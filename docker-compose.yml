@@ -1,0 +1,61 @@
+services:
+  # n8n — orquestrador de IA
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: cortadorlive_n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - GENERIC_TIMEZONE=America/Sao_Paulo
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n-workflows:/home/node/workflows
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:5678/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cortadorlive
+
+  # Backend FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cortadorlive_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - N8N_BASE_URL=http://n8n:5678
+      - PROJETOS_DIR=/app/projetos
+      - ASSETS_DIR=/app/assets
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/projetos:/app/projetos
+      - ./backend/assets:/app/assets
+    depends_on:
+      n8n:
+        condition: service_healthy
+    networks:
+      - cortadorlive
+    # Live reload durante desenvolvimento:
+    # --reload-dir /app/app: só observa o código, não os vídeos em /app/projetos
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
+
+volumes:
+  n8n_data:
+
+networks:
+  cortadorlive:
+    driver: bridge

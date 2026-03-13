@@ -1,0 +1,64 @@
+# Ambientes e Dependências
+node_modules/
+venv/
+env/
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Builds e Compilados (Frontend)
+dist/
+.angular/
+coverage/
+*.log
+
+# Banco de Dados SQLite (Opcional, se não quiser subir os dados locais pro GitHub)
+# Remova caso queira que o DB vazio inicial suba para o repositório
+backend/*.db
+backend/*.sqlite3
+
+# -----------------------------------------------------
+#   ARQUIVOS PESADOS & VÍDEOS (Obrigatório Ignorar)
+# -----------------------------------------------------
+
+# Ignorar o conteúdo completo da pasta de projetos (onde ficam os cortes mp4)
+# O asterisco e barra ignora todas as pastas/arquivos criados lá dentro, 
+# mas mantém pelo menos a estrutura se houver um .gitkeep
+backend/app/projetos/*
+backend/projetos/*
+
+# Caso algum editor gere miniaturas fora, ignore-os globalmente
+*.mp4
+*.webm
+*.mov
+*.mkv
+*.avi
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.json
+
+# Mas permita manter a pasta e o .gitkeep se houver
+!backend/projetos/.gitkeep
+!backend/app/projetos/.gitkeep
+
+# Permite assets de sistema como a intro
+!backend/assets/
+# E permita os pacotes JSON
+!package.json
+!package-lock.json
+!angular.json
+!tsconfig.json
+!tslint.json
+!.prettierrc.json
+!.eslintrc.json
+!backend/**/*.json
+backend/projetos/**/*.json
+
+# Arquivos de IDE vaza conteúdo sensível/local config do ambiente do usuário
+.vscode/
+.idea/
+.DS_Store
