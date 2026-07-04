@@ -3,6 +3,7 @@ import json
 import logging
 import time
 
+from app.channel_config_loader import PROMPT_DIRECAO
 from app.database import AsyncSessionLocal
 from app.domain.corte_mapper import coalescer_chaves_mascote
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
@@ -89,10 +90,6 @@ def _stats_retratos() -> dict:
         "nomes_com_erro": [],
     }
 
-
-
-
-from app.channel_config_loader import PROMPT_DIRECAO
 
 class CenasRemotionService:
     @staticmethod

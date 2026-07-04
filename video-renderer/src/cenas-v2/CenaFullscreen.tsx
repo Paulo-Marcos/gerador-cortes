@@ -28,7 +28,7 @@ export const CenaFullscreen: React.FC<Props> = ({ cena }) => {
   const duracao = (cena.fim - cena.inicio) * fps;
   const { opacity, translateY, reveal } = useFades({ frameLocal, fps, duracao });
   const layout = useCardLayout(cena);
-  const modelo = resolverModeloTelaCheia(cena);
+  const modelo = resolverModeloTelaCheia();
   const sombra = useSombra(cena);
   const subtitleParts: RichTitlePart[] = cena.subtexto
     ? ([{ break: true } as const, { break: true } as const, { highlight: cena.subtexto.toUpperCase() }] as RichTitlePart[])
@@ -223,7 +223,7 @@ const Kicker: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
-export function resolverModeloTelaCheia(_cena: Pick<CenaRemotion, "modelo_cena">): "padrao" | "card" {
+export function resolverModeloTelaCheia(): "padrao" | "card" {
   // I-031: tela_cheia agora renderiza SEMPRE como card.
   // O seletor mantem `padrao` como opcao cosmetica, mas o render ignora.
   return "card";

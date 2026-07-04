@@ -36,13 +36,13 @@ jobs:
             HEAD="${{ github.sha }}"
           fi
           if [ "$BASE" = "0000000000000000000000000000000000000000" ] || [ -z "$BASE" ]; then
-            BASE=$(git rev-parse "$HEAD^" 2>/dev/null || echo "$HEAD")
+            BASE=$(git rev-parse --verify -q "$HEAD^" 2>/dev/null || echo "$HEAD")
           fi
           # Apos force-push de historico reescrito, o SHA "before" pode nao
           # existir mais no repositorio; cai para o pai do HEAD (ou o proprio
           # HEAD em commit inicial sem pai) para nao quebrar o diff.
           if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            BASE=$(git rev-parse "$HEAD^" 2>/dev/null || echo "$HEAD")
+            BASE=$(git rev-parse --verify -q "$HEAD^" 2>/dev/null || echo "$HEAD")
           fi
           echo "base=$BASE" >> "$GITHUB_OUTPUT"
           echo "head=$HEAD" >> "$GITHUB_OUTPUT"
