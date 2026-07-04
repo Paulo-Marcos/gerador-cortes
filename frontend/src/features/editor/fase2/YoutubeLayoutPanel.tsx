@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -408,7 +409,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
       patch({ ...draft, regioes }, syncQuery);
     };
 
-    const save = () => {
+    const save = useCallback(() => {
       const body = { layout_youtube: normalizeYoutubeLayout(draft) } as Partial<Corte>;
       atualizar.mutate(body, {
         onSuccess: () => {
@@ -421,7 +422,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
           });
         },
       });
-    };
+    }, [draft, atualizar, notify]);
 
     // Ctrl+S na tela Pos delega para save via ref. Sem dirty, retorna
     // false (parent fica em silencio).
@@ -437,7 +438,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
           deletedFingerprintsRef.current.clear();
         },
       }),
-      [dirty, atualizar.isPending, draft],
+      [dirty, atualizar.isPending, save],
     );
 
     // F-048 + I-029 v2: helpers para extrair o compartilhada efetivo de cada

@@ -162,9 +162,7 @@ async def test_gerar_bruto_aplica_audio_offset_no_clip(monkeypatch, tmp_path):
     async def _spy_offset(clip_path, offset_ms):
         offset_calls.append(offset_ms)
 
-    monkeypatch.setattr(
-        ExportService, "_aplicar_audio_offset", staticmethod(_spy_offset)
-    )
+    monkeypatch.setattr(ExportService, "_aplicar_audio_offset", staticmethod(_spy_offset))
 
     resultado = await ExportService.gerar_bruto_via_worker("corte-z")
 

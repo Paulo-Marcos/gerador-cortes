@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -593,7 +593,6 @@ async def atualizar_sincronia_legenda(
 
     # Atualiza a transcrição raw no banco
     try:
-
         from app.services.ingestao import IngestaoService
 
         projeto_dir = projetos_dir() / projeto_id
@@ -845,5 +844,3 @@ async def websocket_progresso(websocket: WebSocket, projeto_id: str):
                 break
     except WebSocketDisconnect:
         pass
-
-

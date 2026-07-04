@@ -122,7 +122,9 @@ async def listar_lives_canal(
     if not api_key:
         raise HTTPException(status_code=500, detail="youtube_api_key não configurada no .env")
     if not channel_id:
-        raise HTTPException(status_code=500, detail="youtube_channel_id não configurado no canal ativo")
+        raise HTTPException(
+            status_code=500, detail="youtube_channel_id não configurado no canal ativo"
+        )
 
     # Se after_date não informado, usa a data da live mais recente no banco
     if not after_date:
