@@ -109,6 +109,15 @@ export const Mascote: React.FC<Props> = ({
 
   if (mood === "none" || !MOOD_TO_FILE[mood]) return null;
 
+  // D-197/D-280: canal sem mascote (repo público nasce sem public/mascote) não
+  // renderiza nada — sem este gate, o 404 do staticFile derruba o render das
+  // cenas que usam Mascote direto (sem passar pelo MascotSpotlight).
+  // Mesmo padrão do MascotSpotlight: ts-ignore (não ts-expect-error) porque o
+  // tsc do frontend compila este arquivo em module:ESNext, onde a linha é válida.
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  if (import.meta.env.VITE_CANAL_MASCOTE_HABILITADO !== "true") return null;
+
   const file = MOOD_TO_FILE[mood];
   const sizePx = TAMANHO_PX[tamanho];
   const delayed = Math.max(0, frame - delayFrames);

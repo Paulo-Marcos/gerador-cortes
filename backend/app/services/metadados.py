@@ -15,12 +15,12 @@ from app.channel_config_loader import (
 )
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.editorial_identity import identidade_do_mascote
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
 )
+from app.editorial_identity import identidade_do_mascote
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services.app_logging import operational_error
 from sqlalchemy import select
@@ -268,7 +268,9 @@ class MetadadosService:
         try:
             await ClaudeIaService.gerar_prompt_thumbnail_via_claude(corte_id)
         except Exception as e:  # noqa: BLE001 — background task: loga e segue
-            operational_error("Metadados", f"Erro ao gerar prompt da thumbnail para {corte_id}: {e}")
+            operational_error(
+                "Metadados", f"Erro ao gerar prompt da thumbnail para {corte_id}: {e}"
+            )
 
     @staticmethod
     async def montar_prompt_meta(corte_id: str) -> dict:

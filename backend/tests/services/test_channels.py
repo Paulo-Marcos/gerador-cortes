@@ -208,9 +208,7 @@ def test_seed_mascote_cria_yaml_a_partir_do_ambiente(tmp_path: Path, monkeypatch
 
     migr._semear_mascote_do_ambiente(canal_root)
 
-    dados = yaml.safe_load(
-        (canal_root / "editorial" / "mascote.yaml").read_text(encoding="utf-8")
-    )
+    dados = yaml.safe_load((canal_root / "editorial" / "mascote.yaml").read_text(encoding="utf-8"))
     assert dados["nome"] == "Sapo"
     assert dados["config_version"] == 1
 
@@ -230,9 +228,7 @@ def test_seed_mascote_nao_sobrescreve_nome_existente(tmp_path: Path, monkeypatch
     canal_root = tmp_path / "channels" / "default"
     editorial = canal_root / "editorial"
     editorial.mkdir(parents=True)
-    (editorial / "mascote.yaml").write_text(
-        'config_version: 1\nnome: "Coruja"\n', encoding="utf-8"
-    )
+    (editorial / "mascote.yaml").write_text('config_version: 1\nnome: "Coruja"\n', encoding="utf-8")
     monkeypatch.setenv("CANAL_MASCOTE_NOME", "Sapo")
 
     migr._semear_mascote_do_ambiente(canal_root)

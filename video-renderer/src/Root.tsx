@@ -100,6 +100,8 @@ export const RemotionRoot: React.FC = () => {
           videoUrl: "",
           inicio_seg: 0,
           fim_seg: 10,
+          captions: [],
+          cenas_remotion: [],
         }}
         width={1080}
         height={1920}
