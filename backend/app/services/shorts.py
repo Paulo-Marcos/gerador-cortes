@@ -380,9 +380,9 @@ class ShortsService:
         short_dir = projetos_dir() / corte.projeto_id / "shorts" / short_id
         short_dir.mkdir(parents=True, exist_ok=True)
         props_data = {
-            "videoUrl": str(
-                resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
-            ).replace("\\", "/"),
+            "videoUrl": str(resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)).replace(
+                "\\", "/"
+            ),
             "inicio_seg": short.inicio_seg,
             "fim_seg": short.fim_seg,
             "frase_capa": frase_capa,
@@ -497,9 +497,7 @@ class ShortsService:
             s = await db.get(Short, short_id)
             if s:
                 # Grava RELATIVO ao projeto (D-172): sobrevive a relocação do canal.
-                s.arquivo_short_path = para_relativo_ao_projeto(
-                    str(short_final), corte.projeto_id
-                )
+                s.arquivo_short_path = para_relativo_ao_projeto(str(short_final), corte.projeto_id)
                 s.status = StatusShort.RENDERIZADO
 
                 res_m = await db.execute(

@@ -482,9 +482,7 @@ def _parse_objeto_json(bruto: str) -> dict:
     """
     resultado = json.loads(bruto)
     if not isinstance(resultado, dict):
-        raise ValueError(
-            f"Resposta JSON não é um objeto: recebido {type(resultado).__name__}."
-        )
+        raise ValueError(f"Resposta JSON não é um objeto: recebido {type(resultado).__name__}.")
     return resultado
 
 

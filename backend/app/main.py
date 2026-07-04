@@ -18,12 +18,12 @@ from app.routers import (
     claude_ia,
     cortes,
     export,
+    mascot,
     metadados,
     presets,
     projetos,
     ranking_lives,
     retratos,
-    mascot,
     shorts,
     youtube_browser,
 )
