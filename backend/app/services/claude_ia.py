@@ -48,8 +48,7 @@ def _carregar_transcricao_raw(raw: str, projeto_id: str) -> list | dict:
         return json.loads(raw)
     except json.JSONDecodeError:
         logger.warning(
-            "[ClaudeIA] transcricao_raw do projeto %s corrompida (JSON inválido); "
-            "assumindo vazia.",
+            "[ClaudeIA] transcricao_raw do projeto %s corrompida (JSON inválido); assumindo vazia.",
             projeto_id,
         )
         return []
@@ -603,9 +602,7 @@ class ClaudeIaService:
             projeto = await db.get(Projeto, corte.projeto_id)
             if not projeto or not projeto.transcricao_raw:
                 raise ValueError("Projeto não possui transcrição base para análise.")
-            transcricao_dados = _carregar_transcricao_raw(
-                projeto.transcricao_raw, corte.projeto_id
-            )
+            transcricao_dados = _carregar_transcricao_raw(projeto.transcricao_raw, corte.projeto_id)
             inicio_seg = float(corte.inicio_seg)
             fim_seg = float(corte.fim_seg)
             titulo = corte.titulo_proposto or ""

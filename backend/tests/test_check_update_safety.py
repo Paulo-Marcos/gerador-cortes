@@ -5,6 +5,7 @@ Verifica que o check de "dado de producao versionado" (passo 1, critico):
   - falha (exit != 0) quando um dado de producao simulado aparece versionado
     (ex.: instance/x.db), SEM acusar a pasta de codigo frontend/src/features/projetos/.
 """
+
 import importlib.util
 from pathlib import Path
 
@@ -23,11 +24,16 @@ mod = _load_module()
 
 
 def test_repo_limpo_passa():
-    assert mod.check_no_prod_data_tracked([
-        "backend/app/main.py",
-        "frontend/src/features/projetos/ProjetosPage.tsx",  # CODIGO, nao dado
-        "docs/SETUP.md",
-    ]) is True
+    assert (
+        mod.check_no_prod_data_tracked(
+            [
+                "backend/app/main.py",
+                "frontend/src/features/projetos/ProjetosPage.tsx",  # CODIGO, nao dado
+                "docs/SETUP.md",
+            ]
+        )
+        is True
+    )
 
 
 def test_detecta_db_versionado():
