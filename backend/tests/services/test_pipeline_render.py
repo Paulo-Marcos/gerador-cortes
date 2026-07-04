@@ -17,11 +17,13 @@ from unittest.mock import MagicMock
 import pytest
 from app.domain.overlay_codec import OverlayCodec, overlay_codec_profile
 from app.domain.overlay_metadata import OverlayEntry
+from app.domain.remotion_bundle import compute_src_fingerprint
 from app.domain.retry_policy import RetryPolicy
 from app.services.pipeline_render import (
     _agrupar_overlay_chunks,
     _aguardar_cooldown,
     _arquivo_minimo,
+    _assets_servidos_do_bundle,
     _build_overlay_render_cmd,
     _construir_cenas_chunk_relativas,
     _criar_overlay_chunk,
@@ -38,10 +40,8 @@ from app.services.pipeline_render import (
     _resolver_overlays_para_composicao,
     _retry_async,
     _validar_video_completo,
-    _assets_servidos_do_bundle,
     _validar_video_completo_sync,
 )
-from app.domain.remotion_bundle import compute_src_fingerprint
 
 # ─────────────────────────────────────────────────────────────
 # Helpers

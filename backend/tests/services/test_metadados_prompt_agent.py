@@ -1,9 +1,10 @@
-﻿"""Testes para MetadadosService e templates de prompt.
+"""Testes para MetadadosService e templates de prompt.
 
 canal_config.py e gitignored (conteudo editorial especifico do canal).
 Estes testes verificam apenas propriedades estruturais e comportamentais
 do servico -- sem assertar strings literais do canal.
 """
+
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 

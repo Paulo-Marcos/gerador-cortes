@@ -215,12 +215,7 @@ def _corte_to_dict(corte: Corte) -> dict:
     # Heurística para dados legados ou renderizados antes da flag
     if not d["is_pos_producao"]:
         p_path = (
-            projetos_dir()
-            / corte.projeto_id
-            / "cortes"
-            / corte.id
-            / "upload_ready"
-            / "video.mp4"
+            projetos_dir() / corte.projeto_id / "cortes" / corte.id / "upload_ready" / "video.mp4"
         )
         if p_path.exists():
             d["is_pos_producao"] = 1
