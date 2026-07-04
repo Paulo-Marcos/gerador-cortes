@@ -393,9 +393,7 @@ async def renderizar_pipeline_otimizado(
             )
             try:
                 report(28, "Fase 2/4: preparando overlays")
-                operational_info(
-                    "Pipeline", f"-> Chunks de overlay gerados: {len(overlay_chunks)}"
-                )
+                operational_info("Pipeline", f"-> Chunks de overlay gerados: {len(overlay_chunks)}")
 
                 if not fase_dentro_do_alcance("overlays", parar_em):
                     # Render parcial "só a grade": não renderiza overlays e não
@@ -460,9 +458,7 @@ async def renderizar_pipeline_otimizado(
                         # pode concluir "sucesso" e deixar o render_final compor um
                         # vídeo sem overlays. Falha alto — o `except` abaixo emite
                         # `fase_falhou` e propaga, interrompendo o pipeline.
-                        msg_falha = _mensagem_falha_total_overlays(
-                            falhados, len(overlay_chunks)
-                        )
+                        msg_falha = _mensagem_falha_total_overlays(falhados, len(overlay_chunks))
                         if msg_falha:
                             event_log.emit(
                                 "overlays_falharam",
@@ -551,9 +547,7 @@ async def renderizar_pipeline_otimizado(
                 if not video_final.exists():
                     video_final_valido = False
                 if _deve_pular_fase("render_final", start_from, continuar, video_final_valido):
-                    operational_info(
-                        "Pipeline", "✅ Fase 3/4: video.mp4 final já existe. Pulando."
-                    )
+                    operational_info("Pipeline", "✅ Fase 3/4: video.mp4 final já existe. Pulando.")
                     event_log.emit("fase_pulada", phase="render_final", motivo="artefato_valido")
                 else:
                     logger.info(
@@ -878,10 +872,7 @@ def _find_clip_raw(corte_dir: Path) -> Path | None:
         return "_backup_com_silencios" in p.name
 
     candidatos = [
-        p
-        for ext in ("mkv", "mp4")
-        for p in corte_dir.glob(f"clip_raw*.{ext}")
-        if p.is_file()
+        p for ext in ("mkv", "mp4") for p in corte_dir.glob(f"clip_raw*.{ext}") if p.is_file()
     ]
     nao_backup = [p for p in candidatos if not _is_backup(p)]
     if nao_backup:

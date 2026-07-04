@@ -468,9 +468,7 @@ class YouTubeService:
 
                 # Fallback: usa thumbnail_path do banco (já disponível em meta_db)
                 if not _thumb_found and meta_db and meta_db.thumbnail_path:
-                    _db_thumb = resolver_do_projeto(
-                        meta_db.thumbnail_path, corte.projeto_id
-                    )
+                    _db_thumb = resolver_do_projeto(meta_db.thumbnail_path, corte.projeto_id)
                     if _db_thumb.exists() and _db_thumb.stat().st_size > 0:
                         _thumb_found = _db_thumb
                         operational_debug(
