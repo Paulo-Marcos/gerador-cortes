@@ -12,5 +12,5 @@
     "noUnusedLocals": true,
     "resolveJsonModule": true
   },
-  "exclude": ["remotion.config.ts"]
+  "exclude": ["remotion.config.ts", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }
