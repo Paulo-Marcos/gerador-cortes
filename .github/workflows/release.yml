@@ -24,7 +24,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           NOTES_FILE="$RUNNER_TEMP/release-notes.md"
           awk -v ver="$VERSION" '
-            $0 ~ "^## \\\\[" ver "\\\\]" { found=1; next }
+            index($0, "## [" ver "]") == 1 { found=1; next }
             found && /^## \[/ { exit }
             found && /^\[.*\]:/ { exit }
             found { print }
