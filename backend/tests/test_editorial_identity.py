@@ -19,9 +19,7 @@ from app.editorial_identity import (
 def test_le_nome_do_mascote_yaml(tmp_path: Path):
     editorial = tmp_path / "editorial"
     editorial.mkdir()
-    (editorial / "mascote.yaml").write_text(
-        'config_version: 1\nnome: "Sapo"\n', encoding="utf-8"
-    )
+    (editorial / "mascote.yaml").write_text('config_version: 1\nnome: "Sapo"\n', encoding="utf-8")
 
     mascote = identidade_do_mascote(editorial_root=editorial)
 

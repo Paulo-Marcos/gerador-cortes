@@ -49,6 +49,7 @@ _APP_DIR = Path(__file__).resolve().parent
 _BACKEND_ROOT = _APP_DIR.parent
 _REPO_ROOT = _BACKEND_ROOT.parent
 
+
 def _primeiro_existente(*candidatos: Path) -> Path:
     """Primeiro caminho existente (para exibir o nome real da origem); 1º se nenhum."""
     for candidato in candidatos:

@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { AutoFitText } from "./AutoFitText";
 
 describe("AutoFitText", () => {
-  let originalResizeObserver: any;
+  let originalResizeObserver: typeof globalThis.ResizeObserver;
 
   beforeAll(() => {
     // Mock do ResizeObserver

@@ -360,7 +360,7 @@ function Waveform({
       wsRef.current = null;
       regionsRef.current = null;
     };
-  }, [audioSrc, waveformPeaksSrc]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [audioSrc, waveformPeaksSrc]);
 
   useEffect(() => {
     let frame = 0;
