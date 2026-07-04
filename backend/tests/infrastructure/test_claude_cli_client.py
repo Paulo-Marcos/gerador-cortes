@@ -21,6 +21,17 @@ from app.infrastructure import claude_cli_client as cli
 from app.infrastructure.claude_cli_client import ClaudeCliError
 
 
+@pytest.fixture(autouse=True)
+def _binario_claude_fake(monkeypatch):
+    """Curto-circuita o `shutil.which("claude")` de `_resolver_binario`.
+
+    Os testes mockam o Popen, mas a resolução do binário roda antes — no CI
+    (sem Claude Code instalado) ela levantava ClaudeCliError e derrubava a
+    suíte inteira. O teste não pode depender do claude real no PATH.
+    """
+    monkeypatch.setattr(cli.settings, "claude_cli_path", "claude")
+
+
 class _FakePopen:
     """Imita subprocess.Popen: communicate() devolve (stdout, stderr) bytes."""
 
