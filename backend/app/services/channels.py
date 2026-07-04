@@ -28,7 +28,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-
 from app.channel_assets_sync import garantir_mascote_materializado
 from app.channel_paths import active_channel_root
 
