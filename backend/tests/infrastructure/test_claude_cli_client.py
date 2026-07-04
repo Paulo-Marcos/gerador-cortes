@@ -279,9 +279,11 @@ class TestErros:
 
     def test_timeout_mata_arvore_e_levanta(self, monkeypatch):
         # 1ª communicate estoura timeout → _matar_arvore + reap → levanta sem travar.
+        # _matar_arvore usa taskkill no Windows e proc.kill() em POSIX — o teste
+        # aceita qualquer um dos dois caminhos (o CI roda Linux).
         import subprocess as sp
 
-        matou = {"taskkill": False}
+        matou = {"arvore": False}
 
         class _Hang:
             def __init__(self):
@@ -296,11 +298,11 @@ class TestErros:
                 return b"", b""  # reap após o kill da árvore
 
             def kill(self):
-                pass
+                matou["arvore"] = True  # caminho POSIX do _matar_arvore
 
         def fake_run(args, *_a, **_k):
             if args and args[0] == "taskkill":
-                matou["taskkill"] = True
+                matou["arvore"] = True  # caminho Windows do _matar_arvore
 
         monkeypatch.setattr(cli.subprocess, "Popen", lambda *_a, **_k: _Hang())
         monkeypatch.setattr(cli.subprocess, "run", fake_run)
@@ -309,7 +311,7 @@ class TestErros:
         with pytest.raises(ClaudeCliError, match="timeout"):
             asyncio.run(cli.generate_text("oi", timeout=0.01))
 
-        assert matou["taskkill"], "deve matar a árvore de processos no timeout (Windows)"
+        assert matou["arvore"], "deve matar a árvore de processos no timeout"
 
     def test_provider_desabilitado_levanta(self, monkeypatch):
         monkeypatch.setattr(cli.settings, "claude_cli_enabled", False)
