@@ -102,9 +102,7 @@ class ExportService:
         for corte in cortes:
             if cls.get_tarefa_corte_status(corte.id) != "cortando":
                 cls.set_tarefa_corte_status(corte.id, "cortando")
-                fire_and_forget(
-                    cls.cortar_clip_lossless(corte.id), name=f"cortar-{corte.id[:8]}"
-                )
+                fire_and_forget(cls.cortar_clip_lossless(corte.id), name=f"cortar-{corte.id[:8]}")
                 iniciados.append(corte.id)
         return iniciados
 
@@ -491,7 +489,6 @@ class ExportService:
         if resultado.get("status") != "sucesso":
             raise RuntimeError(f"FFmpeg falhou (worker): {resultado.get('erro', 'desconhecido')}")
 
-
     @classmethod
     async def processar_desvios_rerender(cls, corte_id: str):
         """
@@ -567,7 +564,8 @@ class ExportService:
                             video_path, out_path, segmentos
                         )
                         operational_info(
-                            "ExportService", "✅ Re-renderização por segmentos concluída com sucesso!"
+                            "ExportService",
+                            "✅ Re-renderização por segmentos concluída com sucesso!",
                         )
                     except Exception as e:
                         operational_error("ExportService", f"❌ ERRO re-encode segments: {e}")
@@ -593,9 +591,7 @@ class ExportService:
                 await ExportService._aplicar_audio_offset(out_path, int(corte.audio_offset_ms or 0))
 
                 # Atualiza o arquivo de clip gerado para o novo (relativo ao projeto)
-                corte.arquivo_clip_path = para_relativo_ao_projeto(
-                    str(out_path), corte.projeto_id
-                )
+                corte.arquivo_clip_path = para_relativo_ao_projeto(str(out_path), corte.projeto_id)
                 corte.status = StatusCorte.PROCESSADO
                 await db.commit()
 
@@ -1065,7 +1061,10 @@ class ExportService:
                 parts.append(str(part))
 
             concat_file = temp_dir / "concat_list.txt"
-            linhas = [f"file '{str(Path(p).resolve()).replace('\\\\', '/')}'" for p in parts]
+            # Backslash em expressão de f-string só é aceito a partir do
+            # Python 3.12 (PEP 701); o CI roda 3.11 — manter o replace fora.
+            caminhos = [str(Path(p).resolve()).replace("\\\\", "/") for p in parts]
+            linhas = [f"file '{caminho}'" for caminho in caminhos]
             concat_file.write_text("\n".join(linhas), encoding="utf-8")
 
             cmd = [
@@ -1122,7 +1121,9 @@ class ExportService:
             clip_path = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
 
         if not clip_path.exists():
-            operational_error("service", f"❌ ABORTADO: Arquivo de clip não encontrado: {clip_path}")
+            operational_error(
+                "service", f"❌ ABORTADO: Arquivo de clip não encontrado: {clip_path}"
+            )
             return
 
         # Passo 1: Normalização e Filtro
@@ -1435,12 +1436,7 @@ class ExportService:
                 return {"status": "erro", "mensagem": "Corte não encontrado"}
 
         video_path = (
-            projetos_dir()
-            / corte.projeto_id
-            / "cortes"
-            / corte_id
-            / "upload_ready"
-            / "video.mp4"
+            projetos_dir() / corte.projeto_id / "cortes" / corte_id / "upload_ready" / "video.mp4"
         )
         if not video_path.exists():
             return {"status": "erro", "mensagem": "Video final não encontrado em upload_ready"}

@@ -178,7 +178,9 @@ def test_consolida_assets_sem_perda(tmp_path: Path) -> None:
     assert (assets / "mascote" / "sapo_pensativo.png").is_file()
     assert (assets / "youtube_bg" / "estudio.png").read_bytes() == b"fundo-estudio"
     assert (assets / "retratos" / "karl_marx.jpg").read_bytes() == b"retrato"
-    assert (assets / "theme.config.json").read_text(encoding="utf-8") == '{"palette":{"verde":"#0f0"}}'
+    assert (assets / "theme.config.json").read_text(
+        encoding="utf-8"
+    ) == '{"palette":{"verde":"#0f0"}}'
 
     # Origens esvaziadas.
     assert not (repo / "video-renderer" / "public" / "mascote").exists()

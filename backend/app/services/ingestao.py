@@ -48,7 +48,9 @@ class IngestaoService:
         try:
             operational_info("INGESTAO", "Atualizando status para BAIXANDO...")
             await IngestaoService._atualizar_status(projeto_id, StatusProjeto.BAIXANDO)
-            operational_info("INGESTAO", f"Status BAIXANDO salvo. Iniciando download de: {youtube_url}")
+            operational_info(
+                "INGESTAO", f"Status BAIXANDO salvo. Iniciando download de: {youtube_url}"
+            )
             video_path = await IngestaoService._baixar_video(projeto_id, youtube_url, queue)
 
             await IngestaoService._atualizar_status(projeto_id, StatusProjeto.TRANSCREVENDO)

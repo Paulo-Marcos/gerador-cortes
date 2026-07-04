@@ -1,5 +1,6 @@
 import React from "react";
 import { AbsoluteFill, OffthreadVideo, useCurrentFrame, useVideoConfig, Sequence } from "remotion";
+import { createTikTokStyleCaptions, type Caption, type TikTokPage } from "@remotion/captions";
 import { z } from "zod";
 
 export const shortViralSchema = z.object({
@@ -21,25 +22,19 @@ export type ShortViralProps = z.infer<typeof shortViralSchema>;
 export const CenaShortViral: React.FC<ShortViralProps> = ({
   videoUrl,
   inicio_seg,
-  fim_seg,
   captions
 }) => {
-  const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   // Prepara as legendas no estilo TikTok (agrupando por páginas)
   const { pages } = React.useMemo(() => {
-    // Importante: no ambiente de build o createTikTokStyleCaptions precisa estar disponível
-    // Como Remotion e React estão no escopo global, podemos exigir via require para evitar erros de tipagem
-    const { createTikTokStyleCaptions } = require("@remotion/captions");
     return createTikTokStyleCaptions({
-      captions: captions as any,
+      // O schema zod deixa timestampMs/confidence opcionais; Caption os exige
+      // (aceitando null) — o cast só encurta essa diferença de tipagem.
+      captions: captions as Caption[],
       combineTokensWithinMilliseconds: 1500, // Cada página dura aprox 1.5 seg (3-5 palavras)
     });
   }, [captions]);
-
-  // Se o short for apenas um pedaço do clip_raw, podemos calcular o tempo atual relativo
-  const currentTime = frame / fps;
 
   return (
     <AbsoluteFill style={{ backgroundColor: "black" }}>
@@ -67,7 +62,7 @@ export const CenaShortViral: React.FC<ShortViralProps> = ({
 
       {/* Renderização das Páginas de Legenda */}
       <AbsoluteFill>
-        {pages.map((page: any, index: number) => {
+        {pages.map((page, index) => {
           const nextPage = pages[index + 1] ?? null;
           const startFrame = (page.startMs / 1000) * fps;
           const endFrame = Math.min(
@@ -98,7 +93,7 @@ export const CenaShortViral: React.FC<ShortViralProps> = ({
 const HIGHLIGHT_COLOR = "#00FFDD"; // Verde água neon (viral)
 const TEXT_COLOR = "#FFFFFF";
 
-const CaptionPage: React.FC<{ page: any }> = ({ page }) => {
+const CaptionPage: React.FC<{ page: TikTokPage }> = ({ page }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -119,7 +114,7 @@ const CaptionPage: React.FC<{ page: any }> = ({ page }) => {
         WebkitTextStroke: "4px black", // Borda preta grossa (TikTok style)
         textShadow: "6px 6px 0px rgba(0,0,0,1)" // Sombra sólida
       }}>
-        {page.tokens.map((token: any) => {
+        {page.tokens.map((token) => {
           // A palavra está sendo falada exatamente agora?
           const isActive = token.fromMs <= absoluteTimeMs && token.toMs > absoluteTimeMs;
 
