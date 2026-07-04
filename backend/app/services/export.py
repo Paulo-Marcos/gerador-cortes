@@ -1061,7 +1061,10 @@ class ExportService:
                 parts.append(str(part))
 
             concat_file = temp_dir / "concat_list.txt"
-            linhas = [f"file '{str(Path(p).resolve()).replace('\\\\', '/')}'" for p in parts]
+            # Backslash em expressão de f-string só é aceito a partir do
+            # Python 3.12 (PEP 701); o CI roda 3.11 — manter o replace fora.
+            caminhos = [str(Path(p).resolve()).replace("\\\\", "/") for p in parts]
+            linhas = [f"file '{caminho}'" for caminho in caminhos]
             concat_file.write_text("\n".join(linhas), encoding="utf-8")
 
             cmd = [
