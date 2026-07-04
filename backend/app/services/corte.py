@@ -581,7 +581,9 @@ class CorteService:
                     "-",
                 ]
                 use_proxy = True
-                operational_debug("CorteService", f"Detectando silêncios via proxy FLAC: {proxy_path}")
+                operational_debug(
+                    "CorteService", f"Detectando silêncios via proxy FLAC: {proxy_path}"
+                )
             else:
                 # Fallback: vídeo original (mais lento mas igualmente preciso com busca correta)
                 duration = float(corte.fim_seg) - float(corte.inicio_seg)
@@ -618,7 +620,9 @@ class CorteService:
                 return {"status": "erro", "erro": str(e)}
 
             if returncode != 0 and "silencedetect" not in output:
-                operational_error("CorteService", f"FFmpeg falhou (code {returncode}): {output[-500:]}")
+                operational_error(
+                    "CorteService", f"FFmpeg falhou (code {returncode}): {output[-500:]}"
+                )
                 return {"status": "erro", "erro": "FFmpeg falhou na detecção de silêncios"}
 
             starts = re.findall(r"silence_start: ([\d\.]+)", output)

@@ -35,7 +35,9 @@ async def gerar_sugestoes(corte_id: str):
             "sugestoes": sugestoes,
         }
     except Exception as e:
-        operational_error("Shorts", f"Erro ao gerar sugestões de shorts: {e}\n{traceback.format_exc()}")
+        operational_error(
+            "Shorts", f"Erro ao gerar sugestões de shorts: {e}\n{traceback.format_exc()}"
+        )
         raise erro_interno(e) from e
 
 
@@ -65,7 +67,9 @@ async def analisar_cenas(short_id: str):
         cenas = await ShortsService.analisar_cenas_ia(short_id)
         return {"status": "ok", "cenas": cenas}
     except Exception as e:
-        operational_error("Shorts", f"Erro ao analisar cenas do short: {e}\n{traceback.format_exc()}")
+        operational_error(
+            "Shorts", f"Erro ao analisar cenas do short: {e}\n{traceback.format_exc()}"
+        )
         raise erro_interno(e) from e
 
 

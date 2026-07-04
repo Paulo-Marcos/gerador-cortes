@@ -42,6 +42,7 @@ def _espelho_versionado() -> Path:
         return novo
     return _DATA_DIR / "sapo_poses.json"
 
+
 _CATALOGO_VAZIO: dict[str, Any] = {
     "version": None,
     "atualizado_em": None,

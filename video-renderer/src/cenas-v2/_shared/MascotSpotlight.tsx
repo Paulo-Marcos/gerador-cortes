@@ -19,7 +19,10 @@ export const MascotSpotlight: React.FC<Props> = ({
 }) => {
   // Mascote DESABILITADO por padrao (D-179): so habilita quando o flag === 'true'.
   // Repo publico nasce sem mascote; o canal liga com VITE_CANAL_MASCOTE_HABILITADO=true.
-  // tsconfig uses module:commonjs for type-check only; Vite handles import.meta at build time
+  // tsconfig uses module:commonjs for type-check only; Vite handles import.meta at build time.
+  // Precisa ser ts-ignore (nao ts-expect-error): o tsc do frontend compila este arquivo
+  // via alias @video-renderer/* em module:ESNext, onde a linha NAO tem erro.
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   const mascoteHabilitado = import.meta.env.VITE_CANAL_MASCOTE_HABILITADO === 'true';
   if (!mascoteHabilitado) return null;

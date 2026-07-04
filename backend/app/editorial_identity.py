@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-
 from app.channel_paths import editorial_dir
 
 _MASCOTE_YAML = "mascote.yaml"
