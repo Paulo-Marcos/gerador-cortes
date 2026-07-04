@@ -1,0 +1,12 @@
+# Paths that must never be locked in .guia/locks/registry.yaml.
+# These files are shared process/config surfaces and must stay editable.
+
+.gitignore
+.guia/locks/lock-ignore.txt
+backend/app/models.py
+
+# Relatorios do Guia Fluxo: estado puro de bookkeeping, nunca produto.
+# Isenta-os do lock-curinga `adicoes-exigem-autorizacao` (files: '*', op: add),
+# que antes marcava todo commit de `guia:ready/finish` (git add -A varre novos
+# .guia/reports/*.md) como violacao. Ver D-263.
+.guia/reports/*

@@ -1,0 +1,19 @@
+# Exemplo de configuração de canal — copie examples/instance.example/ para instance/
+# e substitua os valores pelos dados do seu canal
+
+# Versão do schema desta config. NÃO edite à mão: serve para migrações futuras
+# da config quando um `git pull` trouxer um formato novo.
+config_version: 1
+
+handle: "@seucanal"
+nome: "Seu Canal"
+credito: "@seucanal"
+
+# Canal-FONTE das lives: o canal do YouTube de onde o ranking baixa as
+# livestreams. Aceita @handle, id UCxxxx ou username.
+youtube_channel_id: ""
+
+paleta:
+  primaria: "#1a1a2e"
+  secundaria: "#16213e"
+  acento: "#0f3460"

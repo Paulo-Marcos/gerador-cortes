@@ -1,0 +1,362 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+
+    --font-sans: 'DM Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      'Segoe UI', sans-serif;
+    --font-serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
+    --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+    --radius-xs: 5px;
+    --radius-sm: 8px;
+    --radius: 10px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --success: oklch(0.55 0.13 145);
+    --warning: oklch(0.62 0.15 70);
+    --error: oklch(0.55 0.18 25);
+    --info: oklch(0.56 0.13 245);
+
+    --wb-bg: oklch(0.97 0.008 75);
+    --wb-bg-panel: oklch(0.99 0.006 75);
+    --wb-bg-card: #ffffff;
+    --wb-bg-card-elev: oklch(0.985 0.006 75);
+    --wb-bg-inset: oklch(0.95 0.008 75);
+    --wb-border: oklch(0.88 0.01 75);
+    --wb-border-soft: oklch(0.92 0.008 75);
+    --wb-text: oklch(0.2 0.012 60);
+    --wb-text-mute: oklch(0.45 0.012 60);
+    --wb-text-dim: oklch(0.62 0.01 60);
+    --wb-accent: oklch(0.52 0.165 28);
+    --wb-accent-strong: oklch(0.44 0.18 28);
+    --wb-accent-soft: oklch(0.95 0.04 28);
+    --wb-ink: oklch(0.18 0.012 60);
+    --wb-ink-fg: var(--wb-bg);
+    --wb-pill-bg: rgb(255 255 255 / 0.9);
+    --wb-focus: oklch(0.58 0.16 28 / 0.45);
+    --wb-shadow: 0 1px 2px rgb(20 15 10 / 0.04), 0 8px 24px rgb(20 15 10 / 0.06);
+    --wb-shadow-btn: 0 1px 0 rgb(255 255 255 / 0.2) inset, 0 4px 12px oklch(0.52 0.165 28 / 0.24);
+
+    /* Cores semanticas (status) — calibradas no hand-off de design v3.
+       Cada cor tem variante `-soft` para fundo de chip/badge.
+       Existem tambem --success/--warning/--error/--info (legado): preferir --wb-* nos componentes novos. */
+    --wb-ok: oklch(0.6 0.13 145);
+    --wb-ok-soft: oklch(0.94 0.06 145);
+    --wb-warn: oklch(0.66 0.16 65);
+    --wb-warn-soft: oklch(0.94 0.07 65);
+    --wb-err: oklch(0.58 0.18 25);
+    --wb-err-soft: oklch(0.95 0.07 25);
+    --wb-info: oklch(0.58 0.13 245);
+    --wb-info-soft: oklch(0.94 0.06 245);
+    --wb-violet: oklch(0.56 0.14 295);
+    --wb-violet-soft: oklch(0.95 0.05 295);
+    --wb-fire: oklch(0.66 0.19 50);
+    --wb-fire-soft: oklch(0.95 0.07 50);
+    --wb-leitura: oklch(0.56 0.13 240);
+    --wb-leitura-soft: oklch(0.94 0.06 240);
+
+    /* Tintas aplicadas no fundo do card de corte na sidebar do editor.
+       Combinadas via linear-gradient quando o corte acumula flags.
+       Variante vivid = usada no corte selecionado; -soft = no inativo. */
+    --tint-aprovado: oklch(0.86 0.13 145);
+    --tint-fire: oklch(0.85 0.14 55);
+    --tint-leitura: oklch(0.86 0.09 240);
+    --tint-rejeitado: oklch(0.82 0.14 25);
+
+    --tint-aprovado-soft: oklch(0.96 0.04 145);
+    --tint-fire-soft: oklch(0.96 0.04 55);
+    --tint-leitura-soft: oklch(0.96 0.03 240);
+    --tint-rejeitado-soft: oklch(0.95 0.05 25);
+
+    --bg-950: var(--wb-bg);
+    --bg-900: var(--wb-bg-panel);
+    --bg-800: var(--wb-bg-inset);
+    --bg-700: var(--wb-border-soft);
+    --bg-600: var(--wb-border);
+    --bg-500: var(--wb-text-dim);
+    --surface-1: var(--wb-bg-card);
+    --surface-2: var(--wb-bg-card-elev);
+    --surface-3: var(--wb-bg-inset);
+    --accent-200: var(--wb-accent-strong);
+    --accent-300: var(--wb-accent-soft);
+    --accent-400: var(--wb-accent);
+    --accent-500: var(--wb-accent);
+    --accent-600: var(--wb-accent);
+    --accent-700: var(--wb-accent-strong);
+    --text-100: var(--wb-text);
+    --text-200: var(--wb-text-mute);
+    --text-300: var(--wb-text-dim);
+    --text-400: var(--wb-text-dim);
+    --text-500: var(--wb-text);
+    --border: var(--wb-border);
+    --border-hover: var(--wb-text-dim);
+    --border-accent: var(--wb-accent);
+    --accent-glow: var(--wb-focus);
+    --shadow-sm: var(--wb-shadow);
+    --shadow-md: var(--wb-shadow);
+    --shadow-lg: 0 18px 50px rgb(20 15 10 / 0.12);
+  }
+
+  :root[data-wb-theme='dark'] {
+    color-scheme: dark;
+
+    --success: oklch(0.78 0.13 145);
+    --warning: oklch(0.8 0.15 75);
+    --error: oklch(0.72 0.16 25);
+    --info: oklch(0.72 0.12 245);
+
+    --wb-bg: oklch(0.155 0.01 60);
+    --wb-bg-panel: oklch(0.125 0.01 60);
+    --wb-bg-card: oklch(0.195 0.01 60);
+    --wb-bg-card-elev: oklch(0.225 0.01 60);
+    --wb-bg-inset: oklch(0.175 0.01 60);
+    --wb-border: oklch(0.3 0.01 60);
+    --wb-border-soft: oklch(0.25 0.01 60);
+    --wb-text: oklch(0.96 0.005 70);
+    --wb-text-mute: oklch(0.7 0.01 60);
+    --wb-text-dim: oklch(0.5 0.01 60);
+    --wb-accent: oklch(0.72 0.155 32);
+    --wb-accent-strong: oklch(0.78 0.16 32);
+    --wb-accent-soft: oklch(0.3 0.08 28 / 0.45);
+    --wb-ink: oklch(0.96 0.005 70);
+    --wb-ink-fg: oklch(0.15 0.01 60);
+    --wb-pill-bg: oklch(0.1 0.01 60 / 0.78);
+    --wb-focus: oklch(0.72 0.155 32 / 0.42);
+    --wb-shadow: 0 1px 2px rgb(0 0 0 / 0.32), 0 6px 22px rgb(0 0 0 / 0.28);
+    --wb-shadow-btn: 0 1px 0 oklch(1 0 0 / 0.1) inset, 0 4px 14px oklch(0.72 0.155 32 / 0.3);
+
+    /* Cores semanticas (status) — dark. Soft usa alpha para nao competir com fundo escuro. */
+    --wb-ok: oklch(0.78 0.14 145);
+    --wb-ok-soft: oklch(0.3 0.08 145 / 0.4);
+    --wb-warn: oklch(0.82 0.15 70);
+    --wb-warn-soft: oklch(0.32 0.1 65 / 0.4);
+    --wb-err: oklch(0.74 0.16 25);
+    --wb-err-soft: oklch(0.32 0.11 25 / 0.4);
+    --wb-info: oklch(0.74 0.13 245);
+    --wb-info-soft: oklch(0.3 0.09 245 / 0.4);
+    --wb-violet: oklch(0.74 0.14 295);
+    --wb-violet-soft: oklch(0.3 0.09 295 / 0.4);
+    --wb-fire: oklch(0.78 0.18 55);
+    --wb-fire-soft: oklch(0.32 0.1 55 / 0.4);
+    --wb-leitura: oklch(0.74 0.13 245);
+    --wb-leitura-soft: oklch(0.3 0.09 245 / 0.4);
+
+    /* Tintas para tema escuro — vivid = mais L+chroma, soft = quase indistinguível. */
+    --tint-aprovado: oklch(0.42 0.14 145);
+    --tint-fire: oklch(0.42 0.15 55);
+    --tint-leitura: oklch(0.42 0.1 240);
+    --tint-rejeitado: oklch(0.4 0.16 25);
+
+    --tint-aprovado-soft: oklch(0.2 0.04 145);
+    --tint-fire-soft: oklch(0.2 0.04 55);
+    --tint-leitura-soft: oklch(0.2 0.03 240);
+    --tint-rejeitado-soft: oklch(0.2 0.05 25);
+
+    --bg-700: oklch(0.25 0.01 60);
+    --bg-600: oklch(0.3 0.01 60);
+    --bg-500: oklch(0.38 0.01 60);
+    --accent-200: oklch(0.9 0.07 32);
+    --accent-300: oklch(0.86 0.09 32);
+    --accent-400: var(--wb-accent);
+  }
+
+  * {
+    border-color: var(--wb-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    background: var(--wb-bg);
+    color: var(--wb-text);
+    font-family: var(--font-sans);
+    transition:
+      background-color 180ms ease,
+      color 180ms ease;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  ::selection {
+    background: var(--wb-accent-soft);
+    color: var(--wb-text);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--wb-border);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--wb-text-dim);
+    background-clip: padding-box;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: color-mix(in oklch, var(--wb-bg-panel) 86%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .font-editorial {
+    font-family: var(--font-serif);
+  }
+
+  .font-code {
+    font-family: var(--font-mono);
+  }
+
+  .timeline-waveform-host ::part(scroll) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--wb-border) transparent;
+  }
+
+  .timeline-waveform-host ::part(scroll)::-webkit-scrollbar {
+    height: 9px;
+  }
+
+  .timeline-waveform-host ::part(scroll)::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .timeline-waveform-host ::part(scroll)::-webkit-scrollbar-thumb {
+    background: var(--wb-border);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+
+  .timeline-waveform-host ::part(scroll)::-webkit-scrollbar-thumb:hover {
+    background: var(--wb-text-dim);
+    background-clip: padding-box;
+  }
+
+  .timeline-native-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--wb-border) transparent;
+  }
+
+  .timeline-native-scrollbar::-webkit-scrollbar {
+    height: 10px;
+  }
+
+  .timeline-native-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .timeline-native-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--wb-border);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+
+  .timeline-native-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--wb-text-dim);
+    background-clip: padding-box;
+  }
+}
+
+/* ─── Paletas de acento (F-024) ────────────────────────────────────
+   Fora de `@layer base` para que o Tailwind nao purgue (Tailwind v3
+   limpa regras dentro de `@layer base` que nao tem class referenciada
+   no content scan; aqui as classes `wb-palette-<id>` sao adicionadas
+   via JS no <html>, entao precisam ficar em CSS top-level).
+
+   Especificidade: `:root.wb-palette-X` (0,2,0) ganha de `:root` (0,1,0)
+   no light; em dark a regra `[data-wb-theme='dark'].wb-palette-X`
+   (0,3,0) ganha de tudo. Default `terracota` nao tem classe — usa os
+   tokens base de `@layer base`. */
+:root.wb-palette-indigo {
+  --wb-accent: oklch(0.5 0.16 255);
+  --wb-accent-strong: oklch(0.4 0.18 255);
+  --wb-accent-soft: oklch(0.95 0.05 255);
+  --wb-bg: oklch(0.97 0.006 250);
+  --wb-bg-panel: oklch(0.99 0.004 250);
+  --wb-bg-inset: oklch(0.955 0.008 250);
+  --wb-border: oklch(0.88 0.01 250);
+  --wb-border-soft: oklch(0.92 0.008 250);
+  --wb-focus: oklch(0.5 0.16 255 / 0.45);
+}
+:root[data-wb-theme='dark'].wb-palette-indigo {
+  --wb-accent: oklch(0.7 0.16 255);
+  --wb-accent-strong: oklch(0.78 0.17 255);
+  --wb-accent-soft: oklch(0.3 0.1 255 / 0.45);
+  --wb-focus: oklch(0.7 0.16 255 / 0.42);
+}
+
+:root.wb-palette-forest {
+  --wb-accent: oklch(0.5 0.13 155);
+  --wb-accent-strong: oklch(0.4 0.14 155);
+  --wb-accent-soft: oklch(0.94 0.05 155);
+  --wb-bg: oklch(0.965 0.008 110);
+  --wb-bg-panel: oklch(0.99 0.005 110);
+  --wb-bg-inset: oklch(0.95 0.008 110);
+  --wb-border: oklch(0.88 0.01 110);
+  --wb-border-soft: oklch(0.92 0.008 110);
+  --wb-focus: oklch(0.5 0.13 155 / 0.45);
+}
+:root[data-wb-theme='dark'].wb-palette-forest {
+  --wb-accent: oklch(0.72 0.13 155);
+  --wb-accent-strong: oklch(0.8 0.14 155);
+  --wb-accent-soft: oklch(0.3 0.08 155 / 0.45);
+  --wb-focus: oklch(0.72 0.13 155 / 0.42);
+}
+
+:root.wb-palette-plum {
+  --wb-accent: oklch(0.46 0.16 340);
+  --wb-accent-strong: oklch(0.38 0.18 340);
+  --wb-accent-soft: oklch(0.95 0.05 340);
+  --wb-bg: oklch(0.965 0.008 320);
+  --wb-bg-panel: oklch(0.99 0.005 320);
+  --wb-bg-inset: oklch(0.95 0.008 320);
+  --wb-border: oklch(0.88 0.01 320);
+  --wb-border-soft: oklch(0.92 0.008 320);
+  --wb-focus: oklch(0.46 0.16 340 / 0.45);
+}
+:root[data-wb-theme='dark'].wb-palette-plum {
+  --wb-accent: oklch(0.7 0.16 340);
+  --wb-accent-strong: oklch(0.78 0.17 340);
+  --wb-accent-soft: oklch(0.3 0.1 340 / 0.45);
+  --wb-focus: oklch(0.7 0.16 340 / 0.42);
+}
+
+:root.wb-palette-ink {
+  --wb-accent: oklch(0.32 0.02 70);
+  --wb-accent-strong: oklch(0.22 0.02 70);
+  --wb-accent-soft: oklch(0.94 0.008 70);
+  --wb-focus: oklch(0.32 0.02 70 / 0.45);
+}
+:root[data-wb-theme='dark'].wb-palette-ink {
+  --wb-accent: oklch(0.88 0.005 75);
+  --wb-accent-strong: oklch(0.95 0.005 75);
+  --wb-accent-soft: oklch(0.25 0.005 75);
+  --wb-focus: oklch(0.88 0.005 75 / 0.42);
+}

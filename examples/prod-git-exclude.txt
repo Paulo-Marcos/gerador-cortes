@@ -1,0 +1,19 @@
+# Linhas para adicionar a .git/info/exclude no clone de PRODUÇÃO.
+#
+# .git/info/exclude funciona como um .gitignore local do clone —
+# não é versionado e não afeta nenhum outro clone.
+#
+# Por que esses caminhos?
+#   .guia/              → histórico de demandas do Guia Fluxo (muda localmente em produção)
+#   .claude/settings.json → configurações do Claude CLI (ajustadas por instância)
+# Ambos permanecem VERSIONADOS no repositório de dev; aqui apenas ocultamos
+# as alterações locais do clone de produção.
+#
+# Como usar:
+#   cat examples/prod-git-exclude.txt >> .git/info/exclude
+#   # Depois, se já houver arquivos rastreados com alterações locais:
+#   git ls-files .guia/ | xargs git update-index --skip-worktree
+#   git update-index --skip-worktree .claude/settings.json
+
+.guia/
+.claude/settings.json

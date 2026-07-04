@@ -1,0 +1,285 @@
+# Veja features/README.md para o protocolo e formato.
+# Edicao via CLI (recomendado): python bin/check-lock.py lock|unlock
+# Ou edite manualmente preservando o schema abaixo.
+
+version: 1
+locks:
+- id: post-production-video-routing
+  description: Navegacao bruto/pos e metadados na revisao final
+  locked_at: 2026-05-20
+  files:
+  - frontend/src/features/editor/EditorPage.tsx
+  - frontend/src/features/post-production/ScenesPostProductionPage.tsx
+  - frontend/src/features/final-review/FinalReviewPage.tsx
+  - frontend/src/features/post-production/postProductionNavigation.ts
+  - frontend/src/features/post-production/__tests__/postProductionNavigation.test.ts
+  - frontend/src/features/final-review/__tests__/FinalReviewPage.test.tsx
+- id: thumbnail-agent-prompt-livre
+  description: Prompt agente livre da thumbnail (template, endpoint, botao e teste)
+  locked_at: '2026-05-21'
+  files:
+  - backend/app/services/metadados.py
+  - backend/app/routers/metadados.py
+  - backend/tests/services/test_metadados_prompt_agent.py
+  - frontend/src/lib/api.ts
+  - frontend/src/features/metadata/MetadataCard.tsx
+- id: thumbnail-paste-image
+  description: Paste de imagem (Ctrl+V) para subir thumbnail no MetadataCard
+  locked_at: '2026-05-21'
+  files:
+  - frontend/src/features/metadata/MetadataCard.tsx
+- id: prompt-manual-auto-copy
+  description: Copia automatica e formato JSON dos prompts manuais
+  locked_at: '2026-05-22'
+  files:
+  - frontend/src/components/PromptManualPanel.tsx
+  - frontend/src/components/__tests__/PromptManualPanel.autoCopy.test.ts
+  - frontend/src/lib/clipboard.ts
+  - frontend/src/lib/manualPrompt.ts
+  - frontend/src/lib/__tests__/manualPrompt.test.ts
+- id: remotion-v2-card-contracts
+  description: Contratos visuais e componentes dos cards Remotion v2 homologados
+  locked_at: '2026-05-23'
+  files:
+  - scripts/test-remotion-card-contracts.mjs
+  - video-renderer/package.json
+  - video-renderer/src/schema.ts
+  - video-renderer/src/cenas-v2/index.tsx
+  - video-renderer/src/cenas-v2/CenaCard.tsx
+  - video-renderer/src/cenas-v2/CenaCTA.tsx
+  - video-renderer/src/cenas-v2/CenaCitacao.tsx
+  - video-renderer/src/cenas-v2/CenaComparativo.tsx
+  - video-renderer/src/cenas-v2/CenaDefinicao.tsx
+  - video-renderer/src/cenas-v2/CenaEnfase.tsx
+  - video-renderer/src/cenas-v2/CenaEvento.tsx
+  - video-renderer/src/cenas-v2/CenaFonte.tsx
+  - video-renderer/src/cenas-v2/CenaFullscreen.tsx
+  - video-renderer/src/cenas-v2/CenaLinhaTempo.tsx
+  - video-renderer/src/cenas-v2/CenaLista.tsx
+  - video-renderer/src/cenas-v2/CenaLowerThird.tsx
+  - video-renderer/src/cenas-v2/CenaNumber.tsx
+  - video-renderer/src/cenas-v2/CenaPergunta.tsx
+  - video-renderer/src/cenas-v2/CenaPessoa.tsx
+  - video-renderer/src/cenas-v2/_shared/AmbientHud.tsx
+  - video-renderer/src/cenas-v2/_shared/Chrome.tsx
+  - video-renderer/src/cenas-v2/_shared/IconBox.tsx
+  - video-renderer/src/cenas-v2/_shared/LensLine.tsx
+  - video-renderer/src/cenas-v2/_shared/MonoLabel.tsx
+  - video-renderer/src/cenas-v2/_shared/RegionHud.tsx
+  - video-renderer/src/cenas-v2/_shared/RichTitle.tsx
+  - video-renderer/src/cenas-v2/_shared/MascotSpotlight.tsx
+  - video-renderer/src/cenas-v2/_shared/Tag.tsx
+  - video-renderer/src/cenas-v2/_shared/anim.ts
+  - video-renderer/src/cenas-v2/_shared/card-layout-context.ts
+  - video-renderer/src/cenas-v2/_shared/index.ts
+  - video-renderer/src/cenas-v2/_shared/sombra-context.ts
+  - video-renderer/src/cenas-v2/_shared/sombra-tokens.ts
+  - frontend/src/features/editor/fase2/cardPreviewContracts.ts
+  - frontend/src/features/editor/fase2/__tests__/cardContracts.test.ts
+- id: overlay-render-continuar-vs-zero
+  description: 'Reprocessamento de overlays: continuar (skip prontos/retry falhos)
+    vs do zero'
+  locked_at: '2026-05-24'
+  files:
+  - backend/app/services/pipeline_render.py
+  - backend/app/routers/cortes.py
+  - backend/tests/services/test_pipeline_render.py
+  - frontend/src/features/post-production/RenderStartModal.tsx
+  - frontend/src/hooks/useEditor.ts
+- id: publicacao-manual-upload-individual-estudio
+  description: Publicacao manual e upload individual no Estudio
+  locked_at: '2026-05-25'
+  files:
+  - backend/app/domain/youtube_urls.py
+  - backend/app/services/youtube.py
+  - backend/app/routers/export.py
+  - backend/tests/domain/test_youtube_urls.py
+  - backend/tests/services/test_youtube_manual_publish.py
+  - frontend/src/features/projeto-detalhe/ProjetoDetalhePage.tsx
+  - frontend/src/features/projeto-detalhe/CorteCard.tsx
+  - backend/projetos/projetos.db
+  - frontend/src/types/models.ts
+  - frontend/src/lib/api.ts
+  - frontend/src/hooks/useProjetoDetalhe.ts
+- id: f024-shell-unificado
+  description: Shell compartilhado das 3 telas — UnifiedSidebar (132px) + CommonTopBar
+    + PosTopbarExtra (marker tipo + stepper)
+  locked_at: 2026-05-30
+  files:
+  - frontend/src/features/editor/UnifiedSidebar.tsx
+  - frontend/src/features/editor/CommonTopBar.tsx
+  - frontend/src/features/editor/PosTopbarExtra.tsx
+  - frontend/src/components/layout/AppShell.tsx
+- id: f024-bruto-completo
+  description: 'Bruto end-to-end conforme hand-off: ContextStrip + Timeline enxuta
+    + RightTabsPanel + grid'
+  locked_at: 2026-05-30
+  files:
+  - frontend/src/features/editor/fase1/BrutoContextStrip.tsx
+  - frontend/src/features/editor/fase1/RightTabsPanel.tsx
+  - frontend/src/features/editor/fase1/TimelinePanel.tsx
+  - frontend/src/features/editor/fase1/PlayerPanel.tsx
+  - frontend/src/features/editor/fase1/EditorFase1.tsx
+  - frontend/src/features/editor/EditorPage.tsx
+- id: f024-pos-cenas
+  description: Aba Cenas refinada — header por frequencia + CenaItem expansivel +
+    Renderer config split Card/Avancado
+  locked_at: 2026-05-30
+  files:
+  - frontend/src/features/editor/fase2/CenasPanel.tsx
+  - frontend/src/features/editor/fase2/CenaItem.tsx
+  - frontend/src/features/editor/fase2/RendererConfigControls.tsx
+- id: f024-pos-layout-youtube
+  description: Layout YouTube — Tipo do projeto (Full|Compartilhada) + preset Padrao
+    (Projeto/Global separados no backend) + FundoThumb SVG
+  locked_at: 2026-05-30
+  files:
+  - frontend/src/features/editor/fase2/YoutubeLayoutPanel.tsx
+  - frontend/src/features/editor/fase2/youtubeLayoutPadrao.ts
+  - frontend/src/features/editor/fase2/__tests__/youtubeLayoutPadrao.test.ts
+  - frontend/src/features/editor/fase2/youtubeBackgrounds.tsx
+  - backend/app/services/app_settings.py
+  - backend/app/routers/settings.py
+  - backend/app/routers/projetos.py
+  - backend/tests/services/test_app_settings_youtube_layout_global.py
+- id: f024-pos-filtros
+  description: Aba Filtros — Card padrao do projeto + lista com role=button + bug
+    button-in-button corrigido
+  locked_at: 2026-05-30
+  files:
+  - frontend/src/features/post-production/FiltroTestePanel.tsx
+  - frontend/src/features/editor/fase2/EditorFase2.tsx
+- id: f024-pos-scene-timeline
+  description: Timeline do Pos — 2 trilhas alinhadas (Cenas + Layout YT) + zoom +
+    +Comp/+Full inline migrados do YoutubeLayoutPanel
+  locked_at: 2026-05-30
+  files:
+  - frontend/src/features/editor/fase2/SceneTimeline.tsx
+- id: f024-final-readonly
+  description: 'Revisao final read-only — Player + Checklist + Capa + SceneTimeline
+    com readOnly; unico editavel: Metadados'
+  locked_at: 2026-05-30
+  files:
+  - frontend/src/features/final-review/FinalReviewPage.tsx
+- id: f024-paletas-tokens
+  description: Tokens semanticos (--wb-ok/warn/err/info/violet/fire/leitura) + 5 paletas
+    de acento com seletor no ThemePicker (localStorage)
+  locked_at: 2026-05-30
+  files:
+  - frontend/src/index.css
+  - frontend/tailwind.config.ts
+  - frontend/src/hooks/usePalette.ts
+  - frontend/src/hooks/__tests__/usePalette.test.ts
+  - frontend/src/components/layout/ThemePicker.tsx
+  - frontend/src/main.tsx
+- id: editor-cortes-stage-medallion
+  description: Card do corte na sidebar do editor com medalha de estagio + tint de
+    status (aprovado/fire/leitura/rejeitado).
+  locked_at: 2026-05-26
+  files:
+  - backend/app/models.py
+  - backend/app/database.py
+  - backend/app/routers/cortes.py
+  - backend/app/routers/export.py
+  - backend/tests/services/test_cenas_validacao.py
+  - backend/tests/routers/__init__.py
+  - backend/tests/routers/test_export_status_cenas.py
+  - frontend/src/types/models.ts
+  - frontend/src/lib/api.ts
+  - frontend/src/hooks/useEditor.ts
+  - frontend/src/features/editor/fase2/CenasPanel.tsx
+  - frontend/src/features/editor/fase2/EditorFase2.tsx
+  - frontend/src/features/projeto-detalhe/StatusPills.tsx
+  - frontend/src/features/projeto-detalhe/__tests__/StatusPills.test.tsx
+  - AGENTS.md
+  - CLAUDE.md
+  - backend/app/main.py
+  - backend/app/services/export.py
+  - backend/app/services/pipeline_render.py
+  - backend/app/services/projeto.py
+  - bin/check-lock.py
+  - frontend/src/features/editor/EditorCutList.tsx
+  - frontend/src/features/editor/fase1/EditorFase1.tsx
+  - frontend/src/features/editor/fase1/PlayerPanel.tsx
+  - frontend/src/features/post-production/RenderStartModal.tsx
+  - frontend/src/features/post-production/ScenesPostProductionPage.tsx
+  - frontend/src/features/projeto-detalhe/CorteCard.tsx
+  - frontend/src/features/projeto-detalhe/ProjetoDetalhePage.tsx
+  - frontend/src/features/projeto-detalhe/PublicarMassaModal.tsx
+  - frontend/src/features/projetos/ProjetoCard.tsx
+  - frontend/src/hooks/useProjetoDetalhe.ts
+  - frontend/src/index.css
+  - frontend/src/features/editor/CorteStatusCard.tsx
+- id: adicoes-exigem-autorizacao
+  description: Criacao/adicao de novos arquivos exige autorizacao explicita do Paulo.
+  locked_at: 2026-05-30
+  operations:
+  - add
+  files:
+  - '*'
+- id: pos-ctrl-s-save-active-tab
+  description: Ctrl+S na tela Pos salva a aba ativa (Cenas ou Layout) via saveIfDirty
+    exposto por ref; aba Filtros = no-op.
+  locked_at: 2026-05-31
+  files:
+  - frontend/src/features/editor/fase2/CenasPanel.tsx
+  - frontend/src/features/editor/fase2/YoutubeLayoutPanel.tsx
+  - frontend/src/features/editor/fase2/EditorFase2.tsx
+- id: grade-filter-defaults
+  description: 'B-010: Avaliar melhorias de performance na estrutura do graded'
+  locked_at: 2026-05-31
+  files:
+  - backend/app/domain/cinema_filters.py
+  - backend/app/services/pipeline_render.py
+  - backend/app/services/remotion_render.py
+  - backend/app/routers/cortes.py
+- id: i-035-zona-card-compartilhada
+  description: Geometria dinamica da zona do card no layout compartilhado (2 telas)
+    e testes de paridade preview/render
+  locked_at: 2026-06-09
+  files:
+  - backend/app/domain/youtube_layout.py
+  - backend/tests/domain/test_youtube_card_zone.py
+  - frontend/src/features/editor/fase2/youtubeLayout.ts
+  - frontend/src/features/editor/fase2/__tests__/sharedCardZone.test.ts
+- id: f061-dividir-corte
+  description: 'F-061: dividir corte em 2 na edicao bruto (endpoint, api/hook, botao
+    na timeline e testes)'
+  locked_at: 2026-06-15
+  files:
+  - backend/app/routers/cortes.py
+  - backend/tests/domain/test_segment_calculator.py
+  - backend/tests/services/test_corte_dividir.py
+  - frontend/src/lib/api.ts
+  - frontend/src/hooks/useEditor.ts
+  - frontend/src/features/editor/fase1/TimelinePanel.tsx
+  - frontend/src/features/editor/fase1/EditorFase1.tsx
+  - frontend/src/features/editor/EditorPage.tsx
+- id: d068-metadados-sidebar
+  description: Icones T (titulo/descricao) e Imagem (thumbnail) do card de corte na
+    sidebar (CorteStatusCard/UnifiedSidebar) abrem o MetadataModal de qualquer pagina;
+    meta strip vira botoes irmaos do botao de navegacao.
+  locked_at: '2026-06-20'
+  operations:
+  - add
+  - modify
+  - delete
+  - rename
+  files:
+  - frontend/src/features/editor/CorteStatusCard.tsx
+  - frontend/src/features/editor/UnifiedSidebar.tsx
+  - frontend/src/features/editor/__tests__/CorteStatusCard.test.tsx
+- id: d069-leitura-edicao
+  description: 'Feature Leitura: contrato do prefixo de titulo ''Leitura - {autor}
+    - PT.{parte} |'' e helpers (autor/parte, clique do toggle) - front + back'
+  locked_at: '2026-06-20'
+  operations:
+  - add
+  - modify
+  - delete
+  - rename
+  files:
+  - frontend/src/lib/readingMetadata.ts
+  - frontend/src/lib/__tests__/readingMetadata.test.ts
+  - backend/app/domain/reading_metadata.py
+  - backend/tests/domain/test_reading_metadata.py

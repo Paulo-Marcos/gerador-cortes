@@ -1,0 +1,142 @@
+# MCP local/pessoal (ai-memory roda em 127.0.0.1; nao commitar)
+.mcp.json
+
+# Ambientes e Dependências
+node_modules/
+venv/
+env/
+.env
+frontend/.env.production
+.venv/
+
+# Canal-specific editorial content (prompts, personas) — each channel provides their own
+backend/app/canal_config.py
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cobertura de testes Python (binário com paths absolutos locais)
+.coverage
+.coverage.*
+
+# Builds e Compilados (Frontend)
+dist/
+.angular/
+coverage/
+*.log
+
+# Banco de Dados SQLite (Opcional, se não quiser subir os dados locais pro GitHub)
+# Remova caso queira que o DB vazio inicial suba para o repositório
+backend/*.db
+backend/*.sqlite3
+
+# -----------------------------------------------------
+#   ARQUIVOS PESADOS & VÍDEOS (Obrigatório Ignorar)
+# -----------------------------------------------------
+
+# Ignorar o conteúdo completo da pasta de projetos (onde ficam os cortes mp4)
+# O asterisco e barra ignora todas as pastas/arquivos criados lá dentro, 
+# mas mantém pelo menos a estrutura se houver um .gitkeep
+backend/app/projetos/*
+backend/projetos/*
+
+# Caso algum editor gere miniaturas fora, ignore-os globalmente
+*.mp4
+*.webm
+*.mov
+*.mkv
+*.avi
+*.jpg
+*.jpeg
+*.webp
+*.json
+
+
+
+# Mas permita manter a pasta e o .gitkeep se houver
+!backend/projetos/.gitkeep
+!backend/app/projetos/.gitkeep
+
+# Permite assets de sistema como a intro
+!backend/assets/
+# E permita os pacotes JSON
+!package.json
+!package-lock.json
+!angular.json
+!tsconfig.json
+!tslint.json
+!.prettierrc.json
+!.eslintrc.json
+!backend/**/*.json
+!frontend/**/*.json
+!video-renderer/theme.config.json
+!.ai/*.json
+.ai/reports/
+# Config compartilhada do Claude Code (settings.local.json continua ignorado)
+!.claude/settings.json
+backend/projetos/**/*.json
+*token.json
+*client_secrets.json
+
+# Arquivos de IDE vaza conteúdo sensível/local config do ambiente do usuário
+.vscode/
+.idea/
+.DS_Store
+
+# Scripts de scratch / debug — uso pessoal, não vão para o repo
+backend/scratch/
+backend/tmp/
+/scratch/
+/.tmp/
+
+# Backups manuais
+*-PARTIAL-FIX
+*.bak
+*.backup
+*~
+
+# Worktrees gerenciados pelo agente
+.claude/worktrees/
+.antigravity/worktrees/
+
+# Dados locais do canal — NÃO versionado (config, editorial, mascote, db)
+# O template versionado fica em examples/instance.example/
+instance/
+
+# Mascote do canal — cache/local (D-184). A fonte é instance/channels/<canal>/;
+# a materialização (D-171) repõe o cache public/mascote. NÃO versionado.
+# Os nomes legados `sapo` (E-011) seguem ignorados enquanto coexistem no cache.
+frontend/public/mascote/
+video-renderer/public/mascote/
+backend/app/data/mascote_poses.json
+frontend/public/sapo/
+video-renderer/public/sapo/
+backend/app/data/sapo_poses.json
+
+# Bancos de imagem / mídia local — a ferramenta é genérica, esse conteúdo
+# fica só na instância local da aplicação e não vai para o repositório.
+/assets/
+backend/assets/images-examples/
+backend/assets/retratos/
+backend/assets/youtube_bg/
+backend/assets/youtube_palco_cache/
+
+# Deploy — segredos de deploy reais (use deploy.env.example como modelo)
+deploy.env
+
+# Diagnóstico interno de migração — preservado localmente, fora do repo público
+# (nomeia o canal/mascote real; D-210). Diagnósticos futuros podem ser versionados.
+docs/diagnostico/migracao-generica-2026-06-28.md
+
+# Benchmarks e artefatos de debug pessoal
+backend/_bench_grade/
+.ai/debug-i036/
+backend/check_db.py
+
+# Estado local do Guia Fluxo — NÃO versionado (D-275): DEMANDAS.md, reports/,
+# historico/ etc. contêm contexto do canal do autor e não pertencem ao repo
+# público. EXCEÇÃO: .guia/locks/ permanece versionado porque o CI
+# (.github/workflows/lock-check.yml), o hook .githooks/commit-msg e
+# bin/check-lock.py dependem do registry.
+.guia/*
+!.guia/locks/

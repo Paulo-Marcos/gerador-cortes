@@ -1,0 +1,43 @@
+name: Release
+
+# Dispara quando uma tag semver (vX.Y.Z) e empurrada, publicando um
+# GitHub Release com as notas do bloco correspondente em CHANGELOG.md
+# (formato Keep a Changelog).
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write # necessario para criar o Release
+
+jobs:
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract changelog notes
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\\\[" ver "\\\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found && /^\[.*\]:/ { exit }
+            found { print }
+          ' CHANGELOG.md > "$NOTES_FILE"
+          if [ ! -s "$NOTES_FILE" ]; then
+            echo "::error::Nenhum bloco '## [$VERSION]' encontrado em CHANGELOG.md"
+            exit 1
+          fi
+          echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: ${{ steps.changelog.outputs.notes_file }}

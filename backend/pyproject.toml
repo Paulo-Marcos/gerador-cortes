@@ -1,0 +1,36 @@
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["app", "tests"]
+extend-exclude = ["projetos", "assets"]
+
+[tool.ruff.lint]
+# pycodestyle (E/W), pyflakes (F), isort (I), pyupgrade (UP), flake8-bugbear (B)
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+  # Comprimento de linha fica a cargo do formatter (ruff format).
+  "E501",
+  # StatusProjeto/StatusCorte/StatusShort etc. herdam de (str, Enum) de proposito:
+  # trocar por StrEnum muda o str() dos membros e quebraria serializacao/contrato de DB.
+  "UP042",
+]
+
+[tool.ruff.lint.flake8-bugbear]
+# Padrao FastAPI: `def rota(x = Depends(...))` / `Query(...)` etc. nao e mutable-default (B008).
+extend-immutable-calls = [
+  "fastapi.Depends",
+  "fastapi.Query",
+  "fastapi.Path",
+  "fastapi.Body",
+  "fastapi.Header",
+  "fastapi.Cookie",
+  "fastapi.File",
+  "fastapi.Form",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Testes ajustam sys.path antes de importar (E402) e usam pytest.raises(Exception) (B017).
+"tests/**" = ["B017", "E402"]
+
+[tool.ruff.format]
+quote-style = "double"

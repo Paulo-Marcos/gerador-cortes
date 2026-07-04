@@ -1,0 +1,5 @@
+# Forca line endings LF nos arquivos do sistema de travas.
+# O hook git e executado via /bin/sh — CRLF quebra o shebang em Windows.
+
+.githooks/commit-msg  text eol=lf
+bin/check-lock.py     text eol=lf

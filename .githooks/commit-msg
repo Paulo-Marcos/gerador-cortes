@@ -1,0 +1,22 @@
+#!/bin/sh
+# Git hook commit-msg - valida travas em .guia/locks/registry.yaml.
+# Instale uma vez por clone:
+#     git config core.hooksPath .githooks
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+PY=""
+for candidate in python python3; do
+    if command -v "$candidate" >/dev/null 2>&1 && "$candidate" --version >/dev/null 2>&1; then
+        PY="$candidate"
+        break
+    fi
+done
+
+if [ -z "$PY" ]; then
+    echo "Erro: Python nao encontrado no PATH. Hook abortado." >&2
+    echo "(No Windows, 'python3' pode resolver para o stub da Microsoft Store; use 'python'.)" >&2
+    exit 2
+fi
+
+exec "$PY" "$ROOT/bin/check-lock.py" hook "$1"

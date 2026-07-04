@@ -1,0 +1,7 @@
+{
+  "skillOverrides": {
+    "angular": "off",
+    "angular-best-practices": "off",
+    "angular-ui-patterns": "off"
+  }
+}

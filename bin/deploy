@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# bin/deploy — standardized, idempotent deploy for gerador-cortes (CortadorLive).
+# The deploy steps live here so they are executable documentation: an agent (or a
+# new contributor) can run `bin/deploy` without memorizing a single command.
+#
+# It builds the backend image, pushes it to a registry, and brings the stack up on
+# the deploy host via Docker Compose (the same `docker-compose.yml` in this repo).
+#
+# Config comes from ./deploy.env (gitignored). Copy deploy.env.example to deploy.env
+# and fill it in. NEVER commit the real deploy.env.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="${ROOT}/deploy.env"
+
+if [[ ! -f "${ENV_FILE}" ]]; then
+  echo "✗ missing ${ENV_FILE} — copy deploy.env.example to deploy.env and fill it in" >&2
+  exit 1
+fi
+# shellcheck disable=SC1090
+source "${ENV_FILE}"   # provides: REGISTRY, IMAGE, VERSION, DEPLOY_HOST, DEPLOY_USER, COMPOSE_DIR
+
+: "${REGISTRY:?set REGISTRY in deploy.env}" \
+  "${IMAGE:?set IMAGE in deploy.env}" \
+  "${VERSION:?set VERSION in deploy.env}" \
+  "${DEPLOY_HOST:?set DEPLOY_HOST in deploy.env}" \
+  "${DEPLOY_USER:?set DEPLOY_USER in deploy.env}" \
+  "${COMPOSE_DIR:?set COMPOSE_DIR in deploy.env}"
+
+TAG="${REGISTRY}/${IMAGE}:${VERSION}"
+
+echo "→ [1/3] build ${TAG} (backend/Dockerfile)"
+docker build -t "${TAG}" "${ROOT}/backend"
+
+echo "→ [2/3] push ${TAG}"
+docker push "${TAG}"
+
+echo "→ [3/3] deploy on ${DEPLOY_HOST}"
+ssh "${DEPLOY_USER}@${DEPLOY_HOST}" \
+  "cd '${COMPOSE_DIR}' && docker compose pull && docker compose up -d"
+
+echo "✓ deployed ${TAG} to ${DEPLOY_HOST}"

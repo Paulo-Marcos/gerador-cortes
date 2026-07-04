@@ -1,0 +1,18 @@
+# Identidade editorial do MASCOTE do canal (E-010).
+#
+# Copie examples/instance.example/ para instance/channels/<seu-canal>/ e ajuste o
+# `nome` para o personagem-mascote do seu canal. Este arquivo vive em `instance/`
+# (fora do git) e é lido em runtime pelos prompts de thumbnail/metadados.
+#
+# Se este arquivo NÃO existir, o backend usa um mascote NEUTRO ("mascote") — a
+# saída fica genérica, nunca com o personagem de outro canal.
+
+# Versão do schema. NÃO edite à mão: serve para migrações futuras da config.
+config_version: 1
+
+# Nome pelo qual o mascote é citado nos prompts (usado verbatim no texto).
+# Ex.: "Sapo". Deixe "mascote" para uma identidade genérica.
+#
+# Atalho: definir `CANAL_MASCOTE_NOME` no `.env` do backend semeia este `nome` no
+# primeiro boot (só se ainda estiver vazio — nunca sobrescreve). Ver `.env.example`.
+nome: "mascote"

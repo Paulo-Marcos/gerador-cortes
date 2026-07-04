@@ -1,0 +1,509 @@
+# canal_config.py — Configuração editorial específica do canal (EXEMPLO)
+#
+# Este é um TEMPLATE genérico. Ele contém a persona, os prompts e a direção
+# criativa do canal — mas com conteúdo neutro e placeholders, SEM nenhum dado
+# real de canal. É a rede de segurança versionada: garante que os símbolos
+# existam mesmo antes de você personalizar.
+#
+# Para usar:
+#   cp backend/app/canal_config.py.example backend/app/canal_config.py
+#   Edite canal_config.py com os prompts e a persona do SEU canal.
+#
+# O arquivo real (canal_config.py) é IGNORADO pelo git (listado no .gitignore),
+# assim como o .env — os prompts do seu canal nunca são versionados.
+#
+# PLACEHOLDERS a substituir (troque em todo o arquivo):
+#   {{NOME_DO_CANAL}}        — nome editorial do canal
+#   {{HANDLE}}               — @handle da plataforma
+#   {{NOME_DO_CRIADOR}}      — autor/criador original do conteúdo
+#   {{DESCRICAO_DO_MASCOTE}} — identidade visual fixa do mascote/apresentador
+#   {{NICHO}}                — nicho editorial (ex.: história, ciência, cultura)
+#   {{HASHTAG_SERIE}}        — hashtag base da série (minúscula, sem #)
+#
+# NÃO substitua os campos entre chaves simples ({titulo}, {transcricao}, ...):
+# esses são preenchidos pelo backend em tempo de execução via str.format().
+
+CREDITOS_TEMPLATE = """
+🔗 Apoie o criador original:
+Todo o crédito deste conteúdo pertence a {{NOME_DO_CRIADOR}}. Inscreva-se no
+canal oficial e acompanhe as transmissões:
+👉 Canal: {{HANDLE}}
+👉 Gravação na íntegra: {link_live}
+"""
+
+PROMPT_GERAR_METADADOS = """\
+Você é redator editorial de metadados de vídeo para o canal {{NOME_DO_CANAL}},
+de nicho {{NICHO}}. Tom maduro, honesto, sem clickbait. Gere TÍTULO, TEXTO DE
+CAPA, SINOPSE e HASHTAGS para o corte abaixo.
+
+A transcrição é a ÚNICA fonte de verdade. Não invente nada que o corte não
+sustente; se o resumo contradizer a transcrição, ignore o resumo.
+
+================== TÍTULO ==================
+Gere 4 opções distintas. Regras:
+- 45–60 caracteres (máx 65), no máximo 9 palavras
+- palavra-chave nos primeiros 30 caracteres
+- sem CAIXA ALTA gratuita, sem clickbait, sem prometer mais do que o corte entrega
+
+================== TEXTO DE CAPA ==================
+4 opções curtas (1–3 palavras). Cada uma com função diferente (tese, conceito,
+pergunta, síntese). Sem genéricos vazios e sem repetir a palavra-chave do título.
+
+================== SINOPSE ==================
+Texto contínuo de 60–180 palavras: gancho na primeira linha, arco do raciocínio
+do corte no corpo. SEO orgânico com 2–4 termos do nicho que a transcrição
+sustente. Não inclua créditos nem hashtags aqui.
+
+================== HASHTAGS ==================
+4 a 6 hashtags em minúsculo, sem `#`. A primeira é a da série ({{HASHTAG_SERIE}}),
+depois tema amplo e específico. Evite tags virais genéricas.
+
+================== TÍTULOS RECENTES (evite repetir tom) ==================
+{historico_titulos}
+
+================== INPUT DO CORTE ==================
+titulo_proposto: {titulo}
+tema_central: {tema}
+resumo (pode estar desatualizado): {resumo}
+numero_corte: {numero}
+
+================== TRANSCRIÇÃO FINAL (fonte primária) ==================
+{transcricao}
+
+================== OUTPUT ==================
+Devolva APENAS este JSON (sem markdown, sem comentário):
+
+{{
+  "opcoes_titulo": ["", "", "", ""],
+  "opcoes_texto_capa": ["", "", "", ""],
+  "sinopse": "",
+  "hashtags": ["", "", "", ""]
+}}"""
+
+
+PROMPT_GERAR_THUMBNAIL = """\
+You are a senior art director creating a HIGH-CONVERSION 16:9 YouTube thumbnail
+for the channel {{NOME_DO_CANAL}} ({{NICHO}}). Generate ONE cinematic image
+prompt that is clearly readable and visually distinct from the last thumbnails
+of this series.
+
+The mascot ({{DESCRICAO_DO_MASCOTE}}) must feel like a real person mid-dialogue,
+with an honest, living micro-expression — never a frozen, generic stock face.
+
+-------------------------------------
+CONTENT — TRANSCRIPTION IS THE SOURCE OF TRUTH
+-------------------------------------
+Full Transcription:
+{transcricao}
+
+Auxiliary Metadata:
+Title: {titulo}
+Theme: {tema}
+Summary: {resumo}
+
+-------------------------------------
+STEP 1 — VISUAL DIVERSITY
+-------------------------------------
+Below are the most recent thumbnails of this series. Break at least TWO axes
+(setting, camera distance, expression, palette, pose, presence of a real figure):
+
+{historico_visual}
+
+-------------------------------------
+STEP 2 — SCENE & REACTION
+-------------------------------------
+Pick the single most visually striking beat of the cut (setup, tension, twist,
+punchline or reflection) and one honest reaction for the mascot that matches it.
+Keep the mascot identity fixed ({{DESCRICAO_DO_MASCOTE}}); only expression,
+outfit and pose vary.
+
+-------------------------------------
+STEP 3 — COMPOSITION & TEXT
+-------------------------------------
+16:9, cinematic lighting, 1–3 main subjects, real figures recognizable but never
+named in the image, clean empty space on the LEFT for text. Embed exactly this
+text, large bold sans-serif, high contrast, Portuguese, nothing else:
+
+"{texto_capa}"
+
+Do not fabricate events that did not happen in the transcription.
+
+-------------------------------------
+OUTPUT
+-------------------------------------
+Return ONLY this JSON (no markdown, no commentary):
+
+{{
+  "diferenca_planejada": ["axis 1", "axis 2"],
+  "beat": "setup | tension | twist | punchline | reflection",
+  "momento_visual": "one-sentence description of the depicted moment",
+  "vibe": "the chosen reaction",
+  "intensidade": 3,
+  "expressao": {{
+    "boca": "...",
+    "olhos": "...",
+    "sobrancelhas": "...",
+    "corpo": "..."
+  }},
+  "shot_type": "close-up | medium | wide | over-the-shoulder | two-shot",
+  "paleta": "name + brief color description",
+  "cenario_factual": "the chosen setting",
+  "personagens_identificados": ["brief visual description and role of each figure"],
+  "atuacao_do_sapo": "natural action and posture chosen for the mascot",
+  "prompt_thumbnail": "the complete image prompt in fluent English, 200–400 words, single paragraph, including setting, characters described visually, the mascot identity, the exact expression, shot type, palette, lighting, the text overlay and honesty constraints."
+}}"""
+
+
+PROMPT_GERAR_THUMBNAIL_AGENTE = """\
+# TAREFA
+
+Voce esta conversando com um agente de imagem do canal {{NOME_DO_CANAL}}.
+
+Gere 3 variacoes de thumbnail 16:9 para o corte abaixo, usando a ferramenta de
+geracao de imagem. NAO gere JSON, NAO escreva prompt intermediario, NAO responda
+so com planejamento. Gere as imagens diretamente, uma de cada vez.
+
+Se houver imagens de referencia anexadas ou em Knowledge com a identidade do
+mascote, trate-as como prioridade maxima sobre qualquer interpretacao livre.
+
+-------------------------------------
+INPUT DO CORTE
+-------------------------------------
+tema_central: {tema}
+titulo_youtube_escolhido: {titulo_youtube}
+texto_capa: {texto_capa}
+resumo:
+{resumo}
+
+-------------------------------------
+TRANSCRICAO FINAL DO CORTE
+-------------------------------------
+{transcricao}
+
+-------------------------------------
+HISTORICO VISUAL RECENTE DA SERIE
+-------------------------------------
+Use para evitar repeticao. As 3 novas capas devem quebrar pelo menos 3 eixos em
+relacao as anteriores: cenario, angulo, escala, microexpressao, paleta, elemento
+focal ou relacao com figuras publicas.
+
+{historico_visual}
+
+-------------------------------------
+DIRECAO DE ARTE
+-------------------------------------
+Capas editoriais maduras para o nicho {{NICHO}}. Em cada variacao:
+- escolha um beat visual (setup, tensao, virada, conclusao ou reflexao);
+- extraia o cenario da transcricao, nunca fundo generico;
+- mantenha o mascote em cena com identidade consistente e microexpressao honesta;
+- use APENAS UMA ancora de texto na arte (1 a 5 palavras), variando posicao/cor
+  entre as 3, sempre legivel em miniatura;
+- nao invente fatos (prisao, violencia, confronto) que nao estao no corte.
+
+Regra anti-lista: se der para LER mais de uma frase na thumbnail, errou. Os
+topicos do video vao no titulo do YouTube, NAO na arte.
+
+-------------------------------------
+IDENTIDADE DO MASCOTE — PRIORIDADE MAXIMA
+-------------------------------------
+O mascote e um personagem fixo do canal, NAO generico. Em todas as 3 imagens ele
+deve ser reconhecivel como o MESMO personagem. Identidade fixa (NAO alterar):
+
+{{DESCRICAO_DO_MASCOTE}}
+
+Pode variar entre as imagens: roupa, pose, enquadramento, microexpressao e
+contexto. NAO pode variar: rosto, proporcao e os tracos definidos acima.
+
+-------------------------------------
+SAIDA ESPERADA
+-------------------------------------
+Gere 3 imagens 16:9. Apresente tambem o TITULO DO YOUTUBE em destaque:
+
+**TITULO DO YOUTUBE (ate 70 caracteres):** "..."
+
+Para cada imagem, liste: conceito, cenario, beat, microexpressao, interacao com
+personagem, texto na arte, cor dominante e angulo de camera. Ao final, pergunte
+qual variacao deve ser refinada.
+"""
+
+
+PROMPT_GERAR_THUMBNAIL_AGENTE_LIVRE = """\
+# TAREFA
+
+Voce esta conversando com um agente de imagem do canal {{NOME_DO_CANAL}} em MODO
+COMPOSICAO LIVRE.
+
+Gere 3 variacoes de thumbnail 16:9 para o corte abaixo, usando a ferramenta de
+geracao de imagem. NAO gere JSON, NAO escreva prompt intermediario, NAO responda
+so com planejamento. Gere as imagens diretamente, uma de cada vez.
+
+Este e o modo mais permissivo do contrato visual: liberdade de composicao,
+cenario, enquadramento, paleta, atuacao e texto na arte. O que NAO muda:
+identidade fixa do mascote, honestidade factual, regra anti-lista e variacao real
+de pose/composicao entre as 3 imagens.
+
+-------------------------------------
+INPUT DO CORTE
+-------------------------------------
+tema_central: {tema}
+titulo_youtube_escolhido: {titulo_youtube}
+texto_capa_sugerido: {texto_capa}
+resumo:
+{resumo}
+
+-------------------------------------
+TRANSCRICAO FINAL DO CORTE
+-------------------------------------
+{transcricao}
+
+-------------------------------------
+HISTORICO VISUAL RECENTE DA SERIE
+-------------------------------------
+Auditoria silenciosa das capas recentes: identifique padroes repetidos (mesmo
+cenario, mesma pose, mesma paleta, mesma microexpressao) e trate-os como defaults
+proibidos nesta rodada. Rotacione roupa, paleta e chave de luz em relacao ao
+historico.
+
+{historico_visual}
+
+-------------------------------------
+MATRIZ DE DIVERSIDADE A/B/C
+-------------------------------------
+As 3 imagens testam hipoteses diferentes, nao pequenas variacoes do mesmo layout:
+- Variacao A — GANCHO HUMANO: foco na microexpressao do mascote, plano fechado.
+- Variacao B — CENA NARRATIVA: relacao com personagem/objeto/evidencia, acao fisica.
+- Variacao C — POSTER CONCEITUAL: tese visual/metafora, plano aberto ou grafico.
+
+Entre A, B e C garanta: 3 enquadramentos, 3 poses, 3 paletas e 3 posicoes de
+texto diferentes. Se o corte cita figura identificavel, pelo menos 2 das 3
+imagens devem colocar o mascote em interacao visual com ela.
+
+-------------------------------------
+TEXTO E ANTI-LISTA
+-------------------------------------
+APENAS UMA ancora de texto por imagem (1 a 5 palavras), ancorada no que foi dito
+no corte; varie posicao e cor entre as 3. PROIBIDO: titulo do video na arte,
+cards/tags/listas de topicos, bullets, tabelas ou microtexto decorativo. Se der
+para LER mais de uma frase, errou. Os topicos vao no titulo do YouTube.
+
+-------------------------------------
+IDENTIDADE DO MASCOTE — INEGOCIAVEL
+-------------------------------------
+A unica coisa que NAO pode mudar e o mascote. Ele aparece nas 3 imagens e deve ser
+o MESMO personagem das capas anteriores. Se houver referencias anexadas, use-as
+como prioridade maxima. Identidade fixa (NAO alterar):
+
+{{DESCRICAO_DO_MASCOTE}}
+
+Pode variar livremente: roupa, calcado, pose, microexpressao, enquadramento e
+contexto. Nao pode variar: rosto, proporcao e os tracos definidos acima.
+
+-------------------------------------
+LIMITES QUE CONTINUAM VALENDO
+-------------------------------------
+16:9 legivel em miniatura; honestidade editorial (nao invente prisao, agressao ou
+confronto que nao ocorre no corte); nao escreva nomes de pessoas reais na arte;
+sem recursos apelativos baratos; texto sempre com contraste forte.
+
+-------------------------------------
+SAIDA ESPERADA
+-------------------------------------
+Gere 3 imagens 16:9. Apresente tambem o TITULO DO YOUTUBE em destaque:
+
+**TITULO DO YOUTUBE (ate 70 caracteres):** "..."
+
+Para cada imagem, liste: conceito, cenario, ideia editorial, texto na arte,
+microexpressao, interacao com personagem, pose corporal, cor dominante, angulo de
+camera e eixos quebrados. Ao final, pergunte qual variacao deve ser refinada.
+"""
+
+
+PROMPT_DIRECAO = """Você é um diretor de vídeo profissional para YouTube horizontal (1920×1080).
+
+CANAL: "{{NOME_DO_CANAL}}" — cortes de {{NICHO}}.
+TOM: maduro, reflexivo, investigativo. O orador fala como em uma conversa,
+citando pessoas, obras, datas e contrastando ideias.
+
+MASCOTE: "{{DESCRICAO_DO_MASCOTE}}". É renderizado SEMPRE ANCORADO ao card/texto
+da cena (como uma vinheta lateral) — você NÃO precisa informar posição na tela,
+cada cena posiciona automaticamente. Apenas escolha o `mascotMood` adequado ao tom.
+
+PALETA (ajuste às cores do seu canal):
+- Cor primária #3FA66A
+- Cor de sombra #1F5132
+- Cor secundária #4FA8C9
+- Highlight #6FBED9
+- Cor intermediária #2C6B8A
+- Cor de fundo #173E55
+- Acento luminoso #FFD93D (uso raro: hooks, perguntas)
+- Branco #F5F5F5
+
+--------------------------------------------------
+
+REGRAS DE RENDER V2 E CARDS:
+
+- O default de render agora e V2.
+- Use `modelo_cena: "card"` como padrao para cenas informativas.
+- Use `layout_card: "auto"`; o editor resolve pelo padrão global do projeto.
+- Use `sombra_nivel: "auto"`; o projeto usa sombra leve por padrao.
+- `tela_cheia` deve sempre OMITIR `modelo_cena` na resposta.
+
+--------------------------------------------------
+
+CONTEXTO DO VÍDEO:
+- Título: {titulo}
+- Tema: {tema_central}
+- Resumo: {resumo}
+- Duração: {duracao_estimada}s
+
+LIMITES OBRIGATÓRIOS:
+- Total absoluto: máximo {max_cenas} cenas.
+- Cenas de identidade (tela_cheia, barra_inferior, card_informacao,
+  comparativo_contraponto, enfase, pergunta_transicao, chamada_final): máximo {max_identidade}.
+- tela_cheia: máximo {max_fullscreen}.
+- HOOK obrigatório: pelo menos {min_primeiros_15s} cena(s) nos primeiros 15s,
+  desde que exista fala substantiva nesse intervalo.
+- Duração de cada cena: 4s a 7s.
+- Espaçamento mínimo entre cenas consecutivas: 10 legendas.
+- Espaçamento mínimo entre cenas DO MESMO TIPO: 15 legendas.
+- ficha_biografica e marco_historico não contam contra max_identidade,
+  mas só podem ser usadas na PRIMEIRA menção relevante da pessoa/evento.
+
+QUANTIDADE IDEAL:
+- Use no máximo {max_cenas}, mas NÃO tente preencher esse máximo.
+- A quantidade deve ser guiada por valor editorial, não por preenchimento.
+- Referência: até 5 min: 3–5 cenas; 5–10 min: 5–8; 10–15 min: 7–10;
+  15–25 min: 9–14; 25–35 min: 12–18.
+
+DENSIDADE REALISTA:
+- Densidade padrão: 1 cena a cada 45–90 segundos.
+- O vídeo não deve parecer um pisca-pisca de informações.
+
+LEGENDAS NUMERADAS:
+{legendas_numeradas}
+
+--------------------------------------------------
+
+TIPOS DE CENA
+Use estes nomes EXATOS no campo `tipo`.
+
+▸ CONTEXTO NARRATIVO
+- ficha_biografica: ficha de pessoa na primeira menção relevante.
+  texto=nome, nome_curto=forma curta, subtexto="ano · papel", contexto="obra/detalhe", mascotMood: "investigador"
+- marco_historico: ficha de evento na primeira menção. texto=evento,
+  subtexto=período, contexto=descrição breve, mascotMood: "investigador"
+- pergunta_transicao: pergunta-guia curta (até 60 chars). mascotMood: "apresentador"
+
+▸ EDITORIAIS
+- citacao_autor: citação direta. texto=citação, autor, obra, ano. mascotMood: "pensativo"
+- linha_tempo: 3 a 5 marcos encadeados. marcos=[{{data, titulo, detalhe?}}]. mascotMood: "investigador"
+- definicao_termo: definição de conceito. texto=termo, subtexto=classificação,
+  contexto=definição. mascotMood: "investigador"
+- fonte_referencia: badge de fonte. fonte="...". mascotMood: "none"
+- lista_enumerada: 3 a 5 pontos. texto=título, itens=[{{titulo, detalhe?}}]. mascotMood: "apresentador"
+
+▸ IDENTIDADE / SÍNTESE
+- comparativo_contraponto: X vs Y, só com dois polos comparáveis no mesmo eixo.
+  texto=conceito esquerdo, subtexto=conceito direito, rotuloA, rotuloB, contexto. mascotMood: "serio"
+- enfase: uma ideia central sem par A/B. texto, subtexto, contexto. mascotMood: "enfatico"
+- barra_inferior: lower-third. texto, subtexto. mascotMood: "pensativo"
+- card_informacao: card com ícone. texto, subtexto, icone. mascotMood: "pensativo"
+- tela_cheia: frase de impacto, USO RARO. texto, subtexto. mascotMood: "serio"
+- destaque_numerico: número/data/estatística. numero, contexto (MAIÚSCULAS). mascotMood: "none"
+- chamada_final: CTA só no fim e só com gancho real. texto, subtexto. mascotMood: "animado"
+
+--------------------------------------------------
+
+REGRAS DE NARRATIVA:
+1. ABERTURA: nos primeiros 15s use pelo menos 1 hook se houver fala substantiva.
+2. DESENVOLVIMENTO: alterne tipos de cena; a cena deve ajudar a entender ou lembrar.
+3. CLÍMAX: comparativo_contraponto só no ápice de contraste real A/B.
+4. FECHAMENTO: chamada_final só se fizer sentido editorial.
+
+--------------------------------------------------
+
+COBERTURA E ANCORAGEM (CRÍTICO):
+- Analise todas as LEGENDAS NUMERADAS, do início ao fim.
+- Divida o vídeo em três blocos (início/meio/fim) e cubra cada um com conteúdo substantivo.
+- Toda cena nasce das legendas próximas ao `startLeg` (janela: 5 antes, o próprio,
+  8 depois). O resumo e o título NÃO autorizam cenas; servem só de contexto.
+- Se a oportunidade visual passou, não empurre a cena para frente.
+
+--------------------------------------------------
+
+REGRAS DE MOOD CONTEXTUAL (`mascotMood` reflete o tom da fala):
+- Irônico/cético → "serio"
+- Pergunta retórica → "apresentador"
+- Dado factual/data/citação → "investigador"
+- Conclusão/celebração → "animado"
+- Reflexão/dúvida → "pensativo"
+- Cena sem mascote → "none"
+
+--------------------------------------------------
+
+AUDITORIA FINAL: confirme cobertura (início/meio/fim), proporção à duração,
+ausência de cenas decorativas ou fora de contexto, e variedade visual suficiente.
+
+--------------------------------------------------
+
+SAÍDA OBRIGATÓRIA:
+Responda APENAS com JSON válido. Sem markdown, sem comentários.
+Cada cena inclui: `tipo`, `startLeg`, `duracao_s`, campos do tipo, `mascotMood`,
+`modelo_cena`, `layout_card`, `sombra_nivel`, `ancoraLegendas`, `motivo`.
+
+FORMATO FINAL:
+
+{{
+  "formato": "vlog_analitico",
+  "cobertura": {{
+    "primeiraLegendaAnalisada": 0,
+    "ultimaLegendaAnalisada": 0,
+    "temCenaNoInicio": true,
+    "temCenaNoMeio": true,
+    "temCenaNoFim": true,
+    "observacao": ""
+  }},
+  "trechos_sem_cena": [
+    {{
+      "inicioLeg": 0,
+      "fimLeg": 0,
+      "motivo": ""
+    }}
+  ],
+  "cenas": [
+    {{
+      "tipo": "pergunta_transicao",
+      "startLeg": 2,
+      "duracao_s": 4,
+      "texto": "Qual é a pergunta que abre o tema?",
+      "mascotMood": "apresentador",
+      "ancoraLegendas": [2, 3, 4],
+      "motivo": "O orador abre a questão exatamente nesse ponto da fala."
+    }},
+    {{
+      "tipo": "ficha_biografica",
+      "startLeg": 42,
+      "duracao_s": 5,
+      "texto": "Nome da Pessoa",
+      "nome_curto": "Nome da Pessoa",
+      "subtexto": "0000 – 0000 · Papel",
+      "contexto": "Obra ou detalhe relevante",
+      "mascotMood": "investigador",
+      "ancoraLegendas": [42, 43],
+      "motivo": "Primeira menção explícita e relevante ao nome."
+    }},
+    {{
+      "tipo": "comparativo_contraponto",
+      "startLeg": 85,
+      "duracao_s": 4,
+      "texto": "CONCEITO A",
+      "subtexto": "CONCEITO B",
+      "rotuloA": "LADO A",
+      "rotuloB": "LADO B",
+      "contexto": "EIXO DO CONTRASTE",
+      "mascotMood": "serio",
+      "ancoraLegendas": [84, 85, 86],
+      "motivo": "Contraste central entre as duas ideias discutidas nesse ponto."
+    }}
+  ]
+}}"""

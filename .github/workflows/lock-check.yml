@@ -1,0 +1,63 @@
+name: Lock Check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check-locks:
+    name: Verificar travas de edicao
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Determine commit range
+        id: range
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          if [ "$BASE" = "0000000000000000000000000000000000000000" ] || [ -z "$BASE" ]; then
+            BASE=$(git rev-parse "$HEAD^" 2>/dev/null || echo "$HEAD")
+          fi
+          # Apos force-push de historico reescrito, o SHA "before" pode nao
+          # existir mais no repositorio; cai para o pai do HEAD (ou o proprio
+          # HEAD em commit inicial sem pai) para nao quebrar o diff.
+          if ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            BASE=$(git rev-parse "$HEAD^" 2>/dev/null || echo "$HEAD")
+          fi
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "head=$HEAD" >> "$GITHUB_OUTPUT"
+
+      - name: Collect changed files and commit messages
+        shell: bash
+        run: |
+          BASE="${{ steps.range.outputs.base }}"
+          HEAD="${{ steps.range.outputs.head }}"
+          git diff --name-status --diff-filter=ACMRD "$BASE" "$HEAD" > .changed-files
+          git log "$BASE..$HEAD" --pretty=%B > .commit-messages || git log -1 --pretty=%B > .commit-messages
+          echo "---- arquivos alterados ----"
+          cat .changed-files
+          echo "---- mensagens de commit ----"
+          cat .commit-messages
+
+      - name: Run lock check
+        run: python bin/check-lock.py ci --files .changed-files --messages .commit-messages

@@ -1,0 +1,38 @@
+# CortadorLive
+
+> Pipeline full-stack que transforma livestreams do YouTube em cortes analíticos
+> prontos para publicação: download → transcrição → IA propõe cortes → revisão →
+> metadados/thumbnails → export para YouTube. Backend FastAPI (async, SQLite/WAL),
+> frontend React 18 + Vite, renderer Remotion + Native Worker (fila em filesystem),
+> IA via Claude CLI / Gemini.
+
+## Comece por aqui
+- [README.md](README.md): instalação, pré-requisitos e pipeline de uso
+- [CLAUDE.md](CLAUDE.md): guia canônico de arquitetura, comandos e regras (fonte de verdade)
+- [AI_NAVIGATION.md](AI_NAVIGATION.md): índice de navegação para IA + docs/ai-index
+- [CONTRIBUTING.md](CONTRIBUTING.md): como rodar, padrão de commit e locks
+
+## Arquitetura
+- Backend em camadas: routers → services → infrastructure/domain (backend/app/)
+- Modelos SQLAlchemy: backend/app/models.py · tipos espelhados em frontend/src/types/models.ts
+- Renderer Remotion + protocolo de fila: backend/app/infrastructure/worker_queue.py
+
+## Backend (FastAPI)
+- Routers HTTP: backend/app/routers/
+- Serviços (orquestração IA/API): backend/app/services/
+- Clientes externos (Claude CLI, Gemini, FFmpeg): backend/app/infrastructure/
+- Funções puras de domínio: backend/app/domain/
+- Configuração (pydantic-settings): backend/app/config.py
+
+## Frontend (React 18 + Vite)
+- Páginas lazy por feature: frontend/src/features/ · rotas em frontend/src/routes.tsx
+
+## Video Renderer (Remotion)
+- Projeto Remotion separado + Native Worker: video-renderer/
+
+## Fluxo de trabalho (Guia Fluxo)
+- Estado de demandas: .guia/ · locks de arquivos: .guia/locks/registry.yaml
+- Padrão de commit (Conventional Commits + gitmoji): seção em CLAUDE.md
+
+## Domínio
+Entidades: Projeto, Corte (com desvios), Short, Metadado. Fases: Ingestão, Análise, Export.

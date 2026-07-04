@@ -1,0 +1,36 @@
+services:
+  # Backend FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cortadorlive_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - PROJETOS_DIR=/app/projetos
+      - ASSETS_DIR=/app/assets
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/projetos:/app/projetos
+      - ./backend/assets:/app/assets
+      - ./backend/client_secrets.json:/app/client_secrets.json:ro
+      - ./backend/token.json:/app/token.json
+      - ./video-renderer:/video-renderer
+      - /video-renderer/node_modules
+      # Nota: GPU Intel via WSL2 não funciona com VAAPI/ffmpeg no Docker Desktop.
+      # O ffmpeg precisa de /dev/dri/renderD128 (DRM), mas no WSL2 só existe /dev/dxg (DirectX).
+      # Para aceleração real, o backend precisaria rodar em Linux nativo.
+    networks:
+      - cortadorlive
+    # Live reload durante desenvolvimento:
+    # --reload-dir /app/app: só observa o código, não os vídeos em /app/projetos
+    command: bash -c "cd /video-renderer && npm install && cd /app && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app"
+
+networks:
+  cortadorlive:
+    driver: bridge
