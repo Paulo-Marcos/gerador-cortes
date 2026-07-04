@@ -99,11 +99,7 @@ def _instance_root(instance_root: Path | None) -> Path:
 
 
 def _exemplo_dir(exemplo_dir: Path | None) -> Path:
-    return (
-        Path(exemplo_dir)
-        if exemplo_dir
-        else _REPO_ROOT / "examples" / "instance.example"
-    )
+    return Path(exemplo_dir) if exemplo_dir else _REPO_ROOT / "examples" / "instance.example"
 
 
 def _canais_dir(instance_root: Path) -> Path:
@@ -236,9 +232,7 @@ def criar_canal(
     return _montar_canal(canal_id, destino / _CHANNEL_YAML, ativo=(canal_id == ativo))
 
 
-def selecionar_canal(
-    canal_id: str, instance_root: Path | None = None
-) -> ResultadoSelecao:
+def selecionar_canal(canal_id: str, instance_root: Path | None = None) -> ResultadoSelecao:
     """Marca `canal_id` como ativo gravando o ponteiro `active-channel`.
 
     A troca efetiva (banco/assets) só ocorre no PRÓXIMO restart — por isso
@@ -266,9 +260,7 @@ def _materializar_mascote_do_ativo() -> None:
         logger.warning("Falha ao materializar mascote ao selecionar canal: %s", exc)
 
 
-def editar_identidade(
-    canal_id: str, identidade: dict, instance_root: Path | None = None
-) -> Canal:
+def editar_identidade(canal_id: str, identidade: dict, instance_root: Path | None = None) -> Canal:
     """Edita a identidade básica (`channel.yaml`) de um canal existente.
 
     Só os campos presentes em `identidade` são alterados (merge raso; `paleta`

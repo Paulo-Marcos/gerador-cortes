@@ -268,7 +268,9 @@ class MetadadosService:
         try:
             await ClaudeIaService.gerar_prompt_thumbnail_via_claude(corte_id)
         except Exception as e:  # noqa: BLE001 — background task: loga e segue
-            operational_error("Metadados", f"Erro ao gerar prompt da thumbnail para {corte_id}: {e}")
+            operational_error(
+                "Metadados", f"Erro ao gerar prompt da thumbnail para {corte_id}: {e}"
+            )
 
     @staticmethod
     async def montar_prompt_meta(corte_id: str) -> dict:
