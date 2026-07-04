@@ -5,10 +5,9 @@ Modelos SQLAlchemy para o CortadorLive
 import enum
 from datetime import datetime
 
+from app.services import channels
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-from app.services import channels
 
 
 class Base(DeclarativeBase):

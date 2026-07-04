@@ -11,6 +11,7 @@ Cobre o criterio de NAO-QUEBRA da Onda C1:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -56,10 +57,20 @@ def test_catalogo_vazio_quando_arquivo_ausente(
 
 
 def test_habilitado_por_padrao_serve_o_espelho_versionado(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    # Sem a env (default): o espelho versionado continua sendo servido (nao-regressao).
+    # Sem a env (default): o espelho continua sendo servido (nao-regressao).
+    # O espelho foi des-versionado na publicacao (E-011): o teste cria o proprio
+    # em tmp_path — depender do arquivo real so passa em maquina de canal.
     monkeypatch.delenv("CANAL_MASCOTE_HABILITADO", raising=False)
+    espelho = tmp_path / "data"
+    espelho.mkdir()
+    (espelho / "mascote_poses.json").write_text(
+        json.dumps({"version": 1, "poses": [{"id": "serio"}]}), encoding="utf-8"
+    )
+    monkeypatch.setattr(mascot_catalog, "_DATA_DIR", espelho)
+    # Instancia sem override: garante que quem responde e o espelho.
+    monkeypatch.setattr(mascot_catalog, "mascot_dir", lambda: tmp_path / "instance-vazia")
     mascot_catalog.recarregar()
 
     assert len(mascot_catalog.listar_poses()) > 0

@@ -171,9 +171,7 @@ async def test_upload_manual_persiste_relativo(tmp_path, monkeypatch):
     await thumb_module.ThumbnailService.upload_manual("corte-1", b"fake-jpeg", "capa.jpg")
 
     async with sf() as db:
-        result = await db.execute(
-            select(MetadadoCorte).where(MetadadoCorte.corte_id == "corte-1")
-        )
+        result = await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == "corte-1"))
         meta = result.scalar_one()
 
     # Persistido RELATIVO ao projeto; o arquivo físico existe sob a raiz de dados.
