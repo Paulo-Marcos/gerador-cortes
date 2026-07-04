@@ -129,9 +129,7 @@ class RemotionRenderService:
                     if resultado.get("status") == "sucesso":
                         corte = await db.get(Corte, corte_id)
                         if corte:
-                            corte_dir = (
-                                projetos_dir() / corte.projeto_id / "cortes" / corte_id
-                            )
+                            corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte_id
                             upload_ready_dir = corte_dir / "upload_ready"
                             if (upload_ready_dir / "video.mp4").exists():
                                 await RemotionRenderService.finalizar_corte_com_sucesso(

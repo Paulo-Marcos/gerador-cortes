@@ -81,9 +81,7 @@ async def gerar_metadados(corte_id: str, db: AsyncSession = Depends(get_db)):
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
 
-    fire_and_forget(
-        MetadadosService.gerar_metadados(corte_id), name=f"metadados-{corte_id[:8]}"
-    )
+    fire_and_forget(MetadadosService.gerar_metadados(corte_id), name=f"metadados-{corte_id[:8]}")
     return {"message": "Geração de metadados iniciada", "corte_id": corte_id}
 
 

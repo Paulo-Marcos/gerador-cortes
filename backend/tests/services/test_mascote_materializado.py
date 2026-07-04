@@ -16,7 +16,9 @@ from pathlib import Path
 from app.channel_assets_sync import garantir_mascote_materializado
 
 
-def _criar_mascote(canal_assets: Path, arquivos: dict[str, bytes], *, subdir: str = "mascote") -> None:
+def _criar_mascote(
+    canal_assets: Path, arquivos: dict[str, bytes], *, subdir: str = "mascote"
+) -> None:
     mascote = canal_assets / subdir
     mascote.mkdir(parents=True)
     for nome, conteudo in arquivos.items():
