@@ -14,7 +14,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from app.channel_assets_sync import garantir_mascote_materializado
-from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.channel_paths import projetos_dir
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.cinema_filters import get_filtro_vf
@@ -26,9 +26,8 @@ from app.domain.overlay_codec import OverlayCodecProfile, overlay_codec_profile
 from app.domain.overlay_metadata import OverlayEntry, build_overlay_entries
 from app.domain.remotion_bundle import compute_src_fingerprint
 from app.domain.render_etapas import eh_render_parcial, fase_dentro_do_alcance
-from app.domain.retry_policy import RetryPolicy
 from app.domain.time_convert import epoch_to_hora_local, seg_to_duracao_humana
-from app.domain.youtube_layout import aplicar_layout_card_por_contexto, normalizar_layout_youtube
+from app.domain.youtube_layout import aplicar_layout_card_por_contexto
 from app.infrastructure.worker_queue import (
     RemotionWorkerQueue,
     WorkerJob,
@@ -45,12 +44,80 @@ from app.services.app_logging import (
 )
 from app.services.app_settings import AppSettingsService, RenderSettings
 from app.services.media_retention import MediaRetentionService
+from app.services.pipeline_corte_fields import (
+    _campo_corte,
+    _duracao_layout_corte,
+    _extrair_cenas,
+    _find_clip_raw,
+    _find_registered_clip_raw,
+    _layout_youtube_do_corte,
+    _numero_corte,
+)
 from app.services.pipeline_event_log import PipelineEventLog
+from app.services.pipeline_fases import (
+    _arquivo_minimo,
+    _deve_limpar_artefatos,
+    _deve_pular_fase,
+    _limpar_a_partir_de,
+    _normalizar_fase_alias,
+    _remover_arquivo_temporario,
+    _video_final_temporario,
+)
+from app.services.pipeline_overlay_chunks import (
+    _agrupar_overlay_chunks,
+    _construir_cenas_chunk_relativas,
+    _criar_overlay_chunk,
+    _localizar_overlay_existente,
+    _mensagem_falha_total_overlays,
+    _resolver_overlays_para_composicao,
+)
+from app.services.pipeline_render_config import FONTE_PRESETS_VALIDOS, ProjetoRenderConfig
+from app.services.pipeline_render_helpers import (
+    _assets_servidos_do_bundle,
+    _build_overlay_render_cmd,
+    _render_retry_policy,
+    _retry_async,
+)
 from app.services.remotion_bundle_cache import RemotionBundleCache
 from app.services.render_ffmpeg_log import append_ffmpeg_command
 from app.services.youtube_palco import ensure_palco_pngs_para_layout
 
 logger = logging.getLogger(__name__)
+
+# Nomes re-exportados dos sub-módulos fatiados (E-006). Explicitados aqui para o
+# linter reconhecê-los como parte da superfície pública desta fachada e para que
+# `monkeypatch.setattr(pipeline_render, "<nome>", ...)` continue atingindo o
+# call-site — o orquestrador chama esses nomes resolvendo-os no namespace deste
+# módulo.
+__all__ = [
+    "renderizar_pipeline_otimizado",
+    "ProjetoRenderConfig",
+    "FONTE_PRESETS_VALIDOS",
+    "_agrupar_overlay_chunks",
+    "_criar_overlay_chunk",
+    "_construir_cenas_chunk_relativas",
+    "_mensagem_falha_total_overlays",
+    "_resolver_overlays_para_composicao",
+    "_localizar_overlay_existente",
+    "_find_clip_raw",
+    "_find_registered_clip_raw",
+    "_extrair_cenas",
+    "_layout_youtube_do_corte",
+    "_duracao_layout_corte",
+    "_campo_corte",
+    "_numero_corte",
+    "_render_retry_policy",
+    "_retry_async",
+    "_build_overlay_render_cmd",
+    "_assets_servidos_do_bundle",
+    "_normalizar_fase_alias",
+    "_deve_limpar_artefatos",
+    "_deve_pular_fase",
+    "_arquivo_minimo",
+    "_limpar_a_partir_de",
+    "_video_final_temporario",
+    "_remover_arquivo_temporario",
+]
 
 # Quantos chunks de overlay disparamos em paralelo. 2 explora o paralelismo
 # do native_worker (que aceita até `REMOTION_OVERLAY_PARALLEL` overlays
@@ -58,8 +125,6 @@ logger = logging.getLogger(__name__)
 # `--concurrency` interno do Remotion (`AppSettings.render.overlay_concurrency`).
 _MAX_OVERLAYS_PARALLEL = 2
 _OVERLAY_FPS = 30
-_OVERLAY_CHUNK_MAX_SEC = 30
-_OVERLAY_CHUNK_MAX_GAP_SEC = 8
 # Tamanho mínimo para considerar um chunk de overlay "pronto" e pulá-lo no
 # modo continuar. 256 KB é generoso: render incompleto/corrompido geralmente
 # tem <100 KB (o except: unlink() do worker já apaga renders abortados). O
@@ -67,91 +132,11 @@ _OVERLAY_CHUNK_MAX_GAP_SEC = 8
 # usuário via como "deletando overlays". Mantém uma defesa contra arquivos
 # zerados sem rejeitar overlays legítimos pequenos.
 _OVERLAY_MIN_BYTES_PRONTO = 256 * 1024
-# Fração de overlays FALTANDO (chunks que esgotaram os retries) a partir da
-# qual a fase de overlays FALHA ALTO em vez de concluir "sucesso". D-167: com
-# o Chrome Headless quebrado, 100% dos chunks falhavam e a fase seguia emitindo
-# `fase_concluida` — mascarando o problema por dias. A partir de 50% de overlays
-# ausentes o vídeo final sai gravemente incompleto; abaixo disso mantemos a
-# resiliência a falha pontual de 1 chunk isolado (registrado como ausente).
-_OVERLAY_FAIL_ABORT_RATIO = 0.5
-# Extensões de overlay já usadas/aceitas em projetos existentes.
-# A render atual usa a extensão do codec configurado; durante a
-# resolução para composição aceitamos qualquer extensão conhecida
-# (permite reaproveitar artefatos legados sem re-renderizar tudo).
-_OVERLAY_EXTENSIONS_LEGADAS = (".webm", ".mov")
 
-# Pipeline opera em 3 fases (render) + 1 finalização. Os aliases "compose"
-# e "encode" mapeiam para "render_final": antes eram duas fases distintas
-# (composição → clip_composed.mp4 → encode → video.mp4); hoje é uma passada
-# só. Mantemos os aliases para preservar a UX de retomada via start_from.
-_ORDEM_FASES = {"grade": 1, "overlays": 2, "render_final": 3}
-_ALIAS_FASES = {"compose": "render_final", "encode": "render_final"}
-
-# Presets tipograficos suportados pelo renderer Remotion (theme-v2.ts).
-# Manter sincronizado com FONT_PRESETS_V2 e com FONTES_VALIDAS no router.
-FONTE_PRESETS_VALIDOS = frozenset({"atual", "moderna", "cientifica", "minimalista", "tecnica"})
-
-
-class ProjetoRenderConfig:
-    """Configuração de render derivada do `Projeto` — qual versão do renderer
-    (v1/v2) e nível padrão de sombra para cenas com sombra_nivel='auto'.
-
-    Mantida como classe simples (não-dataclass) para evitar uma dependência
-    extra em projetos antigos. Imutável após construção.
-    """
-
-    __slots__ = ("versao", "sombra_padrao", "layout_card_padrao", "fonte_preset")
-
-    def __init__(
-        self,
-        versao: str = "v2",
-        sombra_padrao: str = "nenhuma",
-        layout_card_padrao: str = "vertical",
-        fonte_preset: str = "atual",
-    ) -> None:
-        # V1 está desativada (compositions removidas do Root.tsx).
-        # Qualquer valor de `versao` é normalizado para "v2".
-        self.versao = "v2"
-        self.sombra_padrao = (
-            sombra_padrao if sombra_padrao in ("nenhuma", "leve", "media", "forte") else "nenhuma"
-        )
-        self.layout_card_padrao = (
-            layout_card_padrao if layout_card_padrao in ("horizontal", "vertical") else "vertical"
-        )
-        self.fonte_preset = fonte_preset if fonte_preset in FONTE_PRESETS_VALIDOS else "atual"
-
-    @classmethod
-    def from_projeto(cls, projeto: Projeto | None) -> "ProjetoRenderConfig":
-        if projeto is None:
-            return cls()
-        return cls(
-            versao="v2",  # V1 desativada — forçar V2 mesmo se projeto antigo guardar "v1"
-            sombra_padrao=getattr(projeto, "sombra_nivel_padrao", "nenhuma") or "nenhuma",
-            layout_card_padrao=getattr(projeto, "layout_card_padrao", "vertical") or "vertical",
-            fonte_preset=getattr(projeto, "fonte_preset", "atual") or "atual",
-        )
-
-    @property
-    def overlay_composition(self) -> str:
-        return "OverlaySceneV2" if self.versao == "v2" else "OverlayScene"
-
-    @property
-    def timeline_composition(self) -> str:
-        return "OverlayTimelineV2" if self.versao == "v2" else "OverlayTimeline"
-
-    @property
-    def youtube_composition(self) -> str:
-        return "CenaYouTubeV2" if self.versao == "v2" else "CenaYouTube"
-
-    def overlay_props_extra(self) -> dict:
-        """Props extras a injetar em renders V2 (sombra padrão da composição)."""
-        if self.versao == "v2":
-            return {
-                "sombraNivelPadrao": self.sombra_padrao,
-                "layoutCardPadrao": self.layout_card_padrao,
-                "fontPreset": self.fonte_preset,
-            }
-        return {}
+# Constantes de fase e agrupamento vivem nos sub-módulos fatiados (E-006):
+# `_ORDEM_FASES`/`_ALIAS_FASES` em pipeline_fases; `_OVERLAY_EXTENSIONS_LEGADAS`
+# e os limites de chunk em pipeline_overlay_chunks. `ProjetoRenderConfig` e
+# `FONTE_PRESETS_VALIDOS` em pipeline_render_config. Todos re-importados acima.
 
 
 async def renderizar_pipeline_otimizado(
@@ -651,110 +636,6 @@ async def renderizar_pipeline_otimizado(
 # ---------------------------------------------------------------------------
 
 
-def _agrupar_overlay_chunks(entries: list[OverlayEntry]) -> list[dict]:
-    """Agrupa cenas proximas em chunks transparentes para reduzir renders Remotion."""
-    chunks: list[dict] = []
-    current: list[OverlayEntry] = []
-
-    for entry in entries:
-        if not current:
-            current = [entry]
-            continue
-
-        chunk_start = current[0].start_sec
-        last_end = current[-1].end_sec
-        would_duration = entry.end_sec - chunk_start
-        gap = entry.start_sec - last_end
-
-        if would_duration > _OVERLAY_CHUNK_MAX_SEC or gap > _OVERLAY_CHUNK_MAX_GAP_SEC:
-            chunks.append(_criar_overlay_chunk(len(chunks) + 1, current))
-            current = [entry]
-        else:
-            current.append(entry)
-
-    if current:
-        chunks.append(_criar_overlay_chunk(len(chunks) + 1, current))
-
-    return chunks
-
-
-def _criar_overlay_chunk(index: int, entries: list[OverlayEntry]) -> dict:
-    start_sec = min(entry.start_sec for entry in entries)
-    end_sec = max(entry.end_sec for entry in entries)
-    return {
-        "id": f"{index:03d}",
-        "start_sec": start_sec,
-        "end_sec": end_sec,
-        "entries": entries,
-    }
-
-
-def _construir_cenas_chunk_relativas(
-    chunk_start_sec: float,
-    entries: list[OverlayEntry],
-) -> list[dict]:
-    """Reescreve as 4 chaves de timing de cada cena (`inicio`, `fim`,
-    `inicio_seg`, `fim_seg`) para coordenadas relativas ao início do chunk.
-
-    Por que as 4 chaves: o `normalizarCenaRemotion` em
-    `video-renderer/src/schema.ts` prefere `inicio_seg`/`fim_seg` sobre
-    `inicio`/`fim`. Se mantivermos as `_seg` originais do banco (absolutas)
-    junto com `inicio`/`fim` relativos, a composição Remotion posiciona o
-    `<Sequence>` em frames fora do chunk — o primeiro chunk renderiza com
-    atraso e os subsequentes ficam completamente vazios.
-
-    Invariante crítica: `cena["inicio"] == cena["inicio_seg"]` e
-    `cena["fim"] == cena["fim_seg"]` em toda cena produzida aqui. Os testes
-    cobrem essa invariante explicitamente.
-    """
-    cenas: list[dict] = []
-    for entry in entries:
-        inicio_rel = max(0.0, entry.start_sec - chunk_start_sec)
-        fim_rel = max(0.001, entry.end_sec - chunk_start_sec)
-        cenas.append(
-            {
-                **entry.cena_dict,
-                "inicio": inicio_rel,
-                "fim": fim_rel,
-                "inicio_seg": inicio_rel,
-                "fim_seg": fim_rel,
-            }
-        )
-    return cenas
-
-
-def _mensagem_falha_total_overlays(
-    falhados: list[tuple[str, BaseException]],
-    total_overlays: int,
-) -> str | None:
-    """Decide se a fase de overlays deve FALHAR ALTO e devolve a mensagem acionável.
-
-    A fração de overlays FALTANDO é medida contra o total de overlays do corte
-    (`total_overlays`), não contra o subconjunto re-renderizado: no modo
-    "continuar" só re-rendermos os chunks pendentes, e falhar um deles quando
-    dezenas de overlays válidos já existem não deve derrubar o vídeo.
-
-    Retorna:
-    - `str` (mensagem de erro) quando a fração faltando atinge
-      `_OVERLAY_FAIL_ABORT_RATIO` — caso do bug D-167, em que 100% dos chunks
-      falhavam mas a fase concluía "sucesso".
-    - `None` quando a falha é pontual (tolerada), preservando a resiliência
-      a um chunk isolado, que segue registrado como ausente + warning.
-    """
-    if not falhados or total_overlays <= 0:
-        return None
-    fracao = len(falhados) / total_overlays
-    if fracao < _OVERLAY_FAIL_ABORT_RATIO:
-        return None
-    ids = ", ".join(fid for fid, _ in falhados)
-    return (
-        f"Fase de overlays falhou: {len(falhados)}/{total_overlays} chunks não "
-        f"foram gerados ({fracao:.0%} ≥ {_OVERLAY_FAIL_ABORT_RATIO:.0%}) [{ids}]. "
-        "Nenhum (ou quase nenhum) overlay foi produzido — verifique o Chrome "
-        "Headless do Remotion (bin/ensure-remotion-browser) e o log do worker."
-    )
-
-
 async def _executar_batch_overlay_chunks_parallel(
     chunks: list[dict],
     output_dir: Path,
@@ -844,122 +725,6 @@ async def _aguardar_cooldown(cooldown_sec: int, ha_mais_chunks: bool) -> None:
         return
     operational_info("Pipeline", f"* Cooldown termico ({cooldown_sec}s)...")
     await asyncio.sleep(cooldown_sec)
-
-
-def _find_clip_raw(corte_dir: Path) -> Path | None:
-    """Localiza o vídeo bruto na pasta do corte.
-
-    Robusto a nomes com timestamp (``clip_raw_<ms>.mkv``, produzidos pelo
-    "Gerar Bruto") e à relocação da pasta — depende só do conteúdo do diretório,
-    nunca de um caminho absoluto stale no banco. Ordem de preferência:
-
-    1. Nomes canônicos (``clip_raw.mkv/.mp4``, ``clip_raw_base.mkv/.mp4``).
-    2. Qualquer ``clip_raw*.mkv/.mp4`` (exceto backups), escolhendo o mais
-       recente por mtime — desempate determinístico por nome.
-    3. Backups ``clip_raw_backup_com_silencios.*`` como último recurso.
-    """
-    for name in (
-        "clip_raw.mkv",
-        "clip_raw.mp4",
-        "clip_raw_base.mkv",
-        "clip_raw_base.mp4",
-    ):
-        p = corte_dir / name
-        if p.exists():
-            return p
-
-    def _is_backup(p: Path) -> bool:
-        return "_backup_com_silencios" in p.name
-
-    candidatos = [
-        p for ext in ("mkv", "mp4") for p in corte_dir.glob(f"clip_raw*.{ext}") if p.is_file()
-    ]
-    nao_backup = [p for p in candidatos if not _is_backup(p)]
-    if nao_backup:
-        return max(nao_backup, key=lambda p: (p.stat().st_mtime, p.name))
-
-    backups = [p for p in candidatos if _is_backup(p)]
-    if backups:
-        return max(backups, key=lambda p: (p.stat().st_mtime, p.name))
-
-    return None
-
-
-def _find_registered_clip_raw(corte: Corte) -> Path | None:
-    if not corte.arquivo_clip_path:
-        return None
-
-    # D-158: reancora pelo canal ativo — aceita valor relativo (novo padrão) e
-    # absoluto/Docker legado, ambos resolvem para a raiz de dados vigente.
-    p = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
-    return p if p.exists() else None
-
-
-def _extrair_cenas(corte: Corte) -> list[dict]:
-    """Extrai a lista de cenas do campo cenas_remotion do banco."""
-    raw = _campo_corte(corte, "cenas_remotion")
-    if not raw:
-        return []
-
-    data = []
-
-    if isinstance(raw, str):
-        try:
-            data = json.loads(raw)
-        except Exception as e:
-            logger.error(f"Erro ao parsear JSON de cenas: {e}")
-            return []
-    else:
-        data = raw
-
-    # Se for um dict com chave 'cenas' (padrão)
-    if isinstance(data, dict):
-        return data.get("cenas", [])
-    # Se for uma lista direta
-    if isinstance(data, list):
-        return data
-
-    return []
-
-
-def _layout_youtube_do_corte(
-    corte: Corte | dict | None, fallback_layout: str | dict | None = None
-) -> dict:
-    raw = _campo_corte(corte, "layout_youtube")
-    if isinstance(raw, str):
-        try:
-            raw = json.loads(raw or "{}")
-        except Exception as e:
-            logger.warning(
-                "[Pipeline] layout_youtube invalido no corte %s: %s",
-                _campo_corte(corte, "id", ""),
-                e,
-            )
-            raw = {}
-    return normalizar_layout_youtube(raw, fallback_layout)
-
-
-def _duracao_layout_corte(corte: Corte | dict | None) -> float:
-    duracao = _numero_corte(_campo_corte(corte, "duracao_clip_seg"), 0.0)
-    if duracao > 0:
-        return duracao
-
-    inicio = _numero_corte(_campo_corte(corte, "inicio_seg"), 0.0)
-    fim = _numero_corte(_campo_corte(corte, "fim_seg"), inicio)
-    return max(0.0, fim - inicio)
-
-
-def _campo_corte(corte: Corte | dict | None, campo: str, default=None):
-    if isinstance(corte, dict):
-        return corte.get(campo, default)
-    return getattr(corte, campo, default)
-
-
-def _numero_corte(valor, default: float) -> float:
-    try:
-        return float(valor)
-    except (TypeError, ValueError):
-        return default
 
 
 async def _executar_grade(
@@ -1257,102 +1022,6 @@ async def _executar_render_overlay_chunk_uma_vez(
             pass
 
 
-def _render_retry_policy(render_cfg: RenderSettings) -> RetryPolicy:
-    """Política a partir das settings: número de tentativas configurável,
-    backoff fixo de 2s × attempt (suficiente para falhas transientes)."""
-    return RetryPolicy(max_attempts=render_cfg.overlay_max_attempts, base_delay_sec=2.0)
-
-
-async def _retry_async(
-    *,
-    operacao,
-    policy: RetryPolicy,
-    rotulo: str,
-) -> None:
-    """Executa `operacao()` com retry segundo `policy`.
-
-    `operacao` é uma callable que retorna uma coroutine — chamada de
-    novo a cada tentativa (precisa ser fresh, não a mesma coroutine).
-    """
-    ultimo_erro: BaseException | None = None
-    for attempt in range(1, policy.total_attempts + 1):
-        try:
-            await operacao()
-            if attempt > 1:
-                operational_info("Pipeline", f"* ✅ {rotulo}: sucesso na tentativa {attempt}")
-            return
-        except Exception as e:
-            ultimo_erro = e
-            if not policy.should_retry(attempt):
-                break
-            delay = policy.backoff_seconds(attempt)
-            operational_info(
-                "Pipeline",
-                f"* ⚠ {rotulo}: tentativa {attempt}/{policy.total_attempts} falhou ({type(e).__name__}). "
-                f"Reagendando em {delay:.1f}s.",
-            )
-            if delay > 0:
-                await asyncio.sleep(delay)
-
-    if ultimo_erro is None:
-        # Só chegamos aqui após esgotar as tentativas sem sucesso; ultimo_erro
-        # sempre deveria estar preenchido. Um `assert` sumiria sob `python -O`.
-        raise RuntimeError(f"{rotulo}: retentativas esgotadas sem erro registrado.")
-    raise ultimo_erro
-
-
-def _build_overlay_render_cmd(
-    *,
-    composition: str,
-    bundle_arg: str,
-    output_path: Path,
-    props_file: Path,
-    concurrency: int,
-    codec_profile: OverlayCodecProfile,
-) -> list[str]:
-    """Comando `npx remotion render` para overlay transparente.
-
-    A escolha de codec/pixel-format vem do `codec_profile` (VP9+alpha por
-    padrão; ProRes 4444 disponível para casos especiais).
-    """
-    return [
-        "npx",
-        "remotion",
-        "render",
-        bundle_arg,
-        composition,
-        str(output_path.absolute()),
-        "--props",
-        str(props_file.absolute()),
-        *codec_profile.remotion_args,
-        "--gl=angle",
-        "--log=warn",
-        "--concurrency",
-        str(concurrency),
-        "--overwrite",
-    ]
-
-
-def _assets_servidos_do_bundle(renderer_dir: Path) -> list[Path]:
-    """Assets materializados por canal que o `remotion bundle` EMBUTE no bundle.
-
-    O bundle Remotion copia `video-renderer/public/` (mascote em `public/sapo/`) e
-    embute o `theme.config.json` (importado por `theme-v2.ts`). Esses arquivos são
-    re-materializados por canal (`channel_assets_sync`) e mudam SEM tocar em `src/`.
-    Se ficassem de fora do fingerprint, trocar de canal / re-render de poses daria
-    cache-hit num bundle com o `public/sapo` antigo e a maioria dos overlays do
-    mascote sumiria (D-190). Incluí-los força o rebuild quando o mascote/tema muda.
-    """
-    assets: list[Path] = []
-    public_dir = renderer_dir / "public"
-    if public_dir.is_dir():
-        assets.extend(p for p in public_dir.rglob("*") if p.is_file())
-    theme_config = renderer_dir / "theme.config.json"
-    if theme_config.is_file():
-        assets.append(theme_config)
-    return assets
-
-
 async def _preparar_bundle_overlay(output_dir: Path) -> Path:
     """Garante um bundle Remotion pronto para renderizar os overlays.
 
@@ -1567,50 +1236,6 @@ async def _executar_render_final(
     )
 
 
-def _resolver_overlays_para_composicao(
-    overlay_chunks: list[dict],
-    overlays_dir: Path,
-) -> tuple[list[Path], list[dict]]:
-    """Para cada chunk, escolhe entre o arquivo agrupado ou os `ov_*`
-    individuais (fallback histórico). Aceita extensões legadas: se o
-    chunk foi renderizado em ProRes (.mov) antes da mudança para VP9
-    (.webm), continua usável sem re-renderizar.
-    """
-    overlay_paths: list[Path] = []
-    overlay_timings: list[dict] = []
-
-    for chunk in overlay_chunks:
-        chunk_path = _localizar_overlay_existente(overlays_dir, f"chunk_{chunk['id']}")
-        if chunk_path is not None:
-            overlay_paths.append(chunk_path)
-            overlay_timings.append({"start_sec": chunk["start_sec"], "end_sec": chunk["end_sec"]})
-            continue
-
-        for entry in chunk["entries"]:
-            fallback_path = _localizar_overlay_existente(overlays_dir, f"ov_{entry.id}")
-            if fallback_path is None:
-                logger.warning(
-                    "[Pipeline] Overlay chunk/individual nao encontrado (ext esperadas: %s): %s",
-                    list(_OVERLAY_EXTENSIONS_LEGADAS),
-                    overlays_dir / f"ov_{entry.id}.*",
-                )
-                continue
-            overlay_paths.append(fallback_path)
-            overlay_timings.append({"start_sec": entry.start_sec, "end_sec": entry.end_sec})
-
-    return overlay_paths, overlay_timings
-
-
-def _localizar_overlay_existente(overlays_dir: Path, stem: str) -> Path | None:
-    """Retorna o primeiro `overlays_dir/<stem><ext>` que existe entre as
-    extensões conhecidas, ou None se nenhum existe."""
-    for ext in _OVERLAY_EXTENSIONS_LEGADAS:
-        candidato = overlays_dir / f"{stem}{ext}"
-        if candidato.exists():
-            return candidato
-    return None
-
-
 async def _finalizar_corte(db, corte: Corte, upload_dir: Path) -> None:
     """Atualiza status do corte, gera metadados e copia thumbnail."""
     from app.services.remotion_render import RemotionRenderService
@@ -1635,111 +1260,6 @@ async def _aplicar_retencao_apos_grade(db, event_log: PipelineEventLog, corte: C
         removidos=retention.removidos,
         erros=retention.erros,
     )
-
-
-def _normalizar_fase_alias(fase: str) -> str:
-    """Mapeia aliases (`compose`, `encode`) para a fase canônica `render_final`."""
-    return _ALIAS_FASES.get(fase, fase)
-
-
-def _deve_limpar_artefatos(*, continuar: bool, start_from: str) -> bool:
-    """Decide se `_limpar_a_partir_de` deve rodar antes do pipeline.
-
-    Regras:
-    - `continuar=False` → sempre limpa (re-render total).
-    - `start_from='auto'` + `continuar=True` → não limpa (skip artefatos prontos
-      em cada fase via `_deve_pular_fase` / `_filtrar_chunks_pendentes`).
-    - `start_from='overlays'` + `continuar=True` → **não limpa**. É o modo
-      "Continuar Fase 2": preserva chunks já renderizados; quando o pipeline
-      morre no chunk N, basta retomar e só os faltantes/falhos rodam.
-    - Outros `start_from` explícitos com `continuar=True` → limpa (usuário
-      pediu reinício deliberado daquele ponto).
-    """
-    if not continuar:
-        return True
-    if start_from == "auto":
-        return False
-    if _normalizar_fase_alias(start_from) == "overlays":
-        return False
-    return True
-
-
-def _deve_pular_fase(
-    fase: str,
-    start_from: str,
-    continuar: bool,
-    artefato_valido: bool,
-) -> bool:
-    """Decide se a fase pode ser pulada (artefato pronto + retomada autoriza)."""
-    if not artefato_valido:
-        return False
-    if start_from == "auto":
-        return continuar
-
-    fase_norm = _normalizar_fase_alias(fase)
-    start_norm = _normalizar_fase_alias(start_from)
-    return _ORDEM_FASES.get(fase_norm, 0) < _ORDEM_FASES.get(start_norm, 0)
-
-
-def _arquivo_minimo(path: Path, min_bytes: int) -> bool:
-    return path.exists() and path.stat().st_size >= min_bytes
-
-
-def _limpar_a_partir_de(
-    start_from: str,
-    graded_dir: Path,
-    overlays_dir: Path,
-    video_final: Path,
-    parar_em: str | None = None,
-    continuar: bool = False,
-) -> None:
-    """Remove artefatos da fase escolhida em diante.
-
-    `start_from` aceita os nomes canônicos (`grade`, `overlays`,
-    `render_final`) ou os aliases legados (`compose`, `encode`).
-
-    `parar_em` limita a faixa de limpeza ao alcance pedido: num render
-    parcial "só a grade" (start_from='grade', parar_em='grade') apagamos
-    apenas `graded/`, preservando os overlays já renderizados.
-
-    `continuar` (reaproveitar) preserva os overlays mesmo ao reiniciar pela
-    grade: o caso "deu problema na grade, mas os overlays já terminaram" —
-    refaz só a grade e reusa os overlays prontos (eles são transparentes e
-    independem do conteúdo da grade). Só apagamos os overlays num reinício
-    total da grade (`continuar=False`, "refazer do zero").
-    """
-    fase = _normalizar_fase_alias(start_from)
-    if fase not in _ORDEM_FASES:
-        fase = "grade"
-
-    if fase == "grade":
-        # Overlays só são apagados num reinício total pela grade (refazer do
-        # zero). Com `continuar` (reaproveitar) ou `parar_em='grade'`, eles
-        # ficam intactos para o compose final reutilizá-los.
-        dirs_a_limpar = [graded_dir]
-        if fase_dentro_do_alcance("overlays", parar_em) and not continuar:
-            dirs_a_limpar.append(overlays_dir)
-        for d in dirs_a_limpar:
-            if d.exists():
-                shutil.rmtree(str(d), ignore_errors=True)
-            d.mkdir(parents=True, exist_ok=True)
-    elif fase == "overlays":
-        if overlays_dir.exists():
-            shutil.rmtree(str(overlays_dir), ignore_errors=True)
-        overlays_dir.mkdir(parents=True, exist_ok=True)
-    # O video_final fica publicado; apenas sobras temporarias sao removidas.
-    _remover_arquivo_temporario(_video_final_temporario(video_final))
-
-
-def _video_final_temporario(video_final: Path) -> Path:
-    return video_final.with_name(f"{video_final.stem}.rendering{video_final.suffix}")
-
-
-def _remover_arquivo_temporario(path: Path) -> None:
-    try:
-        path.unlink(missing_ok=True)
-    except PermissionError:
-        logger.warning("[Pipeline] Arquivo temporario ainda em uso: %s", path)
 
 
 async def _publicar_video_final(video_temporario: Path, video_final: Path) -> None:
