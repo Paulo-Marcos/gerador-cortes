@@ -9,6 +9,7 @@ import {
   Rocket,
   Scissors,
   Settings,
+  SlidersHorizontal,
   Sparkles,
   Trophy,
   type LucideIcon,
@@ -51,6 +52,12 @@ const globalItems: NavItem[] = [
     label: 'Padrões de thumbnail',
     Icon: Sparkles,
     isActive: (pathname) => pathname.startsWith('/padroes-thumbnail'),
+  },
+  {
+    to: '/canais',
+    label: 'Configurações',
+    Icon: SlidersHorizontal,
+    isActive: (pathname) => pathname.startsWith('/canais'),
   },
 ];
 
