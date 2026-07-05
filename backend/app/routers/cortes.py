@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import os
@@ -11,10 +10,30 @@ from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import get_db
 from app.domain.corte_mapper import (
     extrair_cenas_remotion,
-    normalizar_cenas_remotion_payload,
 )
 from app.domain.youtube_layout import aplicar_layout_card_por_contexto, normalizar_layout_youtube
 from app.models import Corte, Projeto, StatusCorte
+from app.routers.cortes_helpers import (
+    _corte_to_dict,
+    _hms_to_seg,
+    _limpar_pasta_corte_pos_sync,
+)
+from app.routers.cortes_schemas import (
+    AdicionarDesvioRequest,
+    AtualizarCorteRequest,
+    CorteResponse,
+    CriarCorteDesvioRequest,
+    CriarCorteManualRequest,
+    DecisaoSegmentoRequest,
+    DividirCorteRequest,
+    GerarBrutoRequest,
+    ImportarCenasRequest,
+    ImportarDesviosRequest,
+    RemoverDesvioRequest,
+    RenderPipelineRequest,
+    ReordenarCortesRequest,
+    ValidarCenasRequest,
+)
 from app.routers.errors import erro_interno
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.corte import AtualizarCorteDTO, CorteService
@@ -32,7 +51,6 @@ from app.services.render_progress import RenderProgressStore
 from app.services.tasks import fire_and_forget
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -42,216 +60,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-# ─── Schemas ────────────────────────────────────────────────────────────────
-
-
-class DesvioSchema(BaseModel):
-    inicio_hms: str
-    fim_hms: str
-    motivo: str
-
-
-class CorteResponse(BaseModel):
-    id: str
-    projeto_id: str
-    numero: int
-    titulo_proposto: str
-    resumo: str
-    tema_central: str
-    inicio_hms: str
-    fim_hms: str
-    inicio_seg: float
-    fim_seg: float
-    desvios: list
-    status: str
-    arquivo_clip_path: str
-    # Duração real (segundos) do clip bruto medida via ffprobe. 0.0 se ainda
-    # não gerou.  Frontend usa pra exibir duração exata no Player.
-    duracao_clip_seg: float = 0.0
-    is_leitura: int
-    autor_leitura: str
-    parte_leitura: int = 1
-    transcricao_corte: list = []
-    transcricao_final: list = []
-    transcricao_final_texto: str = ""
-    cenas_remotion: dict | list = []
-    layout_youtube: dict = {}
-    cenas_validadas: int = 0
-    cenas_validadas_em: datetime | None = None
-    # F-063: offset fino de áudio (lip-sync), em ms. Positivo atrasa, negativo adianta.
-    audio_offset_ms: int = 0
-    # F-054: sugestões de mudança de cena detectadas no bruto.
-    segmentos_detectados: list = []
-    is_fire: bool = False
-    is_pos_producao: int = 0
-    # F-058: influência manual do editor no prompt da thumbnail.
-    hints_thumbnail: str = ""
-    criado_em: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class AtualizarCorteRequest(BaseModel):
-    titulo_proposto: str | None = None
-    inicio_hms: str | None = None
-    fim_hms: str | None = None
-    inicio_seg: float | None = None
-    fim_seg: float | None = None
-    desvios: list | None = None
-    status: str | None = None
-    is_leitura: int | None = None
-    autor_leitura: str | None = None
-    parte_leitura: int | None = None
-    transcricao_corte: list | None = None
-    cenas_remotion: list | dict | None = None
-    layout_youtube: dict | None = None
-    # F-058: influência manual do editor no prompt da thumbnail.
-    hints_thumbnail: str | None = None
-    # F-063: offset fino de áudio (lip-sync) por corte, em milissegundos.
-    audio_offset_ms: int | None = None
-
-
-class RemoverDesvioRequest(BaseModel):
-    desvio_index: int
-
-
-class CriarCorteDesvioRequest(BaseModel):
-    desvio_index: int
-    titulo: str = ""
-
-
-class AdicionarDesvioRequest(BaseModel):
-    inicio_hms: str
-    fim_hms: str
-    motivo: str = ""
-
-
-class CriarCorteManualRequest(BaseModel):
-    inicio_hms: str
-    fim_hms: str
-    titulo_proposto: str | None = None
-
-
-class DividirCorteRequest(BaseModel):
-    """F-061: ponto onde o corte deve ser dividido em dois.
-
-    Aceita `ponto_seg` (segundos absolutos, fonte primária do ponteiro do
-    player) ou `ponto_hms` (HH:MM:SS) como fallback.
-    """
-
-    ponto_seg: float | None = None
-    ponto_hms: str | None = None
-
-
-class ReordenarCortesRequest(BaseModel):
-    """F-057: nova ordem dos cortes do projeto.
-
-    `cortes_ids` precisa conter exatamente os IDs dos cortes do projeto, na
-    ordem desejada. O backend renumera (1..N) na ordem recebida.
-    """
-
-    cortes_ids: list[str]
-
-
-class ImportarDesviosRequest(BaseModel):
-    trechos: list
-
-
-# ─── Helpers ─────────────────────────────────────────────────────────────────
-
-
-def _hms_to_seg(hms: str) -> float:
-    try:
-        if not hms:
-            return 0.0
-        partes = str(hms).strip().split(":")
-        if len(partes) >= 3:
-            return int(partes[0]) * 3600 + int(partes[1]) * 60 + float(partes[2])
-        elif len(partes) == 2:
-            return int(partes[0]) * 60 + float(partes[1])
-        elif len(partes) == 1:
-            return float(partes[0])
-    except Exception:
-        pass
-    return 0.0
-
-
-def _corte_to_dict(corte: Corte) -> dict:
-    # WHY: itera por __table__.columns — colunas novas (ex.: I-034 `justificativa`)
-    # entram automaticamente no payload. Só ajustamos abaixo campos JSON-encoded.
-    d = {c: getattr(corte, c) for c in corte.__table__.columns.keys()}
-    d["desvios"] = json.loads(corte.desvios or "[]")
-    d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
-    d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
-    d["transcricao_final_texto"] = corte.transcricao_final_texto or ""
-    d["cenas_remotion"] = normalizar_cenas_remotion_payload(
-        json.loads(corte.cenas_remotion or "[]")
-    )
-    layout_val = getattr(corte, "layout_youtube", None)
-    if isinstance(layout_val, str) and layout_val.strip():
-        d["layout_youtube"] = json.loads(layout_val)
-    elif isinstance(layout_val, dict):
-        d["layout_youtube"] = layout_val
-    else:
-        d["layout_youtube"] = {}
-    d["cenas_validadas"] = int(getattr(corte, "cenas_validadas", 0) or 0)
-    d["cenas_validadas_em"] = getattr(corte, "cenas_validadas_em", None)
-    # F-054: lista pode estar vazia (corte ainda não rodou detecção) ou
-    # ausente em cortes legados — sempre devolve [].
-    try:
-        d["segmentos_detectados"] = json.loads(getattr(corte, "segmentos_detectados", None) or "[]")
-    except Exception:
-        d["segmentos_detectados"] = []
-
-    # Prevenção contra erro de Lazy Loading (greenlet_spawn)
-    try:
-        d["is_fire"] = corte.metadado.is_fire if corte.metadado else False
-    except Exception:
-        d["is_fire"] = False
-
-    d["is_pos_producao"] = getattr(corte, "is_pos_producao", 0)
-
-    # Heurística para dados legados ou renderizados antes da flag
-    if not d["is_pos_producao"]:
-        p_path = (
-            projetos_dir() / corte.projeto_id / "cortes" / corte.id / "upload_ready" / "video.mp4"
-        )
-        if p_path.exists():
-            d["is_pos_producao"] = 1
-
-    # Fallback: se duracao_clip_seg ainda não foi salva (cortes legados
-    # gerados antes desse campo existir) mas o arquivo existe no disco,
-    # mede via ffprobe síncrono e retorna na resposta.  Resposta da API
-    # passa a refletir o valor REAL sem precisar regerar o bruto.
-    d["duracao_clip_seg"] = float(getattr(corte, "duracao_clip_seg", 0.0) or 0.0)
-    if d["duracao_clip_seg"] <= 0 and corte.arquivo_clip_path:
-        p = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
-        if p.exists():
-            try:
-                import subprocess
-
-                result = subprocess.run(
-                    [
-                        "ffprobe",
-                        "-v",
-                        "error",
-                        "-show_entries",
-                        "format=duration",
-                        "-of",
-                        "default=noprint_wrappers=1:nokey=1",
-                        str(p),
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                )
-                if result.returncode == 0:
-                    d["duracao_clip_seg"] = float(result.stdout.strip())
-            except Exception:
-                pass
-
-    return d
+# Schemas e helpers puros vivem em cortes_schemas / cortes_helpers (E-006).
 
 
 # ─── Variável global para props ativas do Remotion ──────────────────────────
@@ -693,17 +502,6 @@ async def obter_video_bruto(corte_id: str, db: AsyncSession = Depends(get_db)):
     raise HTTPException(status_code=404, detail="Vídeo bruto não encontrado")
 
 
-class GerarBrutoRequest(BaseModel):
-    """Opt-ins da regeração do bruto (D-160).
-
-    Só valem quando o corte JÁ tem bruto (regeração). Na 1ª geração o endpoint
-    força a cadeia completa. Default = só o bruto (recorte + silêncios).
-    """
-
-    refazer_transcricao: bool = False
-    refazer_cenas: bool = False
-
-
 def _corte_tem_bruto(corte: Corte) -> bool:
     """True se o corte já tem vídeo bruto em disco (regeração vs 1ª vez, D-160).
 
@@ -803,10 +601,6 @@ async def detectar_segmentos(corte_id: str, db: AsyncSession = Depends(get_db)):
     return {"status": "iniciado", "corte_id": corte_id}
 
 
-class DecisaoSegmentoRequest(BaseModel):
-    decisao: str  # rejeitar | full | compartilhada
-
-
 @router.patch("/{corte_id}/segmentos-detectados/{indice}", response_model=CorteResponse)
 async def decidir_segmento(
     corte_id: str,
@@ -891,14 +685,6 @@ async def exportar_prompt_cenas(corte_id: str):
         raise erro_interno(e) from e
 
 
-class ImportarCenasRequest(BaseModel):
-    cenas: list | None = None
-    formato: str | None = None
-
-    class Config:
-        extra = "allow"
-
-
 @router.post("/{corte_id}/cenas-remotion/importar")
 async def importar_cenas_remotion(corte_id: str, body: ImportarCenasRequest):
     """Importa cenas geradas por IA externa, normaliza e salva."""
@@ -921,10 +707,6 @@ async def preencher_retratos_cenas_remotion(corte_id: str, forcar: bool = False)
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         raise erro_interno(e) from e
-
-
-class ValidarCenasRequest(BaseModel):
-    validado: bool = True
 
 
 @router.post("/{corte_id}/cenas-remotion/validar", response_model=CorteResponse)
@@ -1002,21 +784,6 @@ async def analisar_desvios_ia(corte_id: str, db: AsyncSession = Depends(get_db))
         return _corte_to_dict(corte)
     except Exception as e:
         raise erro_interno(e) from e
-
-
-class RenderPipelineRequest(BaseModel):
-    # `filtro=None` (default) resolve para `AppSettings.filtro_global_padrao`
-    # no service (`pipeline_render.renderizar_pipeline_otimizado` /
-    # `RemotionRenderService.iniciar_render_background`). Antes era o literal
-    # "cinematic_iii", que ignorava a configuracao global. F-030.
-    filtro: str | None = None
-    continuar: bool = True
-    start_from: str = "auto"
-    # `parar_em` (None = roda até o fim). Quando é uma fase intermediária
-    # ("grade"/"overlays"), o pipeline faz um render PARCIAL: para após essa
-    # fase e não finaliza o corte. Permite corrigir uma etapa isolada (ex.:
-    # grade truncada) sem refazer o pipeline inteiro.
-    parar_em: str | None = None
 
 
 def _pipeline_paths(corte: Corte) -> dict[str, Path]:
@@ -1224,53 +991,6 @@ async def obter_remotion_studio_url(corte_id: str, db: AsyncSession = Depends(ge
         "video_url": video_url,
         "props": props,
     }
-
-
-async def _limpar_pasta_corte_pos_sync(corte_dir: Path):
-    """Após sincronização bem-sucedida, mantém apenas clip_filtered.mp4 e upload_ready/.
-    Arquivos de vídeo grandes (clip_raw.*) podem estar com lock no Windows porque o
-    player do navegador segura a conexão de streaming; tenta novamente algumas vezes."""
-    manter = {"clip_filtered.mp4", "upload_ready"}
-    pendentes: list[Path] = []
-
-    for entry in corte_dir.iterdir():
-        if entry.name in manter:
-            continue
-        try:
-            if entry.is_dir():
-                shutil.rmtree(entry)
-            else:
-                entry.unlink()
-        except PermissionError:
-            pendentes.append(entry)
-        except Exception as e:
-            logger.warning("[SincronizarPos] Falha ao remover %s: %s", entry, e)
-
-    # Retry para arquivos travados (típico: clip_raw.mkv sendo servido via stream)
-    for _ in range(1, 6):
-        if not pendentes:
-            break
-        await asyncio.sleep(1.5)
-        ainda_travados: list[Path] = []
-        for entry in pendentes:
-            try:
-                if entry.is_dir():
-                    shutil.rmtree(entry)
-                else:
-                    entry.unlink()
-            except PermissionError:
-                ainda_travados.append(entry)
-            except FileNotFoundError:
-                pass  # Sumiu entre tentativas, ok
-            except Exception as e:
-                logger.warning("[SincronizarPos] Falha ao remover %s: %s", entry, e)
-        pendentes = ainda_travados
-
-    for entry in pendentes:
-        logger.warning(
-            "[SincronizarPos] Não foi possível remover %s (arquivo bloqueado por outro processo)",
-            entry.name,
-        )
 
 
 @router.post("/{corte_id}/sincronizar-pos-producao")
