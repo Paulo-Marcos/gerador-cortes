@@ -180,6 +180,23 @@ def test_aborta_quando_ha_channels_e_itens_planos(tmp_path):
         garantir_layout_de_canais(instance_root=instance)
 
 
+def test_settings_db_na_raiz_nao_e_item_plano(tmp_path):
+    """D-191: `instance/settings.db` é artefato global reservado — não dispara
+    'layout inconsistente' nem é movido para dentro do canal."""
+    instance = tmp_path / "instance"
+    (instance / "channels" / "meucanal").mkdir(parents=True)
+    (instance / "channels" / "meucanal" / "channel.yaml").write_text("nome: x\n", encoding="utf-8")
+    (instance / "active-channel").write_text("meucanal\n", encoding="utf-8")
+    (instance / "settings.db").write_text("", encoding="utf-8")
+
+    resultado = garantir_layout_de_canais(instance_root=instance)
+
+    assert resultado.acao == "noop"
+    # settings.db continua na raiz da instância (não foi movido para o canal).
+    assert (instance / "settings.db").exists()
+    assert not (instance / "channels" / "meucanal" / "settings.db").exists()
+
+
 def test_cura_ponteiro_ausente_com_canal_unico(tmp_path):
     instance = tmp_path / "instance"
     (instance / "channels" / "meucanal").mkdir(parents=True)

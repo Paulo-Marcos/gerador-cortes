@@ -38,7 +38,12 @@ _REPO_ROOT = _BACKEND_ROOT.parent
 # Nomes reservados que pertencem ao layout multi-canal (não são itens "planos").
 _DIR_CANAIS = "channels"
 _PONTEIRO_ATIVO = "active-channel"
-_RESERVADOS = frozenset({_DIR_CANAIS, _PONTEIRO_ATIVO})
+# `settings.db` (D-191) é um artefato GLOBAL de nível de instância (config de
+# todos os canais), vive na raiz de `instance/` ao lado do ponteiro de canal ativo.
+# NÃO é item de layout plano legado: não deve disparar "layout inconsistente" nem
+# ser movido para dentro de um canal.
+_BANCO_SETTINGS = "settings.db"
+_RESERVADOS = frozenset({_DIR_CANAIS, _PONTEIRO_ATIVO, _BANCO_SETTINGS})
 
 _ID_FALLBACK = "default"
 
