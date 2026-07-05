@@ -20,9 +20,9 @@ Itens verificados:
      canal_config.py, midias sob pastas de dados projetos/). CRITICO.
   2. .gitignore cobre producao (instance/, *.db, canal_config.py, .env). CRITICO.
   3. Preview do pull: o delta HEAD..FETCH_HEAD nao pode tocar instance/ nem *.db. CRITICO.
-  4. PROD-local que pode conflitar (.guia/, .claude/settings.json,
-     frontend/.env.production versionados). AVISO -- lembra do overlay
-     .git/info/exclude (D-142).
+  4. Qualquer tracked modificado/staged na PROD (via git status --porcelain):
+     TODOS conflitam no `git pull`. Destaca os de codigo (fora de instance/,
+     gitignored). AVISO -- lembra do overlay .git/info/exclude (D-142).
   5. Lembrete de backup do projetos.db antes do pull. INFO.
 
 Exit code != 0 se qualquer item CRITICO falhar. Stdlib apenas; chama `git`
@@ -80,6 +80,28 @@ def tracked_files() -> list[str]:
     if code != 0:
         return []
     return [line for line in out.splitlines() if line]
+
+
+def tracked_dirty_paths() -> list[str]:
+    """Caminhos TRACKED modificados/staged (o que conflita no `git pull`).
+
+    Le `git status --porcelain` e descarta os untracked (`??`) -- so o que ja
+    esta no indice conflita com o pull. Em rename (`R  old -> new`) reporta o
+    caminho novo (o que passa a estar versionado). Arquivos gitignored
+    (instance/, *.db, .env) nao aparecem aqui, por definicao.
+    """
+    code, out, _ = run_git(["status", "--porcelain"])
+    if code != 0:
+        return []
+    dirty: list[str] = []
+    for line in out.splitlines():
+        if not line or line.startswith("??"):
+            continue
+        path = line[3:]  # pula os 2 codigos de status + espaco
+        if " -> " in path:  # rename: "old -> new"
+            path = path.split(" -> ", 1)[1]
+        dirty.append(path.strip().strip('"'))
+    return dirty
 
 
 # --- Check 1: nenhum dado de producao versionado --------------------------
@@ -172,23 +194,32 @@ def check_pull_preview(remote: str, branch: str, no_fetch: bool) -> bool:
     return True
 
 
-# --- Check 4: PROD-local que pode conflitar (aviso) -----------------------
-def check_prod_local_overlay(files: list[str]) -> bool:
-    print("4) PROD-local que pode conflitar (aviso)")
-    tracked = set(files)
-    flagged: list[str] = []
-    if any(p.startswith(".guia/") for p in tracked):
-        flagged.append(".guia/")
-    if ".claude/settings.json" in tracked:
-        flagged.append(".claude/settings.json")
-    if "frontend/.env.production" in tracked:
-        flagged.append("frontend/.env.production")
-    if flagged:
-        print(f"   {WARN} versionado(s): {', '.join(flagged)}")
-        print("          Na PROD, sobreponha localmente via .git/info/exclude (D-142)")
-        print("          para o pull nao sobrescrever ajustes locais.")
-    else:
-        print(f"   {OK} nada de PROD-local sensivel versionado")
+# --- Check 4: tracked modificado/staged na PROD (aviso) -------------------
+def check_prod_local_changes(_files: list[str]) -> bool:
+    """Avisa sobre QUALQUER tracked modificado/staged -- todos conflitam no pull.
+
+    Nao so os arquivos de overlay conhecidos (.guia/, settings.json,
+    .env.production): qualquer arquivo versionado editado na PROD (ex.: um
+    config.py ajustado a mao) faz o `git pull` conflitar. Destaca os arquivos
+    de CODIGO (fora de instance/, que e gitignored) porque sao os que exigem
+    resolucao manual antes de atualizar. Aviso -- nunca critico.
+    """
+    print("4) Tracked modificado/staged na PROD (aviso)")
+    dirty = tracked_dirty_paths()
+    if not dirty:
+        print(f"   {OK} nenhum arquivo versionado modificado/staged (pull limpo)")
+        return True
+
+    # instance/ e gitignored, mas um path la so apareceria se fosse forcado ao
+    # indice -- entao tratamos tudo fora de instance/ como codigo a destacar.
+    code_paths = [p for p in dirty if not p.startswith("instance/")]
+
+    print(f"   {WARN} {len(dirty)} arquivo(s) versionado(s) modificado(s)/staged conflitam no pull:")
+    for path in dirty:
+        marca = " <- CODIGO" if path in code_paths else ""
+        print(f"          - {path}{marca}")
+    print("          Na PROD, faca stash/commit ou reverta antes do `git pull`.")
+    print("          Para overlay permanente use .git/info/exclude (D-142).")
     return True  # nunca critico
 
 
@@ -221,7 +252,7 @@ def main(argv: list[str] | None = None) -> int:
         check_pull_preview(args.remote, args.branch, args.no_fetch),
     ]
     # Nao-criticos (sempre True, apenas informam).
-    check_prod_local_overlay(files)
+    check_prod_local_changes(files)
     check_backup_reminder()
 
     print("=" * 64)
