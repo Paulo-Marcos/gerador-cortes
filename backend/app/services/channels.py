@@ -30,6 +30,7 @@ from pathlib import Path
 import yaml
 from app.channel_assets_sync import garantir_mascote_materializado
 from app.channel_paths import active_channel_root
+from app.services import settings_store
 
 logger = logging.getLogger(__name__)
 
@@ -127,23 +128,61 @@ def _ler_yaml(channel_yaml: Path) -> dict:
     return dados if isinstance(dados, dict) else {}
 
 
-def _montar_canal(canal_id: str, channel_yaml: Path, ativo: bool) -> Canal:
+def _db_path(instance_root: Path) -> Path:
+    """Banco de settings desta instância (`<instance_root>/settings.db`, D-191)."""
+    return instance_root / "settings.db"
+
+
+def _instance_root_do_ativo() -> Path:
+    """Raiz da instância derivada do canal ATIVO (para achar o `settings.db`).
+
+    `active_channel_root()` devolve `instance/channels/<id>` no layout normal (sobe
+    2 níveis até `instance/`) ou a própria `instance/` no layout legado.
+    """
+    raiz = active_channel_root()
+    if raiz.parent.name == _DIR_CANAIS:
+        return raiz.parent.parent
+    return raiz
+
+
+def _flat_do_yaml(channel_yaml: Path) -> dict:
+    """Lê o `channel.yaml` e achata nos campos de identidade do `settings_store`."""
     dados = _ler_yaml(channel_yaml)
-    paleta = dados.get("paleta") or {}
+    paleta = dados.get("paleta")
     if not isinstance(paleta, dict):
         paleta = {}
+    return {
+        "handle": str(dados.get("handle") or ""),
+        "nome": str(dados.get("nome") or ""),
+        "credito": str(dados.get("credito") or ""),
+        "youtube_channel_id": str(dados.get("youtube_channel_id") or ""),
+        "paleta_primaria": str(paleta.get("primaria") or ""),
+        "paleta_secundaria": str(paleta.get("secundaria") or ""),
+        "paleta_acento": str(paleta.get("acento") or ""),
+    }
+
+
+def _montar_canal(canal_id: str, channel_yaml: Path, ativo: bool, db_path: Path) -> Canal:
+    """Compõe o `Canal` a partir do banco (fonte da verdade), com fallback ao YAML.
+
+    Fallback cobre canais ainda não migrados (sem linha no banco): a identidade é
+    lida do `channel.yaml`, preservando o comportamento pré-D-191.
+    """
+    flat = settings_store.ler_identidade(db_path, canal_id)
+    if flat is None:
+        flat = _flat_do_yaml(channel_yaml)
     return Canal(
         id=canal_id,
-        handle=str(dados.get("handle") or ""),
-        nome=str(dados.get("nome") or ""),
-        credito=str(dados.get("credito") or ""),
+        handle=flat["handle"],
+        nome=flat["nome"],
+        credito=flat["credito"],
         paleta=Paleta(
-            primaria=str(paleta.get("primaria") or ""),
-            secundaria=str(paleta.get("secundaria") or ""),
-            acento=str(paleta.get("acento") or ""),
+            primaria=flat["paleta_primaria"],
+            secundaria=flat["paleta_secundaria"],
+            acento=flat["paleta_acento"],
         ),
         ativo=ativo,
-        youtube_channel_id=str(dados.get("youtube_channel_id") or ""),
+        youtube_channel_id=flat["youtube_channel_id"],
     )
 
 
@@ -175,8 +214,9 @@ def listar_canais(instance_root: Path | None = None) -> list[Canal]:
     if not canais_dir.is_dir():
         return []
     ativo = _ler_canal_ativo(root)
+    db_path = _db_path(root)
     canais = [
-        _montar_canal(p.name, p / _CHANNEL_YAML, ativo=(p.name == ativo))
+        _montar_canal(p.name, p / _CHANNEL_YAML, ativo=(p.name == ativo), db_path=db_path)
         for p in sorted(canais_dir.iterdir(), key=lambda p: p.name)
         if p.is_dir()
     ]
@@ -193,7 +233,8 @@ def identidade_do_canal_ativo() -> Canal:
     que os consumidores usarão no lugar de `settings.canal_*` (migração futura).
     """
     canal_root = active_channel_root()
-    return _montar_canal(canal_root.name, canal_root / _CHANNEL_YAML, ativo=True)
+    db_path = _db_path(_instance_root_do_ativo())
+    return _montar_canal(canal_root.name, canal_root / _CHANNEL_YAML, ativo=True, db_path=db_path)
 
 
 def criar_canal(
@@ -228,8 +269,12 @@ def criar_canal(
     if identidade:
         _aplicar_identidade(destino / _CHANNEL_YAML, identidade)
 
+    # Semeia o banco (fonte da verdade) a partir do YAML já mesclado.
+    db_path = _db_path(root)
+    settings_store.gravar_identidade(db_path, canal_id, _flat_do_yaml(destino / _CHANNEL_YAML))
+
     ativo = _ler_canal_ativo(root)
-    return _montar_canal(canal_id, destino / _CHANNEL_YAML, ativo=(canal_id == ativo))
+    return _montar_canal(canal_id, destino / _CHANNEL_YAML, ativo=(canal_id == ativo), db_path=db_path)
 
 
 def selecionar_canal(canal_id: str, instance_root: Path | None = None) -> ResultadoSelecao:
@@ -269,9 +314,12 @@ def editar_identidade(canal_id: str, identidade: dict, instance_root: Path | Non
     root = _instance_root(instance_root)
     canal_root = _exigir_canal(root, canal_id)
     channel_yaml = canal_root / _CHANNEL_YAML
-    _aplicar_identidade(channel_yaml, identidade)
+    _aplicar_identidade(channel_yaml, identidade)  # merge + espelho no YAML
+    # Banco (fonte da verdade) = identidade completa já mesclada.
+    db_path = _db_path(root)
+    settings_store.gravar_identidade(db_path, canal_id, _flat_do_yaml(channel_yaml))
     ativo = _ler_canal_ativo(root)
-    return _montar_canal(canal_id, channel_yaml, ativo=(canal_id == ativo))
+    return _montar_canal(canal_id, channel_yaml, ativo=(canal_id == ativo), db_path=db_path)
 
 
 # Campos de identidade aceitos no PATCH/criação (escalares de topo).

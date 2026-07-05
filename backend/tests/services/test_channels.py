@@ -158,6 +158,36 @@ def test_identidade_do_canal_ativo_devolve_os_quatro_campos(instancia, monkeypat
     assert canal.youtube_channel_id == "@fonte-lives"
 
 
+def test_identidade_prefere_banco_ao_yaml(instancia, monkeypatch):
+    """D-191: com linha no banco, ela é a fonte da verdade (YAML vira só espelho)."""
+    from app.services import settings_store
+
+    instance_root, _ = instancia
+    canal_root = instance_root / "channels" / "default"
+    monkeypatch.setattr(svc, "active_channel_root", lambda: canal_root)
+
+    settings_store.gravar_identidade(
+        instance_root / "settings.db", "default", {"handle": "@do-banco", "nome": "Do Banco"}
+    )
+
+    canal = svc.identidade_do_canal_ativo()
+    assert canal.handle == "@do-banco"  # banco vence o YAML "@seucanal"
+    assert canal.nome == "Do Banco"
+
+
+def test_editar_identidade_grava_no_banco(instancia):
+    """Editar deve espelhar no YAML E gravar no banco (fonte da verdade)."""
+    from app.services import settings_store
+
+    instance_root, _ = instancia
+    svc.editar_identidade("default", {"nome": "Editado"}, instance_root=instance_root)
+
+    linha = settings_store.ler_identidade(instance_root / "settings.db", "default")
+    assert linha is not None
+    assert linha["nome"] == "Editado"
+    assert linha["handle"] == "@seucanal"  # merge preserva o resto
+
+
 def test_seed_preenche_campos_vazios_a_partir_do_ambiente(tmp_path: Path, monkeypatch):
     canal_root = tmp_path / "channels" / "default"
     canal_root.mkdir(parents=True)
