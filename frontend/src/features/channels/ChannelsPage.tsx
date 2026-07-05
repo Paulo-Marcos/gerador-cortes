@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
 import type { Canal, IdentidadeCanal } from '@/lib/channelsApi';
+import { AppSettingsControls } from '@/features/settings/AppSettingsControls';
 import { ChannelCard } from './ChannelCard';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import {
@@ -133,11 +134,12 @@ export function ChannelsPage() {
               Voltar
             </Link>
             <h1 className="font-editorial text-[48px] font-medium leading-[0.96] tracking-[-0.01em] text-[var(--wb-text)]">
-              Canais
+              Configurações
             </h1>
             <p className="mt-2 max-w-2xl text-[15px] text-[var(--wb-text-mute)]">
-              Gerencie os canais do gerador: crie novos, escolha qual está ativo e ajuste a
-              identidade básica. A troca de canal ativo só efetiva após reiniciar o backend.
+              Todas as configurações do app num só lugar: as <strong>globais</strong> (processamento,
+              logs, render) e as de <strong>cada canal</strong> (identidade). Tudo é editável aqui e
+              persiste no banco. A troca de canal ativo só efetiva após reiniciar o backend.
             </p>
           </div>
           <Button type="button" onClick={() => setDialogo({ tipo: 'criar' })}>
@@ -148,6 +150,21 @@ export function ChannelsPage() {
       </header>
 
       <main className="grid flex-1 content-start gap-5 overflow-auto p-6">
+        <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
+          <h2 className="text-lg font-semibold text-[var(--wb-text)]">Configurações globais</h2>
+          <p className="text-sm text-[var(--wb-text-mute)]">
+            Preferências de processamento aplicadas às renderizações do canal ativo.
+          </p>
+          <AppSettingsControls />
+        </section>
+
+        <div className="mt-2">
+          <h2 className="text-lg font-semibold text-[var(--wb-text)]">Canais</h2>
+          <p className="text-sm text-[var(--wb-text-mute)]">
+            Identidade de cada canal (nome, handle, crédito, canal-fonte das lives e paleta).
+          </p>
+        </div>
+
         {canaisQuery.isLoading && (
           <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
             <Loader2 className="animate-spin" size={16} aria-hidden />
