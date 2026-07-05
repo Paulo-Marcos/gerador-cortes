@@ -1690,37 +1690,53 @@
       "id": "D-233",
       "kind": "chore",
       "title": "Fatiar componentes frontend gigantes (SRP)",
-      "status": "Backlog",
+      "status": "Cancelada",
       "origin": "D-194",
       "context": "OPCIONAL/debito. Fatiar YoutubeLayoutPanel.tsx (1750), CenaOverlay.tsx (1353), PostProductionPage.tsx (1327) em subcomponentes/hooks. Skills-base: clean-architecture-guardian, react-best-practices, senior-frontend. Fonte: D-194. LOCK: varios travados - alto risco. NAO chip autonomo - manual, apos E5.",
       "createdAt": "2026-07-04",
-      "updatedAt": "2026-07-04",
+      "updatedAt": "2026-07-05",
       "startedAt": null,
       "readyAt": null,
-      "finishedAt": null,
+      "finishedAt": "2026-07-05T00:27:43-03:00",
       "modifiedFiles": [],
-      "summary": [],
+      "summary": [
+        "Cancelada em 2026-07-05: Redundante com E-006 (epico guarda-chuva do debito estrutural); consolidado no epico por decisao do dev"
+      ],
       "validations": [],
       "pending": [],
-      "parentId": "E-006"
+      "parentId": "E-006",
+      "cancellations": [
+        {
+          "reason": "Redundante com E-006 (epico guarda-chuva do debito estrutural); consolidado no epico por decisao do dev",
+          "at": "2026-07-05"
+        }
+      ]
     },
     {
       "id": "D-232",
       "kind": "chore",
       "title": "Fatiar arquivos backend gigantes (SRP)",
-      "status": "Backlog",
+      "status": "Cancelada",
       "origin": "D-194",
       "context": "OPCIONAL/debito. Fatiar pipeline_render.py (1854), ffmpeg_commands.py (1581), export.py (1510), routers/cortes.py (1348) em sub-servicos coesos. Skills-base: clean-architecture-guardian, uncle-bob-craft. Fonte: D-194. LOCK: todos travados - alto risco. NAO chip autonomo - manual, apos E1-E4.",
       "createdAt": "2026-07-04",
-      "updatedAt": "2026-07-04",
+      "updatedAt": "2026-07-05",
       "startedAt": null,
       "readyAt": null,
-      "finishedAt": null,
+      "finishedAt": "2026-07-05T00:27:42-03:00",
       "modifiedFiles": [],
-      "summary": [],
+      "summary": [
+        "Cancelada em 2026-07-05: Redundante com E-006 (epico guarda-chuva do debito estrutural); consolidado no epico por decisao do dev"
+      ],
       "validations": [],
       "pending": [],
-      "parentId": "E-006"
+      "parentId": "E-006",
+      "cancellations": [
+        {
+          "reason": "Redundante com E-006 (epico guarda-chuva do debito estrutural); consolidado no epico por decisao do dev",
+          "at": "2026-07-05"
+        }
+      ]
     },
     {
       "id": "D-231",
@@ -3911,18 +3927,91 @@
       "id": "D-191",
       "kind": "feature",
       "title": "Migrar config de arquivos para o banco, editavel pelo app",
-      "status": "Backlog",
+      "status": "Validada",
       "origin": "Backlog (2026-07-03)",
       "context": "Objetivo: toda config/customizacao que hoje vive em ARQUIVO passa a viver no BANCO (por canal) e a ser editavel pela aplicacao \u2014 sem o usuario abrir arquivos ou codigo manualmente. Motivacao: usabilidade e distribuicao (multi-canal/publicacao), a pessoa customiza tudo pela UI.\n\nInventario inicial das configs em arquivo hoje:\n(1) app_settings.json (instance/channels/<canal>/projetos/): youtube_layout_padrao_global (placa/fundo/layout YT padrao GLOBAL, hoje '{}'), filtro_global_padrao, log_level, render (cooldown_sec, overlay_concurrency, bundle_cache_enabled, overlay_codec, overlay_max_attempts, grade_global_quality).\n(2) channel.yaml (instance/channels/<canal>/): identidade do canal \u2014 handle, nome, credito, youtube_channel_id (accessor identidade_do_canal_ativo).\n\nNAO migrar segredos/infra: backend/.env (API keys Gemini/YouTube, PROJETOS_DIR/ASSETS_DIR, N8N webhooks), client_secrets.json e token.json ficam como estao \u2014 secrets nao vao pro banco.\n\nContexto D-189: a placa por-projeto/por-corte JA vive no banco e e editavel no app (95/100 projetos e 54 cortes com a placa gravada). Falta: o Padrao Global (app_settings.json) e a identidade do canal (channel.yaml); e garantir que projeto NOVO herde placa/identidade do padrao do canal (banco) em vez do default de codigo.\n\nAo promover: inventario COMPLETO de arquivos de config; tabela(s) de settings por canal no banco + migracao de leitura dos arquivos atuais com back-compat (sem perder a config da PROD); UI de edicao. Origem: pergunta do Paulo apos D-189; split PROD/DEV e multi-canal ja existem.",
       "createdAt": "2026-07-03",
-      "updatedAt": "2026-07-03",
-      "startedAt": null,
-      "readyAt": null,
-      "finishedAt": null,
-      "modifiedFiles": [],
-      "summary": [],
-      "validations": [],
-      "pending": []
+      "updatedAt": "2026-07-05",
+      "startedAt": "2026-07-05T00:33:30-03:00",
+      "readyAt": "2026-07-05T02:07:35-03:00",
+      "finishedAt": "2026-07-05T12:43:17-03:00",
+      "modifiedFiles": [
+        ".guia/DEMANDAS.md",
+        "backend/app/services/settings_store.py",
+        "backend/app/channel_paths.py",
+        "backend/app/services/app_settings.py",
+        "backend/app/services/channels.py",
+        "backend/app/main.py",
+        "backend/app/routers/settings.py",
+        "backend/app/routers/projetos.py",
+        "backend/tests/services/test_settings_store.py",
+        "backend/tests/services/test_channels.py",
+        "backend/tests/routers/test_settings_router.py",
+        "frontend/src/types/models.ts",
+        "frontend/src/lib/api.ts",
+        "frontend/src/components/layout/SettingsModal.tsx",
+        "frontend/src/features/settings/AppSettingsControls.tsx",
+        "frontend/src/features/channels/ChannelsPage.tsx",
+        "backend/app/channel_layout_migration.py",
+        "backend/tests/test_channel_layout_migration.py",
+        "frontend/src/components/layout/Sidebar.tsx"
+      ],
+      "summary": [
+        "Em desenvolvimento desde 2026-07-05.",
+        "BLOQUEADA POR LOCKS \u2014 nenhum codigo alterado. D-191 (config em arquivo -> banco, editavel no app) + D-176 (rename channel.yaml) exigem tocar arquivos travados e criar arquivos novos, ambos proibidos pelo registry sem autorizacao. Foi feito apenas levantamento read-only (inventario completo + plano de implementacao + lista de unlocks). Worktree gc-D191 criado e removido (0 commits).",
+        "Espinha config->banco esta 100% travada: models.py+database.py (editor-cortes-stage-medallion), services/app_settings.py+routers/settings.py+routers/projetos.py (f024-pos-layout-youtube), main.py (editor-cortes-stage-medallion). Alem disso lock global 'adicoes-exigem-autorizacao' (operations:[add], files:['*']) proibe criar migration_004, novos services/UI/testes.",
+        "D-176 (rename identidade) tem parte em arquivos LIVRES (services/channels.py, routers/channels.py, ranking_lives.py, ChannelForm.tsx, channel_layout_migration.py) mas rippla para models.py:62/270 (travado) e metadados.py:357 (thumbnail-agent-prompt-livre) \u2014 nao ha entrega limpa parcial.",
+        "IMPLEMENTADO. Config migrada de arquivo para banco (Opcao A: instance/settings.db global unico, projetos.db intocado). settings_store (sqlite sync) e a fonte da verdade; app_settings.json e channel.yaml viram ESPELHO/backup + fallback de migracao (le do banco; se sem linha, le o arquivo e semeia o banco).",
+        "D-176 absorvida: schema separa canal de PUBLICACAO (handle/nome/credito) do canal-FONTE das lives (youtube_channel_id) em channel_identity; 'nome' mantido e vivo end-to-end (nome de exibicao em ChannelForm/ChannelCard). Interfaces de AppSettingsService e identidade_do_canal_ativo() preservadas => call-sites e models.py NAO mudaram.",
+        "Migracao automatica no boot (main.py): inicializa settings.db + migrar_identidades_para_banco + seed app_settings do canal ativo, idempotente. render.* agora editavel pela UI (SettingsModal + PUT /settings). Projeto NOVO herda layout YT do padrao global do canal (projetos.py).",
+        "Painel unico de Configuracoes: pagina /canais reformulada como 'Configuracoes' com secao GLOBAIS (filtro/logs/render/status do layout YT global via AppSettingsControls reutilizado pelo modal Ajustes) + secao POR CANAL (identidade de cada canal). Tudo visivel e editavel num so lugar, persistido no settings.db.",
+        "Demanda finalizada via Guia Fluxo."
+      ],
+      "validations": [
+        "Nenhuma \u2014 trabalho read-only (bin/check-lock.py check em ~20 arquivos; Explore agent mapeando readers/writers/consumers). Nenhum teste rodado pois nenhum codigo mudou.",
+        "pytest backend: 1385 passed (inclui test_settings_store, test_channels, test_app_settings*, test_settings_router, pipeline)",
+        "vitest frontend: 234 passed (28 files)",
+        "tsc --noEmit: sem erros em frontend/src",
+        "tsc --noEmit limpo; eslint --max-warnings 0 limpo; vitest 234 passed (28 files)"
+      ],
+      "pending": [],
+      "readyCount": 3,
+      "qualityReview": {
+        "candidates": [
+          "backend/app/services/settings_store.py",
+          "backend/app/channel_paths.py",
+          "backend/app/services/app_settings.py",
+          "backend/app/services/channels.py",
+          "backend/app/main.py",
+          "backend/app/routers/settings.py",
+          "backend/app/routers/projetos.py",
+          "backend/tests/services/test_settings_store.py",
+          "backend/tests/services/test_channels.py",
+          "backend/tests/routers/test_settings_router.py",
+          "frontend/src/types/models.ts",
+          "frontend/src/lib/api.ts",
+          "frontend/src/components/layout/SettingsModal.tsx",
+          "frontend/src/features/settings/AppSettingsControls.tsx",
+          "frontend/src/features/channels/ChannelsPage.tsx",
+          "backend/app/channel_layout_migration.py",
+          "backend/tests/test_channel_layout_migration.py",
+          "frontend/src/components/layout/Sidebar.tsx"
+        ],
+        "dimensions": [
+          "(a) qualidade do codigo (legibilidade, nomes, clean code)",
+          "(b) tamanho de funcoes/arquivos (funcao curta, arquivo coeso)",
+          "(c) responsabilidade unica (SRP) por funcao/classe/modulo",
+          "(d) cobertura/tests do que mudou",
+          "(e) necessidade de refatorar para boa qualidade - e refatorar antes de fechar"
+        ],
+        "skills": [
+          "clean-code-review"
+        ],
+        "findings": [
+          "revisao das 5 dimensoes: SRP ok (settings_store=I/O puro, interfaces preservadas, routers finos); funcoes pequenas; cobertura nova (store/migracao/router/boot) + suites 1386 back/234 front verdes; sem refactor necessario"
+        ],
+        "checkedAt": "2026-07-05"
+      }
     },
     {
       "id": "D-181",
@@ -3976,35 +4065,75 @@
       "id": "D-178",
       "kind": "chore",
       "title": "Guard-rail: avisar qualquer arquivo versionado modificado na PROD",
-      "status": "Backlog",
+      "status": "Validada",
       "origin": "Achado 2026-07-03",
       "context": "bin/check_update_safety.py (item 4) so avisa sobre .guia/.claude/settings.json/frontend.env.production versionados. NAO pegou o config.py modificado localmente na PROD (@ateuinforma) \u2014 que conflitaria no pull. Melhorar: rodar 'git status --porcelain' e AVISAR sobre QUALQUER arquivo TRACKED modificado/staged na PROD (todos conflitam no pull), destacando arquivos de codigo (fora de instance/, gitignored). Nao-bloqueante (aviso), mas visivel. Skills-base: open-source-readiness, clean-code-review.",
       "createdAt": "2026-07-02",
-      "updatedAt": "2026-07-02",
-      "startedAt": null,
-      "readyAt": null,
-      "finishedAt": null,
-      "modifiedFiles": [],
-      "summary": [],
-      "validations": [],
-      "pending": []
+      "updatedAt": "2026-07-05",
+      "startedAt": "2026-07-05T00:33:36-03:00",
+      "readyAt": "2026-07-05T00:35:48-03:00",
+      "finishedAt": "2026-07-05T00:42:02-03:00",
+      "modifiedFiles": [
+        ".guia/DEMANDAS.md",
+        "bin/check_update_safety.py"
+      ],
+      "summary": [
+        "Em desenvolvimento desde 2026-07-05.",
+        "Item 4 do guard-rail agora le git status --porcelain e avisa sobre QUALQUER tracked modificado/staged (todos conflitam no git pull), nao so o overlay conhecido; destaca os de codigo (fora de instance/, gitignored) com marca <- CODIGO; segue nao-bloqueante (return True, exit 0).",
+        "Item 4 do guard-rail le git status --porcelain e avisa sobre qualquer tracked modificado/staged (todos conflitam no pull); destaca codigo fora de instance/; nao-bloqueante",
+        "Item 4 do guard-rail le git status --porcelain e avisa sobre qualquer tracked modificado/staged",
+        "Item 4 do guard-rail le git status --porcelain e avisa sobre qualquer tracked modificado/staged; commit a3f3fea ja mergeado na main via worktree"
+      ],
+      "validations": [
+        "python bin/check_update_safety.py --no-fetch (tree sujo: AVISO+CODIGO exit 0; tree limpo: OK exit 0)",
+        "python bin/check_update_safety.py --no-fetch (suja: AVISO+CODIGO exit 0; limpa: OK exit 0)"
+      ],
+      "pending": [],
+      "readyCount": 1,
+      "qualityReview": {
+        "candidates": [
+          "bin/check_update_safety.py"
+        ],
+        "dimensions": [
+          "(a) qualidade do codigo (legibilidade, nomes, clean code)",
+          "(b) tamanho de funcoes/arquivos (funcao curta, arquivo coeso)",
+          "(c) responsabilidade unica (SRP) por funcao/classe/modulo",
+          "(d) cobertura/tests do que mudou",
+          "(e) necessidade de refatorar para boa qualidade - e refatorar antes de fechar"
+        ],
+        "skills": [
+          "clean-code-review"
+        ],
+        "findings": [
+          "helper tracked_dirty_paths separado da apresentacao; funcoes pequenas"
+        ],
+        "checkedAt": "2026-07-05"
+      }
     },
     {
       "id": "D-176",
       "kind": "feature",
       "title": "Clarificar e documentar campos de identidade do channel.yaml",
-      "status": "Backlog",
+      "status": "Cancelada",
       "origin": "Backlog (2026-07-02)",
       "context": "Os campos do channel.yaml (handle, nome, credito, youtube_channel_id) sao pouco intuitivos e nao dizem para que servem. Levantamento dos usos atuais: (1) youtube_channel_id = canal-FONTE das lives (ranking_lives.py, youtube_browser.py) \u2014 o canal que se assiste/corta; (2) handle = vira canal_origem default do Projeto (models.py:62, projetos.py:106) \u2014 o SEU canal; (3) credito = credito de atribuicao nos metadados do corte (models.py:268, metadados.py:357) \u2014 o SEU canal; (4) nome = CAMPO MORTO: definido em config.py:93 e semeado no boot, mas nenhum consumidor le settings.canal_nome. Problema central: dois canais distintos (o de PUBLICACAO/seu vs o FONTE das lives) convivem no mesmo bloco sem rotulo que os diferencie, e handle vs credito (ambos 'o seu canal') tem papeis diferentes nao obvios. Melhorias a avaliar: renomear campos para nomes autoexplicativos (ex.: agrupar canal_publicacao: {handle, credito, nome} e canal_fonte_lives: {youtube_channel_id}); adicionar comentarios no template examples/instance.example/channel.yaml explicando cada campo e QUAL canal representa; decidir o destino de 'nome' (dar uso ou remover como campo morto). Rename exige migracao de config_version + seed. Descoberto durante a D-173.",
       "createdAt": "2026-07-02",
-      "updatedAt": "2026-07-02",
+      "updatedAt": "2026-07-05",
       "startedAt": null,
       "readyAt": null,
-      "finishedAt": null,
+      "finishedAt": "2026-07-05T00:27:43-03:00",
       "modifiedFiles": [],
-      "summary": [],
+      "summary": [
+        "Cancelada em 2026-07-05: Fundida no design da D-191 (migrar config pro banco): a clareza/rename dos campos do channel.yaml passa a fazer parte do schema de settings por canal no banco"
+      ],
       "validations": [],
-      "pending": []
+      "pending": [],
+      "cancellations": [
+        {
+          "reason": "Fundida no design da D-191 (migrar config pro banco): a clareza/rename dos campos do channel.yaml passa a fazer parte do schema de settings por canal no banco",
+          "at": "2026-07-05"
+        }
+      ]
     },
     {
       "id": "D-175",
