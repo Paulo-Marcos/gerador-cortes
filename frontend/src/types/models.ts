@@ -557,6 +557,18 @@ export interface LimparArquivosResponse {
 
 export type LogLevel = 'disabled' | 'info' | 'debug';
 
+export type OverlayCodec = 'prores_4444' | 'vp9';
+
+// D-191: ajustes do pipeline de renderizacao, agora editaveis pela UI.
+export interface RenderSettings {
+  cooldown_sec: number;
+  overlay_concurrency: number;
+  bundle_cache_enabled: boolean;
+  overlay_codec: OverlayCodec;
+  overlay_max_attempts: number;
+  grade_global_quality: number;
+}
+
 export interface AppSettings {
   log_level: LogLevel;
   filtro_global_padrao: string;
@@ -564,4 +576,6 @@ export interface AppSettings {
   // `Projeto.layout_youtube_padrao` que e por-projeto). JSON string;
   // "{}" significa "sem padrao global definido".
   youtube_layout_padrao_global?: string;
+  // D-191: bloco de render exposto pela API (settings vivem no banco).
+  render?: RenderSettings;
 }

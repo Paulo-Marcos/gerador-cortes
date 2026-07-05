@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { AppSettings, FiltroExport, LogLevel } from '@/types/models';
+import type { AppSettings, FiltroExport, LogLevel, RenderSettings } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
@@ -32,6 +32,14 @@ export const LOG_OPTIONS: Array<{ value: LogLevel; label: string; description: s
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 const DEFAULT_FILTER = 'bypass_dourado_aberto';
+const DEFAULT_RENDER: RenderSettings = {
+  cooldown_sec: 0,
+  overlay_concurrency: 4,
+  bundle_cache_enabled: true,
+  overlay_codec: 'prores_4444',
+  overlay_max_attempts: 3,
+  grade_global_quality: 30,
+};
 const FALLBACK_FILTERS: FiltroExport[] = [
   {
     id: 'cinematic_iii',
@@ -115,10 +123,42 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
     },
   });
 
+  const renderMutation = useMutation({
+    mutationFn: (render: RenderSettings) => api.atualizarSettings({ render }),
+    onSuccess: (settings) => {
+      queryClient.setQueryData(['app-settings'], settings);
+      notify('Ajustes de renderizacao atualizados.', { tone: 'success', title: 'Ajustes' });
+    },
+    onError: () =>
+      notify('Nao foi possivel salvar os ajustes de renderizacao.', {
+        tone: 'error',
+        title: 'Ajustes',
+      }),
+  });
+
   const selectedLevel = settingsQuery.data?.log_level ?? 'disabled';
   const filtros = filtersQuery.data?.filtros?.length ? filtersQuery.data.filtros : FALLBACK_FILTERS;
   const selectedFilter = settingsQuery.data?.filtro_global_padrao ?? DEFAULT_FILTER;
-  const isBusy = settingsQuery.isLoading || settingsMutation.isPending || filterMutation.isPending;
+  const render = settingsQuery.data?.render ?? DEFAULT_RENDER;
+  const isBusy =
+    settingsQuery.isLoading ||
+    settingsMutation.isPending ||
+    filterMutation.isPending ||
+    renderMutation.isPending;
+
+  // Envia o bloco COMPLETO de render com o campo alterado (a API espera o bloco).
+  const patchRender = (patch: Partial<RenderSettings>) =>
+    renderMutation.mutate({ ...render, ...patch });
+
+  const controlCls =
+    'h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-sm font-semibold text-[var(--wb-text)] outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60';
+  const labelCls = 'grid gap-1.5 text-xs font-semibold text-[var(--wb-text-mute)]';
+  // Aplica um campo numérico só quando muda de fato, ignorando entradas inválidas.
+  const onBlurNumber =
+    (campo: keyof RenderSettings, atual: number) => (e: React.FocusEvent<HTMLInputElement>) => {
+      const valor = Number(e.target.value);
+      if (Number.isFinite(valor) && valor !== atual) patchRender({ [campo]: valor });
+    };
 
   return (
     <Modal
@@ -199,6 +239,90 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
               </button>
             );
           })}
+        </div>
+
+        <div className="h-px bg-[var(--wb-border)]" />
+
+        <div className="grid gap-2">
+          <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]">
+            Renderizacao
+          </span>
+          <div className="grid grid-cols-2 gap-3">
+            <label className={labelCls}>
+              Concorrencia de overlay
+              <input
+                type="number"
+                min={1}
+                key={`conc-${render.overlay_concurrency}`}
+                defaultValue={render.overlay_concurrency}
+                disabled={isBusy}
+                onBlur={onBlurNumber('overlay_concurrency', render.overlay_concurrency)}
+                className={controlCls}
+              />
+            </label>
+            <label className={labelCls}>
+              Tentativas por overlay
+              <input
+                type="number"
+                min={1}
+                key={`att-${render.overlay_max_attempts}`}
+                defaultValue={render.overlay_max_attempts}
+                disabled={isBusy}
+                onBlur={onBlurNumber('overlay_max_attempts', render.overlay_max_attempts)}
+                className={controlCls}
+              />
+            </label>
+            <label className={labelCls}>
+              Cooldown entre renders (s)
+              <input
+                type="number"
+                min={0}
+                key={`cd-${render.cooldown_sec}`}
+                defaultValue={render.cooldown_sec}
+                disabled={isBusy}
+                onBlur={onBlurNumber('cooldown_sec', render.cooldown_sec)}
+                className={controlCls}
+              />
+            </label>
+            <label className={labelCls}>
+              Qualidade do grade (QSV, 1-51)
+              <input
+                type="number"
+                min={1}
+                max={51}
+                key={`gq-${render.grade_global_quality}`}
+                defaultValue={render.grade_global_quality}
+                disabled={isBusy}
+                onBlur={onBlurNumber('grade_global_quality', render.grade_global_quality)}
+                className={controlCls}
+              />
+            </label>
+            <label className={labelCls}>
+              Codec do overlay
+              <select
+                value={render.overlay_codec}
+                disabled={isBusy}
+                onChange={(event) =>
+                  patchRender({
+                    overlay_codec: event.target.value as RenderSettings['overlay_codec'],
+                  })
+                }
+                className={controlCls}
+              >
+                <option value="prores_4444">ProRes 4444</option>
+                <option value="vp9">VP9 (.webm)</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-[var(--wb-text)]">
+              <input
+                type="checkbox"
+                checked={render.bundle_cache_enabled}
+                disabled={isBusy}
+                onChange={(event) => patchRender({ bundle_cache_enabled: event.target.checked })}
+              />
+              Cache de bundle Remotion
+            </label>
+          </div>
         </div>
 
         {isBusy && (

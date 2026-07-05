@@ -24,6 +24,7 @@ import type {
   LimparArquivosResponse,
   LogLevel,
   MetadadoCorte,
+  RenderSettings,
   MetadadoPatch,
   PipelineStatusResponse,
   PromptManualResponse,
@@ -121,6 +122,8 @@ export const api = {
           log_level?: LogLevel;
           filtro_global_padrao?: string;
           youtube_layout_padrao_global?: string;
+          // D-191: bloco completo de render (editável pela UI).
+          render?: RenderSettings;
         },
   ) =>
     request<AppSettings>('/settings', {
