@@ -95,11 +95,14 @@ async def criar_projeto(body: CriarProjetoRequest, db: AsyncSession = Depends(ge
     """Cria um novo projeto e inicia o download em background."""
     # I-023: filtro_padrao por projeto removido. O render lê
     # AppSettings.filtro_global_padrao direto em runtime.
+    # D-191: projeto NOVO herda a placa/layout YT do PADRÃO GLOBAL do canal (banco)
+    # em vez do default de código; "{}" (sem padrão global) mantém o default do modelo.
     projeto = Projeto(
         id=str(uuid.uuid4()),
         youtube_url=body.youtube_url,
         canal_origem=body.canal_origem or channels.identidade_do_canal_ativo().handle,
         status=StatusProjeto.PENDENTE,
+        layout_youtube_padrao=AppSettingsService.get().youtube_layout_padrao_global,
     )
     db.add(projeto)
     await db.commit()

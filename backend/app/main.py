@@ -30,7 +30,11 @@ from app.routers import (
 from app.routers import (
     settings as app_settings,
 )
+from app import channel_paths
+from app.services import channels as channels_service
+from app.services import settings_store
 from app.services.app_logging import install_log_controls
+from app.services.app_settings import AppSettingsService
 from app.services.remotion_render import RemotionRenderService
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,6 +52,17 @@ async def lifespan(app: FastAPI):
 
     for dir_path in [str(projetos_dir()), settings.assets_dir]:
         os.makedirs(dir_path, exist_ok=True)
+
+    # D-191: as configurações vivem no banco (`instance/settings.db`). Inicializa o
+    # banco de settings e MIGRA (idempotente) a config já existente em arquivo —
+    # identidade de todos os canais + app settings do canal ativo — para o banco,
+    # sem intervenção manual. Best-effort: um erro de config não derruba o boot.
+    try:
+        settings_store.inicializar(channel_paths.settings_db_path())
+        channels_service.migrar_identidades_para_banco()
+        AppSettingsService.get()  # semeia app_settings do canal ativo a partir do arquivo
+    except Exception as e:  # noqa: BLE001 — boot resiliente a I/O de config
+        print(f"[Settings] Falha ao migrar configs para o banco: {e}")
 
     await init_db()
 

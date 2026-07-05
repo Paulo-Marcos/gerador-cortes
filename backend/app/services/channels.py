@@ -203,6 +203,30 @@ def _exigir_canal(instance_root: Path, canal_id: str) -> Path:
     return canal_root
 
 
+def migrar_identidades_para_banco(instance_root: Path | None = None) -> int:
+    """Semeia no banco a identidade dos canais que ainda só existem em `channel.yaml`.
+
+    Migração automática do D-191 rodada no boot: leva para o `settings_store` a
+    config de identidade já existente (inclusive a da PROD) sem intervenção manual.
+    IDEMPOTENTE — só grava um canal que ainda não tem linha, e nunca semeia um YAML
+    todo-vazio. Retorna quantos canais foram semeados.
+    """
+    root = _instance_root(instance_root)
+    canais_dir = _canais_dir(root)
+    if not canais_dir.is_dir():
+        return 0
+    db_path = _db_path(root)
+    semeados = 0
+    for p in sorted(canais_dir.iterdir(), key=lambda p: p.name):
+        if not p.is_dir() or settings_store.ler_identidade(db_path, p.name) is not None:
+            continue
+        flat = _flat_do_yaml(p / _CHANNEL_YAML)
+        if any(flat.values()):
+            settings_store.gravar_identidade(db_path, p.name, flat)
+            semeados += 1
+    return semeados
+
+
 def listar_canais(instance_root: Path | None = None) -> list[Canal]:
     """Lista os canais em `instance/channels/`, marcando o ativo.
 
