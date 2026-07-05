@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
 from threading import Lock
 
+from app import channel_paths
 from app.channel_paths import projetos_dir
 from app.domain.cinema_filters import FILTROS_CINEMA
 from app.domain.overlay_codec import OverlayCodec
+from app.services import settings_store
 
 DEFAULT_FILTRO_GLOBAL_PADRAO = "bypass_dourado_aberto"
 
@@ -114,80 +116,69 @@ class AppSettings:
 
 
 class AppSettingsService:
-    """Lê e grava ajustes globais em arquivo JSON pequeno."""
+    """Lê e grava os ajustes de app do canal ativo (D-191).
+
+    FONTE DA VERDADE: o banco de settings (`settings_store`, `instance/settings.db`),
+    numa linha por canal. O arquivo `app_settings.json` continua sendo escrito como
+    ESPELHO de compatibilidade/backup e serve de FALLBACK+migração: quando o banco
+    ainda não tem a linha do canal (primeiro boot após o D-191, ou config trazida da
+    PROD em arquivo), o serviço lê o arquivo e SEMEIA o banco a partir dele. A
+    interface pública é a mesma de antes — os consumidores não mudam.
+    """
 
     _lock = Lock()
     _cache: AppSettings | None = None
     _settings_path_override: Path | None = None
+    _db_path_override: Path | None = None
 
     @classmethod
     def get(cls) -> AppSettings:
         with cls._lock:
             if cls._cache is None:
-                cls._cache = cls._read_settings()
+                cls._cache = cls._load()
             return cls._cache
 
     @classmethod
     def update_log_level(cls, log_level: LogLevel) -> AppSettings:
-        with cls._lock:
-            current = cls._cache or cls._read_settings()
-            updated = AppSettings(
-                log_level=log_level,
-                filtro_global_padrao=current.filtro_global_padrao,
-                render=current.render,
-            )
-            cls._write_settings(updated)
-            cls._cache = updated
-        return updated
+        return cls._update(log_level=log_level)
 
     @classmethod
     def update_filtro_global_padrao(cls, filtro: str) -> AppSettings:
-        with cls._lock:
-            current = cls._cache or cls._read_settings()
-            updated = AppSettings(
-                log_level=current.log_level,
-                filtro_global_padrao=_coerce_filtro_global(filtro),
-                render=current.render,
-            )
-            cls._write_settings(updated)
-            cls._cache = updated
-        return updated
+        return cls._update(filtro_global_padrao=_coerce_filtro_global(filtro))
 
     @classmethod
     def update_render(cls, render: RenderSettings) -> AppSettings:
-        with cls._lock:
-            current = cls._cache or cls._read_settings()
-            updated = AppSettings(
-                log_level=current.log_level,
-                filtro_global_padrao=current.filtro_global_padrao,
-                youtube_layout_padrao_global=current.youtube_layout_padrao_global,
-                render=render,
-            )
-            cls._write_settings(updated)
-            cls._cache = updated
-        return updated
+        return cls._update(render=render)
 
     @classmethod
     def update_youtube_layout_padrao_global(cls, layout_json: str) -> AppSettings:
         """Atualiza o padrao GLOBAL do layout YouTube (escopo da aplicacao,
         nao do projeto). Recebe JSON string ja serializada (mesmo formato do
         `Projeto.layout_youtube_padrao`)."""
+        return cls._update(youtube_layout_padrao_global=_coerce_layout_global(layout_json))
+
+    @classmethod
+    def _update(cls, **campos: object) -> AppSettings:
+        """Aplica `campos` sobre o estado atual e persiste (banco + espelho).
+
+        Preserva TODOS os demais campos via `dataclasses.replace` — inclusive o
+        `youtube_layout_padrao_global`, que o código legado esquecia de preservar
+        num `update_log_level`/`update_filtro`.
+        """
         with cls._lock:
-            current = cls._cache or cls._read_settings()
-            updated = AppSettings(
-                log_level=current.log_level,
-                filtro_global_padrao=current.filtro_global_padrao,
-                youtube_layout_padrao_global=_coerce_layout_global(layout_json),
-                render=current.render,
-            )
-            cls._write_settings(updated)
+            current = cls._cache or cls._load()
+            updated = replace(current, **campos)
+            cls._persist(updated)
             cls._cache = updated
         return updated
 
     @classmethod
     def set_settings_path_for_tests(cls, path: Path | None) -> None:
+        """Isola o armazenamento num diretório de teste: o espelho JSON vai para
+        `path` e o banco de settings para `settings.db` ao lado dele."""
         with cls._lock:
             cls._settings_path_override = path
+            cls._db_path_override = (path.parent / "settings.db") if path is not None else None
             cls._cache = None
 
     @classmethod
@@ -197,7 +188,40 @@ class AppSettingsService:
         return projetos_dir() / "app_settings.json"
 
     @classmethod
-    def _read_settings(cls) -> AppSettings:
+    def _db_path(cls) -> Path:
+        if cls._db_path_override is not None:
+            return cls._db_path_override
+        return channel_paths.settings_db_path()
+
+    @classmethod
+    def _channel_id(cls) -> str:
+        """Canal cujas app settings estão em jogo. Em teste (path override) usa uma
+        chave fixa e isolada; em produção, o nome do canal ativo."""
+        if cls._db_path_override is not None:
+            return "default"
+        return channel_paths.active_channel_root().name
+
+    @classmethod
+    def _load(cls) -> AppSettings:
+        db_path = cls._db_path()
+        channel_id = cls._channel_id()
+        row = settings_store.ler_app_settings(db_path, channel_id)
+        if row is not None:
+            return _app_settings_from_row(row)
+        # Sem linha no banco → migra: lê o arquivo legado (fonte da PROD) e semeia.
+        from_file = cls._read_file()
+        settings_store.gravar_app_settings(db_path, channel_id, _row_from_app_settings(from_file))
+        return from_file
+
+    @classmethod
+    def _persist(cls, app_settings: AppSettings) -> None:
+        settings_store.gravar_app_settings(
+            cls._db_path(), cls._channel_id(), _row_from_app_settings(app_settings)
+        )
+        cls._write_file(app_settings)  # espelho de compatibilidade/backup
+
+    @classmethod
+    def _read_file(cls) -> AppSettings:
         path = cls.settings_path()
         if not path.exists():
             return AppSettings()
@@ -217,13 +241,49 @@ class AppSettingsService:
         )
 
     @classmethod
-    def _write_settings(cls, app_settings: AppSettings) -> None:
+    def _write_file(cls, app_settings: AppSettings) -> None:
         path = cls.settings_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
             json.dumps(app_settings.to_dict(), indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
+
+
+def _app_settings_from_row(row: dict) -> AppSettings:
+    """Constrói `AppSettings` a partir de uma linha do banco, coagindo cada campo
+    com os mesmos validadores do caminho de arquivo (defesa contra dados fora de faixa)."""
+    render = RenderSettings(
+        cooldown_sec=_coerce_non_negative_int(row.get("render_cooldown_sec"), 0),
+        overlay_concurrency=_coerce_positive_int(row.get("render_overlay_concurrency"), 4),
+        bundle_cache_enabled=bool(row.get("render_bundle_cache_enabled", 1)),
+        overlay_codec=_coerce_overlay_codec(
+            row.get("render_overlay_codec"), OverlayCodec.PRORES_4444
+        ),
+        overlay_max_attempts=_coerce_positive_int(row.get("render_overlay_max_attempts"), 3),
+        grade_global_quality=_coerce_grade_quality(row.get("render_grade_global_quality"), 30),
+    )
+    return AppSettings(
+        log_level=_coerce_log_level(row.get("log_level")),
+        filtro_global_padrao=_coerce_filtro_global(row.get("filtro_global_padrao")),
+        youtube_layout_padrao_global=_coerce_layout_global(row.get("youtube_layout_padrao_global")),
+        render=render,
+    )
+
+
+def _row_from_app_settings(app: AppSettings) -> dict:
+    """Achata `AppSettings` nas colunas da tabela `app_settings`."""
+    return {
+        "log_level": app.log_level.value,
+        "filtro_global_padrao": app.filtro_global_padrao,
+        "youtube_layout_padrao_global": app.youtube_layout_padrao_global,
+        "render_cooldown_sec": app.render.cooldown_sec,
+        "render_overlay_concurrency": app.render.overlay_concurrency,
+        "render_bundle_cache_enabled": 1 if app.render.bundle_cache_enabled else 0,
+        "render_overlay_codec": app.render.overlay_codec.value,
+        "render_overlay_max_attempts": app.render.overlay_max_attempts,
+        "render_grade_global_quality": app.render.grade_global_quality,
+    }
 
 
 def _coerce_log_level(raw: object) -> LogLevel:

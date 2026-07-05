@@ -49,6 +49,25 @@ def _instance_root() -> Path:
     return _REPO_ROOT / "instance"
 
 
+def instance_root() -> Path:
+    """Raiz da instância (`<repo>/instance`), independente do canal ativo.
+
+    É onde vive o banco de settings GLOBAL (D-191), fora da pasta de qualquer
+    canal — settings de app e o registry de canais não pertencem a um canal só.
+    """
+    return _instance_root()
+
+
+def settings_db_path() -> Path:
+    """Banco de configurações da aplicação (`instance/settings.db`, D-191).
+
+    Fonte da verdade das configs editáveis pelo app (ajustes de app por canal +
+    identidade dos canais). Global e à parte do `projetos.db` (dados/mídias), para
+    que evoluir a config nunca toque no banco pesado.
+    """
+    return _instance_root() / "settings.db"
+
+
 def _ler_canal_ativo(instance_root: Path) -> str:
     """Id do canal ativo gravado no ponteiro, ou string vazia se ausente."""
     try:
