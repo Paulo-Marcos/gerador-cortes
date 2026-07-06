@@ -87,6 +87,23 @@ def test_listar_identidades_indexa_por_canal(tmp_path: Path):
     assert todas["a"]["handle"] == "@a"
 
 
+def test_mascote_round_trip(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_mascote(db, "canal-a", {"nome": "Sapo"})
+
+    assert settings_store.ler_mascote(db, "canal-a") == {"nome": "Sapo"}
+    # Canal sem linha → None (sinaliza fallback ao mascote.yaml legado).
+    assert settings_store.ler_mascote(db, "outro") is None
+
+
+def test_mascote_upsert_sobrescreve(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_mascote(db, "c", {"nome": "Antigo"})
+    settings_store.gravar_mascote(db, "c", {"nome": "Novo"})
+
+    assert settings_store.ler_mascote(db, "c") == {"nome": "Novo"}
+
+
 # --------------------------------------------------------------------------- #
 # AppSettingsService: DB-first + fallback/migração do arquivo legado
 # --------------------------------------------------------------------------- #

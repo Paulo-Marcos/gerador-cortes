@@ -55,6 +55,11 @@ _IDENTIDADE_COLUNAS = (
     "paleta_acento",
 )
 
+# Identidade EDITORIAL do mascote (D-285): o `nome` citado nos prompts de
+# thumbnail/metadados. Espelha `editorial/mascote.yaml`, por canal — o mesmo
+# padrão banco-fonte-da-verdade + arquivo-espelho aplicado à identidade do canal.
+_MASCOTE_COLUNAS = ("nome",)
+
 _DDL = (
     """
     CREATE TABLE IF NOT EXISTS app_settings (
@@ -80,6 +85,12 @@ _DDL = (
         paleta_primaria TEXT NOT NULL DEFAULT '',
         paleta_secundaria TEXT NOT NULL DEFAULT '',
         paleta_acento TEXT NOT NULL DEFAULT ''
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS mascote_identity (
+        channel_id TEXT PRIMARY KEY,
+        nome TEXT NOT NULL DEFAULT ''
     )
     """,
 )
@@ -215,3 +226,48 @@ def listar_identidades(db_path: Path) -> dict[str, dict]:
         row["channel_id"]: {coluna: row[coluna] for coluna in _IDENTIDADE_COLUNAS}
         for row in linhas
     }
+
+
+# --------------------------------------------------------------------------- #
+# Identidade do mascote (D-285 — espelha editorial/mascote.yaml)
+# --------------------------------------------------------------------------- #
+
+
+def ler_mascote(db_path: Path, channel_id: str) -> dict | None:
+    """Lê a identidade do mascote do canal, ou `None` se ainda não existe.
+
+    `None` sinaliza ao chamador para cair no arquivo legado (`mascote.yaml`) e
+    semear o banco — ver `editorial_identity.identidade_do_mascote`.
+    """
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT * FROM mascote_identity WHERE channel_id = ?", (channel_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return {coluna: row[coluna] for coluna in _MASCOTE_COLUNAS}
+
+
+def gravar_mascote(db_path: Path, channel_id: str, valores: dict) -> None:
+    """Grava (UPSERT) a identidade do mascote do canal.
+
+    `valores` deve conter a chave `nome`. Escrita idempotente: reescrever a mesma
+    linha é seguro (semeadura no primeiro acesso, edição pela UI).
+    """
+    colunas = ("channel_id", *_MASCOTE_COLUNAS)
+    placeholders = ", ".join("?" for _ in colunas)
+    atribuicoes = ", ".join(f"{c}=excluded.{c}" for c in _MASCOTE_COLUNAS)
+    parametros = (channel_id, *(str(valores[c]) for c in _MASCOTE_COLUNAS))
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            f"INSERT INTO mascote_identity ({', '.join(colunas)}) VALUES ({placeholders}) "
+            f"ON CONFLICT(channel_id) DO UPDATE SET {atribuicoes}",
+            parametros,
+        )
+        conn.commit()
+    finally:
+        conn.close()

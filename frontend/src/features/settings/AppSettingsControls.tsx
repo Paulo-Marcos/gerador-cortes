@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import type { FiltroExport, LogLevel, RenderSettings } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toaster';
+import { obterMascoteNome, salvarMascoteNome } from './mascoteSettingsApi';
 
 export const LOG_OPTIONS: Array<{ value: LogLevel; label: string; description: string }> = [
   {
@@ -61,6 +62,20 @@ export function AppSettingsControls() {
 
   const settingsQuery = useQuery({ queryKey: ['app-settings'], queryFn: api.obterSettings });
   const filtersQuery = useQuery({ queryKey: ['export-filtros'], queryFn: () => api.listarFiltros() });
+  // D-285: nome do mascote (identidade editorial no banco), query própria pois
+  // vive fora do tipo AppSettings (models.ts sob lock).
+  const mascoteQuery = useQuery({ queryKey: ['mascote-nome'], queryFn: obterMascoteNome });
+
+  const mascoteMutation = useMutation({
+    mutationFn: (nome: string) => salvarMascoteNome(nome),
+    onSuccess: (nome) => {
+      queryClient.setQueryData(['mascote-nome'], nome);
+      queryClient.invalidateQueries({ queryKey: ['app-settings'] });
+      notify('Nome do mascote atualizado.', { tone: 'success', title: 'Ajustes' });
+    },
+    onError: () =>
+      notify('Nao foi possivel salvar o nome do mascote.', { tone: 'error', title: 'Ajustes' }),
+  });
 
   const updateMutation = useMutation({
     mutationFn: (body: UpdateBody) => api.atualizarSettings(body),
@@ -78,7 +93,13 @@ export function AppSettingsControls() {
   const render = data?.render ?? DEFAULT_RENDER;
   const layoutGlobal = data?.youtube_layout_padrao_global ?? '{}';
   const temLayoutGlobal = layoutGlobal.trim() !== '' && layoutGlobal.trim() !== '{}';
-  const isBusy = settingsQuery.isLoading || updateMutation.isPending;
+  const mascoteNome = mascoteQuery.data ?? '';
+  const isBusy = settingsQuery.isLoading || updateMutation.isPending || mascoteMutation.isPending;
+
+  const onBlurMascote = (e: React.FocusEvent<HTMLInputElement>) => {
+    const valor = e.target.value.trim();
+    if (valor !== mascoteNome) mascoteMutation.mutate(valor);
+  };
 
   const patchRender = (patch: Partial<RenderSettings>) =>
     updateMutation.mutate({ render: { ...render, ...patch } });
@@ -133,6 +154,24 @@ export function AppSettingsControls() {
           )}
         </div>
       </div>
+
+      <div className="h-px bg-[var(--wb-border)]" />
+
+      <label className="grid gap-1.5">
+        <span className={sectionLabelCls}>Nome do mascote</span>
+        <input
+          type="text"
+          key={`mascote-${mascoteNome}`}
+          defaultValue={mascoteNome}
+          placeholder="mascote"
+          disabled={isBusy}
+          onBlur={onBlurMascote}
+          className={controlCls}
+        />
+        <span className="text-xs font-normal text-[var(--wb-text-mute)]">
+          Citado nos prompts de capa e metadados. Vazio usa o termo neutro “mascote”.
+        </span>
+      </label>
 
       <div className="h-px bg-[var(--wb-border)]" />
 

@@ -1,3 +1,4 @@
+from app import editorial_identity
 from app.domain.overlay_codec import OverlayCodec
 from app.services.app_settings import AppSettings, AppSettingsService, LogLevel, RenderSettings
 from fastapi import APIRouter
@@ -22,6 +23,9 @@ class AppSettingsResponse(BaseModel):
     filtro_global_padrao: str
     youtube_layout_padrao_global: str = "{}"
     render: RenderSettingsModel
+    # D-285: nome do mascote do canal ativo (identidade editorial no banco).
+    # "" quando ainda não definido (fallback neutro) — a UI mostra placeholder.
+    mascote_nome: str = ""
 
 
 class UpdateAppSettingsRequest(BaseModel):
@@ -32,6 +36,17 @@ class UpdateAppSettingsRequest(BaseModel):
     youtube_layout_padrao_global: str | None = None
     # D-191: bloco de render editável pela UI (bloco completo).
     render: RenderSettingsModel | None = None
+    # D-285: nome do mascote editável pela UI (grava no banco + espelha no yaml).
+    mascote_nome: str | None = None
+
+
+def _mascote_nome() -> str:
+    """Nome do mascote do canal ativo para a resposta.
+
+    Devolve "" no fallback neutro (nome não definido) para a UI exibir placeholder
+    em vez do rótulo genérico "mascote"."""
+    identidade = editorial_identity.identidade_do_mascote()
+    return "" if identidade == editorial_identity.MASCOTE_NEUTRO else identidade.nome
 
 
 def _to_response(app: AppSettings) -> AppSettingsResponse:
@@ -47,6 +62,7 @@ def _to_response(app: AppSettings) -> AppSettingsResponse:
             overlay_max_attempts=app.render.overlay_max_attempts,
             grade_global_quality=app.render.grade_global_quality,
         ),
+        mascote_nome=_mascote_nome(),
     )
 
 
@@ -77,4 +93,6 @@ async def update_settings(body: UpdateAppSettingsRequest):
                 grade_global_quality=body.render.grade_global_quality,
             )
         )
+    if body.mascote_nome is not None:
+        editorial_identity.definir_nome_do_mascote(body.mascote_nome)
     return _to_response(updated)
