@@ -8,6 +8,7 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 from contextlib import asynccontextmanager
 
+from app import channel_paths
 from app.channel_layout_migration import garantir_layout_de_canais
 from app.channel_paths import projetos_dir
 from app.config import settings
@@ -30,7 +31,6 @@ from app.routers import (
 from app.routers import (
     settings as app_settings,
 )
-from app import channel_paths
 from app.services import channels as channels_service
 from app.services import settings_store
 from app.services.app_logging import install_log_controls
