@@ -144,7 +144,9 @@ def test_definir_nome_grava_no_banco_e_espelha_no_yaml(tmp_path: Path):
 def test_definir_nome_vazio_resulta_neutro(tmp_path: Path):
     db = _db(tmp_path)
 
-    resultado = definir_nome_do_mascote("  ", editorial_root=tmp_path, db_path=db, channel_id=_CANAL)
+    resultado = definir_nome_do_mascote(
+        "  ", editorial_root=tmp_path, db_path=db, channel_id=_CANAL
+    )
 
     assert resultado == MASCOTE_NEUTRO
     assert settings_store.ler_mascote(db, _CANAL) == {"nome": ""}

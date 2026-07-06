@@ -51,9 +51,7 @@ class TestCorteToDict:
             layout_youtube='{"modo_padrao":"full"}',
         )
         d = cortes_router._corte_to_dict(c)
-        assert d["desvios"] == [
-            {"inicio_hms": "00:00:01", "fim_hms": "00:00:02", "motivo": "x"}
-        ]
+        assert d["desvios"] == [{"inicio_hms": "00:00:01", "fim_hms": "00:00:02", "motivo": "x"}]
         assert d["transcricao_corte"] == []
         assert d["layout_youtube"]["modo_padrao"] == "full"
 

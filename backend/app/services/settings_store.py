@@ -196,9 +196,7 @@ def gravar_identidade(db_path: Path, channel_id: str, valores: dict) -> None:
             "SELECT 1 FROM channel_identity WHERE channel_id = ?", (channel_id,)
         ).fetchone()
         if existe is None:
-            conn.execute(
-                "INSERT INTO channel_identity (channel_id) VALUES (?)", (channel_id,)
-            )
+            conn.execute("INSERT INTO channel_identity (channel_id) VALUES (?)", (channel_id,))
         if presentes:
             sets = ", ".join(f"{c}=?" for c in presentes)
             conn.execute(
@@ -223,8 +221,7 @@ def listar_identidades(db_path: Path) -> dict[str, dict]:
     finally:
         conn.close()
     return {
-        row["channel_id"]: {coluna: row[coluna] for coluna in _IDENTIDADE_COLUNAS}
-        for row in linhas
+        row["channel_id"]: {coluna: row[coluna] for coluna in _IDENTIDADE_COLUNAS} for row in linhas
     }
 
 

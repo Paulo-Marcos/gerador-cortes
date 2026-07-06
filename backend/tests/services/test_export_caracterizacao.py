@@ -69,9 +69,7 @@ class TestSuperficePublica:
 
 class TestMontarAgendaYoutube:
     def test_pareia_ids_com_datas_na_ordem(self):
-        agenda = ExportService._montar_agenda_youtube(
-            ["a", "b"], ["2026-01-01", "2026-01-02"]
-        )
+        agenda = ExportService._montar_agenda_youtube(["a", "b"], ["2026-01-01", "2026-01-02"])
         assert agenda == [("a", "2026-01-01"), ("b", "2026-01-02")]
 
     def test_datas_faltando_viram_none(self):

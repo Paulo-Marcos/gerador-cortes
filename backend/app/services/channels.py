@@ -298,7 +298,9 @@ def criar_canal(
     settings_store.gravar_identidade(db_path, canal_id, _flat_do_yaml(destino / _CHANNEL_YAML))
 
     ativo = _ler_canal_ativo(root)
-    return _montar_canal(canal_id, destino / _CHANNEL_YAML, ativo=(canal_id == ativo), db_path=db_path)
+    return _montar_canal(
+        canal_id, destino / _CHANNEL_YAML, ativo=(canal_id == ativo), db_path=db_path
+    )
 
 
 def selecionar_canal(canal_id: str, instance_root: Path | None = None) -> ResultadoSelecao:
