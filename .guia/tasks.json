@@ -844,18 +844,44 @@
       "id": "D-259",
       "kind": "feature",
       "title": "Genericizar residuais de naming do mascote (pos E-011)",
-      "status": "Backlog",
+      "status": "Validada",
       "origin": "Backlog (2026-07-04)",
       "context": "Follow-up do E-011 (genericizacao sapo->mascote). Sobras deliberadamente fora do escopo das 4 stories: (1) dois comentarios em prosa em video-renderer/src/Mascote.tsx:21,89 ainda dizem 'sapo' (descritivo, nao identificador); (2) identificadores cosmeticos sapoTop/sapoStyle/sapoBox/sapoPlacement + comentarios nos cards cenas-v2 (CenaComparativo etc.) \u2014 TRAVADOS em remotion-v2-card-contracts (homologados; renomear exige unlock e re-rodar test:cards, risco vs valor); (3) remover o cache local gitignored public/sapo (frontend+video-renderer) e data/sapo_poses.json apos validar E-011 \u2014 hoje coexistem como fallback; (4) opcional: propagar mascote_poses.json como override do canal (mascot/poses.json) na consolidacao offline. Nenhum e funcional/publicado critico; filenames sapo_*.png permanecem por serem dados do canal.",
       "createdAt": "2026-07-04",
-      "updatedAt": "2026-07-04",
-      "startedAt": null,
-      "readyAt": null,
-      "finishedAt": null,
-      "modifiedFiles": [],
-      "summary": [],
-      "validations": [],
-      "pending": []
+      "updatedAt": "2026-07-05",
+      "startedAt": "2026-07-05T14:38:41-03:00",
+      "readyAt": "2026-07-05T14:38:53-03:00",
+      "finishedAt": "2026-07-05T14:40:02-03:00",
+      "modifiedFiles": [
+        ".guia/DEMANDAS.md",
+        "video-renderer/src/Mascote.tsx"
+      ],
+      "summary": [
+        "Em desenvolvimento desde 2026-07-05.",
+        "Item 1 da D-259 (2 comentarios em prosa sapo->mascote em Mascote.tsx) ja estava satisfeito na arvore: os comentarios das linhas ~21 e ~89 ja dizem 'mascote', renomeados no commit 67cb27b (E-011 / squash publico v0.1.0), posterior a redacao do contexto da D-259 (2026-07-04). Nenhuma edicao necessaria; NAO houve commit para evitar no-op/commit fabricado. Itens 2 (cards cenas-v2, TRAVADOS em remotion-v2-card-contracts), 3 (cache public/sapo gitignored) e 4 (override de poses, opcional) ficam fora deste escopo.",
+        "Demanda finalizada via Guia Fluxo."
+      ],
+      "validations": [
+        "grep -i sapo em Mascote.tsx retorna 0 comentario em prosa: apenas filenames sapo_*.png (dados do canal, linhas 46-66) e o seed sapo-blink- (identificador, linha 149), ambos preservados por design"
+      ],
+      "pending": [],
+      "readyCount": 1,
+      "qualityReview": {
+        "candidates": [
+          "video-renderer/src/Mascote.tsx"
+        ],
+        "dimensions": [
+          "(a) qualidade do codigo (legibilidade, nomes, clean code)",
+          "(b) tamanho de funcoes/arquivos (funcao curta, arquivo coeso)",
+          "(c) responsabilidade unica (SRP) por funcao/classe/modulo",
+          "(d) cobertura/tests do que mudou",
+          "(e) necessidade de refatorar para boa qualidade - e refatorar antes de fechar"
+        ],
+        "skills": [],
+        "findings": [],
+        "checkedAt": "2026-07-05",
+        "skipped": "nenhum produto alterado: item 1 ja estava satisfeito na arvore (comentarios ja diziam 'mascote' desde 67cb27b); sem codigo novo a avaliar"
+      }
     },
     {
       "id": "D-257",
@@ -3575,18 +3601,101 @@
       "id": "E-006",
       "kind": "epic",
       "title": "Vistoria2 E6 - Debito estrutural: arquivos e componentes gigantes (OPCIONAL)",
-      "status": "Backlog",
+      "status": "Validada",
       "origin": "D-194 code-review",
       "context": "Epico OPCIONAL (debito) camada estrutural da Vistoria 2 (D-194). Fatiar arquivos >1300 linhas (pipeline_render 1854, ffmpeg_commands 1581, export 1510, cortes router 1348; YoutubeLayoutPanel 1750, CenaOverlay 1353, PostProductionPage 1327). Skills-base: clean-architecture-guardian. Fonte: relatorio D-194. NAO gerar chip autonomo - refactor de arquivos criticos/travados de alto risco, fazer manual. Rodar apos E1-E5.",
       "createdAt": "2026-07-04",
-      "updatedAt": "2026-07-04",
+      "updatedAt": "2026-07-05",
       "startedAt": null,
-      "readyAt": null,
-      "finishedAt": null,
-      "modifiedFiles": [],
-      "summary": [],
-      "validations": [],
-      "pending": []
+      "readyAt": "2026-07-05T23:37:32-03:00",
+      "finishedAt": "2026-07-05T23:42:04-03:00",
+      "modifiedFiles": [
+        "backend/app/domain/ffmpeg_commands.py",
+        "backend/app/services/pipeline_render.py",
+        "backend/app/services/export.py",
+        "backend/app/routers/cortes.py",
+        "frontend/src/features/editor/fase2/CenaOverlay.tsx",
+        "frontend/src/features/editor/fase2/YoutubeLayoutPanel.tsx",
+        "frontend/src/features/post-production/PostProductionPage.tsx",
+        "backend/app/domain/ffmpeg_basic.py",
+        "backend/app/domain/ffmpeg_common.py",
+        "backend/app/domain/ffmpeg_grade.py",
+        "backend/app/domain/ffmpeg_overlay.py",
+        "backend/app/routers/cortes_helpers.py",
+        "backend/app/routers/cortes_schemas.py",
+        "backend/app/services/export_bruto.py",
+        "backend/app/services/export_bulk_queue.py",
+        "backend/app/services/export_csv.py",
+        "backend/app/services/export_processamento.py",
+        "backend/app/services/pipeline_corte_fields.py",
+        "backend/app/services/pipeline_fases.py",
+        "backend/app/services/pipeline_overlay_chunks.py",
+        "backend/app/services/pipeline_render_config.py",
+        "backend/app/services/pipeline_render_helpers.py",
+        "backend/tests/routers/test_cortes_helpers_caracterizacao.py",
+        "backend/tests/services/test_export_caracterizacao.py",
+        "frontend/src/features/editor/fase2/cenaOverlay/sceneKit.tsx",
+        "frontend/src/features/editor/fase2/cenaOverlay/scenes.tsx",
+        "frontend/src/features/editor/fase2/youtubeLayoutPanel/components.tsx",
+        "frontend/src/features/editor/fase2/youtubeLayoutPanel/shared.ts",
+        "frontend/src/features/post-production/postProductionPage/components.tsx"
+      ],
+      "summary": [
+        "Fatiei os 7 arquivos gigantes por SRP preservando a FACHADA (nomes publicos re-exportados; nenhum chamador muda). Backend: ffmpeg_commands->common/basic/grade/overlay; pipeline_render->config/corte_fields/overlay_chunks/fases/helpers (orquestrador+funcoes monkeypatchadas ficam na fachada); export.py->mixins (bulk_queue/csv/bruto/processamento, recompostos por heranca; gerar_bruto_via_worker fica na fachada por causa de monkeypatch de globais); cortes.py->schemas+helpers (cluster pipeline-status e _corte_tem_bruto ficam por monkeypatch de projetos_dir). Frontend: CenaOverlay->sceneKit+scenes; YoutubeLayoutPanel->shared+components; PostProductionPage->components.",
+        "Demanda finalizada via Guia Fluxo."
+      ],
+      "validations": [
+        "backend: python -m pytest tests/ -q => 1439 passed (era 1386 + 53 novos de caracterizacao). ruff limpo. frontend: npx tsc --noEmit => 0 erros; npm run build => OK nos 3."
+      ],
+      "pending": [],
+      "readyCount": 1,
+      "qualityReview": {
+        "candidates": [
+          "backend/app/domain/ffmpeg_commands.py",
+          "backend/app/services/pipeline_render.py",
+          "backend/app/services/export.py",
+          "backend/app/routers/cortes.py",
+          "frontend/src/features/editor/fase2/CenaOverlay.tsx",
+          "frontend/src/features/editor/fase2/YoutubeLayoutPanel.tsx",
+          "frontend/src/features/post-production/PostProductionPage.tsx",
+          "backend/app/domain/ffmpeg_basic.py",
+          "backend/app/domain/ffmpeg_common.py",
+          "backend/app/domain/ffmpeg_grade.py",
+          "backend/app/domain/ffmpeg_overlay.py",
+          "backend/app/routers/cortes_helpers.py",
+          "backend/app/routers/cortes_schemas.py",
+          "backend/app/services/export_bruto.py",
+          "backend/app/services/export_bulk_queue.py",
+          "backend/app/services/export_csv.py",
+          "backend/app/services/export_processamento.py",
+          "backend/app/services/pipeline_corte_fields.py",
+          "backend/app/services/pipeline_fases.py",
+          "backend/app/services/pipeline_overlay_chunks.py",
+          "backend/app/services/pipeline_render_config.py",
+          "backend/app/services/pipeline_render_helpers.py",
+          "backend/tests/routers/test_cortes_helpers_caracterizacao.py",
+          "backend/tests/services/test_export_caracterizacao.py",
+          "frontend/src/features/editor/fase2/cenaOverlay/sceneKit.tsx",
+          "frontend/src/features/editor/fase2/cenaOverlay/scenes.tsx",
+          "frontend/src/features/editor/fase2/youtubeLayoutPanel/components.tsx",
+          "frontend/src/features/editor/fase2/youtubeLayoutPanel/shared.ts",
+          "frontend/src/features/post-production/postProductionPage/components.tsx"
+        ],
+        "dimensions": [
+          "(a) qualidade do codigo (legibilidade, nomes, clean code)",
+          "(b) tamanho de funcoes/arquivos (funcao curta, arquivo coeso)",
+          "(c) responsabilidade unica (SRP) por funcao/classe/modulo",
+          "(d) cobertura/tests do que mudou",
+          "(e) necessidade de refatorar para boa qualidade - e refatorar antes de fechar"
+        ],
+        "skills": [
+          "clean-architecture-guardian"
+        ],
+        "findings": [
+          "SRP: 7 arquivos gigantes fatiados em sub-modulos/subcomponentes coesos; fachada preservada (nomes publicos re-exportados, zero mudanca de comportamento); tamanhos caem drasticamente (ex.: CenaOverlay 1355->55, export 1546->400); funcoes movidas sem alterar logica; 53 testes de caracterizacao adicionados onde a rede era fraca; verificado por 1439 testes verdes + ruff + tsc + build"
+        ],
+        "checkedAt": "2026-07-05"
+      }
     },
     {
       "id": "E-005",
@@ -4139,18 +4248,26 @@
       "id": "D-175",
       "kind": "chore",
       "title": "Dedup: unificar as 2 public/sapo numa fonte",
-      "status": "Backlog",
+      "status": "Cancelada",
       "origin": "Follow-up 2026-07-02",
       "context": "frontend/public/sapo (34) e video-renderer/public/sapo (superset ~51) tem arquivos DIFERENTES, ambos usados (preview do editor vs render Remotion). Otimizacao: unificar numa fonte unica (ex.: o front consumir do render, ou uma pasta compartilhada materializada), reduzindo duplicacao. Baixa prioridade; nao bloqueia. Considerar junto da Onda C (quando public/sapo virar cache materializado do instance/). Skills-base: clean-code-review, remotion-best-practices.",
       "createdAt": "2026-07-02",
-      "updatedAt": "2026-07-02",
+      "updatedAt": "2026-07-05",
       "startedAt": null,
       "readyAt": null,
-      "finishedAt": null,
+      "finishedAt": "2026-07-05T14:36:05-03:00",
       "modifiedFiles": [],
-      "summary": [],
+      "summary": [
+        "Cancelada em 2026-07-05: Moot: a materializacao D-171/E-011 ja tornou public/mascote a fonte servida unica (codigo le so de /mascote/; public/sapo e cache gitignored orfao, nao-lido). Nao ha o que unificar."
+      ],
       "validations": [],
-      "pending": []
+      "pending": [],
+      "cancellations": [
+        {
+          "reason": "Moot: a materializacao D-171/E-011 ja tornou public/mascote a fonte servida unica (codigo le so de /mascote/; public/sapo e cache gitignored orfao, nao-lido). Nao ha o que unificar.",
+          "at": "2026-07-05"
+        }
+      ]
     },
     {
       "id": "D-174",
