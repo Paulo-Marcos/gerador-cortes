@@ -133,13 +133,12 @@ backend/_bench_grade/
 .ai/debug-i036/
 backend/check_db.py
 
-# Estado local do Guia Fluxo. VERSIONADO: .guia/locks/ (o CI
+# Estado local do Guia Fluxo. VERSIONADO: apenas .guia/locks/ — o CI
 # .github/workflows/lock-check.yml, o hook .githooks/commit-msg e
-# bin/check-lock.py dependem do registry) e .guia/tasks.json — catálogo de
-# demandas, curado em D-284 para conter só trabalho do APP, sem a identidade
-# do canal (des-versionado antes em D-275). NÃO versionado: DEMANDAS.md
-# (render parcial + churn), historico/, reports/ e ponteiros de sessão —
-# são estado local ou contexto de canal não-curado.
+# bin/check-lock.py dependem do registry. TODO o resto é dev-only (D-276):
+# o .guia é ferramenta pessoal de coordenação com a IA, não artefato do
+# projeto; o registro auditável das ações é o próprio git history (commits
+# com escopo D-NNN). Não versionar demandas/histórico/reports evita a taxa
+# de curadoria de persona e mantém o repo público limpo.
 .guia/*
 !.guia/locks/
-!.guia/tasks.json
