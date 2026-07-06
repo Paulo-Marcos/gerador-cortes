@@ -10,6 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-06
+
+### Added
+- Configurações page: edit the channel identity, global render settings, and
+  the mascot name directly from the app — configuration moved from files to a
+  per-channel database with file mirror/fallback and boot migration (D-191, D-285).
+- Update guard-rail now warns about **any** locally-modified tracked file before
+  a production update, highlighting code outside `instance/` (D-178).
+
+### Changed
+- Internal: sliced seven oversized modules (>1300 lines) into cohesive
+  sub-modules/sub-components following SRP, with the public façade preserved so
+  behavior is unchanged — `ffmpeg_commands`, `pipeline_render`, `export`,
+  `routers/cortes`, `CenaOverlay`, `YoutubeLayoutPanel`, `PostProductionPage` (E-006).
+- Genericized residual mascot naming in renderer comments (D-259).
+
+### Housekeeping
+- The Guia Fluxo state (`.guia/`) is now developer-only; only `.guia/locks/`
+  remains versioned (required by CI). The auditable action log is the git
+  history itself (D-276).
+
 ## [0.1.0] - 2026-07-04
 
 First public release.
