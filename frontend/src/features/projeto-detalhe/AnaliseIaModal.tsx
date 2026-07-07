@@ -13,11 +13,9 @@ import {
   colarPartesCompleto,
   extrairPartesPrompt,
 } from '@/components/PromptManualPanel';
-import {
-  useAnalisarViaClaude,
-  useImportarAnalise,
-  usePromptAnalise,
-} from '@/hooks/useProjetoDetalhe';
+import { useImportarAnalise, usePromptAnalise } from '@/hooks/useProjetoDetalhe';
+import { useAnalisarComDiarizacao } from '@/hooks/useDiarizacao';
+import { DiarizacaoPanel } from './DiarizacaoPanel';
 
 interface Props {
   open: boolean;
@@ -45,9 +43,11 @@ export function AnaliseIaModal({
   const [confirmReplace, setConfirmReplace] = useState(false);
   const [jsonPorParte, setJsonPorParte] = useState<Record<number, string>>({});
   const [jsonErr, setJsonErr] = useState<string | null>(null);
+  // D-286: usar (ou não) o rótulo de falante da diarização no prompt Claude.
+  const [usarDiarizacao, setUsarDiarizacao] = useState(true);
 
   const importarAnalise = useImportarAnalise(projetoId);
-  const analisarClaude = useAnalisarViaClaude(projetoId);
+  const analisarClaude = useAnalisarComDiarizacao(projetoId);
   const intervaloPrompt =
     modo === 'intervalo'
       ? { inicio_hms: inicioHms.trim(), fim_hms: fimHms.trim(), blocos: blocosPrompt }
@@ -95,7 +95,7 @@ export function AnaliseIaModal({
 
   const onSubmitClaude = () => {
     if (precisaConfirmar && !confirmReplace) return;
-    analisarClaude.mutate(undefined, { onSuccess: fechar });
+    analisarClaude.mutate(usarDiarizacao, { onSuccess: fechar });
   };
 
   const onSubmitManual = () => {
@@ -277,18 +277,26 @@ export function AnaliseIaModal({
         </div>
 
         {origem === 'claude' && (
-          <div className="rounded-[var(--radius-sm)] border border-accent-500/40 bg-accent-500/10 p-3 text-xs text-text-200">
-            <p className="flex items-center gap-1.5 font-semibold text-text-100">
-              <ClaudeIcon size={14} className="text-accent-300" /> Analise completa por IA
-            </p>
-            <p className="mt-1 text-text-300">
-              Usa a skill <code>cortador-expert</code> para gerar os cortes e os trechos a remover
-              da <strong>live inteira</strong>, e em seguida emenda o{' '}
-              <strong>refazer transcrição</strong> de cada corte. Pode levar{' '}
-              <strong>1–3 minutos</strong> em lives longas — aguarde o spinner. Os cortes atuais só
-              são substituídos quando a geração conclui.
-            </p>
-          </div>
+          <>
+            <div className="rounded-[var(--radius-sm)] border border-accent-500/40 bg-accent-500/10 p-3 text-xs text-text-200">
+              <p className="flex items-center gap-1.5 font-semibold text-text-100">
+                <ClaudeIcon size={14} className="text-accent-300" /> Analise completa por IA
+              </p>
+              <p className="mt-1 text-text-300">
+                Usa a skill <code>cortador-expert</code> para gerar os cortes e os trechos a remover
+                da <strong>live inteira</strong>, e em seguida emenda o{' '}
+                <strong>refazer transcrição</strong> de cada corte. Pode levar{' '}
+                <strong>1–3 minutos</strong> em lives longas — aguarde o spinner. Os cortes atuais
+                só são substituídos quando a geração conclui.
+              </p>
+            </div>
+            <DiarizacaoPanel
+              projetoId={projetoId}
+              enabled={open && origem === 'claude'}
+              usarDiarizacao={usarDiarizacao}
+              onToggleUsar={setUsarDiarizacao}
+            />
+          </>
         )}
 
         {origem === 'manual' && (
