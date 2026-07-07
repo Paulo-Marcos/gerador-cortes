@@ -97,7 +97,23 @@ def dica_variacao(tipo: str) -> str:
 
 def bloco_variacao(tipo: str) -> str:
     """Formata a lente como um bloco pronto para concatenar no prompt."""
-    dica = dica_variacao(tipo)
+    return _formatar_bloco(dica_variacao(tipo))
+
+
+def bloco_variacao_de(lentes: list[str]) -> str:
+    """Formata uma lente sorteada de uma LISTA fornecida (lentes por canal, E-021).
+
+    Diferente de `bloco_variacao(tipo)`, que sorteia do catálogo global `_LENTES`,
+    esta recebe as lentes já resolvidas do banco (por canal, via `editorial_skills`).
+    Retorna '' quando a lista é vazia (etapa sem lentes — trechos/thumbnail).
+    """
+    if not lentes:
+        return ""
+    return _formatar_bloco(random.choice(lentes))
+
+
+def _formatar_bloco(dica: str) -> str:
+    """Envelopa a lente escolhida no cabeçalho de variação do prompt (ou '' se vazia)."""
     if not dica:
         return ""
     return (

@@ -28,6 +28,7 @@ explícito, o que dá isolamento trivial por teste (cada `tmp_path` tem seu banc
 from __future__ import annotations
 
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Chaves do bloco de app settings (espelham AppSettings/RenderSettings em
@@ -60,6 +61,13 @@ _IDENTIDADE_COLUNAS = (
 # padrão banco-fonte-da-verdade + arquivo-espelho aplicado à identidade do canal.
 _MASCOTE_COLUNAS = ("nome",)
 
+# Skills editoriais por canal (E-021): corpo do prompt + params (modelo/thinking/
+# timeout/temperature, serializados em `params_json`) + lentes de variação
+# (`lentes_json`). Chave composta (channel_id, skill_key) — uma linha por skill de
+# cada canal. `corpo`/`params_json`/`lentes_json` guardam JSON/texto opaco para o
+# store (o serviço editorial_skills parseia); `updated_at` é ISO-8601 UTC.
+_SKILL_COLUNAS = ("corpo", "params_json", "lentes_json", "updated_at")
+
 _DDL = (
     """
     CREATE TABLE IF NOT EXISTS app_settings (
@@ -91,6 +99,17 @@ _DDL = (
     CREATE TABLE IF NOT EXISTS mascote_identity (
         channel_id TEXT PRIMARY KEY,
         nome TEXT NOT NULL DEFAULT ''
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS editorial_skill (
+        channel_id TEXT NOT NULL,
+        skill_key TEXT NOT NULL,
+        corpo TEXT NOT NULL DEFAULT '',
+        params_json TEXT NOT NULL DEFAULT '{}',
+        lentes_json TEXT NOT NULL DEFAULT '[]',
+        updated_at TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (channel_id, skill_key)
     )
     """,
 )
@@ -264,6 +283,91 @@ def gravar_mascote(db_path: Path, channel_id: str, valores: dict) -> None:
             f"INSERT INTO mascote_identity ({', '.join(colunas)}) VALUES ({placeholders}) "
             f"ON CONFLICT(channel_id) DO UPDATE SET {atribuicoes}",
             parametros,
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# --------------------------------------------------------------------------- #
+# Skills editoriais por canal (E-021)
+# --------------------------------------------------------------------------- #
+
+
+def ler_skill(db_path: Path, channel_id: str, skill_key: str) -> dict | None:
+    """Lê a linha de uma skill editorial do canal, ou `None` se ainda não existe.
+
+    `None` sinaliza ao chamador (serviço `editorial_skills`) para migrar/semear a
+    partir do `.md` legado + defaults de código — mesmo contrato de `ler_mascote`.
+    """
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT * FROM editorial_skill WHERE channel_id = ? AND skill_key = ?",
+            (channel_id, skill_key),
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return {coluna: row[coluna] for coluna in _SKILL_COLUNAS}
+
+
+def ler_skills_do_canal(db_path: Path, channel_id: str) -> dict[str, dict]:
+    """Todas as skills gravadas para o canal, indexadas por `skill_key`.
+
+    Skills ainda não migradas não aparecem — o chamador completa com os defaults.
+    """
+    conn = _connect(db_path)
+    try:
+        linhas = conn.execute(
+            "SELECT * FROM editorial_skill WHERE channel_id = ?", (channel_id,)
+        ).fetchall()
+    finally:
+        conn.close()
+    return {row["skill_key"]: {coluna: row[coluna] for coluna in _SKILL_COLUNAS} for row in linhas}
+
+
+def gravar_skill(db_path: Path, channel_id: str, skill_key: str, valores: dict) -> None:
+    """Grava (UPSERT) a linha de uma skill editorial do canal.
+
+    `valores` deve conter `corpo`, `params_json` e `lentes_json`; `updated_at` é
+    carimbado aqui (ISO-8601 UTC) para o store ser a fonte única do timestamp.
+    Escrita idempotente: reescrever a mesma skill é seguro (seed no 1º acesso,
+    edição/reset pela UI).
+    """
+    dados = {
+        "corpo": str(valores["corpo"]),
+        "params_json": str(valores["params_json"]),
+        "lentes_json": str(valores["lentes_json"]),
+        "updated_at": datetime.now(UTC).isoformat(),
+    }
+    colunas = ("channel_id", "skill_key", *_SKILL_COLUNAS)
+    placeholders = ", ".join("?" for _ in colunas)
+    atribuicoes = ", ".join(f"{c}=excluded.{c}" for c in _SKILL_COLUNAS)
+    parametros = (channel_id, skill_key, *(dados[c] for c in _SKILL_COLUNAS))
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            f"INSERT INTO editorial_skill ({', '.join(colunas)}) VALUES ({placeholders}) "
+            f"ON CONFLICT(channel_id, skill_key) DO UPDATE SET {atribuicoes}",
+            parametros,
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def deletar_skill(db_path: Path, channel_id: str, skill_key: str) -> None:
+    """Remove a linha de uma skill do canal (reset total → volta ao default/seed).
+
+    No-op se a linha não existir. O chamador re-semeia na próxima leitura.
+    """
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "DELETE FROM editorial_skill WHERE channel_id = ? AND skill_key = ?",
+            (channel_id, skill_key),
         )
         conn.commit()
     finally:

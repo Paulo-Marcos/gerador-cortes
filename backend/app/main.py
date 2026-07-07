@@ -9,6 +9,7 @@ if sys.platform == "win32":
 from contextlib import asynccontextmanager
 
 from app import channel_paths
+from app import editorial_skills as editorial_skills_service
 from app.channel_layout_migration import garantir_layout_de_canais
 from app.channel_paths import projetos_dir
 from app.config import settings
@@ -18,6 +19,7 @@ from app.routers import (
     channels,
     claude_ia,
     cortes,
+    editorial_skills,
     export,
     mascot,
     metadados,
@@ -61,6 +63,7 @@ async def lifespan(app: FastAPI):
         settings_store.inicializar(channel_paths.settings_db_path())
         channels_service.migrar_identidades_para_banco()
         AppSettingsService.get()  # semeia app_settings do canal ativo a partir do arquivo
+        editorial_skills_service.migrar_skills_do_canal_ativo()  # E-021: semeia as 5 skills
     except Exception as e:  # noqa: BLE001 — boot resiliente a I/O de config
         print(f"[Settings] Falha ao migrar configs para o banco: {e}")
 
@@ -108,6 +111,9 @@ app.include_router(
     avaliacoes_thumbnail.router, prefix="/api/avaliacoes-thumbnail", tags=["Avaliações Thumbnail"]
 )
 app.include_router(channels.router, prefix="/api/channels", tags=["Canais"])
+app.include_router(
+    editorial_skills.router, prefix="/api/editorial-skills", tags=["Skills editoriais"]
+)
 
 
 @app.get("/api/health")

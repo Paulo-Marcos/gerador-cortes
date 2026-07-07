@@ -24,53 +24,10 @@ import re
 import shutil
 import subprocess
 import tempfile
-from pathlib import Path
 
-from app.channel_paths import editorial_dir
 from app.config import settings
 
 logger = logging.getLogger(__name__)
-
-# D-144: cada skill editorial pode ter o seu corpo SOBRESCRITO por um arquivo em
-# `instance/editorial/` (fonte editorial única, gitignored). Quando o arquivo
-# existe, o conteúdo dele vira a expertise injetada no prompt e a skill nativa de
-# `.claude/skills/` deixa de ser ativada. Quando NÃO existe, mantém-se exatamente
-# o comportamento atual (ativação nativa via `/<skill>`) — fallback não-destrutivo.
-# Os templates GENÉRICOS versionados ficam em `examples/instance.example/editorial/`.
-_EDITORIAL_POR_SKILL = {
-    "cortador-expert": "cortes.md",
-    "trechos-expert": "trechos.md",
-    "cenas-expert": "cenas.md",
-    "metadados-expert": "metadados.md",
-    "thumbnail-prompt-expert": "thumbnail.md",
-}
-
-
-def _dir_editorial() -> Path:
-    """Diretório da fonte editorial da instância.
-
-    Resolvido pela raiz do canal ativo (`channel_paths.editorial_dir`) — costura
-    única do épico Multi-canal. Hoje aponta para `<repo>/instance/editorial`, a
-    mesma raiz onde o CLI descobre `.claude/skills` (ver `_cwd(skill_mode=True)`),
-    então override e fallback continuam compartilhando o ponto de ancoragem.
-    """
-    return editorial_dir()
-
-
-def _carregar_editorial_override(skill: str | None) -> str | None:
-    """Corpo editorial de `instance/editorial/<arquivo>.md` para a skill, ou None.
-
-    None quando a skill não é editorial, o arquivo não existe ou está vazio —
-    casos em que o caller cai no fallback da skill nativa.
-    """
-    arquivo = _EDITORIAL_POR_SKILL.get(skill or "")
-    if not arquivo:
-        return None
-    caminho = _dir_editorial() / arquivo
-    if not caminho.is_file():
-        return None
-    corpo = caminho.read_text(encoding="utf-8").strip()
-    return corpo or None
 
 
 class ClaudeCliError(RuntimeError):
@@ -394,28 +351,29 @@ async def generate_text(
     *,
     model: str = "sonnet",
     skill: str | None = None,
+    expertise: str | None = None,
     max_turns: int = 1,
     timeout: float | None = None,
     thinking_tokens: int | None = None,
 ) -> str:
     """Gera texto livre. Retorna o conteúdo bruto do modelo (campo `result`).
 
-    skill: nome de uma skill em `.claude/skills/`. Quando informado, a skill é
-    ATIVADA nativamente (`/<skill>` na 1ª linha, rodando na raiz do projeto) —
-    não enviamos o corpo do SKILL.md; o Claude o carrega do disco.
+    expertise: corpo editorial JÁ RESOLVIDO pelo caller (E-021: vem do banco por
+    canal, via `editorial_skills.resolver_skill(...).corpo`). Quando informado, é
+    INJETADO no prompt e roda fora do skill_mode (não ativa skill nativa nem herda
+    o CLAUDE.md). É a fonte da verdade da expertise — o loader por arquivo saiu
+    daqui (D-144 → E-021: banco).
 
-    D-144: se a skill tiver um override em `instance/editorial/` (fonte editorial
-    única), o corpo de lá é INJETADO no prompt e a skill nativa NÃO é ativada —
-    o conteúdo passa a ser resolvido pelo loader, não fixo em `.claude/skills/`.
+    skill: nome de uma skill em `.claude/skills/`. Usado só como FALLBACK quando
+    não há `expertise` — a skill é ATIVADA nativamente (`/<skill>`, rodando na raiz
+    do projeto). Hoje os callers editoriais sempre passam `expertise`.
 
     thinking_tokens: liga o extended thinking (MAX_THINKING_TOKENS) só nesta
     chamada. Default None = herda o global (`claude_cli_max_thinking_tokens`).
     """
-    override = _carregar_editorial_override(skill)
-    if override is not None:
-        # Expertise veio do loader (instance/editorial/) → injeta no prompt e roda
-        # fora do skill_mode (não ativa a skill nativa nem herda o CLAUDE.md).
-        entrada = f"{override}\n\n{prompt}"
+    if expertise:
+        # Expertise resolvida pelo caller (banco) → injeta no prompt, sem skill_mode.
+        entrada = f"{expertise}\n\n{prompt}"
         skill_mode = False
     else:
         entrada = f"/{skill}\n\n{prompt}" if skill else prompt
@@ -436,6 +394,7 @@ async def generate_json(
     *,
     model: str = "sonnet",
     skill: str | None = None,
+    expertise: str | None = None,
     max_turns: int = 1,
     timeout: float | None = None,
     thinking_tokens: int | None = None,
@@ -449,6 +408,7 @@ async def generate_json(
         prompt,
         model=model,
         skill=skill,
+        expertise=expertise,
         max_turns=max_turns,
         timeout=timeout,
         thinking_tokens=thinking_tokens,

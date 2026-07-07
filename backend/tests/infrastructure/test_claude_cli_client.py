@@ -321,15 +321,13 @@ class TestErros:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# D-144: override editorial de instance/editorial/ (fonte editorial única)
+# E-021: expertise injetada pelo caller (corpo resolvido do banco por canal).
+# A resolução por arquivo saiu daqui (foi para `editorial_skills`); o client só
+# recebe o corpo já resolvido via `expertise=` e o injeta, sem ativar skill nativa.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-class TestEditorialOverride:
-    """Quando `instance/editorial/<arquivo>.md` existe, o corpo de lá é injetado
-    no prompt e a skill nativa NÃO é ativada; senão, mantém-se a ativação
-    `/<skill>` de hoje (fallback não-destrutivo)."""
-
+class TestExpertiseInjetada:
     def _capturar_run(self, monkeypatch) -> dict:
         capturado: dict = {}
 
@@ -341,41 +339,34 @@ class TestEditorialOverride:
         monkeypatch.setattr(cli, "_run", fake_run)
         return capturado
 
-    def test_override_injeta_corpo_e_nao_ativa_skill_nativa(self, monkeypatch, tmp_path):
-        editorial = tmp_path / "instance" / "editorial"
-        editorial.mkdir(parents=True)
-        (editorial / "metadados.md").write_text("EXPERTISE DA INSTANCIA", encoding="utf-8")
-        monkeypatch.setattr(cli, "_dir_editorial", lambda: editorial)
-
+    def test_expertise_injeta_corpo_e_nao_ativa_skill_nativa(self, monkeypatch):
         capturado = self._capturar_run(monkeypatch)
-        texto = asyncio.run(cli.generate_text("PROMPT DO CORTE", skill="metadados-expert"))
+        texto = asyncio.run(
+            cli.generate_text(
+                "PROMPT DO CORTE", skill="metadados-expert", expertise="EXPERTISE DO BANCO"
+            )
+        )
 
         assert texto == "ok"
-        assert "EXPERTISE DA INSTANCIA" in capturado["entrada"]
+        assert "EXPERTISE DO BANCO" in capturado["entrada"]
         assert "PROMPT DO CORTE" in capturado["entrada"]
         assert "/metadados-expert" not in capturado["entrada"]  # skill nativa não ativada
         assert capturado["skill_mode"] is False
 
-    def test_sem_override_mantem_ativacao_nativa(self, monkeypatch, tmp_path):
-        editorial = tmp_path / "instance" / "editorial"  # vazio: sem override
-        editorial.mkdir(parents=True)
-        monkeypatch.setattr(cli, "_dir_editorial", lambda: editorial)
-
+    def test_sem_expertise_mantem_ativacao_nativa(self, monkeypatch):
+        # Fallback: corpo vazio → ativa `/<skill>` nativa (semântica preservada).
         capturado = self._capturar_run(monkeypatch)
-        asyncio.run(cli.generate_text("PROMPT", skill="metadados-expert"))
+        asyncio.run(cli.generate_text("PROMPT", skill="metadados-expert", expertise=""))
 
         assert capturado["entrada"].startswith("/metadados-expert")
         assert capturado["skill_mode"] is True
 
-    def test_skill_nao_editorial_nunca_tem_override(self, monkeypatch, tmp_path):
-        # Uma skill fora do mapa editorial jamais resolve override, mesmo com
-        # arquivo homônimo presente — evita ativar injeção por engano.
-        editorial = tmp_path / "instance" / "editorial"
-        editorial.mkdir(parents=True)
-        monkeypatch.setattr(cli, "_dir_editorial", lambda: editorial)
+    def test_sem_skill_nem_expertise_manda_prompt_puro(self, monkeypatch):
+        capturado = self._capturar_run(monkeypatch)
+        asyncio.run(cli.generate_text("PROMPT PURO"))
 
-        assert cli._carregar_editorial_override("alguma-skill-qualquer") is None
-        assert cli._carregar_editorial_override(None) is None
+        assert capturado["entrada"] == "PROMPT PURO"
+        assert capturado["skill_mode"] is False
 
 
 # ─────────────────────────────────────────────────────────────────────────────

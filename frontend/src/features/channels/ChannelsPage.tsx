@@ -12,6 +12,7 @@ import type { Canal, IdentidadeCanal } from '@/lib/channelsApi';
 import { AppSettingsControls } from '@/features/settings/AppSettingsControls';
 import { ChannelCard } from './ChannelCard';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
+import { EditorialSkillsSection } from './EditorialSkillsSection';
 import {
   useCanais,
   useConectarYoutube,
@@ -56,8 +57,7 @@ export function ChannelsPage() {
 
   const aoConectarYoutube = () => {
     conectarYoutube.mutate(undefined, {
-      onSuccess: (res) =>
-        notify(res.mensagem, { tone: 'info', title: 'Login do YouTube' }),
+      onSuccess: (res) => notify(res.mensagem, { tone: 'info', title: 'Login do YouTube' }),
       onError: (erro) =>
         notify(mensagemErro(erro, 'Erro ao iniciar login do YouTube.'), { tone: 'error' }),
     });
@@ -84,8 +84,7 @@ export function ChannelsPage() {
           notify(`Canal “${canal.nome || canal.id}” ativado.`, { tone: 'success' });
         }
       },
-      onError: (erro) =>
-        notify(mensagemErro(erro, 'Erro ao selecionar canal.'), { tone: 'error' }),
+      onError: (erro) => notify(mensagemErro(erro, 'Erro ao selecionar canal.'), { tone: 'error' }),
       onSettled: () => setSelecionandoId(null),
     });
   };
@@ -137,9 +136,10 @@ export function ChannelsPage() {
               Configurações
             </h1>
             <p className="mt-2 max-w-2xl text-[15px] text-[var(--wb-text-mute)]">
-              Todas as configurações do app num só lugar: as <strong>globais</strong> (processamento,
-              logs, render) e as de <strong>cada canal</strong> (identidade). Tudo é editável aqui e
-              persiste no banco. A troca de canal ativo só efetiva após reiniciar o backend.
+              Todas as configurações do app num só lugar: as <strong>globais</strong>{' '}
+              (processamento, logs, render) e as de <strong>cada canal</strong> (identidade). Tudo é
+              editável aqui e persiste no banco. A troca de canal ativo só efetiva após reiniciar o
+              backend.
             </p>
           </div>
           <Button type="button" onClick={() => setDialogo({ tipo: 'criar' })}>
@@ -157,6 +157,8 @@ export function ChannelsPage() {
           </p>
           <AppSettingsControls />
         </section>
+
+        <EditorialSkillsSection />
 
         <div className="mt-2">
           <h2 className="text-lg font-semibold text-[var(--wb-text)]">Canais</h2>
@@ -179,7 +181,12 @@ export function ChannelsPage() {
               {mensagemErro(canaisQuery.error, 'Não foi possível carregar os canais.')}
             </p>
             <div>
-              <Button type="button" variant="outline" size="sm" onClick={() => canaisQuery.refetch()}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => canaisQuery.refetch()}
+              >
                 Tentar de novo
               </Button>
             </div>
@@ -225,7 +232,12 @@ export function ChannelsPage() {
         title="Novo canal"
         description="Crie um canal a partir do template. O id (slug) vira a pasta e não muda depois."
       >
-        <ChannelForm mode="criar" pending={criar.isPending} onSubmit={aoCriar} onCancel={fecharDialogo} />
+        <ChannelForm
+          mode="criar"
+          pending={criar.isPending}
+          onSubmit={aoCriar}
+          onCancel={fecharDialogo}
+        />
       </Modal>
 
       <Modal

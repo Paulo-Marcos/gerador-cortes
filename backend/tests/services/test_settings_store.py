@@ -105,6 +105,59 @@ def test_mascote_upsert_sobrescreve(tmp_path: Path):
 
 
 # --------------------------------------------------------------------------- #
+# Skills editoriais por canal (E-021)
+# --------------------------------------------------------------------------- #
+
+
+def _skill_valores(corpo="corpo", params='{"modelo":"opus"}', lentes='["a"]'):
+    return {"corpo": corpo, "params_json": params, "lentes_json": lentes}
+
+
+def test_skill_round_trip(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "canal-a", "cortador-expert", _skill_valores())
+
+    linha = settings_store.ler_skill(db, "canal-a", "cortador-expert")
+    assert linha["corpo"] == "corpo"
+    assert linha["params_json"] == '{"modelo":"opus"}'
+    assert linha["lentes_json"] == '["a"]'
+    assert linha["updated_at"]  # carimbado pelo store
+    # Skill sem linha → None (sinaliza fallback/migração ao chamador).
+    assert settings_store.ler_skill(db, "canal-a", "outra") is None
+    assert settings_store.ler_skill(db, "outro", "cortador-expert") is None
+
+
+def test_skill_upsert_sobrescreve(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "cenas-expert", _skill_valores(corpo="v1"))
+    settings_store.gravar_skill(db, "c", "cenas-expert", _skill_valores(corpo="v2"))
+
+    assert settings_store.ler_skill(db, "c", "cenas-expert")["corpo"] == "v2"
+
+
+def test_listar_skills_do_canal_indexa_por_skill(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "cortador-expert", _skill_valores(corpo="a"))
+    settings_store.gravar_skill(db, "c", "trechos-expert", _skill_valores(corpo="b"))
+    # Outro canal não deve vazar.
+    settings_store.gravar_skill(db, "outro", "cortador-expert", _skill_valores(corpo="z"))
+
+    todas = settings_store.ler_skills_do_canal(db, "c")
+    assert set(todas) == {"cortador-expert", "trechos-expert"}
+    assert todas["cortador-expert"]["corpo"] == "a"
+
+
+def test_deletar_skill_volta_a_none(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "metadados-expert", _skill_valores())
+    settings_store.deletar_skill(db, "c", "metadados-expert")
+
+    assert settings_store.ler_skill(db, "c", "metadados-expert") is None
+    # Deletar inexistente é no-op (não levanta).
+    settings_store.deletar_skill(db, "c", "metadados-expert")
+
+
+# --------------------------------------------------------------------------- #
 # AppSettingsService: DB-first + fallback/migração do arquivo legado
 # --------------------------------------------------------------------------- #
 

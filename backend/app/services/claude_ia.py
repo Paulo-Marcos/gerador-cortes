@@ -21,13 +21,14 @@ import json
 import logging
 import time
 
+from app import editorial_skills
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.chunker import fatiar_transcricao
 from app.domain.segment_calculator import normalizar_desvio
 from app.domain.time_convert import hms_to_seg, seg_to_hms_short
 from app.domain.transcricao_utils import dividir_segmentos_longos, limpar_e_ordenar_transcricao
-from app.domain.variacao_prompt import bloco_variacao
+from app.domain.variacao_prompt import bloco_variacao_de
 from app.editorial_identity import identidade_do_mascote
 from app.infrastructure import claude_cli_client
 from app.models import Corte, Projeto, StatusProjeto
@@ -54,13 +55,29 @@ def _carregar_transcricao_raw(raw: str, projeto_id: str) -> list | dict:
         return []
 
 
-# Identificadores das skills editoriais. Funcionam como CHAVE do loader: o
-# corpo é resolvido por `claude_cli_client` (instance/editorial/ → .claude/skills/).
+# Identificadores das skills editoriais. Funcionam como CHAVE do serviço
+# `editorial_skills`, que resolve por canal (E-021) o CORPO, as LENTES e os PARAMS
+# (modelo/thinking/timeout) — antes espalhados entre `.md`, `_LENTES` e `config`.
 _SKILL_CORTES = "cortador-expert"
 _SKILL_TRECHOS = "trechos-expert"
 _SKILL_CENAS = "cenas-expert"
 _SKILL_METADADOS = "metadados-expert"
 _SKILL_THUMBNAIL = "thumbnail-prompt-expert"
+
+
+def _args_claude(skill: editorial_skills.SkillResolvida, skill_key: str) -> dict:
+    """kwargs comuns do `claude_cli_client` a partir da skill resolvida (E-021).
+
+    `expertise` (corpo do banco) é a fonte da verdade; `skill` fica como FALLBACK
+    nativo (`/<skill>`) caso o corpo venha vazio — preservando a semântica anterior.
+    """
+    return {
+        "model": skill.modelo,
+        "skill": skill_key,
+        "expertise": skill.corpo,
+        "timeout": skill.timeout,
+        "thinking_tokens": skill.thinking_tokens,
+    }
 
 
 def _strip_code_fences(texto: str) -> str:
@@ -146,24 +163,34 @@ class ClaudeIaService:
         I-034: retorna `{cortes, descartados}` para que o caller possa persistir
         o audit trail editorial completo da skill cortador-expert.
         """
+        skill = editorial_skills.resolver_skill(_SKILL_CORTES)
         segmentos = ClaudeIaService._granularizar(transcricao)
         texto_completo = ClaudeIaService._formatar_segmentos(segmentos)
 
         if len(texto_completo) <= settings.claude_analise_max_chars_direto:
             logger.info("[ClaudeIA] Análise DIRETA (%d chars)", len(texto_completo))
-            prompt = ClaudeIaService._montar_prompt(texto_completo, meta)
+            prompt = ClaudeIaService._montar_prompt(
+                texto_completo, meta, variacao=bloco_variacao_de(skill.lentes)
+            )
             resultado = await claude_cli_client.generate_json(
-                prompt, model=settings.claude_model_analise, skill=_SKILL_CORTES
+                prompt, **_args_claude(skill, _SKILL_CORTES)
             )
             return {
                 "cortes": resultado.get("cortes", []),
                 "descartados": resultado.get("descartados", []) or [],
             }
 
-        return await ClaudeIaService._gerar_cortes_em_lote(segmentos, meta, len(texto_completo))
+        return await ClaudeIaService._gerar_cortes_em_lote(
+            segmentos, meta, len(texto_completo), skill
+        )
 
     @staticmethod
-    async def _gerar_cortes_em_lote(segmentos: list, meta: dict, total_chars: int) -> dict:
+    async def _gerar_cortes_em_lote(
+        segmentos: list,
+        meta: dict,
+        total_chars: int,
+        skill: editorial_skills.SkillResolvida,
+    ) -> dict:
         """Fallback para transcrições muito longas: fatia em janelas e concatena,
         deduplicando cortes que começam quase no mesmo ponto (overlap dos chunks).
 
@@ -186,10 +213,13 @@ class ClaudeIaService:
         for indice, chunk in enumerate(chunks):
             texto = ClaudeIaService._formatar_segmentos(chunk)
             prompt = ClaudeIaService._montar_prompt(
-                texto, meta, cabecalho=f"PARTE {indice + 1} de {len(chunks)} da transcrição."
+                texto,
+                meta,
+                cabecalho=f"PARTE {indice + 1} de {len(chunks)} da transcrição.",
+                variacao=bloco_variacao_de(skill.lentes),
             )
             resultado = await claude_cli_client.generate_json(
-                prompt, model=settings.claude_model_analise, skill=_SKILL_CORTES
+                prompt, **_args_claude(skill, _SKILL_CORTES)
             )
             for corte in resultado.get("cortes", []):
                 chave = int(_to_seg(corte.get("inicio_seg") or 0) // 30)  # bucket de 30s
@@ -208,11 +238,13 @@ class ClaudeIaService:
     # ── montagem do prompt e da transcrição ───────────────────────────────────
 
     @staticmethod
-    def _montar_prompt(texto_transcricao: str, meta: dict, *, cabecalho: str = "") -> str:
+    def _montar_prompt(
+        texto_transcricao: str, meta: dict, *, cabecalho: str = "", variacao: str = ""
+    ) -> str:
         duracao = int(meta.get("duracao_segundos") or 0)
         cabecalho_section = f"*** {cabecalho} ***\n\n" if cabecalho else ""
         return (
-            f"{bloco_variacao('cortes')}\n\n"
+            f"{variacao}\n\n"
             f"{cabecalho_section}"
             "=== DADOS DA LIVE ===\n"
             f"Título: {meta.get('titulo_live', '')}\n"
@@ -380,6 +412,7 @@ class ClaudeIaService:
         )
 
         cabecalho_meta = ClaudeIaService._cabecalho_meta_corte(meta, existentes)
+        skill = editorial_skills.resolver_skill(_SKILL_TRECHOS)
 
         novos: list = []
         for indice, chunk in enumerate(chunks):
@@ -389,7 +422,7 @@ class ClaudeIaService:
             )
             t = time.perf_counter()
             resultado = await claude_cli_client.generate_json(
-                prompt, model=settings.claude_model_analise, skill=_SKILL_TRECHOS
+                prompt, **_args_claude(skill, _SKILL_TRECHOS)
             )
             # WHY: a skill trechos-expert pede `desvios`; o prompt rico pode também
             # devolver `trechos` (chave do fluxo manual). Aceitamos ambos.
@@ -516,13 +549,15 @@ class ClaudeIaService:
         if not prompts:
             raise ValueError("Sem prompt de cenas (transcrição final vazia?).")
 
-        variacao = bloco_variacao("cenas")  # uma lente por geração (consistente entre as partes)
+        skill = editorial_skills.resolver_skill(_SKILL_CENAS)
+        # Uma lente por geração (consistente entre as partes), do banco por canal.
+        variacao = bloco_variacao_de(skill.lentes)
         cenas: list = []
         for indice, parte in enumerate(prompts):
             prompt = f"{variacao}\n\n{parte['texto']}"
             t = time.perf_counter()
             resultado = await claude_cli_client.generate_json(
-                prompt, model=settings.claude_model_cenas, skill=_SKILL_CENAS
+                prompt, **_args_claude(skill, _SKILL_CENAS)
             )
             novas = resultado.get("cenas", [])
             cenas.extend(novas)
@@ -562,9 +597,10 @@ class ClaudeIaService:
         """
         from app.services.metadados import MetadadosService
 
+        skill = editorial_skills.resolver_skill(_SKILL_METADADOS)
         ctx = await MetadadosService.montar_contexto_meta(corte_id)
         prompt = (
-            f"{bloco_variacao('metadados')}\n\n"
+            f"{bloco_variacao_de(skill.lentes)}\n\n"
             "=== INPUT DO CORTE ===\n"
             f"titulo_proposto: {ctx['titulo_proposto']}\n"
             f"tema_central: {ctx['tema']}\n"
@@ -580,7 +616,7 @@ class ClaudeIaService:
             "exigido pela seção OUTPUT da skill."
         )
         resultado = await claude_cli_client.generate_json(
-            prompt, model=settings.claude_model_metadados, skill=_SKILL_METADADOS
+            prompt, **_args_claude(skill, _SKILL_METADADOS)
         )
         await MetadadosService.importar_resultado_meta(corte_id, resultado)
         logger.info("[ClaudeIA] Metadados gerados via Claude p/ corte %s", corte_id[:8])
@@ -628,8 +664,11 @@ class ClaudeIaService:
                 "absoluto na transcrição original."
             )
 
+        # Resumo é bespoke (sem corpo de skill), mas reusa modelo + lentes de
+        # metadados por canal (E-021) — mantém a etapa alinhada à config do canal.
+        skill = editorial_skills.resolver_skill(_SKILL_METADADOS)
         prompt = (
-            f"{bloco_variacao('metadados')}\n\n"
+            f"{bloco_variacao_de(skill.lentes)}\n\n"
             "Você é um editor de vídeo-ensaio analítico. Reescreva o RESUMO de um "
             "corte com base na transcrição abaixo. O resumo deve, em 2-3 frases, "
             "descrever o ARCO DE RACIOCÍNIO (tese → desenvolvimento → conclusão), "
@@ -642,9 +681,7 @@ class ClaudeIaService:
             f"{transcricao_filtrada}\n\n"
             'Retorne APENAS o JSON no formato: {"resumo": "..."}'
         )
-        resultado = await claude_cli_client.generate_json(
-            prompt, model=settings.claude_model_metadados
-        )
+        resultado = await claude_cli_client.generate_json(prompt, model=skill.modelo)
         novo_resumo = resultado.get("resumo")
         if not novo_resumo:
             raise ValueError("Claude não retornou a key 'resumo'.")
@@ -700,11 +737,9 @@ class ClaudeIaService:
             else "EMOJIS EDITORIAIS: nenhum (corte não é TOP nem Leitura — não invente emojis decorativos)."
         )
         prompt = ClaudeIaService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
+        skill = editorial_skills.resolver_skill(_SKILL_THUMBNAIL)
         texto = await claude_cli_client.generate_text(
-            prompt,
-            model=settings.claude_model_thumbnail,
-            skill=_SKILL_THUMBNAIL,
-            thinking_tokens=settings.claude_cli_thinking_tokens_thumbnail,
+            prompt, **_args_claude(skill, _SKILL_THUMBNAIL)
         )
         prompt_thumbnail = _strip_code_fences(texto)
         if not prompt_thumbnail:
