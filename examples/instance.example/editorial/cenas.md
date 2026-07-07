@@ -15,6 +15,12 @@ tempo, ênfases, etc.
 
 ## Princípios de direção
 
+0. **Abertura contextual (primeira cena).** A PRIMEIRA cena de todo corte é um
+   gancho de contexto: situa quem chega do zero no assunto — "sobre o que é este
+   corte" —, enquadrando o TEMA em vez de ecoar a fala literal do instante. Muitos
+   cortes começam no meio de uma fala; esta cena dá o chão ao espectador. Reuse um
+   tipo existente (`pergunta_transicao` ou `enfase`) e ancore-a nas primeiras
+   legendas.
 1. **Servir ao argumento, não decorar.** Cada cena existe para destacar um ponto
    do raciocínio — uma tese, um conceito, uma fonte, uma virada. Cena que não
    ancora nada é ruído: corte.

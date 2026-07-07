@@ -361,8 +361,15 @@ LIMITES OBRIGATÓRIOS:
 - Cenas de identidade (tela_cheia, barra_inferior, card_informacao,
   comparativo_contraponto, enfase, pergunta_transicao, chamada_final): máximo {max_identidade}.
 - tela_cheia: máximo {max_fullscreen}.
-- HOOK obrigatório: pelo menos {min_primeiros_15s} cena(s) nos primeiros 15s,
-  desde que exista fala substantiva nesse intervalo.
+- ABERTURA CONTEXTUAL (obrigatória quando {min_primeiros_15s} > 0): a PRIMEIRA
+  cena deve situar quem chega do zero — um GANCHO DE CONTEXTO que enuncia SOBRE O
+  QUE É este corte / o assunto em pauta, e não um eco literal da fala do instante.
+  Muitos cortes começam no meio de uma fala; esta cena dá o chão ao espectador.
+  Ancore-a nas primeiras legendas (onde o tema é introduzido) e escreva o texto
+  enquadrando o assunto do corte, não a frase pontual do orador. Use um tipo
+  existente adequado: pergunta_transicao (a pergunta-guia do tema) ou enfase (a
+  ideia central). Continua valendo: pelo menos {min_primeiros_15s} cena(s) nos
+  primeiros 15s, desde que exista fala substantiva nesse intervalo.
 - Duração de cada cena: 4s a 7s.
 - Espaçamento mínimo entre cenas consecutivas: 10 legendas.
 - Espaçamento mínimo entre cenas DO MESMO TIPO: 15 legendas.
@@ -415,7 +422,9 @@ Use estes nomes EXATOS no campo `tipo`.
 --------------------------------------------------
 
 REGRAS DE NARRATIVA:
-1. ABERTURA: nos primeiros 15s use pelo menos 1 hook se houver fala substantiva.
+1. ABERTURA: a 1ª cena é um GANCHO DE CONTEXTO — situa o espectador que chega do
+   zero no assunto do corte (ex.: "Sobre a pós-modernidade…"), enquadrando o tema
+   em vez de repetir a fala literal do momento. Ancorada nas primeiras legendas.
 2. DESENVOLVIMENTO: alterne tipos de cena; a cena deve ajudar a entender ou lembrar.
 3. CLÍMAX: comparativo_contraponto só no ápice de contraste real A/B.
 4. FECHAMENTO: chamada_final só se fizer sentido editorial.
