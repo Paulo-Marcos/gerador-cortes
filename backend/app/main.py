@@ -19,6 +19,7 @@ from app.routers import (
     channels,
     claude_ia,
     cortes,
+    diarizacao,
     editorial_skills,
     export,
     mascot,
@@ -105,6 +106,7 @@ app.include_router(app_settings.router, prefix="/api/settings", tags=["Settings"
 app.include_router(mascot.router, prefix="/api/mascot", tags=["Mascote"])
 app.include_router(retratos.router, prefix="/api/retratos", tags=["Retratos"])
 app.include_router(claude_ia.router, prefix="/api/claude", tags=["Claude IA"])
+app.include_router(diarizacao.router, prefix="/api/diarizacao", tags=["Diarização"])
 app.include_router(presets.router, prefix="/api/presets", tags=["Presets"])
 app.include_router(ranking_lives.router, prefix="/api/ranking-lives", tags=["Ranking Lives"])
 app.include_router(

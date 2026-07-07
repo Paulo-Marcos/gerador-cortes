@@ -10,6 +10,30 @@ def _seg_hms(inicio, fim, texto="texto"):
     return {"inicio": inicio, "fim": fim, "texto": texto}
 
 
+class TestPreservaFalante:
+    """D-286: o rótulo de falante deve sobreviver à limpeza e ao split."""
+
+    def test_limpar_preserva_speaker(self):
+        seg = {"start": 0.0, "end": 3.0, "texto": "oi", "speaker": "SPEAKER_00"}
+        result = limpar_e_ordenar_transcricao([seg])
+        assert result[0]["speaker"] == "SPEAKER_00"
+
+    def test_limpar_sem_speaker_nao_inventa_campo(self):
+        result = limpar_e_ordenar_transcricao([_seg(0.0, 3.0, "oi")])
+        assert "speaker" not in result[0]
+
+    def test_dividir_propaga_speaker_para_todas_as_partes(self):
+        seg = {
+            "start": 0.0,
+            "end": 20.0,
+            "texto": "um dois tres quatro cinco seis sete oito",
+            "speaker": "SPEAKER_01",
+        }
+        result = dividir_segmentos_longos([seg], max_duracao=4.0, max_palavras=2)
+        assert len(result) > 1
+        assert all(parte["speaker"] == "SPEAKER_01" for parte in result)
+
+
 class TestDividirSegmentosLongos:
     def test_lista_vazia_retorna_vazia(self):
         assert dividir_segmentos_longos([]) == []

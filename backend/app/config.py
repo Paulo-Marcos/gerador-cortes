@@ -80,6 +80,14 @@ class Settings(BaseSettings):
     ranking_peso_sentimento: float = 0.35
     ranking_peso_recencia: float = 0.25
 
+    # --- D-286: Diarização de falantes (canal vs. reagidos) ---
+    # Opt-in: a diarização (pyannote.audio) só roda quando disparada na tela de
+    # análise. Precisa de um token gratuito do HuggingFace (com os termos do
+    # modelo aceitos). Sem token/lib → o serviço degrada e a transcrição segue
+    # sem rótulo de falante, exatamente como hoje.
+    huggingface_token: str = ""
+    diarizacao_modelo: str = "pyannote/speaker-diarization-3.1"
+
     # Quando True, o pipeline de geração de bruto imprime no console e
     # grava em `DEBUG_gerar_bruto.log` o detalhamento completo (segmentos
     # calculados, paths dos arquivos auxiliares, cmd ffmpeg dispatched).

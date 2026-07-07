@@ -95,7 +95,39 @@ GEMINI_API_KEY=sua-chave-do-google-ai-studio
 # Diretórios (os defaults já funcionam para desenvolvimento local)
 PROJETOS_DIR=./projetos
 ASSETS_DIR=./assets
+
+# Diarização de falantes (opcional) — veja a seção abaixo
+HUGGINGFACE_TOKEN=
 ```
+
+### Diarização de falantes — canal vs. reagidos (opcional)
+
+Em vídeos de reação, a IA às vezes atribui ao dono do canal uma fala que é de
+outra pessoa (um trecho reagido, um convidado). A **diarização** rotula quem
+fala em cada segmento da transcrição (`[CANAL]` vs. `[OUTRO]`), para a análise
+gerar cortes sem misturar falas de pessoas diferentes.
+
+É **opcional** e você a dispara **na hora da análise** (botão/toggle na tela do
+projeto): assim vê o vídeo antes e decide se vale a pena. Sem configurar, tudo
+segue funcionando — a transcrição apenas não recebe o rótulo de falante.
+
+Para habilitar:
+
+```bash
+# 1. Instale a dependência pesada (torch + pyannote) no ambiente do backend
+cd backend
+pip install pyannote.audio
+
+# 2. Crie um token GRATUITO em huggingface.co/settings/tokens
+#    e ACEITE os termos do modelo em:
+#    huggingface.co/pyannote/speaker-diarization-3.1
+#    Depois preencha no backend/.env:
+#    HUGGINGFACE_TOKEN=hf_xxx
+```
+
+> Sem GPU a diarização roda na CPU (mais lenta). Após diarizar, você pode
+> **rebatizar** os falantes na UI ("esse é o Pedro", "esse é o João") — os
+> nomes ficam salvos por projeto e entram no prompt da análise.
 
 > A identidade do canal (handle/nome/crédito) e o canal-fonte das lives **não** são configurados
 > aqui — ficam em `instance/channel.yaml` (veja a seção

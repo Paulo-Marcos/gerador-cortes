@@ -19,13 +19,18 @@ router = APIRouter()
 
 
 @router.post("/projeto/{projeto_id}/analisar")
-async def analisar_via_claude(projeto_id: str, db: AsyncSession = Depends(get_db)):
+async def analisar_via_claude(
+    projeto_id: str, usar_diarizacao: bool = True, db: AsyncSession = Depends(get_db)
+):
     """Analisa a transcrição via Claude (SÍNCRONO).
 
     Gera os cortes primeiro e só então substitui os existentes (uma falha não
     apaga os cortes atuais), e encadeia o refazer-transcrição. Síncrono para dar
     feedback direto no front (spinner enquanto roda; erro visível). Em lives
     longas pode levar alguns minutos.
+
+    D-286: `usar_diarizacao` (default True) injeta o rótulo de falante quando o
+    projeto já foi diarizado; passe False para analisar ignorando os falantes.
     """
     projeto = await db.get(Projeto, projeto_id)
     if not projeto:
@@ -33,7 +38,9 @@ async def analisar_via_claude(projeto_id: str, db: AsyncSession = Depends(get_db
     if not projeto.transcricao_raw:
         raise HTTPException(status_code=400, detail="Projeto ainda sem transcrição")
     try:
-        resultado = await ClaudeIaService.analisar_via_claude(projeto_id)
+        resultado = await ClaudeIaService.analisar_via_claude(
+            projeto_id, usar_diarizacao=usar_diarizacao
+        )
         return {
             "message": "Análise via Claude concluída",
             "projeto_id": projeto_id,

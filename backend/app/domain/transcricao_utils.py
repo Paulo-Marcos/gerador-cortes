@@ -47,6 +47,9 @@ def dividir_segmentos_longos(
 
         duracao_por_parte = duracao / num_partes
 
+        # Preserva o rótulo de falante (D-286) em todas as sub-partes do split.
+        falante = item.get("speaker")
+
         for p_idx in range(num_partes):
             idx_inicio = p_idx * palavras_por_parte
             # Na última parte pega o resto
@@ -65,15 +68,16 @@ def dividir_segmentos_longos(
             # Garante que não ultrapasse o fim original
             p_end = min(p_end, end)
 
-            nova_trans.append(
-                {
-                    "start": round(p_start, 3),
-                    "end": round(p_end, 3),
-                    "inicio": round(p_start, 3),
-                    "fim": round(p_end, 3),
-                    "texto": sub_texto,
-                }
-            )
+            parte = {
+                "start": round(p_start, 3),
+                "end": round(p_end, 3),
+                "inicio": round(p_start, 3),
+                "fim": round(p_end, 3),
+                "texto": sub_texto,
+            }
+            if falante:
+                parte["speaker"] = falante
+            nova_trans.append(parte)
 
     return nova_trans
 
@@ -103,7 +107,11 @@ def limpar_e_ordenar_transcricao(transcricao: list[dict]) -> list[dict]:
         fim = _to_seg(item.get("end", item.get("fim", inicio + 0.1)))
         texto = item.get("texto", item.get("text", "")).strip()
         if texto:
-            normalizada.append({"start": inicio, "end": max(inicio + 0.05, fim), "texto": texto})
+            seg = {"start": inicio, "end": max(inicio + 0.05, fim), "texto": texto}
+            # Preserva o rótulo de falante (D-286) ao reconstruir o dict.
+            if item.get("speaker"):
+                seg["speaker"] = item["speaker"]
+            normalizada.append(seg)
 
     # Ordenação estável por início
     normalizada.sort(key=lambda x: x["start"])

@@ -49,6 +49,26 @@ class TestFormatarSegmentos:
         assert "ok" in texto
         assert texto.count("\n") == 0  # só uma linha
 
+    def test_sem_mapa_nao_injeta_rotulo(self):
+        """D-286: back-compat — sem mapa a saída é idêntica ao formato antigo."""
+        segs = [{**_seg(0, 0, "fala"), "speaker": "SPEAKER_00"}]
+        texto = ClaudeIaService._formatar_segmentos(segs)
+        assert texto == "[0] (00:00:00) fala"
+
+    def test_com_mapa_injeta_rotulo_de_falante(self):
+        """D-286: com mapa, prefixa [CANAL]/[OUTRO] conforme o falante."""
+        segs = [
+            {**_seg(0, 0, "fala do host"), "speaker": "SPEAKER_00"},
+            {**_seg(1, 10, "fala reagida"), "speaker": "SPEAKER_01"},
+        ]
+        mapa = {
+            "SPEAKER_00": {"nome": "Pedro", "is_canal": True},
+            "SPEAKER_01": {"nome": "", "is_canal": False},
+        }
+        texto = ClaudeIaService._formatar_segmentos(segs, mapa)
+        assert "[0] (00:00:00) [CANAL: Pedro] fala do host" in texto
+        assert "[1] (00:00:10) [OUTRO] fala reagida" in texto
+
 
 # ── _carregar_transcricao_raw (D-203) ────────────────────────────────────────
 

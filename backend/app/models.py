@@ -83,6 +83,10 @@ class Projeto(Base):
     # classificou como NÃO_RECOMENDADO e descartou (cada item: tema, motivo).
     # Permite ao operador auditar o filtro editorial sem reabrir o prompt.
     descartados_analise: Mapped[str] = mapped_column(Text, default="[]")
+    # D-286: mapa de falantes da diarização — {"SPEAKER_00": {"nome": "", "is_canal": true}, ...}.
+    # `speaker` por segmento mora na transcricao_raw; o nome/rótulo (editável pelo
+    # operador) mora aqui, para relabelar sem reprocessar a transcrição.
+    falantes_map: Mapped[str] = mapped_column(Text, default="{}")
     # Renderer das cenas do Remotion: "v1" (atual/estável) ou "v2" (nova identidade).
     # Default v2: nova identidade editorial das cenas Remotion.
     versao_renderer: Mapped[str] = mapped_column(String(10), default="v2")

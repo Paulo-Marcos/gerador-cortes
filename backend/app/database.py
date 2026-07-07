@@ -74,6 +74,8 @@ async def init_db():
             "ALTER TABLE projetos ADD COLUMN descartados_analise TEXT DEFAULT '[]'",
             # F-052: pontuação herdada do ranking de lives.
             "ALTER TABLE projetos ADD COLUMN pontuacao_ranking REAL DEFAULT 0.0",
+            # D-286: mapa de falantes da diarização (canal vs. reagidos).
+            "ALTER TABLE projetos ADD COLUMN falantes_map TEXT DEFAULT '{}'",
             """
             CREATE TABLE IF NOT EXISTS metadados_shorts (
                 id VARCHAR(36) PRIMARY KEY,

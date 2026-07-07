@@ -25,6 +25,7 @@ from app import editorial_skills
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.chunker import fatiar_transcricao
+from app.domain.diarizacao_align import prefixo_falante
 from app.domain.segment_calculator import normalizar_desvio
 from app.domain.time_convert import hms_to_seg, seg_to_hms_short
 from app.domain.transcricao_utils import dividir_segmentos_longos, limpar_e_ordenar_transcricao
@@ -80,6 +81,21 @@ def _args_claude(skill: editorial_skills.SkillResolvida, skill_key: str) -> dict
     }
 
 
+def _mapa_falantes_para_meta(raw: str) -> dict | None:
+    """Parse tolerante do `falantes_map` para injetar na meta da análise (D-286).
+
+    Retorna `None` (sem rótulo) quando o projeto não foi diarizado ou o JSON é
+    inválido — o formatador então gera o prompt idêntico ao comportamento antigo.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    try:
+        mapa = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return mapa if isinstance(mapa, dict) and mapa else None
+
+
 def _strip_code_fences(texto: str) -> str:
     """Remove cercas ``` de markdown que o modelo às vezes coloca em volta do texto."""
     t = (texto or "").strip()
@@ -97,12 +113,18 @@ class ClaudeIaService:
     """Orquestra gerações via Claude, reusando os serviços de domínio."""
 
     @staticmethod
-    async def analisar_via_claude(projeto_id: str, *, encadear_transcricao: bool = True) -> dict:
+    async def analisar_via_claude(
+        projeto_id: str, *, encadear_transcricao: bool = True, usar_diarizacao: bool = True
+    ) -> dict:
         """Analisa a transcrição via Claude, substitui os cortes e (opcional)
         encadeia o refazer-transcrição para sincronizar cada corte.
 
         Replica a semântica do "reanalisar": apaga os cortes existentes e gera
         do zero. A skill `cortador-expert` carrega toda a expertise editorial.
+
+        D-286: quando `usar_diarizacao` e o projeto já foi diarizado, injeta o
+        rótulo de falante ([CANAL]/[OUTRO]) na transcrição enviada à IA. Sem
+        diarização (ou com o toggle desligado) o prompt sai idêntico ao de antes.
         """
         async with AsyncSessionLocal() as db:
             projeto = await db.get(Projeto, projeto_id)
@@ -114,6 +136,9 @@ class ClaudeIaService:
                 "titulo_live": projeto.titulo_live or "",
                 "youtube_url": projeto.youtube_url or "",
                 "duracao_segundos": projeto.duracao_segundos or 0,
+                "falantes_map": _mapa_falantes_para_meta(projeto.falantes_map)
+                if usar_diarizacao
+                else None,
             }
             status_anterior = projeto.status
             projeto.status = StatusProjeto.ANALISANDO
@@ -164,8 +189,9 @@ class ClaudeIaService:
         o audit trail editorial completo da skill cortador-expert.
         """
         skill = editorial_skills.resolver_skill(_SKILL_CORTES)
+        mapa_falantes = meta.get("falantes_map") or None
         segmentos = ClaudeIaService._granularizar(transcricao)
-        texto_completo = ClaudeIaService._formatar_segmentos(segmentos)
+        texto_completo = ClaudeIaService._formatar_segmentos(segmentos, mapa_falantes)
 
         if len(texto_completo) <= settings.claude_analise_max_chars_direto:
             logger.info("[ClaudeIA] Análise DIRETA (%d chars)", len(texto_completo))
@@ -181,7 +207,7 @@ class ClaudeIaService:
             }
 
         return await ClaudeIaService._gerar_cortes_em_lote(
-            segmentos, meta, len(texto_completo), skill
+            segmentos, meta, len(texto_completo), skill, mapa_falantes
         )
 
     @staticmethod
@@ -190,6 +216,7 @@ class ClaudeIaService:
         meta: dict,
         total_chars: int,
         skill: editorial_skills.SkillResolvida,
+        mapa_falantes: dict | None = None,
     ) -> dict:
         """Fallback para transcrições muito longas: fatia em janelas e concatena,
         deduplicando cortes que começam quase no mesmo ponto (overlap dos chunks).
@@ -211,7 +238,7 @@ class ClaudeIaService:
         descartados: list = []
         temas_vistos: set[str] = set()
         for indice, chunk in enumerate(chunks):
-            texto = ClaudeIaService._formatar_segmentos(chunk)
+            texto = ClaudeIaService._formatar_segmentos(chunk, mapa_falantes)
             prompt = ClaudeIaService._montar_prompt(
                 texto,
                 meta,
@@ -269,14 +296,22 @@ class ClaudeIaService:
         return granular
 
     @staticmethod
-    def _formatar_segmentos(segmentos: list) -> str:
+    def _formatar_segmentos(segmentos: list, mapa_falantes: dict | None = None) -> str:
+        """Formata os segmentos como `[idx] (hms) [FALANTE] texto`.
+
+        D-286: quando `mapa_falantes` é dado, prefixa cada linha com o rótulo do
+        falante ([CANAL]/[OUTRO]) para a IA distinguir a fala do dono do canal da
+        fala reagida. Sem mapa (ou sem `speaker` no segmento) a saída é idêntica
+        ao comportamento antigo — back-compat total.
+        """
         linhas = []
         for seg in segmentos:
             inicio = seg.get("inicio", seg.get("start", 0))
             texto = seg.get("texto", seg.get("text", "")).strip()
             if texto:
                 idx = seg.get("global_index", 0)
-                linhas.append(f"[{idx}] ({seg_to_hms_short(_to_seg(inicio))}) {texto}")
+                prefixo = prefixo_falante(seg.get("speaker"), mapa_falantes)
+                linhas.append(f"[{idx}] ({seg_to_hms_short(_to_seg(inicio))}) {prefixo}{texto}")
         return "\n".join(linhas)
 
     # ── encadeamento do "refazer transcrição" ─────────────────────────────────

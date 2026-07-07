@@ -16,3 +16,8 @@ google-auth-httplib2==0.2.0
 Pillow==12.3.0
 faster-whisper==1.0.3
 scenedetect[opencv]==0.7
+# Diarização de falantes (D-286) — OPCIONAL e pesado (torch + pyannote).
+# Instale só se for usar o rótulo canal/reagidos: `pip install pyannote.audio`.
+# Requer token gratuito do HuggingFace (ver docs/SETUP.md). Deixado comentado
+# para não impor a dependência a quem não usa; o app degrada sem ela.
+# pyannote.audio==3.3.2
