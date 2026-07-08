@@ -108,11 +108,37 @@ _DDL = (
         corpo TEXT NOT NULL DEFAULT '',
         params_json TEXT NOT NULL DEFAULT '{}',
         lentes_json TEXT NOT NULL DEFAULT '[]',
+        scaffold TEXT NOT NULL DEFAULT '',
         updated_at TEXT NOT NULL DEFAULT '',
         PRIMARY KEY (channel_id, skill_key)
     )
     """,
 )
+
+# Colunas adicionadas depois da criação original de uma tabela: (tabela, coluna,
+# DDL de ADD COLUMN). Aplicadas por `_migrar_colunas` em bancos que já existiam
+# antes da coluna existir (o `CREATE TABLE IF NOT EXISTS` sozinho não as adiciona).
+_MIGRACOES_COLUNA = (
+    # D-297: scaffold (contrato de saída) por (canal, skill) — emenda do E-021.
+    (
+        "editorial_skill",
+        "scaffold",
+        "ALTER TABLE editorial_skill ADD COLUMN scaffold TEXT NOT NULL DEFAULT ''",
+    ),
+)
+
+
+def _migrar_colunas(conn: sqlite3.Connection) -> None:
+    """Adiciona colunas novas a tabelas pré-existentes (idempotente).
+
+    Um banco criado antes de uma coluna nova não a ganha pelo `CREATE TABLE IF
+    NOT EXISTS`; este passo checa `PRAGMA table_info` e só roda o `ALTER` quando
+    a coluna falta — seguro rodar a cada abertura.
+    """
+    for tabela, coluna, ddl in _MIGRACOES_COLUNA:
+        colunas = {row["name"] for row in conn.execute(f"PRAGMA table_info({tabela})")}
+        if coluna not in colunas:
+            conn.execute(ddl)
 
 
 def _connect(db_path: Path) -> sqlite3.Connection:
@@ -128,6 +154,7 @@ def _connect(db_path: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA busy_timeout=30000")
     for ddl in _DDL:
         conn.execute(ddl)
+    _migrar_colunas(conn)
     conn.commit()
     return conn
 
@@ -368,6 +395,53 @@ def deletar_skill(db_path: Path, channel_id: str, skill_key: str) -> None:
         conn.execute(
             "DELETE FROM editorial_skill WHERE channel_id = ? AND skill_key = ?",
             (channel_id, skill_key),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# --------------------------------------------------------------------------- #
+# Scaffolds (contrato de saída) por canal (D-297) — coluna da tabela editorial_skill
+# --------------------------------------------------------------------------- #
+
+
+def ler_scaffold(db_path: Path, channel_id: str, skill_key: str) -> str | None:
+    """Lê o scaffold gravado na linha da skill, ou `None` se a linha não existe.
+
+    Diferencia dois estados para o chamador (serviço `editorial_scaffolds`):
+    `None` (linha ausente) e `""` (linha existe, scaffold ainda não semeado) —
+    ambos disparam o seed a partir do default versionado.
+    """
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT scaffold FROM editorial_skill WHERE channel_id = ? AND skill_key = ?",
+            (channel_id, skill_key),
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return row["scaffold"]
+
+
+def gravar_scaffold(db_path: Path, channel_id: str, skill_key: str, scaffold: str) -> None:
+    """Grava (UPSERT) apenas a coluna `scaffold` da linha da skill.
+
+    O UPSERT toca só `scaffold`/`updated_at`: corpo/params/lentes (E-021) ficam
+    intactos quando a linha já existe. O chamador garante que a linha da skill já
+    foi semeada (via `editorial_skills.resolver_skill`) antes de gravar o scaffold,
+    para nunca criar uma linha com corpo vazio que faria o E-021 pular o seed.
+    """
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "INSERT INTO editorial_skill (channel_id, skill_key, scaffold, updated_at) "
+            "VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(channel_id, skill_key) DO UPDATE SET "
+            "scaffold = excluded.scaffold, updated_at = excluded.updated_at",
+            (channel_id, skill_key, str(scaffold), datetime.now(UTC).isoformat()),
         )
         conn.commit()
     finally:

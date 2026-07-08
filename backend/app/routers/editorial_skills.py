@@ -12,7 +12,7 @@ skills editoriais são uma preocupação própria, então ganham seu próprio en
 
 from __future__ import annotations
 
-from app import editorial_skills
+from app import editorial_scaffolds, editorial_skills
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -103,3 +103,76 @@ async def resetar_skill(skill_key: str, body: ResetSkillRequest):
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return _para_response(skill)
+
+
+# --------------------------------------------------------------------------- #
+# Scaffolds (contrato de saída) por canal (D-297)
+# --------------------------------------------------------------------------- #
+# Montados no MESMO router (sub-caminho /scaffolds) para não exigir registro de um
+# router novo em main.py (travado). Mesma preocupação editorial, endpoint irmão.
+
+
+class ScaffoldDescritoResponse(BaseModel):
+    """Um scaffold do canal para a UI: metadados + valor-do-canal + default (reset)."""
+
+    key: str
+    etapa: str
+    descricao: str
+    scaffold: str
+    scaffold_default: str
+    # Placeholders exigidos ({...}) e o marcador do contrato de saída — a UI mostra
+    # ambos como guia de edição.
+    placeholders: list[str]
+    marcador: str
+
+
+class ListaScaffoldsResponse(BaseModel):
+    scaffolds: list[ScaffoldDescritoResponse]
+
+
+class UpdateScaffoldRequest(BaseModel):
+    scaffold: str
+
+
+def _para_response_scaffold(s: editorial_scaffolds.ScaffoldDescrito) -> ScaffoldDescritoResponse:
+    return ScaffoldDescritoResponse(
+        key=s.key,
+        etapa=s.etapa,
+        descricao=s.descricao,
+        scaffold=s.scaffold,
+        scaffold_default=s.scaffold_default,
+        placeholders=s.placeholders,
+        marcador=s.marcador,
+    )
+
+
+@router.get("/scaffolds", response_model=ListaScaffoldsResponse)
+async def listar_scaffolds():
+    return ListaScaffoldsResponse(
+        scaffolds=[_para_response_scaffold(s) for s in editorial_scaffolds.descrever_scaffolds()]
+    )
+
+
+@router.put("/scaffolds/{scaffold_key}", response_model=ScaffoldDescritoResponse)
+async def editar_scaffold(scaffold_key: str, body: UpdateScaffoldRequest):
+    try:
+        scaffold = editorial_scaffolds.definir_scaffold(scaffold_key, body.scaffold)
+    except KeyError as e:
+        raise HTTPException(
+            status_code=404, detail=f"Scaffold desconhecido: {scaffold_key!r}."
+        ) from e
+    except ValueError as e:
+        # Guardrail do contrato: placeholder/marcador inválido → 422 com a razão.
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return _para_response_scaffold(scaffold)
+
+
+@router.post("/scaffolds/{scaffold_key}/reset", response_model=ScaffoldDescritoResponse)
+async def resetar_scaffold(scaffold_key: str):
+    try:
+        scaffold = editorial_scaffolds.resetar_scaffold(scaffold_key)
+    except KeyError as e:
+        raise HTTPException(
+            status_code=404, detail=f"Scaffold desconhecido: {scaffold_key!r}."
+        ) from e
+    return _para_response_scaffold(scaffold)

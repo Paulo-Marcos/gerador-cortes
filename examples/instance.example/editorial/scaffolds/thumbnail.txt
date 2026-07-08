@@ -1,0 +1,25 @@
+=== INPUT DO CORTE ===
+tema_central: {tema}
+titulo_youtube: {titulo_youtube}
+texto_capa_sugerido: {texto_capa}
+resumo: {resumo}
+{marca_emojis}
+{bloco_hints}
+=== TRANSCRIÇÃO FINAL DO CORTE ===
+{transcricao}
+
+=== ELEMENTOS PROIBIDOS — últimas capas do canal (NÃO REPITA nem use similar) ===
+{historico_visual}
+
+=== DIREÇÃO NÃO-NEGOCIÁVEL DESTA CAPA ===
+O método completo vive na skill thumbnail-prompt-expert; isto é só o resumo do que NÃO pode falhar:
+1) CENÁRIO derivado do contexto REAL do corte (lugar/instituição/época/cultura citados ou implicados). Nunca cenário neutro/seguro (lousa, biblioteca genérica, mesa+livro+luminária, fundo escuro vazio).
+2) ELENCO: pessoas reconhecíveis relevantes aparecem sempre que possível; {mascote} sozinho é fallback, não default. Múltiplas figuras permitidas com hierarquia clara; descreva cada pessoa real com fidelidade (idade, cabelo/calvície, barba, óculos, traços, roupa pública).
+3) ROUPA: registro relaxado/casual derivado do contexto — o contraste tema-sério × roupa-informal é da marca. NÃO repita o registro de roupa das últimas capas; default bege/clara/branca/linho PROIBIDO. Descreva a roupa exata SÓ no prompt final; nunca 'adult relaxed clothing'.
+4) LUZ: escolha uma chave de luz/registro tonal e VARIE-A em relação às últimas capas — não escureça por reflexo, sem penumbra cinematográfica por default.
+5) TEXTO: MANCHETE = o titulo_youtube POR INTEIRO — preserve TODO o conteúdo essencial (sujeito, nomes citados, conceito-chave, ideia completa). PROIBIDO cortar para 2-6 palavras ou virar fragmento; compressão só de conectores ('de/que/na/para'), nunca de termos centrais. Título longo → manchete em 2-3 linhas, legibilidade pela composição, nunca apagando palavras. Apoio (texto_capa literal até 5 palavras) é camada SEPARADA — acompanha a manchete, não carrega o resto do título. Tudo como UM sistema gráfico overlay; peso BLACK/HEAVY, contorno+sombra, alto contraste. Emoji 🔥/📖 só junto ao apoio, nunca objeto da cena. Sem retângulo sólido nos 15% inferiores. Anti-slide (sem lista de tópicos, cards ou tags).
+6) Antes de escrever, gere 3 hipóteses internas e descarte as que repetem 3+ eixos das últimas capas; nos EIXOS SATURADOS sinalizados acima, vá ao POLO OPOSTO.
+
+=== SAÍDA (siga TODAS as regras da skill thumbnail-prompt-expert) ===
+1ª linha, exatamente: [VARIATION_TAGS] cenario="..." | personagens="..." | relacao_mascote_personagens="..." | escala_mascote="..." | camera="..." | pose="..." | paleta="..." | luminosidade="..." | tipografia="..." | roupa="..." | layout_texto="..." | apoio_layout="..."  — frases curtas e CONCRETAS descrevendo a solução escolhida, sem listar opções.
+Depois, UMA linha em branco e o prompt final em inglês (formato PROMPT-MODELO da skill), apenas com a solução escolhida. Sem JSON, sem markdown, sem comentários, sem 'ou'/alternativas/listas de proibições.

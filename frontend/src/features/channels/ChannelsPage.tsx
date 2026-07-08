@@ -12,6 +12,7 @@ import type { Canal, IdentidadeCanal } from '@/lib/channelsApi';
 import { AppSettingsControls } from '@/features/settings/AppSettingsControls';
 import { ChannelCard } from './ChannelCard';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
+import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
 import {
   useCanais,
@@ -159,6 +160,8 @@ export function ChannelsPage() {
         </section>
 
         <EditorialSkillsSection />
+
+        <EditorialScaffoldsSection />
 
         <div className="mt-2">
           <h2 className="text-lg font-semibold text-[var(--wb-text)]">Canais</h2>

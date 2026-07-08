@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from app.channel_config_loader import PROMPT_DIRECAO
+from app import editorial_scaffolds
 from app.database import AsyncSessionLocal
 from app.domain.corte_mapper import coalescer_chaves_mascote
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
@@ -141,7 +141,9 @@ class CenasRemotionService:
 
                 limites = _calcular_limites(duracao_estimada)
                 cabecalho_parte = f"*** ATENÇÃO: Esta é a PARTE {i + 1} de {len(chunks)} do vídeo. Gere as cenas APENAS para as legendas listadas abaixo. ***\n\n"
-                prompt_chunk = cabecalho_parte + PROMPT_DIRECAO.format(
+                prompt_chunk = cabecalho_parte + editorial_scaffolds.resolver_scaffold(
+                    "cenas"
+                ).format(
                     titulo=corte.titulo_proposto,
                     tema_central=corte.tema_central,
                     resumo=corte.resumo,
@@ -265,7 +267,7 @@ class CenasRemotionService:
                         "parte": i + 1,
                         "total_partes": len(chunks),
                         "texto": cabecalho_parte
-                        + PROMPT_DIRECAO.format(
+                        + editorial_scaffolds.resolver_scaffold("cenas").format(
                             titulo=corte.titulo_proposto,
                             tema_central=corte.tema_central,
                             resumo=corte.resumo,

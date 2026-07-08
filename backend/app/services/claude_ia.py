@@ -21,7 +21,7 @@ import json
 import logging
 import time
 
-from app import editorial_skills
+from app import editorial_scaffolds, editorial_skills
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.chunker import fatiar_transcricao
@@ -268,20 +268,16 @@ class ClaudeIaService:
     def _montar_prompt(
         texto_transcricao: str, meta: dict, *, cabecalho: str = "", variacao: str = ""
     ) -> str:
+        # D-297: o scaffold (contrato de saída) vem do banco por canal; aqui só
+        # calculamos os valores que envolvem lógica (duração humana, cabeçalho de lote).
         duracao = int(meta.get("duracao_segundos") or 0)
-        cabecalho_section = f"*** {cabecalho} ***\n\n" if cabecalho else ""
-        return (
-            f"{variacao}\n\n"
-            f"{cabecalho_section}"
-            "=== DADOS DA LIVE ===\n"
-            f"Título: {meta.get('titulo_live', '')}\n"
-            f"Duração: {duracao // 3600}h{(duracao % 3600) // 60}m\n"
-            f"URL: {meta.get('youtube_url', '')}\n\n"
-            "=== TRANSCRIÇÃO (índice global, timestamp, fala) ===\n"
-            f"{texto_transcricao}\n"
-            "=== FIM DA TRANSCRIÇÃO ===\n\n"
-            "Gere agora a lista de cortes em JSON puro, seguindo exatamente o "
-            "formato e as regras da sua expertise acima."
+        return editorial_scaffolds.resolver_scaffold("cortes").format(
+            variacao=variacao,
+            cabecalho_section=f"*** {cabecalho} ***\n\n" if cabecalho else "",
+            titulo_live=meta.get("titulo_live", ""),
+            duracao_humana=f"{duracao // 3600}h{(duracao % 3600) // 60}m",
+            youtube_url=meta.get("youtube_url", ""),
+            texto_transcricao=texto_transcricao,
         )
 
     @staticmethod
@@ -509,55 +505,18 @@ class ClaudeIaService:
     def _montar_prompt_trechos(
         texto_transcricao: str, cabecalho_meta: str, parte: int, total_partes: int
     ) -> str:
-        # WHY: regras detalhadas (adaptadas de PROMPT_ANALISAR_DESVIOS em desvios.py)
-        # eram o que faltava — sem isso a IA sub-extraía. Inclui tipos explícitos
-        # (DESVIO/REPETICAO), exemplos concretos e formato JSON com a chave
-        # `desvios` para casar com a skill trechos-expert.
+        # D-297: o scaffold (regras detalhadas + formato JSON com a chave `desvios`)
+        # vem do banco por canal; aqui só calculamos o cabeçalho de lote.
         cabecalho_parte = (
             f"*** ATENÇÃO: Esta é a PARTE {parte} de {total_partes} do corte. "
             f"Identifique os trechos a remover APENAS para esta parte. ***\n\n"
             if total_partes > 1
             else ""
         )
-        return (
-            f"{cabecalho_parte}"
-            f"{cabecalho_meta}\n"
-            "Você é um editor de vídeo especialista. Receberá um trecho da transcrição "
-            "de um corte e deve identificar partes que podem ser removidas sem comprometer "
-            "o entendimento da tese central:\n\n"
-            "1. **DESVIO** — Trecho que foge do tema: digressões, avisos técnicos, problemas "
-            "de transmissão, interação irrelevante com o chat (pedir like/inscrição sem dizer "
-            "qual canal, ler comentário fora do tema, cumprimentar viewers), tangentes administrativas, "
-            "silêncios longos, conteúdo fora do tom.\n"
-            "2. **REPETICAO** — Trecho onde o locutor reitera ideia já explicada sem agregar "
-            "ângulo novo. Marque apenas redundâncias reais, não transições naturais de raciocínio.\n\n"
-            "A transcrição abaixo usa tempos ABSOLUTOS do vídeo original. Os timestamps de início "
-            "e fim que você retornar devem ser desses mesmos tempos absolutos, dentro do intervalo "
-            "do corte.\n\n"
-            "=== TRANSCRIÇÃO (timestamp absoluto — fala) ===\n"
-            f"{texto_transcricao}\n"
-            "=== FIM DA TRANSCRIÇÃO ===\n\n"
-            "Retorne APENAS o JSON, sem explicações. Formato esperado:\n"
-            "{\n"
-            '  "desvios": [\n'
-            "    {\n"
-            '      "inicio_hms": "HH:MM:SS",\n'
-            '      "fim_hms": "HH:MM:SS",\n'
-            '      "tipo": "DESVIO" | "REPETICAO",\n'
-            '      "motivo": "Descrição breve do motivo"\n'
-            "    }\n"
-            "  ]\n"
-            "}\n\n"
-            "Regras importantes:\n"
-            "- Seja conservador: só remova o que claramente não agrega à tese central.\n"
-            "- Encontre TODOS os desvios óbvios — não pare em 2-3. Pedir like/inscrição "
-            "sem qualificar o canal, comentários administrativos longos e digressões claras "
-            "DEVEM ser marcados.\n"
-            "- Para REPETICAO: só marque se a ideia já foi explicada antes e a repetição "
-            "não traz nada novo.\n"
-            "- Não remova transições naturais de raciocínio, apenas redundâncias reais.\n"
-            "- Os timestamps devem estar dentro do intervalo desta parte da transcrição.\n"
-            '- Se realmente não houver nada a remover, retorne {"desvios": []}.\n'
+        return editorial_scaffolds.resolver_scaffold("trechos").format(
+            cabecalho_parte=cabecalho_parte,
+            cabecalho_meta=cabecalho_meta,
+            texto_transcricao=texto_transcricao,
         )
 
     # ── Fase 3: cenas e metadados via Claude (incremental ou em paralelo) ─────
@@ -701,20 +660,14 @@ class ClaudeIaService:
 
         # Resumo é bespoke (sem corpo de skill), mas reusa modelo + lentes de
         # metadados por canal (E-021) — mantém a etapa alinhada à config do canal.
+        # D-297: o scaffold (contrato de saída) vem do banco por canal.
         skill = editorial_skills.resolver_skill(_SKILL_METADADOS)
-        prompt = (
-            f"{bloco_variacao_de(skill.lentes)}\n\n"
-            "Você é um editor de vídeo-ensaio analítico. Reescreva o RESUMO de um "
-            "corte com base na transcrição abaixo. O resumo deve, em 2-3 frases, "
-            "descrever o ARCO DE RACIOCÍNIO (tese → desenvolvimento → conclusão), "
-            "com tom maduro, honesto e sem clickbait.\n\n"
-            f"=== DADOS DO CORTE ===\n"
-            f"titulo_proposto: {titulo}\n"
-            f"tema_central: {tema}\n"
-            f"resumo_antigo (pode estar desatualizado): {resumo_antigo}\n\n"
-            "=== TRANSCRIÇÃO DO CORTE (fonte primária de verdade) ===\n"
-            f"{transcricao_filtrada}\n\n"
-            'Retorne APENAS o JSON no formato: {"resumo": "..."}'
+        prompt = editorial_scaffolds.resolver_scaffold("resumo").format(
+            variacao=bloco_variacao_de(skill.lentes),
+            titulo=titulo,
+            tema=tema,
+            resumo_antigo=resumo_antigo,
+            transcricao=transcricao_filtrada,
         )
         resultado = await claude_cli_client.generate_json(prompt, model=skill.modelo)
         novo_resumo = resultado.get("resumo")
@@ -788,66 +741,19 @@ class ClaudeIaService:
     def _montar_prompt_thumbnail(
         ctx: dict, marca_emojis: str, bloco_hints: str, mascote: str
     ) -> str:
-        # WHY: o método editorial completo vive na skill thumbnail-prompt-expert;
-        # aqui montamos só o contexto do corte + o resumo das regras não-negociáveis.
-        # Extraído da orquestração (D-080) para espelhar _montar_prompt/_montar_prompt_trechos.
-        return (
-            "=== INPUT DO CORTE ===\n"
-            f"tema_central: {ctx['tema']}\n"
-            f"titulo_youtube: {ctx['titulo_youtube']}\n"
-            f"texto_capa_sugerido: {ctx['texto_capa']}\n"
-            f"resumo: {ctx['resumo']}\n"
-            f"{marca_emojis}\n"
-            f"{bloco_hints}\n"
-            "=== TRANSCRIÇÃO FINAL DO CORTE ===\n"
-            f"{ctx['transcricao']}\n\n"
-            "=== ELEMENTOS PROIBIDOS — últimas capas do canal (NÃO REPITA nem use similar) ===\n"
-            f"{ctx['historico_visual']}\n\n"
-            "=== DIREÇÃO NÃO-NEGOCIÁVEL DESTA CAPA ===\n"
-            "O método completo vive na skill thumbnail-prompt-expert; isto é só o "
-            "resumo do que NÃO pode falhar:\n"
-            "1) CENÁRIO derivado do contexto REAL do corte (lugar/instituição/"
-            "época/cultura citados ou implicados). Nunca cenário neutro/seguro "
-            "(lousa, biblioteca genérica, mesa+livro+luminária, fundo escuro "
-            "vazio).\n"
-            "2) ELENCO: pessoas reconhecíveis relevantes aparecem sempre que "
-            f"possível; {mascote} sozinho é fallback, não default. Múltiplas figuras "
-            "permitidas com hierarquia clara; descreva cada pessoa real com "
-            "fidelidade (idade, cabelo/calvície, barba, óculos, traços, roupa "
-            "pública).\n"
-            "3) ROUPA: registro relaxado/casual derivado do contexto — o "
-            "contraste tema-sério × roupa-informal é da marca. NÃO repita o "
-            "registro de roupa das últimas capas; default bege/clara/branca/"
-            "linho PROIBIDO. Descreva a roupa exata SÓ no prompt final; nunca "
-            "'adult relaxed clothing'.\n"
-            "4) LUZ: escolha uma chave de luz/registro tonal e VARIE-A em "
-            "relação às últimas capas — não escureça por reflexo, sem penumbra "
-            "cinematográfica por default.\n"
-            "5) TEXTO: MANCHETE = o titulo_youtube POR INTEIRO — preserve TODO "
-            "o conteúdo essencial (sujeito, nomes citados, conceito-chave, ideia "
-            "completa). PROIBIDO cortar para 2-6 palavras ou virar fragmento; "
-            "compressão só de conectores ('de/que/na/para'), nunca de termos "
-            "centrais. Título longo → manchete em 2-3 linhas, legibilidade pela "
-            "composição, nunca apagando palavras. Apoio (texto_capa literal até "
-            "5 palavras) é camada SEPARADA — acompanha a manchete, não carrega o "
-            "resto do título. Tudo como UM sistema gráfico overlay; peso "
-            "BLACK/HEAVY, contorno+sombra, alto contraste. Emoji 🔥/📖 só junto "
-            "ao apoio, nunca objeto da cena. Sem retângulo sólido nos 15% "
-            "inferiores. Anti-slide (sem lista de tópicos, cards ou tags).\n"
-            "6) Antes de escrever, gere 3 hipóteses internas e descarte as que "
-            "repetem 3+ eixos das últimas capas; nos EIXOS SATURADOS sinalizados "
-            "acima, vá ao POLO OPOSTO.\n\n"
-            "=== SAÍDA (siga TODAS as regras da skill thumbnail-prompt-expert) ===\n"
-            '1ª linha, exatamente: [VARIATION_TAGS] cenario="..." | '
-            'personagens="..." | relacao_mascote_personagens="..." | '
-            'escala_mascote="..." | camera="..." | pose="..." | paleta="..." '
-            '| luminosidade="..." | tipografia="..." | roupa="..." | '
-            'layout_texto="..." | apoio_layout="..."  — frases curtas e '
-            "CONCRETAS descrevendo a solução escolhida, sem listar opções.\n"
-            "Depois, UMA linha em branco e o prompt final em inglês (formato "
-            "PROMPT-MODELO da skill), apenas com a solução escolhida. Sem JSON, "
-            "sem markdown, sem comentários, sem 'ou'/alternativas/listas de "
-            "proibições."
+        # D-297: o scaffold (contexto do corte + regras não-negociáveis + formato de
+        # saída [VARIATION_TAGS]) vem do banco por canal. O método editorial completo
+        # continua na skill thumbnail-prompt-expert (corpo/expertise).
+        return editorial_scaffolds.resolver_scaffold("thumbnail").format(
+            tema=ctx["tema"],
+            titulo_youtube=ctx["titulo_youtube"],
+            texto_capa=ctx["texto_capa"],
+            resumo=ctx["resumo"],
+            marca_emojis=marca_emojis,
+            bloco_hints=bloco_hints,
+            transcricao=ctx["transcricao"],
+            historico_visual=ctx["historico_visual"],
+            mascote=mascote,
         )
 
     @staticmethod

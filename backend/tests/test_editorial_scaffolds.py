@@ -1,0 +1,168 @@
+"""Testes do serviço de scaffolds (contrato de saída) por canal (D-297).
+
+Cobrem o contrato do `editorial_scaffolds` no mesmo espírito de
+`test_editorial_skills`: banco como fonte da verdade, seed idempotente a partir do
+default versionado, o guardrail do contrato (`validar_scaffold`), e as fachadas de
+gestão (descrever/definir/resetar). Tudo isolado por `tmp_path` (um `settings.db` +
+um diretório editorial por teste); os DEFAULTS vêm de
+`examples/instance.example/editorial/scaffolds` e do `channel_config_loader` reais.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from app import channel_config_loader, editorial_scaffolds
+from app.services import settings_store
+
+_CANAL = "canal-teste"
+
+
+def _db(tmp_path: Path) -> Path:
+    return tmp_path / "settings.db"
+
+
+def _editorial(tmp_path: Path) -> Path:
+    raiz = tmp_path / "editorial"
+    raiz.mkdir()
+    return raiz
+
+
+def _kw(tmp_path: Path) -> dict:
+    return {"db_path": _db(tmp_path), "channel_id": _CANAL, "editorial_root": _editorial(tmp_path)}
+
+
+def test_seed_le_default_versionado_e_grava_no_banco(tmp_path: Path):
+    kw = _kw(tmp_path)
+    scaffold = editorial_scaffolds.resolver_scaffold("cortes", **kw)
+
+    assert "=== DADOS DA LIVE ===" in scaffold
+    assert "{texto_transcricao}" in scaffold
+    # Efeito colateral: o banco foi semeado na linha da skill dona.
+    assert settings_store.ler_scaffold(kw["db_path"], _CANAL, "cortador-expert")
+
+
+def test_resolver_scaffold_tambem_semeia_corpo_da_skill(tmp_path: Path):
+    # Regressão-chave: resolver o scaffold NÃO pode deixar a linha da skill nascer
+    # com corpo vazio (o E-021 pularia o seed e a geração perderia a expertise).
+    kw = _kw(tmp_path)
+    editorial_scaffolds.resolver_scaffold("cortes", **kw)
+
+    linha = settings_store.ler_skill(kw["db_path"], _CANAL, "cortador-expert")
+    assert linha is not None
+    assert linha["corpo"].strip() != ""  # corpo semeado pelo E-021
+
+
+def test_cenas_default_vem_do_channel_config_loader(tmp_path: Path):
+    scaffold = editorial_scaffolds.resolver_scaffold("cenas", **_kw(tmp_path))
+    assert scaffold == channel_config_loader.PROMPT_DIRECAO.strip()
+
+
+def test_banco_e_fonte_da_verdade_apos_definir(tmp_path: Path):
+    kw = _kw(tmp_path)
+    # Um scaffold válido para 'resumo' (todos os placeholders + marcador).
+    novo = (
+        "{variacao} {titulo} {tema} {resumo_antigo} {transcricao} "
+        'Retorne o JSON {{"resumo": "..."}}'
+    )
+    editorial_scaffolds.definir_scaffold("resumo", novo, **kw)
+
+    assert editorial_scaffolds.resolver_scaffold("resumo", **kw) == novo
+
+
+def test_editar_resumo_nao_toca_corpo_da_skill_metadados(tmp_path: Path):
+    # 'resumo' guarda seu scaffold na linha de metadados-expert; isso não pode
+    # sobrescrever o corpo (expertise) da skill de metadados.
+    kw = _kw(tmp_path)
+    from app import editorial_skills
+
+    antes = editorial_skills.resolver_skill("metadados-expert", **kw).corpo
+    novo = (
+        "{variacao} {titulo} {tema} {resumo_antigo} {transcricao} "
+        'Retorne o JSON {{"resumo": "..."}}'
+    )
+    editorial_scaffolds.definir_scaffold("resumo", novo, **kw)
+    depois = editorial_skills.resolver_skill("metadados-expert", **kw).corpo
+
+    assert antes == depois
+
+
+def test_resetar_scaffold_volta_ao_default(tmp_path: Path):
+    kw = _kw(tmp_path)
+    valido = '{variacao} {titulo} {tema} {resumo_antigo} {transcricao} JSON {{"resumo": "..."}}'
+    editorial_scaffolds.definir_scaffold("resumo", valido, **kw)
+    descrito = editorial_scaffolds.resetar_scaffold("resumo", **kw)
+
+    assert descrito.scaffold == descrito.scaffold_default
+    assert descrito.scaffold == editorial_scaffolds._default_scaffold(
+        editorial_scaffolds._exigir_catalogo("resumo")
+    )
+
+
+def test_descrever_scaffolds_traz_os_cinco_na_ordem(tmp_path: Path):
+    descritos = editorial_scaffolds.descrever_scaffolds(**_kw(tmp_path))
+    assert [d.key for d in descritos] == ["cortes", "trechos", "cenas", "thumbnail", "resumo"]
+    cortes = next(d for d in descritos if d.key == "cortes")
+    assert cortes.marcador == "JSON"
+    assert "texto_transcricao" in cortes.placeholders
+
+
+def test_scaffold_desconhecido_levanta(tmp_path: Path):
+    with pytest.raises(KeyError):
+        editorial_scaffolds.resolver_scaffold("inexistente", **_kw(tmp_path))
+
+
+# --- Guardrail do contrato de saída (validar_scaffold) ---------------------- #
+
+_CAT_CORTES = editorial_scaffolds._exigir_catalogo("cortes")
+_VALIDO_CORTES = (
+    "{variacao}{cabecalho_section}{titulo_live}{duracao_humana}"
+    "{youtube_url}{texto_transcricao} — gere em JSON"
+)
+
+
+def test_validar_aceita_scaffold_completo():
+    editorial_scaffolds.validar_scaffold(_VALIDO_CORTES, _CAT_CORTES)  # não levanta
+
+
+def test_validar_rejeita_placeholder_obrigatorio_ausente():
+    sem_transcricao = _VALIDO_CORTES.replace("{texto_transcricao}", "")
+    with pytest.raises(ValueError, match="texto_transcricao"):
+        editorial_scaffolds.validar_scaffold(sem_transcricao, _CAT_CORTES)
+
+
+def test_validar_rejeita_placeholder_desconhecido():
+    com_extra = _VALIDO_CORTES + " {campo_inventado}"
+    with pytest.raises(ValueError, match="desconhecidos"):
+        editorial_scaffolds.validar_scaffold(com_extra, _CAT_CORTES)
+
+
+def test_validar_rejeita_marcador_de_contrato_ausente():
+    sem_json = _VALIDO_CORTES.replace(" — gere em JSON", "")
+    with pytest.raises(ValueError, match="JSON"):
+        editorial_scaffolds.validar_scaffold(sem_json, _CAT_CORTES)
+
+
+def test_validar_rejeita_chaves_desbalanceadas():
+    with pytest.raises(ValueError):
+        editorial_scaffolds.validar_scaffold("{variacao " + _VALIDO_CORTES, _CAT_CORTES)
+
+
+def test_validar_rejeita_placeholder_posicional():
+    com_posicional = _VALIDO_CORTES + " {}"
+    with pytest.raises(ValueError, match="posicionais"):
+        editorial_scaffolds.validar_scaffold(com_posicional, _CAT_CORTES)
+
+
+def test_todos_os_defaults_passam_no_guardrail():
+    # Invariante: cada default versionado é montável e respeita o próprio contrato.
+    for cat in editorial_scaffolds.catalogo():
+        editorial_scaffolds.validar_scaffold(editorial_scaffolds._default_scaffold(cat), cat)
+
+
+def test_definir_scaffold_invalido_levanta_valueerror(tmp_path: Path):
+    with pytest.raises(ValueError):
+        editorial_scaffolds.definir_scaffold(
+            "cortes", "sem placeholders nem contrato", **_kw(tmp_path)
+        )
