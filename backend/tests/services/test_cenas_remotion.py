@@ -12,7 +12,11 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from app.services.cenas_remotion import CenasRemotionService, _calcular_limites
+from app.services.cenas_remotion import (
+    CenasRemotionService,
+    _calcular_limites,
+    _carregar_mapa_falantes,
+)
 
 # ─────────────────────────────────────────────────────────────
 # Helpers
@@ -631,3 +635,164 @@ class TestInvarianteIndicesGranularizacao:
         assert cenas_salvas[0]["inicio"] == pytest.approx(tempo_esperado, abs=0.01), (
             f"DESYNC: esperado {tempo_esperado}s, obtido {cenas_salvas[0]['inicio']}s"
         )
+
+
+# ─────────────────────────────────────────────────────────────
+# D-307 — diarização (crítica vs endosso) no prompt de cenas
+# ─────────────────────────────────────────────────────────────
+
+_FALANTES_MAP = {
+    "SPEAKER_00": {"nome": "", "is_canal": True},
+    "SPEAKER_01": {"nome": "", "is_canal": False},
+}
+
+# transcricao_final: timeline EDITADA (começa em ~0s). 3s / <=6 palavras por
+# segmento → _get_granular não fatia; um índice global por segmento.
+_TF_DIAR = [
+    {"start": 0.0, "end": 3.0, "texto": "tese do canal"},
+    {"start": 3.0, "end": 6.0, "texto": "afirmacao de terceiro"},
+    {"start": 6.0, "end": 9.0, "texto": "canal refuta isso"},
+]
+
+# transcricao_raw do projeto: tempo ABSOLUTO (corte em [100, 109]) + speaker.
+_RAW_DIAR = [
+    {"start": 100.0, "end": 103.0, "texto": "tese do canal", "speaker": "SPEAKER_00"},
+    {"start": 103.0, "end": 106.0, "texto": "afirmacao de terceiro", "speaker": "SPEAKER_01"},
+    {"start": 106.0, "end": 109.0, "texto": "canal refuta isso", "speaker": "SPEAKER_00"},
+]
+
+
+def _mock_corte_diar():
+    corte = _mock_corte(transcricao_final=_TF_DIAR)
+    corte.projeto_id = "proj-1"
+    corte.inicio_seg = 100.0
+    corte.fim_seg = 109.0
+    corte.desvios = "[]"
+    return corte
+
+
+def _mock_projeto(falantes_map: str, transcricao_raw=_RAW_DIAR):
+    projeto = MagicMock()
+    projeto.falantes_map = falantes_map
+    projeto.transcricao_raw = json.dumps(transcricao_raw)
+    return projeto
+
+
+def _mock_db_ctx_corte_projeto(corte, projeto):
+    """Context manager de DB que devolve o `corte` para `db.get(Corte, ...)` e o
+    `projeto` para `db.get(Projeto, ...)` — o `montar_prompt` diarizado busca os dois."""
+    from app.models import Projeto
+
+    async def _get(model, _id):
+        return projeto if model is Projeto else corte
+
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(side_effect=_get)
+    mock_db.commit = AsyncMock()
+    mock_ctx = MagicMock()
+    mock_ctx.__aenter__ = AsyncMock(return_value=mock_db)
+    mock_ctx.__aexit__ = AsyncMock(return_value=None)
+    return mock_ctx, mock_db
+
+
+class TestDiarizacaoNasCenas:
+    """D-307: rótulos [CANAL]/[OUTRO] no prompt de cenas quando o projeto é diarizado."""
+
+    # ── unidades puras ────────────────────────────────────────────────
+
+    def test_carregar_mapa_falantes_tolerante(self):
+        assert _carregar_mapa_falantes(None) is None
+        assert _carregar_mapa_falantes("") is None
+        assert _carregar_mapa_falantes("{}") is None  # diarização vazia → sem rótulo
+        assert _carregar_mapa_falantes("{json quebrado") is None
+        assert _carregar_mapa_falantes(123) is None
+        assert _carregar_mapa_falantes(json.dumps(_FALANTES_MAP)) == _FALANTES_MAP
+
+    def test_legendas_sem_mapa_nao_prefixam(self):
+        # Mesmo com `speaker` no segmento, sem mapa não há prefixo (back-compat).
+        chunk = [{"global_index": 0, "start": 0.0, "texto": "oi", "speaker": "SPEAKER_00"}]
+        linhas = CenasRemotionService._montar_legendas_numeradas(chunk)
+        assert "[CANAL]" not in linhas and "[OUTRO]" not in linhas
+        assert linhas.endswith("oi")
+
+    def test_legendas_com_mapa_prefixam_canal_e_outro(self):
+        chunk = [
+            {"global_index": 0, "start": 0.0, "texto": "tese", "speaker": "SPEAKER_00"},
+            {"global_index": 1, "start": 3.0, "texto": "afirma", "speaker": "SPEAKER_01"},
+        ]
+        linhas = CenasRemotionService._montar_legendas_numeradas(chunk, _FALANTES_MAP)
+        assert "[CANAL] tese" in linhas
+        assert "[OUTRO] afirma" in linhas
+
+    def test_turnos_remapeados_para_timeline_editada(self):
+        segs = [{"start": 100.0, "end": 109.0}]  # corte sem desvios → offset -100
+        turnos = CenasRemotionService._turnos_na_timeline_do_corte(_RAW_DIAR, segs)
+        assert turnos == [
+            {"start": 0.0, "end": 3.0, "speaker": "SPEAKER_00"},
+            {"start": 3.0, "end": 6.0, "speaker": "SPEAKER_01"},
+            {"start": 6.0, "end": 9.0, "speaker": "SPEAKER_00"},
+        ]
+
+    def test_turnos_com_desvio_comprimem(self):
+        # Corte [100,110] com desvio [103,105] removido → 2 segmentos mantidos;
+        # o turno único [100,110] é recortado e comprimido em dois contíguos.
+        raw = [{"start": 100.0, "end": 110.0, "texto": "x", "speaker": "SPEAKER_01"}]
+        segs = [{"start": 100.0, "end": 103.0}, {"start": 105.0, "end": 110.0}]
+        turnos = CenasRemotionService._turnos_na_timeline_do_corte(raw, segs)
+        assert turnos == [
+            {"start": 0.0, "end": 3.0, "speaker": "SPEAKER_01"},
+            {"start": 3.0, "end": 8.0, "speaker": "SPEAKER_01"},
+        ]
+
+    def test_turnos_ignora_raw_sem_speaker(self):
+        raw = [{"start": 100.0, "end": 103.0, "texto": "x"}]
+        segs = [{"start": 100.0, "end": 109.0}]
+        assert CenasRemotionService._turnos_na_timeline_do_corte(raw, segs) == []
+
+    # ── integração de montar_prompt ───────────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_prompt_diarizado_injeta_rotulos(self):
+        corte = _mock_corte_diar()
+        projeto = _mock_projeto(json.dumps(_FALANTES_MAP))
+        mock_ctx, _ = _mock_db_ctx_corte_projeto(corte, projeto)
+        with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=mock_ctx):
+            result = await CenasRemotionService.montar_prompt("test-id")
+        prompt = result["prompt"]
+        assert "[CANAL] tese do canal" in prompt
+        assert "[OUTRO] afirmacao de terceiro" in prompt
+        assert "[CANAL] canal refuta isso" in prompt
+
+    @pytest.mark.asyncio
+    async def test_prompt_nao_diarizado_identico_ao_anterior(self):
+        # Mesmíssimo corte/raw; a única diferença é a diarização ligada/desligada.
+        corte_plain = _mock_corte_diar()
+        ctx_plain, _ = _mock_db_ctx_corte_projeto(corte_plain, _mock_projeto("{}"))
+        with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=ctx_plain):
+            prompt_plain = (await CenasRemotionService.montar_prompt("test-id"))["prompt"]
+
+        corte_diar = _mock_corte_diar()
+        ctx_diar, _ = _mock_db_ctx_corte_projeto(
+            corte_diar, _mock_projeto(json.dumps(_FALANTES_MAP))
+        )
+        with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=ctx_diar):
+            prompt_diar = (await CenasRemotionService.montar_prompt("test-id"))["prompt"]
+
+        assert "[CANAL]" not in prompt_plain and "[OUTRO]" not in prompt_plain
+        assert prompt_diar != prompt_plain
+        # A ÚNICA diferença são os prefixos [CANAL] / [OUTRO]: removê-los reconstrói
+        # byte-a-byte o prompt não-diarizado — prova de back-compat total.
+        assert prompt_diar.replace("[CANAL] ", "").replace("[OUTRO] ", "") == prompt_plain
+
+    @pytest.mark.asyncio
+    async def test_override_de_short_nunca_rotula(self):
+        # Short usa transcrição/timeline próprias → não rotula, mesmo com projeto diarizado.
+        corte = _mock_corte_diar()
+        projeto = _mock_projeto(json.dumps(_FALANTES_MAP))
+        mock_ctx, _ = _mock_db_ctx_corte_projeto(corte, projeto)
+        with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=mock_ctx):
+            result = await CenasRemotionService.montar_prompt(
+                "test-id", transcricao_override=_TF_DIAR
+            )
+        prompt = result["prompt"]
+        assert "[CANAL]" not in prompt and "[OUTRO]" not in prompt

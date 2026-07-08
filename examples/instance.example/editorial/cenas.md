@@ -40,6 +40,30 @@ tempo, ênfases, etc.
    prefira a cena apropriada (ficha biográfica, citação com autor/obra, fonte) —
    é o que dá autoridade visual.
 
+## Diarização: crítica vs endosso (quando a transcrição tem falantes)
+
+Em cortes de **reação/análise**, a transcrição pode vir com o falante marcado no
+início de cada legenda: `[CANAL]` (o dono do canal, quem analisa) e `[OUTRO]`
+(um terceiro — o vídeo/pessoa a que o canal está reagindo). Quando esses rótulos
+existirem, eles mudam o sentido do que é dito e **regem** a montagem das cenas:
+
+1. **Fala de `[OUTRO]` nunca vira cena de ênfase ou afirmação neutra.** Uma
+   afirmação de terceiro exibida como ênfase/definição/destaque solto soa como se
+   o canal a estivesse *endossando*. Se aquele momento merece cena, ele é uma
+   **citação COM ATRIBUIÇÃO explícita** — deixe claro *quem disse* (o terceiro) —,
+   de preferência enquadrada como **crítica ou contraponto**: citação atribuída
+   seguida da reação do canal, ou uma pergunta retórica que introduz a crítica.
+2. **A afirmação criticada jamais aparece como conclusão ou verdade do canal.**
+   Não transforme o argumento que o canal está *refutando* em ficha, ênfase ou
+   destaque numérico apresentado como fato. O ponto de vista do canal é a
+   moldura; a fala reagida é o objeto, não a tese.
+3. **Tese e conclusão são sempre da fala de `[CANAL]`.** Cenas que fecham um
+   raciocínio, cravam uma posição ou resumem "o que fica" devem se ancorar no que
+   o dono do canal diz — não no que o terceiro afirmou.
+4. **Sem rótulos, nada muda.** Se a transcrição não traz `[CANAL]`/`[OUTRO]`,
+   trate tudo como fala do canal e siga os princípios acima normalmente — o
+   comportamento é exatamente o de sempre.
+
 ## Variação entre execuções
 
 A cada geração, escolha um **recorte de direção** diferente dentro do que a

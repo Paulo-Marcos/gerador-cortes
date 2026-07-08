@@ -6,14 +6,34 @@ import time
 from app import editorial_scaffolds
 from app.database import AsyncSessionLocal
 from app.domain.corte_mapper import coalescer_chaves_mascote
+from app.domain.diarizacao_align import alinhar_falantes, prefixo_falante
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.segment_calculator import calcular_segmentos, normalizar_desvio
 from app.domain.time_convert import hms_to_seg
 from app.infrastructure import gemini_client
-from app.models import Corte
+from app.models import Corte, Projeto
 from app.services import retrato_wikipedia
 from app.services.app_logging import operational_debug, operational_error, operational_info
 
 logger = logging.getLogger(__name__)
+
+
+def _carregar_mapa_falantes(raw: object) -> dict | None:
+    """Parse tolerante do `projeto.falantes_map` (D-286/D-307).
+
+    Retorna `None` (sem rótulo) quando o projeto não foi diarizado ou o JSON é
+    inválido — nesse caso o prompt de cenas sai idêntico ao comportamento
+    pré-diarização (back-compat total). Espelha `_mapa_falantes_para_meta` do
+    fluxo de análise/trechos, sem acoplar cenas ao módulo `claude_ia`.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    try:
+        mapa = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return mapa if isinstance(mapa, dict) and mapa else None
+
 
 PROMPT_CENAS_CHUNK_TAMANHO_SEG = 900.0
 PROMPT_CENAS_OVERLAP_SEG = 120.0
@@ -120,6 +140,14 @@ class CenasRemotionService:
             # 1. Granulariza a transcrição inteira primeiro e atribui índices globais
             transcricao_granular = CenasRemotionService._get_granular(transcricao_final)
 
+            # 1b. D-307: em projeto diarizado, anota o falante ([CANAL]/[OUTRO]) em
+            # cada segmento para a IA distinguir a tese do canal da fala reagida.
+            # Sem diarização (ou com override de short), `mapa_falantes` fica None e
+            # o prompt sai idêntico ao pré-D-307.
+            transcricao_granular, mapa_falantes = await CenasRemotionService._resolver_diarizacao(
+                db, corte, transcricao_granular, transcricao_override
+            )
+
             # 2. Depois fatia em blocos de 15 minutos, com leve sobreposição para contexto
             chunks = fatiar_transcricao(
                 transcricao_granular,
@@ -130,7 +158,9 @@ class CenasRemotionService:
 
             prompts = []
             for i, chunk in enumerate(chunks):
-                legendas_numeradas = CenasRemotionService._montar_legendas_numeradas(chunk)
+                legendas_numeradas = CenasRemotionService._montar_legendas_numeradas(
+                    chunk, mapa_falantes
+                )
                 duracao_estimada = 0
                 if chunk:
                     ultimo = chunk[-1]
@@ -481,7 +511,9 @@ class CenasRemotionService:
         return granular
 
     @staticmethod
-    def _montar_legendas_numeradas(transcricao_chunk: list) -> str:
+    def _montar_legendas_numeradas(
+        transcricao_chunk: list, mapa_falantes: dict | None = None
+    ) -> str:
         from app.domain.time_convert import seg_to_hms_short
 
         # Usa os índices globais já atribuídos na lista original
@@ -494,9 +526,95 @@ class CenasRemotionService:
             t_start = _to_seg(item.get("start", item.get("inicio", 0)))
             hms = seg_to_hms_short(t_start)
             idx_global = item.get("global_index", 0)
-            linhas.append(f"[{idx_global}] ({hms}) {texto}")
+            # D-307: prefixo [CANAL]/[OUTRO] quando há mapa e o segmento tem falante;
+            # sem mapa (ou sem `speaker`) `prefixo_falante` devolve "" — saída idêntica.
+            prefixo = prefixo_falante(item.get("speaker"), mapa_falantes)
+            linhas.append(f"[{idx_global}] ({hms}) {prefixo}{texto}")
 
         return "\n".join(linhas)
+
+    @staticmethod
+    async def _resolver_diarizacao(
+        db, corte: Corte, transcricao_granular: list, transcricao_override: list | None
+    ) -> tuple[list, dict | None]:
+        """D-307: anota o falante nos segmentos granulares quando o projeto foi
+        diarizado, devolvendo `(granular_anotado, mapa_falantes)`.
+
+        A `transcricao_final` do corte não guarda `speaker` (a sincronização o
+        descarta) e vive numa timeline EDITADA (offset do início + desvios
+        removidos), enquanto o rótulo vive na `projeto.transcricao_raw` em tempo
+        ABSOLUTO. Reprojetamos os turnos do projeto para a timeline do corte e
+        casamos por sobreposição (`alinhar_falantes`).
+
+        Sem diarização, com override de short (outra timeline) ou em qualquer
+        falha, devolve o granular intacto e `mapa=None` — garantindo prompt
+        idêntico ao pré-D-307 (back-compat) e nunca quebrando a geração de cenas.
+        """
+        # Short usa uma transcrição própria (timeline distinta): rotular contra os
+        # segmentos do corte seria incorreto — mantém-se o comportamento anterior.
+        if transcricao_override is not None:
+            return transcricao_granular, None
+
+        projeto = await db.get(Projeto, corte.projeto_id)
+        mapa = _carregar_mapa_falantes(getattr(projeto, "falantes_map", None))
+        if not mapa or projeto is None or not projeto.transcricao_raw:
+            return transcricao_granular, None
+
+        try:
+            transcricao_raw = json.loads(projeto.transcricao_raw)
+            if not isinstance(transcricao_raw, list):
+                return transcricao_granular, None
+            desvios = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
+            segmentos_mantidos = calcular_segmentos(
+                _to_seg(corte.inicio_seg or 0.0), _to_seg(corte.fim_seg or 0.0), desvios
+            )
+            turnos = CenasRemotionService._turnos_na_timeline_do_corte(
+                transcricao_raw, segmentos_mantidos
+            )
+            if not turnos:
+                return transcricao_granular, None
+            return alinhar_falantes(transcricao_granular, turnos), mapa
+        except Exception as exc:  # defensivo: rótulo é enriquecimento, não pode quebrar cenas
+            operational_error(
+                "CenasRemotion",
+                f"Falha ao anotar falantes do corte '{corte.id}' (seguindo sem rótulos): {exc}",
+            )
+            return transcricao_granular, None
+
+    @staticmethod
+    def _turnos_na_timeline_do_corte(transcricao_raw: list, segmentos_mantidos: list) -> list[dict]:
+        """Reprojeta os turnos de falante (tempo ABSOLUTO da live, em
+        `transcricao_raw`) para a timeline EDITADA do corte, recortando cada turno
+        aos segmentos mantidos.
+
+        Aplica o MESMO offset acumulado que `TimelineMath.recalcular_transcricao`
+        usa para gerar a `transcricao_final` — sem isso os turnos (que começam no
+        tempo absoluto) não casariam com os segmentos da final (que começam em
+        ~0s). Um turno que cruza um desvio removido vira dois turnos contíguos.
+        """
+        turnos: list[dict] = []
+        tempo_acumulado = 0.0
+        for seg in segmentos_mantidos:
+            s = float(seg["start"])
+            e = float(seg["end"])
+            for item in transcricao_raw:
+                if not isinstance(item, dict) or not item.get("speaker"):
+                    continue
+                ini = _to_seg(item.get("inicio", item.get("start", 0)))
+                fim = _to_seg(item.get("fim", item.get("end", ini)))
+                ini_ov = max(ini, s)
+                fim_ov = min(fim, e)
+                if fim_ov <= ini_ov:
+                    continue
+                turnos.append(
+                    {
+                        "start": round(tempo_acumulado + (ini_ov - s), 4),
+                        "end": round(tempo_acumulado + (fim_ov - s), 4),
+                        "speaker": item["speaker"],
+                    }
+                )
+            tempo_acumulado += e - s
+        return turnos
 
     @staticmethod
     def _resolver_startleg(start_leg: int, transcricao: list) -> float:
