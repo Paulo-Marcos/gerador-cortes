@@ -24,13 +24,17 @@ class TestDicaVariacao:
         assert dica_variacao("thumbnail_layout_texto") == ""
         assert dica_variacao("thumbnail_apoio_layout") == ""
         assert dica_variacao("thumbnail_roupa") == ""
+        # D-301: "cortes" não tem mais lentes de sorteio — o ângulo do título
+        # deriva do conteúdo de cada corte, não de um cardápio.
+        assert dica_variacao("cortes") == ""
 
 
 class TestBlocoVariacao:
     def test_inclui_cabecalho_e_dica(self):
-        bloco = bloco_variacao("cortes")
+        bloco = bloco_variacao("cenas")
         assert "VARIAÇÃO DESTA EXECUÇÃO" in bloco
-        assert bloco.strip().endswith(tuple(_LENTES["cortes"]))
+        assert bloco.strip().endswith(tuple(_LENTES["cenas"]))
 
     def test_vazio_para_tipo_sem_lente(self):
         assert bloco_variacao("trechos") == ""
+        assert bloco_variacao("cortes") == ""  # D-301

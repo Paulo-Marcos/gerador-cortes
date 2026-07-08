@@ -12,18 +12,32 @@ Bloco THUMBNAIL: a variação aqui NÃO é por sorteio — cenário, pose e roup
 derivam do contexto do corte (sem cardápio). A variação real vem da memória
 global das VARIATION_TAGS (o valor de um eixo na capa anterior vira proibido
 na próxima) + pressão positiva sobre o eixo que satura (`contar_eixos_modais`).
+
+Bloco CORTES (D-301): também NÃO é por sorteio — o ângulo de titulação/recorte
+deriva do conteúdo de cada corte (ver skill cortador-expert), não de um
+cardápio alheio ao texto.
 """
 
 import random
 import re
 
 _LENTES: dict[str, list[str]] = {
-    "cortes": [
-        "Favoreça títulos que destacam a TESE PROVOCATIVA de cada corte.",
-        "Favoreça títulos centrados no CONCEITO-CHAVE de cada corte.",
-        "Favoreça títulos que apontam a CONSEQUÊNCIA PRÁTICA do argumento.",
-        "Favoreça títulos em forma de PERGUNTA que fisga o espectador.",
-    ],
+    # ─── Repertório de CORTES — removido (D-301) ───────────────────────────
+    #
+    # WHY: sortear uma lente por execução fazia sentido como fonte de variação
+    # quando o ângulo do título era decidido isolado da transcrição. Mas a
+    # etapa "Propor cortes" já lê a live inteira e decide, corte a corte, qual
+    # é a tese/conceito-chave/consequência/pergunta de CADA um — o ângulo deve
+    # nascer do CONTEÚDO daquele corte específico (seção "Variação editorial"
+    # da skill cortador-expert), não de um cardápio sorteado à parte do texto.
+    # O sorteio também colidia com o modo lote: cada chunk da MESMA live
+    # sorteava uma lente NOVA, produzindo titulação inconsistente entre partes
+    # da mesma análise (mesmo problema de mode collapse que esvaziou os
+    # repertórios de thumbnail abaixo, por um motivo diferente).
+    #
+    # A chave não existe mais aqui — `repertorio("cortes")`/`dica_variacao
+    # ("cortes")` retornam vazio pelo mesmo caminho de 'trechos' (tipo sem
+    # entrada no dict). Ver `editorial_skills._CATALOGO` (lentes_tipo=None).
     "cenas": [
         "Dê preferência a cenas de ÊNFASE e CITAÇÃO para marcar os pontos altos.",
         "Dê preferência a FICHAS e FONTES para dar autoridade visual ao ensaio.",
@@ -81,12 +95,15 @@ def dica_variacao(tipo: str) -> str:
     """Sorteia uma lente de variação para o tipo informado.
 
     Retorna '' para tipos sem lentes (ex.: 'trechos', onde a remoção deve ser
-    consistente, não variada).
+    consistente, não variada; ou 'cortes', D-301, onde o ângulo deriva do
+    conteúdo de cada corte, não de sorteio).
 
     Exemplo:
-        >>> dica_variacao("cortes") in _LENTES["cortes"]
+        >>> dica_variacao("cenas") in _LENTES["cenas"]
         True
         >>> dica_variacao("trechos")
+        ''
+        >>> dica_variacao("cortes")
         ''
     """
     lentes = _LENTES.get(tipo)

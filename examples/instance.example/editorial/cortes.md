@@ -64,8 +64,11 @@ inteiros descartados vão para `descartados`.
 
 ## Variação editorial
 
-A cada execução, **varie o ângulo de titulação e de recorte** dentro do que a
-transcrição permite. Mantenha rigor; varie a moldura.
+O ângulo de titulação e de recorte de cada corte **nasce do conteúdo daquele
+corte**, não de um cardápio fixo: deixe a tese provocativa, o conceito-chave, a
+consequência prática ou a pergunta que fisga — o que o próprio corte pedir —
+comandar o título. Não repita o mesmo ângulo do corte anterior do mesmo
+projeto. Mantenha rigor; varie a moldura.
 
 ## Checklist final (antes do JSON)
 

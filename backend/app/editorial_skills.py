@@ -56,7 +56,9 @@ class SkillCatalogo:
       global) — só a etapa cortes aponta para um setting próprio (D-300: thinking
       estendido aumenta latência, então cortes precisa de mais fôlego).
     - `lentes_tipo`: chave em `variacao_prompt` das lentes default (None = etapa
-      sem lentes — trechos/thumbnail, consistência ou anti-mode-collapse por design).
+      sem lentes — trechos/thumbnail (consistência/anti-mode-collapse) e cortes
+      (D-301: o ângulo de titulação deriva do conteúdo de cada corte, não de
+      um cardápio sorteado) por design).
 
     Só params do Claude (modelo/thinking/timeout): as 5 skills são geração de TEXTO
     via `claude -p`, que não tem `temperature` — esta vive só nas etapas Gemini
@@ -82,12 +84,14 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
         descricao=(
             "Analisa a transcrição da live inteira e propõe os cortes temáticos "
             "(início/fim, título e tema de cada corte), marcando também os trechos "
-            "a descartar. É o primeiro passo do pipeline de análise."
+            "a descartar. É o primeiro passo do pipeline de análise. Sem lentes de "
+            "sorteio por design (D-301): a variação do ângulo do título nasce do "
+            "conteúdo de cada corte, não de um cardápio sorteado."
         ),
         model_setting="claude_model_analise",
         thinking_setting="claude_cli_thinking_tokens_analise",
         timeout_setting="claude_cli_timeout_analise",
-        lentes_tipo="cortes",
+        lentes_tipo=None,
     ),
     SkillCatalogo(
         key="trechos-expert",
@@ -535,18 +539,63 @@ def _migrar_linha_d300(cat: SkillCatalogo, db: Path, cid: str, linha: dict) -> N
     )
 
 
+# --------------------------------------------------------------------------- #
+# Migração pontual D-301: lentes de sorteio removidas da etapa cortes — canais
+# que já tinham a linha semeada com o repertório ANTIGO (as 4 frases de
+# sorteio) são zerados. Comparar contra a lista ANTIGA — nunca "zerar sempre"
+# — preserva qualquer lente customizada pelo canal via UI de Canais.
+# --------------------------------------------------------------------------- #
+
+_D301_LENTES_CORTES_ANTIGO: list[str] = [
+    "Favoreça títulos que destacam a TESE PROVOCATIVA de cada corte.",
+    "Favoreça títulos centrados no CONCEITO-CHAVE de cada corte.",
+    "Favoreça títulos que apontam a CONSEQUÊNCIA PRÁTICA do argumento.",
+    "Favoreça títulos em forma de PERGUNTA que fisga o espectador.",
+]
+
+
+def _migrar_linha_d301(cat: SkillCatalogo, db: Path, cid: str, linha: dict) -> None:
+    """Zera `lentes_json` de cortador-expert quando a linha JÁ existente ainda
+    tem o repertório de sorteio ANTIGO (D-301: a variação do título passa a
+    derivar do conteúdo de cada corte, não de sorteio).
+
+    No-op para as demais skills e para lentes já customizadas pelo canal
+    (qualquer lista ≠ default antigo não é tocada).
+    """
+    if cat.key != "cortador-expert":
+        return
+    try:
+        lentes = json.loads(linha.get("lentes_json") or "[]")
+    except json.JSONDecodeError:
+        return
+    if lentes != _D301_LENTES_CORTES_ANTIGO:
+        return
+    settings_store.gravar_skill(
+        db,
+        cid,
+        cat.key,
+        {
+            "corpo": linha.get("corpo") or "",
+            "params_json": linha.get("params_json") or "{}",
+            "lentes_json": json.dumps([], ensure_ascii=False),
+        },
+    )
+
+
 def migrar_skills_do_canal_ativo(
     *,
     db_path: Path | None = None,
     channel_id: str | None = None,
 ) -> int:
     """Semeia no banco as skills do canal ativo que ainda não têm linha (boot) e,
-    nas que já existem, roda a migração pontual do D-300 (thinking/timeout).
+    nas que já existem, roda as migrações pontuais D-300 (thinking/timeout) e
+    D-301 (lentes de cortes).
 
     Idempotente: só semeia o que falta e só migra o que ainda está no default
-    antigo. Retorna quantas skills foram SEMEADAS (a migração do D-300 ajusta
-    linhas já existentes e não conta para esse total). Best-effort — pensada
-    para o lifespan, no mesmo espírito de `channels.migrar_identidades_para_banco`.
+    antigo. Retorna quantas skills foram SEMEADAS (as migrações pontuais
+    ajustam linhas já existentes e não contam para esse total). Best-effort —
+    pensada para o lifespan, no mesmo espírito de
+    `channels.migrar_identidades_para_banco`.
     """
     db, cid = _resolver_db_e_canal(db_path, channel_id)
     existentes = settings_store.ler_skills_do_canal(db, cid)
@@ -558,4 +607,9 @@ def migrar_skills_do_canal_ativo(
             semeadas += 1
             continue
         _migrar_linha_d300(cat, db, cid, linha)
+        # Relê após D-300: D-300 pode ter mudado params_json da MESMA linha
+        # (cortador-expert é alcançado pelas duas migrações) — a D-301 precisa
+        # gravar sobre o estado JÁ migrado, não sobre a linha pré-D-300 stale.
+        linha_atual = settings_store.ler_skill(db, cid, cat.key) or linha
+        _migrar_linha_d301(cat, db, cid, linha_atual)
     return semeadas

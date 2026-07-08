@@ -188,6 +188,47 @@ class TestGerarCortes:
         temas = [d["tema"].strip().lower() for d in payload["descartados"]]
         assert temas.count("chat") == 1, f"esperava 1 'chat' após dedup, veio {temas}"
 
+    def test_caminho_lote_usa_a_mesma_lente_em_todos_os_chunks(self, monkeypatch):
+        """D-301: a lente é sorteada UMA vez por geração (fora do loop de
+        chunks), não uma nova por chunk — evita titulação inconsistente entre
+        partes da mesma live."""
+        monkeypatch.setattr(claude_ia.settings, "claude_analise_max_chars_direto", 1)
+
+        prompts_enviados: list[str] = []
+
+        async def fake_gen(prompt: str, *, model: str = "", **_kw):
+            prompts_enviados.append(prompt)
+            return {"cortes": []}
+
+        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake_gen)
+
+        skill_customizada = claude_ia.editorial_skills.SkillResolvida(
+            key="cortador-expert",
+            corpo="",
+            modelo="x",
+            thinking_tokens=0,
+            timeout=60.0,
+            lentes=["LENTE A", "LENTE B", "LENTE C"],
+        )
+        monkeypatch.setattr(
+            claude_ia.editorial_skills, "resolver_skill", lambda *_a, **_k: skill_customizada
+        )
+
+        segs = [_seg(i, i * 600, f"fala {i}") for i in range(9)]
+        monkeypatch.setattr(ClaudeIaService, "_granularizar", staticmethod(lambda t: segs))
+
+        asyncio.run(ClaudeIaService._gerar_cortes([{"x": 1}], {"duracao_segundos": 5000}))
+
+        assert len(prompts_enviados) >= 2, "deveria ter fatiado em múltiplas janelas"
+        lentes_usadas = {
+            lente
+            for lente in skill_customizada.lentes
+            if all(lente in prompt for prompt in prompts_enviados)
+        }
+        assert len(lentes_usadas) == 1, (
+            "esperava a MESMA lente em todos os chunks, não uma nova por chunk"
+        )
+
 
 # ── Fase 2b: trechos a remover (desvios) de um corte ────────────────────────────
 

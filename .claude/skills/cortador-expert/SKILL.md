@@ -90,10 +90,12 @@ inteiros descartados vão para `descartados`.
 
 ## Variação editorial (evite a homogeneidade)
 
-A cada execução, **varie o ângulo de titulação e de recorte** dentro do que a
-transcrição permite: ora destaque a tese provocativa, ora o conceito-chave, ora
-a consequência prática. Dois cortes do mesmo projeto não devem soar como
-template repetido. Mantenha rigor; varie a moldura.
+O ângulo de titulação e de recorte de cada corte **nasce do conteúdo daquele
+corte específico**, não de um cardápio fixo aplicado igual a todos: para cada
+corte, avalie o que ELE pede — tese provocativa, conceito-chave, consequência
+prática do argumento, ou pergunta que fisga o espectador — e deixe essa leitura
+comandar o título. Dois cortes do mesmo projeto não devem repetir o mesmo
+ângulo nem soar como template repetido. Mantenha rigor; varie a moldura.
 
 ## Checklist final (responda mentalmente antes do JSON)
 

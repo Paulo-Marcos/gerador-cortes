@@ -34,10 +34,16 @@ def _editorial(tmp_path: Path, **arquivos: str) -> Path:
 
 
 def _semear_linha_crua(
-    db: Path, skill_key: str, *, thinking_tokens: int, timeout: float, modelo: str = "opus"
+    db: Path,
+    skill_key: str,
+    *,
+    thinking_tokens: int,
+    timeout: float,
+    modelo: str = "opus",
+    lentes: list[str] | None = None,
 ) -> None:
     """Grava uma linha diretamente no banco, sem passar pelo seed do serviço —
-    simula o estado PRÉ-D-300 (ou uma customização já feita pela UI de Canais)."""
+    simula o estado PRÉ-D-300/D-301 (ou uma customização já feita pela UI de Canais)."""
     settings_store.gravar_skill(
         db,
         _CANAL,
@@ -47,7 +53,7 @@ def _semear_linha_crua(
             "params_json": json.dumps(
                 {"modelo": modelo, "thinking_tokens": thinking_tokens, "timeout": timeout}
             ),
-            "lentes_json": "[]",
+            "lentes_json": json.dumps(lentes if lentes is not None else []),
         },
     )
 
@@ -97,6 +103,18 @@ def test_seed_usa_default_quando_canal_sem_md(tmp_path: Path):
 
     # Cai no template genérico versionado (examples/.../editorial/cortes.md).
     assert "Cortador" in skill.corpo
+
+
+def test_cortador_sem_lentes_de_sorteio_por_design(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+
+    skill = editorial_skills.resolver_skill(
+        _SKILL, db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+
+    # D-301: o ângulo do título deriva do conteúdo de cada corte, sem sorteio.
+    assert skill.lentes == []
 
 
 def test_thumbnail_tem_thinking_proprio(tmp_path: Path):
@@ -243,6 +261,8 @@ def test_descrever_skills_traz_as_cinco_com_default_e_atual(tmp_path: Path):
     assert set(thumb.params) == {"modelo", "thinking_tokens", "timeout"}
     trechos = next(d for d in descritas if d.key == "trechos-expert")
     assert trechos.lentes_default == []  # sem lentes por design
+    cortador = next(d for d in descritas if d.key == "cortador-expert")
+    assert cortador.lentes_default == []  # D-301: sem lentes de sorteio por design
 
 
 def test_migracao_idempotente_semeia_cinco_uma_vez(tmp_path: Path):
@@ -299,6 +319,79 @@ def test_migracao_d300_e_idempotente(tmp_path: Path):
     cortes = editorial_skills.resolver_skill("cortador-expert", db_path=db, channel_id=_CANAL)
     assert cortes.thinking_tokens == settings.claude_cli_thinking_tokens_analise
     assert cortes.timeout == settings.claude_cli_timeout_analise
+
+
+def test_migracao_d301_zera_lentes_do_default_antigo(tmp_path: Path):
+    db = _db(tmp_path)
+    # Simula canal semeado ANTES do D-301: lentes = repertório antigo de sorteio.
+    _semear_linha_crua(
+        db,
+        "cortador-expert",
+        thinking_tokens=settings.claude_cli_thinking_tokens_analise,
+        timeout=settings.claude_cli_timeout_analise,
+        lentes=list(editorial_skills._D301_LENTES_CORTES_ANTIGO),
+    )
+
+    editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
+
+    cortes = editorial_skills.resolver_skill("cortador-expert", db_path=db, channel_id=_CANAL)
+    assert cortes.lentes == []
+
+
+def test_migracao_d301_preserva_lentes_customizadas(tmp_path: Path):
+    db = _db(tmp_path)
+    # Canal já customizou as lentes pela UI — lista diferente do default antigo,
+    # a migração não deve tocar.
+    _semear_linha_crua(
+        db,
+        "cortador-expert",
+        thinking_tokens=settings.claude_cli_thinking_tokens_analise,
+        timeout=settings.claude_cli_timeout_analise,
+        lentes=["Lente própria do canal"],
+    )
+
+    editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
+
+    cortes = editorial_skills.resolver_skill("cortador-expert", db_path=db, channel_id=_CANAL)
+    assert cortes.lentes == ["Lente própria do canal"]
+
+
+def test_migracao_d301_e_d300_juntas_nao_se_pisam(tmp_path: Path):
+    db = _db(tmp_path)
+    # Canal semeado ANTES de D-300 E D-301: thinking/timeout antigos + lentes
+    # antigas na MESMA linha (cortador-expert é alcançado pelas duas migrações).
+    _semear_linha_crua(
+        db,
+        "cortador-expert",
+        thinking_tokens=0,
+        timeout=300.0,
+        lentes=list(editorial_skills._D301_LENTES_CORTES_ANTIGO),
+    )
+
+    editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
+
+    cortes = editorial_skills.resolver_skill("cortador-expert", db_path=db, channel_id=_CANAL)
+    # As duas migrações aplicaram: uma não deve reverter o efeito da outra.
+    assert cortes.thinking_tokens == settings.claude_cli_thinking_tokens_analise
+    assert cortes.timeout == settings.claude_cli_timeout_analise
+    assert cortes.lentes == []
+
+
+def test_migracao_d301_e_idempotente(tmp_path: Path):
+    db = _db(tmp_path)
+    _semear_linha_crua(
+        db,
+        "cortador-expert",
+        thinking_tokens=settings.claude_cli_thinking_tokens_analise,
+        timeout=settings.claude_cli_timeout_analise,
+        lentes=list(editorial_skills._D301_LENTES_CORTES_ANTIGO),
+    )
+
+    editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
+    editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
+
+    cortes = editorial_skills.resolver_skill("cortador-expert", db_path=db, channel_id=_CANAL)
+    assert cortes.lentes == []
 
 
 def test_skill_desconhecida_levanta(tmp_path: Path):

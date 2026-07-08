@@ -233,6 +233,10 @@ class ClaudeIaService:
             len(chunks),
         )
 
+        # Uma lente por geração (consistente entre as partes da mesma live),
+        # como o fluxo de cenas — nunca uma nova por chunk (titulação
+        # inconsistente entre partes da mesma análise).
+        variacao = bloco_variacao_de(skill.lentes)
         cortes: list = []
         vistos: set[int] = set()
         descartados: list = []
@@ -243,7 +247,7 @@ class ClaudeIaService:
                 texto,
                 meta,
                 cabecalho=f"PARTE {indice + 1} de {len(chunks)} da transcrição.",
-                variacao=bloco_variacao_de(skill.lentes),
+                variacao=variacao,
             )
             resultado = await claude_cli_client.generate_json(
                 prompt, **_args_claude(skill, _SKILL_CORTES)
