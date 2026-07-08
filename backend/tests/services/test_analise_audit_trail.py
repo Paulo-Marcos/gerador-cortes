@@ -20,12 +20,13 @@ import pytest
 from app.services.analise import AnaliseService
 
 
-def _mock_db_factory():
+def _mock_db_factory(max_numero: int = 0):
     """Devolve (factory, projeto_mock, cortes_capturados, session_mock).
 
     A factory imita `AsyncSessionLocal` (context manager assíncrono).
     `projeto_mock` é o objeto retornado por `db.get(Projeto, ...)`.
     `cortes_capturados` recebe cada `Corte` passado a `db.add`.
+    `max_numero` é o valor de `MAX(Corte.numero)` (0 = projeto sem cortes).
     """
     cortes_capturados: list = []
     projeto_mock = MagicMock()
@@ -36,8 +37,11 @@ def _mock_db_factory():
     session = AsyncMock()
     session.__aenter__ = AsyncMock(return_value=session)
     session.__aexit__ = AsyncMock(return_value=False)
-    # COUNT(Corte.id) → 0 (não há cortes preexistentes)
-    session.execute = AsyncMock(return_value=MagicMock(scalar=lambda: 0))
+    # MAX(Corte.numero) → max_numero; .all() → [] (iterável vazio p/ outros callers)
+    exec_result = MagicMock()
+    exec_result.scalar = lambda: max_numero
+    exec_result.all = lambda: []
+    session.execute = AsyncMock(return_value=exec_result)
     session.get = AsyncMock(return_value=projeto_mock)
     session.commit = AsyncMock()
     session.add = MagicMock(side_effect=lambda corte: cortes_capturados.append(corte))
@@ -107,6 +111,37 @@ async def test_importar_resultado_normaliza_justificativa_strip(monkeypatch):
     )
 
     assert cortes[0].justificativa == "com espaços em volta"
+
+
+@pytest.mark.asyncio
+async def test_importar_resultado_numera_a_partir_do_maximo_existente(monkeypatch):
+    """D-298: a numeração continua do MAIOR número já usado (não da contagem),
+    então os cortes existentes são preservados e os novos seguem a sequência —
+    robusto mesmo se o editor tiver apagado cortes do meio."""
+    factory, _projeto, cortes, _sess = _mock_db_factory(max_numero=2)
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    await AnaliseService.importar_resultado(
+        "p-num",
+        [
+            {
+                "titulo_proposto": "novo 1",
+                "inicio_hms": "00:30:00",
+                "fim_hms": "00:40:00",
+                "inicio_seg": 1800,
+                "fim_seg": 2400,
+            },
+            {
+                "titulo_proposto": "novo 2",
+                "inicio_hms": "00:45:00",
+                "fim_hms": "00:55:00",
+                "inicio_seg": 2700,
+                "fim_seg": 3300,
+            },
+        ],
+    )
+
+    assert [c.numero for c in cortes] == [3, 4], "novos devem seguir de MAX(numero)+1"
 
 
 @pytest.mark.asyncio

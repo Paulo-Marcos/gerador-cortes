@@ -34,7 +34,6 @@ from app.editorial_identity import identidade_do_mascote
 from app.infrastructure import claude_cli_client
 from app.models import Corte, Projeto, StatusProjeto
 from app.services.analise import AnaliseService, _to_seg
-from sqlalchemy import delete as sa_delete
 from sqlalchemy import select as sa_select
 
 logger = logging.getLogger(__name__)
@@ -116,11 +115,16 @@ class ClaudeIaService:
     async def analisar_via_claude(
         projeto_id: str, *, encadear_transcricao: bool = True, usar_diarizacao: bool = True
     ) -> dict:
-        """Analisa a transcrição via Claude, substitui os cortes e (opcional)
-        encadeia o refazer-transcrição para sincronizar cada corte.
+        """Analisa a transcrição via Claude e ADICIONA os cortes gerados aos que
+        já existem no projeto, encadeando (opcional) o refazer-transcrição.
 
-        Replica a semântica do "reanalisar": apaga os cortes existentes e gera
-        do zero. A skill `cortador-expert` carrega toda a expertise editorial.
+        D-298 — modo aditivo: a análise nunca apaga cortes; deletar é ação
+        manual do editor. Os cortes novos seguem a numeração a partir do maior
+        número já usado, e um corte novo cujo início cai no mesmo bucket de 30s
+        de um corte JÁ EXISTENTE é pulado — evita inundar a live com
+        quase-duplicatas quando o projeto é reanalisado. Os `descartados` são
+        MESCLADOS com a auditoria anterior (dedup por `tema`), não sobrescritos.
+        A skill `cortador-expert` carrega toda a expertise editorial.
 
         D-286: quando `usar_diarizacao` e o projeto já foi diarizado, injeta o
         rótulo de falante ([CANAL]/[OUTRO]) na transcrição enviada à IA. Sem
@@ -145,37 +149,103 @@ class ClaudeIaService:
             await db.commit()
 
         try:
-            # Gera PRIMEIRO; só troca os cortes depois de ter o resultado. Assim
-            # uma falha (ou reload que mate a task) NUNCA deixa o projeto sem cortes.
+            # Gera PRIMEIRO; só persiste depois de ter o resultado. Assim uma
+            # falha (ou reload que mate a task) NUNCA deixa o projeto sem cortes.
             payload = await ClaudeIaService._gerar_cortes(transcricao, meta)
             cortes_data = payload.get("cortes", [])
             descartados = payload.get("descartados", [])
             if not cortes_data:
                 raise ValueError("Claude não retornou cortes para a transcrição")
 
+            # Modo aditivo (D-298): lê os cortes e a auditoria que já existem
+            # para pular quase-duplicatas e mesclar os descartados — sem apagar.
             async with AsyncSessionLocal() as db:
-                await db.execute(sa_delete(Corte).where(Corte.projeto_id == projeto_id))
-                await db.commit()
+                result = await db.execute(
+                    sa_select(Corte.inicio_seg).where(Corte.projeto_id == projeto_id)
+                )
+                buckets_existentes = {ClaudeIaService._bucket_30s(row[0]) for row in result.all()}
+                projeto = await db.get(Projeto, projeto_id)
+                descartados_anteriores = (
+                    json.loads(projeto.descartados_analise or "[]") if projeto else []
+                )
+
+            cortes_novos, pulados = ClaudeIaService._filtrar_cortes_em_buckets(
+                cortes_data, buckets_existentes
+            )
+            descartados_mesclados = ClaudeIaService._mesclar_descartados(
+                descartados_anteriores, descartados
+            )
+
+            # importar_resultado numera a partir do maior número já usado, então
+            # os cortes existentes ficam preservados e os novos seguem a sequência.
             await AnaliseService.importar_resultado(
                 projeto_id,
-                cortes_data,
-                descartados=descartados,
+                cortes_novos,
+                descartados=descartados_mesclados,
             )
 
             if encadear_transcricao:
                 await ClaudeIaService._refazer_transcricao(projeto_id)
 
             logger.info(
-                "[ClaudeIA] Projeto %s analisado via Claude: %d cortes, %d descartados",
+                "[ClaudeIA] Projeto %s analisado via Claude (aditivo): +%d cortes, "
+                "%d pulados (bucket já existente), %d descartados",
                 projeto_id[:8],
-                len(cortes_data),
-                len(descartados),
+                len(cortes_novos),
+                pulados,
+                len(descartados_mesclados),
             )
-            return {"total_cortes": len(cortes_data), "total_descartados": len(descartados)}
+            return {
+                "total_cortes": len(cortes_novos),
+                "pulados_existentes": pulados,
+                "total_descartados": len(descartados_mesclados),
+            }
 
         except Exception:  # noqa: BLE001 — restaura status e propaga (endpoint mostra o erro)
             await ClaudeIaService._restaurar_status(projeto_id, status_anterior)
             raise
+
+    # ── modo aditivo: dedup por bucket de 30s + merge de descartados (D-298) ──
+
+    @staticmethod
+    def _bucket_30s(inicio_seg) -> int:
+        """Bucket de 30s do início — mesma granularidade que o modo lote usa
+        para tratar cortes que começam quase no mesmo ponto como duplicados."""
+        return int(_to_seg(inicio_seg or 0) // 30)
+
+    @staticmethod
+    def _filtrar_cortes_em_buckets(cortes: list, buckets_existentes: set[int]) -> tuple[list, int]:
+        """Descarta os cortes cujo início cai no bucket de 30s de um corte JÁ
+        EXISTENTE do projeto (evita inundar a live com quase-duplicatas numa
+        reanálise). Retorna (cortes_a_importar, quantidade_pulada)."""
+        novos: list = []
+        pulados = 0
+        for corte in cortes:
+            if ClaudeIaService._bucket_30s(corte.get("inicio_seg")) in buckets_existentes:
+                pulados += 1
+                continue
+            novos.append(corte)
+        return novos, pulados
+
+    @staticmethod
+    def _mesclar_descartados(existentes: list, novos: list) -> list:
+        """Acrescenta `novos` aos `existentes` deduplicando por `tema`
+        (case-insensitive); preserva todos os existentes e ignora entradas de
+        tema vazio (ruído sem chave de dedup). Mesma regra que o modo lote usa
+        entre as janelas da mesma geração."""
+        mesclados = list(existentes)
+        temas_vistos = {
+            (d.get("tema") or "").strip().lower()
+            for d in existentes
+            if (d.get("tema") or "").strip()
+        }
+        for desc in novos or []:
+            tema_norm = (desc.get("tema") or "").strip().lower()
+            if not tema_norm or tema_norm in temas_vistos:
+                continue
+            temas_vistos.add(tema_norm)
+            mesclados.append(desc)
+        return mesclados
 
     # ── geração dos cortes (decide direto vs lote pelo tamanho) ───────────────
 
@@ -240,7 +310,6 @@ class ClaudeIaService:
         cortes: list = []
         vistos: set[int] = set()
         descartados: list = []
-        temas_vistos: set[str] = set()
         for indice, chunk in enumerate(chunks):
             texto = ClaudeIaService._formatar_segmentos(chunk, mapa_falantes)
             prompt = ClaudeIaService._montar_prompt(
@@ -253,17 +322,14 @@ class ClaudeIaService:
                 prompt, **_args_claude(skill, _SKILL_CORTES)
             )
             for corte in resultado.get("cortes", []):
-                chave = int(_to_seg(corte.get("inicio_seg") or 0) // 30)  # bucket de 30s
+                chave = ClaudeIaService._bucket_30s(corte.get("inicio_seg"))
                 if chave in vistos:
                     continue
                 vistos.add(chave)
                 cortes.append(corte)
-            for desc in resultado.get("descartados", []) or []:
-                tema_norm = (desc.get("tema") or "").strip().lower()
-                if not tema_norm or tema_norm in temas_vistos:
-                    continue
-                temas_vistos.add(tema_norm)
-                descartados.append(desc)
+            descartados = ClaudeIaService._mesclar_descartados(
+                descartados, resultado.get("descartados")
+            )
         return {"cortes": cortes, "descartados": descartados}
 
     # ── montagem do prompt e da transcrição ───────────────────────────────────

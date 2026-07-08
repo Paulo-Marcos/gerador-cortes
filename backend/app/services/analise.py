@@ -451,13 +451,15 @@ class AnaliseService:
         e a `justificativa` editorial em cada corte. Ambos são audit trail.
         """
         async with AsyncSessionLocal() as db:
-            # Busca quantos cortes já existem para continuar a numeração
+            # Continua a numeração a partir do MAIOR número já usado — robusto a
+            # buracos quando o editor apaga cortes do meio (D-298: a análise via
+            # Claude passou a ser aditiva, então esse é o caso comum).
             from app.models import Corte
             from sqlalchemy import func, select
 
-            stmt = select(func.count(Corte.id)).where(Corte.projeto_id == projeto_id)
+            stmt = select(func.max(Corte.numero)).where(Corte.projeto_id == projeto_id)
             result = await db.execute(stmt)
-            total_existente = result.scalar() or 0
+            ultimo_numero = result.scalar() or 0
 
             from app.domain.time_convert import to_seg
 
@@ -482,7 +484,7 @@ class AnaliseService:
                 corte = Corte(
                     id=str(uuid.uuid4()),
                     projeto_id=projeto_id,
-                    numero=total_existente + i + 1,
+                    numero=ultimo_numero + i + 1,
                     titulo_proposto=corte_data.get("titulo_proposto", ""),
                     resumo=corte_data.get("resumo", ""),
                     tema_central=corte_data.get("tema_central", ""),
@@ -499,8 +501,10 @@ class AnaliseService:
             if projeto:
                 projeto.status = StatusProjeto.ANALISADO
                 projeto.ultima_analise_em = datetime.utcnow()
-                # WHY: descartados sobrescreve por completo na reanalise
-                # (mesma semantica de cortes); lista vazia ou None zera.
+                # descartados: sobrescreve com o valor recebido (None preserva o
+                # anterior; lista vazia zera). Callers que querem MESCLAR com a
+                # auditoria anterior (análise aditiva via Claude, D-298) passam a
+                # lista já mesclada.
                 if descartados is not None:
                     projeto.descartados_analise = json.dumps(descartados, ensure_ascii=False)
             await db.commit()
