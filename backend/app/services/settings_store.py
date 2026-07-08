@@ -61,6 +61,10 @@ _IDENTIDADE_COLUNAS = (
 # padrão banco-fonte-da-verdade + arquivo-espelho aplicado à identidade do canal.
 _MASCOTE_COLUNAS = ("nome",)
 
+# Tema de render selecionado por canal (D-174): id do tema da biblioteca versionada
+# (`domain/theme_library.py`) que resolve paleta completa + preset tipográfico.
+_TEMA_COLUNAS = ("tema_id",)
+
 # Skills editoriais por canal (E-021): corpo do prompt + params (modelo/thinking/
 # timeout/temperature, serializados em `params_json`) + lentes de variação
 # (`lentes_json`). Chave composta (channel_id, skill_key) — uma linha por skill de
@@ -99,6 +103,12 @@ _DDL = (
     CREATE TABLE IF NOT EXISTS mascote_identity (
         channel_id TEXT PRIMARY KEY,
         nome TEXT NOT NULL DEFAULT ''
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS channel_theme (
+        channel_id TEXT PRIMARY KEY,
+        tema_id TEXT NOT NULL DEFAULT ''
     )
     """,
     """
@@ -310,6 +320,44 @@ def gravar_mascote(db_path: Path, channel_id: str, valores: dict) -> None:
             f"INSERT INTO mascote_identity ({', '.join(colunas)}) VALUES ({placeholders}) "
             f"ON CONFLICT(channel_id) DO UPDATE SET {atribuicoes}",
             parametros,
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# --------------------------------------------------------------------------- #
+# Tema de render selecionado por canal (D-174)
+# --------------------------------------------------------------------------- #
+
+
+def ler_tema(db_path: Path, channel_id: str) -> str | None:
+    """Id do tema selecionado pelo canal, ou `None` se o canal nunca escolheu.
+
+    `None` (linha ausente) sinaliza "sem seleção" — o chamador cai no comportamento
+    legado (materialização do asset do canal / default versionado), preservando o
+    render atual. Uma linha com `tema_id=''` é tratada igual a ausente pelo serviço.
+    """
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT tema_id FROM channel_theme WHERE channel_id = ?", (channel_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return row["tema_id"] or None
+
+
+def gravar_tema(db_path: Path, channel_id: str, tema_id: str) -> None:
+    """Grava (UPSERT) o tema selecionado do canal. Escrita idempotente."""
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "INSERT INTO channel_theme (channel_id, tema_id) VALUES (?, ?) "
+            "ON CONFLICT(channel_id) DO UPDATE SET tema_id = excluded.tema_id",
+            (channel_id, str(tema_id)),
         )
         conn.commit()
     finally:

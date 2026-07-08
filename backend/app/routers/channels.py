@@ -11,6 +11,8 @@ serviço e mapeia os erros de domínio para os status corretos.
 
 from __future__ import annotations
 
+from app.domain import theme_library
+from app.services import channel_theme as theme_service
 from app.services import channels as channels_service
 from app.services.channels import (
     Canal,
@@ -22,6 +24,69 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 router = APIRouter()
+
+
+# --------------------------------------------------------------------------- #
+# Temas de render por canal (D-174)
+# --------------------------------------------------------------------------- #
+# A paleta de render (17 cores) é OUTRA coisa que a paleta de IDENTIDADE (3 cores,
+# acima em PaletaModel): esta pinta as cenas Remotion; aquela é branding/UI.
+
+
+class TemaModel(BaseModel):
+    id: str
+    nome: str
+    fonte_preset: str
+    paleta: dict[str, str]
+
+
+class ListaTemasResponse(BaseModel):
+    temas: list[TemaModel]
+
+
+class TemaSelecionadoResponse(BaseModel):
+    canal_id: str
+    # Id do tema efetivo do canal (o default `atual` quando o canal nunca escolheu).
+    tema_id: str
+    # True quando o `tema_id` veio de uma escolha explícita; False = default herdado.
+    selecionado: bool
+
+
+class SelecionarTemaRequest(BaseModel):
+    tema_id: str
+
+
+def _tema_para_model(tema: theme_library.Tema) -> TemaModel:
+    return TemaModel(
+        id=tema.id,
+        nome=tema.nome,
+        fonte_preset=tema.fonte_preset,
+        paleta=dict(tema.paleta),
+    )
+
+
+@router.get("/temas", response_model=ListaTemasResponse)
+async def listar_temas():
+    """Biblioteca versionada de temas (paleta completa + preset), para o seletor."""
+    return ListaTemasResponse(temas=[_tema_para_model(t) for t in theme_library.listar_temas()])
+
+
+@router.get("/{canal_id}/tema", response_model=TemaSelecionadoResponse)
+async def obter_tema_do_canal(canal_id: str):
+    selecionado_id = theme_service.tema_selecionado_id(channel_id=canal_id)
+    tema = theme_library.tema_ou_default(selecionado_id)
+    return TemaSelecionadoResponse(
+        canal_id=canal_id, tema_id=tema.id, selecionado=selecionado_id is not None
+    )
+
+
+@router.put("/{canal_id}/tema", response_model=TemaSelecionadoResponse)
+async def selecionar_tema_do_canal(canal_id: str, body: SelecionarTemaRequest):
+    try:
+        tema = theme_service.selecionar_tema(body.tema_id, channel_id=canal_id)
+    except theme_service.TemaInvalido as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return TemaSelecionadoResponse(canal_id=canal_id, tema_id=tema.id, selecionado=True)
 
 
 class PaletaModel(BaseModel):

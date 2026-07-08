@@ -232,6 +232,16 @@ def _materializar_assets_servidos() -> None:
     except Exception as e:  # noqa: BLE001 — boot resiliente a I/O de asset
         print(f"[Multi-canal] Falha ao materializar assets do canal ativo: {e}")
 
+    # D-174: o tema selecionado sobrepõe a paleta copiada acima (quando há seleção).
+    # Rodar DEPOIS de sincronizar_assets_servidos é intencional — a ordem garante a
+    # precedência do tema nomeado sobre o asset legado do canal.
+    try:
+        from app.services.channel_theme import materializar_tema_do_canal
+
+        materializar_tema_do_canal()
+    except Exception as e:  # noqa: BLE001 — boot resiliente a I/O de settings
+        print(f"[Multi-canal] Falha ao materializar tema do canal ativo: {e}")
+
 
 def consolidar_dados_do_canal(
     instance_root: Path | None = None,

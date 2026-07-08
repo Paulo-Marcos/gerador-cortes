@@ -3,15 +3,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   channelsApi,
+  themesApi,
   youtubeAuthApi,
   type CriarCanalRequest,
   type IdentidadeCanal,
   type ListaCanaisResponse,
+  type ListaTemasResponse,
+  type TemaSelecionado,
   type YoutubeAuthStatus,
 } from '@/lib/channelsApi';
 
 const CANAIS_KEY = ['canais'] as const;
 const YOUTUBE_AUTH_KEY = ['youtube-auth-status'] as const;
+const TEMAS_KEY = ['temas'] as const;
+const temaDoCanalKey = (id: string) => ['tema-canal', id] as const;
 
 export function useCanais() {
   return useQuery<ListaCanaisResponse>({
@@ -43,6 +48,36 @@ export function useEditarCanal() {
     mutationFn: ({ id, identidade }: { id: string; identidade: IdentidadeCanal }) =>
       channelsApi.editar(id, identidade),
     onSuccess: () => qc.invalidateQueries({ queryKey: CANAIS_KEY }),
+  });
+}
+
+// ─── Tema de render por canal (D-174) ──────────────────────────────────
+
+/** Biblioteca versionada de temas (default do backend) — estável, cache longo. */
+export function useTemas() {
+  return useQuery<ListaTemasResponse>({
+    queryKey: TEMAS_KEY,
+    queryFn: themesApi.listar,
+    staleTime: Infinity,
+  });
+}
+
+/** Tema selecionado de um canal (default `atual` quando nunca escolheu). */
+export function useTemaDoCanal(canalId: string | undefined) {
+  return useQuery<TemaSelecionado>({
+    queryKey: temaDoCanalKey(canalId ?? ''),
+    queryFn: () => themesApi.obterDoCanal(canalId as string),
+    enabled: Boolean(canalId),
+  });
+}
+
+export function useSelecionarTema() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ canalId, temaId }: { canalId: string; temaId: string }) =>
+      themesApi.selecionar(canalId, temaId),
+    onSuccess: (data) =>
+      qc.invalidateQueries({ queryKey: temaDoCanalKey(data.canal_id) }),
   });
 }
 

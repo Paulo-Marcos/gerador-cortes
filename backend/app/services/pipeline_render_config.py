@@ -69,6 +69,23 @@ class ProjetoRenderConfig:
             return {
                 "sombraNivelPadrao": self.sombra_padrao,
                 "layoutCardPadrao": self.layout_card_padrao,
-                "fontPreset": self.fonte_preset,
+                "fontPreset": self._preset_efetivo(),
             }
         return {}
+
+    def _preset_efetivo(self) -> str:
+        """Preset tipográfico do render: o do projeto quando escolhido explicitamente,
+        senão o DEFAULT do tema do canal (D-174).
+
+        `fonte_preset == 'atual'` é o valor-sentinela "não escolhido" (default da
+        coluna do projeto): nesse caso o tema do canal decide. Um projeto que
+        selecionou outro preset (`moderna`/`cientifica`/…) tem precedência. Sem tema
+        selecionado, `preset_padrao_do_canal()` devolve `'atual'` → render idêntico.
+        """
+        if self.fonte_preset and self.fonte_preset != "atual":
+            return self.fonte_preset
+        # Import tardio: evita acoplar esta config (importada cedo) ao serviço de
+        # tema, que faz I/O de settings.db.
+        from app.services import channel_theme
+
+        return channel_theme.preset_padrao_do_canal()

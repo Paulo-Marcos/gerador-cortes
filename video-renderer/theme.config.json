@@ -2,9 +2,20 @@
   "palette": {
     "verdeMoldura": "#6aaa84",
     "verdeProfundo": "#1a221c",
+    "verdeCard1": "rgba(44, 68, 56, 0.96)",
+    "verdeCard2": "rgba(36, 58, 48, 0.92)",
+    "verdeCard3": "rgba(28, 42, 34, 0.55)",
+    "verdeCard4": "rgba(18, 26, 22, 0.25)",
     "marromQuente": "#3c2a22",
     "azulAcento": "#9bcfe3",
+    "azulSoft": "rgba(150, 205, 235, 0.42)",
+    "azulGhost": "rgba(150, 205, 235, 0.09)",
     "branco": "#ffffff",
+    "brancoMuted": "rgba(255, 255, 255, 0.85)",
+    "brancoDim": "rgba(255, 255, 255, 0.55)",
+    "linha": "rgba(235, 245, 235, 0.92)",
+    "linhaSoft": "rgba(235, 245, 235, 0.40)",
+    "linhaGhost": "rgba(255, 255, 255, 0.12)",
     "fundoPalco": "#0f1410"
   }
 }

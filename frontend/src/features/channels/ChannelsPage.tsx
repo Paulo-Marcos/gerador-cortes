@@ -12,6 +12,7 @@ import type { Canal, IdentidadeCanal } from '@/lib/channelsApi';
 import { AppSettingsControls } from '@/features/settings/AppSettingsControls';
 import { ChannelCard } from './ChannelCard';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
+import { ChannelThemeSection } from './ChannelThemeSection';
 import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
 import {
@@ -158,6 +159,8 @@ export function ChannelsPage() {
           </p>
           <AppSettingsControls />
         </section>
+
+        <ChannelThemeSection />
 
         <EditorialSkillsSection />
 

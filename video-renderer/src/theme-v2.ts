@@ -160,36 +160,41 @@ export const FONTS_V2 = {
   mono: fontVar("--font-mono-v2", mono.fontFamily),
 };
 
-const { palette } = themeConfig;
+// D-174: o TEMA do canal é o conjunto COMPLETO de cores. Cada chave vem do
+// `theme.config.json` (materializado por canal), com FALLBACK ao literal histórico
+// para configs legadas que só trazem as 6 cores base — assim o default (e qualquer
+// canal ainda não migrado) renderiza pixel-idêntico ao estado pré-D-174.
+const palette = themeConfig.palette as Partial<Record<string, string>>;
+const cor = (chave: string, fallback: string): string => palette[chave] ?? fallback;
 
 export const COLORS_V2 = {
   // Verdes — assinatura da moldura
-  verdeMoldura: palette.verdeMoldura,
-  verdeProfundo: palette.verdeProfundo,
-  verdeCard1: "rgba(44, 68, 56, 0.96)",
-  verdeCard2: "rgba(36, 58, 48, 0.92)",
-  verdeCard3: "rgba(28, 42, 34, 0.55)",
-  verdeCard4: "rgba(18, 26, 22, 0.25)",
+  verdeMoldura: cor("verdeMoldura", "#6aaa84"),
+  verdeProfundo: cor("verdeProfundo", "#1a221c"),
+  verdeCard1: cor("verdeCard1", "rgba(44, 68, 56, 0.96)"),
+  verdeCard2: cor("verdeCard2", "rgba(36, 58, 48, 0.92)"),
+  verdeCard3: cor("verdeCard3", "rgba(28, 42, 34, 0.55)"),
+  verdeCard4: cor("verdeCard4", "rgba(18, 26, 22, 0.25)"),
 
-  marromQuente: palette.marromQuente,
+  marromQuente: cor("marromQuente", "#3c2a22"),
 
   // Azul acento (HUD / destaque)
-  azulAcento: palette.azulAcento,
-  azulSoft: "rgba(150, 205, 235, 0.42)",
-  azulGhost: "rgba(150, 205, 235, 0.09)",
+  azulAcento: cor("azulAcento", "#9bcfe3"),
+  azulSoft: cor("azulSoft", "rgba(150, 205, 235, 0.42)"),
+  azulGhost: cor("azulGhost", "rgba(150, 205, 235, 0.09)"),
 
   // Texto
-  branco: palette.branco,
-  brancoMuted: "rgba(255, 255, 255, 0.85)",
-  brancoDim: "rgba(255, 255, 255, 0.55)",
+  branco: cor("branco", "#ffffff"),
+  brancoMuted: cor("brancoMuted", "rgba(255, 255, 255, 0.85)"),
+  brancoDim: cor("brancoDim", "rgba(255, 255, 255, 0.55)"),
 
   // Contornos
-  linha: "rgba(235, 245, 235, 0.92)",
-  linhaSoft: "rgba(235, 245, 235, 0.40)",
-  linhaGhost: "rgba(255, 255, 255, 0.12)",
+  linha: cor("linha", "rgba(235, 245, 235, 0.92)"),
+  linhaSoft: cor("linhaSoft", "rgba(235, 245, 235, 0.40)"),
+  linhaGhost: cor("linhaGhost", "rgba(255, 255, 255, 0.12)"),
 
   // Backdrop
-  fundoPalco: palette.fundoPalco,
+  fundoPalco: cor("fundoPalco", "#0f1410"),
 };
 
 export const SHADOWS_V2 = {

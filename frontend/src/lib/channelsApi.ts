@@ -64,6 +64,31 @@ export interface SelecionarCanalResponse {
   requer_restart: boolean;
 }
 
+// ─── Tema de render por canal (D-174) ──────────────────────────────────
+// A paleta de render (conjunto COMPLETO de cores das cenas Remotion) é OUTRA
+// coisa que a `PaletaCanal` de identidade (3 cores de branding/UI) acima.
+
+export interface Tema {
+  id: string;
+  nome: string;
+  /** Preset tipográfico do tema (atual/moderna/cientifica/minimalista/tecnica). */
+  fonte_preset: string;
+  /** Conjunto completo de cores do render, por chave (verdeMoldura, azulAcento, …). */
+  paleta: Record<string, string>;
+}
+
+export interface ListaTemasResponse {
+  temas: Tema[];
+}
+
+export interface TemaSelecionado {
+  canal_id: string;
+  /** Tema efetivo (o default `atual` quando o canal nunca escolheu). */
+  tema_id: string;
+  /** True = escolha explícita; false = default herdado. */
+  selecionado: boolean;
+}
+
 // ─── Conexão OAuth do YouTube por canal (D-169) ────────────────────────
 
 /** Estado da conexão do YouTube do canal ativo (espelha `youtube_auth.status()`). */
@@ -103,6 +128,23 @@ export const channelsApi = {
     request<Canal>(`/channels/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
+    }),
+};
+
+/**
+ * Temas de render por canal (D-174). A biblioteca de temas é um default versionado
+ * no backend; a SELEÇÃO é por canal (settings.db). Vive em `/api/channels`.
+ */
+export const themesApi = {
+  listar: () => request<ListaTemasResponse>('/channels/temas'),
+
+  obterDoCanal: (id: string) =>
+    request<TemaSelecionado>(`/channels/${encodeURIComponent(id)}/tema`),
+
+  selecionar: (id: string, tema_id: string) =>
+    request<TemaSelecionado>(`/channels/${encodeURIComponent(id)}/tema`, {
+      method: 'PUT',
+      body: JSON.stringify({ tema_id }),
     }),
 };
 
