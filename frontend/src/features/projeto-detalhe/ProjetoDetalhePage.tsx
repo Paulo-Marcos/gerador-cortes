@@ -10,6 +10,7 @@ import {
   Plus,
   RefreshCcw,
   Rocket,
+  Scissors,
 } from 'lucide-react';
 import { AdicionarCorteModal } from '@/features/editor/AdicionarCorteModal';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ import { Modal } from '@/components/ui/modal';
 import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import {
+  useAnalisarDesviosTodos,
   useExportStatus,
   useMarcarPublicadoYouTube,
   useProjeto,
@@ -56,6 +58,7 @@ export function ProjetoDetalhePage() {
   const uploadYoutube = useUploadYouTube();
   const marcarPublicado = useMarcarPublicadoYouTube();
   const reordenar = useReordenarCortes(id);
+  const analisarDesviosTodos = useAnalisarDesviosTodos(id);
 
   function moverCorteNaLista(corteId: string, delta: -1 | 1) {
     const ordemAtual = (cortesQuery.data ?? []).map((c) => ({ id: c.id }));
@@ -81,6 +84,19 @@ export function ProjetoDetalhePage() {
           tone: 'error',
         }),
     });
+  }
+
+  function dispararAnalisarDesviosTodos() {
+    if (
+      !confirm(
+        'Gerar trechos a remover (IA) para TODOS os cortes deste projeto?\n\n' +
+          'A operação roda em segundo plano, corte a corte (pode levar minutos) — ' +
+          'os desvios encontrados vão aparecendo aos poucos. Os trechos já marcados ' +
+          'NÃO são removidos: esta ação só ACRESCENTA.',
+      )
+    )
+      return;
+    analisarDesviosTodos.disparar();
   }
 
   function publicarCorteIndividual(corteId: string) {
@@ -290,6 +306,23 @@ export function ProjetoDetalhePage() {
               >
                 <ClipboardCheck size={16} />
                 Auditar análise
+              </Button>
+            </Tooltip>
+            <Tooltip
+              label="Gera trechos a remover (IA) para todos os cortes do projeto. Roda em segundo plano, corte a corte, e só acrescenta aos já marcados."
+              side="bottom"
+            >
+              <Button
+                variant="outline"
+                onClick={dispararAnalisarDesviosTodos}
+                disabled={cortes.length === 0 || analisarDesviosTodos.disparado}
+              >
+                {analisarDesviosTodos.disparado ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Scissors size={16} />
+                )}
+                Gerar trechos (todos os cortes)
               </Button>
             </Tooltip>
             <Button onClick={() => setPublicarOpen(true)} disabled={cortesProntos.length === 0}>

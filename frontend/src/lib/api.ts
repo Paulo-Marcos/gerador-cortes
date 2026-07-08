@@ -545,6 +545,15 @@ export const api = {
       body: '{}',
     }),
 
+  // D-304: dispara em lote a mesma geração de trechos (trechos-expert/Claude)
+  // para TODOS os cortes do projeto, um a um, em background. Fire-and-forget
+  // — o backend não expõe progresso desta operação.
+  analisarDesviosTodos: (projetoId: string) =>
+    request<{ message: string }>(`/cortes/projeto/${projetoId}/analisar-desvios-todos`, {
+      method: 'POST',
+      body: '{}',
+    }),
+
   // Prompt p/ rodar a análise de trechos numa IA externa (Manual)
   obterPromptDesvios: (corteId: string) =>
     request<{

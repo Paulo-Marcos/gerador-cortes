@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, progressoWsUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
@@ -97,6 +97,48 @@ export function useAnalisarViaClaude(projetoId: string) {
       });
     },
   });
+}
+
+// D-304: dispara em lote a geração de trechos (trechos-expert/Claude) para
+// TODOS os cortes do projeto. Fire-and-forget — o backend não expõe
+// progresso, então o hook só mantém um cooldown local (`disparado`) para
+// evitar duplo disparo enquanto o toast de aviso ainda está visível.
+const COOLDOWN_DESVIOS_TODOS_MS = 10_000;
+
+export function useAnalisarDesviosTodos(projetoId: string) {
+  const { notify } = useToast();
+  const [disparado, setDisparado] = useState(false);
+  const cooldownRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (cooldownRef.current !== null) window.clearTimeout(cooldownRef.current);
+  }, []);
+
+  const mutation = useMutation({
+    mutationFn: () => api.analisarDesviosTodos(projetoId),
+    onSuccess: () => {
+      notify(
+        'Geração de trechos iniciada para todos os cortes: roda em segundo plano, corte a corte, e os desvios vão aparecendo aos poucos. Só ACRESCENTA aos trechos já marcados — nada é removido.',
+        { tone: 'success' },
+      );
+    },
+    onError: (error) => {
+      notify(error instanceof Error ? error.message : 'Falha ao iniciar a geração de trechos.', {
+        tone: 'error',
+      });
+    },
+  });
+
+  function disparar() {
+    setDisparado(true);
+    mutation.mutate(undefined, {
+      onSettled: () => {
+        cooldownRef.current = window.setTimeout(() => setDisparado(false), COOLDOWN_DESVIOS_TODOS_MS);
+      },
+    });
+  }
+
+  return { disparar, disparado: disparado || mutation.isPending };
 }
 
 export function useAnalisarIntervalo(projetoId: string) {
