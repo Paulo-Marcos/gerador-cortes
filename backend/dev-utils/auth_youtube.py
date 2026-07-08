@@ -15,10 +15,15 @@ if str(_BACKEND_ROOT) not in sys.path:
 
 from app.channel_paths import youtube_client_secrets_path, youtube_token_path  # noqa: E402
 
-# Escopos expandidos: upload + gerenciamento de playlists
+# Escopos: upload + gerenciamento de playlists + leitura de estatísticas.
+# O escopo de analytics (D-305) permite ao backend ler views/retenção lifetime
+# dos vídeos do canal. Reautorizar por aqui (rodar este script de novo) reemite
+# um token.json já com TODOS estes escopos — o backend detecta a falta do de
+# analytics e instrui a rodar este utilitário.
 SCOPES = [
     "https://www.googleapis.com/auth/youtube",
     "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
 ]
 
 

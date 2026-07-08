@@ -18,6 +18,7 @@ from app.services.projeto import ProjetoService
 from app.services.tasks import fire_and_forget
 from app.services.telemetria_cortes import TelemetriaCortesService
 from app.services.youtube_palco import ensure_palco_png
+from app.services.youtube_stats import YoutubeStatsService
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
@@ -460,6 +461,56 @@ async def obter_telemetria_cortes(projeto_id: str, db: AsyncSession = Depends(ge
     if payload is None:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
     return payload
+
+
+# ─── D-305: estatísticas YouTube dos vídeos publicados no canal ───────────────
+# Levantamento do canal INTEIRO (não por projeto), como o export de telemetria
+# acima. Caminhos com ≥2 segmentos, para não colidir com GET /{projeto_id}.
+
+
+@router.post("/youtube-stats/sync")
+async def sincronizar_youtube_stats():
+    """Dispara em background a sync das métricas do canal (upsert idempotente).
+
+    Pré-checa o token: se faltar o escopo `yt-analytics.readonly`, responde na
+    hora com a instrução de reautorizar (não um 500 nem uma task silenciosa)."""
+    credenciais = await YoutubeStatsService.verificar_credenciais()
+    if credenciais["status"] == "erro":
+        return credenciais
+    fire_and_forget(YoutubeStatsService.sincronizar(), name="youtube-stats-sync")
+    return {"status": "iniciado", "mensagem": "Sync de estatísticas do YouTube em andamento."}
+
+
+@router.get("/youtube-stats/status")
+async def status_youtube_stats(db: AsyncSession = Depends(get_db)):
+    """Último sync (`sincronizado_em`), se está velho (`stale`) e a lista de vídeos."""
+    return await YoutubeStatsService.status(db)
+
+
+@router.get("/youtube-stats/levantamento/duracao-retencao")
+async def levantamento_duracao_retencao(formato: str = "json", db: AsyncSession = Depends(get_db)):
+    """Retenção e views médias por faixa de duração (calibra as faixas do V2)."""
+    linhas = await YoutubeStatsService.levantamento_duracao_retencao(db)
+    if formato == "csv":
+        return Response(
+            content=YoutubeStatsService.csv_duracao_retencao(linhas),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="youtube-duracao-retencao.csv"'},
+        )
+    return {"faixas": linhas}
+
+
+@router.get("/youtube-stats/levantamento/titulo-desempenho")
+async def levantamento_titulo_desempenho(formato: str = "json", db: AsyncSession = Depends(get_db)):
+    """Views/retenção por comprimento de título e por dois-pontos/pergunta/número."""
+    linhas = await YoutubeStatsService.levantamento_titulo_desempenho(db)
+    if formato == "csv":
+        return Response(
+            content=YoutubeStatsService.csv_titulo_desempenho(linhas),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="youtube-titulo-desempenho.csv"'},
+        )
+    return {"grupos": linhas}
 
 
 @router.patch("/{projeto_id}/render-config", response_model=ProjetoResponse)

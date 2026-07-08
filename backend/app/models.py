@@ -227,6 +227,43 @@ class CorteSnapshot(Base):
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class YoutubeVideoStat(Base):
+    """D-305: métricas lifetime de UM vídeo publicado no canal do operador.
+
+    Levantamento do canal INTEIRO (não só os cortes deste app): cada upload vira
+    uma linha, atualizada por `video_id` (upsert idempotente) a cada sync via
+    YouTube Analytics API. `corte_id` casa a métrica com um corte local quando o
+    vínculo é conhecido — por `Corte.youtube_video_id` (match_por_titulo=0) ou,
+    na falta dele, por título normalizado (match_por_titulo=1, heurística). Vídeos
+    sem corte local também entram: o objetivo é calibrar as faixas de duração e o
+    padrão de título contra o desempenho real. CTR/impressões ficam de fora — a
+    Analytics API pública não os expõe (ver D-305).
+    """
+
+    __tablename__ = "youtube_video_stats"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    video_id: Mapped[str] = mapped_column(String(50), unique=True, index=True)
+    canal_id: Mapped[str] = mapped_column(String(60), default="")
+    titulo: Mapped[str] = mapped_column(String(500), default="")
+    duracao_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    publicado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+    # Métricas lifetime (YouTube Analytics API v2).
+    views: Mapped[int] = mapped_column(Integer, default=0)
+    estimated_minutes_watched: Mapped[float] = mapped_column(Float, default=0.0)
+    average_view_duration_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    average_view_percentage: Mapped[float] = mapped_column(Float, default=0.0)
+    subscribers_gained: Mapped[int] = mapped_column(Integer, default=0)
+    # Casamento com corte local (nullable): por video_id (match_por_titulo=0) ou
+    # por título normalizado (match_por_titulo=1). Vídeo sem corte local fica com
+    # corte_id nulo e ainda entra nos levantamentos.
+    corte_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("cortes.id"), nullable=True, default=None, index=True
+    )
+    match_por_titulo: Mapped[int] = mapped_column(Integer, default=0)
+    sincronizado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+
+
 class Short(Base):
     __tablename__ = "shorts"
 
