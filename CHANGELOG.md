@@ -11,11 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Editorial v2 for cut analysis (D-302): the cutter skill now proposes cuts as
+  self-sufficient stories — strongest-entry-point hook (`frase_gancho`), short
+  opening contextualization, hook/flow/value priority score, 5/8–18/30-minute
+  duration bands, diarization-aware rules, 55–60-character titles — and the
+  trechos skill becomes a "cohesion editor" with the power to revise (remove or
+  adjust) desvios previously marked by AI. New `Corte`/`CorteSnapshot` columns
+  persist the v2 proposal (schema migration 004, tolerant of pre-v2 outputs).
 - Editorial telemetry (D-303): the AI's cut proposal is frozen as an immutable
   snapshot at import time; new endpoints compare proposal vs. final edited cut
   per project and cross-project (JSON/CSV) — boundary deltas, kept/removed/added
   desvios by origin, title changes. Manually-created cuts are labeled
   `sem_proposta_ia` and pre-telemetry cuts `sem_snapshot`.
+
+### Changed
+- The 30% ceiling on removed desvios is gone: removal is now governed by a
+  semantic guardrail (the argument's logical chain must survive the removals),
+  with quality controlled by telemetry instead of a quota (D-302).
 
 ## [0.2.0] - 2026-07-06
 
