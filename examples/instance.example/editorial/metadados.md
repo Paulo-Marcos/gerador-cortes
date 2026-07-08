@@ -40,8 +40,8 @@ sinopse, texto de capa, hashtags.
 
 | Regra | Valor |
 |---|---|
-| Comprimento alvo | **45–60 caracteres** |
-| Comprimento máximo absoluto | **65 caracteres** |
+| Comprimento alvo | **55–60 caracteres** |
+| Comprimento máximo absoluto | **60 caracteres** |
 | Máximo de palavras | **9 palavras** |
 | Subordinadas | **Zero** ("que…", "porque…", "para que…") |
 | Frontload | A palavra que carrega o clique nos primeiros 30 chars |
@@ -146,7 +146,7 @@ primeira da série — sem restrição.
 
 ## 6. CHECKLIST AUTO-APLICADO (antes do JSON)
 
-- Cada título ≤ 65 caracteres e ≤ 9 palavras?
+- Cada título entre 55 e 60 caracteres e ≤ 9 palavras?
 - Nenhuma subordinada? Nenhum na LISTA NEGRA (1.3)?
 - As 4 opções pertencem a **famílias distintas** (A, B, C, D)?
 - Cada título corresponde ao que o corte **realmente** afirma?
