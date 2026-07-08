@@ -50,8 +50,11 @@ class SkillCatalogo:
 
     - `arquivo`: nome do `.md` em `editorial/` (corpo/espelho).
     - `etapa`/`descricao`: rótulo e explicação funcional para a UI.
-    - `model_setting`/`thinking_setting`: nomes dos atributos em `config.settings`
-      de onde vêm os DEFAULTS de modelo e thinking tokens da etapa.
+    - `model_setting`/`thinking_setting`/`timeout_setting`: nomes dos atributos em
+      `config.settings` de onde vêm os DEFAULTS de modelo, thinking tokens e
+      timeout da etapa. `timeout_setting` tem default (`claude_cli_timeout`, o
+      global) — só a etapa cortes aponta para um setting próprio (D-300: thinking
+      estendido aumenta latência, então cortes precisa de mais fôlego).
     - `lentes_tipo`: chave em `variacao_prompt` das lentes default (None = etapa
       sem lentes — trechos/thumbnail, consistência ou anti-mode-collapse por design).
 
@@ -67,6 +70,7 @@ class SkillCatalogo:
     model_setting: str
     thinking_setting: str
     lentes_tipo: str | None
+    timeout_setting: str = "claude_cli_timeout"
 
 
 # Ordem = ordem de exibição na UI. Descrições explicam PARA QUE SERVE cada skill.
@@ -81,7 +85,8 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "a descartar. É o primeiro passo do pipeline de análise."
         ),
         model_setting="claude_model_analise",
-        thinking_setting="claude_cli_max_thinking_tokens",
+        thinking_setting="claude_cli_thinking_tokens_analise",
+        timeout_setting="claude_cli_timeout_analise",
         lentes_tipo="cortes",
     ),
     SkillCatalogo(
@@ -95,7 +100,7 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
             "ser consistente, não variada)."
         ),
         model_setting="claude_model_analise",
-        thinking_setting="claude_cli_max_thinking_tokens",
+        thinking_setting="claude_cli_thinking_tokens_trechos",
         lentes_tipo=None,
     ),
     SkillCatalogo(
@@ -187,7 +192,7 @@ def _default_params(cat: SkillCatalogo) -> dict:
     return {
         "modelo": str(getattr(settings, cat.model_setting)),
         "thinking_tokens": int(getattr(settings, cat.thinking_setting)),
-        "timeout": float(settings.claude_cli_timeout),
+        "timeout": float(getattr(settings, cat.timeout_setting)),
     }
 
 
@@ -475,23 +480,82 @@ def resetar_skill(
     )
 
 
+# --------------------------------------------------------------------------- #
+# Migração pontual D-300: thinking/timeout elevados na análise, para canais que
+# já tinham a linha semeada com os defaults ANTIGOS (compartilhados com cenas/
+# metadados). Comparar contra o valor ANTIGO — nunca contra o novo — preserva
+# qualquer customização feita pela UI de Canais.
+# --------------------------------------------------------------------------- #
+
+_D300_THINKING_ANTIGO = 0  # era `claude_cli_max_thinking_tokens` para cortes/trechos
+_D300_TIMEOUT_ANTIGO = 300.0  # era `claude_cli_timeout` para a etapa cortes
+
+# Novo default de thinking por skill — só as duas etapas alcançadas pelo D-300.
+_D300_THINKING_NOVO: dict[str, int] = {
+    "cortador-expert": settings.claude_cli_thinking_tokens_analise,
+    "trechos-expert": settings.claude_cli_thinking_tokens_trechos,
+}
+
+
+def _migrar_linha_d300(cat: SkillCatalogo, db: Path, cid: str, linha: dict) -> None:
+    """Eleva thinking_tokens (e, só em cortes, o timeout) de uma linha JÁ
+    existente quando o valor gravado ainda é o default ANTIGO.
+
+    No-op para cenas/metadados/thumbnail (fora do escopo do D-300) e para
+    valores já customizados pelo canal (≠ default antigo não é tocado).
+    """
+    thinking_novo = _D300_THINKING_NOVO.get(cat.key)
+    if thinking_novo is None:
+        return
+    try:
+        params = json.loads(linha.get("params_json") or "{}")
+    except json.JSONDecodeError:
+        return
+    if not isinstance(params, dict):
+        return
+
+    mudou = False
+    if params.get("thinking_tokens") == _D300_THINKING_ANTIGO:
+        params["thinking_tokens"] = thinking_novo
+        mudou = True
+    if cat.key == "cortador-expert" and params.get("timeout") == _D300_TIMEOUT_ANTIGO:
+        params["timeout"] = settings.claude_cli_timeout_analise
+        mudou = True
+    if not mudou:
+        return
+    settings_store.gravar_skill(
+        db,
+        cid,
+        cat.key,
+        {
+            "corpo": linha.get("corpo") or "",
+            "params_json": json.dumps(params, ensure_ascii=False),
+            "lentes_json": linha.get("lentes_json") or "[]",
+        },
+    )
+
+
 def migrar_skills_do_canal_ativo(
     *,
     db_path: Path | None = None,
     channel_id: str | None = None,
 ) -> int:
-    """Semeia no banco as skills do canal ativo que ainda não têm linha (boot).
+    """Semeia no banco as skills do canal ativo que ainda não têm linha (boot) e,
+    nas que já existem, roda a migração pontual do D-300 (thinking/timeout).
 
-    Idempotente: só semeia o que falta. Retorna quantas skills foram semeadas.
-    Best-effort — pensada para o lifespan, no mesmo espírito de
-    `channels.migrar_identidades_para_banco`.
+    Idempotente: só semeia o que falta e só migra o que ainda está no default
+    antigo. Retorna quantas skills foram SEMEADAS (a migração do D-300 ajusta
+    linhas já existentes e não conta para esse total). Best-effort — pensada
+    para o lifespan, no mesmo espírito de `channels.migrar_identidades_para_banco`.
     """
     db, cid = _resolver_db_e_canal(db_path, channel_id)
     existentes = settings_store.ler_skills_do_canal(db, cid)
     semeadas = 0
     for cat in _CATALOGO:
-        if cat.key in existentes:
+        linha = existentes.get(cat.key)
+        if linha is None:
+            _semear(cat, db, cid, None)
+            semeadas += 1
             continue
-        _semear(cat, db, cid, None)
-        semeadas += 1
+        _migrar_linha_d300(cat, db, cid, linha)
     return semeadas

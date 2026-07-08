@@ -10,6 +10,7 @@ genéricos vêm de `examples/instance.example/editorial` e `config.settings` rea
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from app import editorial_skills
@@ -32,6 +33,25 @@ def _editorial(tmp_path: Path, **arquivos: str) -> Path:
     return raiz
 
 
+def _semear_linha_crua(
+    db: Path, skill_key: str, *, thinking_tokens: int, timeout: float, modelo: str = "opus"
+) -> None:
+    """Grava uma linha diretamente no banco, sem passar pelo seed do serviço —
+    simula o estado PRÉ-D-300 (ou uma customização já feita pela UI de Canais)."""
+    settings_store.gravar_skill(
+        db,
+        _CANAL,
+        skill_key,
+        {
+            "corpo": "CORPO",
+            "params_json": json.dumps(
+                {"modelo": modelo, "thinking_tokens": thinking_tokens, "timeout": timeout}
+            ),
+            "lentes_json": "[]",
+        },
+    )
+
+
 def test_seed_le_corpo_do_md_e_params_globais(tmp_path: Path):
     db = _db(tmp_path)
     editorial = _editorial(tmp_path, **{"cortes.md": "CORPO DO CANAL"})
@@ -42,9 +62,10 @@ def test_seed_le_corpo_do_md_e_params_globais(tmp_path: Path):
 
     assert skill.corpo == "CORPO DO CANAL"
     # Params default vêm dos globais de config (preserva comportamento atual).
+    # D-300: cortes tem thinking/timeout próprios — não os globais de cenas/metadados.
     assert skill.modelo == settings.claude_model_analise
-    assert skill.thinking_tokens == settings.claude_cli_max_thinking_tokens
-    assert skill.timeout == settings.claude_cli_timeout
+    assert skill.thinking_tokens == settings.claude_cli_thinking_tokens_analise
+    assert skill.timeout == settings.claude_cli_timeout_analise
     # Efeito colateral: o banco foi semeado (migração).
     assert settings_store.ler_skill(db, _CANAL, _SKILL) is not None
 
@@ -89,6 +110,36 @@ def test_thumbnail_tem_thinking_proprio(tmp_path: Path):
     # Thumbnail usa o thinking próprio (maior), não o global.
     assert skill.thinking_tokens == settings.claude_cli_thinking_tokens_thumbnail
     assert skill.modelo == settings.claude_model_thumbnail
+
+
+def test_trechos_tem_thinking_proprio_mas_timeout_global(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+
+    skill = editorial_skills.resolver_skill(
+        "trechos-expert", db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+
+    # D-300: trechos ganhou thinking próprio (menor que cortes, revisa 1 corte só)...
+    assert skill.thinking_tokens == settings.claude_cli_thinking_tokens_trechos
+    # ...mas não ganhou timeout próprio — continua no global (só cortes ganhou).
+    assert skill.timeout == settings.claude_cli_timeout
+
+
+def test_cenas_e_metadados_continuam_no_thinking_global(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+
+    cenas = editorial_skills.resolver_skill(
+        "cenas-expert", db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+    metadados = editorial_skills.resolver_skill(
+        "metadados-expert", db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+
+    # Fora do escopo do D-300: continuam herdando o default global (desligado).
+    assert cenas.thinking_tokens == settings.claude_cli_max_thinking_tokens
+    assert metadados.thinking_tokens == settings.claude_cli_max_thinking_tokens
 
 
 def test_definir_corpo_grava_no_banco_e_espelha_no_md(tmp_path: Path):
@@ -205,6 +256,49 @@ def test_migracao_idempotente_semeia_cinco_uma_vez(tmp_path: Path):
     assert set(settings_store.ler_skills_do_canal(db, _CANAL)) == {
         c.key for c in editorial_skills.catalogo()
     }
+
+
+def test_migracao_d300_eleva_thinking_e_timeout_do_default_antigo(tmp_path: Path):
+    db = _db(tmp_path)
+    # Simula canais semeados ANTES do D-300: thinking=0 e timeout=300 (globais
+    # antigos, compartilhados com cenas/metadados).
+    _semear_linha_crua(db, "cortador-expert", thinking_tokens=0, timeout=300.0)
+    _semear_linha_crua(db, "trechos-expert", thinking_tokens=0, timeout=300.0)
+
+    editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
+
+    cortes = editorial_skills.resolver_skill("cortador-expert", db_path=db, channel_id=_CANAL)
+    trechos = editorial_skills.resolver_skill("trechos-expert", db_path=db, channel_id=_CANAL)
+    assert cortes.thinking_tokens == settings.claude_cli_thinking_tokens_analise
+    assert cortes.timeout == settings.claude_cli_timeout_analise
+    assert trechos.thinking_tokens == settings.claude_cli_thinking_tokens_trechos
+    # Trechos não ganhou timeout próprio no D-300 — continua no global, intocado.
+    assert trechos.timeout == 300.0
+
+
+def test_migracao_d300_preserva_valor_customizado(tmp_path: Path):
+    db = _db(tmp_path)
+    # Canal já customizou thinking (5000) e timeout (450) pela UI — não é o
+    # default antigo (0 / 300), então a migração não deve tocar.
+    _semear_linha_crua(db, "cortador-expert", thinking_tokens=5000, timeout=450.0)
+
+    editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
+
+    cortes = editorial_skills.resolver_skill("cortador-expert", db_path=db, channel_id=_CANAL)
+    assert cortes.thinking_tokens == 5000
+    assert cortes.timeout == 450.0
+
+
+def test_migracao_d300_e_idempotente(tmp_path: Path):
+    db = _db(tmp_path)
+    _semear_linha_crua(db, "cortador-expert", thinking_tokens=0, timeout=300.0)
+
+    editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
+    editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
+
+    cortes = editorial_skills.resolver_skill("cortador-expert", db_path=db, channel_id=_CANAL)
+    assert cortes.thinking_tokens == settings.claude_cli_thinking_tokens_analise
+    assert cortes.timeout == settings.claude_cli_timeout_analise
 
 
 def test_skill_desconhecida_levanta(tmp_path: Path):

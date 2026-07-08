@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     claude_cli_path: str = ""  # override do caminho do binário; vazio = resolve no PATH
     claude_cli_cwd: str = ""  # cwd da invocação; vazio = temp (evita herdar CLAUDE.md do projeto)
     claude_cli_timeout: float = 300.0  # trava pendurada falha em até 5 min (era 10)
+    # D-300: a etapa Propor cortes ganhou thinking estendido (acima) — thinking
+    # aumenta latência, então essa etapa precisa de mais fôlego que o timeout
+    # global antes de ser considerada travada.
+    claude_cli_timeout_analise: float = 600.0
     # Máximo de chamadas `claude -p` simultâneas. Várias em paralelo (ex.: metadados
     # + cenas no gerar-bruto) batem no limite de concorrência da assinatura e falham
     # com is_error transitório. 1 = serializa (mais seguro).
@@ -34,10 +38,17 @@ class Settings(BaseSettings):
     claude_cli_retries: int = (
         4  # tentativas extras em erro transitório (overload/529); backoff exponencial
     )
-    # 0 = desabilita o "extended thinking". Prompts com muitas restrições (ex.:
-    # cenas: máx N, espaçamento mínimo entre cenas) fazem o modelo raciocinar por
-    # MINUTOS sem ganho proporcional. As skills/prompts já são detalhados.
+    # 0 = desabilita o "extended thinking". Usado hoje só por cenas/metadados:
+    # prompts com muitas restrições (ex.: cenas: máx N, espaçamento mínimo entre
+    # cenas) fazem o modelo raciocinar por MINUTOS sem ganho proporcional.
     claude_cli_max_thinking_tokens: int = 0
+    # D-300: Propor cortes é a etapa de MAIOR julgamento editorial (ler a live
+    # inteira e decidir onde começa/termina cada corte, título e tema) — merece
+    # raciocínio estendido tanto quanto a thumbnail.
+    claude_cli_thinking_tokens_analise: int = 12000
+    # D-300: Trechos a remover (desvios) também se beneficia de raciocínio, mas
+    # em escala menor — revisa só UM corte já recortado, não a live inteira.
+    claude_cli_thinking_tokens_trechos: int = 4000
     # Exceção por QUALIDADE: gerar o prompt de thumbnail é a etapa que mais se
     # beneficia de raciocínio (derivar cenário/roupa/luz sem cardápio, gerar 3
     # hipóteses internas e inverter o eixo saturado). Aqui priorizamos qualidade
