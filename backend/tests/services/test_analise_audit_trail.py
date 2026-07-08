@@ -234,3 +234,99 @@ async def test_analisar_transcricao_repassa_descartados_via_claude(monkeypatch):
     await AnaliseService.analisar_transcricao("p-claude")
 
     assert repasse["descartados"] == [{"tema": "x", "motivo": "y"}]
+
+
+# ── D-299: falantes_map na análise de intervalo ────────────────────────────
+
+
+def _transcricao_intervalo_json() -> str:
+    return json.dumps(
+        [
+            {"inicio": "00:00:00", "fim": "00:00:04", "texto": "fala 1"},
+            {"inicio": "00:05:00", "fim": "00:05:04", "texto": "fala 2"},
+        ]
+    )
+
+
+@pytest.mark.asyncio
+async def test_analisar_intervalo_injeta_falantes_map_quando_diarizado(monkeypatch):
+    """D-299: projeto diarizado → `meta["falantes_map"]` chega no `_gerar_cortes`
+    igual ao que `analisar_via_claude` (D-286) já injeta na análise completa.
+    """
+    from app.services.claude_ia import ClaudeIaService
+
+    factory, projeto, _cortes, _sess = _mock_db_factory()
+    projeto.transcricao_raw = _transcricao_intervalo_json()
+    projeto.titulo_live = "L"
+    projeto.youtube_url = "http://x"
+    projeto.duracao_segundos = 600
+    mapa_falantes = {
+        "SPEAKER_00": {"nome": "Pedro", "is_canal": True},
+        "SPEAKER_01": {"nome": "", "is_canal": False},
+    }
+    projeto.falantes_map = json.dumps(mapa_falantes)
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    capturado: dict = {}
+
+    async def fake_gerar_cortes(transcricao, meta):
+        capturado["transcricao"] = transcricao
+        capturado["meta"] = meta
+        return {
+            "cortes": [
+                {
+                    "titulo_proposto": "A",
+                    "inicio_hms": "00:00:00",
+                    "fim_hms": "00:05:04",
+                    "inicio_seg": 0,
+                    "fim_seg": 304,
+                    "desvios": [],
+                }
+            ]
+        }
+
+    monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
+
+    await AnaliseService.analisar_intervalo("p-intervalo-diarizado", 0, 600)
+
+    assert capturado["meta"]["falantes_map"] == mapa_falantes
+
+
+@pytest.mark.asyncio
+async def test_analisar_intervalo_sem_diarizacao_falantes_map_none(monkeypatch):
+    """Sem diarização (`falantes_map` vazio) o `meta["falantes_map"]` sai `None`
+    — mesmo valor que `meta.get("falantes_map")` retornava quando a chave nem
+    existia, então o prompt formatado fica idêntico ao comportamento anterior.
+    """
+    from app.services.claude_ia import ClaudeIaService
+
+    factory, projeto, _cortes, _sess = _mock_db_factory()
+    projeto.transcricao_raw = _transcricao_intervalo_json()
+    projeto.titulo_live = "L"
+    projeto.youtube_url = "http://x"
+    projeto.duracao_segundos = 600
+    projeto.falantes_map = "{}"  # projeto nunca diarizado (default do modelo)
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    capturado: dict = {}
+
+    async def fake_gerar_cortes(transcricao, meta):
+        capturado["meta"] = meta
+        return {
+            "cortes": [
+                {
+                    "titulo_proposto": "A",
+                    "inicio_hms": "00:00:00",
+                    "fim_hms": "00:05:04",
+                    "inicio_seg": 0,
+                    "fim_seg": 304,
+                    "desvios": [],
+                }
+            ]
+        }
+
+    monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
+
+    await AnaliseService.analisar_intervalo("p-intervalo-sem-diarizacao", 0, 600)
+
+    assert capturado["meta"]["falantes_map"] is None

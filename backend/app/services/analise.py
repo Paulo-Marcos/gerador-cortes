@@ -563,12 +563,16 @@ class AnaliseService:
         )
 
         # Import local: claude_ia importa este módulo no topo (evita ciclo).
-        from app.services.claude_ia import ClaudeIaService
+        from app.services.claude_ia import ClaudeIaService, _mapa_falantes_para_meta
 
+        # D-299: mesma injeção de rótulo [CANAL]/[OUTRO] que a análise completa
+        # (D-286) já faz — aqui sempre que o projeto estiver diarizado, sem
+        # toggle (a análise de intervalo não expõe `usar_diarizacao`).
         meta = {
             "titulo_live": projeto.titulo_live or "",
             "youtube_url": projeto.youtube_url or "",
             "duracao_segundos": projeto.duracao_segundos or 0,
+            "falantes_map": _mapa_falantes_para_meta(projeto.falantes_map),
         }
         resultado = await ClaudeIaService._gerar_cortes(transcricao_intervalo, meta)
 
