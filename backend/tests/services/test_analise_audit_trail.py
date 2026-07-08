@@ -17,6 +17,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from app.models import Corte
 from app.services.analise import AnaliseService
 
 
@@ -25,14 +26,22 @@ def _mock_db_factory(max_numero: int = 0):
 
     A factory imita `AsyncSessionLocal` (context manager assíncrono).
     `projeto_mock` é o objeto retornado por `db.get(Projeto, ...)`.
-    `cortes_capturados` recebe cada `Corte` passado a `db.add`.
+    `cortes_capturados` recebe cada `Corte` passado a `db.add`; os
+    `CorteSnapshot` (D-303) vão para `session.snapshots_capturados`.
     `max_numero` é o valor de `MAX(Corte.numero)` (0 = projeto sem cortes).
     """
     cortes_capturados: list = []
+    snapshots_capturados: list = []
     projeto_mock = MagicMock()
     projeto_mock.status = None
     projeto_mock.ultima_analise_em = None
     projeto_mock.descartados_analise = "[]"
+
+    def _capturar(obj):
+        if isinstance(obj, Corte):
+            cortes_capturados.append(obj)
+        else:
+            snapshots_capturados.append(obj)
 
     session = AsyncMock()
     session.__aenter__ = AsyncMock(return_value=session)
@@ -44,7 +53,8 @@ def _mock_db_factory(max_numero: int = 0):
     session.execute = AsyncMock(return_value=exec_result)
     session.get = AsyncMock(return_value=projeto_mock)
     session.commit = AsyncMock()
-    session.add = MagicMock(side_effect=lambda corte: cortes_capturados.append(corte))
+    session.add = MagicMock(side_effect=_capturar)
+    session.snapshots_capturados = snapshots_capturados
 
     def factory():
         return session
@@ -365,3 +375,94 @@ async def test_analisar_intervalo_sem_diarizacao_falantes_map_none(monkeypatch):
     await AnaliseService.analisar_intervalo("p-intervalo-sem-diarizacao", 0, 600)
 
     assert capturado["meta"]["falantes_map"] is None
+
+
+# ── D-303: snapshot imutável da proposta da IA ──────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_importar_resultado_congela_um_snapshot_por_corte(monkeypatch):
+    """Cada corte importado ganha um CorteSnapshot espelhando a proposta."""
+    factory, _projeto, cortes, sess = _mock_db_factory()
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    await AnaliseService.importar_resultado(
+        "p-snap",
+        [
+            {
+                "titulo_proposto": "A",
+                "tema_central": "t",
+                "resumo": "r",
+                "justificativa": "j",
+                "inicio_hms": "00:10:00",
+                "fim_hms": "00:25:00",
+                "desvios": [{"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}],
+            }
+        ],
+    )
+
+    assert len(cortes) == 1
+    assert len(sess.snapshots_capturados) == 1
+    snap = sess.snapshots_capturados[0]
+    assert snap.corte_id == cortes[0].id
+    assert snap.titulo_proposto == "A"
+    assert snap.justificativa == "j"
+    assert snap.inicio_seg == 600.0
+    assert snap.fim_seg == 1500.0
+    assert snap.origem_analise == "claude"  # default: único caller interno
+    assert json.loads(snap.desvios)[0]["motivo"] == "chat"
+
+
+@pytest.mark.asyncio
+async def test_importar_resultado_snapshot_registra_origem_manual(monkeypatch):
+    """Endpoints de paste passam origem='manual' — fica gravado no snapshot."""
+    factory, _projeto, _cortes, sess = _mock_db_factory()
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    await AnaliseService.importar_resultado(
+        "p-snap-manual",
+        [{"titulo_proposto": "A", "inicio_hms": "00:00:10", "fim_hms": "00:01:00"}],
+        origem="manual",
+    )
+
+    assert sess.snapshots_capturados[0].origem_analise == "manual"
+
+
+@pytest.mark.asyncio
+async def test_analisar_intervalo_tambem_congela_snapshot(monkeypatch):
+    """A análise de intervalo cria cortes fora do importar_resultado — o
+    snapshot precisa nascer lá também (origem claude)."""
+    from app.services.claude_ia import ClaudeIaService
+
+    factory, projeto, cortes, sess = _mock_db_factory()
+    projeto.transcricao_raw = _transcricao_intervalo_json()
+    projeto.titulo_live = "L"
+    projeto.youtube_url = "http://x"
+    projeto.duracao_segundos = 600
+    projeto.falantes_map = "{}"
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    async def fake_gerar_cortes(_transcricao, _meta):
+        return {
+            "cortes": [
+                {
+                    "titulo_proposto": "A",
+                    "inicio_hms": "00:00:00",
+                    "fim_hms": "00:05:04",
+                    "inicio_seg": 0,
+                    "fim_seg": 304,
+                    "desvios": [],
+                }
+            ]
+        }
+
+    monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
+
+    await AnaliseService.analisar_intervalo("p-intervalo-snap", 0, 600)
+
+    assert len(cortes) == 1
+    assert len(sess.snapshots_capturados) == 1
+    snap = sess.snapshots_capturados[0]
+    assert snap.corte_id == cortes[0].id
+    assert snap.origem_analise == "claude"
+    assert snap.fim_seg == 304.0

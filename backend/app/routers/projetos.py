@@ -16,9 +16,10 @@ from app.services.ingestao import IngestaoService
 from app.services.pipeline_render import FONTE_PRESETS_VALIDOS
 from app.services.projeto import ProjetoService
 from app.services.tasks import fire_and_forget
+from app.services.telemetria_cortes import TelemetriaCortesService
 from app.services.youtube_palco import ensure_palco_png
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import and_, case, func, select
 from sqlalchemy import delete as sa_delete
@@ -434,6 +435,33 @@ async def obter_auditoria_analise(projeto_id: str, db: AsyncSession = Depends(ge
     }
 
 
+@router.get("/telemetria-cortes/export")
+async def exportar_telemetria_cortes(formato: str = "json", db: AsyncSession = Depends(get_db)):
+    """D-303: agregado cross-projeto da telemetria editorial, uma linha por
+    corte (inclusive manuais/legados). `?formato=csv` devolve CSV para
+    planilha e para o futuro few-shot proposta×final."""
+    linhas = await TelemetriaCortesService.telemetria_agregada(db)
+    if formato == "csv":
+        return Response(
+            content=TelemetriaCortesService.csv_agregado(linhas),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="telemetria-cortes.csv"'},
+        )
+    return {"total_cortes": len(linhas), "cortes": linhas}
+
+
+@router.get("/{projeto_id}/telemetria-cortes")
+async def obter_telemetria_cortes(projeto_id: str, db: AsyncSession = Depends(get_db)):
+    """D-303: diff proposta-da-IA × corte final para cada corte do projeto.
+
+    Complementa a auditoria I-034: aquela mostra o que a IA decidiu; esta
+    mede o que o editor mudou depois (bordas, desvios, título, status)."""
+    payload = await TelemetriaCortesService.telemetria_do_projeto(projeto_id, db)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="Projeto não encontrado")
+    return payload
+
+
 @router.patch("/{projeto_id}/render-config", response_model=ProjetoResponse)
 async def atualizar_render_config(
     projeto_id: str,
@@ -648,7 +676,7 @@ async def importar_analise(
     if not projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
     try:
-        await AnaliseService.importar_resultado(projeto_id, body.cortes)
+        await AnaliseService.importar_resultado(projeto_id, body.cortes, origem="manual")
         return {"message": "Análise importada com sucesso", "total_cortes": len(body.cortes)}
     except Exception as e:
         raise erro_interno(e) from e
@@ -784,7 +812,7 @@ async def importar_analise_intervalo(projeto_id: str, body: ImportarAnaliseReque
     mas AnaliseService.importar_resultado não remove os existentes).
     """
     try:
-        await AnaliseService.importar_resultado(projeto_id, body.cortes)
+        await AnaliseService.importar_resultado(projeto_id, body.cortes, origem="manual")
         return {"message": f"{len(body.cortes)} cortes importados com sucesso para o intervalo."}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

@@ -12,7 +12,7 @@ from app.database import AsyncSessionLocal
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.segment_calculator import normalizar_desvio as _normalizar_desvio
 from app.domain.time_convert import hms_to_seg
-from app.models import Corte, Projeto, StatusProjeto
+from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
 from app.services.app_logging import operational_error, operational_info
 from sqlalchemy import select as sa_select
 
@@ -25,6 +25,32 @@ def _to_seg(val) -> float:
         return float(val)
     except (ValueError, TypeError):
         return hms_to_seg(str(val))
+
+
+def _snapshot_da_proposta(corte: Corte, origem: str) -> CorteSnapshot:
+    """D-303: congela a proposta da IA no instante em que o corte nasce.
+
+    Copia os campos do Corte recém-construído (ainda sem edição humana);
+    o snapshot nunca é atualizado depois — é a régua proposta×final da
+    telemetria editorial. Coalesce com defaults porque atributos não setados
+    de um ORM ainda não flushado valem None (ex.: justificativa na análise
+    de intervalo).
+    """
+    return CorteSnapshot(
+        id=str(uuid.uuid4()),
+        corte_id=corte.id,
+        numero=corte.numero or 0,
+        titulo_proposto=corte.titulo_proposto or "",
+        tema_central=corte.tema_central or "",
+        resumo=corte.resumo or "",
+        justificativa=corte.justificativa or "",
+        inicio_hms=corte.inicio_hms or "00:00:00",
+        fim_hms=corte.fim_hms or "00:00:00",
+        inicio_seg=corte.inicio_seg or 0.0,
+        fim_seg=corte.fim_seg or 0.0,
+        desvios=corte.desvios or "[]",
+        origem_analise=origem,
+    )
 
 
 PROMPT_ANALISE_TRANSCRICAO = """\
@@ -443,12 +469,19 @@ class AnaliseService:
         projeto_id: str,
         cortes_data: list,
         descartados: list | None = None,
+        origem: str = "claude",
     ):
         """Salva cortes vindos de IA externa com a mesma lógica do analisar_transcricao.
 
         I-034: além dos cortes, persiste `descartados` (blocos NÃO_RECOMENDADOS
         que a IA decidiu não virar corte) em `projetos.descartados_analise`,
         e a `justificativa` editorial em cada corte. Ambos são audit trail.
+
+        D-303: cada corte criado aqui ganha um `CorteSnapshot` imutável com a
+        proposta original da IA. `origem` registra a proveniência da análise;
+        o default é "claude" porque o único caller que não passa o parâmetro é
+        o pipeline interno (ClaudeIaService) — os endpoints de import manual
+        passam "manual" explicitamente.
         """
         async with AsyncSessionLocal() as db:
             # Continua a numeração a partir do MAIOR número já usado — robusto a
@@ -496,6 +529,7 @@ class AnaliseService:
                     desvios=json.dumps(desvios_normalizados, ensure_ascii=False),
                 )
                 db.add(corte)
+                db.add(_snapshot_da_proposta(corte, origem))
 
             projeto = await db.get(Projeto, projeto_id)
             if projeto:
@@ -618,6 +652,8 @@ class AnaliseService:
                     desvios=json.dumps(desvios_normalizados, ensure_ascii=False),
                 )
                 db.add(corte)
+                # D-303: intervalo também é proposta de IA (via Claude) — congela.
+                db.add(_snapshot_da_proposta(corte, origem="claude"))
             await db.commit()
 
         operational_info(

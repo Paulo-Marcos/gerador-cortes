@@ -191,6 +191,42 @@ class Corte(Base):
     )
 
 
+class CorteSnapshot(Base):
+    """D-303: snapshot imutável da proposta da IA no momento da importação.
+
+    Congela o que a análise propôs (título, tema, resumo, justificativa,
+    bordas e desvios) ANTES de qualquer edição humana. Gravado uma única vez
+    quando o corte nasce em `AnaliseService.importar_resultado` (ou na análise
+    de intervalo) e nunca mais atualizado — é a régua proposta×final da
+    telemetria editorial. Corte sem snapshot é sinal, não erro: o editor criou
+    na mão (a IA não propôs) ou o corte é anterior à telemetria. Se o corte
+    for deletado o snapshot fica órfão e fora do levantamento (v1 não mede
+    cortes deletados).
+    """
+
+    __tablename__ = "corte_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    corte_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("cortes.id"), unique=True, index=True
+    )
+    numero: Mapped[int] = mapped_column(Integer, default=0)
+    titulo_proposto: Mapped[str] = mapped_column(String(500), default="")
+    tema_central: Mapped[str] = mapped_column(String(500), default="")
+    resumo: Mapped[str] = mapped_column(Text, default="")
+    justificativa: Mapped[str] = mapped_column(Text, default="")
+    inicio_hms: Mapped[str] = mapped_column(String(20), default="00:00:00")
+    fim_hms: Mapped[str] = mapped_column(String(20), default="00:00:00")
+    inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    desvios: Mapped[str] = mapped_column(Text, default="[]")
+    # Proveniência da análise que propôs o corte: "claude" (pipeline interno)
+    # ou "manual" (paste de JSON de IA externa/n8n). Novos providers registram
+    # o próprio rótulo aqui.
+    origem_analise: Mapped[str] = mapped_column(String(30), default="claude")
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class Short(Base):
     __tablename__ = "shorts"
 
