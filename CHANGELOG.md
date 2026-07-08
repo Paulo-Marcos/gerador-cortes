@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Editorial telemetry (D-303): the AI's cut proposal is frozen as an immutable
+  snapshot at import time; new endpoints compare proposal vs. final edited cut
+  per project and cross-project (JSON/CSV) — boundary deltas, kept/removed/added
+  desvios by origin, title changes. Manually-created cuts are labeled
+  `sem_proposta_ia` and pre-telemetry cuts `sem_snapshot`.
+
 ## [0.2.0] - 2026-07-06
 
 ### Added
