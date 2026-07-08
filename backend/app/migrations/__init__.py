@@ -25,6 +25,7 @@ from app.migrations import (
     migration_001_baseline,
     migration_002_paths_relativos,
     migration_003_paths_video_short,
+    migration_004_campos_v2_cortes,
 )
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -56,6 +57,11 @@ MIGRATIONS: tuple[Migration, ...] = (
         version=3,
         description="D-172 — arquivo_video_path e arquivo_short_path relativos ao projeto",
         upgrade=migration_003_paths_video_short.upgrade,
+    ),
+    Migration(
+        version=4,
+        description="D-302 — campos v2 (frase_gancho, contextualizacao, score) em cortes/snapshots",
+        upgrade=migration_004_campos_v2_cortes.upgrade,
     ),
 )
 

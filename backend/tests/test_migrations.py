@@ -119,3 +119,36 @@ async def test_pula_migrations_ja_aplicadas(conn, monkeypatch):
 
     assert chamadas == [2]
     assert versao == 2
+
+
+# ── Migration 004 (D-302): campos v2 em cortes/corte_snapshots ──────────────
+
+
+async def _colunas(conn, tabela: str) -> set[str]:
+    resultado = await conn.execute(text(f"PRAGMA table_info({tabela})"))
+    return {linha[1] for linha in resultado.fetchall()}
+
+
+@pytest.mark.asyncio
+async def test_migration_004_adiciona_colunas_v2_em_banco_antigo(conn):
+    """Banco pré-D-302 (tabelas sem os campos v2) ganha as 4 colunas novas em
+    `cortes` e `corte_snapshots`; rodar de novo é no-op (idempotente)."""
+    from app.migrations import migration_004_campos_v2_cortes
+
+    await conn.execute(text("CREATE TABLE cortes (id VARCHAR(36) PRIMARY KEY)"))
+    await conn.execute(text("CREATE TABLE corte_snapshots (id VARCHAR(36) PRIMARY KEY)"))
+
+    await migration_004_campos_v2_cortes.upgrade(conn)
+    await migration_004_campos_v2_cortes.upgrade(conn)  # idempotência
+
+    esperadas = {"frase_gancho_hms", "frase_gancho_texto", "contextualizacao", "score_json"}
+    assert esperadas <= await _colunas(conn, "cortes")
+    assert esperadas <= await _colunas(conn, "corte_snapshots")
+
+
+@pytest.mark.asyncio
+async def test_migration_004_sem_tabelas_e_noop(conn):
+    """Banco cru (runner antes do create_all) atravessa a migration sem erro."""
+    from app.migrations import migration_004_campos_v2_cortes
+
+    await migration_004_campos_v2_cortes.upgrade(conn)  # não deve lançar

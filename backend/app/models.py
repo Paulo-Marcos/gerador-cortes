@@ -128,6 +128,16 @@ class Corte(Base):
     inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
     fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
     desvios: Mapped[str] = mapped_column(Text, default="[]")
+    # D-302: campos da proposta v2 da análise. `frase_gancho_*` é o ponto de
+    # entrada mais forte do argumento (borda inicial editorial); `contextualizacao`
+    # é a frase curta que situa o assunto (alimenta a 1ª cena, D-295; vazia =
+    # sem contextualização); `score_json` é o ranking relativo {hook, flow,
+    # value, total} entre os cortes da mesma análise. Vazios em análises de
+    # skills anteriores à v2 (back-compat).
+    frase_gancho_hms: Mapped[str] = mapped_column(String(20), default="")
+    frase_gancho_texto: Mapped[str] = mapped_column(Text, default="")
+    contextualizacao: Mapped[str] = mapped_column(Text, default="")
+    score_json: Mapped[str] = mapped_column(Text, default="{}")
     status: Mapped[str] = mapped_column(String(50), default=StatusCorte.PROPOSTO)
     arquivo_clip_path: Mapped[str] = mapped_column(String(1000), default="")
     # Duração real (em segundos) do `arquivo_clip_path`, medida via ffprobe
@@ -220,6 +230,12 @@ class CorteSnapshot(Base):
     inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
     fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
     desvios: Mapped[str] = mapped_column(Text, default="[]")
+    # D-302: espelho dos campos v2 da proposta (frase-gancho, contextualização,
+    # score) — a telemetria mede a proposta v2 contra o corte final.
+    frase_gancho_hms: Mapped[str] = mapped_column(String(20), default="")
+    frase_gancho_texto: Mapped[str] = mapped_column(Text, default="")
+    contextualizacao: Mapped[str] = mapped_column(Text, default="")
+    score_json: Mapped[str] = mapped_column(Text, default="{}")
     # Proveniência da análise que propôs o corte: "claude" (pipeline interno)
     # ou "manual" (paste de JSON de IA externa/n8n). Novos providers registram
     # o próprio rótulo aqui.

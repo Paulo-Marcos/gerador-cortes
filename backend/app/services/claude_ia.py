@@ -25,7 +25,7 @@ from app import editorial_scaffolds, editorial_skills
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.chunker import fatiar_transcricao
-from app.domain.diarizacao_align import prefixo_falante
+from app.domain.diarizacao_align import alinhar_falantes, prefixo_falante
 from app.domain.segment_calculator import normalizar_desvio
 from app.domain.time_convert import hms_to_seg, seg_to_hms_short
 from app.domain.transcricao_utils import dividir_segmentos_longos, limpar_e_ordenar_transcricao
@@ -418,8 +418,12 @@ class ClaudeIaService:
         """Regenera os trechos a remover (desvios) de um corte via Claude e
         ressincroniza a transcrição final. Usa a skill `trechos-expert`.
 
-        Para quando o usuário precisa refazer só os cortes de remoção de um
-        corte específico, sem reanalisar a live inteira.
+        D-302 (2ª passada revisável): além de ACRESCENTAR desvios novos, a
+        skill pode devolver `revisoes` — remoção/ajuste de desvios JÁ marcados
+        de origem IA ('claude'). Desvios manuais e técnicos nunca são tocados.
+        Em projeto diarizado, os chunks saem com o rótulo de falante
+        ([CANAL]/[OUTRO]) para a regra "pausa por troca de falante não é
+        enrolação" funcionar.
         """
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
@@ -434,17 +438,39 @@ class ClaudeIaService:
                 "inicio_hms": corte.inicio_hms or "",
                 "fim_hms": corte.fim_hms or "",
             }
-            # WHY: este botão SÓ ACRESCENTA trechos — nunca remove os existentes.
             desvios_existentes = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
+            # D-286/D-302: a transcricao_corte não guarda `speaker` — o rótulo
+            # vive na transcricao_raw do projeto; reanotamos antes do prompt.
+            projeto = await db.get(Projeto, corte.projeto_id)
+            mapa_falantes = (
+                _mapa_falantes_para_meta(projeto.falantes_map) if projeto is not None else None
+            )
+            transcricao_raw_projeto = (
+                _carregar_transcricao_raw(projeto.transcricao_raw, corte.projeto_id)
+                if mapa_falantes and projeto is not None and projeto.transcricao_raw
+                else []
+            )
 
-        desvios_novos = await ClaudeIaService._gerar_desvios(
-            transcricao_bruta, meta, desvios_existentes
+        if mapa_falantes and isinstance(transcricao_raw_projeto, list):
+            transcricao_bruta = ClaudeIaService._anotar_falantes_do_projeto(
+                transcricao_bruta, transcricao_raw_projeto
+            )
+
+        resultado = await ClaudeIaService._gerar_desvios(
+            transcricao_bruta, meta, desvios_existentes, mapa_falantes
+        )
+        # Revisões alcançam APENAS desvios de origem IA — manual/técnico ficam
+        # intactos por construção (_aplicar_revisoes ignora os demais).
+        existentes_revisados, removidos, ajustados = ClaudeIaService._aplicar_revisoes(
+            desvios_existentes, resultado["revisoes"]
         )
         # WHY: origem='claude' permite o frontend exibir o badge correto
-        # (Bug-2 do I-020). normalizar_desvio preserva campos extras via dict(d).
-        normalizados_novos = [normalizar_desvio({**d, "origem": "claude"}) for d in desvios_novos]
+        # (Bug-2 do I-020) e marca o desvio como revisável em passadas futuras.
+        normalizados_novos = [
+            normalizar_desvio({**d, "origem": "claude"}) for d in resultado["desvios"]
+        ]
         mesclados, adicionados = ClaudeIaService._mesclar_desvios(
-            desvios_existentes, normalizados_novos
+            existentes_revisados, normalizados_novos
         )
 
         async with AsyncSessionLocal() as db:
@@ -460,12 +486,20 @@ class ClaudeIaService:
         await CorteService.sincronizar_transcricao_corte(corte_id)
 
         logger.info(
-            "[ClaudeIA] Trechos via Claude p/ corte %s: +%d novos (total %d)",
+            "[ClaudeIA] Trechos via Claude p/ corte %s: +%d novos, -%d removidos, "
+            "%d ajustados (total %d)",
             corte_id[:8],
             adicionados,
+            removidos,
+            ajustados,
             len(mesclados),
         )
-        return {"total_desvios": len(mesclados), "novos": adicionados}
+        return {
+            "total_desvios": len(mesclados),
+            "novos": adicionados,
+            "removidos": removidos,
+            "ajustados": ajustados,
+        }
 
     @staticmethod
     def _mesclar_desvios(existentes: list, novos: list) -> tuple[list, int]:
@@ -494,13 +528,154 @@ class ClaudeIaService:
             adicionados += 1
         return mesclados, adicionados
 
+    # ── D-302: revisões da 2ª passada sobre desvios de origem IA ─────────────
+
+    # Só desvios com estas origens podem ser revisados pela trechos-expert;
+    # manual (sem origem) e 'tecnico' são intocáveis por política editorial.
+    _ORIGENS_REVISAVEIS = frozenset({"claude"})
+    # O modelo referencia o desvio pelos limites atuais; ±2s por borda ainda
+    # aponta para o MESMO desvio (mesma tolerância da telemetria D-303).
+    _TOLERANCIA_REF_REVISAO_SEG = 2.0
+
     @staticmethod
-    async def _gerar_desvios(transcricao_bruta: list, meta: dict, existentes: list) -> list:
+    def _eh_revisavel(desvio: dict) -> bool:
+        return (desvio.get("origem") or "") in ClaudeIaService._ORIGENS_REVISAVEIS
+
+    @staticmethod
+    def _aplicar_revisoes(existentes: list, revisoes: list) -> tuple[list, int, int]:
+        """Aplica as `revisoes` da trechos-expert sobre os desvios existentes.
+
+        `remover` tira o desvio referenciado da lista; `ajustar` substitui os
+        limites pelos novos (re-normalizados). A referência casa pelos limites
+        ATUAIS do desvio com tolerância de 2s por borda, e SÓ desvios de
+        origem IA são alcançáveis — revisão apontando para desvio protegido ou
+        inexistente é logada e ignorada. Retorna (lista, removidos, ajustados).
+        """
+        resultado = list(existentes)
+        removidos = 0
+        ajustados = 0
+        for revisao in revisoes or []:
+            acao = str(revisao.get("acao") or "").strip().lower()
+            if acao not in ("remover", "ajustar"):
+                logger.warning(
+                    "[ClaudeIA/trechos] revisão com ação desconhecida ignorada: %r", acao
+                )
+                continue
+            indice = ClaudeIaService._indice_desvio_referenciado(resultado, revisao)
+            if indice is None:
+                logger.info(
+                    "[ClaudeIA/trechos] revisão sem alvo revisável (%s %s→%s) — ignorada",
+                    acao,
+                    revisao.get("inicio_hms"),
+                    revisao.get("fim_hms"),
+                )
+                continue
+            alvo = resultado[indice]
+            if acao == "remover":
+                del resultado[indice]
+                removidos += 1
+                logger.info(
+                    "[ClaudeIA/trechos] revisão REMOVEU desvio %s→%s: %s",
+                    alvo.get("inicio_hms"),
+                    alvo.get("fim_hms"),
+                    revisao.get("motivo", ""),
+                )
+                continue
+            ajustado = ClaudeIaService._desvio_com_limites_ajustados(alvo, revisao)
+            if ajustado is None:
+                continue
+            resultado[indice] = ajustado
+            ajustados += 1
+            logger.info(
+                "[ClaudeIA/trechos] revisão AJUSTOU desvio %s→%s para %s→%s: %s",
+                alvo.get("inicio_hms"),
+                alvo.get("fim_hms"),
+                ajustado.get("inicio_hms"),
+                ajustado.get("fim_hms"),
+                revisao.get("motivo", ""),
+            )
+        return resultado, removidos, ajustados
+
+    @staticmethod
+    def _indice_desvio_referenciado(desvios: list, revisao: dict) -> int | None:
+        """Índice do desvio REVISÁVEL cujos limites atuais casam com a
+        referência da revisão (±2s por borda); None quando não há alvo."""
+        referencia = normalizar_desvio(
+            {
+                chave: revisao.get(chave)
+                for chave in ("inicio_hms", "fim_hms", "inicio_seg", "fim_seg")
+                if revisao.get(chave) not in (None, "")
+            }
+        )
+        ref_inicio = referencia.get("inicio_seg")
+        ref_fim = referencia.get("fim_seg")
+        if ref_inicio is None or ref_fim is None:
+            return None
+        tolerancia = ClaudeIaService._TOLERANCIA_REF_REVISAO_SEG
+        for indice, desvio in enumerate(desvios):
+            if not ClaudeIaService._eh_revisavel(desvio):
+                continue
+            if (
+                abs(_to_seg(desvio.get("inicio_seg") or 0) - ref_inicio) <= tolerancia
+                and abs(_to_seg(desvio.get("fim_seg") or 0) - ref_fim) <= tolerancia
+            ):
+                return indice
+        return None
+
+    @staticmethod
+    def _desvio_com_limites_ajustados(desvio: dict, revisao: dict) -> dict | None:
+        """Cópia do desvio com os novos limites da revisão (re-normalizada).
+        Ajuste sem nenhum limite novo não tem o que aplicar → None (logado)."""
+        novo_inicio = str(revisao.get("novo_inicio_hms") or "").strip()
+        novo_fim = str(revisao.get("novo_fim_hms") or "").strip()
+        if not novo_inicio and not novo_fim:
+            logger.warning(
+                "[ClaudeIA/trechos] revisão 'ajustar' sem novo_inicio_hms/novo_fim_hms — ignorada"
+            )
+            return None
+        return normalizar_desvio(
+            {
+                **desvio,
+                "inicio_hms": novo_inicio or desvio.get("inicio_hms"),
+                "fim_hms": novo_fim or desvio.get("fim_hms"),
+            }
+        )
+
+    @staticmethod
+    def _anotar_falantes_do_projeto(transcricao_bruta: list, transcricao_raw: list) -> list:
+        """D-302: reanota o `speaker` nos segmentos do corte a partir da
+        transcrição diarizada do projeto.
+
+        A sincronização do corte (`transcricao_corte`) guarda só
+        start/end/texto — o rótulo de falante vive na `transcricao_raw`. Os
+        segmentos diarizados do projeto funcionam como turnos para
+        `alinhar_falantes` (mesmo casamento por sobreposição da ingestão).
+        """
+        turnos = []
+        for seg in transcricao_raw:
+            if not isinstance(seg, dict) or not seg.get("speaker"):
+                continue
+            inicio = _to_seg(seg.get("inicio", seg.get("start", 0)))
+            fim = _to_seg(seg.get("fim", seg.get("end", inicio)))
+            turnos.append({"start": inicio, "end": fim, "speaker": seg["speaker"]})
+        if not turnos:
+            return transcricao_bruta
+        return alinhar_falantes(transcricao_bruta, turnos)
+
+    @staticmethod
+    async def _gerar_desvios(
+        transcricao_bruta: list,
+        meta: dict,
+        existentes: list,
+        mapa_falantes: dict | None = None,
+    ) -> dict:
         # WHY: o prompt antigo (minimalista) sub-extraía desvios (~3 por corte longo).
         # Reaproveitamos o pipeline rico do fluxo "manual IA": limpamos+granularizamos
         # a transcrição, chunkificamos em partes (~40min com 5min de overlap) e mandamos
         # cada chunk com regras explícitas. Empata em qualidade com PROMPT_ANALISAR_DESVIOS
         # mas pede saída com a chave `desvios` (compatível com a skill trechos-expert).
+        # D-302: retorna {"desvios": [...], "revisoes": [...]} — as revisões agregadas
+        # de todos os chunks; o caller decide como aplicá-las.
         transcricao_limpa = limpar_e_ordenar_transcricao(transcricao_bruta)
         transcricao_granular = dividir_segmentos_longos(
             transcricao_limpa, max_duracao=4.0, max_palavras=6
@@ -516,8 +691,9 @@ class ClaudeIaService:
         skill = editorial_skills.resolver_skill(_SKILL_TRECHOS)
 
         novos: list = []
+        revisoes: list = []
         for indice, chunk in enumerate(chunks):
-            texto_chunk = ClaudeIaService._formatar_chunk_para_prompt(chunk)
+            texto_chunk = ClaudeIaService._formatar_chunk_para_prompt(chunk, mapa_falantes)
             prompt = ClaudeIaService._montar_prompt_trechos(
                 texto_chunk, cabecalho_meta, indice + 1, len(chunks)
             )
@@ -529,29 +705,44 @@ class ClaudeIaService:
             # devolver `trechos` (chave do fluxo manual). Aceitamos ambos.
             chunk_desvios = resultado.get("desvios") or resultado.get("trechos") or []
             novos.extend(chunk_desvios)
+            revisoes.extend(resultado.get("revisoes") or [])
             logger.info(
-                "[ClaudeIA/trechos] chunk %d/%d: %d trechos em %.1fs",
+                "[ClaudeIA/trechos] chunk %d/%d: %d trechos, %d revisões em %.1fs",
                 indice + 1,
                 len(chunks),
                 len(chunk_desvios),
+                len(resultado.get("revisoes") or []),
                 time.perf_counter() - t,
             )
 
-        return novos
+        return {"desvios": novos, "revisoes": revisoes}
 
     @staticmethod
     def _cabecalho_meta_corte(meta: dict, existentes: list) -> str:
         """Bloco de contexto editorial do corte — repetido em cada chunk para
-        evitar que a IA confunda desvio com tese central."""
+        evitar que a IA confunda desvio com tese central.
+
+        D-302: cada desvio já marcado sai rotulado por revisabilidade —
+        [REVISÁVEL] (origem IA, alcançável pela chave `revisoes`) ou
+        [PROTEGIDO] (manual/técnico, intocável) — e o bloco fixa o contrato
+        de `revisoes` que o corpo da skill (trechos-expert v2) descreve.
+        """
         ja_marcados = ""
         if existentes:
             linhas = "\n".join(
-                f"- {d.get('inicio_hms', '')} → {d.get('fim_hms', '')} ({d.get('motivo', '')})"
+                f"- {d.get('inicio_hms', '')} → {d.get('fim_hms', '')} ({d.get('motivo', '')}) "
+                + ("[REVISÁVEL]" if ClaudeIaService._eh_revisavel(d) else "[PROTEGIDO]")
                 for d in existentes
             )
             ja_marcados = (
-                "\n=== TRECHOS JÁ MARCADOS (NÃO repita estes; proponha APENAS NOVOS) ===\n"
+                "\n=== TRECHOS JÁ MARCADOS (não repita; proponha APENAS NOVOS em `desvios`) ===\n"
                 f"{linhas}\n"
+                "Os [REVISÁVEL] vieram de passada anterior de IA: se algum estiver errado "
+                "(remove trecho que sustenta o argumento, borda mal colocada, quebra a "
+                "cadeia lógica), proponha a correção na chave `revisoes` da resposta — "
+                'itens {"acao": "remover"|"ajustar", "inicio_hms"/"fim_hms" ATUAIS do '
+                'desvio, "novo_inicio_hms"/"novo_fim_hms" quando ajustar, "motivo"}. '
+                "NUNCA proponha revisão de um [PROTEGIDO].\n"
             )
         return (
             "=== CORTE EM REVISÃO ===\n"
@@ -562,13 +753,16 @@ class ClaudeIaService:
         )
 
     @staticmethod
-    def _formatar_chunk_para_prompt(chunk: list) -> str:
+    def _formatar_chunk_para_prompt(chunk: list, mapa_falantes: dict | None = None) -> str:
+        """Formata `(hms) [FALANTE] texto`. D-302: com mapa de falantes, prefixa
+        o rótulo [CANAL]/[OUTRO]; sem mapa, saída idêntica ao formato antigo."""
         linhas = []
         for item in chunk:
             inicio = item.get("start", item.get("inicio", 0))
             texto = str(item.get("texto", item.get("text", ""))).strip()
             if texto:
-                linhas.append(f"({seg_to_hms_short(float(inicio))}) {texto}")
+                prefixo = prefixo_falante(item.get("speaker"), mapa_falantes)
+                linhas.append(f"({seg_to_hms_short(float(inicio))}) {prefixo}{texto}")
         return "\n".join(linhas)
 
     @staticmethod

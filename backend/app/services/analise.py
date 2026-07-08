@@ -49,8 +49,41 @@ def _snapshot_da_proposta(corte: Corte, origem: str) -> CorteSnapshot:
         inicio_seg=corte.inicio_seg or 0.0,
         fim_seg=corte.fim_seg or 0.0,
         desvios=corte.desvios or "[]",
+        frase_gancho_hms=corte.frase_gancho_hms or "",
+        frase_gancho_texto=corte.frase_gancho_texto or "",
+        contextualizacao=corte.contextualizacao or "",
+        score_json=corte.score_json or "{}",
         origem_analise=origem,
     )
+
+
+def _campos_v2_da_proposta(corte_data: dict) -> dict:
+    """D-302: extrai os campos da proposta v2 (frase_gancho, contextualizacao,
+    score) com tolerância total à ausência — skills anteriores à v2 seguem
+    importando normalmente, com os campos vazios.
+    """
+    gancho = corte_data.get("frase_gancho")
+    if not isinstance(gancho, dict):
+        gancho = {}
+    score = corte_data.get("score")
+    return {
+        "frase_gancho_hms": str(gancho.get("hms") or "").strip(),
+        "frase_gancho_texto": str(gancho.get("texto") or "").strip(),
+        "contextualizacao": str(corte_data.get("contextualizacao") or "").strip(),
+        "score_json": json.dumps(score, ensure_ascii=False) if isinstance(score, dict) else "{}",
+    }
+
+
+def _com_origem_de_analise(desvio: dict, origem: str) -> dict:
+    """D-302: desvio proposto pela análise interna herda `origem='claude'` — é
+    o que o torna revisável pela 2ª passada (trechos-expert) e o conta como
+    IA na telemetria. Import manual (`origem='manual'`) fica sem rótulo (o
+    editor assume a proveniência ⇒ protegido de revisão), e um desvio que já
+    traga `origem` própria é respeitado.
+    """
+    if desvio.get("origem") or origem != "claude":
+        return desvio
+    return {**desvio, "origem": "claude"}
 
 
 PROMPT_ANALISE_TRANSCRICAO = """\
@@ -482,6 +515,11 @@ class AnaliseService:
         o default é "claude" porque o único caller que não passa o parâmetro é
         o pipeline interno (ClaudeIaService) — os endpoints de import manual
         passam "manual" explicitamente.
+
+        D-302: os campos v2 da proposta (frase_gancho, contextualizacao, score)
+        são persistidos quando presentes e tolerados quando ausentes (skills
+        anteriores à v2). Desvios de análise `origem="claude"` recebem esse
+        rótulo de origem — pré-requisito do merge revisável da 2ª passada.
         """
         async with AsyncSessionLocal() as db:
             # Continua a numeração a partir do MAIOR número já usado — robusto a
@@ -498,7 +536,8 @@ class AnaliseService:
 
             for i, corte_data in enumerate(cortes_data):
                 desvios_normalizados = [
-                    _normalizar_desvio(d) for d in corte_data.get("desvios", [])
+                    _normalizar_desvio(_com_origem_de_analise(d, origem))
+                    for d in corte_data.get("desvios", [])
                 ]
 
                 # Computa inicio_seg/fim_seg a partir de HMS se não fornecidos
@@ -527,6 +566,7 @@ class AnaliseService:
                     inicio_seg=inicio_seg,
                     fim_seg=fim_seg,
                     desvios=json.dumps(desvios_normalizados, ensure_ascii=False),
+                    **_campos_v2_da_proposta(corte_data),
                 )
                 db.add(corte)
                 db.add(_snapshot_da_proposta(corte, origem))
@@ -622,7 +662,8 @@ class AnaliseService:
         async with AsyncSessionLocal() as db:
             for i, corte_data in enumerate(cortes_data):
                 desvios_normalizados = [
-                    _normalizar_desvio(d) for d in corte_data.get("desvios", [])
+                    _normalizar_desvio(_com_origem_de_analise(d, "claude"))
+                    for d in corte_data.get("desvios", [])
                 ]
 
                 # Computa inicio_seg/fim_seg a partir de HMS se não fornecidos
@@ -650,6 +691,7 @@ class AnaliseService:
                     inicio_seg=inicio_seg,
                     fim_seg=fim_seg,
                     desvios=json.dumps(desvios_normalizados, ensure_ascii=False),
+                    **_campos_v2_da_proposta(corte_data),
                 )
                 db.add(corte)
                 # D-303: intervalo também é proposta de IA (via Claude) — congela.

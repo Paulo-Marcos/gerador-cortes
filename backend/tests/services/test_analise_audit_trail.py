@@ -377,6 +377,133 @@ async def test_analisar_intervalo_sem_diarizacao_falantes_map_none(monkeypatch):
     assert capturado["meta"]["falantes_map"] is None
 
 
+# ── D-302: campos v2 da proposta (frase_gancho, contextualizacao, score) ────
+
+
+@pytest.mark.asyncio
+async def test_importar_resultado_persiste_campos_v2_no_corte_e_no_snapshot(monkeypatch):
+    """Proposta v2 completa → frase_gancho/contextualizacao/score chegam ao
+    Corte e são congelados no CorteSnapshot (telemetria mede a proposta v2)."""
+    factory, _projeto, cortes, sess = _mock_db_factory()
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    await AnaliseService.importar_resultado(
+        "p-v2",
+        [
+            {
+                "titulo_proposto": "A",
+                "inicio_hms": "00:05:00",
+                "fim_hms": "00:20:00",
+                "frase_gancho": {"hms": "00:05:12", "texto": "a frase mais forte"},
+                "contextualizacao": "Sobre o último jogo do Flamengo…",
+                "score": {"hook": 8, "flow": 7, "value": 9, "total": 24},
+            }
+        ],
+    )
+
+    corte = cortes[0]
+    assert corte.frase_gancho_hms == "00:05:12"
+    assert corte.frase_gancho_texto == "a frase mais forte"
+    assert corte.contextualizacao == "Sobre o último jogo do Flamengo…"
+    assert json.loads(corte.score_json) == {"hook": 8, "flow": 7, "value": 9, "total": 24}
+
+    snap = sess.snapshots_capturados[0]
+    assert snap.frase_gancho_hms == "00:05:12"
+    assert snap.frase_gancho_texto == "a frase mais forte"
+    assert snap.contextualizacao == "Sobre o último jogo do Flamengo…"
+    assert json.loads(snap.score_json) == {"hook": 8, "flow": 7, "value": 9, "total": 24}
+
+
+@pytest.mark.asyncio
+async def test_importar_resultado_tolera_ausencia_dos_campos_v2(monkeypatch):
+    """Back-compat: skill anterior à v2 (sem os campos novos, ou com
+    contextualizacao=null) importa normalmente com defaults vazios."""
+    factory, _projeto, cortes, sess = _mock_db_factory()
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    await AnaliseService.importar_resultado(
+        "p-v1",
+        [
+            {
+                "titulo_proposto": "A",
+                "inicio_hms": "00:05:00",
+                "fim_hms": "00:20:00",
+                "contextualizacao": None,  # v2 explícito: sem contextualização
+            },
+            {
+                "titulo_proposto": "B",
+                "inicio_hms": "00:25:00",
+                "fim_hms": "00:40:00",
+                "frase_gancho": "string errada",  # tipo inesperado → ignora
+                "score": [1, 2, 3],  # tipo inesperado → ignora
+            },
+        ],
+    )
+
+    for corte in cortes:
+        assert corte.frase_gancho_hms == ""
+        assert corte.frase_gancho_texto == ""
+        assert corte.contextualizacao == ""
+        assert corte.score_json == "{}"
+    assert sess.snapshots_capturados[0].score_json == "{}"
+
+
+@pytest.mark.asyncio
+async def test_importar_resultado_rotula_desvios_da_analise_claude(monkeypatch):
+    """D-302: desvio proposto pela análise interna (origem='claude') herda
+    origem='claude' — pré-requisito do merge revisável da 2ª passada. Desvio
+    que já traz origem própria é respeitado."""
+    factory, _projeto, cortes, _sess = _mock_db_factory()
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    await AnaliseService.importar_resultado(
+        "p-origem",
+        [
+            {
+                "titulo_proposto": "A",
+                "inicio_hms": "00:05:00",
+                "fim_hms": "00:20:00",
+                "desvios": [
+                    {"inicio_hms": "00:06:00", "fim_hms": "00:06:30", "motivo": "vinheta"},
+                    {
+                        "inicio_hms": "00:08:00",
+                        "fim_hms": "00:08:20",
+                        "motivo": "silêncio",
+                        "origem": "tecnico",
+                    },
+                ],
+            }
+        ],
+    )
+
+    desvios = json.loads(cortes[0].desvios)
+    assert desvios[0]["origem"] == "claude"
+    assert desvios[1]["origem"] == "tecnico", "origem própria do desvio é respeitada"
+
+
+@pytest.mark.asyncio
+async def test_importar_resultado_manual_nao_rotula_desvios(monkeypatch):
+    """Import manual (paste de IA externa): o editor assume a proveniência —
+    desvios ficam SEM origem (contam como manuais e protegidos de revisão)."""
+    factory, _projeto, cortes, _sess = _mock_db_factory()
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+
+    await AnaliseService.importar_resultado(
+        "p-manual",
+        [
+            {
+                "titulo_proposto": "A",
+                "inicio_hms": "00:05:00",
+                "fim_hms": "00:20:00",
+                "desvios": [{"inicio_hms": "00:06:00", "fim_hms": "00:06:30", "motivo": "vinheta"}],
+            }
+        ],
+        origem="manual",
+    )
+
+    assert "origem" not in json.loads(cortes[0].desvios)[0]
+
+
 # ── D-303: snapshot imutável da proposta da IA ──────────────────────────────
 
 

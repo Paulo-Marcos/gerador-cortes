@@ -477,13 +477,18 @@ class TestTrechos:
         )
         assert "PARTE 2 de 3" in prompt
 
-    def test_gerar_desvios_retorna_lista_do_json(self, monkeypatch):
+    def test_gerar_desvios_retorna_desvios_e_revisoes_do_json(self, monkeypatch):
+        """D-302: o retorno agrega `desvios` E `revisoes` de todos os chunks;
+        resposta sem `revisoes` (skill antiga) vira lista vazia."""
         fake = _FakeGenerate(
-            {"desvios": [{"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}]}
+            {
+                "desvios": [{"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}],
+                "revisoes": [{"acao": "remover", "inicio_hms": "00:15:00", "fim_hms": "00:15:20"}],
+            }
         )
         monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
 
-        desvios = asyncio.run(
+        resultado = asyncio.run(
             ClaudeIaService._gerar_desvios(
                 [{"start": 0, "end": 4, "texto": "x"}],
                 {
@@ -497,7 +502,29 @@ class TestTrechos:
         )
 
         assert fake.chamadas == 1
-        assert desvios == [{"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}]
+        assert resultado["desvios"] == [
+            {"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}
+        ]
+        assert resultado["revisoes"] == [
+            {"acao": "remover", "inicio_hms": "00:15:00", "fim_hms": "00:15:20"}
+        ]
+
+    def test_gerar_desvios_sem_revisoes_retorna_lista_vazia(self, monkeypatch):
+        """Back-compat: skill que só devolve `desvios` não quebra o fluxo."""
+        fake = _FakeGenerate(
+            {"desvios": [{"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}]}
+        )
+        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
+
+        resultado = asyncio.run(
+            ClaudeIaService._gerar_desvios(
+                [{"start": 0, "end": 4, "texto": "x"}],
+                {"titulo": "C", "tema_central": "t", "inicio_hms": "0", "fim_hms": "0"},
+                [],
+            )
+        )
+
+        assert resultado["revisoes"] == []
 
     def test_mesclar_desvios_so_adiciona_nao_remove(self):
         existentes = [
@@ -519,6 +546,174 @@ class TestTrechos:
         # nenhum existente foi removido
         motivos = [d["motivo"] for d in mesclados]
         assert "manual A" in motivos and "manual B" in motivos and "claude novo" in motivos
+
+
+# ── D-302: merge revisável (revisões sobre desvios de origem IA) ────────────────
+
+
+def _desvio(inicio_hms: str, fim_hms: str, motivo: str, origem: str | None = None) -> dict:
+    from app.domain.segment_calculator import normalizar_desvio
+
+    bruto = {"inicio_hms": inicio_hms, "fim_hms": fim_hms, "motivo": motivo}
+    if origem:
+        bruto["origem"] = origem
+    return normalizar_desvio(bruto)
+
+
+class TestAplicarRevisoes:
+    """D-302: `_aplicar_revisoes` remove/ajusta APENAS desvios de origem IA
+    ('claude'); manual (sem origem) e 'tecnico' são intocáveis."""
+
+    def test_remover_desvio_de_origem_claude(self):
+        existentes = [
+            _desvio("00:05:00", "00:05:30", "chat", origem="claude"),
+            _desvio("00:10:00", "00:10:20", "tangente", origem="claude"),
+        ]
+        revisoes = [
+            {
+                "acao": "remover",
+                "inicio_hms": "00:05:00",
+                "fim_hms": "00:05:30",
+                "motivo": "trecho sustenta o argumento",
+            }
+        ]
+
+        resultado, removidos, ajustados = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+
+        assert removidos == 1 and ajustados == 0
+        assert [d["motivo"] for d in resultado] == ["tangente"]
+
+    def test_ajustar_substitui_limites_e_renormaliza(self):
+        existentes = [_desvio("00:05:00", "00:06:00", "repetição", origem="claude")]
+        revisoes = [
+            {
+                "acao": "ajustar",
+                "inicio_hms": "00:05:00",
+                "fim_hms": "00:06:00",
+                "novo_inicio_hms": "00:05:10",
+                "novo_fim_hms": "00:05:50",
+                "motivo": "borda comia o fim da frase",
+            }
+        ]
+
+        resultado, removidos, ajustados = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+
+        assert removidos == 0 and ajustados == 1
+        # normalizar_desvio canonicaliza o HMS com milissegundos (.000)
+        assert resultado[0]["inicio_hms"].startswith("00:05:10")
+        assert resultado[0]["fim_hms"].startswith("00:05:50")
+        # limites em segundos re-normalizados a partir dos novos HMS
+        assert resultado[0]["inicio_seg"] == 310.0
+        assert resultado[0]["fim_seg"] == 350.0
+        # origem preservada — o desvio segue revisável em passadas futuras
+        assert resultado[0]["origem"] == "claude"
+
+    def test_nao_toca_desvio_manual_nem_tecnico(self):
+        existentes = [
+            _desvio("00:05:00", "00:05:30", "marcado pelo editor"),  # sem origem = manual
+            _desvio("00:10:00", "00:10:20", "silêncio detectado", origem="tecnico"),
+        ]
+        revisoes = [
+            {"acao": "remover", "inicio_hms": "00:05:00", "fim_hms": "00:05:30", "motivo": "x"},
+            {
+                "acao": "ajustar",
+                "inicio_hms": "00:10:00",
+                "fim_hms": "00:10:20",
+                "novo_inicio_hms": "00:10:05",
+                "novo_fim_hms": "00:10:20",
+                "motivo": "y",
+            },
+        ]
+
+        resultado, removidos, ajustados = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+
+        assert removidos == 0 and ajustados == 0, "manual/técnico nunca são alcançados"
+        assert resultado == existentes
+
+    def test_referencia_com_tolerancia_de_2s(self):
+        # O modelo citou 00:05:01 para um desvio que começa em 00:05:00 → mesmo desvio.
+        existentes = [_desvio("00:05:00", "00:05:30", "chat", origem="claude")]
+        revisoes = [
+            {"acao": "remover", "inicio_hms": "00:05:01", "fim_hms": "00:05:29", "motivo": "x"}
+        ]
+
+        resultado, removidos, _ = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+
+        assert removidos == 1 and resultado == []
+
+    def test_revisao_sem_alvo_ou_malformada_e_ignorada(self):
+        existentes = [_desvio("00:05:00", "00:05:30", "chat", origem="claude")]
+        revisoes = [
+            # referência longe de qualquer desvio (> 2s)
+            {"acao": "remover", "inicio_hms": "00:20:00", "fim_hms": "00:20:30", "motivo": "x"},
+            # ação desconhecida
+            {"acao": "explodir", "inicio_hms": "00:05:00", "fim_hms": "00:05:30"},
+            # ajustar sem novos limites
+            {"acao": "ajustar", "inicio_hms": "00:05:00", "fim_hms": "00:05:30", "motivo": "y"},
+            # sem referência nenhuma
+            {"acao": "remover", "motivo": "z"},
+        ]
+
+        resultado, removidos, ajustados = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+
+        assert removidos == 0 and ajustados == 0
+        assert resultado == existentes
+
+
+class TestTrechosComFalantes:
+    """D-302: em projeto diarizado, os chunks do prompt de trechos saem com o
+    rótulo [CANAL]/[OUTRO] (regra: pausa por troca de falante ≠ enrolação)."""
+
+    _MAPA = {
+        "SPEAKER_00": {"nome": "Pedro", "is_canal": True},
+        "SPEAKER_01": {"nome": "", "is_canal": False},
+    }
+
+    def test_formatar_chunk_prefixa_falante_com_mapa(self):
+        chunk = [
+            {"start": 0, "end": 4, "texto": "fala do host", "speaker": "SPEAKER_00"},
+            {"start": 10, "end": 14, "texto": "fala reagida", "speaker": "SPEAKER_01"},
+        ]
+        texto = ClaudeIaService._formatar_chunk_para_prompt(chunk, self._MAPA)
+        assert "(00:00:00) [CANAL: Pedro] fala do host" in texto
+        assert "(00:00:10) [OUTRO] fala reagida" in texto
+
+    def test_formatar_chunk_sem_mapa_sai_identico_ao_formato_antigo(self):
+        chunk = [{"start": 0, "end": 4, "texto": "fala", "speaker": "SPEAKER_00"}]
+        assert ClaudeIaService._formatar_chunk_para_prompt(chunk) == "(00:00:00) fala"
+
+    def test_anotar_falantes_reaproveita_diarizacao_do_projeto(self):
+        # transcricao_corte não guarda speaker; a raw do projeto (diarizada) sim.
+        transcricao_bruta = [{"start": 5.0, "end": 8.0, "texto": "fala"}]
+        transcricao_raw = [
+            {"inicio": "00:00:00", "fim": "00:00:04", "texto": "x", "speaker": "SPEAKER_01"},
+            {"inicio": "00:00:04", "fim": "00:00:12", "texto": "fala", "speaker": "SPEAKER_00"},
+        ]
+        anotada = ClaudeIaService._anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw)
+        assert anotada[0]["speaker"] == "SPEAKER_00"
+
+    def test_anotar_falantes_sem_diarizacao_devolve_intacto(self):
+        transcricao_bruta = [{"start": 5.0, "end": 8.0, "texto": "fala"}]
+        transcricao_raw = [{"inicio": "00:00:00", "fim": "00:00:04", "texto": "x"}]  # sem speaker
+        assert (
+            ClaudeIaService._anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw)
+            is transcricao_bruta
+        )
+
+    def test_cabecalho_rotula_revisavel_e_protegido(self):
+        existentes = [
+            _desvio("00:05:00", "00:05:30", "chat", origem="claude"),
+            _desvio("00:10:00", "00:10:20", "manual do editor"),
+        ]
+        cabecalho = ClaudeIaService._cabecalho_meta_corte(
+            {"titulo": "C", "tema_central": "t", "inicio_hms": "00:00:00", "fim_hms": "00:30:00"},
+            existentes,
+        )
+        assert "(chat) [REVISÁVEL]" in cabecalho
+        assert "(manual do editor) [PROTEGIDO]" in cabecalho
+        # o contrato da chave `revisoes` está declarado no bloco
+        assert '"acao": "remover"|"ajustar"' in cabecalho
+        assert "NUNCA proponha revisão de um [PROTEGIDO]" in cabecalho
 
 
 # ── Fase 3: cenas e metadados via Claude ────────────────────────────────────────
