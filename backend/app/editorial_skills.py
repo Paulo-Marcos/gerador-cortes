@@ -33,7 +33,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import channel_paths
+from app import channel_paths, editorial_corpos_legados
 from app.channel_paths import editorial_dir
 from app.config import settings
 from app.domain import variacao_prompt
@@ -582,20 +582,63 @@ def _migrar_linha_d301(cat: SkillCatalogo, db: Path, cid: str, linha: dict) -> N
     )
 
 
+# --------------------------------------------------------------------------- #
+# Migração pontual D-311: o redesign v2 CONCRETO de cortador/trechos (D-302) foi
+# aplicado só como DADO DE RUNTIME (via `definir_skill`/UI), que não viaja no
+# deploy git. Como `claude_ia` usa o corpo do BANCO por canal como `expertise`,
+# o canal de produção ficou nos corpos concretos pré-v2. Esta migração de código
+# troca o corpo concreto ANTIGO pelo v2 concreto — só quando o corpo gravado bate
+# EXATAMENTE com um default concreto superado conhecido (ver
+# `editorial_corpos_legados`). Corpo genérico (install de terceiro) e customização
+# real não batem e são preservados; o v2 não pertence ao conjunto → idempotente.
+# --------------------------------------------------------------------------- #
+
+
+def _migrar_corpo_v2_concreto(
+    cat: SkillCatalogo, db: Path, cid: str, linha: dict, editorial_root: Path | None
+) -> None:
+    """Substitui o corpo por `CORPOS_V2[cat.key]` quando o corpo JÁ gravado é um
+    default concreto superado conhecido; espelha o novo corpo no `.md`.
+
+    No-op para skills fora de {cortador, trechos} (sem entrada em
+    `CORPOS_SUPERADOS`), para corpos genéricos/customizados (não estão no conjunto)
+    e — por consequência — na segunda passada (o v2 não é um superado).
+    """
+    superados = editorial_corpos_legados.CORPOS_SUPERADOS.get(cat.key)
+    if not superados:
+        return
+    if (linha.get("corpo") or "").strip() not in superados:
+        return
+    novo_corpo = editorial_corpos_legados.CORPOS_V2[cat.key]
+    settings_store.gravar_skill(
+        db,
+        cid,
+        cat.key,
+        {
+            "corpo": novo_corpo,
+            "params_json": linha.get("params_json") or "{}",
+            "lentes_json": linha.get("lentes_json") or "[]",
+        },
+    )
+    _espelhar_corpo_no_md(cat, novo_corpo, editorial_root)
+
+
 def migrar_skills_do_canal_ativo(
     *,
     db_path: Path | None = None,
     channel_id: str | None = None,
+    editorial_root: Path | None = None,
 ) -> int:
     """Semeia no banco as skills do canal ativo que ainda não têm linha (boot) e,
-    nas que já existem, roda as migrações pontuais D-300 (thinking/timeout) e
-    D-301 (lentes de cortes).
+    nas que já existem, roda as migrações pontuais D-300 (thinking/timeout),
+    D-301 (lentes de cortes) e D-311 (corpo concreto pré-v2 → v2 concreto).
 
-    Idempotente: só semeia o que falta e só migra o que ainda está no default
-    antigo. Retorna quantas skills foram SEMEADAS (as migrações pontuais
+    Idempotente: só semeia o que falta e só migra o que ainda está num default
+    superado. Retorna quantas skills foram SEMEADAS (as migrações pontuais
     ajustam linhas já existentes e não contam para esse total). Best-effort —
     pensada para o lifespan, no mesmo espírito de
-    `channels.migrar_identidades_para_banco`.
+    `channels.migrar_identidades_para_banco`. `editorial_root` isola testes do
+    `instance/` real (default = diretório editorial do canal ativo).
     """
     db, cid = _resolver_db_e_canal(db_path, channel_id)
     existentes = settings_store.ler_skills_do_canal(db, cid)
@@ -603,13 +646,15 @@ def migrar_skills_do_canal_ativo(
     for cat in _CATALOGO:
         linha = existentes.get(cat.key)
         if linha is None:
-            _semear(cat, db, cid, None)
+            _semear(cat, db, cid, editorial_root)
             semeadas += 1
             continue
         _migrar_linha_d300(cat, db, cid, linha)
-        # Relê após D-300: D-300 pode ter mudado params_json da MESMA linha
-        # (cortador-expert é alcançado pelas duas migrações) — a D-301 precisa
-        # gravar sobre o estado JÁ migrado, não sobre a linha pré-D-300 stale.
-        linha_atual = settings_store.ler_skill(db, cid, cat.key) or linha
-        _migrar_linha_d301(cat, db, cid, linha_atual)
+        # Relê após cada migração: uma pode ter reescrito params_json/lentes_json
+        # da MESMA linha (cortador-expert é alcançado por todas) — a próxima deve
+        # gravar sobre o estado JÁ migrado, não sobre a linha stale.
+        linha = settings_store.ler_skill(db, cid, cat.key) or linha
+        _migrar_linha_d301(cat, db, cid, linha)
+        linha = settings_store.ler_skill(db, cid, cat.key) or linha
+        _migrar_corpo_v2_concreto(cat, db, cid, linha, editorial_root)
     return semeadas

@@ -11,8 +11,10 @@ genéricos vêm de `examples/instance.example/editorial` e `config.settings` rea
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
+from app import editorial_corpos_legados as legados
 from app import editorial_skills
 from app.config import settings
 from app.services import settings_store
@@ -392,6 +394,142 @@ def test_migracao_d301_e_idempotente(tmp_path: Path):
 
     cortes = editorial_skills.resolver_skill("cortador-expert", db_path=db, channel_id=_CANAL)
     assert cortes.lentes == []
+
+
+_ARQUIVO = {"cortador-expert": "cortes.md", "trechos-expert": "trechos.md"}
+
+
+def _semear_corpo(db: Path, skill_key: str, corpo: str) -> None:
+    """Grava uma linha com um CORPO específico (params/lentes fixos, para checar
+    que a migração D-311 mexe só no corpo)."""
+    settings_store.gravar_skill(
+        db,
+        _CANAL,
+        skill_key,
+        {
+            "corpo": corpo,
+            "params_json": json.dumps({"modelo": "opus", "thinking_tokens": 123, "timeout": 300.0}),
+            "lentes_json": json.dumps([]),
+        },
+    )
+
+
+def test_d311_corpo_concreto_superado_vira_v2_limpo(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+    # Cada default concreto superado conhecido (todas as variantes históricas)
+    # deve convergir para o v2 concreto, em cortador e trechos.
+    for skill_key in ("cortador-expert", "trechos-expert"):
+        for antigo in legados.CORPOS_SUPERADOS[skill_key]:
+            _semear_corpo(db, skill_key, antigo)
+            editorial_skills.migrar_skills_do_canal_ativo(
+                db_path=db, channel_id=_CANAL, editorial_root=editorial
+            )
+            skill = editorial_skills.resolver_skill(
+                skill_key, db_path=db, channel_id=_CANAL, editorial_root=editorial
+            )
+            assert skill.corpo == legados.CORPOS_V2[skill_key]
+            # Params intocados (a migração mexe só no corpo).
+            assert skill.thinking_tokens == 123
+            # Espelho .md reescrito com o v2.
+            espelho = (editorial / _ARQUIVO[skill_key]).read_text(encoding="utf-8").strip()
+            assert espelho == legados.CORPOS_V2[skill_key]
+
+
+def test_d311_corpo_generico_e_preservado(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+    # Corpo GENÉRICO (template dos examples) NÃO está no conjunto de superados
+    # concretos → install de terceiro permanece genérico.
+    for skill_key in ("cortador-expert", "trechos-expert"):
+        cat = editorial_skills._exigir_catalogo(skill_key)
+        generico = editorial_skills._default_corpo(cat, None)
+        _semear_corpo(db, skill_key, generico)
+
+    editorial_skills.migrar_skills_do_canal_ativo(
+        db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+
+    for skill_key in ("cortador-expert", "trechos-expert"):
+        cat = editorial_skills._exigir_catalogo(skill_key)
+        skill = editorial_skills.resolver_skill(
+            skill_key, db_path=db, channel_id=_CANAL, editorial_root=editorial
+        )
+        assert skill.corpo == editorial_skills._default_corpo(cat, None)
+        assert skill.corpo != legados.CORPOS_V2[skill_key]
+
+
+def test_d311_corpo_customizado_e_preservado(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+    _semear_corpo(db, "cortador-expert", "PROMPT CUSTOMIZADO DO CANAL")
+
+    editorial_skills.migrar_skills_do_canal_ativo(
+        db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+
+    skill = editorial_skills.resolver_skill(
+        "cortador-expert", db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+    assert skill.corpo == "PROMPT CUSTOMIZADO DO CANAL"
+
+
+def test_d311_e_idempotente(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+    _semear_corpo(db, "cortador-expert", legados.CORPOS_SUPERADOS["cortador-expert"][0])
+
+    editorial_skills.migrar_skills_do_canal_ativo(
+        db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+    editorial_skills.migrar_skills_do_canal_ativo(
+        db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+
+    skill = editorial_skills.resolver_skill(
+        "cortador-expert", db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+    assert skill.corpo == legados.CORPOS_V2["cortador-expert"]
+
+
+def test_d311_nao_toca_cenas_metadados_thumbnail(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+    # Skills fora do escopo não têm entrada em CORPOS_SUPERADOS: qualquer corpo
+    # (mesmo um que "pareça" um default) é preservado.
+    for skill_key in ("cenas-expert", "metadados-expert", "thumbnail-prompt-expert"):
+        _semear_corpo(db, skill_key, "CORPO ARBITRARIO")
+
+    editorial_skills.migrar_skills_do_canal_ativo(
+        db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+
+    for skill_key in ("cenas-expert", "metadados-expert", "thumbnail-prompt-expert"):
+        skill = editorial_skills.resolver_skill(
+            skill_key, db_path=db, channel_id=_CANAL, editorial_root=editorial
+        )
+        assert skill.corpo == "CORPO ARBITRARIO"
+
+
+def test_d311_v2_limpo_sem_scaffolding(tmp_path: Path):
+    # O v2 concreto não carrega o scaffolding genérico ("TEMPLATE GENÉRICO" /
+    # "Copie este arquivo") — é o corpo direto do prompt.
+    for corpo in legados.CORPOS_V2.values():
+        assert "TEMPLATE GENÉRICO" not in corpo
+        assert "Copie este arquivo" not in corpo
+
+
+def test_d311_v2_espelha_claude_skills_sem_frontmatter():
+    # Guard anti-drift: o v2 embutido deve ser exatamente o corpo atual de
+    # `.claude/skills/<skill>/SKILL.md` sem o frontmatter YAML.
+    for skill_key, arquivo in (
+        ("cortador-expert", "cortador-expert"),
+        ("trechos-expert", "trechos-expert"),
+    ):
+        caminho = editorial_skills._REPO_ROOT / ".claude" / "skills" / arquivo / "SKILL.md"
+        texto = caminho.read_text(encoding="utf-8")
+        sem_fm = re.sub(r"^---\n.*?\n---\n", "", texto, count=1, flags=re.S).strip()
+        assert legados.CORPOS_V2[skill_key] == sem_fm
 
 
 def test_skill_desconhecida_levanta(tmp_path: Path):
