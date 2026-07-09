@@ -4,7 +4,16 @@ import type { RefObject } from 'react';
 import { useShortcuts, type ShortcutBinding } from '../shortcuts';
 import { shortcutFromRegistry } from '../shortcutsRegistry';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, Film, Monitor, SlidersHorizontal, Type } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Film,
+  Monitor,
+  Quote,
+  SlidersHorizontal,
+  Sparkles,
+  Type,
+} from 'lucide-react';
 import type { CenaRemotion, Corte, FontePreset, Projeto } from '@/types/models';
 import type { PlayerHandle } from '../fase1/PlayerPanel';
 import { api } from '@/lib/api';
@@ -601,18 +610,27 @@ export function EditorFase2({
           </div>
           <div className="min-h-0 flex-1">
             {abaDireita === 'cenas' ? (
-              <CenasPanel
-                ref={cenasPanelRef}
-                corteId={corte.id}
-                projetoId={corte.projeto_id}
-                cenas={cenas}
-                formato={formato}
-                paleta={paleta}
-                cenaAtivaIdx={cenaAtivaIdx}
-                cenasValidadas={corte.cenas_validadas === 1}
-                onSeek={onSeek}
-                onCenasChange={onCenasChange}
-              />
+              <div className="flex h-full min-h-0 flex-col">
+                <AberturaEditorial
+                  fraseGancho={corte.frase_gancho_texto}
+                  fraseGanchoHms={corte.frase_gancho_hms}
+                  contextualizacao={corte.contextualizacao}
+                />
+                <div className="min-h-0 flex-1">
+                  <CenasPanel
+                    ref={cenasPanelRef}
+                    corteId={corte.id}
+                    projetoId={corte.projeto_id}
+                    cenas={cenas}
+                    formato={formato}
+                    paleta={paleta}
+                    cenaAtivaIdx={cenaAtivaIdx}
+                    cenasValidadas={corte.cenas_validadas === 1}
+                    onSeek={onSeek}
+                    onCenasChange={onCenasChange}
+                  />
+                </div>
+              </div>
             ) : abaDireita === 'layout' ? (
               <YoutubeLayoutPanel
                 ref={layoutPanelRef}
@@ -711,6 +729,73 @@ function FontePresetPanel({ value, pending, onChange }: FontePresetPanelProps) {
               </button>
             );
           })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// D-314: abertura editorial do corte — contextualização (frase que situa o
+// assunto, que a D-295 leva para a 1ª cena) + frase-gancho (ponto de entrada
+// mais forte, com o timestamp na live). Fica no topo do painel de Cenas, junto
+// de onde a 1ª cena é editada. Só renderiza o que tem conteúdo; nada preenchido
+// (corte antigo/manual) → não ocupa espaço.
+interface AberturaEditorialProps {
+  fraseGancho?: string;
+  fraseGanchoHms?: string;
+  contextualizacao?: string;
+}
+
+function AberturaEditorial({
+  fraseGancho,
+  fraseGanchoHms,
+  contextualizacao,
+}: AberturaEditorialProps) {
+  const contexto = contextualizacao?.trim();
+  const gancho = fraseGancho?.trim();
+  const ganchoHms = fraseGanchoHms?.trim();
+  if (!contexto && !gancho) return null;
+
+  return (
+    <section
+      className="shrink-0 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2.5"
+      aria-label="Abertura editorial do corte"
+    >
+      {contexto && (
+        <div className="flex items-start gap-2">
+          <Sparkles
+            size={13}
+            className="mt-0.5 shrink-0 text-[var(--wb-accent)]"
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <div className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+              Contextualização · 1ª cena
+            </div>
+            <p className="mt-0.5 font-editorial text-[12.5px] leading-snug text-[var(--wb-text)]">
+              {contexto}
+            </p>
+          </div>
+        </div>
+      )}
+      {gancho && (
+        <div className={cn('flex items-start gap-2', contexto && 'mt-2')}>
+          <Quote size={13} className="mt-0.5 shrink-0 text-[var(--wb-text-mute)]" aria-hidden />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+                Gancho
+              </span>
+              {ganchoHms && (
+                <span className="font-code text-[9px] tabular-nums text-[var(--wb-text-dim)]">
+                  {ganchoHms}
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-[12px] italic leading-snug text-[var(--wb-text-mute)]">
+              “{gancho}”
+            </p>
+          </div>
         </div>
       )}
     </section>

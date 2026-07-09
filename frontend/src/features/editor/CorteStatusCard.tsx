@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { Corte, StatusExportCorte } from '@/types/models';
+import type { Corte, CorteScore, StatusExportCorte } from '@/types/models';
 
 /** Cada estágio do pipeline (sequencial: bruto → grade → overlays → final → publicado). */
 interface VideoStage {
@@ -117,6 +117,10 @@ interface Props {
   publicado?: boolean;
   isFire?: boolean;
   isLeitura?: boolean;
+  /** D-314: ranking relativo da proposta v2 (D-302). Exibe um badge discreto
+   *  com o total (breakdown no tooltip) para priorizar qual corte tratar
+   *  primeiro. Ausente/{}/sem total = corte antigo ou manual → não mostra nada. */
+  score?: CorteScore;
   /** Quando informado, o medalhão vira um botão que seleciona o corte.
    *  Sem ele, o card é apenas visual e o pai cuida do clique (ex.: EditorCutList). */
   onSelect?: () => void;
@@ -136,11 +140,13 @@ export function CorteStatusCard({
   publicado = false,
   isFire,
   isLeitura,
+  score,
   onSelect,
   onOpenMetadata,
 }: Props) {
   const stage = deriveVideoStage(status, publicado);
   const meta = deriveMeta(status);
+  const scoreView = resolveScore(score);
   const aprovado = corteStatus ? APROVADO_STATUS.has(corteStatus) : false;
   const rejeitado = corteStatus === 'rejeitado';
   const metaFeitas = (meta.texto ? 1 : 0) + (meta.imagem ? 1 : 0);
@@ -152,6 +158,19 @@ export function CorteStatusCard({
         #{numero}
         {titulo ? ` · ${titulo}` : ''}
       </strong>
+      {scoreView && (
+        <>
+          <span className="font-medium text-text-300">
+            Score IA · <strong className="text-text-100">{scoreView.totalLabel}</strong>
+            <span className="ml-1 font-normal text-text-400">(ranking desta análise)</span>
+          </span>
+          {scoreView.parts.length > 0 && (
+            <span className="ml-1">
+              {scoreView.parts.map((p) => `${p.label} ${p.value}`).join(' · ')}
+            </span>
+          )}
+        </>
+      )}
       <span className="font-medium text-text-300">Pipeline de vídeo</span>
       <span className="ml-1">
         {publicado ? '📺' : stageEmoji(stage.key)} Etapa atual: <strong>{stage.label}</strong>{' '}
@@ -175,13 +194,23 @@ export function CorteStatusCard({
   );
 
   const numeroEl = (
-    <span
-      className={cn(
-        'font-code text-[11px] font-semibold tabular-nums leading-none',
-        ativo ? 'text-[var(--wb-text)]' : 'text-[var(--wb-text-mute)]',
+    <span className="flex items-center gap-1 leading-none">
+      <span
+        className={cn(
+          'font-code text-[11px] font-semibold tabular-nums leading-none',
+          ativo ? 'text-[var(--wb-text)]' : 'text-[var(--wb-text-mute)]',
+        )}
+      >
+        #{numero}
+      </span>
+      {scoreView && (
+        <span
+          className="inline-flex items-center rounded-full bg-[var(--wb-accent-soft)] px-1.5 py-[1px] font-code text-[9px] font-bold tabular-nums leading-none text-[var(--wb-accent)]"
+          aria-label={`Score IA ${scoreView.totalLabel}`}
+        >
+          {scoreView.totalLabel}
+        </span>
       )}
-    >
-      #{numero}
     </span>
   );
   const medalha = <StageMedalha stage={stage} videoPos={videoPos} publicado={publicado} />;
@@ -378,6 +407,32 @@ function ProgressDots({
       )}
     </span>
   );
+}
+
+/** D-314: normaliza o score v2 para exibição. Retorna null quando não há total
+ *  numérico (corte antigo/manual) — o card não mostra nada nesse caso. Números
+ *  inteiros aparecem sem casas; fracionários com uma casa. */
+interface ScoreView {
+  totalLabel: string;
+  parts: Array<{ label: string; value: string }>;
+}
+
+function resolveScore(score?: CorteScore): ScoreView | null {
+  if (!score || typeof score.total !== 'number' || !Number.isFinite(score.total)) {
+    return null;
+  }
+  const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+  const parts: ScoreView['parts'] = [];
+  if (typeof score.hook === 'number' && Number.isFinite(score.hook)) {
+    parts.push({ label: 'Gancho', value: fmt(score.hook) });
+  }
+  if (typeof score.flow === 'number' && Number.isFinite(score.flow)) {
+    parts.push({ label: 'Fluxo', value: fmt(score.flow) });
+  }
+  if (typeof score.value === 'number' && Number.isFinite(score.value)) {
+    parts.push({ label: 'Valor', value: fmt(score.value) });
+  }
+  return { totalLabel: fmt(score.total), parts };
 }
 
 function stageEmoji(key: VideoStage['key']): string {

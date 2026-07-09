@@ -106,6 +106,15 @@ export interface TranscricaoLinha {
   texto: string;
 }
 
+// D-314: ranking relativo da proposta v2 (D-302). Componentes e total podem
+// faltar em análises parciais — todos opcionais.
+export interface CorteScore {
+  hook?: number;
+  flow?: number;
+  value?: number;
+  total?: number;
+}
+
 export interface Corte {
   id: string;
   projeto_id: string;
@@ -117,6 +126,17 @@ export interface Corte {
    * explicando POR QUE o intervalo virou corte e por que a duração escolhida
    * é a certa. Opcional para retrocompatibilidade com cortes antigos. */
   justificativa?: string;
+  // D-314: campos v2 da proposta da IA (D-302), persistidos por corte.
+  // `score` é o ranking relativo {hook, flow, value, total} entre os cortes da
+  // MESMA análise — serve para priorizar qual corte tratar primeiro. `{}`/ausente
+  // em cortes antigos ou criados na mão (não exibir badge). `frase_gancho_*` é o
+  // ponto de entrada mais forte do argumento; `contextualizacao` é a frase que
+  // situa o assunto (alimenta a 1ª cena, D-295; vazia = sem contextualização).
+  frase_gancho_hms?: string;
+  frase_gancho_texto?: string;
+  contextualizacao?: string;
+  score?: CorteScore;
+  // fim D-314
   inicio_hms: string;
   fim_hms: string;
   inicio_seg: number;

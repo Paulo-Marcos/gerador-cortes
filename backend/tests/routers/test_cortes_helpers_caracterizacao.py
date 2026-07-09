@@ -70,3 +70,22 @@ class TestCorteToDict:
         c.layout_youtube = {"modo_padrao": "compartilhada"}
         d = cortes_router._corte_to_dict(c)
         assert d["layout_youtube"] == {"modo_padrao": "compartilhada"}
+
+    def test_score_json_vira_objeto(self):
+        # D-314: score v2 (ranking relativo) sai parseado como dict `score`.
+        c = self._corte()
+        c.score_json = '{"hook": 8, "flow": 7, "value": 9, "total": 24}'
+        c.frase_gancho_hms = "00:12:30"
+        c.frase_gancho_texto = "O ponto de entrada mais forte"
+        c.contextualizacao = "Situa o assunto em uma frase"
+        d = cortes_router._corte_to_dict(c)
+        assert d["score"] == {"hook": 8, "flow": 7, "value": 9, "total": 24}
+        # Campos-texto v2 saem direto das colunas.
+        assert d["frase_gancho_hms"] == "00:12:30"
+        assert d["frase_gancho_texto"] == "O ponto de entrada mais forte"
+        assert d["contextualizacao"] == "Situa o assunto em uma frase"
+
+    def test_score_vazio_vira_dict_vazio(self):
+        # Corte antigo/manual (score_json None ou "") -> {} (front não mostra badge).
+        d = cortes_router._corte_to_dict(self._corte())
+        assert d["score"] == {}

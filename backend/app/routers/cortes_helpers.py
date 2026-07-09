@@ -45,6 +45,16 @@ def _corte_to_dict(corte: Corte) -> dict:
     # entram automaticamente no payload. Só ajustamos abaixo campos JSON-encoded.
     d = {c: getattr(corte, c) for c in corte.__table__.columns.keys()}
     d["desvios"] = json.loads(corte.desvios or "[]")
+    # D-314: `score_json` (proposta v2, D-302) é ranking relativo entre os cortes
+    # da mesma análise — {hook, flow, value, total}. Sai parseado como objeto no
+    # campo `score` para o editor priorizar qual corte tratar primeiro. Corte
+    # antigo/manual (anterior à v2 ou sem análise) → {} — o front não exibe badge.
+    # frase_gancho_hms/frase_gancho_texto/contextualizacao já saem como strings
+    # pela iteração de colunas acima (default "" nos cortes legados).
+    try:
+        d["score"] = json.loads(getattr(corte, "score_json", None) or "{}")
+    except Exception:
+        d["score"] = {}
     d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
     d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
     d["transcricao_final_texto"] = corte.transcricao_final_texto or ""

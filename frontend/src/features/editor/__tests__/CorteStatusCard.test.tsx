@@ -40,3 +40,28 @@ describe('CorteStatusCard — metadados pela sidebar', () => {
     expect(html).not.toContain('Abrir metadados');
   });
 });
+
+describe('CorteStatusCard — score v2 (D-314)', () => {
+  it('exibe o badge de score total quando há total numérico', () => {
+    const html = render(
+      <CorteStatusCard
+        numero={2}
+        status={undefined}
+        ativo={false}
+        score={{ hook: 8, flow: 7, value: 9, total: 24 }}
+      />,
+    );
+
+    expect(html).toContain('aria-label="Score IA 24"');
+  });
+
+  it('não exibe badge de score em corte antigo/manual (sem total)', () => {
+    const semScore = render(<CorteStatusCard numero={4} status={undefined} ativo={false} />);
+    const scoreVazio = render(
+      <CorteStatusCard numero={5} status={undefined} ativo={false} score={{}} />,
+    );
+
+    expect(semScore).not.toContain('Score IA');
+    expect(scoreVazio).not.toContain('Score IA');
+  });
+});

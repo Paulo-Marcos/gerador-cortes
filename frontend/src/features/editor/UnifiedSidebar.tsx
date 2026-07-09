@@ -372,6 +372,7 @@ export function UnifiedSidebar({
                 publicado={publicado}
                 isFire={flags.fire}
                 isLeitura={flags.leitura}
+                score={corte.score}
                 onSelect={() =>
                   navigate(getCortePath?.(corte) ?? `/projetos/${projetoId}/cortes/${corte.id}`)
                 }
