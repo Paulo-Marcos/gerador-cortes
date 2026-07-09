@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Brain, CheckCircle2, Clock, Loader2 } from 'lucide-react';
+import { Brain, CheckCircle2, Clock, Info, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClaudeAiButton, ClaudeIcon } from '@/components/ui/claude-button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +40,6 @@ export function AnaliseIaModal({
   const [inicioHms, setInicioHms] = useState('00:00:00');
   const [fimHms, setFimHms] = useState('00:10:00');
   const [blocosPrompt, setBlocosPrompt] = useState(1);
-  const [confirmReplace, setConfirmReplace] = useState(false);
   const [jsonPorParte, setJsonPorParte] = useState<Record<number, string>>({});
   const [jsonErr, setJsonErr] = useState<string | null>(null);
   // D-286: usar (ou não) o rótulo de falante da diarização no prompt Claude.
@@ -67,12 +66,12 @@ export function AnaliseIaModal({
   );
   const todasColadas = partesColadas === totalPartes;
 
-  const precisaConfirmar =
-    (modo === 'reanalisar' || origem === 'claude') && totalCortesExistentes > 0;
+  // A análise é ADITIVA (D-298): mostramos um aviso informativo — nunca bloqueante —
+  // quando já há cortes, deixando claro que nada é apagado.
+  const temCortesExistentes = totalCortesExistentes > 0;
   const isPending = importarAnalise.isPending || analisarClaude.isPending;
 
   const reset = () => {
-    setConfirmReplace(false);
     setJsonPorParte({});
     setJsonErr(null);
   };
@@ -94,7 +93,6 @@ export function AnaliseIaModal({
   };
 
   const onSubmitClaude = () => {
-    if (precisaConfirmar && !confirmReplace) return;
     analisarClaude.mutate(usarDiarizacao, { onSuccess: fechar });
   };
 
@@ -121,7 +119,6 @@ export function AnaliseIaModal({
       }
       cortesTotais.push(...cortes);
     }
-    if (precisaConfirmar && !confirmReplace) return;
     importarAnalise.mutate({ cortes: cortesTotais }, { onSuccess: fechar });
   };
 
@@ -147,8 +144,8 @@ export function AnaliseIaModal({
               reset();
             }}
             emoji="🔄"
-            title="Refazer toda a análise"
-            hint="Remove cortes existentes e roda IA na transcrição completa."
+            title="Analisar a live inteira"
+            hint="Roda a IA na transcrição completa e adiciona os cortes aos já existentes."
           />
           <ModoButton
             active={modo === 'intervalo'}
@@ -228,22 +225,18 @@ export function AnaliseIaModal({
           </div>
         )}
 
-        {/* Aviso de substituição */}
-        {precisaConfirmar && (
-          <label className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-warning/40 bg-warning/10 p-3 text-xs text-[#fbbf24]">
-            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-            <span className="flex-1 text-text-200">
-              Este projeto já tem <strong>{totalCortesExistentes} cortes</strong>. Refazer a análise
-              irá <strong>removê-los</strong>. Confirme abaixo para prosseguir.
+        {/* Aviso informativo (não bloqueia): a análise é aditiva, nunca apaga */}
+        {temCortesExistentes && (
+          <div className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/40 p-3 text-xs text-text-300">
+            <Info size={16} className="mt-0.5 shrink-0 text-accent-300" />
+            <span className="flex-1">
+              Este projeto já tem{' '}
+              <strong className="text-text-100">{totalCortesExistentes} cortes</strong>. A análise{' '}
+              <strong className="text-text-100">adiciona</strong> os novos aos existentes e continua a
+              numeração — <strong className="text-text-100">nada é apagado</strong>. Para remover
+              cortes, use o editor.
             </span>
-            <input
-              type="checkbox"
-              checked={confirmReplace}
-              onChange={(e) => setConfirmReplace(e.target.checked)}
-              className="mt-0.5 h-4 w-4"
-              aria-label="Confirmar substituição"
-            />
-          </label>
+          </div>
         )}
 
         {/* Origem (Claude em destaque + Manual ao lado em menor destaque) */}
@@ -286,8 +279,9 @@ export function AnaliseIaModal({
                 Usa a skill <code>cortador-expert</code> para gerar os cortes e os trechos a remover
                 da <strong>live inteira</strong>, e em seguida emenda o{' '}
                 <strong>refazer transcrição</strong> de cada corte. Pode levar{' '}
-                <strong>1–3 minutos</strong> em lives longas — aguarde o spinner. Os cortes atuais
-                só são substituídos quando a geração conclui.
+                <strong>1–3 minutos</strong> em lives longas — aguarde o spinner. Os cortes gerados
+                são <strong>adicionados</strong> aos existentes; um corte que começa quase no mesmo
+                ponto de um atual é pulado. Nada é apagado.
               </p>
             </div>
             <DiarizacaoPanel
@@ -324,7 +318,7 @@ export function AnaliseIaModal({
           <Button
             type="button"
             onClick={onSubmitManual}
-            disabled={isPending || !todasColadas || (precisaConfirmar && !confirmReplace)}
+            disabled={isPending || !todasColadas}
           >
             {isPending ? (
               <Loader2 size={16} className="animate-spin" />
@@ -338,7 +332,6 @@ export function AnaliseIaModal({
           <ClaudeAiButton
             size="md"
             pending={isPending}
-            disabled={precisaConfirmar && !confirmReplace}
             onClick={onSubmitClaude}
             label="Gerar por IA"
             pendingLabel="Gerando..."
