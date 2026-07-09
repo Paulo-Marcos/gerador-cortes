@@ -777,9 +777,20 @@ class CorteService:
                     if inicio_seg_buffer <= t_start <= fim_seg_buffer:
                         t_end = _to_seg(item.get("end", item.get("fim", t_start + 1)))
 
-                        trans_bruta.append(
-                            {"start": t_start, "end": t_end, "texto": item.get("texto", "")}
-                        )
+                        seg_bruto = {
+                            "start": t_start,
+                            "end": t_end,
+                            "texto": item.get("texto", ""),
+                        }
+                        # D-309: preserva o rótulo de falante da diarização
+                        # (speaker) fim-a-fim. `limpar_e_ordenar_transcricao` e
+                        # `TimelineMath.recalcular_transcricao` já o propagam, então
+                        # a transcrição final passa a carregar o falante por
+                        # segmento — dispensando a reprojeção de timeline que a
+                        # geração de cenas (D-307) precisava fazer.
+                        if item.get("speaker"):
+                            seg_bruto["speaker"] = item["speaker"]
+                        trans_bruta.append(seg_bruto)
                 except Exception:
                     continue
 

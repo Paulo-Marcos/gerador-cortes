@@ -646,24 +646,27 @@ _FALANTES_MAP = {
     "SPEAKER_01": {"nome": "", "is_canal": False},
 }
 
-# transcricao_final: timeline EDITADA (começa em ~0s). 3s / <=6 palavras por
-# segmento → _get_granular não fatia; um índice global por segmento.
+# transcricao_final: timeline EDITADA (começa em ~0s) já com o `speaker` por
+# segmento. Desde a D-309 a sincronização PRESERVA o falante fim-a-fim, então a
+# geração de cenas usa esse rótulo direto — sem reprojetar a `transcricao_raw`.
+# 3s / <=6 palavras por segmento → _get_granular não fatia; um índice global por
+# segmento.
 _TF_DIAR = [
+    {"start": 0.0, "end": 3.0, "texto": "tese do canal", "speaker": "SPEAKER_00"},
+    {"start": 3.0, "end": 6.0, "texto": "afirmacao de terceiro", "speaker": "SPEAKER_01"},
+    {"start": 6.0, "end": 9.0, "texto": "canal refuta isso", "speaker": "SPEAKER_00"},
+]
+
+# Mesma transcrição SEM `speaker`: simula um corte sincronizado antes da D-309.
+_TF_SEM_SPEAKER = [
     {"start": 0.0, "end": 3.0, "texto": "tese do canal"},
     {"start": 3.0, "end": 6.0, "texto": "afirmacao de terceiro"},
     {"start": 6.0, "end": 9.0, "texto": "canal refuta isso"},
 ]
 
-# transcricao_raw do projeto: tempo ABSOLUTO (corte em [100, 109]) + speaker.
-_RAW_DIAR = [
-    {"start": 100.0, "end": 103.0, "texto": "tese do canal", "speaker": "SPEAKER_00"},
-    {"start": 103.0, "end": 106.0, "texto": "afirmacao de terceiro", "speaker": "SPEAKER_01"},
-    {"start": 106.0, "end": 109.0, "texto": "canal refuta isso", "speaker": "SPEAKER_00"},
-]
 
-
-def _mock_corte_diar():
-    corte = _mock_corte(transcricao_final=_TF_DIAR)
+def _mock_corte_diar(transcricao_final=None):
+    corte = _mock_corte(transcricao_final=transcricao_final or _TF_DIAR)
     corte.projeto_id = "proj-1"
     corte.inicio_seg = 100.0
     corte.fim_seg = 109.0
@@ -671,10 +674,9 @@ def _mock_corte_diar():
     return corte
 
 
-def _mock_projeto(falantes_map: str, transcricao_raw=_RAW_DIAR):
+def _mock_projeto(falantes_map: str):
     projeto = MagicMock()
     projeto.falantes_map = falantes_map
-    projeto.transcricao_raw = json.dumps(transcricao_raw)
     return projeto
 
 
@@ -696,7 +698,8 @@ def _mock_db_ctx_corte_projeto(corte, projeto):
 
 
 class TestDiarizacaoNasCenas:
-    """D-307: rótulos [CANAL]/[OUTRO] no prompt de cenas quando o projeto é diarizado."""
+    """D-307/D-309: rótulos [CANAL]/[OUTRO] no prompt de cenas quando o projeto é
+    diarizado — agora lidos direto do `speaker` preservado na transcrição final."""
 
     # ── unidades puras ────────────────────────────────────────────────
 
@@ -724,35 +727,12 @@ class TestDiarizacaoNasCenas:
         assert "[CANAL] tese" in linhas
         assert "[OUTRO] afirma" in linhas
 
-    def test_turnos_remapeados_para_timeline_editada(self):
-        segs = [{"start": 100.0, "end": 109.0}]  # corte sem desvios → offset -100
-        turnos = CenasRemotionService._turnos_na_timeline_do_corte(_RAW_DIAR, segs)
-        assert turnos == [
-            {"start": 0.0, "end": 3.0, "speaker": "SPEAKER_00"},
-            {"start": 3.0, "end": 6.0, "speaker": "SPEAKER_01"},
-            {"start": 6.0, "end": 9.0, "speaker": "SPEAKER_00"},
-        ]
-
-    def test_turnos_com_desvio_comprimem(self):
-        # Corte [100,110] com desvio [103,105] removido → 2 segmentos mantidos;
-        # o turno único [100,110] é recortado e comprimido em dois contíguos.
-        raw = [{"start": 100.0, "end": 110.0, "texto": "x", "speaker": "SPEAKER_01"}]
-        segs = [{"start": 100.0, "end": 103.0}, {"start": 105.0, "end": 110.0}]
-        turnos = CenasRemotionService._turnos_na_timeline_do_corte(raw, segs)
-        assert turnos == [
-            {"start": 0.0, "end": 3.0, "speaker": "SPEAKER_01"},
-            {"start": 3.0, "end": 8.0, "speaker": "SPEAKER_01"},
-        ]
-
-    def test_turnos_ignora_raw_sem_speaker(self):
-        raw = [{"start": 100.0, "end": 103.0, "texto": "x"}]
-        segs = [{"start": 100.0, "end": 109.0}]
-        assert CenasRemotionService._turnos_na_timeline_do_corte(raw, segs) == []
-
     # ── integração de montar_prompt ───────────────────────────────────
 
     @pytest.mark.asyncio
     async def test_prompt_diarizado_injeta_rotulos(self):
+        # Corte diarizado: a final já traz `speaker` → rótulos vêm pelo caminho
+        # simples (sem reprojeção de timeline).
         corte = _mock_corte_diar()
         projeto = _mock_projeto(json.dumps(_FALANTES_MAP))
         mock_ctx, _ = _mock_db_ctx_corte_projeto(corte, projeto)
@@ -765,7 +745,7 @@ class TestDiarizacaoNasCenas:
 
     @pytest.mark.asyncio
     async def test_prompt_nao_diarizado_identico_ao_anterior(self):
-        # Mesmíssimo corte/raw; a única diferença é a diarização ligada/desligada.
+        # Mesmíssimo corte; a única diferença é a diarização ligada/desligada.
         corte_plain = _mock_corte_diar()
         ctx_plain, _ = _mock_db_ctx_corte_projeto(corte_plain, _mock_projeto("{}"))
         with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=ctx_plain):
@@ -783,6 +763,18 @@ class TestDiarizacaoNasCenas:
         # A ÚNICA diferença são os prefixos [CANAL] / [OUTRO]: removê-los reconstrói
         # byte-a-byte o prompt não-diarizado — prova de back-compat total.
         assert prompt_diar.replace("[CANAL] ", "").replace("[OUTRO] ", "") == prompt_plain
+
+    @pytest.mark.asyncio
+    async def test_prompt_corte_sem_speaker_nao_rotula(self):
+        # Fallback seguro: projeto diarizado, mas corte antigo cuja final foi
+        # sincronizada antes da D-309 (sem `speaker`) → segue sem prefixo, sem quebrar.
+        corte = _mock_corte_diar(transcricao_final=_TF_SEM_SPEAKER)
+        projeto = _mock_projeto(json.dumps(_FALANTES_MAP))
+        mock_ctx, _ = _mock_db_ctx_corte_projeto(corte, projeto)
+        with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=mock_ctx):
+            result = await CenasRemotionService.montar_prompt("test-id")
+        prompt = result["prompt"]
+        assert "[CANAL]" not in prompt and "[OUTRO]" not in prompt
 
     @pytest.mark.asyncio
     async def test_override_de_short_nunca_rotula(self):
