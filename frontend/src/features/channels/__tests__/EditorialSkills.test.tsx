@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { EditorialSkill } from '@/lib/editorialSkillsApi';
+import type { EditorialSkill, SkillVersao } from '@/lib/editorialSkillsApi';
 import { EditorialSkillCard } from '../EditorialSkillCard';
+import { EditorialSkillHistory, formatarData } from '../EditorialSkillHistory';
 import { skillCustomizada } from '../EditorialSkillsSection';
 
 const base: EditorialSkill = {
@@ -50,5 +51,65 @@ describe('EditorialSkillCard', () => {
       <EditorialSkillCard skill={base} customizada onEditar={vi.fn()} />,
     );
     expect(html).toContain('Customizado');
+  });
+});
+
+const versoes: SkillVersao[] = [
+  {
+    versao: 2,
+    criado_em: '2026-07-09T12:00:00+00:00',
+    vigente: true,
+    resumo: 'prompt',
+    mudancas: ['corpo'],
+  },
+  {
+    versao: 1,
+    criado_em: '2026-07-08T10:00:00+00:00',
+    vigente: false,
+    resumo: 'Versão inicial',
+    mudancas: [],
+  },
+];
+
+describe('EditorialSkillHistory', () => {
+  it('lista as versões com resumo e marca a vigente como "Em uso"', () => {
+    const html = renderToStaticMarkup(
+      <EditorialSkillHistory
+        versoes={versoes}
+        carregando={false}
+        erro={null}
+        pending={false}
+        onReverter={vi.fn()}
+      />,
+    );
+    expect(html).toContain('v2');
+    expect(html).toContain('v1');
+    expect(html).toContain('Em uso');
+    expect(html).toContain('Versão inicial');
+    // A versão vigente não oferece "Reverter"; a antiga sim.
+    expect(html).toContain('Reverter');
+  });
+
+  it('mostra estado vazio quando não há versões', () => {
+    const html = renderToStaticMarkup(
+      <EditorialSkillHistory
+        versoes={[]}
+        carregando={false}
+        erro={null}
+        pending={false}
+        onReverter={vi.fn()}
+      />,
+    );
+    expect(html).toContain('Sem versões registradas ainda.');
+  });
+});
+
+describe('formatarData', () => {
+  it('devolve travessão para string vazia', () => {
+    expect(formatarData('')).toBe('—');
+  });
+
+  it('devolve o cru quando não parseia', () => {
+    expect(formatarData('não-é-data')).toBe('não-é-data');
   });
 });

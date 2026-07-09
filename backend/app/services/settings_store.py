@@ -72,6 +72,28 @@ _TEMA_COLUNAS = ("tema_id",)
 # store (o serviço editorial_skills parseia); `updated_at` é ISO-8601 UTC.
 _SKILL_COLUNAS = ("corpo", "params_json", "lentes_json", "updated_at")
 
+# Histórico append-only de versões de uma skill (D-312). Cada edição INSERE uma
+# nova versão (nunca sobrescreve) e desmarca a vigência da anterior — permitindo
+# reverter e auditar. Colunas de CONTEÚDO idênticas às da `editorial_skill` (um
+# snapshot da LINHA inteira por versão — granularidade por registro, não por campo),
+# mais `versao` (sequencial por canal+skill), `vigente` (0/1) e `criado_em`
+# (ISO-8601 UTC). A `editorial_skill` continua sendo a "linha vigente"
+# materializada que `ler_skill`/`resolver_skill` leem — comportamento externo
+# inalterado; esta tabela é o log de auditoria ao lado.
+_VERSAO_COLUNAS = (
+    "versao",
+    "corpo",
+    "params_json",
+    "lentes_json",
+    "scaffold",
+    "vigente",
+    "criado_em",
+)
+
+# Colunas de conteúdo comparadas para o dedup de versão (evita gravar uma versão
+# idêntica à vigente num "salvar" sem alteração real).
+_VERSAO_CONTEUDO = ("corpo", "params_json", "lentes_json", "scaffold")
+
 _DDL = (
     """
     CREATE TABLE IF NOT EXISTS app_settings (
@@ -123,6 +145,20 @@ _DDL = (
         PRIMARY KEY (channel_id, skill_key)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS editorial_skill_version (
+        channel_id TEXT NOT NULL,
+        skill_key TEXT NOT NULL,
+        versao INTEGER NOT NULL,
+        corpo TEXT NOT NULL DEFAULT '',
+        params_json TEXT NOT NULL DEFAULT '{}',
+        lentes_json TEXT NOT NULL DEFAULT '[]',
+        scaffold TEXT NOT NULL DEFAULT '',
+        vigente INTEGER NOT NULL DEFAULT 0,
+        criado_em TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (channel_id, skill_key, versao)
+    )
+    """,
 )
 
 # Colunas adicionadas depois da criação original de uma tabela: (tabela, coluna,
@@ -151,6 +187,30 @@ def _migrar_colunas(conn: sqlite3.Connection) -> None:
             conn.execute(ddl)
 
 
+def _backfill_versao_inicial(conn: sqlite3.Connection) -> None:
+    """Semeia a versão 1 vigente de cada `editorial_skill` que ainda não tem
+    histórico (D-312). Idempotente: só toca linhas sem NENHUMA versão, então
+    reabrir o banco é no-op. É como cada canal já em produção — cujas skills foram
+    gravadas antes desta feature — ganha a versão inicial sem perder o corpo v2 já
+    persistido (D-311). Um único INSERT..SELECT, barato o bastante para o boot.
+
+    `criado_em` reaproveita o `updated_at` da linha (melhor timestamp disponível);
+    se vazio, cai no agora.
+    """
+    conn.execute(
+        "INSERT INTO editorial_skill_version "
+        "(channel_id, skill_key, versao, corpo, params_json, lentes_json, scaffold, vigente, criado_em) "
+        "SELECT s.channel_id, s.skill_key, 1, s.corpo, s.params_json, s.lentes_json, s.scaffold, 1, "
+        "CASE WHEN s.updated_at <> '' THEN s.updated_at ELSE ? END "
+        "FROM editorial_skill s "
+        "WHERE NOT EXISTS ("
+        "  SELECT 1 FROM editorial_skill_version v "
+        "  WHERE v.channel_id = s.channel_id AND v.skill_key = s.skill_key"
+        ")",
+        (datetime.now(UTC).isoformat(),),
+    )
+
+
 def _connect(db_path: Path) -> sqlite3.Connection:
     """Abre o banco de settings garantindo o schema (idempotente) e WAL.
 
@@ -165,6 +225,7 @@ def _connect(db_path: Path) -> sqlite3.Connection:
     for ddl in _DDL:
         conn.execute(ddl)
     _migrar_colunas(conn)
+    _backfill_versao_inicial(conn)
     conn.commit()
     return conn
 
@@ -403,13 +464,71 @@ def ler_skills_do_canal(db_path: Path, channel_id: str) -> dict[str, dict]:
     return {row["skill_key"]: {coluna: row[coluna] for coluna in _SKILL_COLUNAS} for row in linhas}
 
 
+def _snapshot_versao(conn: sqlite3.Connection, channel_id: str, skill_key: str) -> None:
+    """Cria uma nova versão VIGENTE a partir do estado ATUAL da `editorial_skill`,
+    desmarcando a anterior (D-312) — dentro da transação do chamador.
+
+    Append-only: nunca reativa uma versão antiga; a vigência move-se sempre para a
+    versão mais nova. Lê o conteúdo de volta da linha materializada, então basta
+    chamar DEPOIS de gravar a `editorial_skill` — vale para o corpo/params/lentes
+    (`gravar_skill`) e para o scaffold (`gravar_scaffold`), sem duplicar o conteúdo.
+
+    Dedup: se o conteúdo já é idêntico à versão vigente (um "salvar" sem alteração
+    real, um reset que reafirma o valor), não cria versão — evita inflar o histórico
+    com snapshots iguais. Sem linha materializada ainda → no-op.
+    """
+    atual = conn.execute(
+        "SELECT corpo, params_json, lentes_json, scaffold FROM editorial_skill "
+        "WHERE channel_id = ? AND skill_key = ?",
+        (channel_id, skill_key),
+    ).fetchone()
+    if atual is None:
+        return
+    vigente = conn.execute(
+        "SELECT * FROM editorial_skill_version "
+        "WHERE channel_id = ? AND skill_key = ? AND vigente = 1",
+        (channel_id, skill_key),
+    ).fetchone()
+    if vigente is not None and all(vigente[c] == atual[c] for c in _VERSAO_CONTEUDO):
+        return
+    conn.execute(
+        "UPDATE editorial_skill_version SET vigente = 0 "
+        "WHERE channel_id = ? AND skill_key = ? AND vigente = 1",
+        (channel_id, skill_key),
+    )
+    proxima = conn.execute(
+        "SELECT COALESCE(MAX(versao), 0) + 1 AS n FROM editorial_skill_version "
+        "WHERE channel_id = ? AND skill_key = ?",
+        (channel_id, skill_key),
+    ).fetchone()["n"]
+    conn.execute(
+        "INSERT INTO editorial_skill_version "
+        "(channel_id, skill_key, versao, corpo, params_json, lentes_json, scaffold, vigente, criado_em) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)",
+        (
+            channel_id,
+            skill_key,
+            proxima,
+            atual["corpo"],
+            atual["params_json"],
+            atual["lentes_json"],
+            atual["scaffold"],
+            datetime.now(UTC).isoformat(),
+        ),
+    )
+
+
 def gravar_skill(db_path: Path, channel_id: str, skill_key: str, valores: dict) -> None:
-    """Grava (UPSERT) a linha de uma skill editorial do canal.
+    """Grava a linha de uma skill editorial do canal e VERSIONA a mudança (D-312).
 
     `valores` deve conter `corpo`, `params_json` e `lentes_json`; `updated_at` é
     carimbado aqui (ISO-8601 UTC) para o store ser a fonte única do timestamp.
     Escrita idempotente: reescrever a mesma skill é seguro (seed no 1º acesso,
     edição/reset pela UI).
+
+    A `editorial_skill` continua sendo a LINHA VIGENTE que `ler_skill` lê
+    (comportamento externo inalterado); a mesma transação insere uma nova versão
+    vigente no histórico e desmarca a anterior (`_snapshot_versao`, com dedup).
     """
     dados = {
         "corpo": str(valores["corpo"]),
@@ -428,6 +547,7 @@ def gravar_skill(db_path: Path, channel_id: str, skill_key: str, valores: dict) 
             f"ON CONFLICT(channel_id, skill_key) DO UPDATE SET {atribuicoes}",
             parametros,
         )
+        _snapshot_versao(conn, channel_id, skill_key)
         conn.commit()
     finally:
         conn.close()
@@ -491,6 +611,80 @@ def gravar_scaffold(db_path: Path, channel_id: str, skill_key: str, scaffold: st
             "scaffold = excluded.scaffold, updated_at = excluded.updated_at",
             (channel_id, skill_key, str(scaffold), datetime.now(UTC).isoformat()),
         )
+        # D-312: o scaffold é campo de conteúdo versionado — editá-lo também gera
+        # uma nova versão (mesma disciplina append-only do corpo/params/lentes).
+        _snapshot_versao(conn, channel_id, skill_key)
         conn.commit()
     finally:
         conn.close()
+
+
+# --------------------------------------------------------------------------- #
+# Histórico de versões das skills (D-312) — append-only, reverter e auditar
+# --------------------------------------------------------------------------- #
+
+
+def listar_versoes_skill(db_path: Path, channel_id: str, skill_key: str) -> list[dict]:
+    """Todas as versões de uma skill do canal, da mais nova para a mais antiga.
+
+    Cada item traz o snapshot completo do registro naquele momento (conteúdo +
+    `versao`/`vigente`/`criado_em`), matéria-prima para a UI montar o histórico
+    (data + o que mudou) e para o serviço computar o diff entre versões.
+    """
+    conn = _connect(db_path)
+    try:
+        linhas = conn.execute(
+            "SELECT * FROM editorial_skill_version "
+            "WHERE channel_id = ? AND skill_key = ? ORDER BY versao DESC",
+            (channel_id, skill_key),
+        ).fetchall()
+    finally:
+        conn.close()
+    return [{coluna: row[coluna] for coluna in _VERSAO_COLUNAS} for row in linhas]
+
+
+def reverter_skill_para_versao(db_path: Path, channel_id: str, skill_key: str, versao: int) -> dict:
+    """Reverte a skill ao conteúdo de `versao`, mantendo o histórico append-only.
+
+    Em vez de reativar a versão antiga, materializa o conteúdo dela na
+    `editorial_skill` e cria uma NOVA versão vigente com esse conteúdo (via
+    `_snapshot_versao`) — assim reverter é auditável como qualquer outra edição e
+    a numeração nunca retrocede. Levanta `KeyError` se a versão não existe; se o
+    conteúdo alvo já é o vigente, o dedup do snapshot torna a reversão um no-op no
+    histórico (a linha materializada é reafirmada, sem versão nova). Devolve o
+    conteúdo revertido (para o serviço espelhar o corpo no `.md`).
+    """
+    conn = _connect(db_path)
+    try:
+        alvo = conn.execute(
+            "SELECT corpo, params_json, lentes_json, scaffold FROM editorial_skill_version "
+            "WHERE channel_id = ? AND skill_key = ? AND versao = ?",
+            (channel_id, skill_key, versao),
+        ).fetchone()
+        if alvo is None:
+            raise KeyError(
+                f"Versão {versao} inexistente para a skill {skill_key!r} do canal {channel_id!r}."
+            )
+        conn.execute(
+            "INSERT INTO editorial_skill "
+            "(channel_id, skill_key, corpo, params_json, lentes_json, scaffold, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(channel_id, skill_key) DO UPDATE SET "
+            "corpo = excluded.corpo, params_json = excluded.params_json, "
+            "lentes_json = excluded.lentes_json, scaffold = excluded.scaffold, "
+            "updated_at = excluded.updated_at",
+            (
+                channel_id,
+                skill_key,
+                alvo["corpo"],
+                alvo["params_json"],
+                alvo["lentes_json"],
+                alvo["scaffold"],
+                datetime.now(UTC).isoformat(),
+            ),
+        )
+        _snapshot_versao(conn, channel_id, skill_key)
+        conn.commit()
+    finally:
+        conn.close()
+    return {coluna: alvo[coluna] for coluna in _VERSAO_CONTEUDO}

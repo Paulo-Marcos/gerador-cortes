@@ -57,6 +57,25 @@ export interface UpdateSkillPayload {
 /** Campos a restaurar ao default: subconjunto de {corpo, params, lentes}. */
 export type CampoReset = 'corpo' | 'params' | 'lentes';
 
+// ─── Histórico de versões (D-312) ──────────────────────────────────────────
+
+/** Uma versão no histórico append-only de uma skill: data + o que mudou. */
+export interface SkillVersao {
+  versao: number;
+  /** ISO-8601 UTC de quando a versão foi criada. */
+  criado_em: string;
+  /** True na versão atualmente em uso. */
+  vigente: boolean;
+  /** Resumo legível ("Versão inicial" ou os campos alterados). */
+  resumo: string;
+  /** Campos de conteúdo que mudaram vs. a versão anterior. */
+  mudancas: string[];
+}
+
+export interface ListaVersoesResponse {
+  versoes: SkillVersao[];
+}
+
 // ─── Endpoints ─────────────────────────────────────────────────────────────
 
 export const editorialSkillsApi = {
@@ -72,5 +91,15 @@ export const editorialSkillsApi = {
     request<EditorialSkill>(`/editorial-skills/${encodeURIComponent(key)}/reset`, {
       method: 'POST',
       body: JSON.stringify({ campos }),
+    }),
+
+  // D-312: histórico append-only — listar versões e reverter a uma delas.
+  listarVersoes: (key: string) =>
+    request<ListaVersoesResponse>(`/editorial-skills/${encodeURIComponent(key)}/versoes`),
+
+  reverter: (key: string, versao: number) =>
+    request<EditorialSkill>(`/editorial-skills/${encodeURIComponent(key)}/reverter`, {
+      method: 'POST',
+      body: JSON.stringify({ versao }),
     }),
 };

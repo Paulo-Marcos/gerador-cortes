@@ -106,6 +106,58 @@ async def resetar_skill(skill_key: str, body: ResetSkillRequest):
 
 
 # --------------------------------------------------------------------------- #
+# Histórico de versões por skill (D-312) — auditar e reverter (append-only)
+# --------------------------------------------------------------------------- #
+
+
+class SkillVersaoResponse(BaseModel):
+    """Uma versão da skill para a UI de histórico: data + resumo do que mudou."""
+
+    versao: int
+    criado_em: str
+    vigente: bool
+    resumo: str
+    mudancas: list[str]
+
+
+class ListaVersoesResponse(BaseModel):
+    versoes: list[SkillVersaoResponse]
+
+
+class ReverterSkillRequest(BaseModel):
+    versao: int
+
+
+def _para_response_versao(v: editorial_skills.SkillVersaoDescrita) -> SkillVersaoResponse:
+    return SkillVersaoResponse(
+        versao=v.versao,
+        criado_em=v.criado_em,
+        vigente=v.vigente,
+        resumo=v.resumo,
+        mudancas=v.mudancas,
+    )
+
+
+@router.get("/{skill_key}/versoes", response_model=ListaVersoesResponse)
+async def listar_versoes_skill(skill_key: str):
+    try:
+        versoes = editorial_skills.listar_versoes(skill_key)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=f"Skill desconhecida: {skill_key!r}.") from e
+    return ListaVersoesResponse(versoes=[_para_response_versao(v) for v in versoes])
+
+
+@router.post("/{skill_key}/reverter", response_model=SkillDescritaResponse)
+async def reverter_skill(skill_key: str, body: ReverterSkillRequest):
+    try:
+        skill = editorial_skills.reverter_skill(skill_key, body.versao)
+    except KeyError as e:
+        # Skill desconhecida OU versão inexistente — ambas caem em 404 (recurso ausente).
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return _para_response(skill)
+
+
+# --------------------------------------------------------------------------- #
 # Scaffolds (contrato de saída) por canal (D-297)
 # --------------------------------------------------------------------------- #
 # Montados no MESMO router (sub-caminho /scaffolds) para não exigir registro de um

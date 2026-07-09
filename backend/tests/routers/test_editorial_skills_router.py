@@ -88,3 +88,47 @@ def test_skill_desconhecida_da_404(client: TestClient):
 def test_reset_campo_invalido_da_422(client: TestClient):
     resp = client.post("/editorial-skills/cortador-expert/reset", json={"campos": ["xyz"]})
     assert resp.status_code == 422
+
+
+# --------------------------------------------------------------------------- #
+# Histórico de versões (D-312): listar e reverter via HTTP
+# --------------------------------------------------------------------------- #
+
+
+def test_get_versoes_lista_historico_com_resumo(client: TestClient):
+    # v1 (seed no GET) + v2 (edição do corpo).
+    client.get("/editorial-skills")
+    client.put("/editorial-skills/cortador-expert", json={"corpo": "NOVO"})
+
+    resp = client.get("/editorial-skills/cortador-expert/versoes")
+    assert resp.status_code == 200
+    versoes = resp.json()["versoes"]
+    assert [v["versao"] for v in versoes] == [2, 1]
+    assert versoes[0]["vigente"] is True
+    assert versoes[1]["resumo"] == "Versão inicial"
+    assert versoes[0]["mudancas"] == ["corpo"]
+
+
+def test_post_reverter_volta_ao_conteudo_da_versao(client: TestClient):
+    client.get("/editorial-skills")  # seed v1
+    client.put("/editorial-skills/cortador-expert", json={"corpo": "CUSTOMIZADO"})  # v2
+
+    resp = client.post("/editorial-skills/cortador-expert/reverter", json={"versao": 1})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["corpo"] == body["corpo_default"]  # a v1 é o seed = default do canal
+    assert body["corpo"] != "CUSTOMIZADO"
+
+    # Append-only: virou a v3 vigente.
+    versoes = client.get("/editorial-skills/cortador-expert/versoes").json()["versoes"]
+    assert versoes[0]["versao"] == 3 and versoes[0]["vigente"] is True
+
+
+def test_reverter_versao_inexistente_da_404(client: TestClient):
+    client.get("/editorial-skills")  # seed
+    resp = client.post("/editorial-skills/cortador-expert/reverter", json={"versao": 99})
+    assert resp.status_code == 404
+
+
+def test_versoes_de_skill_desconhecida_da_404(client: TestClient):
+    assert client.get("/editorial-skills/inexistente/versoes").status_code == 404

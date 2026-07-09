@@ -10,7 +10,14 @@ import { useToast } from '@/components/ui/toaster';
 import type { CampoReset, EditorialSkill, UpdateSkillPayload } from '@/lib/editorialSkillsApi';
 import { EditorialSkillCard } from './EditorialSkillCard';
 import { EditorialSkillForm } from './EditorialSkillForm';
-import { useEditarSkill, useEditorialSkills, useResetarSkill } from './useEditorialSkills';
+import { EditorialSkillHistory } from './EditorialSkillHistory';
+import {
+  useEditarSkill,
+  useEditorialSkills,
+  useResetarSkill,
+  useReverterSkill,
+  useVersoesSkill,
+} from './useEditorialSkills';
 
 function mensagemErro(erro: unknown, fallback: string): string {
   return erro instanceof Error ? erro.message : fallback;
@@ -37,9 +44,11 @@ export function EditorialSkillsSection() {
   const skillsQuery = useEditorialSkills();
   const editar = useEditarSkill();
   const resetar = useResetarSkill();
+  const reverter = useReverterSkill();
 
   const [editandoKey, setEditandoKey] = useState<string | null>(null);
-  const pending = editar.isPending || resetar.isPending;
+  const versoesQuery = useVersoesSkill(editandoKey);
+  const pending = editar.isPending || resetar.isPending || reverter.isPending;
 
   const skills = skillsQuery.data?.skills ?? [];
   const skillEditando = skills.find((s) => s.key === editandoKey) ?? null;
@@ -65,6 +74,17 @@ export function EditorialSkillsSection() {
       {
         onSuccess: () => notify('Campo restaurado ao padrão.', { tone: 'info' }),
         onError: (erro) => notify(mensagemErro(erro, 'Erro ao resetar.'), { tone: 'error' }),
+      },
+    );
+  };
+
+  const aoReverter = (versao: number) => {
+    if (!editandoKey) return;
+    reverter.mutate(
+      { key: editandoKey, versao },
+      {
+        onSuccess: () => notify(`Skill revertida à versão ${versao}.`, { tone: 'success' }),
+        onError: (erro) => notify(mensagemErro(erro, 'Erro ao reverter.'), { tone: 'error' }),
       },
     );
   };
@@ -119,13 +139,26 @@ export function EditorialSkillsSection() {
         description={skillEditando?.descricao}
       >
         {skillEditando && (
-          <EditorialSkillForm
-            skill={skillEditando}
-            pending={pending}
-            onSave={aoSalvar}
-            onReset={aoResetar}
-            onCancel={() => setEditandoKey(null)}
-          />
+          <div className="grid gap-5">
+            <EditorialSkillForm
+              skill={skillEditando}
+              pending={pending}
+              onSave={aoSalvar}
+              onReset={aoResetar}
+              onCancel={() => setEditandoKey(null)}
+            />
+            <EditorialSkillHistory
+              versoes={versoesQuery.data?.versoes ?? []}
+              carregando={versoesQuery.isLoading}
+              erro={
+                versoesQuery.isError
+                  ? mensagemErro(versoesQuery.error, 'Não foi possível carregar o histórico.')
+                  : null
+              }
+              pending={pending}
+              onReverter={aoReverter}
+            />
+          </div>
         )}
       </Modal>
     </section>

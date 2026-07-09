@@ -158,6 +158,113 @@ def test_deletar_skill_volta_a_none(tmp_path: Path):
 
 
 # --------------------------------------------------------------------------- #
+# Versionamento append-only das skills (D-312)
+# --------------------------------------------------------------------------- #
+
+
+def test_gravar_skill_cria_versao_1_vigente(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "cortador-expert", _skill_valores(corpo="v1"))
+
+    versoes = settings_store.listar_versoes_skill(db, "c", "cortador-expert")
+    assert [v["versao"] for v in versoes] == [1]
+    assert versoes[0]["vigente"] == 1
+    assert versoes[0]["corpo"] == "v1"
+    assert versoes[0]["criado_em"]  # carimbado
+
+
+def test_editar_cria_nova_versao_e_desmarca_a_anterior(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "cortador-expert", _skill_valores(corpo="v1"))
+    settings_store.gravar_skill(db, "c", "cortador-expert", _skill_valores(corpo="v2"))
+
+    versoes = settings_store.listar_versoes_skill(db, "c", "cortador-expert")
+    # Mais nova primeiro; só a v2 é vigente.
+    assert [(v["versao"], v["vigente"], v["corpo"]) for v in versoes] == [
+        (2, 1, "v2"),
+        (1, 0, "v1"),
+    ]
+    # A leitura vigente (editorial_skill) reflete a v2 — comportamento externo intacto.
+    assert settings_store.ler_skill(db, "c", "cortador-expert")["corpo"] == "v2"
+
+
+def test_salvar_identico_nao_cria_versao_nova(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "cenas-expert", _skill_valores(corpo="igual"))
+    # Regravar o MESMO conteúdo (salvar sem mudança real) → dedup, sem versão nova.
+    settings_store.gravar_skill(db, "c", "cenas-expert", _skill_valores(corpo="igual"))
+
+    versoes = settings_store.listar_versoes_skill(db, "c", "cenas-expert")
+    assert [v["versao"] for v in versoes] == [1]
+
+
+def test_gravar_scaffold_versiona(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "cortador-expert", _skill_valores(corpo="v1"))
+    settings_store.gravar_scaffold(db, "c", "cortador-expert", "CONTRATO X")
+
+    versoes = settings_store.listar_versoes_skill(db, "c", "cortador-expert")
+    assert [v["versao"] for v in versoes] == [2, 1]
+    assert versoes[0]["vigente"] == 1
+    assert versoes[0]["scaffold"] == "CONTRATO X"
+
+
+def test_reverter_cria_nova_versao_com_conteudo_antigo(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "cortador-expert", _skill_valores(corpo="v1"))
+    settings_store.gravar_skill(db, "c", "cortador-expert", _skill_valores(corpo="v2"))
+
+    revertido = settings_store.reverter_skill_para_versao(db, "c", "cortador-expert", 1)
+    assert revertido["corpo"] == "v1"
+
+    versoes = settings_store.listar_versoes_skill(db, "c", "cortador-expert")
+    # Append-only: reverter à v1 cria a v3 (cópia da v1) vigente; nada é reativado.
+    assert [(v["versao"], v["vigente"], v["corpo"]) for v in versoes] == [
+        (3, 1, "v1"),
+        (2, 0, "v2"),
+        (1, 0, "v1"),
+    ]
+    assert settings_store.ler_skill(db, "c", "cortador-expert")["corpo"] == "v1"
+
+
+def test_reverter_versao_inexistente_levanta(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "cortador-expert", _skill_valores())
+    try:
+        settings_store.reverter_skill_para_versao(db, "c", "cortador-expert", 99)
+        raise AssertionError("esperava KeyError")
+    except KeyError:
+        pass
+
+
+def test_backfill_linha_legada_vira_versao_1(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.inicializar(db)
+    # Simula uma linha gravada ANTES do D-312 (sem histórico): insere direto na
+    # editorial_skill, sem passar pelo gravar_skill versionado.
+    import sqlite3
+
+    conn = sqlite3.connect(str(db))
+    conn.execute(
+        "INSERT INTO editorial_skill (channel_id, skill_key, corpo, params_json, lentes_json, "
+        "scaffold, updated_at) VALUES ('c', 'cortador-expert', 'CORPO V2 LEGADO', '{}', '[]', '', "
+        "'2026-01-01T00:00:00+00:00')"
+    )
+    conn.commit()
+    conn.close()
+
+    # Qualquer reabertura do banco (aqui, a própria leitura) dispara o backfill
+    # idempotente do boot — a linha legada ganha a versão 1 vigente.
+    versoes = settings_store.listar_versoes_skill(db, "c", "cortador-expert")
+    assert [(v["versao"], v["vigente"], v["corpo"]) for v in versoes] == [(1, 1, "CORPO V2 LEGADO")]
+    # Preserva o corpo v2 já gravado (não perde nada) e reaproveita o updated_at.
+    assert versoes[0]["criado_em"] == "2026-01-01T00:00:00+00:00"
+    # Idempotente: reabrir de novo não duplica.
+    settings_store.inicializar(db)
+    assert len(settings_store.listar_versoes_skill(db, "c", "cortador-expert")) == 1
+
+
+# --------------------------------------------------------------------------- #
 # AppSettingsService: DB-first + fallback/migração do arquivo legado
 # --------------------------------------------------------------------------- #
 

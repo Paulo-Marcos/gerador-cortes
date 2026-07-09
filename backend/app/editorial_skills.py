@@ -485,6 +485,110 @@ def resetar_skill(
 
 
 # --------------------------------------------------------------------------- #
+# Histórico de versões (D-312): auditar o que mudou e reverter (append-only)
+# --------------------------------------------------------------------------- #
+
+
+# Rótulos legíveis dos campos versionados, para o "resumo do que mudou" na UI.
+_ROTULO_CAMPO: dict[str, str] = {
+    "corpo": "prompt",
+    "params_json": "parâmetros",
+    "lentes_json": "lentes",
+    "scaffold": "contrato de saída",
+}
+
+
+@dataclass(frozen=True)
+class SkillVersaoDescrita:
+    """Uma versão da skill para a UI de histórico (D-312).
+
+    `mudancas` lista os campos que diferem da versão IMEDIATAMENTE anterior (a de
+    número `versao - 1`); `resumo` é a forma legível — "Versão inicial" na v1, ou
+    os rótulos dos campos alterados. `vigente` marca a versão atualmente em uso.
+    """
+
+    versao: int
+    criado_em: str
+    vigente: bool
+    resumo: str
+    mudancas: list[str]
+
+
+def _diff_versoes(anterior: dict | None, atual: dict) -> list[str]:
+    """Campos de conteúdo que mudaram de `anterior` para `atual` (ordem estável).
+
+    Sem anterior (primeira versão) → lista vazia (o chamador rotula como inicial).
+    """
+    if anterior is None:
+        return []
+    return [campo for campo in _ROTULO_CAMPO if anterior.get(campo) != atual.get(campo)]
+
+
+def _resumo_mudancas(mudancas: list[str], eh_inicial: bool) -> str:
+    if eh_inicial:
+        return "Versão inicial"
+    if not mudancas:
+        return "Sem alterações de conteúdo"
+    return ", ".join(_ROTULO_CAMPO[campo] for campo in mudancas)
+
+
+def listar_versoes(
+    skill_key: str,
+    *,
+    db_path: Path | None = None,
+    channel_id: str | None = None,
+) -> list[SkillVersaoDescrita]:
+    """Histórico de versões da skill do canal ativo, da mais nova para a mais antiga.
+
+    Computa, para cada versão, o que mudou em relação à anterior — o diff é feito
+    aqui (serviço), não no store, porque depende do vocabulário de campos da skill.
+    """
+    _exigir_catalogo(skill_key)  # valida a key (KeyError → 404 no router)
+    db, cid = _resolver_db_e_canal(db_path, channel_id)
+    linhas = settings_store.listar_versoes_skill(db, cid, skill_key)
+    por_versao = {linha["versao"]: linha for linha in linhas}
+    descritas: list[SkillVersaoDescrita] = []
+    for linha in linhas:  # já em ordem decrescente
+        anterior = por_versao.get(linha["versao"] - 1)
+        eh_inicial = linha["versao"] == 1 or anterior is None
+        mudancas = _diff_versoes(anterior, linha)
+        descritas.append(
+            SkillVersaoDescrita(
+                versao=int(linha["versao"]),
+                criado_em=str(linha["criado_em"] or ""),
+                vigente=bool(linha["vigente"]),
+                resumo=_resumo_mudancas(mudancas, eh_inicial),
+                mudancas=mudancas,
+            )
+        )
+    return descritas
+
+
+def reverter_skill(
+    skill_key: str,
+    versao: int,
+    *,
+    db_path: Path | None = None,
+    channel_id: str | None = None,
+    editorial_root: Path | None = None,
+) -> SkillDescrita:
+    """Reverte a skill do canal ativo ao conteúdo de `versao` (append-only) e
+    devolve a skill já descrita (valor-do-canal + default).
+
+    Delega o append-only ao store; aqui só espelha o corpo revertido no `.md`
+    (mesma coerência banco↔espelho de `definir_skill`) e re-descreve. `KeyError`
+    da versão inexistente sobe para o router mapear como 404.
+    """
+    cat = _exigir_catalogo(skill_key)
+    db, cid = _resolver_db_e_canal(db_path, channel_id)
+    revertido = settings_store.reverter_skill_para_versao(db, cid, skill_key, versao)
+    _espelhar_corpo_no_md(cat, str(revertido.get("corpo") or "").strip(), editorial_root)
+    return _descrever(
+        cat, resolver_skill(skill_key, db_path=db, channel_id=cid, editorial_root=editorial_root)
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Migração pontual D-300: thinking/timeout elevados na análise, para canais que
 # já tinham a linha semeada com os defaults ANTIGOS (compartilhados com cenas/
 # metadados). Comparar contra o valor ANTIGO — nunca contra o novo — preserva

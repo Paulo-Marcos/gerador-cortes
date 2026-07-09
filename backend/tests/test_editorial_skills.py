@@ -539,3 +539,82 @@ def test_skill_desconhecida_levanta(tmp_path: Path):
         raise AssertionError("esperava KeyError")
     except KeyError:
         pass
+
+
+# --------------------------------------------------------------------------- #
+# Histórico de versões (D-312): listar (com resumo do que mudou) e reverter
+# --------------------------------------------------------------------------- #
+
+
+def test_listar_versoes_traz_resumo_do_que_mudou(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path, **{"cortes.md": "V1"})
+
+    # v1: seed pela primeira resolução; v2: muda o corpo; v3: muda os params.
+    editorial_skills.resolver_skill(_SKILL, db_path=db, channel_id=_CANAL, editorial_root=editorial)
+    editorial_skills.definir_skill(
+        _SKILL, corpo="V2", db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+    editorial_skills.definir_skill(
+        _SKILL,
+        params={"modelo": "haiku", "thinking_tokens": 10, "timeout": 120.0},
+        db_path=db,
+        channel_id=_CANAL,
+        editorial_root=editorial,
+    )
+
+    versoes = editorial_skills.listar_versoes(_SKILL, db_path=db, channel_id=_CANAL)
+    # Mais nova primeiro; só a última é vigente.
+    assert [v.versao for v in versoes] == [3, 2, 1]
+    assert [v.vigente for v in versoes] == [True, False, False]
+    assert versoes[2].resumo == "Versão inicial"
+    assert versoes[1].mudancas == ["corpo"]  # v2 mexeu no corpo
+    assert versoes[0].mudancas == ["params_json"]  # v3 mexeu nos params
+    assert "parâmetros" in versoes[0].resumo
+
+
+def test_reverter_skill_volta_conteudo_e_espelha_md(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path, **{"cortes.md": "ORIGINAL"})
+
+    editorial_skills.resolver_skill(_SKILL, db_path=db, channel_id=_CANAL, editorial_root=editorial)
+    editorial_skills.definir_skill(
+        _SKILL, corpo="CUSTOMIZADO", db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+
+    descrita = editorial_skills.reverter_skill(
+        _SKILL, 1, db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+    # Volta ao corpo da v1 e re-descreve.
+    assert descrita.corpo == "ORIGINAL"
+    # Fonte da verdade (banco) e espelho (.md) coerentes com o revertido.
+    atual = editorial_skills.resolver_skill(
+        _SKILL, db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+    assert atual.corpo == "ORIGINAL"
+    assert (editorial / "cortes.md").read_text(encoding="utf-8").strip() == "ORIGINAL"
+    # Append-only: reverter gerou a v3 vigente.
+    versoes = editorial_skills.listar_versoes(_SKILL, db_path=db, channel_id=_CANAL)
+    assert versoes[0].versao == 3 and versoes[0].vigente is True
+
+
+def test_reverter_versao_inexistente_levanta(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+    editorial_skills.resolver_skill(_SKILL, db_path=db, channel_id=_CANAL, editorial_root=editorial)
+    try:
+        editorial_skills.reverter_skill(
+            _SKILL, 99, db_path=db, channel_id=_CANAL, editorial_root=editorial
+        )
+        raise AssertionError("esperava KeyError")
+    except KeyError:
+        pass
+
+
+def test_listar_versoes_skill_desconhecida_levanta(tmp_path: Path):
+    db = _db(tmp_path)
+    try:
+        editorial_skills.listar_versoes("inexistente", db_path=db, channel_id=_CANAL)
+        raise AssertionError("esperava KeyError")
+    except KeyError:
+        pass
