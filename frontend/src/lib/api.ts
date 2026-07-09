@@ -744,6 +744,23 @@ export const api = {
     }),
 
   deletarLayoutPreset: (id: string) => request<void>(`/presets/layout/${id}`, { method: 'DELETE' }),
+
+  // ─── E-022: Área de Análises (telemetria D-310 + desempenho YouTube D-313) ──
+  // Consomem endpoints de backend já existentes; tipos abaixo (final do arquivo).
+  obterTelemetriaCortes: (projetoId: string) =>
+    request<TelemetriaProjeto>(`/projetos/${projetoId}/telemetria-cortes`),
+  telemetriaCortesCsvUrl: () => `${API_BASE}/projetos/telemetria-cortes/export?formato=csv`,
+  obterYoutubeStatsStatus: () => request<YoutubeStatsStatus>('/projetos/youtube-stats/status'),
+  levantamentoDuracaoRetencao: () =>
+    request<{ faixas: LevantamentoDuracao[] }>(
+      '/projetos/youtube-stats/levantamento/duracao-retencao',
+    ),
+  levantamentoTituloDesempenho: () =>
+    request<{ grupos: LevantamentoTitulo[] }>(
+      '/projetos/youtube-stats/levantamento/titulo-desempenho',
+    ),
+  sincronizarYoutubeStats: () =>
+    request<YoutubeStatsSyncResult>('/projetos/youtube-stats/sync', { method: 'POST' }),
 };
 
 export const VIDEOS_BASE = (
@@ -837,4 +854,128 @@ export async function fetchWaveformPeaks(url: string): Promise<WaveformPeaksResp
 
 export function progressoWsUrl(projetoId: string): string {
   return `${API_BASE.replace(/^http(s?):/, 'ws$1:')}/projetos/${projetoId}/ws`;
+}
+
+// ─── E-022: tipos da Área de Análises ────────────────────────────────────────
+// Definidos aqui (e não em models.ts) porque models.ts está sob lock e fora do
+// escopo — mesmo padrão do bloco D-070 acima. Espelham os payloads dos serviços
+// telemetria_cortes / youtube_stats do backend.
+
+/** Situação do corte na telemetria (domain/telemetria_cortes.py). */
+export type TelemetriaSituacao = 'com_snapshot' | 'sem_proposta_ia' | 'sem_snapshot';
+
+export interface TelemetriaTitulo {
+  proposto: string | null;
+  final: string;
+  mudou: boolean | null;
+}
+
+export interface TelemetriaBordas {
+  inicio_proposto_seg: number | null;
+  inicio_final_seg: number;
+  delta_inicio_seg: number | null;
+  fim_proposto_seg: number | null;
+  fim_final_seg: number;
+  delta_fim_seg: number | null;
+  duracao_proposta_seg: number | null;
+  duracao_final_seg: number;
+  delta_duracao_seg: number | null;
+}
+
+export interface TelemetriaDesvios {
+  propostos: number | null;
+  // O backend devolve as listas de desvios (não só a contagem); a UI usa `.length`.
+  mantidos: unknown[] | null;
+  removidos: unknown[] | null;
+  adicionados: unknown[] | null;
+  adicionados_por_origem: Record<string, number> | null;
+  finais: number;
+  finais_por_origem: Record<string, number>;
+}
+
+/** Ranking relativo {hook, flow, value, total} — opcional; só se o payload trouxer. */
+export interface TelemetriaScore {
+  hook?: number;
+  flow?: number;
+  value?: number;
+  total?: number;
+}
+
+export interface TelemetriaCorteDiff {
+  corte_id: string;
+  numero: number;
+  situacao: TelemetriaSituacao;
+  origem_analise: string | null;
+  status_final: string;
+  titulo: TelemetriaTitulo;
+  bordas: TelemetriaBordas;
+  desvios: TelemetriaDesvios;
+  score?: TelemetriaScore | null;
+}
+
+export interface TelemetriaProjeto {
+  projeto_id: string;
+  titulo_live: string;
+  total_cortes: number;
+  com_snapshot: number;
+  sem_snapshot: number;
+  cortes: TelemetriaCorteDiff[];
+}
+
+export interface YoutubeVideoStat {
+  video_id: string;
+  canal_id: string | null;
+  titulo: string | null;
+  duracao_seg: number | null;
+  publicado_em: string | null;
+  views: number | null;
+  estimated_minutes_watched: number | null;
+  average_view_duration_seg: number | null;
+  average_view_percentage: number | null;
+  subscribers_gained: number | null;
+  corte_id: string | null;
+  match_por_titulo: boolean;
+  sincronizado_em: string | null;
+}
+
+export interface YoutubeStatsStatus {
+  total: number;
+  com_corte: number;
+  casados_por_titulo: number;
+  sincronizado_em: string | null;
+  stale: boolean;
+  dias_desde_sync: number | null;
+  videos: YoutubeVideoStat[];
+}
+
+export interface LevantamentoDuracao {
+  faixa: string;
+  videos: number;
+  views_total: number;
+  views_media: number;
+  retencao_media_pct: number;
+  retencao_ponderada_pct: number;
+  avg_view_duration_media_seg: number;
+}
+
+export interface LevantamentoTitulo {
+  grupo: string;
+  faixa: string;
+  videos: number;
+  views_total: number;
+  views_media: number;
+  retencao_media_pct: number;
+  retencao_ponderada_pct: number;
+}
+
+/**
+ * Resultado do POST de sync. `iniciado` = task disparada; `erro` +
+ * `precisa_reautorizar` = faltou escopo OAuth (a UI mostra a instrução).
+ */
+export interface YoutubeStatsSyncResult {
+  status: 'ok' | 'erro' | 'iniciado';
+  precisa_reautorizar?: boolean;
+  mensagem?: string;
+  total?: number;
+  sincronizado_em?: string;
 }

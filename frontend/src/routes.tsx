@@ -42,6 +42,10 @@ const ThumbnailPadroesPage = lazy(() =>
 const ChannelsPage = lazy(() =>
   import('@/features/channels/ChannelsPage').then((m) => ({ default: m.ChannelsPage })),
 );
+// E-022: Área de Análises (telemetria proposta×final + desempenho YouTube).
+const AnalisesPage = lazy(() =>
+  import('@/features/analises/AnalisesPage').then((m) => ({ default: m.AnalisesPage })),
+);
 
 export const router = createBrowserRouter([
   {
@@ -61,6 +65,7 @@ export const router = createBrowserRouter([
       { path: 'ranking-lives', element: <RankingLivesPage /> },
       { path: 'padroes-thumbnail', element: <ThumbnailPadroesPage /> },
       { path: 'canais', element: <ChannelsPage /> },
+      { path: 'analises', element: <AnalisesPage /> },
       { path: '*', element: <StubPage titulo="Pagina nao encontrada" /> },
     ],
   },

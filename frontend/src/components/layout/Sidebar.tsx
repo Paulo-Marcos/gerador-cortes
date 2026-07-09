@@ -1,5 +1,6 @@
 import { Link, useLocation, useMatch } from 'react-router-dom';
 import {
+  BarChart3,
   Check,
   FileText,
   Film,
@@ -52,6 +53,13 @@ const globalItems: NavItem[] = [
     label: 'Padrões de thumbnail',
     Icon: Sparkles,
     isActive: (pathname) => pathname.startsWith('/padroes-thumbnail'),
+  },
+  // E-022: Área de Análises (telemetria proposta×final + desempenho YouTube).
+  {
+    to: '/analises',
+    label: 'Análises',
+    Icon: BarChart3,
+    isActive: (pathname) => pathname.startsWith('/analises'),
   },
   {
     to: '/canais',
