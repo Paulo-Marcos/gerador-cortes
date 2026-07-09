@@ -197,6 +197,26 @@ def test_settings_db_na_raiz_nao_e_item_plano(tmp_path):
     assert not (instance / "channels" / "meucanal" / "settings.db").exists()
 
 
+def test_sidecars_wal_do_settings_db_nao_sao_itens_planos(tmp_path):
+    """D-315: os sidecars WAL/SHM que o SQLite cria ao lado do `settings.db`
+    global não devem disparar 'layout inconsistente' no boot seguinte."""
+    instance = tmp_path / "instance"
+    (instance / "channels" / "meucanal").mkdir(parents=True)
+    (instance / "channels" / "meucanal" / "channel.yaml").write_text("nome: x\n", encoding="utf-8")
+    (instance / "active-channel").write_text("meucanal\n", encoding="utf-8")
+    (instance / "settings.db").write_text("", encoding="utf-8")
+    (instance / "settings.db-wal").write_text("", encoding="utf-8")
+    (instance / "settings.db-shm").write_text("", encoding="utf-8")
+
+    resultado = garantir_layout_de_canais(instance_root=instance)
+
+    assert resultado.acao == "noop"
+    # Os sidecars ficam onde estão — não são movidos para dentro do canal.
+    assert (instance / "settings.db-wal").exists()
+    assert (instance / "settings.db-shm").exists()
+    assert not (instance / "channels" / "meucanal" / "settings.db-wal").exists()
+
+
 def test_cura_ponteiro_ausente_com_canal_unico(tmp_path):
     instance = tmp_path / "instance"
     (instance / "channels" / "meucanal").mkdir(parents=True)

@@ -41,9 +41,22 @@ _PONTEIRO_ATIVO = "active-channel"
 # `settings.db` (D-191) é um artefato GLOBAL de nível de instância (config de
 # todos os canais), vive na raiz de `instance/` ao lado do ponteiro de canal ativo.
 # NÃO é item de layout plano legado: não deve disparar "layout inconsistente" nem
-# ser movido para dentro de um canal.
+# ser movido para dentro de um canal. O SQLite em modo WAL cria sidecars ao lado do
+# banco (`settings.db-wal`, `settings.db-shm`, `settings.db-journal`): eles pertencem
+# ao mesmo artefato global e também são reservados — senão o boot seguinte os veria
+# como itens planos órfãos e abortaria com "layout inconsistente".
 _BANCO_SETTINGS = "settings.db"
 _RESERVADOS = frozenset({_DIR_CANAIS, _PONTEIRO_ATIVO, _BANCO_SETTINGS})
+
+
+def _eh_reservado(nome: str) -> bool:
+    """True para itens do layout multi-canal e para o banco global + seus sidecars.
+
+    Um sidecar do SQLite é qualquer `settings.db-<sufixo>` (`-wal`, `-shm`,
+    `-journal`): pertence ao `settings.db` global, não ao layout plano legado.
+    """
+    return nome in _RESERVADOS or nome.startswith(_BANCO_SETTINGS + "-")
+
 
 _ID_FALLBACK = "default"
 
@@ -571,7 +584,7 @@ def _itens_planos(instance_root: Path) -> list[Path]:
     """Itens no nível raiz da instância que não pertencem ao layout multi-canal."""
     if not instance_root.is_dir():
         return []
-    return [p for p in instance_root.iterdir() if p.name not in _RESERVADOS]
+    return [p for p in instance_root.iterdir() if not _eh_reservado(p.name)]
 
 
 def _derivar_id_canal(channel_yaml: Path) -> str:
