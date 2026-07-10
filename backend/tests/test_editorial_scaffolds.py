@@ -213,6 +213,22 @@ def test_migracao_troca_v1_conservador_pelo_novo_default(tmp_path: Path):
     )
 
 
+def test_migracao_troca_v2_com_revisao_pelo_novo_default(tmp_path: Path):
+    # D-332: o scaffold magro que ainda pedia `revisoes`/[REVISÁVEL] (era D-330)
+    # também é superado — canais nele convergem para o novo default sem revisão.
+    kw = _kw(tmp_path)
+    v2_com_revisao = editorial_scaffolds_legados.SCAFFOLDS_SUPERADOS["trechos-expert"][1]
+    editorial_scaffolds.definir_scaffold("trechos", v2_com_revisao, **kw)
+
+    migrados = editorial_scaffolds.migrar_scaffolds_do_canal_ativo(**kw)
+
+    assert migrados == 1
+    cat = editorial_scaffolds._exigir_catalogo("trechos")
+    novo = editorial_scaffolds.resolver_scaffold("trechos", **kw)
+    assert novo == editorial_scaffolds._default_scaffold(cat)
+    assert "revisoes" not in novo and "REVIS" not in novo
+
+
 def test_migracao_preserva_default_novo_e_e_idempotente(tmp_path: Path):
     kw = _kw(tmp_path)
     # Canal genérico: 1º acesso semeia o NOVO default; a migração é no-op.

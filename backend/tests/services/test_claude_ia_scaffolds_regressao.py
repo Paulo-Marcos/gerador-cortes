@@ -57,6 +57,8 @@ def _oraculo_trechos(texto_transcricao, cabecalho_meta, parte, total_partes):
     # D-330: o scaffold de trechos ficou MAGRO (só o envelope + delegação à
     # expertise trechos-expert v2). As regras conservadoras e os 2 tipos fixos
     # (DESVIO/REPETICAO) saíram do scaffold — a fonte única agora é o corpo.
+    # D-332: o scaffold só pede os `desvios` NOVOS (a `revisoes`/[REVISÁVEL] saiu
+    # — a revisão automática foi revogada).
     cabecalho_parte = (
         f"*** ATENÇÃO: Esta é a PARTE {parte} de {total_partes} do corte. "
         f"Identifique os trechos a remover APENAS para esta parte. ***\n\n"
@@ -69,10 +71,9 @@ def _oraculo_trechos(texto_transcricao, cabecalho_meta, parte, total_partes):
         "=== TRANSCRIÇÃO DO CORTE (timestamp absoluto — fala) ===\n"
         f"{texto_transcricao}\n"
         "=== FIM DA TRANSCRIÇÃO ===\n\n"
-        "Marque agora os trechos a remover (a chave `desvios`) e, quando algum "
-        "desvio [REVISÁVEL] estiver errado, as `revisoes` — em JSON puro, seguindo "
-        "exatamente o formato e as regras da sua expertise acima. Use timestamps "
-        "ABSOLUTOS do vídeo original, dentro do intervalo do corte."
+        "Marque agora os NOVOS trechos a remover (a chave `desvios`) em JSON puro, "
+        "seguindo exatamente o formato e as regras da sua expertise acima. Use "
+        "timestamps ABSOLUTOS do vídeo original, dentro do intervalo do corte."
     )
 
 

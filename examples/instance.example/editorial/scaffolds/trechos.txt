@@ -2,4 +2,4 @@
 {texto_transcricao}
 === FIM DA TRANSCRIÇÃO ===
 
-Marque agora os trechos a remover (a chave `desvios`) e, quando algum desvio [REVISÁVEL] estiver errado, as `revisoes` — em JSON puro, seguindo exatamente o formato e as regras da sua expertise acima. Use timestamps ABSOLUTOS do vídeo original, dentro do intervalo do corte.
+Marque agora os NOVOS trechos a remover (a chave `desvios`) em JSON puro, seguindo exatamente o formato e as regras da sua expertise acima. Use timestamps ABSOLUTOS do vídeo original, dentro do intervalo do corte.

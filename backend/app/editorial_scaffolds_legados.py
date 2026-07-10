@@ -19,9 +19,13 @@ Por que o match é só contra o texto CONCRETO V1 (não o novo nem uma customiza
 um scaffold customizado pelo dono não bate e é PRESERVADO; o novo default magro
 não pertence ao conjunto → a migração é idempotente (roda uma vez e nunca mais).
 
-`TRECHOS_SUPERADOS` == o `scaffolds/trechos.txt` da era pré-D-330, `.strip()`ado
-(como `_default_scaffold` o gravava no banco). Congelado aqui byte-a-byte;
-`test_editorial_scaffolds` guarda que ele NÃO é igual ao novo default.
+D-332: o scaffold magro que PEDIA `revisoes`/[REVISÁVEL] (era D-330) também foi
+SUPERADO — a revisão automática foi revogada; o novo default só pede os `desvios`
+NOVOS. Canais nele convergem para o default atual pela mesma migração.
+
+`*_SUPERADOS` == os `scaffolds/trechos.txt` das eras pré-D-330 e pré-D-332,
+`.strip()`ados (como `_default_scaffold` os gravava no banco). Congelados aqui
+byte-a-byte; `test_editorial_scaffolds` guarda que NÃO são iguais ao novo default.
 """
 
 from __future__ import annotations
@@ -62,9 +66,21 @@ Regras importantes:
 """
 ).strip()
 
+# D-332: scaffold magro que ainda pedia `revisoes`/[REVISÁVEL] (era D-330),
+# superado pela revogação da revisão automática. Congelado byte-a-byte.
+_TRECHOS_V2_COM_REVISAO = (
+    """
+{cabecalho_parte}{cabecalho_meta}=== TRANSCRIÇÃO DO CORTE (timestamp absoluto — fala) ===
+{texto_transcricao}
+=== FIM DA TRANSCRIÇÃO ===
+
+Marque agora os trechos a remover (a chave `desvios`) e, quando algum desvio [REVISÁVEL] estiver errado, as `revisoes` — em JSON puro, seguindo exatamente o formato e as regras da sua expertise acima. Use timestamps ABSOLUTOS do vídeo original, dentro do intervalo do corte.
+"""
+).strip()
+
 # Scaffolds concretos superados por skill_key (a linha da tabela onde o scaffold
 # é guardado). Só `trechos-expert` tem entrada — cortes/cenas/thumbnail/resumo
 # não sofreram esta correção.
 SCAFFOLDS_SUPERADOS: dict[str, tuple[str, ...]] = {
-    "trechos-expert": (_TRECHOS_V1,),
+    "trechos-expert": (_TRECHOS_V1, _TRECHOS_V2_COM_REVISAO),
 }

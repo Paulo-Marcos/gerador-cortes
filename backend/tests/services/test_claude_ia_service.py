@@ -479,9 +479,10 @@ class TestTrechos:
         )
         assert "PARTE 2 de 3" in prompt
 
-    def test_gerar_desvios_retorna_desvios_e_revisoes_do_json(self, monkeypatch):
-        """D-302: o retorno agrega `desvios` E `revisoes` de todos os chunks;
-        resposta sem `revisoes` (skill antiga) vira lista vazia."""
+    def test_gerar_desvios_retorna_so_desvios_e_ignora_revisoes(self, monkeypatch):
+        """D-332: o retorno agrega só `desvios` dos chunks; um `revisoes` no JSON
+        (skill v2-com-revisão legada) é IGNORADO — a revisão automática foi
+        revogada."""
         fake = _FakeGenerate(
             {
                 "desvios": [{"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}],
@@ -507,9 +508,8 @@ class TestTrechos:
         assert resultado["desvios"] == [
             {"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}
         ]
-        assert resultado["revisoes"] == [
-            {"acao": "remover", "inicio_hms": "00:15:00", "fim_hms": "00:15:20"}
-        ]
+        # a chave `revisoes` não é mais propagada
+        assert "revisoes" not in resultado
 
     def test_gerar_desvios_loga_impressao_digital_da_skill(self, monkeypatch, caplog):
         """D-331: antes de chamar o cliente, sai UMA linha [ClaudeIA/skill] com o
@@ -539,8 +539,9 @@ class TestTrechos:
         # a etapa de trechos monta scaffold → o scaffold_sha também sai na linha
         assert "scaffold_sha=" in linha
 
-    def test_gerar_desvios_sem_revisoes_retorna_lista_vazia(self, monkeypatch):
-        """Back-compat: skill que só devolve `desvios` não quebra o fluxo."""
+    def test_gerar_desvios_sem_chave_revisoes_nao_quebra(self, monkeypatch):
+        """Back-compat: skill que só devolve `desvios` (sem `revisoes`) flui
+        normalmente e o retorno traz só os desvios."""
         fake = _FakeGenerate(
             {"desvios": [{"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}]}
         )
@@ -554,7 +555,10 @@ class TestTrechos:
             )
         )
 
-        assert resultado["revisoes"] == []
+        assert resultado["desvios"] == [
+            {"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}
+        ]
+        assert "revisoes" not in resultado
 
     def test_mesclar_desvios_so_adiciona_nao_remove(self):
         existentes = [
@@ -578,7 +582,7 @@ class TestTrechos:
         assert "manual A" in motivos and "manual B" in motivos and "claude novo" in motivos
 
 
-# ── D-302: merge revisável (revisões sobre desvios de origem IA) ────────────────
+# ── D-332: gerar trechos é aditivo PURO (não remove nem revisa) ─────────────────
 
 
 def _desvio(inicio_hms: str, fim_hms: str, motivo: str, origem: str | None = None) -> dict:
@@ -590,104 +594,110 @@ def _desvio(inicio_hms: str, fim_hms: str, motivo: str, origem: str | None = Non
     return normalizar_desvio(bruto)
 
 
-class TestAplicarRevisoes:
-    """D-302: `_aplicar_revisoes` remove/ajusta APENAS desvios de origem IA
-    ('claude'); manual (sem origem) e 'tecnico' são intocáveis."""
+class TestGerarTrechosAditivoPuro:
+    """D-332 (regressão da D-302): "gerar trechos" volta a ser CUMULATIVO — soma
+    os desvios novos e NUNCA remove nem ajusta os já marcados (manual OU claude);
+    a revisão automática foi revogada. Um `revisoes` no JSON da skill é ignorado."""
 
-    def test_remover_desvio_de_origem_claude(self):
-        existentes = [
-            _desvio("00:05:00", "00:05:30", "chat", origem="claude"),
-            _desvio("00:10:00", "00:10:20", "tangente", origem="claude"),
-        ]
-        revisoes = [
-            {
-                "acao": "remover",
-                "inicio_hms": "00:05:00",
-                "fim_hms": "00:05:30",
-                "motivo": "trecho sustenta o argumento",
+    def _montar_factory(self, *, desvios_existentes: list, desvios_novos: list):
+        """Fake de AsyncSessionLocal para gerar_trechos_via_claude. `db.get`
+        despacha por classe (Corte/Projeto). Guarda o JSON final gravado em
+        `corte.desvios` para o teste inspecionar."""
+        corte = MagicMock()
+        corte.transcricao_corte = json.dumps([{"start": 0, "end": 4, "texto": "fala"}])
+        corte.desvios = json.dumps(desvios_existentes)
+        corte.titulo_proposto = "Corte X"
+        corte.tema_central = "tese"
+        corte.inicio_hms = "00:00:00"
+        corte.fim_hms = "00:30:00"
+        corte.projeto_id = "p1"
+
+        projeto = MagicMock()
+        projeto.falantes_map = "{}"  # sem diarização → mapa None
+        projeto.transcricao_raw = None
+
+        async def fake_get(model, _id):
+            return projeto if model is claude_ia.Projeto else corte
+
+        session = AsyncMock()
+        session.__aenter__ = AsyncMock(return_value=session)
+        session.__aexit__ = AsyncMock(return_value=False)
+        session.get = fake_get
+        session.commit = AsyncMock()
+        return (lambda: session), corte
+
+    def test_preserva_manual_e_claude_existentes_e_soma_novos(self, monkeypatch):
+        # Um desvio manual (sem origem) e um de origem 'claude' já marcados.
+        manual = _desvio("00:05:00", "00:05:30", "manual do editor")
+        claude_ant = _desvio("00:10:00", "00:10:20", "chat", origem="claude")
+        factory, corte = self._montar_factory(
+            desvios_existentes=[manual, claude_ant],
+            desvios_novos=[],
+        )
+        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+            # A skill devolve um desvio NOVO, um DUPLICADO do manual (deve pular)
+            # e — como skill v2-com-revisão legada — um `revisoes` que mandaria
+            # remover o desvio 'claude'. A revogação IGNORA `revisoes`.
+            return {
+                "desvios": [
+                    {"inicio_hms": "00:20:00", "fim_hms": "00:20:15", "motivo": "novo"},
+                    {"inicio_hms": "00:05:00", "fim_hms": "00:05:30", "motivo": "dup do manual"},
+                ],
+                "revisoes": [{"acao": "remover", "inicio_hms": "00:10:00", "fim_hms": "00:10:20"}],
             }
-        ]
 
-        resultado, removidos, ajustados = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
 
-        assert removidos == 1 and ajustados == 0
-        assert [d["motivo"] for d in resultado] == ["tangente"]
+        sincronizados: list = []
 
-    def test_ajustar_substitui_limites_e_renormaliza(self):
-        existentes = [_desvio("00:05:00", "00:06:00", "repetição", origem="claude")]
-        revisoes = [
-            {
-                "acao": "ajustar",
-                "inicio_hms": "00:05:00",
-                "fim_hms": "00:06:00",
-                "novo_inicio_hms": "00:05:10",
-                "novo_fim_hms": "00:05:50",
-                "motivo": "borda comia o fim da frase",
-            }
-        ]
+        async def fake_sync(corte_id):
+            sincronizados.append(corte_id)
 
-        resultado, removidos, ajustados = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+        from app.services.corte import CorteService
 
-        assert removidos == 0 and ajustados == 1
-        # normalizar_desvio canonicaliza o HMS com milissegundos (.000)
-        assert resultado[0]["inicio_hms"].startswith("00:05:10")
-        assert resultado[0]["fim_hms"].startswith("00:05:50")
-        # limites em segundos re-normalizados a partir dos novos HMS
-        assert resultado[0]["inicio_seg"] == 310.0
-        assert resultado[0]["fim_seg"] == 350.0
-        # origem preservada — o desvio segue revisável em passadas futuras
-        assert resultado[0]["origem"] == "claude"
+        monkeypatch.setattr(CorteService, "sincronizar_transcricao_corte", staticmethod(fake_sync))
 
-    def test_nao_toca_desvio_manual_nem_tecnico(self):
-        existentes = [
-            _desvio("00:05:00", "00:05:30", "marcado pelo editor"),  # sem origem = manual
-            _desvio("00:10:00", "00:10:20", "silêncio detectado", origem="tecnico"),
-        ]
-        revisoes = [
-            {"acao": "remover", "inicio_hms": "00:05:00", "fim_hms": "00:05:30", "motivo": "x"},
-            {
-                "acao": "ajustar",
-                "inicio_hms": "00:10:00",
-                "fim_hms": "00:10:20",
-                "novo_inicio_hms": "00:10:05",
-                "novo_fim_hms": "00:10:20",
-                "motivo": "y",
-            },
-        ]
+        resultado = asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
 
-        resultado, removidos, ajustados = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+        gravados = json.loads(corte.desvios)
+        motivos = [d["motivo"] for d in gravados]
+        # Os DOIS existentes foram preservados (revisão não removeu o 'claude').
+        assert "manual do editor" in motivos
+        assert "chat" in motivos
+        # O novo entrou; a duplicata do manual foi pulada.
+        assert "novo" in motivos
+        assert "dup do manual" not in motivos
+        assert resultado == {"total_desvios": 3, "novos": 1}
+        # ressincronizou a transcrição final do corte
+        assert sincronizados == ["c1"]
 
-        assert removidos == 0 and ajustados == 0, "manual/técnico nunca são alcançados"
-        assert resultado == existentes
+    def test_sem_desvios_novos_mantem_tudo(self, monkeypatch):
+        manual = _desvio("00:05:00", "00:05:30", "manual do editor")
+        claude_ant = _desvio("00:10:00", "00:10:20", "chat", origem="claude")
+        factory, corte = self._montar_factory(
+            desvios_existentes=[manual, claude_ant],
+            desvios_novos=[],
+        )
+        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
 
-    def test_referencia_com_tolerancia_de_2s(self):
-        # O modelo citou 00:05:01 para um desvio que começa em 00:05:00 → mesmo desvio.
-        existentes = [_desvio("00:05:00", "00:05:30", "chat", origem="claude")]
-        revisoes = [
-            {"acao": "remover", "inicio_hms": "00:05:01", "fim_hms": "00:05:29", "motivo": "x"}
-        ]
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+            return {"desvios": []}  # skill sem nada novo, sem chave revisoes
 
-        resultado, removidos, _ = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
 
-        assert removidos == 1 and resultado == []
+        from app.services.corte import CorteService
 
-    def test_revisao_sem_alvo_ou_malformada_e_ignorada(self):
-        existentes = [_desvio("00:05:00", "00:05:30", "chat", origem="claude")]
-        revisoes = [
-            # referência longe de qualquer desvio (> 2s)
-            {"acao": "remover", "inicio_hms": "00:20:00", "fim_hms": "00:20:30", "motivo": "x"},
-            # ação desconhecida
-            {"acao": "explodir", "inicio_hms": "00:05:00", "fim_hms": "00:05:30"},
-            # ajustar sem novos limites
-            {"acao": "ajustar", "inicio_hms": "00:05:00", "fim_hms": "00:05:30", "motivo": "y"},
-            # sem referência nenhuma
-            {"acao": "remover", "motivo": "z"},
-        ]
+        monkeypatch.setattr(
+            CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
+        )
 
-        resultado, removidos, ajustados = ClaudeIaService._aplicar_revisoes(existentes, revisoes)
+        resultado = asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
 
-        assert removidos == 0 and ajustados == 0
-        assert resultado == existentes
+        gravados = json.loads(corte.desvios)
+        assert [d["motivo"] for d in gravados] == ["manual do editor", "chat"]
+        assert resultado == {"total_desvios": 2, "novos": 0}
 
 
 class TestTrechosComFalantes:
@@ -730,7 +740,9 @@ class TestTrechosComFalantes:
             is transcricao_bruta
         )
 
-    def test_cabecalho_rotula_revisavel_e_protegido(self):
+    def test_cabecalho_so_lista_ja_marcados_sem_revisao(self):
+        """D-332: os já marcados são apenas LISTADOS (não repita; APENAS NOVOS);
+        sem rótulos [REVISÁVEL]/[PROTEGIDO] nem contrato de `revisoes` (revogados)."""
         existentes = [
             _desvio("00:05:00", "00:05:30", "chat", origem="claude"),
             _desvio("00:10:00", "00:10:20", "manual do editor"),
@@ -739,11 +751,13 @@ class TestTrechosComFalantes:
             {"titulo": "C", "tema_central": "t", "inicio_hms": "00:00:00", "fim_hms": "00:30:00"},
             existentes,
         )
-        assert "(chat) [REVISÁVEL]" in cabecalho
-        assert "(manual do editor) [PROTEGIDO]" in cabecalho
-        # o contrato da chave `revisoes` está declarado no bloco
-        assert '"acao": "remover"|"ajustar"' in cabecalho
-        assert "NUNCA proponha revisão de um [PROTEGIDO]" in cabecalho
+        # lista os dois motivos, com a instrução de propor só novos
+        assert "chat" in cabecalho and "manual do editor" in cabecalho
+        assert "APENAS NOVOS" in cabecalho
+        # nada de revisão: sem rótulos nem contrato de `revisoes`
+        assert "REVISÁVEL" not in cabecalho
+        assert "PROTEGIDO" not in cabecalho
+        assert "revisoes" not in cabecalho
 
 
 # ── Fase 3: cenas e metadados via Claude ────────────────────────────────────────
