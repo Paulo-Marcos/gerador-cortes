@@ -29,6 +29,7 @@ from app.services.app_logging import operational_error, operational_info
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # Escopo somente-leitura das métricas. O token de upload (escopos `youtube` +
 # `youtube.upload`) NÃO o inclui por padrão — daí a checagem explícita e o
@@ -47,6 +48,16 @@ _INSTRUCAO_REAUTORIZAR = (
     "O token do YouTube não tem o escopo de estatísticas (yt-analytics.readonly). "
     "Rode 'python dev-utils/auth_youtube.py' na pasta 'backend' (agora ele pede o "
     "escopo de analytics), autorize com a conta do canal e reinicie o backend."
+)
+
+# Instrução para quando a API está desabilitada no projeto do Google Cloud. Não é
+# reautorização (o token está OK) — é uma configuração única no console. O
+# `{projeto}` sai do próprio erro do Google (extendedHelp/reason accessNotConfigured).
+_INSTRUCAO_HABILITAR_API = (
+    "A YouTube Analytics API não está habilitada no projeto do Google Cloud. "
+    "Abra https://console.developers.google.com/apis/api/youtubeanalytics.googleapis.com/overview"
+    "{projeto}, clique em 'Ativar' e aguarde alguns minutos para propagar; depois "
+    "sincronize de novo."
 )
 
 
@@ -140,7 +151,10 @@ def listar_uploads(creds: Credentials) -> tuple[str, list[VideoUpload]]:
     """
     youtube = build("youtube", "v3", credentials=creds, cache_discovery=False)
 
-    canais = youtube.channels().list(part="id,contentDetails", mine=True).execute()
+    try:
+        canais = youtube.channels().list(part="id,contentDetails", mine=True).execute()
+    except HttpError as exc:
+        raise _traduzir_http_error(exc, contexto="identificar o canal no YouTube") from exc
     itens = canais.get("items", [])
     if not itens:
         raise YoutubeAnalyticsError("Não foi possível identificar o canal autenticado no YouTube.")
@@ -157,7 +171,12 @@ def listar_uploads(creds: Credentials) -> tuple[str, list[VideoUpload]]:
     uploads: list[VideoUpload] = []
     for inicio in range(0, len(video_ids), 50):
         chunk = video_ids[inicio : inicio + 50]
-        resp = youtube.videos().list(part="snippet,contentDetails", id=",".join(chunk)).execute()
+        try:
+            resp = (
+                youtube.videos().list(part="snippet,contentDetails", id=",".join(chunk)).execute()
+            )
+        except HttpError as exc:
+            raise _traduzir_http_error(exc, contexto="listar os vídeos do canal") from exc
         uploads.extend(_upload_de_item(item) for item in resp.get("items", []))
     return canal_id, uploads
 
@@ -176,26 +195,83 @@ def metricas_lifetime(
     metricas: dict[str, VideoMetrica] = {}
     start_index = 1
     while True:
-        resp = (
-            analytics.reports()
-            .query(
-                ids="channel==MINE",
-                startDate=start_date,
-                endDate=end_date,
-                metrics=_METRICAS,
-                dimensions="video",
-                sort="-views",
-                maxResults=_MAX_RESULTS,
-                startIndex=start_index,
+        try:
+            resp = (
+                analytics.reports()
+                .query(
+                    ids="channel==MINE",
+                    startDate=start_date,
+                    endDate=end_date,
+                    metrics=_METRICAS,
+                    dimensions="video",
+                    sort="-views",
+                    maxResults=_MAX_RESULTS,
+                    startIndex=start_index,
+                )
+                .execute()
             )
-            .execute()
-        )
+        except HttpError as exc:
+            raise _traduzir_http_error(
+                exc, contexto="consultar as estatísticas do YouTube"
+            ) from exc
         metricas.update(_metricas_de_report(resp))
         linhas = resp.get("rows") or []
         if len(linhas) < _MAX_RESULTS:
             break
         start_index += _MAX_RESULTS
     return metricas
+
+
+def _traduzir_http_error(exc: HttpError, *, contexto: str) -> YoutubeAnalyticsError:
+    """`HttpError` do googleapiclient → `YoutubeAnalyticsError` acionável.
+
+    Distingue o 403 `accessNotConfigured` (API desabilitada no projeto do Google
+    Cloud — configuração única no console) de qualquer outra falha de infra/rede,
+    para que a background task não estoure com traceback cru e o operador receba a
+    instrução certa. API desabilitada NÃO é caso de reautorizar (o token está OK).
+    """
+    if _e_api_desabilitada(exc):
+        mensagem = _INSTRUCAO_HABILITAR_API.format(projeto=_sufixo_projeto(exc))
+        operational_error("YouTubeStats", f"YouTube Analytics API desabilitada: {exc}")
+        return YoutubeAnalyticsError(mensagem)
+    operational_error("YouTubeStats", f"Falha ao {contexto}: {exc}")
+    return YoutubeAnalyticsError(f"Falha ao {contexto}: {exc}")
+
+
+def _e_api_desabilitada(exc: HttpError) -> bool:
+    status = getattr(getattr(exc, "resp", None), "status", None)
+    if status != 403:
+        return False
+    return "accessNotConfigured" in _texto_do_erro(exc)
+
+
+def _sufixo_projeto(exc: HttpError) -> str:
+    """`?project=NNN` extraído do erro, para o link já cair no projeto certo.
+
+    O Google cita o número em duas formas na mesma mensagem — `project=747...`
+    (na URL de ativação) e `project 747...` (no texto). Achamos "project",
+    pulamos o separador (`=`/espaço) e coletamos o primeiro bloco de dígitos.
+    """
+    texto = _texto_do_erro(exc)
+    marcador = "project"
+    pos = texto.find(marcador)
+    if pos == -1:
+        return ""
+    numero = ""
+    for ch in texto[pos + len(marcador) :]:
+        if ch.isdigit():
+            numero += ch
+        elif numero:
+            break  # já pegamos o número; o bloco acabou
+        # antes dos dígitos, ignora separadores (=, espaço) até o número começar
+    return f"?project={numero}" if numero else ""
+
+
+def _texto_do_erro(exc: HttpError) -> str:
+    conteudo = getattr(exc, "content", b"")
+    if isinstance(conteudo, bytes):
+        conteudo = conteudo.decode("utf-8", errors="replace")
+    return f"{conteudo} {exc}"
 
 
 # ── parsing puro (testável com respostas fake, sem rede) ─────────────────────

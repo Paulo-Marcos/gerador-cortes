@@ -10,6 +10,17 @@ from datetime import datetime
 
 import pytest
 from app.infrastructure import youtube_analytics as ya
+from googleapiclient.errors import HttpError
+
+
+class _FakeResp:
+    def __init__(self, status: int):
+        self.status = status
+        self.reason = "Forbidden"
+
+
+def _http_error(status: int, content: bytes) -> HttpError:
+    return HttpError(_FakeResp(status), content)
 
 
 class TestUploadDeItem:
@@ -61,6 +72,35 @@ class TestMetricasDeReport:
 
     def test_report_sem_linhas(self):
         assert ya._metricas_de_report({"columnHeaders": [{"name": "video"}]}) == {}
+
+
+class TestTraduzirHttpError:
+    def test_api_desabilitada_gera_instrucao_de_habilitar_com_projeto(self):
+        content = (
+            b'{"error": {"code": 403, "errors": [{"reason": "accessNotConfigured", '
+            b'"message": "YouTube Analytics API has not been used in project 747438536282 '
+            b'before or it is disabled."}]}}'
+        )
+        erro = ya._traduzir_http_error(_http_error(403, content), contexto="consultar")
+        assert isinstance(erro, ya.YoutubeAnalyticsError)
+        assert erro.precisa_reautorizar is False
+        assert "não está habilitada" in str(erro)
+        assert "project=747438536282" in str(erro)
+
+    def test_falha_generica_nao_vira_habilitar_api(self):
+        erro = ya._traduzir_http_error(
+            _http_error(500, b'{"error": "boom"}'), contexto="consultar as estatísticas"
+        )
+        assert isinstance(erro, ya.YoutubeAnalyticsError)
+        assert erro.precisa_reautorizar is False
+        assert "consultar as estatísticas" in str(erro)
+        assert "habilitada" not in str(erro)
+
+    def test_403_de_outra_causa_nao_vira_habilitar_api(self):
+        erro = ya._traduzir_http_error(
+            _http_error(403, b'{"error": {"reason": "quotaExceeded"}}'), contexto="consultar"
+        )
+        assert "habilitada" not in str(erro)
 
 
 class TestParsearIsoUtc:
