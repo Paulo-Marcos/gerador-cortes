@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app import channel_config_loader, editorial_scaffolds
+from app import channel_config_loader, editorial_scaffolds, editorial_scaffolds_legados
 from app.services import settings_store
 
 _CANAL = "canal-teste"
@@ -166,3 +166,69 @@ def test_definir_scaffold_invalido_levanta_valueerror(tmp_path: Path):
         editorial_scaffolds.definir_scaffold(
             "cortes", "sem placeholders nem contrato", **_kw(tmp_path)
         )
+
+
+# --- D-330: scaffold de trechos magro + migração de boot -------------------- #
+
+_TRECHOS_V1 = editorial_scaffolds_legados.SCAFFOLDS_SUPERADOS["trechos-expert"][0]
+
+
+def test_novo_default_trechos_e_magro_e_delega_a_expertise():
+    # O novo default não carrega mais as regras conservadoras que dominavam o
+    # corpo v2 — delega tudo à expertise e passa no próprio guardrail.
+    cat = editorial_scaffolds._exigir_catalogo("trechos")
+    novo = editorial_scaffolds._default_scaffold(cat)
+
+    editorial_scaffolds.validar_scaffold(novo, cat)  # marcador `desvios` presente
+    assert "seguindo exatamente o formato e as regras da sua expertise" in novo
+    assert "Seja conservador" not in novo
+    assert "REPETICAO" not in novo
+    assert novo != _TRECHOS_V1  # idempotência: novo default nunca é um superado
+
+
+def test_novo_scaffold_trechos_formata_com_kwargs_reais():
+    # Os kwargs EXATOS de `_montar_prompt_trechos`; o `.format` não pode dar KeyError.
+    cat = editorial_scaffolds._exigir_catalogo("trechos")
+    novo = editorial_scaffolds._default_scaffold(cat)
+    montado = novo.format(
+        cabecalho_parte="*** PARTE 1 de 2 ***\n\n",
+        cabecalho_meta="=== CORTE ===\n",
+        texto_transcricao="(00:00:01) fala de teste",
+    )
+    assert "fala de teste" in montado
+    assert "{" not in montado.replace("{{", "").replace("}}", "")  # nada por resolver
+
+
+def test_migracao_troca_v1_conservador_pelo_novo_default(tmp_path: Path):
+    kw = _kw(tmp_path)
+    # Canal semeado com o scaffold V1 conservador (estado pré-D-330).
+    editorial_scaffolds.definir_scaffold("trechos", _TRECHOS_V1, **kw)
+
+    migrados = editorial_scaffolds.migrar_scaffolds_do_canal_ativo(**kw)
+
+    assert migrados == 1
+    cat = editorial_scaffolds._exigir_catalogo("trechos")
+    assert editorial_scaffolds.resolver_scaffold("trechos", **kw) == (
+        editorial_scaffolds._default_scaffold(cat)
+    )
+
+
+def test_migracao_preserva_default_novo_e_e_idempotente(tmp_path: Path):
+    kw = _kw(tmp_path)
+    # Canal genérico: 1º acesso semeia o NOVO default; a migração é no-op.
+    novo = editorial_scaffolds.resolver_scaffold("trechos", **kw)
+
+    assert editorial_scaffolds.migrar_scaffolds_do_canal_ativo(**kw) == 0
+    assert editorial_scaffolds.resolver_scaffold("trechos", **kw) == novo
+
+
+def test_migracao_preserva_scaffold_customizado(tmp_path: Path):
+    kw = _kw(tmp_path)
+    custom = (
+        "{cabecalho_parte}{cabecalho_meta}{texto_transcricao} "
+        "minha regra própria — retorne `desvios` em JSON"
+    )
+    editorial_scaffolds.definir_scaffold("trechos", custom, **kw)
+
+    assert editorial_scaffolds.migrar_scaffolds_do_canal_ativo(**kw) == 0
+    assert editorial_scaffolds.resolver_scaffold("trechos", **kw) == custom

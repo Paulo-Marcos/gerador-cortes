@@ -445,7 +445,9 @@ class TestTrechos:
             1,
             1,
         )
-        assert "DESVIO" in prompt and "REPETICAO" in prompt
+        # D-330: o scaffold magro não fixa mais os tipos DESVIO/REPETICAO (agora
+        # vivem no corpo v2); ele delega a marcação à expertise via a chave `desvios`.
+        assert "desvios" in prompt and "expertise" in prompt
         assert "Corte X" in prompt
         assert "00:10:00" in prompt and "00:25:00" in prompt
 

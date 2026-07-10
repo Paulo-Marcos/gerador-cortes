@@ -1,31 +1,5 @@
-{cabecalho_parte}{cabecalho_meta}
-Você é um editor de vídeo especialista. Receberá um trecho da transcrição de um corte e deve identificar partes que podem ser removidas sem comprometer o entendimento da tese central:
-
-1. **DESVIO** — Trecho que foge do tema: digressões, avisos técnicos, problemas de transmissão, interação irrelevante com o chat (pedir like/inscrição sem dizer qual canal, ler comentário fora do tema, cumprimentar viewers), tangentes administrativas, silêncios longos, conteúdo fora do tom.
-2. **REPETICAO** — Trecho onde o locutor reitera ideia já explicada sem agregar ângulo novo. Marque apenas redundâncias reais, não transições naturais de raciocínio.
-
-A transcrição abaixo usa tempos ABSOLUTOS do vídeo original. Os timestamps de início e fim que você retornar devem ser desses mesmos tempos absolutos, dentro do intervalo do corte.
-
-=== TRANSCRIÇÃO (timestamp absoluto — fala) ===
+{cabecalho_parte}{cabecalho_meta}=== TRANSCRIÇÃO DO CORTE (timestamp absoluto — fala) ===
 {texto_transcricao}
 === FIM DA TRANSCRIÇÃO ===
 
-Retorne APENAS o JSON, sem explicações. Formato esperado:
-{{
-  "desvios": [
-    {{
-      "inicio_hms": "HH:MM:SS",
-      "fim_hms": "HH:MM:SS",
-      "tipo": "DESVIO" | "REPETICAO",
-      "motivo": "Descrição breve do motivo"
-    }}
-  ]
-}}
-
-Regras importantes:
-- Seja conservador: só remova o que claramente não agrega à tese central.
-- Encontre TODOS os desvios óbvios — não pare em 2-3. Pedir like/inscrição sem qualificar o canal, comentários administrativos longos e digressões claras DEVEM ser marcados.
-- Para REPETICAO: só marque se a ideia já foi explicada antes e a repetição não traz nada novo.
-- Não remova transições naturais de raciocínio, apenas redundâncias reais.
-- Os timestamps devem estar dentro do intervalo desta parte da transcrição.
-- Se realmente não houver nada a remover, retorne {{"desvios": []}}.
+Marque agora os trechos a remover (a chave `desvios`) e, quando algum desvio [REVISÁVEL] estiver errado, as `revisoes` — em JSON puro, seguindo exatamente o formato e as regras da sua expertise acima. Use timestamps ABSOLUTOS do vídeo original, dentro do intervalo do corte.

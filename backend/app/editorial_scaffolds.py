@@ -42,7 +42,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from string import Formatter
 
-from app import channel_paths, editorial_skills
+from app import channel_paths, editorial_scaffolds_legados, editorial_skills
 from app.services import settings_store
 
 # app -> backend -> raiz do repo (mesma ancoragem de editorial_skills).
@@ -395,3 +395,41 @@ def resetar_scaffold(
         channel_id=channel_id,
         editorial_root=editorial_root,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Migração pontual de boot (D-330): scaffold concreto V1 superado → default v2
+# --------------------------------------------------------------------------- #
+
+
+def migrar_scaffolds_do_canal_ativo(
+    *,
+    db_path: Path | None = None,
+    channel_id: str | None = None,
+    editorial_root: Path | None = None,
+) -> int:
+    """Troca, no boot, o scaffold concreto V1 superado pelo DEFAULT versionado atual.
+
+    Espelha `editorial_skills._migrar_corpo_v2_concreto` (D-311), mas para o
+    SCAFFOLD por canal: `claude_ia` monta o prompt como `expertise + scaffold`, e o
+    scaffold concreto pré-D-330 (conservador, 2 tipos) DOMINAVA o corpo v2. Aqui o
+    scaffold gravado é substituído pelo novo default magro — SÓ quando bate EXATO
+    com um superado conhecido (`SCAFFOLDS_SUPERADOS`). Scaffold customizado ou já
+    no novo default não bate e é preservado; idempotente.
+
+    Best-effort — pensada para rodar no MESMO ponto de boot que
+    `editorial_skills.migrar_skills_do_canal_ativo`. Retorna quantos scaffolds
+    foram migrados. `editorial_root`/kwargs isolam testes do `instance/` real.
+    """
+    db, cid = _resolver_db_e_canal(db_path, channel_id)
+    migrados = 0
+    for cat in _CATALOGO:
+        superados = editorial_scaffolds_legados.SCAFFOLDS_SUPERADOS.get(cat.skill_key)
+        if not superados:
+            continue
+        atual = settings_store.ler_scaffold(db, cid, cat.skill_key)
+        if not atual or atual.strip() not in superados:
+            continue
+        settings_store.gravar_scaffold(db, cid, cat.skill_key, _default_scaffold(cat))
+        migrados += 1
+    return migrados

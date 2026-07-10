@@ -761,4 +761,13 @@ def migrar_skills_do_canal_ativo(
         _migrar_linha_d301(cat, db, cid, linha)
         linha = settings_store.ler_skill(db, cid, cat.key) or linha
         _migrar_corpo_v2_concreto(cat, db, cid, linha, editorial_root)
+
+    # D-330: no MESMO ponto de boot, alinha o scaffold concreto V1 (conservador)
+    # ao default v2 magro. Import tardio evita o ciclo (editorial_scaffolds importa
+    # editorial_skills no topo). Best-effort: um erro aqui não deve falhar o seed.
+    from app import editorial_scaffolds
+
+    editorial_scaffolds.migrar_scaffolds_do_canal_ativo(
+        db_path=db, channel_id=cid, editorial_root=editorial_root
+    )
     return semeadas

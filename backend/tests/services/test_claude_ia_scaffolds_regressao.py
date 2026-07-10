@@ -54,6 +54,9 @@ def _oraculo_cortes(texto_transcricao, meta, cabecalho="", variacao=""):
 
 
 def _oraculo_trechos(texto_transcricao, cabecalho_meta, parte, total_partes):
+    # D-330: o scaffold de trechos ficou MAGRO (só o envelope + delegação à
+    # expertise trechos-expert v2). As regras conservadoras e os 2 tipos fixos
+    # (DESVIO/REPETICAO) saíram do scaffold — a fonte única agora é o corpo.
     cabecalho_parte = (
         f"*** ATENÇÃO: Esta é a PARTE {parte} de {total_partes} do corte. "
         f"Identifique os trechos a remover APENAS para esta parte. ***\n\n"
@@ -62,43 +65,14 @@ def _oraculo_trechos(texto_transcricao, cabecalho_meta, parte, total_partes):
     )
     return (
         f"{cabecalho_parte}"
-        f"{cabecalho_meta}\n"
-        "Você é um editor de vídeo especialista. Receberá um trecho da transcrição "
-        "de um corte e deve identificar partes que podem ser removidas sem comprometer "
-        "o entendimento da tese central:\n\n"
-        "1. **DESVIO** — Trecho que foge do tema: digressões, avisos técnicos, problemas "
-        "de transmissão, interação irrelevante com o chat (pedir like/inscrição sem dizer "
-        "qual canal, ler comentário fora do tema, cumprimentar viewers), tangentes administrativas, "
-        "silêncios longos, conteúdo fora do tom.\n"
-        "2. **REPETICAO** — Trecho onde o locutor reitera ideia já explicada sem agregar "
-        "ângulo novo. Marque apenas redundâncias reais, não transições naturais de raciocínio.\n\n"
-        "A transcrição abaixo usa tempos ABSOLUTOS do vídeo original. Os timestamps de início "
-        "e fim que você retornar devem ser desses mesmos tempos absolutos, dentro do intervalo "
-        "do corte.\n\n"
-        "=== TRANSCRIÇÃO (timestamp absoluto — fala) ===\n"
+        f"{cabecalho_meta}"
+        "=== TRANSCRIÇÃO DO CORTE (timestamp absoluto — fala) ===\n"
         f"{texto_transcricao}\n"
         "=== FIM DA TRANSCRIÇÃO ===\n\n"
-        "Retorne APENAS o JSON, sem explicações. Formato esperado:\n"
-        "{\n"
-        '  "desvios": [\n'
-        "    {\n"
-        '      "inicio_hms": "HH:MM:SS",\n'
-        '      "fim_hms": "HH:MM:SS",\n'
-        '      "tipo": "DESVIO" | "REPETICAO",\n'
-        '      "motivo": "Descrição breve do motivo"\n'
-        "    }\n"
-        "  ]\n"
-        "}\n\n"
-        "Regras importantes:\n"
-        "- Seja conservador: só remova o que claramente não agrega à tese central.\n"
-        "- Encontre TODOS os desvios óbvios — não pare em 2-3. Pedir like/inscrição "
-        "sem qualificar o canal, comentários administrativos longos e digressões claras "
-        "DEVEM ser marcados.\n"
-        "- Para REPETICAO: só marque se a ideia já foi explicada antes e a repetição "
-        "não traz nada novo.\n"
-        "- Não remova transições naturais de raciocínio, apenas redundâncias reais.\n"
-        "- Os timestamps devem estar dentro do intervalo desta parte da transcrição.\n"
-        '- Se realmente não houver nada a remover, retorne {"desvios": []}.\n'
+        "Marque agora os trechos a remover (a chave `desvios`) e, quando algum "
+        "desvio [REVISÁVEL] estiver errado, as `revisoes` — em JSON puro, seguindo "
+        "exatamente o formato e as regras da sua expertise acima. Use timestamps "
+        "ABSOLUTOS do vídeo original, dentro do intervalo do corte."
     )
 
 
