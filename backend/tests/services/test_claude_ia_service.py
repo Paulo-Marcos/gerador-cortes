@@ -511,6 +511,34 @@ class TestTrechos:
             {"acao": "remover", "inicio_hms": "00:15:00", "fim_hms": "00:15:20"}
         ]
 
+    def test_gerar_desvios_loga_impressao_digital_da_skill(self, monkeypatch, caplog):
+        """D-331: antes de chamar o cliente, sai UMA linha [ClaudeIA/skill] com o
+        sha1 do corpo da skill resolvida — para o operador confirmar por log qual
+        skill (corpo/scaffold/versão) realmente entrou na geração."""
+        import logging
+
+        fake = _FakeGenerate({"desvios": [], "revisoes": []})
+        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
+
+        with caplog.at_level(logging.INFO, logger="app.services.claude_ia"):
+            asyncio.run(
+                ClaudeIaService._gerar_desvios(
+                    [{"start": 0, "end": 4, "texto": "x"}],
+                    {"titulo": "C", "tema_central": "t", "inicio_hms": "0", "fim_hms": "0"},
+                    [],
+                )
+            )
+
+        linhas_skill = [ln for ln in caplog.text.splitlines() if "[ClaudeIA/skill]" in ln]
+        assert len(linhas_skill) == 1, "deve sair exatamente uma linha de impressão digital"
+        linha = linhas_skill[0]
+        assert "etapa=trechos-expert" in linha
+        # o sha da linha bate com o sha1 do corpo da skill trechos-expert resolvida
+        skill = claude_ia.editorial_skills.resolver_skill(claude_ia._SKILL_TRECHOS)
+        assert f"sha={claude_ia._sha1_curto(skill.corpo)}" in linha
+        # a etapa de trechos monta scaffold → o scaffold_sha também sai na linha
+        assert "scaffold_sha=" in linha
+
     def test_gerar_desvios_sem_revisoes_retorna_lista_vazia(self, monkeypatch):
         """Back-compat: skill que só devolve `desvios` não quebra o fluxo."""
         fake = _FakeGenerate(

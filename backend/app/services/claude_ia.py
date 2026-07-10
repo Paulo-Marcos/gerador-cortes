@@ -17,6 +17,7 @@ Fase 2 (este arquivo): análise da live → cortes + trechos a remover (desvios)
 encadeando automaticamente o "refazer transcrição" ao final.
 """
 
+import hashlib
 import json
 import logging
 import time
@@ -37,6 +38,42 @@ from app.services.analise import AnaliseService, _to_seg
 from sqlalchemy import select as sa_select
 
 logger = logging.getLogger(__name__)
+
+
+def _sha1_curto(texto: str) -> str:
+    """SHA1 (8 primeiros hex) de um texto — impressão digital estável e curta."""
+    return hashlib.sha1((texto or "").encode("utf-8")).hexdigest()[:8]
+
+
+def _log_skill_usada(
+    skill_key: str,
+    skill: editorial_skills.SkillResolvida,
+    scaffold_texto: str | None = None,
+) -> None:
+    """Loga a impressão digital da skill resolvida ANTES da chamada ao cliente (D-331).
+
+    WHY: o log do `claude_cli_client` só mostra modelo/tamanho/thinking, não QUAL
+    corpo/scaffold/versão de skill entrou — então não dava para confirmar por log se
+    a geração rodou a skill nova ou a antiga. Esta linha imprime o sha1 do corpo (e
+    do scaffold, quando a etapa monta um) para tornar a skill efetivamente usada
+    auditável com um `grep "[ClaudeIA/skill]"`.
+    """
+    corpo = skill.corpo or ""
+    corpo_strip = corpo.strip()
+    primeira_linha = corpo_strip.splitlines()[0] if corpo_strip else ""
+    scaffold_frag = (
+        f" scaffold_sha={_sha1_curto(scaffold_texto)}" if scaffold_texto is not None else ""
+    )
+    logger.info(
+        '[ClaudeIA/skill] etapa=%s modelo=%s thinking=%s corpo=%dch sha=%s "%s"%s',
+        skill_key,
+        skill.modelo,
+        skill.thinking_tokens,
+        len(corpo),
+        _sha1_curto(corpo),
+        primeira_linha,
+        scaffold_frag,
+    )
 
 
 def _carregar_transcricao_raw(raw: str, projeto_id: str) -> list | dict:
@@ -268,6 +305,7 @@ class ClaudeIaService:
             prompt = ClaudeIaService._montar_prompt(
                 texto_completo, meta, variacao=bloco_variacao_de(skill.lentes)
             )
+            _log_skill_usada(_SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
             resultado = await claude_cli_client.generate_json(
                 prompt, **_args_claude(skill, _SKILL_CORTES)
             )
@@ -307,6 +345,7 @@ class ClaudeIaService:
         # como o fluxo de cenas — nunca uma nova por chunk (titulação
         # inconsistente entre partes da mesma análise).
         variacao = bloco_variacao_de(skill.lentes)
+        _log_skill_usada(_SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
         cortes: list = []
         vistos: set[int] = set()
         descartados: list = []
@@ -689,6 +728,7 @@ class ClaudeIaService:
 
         cabecalho_meta = ClaudeIaService._cabecalho_meta_corte(meta, existentes)
         skill = editorial_skills.resolver_skill(_SKILL_TRECHOS)
+        _log_skill_usada(_SKILL_TRECHOS, skill, editorial_scaffolds.resolver_scaffold("trechos"))
 
         novos: list = []
         revisoes: list = []
@@ -808,6 +848,7 @@ class ClaudeIaService:
             raise ValueError("Sem prompt de cenas (transcrição final vazia?).")
 
         skill = editorial_skills.resolver_skill(_SKILL_CENAS)
+        _log_skill_usada(_SKILL_CENAS, skill)
         # Uma lente por geração (consistente entre as partes), do banco por canal.
         variacao = bloco_variacao_de(skill.lentes)
         cenas: list = []
@@ -873,6 +914,7 @@ class ClaudeIaService:
             "(STEP 0 → checklist final) e devolva APENAS o JSON no formato "
             "exigido pela seção OUTPUT da skill."
         )
+        _log_skill_usada(_SKILL_METADADOS, skill)
         resultado = await claude_cli_client.generate_json(
             prompt, **_args_claude(skill, _SKILL_METADADOS)
         )
@@ -926,13 +968,15 @@ class ClaudeIaService:
         # metadados por canal (E-021) — mantém a etapa alinhada à config do canal.
         # D-297: o scaffold (contrato de saída) vem do banco por canal.
         skill = editorial_skills.resolver_skill(_SKILL_METADADOS)
-        prompt = editorial_scaffolds.resolver_scaffold("resumo").format(
+        scaffold_resumo = editorial_scaffolds.resolver_scaffold("resumo")
+        prompt = scaffold_resumo.format(
             variacao=bloco_variacao_de(skill.lentes),
             titulo=titulo,
             tema=tema,
             resumo_antigo=resumo_antigo,
             transcricao=transcricao_filtrada,
         )
+        _log_skill_usada(_SKILL_METADADOS, skill, scaffold_resumo)
         resultado = await claude_cli_client.generate_json(prompt, model=skill.modelo)
         novo_resumo = resultado.get("resumo")
         if not novo_resumo:
@@ -990,6 +1034,9 @@ class ClaudeIaService:
         )
         prompt = ClaudeIaService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
         skill = editorial_skills.resolver_skill(_SKILL_THUMBNAIL)
+        _log_skill_usada(
+            _SKILL_THUMBNAIL, skill, editorial_scaffolds.resolver_scaffold("thumbnail")
+        )
         texto = await claude_cli_client.generate_text(
             prompt, **_args_claude(skill, _SKILL_THUMBNAIL)
         )
