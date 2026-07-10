@@ -142,3 +142,4 @@ backend/check_db.py
 # de curadoria de persona e mantém o repo público limpo.
 .guia/*
 !.guia/locks/
+backend/_bench/
