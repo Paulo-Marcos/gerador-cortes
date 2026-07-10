@@ -69,7 +69,8 @@ class TestParseJson3:
     def test_resultado_tem_chaves_inicio_fim_texto(self):
         events = [{"tStartMs": 0, "dDurationMs": 1000, "segs": [{"utf8": "Texto"}]}]
         result = parse_json3(self._make_json3(events))
-        assert set(result[0].keys()) == {"inicio", "fim", "texto"}
+        # inicio/fim/texto continuam presentes (back-compat); `palavras` é aditivo (D-337).
+        assert {"inicio", "fim", "texto"}.issubset(result[0].keys())
 
     def test_multiplos_eventos(self):
         events = [
@@ -123,3 +124,74 @@ class TestParseJson3:
         result_sem = parse_json3(self._make_json3(events))
         result_com = parse_json3(self._make_json3(events), offset_ms=0)
         assert result_sem[0]["inicio"] == result_com[0]["inicio"]
+
+
+class TestParseJson3TimingPorPalavra:
+    """D-337: o json3 traz timing por palavra via `tOffsetMs`; parse_json3 preserva
+    esse tempo real absoluto em `palavras`."""
+
+    def _make_json3(self, events):
+        return json.dumps({"events": events})
+
+    def _evento_spike(self):
+        # Exemplo real do spike: tStartMs=25199, primeira palavra sem offset.
+        return {
+            "tStartMs": 25199,
+            "dDurationMs": 3000,
+            "segs": [
+                {"utf8": "Fala"},
+                {"utf8": " meus", "tOffsetMs": 201},
+                {"utf8": " amigos", "tOffsetMs": 441},
+                {"utf8": " e", "tOffsetMs": 641},
+                {"utf8": " minhas", "tOffsetMs": 801},
+                {"utf8": " queridas", "tOffsetMs": 1041},
+            ],
+        }
+
+    def test_preserva_lista_de_palavras(self):
+        result = parse_json3(self._make_json3([self._evento_spike()]))
+        palavras = result[0]["palavras"]
+        assert [p["texto"] for p in palavras] == [
+            "Fala",
+            "meus",
+            "amigos",
+            "e",
+            "minhas",
+            "queridas",
+        ]
+
+    def test_primeira_palavra_sem_offset_usa_tstart_do_evento(self):
+        result = parse_json3(self._make_json3([self._evento_spike()]))
+        # 25199ms → 25.199s
+        assert result[0]["palavras"][0]["inicio_seg"] == pytest.approx(25.199)
+
+    def test_palavra_com_offset_soma_ao_tstart(self):
+        result = parse_json3(self._make_json3([self._evento_spike()]))
+        palavras = result[0]["palavras"]
+        # "amigos" tem tOffsetMs=441 → (25199 + 441)/1000 = 25.640
+        assert palavras[2]["inicio_seg"] == pytest.approx(25.640)
+
+    def test_offset_pts_soma_ao_timing_da_palavra(self):
+        result = parse_json3(self._make_json3([self._evento_spike()]), offset_ms=1000)
+        palavras = result[0]["palavras"]
+        # 25199 + 1000 (PTS) = 26199 na primeira palavra
+        assert palavras[0]["inicio_seg"] == pytest.approx(26.199)
+        # "meus": 25199 + 1000 + 201 = 26400
+        assert palavras[1]["inicio_seg"] == pytest.approx(26.400)
+
+    def test_seg_apenas_quebra_de_linha_nao_vira_palavra(self):
+        events = [
+            {
+                "tStartMs": 1000,
+                "dDurationMs": 1000,
+                "segs": [{"utf8": "Olá"}, {"utf8": "\n"}, {"utf8": " mundo", "tOffsetMs": 300}],
+            }
+        ]
+        result = parse_json3(self._make_json3(events))
+        palavras = result[0]["palavras"]
+        assert [p["texto"] for p in palavras] == ["Olá", "mundo"]
+
+    def test_texto_concatenado_continua_igual(self):
+        # O texto do evento (back-compat) não muda por causa das palavras.
+        result = parse_json3(self._make_json3([self._evento_spike()]))
+        assert result[0]["texto"] == "Fala meus amigos e minhas queridas"

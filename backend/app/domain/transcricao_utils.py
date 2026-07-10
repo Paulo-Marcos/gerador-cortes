@@ -35,6 +35,22 @@ def dividir_segmentos_longos(
             nova_trans.append(item)
             continue
 
+        # Preserva o rótulo de falante (D-286) em todas as sub-partes do split.
+        falante = item.get("speaker")
+
+        # Timing por palavra (D-337): quando o segmento carrega as bordas reais de
+        # cada palavra, corta ali em vez de interpolar por tempo uniforme (que é
+        # falso — palavra tem duração variável). Sem `palavras` (dados legados ou
+        # vtt), cai no fallback proporcional idêntico ao comportamento anterior.
+        palavras_reais = item.get("palavras")
+        tem_timing_real = isinstance(palavras_reais, list) and len(palavras_reais) > 0
+
+        if tem_timing_real:
+            nova_trans.extend(
+                _dividir_por_bordas_reais(palavras_reais, end, max_duracao, max_palavras, falante)
+            )
+            continue
+
         # Caso contrário, divide proporcionalmente
         num_partes_tempo = int(duracao // max_duracao) + 1
         num_partes_palavras = int(len(palavras) // max_palavras) + 1
@@ -46,9 +62,6 @@ def dividir_segmentos_longos(
             palavras_por_parte = 1
 
         duracao_por_parte = duracao / num_partes
-
-        # Preserva o rótulo de falante (D-286) em todas as sub-partes do split.
-        falante = item.get("speaker")
 
         for p_idx in range(num_partes):
             idx_inicio = p_idx * palavras_por_parte
@@ -82,6 +95,69 @@ def dividir_segmentos_longos(
     return nova_trans
 
 
+def _dividir_por_bordas_reais(
+    palavras: list[dict],
+    fim_segmento: float,
+    max_duracao: float,
+    max_palavras: int,
+    falante: str | None,
+) -> list[dict]:
+    """Agrupa `palavras` (cada uma com `inicio_seg` absoluto) em sub-segmentos,
+    usando o início real da palavra como borda: o começo de cada parte é o
+    `inicio_seg` da sua primeira palavra; o fim é o `inicio_seg` da próxima
+    palavra (ou o fim do segmento, na última). Cada sub-parte carrega as suas
+    palavras (D-337).
+    """
+    n = len(palavras)
+    duracao = fim_segmento - palavras[0]["inicio_seg"]
+
+    num_partes_tempo = int(duracao // max_duracao) + 1 if duracao > 0 else 1
+    num_partes_palavras = int(n // max_palavras) + 1
+    num_partes = max(num_partes_tempo, num_partes_palavras)
+
+    palavras_por_parte = max(1, n // num_partes)
+
+    partes: list[dict] = []
+    for p_idx in range(num_partes):
+        idx_inicio = p_idx * palavras_por_parte
+        if idx_inicio >= n:
+            break
+        # Na última parte (ou quando esgota as palavras) pega o resto.
+        if p_idx == num_partes - 1:
+            idx_fim = n
+        else:
+            idx_fim = min((p_idx + 1) * palavras_por_parte, n)
+
+        grupo = palavras[idx_inicio:idx_fim]
+        sub_texto = " ".join(p["texto"] for p in grupo).strip()
+        if not sub_texto:
+            continue
+
+        p_start = grupo[0]["inicio_seg"]
+        # Fim = início da próxima palavra (borda real); na última, o fim do segmento.
+        if idx_fim < n:
+            p_end = palavras[idx_fim]["inicio_seg"]
+        else:
+            p_end = fim_segmento
+        # Não deixa o sub-segmento degenerar (palavras coincidentes ou fim < início).
+        if p_end <= p_start:
+            p_end = p_start + 0.05
+
+        parte = {
+            "start": round(p_start, 3),
+            "end": round(p_end, 3),
+            "inicio": round(p_start, 3),
+            "fim": round(p_end, 3),
+            "texto": sub_texto,
+            "palavras": grupo,
+        }
+        if falante:
+            parte["speaker"] = falante
+        partes.append(parte)
+
+    return partes
+
+
 def limpar_e_ordenar_transcricao(transcricao: list[dict]) -> list[dict]:
     """
     Garante que a transcrição esteja:
@@ -111,6 +187,9 @@ def limpar_e_ordenar_transcricao(transcricao: list[dict]) -> list[dict]:
             # Preserva o rótulo de falante (D-286) ao reconstruir o dict.
             if item.get("speaker"):
                 seg["speaker"] = item["speaker"]
+            # Preserva o timing por palavra (D-337) para chegar à granularização.
+            if item.get("palavras"):
+                seg["palavras"] = item["palavras"]
             normalizada.append(seg)
 
     # Ordenação estável por início
