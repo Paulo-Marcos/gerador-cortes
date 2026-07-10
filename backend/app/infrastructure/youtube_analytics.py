@@ -182,19 +182,22 @@ def listar_uploads(creds: Credentials) -> tuple[str, list[VideoUpload]]:
 
 
 def metricas_lifetime(
-    creds: Credentials, *, start_date: str, end_date: str
+    creds: Credentials, *, video_ids: list[str], start_date: str, end_date: str
 ) -> dict[str, VideoMetrica]:
     """Métricas lifetime por vídeo via Analytics API v2 (uma linha por vídeo).
 
-    `start_date`/`end_date` em `YYYY-MM-DD`. Pagina em janelas de 200 vídeos
-    (`startIndex`) até esgotar. Erros de escopo já foram barrados em
-    `carregar_credenciais`; aqui um erro é infra/rede e sobe como
-    `YoutubeAnalyticsError`.
+    Consulta em LOTES filtrando por `filters=video==id1,id2,...`, não pelo relatório
+    "top videos" (`sort=-views`): esse último é limitado a 200 linhas e recusa
+    `startIndex>200` com HTTP 400 (`badRequest`), quebrando em canais com mais de
+    200 vídeos. Filtrar pela lista explícita de uploads contorna o teto e cobre o
+    canal inteiro. `start_date`/`end_date` em `YYYY-MM-DD`. Erros de escopo já
+    foram barrados em `carregar_credenciais`; aqui um erro é infra/rede e sobe
+    como `YoutubeAnalyticsError`.
     """
     analytics = build("youtubeAnalytics", "v2", credentials=creds, cache_discovery=False)
     metricas: dict[str, VideoMetrica] = {}
-    start_index = 1
-    while True:
+    for inicio in range(0, len(video_ids), _MAX_RESULTS):
+        lote = video_ids[inicio : inicio + _MAX_RESULTS]
         try:
             resp = (
                 analytics.reports()
@@ -204,9 +207,8 @@ def metricas_lifetime(
                     endDate=end_date,
                     metrics=_METRICAS,
                     dimensions="video",
-                    sort="-views",
+                    filters="video==" + ",".join(lote),
                     maxResults=_MAX_RESULTS,
-                    startIndex=start_index,
                 )
                 .execute()
             )
@@ -215,10 +217,6 @@ def metricas_lifetime(
                 exc, contexto="consultar as estatísticas do YouTube"
             ) from exc
         metricas.update(_metricas_de_report(resp))
-        linhas = resp.get("rows") or []
-        if len(linhas) < _MAX_RESULTS:
-            break
-        start_index += _MAX_RESULTS
     return metricas
 
 

@@ -77,6 +77,7 @@ class YoutubeStatsService:
             metricas = await asyncio.to_thread(
                 youtube_analytics.metricas_lifetime,
                 creds,
+                video_ids=[u.video_id for u in uploads],
                 start_date=start_date,
                 end_date=end_date,
             )

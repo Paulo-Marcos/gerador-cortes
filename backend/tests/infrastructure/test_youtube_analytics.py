@@ -103,6 +103,76 @@ class TestTraduzirHttpError:
         assert "habilitada" not in str(erro)
 
 
+class _FakeRequest:
+    def __init__(self, report: dict):
+        self._report = report
+
+    def execute(self) -> dict:
+        return self._report
+
+
+class _FakeReports:
+    def __init__(self, chamadas: list[dict]):
+        self._chamadas = chamadas
+
+    def query(self, **kwargs) -> _FakeRequest:
+        self._chamadas.append(kwargs)
+        # Devolve uma linha por vídeo listado no filtro `video==id1,id2,...`.
+        ids = kwargs["filters"].removeprefix("video==").split(",")
+        rows = [[vid, 0, 100 + i, 0.0, 0, 0] for i, vid in enumerate(ids)]
+        return _FakeRequest(
+            {
+                "columnHeaders": [
+                    {"name": "video"},
+                    {"name": "averageViewPercentage"},
+                    {"name": "views"},
+                    {"name": "averageViewDuration"},
+                    {"name": "estimatedMinutesWatched"},
+                    {"name": "subscribersGained"},
+                ],
+                "rows": rows,
+            }
+        )
+
+
+class _FakeAnalytics:
+    def __init__(self, chamadas: list[dict]):
+        self._reports = _FakeReports(chamadas)
+
+    def reports(self) -> _FakeReports:
+        return self._reports
+
+
+class TestMetricasLifetime:
+    def test_consulta_em_lotes_por_filtro_de_video(self, monkeypatch):
+        chamadas: list[dict] = []
+        monkeypatch.setattr(ya, "build", lambda *a, **k: _FakeAnalytics(chamadas))
+        video_ids = [f"v{n}" for n in range(250)]
+
+        metricas = ya.metricas_lifetime(
+            object(), video_ids=video_ids, start_date="2005-01-01", end_date="2026-07-10"
+        )
+
+        # 250 vídeos → 2 lotes (200 + 50), cobertura completa, sem paginação frágil.
+        assert len(metricas) == 250
+        assert len(chamadas) == 2
+        assert chamadas[0]["filters"].startswith("video==")
+        assert len(chamadas[0]["filters"].removeprefix("video==").split(",")) == 200
+        assert len(chamadas[1]["filters"].removeprefix("video==").split(",")) == 50
+        # O teto de 200 do relatório "top videos" não deve reaparecer: nada de sort/startIndex.
+        assert "sort" not in chamadas[0]
+        assert "startIndex" not in chamadas[0]
+
+    def test_sem_video_ids_nao_chama_a_api(self, monkeypatch):
+        chamadas: list[dict] = []
+        monkeypatch.setattr(ya, "build", lambda *a, **k: _FakeAnalytics(chamadas))
+        metricas = ya.metricas_lifetime(
+            object(), video_ids=[], start_date="2005-01-01", end_date="2026-07-10"
+        )
+        assert metricas == {}
+        assert chamadas == []
+
+
 class TestParsearIsoUtc:
     def test_converte_para_naive_utc(self):
         assert ya._parsear_iso_utc("2024-06-01T15:30:00Z") == datetime(2024, 6, 1, 15, 30, 0)
