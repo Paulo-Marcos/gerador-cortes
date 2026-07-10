@@ -183,6 +183,12 @@ class Corte(Base):
     # prioritária, somando-se ao raciocínio do capista. Vazio = comportamento
     # idêntico ao atual.
     hints_thumbnail: Mapped[str] = mapped_column(Text, default="")
+    # D-334: quantas vezes a skill trechos-expert rodou neste corte (D-332
+    # tornou `gerar_trechos_via_claude` aditivo — o total de desvios origem=
+    # 'claude' deixou de indicar quantos cliques geraram os desvios). Log é
+    # JSON lista de {"em", "adicionados", "total_apos"}, um item por invocação.
+    trechos_geracoes: Mapped[int] = mapped_column(Integer, default=0)
+    trechos_geracoes_log: Mapped[str] = mapped_column(Text, default="[]")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

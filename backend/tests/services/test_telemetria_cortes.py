@@ -170,6 +170,41 @@ async def test_telemetria_do_projeto_mede_o_que_o_editor_mudou(tmp_path, monkeyp
 
 
 @pytest.mark.asyncio
+async def test_telemetria_expoe_trechos_geracoes_e_derivado(tmp_path, monkeypatch):
+    """D-334: a telemetria carrega `trechos_geracoes` do corte e calcula
+    `desvios_claude_por_geracao` a partir dos desvios finais origem='claude'."""
+    engine, factory = await _novo_banco(tmp_path)
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
+    try:
+        projeto_id = await _criar_projeto(factory)
+        await AnaliseService.importar_resultado(projeto_id, [dict(PROPOSTA_IA)])
+
+        async with factory() as db:
+            corte = (
+                (await db.execute(select(Corte).where(Corte.projeto_id == projeto_id)))
+                .scalars()
+                .first()
+            )
+            corte.desvios = json.dumps(
+                [
+                    {"inicio_seg": 10.0, "fim_seg": 20.0, "motivo": "a", "origem": "claude"},
+                    {"inicio_seg": 30.0, "fim_seg": 40.0, "motivo": "b", "origem": "claude"},
+                ]
+            )
+            corte.trechos_geracoes = 2
+            await db.commit()
+
+        async with factory() as db:
+            payload = await TelemetriaCortesService.telemetria_do_projeto(projeto_id, db)
+
+        corte_diff = payload["cortes"][0]
+        assert corte_diff["trechos_geracoes"] == 2
+        assert corte_diff["desvios_claude_por_geracao"] == 1.0
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
 async def test_projeto_legado_sem_snapshots_reporta_sem_snapshot(tmp_path, monkeypatch):
     engine, factory = await _novo_banco(tmp_path)
     try:

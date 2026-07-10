@@ -21,6 +21,7 @@ import hashlib
 import json
 import logging
 import time
+from datetime import datetime
 
 from app import editorial_scaffolds, editorial_skills
 from app.config import settings
@@ -514,6 +515,19 @@ class ClaudeIaService:
             if not corte:
                 raise ValueError("Corte não encontrado")
             corte.desvios = json.dumps(mesclados, ensure_ascii=False)
+            # D-334: conta esta invocação da skill trechos-expert — cobre tanto
+            # o botão por-corte quanto o lote (analisar_desvios_todos_impl
+            # chama esta mesma função por corte).
+            corte.trechos_geracoes = (corte.trechos_geracoes or 0) + 1
+            log = json.loads(corte.trechos_geracoes_log or "[]")
+            log.append(
+                {
+                    "em": datetime.utcnow().isoformat(),
+                    "adicionados": adicionados,
+                    "total_apos": len(mesclados),
+                }
+            )
+            corte.trechos_geracoes_log = json.dumps(log, ensure_ascii=False)
             await db.commit()
 
         # Ressincroniza a transcrição final aplicando o conjunto de desvios.

@@ -26,6 +26,7 @@ from app.migrations import (
     migration_002_paths_relativos,
     migration_003_paths_video_short,
     migration_004_campos_v2_cortes,
+    migration_005_trechos_geracoes,
 )
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -62,6 +63,11 @@ MIGRATIONS: tuple[Migration, ...] = (
         version=4,
         description="D-302 — campos v2 (frase_gancho, contextualizacao, score) em cortes/snapshots",
         upgrade=migration_004_campos_v2_cortes.upgrade,
+    ),
+    Migration(
+        version=5,
+        description="D-334 — trechos_geracoes/trechos_geracoes_log em cortes",
+        upgrade=migration_005_trechos_geracoes.upgrade,
     ),
 )
 

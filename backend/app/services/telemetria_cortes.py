@@ -111,6 +111,7 @@ def _corte_para_diff(corte: Corte) -> dict:
         "fim_seg": corte.fim_seg or 0.0,
         "status": corte.status or "",
         "desvios": _json_lista(corte.desvios),
+        "trechos_geracoes": corte.trechos_geracoes or 0,
     }
 
 

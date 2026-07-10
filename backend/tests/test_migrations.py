@@ -152,3 +152,29 @@ async def test_migration_004_sem_tabelas_e_noop(conn):
     from app.migrations import migration_004_campos_v2_cortes
 
     await migration_004_campos_v2_cortes.upgrade(conn)  # não deve lançar
+
+
+# ── Migration 005 (D-334): contador de gerações de trechos em cortes ────────
+
+
+@pytest.mark.asyncio
+async def test_migration_005_adiciona_colunas_trechos_geracoes_em_banco_antigo(conn):
+    """Banco pré-D-334 (tabela `cortes` sem os campos novos) ganha as 2
+    colunas novas; rodar de novo é no-op (idempotente)."""
+    from app.migrations import migration_005_trechos_geracoes
+
+    await conn.execute(text("CREATE TABLE cortes (id VARCHAR(36) PRIMARY KEY)"))
+
+    await migration_005_trechos_geracoes.upgrade(conn)
+    await migration_005_trechos_geracoes.upgrade(conn)  # idempotência
+
+    esperadas = {"trechos_geracoes", "trechos_geracoes_log"}
+    assert esperadas <= await _colunas(conn, "cortes")
+
+
+@pytest.mark.asyncio
+async def test_migration_005_sem_tabela_e_noop(conn):
+    """Banco cru (runner antes do create_all) atravessa a migration sem erro."""
+    from app.migrations import migration_005_trechos_geracoes
+
+    await migration_005_trechos_geracoes.upgrade(conn)  # não deve lançar

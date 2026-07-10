@@ -76,6 +76,11 @@ def _corte_to_dict(corte: Corte) -> dict:
         d["segmentos_detectados"] = json.loads(getattr(corte, "segmentos_detectados", None) or "[]")
     except Exception:
         d["segmentos_detectados"] = []
+    # D-334: log de invocações da skill trechos-expert (telemetria D-303).
+    try:
+        d["trechos_geracoes_log"] = json.loads(getattr(corte, "trechos_geracoes_log", None) or "[]")
+    except Exception:
+        d["trechos_geracoes_log"] = []
 
     # Prevenção contra erro de Lazy Loading (greenlet_spawn)
     try:

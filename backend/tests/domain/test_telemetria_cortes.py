@@ -52,6 +52,42 @@ def _corte(**kwargs) -> dict:
     return base
 
 
+# ── D-334: contagem de gerações de trechos ────────────────────────────────────
+
+
+def test_trechos_geracoes_ausente_no_corte_conta_como_zero_sem_dividir_por_zero():
+    diff = diff_proposta_vs_final(_snapshot(), _corte())
+
+    assert diff["trechos_geracoes"] == 0
+    assert diff["desvios_claude_por_geracao"] == 0.0
+
+
+def test_desvios_claude_por_geracao_e_o_total_de_claude_sobre_geracoes():
+    finais = [
+        _desvio(300.0, 320.0, origem="claude"),
+        _desvio(400.0, 420.0, origem="claude"),
+        _desvio(500.0, 520.0, origem="claude"),
+    ]
+    diff = diff_proposta_vs_final(
+        _snapshot(desvios=[]),
+        _corte(desvios=finais, trechos_geracoes=2),
+    )
+
+    assert diff["trechos_geracoes"] == 2
+    assert diff["desvios_claude_por_geracao"] == 1.5
+
+
+def test_trechos_geracoes_reportado_tambem_sem_snapshot():
+    diff = diff_proposta_vs_final(
+        None,
+        _corte(desvios=[_desvio(10.0, 20.0, origem="claude")], trechos_geracoes=1),
+        projeto_tem_snapshots=True,
+    )
+
+    assert diff["trechos_geracoes"] == 1
+    assert diff["desvios_claude_por_geracao"] == 1.0
+
+
 def _desvio(inicio: float, fim: float, **kwargs) -> dict:
     base = {"inicio_seg": inicio, "fim_seg": fim, "motivo": "digressão"}
     base.update(kwargs)
@@ -258,3 +294,5 @@ def test_csv_sem_snapshot_deixa_colunas_de_proposta_vazias():
     assert colunas["inicio_proposto_seg"] == ""
     assert colunas["desvios_adicionados_claude"] == ""
     assert colunas["duracao_final_seg"] == "600.0"
+    assert colunas["trechos_geracoes"] == "0"
+    assert colunas["desvios_claude_por_geracao"] == "0.0"

@@ -53,6 +53,8 @@ COLUNAS_CSV_TELEMETRIA = [
     "desvios_adicionados_manual",
     "desvios_adicionados_outros",
     "desvios_finais",
+    "trechos_geracoes",
+    "desvios_claude_por_geracao",
 ]
 
 
@@ -78,6 +80,15 @@ def diff_proposta_vs_final(
     titulo_final = (corte.get("titulo_youtube") or "").strip() or (
         corte.get("titulo_proposto") or ""
     ).strip()
+    # D-334: quantas vezes a trechos-expert rodou neste corte — o total de
+    # desvios origem='claude' sozinho não diz se veio de 1 clique ou de 4
+    # (D-332 tornou a geração aditiva). Derivado só faz sentido com trechos
+    # gerados; 0 gerações → 0.0 (não confundir com "1 desvio por geração").
+    trechos_geracoes = int(corte.get("trechos_geracoes") or 0)
+    desvios_claude_finais = _contar_por_origem(desvios_finais).get("claude", 0)
+    desvios_claude_por_geracao = (
+        round(desvios_claude_finais / trechos_geracoes, 2) if trechos_geracoes else 0.0
+    )
 
     if snapshot is None:
         situacao = SITUACAO_SEM_PROPOSTA_IA if projeto_tem_snapshots else SITUACAO_SEM_SNAPSHOT
@@ -98,6 +109,8 @@ def diff_proposta_vs_final(
                 "finais": len(desvios_finais),
                 "finais_por_origem": _contar_por_origem(desvios_finais),
             },
+            "trechos_geracoes": trechos_geracoes,
+            "desvios_claude_por_geracao": desvios_claude_por_geracao,
         }
 
     desvios_propostos = snapshot.get("desvios") or []
@@ -130,6 +143,8 @@ def diff_proposta_vs_final(
             "finais": len(desvios_finais),
             "finais_por_origem": _contar_por_origem(desvios_finais),
         },
+        "trechos_geracoes": trechos_geracoes,
+        "desvios_claude_por_geracao": desvios_claude_por_geracao,
     }
 
 
@@ -293,4 +308,6 @@ def _achatar_para_csv(diff: dict) -> dict:
         "desvios_adicionados_manual": por_origem.get("manual", 0) if tem_diff_desvios else "",
         "desvios_adicionados_outros": outros if tem_diff_desvios else "",
         "desvios_finais": _num(desvios.get("finais")),
+        "trechos_geracoes": diff.get("trechos_geracoes", 0),
+        "desvios_claude_por_geracao": diff.get("desvios_claude_por_geracao", 0.0),
     }

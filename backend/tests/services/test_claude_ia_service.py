@@ -611,6 +611,8 @@ class TestGerarTrechosAditivoPuro:
         corte.inicio_hms = "00:00:00"
         corte.fim_hms = "00:30:00"
         corte.projeto_id = "p1"
+        corte.trechos_geracoes = 0
+        corte.trechos_geracoes_log = "[]"
 
         projeto = MagicMock()
         projeto.falantes_map = "{}"  # sem diarização → mapa None
@@ -672,6 +674,13 @@ class TestGerarTrechosAditivoPuro:
         assert resultado == {"total_desvios": 3, "novos": 1}
         # ressincronizou a transcrição final do corte
         assert sincronizados == ["c1"]
+        # D-334: uma invocação incrementa o contador e loga a chamada
+        assert corte.trechos_geracoes == 1
+        log = json.loads(corte.trechos_geracoes_log)
+        assert len(log) == 1
+        assert log[0]["adicionados"] == 1
+        assert log[0]["total_apos"] == 3
+        assert "em" in log[0]
 
     def test_sem_desvios_novos_mantem_tudo(self, monkeypatch):
         manual = _desvio("00:05:00", "00:05:30", "manual do editor")
@@ -698,6 +707,40 @@ class TestGerarTrechosAditivoPuro:
         gravados = json.loads(corte.desvios)
         assert [d["motivo"] for d in gravados] == ["manual do editor", "chat"]
         assert resultado == {"total_desvios": 2, "novos": 0}
+        # D-334: mesmo sem desvios novos, a invocação em si conta
+        assert corte.trechos_geracoes == 1
+        log = json.loads(corte.trechos_geracoes_log)
+        assert len(log) == 1
+        assert log[0]["adicionados"] == 0
+        assert log[0]["total_apos"] == 2
+
+    def test_chamadas_sucessivas_acumulam_contador_e_log(self, monkeypatch):
+        """Uma segunda invocação incrementa o contador e ACRESCENTA ao log (não
+        substitui) — cobre o caso de vários cliques no botão por-corte."""
+        manual = _desvio("00:05:00", "00:05:30", "manual do editor")
+        factory, corte = self._montar_factory(
+            desvios_existentes=[manual],
+            desvios_novos=[],
+        )
+        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+            return {"desvios": [{"inicio_hms": "00:20:00", "fim_hms": "00:20:15", "motivo": "x"}]}
+
+        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
+
+        from app.services.corte import CorteService
+
+        monkeypatch.setattr(
+            CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
+        )
+
+        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+
+        assert corte.trechos_geracoes == 2
+        log = json.loads(corte.trechos_geracoes_log)
+        assert len(log) == 2
 
 
 class TestTrechosComFalantes:
