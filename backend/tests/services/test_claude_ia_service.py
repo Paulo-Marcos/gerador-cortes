@@ -610,6 +610,8 @@ class TestGerarTrechosAditivoPuro:
         corte.tema_central = "tese"
         corte.inicio_hms = "00:00:00"
         corte.fim_hms = "00:30:00"
+        corte.inicio_seg = 0.0
+        corte.fim_seg = 1800.0
         corte.projeto_id = "p1"
         corte.trechos_geracoes = 0
         corte.trechos_geracoes_log = "[]"
@@ -741,6 +743,139 @@ class TestGerarTrechosAditivoPuro:
         assert corte.trechos_geracoes == 2
         log = json.loads(corte.trechos_geracoes_log)
         assert len(log) == 2
+
+
+# ── D-339: snap dos desvios do Claude na borda real de palavra ──────────────────
+
+
+class TestSnapDesviosNoFluxo:
+    """D-339: em `gerar_trechos_via_claude`, cada desvio NOVO do Claude é encaixado
+    na borda real de palavra (via `snap_desvios`) ANTES do merge; os desvios já
+    existentes (manual/claude anterior) NÃO são snapados nem alterados. Sem timing
+    por palavra (corte antigo), é no-op — back-compat."""
+
+    def _montar_factory(self, *, desvios_existentes: list, transcricao_raw):
+        corte = MagicMock()
+        corte.transcricao_corte = json.dumps([{"start": 0, "end": 4, "texto": "fala"}])
+        corte.desvios = json.dumps(desvios_existentes)
+        corte.titulo_proposto = "Corte X"
+        corte.tema_central = "tese"
+        corte.inicio_hms = "00:00:00"
+        corte.fim_hms = "00:30:00"
+        corte.inicio_seg = 0.0
+        corte.fim_seg = 1800.0
+        corte.projeto_id = "p1"
+        corte.trechos_geracoes = 0
+        corte.trechos_geracoes_log = "[]"
+
+        projeto = MagicMock()
+        projeto.falantes_map = "{}"  # sem diarização → mapa None
+        projeto.transcricao_raw = (
+            json.dumps(transcricao_raw) if transcricao_raw is not None else None
+        )
+
+        async def fake_get(model, _id):
+            return projeto if model is claude_ia.Projeto else corte
+
+        session = AsyncMock()
+        session.__aenter__ = AsyncMock(return_value=session)
+        session.__aexit__ = AsyncMock(return_value=False)
+        session.get = fake_get
+        session.commit = AsyncMock()
+        return (lambda: session), corte
+
+    def test_snapa_novo_do_claude_mas_nao_os_existentes(self, monkeypatch):
+        # A raw do projeto carrega o timing por palavra (D-337).
+        transcricao_raw = [
+            {
+                "inicio": "00:01:40",
+                "fim": "00:01:46",
+                "texto": "a b c d",
+                "palavras": [
+                    {"texto": "a", "inicio_seg": 100.0},
+                    {"texto": "b", "inicio_seg": 100.6},
+                    {"texto": "c", "inicio_seg": 101.2},
+                    {"texto": "d", "inicio_seg": 102.0},
+                ],
+            },
+            # Palavra perto da borda do desvio manual (300.0) — se o manual fosse
+            # snapado, iria para 300.4; provamos que NÃO é.
+            {
+                "inicio": "00:05:00",
+                "fim": "00:05:02",
+                "texto": "x",
+                "palavras": [{"texto": "x", "inicio_seg": 300.4}],
+            },
+        ]
+        # Desvio manual já marcado (sem origem), numa borda mid-palavra de propósito.
+        manual = _desvio("00:05:00", "00:05:30", "manual do editor")
+        factory, corte = self._montar_factory(
+            desvios_existentes=[manual],
+            transcricao_raw=transcricao_raw,
+        )
+        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+            # Início/fim caídos no meio das palavras: 100.2 → 100.0; 101.5 → 101.2.
+            return {
+                "desvios": [
+                    {"inicio_hms": "00:01:40.200", "fim_hms": "00:01:41.500", "motivo": "novo"}
+                ]
+            }
+
+        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
+
+        from app.services.corte import CorteService
+
+        monkeypatch.setattr(
+            CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
+        )
+
+        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+
+        gravados = json.loads(corte.desvios)
+        por_motivo = {d["motivo"]: d for d in gravados}
+
+        # O desvio NOVO do Claude foi encaixado na borda real de palavra.
+        novo = por_motivo["novo"]
+        assert novo["inicio_seg"] == 100.0, "início deveria snapar para a palavra 'a'"
+        assert novo["fim_seg"] == 101.2, "fim deveria snapar para a borda de 'c'"
+
+        # O desvio manual EXISTENTE não foi snapado (continua 300.0, não 300.4).
+        manual_gravado = por_motivo["manual do editor"]
+        assert manual_gravado["inicio_seg"] == 300.0
+
+    def test_sem_palavras_na_raw_e_no_op(self, monkeypatch):
+        """Corte antigo: a raw não tem `palavras` → o desvio novo entra sem snap."""
+        transcricao_raw = [{"inicio": "00:01:40", "fim": "00:01:46", "texto": "a b c d"}]
+        factory, corte = self._montar_factory(
+            desvios_existentes=[],
+            transcricao_raw=transcricao_raw,
+        )
+        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+            return {
+                "desvios": [
+                    {"inicio_hms": "00:01:40.200", "fim_hms": "00:01:41.500", "motivo": "novo"}
+                ]
+            }
+
+        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
+
+        from app.services.corte import CorteService
+
+        monkeypatch.setattr(
+            CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
+        )
+
+        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+
+        gravados = json.loads(corte.desvios)
+        novo = next(d for d in gravados if d["motivo"] == "novo")
+        # Sem timing por palavra → tempos ficam como propostos (100.2 / 101.5).
+        assert novo["inicio_seg"] == 100.2
+        assert novo["fim_seg"] == 101.5
 
 
 class TestTrechosComFalantes:

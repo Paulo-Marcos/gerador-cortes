@@ -29,6 +29,7 @@ from app.database import AsyncSessionLocal
 from app.domain.chunker import fatiar_transcricao
 from app.domain.diarizacao_align import alinhar_falantes, prefixo_falante
 from app.domain.segment_calculator import normalizar_desvio
+from app.domain.snap_desvios import achatar_palavras, snap_desvio_a_palavras
 from app.domain.time_convert import hms_to_seg, seg_to_hms_short
 from app.domain.transcricao_utils import dividir_segmentos_longos, limpar_e_ordenar_transcricao
 from app.domain.variacao_prompt import bloco_variacao_de
@@ -481,15 +482,20 @@ class ClaudeIaService:
                 "fim_hms": corte.fim_hms or "",
             }
             desvios_existentes = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
+            corte_inicio_seg = _to_seg(corte.inicio_seg or 0)
+            corte_fim_seg = _to_seg(corte.fim_seg or 0)
             # D-286/D-302: a transcricao_corte não guarda `speaker` — o rótulo
             # vive na transcricao_raw do projeto; reanotamos antes do prompt.
+            # D-339: a transcricao_raw também é a ÚNICA fonte do timing por palavra
+            # (a transcricao_corte descarta `palavras`), então carregamos sempre —
+            # não só quando há diarização.
             projeto = await db.get(Projeto, corte.projeto_id)
             mapa_falantes = (
                 _mapa_falantes_para_meta(projeto.falantes_map) if projeto is not None else None
             )
             transcricao_raw_projeto = (
                 _carregar_transcricao_raw(projeto.transcricao_raw, corte.projeto_id)
-                if mapa_falantes and projeto is not None and projeto.transcricao_raw
+                if projeto is not None and projeto.transcricao_raw
                 else []
             )
 
@@ -503,8 +509,17 @@ class ClaudeIaService:
         )
         # WHY: origem='claude' permite o frontend exibir o badge correto
         # (Bug-2 do I-020). D-332: aditivo puro — sem revisão dos existentes.
+        # D-339: encaixa cada desvio NOVO na borda real de palavra (snap
+        # determinístico) ANTES do merge. Só os desvios do Claude passam por aqui;
+        # os já existentes (manual/técnico/claude anterior) ficam intocados. Sem
+        # timing por palavra (corte antigo) `palavras_corte` sai vazia e o snap é
+        # no-op — back-compat total.
+        palavras_corte = ClaudeIaService._palavras_do_corte(
+            transcricao_raw_projeto, corte_inicio_seg, corte_fim_seg
+        )
         normalizados_novos = [
-            normalizar_desvio({**d, "origem": "claude"}) for d in resultado.get("desvios", [])
+            snap_desvio_a_palavras(normalizar_desvio({**d, "origem": "claude"}), palavras_corte)
+            for d in resultado.get("desvios", [])
         ]
         mesclados, adicionados = ClaudeIaService._mesclar_desvios(
             desvios_existentes, normalizados_novos
@@ -593,6 +608,23 @@ class ClaudeIaService:
         if not turnos:
             return transcricao_bruta
         return alinhar_falantes(transcricao_bruta, turnos)
+
+    @staticmethod
+    def _palavras_do_corte(transcricao_raw: list, inicio_seg: float, fim_seg: float) -> list[dict]:
+        """Lista achatada e ordenada das palavras (D-337) na janela do corte, com
+        2s de folga nas bordas. Fonte: a `transcricao_raw` do projeto — a única que
+        carrega o timing por palavra (a `transcricao_corte` o descarta). Sai vazia
+        quando a transcrição não tem `palavras` (dados legados), tornando o snap
+        um no-op (back-compat)."""
+        if not isinstance(transcricao_raw, list):
+            return []
+        margem = 2.0
+        palavras = achatar_palavras(transcricao_raw)
+        if inicio_seg or fim_seg:
+            palavras = [
+                p for p in palavras if inicio_seg - margem <= p["inicio_seg"] <= fim_seg + margem
+            ]
+        return palavras
 
     @staticmethod
     async def _gerar_desvios(
