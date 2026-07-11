@@ -295,6 +295,21 @@ def build_cinematic_grade_layout_filter(
 
     grade_prefix = f"[0:v]{hw}{_CANVAS_NORMALIZE},{_grade_chain(filtro_vf)}format=rgba"
 
+    # P3 (D-338): quando UMA região cobre o corte inteiro, o composite dela já
+    # preenche o quadro → a camada [base] e o overlay=enable final ficam 100%
+    # ocultos atrás dele. Emite o graph ENXUTO (sem split/[base]/overlay final),
+    # dropando 1 overlay de quadro cheio 1080p RGBA + 1 cópia/frame. Nos demais
+    # casos (multi-região, região com buracos) segue o enable-based abaixo.
+    if _regiao_unica_cobre_corte(shared_regions, duracao_seg):
+        return _build_grade_full_cover_filter(
+            grade_prefix,
+            shared_regions[0],
+            has_fg=has_fg,
+            fg_inputs_per_region=fg_inputs_per_region,
+            bg_input=bg_input,
+            duracao_seg=float(duracao_seg),  # type: ignore[arg-type]  # garantido != None pelo guard
+        )
+
     # Caminho enable-based (memória limitada): cada região é compostada full-
     # length e mascarada por `enable` temporal. A segmentação por janela — que
     # evita o composite full-length em cortes multi-região — agora é feita por
@@ -328,6 +343,63 @@ def build_cinematic_grade_layout_filter(
         previous = out_label
 
     parts.append(f"{previous}format=nv12[vout]")
+    return "; ".join(parts)
+
+
+def _regiao_unica_cobre_corte(
+    shared_regions: list[dict], duracao_seg: float | None, eps: float = 0.05
+) -> bool:
+    """P3 (D-338): True quando UMA região compartilhada cobre o corte inteiro
+    ([0, duracao]).
+
+    Nesse caso o composite dela já preenche o quadro, então a camada [base] e o
+    `overlay=enable` final ficam 100% ocultos e o graph enxuto os elimina. Exige
+    duração conhecida: no graph enxuto ela é a ÚNICA âncora de duração finita (o
+    [base], fonte finita do vídeo, era a âncora antiga) — sem ela as fontes
+    `color=`/`-loop 1` (infinitas) fariam a saída rodar solta. Uma única região
+    com buraco antes/depois NÃO cobre o corte → mantém o enable-based.
+    """
+    if duracao_seg is None or duracao_seg <= 0:
+        return False
+    if len(shared_regions) != 1:
+        return False
+    regiao = shared_regions[0]
+    return float(regiao["inicio"]) <= eps and float(regiao["fim"]) >= float(duracao_seg) - eps
+
+
+def _build_grade_full_cover_filter(
+    grade_prefix: str,
+    region: dict,
+    *,
+    has_fg: bool,
+    fg_inputs_per_region: list[str | None] | None,
+    bg_input: str | None,
+    duracao_seg: float,
+) -> str:
+    """Graph ENXUTO do caso 100%-shared (P3, D-338).
+
+    O composite de UMA região cobre o quadro inteiro, então sai `[composed0]`
+    (ou `[shared0]`, sem palco) direto — SEM o `split` que gera `[base]` nem o
+    `overlay=enable` final (ambos ocultos atrás do composite). Remove 1 overlay
+    de quadro cheio 1080p RGBA + 1 cópia/frame; look idêntico (camada oculta).
+
+    A duração, antes ancorada pelo `[base]` finito, passa a ser ancorada por
+    `trim=end` — as bases dos palcos (`color=`) e o PNG do palco (`-loop 1`) são
+    fontes INFINITAS; sem o trim a saída não terminaria (`-shortest` não limita
+    quando a única saída vem de fonte infinita).
+    """
+    parts = [f"{grade_prefix}[src0]"]
+    _append_fg_chains(parts, has_fg, fg_inputs_per_region, bg_input, 1)
+    regiao_tem_fg = fg_inputs_per_region is not None and fg_inputs_per_region[0] is not None
+    composed = _compor_regiao(
+        parts,
+        "[src0]",
+        0,
+        region,
+        regiao_tem_fg=regiao_tem_fg,
+        bg_input=bg_input,
+    )
+    parts.append(f"{composed}trim=end={duracao_seg:.3f},setpts=PTS-STARTPTS,format=nv12[vout]")
     return "; ".join(parts)
 
 

@@ -71,6 +71,54 @@ class TestFiltergraphBase:
         assert "between(t,30.000,60.000)" in f
         assert f.rstrip().endswith("format=nv12[vout]")
 
+    def test_regiao_unica_cobre_corte_emite_graph_enxuto(self):
+        # P3 (D-338): 1 regiao cobrindo [0, duracao] -> o composite ja preenche
+        # o quadro, entao dropa a camada [base] e o overlay=enable final (100%
+        # ocultos). Sai [composed0] direto, com a duracao ancorada por trim=end.
+        regs = [_regiao(0, 30)]
+        f = build_cinematic_grade_layout_filter(
+            None, regs, fg_inputs_per_region=["1:v"], duracao_seg=30
+        )
+        # Graph enxuto: sem split->[base] e sem o overlay=enable final.
+        assert "[base]" not in f
+        assert "split=2[base]" not in f
+        assert "enable=" not in f
+        assert "between(t," not in f
+        # [composed0] (o composite full-frame) sai direto para [vout].
+        assert "[composed0]" in f
+        # Ancora de duracao finita: trim=end (o [base] finito nao existe mais).
+        assert "trim=end=30.000" in f
+        assert f.rstrip().endswith("format=nv12[vout]")
+
+    def test_regiao_unica_sem_palco_tambem_enxuga(self):
+        # Sem palco (fallback drawbox) o composite ainda cobre o quadro (base
+        # 1920x1080) -> mesmo graph enxuto, saindo [shared0] direto.
+        regs = [_regiao(0, 12)]
+        f = build_cinematic_grade_layout_filter(None, regs, duracao_seg=12)
+        assert "[base]" not in f
+        assert "enable=" not in f
+        assert "[shared0]trim=end=12.000" in f
+        assert f.rstrip().endswith("format=nv12[vout]")
+
+    def test_regiao_unica_com_buraco_mantem_enable_based(self):
+        # 1 regiao que NAO cobre o corte inteiro (buraco antes/depois): o [base]
+        # ainda e necessario onde o composite nao aparece -> mantem enable-based.
+        regs = [_regiao(5, 20)]
+        f = build_cinematic_grade_layout_filter(
+            None, regs, fg_inputs_per_region=["1:v"], duracao_seg=30
+        )
+        assert "split=2[base][src0]" in f
+        assert "[base][composed0]" in f
+        assert "between(t,5.000,20.000)" in f
+
+    def test_regiao_unica_sem_duracao_mantem_enable_based(self):
+        # Sem duracao nao ha ancora de duracao finita para o graph enxuto ->
+        # mantem o enable-based (o [base] finito ancora).
+        regs = [_regiao(0, 30)]
+        f = build_cinematic_grade_layout_filter(None, regs, fg_inputs_per_region=["1:v"])
+        assert "split=2[base][src0]" in f
+        assert "[base][composed0]" in f
+
     def test_filtergraph_nunca_segmenta(self):
         # D-065: a trim-segmentation dentro do filtergraph (split+concat) foi
         # REMOVIDA (estourava a RAM). O filter e SEMPRE enable-based, mesmo

@@ -375,9 +375,13 @@ class TestBuildCinematicGradeCmd:
         )
 
         idx = cmd.index("-filter_complex")
-        # A regiao default-shared cobre [0, duracao]; o gate between(t,0,60)
-        # prova que a duracao foi usada para montar a regiao.
-        assert "between(t,0.000,60.000)" in cmd[idx + 1]
+        # A regiao default-shared cobre [0, duracao] -> caso 100%-shared (P3):
+        # graph enxuto (sem [base]/overlay=enable), com a duracao ancorada por
+        # trim=end. O trim=end=60.000 prova que a duracao foi usada.
+        assert "trim=end=60.000" in cmd[idx + 1]
+        # Graph enxuto: sem a camada [base] nem o overlay=enable final.
+        assert "[base]" not in cmd[idx + 1]
+        assert "enable=" not in cmd[idx + 1]
 
     def test_comando_unico_sempre_enable_based_mesmo_com_env_ligado(self, monkeypatch):
         # A segmentacao saiu do COMANDO UNICO: agora e feita por SUBPROCESSO em
