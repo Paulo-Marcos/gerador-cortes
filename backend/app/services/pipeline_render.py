@@ -11,6 +11,7 @@ import os
 import shutil
 import time
 from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.channel_assets_sync import garantir_mascote_materializado
@@ -139,6 +140,49 @@ _OVERLAY_MIN_BYTES_PRONTO = 256 * 1024
 # `FONTE_PRESETS_VALIDOS` em pipeline_render_config. Todos re-importados acima.
 
 
+@dataclass
+class _RenderCtx:
+    """Contexto compartilhado pelas fases do pipeline de render.
+
+    Concentra os paths, a config, o `event_log`/`report` e o punhado de
+    estado mutável que as fases produzem e consomem entre si — em especial
+    as tasks do OVERLAP Fase 1∥Fase 2 (`bundle_task`/`grade_task`), que
+    nascem numa fase e são aguardadas/limpas em outra. O orquestrador
+    apenas sequencia as fases sobre este contexto (D-323).
+    """
+
+    corte_id: str
+    filtro: str
+    continuar: bool
+    start_from: str
+    start_from_norm: str
+    parar_em: str | None
+    render_parcial: bool
+    started_at: float
+    report: Callable[[int, str], None]
+    event_log: PipelineEventLog
+    # Objetos de domínio
+    corte: Corte
+    projeto: Projeto | None
+    render_config: ProjetoRenderConfig
+    # Paths do corte
+    corte_dir: Path
+    graded_dir: Path
+    overlays_dir: Path
+    upload_dir: Path
+    clip_raw: Path | None
+    clip_graded: Path
+    video_final: Path
+    ffmpeg_log_path: Path
+    # Estado mutável produzido/consumido entre fases
+    clip_graded_valido: bool = False
+    video_final_valido: bool = False
+    bundle_task: asyncio.Task[Path] | None = None
+    grade_task: asyncio.Task | None = None
+    inicio_grade: float = 0.0
+    overlay_chunks: list[dict] = field(default_factory=list)
+
+
 async def renderizar_pipeline_otimizado(
     corte_id: str,
     filtro: str | None = None,
@@ -163,6 +207,10 @@ async def renderizar_pipeline_otimizado(
       4. Encode final para YouTube (FFmpeg)
       5. Limpeza de temporários
 
+    O corpo aqui apenas SEQUENCIA as fases (extraídas em `_fase_*`) sobre um
+    `_RenderCtx`, cuidando do OVERLAP Fase 1∥Fase 2 (grade dispara como task,
+    é aguardada depois dos overlays) e do cleanup das tasks no `finally`.
+
     Exemplo:
         >>> result = await renderizar_pipeline_otimizado("abc-123")
         >>> result["status"]
@@ -181,428 +229,29 @@ async def renderizar_pipeline_otimizado(
     )
     report(2, "Carregando corte e preparando pastas")
     async with AsyncSessionLocal() as db:
-        corte = await db.get(Corte, corte_id)
-        if not corte:
-            raise ValueError(f"Corte '{corte_id}' não encontrado")
-
-        projeto = await db.get(Projeto, corte.projeto_id)
-        render_config = ProjetoRenderConfig.from_projeto(projeto)
-        logger.info(
-            "[Pipeline] Render config: versao=%s sombra_padrao=%s",
-            render_config.versao,
-            render_config.sombra_padrao,
+        ctx = await _preparar_contexto(
+            db, corte_id, filtro, continuar, start_from, parar_em, report, started_at
         )
-
-        corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte_id
-        graded_dir = corte_dir / "graded"
-        overlays_dir = corte_dir / "overlays"
-        upload_dir = corte_dir / "upload_ready"
-        clip_raw = _find_clip_raw(corte_dir) or _find_registered_clip_raw(corte)
-
-        for d in (graded_dir, overlays_dir, upload_dir):
-            d.mkdir(parents=True, exist_ok=True)
-        report(8, "Pastas preparadas")
-
-        clip_graded = graded_dir / "clip_graded.mp4"
-        video_final = upload_dir / "video.mp4"
-        # I-023: log textual ao lado do MP4 final com cada comando ffmpeg
-        # executado (fase + filtro + cmd). Permite auditar rapidamente se o
-        # filtro pedido foi mesmo o aplicado, sem abrir o jsonl de eventos.
-        ffmpeg_log_path = upload_dir / "render.ffmpeg.log"
-
-        event_log = PipelineEventLog(corte_dir / "pipeline_events.jsonl", corte_id=corte_id)
-        event_log.emit(
-            "pipeline_iniciado",
-            filtro=filtro,
-            continuar=continuar,
-            start_from=start_from,
-            parar_em=parar_em,
-        )
-
-        # Render parcial (ex.: "só a grade"): para após `parar_em` sem produzir
-        # o vídeo final nem finalizar o corte. Permite corrigir uma fase isolada
-        # e conferir o resultado antes de seguir.
-        render_parcial = eh_render_parcial(parar_em)
-
-        # ─── Inicialização: Limpeza opcional ───
-        start_from_norm = _normalizar_fase_alias(start_from)
-        if _deve_limpar_artefatos(continuar=continuar, start_from=start_from):
-            logger.info("[Pipeline] Reinício solicitado a partir de: %s", start_from_norm)
-            operational_info(
-                "Pipeline",
-                f"Reiniciando a partir de: {start_from_norm} (entrada: {start_from})",
-            )
-            # `parar_em` restringe a limpeza ao intervalo pedido e `continuar`
-            # (reaproveitar) preserva os overlays mesmo reiniciando pela grade:
-            # "só a grade" / "deu erro na grade, reusa overlays" não custam uma
-            # nova rodada de overlays.
-            _limpar_a_partir_de(
-                start_from_norm,
-                graded_dir,
-                overlays_dir,
-                video_final,
-                parar_em=parar_em,
-                continuar=continuar,
-            )
-        elif continuar and start_from_norm == "overlays":
-            operational_info(
-                "Pipeline",
-                "🔁 Continuar Fase 2: mantendo overlays prontos; só renderiza chunks faltantes/falhos.",
-            )
-        else:
-            operational_info(
-                "Pipeline",
-                "🚀 Modo Continuar: Verificando arquivos existentes para pular etapas concluídas...",
-            )
-
-        bundle_task: asyncio.Task[Path] | None = None
-        grade_task: asyncio.Task | None = None
-        inicio_grade = 0.0
+        _aplicar_limpeza_inicial(ctx)
         try:
-            # ─── Pré-validação paralela ───
-            # Os dois artefatos finais relevantes para decidir o que pular
-            # são validados em paralelo (ffprobe rodando em threads).
-            # `_validar_video_completo` retorna False imediatamente se o
-            # arquivo não existe — sem custo extra quando é caso comum.
-            clip_graded_valido, video_final_valido = await asyncio.gather(
-                _validar_video_completo(clip_graded),
-                _validar_video_completo(video_final),
-            )
-
-            # ─── Mascote do canal ativo materializado (D-171) ───
-            # Espelha `<canal>/assets/sapo/*` -> frontend/public/sapo e
-            # video-renderer/public/sapo ANTES de bundlar/renderizar os overlays,
-            # para o Remotion (`staticFile('/sapo/..')`) servir o mascote do canal
-            # ATIVO. Idempotente e NO-OP no layout legado (mantém o sapo atual).
-            # Best-effort: uma falha de cópia não pode derrubar o render — o
-            # fallback já servido continua válido.
-            try:
-                materializados_sapo = garantir_mascote_materializado()
-                if materializados_sapo:
-                    logger.info(
-                        "[Pipeline] Mascote do canal materializado (%d arquivo(s)).",
-                        len(materializados_sapo),
-                    )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "[Pipeline] Falha ao materializar mascote do canal (segue com o atual): %s",
-                    exc,
-                )
-
-            # ─── Bundle Remotion em paralelo à Fase 1 ───
-            # A Grade roda no FFmpeg/QSV (GPU) e o bundle Remotion no
-            # Node (CPU+disco) — não competem por recursos. Disparamos
-            # o bundle como task em background; quando a Fase 2 precisar
-            # do `bundle_dir`, basta await na task. Cache hit é gratuito,
-            # cache miss economiza ~10–30s sobrepondo com a Grade.
-            bundle_task = asyncio.create_task(
-                _preparar_bundle_overlay(overlays_dir),
-                name=f"bundle_overlay_{corte_id}",
-            )
-            event_log.emit("bundle_remotion_iniciado")
-
-            # ─── Fase 1/4: Grade Cinematográfico ───
-            if _deve_pular_fase("grade", start_from, continuar, clip_graded_valido):
-                logger.info(
-                    "[Pipeline] Fase 1/4: clip_graded.mp4 válido encontrado. Pulando re-render."
-                )
-                operational_info(
-                    "Pipeline", "✅ Fase 1/4: Grade cinematográfico já existe. Pulando."
-                )
-                report(22, "Fase 1/4 já concluída")
-                event_log.emit("fase_pulada", phase="grade", motivo="artefato_valido")
-                await _aplicar_retencao_apos_grade(db, event_log, corte)
-            elif start_from_norm in {"overlays", "render_final"} and not clip_graded_valido:
-                raise RuntimeError(
-                    "Você pediu para iniciar depois da fase 1, mas graded/clip_graded.mp4 não existe ou está inválido."
-                )
-            else:
-                if clip_raw is None:
-                    raise ValueError(
-                        f"clip_raw nao encontrado em {corte_dir}. "
-                        "Execute 'Gerar Bruto' no Editor NLE primeiro ou inicie de overlays/render_final com graded valido."
-                    )
-                if clip_graded.exists():
-                    clip_graded.unlink()
-                grade_quality = AppSettingsService.get().render.grade_global_quality
-                logger.info(
-                    "[Pipeline] Fase 1/4: Iniciando grade cinematográfico (Hardware QSV, gq=%d)...",
-                    grade_quality,
-                )
-                operational_info(
-                    "Pipeline",
-                    f"🎞️  Fase 1/4: Aplicando grade cinematográfico ({filtro}, gq={grade_quality})...",
-                )
-                report(12, "Fase 1/4: aplicando grade cinematográfico")
-                inicio_grade = time.time()
-                event_log.emit(
-                    "fase_iniciada", phase="grade", filtro=filtro, global_quality=grade_quality
-                )
-                operational_info(
-                    "Render final",
-                    f"▶ Fase 1/4 (Grade) iniciada às {epoch_to_hora_local(inicio_grade)} "
-                    "(em paralelo com a Fase 2)",
-                )
-                # F-048: passa as 3 camadas da cascade explicitamente para o
-                # FFmpeg poder resolver compartilhada por regiao (com override).
-                global_padrao_render = AppSettingsService.get().youtube_layout_padrao_global
-                # OVERLAP Fase 1∥Fase 2: a grade roda em background (task)
-                # enquanto os overlays — que NAO dependem do graded — renderizam.
-                # O await fica antes da Fase 3 (composicao). Tempo de parede vira
-                # max(grade, overlays), nao a soma. O worker permite grade∥overlay.
-                grade_task = asyncio.create_task(
-                    _executar_grade(
-                        clip_raw,
-                        clip_graded,
-                        filtro,
-                        layout_youtube=_layout_youtube_do_corte(
-                            corte, fallback_layout=projeto.layout_youtube_padrao
-                        ),
-                        duracao_seg=_duracao_layout_corte(corte),
-                        global_quality=grade_quality,
-                        projeto_padrao=projeto.layout_youtube_padrao,
-                        global_padrao=global_padrao_render,
-                        ffmpeg_log_path=ffmpeg_log_path,
-                    ),
-                    name=f"grade_{corte_id}",
-                )
-
-            # ─── Fase 2/4: Renderização de Overlays Transparentes ───
-            # I-036: mesma cascade de layout da grade (corte → projeto → global),
-            # senão cortes intocados renderizam cards em modo full sobre o palco.
-            overlay_chunks = await _preparar_overlay_chunks(
-                corte,
-                render_config.layout_card_padrao,
-                projeto_padrao=projeto.layout_youtube_padrao if projeto else None,
-                global_padrao=AppSettingsService.get().youtube_layout_padrao_global,
-            )
-            try:
-                report(28, "Fase 2/4: preparando overlays")
-                operational_info("Pipeline", f"-> Chunks de overlay gerados: {len(overlay_chunks)}")
-
-                if not fase_dentro_do_alcance("overlays", parar_em):
-                    # Render parcial "só a grade": não renderiza overlays e não
-                    # apaga os já prontos — seguem disponíveis para o próximo run.
-                    operational_info(
-                        "Pipeline",
-                        "⏹ Fase 2/4: pulando overlays (parada solicitada após a grade); preservados.",
-                    )
-                    event_log.emit("fase_pulada", phase="overlays", motivo="parar_em")
-                    report(55, "Parada após a Fase 1 (grade)")
-                else:
-                    render_cfg = AppSettingsService.get().render
-                    codec_profile = overlay_codec_profile(render_cfg.overlay_codec)
-                    to_render = _filtrar_chunks_pendentes(
-                        overlay_chunks=overlay_chunks,
-                        overlays_dir=overlays_dir,
-                        start_from=start_from_norm,
-                        continuar=continuar,
-                        file_extension=codec_profile.file_extension,
-                    )
-
-                    inicio_overlays = time.time()
-                    event_log.emit(
-                        "fase_iniciada",
-                        phase="overlays",
-                        total_chunks=len(overlay_chunks),
-                        chunks_a_renderizar=len(to_render),
-                        codec=render_cfg.overlay_codec.value,
-                    )
-                    if to_render:
-                        operational_info(
-                            "Pipeline",
-                            f"⚛️  Fase 2/4: Iniciando renderização de {len(to_render)} overlays...",
-                        )
-                        report(35, f"Fase 2/4: renderizando {len(to_render)} overlays")
-                        # Bundle foi disparado em paralelo à Grade — aqui só esperamos
-                        # se ainda não ficou pronto. Em cache hit, isto retorna imediato.
-                        inicio_bundle_wait = time.time()
-                        bundle_dir = await bundle_task
-                        bundle_task = None
-                        event_log.emit(
-                            "bundle_remotion_pronto",
-                            duration_sec=time.time() - inicio_bundle_wait,
-                        )
-                        falhados = await _executar_batch_overlay_chunks_parallel(
-                            to_render,
-                            overlays_dir,
-                            render_cfg,
-                            bundle_dir=bundle_dir,
-                            render_config=render_config,
-                        )
-                        for chunk_id, erro in falhados:
-                            event_log.emit(
-                                "chunk_falhou",
-                                phase="overlays",
-                                chunk_id=chunk_id,
-                                attempt=render_cfg.overlay_max_attempts,
-                                error_type=type(erro).__name__,
-                                error_message=str(erro)[:240],
-                            )
-                        # D-167: se (quase) todos os overlays falharam, a fase NÃO
-                        # pode concluir "sucesso" e deixar o render_final compor um
-                        # vídeo sem overlays. Falha alto — o `except` abaixo emite
-                        # `fase_falhou` e propaga, interrompendo o pipeline.
-                        msg_falha = _mensagem_falha_total_overlays(falhados, len(overlay_chunks))
-                        if msg_falha:
-                            event_log.emit(
-                                "overlays_falharam",
-                                phase="overlays",
-                                chunks_faltando=len(falhados),
-                                total_chunks=len(overlay_chunks),
-                            )
-                            raise RuntimeError(msg_falha)
-                    elif overlay_chunks:
-                        operational_info(
-                            "Pipeline",
-                            f"✅ Fase 2/4: Todos os {len(overlay_chunks)} chunks de overlay já existem (skip).",
-                        )
-                    else:
-                        operational_info(
-                            "Pipeline",
-                            "⚠️  Fase 2/4: Nenhuma cena encontrada para este corte. Pulando.",
-                        )
-                    _dur_overlays = time.time() - inicio_overlays
-                    event_log.emit("fase_concluida", phase="overlays", duration_sec=_dur_overlays)
-                    operational_info(
-                        "Render final",
-                        f"✅ Fase 2/4 (Overlays) concluída em {seg_to_duracao_humana(_dur_overlays)} "
-                        f"(fim às {epoch_to_hora_local(time.time())})",
-                    )
-                    report(55, "Fase 2/4 concluída")
-            except Exception as e:
-                operational_error("Pipeline", f"❌ ERRO CRÍTICO NA FASE 2: {e}")
-                logger.error(f"[Pipeline] Erro crítico na Fase 2: {e}", exc_info=True)
-                event_log.emit(
-                    "fase_falhou",
-                    phase="overlays",
-                    error_type=type(e).__name__,
-                    error_message=str(e)[:240],
-                )
-                raise
-
-            # Espera a grade (que rodou EM PARALELO à Fase 2) terminar antes de
-            # compor. Tempo de parede ~ max(grade, overlays), não a soma. O
-            # `await` propaga uma eventual falha da grade.
-            if grade_task is not None:
-                await grade_task
-                _dur_grade = time.time() - inicio_grade
-                event_log.emit("fase_concluida", phase="grade", duration_sec=_dur_grade)
-                await _aplicar_retencao_apos_grade(db, event_log, corte)
-                operational_info(
-                    "Render final",
-                    f"✅ Fase 1/4 (Grade) concluída em {seg_to_duracao_humana(_dur_grade)} "
-                    f"(fim às {epoch_to_hora_local(time.time())})",
-                )
-                grade_task = None
+            await _prevalidar_e_disparar_bundle(ctx)
+            await _fase_grade(ctx, db)
+            await _fase_overlays(ctx)
+            await _aguardar_grade(ctx, db)
 
             # ─── Parada antecipada (render parcial) ───
             # Quando o usuário pede só uma fase intermediária (ex.: "só a grade"
             # para corrigir um graded truncado), paramos aqui: não compomos o
             # vídeo final nem finalizamos o corte. Os artefatos das fases pedidas
             # ficam prontos para conferência e para um próximo render continuar.
-            if render_parcial:
-                _dur_parcial = time.time() - started_at
-                report(100, f"Render parcial concluído (parou em {parar_em})")
-                event_log.emit(
-                    "pipeline_parcial_concluido",
-                    parou_em=parar_em,
-                    duration_sec=_dur_parcial,
-                )
-                operational_info(
-                    "Render final",
-                    f"⏹ PARCIAL {corte_id} (parou em {parar_em}) "
-                    f"| tempo {seg_to_duracao_humana(_dur_parcial)}",
-                )
-                saida_parcial = (
-                    clip_graded if _normalizar_fase_alias(parar_em) == "grade" else overlays_dir
-                )
-                return {
-                    "status": "sucesso_parcial",
-                    "parou_em": parar_em,
-                    "output": str(saida_parcial),
-                }
+            if ctx.render_parcial:
+                return _resultado_parcial(ctx)
 
-            # ─── Fase 3/4: Render Final (Composição + Encode em UMA passada) ───
-            try:
-                report(70, "Fase 3/4: preparando render final")
-                # video_final_valido foi calculado upfront em paralelo — só
-                # re-valida se foi modificado neste run (ex.: limpeza forçada
-                # ou a Fase 1 acabou de regenerar o pipeline).
-                if not video_final.exists():
-                    video_final_valido = False
-                if _deve_pular_fase("render_final", start_from, continuar, video_final_valido):
-                    operational_info("Pipeline", "✅ Fase 3/4: video.mp4 final já existe. Pulando.")
-                    event_log.emit("fase_pulada", phase="render_final", motivo="artefato_valido")
-                else:
-                    logger.info(
-                        "[Pipeline] Fase 3/4: Compondo overlays + encode final (passada única)..."
-                    )
-                    operational_info(
-                        "Pipeline",
-                        "🏁 Fase 3/4: Compondo overlays + encode final (8Mbps / 30 FPS / loudnorm LUFS-14)...",
-                    )
-                    inicio_render = time.time()
-                    event_log.emit(
-                        "fase_iniciada", phase="render_final", overlays_count=len(overlay_chunks)
-                    )
-                    operational_info(
-                        "Render final",
-                        f"▶ Fase 3/4 (Render final) iniciada às {epoch_to_hora_local(inicio_render)}",
-                    )
-                    video_temporario = _video_final_temporario(video_final)
-                    _remover_arquivo_temporario(video_temporario)
-                    await _executar_render_final(
-                        clip_graded,
-                        overlay_chunks,
-                        overlays_dir,
-                        video_temporario,
-                        filtro=filtro,
-                        ffmpeg_log_path=ffmpeg_log_path,
-                    )
-                    await _publicar_video_final(video_temporario, video_final)
-                    _dur_render = time.time() - inicio_render
-                    event_log.emit("fase_concluida", phase="render_final", duration_sec=_dur_render)
-                    operational_info(
-                        "Render final",
-                        f"✅ Fase 3/4 (Render final) concluída em {seg_to_duracao_humana(_dur_render)} "
-                        f"(fim às {epoch_to_hora_local(time.time())})",
-                    )
-                report(92, "Fase 3/4 concluída")
-            except Exception as e:
-                logger.error(f"[Pipeline] Erro crítico na Fase 3: {e}", exc_info=True)
-                operational_error("Pipeline", f"❌ Erro na Fase 3: {e}")
-                event_log.emit(
-                    "fase_falhou",
-                    phase="render_final",
-                    error_type=type(e).__name__,
-                    error_message=str(e)[:240],
-                )
-                raise
-
-            # ─── Fase 4/4: Finalização ───
-            logger.info("[Pipeline] Finalizando metadados e registrando conclusão.")
-            operational_info("Pipeline", "✨ Finalizando processamento...")
-            report(96, "Fase 4/4: finalizando pacote")
-            await _finalizar_corte(db, corte, upload_dir)
-
-            operational_info(
-                "Pipeline",
-                "ℹ️  Artefatos intermediários mantidos para retomada (graded/, overlays/).",
-            )
-            fim_pipeline = time.time()
-            total_pipeline = fim_pipeline - started_at
-            event_log.emit("pipeline_concluido", duration_sec=total_pipeline)
-            operational_info(
-                "Render final",
-                f"✅ CONCLUÍDO {corte_id} | início {epoch_to_hora_local(started_at)} "
-                f"| fim {epoch_to_hora_local(fim_pipeline)} "
-                f"| tempo total {seg_to_duracao_humana(total_pipeline)}",
-            )
-            return {"status": "sucesso", "output": str(video_final)}
+            await _fase_render_final(ctx)
+            return await _finalizar_pipeline(ctx, db)
 
         except Exception as e:
-            event_log.emit(
+            ctx.event_log.emit(
                 "pipeline_falhou",
                 duration_sec=time.time() - started_at,
                 error_type=type(e).__name__,
@@ -610,25 +259,514 @@ async def renderizar_pipeline_otimizado(
             )
             raise
         finally:
-            # Limpa bundle_task se ainda estiver pendente (caso: pipeline
-            # falhou antes da Fase 2, ou Fase 2 não precisou do bundle
-            # porque já estava tudo renderizado).
-            if bundle_task is not None and not bundle_task.done():
-                bundle_task.cancel()
-                try:
-                    await bundle_task
-                except (asyncio.CancelledError, Exception):
-                    pass
-            # Cancela a grade se ficou pendente (ex.: Fase 2 falhou antes do
-            # await da grade). O job FFmpeg no worker segue até o fim, mas a
-            # task async não fica órfã. Se já terminou, consome a exceção.
-            if grade_task is not None and not grade_task.done():
-                grade_task.cancel()
-            if grade_task is not None:
-                try:
-                    await grade_task
-                except (asyncio.CancelledError, Exception):
-                    pass
+            await _cancelar_tasks_pendentes(ctx)
+
+
+# ---------------------------------------------------------------------------
+# Fases do pipeline — o orquestrador acima apenas as sequencia (D-323)
+# ---------------------------------------------------------------------------
+
+
+async def _preparar_contexto(
+    db,
+    corte_id: str,
+    filtro: str,
+    continuar: bool,
+    start_from: str,
+    parar_em: str | None,
+    report: Callable[[int, str], None],
+    started_at: float,
+) -> _RenderCtx:
+    """Carrega corte/projeto, monta os paths do corte e o `event_log`.
+
+    Emite `pipeline_iniciado` e devolve o `_RenderCtx` que as fases
+    consomem. Concentra o setup que era inline no orquestrador.
+    """
+    corte = await db.get(Corte, corte_id)
+    if not corte:
+        raise ValueError(f"Corte '{corte_id}' não encontrado")
+
+    projeto = await db.get(Projeto, corte.projeto_id)
+    render_config = ProjetoRenderConfig.from_projeto(projeto)
+    logger.info(
+        "[Pipeline] Render config: versao=%s sombra_padrao=%s",
+        render_config.versao,
+        render_config.sombra_padrao,
+    )
+
+    corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte_id
+    graded_dir = corte_dir / "graded"
+    overlays_dir = corte_dir / "overlays"
+    upload_dir = corte_dir / "upload_ready"
+    clip_raw = _find_clip_raw(corte_dir) or _find_registered_clip_raw(corte)
+
+    for d in (graded_dir, overlays_dir, upload_dir):
+        d.mkdir(parents=True, exist_ok=True)
+    report(8, "Pastas preparadas")
+
+    clip_graded = graded_dir / "clip_graded.mp4"
+    video_final = upload_dir / "video.mp4"
+    # I-023: log textual ao lado do MP4 final com cada comando ffmpeg
+    # executado (fase + filtro + cmd). Permite auditar rapidamente se o
+    # filtro pedido foi mesmo o aplicado, sem abrir o jsonl de eventos.
+    ffmpeg_log_path = upload_dir / "render.ffmpeg.log"
+
+    event_log = PipelineEventLog(corte_dir / "pipeline_events.jsonl", corte_id=corte_id)
+    event_log.emit(
+        "pipeline_iniciado",
+        filtro=filtro,
+        continuar=continuar,
+        start_from=start_from,
+        parar_em=parar_em,
+    )
+
+    # Render parcial (ex.: "só a grade"): para após `parar_em` sem produzir
+    # o vídeo final nem finalizar o corte. Permite corrigir uma fase isolada
+    # e conferir o resultado antes de seguir.
+    render_parcial = eh_render_parcial(parar_em)
+    start_from_norm = _normalizar_fase_alias(start_from)
+
+    return _RenderCtx(
+        corte_id=corte_id,
+        filtro=filtro,
+        continuar=continuar,
+        start_from=start_from,
+        start_from_norm=start_from_norm,
+        parar_em=parar_em,
+        render_parcial=render_parcial,
+        started_at=started_at,
+        report=report,
+        event_log=event_log,
+        corte=corte,
+        projeto=projeto,
+        render_config=render_config,
+        corte_dir=corte_dir,
+        graded_dir=graded_dir,
+        overlays_dir=overlays_dir,
+        upload_dir=upload_dir,
+        clip_raw=clip_raw,
+        clip_graded=clip_graded,
+        video_final=video_final,
+        ffmpeg_log_path=ffmpeg_log_path,
+    )
+
+
+def _aplicar_limpeza_inicial(ctx: _RenderCtx) -> None:
+    """Limpeza opcional de artefatos conforme `continuar`/`start_from`."""
+    if _deve_limpar_artefatos(continuar=ctx.continuar, start_from=ctx.start_from):
+        logger.info("[Pipeline] Reinício solicitado a partir de: %s", ctx.start_from_norm)
+        operational_info(
+            "Pipeline",
+            f"Reiniciando a partir de: {ctx.start_from_norm} (entrada: {ctx.start_from})",
+        )
+        # `parar_em` restringe a limpeza ao intervalo pedido e `continuar`
+        # (reaproveitar) preserva os overlays mesmo reiniciando pela grade:
+        # "só a grade" / "deu erro na grade, reusa overlays" não custam uma
+        # nova rodada de overlays.
+        _limpar_a_partir_de(
+            ctx.start_from_norm,
+            ctx.graded_dir,
+            ctx.overlays_dir,
+            ctx.video_final,
+            parar_em=ctx.parar_em,
+            continuar=ctx.continuar,
+        )
+    elif ctx.continuar and ctx.start_from_norm == "overlays":
+        operational_info(
+            "Pipeline",
+            "🔁 Continuar Fase 2: mantendo overlays prontos; só renderiza chunks faltantes/falhos.",
+        )
+    else:
+        operational_info(
+            "Pipeline",
+            "🚀 Modo Continuar: Verificando arquivos existentes para pular etapas concluídas...",
+        )
+
+
+async def _prevalidar_e_disparar_bundle(ctx: _RenderCtx) -> None:
+    """Pré-valida artefatos, materializa o mascote e dispara o bundle Remotion.
+
+    O bundle roda como task em background para SOBREPOR a Fase 1 (grade),
+    já que competem por recursos distintos (Node/disco vs GPU) — a Fase 2
+    só aguarda a task quando de fato precisar do `bundle_dir`.
+    """
+    # ─── Pré-validação paralela ───
+    # Os dois artefatos finais relevantes para decidir o que pular
+    # são validados em paralelo (ffprobe rodando em threads).
+    # `_validar_video_completo` retorna False imediatamente se o
+    # arquivo não existe — sem custo extra quando é caso comum.
+    ctx.clip_graded_valido, ctx.video_final_valido = await asyncio.gather(
+        _validar_video_completo(ctx.clip_graded),
+        _validar_video_completo(ctx.video_final),
+    )
+
+    # ─── Mascote do canal ativo materializado (D-171) ───
+    # Espelha `<canal>/assets/sapo/*` -> frontend/public/sapo e
+    # video-renderer/public/sapo ANTES de bundlar/renderizar os overlays,
+    # para o Remotion (`staticFile('/sapo/..')`) servir o mascote do canal
+    # ATIVO. Idempotente e NO-OP no layout legado (mantém o sapo atual).
+    # Best-effort: uma falha de cópia não pode derrubar o render — o
+    # fallback já servido continua válido.
+    try:
+        materializados_sapo = garantir_mascote_materializado()
+        if materializados_sapo:
+            logger.info(
+                "[Pipeline] Mascote do canal materializado (%d arquivo(s)).",
+                len(materializados_sapo),
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "[Pipeline] Falha ao materializar mascote do canal (segue com o atual): %s",
+            exc,
+        )
+
+    # ─── Bundle Remotion em paralelo à Fase 1 ───
+    # A Grade roda no FFmpeg/QSV (GPU) e o bundle Remotion no
+    # Node (CPU+disco) — não competem por recursos. Disparamos
+    # o bundle como task em background; quando a Fase 2 precisar
+    # do `bundle_dir`, basta await na task. Cache hit é gratuito,
+    # cache miss economiza ~10–30s sobrepondo com a Grade.
+    ctx.bundle_task = asyncio.create_task(
+        _preparar_bundle_overlay(ctx.overlays_dir),
+        name=f"bundle_overlay_{ctx.corte_id}",
+    )
+    ctx.event_log.emit("bundle_remotion_iniciado")
+
+
+async def _fase_grade(ctx: _RenderCtx, db) -> None:
+    """Fase 1/4: decide pular a grade ou dispará-la como task de fundo.
+
+    Ao pular, aplica a retenção pós-grade imediatamente. Ao rodar, cria
+    `ctx.grade_task` (aguardada depois da Fase 2, no OVERLAP) e marca
+    `ctx.inicio_grade` para a medição de duração.
+    """
+    if _deve_pular_fase("grade", ctx.start_from, ctx.continuar, ctx.clip_graded_valido):
+        logger.info("[Pipeline] Fase 1/4: clip_graded.mp4 válido encontrado. Pulando re-render.")
+        operational_info("Pipeline", "✅ Fase 1/4: Grade cinematográfico já existe. Pulando.")
+        ctx.report(22, "Fase 1/4 já concluída")
+        ctx.event_log.emit("fase_pulada", phase="grade", motivo="artefato_valido")
+        await _aplicar_retencao_apos_grade(db, ctx.event_log, ctx.corte)
+    elif ctx.start_from_norm in {"overlays", "render_final"} and not ctx.clip_graded_valido:
+        raise RuntimeError(
+            "Você pediu para iniciar depois da fase 1, mas graded/clip_graded.mp4 não existe ou está inválido."
+        )
+    else:
+        if ctx.clip_raw is None:
+            raise ValueError(
+                f"clip_raw nao encontrado em {ctx.corte_dir}. "
+                "Execute 'Gerar Bruto' no Editor NLE primeiro ou inicie de overlays/render_final com graded valido."
+            )
+        if ctx.clip_graded.exists():
+            ctx.clip_graded.unlink()
+        grade_quality = AppSettingsService.get().render.grade_global_quality
+        logger.info(
+            "[Pipeline] Fase 1/4: Iniciando grade cinematográfico (Hardware QSV, gq=%d)...",
+            grade_quality,
+        )
+        operational_info(
+            "Pipeline",
+            f"🎞️  Fase 1/4: Aplicando grade cinematográfico ({ctx.filtro}, gq={grade_quality})...",
+        )
+        ctx.report(12, "Fase 1/4: aplicando grade cinematográfico")
+        ctx.inicio_grade = time.time()
+        ctx.event_log.emit(
+            "fase_iniciada", phase="grade", filtro=ctx.filtro, global_quality=grade_quality
+        )
+        operational_info(
+            "Render final",
+            f"▶ Fase 1/4 (Grade) iniciada às {epoch_to_hora_local(ctx.inicio_grade)} "
+            "(em paralelo com a Fase 2)",
+        )
+        # F-048: passa as 3 camadas da cascade explicitamente para o
+        # FFmpeg poder resolver compartilhada por regiao (com override).
+        global_padrao_render = AppSettingsService.get().youtube_layout_padrao_global
+        # OVERLAP Fase 1∥Fase 2: a grade roda em background (task)
+        # enquanto os overlays — que NAO dependem do graded — renderizam.
+        # O await fica antes da Fase 3 (composicao). Tempo de parede vira
+        # max(grade, overlays), nao a soma. O worker permite grade∥overlay.
+        ctx.grade_task = asyncio.create_task(
+            _executar_grade(
+                ctx.clip_raw,
+                ctx.clip_graded,
+                ctx.filtro,
+                layout_youtube=_layout_youtube_do_corte(
+                    ctx.corte, fallback_layout=ctx.projeto.layout_youtube_padrao
+                ),
+                duracao_seg=_duracao_layout_corte(ctx.corte),
+                global_quality=grade_quality,
+                projeto_padrao=ctx.projeto.layout_youtube_padrao,
+                global_padrao=global_padrao_render,
+                ffmpeg_log_path=ctx.ffmpeg_log_path,
+            ),
+            name=f"grade_{ctx.corte_id}",
+        )
+
+
+async def _fase_overlays(ctx: _RenderCtx) -> None:
+    """Fase 2/4: prepara e renderiza os chunks de overlay transparentes.
+
+    Guarda `ctx.overlay_chunks` (consumidos pela Fase 3) e consome o
+    `ctx.bundle_task` disparado no início. Falha alto se (quase) todos os
+    overlays falharem — o pipeline não pode compor um vídeo sem overlays.
+    """
+    # I-036: mesma cascade de layout da grade (corte → projeto → global),
+    # senão cortes intocados renderizam cards em modo full sobre o palco.
+    ctx.overlay_chunks = await _preparar_overlay_chunks(
+        ctx.corte,
+        ctx.render_config.layout_card_padrao,
+        projeto_padrao=ctx.projeto.layout_youtube_padrao if ctx.projeto else None,
+        global_padrao=AppSettingsService.get().youtube_layout_padrao_global,
+    )
+    try:
+        ctx.report(28, "Fase 2/4: preparando overlays")
+        operational_info("Pipeline", f"-> Chunks de overlay gerados: {len(ctx.overlay_chunks)}")
+
+        if not fase_dentro_do_alcance("overlays", ctx.parar_em):
+            # Render parcial "só a grade": não renderiza overlays e não
+            # apaga os já prontos — seguem disponíveis para o próximo run.
+            operational_info(
+                "Pipeline",
+                "⏹ Fase 2/4: pulando overlays (parada solicitada após a grade); preservados.",
+            )
+            ctx.event_log.emit("fase_pulada", phase="overlays", motivo="parar_em")
+            ctx.report(55, "Parada após a Fase 1 (grade)")
+        else:
+            render_cfg = AppSettingsService.get().render
+            codec_profile = overlay_codec_profile(render_cfg.overlay_codec)
+            to_render = _filtrar_chunks_pendentes(
+                overlay_chunks=ctx.overlay_chunks,
+                overlays_dir=ctx.overlays_dir,
+                start_from=ctx.start_from_norm,
+                continuar=ctx.continuar,
+                file_extension=codec_profile.file_extension,
+            )
+
+            inicio_overlays = time.time()
+            ctx.event_log.emit(
+                "fase_iniciada",
+                phase="overlays",
+                total_chunks=len(ctx.overlay_chunks),
+                chunks_a_renderizar=len(to_render),
+                codec=render_cfg.overlay_codec.value,
+            )
+            if to_render:
+                operational_info(
+                    "Pipeline",
+                    f"⚛️  Fase 2/4: Iniciando renderização de {len(to_render)} overlays...",
+                )
+                ctx.report(35, f"Fase 2/4: renderizando {len(to_render)} overlays")
+                # Bundle foi disparado em paralelo à Grade — aqui só esperamos
+                # se ainda não ficou pronto. Em cache hit, isto retorna imediato.
+                inicio_bundle_wait = time.time()
+                bundle_dir = await ctx.bundle_task
+                ctx.bundle_task = None
+                ctx.event_log.emit(
+                    "bundle_remotion_pronto",
+                    duration_sec=time.time() - inicio_bundle_wait,
+                )
+                falhados = await _executar_batch_overlay_chunks_parallel(
+                    to_render,
+                    ctx.overlays_dir,
+                    render_cfg,
+                    bundle_dir=bundle_dir,
+                    render_config=ctx.render_config,
+                )
+                for chunk_id, erro in falhados:
+                    ctx.event_log.emit(
+                        "chunk_falhou",
+                        phase="overlays",
+                        chunk_id=chunk_id,
+                        attempt=render_cfg.overlay_max_attempts,
+                        error_type=type(erro).__name__,
+                        error_message=str(erro)[:240],
+                    )
+                # D-167: se (quase) todos os overlays falharam, a fase NÃO
+                # pode concluir "sucesso" e deixar o render_final compor um
+                # vídeo sem overlays. Falha alto — o `except` abaixo emite
+                # `fase_falhou` e propaga, interrompendo o pipeline.
+                msg_falha = _mensagem_falha_total_overlays(falhados, len(ctx.overlay_chunks))
+                if msg_falha:
+                    ctx.event_log.emit(
+                        "overlays_falharam",
+                        phase="overlays",
+                        chunks_faltando=len(falhados),
+                        total_chunks=len(ctx.overlay_chunks),
+                    )
+                    raise RuntimeError(msg_falha)
+            elif ctx.overlay_chunks:
+                operational_info(
+                    "Pipeline",
+                    f"✅ Fase 2/4: Todos os {len(ctx.overlay_chunks)} chunks de overlay já existem (skip).",
+                )
+            else:
+                operational_info(
+                    "Pipeline",
+                    "⚠️  Fase 2/4: Nenhuma cena encontrada para este corte. Pulando.",
+                )
+            _dur_overlays = time.time() - inicio_overlays
+            ctx.event_log.emit("fase_concluida", phase="overlays", duration_sec=_dur_overlays)
+            operational_info(
+                "Render final",
+                f"✅ Fase 2/4 (Overlays) concluída em {seg_to_duracao_humana(_dur_overlays)} "
+                f"(fim às {epoch_to_hora_local(time.time())})",
+            )
+            ctx.report(55, "Fase 2/4 concluída")
+    except Exception as e:
+        operational_error("Pipeline", f"❌ ERRO CRÍTICO NA FASE 2: {e}")
+        logger.error(f"[Pipeline] Erro crítico na Fase 2: {e}", exc_info=True)
+        ctx.event_log.emit(
+            "fase_falhou",
+            phase="overlays",
+            error_type=type(e).__name__,
+            error_message=str(e)[:240],
+        )
+        raise
+
+
+async def _aguardar_grade(ctx: _RenderCtx, db) -> None:
+    """Aguarda a grade que rodou EM PARALELO à Fase 2 antes de compor.
+
+    Tempo de parede ~ max(grade, overlays), não a soma. O `await` propaga
+    uma eventual falha da grade.
+    """
+    if ctx.grade_task is not None:
+        await ctx.grade_task
+        _dur_grade = time.time() - ctx.inicio_grade
+        ctx.event_log.emit("fase_concluida", phase="grade", duration_sec=_dur_grade)
+        await _aplicar_retencao_apos_grade(db, ctx.event_log, ctx.corte)
+        operational_info(
+            "Render final",
+            f"✅ Fase 1/4 (Grade) concluída em {seg_to_duracao_humana(_dur_grade)} "
+            f"(fim às {epoch_to_hora_local(time.time())})",
+        )
+        ctx.grade_task = None
+
+
+def _resultado_parcial(ctx: _RenderCtx) -> dict:
+    """Fecha um render parcial: reporta, emite o evento e devolve a saída."""
+    _dur_parcial = time.time() - ctx.started_at
+    ctx.report(100, f"Render parcial concluído (parou em {ctx.parar_em})")
+    ctx.event_log.emit(
+        "pipeline_parcial_concluido",
+        parou_em=ctx.parar_em,
+        duration_sec=_dur_parcial,
+    )
+    operational_info(
+        "Render final",
+        f"⏹ PARCIAL {ctx.corte_id} (parou em {ctx.parar_em}) "
+        f"| tempo {seg_to_duracao_humana(_dur_parcial)}",
+    )
+    saida_parcial = (
+        ctx.clip_graded if _normalizar_fase_alias(ctx.parar_em) == "grade" else ctx.overlays_dir
+    )
+    return {
+        "status": "sucesso_parcial",
+        "parou_em": ctx.parar_em,
+        "output": str(saida_parcial),
+    }
+
+
+async def _fase_render_final(ctx: _RenderCtx) -> None:
+    """Fase 3/4: composição de overlays + encode final em UMA passada FFmpeg."""
+    try:
+        ctx.report(70, "Fase 3/4: preparando render final")
+        # video_final_valido foi calculado upfront em paralelo — só
+        # re-valida se foi modificado neste run (ex.: limpeza forçada
+        # ou a Fase 1 acabou de regenerar o pipeline).
+        if not ctx.video_final.exists():
+            ctx.video_final_valido = False
+        if _deve_pular_fase("render_final", ctx.start_from, ctx.continuar, ctx.video_final_valido):
+            operational_info("Pipeline", "✅ Fase 3/4: video.mp4 final já existe. Pulando.")
+            ctx.event_log.emit("fase_pulada", phase="render_final", motivo="artefato_valido")
+        else:
+            logger.info("[Pipeline] Fase 3/4: Compondo overlays + encode final (passada única)...")
+            operational_info(
+                "Pipeline",
+                "🏁 Fase 3/4: Compondo overlays + encode final (8Mbps / 30 FPS / loudnorm LUFS-14)...",
+            )
+            inicio_render = time.time()
+            ctx.event_log.emit(
+                "fase_iniciada", phase="render_final", overlays_count=len(ctx.overlay_chunks)
+            )
+            operational_info(
+                "Render final",
+                f"▶ Fase 3/4 (Render final) iniciada às {epoch_to_hora_local(inicio_render)}",
+            )
+            video_temporario = _video_final_temporario(ctx.video_final)
+            _remover_arquivo_temporario(video_temporario)
+            await _executar_render_final(
+                ctx.clip_graded,
+                ctx.overlay_chunks,
+                ctx.overlays_dir,
+                video_temporario,
+                filtro=ctx.filtro,
+                ffmpeg_log_path=ctx.ffmpeg_log_path,
+            )
+            await _publicar_video_final(video_temporario, ctx.video_final)
+            _dur_render = time.time() - inicio_render
+            ctx.event_log.emit("fase_concluida", phase="render_final", duration_sec=_dur_render)
+            operational_info(
+                "Render final",
+                f"✅ Fase 3/4 (Render final) concluída em {seg_to_duracao_humana(_dur_render)} "
+                f"(fim às {epoch_to_hora_local(time.time())})",
+            )
+        ctx.report(92, "Fase 3/4 concluída")
+    except Exception as e:
+        logger.error(f"[Pipeline] Erro crítico na Fase 3: {e}", exc_info=True)
+        operational_error("Pipeline", f"❌ Erro na Fase 3: {e}")
+        ctx.event_log.emit(
+            "fase_falhou",
+            phase="render_final",
+            error_type=type(e).__name__,
+            error_message=str(e)[:240],
+        )
+        raise
+
+
+async def _finalizar_pipeline(ctx: _RenderCtx, db) -> dict:
+    """Fase 4/4: finaliza o corte, registra a conclusão e devolve a saída."""
+    logger.info("[Pipeline] Finalizando metadados e registrando conclusão.")
+    operational_info("Pipeline", "✨ Finalizando processamento...")
+    ctx.report(96, "Fase 4/4: finalizando pacote")
+    await _finalizar_corte(db, ctx.corte, ctx.upload_dir)
+
+    operational_info(
+        "Pipeline",
+        "ℹ️  Artefatos intermediários mantidos para retomada (graded/, overlays/).",
+    )
+    fim_pipeline = time.time()
+    total_pipeline = fim_pipeline - ctx.started_at
+    ctx.event_log.emit("pipeline_concluido", duration_sec=total_pipeline)
+    operational_info(
+        "Render final",
+        f"✅ CONCLUÍDO {ctx.corte_id} | início {epoch_to_hora_local(ctx.started_at)} "
+        f"| fim {epoch_to_hora_local(fim_pipeline)} "
+        f"| tempo total {seg_to_duracao_humana(total_pipeline)}",
+    )
+    return {"status": "sucesso", "output": str(ctx.video_final)}
+
+
+async def _cancelar_tasks_pendentes(ctx: _RenderCtx) -> None:
+    """Cleanup do `finally`: cancela bundle/grade se ficaram pendentes."""
+    # Limpa bundle_task se ainda estiver pendente (caso: pipeline
+    # falhou antes da Fase 2, ou Fase 2 não precisou do bundle
+    # porque já estava tudo renderizado).
+    if ctx.bundle_task is not None and not ctx.bundle_task.done():
+        ctx.bundle_task.cancel()
+        try:
+            await ctx.bundle_task
+        except (asyncio.CancelledError, Exception):
+            pass
+    # Cancela a grade se ficou pendente (ex.: Fase 2 falhou antes do
+    # await da grade). O job FFmpeg no worker segue até o fim, mas a
+    # task async não fica órfã. Se já terminou, consome a exceção.
+    if ctx.grade_task is not None and not ctx.grade_task.done():
+        ctx.grade_task.cancel()
+    if ctx.grade_task is not None:
+        try:
+            await ctx.grade_task
+        except (asyncio.CancelledError, Exception):
+            pass
 
 
 # ---------------------------------------------------------------------------
