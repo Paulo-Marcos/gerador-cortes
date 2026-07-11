@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -34,7 +34,7 @@ jobs:
         working-directory: backend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Versao fixa (sem matriz): projeto pessoal/single-maintainer, roda em producao
       # numa unica versao (deploy). Matriz Python/Node daria zero cobertura extra real
@@ -76,7 +76,7 @@ jobs:
         working-directory: frontend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Versao fixa (sem matriz) — mesma decisao do job backend (D-212).
       - name: Setup Node
@@ -125,7 +125,7 @@ jobs:
         working-directory: video-renderer
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Versao fixa (sem matriz) — mesma decisao do job backend (D-212).
       - name: Setup Node
