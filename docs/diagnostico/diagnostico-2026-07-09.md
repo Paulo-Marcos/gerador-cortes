@@ -413,3 +413,116 @@ mapeada) e da serialização dos overlays concorrentes (operacional, +30% da D-3
 > comando de mira global, podendo ter interrompido um render de produção. **Benchmarks futuros
 > devem:** (a) pôr `timeout=` em cada `subprocess.run`; (b) matar só o **PID específico** do bench,
 > nunca `/IM ffmpeg.exe`; (c) usar `-shortest` sempre que houver fonte `color=`/`-loop 1` infinita.
+
+---
+
+## D-322 — Medição da fusão grade+compose+encode
+
+**Objetivo:** decidir, com números reais, se fundir a Fase **grade** (encode #1 → `clip_graded.mp4`)
+com a Fase **render_final** (re-decode + compose overlays + encode #2 8M) numa **única passada**
+FFmpeg vale a pena. A fusão elimina **1 encode + 1 decode** full-length, MAS perde o overlap
+Fase1∥Fase2 (a grade hoje roda em paralelo com os overlays). O diagnóstico marcou isso como a
+alavanca **#2 / médio risco** — só justificada se a grade estiver mesmo dominando o caminho crítico.
+
+**Veredito: NÃO INTEGRAR.** O ganho de wall-clock é **marginal/negativo** e há **regressão de RAM
+de +41%** sobre uma fase que já sofre OOM em produção. Detalhamento abaixo.
+
+### Método
+
+Bench fiel construído a partir dos **builders de domínio reais**
+(`build_cinematic_grade_layout_filter` / `build_compose_and_encode_cmd` / `build_overlay_filter_string`)
+— o comando fundido é o encadeamento `grade → [graded] → compose → encode 8M`, portável para produção.
+Janela de **120 s @1080p** do `clip_raw_base.mp4`, layout 100%-shared 2-telas (full-cover, D-338) +
+PNG de palco, **6 overlays ProRes 4444 reais** de PROD. QSV decode da fonte, gq=30 na grade, 8M no
+final — idêntico à produção. Anti-throttling (D-320): cooldown 60 s antes de cada medição, 3 rounds,
+**mínimo**. Scripts: [`backend/_bench/bench_fusao.py`](../../backend/_bench/bench_fusao.py),
+`identidade_fusao.py`, `mem_fusao.py` (pasta gitignored). SEGURO: timeout+PID; nunca taskkill global.
+
+### 1. Telemetria de PROD (175 cortes) — a grade domina e OCULTA os overlays
+
+Varredura de `pipeline_events.jsonl` reais (ao contrário do diagnóstico original, agora HÁ dados):
+
+| Fase | Amostras | realtime (dur/corte) mediana | Observação |
+|------|---------:|---:|---|
+| grade | 146 | **1,65×** | domina; **no caminho crítico em 130/141 (92%)** dos pares concorrentes |
+| overlays | 190 | 0,56× | escondida sob a grade no overlap |
+| render_final | 191 | 0,24× | bate com o bench (0,22×) — cross-validação |
+
+Ou seja, **hoje `ATUAL ≈ grade_contended + render_final`** e os overlays (0,56×) rodam **de graça**
+dentro da janela da grade (1,65×). O overlap não é desperdício — ele *esconde* os overlays.
+Nota: a grade **falha repetidamente com OOM** em PROD (`WorkerJobFailed Exit code 4294967284`).
+Escopo fusível: **67/76 (88%)** dos comandos de grade logados são `segmentado=False` (comando único,
+fusível); 12% são multi-região segmentada (N subprocessos, **não** fundível → precisaria de fallback).
+
+### 2. Compute isolado (mínimo de 3 rounds frios, janela 120 s)
+
+| Passo | min (s) | realtime |
+|---|---:|---:|
+| grade_solo (encode #1 → graded) | **71,32** | 0,59× |
+| render_final (re-decode + compose + encode 8M) | **26,69** | 0,22× |
+| **fused_pass** (grade+compose+encode, 1 passada) | **81,04** | 0,68× |
+
+`grade_solo + render_final = 98,01 s` vs `fused_pass = 81,04 s` → a fusão **economiza 16,97 s
+(17,3%) de COMPUTE** (elimina encode #1 + o decode do graded). Real, mas **modesto** — consistente
+com a dissecação D-329 (o encode custa ~12 s/janela; o decode do graded, ~5 s).
+
+### 3. Wall-clock — o overlap vale MAIS que a fusão
+
+`ATUAL = max(grade_contended, overlays) + render_final` · `FUNDIDO = overlays_solo + fused_pass`.
+Matriz de sensibilidade (Δ = FUNDIDO − ATUAL; **positivo = fusão mais lenta**), variando a contenção
+`k` na grade (D-320 mediu +30%) e o alívio de paralelismo dos overlays solo `r` (o worker libera 2
+overlays paralelos sem a grade, vs 1 com):
+
+| | ATUAL k=1,0 (98,0 s) | ATUAL k=1,3 (119,4 s) |
+|---|---|---|
+| FUNDIDO overlays serial r=1,0 (148 s) | **+50 s** pior | **+29 s** pior |
+| FUNDIDO overlays 1,6× (123 s) | **+25 s** pior | **+3,5 s** pior |
+| FUNDIDO overlays 2× (114 s) | **+16 s** pior | **−5 s** (4% melhor) |
+
+A fusão só ganha no **canto mais otimista** (contenção máxima + paralelismo 2× perfeito dos overlays),
+e só ~4%. Em **todas** as outras combinações ela **perde** (3–50%). Causa raiz: o overlap atual
+**esconde os overlays (0,56× realtime ≈ 67 s/janela) de graça** sob a grade dominante; a fusão
+sacrifica essa ocultação para economizar 17% de compute — dá **empate ou perda**. (A fusão só venceria
+com folga em cortes de overlays **desprezíveis**, minoria do perfil de PROD.)
+
+### 4. Identidade visual — PASS (a fusão é marginalmente MELHOR)
+
+- Saídas reais 8M (fundida vs pipeline atual): **PSNR Y 41,4 dB · SSIM Y 0,987** — visualmente equivalente.
+- Filtergraph fundido vs referência com intermediário lossless: **PSNR 57,8 dB** — algebricamente
+  idêntico a menos de ruído de arredondamento de tag de cor. Byte-identidade é inatingível através de
+  **qualquer** encode intermediário (o roundtrip re-tagueia o colorspace); imaterial, pois a produção
+  usa um intermediário gq30 **lossy**. **A fusão remove essa geração lossy → qualidade um pouco melhor.**
+  Identidade não é bloqueador — mas também não justifica a fusão sozinha.
+
+### 5. Memória — regressão de +41% sobre uma fase que já dá OOM
+
+Pico de working-set (processo ffmpeg + filhos), GPU livre:
+
+| Cenário | pico RAM |
+|---|---:|
+| grade_solo | 730 MB |
+| render_final | 1582 MB |
+| **fused_pass** | **2238 MB** |
+
+`max(grade, render_final) separados = 1582 MB` (um processo por vez) → **fused_pass 2238 MB = +657 MB
+(+41,5%)**. A fusão empilha o composite RGBA de quadro cheio (grade) + o decode dos ProRes 4444 (compose)
++ o encode 8M no **mesmo** processo. Como a grade **já falha com OOM em produção** (item 1), essa
+regressão de pico **agrava um risco que já derruba renders**. Ressalva: é RAM de sistema; o OOM de PROD
+(`h264_qsv Cannot allocate memory`) é pressão de *surface* QSV — mas o princípio (empilhar os dois
+maiores consumidores) vale para ambos.
+
+### Veredito e recomendação
+
+| Dimensão | Resultado | Peso na decisão |
+|---|---|---|
+| Compute | −17,3% (economiza) | a favor, modesto |
+| Wall-clock | marginal/negativo (ganha só no canto otimista, ~4%) | **contra** |
+| Identidade visual | PASS (levemente melhor) | neutro |
+| Memória | **+41,5%** de pico, sobre fase que já dá OOM | **contra (risco)** |
+| Escopo | só 88% (comando único); 12% segmentado precisa de fallback | contra (complexidade) |
+
+**NÃO INTEGRAR.** Cai na cláusula da porta de decisão da D-322: *ganho marginal/dentro do ruído + risco
+→ não integre; evitar risco inútil é sucesso da demanda.* O overlap Fase1∥Fase2 hoje **já é eficiente**
+justamente porque a grade domina e esconde os overlays. As alavancas reais do E-023 seguem sendo o **P3**
+(já entregue, D-338) e reduzir o custo do composite da grade em si — **não** a fusão.
+Nenhum código de produção foi alterado nesta demanda.
