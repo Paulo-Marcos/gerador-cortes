@@ -184,6 +184,11 @@ class CenasRemotionService:
                     min_primeiros_15s=limites["min_primeiros_15s"]
                     if i == 0
                     else 0,  # só obriga hook na primeira parte
+                    # B (D-295 folding): fonte única da abertura contextual — a frase
+                    # que o cortador-expert já produziu p/ o corte. Opcionais no
+                    # scaffold; só a 1ª parte carrega o gancho (i == 0).
+                    contextualizacao=(corte.contextualizacao or "").strip() if i == 0 else "",
+                    frase_gancho=(corte.frase_gancho_texto or "").strip() if i == 0 else "",
                 )
                 prompts.append(
                     {
@@ -306,6 +311,12 @@ class CenasRemotionService:
                             max_identidade=limites["max_identidade"],
                             max_fullscreen=limites["max_fullscreen"],
                             min_primeiros_15s=limites["min_primeiros_15s"] if i == 0 else 0,
+                            # B (D-295 folding): abertura contextual reusa a frase do
+                            # cortador-expert; opcionais no scaffold, só na 1ª parte.
+                            contextualizacao=(corte.contextualizacao or "").strip()
+                            if i == 0
+                            else "",
+                            frase_gancho=(corte.frase_gancho_texto or "").strip() if i == 0 else "",
                         ),
                     }
                 )

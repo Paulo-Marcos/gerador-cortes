@@ -61,8 +61,11 @@ class ScaffoldCatalogo:
     - `skill_key`: linha da tabela `editorial_skill` onde o scaffold é guardado.
     - `etapa`/`descricao`: rótulo e explicação para a UI.
     - `arquivo`: template default em `scaffolds/` (None p/ `cenas`, que usa o loader).
-    - `placeholders`: os campos `{...}` que o builder injeta — TODOS obrigatórios e
-      o conjunto EXATO permitido (nenhum a mais, senão o `str.format` quebra).
+    - `placeholders`: os campos `{...}` OBRIGATÓRIOS que o builder injeta.
+    - `opcionais`: campos `{...}` PERMITIDOS mas não obrigatórios — o builder
+      sempre os injeta (valor pode vir vazio), então o scaffold pode usá-los ou
+      não. Serve p/ campos que só alguns canais aproveitam (ex.: `contextualizacao`
+      na abertura). `placeholders ∪ opcionais` = conjunto EXATO permitido.
     - `marcador`: token que o contrato de saída exige (checado case-insensitive).
     """
 
@@ -73,6 +76,7 @@ class ScaffoldCatalogo:
     arquivo: str | None
     placeholders: tuple[str, ...]
     marcador: str
+    opcionais: tuple[str, ...] = ()
 
 
 # Ordem = ordem de exibição na UI.
@@ -130,6 +134,9 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
             "min_primeiros_15s",
         ),
         marcador="cenas",
+        # B (D-295 folding): a abertura contextual pode reusar a frase que o
+        # cortador-expert já produziu por corte. Opcionais: só alguns canais os usam.
+        opcionais=("contextualizacao", "frase_gancho"),
     ),
     ScaffoldCatalogo(
         key="thumbnail",
@@ -245,13 +252,14 @@ def validar_scaffold(template: str, cat: ScaffoldCatalogo) -> None:
             + ", ".join("{" + p + "}" for p in sorted(faltando))
             + "."
         )
-    desconhecidos = campos - obrigatorios
+    permitidos = obrigatorios | set(cat.opcionais)
+    desconhecidos = campos - permitidos
     if desconhecidos:
         raise ValueError(
             "Placeholders desconhecidos (quebrariam a montagem): "
             + ", ".join("{" + p + "}" for p in sorted(desconhecidos))
             + ". Permitidos: "
-            + ", ".join("{" + p + "}" for p in cat.placeholders)
+            + ", ".join("{" + p + "}" for p in (*cat.placeholders, *cat.opcionais))
             + "."
         )
     if cat.marcador and cat.marcador.lower() not in template.lower():
