@@ -35,6 +35,77 @@ CORES_SERIE = [
 ]
 
 
+def _mmss(segundos: float) -> str:
+    """Segundos → `MM:SS` (ou `HH:MM:SS` acima de 1h)."""
+    total = max(0, int(segundos))
+    horas, resto = divmod(total, 3600)
+    minutos, seg = divmod(resto, 60)
+    if horas:
+        return f"{horas:02d}:{minutos:02d}:{seg:02d}"
+    return f"{minutos:02d}:{seg:02d}"
+
+
+def formatar_transcricao_timestampada(segmentos: list | None, bucket_seg: float = 25.0) -> str:
+    """Transcrição com marcadores `[MM:SS]` a cada ~`bucket_seg` (D-342).
+
+    A transcrição final limpa (`transcricao_final_texto`) é texto corrido **sem
+    tempo**, então a IA não conseguiria posicionar capítulos. Aqui reconstruímos
+    o texto a partir de `transcricao_final` (JSON com `start` já rebaseado ao
+    início do corte), inserindo um marcador de tempo a cada bloco de ~`bucket_seg`
+    segundos — esqueleto suficiente para ancorar os `chapters` sem inflar o prompt
+    com um timestamp por palavra. Lista vazia/inválida → `""`.
+    """
+    if not segmentos:
+        return ""
+    linhas: list[str] = []
+    bucket_inicio: float | None = None
+    bucket_textos: list[str] = []
+    for seg in segmentos:
+        if not isinstance(seg, dict):
+            continue
+        texto = str(seg.get("texto", "")).strip()
+        if not texto:
+            continue
+        try:
+            start = float(seg.get("start"))
+        except (TypeError, ValueError):
+            start = bucket_inicio if bucket_inicio is not None else 0.0
+        if bucket_inicio is None:
+            bucket_inicio = start
+        if start - bucket_inicio >= bucket_seg and bucket_textos:
+            linhas.append(f"[{_mmss(bucket_inicio)}] " + " ".join(bucket_textos))
+            bucket_inicio = start
+            bucket_textos = []
+        bucket_textos.append(texto)
+    if bucket_textos and bucket_inicio is not None:
+        linhas.append(f"[{_mmss(bucket_inicio)}] " + " ".join(bucket_textos))
+    return "\n".join(linhas)
+
+
+def formatar_bloco_capitulos(chapters: list | None) -> str:
+    """Monta o bloco 'Capítulos:' da descrição a partir dos chapters da IA (D-342).
+
+    Cada item é ``{"inicio": "MM:SS", "titulo": str}``. O YouTube só ativa
+    capítulos se o primeiro for ``00:00`` e houver **pelo menos 3** timestamps
+    crescentes — então, diante de lista vazia, curta ou malformada, devolvemos
+    ``""`` (nenhum bloco) em vez de um bloco quebrado que só polui a descrição.
+    """
+    if not chapters or len(chapters) < 3:
+        return ""
+    linhas: list[str] = []
+    for cap in chapters:
+        if not isinstance(cap, dict):
+            return ""
+        inicio = str(cap.get("inicio", "")).strip()
+        titulo = str(cap.get("titulo", "")).strip()
+        if not inicio or not titulo:
+            return ""
+        linhas.append(f"{inicio} {titulo}")
+    if not linhas[0].startswith("00:00"):
+        return ""
+    return "Capítulos:\n" + "\n".join(linhas)
+
+
 def formatar_bloco_hints_thumbnail(hints: str | None) -> str:
     """F-058: bloco opcional com as sugestões manuais do editor para a capa.
 
@@ -110,6 +181,24 @@ class MetadadosService:
             if not corte:
                 return ""
             return corte.transcricao_final_texto or ""
+
+    @staticmethod
+    async def _obter_transcricao_marcada(corte_id: str) -> str:
+        """Transcrição final com marcadores `[MM:SS]` para posicionar capítulos (D-342).
+
+        Lê `transcricao_final` (JSON com `start` rebaseado) e formata em blocos.
+        Vazia quando o corte não tem a versão estruturada — o chamador cai de
+        volta na transcrição de texto puro.
+        """
+        async with AsyncSessionLocal() as db:
+            corte = await db.get(Corte, corte_id)
+            if not corte or not corte.transcricao_final:
+                return ""
+        try:
+            segmentos = json.loads(corte.transcricao_final)
+        except (ValueError, TypeError):
+            return ""
+        return formatar_transcricao_timestampada(segmentos)
 
     @staticmethod
     async def _obter_historico_thumbnails(
@@ -225,6 +314,7 @@ class MetadadosService:
                 raise ValueError("Corte não encontrado")
 
         transcricao = await MetadadosService._obter_transcricao_final(corte_id)
+        transcricao_marcada = await MetadadosService._obter_transcricao_marcada(corte_id)
         historico_titulos = await MetadadosService._obter_historico_titulos(corte_id)
 
         return {
@@ -233,6 +323,11 @@ class MetadadosService:
             "resumo": corte.resumo or "",
             "numero_corte": corte.numero,
             "transcricao": transcricao
+            or "(transcrição indisponível — sincronize o corte primeiro)",
+            # D-342: mesma transcrição, com marcadores [MM:SS] p/ ancorar capítulos.
+            # Fallback no texto puro quando não há a versão estruturada.
+            "transcricao_marcada": transcricao_marcada
+            or transcricao
             or "(transcrição indisponível — sincronize o corte primeiro)",
             "historico_titulos": MetadadosService._formatar_historico_titulos(historico_titulos),
         }
@@ -319,9 +414,16 @@ class MetadadosService:
         link_live = MetadadosService._gerar_link_timestampado(projeto.youtube_url, corte.inicio_seg)
         sinopse = resultado.get("sinopse", "")
         hashtags = resultado.get("hashtags", [])
+        # D-342: tags é lista PRÓPRIA (SEO oculto: nomes soletráveis + marca),
+        # separada das hashtags. Contrato antigo não trazia `tags` → fallback
+        # para as hashtags preserva o comportamento dos cortes já gerados.
+        tags = resultado.get("tags") or hashtags
+        capitulos_str = formatar_bloco_capitulos(resultado.get("chapters"))
         creditos = CREDITOS_TEMPLATE.format(link_live=link_live)
         hashtags_str = " ".join(f"#{tag}" for tag in hashtags)
-        descricao_completa = f"{sinopse}\n\n{creditos}\n\n{hashtags_str}"
+        # Ordem da descrição: gancho+corpo (sinopse) → capítulos → créditos → hashtags.
+        blocos = [sinopse, capitulos_str, creditos, hashtags_str]
+        descricao_completa = "\n\n".join(bloco for bloco in blocos if bloco)
 
         num_serie = corte.numero
         cor_serie = CORES_SERIE[(num_serie - 1) % len(CORES_SERIE)]
@@ -351,7 +453,7 @@ class MetadadosService:
                 )
 
             meta.descricao_youtube = descricao_completa
-            meta.tags_youtube = json.dumps(hashtags, ensure_ascii=False)
+            meta.tags_youtube = json.dumps(tags, ensure_ascii=False)
             meta.opcoes_titulo = json.dumps(opcoes_titulo, ensure_ascii=False)
             meta.opcoes_texto_capa = json.dumps(opcoes_texto_capa, ensure_ascii=False)
 

@@ -985,6 +985,9 @@ class TestCenasMetadados:
                 "resumo": "resumo antigo",
                 "numero_corte": 7,
                 "transcricao": "fala real do corte",
+                # D-342: o prompt passou a usar a transcrição marcada ([MM:SS])
+                # para o modelo ancorar os capítulos.
+                "transcricao_marcada": "[00:00] fala real do corte",
                 "historico_titulos": "- Anterior 1\n- Anterior 2",
             }
 

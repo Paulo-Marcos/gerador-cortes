@@ -7,7 +7,6 @@ import {
   Clipboard,
   FileText,
   Folder,
-  Hash,
   Image,
   Loader2,
   Palette,
@@ -45,6 +44,55 @@ function splitTags(tags: string) {
     .split(',')
     .map((tag) => tag.trim())
     .filter(Boolean);
+}
+
+// D-342: palavras curtas de ligação não contam como "repetir a palavra do título".
+const COVER_STOPWORDS = new Set([
+  'de',
+  'da',
+  'do',
+  'das',
+  'dos',
+  'e',
+  'em',
+  'no',
+  'na',
+  'nos',
+  'nas',
+  'com',
+  'que',
+  'os',
+  'as',
+  'um',
+  'uma',
+  'por',
+  'para',
+]);
+
+/** Conta palavras do texto de capa (ignora emojis 🔥/📖) e detecta redundância
+ * com o título — a regra editorial manda a capa complementar, não repetir. */
+export function coverTextStats(coverText: string, title: string) {
+  const limpo = coverText.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+  const words = limpo ? limpo.split(/\s+/).filter(Boolean) : [];
+  const titleLower = title.toLowerCase();
+  const redundant = words.some((raw) => {
+    const w = raw.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    return w.length > 3 && !COVER_STOPWORDS.has(w) && titleLower.includes(w);
+  });
+  return { count: words.length, redundant };
+}
+
+function CoverTextMeter({ coverText, title }: { coverText: string; title: string }) {
+  const { count, redundant } = coverTextStats(coverText, title);
+  const overLimit = count > 3;
+  return (
+    <div
+      className={cn('text-xs text-[var(--wb-text-dim)]', (overLimit || redundant) && 'text-error')}
+    >
+      {count} {count === 1 ? 'palavra' : 'palavras'} · ideal 1–3
+      {redundant && ' · nao repita a palavra-chave do titulo'}
+    </div>
+  );
 }
 
 function hueFromCut(cut: Corte) {
@@ -507,6 +555,7 @@ export function MetadataCard({
               placeholder="Ex: JUSTICA EM SI"
               className="h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-sm font-extrabold outline-none focus:border-[var(--wb-accent)]"
             />
+            <CoverTextMeter coverText={coverText} title={title} />
 
             <div className="grid gap-2 pt-1 md:grid-cols-[minmax(220px,0.8fr)_minmax(260px,1fr)]">
               <ActionGroup title="Regerar metadados" tone="oklch(0.54 0.16 32)">
@@ -559,8 +608,12 @@ export function MetadataCard({
             {showTags && (
               <label className="grid gap-2">
                 <span className="flex items-center gap-1.5 font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-                  <Hash size={13} aria-hidden />
-                  Tags
+                  <Tag size={13} aria-hidden />
+                  Tags (SEO oculto)
+                </span>
+                <span className="text-[11px] leading-snug text-[var(--wb-text-dim)]">
+                  Nomes citados/soletraveis + marca. Nao sao as hashtags — essas ja vao na
+                  descricao.
                 </span>
                 <textarea
                   value={tagsText}
