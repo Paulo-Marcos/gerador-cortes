@@ -50,14 +50,14 @@ def _to_seg(val) -> float:
 
 
 def _calcular_limites(duracao_seg: int) -> dict:
-    """
-    Calibração baseada em densidade — ~2.5 cenas/min, com hook
-    obrigatório nos primeiros 15s.
+    """Limites numéricos (TETO) de cenas por parte, injetados no prompt.
 
-    Regra empírica: canais de cortes virais entregam 1 cena a cada
-    ~20-30s. Não confundir com vídeo longo de canal (1 cena/min).
+    A densidade-alvo editorial é calma — canal analítico, público maduro, ~1 cena
+    a cada 60–90s (over-editing reduz retenção nesse público). O `max_cenas` daqui
+    é um TETO, não uma meta: o prompt instrui a não preenchê-lo. `cenas_por_min`
+    fixa esse teto no limite denso do alvo (~1 cena/min).
     """
-    cenas_por_min = 1.5
+    cenas_por_min = 1.0
     duracao_min = max(0.5, duracao_seg / 60.0)
     max_cenas = int(round(duracao_min * cenas_por_min))
 
