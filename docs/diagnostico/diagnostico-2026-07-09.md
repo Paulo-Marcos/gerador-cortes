@@ -279,3 +279,137 @@ As alavancas reais apontadas pelo número são as **outras** do diagnóstico:
 **Nota metodológica:** a máquina sofre *thermal throttling* pesado sob carga QSV sustentada
 (runtimes subiram ~50% em ~12 min de bench contínuo). Benchmarks de render nesta máquina
 precisam de intervalos de resfriamento entre corridas, ou os números derivam para pior.
+
+---
+
+## D-329 — Dissecação do composite de palco
+
+**Objetivo:** abrir a caixa-preta do fator **A→B = 2,45×** medido na D-320 — o composite de
+palco custa 2,45× a grade só-cor, mas a D-320 tratou o composite como um bloco único. A D-329
+mede **quanto cada sub-etapa** (crop/scale, overlays, conversões de pixfmt, encode) contribui,
+para priorizar as otimizações *look-preserving* da Onda 3.
+
+**Método.** Reconstruí o filtergraph REAL da grade chamando `build_cinematic_grade_layout_filter`
+direto (função pura; 1 região de 2 telas + PNG de palco, geometria `DEFAULT_*`) e o construí
+**incrementalmente**: cada *rung* adiciona uma sub-etapa; o **delta** sobre o anterior = custo
+daquela sub-etapa. Janela de **120 s @1080p** do `clip_raw_base.mp4`, decode SW, `-filter_complex`,
+`-f null` (mede só decode+filtro, sem encode) exceto o último rung. Script:
+[`backend/_bench/bench_dissect.py`](../../backend/_bench/bench_dissect.py) (pasta gitignored).
+Para neutralizar o *throttling* documentado na D-320: **cooldown de 60 s ANTES de cada rung**
+(cada um medido com a máquina fria), 2 rounds, reporta o **mínimo**. Validação cruzada com a
+D-320: L2 (cor) = 36 s ≈ A da D-320 (30,6 s); L6 (full+encode) = 85 s ≈ B (74,9 s) — metodologia
+consistente, absolutos ~15% inflados pelo calor residual.
+
+### Custo por sub-etapa (mínimo de 2 rounds frios)
+
+| Rung | Filtergraph acumulado | min (s) | **Δ = custo da sub-etapa** |
+|---|---|---:|---:|
+| **L1** decode | `[0:v]null` | 4,55 | — (decode VP9 SW) |
+| **L2** +cor (=A) | `…,COLOR,format=nv12` | 36,06 | **+31,5 s — grade de cor** (curves/eq/letterbox) |
+| **L3** +conversão rgba | `…,COLOR,format=rgba,format=nv12` | 50,89 | **+14,8 s — materialização RGBA** (full-frame) |
+| **L4** +crop/scale | split + crop/scale das 2 telas | 44,65 | ≈0 (ruído: −6 s) — **crop/scale é barato** (sub-quadro) |
+| **L5** +overlays | filtergraph completo (`-f null`) | 73,88 | **+23 s — base preta + 4 overlays + fg** |
+| **L6** +encode (=B) | filtergraph completo + `h264_qsv` | 85,45 | **+11,6 s — encode QSV** |
+
+> O delta de L4 saiu **negativo** (−6 s): crop/scale das duas telas é tão barato (recorta para
+> 1325×720 e 340×260 — bem menos pixels que o quadro cheio) que seu custo fica **abaixo do ruído
+> térmico** (±15% run-a-run nesta máquina). Ou seja: **crop/scale NÃO é alavanca.** Por isso L4/L5
+> ficam agregados no bloco "crop/scale + overlays" abaixo.
+
+### Decomposição do overhead do composite (o "2,45×")
+
+O overhead puro de filtro do composite sobre a cor é **L5 − L2 = 37,8 s** (ambos `-f null`, sem
+encode). Repartição:
+
+| Sub-lever | Custo | Fatia do overhead |
+|---|---:|---:|
+| **Overlays + base preta + fg** (crop/scale é ~0) | ~23,0 s | **~61%** |
+| **Materialização RGBA** (4 B/px full-frame) | ~14,8 s | **~39%** |
+
+**Sub-lever DOMINANTE = as sobreposições** (`overlay`), não o crop/scale nem o filtro de cor.
+São **4 overlays por frame**, dois deles em **quadro cheio 1920×1080 RGBA** — o `overlay` do
+**fg** (`[shared0][fg0]`) e o **overlay final** (`[base][composed0]`). Os outros dois (tela, face)
+compõem regiões menores. A **materialização RGBA** é a segunda maior fatia: todo o composite roda
+a **4 B/px** (vs 1,5 do nv12) → ~2,7× mais banda de memória em *cada* overlay.
+
+### Respostas às perguntas da D-329
+
+1. **Qual sub-etapa domina o 2,45×?** As **sobreposições** (~61% do overhead; os dois overlays de
+   quadro cheio em RGBA — fg e final). Crop/scale é desprezível; a cor não é o gargalo (já sabido).
+
+2. **As conversões RGBA↔YUV são redundantes/repetidas? Quanto custam?** **Não são redundantes** — o
+   graph faz **UMA** materialização RGBA no prefixo (`nv12→rgba`), mantém RGBA por todo o composite
+   e faz **UMA** conversão final (`rgba→nv12`); fg e base preta já nascem em RGBA; os `format=rgba`
+   de face/tela são sub-quadro (baratos). O custo (~15 s, 39% do overhead) **não é conversão
+   supérflua — é a banda inerente de compor a 4 B/px**, necessária porque o overlay do fg exige
+   **alpha** (transparência do chrome do palco). Casa com a D-320: trocar `rgba→yuva420p` rendeu ~0%
+   justamente porque a saída já é 4:2:0 e os overlays continuam per-pixel; e **custaria fidelidade**.
+
+3. **Fundo e frente são estáticos → dá para pré-compor "fundo+frente" e fazer 1 overlay?** **Não
+   nessa ordem-Z**: a base preta fica ATRÁS dos vídeos e o fg (palco) fica NA FRENTE — os vídeos
+   dinâmicos ficam *entre* as duas camadas estáticas, então não há como fundir fg+bg num único
+   overlay. **Mas há um ganho estrutural real (P3, ver abaixo):** em cortes **100% compartilhados**
+   (região cobre o corte inteiro — caso comum), `[composed0]` cobre o quadro todo, então a camada
+   `[base]` (quadro graded completo) e o **overlay final** `[base][composed0]` são **redundantes** e
+   podem ser **eliminados** (dropa 1 dos 2 overlays de quadro cheio + 1 split-cópia por frame).
+   Pré-escalar o PNG de fg no disco (P1) para evitar o `scale`/frame **não rende nada** — dentro do
+   ruído (o scale do fg é 1 op/frame, irrelevante frente aos overlays).
+
+4. **crop/scale poderia ir para `vpp_qsv` (GPU) preservando o look?** **Inviável neste hardware, e
+   de baixo retorno de qualquer forma.** `vpp_qsv` PURO funciona (decode QSV→`vpp_qsv`→hwdownload
+   roda a 2,63× realtime), mas para usá-lo no meio do graph — DEPOIS da grade de cor em software —
+   é preciso `hwupload` do frame SW de volta para a iGPU, e isso **falha nesta máquina** com erro de
+   textura **D3D11 `80070057` (E_INVALIDARG)** ao criar o pool de frames. Só daria movendo o
+   crop/scale para ANTES da cor (frames vindos do decode QSV) — o que **muda o look** (a cor passaria
+   a ser aplicada pós-recorte/composição) e exigiria revalidação do piso de qualidade. Além disso,
+   crop/scale já custa ~0 (item L4), então **não é onde está o gargalo**. Confirma o beco-sem-saída
+   de round-trip hw da D-320.
+
+### Prototipagem das otimizações
+
+| Proto | Ideia | Resultado |
+|---|---|---|
+| **P1** | fg PNG pré-escalado 1920×1080 no disco (sem `scale`/frame) | **Ganho ~0** — dentro do ruído (fg scale é 1 op/frame). Descartar. |
+| **P2** | crop/scale da tela em `vpp_qsv` (GPU) | **Inviável** — `hwupload` falha (D3D11 `80070057`). Ver pergunta 4. |
+| **P3** | dropar `[base]`+overlay final em corte 100% shared | **MEDIDO: −8,2% (mediana, −6,0 s)** de custo de filtro. Remove 1 dos 2 overlays de quadro cheio (1080p RGBA) + a cópia de `[base]`/frame; zero mudança visual (camada oculta). Delta **pareado** (L5 vs P3 no mesmo estado térmico, 3 rounds): −31,6% / +2,3% / −8,2% — os valores do P3 são estáveis (~65–68 s) e o L5 oscila (66–95 s); como o P3 roda *depois* do L5 no par (handicap térmico), o ganho real é **≥8%**. |
+
+### Recomendação priorizada para a Onda 3 (stories propostas)
+
+Todas *look-preserving* (preservam o piso de qualidade). Ordem por ROI/risco:
+
+1. **[ALTA / baixo risco] Eliminar `[base]`+overlay final em cortes 100% compartilhados (P3).**
+   Quando a região compartilhada cobre o corte inteiro (`modo=compartilhada` sem trechos FULL),
+   `[composed0]` já cobre o quadro → sair `[composed0]` direto, sem o `split` que gera `[base]` nem
+   o `overlay=enable` final. Remove **1 overlay de quadro cheio (1080p RGBA) + 1 cópia/frame**.
+   Ganho **medido: −8,2% (mediana, ≥8% real)** do custo de filtro do composite; zero mudança
+   visual (camada oculta). *Requer:* detectar o caso "100% shared" no builder e emitir o graph
+   enxuto (sair `[composed0]` direto, sem `split`/`[base]` nem `overlay=enable` final). Nota de
+   implementação: o graph enxuto perde a âncora de duração do `[base]` finito — o comando de
+   segmento de produção já usa `-shortest`, mas atenção que `-shortest` NÃO limita quando a fonte
+   infinita (base `color=`) alimenta a única saída; usar duração explícita (`-t`/`trim`) ou manter
+   a base preta finita.
+
+2. **[ALTA / médio risco] Fundir grade+compose para eliminar 1 decode + 1 encode full-length.**
+   (Já apontado na D-320 e reafirmado aqui: o encode custa +11,6 s/seg e o composite roda sobre um
+   re-decode.) É a maior alavanca isolada, mas mexe na orquestração de fases — story maior.
+
+3. **[MÉDIA / operacional] Não rodar overlays Remotion concorrentes com a grade na mesma iGPU.**
+   A D-320 mediu **+30%** de contenção. Serializar/escalonar Fase1×Fase2 recupera esse pedágio sem
+   tocar no filtergraph.
+
+4. **[BAIXA] Reduzir a banda RGBA do composite.** Os ~15 s de materialização a 4 B/px são reais,
+   mas a D-320 já mostrou que `yuva420p` não ajuda (saída já é 4:2:0) e custa fidelidade. Só valeria
+   com um redesenho que reduzisse o **número de overlays de quadro cheio** (o que o item 1 já faz) —
+   não como troca de pixfmt. **Não priorizar como alavanca isolada.**
+
+**Veredito:** o gargalo dentro do composite são as **sobreposições de quadro cheio em RGBA**, não o
+crop/scale nem o pixfmt em si. A intervenção de **melhor ROI e menor risco é o P3** (dropar a camada
+`[base]` redundante em cortes 100% compartilhados), seguida da fusão grade+compose (maior, já
+mapeada) e da serialização dos overlays concorrentes (operacional, +30% da D-320).
+
+> **⚠️ Nota operacional (incidente de bench):** `taskkill /F /IM ffmpeg.exe` mata **todo** ffmpeg da
+> máquina — **incluindo o backend de produção** em `C:\PRD\gerador-cortes`. Durante esta tarefa um
+> graph de bench com base `color=` infinita (sem `-shortest`) rodou solto e foi encerrado com esse
+> comando de mira global, podendo ter interrompido um render de produção. **Benchmarks futuros
+> devem:** (a) pôr `timeout=` em cada `subprocess.run`; (b) matar só o **PID específico** do bench,
+> nunca `/IM ffmpeg.exe`; (c) usar `-shortest` sempre que houver fonte `color=`/`-loop 1` infinita.
