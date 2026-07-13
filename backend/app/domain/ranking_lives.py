@@ -27,6 +27,9 @@ class PesosRanking:
     comentarios_por_view: float = 0.15
     sentimento: float = 0.35
     recencia: float = 0.25
+    # Meia-vida do decay de recência (dias). Fica junto dos pesos para o serviço
+    # injetar o valor de settings; o domínio segue puro (não lê config).
+    meia_vida_dias: float = 90.0
 
 
 @dataclass(frozen=True)
@@ -132,7 +135,7 @@ def pontuar_lote(
         l_norm = normalizar_minmax(ltx, l_min, l_max)
         c_norm = normalizar_minmax(ctx, c_min, c_max)
         s_norm = max(0.0, min(1.0, sinal.sentimento_0a10 / 10.0))
-        r_norm = calcular_recencia(sinal.data_publicacao, hoje)
+        r_norm = calcular_recencia(sinal.data_publicacao, hoje, pesos.meia_vida_dias)
 
         componentes_raw = {
             "views": pesos.views * v_norm,

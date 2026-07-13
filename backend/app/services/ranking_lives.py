@@ -56,6 +56,7 @@ def _pesos_atuais() -> PesosRanking:
         comentarios_por_view=settings.ranking_peso_comentarios_por_view,
         sentimento=settings.ranking_peso_sentimento,
         recencia=settings.ranking_peso_recencia,
+        meia_vida_dias=settings.ranking_meia_vida_dias,
     )
 
 

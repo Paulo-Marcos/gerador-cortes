@@ -156,6 +156,14 @@ class TestPontuarLote:
         esperado = (pesos.sentimento * 1.0) * 100.0 / peso_total
         assert diff == pytest.approx(esperado, abs=0.05)
 
+    def test_meia_vida_dos_pesos_altera_recencia(self):
+        # Mesmo sinal, mesma data (60 dias atrás), mas meias-vidas diferentes.
+        # Meia-vida curta pune mais a idade → componente de recência menor.
+        sinais = [_sinal("x", dias_atras=60)]
+        curta = pontuar_lote(sinais, PesosRanking(meia_vida_dias=30), HOJE)[0]
+        longa = pontuar_lote(sinais, PesosRanking(meia_vida_dias=180), HOJE)[0]
+        assert curta.componentes["recencia"] < longa.componentes["recencia"]
+
     def test_views_em_log_compensa_cauda_longa(self):
         # Dois patamares de views muito diferentes mas mesma TAXA de engajamento
         # → score próximo, dominado pela parte de engajamento e sentimento.
