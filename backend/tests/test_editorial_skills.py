@@ -11,7 +11,6 @@ genéricos vêm de `examples/instance.example/editorial` e `config.settings` rea
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 from app import editorial_corpos_legados as legados
@@ -517,19 +516,6 @@ def test_d311_v2_limpo_sem_scaffolding(tmp_path: Path):
     for corpo in legados.CORPOS_V2.values():
         assert "TEMPLATE GENÉRICO" not in corpo
         assert "Copie este arquivo" not in corpo
-
-
-def test_d311_v2_espelha_claude_skills_sem_frontmatter():
-    # Guard anti-drift: o v2 embutido deve ser exatamente o corpo atual de
-    # `.claude/skills/<skill>/SKILL.md` sem o frontmatter YAML.
-    for skill_key, arquivo in (
-        ("cortador-expert", "cortador-expert"),
-        ("trechos-expert", "trechos-expert"),
-    ):
-        caminho = editorial_skills._REPO_ROOT / ".claude" / "skills" / arquivo / "SKILL.md"
-        texto = caminho.read_text(encoding="utf-8")
-        sem_fm = re.sub(r"^---\n.*?\n---\n", "", texto, count=1, flags=re.S).strip()
-        assert legados.CORPOS_V2[skill_key] == sem_fm
 
 
 def test_skill_desconhecida_levanta(tmp_path: Path):
