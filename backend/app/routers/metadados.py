@@ -76,7 +76,7 @@ async def obter_metadado(corte_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/corte/{corte_id}/gerar")
 async def gerar_metadados(corte_id: str, db: AsyncSession = Depends(get_db)):
-    """Dispara geração de metadados via n8n."""
+    """Dispara geração de metadados via Claude."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
@@ -138,7 +138,7 @@ async def gerar_thumbnail(corte_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/corte/{corte_id}/gerar-prompt")
 async def gerar_prompt_route(corte_id: str, db: AsyncSession = Depends(get_db)):
-    """Dispara geração do prompt da thumbnail via n8n usando texto e opções escolhidas."""
+    """Dispara geração do prompt da thumbnail via Claude usando texto e opções escolhidas."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
@@ -166,7 +166,7 @@ async def upload_thumbnail_manual(
 
 @router.get("/corte/{corte_id}/meta/prompt")
 async def exportar_prompt_meta(corte_id: str, db: AsyncSession = Depends(get_db)):
-    """Retorna o prompt de geração de metadados sem chamar o n8n."""
+    """Retorna o prompt de geração de metadados sem chamar a IA."""
     try:
         return await MetadadosService.montar_prompt_meta(corte_id)
     except ValueError as e:
@@ -199,7 +199,7 @@ async def importar_meta(
 
 @router.get("/corte/{corte_id}/prompt-thumbnail/prompt")
 async def exportar_prompt_thumbnail(corte_id: str, db: AsyncSession = Depends(get_db)):
-    """Retorna o prompt de geração de thumbnail sem chamar o n8n."""
+    """Retorna o prompt de geração de thumbnail sem chamar a IA."""
     try:
         return await MetadadosService.montar_prompt_thumbnail_externo(corte_id)
     except ValueError as e:

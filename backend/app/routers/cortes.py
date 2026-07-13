@@ -279,22 +279,6 @@ async def dividir_corte(
     return [_corte_to_dict(por_id[original_id]), _corte_to_dict(por_id[novo_id])]
 
 
-@router.post("/{corte_id}/gerar-resumo")
-async def gerar_resumo_ia(corte_id: str, db: AsyncSession = Depends(get_db)):
-    """Gera um novo resumo maduro via n8n usando a transcrição do corte."""
-    try:
-        await CorteService.gerar_resumo_ia(corte_id)
-
-        # Recupera o corte atualizado para o frontend reativar tudo automaticamente
-        corte = await db.get(Corte, corte_id)
-        if not corte:
-            raise HTTPException(status_code=404, detail="Corte não encontrado após IA")
-
-        return _corte_to_dict(corte)
-    except Exception as e:
-        raise erro_interno(e) from e
-
-
 @router.post("/{corte_id}/analisar-desvios")
 async def analisar_desvios_corte(
     corte_id: str, limpar_anteriores: bool = False, db: AsyncSession = Depends(get_db)
@@ -362,45 +346,6 @@ async def waveform_peaks_corte(
         raise erro_interno(e) from e
 
 
-@router.post("/{corte_id}/processar-desvios")
-async def processar_desvios(corte_id: str, db: AsyncSession = Depends(get_db)):
-    """Caminho A: Re-renderiza o vídeo removendo todos os desvios automaticamente."""
-    try:
-        resultado = await ExportService.processar_desvios_rerender(corte_id)
-        if resultado.get("status") == "erro":
-            raise HTTPException(status_code=500, detail=resultado.get("mensagem"))
-
-        # Recarrega o corte com os metadados para evitar erro de lazy loading no _corte_to_dict
-        stmt = select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
-        result = await db.execute(stmt)
-        corte = result.scalar_one_or_none()
-
-        if not corte:
-            raise HTTPException(status_code=404, detail="Corte não encontrado após processamento")
-
-        return _corte_to_dict(corte)
-    except Exception as e:
-        raise erro_interno(e) from e
-
-
-@router.get("/{corte_id}/exportar-losslesscut")
-async def exportar_losslesscut(corte_id: str):
-    """Caminho B: Gera arquivo LLC do LosslessCut e retorna o caminho do diretório."""
-    try:
-        csv_path = await ExportService.gerar_csv_desvios_corte(corte_id)
-        llc_path = str(csv_path).replace(".csv", "-proj.llc")
-        dir_path = os.path.dirname(os.path.abspath(llc_path))
-
-        return {
-            "status": "ok",
-            "mensagem": "Arquivo .llc gerado com sucesso.",
-            "dir_path": dir_path,
-            "llc_path": llc_path,
-        }
-    except Exception as e:
-        raise erro_interno(e) from e
-
-
 @router.get("/{corte_id}/caminho-pasta")
 async def obter_caminho_pasta(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Apenas retorna o caminho da pasta do corte (sem gerar arquivos extras)."""
@@ -411,36 +356,6 @@ async def obter_caminho_pasta(corte_id: str, db: AsyncSession = Depends(get_db))
     dir_path = str(projetos_dir() / corte.projeto_id / "cortes" / corte_id)
 
     return {"dir_path": dir_path}
-
-
-@router.get("/{corte_id}/video-renderizado")
-async def obter_video_renderizado(corte_id: str, db: AsyncSession = Depends(get_db)):
-    """Serve o arquivo de vídeo final re-renderizado (clip_raw.mkv ou clip_raw.mp4)."""
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    path = None
-    if corte.arquivo_clip_path:
-        path = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
-
-    if not path or not path.exists():
-        corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte_id
-        for candidate in ["clip_raw.mp4", "clip_raw.mkv", "clip_raw_base.mp4", "clip_raw_base.mkv"]:
-            p = corte_dir / candidate
-            if p.exists():
-                path = p
-                break
-
-    if not path or not path.exists():
-        raise HTTPException(
-            status_code=404, detail="Arquivo físico do vídeo não encontrado no servidor"
-        )
-
-    relative_path = f"cortes/{corte_id}/{path.name}"
-    from fastapi.responses import RedirectResponse
-
-    return RedirectResponse(url=f"/videos/{corte.projeto_id}/{relative_path}")
 
 
 @router.get("/{corte_id}/video-bruto")

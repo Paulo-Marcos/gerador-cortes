@@ -54,7 +54,6 @@ async def init_db():
             "ALTER TABLE cortes ADD COLUMN cenas_remotion TEXT DEFAULT '[]'",
             'ALTER TABLE cortes ADD COLUMN layout_youtube TEXT DEFAULT \'{"modo_padrao":"full","regioes":[]}\'',
             "ALTER TABLE cortes ADD COLUMN is_pos_producao INTEGER DEFAULT 0",
-            "ALTER TABLE cortes ADD COLUMN sugestoes_ia_raw TEXT DEFAULT ''",
             "ALTER TABLE cortes ADD COLUMN duracao_clip_seg REAL DEFAULT 0.0",
             "ALTER TABLE cortes ADD COLUMN cenas_validadas INTEGER DEFAULT 0",
             "ALTER TABLE cortes ADD COLUMN cenas_validadas_em DATETIME",

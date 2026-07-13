@@ -2,7 +2,6 @@
 Serviço de Análise — gera cortes via Claude e os salva no projeto
 """
 
-import asyncio
 import json
 import uuid
 from datetime import datetime
@@ -13,7 +12,7 @@ from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.segment_calculator import normalizar_desvio as _normalizar_desvio
 from app.domain.time_convert import hms_to_seg
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
-from app.services.app_logging import operational_error, operational_info
+from app.services.app_logging import operational_info
 from sqlalchemy import select as sa_select
 
 
@@ -703,43 +702,6 @@ class AnaliseService:
             f"{len(cortes_data)} novos cortes adicionados (a partir do #{proximo_numero})",
         )
         return {"novos_cortes": len(cortes_data), "primeiro_numero": proximo_numero}
-
-    @staticmethod
-    async def _auto_pipeline_cortes(projeto_id: str) -> None:
-        """Pipeline pós-análise: corta clips brutos + gera resumos IA."""
-        try:
-            operational_info("AutoPipeline", f"Iniciando para projeto {projeto_id}")
-            from app.services.corte import CorteService
-            from app.services.export import ExportService
-
-            async with AsyncSessionLocal() as db_pipe:
-                result = await db_pipe.execute(
-                    sa_select(Corte).where(Corte.projeto_id == projeto_id)
-                )
-                todos_cortes = result.scalars().all()
-
-            corte_ids = [c.id for c in todos_cortes]
-            operational_info("AutoPipeline", f"{len(corte_ids)} cortes. Cortando clips...")
-
-            sem = asyncio.Semaphore(4)
-
-            async def _cortar(cid: str) -> None:
-                async with sem:
-                    await ExportService.cortar_clip_lossless(cid)
-
-            await asyncio.gather(*[_cortar(cid) for cid in corte_ids], return_exceptions=True)
-            operational_info("AutoPipeline", "Clips brutos gerados. Gerando resumos IA...")
-
-            for cid in corte_ids:
-                try:
-                    await CorteService.gerar_resumo_ia(cid)
-                    await asyncio.sleep(1)
-                except Exception as e_resumo:
-                    operational_error("AutoPipeline", f"Erro resumo {cid}: {e_resumo}")
-
-            operational_info("AutoPipeline", f"Concluído para projeto {projeto_id}")
-        except Exception as e_pipe:
-            operational_error("AutoPipeline", f"ERRO: {e_pipe}")
 
     @staticmethod
     def _ler_guia() -> str:

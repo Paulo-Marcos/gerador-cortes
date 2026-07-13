@@ -169,7 +169,6 @@ class Corte(Base):
         DateTime, nullable=True, default=None
     )
     is_pos_producao: Mapped[int] = mapped_column(Integer, default=0)
-    sugestoes_ia_raw: Mapped[str] = mapped_column(Text, default="")
     # F-058: influência manual do editor sobre a thumbnail. Texto livre
     # (pessoas a destacar, relações, ênfases de tema). Quando preenchido, é
     # anexado ao prompt da skill `thumbnail-prompt-expert` como direção

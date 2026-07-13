@@ -5,13 +5,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from app.channel_paths import (
-    para_relativo_ao_projeto,
     projetos_dir,
     resolver_do_projeto,
 )
 from app.database import AsyncSessionLocal, get_db
 from app.domain.cinema_filters import FILTROS_CINEMA
-from app.models import Corte, MetadadoCorte, Projeto, StatusCorte
+from app.models import Corte, MetadadoCorte, StatusCorte
 from app.routers.errors import erro_interno
 from app.services.app_logging import operational_info
 from app.services.export import ExportService
@@ -19,24 +18,11 @@ from app.services.render_progress import RenderProgressStore
 from app.services.tasks import fire_and_forget
 from app.services.youtube import YouTubeService
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
-
-
-@router.get("/projeto/{projeto_id}/losslesscut.csv")
-async def exportar_losslesscut(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    projeto = await db.get(Projeto, projeto_id)
-    if not projeto:
-        raise HTTPException(status_code=404, detail="Projeto não encontrado")
-
-    csv_path = await ExportService.gerar_csv_losslesscut(projeto_id, db)
-    return FileResponse(
-        csv_path, media_type="text/csv", filename=f"losslesscut_{projeto_id[:8]}.csv"
-    )
 
 
 def _contar_cenas_remotion(payload: str | None) -> int:
@@ -134,29 +120,6 @@ async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
     return {"projeto_id": projeto_id, "cortes": items}
 
 
-@router.post("/corte/{corte_id}/cortar")
-async def iniciar_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    if ExportService.get_tarefa_corte_status(corte_id) == "cortando":
-        return {"message": "Corte já em andamento", "corte_id": corte_id}
-
-    ExportService.set_tarefa_corte_status(corte_id, "cortando")
-
-    async def _run():
-        resultado = await ExportService.cortar_clip_lossless(corte_id)
-        if resultado.get("status") == "pronto":
-            ExportService.set_tarefa_corte_status(corte_id, "pronto")
-        else:
-            msg = resultado.get("mensagem", "erro desconhecido")
-            ExportService.set_tarefa_corte_status(corte_id, f"erro: {msg}")
-
-    fire_and_forget(_run(), name=f"cortar-{corte_id[:8]}")
-    return {"message": "Corte iniciado", "corte_id": corte_id}
-
-
 @router.get("/corte/{corte_id}/cortar/status")
 async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
     status = ExportService.get_tarefa_corte_status(corte_id)
@@ -173,52 +136,6 @@ async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
         "clip_path": clip_path,
         "clip_gerado": bool(clip_resolvido and clip_resolvido.exists()),
     }
-
-
-@router.post("/projeto/{projeto_id}/cortar-todos")
-async def cortar_todos(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    iniciados = await ExportService.cortar_todos_impl(projeto_id)
-    return {"message": f"{len(iniciados)} cortes iniciados", "cortes": iniciados}
-
-
-@router.post("/corte/{corte_id}/gerar-csv-desvios")
-async def gerar_csv_desvios_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
-    try:
-        caminho = await ExportService.gerar_csv_desvios_corte(corte_id)
-        return {"message": "CSV de desvios gerado", "caminho": caminho}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao gerar CSV de desvios: {e}") from e
-
-
-@router.post("/projeto/{projeto_id}/gerar-scripts-losslesscut")
-async def gerar_scripts_losslesscut(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    res = await ExportService.gerar_scripts_losslesscut_logic(projeto_id)
-    return res
-
-
-@router.post("/corte/{corte_id}/auto-editor")
-async def aplicar_auto_editor(corte_id: str, db: AsyncSession = Depends(get_db)):
-    try:
-        result = await ExportService.aplicar_auto_editor(corte_id)
-        if result.get("status") == "erro":
-            raise HTTPException(status_code=400, detail=result.get("mensagem"))
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro no auto-editor: {e}") from e
-
-
-@router.post("/corte/{corte_id}/importar-clip")
-async def importar_clip(corte_id: str, clip_path: str, db: AsyncSession = Depends(get_db)):
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-    if not Path(clip_path).exists():
-        raise HTTPException(status_code=400, detail="Arquivo não encontrado no caminho informado")
-    # D-158: guarda relativo ao projeto quando o clip vive dentro da pasta do
-    # projeto (reancorável pelo canal ativo); fora dela, mantém o valor informado.
-    corte.arquivo_clip_path = para_relativo_ao_projeto(clip_path, corte.projeto_id)
-    await db.commit()
-    return {"message": "Clip registrado com sucesso", "clip_path": clip_path}
 
 
 @router.post("/corte/{corte_id}/processar")
@@ -456,28 +373,6 @@ async def status_fila_processamento(projeto_id: str):
     }
 
 
-@router.get("/filas-processamento")
-async def status_todas_filas():
-    filas_info = {}
-    for proj_id, fila in ExportService.get_fila_processamento().items():
-        total = len(fila)
-        concluidos = sum(1 for s in fila.values() if s == "concluido")
-        processando = sum(1 for s in fila.values() if s == "processando")
-        aguardando = sum(1 for s in fila.values() if s == "aguardando")
-        erros = sum(1 for s in fila.values() if s == "erro")
-        if total > 0:
-            filas_info[proj_id] = {
-                "ativo": True,
-                "total": total,
-                "concluidos": concluidos,
-                "processando": processando,
-                "aguardando": aguardando,
-                "erros": erros,
-                "pct": round(concluidos / total * 100) if total > 0 else 0,
-            }
-    return filas_info
-
-
 @router.get("/fila-global")
 async def fila_global():
     pos_total = pos_processando = pos_aguardando = pos_concluidos = pos_erros = 0
@@ -568,12 +463,3 @@ async def bulk_upload_youtube(
 
 # I-023: PATCH /projeto/{id}/filtro-padrao removido. O filtro de render
 # é fonte única em AppSettings.filtro_global_padrao (PUT /api/settings).
-
-
-@router.post("/projeto/{projeto_id}/gerar-todos-brutos-e-scripts")
-async def gerar_todos_brutos_e_scripts(projeto_id: str):
-    fire_and_forget(
-        ExportService.gerar_todos_brutos_e_scripts_impl(projeto_id),
-        name=f"brutos-scripts-{projeto_id[:8]}",
-    )
-    return {"message": "Processo de geração massiva de brutos e scripts iniciado em background."}

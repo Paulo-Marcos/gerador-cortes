@@ -2,7 +2,7 @@
 Serviço de Export — CSV LosslessCut + corte lossless com ffmpeg + processamento (áudio + intro/outro)
 
 FACHADA (E-006): a lógica foi fatiada por responsabilidade em mixins
-(`export_bulk_queue`, `export_csv`, `export_bruto`, `export_processamento`).
+(`export_bulk_queue`, `export_bruto`, `export_processamento`).
 `ExportService` recompõe todos eles por herança e detém o estado de classe —
 toda chamada `ExportService.metodo(...)`/`cls.metodo(...)` continua resolvendo
 pela MRO, então nenhum chamador muda.
@@ -13,18 +13,8 @@ monkeypatch em globais deste módulo (`AsyncSessionLocal`, `build_bruto_pipeline
 """
 
 import asyncio
-import importlib.util
 import json
 from pathlib import Path
-
-# Instala auto-editor automaticamente em tempo de execução para não quebrar o container docker existente
-if importlib.util.find_spec("auto_editor") is None:
-    import subprocess
-
-    # Bootstrap em tempo de import (antes de app_logging ser importado abaixo):
-    # mantém print puro de propósito — não há infra de log disponível aqui ainda.
-    print("[ExportService] Instalando auto-editor via pip...")
-    subprocess.check_call(["pip", "install", "auto-editor"])
 
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.config import settings
@@ -45,14 +35,12 @@ from app.services.app_logging import (
 from app.services.bruto_progress import BrutoProgress
 from app.services.export_bruto import _ExportBrutoMixin
 from app.services.export_bulk_queue import _ExportBulkQueueMixin
-from app.services.export_csv import _ExportCsvMixin
 from app.services.export_processamento import _ExportProcessamentoMixin
 from app.services.tasks import fire_and_forget
 
 
 class ExportService(
     _ExportBulkQueueMixin,
-    _ExportCsvMixin,
     _ExportBrutoMixin,
     _ExportProcessamentoMixin,
 ):

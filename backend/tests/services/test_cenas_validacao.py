@@ -55,7 +55,6 @@ def _corte_estavel(*, cenas_remotion="[]", cenas_validadas=0):
     corte.cenas_validadas = cenas_validadas
     corte.cenas_validadas_em = None
     corte.is_pos_producao = 0
-    corte.sugestoes_ia_raw = ""
     corte.criado_em = datetime(2026, 5, 24, 12, 0, 0)
     corte.atualizado_em = datetime(2026, 5, 24, 12, 0, 0)
     corte.metadado = None
@@ -88,7 +87,6 @@ def _corte_estavel(*, cenas_remotion="[]", cenas_validadas=0):
         "cenas_validadas",
         "cenas_validadas_em",
         "is_pos_producao",
-        "sugestoes_ia_raw",
         "criado_em",
         "atualizado_em",
     ]

@@ -533,17 +533,6 @@ class CorteService:
         return corte
 
     @staticmethod
-    async def gerar_resumo_ia(corte_id: str) -> dict:
-        """Regera o resumo do corte via Claude (filtra a sub-transcrição do
-        período e pede um resumo maduro). Delega ao caminho Claude e mantém o
-        contrato `{resumo, status}` que o router de cortes consome.
-        """
-        # Import local: claude_ia importa serviços de domínio no topo (evita ciclo).
-        from app.services.claude_ia import ClaudeIaService
-
-        return await ClaudeIaService.gerar_resumo_via_claude(corte_id)
-
-    @staticmethod
     async def detectar_silencios_tecnico(corte_id: str, limpar_anteriores: bool = False) -> dict:
         """
         Usa o FFmpeg silencedetect para encontrar silêncios reais no trecho do vídeo.

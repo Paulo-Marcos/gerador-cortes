@@ -11,7 +11,6 @@ from app.services import channels
 from app.services.analise import AnaliseService
 from app.services.app_logging import operational_error, operational_info
 from app.services.app_settings import AppSettingsService
-from app.services.export import ExportService
 from app.services.ingestao import IngestaoService
 from app.services.pipeline_render import FONTE_PRESETS_VALIDOS
 from app.services.projeto import ProjetoService
@@ -20,7 +19,7 @@ from app.services.telemetria_cortes import TelemetriaCortesService
 from app.services.youtube_palco import ensure_palco_png
 from app.services.youtube_stats import YoutubeStatsService
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import and_, case, func, select
 from sqlalchemy import delete as sa_delete
@@ -320,20 +319,6 @@ async def listar_projetos(db: AsyncSession = Depends(get_db)):
     return resp
 
 
-@router.get("/{projeto_id}/transcricao-preview")
-async def get_transcricao_preview(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    """Retorna os primeiros segmentos da transcrição bruta para conferência de sincronia no UI."""
-    projeto = await db.get(Projeto, projeto_id)
-    if not projeto or not projeto.transcricao_raw:
-        return []
-    try:
-        trans = json.loads(projeto.transcricao_raw)
-        # Retorna apenas os 5 primeiros para preview leve
-        return trans[:5]
-    except Exception:
-        return []
-
-
 @router.patch("/{projeto_id}/transcricao")
 async def atualizar_transcricao_projeto(
     projeto_id: str, body: dict, db: AsyncSession = Depends(get_db)
@@ -622,29 +607,9 @@ async def limpar_arquivos_projeto(projeto_id: str, db: AsyncSession = Depends(ge
     return resultado
 
 
-@router.get("/{projeto_id}/transcricao")
-async def obter_transcricao(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    """Retorna a transcrição raw com timestamps."""
-    projeto = await db.get(Projeto, projeto_id)
-    if not projeto:
-        raise HTTPException(status_code=404, detail="Projeto não encontrado")
-    if not projeto.transcricao_raw:
-        raise HTTPException(status_code=404, detail="Transcrição ainda não disponível")
-    return {"transcricao": json.loads(projeto.transcricao_raw)}
-
-
-@router.get("/{projeto_id}/losslesscut.csv")
-async def exportar_losslesscut(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    """Gera CSV de segmentos compatível com LosslessCut."""
-    csv_path = await ExportService.gerar_csv_losslesscut(projeto_id)
-    return FileResponse(
-        csv_path, media_type="text/csv", filename=f"projeto_{projeto_id[:8]}_losslesscut.csv"
-    )
-
-
 @router.get("/{projeto_id}/analise/prompt")
 async def exportar_prompt_analise(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    """Retorna o prompt de análise de transcrição sem chamar o n8n."""
+    """Retorna o prompt de análise de transcrição sem chamar a IA."""
     projeto = await db.get(Projeto, projeto_id)
     if not projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
@@ -722,7 +687,7 @@ class ImportarAnaliseRequest(BaseModel):
 async def importar_analise(
     projeto_id: str, body: ImportarAnaliseRequest, db: AsyncSession = Depends(get_db)
 ):
-    """Importa cortes gerados por IA externa e salva como se fosse resultado do n8n."""
+    """Importa cortes gerados por IA externa e salva como resultado da análise."""
     projeto = await db.get(Projeto, projeto_id)
     if not projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
@@ -731,22 +696,6 @@ async def importar_analise(
         return {"message": "Análise importada com sucesso", "total_cortes": len(body.cortes)}
     except Exception as e:
         raise erro_interno(e) from e
-
-
-@router.post("/{projeto_id}/analisar")
-async def analisar_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    """Dispara análise da transcrição via n8n."""
-    projeto = await db.get(Projeto, projeto_id)
-    if not projeto:
-        raise HTTPException(status_code=404, detail="Projeto não encontrado")
-    if not projeto.transcricao_raw:
-        raise HTTPException(status_code=400, detail="Projeto ainda sem transcrição")
-
-    fire_and_forget(
-        AnaliseService.analisar_transcricao(projeto_id),
-        name=f"analise-{projeto_id[:8]}",
-    )
-    return {"message": "Análise iniciada", "projeto_id": projeto_id}
 
 
 @router.post("/{projeto_id}/reanalisar")
@@ -849,22 +798,6 @@ async def exportar_prompt_analise_intervalo(
         if blocos is not None and (blocos < 1 or blocos > 20):
             raise ValueError("blocos deve estar entre 1 e 20")
         return await AnaliseService.montar_prompt_intervalo(projeto_id, inicio_seg, fim_seg, blocos)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        raise erro_interno(e) from e
-
-
-@router.post("/{projeto_id}/analise-intervalo/importar")
-async def importar_analise_intervalo(projeto_id: str, body: ImportarAnaliseRequest):
-    """
-    Importa o resultado de uma análise manual de intervalo.
-    Funciona igual ao importar global, pois os cortes são sempre apendados ao projeto (no AnaliseService isso é decidido,
-    mas AnaliseService.importar_resultado não remove os existentes).
-    """
-    try:
-        await AnaliseService.importar_resultado(projeto_id, body.cortes, origem="manual")
-        return {"message": f"{len(body.cortes)} cortes importados com sucesso para o intervalo."}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:

@@ -61,8 +61,7 @@ class IngestaoService:
             await queue.put({"status": "pronto", "progresso": 100})
 
             # Pipeline para aqui: análise/desvios/brutos são disparados manualmente
-            # pelo usuário via UI. `_auto_pipeline` continua disponível para chamada
-            # explícita, mas não roda mais automaticamente após download.
+            # pelo usuário via UI. Nada roda automaticamente após o download.
 
         except Exception as e:
             operational_error(
@@ -337,55 +336,3 @@ class IngestaoService:
             yield update
             if update.get("status") in ("pronto", "erro"):
                 break
-
-    @staticmethod
-    async def _auto_pipeline(projeto_id: str, skip_analise: bool = False):
-        """
-        Pipeline automático pós-download:
-          1. Análise de transcrição (n8n) -> gera cortes propostos
-          2. Detecção de desvios em massa em todos os cortes
-          3. Download dos cortes brutos de todos os cortes aprovados automáticos
-
-        `skip_analise=True` pula a etapa 1 e vai direto para desvios + brutos.
-        Use quando o projeto já tem cortes (ex.: retomada após falha) — evita
-        duplicar cortes, já que `importar_resultado` acumula em vez de substituir.
-        """
-        try:
-            # 1. Analisa transcrição (pulada se o projeto já tem cortes)
-            if skip_analise:
-                operational_info(
-                    "AUTO-PIPELINE",
-                    f"{projeto_id}: pulando análise de transcrição (skip_analise=True).",
-                )
-            else:
-                operational_info(
-                    "AUTO-PIPELINE", f"{projeto_id}: iniciando análise de transcrição..."
-                )
-                from app.services.analise import AnaliseService
-
-                await AnaliseService.analisar_transcricao(projeto_id)
-                operational_info("AUTO-PIPELINE", f"{projeto_id}: análise concluída.")
-
-            # 2. Detecta desvios em todos os cortes em paralelo (máx 4)
-            operational_info("AUTO-PIPELINE", f"{projeto_id}: iniciando análise de desvios...")
-            from app.services.corte import CorteService
-
-            await CorteService.analisar_desvios_todos_impl(projeto_id)
-            operational_info("AUTO-PIPELINE", f"{projeto_id}: desvios concluídos.")
-
-            # 3. Baixa cortes brutos de todos os cortes aprovados
-            operational_info(
-                "AUTO-PIPELINE", f"{projeto_id}: iniciando download de cortes brutos..."
-            )
-            from app.services.export import ExportService
-
-            await ExportService.cortar_todos_impl(projeto_id)
-            operational_info("AUTO-PIPELINE", f"{projeto_id}: cortes brutos concluídos.")
-
-        except Exception as e:
-            operational_error(
-                "AUTO-PIPELINE",
-                f"ERRO no projeto {projeto_id}: {e}\n{traceback.format_exc()}",
-            )
-            # Marca projeto como ERRO para que "reiniciar falhados" consiga retomá-lo.
-            await IngestaoService._atualizar_status(projeto_id, StatusProjeto.ERRO, str(e))

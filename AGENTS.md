@@ -76,7 +76,7 @@ Key routes:
 | `/projetos/:id/metadados` | MetadataPage | Title, description, thumbnail |
 | `/projetos/:id/post-production` | ScenesPostProductionPage | Scene/post-production editing |
 | `/projetos/:id/final-review` | FinalReviewPage | Final review before export |
-| `/projetos/:id/export` | PostProductionPage | LosslessCut CSV + YouTube publish |
+| `/projetos/:id/export` | PostProductionPage | Exporta clipes e publica no YouTube |
 | `/buscar-lives` | LiveSearchPage | Search/download livestreams |
 | `/ranking-lives` | RankingLivesPage | Source-live ranking queue |
 
@@ -119,7 +119,7 @@ The channel's identity (handle/nome/crédito) and the source channel for lives (
 - **Corte**: A proposed or approved video segment, defined by `inicio_hms`/`fim_hms` timestamps. Cuts can have `desvios` (detected anomalies/highlights).
 - **Ingestão**: The pipeline phase that downloads the video via yt-dlp and parses the VTT subtitle file into the database.
 - **Análise**: The phase where the transcript is sent to n8n → AI → returns proposed cuts.
-- **Export**: Produces a LosslessCut-compatible CSV + optionally normalizes/concatenates clips via ffmpeg.
+- **Export**: Normalizes/concatenates clips via ffmpeg and publishes to YouTube (individual or bulk upload).
 
 ## Coding Rules
 
