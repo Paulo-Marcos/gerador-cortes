@@ -18,7 +18,7 @@ import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app import prompts_utilitarios
+from app import prompts_utilitarios, ranking_settings
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.ranking_lives import (
@@ -51,14 +51,13 @@ _JANELAS_FALLBACK_MESES = [3, 6, 12, 24]
 
 
 def _pesos_atuais() -> PesosRanking:
-    return PesosRanking(
-        views=settings.ranking_peso_views,
-        likes_por_view=settings.ranking_peso_likes_por_view,
-        comentarios_por_view=settings.ranking_peso_comentarios_por_view,
-        sentimento=settings.ranking_peso_sentimento,
-        recencia=settings.ranking_peso_recencia,
-        meia_vida_dias=settings.ranking_meia_vida_dias,
-    )
+    """Pesos do ranking do canal ATIVO (D-351): banco como fonte da verdade.
+
+    Delega ao `ranking_settings`, que lê a tabela `ranking_pesos` do canal e cai
+    nos defaults de `config.settings` (semeando-os) quando o canal nunca customizou —
+    o fallback ao `.env` de antes fica preservado pelo seed.
+    """
+    return ranking_settings.resolver_pesos()
 
 
 async def _video_ids_indisponiveis(db: AsyncSession) -> set[str]:

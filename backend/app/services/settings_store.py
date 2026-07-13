@@ -94,6 +94,20 @@ _VERSAO_COLUNAS = (
 # idêntica à vigente num "salvar" sem alteração real).
 _VERSAO_CONTEUDO = ("corpo", "params_json", "lentes_json", "scaffold")
 
+# Pesos e critérios do ranking de lives por canal (D-351): os 5 pesos que combinam
+# os sinais (views/likes/comentários/sentimento/recência) mais a meia-vida do decay
+# de recência. Antes só existiam como settings de `.env` — agora editáveis por canal
+# no banco, no mesmo padrão banco-fonte-da-verdade do E-021. Todos REAL (float);
+# uma linha por canal.
+_RANKING_PESOS_COLUNAS = (
+    "views",
+    "likes_por_view",
+    "comentarios_por_view",
+    "sentimento",
+    "recencia",
+    "meia_vida_dias",
+)
+
 _DDL = (
     """
     CREATE TABLE IF NOT EXISTS app_settings (
@@ -172,6 +186,21 @@ _DDL = (
         template TEXT NOT NULL DEFAULT '',
         updated_at TEXT NOT NULL DEFAULT '',
         PRIMARY KEY (channel_id, scaffold_key)
+    )
+    """,
+    # D-351: pesos e critérios do ranking de lives por canal. Uma linha por canal;
+    # a ausência de linha sinaliza ao serviço `ranking_settings` para semear a
+    # partir dos defaults de `config.settings` (fallback preservado).
+    """
+    CREATE TABLE IF NOT EXISTS ranking_pesos (
+        channel_id TEXT PRIMARY KEY,
+        views REAL NOT NULL DEFAULT 0,
+        likes_por_view REAL NOT NULL DEFAULT 0,
+        comentarios_por_view REAL NOT NULL DEFAULT 0,
+        sentimento REAL NOT NULL DEFAULT 0,
+        recencia REAL NOT NULL DEFAULT 0,
+        meia_vida_dias REAL NOT NULL DEFAULT 90,
+        updated_at TEXT NOT NULL DEFAULT ''
     )
     """,
 )
@@ -670,6 +699,58 @@ def migrar_scaffolds_para_tabela_propria(
     finally:
         conn.close()
     return migrados
+
+
+# --------------------------------------------------------------------------- #
+# Pesos e critérios do ranking de lives por canal (D-351)
+# --------------------------------------------------------------------------- #
+
+
+def ler_ranking_pesos(db_path: Path, channel_id: str) -> dict | None:
+    """Lê os pesos do ranking do canal, ou `None` se ainda não existe linha.
+
+    `None` sinaliza ao chamador (serviço `ranking_settings`) para semear a partir
+    dos defaults de `config.settings` — mesmo contrato de `ler_app_settings`.
+    """
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT * FROM ranking_pesos WHERE channel_id = ?", (channel_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is None:
+        return None
+    return {coluna: row[coluna] for coluna in _RANKING_PESOS_COLUNAS}
+
+
+def gravar_ranking_pesos(db_path: Path, channel_id: str, valores: dict) -> None:
+    """Grava (UPSERT) os pesos do ranking do canal.
+
+    `valores` deve conter todas as chaves de `_RANKING_PESOS_COLUNAS`. Escrita
+    idempotente: reescrever a mesma linha é seguro (seed no 1º acesso, edição/reset
+    pela UI). `updated_at` é carimbado aqui (ISO-8601 UTC).
+    """
+    dados = {**{c: float(valores[c]) for c in _RANKING_PESOS_COLUNAS}}
+    colunas = ("channel_id", *_RANKING_PESOS_COLUNAS, "updated_at")
+    placeholders = ", ".join("?" for _ in colunas)
+    atualizaveis = (*_RANKING_PESOS_COLUNAS, "updated_at")
+    atribuicoes = ", ".join(f"{c}=excluded.{c}" for c in atualizaveis)
+    parametros = (
+        channel_id,
+        *(dados[c] for c in _RANKING_PESOS_COLUNAS),
+        datetime.now(UTC).isoformat(),
+    )
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            f"INSERT INTO ranking_pesos ({', '.join(colunas)}) VALUES ({placeholders}) "
+            f"ON CONFLICT(channel_id) DO UPDATE SET {atribuicoes}",
+            parametros,
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 # --------------------------------------------------------------------------- #
