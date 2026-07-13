@@ -8,7 +8,6 @@ import {
   FolderOpen,
   ImageOff,
   Loader2,
-  Smartphone,
   Tags,
   UploadCloud,
   Youtube,
@@ -230,17 +229,6 @@ export function CorteCard({
                   aria-label="Abrir metadados"
                 >
                   <Tags size={18} />
-                </Button>
-              </Tooltip>
-              <Tooltip label="Fábrica de Shorts" side="top">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate(`/projetos/${projetoId}/cortes/${corte.corte_id}/shorts`)}
-                  aria-label="Gerar shorts"
-                >
-                  <Smartphone size={18} />
                 </Button>
               </Tooltip>
               {podeEnviarYoutube && (

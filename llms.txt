@@ -35,4 +35,4 @@
 - Padrão de commit (Conventional Commits + gitmoji): seção em CLAUDE.md
 
 ## Domínio
-Entidades: Projeto, Corte (com desvios), Short, Metadado. Fases: Ingestão, Análise, Export.
+Entidades: Projeto, Corte (com desvios), Metadado. Fases: Ingestão, Análise, Export.

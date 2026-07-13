@@ -32,13 +32,6 @@ class StatusCorte(str, enum.Enum):
     PROCESSADO = "processado"
 
 
-class StatusShort(str, enum.Enum):
-    SUGERIDO = "sugerido"
-    APROVADO = "aprovado"
-    REJEITADO = "rejeitado"
-    RENDERIZADO = "renderizado"
-
-
 class StatusLiveCandidata(str, enum.Enum):
     """Estado de uma live na fila de ranking (F-052).
 
@@ -202,9 +195,6 @@ class Corte(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
-    shorts: Mapped[list["Short"]] = relationship(
-        "Short", back_populates="corte", cascade="all, delete-orphan"
-    )
 
 
 class CorteSnapshot(Base):
@@ -284,53 +274,6 @@ class YoutubeVideoStat(Base):
     )
     match_por_titulo: Mapped[int] = mapped_column(Integer, default=0)
     sincronizado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
-
-
-class Short(Base):
-    __tablename__ = "shorts"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    corte_id: Mapped[str] = mapped_column(String(36), ForeignKey("cortes.id"))
-    numero: Mapped[int] = mapped_column(Integer)
-    titulo_sugerido: Mapped[str] = mapped_column(String(500), default="")
-    inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
-    fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
-    cenas_remotion: Mapped[str] = mapped_column(Text, default="[]")
-    desvios: Mapped[str] = mapped_column(Text, default="[]")
-    status: Mapped[str] = mapped_column(String(50), default=StatusShort.SUGERIDO)
-    arquivo_short_path: Mapped[str] = mapped_column(String(1000), default="")
-    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    atualizado_em: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
-
-    corte: Mapped["Corte"] = relationship("Corte", back_populates="shorts")
-    metadado: Mapped["MetadadoShort"] = relationship(
-        "MetadadoShort",
-        back_populates="short",
-        uselist=False,
-        cascade="all, delete-orphan",
-        lazy="selectin",
-    )
-
-
-class MetadadoShort(Base):
-    __tablename__ = "metadados_shorts"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    short_id: Mapped[str] = mapped_column(String(36), ForeignKey("shorts.id"), unique=True)
-    titulo_youtube: Mapped[str] = mapped_column(String(100), default="")
-    descricao_youtube: Mapped[str] = mapped_column(Text, default="")
-    tags_youtube: Mapped[str] = mapped_column(Text, default="[]")
-    frase_capa: Mapped[str] = mapped_column(String(100), default="")
-    youtube_video_id: Mapped[str] = mapped_column(String(50), default="")
-    youtube_url_publicado: Mapped[str] = mapped_column(String(200), default="")
-    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    atualizado_em: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
-
-    short: Mapped["Short"] = relationship("Short", back_populates="metadado")
 
 
 class LayoutPreset(Base):

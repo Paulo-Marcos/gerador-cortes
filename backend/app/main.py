@@ -28,7 +28,6 @@ from app.routers import (
     projetos,
     ranking_lives,
     retratos,
-    shorts,
     youtube_browser,
 )
 from app.routers import (
@@ -101,7 +100,6 @@ app.include_router(cortes.router, prefix="/api/cortes", tags=["Cortes"])
 app.include_router(metadados.router, prefix="/api/metadados", tags=["Metadados"])
 app.include_router(export.router, prefix="/api/export", tags=["Export"])
 app.include_router(youtube_browser.router, prefix="/api/youtube", tags=["YouTube Browser"])
-app.include_router(shorts.router, prefix="/api/shorts", tags=["Shorts"])
 app.include_router(app_settings.router, prefix="/api/settings", tags=["Settings"])
 app.include_router(mascot.router, prefix="/api/mascot", tags=["Mascote"])
 app.include_router(retratos.router, prefix="/api/retratos", tags=["Retratos"])

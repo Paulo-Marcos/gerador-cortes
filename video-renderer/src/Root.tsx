@@ -5,7 +5,6 @@ import { Composition } from "remotion";
 // e src/cenas/ caso seja preciso reativar via novo Composition.
 import { CenaYouTubeV2 } from "./CenaYouTubeV2";
 import { CenaReacao } from "./CenaReacao";
-import { CenaShortViral, shortViralSchema } from "./CenaShortViral";
 import { OverlaySceneV2 } from "./OverlaySceneV2";
 import { OverlayTimelineV2 } from "./OverlayTimelineV2";
 import {
@@ -69,42 +68,6 @@ export const RemotionRoot: React.FC = () => {
         }}
         width={1920}
         height={1080}
-      />
-
-      {/* ─── Short Viral (1080×1920) ─── */}
-      <Composition
-        id="CenaShortViral"
-        component={CenaShortViral}
-        schema={shortViralSchema}
-        calculateMetadata={async ({ props }) => {
-          try {
-            const metadata = await getVideoMetadata(props.videoUrl);
-            const durationSec = props.fim_seg && props.fim_seg > props.inicio_seg
-              ? (props.fim_seg - props.inicio_seg)
-              : metadata.durationInSeconds;
-            return {
-              durationInFrames: Math.ceil(durationSec * 30),
-              fps: 30,
-              props,
-            };
-          } catch (err) {
-            console.error("Erro ao ler metadata do vídeo. Usando fallback.", err);
-            return {
-              durationInFrames: 300,
-              fps: 30,
-              props,
-            };
-          }
-        }}
-        defaultProps={{
-          videoUrl: "",
-          inicio_seg: 0,
-          fim_seg: 10,
-          captions: [],
-          cenas_remotion: [],
-        }}
-        width={1080}
-        height={1920}
       />
 
       {/* ─── V2 — Nova identidade editorial (Space Grotesk + brackets verdes) ─── */}

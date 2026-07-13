@@ -66,7 +66,7 @@ SQLite via SQLAlchemy async          ← WAL mode for concurrency
 - All I/O is **async-first** (yt-dlp downloads, ffmpeg transcoding, Gemini API, n8n webhooks)
 - Long-running operations (download, transcription, export) run as fire-and-forget `asyncio` tasks
 - **WebSocket** endpoints stream real-time progress updates to the frontend
-- AI-heavy work runs through **three paths**: (1) **n8n webhooks** (default for transcript analysis & metadata generation), (2) the **Claude CLI** (`infrastructure/claude_cli_client.py` + `services/claude_ia.py`) — an alternative provider using the local Claude subscription and the versioned expertise in `.claude/skills/`, and (3) the **Gemini API** (`infrastructure/gemini_client.py`) for scene generation, thumbnails, `desvios` and shorts
+- AI-heavy work runs through **three paths**: (1) **n8n webhooks** (default for transcript analysis & metadata generation), (2) the **Claude CLI** (`infrastructure/claude_cli_client.py` + `services/claude_ia.py`) — an alternative provider using the local Claude subscription and the versioned expertise in `.claude/skills/`, and (3) the **Gemini API** (`infrastructure/gemini_client.py`) for scene generation, thumbnails and `desvios`
 
 ### Frontend (React 18, Standalone)
 
@@ -99,9 +99,6 @@ Projeto (StatusProjeto)
   └── Corte[] (StatusCorte)
         proposto → aprovado → editado → processado  (| rejeitado)
         └── MetadadoCorte (1:1)
-        └── Short[] (StatusShort)
-              sugerido → aprovado → renderizado  (| rejeitado)
-              └── MetadadoShort (1:1)
 ```
 
 All SQLAlchemy models are in `backend/app/models.py`. All TypeScript interfaces mirror these in `frontend/src/types/models.ts`.
@@ -127,7 +124,6 @@ The `n8n-workflows/` folder contains the exported n8n workflow JSONs that must b
 
 - **Projeto**: A YouTube livestream download + processing session. Each project maps to a directory under `backend/projetos/<id>/`.
 - **Corte**: A proposed or approved video segment, defined by `inicio_hms`/`fim_hms` timestamps. Cuts can have `desvios` (detected anomalies/highlights).
-- **Short**: A vertical/TikTok-style derivative clip generated from a `Corte`.
 - **Ingestão**: The pipeline phase that downloads the video via yt-dlp and parses the VTT subtitle file into the database.
 - **Análise**: The phase where the transcript is sent to n8n → AI → returns proposed cuts.
 - **Export**: Produces a LosslessCut-compatible CSV + optionally normalizes/concatenates clips via ffmpeg.
@@ -265,8 +261,8 @@ routers/ (HTTP)  →  services/ (orquestração)  →  domain/ (puro)
 
 ### DDD pragmático
 - Cada feature travada em `registry.yaml` corresponde aproximadamente a um bounded context.
-- Vocabulário do domínio (`Projeto`, `Corte`, `Short`, `Metadado`, `Ingestão`, `Análise`) é **consistente** em código, banco e UI — não invente sinônimos.
-- Status enums (`StatusProjeto`, `StatusCorte`, `StatusShort`) são parte do contrato; mudanças exigem migração de banco.
+- Vocabulário do domínio (`Projeto`, `Corte`, `Metadado`, `Ingestão`, `Análise`) é **consistente** em código, banco e UI — não invente sinônimos.
+- Status enums (`StatusProjeto`, `StatusCorte`) são parte do contrato; mudanças exigem migração de banco.
 
 ### Não-regressão
 - Não "limpe" código adjacente ao que você precisa mudar. Refactor de brinde = PR separado.

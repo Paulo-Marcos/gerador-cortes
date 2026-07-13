@@ -77,19 +77,6 @@ async def init_db():
             # D-286: mapa de falantes da diarização (canal vs. reagidos).
             "ALTER TABLE projetos ADD COLUMN falantes_map TEXT DEFAULT '{}'",
             """
-            CREATE TABLE IF NOT EXISTS metadados_shorts (
-                id VARCHAR(36) PRIMARY KEY,
-                short_id VARCHAR(36) UNIQUE,
-                titulo_youtube VARCHAR(100) DEFAULT '',
-                descricao_youtube TEXT DEFAULT '',
-                tags_youtube TEXT DEFAULT '[]',
-                frase_capa VARCHAR(100) DEFAULT '',
-                criado_em DATETIME,
-                atualizado_em DATETIME,
-                FOREIGN KEY(short_id) REFERENCES shorts(id)
-            )
-            """,
-            """
             CREATE TABLE IF NOT EXISTS layout_presets (
                 id VARCHAR(36) PRIMARY KEY,
                 nome VARCHAR(120) NOT NULL,
