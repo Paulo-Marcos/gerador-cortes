@@ -1,0 +1,15 @@
+{variacao}
+
+=== INPUT DO CORTE ===
+titulo_proposto: {titulo_proposto}
+tema_central: {tema_central}
+numero_corte: {numero_corte}
+resumo_historico (pode estar desatualizado — em caso de conflito, a transcrição prevalece): {resumo_historico}
+
+=== TRANSCRIÇÃO FINAL DO CORTE (fonte primária de verdade; marcadores [MM:SS] são relativos ao início do corte — use-os para posicionar os `chapters`) ===
+{transcricao_marcada}
+
+=== TÍTULOS RECENTES DA SÉRIE (evite repetir estrutura/tom) ===
+{historico_titulos}
+
+Gere os metadados seguindo TODAS as regras da skill metadados-expert (STEP 0 → checklist final) e devolva APENAS o JSON no formato exigido pela seção OUTPUT da skill.

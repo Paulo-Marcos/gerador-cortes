@@ -159,6 +159,21 @@ _DDL = (
         PRIMARY KEY (channel_id, skill_key, versao)
     )
     """,
+    # D-349: scaffolds (contrato de saída) em tabela PRÓPRIA, keyed por
+    # `scaffold_key`, uma linha por (canal, scaffold). Antes cada scaffold morava
+    # na coluna `scaffold` da linha `editorial_skill` (D-297) — uma por skill_key —,
+    # o que impedia dois scaffolds na mesma skill (ex.: `resumo` e `metadados`, ambos
+    # reusando params de `metadados-expert`). A coluna antiga fica ÓRFÃ (não é
+    # removida); a migração de dados copia o conteúdo para cá no boot.
+    """
+    CREATE TABLE IF NOT EXISTS editorial_scaffold (
+        channel_id TEXT NOT NULL,
+        scaffold_key TEXT NOT NULL,
+        template TEXT NOT NULL DEFAULT '',
+        updated_at TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (channel_id, scaffold_key)
+    )
+    """,
 )
 
 # Colunas adicionadas depois da criação original de uma tabela: (tabela, coluna,
@@ -470,8 +485,10 @@ def _snapshot_versao(conn: sqlite3.Connection, channel_id: str, skill_key: str) 
 
     Append-only: nunca reativa uma versão antiga; a vigência move-se sempre para a
     versão mais nova. Lê o conteúdo de volta da linha materializada, então basta
-    chamar DEPOIS de gravar a `editorial_skill` — vale para o corpo/params/lentes
-    (`gravar_skill`) e para o scaffold (`gravar_scaffold`), sem duplicar o conteúdo.
+    chamar DEPOIS de gravar a `editorial_skill` (corpo/params/lentes de
+    `gravar_skill`), sem duplicar o conteúdo. A coluna `scaffold` snapshotada aqui é
+    a LEGADA (D-297); desde o D-349 o scaffold vive em tabela própria e não é mais
+    versionado — o valor snapshotado fica órfão, inerte.
 
     Dedup: se o conteúdo já é idêntico à versão vigente (um "salvar" sem alteração
     real, um reset que reafirma o valor), não cria versão — evita inflar o histórico
@@ -570,53 +587,89 @@ def deletar_skill(db_path: Path, channel_id: str, skill_key: str) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Scaffolds (contrato de saída) por canal (D-297) — coluna da tabela editorial_skill
+# Scaffolds (contrato de saída) por canal (D-349) — tabela própria por scaffold_key
 # --------------------------------------------------------------------------- #
 
 
-def ler_scaffold(db_path: Path, channel_id: str, skill_key: str) -> str | None:
-    """Lê o scaffold gravado na linha da skill, ou `None` se a linha não existe.
+def ler_scaffold(db_path: Path, channel_id: str, scaffold_key: str) -> str | None:
+    """Lê o scaffold do canal na tabela própria, ou `None` se a linha não existe.
 
     Diferencia dois estados para o chamador (serviço `editorial_scaffolds`):
     `None` (linha ausente) e `""` (linha existe, scaffold ainda não semeado) —
     ambos disparam o seed a partir do default versionado.
+
+    D-349: chaveado por `scaffold_key` (não mais `skill_key`), o que permite dois
+    scaffolds distintos reusarem os params de uma mesma skill (ex.: `resumo` e
+    `metadados`, ambos ligados a `metadados-expert`).
     """
     conn = _connect(db_path)
     try:
         row = conn.execute(
-            "SELECT scaffold FROM editorial_skill WHERE channel_id = ? AND skill_key = ?",
-            (channel_id, skill_key),
+            "SELECT template FROM editorial_scaffold WHERE channel_id = ? AND scaffold_key = ?",
+            (channel_id, scaffold_key),
         ).fetchone()
     finally:
         conn.close()
     if row is None:
         return None
-    return row["scaffold"]
+    return row["template"]
 
 
-def gravar_scaffold(db_path: Path, channel_id: str, skill_key: str, scaffold: str) -> None:
-    """Grava (UPSERT) apenas a coluna `scaffold` da linha da skill.
+def gravar_scaffold(db_path: Path, channel_id: str, scaffold_key: str, template: str) -> None:
+    """Grava (UPSERT) o scaffold do canal na tabela própria `editorial_scaffold`.
 
-    O UPSERT toca só `scaffold`/`updated_at`: corpo/params/lentes (E-021) ficam
-    intactos quando a linha já existe. O chamador garante que a linha da skill já
-    foi semeada (via `editorial_skills.resolver_skill`) antes de gravar o scaffold,
-    para nunca criar uma linha com corpo vazio que faria o E-021 pular o seed.
+    Escrita idempotente, keyed por (canal, scaffold_key). Não toca a linha da skill
+    (corpo/params/lentes do E-021 ficam intactos).
+
+    TODO(D-349): o histórico de versões do scaffold NÃO é escopo desta demanda —
+    `editorial_skill_version` fica como está e este UPSERT não versiona o scaffold.
     """
     conn = _connect(db_path)
     try:
         conn.execute(
-            "INSERT INTO editorial_skill (channel_id, skill_key, scaffold, updated_at) "
+            "INSERT INTO editorial_scaffold (channel_id, scaffold_key, template, updated_at) "
             "VALUES (?, ?, ?, ?) "
-            "ON CONFLICT(channel_id, skill_key) DO UPDATE SET "
-            "scaffold = excluded.scaffold, updated_at = excluded.updated_at",
-            (channel_id, skill_key, str(scaffold), datetime.now(UTC).isoformat()),
+            "ON CONFLICT(channel_id, scaffold_key) DO UPDATE SET "
+            "template = excluded.template, updated_at = excluded.updated_at",
+            (channel_id, scaffold_key, str(template), datetime.now(UTC).isoformat()),
         )
-        # D-312: o scaffold é campo de conteúdo versionado — editá-lo também gera
-        # uma nova versão (mesma disciplina append-only do corpo/params/lentes).
-        _snapshot_versao(conn, channel_id, skill_key)
         conn.commit()
     finally:
         conn.close()
+
+
+def migrar_scaffolds_para_tabela_propria(
+    db_path: Path, mapa_skill_para_scaffold: dict[str, str]
+) -> int:
+    """Copia (idempotente) a coluna legada `editorial_skill.scaffold` para a tabela
+    própria `editorial_scaffold`, keyed por `scaffold_key` (D-349).
+
+    Para cada `skill_key → scaffold_key` do mapa, insere o template de TODO canal
+    cuja linha de skill tem `scaffold` não-vazio e que ainda NÃO possui linha na
+    tabela nova (guarda `NOT EXISTS` → idempotente: rodar 2× não duplica nem
+    sobrescreve um scaffold já editado). A coluna legada é PRESERVADA (não é
+    removida). Retorna quantas linhas foram copiadas.
+    """
+    conn = _connect(db_path)
+    try:
+        migrados = 0
+        agora = datetime.now(UTC).isoformat()
+        for skill_key, scaffold_key in mapa_skill_para_scaffold.items():
+            cur = conn.execute(
+                "INSERT INTO editorial_scaffold (channel_id, scaffold_key, template, updated_at) "
+                "SELECT s.channel_id, ?, s.scaffold, ? FROM editorial_skill s "
+                "WHERE s.skill_key = ? AND s.scaffold <> '' "
+                "AND NOT EXISTS ("
+                "  SELECT 1 FROM editorial_scaffold e "
+                "  WHERE e.channel_id = s.channel_id AND e.scaffold_key = ?"
+                ")",
+                (scaffold_key, agora, skill_key, scaffold_key),
+            )
+            migrados += max(cur.rowcount, 0)
+        conn.commit()
+    finally:
+        conn.close()
+    return migrados
 
 
 # --------------------------------------------------------------------------- #

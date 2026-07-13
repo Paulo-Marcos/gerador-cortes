@@ -10,13 +10,15 @@ os builders `_montar_prompt*` em `services/claude_ia` e o `PROMPT_DIRECAO` de
 banco-fonte-da-verdade + default versionado + seed idempotente no 1º acesso
 (preservando byte-a-byte a saída atual do canal).
 
-ARMAZENAMENTO (reuso do E-021, não uma tabela nova): a coluna `scaffold` da tabela
-`editorial_skill`, uma por (canal, skill_key). Os 5 scaffolds mapeiam para os
-skill_key existentes. O `resumo` não tem skill própria (reusa modelo+lentes de
-`metadados-expert`), então guarda seu scaffold na linha de `metadados-expert` —
-cuja geração de metadados delega 100% ao corpo, deixando a coluna `scaffold` dessa
-linha livre. Esse mapeamento físico é INTERNO; a UI apresenta os 5 scaffolds como
-itens próprios, com seus rótulos de etapa.
+ARMAZENAMENTO (D-349): a tabela própria `editorial_scaffold`, uma linha por
+(canal, `scaffold_key`). Antes (D-297) o scaffold morava na coluna `scaffold` da
+linha `editorial_skill`, uma por `skill_key` — o que só permitia UM scaffold por
+skill. Como `resumo` e `metadados` reusam ambos os params de `metadados-expert`,
+não cabiam dois scaffolds na mesma linha; por isso o storage passou a ser keyed
+por `scaffold_key`. O `cat.skill_key` continua sendo usado APENAS para reusar
+modelo/lentes/params da skill dona (via `editorial_skills.resolver_skill`), nunca
+mais como chave de armazenamento. Uma migração de boot copia os scaffolds da
+coluna legada para a tabela nova, preservando as customizações existentes.
 
 DEFAULT VERSIONADO (alvo do reset e fonte do seed): para 4 scaffolds é o template
 em `examples/instance.example/editorial/scaffolds/<arquivo>.txt` (brand-neutral).
@@ -172,14 +174,50 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
         placeholders=("variacao", "titulo", "tema", "resumo_antigo", "transcricao"),
         marcador="resumo",
     ),
+    ScaffoldCatalogo(
+        key="metadados",
+        skill_key="metadados-expert",
+        etapa="Metadados YouTube",
+        descricao=(
+            "Invólucro que envia o input do corte (título proposto, tema, número, "
+            "resumo histórico, transcrição com marcadores [MM:SS] e títulos recentes "
+            "da série) e pede os metadados em JSON. O corpo/expertise vem da skill "
+            "'Metadados YouTube'."
+        ),
+        arquivo="metadados.txt",
+        placeholders=(
+            "variacao",
+            "titulo_proposto",
+            "tema_central",
+            "numero_corte",
+            "resumo_historico",
+            "transcricao_marcada",
+            "historico_titulos",
+        ),
+        marcador="JSON",
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, ScaffoldCatalogo] = {c.key: c for c in _CATALOGO}
 
 
 def catalogo() -> tuple[ScaffoldCatalogo, ...]:
-    """Os 5 scaffolds, na ordem de exibição."""
+    """Os scaffolds do catálogo, na ordem de exibição."""
     return _CATALOGO
+
+
+# D-349: mapa `skill_key → scaffold_key` do storage LEGADO (coluna
+# `editorial_skill.scaffold`, uma por skill). É a base da migração de dados para a
+# tabela nova: cada skill guardava exatamente UM scaffold, então `metadados-expert`
+# aponta para `resumo` (o único scaffold que ali morava antes do D-349) — o novo
+# `metadados` nasce direto na tabela nova, sem dado legado a migrar.
+_MAPA_MIGRACAO_LEGADO: dict[str, str] = {
+    "cortador-expert": "cortes",
+    "trechos-expert": "trechos",
+    "cenas-expert": _KEY_CENAS,
+    "thumbnail-prompt-expert": "thumbnail",
+    "metadados-expert": "resumo",
+}
 
 
 def _exigir_catalogo(scaffold_key: str) -> ScaffoldCatalogo:
@@ -290,10 +328,11 @@ def resolver_scaffold(
     """Resolve o scaffold do canal ATIVO — banco como fonte da verdade (D-297).
 
     Ordem (espelha `editorial_skills.resolver_skill`):
-      1. Garante que a linha da skill esteja SEMEADA (corpo/params/lentes do E-021),
-         para nunca deixar a linha nascer só com o scaffold (corpo vazio).
-      2. BANCO: se há scaffold gravado, é a fonte da verdade.
-      3. Sem scaffold (linha ausente ou coluna vazia) → SEMEIA a partir do default
+      1. Garante que a linha da skill DONA esteja SEMEADA (corpo/params/lentes do
+         E-021) — a etapa reusa modelo/lentes dela; o scaffold em si mora à parte.
+      2. BANCO (tabela `editorial_scaffold`, keyed por `scaffold_key`): se há
+         scaffold gravado, é a fonte da verdade.
+      3. Sem scaffold (linha ausente ou vazia) → SEMEIA a partir do default
          versionado e devolve. A partir daí o banco basta.
 
     Nunca lança no caminho feliz. Os kwargs isolam testes do `instance/` real.
@@ -303,10 +342,10 @@ def resolver_scaffold(
     editorial_skills.resolver_skill(
         cat.skill_key, db_path=db, channel_id=cid, editorial_root=editorial_root
     )
-    atual = settings_store.ler_scaffold(db, cid, cat.skill_key)
+    atual = settings_store.ler_scaffold(db, cid, cat.key)
     if not atual:
         default = _default_scaffold(cat)
-        settings_store.gravar_scaffold(db, cid, cat.skill_key, default)
+        settings_store.gravar_scaffold(db, cid, cat.key, default)
         return default
     return atual
 
@@ -347,7 +386,7 @@ def descrever_scaffolds(
     channel_id: str | None = None,
     editorial_root: Path | None = None,
 ) -> list[ScaffoldDescrito]:
-    """Os 5 scaffolds do canal ativo com valor-do-canal + default, para a UI."""
+    """Os scaffolds do canal ativo com valor-do-canal + default, para a UI."""
     return [
         _descrever(
             cat,
@@ -376,11 +415,11 @@ def definir_scaffold(
     cat = _exigir_catalogo(scaffold_key)
     validar_scaffold(scaffold, cat)
     db, cid = _resolver_db_e_canal(db_path, channel_id)
-    # Garante a linha da skill semeada (E-021) antes de gravar só o scaffold.
+    # Garante a linha da skill dona semeada (E-021 — modelo/lentes reusados).
     editorial_skills.resolver_skill(
         cat.skill_key, db_path=db, channel_id=cid, editorial_root=editorial_root
     )
-    settings_store.gravar_scaffold(db, cid, cat.skill_key, scaffold)
+    settings_store.gravar_scaffold(db, cid, cat.key, scaffold)
     return _descrever(
         cat,
         resolver_scaffold(scaffold_key, db_path=db, channel_id=cid, editorial_root=editorial_root),
@@ -428,16 +467,22 @@ def migrar_scaffolds_do_canal_ativo(
     Best-effort — pensada para rodar no MESMO ponto de boot que
     `editorial_skills.migrar_skills_do_canal_ativo`. Retorna quantos scaffolds
     foram migrados. `editorial_root`/kwargs isolam testes do `instance/` real.
+
+    D-349: ANTES de qualquer coisa, move os scaffolds da coluna legada
+    (`editorial_skill.scaffold`, keyed por skill) para a tabela própria
+    (`editorial_scaffold`, keyed por scaffold_key) — assim um scaffold V1 já
+    customizado é migrado primeiro e a troca V1→v2 abaixo o enxerga na tabela nova.
     """
     db, cid = _resolver_db_e_canal(db_path, channel_id)
+    settings_store.migrar_scaffolds_para_tabela_propria(db, _MAPA_MIGRACAO_LEGADO)
     migrados = 0
     for cat in _CATALOGO:
         superados = editorial_scaffolds_legados.SCAFFOLDS_SUPERADOS.get(cat.skill_key)
         if not superados:
             continue
-        atual = settings_store.ler_scaffold(db, cid, cat.skill_key)
+        atual = settings_store.ler_scaffold(db, cid, cat.key)
         if not atual or atual.strip() not in superados:
             continue
-        settings_store.gravar_scaffold(db, cid, cat.skill_key, _default_scaffold(cat))
+        settings_store.gravar_scaffold(db, cid, cat.key, _default_scaffold(cat))
         migrados += 1
     return migrados

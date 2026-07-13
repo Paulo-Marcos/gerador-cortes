@@ -138,6 +138,37 @@ def _oraculo_thumbnail(ctx, marca_emojis, bloco_hints, mascote):
     )
 
 
+def _oraculo_metadados(
+    variacao,
+    titulo_proposto,
+    tema_central,
+    numero_corte,
+    resumo_historico,
+    transcricao_marcada,
+    historico_titulos,
+):
+    # Cópia fiel do invólucro "INPUT DO CORTE" hardcoded em
+    # gerar_metadados_via_claude ANTES do D-349.
+    return (
+        f"{variacao}\n\n"
+        "=== INPUT DO CORTE ===\n"
+        f"titulo_proposto: {titulo_proposto}\n"
+        f"tema_central: {tema_central}\n"
+        f"numero_corte: {numero_corte}\n"
+        f"resumo_historico (pode estar desatualizado — em caso de conflito, "
+        f"a transcrição prevalece): {resumo_historico}\n\n"
+        "=== TRANSCRIÇÃO FINAL DO CORTE (fonte primária de verdade; "
+        "marcadores [MM:SS] são relativos ao início do corte — use-os para "
+        "posicionar os `chapters`) ===\n"
+        f"{transcricao_marcada}\n\n"
+        "=== TÍTULOS RECENTES DA SÉRIE (evite repetir estrutura/tom) ===\n"
+        f"{historico_titulos}\n\n"
+        "Gere os metadados seguindo TODAS as regras da skill metadados-expert "
+        "(STEP 0 → checklist final) e devolva APENAS o JSON no formato "
+        "exigido pela seção OUTPUT da skill."
+    )
+
+
 def _oraculo_resumo(variacao, titulo, tema, resumo_antigo, transcricao):
     return (
         f"{variacao}\n\n"
@@ -195,6 +226,25 @@ def test_thumbnail_identico_ao_oraculo():
     mascote = "Mascote"
     novo = ClaudeIaService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
     _igual(novo, _oraculo_thumbnail(ctx, marca_emojis, bloco_hints, mascote))
+
+
+def test_metadados_default_identico_ao_oraculo():
+    # D-349: o invólucro de metadados foi externalizado para scaffold; o default
+    # versionado, formatado com os mesmos valores, reproduz o prompt hardcoded antigo.
+    valores = {
+        "variacao": "LENTE: foque no contraste.",
+        "titulo_proposto": "O que Foucault disse sobre poder",
+        "tema_central": "Foucault e o poder",
+        "numero_corte": 7,
+        "resumo_historico": "resumo antigo",
+        "transcricao_marcada": "[00:00] olá\n[00:04] mundo",
+        "historico_titulos": "- Título A\n- Título B",
+    }
+    template = editorial_scaffolds._default_scaffold(
+        editorial_scaffolds._exigir_catalogo("metadados")
+    )
+    novo = template.format(**valores)
+    _igual(novo, _oraculo_metadados(**valores))
 
 
 def test_resumo_default_identico_ao_oraculo():

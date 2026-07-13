@@ -10,6 +10,7 @@ um diretório editorial por teste); os DEFAULTS vêm de
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,26 @@ from app import channel_config_loader, editorial_scaffolds, editorial_scaffolds_
 from app.services import settings_store
 
 _CANAL = "canal-teste"
+
+
+def _gravar_scaffold_legado(db: Path, channel_id: str, skill_key: str, template: str) -> None:
+    """Escreve na coluna LEGADA `editorial_skill.scaffold` (pré-D-349) para simular
+    um canal com scaffold customizado antes da migração para a tabela própria."""
+    settings_store.gravar_skill(
+        db,
+        channel_id,
+        skill_key,
+        {"corpo": "expertise", "params_json": "{}", "lentes_json": "[]"},
+    )
+    conn = sqlite3.connect(str(db))
+    try:
+        conn.execute(
+            "UPDATE editorial_skill SET scaffold = ? WHERE channel_id = ? AND skill_key = ?",
+            (template, channel_id, skill_key),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def _db(tmp_path: Path) -> Path:
@@ -39,8 +60,8 @@ def test_seed_le_default_versionado_e_grava_no_banco(tmp_path: Path):
 
     assert "=== DADOS DA LIVE ===" in scaffold
     assert "{texto_transcricao}" in scaffold
-    # Efeito colateral: o banco foi semeado na linha da skill dona.
-    assert settings_store.ler_scaffold(kw["db_path"], _CANAL, "cortador-expert")
+    # Efeito colateral: o banco foi semeado na tabela própria, keyed por scaffold_key.
+    assert settings_store.ler_scaffold(kw["db_path"], _CANAL, "cortes")
 
 
 def test_resolver_scaffold_tambem_semeia_corpo_da_skill(tmp_path: Path):
@@ -100,17 +121,116 @@ def test_resetar_scaffold_volta_ao_default(tmp_path: Path):
     )
 
 
-def test_descrever_scaffolds_traz_os_cinco_na_ordem(tmp_path: Path):
+def test_descrever_scaffolds_traz_todos_na_ordem(tmp_path: Path):
     descritos = editorial_scaffolds.descrever_scaffolds(**_kw(tmp_path))
-    assert [d.key for d in descritos] == ["cortes", "trechos", "cenas", "thumbnail", "resumo"]
+    assert [d.key for d in descritos] == [
+        "cortes",
+        "trechos",
+        "cenas",
+        "thumbnail",
+        "resumo",
+        "metadados",
+    ]
     cortes = next(d for d in descritos if d.key == "cortes")
     assert cortes.marcador == "JSON"
     assert "texto_transcricao" in cortes.placeholders
 
 
+def test_metadados_seed_le_default_e_grava_por_scaffold_key(tmp_path: Path):
+    # O novo scaffold 'metadados' (D-349) nasce do default versionado e é gravado
+    # na tabela própria sob a chave 'metadados' — SEM colidir com 'resumo', que
+    # também reusa a skill metadados-expert.
+    kw = _kw(tmp_path)
+    scaffold = editorial_scaffolds.resolver_scaffold("metadados", **kw)
+
+    assert "=== INPUT DO CORTE ===" in scaffold
+    assert "{transcricao_marcada}" in scaffold
+    assert settings_store.ler_scaffold(kw["db_path"], _CANAL, "metadados")
+    # 'resumo' e 'metadados' convivem, cada um sob sua própria chave.
+    editorial_scaffolds.resolver_scaffold("resumo", **kw)
+    assert settings_store.ler_scaffold(kw["db_path"], _CANAL, "resumo") != scaffold
+
+
+def test_definir_metadados_valida_guardrail(tmp_path: Path):
+    # Placeholder desconhecido → o guardrail do contrato rejeita (→ 422 no router).
+    with pytest.raises(ValueError, match="desconhecidos"):
+        editorial_scaffolds.definir_scaffold(
+            "metadados",
+            "{variacao} {titulo_proposto} {tema_central} {numero_corte} "
+            "{resumo_historico} {transcricao_marcada} {historico_titulos} "
+            "{campo_inventado} — devolva o JSON",
+            **_kw(tmp_path),
+        )
+
+
 def test_scaffold_desconhecido_levanta(tmp_path: Path):
     with pytest.raises(KeyError):
         editorial_scaffolds.resolver_scaffold("inexistente", **_kw(tmp_path))
+
+
+# --- D-349: migração da coluna legada → tabela própria por scaffold_key ------ #
+
+
+def test_migracao_move_scaffold_legado_para_scaffold_key_certo(tmp_path: Path):
+    kw = _kw(tmp_path)
+    db = kw["db_path"]
+    # Canal com scaffold customizado na coluna ANTIGA da linha metadados-expert
+    # (onde morava o scaffold 'resumo' antes do D-349).
+    custom = (
+        "{variacao} {titulo} {tema} {resumo_antigo} {transcricao} "
+        'meu resumo — retorne o JSON {{"resumo": "..."}}'
+    )
+    _gravar_scaffold_legado(db, _CANAL, "metadados-expert", custom)
+
+    migrados = settings_store.migrar_scaffolds_para_tabela_propria(
+        db, editorial_scaffolds._MAPA_MIGRACAO_LEGADO
+    )
+
+    assert migrados == 1
+    # Migrou para a chave 'resumo' (não 'metadados').
+    assert settings_store.ler_scaffold(db, _CANAL, "resumo") == custom
+    assert settings_store.ler_scaffold(db, _CANAL, "metadados") is None
+    # E o serviço devolve o customizado, sem re-semear o default.
+    assert editorial_scaffolds.resolver_scaffold("resumo", **kw) == custom
+
+
+def test_migracao_e_idempotente_e_nao_sobrescreve(tmp_path: Path):
+    kw = _kw(tmp_path)
+    db = kw["db_path"]
+    _gravar_scaffold_legado(
+        db, _CANAL, "cortador-expert", "SCAFFOLD LEGADO {texto_transcricao} JSON"
+    )
+
+    assert (
+        settings_store.migrar_scaffolds_para_tabela_propria(
+            db, editorial_scaffolds._MAPA_MIGRACAO_LEGADO
+        )
+        == 1
+    )
+    # 2ª rodada: nada a migrar (NOT EXISTS), e o valor já migrado é preservado.
+    assert (
+        settings_store.migrar_scaffolds_para_tabela_propria(
+            db, editorial_scaffolds._MAPA_MIGRACAO_LEGADO
+        )
+        == 0
+    )
+    assert (
+        settings_store.ler_scaffold(db, _CANAL, "cortes")
+        == "SCAFFOLD LEGADO {texto_transcricao} JSON"
+    )
+
+
+def test_migracao_boot_preserva_scaffold_legado_customizado(tmp_path: Path):
+    # A migração de dados roda dentro de `migrar_scaffolds_do_canal_ativo` (boot):
+    # um scaffold de cortes customizado na coluna antiga sobrevive e é lido de volta.
+    kw = _kw(tmp_path)
+    db = kw["db_path"]
+    custom = "{variacao}{cabecalho_section}{titulo_live}{duracao_humana}{youtube_url}{texto_transcricao} custom JSON"
+    _gravar_scaffold_legado(db, _CANAL, "cortador-expert", custom)
+
+    editorial_scaffolds.migrar_scaffolds_do_canal_ativo(**kw)
+
+    assert editorial_scaffolds.resolver_scaffold("cortes", **kw) == custom
 
 
 # --- Guardrail do contrato de saída (validar_scaffold) ---------------------- #

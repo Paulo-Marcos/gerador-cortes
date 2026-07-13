@@ -9,6 +9,7 @@ banco mesmo que o arquivo suma.
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
 from app.services import settings_store
@@ -198,15 +199,39 @@ def test_salvar_identico_nao_cria_versao_nova(tmp_path: Path):
     assert [v["versao"] for v in versoes] == [1]
 
 
-def test_gravar_scaffold_versiona(tmp_path: Path):
+def test_scaffold_grava_em_tabela_propria_por_scaffold_key(tmp_path: Path):
+    # D-349: o scaffold vive em tabela própria keyed por scaffold_key e NÃO versiona
+    # a skill (a coluna legada e o histórico de versões ficam intactos).
     db = tmp_path / "settings.db"
     settings_store.gravar_skill(db, "c", "cortador-expert", _skill_valores(corpo="v1"))
-    settings_store.gravar_scaffold(db, "c", "cortador-expert", "CONTRATO X")
+    settings_store.gravar_scaffold(db, "c", "cortes", "CONTRATO X")
 
+    assert settings_store.ler_scaffold(db, "c", "cortes") == "CONTRATO X"
+    # Nenhuma versão nova da skill: gravar o scaffold não toca editorial_skill_version.
     versoes = settings_store.listar_versoes_skill(db, "c", "cortador-expert")
-    assert [v["versao"] for v in versoes] == [2, 1]
-    assert versoes[0]["vigente"] == 1
-    assert versoes[0]["scaffold"] == "CONTRATO X"
+    assert [v["versao"] for v in versoes] == [1]
+
+
+def test_migrar_scaffolds_para_tabela_propria_idempotente(tmp_path: Path):
+    db = tmp_path / "settings.db"
+    settings_store.gravar_skill(db, "c", "metadados-expert", _skill_valores(corpo="v1"))
+    conn = sqlite3.connect(str(db))
+    try:
+        conn.execute(
+            "UPDATE editorial_skill SET scaffold = ? "
+            "WHERE channel_id = 'c' AND skill_key = 'metadados-expert'",
+            ("SCAFFOLD RESUMO LEGADO",),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    mapa = {"metadados-expert": "resumo"}
+    assert settings_store.migrar_scaffolds_para_tabela_propria(db, mapa) == 1
+    assert settings_store.ler_scaffold(db, "c", "resumo") == "SCAFFOLD RESUMO LEGADO"
+    # Idempotente: 2ª rodada não copia de novo nem sobrescreve.
+    assert settings_store.migrar_scaffolds_para_tabela_propria(db, mapa) == 0
+    assert settings_store.ler_scaffold(db, "c", "resumo") == "SCAFFOLD RESUMO LEGADO"
 
 
 def test_reverter_cria_nova_versao_com_conteudo_antigo(tmp_path: Path):

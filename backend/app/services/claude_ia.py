@@ -687,6 +687,10 @@ class ClaudeIaService:
         D-332: os trechos já marcados são apenas LISTADOS, com a instrução de
         não repeti-los e propor APENAS NOVOS. A revisão automática da D-302 foi
         revogada — sem [REVISÁVEL]/[PROTEGIDO] e sem contrato de `revisoes`.
+
+        D-349: PERMANECE no código (não vira scaffold): é DADO COMPUTADO do corte
+        (título/tema/intervalo + lista de trechos já marcados), não prosa editável.
+        O scaffold de trechos o consome via placeholder `{cabecalho_meta}`.
         """
         ja_marcados = ""
         if existentes:
@@ -813,25 +817,20 @@ class ClaudeIaService:
 
         skill = editorial_skills.resolver_skill(_SKILL_METADADOS)
         ctx = await MetadadosService.montar_contexto_meta(corte_id)
-        prompt = (
-            f"{bloco_variacao_de(skill.lentes)}\n\n"
-            "=== INPUT DO CORTE ===\n"
-            f"titulo_proposto: {ctx['titulo_proposto']}\n"
-            f"tema_central: {ctx['tema']}\n"
-            f"numero_corte: {ctx['numero_corte']}\n"
-            f"resumo_historico (pode estar desatualizado — em caso de conflito, "
-            f"a transcrição prevalece): {ctx['resumo']}\n\n"
-            "=== TRANSCRIÇÃO FINAL DO CORTE (fonte primária de verdade; "
-            "marcadores [MM:SS] são relativos ao início do corte — use-os para "
-            "posicionar os `chapters`) ===\n"
-            f"{ctx['transcricao_marcada']}\n\n"
-            "=== TÍTULOS RECENTES DA SÉRIE (evite repetir estrutura/tom) ===\n"
-            f"{ctx['historico_titulos']}\n\n"
-            "Gere os metadados seguindo TODAS as regras da skill metadados-expert "
-            "(STEP 0 → checklist final) e devolva APENAS o JSON no formato "
-            "exigido pela seção OUTPUT da skill."
+        # D-349: o scaffold (invólucro "INPUT DO CORTE" + contrato de saída) vem do
+        # banco por canal, como as demais etapas. O corpo/expertise (regras de
+        # título, checklist, seção OUTPUT) continua na skill metadados-expert.
+        scaffold_meta = editorial_scaffolds.resolver_scaffold("metadados")
+        prompt = scaffold_meta.format(
+            variacao=bloco_variacao_de(skill.lentes),
+            titulo_proposto=ctx["titulo_proposto"],
+            tema_central=ctx["tema"],
+            numero_corte=ctx["numero_corte"],
+            resumo_historico=ctx["resumo"],
+            transcricao_marcada=ctx["transcricao_marcada"],
+            historico_titulos=ctx["historico_titulos"],
         )
-        _log_skill_usada(_SKILL_METADADOS, skill)
+        _log_skill_usada(_SKILL_METADADOS, skill, scaffold_meta)
         resultado = await claude_cli_client.generate_json(
             prompt, **_args_claude(skill, _SKILL_METADADOS)
         )
@@ -930,6 +929,9 @@ class ClaudeIaService:
         mascote = identidade_do_mascote().nome
         # F-058: direção manual do editor, anexada ao prompt como prioridade.
         bloco_hints = formatar_bloco_hints_thumbnail(ctx.get("hints"))
+        # D-349: este bloco PERMANECE no código (não vira scaffold): é DADO
+        # COMPUTADO a partir das flags editoriais do corte (is_fire/is_leitura), não
+        # prosa editável. O scaffold de thumbnail o consome via `{marca_emojis}`.
         emojis_obrigatorios = []
         if ctx.get("is_fire"):
             emojis_obrigatorios.append("🔥")
