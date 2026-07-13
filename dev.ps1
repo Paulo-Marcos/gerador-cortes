@@ -105,6 +105,37 @@ function Get-ConfiguredLogLevel {
     return "disabled"
 }
 
+# Auto-cura do ambiente Remotion antes de subir os servicos (D-359).
+# Duas falhas silenciosas recorrentes deixavam o JSON de cenas sair mas nenhum
+# overlay .mov ser gerado (video final sem overlays):
+#   1. video-renderer/node_modules vazio/incompleto -> `npx remotion` nao resolve.
+#   2. Chrome Headless Shell ausente -> no Node 24 o extract-zip extrai so
+#      ABOUT+LICENSE em silencio e todo render sai exit 0 sem gerar arquivo.
+function Confirm-RemotionReady {
+    $vr = Join-Path $BASE "video-renderer"
+
+    # Marcador preciso: sem o CLI do Remotion nenhum overlay renderiza. Cobre o
+    # caso de node_modules existente porem vazio (npm ci interrompido/limpo).
+    $cliMarker = Join-Path $vr "node_modules\@remotion\cli\package.json"
+    if (-not (Test-Path $cliMarker)) {
+        Write-Host "  video-renderer/node_modules incompleto - rodando npm ci..." -ForegroundColor DarkYellow
+        Push-Location $vr
+        try {
+            & npm.cmd ci
+            if ($LASTEXITCODE -ne 0) { throw "npm ci falhou no video-renderer (exit $LASTEXITCODE)." }
+        } finally {
+            Pop-Location
+        }
+    }
+
+    # Idempotente: sai rapido quando o exe ja responde a --version.
+    Write-Host "  Verificando Chrome Headless Shell do Remotion..." -ForegroundColor DarkGray
+    & (Join-Path $BASE "bin\ensure-remotion-browser.ps1")
+    if ($LASTEXITCODE -ne 0) {
+        throw "ensure-remotion-browser falhou (exit $LASTEXITCODE) - overlays nao renderizariam."
+    }
+}
+
 # Cria processo SEM event handlers — usa ReadLineAsync no loop principal
 function Start-DevProcess {
     param(
@@ -207,6 +238,8 @@ Write-Host " - iniciando..." -ForegroundColor DarkGray
 Write-Host ""
 
 Clear-DevEnvironment
+
+Confirm-RemotionReady
 
 Write-Host ""
 Write-Host "  Backend        " -ForegroundColor DarkCyan -NoNewline; Write-Host "http://localhost:8000"

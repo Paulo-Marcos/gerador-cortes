@@ -64,7 +64,7 @@ if (Test-BrowserExe) {
 
 Write-Info "exe ausente ou nao-funcional. Iniciando instalacao/reparo..."
 
-# --- Passo 2: garantir o zip -----------------------------------------------
+# --- Passo 2 + 3: garantir um zip integro e extrair (com recuperacao) ------
 function Get-ZipPath {
     if (-not (Test-Path $browserDir)) { return $null }
     $zip = Get-ChildItem -Path $browserDir -Filter 'chrome-headless-shell-win64.zip' -File -ErrorAction SilentlyContinue |
@@ -73,30 +73,60 @@ function Get-ZipPath {
     return $null
 }
 
-$zipPath = Get-ZipPath
-if (-not $zipPath) {
-    Write-Info "zip nao encontrado. Baixando via 'npx remotion browser ensure'..."
+function Invoke-BrowserDownload {
+    Write-Info "Baixando via 'npx remotion browser ensure'..."
     Push-Location $videoRenderer
     try {
         & npx remotion browser ensure
     } finally {
         Pop-Location
     }
-    $zipPath = Get-ZipPath
 }
 
-if (-not $zipPath) {
-    Write-Fail "nao foi possivel obter o zip do Chrome Headless Shell."
+# Extrai o zip para win64/. Retorna $true no sucesso. Se o zip estiver
+# corrompido/truncado, Expand-Archive falha com "registro Final de Diretorio
+# Central nao localizado" — resquicio do proprio bug do extract-zip no Node 24,
+# que baixa um zip parcial. Nesse caso descartamos o zip parcial (e o win64/
+# meio-extraido) para forcar um download limpo na proxima tentativa, em vez de
+# insistir num artefato quebrado (era a falha que travava o reparo).
+function Expand-BrowserZip {
+    param([string]$ZipPath)
+    if (-not (Test-Path $win64Dir)) {
+        New-Item -ItemType Directory -Path $win64Dir -Force | Out-Null
+    }
+    Write-Info "extraindo (Expand-Archive -Force) para '$win64Dir'..."
+    try {
+        Expand-Archive -Path $ZipPath -DestinationPath $win64Dir -Force -ErrorAction Stop
+        return $true
+    } catch {
+        Write-Info "zip invalido/truncado ($_). Descartando para rebaixar."
+        Remove-Item -Path $ZipPath -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $win64Dir -Recurse -Force -ErrorAction SilentlyContinue
+        return $false
+    }
+}
+
+# Ate 2 tentativas: usa o zip presente; se estiver corrompido, descarta,
+# rebaixa e extrai uma vez mais.
+$extraido = $false
+for ($tentativa = 1; $tentativa -le 2 -and -not $extraido; $tentativa++) {
+    $zipPath = Get-ZipPath
+    if (-not $zipPath) {
+        Invoke-BrowserDownload
+        $zipPath = Get-ZipPath
+    }
+    if (-not $zipPath) {
+        Write-Fail "nao foi possivel obter o zip do Chrome Headless Shell."
+        exit 1
+    }
+    Write-Info "zip (tentativa $tentativa): $zipPath"
+    $extraido = Expand-BrowserZip -ZipPath $zipPath
+}
+
+if (-not $extraido) {
+    Write-Fail "nao foi possivel extrair o Chrome Headless Shell (zip corrompido mesmo apos rebaixar)."
     exit 1
 }
-Write-Info "zip: $zipPath"
-
-# --- Passo 3: extrair para win64/ ------------------------------------------
-if (-not (Test-Path $win64Dir)) {
-    New-Item -ItemType Directory -Path $win64Dir -Force | Out-Null
-}
-Write-Info "extraindo (Expand-Archive -Force) para '$win64Dir'..."
-Expand-Archive -Path $zipPath -DestinationPath $win64Dir -Force
 
 # --- Passo 4: criar/atualizar o marker VERSION -----------------------------
 function Resolve-BrowserVersion {
