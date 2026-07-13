@@ -5,6 +5,7 @@ from app.domain.diarizacao_align import (
     heuristica_falante_canal,
     montar_mapa_falantes,
     prefixo_falante,
+    rotular_janela,
 )
 
 
@@ -42,6 +43,30 @@ def test_alinhar_segmento_sem_sobreposicao_fica_sem_falante():
     resultado = alinhar_falantes(segmentos, turns)
 
     assert "speaker" not in resultado[0]
+
+
+def test_rotular_janela_so_marca_segmentos_dentro_da_janela():
+    segmentos = [
+        {"inicio": "00:00:01", "fim": "00:00:04", "texto": "dentro"},
+        {"inicio": "00:00:20", "fim": "00:00:24", "texto": "fora"},
+    ]
+    turns = [{"start": 0.0, "end": 10.0, "speaker": "SPEAKER_00"}]
+
+    resultado = rotular_janela(segmentos, turns, 0.0, 10.0)
+
+    assert resultado[0]["speaker"] == "SPEAKER_00"
+    assert "speaker" not in resultado[1]
+    # Não muta a entrada original.
+    assert "speaker" not in segmentos[0]
+
+
+def test_rotular_janela_preserva_speaker_previo_fora_da_janela():
+    segmentos = [{"inicio": "00:02:00", "fim": "00:02:05", "texto": "antigo", "speaker": "X"}]
+    turns = [{"start": 0.0, "end": 10.0, "speaker": "SPEAKER_00"}]
+
+    resultado = rotular_janela(segmentos, turns, 0.0, 10.0)
+
+    assert resultado[0]["speaker"] == "X"
 
 
 def test_heuristica_canal_escolhe_maior_tempo_de_fala():

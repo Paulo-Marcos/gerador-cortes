@@ -59,6 +59,43 @@ def alinhar_falantes(segmentos: list[dict], turns: list[dict]) -> list[dict]:
     return resultado
 
 
+def rotular_janela(
+    segmentos: list[dict],
+    turns: list[dict],
+    janela_inicio: float,
+    janela_fim: float,
+) -> list[dict]:
+    """Como `alinhar_falantes`, mas rotula SÓ os segmentos dentro da janela.
+
+    Usado pela diarização por corte: a diarização rodou apenas no trecho
+    `[janela_inicio, janela_fim]`, então segmentos fora da janela ficam intactos
+    (preservando um `speaker` prévio, se houver) e apenas os que se sobrepõem à
+    janela recebem o falante dominante.
+
+    Exemplo:
+        >>> segs = [
+        ...     {"inicio": "00:00:01", "fim": "00:00:04", "texto": "dentro"},
+        ...     {"inicio": "00:00:20", "fim": "00:00:24", "texto": "fora"},
+        ... ]
+        >>> turns = [{"start": 0.0, "end": 10.0, "speaker": "SPEAKER_00"}]
+        >>> rotulados = rotular_janela(segs, turns, 0.0, 10.0)
+        >>> rotulados[0]["speaker"], "speaker" in rotulados[1]
+        ('SPEAKER_00', False)
+    """
+    resultado = []
+    for seg in segmentos:
+        novo = dict(seg)
+        if turns:
+            inicio, fim = _limites_segmento(seg)
+            sobrepoe_janela = inicio < janela_fim and fim > janela_inicio
+            if sobrepoe_janela:
+                falante = _falante_dominante(inicio, fim, turns)
+                if falante:
+                    novo["speaker"] = falante
+        resultado.append(novo)
+    return resultado
+
+
 def heuristica_falante_canal(turns: list[dict]) -> str | None:
     """Elege o dono do canal como o falante com maior tempo total de fala.
 

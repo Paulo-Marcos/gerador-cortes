@@ -104,6 +104,9 @@ export interface TranscricaoLinha {
   start: number;
   end: number;
   texto: string;
+  // D-286/D-360: rótulo de falante da diarização (SPEAKER_00/01…), resolvido
+  // para nome/canal via `falantes_map` do projeto. Ausente = sem diarização.
+  speaker?: string;
 }
 
 // D-314: ranking relativo da proposta v2 (D-302). Componentes e total podem

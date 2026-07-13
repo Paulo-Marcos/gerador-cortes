@@ -21,13 +21,26 @@ logger = logging.getLogger(__name__)
 _AUDIO_WAV = "diarizacao_audio.wav"
 
 
-async def _extrair_audio(video_path: Path) -> Path:
-    """Extrai um WAV mono 16 kHz do vídeo (formato ideal para o pyannote)."""
+async def _extrair_audio(
+    video_path: Path,
+    inicio_seg: float | None = None,
+    fim_seg: float | None = None,
+) -> Path:
+    """Extrai um WAV mono 16 kHz do vídeo (formato ideal para o pyannote).
+
+    Quando `inicio_seg`/`fim_seg` são dados, recorta só essa janela — usado pela
+    diarização por corte, que roda pyannote apenas no trecho de interesse (rápido)
+    em vez do vídeo inteiro. `-ss`/`-t` vêm ANTES do `-i` para o seek ser rápido.
+    """
     wav_path = video_path.with_name(_AUDIO_WAV)
+    corte_args: list[str] = []
+    if inicio_seg is not None and fim_seg is not None and fim_seg > inicio_seg:
+        corte_args = ["-ss", str(inicio_seg), "-t", str(fim_seg - inicio_seg)]
     await run_ffmpeg_simple(
         [
             "ffmpeg",
             "-y",
+            *corte_args,
             "-i",
             str(video_path),
             "-vn",  # descarta o vídeo
@@ -66,8 +79,17 @@ def _rodar_pipeline_sync(wav_path: Path) -> list[dict]:
     return turns
 
 
-async def diarizar(video_path: str | Path) -> list[dict] | None:
+async def diarizar(
+    video_path: str | Path,
+    inicio_seg: float | None = None,
+    fim_seg: float | None = None,
+) -> list[dict] | None:
     """Diariza o áudio do vídeo, devolvendo os turnos `{start, end, speaker}`.
+
+    Sem `inicio_seg`/`fim_seg` diariza o vídeo inteiro (fluxo do projeto). Com a
+    janela, roda pyannote só nesse trecho (diarização por corte) e reprojeta os
+    turnos para o tempo ABSOLUTO do vídeo — somando `inicio_seg` — para casar com
+    a transcrição do projeto no alinhamento.
 
     Retorna `None` (degradação graciosa) quando a diarização não pode rodar:
     token ausente, pyannote não instalado, ou qualquer erro de inferência.
@@ -84,14 +106,20 @@ async def diarizar(video_path: str | Path) -> list[dict] | None:
         logger.error("[Diarizacao] Vídeo não encontrado: %s", video)
         return None
 
+    janela = inicio_seg is not None and fim_seg is not None and fim_seg > inicio_seg
+    offset = inicio_seg if janela else 0.0
+
     wav_path: Path | None = None
     try:
-        wav_path = await _extrair_audio(video)
+        wav_path = await _extrair_audio(video, inicio_seg, fim_seg)
         turns = await asyncio.to_thread(_rodar_pipeline_sync, wav_path)
+        if offset:
+            turns = [{**t, "start": t["start"] + offset, "end": t["end"] + offset} for t in turns]
         logger.info(
-            "[Diarizacao] %d turnos, %d falantes distintos.",
+            "[Diarizacao] %d turnos, %d falantes distintos%s.",
             len(turns),
             len({t["speaker"] for t in turns}),
+            f" (janela {inicio_seg:.0f}-{fim_seg:.0f}s)" if janela else "",
         )
         return turns
     except ImportError:

@@ -12,6 +12,7 @@ import {
   Trash2,
   WandSparkles,
 } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClaudeAiButton } from '@/components/ui/claude-button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -19,6 +20,9 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
 import { cn } from '@/lib/utils';
 import { hmsParaSeg } from '../timeUtils';
+import { useCorte } from '@/hooks/useEditor';
+import { useDiarizarCorte, useFalantes } from '@/hooks/useDiarizacao';
+import type { FalantesMap } from '@/lib/api';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
 
 // ─────────────────────────────────────────────────────────────
@@ -73,6 +77,12 @@ export function RightTabsPanel({
   transcricaoAtualizando,
 }: RightTabsPanelProps) {
   const [tab, setTab] = useState<TabId>('trechos');
+
+  // D-360: diarização por corte. projetoId sai do corte já em cache; o mapa de
+  // falantes resolve SPEAKER_xx → nome/canal na etiqueta inline da transcrição.
+  const projetoId = useCorte(corteId).data?.projeto_id;
+  const falantes = useFalantes(projetoId, tab === 'transcricao').data?.falantes;
+  const diarizar = useDiarizarCorte(corteId, projetoId);
 
   // Decisao Paulo: refresh do header SEMPRE atualiza a transcricao,
   // independente da aba ativa. "Reanalisar trechos" continua via o botao
@@ -134,7 +144,14 @@ export function RightTabsPanel({
           pending={pendingTrechos}
         />
       ) : (
-        <TranscriptList linhas={transcricao ?? []} currentTime={currentTime} onSeek={onSeek} />
+        <TranscriptList
+          linhas={transcricao ?? []}
+          currentTime={currentTime}
+          onSeek={onSeek}
+          falantes={falantes}
+          onDiarizar={() => diarizar.mutate()}
+          diarizando={diarizar.isPending}
+        />
       )}
     </section>
   );
@@ -400,12 +417,21 @@ function TranscriptList({
   linhas,
   currentTime,
   onSeek,
+  falantes,
+  onDiarizar,
+  diarizando,
 }: {
   linhas: TranscricaoLinha[];
   currentTime: number;
   onSeek: (seg: number) => void;
+  falantes?: FalantesMap;
+  onDiarizar: () => void;
+  diarizando: boolean;
 }) {
   const [busca, setBusca] = useState('');
+
+  // D-360: só mostra a etiqueta quando ao menos uma linha tem falante.
+  const temFalante = useMemo(() => linhas.some((l) => l.speaker), [linhas]);
 
   const linhasFiltradas = useMemo(() => {
     if (!linhas) return [];
@@ -437,7 +463,7 @@ function TranscriptList({
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Busca — v2_bruto.jsx:553-582 */}
-      <div className="flex-shrink-0 border-b border-[var(--wb-border-soft)] px-3 py-2.5">
+      <div className="flex-shrink-0 space-y-2 border-b border-[var(--wb-border-soft)] px-3 py-2.5">
         <div className="flex h-[30px] items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5">
           <Search size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
           <input
@@ -448,6 +474,20 @@ function TranscriptList({
           />
           <span className="font-code text-[10px] text-[var(--wb-text-dim)]">⌘F</span>
         </div>
+        {/* D-360: diariza só este corte (evita rodar o vídeo inteiro). */}
+        <Tooltip label="Identifica os falantes só neste corte (não roda o vídeo todo)" side="bottom">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={onDiarizar}
+            disabled={diarizando}
+          >
+            {diarizando ? <Loader2 className="animate-spin" /> : <Users />}
+            {diarizando ? 'Diarizando...' : 'Diarizar este corte'}
+          </Button>
+        </Tooltip>
       </div>
 
       {/* Linhas — v2_bruto.jsx:584-621 */}
@@ -489,6 +529,7 @@ function TranscriptList({
                   ativa ? 'font-medium text-[var(--wb-ink)]' : 'text-[var(--wb-text)]',
                 )}
               >
+                {temFalante && <FalanteBadge speaker={l.speaker} falantes={falantes} />}
                 {l.texto}
               </span>
             </button>
@@ -496,6 +537,29 @@ function TranscriptList({
         })}
       </div>
     </div>
+  );
+}
+
+// D-360: chip inline do falante. Resolve SPEAKER_xx → nome/canal via mapa; sem
+// nome batizado cai para "Falante N". Linhas sem `speaker` (fora da janela
+// diarizada) não renderizam badge.
+function FalanteBadge({ speaker, falantes }: { speaker?: string; falantes?: FalantesMap }) {
+  if (!speaker) return null;
+  const info = falantes?.[speaker];
+  const isCanal = !!info?.is_canal;
+  const nome = info?.nome?.trim();
+  const label = nome || `Falante ${speaker.replace(/^SPEAKER_?/i, '').replace(/^0+/, '') || speaker}`;
+  return (
+    <span
+      className="mr-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 align-baseline font-code text-[9.5px] font-semibold uppercase tracking-[0.03em]"
+      style={
+        isCanal
+          ? { background: 'var(--wb-accent-soft)', color: 'var(--wb-accent)' }
+          : { background: 'var(--wb-violet-soft)', color: 'var(--wb-violet)' }
+      }
+    >
+      {isCanal ? `Canal${nome ? `: ${nome}` : ''}` : label}
+    </span>
   );
 }
 
