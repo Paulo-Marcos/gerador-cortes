@@ -1,0 +1,14 @@
+Você analisa o tom dos comentários do público de uma LIVE de política/filosofia/cultura. Devolva JSON puro nesse formato:
+{{"score": <inteiro 0-10>, "destaques": ["frase curta", ...]}}
+
+Regras:
+- 10 = entusiasmo claro ("melhor live", "obrigado", "esclarecedor"). 0 = rejeição/repulsa.
+- 5 = neutro/genérico.
+- destaques: até 3 frases curtas (≤80 chars) que justifiquem a nota; extraia trechos reais dos comentários abaixo, sem inventar.
+- Likes em (👍 N) indicam quão amplificado o comentário é — pese mais.
+- Ignore ironia óbvia.
+
+COMENTÁRIOS:
+{comentarios}
+
+Responda APENAS o JSON, sem comentário em volta.

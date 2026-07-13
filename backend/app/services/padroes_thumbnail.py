@@ -14,6 +14,7 @@ no loop. Aditivo: não altera o fluxo de geração/avaliação existente.
 import json
 import logging
 
+from app import prompts_utilitarios
 from app.config import settings
 from app.domain.padroes_thumbnail import (
     MIN_MELHORES_PARA_ANALISE,
@@ -57,33 +58,16 @@ def _formatar_exemplos(melhores: list[dict]) -> str:
 
 
 def _montar_prompt(padroes: dict, melhores: list[dict]) -> str:
-    """Monta o prompt inline do agente de padrões (sem skill dedicada)."""
-    return (
-        "Você é um diretor de arte editorial analisando os prompts de thumbnail "
-        "MELHOR AVALIADOS de um canal. O objetivo é "
-        "descobrir o que os melhores têm em comum para refinar a skill do "
-        "Capista que os gera.\n\n"
-        f"Total de melhores avaliados: {padroes['total_melhores']} "
-        f"(com linha [VARIATION_TAGS]: {padroes['com_tags']}).\n\n"
-        "=== FREQUÊNCIA DOS EIXOS VISUAIS NOS MELHORES ===\n"
-        f"{_formatar_eixos(padroes['eixos'])}\n\n"
-        "=== PROMPTS DOS MELHORES (na íntegra) ===\n"
-        f"{_formatar_exemplos(melhores)}\n\n"
-        "=== TAREFA ===\n"
-        "Identifique os PADRÕES recorrentes entre os melhores (cenário, elenco, "
-        "luz, paleta, tipografia, composição, roupa, escala do mascote, etc.) e "
-        "proponha um ajuste objetivo para a skill thumbnail-prompt-expert que "
-        "reforce esses padrões sem engessar a variação. Seja concreto e honesto: "
-        "se a amostra for pequena ou ruidosa, diga.\n\n"
-        "Responda SOMENTE com JSON no formato:\n"
-        "{\n"
-        '  "resumo": "1-3 frases sobre o que os melhores têm em comum",\n'
-        '  "padroes": [\n'
-        '    {"eixo": "<eixo>", "padrao": "<o que se repete>", '
-        '"evidencia": "<por que/como aparece>", "forca": "alta|media|baixa"}\n'
-        "  ],\n"
-        '  "proposta_ajuste_skill": "<texto objetivo do ajuste sugerido na skill>"\n'
-        "}"
+    """Monta o prompt do agente de padrões a partir do template do canal (D-348).
+
+    O invólucro (instrução + contrato de saída) mora no banco por canal, editável
+    em /canais; aqui só injetamos os dados computados.
+    """
+    return prompts_utilitarios.resolver_prompt("padroes-thumbnail").format(
+        total_melhores=padroes["total_melhores"],
+        com_tags=padroes["com_tags"],
+        eixos=_formatar_eixos(padroes["eixos"]),
+        exemplos=_formatar_exemplos(melhores),
     )
 
 

@@ -12,7 +12,7 @@ skills editoriais são uma preocupação própria, então ganham seu próprio en
 
 from __future__ import annotations
 
-from app import editorial_scaffolds, editorial_skills
+from app import editorial_scaffolds, editorial_skills, prompts_utilitarios
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -228,3 +228,71 @@ async def resetar_scaffold(scaffold_key: str):
             status_code=404, detail=f"Scaffold desconhecido: {scaffold_key!r}."
         ) from e
     return _para_response_scaffold(scaffold)
+
+
+# --------------------------------------------------------------------------- #
+# Prompts utilitários por canal (D-348)
+# --------------------------------------------------------------------------- #
+# Prompts de IA auxiliares (fora do pipeline de corte) antes hardcoded, agora
+# editáveis por canal. Montados no MESMO router (sub-caminho /prompts-utilitarios)
+# para não exigir registro de um router novo em main.py (travado).
+
+
+class PromptUtilitarioResponse(BaseModel):
+    """Um prompt utilitário do canal para a UI: metadados + valor + default (reset)."""
+
+    key: str
+    etapa: str
+    descricao: str
+    prompt: str
+    prompt_default: str
+    placeholders: list[str]
+    marcador: str
+
+
+class ListaPromptsUtilitariosResponse(BaseModel):
+    prompts: list[PromptUtilitarioResponse]
+
+
+class UpdatePromptUtilitarioRequest(BaseModel):
+    prompt: str
+
+
+def _para_response_prompt(p: prompts_utilitarios.PromptDescrito) -> PromptUtilitarioResponse:
+    return PromptUtilitarioResponse(
+        key=p.key,
+        etapa=p.etapa,
+        descricao=p.descricao,
+        prompt=p.prompt,
+        prompt_default=p.prompt_default,
+        placeholders=p.placeholders,
+        marcador=p.marcador,
+    )
+
+
+@router.get("/prompts-utilitarios", response_model=ListaPromptsUtilitariosResponse)
+async def listar_prompts_utilitarios():
+    return ListaPromptsUtilitariosResponse(
+        prompts=[_para_response_prompt(p) for p in prompts_utilitarios.descrever_prompts()]
+    )
+
+
+@router.put("/prompts-utilitarios/{key}", response_model=PromptUtilitarioResponse)
+async def editar_prompt_utilitario(key: str, body: UpdatePromptUtilitarioRequest):
+    try:
+        prompt = prompts_utilitarios.definir_prompt(key, body.prompt)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=f"Prompt desconhecido: {key!r}.") from e
+    except ValueError as e:
+        # Guardrail do contrato: placeholder/marcador inválido → 422 com a razão.
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return _para_response_prompt(prompt)
+
+
+@router.post("/prompts-utilitarios/{key}/reset", response_model=PromptUtilitarioResponse)
+async def resetar_prompt_utilitario(key: str):
+    try:
+        prompt = prompts_utilitarios.resetar_prompt(key)
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=f"Prompt desconhecido: {key!r}.") from e
+    return _para_response_prompt(prompt)

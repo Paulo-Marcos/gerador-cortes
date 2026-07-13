@@ -1,8 +1,19 @@
 """D-070: serviço de análise de padrões dos melhores prompts de thumbnail."""
 
 import pytest
+from app import prompts_utilitarios
 from app.services import padroes_thumbnail as padroes_module
 from app.services.padroes_thumbnail import PadroesThumbnailService
+
+
+@pytest.fixture(autouse=True)
+def _prompt_do_default(monkeypatch):
+    """D-348: resolve o prompt do default versionado (sem tocar o `instance/` real)."""
+
+    def _fake(key, **_kw):
+        return prompts_utilitarios._default_prompt(prompts_utilitarios._exigir_catalogo(key))
+
+    monkeypatch.setattr(padroes_module.prompts_utilitarios, "resolver_prompt", _fake)
 
 
 def _avaliacao(veredito: str, cenario: str, paleta: str) -> dict:

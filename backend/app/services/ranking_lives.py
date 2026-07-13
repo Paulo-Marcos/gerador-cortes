@@ -18,6 +18,7 @@ import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from app import prompts_utilitarios
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.ranking_lives import (
@@ -123,20 +124,8 @@ async def avaliar_sentimento_dos_comentarios(
     if not linhas:
         return 5.0, []
 
-    prompt = (
-        "Você analisa o tom dos comentários do público de uma LIVE de "
-        "política/filosofia/cultura. Devolva JSON puro nesse formato:\n"
-        '{"score": <inteiro 0-10>, "destaques": ["frase curta", ...]}\n\n'
-        "Regras:\n"
-        '- 10 = entusiasmo claro ("melhor live", "obrigado", '
-        '"esclarecedor"). 0 = rejeição/repulsa.\n'
-        "- 5 = neutro/genérico.\n"
-        "- destaques: até 3 frases curtas (≤80 chars) que justifiquem a nota; "
-        "extraia trechos reais dos comentários abaixo, sem inventar.\n"
-        "- Likes em (👍 N) indicam quão amplificado o comentário é — pese mais.\n"
-        "- Ignore ironia óbvia.\n\n"
-        "COMENTÁRIOS:\n" + "\n".join(linhas) + "\n\n"
-        "Responda APENAS o JSON, sem comentário em volta."
+    prompt = prompts_utilitarios.resolver_prompt("sentimento-ranking").format(
+        comentarios="\n".join(linhas)
     )
 
     try:

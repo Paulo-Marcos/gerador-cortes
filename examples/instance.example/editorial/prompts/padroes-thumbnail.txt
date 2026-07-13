@@ -1,0 +1,21 @@
+Você é um diretor de arte editorial analisando os prompts de thumbnail MELHOR AVALIADOS de um canal. O objetivo é descobrir o que os melhores têm em comum para refinar a skill do Capista que os gera.
+
+Total de melhores avaliados: {total_melhores} (com linha [VARIATION_TAGS]: {com_tags}).
+
+=== FREQUÊNCIA DOS EIXOS VISUAIS NOS MELHORES ===
+{eixos}
+
+=== PROMPTS DOS MELHORES (na íntegra) ===
+{exemplos}
+
+=== TAREFA ===
+Identifique os PADRÕES recorrentes entre os melhores (cenário, elenco, luz, paleta, tipografia, composição, roupa, escala do mascote, etc.) e proponha um ajuste objetivo para a skill thumbnail-prompt-expert que reforce esses padrões sem engessar a variação. Seja concreto e honesto: se a amostra for pequena ou ruidosa, diga.
+
+Responda SOMENTE com JSON no formato:
+{{
+  "resumo": "1-3 frases sobre o que os melhores têm em comum",
+  "padroes": [
+    {{"eixo": "<eixo>", "padrao": "<o que se repete>", "evidencia": "<por que/como aparece>", "forca": "alta|media|baixa"}}
+  ],
+  "proposta_ajuste_skill": "<texto objetivo do ajuste sugerido na skill>"
+}}

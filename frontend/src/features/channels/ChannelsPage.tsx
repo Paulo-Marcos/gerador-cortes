@@ -15,6 +15,7 @@ import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { ChannelThemeSection } from './ChannelThemeSection';
 import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
+import { PromptsUtilitariosSection } from './PromptsUtilitariosSection';
 import {
   useCanais,
   useConectarYoutube,
@@ -165,6 +166,8 @@ export function ChannelsPage() {
         <EditorialSkillsSection />
 
         <EditorialScaffoldsSection />
+
+        <PromptsUtilitariosSection />
 
         <div className="mt-2">
           <h2 className="text-lg font-semibold text-[var(--wb-text)]">Canais</h2>
