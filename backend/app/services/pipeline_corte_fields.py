@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 
 from app.channel_paths import resolver_do_projeto
+from app.domain.segment_calculator import calcular_segmentos, normalizar_desvio
 from app.domain.youtube_layout import normalizar_layout_youtube
 from app.models import Corte
 
@@ -109,14 +110,50 @@ def _layout_youtube_do_corte(
     return normalizar_layout_youtube(raw, fallback_layout)
 
 
+def _desvios_do_corte(corte: Corte | dict | None) -> list[dict]:
+    """Extrai a lista de desvios (trechos removidos) do corte.
+
+    Tolerante ao formato: JSON string (como fica no banco) ou lista já
+    desserializada. Descarta entradas que não sejam dict.
+    """
+    raw = _campo_corte(corte, "desvios")
+    if not raw:
+        return []
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (ValueError, TypeError):
+            return []
+    if isinstance(raw, list):
+        return [normalizar_desvio(d) for d in raw if isinstance(d, dict)]
+    return []
+
+
 def _duracao_layout_corte(corte: Corte | dict | None) -> float:
+    """Duração de referência do corte que ancora a grade e o compose final.
+
+    Prioriza `duracao_clip_seg` — a duração REAL do `clip_raw`, medida por
+    ffprobe no "Gerar Bruto" (já líquida, sem os trechos removidos).
+
+    Quando ausente (corte ainda não gerado ou campo zerado), o fallback usa a
+    duração LÍQUIDA — o span menos os trechos removidos (desvios) —, NÃO o span
+    bruto `fim - inicio` (o campo "DUR" do editor, que inclui os trechos).
+    Ancorar a grade no span bruto inflava a duração: o graded/final rodavam
+    além do conteúdo real e congelavam o último frame até o fim do span (D-362).
+    A líquida é idêntica ao `calcularDuracaoLiquida` do editor e à duração que o
+    `clip_raw` realmente terá.
+    """
     duracao = _numero_corte(_campo_corte(corte, "duracao_clip_seg"), 0.0)
     if duracao > 0:
         return duracao
 
     inicio = _numero_corte(_campo_corte(corte, "inicio_seg"), 0.0)
     fim = _numero_corte(_campo_corte(corte, "fim_seg"), inicio)
-    return max(0.0, fim - inicio)
+    if fim <= inicio:
+        return 0.0
+
+    segmentos = calcular_segmentos(inicio, fim, _desvios_do_corte(corte))
+    return sum(s["end"] - s["start"] for s in segmentos)
 
 
 def _campo_corte(corte: Corte | dict | None, campo: str, default=None):
