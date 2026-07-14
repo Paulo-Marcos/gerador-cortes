@@ -11,6 +11,12 @@ import asyncio
 from app.services.app_logging import operational_error, operational_info
 from app.services.tasks import fire_and_forget
 
+# D-364: o render final em lote roda SEQUENCIAL (1 corte por vez). Cada corte
+# dispara ffmpeg pesado (normalização + filtro + intro/outro); rodar vários em
+# paralelo estoura CPU/RAM da máquina do editor. A fila (`_fila_processamento`)
+# continua mostrando o progresso — só um fica "processando" de cada vez.
+_BULK_PROCESSAR_CONCORRENCIA = 1
+
 
 class _ExportBulkQueueMixin:
     @classmethod
@@ -31,14 +37,31 @@ class _ExportBulkQueueMixin:
 
     @classmethod
     async def bulk_processar_impl(cls, projeto_id: str, corte_ids: list[str], filtro: str):
-        import asyncio
-
         if cls._bulk_processar_sem is None:
-            cls._bulk_processar_sem = asyncio.Semaphore(4)
-
-        sem = cls._bulk_processar_sem
+            cls._bulk_processar_sem = asyncio.Semaphore(_BULK_PROCESSAR_CONCORRENCIA)
 
         cls._fila_processamento[projeto_id] = {cid: "aguardando" for cid in corte_ids}
+
+        fire_and_forget(
+            cls._run_processar_queue(projeto_id, corte_ids, filtro),
+            name=f"processar-todos-{projeto_id[:8]}",
+        )
+
+    @classmethod
+    async def _run_processar_queue(
+        cls,
+        projeto_id: str,
+        corte_ids: list[str],
+        filtro: str,
+        cleanup_delay: float | None = 300,
+    ) -> None:
+        """Processa os cortes da fila respeitando `_bulk_processar_sem`.
+
+        Com o semáforo em 1 (D-364), os cortes rodam UM DE CADA VEZ — só um fica
+        "processando" na fila; os demais esperam. `cleanup_delay=None` preserva a
+        fila (usado em teste); em produção ela é limpa após o delay.
+        """
+        sem = cls._bulk_processar_sem
 
         async def _processar_com_sem(corte_id: str):
             async with sem:
@@ -52,12 +75,11 @@ class _ExportBulkQueueMixin:
                     cls._fila_processamento[projeto_id][corte_id] = "erro"
                     operational_error("ExportService", f"Erro: {corte_id}: {e}")
 
-        async def _run_all_processar():
-            await asyncio.gather(*[_processar_com_sem(cid) for cid in corte_ids])
-            await asyncio.sleep(300)
-            cls._fila_processamento.pop(projeto_id, None)
+        await asyncio.gather(*[_processar_com_sem(cid) for cid in corte_ids])
 
-        fire_and_forget(_run_all_processar(), name=f"processar-todos-{projeto_id[:8]}")
+        if cleanup_delay is not None:
+            await asyncio.sleep(cleanup_delay)
+            cls._fila_processamento.pop(projeto_id, None)
 
     @classmethod
     async def bulk_upload_youtube_impl(

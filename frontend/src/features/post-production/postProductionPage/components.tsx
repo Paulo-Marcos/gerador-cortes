@@ -630,10 +630,21 @@ export function PPSidePanel({
               ))}
             </div>
             {pendingPostCount > 0 && (
-              <Button type="button" className="mt-3 w-full" onClick={onBulkProcess} disabled={busy}>
-                <RefreshCw />
-                Aplicar a {pendingPostCount} pendente(s)
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  className="mt-3 w-full"
+                  onClick={onBulkProcess}
+                  disabled={busy}
+                >
+                  <RefreshCw />
+                  Renderizar {pendingPostCount} pendente(s) em sequência
+                </Button>
+                {/* D-364: o lote roda 1 corte por vez para não sobrecarregar a máquina. */}
+                <p className="mt-1 text-center text-[11px] text-[var(--wb-text-mute)]">
+                  Renderiza um de cada vez — acompanhe a fila abaixo.
+                </p>
+              </>
             )}
           </div>
 
