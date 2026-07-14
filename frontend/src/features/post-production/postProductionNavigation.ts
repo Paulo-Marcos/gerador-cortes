@@ -81,6 +81,26 @@ export function pickPostProductionEntryCut(
   );
 }
 
+export type VideoFontePos = 'final' | 'raw' | 'graded';
+
+/**
+ * Escolhe qual fonte o player da tela Pos deve exibir (D-368).
+ *
+ * Bruto-first: enquanto o `clip_raw` existe (`brutoDisponivel`), mostra o
+ * BRUTO; so cai pro graded quando o bruto some. A retencao so apaga o raw
+ * depois do grade 100% (`clip_graded.mp4` completo, nao os segmentos `.ts`
+ * parciais), entao um grade pela metade nunca troca o player no meio — regra
+ * do usuario "se tem bruto e bruto, se nao tem bruto pode ser o grade".
+ * `final` (upload_ready) vence quando o corte ja foi publicado.
+ */
+export function resolverVideoFonte(params: {
+  videoPronto: boolean;
+  brutoDisponivel: boolean;
+}): VideoFontePos {
+  if (params.videoPronto) return 'final';
+  return params.brutoDisponivel ? 'raw' : 'graded';
+}
+
 export function isCenaRemotion(value: unknown): value is CenaRemotion {
   if (!value || typeof value !== 'object') return false;
   const cena = value as Partial<CenaRemotion>;

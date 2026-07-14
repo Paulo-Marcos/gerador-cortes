@@ -8,6 +8,7 @@ import {
   isCenaRemotion,
   parseCenasPayload,
   progressFromPipelineArtifacts,
+  resolverVideoFonte,
 } from '../postProductionNavigation';
 
 const projetoId = 'projeto-1';
@@ -174,6 +175,22 @@ describe('postProductionNavigation', () => {
     it('retorna array de cenas vazio para payloads invalidos', () => {
       expect(parseCenasPayload(null).cenas).toEqual([]);
       expect(parseCenasPayload('invalid').cenas).toEqual([]);
+    });
+  });
+
+  describe('resolverVideoFonte (D-368: bruto-first)', () => {
+    it('mostra o BRUTO enquanto o clip_raw existe, mesmo com grade em andamento', () => {
+      // grade parcial nao deve trocar o player: brutoDisponivel ainda true
+      expect(resolverVideoFonte({ videoPronto: false, brutoDisponivel: true })).toBe('raw');
+    });
+
+    it('so cai pro graded quando o bruto some (retencao pos-grade-100%)', () => {
+      expect(resolverVideoFonte({ videoPronto: false, brutoDisponivel: false })).toBe('graded');
+    });
+
+    it('final (upload_ready) vence quando o corte ja foi publicado', () => {
+      expect(resolverVideoFonte({ videoPronto: true, brutoDisponivel: true })).toBe('final');
+      expect(resolverVideoFonte({ videoPronto: true, brutoDisponivel: false })).toBe('final');
     });
   });
 

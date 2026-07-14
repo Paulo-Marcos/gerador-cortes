@@ -43,6 +43,7 @@ import {
   resolveRenderCompletionPath,
   parseCenasPayload,
   progressFromPipelineArtifacts,
+  resolverVideoFonte,
 } from './postProductionNavigation';
 
 export function ScenesPostProductionPage() {
@@ -296,20 +297,24 @@ export function ScenesPostProductionPage() {
       (renderFinalRunning ? progressFromPipelineArtifacts(pipelineStatus.data?.fases) : 0),
   );
 
-  // videoSrc com fallback final -> graded -> raw. O retention apaga o
-  // clip_raw assim que o graded fica pronto; sem este fallback o <video>
-  // recebe 404 e o player fica preto entre fases (I-014).
-  // I-030: pipelineStatus reporta `fases.grade` em ~2s; useExportStatus poll
-  // em 8s. Sem `phaseGradeDone` a janela entre retention e o proximo poll do
-  // exportStatus deixa o videoSrc apontando pro raw recem-deletado.
+  // videoSrc bruto-first (D-368): a fonte e escolhida por `resolverVideoFonte`.
+  // Enquanto o clip_raw existe no disco (`fases.raw`), o player mostra o BRUTO;
+  // so cai pro graded quando o bruto some — a retencao so apaga o raw depois do
+  // grade 100%, entao um grade pela metade nunca troca o player no meio.
+  // `!== false` mantem o bruto como padrao enquanto o pipelineStatus nao
+  // carregou, pra nao piscar graded antes do primeiro fetch nem devolver 404
+  // do raw recem-deletado.
   const exportEntry = exportStatusQ.data?.cortes.find((c) => c.corte_id === corte.id);
-  const phaseGradeDone = Boolean(pipelineStatus.data?.fases?.grade);
-  const gradeDisponivel = Boolean(exportEntry?.grade_pronta) || phaseGradeDone;
-  const videoSrc = exportEntry?.video_pronto
-    ? `${finalVideoUrl(projetoId, corte.id)}?v=${videoBust}`
-    : gradeDisponivel
-      ? `${gradedVideoUrl(projetoId, corte.id)}?v=${videoBust}`
-      : rawVideoBustedUrl(corte.id, videoBust);
+  const videoFonte = resolverVideoFonte({
+    videoPronto: Boolean(exportEntry?.video_pronto),
+    brutoDisponivel: pipelineStatus.data?.fases?.raw !== false,
+  });
+  const videoSrc =
+    videoFonte === 'final'
+      ? `${finalVideoUrl(projetoId, corte.id)}?v=${videoBust}`
+      : videoFonte === 'raw'
+        ? rawVideoBustedUrl(corte.id, videoBust)
+        : `${gradedVideoUrl(projetoId, corte.id)}?v=${videoBust}`;
 
   // I-025 (freeze player na render): video estavel — pinnedSrc declarado
   // como hook no topo do componente (antes dos early returns); aqui so
