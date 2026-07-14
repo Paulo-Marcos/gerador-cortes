@@ -26,11 +26,12 @@ from datetime import datetime
 from app import editorial_scaffolds, editorial_skills
 from app.config import settings
 from app.database import AsyncSessionLocal
+from app.domain.ancora_match import ancorar_intervalo
 from app.domain.chunker import fatiar_transcricao
 from app.domain.diarizacao_align import alinhar_falantes, prefixo_falante
 from app.domain.segment_calculator import normalizar_desvio
 from app.domain.snap_desvios import achatar_palavras, snap_desvio_a_palavras
-from app.domain.time_convert import hms_to_seg, seg_to_hms_short
+from app.domain.time_convert import hms_to_seg, seg_to_hms, seg_to_hms_short
 from app.domain.transcricao_utils import dividir_segmentos_longos, limpar_e_ordenar_transcricao
 from app.domain.variacao_prompt import bloco_variacao_de
 from app.editorial_identity import identidade_do_mascote
@@ -532,8 +533,16 @@ class ClaudeIaService:
         palavras_corte = ClaudeIaService._palavras_do_corte(
             transcricao_raw_projeto, corte_inicio_seg, corte_fim_seg
         )
+        # D-355: quando o desvio traz a citação (inicio_texto/fim_texto), ancora a
+        # borda na palavra real (busca janelada ~5s) ANTES do snap — o snap então
+        # só faz o ajuste fino. Sem citação, ancoragem é no-op e o snap age sozinho.
         normalizados_novos = [
-            snap_desvio_a_palavras(normalizar_desvio({**d, "origem": "claude"}), palavras_corte)
+            snap_desvio_a_palavras(
+                ClaudeIaService._ancorar_desvio(
+                    normalizar_desvio({**d, "origem": "claude"}), palavras_corte
+                ),
+                palavras_corte,
+            )
             for d in resultado.get("desvios", [])
         ]
         mesclados, adicionados = ClaudeIaService._mesclar_desvios(
@@ -623,6 +632,46 @@ class ClaudeIaService:
         if not turnos:
             return transcricao_bruta
         return alinhar_falantes(transcricao_bruta, turnos)
+
+    # D-355: janela curta para ancorar a borda de DESVIO — o timestamp do desvio
+    # já é fino (nível de segmento ≤6 palavras), então basta ±5s; o snap (0.8s)
+    # completa o ajuste de borda de palavra depois.
+    _JANELA_ANCORA_DESVIO_SEG = 5.0
+
+    @staticmethod
+    def _ancorar_desvio(desvio: dict, palavras: list[dict]) -> dict:
+        """D-355: ancora as bordas do desvio no tempo real da palavra citada
+        (`inicio_texto`/`fim_texto`), dentro de ±5s do timestamp proposto.
+
+        Sem citação, sem palavras (VTT legado) ou sem match → devolve o desvio
+        inalterado (o `snap` a seguir faz o ajuste fino sozinho, como hoje).
+        Nunca inverte a borda (garantido por `ancorar_intervalo`). Preserva os
+        demais campos via `dict(desvio)`.
+        """
+        inicio_texto = (desvio.get("inicio_texto") or "").strip()
+        fim_texto = (desvio.get("fim_texto") or "").strip()
+        if not palavras or (not inicio_texto and not fim_texto):
+            return desvio
+        ini = _to_seg(desvio.get("inicio_seg") or 0)
+        fim = _to_seg(desvio.get("fim_seg") or 0)
+        novo_ini, novo_fim = ancorar_intervalo(
+            inicio_texto,
+            fim_texto,
+            ini,
+            fim,
+            palavras,
+            janela_seg=ClaudeIaService._JANELA_ANCORA_DESVIO_SEG,
+        )
+        if novo_ini == ini and novo_fim == fim:
+            return desvio
+        ajustado = dict(desvio)
+        ini_r = round(novo_ini, 3)
+        fim_r = round(novo_fim, 3)
+        ajustado["inicio_seg"] = ini_r
+        ajustado["fim_seg"] = fim_r
+        ajustado["inicio_hms"] = seg_to_hms(ini_r)
+        ajustado["fim_hms"] = seg_to_hms(fim_r)
+        return ajustado
 
     @staticmethod
     def _palavras_do_corte(transcricao_raw: list, inicio_seg: float, fim_seg: float) -> list[dict]:

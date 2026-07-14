@@ -8,12 +8,46 @@ from datetime import datetime
 
 from app.config import settings
 from app.database import AsyncSessionLocal
+from app.domain.ancora_match import achatar_palavras, ancorar_intervalo
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.segment_calculator import normalizar_desvio as _normalizar_desvio
-from app.domain.time_convert import hms_to_seg
+from app.domain.time_convert import hms_to_seg, seg_to_hms
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
 from app.services.app_logging import operational_info
 from sqlalchemy import select as sa_select
+
+# D-355: janela (em segundos) para ancorar a borda de CORTE na palavra citada.
+# Ampla porque o timestamp do LLM é "de memória" e erra por dezenas de segundos;
+# a busca janelada ainda evita casar frase repetida em outro ponto da live.
+_JANELA_ANCORA_CORTE_SEG = 60.0
+
+
+def _bordas_ancoradas_do_corte(
+    corte_data: dict, inicio_seg: float, fim_seg: float, palavras: list[dict]
+) -> tuple[float, float]:
+    """D-355: ancora as bordas do corte no tempo real da palavra quando o LLM
+    fornece a citação (`inicio_texto`/`fim_texto`).
+
+    Piloto: se `inicio_texto` faltar, usa a `frase_gancho.texto` como âncora de
+    início (a skill v2 já produz o gancho verbatim). Sem citação, sem palavras
+    (VTT legado) ou sem bom match → devolve o par proposto intacto (não-quebradiço).
+    """
+    inicio_texto = (corte_data.get("inicio_texto") or "").strip()
+    fim_texto = (corte_data.get("fim_texto") or "").strip()
+    if not inicio_texto:
+        gancho = corte_data.get("frase_gancho")
+        if isinstance(gancho, dict):
+            inicio_texto = (gancho.get("texto") or "").strip()
+    if not palavras or (not inicio_texto and not fim_texto):
+        return inicio_seg, fim_seg
+    return ancorar_intervalo(
+        inicio_texto,
+        fim_texto,
+        inicio_seg,
+        fim_seg,
+        palavras,
+        janela_seg=_JANELA_ANCORA_CORTE_SEG,
+    )
 
 
 def _to_seg(val) -> float:
@@ -497,6 +531,21 @@ class AnaliseService:
         return max(inicio_seg, parte_inicio), min(fim_seg, parte_fim)
 
     @staticmethod
+    async def _palavras_word_level(db, projeto_id: str) -> list[dict]:
+        """D-355: lista achatada e ordenada das palavras word-level (D-337) do
+        projeto, fonte da âncora verbatim. Vazia quando o projeto não tem
+        `transcricao_raw` ou ela é legado sem `palavras` (âncora vira no-op)."""
+        projeto = await db.get(Projeto, projeto_id)
+        raw = getattr(projeto, "transcricao_raw", None) if projeto else None
+        if not isinstance(raw, str) or not raw:
+            return []
+        try:
+            transcricao = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return []
+        return achatar_palavras(transcricao if isinstance(transcricao, list) else [])
+
+    @staticmethod
     async def importar_resultado(
         projeto_id: str,
         cortes_data: list,
@@ -533,6 +582,10 @@ class AnaliseService:
 
             from app.domain.time_convert import to_seg
 
+            # D-355: palavras word-level do projeto (fonte da âncora verbatim).
+            # Carregadas UMA vez; vazias em projeto sem timing (VTT) → âncora no-op.
+            palavras_flat = await AnaliseService._palavras_word_level(db, projeto_id)
+
             for i, corte_data in enumerate(cortes_data):
                 desvios_normalizados = [
                     _normalizar_desvio(_com_origem_de_analise(d, origem))
@@ -552,6 +605,17 @@ class AnaliseService:
                 else:
                     fim_seg = to_seg(fim_seg)
 
+                # D-355: ancora as bordas na palavra citada, se houver citação.
+                inicio_ancorado, fim_ancorado = _bordas_ancoradas_do_corte(
+                    corte_data, inicio_seg, fim_seg, palavras_flat
+                )
+                ancorado = inicio_ancorado != inicio_seg or fim_ancorado != fim_seg
+                inicio_seg, fim_seg = inicio_ancorado, fim_ancorado
+                inicio_hms = (
+                    seg_to_hms(inicio_seg) if ancorado else corte_data.get("inicio_hms", "00:00:00")
+                )
+                fim_hms = seg_to_hms(fim_seg) if ancorado else corte_data.get("fim_hms", "00:00:00")
+
                 corte = Corte(
                     id=str(uuid.uuid4()),
                     projeto_id=projeto_id,
@@ -560,8 +624,8 @@ class AnaliseService:
                     resumo=corte_data.get("resumo", ""),
                     tema_central=corte_data.get("tema_central", ""),
                     justificativa=(corte_data.get("justificativa") or "").strip(),
-                    inicio_hms=corte_data.get("inicio_hms", "00:00:00"),
-                    fim_hms=corte_data.get("fim_hms", "00:00:00"),
+                    inicio_hms=inicio_hms,
+                    fim_hms=fim_hms,
                     inicio_seg=inicio_seg,
                     fim_seg=fim_seg,
                     desvios=json.dumps(desvios_normalizados, ensure_ascii=False),
@@ -657,6 +721,9 @@ class AnaliseService:
         if not cortes_data:
             raise ValueError("Claude não retornou cortes para o intervalo informado")
 
+        # D-355: palavras word-level do intervalo já carregado (fonte da âncora).
+        palavras_flat = achatar_palavras(transcricao_completa)
+
         # Salva novos cortes sem remover os existentes
         async with AsyncSessionLocal() as db:
             for i, corte_data in enumerate(cortes_data):
@@ -678,6 +745,17 @@ class AnaliseService:
                 else:
                     fim_seg = _to_seg(fim_seg)
 
+                # D-355: ancora as bordas na palavra citada, se houver citação.
+                inicio_ancorado, fim_ancorado = _bordas_ancoradas_do_corte(
+                    corte_data, inicio_seg, fim_seg, palavras_flat
+                )
+                ancorado = inicio_ancorado != inicio_seg or fim_ancorado != fim_seg
+                inicio_seg, fim_seg = inicio_ancorado, fim_ancorado
+                inicio_hms = (
+                    seg_to_hms(inicio_seg) if ancorado else corte_data.get("inicio_hms", "00:00:00")
+                )
+                fim_hms = seg_to_hms(fim_seg) if ancorado else corte_data.get("fim_hms", "00:00:00")
+
                 corte = Corte(
                     id=str(uuid.uuid4()),
                     projeto_id=projeto_id,
@@ -685,8 +763,8 @@ class AnaliseService:
                     titulo_proposto=corte_data.get("titulo_proposto", ""),
                     resumo=corte_data.get("resumo", ""),
                     tema_central=corte_data.get("tema_central", ""),
-                    inicio_hms=corte_data.get("inicio_hms", "00:00:00"),
-                    fim_hms=corte_data.get("fim_hms", "00:00:00"),
+                    inicio_hms=inicio_hms,
+                    fim_hms=fim_hms,
                     inicio_seg=inicio_seg,
                     fim_seg=fim_seg,
                     desvios=json.dumps(desvios_normalizados, ensure_ascii=False),
