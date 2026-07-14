@@ -98,6 +98,10 @@ export function FinalReviewPage() {
     [corte?.cenas_remotion],
   );
   const videoRef = useRef<HTMLVideoElement>(null);
+  // D-365: playhead da timeline segue o <video> final (igual ao Pos, que
+  // alimenta `currentTime` via onTimeUpdate). Sem isso a timeline ficava
+  // congelada em 0 e parecia "nao funcionar".
+  const [currentTime, setCurrentTime] = useState(0);
 
   // Selecao automatica do corte ao entrar em Final sem corteId: prioriza
   // quem ja tem video pronto, mas mantem o usuario em Final (sem cair em
@@ -443,6 +447,7 @@ export function FinalReviewPage() {
                 onAbrirPasta={() => abrirPasta.mutate(corte.id)}
                 abrindoPasta={abrirPasta.isPending}
                 videoRef={videoRef}
+                onTimeUpdate={setCurrentTime}
               />
             ) : (
               <div className="flex h-full items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-8 text-center text-[var(--wb-text-mute)]">
@@ -480,7 +485,7 @@ export function FinalReviewPage() {
           <div style={{ gridColumn: '1', gridRow: '2', minHeight: 0 }}>
             <SceneTimeline
               cenas={cenas}
-              currentTime={0}
+              currentTime={currentTime}
               duration={timelineDuration}
               layoutYoutube={(corte as unknown as { layout_youtube?: never }).layout_youtube}
               onSeek={(seg) => {
@@ -546,6 +551,7 @@ function FinalPlayerPanel({
   onAbrirPasta,
   abrindoPasta,
   videoRef,
+  onTimeUpdate,
 }: {
   src: string;
   projetoId: string;
@@ -553,6 +559,7 @@ function FinalPlayerPanel({
   onAbrirPasta: () => void;
   abrindoPasta: boolean;
   videoRef: React.RefObject<HTMLVideoElement>;
+  onTimeUpdate: (segundos: number) => void;
 }) {
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
@@ -595,6 +602,7 @@ function FinalPlayerPanel({
           src={src}
           controls
           preload="metadata"
+          onTimeUpdate={(e) => onTimeUpdate(e.currentTarget.currentTime)}
           className="h-full w-full bg-black object-contain"
         />
       </div>
