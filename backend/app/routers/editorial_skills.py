@@ -330,6 +330,7 @@ class UpdateRankingPesosRequest(BaseModel):
     comentarios_por_view: float
     sentimento: float
     recencia: float
+    vph: float
     meia_vida_dias: float
 
 

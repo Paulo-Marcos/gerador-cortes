@@ -44,6 +44,7 @@ export interface RankingPesosPayload {
   comentarios_por_view: number;
   sentimento: number;
   recencia: number;
+  vph: number;
   meia_vida_dias: number;
 }
 

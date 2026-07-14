@@ -206,3 +206,24 @@ def test_pesos_atuais_do_servico_reflete_customizado(tmp_path: Path, monkeypatch
     pesos = ranking_lives._pesos_atuais()
     assert pesos.views == pytest.approx(0.42)
     assert pesos.meia_vida_dias == pytest.approx(45.0)
+
+
+# ─── Guarda anti-regressão (D-356): schema do router cobre todos os critérios ──
+
+
+def test_request_do_router_cobre_todos_os_criterios():
+    """O `UpdateRankingPesosRequest` (PUT) deve declarar TODAS as chaves do domínio.
+
+    Regressão do D-356: o critério `vph` foi adicionado ao domínio/settings mas
+    ficou de fora do schema do request; o Pydantic descartava o campo e o
+    `validar_pesos` reclamava 'Faltam critérios: vph' → 422 ao salvar. Este teste
+    trava a divergência: qualquer critério novo no domínio precisa entrar no request.
+    """
+    from app.routers.editorial_skills import UpdateRankingPesosRequest
+
+    campos = set(UpdateRankingPesosRequest.model_fields)
+    assert campos == set(ranking_settings._TODAS_CHAVES), (
+        "UpdateRankingPesosRequest desalinhado com os critérios do ranking: "
+        f"faltando={set(ranking_settings._TODAS_CHAVES) - campos}, "
+        f"sobrando={campos - set(ranking_settings._TODAS_CHAVES)}"
+    )
