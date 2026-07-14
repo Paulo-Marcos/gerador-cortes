@@ -38,6 +38,7 @@ import {
 } from './regerarBrutoPlan';
 import { ShortcutsHelpModal } from './ShortcutsHelpModal';
 import { useShortcuts, type ShortcutBinding } from './shortcuts';
+import { useEditHistory } from './useEditHistory';
 import { calcularDuracaoLiquida, hmsParaSeg, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
 import { UnifiedSidebar } from './UnifiedSidebar';
@@ -122,8 +123,10 @@ export function EditorPage() {
     selectedDesvioIdxRef.current = selectedDesvioIdx;
   }, [selectedDesvioIdx]);
   const [waveformRefreshKey, setWaveformRefreshKey] = useState(0);
-  const [dirty, setDirty] = useState<Partial<Corte>>({});
-  const dirtyRef = useRef<Partial<Corte>>({});
+  // D-361: histórico das edições locais (dirty) com Ctrl+Z / Ctrl+Y.
+  const editHistory = useEditHistory<Partial<Corte>>({});
+  const dirty = editHistory.present;
+  const { reset: resetEditHistory } = editHistory;
   const waveformWindowRef = useRef<WaveformWindow | null>(null);
   const playerRef = useRef<PlayerHandle>(null);
 
@@ -232,8 +235,7 @@ export function EditorPage() {
   };
 
   useEffect(() => {
-    dirtyRef.current = {};
-    setDirty({});
+    resetEditHistory({});
     setPlaybackRate(1);
     setCurrentTime(0);
     setWaveformRefreshKey(0);
@@ -241,7 +243,7 @@ export function EditorPage() {
     // Reset trecho destravado por default ao trocar de corte (caso o
     // usuario tenha travado e mudado de corte, comeca o proximo destravado).
     setTrechoLocked(false);
-  }, [corteId]);
+  }, [corteId, resetEditHistory]);
 
   // Quando a geração do bruto termina, traz o corte atualizado (clip_path +
   // transcricao_final re-sincronizada com os desvios removidos).
@@ -288,9 +290,7 @@ export function EditorPage() {
   }
 
   function patchDirty(patch: Partial<Corte>) {
-    const next = mergeDirtyPatch(dirtyRef.current, patch);
-    dirtyRef.current = next;
-    setDirty(next);
+    editHistory.set(mergeDirtyPatch(editHistory.getPresent(), patch));
   }
 
   function setInicioAtual() {
@@ -304,14 +304,13 @@ export function EditorPage() {
   }
 
   function salvarMudancas() {
-    const pendingDirty = dirtyRef.current;
+    const pendingDirty = editHistory.getPresent();
     if (!corte || Object.keys(pendingDirty).length === 0) return;
     atualizarCorte.mutate(
       { ...pendingDirty },
       {
         onSuccess: () => {
-          dirtyRef.current = {};
-          setDirty({});
+          editHistory.reset({});
         },
       },
     );
@@ -319,10 +318,15 @@ export function EditorPage() {
 
   function onChangeDesvio(idx: number, novoInicio: string, novoFim: string) {
     if (!corte) return;
-    const next = applyDesvioChange(corte.desvios ?? [], dirtyRef.current, idx, novoInicio, novoFim);
+    const next = applyDesvioChange(
+      corte.desvios ?? [],
+      editHistory.getPresent(),
+      idx,
+      novoInicio,
+      novoFim,
+    );
     if (!next) return;
-    dirtyRef.current = next;
-    setDirty(next);
+    editHistory.set(next);
   }
 
   function onAdicionarDesvio(desvio: Desvio) {
@@ -541,6 +545,22 @@ export function EditorPage() {
         group: 'edicao',
         description: 'Reproducao sem cortes (smart play)',
         action: () => setSmartPlay((v) => !v),
+      },
+      {
+        key: 'z',
+        mod: 'ctrl',
+        group: 'edicao',
+        description: 'Desfazer alteracao (inicio/fim, trecho, intervalo)',
+        action: editHistory.undo,
+        skipInEditable: true,
+      },
+      {
+        key: 'y',
+        mod: 'ctrl',
+        group: 'edicao',
+        description: 'Refazer alteracao',
+        action: editHistory.redo,
+        skipInEditable: true,
       },
       {
         key: 's',
