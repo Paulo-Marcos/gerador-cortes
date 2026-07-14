@@ -31,7 +31,8 @@ import {
   usePipelineStatus,
   useRenderizarRemotion,
 } from '@/hooks/useEditor';
-import { finalVideoUrl, resolveThumbUrl } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { api, finalVideoUrl, resolveThumbUrl } from '@/lib/api';
 import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
 import { CommonTopBar, type MoreMenuItem } from '@/features/editor/CommonTopBar';
 import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
@@ -86,6 +87,12 @@ export function FinalReviewPage() {
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pipelineStatus = usePipelineStatus(corteId, renderFinalLocal);
+  // D-367: filtro/grade exibido no header do player. No fluxo normal de
+  // "Renderizar" o filtro vai `null` e o backend resolve para o global
+  // (AppSettings.filtro_global_padrao), entao o global reflete o que foi
+  // aplicado. Ressalva: se o global mudar depois do render, mostra o novo.
+  const settingsQ = useQuery({ queryKey: ['app-settings'], queryFn: api.obterSettings });
+  const filtrosQ = useQuery({ queryKey: ['export-filtros'], queryFn: () => api.listarFiltros() });
 
   const cortes = useMemo(() => cortesQuery.data ?? [], [cortesQuery.data]);
   const corte = corteQuery.data;
@@ -367,6 +374,11 @@ export function FinalReviewPage() {
   ];
   const exportStatuses = exportStatusQ.data?.cortes ?? [];
 
+  // D-367: resolve o id do filtro global para o nome amigavel (FiltroExport.nome).
+  const filtroGlobalId = settingsQ.data?.filtro_global_padrao;
+  const filtroNome =
+    filtrosQ.data?.filtros.find((f) => f.id === filtroGlobalId)?.nome ?? filtroGlobalId ?? null;
+
   return (
     <>
       <UnifiedSidebar
@@ -448,6 +460,7 @@ export function FinalReviewPage() {
                 abrindoPasta={abrirPasta.isPending}
                 videoRef={videoRef}
                 onTimeUpdate={setCurrentTime}
+                filtroLabel={filtroNome}
               />
             ) : (
               <div className="flex h-full items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-8 text-center text-[var(--wb-text-mute)]">
@@ -553,6 +566,7 @@ function FinalPlayerPanel({
   abrindoPasta,
   videoRef,
   onTimeUpdate,
+  filtroLabel,
 }: {
   src: string;
   projetoId: string;
@@ -561,6 +575,7 @@ function FinalPlayerPanel({
   abrindoPasta: boolean;
   videoRef: React.RefObject<HTMLVideoElement>;
   onTimeUpdate: (segundos: number) => void;
+  filtroLabel: string | null;
 }) {
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
@@ -572,6 +587,15 @@ function FinalPlayerPanel({
         <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
           1920×1080 · 29.97fps · h264
         </span>
+        {/* D-367: filtro/grade aplicado ao render */}
+        {filtroLabel && (
+          <Tooltip label="Filtro/grade aplicado no render" side="bottom">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)]">
+              <Palette size={11} aria-hidden />
+              {filtroLabel}
+            </span>
+          </Tooltip>
+        )}
         <div className="flex-1" />
         <Tooltip label="Baixar MP4" side="bottom">
           <a
