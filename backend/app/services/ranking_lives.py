@@ -129,7 +129,9 @@ async def avaliar_sentimento_dos_comentarios(
 
     try:
         bruto = await claude_cli_client.generate_json(
-            prompt, model=settings.claude_model_ranking_sentimento
+            prompt,
+            model=settings.claude_model_ranking_sentimento,
+            contexto=claude_cli_client.LlmCallContext(etapa="sentimento-ranking"),
         )
     except claude_cli_client.ClaudeCliError as exc:
         logger.warning("[Ranking] Sentimento via Claude falhou (%s) — uso neutro", exc)

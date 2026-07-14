@@ -6,12 +6,14 @@ import { BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PropostaFinalTab } from './PropostaFinalTab';
 import { YoutubeDesempenhoTab } from './YoutubeDesempenhoTab';
+import { LlmCallsTab } from './LlmCallsTab';
 
-type AbaId = 'proposta-final' | 'youtube';
+type AbaId = 'proposta-final' | 'youtube' | 'llm-calls';
 
 const ABAS: { id: AbaId; rotulo: string }[] = [
   { id: 'proposta-final', rotulo: 'Proposta × Final' },
   { id: 'youtube', rotulo: 'Desempenho YouTube' },
+  { id: 'llm-calls', rotulo: 'Chamadas de IA' },
 ];
 
 export function AnalisesPage() {
@@ -56,7 +58,9 @@ export function AnalisesPage() {
       </header>
 
       <main className="flex-1 overflow-auto p-6">
-        {aba === 'proposta-final' ? <PropostaFinalTab /> : <YoutubeDesempenhoTab />}
+        {aba === 'proposta-final' && <PropostaFinalTab />}
+        {aba === 'youtube' && <YoutubeDesempenhoTab />}
+        {aba === 'llm-calls' && <LlmCallsTab />}
       </main>
     </div>
   );

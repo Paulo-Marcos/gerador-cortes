@@ -24,10 +24,26 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
+from dataclasses import dataclass
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class LlmCallContext:
+    """Contexto editorial de uma chamada, para a telemetria (D-353).
+
+    Todos opcionais — `None` é aceitável e gravado como tal. `etapa` costuma ser a
+    skill_key (ex.: "cortador-expert"); `projeto_id`/`corte_id` amarram a chamada
+    ao trabalho que a originou (quando o caller os conhece).
+    """
+
+    etapa: str | None = None
+    projeto_id: str | None = None
+    corte_id: str | None = None
 
 
 class ClaudeCliError(RuntimeError):
@@ -346,6 +362,70 @@ def _try_parse_envelope(stdout: str) -> dict | None:
     return None
 
 
+def _tokens_do_envelope(envelope: dict) -> tuple[int | None, int | None]:
+    """Extrai (tokens_in, tokens_out) do `usage` do envelope — BEST-EFFORT.
+
+    O CLI pode ou não emitir `usage`, e o formato varia (chaves estilo Anthropic
+    `input_tokens`/`output_tokens` ou estilo OpenAI `prompt_tokens`/
+    `completion_tokens`). Qualquer ausência/formato inesperado → `None` (a
+    telemetria grava o que houver, sem falhar).
+    """
+    usage = envelope.get("usage")
+    if not isinstance(usage, dict):
+        return None, None
+
+    def _int(*chaves: str) -> int | None:
+        for chave in chaves:
+            valor = usage.get(chave)
+            if isinstance(valor, (int, float)):
+                return int(valor)
+        return None
+
+    return _int("input_tokens", "prompt_tokens"), _int("output_tokens", "completion_tokens")
+
+
+def _registrar_telemetria(
+    *,
+    prompt: str,
+    resposta: str,
+    model: str,
+    skill: str | None,
+    contexto: LlmCallContext | None,
+    envelope: dict | None,
+    latencia_ms: float,
+    sucesso: bool,
+    erro_tipo: str | None,
+) -> None:
+    """Grava a telemetria da chamada — NÃO-FATAL (D-353).
+
+    Qualquer exceção aqui (banco travado, disco cheio, etc.) é engolida com um
+    `logger.warning`: telemetria NUNCA pode quebrar uma geração de produção. A
+    `etapa` cai na `skill` quando o contexto não a informou.
+    """
+    try:
+        from app.services import llm_calls_store
+
+        tokens_in, tokens_out = _tokens_do_envelope(envelope) if envelope else (None, None)
+        etapa = (contexto.etapa if contexto else None) or skill
+        llm_calls_store.gravar_llm_call(
+            etapa=etapa,
+            model=model,
+            projeto_id=contexto.projeto_id if contexto else None,
+            corte_id=contexto.corte_id if contexto else None,
+            prompt=prompt,
+            resposta=resposta,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            custo_usd=(envelope.get("total_cost_usd") if envelope else None),
+            duracao_ms_servidor=(envelope.get("duration_ms") if envelope else None),
+            latencia_ms_wall=latencia_ms,
+            sucesso=sucesso,
+            erro_tipo=erro_tipo,
+        )
+    except Exception as exc:  # noqa: BLE001 — telemetria é best-effort, nunca fatal
+        logger.warning("[ClaudeCLI] falha ao gravar telemetria da chamada: %s", exc)
+
+
 async def generate_text(
     prompt: str,
     *,
@@ -355,6 +435,7 @@ async def generate_text(
     max_turns: int = 1,
     timeout: float | None = None,
     thinking_tokens: int | None = None,
+    contexto: LlmCallContext | None = None,
 ) -> str:
     """Gera texto livre. Retorna o conteúdo bruto do modelo (campo `result`).
 
@@ -370,6 +451,9 @@ async def generate_text(
 
     thinking_tokens: liga o extended thinking (MAX_THINKING_TOKENS) só nesta
     chamada. Default None = herda o global (`claude_cli_max_thinking_tokens`).
+
+    contexto: metadados editoriais (etapa/projeto/corte) só para a TELEMETRIA
+    (D-353). Não altera a geração; a gravação é não-fatal.
     """
     if expertise:
         # Expertise resolvida pelo caller (banco) → injeta no prompt, sem skill_mode.
@@ -378,15 +462,44 @@ async def generate_text(
     else:
         entrada = f"/{skill}\n\n{prompt}" if skill else prompt
         skill_mode = skill is not None
-    envelope = await _run(
-        entrada,
+    # Latência de parede: cobre subprocess + retries + fila do semáforo (o que o
+    # operador realmente esperou), complementando o `duration_ms` do envelope.
+    inicio = time.perf_counter()
+    try:
+        envelope = await _run(
+            entrada,
+            model=model,
+            max_turns=max_turns,
+            timeout=timeout if timeout is not None else settings.claude_cli_timeout,
+            skill_mode=skill_mode,
+            thinking_tokens=thinking_tokens,
+        )
+    except ClaudeCliError as exc:
+        _registrar_telemetria(
+            prompt=entrada,
+            resposta="",
+            model=model,
+            skill=skill,
+            contexto=contexto,
+            envelope=None,
+            latencia_ms=(time.perf_counter() - inicio) * 1000.0,
+            sucesso=False,
+            erro_tipo=type(exc).__name__,
+        )
+        raise
+    resultado = str(envelope.get("result", "")).strip()
+    _registrar_telemetria(
+        prompt=entrada,
+        resposta=resultado,
         model=model,
-        max_turns=max_turns,
-        timeout=timeout if timeout is not None else settings.claude_cli_timeout,
-        skill_mode=skill_mode,
-        thinking_tokens=thinking_tokens,
+        skill=skill,
+        contexto=contexto,
+        envelope=envelope,
+        latencia_ms=(time.perf_counter() - inicio) * 1000.0,
+        sucesso=True,
+        erro_tipo=None,
     )
-    return str(envelope.get("result", "")).strip()
+    return resultado
 
 
 async def generate_json(
@@ -398,6 +511,7 @@ async def generate_json(
     max_turns: int = 1,
     timeout: float | None = None,
     thinking_tokens: int | None = None,
+    contexto: LlmCallContext | None = None,
 ) -> dict:
     """Gera JSON. Instrua o formato no prompt; extrai mesmo com markdown fences.
 
@@ -412,6 +526,7 @@ async def generate_json(
         max_turns=max_turns,
         timeout=timeout,
         thinking_tokens=thinking_tokens,
+        contexto=contexto,
     )
     return _extract_json(texto)
 

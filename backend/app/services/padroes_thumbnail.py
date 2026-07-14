@@ -104,7 +104,9 @@ class PadroesThumbnailService:
 
         try:
             analise = await claude_cli_client.generate_json(
-                prompt, model=settings.claude_model_metadados
+                prompt,
+                model=settings.claude_model_metadados,
+                contexto=claude_cli_client.LlmCallContext(etapa="padroes-thumbnail"),
             )
         except (ValueError, json.JSONDecodeError):
             logger.exception("Falha ao analisar padrões de thumbnail via Claude")

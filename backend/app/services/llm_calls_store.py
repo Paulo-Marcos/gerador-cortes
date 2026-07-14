@@ -1,0 +1,186 @@
+"""Telemetria das chamadas de IA (D-353) — armazenamento append-only próprio.
+
+Grava cada chamada do Claude CLI (prompt, resposta, modelo, tokens, custo,
+latência, etapa/skill, projeto/corte, sucesso/erro) para que nada se perca e a
+Área de Análises possa auditar o que a IA realmente recebeu e devolveu.
+
+DECISÃO DE TOPOLOGIA (D-353): banco PRÓPRIO e separado (`instance/llm_calls.db`),
+distinto do `settings.db` (configuração) e do `projetos.db` (dados/mídias). Isso
+mantém a telemetria PURAMENTE ADITIVA — nunca toca nem migra nada dos bancos de
+produção — e evita disputar o lock do banco pesado (`database.py`). O módulo é SQL
+cru síncrono no mesmo padrão de `settings_store` (`_connect`, WAL, `busy_timeout`,
+`CREATE TABLE IF NOT EXISTS` a cada abertura → banco novo nasce com o schema).
+
+SEM FK: `projeto_id`/`corte_id` são apenas strings soltas — as entidades vivem em
+OUTRO banco (`projetos.db`) e a telemetria não deve acoplar-se ao ciclo de vida
+delas (um corte apagado não apaga seu histórico de chamadas).
+
+Camada `services/`: I/O puro de SQLite. As funções aceitam `db_path` explícito
+(default resolvido por `channel_paths.instance_root()`), o que dá isolamento
+trivial por teste (cada `tmp_path` tem seu banco).
+"""
+
+from __future__ import annotations
+
+import sqlite3
+import uuid
+from datetime import UTC, datetime
+from pathlib import Path
+
+from app import channel_paths
+
+# Ordem canônica das colunas (também a ordem de leitura em `listar_llm_calls`).
+_COLUNAS = (
+    "id",
+    "ts",
+    "etapa",
+    "model",
+    "projeto_id",
+    "corte_id",
+    "prompt",
+    "resposta",
+    "tokens_in",
+    "tokens_out",
+    "custo_usd",
+    "duracao_ms_servidor",
+    "latencia_ms_wall",
+    "sucesso",
+    "erro_tipo",
+)
+
+_DDL = """
+CREATE TABLE IF NOT EXISTS llm_calls (
+    id TEXT PRIMARY KEY,
+    ts TEXT NOT NULL,
+    etapa TEXT,
+    model TEXT,
+    projeto_id TEXT,
+    corte_id TEXT,
+    prompt TEXT,
+    resposta TEXT,
+    tokens_in INTEGER,
+    tokens_out INTEGER,
+    custo_usd REAL,
+    duracao_ms_servidor REAL,
+    latencia_ms_wall REAL,
+    sucesso INTEGER NOT NULL DEFAULT 1,
+    erro_tipo TEXT
+)
+"""
+
+
+def _default_db_path() -> Path:
+    """Banco de telemetria de IA (`instance/llm_calls.db`).
+
+    Global à instância (como o `settings.db`), fora da pasta de qualquer canal e
+    à parte do `projetos.db` — telemetria nunca toca o banco pesado de dados.
+    """
+    return channel_paths.instance_root() / "llm_calls.db"
+
+
+def _connect(db_path: Path) -> sqlite3.Connection:
+    """Abre o banco de telemetria garantindo o schema (idempotente) e WAL.
+
+    Cria arquivo/diretório se preciso e roda o DDL `IF NOT EXISTS` a cada abertura,
+    para que um banco novo (primeiro boot, split PROD/DEV) já nasça com a tabela.
+    """
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
+    conn.execute(_DDL)
+    conn.commit()
+    return conn
+
+
+def inicializar(db_path: Path | None = None) -> None:
+    """Garante o arquivo do banco e a tabela de telemetria. No-op se já existem."""
+    _connect(db_path if db_path is not None else _default_db_path()).close()
+
+
+def gravar_llm_call(
+    *,
+    db_path: Path | None = None,
+    etapa: str | None = None,
+    model: str | None = None,
+    projeto_id: str | None = None,
+    corte_id: str | None = None,
+    prompt: str | None = None,
+    resposta: str | None = None,
+    tokens_in: int | None = None,
+    tokens_out: int | None = None,
+    custo_usd: float | None = None,
+    duracao_ms_servidor: float | None = None,
+    latencia_ms_wall: float | None = None,
+    sucesso: bool = True,
+    erro_tipo: str | None = None,
+) -> str:
+    """Registra (INSERT) uma chamada de IA e devolve o `id` gerado.
+
+    `id` é um uuid4 e `ts` é o instante atual (ISO-8601 UTC) — ambos carimbados
+    aqui para o store ser a fonte única desses valores. A tabela é criada na hora
+    se ainda não existir (`_connect`).
+    """
+    registro = {
+        "id": str(uuid.uuid4()),
+        "ts": datetime.now(UTC).isoformat(),
+        "etapa": etapa,
+        "model": model,
+        "projeto_id": projeto_id,
+        "corte_id": corte_id,
+        "prompt": prompt,
+        "resposta": resposta,
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "custo_usd": custo_usd,
+        "duracao_ms_servidor": duracao_ms_servidor,
+        "latencia_ms_wall": latencia_ms_wall,
+        "sucesso": 1 if sucesso else 0,
+        "erro_tipo": erro_tipo,
+    }
+    placeholders = ", ".join("?" for _ in _COLUNAS)
+    parametros = tuple(registro[c] for c in _COLUNAS)
+    conn = _connect(db_path if db_path is not None else _default_db_path())
+    try:
+        conn.execute(
+            f"INSERT INTO llm_calls ({', '.join(_COLUNAS)}) VALUES ({placeholders})",
+            parametros,
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return registro["id"]
+
+
+def listar_llm_calls(
+    *,
+    db_path: Path | None = None,
+    projeto_id: str | None = None,
+    corte_id: str | None = None,
+    etapa: str | None = None,
+    limite: int = 100,
+) -> list[dict]:
+    """Lista as chamadas registradas, da mais recente para a mais antiga.
+
+    Filtros opcionais (`projeto_id`/`corte_id`/`etapa`) combinam por AND; ausentes
+    não restringem. `limite` corta o resultado (o mais recente primeiro).
+    """
+    filtros: list[str] = []
+    valores: list = []
+    for coluna, valor in (("projeto_id", projeto_id), ("corte_id", corte_id), ("etapa", etapa)):
+        if valor is not None:
+            filtros.append(f"{coluna} = ?")
+            valores.append(valor)
+    where = f"WHERE {' AND '.join(filtros)}" if filtros else ""
+    valores.append(max(0, int(limite)))
+
+    conn = _connect(db_path if db_path is not None else _default_db_path())
+    try:
+        linhas = conn.execute(
+            f"SELECT * FROM llm_calls {where} ORDER BY ts DESC LIMIT ?",
+            tuple(valores),
+        ).fetchall()
+    finally:
+        conn.close()
+    return [{coluna: row[coluna] for coluna in _COLUNAS} for row in linhas]

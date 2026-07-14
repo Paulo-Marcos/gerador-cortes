@@ -104,11 +104,20 @@ _SKILL_METADADOS = "metadados-expert"
 _SKILL_THUMBNAIL = "thumbnail-prompt-expert"
 
 
-def _args_claude(skill: editorial_skills.SkillResolvida, skill_key: str) -> dict:
+def _args_claude(
+    skill: editorial_skills.SkillResolvida,
+    skill_key: str,
+    *,
+    projeto_id: str | None = None,
+    corte_id: str | None = None,
+) -> dict:
     """kwargs comuns do `claude_cli_client` a partir da skill resolvida (E-021).
 
     `expertise` (corpo do banco) é a fonte da verdade; `skill` fica como FALLBACK
     nativo (`/<skill>`) caso o corpo venha vazio — preservando a semântica anterior.
+
+    D-353: injeta o `contexto` (etapa=skill_key + projeto/corte) para a telemetria
+    de chamadas de IA. `None` é aceitável — grava o que houver.
     """
     return {
         "model": skill.modelo,
@@ -116,6 +125,9 @@ def _args_claude(skill: editorial_skills.SkillResolvida, skill_key: str) -> dict
         "expertise": skill.corpo,
         "timeout": skill.timeout,
         "thinking_tokens": skill.thinking_tokens,
+        "contexto": claude_cli_client.LlmCallContext(
+            etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id
+        ),
     }
 
 
@@ -176,6 +188,7 @@ class ClaudeIaService:
 
             transcricao = _carregar_transcricao_raw(projeto.transcricao_raw, projeto_id)
             meta = {
+                "projeto_id": projeto_id,  # D-353: contexto p/ telemetria da geração
                 "titulo_live": projeto.titulo_live or "",
                 "youtube_url": projeto.youtube_url or "",
                 "duracao_segundos": projeto.duracao_segundos or 0,
@@ -309,7 +322,7 @@ class ClaudeIaService:
             )
             _log_skill_usada(_SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
             resultado = await claude_cli_client.generate_json(
-                prompt, **_args_claude(skill, _SKILL_CORTES)
+                prompt, **_args_claude(skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id"))
             )
             return {
                 "cortes": resultado.get("cortes", []),
@@ -360,7 +373,7 @@ class ClaudeIaService:
                 variacao=variacao,
             )
             resultado = await claude_cli_client.generate_json(
-                prompt, **_args_claude(skill, _SKILL_CORTES)
+                prompt, **_args_claude(skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id"))
             )
             for corte in resultado.get("cortes", []):
                 chave = ClaudeIaService._bucket_30s(corte.get("inicio_seg"))
@@ -476,6 +489,8 @@ class ClaudeIaService:
                 raise ValueError("Corte sem transcrição bruta. Rode 'refazer transcrição' antes.")
             transcricao_bruta = json.loads(corte.transcricao_corte)
             meta = {
+                "corte_id": corte_id,  # D-353: contexto p/ telemetria da geração
+                "projeto_id": corte.projeto_id,
                 "titulo": corte.titulo_proposto or "",
                 "tema_central": corte.tema_central or "",
                 "inicio_hms": corte.inicio_hms or "",
@@ -663,7 +678,13 @@ class ClaudeIaService:
             )
             t = time.perf_counter()
             resultado = await claude_cli_client.generate_json(
-                prompt, **_args_claude(skill, _SKILL_TRECHOS)
+                prompt,
+                **_args_claude(
+                    skill,
+                    _SKILL_TRECHOS,
+                    projeto_id=meta.get("projeto_id"),
+                    corte_id=meta.get("corte_id"),
+                ),
             )
             # WHY: a skill trechos-expert pede `desvios`; o prompt rico pode também
             # devolver `trechos` (chave do fluxo manual). Aceitamos ambos.
@@ -775,7 +796,7 @@ class ClaudeIaService:
             prompt = f"{variacao}\n\n{parte['texto']}"
             t = time.perf_counter()
             resultado = await claude_cli_client.generate_json(
-                prompt, **_args_claude(skill, _SKILL_CENAS)
+                prompt, **_args_claude(skill, _SKILL_CENAS, corte_id=corte_id)
             )
             novas = resultado.get("cenas", [])
             cenas.extend(novas)
@@ -832,7 +853,7 @@ class ClaudeIaService:
         )
         _log_skill_usada(_SKILL_METADADOS, skill, scaffold_meta)
         resultado = await claude_cli_client.generate_json(
-            prompt, **_args_claude(skill, _SKILL_METADADOS)
+            prompt, **_args_claude(skill, _SKILL_METADADOS, corte_id=corte_id)
         )
         await MetadadosService.importar_resultado_meta(corte_id, resultado)
         logger.info("[ClaudeIA] Metadados gerados via Claude p/ corte %s", corte_id[:8])
@@ -855,6 +876,7 @@ class ClaudeIaService:
             if not projeto or not projeto.transcricao_raw:
                 raise ValueError("Projeto não possui transcrição base para análise.")
             transcricao_dados = _carregar_transcricao_raw(projeto.transcricao_raw, corte.projeto_id)
+            projeto_id = corte.projeto_id
             inicio_seg = float(corte.inicio_seg)
             fim_seg = float(corte.fim_seg)
             titulo = corte.titulo_proposto or ""
@@ -893,7 +915,13 @@ class ClaudeIaService:
             transcricao=transcricao_filtrada,
         )
         _log_skill_usada(_SKILL_METADADOS, skill, scaffold_resumo)
-        resultado = await claude_cli_client.generate_json(prompt, model=skill.modelo)
+        resultado = await claude_cli_client.generate_json(
+            prompt,
+            model=skill.modelo,
+            contexto=claude_cli_client.LlmCallContext(
+                etapa="resumo", projeto_id=projeto_id, corte_id=corte_id
+            ),
+        )
         novo_resumo = resultado.get("resumo")
         if not novo_resumo:
             raise ValueError("Claude não retornou a key 'resumo'.")
@@ -957,7 +985,7 @@ class ClaudeIaService:
             _SKILL_THUMBNAIL, skill, editorial_scaffolds.resolver_scaffold("thumbnail")
         )
         texto = await claude_cli_client.generate_text(
-            prompt, **_args_claude(skill, _SKILL_THUMBNAIL)
+            prompt, **_args_claude(skill, _SKILL_THUMBNAIL, corte_id=corte_id)
         )
         prompt_thumbnail = _strip_code_fences(texto)
         if not prompt_thumbnail:

@@ -9,8 +9,10 @@ import logging
 
 from app.database import get_db
 from app.models import Corte, Projeto
+from app.services import llm_calls_store
 from app.services.claude_ia import ClaudeIaService
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -125,3 +127,57 @@ async def gerar_prompt_thumbnail_via_claude(corte_id: str, db: AsyncSession = De
     except Exception as exc:  # noqa: BLE001
         logger.exception("Erro ao gerar prompt de thumbnail via Claude")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+# --------------------------------------------------------------------------- #
+# Telemetria das chamadas de IA (D-353)
+# --------------------------------------------------------------------------- #
+# Montada NESTE router (`/api/claude`, provider Claude) para não exigir registro
+# de um router novo em main.py (travado) — e é o lugar semântico: telemetria das
+# chamadas do Claude vive ao lado das rotas que as disparam. Somente leitura; a
+# gravação acontece de forma não-fatal dentro do próprio client (claude_cli_client).
+
+
+class LlmCallResponse(BaseModel):
+    """Uma chamada de IA registrada, para a Área de Análises."""
+
+    id: str
+    ts: str
+    etapa: str | None = None
+    model: str | None = None
+    projeto_id: str | None = None
+    corte_id: str | None = None
+    prompt: str | None = None
+    resposta: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    custo_usd: float | None = None
+    duracao_ms_servidor: float | None = None
+    latencia_ms_wall: float | None = None
+    sucesso: bool
+    erro_tipo: str | None = None
+
+
+class ListaLlmCallsResponse(BaseModel):
+    chamadas: list[LlmCallResponse]
+
+
+@router.get("/telemetria/llm-calls", response_model=ListaLlmCallsResponse)
+async def listar_llm_calls(
+    projeto_id: str | None = None,
+    corte_id: str | None = None,
+    etapa: str | None = None,
+    limite: int = 100,
+):
+    """Lista as chamadas de IA registradas (mais recentes primeiro), com filtros
+    opcionais por projeto/corte/etapa. Alimenta a aba "Chamadas de IA" em Análises.
+    """
+    registros = llm_calls_store.listar_llm_calls(
+        projeto_id=projeto_id,
+        corte_id=corte_id,
+        etapa=etapa,
+        limite=max(1, min(limite, 500)),
+    )
+    return ListaLlmCallsResponse(
+        chamadas=[LlmCallResponse(**{**r, "sucesso": bool(r["sucesso"])}) for r in registros]
+    )
