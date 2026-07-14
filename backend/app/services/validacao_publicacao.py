@@ -5,8 +5,11 @@ vídeo final presente, duração final batendo com a líquida (trechos de fato
 aplicados — o mesmo mismatch do D-362), cenas do roteiro visual, título,
 descrição, tags e thumbnail.
 
-Política (D-363): QUALQUER item faltando bloqueia o upload — o operador
-corrige e confirma antes de subir. Todas as checagens são bloqueantes.
+Política (D-363/D-369): itens essenciais faltando BLOQUEIAM o upload (vídeo
+final, título, descrição, tags, thumbnail). Cenas (opcionais) e duração são
+AVISOS — aparecem no relatório mas não travam. A duração não bloqueia porque o
+vídeo de upload inclui abertura/encerramento, então não bate com a líquida do
+corte (comparar-e-bloquear dava falso-positivo).
 
 O serviço é assíncrono só por causa do `ffprobe` (duração do vídeo final);
 a montagem do relatório em si é determinística e a lógica de cada checagem
@@ -15,20 +18,16 @@ vive em helpers puros (fáceis de testar sem I/O).
 
 from __future__ import annotations
 
-import asyncio
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.infrastructure.ffmpeg_runner import probe_duracao
 from app.models import Corte, MetadadoCorte
 from app.services.pipeline_corte_fields import _duracao_layout_corte
 from sqlalchemy import select
-
-# Acima desta diferença entre a duração do vídeo final e a líquida esperada,
-# consideramos que os trechos não foram aplicados (ou sobrou freeze — D-362).
-TOLERANCIA_DURACAO_SEG = 2.0
 
 # Extensões de thumbnail aceitas em upload_ready/ (mesma ordem do upload real).
 _THUMB_NAMES = ("thumbnail.jpg", "thumbnail.png", "thumbnail.webp")
@@ -36,15 +35,27 @@ _THUMB_NAMES = ("thumbnail.jpg", "thumbnail.png", "thumbnail.webp")
 
 @dataclass
 class Checagem:
-    """Resultado de uma checagem individual da validação pré-publicação."""
+    """Resultado de uma checagem individual da validação pré-publicação.
+
+    `bloqueante=True` (padrão): a falha impede o upload. `bloqueante=False`:
+    é apenas um AVISO — aparece no relatório mas não trava a publicação (ex.:
+    cenas são opcionais; nem todo corte usa o roteiro visual — D-369).
+    """
 
     id: str
     label: str
     ok: bool
     detalhe: str = ""
+    bloqueante: bool = True
 
     def to_dict(self) -> dict:
-        return {"id": self.id, "label": self.label, "ok": self.ok, "detalhe": self.detalhe}
+        return {
+            "id": self.id,
+            "label": self.label,
+            "ok": self.ok,
+            "detalhe": self.detalhe,
+            "bloqueante": self.bloqueante,
+        }
 
 
 @dataclass
@@ -53,8 +64,8 @@ class RelatorioValidacao:
 
     @property
     def bloqueado(self) -> bool:
-        """True se qualquer checagem falhou (todas são bloqueantes — D-363)."""
-        return any(not c.ok for c in self.checagens)
+        """True só quando uma checagem BLOQUEANTE falha (avisos não travam)."""
+        return any(not c.ok and c.bloqueante for c in self.checagens)
 
     @property
     def ok(self) -> bool:
@@ -65,7 +76,10 @@ class RelatorioValidacao:
             "ok": self.ok,
             "bloqueado": self.bloqueado,
             "checagens": [c.to_dict() for c in self.checagens],
-            "pendencias": [c.label for c in self.checagens if not c.ok],
+            # Pendências = só o que BLOQUEIA (o que o operador precisa corrigir).
+            "pendencias": [c.label for c in self.checagens if not c.ok and c.bloqueante],
+            # Avisos = falhas não-bloqueantes (informativas).
+            "avisos": [c.label for c in self.checagens if not c.ok and not c.bloqueante],
         }
 
 
@@ -83,13 +97,16 @@ def _parse_lista_json(raw: str | list | None) -> list:
 
 
 def _checar_cenas(cenas_raw: str | list | None) -> Checagem:
+    # AVISO (não bloqueia): cenas são opcionais — nem todo corte usa o roteiro
+    # visual (D-369). Mostramos no relatório, mas não travamos a publicação.
     cenas = _parse_lista_json(cenas_raw)
     n = len(cenas)
     return Checagem(
         "cenas",
         "Cenas adicionadas",
         ok=n > 0,
-        detalhe=f"{n} cena(s)" if n else "nenhuma cena no roteiro visual",
+        detalhe=f"{n} cena(s)" if n else "nenhuma cena (opcional)",
+        bloqueante=False,
     )
 
 
@@ -112,26 +129,29 @@ def _checar_tags(tags_raw: str | list | None) -> Checagem:
 
 
 def _checar_duracao(duracao_final: float | None, duracao_esperada: float) -> Checagem:
-    """Compara a duração medida do vídeo final com a líquida esperada.
+    """Informa a duração do vídeo final (AVISO — nunca bloqueia).
 
-    É a checagem que pega o D-362: se os trechos não foram aplicados (ou
-    sobrou freeze no fim), o vídeo final fica mais longo que a líquida.
+    O vídeo de upload inclui abertura/encerramento concatenados
+    (`_adicionar_intro_outro`), então NÃO bate com a duração líquida do corte —
+    comparar-e-bloquear daria falso-positivo (D-369). Fica como aviso para o
+    operador conferir o tamanho de olho; um freeze do tipo D-362 apareceria aqui
+    como uma duração muito acima do esperado.
     """
     if duracao_final is None:
         return Checagem(
             "duracao",
             "Duração final",
-            ok=False,
-            detalhe="não foi possível medir a duração do vídeo final",
+            ok=True,
+            detalhe="não verificada (ffprobe indisponível)",
+            bloqueante=False,
         )
-    diff = abs(duracao_final - duracao_esperada)
-    ok = diff <= TOLERANCIA_DURACAO_SEG
-    detalhe = (
-        f"final={duracao_final:.1f}s vs esperado={duracao_esperada:.1f}s (Δ={diff:.1f}s)"
-        if not ok
-        else f"{duracao_final:.1f}s"
+    return Checagem(
+        "duracao",
+        "Duração final",
+        ok=True,
+        detalhe=f"{duracao_final:.1f}s (corte ~{duracao_esperada:.0f}s + abertura/encerramento)",
+        bloqueante=False,
     )
-    return Checagem("duracao", "Duração final (trechos aplicados)", ok=ok, detalhe=detalhe)
 
 
 class ValidacaoPublicacaoService:
@@ -179,7 +199,7 @@ class ValidacaoPublicacaoService:
             )
         )
 
-        duracao_final = await cls._probe_duracao(video_path) if video_existe else None
+        duracao_final = await probe_duracao(video_path) if video_existe else None
         checagens.append(_checar_duracao(duracao_final, duracao_esperada))
 
         checagens.append(_checar_cenas(cenas_raw))
@@ -209,24 +229,3 @@ class ValidacaoPublicacaoService:
                 return Checagem("thumbnail", "Thumbnail", ok=True, detalhe=db_thumb.name)
 
         return Checagem("thumbnail", "Thumbnail", ok=False, detalhe="thumbnail ausente")
-
-    @staticmethod
-    async def _probe_duracao(file_path: Path) -> float | None:
-        """Duração em segundos via ffprobe, ou None se falhar."""
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                "ffprobe",
-                "-v",
-                "error",
-                "-show_entries",
-                "format=duration",
-                "-of",
-                "default=noprint_wrappers=1:nokey=1",
-                str(file_path),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, _ = await proc.communicate()
-            return float(stdout.decode().strip())
-        except Exception:
-            return None

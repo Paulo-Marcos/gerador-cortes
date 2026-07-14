@@ -261,3 +261,47 @@ async def probe_codecs(path: Path) -> tuple[str, str]:
         _probe_stream("a:0"),
     )
     return v_codec, a_codec
+
+
+def _parse_duracao(raw: str) -> float | None:
+    try:
+        return float(raw.strip())
+    except (ValueError, AttributeError):
+        return None
+
+
+async def probe_duracao(path: Path) -> float | None:
+    """Duração (segundos) de um arquivo de mídia via ffprobe, ou None se falhar.
+
+    Robusto ao event loop do backend no Windows: `create_subprocess_exec` levanta
+    `NotImplementedError` quando o loop é o Selector (uvicorn) — nesse caso cai no
+    ffprobe SÍNCRONO em thread (mesmo padrão de `probe_codecs`). Sem o fallback, o
+    probe async falhava silenciosamente e retornava None (D-369).
+    """
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        str(path),
+    ]
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    except NotImplementedError:
+        _, out, _ = await asyncio.to_thread(_run_ffmpeg_sync, cmd, "ffprobe-duracao")
+        return _parse_duracao(out)
+    except Exception:
+        return None
+
+    try:
+        out, _ = await proc.communicate()
+    except Exception:
+        return None
+    return _parse_duracao(out.decode())

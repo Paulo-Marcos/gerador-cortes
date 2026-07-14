@@ -37,12 +37,20 @@ const DEFAULT_FILTER = 'bypass_dourado_aberto';
 const VARIANTES_CINE_III = ['cinematic_iii', 'bypass_dourado_aberto'];
 
 // D-363: relatório de validação pré-publicação devolvido pelo backend.
-type ValidacaoCheck = { id: string; label: string; ok: boolean; detalhe: string };
+// `bloqueante=false` (D-369) → falha é só aviso, não trava o upload.
+type ValidacaoCheck = {
+  id: string;
+  label: string;
+  ok: boolean;
+  detalhe: string;
+  bloqueante: boolean;
+};
 type ValidacaoPublicacao = {
   ok: boolean;
   bloqueado: boolean;
   checagens: ValidacaoCheck[];
   pendencias: string[];
+  avisos?: string[];
 };
 
 export function PostProductionPage() {
@@ -531,17 +539,31 @@ export function PostProductionPage() {
               </p>
             )}
             <ul className="space-y-1.5">
-              {validacaoPublicacao.checagens.map((c) => (
-                <li key={c.id} className="flex items-start gap-2 text-sm">
-                  <span aria-hidden className={c.ok ? 'text-success' : 'text-error'}>
-                    {c.ok ? '✓' : '✗'}
-                  </span>
-                  <span className="text-text-100">
-                    {c.label}
-                    {c.detalhe ? <span className="text-text-300"> — {c.detalhe}</span> : null}
-                  </span>
-                </li>
-              ))}
+              {validacaoPublicacao.checagens.map((c) => {
+                // ✓ passou · ✗ falha bloqueante · ⚠ aviso (não bloqueia — D-369)
+                const estado = c.ok ? 'ok' : c.bloqueante ? 'erro' : 'aviso';
+                const marca = estado === 'ok' ? '✓' : estado === 'erro' ? '✗' : '⚠';
+                const cor =
+                  estado === 'ok'
+                    ? 'text-success'
+                    : estado === 'erro'
+                      ? 'text-error'
+                      : 'text-warning';
+                return (
+                  <li key={c.id} className="flex items-start gap-2 text-sm">
+                    <span aria-hidden className={cor}>
+                      {marca}
+                    </span>
+                    <span className="text-text-100">
+                      {c.label}
+                      {!c.ok && !c.bloqueante ? (
+                        <span className="text-text-300"> (opcional)</span>
+                      ) : null}
+                      {c.detalhe ? <span className="text-text-300"> — {c.detalhe}</span> : null}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ) : (
