@@ -14,6 +14,7 @@ from app.domain.youtube_urls import extract_youtube_video_id
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services.app_logging import operational_debug, operational_error, operational_info
 from app.services.media_retention import MediaRetentionService
+from app.services.validacao_publicacao import ValidacaoPublicacaoService
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -341,6 +342,30 @@ class YouTubeService:
 
             titulo_live = projeto.titulo_live or "Live"
             numero_corte = corte.numero
+
+        # D-363: valida o pacote ANTES de subir. Política: QUALQUER item faltando
+        # bloqueia (vídeo final, duração≈líquida/trechos aplicados, cenas, título,
+        # descrição, tags, thumbnail). Cobre upload individual e em massa — ambos
+        # passam por aqui. O corte já publicado retornou acima (idempotente), então
+        # a validação só roda para uploads novos.
+        validacao = await ValidacaoPublicacaoService.validar(corte_id)
+        if validacao.get("bloqueado"):
+            pendencias = validacao.get("pendencias", [])
+            operational_info(
+                "YouTube",
+                f"Upload de {corte_id} bloqueado pela validação. Pendências: {pendencias}",
+            )
+            return {
+                "status": "erro",
+                "mensagem": "Publicação bloqueada — ajuste antes de subir: "
+                + ", ".join(pendencias),
+                "validacao": validacao,
+            }
+
+        async with AsyncSessionLocal() as db:
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                return {"status": "erro", "mensagem": "Corte não encontrado"}
 
             meta_result = await db.execute(
                 select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, RefreshCw, Rocket } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
 import { useCortesProjeto, usePipelineStatus } from '@/hooks/useEditor';
 import { exportStatusKey, projetoKey, useExportStatus } from '@/hooks/useProjetoDetalhe';
@@ -35,6 +36,15 @@ const DEFAULT_FILTER = 'bypass_dourado_aberto';
 
 const VARIANTES_CINE_III = ['cinematic_iii', 'bypass_dourado_aberto'];
 
+// D-363: relatório de validação pré-publicação devolvido pelo backend.
+type ValidacaoCheck = { id: string; label: string; ok: boolean; detalhe: string };
+type ValidacaoPublicacao = {
+  ok: boolean;
+  bloqueado: boolean;
+  checagens: ValidacaoCheck[];
+  pendencias: string[];
+};
+
 export function PostProductionPage() {
   const { id: projetoId } = useParams();
   const [searchParams] = useSearchParams();
@@ -47,6 +57,10 @@ export function PostProductionPage() {
   const [bulkSchedule, setBulkSchedule] = useState(true);
   const [bulkStartAt, setBulkStartAt] = useState('');
   const [scheduledAt, setScheduledAt] = useState<Record<string, string>>({});
+  // D-363: gate de confirmação antes de publicar. `confirmPublishId` abre o modal;
+  // `validacaoPublicacao` guarda as pendências quando o backend bloqueia.
+  const [confirmPublishId, setConfirmPublishId] = useState<string | null>(null);
+  const [validacaoPublicacao, setValidacaoPublicacao] = useState<ValidacaoPublicacao | null>(null);
   const [renderFinalLocal, setRenderFinalLocal] = useState(
     () =>
       Boolean(searchParams.get('corte')) &&
@@ -280,7 +294,20 @@ export function PostProductionPage() {
         scheduled_at: date ? new Date(date).toISOString() : null,
       });
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
+      // D-363: o backend devolve HTTP 200 mesmo quando bloqueia — inspeciona o corpo.
+      const r = res as unknown as {
+        status?: string;
+        mensagem?: string;
+        validacao?: ValidacaoPublicacao;
+      };
+      if (r.validacao?.bloqueado || r.status === 'erro') {
+        setValidacaoPublicacao(r.validacao ?? null);
+        notify(r.mensagem ?? 'Publicação bloqueada pela validação.', { tone: 'error' });
+        return; // mantém o modal aberto exibindo as pendências
+      }
+      setConfirmPublishId(null);
+      setValidacaoPublicacao(null);
       notify('Upload enviado para o YouTube.', { tone: 'success' });
       window.setTimeout(invalidateAll, 3_000);
     },
@@ -376,7 +403,10 @@ export function PostProductionPage() {
                 onProcess={processarRenderFinal}
                 onFaststart={() => faststart.mutate()}
                 onBulkProcess={() => bulkProcessar.mutate()}
-                onUploadYoutube={() => uploadYoutube.mutate(activeStatus.corte_id)}
+                onUploadYoutube={() => {
+                  setValidacaoPublicacao(null);
+                  setConfirmPublishId(activeStatus.corte_id);
+                }}
                 onBulkYoutube={() => bulkYoutube.mutate()}
                 pendingPostCount={pendingPost.length}
                 readyToPublishCount={readyToPublish.length}
@@ -448,6 +478,79 @@ export function PostProductionPage() {
           </div>
         )}
       </main>
+
+      {/* D-363: gate de confirmação pré-publicação. Ao confirmar, o backend
+          valida o pacote; se algo faltar, não sobe e lista as pendências. */}
+      <Modal
+        open={Boolean(confirmPublishId)}
+        onClose={() => {
+          if (uploadYoutube.isPending) return;
+          setConfirmPublishId(null);
+          setValidacaoPublicacao(null);
+        }}
+        title="Confirmar publicação no YouTube"
+        description="Antes de subir, o pacote do corte é validado. Faltando algo, o upload é bloqueado."
+        size="md"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setConfirmPublishId(null);
+                setValidacaoPublicacao(null);
+              }}
+              disabled={uploadYoutube.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => confirmPublishId && uploadYoutube.mutate(confirmPublishId)}
+              disabled={uploadYoutube.isPending}
+            >
+              {uploadYoutube.isPending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Validando…
+                </>
+              ) : validacaoPublicacao?.bloqueado ? (
+                'Revalidar e publicar'
+              ) : (
+                'Confirmar e publicar'
+              )}
+            </Button>
+          </>
+        }
+      >
+        {validacaoPublicacao ? (
+          <div className="space-y-2">
+            {validacaoPublicacao.bloqueado && (
+              <p className="text-sm font-medium text-error">
+                Publicação bloqueada — ajuste os itens abaixo e revalide:
+              </p>
+            )}
+            <ul className="space-y-1.5">
+              {validacaoPublicacao.checagens.map((c) => (
+                <li key={c.id} className="flex items-start gap-2 text-sm">
+                  <span aria-hidden className={c.ok ? 'text-success' : 'text-error'}>
+                    {c.ok ? '✓' : '✗'}
+                  </span>
+                  <span className="text-text-100">
+                    {c.label}
+                    {c.detalhe ? <span className="text-text-300"> — {c.detalhe}</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="text-sm text-text-300">
+            Serão verificados: vídeo final, duração (trechos aplicados), cenas, título, descrição,
+            tags e thumbnail. Clique em <strong>Confirmar e publicar</strong> para validar e subir.
+          </p>
+        )}
+      </Modal>
     </div>
   );
 }
