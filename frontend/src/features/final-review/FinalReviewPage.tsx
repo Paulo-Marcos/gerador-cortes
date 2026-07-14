@@ -31,7 +31,7 @@ import {
   usePipelineStatus,
   useRenderizarRemotion,
 } from '@/hooks/useEditor';
-import { finalVideoUrl } from '@/lib/api';
+import { finalVideoUrl, resolveThumbUrl } from '@/lib/api';
 import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
 import { CommonTopBar, type MoreMenuItem } from '@/features/editor/CommonTopBar';
 import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
@@ -477,6 +477,7 @@ export function FinalReviewPage() {
             <CapaCard
               titulo={corte.titulo_proposto ?? projeto.data?.titulo_live ?? 'Corte'}
               pronta={Boolean(exportStatusAtual?.thumbnail_pronta)}
+              thumbUrl={resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path)}
               onEditar={() => setMetadataOpen(true)}
             />
           </div>
@@ -687,10 +688,12 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
 function CapaCard({
   titulo,
   pronta,
+  thumbUrl,
   onEditar,
 }: {
   titulo: string;
   pronta: boolean;
+  thumbUrl: string | null;
   onEditar: () => void;
 }) {
   return (
@@ -722,9 +725,19 @@ function CapaCard({
           className="relative overflow-hidden rounded-[var(--radius-sm)] bg-gradient-to-br from-[oklch(0.45_0.05_60)] via-[oklch(0.3_0.04_60)] to-[oklch(0.15_0.03_60)]"
           style={{ aspectRatio: '16 / 9' }}
         >
-          <div className="absolute bottom-3 left-3 max-w-[80%] text-white">
-            <div className="font-editorial text-[16px] font-medium leading-tight">{titulo}</div>
-          </div>
+          {/* D-366: mostra a capa renderizada quando existe; senao mantem o
+              gradiente + titulo como placeholder. */}
+          {thumbUrl ? (
+            <img
+              src={thumbUrl}
+              alt={`Capa de ${titulo}`}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <div className="absolute bottom-3 left-3 max-w-[80%] text-white">
+              <div className="font-editorial text-[16px] font-medium leading-tight">{titulo}</div>
+            </div>
+          )}
         </div>
       </div>
     </section>
