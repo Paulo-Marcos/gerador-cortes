@@ -37,6 +37,7 @@ _CHAVES_PESO: tuple[str, ...] = (
     "comentarios_por_view",
     "sentimento",
     "recencia",
+    "vph",
 )
 _CHAVE_MEIA_VIDA = "meia_vida_dias"
 _TODAS_CHAVES: tuple[str, ...] = (*_CHAVES_PESO, _CHAVE_MEIA_VIDA)
@@ -57,29 +58,22 @@ class CriterioRanking:
     eh_peso: bool
 
 
-# Ordem = ordem de exibição na UI.
+# Ordem = ordem de exibição na UI. Ordenada pela filosofia do dono (D-356): o que
+# o público genuinamente curtiu vem primeiro; audiência bruta por último.
 _CRITERIOS: tuple[CriterioRanking, ...] = (
     CriterioRanking(
-        key="views",
-        rotulo="Audiência (views)",
+        key="sentimento",
+        rotulo="Positividade dos comentários (o público disse que foi bom?)",
         descricao=(
-            "Quanto pesa o total de visualizações da live (em escala log, para não "
-            "deixar um viral dominar). Peso relativo aos demais critérios."
-        ),
-        eh_peso=True,
-    ),
-    CriterioRanking(
-        key="likes_por_view",
-        rotulo="Likes por view",
-        descricao=(
-            "Quanto pesa a TAXA de likes por visualização — engajamento relativo, "
-            "não o número absoluto de likes."
+            "Quanto pesa o tom dos comentários (score 0-10 avaliado pelo Claude). "
+            "Alto = público entusiasmado; baixo = rejeição. O sinal mais forte do "
+            "que o público genuinamente curtiu."
         ),
         eh_peso=True,
     ),
     CriterioRanking(
         key="comentarios_por_view",
-        rotulo="Comentários por view",
+        rotulo="Engajamento de comentários (quantos comentaram, por view)",
         descricao=(
             "Quanto pesa a TAXA de comentários por visualização — quanta conversa a "
             "live gerou em relação ao seu alcance."
@@ -87,11 +81,11 @@ _CRITERIOS: tuple[CriterioRanking, ...] = (
         eh_peso=True,
     ),
     CriterioRanking(
-        key="sentimento",
-        rotulo="Tom do público (sentimento dos comentários, via Claude)",
+        key="likes_por_view",
+        rotulo="Likes (% das views)",
         descricao=(
-            "Quanto pesa o tom dos comentários (score 0-10 avaliado pelo Claude). "
-            "Alto = público entusiasmado; baixo = rejeição."
+            "Quanto pesa a TAXA de likes por visualização — engajamento relativo, "
+            "não o número absoluto de likes."
         ),
         eh_peso=True,
     ),
@@ -101,6 +95,25 @@ _CRITERIOS: tuple[CriterioRanking, ...] = (
         descricao=(
             "Quanto pesa a live ser recente. O decay é exponencial e cai pela metade "
             "a cada 'meia-vida' (abaixo)."
+        ),
+        eh_peso=True,
+    ),
+    CriterioRanking(
+        key="vph",
+        rotulo="Momento (views por hora)",
+        descricao=(
+            "Quanto pesa o ritmo de audiência da live (views por hora, em escala log). "
+            "Um piso de idade evita premiar a live recém-publicada; capta o 'momento' "
+            "sem confundir com recência."
+        ),
+        eh_peso=True,
+    ),
+    CriterioRanking(
+        key="views",
+        rotulo="Audiência bruta (views)",
+        descricao=(
+            "Quanto pesa o total de visualizações da live (em escala log, para não "
+            "deixar um viral dominar). Peso relativo aos demais critérios."
         ),
         eh_peso=True,
     ),
@@ -136,6 +149,7 @@ def _defaults() -> dict[str, float]:
         "comentarios_por_view": float(settings.ranking_peso_comentarios_por_view),
         "sentimento": float(settings.ranking_peso_sentimento),
         "recencia": float(settings.ranking_peso_recencia),
+        "vph": float(settings.ranking_peso_vph),
         "meia_vida_dias": float(settings.ranking_meia_vida_dias),
     }
 

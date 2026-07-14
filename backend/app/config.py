@@ -85,11 +85,15 @@ class Settings(BaseSettings):
     ranking_max_comentarios_por_live: int = 30
     ranking_cache_horas: float = 24.0
     ranking_meia_vida_dias: float = 90.0
-    ranking_peso_views: float = 0.15
-    ranking_peso_likes_por_view: float = 0.10
-    ranking_peso_comentarios_por_view: float = 0.15
-    ranking_peso_sentimento: float = 0.35
-    ranking_peso_recencia: float = 0.25
+    # Filosofia do dono (D-356): engajamento genuíno > audiência bruta. Ordem de
+    # prioridade — positividade + volume de comentários > likes (%views) > recência
+    # > VPH (momento) > views. Editáveis por canal (D-351); estes são só o default.
+    ranking_peso_sentimento: float = 0.30
+    ranking_peso_comentarios_por_view: float = 0.25
+    ranking_peso_likes_por_view: float = 0.15
+    ranking_peso_recencia: float = 0.12
+    ranking_peso_vph: float = 0.10
+    ranking_peso_views: float = 0.08
 
     # --- D-286: Diarização de falantes (canal vs. reagidos) ---
     # Opt-in: a diarização (pyannote.audio) só roda quando disparada na tela de

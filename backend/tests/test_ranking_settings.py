@@ -24,11 +24,12 @@ def _kw(tmp_path: Path) -> dict:
 
 def _valores(**overrides: float) -> dict:
     base = {
-        "views": 0.15,
-        "likes_por_view": 0.10,
-        "comentarios_por_view": 0.15,
-        "sentimento": 0.35,
-        "recencia": 0.25,
+        "views": 0.08,
+        "likes_por_view": 0.15,
+        "comentarios_por_view": 0.25,
+        "sentimento": 0.30,
+        "recencia": 0.12,
+        "vph": 0.10,
         "meia_vida_dias": 90.0,
     }
     base.update(overrides)
@@ -49,6 +50,7 @@ def test_seed_le_defaults_de_settings(tmp_path: Path):
     assert pesos.comentarios_por_view == pytest.approx(settings.ranking_peso_comentarios_por_view)
     assert pesos.sentimento == pytest.approx(settings.ranking_peso_sentimento)
     assert pesos.recencia == pytest.approx(settings.ranking_peso_recencia)
+    assert pesos.vph == pytest.approx(settings.ranking_peso_vph)
     assert pesos.meia_vida_dias == pytest.approx(settings.ranking_meia_vida_dias)
     # Efeito colateral: o seed gravou a linha no banco.
     assert settings_store.ler_ranking_pesos(kw["db_path"], _CANAL) is not None
@@ -89,7 +91,9 @@ def test_valida_peso_negativo(tmp_path: Path):
 
 
 def test_valida_todos_os_pesos_zero(tmp_path: Path):
-    zerados = _valores(views=0, likes_por_view=0, comentarios_por_view=0, sentimento=0, recencia=0)
+    zerados = _valores(
+        views=0, likes_por_view=0, comentarios_por_view=0, sentimento=0, recencia=0, vph=0
+    )
     with pytest.raises(ValueError, match="peso"):
         ranking_settings.definir_pesos(zerados, **_kw(tmp_path))
 
@@ -120,23 +124,66 @@ def test_resetar_volta_aos_defaults(tmp_path: Path):
 
 def test_descrever_traz_todos_com_rotulo_e_default(tmp_path: Path):
     descritos = ranking_settings.descrever_pesos(**_kw(tmp_path))
+    # Ordem = filosofia do dono (D-356): engajamento genuíno primeiro, views por último.
     assert [d.key for d in descritos] == [
-        "views",
-        "likes_por_view",
-        "comentarios_por_view",
         "sentimento",
+        "comentarios_por_view",
+        "likes_por_view",
         "recencia",
+        "vph",
+        "views",
         "meia_vida_dias",
     ]
     sentimento = next(d for d in descritos if d.key == "sentimento")
-    assert "sentimento" in sentimento.rotulo.lower()
+    assert "positividade" in sentimento.rotulo.lower()
     assert sentimento.eh_peso is True
     assert sentimento.valor_default == pytest.approx(settings.ranking_peso_sentimento)
+    vph = next(d for d in descritos if d.key == "vph")
+    assert vph.eh_peso is True
+    assert vph.valor_default == pytest.approx(settings.ranking_peso_vph)
     meia_vida = next(d for d in descritos if d.key == "meia_vida_dias")
     assert meia_vida.eh_peso is False
 
 
 # ─── Integração leve: o serviço reflete o customizado do canal ──────────────
+
+
+# ─── Migração idempotente: coluna vph em banco legado (D-356) ────────────────
+
+
+def test_migracao_adiciona_vph_sem_perder_pesos(tmp_path: Path):
+    """Banco de canal que já customizou os pesos (sem a coluna vph) ganha a coluna
+    na primeira abertura, preservando os valores ajustados (D-356)."""
+    import sqlite3
+
+    from app.services import settings_store
+
+    db = tmp_path / "settings.db"
+    # Simula o schema LEGADO da ranking_pesos: sem a coluna `vph`.
+    conn = sqlite3.connect(str(db))
+    conn.execute(
+        "CREATE TABLE ranking_pesos ("
+        "channel_id TEXT PRIMARY KEY, views REAL, likes_por_view REAL, "
+        "comentarios_por_view REAL, sentimento REAL, recencia REAL, "
+        "meia_vida_dias REAL, updated_at TEXT)"
+    )
+    conn.execute(
+        "INSERT INTO ranking_pesos VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        ("c1", 0.9, 0.1, 0.2, 0.7, 0.3, 45.0, ""),
+    )
+    conn.commit()
+    conn.close()
+
+    # A leitura via settings_store abre o banco → roda `_migrar_colunas` (idempotente).
+    pesos = settings_store.ler_ranking_pesos(db, "c1")
+    assert pesos is not None
+    assert pesos["vph"] == pytest.approx(0.0)  # coluna nova, default 0 até o canal adotar
+    assert pesos["sentimento"] == pytest.approx(0.7)  # customização preservada
+    assert pesos["meia_vida_dias"] == pytest.approx(45.0)
+
+    # Reabrir de novo não quebra nem reseta (idempotência).
+    de_novo = settings_store.ler_ranking_pesos(db, "c1")
+    assert de_novo["sentimento"] == pytest.approx(0.7)
 
 
 def test_pesos_atuais_do_servico_reflete_customizado(tmp_path: Path, monkeypatch):

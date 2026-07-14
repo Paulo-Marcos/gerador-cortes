@@ -6,9 +6,11 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from app.domain.ranking_lives import (
+    PISO_IDADE_HORAS_VPH,
     PesosRanking,
     SinaisLive,
     calcular_recencia,
+    calcular_vph,
     normalizar_minmax,
     pontuar_lote,
 )
@@ -131,7 +133,7 @@ class TestPontuarLote:
 
     def test_pesos_zerados_levantam(self):
         pesos_zero = PesosRanking(
-            views=0, likes_por_view=0, comentarios_por_view=0, sentimento=0, recencia=0
+            views=0, likes_por_view=0, comentarios_por_view=0, sentimento=0, recencia=0, vph=0
         )
         with pytest.raises(ValueError, match="pesos"):
             pontuar_lote([_sinal()], pesos_zero, HOJE)
@@ -152,6 +154,7 @@ class TestPontuarLote:
             + pesos.comentarios_por_view
             + pesos.sentimento
             + pesos.recencia
+            + pesos.vph
         )
         esperado = (pesos.sentimento * 1.0) * 100.0 / peso_total
         assert diff == pytest.approx(esperado, abs=0.05)
@@ -181,5 +184,71 @@ class TestPontuarLote:
         pontuadas = {
             p.video_id: p.pontuacao_total for p in pontuar_lote(sinais, PesosRanking(), HOJE)
         }
-        # O "grande" ganha em views, mas a taxa é a mesma → diferença pequena, não brutal.
+        # O "grande" ganha em views/VPH, mas a taxa é a mesma → diferença contida.
         assert pontuadas["grande"] - pontuadas["pequeno"] < 25.0
+
+
+class TestCalcularVph:
+    def test_views_por_hora_basico(self):
+        # 6000 views, 60h de vida → 100 views/h (idade acima do piso).
+        pub = HOJE - timedelta(hours=60)
+        assert calcular_vph(6_000, pub, HOJE) == pytest.approx(100.0)
+
+    def test_piso_evita_estouro_de_live_recente(self):
+        # 30 min de vida: sem piso daria 6000/0.5 = 12k/h; com piso de 6h, 1000/h.
+        pub = HOJE - timedelta(minutes=30)
+        assert calcular_vph(6_000, pub, HOJE) == pytest.approx(6_000 / PISO_IDADE_HORAS_VPH)
+
+    def test_abaixo_do_piso_todas_iguais(self):
+        # Duas lives com a MESMA audiência, ambas mais novas que o piso, têm o mesmo
+        # VPH — o piso as trata como se tivessem a idade mínima (não premia a mais nova).
+        nova = calcular_vph(6_000, HOJE - timedelta(hours=1), HOJE)
+        recem = calcular_vph(6_000, HOJE - timedelta(hours=3), HOJE)
+        assert nova == pytest.approx(recem)
+
+    def test_data_futura_cai_no_piso(self):
+        pub = HOJE + timedelta(hours=5)
+        assert calcular_vph(6_000, pub, HOJE) == pytest.approx(6_000 / PISO_IDADE_HORAS_VPH)
+
+
+class TestEmbasamentoDetalhado:
+    def test_detalhes_cobrem_os_seis_criterios(self):
+        pontuada = pontuar_lote([_sinal()], PesosRanking(), HOJE)[0]
+        criterios = {d.criterio for d in pontuada.detalhes}
+        assert criterios == {
+            "views",
+            "likes_por_view",
+            "comentarios_por_view",
+            "sentimento",
+            "recencia",
+            "vph",
+        }
+
+    def test_soma_das_contribuicoes_reconstitui_a_nota(self):
+        sinais = [
+            _sinal("a", views=1_000, likes=10, comentarios=5, sentimento=6, dias_atras=10),
+            _sinal("b", views=5_000, likes=200, comentarios=30, sentimento=8, dias_atras=60),
+        ]
+        for pontuada in pontuar_lote(sinais, PesosRanking(), HOJE):
+            soma = sum(d.contribuicao for d in pontuada.detalhes)
+            assert soma == pytest.approx(pontuada.pontuacao_total, abs=0.05)
+
+    def test_detalhe_expoe_bruto_normalizado_e_peso(self):
+        pesos = PesosRanking()
+        pontuada = pontuar_lote([_sinal(sentimento=8.0)], pesos, HOJE)[0]
+        sentimento = next(d for d in pontuada.detalhes if d.criterio == "sentimento")
+        assert sentimento.valor_bruto == pytest.approx(8.0)  # bruto = score 0-10
+        assert 0.0 <= sentimento.valor_normalizado <= 1.0
+        assert sentimento.peso == pytest.approx(pesos.sentimento)
+
+    def test_vph_normaliza_por_lote(self):
+        # Mesma audiência, idades muito diferentes (ambas acima do piso): a mais nova
+        # tem VPH maior → normalizado maior no lote.
+        sinais = [
+            _sinal("lenta", views=10_000, dias_atras=30),
+            _sinal("rapida", views=10_000, dias_atras=1),
+        ]
+        pontuadas = {p.video_id: p for p in pontuar_lote(sinais, PesosRanking(), HOJE)}
+        vph_lenta = next(d for d in pontuadas["lenta"].detalhes if d.criterio == "vph")
+        vph_rapida = next(d for d in pontuadas["rapida"].detalhes if d.criterio == "vph")
+        assert vph_rapida.valor_normalizado > vph_lenta.valor_normalizado

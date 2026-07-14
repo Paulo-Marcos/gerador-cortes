@@ -288,7 +288,8 @@ async def _avaliar_e_persistir(videos: list[VideoResumo]) -> list[LiveCandidata]
             destino.sentimento_destaques = json.dumps(destaques, ensure_ascii=False)
             destino.pontuacao_total = ponto.pontuacao_total if ponto else 0.0
             destino.componentes_pontuacao = json.dumps(
-                ponto.componentes if ponto else {}, ensure_ascii=False
+                [_detalhe_para_dict(d) for d in ponto.detalhes] if ponto else [],
+                ensure_ascii=False,
             )
             destino.fetched_at = agora
 
@@ -361,7 +362,55 @@ def _empacotar_resposta(candidatas: list[LiveCandidata]) -> dict:
     }
 
 
+def _detalhe_para_dict(d) -> dict:
+    """Serializa um `ComponenteDetalhado` do domínio para persistir/transportar."""
+    return {
+        "criterio": d.criterio,
+        "valor_bruto": d.valor_bruto,
+        "valor_normalizado": d.valor_normalizado,
+        "peso": d.peso,
+        "contribuicao": d.contribuicao,
+    }
+
+
+def _embasamento(bruto_json: str) -> tuple[list[dict], dict[str, float]]:
+    """Painel de embasamento (D-356) + mapa plano de contribuições (compat).
+
+    Lê o `componentes_pontuacao` persistido e devolve:
+      - `embasamento`: os detalhes por critério, ENRIQUECIDOS com o rótulo do
+        `ranking_settings` (rótulo é presentação — fica no serviço, não no domínio
+        puro) e ordenados pela filosofia do catálogo.
+      - `componentes`: o mapa plano `criterio → contribuição` (o que a UI antiga
+        já consumia; mantém o contrato).
+
+    Tolera o formato LEGADO (mapa plano gravado antes desta feature): nesse caso o
+    embasamento vem vazio e o mapa plano é o próprio conteúdo.
+    """
+    dados = json.loads(bruto_json or "[]")
+    if isinstance(dados, dict):  # legado: mapa plano criterio→contribuição
+        return [], {k: float(v) for k, v in dados.items()}
+
+    criterios = ranking_settings.catalogo()
+    rotulos = {c.key: c.rotulo for c in criterios}
+    ordem = {c.key: i for i, c in enumerate(criterios)}
+    embasamento = [
+        {
+            "criterio": d.get("criterio", ""),
+            "rotulo": rotulos.get(d.get("criterio", ""), d.get("criterio", "")),
+            "valor_bruto": d.get("valor_bruto", 0.0),
+            "valor_normalizado": d.get("valor_normalizado", 0.0),
+            "peso": d.get("peso", 0.0),
+            "contribuicao": d.get("contribuicao", 0.0),
+        }
+        for d in dados
+    ]
+    embasamento.sort(key=lambda item: ordem.get(item["criterio"], len(ordem)))
+    componentes = {item["criterio"]: item["contribuicao"] for item in embasamento}
+    return embasamento, componentes
+
+
 def _serializar(c: LiveCandidata) -> dict:
+    embasamento, componentes = _embasamento(c.componentes_pontuacao)
     return {
         "id": c.id,
         "video_id": c.video_id,
@@ -377,7 +426,8 @@ def _serializar(c: LiveCandidata) -> dict:
         "sentimento_score": round(c.sentimento_score, 2),
         "sentimento_destaques": json.loads(c.sentimento_destaques or "[]"),
         "pontuacao_total": round(c.pontuacao_total, 2),
-        "componentes_pontuacao": json.loads(c.componentes_pontuacao or "{}"),
+        "componentes_pontuacao": componentes,
+        "embasamento": embasamento,
         "status": c.status,
         "fetched_at": _iso_or_empty(c.fetched_at),
     }

@@ -105,6 +105,7 @@ _RANKING_PESOS_COLUNAS = (
     "comentarios_por_view",
     "sentimento",
     "recencia",
+    "vph",
     "meia_vida_dias",
 )
 
@@ -199,6 +200,7 @@ _DDL = (
         comentarios_por_view REAL NOT NULL DEFAULT 0,
         sentimento REAL NOT NULL DEFAULT 0,
         recencia REAL NOT NULL DEFAULT 0,
+        vph REAL NOT NULL DEFAULT 0,
         meia_vida_dias REAL NOT NULL DEFAULT 90,
         updated_at TEXT NOT NULL DEFAULT ''
     )
@@ -214,6 +216,15 @@ _MIGRACOES_COLUNA = (
         "editorial_skill",
         "scaffold",
         "ALTER TABLE editorial_skill ADD COLUMN scaffold TEXT NOT NULL DEFAULT ''",
+    ),
+    # D-356: VPH (views por hora) como novo peso do ranking. Bancos de canais que já
+    # customizaram os pesos ganham a coluna sem perder o que ajustaram; o default 0
+    # mantém o comportamento atual até o canal adotar o novo peso (reset/edição em
+    # /canais) — o seed (defaults de config) só vale para canais SEM linha.
+    (
+        "ranking_pesos",
+        "vph",
+        "ALTER TABLE ranking_pesos ADD COLUMN vph REAL NOT NULL DEFAULT 0",
     ),
 )
 

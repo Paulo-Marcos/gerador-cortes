@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -8,6 +8,7 @@ import {
   Eye,
   ExternalLink,
   Heart,
+  Info,
   Loader2,
   MessageCircle,
   RefreshCw,
@@ -23,6 +24,14 @@ import { useToast } from '@/components/ui/toaster';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { RankingLive, RankingLivesResponse } from '@/types/models';
+import { RankingEmbasamentoPanel, type EmbasamentoItem } from './RankingEmbasamentoPanel';
+
+/**
+ * O payload do ranking passou a trazer `embasamento` on-the-fly (D-356). Como
+ * `api.ts`/`models.ts` estão travados e não descrevem o campo, tipamos LOCALMENTE
+ * a extensão sobre `RankingLive`.
+ */
+type LiveComEmbasamento = RankingLive & { embasamento?: EmbasamentoItem[] };
 
 function formatPublishedAt(iso: string) {
   if (!iso) return 'sem data';
@@ -76,6 +85,7 @@ const COMPONENTE_LABEL: Record<string, string> = {
   comentarios_por_view: 'Comentários (taxa)',
   sentimento: 'Tom do público',
   recencia: 'Recência',
+  vph: 'Momento (v/h)',
 };
 
 export function RankingLivesPage() {
@@ -263,10 +273,12 @@ interface RowProps {
 }
 
 function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando }: RowProps) {
+  const [embasamentoAberto, setEmbasamentoAberto] = useState(false);
   const score = Math.round(live.pontuacao_total);
   const breakdown = Object.entries(live.componentes_pontuacao)
     .map(([k, v]) => `${COMPONENTE_LABEL[k] ?? k}: ${Math.round(v)}`)
     .join(' · ');
+  const embasamento = (live as LiveComEmbasamento).embasamento ?? [];
 
   return (
     <li
@@ -379,6 +391,17 @@ function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando 
           </div>
         </Tooltip>
 
+        {embasamento.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setEmbasamentoAberto(true)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 py-1.5 text-xs font-semibold text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
+          >
+            <Info size={13} aria-hidden />
+            Entenda a nota
+          </button>
+        )}
+
         <div className="flex items-center gap-2">
           <Button
             type="button"
@@ -403,6 +426,16 @@ function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando 
           </Button>
         </div>
       </div>
+
+      {embasamentoAberto && (
+        <RankingEmbasamentoPanel
+          titulo={live.titulo}
+          pontuacaoTotal={live.pontuacao_total}
+          embasamento={embasamento}
+          destaques={live.sentimento_destaques}
+          onClose={() => setEmbasamentoAberto(false)}
+        />
+      )}
     </li>
   );
 }
