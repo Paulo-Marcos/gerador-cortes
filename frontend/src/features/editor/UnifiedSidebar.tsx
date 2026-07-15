@@ -44,6 +44,10 @@ interface UnifiedSidebarProps {
    *  Default = /projetos/:id/cortes/:corteId (Bruto). */
   getCortePath?: (corte: Corte) => string;
   onOpenSettings: () => void;
+  /** D-378: tempo atual do player (segundos), quando a sidebar roda dentro
+   *  do Editor — repassado ao modal "Adicionar corte manualmente" para o
+   *  botao "usar tempo atual". Ausente fora do Editor (sem player). */
+  getCurrentTime?: () => number;
 }
 
 const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
@@ -155,6 +159,7 @@ export function UnifiedSidebar({
   activePhase,
   getCortePath,
   onOpenSettings,
+  getCurrentTime,
 }: UnifiedSidebarProps) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -276,6 +281,7 @@ export function UnifiedSidebar({
           open={adicionarOpen}
           onClose={() => setAdicionarOpen(false)}
           projetoId={projetoIdAtivo}
+          getCurrentTime={getCurrentTime}
           onCreated={(corte) =>
             navigate(getCortePath?.(corte) ?? `/projetos/${projetoIdAtivo}/cortes/${corte.id}`)
           }

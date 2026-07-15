@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus } from 'lucide-react';
+import { Clock3, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { api } from '@/lib/api';
 import { corteKey, cortesProjetoKey } from '@/hooks/useEditor';
 import type { Corte } from '@/types/models';
-import { hmsParaSeg, validarHms } from './timeUtils';
+import { hmsParaSeg, segParaHms, validarHms } from './timeUtils';
 
 // F-056: criar corte manualmente a partir de [inicio_hms, fim_hms].
 // Apos criar, dispara a analise de desvios (Gemini) para sugerir trechos a
@@ -20,11 +21,21 @@ interface Props {
   onClose: () => void;
   projetoId: string;
   onCreated?: (corte: Corte) => void;
+  /** D-378: quando informado (aberto de dentro do Editor, com player ativo),
+   *  mostra um botao "usar tempo atual" ao lado de inicio/fim. Ausente na
+   *  tela do projeto (sem player) — os botoes ficam ocultos. */
+  getCurrentTime?: () => number;
 }
 
 type Fase = 'form' | 'criando' | 'analisando';
 
-export function AdicionarCorteModal({ open, onClose, projetoId, onCreated }: Props) {
+export function AdicionarCorteModal({
+  open,
+  onClose,
+  projetoId,
+  onCreated,
+  getCurrentTime,
+}: Props) {
   const qc = useQueryClient();
   const { notify } = useToast();
 
@@ -46,6 +57,13 @@ export function AdicionarCorteModal({ open, onClose, projetoId, onCreated }: Pro
   const ocupado = fase !== 'form';
   const podeSubmeter =
     validarHms(inicio) && validarHms(fim) && hmsParaSeg(fim) > hmsParaSeg(inicio);
+
+  function usarTempoAtual(campo: 'inicio' | 'fim') {
+    if (!getCurrentTime) return;
+    const hms = segParaHms(getCurrentTime());
+    if (campo === 'inicio') setInicio(hms);
+    else setFim(hms);
+  }
 
   async function submeter() {
     if (!podeSubmeter || ocupado) return;
@@ -121,29 +139,61 @@ export function AdicionarCorteModal({ open, onClose, projetoId, onCreated }: Pro
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-300">
               Inicio
             </span>
-            <input
-              type="text"
-              value={inicio}
-              onChange={(event) => setInicio(event.target.value)}
-              placeholder="00:00:00"
-              className="h-9 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900 px-2.5 font-code text-sm text-text-100 outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
-              disabled={ocupado}
-              aria-invalid={!validarHms(inicio)}
-            />
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={inicio}
+                onChange={(event) => setInicio(event.target.value)}
+                placeholder="00:00:00"
+                className="h-9 min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900 px-2.5 font-code text-sm text-text-100 outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+                disabled={ocupado}
+                aria-invalid={!validarHms(inicio)}
+              />
+              {getCurrentTime && (
+                <Tooltip label="Usar tempo atual do player" side="top">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={() => usarTempoAtual('inicio')}
+                    disabled={ocupado}
+                    aria-label="Usar tempo atual como inicio"
+                  >
+                    <Clock3 size={14} />
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
           </label>
           <label className="grid gap-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-300">
               Fim
             </span>
-            <input
-              type="text"
-              value={fim}
-              onChange={(event) => setFim(event.target.value)}
-              placeholder="00:01:00"
-              className="h-9 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900 px-2.5 font-code text-sm text-text-100 outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
-              disabled={ocupado}
-              aria-invalid={!validarHms(fim)}
-            />
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                value={fim}
+                onChange={(event) => setFim(event.target.value)}
+                placeholder="00:01:00"
+                className="h-9 min-w-0 flex-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900 px-2.5 font-code text-sm text-text-100 outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+                disabled={ocupado}
+                aria-invalid={!validarHms(fim)}
+              />
+              {getCurrentTime && (
+                <Tooltip label="Usar tempo atual do player" side="top">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={() => usarTempoAtual('fim')}
+                    disabled={ocupado}
+                    aria-label="Usar tempo atual como fim"
+                  >
+                    <Clock3 size={14} />
+                  </Button>
+                </Tooltip>
+              )}
+            </div>
           </label>
         </div>
 

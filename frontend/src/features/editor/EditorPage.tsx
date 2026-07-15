@@ -723,6 +723,7 @@ export function EditorPage() {
           })
         }
         onOpenSettings={() => setSettingsOpen(true)}
+        getCurrentTime={() => playerRef.current?.getCurrentTime() ?? currentTime}
       />
 
       <div className="ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)]">
