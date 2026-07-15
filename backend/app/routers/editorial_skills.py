@@ -80,6 +80,85 @@ async def listar_skills():
     )
 
 
+# --------------------------------------------------------------------------- #
+# Pesos e critérios do ranking de lives por canal (D-351)
+# --------------------------------------------------------------------------- #
+# Os pesos do ranking (views/likes/comentários/sentimento/recência) e a meia-vida
+# saem do `.env` e viram editáveis por canal. Montados no MESMO router (sub-caminho
+# /ranking-pesos) para não exigir registro de um router novo em main.py (travado).
+#
+# Registrados ANTES de `PUT /{skill_key}` (D-374): rotas com um único segmento
+# literal (`/ranking-pesos`) colidem com o padrão genérico `/{skill_key}` — o
+# Starlette casa por ORDEM de registro, então a rota genérica capturava o PUT
+# antes da específica e derrubava "Skill desconhecida: 'ranking-pesos'" (404).
+
+
+class CriterioRankingResponse(BaseModel):
+    """Um critério do ranking para a UI: rótulo/descrição + valor + default (reset)."""
+
+    key: str
+    rotulo: str
+    descricao: str
+    # True para os 5 pesos (participam do reescalonamento); False para a meia-vida.
+    eh_peso: bool
+    valor: float
+    valor_default: float
+
+
+class ListaRankingPesosResponse(BaseModel):
+    criterios: list[CriterioRankingResponse]
+
+
+class UpdateRankingPesosRequest(BaseModel):
+    """Todos os critérios de uma vez — o reescalonamento é sobre o conjunto."""
+
+    views: float
+    likes_por_view: float
+    comentarios_por_view: float
+    sentimento: float
+    recencia: float
+    vph: float
+    meia_vida_dias: float
+
+
+def _para_response_criterio(c: ranking_settings.CriterioDescrito) -> CriterioRankingResponse:
+    return CriterioRankingResponse(
+        key=c.key,
+        rotulo=c.rotulo,
+        descricao=c.descricao,
+        eh_peso=c.eh_peso,
+        valor=c.valor,
+        valor_default=c.valor_default,
+    )
+
+
+@router.get("/ranking-pesos", response_model=ListaRankingPesosResponse)
+async def listar_ranking_pesos():
+    return ListaRankingPesosResponse(
+        criterios=[_para_response_criterio(c) for c in ranking_settings.descrever_pesos()]
+    )
+
+
+@router.put("/ranking-pesos", response_model=ListaRankingPesosResponse)
+async def editar_ranking_pesos(body: UpdateRankingPesosRequest):
+    try:
+        criterios = ranking_settings.definir_pesos(body.model_dump())
+    except ValueError as e:
+        # Guardrail: peso negativo, todos-zero ou meia-vida <= 0 → 422 com a razão.
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return ListaRankingPesosResponse(criterios=[_para_response_criterio(c) for c in criterios])
+
+
+# GET (não POST): resetar-para-o-padrão é idempotente e sem corpo. Um POST sem body
+# vinha disparando 422 "body Field required" no cliente/stack; GET evita isso e casa
+# com a natureza sem-payload da operação.
+@router.get("/ranking-pesos/reset", response_model=ListaRankingPesosResponse)
+async def resetar_ranking_pesos():
+    return ListaRankingPesosResponse(
+        criterios=[_para_response_criterio(c) for c in ranking_settings.resetar_pesos()]
+    )
+
+
 @router.put("/{skill_key}", response_model=SkillDescritaResponse)
 async def editar_skill(skill_key: str, body: UpdateSkillRequest):
     try:
@@ -296,77 +375,3 @@ async def resetar_prompt_utilitario(key: str):
     except KeyError as e:
         raise HTTPException(status_code=404, detail=f"Prompt desconhecido: {key!r}.") from e
     return _para_response_prompt(prompt)
-
-
-# --------------------------------------------------------------------------- #
-# Pesos e critérios do ranking de lives por canal (D-351)
-# --------------------------------------------------------------------------- #
-# Os pesos do ranking (views/likes/comentários/sentimento/recência) e a meia-vida
-# saem do `.env` e viram editáveis por canal. Montados no MESMO router (sub-caminho
-# /ranking-pesos) para não exigir registro de um router novo em main.py (travado).
-
-
-class CriterioRankingResponse(BaseModel):
-    """Um critério do ranking para a UI: rótulo/descrição + valor + default (reset)."""
-
-    key: str
-    rotulo: str
-    descricao: str
-    # True para os 5 pesos (participam do reescalonamento); False para a meia-vida.
-    eh_peso: bool
-    valor: float
-    valor_default: float
-
-
-class ListaRankingPesosResponse(BaseModel):
-    criterios: list[CriterioRankingResponse]
-
-
-class UpdateRankingPesosRequest(BaseModel):
-    """Todos os critérios de uma vez — o reescalonamento é sobre o conjunto."""
-
-    views: float
-    likes_por_view: float
-    comentarios_por_view: float
-    sentimento: float
-    recencia: float
-    vph: float
-    meia_vida_dias: float
-
-
-def _para_response_criterio(c: ranking_settings.CriterioDescrito) -> CriterioRankingResponse:
-    return CriterioRankingResponse(
-        key=c.key,
-        rotulo=c.rotulo,
-        descricao=c.descricao,
-        eh_peso=c.eh_peso,
-        valor=c.valor,
-        valor_default=c.valor_default,
-    )
-
-
-@router.get("/ranking-pesos", response_model=ListaRankingPesosResponse)
-async def listar_ranking_pesos():
-    return ListaRankingPesosResponse(
-        criterios=[_para_response_criterio(c) for c in ranking_settings.descrever_pesos()]
-    )
-
-
-@router.put("/ranking-pesos", response_model=ListaRankingPesosResponse)
-async def editar_ranking_pesos(body: UpdateRankingPesosRequest):
-    try:
-        criterios = ranking_settings.definir_pesos(body.model_dump())
-    except ValueError as e:
-        # Guardrail: peso negativo, todos-zero ou meia-vida <= 0 → 422 com a razão.
-        raise HTTPException(status_code=422, detail=str(e)) from e
-    return ListaRankingPesosResponse(criterios=[_para_response_criterio(c) for c in criterios])
-
-
-# GET (não POST): resetar-para-o-padrão é idempotente e sem corpo. Um POST sem body
-# vinha disparando 422 "body Field required" no cliente/stack; GET evita isso e casa
-# com a natureza sem-payload da operação.
-@router.get("/ranking-pesos/reset", response_model=ListaRankingPesosResponse)
-async def resetar_ranking_pesos():
-    return ListaRankingPesosResponse(
-        criterios=[_para_response_criterio(c) for c in ranking_settings.resetar_pesos()]
-    )

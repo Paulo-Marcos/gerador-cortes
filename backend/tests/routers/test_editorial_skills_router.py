@@ -132,3 +132,29 @@ def test_reverter_versao_inexistente_da_404(client: TestClient):
 
 def test_versoes_de_skill_desconhecida_da_404(client: TestClient):
     assert client.get("/editorial-skills/inexistente/versoes").status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# Pesos do ranking (D-374): rota de segmento único não pode ser engolida pela
+# rota genérica `/{skill_key}` — regressão só aparece com o app montado de
+# verdade (ordem de registro do Starlette), não testando a função isolada.
+# --------------------------------------------------------------------------- #
+
+
+def test_put_ranking_pesos_nao_cai_no_404_da_rota_generica(client: TestClient):
+    atuais = client.get("/editorial-skills/ranking-pesos").json()["criterios"]
+    payload = {c["key"]: c["valor"] for c in atuais if c["eh_peso"]}
+    payload["meia_vida_dias"] = next(c["valor"] for c in atuais if not c["eh_peso"])
+    payload["views"] = 0.5
+
+    resp = client.put("/editorial-skills/ranking-pesos", json=payload)
+
+    assert resp.status_code == 200
+    criterios = {c["key"]: c["valor"] for c in resp.json()["criterios"]}
+    assert criterios["views"] == 0.5
+
+
+def test_get_ranking_pesos_reset_funciona(client: TestClient):
+    resp = client.get("/editorial-skills/ranking-pesos/reset")
+    assert resp.status_code == 200
+    assert "criterios" in resp.json()
