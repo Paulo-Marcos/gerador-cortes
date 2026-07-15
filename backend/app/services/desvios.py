@@ -203,6 +203,7 @@ class DesviosService:
             from app.domain.time_convert import seg_to_hms_short
 
             todos_trechos = []
+            erros = []
 
             for i, chunk in enumerate(chunks):
                 linhas = []
@@ -227,5 +228,13 @@ class DesviosService:
                     todos_trechos.extend(trechos)
                 except Exception as e:
                     operational_error("Desvios", f"Erro ao analisar parte {i + 1} com Gemini: {e}")
+                    erros.append(str(e))
+
+            # D-376: se TODAS as partes falharam, "0 trechos" não é um resultado
+            # legítimo (nenhuma IA rodou) — subir o erro real em vez de devolver
+            # sucesso silencioso com desvios=[] (mascarava, por exemplo, uma
+            # GEMINI_API_KEY inválida).
+            if erros and len(erros) == len(chunks):
+                raise RuntimeError(f"Gemini falhou em todas as partes: {erros[0]}")
 
             return await DesviosService.importar_resultado(corte_id, todos_trechos, origem="gemini")

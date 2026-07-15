@@ -45,6 +45,10 @@ async def generate_json(
             "response_mime_type": "application/json",
             "temperature": temperature,
             "top_p": top_p,
+            # D-376: sem timeout, uma chamada lenta/travada prende quem espera
+            # (ex.: criação manual de corte) indefinidamente — medido 71s numa
+            # transcrição de 20s; sem limite pode ficar pendurado por muito mais.
+            "http_options": {"timeout": int(settings.gemini_timeout_seg * 1000)},
         }
         if schema is not None:
             config["response_schema"] = schema

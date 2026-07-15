@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     guia_cortes_path: str = os.path.join(_BACKEND_ROOT, "assets", "GUIA_CRIACAO_CORTES.md")
 
     gemini_api_key: str = ""
+    # D-376: sem timeout, uma chamada Gemini lenta/travada (medido: 71s num
+    # prompt de 20s de transcrição) prende a criação manual de corte
+    # indefinidamente — o usuário via o corte "criando" para sempre.
+    gemini_timeout_seg: float = 120.0
     youtube_api_key: str = ""
     ytdlp_format: str = "bestvideo+bestaudio/best"
 
