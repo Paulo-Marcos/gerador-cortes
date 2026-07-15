@@ -69,30 +69,26 @@ const COVER_STOPWORDS = new Set([
   'para',
 ]);
 
-/** Conta palavras do texto de capa (ignora emojis 🔥/📖) e detecta redundância
- * com o título — a regra editorial manda a capa complementar, não repetir. */
+/** Detecta redundância do texto de capa com o título (ignora emojis 🔥/📖) —
+ * a regra editorial manda a capa complementar o título, não repeti-lo.
+ * Tamanho do texto de capa não tem mais teto fixo: manda a legibilidade. */
 export function coverTextStats(coverText: string, title: string) {
   const limpo = coverText.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
-  const words = limpo ? limpo.split(/\s+/).filter(Boolean) : [];
   const titleLower = title.toLowerCase();
-  const redundant = words.some((raw) => {
-    const w = raw.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-    return w.length > 3 && !COVER_STOPWORDS.has(w) && titleLower.includes(w);
-  });
-  return { count: words.length, redundant };
+  const redundant = limpo
+    .split(/\s+/)
+    .filter(Boolean)
+    .some((raw) => {
+      const w = raw.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+      return w.length > 3 && !COVER_STOPWORDS.has(w) && titleLower.includes(w);
+    });
+  return { redundant };
 }
 
 function CoverTextMeter({ coverText, title }: { coverText: string; title: string }) {
-  const { count, redundant } = coverTextStats(coverText, title);
-  const overLimit = count > 3;
-  return (
-    <div
-      className={cn('text-xs text-[var(--wb-text-dim)]', (overLimit || redundant) && 'text-error')}
-    >
-      {count} {count === 1 ? 'palavra' : 'palavras'} · ideal 1–3
-      {redundant && ' · nao repita a palavra-chave do titulo'}
-    </div>
-  );
+  const { redundant } = coverTextStats(coverText, title);
+  if (!redundant) return null;
+  return <div className="text-xs text-error">nao repita a palavra-chave do titulo</div>;
 }
 
 function hueFromCut(cut: Corte) {
