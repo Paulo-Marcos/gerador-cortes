@@ -67,7 +67,7 @@ def _rodar_pipeline_sync(wav_path: Path) -> list[dict]:
 
     pipeline = Pipeline.from_pretrained(
         settings.diarizacao_modelo,
-        use_auth_token=settings.huggingface_token,
+        token=settings.huggingface_token,
     )
     diarizacao = pipeline(str(wav_path))
 
