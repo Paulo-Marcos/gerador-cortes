@@ -75,6 +75,8 @@ async def init_db():
             "ALTER TABLE projetos ADD COLUMN pontuacao_ranking REAL DEFAULT 0.0",
             # D-286: mapa de falantes da diarização (canal vs. reagidos).
             "ALTER TABLE projetos ADD COLUMN falantes_map TEXT DEFAULT '{}'",
+            # D-372: voto manual (1-5) de qualidade da live, comparável à pontuacao_ranking.
+            "ALTER TABLE projetos ADD COLUMN voto_qualidade_live INTEGER",
             """
             CREATE TABLE IF NOT EXISTS layout_presets (
                 id VARCHAR(36) PRIMARY KEY,

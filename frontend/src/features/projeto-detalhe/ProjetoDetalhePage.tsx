@@ -35,6 +35,7 @@ import { CorteCard } from './CorteCard';
 import { AnaliseIaModal } from './AnaliseIaModal';
 import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
 import { PublicarMassaModal } from './PublicarMassaModal';
+import { VotoQualidadeLive } from './VotoQualidadeLive';
 
 export function ProjetoDetalhePage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -238,6 +239,12 @@ export function ProjetoDetalhePage() {
                       {formatarDuracaoHMS(projeto.data.duracao_segundos)}
                     </span>
                   </span>
+                )}
+                {projeto.data.pontuacao_ranking > 0 && (
+                  <VotoQualidadeLive
+                    projetoId={id}
+                    pontuacaoRanking={projeto.data.pontuacao_ranking}
+                  />
                 )}
                 <span className="inline-flex items-center gap-1">
                   <Badge variant="accent">{cortes.length} cortes</Badge>

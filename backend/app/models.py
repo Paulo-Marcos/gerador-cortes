@@ -93,6 +93,10 @@ class Projeto(Base):
     # F-052: pontuação herdada da tela de Ranking de Lives no momento do download.
     # 0.0 quando o projeto não veio do ranking (fluxo legado do YoutubeBrowser).
     pontuacao_ranking: Mapped[float] = mapped_column(Float, default=0.0)
+    # D-372: voto MANUAL do operador (1-5) sobre a qualidade real da live, dado
+    # depois de assistir/cortar — referência comparativa contra `pontuacao_ranking`,
+    # que às vezes diverge. None enquanto o operador não votou.
+    voto_qualidade_live: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
