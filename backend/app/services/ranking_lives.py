@@ -60,6 +60,17 @@ def _pesos_atuais() -> PesosRanking:
     return ranking_settings.resolver_pesos()
 
 
+async def _projetos_por_video_id(db: AsyncSession) -> dict[str, str]:
+    """video_id → id do Projeto já criado para ele (qualquer status)."""
+    res = await db.execute(select(Projeto.id, Projeto.youtube_url))
+    mapa: dict[str, str] = {}
+    for projeto_id, url in res.all():
+        vid = _extrair_video_id_de_url(url)
+        if vid:
+            mapa.setdefault(vid, projeto_id)
+    return mapa
+
+
 async def _video_ids_indisponiveis(db: AsyncSession) -> set[str]:
     """video_ids que NÃO podem mais aparecer no ranking.
 
@@ -68,17 +79,38 @@ async def _video_ids_indisponiveis(db: AsyncSession) -> set[str]:
         pipeline pelo botão "Baixar e cortar" ou pelo browser legado;
       - candidatas marcadas como REJEITADA.
     """
-    indisponiveis: set[str] = set()
-    res = await db.execute(select(Projeto.youtube_url))
-    for url in res.scalars().all():
-        vid = _extrair_video_id_de_url(url)
-        if vid:
-            indisponiveis.add(vid)
+    indisponiveis: set[str] = set(await _projetos_por_video_id(db))
     res = await db.execute(
         select(LiveCandidata.video_id).where(LiveCandidata.status == StatusLiveCandidata.REJEITADA)
     )
     indisponiveis.update(res.scalars().all())
     return indisponiveis
+
+
+async def _sincronizar_promovidas_por_projeto(db: AsyncSession) -> None:
+    """Corrige candidatas PENDENTES cujo vídeo já virou Projeto por outra via.
+
+    O endpoint `/ranking-lives/{id}/enfileirar` marca a candidata como
+    PROMOVIDA na hora, mas um Projeto também pode nascer sem passar por ali
+    (ex.: colar a URL manualmente em "novo projeto"). Sem essa sincronização a
+    LiveCandidata nunca transiciona e o vídeo continua aparecendo no ranking
+    mesmo já tendo sido baixado (D-373).
+    """
+    projetos_por_video = await _projetos_por_video_id(db)
+    if not projetos_por_video:
+        return
+    res = await db.execute(
+        select(LiveCandidata).where(LiveCandidata.status == StatusLiveCandidata.PENDENTE)
+    )
+    mudou = False
+    for candidata in res.scalars().all():
+        projeto_id = projetos_por_video.get(candidata.video_id)
+        if projeto_id:
+            candidata.status = StatusLiveCandidata.PROMOVIDA
+            candidata.projeto_id = projeto_id
+            mudou = True
+    if mudou:
+        await db.commit()
 
 
 def _extrair_video_id_de_url(url: str) -> str | None:
@@ -161,6 +193,7 @@ async def gerar_ranking(*, forcar_refresh: bool = False) -> dict:
         raise YoutubeDataApiError("youtube_channel_id não configurado no canal ativo")
 
     async with AsyncSessionLocal() as db:
+        await _sincronizar_promovidas_por_projeto(db)
         if not forcar_refresh:
             res = await db.execute(
                 select(LiveCandidata)
@@ -192,6 +225,7 @@ async def gerar_ranking(*, forcar_refresh: bool = False) -> dict:
             break
 
     async with AsyncSessionLocal() as db:
+        await _sincronizar_promovidas_por_projeto(db)
         res = await db.execute(
             select(LiveCandidata)
             .where(LiveCandidata.status == StatusLiveCandidata.PENDENTE)
