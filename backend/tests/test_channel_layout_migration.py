@@ -217,6 +217,26 @@ def test_sidecars_wal_do_settings_db_nao_sao_itens_planos(tmp_path):
     assert not (instance / "channels" / "meucanal" / "settings.db-wal").exists()
 
 
+def test_llm_calls_db_na_raiz_nao_e_item_plano(tmp_path):
+    """D-353: `instance/llm_calls.db` (telemetria global de IA) é artefato global
+    reservado como o `settings.db` — não dispara 'layout inconsistente' no boot (era
+    o bug que travava o PROD com layout `channels/`) nem é movido para dentro do canal."""
+    instance = tmp_path / "instance"
+    (instance / "channels" / "meucanal").mkdir(parents=True)
+    (instance / "channels" / "meucanal" / "channel.yaml").write_text("nome: x\n", encoding="utf-8")
+    (instance / "active-channel").write_text("meucanal\n", encoding="utf-8")
+    (instance / "llm_calls.db").write_text("", encoding="utf-8")
+    (instance / "llm_calls.db-wal").write_text("", encoding="utf-8")
+    (instance / "llm_calls.db-shm").write_text("", encoding="utf-8")
+
+    resultado = garantir_layout_de_canais(instance_root=instance)
+
+    assert resultado.acao == "noop"
+    assert (instance / "llm_calls.db").exists()
+    assert (instance / "llm_calls.db-wal").exists()
+    assert not (instance / "channels" / "meucanal" / "llm_calls.db").exists()
+
+
 def test_cura_ponteiro_ausente_com_canal_unico(tmp_path):
     instance = tmp_path / "instance"
     (instance / "channels" / "meucanal").mkdir(parents=True)

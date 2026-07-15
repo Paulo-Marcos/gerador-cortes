@@ -46,16 +46,23 @@ _PONTEIRO_ATIVO = "active-channel"
 # ao mesmo artefato global e também são reservados — senão o boot seguinte os veria
 # como itens planos órfãos e abortaria com "layout inconsistente".
 _BANCO_SETTINGS = "settings.db"
-_RESERVADOS = frozenset({_DIR_CANAIS, _PONTEIRO_ATIVO, _BANCO_SETTINGS})
+# `llm_calls.db` (D-353): telemetria GLOBAL de chamadas de IA — artefato de nível de
+# instância como o `settings.db` (não é por-canal). Vive na raiz de `instance/` e
+# NÃO é item de layout plano legado: não deve disparar "layout inconsistente" nem
+# ser movido para dentro de um canal.
+_BANCO_LLM_CALLS = "llm_calls.db"
+_BANCOS_GLOBAIS = frozenset({_BANCO_SETTINGS, _BANCO_LLM_CALLS})
+_RESERVADOS = frozenset({_DIR_CANAIS, _PONTEIRO_ATIVO, *_BANCOS_GLOBAIS})
 
 
 def _eh_reservado(nome: str) -> bool:
-    """True para itens do layout multi-canal e para o banco global + seus sidecars.
+    """True para itens do layout multi-canal e para os bancos globais + seus sidecars.
 
-    Um sidecar do SQLite é qualquer `settings.db-<sufixo>` (`-wal`, `-shm`,
-    `-journal`): pertence ao `settings.db` global, não ao layout plano legado.
+    Um sidecar do SQLite é qualquer `<banco>.db-<sufixo>` (`-wal`, `-shm`,
+    `-journal`): pertence ao banco global (`settings.db`/`llm_calls.db`), não ao
+    layout plano legado.
     """
-    return nome in _RESERVADOS or nome.startswith(_BANCO_SETTINGS + "-")
+    return nome in _RESERVADOS or any(nome.startswith(b + "-") for b in _BANCOS_GLOBAIS)
 
 
 _ID_FALLBACK = "default"
