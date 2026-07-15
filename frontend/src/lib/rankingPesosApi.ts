@@ -59,8 +59,9 @@ export const rankingPesosApi = {
       body: JSON.stringify(valores),
     }),
 
+  // GET (não POST): reset é idempotente e sem corpo; POST sem body disparava 422.
   resetar: () =>
     request<ListaRankingPesosResponse>('/editorial-skills/ranking-pesos/reset', {
-      method: 'POST',
+      method: 'GET',
     }),
 };

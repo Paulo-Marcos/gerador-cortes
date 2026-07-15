@@ -362,7 +362,10 @@ async def editar_ranking_pesos(body: UpdateRankingPesosRequest):
     return ListaRankingPesosResponse(criterios=[_para_response_criterio(c) for c in criterios])
 
 
-@router.post("/ranking-pesos/reset", response_model=ListaRankingPesosResponse)
+# GET (não POST): resetar-para-o-padrão é idempotente e sem corpo. Um POST sem body
+# vinha disparando 422 "body Field required" no cliente/stack; GET evita isso e casa
+# com a natureza sem-payload da operação.
+@router.get("/ranking-pesos/reset", response_model=ListaRankingPesosResponse)
 async def resetar_ranking_pesos():
     return ListaRankingPesosResponse(
         criterios=[_para_response_criterio(c) for c in ranking_settings.resetar_pesos()]
