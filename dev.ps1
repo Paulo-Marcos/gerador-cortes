@@ -41,23 +41,37 @@ function Stop-ProcessTree {
     }
 }
 
+function Test-CortadorProcess {
+    # D-370: so encerra processos deste checkout, casados pelo caminho absoluto
+    # do projeto ($BASE) no CommandLine/ExecutablePath.
+    # Tokens genericos (uvicorn/app.main, native_worker.js, vite, remotion, a
+    # porta) foram removidos de proposito: eles NAO distinguem este DEV do PROD
+    # (C:\PRD\gerador-cortes) nem de apps de terceiros que usam node/vite/porta
+    # 3000 (ex.: BolsoFundo), e o sweep antigo matava esses processos alheios.
+    # Processos "pathless" (backend na 8000, worker) nao entram aqui; o Ctrl+C ja
+    # os encerra pela arvore no bloco finally. Melhor deixar uma porta presa (e
+    # avisar) do que derrubar o PROD ou um app sem relacao.
+    param([string]$CommandLine, [string]$ExecutablePath)
+
+    $cl  = if ($CommandLine)    { $CommandLine }    else { "" }
+    $exe = if ($ExecutablePath) { $ExecutablePath } else { "" }
+
+    return ($cl -like "*$BASE*" -or $exe -like "*$BASE*")
+}
+
 function Clear-DevEnvironment {
     Write-Host "  Limpando portas/processos antigos..." -ForegroundColor DarkGray
 
+    # Candidatos: donos das portas do projeto + node/python com linha de comando
+    # nossa. Donos de porta so entram na lista; o corte final passa pela prova de
+    # posse abaixo, entao porta ocupada por app alheio nao e encerrada.
     $pidsByPort = foreach ($port in $projectPorts) {
         Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue |
             Select-Object -ExpandProperty OwningProcess
     }
 
     $pidsByCmd = Get-CimInstance Win32_Process -Filter "Name = 'python.exe' OR Name = 'node.exe'" -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.CommandLine -like "*uvicorn*" -or
-            $_.CommandLine -like "*app.main*" -or
-            $_.CommandLine -like "*gerador-cortes*" -or
-            $_.CommandLine -like "*remotion*" -or
-            $_.CommandLine -like "*vite*" -or
-            $_.CommandLine -like "*spawn_main*"
-        } |
+        Where-Object { Test-CortadorProcess -CommandLine $_.CommandLine -ExecutablePath $_.ExecutablePath } |
         Select-Object -ExpandProperty ProcessId
 
     $allPids = @($pidsByPort) + @($pidsByCmd) |
@@ -65,14 +79,21 @@ function Clear-DevEnvironment {
         Select-Object -Unique
 
     foreach ($targetPid in $allPids) {
-        $proc = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
-        if ($proc) {
-            Write-Host "  Encerrando $($proc.Name) (PID $targetPid)" -ForegroundColor DarkYellow
+        $cim = Get-CimInstance Win32_Process -Filter "ProcessId=$targetPid" -ErrorAction SilentlyContinue
+        if (-not $cim) { continue }
+
+        if (Test-CortadorProcess -CommandLine $cim.CommandLine -ExecutablePath $cim.ExecutablePath) {
+            Write-Host "  Encerrando $($cim.Name) (PID $targetPid)" -ForegroundColor DarkYellow
             Stop-ProcessTree -ProcessId $targetPid -IncludeRoot
+        } else {
+            Write-Host "  Porta ocupada por $($cim.Name) (PID $targetPid) alheio ao CortadorLive - ignorando" -ForegroundColor DarkGray
         }
     }
 
-    Get-Process -Name ffmpeg -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    # FFmpeg: apenas os deste projeto (nunca global - poderia matar render de PROD).
+    Get-CimInstance Win32_Process -Filter "Name = 'ffmpeg.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -like "*$BASE*" } |
+        ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {} }
 }
 
 function Get-ConfiguredLogLevel {

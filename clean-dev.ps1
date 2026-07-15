@@ -3,6 +3,7 @@
 $OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
 
+$BASE = $PSScriptRoot
 $projectPorts = @(8000, 4300, 3000, 3001)
 
 function Stop-ProcessTree {
@@ -16,6 +17,19 @@ function Stop-ProcessTree {
     try { Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue } catch {}
 }
 
+function Test-CortadorProcess {
+    # D-370: so encerra processos deste checkout (casados pelo caminho absoluto
+    # $BASE). Tokens genericos (uvicorn/app.main, native_worker.js, vite,
+    # remotion, porta) NAO distinguem este DEV do PROD (C:\PRD\gerador-cortes)
+    # nem de apps de terceiros que usam node/vite/porta (ex.: BolsoFundo).
+    param([string]$CommandLine, [string]$ExecutablePath)
+
+    $cl  = if ($CommandLine)    { $CommandLine }    else { "" }
+    $exe = if ($ExecutablePath) { $ExecutablePath } else { "" }
+
+    return ($cl -like "*$BASE*" -or $exe -like "*$BASE*")
+}
+
 Write-Host "----------------------------------------------------" -ForegroundColor Cyan
 Write-Host "Iniciando limpeza do ambiente local..." -ForegroundColor Cyan
 Write-Host "----------------------------------------------------" -ForegroundColor Cyan
@@ -26,14 +40,7 @@ $pidsByPort = foreach ($port in $projectPorts) {
 }
 
 $pidsByCmd = Get-CimInstance Win32_Process -Filter "Name = 'python.exe' OR Name = 'node.exe'" -ErrorAction SilentlyContinue |
-    Where-Object {
-        $_.CommandLine -like "*uvicorn*" -or
-        $_.CommandLine -like "*app.main*" -or
-        $_.CommandLine -like "*gerador-cortes*" -or
-        $_.CommandLine -like "*remotion*" -or
-        $_.CommandLine -like "*vite*" -or
-        $_.CommandLine -like "*spawn_main*"
-    } |
+    Where-Object { Test-CortadorProcess -CommandLine $_.CommandLine -ExecutablePath $_.ExecutablePath } |
     Select-Object -ExpandProperty ProcessId
 
 $allPids = ($pidsByPort + $pidsByCmd) |
@@ -42,20 +49,26 @@ $allPids = ($pidsByPort + $pidsByCmd) |
 
 if ($allPids) {
     foreach ($targetPid in $allPids) {
-        $proc = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
-        if ($proc) {
-            Write-Host "Encerrando: $($proc.Name) (PID $targetPid)..." -ForegroundColor Yellow
+        $cim = Get-CimInstance Win32_Process -Filter "ProcessId=$targetPid" -ErrorAction SilentlyContinue
+        if (-not $cim) { continue }
+
+        if (Test-CortadorProcess -CommandLine $cim.CommandLine -ExecutablePath $cim.ExecutablePath) {
+            Write-Host "Encerrando: $($cim.Name) (PID $targetPid)..." -ForegroundColor Yellow
             Stop-ProcessTree -ProcessId $targetPid
+        } else {
+            Write-Host "Porta ocupada por $($cim.Name) (PID $targetPid) alheio ao CortadorLive - ignorando." -ForegroundColor DarkGray
         }
     }
 } else {
     Write-Host "Nenhum processo antigo encontrado." -ForegroundColor Gray
 }
 
-$ffmpegs = Get-Process -Name ffmpeg -ErrorAction SilentlyContinue
+# FFmpeg: apenas os deste projeto (nunca global - poderia matar render de PROD).
+$ffmpegs = Get-CimInstance Win32_Process -Filter "Name = 'ffmpeg.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -like "*$BASE*" }
 if ($ffmpegs) {
-    Write-Host "Limpando FFmpeg..." -ForegroundColor Yellow
-    $ffmpegs | Stop-Process -Force -ErrorAction SilentlyContinue
+    Write-Host "Limpando FFmpeg do projeto..." -ForegroundColor Yellow
+    $ffmpegs | ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {} }
 }
 
 Write-Host "----------------------------------------------------" -ForegroundColor Cyan
