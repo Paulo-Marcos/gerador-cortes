@@ -16,7 +16,7 @@ import {
   Trophy,
   X,
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -91,7 +91,6 @@ const COMPONENTE_LABEL: Record<string, string> = {
 export function RankingLivesPage() {
   const { notify } = useToast();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   const rankingKey = ['ranking-lives'] as const;
   const rankingQuery = useQuery({
@@ -138,13 +137,14 @@ export function RankingLivesPage() {
           ? { ...current, lives: current.lives.filter((l) => l.video_id !== videoId) }
           : current,
       );
+      // Fica na tela de ranking (sem navigate): o usuário pode encadear vários
+      // downloads em seguida sem perder a lista.
       notify(
         data.ja_existia
-          ? 'Já havia projeto para essa live; abrindo.'
+          ? 'Já havia projeto para essa live.'
           : 'Download iniciado — vai aparecer em Projetos.',
         { tone: 'success' },
       );
-      navigate(`/projetos/${data.projeto_id}`);
     },
     onError: (err) => {
       notify(err instanceof Error ? err.message : 'Falha ao baixar.', { tone: 'error' });
