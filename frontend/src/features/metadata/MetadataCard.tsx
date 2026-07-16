@@ -46,51 +46,6 @@ function splitTags(tags: string) {
     .filter(Boolean);
 }
 
-// D-342: palavras curtas de ligação não contam como "repetir a palavra do título".
-const COVER_STOPWORDS = new Set([
-  'de',
-  'da',
-  'do',
-  'das',
-  'dos',
-  'e',
-  'em',
-  'no',
-  'na',
-  'nos',
-  'nas',
-  'com',
-  'que',
-  'os',
-  'as',
-  'um',
-  'uma',
-  'por',
-  'para',
-]);
-
-/** Detecta redundância do texto de capa com o título (ignora emojis 🔥/📖) —
- * a regra editorial manda a capa complementar o título, não repeti-lo.
- * Tamanho do texto de capa não tem mais teto fixo: manda a legibilidade. */
-export function coverTextStats(coverText: string, title: string) {
-  const limpo = coverText.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
-  const titleLower = title.toLowerCase();
-  const redundant = limpo
-    .split(/\s+/)
-    .filter(Boolean)
-    .some((raw) => {
-      const w = raw.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-      return w.length > 3 && !COVER_STOPWORDS.has(w) && titleLower.includes(w);
-    });
-  return { redundant };
-}
-
-function CoverTextMeter({ coverText, title }: { coverText: string; title: string }) {
-  const { redundant } = coverTextStats(coverText, title);
-  if (!redundant) return null;
-  return <div className="text-xs text-error">nao repita a palavra-chave do titulo</div>;
-}
-
 function hueFromCut(cut: Corte) {
   return (cut.numero * 53 + cut.titulo_proposto.length * 7) % 360;
 }
@@ -551,7 +506,6 @@ export function MetadataCard({
               placeholder="Ex: JUSTICA EM SI"
               className="h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-sm font-extrabold outline-none focus:border-[var(--wb-accent)]"
             />
-            <CoverTextMeter coverText={coverText} title={title} />
 
             <div className="grid gap-2 pt-1 md:grid-cols-[minmax(220px,0.8fr)_minmax(260px,1fr)]">
               <ActionGroup title="Regerar metadados" tone="oklch(0.54 0.16 32)">
