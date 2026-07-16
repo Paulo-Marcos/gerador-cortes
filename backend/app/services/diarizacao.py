@@ -29,8 +29,10 @@ logger = logging.getLogger(__name__)
 # Motivo padrão quando a diarização não roda (token/lib ausente). Compartilhado
 # pelos fluxos de projeto e de corte para não divergir a mensagem ao operador.
 _MOTIVO_INDISPONIVEL = (
-    "Diarização indisponível (verifique HUGGINGFACE_TOKEN e a instalação do "
-    "pyannote.audio). Transcrição mantida sem rótulo."
+    "Diarização indisponível. Verifique: (1) pyannote.audio instalado; (2) "
+    "HUGGINGFACE_TOKEN preenchido e COM acesso a repositórios gated; (3) termos "
+    "aceitos em huggingface.co/pyannote/speaker-diarization-3.1 e /segmentation-3.0. "
+    "Transcrição mantida sem rótulo — a causa específica está no log do backend."
 )
 
 

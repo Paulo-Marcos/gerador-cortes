@@ -119,11 +119,26 @@ cd backend
 pip install pyannote.audio
 
 # 2. Crie um token GRATUITO em huggingface.co/settings/tokens
-#    e ACEITE os termos do modelo em:
+#    - Prefira um token CLÁSSICO com role "Read" (enxerga repos gated por padrão).
+#    - Se usar token "fine-grained", HABILITE a permissão
+#      "Read access to contents of all public gated repos you can access"
+#      — sem esse checkbox o download falha com 403 mesmo com os termos aceitos.
+#    e ACEITE os termos dos DOIS modelos gated (o 3.1 depende do segmentation):
 #    huggingface.co/pyannote/speaker-diarization-3.1
+#    huggingface.co/pyannote/segmentation-3.0
 #    Depois preencha no backend/.env:
 #    HUGGINGFACE_TOKEN=hf_xxx
 ```
+
+> **Erro "cannot find the requested files ... check your connection"?** Apesar do
+> texto, quase nunca é conexão: é um **403** porque o token não tem acesso a repos
+> gated (checkbox do fine-grained acima) ou os termos de um dos modelos não foram
+> aceitos. A causa específica sai no log do backend (`[Diarizacao] Causa provável: ...`).
+
+> **Aviso de symlink no Windows** (`cache-system uses symlinks ... your machine does
+> not support them`): é benigno — o cache funciona em modo cópia (gasta um pouco mais
+> de disco). Para silenciar, ative o Developer Mode do Windows ou defina
+> `HF_HUB_DISABLE_SYMLINKS_WARNING=1`.
 
 > Sem GPU a diarização roda na CPU (mais lenta). Após diarizar, você pode
 > **rebatizar** os falantes na UI ("esse é o Pedro", "esse é o João") — os

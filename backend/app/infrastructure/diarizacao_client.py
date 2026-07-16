@@ -130,7 +130,34 @@ async def diarizar(
         return None
     except Exception as exc:  # noqa: BLE001 — degrada em vez de derrubar a análise
         logger.error("[Diarizacao] Falha na diarização: %s", exc)
+        _logar_dica_setup(exc)
         return None
     finally:
         if wav_path is not None:
             wav_path.unlink(missing_ok=True)
+
+
+def _logar_dica_setup(exc: Exception) -> None:
+    """Traduz erros comuns do HuggingFace numa dica acionável no log.
+
+    A mensagem crua do Hub ("cannot find the requested files ... check your
+    connection") esconde a causa real: quase sempre é um token SEM acesso a
+    repositórios *gated* (ou termos não aceitos), não falta de conexão. Sem
+    esta tradução, um checkbox faltando no token vira uma investigação longa.
+    """
+    msg = str(exc).lower()
+    if any(m in msg for m in ("gated", "403", "enable access", "accept the", "awaiting")):
+        logger.error(
+            "[Diarizacao] Causa provável: o HUGGINGFACE_TOKEN não tem acesso a "
+            "repositórios gated. Habilite 'Read access to public gated repos' no "
+            "token (huggingface.co/settings/tokens) OU use um token clássico Read, "
+            "e aceite os termos em huggingface.co/pyannote/speaker-diarization-3.1 "
+            "e huggingface.co/pyannote/segmentation-3.0."
+        )
+    elif any(m in msg for m in ("cannot find the requested files", "connection", "offline")):
+        logger.error(
+            "[Diarizacao] Causa provável: modelo não está em cache e o download "
+            "falhou. Confirme a conexão e o acesso do HUGGINGFACE_TOKEN aos modelos "
+            "pyannote (repos gated) — a mensagem 'check your connection' do Hub "
+            "costuma ser, na verdade, um 403 de permissão."
+        )
