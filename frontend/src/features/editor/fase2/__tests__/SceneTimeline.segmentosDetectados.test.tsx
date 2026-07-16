@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { SceneTimeline } from '../SceneTimeline';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import type { SegmentoDetectado } from '@/types/models';
+import type { CenaRemotion, SegmentoDetectado } from '@/types/models';
 import type { YoutubeLayout } from '../youtubeLayout';
 
 const layout: YoutubeLayout = {
@@ -80,5 +80,61 @@ describe('SceneTimeline · segmentos detectados (F-054)', () => {
     const html = render([]);
 
     expect(html).not.toContain('Segmento detectado');
+  });
+});
+
+// D-381: a timeline da tela Final precisa NAVEGAR (seek por clique) mesmo em
+// readOnly. `seekable` habilita o seek sem reabrir a edicao.
+function renderTimeline(opts: { readOnly?: boolean; seekable?: boolean; cenas?: CenaRemotion[] }) {
+  return renderToStaticMarkup(
+    <TooltipProvider>
+      <SceneTimeline
+        cenas={opts.cenas ?? []}
+        currentTime={0}
+        duration={120}
+        layoutYoutube={layout}
+        onSeek={vi.fn()}
+        readOnly={opts.readOnly}
+        seekable={opts.seekable}
+      />
+    </TooltipProvider>,
+  );
+}
+
+const umaCena: CenaRemotion[] = [{ tipo: 'tela_cheia', inicio: 0, fim: 10 } as CenaRemotion];
+
+/** Extrai a tag de abertura do <button> do bloco de cena para asserçoes
+ *  escopadas (o header em modo edicao tem outros botoes disabled — ex.: zoom
+ *  no minimo — que poluiriam um match no html inteiro). */
+function sceneButtonTag(html: string): string {
+  return html.match(/<button[^>]*aria-label="Cena[^>]*>/)?.[0] ?? '';
+}
+
+describe('SceneTimeline · seekable (D-381)', () => {
+  it('readOnly puro deixa o bloco de cena estatico (disabled, cursor-default)', () => {
+    const btn = sceneButtonTag(renderTimeline({ readOnly: true, cenas: umaCena }));
+
+    expect(btn).not.toBe(''); // o bloco renderizou
+    expect(btn).toContain('disabled'); // sem seek
+    expect(btn).toContain('cursor-default');
+  });
+
+  it('readOnly + seekable habilita o seek no bloco, mantendo a edicao off', () => {
+    const html = renderTimeline({ readOnly: true, seekable: true, cenas: umaCena });
+    const btn = sceneButtonTag(html);
+
+    expect(btn).not.toBe('');
+    expect(btn).not.toContain('disabled'); // clicavel para seek
+    expect(btn).toContain('cursor-pointer');
+    // edicao permanece desligada: sem +Comp/+Full nem controles de zoom
+    expect(html).not.toContain('Comp.');
+    expect(html).not.toContain('Aumentar zoom');
+  });
+
+  it('sem readOnly (edicao) o bloco segue clicavel como antes', () => {
+    const btn = sceneButtonTag(renderTimeline({ cenas: umaCena }));
+
+    expect(btn).not.toContain('disabled');
+    expect(btn).toContain('cursor-pointer');
   });
 });

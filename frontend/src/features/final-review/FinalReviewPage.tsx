@@ -508,6 +508,7 @@ export function FinalReviewPage() {
                 v.currentTime = Math.max(0, seg);
               }}
               readOnly
+              seekable
             />
           </div>
         </div>

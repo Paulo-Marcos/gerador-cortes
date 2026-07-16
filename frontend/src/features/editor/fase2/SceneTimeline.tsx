@@ -76,8 +76,12 @@ interface Props {
   /** F-054: re-roda a detecção de cena no bruto existente (idempotente). */
   onReprocessarSegmentosDetectados?: () => void;
   detectandoSegmentos?: boolean;
-  /** Read-only (Final): sem zoom, sem +Comp/+Full, blocos nao clicaveis. */
+  /** Read-only (Final): sem zoom, sem +Comp/+Full, sem resize/edicao. */
   readOnly?: boolean;
+  /** D-381: permite NAVEGAR (seek: clique na trilha/cena + arrasto do playhead)
+   *  mesmo em `readOnly`. A edicao (add/resize/zoom/select) continua desligada.
+   *  Usado na tela Final para clicar/scrubar o video renderizado. */
+  seekable?: boolean;
 }
 
 const TIMECODE_SLOTS = 7;
@@ -277,6 +281,7 @@ export function SceneTimeline({
   onReprocessarSegmentosDetectados,
   detectandoSegmentos = false,
   readOnly = false,
+  seekable = false,
 }: Props) {
   const [zoom, setZoom] = useState(1);
   const [dragState, setDragState] = useState<RegionDragState | null>(null);
@@ -297,6 +302,9 @@ export function SceneTimeline({
   const timecodes = buildTimecodes(safeDuration);
   const showAddButtons = !readOnly && onAddRegion;
   const canResizeRegions = !readOnly && Boolean(onRegionResize);
+  // D-381: navegar (seek) é permitido fora do readOnly OU quando `seekable`
+  // (tela Final). Edição continua atrelada só a `!readOnly`.
+  const podeNavegar = !readOnly || seekable;
   const isDraggingRegion = dragState !== null;
   const isDraggingPlayhead = playheadPointerId !== null;
   const waveformBars = useMemo(
@@ -325,7 +333,7 @@ export function SceneTimeline({
   );
 
   const startPlayheadDrag = (event: React.PointerEvent<HTMLElement>) => {
-    if (readOnly || event.button !== 0) return;
+    if (!podeNavegar || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
     setPlayheadPointerId(event.pointerId);
@@ -337,7 +345,7 @@ export function SceneTimeline({
   // e.target === e.currentTarget; cliques em bloco caem no proprio botao
   // e nao acionam este handler.
   const handleTrackClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (readOnly) return;
+    if (!podeNavegar) return;
     if (event.target !== event.currentTarget) return;
     const rect = event.currentTarget.getBoundingClientRect();
     if (rect.width <= 0) return;
@@ -695,7 +703,7 @@ export function SceneTimeline({
               ref={sceneTrackRef}
               className={cn(
                 'relative flex-1 overflow-hidden rounded-[6px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]',
-                readOnly ? 'cursor-default' : 'cursor-pointer',
+                podeNavegar ? 'cursor-pointer' : 'cursor-default',
               )}
               style={{ height: SCENE_TRACK_HEIGHT }}
               onPointerDown={handleTrackPointerDown}
@@ -716,25 +724,26 @@ export function SceneTimeline({
                     title={`${meta.label} · ${cena.texto || ''} · ${segParaMmSs(cena.inicio, true)}`}
                     onKeyDown={blockKeyboardActivation}
                     onClick={(event) => {
-                      if (readOnly) return;
+                      if (!podeNavegar) return;
                       event.stopPropagation();
                       const track = sceneTrackRef.current;
                       const tempo = track
                         ? secondsFromPointer(event, track, safeDuration)
                         : cena.inicio;
-                      if (event.ctrlKey || event.metaKey) {
+                      if ((event.ctrlKey || event.metaKey) && !readOnly) {
                         // Ctrl+click = seleciona + abre aba Cenas; player vai
                         // ao ponto exato do clique (nao ao inicio da cena).
+                        // So no modo edicao — em `seekable` readOnly apenas navega.
                         onSelectCena?.(idx, { tempo, abrirAba: true });
                       }
                       onSeek(tempo);
                     }}
-                    disabled={readOnly}
+                    disabled={!podeNavegar}
                     aria-label={`Cena ${meta.label}`}
                     aria-pressed={isSelected}
                     className={cn(
                       'absolute z-10 flex items-center gap-1.5 overflow-hidden rounded-[5px] border px-2 transition-colors',
-                      readOnly ? 'cursor-default' : 'cursor-pointer',
+                      podeNavegar ? 'cursor-pointer' : 'cursor-default',
                     )}
                     style={{
                       // Sem offset extra: bloco usa exatamente a fracao do tempo,
@@ -812,7 +821,7 @@ export function SceneTimeline({
               ref={layoutTrackRef}
               className={cn(
                 'relative flex-1 overflow-hidden rounded-[6px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]',
-                readOnly ? 'cursor-default' : 'cursor-pointer',
+                podeNavegar ? 'cursor-pointer' : 'cursor-default',
               )}
               style={{ height: LAYOUT_TRACK_HEIGHT }}
               onPointerDown={handleTrackPointerDown}
@@ -877,25 +886,26 @@ export function SceneTimeline({
                     title={`${region.modo} · ${segParaMmSs(region.inicio, true)} → ${segParaMmSs(region.fim, true)}`}
                     onKeyDown={blockKeyboardActivation}
                     onClick={(event) => {
-                      if (readOnly) return;
+                      if (!podeNavegar) return;
                       event.stopPropagation();
                       const track = layoutTrackRef.current;
                       const tempo = track
                         ? secondsFromPointer(event, track, safeDuration)
                         : region.inicio;
-                      if (event.ctrlKey || event.metaKey) {
+                      if ((event.ctrlKey || event.metaKey) && !readOnly) {
                         // Ctrl+click = seleciona regiao + abre aba Layout;
-                        // playhead vai ao ponto exato do clique.
+                        // playhead vai ao ponto exato do clique. So no modo
+                        // edicao — em `seekable` readOnly apenas navega.
                         onSelectRegion?.(idx, { tempo, abrirAba: true });
                       }
                       onSeek(tempo);
                     }}
-                    disabled={readOnly}
+                    disabled={!podeNavegar}
                     aria-label={`Região ${region.modo}`}
                     aria-pressed={isSelected}
                     className={cn(
                       'group absolute z-10 flex items-center gap-1.5 rounded-[4px] border px-2 transition-colors',
-                      readOnly ? 'cursor-default' : 'cursor-pointer',
+                      podeNavegar ? 'cursor-pointer' : 'cursor-default',
                     )}
                     style={{
                       // Sem offset: alinhamento pixel-perfect com o playhead.

@@ -11,10 +11,9 @@ import type { Corte } from '@/types/models';
 import { hmsParaSeg, segParaHms, validarHms } from './timeUtils';
 
 // F-056: criar corte manualmente a partir de [inicio_hms, fim_hms].
-// Apos criar, dispara a analise de desvios (Gemini) para sugerir trechos a
-// remover; a transcricao e re-sincronizada automaticamente pelo servico
-// quando desvios sao importados. O corte e criado mesmo que a analise IA
-// falhe.
+// D-382: nao dispara mais a busca automatica de trechos a remover via Gemini
+// (o usuario nao usa mais essa etapa); quem quiser trechos sugeridos usa os
+// fluxos manuais existentes (Gerar trechos / Analise IA) depois de criado.
 
 interface Props {
   open: boolean;
@@ -27,7 +26,7 @@ interface Props {
   getCurrentTime?: () => number;
 }
 
-type Fase = 'form' | 'criando' | 'analisando';
+type Fase = 'form' | 'criando';
 
 export function AdicionarCorteModal({
   open,
@@ -85,42 +84,19 @@ export function AdicionarCorteModal({
 
     qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
     qc.setQueryData(corteKey(corteCriado.id), corteCriado);
-    notify(`Corte #${corteCriado.numero} criado. Buscando trechos a remover...`, {
-      tone: 'success',
-    });
-
-    setFase('analisando');
-    try {
-      const comDesvios = await api.analisarDesviosIa(corteCriado.id);
-      qc.setQueryData(corteKey(comDesvios.id), comDesvios);
-      qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
-      onCreated?.(comDesvios);
-    } catch (e) {
-      notify(
-        e instanceof Error
-          ? `Corte criado. Falha na busca de trechos: ${e.message}`
-          : 'Corte criado. Busca de trechos falhou; voce pode tentar de novo manualmente.',
-        { tone: 'warning' },
-      );
-      onCreated?.(corteCriado);
-    }
-
+    notify(`Corte #${corteCriado.numero} criado.`, { tone: 'success' });
+    onCreated?.(corteCriado);
     onClose();
   }
 
-  const labelAcao =
-    fase === 'criando'
-      ? 'Criando corte...'
-      : fase === 'analisando'
-        ? 'Buscando trechos a remover...'
-        : 'Criar e buscar trechos';
+  const labelAcao = fase === 'criando' ? 'Criando corte...' : 'Criar corte';
 
   return (
     <Modal
       open={open}
       onClose={ocupado ? () => {} : onClose}
       title="Adicionar corte manualmente"
-      description="Informe inicio e fim em HH:MM:SS. Apos criar, a IA vai sugerir trechos a remover."
+      description="Informe inicio e fim em HH:MM:SS."
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose} disabled={ocupado}>
