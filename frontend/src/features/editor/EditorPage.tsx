@@ -44,6 +44,7 @@ import {
 } from './regerarBrutoPlan';
 import { ShortcutsHelpModal } from './ShortcutsHelpModal';
 import { useShortcuts, type ShortcutBinding } from './shortcuts';
+import { shortcutFromRegistry } from './shortcutsRegistry';
 import { useEditHistory } from './useEditHistory';
 import { calcularDuracaoLiquida, hmsParaSeg, segParaHms } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
@@ -452,150 +453,38 @@ export function EditorPage() {
     }
   }
 
+  // D-394: bindings vêm do registro central (ids bruto.*) — assim TODA
+  // funcionalidade do editor pode ter o atalho reatribuído pelo usuário
+  // na página Atalhos (overlay wb-keybindings-v1).
   const bindings: ShortcutBinding[] = useMemo(
     () => [
-      {
-        key: ' ',
-        group: 'player',
-        description: 'Play/pause',
-        action: () => playerRef.current?.togglePlay(),
-      },
-      {
-        key: ',',
-        group: 'player',
-        description: 'Frame anterior',
-        action: () => playerRef.current?.step(-1 / 30),
-      },
-      {
-        key: '.',
-        group: 'player',
-        description: 'Frame proximo',
-        action: () => playerRef.current?.step(1 / 30),
-      },
-      { key: 'arrowleft', group: 'player', description: 'Retroceder 5s', action: () => onSkip(-5) },
-      { key: 'arrowright', group: 'player', description: 'Avancar 5s', action: () => onSkip(5) },
-      {
-        key: 'j',
-        mod: 'ctrl',
-        group: 'player',
-        description: 'Velocidade -0.25',
-        action: () => onChangeSpeed(-0.25),
-      },
-      {
-        key: 'k',
-        mod: 'ctrl',
-        group: 'player',
-        description: 'Velocidade +0.25',
-        action: () => onChangeSpeed(0.25),
-      },
-      {
-        key: 'j',
-        group: 'navegacao',
-        description: 'Corte anterior',
-        action: () => navegarCorte(-1),
-      },
-      { key: 'k', group: 'navegacao', description: 'Proximo corte', action: () => navegarCorte(1) },
-      {
-        key: '[',
-        group: 'edicao',
-        description: 'Definir inicio no tempo atual',
-        action: setInicioAtual,
-      },
-      { key: ']', group: 'edicao', description: 'Definir fim no tempo atual', action: setFimAtual },
-      { key: 'a', group: 'edicao', description: 'Alternar aprovado', action: toggleAprovado },
-      { key: 'r', group: 'edicao', description: 'Alternar rejeitado', action: toggleRejeitado },
-      { key: 'f', group: 'edicao', description: 'Toggle fire', action: () => toggleFire.mutate() },
-      {
-        key: 'l',
-        group: 'edicao',
-        description: 'Toggle leitura',
-        action: () => corte && toggleLeitura.mutate(corte),
-      },
-      {
-        key: 'l',
-        mod: 'ctrl',
-        group: 'edicao',
-        description: 'Travar/destravar trecho',
-        action: () => setTrechoLocked((v) => !v),
-      },
-      {
-        key: 'p',
-        mod: 'ctrl',
-        group: 'edicao',
-        description: 'Ativar/desativar modo ponteiro',
-        action: () => setPointerMode((v) => !v),
-      },
-      {
-        key: 't',
-        mod: 'ctrl+alt',
-        group: 'edicao',
-        description: 'Adicionar trecho no cursor',
-        action: adicionarTrechoAqui,
-      },
-      {
-        key: 'd',
-        group: 'edicao',
-        description: 'Dividir corte no ponteiro',
-        action: onDividirCorteAqui,
-      },
-      {
-        key: 'Delete',
-        mod: 'ctrl',
-        group: 'edicao',
-        description: 'Remover trecho selecionado (Ctrl+click no trecho)',
-        action: onRemoverTrechoSelecionado,
-      },
-      {
-        key: 'b',
-        mod: 'ctrl',
-        group: 'edicao',
-        description: 'Reproducao sem cortes (smart play)',
-        action: () => setSmartPlay((v) => !v),
-      },
-      {
-        key: 'z',
-        mod: 'ctrl',
-        group: 'edicao',
-        description: 'Desfazer alteracao (inicio/fim, trecho, intervalo)',
-        action: editHistory.undo,
-        skipInEditable: true,
-      },
-      {
-        key: 'y',
-        mod: 'ctrl',
-        group: 'edicao',
-        description: 'Refazer alteracao',
-        action: editHistory.redo,
-        skipInEditable: true,
-      },
-      {
-        key: 's',
-        mod: 'any',
-        group: 'global',
-        description: 'Salvar mudancas',
-        action: salvarMudancas,
-      },
-      {
-        key: 'g',
-        mod: 'any',
-        group: 'global',
-        description: 'Gerar video bruto',
-        action: () => handleGerarBrutoPrincipal(),
-      },
-      {
-        key: 'o',
-        mod: 'any',
-        group: 'global',
-        description: 'Abrir pasta',
-        action: () => abrirPasta.mutate(corteId),
-      },
-      {
-        key: '?',
-        mod: 'shift',
-        group: 'global',
-        description: 'Mostrar atalhos',
-        action: () => setShortcutsOpen(true),
-      },
+      shortcutFromRegistry('player.togglePlay', () => playerRef.current?.togglePlay()),
+      shortcutFromRegistry('bruto.frameAnterior', () => playerRef.current?.step(-1 / 30)),
+      shortcutFromRegistry('bruto.frameProximo', () => playerRef.current?.step(1 / 30)),
+      shortcutFromRegistry('bruto.seekBack5s', () => onSkip(-5)),
+      shortcutFromRegistry('bruto.seekFwd5s', () => onSkip(5)),
+      shortcutFromRegistry('bruto.speedDown', () => onChangeSpeed(-0.25)),
+      shortcutFromRegistry('bruto.speedUp', () => onChangeSpeed(0.25)),
+      shortcutFromRegistry('bruto.corteAnterior', () => navegarCorte(-1)),
+      shortcutFromRegistry('bruto.proximoCorte', () => navegarCorte(1)),
+      shortcutFromRegistry('bruto.inAqui', setInicioAtual),
+      shortcutFromRegistry('bruto.outAqui', setFimAtual),
+      shortcutFromRegistry('bruto.aprovar', toggleAprovado),
+      shortcutFromRegistry('bruto.rejeitar', toggleRejeitado),
+      shortcutFromRegistry('bruto.fire', () => toggleFire.mutate()),
+      shortcutFromRegistry('bruto.leitura', () => corte && toggleLeitura.mutate(corte)),
+      shortcutFromRegistry('bruto.travarTrecho', () => setTrechoLocked((v) => !v)),
+      shortcutFromRegistry('bruto.modoPonteiro', () => setPointerMode((v) => !v)),
+      shortcutFromRegistry('bruto.adicionarTrecho', adicionarTrechoAqui),
+      shortcutFromRegistry('bruto.dividirCorte', onDividirCorteAqui),
+      shortcutFromRegistry('bruto.removerTrecho', onRemoverTrechoSelecionado),
+      shortcutFromRegistry('bruto.smartPlay', () => setSmartPlay((v) => !v)),
+      shortcutFromRegistry('bruto.undo', editHistory.undo),
+      shortcutFromRegistry('bruto.redo', editHistory.redo),
+      shortcutFromRegistry('bruto.salvar', salvarMudancas),
+      shortcutFromRegistry('bruto.gerarBruto', () => handleGerarBrutoPrincipal()),
+      shortcutFromRegistry('bruto.abrirPasta', () => abrirPasta.mutate(corteId)),
+      shortcutFromRegistry('bruto.mostrarAtalhos', () => setShortcutsOpen(true)),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [corte, corteId, isDirty],

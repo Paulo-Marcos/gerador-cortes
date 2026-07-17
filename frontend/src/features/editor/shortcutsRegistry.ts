@@ -56,7 +56,34 @@ export type ShortcutId =
   | 'wb.toggleRightPanel'
   | 'wb.nextTab'
   | 'wb.prevTab'
-  | 'wb.closeTab';
+  | 'wb.closeTab'
+  // ── Editor Bruto (D-394: formalizados no registro p/ serem editáveis) ─
+  | 'bruto.frameAnterior'
+  | 'bruto.frameProximo'
+  | 'bruto.seekBack5s'
+  | 'bruto.seekFwd5s'
+  | 'bruto.speedDown'
+  | 'bruto.speedUp'
+  | 'bruto.corteAnterior'
+  | 'bruto.proximoCorte'
+  | 'bruto.inAqui'
+  | 'bruto.outAqui'
+  | 'bruto.aprovar'
+  | 'bruto.rejeitar'
+  | 'bruto.fire'
+  | 'bruto.leitura'
+  | 'bruto.travarTrecho'
+  | 'bruto.modoPonteiro'
+  | 'bruto.adicionarTrecho'
+  | 'bruto.dividirCorte'
+  | 'bruto.removerTrecho'
+  | 'bruto.smartPlay'
+  | 'bruto.undo'
+  | 'bruto.redo'
+  | 'bruto.salvar'
+  | 'bruto.gerarBruto'
+  | 'bruto.abrirPasta'
+  | 'bruto.mostrarAtalhos';
 
 export interface ShortcutSpec {
   id: ShortcutId;
@@ -235,7 +262,287 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     description: 'Fechar aba de trabalho atual',
     group: 'navegacao',
   },
+  // ── Editor Bruto (D-394: cada funcionalidade com atalho editável) ────
+  {
+    id: 'bruto.frameAnterior',
+    screen: 'bruto',
+    key: ',',
+    description: 'Frame anterior',
+    group: 'player',
+  },
+  {
+    id: 'bruto.frameProximo',
+    screen: 'bruto',
+    key: '.',
+    description: 'Frame próximo',
+    group: 'player',
+  },
+  {
+    id: 'bruto.seekBack5s',
+    screen: 'bruto',
+    key: 'ArrowLeft',
+    description: 'Retroceder 5 segundos',
+    group: 'player',
+  },
+  {
+    id: 'bruto.seekFwd5s',
+    screen: 'bruto',
+    key: 'ArrowRight',
+    description: 'Avançar 5 segundos',
+    group: 'player',
+  },
+  {
+    id: 'bruto.speedDown',
+    screen: 'bruto',
+    key: 'j',
+    mod: 'ctrl',
+    description: 'Velocidade -0.25x',
+    group: 'player',
+  },
+  {
+    id: 'bruto.speedUp',
+    screen: 'bruto',
+    key: 'k',
+    mod: 'ctrl',
+    description: 'Velocidade +0.25x',
+    group: 'player',
+  },
+  {
+    id: 'bruto.corteAnterior',
+    screen: 'bruto',
+    key: 'j',
+    description: 'Corte anterior',
+    group: 'navegacao',
+  },
+  {
+    id: 'bruto.proximoCorte',
+    screen: 'bruto',
+    key: 'k',
+    description: 'Próximo corte',
+    group: 'navegacao',
+  },
+  {
+    id: 'bruto.inAqui',
+    screen: 'bruto',
+    key: '[',
+    description: 'Definir início no tempo atual',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.outAqui',
+    screen: 'bruto',
+    key: ']',
+    description: 'Definir fim no tempo atual',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.aprovar',
+    screen: 'bruto',
+    key: 'a',
+    description: 'Alternar aprovado',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.rejeitar',
+    screen: 'bruto',
+    key: 'r',
+    description: 'Alternar rejeitado (excluir corte)',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.fire',
+    screen: 'bruto',
+    key: 'f',
+    description: 'Toggle 🔥 fire',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.leitura',
+    screen: 'bruto',
+    key: 'l',
+    description: 'Toggle 📖 leitura',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.travarTrecho',
+    screen: 'bruto',
+    key: 'l',
+    mod: 'ctrl',
+    description: 'Travar/destravar trecho',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.modoPonteiro',
+    screen: 'bruto',
+    key: 'p',
+    mod: 'ctrl',
+    description: 'Ativar/desativar modo ponteiro',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.adicionarTrecho',
+    screen: 'bruto',
+    key: 't',
+    mod: 'ctrl+alt',
+    description: 'Adicionar trecho no cursor',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.dividirCorte',
+    screen: 'bruto',
+    key: 'd',
+    description: 'Dividir corte no ponteiro',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.removerTrecho',
+    screen: 'bruto',
+    key: 'Delete',
+    mod: 'ctrl',
+    description: 'Remover trecho selecionado',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.smartPlay',
+    screen: 'bruto',
+    key: 'b',
+    mod: 'ctrl',
+    description: 'Reprodução sem cortes (smart play)',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.undo',
+    screen: 'bruto',
+    key: 'z',
+    mod: 'ctrl',
+    description: 'Desfazer alteração (início/fim, trecho, intervalo)',
+    group: 'edicao',
+    skipInEditable: true,
+  },
+  {
+    id: 'bruto.redo',
+    screen: 'bruto',
+    key: 'y',
+    mod: 'ctrl',
+    description: 'Refazer alteração',
+    group: 'edicao',
+    skipInEditable: true,
+  },
+  {
+    id: 'bruto.salvar',
+    screen: 'bruto',
+    key: 's',
+    mod: 'any',
+    description: 'Salvar mudanças',
+    group: 'global',
+  },
+  {
+    id: 'bruto.gerarBruto',
+    screen: 'bruto',
+    key: 'g',
+    mod: 'any',
+    description: 'Gerar/regerar vídeo bruto',
+    group: 'global',
+  },
+  {
+    id: 'bruto.abrirPasta',
+    screen: 'bruto',
+    key: 'o',
+    mod: 'any',
+    description: 'Abrir pasta do corte',
+    group: 'global',
+  },
+  {
+    id: 'bruto.mostrarAtalhos',
+    screen: 'bruto',
+    key: '?',
+    mod: 'shift',
+    description: 'Mostrar atalhos do editor',
+    group: 'global',
+  },
 ];
+
+// ─────────────────────────────────────────────────────────────
+// Overrides de keybinding (D-394): o usuário pode reatribuir a tecla
+// de QUALQUER atalho do registro. Overlay em localStorage
+// `wb-keybindings-v1` ({id: {key, mod?}}); os call sites recebem o
+// combo efetivo via shortcutFromRegistry — reatribuição aplica ao
+// recarregar a página.
+// ─────────────────────────────────────────────────────────────
+
+export const KEYBINDINGS_STORAGE_KEY = 'wb-keybindings-v1';
+
+export interface KeyOverride {
+  key: string;
+  mod?: ShortcutBinding['mod'];
+}
+
+export type KeybindingsOverlay = Partial<Record<ShortcutId, KeyOverride>>;
+
+const MODS_VALIDOS = new Set(['ctrl', 'shift', 'alt', 'ctrl+alt', 'any']);
+
+export function parseKeybindingsOverlay(raw: string | null): KeybindingsOverlay {
+  if (!raw) return {};
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (typeof data !== 'object' || data === null) return {};
+  const overlay: KeybindingsOverlay = {};
+  for (const [id, valor] of Object.entries(data as Record<string, unknown>)) {
+    if (!REGISTRY_BY_ID.has(id as ShortcutId)) continue;
+    if (typeof valor !== 'object' || valor === null) continue;
+    const cand = valor as { key?: unknown; mod?: unknown };
+    if (typeof cand.key !== 'string' || cand.key.length === 0) continue;
+    const override: KeyOverride = { key: cand.key };
+    if (typeof cand.mod === 'string' && MODS_VALIDOS.has(cand.mod)) {
+      override.mod = cand.mod as ShortcutBinding['mod'];
+    }
+    overlay[id as ShortcutId] = override;
+  }
+  return overlay;
+}
+
+export function loadKeybindingsOverlay(): KeybindingsOverlay {
+  if (typeof window === 'undefined') return {};
+  try {
+    return parseKeybindingsOverlay(window.localStorage.getItem(KEYBINDINGS_STORAGE_KEY));
+  } catch {
+    return {};
+  }
+}
+
+/** Persiste (override=null remove a customização do id). */
+export function saveKeybindingOverride(id: ShortcutId, override: KeyOverride | null): void {
+  const overlay = loadKeybindingsOverlay();
+  if (override) overlay[id] = override;
+  else delete overlay[id];
+  try {
+    window.localStorage.setItem(KEYBINDINGS_STORAGE_KEY, JSON.stringify(overlay));
+  } catch {
+    // localStorage indisponível — customização não persiste
+  }
+}
+
+export function clearKeybindingsOverlay(): void {
+  try {
+    window.localStorage.removeItem(KEYBINDINGS_STORAGE_KEY);
+  } catch {
+    // ignora
+  }
+}
+
+/** Registro com os overrides do usuário aplicados. */
+export function effectiveShortcutSpecs(
+  overlay: KeybindingsOverlay = loadKeybindingsOverlay(),
+): ShortcutSpec[] {
+  return SHORTCUTS_REGISTRY.map((spec) => {
+    const override = overlay[spec.id];
+    return override ? { ...spec, key: override.key, mod: override.mod } : spec;
+  });
+}
 
 const REGISTRY_BY_ID = new Map<ShortcutId, ShortcutSpec>(
   SHORTCUTS_REGISTRY.map((spec) => [spec.id, spec]),
@@ -253,9 +560,11 @@ export function shortcutFromRegistry(id: ShortcutId, action: () => void): Shortc
   if (!spec) {
     throw new Error(`Shortcut id ${id} nao registrado em shortcutsRegistry.ts`);
   }
+  // D-394: aplica a customização do usuário (localStorage) sobre o default.
+  const override = loadKeybindingsOverlay()[id];
   return {
-    key: spec.key,
-    mod: spec.mod,
+    key: override?.key ?? spec.key,
+    mod: override ? override.mod : spec.mod,
     group: spec.group,
     description: spec.description,
     action,
