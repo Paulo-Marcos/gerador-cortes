@@ -232,8 +232,8 @@ export function AnaliseIaModal({
             <span className="flex-1">
               Este projeto já tem{' '}
               <strong className="text-text-100">{totalCortesExistentes} cortes</strong>. A análise{' '}
-              <strong className="text-text-100">adiciona</strong> os novos aos existentes e continua a
-              numeração — <strong className="text-text-100">nada é apagado</strong>. Para remover
+              <strong className="text-text-100">adiciona</strong> os novos aos existentes e continua
+              a numeração — <strong className="text-text-100">nada é apagado</strong>. Para remover
               cortes, use o editor.
             </span>
           </div>
@@ -315,11 +315,7 @@ export function AnaliseIaModal({
           Cancelar
         </Button>
         {origem === 'manual' && (
-          <Button
-            type="button"
-            onClick={onSubmitManual}
-            disabled={isPending || !todasColadas}
-          >
+          <Button type="button" onClick={onSubmitManual} disabled={isPending || !todasColadas}>
             {isPending ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (

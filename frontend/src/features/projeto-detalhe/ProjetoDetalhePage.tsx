@@ -28,8 +28,9 @@ import {
   useUploadYouTube,
 } from '@/hooks/useProjetoDetalhe';
 import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/hooks/useEditor';
+import { useFalantes } from '@/hooks/useDiarizacao';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
-import { formatarDataLive, formatarDuracaoHMS } from '@/lib/utils';
+import { cn, formatarDataLive, formatarDuracaoHMS, thumbnailUrl } from '@/lib/utils';
 import type { StatusExportCorte } from '@/types/models';
 import { CorteCard } from './CorteCard';
 import { AnaliseIaModal } from './AnaliseIaModal';
@@ -191,6 +192,18 @@ export function ProjetoDetalhePage() {
   const corteIds = useMemo(() => (cortesQuery.data ?? []).map((c) => c.id), [cortesQuery.data]);
   useWarmupWaveforms(corteIds);
 
+  // Chips de estado do pipeline no header (DE-PARA §2).
+  const falantes = useFalantes(id, true);
+  const totalFalantes = falantes.data?.falantes ? Object.keys(falantes.data.falantes).length : 0;
+  const baixado = projeto.data && !['pendente', 'baixando', 'erro'].includes(projeto.data.status);
+  const transcrito =
+    projeto.data && ['pronto', 'analisando', 'analisado'].includes(projeto.data.status);
+  const avaliados = (cortesQuery.data ?? []).filter((c) => c.status !== 'proposto').length;
+  const statusPorCorte = useMemo(
+    () => new Map((cortesQuery.data ?? []).map((c) => [c.id, c])),
+    [cortesQuery.data],
+  );
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className="mx-auto flex max-w-[1600px] flex-col gap-5 px-6 py-6">
@@ -202,8 +215,16 @@ export function ProjetoDetalhePage() {
           <ArrowLeft size={14} /> Projetos
         </Link>
 
-        {/* Header */}
+        {/* Header (DE-PARA §2: thumb 120px + chips de estado do pipeline) */}
         <header className="flex flex-wrap items-end justify-between gap-4">
+          {projeto.data?.youtube_url && (
+            <img
+              src={thumbnailUrl(projeto.data.youtube_url, 'mq') ?? undefined}
+              alt=""
+              loading="lazy"
+              className="hidden w-[120px] flex-none self-start rounded-[9px] object-cover [aspect-ratio:16/9] sm:block"
+            />
+          )}
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="line-clamp-2 max-w-3xl text-2xl font-medium tracking-tight text-text-100">
@@ -264,6 +285,45 @@ export function ProjetoDetalhePage() {
                 )}
                 {totalPublicados > 0 && (
                   <Badge variant="info">▶️ {totalPublicados} publicados</Badge>
+                )}
+              </div>
+            )}
+            {projeto.data && (
+              <div className="flex flex-wrap gap-1.5">
+                <span
+                  className={cn(
+                    'rounded-[5px] px-2 py-0.5 text-[9.5px] font-bold',
+                    baixado
+                      ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
+                      : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)]',
+                  )}
+                >
+                  {baixado ? '✓ baixado' : '⬇ download pendente'}
+                </span>
+                <span
+                  className={cn(
+                    'rounded-[5px] px-2 py-0.5 text-[9.5px] font-bold',
+                    transcrito
+                      ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
+                      : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)]',
+                  )}
+                >
+                  {transcrito ? '✓ transcrito' : '📝 transcrição pendente'}
+                </span>
+                {totalFalantes > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setAnaliseOpen(true)}
+                    title="Diarização de falantes (painel na Análise IA)"
+                    className="rounded-[5px] bg-[var(--wb-ok-soft)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--wb-ok)]"
+                  >
+                    ✓ diarizado · {totalFalantes} falante{totalFalantes > 1 ? 's' : ''}
+                  </button>
+                )}
+                {cortes.length > 0 && (
+                  <span className="rounded-[5px] bg-[var(--wb-accent-soft)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--wb-accent)]">
+                    ✂ {avaliados}/{cortes.length} avaliados
+                  </span>
                 )}
               </div>
             )}
@@ -424,6 +484,9 @@ export function ProjetoDetalhePage() {
                 key={corte.corte_id}
                 projetoId={id}
                 corte={corte}
+                statusCorte={statusPorCorte.get(corte.corte_id)?.status}
+                isFire={statusPorCorte.get(corte.corte_id)?.is_fire}
+                isLeitura={statusPorCorte.get(corte.corte_id)?.is_leitura}
                 onUploadYoutube={() => publicarCorteIndividual(corte.corte_id)}
                 uploadYoutubePending={uploadingCorteId === corte.corte_id}
                 onMarcarPublicado={() => abrirMarcarPublicado(corte)}

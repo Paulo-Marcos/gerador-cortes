@@ -17,12 +17,16 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { resolveThumbUrl } from '@/lib/api';
 import { useAbrirPasta } from '@/hooks/useProjetoDetalhe';
-import type { StatusExportCorte } from '@/types/models';
+import type { StatusCorte, StatusExportCorte } from '@/types/models';
 import { StatusPills } from './StatusPills';
 
 interface Props {
   projetoId: string;
   corte: StatusExportCorte;
+  /** Status editorial do corte — pinta o fundo semântico do card (DE-PARA §2). */
+  statusCorte?: StatusCorte;
+  isFire?: boolean;
+  isLeitura?: boolean;
   selecionavel?: boolean;
   selecionado?: boolean;
   onToggleSelecionado?: () => void;
@@ -39,9 +43,25 @@ interface Props {
   reordenando?: boolean;
 }
 
+/** Fundo + borda esquerda semânticos do card (protótipo §Workspace). */
+function tintDoCorte(status: StatusCorte | undefined, isFire?: boolean, isLeitura?: boolean) {
+  if (status === 'rejeitado') {
+    return 'bg-[var(--wb-err-soft)] border-l-[3px] border-l-[var(--wb-err)]';
+  }
+  if (status === 'aprovado' || status === 'editado' || status === 'processado') {
+    if (isFire) return 'bg-[var(--wb-fire-soft)] border-l-[3px] border-l-[var(--wb-fire)]';
+    if (isLeitura) return 'bg-[var(--wb-leitura-soft)] border-l-[3px] border-l-[var(--wb-leitura)]';
+    return 'bg-[var(--wb-ok-soft)] border-l-[3px] border-l-[var(--wb-ok)]';
+  }
+  return '';
+}
+
 export function CorteCard({
   projetoId,
   corte,
+  statusCorte,
+  isFire,
+  isLeitura,
   selecionavel = false,
   selecionado = false,
   onToggleSelecionado,
@@ -97,6 +117,7 @@ export function CorteCard({
         corte.pronto_publicar
           ? 'border-accent-500/40 shadow-[0_0_22px_var(--accent-glow)]'
           : 'border-[var(--border)] hover:border-[var(--border-hover)]',
+        tintDoCorte(statusCorte, isFire, isLeitura),
         selecionavel && selecionado && 'ring-2 ring-accent-500',
       )}
     >
