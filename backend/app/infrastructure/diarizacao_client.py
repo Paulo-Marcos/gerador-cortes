@@ -57,6 +57,28 @@ async def _extrair_audio(
     return wav_path
 
 
+def _carregar_waveform(wav_path: Path) -> dict:
+    """Lê o WAV como dict `{'waveform', 'sample_rate'}` aceito pelo pyannote.
+
+    O pyannote 4.x delega a decodificação de arquivo ao torchcodec, que no
+    Windows exige DLLs de FFmpeg "full-shared" e quebra com facilidade (D-385).
+    Como o WAV é gerado por nós com formato conhecido (mono 16 kHz PCM16),
+    lemos com a stdlib e entregamos o áudio já em memória — caminho que o
+    pyannote aceita sem nenhum decoder externo.
+    """
+    import wave
+
+    import numpy as np
+    import torch
+
+    with wave.open(str(wav_path), "rb") as wav:
+        sample_rate = wav.getframerate()
+        frames = wav.readframes(wav.getnframes())
+    amostras = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+    waveform = torch.from_numpy(amostras).unsqueeze(0)  # (channel, time)
+    return {"waveform": waveform, "sample_rate": sample_rate}
+
+
 def _rodar_pipeline_sync(wav_path: Path) -> list[dict]:
     """Roda a diarização pyannote de forma síncrona (chamada via thread).
 
@@ -69,7 +91,7 @@ def _rodar_pipeline_sync(wav_path: Path) -> list[dict]:
         settings.diarizacao_modelo,
         token=settings.huggingface_token,
     )
-    diarizacao = pipeline(str(wav_path))
+    diarizacao = pipeline(_carregar_waveform(wav_path))
 
     turns: list[dict] = []
     for turno, _track, speaker in diarizacao.itertracks(yield_label=True):

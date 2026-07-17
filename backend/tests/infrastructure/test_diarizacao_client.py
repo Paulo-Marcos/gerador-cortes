@@ -10,9 +10,20 @@ from __future__ import annotations
 
 import sys
 import types
+import wave
+from pathlib import Path
 
 import pytest
 from app.infrastructure import diarizacao_client as client
+
+
+def _escrever_wav(path: Path, n_frames: int = 1600, sample_rate: int = 16000) -> None:
+    """Grava um WAV mono 16 kHz PCM16 mínimo — mesmo formato que o ffmpeg gera."""
+    with wave.open(str(path), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(b"\x00\x00" * n_frames)
 
 
 class _FakeTurn:
@@ -28,7 +39,7 @@ class _FakeDiarizacao:
 
 
 class _FakePipeline:
-    def __call__(self, wav_path: str):
+    def __call__(self, audio):
         return _FakeDiarizacao()
 
 
@@ -51,9 +62,22 @@ def _pyannote_fake(monkeypatch):
     return calls
 
 
+def test_carregar_waveform_le_wav_em_memoria(tmp_path):
+    """O áudio vai pré-carregado (D-385): pyannote 4.x exigiria torchcodec p/ arquivo."""
+    wav_path = tmp_path / "audio.wav"
+    _escrever_wav(wav_path, n_frames=1600)
+
+    audio = client._carregar_waveform(wav_path)
+
+    assert audio["sample_rate"] == 16000
+    assert tuple(audio["waveform"].shape) == (1, 1600)  # (channel, time)
+    assert audio["waveform"].dtype.is_floating_point
+
+
 def test_rodar_pipeline_sync_usa_kwarg_token(_pyannote_fake, monkeypatch, tmp_path):
     monkeypatch.setattr(client.settings, "huggingface_token", "hf_fake")
     wav_path = tmp_path / "audio.wav"
+    _escrever_wav(wav_path)
 
     turns = client._rodar_pipeline_sync(wav_path)
 
