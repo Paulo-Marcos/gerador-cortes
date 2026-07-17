@@ -88,6 +88,23 @@ export function activateTab(state: TabsState, index: number): TabsState {
   return { ...state, activeIndex: index };
 }
 
+/**
+ * Remove abas de projetos que não existem mais (D-394: abas fantasmas
+ * persistidas de outro banco/projeto removido). Mantém a aba ativa se
+ * ela sobreviver; senão ativa a vizinha mais próxima.
+ */
+export function pruneTabs(state: TabsState, projetosValidos: ReadonlySet<string>): TabsState {
+  if (state.tabs.every((tab) => projetosValidos.has(tab.projetoId))) return state;
+  const ativa = state.activeIndex >= 0 ? state.tabs[state.activeIndex] : null;
+  const tabs = state.tabs.filter((tab) => projetosValidos.has(tab.projetoId));
+  if (tabs.length === 0) return EMPTY_TABS_STATE;
+  const indiceAtiva = ativa ? tabs.findIndex((tab) => isSameTab(tab, ativa)) : -1;
+  return {
+    tabs,
+    activeIndex: indiceAtiva >= 0 ? indiceAtiva : Math.min(state.activeIndex, tabs.length - 1),
+  };
+}
+
 export function serializeTabs(state: TabsState): string {
   return JSON.stringify(state);
 }
@@ -148,6 +165,8 @@ export interface UseWorkbenchTabsResult {
   open: (tab: WorkbenchTab) => void;
   close: (index: number) => void;
   activate: (index: number) => void;
+  /** Fecha abas de projetos fora da lista (abas fantasmas). */
+  prune: (projetosValidos: ReadonlySet<string>) => void;
 }
 
 export function useWorkbenchTabs(): UseWorkbenchTabsResult {
@@ -164,6 +183,10 @@ export function useWorkbenchTabs(): UseWorkbenchTabsResult {
   const open = useCallback((tab: WorkbenchTab) => setState((prev) => openTab(prev, tab)), []);
   const close = useCallback((index: number) => setState((prev) => closeTab(prev, index)), []);
   const activate = useCallback((index: number) => setState((prev) => activateTab(prev, index)), []);
+  const prune = useCallback(
+    (projetosValidos: ReadonlySet<string>) => setState((prev) => pruneTabs(prev, projetosValidos)),
+    [],
+  );
 
   return {
     tabs: state.tabs,
@@ -172,5 +195,6 @@ export function useWorkbenchTabs(): UseWorkbenchTabsResult {
     open,
     close,
     activate,
+    prune,
   };
 }

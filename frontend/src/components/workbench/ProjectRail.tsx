@@ -1,17 +1,5 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-  BarChart3,
-  ChevronLeft,
-  ChevronRight,
-  Home,
-  Keyboard,
-  Radio,
-  SlidersHorizontal,
-  Sparkles,
-  Trophy,
-  type LucideIcon,
-} from 'lucide-react';
 import { cn, thumbnailUrl } from '@/lib/utils';
 import { useProjetos } from '@/hooks/useProjetos';
 import { PipelineProgress } from '@/features/projetos/PipelineProgress';
@@ -50,17 +38,20 @@ export function projetosDoRail(
 interface GlobalNavItem {
   to: string;
   label: string;
-  Icon: LucideIcon;
+  /** Ícone do protótipo Workbench 1c (validação 1: usar os do design). */
+  emoji: string;
+  /** Divisor acima do item (protótipo separa Atalhos/Configurações). */
+  divisor?: boolean;
 }
 
 const GLOBAL_NAV: GlobalNavItem[] = [
-  { to: '/projetos', label: 'Biblioteca', Icon: Home },
-  { to: '/ranking-lives', label: 'Ranking de lives', Icon: Trophy },
-  { to: '/buscar-lives', label: 'Buscar lives', Icon: Radio },
-  { to: '/padroes-thumbnail', label: 'Padrões de thumbnail', Icon: Sparkles },
-  { to: '/analises', label: 'Análises', Icon: BarChart3 },
-  { to: '/atalhos', label: 'Atalhos', Icon: Keyboard },
-  { to: '/canais', label: 'Configurações', Icon: SlidersHorizontal },
+  { to: '/projetos', label: 'Biblioteca', emoji: '🏠' },
+  { to: '/ranking-lives', label: 'Ranking de lives', emoji: '🏆' },
+  { to: '/buscar-lives', label: 'Buscar lives', emoji: '📡' },
+  { to: '/padroes-thumbnail', label: 'Padrões de thumbnail', emoji: '✨' },
+  { to: '/analises', label: 'Análises', emoji: '📊' },
+  { to: '/atalhos', label: 'Atalhos', emoji: '⌨', divisor: true },
+  { to: '/canais', label: 'Configurações', emoji: '⚙' },
 ];
 
 function RailCard({ projeto, open }: { projeto: Projeto; open: boolean }) {
@@ -122,7 +113,6 @@ export function ProjectRail() {
   const projetos = useProjetos();
 
   const open = effective.rail;
-  const Chevron = open ? ChevronLeft : ChevronRight;
   const abertosIds = [...new Set(tabs.map((tab) => tab.projetoId))];
   const doRail = projetosDoRail(projetos.data ?? [], abertosIds);
 
@@ -142,9 +132,9 @@ export function ProjectRail() {
           type="button"
           onClick={() => toggle('rail')}
           aria-label={open ? 'Recolher rail de projetos' : 'Expandir rail de projetos'}
-          className="ml-auto flex h-[22px] w-[22px] items-center justify-center rounded-md bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+          className="ml-auto flex h-[22px] w-[22px] items-center justify-center rounded-md bg-[var(--wb-bg-inset)] text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
         >
-          <Chevron size={12} aria-hidden />
+          <span aria-hidden>{open ? '◀' : '▶'}</span>
         </button>
       </div>
 
@@ -163,24 +153,28 @@ export function ProjectRail() {
         aria-label="Navegação global"
         className="flex flex-none flex-col gap-1.5 border-t border-[var(--wb-border)] p-2.5"
       >
-        {GLOBAL_NAV.map(({ to, label, Icon }) => {
+        {GLOBAL_NAV.map(({ to, label, emoji, divisor }) => {
           const ativo = pathname === to || (to !== '/projetos' && pathname.startsWith(to));
           return (
-            <Link
-              key={to}
-              to={to}
-              aria-label={label}
-              title={label}
-              className={cn(
-                'flex items-center gap-2 whitespace-nowrap rounded-md px-1.5 py-1 text-[10.5px] font-semibold',
-                ativo
-                  ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-                  : 'text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-              )}
-            >
-              <Icon size={14} className="flex-none" aria-hidden />
-              {open && <span>{label}</span>}
-            </Link>
+            <span key={to} className="contents">
+              {divisor && <span aria-hidden className="my-0.5 h-px bg-[var(--wb-border)]" />}
+              <Link
+                to={to}
+                aria-label={label}
+                title={label}
+                className={cn(
+                  'flex items-center gap-2 whitespace-nowrap rounded-md px-1.5 py-1 text-[10.5px] font-semibold',
+                  ativo
+                    ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
+                    : 'text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+                )}
+              >
+                <span className="w-4 flex-none text-center text-[12px] leading-none" aria-hidden>
+                  {emoji}
+                </span>
+                {open && <span>{label}</span>}
+              </Link>
+            </span>
           );
         })}
       </nav>

@@ -124,7 +124,17 @@ export function GlobalQueue() {
       title={
         jobs.length > 0 ? `FILA · ${jobs.length} JOB${jobs.length > 1 ? 'S' : ''}` : 'FILA GLOBAL'
       }
-      indicator={jobs.length > 0 ? <CollapsedQueueRing job={jobs[0]} /> : undefined}
+      indicator={
+        jobs.length > 0 ? (
+          <CollapsedQueueRing job={jobs[0]} />
+        ) : (
+          // Fila vazia recolhida também mostra o anel (validação 1, item 12).
+          <span
+            aria-hidden
+            className="h-[15px] w-[15px] rounded-full border-2 border-[var(--wb-border)]"
+          />
+        )
+      }
     >
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-2.5">
         {jobs.map((job) => (

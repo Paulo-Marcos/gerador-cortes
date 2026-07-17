@@ -1,4 +1,3 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useWorkbenchPanelsContext } from './WorkbenchPanelsProvider';
@@ -35,8 +34,8 @@ export function PanelShell({ id, side, title, indicator, headerExtra, children }
   const { effective, widthOf, toggle } = useWorkbenchPanelsContext();
   const open = effective[id];
   const width = widthOf(id);
-  // Chevron aponta para onde o painel vai ao clicar (recolher/expandir).
-  const Chevron = (side === 'left') === open ? ChevronLeft : ChevronRight;
+  // Chevron do protótipo (◀/▶): aponta para onde o painel vai ao clicar.
+  const chevron = (side === 'left') === open ? '◀' : '▶';
 
   return (
     <aside
@@ -59,9 +58,9 @@ export function PanelShell({ id, side, title, indicator, headerExtra, children }
                 type="button"
                 onClick={() => toggle(id)}
                 aria-label={`Recolher painel ${title}`}
-                className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+                className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-[var(--wb-bg-inset)] text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
               >
-                <Chevron size={12} aria-hidden />
+                <span aria-hidden>{chevron}</span>
               </button>
             </div>
           </div>
@@ -74,14 +73,16 @@ export function PanelShell({ id, side, title, indicator, headerExtra, children }
           aria-label={`Expandir painel ${title}`}
           className="flex flex-1 cursor-pointer flex-col items-center gap-2.5 py-2.5 text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
         >
-          <Chevron size={12} aria-hidden />
+          <span className="text-[10px]" aria-hidden>
+            {chevron}
+          </span>
+          {indicator}
           <span
             className="font-code text-[9px] font-extrabold tracking-[0.14em]"
             style={{ writingMode: 'vertical-rl' }}
           >
             {title}
           </span>
-          {indicator}
         </button>
       )}
     </aside>

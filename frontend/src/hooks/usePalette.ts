@@ -29,19 +29,19 @@ export const PALETTES: readonly PaletteOption[] = [
     id: 'indigo',
     nome: 'Indigo aço',
     descricao: 'Frio · técnico, profissional',
-    swatch: 'oklch(0.5 0.16 255)',
+    swatch: 'oklch(0.5 0.14 275)',
   },
   {
     id: 'forest',
     nome: 'Floresta',
     descricao: 'Natural · calmo, denso',
-    swatch: 'oklch(0.5 0.13 155)',
+    swatch: 'oklch(0.5 0.12 155)',
   },
   {
     id: 'plum',
     nome: 'Ameixa',
     descricao: 'Sofisticado · editorial dramático',
-    swatch: 'oklch(0.46 0.16 340)',
+    swatch: 'oklch(0.5 0.13 320)',
   },
   {
     id: 'ink',

@@ -23,46 +23,47 @@
     --error: oklch(0.55 0.18 25);
     --info: oklch(0.56 0.13 245);
 
-    --wb-bg: oklch(0.97 0.008 75);
-    --wb-bg-panel: oklch(0.99 0.006 75);
+    /* Base COOL-GRAY do design Workbench 1c (validação 1 do Paulo:
+       adotar as cores do protótipo literalmente — família 240/250). */
+    --wb-bg: oklch(0.965 0.005 240);
+    --wb-bg-panel: #ffffff;
     --wb-bg-card: #ffffff;
-    --wb-bg-card-elev: oklch(0.985 0.006 75);
-    --wb-bg-inset: oklch(0.95 0.008 75);
-    /* Faixa das abas do shell Workbench (hand-off design_handoff_workbench).
-       L/C do hand-off; hue segue a familia de fundo da paleta ativa. */
-    --wb-bg-strip: oklch(0.92 0.008 75);
-    --wb-border: oklch(0.88 0.01 75);
-    --wb-border-soft: oklch(0.92 0.008 75);
-    --wb-text: oklch(0.2 0.012 60);
-    --wb-text-mute: oklch(0.45 0.012 60);
-    --wb-text-dim: oklch(0.62 0.01 60);
+    --wb-bg-card-elev: oklch(0.985 0.004 240);
+    --wb-bg-inset: oklch(0.945 0.006 240);
+    /* Faixa das abas do shell Workbench (protótipo: --strip). */
+    --wb-bg-strip: oklch(0.92 0.008 240);
+    --wb-border: oklch(0.9 0.008 240);
+    --wb-border-soft: oklch(0.93 0.006 240);
+    --wb-text: oklch(0.22 0.015 250);
+    --wb-text-mute: oklch(0.45 0.02 250);
+    --wb-text-dim: oklch(0.6 0.02 250);
     --wb-accent: oklch(0.52 0.165 28);
     --wb-accent-strong: oklch(0.44 0.18 28);
     --wb-accent-soft: oklch(0.95 0.04 28);
     /* Texto sobre fundo --wb-accent (protótipo: --acc-fg). */
     --wb-accent-fg: #ffffff;
-    --wb-ink: oklch(0.18 0.012 60);
+    --wb-ink: oklch(0.2 0.015 250);
     --wb-ink-fg: var(--wb-bg);
     --wb-pill-bg: rgb(255 255 255 / 0.9);
     --wb-focus: oklch(0.58 0.16 28 / 0.45);
-    --wb-shadow: 0 1px 2px rgb(20 15 10 / 0.04), 0 8px 24px rgb(20 15 10 / 0.06);
+    --wb-shadow: 0 1px 2px rgb(20 25 40 / 0.05), 0 8px 24px rgb(20 25 40 / 0.07);
     --wb-shadow-btn: 0 1px 0 rgb(255 255 255 / 0.2) inset, 0 4px 12px oklch(0.52 0.165 28 / 0.24);
 
-    /* Cores semanticas (status) — calibradas no hand-off de design v3.
+    /* Cores semanticas (status) — valores do protótipo Workbench 1c.
        Cada cor tem variante `-soft` para fundo de chip/badge.
        Existem tambem --success/--warning/--error/--info (legado): preferir --wb-* nos componentes novos. */
     --wb-ok: oklch(0.6 0.13 145);
     --wb-ok-soft: oklch(0.94 0.06 145);
-    --wb-warn: oklch(0.66 0.16 65);
-    --wb-warn-soft: oklch(0.94 0.07 65);
+    --wb-warn: oklch(0.62 0.15 70);
+    --wb-warn-soft: oklch(0.955 0.035 70);
     --wb-err: oklch(0.58 0.18 25);
-    --wb-err-soft: oklch(0.95 0.07 25);
-    --wb-info: oklch(0.58 0.13 245);
-    --wb-info-soft: oklch(0.94 0.06 245);
+    --wb-err-soft: oklch(0.95 0.06 25);
+    --wb-info: oklch(0.56 0.13 245);
+    --wb-info-soft: oklch(0.94 0.05 245);
     --wb-violet: oklch(0.56 0.14 295);
     --wb-violet-soft: oklch(0.95 0.05 295);
     --wb-fire: oklch(0.66 0.19 50);
-    --wb-fire-soft: oklch(0.95 0.07 50);
+    --wb-fire-soft: oklch(0.96 0.045 55);
     --wb-leitura: oklch(0.56 0.13 240);
     --wb-leitura-soft: oklch(0.94 0.06 240);
 
@@ -116,38 +117,39 @@
     --error: oklch(0.72 0.16 25);
     --info: oklch(0.72 0.12 245);
 
-    --wb-bg: oklch(0.155 0.01 60);
-    --wb-bg-panel: oklch(0.125 0.01 60);
-    --wb-bg-card: oklch(0.195 0.01 60);
-    --wb-bg-card-elev: oklch(0.225 0.01 60);
-    --wb-bg-inset: oklch(0.175 0.01 60);
-    /* Faixa das abas — dark (hand-off; hue 60 = familia de fundo dark, igual p/ todas as paletas). */
-    --wb-bg-strip: oklch(0.125 0.012 60);
-    --wb-border: oklch(0.3 0.01 60);
-    --wb-border-soft: oklch(0.25 0.01 60);
-    --wb-text: oklch(0.96 0.005 70);
-    --wb-text-mute: oklch(0.7 0.01 60);
-    --wb-text-dim: oklch(0.5 0.01 60);
+    /* Base COOL-GRAY dark do protótipo Workbench 1c (família 255/250). */
+    --wb-bg: oklch(0.16 0.012 255);
+    --wb-bg-panel: oklch(0.195 0.012 255);
+    --wb-bg-card: oklch(0.195 0.012 255);
+    --wb-bg-card-elev: oklch(0.225 0.012 255);
+    --wb-bg-inset: oklch(0.23 0.012 255);
+    /* Faixa das abas — dark (protótipo: --strip). */
+    --wb-bg-strip: oklch(0.125 0.012 255);
+    --wb-border: oklch(0.3 0.012 255);
+    --wb-border-soft: oklch(0.26 0.012 255);
+    --wb-text: oklch(0.95 0.008 250);
+    --wb-text-mute: oklch(0.72 0.015 250);
+    --wb-text-dim: oklch(0.52 0.015 250);
     --wb-accent: oklch(0.72 0.155 32);
-    --wb-accent-strong: oklch(0.78 0.16 32);
+    --wb-accent-strong: oklch(0.8 0.15 32);
     --wb-accent-soft: oklch(0.3 0.08 28 / 0.45);
     /* Texto sobre acento dark: quase-preto na familia do acento (protótipo). */
     --wb-accent-fg: oklch(0.14 0.01 60);
-    --wb-ink: oklch(0.96 0.005 70);
-    --wb-ink-fg: oklch(0.15 0.01 60);
-    --wb-pill-bg: oklch(0.1 0.01 60 / 0.78);
+    --wb-ink: oklch(0.95 0.008 250);
+    --wb-ink-fg: oklch(0.15 0.012 255);
+    --wb-pill-bg: oklch(0.1 0.012 255 / 0.78);
     --wb-focus: oklch(0.72 0.155 32 / 0.42);
-    --wb-shadow: 0 1px 2px rgb(0 0 0 / 0.32), 0 6px 22px rgb(0 0 0 / 0.28);
+    --wb-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 8px 26px rgb(0 0 0 / 0.3);
     --wb-shadow-btn: 0 1px 0 oklch(1 0 0 / 0.1) inset, 0 4px 14px oklch(0.72 0.155 32 / 0.3);
 
-    /* Cores semanticas (status) — dark. Soft usa alpha para nao competir com fundo escuro. */
-    --wb-ok: oklch(0.78 0.14 145);
+    /* Cores semanticas (status) — dark do protótipo. Soft usa alpha. */
+    --wb-ok: oklch(0.76 0.14 145);
     --wb-ok-soft: oklch(0.3 0.08 145 / 0.4);
-    --wb-warn: oklch(0.82 0.15 70);
-    --wb-warn-soft: oklch(0.32 0.1 65 / 0.4);
-    --wb-err: oklch(0.74 0.16 25);
+    --wb-warn: oklch(0.8 0.15 70);
+    --wb-warn-soft: oklch(0.32 0.09 70 / 0.42);
+    --wb-err: oklch(0.72 0.16 25);
     --wb-err-soft: oklch(0.32 0.11 25 / 0.4);
-    --wb-info: oklch(0.74 0.13 245);
+    --wb-info: oklch(0.72 0.13 245);
     --wb-info-soft: oklch(0.3 0.09 245 / 0.4);
     --wb-violet: oklch(0.74 0.14 295);
     --wb-violet-soft: oklch(0.3 0.09 295 / 0.4);
@@ -167,9 +169,9 @@
     --tint-leitura-soft: oklch(0.2 0.03 240);
     --tint-rejeitado-soft: oklch(0.2 0.05 25);
 
-    --bg-700: oklch(0.25 0.01 60);
-    --bg-600: oklch(0.3 0.01 60);
-    --bg-500: oklch(0.38 0.01 60);
+    --bg-700: oklch(0.26 0.012 255);
+    --bg-600: oklch(0.3 0.012 255);
+    --bg-500: oklch(0.38 0.012 255);
     --accent-200: oklch(0.9 0.07 32);
     --accent-300: oklch(0.86 0.09 32);
     --accent-400: var(--wb-accent);
@@ -304,64 +306,48 @@
    no light; em dark a regra `[data-wb-theme='dark'].wb-palette-X`
    (0,3,0) ganha de tudo. Default `terracota` nao tem classe — usa os
    tokens base de `@layer base`. */
+/* Valores do protótipo Workbench 1c (body[data-accent=...]): as paletas
+   mudam SÓ o acento — o fundo cool-gray é fixo, como no design. */
 :root.wb-palette-indigo {
-  --wb-accent: oklch(0.5 0.16 255);
-  --wb-accent-strong: oklch(0.4 0.18 255);
-  --wb-accent-soft: oklch(0.95 0.05 255);
-  --wb-bg: oklch(0.97 0.006 250);
-  --wb-bg-panel: oklch(0.99 0.004 250);
-  --wb-bg-inset: oklch(0.955 0.008 250);
-  --wb-bg-strip: oklch(0.92 0.008 250);
-  --wb-border: oklch(0.88 0.01 250);
-  --wb-border-soft: oklch(0.92 0.008 250);
-  --wb-focus: oklch(0.5 0.16 255 / 0.45);
+  --wb-accent: oklch(0.5 0.14 275);
+  --wb-accent-strong: oklch(0.42 0.16 275);
+  --wb-accent-soft: oklch(0.94 0.04 275);
+  --wb-focus: oklch(0.5 0.14 275 / 0.45);
 }
 :root[data-wb-theme='dark'].wb-palette-indigo {
-  --wb-accent: oklch(0.7 0.16 255);
-  --wb-accent-strong: oklch(0.78 0.17 255);
-  --wb-accent-soft: oklch(0.3 0.1 255 / 0.45);
-  --wb-accent-fg: oklch(0.14 0.01 255);
-  --wb-focus: oklch(0.7 0.16 255 / 0.42);
+  --wb-accent: oklch(0.72 0.13 275);
+  --wb-accent-strong: oklch(0.8 0.12 275);
+  --wb-accent-soft: oklch(0.3 0.09 275 / 0.45);
+  --wb-accent-fg: oklch(0.14 0.01 275);
+  --wb-focus: oklch(0.72 0.13 275 / 0.42);
 }
 
 :root.wb-palette-forest {
-  --wb-accent: oklch(0.5 0.13 155);
-  --wb-accent-strong: oklch(0.4 0.14 155);
+  --wb-accent: oklch(0.5 0.12 155);
+  --wb-accent-strong: oklch(0.42 0.13 155);
   --wb-accent-soft: oklch(0.94 0.05 155);
-  --wb-bg: oklch(0.965 0.008 110);
-  --wb-bg-panel: oklch(0.99 0.005 110);
-  --wb-bg-inset: oklch(0.95 0.008 110);
-  --wb-bg-strip: oklch(0.92 0.008 110);
-  --wb-border: oklch(0.88 0.01 110);
-  --wb-border-soft: oklch(0.92 0.008 110);
-  --wb-focus: oklch(0.5 0.13 155 / 0.45);
+  --wb-focus: oklch(0.5 0.12 155 / 0.45);
 }
 :root[data-wb-theme='dark'].wb-palette-forest {
-  --wb-accent: oklch(0.72 0.13 155);
-  --wb-accent-strong: oklch(0.8 0.14 155);
+  --wb-accent: oklch(0.74 0.13 155);
+  --wb-accent-strong: oklch(0.82 0.13 155);
   --wb-accent-soft: oklch(0.3 0.08 155 / 0.45);
   --wb-accent-fg: oklch(0.14 0.01 155);
-  --wb-focus: oklch(0.72 0.13 155 / 0.42);
+  --wb-focus: oklch(0.74 0.13 155 / 0.42);
 }
 
 :root.wb-palette-plum {
-  --wb-accent: oklch(0.46 0.16 340);
-  --wb-accent-strong: oklch(0.38 0.18 340);
-  --wb-accent-soft: oklch(0.95 0.05 340);
-  --wb-bg: oklch(0.965 0.008 320);
-  --wb-bg-panel: oklch(0.99 0.005 320);
-  --wb-bg-inset: oklch(0.95 0.008 320);
-  --wb-bg-strip: oklch(0.92 0.008 320);
-  --wb-border: oklch(0.88 0.01 320);
-  --wb-border-soft: oklch(0.92 0.008 320);
-  --wb-focus: oklch(0.46 0.16 340 / 0.45);
+  --wb-accent: oklch(0.5 0.13 320);
+  --wb-accent-strong: oklch(0.42 0.15 320);
+  --wb-accent-soft: oklch(0.95 0.04 320);
+  --wb-focus: oklch(0.5 0.13 320 / 0.45);
 }
 :root[data-wb-theme='dark'].wb-palette-plum {
-  --wb-accent: oklch(0.7 0.16 340);
-  --wb-accent-strong: oklch(0.78 0.17 340);
-  --wb-accent-soft: oklch(0.3 0.1 340 / 0.45);
-  --wb-accent-fg: oklch(0.14 0.01 340);
-  --wb-focus: oklch(0.7 0.16 340 / 0.42);
+  --wb-accent: oklch(0.74 0.12 320);
+  --wb-accent-strong: oklch(0.82 0.11 320);
+  --wb-accent-soft: oklch(0.3 0.09 320 / 0.45);
+  --wb-accent-fg: oklch(0.14 0.01 320);
+  --wb-focus: oklch(0.74 0.12 320 / 0.42);
 }
 
 :root.wb-palette-ink {

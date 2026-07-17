@@ -1,4 +1,5 @@
-import { Moon, Plus, Scissors, Search, Sun, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -37,11 +38,88 @@ export function progressoDaAba(tab: WorkbenchTab, projeto: Projeto | undefined):
   }
 }
 
+/** Dropdown do ＋: escolher um projeto abre a aba do workspace dele. */
+function NovaAbaMenu({ onEscolher }: { onEscolher: (projetoId: string) => void }) {
+  const projetos = useProjetos();
+  const [aberto, setAberto] = useState(false);
+  const [busca, setBusca] = useState('');
+  const raiz = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    const fechar = (event: MouseEvent) => {
+      if (!raiz.current?.contains(event.target as Node)) setAberto(false);
+    };
+    document.addEventListener('mousedown', fechar);
+    return () => document.removeEventListener('mousedown', fechar);
+  }, [aberto]);
+
+  const lista = (projetos.data ?? []).filter((p) =>
+    p.titulo_live.toLowerCase().includes(busca.trim().toLowerCase()),
+  );
+
+  return (
+    <div ref={raiz} className="relative">
+      <button
+        type="button"
+        aria-label="Nova aba de trabalho"
+        aria-expanded={aberto}
+        title="Nova aba — escolher projeto"
+        onClick={() => setAberto((v) => !v)}
+        className="px-2.5 py-1.5 text-[14px] font-bold text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
+      >
+        ＋
+      </button>
+      {aberto && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-[300px] rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2 shadow-[var(--wb-shadow)]">
+          <input
+            autoFocus
+            value={busca}
+            onChange={(event) => setBusca(event.target.value)}
+            placeholder="buscar projeto…"
+            className="mb-1.5 w-full rounded-md border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-2 py-1 text-[11px] text-[var(--wb-text)] outline-none placeholder:text-[var(--wb-text-dim)]"
+          />
+          <div className="max-h-[260px] overflow-y-auto">
+            {lista.slice(0, 20).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  setAberto(false);
+                  setBusca('');
+                  onEscolher(p.id);
+                }}
+                className="block w-full truncate rounded-md px-2 py-1.5 text-left text-[11px] font-semibold text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
+                title={p.titulo_live}
+              >
+                {p.titulo_live}
+              </button>
+            ))}
+            {lista.length === 0 && (
+              <p className="px-2 py-2 text-[10.5px] text-[var(--wb-text-dim)]">
+                Nenhum projeto encontrado.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function TabStrip() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { tabs, activeIndex, activate, close } = useWorkbenchTabsContext();
+  const { tabs, activeIndex, activate, close, prune } = useWorkbenchTabsContext();
   const projetos = useProjetos();
+
+  // D-394: abas fantasmas (projeto removido / banco trocado) fecham
+  // sozinhas assim que a lista real de projetos chega.
+  const projetosData = projetos.data;
+  useEffect(() => {
+    if (!projetosData) return;
+    prune(new Set(projetosData.map((p) => p.id)));
+  }, [projetosData, prune]);
 
   const projetoDaAba = (tab: WorkbenchTab) => projetos.data?.find((p) => p.id === tab.projetoId);
 
@@ -66,10 +144,10 @@ export function TabStrip() {
   return (
     <div className="flex flex-none items-end gap-1 bg-[var(--wb-bg-strip)] px-3 pt-2">
       <div
-        className="mb-1.5 flex h-7 w-7 flex-none items-center justify-center rounded-[7px] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]"
+        className="mb-1.5 flex h-7 w-7 flex-none items-center justify-center rounded-[7px] bg-[var(--wb-accent)] font-code text-[12px] font-bold text-[var(--wb-accent-fg)]"
         aria-hidden
       >
-        <Scissors size={14} />
+        ✂
       </div>
 
       <div role="tablist" aria-label="Abas de trabalho" className="flex min-w-0 items-end gap-1">
@@ -132,15 +210,9 @@ export function TabStrip() {
         })}
       </div>
 
-      <button
-        type="button"
-        aria-label="Nova aba (escolher projeto na Biblioteca)"
-        title="Nova aba — escolher projeto na Biblioteca"
-        onClick={() => navigate('/projetos')}
-        className="px-2.5 py-1.5 text-[13px] font-bold text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
-      >
-        <Plus size={14} aria-hidden />
-      </button>
+      <NovaAbaMenu
+        onEscolher={(projetoId) => navigate(tabPath({ projetoId, etapa: 'workspace' }))}
+      />
 
       <div className="flex-1" />
 
@@ -159,9 +231,9 @@ export function TabStrip() {
         onClick={toggleTheme}
         aria-label="Alternar tema"
         title="Alternar tema"
-        className="mb-1.5 flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+        className="mb-1.5 flex h-7 w-7 flex-none items-center justify-center rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
       >
-        {theme === 'light' ? <Moon size={13} aria-hidden /> : <Sun size={13} aria-hidden />}
+        <span aria-hidden>{theme === 'light' ? '🌙' : '☀️'}</span>
       </button>
     </div>
   );

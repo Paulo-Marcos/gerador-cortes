@@ -7,6 +7,7 @@ import {
   isWorkbenchEtapa,
   openTab,
   parseStoredTabs,
+  pruneTabs,
   serializeTabs,
   type TabsState,
   type WorkbenchTab,
@@ -99,6 +100,28 @@ describe('activateTab', () => {
   it('índice inválido não altera o estado', () => {
     expect(activateTab(two, 5)).toBe(two);
     expect(activateTab(two, -1)).toBe(two);
+  });
+});
+
+describe('pruneTabs (abas fantasmas — D-394)', () => {
+  const tres = state([tab('a', 'workspace'), tab('b', 'cortes'), tab('c', 'pos')], 1);
+
+  it('remove abas de projetos inexistentes mantendo a ativa quando ela sobrevive', () => {
+    const s = pruneTabs(tres, new Set(['b', 'c']));
+    expect(s.tabs).toEqual([tab('b', 'cortes'), tab('c', 'pos')]);
+    expect(s.tabs[s.activeIndex]).toEqual(tab('b', 'cortes'));
+  });
+
+  it('ativa a vizinha quando a aba ativa era fantasma', () => {
+    const s = pruneTabs(state(tres.tabs, 1), new Set(['a', 'c']));
+    expect(s.tabs).toEqual([tab('a', 'workspace'), tab('c', 'pos')]);
+    expect(s.activeIndex).toBeGreaterThanOrEqual(0);
+    expect(s.activeIndex).toBeLessThan(s.tabs.length);
+  });
+
+  it('todas fantasmas → estado vazio; nenhuma fantasma → mesmo objeto', () => {
+    expect(pruneTabs(tres, new Set())).toEqual(EMPTY_TABS_STATE);
+    expect(pruneTabs(tres, new Set(['a', 'b', 'c']))).toBe(tres);
   });
 });
 
