@@ -35,6 +35,9 @@ import { useQuery } from '@tanstack/react-query';
 import { api, finalVideoUrl, resolveThumbUrl } from '@/lib/api';
 import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
 import { CommonTopBar, type MoreMenuItem } from '@/features/editor/CommonTopBar';
+import { WorkbenchCutsPanel } from '@/features/editor/WorkbenchCutsPanel';
+import { WorkbenchEditorLayout } from '@/features/editor/WorkbenchEditorLayout';
+import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
 import { SceneTimeline } from '@/features/editor/fase2/SceneTimeline';
 import { calcularDuracaoLiquida } from '@/features/editor/timeUtils';
@@ -379,6 +382,185 @@ export function FinalReviewPage() {
   const filtroNome =
     filtrosQ.data?.filtros.find((f) => f.id === filtroGlobalId)?.nome ?? filtroGlobalId ?? null;
 
+  // Grid do conteúdo (player + checklist/capa + timeline read-only) —
+  // compartilhado entre o shell legado e o Workbench.
+  const conteudoFinal = (
+    <div
+      className="grid min-h-0 flex-1"
+      style={{
+        gridTemplateColumns: '1.5fr 320px',
+        gridTemplateRows: '1fr 220px',
+        gap: 12,
+        padding: 12,
+      }}
+    >
+      <div style={{ gridColumn: '1', gridRow: '1', minHeight: 0 }}>
+        {videoPronto ? (
+          <FinalPlayerPanel
+            src={finalVideoUrl(projetoId, corte.id)}
+            projetoId={projetoId}
+            corteId={corte.id}
+            onAbrirPasta={() => abrirPasta.mutate(corte.id)}
+            abrindoPasta={abrirPasta.isPending}
+            videoRef={videoRef}
+            onTimeUpdate={setCurrentTime}
+            filtroLabel={filtroNome}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-8 text-center text-[var(--wb-text-mute)]">
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-editorial text-lg text-[var(--wb-text)]">
+                Render final ainda nao disponivel
+              </p>
+              <p className="text-sm">Gere o video na fase Pos para visualizar aqui.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          gridColumn: '2',
+          gridRow: '1 / span 2',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          minHeight: 0,
+          overflow: 'auto',
+        }}
+      >
+        <ChecklistCard items={checklistItems} />
+        <CapaCard
+          titulo={corte.titulo_proposto ?? projeto.data?.titulo_live ?? 'Corte'}
+          pronta={Boolean(exportStatusAtual?.thumbnail_pronta)}
+          thumbUrl={resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path)}
+          onEditar={() => setMetadataOpen(true)}
+        />
+      </div>
+
+      <div style={{ gridColumn: '1', gridRow: '2', minHeight: 0 }}>
+        <SceneTimeline
+          cenas={cenas}
+          currentTime={currentTime}
+          duration={timelineDuration}
+          layoutYoutube={(corte as unknown as { layout_youtube?: never }).layout_youtube}
+          onSeek={(seg) => {
+            const v = videoRef.current;
+            if (!v) return;
+            v.currentTime = Math.max(0, seg);
+          }}
+          readOnly
+          seekable
+        />
+      </div>
+    </div>
+  );
+
+  const finalModals = (
+    <>
+      <RenderStepsModal
+        open={renderStartModalOpen}
+        status={pipelineStatus.data}
+        onClose={() => setRenderStartModalOpen(false)}
+        onConfirm={startRenderFinal}
+      />
+      <MetadataModal
+        open={metadataOpen}
+        projetoId={projetoId}
+        corte={corte}
+        onClose={() => setMetadataOpen(false)}
+      />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </>
+  );
+
+  // ── Shell Workbench (Etapa 5 / DE-PARA §5): painel CORTES retrátil +
+  // linha de ações no topo do conteúdo da aba; grid final compartilhado.
+  if (isWorkbenchEnabled()) {
+    return (
+      <>
+        <WorkbenchEditorLayout
+          panelIds={['cuts']}
+          leftPanel={
+            <WorkbenchCutsPanel
+              projetoId={projetoId}
+              cortes={cortes}
+              corteAtivoId={corte.id}
+              exportStatus={exportStatuses}
+              getCortePath={(item) =>
+                resolveCorteStagePath({
+                  projetoId,
+                  corte: item,
+                  status: exportStatuses.find((status) => status.corte_id === item.id),
+                })
+              }
+            />
+          }
+        >
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            {statusPills}
+            <div className="flex-1" />
+            <Tooltip label="Re-renderizar o video final" side="bottom">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void renderizarNovamente()}
+                disabled={renderFinalRunning}
+              >
+                {renderFinalRunning ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+                {renderFinalRunning ? `Re-renderizando ${renderProgress}%` : 'Re-renderizar'}
+              </Button>
+            </Tooltip>
+            <Tooltip label="Abrir pasta do render (Ctrl+O)" side="bottom">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => abrirPasta.mutate(corte.id)}
+                disabled={abrirPasta.isPending}
+              >
+                <FolderOpen />
+                Pasta
+              </Button>
+            </Tooltip>
+            <Tooltip label="Editar metadados (único editável aqui)" side="bottom">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setMetadataOpen(true)}
+              >
+                <FileText />
+                Metadados
+              </Button>
+            </Tooltip>
+            <Tooltip label={aprovado ? 'Corte já aprovado' : 'Aprovar este corte'} side="bottom">
+              <Button
+                type="button"
+                size="sm"
+                onClick={aprovarCorte}
+                disabled={atualizarCorte.isPending || aprovado}
+                className="bg-[var(--wb-ok)] text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {atualizarCorte.isPending ? (
+                  <Loader2 className="animate-spin" />
+                ) : aprovado ? (
+                  <CheckCircle2 />
+                ) : (
+                  <Upload />
+                )}
+                {aprovado ? 'Aprovado' : 'Aprovar'}
+              </Button>
+            </Tooltip>
+          </div>
+          {conteudoFinal}
+        </WorkbenchEditorLayout>
+        {finalModals}
+      </>
+    );
+  }
+
   return (
     <>
       <UnifiedSidebar
@@ -439,94 +621,10 @@ export function FinalReviewPage() {
           moreMenuItems={moreMenuItems}
         />
 
-        {/* Grid Final — v3_final.jsx:281-301 */}
-        <div
-          className="grid min-h-0 flex-1"
-          style={{
-            gridTemplateColumns: '1.5fr 320px',
-            gridTemplateRows: '1fr 220px',
-            gap: 12,
-            padding: 12,
-          }}
-        >
-          {/* Player Final (col 1 row 1) */}
-          <div style={{ gridColumn: '1', gridRow: '1', minHeight: 0 }}>
-            {videoPronto ? (
-              <FinalPlayerPanel
-                src={finalVideoUrl(projetoId, corte.id)}
-                projetoId={projetoId}
-                corteId={corte.id}
-                onAbrirPasta={() => abrirPasta.mutate(corte.id)}
-                abrindoPasta={abrirPasta.isPending}
-                videoRef={videoRef}
-                onTimeUpdate={setCurrentTime}
-                filtroLabel={filtroNome}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-8 text-center text-[var(--wb-text-mute)]">
-                <div className="flex flex-col items-center gap-2">
-                  <p className="font-editorial text-lg text-[var(--wb-text)]">
-                    Render final ainda nao disponivel
-                  </p>
-                  <p className="text-sm">Gere o video na fase Pos para visualizar aqui.</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Checklist + Capa (col 2 row 1 / span 2) */}
-          <div
-            style={{
-              gridColumn: '2',
-              gridRow: '1 / span 2',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              minHeight: 0,
-              overflow: 'auto',
-            }}
-          >
-            <ChecklistCard items={checklistItems} />
-            <CapaCard
-              titulo={corte.titulo_proposto ?? projeto.data?.titulo_live ?? 'Corte'}
-              pronta={Boolean(exportStatusAtual?.thumbnail_pronta)}
-              thumbUrl={resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path)}
-              onEditar={() => setMetadataOpen(true)}
-            />
-          </div>
-
-          {/* Timeline read-only (col 1 row 2) */}
-          <div style={{ gridColumn: '1', gridRow: '2', minHeight: 0 }}>
-            <SceneTimeline
-              cenas={cenas}
-              currentTime={currentTime}
-              duration={timelineDuration}
-              layoutYoutube={(corte as unknown as { layout_youtube?: never }).layout_youtube}
-              onSeek={(seg) => {
-                const v = videoRef.current;
-                if (!v) return;
-                v.currentTime = Math.max(0, seg);
-              }}
-              readOnly
-              seekable
-            />
-          </div>
-        </div>
+        {conteudoFinal}
       </div>
 
-      <RenderStepsModal
-        open={renderStartModalOpen}
-        status={pipelineStatus.data}
-        onClose={() => setRenderStartModalOpen(false)}
-        onConfirm={startRenderFinal}
-      />
-      <MetadataModal
-        open={metadataOpen}
-        projetoId={projetoId}
-        corte={corte}
-        onClose={() => setMetadataOpen(false)}
-      />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {finalModals}
     </>
   );
 }
