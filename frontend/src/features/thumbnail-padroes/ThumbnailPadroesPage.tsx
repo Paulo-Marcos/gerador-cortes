@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
 import { api, type PadroesThumbnailResponse } from '@/lib/api';
 import { eixosComOcorrencias, rotuloEixo } from './thumbnailPadroes';
+import { cn } from '@/lib/utils';
+import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 
 const FORCA_TONS: Record<string, string> = {
   alta: 'text-[var(--wb-ok)]',
@@ -32,7 +34,12 @@ export function ThumbnailPadroesPage() {
   const eixos = eixosComOcorrencias(resultado?.padroes ?? null);
 
   return (
-    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]">
+    <div
+      className={cn(
+        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
+        isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+      )}
+    >
       <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-7 py-5">
         <div className="flex items-start gap-4">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]">
@@ -80,8 +87,8 @@ export function ThumbnailPadroesPage() {
           <div className="rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5 text-[15px] text-[var(--wb-text-mute)]">
             Ainda não há avaliações boas suficientes para extrair padrões. Foram encontradas{' '}
             <strong>{resultado?.total_melhores ?? 0}</strong> capas bem avaliadas (mínimo de{' '}
-            <strong>{resultado?.minimo ?? 3}</strong>). Avalie mais capas como “Ótimo/Bom” e tente de
-            novo.
+            <strong>{resultado?.minimo ?? 3}</strong>). Avalie mais capas como “Ótimo/Bom” e tente
+            de novo.
           </div>
         )}
 
@@ -158,7 +165,9 @@ export function ThumbnailPadroesPage() {
                           >
                             {ocorrencia.valor}
                             {ocorrencia.contagem > 1 && (
-                              <span className="ml-1 text-[var(--wb-text-dim)]">×{ocorrencia.contagem}</span>
+                              <span className="ml-1 text-[var(--wb-text-dim)]">
+                                ×{ocorrencia.contagem}
+                              </span>
                             )}
                           </span>
                         ))}

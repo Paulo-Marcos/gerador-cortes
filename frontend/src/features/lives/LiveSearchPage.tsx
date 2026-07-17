@@ -18,6 +18,7 @@ import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import type { YoutubeLive, YoutubeLivesResponse } from '@/types/models';
 
 const DEFAULT_AFTER_DATE = '2026-05-01';
@@ -140,7 +141,12 @@ export function LiveSearchPage() {
   };
 
   return (
-    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]">
+    <div
+      className={cn(
+        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
+        isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+      )}
+    >
       <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-7 py-5">
         <div className="flex items-start gap-4">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]">
