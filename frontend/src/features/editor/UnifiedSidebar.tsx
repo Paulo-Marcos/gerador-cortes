@@ -52,14 +52,16 @@ interface UnifiedSidebarProps {
 
 const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
 
-interface SinalFlags {
+// Exportados para o WorkbenchCutsPanel (Etapa 3a) reusar os MESMOS
+// tints do card de corte — fonte única, sem duplicar a regra.
+export interface SinalFlags {
   aprovado: boolean;
   rejeitado: boolean;
   fire: boolean;
   leitura: boolean;
 }
 
-function tintarFundo(flags: SinalFlags, ativo: boolean): string | undefined {
+export function tintarFundo(flags: SinalFlags, ativo: boolean): string | undefined {
   const sfx = ativo ? '' : '-soft';
   if (flags.rejeitado) return `var(--tint-rejeitado${sfx})`;
   const stops: string[] = [];

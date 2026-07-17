@@ -27,10 +27,16 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { FolderOpen, Keyboard, Loader2, RefreshCw, Save, Scissors } from 'lucide-react';
 import type { Corte, Desvio } from '@/types/models';
 import { EditorFase1 } from './fase1/EditorFase1';
-import type { PlayerHandle } from './fase1/PlayerPanel';
+import { PlayerPanel, type PlayerHandle } from './fase1/PlayerPanel';
+import { TimelinePanel } from './fase1/TimelinePanel';
+import { RightTabsPanel } from './fase1/RightTabsPanel';
 import { TrechosManualModal } from './fase1/TrechosManualModal';
 import { BrutoContextStrip } from './fase1/BrutoContextStrip';
 import { BrutoStepsDropdown } from './BrutoStepsDropdown';
+import { PanelShell } from '@/components/workbench/PanelShell';
+import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
+import { WorkbenchCutsPanel } from './WorkbenchCutsPanel';
+import { PlayerCap, WorkbenchEditorLayout } from './WorkbenchEditorLayout';
 import {
   OPCOES_REGERAR_VAZIAS,
   planejarRegeracaoBruto,
@@ -163,9 +169,9 @@ export function EditorPage() {
   const videoPronto = Boolean(exportStatusAtual?.video_pronto || corteUI?.is_pos_producao === 1);
   const brutoPronto = Boolean(
     statusBruto.data?.clip_gerado ||
-      exportStatusAtual?.raw_pronto ||
-      videoPronto ||
-      corteUI?.arquivo_clip_path,
+    exportStatusAtual?.raw_pronto ||
+    videoPronto ||
+    corteUI?.arquivo_clip_path,
   );
   const brutoStatusAtual: 'idle' | 'processando' | 'concluido' | 'erro' = (() => {
     const s = statusBruto.data?.status;
@@ -707,6 +713,249 @@ export function EditorPage() {
   ];
   const exportStatuses = exportStatusQ.data?.cortes ?? [];
 
+  const editorModals = (
+    <>
+      <ShortcutsHelpModal
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+        bindings={bindings}
+      />
+      <TrechosManualModal
+        open={trechosManualOpen}
+        onClose={() => setTrechosManualOpen(false)}
+        corteId={corteId}
+      />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </>
+  );
+
+  // ── Shell Workbench (Etapa 3): mesma orquestração, re-hospedada ──
+  // Painel CORTES retrátil + centro (player 16:9 com cap → transporte →
+  // contexto → timeline flex:1) + painel direito retrátil. A lógica acima
+  // (hooks, atalhos, dirty, waveform window) é EXATAMENTE a mesma do
+  // layout legado — só o container muda.
+  if (isWorkbenchEnabled()) {
+    return (
+      <>
+        <WorkbenchEditorLayout
+          panelIds={['cuts', 'right']}
+          leftPanel={
+            <WorkbenchCutsPanel
+              projetoId={projetoId}
+              cortes={cortes}
+              corteAtivoId={corteUI.id}
+              exportStatus={exportStatuses}
+              getCortePath={(item) =>
+                resolveCorteStagePath({
+                  projetoId,
+                  corte: item,
+                  status: exportStatuses.find((status) => status.corte_id === item.id),
+                })
+              }
+              getCurrentTime={() => playerRef.current?.getCurrentTime() ?? currentTime}
+            />
+          }
+          rightPanel={
+            <PanelShell id="right" side="right" title="TRECHOS · TRANSCRIÇÃO">
+              <div className="min-h-0 flex-1 px-1.5 pb-1.5">
+                <RightTabsPanel
+                  corteId={corteUI.id}
+                  hintsThumbnail={corteUI.hints_thumbnail}
+                  desvios={corteUI.desvios ?? []}
+                  selectedDesvioIdx={selectedDesvioIdx}
+                  onSeek={onSeekTimeline}
+                  onAdicionarDesvio={onAdicionarDesvio}
+                  onRemoverDesvio={onRemoverDesvio}
+                  onGerarManual={() => setTrechosManualOpen(true)}
+                  onGerarTrechosClaude={() => gerarTrechosClaude.mutate()}
+                  pendingTrechos={{
+                    adicionando: adicionarDesvio.isPending,
+                    removendo: removerDesvio.isPending,
+                    claude: gerarTrechosClaude.isPending,
+                  }}
+                  transcricao={corteUI.transcricao_corte}
+                  currentTime={currentTime}
+                  onAtualizarTranscricao={() => sincTrans.mutate()}
+                  transcricaoAtualizando={sincTrans.isPending}
+                />
+              </div>
+            </PanelShell>
+          }
+        >
+          <PlayerCap>
+            <PlayerPanel
+              ref={playerRef}
+              src={videoOriginal}
+              inicioSeg={corteUI.inicio_seg}
+              fimSeg={corteUI.fim_seg}
+              desvios={corteUI.desvios ?? []}
+              playbackRate={playbackRate}
+              smartPlay={smartPlay}
+              onTimeUpdate={setCurrentTime}
+              audioPreviewSrc={waveformAudio}
+              audioPreviewStartSec={waveformOffsetSec}
+              audioOffsetMs={corteUI.audio_offset_ms ?? 0}
+              onAudioOffsetChange={(ms) => patchDirty({ audio_offset_ms: ms })}
+            />
+          </PlayerCap>
+
+          {/* Linha de transporte (DE-PARA §3b) — reusa StatusToggleRow. */}
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            <StatusToggleRow
+              corte={corteUI}
+              onAprovar={toggleAprovado}
+              onRejeitar={toggleRejeitado}
+              onToggleFire={() => toggleFire.mutate()}
+              onToggleLeitura={() => toggleLeitura.mutate(corteUI)}
+              onUpdateLeitura={(patch) =>
+                atualizarCorte.mutate(patch, {
+                  onSuccess: () => qc.invalidateQueries({ queryKey: ['metadado', corteId] }),
+                })
+              }
+              pendingFlags={{
+                aprovando: atualizarCorte.isPending,
+                rejeitando: atualizarCorte.isPending,
+                fire: toggleFire.isPending,
+                leitura: toggleLeitura.isPending,
+              }}
+            />
+            <div className="flex-1" />
+            <span className="hidden font-code text-[10px] font-semibold text-[var(--wb-text-dim)] lg:block">
+              A/R status · F fire · [ ] início/fim · ←→ 5s · Ctrl+Z
+            </span>
+          </div>
+
+          <BrutoContextStrip
+            previous={previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null}
+            next={nextCut ? { numero: nextCut.numero, hms: nextCut.inicio_hms } : null}
+            inicioHms={corteUI.inicio_hms}
+            fimHms={corteUI.fim_hms}
+            inicioSeg={hmsParaSeg(corteUI.inicio_hms)}
+            currentTime={currentTime}
+            durSeg={durSeg}
+            liquidoSeg={liquidoSeg}
+            intervaloAberto={intervaloAberto}
+            onToggleIntervalo={() => setIntervaloAberto((v) => !v)}
+            onAplicarIntervalo={aplicarIntervaloManual}
+          />
+
+          {/* Faixa de contexto do corte (DE-PARA §3b): título editável +
+              trechos + salvar/regerar (campos que antes viviam na topbar). */}
+          <div className="flex flex-none flex-wrap items-center gap-2 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 py-1.5">
+            <label className="flex min-w-[180px] flex-[2] flex-col gap-0.5">
+              <span className="font-code text-[8.5px] font-extrabold tracking-[0.12em] text-[var(--wb-text-dim)]">
+                TÍTULO DO CORTE
+              </span>
+              <input
+                value={corteUI.titulo_proposto}
+                onChange={(event) => patchDirty({ titulo_proposto: event.target.value })}
+                className="rounded-md bg-[var(--wb-bg-inset)] px-2 py-1 text-[11px] font-semibold text-[var(--wb-text)] outline-none focus:ring-2 focus:ring-[var(--wb-focus)]"
+              />
+            </label>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-code text-[8.5px] font-extrabold tracking-[0.12em] text-[var(--wb-text-dim)]">
+                TRECHOS
+              </span>
+              <span className="rounded-md bg-[var(--wb-bg-inset)] px-2 py-1 font-code text-[11px] font-semibold">
+                {(corteUI.desvios ?? []).length} desvios
+              </span>
+            </div>
+            <div className="ml-auto flex items-center gap-1.5">
+              <Tooltip label="Salvar (Ctrl+S)" side="top">
+                <Button
+                  size="sm"
+                  variant={isDirty ? 'default' : 'outline'}
+                  onClick={salvarMudancas}
+                  disabled={!isDirty || atualizarCorte.isPending}
+                >
+                  {atualizarCorte.isPending ? <Loader2 className="animate-spin" /> : <Save />}
+                  Salvar
+                </Button>
+              </Tooltip>
+              <div className="flex items-center">
+                <Tooltip
+                  label={brutoPronto ? 'Regerar bruto (Ctrl+G)' : 'Gerar bruto (Ctrl+G)'}
+                  side="top"
+                >
+                  <Button
+                    variant={brutoPronto ? 'outline' : 'default'}
+                    size="sm"
+                    className="rounded-r-none"
+                    onClick={handleGerarBrutoPrincipal}
+                    disabled={brutoBusy}
+                  >
+                    {brutoBusy ? <Loader2 className="animate-spin" /> : <Scissors />}
+                    {brutoPronto ? 'Regerar bruto' : 'Gerar bruto'}
+                  </Button>
+                </Tooltip>
+                <BrutoStepsDropdown
+                  corteId={corteId}
+                  ativo={brutoBusy}
+                  metadadosStatus={metaClaudeStatus}
+                  variant={brutoPronto ? 'outline' : 'default'}
+                  brutoPronto={brutoPronto}
+                  onRegerar={brutoBusy ? undefined : handleRegerarBruto}
+                />
+              </div>
+              <Tooltip label="Abrir pasta (Ctrl+O)" side="top">
+                <IconButton
+                  aria-label="Abrir pasta"
+                  onClick={() => abrirPasta.mutate(corteId)}
+                  disabled={abrirPasta.isPending}
+                >
+                  <FolderOpen />
+                </IconButton>
+              </Tooltip>
+              <Tooltip label="Atalhos (?)" side="top">
+                <IconButton aria-label="Atalhos" onClick={() => setShortcutsOpen(true)}>
+                  <Keyboard />
+                </IconButton>
+              </Tooltip>
+            </div>
+          </div>
+
+          {/* Timeline em flex:1 — quanto mais alto o painel, mais legível a
+              onda (aceite crítico de waveform do DE-PARA §3). */}
+          <div className="min-h-0 flex-1">
+            <TimelinePanel
+              audioSrc={waveformAudio}
+              waveformPeaksSrc={waveformPeaks}
+              audioOffsetSec={waveformOffsetSec}
+              inicioSeg={corteUI.inicio_seg}
+              fimSeg={corteUI.fim_seg}
+              desvios={corteUI.desvios ?? []}
+              currentTime={currentTime}
+              playbackRate={playbackRate}
+              playerRef={playerRef}
+              onSeek={onSeekTimeline}
+              onSkip={onSkip}
+              onChangeSpeed={onChangeSpeed}
+              onSetInicioAqui={setInicioAtual}
+              onSetFimAqui={setFimAtual}
+              onAtualizarAudioTimeline={() => setWaveformRefreshKey((k) => k + 1)}
+              locked={trechoLocked}
+              onToggleLocked={() => setTrechoLocked((v) => !v)}
+              pointer={pointerMode}
+              onTogglePointer={() => setPointerMode((v) => !v)}
+              smartPlay={smartPlay}
+              onToggleSmartPlay={() => setSmartPlay((v) => !v)}
+              onSelectDesvio={onSelectDesvioByTime}
+              onAdicionarTrechoAqui={adicionarTrechoAqui}
+              onChangeDesvio={onChangeDesvio}
+              onCriarCorteDaSelecao={onCriarCorteDaSelecao}
+              onDividirAqui={onDividirCorteAqui}
+              dividindo={dividirCorte.isPending}
+              onGerarBruto={handleGerarBrutoPrincipal}
+              brutoPronto={brutoPronto}
+              brutoStatus={brutoStatusAtual}
+            />
+          </div>
+        </WorkbenchEditorLayout>
+        {editorModals}
+      </>
+    );
+  }
+
   return (
     <>
       <UnifiedSidebar
@@ -864,17 +1113,7 @@ export function EditorPage() {
         </div>
       </div>
 
-      <ShortcutsHelpModal
-        open={shortcutsOpen}
-        onClose={() => setShortcutsOpen(false)}
-        bindings={bindings}
-      />
-      <TrechosManualModal
-        open={trechosManualOpen}
-        onClose={() => setTrechosManualOpen(false)}
-        corteId={corteId}
-      />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {editorModals}
     </>
   );
 }
