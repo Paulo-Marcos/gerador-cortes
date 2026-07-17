@@ -2,6 +2,8 @@ import { Suspense, useState } from 'react';
 import { Bell, ChevronRight, Loader2 } from 'lucide-react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { IconButton } from '@/components/ui/icon-button';
+import { WorkbenchShell } from '@/components/workbench/WorkbenchShell';
+import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { Sidebar } from './Sidebar';
 import { SettingsModal } from './SettingsModal';
 
@@ -20,6 +22,13 @@ function getRouteLabel(pathname: string) {
 }
 
 export function AppShell() {
+  // Flag VITE_WORKBENCH (PLANO-DE-ETAPAS regra 6): shell novo e antigo
+  // coexistem até a Etapa 8; rollback é desligar a flag.
+  if (isWorkbenchEnabled()) return <WorkbenchShell />;
+  return <LegacyShell />;
+}
+
+function LegacyShell() {
   const location = useLocation();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const label = getRouteLabel(location.pathname);

@@ -18,9 +18,11 @@ export function isWorkbenchEtapa(value: unknown): value is WorkbenchEtapa {
 }
 
 export interface WorkbenchTab {
-  projetoId: number;
+  /** Id do projeto como vem da API (`Projeto.id`). */
+  projetoId: string;
   etapa: WorkbenchEtapa;
-  corteId?: number;
+  /** Id do corte focado dentro da etapa (`Corte.id`), quando houver. */
+  corteId?: string;
 }
 
 export interface TabsState {
@@ -48,7 +50,12 @@ export function openTab(state: TabsState, tab: WorkbenchTab): TabsState {
   if (existingIndex >= 0) {
     const existing = state.tabs[existingIndex];
     const updated: WorkbenchTab =
-      tab.corteId !== undefined ? { ...existing, corteId: tab.corteId } : existing;
+      tab.corteId !== undefined && tab.corteId !== existing.corteId
+        ? { ...existing, corteId: tab.corteId }
+        : existing;
+    // Já é a aba ativa e nada mudou — devolve o mesmo estado (evita
+    // re-render em cascata na sincronização rota→aba).
+    if (updated === existing && existingIndex === state.activeIndex) return state;
     const tabs =
       updated === existing
         ? state.tabs
@@ -88,10 +95,10 @@ export function serializeTabs(state: TabsState): string {
 function parseTab(value: unknown): WorkbenchTab | null {
   if (typeof value !== 'object' || value === null) return null;
   const candidate = value as { projetoId?: unknown; etapa?: unknown; corteId?: unknown };
-  if (typeof candidate.projetoId !== 'number' || !Number.isFinite(candidate.projetoId)) return null;
+  if (typeof candidate.projetoId !== 'string' || candidate.projetoId.length === 0) return null;
   if (!isWorkbenchEtapa(candidate.etapa)) return null;
   const tab: WorkbenchTab = { projetoId: candidate.projetoId, etapa: candidate.etapa };
-  if (typeof candidate.corteId === 'number' && Number.isFinite(candidate.corteId)) {
+  if (typeof candidate.corteId === 'string' && candidate.corteId.length > 0) {
     tab.corteId = candidate.corteId;
   }
   return tab;
