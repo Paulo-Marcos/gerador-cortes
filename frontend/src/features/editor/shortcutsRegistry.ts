@@ -45,7 +45,18 @@ export type ShortcutId =
   // Undo da timeline (regioes + layout)
   | 'pos.undoTimeline'
   // Preview Remotion
-  | 'pos.toggleRemotion';
+  | 'pos.toggleRemotion'
+  // ── Shell Workbench (Etapa 7 / ATALHOS-E-CONFIGURACOES §2) ──────────
+  // Desvios do hand-off por conflito/limite do runtime: Ctrl+B é o smart
+  // play do Bruto → rail em Ctrl+Alt+B; Ctrl+Tab é do browser → abas em
+  // Ctrl+Alt+←/→; sem mod ctrl+shift no matches() → fechar aba Ctrl+Alt+X.
+  | 'wb.toggleRail'
+  | 'wb.toggleQueue'
+  | 'wb.toggleLeftPanel'
+  | 'wb.toggleRightPanel'
+  | 'wb.nextTab'
+  | 'wb.prevTab'
+  | 'wb.closeTab';
 
 export interface ShortcutSpec {
   id: ShortcutId;
@@ -166,6 +177,63 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     description: 'Desfazer ultima alteracao da timeline (regiao/layout)',
     group: 'edicao',
     skipInEditable: true,
+  },
+  // ── Shell Workbench (abas + painéis retráteis) ───────────────────────
+  {
+    id: 'wb.toggleRail',
+    screen: 'global',
+    key: 'b',
+    mod: 'ctrl+alt',
+    description: 'Colapsar/expandir rail de projetos',
+    group: 'navegacao',
+  },
+  {
+    id: 'wb.toggleQueue',
+    screen: 'global',
+    key: 'q',
+    mod: 'ctrl+alt',
+    description: 'Colapsar/expandir fila global de renders',
+    group: 'navegacao',
+  },
+  {
+    id: 'wb.toggleLeftPanel',
+    screen: 'global',
+    key: '[',
+    mod: 'ctrl',
+    description: 'Colapsar/expandir painel esquerdo (cortes/cenas)',
+    group: 'navegacao',
+  },
+  {
+    id: 'wb.toggleRightPanel',
+    screen: 'global',
+    key: ']',
+    mod: 'ctrl',
+    description: 'Colapsar/expandir painel direito (trechos/layout)',
+    group: 'navegacao',
+  },
+  {
+    id: 'wb.nextTab',
+    screen: 'global',
+    key: 'ArrowRight',
+    mod: 'ctrl+alt',
+    description: 'Proxima aba de trabalho',
+    group: 'navegacao',
+  },
+  {
+    id: 'wb.prevTab',
+    screen: 'global',
+    key: 'ArrowLeft',
+    mod: 'ctrl+alt',
+    description: 'Aba de trabalho anterior',
+    group: 'navegacao',
+  },
+  {
+    id: 'wb.closeTab',
+    screen: 'global',
+    key: 'x',
+    mod: 'ctrl+alt',
+    description: 'Fechar aba de trabalho atual',
+    group: 'navegacao',
   },
 ];
 

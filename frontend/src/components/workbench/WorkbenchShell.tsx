@@ -1,13 +1,15 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
+import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
 import { GlobalQueue } from './GlobalQueue';
 import { ProjectRail } from './ProjectRail';
 import { TabStrip } from './TabStrip';
-import { WorkbenchPanelsProvider } from './WorkbenchPanelsProvider';
+import { WorkbenchPanelsProvider, useWorkbenchPanelsContext } from './WorkbenchPanelsProvider';
 import { WorkbenchQueueProvider } from './useWorkbenchQueue';
 import { WorkbenchTabsProvider, useWorkbenchTabsContext } from './WorkbenchTabsProvider';
-import { routeToTab } from './workbenchRoutes';
+import { routeToTab, tabPath } from './workbenchRoutes';
 
 // ─────────────────────────────────────────────────────────────
 // WorkbenchShell — shell novo (DE-PARA §0): tab strip no topo,
@@ -28,12 +30,58 @@ function RouteTabSync() {
   return null;
 }
 
+// Atalhos do shell (ATALHOS-E-CONFIGURACOES §2, ids wb.* do registro):
+// painéis retráteis + ciclo/fechamento de abas.
+function ShellShortcuts() {
+  const navigate = useNavigate();
+  const { tabs, activeIndex, activate, close } = useWorkbenchTabsContext();
+  const { toggle, pagePanels } = useWorkbenchPanelsContext();
+
+  const bindings = useMemo<ShortcutBinding[]>(() => {
+    const cycleTab = (dir: -1 | 1) => {
+      if (tabs.length === 0) return;
+      const next = (activeIndex + dir + tabs.length) % tabs.length;
+      activate(next);
+      navigate(tabPath(tabs[next]));
+    };
+    const closeActive = () => {
+      if (activeIndex < 0) return;
+      close(activeIndex);
+      const restantes = tabs.filter((_, i) => i !== activeIndex);
+      if (restantes.length === 0) {
+        navigate('/projetos');
+        return;
+      }
+      navigate(tabPath(restantes[Math.max(0, activeIndex - 1)]));
+    };
+    return [
+      shortcutFromRegistry('wb.toggleRail', () => toggle('rail')),
+      shortcutFromRegistry('wb.toggleQueue', () => toggle('fila')),
+      shortcutFromRegistry('wb.toggleLeftPanel', () => {
+        const id = pagePanels.find((p) => p === 'cuts' || p === 'cenas');
+        if (id) toggle(id);
+      }),
+      shortcutFromRegistry('wb.toggleRightPanel', () => {
+        const id = pagePanels.find((p) => p === 'right' || p === 'layout');
+        if (id) toggle(id);
+      }),
+      shortcutFromRegistry('wb.nextTab', () => cycleTab(1)),
+      shortcutFromRegistry('wb.prevTab', () => cycleTab(-1)),
+      shortcutFromRegistry('wb.closeTab', closeActive),
+    ];
+  }, [tabs, activeIndex, activate, close, navigate, toggle, pagePanels]);
+
+  useShortcuts(bindings, true);
+  return null;
+}
+
 export function WorkbenchShell() {
   return (
     <WorkbenchPanelsProvider>
       <WorkbenchTabsProvider>
         <WorkbenchQueueProvider>
           <RouteTabSync />
+          <ShellShortcuts />
           <div className="flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]">
             <TabStrip />
             <div className="flex min-h-0 flex-1">

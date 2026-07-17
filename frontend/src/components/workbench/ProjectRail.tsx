@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Home,
+  Keyboard,
   Radio,
   SlidersHorizontal,
   Sparkles,
@@ -58,6 +59,7 @@ const GLOBAL_NAV: GlobalNavItem[] = [
   { to: '/buscar-lives', label: 'Buscar lives', Icon: Radio },
   { to: '/padroes-thumbnail', label: 'Padrões de thumbnail', Icon: Sparkles },
   { to: '/analises', label: 'Análises', Icon: BarChart3 },
+  { to: '/atalhos', label: 'Atalhos', Icon: Keyboard },
   { to: '/canais', label: 'Configurações', Icon: SlidersHorizontal },
 ];
 

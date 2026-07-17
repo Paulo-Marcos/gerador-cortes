@@ -13,6 +13,8 @@ import {
 
 interface WorkbenchPanelsContextValue extends UseWorkbenchPanelsResult {
   setPagePanels: (ids: readonly WorkbenchPanelId[]) => void;
+  /** Painéis registrados pela página atual (alvo dos atalhos Ctrl+[ / Ctrl+]). */
+  pagePanels: readonly WorkbenchPanelId[];
 }
 
 const WorkbenchPanelsContext = createContext<WorkbenchPanelsContextValue | null>(null);
@@ -25,8 +27,8 @@ export function WorkbenchPanelsProvider({ children }: { children: ReactNode }) {
   const panels = useWorkbenchPanels(active);
 
   const value = useMemo<WorkbenchPanelsContextValue>(
-    () => ({ ...panels, setPagePanels }),
-    [panels],
+    () => ({ ...panels, setPagePanels, pagePanels }),
+    [panels, pagePanels],
   );
 
   return (
