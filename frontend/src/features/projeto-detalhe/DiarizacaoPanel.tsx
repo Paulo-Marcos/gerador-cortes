@@ -8,7 +8,11 @@ import { Loader2, Mic, Save, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { FalantesMap } from '@/lib/api';
-import { useAtualizarFalantes, useDiarizarProjeto, useFalantes } from '@/hooks/useDiarizacao';
+import {
+  useAtualizarFalantes,
+  useDiarizarProjeto,
+  useFalantes,
+} from '@/hooks/useDiarizacao';
 
 interface Props {
   projetoId: string;
@@ -42,7 +46,9 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
 
   const setCanal = (sid: string) =>
     setRascunho((prev) =>
-      Object.fromEntries(Object.entries(prev).map(([k, v]) => [k, { ...v, is_canal: k === sid }])),
+      Object.fromEntries(
+        Object.entries(prev).map(([k, v]) => [k, { ...v, is_canal: k === sid }]),
+      ),
     );
 
   return (
@@ -60,8 +66,8 @@ export function DiarizacaoPanel({ projetoId, enabled, usarDiarizacao, onToggleUs
             <Users size={14} className="text-accent-300" /> Usar diarização de falantes
           </span>
           <span className="mt-0.5 block text-[11px] text-text-300">
-            Marca no prompt quem fala em cada trecho ({'['}CANAL{']'} vs. {'['}OUTRO{']'}) para a IA
-            não misturar a fala do dono do canal com a fala reagida.
+            Marca no prompt quem fala em cada trecho ({'['}CANAL{']'} vs. {'['}OUTRO{']'}) para a
+            IA não misturar a fala do dono do canal com a fala reagida.
           </span>
         </span>
       </label>
