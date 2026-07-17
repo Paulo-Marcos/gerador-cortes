@@ -23,6 +23,11 @@ import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
 import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
 import { CommonTopBar, type MoreMenuItem } from '@/features/editor/CommonTopBar';
 import { PosTopbarExtra, type PosStep, type VideoTipo } from '@/features/editor/PosTopbarExtra';
+import { WorkbenchCutsPanel } from '@/features/editor/WorkbenchCutsPanel';
+import { WorkbenchEditorLayout } from '@/features/editor/WorkbenchEditorLayout';
+import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
+import { useWorkbenchQueueOptional } from '@/components/workbench/useWorkbenchQueue';
+import { rotuloCurtoProjeto } from '@/components/workbench/workbenchRoutes';
 import { MetadataModal } from '@/features/metadata/MetadataModal';
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from './RenderStepsModal';
@@ -94,6 +99,9 @@ export function ScenesPostProductionPage() {
 
   const cortes = useMemo(() => cortesQuery.data ?? [], [cortesQuery.data]);
   const corte = corteQuery.data;
+  // Fila global do Workbench: registrar o job deixa o render visível em
+  // qualquer tela (a aba não bloqueia). Null no shell legado.
+  const workbenchQueue = useWorkbenchQueueOptional();
   const renderFinal = useRenderizarRemotion(corteId);
   const pipelineStatus = usePipelineStatus(corteId, renderFinalLocal);
   const abrirPasta = useAbrirPasta();
@@ -277,6 +285,13 @@ export function ScenesPostProductionPage() {
     window.localStorage.setItem(`render-final:${corteId}`, 'running');
     setRenderFinalLocal(true);
     setRenderStartModalOpen(false);
+    // Workbench: acompanha o render na fila global (DE-PARA §4 —
+    // "renderizar em 2º plano" não bloqueia a aba).
+    workbenchQueue?.registerJob({
+      corteId,
+      projetoId,
+      rotulo: `${rotuloCurtoProjeto(projeto.data?.titulo_live)} · corte ${corte?.numero ?? '?'} → render`,
+    });
     renderFinal.mutate(opts, {
       onSuccess: () => {
         void pipelineStatus.refetch();
@@ -346,6 +361,113 @@ export function ScenesPostProductionPage() {
     },
   ];
   const exportStatuses = exportStatusQ.data?.cortes ?? [];
+
+  const posModals = (
+    <>
+      <RenderStepsModal
+        open={renderStartModalOpen}
+        status={pipelineStatus.data}
+        onClose={() => setRenderStartModalOpen(false)}
+        onConfirm={startRenderFinal}
+      />
+      <MetadataModal
+        open={metadataOpen}
+        projetoId={projetoId}
+        corte={corte}
+        onClose={() => setMetadataOpen(false)}
+      />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </>
+  );
+
+  // ── Shell Workbench (Etapa 4): steps no topo do conteúdo da aba, painel
+  // CORTES retrátil e o EditorFase2 (player+timeline+painéis de cenas/
+  // layout/filtros com todos os atalhos) re-hospedado intacto no centro.
+  if (isWorkbenchEnabled()) {
+    return (
+      <>
+        <WorkbenchEditorLayout
+          panelIds={['cuts']}
+          leftPanel={
+            <WorkbenchCutsPanel
+              projetoId={projetoId}
+              cortes={cortes}
+              corteAtivoId={corte.id}
+              exportStatus={exportStatuses}
+              getCortePath={(item) =>
+                resolveCorteStagePath({
+                  projetoId,
+                  corte: item,
+                  status: exportStatuses.find((status) => status.corte_id === item.id),
+                  forcePhase2,
+                })
+              }
+            />
+          }
+        >
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            <PosTopbarExtra
+              tipo={videoTipo}
+              active={stepActive}
+              done={stepDone}
+              onMetadadosClick={() => setMetadataOpen(true)}
+            />
+            <div className="flex-1" />
+            <Tooltip
+              label={
+                renderFinalRunning
+                  ? `Renderizando ${renderFinalProgress}% — acompanhe na fila global`
+                  : 'Renderizar (o job aparece na fila global; pode trocar de aba)'
+              }
+              side="bottom"
+            >
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={renderizarFinal}
+                disabled={renderFinalRunning}
+              >
+                {renderFinalRunning ? <Loader2 className="animate-spin" /> : <Play />}
+                {renderFinalRunning ? `Renderizando ${renderFinalProgress}%` : 'Renderizar'}
+              </Button>
+            </Tooltip>
+            <Tooltip label="Abrir pasta do corte" side="bottom">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => abrirPasta.mutate(corte.id)}
+                disabled={abrirPasta.isPending}
+              >
+                <FolderOpen />
+              </Button>
+            </Tooltip>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col">
+            <EditorFase2
+              videoSrc={videoSrcEstavel}
+              modoLabel="Cenas"
+              corte={corte}
+              cenas={cenas}
+              formato={payload.formato}
+              paleta={payload.paleta}
+              playerRef={playerRef}
+              currentTime={currentTime}
+              onTimeUpdate={setCurrentTime}
+              onSeek={(seg) => playerRef.current?.seekTo(seg)}
+              onCenasChange={setCenas}
+              onAbrirStudio={abrirStudio}
+              abrindoStudio={studioUrl.isPending}
+              playbackRate={playbackRate}
+            />
+          </div>
+        </WorkbenchEditorLayout>
+        {posModals}
+      </>
+    );
+  }
 
   return (
     <>
@@ -419,19 +541,7 @@ export function ScenesPostProductionPage() {
         </div>
       </div>
 
-      <RenderStepsModal
-        open={renderStartModalOpen}
-        status={pipelineStatus.data}
-        onClose={() => setRenderStartModalOpen(false)}
-        onConfirm={startRenderFinal}
-      />
-      <MetadataModal
-        open={metadataOpen}
-        projetoId={projetoId}
-        corte={corte}
-        onClose={() => setMetadataOpen(false)}
-      />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {posModals}
     </>
   );
 }

@@ -102,3 +102,12 @@ export function useWorkbenchQueue(): WorkbenchQueueContextValue {
   }
   return context;
 }
+
+/**
+ * Variante nula-segura para telas que existem nos DOIS shells: no shell
+ * legado (sem provider) devolve null e o chamador simplesmente não
+ * registra o job na fila.
+ */
+export function useWorkbenchQueueOptional(): WorkbenchQueueContextValue | null {
+  return useContext(WorkbenchQueueContext);
+}
