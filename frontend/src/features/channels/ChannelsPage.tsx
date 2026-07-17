@@ -1,15 +1,19 @@
-// D-154: página de gerenciamento de canais (épico Multi-canal — Opção X). Lista
-// os canais destacando o ativo, permite criar, selecionar (com aviso de restart
-// quando a API sinaliza) e editar a identidade básica. Container: orquestra o
-// I/O (hooks em useChannels) e delega a renderização aos componentes burros.
+// D-154 + D-394 (design Workbench 1c, validação 1): página de Configurações
+// no formato do protótipo — abas "Canal ativo" e "Aplicação"; no canal, as
+// áreas editoriais (skills/scaffolds/prompts/pesos) viram BLOCOS-portal que
+// abrem cada seção; na aplicação, Aparência (tema+paleta) + settings globais.
+// Container: orquestra o I/O (hooks em useChannels) e delega às seções.
 import { useState } from 'react';
-import { AlertTriangle, ArrowLeft, Loader2, Plus, Radio } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { AlertTriangle, ChevronLeft, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
+import { cn } from '@/lib/utils';
 import type { Canal, IdentidadeCanal } from '@/lib/channelsApi';
 import { AppSettingsControls } from '@/features/settings/AppSettingsControls';
+import { useTheme } from '@/hooks/useTheme';
+import { PALETTES, usePalette } from '@/hooks/usePalette';
+import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { ChannelCard } from './ChannelCard';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { ChannelThemeSection } from './ChannelThemeSection';
@@ -28,6 +32,8 @@ import {
 } from './useChannels';
 
 type Dialogo = { tipo: 'criar' } | { tipo: 'editar'; canal: Canal } | null;
+type Aba = 'canal' | 'aplicacao';
+type SecaoCanal = null | 'skills' | 'scaffolds' | 'prompts' | 'pesos';
 
 function mensagemErro(erro: unknown, fallback: string): string {
   return erro instanceof Error ? erro.message : fallback;
@@ -44,6 +50,110 @@ function paraIdentidade(values: ChannelFormValues): IdentidadeCanal {
   };
 }
 
+/** Bloco-portal do protótipo: card clicável que abre uma área editorial. */
+function BlocoPortal({
+  emoji,
+  titulo,
+  descricao,
+  onClick,
+}: {
+  emoji: string;
+  titulo: string;
+  descricao: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-3.5 text-left shadow-[var(--wb-shadow)] transition-colors hover:border-[var(--wb-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-[16px]" aria-hidden>
+          {emoji}
+        </span>
+        <span className="text-[12.5px] font-bold text-[var(--wb-text)]">{titulo}</span>
+        <span className="ml-auto text-[var(--wb-text-dim)]" aria-hidden>
+          →
+        </span>
+      </div>
+      <p className="mt-1.5 text-[11px] leading-snug text-[var(--wb-text-mute)]">{descricao}</p>
+    </button>
+  );
+}
+
+/** Aparência (design §Aplicação): tema claro/escuro + paleta de acento. */
+function AparenciaSection() {
+  const { theme, setTheme } = useTheme();
+  const { palette, setPalette } = usePalette();
+
+  return (
+    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
+      <h2 className="text-lg font-semibold text-[var(--wb-text)]">Aparência</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-code text-[9px] font-extrabold tracking-[0.14em] text-[var(--wb-text-dim)]">
+          TEMA
+        </span>
+        {(
+          [
+            { id: 'light', rotulo: '☀️ Claro' },
+            { id: 'dark', rotulo: '🌙 Escuro' },
+          ] as const
+        ).map(({ id, rotulo }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTheme(id)}
+            aria-pressed={theme === id}
+            className={cn(
+              'rounded-lg border px-3 py-1.5 text-[11px] font-bold',
+              theme === id
+                ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
+                : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+            )}
+          >
+            {rotulo}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-code text-[9px] font-extrabold tracking-[0.14em] text-[var(--wb-text-dim)]">
+          PALETA DE ACENTO
+        </span>
+        {PALETTES.map((opcao) => (
+          <button
+            key={opcao.id}
+            type="button"
+            onClick={() => setPalette(opcao.id)}
+            aria-pressed={palette === opcao.id}
+            title={opcao.descricao}
+            className={cn(
+              'flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[11px] font-bold',
+              palette === opcao.id
+                ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-text)]'
+                : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+            )}
+          >
+            <span
+              aria-hidden
+              className="h-3.5 w-3.5 rounded-full"
+              style={{ background: opcao.swatch }}
+            />
+            {opcao.nome}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const SECOES_CANAL: Record<Exclude<SecaoCanal, null>, { titulo: string }> = {
+  skills: { titulo: 'Skills editoriais' },
+  scaffolds: { titulo: 'Scaffolds' },
+  prompts: { titulo: 'Prompts utilitários' },
+  pesos: { titulo: 'Pesos do ranking' },
+};
+
 export function ChannelsPage() {
   const { notify } = useToast();
   const canaisQuery = useCanais();
@@ -56,6 +166,8 @@ export function ChannelsPage() {
 
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [selecionandoId, setSelecionandoId] = useState<string | null>(null);
+  const [aba, setAba] = useState<Aba>('canal');
+  const [secao, setSecao] = useState<SecaoCanal>(null);
 
   const fecharDialogo = () => setDialogo(null);
 
@@ -122,119 +234,172 @@ export function ChannelsPage() {
   const canais = canaisQuery.data?.canais ?? [];
 
   return (
-    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]">
-      <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-7 py-5">
-        <div className="flex items-start gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]">
-            <Radio size={22} aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <Link
-              to="/projetos"
-              className="mb-1.5 inline-flex items-center gap-1.5 text-sm text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
+    <div
+      className={cn(
+        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
+        isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+      )}
+    >
+      <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
+        <span className="text-[16px]" aria-hidden>
+          ⚙
+        </span>
+        <h1 className="text-[15px] font-extrabold">Configurações</h1>
+        <div className="ml-3 flex gap-1.5">
+          {(
+            [
+              { id: 'canal', rotulo: 'Canal ativo' },
+              { id: 'aplicacao', rotulo: 'Aplicação' },
+            ] as const
+          ).map(({ id, rotulo }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                setAba(id);
+                setSecao(null);
+              }}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-[10px] font-semibold',
+                aba === id && secao === null
+                  ? 'bg-[var(--wb-accent)] font-bold text-[var(--wb-accent-fg)]'
+                  : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+              )}
             >
-              <ArrowLeft size={14} aria-hidden />
-              Voltar
-            </Link>
-            <h1 className="font-editorial text-[48px] font-medium leading-[0.96] tracking-[-0.01em] text-[var(--wb-text)]">
-              Configurações
-            </h1>
-            <p className="mt-2 max-w-2xl text-[15px] text-[var(--wb-text-mute)]">
-              Todas as configurações do app num só lugar: as <strong>globais</strong>{' '}
-              (processamento, logs, render) e as de <strong>cada canal</strong> (identidade). Tudo é
-              editável aqui e persiste no banco. A troca de canal ativo só efetiva após reiniciar o
-              backend.
-            </p>
-          </div>
-          <Button type="button" onClick={() => setDialogo({ tipo: 'criar' })}>
+              {rotulo}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1" />
+        {aba === 'canal' && secao === null && (
+          <Button type="button" size="sm" onClick={() => setDialogo({ tipo: 'criar' })}>
             <Plus aria-hidden />
             Novo canal
           </Button>
-        </div>
+        )}
       </header>
 
-      <main className="grid flex-1 content-start gap-5 overflow-auto p-6">
-        <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-          <h2 className="text-lg font-semibold text-[var(--wb-text)]">Configurações globais</h2>
-          <p className="text-sm text-[var(--wb-text-mute)]">
-            Preferências de processamento aplicadas às renderizações do canal ativo.
-          </p>
-          <AppSettingsControls />
-        </section>
-
-        <ChannelThemeSection />
-
-        <EditorialSkillsSection />
-
-        <EditorialScaffoldsSection />
-
-        <PromptsUtilitariosSection />
-
-        <RankingPesosSection />
-
-        <div className="mt-2">
-          <h2 className="text-lg font-semibold text-[var(--wb-text)]">Canais</h2>
-          <p className="text-sm text-[var(--wb-text-mute)]">
-            Identidade de cada canal (nome, handle, crédito, canal-fonte das lives e paleta).
-          </p>
-        </div>
-
-        {canaisQuery.isLoading && (
-          <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-            <Loader2 className="animate-spin" size={16} aria-hidden />
-            Carregando canais…
-          </p>
+      <main className="grid flex-1 content-start gap-4 overflow-auto p-4">
+        {aba === 'aplicacao' && (
+          <>
+            <AparenciaSection />
+            <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
+              <h2 className="text-lg font-semibold text-[var(--wb-text)]">Configurações globais</h2>
+              <p className="text-sm text-[var(--wb-text-mute)]">
+                Preferências de processamento aplicadas às renderizações do canal ativo.
+              </p>
+              <AppSettingsControls />
+            </section>
+          </>
         )}
 
-        {canaisQuery.isError && (
-          <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklch,var(--error)_10%,var(--wb-bg-card))] p-5">
-            <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-              <AlertTriangle size={16} aria-hidden className="text-error" />
-              {mensagemErro(canaisQuery.error, 'Não foi possível carregar os canais.')}
-            </p>
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => canaisQuery.refetch()}
-              >
-                Tentar de novo
-              </Button>
-            </div>
-          </div>
+        {aba === 'canal' && secao !== null && (
+          <>
+            <button
+              type="button"
+              onClick={() => setSecao(null)}
+              className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
+            >
+              <ChevronLeft size={14} aria-hidden />
+              Canal ativo · {SECOES_CANAL[secao].titulo}
+            </button>
+            {secao === 'skills' && <EditorialSkillsSection />}
+            {secao === 'scaffolds' && <EditorialScaffoldsSection />}
+            {secao === 'prompts' && <PromptsUtilitariosSection />}
+            {secao === 'pesos' && <RankingPesosSection />}
+          </>
         )}
 
-        {canaisQuery.isSuccess && canais.length === 0 && (
-          <div className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-6 text-center">
-            <p className="text-[15px] text-[var(--wb-text-mute)]">
-              Nenhum canal cadastrado ainda. Crie o primeiro para começar.
-            </p>
-            <div className="flex justify-center">
-              <Button type="button" onClick={() => setDialogo({ tipo: 'criar' })}>
-                <Plus aria-hidden />
-                Criar primeiro canal
-              </Button>
-            </div>
-          </div>
-        )}
+        {aba === 'canal' && secao === null && (
+          <>
+            {canaisQuery.isLoading && (
+              <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
+                <Loader2 className="animate-spin" size={16} aria-hidden />
+                Carregando canais…
+              </p>
+            )}
 
-        {canais.length > 0 && (
-          <ul className="grid gap-3">
-            {canais.map((canal) => (
-              <ChannelCard
-                key={canal.id}
-                canal={canal}
-                selecionando={selecionandoId === canal.id}
-                onSelecionar={() => aoSelecionar(canal)}
-                onEditar={() => setDialogo({ tipo: 'editar', canal })}
-                youtube={canal.ativo ? youtubeStatus.data : undefined}
-                youtubeBusy={conectarYoutube.isPending || desconectarYoutube.isPending}
-                onConectarYoutube={aoConectarYoutube}
-                onDesconectarYoutube={aoDesconectarYoutube}
+            {canaisQuery.isError && (
+              <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklch,var(--error)_10%,var(--wb-bg-card))] p-5">
+                <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
+                  <AlertTriangle size={16} aria-hidden className="text-error" />
+                  {mensagemErro(canaisQuery.error, 'Não foi possível carregar os canais.')}
+                </p>
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => canaisQuery.refetch()}
+                  >
+                    Tentar de novo
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {canaisQuery.isSuccess && canais.length === 0 && (
+              <div className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-6 text-center">
+                <p className="text-[15px] text-[var(--wb-text-mute)]">
+                  Nenhum canal cadastrado ainda. Crie o primeiro para começar.
+                </p>
+                <div className="flex justify-center">
+                  <Button type="button" onClick={() => setDialogo({ tipo: 'criar' })}>
+                    <Plus aria-hidden />
+                    Criar primeiro canal
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {canais.length > 0 && (
+              <ul className="grid gap-3">
+                {canais.map((canal) => (
+                  <ChannelCard
+                    key={canal.id}
+                    canal={canal}
+                    selecionando={selecionandoId === canal.id}
+                    onSelecionar={() => aoSelecionar(canal)}
+                    onEditar={() => setDialogo({ tipo: 'editar', canal })}
+                    youtube={canal.ativo ? youtubeStatus.data : undefined}
+                    youtubeBusy={conectarYoutube.isPending || desconectarYoutube.isPending}
+                    onConectarYoutube={aoConectarYoutube}
+                    onDesconectarYoutube={aoDesconectarYoutube}
+                  />
+                ))}
+              </ul>
+            )}
+
+            <ChannelThemeSection />
+
+            {/* Blocos-portal do design: cada área editorial abre em sub-view. */}
+            <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
+              <BlocoPortal
+                emoji="🧠"
+                titulo="Skills editoriais"
+                descricao="Prompts por etapa (análise, títulos, cenas…) com histórico de versões e reset por campo."
+                onClick={() => setSecao('skills')}
               />
-            ))}
-          </ul>
+              <BlocoPortal
+                emoji="🧩"
+                titulo="Scaffolds"
+                descricao="Contrato de saída de cada skill: placeholders validados e texto do invólucro."
+                onClick={() => setSecao('scaffolds')}
+              />
+              <BlocoPortal
+                emoji="🛠"
+                titulo="Prompts utilitários"
+                descricao="Prompts avulsos (desvios, thumbnail, sentimento…) editáveis com validação."
+                onClick={() => setSecao('prompts')}
+              />
+              <BlocoPortal
+                emoji="⚖"
+                titulo="Pesos do ranking"
+                descricao="Pesos usados no score do ranking de lives do canal."
+                onClick={() => setSecao('pesos')}
+              />
+            </div>
+          </>
         )}
       </main>
 
