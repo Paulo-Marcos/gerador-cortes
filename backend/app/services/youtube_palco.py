@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import tempfile
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,71 @@ _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-youtube-palco.mjs"
 
 def _cache_dir() -> Path:
     return channel_paths.palco_cache_dir()
+
+
+# Quantos bytes do final da saída do gen-youtube-palco.mjs entram no diagnóstico.
+_SAIDA_TAIL_BYTES = 2048
+
+
+@dataclass(frozen=True)
+class PalcoPngFalha:
+    """Diagnóstico de UMA geração de PNG do palco que falhou (D-384).
+
+    `saida` carrega os últimos KB do stdout+stderr do gen-youtube-palco.mjs —
+    é o que permite diagnosticar sem re-rodar o gerador na mão.
+    """
+
+    chave: str
+    returncode: int | None
+    saida: str
+
+
+@dataclass
+class PalcoPngsResultado:
+    """Resultado de `ensure_palco_pngs_para_layout` (D-384).
+
+    Além dos PNGs gerados, expõe as chaves EXIGIDAS pelas regiões
+    compartilhadas/full posicionadas do corte — é a diferença entre "faltou um
+    PNG opcional" (base sem região) e "o render vai sair com fundo placeholder".
+    """
+
+    gerados: dict[str, Path] = field(default_factory=dict)
+    falhas: list[PalcoPngFalha] = field(default_factory=list)
+    chaves_regioes: set[str] = field(default_factory=set)
+
+    @property
+    def regioes_sem_png(self) -> set[str]:
+        """Chaves exigidas por região que NÃO têm PNG — condição de bloqueio."""
+        return {chave for chave in self.chaves_regioes if chave not in self.gerados}
+
+    def diagnostico(self) -> str:
+        """Texto único com a saída do gerador por chave falhada."""
+        partes = [
+            f"[{falha.chave} rc={falha.returncode if falha.returncode is not None else '?'}] "
+            f"{falha.saida}".strip()
+            for falha in self.falhas
+        ]
+        return "\n".join(partes) or "sem saida capturada do gen-youtube-palco.mjs"
+
+
+class PalcoPngGeracaoError(RuntimeError):
+    """PNG do palco exigido por região do corte não pôde ser gerado (D-384).
+
+    Levantado pelo pipeline de render para BLOQUEAR o render em vez de
+    entregar vídeo com o fundo procedural de fallback sem ninguém perceber.
+    """
+
+    def __init__(self, chaves_faltantes: set[str], diagnostico: str) -> None:
+        self.chaves_faltantes = sorted(chaves_faltantes)
+        self.diagnostico = diagnostico
+        super().__init__(
+            f"PNG do palco nao pode ser gerado para {len(self.chaves_faltantes)} "
+            f"regiao(oes) do corte (chaves: {', '.join(self.chaves_faltantes)}). "
+            "Render bloqueado para nao publicar video com fundo placeholder. "
+            "Para renderizar mesmo assim com o fundo de fallback, defina "
+            "PALCO_FALLBACK_EXPLICITO=1. Diagnostico do gen-youtube-palco.mjs:\n"
+            f"{diagnostico}"
+        )
 
 
 # Dedupe de gerações concorrentes da MESMA chave — sem isso, salvar o layout
@@ -101,7 +167,8 @@ async def ensure_palco_png(
         projeto_padrao=projeto_padrao,
         global_padrao=global_padrao,
     )
-    return await _ensure_png_para_props(_props_from_resolved(resolvido), forcar=forcar)
+    resultado = await _ensure_png_para_props(_props_from_resolved(resolvido), forcar=forcar)
+    return resultado if isinstance(resultado, Path) else None
 
 
 async def ensure_palco_pngs_para_layout(
@@ -111,11 +178,14 @@ async def ensure_palco_pngs_para_layout(
     forcar: bool = False,
     projeto_padrao: Any = None,
     global_padrao: Any = None,
-) -> dict[str, Path]:
+) -> PalcoPngsResultado:
     """Garante PNG por config único do layout — base + overrides de segmento (F-048).
 
-    Retorna `{cache_key: path}`; uma região sem override compartilha a chave do
-    PNG base. Configs que falharem na geração são omitidos do mapa.
+    Retorna `PalcoPngsResultado` (D-384): `gerados` traz `{cache_key: path}`
+    (uma região sem override compartilha a chave do PNG base); configs que
+    falharem entram em `falhas` com a saída do gerador; `chaves_regioes` lista
+    as chaves EXIGIDAS pelas regiões compartilhadas/full posicionadas — se
+    alguma delas não estiver em `gerados`, o render sairia com fundo placeholder.
 
     Cascade lazy: usa `projeto_padrao`/`global_padrao` quando o corte nao tem
     `compartilhada` proprio.
@@ -134,6 +204,9 @@ async def ensure_palco_pngs_para_layout(
         global_padrao=global_padrao,
     )
     configs_por_chave: dict[str, dict[str, Any]] = {}
+    # D-384: chaves exigidas pelas regiões — a base só entra aqui quando uma
+    # região a compartilha; base sem região é pré-geração opcional.
+    chaves_regioes: set[str] = set()
 
     base_props = _props_from_resolved(resolvido)
     base_key = palco_cache_key_para_config(
@@ -161,6 +234,7 @@ async def ensure_palco_pngs_para_layout(
             fundo=resolvido["fundo"],
             placa=resolvido["placa"],
         )
+        chaves_regioes.add(chave)
         if chave in configs_por_chave:
             continue
         configs_por_chave[chave] = {
@@ -186,6 +260,7 @@ async def ensure_palco_pngs_para_layout(
             fundo=resolvido["fundo"],
             placa=resolvido["placa"],
         )
+        chaves_regioes.add(chave)
         if chave in configs_por_chave:
             continue
         configs_por_chave[chave] = {
@@ -200,13 +275,26 @@ async def ensure_palco_pngs_para_layout(
     # Cache hit retorna imediato; o semaforo evita spawnar node demais de uma vez.
     sem = asyncio.Semaphore(3)
 
-    async def _gerar(chave: str, props: dict) -> tuple[str, Path | None]:
+    async def _gerar(chave: str, props: dict) -> tuple[str, Path | PalcoPngFalha]:
         async with sem:
             destino = _cache_dir() / f"{chave}.png"
-            return chave, await _ensure_png_para_props(props, destino=destino, forcar=forcar)
+            try:
+                return chave, await _ensure_png_para_props(props, destino=destino, forcar=forcar)
+            except Exception as exc:  # noqa: BLE001 — falha vira diagnóstico, não crash
+                return chave, PalcoPngFalha(
+                    chave=chave,
+                    returncode=None,
+                    saida=f"{type(exc).__name__}: {exc}"[-_SAIDA_TAIL_BYTES:],
+                )
 
     pares = await asyncio.gather(*[_gerar(c, p) for c, p in configs_por_chave.items()])
-    return {chave: caminho for chave, caminho in pares if caminho is not None}
+    resultado = PalcoPngsResultado(chaves_regioes=chaves_regioes)
+    for chave, valor in pares:
+        if isinstance(valor, Path):
+            resultado.gerados[chave] = valor
+        else:
+            resultado.falhas.append(valor)
+    return resultado
 
 
 def _props_from_resolved(layout: dict) -> dict:
@@ -228,8 +316,12 @@ async def _ensure_png_para_props(
     *,
     destino: Path | None = None,
     forcar: bool = False,
-) -> Path | None:
-    """Helper: gera um PNG a partir de props ja resolvidas (sem normalizacao)."""
+) -> Path | PalcoPngFalha:
+    """Helper: gera um PNG a partir de props ja resolvidas (sem normalizacao).
+
+    D-384: em vez de devolver None (falha silenciosa), devolve `PalcoPngFalha`
+    com os últimos KB da saída do gen-youtube-palco.mjs para diagnóstico.
+    """
     if destino is None:
         chave = palco_cache_key_para_config(
             compartilhada={
@@ -244,11 +336,19 @@ async def _ensure_png_para_props(
         )
         destino = _cache_dir() / f"{chave}.png"
 
+    chave = destino.stem
     chave_inflight = destino.name
     if destino.exists() and not forcar:
         return destino
     if chave_inflight in _inflight:
-        return destino if destino.exists() else None
+        if destino.exists():
+            return destino
+        return PalcoPngFalha(
+            chave=chave,
+            returncode=None,
+            saida="geracao concorrente da mesma chave ainda em andamento; "
+            "re-execute o render quando ela concluir",
+        )
 
     _inflight.add(chave_inflight)
     try:
@@ -295,10 +395,22 @@ async def _ensure_png_para_props(
                     returncode,
                     saida[-800:],
                 )
-                return None
+                return PalcoPngFalha(
+                    chave=chave,
+                    returncode=returncode,
+                    saida=saida[-_SAIDA_TAIL_BYTES:],
+                )
         finally:
             Path(props_path).unlink(missing_ok=True)
     finally:
         _inflight.discard(chave_inflight)
 
-    return destino if destino.exists() else None
+    if destino.exists():
+        return destino
+    return PalcoPngFalha(
+        chave=chave,
+        returncode=returncode,
+        saida=("gerador terminou com rc=0 mas o PNG nao foi criado.\n" + saida)[
+            -_SAIDA_TAIL_BYTES:
+        ],
+    )

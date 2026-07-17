@@ -81,7 +81,11 @@ from app.services.pipeline_render_helpers import (
 )
 from app.services.remotion_bundle_cache import RemotionBundleCache
 from app.services.render_ffmpeg_log import append_ffmpeg_command
-from app.services.youtube_palco import ensure_palco_pngs_para_layout
+from app.services.youtube_palco import (
+    PalcoPngGeracaoError,
+    PalcoPngsResultado,
+    ensure_palco_pngs_para_layout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -497,6 +501,8 @@ async def _fase_grade(ctx: _RenderCtx, db) -> None:
                 projeto_padrao=ctx.projeto.layout_youtube_padrao,
                 global_padrao=global_padrao_render,
                 ffmpeg_log_path=ctx.ffmpeg_log_path,
+                event_log=ctx.event_log,
+                report=ctx.report,
             ),
             name=f"grade_{ctx.corte_id}",
         )
@@ -865,6 +871,80 @@ async def _aguardar_cooldown(cooldown_sec: int, ha_mais_chunks: bool) -> None:
     await asyncio.sleep(cooldown_sec)
 
 
+def _palco_fallback_explicito() -> bool:
+    """D-384: opt-in CONSCIENTE para renderizar com o fundo procedural de fallback."""
+    return os.getenv("PALCO_FALLBACK_EXPLICITO", "").strip().lower() in {"1", "true", "sim"}
+
+
+def _reportar_falhas_palco(
+    resultado: PalcoPngsResultado,
+    *,
+    event_log: PipelineEventLog | None = None,
+    report: Callable[[int, str], None] | None = None,
+) -> None:
+    """D-384: torna VISÍVEL a falha de geração do PNG do palco.
+
+    Antes, o PNG faltando caía silenciosamente no fundo procedural de drawbox
+    do `_shared_background_chain` e o usuário só percebia assistindo o vídeo
+    final (3 semanas no D-383). Agora: evento `palco_png_falhou` no
+    pipeline_events.jsonl (com a saída do gen-youtube-palco.mjs), aviso no
+    canal de progresso e, quando alguma REGIÃO do corte exige o palco,
+    `PalcoPngGeracaoError` bloqueia o render — a menos do opt-in explícito
+    `PALCO_FALLBACK_EXPLICITO=1`.
+    """
+    diagnostico = resultado.diagnostico()
+    faltantes = resultado.regioes_sem_png
+    if not faltantes:
+        if resultado.falhas and event_log:
+            # Falhou só a pré-geração da base (nenhuma região a exige):
+            # não bloqueia, mas deixa rastro auditável no jsonl.
+            event_log.emit(
+                "palco_png_falhou",
+                phase="grade",
+                bloqueante=False,
+                error_type="PalcoPngFalha",
+                error_message=diagnostico[:240],
+                saida_gerador=diagnostico[:2048],
+            )
+        return
+
+    fallback = _palco_fallback_explicito()
+    logger.error(
+        "[Pipeline] PNG do palco faltando para %d regiao(oes): %s\n%s",
+        len(faltantes),
+        sorted(faltantes),
+        diagnostico,
+    )
+    if event_log:
+        event_log.emit(
+            "palco_png_falhou",
+            phase="grade",
+            bloqueante=not fallback,
+            error_type="PalcoPngGeracaoError",
+            error_message=f"{len(faltantes)} regiao(oes) sem PNG do palco",
+            chaves_faltantes=sorted(faltantes),
+            saida_gerador=diagnostico[:2048],
+        )
+    if fallback:
+        operational_error(
+            "Pipeline",
+            f"⚠ Palco indisponível para {len(faltantes)} região(ões) — seguindo com "
+            "fundo de fallback (PALCO_FALLBACK_EXPLICITO=1).",
+        )
+        if report:
+            report(12, "⚠ Palco indisponível — render seguirá com fundo de fallback")
+        return
+
+    operational_error(
+        "Pipeline",
+        f"❌ PNG do palco não pôde ser gerado para {len(faltantes)} região(ões). "
+        "Render bloqueado para não sair com fundo placeholder.",
+    )
+    if report:
+        report(12, "❌ Falha ao gerar o PNG do palco — render bloqueado")
+    raise PalcoPngGeracaoError(faltantes, diagnostico)
+
+
 async def _executar_grade(
     input_path: Path,
     output_path: Path,
@@ -876,6 +956,8 @@ async def _executar_grade(
     projeto_padrao: str | dict | None = None,
     global_padrao: str | dict | None = None,
     ffmpeg_log_path: Path | None = None,
+    event_log: PipelineEventLog | None = None,
+    report: Callable[[int, str], None] | None = None,
 ) -> None:
     """Fase 1: aplica grade cinematográfico via QSV.
 
@@ -894,18 +976,17 @@ async def _executar_grade(
     filtro_vf = get_filtro_vf(filtro)
 
     # F-048: garante PNGs cacheados para cada config único da cascade.
-    try:
-        await ensure_palco_pngs_para_layout(
-            layout_youtube,
-            duracao_seg=duracao_seg,
-            projeto_padrao=projeto_padrao,
-            global_padrao=global_padrao,
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(
-            "[Pipeline] Falha ao pre-gerar PNGs do palco; FFmpeg usará fallback. erro=%s",
-            exc,
-        )
+    # D-384: a falha de geração deixou de ser silenciosa — falhas por config
+    # viram diagnóstico no resultado; região exigindo palco sem PNG BLOQUEIA
+    # o render (ver _reportar_falhas_palco). Exceções de resolução de layout
+    # propagam: o build_grade_plan logo abaixo quebraria da mesma forma.
+    resultado_palco = await ensure_palco_pngs_para_layout(
+        layout_youtube,
+        duracao_seg=duracao_seg,
+        projeto_padrao=projeto_padrao,
+        global_padrao=global_padrao,
+    )
+    _reportar_falhas_palco(resultado_palco, event_log=event_log, report=report)
 
     fila_dir = projetos_dir() / "fila_remotion"
     fila_dir.mkdir(parents=True, exist_ok=True)

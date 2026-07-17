@@ -7,6 +7,7 @@ from pathlib import Path
 import app.services.pipeline_render as pr
 import pytest
 from app.infrastructure.worker_queue import WorkerJobFailed, WorkerJobTimeout
+from app.services.youtube_palco import PalcoPngsResultado
 
 
 @pytest.mark.asyncio
@@ -14,7 +15,7 @@ async def test_grade_qsv_falha_cai_para_software(tmp_path, monkeypatch):
     monkeypatch.setattr(pr, "projetos_dir", lambda: tmp_path)
 
     async def _sem_palco(*a, **k):
-        return {}
+        return PalcoPngsResultado()
 
     monkeypatch.setattr(pr, "ensure_palco_pngs_para_layout", _sem_palco)
 
@@ -40,7 +41,7 @@ async def test_grade_qsv_ok_nao_refaz(tmp_path, monkeypatch):
     monkeypatch.setattr(pr, "projetos_dir", lambda: tmp_path)
 
     async def _sem_palco(*a, **k):
-        return {}
+        return PalcoPngsResultado()
 
     monkeypatch.setattr(pr, "ensure_palco_pngs_para_layout", _sem_palco)
 
@@ -62,7 +63,7 @@ async def test_grade_timeout_qsv_tambem_cai_para_software(tmp_path, monkeypatch)
     monkeypatch.setattr(pr, "projetos_dir", lambda: tmp_path)
 
     async def _sem_palco(*a, **k):
-        return {}
+        return PalcoPngsResultado()
 
     monkeypatch.setattr(pr, "ensure_palco_pngs_para_layout", _sem_palco)
 
@@ -91,7 +92,7 @@ async def test_grade_segmentado_escreve_lista_roda_passos_e_limpa(tmp_path, monk
     monkeypatch.setattr(pr, "projetos_dir", lambda: tmp_path)
 
     async def _sem_palco(*a, **k):
-        return {}
+        return PalcoPngsResultado()
 
     monkeypatch.setattr(pr, "ensure_palco_pngs_para_layout", _sem_palco)
 
