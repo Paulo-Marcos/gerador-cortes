@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft,
   Calendar,
   Clock,
   Download,
@@ -16,7 +15,6 @@ import {
   Trophy,
   X,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -163,46 +161,33 @@ export function RankingLivesPage() {
         isWorkbenchEnabled() ? 'h-full' : 'h-screen',
       )}
     >
-      <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-7 py-5">
-        <div className="flex items-start gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]">
-            <Trophy size={22} aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <Link
-              to="/projetos"
-              className="mb-1.5 inline-flex items-center gap-1.5 text-sm text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
-            >
-              <ArrowLeft size={14} aria-hidden />
-              Voltar
-            </Link>
-            <div className="flex items-baseline gap-3">
-              <h1 className="font-editorial text-[48px] font-medium leading-[0.96] tracking-[-0.01em] text-[var(--wb-text)]">
-                Ranking de lives
-              </h1>
-              <span className="font-code text-[12px] uppercase tracking-[0.09em] text-[var(--wb-text-dim)]">
-                top {lives.length}
-              </span>
-            </div>
-            <p className="mt-2 text-[15px] text-[var(--wb-text-mute)]">
-              Pontuação baseada em audiência, engajamento, tom dos comentários e recência. Lives já
-              baixadas ou rejeitadas não aparecem aqui.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => refreshMutation.mutate()}
-            disabled={refreshMutation.isPending}
-          >
-            {refreshMutation.isPending ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <RefreshCw aria-hidden />
-            )}
-            Atualizar ranking
-          </Button>
-        </div>
+      {/* Header compacto do design Workbench 1c (§Ranking). */}
+      <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
+        <span className="text-[16px]" aria-hidden>
+          🏆
+        </span>
+        <h1 className="text-[15px] font-extrabold">Ranking de lives</h1>
+        <span className="font-code text-[10px] uppercase tracking-[0.09em] text-[var(--wb-text-dim)]">
+          top {lives.length}
+        </span>
+        <span className="hidden text-xs text-[var(--wb-text-mute)] lg:block">
+          audiência · engajamento · tom dos comentários · recência
+        </span>
+        <div className="flex-1" />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => refreshMutation.mutate()}
+          disabled={refreshMutation.isPending}
+        >
+          {refreshMutation.isPending ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <RefreshCw aria-hidden />
+          )}
+          Atualizar ranking
+        </Button>
       </header>
 
       <main className="grid flex-1 content-start gap-4 overflow-auto p-5">

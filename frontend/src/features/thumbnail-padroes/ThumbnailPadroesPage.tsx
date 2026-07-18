@@ -3,8 +3,7 @@
 // têm em comum (por eixo) e a proposta de ajuste para a skill do Capista, para o
 // Paulo validar antes da edição manual da SKILL.md.
 import { useMutation } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Sparkles, Wand2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader2, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
 import { api, type PadroesThumbnailResponse } from '@/lib/api';
@@ -40,32 +39,25 @@ export function ThumbnailPadroesPage() {
         isWorkbenchEnabled() ? 'h-full' : 'h-screen',
       )}
     >
-      <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-7 py-5">
-        <div className="flex items-start gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]">
-            <Sparkles size={22} aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <Link
-              to="/projetos"
-              className="mb-1.5 inline-flex items-center gap-1.5 text-sm text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
-            >
-              <ArrowLeft size={14} aria-hidden />
-              Voltar
-            </Link>
-            <h1 className="font-editorial text-[48px] font-medium leading-[0.96] tracking-[-0.01em] text-[var(--wb-text)]">
-              Padrões de thumbnail
-            </h1>
-            <p className="mt-2 max-w-2xl text-[15px] text-[var(--wb-text-mute)]">
-              Lê as capas melhor avaliadas e mostra o que os melhores prompts têm em comum, com uma
-              proposta de ajuste para a skill do Capista. Valide os padrões antes de aplicar.
-            </p>
-          </div>
-          <Button type="button" onClick={() => analise.mutate()} disabled={analise.isPending}>
-            {analise.isPending ? <Loader2 className="animate-spin" /> : <Wand2 aria-hidden />}
-            Analisar padrões
-          </Button>
-        </div>
+      {/* Header compacto do design Workbench 1c (§Padrões de thumbnail). */}
+      <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
+        <span className="text-[16px]" aria-hidden>
+          ✨
+        </span>
+        <h1 className="text-[15px] font-extrabold">Padrões de thumbnail</h1>
+        <span className="hidden text-xs text-[var(--wb-text-mute)] lg:block">
+          o que as capas melhor avaliadas têm em comum — valide antes de aplicar
+        </span>
+        <div className="flex-1" />
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => analise.mutate()}
+          disabled={analise.isPending}
+        >
+          {analise.isPending ? <Loader2 className="animate-spin" /> : <Wand2 aria-hidden />}
+          Analisar padrões
+        </Button>
       </header>
 
       <main className="grid flex-1 content-start gap-5 overflow-auto p-6">

@@ -163,13 +163,13 @@ export function ProjectRail() {
                 aria-label={label}
                 title={label}
                 className={cn(
-                  'flex items-center gap-2 whitespace-nowrap rounded-md px-1.5 py-1 text-[10.5px] font-semibold',
+                  'flex items-center gap-2.5 whitespace-nowrap rounded-md px-1.5 py-1.5 text-[12px] font-semibold',
                   ativo
                     ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
                     : 'text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
                 )}
               >
-                <span className="w-4 flex-none text-center text-[12px] leading-none" aria-hidden>
+                <span className="w-5 flex-none text-center text-[16px] leading-none" aria-hidden>
                   {emoji}
                 </span>
                 {open && <span>{label}</span>}

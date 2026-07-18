@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft,
   AtSign,
   Calendar,
   Check,
@@ -12,7 +11,6 @@ import {
   Radio,
   Search,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
@@ -147,27 +145,15 @@ export function LiveSearchPage() {
         isWorkbenchEnabled() ? 'h-full' : 'h-screen',
       )}
     >
-      <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-7 py-5">
-        <div className="flex items-start gap-4">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]">
-            <Radio size={22} aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <Link
-              to="/projetos"
-              className="mb-1.5 inline-flex items-center gap-1.5 text-sm text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
-            >
-              <ArrowLeft size={14} aria-hidden />
-              Voltar
-            </Link>
-            <h1 className="font-editorial text-[48px] font-medium leading-[0.96] tracking-[-0.01em] text-[var(--wb-text)]">
-              Buscar novas lives
-            </h1>
-            <p className="mt-2 text-[15px] text-[var(--wb-text-mute)]">
-              Encontre lives recentes, selecione as nao baixadas e inicie o pipeline.
-            </p>
-          </div>
-        </div>
+      {/* Header compacto do design Workbench 1c (§Buscar lives). */}
+      <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
+        <span className="text-[16px]" aria-hidden>
+          📡
+        </span>
+        <h1 className="text-[15px] font-extrabold">Buscar novas lives</h1>
+        <span className="hidden text-xs text-[var(--wb-text-mute)] md:block">
+          encontre lives recentes, selecione as não baixadas e inicie o pipeline
+        </span>
       </header>
 
       <main className="grid flex-1 content-start gap-4 overflow-auto p-5">

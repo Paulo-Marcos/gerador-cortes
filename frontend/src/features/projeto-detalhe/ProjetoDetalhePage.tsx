@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   AlertCircle,
-  ArrowLeft,
   Brain,
   ClipboardCheck,
   ExternalLink,
@@ -19,6 +18,7 @@ import { Modal } from '@/components/ui/modal';
 import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import {
+  useAbrirPasta,
   useAnalisarDesviosTodos,
   useExportStatus,
   useMarcarPublicadoYouTube,
@@ -31,8 +31,7 @@ import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/hooks/useEdi
 import { useFalantes } from '@/hooks/useDiarizacao';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import { cn, formatarDataLive, formatarDuracaoHMS, thumbnailUrl } from '@/lib/utils';
-import type { StatusExportCorte } from '@/types/models';
-import { CorteCard } from './CorteCard';
+import type { Corte, StatusExportCorte } from '@/types/models';
 import { AnaliseIaModal } from './AnaliseIaModal';
 import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
 import { PublicarMassaModal } from './PublicarMassaModal';
@@ -53,7 +52,7 @@ export function ProjetoDetalhePage() {
   const [uploadingCorteId, setUploadingCorteId] = useState<string | null>(null);
   const [manualPublishCorte, setManualPublishCorte] = useState<StatusExportCorte | null>(null);
   const [manualYoutubeUrl, setManualYoutubeUrl] = useState('');
-  const [manualPublishCorteId, setManualPublishCorteId] = useState<string | null>(null);
+  const [, setManualPublishCorteId] = useState<string | null>(null);
 
   const { notify } = useToast();
   const refazerTranscricao = useRefazerTranscricao(id);
@@ -206,17 +205,10 @@ export function ProjetoDetalhePage() {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-5 px-6 py-6">
-        {/* Breadcrumb */}
-        <Link
-          to="/projetos"
-          className="inline-flex w-fit items-center gap-1.5 text-xs text-text-400 hover:text-text-200"
-        >
-          <ArrowLeft size={14} /> Projetos
-        </Link>
-
-        {/* Header (DE-PARA §2: thumb 120px + chips de estado do pipeline) */}
-        <header className="flex flex-wrap items-end justify-between gap-4">
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-3">
+        {/* Header compacto (design Workbench 1c §Workspace: thumb 120px +
+            título 14px/800 + meta + chips de estado). */}
+        <header className="flex flex-wrap items-center justify-between gap-3">
           {projeto.data?.youtube_url && (
             <img
               src={thumbnailUrl(projeto.data.youtube_url, 'mq') ?? undefined}
@@ -227,10 +219,7 @@ export function ProjetoDetalhePage() {
           )}
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="line-clamp-2 max-w-3xl text-2xl font-medium tracking-tight text-text-100">
-                <span aria-hidden className="mr-1.5">
-                  🎬
-                </span>
+              <h1 className="line-clamp-2 max-w-3xl text-[14px] font-extrabold text-[var(--wb-text)]">
                 {projeto.data?.titulo_live || (projeto.isLoading ? 'Carregando...' : 'Projeto')}
               </h1>
               {cortesQuery.isFetching && !cortesQuery.isLoading && (
@@ -463,34 +452,27 @@ export function ProjetoDetalhePage() {
           </div>
         )}
 
-        {/* Grid de cortes */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {/* Grid de cortes compactos (design Workbench 1c §Workspace):
+            tint semântico + borda esquerda, click abre a aba do editor;
+            ações rápidas aparecem no hover. */}
+        <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
           {cortesQuery.isLoading &&
             Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="flex aspect-[4/3] flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-surface-1"
-              >
-                <div className="aspect-video w-full animate-pulse bg-bg-800" />
-                <div className="flex-1 space-y-2 p-3">
-                  <div className="h-3.5 w-3/4 animate-pulse rounded bg-bg-800" />
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-bg-800" />
-                </div>
-              </div>
+                className="h-[74px] animate-pulse rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)]"
+              />
             ))}
           {!cortesQuery.isLoading &&
             cortes.map((corte, idx) => (
-              <CorteCard
+              <CorteLinhaCompacta
                 key={corte.corte_id}
                 projetoId={id}
-                corte={corte}
-                statusCorte={statusPorCorte.get(corte.corte_id)?.status}
-                isFire={statusPorCorte.get(corte.corte_id)?.is_fire}
-                isLeitura={statusPorCorte.get(corte.corte_id)?.is_leitura}
+                status={corte}
+                corteFull={statusPorCorte.get(corte.corte_id)}
                 onUploadYoutube={() => publicarCorteIndividual(corte.corte_id)}
-                uploadYoutubePending={uploadingCorteId === corte.corte_id}
+                uploadPending={uploadingCorteId === corte.corte_id}
                 onMarcarPublicado={() => abrirMarcarPublicado(corte)}
-                marcarPublicadoPending={manualPublishCorteId === corte.corte_id}
                 onMover={(delta) => moverCorteNaLista(corte.corte_id, delta)}
                 podeSubir={idx > 0}
                 podeDescer={idx < cortes.length - 1}
@@ -564,5 +546,184 @@ export function ProjetoDetalhePage() {
         </label>
       </Modal>
     </TooltipProvider>
+  );
+}
+
+// ─── Card compacto do Workspace (design Workbench 1c §2, D-395) ────────
+// "07 · Título" + duração + linha de status semântica; tint de fundo com
+// borda esquerda 3px; click abre a aba do editor no corte. Ações rápidas
+// (mover/metadados via editor, YouTube, pasta) aparecem no hover.
+
+const TINT_COMPACTO: Record<string, string> = {
+  rejeitado: 'bg-[var(--wb-err-soft)] border-l-[3px] border-l-[var(--wb-err)]',
+  fire: 'bg-[var(--wb-fire-soft)] border-l-[3px] border-l-[var(--wb-fire)]',
+  leitura: 'bg-[var(--wb-leitura-soft)] border-l-[3px] border-l-[var(--wb-leitura)]',
+  aprovado: 'bg-[var(--wb-ok-soft)] border-l-[3px] border-l-[var(--wb-ok)]',
+};
+
+function CorteLinhaCompacta({
+  projetoId,
+  status,
+  corteFull,
+  onUploadYoutube,
+  uploadPending,
+  onMarcarPublicado,
+  onMover,
+  podeSubir,
+  podeDescer,
+  reordenando,
+}: {
+  projetoId: string;
+  status: StatusExportCorte;
+  corteFull?: Corte;
+  onUploadYoutube: () => void;
+  uploadPending: boolean;
+  onMarcarPublicado: () => void;
+  onMover: (delta: -1 | 1) => void;
+  podeSubir: boolean;
+  podeDescer: boolean;
+  reordenando: boolean;
+}) {
+  const navigate = useNavigate();
+  const abrirPasta = useAbrirPasta();
+  const aprovado = corteFull
+    ? ['aprovado', 'editado', 'processado'].includes(corteFull.status)
+    : status.pronto_publicar;
+  const publicado = Boolean(status.youtube_url_publicado);
+  const tintKey =
+    corteFull?.status === 'rejeitado'
+      ? 'rejeitado'
+      : aprovado
+        ? corteFull?.is_fire
+          ? 'fire'
+          : corteFull?.is_leitura
+            ? 'leitura'
+            : 'aprovado'
+        : null;
+  const durSeg = corteFull ? Math.max(0, corteFull.fim_seg - corteFull.inicio_seg) : 0;
+
+  const linhaStatus = publicado
+    ? 'publicado no YouTube ▶'
+    : corteFull?.status === 'rejeitado'
+      ? 'rejeitado'
+      : aprovado
+        ? status.video_pronto
+          ? `aprovado${corteFull?.is_fire ? ' 🔥' : ''} · pós ✓`
+          : status.metadados_completos
+            ? `aprovado${corteFull?.is_fire ? ' 🔥' : ''} · sem render`
+            : `aprovado${corteFull?.is_fire ? ' 🔥' : ''} · sem metadados`
+        : 'pendente';
+
+  const corStatus = publicado
+    ? 'text-[var(--wb-info)]'
+    : corteFull?.status === 'rejeitado'
+      ? 'text-[var(--wb-text-mute)]'
+      : aprovado
+        ? 'text-[var(--wb-ok)]'
+        : 'text-[var(--wb-text-dim)]';
+
+  const irEditor = () => navigate(`/projetos/${projetoId}/cortes/${status.corte_id}`);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Abrir editor do corte ${status.numero}`}
+      onClick={irEditor}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') irEditor();
+      }}
+      className={cn(
+        'group cursor-pointer rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5 transition-colors hover:border-[var(--wb-text-dim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+        tintKey && TINT_COMPACTO[tintKey],
+      )}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <span
+          className={cn(
+            'truncate text-[11px]',
+            aprovado || publicado
+              ? 'font-bold text-[var(--wb-text)]'
+              : 'font-semibold text-[var(--wb-text-mute)]',
+          )}
+          title={status.titulo}
+        >
+          {String(status.numero).padStart(2, '0')} · {status.titulo || `Corte #${status.numero}`}
+        </span>
+        {durSeg > 0 && (
+          <span className="font-code text-[9px] font-semibold text-[var(--wb-text-dim)]">
+            {formatarDuracaoHMS(durSeg)}
+          </span>
+        )}
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <span className={cn('text-[9.5px] font-semibold', corStatus)}>{linhaStatus}</span>
+        <span
+          onClick={(e) => e.stopPropagation()}
+          className="flex gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+        >
+          <button
+            type="button"
+            onClick={() => onMover(-1)}
+            disabled={!podeSubir || reordenando}
+            aria-label={`Mover corte ${status.numero} para cima`}
+            className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-30"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            onClick={() => onMover(1)}
+            disabled={!podeDescer || reordenando}
+            aria-label={`Mover corte ${status.numero} para baixo`}
+            className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-30"
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/projetos/${projetoId}/metadados`)}
+            aria-label="Abrir metadados"
+            title="Metadados"
+            className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
+          >
+            🏷
+          </button>
+          {status.pronto_publicar && !publicado && (
+            <button
+              type="button"
+              onClick={onUploadYoutube}
+              disabled={uploadPending}
+              aria-label="Enviar video individual para o YouTube"
+              title="Enviar para o YouTube"
+              className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-40"
+            >
+              ☁
+            </button>
+          )}
+          {!publicado && (
+            <button
+              type="button"
+              onClick={onMarcarPublicado}
+              aria-label="Informar URL ja publicada no YouTube"
+              title="Informar URL do YouTube"
+              className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
+            >
+              ▶
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => abrirPasta.mutate(status.corte_id)}
+            disabled={abrirPasta.isPending}
+            aria-label="Abrir pasta"
+            title="Abrir pasta"
+            className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-40"
+          >
+            📁
+          </button>
+        </span>
+      </div>
+    </div>
   );
 }

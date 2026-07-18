@@ -124,8 +124,8 @@ export function RankingEmbasamentoPanel({
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <p className="mb-3 text-xs text-[var(--wb-text-mute)]">
-            Cada critério vale o valor bruto → sua posição no lote (0–100%) × o peso do
-            canal = a contribuição em pontos. A soma das contribuições é a nota final.
+            Cada critério vale o valor bruto → sua posição no lote (0–100%) × o peso do canal = a
+            contribuição em pontos. A soma das contribuições é a nota final.
           </p>
 
           <div className="overflow-x-auto">
@@ -145,9 +145,7 @@ export function RankingEmbasamentoPanel({
                     key={item.criterio}
                     className="border-b border-[var(--wb-border-soft)] last:border-0"
                   >
-                    <td className="py-2 pr-3 font-semibold text-[var(--wb-text)]">
-                      {item.rotulo}
-                    </td>
+                    <td className="py-2 pr-3 font-semibold text-[var(--wb-text)]">{item.rotulo}</td>
                     <td className="py-2 pr-3 text-[var(--wb-text-mute)]">
                       {formatBruto(item.criterio, item.valor_bruto)}
                     </td>
