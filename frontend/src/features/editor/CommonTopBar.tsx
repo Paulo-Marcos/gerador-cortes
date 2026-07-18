@@ -197,6 +197,8 @@ export function StatusToggleCompact({
 }: StatusToggleCompactProps) {
   return (
     <Tooltip label={title ?? label} side="bottom">
+      {/* Pill do protótipo Workbench 1c (linha de transporte): rótulo
+          visível "A · Aprovar", cor cheia quando ativo. */}
       <button
         type="button"
         onClick={onClick}
@@ -205,15 +207,16 @@ export function StatusToggleCompact({
         aria-pressed={active}
         style={{ '--status-color': color } as CSSProperties}
         className={cn(
-          'flex h-6 w-6 items-center justify-center rounded-full border transition-colors',
+          'flex items-center gap-1.5 rounded-[9px] border px-3 py-1.5 text-[11.5px] font-extrabold transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
           'disabled:pointer-events-none disabled:opacity-50',
           active
             ? 'border-[var(--status-color)] bg-[var(--status-color)] text-white'
-            : 'border-[var(--wb-border)] bg-[var(--wb-pill-bg)] text-[var(--wb-text-mute)] hover:border-[var(--status-color)] hover:text-[var(--status-color)]',
+            : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text-mute)] hover:border-[var(--status-color)] hover:text-[var(--status-color)]',
         )}
       >
-        <Icon size={12} strokeWidth={active ? 2.6 : 1.9} aria-hidden />
+        <Icon size={12} strokeWidth={active ? 2.6 : 2} aria-hidden />
+        <span className="whitespace-nowrap">{label}</span>
       </button>
     </Tooltip>
   );
@@ -295,7 +298,7 @@ export function StatusToggleRow({
     <>
       <StatusToggleCompact
         icon={Check}
-        label="Aprovar"
+        label="A · Aprovar"
         active={aprovado}
         color="var(--wb-ok)"
         onClick={onAprovar}
@@ -304,7 +307,7 @@ export function StatusToggleRow({
       />
       <StatusToggleCompact
         icon={X}
-        label="Excluir"
+        label="R · Rejeitar"
         active={rejeitado}
         color="var(--wb-err)"
         onClick={onRejeitar}
@@ -313,7 +316,7 @@ export function StatusToggleRow({
       />
       <StatusToggleCompact
         icon={Flame}
-        label="TOP"
+        label="Fire"
         active={Boolean(corte.is_fire)}
         color="var(--wb-fire)"
         onClick={onToggleFire}

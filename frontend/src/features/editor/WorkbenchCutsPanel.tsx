@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatarDuracaoHMS } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
 import { PanelShell } from '@/components/workbench/PanelShell';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { moverCorte, useReordenarCortes } from '@/hooks/useEditor';
 import { MetadataModal } from '@/features/metadata/MetadataModal';
 import { AdicionarCorteModal } from './AdicionarCorteModal';
-import { CorteStatusCard } from './CorteStatusCard';
+import { resolveThumbUrl } from '@/lib/api';
 import { tintarFundo, type SinalFlags } from './UnifiedSidebar';
 
 // ─────────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ export function WorkbenchCutsPanel({
               ref={ativo ? activeCardRef : undefined}
               style={inlineStyle}
               className={cn(
-                'group relative flex w-full flex-col items-center gap-1 rounded-[var(--radius-sm)] border px-1.5 py-2 transition-colors',
+                'group relative flex w-full items-center gap-1 rounded-[var(--radius-sm)] border px-1.5 py-1.5 transition-colors',
                 !tintBackground && 'hover:bg-[var(--wb-bg-inset)]',
                 ativo
                   ? cn(
@@ -144,21 +144,80 @@ export function WorkbenchCutsPanel({
                 </button>
               </div>
 
-              <CorteStatusCard
-                numero={corte.numero}
-                titulo={corte.titulo_proposto}
-                corteStatus={corte.status}
-                status={stat}
-                ativo={ativo}
-                publicado={publicado}
-                isFire={flags.fire}
-                isLeitura={flags.leitura}
-                score={corte.score}
-                onSelect={() =>
+              {/* Linha do protótipo: thumb 50×29 + "NN · título" + status. */}
+              <button
+                type="button"
+                onClick={() =>
                   navigate(getCortePath?.(corte) ?? `/projetos/${projetoId}/cortes/${corte.id}`)
                 }
-                onOpenMetadata={() => setMetaCorte(corte)}
-              />
+                className="flex w-full items-center gap-2 text-left focus-visible:outline-none"
+              >
+                {resolveThumbUrl(projetoId, stat?.thumbnail_path) ? (
+                  <img
+                    src={resolveThumbUrl(projetoId, stat?.thumbnail_path) ?? undefined}
+                    alt=""
+                    loading="lazy"
+                    className="h-[29px] w-[50px] flex-none rounded object-cover"
+                  />
+                ) : (
+                  <span
+                    aria-hidden
+                    className="flex h-[29px] w-[50px] flex-none items-center justify-center rounded bg-[var(--wb-bg-inset)] font-code text-[9px] font-bold text-[var(--wb-text-dim)]"
+                  >
+                    #{corte.numero}
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={cn(
+                      'block truncate text-[11px]',
+                      flags.aprovado || publicado
+                        ? 'font-bold text-[var(--wb-text)]'
+                        : 'font-semibold text-[var(--wb-text-mute)]',
+                    )}
+                  >
+                    {corte.numero} · {corte.titulo_proposto || `Corte #${corte.numero}`}
+                  </span>
+                  <span
+                    className={cn(
+                      'block truncate text-[9.5px]',
+                      ativo
+                        ? 'font-semibold text-[var(--wb-accent)]'
+                        : 'text-[var(--wb-text-mute)]',
+                    )}
+                  >
+                    {formatarDuracaoHMS(Math.max(0, corte.fim_seg - corte.inicio_seg))}
+                    {publicado
+                      ? ' · publicado ▶'
+                      : flags.rejeitado
+                        ? ' · rejeitado'
+                        : flags.aprovado
+                          ? `${flags.fire ? ' · aprovado 🔥' : ' · aprovado ✓'}`
+                          : ativo
+                            ? ' · avaliando…'
+                            : ' · pendente'}
+                  </span>
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Abrir metadados do corte ${corte.numero}`}
+                  title="Metadados"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMetaCorte(corte);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.stopPropagation();
+                      setMetaCorte(corte);
+                    }
+                  }}
+                  className="flex-none rounded px-1 text-[11px] text-[var(--wb-text-dim)] opacity-0 hover:text-[var(--wb-text)] focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  🏷
+                </span>
+              </button>
             </div>
           );
         })}

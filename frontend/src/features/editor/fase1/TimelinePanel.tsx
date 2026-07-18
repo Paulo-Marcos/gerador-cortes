@@ -16,7 +16,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Flag,
-  GripVertical,
   Lock,
   MoreVertical,
   MousePointer2,
@@ -986,7 +985,6 @@ export function TimelinePanel({
     >
       {/* Header — v2_bruto.jsx:209-329 (Panel + toolbar) */}
       <header className="flex flex-shrink-0 items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <GripVertical size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
         <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
           Timeline
         </span>

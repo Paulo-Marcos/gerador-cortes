@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { GripVertical, Scissors } from 'lucide-react';
+import { Scissors } from 'lucide-react';
 import { hmsParaSeg, segParaMmSs } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
@@ -119,7 +119,6 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     <section className="flex h-full w-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
       {/* Header: grip + caption + badge + right info ---- v2_bruto.jsx:629-637 */}
       <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <GripVertical size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
         <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
           Player
         </span>

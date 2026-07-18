@@ -9,7 +9,6 @@ import {
   Flame,
   Folder,
   FolderOpen,
-  GripVertical,
   Keyboard,
   Loader2,
   Palette,
@@ -679,7 +678,6 @@ function FinalPlayerPanel({
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
       <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <GripVertical size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
         <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
           Vídeo final
         </span>
@@ -748,7 +746,6 @@ function ChecklistCard({ items }: { items: ChecklistItem[] }) {
   return (
     <section className="flex-shrink-0 overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
       <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <GripVertical size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
         <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
           Checklist
         </span>
@@ -822,7 +819,6 @@ function CapaCard({
   return (
     <section className="flex-shrink-0 overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
       <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <GripVertical size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
         <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
           Capa
         </span>
