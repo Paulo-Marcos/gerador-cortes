@@ -35,13 +35,17 @@ export function WorkbenchEditorLayout({ panelIds, leftPanel, rightPanel, childre
  * `width:min(100%, calc((100vh - 330px)*16/9))`).
  */
 export function PlayerCap({ children }: { children: ReactNode }) {
+  // Reserve de 500px (validação 3): o hand-off cita 330px, mas a coluna
+  // real tem sincronia + transporte + contexto + título (~170px a mais);
+  // sem esse ajuste o player engolia a altura e a TIMELINE sumia.
   return (
     <div
       className="flex-none self-center"
       style={{
-        width: 'min(100%, calc((100vh - 330px) * 1.7778))',
+        width: 'min(100%, calc((100vh - 500px) * 1.7778))',
         aspectRatio: '16 / 9',
         maxWidth: '100%',
+        minWidth: 'min(100%, 420px)',
       }}
     >
       {children}

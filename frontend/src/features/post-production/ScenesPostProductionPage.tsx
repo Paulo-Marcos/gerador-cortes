@@ -387,7 +387,7 @@ export function ScenesPostProductionPage() {
     return (
       <>
         <WorkbenchEditorLayout
-          panelIds={['cuts']}
+          panelIds={['cuts', 'cenas', 'layout']}
           leftPanel={
             <WorkbenchCutsPanel
               projetoId={projetoId}
@@ -447,6 +447,7 @@ export function ScenesPostProductionPage() {
 
           <div className="flex min-h-0 flex-1 flex-col">
             <EditorFase2
+              workbench
               videoSrc={videoSrcEstavel}
               modoLabel="Cenas"
               corte={corte}

@@ -496,64 +496,130 @@ export function FinalReviewPage() {
             />
           }
         >
+          {/* Layout simples do protótipo (AUDITORIA §2c): player grande +
+              linha de ações + checklist em chips + capa compacta + timeline. */}
+          <div
+            className="flex-none self-center"
+            style={{
+              width: 'min(100%, calc((100vh - 380px) * 1.7778))',
+              aspectRatio: '16 / 9',
+              maxWidth: '100%',
+              minWidth: 'min(100%, 480px)',
+            }}
+          >
+            {videoPronto ? (
+              <FinalPlayerPanel
+                src={finalVideoUrl(projetoId, corte.id)}
+                projetoId={projetoId}
+                corteId={corte.id}
+                onAbrirPasta={() => abrirPasta.mutate(corte.id)}
+                abrindoPasta={abrirPasta.isPending}
+                videoRef={videoRef}
+                onTimeUpdate={setCurrentTime}
+                filtroLabel={filtroNome}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-8 text-center text-[var(--wb-text-mute)]">
+                <div className="flex flex-col items-center gap-2">
+                  <p className="text-[14px] font-bold text-[var(--wb-text)]">
+                    Render final ainda nao disponivel
+                  </p>
+                  <p className="text-xs">Gere o video na fase Pos para visualizar aqui.</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Linha de ações do protótipo */}
           <div className="flex flex-none flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={aprovarCorte}
+              disabled={atualizarCorte.isPending || aprovado}
+              className="flex items-center gap-1.5 rounded-[9px] bg-[var(--wb-ok)] px-4 py-2 text-[11.5px] font-extrabold text-white hover:opacity-90 disabled:opacity-60"
+            >
+              {atualizarCorte.isPending ? (
+                <Loader2 size={13} className="animate-spin" aria-hidden />
+              ) : (
+                <CheckCircle2 size={13} aria-hidden />
+              )}
+              {aprovado ? 'Aprovado' : 'Aprovar e publicar'}
+            </button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(`/projetos/${projetoId}/post-production?corte=${corte.id}`)}
+            >
+              ↩ Voltar para pós
+            </Button>
             {statusPills}
             <div className="flex-1" />
-            <Tooltip label="Re-renderizar o video final" side="bottom">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => void renderizarNovamente()}
-                disabled={renderFinalRunning}
-              >
-                {renderFinalRunning ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-                {renderFinalRunning ? `Re-renderizando ${renderProgress}%` : 'Re-renderizar'}
-              </Button>
-            </Tooltip>
-            <Tooltip label="Abrir pasta do render (Ctrl+O)" side="bottom">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => abrirPasta.mutate(corte.id)}
-                disabled={abrirPasta.isPending}
-              >
-                <FolderOpen />
-                Pasta
-              </Button>
-            </Tooltip>
-            <Tooltip label="Editar metadados (único editável aqui)" side="bottom">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setMetadataOpen(true)}
-              >
-                <FileText />
-                Metadados
-              </Button>
-            </Tooltip>
-            <Tooltip label={aprovado ? 'Corte já aprovado' : 'Aprovar este corte'} side="bottom">
-              <Button
-                type="button"
-                size="sm"
-                onClick={aprovarCorte}
-                disabled={atualizarCorte.isPending || aprovado}
-                className="bg-[var(--wb-ok)] text-white hover:opacity-90 disabled:opacity-60"
-              >
-                {atualizarCorte.isPending ? (
-                  <Loader2 className="animate-spin" />
-                ) : aprovado ? (
-                  <CheckCircle2 />
-                ) : (
-                  <Upload />
-                )}
-                {aprovado ? 'Aprovado' : 'Aprovar'}
-              </Button>
-            </Tooltip>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void renderizarNovamente()}
+              disabled={renderFinalRunning}
+            >
+              {renderFinalRunning ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              {renderFinalRunning ? `Re-renderizando ${renderProgress}%` : 'Re-renderizar'}
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setMetadataOpen(true)}>
+              <FileText />
+              Metadados
+            </Button>
           </div>
-          {conteudoFinal}
+
+          {/* Checklist em chips + capa compacta + agendamento */}
+          <div className="flex flex-none flex-wrap items-center gap-1.5">
+            {checklistItems.map((item, idx) => (
+              <span
+                key={idx}
+                title={item.label}
+                className={
+                  item.ok
+                    ? 'flex items-center gap-1 rounded-[6px] bg-[var(--wb-ok-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-ok)]'
+                    : 'flex items-center gap-1 rounded-[6px] bg-[var(--wb-warn-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-warn)]'
+                }
+              >
+                {item.ok ? '✓' : '○'} {item.label}
+              </span>
+            ))}
+            {exportStatusAtual?.youtube_scheduled_at && (
+              <span className="rounded-[6px] bg-[var(--wb-info-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-info)]">
+                agendado · {exportStatusAtual.youtube_scheduled_at}
+              </span>
+            )}
+            <div className="flex-1" />
+            {resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) && (
+              <img
+                src={resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) ?? undefined}
+                alt="Capa do corte"
+                className="h-12 rounded-md object-cover"
+              />
+            )}
+            <Button type="button" variant="ghost" size="sm" onClick={() => setMetadataOpen(true)}>
+              <Edit3 />
+              Editar capa
+            </Button>
+          </div>
+
+          {/* Timeline read-only navegável (D-365) */}
+          <div className="h-[150px] flex-none">
+            <SceneTimeline
+              cenas={cenas}
+              currentTime={currentTime}
+              duration={timelineDuration}
+              layoutYoutube={(corte as unknown as { layout_youtube?: never }).layout_youtube}
+              onSeek={(seg) => {
+                const v = videoRef.current;
+                if (!v) return;
+                v.currentTime = Math.max(0, seg);
+              }}
+              readOnly
+              seekable
+            />
+          </div>
         </WorkbenchEditorLayout>
         {finalModals}
       </>

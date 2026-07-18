@@ -803,9 +803,10 @@ export function EditorPage() {
             </div>
           </div>
 
-          {/* Timeline em flex:1 — quanto mais alto o painel, mais legível a
-              onda (aceite crítico de waveform do DE-PARA §3). */}
-          <div className="min-h-0 flex-1">
+          {/* Timeline em flex:1 com piso de 200px — quanto mais alto o
+              painel, mais legível a onda (aceite crítico do DE-PARA §3);
+              o piso garante a onda visível mesmo com o player no cap. */}
+          <div className="min-h-[200px] flex-1">
             <TimelinePanel
               audioSrc={waveformAudio}
               waveformPeaksSrc={waveformPeaks}

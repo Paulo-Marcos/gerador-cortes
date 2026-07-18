@@ -27,6 +27,7 @@ import { SceneTimeline } from './SceneTimeline';
 import { FiltroTestePanel } from '@/features/post-production/FiltroTestePanel';
 import { YoutubeLayoutPanel, type YoutubeLayoutPanelHandle } from './YoutubeLayoutPanel';
 import { SegmentoDetectadoPopover } from './SegmentoDetectadoPopover';
+import { PanelShell } from '@/components/workbench/PanelShell';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
 import {
   normalizeYoutubeLayout,
@@ -68,6 +69,8 @@ interface Props {
   abrindoStudio: boolean;
   currentTime: number;
   playbackRate?: number;
+  /** Shell Workbench (AUDITORIA §2b): painéis CENAS/LAYOUT retráteis. */
+  workbench?: boolean;
 }
 
 const PANEL_PERSIST = 'editor-fase2-panels-v1';
@@ -87,6 +90,7 @@ export function EditorFase2({
   abrindoStudio,
   currentTime,
   playbackRate,
+  workbench = false,
 }: Props) {
   const queryClient = useQueryClient();
   // Cenas usam tempo relativo ao bruto. Como o player toca o bruto direto
@@ -475,6 +479,11 @@ export function EditorFase2({
   const editorBindings = useMemo<ShortcutBinding[]>(
     () => [
       shortcutFromRegistry('pos.save', () => {
+        if (workbench) {
+          cenasPanelRef.current?.saveIfDirty();
+          layoutPanelRef.current?.saveIfDirty();
+          return;
+        }
         if (abaDireita === 'cenas') cenasPanelRef.current?.saveIfDirty();
         else if (abaDireita === 'layout') layoutPanelRef.current?.saveIfDirty();
       }),
@@ -490,6 +499,7 @@ export function EditorFase2({
     ],
     [
       abaDireita,
+      workbench,
       handleAjustarRegiaoSelecionada,
       handleSeekSelectionEdge,
       handleToggleRemotion,
@@ -498,6 +508,161 @@ export function EditorFase2({
     ],
   );
   useShortcuts(editorBindings);
+
+  // ── Shell Workbench (AUDITORIA §2b): CENAS à esquerda, preview+timeline
+  // no centro, LAYOUT YOUTUBE à direita — mesmos componentes e estado do
+  // modo legado, só o container muda (painéis retráteis do design).
+  if (workbench) {
+    return (
+      <div className="flex h-full min-h-0">
+        <PanelShell
+          id="cenas"
+          side="left"
+          title={`CENAS · ${cenas.length}`}
+          indicator={<span aria-hidden className="h-2 w-2 rounded-full bg-[var(--wb-accent)]" />}
+        >
+          <div className="flex min-h-0 flex-1 flex-col">
+            <AberturaEditorial
+              fraseGancho={corte.frase_gancho_texto}
+              fraseGanchoHms={corte.frase_gancho_hms}
+              contextualizacao={corte.contextualizacao}
+            />
+            <div className="min-h-0 flex-1">
+              <CenasPanel
+                ref={cenasPanelRef}
+                corteId={corte.id}
+                projetoId={corte.projeto_id}
+                cenas={cenas}
+                formato={formato}
+                paleta={paleta}
+                cenaAtivaIdx={cenaAtivaIdx}
+                cenasValidadas={corte.cenas_validadas === 1}
+                onSeek={onSeek}
+                onCenasChange={onCenasChange}
+              />
+            </div>
+          </div>
+        </PanelShell>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5 p-2.5">
+          <div className="min-h-0 flex-1">
+            <CenaPlayerPanel
+              ref={playerRef}
+              src={videoSrc}
+              cenas={cenas}
+              durationSeg={timelineDuration}
+              offsetSeg={offsetSeg}
+              modoLabel={modoLabel}
+              onTimeUpdate={onTimeUpdate}
+              onAbrirStudio={onAbrirStudio}
+              abrindoStudio={abrindoStudio}
+              sombraNivelPadrao={projeto?.sombra_nivel_padrao ?? 'nenhuma'}
+              layoutCardPadrao={projeto?.layout_card_padrao ?? 'vertical'}
+              fontPreset={fontePresetSelecionado}
+              layoutYoutube={layoutYoutube}
+              playbackRate={playbackRate}
+              remotionEnabled={remotionEnabled}
+              onToggleRemotion={handleToggleRemotion}
+            />
+          </div>
+          <div ref={timelineWrapperRef} className="relative flex-none">
+            <SceneTimeline
+              cenas={cenas}
+              currentTime={currentTime + offsetSeg}
+              duration={timelineDuration}
+              layoutYoutube={layoutYoutube}
+              activeIdx={cenaAtivaIdx}
+              selectedCenaIdx={selectedCenaIdx}
+              selectedRegionIdx={selectedRegionIdx}
+              onSeek={onSeek}
+              onSelectCena={(idx) => handleSelecionarCena(idx)}
+              onSelectRegion={(idx) => handleSelecionarRegiao(idx)}
+              onAddRegion={handleAddRegion}
+              onRegionResize={handleResizeRegion}
+              onAjustarInicioPinada={() => handleAjustarRegiaoSelecionada('inicio')}
+              onAjustarFimPinada={() => handleAjustarRegiaoSelecionada('fim')}
+              waveformCorteId={corte.id}
+              waveformSourceStartSec={corte.inicio_seg}
+              waveformSourceEndSec={corte.fim_seg}
+              waveformDesvios={corte.desvios}
+              segmentosDetectados={segmentosDetectados}
+              onReprocessarSegmentosDetectados={
+                corte.arquivo_clip_path ? reprocessarSegmentos : undefined
+              }
+              detectandoSegmentos={detectandoSegmentos}
+              onSelectSegmentoDetectado={(indice, anchorClientX) => {
+                const wrapper = timelineWrapperRef.current;
+                if (!wrapper) return;
+                const rect = wrapper.getBoundingClientRect();
+                setPopoverSegmento({
+                  indice,
+                  anchorLeft: anchorClientX - rect.left,
+                  anchorTop: 28,
+                });
+              }}
+            />
+            {popoverSegmento && segmentosDetectados[popoverSegmento.indice] && (
+              <SegmentoDetectadoPopover
+                segmento={segmentosDetectados[popoverSegmento.indice]}
+                indice={popoverSegmento.indice}
+                anchor={{
+                  left: popoverSegmento.anchorLeft,
+                  top: popoverSegmento.anchorTop,
+                }}
+                disabled={decidindoSegmento}
+                onDecidir={(idx, decisao) => decidirSegmento(idx, decisao)}
+                onFechar={() => setPopoverSegmento(null)}
+              />
+            )}
+          </div>
+        </div>
+
+        <PanelShell
+          id="layout"
+          side="right"
+          title="LAYOUT YOUTUBE"
+          headerExtra={
+            <button
+              type="button"
+              onClick={() => setAbaDireita(abaDireita === 'filtros' ? 'layout' : 'filtros')}
+              className="rounded-md bg-[var(--wb-bg-inset)] px-2 py-0.5 text-[9px] font-bold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
+            >
+              {abaDireita === 'filtros' ? '← layout' : 'filtros'}
+            </button>
+          }
+        >
+          <div className="min-h-0 flex-1">
+            {abaDireita === 'filtros' ? (
+              <div className="flex h-full min-h-0 flex-col bg-[var(--wb-bg-card)]">
+                <FontePresetPanel
+                  value={fontePresetSelecionado}
+                  pending={fontePresetMutation.isPending}
+                  onChange={(next) => fontePresetMutation.mutate(next)}
+                />
+                <div className="min-h-0 flex-1">
+                  <FiltroTestePanel
+                    corteId={corte.id}
+                    projetoId={corte.projeto_id}
+                    brutoPronto={brutoPronto}
+                  />
+                </div>
+              </div>
+            ) : (
+              <YoutubeLayoutPanel
+                ref={layoutPanelRef}
+                corteId={corte.id}
+                projetoId={corte.projeto_id}
+                layout={layoutYoutube}
+                currentTime={currentTime + offsetSeg}
+                duration={timelineDuration}
+                onSeek={onSeek}
+              />
+            )}
+          </div>
+        </PanelShell>
+      </div>
+    );
+  }
 
   return (
     <PanelGroup direction="horizontal" autoSaveId={PANEL_PERSIST} className="flex-1">
@@ -763,11 +928,7 @@ function AberturaEditorial({
     >
       {contexto && (
         <div className="flex items-start gap-2">
-          <Sparkles
-            size={13}
-            className="mt-0.5 shrink-0 text-[var(--wb-accent)]"
-            aria-hidden
-          />
+          <Sparkles size={13} className="mt-0.5 shrink-0 text-[var(--wb-accent)]" aria-hidden />
           <div className="min-w-0">
             <div className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
               Contextualização · 1ª cena
