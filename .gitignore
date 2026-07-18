@@ -143,3 +143,6 @@ backend/check_db.py
 .guia/*
 !.guia/locks/
 backend/_bench/
+
+# Screenshots de auditoria de design (enviados ao claude.ai/design via MCP)
+capturas/
