@@ -99,7 +99,7 @@ function RailCard({ projeto, open }: { projeto: Projeto; open: boolean }) {
       </div>
       {open && (
         <div className="mt-2">
-          <PipelineProgress projeto={projeto} />
+          <PipelineProgress projeto={projeto} compact />
         </div>
       )}
     </div>
@@ -169,7 +169,10 @@ export function ProjectRail() {
                     : 'text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
                 )}
               >
-                <span className="w-5 flex-none text-center text-[16px] leading-none" aria-hidden>
+                <span
+                  className="w-[22px] flex-none text-center text-[17px] leading-none"
+                  aria-hidden
+                >
                   {emoji}
                 </span>
                 {open && <span>{label}</span>}

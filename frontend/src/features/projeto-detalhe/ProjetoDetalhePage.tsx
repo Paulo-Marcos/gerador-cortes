@@ -31,6 +31,7 @@ import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/hooks/useEdi
 import { useFalantes } from '@/hooks/useDiarizacao';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import { cn, formatarDataLive, formatarDuracaoHMS, thumbnailUrl } from '@/lib/utils';
+import { resolveThumbUrl } from '@/lib/api';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { AnaliseIaModal } from './AnaliseIaModal';
 import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
@@ -549,17 +550,59 @@ export function ProjetoDetalhePage() {
   );
 }
 
-// ─── Card compacto do Workspace (design Workbench 1c §2, D-395) ────────
-// "07 · Título" + duração + linha de status semântica; tint de fundo com
-// borda esquerda 3px; click abre a aba do editor no corte. Ações rápidas
-// (mover/metadados via editor, YouTube, pasta) aparecem no hover.
+// ─── Card de corte do Workspace (AUDITORIA §4.2, D-396) ───────────────
+// Capa (thumbnail do corte, fallback gradiente) + badge #numero (topo-esq),
+// badge de status (base-esq), duração (base-dir) e linha de ícones do
+// processo DO CORTE (✂ Bruto · 🎬 Pós · 👁 Revisão · 🏷 Metadados · 🚀
+// Publicação) com os 3 estados do §1.1 e label auxiliar. Rejeitado ganha
+// opacity .72 + véu na capa. Click abre a aba do editor no corte.
 
-const TINT_COMPACTO: Record<string, string> = {
-  rejeitado: 'bg-[var(--wb-err-soft)] border-l-[3px] border-l-[var(--wb-err)]',
-  fire: 'bg-[var(--wb-fire-soft)] border-l-[3px] border-l-[var(--wb-fire)]',
-  leitura: 'bg-[var(--wb-leitura-soft)] border-l-[3px] border-l-[var(--wb-leitura)]',
-  aprovado: 'bg-[var(--wb-ok-soft)] border-l-[3px] border-l-[var(--wb-ok)]',
+type EstadoEtapa = 'done' | 'active' | 'todo';
+
+const CLASSE_ETAPA: Record<EstadoEtapa, string> = {
+  done: 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]',
+  active: 'bg-[var(--wb-accent)] text-[var(--wb-accent-fg)] shadow-[0_0_6px_var(--wb-accent)]',
+  todo: 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] opacity-55',
 };
+
+/** Estados das 5 etapas do corte a partir do StatusExportCorte. */
+function etapasDoCorte(s: StatusExportCorte, aprovado: boolean) {
+  const publicado = Boolean(s.youtube_url_publicado);
+  const bruto: EstadoEtapa = s.raw_pronto || s.video_pronto ? 'done' : aprovado ? 'active' : 'todo';
+  const pos: EstadoEtapa = s.video_pronto
+    ? 'done'
+    : s.grade_pronta || s.overlays_prontos
+      ? 'active'
+      : 'todo';
+  const revisao: EstadoEtapa = s.pronto_publicar ? 'done' : s.video_pronto ? 'active' : 'todo';
+  const metadados: EstadoEtapa = s.metadados_completos ? 'done' : 'todo';
+  const publicacao: EstadoEtapa = publicado ? 'done' : s.pronto_publicar ? 'active' : 'todo';
+  return [
+    { emoji: '✂', titulo: 'Bruto', estado: bruto },
+    { emoji: '🎬', titulo: 'Pós-produção', estado: pos },
+    { emoji: '👁', titulo: 'Revisão', estado: revisao },
+    { emoji: '🏷', titulo: 'Metadados', estado: metadados },
+    { emoji: '🚀', titulo: 'Publicação', estado: publicacao },
+  ];
+}
+
+function labelAuxiliar(s: StatusExportCorte, statusCorte: Corte['status'] | undefined): string {
+  if (s.youtube_url_publicado) return 'publicado ▶';
+  if (statusCorte === 'rejeitado') return 'rejeitado';
+  if (s.pronto_publicar) return 'pronto p/ publicar 🚀';
+  if (s.video_pronto) return 'revisar 👁';
+  if (s.metadados_completos) return 'sem render';
+  if (s.raw_pronto) return 'pós →';
+  if (statusCorte && statusCorte !== 'proposto') return 'continuar ▶';
+  return 'pendente';
+}
+
+const GRADIENTES_CAPA = [
+  'linear-gradient(135deg, oklch(0.5 0.1 250), oklch(0.3 0.08 270))',
+  'linear-gradient(135deg, oklch(0.52 0.12 30), oklch(0.32 0.1 20))',
+  'linear-gradient(135deg, oklch(0.5 0.1 155), oklch(0.3 0.08 175))',
+  'linear-gradient(135deg, oklch(0.5 0.1 320), oklch(0.3 0.08 300))',
+];
 
 function CorteLinhaCompacta({
   projetoId,
@@ -589,40 +632,21 @@ function CorteLinhaCompacta({
   const aprovado = corteFull
     ? ['aprovado', 'editado', 'processado'].includes(corteFull.status)
     : status.pronto_publicar;
+  const rejeitado = corteFull?.status === 'rejeitado';
   const publicado = Boolean(status.youtube_url_publicado);
-  const tintKey =
-    corteFull?.status === 'rejeitado'
-      ? 'rejeitado'
+  const durSeg = corteFull ? Math.max(0, corteFull.fim_seg - corteFull.inicio_seg) : 0;
+  const capa = resolveThumbUrl(projetoId, status.thumbnail_path);
+  const irEditor = () => navigate(`/projetos/${projetoId}/cortes/${status.corte_id}`);
+
+  const badgeStatus = publicado
+    ? { texto: 'publicado', classe: 'bg-[var(--wb-info)] text-white' }
+    : rejeitado
+      ? { texto: 'rejeitado', classe: 'bg-[var(--wb-err)] text-white' }
       : aprovado
         ? corteFull?.is_fire
-          ? 'fire'
-          : corteFull?.is_leitura
-            ? 'leitura'
-            : 'aprovado'
-        : null;
-  const durSeg = corteFull ? Math.max(0, corteFull.fim_seg - corteFull.inicio_seg) : 0;
-
-  const linhaStatus = publicado
-    ? 'publicado no YouTube ▶'
-    : corteFull?.status === 'rejeitado'
-      ? 'rejeitado'
-      : aprovado
-        ? status.video_pronto
-          ? `aprovado${corteFull?.is_fire ? ' 🔥' : ''} · pós ✓`
-          : status.metadados_completos
-            ? `aprovado${corteFull?.is_fire ? ' 🔥' : ''} · sem render`
-            : `aprovado${corteFull?.is_fire ? ' 🔥' : ''} · sem metadados`
-        : 'pendente';
-
-  const corStatus = publicado
-    ? 'text-[var(--wb-info)]'
-    : corteFull?.status === 'rejeitado'
-      ? 'text-[var(--wb-text-mute)]'
-      : aprovado
-        ? 'text-[var(--wb-ok)]'
-        : 'text-[var(--wb-text-dim)]';
-
-  const irEditor = () => navigate(`/projetos/${projetoId}/cortes/${status.corte_id}`);
+          ? { texto: '🔥 aprovado', classe: 'bg-[var(--wb-fire)] text-white' }
+          : { texto: 'aprovado', classe: 'bg-[var(--wb-ok)] text-white' }
+        : { texto: 'pendente', classe: 'bg-[var(--wb-pill-bg)] text-[var(--wb-text)]' };
 
   return (
     <div
@@ -634,40 +658,46 @@ function CorteLinhaCompacta({
         if (e.key === 'Enter') irEditor();
       }}
       className={cn(
-        'group cursor-pointer rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5 transition-colors hover:border-[var(--wb-text-dim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-        tintKey && TINT_COMPACTO[tintKey],
+        'group cursor-pointer overflow-hidden rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] transition-colors hover:border-[var(--wb-text-dim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+        rejeitado && 'opacity-[.72]',
       )}
     >
-      <div className="flex items-baseline justify-between gap-2">
+      {/* Capa 16:9 com badges sobrepostos */}
+      <div
+        className="relative aspect-video w-full bg-[var(--wb-bg-inset)]"
+        style={
+          capa ? undefined : { background: GRADIENTES_CAPA[status.numero % GRADIENTES_CAPA.length] }
+        }
+      >
+        {capa && <img src={capa} alt="" loading="lazy" className="h-full w-full object-cover" />}
+        {rejeitado && <div className="absolute inset-0 bg-black/45" aria-hidden />}
+        <span className="absolute left-1.5 top-1.5 rounded-[5px] bg-black/55 px-1.5 py-0.5 font-code text-[9px] font-bold text-white">
+          #{status.numero}
+        </span>
         <span
           className={cn(
-            'truncate text-[11px]',
-            aprovado || publicado
-              ? 'font-bold text-[var(--wb-text)]'
-              : 'font-semibold text-[var(--wb-text-mute)]',
+            'absolute bottom-1.5 left-1.5 rounded-[5px] px-1.5 py-0.5 text-[9px] font-bold',
+            badgeStatus.classe,
           )}
-          title={status.titulo}
         >
-          {String(status.numero).padStart(2, '0')} · {status.titulo || `Corte #${status.numero}`}
+          {badgeStatus.texto}
         </span>
         {durSeg > 0 && (
-          <span className="font-code text-[9px] font-semibold text-[var(--wb-text-dim)]">
+          <span className="absolute bottom-1.5 right-1.5 rounded-[5px] bg-black/55 px-1.5 py-0.5 font-code text-[9px] font-bold tabular-nums text-white">
             {formatarDuracaoHMS(durSeg)}
           </span>
         )}
-      </div>
-      <div className="mt-1 flex items-center justify-between gap-2">
-        <span className={cn('text-[9.5px] font-semibold', corStatus)}>{linhaStatus}</span>
+        {/* Ações rápidas em hover */}
         <span
           onClick={(e) => e.stopPropagation()}
-          className="flex gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
+          className="absolute right-1.5 top-1.5 flex gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
         >
           <button
             type="button"
             onClick={() => onMover(-1)}
             disabled={!podeSubir || reordenando}
             aria-label={`Mover corte ${status.numero} para cima`}
-            className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-30"
+            className="rounded bg-black/60 px-1 text-[10px] text-white disabled:opacity-30"
           >
             ↑
           </button>
@@ -676,18 +706,9 @@ function CorteLinhaCompacta({
             onClick={() => onMover(1)}
             disabled={!podeDescer || reordenando}
             aria-label={`Mover corte ${status.numero} para baixo`}
-            className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-30"
+            className="rounded bg-black/60 px-1 text-[10px] text-white disabled:opacity-30"
           >
             ↓
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(`/projetos/${projetoId}/metadados`)}
-            aria-label="Abrir metadados"
-            title="Metadados"
-            className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
-          >
-            🏷
           </button>
           {status.pronto_publicar && !publicado && (
             <button
@@ -696,7 +717,7 @@ function CorteLinhaCompacta({
               disabled={uploadPending}
               aria-label="Enviar video individual para o YouTube"
               title="Enviar para o YouTube"
-              className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-40"
+              className="rounded bg-black/60 px-1 text-[10px] text-white disabled:opacity-40"
             >
               ☁
             </button>
@@ -707,7 +728,7 @@ function CorteLinhaCompacta({
               onClick={onMarcarPublicado}
               aria-label="Informar URL ja publicada no YouTube"
               title="Informar URL do YouTube"
-              className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
+              className="rounded bg-black/60 px-1 text-[10px] text-white"
             >
               ▶
             </button>
@@ -718,11 +739,45 @@ function CorteLinhaCompacta({
             disabled={abrirPasta.isPending}
             aria-label="Abrir pasta"
             title="Abrir pasta"
-            className="rounded px-1 text-[10px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-40"
+            className="rounded bg-black/60 px-1 text-[10px] text-white disabled:opacity-40"
           >
             📁
           </button>
         </span>
+      </div>
+
+      <div className="px-2 py-1.5">
+        <div
+          className={cn(
+            'truncate text-[11px]',
+            aprovado || publicado
+              ? 'font-bold text-[var(--wb-text)]'
+              : 'font-semibold text-[var(--wb-text-mute)]',
+          )}
+          title={status.titulo}
+        >
+          {status.titulo || `Corte #${status.numero}`}
+        </div>
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span className="flex gap-1" role="list" aria-label="Processo do corte">
+            {etapasDoCorte(status, aprovado).map(({ emoji, titulo, estado }) => (
+              <span
+                key={titulo}
+                role="listitem"
+                title={`${titulo}: ${estado === 'done' ? 'feito' : estado === 'active' ? 'em andamento' : 'pendente'}`}
+                className={cn(
+                  'flex h-[23px] w-[23px] items-center justify-center rounded-full text-[12px] leading-none',
+                  CLASSE_ETAPA[estado],
+                )}
+              >
+                <span aria-hidden>{emoji}</span>
+              </span>
+            ))}
+          </span>
+          <span className="truncate text-[9.5px] font-semibold text-[var(--wb-text-mute)]">
+            {labelAuxiliar(status, corteFull?.status)}
+          </span>
+        </div>
       </div>
     </div>
   );

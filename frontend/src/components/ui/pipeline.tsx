@@ -20,53 +20,37 @@ export const PIPELINE_STAGE_META = [
   { key: 'publicacao', label: 'Publicacao', shortLabel: 'Upload', Icon: Rocket },
 ] as const;
 
+// Estados dos ícones de etapa (AUDITORIA-IMPLEMENTACAO §1.1): feito em
+// ok-soft/ok; ativo em cor cheia com glow; pendente em inset esmaecido.
 const stateClass: Record<PipelineStepState, string> = {
-  done: 'border-[var(--wb-ink)] bg-[var(--wb-ink)] text-[var(--wb-ink-fg)]',
-  active:
-    'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-white shadow-[0_0_0_4px_var(--wb-accent-soft)]',
-  todo: 'border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text-dim)]',
+  done: 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]',
+  active: 'bg-[var(--wb-accent)] text-[var(--wb-accent-fg)] shadow-[0_0_6px_var(--wb-accent)]',
+  todo: 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] opacity-55',
 };
 
 export function Pipeline({ steps, compact = false }: { steps: PipelineStep[]; compact?: boolean }) {
   return (
-    <div className="flex w-full items-center" role="list" aria-label="Progresso do pipeline">
-      {steps.map((step, index) => {
+    <div
+      className={cn('flex w-full items-center', compact ? 'gap-1' : 'gap-1.5')}
+      role="list"
+      aria-label="Progresso do pipeline"
+    >
+      {steps.map((step) => {
         const Icon = step.Icon;
-        const isLast = index === steps.length - 1;
-
         return (
-          <div key={step.key} className={cn('flex min-w-0 items-center', !isLast && 'flex-1')}>
-            <div
-              role="listitem"
-              aria-label={`${step.label}: ${step.state}`}
-              title={step.hint ?? step.label}
-              className="flex min-w-0 flex-col items-center gap-1"
-            >
-              <span
-                className={cn(
-                  'flex items-center justify-center rounded-full border transition-all',
-                  compact ? 'h-5 w-5' : step.state === 'active' ? 'h-7 w-7' : 'h-6 w-6',
-                  stateClass[step.state],
-                )}
-              >
-                <Icon size={compact ? 10 : 13} strokeWidth={2.2} aria-hidden />
-              </span>
-              {!compact && (
-                <span className="max-w-20 truncate text-[10px] font-semibold uppercase tracking-[0.04em] text-[var(--wb-text-dim)]">
-                  {step.shortLabel ?? step.label}
-                </span>
-              )}
-            </div>
-            {!isLast && (
-              <span
-                aria-hidden
-                className={cn(
-                  'mx-1 h-px min-w-4 flex-1',
-                  step.state === 'done' ? 'bg-[var(--wb-ink)]' : 'bg-[var(--wb-border)]',
-                )}
-              />
+          <span
+            key={step.key}
+            role="listitem"
+            aria-label={`${step.label}: ${step.state}`}
+            title={step.hint ? `${step.label} — ${step.hint}` : step.label}
+            className={cn(
+              'flex flex-none items-center justify-center rounded-full transition-all',
+              compact ? 'h-[21px] w-[21px]' : 'h-6 w-6',
+              stateClass[step.state],
             )}
-          </div>
+          >
+            <Icon size={compact ? 12 : 13} strokeWidth={2.2} aria-hidden />
+          </span>
         );
       })}
     </div>

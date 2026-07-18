@@ -51,6 +51,13 @@ function buildSteps(projeto: Projeto): PipelineStep[] {
   });
 }
 
-export function PipelineProgress({ projeto }: { projeto: Projeto }) {
-  return <Pipeline steps={buildSteps(projeto)} compact />;
+export function PipelineProgress({
+  projeto,
+  compact = false,
+}: {
+  projeto: Projeto;
+  /** true = ícones 21px (rail); false = 24px (Biblioteca) — AUDITORIA §1.1/§4.1. */
+  compact?: boolean;
+}) {
+  return <Pipeline steps={buildSteps(projeto)} compact={compact} />;
 }
