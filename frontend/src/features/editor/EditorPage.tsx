@@ -917,6 +917,7 @@ export function EditorPage() {
               o piso garante a onda visível mesmo com o player no cap. */}
           <div className="min-h-[200px] flex-1">
             <TimelinePanel
+              variant="workbench"
               audioSrc={waveformAudio}
               waveformPeaksSrc={waveformPeaks}
               audioOffsetSec={waveformOffsetSec}
