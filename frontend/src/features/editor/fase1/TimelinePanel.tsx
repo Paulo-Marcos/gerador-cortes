@@ -1169,28 +1169,26 @@ export function TimelinePanel({
             />
 
             <Tooltip label="Marcar inicio aqui ( [ )" side="bottom">
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={onSetInicioAqui}
                 disabled={!onSetInicioAqui}
+                aria-label="Marcar inicio aqui"
+                className="flex h-7 w-7 flex-none items-center justify-center rounded-[var(--radius-sm)] bg-[var(--wb-ok-soft)] text-[var(--wb-ok)] transition-colors disabled:opacity-40"
               >
-                <Flag />
-                In
-              </Button>
+                <Flag size={13} />
+              </button>
             </Tooltip>
             <Tooltip label="Marcar fim aqui ( ] )" side="bottom">
-              <Button
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
                 onClick={onSetFimAqui}
                 disabled={!onSetFimAqui}
+                aria-label="Marcar fim aqui"
+                className="flex h-7 w-7 flex-none items-center justify-center rounded-[var(--radius-sm)] bg-[var(--wb-err-soft)] text-[var(--wb-err)] transition-colors disabled:opacity-40"
               >
-                <Flag style={{ transform: 'scaleX(-1)' }} />
-                Out
-              </Button>
+                <Flag size={13} style={{ transform: 'scaleX(-1)' }} />
+              </button>
             </Tooltip>
 
             <Tooltip
