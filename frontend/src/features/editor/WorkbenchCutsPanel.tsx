@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, Scissors, Settings } from 'lucide-react';
 import { cn, formatarDuracaoHMS } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
 import { PanelShell } from '@/components/workbench/PanelShell';
+import { RetractableFooter } from '@/components/workbench/RetractableFooter';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { moverCorte, useReordenarCortes } from '@/hooks/useEditor';
 import { MetadataModal } from '@/features/metadata/MetadataModal';
@@ -16,6 +17,23 @@ import { tintarFundo, type SinalFlags } from './UnifiedSidebar';
 // re-hospedada num PanelShell retrátil (DE-PARA §3, Etapa 3a).
 // A navegação por fases saiu (virou aba do shell); os tints
 // `tintarFundo` e o CorteStatusCard são preservados intactos.
+//
+// Rodapé "⚙ FERRAMENTAS DO CORTE" (AUDITORIA-v2 §8, CP9): a auditoria
+// lista 5 ações candidatas, mas 4 delas já têm um gatilho que funciona
+// bem em outro lugar — duplicá-las aqui violaria a regra "sem duplicar
+// trigger" da própria etapa. Decisão (ver deviations do commit):
+//   - "÷ dividir corte em dois" já mora no menu ⚙ da Timeline (CP7).
+//   - "↕ reordenar cortes" já é prático como setas ↑↓ inline na lista.
+//   - "⧉ duplicar corte" está fora de escopo desta rodada (não existe
+//     hook/endpoint — decisão de Paulo).
+//   - "🗑 excluir corte" duplicaria 1:1 o botão "R · Rejeitar" do
+//     veredito: `toggleRejeitado` já chama `useDeletarCorte` (delete
+//     permanente com confirm), como confirma o title="Excluir (R)" em
+//     `CommonTopBar.tsx`.
+// Sobra só "✂ adicionar corte manual" (piso explícito da etapa) — o
+// mesmo `AdicionarCorteModal` já acionado pelo ícone do header e pelo
+// botão tracejado da lista; o rodapé é só mais um ponto de acesso
+// estável (sempre no mesmo lugar, mesmo com a lista rolada/colapsada).
 // ─────────────────────────────────────────────────────────────
 
 const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
@@ -44,6 +62,7 @@ export function WorkbenchCutsPanel({
   const statusMap = new Map(exportStatus.map((s) => [s.corte_id, s] as const));
   const [adicionarOpen, setAdicionarOpen] = useState(false);
   const [metaCorte, setMetaCorte] = useState<Corte | null>(null);
+  const [ferramentasOpen, setFerramentasOpen] = useState(false);
   const reordenar = useReordenarCortes(projetoId);
 
   const aprovados = cortes.filter((c) => APROVADO_STATUS.has(c.status)).length;
@@ -230,6 +249,22 @@ export function WorkbenchCutsPanel({
           ＋ adicionar corte
         </button>
       </div>
+
+      <RetractableFooter
+        icon={<Settings size={13} />}
+        label="FERRAMENTAS DO CORTE"
+        open={ferramentasOpen}
+        onToggle={() => setFerramentasOpen((v) => !v)}
+      >
+        <button
+          type="button"
+          onClick={() => setAdicionarOpen(true)}
+          className="flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[11.5px] font-semibold text-[var(--wb-text)] hover:bg-[var(--wb-bg-inset)]"
+        >
+          <Scissors size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
+          Adicionar corte manual
+        </button>
+      </RetractableFooter>
 
       <AdicionarCorteModal
         open={adicionarOpen}

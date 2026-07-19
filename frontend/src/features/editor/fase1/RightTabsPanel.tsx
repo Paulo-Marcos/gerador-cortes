@@ -9,6 +9,7 @@ import {
   Scissors,
   Search,
   Sparkles,
+  Star,
   Trash2,
   WandSparkles,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import { ClaudeAiButton } from '@/components/ui/claude-button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
+import { RetractableFooter } from '@/components/workbench/RetractableFooter';
 import { cn } from '@/lib/utils';
 import { hmsParaSeg } from '../timeUtils';
 import { useCorte } from '@/hooks/useEditor';
@@ -32,6 +34,23 @@ import type { Desvio, TranscricaoLinha } from '@/types/models';
 // visivel a direita.
 // Preserva 100% da logica funcional (filtros IA/Manual/Silencios, busca,
 // scroll-to, modal manual via `usePromptDesvios`).
+//
+// `variant="workbench"` (AUDITORIA-v2 §9, CP10) — move "⟳ Regerar
+// transcrição" do header pro rodapé retrátil "⭐ MAIS AÇÕES" (fechado por
+// padrão): é uma ação de baixo uso, então ganha com o rodapé em vez de
+// ocupar o header sempre visível. `variant="legacy"` (default) preserva
+// 100% o header atual (EditorFase1/shell antigo) — nada muda ali.
+// Decisões que NÃO mudam em nenhum variant (ver deviations do commit):
+//   - "🔍 Buscar na transcrição" fica onde está (topo da aba Transcrição,
+//     sempre visível): é usada com frequência ao revisar um corte —
+//     escondê-la atrás de um rodapé fechado por padrão pioraria o fluxo
+//     comum, então a etapa pediu "só mover se fizer sentido" e aqui não
+//     fez.
+//   - "⭐ Influenciar a capa" (ThumbnailHintsEditor) não é tocado — mover
+//     o trigger sem virar uma ação por-trecho mudaria o comportamento
+//     (hoje é um editor sempre visível), fora do escopo desta etapa.
+//   - "⤓ Exportar transcrição (SRT)" não existe (sem hook/endpoint) —
+//     decisão já tomada fora desta etapa: não construir agora.
 // ─────────────────────────────────────────────────────────────
 
 interface RightTabsPanelProps {
@@ -56,6 +75,10 @@ interface RightTabsPanelProps {
   currentTime: number;
   onAtualizarTranscricao: () => void;
   transcricaoAtualizando: boolean;
+  /** AUDITORIA-v2 §9 (CP10): 'legacy' (default) preserva o header atual
+   *  (EditorFase1). 'workbench' move "Regerar transcrição" pro rodapé
+   *  retrátil "MAIS AÇÕES". */
+  variant?: 'legacy' | 'workbench';
 }
 
 type TabId = 'trechos' | 'transcricao';
@@ -75,8 +98,11 @@ export function RightTabsPanel({
   currentTime,
   onAtualizarTranscricao,
   transcricaoAtualizando,
+  variant = 'legacy',
 }: RightTabsPanelProps) {
   const [tab, setTab] = useState<TabId>('trechos');
+  const [maisAcoesOpen, setMaisAcoesOpen] = useState(false);
+  const isWorkbench = variant === 'workbench';
 
   // D-360: diarização por corte. projetoId sai do corte já em cache; o mapa de
   // falantes resolve SPEAKER_xx → nome/canal na etiqueta inline da transcrição.
@@ -118,18 +144,23 @@ export function RightTabsPanel({
           count={transcricao?.length ?? 0}
         />
         <div className="flex-1" />
-        <Tooltip label={refreshTitle} side="bottom">
-          <IconButton
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            disabled={refreshPending}
-            aria-label={refreshTitle}
-          >
-            {refreshPending ? <Loader2 className="animate-spin" /> : <RotateCw />}
-          </IconButton>
-        </Tooltip>
+        {/* AUDITORIA-v2 §9 (CP10): no Workbench o refresh sai do header
+            (baixo uso) e migra pro rodapé "MAIS AÇÕES" abaixo; legacy
+            mantém 100% como sempre. */}
+        {!isWorkbench && (
+          <Tooltip label={refreshTitle} side="bottom">
+            <IconButton
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={refreshPending}
+              aria-label={refreshTitle}
+            >
+              {refreshPending ? <Loader2 className="animate-spin" /> : <RotateCw />}
+            </IconButton>
+          </Tooltip>
+        )}
       </header>
 
       {tab === 'trechos' ? (
@@ -152,6 +183,29 @@ export function RightTabsPanel({
           onDiarizar={() => diarizar.mutate()}
           diarizando={diarizar.isPending}
         />
+      )}
+
+      {isWorkbench && (
+        <RetractableFooter
+          icon={<Star size={13} />}
+          label="MAIS AÇÕES"
+          open={maisAcoesOpen}
+          onToggle={() => setMaisAcoesOpen((v) => !v)}
+        >
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshPending}
+            className="flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[11.5px] font-semibold text-[var(--wb-text)] hover:bg-[var(--wb-bg-inset)] disabled:pointer-events-none disabled:opacity-60"
+          >
+            {refreshPending ? (
+              <Loader2 size={13} className="animate-spin text-[var(--wb-text-dim)]" aria-hidden />
+            ) : (
+              <RotateCw size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
+            )}
+            {refreshPending ? 'Atualizando transcrição…' : 'Regerar transcrição'}
+          </button>
+        </RetractableFooter>
       )}
     </section>
   );

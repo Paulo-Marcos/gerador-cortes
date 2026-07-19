@@ -686,6 +686,7 @@ export function EditorPage() {
             <PanelShell id="right" side="right" title="TRECHOS · TRANSCRIÇÃO">
               <div className="min-h-0 flex-1 px-1.5 pb-1.5">
                 <RightTabsPanel
+                  variant="workbench"
                   corteId={corteUI.id}
                   hintsThumbnail={corteUI.hints_thumbnail}
                   desvios={corteUI.desvios ?? []}
