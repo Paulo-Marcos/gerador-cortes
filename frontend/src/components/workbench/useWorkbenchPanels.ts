@@ -47,7 +47,8 @@ export const DEFAULT_OPEN_STATE: PanelOpenState = {
   rail: true,
   cuts: true,
   right: true,
-  fila: true,
+  // CP1 (AUDITORIA-v2 §1/§12): fila global colapsada 40px por padrão.
+  fila: false,
   cenas: true,
   layout: true,
 };

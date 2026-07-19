@@ -54,8 +54,12 @@
        Existem tambem --success/--warning/--error/--info (legado): preferir --wb-* nos componentes novos. */
     --wb-ok: oklch(0.6 0.13 145);
     --wb-ok-soft: oklch(0.94 0.06 145);
+    /* Texto legível sobre --wb-ok-soft (protótipo Workbench 1c: --ok-ink). */
+    --wb-ok-ink: oklch(0.4 0.12 145);
     --wb-warn: oklch(0.62 0.15 70);
     --wb-warn-soft: oklch(0.955 0.035 70);
+    /* Texto legível sobre --wb-warn-soft (protótipo Workbench 1c: --warn-ink). */
+    --wb-warn-ink: oklch(0.48 0.13 70);
     --wb-err: oklch(0.58 0.18 25);
     --wb-err-soft: oklch(0.95 0.06 25);
     --wb-info: oklch(0.56 0.13 245);
@@ -145,8 +149,12 @@
     /* Cores semanticas (status) — dark do protótipo. Soft usa alpha. */
     --wb-ok: oklch(0.76 0.14 145);
     --wb-ok-soft: oklch(0.3 0.08 145 / 0.4);
+    /* Texto legível sobre --wb-ok-soft (protótipo Workbench 1c: --ok-ink). */
+    --wb-ok-ink: oklch(0.8 0.13 145);
     --wb-warn: oklch(0.8 0.15 70);
     --wb-warn-soft: oklch(0.32 0.09 70 / 0.42);
+    /* Texto legível sobre --wb-warn-soft (protótipo Workbench 1c: --warn-ink). */
+    --wb-warn-ink: oklch(0.84 0.13 75);
     --wb-err: oklch(0.72 0.16 25);
     --wb-err-soft: oklch(0.32 0.11 25 / 0.4);
     --wb-info: oklch(0.72 0.13 245);

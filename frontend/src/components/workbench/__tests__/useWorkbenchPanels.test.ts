@@ -8,6 +8,7 @@ import {
   parseStoredPanels,
   resolveEffectiveOpen,
   serializePanels,
+  type PanelOpenState,
   type WorkbenchPanelId,
 } from '../useWorkbenchPanels';
 
@@ -16,7 +17,18 @@ const EDITOR_PANELS: WorkbenchPanelId[] = ['rail', 'cuts', 'right', 'fila'];
 /** Painéis da view de pós-produção (DE-PARA §0/§4). */
 const POS_PANELS: WorkbenchPanelId[] = ['rail', 'cenas', 'layout', 'fila'];
 
-const allOpen = () => ({ ...DEFAULT_OPEN_STATE });
+// Fixture "todos abertos" independente do DEFAULT_OPEN_STATE real: os testes de
+// auto-colapso abaixo exercitam resolveEffectiveOpen a partir de um desejado
+// 100% aberto (cenário deliberado), não do default de abertura do app — por
+// isso não reusa DEFAULT_OPEN_STATE diretamente (CP1 mudou fila:true → false).
+const allOpen = (): PanelOpenState => ({
+  rail: true,
+  cuts: true,
+  right: true,
+  fila: true,
+  cenas: true,
+  layout: true,
+});
 
 describe('constantes do hand-off', () => {
   it('dimensões abertas/colapsadas batem com o README do hand-off', () => {
@@ -26,6 +38,17 @@ describe('constantes do hand-off', () => {
     expect(PANEL_WIDTHS.fila).toEqual({ open: 248, collapsed: 42 });
     expect(PANEL_WIDTHS.cenas).toEqual({ open: 232, collapsed: 40 });
     expect(PANEL_WIDTHS.layout).toEqual({ open: 260, collapsed: 38 });
+  });
+
+  it('CP1: fila global vem colapsada por padrão; os demais painéis vêm abertos', () => {
+    expect(DEFAULT_OPEN_STATE).toEqual({
+      rail: true,
+      cuts: true,
+      right: true,
+      fila: false,
+      cenas: true,
+      layout: true,
+    });
   });
 
   it('centro mínimo é 420px e a ordem de cedência é rail→fila→dir→esq', () => {
@@ -172,7 +195,8 @@ describe('persistência workbench-panels-v1', () => {
     expect(parsed).not.toBeNull();
     expect(parsed?.desired.rail).toBe(false);
     expect(parsed?.desired.cuts).toBe(true);
-    expect(parsed?.desired.fila).toBe(true);
+    // CP1 (AUDITORIA-v2 §1/§12): fila global colapsada por padrão.
+    expect(parsed?.desired.fila).toBe(false);
     expect(parsed?.lastManualExpand).toBeNull();
   });
 
