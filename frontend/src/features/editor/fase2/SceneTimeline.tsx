@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { GripVertical, Loader2, Plus, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Check, GripVertical, Loader2, Plus, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { fetchWaveformPeaks, waveformPeaksUrl } from '@/lib/api';
@@ -82,6 +82,17 @@ interface Props {
    *  mesmo em `readOnly`. A edicao (add/resize/zoom/select) continua desligada.
    *  Usado na tela Final para clicar/scrubar o video renderizado. */
   seekable?: boolean;
+  /** D-396 (AUDITORIA-v2 §10): quando o consumidor confirma que as cenas ja
+   *  renderizaram no video final, o badge "N cenas" troca para o estilo de
+   *  sucesso (--wb-ok-soft/--wb-ok-ink) com um icone de check. Default false
+   *  preserva o badge neutro atual em todo consumidor que nao passar a prop
+   *  (ex.: Pos-producao, onde as cenas ainda estao em edicao). */
+  cenasRenderizadas?: boolean;
+  /** D-396 (AUDITORIA-v2 §10): idem, para o badge de regioes do Layout
+   *  YouTube — quando o palco (composite do layout) ja foi gerado com
+   *  sucesso, o badge troca o texto "N regioes" por "palco gerado" no
+   *  mesmo estilo de sucesso. Default false preserva "N regioes" atual. */
+  palcoGerado?: boolean;
 }
 
 const TIMECODE_SLOTS = 7;
@@ -282,6 +293,8 @@ export function SceneTimeline({
   detectandoSegmentos = false,
   readOnly = false,
   seekable = false,
+  cenasRenderizadas = false,
+  palcoGerado = false,
 }: Props) {
   const [zoom, setZoom] = useState(1);
   const [dragState, setDragState] = useState<RegionDragState | null>(null);
@@ -573,11 +586,31 @@ export function SceneTimeline({
         <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
           Timeline · cenas + layout YouTube
         </span>
-        <span className="rounded-full bg-[var(--wb-bg-card)] border border-[var(--wb-border-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-text-mute)]">
+        <span
+          className={
+            cenasRenderizadas
+              ? 'flex items-center gap-1 rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-ok-ink)]'
+              : 'rounded-full bg-[var(--wb-bg-card)] border border-[var(--wb-border-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-text-mute)]'
+          }
+        >
+          {cenasRenderizadas && <Check size={10} strokeWidth={3} aria-hidden />}
           {ordenadas.length} cenas
         </span>
-        <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
-          {regioes.length} {regioes.length === 1 ? 'região' : 'regiões'}
+        <span
+          className={
+            palcoGerado
+              ? 'flex items-center gap-1 rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-ok-ink)]'
+              : 'rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]'
+          }
+        >
+          {palcoGerado ? (
+            <>
+              <Check size={10} strokeWidth={3} aria-hidden />
+              palco gerado
+            </>
+          ) : (
+            `${regioes.length} ${regioes.length === 1 ? 'região' : 'regiões'}`
+          )}
         </span>
         <div className="flex-1" />
         {!readOnly && (

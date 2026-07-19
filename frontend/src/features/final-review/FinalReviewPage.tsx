@@ -106,6 +106,15 @@ export function FinalReviewPage() {
     () => parseCenasPayload(corte?.cenas_remotion).cenas,
     [corte?.cenas_remotion],
   );
+  // D-396 (AUDITORIA-v2 §10): badges de sucesso da timeline CENAS/LAYOUT YT
+  // no Workbench. Nao ha flag por-cena de "renderizada" nem um "palco_pronto"
+  // exposto pela API — usamos os agregados de `exportStatusAtual` ja
+  // consumidos pelo checklist logo abaixo como proxy: `overlays_prontos`
+  // (overlays das cenas aplicados ao video final) e `grade_pronta` (a fase
+  // de grade e onde o composite do palco acontece — D-384 bloqueia o render
+  // se o PNG do palco falhar, entao grade_pronta=true implica palco ok).
+  const cenasRenderizadas = cenas.length > 0 && Boolean(exportStatusAtual?.overlays_prontos);
+  const palcoGerado = Boolean(exportStatusAtual?.grade_pronta);
   const videoRef = useRef<HTMLVideoElement>(null);
   // D-365: playhead da timeline segue o <video> final (igual ao Pos, que
   // alimenta `currentTime` via onTimeUpdate). Sem isso a timeline ficava
@@ -618,6 +627,8 @@ export function FinalReviewPage() {
               }}
               readOnly
               seekable
+              cenasRenderizadas={cenasRenderizadas}
+              palcoGerado={palcoGerado}
             />
           </div>
         </WorkbenchEditorLayout>
