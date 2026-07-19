@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
+import { IconButton, type IconButtonProps } from '@/components/ui/icon-button';
 import { buildReadingPatch, getReadingClickIntent, type ReadingPatch } from '@/lib/readingMetadata';
 import type { Corte, Projeto } from '@/types/models';
 
@@ -184,6 +185,14 @@ interface StatusToggleCompactProps {
   onClick: () => void;
   disabled?: boolean;
   title?: string;
+  /** AUDITORIA-v2 §2 (CP2) — renderiza como ícone quadrado da toolbar do
+   *  Bruto/Workbench em vez da pílula com rótulo do CommonTopBar legado.
+   *  Mesmos handler/estado; só muda a apresentação. */
+  iconOnly?: boolean;
+  /** Variante do IconButton quando `iconOnly` + `active` (cor por tipo:
+   *  ok/err/fire-soft/leitura-soft). Inativo é sempre `inset`. */
+  activeVariant?: IconButtonProps['variant'];
+  iconSize?: number;
 }
 
 export function StatusToggleCompact({
@@ -194,7 +203,27 @@ export function StatusToggleCompact({
   onClick,
   disabled,
   title,
+  iconOnly,
+  activeVariant = 'inset',
+  iconSize = 15,
 }: StatusToggleCompactProps) {
+  if (iconOnly) {
+    return (
+      <Tooltip label={title ?? label} side="bottom">
+        <IconButton
+          size="toolbar"
+          variant={active ? activeVariant : 'inset'}
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+          aria-pressed={active}
+        >
+          <Icon size={iconSize} strokeWidth={active ? 2.6 : 2} aria-hidden />
+        </IconButton>
+      </Tooltip>
+    );
+  }
+
   return (
     <Tooltip label={title ?? label} side="bottom">
       {/* Pill do protótipo Workbench 1c (linha de transporte): rótulo
@@ -237,6 +266,8 @@ interface StatusToggleRowProps {
     fire?: boolean;
     leitura?: boolean;
   };
+  /** AUDITORIA-v2 §2 (CP2) — repassado a cada `StatusToggleCompact`; ver ali. */
+  iconOnly?: boolean;
 }
 
 export function StatusToggleRow({
@@ -247,6 +278,7 @@ export function StatusToggleRow({
   onToggleLeitura,
   onUpdateLeitura,
   pendingFlags,
+  iconOnly,
 }: StatusToggleRowProps) {
   const aprovado = ['aprovado', 'editado', 'processado'].includes(corte.status);
   const rejeitado = corte.status === 'rejeitado';
@@ -304,6 +336,9 @@ export function StatusToggleRow({
         onClick={onAprovar}
         disabled={pendingFlags.aprovando}
         title="Aprovar (A)"
+        iconOnly={iconOnly}
+        activeVariant="ok"
+        iconSize={16}
       />
       <StatusToggleCompact
         icon={X}
@@ -313,6 +348,8 @@ export function StatusToggleRow({
         onClick={onRejeitar}
         disabled={pendingFlags.rejeitando}
         title="Excluir (R)"
+        iconOnly={iconOnly}
+        activeVariant="err"
       />
       <StatusToggleCompact
         icon={Flame}
@@ -322,6 +359,8 @@ export function StatusToggleRow({
         onClick={onToggleFire}
         disabled={pendingFlags.fire}
         title="TOP (F)"
+        iconOnly={iconOnly}
+        activeVariant="fire-soft"
       />
       <StatusToggleCompact
         icon={BookOpen}
@@ -331,6 +370,8 @@ export function StatusToggleRow({
         onClick={handleReadingClick}
         disabled={pendingFlags.leitura}
         title={onUpdateLeitura ? 'Leitura (L) · clique 2x p/ editar autor' : 'Leitura (L)'}
+        iconOnly={iconOnly}
+        activeVariant="leitura-soft"
       />
       {onUpdateLeitura && (
         <ReadingModal

@@ -54,6 +54,9 @@ export function BrutoStepsDropdown({
   variant = 'outline',
   brutoPronto = false,
   onRegerar,
+  open: openProp,
+  onOpenChange,
+  hideTrigger = false,
 }: {
   corteId: string;
   ativo: boolean;
@@ -63,8 +66,18 @@ export function BrutoStepsDropdown({
   brutoPronto?: boolean;
   /** D-160 — regera o bruto com os opt-ins marcados. Ausente oculta a seção. */
   onRegerar?: (opts: RegerarBrutoOpcoes) => void;
+  /** AUDITORIA-v2 §2 (CP2) — quando informado, o painel vira controlado (o
+   *  ícone ⟳ da toolbar do Workbench abre/fecha por fora). Sem isso, mantém
+   *  o estado interno de sempre (uso legado, com o próprio chevron). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Oculta o botão-gatilho (chevron "grudado") quando outro elemento (o
+   *  ícone ⟳ da toolbar) já controla `open` por fora. */
+  hideTrigger?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = onOpenChange ?? setOpenState;
   const [opts, setOpts] = useState<RegerarBrutoOpcoes>(OPCOES_REGERAR_VAZIAS);
   const { data } = useBrutoProgress(corteId, ativo || open);
 
@@ -86,20 +99,24 @@ export function BrutoStepsDropdown({
 
   // "Grudado" no botão principal (split-button): rounded-l-none + -ml-px funde a
   // borda. Sem spinner no gatilho — só o botão gerar/regerar mostra loading.
+  // Quando `hideTrigger` (CP2 — ícone ⟳ da toolbar controla por fora), não
+  // funde borda nenhuma: o wrapper só serve de âncora para o painel absoluto.
   return (
-    <div className="relative -ml-px">
-      <Tooltip label="Passos do bruto" side="bottom">
-        <Button
-          type="button"
-          variant={variant}
-          size="icon-sm"
-          aria-label="Ver passos do bruto"
-          className="rounded-l-none"
-          onClick={() => setOpen((v) => !v)}
-        >
-          <ChevronDown />
-        </Button>
-      </Tooltip>
+    <div className={hideTrigger ? 'relative' : 'relative -ml-px'}>
+      {!hideTrigger && (
+        <Tooltip label="Passos do bruto" side="bottom">
+          <Button
+            type="button"
+            variant={variant}
+            size="icon-sm"
+            aria-label="Ver passos do bruto"
+            className="rounded-l-none"
+            onClick={() => setOpen(!open)}
+          >
+            <ChevronDown />
+          </Button>
+        </Tooltip>
+      )}
 
       {open && (
         <>

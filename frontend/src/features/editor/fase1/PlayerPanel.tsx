@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Scissors } from 'lucide-react';
-import { hmsParaSeg, segParaMmSs } from '../timeUtils';
+import { cn } from '@/lib/utils';
+import { hmsParaSeg, segParaHms, segParaMmSs } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
@@ -15,6 +16,11 @@ export type { PlayerHandle };
 //
 // O antigo painel inferior (prev/next aprovados) saiu para o
 // BrutoContextStrip — substituido pelo bloco IN/OUT/DUR.
+//
+// `variant="overlay"` (AUDITORIA-v2 §4, CP4) — usado só pelo shell Workbench:
+// sem o header de texto acima do vídeo; os mesmos dados (BRUTO/velocidade/
+// intervalo do corte) viram 3 chips sobrepostos DIRETO no vídeo. O shell
+// legado (EditorFase1) continua no `variant="legacy"` (default) — inalterado.
 // ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -34,6 +40,9 @@ interface Props {
   /** Offset atual (ms). Quando `onAudioOffsetChange` é dado, mostra o controle. */
   audioOffsetMs?: number;
   onAudioOffsetChange?: (ms: number) => void;
+  /** AUDITORIA-v2 §4 (CP4) — 'legacy' (default) mantém o header do editor
+   *  antigo; 'overlay' é o vídeo largo do Workbench com chips sobrepostos. */
+  variant?: 'legacy' | 'overlay';
 }
 
 export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
@@ -49,6 +58,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     audioPreviewStartSec = 0,
     audioOffsetMs = 0,
     onAudioOffsetChange,
+    variant = 'legacy',
   },
   ref,
 ) {
@@ -116,29 +126,40 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   const rateLabel = `${playbackRate.toFixed(2)}×`;
 
   return (
-    <section className="flex h-full w-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-      {/* Header: grip + caption + badge + right info ---- v2_bruto.jsx:629-637 */}
-      <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
-          Player
-        </span>
-        <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
-          video original · 4K
-        </span>
-        <div className="flex-1" />
-        {smartPlay && (
-          <span className="flex items-center gap-1 rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold text-[var(--wb-accent)]">
-            <Scissors size={10} aria-hidden />
-            sem cortes
+    <section
+      className={cn(
+        'flex h-full w-full flex-col overflow-hidden',
+        variant === 'overlay'
+          ? 'rounded-xl shadow-[var(--wb-shadow)]'
+          : 'rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]',
+      )}
+    >
+      {/* Header: grip + caption + badge + right info ---- v2_bruto.jsx:629-637
+          Só no legado — o Workbench (variant="overlay") sobrepõe os mesmos
+          dados como chips direto no vídeo (AUDITORIA-v2 §4). */}
+      {variant === 'legacy' && (
+        <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
+          <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
+            Player
           </span>
-        )}
-        <span
-          className="font-code text-[11px] text-[var(--wb-text-dim)]"
-          style={{ fontVariantNumeric: 'tabular-nums' }}
-        >
-          {rateLabel} · corte de {segParaMmSs(duracao, true)}
-        </span>
-      </header>
+          <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
+            video original · 4K
+          </span>
+          <div className="flex-1" />
+          {smartPlay && (
+            <span className="flex items-center gap-1 rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold text-[var(--wb-accent)]">
+              <Scissors size={10} aria-hidden />
+              sem cortes
+            </span>
+          )}
+          <span
+            className="font-code text-[11px] text-[var(--wb-text-dim)]"
+            style={{ fontVariantNumeric: 'tabular-nums' }}
+          >
+            {rateLabel} · corte de {segParaMmSs(duracao, true)}
+          </span>
+        </header>
+      )}
 
       <div className="relative min-h-0 flex-1 bg-black">
         <video
@@ -149,6 +170,19 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
           crossOrigin="anonymous"
           className="h-full w-full"
         />
+        {variant === 'overlay' && (
+          <>
+            <span className="pointer-events-none absolute left-2.5 top-2.5 rounded-[5px] bg-black/50 px-1.5 py-0.5 font-code text-[9px] font-bold text-white">
+              BRUTO
+            </span>
+            <span className="pointer-events-none absolute right-2.5 top-2.5 rounded-[5px] bg-black/50 px-1.5 py-0.5 font-code text-[9px] font-bold text-white">
+              {rateLabel}
+            </span>
+            <span className="pointer-events-none absolute bottom-2.5 left-2.5 rounded-[5px] bg-black/55 px-2 py-0.5 font-code text-[10px] font-semibold text-white">
+              {segParaHms(inicioSeg)} / {segParaHms(fimSeg)}
+            </span>
+          </>
+        )}
       </div>
 
       {/* F-063: áudio do proxy para preview de lip-sync (oculto, controlado pelo hook). */}

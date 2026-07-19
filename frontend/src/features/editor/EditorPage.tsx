@@ -20,11 +20,22 @@ import {
   useToggleLeitura,
 } from '@/hooks/useEditor';
 import { api, audioProxyUrl, waveformPeaksUrl } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
-import { FolderOpen, Keyboard, Loader2, RefreshCw, Save, Scissors } from 'lucide-react';
+import {
+  Clock,
+  FolderOpen,
+  Headphones,
+  Info,
+  Keyboard,
+  Loader2,
+  RefreshCw,
+  Save,
+  Scissors,
+} from 'lucide-react';
 import type { Corte, Desvio } from '@/types/models';
 import { EditorFase1 } from './fase1/EditorFase1';
 import { PlayerPanel, type PlayerHandle } from './fase1/PlayerPanel';
@@ -46,7 +57,7 @@ import { ShortcutsHelpModal } from './ShortcutsHelpModal';
 import { useShortcuts, type ShortcutBinding } from './shortcuts';
 import { shortcutFromRegistry } from './shortcutsRegistry';
 import { useEditHistory } from './useEditHistory';
-import { calcularDuracaoLiquida, hmsParaSeg, segParaHms } from './timeUtils';
+import { calcularDuracaoLiquida, hmsParaSeg, segParaHms, segParaMmSs } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
 import { UnifiedSidebar } from './UnifiedSidebar';
 import { CommonTopBar, StatusToggleRow, type MoreMenuItem } from './CommonTopBar';
@@ -117,6 +128,15 @@ export function EditorPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [trechosManualOpen, setTrechosManualOpen] = useState(false);
   const [intervaloAberto, setIntervaloAberto] = useState(false);
+  // AUDITORIA-v2 §2/§5/§6 (CP2): toggles da toolbar do Workbench. Começam
+  // FECHADOS — Sincronia/Tempos ficam ocultos por padrão (só o estado do
+  // ícone muda nesta etapa; a próxima liga a visibilidade de
+  // BrutoContextStrip/AudioSyncControl a partir destes mesmos booleans).
+  const [temposAbertos, setTemposAbertos] = useState(false);
+  const [sincroniaAberta, setSincroniaAberta] = useState(false);
+  // Painel "passos do bruto" (BrutoStepsDropdown), agora aberto pelo ícone
+  // ⟳ da toolbar (controlado por fora — ver CP2).
+  const [brutoDropdownOpen, setBrutoDropdownOpen] = useState(false);
   // Trecho comeca DESTRAVADO por default (decisao Paulo): usuario pode
   // gerenciar tamanho dos trechos na waveform sem precisar destravar manualmente.
   // Trocar de corte reseta para destravado (caso o usuario tenha travado e mudado).
@@ -671,25 +691,12 @@ export function EditorPage() {
             </PanelShell>
           }
         >
-          <PlayerCap>
-            <PlayerPanel
-              ref={playerRef}
-              src={videoOriginal}
-              inicioSeg={corteUI.inicio_seg}
-              fimSeg={corteUI.fim_seg}
-              desvios={corteUI.desvios ?? []}
-              playbackRate={playbackRate}
-              smartPlay={smartPlay}
-              onTimeUpdate={setCurrentTime}
-              audioPreviewSrc={waveformAudio}
-              audioPreviewStartSec={waveformOffsetSec}
-              audioOffsetMs={corteUI.audio_offset_ms ?? 0}
-              onAudioOffsetChange={(ms) => patchDirty({ audio_offset_ms: ms })}
-            />
-          </PlayerCap>
-
-          {/* Linha de transporte (DE-PARA §3b) — reusa StatusToggleRow. */}
-          <div className="flex flex-none flex-wrap items-center gap-2">
+          {/* Toolbar do Bruto (AUDITORIA-v2 §2/§3, CP2/CP3): veredito em
+              ícones (reaproveita StatusToggleRow, só muda a apresentação) +
+              regerar/pasta/tempos/sincronia/info + chip do vídeo original +
+              pílula Salvar flutuante (último filho flex — reserva a própria
+              largura; NÃO é position:absolute, nada desliza por baixo). */}
+          <div className="flex flex-none items-center gap-1.5">
             <StatusToggleRow
               corte={corteUI}
               onAprovar={toggleAprovado}
@@ -707,12 +714,149 @@ export function EditorPage() {
                 fire: toggleFire.isPending,
                 leitura: toggleLeitura.isPending,
               }}
+              iconOnly
             />
-            <div className="flex-1" />
-            <span className="hidden font-code text-[10px] font-semibold text-[var(--wb-text-dim)] lg:block">
-              A/R status · F fire · [ ] início/fim · ←→ 5s · Ctrl+Z
+
+            <div className="h-6 w-px flex-none bg-[var(--wb-border)]" aria-hidden />
+
+            <div className="relative flex-none">
+              <Tooltip
+                label={brutoPronto ? 'Regerar bruto (Ctrl+G)' : 'Gerar bruto (Ctrl+G)'}
+                side="bottom"
+              >
+                <IconButton
+                  aria-label={brutoPronto ? 'Regerar bruto' : 'Gerar bruto'}
+                  size="toolbar"
+                  variant="inset"
+                  onClick={() => {
+                    // brutoPronto: abre o dropdown p/ escolher o que também
+                    // refazer (mesmo handleRegerarBruto de sempre). 1ª geração
+                    // não tem opt-ins — dispara direto (mesmo Ctrl+G/botão de
+                    // sempre): handleGerarBrutoPrincipal.
+                    if (brutoPronto) setBrutoDropdownOpen((v) => !v);
+                    else handleGerarBrutoPrincipal();
+                  }}
+                  disabled={brutoBusy}
+                >
+                  {brutoBusy ? (
+                    <Loader2 size={15} className="animate-spin" aria-hidden />
+                  ) : (
+                    <RefreshCw size={15} aria-hidden />
+                  )}
+                </IconButton>
+              </Tooltip>
+              {brutoPronto && (
+                <BrutoStepsDropdown
+                  corteId={corteId}
+                  ativo={brutoBusy}
+                  metadadosStatus={metaClaudeStatus}
+                  variant="outline"
+                  brutoPronto={brutoPronto}
+                  onRegerar={brutoBusy ? undefined : handleRegerarBruto}
+                  open={brutoDropdownOpen}
+                  onOpenChange={setBrutoDropdownOpen}
+                  hideTrigger
+                />
+              )}
+            </div>
+
+            <Tooltip label="Abrir pasta (Ctrl+O)" side="bottom">
+              <IconButton
+                aria-label="Abrir pasta do corte"
+                size="toolbar"
+                variant="inset"
+                onClick={() => abrirPasta.mutate(corteId)}
+                disabled={abrirPasta.isPending}
+              >
+                <FolderOpen size={14} aria-hidden />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip label="Tempos do corte" side="bottom">
+              <IconButton
+                aria-label="Alternar tempos do corte"
+                aria-pressed={temposAbertos}
+                size="toolbar"
+                variant={temposAbertos ? 'toggle-active' : 'inset'}
+                onClick={() => setTemposAbertos((v) => !v)}
+              >
+                <Clock size={14} aria-hidden />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip label="Sincronia do áudio" side="bottom">
+              <IconButton
+                aria-label="Alternar sincronia do áudio"
+                aria-pressed={sincroniaAberta}
+                size="toolbar"
+                variant={sincroniaAberta ? 'toggle-active' : 'inset'}
+                onClick={() => setSincroniaAberta((v) => !v)}
+              >
+                <Headphones size={14} aria-hidden />
+              </IconButton>
+            </Tooltip>
+
+            {/* ℹ️ — SÓ tooltip via atributo title (AUDITORIA-v2 §2): sem
+                onClick, sem modal. O atalho continua na página Atalhos. */}
+            <span
+              title="Aprovar A · Rejeitar R · Fire F · In/Out [ ] · Navegar ←→ 5s · Desfazer Ctrl+Z"
+              className="flex aspect-square min-w-[24px] flex-[0_1_34px] cursor-help items-center justify-center text-[var(--wb-text-dim)]"
+            >
+              <Info size={14} aria-hidden />
             </span>
+
+            <span className="min-w-0 flex-[0_1_auto] overflow-hidden whitespace-nowrap text-ellipsis rounded-[5px] bg-[var(--wb-bg-inset)] px-2 py-0.5 font-code text-[8.5px] font-bold uppercase text-[var(--wb-text-mute)]">
+              Vídeo original · 4K
+            </span>
+            <span className="min-w-0 flex-[0_1_auto] overflow-hidden whitespace-nowrap text-ellipsis font-code text-[10px] font-semibold text-[var(--wb-text-dim)]">
+              corte de {segParaMmSs(durSeg, true)}
+            </span>
+
+            <div className="min-w-2 flex-1" />
+
+            <Tooltip label="Salvar (Ctrl+S)" side="top">
+              <button
+                type="button"
+                onClick={salvarMudancas}
+                disabled={!isDirty || atualizarCorte.isPending}
+                className="flex flex-none items-center gap-1.5 rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-[11px] py-[7px] shadow-[var(--wb-shadow)] disabled:pointer-events-none disabled:opacity-60"
+              >
+                {atualizarCorte.isPending ? (
+                  <Loader2 size={11} className="animate-spin text-[var(--wb-text-mute)]" aria-hidden />
+                ) : (
+                  <span
+                    className={cn(
+                      'h-[7px] w-[7px] rounded-full',
+                      isDirty ? 'bg-[var(--wb-warn)]' : 'bg-transparent',
+                    )}
+                    aria-hidden
+                  />
+                )}
+                <span className="text-[10.5px] font-bold text-[var(--wb-text)]">Salvar</span>
+                <span className="font-code text-[9px] font-semibold text-[var(--wb-text-dim)]">
+                  Ctrl+S
+                </span>
+              </button>
+            </Tooltip>
           </div>
+
+          <PlayerCap>
+            <PlayerPanel
+              ref={playerRef}
+              variant="overlay"
+              src={videoOriginal}
+              inicioSeg={corteUI.inicio_seg}
+              fimSeg={corteUI.fim_seg}
+              desvios={corteUI.desvios ?? []}
+              playbackRate={playbackRate}
+              smartPlay={smartPlay}
+              onTimeUpdate={setCurrentTime}
+              audioPreviewSrc={waveformAudio}
+              audioPreviewStartSec={waveformOffsetSec}
+              audioOffsetMs={corteUI.audio_offset_ms ?? 0}
+              onAudioOffsetChange={(ms) => patchDirty({ audio_offset_ms: ms })}
+            />
+          </PlayerCap>
 
           <BrutoContextStrip
             previous={previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null}
@@ -728,8 +872,12 @@ export function EditorPage() {
             onAplicarIntervalo={aplicarIntervaloManual}
           />
 
-          {/* Faixa de contexto do corte (DE-PARA §3b): título editável +
-              trechos + salvar/regerar (campos que antes viviam na topbar). */}
+          {/* Título + trechos do corte (DE-PARA §3b). Salvar/regerar/abrir
+              pasta/atalhos subiram pra toolbar acima (CP2/CP3) — o que resta
+              aqui (título editável + contagem de trechos) ainda não tem pra
+              onde ir: o painel "Tempos" (🕑, AUDITORIA-v2 §6) que vai
+              hospedar estes campos é a próxima etapa; por ora, continua
+              sempre visível pra não perder a função de renomear o corte. */}
           <div className="flex flex-none flex-wrap items-center gap-2 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 py-1.5">
             <label className="flex min-w-[180px] flex-[2] flex-col gap-0.5">
               <span className="font-code text-[8.5px] font-extrabold tracking-[0.12em] text-[var(--wb-text-dim)]">
@@ -748,58 +896,6 @@ export function EditorPage() {
               <span className="rounded-md bg-[var(--wb-bg-inset)] px-2 py-1 font-code text-[11px] font-semibold">
                 {(corteUI.desvios ?? []).length} desvios
               </span>
-            </div>
-            <div className="ml-auto flex items-center gap-1.5">
-              <Tooltip label="Salvar (Ctrl+S)" side="top">
-                <Button
-                  size="sm"
-                  variant={isDirty ? 'default' : 'outline'}
-                  onClick={salvarMudancas}
-                  disabled={!isDirty || atualizarCorte.isPending}
-                >
-                  {atualizarCorte.isPending ? <Loader2 className="animate-spin" /> : <Save />}
-                  Salvar
-                </Button>
-              </Tooltip>
-              <div className="flex items-center">
-                <Tooltip
-                  label={brutoPronto ? 'Regerar bruto (Ctrl+G)' : 'Gerar bruto (Ctrl+G)'}
-                  side="top"
-                >
-                  <Button
-                    variant={brutoPronto ? 'outline' : 'default'}
-                    size="sm"
-                    className="rounded-r-none"
-                    onClick={handleGerarBrutoPrincipal}
-                    disabled={brutoBusy}
-                  >
-                    {brutoBusy ? <Loader2 className="animate-spin" /> : <Scissors />}
-                    {brutoPronto ? 'Regerar bruto' : 'Gerar bruto'}
-                  </Button>
-                </Tooltip>
-                <BrutoStepsDropdown
-                  corteId={corteId}
-                  ativo={brutoBusy}
-                  metadadosStatus={metaClaudeStatus}
-                  variant={brutoPronto ? 'outline' : 'default'}
-                  brutoPronto={brutoPronto}
-                  onRegerar={brutoBusy ? undefined : handleRegerarBruto}
-                />
-              </div>
-              <Tooltip label="Abrir pasta (Ctrl+O)" side="top">
-                <IconButton
-                  aria-label="Abrir pasta"
-                  onClick={() => abrirPasta.mutate(corteId)}
-                  disabled={abrirPasta.isPending}
-                >
-                  <FolderOpen />
-                </IconButton>
-              </Tooltip>
-              <Tooltip label="Atalhos (?)" side="top">
-                <IconButton aria-label="Atalhos" onClick={() => setShortcutsOpen(true)}>
-                  <Keyboard />
-                </IconButton>
-              </Tooltip>
             </div>
           </div>
 

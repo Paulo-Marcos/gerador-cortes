@@ -31,20 +31,26 @@ export function WorkbenchEditorLayout({ panelIds, leftPanel, rightPanel, childre
 
 /**
  * Container do player: sempre 16:9, altura limitada para sobrar
- * espaço vertical para timeline/ferramentas (README do hand-off:
- * `width:min(100%, calc((100vh - 330px)*16/9))`).
+ * espaço vertical para timeline/ferramentas.
+ *
+ * AUDITORIA-v2 §4 (CP4): largura 100% do centro, `max-height:44vh`,
+ * `min-height:0`. A `width` abaixo já embute esse teto de altura — convertida
+ * pra largura via a proporção 16/9 — para o vídeo encolher CENTRALIZADO
+ * (mantendo a proporção) em vez de estourar a altura e esconder a timeline;
+ * `maxHeight`/`minHeight` ficam como reforço direto do texto da auditoria.
+ * `minWidth` é o piso que evita o player ficar minúsculo em janelas bem
+ * baixas, sem violar o mínimo de 420px do centro (nunca ultrapassa 100%).
  */
 export function PlayerCap({ children }: { children: ReactNode }) {
-  // Reserve de 500px (validação 3): o hand-off cita 330px, mas a coluna
-  // real tem sincronia + transporte + contexto + título (~170px a mais);
-  // sem esse ajuste o player engolia a altura e a TIMELINE sumia.
   return (
     <div
       className="flex-none self-center"
       style={{
-        width: 'min(100%, calc((100vh - 500px) * 1.7778))',
+        width: 'min(100%, calc(44vh * 16 / 9))',
         aspectRatio: '16 / 9',
         maxWidth: '100%',
+        maxHeight: '44vh',
+        minHeight: 0,
         minWidth: 'min(100%, 420px)',
       }}
     >
