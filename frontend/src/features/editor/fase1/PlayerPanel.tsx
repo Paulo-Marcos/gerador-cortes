@@ -195,7 +195,11 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
           className="hidden"
         />
       )}
-      {onAudioOffsetChange && (
+      {/* AUDITORIA-v2 §5 (CP5): no Workbench (variant='overlay') a faixa de
+          sincronia sai daqui — vira irmã do vídeo (fora do cap de altura do
+          PlayerCap), montada pelo próprio EditorPage com variant="workbench".
+          O legado (variant='legacy') mantém o controle aqui, inalterado. */}
+      {variant === 'legacy' && onAudioOffsetChange && (
         <AudioSyncControl
           offsetMs={audioOffsetMs}
           onChange={onAudioOffsetChange}

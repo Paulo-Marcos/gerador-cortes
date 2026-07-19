@@ -43,6 +43,7 @@ import { TimelinePanel } from './fase1/TimelinePanel';
 import { RightTabsPanel } from './fase1/RightTabsPanel';
 import { TrechosManualModal } from './fase1/TrechosManualModal';
 import { BrutoContextStrip } from './fase1/BrutoContextStrip';
+import { AudioSyncControl, MAX_MS, MIN_MS, STEP_FINO } from './fase1/AudioSyncControl';
 import { BrutoStepsDropdown } from './BrutoStepsDropdown';
 import { PanelShell } from '@/components/workbench/PanelShell';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
@@ -432,6 +433,21 @@ export function EditorPage() {
     });
   }
 
+  // AUDITORIA-v2 §5 (CP5): atalhos ',' / '.' (Ctrl) para o nudge fino da
+  // Sincronia do áudio — mesmo STEP_FINO dos botões -10/+10, mesma lógica
+  // de offset já usada pelo AudioSyncControl (clamp em MIN_MS/MAX_MS).
+  // Lê a base via editHistory.getPresent() (igual salvarMudancas/patchDirty)
+  // em vez de corteUI fechado no closure — os bindings são memoizados e não
+  // recalculam a cada tecla, então um valor capturado no closure ficaria
+  // desatualizado entre pressionamentos sucessivos.
+  function nudgeSincronia(delta: number) {
+    if (!corte) return;
+    const pendingDirty = editHistory.getPresent();
+    const atual = pendingDirty.audio_offset_ms ?? corte.audio_offset_ms ?? 0;
+    const next = Math.max(MIN_MS, Math.min(MAX_MS, Math.round(atual + delta)));
+    patchDirty({ audio_offset_ms: next });
+  }
+
   function toggleAprovado() {
     if (!corteUI) return;
     const aprovado = ['aprovado', 'editado', 'processado'].includes(corteUI.status);
@@ -499,6 +515,8 @@ export function EditorPage() {
       shortcutFromRegistry('bruto.dividirCorte', onDividirCorteAqui),
       shortcutFromRegistry('bruto.removerTrecho', onRemoverTrechoSelecionado),
       shortcutFromRegistry('bruto.smartPlay', () => setSmartPlay((v) => !v)),
+      shortcutFromRegistry('bruto.sincroniaNudgeMenos', () => nudgeSincronia(-STEP_FINO)),
+      shortcutFromRegistry('bruto.sincroniaNudgeMais', () => nudgeSincronia(STEP_FINO)),
       shortcutFromRegistry('bruto.undo', editHistory.undo),
       shortcutFromRegistry('bruto.redo', editHistory.redo),
       shortcutFromRegistry('bruto.salvar', salvarMudancas),
@@ -858,46 +876,41 @@ export function EditorPage() {
             />
           </PlayerCap>
 
-          <BrutoContextStrip
-            previous={previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null}
-            next={nextCut ? { numero: nextCut.numero, hms: nextCut.inicio_hms } : null}
-            inicioHms={corteUI.inicio_hms}
-            fimHms={corteUI.fim_hms}
-            inicioSeg={hmsParaSeg(corteUI.inicio_hms)}
-            currentTime={currentTime}
-            durSeg={durSeg}
-            liquidoSeg={liquidoSeg}
-            intervaloAberto={intervaloAberto}
-            onToggleIntervalo={() => setIntervaloAberto((v) => !v)}
-            onAplicarIntervalo={aplicarIntervaloManual}
-          />
+          {/* Sincronia (AUDITORIA-v2 §5, CP5): oculta por padrao, alterna
+              pelo icone 🎧 da toolbar. Fica entre o video e o painel de
+              Tempos — nunca dentro do PlayerCap (senao disputaria altura
+              com o video no teto de 44vh). */}
+          {sincroniaAberta && (
+            <AudioSyncControl
+              variant="workbench"
+              offsetMs={corteUI.audio_offset_ms ?? 0}
+              onChange={(ms) => patchDirty({ audio_offset_ms: ms })}
+              onClose={() => setSincroniaAberta(false)}
+            />
+          )}
 
-          {/* Título + trechos do corte (DE-PARA §3b). Salvar/regerar/abrir
-              pasta/atalhos subiram pra toolbar acima (CP2/CP3) — o que resta
-              aqui (título editável + contagem de trechos) ainda não tem pra
-              onde ir: o painel "Tempos" (🕑, AUDITORIA-v2 §6) que vai
-              hospedar estes campos é a próxima etapa; por ora, continua
-              sempre visível pra não perder a função de renomear o corte. */}
-          <div className="flex flex-none flex-wrap items-center gap-2 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 py-1.5">
-            <label className="flex min-w-[180px] flex-[2] flex-col gap-0.5">
-              <span className="font-code text-[8.5px] font-extrabold tracking-[0.12em] text-[var(--wb-text-dim)]">
-                TÍTULO DO CORTE
-              </span>
-              <input
-                value={corteUI.titulo_proposto}
-                onChange={(event) => patchDirty({ titulo_proposto: event.target.value })}
-                className="rounded-md bg-[var(--wb-bg-inset)] px-2 py-1 text-[11px] font-semibold text-[var(--wb-text)] outline-none focus:ring-2 focus:ring-[var(--wb-focus)]"
-              />
-            </label>
-            <div className="flex flex-col gap-0.5">
-              <span className="font-code text-[8.5px] font-extrabold tracking-[0.12em] text-[var(--wb-text-dim)]">
-                TRECHOS
-              </span>
-              <span className="rounded-md bg-[var(--wb-bg-inset)] px-2 py-1 font-code text-[11px] font-semibold">
-                {(corteUI.desvios ?? []).length} desvios
-              </span>
-            </div>
-          </div>
+          {/* Tempos (AUDITORIA-v2 §6, CP6): oculto por padrao, alterna pelo
+              icone 🕑 da toolbar. Hospeda titulo/trechos/Intervalo — o
+              bloco que antes ficava sempre visivel solto no centro. */}
+          {temposAbertos && (
+            <BrutoContextStrip
+              variant="workbench"
+              previous={previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null}
+              next={nextCut ? { numero: nextCut.numero, hms: nextCut.inicio_hms } : null}
+              inicioHms={corteUI.inicio_hms}
+              fimHms={corteUI.fim_hms}
+              inicioSeg={hmsParaSeg(corteUI.inicio_hms)}
+              currentTime={currentTime}
+              durSeg={durSeg}
+              liquidoSeg={liquidoSeg}
+              intervaloAberto={intervaloAberto}
+              onToggleIntervalo={() => setIntervaloAberto((v) => !v)}
+              onAplicarIntervalo={aplicarIntervaloManual}
+              titulo={corteUI.titulo_proposto}
+              onChangeTitulo={(titulo) => patchDirty({ titulo_proposto: titulo })}
+              trechosCount={(corteUI.desvios ?? []).length}
+            />
+          )}
 
           {/* Timeline em flex:1 com piso de 200px — quanto mais alto o
               painel, mais legível a onda (aceite crítico do DE-PARA §3);

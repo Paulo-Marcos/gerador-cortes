@@ -78,6 +78,8 @@ export type ShortcutId =
   | 'bruto.dividirCorte'
   | 'bruto.removerTrecho'
   | 'bruto.smartPlay'
+  | 'bruto.sincroniaNudgeMenos'
+  | 'bruto.sincroniaNudgeMais'
   | 'bruto.undo'
   | 'bruto.redo'
   | 'bruto.salvar'
@@ -408,6 +410,26 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     key: 'b',
     mod: 'ctrl',
     description: 'Reprodução sem cortes (smart play)',
+    group: 'edicao',
+  },
+  // AUDITORIA-v2 §5 (CP5): nudge fino da Sincronia do áudio. Usa mod:'ctrl'
+  // (em vez das teclas nuas ',' '.' pedidas na auditoria) porque
+  // bruto.frameAnterior/bruto.frameProximo já ocupam ',' '.' sem modificador
+  // nesta mesma tela — combo igual sem mod colidiria (assertNoShortcutConflicts).
+  {
+    id: 'bruto.sincroniaNudgeMenos',
+    screen: 'bruto',
+    key: ',',
+    mod: 'ctrl',
+    description: 'Sincronia do áudio: adiantar 10ms',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.sincroniaNudgeMais',
+    screen: 'bruto',
+    key: '.',
+    mod: 'ctrl',
+    description: 'Sincronia do áudio: atrasar 10ms',
     group: 'edicao',
   },
   {
