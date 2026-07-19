@@ -1168,15 +1168,18 @@ export function TimelinePanel({
               onSkipEnd={() => handleSeek(fimSeg)}
             />
 
+            {/* Workbench 1c.dc.html:223-224 - pilulas com rotulo (nao icone
+                puro): fundo --wb-ok-soft/--wb-err-soft, texto --wb-ok-ink/--wb-err. */}
             <Tooltip label="Marcar inicio aqui ( [ )" side="bottom">
               <button
                 type="button"
                 onClick={onSetInicioAqui}
                 disabled={!onSetInicioAqui}
                 aria-label="Marcar inicio aqui"
-                className="flex h-7 w-7 flex-none items-center justify-center rounded-[var(--radius-sm)] bg-[var(--wb-ok-soft)] text-[var(--wb-ok)] transition-colors disabled:opacity-40"
+                className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-ok-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-ok-ink)] transition-colors disabled:opacity-40"
               >
-                <Flag size={13} />
+                <Flag size={11} />
+                In
               </button>
             </Tooltip>
             <Tooltip label="Marcar fim aqui ( ] )" side="bottom">
@@ -1185,9 +1188,10 @@ export function TimelinePanel({
                 onClick={onSetFimAqui}
                 disabled={!onSetFimAqui}
                 aria-label="Marcar fim aqui"
-                className="flex h-7 w-7 flex-none items-center justify-center rounded-[var(--radius-sm)] bg-[var(--wb-err-soft)] text-[var(--wb-err)] transition-colors disabled:opacity-40"
+                className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-err-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-err)] transition-colors disabled:opacity-40"
               >
-                <Flag size={13} style={{ transform: 'scaleX(-1)' }} />
+                <Flag size={11} style={{ transform: 'scaleX(-1)' }} />
+                Out
               </button>
             </Tooltip>
 

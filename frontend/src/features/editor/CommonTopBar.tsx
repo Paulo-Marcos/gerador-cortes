@@ -208,11 +208,16 @@ export function StatusToggleCompact({
   iconSize = 15,
 }: StatusToggleCompactProps) {
   if (iconOnly) {
+    // AUDITORIA-v2 §2 / Workbench 1c.dc.html:157-160 — a cor destes botoes e
+    // FIXA (identidade da acao), nao condicionada ao estado atual do corte:
+    // Aprovar e sempre --wb-ok, Rejeitar sempre --wb-err, Fire sempre
+    // --wb-fire-soft, Leitura sempre --wb-inset. O estado "active" ainda
+    // reforca o icone (stroke mais grosso) mas nao muda o fundo.
     return (
       <Tooltip label={title ?? label} side="bottom">
         <IconButton
           size="toolbar"
-          variant={active ? activeVariant : 'inset'}
+          variant={activeVariant}
           onClick={onClick}
           disabled={disabled}
           aria-label={label}
@@ -371,7 +376,7 @@ export function StatusToggleRow({
         disabled={pendingFlags.leitura}
         title={onUpdateLeitura ? 'Leitura (L) · clique 2x p/ editar autor' : 'Leitura (L)'}
         iconOnly={iconOnly}
-        activeVariant="leitura-soft"
+        activeVariant="inset"
       />
       {onUpdateLeitura && (
         <ReadingModal
