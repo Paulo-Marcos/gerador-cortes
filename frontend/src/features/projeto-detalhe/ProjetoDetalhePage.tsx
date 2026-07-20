@@ -37,6 +37,7 @@ import type { Corte, StatusExportCorte } from '@/types/models';
 import { AnaliseIaModal } from './AnaliseIaModal';
 import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
 import { PublicarMassaModal } from './PublicarMassaModal';
+import { buildStatusPills } from './StatusPills';
 import { VotoQualidadeLive } from './VotoQualidadeLive';
 
 export function ProjetoDetalhePage() {
@@ -562,38 +563,23 @@ export function ProjetoDetalhePage() {
 
 // ─── Card de corte do Workspace (AUDITORIA §4.2, D-396) ───────────────
 // Capa (thumbnail do corte, fallback gradiente) + badge #numero (topo-esq),
-// badge de status (base-esq), duração (base-dir) e linha de ícones do
-// processo DO CORTE (✂ Bruto · 🎬 Pós · 👁 Revisão · 🏷 Metadados · 🚀
-// Publicação) com os 3 estados do §1.1 e label auxiliar. Rejeitado ganha
-// opacity .72 + véu na capa. Click abre a aba do editor no corte.
+// badge de status (base-esq), duração (base-dir) e os 8 estágios do
+// pipeline (DE-PARA-v2 §2: BRUTO·CENAS·GRADED·OVERLAYS·FINAL·YOUTUBE·
+// THUMB·META) como pips compactos com tooltip. Rejeitado ganha opacity
+// .72 + véu na capa; aprovado/fire/leitura ganham tint + borda esquerda
+// (portado de CorteCard.tsx, tintDoCorte). Click abre a aba do editor.
 
-type EstadoEtapa = 'done' | 'active' | 'todo';
-
-const CLASSE_ETAPA: Record<EstadoEtapa, string> = {
-  done: 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]',
-  active: 'bg-[var(--wb-accent)] text-[var(--wb-accent-fg)] shadow-[0_0_6px_var(--wb-accent)]',
-  todo: 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] opacity-55',
-};
-
-/** Estados das 5 etapas do corte a partir do StatusExportCorte. */
-function etapasDoCorte(s: StatusExportCorte, aprovado: boolean) {
-  const publicado = Boolean(s.youtube_url_publicado);
-  const bruto: EstadoEtapa = s.raw_pronto || s.video_pronto ? 'done' : aprovado ? 'active' : 'todo';
-  const pos: EstadoEtapa = s.video_pronto
-    ? 'done'
-    : s.grade_pronta || s.overlays_prontos
-      ? 'active'
-      : 'todo';
-  const revisao: EstadoEtapa = s.pronto_publicar ? 'done' : s.video_pronto ? 'active' : 'todo';
-  const metadados: EstadoEtapa = s.metadados_completos ? 'done' : 'todo';
-  const publicacao: EstadoEtapa = publicado ? 'done' : s.pronto_publicar ? 'active' : 'todo';
-  return [
-    { emoji: '✂', titulo: 'Bruto', estado: bruto },
-    { emoji: '🎬', titulo: 'Pós-produção', estado: pos },
-    { emoji: '👁', titulo: 'Revisão', estado: revisao },
-    { emoji: '🏷', titulo: 'Metadados', estado: metadados },
-    { emoji: '🚀', titulo: 'Publicação', estado: publicacao },
-  ];
+/** Tint de fundo + borda esquerda por status do corte (portado de CorteCard.tsx). */
+function tintDoCorte(status: Corte['status'] | undefined, isFire?: boolean, isLeitura?: boolean) {
+  if (status === 'rejeitado') {
+    return 'bg-[var(--wb-err-soft)] border-l-[3px] border-l-[var(--wb-err)]';
+  }
+  if (status === 'aprovado' || status === 'editado' || status === 'processado') {
+    if (isFire) return 'bg-[var(--wb-fire-soft)] border-l-[3px] border-l-[var(--wb-fire)]';
+    if (isLeitura) return 'bg-[var(--wb-leitura-soft)] border-l-[3px] border-l-[var(--wb-leitura)]';
+    return 'bg-[var(--wb-ok-soft)] border-l-[3px] border-l-[var(--wb-ok)]';
+  }
+  return 'bg-[var(--wb-bg-panel)]';
 }
 
 function labelAuxiliar(s: StatusExportCorte, statusCorte: Corte['status'] | undefined): string {
@@ -668,7 +654,8 @@ function CorteLinhaCompacta({
         if (e.key === 'Enter') irEditor();
       }}
       className={cn(
-        'group cursor-pointer overflow-hidden rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] transition-colors hover:border-[var(--wb-text-dim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+        'group cursor-pointer overflow-hidden rounded-[10px] border border-[var(--wb-border)] transition-colors hover:border-[var(--wb-text-dim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+        tintDoCorte(corteFull?.status, corteFull?.is_fire, corteFull?.is_leitura),
         rejeitado && 'opacity-[.72]',
       )}
     >
@@ -769,15 +756,17 @@ function CorteLinhaCompacta({
           {status.titulo || `Corte #${status.numero}`}
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-2">
-          <span className="flex gap-1" role="list" aria-label="Processo do corte">
-            {etapasDoCorte(status, aprovado).map(({ emoji, titulo, estado }) => (
+          <span className="flex flex-wrap gap-[3px]" role="list" aria-label="Estágios do corte">
+            {buildStatusPills(status).map(({ emoji, label, done, hint }) => (
               <span
-                key={titulo}
+                key={label}
                 role="listitem"
-                title={`${titulo}: ${estado === 'done' ? 'feito' : estado === 'active' ? 'em andamento' : 'pendente'}`}
+                title={`${label}: ${done ? 'feito' : 'pendente'} — ${hint}`}
                 className={cn(
-                  'flex h-[23px] w-[23px] items-center justify-center rounded-full text-[12px] leading-none',
-                  CLASSE_ETAPA[estado],
+                  'flex h-[15px] w-[15px] items-center justify-center rounded-full text-[8.5px] leading-none',
+                  done
+                    ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
+                    : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] opacity-55',
                 )}
               >
                 <span aria-hidden>{emoji}</span>
