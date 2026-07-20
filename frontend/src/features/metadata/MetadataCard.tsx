@@ -302,7 +302,10 @@ export function MetadataCard({
               </button>
             )}
             <div className="min-w-0">
-              <h3 className="truncate font-editorial text-[25px] font-medium leading-[1.05] text-[var(--wb-text)]">
+              {/* DE-PARA-v2 §6: PROD mostra o título inteiro; truncate (1
+                  linha) cortava mesmo sobrando espaço horizontal. 2 linhas
+                  antes de reticências. */}
+              <h3 className="line-clamp-2 font-editorial text-[25px] font-medium leading-[1.05] text-[var(--wb-text)]">
                 {generated ? title || cut.titulo_proposto : cut.titulo_proposto}
               </h3>
               {generated && (
