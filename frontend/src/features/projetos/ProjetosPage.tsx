@@ -1,6 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, Loader2, Plus, RefreshCw, Search, Youtube } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronDown,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Search,
+  SlidersHorizontal,
+  Youtube,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
 import { temFalhados, useProjetos, useReiniciarFalhados } from '@/hooks/useProjetos';
@@ -69,6 +78,22 @@ function sortProjetosPorPublicacao(a: Projeto, b: Projeto) {
   return (b.criado_em || '').localeCompare(a.criado_em || '');
 }
 
+type SortKey = 'recentes' | 'antigos' | 'titulo';
+
+// DE-PARA-v2 §1: ordenação da grid, ausente na implementação. "Mais
+// recentes" é o sort_key default (o mesmo já aplicado incondicionalmente
+// antes desta mudança) — os demais são o mínimo útil pra tornar o seletor
+// funcional sem inventar critério que a PROD não descreveu.
+const SORTS: Array<{ key: SortKey; label: string; compare: (a: Projeto, b: Projeto) => number }> = [
+  { key: 'recentes', label: 'Mais recentes', compare: sortProjetosPorPublicacao },
+  { key: 'antigos', label: 'Mais antigos', compare: (a, b) => -sortProjetosPorPublicacao(a, b) },
+  {
+    key: 'titulo',
+    label: 'Título (A-Z)',
+    compare: (a, b) => a.titulo_live.localeCompare(b.titulo_live, 'pt-BR'),
+  },
+];
+
 export function ProjetosPage() {
   const navigate = useNavigate();
   const { notify } = useToast();
@@ -77,6 +102,7 @@ export function ProjetosPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('todos');
   const [query, setQuery] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('recentes');
 
   const allProjects = useMemo(() => projetos ?? [], [projetos]);
   const falhadosVisivel = useMemo(() => temFalhados(allProjects), [allProjects]);
@@ -84,18 +110,17 @@ export function ProjetosPage() {
   const filteredProjects = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     const activeFilter = FILTERS.find((item) => item.key === filter) ?? FILTERS[0];
+    const compare = SORTS.find((item) => item.key === sortKey)?.compare ?? sortProjetosPorPublicacao;
 
     return allProjects
       .filter(activeFilter.matches)
       .filter((projeto) => {
         if (!normalizedQuery) return true;
-        return `${projeto.titulo_live} ${projeto.canal_origem}`
-          .toLowerCase()
-          .includes(normalizedQuery);
+        return projeto.titulo_live.toLowerCase().includes(normalizedQuery);
       })
       .slice()
-      .sort(sortProjetosPorPublicacao);
-  }, [filter, query, allProjects]);
+      .sort(compare);
+  }, [filter, query, sortKey, allProjects]);
 
   const counts = useMemo(
     () =>
@@ -110,87 +135,134 @@ export function ProjetosPage() {
 
   return (
     <div className="flex min-h-full flex-col gap-3 p-4">
-      {/* Header compacto do Workbench (protótipo §Biblioteca): título +
-          chips de filtro com contagem + busca + ações na mesma linha. */}
-      <header className="flex flex-wrap items-center gap-2">
-        <h1 className="text-[15px] font-extrabold">Biblioteca</h1>
+      {/* Header editorial (DE-PARA-v2 §1): eyebrow + contador (linha 1, com
+          as ações primárias), headline serif itálico (linha 2), busca larga
+          + filtros + ordenação (linha 3) — restaura o cabeçalho de PROD que
+          a versão compacta tinha perdido. */}
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-baseline gap-2">
+            <span className="font-code text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
+              Biblioteca de lives
+            </span>
+            <span className="text-[var(--wb-text-dim)]" aria-hidden>
+              —
+            </span>
+            <span className="text-[11px] font-semibold text-[var(--wb-text-dim)]">
+              {allProjects.length} {allProjects.length === 1 ? 'projeto' : 'projetos'}
+            </span>
+          </div>
 
-        <div className="ml-2 flex flex-wrap gap-1.5">
-          {FILTERS.map((item) => (
+          {isFetching && !isLoading && (
+            <Loader2
+              size={14}
+              className="animate-spin text-[var(--wb-text-dim)]"
+              aria-label="Atualizando"
+            />
+          )}
+
+          <div className="flex-1" />
+
+          {falhadosVisivel && (
             <button
-              key={item.key}
               type="button"
-              onClick={() => setFilter(item.key)}
-              className={
-                item.key === filter
-                  ? 'rounded-md bg-[var(--wb-accent)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-accent-fg)]'
-                  : 'rounded-md bg-[var(--wb-bg-inset)] px-2.5 py-1 text-[10px] font-semibold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]'
+              onClick={() =>
+                reiniciar.mutate(undefined, {
+                  onSuccess: (data) => {
+                    if (data.total === 0) {
+                      notify('Nenhum projeto com falha de download para reiniciar.', {
+                        tone: 'info',
+                      });
+                    } else {
+                      notify(`${data.total} download(s) reiniciado(s).`, { tone: 'success' });
+                    }
+                  },
+                  onError: (err) =>
+                    notify(err instanceof Error ? err.message : 'Erro ao reiniciar downloads.', {
+                      tone: 'error',
+                    }),
+                })
               }
+              disabled={reiniciar.isPending}
+              className="flex items-center gap-1.5 rounded-lg bg-[var(--wb-warn-soft)] px-3 py-1.5 text-[10.5px] font-bold text-[var(--wb-warn)] disabled:opacity-60"
             >
-              {item.label} {counts[item.key]}
+              {reiniciar.isPending ? (
+                <Loader2 size={12} className="animate-spin" aria-hidden />
+              ) : (
+                <RefreshCw size={12} aria-hidden />
+              )}
+              reiniciar falhados
             </button>
-          ))}
+          )}
+          <Button variant="outline" size="sm" onClick={onExplorar}>
+            <Youtube />
+            Explorar YouTube
+          </Button>
+          <Button size="sm" onClick={onCreate}>
+            <Plus />
+            Novo projeto
+          </Button>
         </div>
 
-        {isFetching && !isLoading && (
-          <Loader2
-            size={14}
-            className="animate-spin text-[var(--wb-text-dim)]"
-            aria-label="Atualizando"
-          />
-        )}
+        <h1 className="font-editorial text-[32px] italic leading-tight text-[var(--wb-text)]">
+          Cada live, um arquivo de cortes possíveis.
+        </h1>
 
-        <div className="flex-1" />
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex h-8 w-[280px] flex-none items-center gap-2 rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 text-xs text-[var(--wb-text-mute)]">
+            <Search size={13} aria-hidden />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar projetos…"
+              className="min-w-0 flex-1 bg-transparent text-[var(--wb-text)] outline-none placeholder:text-[var(--wb-text-dim)]"
+            />
+          </label>
 
-        <label className="flex h-8 min-w-[190px] items-center gap-2 rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 text-xs text-[var(--wb-text-mute)]">
-          <Search size={13} aria-hidden />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="buscar live ou canal…"
-            className="min-w-0 flex-1 bg-transparent text-[var(--wb-text)] outline-none placeholder:text-[var(--wb-text-dim)]"
-          />
-        </label>
+          <div className="flex flex-wrap gap-1.5">
+            {FILTERS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setFilter(item.key)}
+                className={
+                  item.key === filter
+                    ? 'rounded-md bg-[var(--wb-accent)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-accent-fg)]'
+                    : 'rounded-md bg-[var(--wb-bg-inset)] px-2.5 py-1 text-[10px] font-semibold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]'
+                }
+              >
+                {item.label} {counts[item.key]}
+              </button>
+            ))}
+          </div>
 
-        {falhadosVisivel && (
-          <button
-            type="button"
-            onClick={() =>
-              reiniciar.mutate(undefined, {
-                onSuccess: (data) => {
-                  if (data.total === 0) {
-                    notify('Nenhum projeto com falha de download para reiniciar.', {
-                      tone: 'info',
-                    });
-                  } else {
-                    notify(`${data.total} download(s) reiniciado(s).`, { tone: 'success' });
-                  }
-                },
-                onError: (err) =>
-                  notify(err instanceof Error ? err.message : 'Erro ao reiniciar downloads.', {
-                    tone: 'error',
-                  }),
-              })
-            }
-            disabled={reiniciar.isPending}
-            className="flex items-center gap-1.5 rounded-lg bg-[var(--wb-warn-soft)] px-3 py-1.5 text-[10.5px] font-bold text-[var(--wb-warn)] disabled:opacity-60"
-          >
-            {reiniciar.isPending ? (
-              <Loader2 size={12} className="animate-spin" aria-hidden />
-            ) : (
-              <RefreshCw size={12} aria-hidden />
-            )}
-            reiniciar falhados
-          </button>
-        )}
-        <Button variant="outline" size="sm" onClick={onExplorar}>
-          <Youtube />
-          Explorar YouTube
-        </Button>
-        <Button size="sm" onClick={onCreate}>
-          <Plus />
-          Novo projeto
-        </Button>
+          <div className="flex-1" />
+
+          <div className="relative">
+            <select
+              value={sortKey}
+              onChange={(event) => setSortKey(event.target.value as SortKey)}
+              aria-label="Ordenar projetos"
+              className="h-8 appearance-none rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] py-1 pl-7 pr-7 text-[11px] font-semibold text-[var(--wb-text)] outline-none"
+            >
+              {SORTS.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <SlidersHorizontal
+              size={12}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--wb-text-dim)]"
+              aria-hidden
+            />
+            <ChevronDown
+              size={12}
+              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--wb-text-dim)]"
+              aria-hidden
+            />
+          </div>
+        </div>
       </header>
 
       <NovoProjetoForm open={formOpen} onClose={() => setFormOpen(false)} />
