@@ -1,15 +1,18 @@
 import { Suspense, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
 import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
+import { finalReviewPath, postProductionPath } from '@/features/post-production/postProductionNavigation';
 import { GlobalQueue } from './GlobalQueue';
 import { ProjectRail } from './ProjectRail';
 import { TabStrip } from './TabStrip';
 import { WorkbenchPanelsProvider, useWorkbenchPanelsContext } from './WorkbenchPanelsProvider';
 import { WorkbenchQueueProvider } from './useWorkbenchQueue';
 import { WorkbenchTabsProvider, useWorkbenchTabsContext } from './WorkbenchTabsProvider';
-import { routeToTab, tabPath } from './workbenchRoutes';
+import { ETAPA_DOT_TOKENS, ETAPA_LABELS, routeToTab, tabPath } from './workbenchRoutes';
+import type { WorkbenchEtapa } from './useWorkbenchTabs';
 
 // ─────────────────────────────────────────────────────────────
 // WorkbenchShell — shell novo (DE-PARA §0): tab strip no topo,
@@ -75,6 +78,67 @@ function ShellShortcuts() {
   return null;
 }
 
+const REGRA0_ETAPAS: readonly WorkbenchEtapa[] = ['workspace', 'cortes', 'pos', 'metadados', 'revisao'];
+
+// Regra 0 (telas/README.md): barra de etapas do projeto/corte, sempre
+// visível abaixo do TabStrip — 5 destinos do pipeline, um único ponto de
+// implementação para as 5 telas (não duplica lógica de rota: reaproveita
+// tabPath/postProductionPath/finalReviewPath já usados pelo resto do shell).
+function WorkbenchStageBar() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
+  const { activeTab } = useWorkbenchTabsContext();
+
+  const atual = routeToTab(pathname);
+  const corteDaRota = atual?.corteId ?? searchParams.get('corte') ?? undefined;
+  const corteId =
+    corteDaRota ?? (activeTab?.projetoId === atual?.projetoId ? activeTab?.corteId : undefined);
+
+  if (!atual) return null;
+  const { projetoId, etapa: etapaAtiva } = atual;
+
+  const irPara = (etapa: WorkbenchEtapa) => {
+    if (etapa === 'pos' && corteId) return navigate(postProductionPath(projetoId, corteId));
+    if (etapa === 'revisao' && corteId) return navigate(finalReviewPath(projetoId, corteId));
+    navigate(tabPath({ projetoId, etapa, corteId: etapa === 'cortes' ? corteId : undefined }));
+  };
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Etapas do projeto"
+      className="flex flex-none items-center gap-1 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-strip)] px-3 py-1.5"
+    >
+      {REGRA0_ETAPAS.map((etapa) => {
+        const ativa = etapa === etapaAtiva;
+        return (
+          <button
+            key={etapa}
+            type="button"
+            role="tab"
+            aria-selected={ativa}
+            onClick={() => irPara(etapa)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-[7px] border-l-[3px] px-2.5 py-1 text-[11px] font-semibold transition-colors',
+              ativa
+                ? 'border-l-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-text)]'
+                : 'border-l-transparent text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]',
+            )}
+          >
+            <span
+              className="h-1.5 w-1.5 flex-none rounded-full"
+              style={{ background: ETAPA_DOT_TOKENS[etapa] }}
+              aria-hidden
+            />
+            {ETAPA_LABELS[etapa]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function WorkbenchShell() {
   return (
     <WorkbenchPanelsProvider>
@@ -84,6 +148,7 @@ export function WorkbenchShell() {
           <ShellShortcuts />
           <div className="flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]">
             <TabStrip />
+            <WorkbenchStageBar />
             <div className="flex min-h-0 flex-1">
               <ProjectRail />
               <main className="min-w-0 flex-1 overflow-y-auto">
