@@ -103,13 +103,16 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }
               borderColor: `color-mix(in oklch, ${meta.color} 50%, var(--wb-border))`,
               color: meta.color,
             }}
-            aria-hidden
+            title={meta.label}
           >
             <SceneTypeIcon tipo={cena.tipo} size={14} />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="truncate text-[12.5px] font-semibold text-[var(--wb-text)]">
+              <span
+                className="truncate text-[12.5px] font-semibold text-[var(--wb-text)]"
+                title={cena.texto || meta.label}
+              >
                 {cena.texto || meta.label}
               </span>
               {semRetrato && (
@@ -123,23 +126,19 @@ export function CenaItem({ cena, ativa, sobreposta, onChange, onRemove, onSeek }
                 </Tooltip>
               )}
             </div>
+            {/* Intervalo numa única linha mono (DE-PARA-v2 §4). O chip de
+                tipo saiu daqui — em ~124px disponíveis ele não convivia com
+                o intervalo pros tipos de nome longo ("Card de informacao");
+                o ícone à esquerda (cor + forma por tipo, tooltip com o nome)
+                já é a identificação primária, sem duplicar em texto. */}
             <div
-              className="mt-0.5 font-code text-[10px] text-[var(--wb-text-dim)]"
+              className="mt-0.5 truncate font-code text-[10px] text-[var(--wb-text-dim)]"
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
               {cena.inicio.toFixed(1)}s → {cena.fim.toFixed(1)}s ·{' '}
               {(cena.fim - cena.inicio).toFixed(1)}s
             </div>
           </div>
-          <span
-            className="rounded-full px-2 py-0.5 font-code text-[9px] font-bold uppercase tracking-[0.06em]"
-            style={{
-              background: `color-mix(in oklch, ${meta.color} 14%, transparent)`,
-              color: meta.color,
-            }}
-          >
-            {meta.label}
-          </span>
         </button>
         <Tooltip label="Remover cena" side="left">
           <button
