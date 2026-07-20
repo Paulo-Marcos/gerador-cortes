@@ -14,6 +14,7 @@ import {
 import { AdicionarCorteModal } from '@/features/editor/AdicionarCorteModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Modal } from '@/components/ui/modal';
 import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
@@ -319,69 +320,78 @@ export function ProjetoDetalhePage() {
             )}
           </div>
 
-          {/* Ações globais */}
+          {/* Ações globais — padrão híbrido do design (README-v2 item 3):
+              secundárias viram ícone, texto só no que é primário/frequente. */}
           <div className="flex flex-wrap items-center gap-1.5">
             {projeto.data?.youtube_url && (
               <Tooltip label="Abrir vídeo original no YouTube" side="bottom">
-                <Button asChild variant="ghost">
-                  <a href={projeto.data.youtube_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink size={16} />
-                    Abrir no YouTube
-                  </a>
-                </Button>
+                <IconButton
+                  size="toolbar-sm"
+                  variant="inset"
+                  aria-label="Abrir no YouTube"
+                  onClick={() =>
+                    window.open(projeto.data?.youtube_url ?? '', '_blank', 'noopener,noreferrer')
+                  }
+                >
+                  <ExternalLink />
+                </IconButton>
               </Tooltip>
             )}
             <Tooltip
-              label="Re-baixa as legendas no formato json3 (sem duplicacao do VTT) e re-sincroniza todos os cortes."
+              label="Refazer transcrição — re-baixa as legendas no formato json3 (sem duplicacao do VTT) e re-sincroniza todos os cortes."
               side="bottom"
             >
-              <Button
-                variant="outline"
+              <IconButton
+                size="toolbar-sm"
+                variant="inset"
+                aria-label="Refazer transcricao"
                 onClick={dispararRefazerTranscricao}
                 disabled={refazerTranscricao.isPending}
               >
                 {refazerTranscricao.isPending ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 className="animate-spin" />
                 ) : (
-                  <RefreshCcw size={16} />
+                  <RefreshCcw />
                 )}
-                Refazer transcricao
-              </Button>
+              </IconButton>
             </Tooltip>
-            <Button variant="outline" onClick={() => setAnaliseOpen(true)}>
-              <Brain size={16} />
-              Análise IA
-            </Button>
             <Tooltip
-              label="Ver por que a IA escolheu cada corte e o que foi descartado."
+              label="Auditar análise — ver por que a IA escolheu cada corte e o que foi descartado."
               side="bottom"
             >
-              <Button
-                variant="outline"
+              <IconButton
+                size="toolbar-sm"
+                variant="inset"
+                aria-label="Auditar análise"
                 onClick={() => setAuditoriaOpen(true)}
                 disabled={cortes.length === 0}
               >
-                <ClipboardCheck size={16} />
-                Auditar análise
-              </Button>
+                <ClipboardCheck />
+              </IconButton>
             </Tooltip>
             <Tooltip
-              label="Gera trechos a remover (IA) para todos os cortes do projeto. Roda em segundo plano, corte a corte, e só acrescenta aos já marcados."
+              label="Gerar trechos a remover (IA) para todos os cortes. Roda em segundo plano, corte a corte, e só acrescenta aos já marcados."
               side="bottom"
             >
-              <Button
-                variant="outline"
+              <IconButton
+                size="toolbar-sm"
+                variant="inset"
+                aria-label="Gerar trechos (todos os cortes)"
                 onClick={dispararAnalisarDesviosTodos}
                 disabled={cortes.length === 0 || analisarDesviosTodos.disparado}
               >
                 {analisarDesviosTodos.disparado ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 className="animate-spin" />
                 ) : (
-                  <Scissors size={16} />
+                  <Scissors />
                 )}
-                Gerar trechos (todos os cortes)
-              </Button>
+              </IconButton>
             </Tooltip>
+            <div className="h-6 w-px bg-[var(--wb-border)]" aria-hidden />
+            <Button variant="outline" onClick={() => setAnaliseOpen(true)}>
+              <Brain size={16} />
+              Análise IA
+            </Button>
             <Button onClick={() => setPublicarOpen(true)} disabled={cortesProntos.length === 0}>
               <Rocket size={16} />
               Publicar em massa

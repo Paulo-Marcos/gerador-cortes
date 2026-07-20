@@ -24,8 +24,10 @@ export function ClaudeIcon({ size = 14, className }: { size?: number; className?
 
 type ClaudeAiButtonSize = 'sm' | 'md';
 
-export interface ClaudeAiButtonProps
-  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+export interface ClaudeAiButtonProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'children'
+> {
   pending?: boolean;
   size?: ClaudeAiButtonSize;
   /** Texto customizado. Padrão: "AI". */
@@ -80,7 +82,7 @@ export const ClaudeAiButton = React.forwardRef<HTMLButtonElement, ClaudeAiButton
         disabled={disabled || pending}
         className={cn(
           'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] font-semibold text-white transition-colors',
-          'shadow-[var(--wb-shadow-btn)] hover:brightness-110 active:brightness-100',
+          'shadow-[shadow:var(--wb-shadow-btn)] hover:brightness-110 active:brightness-100',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--wb-focus,#D97757)]',
           'disabled:pointer-events-none disabled:opacity-60',
           '[&_svg]:shrink-0',

@@ -366,7 +366,8 @@ export function PostProductionPage() {
       (renderFinalRunning ? progressFromPipelineArtifacts(pipelineStatus.data?.fases) : 0),
   );
 
-  if (!projetoId) return <div className="p-6 text-sm text-error">Projeto nao encontrado.</div>;
+  if (!projetoId)
+    return <div className="p-6 text-sm text-[var(--wb-err)]">Projeto nao encontrado.</div>;
 
   return (
     <div className="flex h-screen min-h-0 overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]">
@@ -451,7 +452,7 @@ export function PostProductionPage() {
                 <Loader2 className="mx-auto animate-spin text-[var(--wb-text-dim)]" />
               ) : exportQuery.isError ? (
                 <>
-                  <p className="font-editorial text-2xl font-medium text-error">
+                  <p className="font-editorial text-2xl font-medium text-[var(--wb-err)]">
                     Erro ao carregar status de export
                   </p>
                   <p className="mt-1 text-sm text-[var(--wb-text-mute)]">
@@ -534,7 +535,7 @@ export function PostProductionPage() {
         {validacaoPublicacao ? (
           <div className="space-y-2">
             {validacaoPublicacao.bloqueado && (
-              <p className="text-sm font-medium text-error">
+              <p className="text-sm font-medium text-[var(--wb-err)]">
                 Publicação bloqueada — ajuste os itens abaixo e revalide:
               </p>
             )}
@@ -547,19 +548,21 @@ export function PostProductionPage() {
                   estado === 'ok'
                     ? 'text-success'
                     : estado === 'erro'
-                      ? 'text-error'
+                      ? 'text-[var(--wb-err)]'
                       : 'text-warning';
                 return (
                   <li key={c.id} className="flex items-start gap-2 text-sm">
                     <span aria-hidden className={cor}>
                       {marca}
                     </span>
-                    <span className="text-text-100">
+                    <span className="text-[var(--wb-text)]">
                       {c.label}
                       {!c.ok && !c.bloqueante ? (
-                        <span className="text-text-300"> (opcional)</span>
+                        <span className="text-[var(--wb-text-mute)]"> (opcional)</span>
                       ) : null}
-                      {c.detalhe ? <span className="text-text-300"> — {c.detalhe}</span> : null}
+                      {c.detalhe ? (
+                        <span className="text-[var(--wb-text-mute)]"> — {c.detalhe}</span>
+                      ) : null}
                     </span>
                   </li>
                 );
@@ -567,7 +570,7 @@ export function PostProductionPage() {
             </ul>
           </div>
         ) : (
-          <p className="text-sm text-text-300">
+          <p className="text-sm text-[var(--wb-text-mute)]">
             Serão verificados: vídeo final, duração (trechos aplicados), cenas, título, descrição,
             tags e thumbnail. Clique em <strong>Confirmar e publicar</strong> para validar e subir.
           </p>

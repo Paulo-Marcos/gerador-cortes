@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClaudeAiButton } from '@/components/ui/claude-button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Modal } from '@/components/ui/modal';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
@@ -56,20 +57,28 @@ export function MetadataCard({
   status,
   innerRef,
   onMetaLoaded,
+  variant = 'card',
+  onRequestClose,
 }: {
   projetoId: string;
   cut: Corte;
   status?: StatusExportCorte;
   innerRef?: (element: HTMLElement | null) => void;
   onMetaLoaded?: (corteId: string, meta: MetadadoCorte) => void;
+  /** 'modal' = corpo denso do protótipo (AUDITORIA-v3 §6): sem header próprio,
+      labels mono com contador à direita, descrição+tags sempre visíveis. */
+  variant?: 'card' | 'modal';
+  onRequestClose?: () => void;
 }) {
+  const modal = variant === 'modal';
   const { notify } = useToast();
   const queryClient = useQueryClient();
-  const [expanded, setExpanded] = useState(cut.numero <= 2);
+  const [expanded, setExpanded] = useState(modal || cut.numero <= 2);
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
   const [showThumbSuggestions, setShowThumbSuggestions] = useState(false);
-  const [showDescription, setShowDescription] = useState(false);
-  const [showTags, setShowTags] = useState(false);
+  const [showDescription, setShowDescription] = useState(modal);
+  const [showTags, setShowTags] = useState(modal);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [manualKind, setManualKind] = useState<PromptModalKind | null>(null);
   const [title, setTitle] = useState('');
   const [coverText, setCoverText] = useState('');
@@ -103,6 +112,7 @@ export function MetadataCard({
     mutationFn: (patch: MetadadoPatch) => api.atualizarMetadado(cut.id, patch),
     onSuccess: () => {
       invalidate();
+      setLastSavedAt(new Date());
       notify('Metadados salvos.', { tone: 'success' });
     },
     onError: (error) =>
@@ -257,147 +267,155 @@ export function MetadataCard({
       ref={innerRef}
       tabIndex={-1}
       onPaste={handlePasteImage}
-      className="scroll-mt-[132px] overflow-visible rounded-[12px] border border-[var(--wb-border-soft)] bg-[color-mix(in_oklch,var(--wb-bg-card)_88%,var(--wb-bg-panel))] shadow-[0_1px_2px_rgba(20,15,10,0.05),0_10px_26px_rgba(20,15,10,0.07)] outline-none focus-visible:border-[var(--wb-accent)]"
+      className={cn(
+        'outline-none',
+        !modal &&
+          'scroll-mt-[132px] overflow-visible rounded-[12px] border border-[var(--wb-border-soft)] bg-[color-mix(in_oklch,var(--wb-bg-card)_88%,var(--wb-bg-panel))] shadow-[0_1px_2px_rgba(20,15,10,0.05),0_10px_26px_rgba(20,15,10,0.07)] focus-visible:border-[var(--wb-accent)]',
+      )}
     >
-      <header
-        onClick={() => setExpanded((current) => !current)}
-        className={cn(
-          'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 bg-[color-mix(in_oklch,var(--wb-bg-inset)_52%,var(--wb-bg-card))] px-4 py-3',
-          expanded && 'border-b border-[var(--wb-border-soft)]',
-        )}
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="shrink-0 font-code font-bold text-[var(--wb-text-dim)]">
-            #{cut.numero}
-          </span>
-          {generated && (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.');
-              }}
-              className="aspect-video w-[74px] shrink-0 overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)]"
-            >
-              {thumbnailUrl ? (
-                <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <ThumbnailPlaceholder hue={hueFromCut(cut)} />
-              )}
-            </button>
+      {!modal && (
+        <header
+          onClick={() => setExpanded((current) => !current)}
+          className={cn(
+            'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 bg-[color-mix(in_oklch,var(--wb-bg-inset)_52%,var(--wb-bg-card))] px-4 py-3',
+            expanded && 'border-b border-[var(--wb-border-soft)]',
           )}
-          <div className="min-w-0">
-            <h3 className="truncate font-editorial text-[25px] font-medium leading-[1.05] text-[var(--wb-text)]">
-              {generated ? title || cut.titulo_proposto : cut.titulo_proposto}
-            </h3>
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="shrink-0 font-code font-bold text-[var(--wb-text-dim)]">
+              #{cut.numero}
+            </span>
             {generated && (
-              <div className="mt-1 flex items-center gap-2 text-xs text-[var(--wb-text-mute)]">
-                <span className="font-code text-[var(--wb-text-dim)]">
-                  {coverText || 'Thumbnail'}
-                </span>
-                {promptReady && <Sparkles size={12} className="text-warning" aria-label="prompt" />}
-                {thumbnailReady && (
-                  <Check size={12} className="text-success" aria-label="thumbnail" />
-                )}
-                {Boolean(cut.is_leitura) && (
-                  <BookOpen size={12} className="text-info" aria-label="leitura" />
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          {generated && (
-            <>
-              <IconAction
-                title="Descricao"
-                active={showDescription}
-                tone="oklch(0.55 0.12 245)"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setExpanded(true);
-                  setShowDescription((current) => !current);
-                }}
-              >
-                <FileText />
-              </IconAction>
-              <IconAction
-                title="Tags"
-                active={showTags}
-                tone="oklch(0.48 0.10 145)"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setExpanded(true);
-                  setShowTags((current) => !current);
-                }}
-              >
-                <Tag />
-              </IconAction>
-              <IconAction
-                title="Copiar prompt thumbnail"
-                active={promptReady}
-                tone="oklch(0.62 0.18 38)"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void copy(meta?.prompt_thumbnail ?? '', 'Prompt copiado.');
-                }}
-              >
-                <Clipboard />
-              </IconAction>
-              <label
-                title="Subir thumbnail"
-                onClick={(event) => event.stopPropagation()}
-                className={cn(
-                  'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border bg-[var(--wb-bg-panel)] text-[var(--wb-text-mute)]',
-                  thumbnailReady && 'border-info text-info',
-                )}
-              >
-                <UploadCloud size={14} aria-hidden />
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) uploadThumbnail.mutate(file);
-                    event.currentTarget.value = '';
-                  }}
-                />
-              </label>
-              <IconAction
-                title="Copiar pasta da thumbnail"
-                tone="oklch(0.53 0.12 55)"
+              <button
+                type="button"
                 onClick={(event) => {
                   event.stopPropagation();
                   void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.');
                 }}
+                className="aspect-video w-[74px] shrink-0 overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)]"
               >
-                <Folder />
-              </IconAction>
-            </>
-          )}
-          <span
-            className={cn(
-              'inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-[11px] font-bold',
-              generated
-                ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-                : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text-dim)]',
+                {thumbnailUrl ? (
+                  <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <ThumbnailPlaceholder hue={hueFromCut(cut)} />
+                )}
+              </button>
             )}
-          >
+            <div className="min-w-0">
+              <h3 className="truncate font-editorial text-[25px] font-medium leading-[1.05] text-[var(--wb-text)]">
+                {generated ? title || cut.titulo_proposto : cut.titulo_proposto}
+              </h3>
+              {generated && (
+                <div className="mt-1 flex items-center gap-2 text-xs text-[var(--wb-text-mute)]">
+                  <span className="font-code text-[var(--wb-text-dim)]">
+                    {coverText || 'Thumbnail'}
+                  </span>
+                  {promptReady && (
+                    <Sparkles size={12} className="text-warning" aria-label="prompt" />
+                  )}
+                  {thumbnailReady && (
+                    <Check size={12} className="text-success" aria-label="thumbnail" />
+                  )}
+                  {Boolean(cut.is_leitura) && (
+                    <BookOpen size={12} className="text-info" aria-label="leitura" />
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {generated && (
+              <>
+                <IconAction
+                  title="Descricao"
+                  active={showDescription}
+                  tone="oklch(0.55 0.12 245)"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setExpanded(true);
+                    setShowDescription((current) => !current);
+                  }}
+                >
+                  <FileText />
+                </IconAction>
+                <IconAction
+                  title="Tags"
+                  active={showTags}
+                  tone="oklch(0.48 0.10 145)"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setExpanded(true);
+                    setShowTags((current) => !current);
+                  }}
+                >
+                  <Tag />
+                </IconAction>
+                <IconAction
+                  title="Copiar prompt thumbnail"
+                  active={promptReady}
+                  tone="oklch(0.62 0.18 38)"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void copy(meta?.prompt_thumbnail ?? '', 'Prompt copiado.');
+                  }}
+                >
+                  <Clipboard />
+                </IconAction>
+                <label
+                  title="Subir thumbnail"
+                  onClick={(event) => event.stopPropagation()}
+                  className={cn(
+                    'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border bg-[var(--wb-bg-panel)] text-[var(--wb-text-mute)]',
+                    thumbnailReady && 'border-info text-info',
+                  )}
+                >
+                  <UploadCloud size={14} aria-hidden />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) uploadThumbnail.mutate(file);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <IconAction
+                  title="Copiar pasta da thumbnail"
+                  tone="oklch(0.53 0.12 55)"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.');
+                  }}
+                >
+                  <Folder />
+                </IconAction>
+              </>
+            )}
             <span
               className={cn(
-                'h-1.5 w-1.5 rounded-full',
-                generated ? 'bg-[var(--wb-accent)]' : 'bg-[var(--wb-text-dim)]',
+                'inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-[11px] font-bold',
+                generated
+                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
+                  : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text-dim)]',
               )}
-            />
-            {generated ? 'metadados' : 'pendente'}
-          </span>
-          <IconAction title={expanded ? 'Recolher' : 'Expandir'} active={expanded}>
-            <ChevronDown className={expanded ? 'rotate-180' : ''} />
-          </IconAction>
-        </div>
-      </header>
+            >
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 rounded-full',
+                  generated ? 'bg-[var(--wb-accent)]' : 'bg-[var(--wb-text-dim)]',
+                )}
+              />
+              {generated ? 'metadados' : 'pendente'}
+            </span>
+            <IconAction title={expanded ? 'Recolher' : 'Expandir'} active={expanded}>
+              <ChevronDown className={expanded ? 'rotate-180' : ''} />
+            </IconAction>
+          </div>
+        </header>
+      )}
 
       {expanded && metaQuery.isLoading && (
         <div className="grid min-h-[180px] place-items-center">
@@ -435,7 +453,224 @@ export function MetadataCard({
         </section>
       )}
 
-      {expanded && generated && (
+      {expanded && generated && modal && (
+        <section className="grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_200px]">
+          <div className="flex min-w-0 flex-col gap-3">
+            <div>
+              <ModalFieldLabel
+                label="Título YouTube"
+                counter={`${title.length}/100`}
+                over={title.length > 100}
+              />
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                onBlur={() => save({ titulo_youtube: title })}
+                className="h-10 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[12.5px] font-semibold outline-none focus:border-[var(--wb-accent)]"
+              />
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {titleSuggestions.map((suggestion) => (
+                  <ModalChip
+                    key={`${cut.id}-title-${suggestion}`}
+                    active={suggestion === title}
+                    onClick={() => {
+                      const nextTitle = withReadingTitlePrefix(suggestion);
+                      setTitle(nextTitle);
+                      save({ titulo_youtube: nextTitle });
+                    }}
+                  >
+                    {suggestion}
+                  </ModalChip>
+                ))}
+                <ModalChip
+                  accent
+                  pending={generateMetadataClaude.isPending}
+                  onClick={() => generateMetadataClaude.mutate()}
+                >
+                  ✦ regerar por IA
+                </ModalChip>
+                <ModalChip onClick={() => setManualKind('metadata')}>manual</ModalChip>
+              </div>
+            </div>
+
+            <div>
+              <ModalFieldLabel
+                label="Texto da capa"
+                counter={`${coverText.length}/28`}
+                over={coverText.length > 28}
+              />
+              <input
+                value={coverText}
+                onChange={(event) => setCoverText(event.target.value)}
+                onBlur={() => save({ texto_capa: coverText })}
+                placeholder="Ex: JUSTICA EM SI"
+                className="h-10 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[12.5px] font-extrabold outline-none focus:border-[var(--wb-accent)]"
+              />
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {thumbSuggestions.map((suggestion) => (
+                  <ModalChip
+                    key={`${cut.id}-thumb-${suggestion}`}
+                    active={suggestion === coverText}
+                    onClick={() => {
+                      const nextCoverText = withCoverEmojis(suggestion);
+                      setCoverText(nextCoverText);
+                      save({ texto_capa: nextCoverText });
+                    }}
+                  >
+                    {suggestion}
+                  </ModalChip>
+                ))}
+                <ModalChip
+                  accent
+                  pending={generatePromptThumbnailClaude.isPending}
+                  onClick={() => generatePromptThumbnailClaude.mutate()}
+                >
+                  ✦ {promptReady ? 'regerar' : 'gerar'} prompt thumbnail
+                </ModalChip>
+                <ModalChip onClick={() => setManualKind('thumbnail-agent-livre')}>manual</ModalChip>
+              </div>
+            </div>
+
+            <div className="grid gap-2.5 md:grid-cols-2">
+              <div>
+                <ModalFieldLabel label="Descrição" />
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  onBlur={() => save({ descricao_youtube: sanitizeDescription(description) })}
+                  rows={4}
+                  className="min-h-[84px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 text-[11px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
+                />
+              </div>
+              <div>
+                <ModalFieldLabel label="Tags" />
+                <textarea
+                  value={tagsText}
+                  onChange={(event) => setTagsText(event.target.value)}
+                  onBlur={() => save({ tags_youtube: splitTags(tagsText) })}
+                  rows={4}
+                  className="min-h-[84px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 font-code text-[11px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
+                />
+              </div>
+            </div>
+
+            {/* F-058: influência manual do editor no prompt da thumbnail. */}
+            <ThumbnailHintsEditor corteId={cut.id} initialValue={cut.hints_thumbnail} />
+          </div>
+
+          <aside className="grid content-start gap-2.5">
+            <button
+              type="button"
+              onClick={() =>
+                void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.')
+              }
+              className="aspect-video overflow-hidden rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)]"
+            >
+              {thumbnailUrl ? (
+                <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="grid h-full place-items-center text-xs text-[var(--wb-text-dim)]">
+                  Sem thumbnail
+                </div>
+              )}
+            </button>
+            <Button
+              type="button"
+              onClick={() => generateThumbnail.mutate()}
+              disabled={!promptReady || generateThumbnail.isPending}
+            >
+              {generateThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
+              Gerar thumbnail
+            </Button>
+            <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-4 text-sm font-semibold text-[var(--wb-text)] hover:border-[var(--wb-text-dim)]">
+              <UploadCloud size={16} aria-hidden />
+              Trocar thumbnail
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) uploadThumbnail.mutate(file);
+                  event.currentTarget.value = '';
+                }}
+              />
+            </label>
+            <p className="text-center font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+              ou cole com Ctrl+V
+            </p>
+            {thumbnailUrl && (
+              <div className="flex items-center justify-center gap-1.5">
+                <IconButton
+                  size="sm"
+                  variant="inset"
+                  aria-label="Copiar pasta da thumbnail"
+                  title="Copiar pasta da thumbnail"
+                  onClick={() => void copy(meta?.thumbnail_path ?? '', 'Endereco copiado.')}
+                >
+                  <Folder />
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  variant="inset"
+                  aria-label="Comprimir thumbnail"
+                  title="Comprimir thumbnail"
+                  onClick={() => compressThumbnail.mutate()}
+                  disabled={compressThumbnail.isPending}
+                >
+                  {compressThumbnail.isPending ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <RefreshCw />
+                  )}
+                </IconButton>
+                <IconButton
+                  size="sm"
+                  variant="inset"
+                  aria-label="Remover thumbnail"
+                  title="Remover thumbnail (apaga o arquivo)"
+                  onClick={confirmRemoveThumbnail}
+                  disabled={removeThumbnail.isPending}
+                  className="text-[var(--wb-err)] hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
+                >
+                  {removeThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                </IconButton>
+              </div>
+            )}
+            {/* D-066: avaliação do par prompt+imagem (histórico de qualidade). */}
+            {promptReady && <ThumbnailAvaliacaoPanel corteId={cut.id} />}
+          </aside>
+
+          <footer className="-mx-4 -mb-3.5 mt-0.5 flex items-center gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-4 py-2.5 lg:col-span-2">
+            <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
+              {lastSavedAt
+                ? `salvo há ${relativeMinutes(lastSavedAt)}`
+                : 'alterações salvam ao sair do campo'}
+            </span>
+            <span className="flex-1" />
+            <Button type="button" variant="outline" onClick={onRequestClose}>
+              Fechar
+            </Button>
+            <Button
+              type="button"
+              onClick={() =>
+                save({
+                  titulo_youtube: title,
+                  texto_capa: coverText,
+                  descricao_youtube: sanitizeDescription(description),
+                  tags_youtube: splitTags(tagsText),
+                })
+              }
+              disabled={saveMutation.isPending}
+            >
+              {saveMutation.isPending && <Loader2 className="animate-spin" />}
+              Salvar metadados
+            </Button>
+          </footer>
+        </section>
+      )}
+
+      {expanded && generated && !modal && (
         <section className="grid gap-3 bg-[color-mix(in_oklch,var(--wb-bg-card)_72%,var(--wb-bg-panel))] p-3.5 lg:grid-cols-[minmax(0,1fr)_190px]">
           <div className="grid gap-3">
             <FieldHeader
@@ -701,6 +936,76 @@ function IconAction({
       {children}
     </button>
   );
+}
+
+// AUDITORIA-v3 §6 — label de campo do corpo de modal: mono uppercase à
+// esquerda, contador à direita (na MESMA linha, como no protótipo).
+function ModalFieldLabel({
+  label,
+  counter,
+  over,
+}: {
+  label: string;
+  counter?: string;
+  over?: boolean;
+}) {
+  return (
+    <div className="mb-1.5 flex items-center gap-1.5">
+      <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
+        {label}
+      </span>
+      {counter && (
+        <span
+          className={cn(
+            'ml-auto font-code text-[9.5px] font-semibold text-[var(--wb-text-dim)]',
+            over && 'text-[var(--wb-err)]',
+          )}
+        >
+          {counter}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Pill de sugestão/ação do corpo de modal (protótipo: rounded-full, inset;
+// accent = ação de IA).
+function ModalChip({
+  active,
+  accent,
+  pending,
+  onClick,
+  children,
+}: {
+  active?: boolean;
+  accent?: boolean;
+  pending?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      className={cn(
+        'rounded-full px-2.5 py-1 text-left text-[9.5px] font-semibold transition-colors disabled:opacity-60',
+        accent
+          ? 'bg-[var(--wb-accent-soft)] font-bold text-[var(--wb-accent)] hover:opacity-85'
+          : active
+            ? 'bg-[var(--wb-accent)] text-white'
+            : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+      )}
+    >
+      {pending ? '…' : children}
+    </button>
+  );
+}
+
+function relativeMinutes(from: Date) {
+  const min = Math.max(0, Math.round((Date.now() - from.getTime()) / 60000));
+  if (min < 1) return 'instantes';
+  return `${min} min`;
 }
 
 function FieldHeader({

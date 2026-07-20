@@ -93,7 +93,7 @@ export function RankingEmbasamentoPanel({
       <div
         ref={painelRef}
         tabIndex={-1}
-        className="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text)] shadow-[var(--wb-shadow)] outline-none"
+        className="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text)] shadow-[shadow:var(--wb-shadow)] outline-none"
       >
         <header className="flex items-start justify-between gap-3 border-b border-[var(--wb-border-soft)] px-5 py-4">
           <div className="min-w-0 flex-1">

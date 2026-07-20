@@ -299,10 +299,10 @@ export function PadraoAtualChip({
   const tone = TONE[escopo];
   const sub =
     escopo === 'default'
-      ? 'sem padrão salvo — usa fallback padrão da app'
+      ? 'fallback da app'
       : presetNome
         ? `preset "${presetNome}"`
-        : 'personalizado neste nível';
+        : 'personalizado';
   return (
     <span
       className="inline-flex items-center gap-1 truncate rounded-full px-2 py-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.04em]"
@@ -343,7 +343,7 @@ export function InlineModeToggle({
     <div className="flex items-center gap-2 py-1">
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
         <Flag size={10} className="flex-shrink-0 text-[var(--wb-accent)]" />
-        <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+        <span className="whitespace-nowrap font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
           {label}
         </span>
         {herdando && herdandoDe ? (
@@ -366,6 +366,7 @@ export function InlineModeToggle({
               onClick={() => onChange(m)}
               disabled={pending}
               aria-pressed={pressed}
+              title={MODE_LABEL[m]}
               className={cn(
                 'h-6 px-2 font-code text-[10px] font-bold uppercase tracking-[0.04em] transition-colors disabled:cursor-wait disabled:opacity-60',
                 pressed
@@ -373,7 +374,9 @@ export function InlineModeToggle({
                   : 'bg-transparent text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
               )}
             >
-              {MODE_LABEL[m]}
+              {/* Rótulo curto (COMP.) como nos chips de região do protótipo —
+                  o nome completo fica no title. */}
+              {m === 'compartilhada' ? 'COMP.' : MODE_LABEL[m]}
             </button>
           );
         })}
@@ -695,4 +698,3 @@ function TimeField({
     />
   );
 }
-

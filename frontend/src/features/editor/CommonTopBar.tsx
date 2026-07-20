@@ -141,7 +141,7 @@ function MoreMenu({ items }: { items: MoreMenuItem[] }) {
         </button>
       </Tooltip>
       {open && (
-        <div className="absolute right-0 top-10 z-30 flex w-[220px] flex-col gap-0.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[var(--wb-shadow)]">
+        <div className="absolute right-0 top-10 z-30 flex w-[220px] flex-col gap-0.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[shadow:var(--wb-shadow)]">
           {items.map((it, idx) => {
             const Icon = it.icon;
             return (

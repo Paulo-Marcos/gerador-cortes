@@ -66,7 +66,7 @@ function BlocoPortal({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-3.5 text-left shadow-[var(--wb-shadow)] transition-colors hover:border-[var(--wb-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+      className="rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-3.5 text-left shadow-[shadow:var(--wb-shadow)] transition-colors hover:border-[var(--wb-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
     >
       <div className="flex items-center gap-2">
         <span className="text-[16px]" aria-hidden>

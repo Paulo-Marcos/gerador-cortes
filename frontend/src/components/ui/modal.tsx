@@ -73,28 +73,34 @@ export function Modal({
         tabIndex={-1}
         className={cn(
           'relative flex w-full flex-col overflow-hidden rounded-[var(--radius-lg)]',
-          'bg-surface-1 border border-[var(--border)] shadow-lg outline-none',
+          'border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] shadow-[shadow:var(--wb-shadow)] outline-none',
           'max-h-[85vh]',
           SIZES[size],
         )}
       >
-        <header className="flex items-start justify-between gap-3 border-b border-[var(--border)] p-4">
+        <header className="flex items-start justify-between gap-3 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] px-4 py-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-text-100">{title}</h2>
-            {description && <p className="mt-0.5 text-xs text-text-300">{description}</p>}
+            <h2 className="font-editorial text-[17px] font-medium leading-snug text-[var(--wb-text)]">
+              {title}
+            </h2>
+            {description && (
+              <p className="mt-0.5 font-code text-[10.5px] text-[var(--wb-text-dim)]">
+                {description}
+              </p>
+            )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="-m-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-300 hover:bg-bg-800 hover:text-text-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
           >
             <X size={16} />
           </button>
         </header>
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+        <div className="flex-1 overflow-y-auto px-4 py-3.5">{children}</div>
         {footer && (
-          <footer className="flex items-center justify-end gap-2 border-t border-[var(--border)] p-3">
+          <footer className="flex items-center justify-end gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-4 py-2.5">
             {footer}
           </footer>
         )}

@@ -71,7 +71,7 @@ function NovaAbaMenu({ onEscolher }: { onEscolher: (projetoId: string) => void }
         ＋
       </button>
       {aberto && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-[300px] rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2 shadow-[var(--wb-shadow)]">
+        <div className="absolute left-0 top-full z-50 mt-1 w-[300px] rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2 shadow-[shadow:var(--wb-shadow)]">
           <input
             autoFocus
             value={busca}

@@ -157,7 +157,7 @@ export function LiveSearchPage() {
       </header>
 
       <main className="grid flex-1 content-start gap-4 overflow-auto p-5">
-        <section className="grid items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-4 shadow-[var(--wb-shadow)] lg:grid-cols-[minmax(220px,1fr)_minmax(180px,260px)_170px]">
+        <section className="grid items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-4 shadow-[shadow:var(--wb-shadow)] lg:grid-cols-[minmax(220px,1fr)_minmax(180px,260px)_170px]">
           <label className="grid gap-2">
             <span className="font-code text-[11px] font-bold uppercase tracking-[0.09em] text-[var(--wb-text-dim)]">
               Lives apos a data
@@ -290,7 +290,7 @@ function LiveRow({
   return (
     <article
       className={cn(
-        'grid items-center gap-3 rounded-[var(--radius-lg)] border bg-[var(--wb-bg-card)] p-3 shadow-[var(--wb-shadow)] transition-colors',
+        'grid items-center gap-3 rounded-[var(--radius-lg)] border bg-[var(--wb-bg-card)] p-3 shadow-[shadow:var(--wb-shadow)] transition-colors',
         'md:grid-cols-[28px_146px_minmax(0,1fr)_auto]',
         selected
           ? 'border-[var(--wb-accent)] bg-[color-mix(in_oklch,var(--wb-accent)_8%,var(--wb-bg-card))]'

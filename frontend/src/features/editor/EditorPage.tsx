@@ -838,10 +838,14 @@ export function EditorPage() {
                 type="button"
                 onClick={salvarMudancas}
                 disabled={!isDirty || atualizarCorte.isPending}
-                className="flex flex-none items-center gap-1.5 rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-[11px] py-[7px] shadow-[var(--wb-shadow)] disabled:pointer-events-none disabled:opacity-60"
+                className="flex flex-none items-center gap-1.5 rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-[11px] py-[7px] shadow-[shadow:var(--wb-shadow)] disabled:pointer-events-none disabled:opacity-60"
               >
                 {atualizarCorte.isPending ? (
-                  <Loader2 size={11} className="animate-spin text-[var(--wb-text-mute)]" aria-hidden />
+                  <Loader2
+                    size={11}
+                    className="animate-spin text-[var(--wb-text-mute)]"
+                    aria-hidden
+                  />
                 ) : (
                   <span
                     className={cn(
@@ -896,7 +900,9 @@ export function EditorPage() {
           {temposAbertos && (
             <BrutoContextStrip
               variant="workbench"
-              previous={previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null}
+              previous={
+                previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null
+              }
               next={nextCut ? { numero: nextCut.numero, hms: nextCut.inicio_hms } : null}
               inicioHms={corteUI.inicio_hms}
               fimHms={corteUI.fim_hms}

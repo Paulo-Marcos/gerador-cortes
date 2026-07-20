@@ -79,7 +79,7 @@ export function PPCutsRail({
             </span>
             <span className="flex flex-wrap items-center justify-center gap-0.5 text-[11px]">
               {cut?.status === 'rejeitado' && (
-                <X size={11} className="text-error" aria-label="rejeitado" />
+                <X size={11} className="text-[var(--wb-err)]" aria-label="rejeitado" />
               )}
               {(cut?.status === 'aprovado' ||
                 cut?.status === 'processado' ||
@@ -87,7 +87,9 @@ export function PPCutsRail({
                 <Check size={11} className="text-success" aria-label="aprovado" />
               )}
               {cut?.is_fire && <Flame size={11} className="text-warning" aria-label="top" />}
-              {cut?.is_leitura && <BookOpen size={11} className="text-info" aria-label="leitura" />}
+              {cut?.is_leitura && (
+                <BookOpen size={11} className="text-[var(--wb-info)]" aria-label="leitura" />
+              )}
               {status.raw_pronto && (
                 <Film size={10} className="text-[var(--wb-text-mute)]" aria-label="bruto" />
               )}
@@ -599,7 +601,9 @@ export function PPSidePanel({
                   {fila.concluidos}/{fila.total} completos
                 </span>
                 <span>{fila.aguardando} aguardando</span>
-                {fila.erros > 0 && <span className="text-error">{fila.erros} erro(s)</span>}
+                {fila.erros > 0 && (
+                  <span className="text-[var(--wb-err)]">{fila.erros} erro(s)</span>
+                )}
               </div>
             </div>
           )}
@@ -682,7 +686,7 @@ export function PPSidePanel({
 
           <div className="rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] p-3">
             <div className="mb-2 flex items-center gap-2">
-              <Youtube size={14} className="text-error" aria-hidden />
+              <Youtube size={14} className="text-[var(--wb-err)]" aria-hidden />
               <span className="font-code text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
                 Publicacao
               </span>
@@ -692,7 +696,7 @@ export function PPSidePanel({
                 href={status.youtube_url_publicado}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 text-sm font-bold text-error"
+                className="inline-flex items-center gap-2 text-sm font-bold text-[var(--wb-err)]"
               >
                 <ExternalLink size={14} aria-hidden />
                 YouTube {status.youtube_scheduled_at ? '(agendado)' : '(publicado)'}
@@ -756,7 +760,7 @@ export function PPSidePanel({
                 </label>
                 <Button
                   type="button"
-                  className="mt-3 w-full bg-error hover:opacity-90"
+                  className="mt-3 w-full bg-[var(--wb-err)] hover:opacity-90"
                   onClick={onBulkYoutube}
                   disabled={busy}
                 >
@@ -857,7 +861,7 @@ export function PPSidePanel({
           )}
 
           {cut?.is_leitura && (
-            <div className="rounded-[var(--radius)] border border-info/30 bg-info/10 p-3 text-xs text-info">
+            <div className="rounded-[var(--radius)] border border-[color-mix(in_srgb,var(--wb-info)_30%,transparent)] bg-[var(--wb-info-soft)] p-3 text-xs text-[var(--wb-info)]">
               <BookOpen size={14} className="mr-1 inline" aria-hidden />
               Corte marcado como leitura
               {cut.autor_leitura ? `: ${cut.autor_leitura} PT.${cut.parte_leitura || 1}` : ''}.

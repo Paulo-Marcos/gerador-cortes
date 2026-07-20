@@ -845,7 +845,7 @@ function AdvancedMenu({
               zIndex: 100,
               maxHeight: 'calc(100vh - 100px)',
             }}
-            className="flex w-[240px] flex-col gap-0.5 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[var(--wb-shadow)]"
+            className="flex w-[240px] flex-col gap-0.5 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[shadow:var(--wb-shadow)]"
           >
             <div className="px-2 pb-1 pt-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]">
               Avancado
@@ -1017,10 +1017,7 @@ function AdvancedMenu({
                   >
                     <RotateCw
                       size={13}
-                      className={cn(
-                        'text-[var(--wb-text-mute)]',
-                        refreshing && 'animate-spin',
-                      )}
+                      className={cn('text-[var(--wb-text-mute)]', refreshing && 'animate-spin')}
                     />
                     <span className="flex-1">
                       {refreshing ? 'Atualizando onda…' : 'Atualizar onda de áudio'}
@@ -1292,7 +1289,10 @@ export function TimelinePanel({
                 </Button>
               </Tooltip>
               {onDividirAqui && (
-                <Tooltip label="Dividir corte no cursor (D) — mantém trechos e tempos" side="bottom">
+                <Tooltip
+                  label="Dividir corte no cursor (D) — mantém trechos e tempos"
+                  side="bottom"
+                >
                   <Button
                     type="button"
                     variant="outline"

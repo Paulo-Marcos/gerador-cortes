@@ -218,7 +218,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         {/* L1: titulo + chips + caption */}
         <div className="mb-2.5 flex items-center gap-2">
           <Film size={14} className="text-[var(--wb-text-mute)]" aria-hidden />
-          <strong className="font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
+          <strong className="whitespace-nowrap font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
             Cenas Remotion
           </strong>
           <span className="inline-flex items-center rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)]">
@@ -239,9 +239,6 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             </span>
           )}
           <div className="flex-1" />
-          <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-            roteiro visual
-          </span>
         </div>
 
         {/* L2: acao primaria (Gerar por IA + Retratos + moreH) */}
@@ -249,6 +246,8 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <Tooltip label="Gerar cenas automaticamente via Claude" side="bottom">
             <ClaudeAiButton
               className="flex-1 justify-start pl-3.5"
+              label="Gerar por IA"
+              pendingLabel="Gerando…"
               pending={gerarClaude.isPending}
               onClick={() => gerarClaude.mutate()}
             />

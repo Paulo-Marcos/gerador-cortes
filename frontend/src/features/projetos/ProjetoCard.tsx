@@ -65,7 +65,7 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
       role="button"
       aria-label={`Abrir projeto ${projeto.titulo_live}`}
       className={cn(
-        'group cursor-pointer overflow-hidden rounded-[12px] border bg-[var(--wb-bg-panel)] shadow-[var(--wb-shadow)] transition-all duration-200',
+        'group cursor-pointer overflow-hidden rounded-[12px] border bg-[var(--wb-bg-panel)] shadow-[shadow:var(--wb-shadow)] transition-all duration-200',
         'hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
         pronto
           ? 'border-[var(--wb-ok)]'

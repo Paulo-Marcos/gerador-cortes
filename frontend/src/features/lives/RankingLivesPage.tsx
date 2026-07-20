@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Calendar,
@@ -11,6 +12,7 @@ import {
   Loader2,
   MessageCircle,
   RefreshCw,
+  Scale,
   Sparkles,
   Trophy,
   X,
@@ -174,6 +176,13 @@ export function RankingLivesPage() {
           audiência · engajamento · tom dos comentários · recência
         </span>
         <div className="flex-1" />
+        {/* Protótipo §Ranking: atalho para os pesos (configurados em /canais). */}
+        <Button asChild variant="outline" size="sm">
+          <Link to="/canais" title="Configurar pesos do ranking (Canais)">
+            <Scale aria-hidden />
+            Pesos do ranking
+          </Link>
+        </Button>
         <Button
           type="button"
           variant="outline"
@@ -274,7 +283,7 @@ function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando 
   return (
     <li
       className={cn(
-        'grid items-stretch gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-3 shadow-[var(--wb-shadow)] transition-colors',
+        'grid items-stretch gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-3 shadow-[shadow:var(--wb-shadow)] transition-colors',
         'md:grid-cols-[56px_146px_minmax(0,1fr)_220px]',
       )}
     >

@@ -787,7 +787,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
           <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
             <div className="mb-2.5 flex items-center gap-2">
               <Layers size={14} className="text-[var(--wb-text-mute)]" aria-hidden />
-              <strong className="font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
+              <strong className="whitespace-nowrap font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
                 Layout YouTube
               </strong>
               <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">

@@ -136,7 +136,7 @@ export function metaCena(tipo: string): TipoMeta {
       label: tipo,
       icon: 'Film',
       color: 'var(--wb-text-mute)',
-      tone: 'border-[var(--border)] bg-bg-800 text-text-200',
+      tone: 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
     }
   );
 }

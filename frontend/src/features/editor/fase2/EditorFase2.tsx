@@ -742,7 +742,7 @@ export function EditorFase2({
           </div>
         </div>
       </Panel>
-      <PanelResizeHandle className="w-1 bg-[var(--border)] hover:bg-accent-500/50" />
+      <PanelResizeHandle className="w-1 bg-[var(--border)] hover:bg-[color-mix(in_srgb,var(--wb-accent)_50%,transparent)]" />
       <Panel defaultSize={30} minSize={22} order={2}>
         <div className="flex h-full min-h-0 flex-col">
           {/* Tabs header — replica v3_pos.jsx:385-432. Select "Filtro padrao"

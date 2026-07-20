@@ -110,7 +110,7 @@ export function ThemePicker() {
               zIndex: 100,
               transform: 'translateY(-100%)',
             }}
-            className="w-[220px] rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[var(--wb-shadow)]"
+            className="w-[220px] rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[shadow:var(--wb-shadow)]"
           >
             <div className="mb-1 px-2 pt-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]">
               Paleta

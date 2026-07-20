@@ -1,41 +1,25 @@
-import {
-  AtSign,
-  BookOpen,
-  Brain,
-  CalendarDays,
-  Check,
-  CircleHelp,
-  FileText,
-  Film,
-  GitCompareArrows,
-  Hash,
-  Image,
-  List,
-  PanelBottom,
-  Rocket,
-  Sparkles,
-  Tag,
-  type LucideIcon,
-} from 'lucide-react';
 import { metaCena, type CenaIconName } from './sceneTypes';
 
-const ICONS: Record<CenaIconName, LucideIcon> = {
-  Film,
-  PanelBottom,
-  FileText,
-  Hash,
-  GitCompareArrows,
-  Sparkles,
-  CircleHelp,
-  Rocket,
-  AtSign,
-  CalendarDays,
-  BookOpen,
-  List,
-  Brain,
-  Tag,
-  Check,
-  Image,
+// Glifos emoji do design Workbench 1c (§ABA POS — itens de cena e timeline).
+// O protótipo usa emoji colorido por tipo (🎥 🖥 🔍 👤 ▦ …) no lugar de
+// ícones line-art; a chave continua sendo o `icon` de TIPOS_CENA.
+const EMOJI: Record<CenaIconName, string> = {
+  Film: '🎥',
+  PanelBottom: '▦',
+  FileText: '📋',
+  Hash: '🔢',
+  GitCompareArrows: '⚖',
+  Sparkles: '✨',
+  CircleHelp: '❓',
+  Rocket: '🚀',
+  AtSign: '👤',
+  CalendarDays: '📅',
+  BookOpen: '📖',
+  List: '⏳',
+  Brain: '🧠',
+  Tag: '🏷',
+  Check: '✅',
+  Image: '🖼',
 };
 
 interface Props {
@@ -46,8 +30,11 @@ interface Props {
 
 export function SceneTypeIcon({ tipo, size = 14, className }: Props) {
   const meta = metaCena(tipo);
-  const Icon = ICONS[meta.icon] ?? Film;
-  return <Icon size={size} strokeWidth={1.85} className={className} aria-hidden />;
+  return (
+    <span className={className} style={{ fontSize: size, lineHeight: 1 }} aria-hidden>
+      {EMOJI[meta.icon] ?? '🎬'}
+    </span>
+  );
 }
 
 export function sceneTypeStyle(tipo: string) {

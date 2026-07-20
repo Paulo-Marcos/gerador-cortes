@@ -36,8 +36,9 @@ describe('constantes do hand-off', () => {
     expect(PANEL_WIDTHS.cuts).toEqual({ open: 236, collapsed: 40 });
     expect(PANEL_WIDTHS.right).toEqual({ open: 300, collapsed: 38 });
     expect(PANEL_WIDTHS.fila).toEqual({ open: 248, collapsed: 42 });
-    expect(PANEL_WIDTHS.cenas).toEqual({ open: 232, collapsed: 40 });
-    expect(PANEL_WIDTHS.layout).toEqual({ open: 260, collapsed: 38 });
+    // AUDITORIA-v3 §6 alargou cenas/layout (292/276) para a densidade do protótipo.
+    expect(PANEL_WIDTHS.cenas).toEqual({ open: 292, collapsed: 40 });
+    expect(PANEL_WIDTHS.layout).toEqual({ open: 276, collapsed: 38 });
   });
 
   it('CP1: fila global vem colapsada por padrão; os demais painéis vêm abertos', () => {

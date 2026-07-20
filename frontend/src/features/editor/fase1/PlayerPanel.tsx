@@ -130,7 +130,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
       className={cn(
         'flex h-full w-full flex-col overflow-hidden',
         variant === 'overlay'
-          ? 'rounded-xl shadow-[var(--wb-shadow)]'
+          ? 'rounded-xl shadow-[shadow:var(--wb-shadow)]'
           : 'rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]',
       )}
     >

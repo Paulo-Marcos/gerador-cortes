@@ -18,7 +18,7 @@ export function MetadataModal({ open, projetoId, corte, onClose }: Props) {
       description={corte.titulo_proposto}
       size="xl"
     >
-      <MetadataCard projetoId={projetoId} cut={corte} />
+      <MetadataCard projetoId={projetoId} cut={corte} variant="modal" onRequestClose={onClose} />
     </Modal>
   );
 }

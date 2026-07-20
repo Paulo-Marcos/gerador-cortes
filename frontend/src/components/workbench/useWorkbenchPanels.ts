@@ -24,8 +24,10 @@ export const PANEL_WIDTHS: Record<WorkbenchPanelId, PanelWidths> = {
   cuts: { open: 236, collapsed: 40 },
   right: { open: 300, collapsed: 38 },
   fila: { open: 248, collapsed: 42 },
-  cenas: { open: 232, collapsed: 40 },
-  layout: { open: 260, collapsed: 38 },
+  // AUDITORIA-v3 §6: CENAS 292px / LAYOUT YOUTUBE 276px — abaixo disso os
+  // itens de cena e os labels do layout quebram linha e truncam.
+  cenas: { open: 292, collapsed: 40 },
+  layout: { open: 276, collapsed: 38 },
 };
 
 /** Largura mínima garantida ao conteúdo central. */

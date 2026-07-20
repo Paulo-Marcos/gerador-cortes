@@ -34,7 +34,7 @@ const variantClasses: Record<NonNullable<IconButtonProps['variant']>, string> = 
     'border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
   solid: 'border border-transparent bg-[var(--wb-ink)] text-[var(--wb-ink-fg)] hover:opacity-90',
   accent:
-    'border border-transparent bg-[var(--wb-accent)] text-white shadow-[var(--wb-shadow-btn)] hover:opacity-90',
+    'border border-transparent bg-[var(--wb-accent)] text-white shadow-[shadow:var(--wb-shadow-btn)] hover:opacity-90',
   // AUDITORIA-v2 §2 — cores fixas da toolbar do Bruto (veredito + toggles).
   ok: 'border border-transparent bg-[var(--wb-ok)] text-white hover:opacity-90',
   err: 'border border-transparent bg-[var(--wb-err)] text-white hover:opacity-90',
