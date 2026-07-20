@@ -323,6 +323,8 @@ export function FinalReviewPage() {
       icon: VolumeX,
     },
   ];
+  const checklistOkCount = checklistItems.filter((item) => item.ok).length;
+  const capaPronta = Boolean(exportStatusAtual?.thumbnail_pronta);
 
   // Duracao para timeline: usa duracao real do clip se houver.
   const timelineDuration = Math.max(
@@ -579,8 +581,22 @@ export function FinalReviewPage() {
             </Button>
           </div>
 
-          {/* Checklist em chips + capa compacta + agendamento */}
+          {/* Checklist em chips + capa compacta + agendamento. DE-PARA-v2 §5:
+              ausência do painel lateral CHECKLIST é intencional (linha de
+              ações no lugar), só o contador N/6 precisava voltar. */}
           <div className="flex flex-none flex-wrap items-center gap-1.5">
+            <span className="font-code text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]">
+              Checklist
+            </span>
+            <span
+              className={
+                checklistOkCount === checklistItems.length
+                  ? 'rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[9.5px] font-bold text-[var(--wb-ok)]'
+                  : 'rounded-full bg-[var(--wb-warn-soft)] px-2 py-0.5 font-code text-[9.5px] font-bold text-[var(--wb-warn)]'
+              }
+            >
+              {checklistOkCount}/{checklistItems.length}
+            </span>
             {checklistItems.map((item, idx) => (
               <span
                 key={idx}
@@ -601,11 +617,22 @@ export function FinalReviewPage() {
             )}
             <div className="flex-1" />
             {resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) && (
-              <img
-                src={resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) ?? undefined}
-                alt="Capa do corte"
-                className="h-12 rounded-md object-cover"
-              />
+              <span className="flex items-center gap-1.5">
+                <span
+                  className={
+                    capaPronta
+                      ? 'rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[9px] font-bold uppercase text-[var(--wb-ok)]'
+                      : 'rounded-full bg-[var(--wb-warn-soft)] px-2 py-0.5 font-code text-[9px] font-bold uppercase text-[var(--wb-warn)]'
+                  }
+                >
+                  {capaPronta ? 'pronta' : 'pendente'}
+                </span>
+                <img
+                  src={resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) ?? undefined}
+                  alt="Capa do corte"
+                  className="h-12 rounded-md object-cover"
+                />
+              </span>
             )}
             <Button type="button" variant="ghost" size="sm" onClick={() => setMetadataOpen(true)}>
               <Edit3 />
