@@ -44,9 +44,11 @@ export function routeToTab(pathname: string): WorkbenchTab | null {
   return null;
 }
 
+// "Bruto" (não "Cortes"): é o nome da etapa no redesign v3 — protótipo,
+// barra de etapas e hand-off usam o mesmo vocabulário.
 export const ETAPA_LABELS: Record<WorkbenchEtapa, string> = {
   workspace: 'Workspace',
-  cortes: 'Cortes',
+  cortes: 'Bruto',
   pos: 'Pós',
   metadados: 'Metadados',
   revisao: 'Revisão',
@@ -54,7 +56,7 @@ export const ETAPA_LABELS: Record<WorkbenchEtapa, string> = {
 
 /** Cor do dot de status da aba (protótipo: cor da etapa). */
 export const ETAPA_DOT_TOKENS: Record<WorkbenchEtapa, string> = {
-  workspace: 'var(--wb-text-dim)',
+  workspace: 'var(--wb-ok)',
   cortes: 'var(--wb-accent)',
   pos: 'var(--wb-warn)',
   metadados: 'var(--wb-fire)',
