@@ -17,11 +17,13 @@ import {
   UploadCloud,
   Wand2,
   Youtube,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClaudeAiButton } from '@/components/ui/claude-button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Modal } from '@/components/ui/modal';
+import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
 import { api, resolveThumbUrl } from '@/lib/api';
@@ -55,6 +57,7 @@ export function MetadataCard({
   projetoId,
   cut,
   status,
+  active = false,
   innerRef,
   onMetaLoaded,
   variant = 'card',
@@ -63,6 +66,8 @@ export function MetadataCard({
   projetoId: string;
   cut: Corte;
   status?: StatusExportCorte;
+  /** Corte em foco na lista: só ele nasce expandido (DE-PARA-v3 §5). */
+  active?: boolean;
   innerRef?: (element: HTMLElement | null) => void;
   onMetaLoaded?: (corteId: string, meta: MetadadoCorte) => void;
   /** 'modal' = corpo denso do protótipo (AUDITORIA-v3 §6): sem header próprio,
@@ -73,7 +78,10 @@ export function MetadataCard({
   const modal = variant === 'modal';
   const { notify } = useToast();
   const queryClient = useQueryClient();
-  const [expanded, setExpanded] = useState(modal || cut.numero <= 2);
+  // DE-PARA-v3 §5: "cards não-focados ficam recolhidos (só header)" — o card
+  // em foco na lista é o expandido; trocar o foco recolhe o anterior. O clique
+  // no header continua alternando manualmente.
+  const [expanded, setExpanded] = useState(modal || active);
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
   const [showThumbSuggestions, setShowThumbSuggestions] = useState(false);
   const [showDescription, setShowDescription] = useState(modal);
@@ -94,6 +102,12 @@ export function MetadataCard({
   const promptReady = Boolean(meta?.prompt_thumbnail);
   const thumbnailUrl = resolveThumbUrl(projetoId, meta?.thumbnail_path);
   const thumbnailReady = Boolean(status?.thumbnail_pronta || thumbnailUrl);
+
+  // Foco da lista manda no expandido: seleciona outro corte → este recolhe.
+  useEffect(() => {
+    if (modal) return;
+    setExpanded(active);
+  }, [active, modal]);
 
   useEffect(() => {
     if (!meta) return;
@@ -328,74 +342,48 @@ export function MetadataCard({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* DE-PARA-v3 §5: os 5 icon-buttons do header (documento, tags,
+                clipboard, upload, pasta) viraram um único ⋯ — o header fica
+                com título + status + recolher. */}
             {generated && (
-              <>
-                <IconAction
-                  title="Descricao"
-                  active={showDescription}
-                  tone="oklch(0.55 0.12 245)"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setExpanded(true);
-                    setShowDescription((current) => !current);
-                  }}
-                >
-                  <FileText />
-                </IconAction>
-                <IconAction
-                  title="Tags"
-                  active={showTags}
-                  tone="oklch(0.48 0.10 145)"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setExpanded(true);
-                    setShowTags((current) => !current);
-                  }}
-                >
-                  <Tag />
-                </IconAction>
-                <IconAction
-                  title="Copiar prompt thumbnail"
-                  active={promptReady}
-                  tone="oklch(0.62 0.18 38)"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void copy(meta?.prompt_thumbnail ?? '', 'Prompt copiado.');
-                  }}
-                >
-                  <Clipboard />
-                </IconAction>
-                <label
-                  title="Subir thumbnail"
-                  onClick={(event) => event.stopPropagation()}
-                  className={cn(
-                    'flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border bg-[var(--wb-bg-panel)] text-[var(--wb-text-mute)]',
-                    thumbnailReady && 'border-info text-info',
-                  )}
-                >
-                  <UploadCloud size={14} aria-hidden />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) uploadThumbnail.mutate(file);
-                      event.currentTarget.value = '';
-                    }}
-                  />
-                </label>
-                <IconAction
-                  title="Copiar pasta da thumbnail"
-                  tone="oklch(0.53 0.12 55)"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.');
-                  }}
-                >
-                  <Folder />
-                </IconAction>
-              </>
+              <OverflowMenu
+                label="Mais ações do corte"
+                items={[
+                  {
+                    icon: FileText,
+                    label: showDescription ? 'Ocultar descrição' : 'Ver descrição',
+                    onClick: () => {
+                      setExpanded(true);
+                      setShowDescription((current) => !current);
+                    },
+                  },
+                  {
+                    icon: Tag,
+                    label: showTags ? 'Ocultar tags' : 'Ver tags',
+                    onClick: () => {
+                      setExpanded(true);
+                      setShowTags((current) => !current);
+                    },
+                  },
+                  {
+                    icon: Clipboard,
+                    label: 'Copiar prompt thumbnail',
+                    onClick: () => void copy(meta?.prompt_thumbnail ?? '', 'Prompt copiado.'),
+                  },
+                  {
+                    icon: UploadCloud,
+                    label: 'Subir thumbnail',
+                    accept: 'image/*',
+                    onFile: (file) => uploadThumbnail.mutate(file),
+                  },
+                  {
+                    icon: Folder,
+                    label: 'Copiar pasta da thumbnail',
+                    onClick: () =>
+                      void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.'),
+                  },
+                ]}
+              />
             )}
             <span
               className={cn(
@@ -745,39 +733,27 @@ export function MetadataCard({
               className="h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-sm font-extrabold outline-none focus:border-[var(--wb-accent)]"
             />
 
-            <div className="grid gap-2 pt-1 md:grid-cols-[minmax(220px,0.8fr)_minmax(260px,1fr)]">
-              <ActionGroup title="Regerar metadados" tone="oklch(0.54 0.16 32)">
-                <ClaudeAiButton
-                  pending={generateMetadataClaude.isPending}
-                  onClick={() => generateMetadataClaude.mutate()}
-                  title="Regerar metadados via Claude"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setManualKind('metadata')}
-                >
-                  <Wand2 />
-                  Manual
-                </Button>
-              </ActionGroup>
-              <ActionGroup title="Prompt thumbnail" tone="oklch(0.55 0.14 285)">
-                <ClaudeAiButton
-                  pending={generatePromptThumbnailClaude.isPending}
-                  onClick={() => generatePromptThumbnailClaude.mutate()}
-                  title={promptReady ? 'Regerar prompt via Claude' : 'Gerar prompt via Claude'}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setManualKind('thumbnail-agent-livre')}
-                >
-                  <Palette />
-                  Manual
-                </Button>
-              </ActionGroup>
+            {/* DE-PARA-v3 §5: dois segmented compactos no lugar das caixas
+                coloridas (que ainda usavam oklch solto, fora dos tokens). O
+                lado AI mantém o laranja oficial da Claude — falso positivo
+                declarado no hand-off, é cor de marca. */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <SegmentedAiManual
+                label="Regerar metadados"
+                aiPending={generateMetadataClaude.isPending}
+                aiTitle="Regerar metadados via Claude"
+                onAi={() => generateMetadataClaude.mutate()}
+                manualIcon={Wand2}
+                onManual={() => setManualKind('metadata')}
+              />
+              <SegmentedAiManual
+                label="Prompt thumbnail"
+                aiPending={generatePromptThumbnailClaude.isPending}
+                aiTitle={promptReady ? 'Regerar prompt via Claude' : 'Gerar prompt via Claude'}
+                onAi={() => generatePromptThumbnailClaude.mutate()}
+                manualIcon={Palette}
+                onManual={() => setManualKind('thumbnail-agent-livre')}
+              />
             </div>
 
             {/* F-058: influência manual do editor no prompt da thumbnail. */}
@@ -830,16 +806,10 @@ export function MetadataCard({
                 </div>
               )}
             </button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => generateThumbnail.mutate()}
-              disabled={!promptReady || generateThumbnail.isPending}
-            >
-              {generateThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Image />}
-              Gerar thumbnail
-            </Button>
-            <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-4 text-sm font-semibold text-[var(--wb-text)] hover:border-[var(--wb-text-dim)]">
+            {/* DE-PARA-v3 §5: "Trocar thumbnail" é o primário (sólido em
+                acento); "Gerar" fica em outline; e as ações raras (copiar
+                pasta, comprimir, remover) saem da pilha de botões para um ⋯. */}
+            <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--wb-accent)] px-4 text-sm font-bold text-[var(--wb-accent-fg)] shadow-[shadow:var(--wb-shadow-btn)] hover:bg-[var(--wb-accent-strong)]">
               <UploadCloud size={16} aria-hidden />
               Trocar thumbnail
               <input
@@ -853,45 +823,46 @@ export function MetadataCard({
                 }}
               />
             </label>
-            <p className="text-center font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-              ou cole com Ctrl+V
-            </p>
-            {thumbnailUrl && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => void copy(meta?.thumbnail_path ?? '', 'Endereco copiado.')}
-                >
-                  <Folder />
-                  Copiar pasta
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => compressThumbnail.mutate()}
-                  disabled={compressThumbnail.isPending}
-                >
-                  {compressThumbnail.isPending ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <RefreshCw />
-                  )}
-                  Comprimir
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={confirmRemoveThumbnail}
-                  disabled={removeThumbnail.isPending}
-                  title="Remover thumbnail (apaga o arquivo)"
-                  className="text-error hover:border-error"
-                >
-                  {removeThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
-                  Remover
-                </Button>
-              </>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => generateThumbnail.mutate()}
+              disabled={!promptReady || generateThumbnail.isPending}
+            >
+              {generateThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Image />}
+              Gerar thumbnail
+            </Button>
+            <div className="flex items-center gap-2">
+              <p className="flex-1 font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+                ou cole com Ctrl+V
+              </p>
+              {thumbnailUrl && (
+                <OverflowMenu
+                  compact
+                  label="Mais ações da thumbnail"
+                  items={[
+                    {
+                      icon: Folder,
+                      label: 'Copiar pasta',
+                      onClick: () => void copy(meta?.thumbnail_path ?? '', 'Endereco copiado.'),
+                    },
+                    {
+                      icon: RefreshCw,
+                      label: compressThumbnail.isPending ? 'Comprimindo…' : 'Comprimir',
+                      disabled: compressThumbnail.isPending,
+                      onClick: () => compressThumbnail.mutate(),
+                    },
+                    {
+                      icon: Trash2,
+                      label: 'Remover',
+                      danger: true,
+                      disabled: removeThumbnail.isPending,
+                      onClick: confirmRemoveThumbnail,
+                    },
+                  ]}
+                />
+              )}
+            </div>
             {/* D-066: avaliação do par prompt+imagem (histórico de qualidade). */}
             {promptReady && <ThumbnailAvaliacaoPanel corteId={cut.id} />}
           </aside>
@@ -1068,30 +1039,47 @@ function SuggestionButton({
   );
 }
 
-function ActionGroup({
-  title,
-  tone,
-  children,
+/**
+ * Par AI | Manual em segmented compacto (DE-PARA-v3 §5). Substitui as
+ * caixas `ActionGroup` coloridas: mesma função, um terço do peso visual.
+ */
+function SegmentedAiManual({
+  label,
+  aiPending,
+  aiTitle,
+  onAi,
+  manualIcon: ManualIcon,
+  onManual,
 }: {
-  title: string;
-  tone: string;
-  children: React.ReactNode;
+  label: string;
+  aiPending: boolean;
+  aiTitle: string;
+  onAi: () => void;
+  manualIcon: LucideIcon;
+  onManual: () => void;
 }) {
   return (
-    <div
-      className="grid gap-2 rounded-[var(--radius)] border p-2.5"
-      style={{
-        borderColor: `color-mix(in oklch, ${tone} 26%, var(--wb-border))`,
-        background: `color-mix(in oklch, ${tone} 7%, var(--wb-bg-card))`,
-      }}
-    >
-      <div
-        className="font-code text-[10.5px] font-extrabold uppercase tracking-[0.08em]"
-        style={{ color: tone }}
-      >
-        {title}
+    <div className="flex flex-col gap-1.5">
+      <span className="font-code text-[8.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+        {label}
+      </span>
+      <div className="inline-flex gap-0.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
+        <ClaudeAiButton
+          size="sm"
+          pending={aiPending}
+          onClick={onAi}
+          title={aiTitle}
+          className="h-[26px] gap-1.5 rounded-[6px] px-3 text-[10px]"
+        />
+        <button
+          type="button"
+          onClick={onManual}
+          className="inline-flex h-[26px] items-center gap-1.5 rounded-[6px] px-3 text-[10px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-panel)] hover:text-[var(--wb-text)]"
+        >
+          <ManualIcon size={12} aria-hidden />
+          Manual
+        </button>
       </div>
-      <div className="flex flex-wrap gap-1.5">{children}</div>
     </div>
   );
 }

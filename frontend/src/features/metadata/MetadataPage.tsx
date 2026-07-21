@@ -187,6 +187,7 @@ export function MetadataPage() {
                   projetoId={projetoId}
                   cut={cut}
                   status={statusMap.get(cut.id)}
+                  active={cut.id === activeId}
                   innerRef={(element) => {
                     refs.current[cut.id] = element;
                   }}
