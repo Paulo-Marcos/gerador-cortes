@@ -111,6 +111,12 @@ function appendQueryParams(url: string, params: Record<string, string>): string 
   return `${url}${url.includes('?') ? '&' : '?'}${search}`;
 }
 
+// Botão dentro do cluster de ferramentas do Bruto: sem borda e sem fundo
+// próprios (quem tem é o cluster), tamanho igual ao dos vizinhos. A cor do
+// glifo vem de fora, por ferramenta.
+const FERRAMENTA_CLASS =
+  'flex aspect-square min-w-[24px] flex-[0_1_34px] items-center justify-center rounded-[6px] transition-colors hover:bg-[var(--wb-bg-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-40';
+
 export function EditorPage() {
   const { id: projetoId = '', corteId = '' } = useParams<{ id: string; corteId: string }>();
   const navigate = useNavigate();
@@ -738,82 +744,98 @@ export function EditorPage() {
 
             <div className="h-6 w-px flex-none bg-[var(--wb-border)]" aria-hidden />
 
-            <div className="relative flex-none">
-              <Tooltip
-                label={brutoPronto ? 'Regerar bruto (Ctrl+G)' : 'Gerar bruto (Ctrl+G)'}
-                side="bottom"
-              >
-                <IconButton
-                  aria-label={brutoPronto ? 'Regerar bruto' : 'Gerar bruto'}
-                  size="toolbar"
-                  variant="inset"
-                  onClick={() => {
-                    // brutoPronto: abre o dropdown p/ escolher o que também
-                    // refazer (mesmo handleRegerarBruto de sempre). 1ª geração
-                    // não tem opt-ins — dispara direto (mesmo Ctrl+G/botão de
-                    // sempre): handleGerarBrutoPrincipal.
-                    if (brutoPronto) setBrutoDropdownOpen((v) => !v);
-                    else handleGerarBrutoPrincipal();
-                  }}
-                  disabled={brutoBusy}
+            {/* Cluster de ferramentas do corte: UM fundo/borda para o grupo
+                inteiro (cada botão era uma caixa com borda própria, e a do
+                "regerar" ainda destoava por causa do wrapper do dropdown).
+                Cor fica só no glifo — identidade sem o peso de um chip cheio. */}
+            <div className="inline-flex flex-none items-center gap-0.5 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
+              <div className="relative">
+                <Tooltip
+                  label={brutoPronto ? 'Regerar bruto (Ctrl+G)' : 'Gerar bruto (Ctrl+G)'}
+                  side="bottom"
                 >
-                  {brutoBusy ? (
-                    <Loader2 size={15} className="animate-spin" aria-hidden />
-                  ) : (
-                    <RefreshCw size={15} aria-hidden />
-                  )}
-                </IconButton>
+                  <button
+                    type="button"
+                    aria-label={brutoPronto ? 'Regerar bruto' : 'Gerar bruto'}
+                    className={cn(FERRAMENTA_CLASS, 'text-[var(--wb-accent)]')}
+                    onClick={() => {
+                      // brutoPronto: abre o dropdown p/ escolher o que também
+                      // refazer (mesmo handleRegerarBruto de sempre). 1ª geração
+                      // não tem opt-ins — dispara direto (mesmo Ctrl+G/botão de
+                      // sempre): handleGerarBrutoPrincipal.
+                      if (brutoPronto) setBrutoDropdownOpen((v) => !v);
+                      else handleGerarBrutoPrincipal();
+                    }}
+                    disabled={brutoBusy}
+                  >
+                    {brutoBusy ? (
+                      <Loader2 size={15} className="animate-spin" aria-hidden />
+                    ) : (
+                      <RefreshCw size={15} aria-hidden />
+                    )}
+                  </button>
+                </Tooltip>
+                {brutoPronto && (
+                  <BrutoStepsDropdown
+                    corteId={corteId}
+                    ativo={brutoBusy}
+                    metadadosStatus={metaClaudeStatus}
+                    variant="outline"
+                    brutoPronto={brutoPronto}
+                    onRegerar={brutoBusy ? undefined : handleRegerarBruto}
+                    open={brutoDropdownOpen}
+                    onOpenChange={setBrutoDropdownOpen}
+                    hideTrigger
+                  />
+                )}
+              </div>
+
+              <Tooltip label="Abrir pasta (Ctrl+O)" side="bottom">
+                <button
+                  type="button"
+                  aria-label="Abrir pasta do corte"
+                  className={cn(FERRAMENTA_CLASS, 'text-[var(--wb-warn)]')}
+                  onClick={() => abrirPasta.mutate(corteId)}
+                  disabled={abrirPasta.isPending}
+                >
+                  <FolderOpen size={14} aria-hidden />
+                </button>
               </Tooltip>
-              {brutoPronto && (
-                <BrutoStepsDropdown
-                  corteId={corteId}
-                  ativo={brutoBusy}
-                  metadadosStatus={metaClaudeStatus}
-                  variant="outline"
-                  brutoPronto={brutoPronto}
-                  onRegerar={brutoBusy ? undefined : handleRegerarBruto}
-                  open={brutoDropdownOpen}
-                  onOpenChange={setBrutoDropdownOpen}
-                  hideTrigger
-                />
-              )}
+
+              <Tooltip label="Tempos do corte" side="bottom">
+                <button
+                  type="button"
+                  aria-label="Alternar tempos do corte"
+                  aria-pressed={temposAbertos}
+                  className={cn(
+                    FERRAMENTA_CLASS,
+                    temposAbertos
+                      ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
+                      : 'text-[var(--wb-info)]',
+                  )}
+                  onClick={() => setTemposAbertos((v) => !v)}
+                >
+                  <Clock size={14} aria-hidden />
+                </button>
+              </Tooltip>
+
+              <Tooltip label="Sincronia do áudio" side="bottom">
+                <button
+                  type="button"
+                  aria-label="Alternar sincronia do áudio"
+                  aria-pressed={sincroniaAberta}
+                  className={cn(
+                    FERRAMENTA_CLASS,
+                    sincroniaAberta
+                      ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
+                      : 'text-[var(--wb-violet)]',
+                  )}
+                  onClick={() => setSincroniaAberta((v) => !v)}
+                >
+                  <Headphones size={14} aria-hidden />
+                </button>
+              </Tooltip>
             </div>
-
-            <Tooltip label="Abrir pasta (Ctrl+O)" side="bottom">
-              <IconButton
-                aria-label="Abrir pasta do corte"
-                size="toolbar"
-                variant="inset"
-                onClick={() => abrirPasta.mutate(corteId)}
-                disabled={abrirPasta.isPending}
-              >
-                <FolderOpen size={14} aria-hidden />
-              </IconButton>
-            </Tooltip>
-
-            <Tooltip label="Tempos do corte" side="bottom">
-              <IconButton
-                aria-label="Alternar tempos do corte"
-                aria-pressed={temposAbertos}
-                size="toolbar"
-                variant={temposAbertos ? 'toggle-active' : 'inset'}
-                onClick={() => setTemposAbertos((v) => !v)}
-              >
-                <Clock size={14} aria-hidden />
-              </IconButton>
-            </Tooltip>
-
-            <Tooltip label="Sincronia do áudio" side="bottom">
-              <IconButton
-                aria-label="Alternar sincronia do áudio"
-                aria-pressed={sincroniaAberta}
-                size="toolbar"
-                variant={sincroniaAberta ? 'toggle-active' : 'inset'}
-                onClick={() => setSincroniaAberta((v) => !v)}
-              >
-                <Headphones size={14} aria-hidden />
-              </IconButton>
-            </Tooltip>
 
             {/* ℹ️ — SÓ tooltip via atributo title (AUDITORIA-v2 §2): sem
                 onClick, sem modal. O atalho continua na página Atalhos. */}

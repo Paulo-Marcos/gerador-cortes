@@ -37,7 +37,9 @@ export function RetractableFooter({ icon, label, open, onToggle, children }: Pro
         <span className="flex-none text-[var(--wb-text-dim)]" aria-hidden>
           {icon}
         </span>
-        <span className="flex-1 font-code text-[9px] font-extrabold tracking-[0.14em] text-[var(--wb-text-dim)]">
+        {/* Protótipo v3: rótulo em sans, caixa normal e peso 600 — o mono
+            caixa-alta com tracking largo pesava mais que o conteúdo do painel. */}
+        <span className="flex-1 text-[10.5px] font-semibold text-[var(--wb-text-mute)]">
           {label}
         </span>
         <span className="flex-none text-[var(--wb-text-dim)]" aria-hidden>

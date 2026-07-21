@@ -62,11 +62,11 @@ function render(cortes: Corte[], exportStatus: StatusExportCorte[] = []) {
   );
 }
 
-describe('WorkbenchCutsPanel — rodapé "FERRAMENTAS DO CORTE" (AUDITORIA-v2 §8, CP9)', () => {
+describe('WorkbenchCutsPanel — rodapé "Ferramentas do corte" (AUDITORIA-v2 §8, CP9)', () => {
   it('renderiza o rodapé fechado por padrão, sem duplicar "adicionar corte manual" já visível na lista', () => {
     const html = render([corte(1), corte(2, 'aprovado')]);
 
-    expect(html).toContain('FERRAMENTAS DO CORTE');
+    expect(html).toContain('Ferramentas do corte');
     expect(html).toContain('aria-expanded="false"');
     // O botão tracejado "＋ adicionar corte" no rodapé DA LISTA continua lá
     // (DE-PARA §3) — o rodapé retrátil é fechado, então seu próprio botão

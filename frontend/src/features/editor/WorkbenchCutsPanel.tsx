@@ -252,7 +252,7 @@ export function WorkbenchCutsPanel({
 
       <RetractableFooter
         icon={<Settings size={13} />}
-        label="FERRAMENTAS DO CORTE"
+        label="Ferramentas do corte"
         open={ferramentasOpen}
         onToggle={() => setFerramentasOpen((v) => !v)}
       >

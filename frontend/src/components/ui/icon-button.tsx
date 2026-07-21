@@ -9,6 +9,7 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
     | 'accent'
     | 'ok'
     | 'err'
+    | 'err-outline'
     | 'fire-soft'
     | 'leitura-soft'
     | 'inset'
@@ -38,6 +39,11 @@ const variantClasses: Record<NonNullable<IconButtonProps['variant']>, string> = 
   // AUDITORIA-v2 §2 — cores fixas da toolbar do Bruto (veredito + toggles).
   ok: 'border border-transparent bg-[var(--wb-ok)] text-white hover:opacity-90',
   err: 'border border-transparent bg-[var(--wb-err)] text-white hover:opacity-90',
+  // Protótipo v3 (toolbar do Bruto): Rejeitar é o secundário do par — fundo
+  // de painel + borda, só o glifo em --wb-err. O vermelho cheio ao lado do
+  // verde cheio fazia a toolbar inteira parecer um semáforo.
+  'err-outline':
+    'border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-err)] hover:border-[var(--wb-err)]',
   'fire-soft': 'border border-[var(--wb-fire)] bg-[var(--wb-fire-soft)] text-[var(--wb-fire)]',
   'leitura-soft':
     'border border-[var(--wb-leitura)] bg-[var(--wb-leitura-soft)] text-[var(--wb-leitura)]',

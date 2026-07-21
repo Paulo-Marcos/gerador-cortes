@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
-  FileText,
   GripVertical,
   Loader2,
   Plus,
   RotateCw,
-  Scissors,
   Search,
   Sparkles,
   Star,
@@ -83,6 +81,17 @@ interface RightTabsPanelProps {
 
 type TabId = 'trechos' | 'transcricao';
 
+/**
+ * "00:22:09.000" → "22:09.0". O protótipo v3 mostra décimos: os
+ * milissegundos cheios alargavam a coluna de tempo e empurravam o texto
+ * do trecho, sem acrescentar precisão útil na leitura.
+ */
+function mmssDecimo(hms: string): string {
+  const semHora = hms.slice(3);
+  const ponto = semHora.indexOf('.');
+  return ponto === -1 ? semHora : semHora.slice(0, ponto + 2);
+}
+
 export function RightTabsPanel({
   corteId,
   hintsThumbnail,
@@ -123,14 +132,15 @@ export function RightTabsPanel({
       <div className="flex-shrink-0 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
         <ThumbnailHintsEditor corteId={corteId} initialValue={hintsThumbnail} />
       </div>
-      {/* Tabs header — v2_bruto.jsx:415-476 */}
-      <header className="flex flex-shrink-0 items-center gap-1 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <GripVertical size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
+      {/* Tabs planas com sublinhado (DE-PARA-v3 §3): sem caixa e sem sombra,
+          alinhadas ao TabStrip fino do shell. O fundo `inset` saiu junto —
+          a faixa agora só tem a divisória inferior. */}
+      <header className="flex flex-shrink-0 items-center gap-2.5 border-b border-[var(--wb-border-soft)] px-3 pt-2">
+        <GripVertical size={13} className="mb-2 text-[var(--wb-text-dim)]" aria-hidden />
         <TabButton
           id="trechos"
           active={tab === 'trechos'}
           onClick={() => setTab('trechos')}
-          icon={Scissors}
           label="Trechos a remover"
           count={desvios.length}
           countTone="err"
@@ -139,8 +149,7 @@ export function RightTabsPanel({
           id="transcricao"
           active={tab === 'transcricao'}
           onClick={() => setTab('transcricao')}
-          icon={FileText}
-          label="Transcricao"
+          label="Transcrição"
           count={transcricao?.length ?? 0}
         />
         <div className="flex-1" />
@@ -188,7 +197,7 @@ export function RightTabsPanel({
       {isWorkbench && (
         <RetractableFooter
           icon={<Star size={13} />}
-          label="MAIS AÇÕES"
+          label="Mais ações"
           open={maisAcoesOpen}
           onToggle={() => setMaisAcoesOpen((v) => !v)}
         >
@@ -211,10 +220,15 @@ export function RightTabsPanel({
   );
 }
 
+/**
+ * Aba plana com sublinhado (DE-PARA-v3 §3). Antes era uma caixa com borda,
+ * fundo próprio e `shadow-sm` — visual de tab antigo, destoando do TabStrip
+ * fino e plano do resto do shell. Agora: só rótulo + contador, ativo marcado
+ * por `border-bottom: 2px var(--wb-accent)`. Sem caixa, sem sombra.
+ */
 function TabButton({
   active,
   onClick,
-  icon: Icon,
   label,
   count,
   countTone,
@@ -222,7 +236,6 @@ function TabButton({
   id: TabId;
   active: boolean;
   onClick: () => void;
-  icon: typeof Scissors;
   label: string;
   count: number;
   countTone?: 'err';
@@ -232,23 +245,20 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-[var(--radius-xs)] border px-2.5 py-1 text-[11.5px] font-semibold transition-colors',
+        'inline-flex items-center gap-[7px] whitespace-nowrap border-b-2 px-1 py-2 text-[11.5px] transition-colors',
         active
-          ? 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] text-[var(--wb-ink)] shadow-sm'
-          : 'border-transparent text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+          ? 'border-b-[var(--wb-accent)] font-bold text-[var(--wb-text)]'
+          : 'border-b-transparent font-semibold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
       )}
       aria-current={active ? 'page' : undefined}
     >
-      <Icon size={12} />
       {label}
       <span
         className={cn(
-          'rounded-full px-1.5 font-code text-[9.5px] font-bold',
-          countTone === 'err' && active
-            ? 'bg-[var(--wb-err-soft)] text-[var(--wb-err)]'
-            : countTone === 'err'
-              ? 'bg-[var(--wb-bg-inset)] text-[var(--wb-err)]'
-              : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)]',
+          'rounded-[5px] px-1.5 py-px font-code text-[9px] font-bold',
+          countTone === 'err'
+            ? 'bg-[var(--wb-err-soft)] text-[var(--wb-err-ink)]'
+            : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
         )}
       >
         {count}
@@ -285,8 +295,10 @@ const TAG_META: Record<TrechoTag, { label: string; bg: string; fg: string }> = {
   silencio: { label: 'silencio', bg: 'var(--wb-info-soft)', fg: 'var(--wb-info)' },
   hesitacao: { label: 'hesitacao', bg: 'var(--wb-warn-soft)', fg: 'var(--wb-warn)' },
   off: { label: 'off-topic', bg: 'var(--wb-violet-soft)', fg: 'var(--wb-violet)' },
-  rep: { label: 'repeticao', bg: 'var(--wb-bg-inset)', fg: 'var(--wb-text-mute)' },
-  manual: { label: 'manual', bg: 'var(--wb-accent-soft)', fg: 'var(--wb-accent)' },
+  // DE-PARA-v3 §3: repetição em violet, manual em neutro (a paleta do
+  // protótipo). Antes era o inverso — manual roubava o acento.
+  rep: { label: 'repeticao', bg: 'var(--wb-violet-soft)', fg: 'var(--wb-violet)' },
+  manual: { label: 'manual', bg: 'var(--wb-bg-inset)', fg: 'var(--wb-text-mute)' },
   claude: { label: 'IA', bg: 'var(--wb-accent-soft)', fg: 'var(--wb-accent)' },
   gemini: { label: 'IA Gemini', bg: 'var(--wb-violet-soft)', fg: 'var(--wb-violet)' },
   n8n: { label: 'IA n8n', bg: 'var(--wb-violet-soft)', fg: 'var(--wb-violet)' },
@@ -348,29 +360,41 @@ function TrechosList({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Sub-barra de filtros — v2_bruto.jsx:494-506 */}
-      <div className="flex flex-shrink-0 items-center gap-1.5 border-b border-[var(--wb-border-soft)] px-3 py-2">
-        <Tooltip label="Gerar trechos a remover via Claude" side="bottom">
-          <ClaudeAiButton pending={pending.claude} onClick={onGerarTrechosClaude} />
-        </Tooltip>
-        <Tooltip label="Importar trechos manualmente (cola JSON da IA)" side="bottom">
-          <Button type="button" variant="outline" size="sm" onClick={onGerarManual}>
-            <WandSparkles />
-            Manual
-          </Button>
-        </Tooltip>
+      {/* Sub-barra compacta do protótipo v3: AI|Manual num segmented pequeno
+          (antes eram dois botões de altura cheia, que pesavam mais que as
+          próprias linhas de trecho) e o ＋ em acento suave, 30×30. */}
+      <div className="flex flex-shrink-0 items-center gap-1.5 px-3 pb-2 pt-2">
+        <div className="inline-flex gap-0.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
+          <Tooltip label="Gerar trechos a remover via Claude" side="bottom">
+            <ClaudeAiButton
+              size="sm"
+              pending={pending.claude}
+              onClick={onGerarTrechosClaude}
+              className="h-[26px] gap-1.5 rounded-[6px] px-3 text-[10.5px]"
+            />
+          </Tooltip>
+          <Tooltip label="Importar trechos manualmente (cola JSON da IA)" side="bottom">
+            <button
+              type="button"
+              onClick={onGerarManual}
+              className="inline-flex h-[26px] items-center gap-1.5 rounded-[6px] px-3 text-[10.5px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-panel)] hover:text-[var(--wb-text)]"
+            >
+              <WandSparkles size={12} aria-hidden />
+              Manual
+            </button>
+          </Tooltip>
+        </div>
         <div className="flex-1" />
         <Tooltip label="Adicionar trecho" side="bottom">
-          <IconButton
+          <button
             type="button"
-            variant="accent"
-            size="sm"
             onClick={adicionarAqui}
             disabled={pending.adicionando}
             aria-label="Adicionar trecho"
+            className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)] transition-colors hover:bg-[var(--wb-accent)] hover:text-[var(--wb-accent-fg)] disabled:pointer-events-none disabled:opacity-40"
           >
-            <Plus />
-          </IconButton>
+            <Plus size={15} strokeWidth={2.2} aria-hidden />
+          </button>
         </Tooltip>
       </div>
 
@@ -414,14 +438,14 @@ function TrechosList({
                     className="font-code text-[10.5px] font-bold text-[var(--wb-text)]"
                     style={{ fontVariantNumeric: 'tabular-nums' }}
                   >
-                    {d.inicio_hms.slice(3)}
+                    {mmssDecimo(d.inicio_hms)}
                   </span>
                   <ChevronDown size={9} className="text-[var(--wb-text-dim)]" />
                   <span
                     className="font-code text-[10.5px] text-[var(--wb-text-mute)]"
                     style={{ fontVariantNumeric: 'tabular-nums' }}
                   >
-                    {d.fim_hms.slice(3)}
+                    {mmssDecimo(d.fim_hms)}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
@@ -433,13 +457,15 @@ function TrechosList({
                       {meta.label}
                     </span>
                     <span
-                      className="font-code text-[10px] font-semibold text-[var(--wb-err)]"
+                      className="font-code text-[10px] font-semibold text-[var(--wb-err-ink)]"
                       style={{ fontVariantNumeric: 'tabular-nums' }}
                     >
                       −{delta.toFixed(1)}s
                     </span>
                   </div>
-                  <div className="text-[12.5px] leading-tight text-[var(--wb-text)]">
+                  {/* DE-PARA-v3 §3: texto em 2 linhas e em --wb-text-mute —
+                      o motivo é apoio, não o conteúdo principal da linha. */}
+                  <div className="line-clamp-2 text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
                     {d.motivo || '—'}
                   </div>
                 </div>
@@ -529,7 +555,10 @@ function TranscriptList({
           <span className="font-code text-[10px] text-[var(--wb-text-dim)]">⌘F</span>
         </div>
         {/* D-360: diariza só este corte (evita rodar o vídeo inteiro). */}
-        <Tooltip label="Identifica os falantes só neste corte (não roda o vídeo todo)" side="bottom">
+        <Tooltip
+          label="Identifica os falantes só neste corte (não roda o vídeo todo)"
+          side="bottom"
+        >
           <Button
             type="button"
             variant="outline"
@@ -602,7 +631,8 @@ function FalanteBadge({ speaker, falantes }: { speaker?: string; falantes?: Fala
   const info = falantes?.[speaker];
   const isCanal = !!info?.is_canal;
   const nome = info?.nome?.trim();
-  const label = nome || `Falante ${speaker.replace(/^SPEAKER_?/i, '').replace(/^0+/, '') || speaker}`;
+  const label =
+    nome || `Falante ${speaker.replace(/^SPEAKER_?/i, '').replace(/^0+/, '') || speaker}`;
   return (
     <span
       className="mr-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 align-baseline font-code text-[9.5px] font-semibold uppercase tracking-[0.03em]"

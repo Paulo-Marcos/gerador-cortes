@@ -354,7 +354,7 @@ export function StatusToggleRow({
         disabled={pendingFlags.rejeitando}
         title="Excluir (R)"
         iconOnly={iconOnly}
-        activeVariant="err"
+        activeVariant="err-outline"
       />
       <StatusToggleCompact
         icon={Flame}
@@ -376,7 +376,9 @@ export function StatusToggleRow({
         disabled={pendingFlags.leitura}
         title={onUpdateLeitura ? 'Leitura (L) · clique 2x p/ editar autor' : 'Leitura (L)'}
         iconOnly={iconOnly}
-        activeVariant="inset"
+        // Cor de identidade como os vizinhos (fire/rejeitar): no `inset` o
+        // 📖 virava mais uma caixa cinza no meio do veredito.
+        activeVariant="leitura-soft"
       />
       {onUpdateLeitura && (
         <ReadingModal

@@ -59,27 +59,27 @@ function render(variant?: 'legacy' | 'workbench') {
 }
 
 describe('RightTabsPanel — variant legacy (default) preserva o header atual', () => {
-  it('mantém "Atualizar transcricao" no header e NÃO renderiza o rodapé "MAIS AÇÕES"', () => {
+  it('mantém "Atualizar transcricao" no header e NÃO renderiza o rodapé "Mais ações"', () => {
     const html = render();
 
     expect(html).toContain('aria-label="Atualizar transcricao"');
-    expect(html).not.toContain('MAIS AÇÕES');
+    expect(html).not.toContain('Mais ações');
   });
 
   it('mesmo comportamento quando variant não é passado (EditorFase1/shell antigo)', () => {
     const html = render('legacy');
 
     expect(html).toContain('aria-label="Atualizar transcricao"');
-    expect(html).not.toContain('MAIS AÇÕES');
+    expect(html).not.toContain('Mais ações');
   });
 });
 
 describe('RightTabsPanel — variant workbench move "Regerar transcrição" pro rodapé (AUDITORIA-v2 §9, CP10)', () => {
-  it('remove o refresh do header e mostra o rodapé "MAIS AÇÕES" fechado por padrão', () => {
+  it('remove o refresh do header e mostra o rodapé "Mais ações" fechado por padrão', () => {
     const html = render('workbench');
 
     expect(html).not.toContain('aria-label="Atualizar transcricao"');
-    expect(html).toContain('MAIS AÇÕES');
+    expect(html).toContain('Mais ações');
     expect(html).toContain('aria-expanded="false"');
     // Fechado por padrão: a ação "Regerar transcrição" ainda não aparece no HTML.
     expect(html).not.toContain('Regerar transcrição');
