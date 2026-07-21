@@ -63,7 +63,7 @@ const SPEED_STEP = 0.25;
 // e Aprovar (primaryAction). Sem botoes de salvar/editar/zoom/+regiao
 // nos componentes compartilhados (passa `readOnly={true}`).
 //
-// Layout: grid 1.5fr 320px / rows 1fr 220px.
+// Layout: grid 1.5fr 320px / rows 1fr minmax(200px, auto).
 //   Player (col 1, row 1) + SceneTimelineReadOnly (col 1, row 2) +
 //   ChecklistCard + CapaCard empilhados a direita (col 2, row 1/span 2).
 // ─────────────────────────────────────────────────────────────
@@ -88,6 +88,9 @@ export function FinalReviewPage() {
   const [renderStartModalOpen, setRenderStartModalOpen] = useState(false);
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // DE-PARA-v3 §4: o checklist nasce recolhido num contador N/6 — só o
+  // contador ocupa a barra de ações; os 6 chips expandem sob demanda.
+  const [checklistAberto, setChecklistAberto] = useState(false);
   const pipelineStatus = usePipelineStatus(corteId, renderFinalLocal);
   // D-367: filtro/grade exibido no header do player. No fluxo normal de
   // "Renderizar" o filtro vai `null` e o backend resolve para o global
@@ -399,7 +402,10 @@ export function FinalReviewPage() {
       className="grid min-h-0 flex-1"
       style={{
         gridTemplateColumns: '1.5fr 320px',
-        gridTemplateRows: '1fr 220px',
+        // DE-PARA-v3 §4: 220px fixos cortavam a trilha LAYOUT YT e o eixo na
+        // borda inferior. `minmax(200px, auto)` dá à timeline pelo menos a
+        // altura natural dela e deixa o player ceder o espaço.
+        gridTemplateRows: '1fr minmax(200px, auto)',
         gap: 12,
         padding: 12,
       }}
@@ -507,17 +513,10 @@ export function FinalReviewPage() {
             />
           }
         >
-          {/* Layout simples do protótipo (AUDITORIA §2c): player grande +
-              linha de ações + checklist em chips + capa compacta + timeline. */}
-          <div
-            className="flex-none self-center"
-            style={{
-              width: 'min(100%, calc((100vh - 380px) * 1.7778))',
-              aspectRatio: '16 / 9',
-              maxWidth: '100%',
-              minWidth: 'min(100%, 480px)',
-            }}
-          >
+          {/* Fluxo vertical: o PLAYER é o item flexível — fica com todo o
+              espaço que sobra — e a timeline ancora no rodapé com a altura
+              natural dela (nunca cortada, nunca sobrando branco embaixo). */}
+          <div className="min-h-0 flex-1">
             {videoPronto ? (
               <FinalPlayerPanel
                 src={finalVideoUrl(projetoId, corte.id)}
@@ -565,6 +564,22 @@ export function FinalReviewPage() {
             </Button>
             {statusPills}
             <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => setChecklistAberto((aberto) => !aberto)}
+              aria-expanded={checklistAberto}
+              title="Ver checklist de publicação"
+              className={
+                checklistOkCount === checklistItems.length
+                  ? 'flex items-center gap-1.5 rounded-[9px] bg-[var(--wb-ok-soft)] px-3 py-2 text-[10.5px] font-bold text-[var(--wb-ok-ink)]'
+                  : 'flex items-center gap-1.5 rounded-[9px] bg-[var(--wb-warn-soft)] px-3 py-2 text-[10.5px] font-bold text-[var(--wb-warn-ink)]'
+              }
+            >
+              CHECKLIST {checklistOkCount}/{checklistItems.length}
+              <span aria-hidden className="text-[9px]">
+                {checklistAberto ? '▲' : '▼'}
+              </span>
+            </button>
             <Button
               type="button"
               variant="outline"
@@ -581,67 +596,62 @@ export function FinalReviewPage() {
             </Button>
           </div>
 
-          {/* Checklist em chips + capa compacta + agendamento. DE-PARA-v2 §5:
-              ausência do painel lateral CHECKLIST é intencional (linha de
-              ações no lugar), só o contador N/6 precisava voltar. */}
-          <div className="flex flex-none flex-wrap items-center gap-1.5">
-            <span className="font-code text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]">
-              Checklist
-            </span>
-            <span
-              className={
-                checklistOkCount === checklistItems.length
-                  ? 'rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[9.5px] font-bold text-[var(--wb-ok)]'
-                  : 'rounded-full bg-[var(--wb-warn-soft)] px-2 py-0.5 font-code text-[9.5px] font-bold text-[var(--wb-warn)]'
-              }
-            >
-              {checklistOkCount}/{checklistItems.length}
-            </span>
-            {checklistItems.map((item, idx) => (
-              <span
-                key={idx}
-                title={item.label}
-                className={
-                  item.ok
-                    ? 'flex items-center gap-1 rounded-[6px] bg-[var(--wb-ok-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-ok)]'
-                    : 'flex items-center gap-1 rounded-[6px] bg-[var(--wb-warn-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-warn)]'
-                }
-              >
-                {item.ok ? '✓' : '○'} {item.label}
-              </span>
-            ))}
-            {exportStatusAtual?.youtube_scheduled_at && (
-              <span className="rounded-[6px] bg-[var(--wb-info-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-info)]">
-                agendado · {exportStatusAtual.youtube_scheduled_at}
-              </span>
-            )}
-            <div className="flex-1" />
-            {resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) && (
-              <span className="flex items-center gap-1.5">
+          {/* Checklist expansível (DE-PARA-v3 §4): recolhido por padrão para
+              despoluir; o contador na barra de ações é o gatilho. Traz os 6
+              chips + o cluster compacto (agendamento · capa · editar). */}
+          {checklistAberto && (
+            <div className="flex flex-none flex-wrap items-center gap-1.5 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
+              {checklistItems.map((item, idx) => (
                 <span
+                  key={idx}
+                  title={item.label}
                   className={
-                    capaPronta
-                      ? 'rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[9px] font-bold uppercase text-[var(--wb-ok)]'
-                      : 'rounded-full bg-[var(--wb-warn-soft)] px-2 py-0.5 font-code text-[9px] font-bold uppercase text-[var(--wb-warn)]'
+                    item.ok
+                      ? 'flex items-center gap-1 rounded-[6px] bg-[var(--wb-ok-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-ok)]'
+                      : 'flex items-center gap-1 rounded-[6px] bg-[var(--wb-warn-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-warn)]'
                   }
                 >
-                  {capaPronta ? 'pronta' : 'pendente'}
+                  {item.ok ? '✓' : '○'} {item.label}
                 </span>
-                <img
-                  src={resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) ?? undefined}
-                  alt="Capa do corte"
-                  className="h-12 rounded-md object-cover"
-                />
-              </span>
-            )}
-            <Button type="button" variant="ghost" size="sm" onClick={() => setMetadataOpen(true)}>
-              <Edit3 />
-              Editar capa
-            </Button>
-          </div>
+              ))}
+              {exportStatusAtual?.youtube_scheduled_at && (
+                <span className="rounded-[6px] bg-[var(--wb-info-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-info)]">
+                  agendado · {exportStatusAtual.youtube_scheduled_at}
+                </span>
+              )}
+              <div className="flex-1" />
+              {resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) && (
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={
+                      capaPronta
+                        ? 'rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[9px] font-bold uppercase text-[var(--wb-ok)]'
+                        : 'rounded-full bg-[var(--wb-warn-soft)] px-2 py-0.5 font-code text-[9px] font-bold uppercase text-[var(--wb-warn)]'
+                    }
+                  >
+                    {capaPronta ? 'pronta' : 'pendente'}
+                  </span>
+                  <img
+                    src={resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) ?? undefined}
+                    alt="Capa do corte"
+                    className="h-12 rounded-md object-cover"
+                  />
+                </span>
+              )}
+              <Button type="button" variant="ghost" size="sm" onClick={() => setMetadataOpen(true)}>
+                <Edit3 />
+                Editar capa
+              </Button>
+            </div>
+          )}
 
-          {/* Timeline read-only navegável (D-365) */}
-          <div className="h-[150px] flex-none">
+          {/* Timeline read-only navegável (D-365), ancorada no rodapé com a
+              altura natural do componente (cabeçalho + trilha CENAS 68px +
+              trilha LAYOUT YT 44px + eixo ≈ 196px). `flex-none` porque o
+              SceneTimeline não estica por dentro: com `flex-1` ele ganhava a
+              sobra e a devolvia como espaço branco abaixo do eixo. Quem cresce
+              é o player. */}
+          <div className="flex-none">
             <SceneTimeline
               cenas={cenas}
               currentTime={currentTime}
@@ -785,15 +795,23 @@ function FinalPlayerPanel({
         <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
           Vídeo final
         </span>
-        <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
+        <span className="flex-none rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
           1920×1080 · 29.97fps · h264
         </span>
-        {/* D-367: filtro/grade aplicado ao render */}
+        {/* D-367 + DE-PARA-v3 §4: o filtro de render é fonte única global
+            (I-023 removeu o filtro por projeto/corte, e o render não persiste
+            qual usou). O chip portanto identifica o AJUSTE GLOBAL ATUAL — não
+            o perfil gravado neste corte, que pode divergir se o ajuste mudou
+            depois do render. Rotular assim evita afirmar um dado que o
+            back-end não guarda. */}
         {filtroLabel && (
-          <Tooltip label="Filtro/grade aplicado no render" side="bottom">
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)]">
+          <Tooltip
+            label="Filtro/grade global dos Ajustes — é o perfil usado nos renders enquanto estiver selecionado. O filtro não é gravado por corte."
+            side="bottom"
+          >
+            <span className="inline-flex flex-none items-center gap-1 rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)]">
               <Palette size={11} aria-hidden />
-              {filtroLabel}
+              Global · {filtroLabel}
             </span>
           </Tooltip>
         )}
@@ -822,6 +840,10 @@ function FinalPlayerPanel({
           </Button>
         </Tooltip>
       </header>
+      {/* O vídeo ocupa o que sobra DA SEÇÃO. Qualquer teto de altura tem de
+          vir do container externo e nunca envolver esta seção inteira: o
+          cabeçalho (specs + filtro + MP4/Pasta) vive aqui dentro e, espremido
+          junto, quebra em várias linhas. */}
       <div className="relative min-h-0 flex-1 bg-black">
         <video
           ref={videoRef}
