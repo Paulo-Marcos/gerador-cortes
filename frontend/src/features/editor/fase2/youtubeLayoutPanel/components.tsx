@@ -57,6 +57,7 @@ export function DefinirPadroesCard({
   onResetSegmentoPadrao,
   pendingProjeto,
   pendingGlobal,
+  hideHeader = false,
 }: {
   open: boolean;
   onToggle: () => void;
@@ -84,6 +85,9 @@ export function DefinirPadroesCard({
   onResetSegmentoPadrao: () => void;
   pendingProjeto: boolean;
   pendingGlobal: boolean;
+  /** AUDITORIA-v4 §3: o gatilho e o selo vivem na linha "PADRÃO … definir" do
+   *  painel; aqui só o corpo, sem repetir cabeçalho nem moldura destacada. */
+  hideHeader?: boolean;
 }) {
   const chipTone =
     usando === 'projeto'
@@ -92,40 +96,46 @@ export function DefinirPadroesCard({
         ? 'var(--wb-violet)'
         : 'var(--wb-text-dim)';
   const presetTipo: LayoutPresetTipo = modo === 'full' ? 'posicionamento_full' : 'posicionamento';
+  if (hideHeader && !open) return null;
+
   return (
     <section
-      className="rounded-[var(--radius-sm)] border"
+      className={
+        hideHeader ? 'mt-2 rounded-[var(--radius-sm)] border' : 'rounded-[var(--radius-sm)] border'
+      }
       style={{
         background: 'color-mix(in oklch, var(--wb-accent) 5%, var(--wb-bg-card))',
         borderColor: 'color-mix(in oklch, var(--wb-accent) 30%, var(--wb-border))',
       }}
     >
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2 text-left transition-opacity hover:opacity-90"
-      >
-        <Flag size={12} className="flex-shrink-0 text-[var(--wb-accent)]" />
-        <strong className="text-[12px] font-bold text-[var(--wb-ink)]">Definir padrões</strong>
-        <span
-          className="rounded-full px-2 py-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.04em]"
-          style={{
-            background: 'color-mix(in oklch, ' + chipTone + ' 14%, transparent)',
-            color: chipTone,
-          }}
+      {!hideHeader && (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2 text-left transition-opacity hover:opacity-90"
         >
-          {label}
-        </span>
-        <div className="flex-1" />
-        <ChevronDown
-          size={13}
-          className="text-[var(--wb-text-dim)] transition-transform"
-          style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-        />
-      </button>
+          <Flag size={12} className="flex-shrink-0 text-[var(--wb-accent)]" />
+          <strong className="text-[12px] font-bold text-[var(--wb-ink)]">Definir padrões</strong>
+          <span
+            className="rounded-full px-2 py-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.04em]"
+            style={{
+              background: 'color-mix(in oklch, ' + chipTone + ' 14%, transparent)',
+              color: chipTone,
+            }}
+          >
+            {label}
+          </span>
+          <div className="flex-1" />
+          <ChevronDown
+            size={13}
+            className="text-[var(--wb-text-dim)] transition-transform"
+            style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          />
+        </button>
+      )}
       {open && (
-        <div className="border-t border-[var(--wb-border-soft)] p-3">
+        <div className={hideHeader ? 'p-3' : 'border-t border-[var(--wb-border-soft)] p-3'}>
           <p className="mb-2.5 text-[10.5px] leading-snug text-[var(--wb-text-mute)]">
             Cada nível define o posicionamento desse escopo (e fundo + placa em
             Corte/Projeto/Global). A prioridade é{' '}
@@ -389,22 +399,8 @@ export function InlineModeToggle({
 // FundoPicker removido (F-060): o seletor de fundo migrou para o modal de
 // posicionamento (PosicionamentoModal).
 
-// ─── SceneStat (replica do utilizado em CenasPanel) ───────────────
-export function SceneStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-2 py-1.5">
-      <div className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-        {label}
-      </div>
-      <div
-        className="mt-0.5 font-code text-[11.5px] text-[var(--wb-text)]"
-        style={{ fontVariantNumeric: 'tabular-nums' }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
+// SceneStat removido (AUDITORIA-v4 §2/§3): os 3 cards de stats viraram uma
+// linha inline tanto no CenasPanel quanto aqui no Layout YouTube.
 
 // PlacaField removido (F-060): a edicao da placa migrou para o modal de
 // posicionamento (PosicionamentoModal).

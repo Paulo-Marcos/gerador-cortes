@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Layers, Loader2, Save } from 'lucide-react';
+import { ChevronDown, Layers, Loader2, Save } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -51,7 +51,6 @@ import {
   InlineModeToggle,
   PadraoAtualChip,
   RegionItem,
-  SceneStat,
 } from './youtubeLayoutPanel/components';
 import { MODE_LABEL, clamp, round } from './youtubeLayoutPanel/shared';
 
@@ -199,6 +198,10 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
     // Estado de expansao do card "Definir padroes" (comeca colapsado).
     // F-060: Fundo e Placa sairam do painel — agora vivem no modal "Definir".
     const [padraoOpen, setPadraoOpen] = useState(false);
+    // AUDITORIA-v4 §3: painel nasce enxuto — lista de regiões e o toggle de
+    // tipo do projeto abrem sob demanda.
+    const [regioesOpen, setRegioesOpen] = useState(false);
+    const [ajusteFinoOpen, setAjusteFinoOpen] = useState(false);
     // F-060: qual modo o card "Definir padroes" esta configurando. Inicia no
     // modo do corte e re-sincroniza quando ele muda.
     const [modoDefinir, setModoDefinir] = useState<YoutubeLayoutMode>(draft.modo_padrao);
@@ -782,11 +785,14 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
 
     return (
       <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        {/* overflow-x-hidden explícito: com só `overflow-y-auto`, o CSS
+            promove o eixo X para `auto` e qualquer conteúdo largo (chip de
+            padrão, rótulo de modo) criava barra horizontal no painel. */}
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           {/* Cabecalho */}
           <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
-            <div className="mb-2.5 flex items-center gap-2">
-              <Layers size={14} className="text-[var(--wb-text-mute)]" aria-hidden />
+            <div className="mb-2.5 flex flex-wrap items-center gap-2">
+              <Layers size={14} className="flex-none text-[var(--wb-text-mute)]" aria-hidden />
               <strong className="whitespace-nowrap font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
                 Layout YouTube
               </strong>
@@ -832,22 +838,9 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               )}
             </div>
 
-            {/* Stats grid 3 — subiu pra cima (decisao Paulo) */}
-            <div className="mb-2 grid grid-cols-3 gap-1.5">
-              <SceneStat label="Regioes" value={String(draft.regioes.length)} />
-              <SceneStat label="Shared" value={String(shared.length)} />
-              <SceneStat label="Duracao" value={segParaMmSs(duration, true)} />
-            </div>
-
-            {/* Tipo do projeto + Modo do corte — linhas compactas
-              (decisao Paulo). Cada uma: caption + segmented pequeno. */}
-            <InlineModeToggle
-              label="Tipo do projeto"
-              hint="novos cortes herdam"
-              value={tipoProjeto}
-              pending={definirPadraoProjetoMutation.isPending}
-              onChange={handleDefinirTipoProjeto}
-            />
+            {/* AUDITORIA-v4 §3: MODO DESTE CORTE é o único toggle essencial —
+              sobe para o topo. "Tipo do projeto" (nível projeto, mexido raro)
+              desce para o disclosure "Ajuste fino". */}
             <InlineModeToggle
               label="Modo deste corte"
               value={draft.modo_padrao}
@@ -856,21 +849,92 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               herdandoDe={tipoProjeto}
             />
 
-            {/* F-048/F-060: padrao atual do corte — mostra qual preset/nivel
-              esta alimentando o modo padrao do corte (Full ou Compartilhada). */}
-            <div className="mt-1 flex items-center gap-1.5">
-              <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                Padrão atual
+            {/* Stats numa linha (mesmo tratamento do CenasPanel na §2): os 3
+              cards com borda eram um bloco alto para 3 números. */}
+            <div className="mt-2 flex flex-wrap items-center gap-2 font-code text-[10.5px] tabular-nums">
+              <span>
+                <b className="font-bold text-[var(--wb-text)]">{draft.regioes.length}</b>{' '}
+                <span className="text-[var(--wb-text-dim)]">regiões</span>
               </span>
-              <PadraoAtualChip escopo={escopoAtivoCorte} presetNome={presetNomeAtivo} />
+              <span aria-hidden className="text-[var(--wb-border)]">
+                ·
+              </span>
+              <span>
+                <b className="font-bold text-[var(--wb-text)]">{shared.length}</b>{' '}
+                <span className="text-[var(--wb-text-dim)]">shared</span>
+              </span>
+              <span aria-hidden className="text-[var(--wb-border)]">
+                ·
+              </span>
+              <span>
+                <b className="font-bold text-[var(--wb-text)]">{segParaMmSs(duration, true)}</b>{' '}
+                <span className="text-[var(--wb-text-dim)]">duração</span>
+              </span>
             </div>
+
+            {/* Ajuste fino — o que é de projeto/raro fica recolhido. O resumo
+              no cabeçalho mantém a informação visível; só o controle recolhe. */}
+            <button
+              type="button"
+              onClick={() => setAjusteFinoOpen((v) => !v)}
+              aria-expanded={ajusteFinoOpen}
+              className="mt-2 flex w-full items-center gap-1.5 rounded-[var(--radius-xs)] px-1 py-1 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
+            >
+              <span className="flex-none font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+                Ajuste fino
+              </span>
+              <span className="min-w-0 flex-1 truncate font-code text-[9.5px] text-[var(--wb-text-mute)]">
+                tipo do projeto: {MODE_LABEL[tipoProjeto]}
+              </span>
+              <ChevronDown
+                size={12}
+                className="flex-none text-[var(--wb-text-dim)] transition-transform"
+                style={{ transform: ajusteFinoOpen ? 'rotate(180deg)' : 'none' }}
+                aria-hidden
+              />
+            </button>
+            {ajusteFinoOpen && (
+              <div className="mt-1 rounded-[var(--radius-sm)] border border-dashed border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-1.5">
+                <InlineModeToggle
+                  label="Tipo do projeto"
+                  hint="novos cortes herdam"
+                  value={tipoProjeto}
+                  pending={definirPadraoProjetoMutation.isPending}
+                  onChange={handleDefinirTipoProjeto}
+                />
+              </div>
+            )}
           </header>
 
-          {/* F-048/F-060: Definir padroes (Corte / Projeto / Global) — sempre
-            visivel; o toggle escolhe se esta definindo o posicionamento Full
-            ou Compartilhada. Cada linha tem split button "Definir ▾" que abre
-            o modal (com fundo/placa) ou aplica preset direto. */}
-          <div className="border-b border-[var(--wb-border-soft)] p-3">
+          {/* F-048/F-060 + AUDITORIA-v4 §3: PADRÃO em UMA linha — selo do
+            padrão em uso + link "definir". O card completo (escopos corte/
+            projeto/global, presets, modal) abre a partir daqui, colapsado por
+            padrão: era um bloco destacado ocupando o painel o tempo todo. */}
+          <div className="border-b border-[var(--wb-border-soft)] px-3 py-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="flex-none font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+                Padrão
+              </span>
+              {/* min-w-0 + truncate: o nome do preset pode ser longo e era ele
+                  que empurrava a largura do painel. */}
+              <span className="min-w-0 flex-1 truncate">
+                <PadraoAtualChip escopo={escopoAtivoCorte} presetNome={presetNomeAtivo} />
+              </span>
+              <button
+                type="button"
+                onClick={() => setPadraoOpen((v) => !v)}
+                aria-expanded={padraoOpen}
+                className="inline-flex flex-none items-center gap-1 rounded-[var(--radius-xs)] px-1.5 py-1 text-[10.5px] font-semibold text-[var(--wb-accent)] transition-colors hover:bg-[var(--wb-accent-soft)]"
+              >
+                {padraoOpen ? 'fechar' : 'definir'}
+                <ChevronDown
+                  size={11}
+                  className="transition-transform"
+                  style={{ transform: padraoOpen ? 'rotate(180deg)' : 'none' }}
+                  aria-hidden
+                />
+              </button>
+            </div>
             <DefinirPadroesCard
               open={padraoOpen}
               onToggle={() => setPadraoOpen((v) => !v)}
@@ -901,29 +965,41 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               onResetSegmentoPadrao={() => removerPadraoSegmento(modoDefinir)}
               pendingProjeto={definirPadraoProjetoMutation.isPending}
               pendingGlobal={definirPadraoGlobalMutation.isPending}
+              hideHeader
             />
           </div>
 
-          {/* REGIOES — v3_pos.jsx:1102-1117 */}
+          {/* REGIÕES (AUDITORIA-v4 §3): resumo de UMA linha. A lista completa
+            de RegionItem abre pelo próprio resumo — antes ficava expandida
+            fixa, e com zero regiões ainda ocupava uma caixa vazia de 60px
+            dizendo "Sem intervalos manuais". Criar região segue na timeline. */}
           <div className="px-3 pb-3 pt-1">
-            <div className="mb-1.5 flex items-center gap-2">
-              <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-                Regioes customizadas
+            <button
+              type="button"
+              onClick={() => setRegioesOpen((v) => !v)}
+              aria-expanded={regioesOpen}
+              disabled={draft.regioes.length === 0}
+              className="flex w-full items-center gap-2 rounded-[var(--radius-xs)] px-1 py-1 text-left transition-colors hover:bg-[var(--wb-bg-inset)] disabled:pointer-events-none"
+            >
+              <span className="flex-none font-code text-[9.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
+                Regiões
               </span>
-              <span className="rounded-full bg-[var(--wb-bg-inset)] px-1.5 py-0.5 font-code text-[9.5px] font-bold text-[var(--wb-text-mute)]">
-                {draft.regioes.length}
+              <span className="min-w-0 flex-1 truncate font-code text-[10.5px] text-[var(--wb-text-mute)]">
+                {draft.regioes.length === 0
+                  ? 'nenhuma · crie na timeline ↙'
+                  : `${draft.regioes.length} manuais`}
               </span>
-              <div className="flex-1" />
-              <span className="font-code text-[9px] uppercase tracking-[0.08em] text-[var(--wb-text-faint)]">
-                + na timeline ↙
-              </span>
-            </div>
+              {draft.regioes.length > 0 && (
+                <ChevronDown
+                  size={12}
+                  className="text-[var(--wb-text-dim)] transition-transform"
+                  style={{ transform: regioesOpen ? 'rotate(180deg)' : 'none' }}
+                  aria-hidden
+                />
+              )}
+            </button>
 
-            {draft.regioes.length === 0 ? (
-              <div className="flex min-h-[60px] items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 text-center text-[11px] text-[var(--wb-text-mute)]">
-                Sem intervalos manuais
-              </div>
-            ) : (
+            {draft.regioes.length > 0 && regioesOpen && (
               <ul role="list" className="flex flex-col gap-1.5">
                 {draft.regioes.map((region, index) => {
                   const active = currentTime >= region.inicio && currentTime < region.fim;

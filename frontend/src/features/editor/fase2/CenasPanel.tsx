@@ -7,16 +7,15 @@ import {
   Film,
   Image as ImageIcon,
   Loader2,
-  MoreHorizontal,
   Plus,
+  Settings2,
   ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ClaudeAiButton } from '@/components/ui/claude-button';
-import { IconButton } from '@/components/ui/icon-button';
+import { ClaudeIcon } from '@/components/ui/claude-button';
+import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
-import { cn } from '@/lib/utils';
 import {
   useAtualizarCorte,
   useGerarCenasClaude,
@@ -36,11 +35,10 @@ import { validateSceneOverlaps } from './sceneValidation';
 // Header reorganizado por frequencia de uso:
 //   1. Linha de titulo: Film + serif 17/500 + Chip contagem + Chip "N sem
 //      retrato" warn + caption "roteiro visual"
-//   2. Acao primaria: "Gerar por IA" (ink) + "Retratos" (outline com N) +
-//      moreH (recolhe Manual + Studio)
-//   3. Padroes do projeto: caption + Card sempre visivel + botao "avancado"
-//      que revela Render + Sombra
-//   4. Stats grid 3 (Duracao / Densidade / Cobertura)
+//   2. Acao primaria (AUDITORIA-v4 §1): UMA linha — "Gerar cenas" (accent) +
+//      menu ⋯ com Retratos / Manual / Studio / Padroes do palco
+//   3. Padroes do palco: so aparece quando acionado pelo ⋯ (nao e mais linha fixa)
+//   4. Stats (AUDITORIA-v4 §2): uma linha inline "Ns duracao · N cenas · N% cobertura"
 // Lista: CenaItem expansivel.
 // Footer: "Tipos disponiveis ▾" + spacer + "Marcar validadas" (ok).
 //
@@ -84,7 +82,6 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
   const validarCenas = useValidarCenasRemotion(corteId, projetoId);
   const { notify } = useToast();
   const [manualOpen, setManualOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [padroesOpen, setPadroesOpen] = useState(false);
   const [showTypes, setShowTypes] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -241,98 +238,82 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <div className="flex-1" />
         </div>
 
-        {/* L2: acao primaria (Gerar por IA + Retratos + moreH) */}
+        {/* L2: uma única linha de ação (AUDITORIA-v4 §1) — primário
+            "Gerar cenas" + ⋯. Antes eram dois botões lado a lado MAIS a linha
+            fixa "Padrões · avançado": duas fileiras de controles só para
+            chegar na lista de cenas. Nada sumiu — Retratos, Manual, Studio e
+            Padrões moram no ⋯, com os mesmos disabled/tooltip/loading. */}
         <div className="mb-2 flex items-stretch gap-1.5">
           <Tooltip label="Gerar cenas automaticamente via Claude" side="bottom">
-            <ClaudeAiButton
-              className="flex-1 justify-start pl-3.5"
-              label="Gerar por IA"
-              pendingLabel="Gerando…"
-              pending={gerarClaude.isPending}
+            <button
+              type="button"
               onClick={() => gerarClaude.mutate()}
-            />
-          </Tooltip>
-          <Tooltip label={retratosTooltip} side="bottom">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handlePreencherRetratos}
-              disabled={retratosDisabled}
+              disabled={gerarClaude.isPending}
+              className="flex flex-1 items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--wb-accent)] px-3 py-2 text-[11px] font-bold text-[var(--wb-accent-fg)] shadow-[shadow:var(--wb-shadow-btn)] transition-colors hover:bg-[var(--wb-accent-strong)] disabled:pointer-events-none disabled:opacity-60"
             >
-              {preencherRetratos.isPending ? <Loader2 className="animate-spin" /> : <ImageIcon />}
-              Retratos{fichasSemRetrato > 0 ? ` (${fichasSemRetrato})` : ''}
-            </Button>
+              {gerarClaude.isPending ? (
+                <Loader2 size={13} className="animate-spin" aria-hidden />
+              ) : (
+                <ClaudeIcon size={13} />
+              )}
+              {gerarClaude.isPending ? 'Gerando…' : 'Gerar cenas'}
+            </button>
           </Tooltip>
-          <Tooltip label="Outras acoes (manual e studio)" side="bottom">
-            <IconButton
-              type="button"
-              variant={moreOpen ? 'outline' : 'ghost'}
-              size="sm"
-              onClick={() => setMoreOpen((v) => !v)}
-              aria-pressed={moreOpen}
-              aria-label="Outras acoes"
-            >
-              <MoreHorizontal />
-            </IconButton>
-          </Tooltip>
+          <OverflowMenu
+            label="Outras ações das cenas"
+            items={[
+              {
+                icon: ImageIcon,
+                label: `Retratos${fichasSemRetrato > 0 ? ` (${fichasSemRetrato})` : ''}`,
+                title: retratosTooltip,
+                disabled: retratosDisabled,
+                onClick: handlePreencherRetratos,
+              },
+              { icon: Plus, label: 'Gerar manual', onClick: handleAdd },
+              {
+                icon: ExternalLink,
+                label: 'Studio Remotion',
+                onClick: () => setManualOpen(true),
+              },
+              {
+                icon: Settings2,
+                label: padroesOpen ? 'Ocultar padrões do palco' : 'Padrões do palco',
+                onClick: () => setPadroesOpen((v) => !v),
+              },
+            ]}
+          />
         </div>
 
-        {/* L2b: expander 'mais' - Manual + Studio (raras) */}
-        {moreOpen && (
-          <div className="mb-2 flex gap-1.5 rounded-[var(--radius-sm)] border border-dashed border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-1.5">
-            <Tooltip label="Adicionar cena manualmente" side="bottom">
-              <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
-                <Plus />
-                Manual
-              </Button>
-            </Tooltip>
-            <Tooltip label="Abrir Remotion Studio" side="bottom">
-              <Button type="button" variant="outline" size="sm" onClick={() => setManualOpen(true)}>
-                <ExternalLink />
-                Studio
-              </Button>
-            </Tooltip>
-          </div>
-        )}
-
-        {/* L3: Padroes do projeto */}
-        <div className="mb-2 flex items-center gap-1.5">
-          <span className="mr-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-            Padroes
-          </span>
-          <RendererConfigControls.Card projetoId={projetoId} />
-          <button
-            type="button"
-            onClick={() => setPadroesOpen((v) => !v)}
-            title="Avancado · Render V2 · Sombra"
-            className={cn(
-              'ml-auto inline-flex h-[26px] items-center gap-1 rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] px-2 font-code text-[9.5px] font-bold uppercase tracking-[0.06em] text-[var(--wb-text-mute)] transition-colors',
-              padroesOpen ? 'bg-[var(--wb-bg-inset)]' : 'bg-transparent',
-            )}
-            aria-expanded={padroesOpen}
-          >
-            avancado
-            <ChevronDown
-              size={11}
-              className="transition-transform"
-              style={{ transform: padroesOpen ? 'rotate(180deg)' : 'none' }}
-            />
-          </button>
-        </div>
-
-        {/* L3b: expander padroes avancado — Render + Sombra */}
+        {/* Padrões do palco — agora só aparece quando pedido pelo ⋯. Traz
+            junto o card de config do renderer, que era a antiga linha fixa. */}
         {padroesOpen && (
-          <div className="mb-2 flex flex-wrap gap-1.5 rounded-[var(--radius-sm)] border border-dashed border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-1.5">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-[var(--radius-sm)] border border-dashed border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-1.5">
+            <RendererConfigControls.Card projetoId={projetoId} />
             <RendererConfigControls.Avancado projetoId={projetoId} />
           </div>
         )}
 
-        {/* L4: Stats grid 3 */}
-        <div className="grid grid-cols-3 gap-1.5">
-          <SceneStat label="Duracao" value={`${duracaoCenas.toFixed(1)}s`} />
-          <SceneStat label="Densidade" value={`${cenasOrdenadas.length} cenas`} />
-          <SceneStat label="Cobertura" value={`${cobertura.toFixed(1)}%`} />
+        {/* L4: stats numa linha (AUDITORIA-v4 §2) — eram 3 cards com borda e
+            fundo, um bloco alto só para 3 números. Mesmos dados, uma linha. */}
+        <div className="flex flex-wrap items-center gap-2 font-code text-[10.5px] tabular-nums">
+          <span>
+            <b className="font-bold text-[var(--wb-text)]">{duracaoCenas.toFixed(0)}s</b>{' '}
+            <span className="text-[var(--wb-text-dim)]">duração</span>
+          </span>
+          <span aria-hidden className="text-[var(--wb-border)]">
+            ·
+          </span>
+          <span>
+            <b className="font-bold text-[var(--wb-text)]">{cenasOrdenadas.length}</b>{' '}
+            <span className="text-[var(--wb-text-dim)]">cenas</span>
+          </span>
+          <span aria-hidden className="text-[var(--wb-border)]">
+            ·
+          </span>
+          <span>
+            <b className="font-bold text-[var(--wb-text)]">{cobertura.toFixed(0)}%</b>{' '}
+            <span className="text-[var(--wb-text-dim)]">cobertura</span>
+          </span>
         </div>
 
         {/* Botao Salvar so aparece quando dirty (mantem comportamento anterior) */}
@@ -465,19 +446,5 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
   );
 });
 
-// ── SceneStat · v3_pos.jsx:695-706 ───────────────────────────
-function SceneStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-2 py-1.5">
-      <div className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-        {label}
-      </div>
-      <div
-        className="mt-0.5 font-code text-[11.5px] text-[var(--wb-text)]"
-        style={{ fontVariantNumeric: 'tabular-nums' }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
+// SceneStat (3 cards Duração/Densidade/Cobertura) saiu na AUDITORIA-v4 §2 —
+// os mesmos números agora vivem numa linha inline no header do painel.
