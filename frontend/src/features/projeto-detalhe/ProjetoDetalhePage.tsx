@@ -2,19 +2,17 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   AlertCircle,
+  ArrowUpRight,
   Brain,
-  ClipboardCheck,
-  ExternalLink,
   Loader2,
   Plus,
-  RefreshCcw,
   Rocket,
+  RotateCw,
   Scissors,
+  Search,
 } from 'lucide-react';
 import { AdicionarCorteModal } from '@/features/editor/AdicionarCorteModal';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { Modal } from '@/components/ui/modal';
 import { Tooltip, TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
@@ -37,8 +35,14 @@ import type { Corte, StatusExportCorte } from '@/types/models';
 import { AnaliseIaModal } from './AnaliseIaModal';
 import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
 import { PublicarMassaModal } from './PublicarMassaModal';
-import { buildStatusPills } from './StatusPills';
+import { StatusPipStrip } from './StatusPills';
 import { VotoQualidadeLive } from './VotoQualidadeLive';
+
+// Ícone do cluster UTILITÁRIOS (protótipo v3 §Workspace): 32×30, sem borda e
+// sem fundo próprios — quem tem é o cluster. A cor do glifo vem de fora, uma
+// por ferramenta: tudo cinza deixava a fileira morta.
+const UTILITARIO_CLASS =
+  'flex h-[30px] w-8 items-center justify-center rounded-[6px] transition-colors hover:bg-[var(--wb-bg-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-40';
 
 export function ProjetoDetalhePage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -209,46 +213,46 @@ export function ProjetoDetalhePage() {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-3">
-        {/* Header compacto (design Workbench 1c §Workspace: thumb 120px +
-            título 14px/800 + meta + chips de estado). */}
-        <header className="flex flex-wrap items-center justify-between gap-3">
+        {/* Header do protótipo v3 §Workspace: thumb 132px + headline serif 24px
+            + uma única linha mono discreta com a meta. As contagens são TEXTO
+            colorido (acento / ok), não Badge — as caixas coloridas competiam
+            com os chips de estado logo abaixo e com a barra de ações. */}
+        <header className="flex flex-wrap items-start gap-4">
           {projeto.data?.youtube_url && (
             <img
               src={thumbnailUrl(projeto.data.youtube_url, 'mq') ?? undefined}
               alt=""
               loading="lazy"
-              className="hidden w-[120px] flex-none self-start rounded-[9px] object-cover [aspect-ratio:16/9] sm:block"
+              className="hidden w-[132px] flex-none self-start rounded-[10px] object-cover shadow-[shadow:var(--wb-shadow)] [aspect-ratio:16/9] sm:block"
             />
           )}
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="line-clamp-2 max-w-3xl text-[14px] font-extrabold text-[var(--wb-text)]">
+              <h1 className="font-editorial text-[24px] font-medium leading-[1.15] text-[var(--wb-text)] [text-wrap:pretty]">
                 {projeto.data?.titulo_live || (projeto.isLoading ? 'Carregando...' : 'Projeto')}
               </h1>
               {cortesQuery.isFetching && !cortesQuery.isLoading && (
-                <Loader2 size={14} className="animate-spin text-text-400" />
+                <Loader2 size={14} className="animate-spin text-[var(--wb-text-dim)]" />
               )}
             </div>
             {projeto.data && (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 font-code text-[10.5px] font-semibold text-[var(--wb-text-mute)]">
                 {projeto.data.canal_origem && (
-                  <span className="flex items-center gap-1 text-fuchsia-300/90">
+                  <span className="flex items-center gap-1.5">
                     <span aria-hidden>📺</span>
                     {projeto.data.canal_origem}
                   </span>
                 )}
                 {projeto.data.data_live && (
-                  <span className="flex items-center gap-1 text-amber-300/90">
-                    <span aria-hidden>🗓️</span>
-                    <time className="font-mono tabular-nums">
-                      {formatarDataLive(projeto.data.data_live)}
-                    </time>
+                  <span className="flex items-center gap-1.5">
+                    <span aria-hidden>🗓</span>
+                    <time className="tabular-nums">{formatarDataLive(projeto.data.data_live)}</time>
                   </span>
                 )}
                 {projeto.data.duracao_segundos > 0 && (
-                  <span className="flex items-center gap-1 text-amber-300/90">
-                    <span aria-hidden>⏱️</span>
-                    <span className="font-mono tabular-nums">
+                  <span className="flex items-center gap-1.5">
+                    <span aria-hidden>⏱</span>
+                    <span className="tabular-nums">
                       {formatarDuracaoHMS(projeto.data.duracao_segundos)}
                     </span>
                   </span>
@@ -259,24 +263,28 @@ export function ProjetoDetalhePage() {
                     pontuacaoRanking={projeto.data.pontuacao_ranking}
                   />
                 )}
-                <span className="inline-flex items-center gap-1">
-                  <Badge variant="accent">{cortes.length} cortes</Badge>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="font-bold text-[var(--wb-accent)]">{cortes.length} cortes</span>
                   <Tooltip label="Adicionar corte manualmente" side="bottom">
                     <button
                       type="button"
                       onClick={() => setAdicionarCorteOpen(true)}
                       aria-label="Adicionar corte manualmente"
-                      className="inline-flex h-5 w-5 items-center justify-center rounded-[var(--radius-xs)] border border-[var(--border)] text-text-300 transition-colors hover:border-[var(--wb-text-dim)] hover:bg-bg-800 hover:text-text-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-[4px] text-[var(--wb-text-dim)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
                     >
-                      <Plus size={12} strokeWidth={2.4} aria-hidden />
+                      <Plus size={11} strokeWidth={2.4} aria-hidden />
                     </button>
                   </Tooltip>
                 </span>
                 {cortesProntos.length > 0 && (
-                  <Badge variant="success">🚀 {cortesProntos.length} prontos</Badge>
+                  <span className="font-bold text-[var(--wb-warn-ink)]">
+                    🚀 {cortesProntos.length} prontos
+                  </span>
                 )}
                 {totalPublicados > 0 && (
-                  <Badge variant="info">▶️ {totalPublicados} publicados</Badge>
+                  <span className="font-bold text-[var(--wb-ok-ink)]">
+                    ▶ {totalPublicados} publicados
+                  </span>
                 )}
               </div>
             )}
@@ -284,9 +292,9 @@ export function ProjetoDetalhePage() {
               <div className="flex flex-wrap gap-1.5">
                 <span
                   className={cn(
-                    'rounded-[5px] px-2 py-0.5 text-[9.5px] font-bold',
+                    'rounded-[6px] px-2.5 py-[3px] text-[10px] font-bold',
                     baixado
-                      ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
+                      ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]'
                       : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)]',
                   )}
                 >
@@ -294,9 +302,9 @@ export function ProjetoDetalhePage() {
                 </span>
                 <span
                   className={cn(
-                    'rounded-[5px] px-2 py-0.5 text-[9.5px] font-bold',
+                    'rounded-[6px] px-2.5 py-[3px] text-[10px] font-bold',
                     transcrito
-                      ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
+                      ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]'
                       : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)]',
                   )}
                 >
@@ -307,98 +315,113 @@ export function ProjetoDetalhePage() {
                     type="button"
                     onClick={() => setAnaliseOpen(true)}
                     title="Diarização de falantes (painel na Análise IA)"
-                    className="rounded-[5px] bg-[var(--wb-ok-soft)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--wb-ok)]"
+                    className="rounded-[6px] bg-[var(--wb-ok-soft)] px-2.5 py-[3px] text-[10px] font-bold text-[var(--wb-ok)]"
                   >
                     ✓ diarizado · {totalFalantes} falante{totalFalantes > 1 ? 's' : ''}
                   </button>
                 )}
                 {cortes.length > 0 && (
-                  <span className="rounded-[5px] bg-[var(--wb-accent-soft)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--wb-accent)]">
+                  <span className="rounded-[6px] bg-[var(--wb-accent-soft)] px-2.5 py-[3px] text-[10px] font-bold text-[var(--wb-accent)]">
                     ✂ {avaliados}/{cortes.length} avaliados
                   </span>
                 )}
               </div>
             )}
           </div>
+        </header>
 
-          {/* Ações globais — padrão híbrido do design (README-v2 item 3):
-              secundárias viram ícone, texto só no que é primário/frequente. */}
-          <div className="flex flex-wrap items-center gap-1.5">
+        {/* Ações globais (DE-PARA-v3 §2) — dois grupos com hierarquia clara
+            dentro de um painel: à esquerda o primário sólido + o secundário em
+            outline; à direita, atrás do rótulo UTILITÁRIOS, um cluster inset
+            visualmente recuado com os 4 ícones raros (cada um com `title`).
+            Antes tudo dividia a mesma linha e o mesmo peso — não dava para ler
+            o que era primário. */}
+        <div className="flex flex-wrap items-center gap-2.5 rounded-[11px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3.5 py-2.5">
+          <Button onClick={() => setPublicarOpen(true)} disabled={cortesProntos.length === 0}>
+            <Rocket size={16} />
+            Publicar em massa
+          </Button>
+          <Button variant="outline" onClick={() => setAnaliseOpen(true)}>
+            <Brain size={16} />
+            Análise IA
+          </Button>
+
+          <div className="flex-1" />
+
+          <span className="font-code text-[8.5px] font-bold uppercase tracking-[0.12em] text-[var(--wb-text-dim)]">
+            Utilitários
+          </span>
+          {/* Só o CONTAINER tem borda/fundo — cada ícone é limpo, traço fino em
+              --wb-text-mute, e só ganha fundo no hover. Antes cada botão tinha
+              caixa e borda próprias, o que criava a fileira cinza pesada. */}
+          <div className="inline-flex items-center gap-0.5 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
             {projeto.data?.youtube_url && (
               <Tooltip label="Abrir vídeo original no YouTube" side="bottom">
-                <IconButton
-                  size="toolbar-sm"
-                  variant="inset"
+                <button
+                  type="button"
+                  className={cn(UTILITARIO_CLASS, 'text-[var(--wb-info)]')}
                   aria-label="Abrir no YouTube"
                   onClick={() =>
                     window.open(projeto.data?.youtube_url ?? '', '_blank', 'noopener,noreferrer')
                   }
                 >
-                  <ExternalLink />
-                </IconButton>
+                  <ArrowUpRight size={16} strokeWidth={1.75} aria-hidden />
+                </button>
               </Tooltip>
             )}
             <Tooltip
               label="Refazer transcrição — re-baixa as legendas no formato json3 (sem duplicacao do VTT) e re-sincroniza todos os cortes."
               side="bottom"
             >
-              <IconButton
-                size="toolbar-sm"
-                variant="inset"
+              <button
+                type="button"
+                className={cn(UTILITARIO_CLASS, 'text-[var(--wb-accent)]')}
                 aria-label="Refazer transcricao"
                 onClick={dispararRefazerTranscricao}
                 disabled={refazerTranscricao.isPending}
               >
-                {refazerTranscricao.isPending ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <RefreshCcw />
-                )}
-              </IconButton>
+                <RotateCw
+                  size={16}
+                  strokeWidth={1.75}
+                  aria-hidden
+                  className={refazerTranscricao.isPending ? 'animate-spin' : undefined}
+                />
+              </button>
             </Tooltip>
             <Tooltip
               label="Auditar análise — ver por que a IA escolheu cada corte e o que foi descartado."
               side="bottom"
             >
-              <IconButton
-                size="toolbar-sm"
-                variant="inset"
+              <button
+                type="button"
+                className={cn(UTILITARIO_CLASS, 'text-[var(--wb-violet)]')}
                 aria-label="Auditar análise"
                 onClick={() => setAuditoriaOpen(true)}
                 disabled={cortes.length === 0}
               >
-                <ClipboardCheck />
-              </IconButton>
+                <Search size={16} strokeWidth={1.75} aria-hidden />
+              </button>
             </Tooltip>
             <Tooltip
               label="Gerar trechos a remover (IA) para todos os cortes. Roda em segundo plano, corte a corte, e só acrescenta aos já marcados."
               side="bottom"
             >
-              <IconButton
-                size="toolbar-sm"
-                variant="inset"
+              <button
+                type="button"
+                className={cn(UTILITARIO_CLASS, 'text-[var(--wb-warn)]')}
                 aria-label="Gerar trechos (todos os cortes)"
                 onClick={dispararAnalisarDesviosTodos}
                 disabled={cortes.length === 0 || analisarDesviosTodos.disparado}
               >
                 {analisarDesviosTodos.disparado ? (
-                  <Loader2 className="animate-spin" />
+                  <Loader2 size={16} strokeWidth={1.75} className="animate-spin" aria-hidden />
                 ) : (
-                  <Scissors />
+                  <Scissors size={16} strokeWidth={1.75} aria-hidden />
                 )}
-              </IconButton>
+              </button>
             </Tooltip>
-            <div className="h-6 w-px bg-[var(--wb-border)]" aria-hidden />
-            <Button variant="outline" onClick={() => setAnaliseOpen(true)}>
-              <Brain size={16} />
-              Análise IA
-            </Button>
-            <Button onClick={() => setPublicarOpen(true)} disabled={cortesProntos.length === 0}>
-              <Rocket size={16} />
-              Publicar em massa
-            </Button>
           </div>
-        </header>
+        </div>
 
         {/* Progresso em tempo real (WebSocket) */}
         {progresso && (progresso.status === 'baixando' || progresso.status === 'transcrevendo') && (
@@ -746,7 +769,9 @@ function CorteLinhaCompacta({
       <div className="px-2 py-1.5">
         <div
           className={cn(
-            'truncate text-[11px]',
+            // DE-PARA-v3 (densidade): 2 linhas antes de reticências — o
+            // `truncate` cortava o título cedo mesmo sobrando espaço.
+            'line-clamp-2 text-[11px] leading-[1.3]',
             aprovado || publicado
               ? 'font-bold text-[var(--wb-text)]'
               : 'font-semibold text-[var(--wb-text-mute)]',
@@ -756,23 +781,11 @@ function CorteLinhaCompacta({
           {status.titulo || `Corte #${status.numero}`}
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-2">
-          <span className="flex flex-wrap gap-[3px]" role="list" aria-label="Estágios do corte">
-            {buildStatusPills(status).map(({ emoji, label, done, hint }) => (
-              <span
-                key={label}
-                role="listitem"
-                title={`${label}: ${done ? 'feito' : 'pendente'} — ${hint}`}
-                className={cn(
-                  'flex h-[15px] w-[15px] items-center justify-center rounded-full text-[8.5px] leading-none',
-                  done
-                    ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
-                    : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] opacity-55',
-                )}
-              >
-                <span aria-hidden>{emoji}</span>
-              </span>
-            ))}
-          </span>
+          {/* DE-PARA-v3 §2: tira compacta de 8 pips coloridos por estado
+              (o emoji em círculo de 15px pesava demais no card estreito e a
+              cor não dizia em que estágio o corte parou). O rótulo-resumo
+              ao lado continua sendo `labelAuxiliar`. */}
+          <StatusPipStrip corte={status} statusCorte={corteFull?.status} />
           <span className="truncate text-[9.5px] font-semibold text-[var(--wb-text-mute)]">
             {labelAuxiliar(status, corteFull?.status)}
           </span>

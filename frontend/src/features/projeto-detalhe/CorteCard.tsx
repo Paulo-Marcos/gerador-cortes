@@ -223,7 +223,7 @@ export function CorteCard({
 
         {/* Bottom-up: status pills, ações */}
         <div className="mt-auto flex flex-col gap-2.5 pt-3">
-          <StatusPills corte={corte} />
+          <StatusPills corte={corte} statusCorte={statusCorte} />
 
           <div
             onClick={(e) => e.stopPropagation()}
