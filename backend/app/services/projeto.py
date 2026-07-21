@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
@@ -16,6 +17,11 @@ class ProjetoService:
 
         await db.delete(projeto)
         await db.commit()
+
+        projeto_dir = projetos_dir() / projeto_id
+        if projeto_dir.exists():
+            shutil.rmtree(projeto_dir, ignore_errors=True)
+
         return True
 
     @staticmethod
