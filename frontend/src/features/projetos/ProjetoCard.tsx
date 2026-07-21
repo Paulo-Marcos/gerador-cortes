@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Eraser, Sparkles, Trash2, Trophy } from 'lucide-react';
+import { Clock, Eraser, FolderOpen, Sparkles, Trash2, Trophy } from 'lucide-react';
+import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { StatusChip } from '@/components/ui/status-chip';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -36,15 +37,14 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
     navigate(`/projetos/${projeto.id}`);
   };
 
-  const onDelete = (event: React.MouseEvent) => {
-    event.stopPropagation();
+  // Chamados pelo ⋯ (OverflowMenu já contém o clique — o card não navega).
+  const onDelete = () => {
     if (!confirm(`Remover o projeto "${projeto.titulo_live}"? Esta acao nao pode ser desfeita.`))
       return;
     remover.mutate(projeto.id);
   };
 
-  const onLimpar = (event: React.MouseEvent) => {
-    event.stopPropagation();
+  const onLimpar = () => {
     if (limpo) return;
     if (
       !confirm(
@@ -65,7 +65,10 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
       role="button"
       aria-label={`Abrir projeto ${projeto.titulo_live}`}
       className={cn(
-        'group cursor-pointer overflow-hidden rounded-[12px] border bg-[var(--wb-bg-panel)] shadow-[shadow:var(--wb-shadow)] transition-all duration-200',
+        // `transition-all` incluía background-color: ao alternar o tema o card
+        // ficava preso na cor antiga (clara no escuro) até a próxima recalc de
+        // estilo. Transicionar só o que a interação anima resolve.
+        'group cursor-pointer overflow-hidden rounded-[12px] border bg-[var(--wb-bg-panel)] shadow-[shadow:var(--wb-shadow)] transition-[transform,border-color,box-shadow] duration-200',
         'hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
         pronto
           ? 'border-[var(--wb-ok)]'
@@ -118,38 +121,6 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
           </span>
         )}
 
-        {/* Ações destrutivas em hover (protótipo: ações em hover/menu) */}
-        <div
-          onClick={(event) => event.stopPropagation()}
-          className="absolute bottom-2 left-2 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100"
-        >
-          <Tooltip label={limpo ? 'Midia pesada ja foi limpa' : 'Limpar midia pesada'} side="top">
-            <button
-              type="button"
-              onClick={onLimpar}
-              disabled={limpar.isPending || limpo}
-              aria-label="Limpar arquivos"
-              className={cn(
-                'flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-sm hover:bg-black/85 disabled:opacity-40',
-                limpo && 'text-info',
-              )}
-            >
-              {limpo ? <Sparkles size={12} aria-hidden /> : <Eraser size={12} aria-hidden />}
-            </button>
-          </Tooltip>
-          <Tooltip label="Remover projeto" side="top">
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={remover.isPending}
-              aria-label="Remover projeto"
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-sm hover:bg-error/80 disabled:opacity-40"
-            >
-              <Trash2 size={12} aria-hidden />
-            </button>
-          </Tooltip>
-        </div>
-
         {baixando && (
           <div className="absolute inset-x-0 bottom-0 h-1 bg-black/30">
             <div
@@ -172,8 +143,35 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
           {projeto.data_live ? ` · ${formatarDataLive(projeto.data_live)}` : ''}
           {` · ${projeto.total_cortes} cortes · ${projeto.total_publicados} publicados`}
         </p>
-        <div className="mt-2">
+        {/* DE-PARA-v3 §1: pipeline de 6 pips + rótulo de estado; as ações
+            raras saem da sobreposição na thumb e vão para um único ⋯. */}
+        <div className="mt-2 flex items-center gap-2">
           <PipelineProgress projeto={projeto} />
+          <div className="flex-1" />
+          <OverflowMenu
+            compact
+            label="Mais ações do projeto"
+            items={[
+              {
+                icon: FolderOpen,
+                label: 'Abrir projeto',
+                onClick: onCardClick,
+              },
+              {
+                icon: limpo ? Sparkles : Eraser,
+                label: limpo ? 'Mídia pesada já limpa' : 'Limpar mídia pesada',
+                disabled: limpar.isPending || limpo,
+                onClick: () => onLimpar(),
+              },
+              {
+                icon: Trash2,
+                label: 'Remover projeto',
+                danger: true,
+                disabled: remover.isPending,
+                onClick: () => onDelete(),
+              },
+            ]}
+          />
         </div>
       </div>
     </article>
