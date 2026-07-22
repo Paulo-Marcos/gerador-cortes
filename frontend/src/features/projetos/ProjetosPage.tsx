@@ -19,7 +19,7 @@ import { NovoProjetoForm } from './NovoProjetoForm';
 import { ProjetoCard } from './ProjetoCard';
 import { ProjetoCardSkeleton } from './ProjetoCardSkeleton';
 
-type FilterKey = 'todos' | 'nao_publicados' | 'analise' | 'edicao' | 'publicados';
+type FilterKey = 'todos' | 'nao_publicados' | 'analise' | 'edicao' | 'publicados' | 'nao_limpos';
 
 const FILTERS: Array<{ key: FilterKey; label: string; matches: (projeto: Projeto) => boolean }> = [
   { key: 'todos', label: 'Todos', matches: () => true },
@@ -48,6 +48,13 @@ const FILTERS: Array<{ key: FilterKey; label: string; matches: (projeto: Projeto
     label: 'Publicados',
     matches: (projeto) =>
       projeto.total_cortes > 0 && projeto.total_publicados === projeto.total_cortes,
+  },
+  {
+    // D-399: fila de manutenção de disco — projetos cuja mídia pesada ainda
+    // ocupa espaço. Isola quem pode ser limpo sem caçar card a card.
+    key: 'nao_limpos',
+    label: 'Nao limpos',
+    matches: (projeto) => !projeto.arquivos_limpos,
   },
 ];
 
@@ -280,7 +287,10 @@ export function ProjetosPage() {
         </div>
       )}
 
-      <div className="grid [grid-template-columns:repeat(auto-fill,minmax(250px,1fr))] gap-3">
+      {/* D-399: coluna mínima subiu de 250px porque o card ganhou faixa de
+          status, tipografia maior e barra de ações — a 250px o rodapé
+          espremia os 6 ícones do pipeline contra os botões. */}
+      <div className="grid [grid-template-columns:repeat(auto-fill,minmax(288px,1fr))] gap-3">
         {isLoading &&
           Array.from({ length: 8 }).map((_, index) => <ProjetoCardSkeleton key={index} />)}
 
