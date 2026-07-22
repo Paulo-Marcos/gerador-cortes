@@ -1,6 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Plus, Scissors, Settings } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Film,
+  Plus,
+  Scissors,
+  Settings,
+  Sparkles,
+  Tag,
+  Youtube,
+} from 'lucide-react';
 import { cn, formatarDuracaoHMS } from '@/lib/utils';
 import { Tooltip } from '@/components/ui/tooltip';
 import { PanelShell } from '@/components/workbench/PanelShell';
@@ -37,6 +48,131 @@ import { tintarFundo, type SinalFlags } from './UnifiedSidebar';
 // ─────────────────────────────────────────────────────────────
 
 const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
+
+// ─────────────────────────────────────────────────────────────
+// D-397 · Semáforo do card: DECISÃO (cor) + ESTÁGIO (ícones)
+//
+// São dois eixos independentes e o card os mantém separados:
+//   • DECISÃO editorial — rejeitado / aprovado / 🔥 fire / 📖 leitura.
+//     Vive na cor: fundo tintado (`tintarFundo`, regra única já usada
+//     pela sidebar antiga) + uma faixa vertical à esquerda em cor
+//     CHEIA. O fundo inativo usa os tints `-soft` (quase brancos), e
+//     num degradê verde→laranja→azul isso fica ilegível; a faixa é o
+//     que torna o degradê perceptível sem gritar no painel.
+//   • ESTÁGIO do pipeline — bruto gerado? pós/render final feito? já
+//     está no YouTube? Vive em 3 ícones + a palavra da fase.
+//
+// Por que não confiar só na cor: pelos guias de status indicator
+// (Carbon), um indicador acessível combina ao menos 3 de 4 canais —
+// cor, forma, símbolo e texto. Daí o trio faixa colorida + ícone
+// preenchido/vazado + palavra da fase (+ tooltip descritivo).
+// ─────────────────────────────────────────────────────────────
+
+const COR_ESTAGIO = {
+  bruto: 'oklch(0.72 0.16 75)',
+  pos: 'oklch(0.62 0.2 300)',
+  youtube: 'oklch(0.6 0.2 25)',
+} as const;
+
+type EstadoEstagio = 'pronto' | 'andamento' | 'pendente';
+
+interface EstagioView {
+  chave: keyof typeof COR_ESTAGIO;
+  Icon: LucideIcon;
+  rotulo: string;
+  estado: EstadoEstagio;
+  cor: string;
+  detalhe: string;
+}
+
+/** Marco do pipeline: ícone, rótulo e como cada estado se lê por extenso. */
+const MARCOS = {
+  bruto: {
+    Icon: Film,
+    rotulo: 'Bruto',
+    cor: COR_ESTAGIO.bruto,
+    detalhe: { pronto: 'gerado', andamento: 'gerando', pendente: 'não gerado' },
+  },
+  pos: {
+    Icon: Sparkles,
+    rotulo: 'Pós',
+    cor: COR_ESTAGIO.pos,
+    detalhe: { pronto: 'render final pronto', andamento: 'em andamento', pendente: 'não iniciada' },
+  },
+  youtube: {
+    Icon: Youtube,
+    rotulo: 'YouTube',
+    cor: COR_ESTAGIO.youtube,
+    detalhe: { pronto: 'publicado', andamento: 'agendado', pendente: 'não publicado' },
+  },
+} as const satisfies Record<
+  keyof typeof COR_ESTAGIO,
+  { Icon: LucideIcon; rotulo: string; cor: string; detalhe: Record<EstadoEstagio, string> }
+>;
+
+function marcoView(chave: keyof typeof MARCOS, estado: EstadoEstagio): EstagioView {
+  const { Icon, rotulo, cor, detalhe } = MARCOS[chave];
+  return { chave, Icon, rotulo, cor, estado, detalhe: detalhe[estado] };
+}
+
+/** Os 3 marcos que dizem em que fase o corte está, na ordem do pipeline. */
+export function derivarEstagios(
+  status: StatusExportCorte | undefined,
+  publicado: boolean,
+): EstagioView[] {
+  // "Pós" fecha no encode final (upload_ready/video.mp4). Grade, overlays e
+  // cenas salvas são etapas intermediárias — valem como "em andamento".
+  const posIniciada = Boolean(
+    status?.grade_pronta || status?.overlays_prontos || status?.cenas_geradas,
+  );
+
+  return [
+    marcoView('bruto', status?.raw_pronto ? 'pronto' : 'pendente'),
+    marcoView('pos', status?.video_pronto ? 'pronto' : posIniciada ? 'andamento' : 'pendente'),
+    marcoView(
+      'youtube',
+      publicado ? 'pronto' : status?.youtube_scheduled_at ? 'andamento' : 'pendente',
+    ),
+  ];
+}
+
+interface FaseView {
+  rotulo: string;
+  ink: string;
+}
+
+/**
+ * A palavra que resume onde o corte está — canal de TEXTO do semáforo.
+ * A tinta usa os tokens `-ink` do tema (legíveis sobre o fundo tintado nos
+ * dois temas); os `--tint-*` são cores de SUPERFÍCIE e no escuro ficariam
+ * quase invisíveis como texto.
+ */
+export function derivarFase(
+  flags: SinalFlags,
+  status: StatusExportCorte | undefined,
+  publicado: boolean,
+): FaseView {
+  if (flags.rejeitado) return { rotulo: 'rejeitado', ink: 'var(--wb-err-ink)' };
+  if (!flags.aprovado) return { rotulo: 'pendente', ink: 'var(--wb-text-mute)' };
+  if (publicado) return { rotulo: 'publicado', ink: 'var(--wb-ok-ink)' };
+  // "a publicar" e não "pronto para publicar": a linha tem ~124px no painel
+  // de 236px e o rótulo longo truncava.
+  if (status?.video_pronto) return { rotulo: 'a publicar', ink: 'var(--wb-ok-ink)' };
+  if (status?.raw_pronto) return { rotulo: 'pós', ink: 'var(--wb-violet)' };
+  return { rotulo: 'edição', ink: 'var(--wb-warn-ink)' };
+}
+
+/** Faixa lateral: mesma regra de `tintarFundo`, porém sempre em cor cheia. */
+export function faixaDeSinais(flags: SinalFlags): string {
+  if (flags.rejeitado) return 'var(--tint-rejeitado)';
+  const stops: string[] = [];
+  if (flags.aprovado) stops.push('var(--tint-aprovado)');
+  if (flags.fire) stops.push('var(--tint-fire)');
+  if (flags.leitura) stops.push('var(--tint-leitura)');
+  if (stops.length === 0) return 'var(--wb-border)';
+  if (stops.length === 1) return stops[0];
+  return `linear-gradient(180deg, ${stops.join(', ')})`;
+}
 
 interface Props {
   projetoId: string;
@@ -98,146 +234,23 @@ export function WorkbenchCutsPanel({
       <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1.5 pb-2">
         {cortes.map((corte, idx) => {
           const ativo = corte.id === corteAtivoId;
-          const stat = statusMap.get(corte.id);
-          const publicado = Boolean(stat?.youtube_url_publicado);
-          const flags: SinalFlags = {
-            aprovado: APROVADO_STATUS.has(corte.status),
-            rejeitado: corte.status === 'rejeitado',
-            fire: Boolean(corte.is_fire),
-            leitura: Boolean(corte.is_leitura),
-          };
-          const tintBackground = tintarFundo(flags, ativo);
-          const inlineStyle: React.CSSProperties | undefined = tintBackground
-            ? { background: tintBackground }
-            : undefined;
-          const podeSubir = idx > 0;
-          const podeDescer = idx < cortes.length - 1;
-
           return (
-            <div
+            <CorteCard
               key={corte.id}
-              ref={ativo ? activeCardRef : undefined}
-              style={inlineStyle}
-              className={cn(
-                'group relative flex w-full items-center gap-1 rounded-[var(--radius-sm)] border px-1.5 py-1.5 transition-colors',
-                !tintBackground && 'hover:bg-[var(--wb-bg-inset)]',
-                ativo
-                  ? cn(
-                      'border-[var(--wb-border)] shadow-sm',
-                      !tintBackground && 'bg-[var(--wb-bg-card)]',
-                    )
-                  : 'border-transparent',
-              )}
-            >
-              {ativo && (
-                <span
-                  aria-hidden
-                  className="absolute bottom-3 left-[-7px] top-3 w-[3px] rounded-r-full bg-[var(--wb-accent)]"
-                />
-              )}
-
-              <div
-                className={cn(
-                  'pointer-events-none absolute right-0.5 top-0.5 flex flex-col gap-0.5 transition-opacity',
-                  'opacity-0 focus-within:opacity-100 group-hover:opacity-100',
-                  reordenar.isPending && 'opacity-100',
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => mover(corte.id, -1)}
-                  disabled={!podeSubir || reordenar.isPending}
-                  aria-label={`Mover corte ${corte.numero} para cima`}
-                  className="pointer-events-auto flex h-3.5 w-3.5 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--wb-bg-card)]/85 text-[var(--wb-text-dim)] shadow-sm hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--wb-focus)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-[var(--wb-bg-card)]/85"
-                >
-                  <ChevronUp size={10} strokeWidth={2.4} aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => mover(corte.id, 1)}
-                  disabled={!podeDescer || reordenar.isPending}
-                  aria-label={`Mover corte ${corte.numero} para baixo`}
-                  className="pointer-events-auto flex h-3.5 w-3.5 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--wb-bg-card)]/85 text-[var(--wb-text-dim)] shadow-sm hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--wb-focus)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-[var(--wb-bg-card)]/85"
-                >
-                  <ChevronDown size={10} strokeWidth={2.4} aria-hidden />
-                </button>
-              </div>
-
-              {/* Linha do protótipo: thumb 50×29 + "NN · título" + status. */}
-              <button
-                type="button"
-                onClick={() =>
-                  navigate(getCortePath?.(corte) ?? `/projetos/${projetoId}/cortes/${corte.id}`)
-                }
-                className="flex w-full items-center gap-2 text-left focus-visible:outline-none"
-              >
-                {resolveThumbUrl(projetoId, stat?.thumbnail_path) ? (
-                  <img
-                    src={resolveThumbUrl(projetoId, stat?.thumbnail_path) ?? undefined}
-                    alt=""
-                    loading="lazy"
-                    className="h-[29px] w-[50px] flex-none rounded object-cover"
-                  />
-                ) : (
-                  <span
-                    aria-hidden
-                    className="flex h-[29px] w-[50px] flex-none items-center justify-center rounded bg-[var(--wb-bg-inset)] font-code text-[9px] font-bold text-[var(--wb-text-dim)]"
-                  >
-                    #{corte.numero}
-                  </span>
-                )}
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={cn(
-                      'block truncate text-[11px]',
-                      flags.aprovado || publicado
-                        ? 'font-bold text-[var(--wb-text)]'
-                        : 'font-semibold text-[var(--wb-text-mute)]',
-                    )}
-                  >
-                    {corte.numero} · {corte.titulo_proposto || `Corte #${corte.numero}`}
-                  </span>
-                  <span
-                    className={cn(
-                      'block truncate text-[9.5px]',
-                      ativo
-                        ? 'font-semibold text-[var(--wb-accent)]'
-                        : 'text-[var(--wb-text-mute)]',
-                    )}
-                  >
-                    {formatarDuracaoHMS(Math.max(0, corte.fim_seg - corte.inicio_seg))}
-                    {publicado
-                      ? ' · publicado ▶'
-                      : flags.rejeitado
-                        ? ' · rejeitado'
-                        : flags.aprovado
-                          ? `${flags.fire ? ' · aprovado 🔥' : ' · aprovado ✓'}`
-                          : ativo
-                            ? ' · avaliando…'
-                            : ' · pendente'}
-                  </span>
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Abrir metadados do corte ${corte.numero}`}
-                  title="Metadados"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMetaCorte(corte);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.stopPropagation();
-                      setMetaCorte(corte);
-                    }
-                  }}
-                  className="flex-none rounded px-1 text-[11px] text-[var(--wb-text-dim)] opacity-0 hover:text-[var(--wb-text)] focus-visible:opacity-100 group-hover:opacity-100"
-                >
-                  🏷
-                </span>
-              </button>
-            </div>
+              cardRef={ativo ? activeCardRef : undefined}
+              projetoId={projetoId}
+              corte={corte}
+              status={statusMap.get(corte.id)}
+              ativo={ativo}
+              podeSubir={idx > 0}
+              podeDescer={idx < cortes.length - 1}
+              reordenando={reordenar.isPending}
+              onMover={(delta) => mover(corte.id, delta)}
+              onAbrir={() =>
+                navigate(getCortePath?.(corte) ?? `/projetos/${projetoId}/cortes/${corte.id}`)
+              }
+              onAbrirMetadados={() => setMetaCorte(corte)}
+            />
           );
         })}
 
@@ -285,5 +298,220 @@ export function WorkbenchCutsPanel({
         />
       )}
     </PanelShell>
+  );
+}
+
+interface CorteCardProps {
+  cardRef?: RefObject<HTMLDivElement>;
+  projetoId: string;
+  corte: Corte;
+  status: StatusExportCorte | undefined;
+  ativo: boolean;
+  podeSubir: boolean;
+  podeDescer: boolean;
+  reordenando: boolean;
+  onMover: (delta: -1 | 1) => void;
+  onAbrir: () => void;
+  onAbrirMetadados: () => void;
+}
+
+/**
+ * Card de um corte na lista: decisão editorial na cor (fundo tintado + faixa
+ * lateral) e estágio do pipeline nos ícones + na palavra da fase.
+ */
+function CorteCard({
+  cardRef,
+  projetoId,
+  corte,
+  status,
+  ativo,
+  podeSubir,
+  podeDescer,
+  reordenando,
+  onMover,
+  onAbrir,
+  onAbrirMetadados,
+}: CorteCardProps) {
+  const publicado = Boolean(status?.youtube_url_publicado);
+  const flags: SinalFlags = {
+    aprovado: APROVADO_STATUS.has(corte.status),
+    rejeitado: corte.status === 'rejeitado',
+    fire: Boolean(corte.is_fire),
+    leitura: Boolean(corte.is_leitura),
+  };
+  const tintBackground = tintarFundo(flags, ativo);
+  const fase = derivarFase(flags, status, publicado);
+  const thumbUrl = resolveThumbUrl(projetoId, status?.thumbnail_path);
+
+  return (
+    <div
+      ref={cardRef}
+      style={tintBackground ? { background: tintBackground } : undefined}
+      className={cn(
+        'group relative flex w-full flex-col gap-1.5 rounded-[var(--radius-sm)] border py-2 pl-[13px] pr-2 transition-colors',
+        !tintBackground && 'hover:bg-[var(--wb-bg-inset)]',
+        ativo
+          ? cn('border-[var(--wb-accent)] shadow-sm', !tintBackground && 'bg-[var(--wb-bg-card)]')
+          : 'border-transparent',
+      )}
+    >
+      <span
+        aria-hidden
+        style={{ background: faixaDeSinais(flags) }}
+        className="absolute bottom-2 left-1 top-2 w-[3px] rounded-full"
+      />
+
+      <div
+        className={cn(
+          'pointer-events-none absolute right-0.5 top-0.5 flex flex-col gap-0.5 transition-opacity',
+          'opacity-0 focus-within:opacity-100 group-hover:opacity-100',
+          reordenando && 'opacity-100',
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => onMover(-1)}
+          disabled={!podeSubir || reordenando}
+          aria-label={`Mover corte ${corte.numero} para cima`}
+          className="pointer-events-auto flex h-3.5 w-3.5 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--wb-bg-card)]/85 text-[var(--wb-text-dim)] shadow-sm hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--wb-focus)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-[var(--wb-bg-card)]/85"
+        >
+          <ChevronUp size={10} strokeWidth={2.4} aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={() => onMover(1)}
+          disabled={!podeDescer || reordenando}
+          aria-label={`Mover corte ${corte.numero} para baixo`}
+          className="pointer-events-auto flex h-3.5 w-3.5 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--wb-bg-card)]/85 text-[var(--wb-text-dim)] shadow-sm hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--wb-focus)] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-[var(--wb-bg-card)]/85"
+        >
+          <ChevronDown size={10} strokeWidth={2.4} aria-hidden />
+        </button>
+      </div>
+
+      {/* Linha 1: thumb 58×33 + "NN · título" + duração · fase. */}
+      <button
+        type="button"
+        aria-current={ativo ? 'page' : undefined}
+        onClick={onAbrir}
+        className="flex w-full items-center gap-2 text-left focus-visible:outline-none"
+      >
+        {thumbUrl ? (
+          <img
+            src={thumbUrl}
+            alt=""
+            loading="lazy"
+            className="h-[33px] w-[58px] flex-none rounded object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="flex h-[33px] w-[58px] flex-none items-center justify-center rounded bg-[var(--wb-bg-inset)] font-code text-[10.5px] font-bold text-[var(--wb-text-dim)]"
+          >
+            #{corte.numero}
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span
+            className={cn(
+              'block truncate text-[12.5px] leading-tight',
+              flags.aprovado || publicado
+                ? 'font-bold text-[var(--wb-text)]'
+                : 'font-semibold text-[var(--wb-text-mute)]',
+            )}
+          >
+            {corte.numero} · {corte.titulo_proposto || `Corte #${corte.numero}`}
+          </span>
+          <span className="mt-0.5 block truncate text-[11px] leading-tight text-[var(--wb-text-mute)]">
+            {formatarDuracaoHMS(Math.max(0, corte.fim_seg - corte.inicio_seg))}
+            {' · '}
+            {/* No card ativo o fundo vai para o tint VIVO e as tintas de fase
+                caem para ~3:1 — ali o rótulo usa o texto normal (>8:1) e a cor
+                fica por conta da faixa e dos ícones de estágio. */}
+            <span
+              className="font-semibold"
+              style={{ color: ativo && tintBackground ? 'var(--wb-text)' : fase.ink }}
+            >
+              {fase.rotulo}
+            </span>
+          </span>
+        </span>
+      </button>
+
+      {/* Linha 2: em que ponto do pipeline o corte está + atalho de metadados. */}
+      <div className="flex items-center justify-between gap-1">
+        <EstagioTrack numero={corte.numero} estagios={derivarEstagios(status, publicado)} />
+        <button
+          type="button"
+          aria-label={`Abrir metadados do corte ${corte.numero}`}
+          title="Metadados"
+          onClick={onAbrirMetadados}
+          className="flex h-[20px] w-[20px] flex-none items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-dim)] opacity-0 hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] group-hover:opacity-100"
+        >
+          <Tag size={12} strokeWidth={2.2} aria-hidden />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Trilha compacta dos 3 marcos do pipeline (bruto → pós → YouTube).
+ * Cada slot combina forma + cor + símbolo; o texto vem no tooltip e no
+ * aria-label, para que o estado não dependa só da cor.
+ */
+function EstagioTrack({ numero, estagios }: { numero: number; estagios: EstagioView[] }) {
+  const resumo = estagios.map((e) => `${e.rotulo}: ${e.detalhe}`).join(' · ');
+
+  return (
+    <Tooltip
+      label={
+        <span className="flex flex-col gap-0.5 text-[11px] leading-snug">
+          <strong className="text-[11.5px] font-medium">Corte {numero} · pipeline</strong>
+          {estagios.map((estagio) => (
+            <span key={estagio.chave}>
+              {estagio.estado === 'pronto' ? '✅' : estagio.estado === 'andamento' ? '◐' : '⬜'}{' '}
+              {estagio.rotulo} — {estagio.detalhe}
+            </span>
+          ))}
+        </span>
+      }
+      side="right"
+    >
+      <span className="flex items-center gap-1" role="img" aria-label={resumo}>
+        {estagios.map((estagio) => (
+          <EstagioSlot key={estagio.chave} estagio={estagio} />
+        ))}
+      </span>
+    </Tooltip>
+  );
+}
+
+function EstagioSlot({ estagio }: { estagio: EstagioView }) {
+  const { Icon, estado, cor } = estagio;
+  const pronto = estado === 'pronto';
+  const andamento = estado === 'andamento';
+
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'flex h-[20px] w-[20px] items-center justify-center rounded-[6px] transition-colors',
+        pronto && 'shadow-sm',
+        !pronto && !andamento && 'opacity-45',
+      )}
+      style={{
+        background: pronto ? cor : andamento ? 'transparent' : 'var(--wb-bg-inset)',
+        // "Em andamento" = contorno na cor do estágio (forma diferente do
+        // preenchido), sem depender do ring do Tailwind com cor dinâmica.
+        boxShadow: andamento ? `inset 0 0 0 1.5px ${cor}` : undefined,
+      }}
+    >
+      <Icon
+        size={12}
+        strokeWidth={2.4}
+        color={pronto ? '#ffffff' : andamento ? cor : 'var(--wb-text-dim)'}
+        aria-hidden
+      />
+    </span>
   );
 }
