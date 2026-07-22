@@ -1,7 +1,14 @@
 """Retencao de artefatos pesados de midia.
 
-Mantem somente o material necessario para reconstruir o pacote final:
-`graded/clip_graded.mp4`, `overlays/`, logs, metadados e thumbnails.
+Duas politicas distintas, com objetivos diferentes:
+
+* RETENCAO DE MEIO DE PIPELINE (`aplicar_apos_grade`, `aplicar_apos_upload`):
+  roda sozinha durante o processamento e mantem o material necessario para
+  reconstruir o pacote final sem re-render — `graded/clip_graded.mp4`,
+  `overlays/`, logs, metadados e thumbnails.
+* LIMPEZA TERMINAL (`limpar_projeto`): disparada pelo usuario quando o projeto
+  ja acabou. Zera TODA a midia pesada e preserva apenas o que documenta o
+  trabalho (metadados, legendas, thumbnails, logs).
 """
 
 from __future__ import annotations
@@ -30,11 +37,41 @@ RAW_GLOBS = (
     "clip_raw_*.mkv",
     "clip_raw_*.mp4",
 )
-ORIGINAL_VIDEO_NAMES = (
-    "video.mkv",
-    "video.mp4",
-    "video.webm",
-    "video.mov",
+# Extensoes de midia PESADA que a limpeza terminal remove. Enumerar por extensao
+# — e nao por nome de arquivo — porque a pasta do corte acumula video com nome
+# editorial livre (ex.: `01_A_Esquerda_....mkv`), chunks de overlay em ProRes e
+# proxies de audio; qualquer lista de nomes fixos deixa material para tras.
+MEDIA_PESADA_SUFIXOS = frozenset(
+    {
+        # video
+        ".mkv",
+        ".mp4",
+        ".webm",
+        ".mov",
+        ".m4v",
+        ".avi",
+        ".ts",
+        # proxies de audio (`proxies/*.flac`) e derivados
+        ".flac",
+        ".wav",
+        ".mp3",
+        ".m4a",
+        ".aac",
+        ".opus",
+        # sobras de download interrompido do yt-dlp
+        ".part",
+        ".ytdl",
+    }
+)
+
+# Diretorios que sao PURO scratch: nada la dentro sobrevive a limpeza terminal.
+# `tmp_rerender_*` sao os `mkdtemp` que `ExportService` cria dentro da pasta do
+# corte a cada re-render do bruto e nunca remove; `versoes/` guarda previews de
+# filtro; `proxies/` e cache de audio regeravel a partir da live.
+SCRATCH_GLOBS = (
+    "cortes/*/tmp_rerender_*",
+    "cortes/*/versoes",
+    "proxies",
 )
 
 
@@ -80,15 +117,73 @@ class MediaRetentionService:
 
     @classmethod
     def limpar_projeto(cls, projeto: Projeto, cortes: list[Corte]) -> RetentionReport:
-        """Limpeza manual do projeto preservando materiais de reconstrucao."""
+        """Limpeza TERMINAL: zera a midia pesada e mantem so o que documenta o trabalho.
+
+        POR QUE nao reusa `aplicar_apos_upload` (D-398): aquela e a retencao de MEIO
+        de pipeline e por contrato preserva `graded/` + `overlays/`; alem disso ela
+        aborta o corte inteiro quando o graded nao esta la. Aplicada como "limpar
+        projeto" ela deixava para tras os overlays (a maior fatia do disco), os
+        `tmp_rerender_*` e os proxies de audio — o botao dizia "limpo" com dezenas de
+        GB intactos. Aqui a regra e a inversa: sai tudo que e midia, fica o que
+        permite REPLICAR o trabalho (metadados, legendas, thumbnails, logs).
+        """
         report = RetentionReport()
+        # `projetos_dir() / ""` resolve para a RAIZ de dados: sem id a varredura
+        # recursiva abaixo levaria a midia de todos os projetos do canal.
+        if not projeto.id:
+            report.erros.append("projeto sem id: limpeza abortada")
+            return report
+
         projeto_dir = cls.projeto_dir(projeto.id)
+        if not projeto_dir.is_dir():
+            return report
 
-        report.merge(cls._remover_video_original(projeto, projeto_dir))
-        for corte in cortes:
-            report.merge(cls.aplicar_apos_upload(corte))
+        for scratch in cls._scratch_dirs(projeto_dir):
+            cls._remover_diretorio(scratch, report)
 
+        for arquivo in cls._midia_pesada(projeto_dir):
+            cls._remover_arquivo(arquivo, report)
+
+        cls._esquecer_paths_de_midia(projeto, cortes)
+        cls._registrar_residuo(projeto_dir, report)
         return report
+
+    @classmethod
+    def _scratch_dirs(cls, projeto_dir: Path) -> list[Path]:
+        return [
+            caminho
+            for padrao in SCRATCH_GLOBS
+            for caminho in projeto_dir.glob(padrao)
+            if caminho.is_dir()
+        ]
+
+    @classmethod
+    def _midia_pesada(cls, projeto_dir: Path) -> list[Path]:
+        return sorted(
+            caminho
+            for caminho in projeto_dir.rglob("*")
+            if caminho.suffix.lower() in MEDIA_PESADA_SUFIXOS and caminho.is_file()
+        )
+
+    @classmethod
+    def _esquecer_paths_de_midia(cls, projeto: Projeto, cortes: list[Corte]) -> None:
+        """Zera no banco os ponteiros cujo arquivo a limpeza acabou de remover."""
+        if not cls._video_original_existente(projeto):
+            projeto.arquivo_video_path = ""
+        for corte in cortes:
+            if not cls._arquivo_clip_existente(corte):
+                corte.arquivo_clip_path = ""
+
+    @classmethod
+    def _registrar_residuo(cls, projeto_dir: Path, report: RetentionReport) -> None:
+        """Anota em `pulados` a midia que sobreviveu — arquivo em uso, por exemplo.
+
+        `ProjetoService` deriva `arquivos_limpos` de `pulados`/`erros`, entao a
+        varredura de sobra e o que impede o projeto de ser marcado como limpo
+        enquanto ainda houver midia pesada no disco.
+        """
+        for restante in cls._midia_pesada(projeto_dir):
+            report.pulados.append(f"{cls._display(restante)}: midia pesada nao removida")
 
     @staticmethod
     def projeto_dir(projeto_id: str) -> Path:
@@ -150,25 +245,6 @@ class MediaRetentionService:
                 paths.append(registered)
 
         return cls._unique_paths(paths)
-
-    @classmethod
-    def _remover_video_original(cls, projeto: Projeto, projeto_dir: Path) -> RetentionReport:
-        report = RetentionReport()
-        candidates = [projeto_dir / name for name in ORIGINAL_VIDEO_NAMES]
-
-        if projeto.arquivo_video_path:
-            registered = resolver_do_projeto(projeto.arquivo_video_path, projeto.id)
-            if cls._is_inside(registered, projeto_dir):
-                candidates.append(registered)
-
-        removed_paths = cls._unique_paths(candidates)
-        for path in removed_paths:
-            cls._remover_arquivo(path, report)
-
-        if not cls._video_original_existente(projeto):
-            projeto.arquivo_video_path = ""
-
-        return report
 
     @staticmethod
     def _video_aproveitavel(path: Path) -> bool:
