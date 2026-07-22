@@ -1,6 +1,10 @@
 # MCP local/pessoal (ai-memory roda em 127.0.0.1; nao commitar)
 .mcp.json
 
+# Portas alternativas do dev.ps1 neste checkout (DEV convive com PROD na mesma
+# maquina). Fica fora do repo de proposito: o PROD roda com os defaults.
+dev.ports.local.ps1
+
 # Ambientes e Dependências
 node_modules/
 venv/

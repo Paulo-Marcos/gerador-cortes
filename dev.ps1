@@ -23,7 +23,22 @@ $env:PYTHONUNBUFFERED = "1"
 $OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
 
-$projectPorts = @(8000, 4300, 3000, 3001)
+# Portas dos servicos. Os defaults sao as portas de PROD: o checkout de
+# producao roda este arquivo como esta no repositorio e NAO muda de porta.
+# Um `dev.ports.local.ps1` ao lado deste script (untracked, so existe nos
+# checkouts de desenvolvimento) sobrescreve estes valores para o DEV subir em
+# portas alternativas - assim DEV e PROD convivem na mesma maquina sem
+# disputar porta. O frontend recebe VITE_API_URL derivado de $BackendPort,
+# entao nao ha como o DEV falar com o backend do PROD por engano.
+$BackendPort  = 8000
+$FrontendPort = 4300
+$RemotionPort = 3000
+$WorkerPort   = 3001
+
+$portsOverride = Join-Path $PSScriptRoot "dev.ports.local.ps1"
+if (Test-Path $portsOverride) { . $portsOverride }
+
+$projectPorts = @($BackendPort, $FrontendPort, $RemotionPort, $WorkerPort)
 
 function Stop-ProcessTree {
     param(
@@ -263,10 +278,10 @@ Clear-DevEnvironment
 Confirm-RemotionReady
 
 Write-Host ""
-Write-Host "  Backend        " -ForegroundColor DarkCyan -NoNewline; Write-Host "http://localhost:8000"
-Write-Host "  API Docs       " -ForegroundColor DarkCyan -NoNewline; Write-Host "http://localhost:8000/docs"
-Write-Host "  Frontend React " -ForegroundColor Green    -NoNewline; Write-Host "http://localhost:4300"
-Write-Host "  Remotion       " -ForegroundColor Magenta  -NoNewline; Write-Host "http://localhost:3000"
+Write-Host "  Backend        " -ForegroundColor DarkCyan -NoNewline; Write-Host "http://localhost:$BackendPort"
+Write-Host "  API Docs       " -ForegroundColor DarkCyan -NoNewline; Write-Host "http://localhost:$BackendPort/docs"
+Write-Host "  Frontend React " -ForegroundColor Green    -NoNewline; Write-Host "http://localhost:$FrontendPort"
+Write-Host "  Remotion       " -ForegroundColor Magenta  -NoNewline; Write-Host "http://localhost:$RemotionPort"
 Write-Host "  Log atual      " -ForegroundColor Yellow   -NoNewline; Write-Host (Get-ConfiguredLogLevel)
 Write-Host ""
 Write-Host "  Ctrl+C para encerrar tudo" -ForegroundColor DarkGray
@@ -279,7 +294,7 @@ $services = @(
         Label = "[BACK] "
         Color = "Cyan"
         FileName = $CMD
-        Arguments = '/d /s /c "python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"'
+        Arguments = "/d /s /c `"python -m uvicorn app.main:app --host 0.0.0.0 --port $BackendPort --reload`""
         WorkingDirectory = Join-Path $BASE "backend"
         EnvVars = @{
             PYTHONUNBUFFERED = "1"
@@ -292,10 +307,11 @@ $services = @(
         Label = "[REACT]"
         Color = "Green"
         FileName = $CMD
-        Arguments = '/d /s /c "npm.cmd run dev"'
+        Arguments = "/d /s /c `"npm.cmd run dev -- --port $FrontendPort --strictPort`""
         WorkingDirectory = Join-Path $BASE "frontend"
         EnvVars = @{
             LANG = "en_US.UTF-8"
+            VITE_API_URL = "http://localhost:$BackendPort/api"
         }
     },
     @{
@@ -303,7 +319,7 @@ $services = @(
         Label = "[REM]  "
         Color = "Magenta"
         FileName = $CMD
-        Arguments = '/d /s /c "npm.cmd run dev -- --no-open"'
+        Arguments = "/d /s /c `"npm.cmd run dev -- --no-open --port $RemotionPort`""
         WorkingDirectory = Join-Path $BASE "video-renderer"
         EnvVars = @{
             LANG = "en_US.UTF-8"
