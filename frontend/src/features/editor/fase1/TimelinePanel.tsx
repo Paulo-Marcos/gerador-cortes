@@ -1214,6 +1214,11 @@ export function TimelinePanel({
 
             <div className="flex-1" />
 
+            {/* D-402: a velocidade em vigor precisa ser legivel sem abrir o ⚙.
+                O CP7 mandou o CONTROLE pro AdvancedMenu; aqui volta so o
+                INDICADOR (pill nao-clicavel), como no header legacy. */}
+            <SpeedDisplay playbackRate={playbackRate} />
+
             <AdvancedMenu
               variant="workbench"
               onZoomIn={handleZoomIn}
