@@ -224,6 +224,27 @@ describe('D-404 · a linha do corte é um link de verdade', () => {
   });
 });
 
+// ── D-405 · ícone de metadados fixo quando já gerados ────────
+
+describe('D-405 · ícone de metadados vira indicador de estado', () => {
+  it('com metadados gerados o ícone fica fixo, preenchido e se anuncia como estado', () => {
+    const html = render([corte(1)], [statusExport({ metadados_completos: true })]);
+
+    expect(html).toContain('Metadados do corte 1 gerados — abrir');
+    expect(html).toContain('title="Metadados gerados"');
+    expect(html).toContain('text-[var(--wb-fire)]');
+    expect(html).not.toContain('aria-label="Abrir metadados do corte 1"');
+  });
+
+  it('sem metadados o ícone continua sendo só atalho de hover', () => {
+    const html = render([corte(1)], [statusExport()]);
+
+    expect(html).toContain('aria-label="Abrir metadados do corte 1"');
+    expect(html).toContain('title="Metadados"');
+    expect(html).not.toContain('text-[var(--wb-fire)]');
+  });
+});
+
 describe('D-397 · o card renderiza os dois eixos do semáforo', () => {
   it('pinta a faixa lateral com o degradê dos sinais do corte', () => {
     const fireELeitura = { ...corte(1, 'aprovado'), is_fire: true, is_leitura: true } as Corte;

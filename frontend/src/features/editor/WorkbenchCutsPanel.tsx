@@ -332,6 +332,7 @@ function CorteCard({
   onAbrirMetadados,
 }: CorteCardProps) {
   const publicado = Boolean(status?.youtube_url_publicado);
+  const temMetadados = Boolean(status?.metadados_completos);
   const flags: SinalFlags = {
     aprovado: APROVADO_STATUS.has(corte.status),
     rejeitado: corte.status === 'rejeitado',
@@ -443,17 +444,52 @@ function CorteCard({
       {/* Linha 2: em que ponto do pipeline o corte está + atalho de metadados. */}
       <div className="flex items-center justify-between gap-1">
         <EstagioTrack numero={corte.numero} estagios={derivarEstagios(status, publicado)} />
-        <button
-          type="button"
-          aria-label={`Abrir metadados do corte ${corte.numero}`}
-          title="Metadados"
-          onClick={onAbrirMetadados}
-          className="flex h-[20px] w-[20px] flex-none items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-dim)] opacity-0 hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] group-hover:opacity-100"
-        >
-          <Tag size={12} strokeWidth={2.2} aria-hidden />
-        </button>
+        <BotaoMetadados numero={corte.numero} gerados={temMetadados} onAbrir={onAbrirMetadados} />
       </div>
     </div>
+  );
+}
+
+/**
+ * Atalho de metadados do corte — e, quando eles já existem, o próprio
+ * INDICADOR de que existem (D-405).
+ *
+ * Gerados: fica fixo, preenchido e na cor da etapa Metadados (a mesma tinta
+ * do dot em ETAPA_DOT_TOKENS). Não gerados: segue sendo um atalho discreto,
+ * que só aparece no hover do card, para não poluir a lista com ação de corte
+ * ainda não trabalhado. O estado não fica só na cor — o rótulo acessível e o
+ * title mudam junto. O slot de 20×20 existe nos dois casos (só a opacidade
+ * muda), então a densidade e o alinhamento da lista não se mexem.
+ */
+function BotaoMetadados({
+  numero,
+  gerados,
+  onAbrir,
+}: {
+  numero: number;
+  gerados: boolean;
+  onAbrir: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={
+        gerados
+          ? `Metadados do corte ${numero} gerados — abrir`
+          : `Abrir metadados do corte ${numero}`
+      }
+      title={gerados ? 'Metadados gerados' : 'Metadados'}
+      onClick={onAbrir}
+      className={cn(
+        'flex h-[20px] w-[20px] flex-none items-center justify-center rounded-[var(--radius-xs)] transition-opacity',
+        'hover:bg-[var(--wb-bg-inset)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+        gerados
+          ? 'text-[var(--wb-fire)] opacity-100'
+          : 'text-[var(--wb-text-dim)] opacity-0 hover:text-[var(--wb-text)] group-hover:opacity-100',
+      )}
+    >
+      <Tag size={12} strokeWidth={2.2} fill={gerados ? 'currentColor' : 'none'} aria-hidden />
+    </button>
   );
 }
 
