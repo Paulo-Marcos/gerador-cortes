@@ -42,19 +42,8 @@ def colunas_faltantes(esperadas: Iterable[str], atuais: Container[str]) -> list[
     return [nome for nome in esperadas if nome not in atuais]
 
 
-def _default_sql(coluna: Column) -> str | None:
-    """Literal SQL do default do modelo, ou ``None`` quando não há um seguro.
-
-    Só default LITERAL vira ``DEFAULT`` no DDL. Default calculado em Python
-    (``datetime.utcnow``, lambda que lê a identidade do canal) não tem
-    equivalente estático: a coluna nasce nula e o ORM a preenche na escrita
-    seguinte — que é justamente o estado de uma linha antiga.
-    """
-    default = coluna.default
-    if default is None or not default.is_scalar:
-        return None
-
-    valor = default.arg
+def _literal_sql(valor: object) -> str | None:
+    """Valor Python renderizado como literal SQL, ou ``None`` se não houver forma segura."""
     if isinstance(valor, enum.Enum):  # StatusProjeto/StatusCorte são str-enums
         valor = valor.value
     if isinstance(valor, bool):
@@ -66,9 +55,24 @@ def _default_sql(coluna: Column) -> str | None:
     return None
 
 
+def _default_sql(coluna: Column) -> str | None:
+    """Literal SQL do default do modelo, ou ``None`` quando não há um seguro.
+
+    Só default LITERAL vira ``DEFAULT`` no DDL. Default calculado em Python
+    (``datetime.utcnow``, lambda que lê a identidade do canal) não tem
+    equivalente estático: a coluna nasce nula e o ORM a preenche na escrita
+    seguinte — que é justamente o estado de uma linha antiga.
+    """
+    default = coluna.default
+    if default is None or not default.is_scalar:
+        return None
+    return _literal_sql(default.arg)
+
+
 def ddl_add_column(tabela: str, coluna: Column) -> str:
     """``ALTER TABLE`` que acrescenta `coluna` como nullable, com default literal se houver."""
-    ddl = f"ALTER TABLE {tabela} ADD COLUMN {coluna.name} {coluna.type.compile(_DIALETO_SQLITE)}"
+    tipo = coluna.type.compile(_DIALETO_SQLITE)
+    ddl = f"ALTER TABLE {tabela} ADD COLUMN {coluna.name} {tipo}"
     default = _default_sql(coluna)
     return ddl if default is None else f"{ddl} DEFAULT {default}"
 
@@ -81,6 +85,23 @@ async def _tabelas_do_banco(conn: AsyncConnection) -> set[str]:
 async def _colunas_da_tabela(conn: AsyncConnection, tabela: str) -> set[str]:
     resultado = await conn.execute(text(f"PRAGMA table_info({tabela})"))
     return {linha[1] for linha in resultado.fetchall()}
+
+
+async def _reparar_coluna(conn: AsyncConnection, tabela: str, coluna: Column) -> bool:
+    """Acrescenta `coluna` a `tabela`, dizendo se conseguiu.
+
+    Falha é registrada e engolida de propósito: reparo de schema é melhor-esforço
+    e não pode impedir o app de subir — o boot segue, e o log diz o que ficou para trás.
+    """
+    ddl = ddl_add_column(tabela, coluna)
+    try:
+        await conn.execute(text(ddl))
+    except Exception:
+        logger.exception("Schema drift: falha ao reparar %s.%s", tabela, coluna.name)
+        return False
+
+    logger.warning("Schema drift reparado em %s.%s via: %s", tabela, coluna.name, ddl)
+    return True
 
 
 async def reconciliar_schema(conn: AsyncConnection) -> dict[str, list[str]]:
@@ -99,13 +120,7 @@ async def reconciliar_schema(conn: AsyncConnection) -> dict[str, list[str]]:
 
         atuais = await _colunas_da_tabela(conn, tabela.name)
         for nome in colunas_faltantes((coluna.name for coluna in tabela.columns), atuais):
-            ddl = ddl_add_column(tabela.name, tabela.columns[nome])
-            try:
-                await conn.execute(text(ddl))
-            except Exception:
-                logger.exception("Schema drift: falha ao reparar %s.%s", tabela.name, nome)
-                continue
-            reparos.setdefault(tabela.name, []).append(nome)
-            logger.warning("Schema drift reparado em %s.%s via: %s", tabela.name, nome, ddl)
+            if await _reparar_coluna(conn, tabela.name, tabela.columns[nome]):
+                reparos.setdefault(tabela.name, []).append(nome)
 
     return reparos

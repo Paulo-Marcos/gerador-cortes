@@ -262,6 +262,16 @@ async def test_runner_reconcilia_antes_das_migrations(conn):
     assert "is_fire" in await _colunas(conn, "metadados_cortes")
 
 
+@pytest.mark.asyncio
+async def test_reparo_que_falha_nao_derruba_o_boot(conn):
+    """Reparo é melhor-esforço: um ALTER que o SQLite recusa vira log, não exceção —
+    o app sobe e o log diz o que ficou para trás."""
+    await conn.execute(text("CREATE TABLE projetos (id VARCHAR(36) PRIMARY KEY)"))
+    ja_existe = Column("id", String(36))  # ADD COLUMN de coluna existente é recusado
+
+    assert await reconciliacao._reparar_coluna(conn, "projetos", ja_existe) is False
+
+
 def test_colunas_faltantes_preserva_ordem_do_modelo():
     assert reconciliacao.colunas_faltantes(["id", "titulo", "is_fire"], {"id"}) == [
         "titulo",
