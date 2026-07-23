@@ -9,6 +9,54 @@ import type { Desvio } from '@/types/models';
 
 export type { PlayerHandle };
 
+// ─── D-409: retomar de onde parou ────────────────────────────────────────
+// Sair do corte e voltar (passar por Configuracoes, por exemplo) recomecava
+// o video no inicio, porque `loadedmetadata` sempre reposicionava em
+// inicioSeg. A posicao fica no localStorage por corte: e conveniencia de
+// navegacao, nao dado do dominio — nao vale um round-trip nem uma coluna.
+const POSICAO_PREFIXO = 'bruto:posicao:';
+/** Margem para considerar que o corte foi assistido ate o fim. */
+const MARGEM_FIM_SEG = 1;
+
+function lerPosicaoSalva(chave: string | undefined): number | null {
+  if (!chave) return null;
+  try {
+    const bruto = localStorage.getItem(POSICAO_PREFIXO + chave);
+    if (bruto === null) return null;
+    const seg = Number(bruto);
+    return Number.isFinite(seg) ? seg : null;
+  } catch {
+    // Modo privado / storage bloqueado: sem retomada, e so isso.
+    return null;
+  }
+}
+
+function gravarPosicaoSalva(chave: string | undefined, seg: number) {
+  if (!chave) return;
+  try {
+    localStorage.setItem(POSICAO_PREFIXO + chave, String(seg));
+  } catch {
+    // idem: perder a retomada nunca pode quebrar a reproducao.
+  }
+}
+
+/**
+ * Onde o video deve comecar. Cai em `inicioSeg` quando nao ha posicao salva,
+ * quando ela ficou FORA do corte (o corte foi reenquadrado no In/Out desde a
+ * ultima visita) ou quando o corte ja tinha sido visto ate o fim — nesses
+ * casos retomar levaria a um ponto que nao pertence mais ao corte, ou ao
+ * ultimo segundo dele.
+ */
+export function posicaoInicialDoVideo(
+  salva: number | null,
+  inicioSeg: number,
+  fimSeg: number,
+): number {
+  if (salva === null || salva < inicioSeg) return inicioSeg;
+  if (fimSeg > 0 && salva >= fimSeg - MARGEM_FIM_SEG) return inicioSeg;
+  return salva;
+}
+
 // ─────────────────────────────────────────────────────────────
 // PlayerPanel — replica `design_reference/src/v2_bruto.jsx:627-649`.
 // Panel header "Player" + badge "video original · 4K" + display
@@ -43,6 +91,9 @@ interface Props {
   /** AUDITORIA-v2 §4 (CP4) — 'legacy' (default) mantém o header do editor
    *  antigo; 'overlay' é o vídeo largo do Workbench com chips sobrepostos. */
   variant?: 'legacy' | 'overlay';
+  /** D-409: identidade do corte para lembrar onde a reprodução parou. Sem
+   *  ela o player continua sempre começando no início do corte. */
+  posicaoKey?: string;
 }
 
 export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
@@ -59,6 +110,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     audioOffsetMs = 0,
     onAudioOffsetChange,
     variant = 'legacy',
+    posicaoKey,
   },
   ref,
 ) {
@@ -83,6 +135,10 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     offsetMs: audioOffsetMs,
   });
 
+  // D-409: ultimo segundo ja persistido, para nao escrever no localStorage a
+  // cada `timeupdate` (o evento dispara ~4x/s).
+  const posicaoGravadaRef = useRef(-1);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -92,6 +148,11 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
       lastTimeRef.current = t;
       currentTimeRef.current = t;
       onTimeUpdateRef.current?.(t);
+
+      if (Math.abs(t - posicaoGravadaRef.current) >= 1) {
+        posicaoGravadaRef.current = t;
+        gravarPosicaoSalva(posicaoKey, t);
+      }
 
       if (fimSeg > 0 && !video.paused && prev < fimSeg && t >= fimSeg && t - prev < 1) {
         video.pause();
@@ -110,9 +171,11 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
       }
     };
     const onLoaded = () => {
-      video.currentTime = inicioSeg;
-      lastTimeRef.current = inicioSeg;
-      currentTimeRef.current = inicioSeg;
+      const alvo = posicaoInicialDoVideo(lerPosicaoSalva(posicaoKey), inicioSeg, fimSeg);
+      video.currentTime = alvo;
+      lastTimeRef.current = alvo;
+      currentTimeRef.current = alvo;
+      posicaoGravadaRef.current = alvo;
     };
     video.addEventListener('timeupdate', onTime);
     video.addEventListener('loadedmetadata', onLoaded);
@@ -120,7 +183,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
       video.removeEventListener('timeupdate', onTime);
       video.removeEventListener('loadedmetadata', onLoaded);
     };
-  }, [src, inicioSeg, fimSeg, desvios, smartPlay]);
+  }, [src, inicioSeg, fimSeg, desvios, smartPlay, posicaoKey]);
 
   const duracao = Math.max(0, fimSeg - inicioSeg);
   const rateLabel = `${playbackRate.toFixed(2)}×`;

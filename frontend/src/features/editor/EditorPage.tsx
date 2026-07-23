@@ -897,6 +897,7 @@ export function EditorPage() {
             <PlayerPanel
               ref={playerRef}
               variant="overlay"
+              posicaoKey={corteId}
               src={videoOriginal}
               inicioSeg={corteUI.inicio_seg}
               fimSeg={corteUI.fim_seg}
