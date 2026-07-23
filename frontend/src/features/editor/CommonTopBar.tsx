@@ -208,16 +208,19 @@ export function StatusToggleCompact({
   iconSize = 15,
 }: StatusToggleCompactProps) {
   if (iconOnly) {
-    // AUDITORIA-v2 §2 / Workbench 1c.dc.html:157-160 — a cor destes botoes e
-    // FIXA (identidade da acao), nao condicionada ao estado atual do corte:
-    // Aprovar e sempre --wb-ok, Rejeitar sempre --wb-err, Fire sempre
-    // --wb-fire-soft, Leitura sempre --wb-inset. O estado "active" ainda
-    // reforca o icone (stroke mais grosso) mas nao muda o fundo.
+    // D-406 revisa a AUDITORIA-v2 §2 (Workbench 1c.dc.html:157-160), que fixava
+    // a cor pela identidade da acao — o fundo era o mesmo aprovado ou nao, e so
+    // a espessura do stroke mudava. Na pratica aprovar nao dava retorno nenhum.
+    // Agora o FUNDO carrega o estado (ativo = variante cheia/soft; inativo =
+    // inset neutro) e o GLIFO carrega a identidade (verde/vermelho/fogo/leitura
+    // mesmo desligado). O `color` inativo vai inline porque `inset` ja pinta o
+    // texto por classe — e inline sempre vence, sem depender da ordem do CSS.
     return (
       <Tooltip label={title ?? label} side="bottom">
         <IconButton
           size="toolbar"
-          variant={activeVariant}
+          variant={active ? activeVariant : 'inset'}
+          style={active ? undefined : { color }}
           onClick={onClick}
           disabled={disabled}
           aria-label={label}
@@ -331,6 +334,9 @@ export function StatusToggleRow({
     }, 240);
   }
 
+  // D-406: os tres qualificadores POSITIVOS andam juntos (Aprovar, Fire,
+  // Leitura) e o destrutivo fecha a fila — antes Rejeitar ficava encravado
+  // entre Aprovar e Fire, colando a acao irreversivel no clique mais comum.
   return (
     <>
       <StatusToggleCompact
@@ -344,17 +350,6 @@ export function StatusToggleRow({
         iconOnly={iconOnly}
         activeVariant="ok"
         iconSize={16}
-      />
-      <StatusToggleCompact
-        icon={X}
-        label="R · Rejeitar"
-        active={rejeitado}
-        color="var(--wb-err)"
-        onClick={onRejeitar}
-        disabled={pendingFlags.rejeitando}
-        title="Excluir (R)"
-        iconOnly={iconOnly}
-        activeVariant="err-outline"
       />
       <StatusToggleCompact
         icon={Flame}
@@ -379,6 +374,20 @@ export function StatusToggleRow({
         // Cor de identidade como os vizinhos (fire/rejeitar): no `inset` o
         // 📖 virava mais uma caixa cinza no meio do veredito.
         activeVariant="leitura-soft"
+      />
+      <StatusToggleCompact
+        icon={X}
+        label="R · Rejeitar"
+        active={rejeitado}
+        color="var(--wb-err)"
+        onClick={onRejeitar}
+        disabled={pendingFlags.rejeitando}
+        title="Excluir (R)"
+        iconOnly={iconOnly}
+        // Rejeitado precisa gritar mais que o `err-outline` de antes: com o
+        // fundo agora carregando o estado, o outline era indistinguivel do
+        // inset neutro dos vizinhos desligados.
+        activeVariant="err"
       />
       {onUpdateLeitura && (
         <ReadingModal
