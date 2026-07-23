@@ -855,34 +855,37 @@ export function EditorPage() {
 
             <div className="min-w-2 flex-1" />
 
-            <Tooltip label="Salvar (Ctrl+S)" side="top">
-              <button
-                type="button"
-                onClick={salvarMudancas}
-                disabled={!isDirty || atualizarCorte.isPending}
-                className="flex flex-none items-center gap-1.5 rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-[11px] py-[7px] shadow-[shadow:var(--wb-shadow)] disabled:pointer-events-none disabled:opacity-60"
-              >
-                {atualizarCorte.isPending ? (
-                  <Loader2
-                    size={11}
-                    className="animate-spin text-[var(--wb-text-mute)]"
-                    aria-hidden
-                  />
-                ) : (
-                  <span
-                    className={cn(
-                      'h-[7px] w-[7px] rounded-full',
-                      isDirty ? 'bg-[var(--wb-warn)]' : 'bg-transparent',
-                    )}
-                    aria-hidden
-                  />
-                )}
-                <span className="text-[10.5px] font-bold text-[var(--wb-text)]">Salvar</span>
-                <span className="font-code text-[9px] font-semibold text-[var(--wb-text-dim)]">
-                  Ctrl+S
-                </span>
-              </button>
-            </Tooltip>
+            {/* D-407: o Salvar era permanente e so ficava `disabled` quando
+                limpo — ocupava a ponta da toolbar sem dizer nada. Agora so
+                existe enquanto ha o que salvar (ou enquanto salva, para o
+                clique nao sumir sob o cursor) e usa a cor de alerta, virando
+                o aviso de "corte sujo" em vez de mais um botao morto. Sem
+                salto de layout: quem cede o espaco e o espacador flex-1 ao
+                lado, entao nada da toolbar se desloca. */}
+            {(isDirty || atualizarCorte.isPending) && (
+              <Tooltip label="Salvar (Ctrl+S)" side="top">
+                <button
+                  type="button"
+                  onClick={salvarMudancas}
+                  disabled={atualizarCorte.isPending}
+                  className="flex flex-none items-center gap-1.5 rounded-lg border border-[var(--wb-warn)] bg-[var(--wb-warn-soft)] px-[11px] py-[7px] shadow-[shadow:var(--wb-shadow)] disabled:pointer-events-none disabled:opacity-60"
+                >
+                  {atualizarCorte.isPending ? (
+                    <Loader2
+                      size={11}
+                      className="animate-spin text-[var(--wb-warn-ink)]"
+                      aria-hidden
+                    />
+                  ) : (
+                    <span className="h-[7px] w-[7px] rounded-full bg-[var(--wb-warn)]" aria-hidden />
+                  )}
+                  <span className="text-[10.5px] font-bold text-[var(--wb-warn-ink)]">Salvar</span>
+                  <span className="font-code text-[9px] font-semibold text-[var(--wb-warn-ink)] opacity-70">
+                    Ctrl+S
+                  </span>
+                </button>
+              </Tooltip>
+            )}
           </div>
 
           <PlayerCap>
