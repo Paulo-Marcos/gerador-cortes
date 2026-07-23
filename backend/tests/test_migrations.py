@@ -9,6 +9,8 @@ garantir as invariantes que sustentam a "atualização sem quebra":
   - migrations pendentes rodam em ordem crescente, carimbando cada passo.
 """
 
+from datetime import datetime
+
 import app.migrations as migrations_module
 import pytest
 import pytest_asyncio
@@ -17,8 +19,10 @@ from app.migrations import (
     Migration,
     _ler_versao_schema,
     aplicar_migrations,
+    reconciliacao,
 )
-from sqlalchemy import text
+from app.models import Base
+from sqlalchemy import Column, DateTime, String, text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -178,3 +182,116 @@ async def test_migration_005_sem_tabela_e_noop(conn):
     from app.migrations import migration_005_trechos_geracoes
 
     await migration_005_trechos_geracoes.upgrade(conn)  # não deve lançar
+
+
+# ── Reconciliação declarativa (D-403): modelo × schema real ─────────────────
+
+
+async def _criar_tabelas_so_com_pk(conn) -> None:
+    """Banco no pior caso: toda tabela do modelo existe, mas só com a PK.
+
+    Reproduz o vão que `create_all` não fecha — a tabela já existe, então nenhuma
+    coluna nova do modelo entra nela.
+    """
+    for tabela in Base.metadata.sorted_tables:
+        pk = next(iter(tabela.primary_key.columns)).name
+        await conn.execute(text(f"CREATE TABLE {tabela.name} ({pk} VARCHAR(36) PRIMARY KEY)"))
+
+
+@pytest.mark.asyncio
+async def test_reconciliacao_adiciona_is_fire_em_metadados_antigo(conn):
+    """Regressão D-403: banco cuja `metadados_cortes` nasceu sem `is_fire` ganha a
+    coluna — era o que fazia `GET /api/cortes/projeto/{id}` responder 500."""
+    await conn.execute(text("CREATE TABLE metadados_cortes (id VARCHAR(36) PRIMARY KEY)"))
+
+    await reconciliacao.reconciliar_schema(conn)
+
+    assert "is_fire" in await _colunas(conn, "metadados_cortes")
+
+
+@pytest.mark.asyncio
+async def test_reconciliacao_cobre_toda_coluna_de_todo_modelo(conn):
+    """O verificador de fato: nenhuma coluna declarada em `models.py` fica de fora,
+    em nenhuma tabela. Uma coluna nova que ninguém migrou cai aqui, não em produção."""
+    await _criar_tabelas_so_com_pk(conn)
+
+    await reconciliacao.reconciliar_schema(conn)
+
+    for tabela in Base.metadata.sorted_tables:
+        esperadas = {coluna.name for coluna in tabela.columns}
+        assert esperadas <= await _colunas(conn, tabela.name), f"drift em {tabela.name}"
+
+
+@pytest.mark.asyncio
+async def test_reconciliacao_e_idempotente(conn):
+    """Rodar de novo é no-op: o segundo boot não repara nada."""
+    await _criar_tabelas_so_com_pk(conn)
+
+    await reconciliacao.reconciliar_schema(conn)
+
+    assert await reconciliacao.reconciliar_schema(conn) == {}
+
+
+@pytest.mark.asyncio
+async def test_reconciliacao_preserva_coluna_extra_legada(conn):
+    """Coluna que só existe no banco (legado que o ORM ignora, ex. `filtro_padrao`)
+    não é dropada — reparo só adiciona."""
+    await conn.execute(
+        text("CREATE TABLE projetos (id VARCHAR(36) PRIMARY KEY, filtro_padrao TEXT)")
+    )
+
+    await reconciliacao.reconciliar_schema(conn)
+
+    assert "filtro_padrao" in await _colunas(conn, "projetos")
+
+
+@pytest.mark.asyncio
+async def test_reconciliacao_ignora_tabela_ausente(conn):
+    """Banco cru (antes do `create_all`) atravessa sem erro: criar tabela é papel
+    do `create_all`, que já a cria completa."""
+    assert await reconciliacao.reconciliar_schema(conn) == {}
+
+
+@pytest.mark.asyncio
+async def test_runner_reconcilia_antes_das_migrations(conn):
+    """A reconciliação está de fato no caminho do boot — `init_db` chama o runner."""
+    await conn.execute(text("CREATE TABLE metadados_cortes (id VARCHAR(36) PRIMARY KEY)"))
+
+    await aplicar_migrations(conn)
+
+    assert "is_fire" in await _colunas(conn, "metadados_cortes")
+
+
+def test_colunas_faltantes_preserva_ordem_do_modelo():
+    assert reconciliacao.colunas_faltantes(["id", "titulo", "is_fire"], {"id"}) == [
+        "titulo",
+        "is_fire",
+    ]
+
+
+def test_ddl_usa_default_literal_do_modelo():
+    coluna = Base.metadata.tables["metadados_cortes"].columns["is_fire"]
+
+    assert reconciliacao.ddl_add_column("metadados_cortes", coluna).endswith("DEFAULT 0")
+
+
+def test_ddl_usa_o_valor_do_enum_e_nao_seu_repr():
+    """`default=StatusProjeto.PENDENTE` precisa virar `'pendente'` — o `repr` de um
+    str-enum ('StatusProjeto.PENDENTE') entraria como lixo na coluna."""
+    coluna = Base.metadata.tables["projetos"].columns["status"]
+
+    assert reconciliacao.ddl_add_column("projetos", coluna).endswith("DEFAULT 'pendente'")
+
+
+def test_ddl_escapa_aspas_do_default():
+    coluna = Column("credito", String(200), default="d'Ávila")
+
+    assert reconciliacao.ddl_add_column("metadados_cortes", coluna).endswith("DEFAULT 'd''Ávila'")
+
+
+def test_ddl_omite_default_calculado_em_python():
+    """`datetime.utcnow` não tem equivalente estático: a coluna nasce nula e o ORM
+    a preenche na escrita seguinte."""
+    coluna = Column("criado_em", DateTime, default=datetime.utcnow)
+
+    assert "DEFAULT" not in reconciliacao.ddl_add_column("cortes", coluna)

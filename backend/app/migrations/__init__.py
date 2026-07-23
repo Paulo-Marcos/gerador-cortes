@@ -1,10 +1,17 @@
-"""Versionamento de schema do SQLite via ``PRAGMA user_version``.
+"""Evolução de schema do SQLite no boot: reconciliação declarativa + migrations.
 
 O ``.db`` do usuário é gitignored: num ``git pull`` de uma versão nova, o banco
 precisa ser MIGRADO no boot, não recriado. Este módulo aplica migrations
 idempotentes em ordem crescente de versão e carimba ``PRAGMA user_version`` a
 cada passo. Migrations já aplicadas (``version <= user_version``) NÃO
 reexecutam — rerodar o boot é seguro.
+
+Antes das migrations versionadas roda a reconciliação declarativa
+(:mod:`app.migrations.reconciliacao`), que deriva de ``Base.metadata`` as colunas
+que o modelo declara e o banco não tem. Ela é a rede de segurança para a coluna
+que entrou no modelo sem migration nem ALTER — cenário que quebrava a API com
+``no such column`` (D-403). Roda em TODO boot, não uma vez só: a
+``user_version`` marca a evolução intencional, não o estado real do arquivo.
 
 Escolha de ``PRAGMA user_version`` (em vez de tabela ``schema_version``):
 é um inteiro no cabeçalho do próprio arquivo, sem custo de tabela extra,
@@ -27,6 +34,7 @@ from app.migrations import (
     migration_003_paths_video_short,
     migration_004_campos_v2_cortes,
     migration_005_trechos_geracoes,
+    reconciliacao,
 )
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -85,10 +93,15 @@ async def _carimbar_versao_schema(conn: AsyncConnection, versao: int) -> None:
 
 
 async def aplicar_migrations(conn: AsyncConnection) -> int:
-    """Aplica as migrations pendentes em ordem e retorna a versão final do schema.
+    """Reconcilia o schema declarativo, aplica as migrations pendentes em ordem
+    e retorna a versão final do schema.
 
-    Idempotente: pula tudo que já está abaixo ou na ``user_version`` atual.
+    Idempotente nas duas etapas: a reconciliação só age sobre coluna do modelo
+    ausente no banco, e as migrations pulam tudo que já está abaixo ou na
+    ``user_version`` atual.
     """
+    await reconciliacao.reconciliar_schema(conn)
+
     versao_atual = await _ler_versao_schema(conn)
     for migration in MIGRATIONS:
         if migration.version <= versao_atual:
