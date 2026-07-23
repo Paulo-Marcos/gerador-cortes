@@ -117,6 +117,40 @@ function appendQueryParams(url: string, params: Record<string, string>): string 
 const FERRAMENTA_CLASS =
   'flex aspect-square min-w-[24px] flex-[0_1_34px] items-center justify-center rounded-[6px] transition-colors hover:bg-[var(--wb-bg-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-40';
 
+// D-410: par rótulo/valor da faixa acima do vídeo. Rótulo miúdo em caixa alta
+// e valor em tabular-nums, para os números não dançarem enquanto o player anda.
+const TOM_FAIXA_VIDEO = {
+  padrao: 'text-[var(--wb-text)]',
+  ok: 'text-[var(--wb-ok)]',
+  accent: 'text-[var(--wb-accent)]',
+} as const;
+
+function CampoFaixaVideo({
+  rotulo,
+  valor,
+  tom = 'padrao',
+  titulo,
+}: {
+  rotulo: string;
+  valor: string;
+  tom?: keyof typeof TOM_FAIXA_VIDEO;
+  titulo?: string;
+}) {
+  return (
+    <span className="flex flex-none items-baseline gap-1.5" title={titulo}>
+      <span className="font-code text-[8.5px] font-bold uppercase tracking-[0.12em] text-[var(--wb-text-dim)]">
+        {rotulo}
+      </span>
+      <span
+        className={cn('font-code text-[11px] font-semibold', TOM_FAIXA_VIDEO[tom])}
+        style={{ fontVariantNumeric: 'tabular-nums' }}
+      >
+        {valor}
+      </span>
+    </span>
+  );
+}
+
 export function EditorPage() {
   const { id: projetoId = '', corteId = '' } = useParams<{ id: string; corteId: string }>();
   const navigate = useNavigate();
@@ -854,9 +888,9 @@ export function EditorPage() {
             <span className="min-w-0 flex-[0_1_auto] overflow-hidden whitespace-nowrap text-ellipsis rounded-[5px] bg-[var(--wb-bg-inset)] px-2 py-0.5 font-code text-[8.5px] font-bold uppercase text-[var(--wb-text-mute)]">
               Vídeo original · 4K
             </span>
-            <span className="min-w-0 flex-[0_1_auto] overflow-hidden whitespace-nowrap text-ellipsis font-code text-[10px] font-semibold text-[var(--wb-text-dim)]">
-              corte de {segParaMmSs(durSeg, true)}
-            </span>
+            {/* D-410: "corte de MM:SS" saiu daqui — virou o campo Duração da
+                faixa acima do vídeo, ao lado da líquida. Repetir na toolbar só
+                gastava largura, que já faltava em janelas estreitas. */}
 
             <div className="min-w-2 flex-1" />
 
@@ -891,6 +925,34 @@ export function EditorPage() {
                 </button>
               </Tooltip>
             )}
+          </div>
+
+          {/* D-410: faixa de leitura do vídeo. Vem ACIMA do PlayerCap, nunca
+              dentro — pela mesma razão da Sincronia/Tempos (CP5/CP6): dentro
+              ela disputaria altura com o vídeo no teto de 44vh. Reúne o que
+              antes eram chips sobrepostos à imagem (BRUTO, velocidade,
+              intervalo) e acrescenta duração líquida e tempo no corte, que só
+              existiam no painel Tempos. */}
+          <div className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1 rounded-[9px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-1.5">
+            <span className="flex-none rounded-[5px] bg-[var(--wb-ink)] px-1.5 py-0.5 font-code text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--wb-ink-fg)]">
+              Bruto
+            </span>
+            <CampoFaixaVideo rotulo="Velocidade" valor={`${playbackRate.toFixed(2)}×`} />
+            <CampoFaixaVideo rotulo="Início" valor={segParaHms(corteUI.inicio_seg)} />
+            <CampoFaixaVideo rotulo="Fim" valor={segParaHms(corteUI.fim_seg)} />
+            <CampoFaixaVideo rotulo="Duração" valor={segParaMmSs(durSeg, true)} />
+            <CampoFaixaVideo
+              rotulo="Líquido"
+              valor={segParaMmSs(liquidoSeg, true)}
+              tom="ok"
+              titulo="Duração após remover os trechos marcados"
+            />
+            <CampoFaixaVideo
+              rotulo="No corte"
+              valor={segParaMmSs(Math.max(0, currentTime - corteUI.inicio_seg), true)}
+              tom="accent"
+              titulo="Posição do player contada a partir do início do corte"
+            />
           </div>
 
           <PlayerCap>

@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { hmsParaSeg, segParaHms, segParaMmSs } from '../timeUtils';
+import { hmsParaSeg, segParaMmSs } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
@@ -233,19 +233,12 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
           crossOrigin="anonymous"
           className="h-full w-full"
         />
-        {variant === 'overlay' && (
-          <>
-            <span className="pointer-events-none absolute left-2.5 top-2.5 rounded-[5px] bg-black/50 px-1.5 py-0.5 font-code text-[9px] font-bold text-white">
-              BRUTO
-            </span>
-            <span className="pointer-events-none absolute right-2.5 top-2.5 rounded-[5px] bg-black/50 px-1.5 py-0.5 font-code text-[9px] font-bold text-white">
-              {rateLabel}
-            </span>
-            <span className="pointer-events-none absolute bottom-2.5 left-2.5 rounded-[5px] bg-black/55 px-2 py-0.5 font-code text-[10px] font-semibold text-white">
-              {segParaHms(inicioSeg)} / {segParaHms(fimSeg)}
-            </span>
-          </>
-        )}
+        {/* D-410: os chips BRUTO / velocidade / intervalo eram `absolute`
+            sobre a imagem e brigavam com o conteudo do quadro — sobre um fundo
+            claro sumiam, sobre um escuro tapavam o rosto. Migraram para a
+            faixa dedicada que o EditorPage monta ACIMA do video, fora da area
+            de imagem e com espaco para os campos que faltavam (duracao liquida
+            e tempo no corte). O `variant='legacy'` mantem o header de texto. */}
       </div>
 
       {/* F-063: áudio do proxy para preview de lip-sync (oculto, controlado pelo hook). */}
