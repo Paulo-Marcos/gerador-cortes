@@ -89,6 +89,10 @@ interface Props {
   onGerarBruto?: () => void;
   brutoPronto?: boolean;
   brutoStatus?: 'idle' | 'processando' | 'concluido' | 'erro';
+  /** D-412: inicio do proximo corte (segundos do video original) e o numero
+   *  dele, para marcar na onda ate onde este corte pode ir. */
+  proximoInicioSeg?: number;
+  proximoNumero?: number;
   /** AUDITORIA-v2 §7 (CP7): 'legacy' (default) preserva o cabecalho/menu
    *  atuais (EditorFase1). 'workbench' reduz o cabecalho e move
    *  velocidade/dividir/trecho/atualizar-onda para o AdvancedMenu. */
@@ -105,6 +109,8 @@ const WB = {
   textMute: 'var(--wb-text-mute)',
   textDim: 'var(--wb-text-dim)',
   accent: 'var(--wb-accent)',
+  // D-412: cor da marca do proximo corte (limite que nao deveria ser cruzado).
+  err: 'var(--wb-err)',
 };
 
 const TIMECODE_SLOTS = 7;
@@ -120,6 +126,50 @@ const SPEED_OPTIONS = [0.5, 1, 1.5, 2] as const;
 function queryShadow(container: HTMLElement | null, selector: string): HTMLElement | null {
   const host = container?.firstElementChild as HTMLElement | undefined;
   return (host?.shadowRoot?.querySelector(selector) as HTMLElement | null) ?? null;
+}
+
+// D-412 — marca do inicio do proximo corte na onda.
+const ATRIBUTO_MARCA_PROXIMO = 'data-proximo-corte';
+
+/**
+ * Linha vertical tracejada que marca onde o proximo corte comeca. Tracejada e
+ * na cor de erro para nao ser confundida com o cursor de reproducao (solido,
+ * accent) nem com as regioes de trecho (blocos preenchidos): passar dela
+ * significa invadir o corte vizinho.
+ */
+function criarMarcaProximoCorte(numero?: number): HTMLElement {
+  const marca = document.createElement('div');
+  marca.setAttribute(ATRIBUTO_MARCA_PROXIMO, '1');
+  marca.title =
+    numero === undefined ? 'Inicio do proximo corte' : `Inicio do proximo corte (#${numero})`;
+  marca.style.cssText = [
+    'position:absolute',
+    'top:0',
+    'bottom:0',
+    'width:0',
+    `border-left:2px dashed ${WB.err}`,
+    'pointer-events:none',
+    'z-index:4',
+  ].join(';');
+
+  const bandeira = document.createElement('span');
+  bandeira.textContent = numero === undefined ? 'próx.' : `#${numero}`;
+  bandeira.style.cssText = [
+    'position:absolute',
+    'top:2px',
+    'left:3px',
+    `background:${WB.err}`,
+    'color:#fff',
+    'font-family:var(--font-mono)',
+    'font-size:8px',
+    'font-weight:700',
+    'line-height:1',
+    'padding:2px 3px',
+    'border-radius:3px',
+    'white-space:nowrap',
+  ].join(';');
+  marca.appendChild(bandeira);
+  return marca;
 }
 
 function buildTimecodes(inicio: number, fim: number): string[] {
@@ -201,6 +251,12 @@ interface WaveformProps {
   onChangeDesvio?: (idx: number, inicio: string, fim: string) => void;
   onZoomChange: (next: number) => void;
   onLoadingChange?: (loading: boolean) => void;
+  /** D-412: inicio do PROXIMO corte, em segundos do video original. Marca uma
+   *  linha na onda para a invasao do corte vizinho ficar visivel. Ausente
+   *  quando este e o ultimo corte. */
+  proximoInicioSeg?: number;
+  /** Numero do proximo corte, so para rotular a marca. */
+  proximoNumero?: number;
   // AUDITORIA-v2 §7/§8 (CP8): 'legacy' (default) preserva EXATAMENTE os
   // parametros visuais atuais (cor/barWidth hardcoded). 'workbench' deixa a
   // onda mais densa/detalhada (barWidth/barGap menores) com a cor vinda do
@@ -227,6 +283,8 @@ function Waveform({
   onChangeDesvio,
   onZoomChange,
   onLoadingChange,
+  proximoInicioSeg,
+  proximoNumero,
   variant = 'legacy',
 }: WaveformProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -254,6 +312,7 @@ function Waveform({
     zoomLevel,
     pointer,
     playerRef,
+    proximoInicioSeg,
   });
   latestRef.current = {
     audioOffsetSec,
@@ -270,7 +329,51 @@ function Waveform({
     zoomLevel,
     pointer,
     playerRef,
+    proximoInicioSeg,
   };
+
+  // D-412: linha do inicio do proximo corte. Vive DENTRO do wrapper do shadow
+  // (como o cursor de reproducao), nao num overlay por fora — so ali ela
+  // acompanha zoom e scroll horizontal da onda. Posicao em % da duracao,
+  // mesmo eixo do cursor.
+  useEffect(() => {
+    let frame = 0;
+    let marca: HTMLElement | null = null;
+    const tick = () => {
+      frame = requestAnimationFrame(tick);
+      const ws = wsRef.current;
+      if (!ws) return;
+
+      const alvo = latestRef.current.proximoInicioSeg;
+      const duracao = ws.getDuration();
+      // Sem proximo corte (este e o ultimo) ou marca fora da janela da onda:
+      // nao ha o que apontar, e uma linha grudada na borda so mentiria.
+      const posicao =
+        alvo === undefined || duracao <= 0
+          ? -1
+          : (alvo - latestRef.current.audioOffsetSec) / duracao;
+      if (posicao < 0 || posicao > 1) {
+        marca?.remove();
+        marca = null;
+        return;
+      }
+
+      // Cacheado como o cursor faz: `queryShadow` a cada frame seria varrer o
+      // shadow 60x/s so para reposicionar um elemento que ja temos em maos.
+      if (!marca?.isConnected) {
+        const wrapper = queryShadow(containerRef.current, '.wrapper');
+        if (!wrapper) return;
+        marca = criarMarcaProximoCorte(proximoNumero);
+        wrapper.appendChild(marca);
+      }
+      marca.style.left = `${posicao * 100}%`;
+    };
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(frame);
+      marca?.remove();
+    };
+  }, [proximoNumero]);
 
   useEffect(() => {
     if (!containerRef.current || !audioSrc) return;
@@ -1067,6 +1170,8 @@ export function TimelinePanel({
   onDividirAqui,
   dividindo,
   onChangeSpeed,
+  proximoInicioSeg,
+  proximoNumero,
   variant = 'legacy',
 }: Props) {
   const [lockedFallback, setLockedFallback] = useState(true);
@@ -1365,6 +1470,8 @@ export function TimelinePanel({
           onChangeDesvio={onChangeDesvio}
           onZoomChange={setZoomLevel}
           onLoadingChange={setAudioRefreshing}
+          proximoInicioSeg={proximoInicioSeg}
+          proximoNumero={proximoNumero}
           variant={variant}
         />
       </div>

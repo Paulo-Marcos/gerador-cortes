@@ -1030,6 +1030,11 @@ export function EditorPage() {
               audioOffsetSec={waveformOffsetSec}
               inicioSeg={corteUI.inicio_seg}
               fimSeg={corteUI.fim_seg}
+              // D-412: o inicio do proximo corte ja era exibido como numero no
+              // painel Tempos; aqui ele vira marca na onda, onde a invasao do
+              // corte vizinho fica visivel enquanto se arrasta o Out.
+              proximoInicioSeg={nextCut?.inicio_seg}
+              proximoNumero={nextCut?.numero}
               desvios={corteUI.desvios ?? []}
               currentTime={currentTime}
               playbackRate={playbackRate}
