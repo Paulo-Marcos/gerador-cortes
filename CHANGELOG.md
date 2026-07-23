@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per project and cross-project (JSON/CSV) — boundary deltas, kept/removed/added
   desvios by origin, title changes. Manually-created cuts are labeled
   `sem_proposta_ia` and pre-telemetry cuts `sem_snapshot`.
+- Current playback speed is shown on the raw-editing timeline bar again (D-402):
+  the workbench header carries the read-only `⚡ N.NN×` pill next to the ⚙ menu,
+  so the review pace is legible without opening a menu. Changing speed (⚙ menu
+  or Ctrl+J/K) updates it live; the control itself stays in the menu.
 
 ### Changed
 - The 30% ceiling on removed desvios is gone: removal is now governed by a
