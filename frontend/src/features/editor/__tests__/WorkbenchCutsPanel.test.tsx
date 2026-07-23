@@ -205,6 +205,25 @@ describe('D-397 · card sem "aprovado ✓"', () => {
   });
 });
 
+// ── D-404 · Ctrl+clique abre em nova aba ─────────────────────
+
+describe('D-404 · a linha do corte é um link de verdade', () => {
+  it('renderiza <a href> da rota do corte — é o href que dá Ctrl+clique/nova aba', () => {
+    const html = render([corte(1), corte(2)]);
+
+    expect(html).toContain('href="/projetos/p1/cortes/c1"');
+    expect(html).toContain('href="/projetos/p1/cortes/c2"');
+  });
+
+  it('não sobrou <button> navegando por onClick no lugar do link', () => {
+    const html = render([corte(1)]);
+
+    // O card ainda tem botões (mover, metadados), mas a navegação do corte
+    // sai por âncora: sem href, o navegador não oferece "nova aba".
+    expect(html).toMatch(/<a[^>]+href="\/projetos\/p1\/cortes\/c1"/);
+  });
+});
+
 describe('D-397 · o card renderiza os dois eixos do semáforo', () => {
   it('pinta a faixa lateral com o degradê dos sinais do corte', () => {
     const fireELeitura = { ...corte(1, 'aprovado'), is_fire: true, is_leitura: true } as Corte;

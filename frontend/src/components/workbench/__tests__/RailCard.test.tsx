@@ -57,3 +57,13 @@ describe('RailCard — botão de fixar (D-400)', () => {
     expect(html).not.toContain('Projeto fixado');
   });
 });
+
+describe('RailCard — abrir em nova aba (D-404)', () => {
+  it('o card é um link para o workspace, e não um div role="button"', () => {
+    const html = markup({ open: true, fixado: false });
+
+    expect(html).toContain('href="/projetos/263"');
+    expect(html).toContain('aria-label="Abrir workspace de LIVE Ato do Álvaro"');
+    expect(html).not.toContain('role="button"');
+  });
+});

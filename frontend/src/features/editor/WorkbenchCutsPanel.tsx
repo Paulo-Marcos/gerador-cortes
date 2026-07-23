@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { LucideIcon } from 'lucide-react';
 import {
   ChevronDown,
@@ -246,9 +246,7 @@ export function WorkbenchCutsPanel({
               podeDescer={idx < cortes.length - 1}
               reordenando={reordenar.isPending}
               onMover={(delta) => mover(corte.id, delta)}
-              onAbrir={() =>
-                navigate(getCortePath?.(corte) ?? `/projetos/${projetoId}/cortes/${corte.id}`)
-              }
+              href={getCortePath?.(corte) ?? `/projetos/${projetoId}/cortes/${corte.id}`}
               onAbrirMetadados={() => setMetaCorte(corte)}
             />
           );
@@ -311,7 +309,8 @@ interface CorteCardProps {
   podeDescer: boolean;
   reordenando: boolean;
   onMover: (delta: -1 | 1) => void;
-  onAbrir: () => void;
+  /** Rota do corte. É um <Link> de verdade — ver D-404 no corpo do card. */
+  href: string;
   onAbrirMetadados: () => void;
 }
 
@@ -329,7 +328,7 @@ function CorteCard({
   podeDescer,
   reordenando,
   onMover,
-  onAbrir,
+  href,
   onAbrirMetadados,
 }: CorteCardProps) {
   const publicado = Boolean(status?.youtube_url_publicado);
@@ -388,11 +387,15 @@ function CorteCard({
         </button>
       </div>
 
-      {/* Linha 1: thumb 58×33 + "NN · título" + duração · fase. */}
-      <button
-        type="button"
+      {/* Linha 1: thumb 58×33 + "NN · título" + duração · fase.
+          D-404: é um <Link> (âncora de verdade), não um <button> com
+          navigate(). Só assim o navegador devolve os gestos nativos —
+          Ctrl/⌘+clique e clique do meio abrem o corte em nova aba, e o
+          menu de contexto ganha "abrir link em nova aba". O clique
+          simples continua sendo navegação SPA, sem reload. */}
+      <Link
+        to={href}
         aria-current={ativo ? 'page' : undefined}
-        onClick={onAbrir}
         className="flex w-full items-center gap-2 text-left focus-visible:outline-none"
       >
         {thumbUrl ? (
@@ -435,7 +438,7 @@ function CorteCard({
             </span>
           </span>
         </span>
-      </button>
+      </Link>
 
       {/* Linha 2: em que ponto do pipeline o corte está + atalho de metadados. */}
       <div className="flex items-center justify-between gap-1">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pin } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { cn, thumbnailUrl } from '@/lib/utils';
 import { useProjetos } from '@/hooks/useProjetos';
 import { PipelineProgress } from '@/features/projetos/PipelineProgress';
@@ -92,7 +92,9 @@ function BotaoFixar({
         onFixar();
       }}
       className={cn(
-        'ml-auto flex-none rounded p-0.5 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+        // z-[2]: fica ACIMA do link que cobre o card (D-404), senão fixar
+        // viraria "abrir projeto".
+        'relative z-[2] ml-auto flex-none rounded p-0.5 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
         // Solto fica discreto (mas sempre visível — é ação pedida, não atalho
         // escondido); no hover do card e ao focar, acende.
         fixado
@@ -113,7 +115,6 @@ interface RailCardProps {
 }
 
 export function RailCard({ projeto, open, fixado, onFixar }: RailCardProps) {
-  const navigate = useNavigate();
   const { activeTab } = useWorkbenchTabsContext();
   const [thumbErr, setThumbErr] = useState(false);
   const thumb = thumbnailUrl(projeto.youtube_url, 'mq');
@@ -121,21 +122,25 @@ export function RailCard({ projeto, open, fixado, onFixar }: RailCardProps) {
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={`Abrir workspace de ${projeto.titulo_live}`}
-      title={projeto.titulo_live}
-      onClick={() => navigate(tabPath({ projetoId: projeto.id, etapa: 'workspace' }))}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') navigate(tabPath({ projetoId: projeto.id, etapa: 'workspace' }));
-      }}
       className={cn(
-        'group cursor-pointer rounded-[10px] border p-2 transition-colors',
+        'group relative rounded-[10px] border p-2 transition-colors',
         ativo
           ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
           : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] hover:border-[var(--wb-text-dim)]',
       )}
     >
+      {/* D-404: o card inteiro é um link esticado, não um div role="button"
+          com navigate(). O card precisa continuar hospedando o botão de
+          fixar (âncora não pode ter botão dentro), então o link cobre a
+          área clicável por baixo e o botão sobe no z. Resultado: Ctrl/⌘+
+          clique e clique do meio abrem o projeto em nova aba, e o menu de
+          contexto oferece "abrir link em nova aba". */}
+      <Link
+        to={tabPath({ projetoId: projeto.id, etapa: 'workspace' })}
+        aria-label={`Abrir workspace de ${projeto.titulo_live}`}
+        title={projeto.titulo_live}
+        className="absolute inset-0 z-[1] rounded-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+      />
       <div className="flex items-center gap-2">
         <span className="relative h-6 w-10 flex-none">
           {thumb && !thumbErr ? (

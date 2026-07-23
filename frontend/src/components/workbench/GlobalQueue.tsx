@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { usePipelineStatus } from '@/hooks/useEditor';
 import { PanelShell } from './PanelShell';
 import { useWorkbenchQueue, type QueueJob } from './useWorkbenchQueue';
@@ -14,7 +14,6 @@ import { tabPath } from './workbenchRoutes';
 // ─────────────────────────────────────────────────────────────
 
 function QueueJobItem({ job }: { job: QueueJob }) {
-  const navigate = useNavigate();
   const { removeJob } = useWorkbenchQueue();
   const status = usePipelineStatus(job.corteId, true);
 
@@ -36,15 +35,14 @@ function QueueJobItem({ job }: { job: QueueJob }) {
             <X size={11} aria-hidden />
           </button>
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            navigate(tabPath({ projetoId: job.projetoId, etapa: 'revisao', corteId: job.corteId }))
-          }
-          className="mt-1 text-[10px] font-semibold text-[var(--wb-ok)] underline"
+        {/* D-404: link de verdade — Ctrl/⌘+clique abre a revisão em nova aba
+            do navegador sem tirar o usuário da tela em que ele está. */}
+        <Link
+          to={tabPath({ projetoId: job.projetoId, etapa: 'revisao', corteId: job.corteId })}
+          className="mt-1 block text-[10px] font-semibold text-[var(--wb-ok)] underline"
         >
           abrir na aba Revisão →
-        </button>
+        </Link>
       </div>
     );
   }
