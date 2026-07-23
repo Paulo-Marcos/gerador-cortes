@@ -51,7 +51,7 @@ from app.services.pipeline_corte_fields import (
     _extrair_cenas,
     _find_clip_raw,
     _find_registered_clip_raw,
-    _layout_youtube_do_corte,
+    _layout_youtube_cru_do_corte,
     _numero_corte,
 )
 from app.services.pipeline_event_log import PipelineEventLog
@@ -107,7 +107,7 @@ __all__ = [
     "_find_clip_raw",
     "_find_registered_clip_raw",
     "_extrair_cenas",
-    "_layout_youtube_do_corte",
+    "_layout_youtube_cru_do_corte",
     "_duracao_layout_corte",
     "_campo_corte",
     "_numero_corte",
@@ -493,9 +493,12 @@ async def _fase_grade(ctx: _RenderCtx, db) -> None:
                 ctx.clip_raw,
                 ctx.clip_graded,
                 ctx.filtro,
-                layout_youtube=_layout_youtube_do_corte(
-                    ctx.corte, fallback_layout=ctx.projeto.layout_youtube_padrao
-                ),
+                # D-414: o layout do corte vai CRU — a Fase 2 ja seguia essa
+                # regra. Pre-normalizar contra o padrao do projeto preenchia
+                # fundo/placa/compartilhada/full com os defaults de codigo e a
+                # cascade la embaixo descartava o nivel GLOBAL inteiro: corte
+                # intocado renderizava sem crop, sem palco e com fundo errado.
+                layout_youtube=_layout_youtube_cru_do_corte(ctx.corte),
                 duracao_seg=_duracao_layout_corte(ctx.corte),
                 global_quality=grade_quality,
                 projeto_padrao=ctx.projeto.layout_youtube_padrao,

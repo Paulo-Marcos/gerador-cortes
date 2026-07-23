@@ -11,7 +11,6 @@ from pathlib import Path
 
 from app.channel_paths import resolver_do_projeto
 from app.domain.segment_calculator import calcular_segmentos, normalizar_desvio
-from app.domain.youtube_layout import normalizar_layout_youtube
 from app.models import Corte
 
 logger = logging.getLogger(__name__)
@@ -93,21 +92,27 @@ def _extrair_cenas(corte: Corte) -> list[dict]:
     return []
 
 
-def _layout_youtube_do_corte(
-    corte: Corte | dict | None, fallback_layout: str | dict | None = None
-) -> dict:
+def _layout_youtube_cru_do_corte(corte: Corte | dict | None) -> dict:
+    """Layout do corte como ele foi salvo — desserializado, mas NAO normalizado.
+
+    Quem resolve a cascata (`resolver_layout_em_cascata`) precisa distinguir um
+    corte intocado de um configurado: normalizar antes preenche fundo, placa,
+    compartilhada e full com os defaults de codigo, o corte passa a parecer
+    configurado e os niveis de projeto e global sao descartados (D-414).
+    """
     raw = _campo_corte(corte, "layout_youtube")
-    if isinstance(raw, str):
-        try:
-            raw = json.loads(raw or "{}")
-        except Exception as e:
-            logger.warning(
-                "[Pipeline] layout_youtube invalido no corte %s: %s",
-                _campo_corte(corte, "id", ""),
-                e,
-            )
-            raw = {}
-    return normalizar_layout_youtube(raw, fallback_layout)
+    if isinstance(raw, dict):
+        return raw
+    try:
+        parsed = json.loads(raw or "{}")
+    except (ValueError, TypeError) as e:
+        logger.warning(
+            "[Pipeline] layout_youtube invalido no corte %s: %s",
+            _campo_corte(corte, "id", ""),
+            e,
+        )
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
 
 
 def _desvios_do_corte(corte: Corte | dict | None) -> list[dict]:
