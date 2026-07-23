@@ -8,10 +8,11 @@ do palco (com efeitos colaterais de cache/lookup) vive na fachada
 """
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.domain.ffmpeg_common import _CANVAS_NORMALIZE, _ffmpeg_filter_thread_args
+from app.domain.palco_derivados import PalcoDerivados
 
 # ---------------------------------------------------------------------------
 # Pipeline Otimizado — Composição por Camadas (QSV + Remotion Overlays)
@@ -30,6 +31,14 @@ class _GradeLayout:
     bg_png: Path | None
     unique_pngs: list[Path]
     png_input_index: list[int | None]
+    # D-415: derivados pré-compostos (bgpre + chrome) por região, quando
+    # disponíveis. Lista vazia = otimização desligada/indisponível.
+    derivados_por_regiao: list[PalcoDerivados | None] = field(default_factory=list)
+
+    def derivado_da_regiao(self, index: int) -> PalcoDerivados | None:
+        if index < len(self.derivados_por_regiao):
+            return self.derivados_por_regiao[index]
+        return None
 
 
 @dataclass(frozen=True)
@@ -85,11 +94,13 @@ def _build_grade_plan_segmentado(
         if ridx is None:
             region_rel: dict | None = None
             fg_png: Path | None = None
+            derivado: PalcoDerivados | None = None
         else:
             # A janela do segmento vira [0, dur] após o input-seek (PTS começa em
             # ~0); a região cobre o segmento inteiro.
             region_rel = {**layout.shared_regions[ridx], "inicio": 0.0, "fim": dur}
             fg_png = layout.fg_paths_por_regiao[ridx]
+            derivado = layout.derivado_da_regiao(ridx)
         steps.append(
             GradeStep(
                 _build_grade_segment_cmd(
@@ -101,6 +112,7 @@ def _build_grade_plan_segmentado(
                     region_rel=region_rel,
                     fg_png=fg_png,
                     global_quality=global_quality,
+                    derivado=derivado,
                 ),
                 f"seg{k:03d}",
             )
@@ -138,6 +150,7 @@ def _build_grade_segment_cmd(
     region_rel: dict | None,
     fg_png: Path | None,
     global_quality: int,
+    derivado: PalcoDerivados | None = None,
 ) -> list[str]:
     """Comando FFmpeg de UM segmento da grade.
 
@@ -158,7 +171,18 @@ def _build_grade_segment_cmd(
     cmd = ["ffmpeg", "-y", "-nostdin"]
     cmd += ["-ss", f"{inicio:.3f}", "-t", f"{dur:.3f}", "-i", str(input_path)]
 
-    if tem_regiao and fg_png is not None:
+    if tem_regiao and derivado is not None:
+        # D-415: composite pré-composto — bgpre (main opaco) + chrome recortado.
+        for png in (derivado.bg_pre, derivado.chrome):
+            cmd += ["-loop", "1", "-framerate", "30", "-threads", "1", "-i", str(png)]
+        filt = build_grade_precomposto_filter(
+            filtro_vf,
+            region_rel,
+            derivado,
+            duracao_seg=dur,
+            hwaccel_decode=False,
+        )
+    elif tem_regiao and fg_png is not None:
         cmd += ["-loop", "1", "-framerate", "30", "-threads", "1", "-i", str(fg_png)]
         filt = build_cinematic_grade_layout_filter(
             filtro_vf,
@@ -403,6 +427,66 @@ def _build_grade_full_cover_filter(
     return "; ".join(parts)
 
 
+def build_grade_precomposto_filter(
+    filtro_vf: str | None,
+    region: dict,
+    derivado: PalcoDerivados,
+    *,
+    duracao_seg: float,
+    bg_label: str = "1:v",
+    chrome_label: str = "2:v",
+    hwaccel_decode: bool = False,
+) -> str:
+    """Graph pré-composto do palco (D-415) — UMA região cobrindo [0, duração].
+
+    O fundo opaco pré-achatado (`bgpre`) vira o main e, por ser opaco, toda a
+    cadeia principal roda em yuv420p — some o `format=rgba` full-frame do vídeo
+    graded, a fonte `color=` e o overlay full-frame do palco. Só o chrome
+    (recorte RGBA mascarado aos slots) fica por cima dos vídeos, aplicado uma
+    única vez (a partição bgpre/chrome não tem double-blend). ~26% mais rápido
+    que o graph legado no bench D-415, mesmo look (delta = subamostragem 4:2:0
+    antecipada — o entregável final já é 4:2:0).
+
+    A duração é ancorada por `trim=end` (bgpre/chrome via `-loop 1` são fontes
+    infinitas — mesmo racional do full-cover P3).
+    """
+    hw = "hwdownload,format=nv12," if hwaccel_decode else ""
+    pix = "yuv420p"
+    try:
+        quantidade_telas = int(region.get("telas", 2) or 2)
+    except (TypeError, ValueError):
+        quantidade_telas = 2
+    tela_slot = region["slot_tela"]
+
+    parts = [f"[{bg_label}]setsar=1,format={pix}[bg0]"]
+    parts.append(f"[{chrome_label}]format=rgba[chrome0]")
+
+    prefix = f"[0:v]{hw}{_CANVAS_NORMALIZE},{_grade_chain(filtro_vf)}format={pix}"
+    if quantidade_telas == 1:
+        parts.append(f"{prefix}[srcTela]")
+    else:
+        parts.append(f"{prefix},split=2[srcFace][srcTela]")
+        face_slot = region["slot_facecam"]
+        parts.append(
+            f"[srcFace]{_crop_scale_chain(region['crop_facecam'], face_slot, pix=pix)}[face0]"
+        )
+    parts.append(f"[srcTela]{_crop_scale_chain(region['crop_tela'], tela_slot, pix=pix)}[tela0]")
+
+    parts.append(f"[bg0][tela0]overlay=x={tela_slot['x']}:y={tela_slot['y']}:format=auto[bgTela0]")
+    videos_out = "[bgTela0]"
+    if quantidade_telas != 1:
+        parts.append(
+            f"[bgTela0][face0]overlay=x={face_slot['x']}:y={face_slot['y']}:format=auto[shared0]"
+        )
+        videos_out = "[shared0]"
+    parts.append(
+        f"{videos_out}[chrome0]overlay=x={derivado.chrome_x}:y={derivado.chrome_y}:"
+        "format=auto[composed0]"
+    )
+    parts.append(f"[composed0]trim=end={duracao_seg:.3f},setpts=PTS-STARTPTS,format=nv12[vout]")
+    return "; ".join(parts)
+
+
 def _construir_segmentos_grade(
     shared_regions: list[dict], duracao_seg: float | None, eps: float = 0.05
 ) -> list[tuple[float, float, int | None]] | None:
@@ -520,12 +604,12 @@ def _grade_chain(filtro_vf: str | None) -> str:
     return f"{filtro_vf}," if filtro_vf else ""
 
 
-def _crop_scale_chain(crop: dict, slot: dict) -> str:
+def _crop_scale_chain(crop: dict, slot: dict, *, pix: str = "rgba") -> str:
     scale_w, scale_h = _proportional_size(crop, slot)
     return (
         f"crop={crop['w']}:{crop['h']}:{crop['x']}:{crop['y']},"
         f"scale={scale_w}:{scale_h},"
-        "setsar=1,format=rgba"
+        f"setsar=1,format={pix}"
     )
 
 

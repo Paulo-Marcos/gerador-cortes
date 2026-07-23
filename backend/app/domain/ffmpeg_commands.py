@@ -32,6 +32,7 @@ from app.domain.ffmpeg_common import (
     _FILTER_SCRIPT_SIZE_THRESHOLD,
     _ffmpeg_decode_thread_args,
     _ffmpeg_filter_thread_args,
+    _grade_palco_precomposto_enabled,
     _grade_trim_segmentation_enabled,
     _int_env,
     _resolve_filter_arg,
@@ -49,10 +50,12 @@ from app.domain.ffmpeg_grade import (
     _grade_chain,
     _GradeLayout,
     _proportional_size,
+    _regiao_unica_cobre_corte,
     _shared_background_chain,
     _shared_background_png_chain,
     _shared_black_base_chain,
     build_cinematic_grade_layout_filter,
+    build_grade_precomposto_filter,
 )
 from app.domain.ffmpeg_overlay import (
     _LOUDNORM_YOUTUBE,
@@ -64,6 +67,7 @@ from app.domain.ffmpeg_overlay import (
     build_overlay_composition_cmd,
     build_overlay_filter_string,
 )
+from app.domain.palco_derivados import PalcoDerivados, ensure_derivados_palco
 from app.domain.youtube_layout import (
     config_compartilhada_para_full,
     normalizar_layout_youtube,
@@ -97,6 +101,11 @@ __all__ = [
     "_resolve_shared_bg_png",
     "_resolve_shared_fg_png",
     "_resolve_shared_fg_png_para_config",
+    "_resolve_palco_derivados",
+    "build_grade_precomposto_filter",
+    "PalcoDerivados",
+    "_regiao_unica_cobre_corte",
+    "_grade_palco_precomposto_enabled",
     "_construir_segmentos_grade",
     "_build_grade_plan_segmentado",
     "_build_grade_segment_cmd",
@@ -210,6 +219,14 @@ def _resolver_grade_layout(
             _resolve_shared_fg_png_para_config(region_config, fundo=fundo, placa=placa)
         )
 
+    # D-415: derivados pré-compostos (bgpre + chrome) por região com palco.
+    derivados_por_regiao: list[PalcoDerivados | None] = []
+    if _grade_palco_precomposto_enabled():
+        for region, fg_path in zip(shared_regions, fg_paths_por_regiao, strict=True):
+            derivados_por_regiao.append(
+                _resolve_palco_derivados(fg_path, region) if fg_path is not None else None
+            )
+
     has_any_fg = bool(shared_regions) and any(p is not None for p in fg_paths_por_regiao)
     bg_png = _resolve_shared_bg_png(layout_resolvido) if shared_regions and not has_any_fg else None
 
@@ -234,6 +251,7 @@ def _resolver_grade_layout(
         bg_png=bg_png,
         unique_pngs=unique_pngs,
         png_input_index=png_input_index,
+        derivados_por_regiao=derivados_por_regiao,
     )
 
 
@@ -307,14 +325,34 @@ def build_cinematic_grade_cmd(
     # `-threads 1` por PNG: são imagens estáticas, 1 thread basta — e o decode
     # PNG multi-thread alocava um pool de frame buffers por thread que estourava
     # a RAM em cortes multi-região (erro `png thread_get_buffer() failed`, D-065).
-    if has_any_fg:
+    # D-415: no caso full-cover (1 região cobrindo o corte) com derivados
+    # disponíveis, o graph pré-composto substitui o legado — bgpre (main opaco,
+    # cadeia yuv420p) + chrome recortado, ~26% mais rápido (bench D-415).
+    derivado_full = (
+        layout.derivado_da_regiao(0)
+        if _regiao_unica_cobre_corte(shared_regions, duracao_seg)
+        else None
+    )
+
+    if derivado_full is not None:
+        for png in (derivado_full.bg_pre, derivado_full.chrome):
+            cmd += ["-loop", "1", "-framerate", "30", "-threads", "1", "-i", str(png)]
+    elif has_any_fg:
         for png in unique_pngs:
             cmd += ["-loop", "1", "-framerate", "30", "-threads", "1", "-i", str(png)]
     elif bg_png is not None:
         cmd += ["-loop", "1", "-framerate", "30", "-threads", "1", "-i", str(bg_png)]
 
     if shared_regions:
-        if has_any_fg:
+        if derivado_full is not None:
+            filter_str = build_grade_precomposto_filter(
+                filtro_vf,
+                shared_regions[0],
+                derivado_full,
+                duracao_seg=float(duracao_seg),  # type: ignore[arg-type]  # != None pelo guard
+                hwaccel_decode=usa_qsv_decode_filtros,
+            )
+        elif has_any_fg:
             fg_inputs_per_region: list[str | None] = [
                 f"{1 + idx}:v" if idx is not None else None for idx in png_input_index
             ]
@@ -435,6 +473,15 @@ def build_grade_plan(
         temp_files=[],
         segmentado=False,
     )
+
+
+def _resolve_palco_derivados(palco_png: Path, region: dict) -> PalcoDerivados | None:
+    """D-415: garante os assets derivados (bgpre + chrome) do palco da região.
+
+    Vive na fachada (como os demais resolvers) para ser monkeypatchável nos
+    testes; a geração/caching real fica em `palco_derivados`.
+    """
+    return ensure_derivados_palco(palco_png, region)
 
 
 def _resolve_shared_bg_png(layout_youtube: dict | None) -> Path | None:

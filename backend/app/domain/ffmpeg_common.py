@@ -81,6 +81,20 @@ def _grade_trim_segmentation_enabled() -> bool:
     )
 
 
+def _grade_palco_precomposto_enabled() -> bool:
+    """Liga o composite do palco PRÉ-COMPOSTO (D-415): fundo opaco achatado
+    (base preta + palco) como main em yuv420p + um único overlay RGBA do chrome
+    recortado aos slots. Elimina a fonte `color=`, o overlay full-frame do palco
+    e as conversões RGBA full-frame — ~26% mais rápido que o graph legado
+    (bench D-415). Kill-switch: `GRADE_PALCO_PRECOMPOSTO=0`."""
+    return os.environ.get("GRADE_PALCO_PRECOMPOSTO", "1").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
 def _resolve_filter_arg(filter_str: str, output_dir: Path) -> list[str]:
     """Retorna [-filter_complex, str] ou [-filter_complex_script, path].
 

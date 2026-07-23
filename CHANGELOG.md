@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   or Ctrl+J/K) updates it live; the control itself stays in the menu.
 
 ### Changed
+- Grade renders with a palco are ~16% faster (D-415): the static palco is now
+  pre-composed offline into an opaque background (black base + palco flattened)
+  plus a slot-masked chrome cutout, letting the main filtergraph chain run in
+  yuv420p — eliminating the full-frame RGBA conversions and the full-frame
+  palco overlay that dominated the composite cost (D-329). Derived assets are
+  cached next to the palco PNG and invalidated by palco mtime/slot geometry;
+  any derivation failure falls back to the legacy graph, and
+  `GRADE_PALCO_PRECOMPOSTO=0` disables the optimization entirely.
 - The 30% ceiling on removed desvios is gone: removal is now governed by a
   semantic guardrail (the argument's logical chain must survive the removals),
   with quality controlled by telemetry instead of a quota (D-302).
