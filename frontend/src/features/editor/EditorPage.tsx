@@ -523,6 +523,8 @@ export function EditorPage() {
       shortcutFromRegistry('bruto.smartPlay', () => setSmartPlay((v) => !v)),
       shortcutFromRegistry('bruto.sincroniaNudgeMenos', () => nudgeSincronia(-STEP_FINO)),
       shortcutFromRegistry('bruto.sincroniaNudgeMais', () => nudgeSincronia(STEP_FINO)),
+      shortcutFromRegistry('bruto.alternarTempos', () => setTemposAbertos((v) => !v)),
+      shortcutFromRegistry('bruto.alternarSincronia', () => setSincroniaAberta((v) => !v)),
       shortcutFromRegistry('bruto.undo', editHistory.undo),
       shortcutFromRegistry('bruto.redo', editHistory.redo),
       shortcutFromRegistry('bruto.salvar', salvarMudancas),
@@ -802,7 +804,10 @@ export function EditorPage() {
                 </button>
               </Tooltip>
 
-              <Tooltip label="Tempos do corte" side="bottom">
+              {/* D-408: a tecla entra no rotulo (como "Regerar bruto (Ctrl+G)"
+                  e "Abrir pasta (Ctrl+O)" ao lado) — atalho que so vive no
+                  registro nao e descoberto por ninguem. */}
+              <Tooltip label="Tempos do corte (T)" side="bottom">
                 <button
                   type="button"
                   aria-label="Alternar tempos do corte"
@@ -819,7 +824,7 @@ export function EditorPage() {
                 </button>
               </Tooltip>
 
-              <Tooltip label="Sincronia do áudio" side="bottom">
+              <Tooltip label="Sincronia do áudio (H)" side="bottom">
                 <button
                   type="button"
                   aria-label="Alternar sincronia do áudio"
@@ -840,7 +845,7 @@ export function EditorPage() {
             {/* ℹ️ — SÓ tooltip via atributo title (AUDITORIA-v2 §2): sem
                 onClick, sem modal. O atalho continua na página Atalhos. */}
             <span
-              title="Aprovar A · Rejeitar R · Fire F · In/Out [ ] · Navegar ←→ 5s · Desfazer Ctrl+Z"
+              title="Aprovar A · Rejeitar R · Fire F · Tempos T · Sincronia H · In/Out [ ] · Navegar ←→ 5s · Desfazer Ctrl+Z"
               className="flex aspect-square min-w-[24px] flex-[0_1_34px] cursor-help items-center justify-center text-[var(--wb-text-dim)]"
             >
               <Info size={14} aria-hidden />

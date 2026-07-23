@@ -80,6 +80,8 @@ export type ShortcutId =
   | 'bruto.smartPlay'
   | 'bruto.sincroniaNudgeMenos'
   | 'bruto.sincroniaNudgeMais'
+  | 'bruto.alternarTempos'
+  | 'bruto.alternarSincronia'
   | 'bruto.undo'
   | 'bruto.redo'
   | 'bruto.salvar'
@@ -430,6 +432,24 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     key: '.',
     mod: 'ctrl',
     description: 'Sincronia do áudio: atrasar 10ms',
+    group: 'edicao',
+  },
+  // D-408: os dois paineis recolhiveis do Bruto so abriam por clique nos
+  // icones da toolbar. Teclas nuas, como os vizinhos de veredito (A/R/F/L) e
+  // D — no escopo 'bruto' as unicas letras livres eram justamente estas: 't'
+  // sem modificador (ctrl+alt+T e outro atalho) e 'h'.
+  {
+    id: 'bruto.alternarTempos',
+    screen: 'bruto',
+    key: 't',
+    description: 'Mostrar/ocultar os tempos do corte',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.alternarSincronia',
+    screen: 'bruto',
+    key: 'h',
+    description: 'Mostrar/ocultar a sincronia do áudio',
     group: 'edicao',
   },
   {
