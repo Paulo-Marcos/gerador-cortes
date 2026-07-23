@@ -33,6 +33,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   semantic guardrail (the argument's logical chain must survive the removals),
   with quality controlled by telemetry instead of a quota (D-302).
 
+### Fixed
+- Model columns missing from an existing database no longer break the API
+  (D-403). `create_all` only creates tables that do not exist yet, so a column
+  added to a model whose table was already in the user's database never reached
+  it — `metadados_cortes.is_fire` was in that state and made
+  `GET /api/cortes/projeto/{id}` and `/api/export/projeto/{id}/status` fail with
+  500 (`no such column`), leaving the UI claiming the project had no cuts. Boot
+  now reconciles the declarative schema before running the versioned migrations:
+  the missing `ALTER TABLE ADD COLUMN` statements are derived from
+  `Base.metadata`, so forgetting one is no longer possible. The repair is
+  conservative — it only adds columns declared in the model, never drops or
+  renames, does not reproduce constraints, and logs each repair as a warning.
+
 ## [0.2.0] - 2026-07-06
 
 ### Added
