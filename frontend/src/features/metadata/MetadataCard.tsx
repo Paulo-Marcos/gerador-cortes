@@ -36,6 +36,11 @@ import type { Corte, MetadadoCorte, MetadadoPatch, StatusExportCorte } from '@/t
 
 export const metadataKey = (corteId: string) => ['metadado', corteId] as const;
 
+// D-413: os botões da coluna da thumbnail (modal) herdavam o `size=default` do
+// primitivo — 11,5px, ilegível ao lado do corpo já ampliado. Sobrescrito só
+// aqui: o `Button` é compartilhado com o app inteiro.
+const MODAL_ASIDE_BUTTON = 'h-10 px-3.5 text-[13px]';
+
 type PromptModalKind = 'metadata' | 'thumbnail' | 'thumbnail-agent' | 'thumbnail-agent-livre';
 
 export function sanitizeDescription(text: string) {
@@ -445,8 +450,8 @@ export function MetadataCard({
       )}
 
       {expanded && generated && modal && (
-        <section className="grid gap-3.5 lg:grid-cols-[minmax(0,1fr)_200px]">
-          <div className="flex min-w-0 flex-col gap-3">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_232px]">
+          <div className="flex min-w-0 flex-col gap-4">
             <div>
               <ModalFieldLabel
                 label="Título YouTube"
@@ -457,9 +462,9 @@ export function MetadataCard({
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 onBlur={() => save({ titulo_youtube: title })}
-                className="h-10 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[12.5px] font-semibold outline-none focus:border-[var(--wb-accent)]"
+                className="h-11 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[15px] font-semibold outline-none focus:border-[var(--wb-accent)]"
               />
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <ModalSuggestionRow>
                 {titleSuggestions.map((suggestion) => (
                   <ModalChip
                     key={`${cut.id}-title-${suggestion}`}
@@ -473,15 +478,20 @@ export function MetadataCard({
                     {suggestion}
                   </ModalChip>
                 ))}
-                <ModalChip
+              </ModalSuggestionRow>
+              <ModalActionRow>
+                <ModalActionButton
                   accent
+                  icon={Sparkles}
                   pending={generateMetadataClaude.isPending}
                   onClick={() => generateMetadataClaude.mutate()}
                 >
-                  ✦ regerar por IA
-                </ModalChip>
-                <ModalChip onClick={() => setManualKind('metadata')}>manual</ModalChip>
-              </div>
+                  Regerar por IA
+                </ModalActionButton>
+                <ModalActionButton icon={Wand2} onClick={() => setManualKind('metadata')}>
+                  Manual
+                </ModalActionButton>
+              </ModalActionRow>
             </div>
 
             <div>
@@ -495,9 +505,9 @@ export function MetadataCard({
                 onChange={(event) => setCoverText(event.target.value)}
                 onBlur={() => save({ texto_capa: coverText })}
                 placeholder="Ex: JUSTICA EM SI"
-                className="h-10 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[12.5px] font-extrabold outline-none focus:border-[var(--wb-accent)]"
+                className="h-11 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[15px] font-extrabold outline-none focus:border-[var(--wb-accent)]"
               />
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <ModalSuggestionRow>
                 {thumbSuggestions.map((suggestion) => (
                   <ModalChip
                     key={`${cut.id}-thumb-${suggestion}`}
@@ -511,18 +521,26 @@ export function MetadataCard({
                     {suggestion}
                   </ModalChip>
                 ))}
-                <ModalChip
+              </ModalSuggestionRow>
+              <ModalActionRow>
+                <ModalActionButton
                   accent
+                  icon={Sparkles}
                   pending={generatePromptThumbnailClaude.isPending}
                   onClick={() => generatePromptThumbnailClaude.mutate()}
                 >
-                  ✦ {promptReady ? 'regerar' : 'gerar'} prompt thumbnail
-                </ModalChip>
-                <ModalChip onClick={() => setManualKind('thumbnail-agent-livre')}>manual</ModalChip>
-              </div>
+                  {promptReady ? 'Regerar' : 'Gerar'} prompt da capa
+                </ModalActionButton>
+                <ModalActionButton
+                  icon={Palette}
+                  onClick={() => setManualKind('thumbnail-agent-livre')}
+                >
+                  Manual
+                </ModalActionButton>
+              </ModalActionRow>
             </div>
 
-            <div className="grid gap-2.5 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <div>
                 <ModalFieldLabel label="Descrição" />
                 <textarea
@@ -530,7 +548,7 @@ export function MetadataCard({
                   onChange={(event) => setDescription(event.target.value)}
                   onBlur={() => save({ descricao_youtube: sanitizeDescription(description) })}
                   rows={4}
-                  className="min-h-[84px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 text-[11px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
+                  className="min-h-[104px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 text-[13px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
                 />
               </div>
               <div>
@@ -540,7 +558,7 @@ export function MetadataCard({
                   onChange={(event) => setTagsText(event.target.value)}
                   onBlur={() => save({ tags_youtube: splitTags(tagsText) })}
                   rows={4}
-                  className="min-h-[84px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 font-code text-[11px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
+                  className="min-h-[104px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 font-code text-[13px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
                 />
               </div>
             </div>
@@ -552,6 +570,7 @@ export function MetadataCard({
           <aside className="grid content-start gap-2.5">
             <button
               type="button"
+              title="Copiar o endereço do arquivo da thumbnail"
               onClick={() =>
                 void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.')
               }
@@ -560,21 +579,46 @@ export function MetadataCard({
               {thumbnailUrl ? (
                 <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
               ) : (
-                <div className="grid h-full place-items-center text-xs text-[var(--wb-text-dim)]">
+                <div className="grid h-full place-items-center text-sm text-[var(--wb-text-dim)]">
                   Sem thumbnail
                 </div>
               )}
             </button>
+            {/* D-413: copiar o prompt é a ação principal do fluxo manual de capa
+                (cola no agente capista e traz a imagem de volta por Ctrl+V). Ela
+                só existia no ⋯ do header do card, que o modal não renderiza —
+                logo, sumiu da tela desde o D-396. */}
             <Button
               type="button"
+              className={MODAL_ASIDE_BUTTON}
+              onClick={() => void copy(meta?.prompt_thumbnail ?? '', 'Prompt da capa copiado.')}
+              disabled={!promptReady}
+              title={
+                promptReady
+                  ? 'Copiar o prompt para colar no agente capista'
+                  : 'Gere o prompt da capa primeiro'
+              }
+            >
+              <Clipboard />
+              Copiar prompt
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className={MODAL_ASIDE_BUTTON}
               onClick={() => generateThumbnail.mutate()}
               disabled={!promptReady || generateThumbnail.isPending}
             >
               {generateThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
               Gerar thumbnail
             </Button>
-            <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-4 text-sm font-semibold text-[var(--wb-text)] hover:border-[var(--wb-text-dim)]">
-              <UploadCloud size={16} aria-hidden />
+            <label
+              className={cn(
+                MODAL_ASIDE_BUTTON,
+                'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] font-bold text-[var(--wb-text)] hover:border-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-card-elev)]',
+              )}
+            >
+              <UploadCloud size={13} aria-hidden />
               Trocar thumbnail
               <input
                 type="file"
@@ -587,7 +631,7 @@ export function MetadataCard({
                 }}
               />
             </label>
-            <p className="text-center font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+            <p className="text-center font-code text-[11px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
               ou cole com Ctrl+V
             </p>
             {thumbnailUrl && (
@@ -633,17 +677,23 @@ export function MetadataCard({
           </aside>
 
           <footer className="-mx-4 -mb-3.5 mt-0.5 flex items-center gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-4 py-2.5 lg:col-span-2">
-            <span className="font-code text-[10px] text-[var(--wb-text-dim)]">
+            <span className="font-code text-[12px] text-[var(--wb-text-dim)]">
               {lastSavedAt
                 ? `salvo há ${relativeMinutes(lastSavedAt)}`
                 : 'alterações salvam ao sair do campo'}
             </span>
             <span className="flex-1" />
-            <Button type="button" variant="outline" onClick={onRequestClose}>
+            <Button
+              type="button"
+              variant="outline"
+              className={MODAL_ASIDE_BUTTON}
+              onClick={onRequestClose}
+            >
               Fechar
             </Button>
             <Button
               type="button"
+              className={MODAL_ASIDE_BUTTON}
               onClick={() =>
                 save({
                   titulo_youtube: title,
@@ -925,13 +975,13 @@ function ModalFieldLabel({
 }) {
   return (
     <div className="mb-1.5 flex items-center gap-1.5">
-      <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
+      <span className="font-code text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
         {label}
       </span>
       {counter && (
         <span
           className={cn(
-            'ml-auto font-code text-[9.5px] font-semibold text-[var(--wb-text-dim)]',
+            'ml-auto font-code text-[11.5px] font-semibold text-[var(--wb-text-dim)]',
             over && 'text-[var(--wb-err)]',
           )}
         >
@@ -942,18 +992,42 @@ function ModalFieldLabel({
   );
 }
 
-// Pill de sugestão/ação do corpo de modal (protótipo: rounded-full, inset;
-// accent = ação de IA).
-function ModalChip({
-  active,
+/**
+ * D-413 — a faixa de sugestões e as ações de geração dividiam o MESMO
+ * flex-wrap de `ModalChip`: "regerar por IA" e "manual" liam como se fossem
+ * mais duas opções de título. Agora as sugestões ficam rotuladas e as ações
+ * vão para uma barra própria, separada por um filete e com botões de outra
+ * forma (retangulares, com ícone) — pill = escolha, retângulo = ação.
+ */
+function ModalSuggestionRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <span className="font-code text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+        sugestões
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function ModalActionRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-dashed border-[var(--wb-border-soft)] pt-2.5">
+      {children}
+    </div>
+  );
+}
+
+function ModalActionButton({
   accent,
   pending,
+  icon: Icon,
   onClick,
   children,
 }: {
-  active?: boolean;
   accent?: boolean;
   pending?: boolean;
+  icon: LucideIcon;
   onClick: () => void;
   children: React.ReactNode;
 }) {
@@ -963,15 +1037,45 @@ function ModalChip({
       onClick={onClick}
       disabled={pending}
       className={cn(
-        'rounded-full px-2.5 py-1 text-left text-[9.5px] font-semibold transition-colors disabled:opacity-60',
+        'inline-flex h-8 items-center gap-1.5 rounded-[7px] border px-3 text-[12.5px] font-semibold transition-colors disabled:opacity-60',
         accent
-          ? 'bg-[var(--wb-accent-soft)] font-bold text-[var(--wb-accent)] hover:opacity-85'
-          : active
-            ? 'bg-[var(--wb-accent)] text-white'
-            : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)] hover:bg-[var(--wb-accent)] hover:text-white'
+          : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
       )}
     >
-      {pending ? '…' : children}
+      {pending ? (
+        <Loader2 size={14} className="animate-spin" aria-hidden />
+      ) : (
+        <Icon size={14} aria-hidden />
+      )}
+      {children}
+    </button>
+  );
+}
+
+// Pill de SUGESTÃO do corpo de modal (protótipo: rounded-full, inset). D-413
+// tirou daqui a variante `accent`: ação de geração agora é ModalActionButton.
+function ModalChip({
+  active,
+  onClick,
+  children,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-full px-3 py-1.5 text-left text-[12px] font-semibold transition-colors',
+        active
+          ? 'bg-[var(--wb-accent)] text-white'
+          : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+      )}
+    >
+      {children}
     </button>
   );
 }
