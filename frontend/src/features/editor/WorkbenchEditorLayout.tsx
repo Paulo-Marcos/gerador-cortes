@@ -40,11 +40,17 @@ export function WorkbenchEditorLayout({ panelIds, leftPanel, rightPanel, childre
  * `maxHeight`/`minHeight` ficam como reforço direto do texto da auditoria.
  * `minWidth` é o piso que evita o player ficar minúsculo em janelas bem
  * baixas, sem violar o mínimo de 420px do centro (nunca ultrapassa 100%).
+ *
+ * D-411: `shrink` no lugar de `flex-none`. Como flex-none, o player era
+ * intocável e QUEM cedia era sempre a timeline — com Tempos e Sincronia
+ * abertos numa janela baixa ela chegava a 0px e a onda sumia inteira. Sendo
+ * o maior bloco da coluna, é ele quem tem folga para ceder; `maxHeight:44vh`
+ * segue valendo como TETO, então em janela alta nada muda.
  */
 export function PlayerCap({ children }: { children: ReactNode }) {
   return (
     <div
-      className="flex-none self-center"
+      className="shrink self-center"
       style={{
         width: 'min(100%, calc(44vh * 16 / 9))',
         aspectRatio: '16 / 9',

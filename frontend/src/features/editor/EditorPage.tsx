@@ -944,10 +944,17 @@ export function EditorPage() {
             />
           )}
 
-          {/* Timeline em flex:1 com piso de 200px — quanto mais alto o
-              painel, mais legível a onda (aceite crítico do DE-PARA §3);
-              o piso garante a onda visível mesmo com o player no cap. */}
-          <div className="min-h-[200px] flex-1">
+          {/* Os 200px do DE-PARA §3 (quanto mais alto o painel, mais legível a
+              onda) eram um `min-height`, e min-height RÍGIDO nao encolhe: com
+              Tempos e/ou Sincronia abertos numa janela baixa a soma dos irmaos
+              estourava a coluna e a onda vazava por baixo do `overflow-hidden`
+              — media 77px fora em 1600x720 (D-411).
+              Vira `flex: 1 1 200px`: 200px continua sendo a altura PREFERIDA e
+              a onda ainda cresce quando sobra espaco, mas agora e um basis, que
+              o flex pode encolher quando falta. O piso de 110px (cabecalho da
+              timeline + onda ainda legivel) e seguro agora que o PlayerCap
+              tambem encolhe (D-411): sempre ha quem ceda antes de estourar. */}
+          <div className="min-h-[110px] shrink grow basis-[200px]">
             <TimelinePanel
               variant="workbench"
               audioSrc={waveformAudio}
