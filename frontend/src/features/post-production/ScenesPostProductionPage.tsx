@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { FolderOpen, Keyboard, Loader2, Play } from 'lucide-react';
+import { FolderOpen, Keyboard, Loader2, Play, Star } from 'lucide-react';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
 import {
   type RenderStartFrom,
@@ -28,6 +28,8 @@ import { WorkbenchEditorLayout } from '@/features/editor/WorkbenchEditorLayout';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { useWorkbenchQueueOptional } from '@/components/workbench/useWorkbenchQueue';
 import { rotuloCurtoProjeto } from '@/components/workbench/workbenchRoutes';
+import { AvaliacaoCorteModal } from '@/features/editor/avaliacao/AvaliacaoCorteModal';
+import { useAvaliacaoCorte } from '@/features/editor/avaliacao/useAvaliacaoCorte';
 import { MetadataModal } from '@/features/metadata/MetadataModal';
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from './RenderStepsModal';
@@ -77,6 +79,10 @@ export function ScenesPostProductionPage() {
   const [renderStartModalOpen, setRenderStartModalOpen] = useState(false);
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // D-419: a nota do corte é perguntada uma vez, no clique de "Gerar bruto"
+  // (tela Bruta). Aqui ela só fica reabrível para ajuste.
+  const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
+  const avaliacaoQuery = useAvaliacaoCorte(corteId || undefined);
   const ultimoStatusBrutoRef = useRef<string | undefined>(undefined);
   const gradeFaseRef = useRef(false);
   const playerRef = useRef<PlayerHandle>(null);
@@ -347,6 +353,13 @@ export function ScenesPostProductionPage() {
 
   const moreMenuItems: MoreMenuItem[] = [
     {
+      icon: Star,
+      label: avaliacaoQuery.data?.voto
+        ? `Avaliar corte (${avaliacaoQuery.data.voto}/5)`
+        : 'Avaliar corte',
+      onClick: () => setAvaliacaoOpen(true),
+    },
+    {
       icon: FolderOpen,
       label: 'Abrir pasta',
       kbd: 'Ctrl+O',
@@ -377,6 +390,12 @@ export function ScenesPostProductionPage() {
         onClose={() => setMetadataOpen(false)}
       />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AvaliacaoCorteModal
+        open={avaliacaoOpen}
+        corteId={corte.id}
+        onClose={() => setAvaliacaoOpen(false)}
+        descricao={corte.titulo_proposto}
+      />
     </>
   );
 
@@ -430,6 +449,27 @@ export function ScenesPostProductionPage() {
               >
                 {renderFinalRunning ? <Loader2 className="animate-spin" /> : <Play />}
                 {renderFinalRunning ? `Renderizando ${renderFinalProgress}%` : 'Renderizar'}
+              </Button>
+            </Tooltip>
+            <Tooltip
+              label={
+                avaliacaoQuery.data?.voto
+                  ? `Qualidade do corte: ${avaliacaoQuery.data.voto} de 5 — clique para ajustar`
+                  : 'Avaliar a qualidade deste corte'
+              }
+              side="bottom"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setAvaliacaoOpen(true)}
+                aria-label="Avaliar qualidade do corte"
+              >
+                <Star
+                  className={avaliacaoQuery.data?.voto ? 'fill-amber-300 text-amber-300' : ''}
+                />
+                {avaliacaoQuery.data?.voto ?? 'Avaliar'}
               </Button>
             </Tooltip>
             <Tooltip label="Abrir pasta do corte" side="bottom">

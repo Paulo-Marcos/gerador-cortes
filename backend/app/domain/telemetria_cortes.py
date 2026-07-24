@@ -55,6 +55,12 @@ COLUNAS_CSV_TELEMETRIA = [
     "desvios_finais",
     "trechos_geracoes",
     "desvios_claude_por_geracao",
+    # D-419: opinião humana sobre o corte, dada na 1ª geração do bruto. É a
+    # única coluna subjetiva da tabela — as demais medem o que o editor FEZ,
+    # esta diz o que ele ACHOU. Vazia enquanto o corte não foi avaliado.
+    "voto_qualidade",
+    "voto_qualidade_motivos",
+    "voto_qualidade_comentario",
 ]
 
 
@@ -111,6 +117,7 @@ def diff_proposta_vs_final(
             },
             "trechos_geracoes": trechos_geracoes,
             "desvios_claude_por_geracao": desvios_claude_por_geracao,
+            "avaliacao": _avaliacao(corte),
         }
 
     desvios_propostos = snapshot.get("desvios") or []
@@ -145,6 +152,7 @@ def diff_proposta_vs_final(
         },
         "trechos_geracoes": trechos_geracoes,
         "desvios_claude_por_geracao": desvios_claude_por_geracao,
+        "avaliacao": _avaliacao(corte),
     }
 
 
@@ -250,6 +258,20 @@ def _classificar_desvios(
     return mantidos, removidos, finais_restantes
 
 
+def _avaliacao(corte: dict) -> dict:
+    """Avaliação humana do corte (D-419), normalizada para o diff e o CSV.
+
+    `voto=None` distingue "não avaliado" de qualquer nota — o levantamento
+    precisa saber quantos cortes ficaram sem opinião, não tratá-los como zero.
+    """
+    voto = corte.get("voto_qualidade")
+    return {
+        "voto": int(voto) if voto is not None else None,
+        "motivos": list(corte.get("voto_qualidade_motivos") or []),
+        "comentario": (corte.get("voto_qualidade_comentario") or "").strip(),
+    }
+
+
 def _contar_por_origem(desvios: list[dict]) -> dict[str, int]:
     """Agrupa por `origem` do trecho ("claude"/"tecnico"/"gemini"/...);
     trecho sem origem conta como "manual" (editor na timeline)."""
@@ -264,6 +286,7 @@ def _achatar_para_csv(diff: dict) -> dict:
     titulo = diff.get("titulo") or {}
     bordas = diff.get("bordas") or {}
     desvios = diff.get("desvios") or {}
+    avaliacao = diff.get("avaliacao") or {}
     # None = sem snapshot (colunas vazias); {} = com snapshot e zero adições (0).
     tem_diff_desvios = desvios.get("adicionados_por_origem") is not None
     por_origem = desvios.get("adicionados_por_origem") or {}
@@ -310,4 +333,9 @@ def _achatar_para_csv(diff: dict) -> dict:
         "desvios_finais": _num(desvios.get("finais")),
         "trechos_geracoes": diff.get("trechos_geracoes", 0),
         "desvios_claude_por_geracao": diff.get("desvios_claude_por_geracao", 0.0),
+        "voto_qualidade": _num(avaliacao.get("voto")),
+        # Um só campo com os slugs separados por "|": o CSV é plano e a
+        # quantidade de motivos varia; uma coluna por slug inflaria a tabela.
+        "voto_qualidade_motivos": "|".join(avaliacao.get("motivos") or []),
+        "voto_qualidade_comentario": avaliacao.get("comentario") or "",
     }

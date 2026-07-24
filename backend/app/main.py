@@ -15,6 +15,7 @@ from app.channel_paths import projetos_dir
 from app.config import settings
 from app.database import init_db
 from app.routers import (
+    avaliacao_cortes,
     avaliacoes_thumbnail,
     channels,
     claude_ia,
@@ -107,6 +108,9 @@ app.include_router(claude_ia.router, prefix="/api/claude", tags=["Claude IA"])
 app.include_router(diarizacao.router, prefix="/api/diarizacao", tags=["Diarização"])
 app.include_router(presets.router, prefix="/api/presets", tags=["Presets"])
 app.include_router(ranking_lives.router, prefix="/api/ranking-lives", tags=["Ranking Lives"])
+app.include_router(
+    avaliacao_cortes.router, prefix="/api/avaliacao-cortes", tags=["Avaliação de Cortes"]
+)
 app.include_router(
     avaliacoes_thumbnail.router, prefix="/api/avaliacoes-thumbnail", tags=["Avaliações Thumbnail"]
 )

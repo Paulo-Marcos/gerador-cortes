@@ -185,6 +185,18 @@ class Corte(Base):
     # JSON lista de {"em", "adicionados", "total_apos"}, um item por invocação.
     trechos_geracoes: Mapped[int] = mapped_column(Integer, default=0)
     trechos_geracoes_log: Mapped[str] = mapped_column(Text, default="[]")
+    # D-419: avaliação humana da qualidade DESTE corte, colhida quando o editor
+    # manda gerar o bruto pela 1ª vez — com o corte fresco na cabeça. O voto da
+    # live (`Projeto.voto_qualidade_live`, D-372) chega tarde demais para isso:
+    # quando a live inteira termina, metade dos cortes já saiu da memória.
+    # `voto` 1-5 (NULL = ainda não avaliado); `motivos` é lista JSON de slugs do
+    # vocabulário em `domain/avaliacao_corte.py`. Entra na telemetria (D-303).
+    voto_qualidade: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    voto_qualidade_motivos: Mapped[str] = mapped_column(Text, default="[]")
+    voto_qualidade_comentario: Mapped[str] = mapped_column(Text, default="")
+    voto_qualidade_em: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, default=None
+    )
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

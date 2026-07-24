@@ -7,6 +7,7 @@ de projeto e cross-projeto (JSON/CSV).
 
 import json
 
+from app.domain.avaliacao_corte import motivos_persistidos
 from app.domain.telemetria_cortes import (
     SITUACAO_COM_SNAPSHOT,
     diff_proposta_vs_final,
@@ -112,6 +113,10 @@ def _corte_para_diff(corte: Corte) -> dict:
         "status": corte.status or "",
         "desvios": _json_lista(corte.desvios),
         "trechos_geracoes": corte.trechos_geracoes or 0,
+        # D-419: a nota que o editor deu ao corte na 1ª geração do bruto.
+        "voto_qualidade": corte.voto_qualidade,
+        "voto_qualidade_motivos": motivos_persistidos(corte.voto_qualidade_motivos),
+        "voto_qualidade_comentario": corte.voto_qualidade_comentario or "",
     }
 
 

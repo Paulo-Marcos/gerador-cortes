@@ -16,8 +16,10 @@ import {
   useRemoverDesvio,
   useSincronizarTranscricao,
   useStatusBruto,
+  useStatusMetadadosClaude,
   useToggleFire,
   useToggleLeitura,
+  useTrechosClaudeEmAndamento,
 } from '@/hooks/useEditor';
 import { api, audioProxyUrl, waveformPeaksUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -63,6 +65,7 @@ import { selectDesvioIdxByTime } from './fase1/desvioUtils';
 import { UnifiedSidebar } from './UnifiedSidebar';
 import { CommonTopBar, StatusToggleRow, type MoreMenuItem } from './CommonTopBar';
 import { SettingsModal } from '@/components/layout/SettingsModal';
+import { AvaliacaoCorteModal } from './avaliacao/AvaliacaoCorteModal';
 import {
   applyDesvioChange,
   mergeDirtyPatch,
@@ -168,6 +171,9 @@ export function EditorPage() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [trechosManualOpen, setTrechosManualOpen] = useState(false);
+  // D-419: avaliação da qualidade do corte, perguntada uma única vez — no
+  // clique que dispara a 1ª geração do bruto.
+  const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
   const [intervaloAberto, setIntervaloAberto] = useState(false);
   // AUDITORIA-v2 §2/§5/§6 (CP2): toggles da toolbar do Workbench. Começam
   // FECHADOS — Sincronia/Tempos ficam ocultos por padrão (só o estado do
@@ -255,6 +261,12 @@ export function EditorPage() {
   const dividirCorte = useDividirCorte(corteId, projetoId);
   const abrirPasta = useAbrirPasta();
   const brutoMutationPendenteNoCorteAtual = gerarBruto.isPending && gerandoBrutoCorteId === corteId;
+  // D-420 — as gerações via Claude são longas (dezenas de segundos) e o editor
+  // NÃO remonta ao trocar de corte: lidas direto do `isPending` da mutação, elas
+  // desabilitavam o botão do corte novo por causa da execução do anterior. Estes
+  // dois leem o estado no cache, chaveado pelo corte que pediu.
+  const metaClaudeStatus = useStatusMetadadosClaude(corteId);
+  const trechosClaudePendente = useTrechosClaudeEmAndamento(corteId);
 
   const brutoOcupado = () =>
     !corteId || brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual;
@@ -276,6 +288,10 @@ export function EditorPage() {
     if (brutoOcupado()) return;
     dispararBruto(undefined);
     gerarMetadadosClaude.mutate();
+    // D-419: pergunta a qualidade AGORA, não quando o bruto ficar pronto — é
+    // neste clique que o editor acabou de ver e ajustar o corte. A geração já
+    // saiu acima e corre em segundo plano; o modal não a bloqueia.
+    setAvaliacaoOpen(true);
   };
 
   // D-160 — regeração (bruto já existe): por DEFAULT roda só o bruto. Os opt-ins
@@ -636,15 +652,7 @@ export function EditorPage() {
   const brutoBusy =
     brutoStatusAtual === 'processando' ||
     brutoMutationPendenteNoCorteAtual ||
-    gerarMetadadosClaude.isPending;
-  const metaClaudeStatus: 'pendente' | 'rodando' | 'concluido' | 'erro' =
-    gerarMetadadosClaude.isPending
-      ? 'rodando'
-      : gerarMetadadosClaude.isError
-        ? 'erro'
-        : gerarMetadadosClaude.isSuccess
-          ? 'concluido'
-          : 'pendente';
+    metaClaudeStatus === 'rodando';
   const durSeg = Math.max(0, corteUI.fim_seg - corteUI.inicio_seg);
 
   function aplicarIntervaloManual(novoInicioHms: string, novoFimHms: string) {
@@ -695,6 +703,12 @@ export function EditorPage() {
         corteId={corteId}
       />
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AvaliacaoCorteModal
+        open={avaliacaoOpen}
+        corteId={corteId}
+        onClose={() => setAvaliacaoOpen(false)}
+        descricao="O bruto está sendo gerado em segundo plano"
+      />
     </>
   );
 
@@ -741,7 +755,7 @@ export function EditorPage() {
                   pendingTrechos={{
                     adicionando: adicionarDesvio.isPending,
                     removendo: removerDesvio.isPending,
-                    claude: gerarTrechosClaude.isPending,
+                    claude: trechosClaudePendente,
                   }}
                   transcricao={corteUI.transcricao_corte}
                   currentTime={currentTime}
@@ -1219,7 +1233,7 @@ export function EditorPage() {
               transcricao: sincTrans.isPending,
               adicionando: adicionarDesvio.isPending,
               removendo: removerDesvio.isPending,
-              claude: gerarTrechosClaude.isPending,
+              claude: trechosClaudePendente,
             }}
           />
         </div>
