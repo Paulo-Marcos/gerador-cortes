@@ -14,7 +14,7 @@ import {
   extrairPartesPrompt,
 } from '@/components/PromptManualPanel';
 import { useImportarAnalise, usePromptAnalise } from '@/hooks/useProjetoDetalhe';
-import { useAnalisarComDiarizacao } from '@/hooks/useDiarizacao';
+import { useAnaliseClaudeEmAndamento, useAnalisarComDiarizacao } from '@/hooks/useDiarizacao';
 import { DiarizacaoPanel } from './DiarizacaoPanel';
 
 interface Props {
@@ -28,7 +28,17 @@ interface Props {
 type Modo = 'reanalisar' | 'intervalo';
 type Origem = 'auto' | 'manual' | 'claude';
 
-export function AnaliseIaModal({
+/**
+ * D-418 — o modal é remontado a cada live (`key`), porque a página de detalhe
+ * NÃO remonta ao trocar de projeto pelo rail: só o parâmetro da rota muda. Sem a
+ * key, tudo que é estado local (JSON colado, intervalo, mutação de importação)
+ * sobrevivia à troca e a live nova aparecia com o trabalho da anterior.
+ */
+export function AnaliseIaModal(props: Props) {
+  return <AnaliseIaModalDaLive key={props.projetoId} {...props} />;
+}
+
+function AnaliseIaModalDaLive({
   open,
   onClose,
   projetoId,
@@ -69,7 +79,11 @@ export function AnaliseIaModal({
   // A análise é ADITIVA (D-298): mostramos um aviso informativo — nunca bloqueante —
   // quando já há cortes, deixando claro que nada é apagado.
   const temCortesExistentes = totalCortesExistentes > 0;
-  const isPending = importarAnalise.isPending || analisarClaude.isPending;
+  // D-418: quem manda no spinner é a mutação DESTA live no cache, não o
+  // `isPending` do componente — assim a análise de uma live nunca desabilita o
+  // botão da outra, e voltar para a live em análise reencontra o "Gerando...".
+  const analiseEmAndamento = useAnaliseClaudeEmAndamento(projetoId);
+  const isPending = importarAnalise.isPending || analiseEmAndamento;
 
   const reset = () => {
     setJsonPorParte({});

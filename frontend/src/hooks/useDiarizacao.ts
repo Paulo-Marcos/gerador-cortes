@@ -3,7 +3,7 @@
 // Vivem num arquivo próprio (e não em useProjetoDetalhe.ts, que está sob lock)
 // para não tocar features protegidas. Reutilizam as query-keys existentes para
 // manter as invalidações consistentes com o resto do detalhe do projeto.
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type DiarizarResponse, type FalantesMap } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
 import { corteKey, cortesProjetoKey } from './useEditor';
@@ -106,6 +106,21 @@ export function useAtualizarFalantes(projetoId: string) {
   });
 }
 
+/** Chave da análise via Claude, POR PROJETO (D-418).
+ *
+ * A rota `/projetos/:id` renderiza o mesmo elemento para todas as lives, então
+ * trocar de live pelo rail não remonta a página: um `isPending` de componente
+ * vazava o "Gerando..." de uma live para a outra. Com a mutação chaveada, o
+ * estado de execução vive no cache do react-query e é individual por live.
+ */
+export const analiseClaudeKey = (projetoId: string) => ['analise-claude', projetoId] as const;
+
+/** True enquanto ESTA live tem análise via Claude em voo — inclusive quando quem
+ * disparou já foi desmontado (o usuário abriu outra live e voltou). */
+export function useAnaliseClaudeEmAndamento(projetoId: string): boolean {
+  return useIsMutating({ mutationKey: analiseClaudeKey(projetoId), exact: true }) > 0;
+}
+
 /** Análise via Claude com o toggle de diarização (D-286).
  * Espelha as invalidações de `useAnalisarViaClaude`, mas encaminha
  * `usar_diarizacao` para injetar (ou não) o rótulo de falante no prompt. */
@@ -113,6 +128,7 @@ export function useAnalisarComDiarizacao(projetoId: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
+    mutationKey: analiseClaudeKey(projetoId),
     mutationFn: (usarDiarizacao: boolean) => api.analisarViaClaude(projetoId, usarDiarizacao),
     onSuccess: (data) => {
       notify(`Análise via Claude concluída: ${data.total_cortes ?? 0} corte(s).`, {
