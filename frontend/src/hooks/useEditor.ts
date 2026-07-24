@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useIsMutating,
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { api, type GerarBrutoOpcoes } from '@/lib/api';
 import { exportStatusKey } from './useProjetoDetalhe';
 import { useToast } from '@/components/ui/toaster';
@@ -403,6 +409,37 @@ export function useRemoverDesvio(corteId: string) {
   });
 }
 
+// D-420 — chaves das gerações via Claude, POR CORTE.
+//
+// A rota `/projetos/:id/cortes/:corteId` renderiza o MESMO elemento para todos
+// os cortes, então trocar de corte não remonta o editor: um `isPending` de
+// componente sobrevivia à troca e desabilitava o botão do corte novo por causa
+// da execução do anterior. Com a mutação chaveada, o estado de execução vive no
+// cache do react-query e é individual por corte — mesmo padrão do D-418.
+export const metadadosClaudeKey = (corteId: string) => ['claude-metadados', corteId] as const;
+export const trechosClaudeKey = (corteId: string) => ['claude-trechos', corteId] as const;
+
+/** Estado da geração de metadados via Claude DESTE corte. `concluido`/`erro`
+ * valem até o react-query coletar a mutação encerrada (gcTime). */
+export function useStatusMetadadosClaude(
+  corteId: string,
+): 'pendente' | 'rodando' | 'concluido' | 'erro' {
+  const estados = useMutationState({
+    filters: { mutationKey: metadadosClaudeKey(corteId), exact: true },
+    select: (mutation) => mutation.state.status,
+  });
+  const ultimo = estados.at(-1);
+  if (ultimo === 'pending') return 'rodando';
+  if (ultimo === 'error') return 'erro';
+  if (ultimo === 'success') return 'concluido';
+  return 'pendente';
+}
+
+/** True enquanto ESTE corte tem geração de trechos via Claude em voo. */
+export function useTrechosClaudeEmAndamento(corteId: string): boolean {
+  return useIsMutating({ mutationKey: trechosClaudeKey(corteId), exact: true }) > 0;
+}
+
 // F-038 — regera os trechos a remover (desvios) do corte via Claude e
 // ressincroniza a transcrição final. O endpoint não devolve o Corte, então
 // invalidamos a query para refetch do corte atualizado.
@@ -410,6 +447,7 @@ export function useGerarTrechosClaude(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
+    mutationKey: trechosClaudeKey(corteId),
     mutationFn: () => api.gerarTrechosClaude(corteId),
     onSuccess: (data) => {
       const msg =
@@ -450,6 +488,7 @@ export function useGerarMetadadosClaude(corteId: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
+    mutationKey: metadadosClaudeKey(corteId),
     mutationFn: () => api.gerarMetadadosClaude(corteId),
     onSuccess: () => {
       notify('Metadados gerados via Claude.', { tone: 'success' });
