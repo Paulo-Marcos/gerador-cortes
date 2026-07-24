@@ -5,9 +5,12 @@ import json
 import logging
 import os
 import re
+from collections.abc import Awaitable
+from dataclasses import dataclass
 from typing import Any
 
 from app.config import settings
+from app.infrastructure import fila_ia
 from google import genai
 
 logger = logging.getLogger(__name__)
@@ -25,6 +28,20 @@ def _get_client() -> genai.Client:
     return _client
 
 
+# ── Fila global (D-417) ─────────────────────────────────────────────────────
+# `contexto` serve só à fila — não altera a geração. O anúncio em si vive em
+# `fila_ia`, compartilhado com o Claude.
+
+
+@dataclass(frozen=True)
+class GeminiCallContext:
+    """Etapa e alvo da chamada, para a fila global. Todos opcionais."""
+
+    etapa: str | None = None
+    projeto_id: str | None = None
+    corte_id: str | None = None
+
+
 async def generate_json(
     model: str,
     prompt: str,
@@ -32,6 +49,7 @@ async def generate_json(
     schema: Any = None,
     temperature: float = 0.7,
     top_p: float = 0.9,
+    contexto: GeminiCallContext | None = None,
 ) -> dict:
     """Chama Gemini e retorna JSON parseado.
 
@@ -65,10 +83,15 @@ async def generate_json(
         logger.debug("[GeminiClient] JSON extraído com sucesso.")
         return data
 
-    return await asyncio.to_thread(_call_sync)
+    return await _com_anuncio(asyncio.to_thread(_call_sync), contexto)
 
 
-async def generate_image(prompt: str, *, model: str = "gemini-2.5-flash-image") -> bytes:
+async def generate_image(
+    prompt: str,
+    *,
+    model: str = "gemini-2.5-flash-image",
+    contexto: GeminiCallContext | None = None,
+) -> bytes:
     """Gera uma imagem via Gemini e retorna os bytes.
 
     Exemplo:
@@ -86,7 +109,23 @@ async def generate_image(prompt: str, *, model: str = "gemini-2.5-flash-image") 
                 return part.as_image().image_bytes
         raise ValueError("Gemini retornou sucesso mas sem imagem no response.parts")
 
-    return await asyncio.to_thread(_call_sync)
+    return await _com_anuncio(asyncio.to_thread(_call_sync), contexto)
+
+
+async def _com_anuncio(chamada: Awaitable[Any], contexto: GeminiCallContext | None) -> Any:
+    """Roda a chamada anunciando início e desfecho na fila global."""
+    chave = fila_ia.anunciar_inicio(
+        contexto.etapa if contexto else None,
+        projeto_id=contexto.projeto_id if contexto else None,
+        corte_id=contexto.corte_id if contexto else None,
+    )
+    try:
+        resultado = await chamada
+    except BaseException as exc:
+        fila_ia.anunciar_fim(chave, sucesso=False, erro=fila_ia.mensagem_de(exc))
+        raise
+    fila_ia.anunciar_fim(chave, sucesso=True)
+    return resultado
 
 
 def _extract_json(text: str) -> dict:

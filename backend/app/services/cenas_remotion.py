@@ -334,6 +334,9 @@ class CenasRemotionService:
                         "gemini-2.5-flash",
                         prompt_info["texto"],
                         temperature=0.7,
+                        contexto=gemini_client.GeminiCallContext(
+                            etapa="cenas-gemini", corte_id=corte_id
+                        ),
                     )
                 except Exception as gem_err:
                     operational_error(

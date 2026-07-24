@@ -28,6 +28,7 @@ import time
 from dataclasses import dataclass
 
 from app.config import settings
+from app.infrastructure import fila_ia
 
 logger = logging.getLogger(__name__)
 
@@ -426,6 +427,25 @@ def _registrar_telemetria(
         logger.warning("[ClaudeCLI] falha ao gravar telemetria da chamada: %s", exc)
 
 
+# ── Fila global (D-417) ─────────────────────────────────────────────────────
+# As chamadas daqui rodam SÍNCRONAS dentro do request (a análise da transcrição
+# leva minutos), então sem este anúncio o operador não tem como saber que há IA
+# em andamento. O anúncio em si vive em `fila_ia`, compartilhado com o Gemini.
+
+
+def _etapa_da_chamada(contexto: LlmCallContext | None, skill: str | None) -> str | None:
+    """Etapa da telemetria; cai na skill quando o contexto não a informou."""
+    return (contexto.etapa if contexto else None) or skill
+
+
+def _anunciar_inicio(contexto: LlmCallContext | None, skill: str | None) -> str:
+    return fila_ia.anunciar_inicio(
+        _etapa_da_chamada(contexto, skill),
+        projeto_id=contexto.projeto_id if contexto else None,
+        corte_id=contexto.corte_id if contexto else None,
+    )
+
+
 async def generate_text(
     prompt: str,
     *,
@@ -465,6 +485,7 @@ async def generate_text(
     # Latência de parede: cobre subprocess + retries + fila do semáforo (o que o
     # operador realmente esperou), complementando o `duration_ms` do envelope.
     inicio = time.perf_counter()
+    chave_fila = _anunciar_inicio(contexto, skill)
     try:
         envelope = await _run(
             entrada,
@@ -486,6 +507,12 @@ async def generate_text(
             sucesso=False,
             erro_tipo=type(exc).__name__,
         )
+        fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
+        raise
+    except BaseException as exc:
+        # Cancelamento ou erro inesperado: sem isto o job ficaria "rodando" na
+        # fila para sempre.
+        fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
         raise
     resultado = str(envelope.get("result", "")).strip()
     _registrar_telemetria(
@@ -499,6 +526,7 @@ async def generate_text(
         sucesso=True,
         erro_tipo=None,
     )
+    fila_ia.anunciar_fim(chave_fila, sucesso=True)
     return resultado
 
 
@@ -528,7 +556,21 @@ async def generate_json(
         thinking_tokens=thinking_tokens,
         contexto=contexto,
     )
-    return _extract_json(texto)
+    try:
+        return _extract_json(texto)
+    except Exception as exc:
+        # A chamada em si deu certo, mas o resultado é inútil para o caller — a
+        # fila precisa mostrar isso como falha (a chave é a mesma do início).
+        fila_ia.anunciar_fim(
+            fila_ia.chave(
+                _etapa_da_chamada(contexto, skill),
+                projeto_id=contexto.projeto_id if contexto else None,
+                corte_id=contexto.corte_id if contexto else None,
+            ),
+            sucesso=False,
+            erro=fila_ia.mensagem_de(exc),
+        )
+        raise
 
 
 def _extract_json(text: str) -> dict:

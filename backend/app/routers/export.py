@@ -14,6 +14,7 @@ from app.models import Corte, MetadadoCorte, StatusCorte
 from app.routers.errors import erro_interno
 from app.services.app_logging import operational_info
 from app.services.export import ExportService
+from app.services.jobs_globais import JobsGlobais
 from app.services.render_progress import RenderProgressStore
 from app.services.tasks import fire_and_forget
 from app.services.youtube import YouTubeService
@@ -374,7 +375,7 @@ async def status_fila_processamento(projeto_id: str):
 
 
 @router.get("/fila-global")
-async def fila_global():
+async def fila_global(db: AsyncSession = Depends(get_db)):
     pos_total = pos_processando = pos_aguardando = pos_concluidos = pos_erros = 0
     for fila in ExportService.get_fila_processamento().values():
         pos_total += len(fila)
@@ -406,6 +407,11 @@ async def fila_global():
             "erros": yt_erros,
             "ativo": yt_total > 0 and yt_concluidos < yt_total,
         },
+        # D-417: inventário item a item de todo trabalho pesado (bruto, pós,
+        # render, YouTube, consultas de IA e demais tarefas de background) que
+        # alimenta a fila global do Workbench. Os contadores acima seguem
+        # intactos para quem já os consome.
+        "jobs": await JobsGlobais.coletar_descritos(db),
     }
 
 

@@ -28,6 +28,11 @@ class _ExportBulkQueueMixin:
         cls._tarefas_corte[corte_id] = status
 
     @classmethod
+    def get_tarefas_corte(cls) -> dict[str, str]:
+        """Cópia do mapa corte→status do gerar-bruto (D-417: fila global)."""
+        return dict(cls._tarefas_corte)
+
+    @classmethod
     def get_fila_processamento(cls) -> dict:
         return cls._fila_processamento
 

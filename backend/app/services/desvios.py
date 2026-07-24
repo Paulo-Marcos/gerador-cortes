@@ -222,7 +222,12 @@ class DesviosService:
 
                 try:
                     resultado = await gemini_client.generate_json(
-                        "gemini-2.5-flash", prompt, temperature=0.7
+                        "gemini-2.5-flash",
+                        prompt,
+                        temperature=0.7,
+                        contexto=gemini_client.GeminiCallContext(
+                            etapa="desvios", corte_id=corte_id
+                        ),
                     )
                     trechos = resultado.get("trechos", [])
                     todos_trechos.extend(trechos)

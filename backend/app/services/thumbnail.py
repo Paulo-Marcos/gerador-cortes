@@ -157,7 +157,14 @@ class ThumbnailService:
 
         try:
             prompt_para_gerador = strip_variation_tags(meta.prompt_thumbnail)
-            imagem_bytes = await gemini_client.generate_image(prompt_para_gerador)
+            imagem_bytes = await gemini_client.generate_image(
+                prompt_para_gerador,
+                contexto=gemini_client.GeminiCallContext(
+                    etapa="thumbnail-imagem",
+                    projeto_id=corte.projeto_id,
+                    corte_id=corte_id,
+                ),
+            )
 
             # Salva a imagem na pasta de thumbnails DO PROJETO (mesma convenção do
             # upload manual), para que o caminho seja reancorável pelo canal ativo.

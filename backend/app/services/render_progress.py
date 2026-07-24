@@ -95,6 +95,11 @@ class RenderProgressStore:
         return current is not None and current.state == "running"
 
     @classmethod
+    def todos(cls) -> dict[str, RenderProgress]:
+        """Cópia do progresso de todos os cortes conhecidos (D-417: fila global)."""
+        return dict(cls._progress)
+
+    @classmethod
     def get(cls, corte_id: str) -> RenderProgress:
         return cls._progress.get(corte_id) or RenderProgress(
             state="idle",
