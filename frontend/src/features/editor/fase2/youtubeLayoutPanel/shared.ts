@@ -9,6 +9,12 @@ export const MODE_LABEL: Record<YoutubeLayoutMode, string> = {
   compartilhada: 'Compartilhada',
 };
 
+/** Rotulo curto para pilulas e chips, onde 'Compartilhada' nao cabe. */
+export const MODE_SHORT: Record<YoutubeLayoutMode, string> = {
+  full: 'FULL',
+  compartilhada: 'COMP.',
+};
+
 export function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }

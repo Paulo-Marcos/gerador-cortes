@@ -4,7 +4,7 @@
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import {
-  ChevronDown,
+  ArrowLeftRight,
   Flag,
   Folder,
   Globe,
@@ -21,23 +21,35 @@ import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
 import { segParaMmSs } from '../../timeUtils';
 import { DefinirSplitButton } from '../DefinirSplitButton';
 import type { YoutubeLayoutMode, YoutubeLayoutRegion } from '../youtubeLayout';
-import { MODE_LABEL, clamp, round } from './shared';
+import { MODE_LABEL, MODE_SHORT, clamp, round } from './shared';
 
 // Collapsible removido (F-060): as secoes Fundo/Placa migraram para o modal
 // de posicionamento — fundo e placa agora pertencem ao preset/escopo.
 
-// ─── DefinirPadroesCard · F-048 ────────────────────────────────────────
-// Card que substituiu o antigo PadraoLayoutCard. 3 linhas (Corte / Projeto /
-// Global) — cada uma com SplitButton "Definir ▾" que abre o
-// PosicionamentoModal ou aplica preset via dropdown. Sem botao "Usar":
-// aplicacao do escopo correto e automatica no preview (cascade lazy).
-export function DefinirPadroesCard({
-  open,
-  onToggle,
-  label,
-  usando,
+// ─── EscopoLadder · D-421 ──────────────────────────────────────────────
+// Substitui o DefinirPadroesCard (F-048), onde a cascata de escopos existia
+// apenas como PROSA ("segmento > segmento (padrão) > corte > projeto >
+// global") dentro de um card colapsado, a dois cliques de distância. Agora a
+// cascata E a ordem visual das linhas — sempre aberta, do mais específico ao
+// mais geral, com o escopo vencedor marcado.
+//
+// Duas remoções deliberadas:
+//   - o toggle "Definindo Full|Compartilhada" era um FILTRO desenhado com o
+//     mesmo segmented que define VALOR em outros dois pontos do painel; virou
+//     um link discreto no cabeçalho da escada;
+//   - o disclosure "Ajuste fino" (um único controle dentro) morreu: "Tipo do
+//     projeto" é uma propriedade do escopo Projeto e passou a morar na linha
+//     dele, junto do preset que aquele mesmo escopo define.
+//
+// Referências: indicador "Modified in: <escopo>" do Settings do VS Code (expõe
+// de onde o valor efetivo nasce, em vez de escondê-lo) e overrides de instância
+// do Figma (herdado vs sobrescrito sempre visível, com caminho de volta).
+export function EscopoLadder({
   modo,
-  onChangeModo,
+  onAlternarModo,
+  escopoAtivo,
+  tipoProjeto,
+  onChangeTipoProjeto,
   corteDefinido,
   projetoDefinido,
   globalDefinido,
@@ -57,15 +69,15 @@ export function DefinirPadroesCard({
   onResetSegmentoPadrao,
   pendingProjeto,
   pendingGlobal,
-  hideHeader = false,
 }: {
-  open: boolean;
-  onToggle: () => void;
-  label: string;
-  usando: 'projeto' | 'global' | 'custom';
-  /** F-060: qual modo esta sendo definido (Full | Compartilhada). */
+  /** F-060: qual modo a escada exibe e define (Full | Compartilhada). */
   modo: YoutubeLayoutMode;
-  onChangeModo: (modo: YoutubeLayoutMode) => void;
+  onAlternarModo: (modo: YoutubeLayoutMode) => void;
+  /** Escopo que alimenta o corte agora — recebe o selo "em uso". */
+  escopoAtivo: 'corte' | 'projeto' | 'global' | 'default';
+  /** Modo com que novos cortes do projeto nascem (mora na linha Projeto). */
+  tipoProjeto: YoutubeLayoutMode;
+  onChangeTipoProjeto: (modo: YoutubeLayoutMode) => void;
   corteDefinido: boolean;
   projetoDefinido: boolean;
   globalDefinido: boolean;
@@ -85,134 +97,97 @@ export function DefinirPadroesCard({
   onResetSegmentoPadrao: () => void;
   pendingProjeto: boolean;
   pendingGlobal: boolean;
-  /** AUDITORIA-v4 §3: o gatilho e o selo vivem na linha "PADRÃO … definir" do
-   *  painel; aqui só o corpo, sem repetir cabeçalho nem moldura destacada. */
-  hideHeader?: boolean;
 }) {
-  const chipTone =
-    usando === 'projeto'
-      ? 'var(--wb-info)'
-      : usando === 'global'
-        ? 'var(--wb-violet)'
-        : 'var(--wb-text-dim)';
   const presetTipo: LayoutPresetTipo = modo === 'full' ? 'posicionamento_full' : 'posicionamento';
-  if (hideHeader && !open) return null;
+  const outroModo: YoutubeLayoutMode = modo === 'full' ? 'compartilhada' : 'full';
 
   return (
-    <section
-      className={
-        hideHeader ? 'mt-2 rounded-[var(--radius-sm)] border' : 'rounded-[var(--radius-sm)] border'
-      }
-      style={{
-        background: 'color-mix(in oklch, var(--wb-accent) 5%, var(--wb-bg-card))',
-        borderColor: 'color-mix(in oklch, var(--wb-accent) 30%, var(--wb-border))',
-      }}
-    >
-      {!hideHeader && (
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          className="flex w-full items-center gap-2 border-0 bg-transparent px-3 py-2 text-left transition-opacity hover:opacity-90"
-        >
-          <Flag size={12} className="flex-shrink-0 text-[var(--wb-accent)]" />
-          <strong className="text-[12px] font-bold text-[var(--wb-ink)]">Definir padrões</strong>
-          <span
-            className="rounded-full px-2 py-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.04em]"
-            style={{
-              background: 'color-mix(in oklch, ' + chipTone + ' 14%, transparent)',
-              color: chipTone,
-            }}
+    <section>
+      <div className="flex items-center gap-2">
+        <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+          Posicionamento
+        </span>
+        <div className="flex-1" />
+        <Tooltip label={`Ver e definir os padrões de ${MODE_LABEL[outroModo]}`} side="left">
+          <button
+            type="button"
+            onClick={() => onAlternarModo(outroModo)}
+            className="inline-flex items-center gap-1 rounded-[var(--radius-xs)] px-1.5 py-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)] transition-colors hover:bg-[var(--wb-accent-soft)]"
           >
-            {label}
-          </span>
-          <div className="flex-1" />
-          <ChevronDown
-            size={13}
-            className="text-[var(--wb-text-dim)] transition-transform"
-            style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-          />
-        </button>
-      )}
-      {open && (
-        <div className={hideHeader ? 'p-3' : 'border-t border-[var(--wb-border-soft)] p-3'}>
-          <p className="mb-2.5 text-[10.5px] leading-snug text-[var(--wb-text-mute)]">
-            Cada nível define o posicionamento desse escopo (e fundo + placa em
-            Corte/Projeto/Global). A prioridade é{' '}
-            <strong>segmento &gt; segmento (padrão) &gt; corte &gt; projeto &gt; global</strong>.
-          </p>
+            {MODE_SHORT[modo]}
+            <ArrowLeftRight size={10} aria-hidden />
+          </button>
+        </Tooltip>
+      </div>
+      <p className="mb-1.5 mt-0.5 font-code text-[9px] text-[var(--wb-text-faint)]">
+        do mais específico ao mais geral — o primeiro definido vence
+      </p>
 
-          {/* F-060: alterna entre definir o posicionamento Full ou Compartilhada. */}
-          <div className="mb-2.5 flex items-center gap-2">
-            <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-              Definindo
+      <DefinirScopeRow
+        title="Segmento"
+        hint="só dentro de regiões"
+        icon={Flag}
+        tone="var(--wb-violet)"
+        definido={segmentoPadraoDefinido}
+        presetNome={presetSegmentoPadraoNome}
+        presetTipo={presetTipo}
+        onDefinir={onDefinirSegmentoPadrao}
+        onPreset={onPresetSegmentoPadrao}
+        onReset={segmentoPadraoDefinido ? onResetSegmentoPadrao : undefined}
+        pendingDefinir={false}
+      />
+      <DefinirScopeRow
+        title="Corte"
+        icon={Scissors}
+        tone="var(--wb-accent)"
+        ativo={escopoAtivo === 'corte'}
+        definido={corteDefinido}
+        presetNome={presetCorteNome}
+        presetTipo={presetTipo}
+        onDefinir={onDefinirCorte}
+        onPreset={onPresetCorte}
+        pendingDefinir={false}
+      />
+      <DefinirScopeRow
+        title="Projeto"
+        icon={Folder}
+        tone="var(--wb-info)"
+        ativo={escopoAtivo === 'projeto'}
+        definido={projetoDefinido}
+        presetNome={presetProjetoNome}
+        presetTipo={presetTipo}
+        onDefinir={onDefinirProjeto}
+        onPreset={onPresetProjeto}
+        pendingDefinir={pendingProjeto}
+        extra={
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="whitespace-nowrap font-code text-[9px] uppercase tracking-[0.06em] text-[var(--wb-text-faint)]">
+              novos cortes
             </span>
-            <div className="inline-flex items-center overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
-              {(['full', 'compartilhada'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => onChangeModo(m)}
-                  aria-pressed={modo === m}
-                  className={cn(
-                    'h-6 px-2 font-code text-[10px] font-bold uppercase tracking-[0.04em] transition-colors',
-                    modo === m
-                      ? 'bg-[var(--wb-accent)] text-white'
-                      : 'bg-transparent text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-                  )}
-                >
-                  {MODE_LABEL[m]}
-                </button>
-              ))}
-            </div>
+            <ModePills
+              value={tipoProjeto}
+              onChange={onChangeTipoProjeto}
+              pending={pendingProjeto}
+            />
           </div>
-
-          <DefinirScopeRow
-            title="Corte"
-            icon={Scissors}
-            tone="var(--wb-accent)"
-            definido={corteDefinido}
-            presetNome={presetCorteNome}
-            presetTipo={presetTipo}
-            onDefinir={onDefinirCorte}
-            onPreset={onPresetCorte}
-            pendingDefinir={false}
-          />
-          <DefinirScopeRow
-            title="Segmento (padrão deste corte)"
-            icon={Flag}
-            tone="var(--wb-violet)"
-            definido={segmentoPadraoDefinido}
-            presetNome={presetSegmentoPadraoNome}
-            presetTipo={presetTipo}
-            onDefinir={onDefinirSegmentoPadrao}
-            onPreset={onPresetSegmentoPadrao}
-            onReset={segmentoPadraoDefinido ? onResetSegmentoPadrao : undefined}
-            pendingDefinir={false}
-          />
-          <DefinirScopeRow
-            title="Projeto"
-            icon={Folder}
-            tone="var(--wb-info)"
-            definido={projetoDefinido}
-            presetNome={presetProjetoNome}
-            presetTipo={presetTipo}
-            onDefinir={onDefinirProjeto}
-            onPreset={onPresetProjeto}
-            pendingDefinir={pendingProjeto}
-          />
-          <DefinirScopeRow
-            title="Global"
-            icon={Globe}
-            tone="var(--wb-violet)"
-            definido={globalDefinido}
-            presetNome={presetGlobalNome}
-            presetTipo={presetTipo}
-            onDefinir={onDefinirGlobal}
-            onPreset={onPresetGlobal}
-            pendingDefinir={pendingGlobal}
-          />
-        </div>
+        }
+      />
+      <DefinirScopeRow
+        title="Global"
+        icon={Globe}
+        tone="var(--wb-violet)"
+        ativo={escopoAtivo === 'global'}
+        definido={globalDefinido}
+        presetNome={presetGlobalNome}
+        presetTipo={presetTipo}
+        onDefinir={onDefinirGlobal}
+        onPreset={onPresetGlobal}
+        pendingDefinir={pendingGlobal}
+      />
+      {escopoAtivo === 'default' && (
+        <p className="mt-1 font-code text-[9px] text-[var(--wb-text-faint)]">
+          nenhum escopo definido — usando o fallback da aplicação
+        </p>
       )}
     </section>
   );
@@ -220,49 +195,88 @@ export function DefinirPadroesCard({
 
 function DefinirScopeRow({
   title,
+  hint,
   icon: Icon,
   definido,
   presetNome,
   presetTipo,
   tone,
+  ativo = false,
+  extra,
   onDefinir,
   onPreset,
   onReset,
   pendingDefinir,
 }: {
   title: string;
+  /** Nota curta ao lado do titulo (ex.: onde este escopo se aplica). */
+  hint?: string;
   icon: typeof Folder;
-  /** Tem JSON salvo neste escopo (i.e. nao herda do nivel acima). */
+  /** Tem JSON salvo neste escopo (i.e. nao cai para o proximo da escada). */
   definido: boolean;
   /** Nome do preset salvo que bate com o config atual deste escopo. */
   presetNome: string | null;
   /** F-060: tipo de preset listado no dropdown (por modo). */
   presetTipo: LayoutPresetTipo;
   tone: string;
+  /** D-421: escopo que efetivamente alimenta o corte agora. */
+  ativo?: boolean;
+  /** Controle extra sob o subtitulo (a linha Projeto usa p/ o tipo do projeto). */
+  extra?: ReactNode;
   onDefinir: () => void;
   onPreset: (preset: LayoutPreset) => void;
-  /** Opcional: limpa este escopo (usado pelo Segmento padrao p/ destrarvar). */
+  /** Opcional: limpa este escopo (usado pelo Segmento p/ voltar a herdar). */
   onReset?: () => void;
   pendingDefinir: boolean;
 }) {
   let subtitulo: string;
-  if (!definido) subtitulo = 'Sem preset (herda do nível acima)';
+  if (!definido) subtitulo = 'Não definido — cai para o próximo';
   else if (presetNome) subtitulo = `Preset: ${presetNome}`;
   else subtitulo = 'Personalizado (não bate com preset salvo)';
 
   return (
-    <div className="mb-2 flex items-center gap-2 rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-2 last:mb-0">
+    <div
+      className={cn(
+        'mb-1 flex items-center gap-2 rounded-[var(--radius-xs)] border p-1.5 last:mb-0',
+        ativo
+          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+          : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]',
+      )}
+    >
       <span
-        className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
+        className="inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full"
         style={{ background: 'color-mix(in oklch, ' + tone + ' 18%, transparent)', color: tone }}
       >
-        <Icon size={13} />
+        <Icon size={12} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-[12px] font-bold text-[var(--wb-text)]">{title}</div>
-        <div className="truncate font-code text-[10px] text-[var(--wb-text-dim)]" title={subtitulo}>
+        <div className="flex min-w-0 items-baseline gap-1.5">
+          <span className="flex-none text-[11.5px] font-bold text-[var(--wb-text)]">{title}</span>
+          {hint && (
+            <span className="truncate font-code text-[9px] text-[var(--wb-text-faint)]">
+              {hint}
+            </span>
+          )}
+          {ativo && (
+            <span
+              className="flex-none rounded-full px-1.5 font-code text-[8.5px] font-bold uppercase tracking-[0.04em]"
+              style={{
+                background: 'color-mix(in oklch, var(--wb-accent) 16%, transparent)',
+                color: 'var(--wb-accent)',
+              }}
+              title="É deste escopo que o corte está lendo agora"
+            >
+              em uso
+            </span>
+          )}
+        </div>
+        <div
+          className="truncate font-code text-[9.5px] text-[var(--wb-text-dim)]"
+          title={subtitulo}
+        >
           {subtitulo}
         </div>
+        {extra}
       </div>
       <DefinirSplitButton
         label="Definir"
@@ -287,110 +301,106 @@ function DefinirScopeRow({
   );
 }
 
-export function PadraoAtualChip({
-  escopo,
-  presetNome,
-}: {
-  escopo: 'corte' | 'projeto' | 'global' | 'default';
-  presetNome: string | null;
-}) {
-  const TONE: Record<typeof escopo, string> = {
-    corte: 'var(--wb-accent)',
-    projeto: 'var(--wb-info)',
-    global: 'var(--wb-violet)',
-    default: 'var(--wb-text-dim)',
-  };
-  const LABEL: Record<typeof escopo, string> = {
-    corte: 'Corte',
-    projeto: 'Projeto',
-    global: 'Global',
-    default: 'Default',
-  };
-  const tone = TONE[escopo];
-  const sub =
-    escopo === 'default'
-      ? 'fallback da app'
-      : presetNome
-        ? `preset "${presetNome}"`
-        : 'personalizado';
-  return (
-    <span
-      className="inline-flex items-center gap-1 truncate rounded-full px-2 py-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.04em]"
-      style={{ background: 'color-mix(in oklch, ' + tone + ' 14%, transparent)', color: tone }}
-      title={`Vem do escopo ${LABEL[escopo]} — ${sub}`}
-    >
-      {LABEL[escopo]} · {sub}
-    </span>
-  );
-}
+// PadraoAtualChip removido (D-421): o selo "Corte · preset X" duplicava o que a
+// EscopoLadder agora diz na propria linha do escopo, com o marcador "em uso".
 
 // (LayoutSubLabel removido: os titulos das secoes viraram parte do
 // componente Collapsible.)
 
-// ─── InlineModeToggle — linha unica compacta (decisao Paulo) ──────
-// Caption a esquerda + segmented 2 pilulas a direita. Substitui o
-// ProjectTypeToggle vertical e o grid 2-col de ModePicker grande
-// (ambos ocupavam muita altura desnecessaria no header).
+// ─── ModePills — segmented Full | Comp. reutilizavel ───────────────────
+// D-421: extraido do InlineModeToggle para que a linha Projeto da EscopoLadder
+// use as mesmas pilulas sem arrastar junto o rotulo e o layout de linha.
+export function ModePills({
+  value,
+  onChange,
+  pending,
+  herdando = false,
+}: {
+  value: YoutubeLayoutMode;
+  onChange: (modo: YoutubeLayoutMode) => void;
+  pending?: boolean;
+  /** Nenhuma pílula fica pressed: o valor efetivo vem de outro escopo. */
+  herdando?: boolean;
+}) {
+  return (
+    <div className="inline-flex items-center overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
+      {(['full', 'compartilhada'] as const).map((m) => {
+        const pressed = !herdando && value === m;
+        return (
+          <button
+            key={m}
+            type="button"
+            onClick={() => onChange(m)}
+            disabled={pending}
+            aria-pressed={pressed}
+            title={MODE_LABEL[m]}
+            className={cn(
+              'h-6 px-2 font-code text-[10px] font-bold uppercase tracking-[0.04em] transition-colors disabled:cursor-wait disabled:opacity-60',
+              pressed
+                ? 'bg-[var(--wb-accent)] text-white'
+                : 'bg-transparent text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
+            )}
+          >
+            {/* Rótulo curto (COMP.) como nos chips de região; o nome completo
+                fica no title. */}
+            {MODE_SHORT[m]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── InlineModeToggle — modo DESTE corte ───────────────────────────────
+// D-421: era instanciado duas vezes (modo do corte e tipo do projeto), fazendo
+// o mesmo widget significar valores de níveis diferentes na mesma tela. Sobrou
+// uma instância; o tipo do projeto virou a linha Projeto da EscopoLadder.
+// Ganhou `onReset` — antes, uma vez clicada uma pílula, não havia caminho de
+// volta ao modo do projeto (padrão de override do Figma: sobrescrito sempre
+// reversível).
 export function InlineModeToggle({
   label,
-  hint,
   value,
-  pending,
   onChange,
   herdando = false,
   herdandoDe,
+  onReset,
 }: {
   label: string;
-  hint?: string;
   value: YoutubeLayoutMode;
-  pending?: boolean;
   onChange: (modo: YoutubeLayoutMode) => void;
-  /** I-025: quando true, nenhuma pílula fica pressed e exibe chip "herdando do projeto: X". */
+  /** I-025: quando true, nenhuma pílula fica pressed e o caption diz "herdando". */
   herdando?: boolean;
   herdandoDe?: YoutubeLayoutMode;
+  /** D-421: devolve o corte ao modo do projeto. Ausente quando já coincidem. */
+  onReset?: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 py-1">
+    <div className="flex items-center gap-1.5 py-1">
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
         <Flag size={10} className="flex-shrink-0 text-[var(--wb-accent)]" />
         <span className="whitespace-nowrap font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
           {label}
         </span>
-        {herdando && herdandoDe ? (
+        {herdandoDe && (
           <span className="truncate font-code text-[9px] text-[var(--wb-text-faint)]">
-            · herdando do projeto: {MODE_LABEL[herdandoDe]}
+            {herdando ? '↳ herdando do Projeto:' : '· Projeto:'} {MODE_LABEL[herdandoDe]}
           </span>
-        ) : hint ? (
-          <span className="truncate font-code text-[9px] text-[var(--wb-text-faint)]">
-            · {hint}
-          </span>
-        ) : null}
+        )}
       </div>
-      <div className="inline-flex items-center overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
-        {(['full', 'compartilhada'] as const).map((m) => {
-          const pressed = !herdando && value === m;
-          return (
-            <button
-              key={m}
-              type="button"
-              onClick={() => onChange(m)}
-              disabled={pending}
-              aria-pressed={pressed}
-              title={MODE_LABEL[m]}
-              className={cn(
-                'h-6 px-2 font-code text-[10px] font-bold uppercase tracking-[0.04em] transition-colors disabled:cursor-wait disabled:opacity-60',
-                pressed
-                  ? 'bg-[var(--wb-accent)] text-white'
-                  : 'bg-transparent text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-              )}
-            >
-              {/* Rótulo curto (COMP.) como nos chips de região do protótipo —
-                  o nome completo fica no title. */}
-              {m === 'compartilhada' ? 'COMP.' : MODE_LABEL[m]}
-            </button>
-          );
-        })}
-      </div>
+      {onReset && (
+        <Tooltip label="Voltar ao modo do projeto" side="left">
+          <button
+            type="button"
+            onClick={onReset}
+            aria-label="Voltar ao modo do projeto"
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
+          >
+            <RotateCw size={11} />
+          </button>
+        </Tooltip>
+      )}
+      <ModePills value={value} onChange={onChange} herdando={herdando} />
     </div>
   );
 }

@@ -41,17 +41,12 @@ import {
   type YoutubePlaca,
   type YoutubeSharedConfig,
 } from './youtubeLayout';
-import { draftMatchesPreset, readPadraoModo } from './youtubeLayoutPadrao';
+import { readPadraoModo } from './youtubeLayoutPadrao';
 import { useLayoutPresets } from './useLayoutPresets';
 import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
 import { ScanLine } from 'lucide-react';
-import {
-  DefinirPadroesCard,
-  InlineModeToggle,
-  PadraoAtualChip,
-  RegionItem,
-} from './youtubeLayoutPanel/components';
+import { EscopoLadder, InlineModeToggle, RegionItem } from './youtubeLayoutPanel/components';
 import { MODE_LABEL, clamp, round } from './youtubeLayoutPanel/shared';
 
 // ─────────────────────────────────────────────────────────────
@@ -195,18 +190,17 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
       onConfirm: () => void;
     }>(null);
 
-    // Estado de expansao do card "Definir padroes" (comeca colapsado).
-    // F-060: Fundo e Placa sairam do painel — agora vivem no modal "Definir".
-    const [padraoOpen, setPadraoOpen] = useState(false);
-    // AUDITORIA-v4 §3: painel nasce enxuto — lista de regiões e o toggle de
-    // tipo do projeto abrem sob demanda.
+    // AUDITORIA-v4 §3: painel nasce enxuto — a lista de regiões abre sob demanda.
+    // D-421: `padraoOpen` e `ajusteFinoOpen` sumiram. Eram dois disclosures
+    // escondendo um controle cada; a escada de escopos e o tipo do projeto são
+    // a informação central do painel e agora ficam sempre visíveis.
     const [regioesOpen, setRegioesOpen] = useState(false);
-    const [ajusteFinoOpen, setAjusteFinoOpen] = useState(false);
-    // F-060: qual modo o card "Definir padroes" esta configurando. Inicia no
-    // modo do corte e re-sincroniza quando ele muda.
-    const [modoDefinir, setModoDefinir] = useState<YoutubeLayoutMode>(draft.modo_padrao);
+    // F-060: qual modo a escada de escopos está configurando. Inicia no modo do
+    // corte e re-sincroniza quando ele muda; o link no cabeçalho da escada
+    // permite definir os padrões do outro modo sem trocar o modo do corte.
+    const [modoEscada, setModoEscada] = useState<YoutubeLayoutMode>(draft.modo_padrao);
     useEffect(() => {
-      setModoDefinir(draft.modo_padrao);
+      setModoEscada(draft.modo_padrao);
     }, [draft.modo_padrao]);
 
     const definirPadraoGlobalMutation = useMutation({
@@ -518,8 +512,6 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
         : escopoDefinido('global', modoChip)
           ? 'global'
           : 'default';
-    const presetNomeAtivo =
-      escopoAtivoCorte === 'default' ? null : presetNomeDoEscopo(escopoAtivoCorte, modoChip);
 
     // F-060: o modal trabalha com config sintetico de 1 tela quando modo=full;
     // na persistencia voltamos para o shape {crop, slot}.
@@ -722,15 +714,9 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
 
     // F-048: cascade lazy — aplicacao do padrao acontece automaticamente no
     // momento do consumo (preview/render). O "Usar" foi removido daqui.
-    // `padraoUsando` ainda informa o chip do header com qual escopo casa.
-    const padraoUsando: 'projeto' | 'global' | 'custom' = draftMatchesPreset(
-      draft,
-      padraoProjetoJson,
-    )
-      ? 'projeto'
-      : draftMatchesPreset(draft, padraoGlobalJson)
-        ? 'global'
-        : 'custom';
+    // D-421: `padraoUsando`/`padraoLabel` sairam junto com o PadraoAtualChip —
+    // a EscopoLadder ja marca "em uso" na linha do escopo que alimenta o corte,
+    // sem precisar de um segundo selo no cabecalho dizendo a mesma coisa.
 
     // Setar tipo do projeto: faz PATCH parcial preservando fundo/placa/
     // compartilhada ja salvos (ou usa defaults DEFAULT_YOUTUBE_LAYOUT).
@@ -776,13 +762,6 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
       );
     };
 
-    const padraoLabel: string =
-      padraoUsando === 'projeto'
-        ? 'Usando padrão Projeto'
-        : padraoUsando === 'global'
-          ? 'Usando padrão Global'
-          : 'Customizado (não usa padrão)';
-
     return (
       <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
         {/* overflow-x-hidden explícito: com só `overflow-y-auto`, o CSS
@@ -796,9 +775,14 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               <strong className="whitespace-nowrap font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
                 Layout YouTube
               </strong>
-              <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
-                agora: {MODE_LABEL[activeMode]}
-              </span>
+              {/* D-421: o chip só aparece quando o modo sob o playhead difere
+                do modo do corte (i.e. há uma região ativa). Fora disso ele
+                repetia, em outro formato, o segmented logo abaixo. */}
+              {activeMode !== draft.modo_padrao && (
+                <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
+                  agora: {MODE_LABEL[activeMode]}
+                </span>
+              )}
               <div className="flex-1" />
               <Tooltip
                 label={
@@ -838,15 +822,22 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               )}
             </div>
 
-            {/* AUDITORIA-v4 §3: MODO DESTE CORTE é o único toggle essencial —
-              sobe para o topo. "Tipo do projeto" (nível projeto, mexido raro)
-              desce para o disclosure "Ajuste fino". */}
+            {/* D-421: único toggle de MODO do painel. "Tipo do projeto" não é
+              mais um segundo segmented idêntico logo abaixo — virou a linha
+              Projeto da escada de escopos, onde o resto do padrão do projeto
+              já é definido. O ↺ devolve o corte ao modo do projeto; sem ele o
+              override era só de ida. */}
             <InlineModeToggle
               label="Modo deste corte"
               value={draft.modo_padrao}
               onChange={handleDefault}
               herdando={modoHerdando}
               herdandoDe={tipoProjeto}
+              onReset={
+                !modoHerdando && draft.modo_padrao !== tipoProjeto
+                  ? () => handleDefault(tipoProjeto)
+                  : undefined
+              }
             />
 
             {/* Stats numa linha (mesmo tratamento do CenasPanel na §2): os 3
@@ -871,101 +862,42 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
                 <span className="text-[var(--wb-text-dim)]">duração</span>
               </span>
             </div>
-
-            {/* Ajuste fino — o que é de projeto/raro fica recolhido. O resumo
-              no cabeçalho mantém a informação visível; só o controle recolhe. */}
-            <button
-              type="button"
-              onClick={() => setAjusteFinoOpen((v) => !v)}
-              aria-expanded={ajusteFinoOpen}
-              className="mt-2 flex w-full items-center gap-1.5 rounded-[var(--radius-xs)] px-1 py-1 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
-            >
-              <span className="flex-none font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                Ajuste fino
-              </span>
-              <span className="min-w-0 flex-1 truncate font-code text-[9.5px] text-[var(--wb-text-mute)]">
-                tipo do projeto: {MODE_LABEL[tipoProjeto]}
-              </span>
-              <ChevronDown
-                size={12}
-                className="flex-none text-[var(--wb-text-dim)] transition-transform"
-                style={{ transform: ajusteFinoOpen ? 'rotate(180deg)' : 'none' }}
-                aria-hidden
-              />
-            </button>
-            {ajusteFinoOpen && (
-              <div className="mt-1 rounded-[var(--radius-sm)] border border-dashed border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-1.5">
-                <InlineModeToggle
-                  label="Tipo do projeto"
-                  hint="novos cortes herdam"
-                  value={tipoProjeto}
-                  pending={definirPadraoProjetoMutation.isPending}
-                  onChange={handleDefinirTipoProjeto}
-                />
-              </div>
-            )}
           </header>
 
-          {/* F-048/F-060 + AUDITORIA-v4 §3: PADRÃO em UMA linha — selo do
-            padrão em uso + link "definir". O card completo (escopos corte/
-            projeto/global, presets, modal) abre a partir daqui, colapsado por
-            padrão: era um bloco destacado ocupando o painel o tempo todo. */}
+          {/* D-421: a escada de escopos deixou de morar atrás de "PADRÃO …
+            definir ▾". A prioridade (segmento > corte > projeto > global) era
+            prosa dentro de um card colapsado; agora é a própria ordem das
+            linhas, sempre visível, com o escopo vencedor marcado "em uso". */}
           <div className="border-b border-[var(--wb-border-soft)] px-3 py-2">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <span className="flex-none font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-                Padrão
-              </span>
-              {/* min-w-0 + truncate: o nome do preset pode ser longo e era ele
-                  que empurrava a largura do painel. */}
-              <span className="min-w-0 flex-1 truncate">
-                <PadraoAtualChip escopo={escopoAtivoCorte} presetNome={presetNomeAtivo} />
-              </span>
-              <button
-                type="button"
-                onClick={() => setPadraoOpen((v) => !v)}
-                aria-expanded={padraoOpen}
-                className="inline-flex flex-none items-center gap-1 rounded-[var(--radius-xs)] px-1.5 py-1 text-[10.5px] font-semibold text-[var(--wb-accent)] transition-colors hover:bg-[var(--wb-accent-soft)]"
-              >
-                {padraoOpen ? 'fechar' : 'definir'}
-                <ChevronDown
-                  size={11}
-                  className="transition-transform"
-                  style={{ transform: padraoOpen ? 'rotate(180deg)' : 'none' }}
-                  aria-hidden
-                />
-              </button>
-            </div>
-            <DefinirPadroesCard
-              open={padraoOpen}
-              onToggle={() => setPadraoOpen((v) => !v)}
-              label={padraoLabel}
-              usando={padraoUsando}
-              modo={modoDefinir}
-              onChangeModo={setModoDefinir}
-              corteDefinido={escopoDefinido('corte', modoDefinir)}
-              projetoDefinido={escopoDefinido('projeto', modoDefinir)}
-              globalDefinido={escopoDefinido('global', modoDefinir)}
-              segmentoPadraoDefinido={escopoDefinido('segmento_padrao', modoDefinir)}
-              presetCorteNome={presetNomeDoEscopo('corte', modoDefinir)}
-              presetProjetoNome={presetNomeDoEscopo('projeto', modoDefinir)}
-              presetGlobalNome={presetNomeDoEscopo('global', modoDefinir)}
-              presetSegmentoPadraoNome={presetNomeDoEscopo('segmento_padrao', modoDefinir)}
-              onDefinirCorte={() => abrirModalPosicionamento('corte', modoDefinir)}
-              onDefinirProjeto={() => abrirModalPosicionamento('projeto', modoDefinir)}
-              onDefinirGlobal={() => abrirModalPosicionamento('global', modoDefinir)}
+            <EscopoLadder
+              modo={modoEscada}
+              onAlternarModo={setModoEscada}
+              escopoAtivo={escopoAtivoCorte}
+              tipoProjeto={tipoProjeto}
+              onChangeTipoProjeto={handleDefinirTipoProjeto}
+              corteDefinido={escopoDefinido('corte', modoEscada)}
+              projetoDefinido={escopoDefinido('projeto', modoEscada)}
+              globalDefinido={escopoDefinido('global', modoEscada)}
+              segmentoPadraoDefinido={escopoDefinido('segmento_padrao', modoEscada)}
+              presetCorteNome={presetNomeDoEscopo('corte', modoEscada)}
+              presetProjetoNome={presetNomeDoEscopo('projeto', modoEscada)}
+              presetGlobalNome={presetNomeDoEscopo('global', modoEscada)}
+              presetSegmentoPadraoNome={presetNomeDoEscopo('segmento_padrao', modoEscada)}
+              onDefinirCorte={() => abrirModalPosicionamento('corte', modoEscada)}
+              onDefinirProjeto={() => abrirModalPosicionamento('projeto', modoEscada)}
+              onDefinirGlobal={() => abrirModalPosicionamento('global', modoEscada)}
               onDefinirSegmentoPadrao={() =>
-                abrirModalPosicionamento('segmento_padrao', modoDefinir)
+                abrirModalPosicionamento('segmento_padrao', modoEscada)
               }
-              onPresetCorte={(preset) => handlePresetEscopo('corte', modoDefinir, preset)}
-              onPresetProjeto={(preset) => handlePresetEscopo('projeto', modoDefinir, preset)}
-              onPresetGlobal={(preset) => handlePresetEscopo('global', modoDefinir, preset)}
+              onPresetCorte={(preset) => handlePresetEscopo('corte', modoEscada, preset)}
+              onPresetProjeto={(preset) => handlePresetEscopo('projeto', modoEscada, preset)}
+              onPresetGlobal={(preset) => handlePresetEscopo('global', modoEscada, preset)}
               onPresetSegmentoPadrao={(preset) =>
-                handlePresetEscopo('segmento_padrao', modoDefinir, preset)
+                handlePresetEscopo('segmento_padrao', modoEscada, preset)
               }
-              onResetSegmentoPadrao={() => removerPadraoSegmento(modoDefinir)}
+              onResetSegmentoPadrao={() => removerPadraoSegmento(modoEscada)}
               pendingProjeto={definirPadraoProjetoMutation.isPending}
               pendingGlobal={definirPadraoGlobalMutation.isPending}
-              hideHeader
             />
           </div>
 
