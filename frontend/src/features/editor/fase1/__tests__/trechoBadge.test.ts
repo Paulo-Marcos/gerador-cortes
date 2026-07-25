@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inferirCategoriaDoMotivo, resolverBadgeTrecho } from '../trechoBadge';
+import { resolverBadgeTrecho } from '../trechoBadge';
 import type { Desvio } from '@/types/models';
 
 function desvio(patch: Partial<Desvio> = {}): Desvio {
@@ -47,31 +47,20 @@ describe('resolverBadgeTrecho — categoria manda no badge (D-422)', () => {
   });
 });
 
-describe('resolverBadgeTrecho — desvios legados (sem categoria)', () => {
-  it('infere a categoria pelo motivo de cortes já analisados', () => {
+describe('resolverBadgeTrecho — fallback por origem (sem categoria)', () => {
+  // A inferência pelo motivo é do backend (`domain/desvio_categoria.py`, aplicada
+  // na serialização do corte): aqui só verificamos que a ausência de categoria
+  // degrada para o badge por origem — o comportamento pré-D-422, não um bug.
+  it('cai no badge por origem, sem deduzir categoria do texto', () => {
     expect(
-      resolverBadgeTrecho(desvio({ origem: 'claude', motivo: 'desvio ESTRUTURAL: digressão sobre' }))
+      resolverBadgeTrecho(desvio({ origem: 'claude', motivo: 'digressão sobre utilitarismo' }))
         .label,
-    ).toBe('tangente');
-    expect(
-      resolverBadgeTrecho(
-        desvio({ origem: 'claude', motivo: 'muletas e reações soltas após o vídeo' }),
-      ).label,
-    ).toBe('muleta');
-    expect(
-      resolverBadgeTrecho(desvio({ origem: 'tecnico', motivo: 'Silêncio Detectado (IA/Técnico)' }))
-        .label,
-    ).toBe('silencio');
-  });
-
-  it('cai no badge por origem quando o motivo não diz nada — comportamento pré-D-422', () => {
-    expect(resolverBadgeTrecho(desvio({ origem: 'claude', motivo: 'algo qualquer' })).label).toBe(
-      'IA',
-    );
+    ).toBe('IA');
     expect(resolverBadgeTrecho(desvio({ origem: 'manual', motivo: 'Trecho manual' })).label).toBe(
       'manual',
     );
     expect(resolverBadgeTrecho(desvio({ origem: 'gemini', motivo: '' })).label).toBe('IA Gemini');
+    expect(resolverBadgeTrecho(desvio({ origem: 'tecnico', motivo: '' })).label).toBe('silencio');
   });
 
   it('desvio sem origem nem motivo não quebra', () => {
@@ -82,16 +71,5 @@ describe('resolverBadgeTrecho — desvios legados (sem categoria)', () => {
     expect(resolverBadgeTrecho(desvio({ categoria: 'outro', origem: 'gemini' })).label).toBe(
       'IA Gemini',
     );
-  });
-});
-
-describe('inferirCategoriaDoMotivo', () => {
-  it('reconhece o aviso de imprecisão escrito pela skill', () => {
-    expect(inferirCategoriaDoMotivo('Possível imprecisão — data da guerra')).toBe('imprecisao');
-  });
-
-  it('devolve null sem pista no texto', () => {
-    expect(inferirCategoriaDoMotivo('')).toBeNull();
-    expect(inferirCategoriaDoMotivo('trecho')).toBeNull();
   });
 });

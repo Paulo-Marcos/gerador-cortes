@@ -19,6 +19,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.domain.corte_mapper import normalizar_cenas_remotion_payload
+from app.domain.desvio_categoria import classificar_desvio
 from app.models import Corte
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,11 @@ def _corte_to_dict(corte: Corte) -> dict:
     # WHY: itera por __table__.columns — colunas novas (ex.: I-034 `justificativa`)
     # entram automaticamente no payload. Só ajustamos abaixo campos JSON-encoded.
     d = {c: getattr(corte, c) for c in corte.__table__.columns.keys()}
-    d["desvios"] = json.loads(corte.desvios or "[]")
+    # D-422: classifica no caminho de LEITURA, não só na geração — assim os cortes
+    # analisados antes da categoria existir também chegam badgeados ao editor, sem
+    # migrar banco e sem replicar a tabela de inferência no frontend. Este é o
+    # único ponto de serialização de corte da API, então cobre todas as rotas.
+    d["desvios"] = [classificar_desvio(x) for x in json.loads(corte.desvios or "[]")]
     # D-314: `score_json` (proposta v2, D-302) é ranking relativo entre os cortes
     # da mesma análise — {hook, flow, value, total}. Sai parseado como objeto no
     # campo `score` para o editor priorizar qual corte tratar primeiro. Corte

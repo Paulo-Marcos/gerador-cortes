@@ -51,9 +51,44 @@ class TestCorteToDict:
             layout_youtube='{"modo_padrao":"full"}',
         )
         d = cortes_router._corte_to_dict(c)
-        assert d["desvios"] == [{"inicio_hms": "00:00:01", "fim_hms": "00:00:02", "motivo": "x"}]
+        # D-422: o desvio sai classificado (`categoria`); o resto do payload é igual.
+        assert d["desvios"] == [
+            {
+                "inicio_hms": "00:00:01",
+                "fim_hms": "00:00:02",
+                "motivo": "x",
+                "categoria": "outro",
+            }
+        ]
         assert d["transcricao_corte"] == []
         assert d["layout_youtube"]["modo_padrao"] == "full"
+
+    def test_desvio_legado_sai_classificado_pelo_motivo(self):
+        # D-422: cortes analisados antes da categoria existir chegam badgeados ao
+        # editor sem migrar banco — a classificação roda na serialização.
+        c = self._corte(
+            desvios=(
+                '[{"inicio_hms":"00:27:57","fim_hms":"00:29:30",'
+                '"motivo":"desvio ESTRUTURAL: digressão sobre utilitarismo","origem":"claude"},'
+                '{"inicio_hms":"00:36:14","fim_hms":"00:36:23",'
+                '"motivo":"muletas e reações soltas","origem":"claude"},'
+                '{"inicio_hms":"00:40:00","fim_hms":"00:40:05",'
+                '"motivo":"Silêncio Detectado (IA/Técnico)","origem":"tecnico"}]'
+            )
+        )
+        categorias = [x["categoria"] for x in cortes_router._corte_to_dict(c)["desvios"]]
+        assert categorias == ["tangente", "disfluencia", "silencio"]
+
+    def test_desvio_impreciso_sai_com_aviso_no_motivo(self):
+        c = self._corte(
+            desvios=(
+                '[{"inicio_hms":"00:38:02","fim_hms":"00:38:09",'
+                '"categoria":"imprecisao","motivo":"atribui a frase a Platão"}]'
+            )
+        )
+        desvio = cortes_router._corte_to_dict(c)["desvios"][0]
+        assert desvio["categoria"] == "imprecisao"
+        assert desvio["motivo"].startswith("Possível imprecisão")
 
     def test_campos_nulos_viram_defaults_vazios(self):
         d = cortes_router._corte_to_dict(self._corte())

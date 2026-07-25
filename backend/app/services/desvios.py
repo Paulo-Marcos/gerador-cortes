@@ -49,6 +49,38 @@ Regras importantes:
 """
 
 
+def desvio_de_trecho(trecho: dict, origem: str) -> dict | None:
+    """Converte um trecho devolvido pela IA (ou colado no modal) em desvio.
+
+    Devolve `None` quando o trecho não tem as duas bordas — sem elas não há o que
+    remover. Puro: nenhum acesso a banco, testável direto.
+    """
+    inicio_hms = trecho.get("inicio_hms", "")
+    fim_hms = trecho.get("fim_hms", "")
+    if not inicio_hms or not fim_hms:
+        return None
+
+    categoria = normalizar_categoria(
+        trecho.get("categoria") or trecho.get("tipo"), trecho.get("motivo", "")
+    )
+    motivo = str(trecho.get("motivo", "")).strip()
+    # D-422: o badge do painel passa a carregar o motivo da remoção, então o prefixo
+    # "[TIPO]" no texto virou redundante — só permanece quando não reconhecemos a
+    # categoria, para não perder a única pista que o trecho trazia.
+    if categoria == OUTRO:
+        motivo = f"[{trecho.get('tipo', 'DESVIO')}] {motivo}".strip()
+
+    return {
+        "inicio_hms": inicio_hms,
+        "fim_hms": fim_hms,
+        "inicio_seg": hms_to_seg(inicio_hms),
+        "fim_seg": hms_to_seg(fim_hms),
+        "motivo": motivo_com_aviso(motivo, categoria),
+        "categoria": categoria,
+        "origem": origem,
+    }
+
+
 class DesviosService:
     @staticmethod
     async def montar_prompt(corte_id: str, transcricao_override: list = None) -> dict:
@@ -148,32 +180,7 @@ class DesviosService:
 
             desvios_existentes = json.loads(corte.desvios or "[]")
 
-            novos = []
-            for t in trechos:
-                inicio_hms = t.get("inicio_hms", "")
-                fim_hms = t.get("fim_hms", "")
-                if not inicio_hms or not fim_hms:
-                    continue
-                # D-422: o badge do painel passa a carregar o motivo da remoção, então
-                # o prefixo "[TIPO]" no texto virou redundante — sai quando a categoria
-                # é reconhecida e fica (compatível) quando cai em `outro`.
-                categoria = normalizar_categoria(
-                    t.get("categoria") or t.get("tipo"), t.get("motivo", "")
-                )
-                motivo_bruto = str(t.get("motivo", "")).strip()
-                if categoria == OUTRO:
-                    motivo_bruto = f"[{t.get('tipo', 'DESVIO')}] {motivo_bruto}".strip()
-                novos.append(
-                    {
-                        "inicio_hms": inicio_hms,
-                        "fim_hms": fim_hms,
-                        "inicio_seg": hms_to_seg(inicio_hms),
-                        "fim_seg": hms_to_seg(fim_hms),
-                        "motivo": motivo_com_aviso(motivo_bruto, categoria),
-                        "categoria": categoria,
-                        "origem": origem,
-                    }
-                )
+            novos = [d for d in (desvio_de_trecho(t, origem) for t in trechos) if d]
 
             todos = desvios_existentes + novos
             todos.sort(key=lambda d: d.get("inicio_seg", 0))

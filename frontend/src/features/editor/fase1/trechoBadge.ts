@@ -1,4 +1,4 @@
-import type { Desvio, DesvioCategoria } from '@/types/models';
+import type { Desvio, DesvioCategoria, DesvioOrigem } from '@/types/models';
 
 /**
  * D-422: o badge do trecho mostra o MOTIVO da remoção, não quem a propôs.
@@ -51,7 +51,9 @@ const BADGE_POR_CATEGORIA: Record<DesvioCategoria, BadgeTrecho> = {
   outro: { label: 'IA', titulo: 'Trecho proposto por IA', ...IA },
 };
 
-const BADGE_POR_ORIGEM: Record<string, BadgeTrecho> = {
+// Fallback: desvio que chegou sem categoria reconhecida. Tipado por `DesvioOrigem`
+// para que uma origem nova não passe sem badge.
+const BADGE_POR_ORIGEM: Record<DesvioOrigem, BadgeTrecho> = {
   claude: { label: 'IA', titulo: 'Trecho proposto por IA (Claude)', ...IA },
   gemini: { label: 'IA Gemini', titulo: 'Trecho proposto por IA (Gemini)', ...REDUNDANCIA },
   n8n: { label: 'IA n8n', titulo: 'Trecho proposto por IA (n8n)', ...REDUNDANCIA },
@@ -59,63 +61,21 @@ const BADGE_POR_ORIGEM: Record<string, BadgeTrecho> = {
   tecnico: BADGE_POR_CATEGORIA.silencio,
 };
 
-// Inferência por motivo para desvios LEGADOS (persistidos antes do D-422, sem
-// `categoria`). Espelha `_RAIZES_MOTIVO` do backend — a duplicação existe para
-// que os cortes já analisados ganhem o badge certo sem migrar o banco. Fonte
-// canônica é o backend; ao mexer aqui, mexa lá.
-const RAIZES_MOTIVO: readonly (readonly [string, DesvioCategoria])[] = [
-  ['silenc', 'silencio'],
-  ['impreci', 'imprecisao'],
-  ['incorret', 'imprecisao'],
-  ['possivelmente errad', 'imprecisao'],
-  ['repet', 'repeticao'],
-  ['redundan', 'repeticao'],
-  ['reitera', 'repeticao'],
-  ['hesita', 'disfluencia'],
-  ['muleta', 'disfluencia'],
-  ['gagueira', 'disfluencia'],
-  ['falso comeco', 'disfluencia'],
-  ['autocorre', 'disfluencia'],
-  ['chat', 'chat'],
-  ['audiencia', 'chat'],
-  ['digress', 'tangente'],
-  ['tangente', 'tangente'],
-  ['off-topic', 'tangente'],
-  ['desvio', 'tangente'],
-  ['enrola', 'enrolacao'],
-  ['desabafo', 'tom'],
-  ['treta', 'tom'],
-];
-
-function semAcento(texto: string): string {
-  return texto
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Mn}/gu, '');
-}
-
-/** Categoria deduzida do motivo de um desvio legado, ou `null` se nada casar. */
-export function inferirCategoriaDoMotivo(motivo: string | undefined): DesvioCategoria | null {
-  const texto = semAcento(motivo ?? '');
-  if (!texto) return null;
-  for (const [raiz, categoria] of RAIZES_MOTIVO) {
-    if (texto.includes(raiz)) return categoria;
-  }
-  return null;
-}
-
 /**
- * Badge do trecho: categoria persistida → inferência pelo motivo (legado) →
- * origem. Sempre devolve um badge; nunca lança.
+ * Badge do trecho: `categoria` manda; sem ela, cai no badge por origem.
+ *
+ * A classificação — inclusive a inferência pelo motivo dos desvios legados — é
+ * do backend (`domain/desvio_categoria.py`, aplicada na serialização do corte em
+ * `cortes_helpers._corte_to_dict`). Aqui não se deduz categoria: replicar aquela
+ * tabela em TS seria a mesma regra de domínio em duas linguagens, divergindo na
+ * primeira vez que uma delas mudasse.
+ *
+ * Sempre devolve um badge; nunca lança.
  */
 export function resolverBadgeTrecho(desvio: Desvio): BadgeTrecho {
   const categoria = desvio.categoria;
   if (categoria && categoria !== 'outro' && BADGE_POR_CATEGORIA[categoria]) {
     return BADGE_POR_CATEGORIA[categoria];
   }
-
-  const inferida = inferirCategoriaDoMotivo(desvio.motivo);
-  if (inferida) return BADGE_POR_CATEGORIA[inferida];
-
   return BADGE_POR_ORIGEM[desvio.origem ?? 'manual'] ?? BADGE_POR_ORIGEM.manual;
 }
