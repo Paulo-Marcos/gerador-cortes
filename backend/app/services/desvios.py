@@ -1,17 +1,25 @@
 import json
 
 from app.database import AsyncSessionLocal
+from app.domain.desvio_categoria import OUTRO, motivo_com_aviso, normalizar_categoria
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.time_convert import hms_to_seg
 from app.models import Corte
 from app.services.app_logging import operational_error
 
-PROMPT_ANALISAR_DESVIOS = """Você é um editor de vídeo especialista. Receberá a transcrição de um trecho de vídeo e deverá identificar dois tipos de partes que podem ser removidas sem comprometer o entendimento da mensagem:
+PROMPT_ANALISAR_DESVIOS = """Você é um editor de vídeo especialista. Receberá a transcrição de um trecho de vídeo e deverá identificar as partes que podem ser removidas sem comprometer o entendimento da mensagem. Classifique cada trecho em UMA destas categorias:
 
-1. **DESVIO** — Trecho que foge do tema central: digressões, avisos técnicos, problemas de transmissão, interações irrelevantes com o chat, etc.
+1. **TANGENTE** — Trecho que foge do tema central: digressões, avisos técnicos, problemas de transmissão, tangentes administrativas.
 2. **REPETICAO** — Trecho onde o locutor repete excessivamente a mesma ideia sem agregar informação nova. O interlocutor é prolixo e costuma reiterar pontos já explicados de forma redundante.
+3. **CHAT** — Interação com o chat ao vivo: ler nomes, agradecer doações, pedir like/inscrição.
+4. **DISFLUENCIA** — Muletas, gagueira, falsos começos, autocorreções e formulações abandonadas que o locutor refaz de forma limpa em seguida.
+5. **ENROLACAO** — Enrolação sem conteúdo: procurar link, pausa técnica, silêncio longo sem função retórica.
+6. **IMPRECISAO** — Afirmação factualmente **imprecisa ou possivelmente errada**: número, data, nome, atribuição de autoria ou estatística que soa duvidoso, ou generalização apresentada como fato. Marque mesmo sem ter certeza do erro: a dúvida é o critério.
+7. **TOM** — Conteúdo fora do tom: desabafos, tretas, histórias constrangedoras.
 
 Retorne um JSON com a lista de trechos a remover. Para cada trecho, identifique o timestamp exato de início e fim (no formato HH:MM:SS, com os mesmos valores da transcrição) e uma descrição breve do motivo.
+
+Para **IMPRECISAO**, o motivo deve dizer explicitamente o que pode estar errado e começar com "Possível imprecisão" — quem revisa precisa ver na mensagem que aquilo é dúvida factual, não gordura.
 
 A transcrição abaixo usa tempos **absolutos do vídeo original**. Os timestamps de início e fim que você retornar devem ser desses mesmos tempos absolutos.
 
@@ -25,7 +33,7 @@ Retorne APENAS o JSON, sem explicações. Formato esperado:
     {{
       "inicio_hms": "HH:MM:SS",
       "fim_hms": "HH:MM:SS",
-      "tipo": "DESVIO" | "REPETICAO",
+      "tipo": "TANGENTE" | "REPETICAO" | "CHAT" | "DISFLUENCIA" | "ENROLACAO" | "IMPRECISAO" | "TOM",
       "motivo": "Descrição breve do motivo"
     }}
   ]
@@ -34,6 +42,7 @@ Retorne APENAS o JSON, sem explicações. Formato esperado:
 Regras importantes:
 - Seja conservador: só remova o que claramente não agrega.
 - Para REPETICAO: só marque se a ideia já foi explicada anteriormente e a repetição não traz ângulo novo.
+- Para IMPRECISAO: marque o menor trecho que contém a afirmação duvidosa; se ela sustenta o argumento inteiro (removê-la quebra o que vem depois), NÃO marque.
 - Não remova transições naturais de raciocínio, apenas redundâncias reais.
 - Os timestamps devem estar dentro do intervalo da transcrição fornecida.
 - Se não houver nada a remover, retorne {{"trechos": []}}.
@@ -113,7 +122,10 @@ class DesviosService:
                     {
                         "inicio_hms": "HH:MM:SS",
                         "fim_hms": "HH:MM:SS",
-                        "tipo": "DESVIO | REPETICAO",
+                        "tipo": (
+                            "TANGENTE | REPETICAO | CHAT | DISFLUENCIA | "
+                            "ENROLACAO | IMPRECISAO | TOM"
+                        ),
                         "motivo": "Descrição breve",
                     }
                 ]
@@ -142,13 +154,23 @@ class DesviosService:
                 fim_hms = t.get("fim_hms", "")
                 if not inicio_hms or not fim_hms:
                     continue
+                # D-422: o badge do painel passa a carregar o motivo da remoção, então
+                # o prefixo "[TIPO]" no texto virou redundante — sai quando a categoria
+                # é reconhecida e fica (compatível) quando cai em `outro`.
+                categoria = normalizar_categoria(
+                    t.get("categoria") or t.get("tipo"), t.get("motivo", "")
+                )
+                motivo_bruto = str(t.get("motivo", "")).strip()
+                if categoria == OUTRO:
+                    motivo_bruto = f"[{t.get('tipo', 'DESVIO')}] {motivo_bruto}".strip()
                 novos.append(
                     {
                         "inicio_hms": inicio_hms,
                         "fim_hms": fim_hms,
                         "inicio_seg": hms_to_seg(inicio_hms),
                         "fim_seg": hms_to_seg(fim_hms),
-                        "motivo": f"[{t.get('tipo', 'DESVIO')}] {t.get('motivo', '')}".strip(),
+                        "motivo": motivo_com_aviso(motivo_bruto, categoria),
+                        "categoria": categoria,
                         "origem": origem,
                     }
                 )

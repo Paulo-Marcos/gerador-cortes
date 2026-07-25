@@ -11,14 +11,33 @@ permanência — serve ao fluxo da história que o corte conta.
 
 ## O que REMOVER (marcar como desvio)
 
-- **Repetições**: o locutor reitera a mesma ideia sem avançar o argumento.
-- **Interação com o chat ao vivo** (ler nomes, responder doações, bate-boca).
-- **Tangentes** que interrompem a história do corte e não agregam.
-- **Enrolação** sem conteúdo (pausas técnicas, procura de link, silêncio longo
-  sem função retórica).
-- **Conteúdo fora do tom** (NÃO_RECOMENDADO): desabafos pessoais, histórias
+Cada desvio sai com uma `categoria` deste vocabulário FECHADO — é ela que o
+editor vê no badge do painel de trechos:
+
+- **Repetições** (`repeticao`): o locutor reitera a mesma ideia sem avançar o argumento.
+- **Muletas e falsos começos** (`disfluencia`): gagueira, autocorreção, formulação
+  abandonada que ele refaz limpa em seguida.
+- **Tangentes** (`tangente`) que interrompem a história do corte e não agregam,
+  incluindo as administrativas ("já volto", problemas de áudio).
+- **Interação com o chat ao vivo** (`chat`): ler nomes, responder doações, bate-boca.
+- **Enrolação** (`enrolacao`) sem conteúdo (pausas técnicas, procura de link,
+  silêncio longo sem função retórica).
+- **Afirmações possivelmente imprecisas ou erradas** (`imprecisao`): ver a seção
+  própria abaixo.
+- **Conteúdo fora do tom** (`tom`, NÃO_RECOMENDADO): desabafos pessoais, histórias
   constrangedoras.
-- **Tangentes administrativas** ("já volto", problemas de áudio).
+
+## Imprecisão factual (`imprecisao`)
+
+Fala ao vivo é dita de memória: número aproximado, data trocada, frase atribuída
+ao autor errado, generalização apresentada como fato. **Marque esses trechos** — o
+critério é a **dúvida**, não a certeza do erro.
+
+1. O motivo **deve começar com "Possível imprecisão"** e dizer o que pode estar
+   errado (ex.: "Possível imprecisão — cita 40% sem fonte").
+2. Marque o **menor trecho** que contém a afirmação duvidosa.
+3. Se a afirmação **sustenta o argumento**, não marque — vale o guardrail abaixo.
+4. Opinião e juízo de valor não são imprecisão: a categoria é sobre fato verificável.
 
 ## Guardrail semântico (como decidir a dúvida)
 
@@ -60,7 +79,8 @@ marcado, só acrescenta.
    absoluto da live), não tempo relativo ao início do corte.
 3. **Motivo claro** por desvio, em poucas palavras (ex.: "interação com chat",
    "repetição da tese", "tangente sobre áudio").
-4. Lista vazia é uma resposta válida e correta: sem nada a remover, retorne
+4. **`categoria` sempre presente**, do vocabulário fechado acima.
+5. Lista vazia é uma resposta válida e correta: sem nada a remover, retorne
    `"desvios": []`.
 
 ## Formato de saída (JSON puro, sem markdown, sem texto fora do JSON)
@@ -68,7 +88,12 @@ marcado, só acrescenta.
 ```json
 {
   "desvios": [
-    { "inicio_hms": "HH:MM:SS", "fim_hms": "HH:MM:SS", "motivo": "descrição breve do trecho removido" }
+    {
+      "inicio_hms": "HH:MM:SS",
+      "fim_hms": "HH:MM:SS",
+      "categoria": "repeticao | disfluencia | tangente | chat | enrolacao | imprecisao | tom",
+      "motivo": "descrição breve do trecho removido"
+    }
   ]
 }
 ```

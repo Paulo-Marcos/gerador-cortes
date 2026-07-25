@@ -19,6 +19,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
 import { RetractableFooter } from '@/components/workbench/RetractableFooter';
 import { cn } from '@/lib/utils';
+import { resolverBadgeTrecho } from './trechoBadge';
 import { hmsParaSeg } from '../timeUtils';
 import { useCorte } from '@/hooks/useEditor';
 import { useDiarizarCorte, useFalantes } from '@/hooks/useDiarizacao';
@@ -269,40 +270,9 @@ function TabButton({
 
 // ───── TrechosList — v2_bruto.jsx:484-548 ─────
 
-type TrechoTag = 'silencio' | 'hesitacao' | 'off' | 'rep' | 'manual' | 'claude' | 'gemini' | 'n8n';
-
-function detectarTag(desvio: Desvio): TrechoTag {
-  // WHY: a origem persistida (I-020) é o sinal canônico — usa direto quando
-  // existe. Para desvios legados sem `origem`, cai no regex de motivo
-  // (silêncios técnicos sempre têm "silêncio" no motivo; o resto vai para
-  // 'manual' por compatibilidade com o badge antigo).
-  const origem = desvio.origem;
-  if (origem === 'claude') return 'claude';
-  if (origem === 'gemini') return 'gemini';
-  if (origem === 'n8n') return 'n8n';
-  if (origem === 'tecnico') return 'silencio';
-  if (origem === 'manual') return 'manual';
-
-  const m = (desvio.motivo ?? '').toLowerCase();
-  if (m.includes('silenc')) return 'silencio';
-  if (m.includes('hesit')) return 'hesitacao';
-  if (m.includes('off')) return 'off';
-  if (m.includes('repet') || m.includes('rep.')) return 'rep';
-  return 'manual';
-}
-
-const TAG_META: Record<TrechoTag, { label: string; bg: string; fg: string }> = {
-  silencio: { label: 'silencio', bg: 'var(--wb-info-soft)', fg: 'var(--wb-info)' },
-  hesitacao: { label: 'hesitacao', bg: 'var(--wb-warn-soft)', fg: 'var(--wb-warn)' },
-  off: { label: 'off-topic', bg: 'var(--wb-violet-soft)', fg: 'var(--wb-violet)' },
-  // DE-PARA-v3 §3: repetição em violet, manual em neutro (a paleta do
-  // protótipo). Antes era o inverso — manual roubava o acento.
-  rep: { label: 'repeticao', bg: 'var(--wb-violet-soft)', fg: 'var(--wb-violet)' },
-  manual: { label: 'manual', bg: 'var(--wb-bg-inset)', fg: 'var(--wb-text-mute)' },
-  claude: { label: 'IA', bg: 'var(--wb-accent-soft)', fg: 'var(--wb-accent)' },
-  gemini: { label: 'IA Gemini', bg: 'var(--wb-violet-soft)', fg: 'var(--wb-violet)' },
-  n8n: { label: 'IA n8n', bg: 'var(--wb-violet-soft)', fg: 'var(--wb-violet)' },
-};
+// D-422: o badge do trecho passou a mostrar o MOTIVO da remoção (repetição,
+// tangente, imprecisão…) em vez de um "IA" único para tudo que a IA propôs. A
+// resolução vive em `trechoBadge.ts` (testável, cobre legados sem `categoria`).
 
 function TrechosList({
   desvios,
@@ -408,8 +378,7 @@ function TrechosList({
           </div>
         )}
         {sortedWithOriginalIdx.map(({ d, i }, sortPos) => {
-          const tag = detectarTag(d);
-          const meta = TAG_META[tag];
+          const badge = resolverBadgeTrecho(d);
           const ds = hmsParaSeg(d.inicio_hms);
           const de = hmsParaSeg(d.fim_hms);
           const delta = Math.max(0, de - ds);
@@ -452,9 +421,10 @@ function TrechosList({
                   <div className="mb-1 flex items-center gap-1.5">
                     <span
                       className="inline-flex items-center rounded-full px-2 py-0.5 font-code text-[10px] font-semibold uppercase tracking-[0.04em]"
-                      style={{ background: meta.bg, color: meta.fg }}
+                      style={{ background: badge.bg, color: badge.fg }}
+                      title={badge.titulo}
                     >
-                      {meta.label}
+                      {badge.label}
                     </span>
                     <span
                       className="font-code text-[10px] font-semibold text-[var(--wb-err-ink)]"

@@ -91,6 +91,20 @@ export type DecisaoSegmentoDetectado = 'rejeitar' | 'full' | 'compartilhada';
 
 export type DesvioOrigem = 'claude' | 'manual' | 'gemini' | 'n8n' | 'tecnico';
 
+/** D-422: motivo editorial da remoção — eixo independente de `origem` (quem
+ *  marcou). Vocabulário fechado, normalizado no backend por
+ *  `domain/desvio_categoria.py`. */
+export type DesvioCategoria =
+  | 'repeticao'
+  | 'disfluencia'
+  | 'tangente'
+  | 'chat'
+  | 'enrolacao'
+  | 'imprecisao'
+  | 'tom'
+  | 'silencio'
+  | 'outro';
+
 export interface Desvio {
   inicio_hms: string;
   fim_hms: string;
@@ -98,6 +112,9 @@ export interface Desvio {
   /** Procedência editorial do desvio. Opcional p/ retrocompatibilidade
    *  com desvios persistidos antes do I-020. */
   origem?: DesvioOrigem;
+  /** Motivo da remoção. Opcional p/ retrocompatibilidade com desvios
+   *  persistidos antes do D-422 (o badge infere pelo `motivo`). */
+  categoria?: DesvioCategoria;
 }
 
 export interface TranscricaoLinha {

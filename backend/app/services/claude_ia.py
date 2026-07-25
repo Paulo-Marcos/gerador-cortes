@@ -28,6 +28,7 @@ from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.ancora_match import ancorar_intervalo
 from app.domain.chunker import fatiar_transcricao
+from app.domain.desvio_categoria import classificar_desvio
 from app.domain.diarizacao_align import alinhar_falantes, prefixo_falante
 from app.domain.segment_calculator import normalizar_desvio
 from app.domain.snap_desvios import achatar_palavras, snap_desvio_a_palavras
@@ -536,10 +537,15 @@ class ClaudeIaService:
         # D-355: quando o desvio traz a citação (inicio_texto/fim_texto), ancora a
         # borda na palavra real (busca janelada ~5s) ANTES do snap — o snap então
         # só faz o ajuste fino. Sem citação, ancoragem é no-op e o snap age sozinho.
+        # D-422: `classificar_desvio` reconcilia a `categoria` devolvida pela skill
+        # com o vocabulário canônico (e garante o aviso no motivo dos imprecisos)
+        # antes de qualquer ajuste de borda — a UI badgeia o MOTIVO da remoção, não
+        # a origem.
         normalizados_novos = [
             snap_desvio_a_palavras(
                 ClaudeIaService._ancorar_desvio(
-                    normalizar_desvio({**d, "origem": "claude"}), palavras_corte
+                    classificar_desvio(normalizar_desvio({**d, "origem": "claude"})),
+                    palavras_corte,
                 ),
                 palavras_corte,
             )

@@ -24,13 +24,14 @@ vi.mock('@/hooks/useDiarizacao', async () => {
 });
 
 import { RightTabsPanel } from '../RightTabsPanel';
+import type { Desvio } from '@/types/models';
 
 const noop = vi.fn();
 
-function baseProps() {
+function baseProps(desvios: Desvio[] = []) {
   return {
     corteId: 'c1',
-    desvios: [],
+    desvios,
     selectedDesvioIdx: null,
     onSeek: noop,
     onAdicionarDesvio: noop,
@@ -45,13 +46,13 @@ function baseProps() {
   };
 }
 
-function render(variant?: 'legacy' | 'workbench') {
+function render(variant?: 'legacy' | 'workbench', desvios?: Desvio[]) {
   const qc = new QueryClient();
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <ToastProvider>
         <TooltipProvider>
-          <RightTabsPanel {...baseProps()} variant={variant} />
+          <RightTabsPanel {...baseProps(desvios)} variant={variant} />
         </TooltipProvider>
       </ToastProvider>
     </QueryClientProvider>,
@@ -90,5 +91,62 @@ describe('RightTabsPanel — variant workbench move "Regerar transcrição" pro 
 
     // ThumbnailHintsEditor continua sempre visível no topo do painel.
     expect(html).toContain('Influenciar');
+  });
+});
+
+describe('RightTabsPanel — badge do trecho varia pelo motivo da remoção (D-422)', () => {
+  const desviosDaIa: Desvio[] = [
+    {
+      inicio_hms: '00:27:57',
+      fim_hms: '00:29:30',
+      motivo: 'digressão sobre utilitarismo',
+      origem: 'claude',
+      categoria: 'tangente',
+    },
+    {
+      inicio_hms: '00:37:10',
+      fim_hms: '00:37:16',
+      motivo: 'checagem com a audiência e repetição',
+      origem: 'claude',
+      categoria: 'repeticao',
+    },
+    {
+      inicio_hms: '00:38:02',
+      fim_hms: '00:38:09',
+      motivo: 'Possível imprecisão — atribui a frase a Platão',
+      origem: 'claude',
+      categoria: 'imprecisao',
+    },
+  ];
+
+  it('três trechos da MESMA origem (claude) rendem três badges distintos, sem "IA" genérico', () => {
+    const html = render('workbench', desviosDaIa);
+
+    expect(html).toContain('>tangente<');
+    expect(html).toContain('>repeticao<');
+    expect(html).toContain('>impreciso<');
+    expect(html).not.toContain('>IA<');
+  });
+
+  it('o trecho impreciso avisa na mensagem, não só na cor do badge', () => {
+    const html = render('workbench', desviosDaIa);
+
+    expect(html).toContain('Possível imprecisão');
+    expect(html).toContain('var(--wb-warn-soft)');
+  });
+
+  it('desvio legado sem categoria continua badgeado (fallback por motivo/origem)', () => {
+    const html = render('workbench', [
+      { inicio_hms: '00:36:14', fim_hms: '00:36:23', motivo: 'Trecho manual', origem: 'manual' },
+      {
+        inicio_hms: '00:40:00',
+        fim_hms: '00:40:05',
+        motivo: 'Silêncio Detectado (IA/Técnico)',
+        origem: 'tecnico',
+      },
+    ]);
+
+    expect(html).toContain('>manual<');
+    expect(html).toContain('>silencio<');
   });
 });

@@ -14,6 +14,7 @@ from app.domain.corte_mapper import (
     normalizar_cenas_remotion_payload,
     tem_colapso_de_tempos_das_cenas,
 )
+from app.domain.desvio_categoria import SILENCIO
 from app.domain.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
@@ -653,6 +654,9 @@ class CorteService:
                         "fim_seg": e_abs,
                         "motivo": "Silêncio Detectado (IA/Técnico)",
                         "origem": "tecnico",
+                        # D-422: categoria explícita — o badge do painel não precisa
+                        # inferir "silêncio" do texto do motivo.
+                        "categoria": SILENCIO,
                     }
                 )
 
