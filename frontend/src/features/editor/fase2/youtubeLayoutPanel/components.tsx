@@ -123,9 +123,12 @@ export function EscopoLadder({
         do mais específico ao mais geral — o primeiro definido vence
       </p>
 
+      {/* "Segmento (padrão)" e não "Segmento": o override por-região é outro
+        escopo (LABEL_ESCOPO.segmento), editado no RegionItem. Dois rótulos
+        iguais para escopos diferentes seriam desinformação. */}
       <DefinirScopeRow
-        title="Segmento"
-        hint="só dentro de regiões"
+        title="Segmento (padrão)"
+        hint="base das regiões"
         icon={Flag}
         tone="var(--wb-violet)"
         definido={segmentoPadraoDefinido}
