@@ -25,6 +25,7 @@ from sqlalchemy import and_, case, func, select
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 logger = logging.getLogger(__name__)
 
@@ -190,8 +191,13 @@ async def listar_projetos(db: AsyncSession = Depends(get_db)):
     Usa 2 queries SQL com GROUP BY para evitar o padrão N+1.
     """
 
+    # D-431: `transcricao_raw` guarda a transcrição inteira da live (dezenas de MB
+    # somados no acervo) e não faz parte de `ProjetoResponse` — sem o defer, cada
+    # poll da lista lia e hidratava esse volume só para o Pydantic descartá-lo.
     result = await db.execute(
-        select(Projeto).order_by(
+        select(Projeto)
+        .options(defer(Projeto.transcricao_raw))
+        .order_by(
             Projeto.data_live.desc(),
             Projeto.criado_em.desc(),
         )
@@ -302,10 +308,14 @@ async def listar_projetos(db: AsyncSession = Depends(get_db)):
             if upload_ready.exists():
                 video_pronto_count[proj_id] += 1
 
+    # D-431: pular a coluna deferida — tocá-la aqui dispararia lazy load, que sob
+    # AsyncSession estoura em greenlet_spawn. As demais seguem entrando sozinhas.
+    colunas = [c for c in Projeto.__table__.columns.keys() if c != "transcricao_raw"]
+
     resp = []
     for p in projetos:
         stats = corte_stats.get(p.id)
-        d = {c: getattr(p, c) for c in p.__table__.columns.keys()}
+        d = {c: getattr(p, c) for c in colunas}
         d["total_cortes"] = stats.total if stats else 0
         d["total_publicados"] = stats.publicados if stats else 0
         d["total_aprovados"] = stats.aprovados if stats else 0
