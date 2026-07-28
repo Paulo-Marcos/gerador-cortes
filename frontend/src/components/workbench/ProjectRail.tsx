@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pin } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { cn, thumbnailUrl } from '@/lib/utils';
 import { useProjetos } from '@/hooks/useProjetos';
 import { PipelineProgress } from '@/features/projetos/PipelineProgress';
@@ -8,7 +8,7 @@ import type { Projeto } from '@/types/models';
 import { useProjetosFixados } from './useProjetosFixados';
 import { useWorkbenchPanelsContext } from './WorkbenchPanelsProvider';
 import { useWorkbenchTabsContext } from './WorkbenchTabsProvider';
-import { rotuloCurtoProjeto, tabPath } from './workbenchRoutes';
+import { GLOBAL_TABS, rotuloCurtoProjeto, tabPath } from './workbenchRoutes';
 
 // ─────────────────────────────────────────────────────────────
 // ProjectRail — rail de projetos ativos à esquerda (DE-PARA §0).
@@ -51,25 +51,6 @@ export function projetosDoRail({
   }
   return doRail.slice(0, limite);
 }
-
-interface GlobalNavItem {
-  to: string;
-  label: string;
-  /** Ícone do protótipo Workbench 1c (validação 1: usar os do design). */
-  emoji: string;
-  /** Divisor acima do item (protótipo separa Atalhos/Configurações). */
-  divisor?: boolean;
-}
-
-const GLOBAL_NAV: GlobalNavItem[] = [
-  { to: '/projetos', label: 'Biblioteca', emoji: '🏠' },
-  { to: '/ranking-lives', label: 'Ranking de lives', emoji: '🏆' },
-  { to: '/buscar-lives', label: 'Buscar lives', emoji: '📡' },
-  { to: '/padroes-thumbnail', label: 'Padrões de thumbnail', emoji: '✨' },
-  { to: '/analises', label: 'Análises', emoji: '📊' },
-  { to: '/atalhos', label: 'Atalhos', emoji: '⌨', divisor: true },
-  { to: '/canais', label: 'Configurações', emoji: '⚙' },
-];
 
 /** Alterna o pin do projeto sem disparar o clique de abrir o card. */
 function BotaoFixar({
@@ -118,7 +99,7 @@ export function RailCard({ projeto, open, fixado, onFixar }: RailCardProps) {
   const { activeTab } = useWorkbenchTabsContext();
   const [thumbErr, setThumbErr] = useState(false);
   const thumb = thumbnailUrl(projeto.youtube_url, 'mq');
-  const ativo = activeTab?.projetoId === projeto.id;
+  const ativo = activeTab?.kind === 'projeto' && activeTab.projetoId === projeto.id;
 
   return (
     <div
@@ -136,7 +117,7 @@ export function RailCard({ projeto, open, fixado, onFixar }: RailCardProps) {
           clique e clique do meio abrem o projeto em nova aba, e o menu de
           contexto oferece "abrir link em nova aba". */}
       <Link
-        to={tabPath({ projetoId: projeto.id, etapa: 'workspace' })}
+        to={tabPath({ kind: 'projeto', projetoId: projeto.id, etapa: 'workspace' })}
         aria-label={`Abrir workspace de ${projeto.titulo_live}`}
         title={projeto.titulo_live}
         className="absolute inset-0 z-[1] rounded-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
@@ -182,9 +163,8 @@ export function RailCard({ projeto, open, fixado, onFixar }: RailCardProps) {
 }
 
 export function ProjectRail() {
-  const { pathname } = useLocation();
   const { effective, widthOf, toggle } = useWorkbenchPanelsContext();
-  const { tabs } = useWorkbenchTabsContext();
+  const { tabs, activeTab } = useWorkbenchTabsContext();
   const projetos = useProjetos();
   const { fixados, isFixado, toggle: toggleFixado, prune: prunePins } = useProjetosFixados();
 
@@ -197,7 +177,9 @@ export function ProjectRail() {
   }, [projetosData, prunePins]);
 
   const open = effective.rail;
-  const abertosIds = [...new Set(tabs.map((tab) => tab.projetoId))];
+  const abertosIds = [
+    ...new Set(tabs.flatMap((tab) => (tab.kind === 'projeto' ? [tab.projetoId] : []))),
+  ];
   const doRail = projetosDoRail({
     projetos: projetosData ?? [],
     abertosIds,
@@ -247,13 +229,15 @@ export function ProjectRail() {
         aria-label="Navegação global"
         className="flex flex-none flex-col gap-1.5 border-t border-[var(--wb-border)] p-2.5"
       >
-        {GLOBAL_NAV.map(({ to, label, emoji, divisor }) => {
-          const ativo = pathname === to || (to !== '/projetos' && pathname.startsWith(to));
+        {GLOBAL_TABS.map(({ id, path, label, emoji, divisor }) => {
+          // Cada tela global tem a sua guia (D-427): o item fica aceso
+          // enquanto a guia dela é a ativa, não pela rota crua.
+          const ativo = activeTab?.kind === 'global' && activeTab.global === id;
           return (
-            <span key={to} className="contents">
+            <span key={id} className="contents">
               {divisor && <span aria-hidden className="my-0.5 h-px bg-[var(--wb-border)]" />}
               <Link
-                to={to}
+                to={path}
                 aria-label={label}
                 title={label}
                 className={cn(

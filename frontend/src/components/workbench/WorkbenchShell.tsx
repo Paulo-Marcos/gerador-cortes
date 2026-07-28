@@ -10,6 +10,7 @@ import { TabStrip } from './TabStrip';
 import { WorkbenchPanelsProvider, useWorkbenchPanelsContext } from './WorkbenchPanelsProvider';
 import { WorkbenchQueueProvider } from './useWorkbenchQueue';
 import { WorkbenchTabsProvider, useWorkbenchTabsContext } from './WorkbenchTabsProvider';
+import { activateTab, closeTab, type TabsState } from './useWorkbenchTabs';
 import { routeToTab, tabPath } from './workbenchRoutes';
 
 // ─────────────────────────────────────────────────────────────
@@ -20,13 +21,13 @@ import { routeToTab, tabPath } from './workbenchRoutes';
 // ─────────────────────────────────────────────────────────────
 
 function RouteTabSync() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const { open } = useWorkbenchTabsContext();
 
   useEffect(() => {
-    const tab = routeToTab(pathname);
+    const tab = routeToTab(pathname, search);
     if (tab) open(tab);
-  }, [pathname, open]);
+  }, [pathname, search, open]);
 
   return null;
 }
@@ -35,26 +36,21 @@ function RouteTabSync() {
 // painéis retráteis + ciclo/fechamento de abas.
 function ShellShortcuts() {
   const navigate = useNavigate();
-  const { tabs, activeIndex, activate, close } = useWorkbenchTabsContext();
+  const { state, tabs, activeIndex, replace } = useWorkbenchTabsContext();
   const { toggle, pagePanels } = useWorkbenchPanelsContext();
 
   const bindings = useMemo<ShortcutBinding[]>(() => {
+    const aplicar = (proximo: TabsState) => {
+      if (proximo === state) return;
+      replace(proximo);
+      const alvo = proximo.tabs[proximo.activeIndex];
+      if (alvo) navigate(tabPath(alvo));
+    };
     const cycleTab = (dir: -1 | 1) => {
       if (tabs.length === 0) return;
-      const next = (activeIndex + dir + tabs.length) % tabs.length;
-      activate(next);
-      navigate(tabPath(tabs[next]));
+      aplicar(activateTab(state, (activeIndex + dir + tabs.length) % tabs.length));
     };
-    const closeActive = () => {
-      if (activeIndex < 0) return;
-      close(activeIndex);
-      const restantes = tabs.filter((_, i) => i !== activeIndex);
-      if (restantes.length === 0) {
-        navigate('/projetos');
-        return;
-      }
-      navigate(tabPath(restantes[Math.max(0, activeIndex - 1)]));
-    };
+    const closeActive = () => aplicar(closeTab(state, activeIndex));
     return [
       shortcutFromRegistry('wb.toggleRail', () => toggle('rail')),
       shortcutFromRegistry('wb.toggleQueue', () => toggle('fila')),
@@ -70,7 +66,7 @@ function ShellShortcuts() {
       shortcutFromRegistry('wb.prevTab', () => cycleTab(-1)),
       shortcutFromRegistry('wb.closeTab', closeActive),
     ];
-  }, [tabs, activeIndex, activate, close, navigate, toggle, pagePanels]);
+  }, [state, tabs, activeIndex, replace, navigate, toggle, pagePanels]);
 
   useShortcuts(bindings, true);
   return null;

@@ -1,26 +1,64 @@
-import type { WorkbenchEtapa, WorkbenchTab } from './useWorkbenchTabs';
+import { finalReviewPath, postProductionPath } from '@/features/post-production/postProductionNavigation';
+import type { GlobalTabId, WorkbenchEtapa, WorkbenchTab } from './useWorkbenchTabs';
 
 // ─────────────────────────────────────────────────────────────
 // Mapeamento rota ↔ aba de trabalho (DE-PARA §0: rotas mantidas
-// 1:1; a rota ativa abre/foca a aba correspondente). Rotas
-// globais (biblioteca, ranking, buscar, padrões, análises,
-// canais) não viram aba — são navegação do rail.
+// 1:1; a rota ativa abre/foca a aba correspondente).
+//
+// D-427: as rotas globais (Biblioteca, Ranking, Buscar, Padrões,
+// Análises, Atalhos, Configurações) também viram aba — antes elas
+// tomavam a área central por cima da aba de trabalho ativa. Este
+// módulo é a fonte única dessa lista: o rail monta a navegação a
+// partir dela.
 // ─────────────────────────────────────────────────────────────
 
+export interface GlobalTabInfo {
+  id: GlobalTabId;
+  path: string;
+  label: string;
+  /** Ícone do protótipo Workbench 1c (validação 1: usar os do design). */
+  emoji: string;
+  /** Divisor acima do item no rail (protótipo separa Atalhos/Configurações). */
+  divisor?: boolean;
+}
+
+export const GLOBAL_TABS: readonly GlobalTabInfo[] = [
+  { id: 'biblioteca', path: '/projetos', label: 'Biblioteca', emoji: '🏠' },
+  { id: 'ranking', path: '/ranking-lives', label: 'Ranking de lives', emoji: '🏆' },
+  { id: 'buscar', path: '/buscar-lives', label: 'Buscar lives', emoji: '📡' },
+  { id: 'thumbnails', path: '/padroes-thumbnail', label: 'Padrões de thumbnail', emoji: '✨' },
+  { id: 'analises', path: '/analises', label: 'Análises', emoji: '📊' },
+  { id: 'atalhos', path: '/atalhos', label: 'Atalhos', emoji: '⌨', divisor: true },
+  { id: 'config', path: '/canais', label: 'Configurações', emoji: '⚙' },
+];
+
+const GLOBAL_POR_ID = new Map(GLOBAL_TABS.map((info) => [info.id, info] as const));
+
+export function globalTabInfo(id: GlobalTabId): GlobalTabInfo {
+  return GLOBAL_POR_ID.get(id) ?? GLOBAL_TABS[0];
+}
+
+/** Rota da aba — inclui o corte amarrado mesmo nas etapas que o levam na query. */
 export function tabPath(tab: WorkbenchTab): string {
+  if (tab.kind === 'global') return globalTabInfo(tab.global).path;
+  const { projetoId, corteId } = tab;
   switch (tab.etapa) {
     case 'workspace':
-      return `/projetos/${tab.projetoId}`;
+      return corteId ? `/projetos/${projetoId}?corte=${corteId}` : `/projetos/${projetoId}`;
     case 'cortes':
-      return tab.corteId
-        ? `/projetos/${tab.projetoId}/cortes/${tab.corteId}`
-        : `/projetos/${tab.projetoId}/cortes`;
+      return corteId ? `/projetos/${projetoId}/cortes/${corteId}` : `/projetos/${projetoId}/cortes`;
     case 'pos':
-      return `/projetos/${tab.projetoId}/post-production`;
+      return corteId
+        ? postProductionPath(projetoId, corteId)
+        : `/projetos/${projetoId}/post-production`;
     case 'metadados':
-      return `/projetos/${tab.projetoId}/metadados`;
+      return corteId
+        ? `/projetos/${projetoId}/metadados?corte=${corteId}`
+        : `/projetos/${projetoId}/metadados`;
     case 'revisao':
-      return `/projetos/${tab.projetoId}/final-review`;
+      return corteId
+        ? finalReviewPath(projetoId, corteId)
+        : `/projetos/${projetoId}/final-review`;
   }
 }
 
@@ -32,13 +70,22 @@ const ROUTE_TO_ETAPA: ReadonlyArray<[RegExp, WorkbenchEtapa]> = [
   [/^\/projetos\/([^/]+)\/?$/, 'workspace'],
 ];
 
-/** Converte um pathname em aba; null para rotas globais (sem aba). */
-export function routeToTab(pathname: string): WorkbenchTab | null {
+/**
+ * Converte a localização atual em aba. O corte vem do path (Bruto) ou
+ * de `?corte=` (Pós, Metadados, Revisão) — é ele que mantém a aba
+ * amarrada ao mesmo corte quando a etapa muda.
+ */
+export function routeToTab(pathname: string, search = ''): WorkbenchTab | null {
+  const normalizado = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
+  const global = GLOBAL_TABS.find((info) => info.path === normalizado);
+  if (global) return { kind: 'global', global: global.id };
+
   for (const [pattern, etapa] of ROUTE_TO_ETAPA) {
     const match = pattern.exec(pathname);
     if (!match) continue;
-    const tab: WorkbenchTab = { projetoId: match[1], etapa };
-    if (etapa === 'cortes' && match[2]) tab.corteId = match[2];
+    const corteId = match[2] || new URLSearchParams(search).get('corte') || undefined;
+    const tab: WorkbenchTab = { kind: 'projeto', projetoId: match[1], etapa };
+    if (corteId) tab.corteId = corteId;
     return tab;
   }
   return null;

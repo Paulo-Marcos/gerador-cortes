@@ -53,12 +53,14 @@ function etapaDoJob(job: QueueJob): WorkbenchEtapa {
 }
 
 function destinoDoJob(job: QueueJob): string {
-  const etapa = etapaDoJob(job);
-  const base = tabPath({ projetoId: job.projetoId, etapa, corteId: job.corteId });
-  // Só a etapa "cortes" carrega o corte no path; Pós, Metadados e Revisão
-  // selecionam por `?corte=` — sem isso a tela abre no primeiro corte do projeto.
-  if (etapa === 'cortes' || etapa === 'workspace') return base;
-  return `${base}?corte=${job.corteId}`;
+  // `tabPath` já resolve como cada etapa carrega o corte: no path (Bruto)
+  // ou em `?corte=` (Pós, Metadados, Revisão).
+  return tabPath({
+    kind: 'projeto',
+    projetoId: job.projetoId,
+    etapa: etapaDoJob(job),
+    corteId: job.corteId,
+  });
 }
 
 function BotaoRemover({ job }: { job: QueueJob }) {

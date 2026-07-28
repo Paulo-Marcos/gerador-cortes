@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Check, Image, Loader2, RefreshCw, Rocket, Sparkles, Tag } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCortesProjeto } from '@/hooks/useEditor';
 import { useExportStatus } from '@/hooks/useProjetoDetalhe';
@@ -18,7 +18,10 @@ function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
 
 export function MetadataPage() {
   const { id: projetoId } = useParams();
-  const [activeId, setActiveId] = useState('');
+  const [searchParams] = useSearchParams();
+  // D-427: a aba de trabalho amarrada a um corte chega aqui com `?corte=`
+  // — sem isso a tela abriria sempre no primeiro corte do projeto.
+  const [activeId, setActiveId] = useState(() => searchParams.get('corte') ?? '');
   const [metaById, setMetaById] = useState<Record<string, MetadadoCorte>>({});
   const [publicarOpen, setPublicarOpen] = useState(false);
   const refs = useRef<Record<string, HTMLElement | null>>({});

@@ -1,20 +1,16 @@
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useCanais } from '@/features/channels/useChannels';
-import {
-  finalReviewPath,
-  postProductionPath,
-} from '@/features/post-production/postProductionNavigation';
 import { useWorkbenchTabsContext } from './WorkbenchTabsProvider';
-import { ETAPA_DOT_TOKENS, ETAPA_LABELS, routeToTab, tabPath } from './workbenchRoutes';
+import { ETAPA_DOT_TOKENS, ETAPA_LABELS, tabPath } from './workbenchRoutes';
 import type { WorkbenchEtapa } from './useWorkbenchTabs';
 
 // ─────────────────────────────────────────────────────────────
 // Regra 0 do redesign (DE-PARA-v3 §0): barra de etapas do projeto,
 // sempre visível abaixo do TabStrip nas 5 telas do pipeline. Um
 // único ponto de montagem (WorkbenchShell) cobre Workspace, Bruto,
-// Pós, Metadados e Revisão — sem duplicar lógica de rota: reaproveita
-// tabPath/postProductionPath/finalReviewPath.
+// Pós, Metadados e Revisão — sem duplicar lógica de rota: `tabPath` é
+// quem sabe como cada etapa carrega o corte.
 //
 // Visual (protótipo Workbench v3): eyebrow "@canal ·" + pill segmentado
 // com setas entre as etapas; item ativo sólido em --wb-accent.
@@ -40,26 +36,16 @@ function useHandleDoCanalAtivo(): string | undefined {
 
 export function ProjectStageBar() {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const [searchParams] = useSearchParams();
   const { activeTab } = useWorkbenchTabsContext();
   const handleCanal = useHandleDoCanalAtivo();
 
-  const atual = routeToTab(pathname);
-  // O corte selecionado sobrevive à troca de etapa: vem da rota, da
-  // querystring (?corte=) ou da aba ativa do mesmo projeto.
-  const corteDaRota = atual?.corteId ?? searchParams.get('corte') ?? undefined;
-  const corteId =
-    corteDaRota ?? (activeTab?.projetoId === atual?.projetoId ? activeTab?.corteId : undefined);
+  // D-427: a barra dirige a ABA ATIVA, não a rota crua. É isso que faz a
+  // troca de etapa continuar na mesma guia levando junto o corte a que
+  // ela está amarrada — em vez de abrir uma guia por etapa.
+  if (activeTab?.kind !== 'projeto') return null;
+  const etapaAtiva = activeTab.etapa;
 
-  if (!atual) return null;
-  const { projetoId, etapa: etapaAtiva } = atual;
-
-  const irPara = (etapa: WorkbenchEtapa) => {
-    if (etapa === 'pos' && corteId) return navigate(postProductionPath(projetoId, corteId));
-    if (etapa === 'revisao' && corteId) return navigate(finalReviewPath(projetoId, corteId));
-    navigate(tabPath({ projetoId, etapa, corteId: etapa === 'cortes' ? corteId : undefined }));
-  };
+  const irPara = (etapa: WorkbenchEtapa) => navigate(tabPath({ ...activeTab, etapa }));
 
   return (
     <div className="flex flex-none flex-wrap items-center gap-3 border-b border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3.5 py-[7px]">
