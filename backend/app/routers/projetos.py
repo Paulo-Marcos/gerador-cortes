@@ -184,6 +184,18 @@ async def reiniciar_downloads_falhados(db: AsyncSession = Depends(get_db)):
     return {"message": f"{len(ids)} downloads reiniciados", "total": len(ids), "ids": ids}
 
 
+# D-431: `transcricao_raw` guarda a transcrição inteira da live (dezenas de MB
+# somados no acervo) e não faz parte de `ProjetoResponse` — sem o defer, cada poll
+# da lista lia e hidratava esse volume só para o Pydantic descartá-lo. As duas
+# constantes andam juntas de propósito: ler aqui uma coluna deferida dispararia
+# lazy load, que sob AsyncSession estoura em greenlet_spawn.
+_COLUNAS_DIFERIDAS_NA_LISTAGEM = ("transcricao_raw",)
+_DEFERS_DA_LISTAGEM = tuple(defer(getattr(Projeto, c)) for c in _COLUNAS_DIFERIDAS_NA_LISTAGEM)
+_COLUNAS_DA_LISTAGEM = [
+    c for c in Projeto.__table__.columns.keys() if c not in _COLUNAS_DIFERIDAS_NA_LISTAGEM
+]
+
+
 @router.get("", response_model=list[ProjetoResponse])
 async def listar_projetos(db: AsyncSession = Depends(get_db)):
     """
@@ -191,12 +203,9 @@ async def listar_projetos(db: AsyncSession = Depends(get_db)):
     Usa 2 queries SQL com GROUP BY para evitar o padrão N+1.
     """
 
-    # D-431: `transcricao_raw` guarda a transcrição inteira da live (dezenas de MB
-    # somados no acervo) e não faz parte de `ProjetoResponse` — sem o defer, cada
-    # poll da lista lia e hidratava esse volume só para o Pydantic descartá-lo.
     result = await db.execute(
         select(Projeto)
-        .options(defer(Projeto.transcricao_raw))
+        .options(*_DEFERS_DA_LISTAGEM)
         .order_by(
             Projeto.data_live.desc(),
             Projeto.criado_em.desc(),
@@ -308,14 +317,10 @@ async def listar_projetos(db: AsyncSession = Depends(get_db)):
             if upload_ready.exists():
                 video_pronto_count[proj_id] += 1
 
-    # D-431: pular a coluna deferida — tocá-la aqui dispararia lazy load, que sob
-    # AsyncSession estoura em greenlet_spawn. As demais seguem entrando sozinhas.
-    colunas = [c for c in Projeto.__table__.columns.keys() if c != "transcricao_raw"]
-
     resp = []
     for p in projetos:
         stats = corte_stats.get(p.id)
-        d = {c: getattr(p, c) for c in colunas}
+        d = {c: getattr(p, c) for c in _COLUNAS_DA_LISTAGEM}
         d["total_cortes"] = stats.total if stats else 0
         d["total_publicados"] = stats.publicados if stats else 0
         d["total_aprovados"] = stats.aprovados if stats else 0
