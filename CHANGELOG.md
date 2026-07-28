@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   or Ctrl+J/K) updates it live; the control itself stays in the menu.
 
 ### Changed
+- The project list endpoint is ~4x faster and no longer churns memory (D-431):
+  `GET /api/projetos` was loading every column of every project — including
+  `transcricao_raw`, the full livestream transcript (62.8 MB across the archive)
+  — only for `ProjetoResponse` to discard it during serialization. Deferring the
+  column cuts the query from 1649ms to 250ms and the per-request memory peak from
+  80.2 MB to 0.6 MB, which matters because the frontend polls this endpoint every
+  30s while idle and every 3s while a project is active.
 - Grade renders with a palco are ~16% faster (D-415): the static palco is now
   pre-composed offline into an opaque background (black base + palco flattened)
   plus a slot-masked chrome cutout, letting the main filtergraph chain run in
