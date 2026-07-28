@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { Tooltip } from '@/components/ui/tooltip';
 import {
   Clock,
@@ -56,6 +57,7 @@ import {
   planejarRegeracaoBruto,
   type RegerarBrutoOpcoes,
 } from './regerarBrutoPlan';
+import { confirmacaoRegerarBruto, confirmacaoRegerarTrechos } from './regeracaoConfirmacao';
 import { ShortcutsHelpModal } from './ShortcutsHelpModal';
 import { useShortcuts, type ShortcutBinding } from './shortcuts';
 import { shortcutFromRegistry } from './shortcutsRegistry';
@@ -268,6 +270,8 @@ export function EditorPage() {
   const metaClaudeStatus = useStatusMetadadosClaude(corteId);
   const trechosClaudePendente = useTrechosClaudeEmAndamento(corteId);
 
+  const confirmacao = useConfirmacao();
+
   const brutoOcupado = () =>
     !corteId || brutoStatusAtual === 'processando' || brutoMutationPendenteNoCorteAtual;
 
@@ -298,8 +302,7 @@ export function EditorPage() {
   // marcados no dropdown ("Também refazer") ligam transcrição/cenas (flags do
   // endpoint) e metadados/desvios (mutations separadas). Desvios alteram o
   // recorte, então rodam ANTES do bruto.
-  const handleRegerarBruto = async (opts: RegerarBrutoOpcoes = OPCOES_REGERAR_VAZIAS) => {
-    if (brutoOcupado()) return;
+  const executarRegeracaoBruto = async (opts: RegerarBrutoOpcoes) => {
     const plano = planejarRegeracaoBruto(opts);
     if (plano.desvios) {
       try {
@@ -312,10 +315,28 @@ export function EditorPage() {
     if (plano.metadados) gerarMetadadosClaude.mutate();
   };
 
+  // D-428 — com bruto já na mão, regerar substitui o vídeo atual: passa pela
+  // confirmação antes de sair. Cobre o Ctrl+G, o botão principal e o "Regerar
+  // bruto" do dropdown, que caíam todos aqui.
+  const handleRegerarBruto = (opts: RegerarBrutoOpcoes = OPCOES_REGERAR_VAZIAS) => {
+    if (brutoOcupado()) return;
+    confirmacao.executarOuPedir(confirmacaoRegerarBruto(brutoPronto, opts), () =>
+      void executarRegeracaoBruto(opts),
+    );
+  };
+
   // Botão/atalho principal: 1ª vez → cadeia completa; regeração → só o bruto.
   const handleGerarBrutoPrincipal = () => {
-    if (brutoPronto) void handleRegerarBruto();
+    if (brutoPronto) handleRegerarBruto();
     else handleGerarBrutoInicial();
+  };
+
+  // D-428 — analisar trechos de novo acrescenta à lista já revisada e custa
+  // Claude: com trechos marcados, confirma antes.
+  const handleGerarTrechosClaude = () => {
+    confirmacao.executarOuPedir(confirmacaoRegerarTrechos(corteUI?.desvios?.length ?? 0), () =>
+      gerarTrechosClaude.mutate(),
+    );
   };
 
   useEffect(() => {
@@ -709,6 +730,11 @@ export function EditorPage() {
         onClose={() => setAvaliacaoOpen(false)}
         descricao="O bruto está sendo gerado em segundo plano"
       />
+      <ConfirmDialog
+        pedido={confirmacao.pedido}
+        onCancel={confirmacao.cancelar}
+        onConfirm={confirmacao.confirmar}
+      />
     </>
   );
 
@@ -751,7 +777,7 @@ export function EditorPage() {
                   onAdicionarDesvio={onAdicionarDesvio}
                   onRemoverDesvio={onRemoverDesvio}
                   onGerarManual={() => setTrechosManualOpen(true)}
-                  onGerarTrechosClaude={() => gerarTrechosClaude.mutate()}
+                  onGerarTrechosClaude={handleGerarTrechosClaude}
                   pendingTrechos={{
                     adicionando: adicionarDesvio.isPending,
                     removendo: removerDesvio.isPending,
@@ -1227,7 +1253,7 @@ export function EditorPage() {
             onDividirCorteAqui={onDividirCorteAqui}
             dividindoCorte={dividirCorte.isPending}
             onGerarManual={() => setTrechosManualOpen(true)}
-            onGerarTrechosClaude={() => gerarTrechosClaude.mutate()}
+            onGerarTrechosClaude={handleGerarTrechosClaude}
             pending={{
               bruto: brutoMutationPendenteNoCorteAtual,
               transcricao: sincTrans.isPending,

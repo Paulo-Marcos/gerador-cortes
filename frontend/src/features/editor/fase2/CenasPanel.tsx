@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClaudeIcon } from '@/components/ui/claude-button';
+import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
@@ -23,6 +24,7 @@ import {
   useValidarCenasRemotion,
 } from '@/hooks/useEditor';
 import type { CenaRemotion, CenasRemotionPayload } from '@/types/models';
+import { confirmacaoRegerarCenas } from '../regeracaoConfirmacao';
 import { CenaItem } from './CenaItem';
 import { CenasManualModal } from './CenasManualModal';
 import { RendererConfigControls } from './RendererConfigControls';
@@ -81,6 +83,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
   const preencherRetratos = usePreencherRetratosCenas(corteId);
   const validarCenas = useValidarCenasRemotion(corteId, projetoId);
   const { notify } = useToast();
+  const confirmacao = useConfirmacao();
   const [manualOpen, setManualOpen] = useState(false);
   const [padroesOpen, setPadroesOpen] = useState(false);
   const [showTypes, setShowTypes] = useState(false);
@@ -110,6 +113,14 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
     : totalFichas === 0
       ? 'Nenhuma ficha biografica para buscar'
       : 'Buscar retratos das fichas biograficas';
+
+  // D-428: gerar cenas SUBSTITUI o roteiro visual inteiro. Com cenas ja na
+  // tela, o clique passa pela confirmacao; sem nenhuma, dispara direto.
+  const handleGerarCenas = () => {
+    confirmacao.executarOuPedir(confirmacaoRegerarCenas(cenasOrdenadas.length), () =>
+      gerarClaude.mutate(),
+    );
+  };
 
   const handleChange = (idx: number, next: CenaRemotion) => {
     const novas = [...cenas];
@@ -247,7 +258,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <Tooltip label="Gerar cenas automaticamente via Claude" side="bottom">
             <button
               type="button"
-              onClick={() => gerarClaude.mutate()}
+              onClick={handleGerarCenas}
               disabled={gerarClaude.isPending}
               className="flex flex-1 items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--wb-accent)] px-3 py-2 text-[11px] font-bold text-[var(--wb-accent-fg)] shadow-[shadow:var(--wb-shadow-btn)] transition-colors hover:bg-[var(--wb-accent-strong)] disabled:pointer-events-none disabled:opacity-60"
             >
@@ -442,6 +453,12 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       )}
 
       <CenasManualModal open={manualOpen} onClose={() => setManualOpen(false)} corteId={corteId} />
+
+      <ConfirmDialog
+        pedido={confirmacao.pedido}
+        onCancel={confirmacao.cancelar}
+        onConfirm={confirmacao.confirmar}
+      />
     </section>
   );
 });
