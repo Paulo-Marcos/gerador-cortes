@@ -37,9 +37,11 @@ import { MODE_LABEL, MODE_SHORT, clamp, round } from './shared';
 //   - o toggle "Definindo Full|Compartilhada" era um FILTRO desenhado com o
 //     mesmo segmented que define VALOR em outros dois pontos do painel; virou
 //     um link discreto no cabeçalho da escada;
-//   - o disclosure "Ajuste fino" (um único controle dentro) morreu: "Tipo do
-//     projeto" é uma propriedade do escopo Projeto e passou a morar na linha
-//     dele, junto do preset que aquele mesmo escopo define.
+//   - o disclosure "Ajuste fino" (um único controle dentro) morreu.
+//
+// D-423: o "tipo do projeto" chegou a morar na linha Projeto desta escada e não
+// coube — voltou para o cabeçalho, agora no ModoBlock. Esta escada trata de UMA
+// coisa: de qual escopo sai o POSICIONAMENTO do modo selecionado.
 //
 // Referências: indicador "Modified in: <escopo>" do Settings do VS Code (expõe
 // de onde o valor efetivo nasce, em vez de escondê-lo) e overrides de instância
@@ -48,8 +50,6 @@ export function EscopoLadder({
   modo,
   onAlternarModo,
   escopoAtivo,
-  tipoProjeto,
-  onChangeTipoProjeto,
   corteDefinido,
   projetoDefinido,
   globalDefinido,
@@ -75,9 +75,6 @@ export function EscopoLadder({
   onAlternarModo: (modo: YoutubeLayoutMode) => void;
   /** Escopo que alimenta o corte agora — recebe o selo "em uso". */
   escopoAtivo: 'corte' | 'projeto' | 'global' | 'default';
-  /** Modo com que novos cortes do projeto nascem (mora na linha Projeto). */
-  tipoProjeto: YoutubeLayoutMode;
-  onChangeTipoProjeto: (modo: YoutubeLayoutMode) => void;
   corteDefinido: boolean;
   projetoDefinido: boolean;
   globalDefinido: boolean;
@@ -162,18 +159,6 @@ export function EscopoLadder({
         onDefinir={onDefinirProjeto}
         onPreset={onPresetProjeto}
         pendingDefinir={pendingProjeto}
-        extra={
-          <div className="mt-1 flex items-center gap-1.5">
-            <span className="whitespace-nowrap font-code text-[9px] uppercase tracking-[0.06em] text-[var(--wb-text-faint)]">
-              novos cortes
-            </span>
-            <ModePills
-              value={tipoProjeto}
-              onChange={onChangeTipoProjeto}
-              pending={pendingProjeto}
-            />
-          </div>
-        }
       />
       <DefinirScopeRow
         title="Global"
@@ -205,7 +190,6 @@ function DefinirScopeRow({
   presetTipo,
   tone,
   ativo = false,
-  extra,
   onDefinir,
   onPreset,
   onReset,
@@ -224,8 +208,6 @@ function DefinirScopeRow({
   tone: string;
   /** D-421: escopo que efetivamente alimenta o corte agora. */
   ativo?: boolean;
-  /** Controle extra sob o subtitulo (a linha Projeto usa p/ o tipo do projeto). */
-  extra?: ReactNode;
   onDefinir: () => void;
   onPreset: (preset: LayoutPreset) => void;
   /** Opcional: limpa este escopo (usado pelo Segmento p/ voltar a herdar). */
@@ -279,7 +261,6 @@ function DefinirScopeRow({
         >
           {subtitulo}
         </div>
-        {extra}
       </div>
       <DefinirSplitButton
         label="Definir"
@@ -313,6 +294,11 @@ function DefinirScopeRow({
 // ─── ModePills — segmented Full | Comp. reutilizavel ───────────────────
 // D-421: extraido do InlineModeToggle para que a linha Projeto da EscopoLadder
 // use as mesmas pilulas sem arrastar junto o rotulo e o layout de linha.
+//
+// D-423: `flex-none`. Sem ele as pilulas eram o item flexivel da linha e, num
+// painel estreito, encolhiam ate a segunda (COMP.) sair pela direita — que o
+// container do painel corta com `overflow-x-hidden`. Resultado: so dava para
+// clicar FULL. Agora quem cede espaco e o rotulo (truncate), nunca o controle.
 export function ModePills({
   value,
   onChange,
@@ -326,7 +312,7 @@ export function ModePills({
   herdando?: boolean;
 }) {
   return (
-    <div className="inline-flex items-center overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
+    <div className="inline-flex flex-none items-center overflow-hidden rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
       {(['full', 'compartilhada'] as const).map((m) => {
         const pressed = !herdando && value === m;
         return (
@@ -354,56 +340,122 @@ export function ModePills({
   );
 }
 
-// ─── InlineModeToggle — modo DESTE corte ───────────────────────────────
-// D-421: era instanciado duas vezes (modo do corte e tipo do projeto), fazendo
-// o mesmo widget significar valores de níveis diferentes na mesma tela. Sobrou
-// uma instância; o tipo do projeto virou a linha Projeto da EscopoLadder.
-// Ganhou `onReset` — antes, uma vez clicada uma pílula, não havia caminho de
-// volta ao modo do projeto (padrão de override do Figma: sobrescrito sempre
-// reversível).
-export function InlineModeToggle({
+// ─── ModoBlock — as DUAS decisões de modo, lado a lado ─────────────────
+// D-423: o "modo com que novos cortes nascem" morava dentro da linha Projeto da
+// escada de posicionamento (D-421), espremido entre o ícone e o botão "Definir
+// ▾" — e a pílula COMP. simplesmente não cabia, ficando fora da área visível.
+// Não dava para escolher Compartilhada como padrão do projeto.
+//
+// Duas mudanças de fundo, além de destravar o clique:
+//   - MODO deixou de ser um detalhe de um dos degraus da escada. Modo (o quê se
+//     compõe) e posicionamento (onde cada coisa entra) são decisões diferentes;
+//     agora são dois blocos, e a escada volta a ser só cascata de
+//     posicionamento — que é o que o título dela diz.
+//   - as duas linhas de modo ficam adjacentes e com o MESMO widget, então
+//     "este corte está em Full porque o projeto está em Full" se lê numa
+//     olhada, e mudar o padrão é um clique na linha de baixo.
+export function ModoBlock({
+  modoCorte,
+  onChangeModoCorte,
+  herdando,
+  onResetCorte,
+  tipoProjeto,
+  onChangeTipoProjeto,
+  pendingProjeto,
+}: {
+  modoCorte: YoutubeLayoutMode;
+  onChangeModoCorte: (modo: YoutubeLayoutMode) => void;
+  /** I-025: quando true, nenhuma pílula fica pressed — o corte herda do projeto. */
+  herdando: boolean;
+  /** D-421: devolve o corte ao modo do projeto. Ausente quando já coincidem. */
+  onResetCorte?: () => void;
+  tipoProjeto: YoutubeLayoutMode;
+  onChangeTipoProjeto: (modo: YoutubeLayoutMode) => void;
+  pendingProjeto: boolean;
+}) {
+  return (
+    <section className="mt-2 rounded-[var(--radius-xs)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] px-2 py-1">
+      <span className="font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+        Modo
+      </span>
+      <ModoRow
+        icon={Scissors}
+        tone="var(--wb-accent)"
+        label="Este corte"
+        caption={
+          herdando
+            ? `↳ herdando do Projeto: ${MODE_LABEL[tipoProjeto]}`
+            : `sobrescrevendo o Projeto (${MODE_LABEL[tipoProjeto]})`
+        }
+        value={modoCorte}
+        onChange={onChangeModoCorte}
+        herdando={herdando}
+        onReset={onResetCorte}
+        resetLabel="Voltar ao modo do projeto"
+      />
+      <ModoRow
+        icon={Folder}
+        tone="var(--wb-info)"
+        label="Novos cortes"
+        caption="padrão do projeto"
+        value={tipoProjeto}
+        onChange={onChangeTipoProjeto}
+        pending={pendingProjeto}
+      />
+    </section>
+  );
+}
+
+// Uma linha do ModoBlock. O rótulo (com a legenda embaixo) é quem encolhe; as
+// pílulas são `flex-none` e ficam sempre alcançáveis por mais estreito que o
+// painel esteja — a regressão que o D-423 corrige.
+function ModoRow({
+  icon: Icon,
+  tone,
   label,
+  caption,
   value,
   onChange,
   herdando = false,
-  herdandoDe,
+  pending,
   onReset,
+  resetLabel,
 }: {
+  icon: typeof Folder;
+  tone: string;
   label: string;
+  caption: string;
   value: YoutubeLayoutMode;
   onChange: (modo: YoutubeLayoutMode) => void;
-  /** I-025: quando true, nenhuma pílula fica pressed e o caption diz "herdando". */
   herdando?: boolean;
-  herdandoDe?: YoutubeLayoutMode;
-  /** D-421: devolve o corte ao modo do projeto. Ausente quando já coincidem. */
+  pending?: boolean;
   onReset?: () => void;
+  resetLabel?: string;
 }) {
   return (
     <div className="flex items-center gap-1.5 py-1">
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        <Flag size={10} className="flex-shrink-0 text-[var(--wb-accent)]" />
-        <span className="whitespace-nowrap font-code text-[9.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+      <Icon size={11} className="flex-none" style={{ color: tone }} aria-hidden />
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-code text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--wb-text)]">
           {label}
-        </span>
-        {herdandoDe && (
-          <span className="truncate font-code text-[9px] text-[var(--wb-text-faint)]">
-            {herdando ? '↳ herdando do Projeto:' : '· Projeto:'} {MODE_LABEL[herdandoDe]}
-          </span>
-        )}
+        </div>
+        <div className="truncate font-code text-[9px] text-[var(--wb-text-faint)]" title={caption}>
+          {caption}
+        </div>
       </div>
-      {onReset && (
-        <Tooltip label="Voltar ao modo do projeto" side="left">
+      {onReset && resetLabel && (
+        <Tooltip label={resetLabel} side="left">
           <button
             type="button"
             onClick={onReset}
-            aria-label="Voltar ao modo do projeto"
-            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
+            aria-label={resetLabel}
+            className="flex h-6 w-6 flex-none items-center justify-center rounded text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
           >
             <RotateCw size={11} />
           </button>
         </Tooltip>
       )}
-      <ModePills value={value} onChange={onChange} herdando={herdando} />
+      <ModePills value={value} onChange={onChange} herdando={herdando} pending={pending} />
     </div>
   );
 }

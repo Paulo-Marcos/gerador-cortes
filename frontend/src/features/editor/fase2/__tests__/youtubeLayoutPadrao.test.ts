@@ -5,7 +5,7 @@ import {
   resolveLayoutChain,
   type YoutubeLayout,
 } from '../youtubeLayout';
-import { draftMatchesPreset, readPadraoModo } from '../youtubeLayoutPadrao';
+import { draftMatchesPreset, montarPadraoJson, readPadraoModo } from '../youtubeLayoutPadrao';
 
 describe('readPadraoModo', () => {
   it('retorna null para vazio / undefined / "{}"', () => {
@@ -35,6 +35,73 @@ describe('readPadraoModo', () => {
 
   it('retorna null para JSON malformado', () => {
     expect(readPadraoModo('{ ill formed')).toBeNull();
+  });
+});
+
+describe('montarPadraoJson — escrita do padrao de um escopo (D-423)', () => {
+  const base = normalizeYoutubeLayout(DEFAULT_YOUTUBE_LAYOUT) as YoutubeLayout;
+
+  it('grava o modo_padrao pedido preservando fundo/placa/posicionamentos salvos', () => {
+    const salvo = JSON.stringify({
+      modo_padrao: 'full',
+      fundo: 'cosmograph',
+      placa: base.placa,
+      compartilhada: base.compartilhada,
+      full: base.full,
+    });
+    const resultado = JSON.parse(montarPadraoJson(salvo, { modo_padrao: 'compartilhada' }));
+    expect(resultado.modo_padrao).toBe('compartilhada');
+    expect(resultado.fundo).toBe('cosmograph');
+  });
+
+  it('mudar o modo NAO apaga o posicionamento Full ja salvo no escopo', () => {
+    // Regressao D-423: `definirTipoProjeto` remontava o JSON sem a chave `full`,
+    // entao cada troca de modo zerava o posicionamento Full daquele escopo.
+    const fullCustomizado = { crop: { x: 5, y: 6, w: 50, h: 40 }, slot: base.full.slot };
+    const salvo = JSON.stringify({ modo_padrao: 'compartilhada', full: fullCustomizado });
+    const resultado = JSON.parse(montarPadraoJson(salvo, { modo_padrao: 'full' }));
+    expect(resultado.full.crop).toEqual(fullCustomizado.crop);
+  });
+
+  it('salvar posicionamento Compartilhada num escopo VAZIO nao carimba modo_padrao=full', () => {
+    // Regressao D-423: com o escopo vazio o JSON nascia de DEFAULT_YOUTUBE_LAYOUT
+    // e o `modo_padrao: 'full'` dele entrava de carona — o projeto voltava a Full
+    // toda vez que se definia um preset Compartilhada.
+    const resultado = JSON.parse(
+      montarPadraoJson('{}', {
+        modo_padrao: 'compartilhada',
+        compartilhada: { ...base.compartilhada, telas: 2 },
+      }),
+    );
+    expect(resultado.modo_padrao).toBe('compartilhada');
+    expect(resultado.compartilhada.telas).toBe(2);
+  });
+
+  it('NAO materializa chave ausente — e a ausencia que faz o escopo cair para o proximo', () => {
+    // `resolver_layout_em_cascata` (backend) e `resolveLayoutChain` tratam cada
+    // nivel como PARCIAL. Preencher defaults aqui pregaria o projeto num valor e
+    // cortaria a heranca do Global sem ninguem ter pedido.
+    const resultado = JSON.parse(montarPadraoJson(undefined, { modo_padrao: 'full' }));
+    expect(Object.keys(resultado)).toEqual(['modo_padrao']);
+  });
+
+  it('so o modo mudou: nao inventa posicionamento que o escopo ainda herdava', () => {
+    const salvo = JSON.stringify({ modo_padrao: 'full', fundo: 'cosmograph' });
+    const resultado = JSON.parse(montarPadraoJson(salvo, { modo_padrao: 'compartilhada' }));
+    expect(Object.keys(resultado).sort()).toEqual(['fundo', 'modo_padrao']);
+    // e o que ja estava salvo continua la, com o modo trocado
+    expect(resultado).toEqual({ modo_padrao: 'compartilhada', fundo: 'cosmograph' });
+  });
+
+  it('a heranca sobrevive: escopo sem posicionamento continua caindo para o Global', () => {
+    const projetoJson = montarPadraoJson('{}', { modo_padrao: 'compartilhada' });
+    const globalJson = JSON.stringify({ fundo: 'hud-forte' });
+    expect(resolveLayoutChain(null, projetoJson, globalJson).fundo).toBe('hud-forte');
+  });
+
+  it('JSON salvo corrompido parte do zero em vez de estourar', () => {
+    const resultado = JSON.parse(montarPadraoJson('{ ill formed', { modo_padrao: 'full' }));
+    expect(resultado).toEqual({ modo_padrao: 'full' });
   });
 });
 

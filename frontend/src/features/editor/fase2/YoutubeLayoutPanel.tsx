@@ -41,12 +41,12 @@ import {
   type YoutubePlaca,
   type YoutubeSharedConfig,
 } from './youtubeLayout';
-import { readPadraoModo } from './youtubeLayoutPadrao';
+import { modoPadraoDoEscopo, montarPadraoJson } from './youtubeLayoutPadrao';
 import { useLayoutPresets } from './useLayoutPresets';
 import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
 import { ScanLine } from 'lucide-react';
-import { EscopoLadder, InlineModeToggle, RegionItem } from './youtubeLayoutPanel/components';
+import { EscopoLadder, ModoBlock, RegionItem } from './youtubeLayoutPanel/components';
 import { MODE_LABEL, clamp, round } from './youtubeLayoutPanel/shared';
 
 // ─────────────────────────────────────────────────────────────
@@ -273,7 +273,10 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
 
     const activeMode = resolveYoutubeModeAt(draft, currentTime);
     const shared = useMemo(() => sharedRegions(draft, duration), [draft, duration]);
-    const tipoProjeto: YoutubeLayoutMode = readPadraoModo(padraoProjetoJson) ?? 'full';
+    const tipoProjeto: YoutubeLayoutMode = modoPadraoDoEscopo(padraoProjetoJson);
+    // D-423: mesmo par leitura/escrita do projeto, para o escopo Global. Sem ele
+    // `persistirEscopo` nao tinha o que preservar e reescrevia `modo_padrao`.
+    const tipoGlobal: YoutubeLayoutMode = modoPadraoDoEscopo(padraoGlobalJson);
 
     // I-025: o corte herda o "Modo" do projeto até o usuário escolher
     // explicitamente Full ou Compartilhada aqui. Considera "herdando" quando o
@@ -549,20 +552,18 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
         return;
       }
       const json = escopo === 'projeto' ? padraoProjetoJson : padraoGlobalJson;
-      let base = DEFAULT_YOUTUBE_LAYOUT;
-      if (json && json !== '{}') {
-        try {
-          base = normalizeYoutubeLayout(JSON.parse(json));
-        } catch {
-          // ignora — usa default
-        }
-      }
-      const novoJson = JSON.stringify({
-        modo_padrao: base.modo_padrao,
-        fundo: extras?.fundo ?? base.fundo,
-        placa: extras?.placa ?? base.placa,
-        compartilhada: modo === 'full' ? base.compartilhada : config,
-        full: modo === 'full' ? fullFromSynthetic(config) : base.full,
+      // D-423: o `modo_padrao` do escopo e PRESERVADO — definir posicionamento
+      // nao decide com que modo novos cortes nascem. Antes, num escopo ainda
+      // vazio o JSON era remontado a partir de DEFAULT_YOUTUBE_LAYOUT e o
+      // `modo_padrao: 'full'` dele entrava junto, mesmo salvando um preset
+      // Compartilhada.
+      const novoJson = montarPadraoJson(json, {
+        modo_padrao: escopo === 'projeto' ? tipoProjeto : tipoGlobal,
+        fundo: extras?.fundo,
+        placa: extras?.placa,
+        ...(modo === 'full'
+          ? { full: fullFromSynthetic(config) }
+          : { compartilhada: config }),
       });
       if (escopo === 'global') {
         definirPadraoGlobalMutation.mutate(novoJson);
@@ -718,25 +719,13 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
     // a EscopoLadder ja marca "em uso" na linha do escopo que alimenta o corte,
     // sem precisar de um segundo selo no cabecalho dizendo a mesma coisa.
 
-    // Setar tipo do projeto: faz PATCH parcial preservando fundo/placa/
-    // compartilhada ja salvos (ou usa defaults DEFAULT_YOUTUBE_LAYOUT).
+    // Setar tipo do projeto: PATCH parcial que mexe SO no modo. D-423: a versao
+    // anterior remontava o JSON sem a chave `full`, apagando o posicionamento
+    // Full que o escopo Projeto ja tinha salvo a cada troca de modo.
     const definirTipoProjeto = (novoModo: YoutubeLayoutMode) => {
-      let presetExistente: { fundo?: unknown; placa?: unknown; compartilhada?: unknown } = {};
-      if (padraoProjetoJson && padraoProjetoJson !== '{}') {
-        try {
-          presetExistente = JSON.parse(padraoProjetoJson) as typeof presetExistente;
-        } catch {
-          // ignorar — usa defaults abaixo
-        }
-      }
-      const base = normalizeYoutubeLayout(presetExistente);
-      const json = JSON.stringify({
-        modo_padrao: novoModo,
-        fundo: base.fundo,
-        placa: base.placa,
-        compartilhada: base.compartilhada,
-      });
-      definirPadraoProjetoMutation.mutate(json);
+      definirPadraoProjetoMutation.mutate(
+        montarPadraoJson(padraoProjetoJson, { modo_padrao: novoModo }),
+      );
     };
 
     // Acoes do card de tipo do projeto preservam o modal de confirmacao.
@@ -822,22 +811,23 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               )}
             </div>
 
-            {/* D-421: único toggle de MODO do painel. "Tipo do projeto" não é
-              mais um segundo segmented idêntico logo abaixo — virou a linha
-              Projeto da escada de escopos, onde o resto do padrão do projeto
-              já é definido. O ↺ devolve o corte ao modo do projeto; sem ele o
-              override era só de ida. */}
-            <InlineModeToggle
-              label="Modo deste corte"
-              value={draft.modo_padrao}
-              onChange={handleDefault}
+            {/* D-423: as duas decisões de MODO juntas — a deste corte e a que
+              vale para novos cortes do projeto. A segunda tinha ido parar
+              dentro da linha Projeto da escada (D-421), onde a pílula COMP.
+              não cabia e ficava fora da área visível: não havia como pôr o
+              projeto em Compartilhada. O ↺ devolve o corte ao modo do projeto. */}
+            <ModoBlock
+              modoCorte={draft.modo_padrao}
+              onChangeModoCorte={handleDefault}
               herdando={modoHerdando}
-              herdandoDe={tipoProjeto}
-              onReset={
+              onResetCorte={
                 !modoHerdando && draft.modo_padrao !== tipoProjeto
                   ? () => handleDefault(tipoProjeto)
                   : undefined
               }
+              tipoProjeto={tipoProjeto}
+              onChangeTipoProjeto={handleDefinirTipoProjeto}
+              pendingProjeto={definirPadraoProjetoMutation.isPending}
             />
 
             {/* Stats numa linha (mesmo tratamento do CenasPanel na §2): os 3
@@ -873,8 +863,6 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
               modo={modoEscada}
               onAlternarModo={setModoEscada}
               escopoAtivo={escopoAtivoCorte}
-              tipoProjeto={tipoProjeto}
-              onChangeTipoProjeto={handleDefinirTipoProjeto}
               corteDefinido={escopoDefinido('corte', modoEscada)}
               projetoDefinido={escopoDefinido('projeto', modoEscada)}
               globalDefinido={escopoDefinido('global', modoEscada)}
