@@ -674,15 +674,20 @@ class CenasRemotionService:
             # Normalizar campos que a IA pode gerar com nomes errados
             tipo = cena_convertida["tipo"]
             if tipo == "destaque_numerico":
-                # IA pode enviar numero como string ou usar campo "valor"/"data"
+                # IA pode usar o campo "valor"/"data"/"stat" em vez de "numero".
+                # D-429: o valor é preservado como veio. A coerção antiga para
+                # float assumia formato pt-BR e destruía o token — "45.7" virava
+                # 457 e "15/09/1850" caía no except. Quem lê o valor é o render,
+                # que decompõe prefixo/núcleo/sufixo (numeroFit.analisarNumeroDestaque).
                 for alias in ("valor", "data", "stat"):
                     if alias in cena and "numero" not in cena_convertida:
-                        try:
-                            cena_convertida["numero"] = float(
-                                str(cena[alias]).replace(".", "").replace(",", ".")
-                            )
-                        except Exception:
-                            cena_convertida["texto"] = str(cena[alias])
+                        valor_alias = cena[alias]
+                        cena_convertida["numero"] = (
+                            valor_alias
+                            if isinstance(valor_alias, (int, float))
+                            else str(valor_alias).strip()
+                        )
+                        break
             elif tipo == "fonte_referencia":
                 # IA pode usar "referencia" ou "source" em vez de "fonte"
                 if "fonte" not in cena_convertida:

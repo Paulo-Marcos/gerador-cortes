@@ -3,7 +3,11 @@ import { CenaRemotion } from "../schema";
 import { COLORS_V2 as C, FONTS_V2 as F, SHADOWS_V2 as SH } from "../theme-v2";
 import { useGlobalFrame } from "../frame-context";
 import { AmbientHud, useFades} from "./_shared";
-import { numeroFontSize } from "./_shared/numeroFit";
+import {
+  analisarNumeroDestaque,
+  formatarNucleoDestaque,
+  numeroFontSize,
+} from "./_shared/numeroFit";
 
 interface Props {
   cena: CenaRemotion;
@@ -19,19 +23,19 @@ export const CenaNumber: React.FC<Props> = ({ cena }) => {
   const frameLocal = frame - cena.inicio * fps;
   const duracao = (cena.fim - cena.inicio) * fps;
   const { opacity, enter } = useFades({ frameLocal, fps, duracao, entryFrames: 20 });
-  // Number counting animation
-  const rawNumero = cena.numero ?? cena.texto ?? "";
-  const target = typeof rawNumero === "number"
-    ? rawNumero
-    : Number(String(rawNumero).replace(/[^\d.-]/g, ""));
-  const isNumeric = Number.isFinite(target) && target !== 0;
-  const counted = Math.round(interpolate(enter, [0, 1], [0, target]));
-  const sufixo = typeof rawNumero === "string" ? rawNumero.replace(/[\d.,-]/g, "") : "";
-  const display = isNumeric ? `${counted.toLocaleString("pt-BR")}${sufixo}` : String(rawNumero);
+  // D-429: o token é decomposto uma única vez em prefixo + núcleo + sufixo. A
+  // contagem anima só o núcleo, preservando vírgula decimal, separador de milhar
+  // e unidade; tokens sem núcleo único (datas, placares) saem literais.
+  const numero = analisarNumeroDestaque(cena.numero ?? cena.texto ?? "");
+  const contado = numero.valor === null
+    ? null
+    : interpolate(enter, [0, 1], [0, numero.valor]);
+  const display = contado === null
+    ? numero.textoFinal
+    : `${numero.prefixo}${formatarNucleoDestaque(contado, numero)}${numero.sufixo}`;
   // Corpo derivado do valor FINAL (não do número animado) — mantém o tamanho
   // estável durante a contagem e evita que valores grandes estourem o anel.
-  const finalDisplay = isNumeric ? `${target.toLocaleString("pt-BR")}${sufixo}` : String(rawNumero);
-  const numeroSize = numeroFontSize(finalDisplay);
+  const numeroSize = numeroFontSize(numero.textoFinal);
 
   return (
     <AbsoluteFill

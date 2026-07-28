@@ -395,6 +395,18 @@ class TestConverterStartleg:
         result = CenasRemotionService._converter_startleg(cenas, trans)
         assert "numero" in result[0]
 
+    def test_alias_preserva_token_de_exibicao(self):
+        """D-429: a coercao para float assumia pt-BR e destruia o valor."""
+        trans = self._trans_granular()
+        cenas = [
+            {"tipo": "destaque_numerico", "startLeg": 0, "duracao_s": 4, "valor": "45.7"},
+            {"tipo": "destaque_numerico", "startLeg": 1, "duracao_s": 4, "valor": "1,5 milhao"},
+            {"tipo": "destaque_numerico", "startLeg": 2, "duracao_s": 4, "data": "15/09/1850"},
+            {"tipo": "destaque_numerico", "startLeg": 3, "duracao_s": 4, "stat": 1914},
+        ]
+        result = CenasRemotionService._converter_startleg(cenas, trans)
+        assert [c["numero"] for c in result] == ["45.7", "1,5 milhao", "15/09/1850", 1914]
+
     def test_normaliza_fonte_referencia_alias(self):
         trans = self._trans_granular()
         cenas = [

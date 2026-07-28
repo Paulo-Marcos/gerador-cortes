@@ -2,6 +2,8 @@
  * Cenas do CenaOverlay + roteador CenaStage (E-006).
  * Port fiel das cenas do Remotion; usa o kit de estilo compartilhado.
  */
+import { analisarNumeroDestaque } from '@video-renderer/cenas-v2/_shared/numeroFit';
+
 import type { CenaRemotion } from '@/types/models';
 
 import {
@@ -187,7 +189,9 @@ function SceneDestaque({ cena }: { cena: CenaRemotion }) {
               textShadow: `0 0 60px rgba(63,166,106,0.27), 0 10px 40px rgba(0,0,0,0.5)`,
             }}
           >
-            {cena.numero ?? cena.texto ?? '0'}
+            {/* D-429: mesma leitura do render (Remotion) — o preview mostrava o
+                valor cru e divergia do vídeo final. */}
+            {analisarNumeroDestaque(cena.numero ?? cena.texto ?? '0').textoFinal}
           </p>
           {cena.subtexto && (
             <div
