@@ -65,10 +65,18 @@ function Get-EdgeAppArgs {
 
     if ($EdgeAppId) { return "--profile-directory=Default --app-id=$EdgeAppId" }
 
-    $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-    if (Test-Path $startMenu) {
+    # O Edge espalha o atalho do app instalado em lugares diferentes conforme
+    # o que o usuario marca na instalacao (menu Iniciar, area de trabalho,
+    # barra de tarefas) - varremos os tres.
+    $locais = @(
+        (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'),
+        (Join-Path $env:APPDATA 'Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar'),
+        [Environment]::GetFolderPath('Desktop')
+    ) | Where-Object { $_ -and (Test-Path $_) }
+
+    if ($locais) {
         $shell = New-Object -ComObject WScript.Shell
-        $doEdge = Get-ChildItem -Path $startMenu -Filter '*.lnk' -Recurse -ErrorAction SilentlyContinue |
+        $doEdge = Get-ChildItem -Path $locais -Filter '*.lnk' -Recurse -ErrorAction SilentlyContinue |
             ForEach-Object {
                 $lnk = $shell.CreateShortcut($_.FullName)
                 if ($lnk.TargetPath -like '*msedge.exe' -and $lnk.Arguments -match '--app-id=') {
@@ -77,7 +85,10 @@ function Get-EdgeAppArgs {
             }
         # Casa pelo nome do app; com um unico app do Edge instalado, aceita ele.
         $escolhido = @($doEdge | Where-Object { $_.Nome -like "*$AppName*" })[0]
-        if (-not $escolhido -and @($doEdge).Count -eq 1) { $escolhido = @($doEdge)[0] }
+        if (-not $escolhido) {
+            $unicos = @($doEdge | Sort-Object Args -Unique)
+            if ($unicos.Count -eq 1) { $escolhido = $unicos[0] }
+        }
         if ($escolhido) { return $escolhido.Args }
     }
 
