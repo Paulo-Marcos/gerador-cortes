@@ -244,3 +244,62 @@ class TestValidacaoFingerprint:
         cache = RemotionBundleCache(tmp_path / "cache")
         with pytest.raises(ValueError):
             cache.lookup(fingerprint_invalido)
+
+
+# ─────────────────────────────────────────────────────────────
+# Single-flight (D-435)
+# ─────────────────────────────────────────────────────────────
+
+
+class TestSingleFlight:
+    """Renders concorrentes com o MESMO fingerprint não podem se atropelar.
+
+    Era o que derrubava um lote de cortes: todos erravam o `lookup`, todos
+    chamavam `_reservar` (que apaga o diretório existente) e cada um destruía
+    o bundle que o outro estava construindo — os chunks de overlay então
+    morriam com `Exit code: 1`.
+    """
+
+    def test_chamadas_concorrentes_constroem_uma_vez_so(self, tmp_path: Path):
+        chamadas: list[Path] = []
+
+        async def builder_lento(target_dir: Path) -> None:
+            chamadas.append(target_dir)
+            # Cede o loop no meio da construção: é a janela em que o
+            # concorrente antes entrava e apagava esta pasta.
+            await asyncio.sleep(0.01)
+            (target_dir / "index.html").write_text("bundle", encoding="utf-8")
+
+        async def cenario() -> list[Path]:
+            cache = RemotionBundleCache(tmp_path / "cache")
+            return await asyncio.gather(
+                *(cache.get_or_create(_fingerprint(60), builder_lento) for _ in range(3))
+            )
+
+        resultados = asyncio.run(cenario())
+
+        assert len(chamadas) == 1
+        assert len({str(p) for p in resultados}) == 1
+        assert (resultados[0] / "index.html").read_text(encoding="utf-8") == "bundle"
+
+    def test_fingerprints_distintos_nao_se_serializam(self, tmp_path: Path):
+        async def cenario() -> list[Path]:
+            cache = RemotionBundleCache(tmp_path / "cache")
+            return await asyncio.gather(
+                cache.get_or_create(_fingerprint(61), _build_ok()),
+                cache.get_or_create(_fingerprint(62), _build_ok()),
+            )
+
+        primeiro, segundo = asyncio.run(cenario())
+        assert primeiro != segundo
+        assert primeiro.exists() and segundo.exists()
+
+    def test_falha_do_construtor_nao_trava_a_proxima_tentativa(self, tmp_path: Path):
+        async def cenario() -> Path:
+            cache = RemotionBundleCache(tmp_path / "cache")
+            with pytest.raises(RuntimeError):
+                await cache.get_or_create(_fingerprint(63), _build_falha())
+            return await cache.get_or_create(_fingerprint(63), _build_ok())
+
+        entry = asyncio.run(cenario())
+        assert (entry / "index.html").exists()

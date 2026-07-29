@@ -12,10 +12,19 @@ Cada entrada vive em `<root>/<fingerprint>/`. Existem dois marcadores:
 reservado. Se falhar, o diretório parcial é apagado para não envenenar o
 cache. Isso isola este service de QUALQUER conhecimento sobre o Remotion
 em si — só sabe lidar com pastas e timestamps.
+
+**Single-flight (D-435).** A construção é serializada por fingerprint. Sem
+isso, renders disparados juntos (um lote de cortes) computavam o MESMO
+fingerprint, todos erravam o `lookup` e todos chamavam `_reservar` — que
+apaga o diretório existente. Cada um destruía o bundle que o outro estava
+construindo ou já usando, e os chunks de overlay morriam com `Exit code: 1`
+apontando (falsamente) para o Chrome Headless. Com o lock, o primeiro
+constrói e os demais reaproveitam.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import shutil
 import time
@@ -28,6 +37,21 @@ logger = logging.getLogger(__name__)
 
 _INDEX_FILE = "index.html"
 _COMMIT_FILE = "committed.txt"
+
+# (raiz do cache, fingerprint) → lock da construção. De módulo porque cada
+# render instancia um `RemotionBundleCache` novo apontando para a mesma pasta —
+# um lock por instância não serializaria nada. O dicionário cresce com o número
+# de fingerprints distintos vistos no processo (unidades), então não é podado.
+_construcoes: dict[tuple[str, str], asyncio.Lock] = {}
+
+
+def _lock_da_construcao(root: Path, fingerprint: str) -> asyncio.Lock:
+    chave = (str(root), fingerprint)
+    lock = _construcoes.get(chave)
+    if lock is None:
+        lock = asyncio.Lock()
+        _construcoes[chave] = lock
+    return lock
 
 
 @dataclass(frozen=True)
@@ -71,11 +95,28 @@ class RemotionBundleCache:
         O `builder` recebe a pasta de saída e deve materializar o bundle
         ali dentro (mínimo: produzir `<pasta>/index.html`). Em caso de
         falha, a pasta é removida e a exceção propaga.
+
+        Chamadas concorrentes para o mesmo fingerprint são serializadas: só a
+        primeira constrói, as demais acordam com o cache já quente.
         """
         hit = self.lookup(fingerprint)
         if hit is not None:
             return hit
 
+        async with _lock_da_construcao(self._root, fingerprint):
+            # Segundo lookup DENTRO do lock: quem esperou aqui estava, quase
+            # sempre, atrás de quem acabou de construir este mesmo bundle.
+            hit = self.lookup(fingerprint)
+            if hit is not None:
+                return hit
+            return await self._construir(fingerprint, builder)
+
+    async def _construir(
+        self,
+        fingerprint: str,
+        builder: Callable[[Path], Awaitable[None]],
+    ) -> Path:
+        """Materializa o bundle e o comita. Chamado só sob o lock do fingerprint."""
         entry_dir = self._reservar(fingerprint)
         try:
             await builder(entry_dir)
