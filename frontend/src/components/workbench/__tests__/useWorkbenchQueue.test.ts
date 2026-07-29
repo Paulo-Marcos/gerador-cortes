@@ -6,6 +6,7 @@ import {
   mesclarFila,
   migrarFilaV1,
   parseStoredQueue,
+  TOLERANCIA_AUSENTE_MS,
   type EstadoFila,
   type QueueJob,
 } from '../useWorkbenchQueue';
@@ -177,9 +178,10 @@ describe('persistência', () => {
   });
 
   it('migra a fila v1 (só render, sem estado) para jobs de render rodando', () => {
+    const T0 = 1_700_000_000_000;
     const v1 = JSON.stringify([{ corteId: 'c1', projetoId: 'p1', rotulo: '265 · corte 7 → render' }]);
 
-    const migrado = migrarFilaV1(v1);
+    const migrado = migrarFilaV1(v1, T0);
 
     expect(migrado?.jobs).toEqual([
       {
@@ -196,6 +198,10 @@ describe('persistência', () => {
         etapa: 'Render final',
         erro: '',
         terminalDesde: null,
+        iniciadoEm: T0,
+        atualizadoEm: T0,
+        historico: [],
+        ausenteDesde: null,
       },
     ]);
   });
@@ -343,5 +349,104 @@ describe('agruparFila', () => {
     ]);
 
     expect(grupos[0].estado).toBe('concluido');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// D-435 — a fila precisa admitir quando perdeu o job de vista, e
+// guardar por onde ele passou (é o que o modal de detalhe mostra).
+// ─────────────────────────────────────────────────────────────
+
+describe('job que some do backend', () => {
+  const T0 = 1_700_000_000_000;
+
+  it('segura o job ativo durante a tolerância', () => {
+    const rodando = mesclarFila(fila(), [remoto()], T0);
+
+    const poucoDepois = mesclarFila(rodando, [], T0 + TOLERANCIA_AUSENTE_MS - 1);
+
+    expect(poucoDepois.jobs[0].estado).toBe('rodando');
+  });
+
+  // Regressão: o store do backend é em memória, então reiniciar o uvicorn
+  // apagava o job em voo — e a fila guardava para sempre um "rodando 50%" que
+  // nunca mais ia andar (job ativo não entra na expiração de 1 h).
+  it('marca o job ativo como perdido depois da tolerância', () => {
+    // A tolerância conta da PRIMEIRA ausência observada, não do último poll
+    // em que o job apareceu — daí os dois passos.
+    const rodando = mesclarFila(fila(), [remoto()], T0);
+    const sumiu = mesclarFila(rodando, [], T0 + 2_000);
+
+    const depois = mesclarFila(sumiu, [], T0 + 2_000 + TOLERANCIA_AUSENTE_MS);
+
+    expect(depois.jobs[0].estado).toBe('perdido');
+    expect(depois.jobs[0].terminalDesde).toBe(T0 + 2_000 + TOLERANCIA_AUSENTE_MS);
+    expect(depois.jobs[0].historico.at(-1)?.estado).toBe('perdido');
+  });
+
+  it('o job perdido some sozinho como qualquer outro terminal', () => {
+    const rodando = mesclarFila(fila(), [remoto()], T0);
+    const sumiu = mesclarFila(rodando, [], T0 + 2_000);
+    const virouPerdido = T0 + 2_000 + TOLERANCIA_AUSENTE_MS;
+    const perdido = mesclarFila(sumiu, [], virouPerdido);
+
+    const muitoDepois = mesclarFila(perdido, [], virouPerdido + EXPIRACAO_TERMINAL_MS);
+
+    expect(muitoDepois.jobs).toHaveLength(0);
+  });
+
+  it('não mexe no job terminal que o backend parou de publicar', () => {
+    const concluido = mesclarFila(fila(), [remoto({ estado: 'concluido', progresso: 100 })], T0);
+
+    const depois = mesclarFila(concluido, [], T0 + TOLERANCIA_AUSENTE_MS);
+
+    expect(depois.jobs[0].estado).toBe('concluido');
+  });
+
+  it('o job que reaparece volta a ser ativo e esquece a ausência', () => {
+    const rodando = mesclarFila(fila(), [remoto()], T0);
+    const sumido = mesclarFila(rodando, [], T0 + 1_000);
+
+    const devolta = mesclarFila(sumido, [remoto({ progresso: 70 })], T0 + 2_000);
+
+    expect(devolta.jobs[0].estado).toBe('rodando');
+    expect(devolta.jobs[0].ausenteDesde).toBeNull();
+  });
+});
+
+describe('histórico de etapas', () => {
+  const T0 = 1_700_000_000_000;
+
+  it('registra um marco por virada observada', () => {
+    let estado = mesclarFila(fila(), [remoto({ etapa: 'Fase 1/4', progresso: 12 })], T0);
+    estado = mesclarFila(estado, [remoto({ etapa: 'Fase 2/4', progresso: 35 })], T0 + 2_000);
+    estado = mesclarFila(estado, [remoto({ estado: 'concluido', progresso: 100 })], T0 + 4_000);
+
+    expect(estado.jobs[0].historico.map((marco) => marco.etapa)).toEqual([
+      'Fase 1/4',
+      'Fase 2/4',
+      'Fase 2/4',
+    ]);
+    expect(estado.jobs[0].historico.at(-1)?.estado).toBe('concluido');
+  });
+
+  it('não registra marco quando o poll repete o mesmo estado', () => {
+    const primeiro = mesclarFila(fila(), [remoto()], T0);
+    const segundo = mesclarFila(primeiro, [remoto()], T0 + 2_000);
+
+    expect(segundo.jobs[0].historico).toHaveLength(1);
+    expect(segundo.jobs[0].atualizadoEm).toBe(T0);
+  });
+
+  it('marca o instante em que o job travou', () => {
+    const primeiro = mesclarFila(fila(), [remoto({ etapa: 'Detectando mudanças de cena' })], T0);
+    const parado = mesclarFila(
+      primeiro,
+      [remoto({ etapa: 'Detectando mudanças de cena' })],
+      T0 + 10 * 60_000,
+    );
+
+    expect(parado.jobs[0].iniciadoEm).toBe(T0);
+    expect(parado.jobs[0].atualizadoEm).toBe(T0);
   });
 });

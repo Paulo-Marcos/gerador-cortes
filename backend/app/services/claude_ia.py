@@ -36,7 +36,7 @@ from app.domain.time_convert import hms_to_seg, seg_to_hms, seg_to_hms_short
 from app.domain.transcricao_utils import dividir_segmentos_longos, limpar_e_ordenar_transcricao
 from app.domain.variacao_prompt import bloco_variacao_de
 from app.editorial_identity import identidade_do_mascote
-from app.infrastructure import claude_cli_client
+from app.infrastructure import claude_cli_client, fila_ia
 from app.models import Corte, Projeto, StatusProjeto
 from app.services.analise import AnaliseService, _to_seg
 from sqlalchemy import select as sa_select
@@ -828,6 +828,24 @@ class ClaudeIaService:
         cenas já existentes. Se o corte for longo, o prompt vem particionado —
         geramos por parte e concatenamos as cenas antes de importar.
         """
+        # D-435: a fila só via as cenas quando o Claude CLI anunciava CADA
+        # chamada, então montar o prompt, importar retratos e qualquer falha
+        # antes da 1ª chamada aconteciam sem item nenhum na fila — e a geração
+        # automática disparada pelo bruto parecia não existir. Anunciamos a fase
+        # inteira sob a MESMA chave que as chamadas internas usam, de modo que
+        # elas apenas atualizam este item em vez de criar outro.
+        chave_fila = fila_ia.anunciar_inicio(_SKILL_CENAS, corte_id=corte_id)
+        try:
+            resultado = await ClaudeIaService._gerar_cenas(corte_id)
+        except BaseException as exc:
+            fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
+            raise
+        fila_ia.anunciar_fim(chave_fila, sucesso=True)
+        return resultado
+
+    @staticmethod
+    async def _gerar_cenas(corte_id: str) -> dict:
+        """Corpo da geração de cenas — ver `gerar_cenas_via_claude`."""
         from app.services.cenas_remotion import CenasRemotionService
 
         logger.info("[ClaudeIA/cenas] iniciando corte %s", corte_id[:8])

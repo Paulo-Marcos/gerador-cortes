@@ -25,6 +25,16 @@ import { rotuloCurtoProjeto } from './workbenchRoutes';
 // virava um histórico e perdia a serventia de mostrar o que está
 // acontecendo AGORA. `registerJob` continua existindo para a
 // transição otimista no clique, antes do primeiro poll responder.
+//
+// D-435: congelar era certo para job TERMINAL e errado para job
+// ATIVO. Os stores do backend vivem em memória, então um reinício
+// do uvicorn apagava o job em voo — e a fila guardava para sempre
+// um "rodando 50%" que nunca mais ia andar, sem expirar (a hora só
+// conta a partir do desfecho). Job ativo que some do inventário por
+// mais de `TOLERANCIA_AUSENTE_MS` vira `perdido`: desfecho honesto
+// ("não sei como terminou"), que já entra na expiração normal.
+// Cada job também guarda o próprio histórico de etapas, que é o que
+// o modal de detalhe mostra — a fila só tem espaço para uma linha.
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -34,7 +44,23 @@ import { rotuloCurtoProjeto } from './workbenchRoutes';
  */
 export type JobTipo = string;
 export type JobFamilia = 'ia' | 'midia' | 'publicacao';
-export type JobEstado = 'aguardando' | 'rodando' | 'concluido' | 'erro' | 'cancelado';
+/** `perdido` é só do cliente — ver o cabeçalho do módulo (D-435). */
+export type JobEstado =
+  | 'aguardando'
+  | 'rodando'
+  | 'concluido'
+  | 'erro'
+  | 'cancelado'
+  | 'perdido';
+
+/** Uma virada observada do job: é o que o modal de detalhe desenha como linha do tempo. */
+export interface MarcoJob {
+  /** Epoch ms em que a virada foi observada. */
+  em: number;
+  estado: JobEstado;
+  etapa: string;
+  progresso: number;
+}
 
 export interface QueueJob {
   /** `{tipo}:{ref}` — mesma chave que o backend emite. */
@@ -60,10 +86,37 @@ export interface QueueJob {
    * fila também guarda job que ele já parou de publicar.
    */
   terminalDesde: number | null;
+  /** Epoch ms da primeira vez que este job apareceu na fila. */
+  iniciadoEm: number;
+  /** Epoch ms da última virada observada — "parado há X" sai daqui. */
+  atualizadoEm: number;
+  /** Viradas observadas, da mais antiga para a mais recente. */
+  historico: MarcoJob[];
+  /**
+   * Desde quando o job ATIVO sumiu do inventário do backend (epoch ms), ou
+   * null. Passada a tolerância, ele vira `perdido`.
+   */
+  ausenteDesde: number | null;
 }
 
 /** Quanto tempo um job terminado continua visível antes de sumir (D-425). */
 export const EXPIRACAO_TERMINAL_MS = 60 * 60 * 1000;
+
+/**
+ * Quanto um job ativo pode ficar fora do inventário antes de virar `perdido`.
+ * Folgado de propósito: o backend publica job ativo em todo poll, então a
+ * ausência só é real depois de vários polls seguidos — um hiccup de rede ou o
+ * registro otimista do clique (que precede o primeiro poll) não podem
+ * condenar uma execução que está viva.
+ */
+export const TOLERANCIA_AUSENTE_MS = 30 * 1000;
+
+/**
+ * Teto de marcos guardados por job. O render final vira dezenas de etapas
+ * ("overlay 3/7", "overlay 4/7"…) e a fila inteira vai para o localStorage a
+ * cada poll — sem teto, o histórico cresceria sem limite.
+ */
+const MAX_MARCOS = 40;
 
 /** Item cru de `/export/fila-global`. Tipado aqui porque a fila é o único consumidor. */
 interface JobRemoto {
@@ -89,7 +142,7 @@ export function ehAtivo(estado: JobEstado): boolean {
   return estado === 'aguardando' || estado === 'rodando';
 }
 
-export function jobDeRemoto(remoto: JobRemoto): QueueJob {
+export function jobDeRemoto(remoto: JobRemoto, agora: number = Date.now()): QueueJob {
   const projeto = rotuloCurtoProjeto(remoto.projeto_titulo);
   const alvo = remoto.corte_numero != null ? `${projeto} · corte ${remoto.corte_numero}` : projeto;
   return {
@@ -106,7 +159,25 @@ export function jobDeRemoto(remoto: JobRemoto): QueueJob {
     etapa: remoto.etapa,
     erro: remoto.erro,
     terminalDesde: null,
+    iniciadoEm: agora,
+    atualizadoEm: agora,
+    historico: [],
+    ausenteDesde: null,
   };
+}
+
+/** Identidade do momento do job — muda a cada avanço observável (espelha o backend). */
+function assinaturaDoJob(job: QueueJob): string {
+  return `${job.estado}|${job.progresso}|${job.etapa}|${job.erro}`;
+}
+
+function marcoDe(job: QueueJob, em: number): MarcoJob {
+  return { em, estado: job.estado, etapa: job.etapa, progresso: job.progresso };
+}
+
+function comMarco(historico: MarcoJob[], marco: MarcoJob): MarcoJob[] {
+  // Descarta o começo, não o fim: o que interessa é onde o job está agora.
+  return [...historico, marco].slice(-MAX_MARCOS);
 }
 
 /**
@@ -148,6 +219,47 @@ function carimbarTerminal(job: QueueJob, anterior: QueueJob | undefined, agora: 
   return { ...job, terminalDesde: carimbo ?? agora };
 }
 
+/** Funde o job recém-chegado do backend com o que já estava na fila. */
+function reconciliarPresente(
+  vindo: QueueJob,
+  anterior: QueueJob | undefined,
+  agora: number,
+): QueueJob {
+  const job = carimbarTerminal(vindo, anterior, agora);
+  if (!anterior) {
+    return { ...job, historico: [marcoDe(job, agora)] };
+  }
+  const avancou = assinaturaDoJob(anterior) !== assinaturaDoJob(job);
+  return {
+    ...job,
+    iniciadoEm: anterior.iniciadoEm,
+    atualizadoEm: avancou ? agora : anterior.atualizadoEm,
+    historico: avancou ? comMarco(anterior.historico, marcoDe(job, agora)) : anterior.historico,
+    ausenteDesde: null,
+  };
+}
+
+/**
+ * Decide o destino do job que o backend deixou de publicar. Terminal fica como
+ * está (é a retenção do D-425); ativo espera a tolerância e então vira
+ * `perdido` — ver o cabeçalho do módulo.
+ */
+function reconciliarAusente(job: QueueJob, agora: number): QueueJob {
+  if (!ehAtivo(job.estado)) return job;
+  const desde = job.ausenteDesde ?? agora;
+  if (agora - desde < TOLERANCIA_AUSENTE_MS) {
+    return job.ausenteDesde === desde ? job : { ...job, ausenteDesde: desde };
+  }
+  const perdido: QueueJob = {
+    ...job,
+    estado: 'perdido',
+    atualizadoEm: agora,
+    terminalDesde: agora,
+    ausenteDesde: desde,
+  };
+  return { ...perdido, historico: comMarco(job.historico, marcoDe(perdido, agora)) };
+}
+
 function expirou(job: QueueJob, agora: number): boolean {
   return job.terminalDesde != null && agora - job.terminalDesde >= EXPIRACAO_TERMINAL_MS;
 }
@@ -162,7 +274,7 @@ export function mesclarFila(
   remotos: JobRemoto[],
   agora: number = Date.now(),
 ): EstadoFila {
-  const vindos = remotos.map(jobDeRemoto);
+  const vindos = remotos.map((remoto) => jobDeRemoto(remoto, agora));
   const idsRemotos = new Set(vindos.map((job) => job.id));
   const ativosRemotos = new Set(vindos.filter((job) => ehAtivo(job.estado)).map((job) => job.id));
 
@@ -173,8 +285,13 @@ export function mesclarFila(
   );
   const dispensadosSet = new Set(dispensados);
 
-  const porId = new Map(estado.jobs.map((job) => [job.id, job] as const));
-  for (const job of vindos) porId.set(job.id, carimbarTerminal(job, porId.get(job.id), agora));
+  const porId = new Map(
+    estado.jobs.map(
+      (job) =>
+        [job.id, idsRemotos.has(job.id) ? job : reconciliarAusente(job, agora)] as const,
+    ),
+  );
+  for (const job of vindos) porId.set(job.id, reconciliarPresente(job, porId.get(job.id), agora));
 
   const proximo: EstadoFila = {
     jobs: ordenar(
@@ -189,6 +306,19 @@ export function mesclarFila(
 
 export function serializeQueue(estado: EstadoFila): string {
   return JSON.stringify(estado);
+}
+
+function parseMarcos(bruto: unknown): MarcoJob[] {
+  if (!Array.isArray(bruto)) return [];
+  return bruto
+    .filter((marco): marco is MarcoJob => typeof marco === 'object' && marco !== null)
+    .map((marco) => ({
+      em: typeof marco.em === 'number' ? marco.em : 0,
+      estado: (marco.estado ?? 'rodando') as JobEstado,
+      etapa: typeof marco.etapa === 'string' ? marco.etapa : '',
+      progresso: typeof marco.progresso === 'number' ? marco.progresso : 0,
+    }))
+    .slice(-MAX_MARCOS);
 }
 
 function parseJob(item: unknown): QueueJob | null {
@@ -223,6 +353,12 @@ function parseJob(item: unknown): QueueJob | null {
         : ehAtivo(estado)
           ? null
           : Date.now(),
+    // Fila salva antes do D-435 não tem tempos nem histórico: a contagem
+    // recomeça do reload, o que só custa um "há X" mais curto do que o real.
+    iniciadoEm: typeof candidato.iniciadoEm === 'number' ? candidato.iniciadoEm : Date.now(),
+    atualizadoEm: typeof candidato.atualizadoEm === 'number' ? candidato.atualizadoEm : Date.now(),
+    historico: parseMarcos(candidato.historico),
+    ausenteDesde: typeof candidato.ausenteDesde === 'number' ? candidato.ausenteDesde : null,
   };
 }
 
@@ -244,7 +380,7 @@ export function parseStoredQueue(raw: string | null): EstadoFila | null {
 }
 
 /** Migração da fila v1 (só render, sem estado): vira job de render rodando. */
-export function migrarFilaV1(raw: string | null): EstadoFila | null {
+export function migrarFilaV1(raw: string | null, agora: number = Date.now()): EstadoFila | null {
   if (!raw) return null;
   let data: unknown;
   try {
@@ -273,6 +409,10 @@ export function migrarFilaV1(raw: string | null): EstadoFila | null {
       etapa: 'Render final',
       erro: '',
       terminalDesde: null,
+      iniciadoEm: agora,
+      atualizadoEm: agora,
+      historico: [],
+      ausenteDesde: null,
     });
   }
   return { jobs, dispensados: [] };
@@ -303,8 +443,16 @@ export interface GrupoFila {
 // Qual estado "ganha" o rótulo do grupo. Erro na frente de tudo: um lote em que
 // uma peça falhou não pode se anunciar como concluído. Depois vem o que ainda
 // está acontecendo; cancelado fica por último, abaixo até de concluído, porque
-// é o desfecho que menos pede atenção.
-const PRIORIDADE_ESTADO: JobEstado[] = ['erro', 'rodando', 'aguardando', 'concluido', 'cancelado'];
+// é o desfecho que menos pede atenção. `perdido` fica acima de concluído (é
+// anomalia, o operador precisa vê-la) e abaixo do que ainda roda.
+const PRIORIDADE_ESTADO: JobEstado[] = [
+  'erro',
+  'rodando',
+  'aguardando',
+  'perdido',
+  'concluido',
+  'cancelado',
+];
 
 export function agruparFila(jobs: QueueJob[]): GrupoFila[] {
   const grupos = new Map<string, QueueJob[]>();
@@ -383,6 +531,7 @@ export function WorkbenchQueueProvider({ children }: { children: ReactNode }) {
 
   const registerJob = useCallback((registro: RegistroJob) => {
     const id = `render:${registro.corteId}`;
+    const agora = Date.now();
     const job: QueueJob = {
       id,
       tipo: 'render',
@@ -398,6 +547,10 @@ export function WorkbenchQueueProvider({ children }: { children: ReactNode }) {
       etapa: 'Iniciando render final',
       erro: '',
       terminalDesde: null,
+      iniciadoEm: agora,
+      atualizadoEm: agora,
+      historico: [{ em: agora, estado: 'rodando', etapa: 'Iniciando render final', progresso: 0 }],
+      ausenteDesde: null,
     };
     setEstado((anterior) => ({
       jobs: ordenar([...anterior.jobs.filter((j) => j.id !== id), job]),

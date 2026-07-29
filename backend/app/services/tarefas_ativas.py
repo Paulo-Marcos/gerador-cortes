@@ -33,6 +33,7 @@ FAMILIA_PUBLICACAO = "publicacao"
 TIPOS: dict[str, tuple[str, str]] = {
     "ingestao": (FAMILIA_MIDIA, "ingestão"),
     "bruto": (FAMILIA_MIDIA, "bruto"),
+    "segmentos": (FAMILIA_MIDIA, "segmentos"),
     "pos": (FAMILIA_MIDIA, "pós"),
     "render": (FAMILIA_MIDIA, "render"),
     "youtube": (FAMILIA_PUBLICACAO, "youtube"),
@@ -80,7 +81,11 @@ TAREFAS_BACKGROUND: tuple[tuple[str, str, str, str], ...] = (
     ("metadados-", "metadados", "corte", "Gerando metadados"),
     ("multiversion-", "render", "corte", "Render multi-versão"),
     ("palco-png-", "render", "projeto", "Renderizando palco"),
-    ("deteccao-seg-", "bruto", "corte", "Detectando silêncios"),
+    # D-435: é o PySceneDetect varrendo o bruto atrás de mudanças de cena, não a
+    # detecção de silêncios do gerar-bruto. Como roda MUITO depois do bruto ficar
+    # pronto (varre frame a frame), o rótulo antigo — "bruto → Detectando
+    # silêncios" — fazia parecer que a fila tinha travado numa etapa já concluída.
+    ("deteccao-seg-", "segmentos", "corte", "Detectando mudanças de cena"),
 )
 
 # Tarefa terminal é descartada daqui depois disto. Precisa cobrir a janela de
