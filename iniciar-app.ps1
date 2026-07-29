@@ -3,11 +3,11 @@
 # esconde o console e o iniciar-app.vbs, que chama este script.
 #
 # D-432. Duas garantias que valem mais que o resto do arquivo:
-#   1. Clicar no atalho REINICIA: encerra a execucao anterior e sobe uma nova.
-#      A unica excecao e trabalho pesado em andamento (render, upload) - ai
-#      pergunta antes, porque abortar um upload deixa video parcial no canal.
-#      Defina $ReiniciarSemPerguntar = $true no app.local.ps1 para nunca
-#      perguntar.
+#   1. Com a aplicacao parada, clicar no atalho sobe tudo e abre a janela.
+#      Com ela no ar, PERGUNTA: reiniciar, encerrar ou cancelar. A caixa
+#      avisa quando ha trabalho pesado em andamento, porque abortar um upload
+#      deixa video parcial no canal. $ReiniciarSemPerguntar = $true no
+#      app.local.ps1 pula a caixa e reinicia direto.
 #   2. Le as portas do PROPRIO checkout (dev.ports.local.ps1 quando existe),
 #      entao o atalho do DEV e o do PROD convivem sem disputar porta - a
 #      mesma regra do D-370.
@@ -124,20 +124,94 @@ function Get-JobsAtivos {
     } catch { return @() }
 }
 
-<# Segue com o reinicio? So pergunta quando ha o que perder. #>
-function Confirm-Reinicio {
-    if ($ReiniciarSemPerguntar) { return $true }
-    $ativos = Get-JobsAtivos
-    if ($ativos.Count -eq 0) { return $true }
+<#
+Pergunta o que fazer quando ja ha aplicacao no ar. Devolve 'reiniciar',
+'encerrar' ou 'cancelar'.
 
-    $lista = ($ativos | Select-Object -First 5 | ForEach-Object { "  - $($_.rotulo) ($($_.estado))" }) -join "`n"
-    $texto = "Ha $($ativos.Count) trabalho(s) em andamento:`n`n$lista`n`n" +
-             "Reiniciar aborta tudo isso. Upload do YouTube interrompido deixa video parcial no canal.`n`n" +
-             "Reiniciar mesmo assim?"
-    # 4 = Sim/Nao, 48 = icone de aviso, 65536 = traz para a frente (o script
-    # roda escondido, senao a caixa nasce atras das outras janelas).
-    $resposta = (New-Object -ComObject WScript.Shell).Popup($texto, 0, "$AppName - reiniciar?", 4 + 48 + 65536)
-    return $resposta -eq 6
+Caixa propria em vez de MessageBox porque os botoes de um MessageBox sao
+Sim/Nao/Cancelar - rotulos que nao dizem qual e qual aqui. O texto ainda
+avisa sobre trabalho pesado em andamento, que e o que torna o reinicio caro.
+#>
+function Show-DialogoExecucaoAtiva {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    $ativos = Get-JobsAtivos
+    $texto = "O $AppName ja esta em execucao."
+    if ($ativos.Count -gt 0) {
+        $lista = ($ativos | Select-Object -First 5 | ForEach-Object { "   - $($_.rotulo) ($($_.estado))" }) -join "`r`n"
+        $texto += "`r`n`r`nATENCAO - $($ativos.Count) trabalho(s) em andamento:`r`n$lista" +
+                  "`r`n`r`nReiniciar ou encerrar aborta tudo isso. Upload do YouTube" +
+                  " interrompido deixa video parcial no canal."
+    } else {
+        $texto += "`r`nNao ha trabalho pesado em andamento."
+    }
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = $AppName
+    $form.ClientSize = New-Object System.Drawing.Size(470, 190)
+    $form.FormBorderStyle = 'FixedDialog'
+    $form.StartPosition = 'CenterScreen'
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+    # Nasce escondido pelo wscript: sem TopMost a caixa aparece atras de tudo.
+    $form.TopMost = $true
+    $icone = Join-Path $PSScriptRoot 'frontend\public\app-icon.ico'
+    if (Test-Path $icone) { try { $form.Icon = New-Object System.Drawing.Icon($icone) } catch {} }
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = $texto
+    $label.SetBounds(16, 16, 438, 116)
+    $form.Controls.Add($label)
+
+    $botoes = @(
+        @{ Texto = 'Reiniciar'; Resultado = 'reiniciar'; X = 200 },
+        @{ Texto = 'Encerrar';  Resultado = 'encerrar';  X = 290 },
+        @{ Texto = 'Cancelar';  Resultado = 'cancelar';  X = 380 }
+    )
+    # Hashtable, e nao uma variavel $script:, porque GetNewClosure() embrulha o
+    # handler num modulo proprio - la dentro `$script:` aponta para o escopo do
+    # closure, nao para o desta funcao, e a escolha do usuario se perdia (o
+    # clique em Reiniciar voltava 'cancelar'). O hashtable e capturado por
+    # referencia, entao mexer numa chave dele e visto aqui fora.
+    # Tambem e o valor que sobra quando a caixa e fechada no X.
+    $estado = @{ escolha = 'cancelar' }
+    foreach ($b in $botoes) {
+        $botao = New-Object System.Windows.Forms.Button
+        $botao.Text = $b.Texto
+        $botao.SetBounds($b.X, 146, 82, 28)
+        $resultado = $b.Resultado
+        $botao.Add_Click({ $estado.escolha = $resultado; $form.Close() }.GetNewClosure())
+        $form.Controls.Add($botao)
+        if ($b.Resultado -eq 'cancelar') { $form.CancelButton = $botao }
+    }
+
+    # O processo nasce com a janela escondida (wscript Run ..., 0) e o Windows
+    # aplica esse "esconde" a PRIMEIRA janela de topo que ele criar - esta
+    # caixa inclusive. Sem forcar SW_SHOW ela nasce invisivel e o launcher
+    # trava esperando um clique que ninguem consegue dar. TopMost/Activate
+    # sozinhos NAO resolvem: nao desfazem o SW_HIDE inicial.
+    if (-not ('CutCut.Janela' -as [type])) {
+        Add-Type -Namespace CutCut -Name Janela -MemberDefinition @'
+[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
+[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+'@
+    }
+    $form.Add_Shown({
+        [CutCut.Janela]::ShowWindow($form.Handle, 5) | Out-Null   # SW_SHOW
+        [CutCut.Janela]::SetForegroundWindow($form.Handle) | Out-Null
+        $form.Activate()
+    }.GetNewClosure())
+    [void]$form.ShowDialog()
+    $form.Dispose()
+    return $estado.escolha
+}
+
+<# Encerra tudo do checkout. Matar o supervisor a forca nao roda o finally
+   dele, entao os filhos ficariam orfaos - quem os recolhe e o clean-dev. #>
+function Stop-Aplicacao {
+    Stop-ExecucaoAnterior
+    & (Join-Path $PSScriptRoot 'clean-dev.ps1') | Out-Null
 }
 
 <#
@@ -158,10 +232,18 @@ function Stop-ExecucaoAnterior {
 
 $estavaNoAr = Test-NoAr -Url $healthUrl -Tentativas 3
 
-if ($estavaNoAr -and -not (Confirm-Reinicio)) {
-    # Operador escolheu preservar o trabalho em andamento: so traz a janela.
-    Open-Janela -Url $appUrl
-    exit 0
+if ($estavaNoAr -and -not $ReiniciarSemPerguntar) {
+    switch (Show-DialogoExecucaoAtiva) {
+        'cancelar' {
+            # So traz a janela do app; nada e tocado.
+            Open-Janela -Url $appUrl
+            exit 0
+        }
+        'encerrar' {
+            Stop-Aplicacao
+            exit 0
+        }
+    }
 }
 
 Stop-ExecucaoAnterior
