@@ -243,16 +243,26 @@ function Write-ServiceLine {
         [string]$Line
     )
 
-    if ($Line -and $Line.Trim() -ne "") {
-        $previousColor = [Console]::ForegroundColor
-        try {
-            [Console]::ForegroundColor = [System.ConsoleColor]::$Color
-            [Console]::Write($Label)
-            [Console]::ForegroundColor = $previousColor
-            [Console]::WriteLine(" $Line")
-        } catch {
-            [Console]::ForegroundColor = $previousColor
-        }
+    if (-not $Line -or $Line.Trim() -eq "") { return }
+
+    # D-432: em modo silencioso nao ha console para colorir, e [Console]::Write
+    # escreve direto no .NET - passando POR FORA do Start-Transcript, que so
+    # enxerga o host do PowerShell. Era por isso que o log saia com o boot
+    # inteiro e nenhuma linha de servico depois. Write-Host passa pelo host e
+    # portanto e transcrito.
+    if ($Silent) {
+        Write-Host "$Label $Line"
+        return
+    }
+
+    $previousColor = [Console]::ForegroundColor
+    try {
+        [Console]::ForegroundColor = [System.ConsoleColor]::$Color
+        [Console]::Write($Label)
+        [Console]::ForegroundColor = $previousColor
+        [Console]::WriteLine(" $Line")
+    } catch {
+        [Console]::ForegroundColor = $previousColor
     }
 }
 
