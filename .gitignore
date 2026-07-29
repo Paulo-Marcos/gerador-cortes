@@ -150,3 +150,8 @@ backend/_bench/
 
 # Screenshots de auditoria de design (enviados ao claude.ai/design via MCP)
 capturas/
+
+# Launcher do atalho (D-432): log do modo -Silent e ajustes desta maquina
+# (app-id do Edge, nome do app instalado).
+logs/
+app.local.ps1

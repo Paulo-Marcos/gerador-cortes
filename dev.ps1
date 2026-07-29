@@ -2,13 +2,31 @@
 # WHY ReadLineAsync: event handlers .NET (OutputDataReceived) executam ScriptBlocks
 # em ThreadPool threads, o que crasha o host PowerShell (exit code 2).
 # ReadLineAsync le output de forma assincrona SEM threads extras.
+#
+# D-432: -Silent e o modo usado pelo atalho da area de trabalho (iniciar-app.vbs),
+# que roda este script com a janela escondida. Nesse modo NAO pode haver
+# Read-Host: um prompt invisivel deixaria o supervisor pendurado para sempre
+# segurando as portas. Em troca, a saida vai para logs/app-<data>.log - sem
+# console na tela, o log e o unico jeito de ver o que aconteceu.
+param([switch]$Silent)
+
+if ($Silent) {
+    $logDir = Join-Path $PSScriptRoot "logs"
+    New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+    Start-Transcript -Path (Join-Path $logDir "app-$(Get-Date -Format 'yyyyMMdd').log") -Append | Out-Null
+}
+
+function Wait-Enter {
+    param([string]$Message = "  Pressione ENTER para fechar")
+    if (-not $Silent) { Read-Host $Message | Out-Null }
+}
 
 trap {
     Write-Host ""
     Write-Host "  === ERRO FATAL ===" -ForegroundColor Red
     Write-Host "  $_" -ForegroundColor Red
     Write-Host ""
-    Read-Host "  Pressione ENTER para fechar"
+    Wait-Enter
     exit 1
 }
 
@@ -101,7 +119,7 @@ function Clear-DevEnvironment {
             Write-Host "  Encerrando $($cim.Name) (PID $targetPid)" -ForegroundColor DarkYellow
             Stop-ProcessTree -ProcessId $targetPid -IncludeRoot
         } else {
-            Write-Host "  Porta ocupada por $($cim.Name) (PID $targetPid) alheio ao CortadorLive - ignorando" -ForegroundColor DarkGray
+            Write-Host "  Porta ocupada por $($cim.Name) (PID $targetPid) alheio ao CutCut - ignorando" -ForegroundColor DarkGray
         }
     }
 
@@ -269,7 +287,7 @@ function Read-AllServiceOutput {
 
 Clear-Host
 Write-Host ""
-Write-Host "  CortadorLive" -ForegroundColor Cyan -NoNewline
+Write-Host "  CutCut" -ForegroundColor Cyan -NoNewline
 Write-Host " - iniciando..." -ForegroundColor DarkGray
 Write-Host ""
 
@@ -378,5 +396,6 @@ try {
 
     Write-Host "  Pronto." -ForegroundColor DarkGray
     Write-Host ""
-    Read-Host "  Pressione ENTER para fechar"
+    Wait-Enter
+    if ($Silent) { Stop-Transcript | Out-Null }
 }
