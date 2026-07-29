@@ -2,7 +2,14 @@
 <html lang="pt-br" data-theme="indigo">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" href="/app-icon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/app-icon-192.png" />
+    <!-- D-434: o manifest da identidade propria ao app instalado (nome, icone
+         e janela sem barra de endereco). O `id` fixo nele e o que garante que
+         mexer no start_url depois nao registre um app NOVO no Edge, o que
+         duplicaria o icone e quebraria o atalho do D-432. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#15181d" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
