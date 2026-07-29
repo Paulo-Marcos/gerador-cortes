@@ -74,7 +74,6 @@ async def test_grade_e_overlays_rodam_em_paralelo(tmp_path, monkeypatch):
 
     monkeypatch.setattr(pr, "_validar_video_completo", _invalido)
     monkeypatch.setattr(pr, "_preparar_bundle_overlay", _bundle)
-    monkeypatch.setattr(pr, "_aplicar_retencao_apos_grade", _noop)
     monkeypatch.setattr(pr, "_preparar_overlay_chunks", _um_chunk)
     monkeypatch.setattr(pr, "_filtrar_chunks_pendentes", lambda **k: k["overlay_chunks"])
     monkeypatch.setattr(pr, "_executar_render_final", _noop)

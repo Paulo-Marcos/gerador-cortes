@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { FolderOpen, Keyboard, Loader2, Play, Star } from 'lucide-react';
+import { FolderOpen, Keyboard, Loader2, Play, RotateCcw, Star } from 'lucide-react';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
 import {
   type RenderStartFrom,
   useCorte,
   useCortesProjeto,
+  useGerarBruto,
   usePipelineStatus,
   useRenderizarRemotion,
   useStatusBruto,
@@ -14,7 +15,9 @@ import {
 import { finalVideoUrl, gradedVideoUrl, rawVideoBustedUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import type { CenaRemotion } from '@/types/models';
 import type { PlayerHandle } from '@/features/editor/fase1/PlayerPanel';
 import { EditorFase2 } from '@/features/editor/fase2/EditorFase2';
@@ -51,7 +54,17 @@ import {
   parseCenasPayload,
   progressFromPipelineArtifacts,
   resolverVideoFonte,
+  fontesDisponiveis,
+  resolverVideoFonteEfetiva,
+  type VideoFontePos,
 } from './postProductionNavigation';
+
+// Rotulo e tooltip de cada fonte no seletor do player (D-430).
+const FONTE_LABEL: Record<VideoFontePos, { curto: string; ajuda: string }> = {
+  raw: { curto: 'Bruto', ajuda: 'Recorte da live, sem grade nem overlays' },
+  graded: { curto: 'Grade', ajuda: 'Bruto com o filtro cinematografico aplicado' },
+  final: { curto: 'Final', ajuda: 'Video renderizado, com overlays — pronto para publicar' },
+};
 
 export function ScenesPostProductionPage() {
   const { id: projetoId = '' } = useParams<{ id: string }>();
@@ -82,11 +95,18 @@ export function ScenesPostProductionPage() {
   // D-419: a nota do corte é perguntada uma vez, no clique de "Gerar bruto"
   // (tela Bruta). Aqui ela só fica reabrível para ajuste.
   const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
+  // D-430: fonte do player escolhida a mao. `null` = segue o padrao
+  // bruto-first do D-368. Zerada ao trocar de corte (effect abaixo).
+  const [fonteEscolhida, setFonteEscolhida] = useState<VideoFontePos | null>(null);
   const avaliacaoQuery = useAvaliacaoCorte(corteId || undefined);
   const ultimoStatusBrutoRef = useRef<string | undefined>(undefined);
   const gradeFaseRef = useRef(false);
+  const brutoEmGeracaoRef = useRef(false);
   const playerRef = useRef<PlayerHandle>(null);
   const { notify: notifyToast } = useToast();
+
+  const brutoEmGeracao =
+    statusBruto.data?.status === 'cortando' || statusBruto.data?.status === 'processando';
 
   useEffect(() => {
     const anterior = ultimoStatusBrutoRef.current;
@@ -109,6 +129,8 @@ export function ScenesPostProductionPage() {
   // qualquer tela (a aba não bloqueia). Null no shell legado.
   const workbenchQueue = useWorkbenchQueueOptional();
   const renderFinal = useRenderizarRemotion(corteId);
+  const gerarBruto = useGerarBruto(corteId, projetoId);
+  const confirmacao = useConfirmacao();
   const pipelineStatus = usePipelineStatus(corteId, renderFinalLocal);
   const abrirPasta = useAbrirPasta();
   const studioUrl = useStudioUrl(corteId);
@@ -124,6 +146,7 @@ export function ScenesPostProductionPage() {
     setRenderFinalLocal(
       Boolean(corteId) && window.localStorage.getItem(`render-final:${corteId}`) === 'running',
     );
+    setFonteEscolhida(null);
   }, [corteId]);
 
   useEffect(() => {
@@ -158,10 +181,21 @@ export function ScenesPostProductionPage() {
     renderFinalLocal,
   ]);
 
-  // I-030: assim que pipelineStatus reporta fases.grade=true, o backend ja
-  // deletou o raw e zerou corte.arquivo_clip_path. Forca o refetch do
-  // exportStatus para o checklist/sidebar refletirem grade_pronta sem
-  // esperar o poll de 8s.
+  // D-430: `usePipelineStatus` so faz polling durante o render, entao quando a
+  // regeracao do bruto termina o `fases.raw` continua `false` em cache — o
+  // botao "Regerar bruto" ficava na tela e o player seguia na fonte antiga ate
+  // um reload. Refetcha na borda de descida de `brutoEmGeracao`.
+  useEffect(() => {
+    if (brutoEmGeracaoRef.current && !brutoEmGeracao) {
+      void pipelineStatus.refetch();
+    }
+    brutoEmGeracaoRef.current = brutoEmGeracao;
+  }, [brutoEmGeracao, pipelineStatus]);
+
+  // I-030: assim que pipelineStatus reporta fases.grade=true, forca o refetch
+  // do exportStatus para o checklist/sidebar refletirem grade_pronta sem
+  // esperar o poll de 8s. (Ate D-430 o backend tambem apagava o raw nesse
+  // ponto; hoje o bruto sobrevive, mas o refetch segue valendo pela grade.)
   useEffect(() => {
     const gradeAtual = Boolean(pipelineStatus.data?.fases?.grade);
     if (gradeAtual && !gradeFaseRef.current) {
@@ -318,17 +352,25 @@ export function ScenesPostProductionPage() {
       (renderFinalRunning ? progressFromPipelineArtifacts(pipelineStatus.data?.fases) : 0),
   );
 
-  // videoSrc bruto-first (D-368): a fonte e escolhida por `resolverVideoFonte`.
-  // Enquanto o clip_raw existe no disco (`fases.raw`), o player mostra o BRUTO;
-  // so cai pro graded quando o bruto some — a retencao so apaga o raw depois do
-  // grade 100%, entao um grade pela metade nunca troca o player no meio.
+  // videoSrc bruto-first (D-368): o PADRAO vem de `resolverVideoFonte` —
+  // enquanto o clip_raw existe no disco (`fases.raw`), o player mostra o BRUTO.
   // `!== false` mantem o bruto como padrao enquanto o pipelineStatus nao
-  // carregou, pra nao piscar graded antes do primeiro fetch nem devolver 404
-  // do raw recem-deletado.
+  // carregou, pra nao piscar graded antes do primeiro fetch.
+  // D-430: o usuario pode sobrepor esse padrao pelo seletor de fonte; a escolha
+  // so vale enquanto a fonte existir (`resolverVideoFonteEfetiva`).
   const exportEntry = exportStatusQ.data?.cortes.find((c) => c.corte_id === corte.id);
-  const videoFonte = resolverVideoFonte({
-    videoPronto: Boolean(exportEntry?.video_pronto),
-    brutoDisponivel: pipelineStatus.data?.fases?.raw !== false,
+  const videoPronto = Boolean(exportEntry?.video_pronto);
+  const brutoDisponivel = pipelineStatus.data?.fases?.raw !== false;
+  const videoFonteAutomatica = resolverVideoFonte({ videoPronto, brutoDisponivel });
+  const fontes = fontesDisponiveis({
+    brutoDisponivel,
+    gradedDisponivel: Boolean(pipelineStatus.data?.fases?.grade),
+    videoPronto,
+  });
+  const videoFonte = resolverVideoFonteEfetiva({
+    escolhida: fonteEscolhida,
+    disponiveis: fontes,
+    automatica: videoFonteAutomatica,
   });
   const videoSrc =
     videoFonte === 'final'
@@ -336,6 +378,24 @@ export function ScenesPostProductionPage() {
       : videoFonte === 'raw'
         ? rawVideoBustedUrl(corte.id, videoBust)
         : `${gradedVideoUrl(projetoId, corte.id)}?v=${videoBust}`;
+
+  // D-430: o bruto so some na limpeza do projeto. Quando isso acontece e o
+  // usuario precisa retrabalhar o pos, este botao re-extrai o trecho da live.
+  const brutoAusente = pipelineStatus.data?.fases?.raw === false;
+  const gerandoBruto = gerarBruto.isPending || brutoEmGeracao;
+
+  function regerarBruto() {
+    confirmacao.executarOuPedir(
+      {
+        titulo: 'Regerar video bruto',
+        descricao:
+          'O trecho e re-extraido da live. Cenas, layout e metadados ja editados sao mantidos.',
+        detalhe: `Corte ${corte?.numero ?? '?'} · ${corte?.titulo_proposto ?? ''}`,
+        confirmLabel: 'Regerar bruto',
+      },
+      () => gerarBruto.mutate({ refazer_transcricao: false, refazer_cenas: false }),
+    );
+  }
 
   // I-025 (freeze player na render): video estavel — pinnedSrc declarado
   // como hook no topo do componente (antes dos early returns); aqui so
@@ -375,8 +435,37 @@ export function ScenesPostProductionPage() {
   ];
   const exportStatuses = exportStatusQ.data?.cortes ?? [];
 
+  // Acoes compartilhadas pelos dois shells (Workbench e legado) — declaradas
+  // uma vez para as duas barras nao divergirem.
+  const seletorFonte = fontes.length > 1 && (
+    <FonteVideoSwitch fontes={fontes} atual={videoFonte} onEscolher={setFonteEscolhida} />
+  );
+
+  const botaoRegerarBruto = brutoAusente && (
+    <Tooltip
+      label="O video bruto foi apagado na limpeza do projeto. Regerar re-extrai o trecho da live sem refazer transcricao nem cenas."
+      side="bottom"
+    >
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={regerarBruto}
+        disabled={gerandoBruto}
+      >
+        {gerandoBruto ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+        {gerandoBruto ? 'Gerando bruto...' : 'Regerar bruto'}
+      </Button>
+    </Tooltip>
+  );
+
   const posModals = (
     <>
+      <ConfirmDialog
+        pedido={confirmacao.pedido}
+        onCancel={confirmacao.cancelar}
+        onConfirm={confirmacao.confirmar}
+      />
       <RenderStepsModal
         open={renderStartModalOpen}
         status={pipelineStatus.data}
@@ -432,6 +521,8 @@ export function ScenesPostProductionPage() {
               onMetadadosClick={() => setMetadataOpen(true)}
             />
             <div className="flex-1" />
+            {seletorFonte}
+            {botaoRegerarBruto}
             <Tooltip
               label={
                 renderFinalRunning
@@ -543,21 +634,25 @@ export function ScenesPostProductionPage() {
             />
           }
           primaryAction={
-            <Tooltip
-              label={renderFinalRunning ? `Renderizando ${renderFinalProgress}%` : 'Renderizar'}
-              side="bottom"
-            >
-              <Button
-                type="button"
-                variant="default"
-                size="sm"
-                onClick={renderizarFinal}
-                disabled={renderFinalRunning}
+            <div className="flex items-center gap-2">
+              {seletorFonte}
+              {botaoRegerarBruto}
+              <Tooltip
+                label={renderFinalRunning ? `Renderizando ${renderFinalProgress}%` : 'Renderizar'}
+                side="bottom"
               >
-                {renderFinalRunning ? <Loader2 className="animate-spin" /> : <Play />}
-                {renderFinalRunning ? `Renderizando ${renderFinalProgress}%` : 'Renderizar'}
-              </Button>
-            </Tooltip>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={renderizarFinal}
+                  disabled={renderFinalRunning}
+                >
+                  {renderFinalRunning ? <Loader2 className="animate-spin" /> : <Play />}
+                  {renderFinalRunning ? `Renderizando ${renderFinalProgress}%` : 'Renderizar'}
+                </Button>
+              </Tooltip>
+            </div>
           }
           moreMenuItems={moreMenuItems}
         />
@@ -584,5 +679,50 @@ export function ScenesPostProductionPage() {
 
       {posModals}
     </>
+  );
+}
+
+// ── FonteVideoSwitch (D-430) ─────────────────────────────────
+// Segmented control com as fontes que existem em disco. So aparece quando ha
+// mais de uma — com um unico artefato nao ha o que escolher.
+function FonteVideoSwitch({
+  fontes,
+  atual,
+  onEscolher,
+}: {
+  fontes: VideoFontePos[];
+  atual: VideoFontePos;
+  onEscolher: (fonte: VideoFontePos) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Fonte do video no player"
+      className="inline-flex items-center rounded-full border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-1"
+    >
+      {fontes.map((fonte) => {
+        const { curto, ajuda } = FONTE_LABEL[fonte];
+        const ativa = fonte === atual;
+        return (
+          <Tooltip key={fonte} label={ajuda} side="bottom">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={ativa}
+              onClick={() => onEscolher(fonte)}
+              className={cn(
+                'inline-flex h-7 items-center rounded-full border-0 px-3 text-[12px] transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+                ativa
+                  ? 'bg-[var(--wb-accent)] font-bold text-[var(--wb-ink-fg)]'
+                  : 'bg-transparent font-semibold text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-card)] hover:text-[var(--wb-text)]',
+              )}
+            >
+              {curto}
+            </button>
+          </Tooltip>
+        );
+      })}
+    </div>
   );
 }

@@ -44,7 +44,6 @@ from app.services.app_logging import (
     operational_info,
 )
 from app.services.app_settings import AppSettingsService, RenderSettings
-from app.services.media_retention import MediaRetentionService
 from app.services.pipeline_corte_fields import (
     _campo_corte,
     _duracao_layout_corte,
@@ -239,9 +238,9 @@ async def renderizar_pipeline_otimizado(
         _aplicar_limpeza_inicial(ctx)
         try:
             await _prevalidar_e_disparar_bundle(ctx)
-            await _fase_grade(ctx, db)
+            await _fase_grade(ctx)
             await _fase_overlays(ctx)
-            await _aguardar_grade(ctx, db)
+            await _aguardar_grade(ctx)
 
             # ─── Parada antecipada (render parcial) ───
             # Quando o usuário pede só uma fase intermediária (ex.: "só a grade"
@@ -437,19 +436,17 @@ async def _prevalidar_e_disparar_bundle(ctx: _RenderCtx) -> None:
     ctx.event_log.emit("bundle_remotion_iniciado")
 
 
-async def _fase_grade(ctx: _RenderCtx, db) -> None:
+async def _fase_grade(ctx: _RenderCtx) -> None:
     """Fase 1/4: decide pular a grade ou dispará-la como task de fundo.
 
-    Ao pular, aplica a retenção pós-grade imediatamente. Ao rodar, cria
-    `ctx.grade_task` (aguardada depois da Fase 2, no OVERLAP) e marca
-    `ctx.inicio_grade` para a medição de duração.
+    Ao rodar, cria `ctx.grade_task` (aguardada depois da Fase 2, no OVERLAP) e
+    marca `ctx.inicio_grade` para a medição de duração.
     """
     if _deve_pular_fase("grade", ctx.start_from, ctx.continuar, ctx.clip_graded_valido):
         logger.info("[Pipeline] Fase 1/4: clip_graded.mp4 válido encontrado. Pulando re-render.")
         operational_info("Pipeline", "✅ Fase 1/4: Grade cinematográfico já existe. Pulando.")
         ctx.report(22, "Fase 1/4 já concluída")
         ctx.event_log.emit("fase_pulada", phase="grade", motivo="artefato_valido")
-        await _aplicar_retencao_apos_grade(db, ctx.event_log, ctx.corte)
     elif ctx.start_from_norm in {"overlays", "render_final"} and not ctx.clip_graded_valido:
         raise RuntimeError(
             "Você pediu para iniciar depois da fase 1, mas graded/clip_graded.mp4 não existe ou está inválido."
@@ -632,7 +629,7 @@ async def _fase_overlays(ctx: _RenderCtx) -> None:
         raise
 
 
-async def _aguardar_grade(ctx: _RenderCtx, db) -> None:
+async def _aguardar_grade(ctx: _RenderCtx) -> None:
     """Aguarda a grade que rodou EM PARALELO à Fase 2 antes de compor.
 
     Tempo de parede ~ max(grade, overlays), não a soma. O `await` propaga
@@ -642,7 +639,6 @@ async def _aguardar_grade(ctx: _RenderCtx, db) -> None:
         await ctx.grade_task
         _dur_grade = time.time() - ctx.inicio_grade
         ctx.event_log.emit("fase_concluida", phase="grade", duration_sec=_dur_grade)
-        await _aplicar_retencao_apos_grade(db, ctx.event_log, ctx.corte)
         operational_info(
             "Render final",
             f"✅ Fase 1/4 (Grade) concluída em {seg_to_duracao_humana(_dur_grade)} "
@@ -1463,25 +1459,6 @@ async def _finalizar_corte(db, corte: Corte, upload_dir: Path) -> None:
     from app.services.remotion_render import RemotionRenderService
 
     await RemotionRenderService.finalizar_corte_com_sucesso(db, corte, upload_dir)
-
-
-async def _aplicar_retencao_apos_grade(db, event_log: PipelineEventLog, corte: Corte) -> None:
-    clip_path_before = corte.arquivo_clip_path
-    retention = MediaRetentionService.aplicar_apos_grade(corte)
-    if (
-        not retention.removidos
-        and not retention.erros
-        and corte.arquivo_clip_path == clip_path_before
-    ):
-        return
-
-    await db.commit()
-    event_log.emit(
-        "retencao_apos_grade",
-        liberado_mb=retention.liberado_mb,
-        removidos=retention.removidos,
-        erros=retention.erros,
-    )
 
 
 async def _publicar_video_final(video_temporario: Path, video_final: Path) -> None:

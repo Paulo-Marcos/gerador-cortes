@@ -60,9 +60,6 @@ def _patch_io(monkeypatch, tmp_path: Path):
     async def _bundle(_dir):
         return tmp_path / "bundle"
 
-    async def _retencao(_db, _log, _corte):
-        return None
-
     async def _sem_chunks(*_a, **_k):
         return []
 
@@ -71,7 +68,6 @@ def _patch_io(monkeypatch, tmp_path: Path):
 
     monkeypatch.setattr(pr, "_validar_video_completo", _valido)
     monkeypatch.setattr(pr, "_preparar_bundle_overlay", _bundle)
-    monkeypatch.setattr(pr, "_aplicar_retencao_apos_grade", _retencao)
     monkeypatch.setattr(pr, "_preparar_overlay_chunks", _sem_chunks)
     monkeypatch.setattr(pr, "_finalizar_corte", _finalizar)
 

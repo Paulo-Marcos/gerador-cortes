@@ -84,14 +84,16 @@ export function pickPostProductionEntryCut(
 export type VideoFontePos = 'final' | 'raw' | 'graded';
 
 /**
- * Escolhe qual fonte o player da tela Pos deve exibir (D-368).
+ * Escolhe qual fonte o player da tela Pos exibe por PADRAO (D-368).
  *
  * Bruto-first: enquanto o `clip_raw` existe (`brutoDisponivel`), mostra o
- * BRUTO; so cai pro graded quando o bruto some. A retencao so apaga o raw
- * depois do grade 100% (`clip_graded.mp4` completo, nao os segmentos `.ts`
- * parciais), entao um grade pela metade nunca troca o player no meio — regra
- * do usuario "se tem bruto e bruto, se nao tem bruto pode ser o grade".
- * `final` (upload_ready) vence quando o corte ja foi publicado.
+ * BRUTO; so cai pro graded quando o bruto some — regra do usuario "se tem
+ * bruto e bruto, se nao tem bruto pode ser o grade". `final` (upload_ready)
+ * vence quando o corte ja foi renderizado.
+ *
+ * D-430: o bruto deixou de ser apagado no fim do render, entao este padrao
+ * praticamente nunca mais cai em `graded` sozinho. Por isso a escolha virou
+ * sobreponivel pelo usuario — ver `resolverVideoFonteEfetiva`.
  */
 export function resolverVideoFonte(params: {
   videoPronto: boolean;
@@ -99,6 +101,37 @@ export function resolverVideoFonte(params: {
 }): VideoFontePos {
   if (params.videoPronto) return 'final';
   return params.brutoDisponivel ? 'raw' : 'graded';
+}
+
+/** Fontes que existem em disco, na ordem em que o seletor as apresenta. */
+export function fontesDisponiveis(params: {
+  brutoDisponivel: boolean;
+  gradedDisponivel: boolean;
+  videoPronto: boolean;
+}): VideoFontePos[] {
+  const fontes: VideoFontePos[] = [];
+  if (params.brutoDisponivel) fontes.push('raw');
+  if (params.gradedDisponivel) fontes.push('graded');
+  if (params.videoPronto) fontes.push('final');
+  return fontes;
+}
+
+/**
+ * Concilia a escolha manual do usuario com o padrao automatico (D-430).
+ *
+ * A escolha so vale enquanto aquela fonte existir: trocar de corte com a
+ * selecao presa, ou perder o graded, cai de volta no padrao em vez de apontar
+ * o player para um arquivo que nao esta la.
+ */
+export function resolverVideoFonteEfetiva(params: {
+  escolhida: VideoFontePos | null;
+  disponiveis: VideoFontePos[];
+  automatica: VideoFontePos;
+}): VideoFontePos {
+  if (params.escolhida && params.disponiveis.includes(params.escolhida)) {
+    return params.escolhida;
+  }
+  return params.automatica;
 }
 
 export function isCenaRemotion(value: unknown): value is CenaRemotion {

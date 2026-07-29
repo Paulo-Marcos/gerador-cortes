@@ -11,6 +11,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from app.models import Corte
 from app.routers import cortes as cortes_router
 from app.services.export import ExportService
 
@@ -23,13 +24,18 @@ def _limpar_tarefas_corte():
     ExportService._tarefas_corte.clear()
 
 
+# Capturado antes do autouse abaixo trocar a função por um stub — os testes de
+# `TestTrabalhoDerivado` exercem a implementação real.
+_JA_GEROU_BRUTO_REAL = cortes_router._corte_ja_gerou_bruto
+
+
 @pytest.fixture(autouse=True)
 def _corte_sem_bruto(monkeypatch):
     """Default: corte SEM bruto (1ª geração) — evita I/O de disco nos testes de contrato.
 
     Os testes que exercem a regeração (D-160) sobrescrevem via monkeypatch.
     """
-    monkeypatch.setattr(cortes_router, "_corte_tem_bruto", lambda corte: False)
+    monkeypatch.setattr(cortes_router, "_corte_ja_gerou_bruto", lambda corte: False)
 
 
 def _db_com_corte(corte=None):
@@ -168,7 +174,7 @@ async def _capturar_flags_do_worker(monkeypatch) -> dict:
 @pytest.mark.asyncio
 async def test_primeira_geracao_forca_cadeia_completa(monkeypatch):
     """Corte SEM bruto: transcrição + cenas rodam, ignorando o body (não regride)."""
-    monkeypatch.setattr(cortes_router, "_corte_tem_bruto", lambda corte: False)
+    monkeypatch.setattr(cortes_router, "_corte_ja_gerou_bruto", lambda corte: False)
     capturado = await _capturar_flags_do_worker(monkeypatch)
 
     db = _db_com_corte()
@@ -184,7 +190,7 @@ async def test_primeira_geracao_forca_cadeia_completa(monkeypatch):
 @pytest.mark.asyncio
 async def test_regeracao_sem_opt_in_roda_so_o_bruto(monkeypatch):
     """Corte COM bruto e body default: transcrição e cenas NÃO rodam."""
-    monkeypatch.setattr(cortes_router, "_corte_tem_bruto", lambda corte: True)
+    monkeypatch.setattr(cortes_router, "_corte_ja_gerou_bruto", lambda corte: True)
     capturado = await _capturar_flags_do_worker(monkeypatch)
 
     db = _db_com_corte()
@@ -198,7 +204,7 @@ async def test_regeracao_sem_opt_in_roda_so_o_bruto(monkeypatch):
 @pytest.mark.asyncio
 async def test_regeracao_honra_opt_in_selecionado(monkeypatch):
     """Corte COM bruto: só o opt-in marcado (cenas) roda além do bruto."""
-    monkeypatch.setattr(cortes_router, "_corte_tem_bruto", lambda corte: True)
+    monkeypatch.setattr(cortes_router, "_corte_ja_gerou_bruto", lambda corte: True)
     capturado = await _capturar_flags_do_worker(monkeypatch)
 
     db = _db_com_corte()
@@ -208,3 +214,53 @@ async def test_regeracao_honra_opt_in_selecionado(monkeypatch):
         await asyncio.sleep(0)
 
     assert capturado == {"refazer_transcricao": False, "refazer_cenas": True}
+
+
+def _corte_com(**campos) -> Corte:
+    base = {"transcricao_final_texto": "", "cenas_remotion": "[]"}
+    return Corte(id="corte-1", projeto_id="proj-1", numero=1, **{**base, **campos})
+
+
+class TestTrabalhoDerivado:
+    """D-430: bruto apagado na limpeza NÃO pode ser lido como 1ª geração.
+
+    Se fosse, o botão "Regerar bruto" do Pós re-rodaria as cenas por IA e
+    sobrescreveria o pós já editado.
+    """
+
+    def test_corte_zerado_nao_tem_trabalho_derivado(self):
+        assert cortes_router._corte_tem_trabalho_derivado(_corte_com()) is False
+
+    def test_transcricao_sincronizada_conta_como_trabalho(self):
+        corte = _corte_com(transcricao_final_texto="texto ja sincronizado")
+        assert cortes_router._corte_tem_trabalho_derivado(corte) is True
+
+    def test_cenas_em_lista_contam_como_trabalho(self):
+        corte = _corte_com(cenas_remotion='[{"tipo": "tela_cheia", "inicio": 0, "fim": 5}]')
+        assert cortes_router._corte_tem_trabalho_derivado(corte) is True
+
+    def test_cenas_no_payload_com_formato_contam_como_trabalho(self):
+        corte = _corte_com(
+            cenas_remotion='{"formato": "9:16", "cenas": [{"tipo": "t", "inicio": 0, "fim": 1}]}'
+        )
+        assert cortes_router._corte_tem_trabalho_derivado(corte) is True
+
+    def test_payload_com_cenas_vazias_nao_conta(self):
+        corte = _corte_com(cenas_remotion='{"formato": "9:16", "cenas": []}')
+        assert cortes_router._corte_tem_trabalho_derivado(corte) is False
+
+    def test_cenas_corrompidas_nao_derrubam_a_checagem(self):
+        corte = _corte_com(cenas_remotion="{nao é json")
+        assert cortes_router._corte_tem_trabalho_derivado(corte) is False
+
+    def test_bruto_apagado_com_pos_feito_ainda_e_regeracao(self, monkeypatch, tmp_path):
+        """Sem arquivo em disco, mas com cenas editadas → regeração, não 1ª vez."""
+        monkeypatch.setattr(cortes_router, "projetos_dir", lambda: tmp_path)
+        corte = _corte_com(cenas_remotion='[{"tipo": "tela_cheia", "inicio": 0, "fim": 5}]')
+
+        assert _JA_GEROU_BRUTO_REAL(corte) is True
+
+    def test_corte_novo_sem_nada_continua_sendo_primeira_geracao(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(cortes_router, "projetos_dir", lambda: tmp_path)
+
+        assert _JA_GEROU_BRUTO_REAL(_corte_com()) is False

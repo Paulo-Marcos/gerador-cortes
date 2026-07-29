@@ -7,8 +7,8 @@ campos JSON, mede duração via ffprobe quando ausente). Re-exportadas pela
 fachada `app.routers.cortes`.
 
 NOTA: os helpers do cluster `pipeline-status` (`_pipeline_paths`,
-`_grade_aproveitavel`, etc.) e `_corte_tem_bruto` permanecem no módulo do router
-porque seus testes fazem monkeypatch em `cortes.projetos_dir`/`_corte_tem_bruto`.
+`_grade_aproveitavel`, etc.) e `_corte_ja_gerou_bruto` permanecem no módulo do router
+porque seus testes fazem monkeypatch em `cortes.projetos_dir`/`_corte_ja_gerou_bruto`.
 """
 
 import asyncio

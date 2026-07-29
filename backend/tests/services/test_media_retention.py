@@ -24,28 +24,7 @@ def _corte(projeto_id: str, corte_id: str, raw_path: Path | None = None) -> Cort
     )
 
 
-def test_apos_grade_remove_raw_e_preserva_upload_ready(monkeypatch, tmp_path):
-    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
-    corte_dir = tmp_path / "p1" / "cortes" / "c1"
-    raw = _arquivo(corte_dir / "clip_raw.mkv")
-    graded = _video_aproveitavel(corte_dir / "graded" / "clip_graded.mp4")
-    upload = _video_aproveitavel(corte_dir / "upload_ready" / "video.mp4")
-    overlay = _arquivo(corte_dir / "overlays" / "chunk_001.webm")
-    event_log = _arquivo(corte_dir / "pipeline_events.jsonl")
-    corte = _corte("p1", "c1", raw)
-
-    report = MediaRetentionService.aplicar_apos_grade(corte)
-
-    assert not raw.exists()
-    assert upload.exists()
-    assert graded.exists()
-    assert overlay.exists()
-    assert event_log.exists()
-    assert corte.arquivo_clip_path == ""
-    assert any("clip_raw.mkv" in item for item in report.removidos)
-
-
-def test_apos_upload_remove_raw_e_video_final_preservando_materiais(monkeypatch, tmp_path):
+def test_apos_upload_remove_video_final_preservando_bruto_e_materiais(monkeypatch, tmp_path):
     monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
     corte_dir = tmp_path / "p1" / "cortes" / "c1"
     raw = _arquivo(corte_dir / "clip_raw_123.mkv")
@@ -61,7 +40,8 @@ def test_apos_upload_remove_raw_e_video_final_preservando_materiais(monkeypatch,
 
     report = MediaRetentionService.aplicar_apos_upload(corte)
 
-    assert not raw.exists()
+    # D-430: nem o upload conclui o descarte do bruto — so `limpar_projeto`.
+    assert raw.exists()
     assert not upload_video.exists()
     assert not preview.exists()
     assert not versao_completa.exists()
@@ -70,7 +50,7 @@ def test_apos_upload_remove_raw_e_video_final_preservando_materiais(monkeypatch,
     assert thumbnail.exists()
     assert metadata.exists()
     assert overlay.exists()
-    assert corte.arquivo_clip_path == ""
+    assert corte.arquivo_clip_path == str(raw)
     assert any("upload_ready" in item and "video.mp4" in item for item in report.removidos)
     assert any(item.endswith("versoes/") for item in report.removidos)
 

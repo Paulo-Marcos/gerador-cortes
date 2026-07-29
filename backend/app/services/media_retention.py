@@ -2,13 +2,20 @@
 
 Duas politicas distintas, com objetivos diferentes:
 
-* RETENCAO DE MEIO DE PIPELINE (`aplicar_apos_grade`, `aplicar_apos_upload`):
-  roda sozinha durante o processamento e mantem o material necessario para
-  reconstruir o pacote final sem re-render — `graded/clip_graded.mp4`,
-  `overlays/`, logs, metadados e thumbnails.
+* RETENCAO DE MEIO DE PIPELINE (`aplicar_apos_upload`): roda sozinha ao fim do
+  upload e mantem o material necessario para reconstruir o pacote final sem
+  re-render — `clip_raw*`, `graded/clip_graded.mp4`, `overlays/`, logs,
+  metadados e thumbnails.
 * LIMPEZA TERMINAL (`limpar_projeto`): disparada pelo usuario quando o projeto
   ja acabou. Zera TODA a midia pesada e preserva apenas o que documenta o
   trabalho (metadados, legendas, thumbnails, logs).
+
+D-430: o `clip_raw` saiu da retencao de meio de pipeline e passou a ser
+descartado SO na limpeza terminal. Ele e o unico artefato que nao da para
+reconstruir a partir da pasta do corte — refazer exige re-extrair o trecho da
+live — e apaga-lo no fim do render final deixava o usuario sem material quando
+o proprio render final saia com erro. Com isso a etapa `aplicar_apos_grade`
+ficou sem nada para fazer e foi removida.
 """
 
 from __future__ import annotations
@@ -25,18 +32,6 @@ logger = logging.getLogger(__name__)
 
 MIN_VIDEO_BYTES = 1024 * 1024
 
-RAW_NAMES = (
-    "clip_raw.mkv",
-    "clip_raw.mp4",
-    "clip_raw_base.mkv",
-    "clip_raw_base.mp4",
-    "clip_raw_backup_com_silencios.mkv",
-    "clip_raw_backup_com_silencios.mp4",
-)
-RAW_GLOBS = (
-    "clip_raw_*.mkv",
-    "clip_raw_*.mp4",
-)
 # Extensoes de midia PESADA que a limpeza terminal remove. Enumerar por extensao
 # — e nao por nome de arquivo — porque a pasta do corte acumula video com nome
 # editorial livre (ex.: `01_A_Esquerda_....mkv`), chunks de overlay em ProRes e
@@ -106,14 +101,27 @@ class RetentionReport:
 
 class MediaRetentionService:
     @classmethod
-    def aplicar_apos_grade(cls, corte: Corte) -> RetentionReport:
-        """Remove `clip_raw.*` quando o graded ja pode substituir o bruto."""
-        return cls._limpar_corte(corte, remover_upload_ready=False)
-
-    @classmethod
     def aplicar_apos_upload(cls, corte: Corte) -> RetentionReport:
-        """Remove raw e `upload_ready/video.mp4` apos upload concluido."""
-        return cls._limpar_corte(corte, remover_upload_ready=True)
+        """Remove `upload_ready/video.mp4` e as previews de filtro apos o upload.
+
+        O `clip_raw` NAO entra aqui (D-430) — so a limpeza terminal o descarta.
+        """
+        report = RetentionReport()
+        corte_dir = cls.corte_dir(corte)
+        cls._remover_versoes_filtro(corte_dir, report)
+
+        graded = corte_dir / "graded" / "clip_graded.mp4"
+        if not cls._video_aproveitavel(graded):
+            report.pulados.append(f"{corte.id}: graded ausente ou pequeno; upload_ready preservado")
+            return report
+
+        report.preservados.append(cls._display(graded))
+        overlays_dir = corte_dir / "overlays"
+        if overlays_dir.exists():
+            report.preservados.append(cls._display(overlays_dir))
+
+        cls._remover_arquivo(corte_dir / "upload_ready" / "video.mp4", report)
+        return report
 
     @classmethod
     def limpar_projeto(cls, projeto: Projeto, cortes: list[Corte]) -> RetentionReport:
@@ -194,57 +202,12 @@ class MediaRetentionService:
         return cls.projeto_dir(corte.projeto_id) / "cortes" / corte.id
 
     @classmethod
-    def _limpar_corte(cls, corte: Corte, *, remover_upload_ready: bool) -> RetentionReport:
-        report = RetentionReport()
-        corte_dir = cls.corte_dir(corte)
-        graded = corte_dir / "graded" / "clip_graded.mp4"
-
-        if remover_upload_ready:
-            cls._remover_versoes_filtro(corte_dir, report)
-
-        if not cls._video_aproveitavel(graded):
-            report.pulados.append(
-                f"{corte.id}: graded ausente ou pequeno; raw/upload_ready preservados"
-            )
-            return report
-
-        report.preservados.append(cls._display(graded))
-        overlays_dir = corte_dir / "overlays"
-        if overlays_dir.exists():
-            report.preservados.append(cls._display(overlays_dir))
-
-        raw_paths = cls._raw_paths(corte, corte_dir)
-        for path in raw_paths:
-            cls._remover_arquivo(path, report)
-
-        if not cls._arquivo_clip_existente(corte):
-            corte.arquivo_clip_path = ""
-
-        if remover_upload_ready:
-            cls._remover_arquivo(corte_dir / "upload_ready" / "video.mp4", report)
-
-        return report
-
-    @classmethod
     def _remover_versoes_filtro(cls, corte_dir: Path, report: RetentionReport) -> None:
         versoes_dir = corte_dir / "versoes"
         if not versoes_dir.exists():
             return
 
         cls._remover_diretorio(versoes_dir, report)
-
-    @classmethod
-    def _raw_paths(cls, corte: Corte, corte_dir: Path) -> list[Path]:
-        paths: list[Path] = [corte_dir / name for name in RAW_NAMES]
-        for pattern in RAW_GLOBS:
-            paths.extend(corte_dir.glob(pattern))
-
-        if corte.arquivo_clip_path:
-            registered = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
-            if cls._is_inside(registered, corte_dir):
-                paths.append(registered)
-
-        return cls._unique_paths(paths)
 
     @staticmethod
     def _video_aproveitavel(path: Path) -> bool:
@@ -307,25 +270,6 @@ class MediaRetentionService:
 
         report.freed_bytes += size
         report.removidos.append(f"{MediaRetentionService._display(path)}/")
-
-    @classmethod
-    def _is_inside(cls, path: Path, parent: Path) -> bool:
-        try:
-            cls._resolve(path).relative_to(cls._resolve(parent))
-            return True
-        except ValueError:
-            return False
-
-    @classmethod
-    def _unique_paths(cls, paths: list[Path]) -> list[Path]:
-        unique: dict[Path, Path] = {}
-        for path in paths:
-            unique[cls._resolve(path)] = path
-        return list(unique.values())
-
-    @staticmethod
-    def _resolve(path: Path) -> Path:
-        return path.expanduser().resolve(strict=False)
 
     @staticmethod
     def _display(path: Path) -> str:

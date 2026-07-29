@@ -96,7 +96,6 @@ async def _kwargs_da_grade(tmp_path, monkeypatch) -> dict:
 
     monkeypatch.setattr(pr, "_validar_video_completo", _invalido)
     monkeypatch.setattr(pr, "_preparar_bundle_overlay", _bundle)
-    monkeypatch.setattr(pr, "_aplicar_retencao_apos_grade", _noop)
     monkeypatch.setattr(pr, "_preparar_overlay_chunks", _sem_chunks)
     monkeypatch.setattr(pr, "_filtrar_chunks_pendentes", lambda **k: k["overlay_chunks"])
     monkeypatch.setattr(pr, "_executar_batch_overlay_chunks_parallel", _sem_chunks)

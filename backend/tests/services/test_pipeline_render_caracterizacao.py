@@ -91,7 +91,6 @@ def _base_patches(monkeypatch, tmp_path: Path):
         return [{"id": "001", "start_sec": 0.0, "end_sec": 5.0, "entries": []}]
 
     monkeypatch.setattr(pr, "_preparar_bundle_overlay", _bundle)
-    monkeypatch.setattr(pr, "_aplicar_retencao_apos_grade", _noop)
     monkeypatch.setattr(pr, "_preparar_overlay_chunks", _um_chunk)
     monkeypatch.setattr(pr, "_filtrar_chunks_pendentes", lambda **k: k["overlay_chunks"])
     monkeypatch.setattr(pr, "_publicar_video_final", _noop)

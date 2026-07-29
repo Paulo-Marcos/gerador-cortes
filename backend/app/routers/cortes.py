@@ -417,17 +417,44 @@ async def obter_video_bruto(corte_id: str, db: AsyncSession = Depends(get_db)):
     raise HTTPException(status_code=404, detail="Vídeo bruto não encontrado")
 
 
-def _corte_tem_bruto(corte: Corte) -> bool:
-    """True se o corte já tem vídeo bruto em disco (regeração vs 1ª vez, D-160).
+def _corte_ja_gerou_bruto(corte: Corte) -> bool:
+    """True se o corte já passou por uma geração de bruto (regeração vs 1ª vez, D-160).
 
     Usa `_find_clip_raw` (mesma fonte de verdade do pipeline de render), robusto
     a nomes com timestamp e à relocação da pasta — não confia num caminho stale
     no banco.
+
+    D-430 — o bruto sobrevive ao render final, mas a limpeza do projeto ainda o
+    apaga. Um corte já trabalhado pode então estar sem arquivo em disco, e ler
+    isso como "1ª geração" faria o `gerar-bruto` re-rodar transcrição + cenas
+    por IA, SOBRESCREVENDO o pós já editado. Por isso o trabalho derivado
+    também conta como prova de que o corte já rodou.
     """
     from app.services.pipeline_render import _find_clip_raw
 
     corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte.id
-    return _find_clip_raw(corte_dir) is not None
+    if _find_clip_raw(corte_dir) is not None:
+        return True
+    return _corte_tem_trabalho_derivado(corte)
+
+
+def _corte_tem_trabalho_derivado(corte: Corte) -> bool:
+    """True quando já existe transcrição sincronizada ou cenas para este corte.
+
+    Ambas as colunas nascem com default JSON (`"[]"`), então checar o campo cru
+    daria sempre verdadeiro — é o CONTEÚDO que precisa ser inspecionado.
+    """
+    if corte.transcricao_final_texto:
+        return True
+
+    try:
+        cenas = json.loads(corte.cenas_remotion or "[]")
+    except json.JSONDecodeError:
+        return False
+
+    if isinstance(cenas, dict):
+        cenas = cenas.get("cenas", [])
+    return bool(cenas)
 
 
 @router.post("/{corte_id}/gerar-bruto")
@@ -455,7 +482,7 @@ async def gerar_bruto(
         return {"message": "Geração de bruto já em andamento", "corte_id": corte_id}
 
     opcoes = body or GerarBrutoRequest()
-    if _corte_tem_bruto(corte):
+    if _corte_ja_gerou_bruto(corte):
         refazer_transcricao = opcoes.refazer_transcricao
         refazer_cenas = opcoes.refazer_cenas
     else:

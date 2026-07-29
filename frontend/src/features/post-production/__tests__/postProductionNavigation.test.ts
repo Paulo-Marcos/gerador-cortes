@@ -9,6 +9,8 @@ import {
   parseCenasPayload,
   progressFromPipelineArtifacts,
   resolverVideoFonte,
+  fontesDisponiveis,
+  resolverVideoFonteEfetiva,
 } from '../postProductionNavigation';
 
 const projetoId = 'projeto-1';
@@ -191,6 +193,58 @@ describe('postProductionNavigation', () => {
     it('final (upload_ready) vence quando o corte ja foi publicado', () => {
       expect(resolverVideoFonte({ videoPronto: true, brutoDisponivel: true })).toBe('final');
       expect(resolverVideoFonte({ videoPronto: true, brutoDisponivel: false })).toBe('final');
+    });
+  });
+
+  describe('fontesDisponiveis (D-430)', () => {
+    it('lista so o que existe em disco, na ordem do pipeline', () => {
+      expect(
+        fontesDisponiveis({ brutoDisponivel: true, gradedDisponivel: true, videoPronto: true }),
+      ).toEqual(['raw', 'graded', 'final']);
+    });
+
+    it('omite as fases que ainda nao rodaram', () => {
+      expect(
+        fontesDisponiveis({ brutoDisponivel: true, gradedDisponivel: false, videoPronto: false }),
+      ).toEqual(['raw']);
+    });
+
+    it('lista apenas o graded quando o bruto foi apagado na limpeza', () => {
+      expect(
+        fontesDisponiveis({ brutoDisponivel: false, gradedDisponivel: true, videoPronto: false }),
+      ).toEqual(['graded']);
+    });
+  });
+
+  describe('resolverVideoFonteEfetiva (D-430)', () => {
+    it('respeita a escolha manual do usuario', () => {
+      expect(
+        resolverVideoFonteEfetiva({
+          escolhida: 'graded',
+          disponiveis: ['raw', 'graded'],
+          automatica: 'raw',
+        }),
+      ).toBe('graded');
+    });
+
+    it('cai no padrao quando nada foi escolhido', () => {
+      expect(
+        resolverVideoFonteEfetiva({
+          escolhida: null,
+          disponiveis: ['raw', 'graded'],
+          automatica: 'raw',
+        }),
+      ).toBe('raw');
+    });
+
+    it('descarta a escolha quando aquela fonte deixou de existir', () => {
+      expect(
+        resolverVideoFonteEfetiva({
+          escolhida: 'graded',
+          disponiveis: ['raw'],
+          automatica: 'raw',
+        }),
+      ).toBe('raw');
     });
   });
 
