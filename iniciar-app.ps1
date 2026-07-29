@@ -125,31 +125,23 @@ function Get-JobsAtivos {
 }
 
 <#
-Pergunta o que fazer quando ja ha aplicacao no ar. Devolve 'reiniciar',
-'encerrar' ou 'cancelar'.
+Caixa de escolha com botoes rotulados. Existe em vez de um MessageBox porque
+os botoes de um MessageBox sao Sim/Nao/Cancelar - rotulos que nao dizem qual e
+qual nas perguntas daqui.
 
-Caixa propria em vez de MessageBox porque os botoes de um MessageBox sao
-Sim/Nao/Cancelar - rotulos que nao dizem qual e qual aqui. O texto ainda
-avisa sobre trabalho pesado em andamento, que e o que torna o reinicio caro.
+$Botoes: lista de @{ Texto = '...'; Resultado = '...' }. O ULTIMO e o de
+escape: e o que Esc e o X devolvem.
 #>
-function Show-DialogoExecucaoAtiva {
+function Show-Escolha {
+    param([string]$Texto, [array]$Botoes)
+
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
 
-    $ativos = Get-JobsAtivos
-    $texto = "O $AppName ja esta em execucao."
-    if ($ativos.Count -gt 0) {
-        $lista = ($ativos | Select-Object -First 5 | ForEach-Object { "   - $($_.rotulo) ($($_.estado))" }) -join "`r`n"
-        $texto += "`r`n`r`nATENCAO - $($ativos.Count) trabalho(s) em andamento:`r`n$lista" +
-                  "`r`n`r`nReiniciar ou encerrar aborta tudo isso. Upload do YouTube" +
-                  " interrompido deixa video parcial no canal."
-    } else {
-        $texto += "`r`nNao ha trabalho pesado em andamento."
-    }
-
+    $largura = 470
     $form = New-Object System.Windows.Forms.Form
     $form.Text = $AppName
-    $form.ClientSize = New-Object System.Drawing.Size(470, 190)
+    $form.ClientSize = New-Object System.Drawing.Size($largura, 200)
     $form.FormBorderStyle = 'FixedDialog'
     $form.StartPosition = 'CenterScreen'
     $form.MaximizeBox = $false
@@ -160,30 +152,28 @@ function Show-DialogoExecucaoAtiva {
     if (Test-Path $icone) { try { $form.Icon = New-Object System.Drawing.Icon($icone) } catch {} }
 
     $label = New-Object System.Windows.Forms.Label
-    $label.Text = $texto
-    $label.SetBounds(16, 16, 438, 116)
+    $label.Text = $Texto
+    $label.SetBounds(16, 16, $largura - 32, 130)
     $form.Controls.Add($label)
 
-    $botoes = @(
-        @{ Texto = 'Reiniciar'; Resultado = 'reiniciar'; X = 200 },
-        @{ Texto = 'Encerrar';  Resultado = 'encerrar';  X = 290 },
-        @{ Texto = 'Cancelar';  Resultado = 'cancelar';  X = 380 }
-    )
     # Hashtable, e nao uma variavel $script:, porque GetNewClosure() embrulha o
     # handler num modulo proprio - la dentro `$script:` aponta para o escopo do
     # closure, nao para o desta funcao, e a escolha do usuario se perdia (o
     # clique em Reiniciar voltava 'cancelar'). O hashtable e capturado por
     # referencia, entao mexer numa chave dele e visto aqui fora.
     # Tambem e o valor que sobra quando a caixa e fechada no X.
-    $estado = @{ escolha = 'cancelar' }
-    foreach ($b in $botoes) {
+    $escape = $Botoes[-1].Resultado
+    $estado = @{ escolha = $escape }
+    $x = $largura - 16 - (90 * $Botoes.Count)
+    foreach ($b in $Botoes) {
         $botao = New-Object System.Windows.Forms.Button
         $botao.Text = $b.Texto
-        $botao.SetBounds($b.X, 146, 82, 28)
+        $botao.SetBounds($x, 156, 82, 28)
+        $x += 90
         $resultado = $b.Resultado
         $botao.Add_Click({ $estado.escolha = $resultado; $form.Close() }.GetNewClosure())
         $form.Controls.Add($botao)
-        if ($b.Resultado -eq 'cancelar') { $form.CancelButton = $botao }
+        if ($b.Resultado -eq $escape) { $form.CancelButton = $botao }
     }
 
     # O processo nasce com a janela escondida (wscript Run ..., 0) e o Windows
@@ -207,11 +197,97 @@ function Show-DialogoExecucaoAtiva {
     return $estado.escolha
 }
 
-<# Encerra tudo do checkout. Matar o supervisor a forca nao roda o finally
-   dele, entao os filhos ficariam orfaos - quem os recolhe e o clean-dev. #>
+<#
+Pergunta o que fazer quando ja ha aplicacao no ar: 'reiniciar', 'encerrar' ou
+'cancelar'. O aviso de trabalho pesado e o que torna a escolha informada -
+abortar um upload deixa video parcial no canal.
+#>
+function Show-DialogoExecucaoAtiva {
+    $ativos = Get-JobsAtivos
+    $texto = "O $AppName ja esta em execucao."
+    if ($ativos.Count -gt 0) {
+        $lista = ($ativos | Select-Object -First 5 | ForEach-Object { "   - $($_.rotulo) ($($_.estado))" }) -join "`r`n"
+        $texto += "`r`n`r`nATENCAO - $($ativos.Count) trabalho(s) em andamento:`r`n$lista" +
+                  "`r`n`r`nReiniciar ou encerrar aborta tudo isso. Upload do YouTube" +
+                  " interrompido deixa video parcial no canal."
+    } else {
+        $texto += "`r`nNao ha trabalho pesado em andamento."
+    }
+
+    return Show-Escolha -Texto $texto -Botoes @(
+        @{ Texto = 'Reiniciar'; Resultado = 'reiniciar' },
+        @{ Texto = 'Encerrar';  Resultado = 'encerrar'  },
+        @{ Texto = 'Cancelar';  Resultado = 'cancelar'  }
+    )
+}
+
+<# Espera o backend sair do ar. True quando caiu. #>
+function Wait-Queda {
+    param([int]$Segundos = 25)
+    $ate = (Get-Date).AddSeconds($Segundos)
+    while ((Get-Date) -lt $ate) {
+        if (-not (Test-NoAr -Url $healthUrl)) { return $true }
+        Start-Sleep -Milliseconds 500
+    }
+    return (-not (Test-NoAr -Url $healthUrl))
+}
+
+<# Processos segurando as portas deste checkout (com a linha de comando). #>
+function Get-DonosDasPortas {
+    $ids = foreach ($porta in @($BackendPort, $FrontendPort)) {
+        Get-NetTCPConnection -LocalPort $porta -State Listen -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess
+    }
+    @($ids | Where-Object { $_ -gt 4 } | Select-Object -Unique) |
+        ForEach-Object { Get-CimInstance Win32_Process -Filter "ProcessId=$_" -ErrorAction SilentlyContinue } |
+        Where-Object { $_ }
+}
+
+<#
+Ultimo recurso: derruba quem segura as portas. Em RODADAS porque o uvicorn
+--reload entrega o socket a um filho (multiprocessing) e o dono relatado muda
+a cada morte - matar uma vez so deixava a porta presa pelo filho seguinte.
+#>
+function Stop-DonosDasPortas {
+    for ($i = 1; $i -le 5; $i++) {
+        $donos = @(Get-DonosDasPortas)
+        if (-not $donos) { break }
+        foreach ($d in $donos) { Stop-ArvoreDeProcessos -ProcessId $d.ProcessId }
+        Start-Sleep -Seconds 1
+    }
+    return (Wait-Queda -Segundos 10)
+}
+
+<#
+Encerra tudo do checkout e CONFIRMA que caiu.
+
+A limpeza do clean-dev casa processos pelo caminho do checkout; um backend
+lancado antes do D-436 nao carrega esse caminho, sobrevive e segue segurando a
+porta - e o clique seguinte dizia "ja esta em execucao" sem explicar nada
+(D-438). Sobrando alguem, mostra quem e e pergunta antes de forcar.
+#>
 function Stop-Aplicacao {
     Stop-ExecucaoAnterior
     & (Join-Path $PSScriptRoot 'clean-dev.ps1') | Out-Null
+    if (Wait-Queda) { return $true }
+
+    $lista = (@(Get-DonosDasPortas) | Select-Object -First 4 | ForEach-Object {
+        $cl = ($_.CommandLine -replace '\s+', ' ')
+        "   - PID $($_.ProcessId): " + $cl.Substring(0, [Math]::Min(64, $cl.Length))
+    }) -join "`r`n"
+
+    $texto = "Nao consegui encerrar o $AppName pelo caminho normal." +
+             "`r`n`r`nAinda ha processo segurando as portas $BackendPort/$FrontendPort" +
+             ":`r`n$lista" +
+             "`r`n`r`nEnquanto ele viver, todo clique no atalho vai dizer que a" +
+             " aplicacao ja esta em execucao. Forcar o encerramento?"
+
+    if ((Show-Escolha -Texto $texto -Botoes @(
+            @{ Texto = 'Forcar';   Resultado = 'forcar'   },
+            @{ Texto = 'Cancelar'; Resultado = 'cancelar' }
+        )) -ne 'forcar') { return $false }
+
+    return (Stop-DonosDasPortas)
 }
 
 <#
@@ -253,28 +329,25 @@ if ($estavaNoAr -and -not $ReiniciarSemPerguntar) {
             exit 0
         }
         'encerrar' {
-            Stop-Aplicacao
-            exit 0
+            if (Stop-Aplicacao) { exit 0 }
+            exit 1
         }
     }
 }
 
-Stop-ExecucaoAnterior
+# Reiniciar: garante a QUEDA antes de subir. Sem isso o dev.ps1 novo disputa a
+# porta com o backend que ainda esta morrendo e o boot morre no primeiro
+# segundo.
+if ($estavaNoAr) {
+    if (-not (Stop-Aplicacao)) { exit 1 }
+} else {
+    Stop-ExecucaoAnterior
+}
+
 Start-Process -FilePath 'powershell' -WindowStyle Hidden -ArgumentList @(
     '-NoProfile', '-ExecutionPolicy', 'Bypass',
     '-File', (Join-Path $PSScriptRoot 'dev.ps1'), '-Silent'
 )
-
-# Num reinicio, o backend antigo ainda responde por alguns segundos depois de
-# o supervisor morrer (quem encerra os filhos e o dev.ps1 novo, no boot).
-# Sem esperar a queda, a espera abaixo daria "pronto" na primeira tentativa e
-# a janela abriria contra um servidor prestes a sumir.
-if ($estavaNoAr) {
-    $ateCair = (Get-Date).AddSeconds(45)
-    while ((Get-Date) -lt $ateCair -and (Test-NoAr -Url $healthUrl)) {
-        Start-Sleep -Milliseconds 500
-    }
-}
 
 # Espera os DOIS: so o backend de pe ainda abriria a janela em branco. O
 # primeiro boot inclui o bundle do Remotion, dai a folga de 2 minutos.
