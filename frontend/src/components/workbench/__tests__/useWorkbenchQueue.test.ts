@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  agruparFila,
+  EXPIRACAO_TERMINAL_MS,
   jobDeRemoto,
   mesclarFila,
   migrarFilaV1,
@@ -186,11 +188,14 @@ describe('persistência', () => {
         familia: 'midia',
         corteId: 'c1',
         projetoId: 'p1',
+        alvo: '265 · corte 7 → render',
+        rotuloTipo: 'render',
         rotulo: '265 · corte 7 → render',
         estado: 'rodando',
         progresso: 0,
         etapa: 'Render final',
         erro: '',
+        terminalDesde: null,
       },
     ]);
   });
@@ -223,5 +228,120 @@ describe('persistência', () => {
     expect(parseStoredQueue('não é json')).toBeNull();
     expect(parseStoredQueue(null)).toBeNull();
     expect(migrarFilaV1('{}')).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// D-425 — a fila precisa mostrar o AGORA, não virar histórico.
+// ─────────────────────────────────────────────────────────────
+
+describe('expiração do job terminado', () => {
+  const T0 = 1_700_000_000_000;
+
+  it('mantém o job concluído durante a primeira hora', () => {
+    const concluido = mesclarFila(fila(), [remoto({ estado: 'concluido', progresso: 100 })], T0);
+
+    const quaseUmaHora = mesclarFila(concluido, [], T0 + EXPIRACAO_TERMINAL_MS - 1);
+
+    expect(quaseUmaHora.jobs).toHaveLength(1);
+  });
+
+  it('some com o job concluído depois de uma hora', () => {
+    const concluido = mesclarFila(fila(), [remoto({ estado: 'concluido', progresso: 100 })], T0);
+
+    const depois = mesclarFila(concluido, [], T0 + EXPIRACAO_TERMINAL_MS);
+
+    expect(depois.jobs).toHaveLength(0);
+  });
+
+  it('não renova o relógio a cada poll do backend', () => {
+    // Regressão: carimbar de novo a cada leitura faria o job concluído nunca
+    // completar a hora — a fila voltaria a crescer sem limite.
+    const concluido = remoto({ estado: 'concluido', progresso: 100 });
+    let estado = mesclarFila(fila(), [concluido], T0);
+    for (let minuto = 1; minuto <= 59; minuto += 1) {
+      estado = mesclarFila(estado, [concluido], T0 + minuto * 60_000);
+    }
+
+    expect(estado.jobs).toHaveLength(1);
+    expect(mesclarFila(estado, [concluido], T0 + EXPIRACAO_TERMINAL_MS).jobs).toHaveLength(0);
+  });
+
+  it('não expira job ativo, por mais longo que seja o trabalho', () => {
+    const rodando = mesclarFila(fila(), [remoto({ estado: 'rodando' })], T0);
+
+    const muitoDepois = mesclarFila(rodando, [remoto({ estado: 'rodando' })], T0 + 5 * EXPIRACAO_TERMINAL_MS);
+
+    expect(muitoDepois.jobs).toHaveLength(1);
+  });
+
+  it('reinicia o relógio quando o mesmo job volta a rodar', () => {
+    const concluido = mesclarFila(fila(), [remoto({ estado: 'concluido', progresso: 100 })], T0);
+    const rodandoDeNovo = mesclarFila(concluido, [remoto({ estado: 'rodando' })], T0 + 60_000);
+
+    expect(rodandoDeNovo.jobs[0].terminalDesde).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// D-425 — uma linha por alvo; o detalhe fica atrás do clique.
+// ─────────────────────────────────────────────────────────────
+
+describe('agruparFila', () => {
+  function job(over: Partial<QueueJob> = {}): QueueJob {
+    return { ...jobDeRemoto(remoto()), ...over };
+  }
+
+  it('junta execuções do mesmo corte numa linha só', () => {
+    const grupos = agruparFila([
+      job({ id: 'render:c1', corteId: 'c1', rotuloTipo: 'render' }),
+      job({ id: 'bruto:c1', corteId: 'c1', rotuloTipo: 'bruto' }),
+      job({ id: 'render:c2', corteId: 'c2', rotuloTipo: 'render' }),
+    ]);
+
+    expect(grupos).toHaveLength(2);
+    expect(grupos[0].jobs).toHaveLength(2);
+    expect(grupos[0].rotulo).toBe('265 · corte 7');
+    expect(grupos[1].jobs).toHaveLength(1);
+  });
+
+  it('agrupa por projeto o job que não tem corte', () => {
+    const grupos = agruparFila([
+      job({ id: 'ia:cortador:p1', corteId: '', projetoId: 'p1' }),
+      job({ id: 'ingestao:p1', corteId: '', projetoId: 'p1' }),
+    ]);
+
+    expect(grupos).toHaveLength(1);
+    expect(grupos[0].jobs).toHaveLength(2);
+  });
+
+  it('o erro manda no rótulo do grupo — um lote com falha não é "concluído"', () => {
+    const grupos = agruparFila([
+      job({ id: 'a:c1', corteId: 'c1', estado: 'concluido' }),
+      job({ id: 'b:c1', corteId: 'c1', estado: 'erro' }),
+      job({ id: 'c:c1', corteId: 'c1', estado: 'rodando' }),
+    ]);
+
+    expect(grupos[0].estado).toBe('erro');
+    expect(grupos[0].destaque.id).toBe('b:c1');
+  });
+
+  it('sem erro, o que está rodando é o destaque', () => {
+    const grupos = agruparFila([
+      job({ id: 'a:c1', corteId: 'c1', estado: 'concluido' }),
+      job({ id: 'b:c1', corteId: 'c1', estado: 'rodando', etapa: 'Fase 2/4: overlay 3/7' }),
+    ]);
+
+    expect(grupos[0].estado).toBe('rodando');
+    expect(grupos[0].destaque.etapa).toBe('Fase 2/4: overlay 3/7');
+  });
+
+  it('cancelado não rouba o destaque de um concluído', () => {
+    const grupos = agruparFila([
+      job({ id: 'a:c1', corteId: 'c1', estado: 'cancelado' }),
+      job({ id: 'b:c1', corteId: 'c1', estado: 'concluido' }),
+    ]);
+
+    expect(grupos[0].estado).toBe('concluido');
   });
 });

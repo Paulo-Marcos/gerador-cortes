@@ -19,10 +19,12 @@ import { rotuloCurtoProjeto } from './workbenchRoutes';
 // tela que o disparou e sobrevive a reload.
 //
 // A retenção é do cliente: quando o backend para de publicar um
-// job, o último estado conhecido fica congelado na lista até o
-// operador remover (X) ou limpar tudo. `registerJob` continua
-// existindo para a transição otimista no clique, antes do
-// primeiro poll responder.
+// job, o último estado conhecido fica congelado na lista. O
+// operador pode removê-lo na hora (X), e o que ele não remover
+// sai sozinho 1 h depois de terminar (D-425) — sem isso a fila
+// virava um histórico e perdia a serventia de mostrar o que está
+// acontecendo AGORA. `registerJob` continua existindo para a
+// transição otimista no clique, antes do primeiro poll responder.
 // ─────────────────────────────────────────────────────────────
 
 /**
@@ -32,7 +34,7 @@ import { rotuloCurtoProjeto } from './workbenchRoutes';
  */
 export type JobTipo = string;
 export type JobFamilia = 'ia' | 'midia' | 'publicacao';
-export type JobEstado = 'aguardando' | 'rodando' | 'concluido' | 'erro';
+export type JobEstado = 'aguardando' | 'rodando' | 'concluido' | 'erro' | 'cancelado';
 
 export interface QueueJob {
   /** `{tipo}:{ref}` — mesma chave que o backend emite. */
@@ -42,13 +44,26 @@ export interface QueueJob {
   /** Vazio em job de escopo projeto (ingestão, análise da live inteira). */
   corteId: string;
   projetoId: string;
+  /** Alvo do trabalho, sem o tipo: "265 · corte 7" ou "265". Agrupa a fila. */
+  alvo: string;
+  /** Nome do tipo em português vindo do backend ("render", "capa", "análise"). */
+  rotuloTipo: string;
   /** Rótulo humano do job (ex.: "265 · corte 7 → render", "265 → análise"). */
   rotulo: string;
   estado: JobEstado;
   progresso: number;
   etapa: string;
   erro: string;
+  /**
+   * Quando o job foi visto pela primeira vez num estado terminal (epoch ms).
+   * É o relógio da expiração de 1 h — o backend não serve para isso porque a
+   * fila também guarda job que ele já parou de publicar.
+   */
+  terminalDesde: number | null;
 }
+
+/** Quanto tempo um job terminado continua visível antes de sumir (D-425). */
+export const EXPIRACAO_TERMINAL_MS = 60 * 60 * 1000;
 
 /** Item cru de `/export/fila-global`. Tipado aqui porque a fila é o único consumidor. */
 interface JobRemoto {
@@ -83,17 +98,29 @@ export function jobDeRemoto(remoto: JobRemoto): QueueJob {
     familia: remoto.familia,
     corteId: remoto.corte_id,
     projetoId: remoto.projeto_id,
+    alvo,
+    rotuloTipo: remoto.rotulo_tipo,
     rotulo: `${alvo} → ${remoto.rotulo_tipo}`,
     estado: remoto.estado,
     progresso: remoto.progresso,
     etapa: remoto.etapa,
     erro: remoto.erro,
+    terminalDesde: null,
   };
+}
+
+/**
+ * Chave de agrupamento: tudo que pertence ao mesmo corte (ou ao mesmo projeto,
+ * quando o job não tem corte) cai numa linha só. Sem isso, disparar bruto +
+ * capa + metadados de um corte enchia a fila com três linhas quase idênticas.
+ */
+export function chaveDoGrupo(job: QueueJob): string {
+  return job.corteId || job.projetoId || job.id;
 }
 
 export interface EstadoFila {
   jobs: QueueJob[];
-  /** Ids que o operador removeu — o backend pode continuar publicando por ~10min. */
+  /** Ids que o operador removeu — o backend pode continuar publicando por ~1 h. */
   dispensados: string[];
 }
 
@@ -109,11 +136,32 @@ function assinatura(estado: EstadoFila): string {
 }
 
 /**
+ * Carimba o instante em que o job virou terminal, preservando o carimbo já
+ * existente. É o carimbo que decide a expiração — se ele fosse renovado a cada
+ * poll, o job concluído nunca completaria a hora e jamais sairia da fila.
+ */
+function carimbarTerminal(job: QueueJob, anterior: QueueJob | undefined, agora: number): QueueJob {
+  // O job vem de `jobDeRemoto`, que nasce sem carimbo: voltar a rodar já zera o
+  // relógio, e é isso que faz um job re-disparado recomeçar a contagem do zero.
+  if (ehAtivo(job.estado)) return job;
+  const carimbo = anterior && !ehAtivo(anterior.estado) ? anterior.terminalDesde : null;
+  return { ...job, terminalDesde: carimbo ?? agora };
+}
+
+function expirou(job: QueueJob, agora: number): boolean {
+  return job.terminalDesde != null && agora - job.terminalDesde >= EXPIRACAO_TERMINAL_MS;
+}
+
+/**
  * Funde o inventário do backend no estado local. Devolve o MESMO objeto quando
  * nada muda — o provider chama isso a cada poll e re-render à toa custa caro
  * com render longo rodando.
  */
-export function mesclarFila(estado: EstadoFila, remotos: JobRemoto[]): EstadoFila {
+export function mesclarFila(
+  estado: EstadoFila,
+  remotos: JobRemoto[],
+  agora: number = Date.now(),
+): EstadoFila {
   const vindos = remotos.map(jobDeRemoto);
   const idsRemotos = new Set(vindos.map((job) => job.id));
   const ativosRemotos = new Set(vindos.filter((job) => ehAtivo(job.estado)).map((job) => job.id));
@@ -126,10 +174,14 @@ export function mesclarFila(estado: EstadoFila, remotos: JobRemoto[]): EstadoFil
   const dispensadosSet = new Set(dispensados);
 
   const porId = new Map(estado.jobs.map((job) => [job.id, job] as const));
-  for (const job of vindos) porId.set(job.id, job);
+  for (const job of vindos) porId.set(job.id, carimbarTerminal(job, porId.get(job.id), agora));
 
   const proximo: EstadoFila = {
-    jobs: ordenar([...porId.values()].filter((job) => !dispensadosSet.has(job.id))),
+    jobs: ordenar(
+      [...porId.values()].filter(
+        (job) => !dispensadosSet.has(job.id) && !expirou(job, agora),
+      ),
+    ),
     dispensados,
   };
   return assinatura(proximo) === assinatura(estado) ? estado : proximo;
@@ -146,17 +198,31 @@ function parseJob(item: unknown): QueueJob | null {
   // análise da live) tem `corteId` vazio e, exigindo-o aqui, sumiria da fila no
   // primeiro reload depois que o backend parasse de publicá-lo.
   if (typeof candidato.id !== 'string' || candidato.id.length === 0) return null;
+  const rotulo = typeof candidato.rotulo === 'string' ? candidato.rotulo : candidato.id;
+  const estado = (candidato.estado ?? 'rodando') as JobEstado;
   return {
     id: candidato.id,
     tipo: (candidato.tipo ?? 'render') as JobTipo,
     familia: (candidato.familia ?? 'midia') as JobFamilia,
     corteId: typeof candidato.corteId === 'string' ? candidato.corteId : '',
     projetoId: typeof candidato.projetoId === 'string' ? candidato.projetoId : '',
-    rotulo: typeof candidato.rotulo === 'string' ? candidato.rotulo : candidato.id,
-    estado: (candidato.estado ?? 'rodando') as JobEstado,
+    // Fila salva antes do D-425 não tem `alvo`/`rotuloTipo`: o rótulo inteiro
+    // vira o alvo, o que só custa um agrupamento menos preciso até o próximo poll.
+    alvo: typeof candidato.alvo === 'string' ? candidato.alvo : rotulo,
+    rotuloTipo: typeof candidato.rotuloTipo === 'string' ? candidato.rotuloTipo : '',
+    rotulo,
+    estado,
     progresso: typeof candidato.progresso === 'number' ? candidato.progresso : 0,
     etapa: typeof candidato.etapa === 'string' ? candidato.etapa : '',
     erro: typeof candidato.erro === 'string' ? candidato.erro : '',
+    // Job terminal salvo sem carimbo (fila anterior ao D-425) ficaria para
+    // sempre: dar-lhe o carimbo de agora faz a hora contar a partir do reload.
+    terminalDesde:
+      typeof candidato.terminalDesde === 'number'
+        ? candidato.terminalDesde
+        : ehAtivo(estado)
+          ? null
+          : Date.now(),
   };
 }
 
@@ -192,17 +258,21 @@ export function migrarFilaV1(raw: string | null): EstadoFila | null {
     if (typeof item !== 'object' || item === null) continue;
     const { corteId, projetoId, rotulo } = item as Record<string, unknown>;
     if (typeof corteId !== 'string' || corteId.length === 0) continue;
+    const texto = typeof rotulo === 'string' ? rotulo : corteId;
     jobs.push({
       id: `render:${corteId}`,
       tipo: 'render',
       familia: 'midia',
       corteId,
       projetoId: typeof projetoId === 'string' ? projetoId : '',
-      rotulo: typeof rotulo === 'string' ? rotulo : corteId,
+      alvo: texto,
+      rotuloTipo: 'render',
+      rotulo: texto,
       estado: 'rodando',
       progresso: 0,
       etapa: 'Render final',
       erro: '',
+      terminalDesde: null,
     });
   }
   return { jobs, dispensados: [] };
@@ -215,11 +285,54 @@ export interface RegistroJob {
   rotulo: string;
 }
 
+/**
+ * Uma linha da fila: todos os jobs do mesmo alvo (corte, ou projeto quando o
+ * job não tem corte). O detalhe de cada execução fica atrás do clique.
+ */
+export interface GrupoFila {
+  chave: string;
+  /** "265 · corte 7" — o alvo, sem os tipos. */
+  rotulo: string;
+  jobs: QueueJob[];
+  /** Estado que representa o grupo (ver `PRIORIDADE_ESTADO`). */
+  estado: JobEstado;
+  /** Job que dá progresso/etapa à linha colapsada. */
+  destaque: QueueJob;
+}
+
+// Qual estado "ganha" o rótulo do grupo. Erro na frente de tudo: um lote em que
+// uma peça falhou não pode se anunciar como concluído. Depois vem o que ainda
+// está acontecendo; cancelado fica por último, abaixo até de concluído, porque
+// é o desfecho que menos pede atenção.
+const PRIORIDADE_ESTADO: JobEstado[] = ['erro', 'rodando', 'aguardando', 'concluido', 'cancelado'];
+
+export function agruparFila(jobs: QueueJob[]): GrupoFila[] {
+  const grupos = new Map<string, QueueJob[]>();
+  for (const job of jobs) {
+    const chave = chaveDoGrupo(job);
+    const atual = grupos.get(chave);
+    if (atual) atual.push(job);
+    else grupos.set(chave, [job]);
+  }
+
+  return [...grupos.entries()].map(([chave, doGrupo]) => {
+    const estado =
+      PRIORIDADE_ESTADO.find((candidato) => doGrupo.some((job) => job.estado === candidato)) ??
+      doGrupo[0].estado;
+    const destaque = doGrupo.find((job) => job.estado === estado) ?? doGrupo[0];
+    return { chave, rotulo: destaque.alvo, jobs: doGrupo, estado, destaque };
+  });
+}
+
 interface WorkbenchQueueContextValue {
   jobs: QueueJob[];
+  /** A fila como a UI desenha: uma linha por alvo (D-425). */
+  grupos: GrupoFila[];
   /** Registra (ou re-registra) o acompanhamento de um render recém-disparado. */
   registerJob: (job: RegistroJob) => void;
   removeJob: (id: string) => void;
+  /** D-426: pede ao backend que interrompa o job. Rejeita com a mensagem da API. */
+  cancelJob: (id: string) => Promise<void>;
   clearAll: () => void;
 }
 
@@ -276,11 +389,15 @@ export function WorkbenchQueueProvider({ children }: { children: ReactNode }) {
       familia: 'midia',
       corteId: registro.corteId,
       projetoId: registro.projetoId,
+      // O alvo real chega no primeiro poll; até lá o rótulo otimista serve.
+      alvo: registro.rotulo,
+      rotuloTipo: 'render',
       rotulo: registro.rotulo,
       estado: 'rodando',
       progresso: 0,
       etapa: 'Iniciando render final',
       erro: '',
+      terminalDesde: null,
     };
     setEstado((anterior) => ({
       jobs: ordenar([...anterior.jobs.filter((j) => j.id !== id), job]),
@@ -297,6 +414,23 @@ export function WorkbenchQueueProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const cancelJob = useCallback(
+    async (id: string) => {
+      // Marca otimista: o backend leva alguns segundos para os processos
+      // morrerem e o poll refletir o novo estado. Sem isso, o operador clica em
+      // cancelar e a linha segue dizendo "rodando" — e ele clica de novo.
+      setEstado((anterior) => ({
+        ...anterior,
+        jobs: anterior.jobs.map((job) =>
+          job.id === id ? { ...job, estado: 'cancelado', etapa: 'Cancelando…' } : job,
+        ),
+      }));
+      await api.cancelarJob(id);
+      await filaGlobal.refetch();
+    },
+    [filaGlobal],
+  );
+
   const clearAll = useCallback(() => {
     setEstado((anterior) => ({
       jobs: [],
@@ -304,9 +438,11 @@ export function WorkbenchQueueProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const grupos = useMemo(() => agruparFila(estado.jobs), [estado.jobs]);
+
   const value = useMemo(
-    () => ({ jobs: estado.jobs, registerJob, removeJob, clearAll }),
-    [estado.jobs, registerJob, removeJob, clearAll],
+    () => ({ jobs: estado.jobs, grupos, registerJob, removeJob, cancelJob, clearAll }),
+    [estado.jobs, grupos, registerJob, removeJob, cancelJob, clearAll],
   );
 
   return <WorkbenchQueueContext.Provider value={value}>{children}</WorkbenchQueueContext.Provider>;
