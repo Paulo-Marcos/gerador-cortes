@@ -2,6 +2,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { spawn } = require("child_process");
+const { AsyncLocalStorage } = require("node:async_hooks");
 const { clockNow, formatDuration } = require("./worker_time.js");
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -129,6 +130,75 @@ const MAX_PARALLEL_OVERLAYS = Number(
   process.env.REMOTION_OVERLAY_PARALLEL || "2",
 );
 const activeJobs = new Map();
+
+// ── Ack de início e cancelamento (D-424 / D-426) ───────────────────────────
+// O protocolo original tinha só dois arquivos: `req_` (pedido) e `res_`
+// (desfecho). Faltavam dois sinais:
+//
+//   `ack_{id}.json`    — o worker COMEÇOU a executar. Sem ele, o backend não
+//     distingue "esperando na fila" de "renderizando", e o timeout do job
+//     acabava sendo consumido pela espera (D-424): com dois cortes em voo, um
+//     chunk de overlay podia estourar os 30 min sem nunca ter rodado.
+//   `cancel_{id}.json` — o operador desistiu. Mata a árvore de processos do
+//     job e devolve `res_` com status `cancelado` (D-426), em vez de exigir
+//     que se derrube a aplicação inteira.
+//
+// O id do job viaja por AsyncLocalStorage em vez de parâmetro: `runCommand`
+// tem 8 pontos de chamada e jobs rodam em paralelo, então uma variável de
+// módulo apontaria para o job errado.
+const jobContext = new AsyncLocalStorage();
+const cancelados = new Set();
+const filhosPorJob = new Map();
+
+function ackPath(id) {
+  return path.join(filaDir, `ack_${id}.json`);
+}
+
+function cancelPath(id) {
+  return path.join(filaDir, `cancel_${id}.json`);
+}
+
+function removerSeExistir(filePath) {
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (e) {
+    console.warn(`⚠️ Não foi possível remover ${path.basename(filePath)}: ${e.message}`);
+  }
+}
+
+function registrarFilho(child) {
+  const store = jobContext.getStore();
+  if (!store) return;
+  if (!filhosPorJob.has(store.id)) filhosPorJob.set(store.id, new Set());
+  filhosPorJob.get(store.id).add(child);
+  const esquecer = () => filhosPorJob.get(store.id)?.delete(child);
+  child.once("close", esquecer);
+  child.once("error", esquecer);
+}
+
+/** Mata a árvore de processos do job. Por PID + /T — NUNCA por nome de imagem,
+ *  que derrubaria ffmpeg de outros cortes (e da produção). */
+function matarFilhos(id) {
+  const filhos = filhosPorJob.get(id);
+  if (!filhos || filhos.size === 0) return 0;
+  let mortos = 0;
+  for (const child of filhos) {
+    if (!child.pid || child.killed) continue;
+    try {
+      if (process.platform === "win32") {
+        spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+          stdio: "ignore",
+        });
+      } else {
+        child.kill("SIGKILL");
+      }
+      mortos += 1;
+    } catch (e) {
+      console.warn(`⚠️ Falha ao encerrar PID ${child.pid}: ${e.message}`);
+    }
+  }
+  return mortos;
+}
 
 // D-065: folga mínima de RAM livre (MB) para INICIAR um job concorrente.
 // Um único ffmpeg de compose+encode com vários overlays ProRes 4444 pode
@@ -276,6 +346,7 @@ async function getVideoInfo(filePath) {
       ],
       { shell: true },
     );
+    registrarFilho(child);
 
     let output = "";
     let errorOutput = "";
@@ -373,7 +444,45 @@ async function checkFila() {
   }
 }
 
+/**
+ * Envelope de execução: anuncia o início (`ack_`), amarra o id do job ao
+ * contexto assíncrono (para `registrarFilho` saber de quem é cada processo)
+ * e converte um kill por cancelamento no desfecho `cancelado` — sem isso o
+ * job morto sairia como "Exit code: 1", indistinguível de uma falha real.
+ */
 async function processJob(jobData, jobFile) {
+  const { id } = jobData;
+  const resPath = path.join(filaDir, `res_${id}.json`);
+
+  try {
+    fs.writeFileSync(
+      ackPath(id),
+      JSON.stringify({ id, started_at: Date.now() }),
+    );
+  } catch (e) {
+    console.warn(`⚠️ Falha ao anunciar início de ${id}: ${e.message}`);
+  }
+
+  try {
+    await jobContext.run({ id }, () => executarJob(jobData, jobFile));
+    if (cancelados.has(id)) {
+      fs.writeFileSync(
+        resPath,
+        JSON.stringify({
+          status: "cancelado",
+          erro: "Cancelado pelo operador",
+        }),
+      );
+    }
+  } finally {
+    cancelados.delete(id);
+    filhosPorJob.delete(id);
+    removerSeExistir(ackPath(id));
+    removerSeExistir(cancelPath(id));
+  }
+}
+
+async function executarJob(jobData, jobFile) {
   configureLogLevel(jobData.log_level || jobData.logLevel);
   const { id, cmd, cwd } = jobData;
   const resPath = path.join(filaDir, `res_${id}.json`);
@@ -1028,6 +1137,7 @@ function runCommand(command, args, cwd, shell) {
         NODE_OPTIONS: buildNodeOptions(),
       },
     });
+    registrarFilho(child);
 
     child.stdout.on("data", (data) => {
       const text = data.toString();
@@ -1112,11 +1222,56 @@ function runCommandOutput(command, args, cwd, shell) {
   });
 }
 
+/**
+ * Atende os pedidos de cancelamento (D-426). Job em execução tem a árvore de
+ * processos encerrada e o desfecho escrito pelo `processJob`; job ainda na
+ * fila é respondido aqui mesmo, para o backend não esperar o timeout inteiro
+ * por algo que nunca vai rodar.
+ */
+function tratarCancelamentos(files) {
+  const removidos = new Set();
+  for (const nome of files) {
+    if (!nome.startsWith("cancel_") || !nome.endsWith(".json")) continue;
+    const id = nome.slice("cancel_".length, -".json".length);
+    const jobFile = `req_${id}.json`;
+
+    if (activeJobs.has(jobFile)) {
+      if (cancelados.has(id)) continue; // kill já disparado neste job
+      cancelados.add(id);
+      const mortos = matarFilhos(id);
+      console.log(
+        `[${clockNow()}] 🛑 [Cancelamento] ${id}: ${mortos} processo(s) encerrado(s).`,
+      );
+      continue; // o processJob escreve o res_ e limpa os sentinelas
+    }
+
+    const reqPath = path.join(filaDir, jobFile);
+    if (fs.existsSync(reqPath)) {
+      removerSeExistir(reqPath);
+      removidos.add(jobFile);
+      fs.writeFileSync(
+        path.join(filaDir, `res_${id}.json`),
+        JSON.stringify({
+          status: "cancelado",
+          erro: "Cancelado pelo operador antes de iniciar",
+        }),
+      );
+      console.log(`[${clockNow()}] 🛑 [Cancelamento] ${id}: removido da fila.`);
+    }
+    removerSeExistir(path.join(filaDir, nome));
+  }
+  return removidos;
+}
+
 async function checkFilaParallel() {
   try {
     const files = fs.readdirSync(filaDir);
+    // O snapshot de `files` é anterior ao cancelamento: sem descontar os
+    // pedidos que acabaram de sair, o loop abaixo leria um req_ inexistente e
+    // sobrescreveria o `res_ cancelado` com um erro de leitura.
+    const removidos = tratarCancelamentos(files);
     const reqFiles = files.filter(
-      (f) => f.startsWith("req_") && f.endsWith(".json"),
+      (f) => f.startsWith("req_") && f.endsWith(".json") && !removidos.has(f),
     );
 
     for (const jobFile of reqFiles) {

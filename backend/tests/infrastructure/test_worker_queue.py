@@ -2,12 +2,14 @@
 
 Áreas cobertas:
   - `_polling_existencia`: fallback puro.
-  - `_aguardar_arquivo_de_resposta`: caminho rápido com watcher real e
-    queda para polling quando o watcher quebra (ImportError, exceções).
+  - `_aguardar_arquivo_de_resposta`: caminho rápido com watcher real,
+    queda para polling quando o watcher quebra (ImportError, exceções) e
+    o reinício do relógio no `ack_` (D-424).
   - `_watch_until_present`: regressão do bug do `awatch(timeout=...)`
     — garante que NÃO passamos kwargs inválidos.
   - `RemotionWorkerQueue.submit_and_wait`: protocolo de fila (req → res),
-    propagação de categoria, timeout e falha do worker.
+    propagação de categoria, timeout, falha e cancelamento do worker.
+  - `cancelar_owner`: sentinela de cancelamento por dono (D-426).
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ import pytest
 from app.infrastructure.worker_queue import (
     RemotionWorkerQueue,
     WorkerJob,
+    WorkerJobCancelled,
     WorkerJobCategory,
     WorkerJobFailed,
     WorkerJobTimeout,
@@ -30,6 +33,8 @@ from app.infrastructure.worker_queue import (
     _polling_existencia,
     _queue_job_id,
     _watch_until_present,
+    cancelar_owner,
+    jobs_em_voo,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -42,14 +47,13 @@ class TestPollingExistencia:
         f = tmp_path / "res_x.json"
         f.write_text("{}", encoding="utf-8")
         inicio = time.perf_counter()
-        ok = asyncio.run(_polling_existencia(f, timeout=10, intervalo=0.5))
-        assert ok is True
+        achado = asyncio.run(_polling_existencia([f], timeout=10, intervalo=0.5))
+        assert achado == f
         assert time.perf_counter() - inicio < 0.1
 
     def test_timeout_quando_arquivo_nao_aparece(self, tmp_path):
         f = tmp_path / "res_x.json"
-        ok = asyncio.run(_polling_existencia(f, timeout=1, intervalo=0.1))
-        assert ok is False
+        assert asyncio.run(_polling_existencia([f], timeout=1, intervalo=0.1)) is None
 
     def test_detecta_arquivo_criado_durante_espera(self, tmp_path):
         f = tmp_path / "res_x.json"
@@ -60,11 +64,27 @@ class TestPollingExistencia:
                 f.write_text("{}", encoding="utf-8")
 
             criar_task = asyncio.create_task(criar(0.2))
-            ok = await _polling_existencia(f, timeout=5, intervalo=0.1)
+            achado = await _polling_existencia([f], timeout=5, intervalo=0.1)
             await criar_task
-            return ok
+            return achado
 
-        assert asyncio.run(cenario()) is True
+        assert asyncio.run(cenario()) == f
+
+    def test_devolve_qual_dos_alvos_apareceu(self, tmp_path):
+        res = tmp_path / "res_x.json"
+        ack = tmp_path / "ack_x.json"
+
+        async def cenario():
+            async def criar(delay: float):
+                await asyncio.sleep(delay)
+                ack.write_text("{}", encoding="utf-8")
+
+            criar_task = asyncio.create_task(criar(0.2))
+            achado = await _polling_existencia([res, ack], timeout=5, intervalo=0.1)
+            await criar_task
+            return achado
+
+        assert asyncio.run(cenario()) == ack
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -77,13 +97,13 @@ class TestAguardarArquivoDeResposta:
         f = tmp_path / "res_x.json"
         f.write_text("{}", encoding="utf-8")
         inicio = time.perf_counter()
-        ok = asyncio.run(_aguardar_arquivo_de_resposta(f, timeout=10))
+        ok = asyncio.run(_aguardar_arquivo_de_resposta(f, tmp_path / "ack_x.json", timeout=10))
         assert ok is True
         assert time.perf_counter() - inicio < 0.1
 
     def test_timeout_quando_arquivo_nao_aparece(self, tmp_path):
         f = tmp_path / "res_x.json"
-        ok = asyncio.run(_aguardar_arquivo_de_resposta(f, timeout=1))
+        ok = asyncio.run(_aguardar_arquivo_de_resposta(f, tmp_path / "ack_x.json", timeout=1))
         assert ok is False
 
     def test_detecta_arquivo_criado_apos_inicio(self, tmp_path):
@@ -98,7 +118,7 @@ class TestAguardarArquivoDeResposta:
 
             criar_task = asyncio.create_task(criar(0.15))
             inicio = time.perf_counter()
-            ok = await _aguardar_arquivo_de_resposta(f, timeout=10)
+            ok = await _aguardar_arquivo_de_resposta(f, tmp_path / "ack_x.json", timeout=10)
             elapsed = time.perf_counter() - inicio
             await criar_task
             return ok, elapsed
@@ -126,11 +146,50 @@ class TestAguardarArquivoDeResposta:
                 f.write_text("{}", encoding="utf-8")
 
             criar = asyncio.create_task(criar(0.2))
-            ok = await _aguardar_arquivo_de_resposta(f, timeout=3)
+            ok = await _aguardar_arquivo_de_resposta(f, tmp_path / "ack_x.json", timeout=3)
             await criar
             return ok
 
         assert asyncio.run(cenario()) is True
+
+
+class TestRelogioComecaNoAck:
+    """D-424: o `timeout_sec` mede EXECUÇÃO, não espera na fila.
+
+    Antes, um chunk de overlay atrás de outros jobs consumia os 30 min de
+    orçamento sem nunca ter rodado — e o retry re-submetia por cima de um
+    job que o worker já estava executando.
+    """
+
+    def test_ack_reinicia_a_contagem(self, tmp_path):
+        res = tmp_path / "res_x.json"
+        ack = tmp_path / "ack_x.json"
+
+        async def cenario():
+            async def anunciar_inicio():
+                # Chega quase no fim do 1º orçamento: sem o reinício, a espera
+                # terminaria em ~0,6 s no total.
+                await asyncio.sleep(0.5)
+                ack.write_text("{}", encoding="utf-8")
+
+            anuncio = asyncio.create_task(anunciar_inicio())
+            inicio = time.perf_counter()
+            ok = await _aguardar_arquivo_de_resposta(res, ack, timeout=1)
+            elapsed = time.perf_counter() - inicio
+            await anuncio
+            return ok, elapsed
+
+        ok, elapsed = asyncio.run(cenario())
+        assert ok is False, "sem res_, a espera termina em timeout"
+        assert elapsed > 1.2, f"o ack deveria ter reiniciado o relógio; esperou só {elapsed:.2f}s"
+
+    def test_espera_na_fila_sozinha_ainda_estoura(self, tmp_path):
+        """Sem ack nenhum, o job continua tendo um teto — não espera para sempre."""
+        res = tmp_path / "res_x.json"
+        inicio = time.perf_counter()
+        ok = asyncio.run(_aguardar_arquivo_de_resposta(res, tmp_path / "ack_x.json", timeout=1))
+        assert ok is False
+        assert time.perf_counter() - inicio < 2.5
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -157,7 +216,7 @@ class TestAwatchKwargsRegressao:
         async def cenario():
             try:
                 await asyncio.wait_for(
-                    _watch_until_present(fake_awatch, f, timeout=1),
+                    _watch_until_present(fake_awatch, [f], timeout=1),
                     timeout=2,
                 )
             except (TimeoutError, StopAsyncIteration):
@@ -320,6 +379,29 @@ class TestRemotionWorkerQueueSubmit:
 
         asyncio.run(cenario())
 
+    def test_status_cancelado_levanta_workerjobcancelled(self, tmp_path):
+        """Cancelamento não é falha: quem orquestra precisa distinguir para
+        não re-tentar o que o operador mandou parar (D-426)."""
+        queue = RemotionWorkerQueue(tmp_path)
+        job = WorkerJob(id="job_cancel", cmd=["x"], cwd=tmp_path, timeout_sec=5)
+
+        async def cenario():
+            async def fake_worker():
+                req = await _esperar_req(tmp_path, job)
+                queue_id = req.stem.removeprefix("req_")
+                _write_resposta(
+                    tmp_path / f"res_{queue_id}.json",
+                    status="cancelado",
+                    erro="Cancelado pelo operador",
+                )
+
+            worker_task = asyncio.create_task(fake_worker())
+            with pytest.raises(WorkerJobCancelled, match="Cancelado pelo operador"):
+                await queue.submit_and_wait(job)
+            await worker_task
+
+        asyncio.run(cenario())
+
     def test_remove_request_e_response_stale_antes_de_enfileirar(self, tmp_path):
         """Restos de execuções anteriores não devem mascarar a resposta nova."""
         (tmp_path / "req_job_stale.json").write_text("{}", encoding="utf-8")
@@ -335,3 +417,46 @@ class TestRemotionWorkerQueueSubmit:
         # bloqueia esperando o NOVO res. Como ninguém escreve, dá timeout.
         with pytest.raises(WorkerJobTimeout):
             asyncio.run(queue.submit_and_wait(job))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# cancelar_owner — sentinela de cancelamento por dono (D-426)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestCancelarOwner:
+    def test_escreve_sentinela_para_job_em_voo(self, tmp_path):
+        queue = RemotionWorkerQueue(tmp_path)
+        job = WorkerJob(
+            id="job_owner",
+            cmd=["x"],
+            cwd=tmp_path,
+            timeout_sec=5,
+            owner="corte-1",
+        )
+
+        async def cenario():
+            async def cancelar_quando_enfileirar():
+                await _esperar_req(tmp_path, job)
+                assert jobs_em_voo("corte-1") == 1
+                assert cancelar_owner("corte-1") == 1
+                # O worker responderia ao sentinela; aqui simulamos a resposta.
+                queue_id = _queue_job_id(job)
+                assert (tmp_path / f"cancel_{queue_id}.json").exists()
+                _write_resposta(
+                    tmp_path / f"res_{queue_id}.json",
+                    status="cancelado",
+                    erro="Cancelado pelo operador",
+                )
+
+            cancelador = asyncio.create_task(cancelar_quando_enfileirar())
+            with pytest.raises(WorkerJobCancelled):
+                await queue.submit_and_wait(job)
+            await cancelador
+
+        asyncio.run(cenario())
+        assert jobs_em_voo("corte-1") == 0, "job resolvido não pode seguir 'em voo'"
+
+    def test_dono_sem_job_em_voo_e_noop(self, tmp_path):
+        assert cancelar_owner("ninguem") == 0
+        assert jobs_em_voo("ninguem") == 0

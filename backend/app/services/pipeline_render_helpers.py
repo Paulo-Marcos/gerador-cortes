@@ -24,11 +24,16 @@ async def _retry_async(
     operacao,
     policy: RetryPolicy,
     rotulo: str,
+    nao_retentar: tuple[type[BaseException], ...] = (),
 ) -> None:
     """Executa `operacao()` com retry segundo `policy`.
 
     `operacao` é uma callable que retorna uma coroutine — chamada de
     novo a cada tentativa (precisa ser fresh, não a mesma coroutine).
+
+    `nao_retentar` lista os erros que propagam na primeira ocorrência. Existe
+    para o cancelamento (D-426): re-tentar o que o operador mandou parar
+    ressuscitaria o trabalho três vezes antes de desistir.
     """
     ultimo_erro: BaseException | None = None
     for attempt in range(1, policy.total_attempts + 1):
@@ -37,6 +42,8 @@ async def _retry_async(
             if attempt > 1:
                 operational_info("Pipeline", f"* ✅ {rotulo}: sucesso na tentativa {attempt}")
             return
+        except nao_retentar:
+            raise
         except Exception as e:
             ultimo_erro = e
             if not policy.should_retry(attempt):

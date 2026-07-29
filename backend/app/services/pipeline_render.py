@@ -32,9 +32,11 @@ from app.domain.youtube_layout import aplicar_layout_card_por_contexto
 from app.infrastructure.worker_queue import (
     RemotionWorkerQueue,
     WorkerJob,
+    WorkerJobCancelled,
     WorkerJobCategory,
     WorkerJobFailed,
     WorkerJobTimeout,
+    definir_dono_dos_jobs,
 )
 from app.models import Corte, Projeto
 from app.services.app_logging import (
@@ -220,6 +222,10 @@ async def renderizar_pipeline_otimizado(
         'sucesso'
     """
     started_at = time.time()
+    # Todo job que este pipeline enfileirar (grade, bundle, cada chunk de
+    # overlay, encode final) passa a pertencer a este corte — é o que permite
+    # cancelar o render inteiro de uma vez (D-426).
+    definir_dono_dos_jobs(corte_id)
 
     def report(progress: int, stage: str) -> None:
         operational_info("Render final", f"{progress}% - {stage}", started_at=started_at)
@@ -508,6 +514,20 @@ async def _fase_grade(ctx: _RenderCtx) -> None:
         )
 
 
+# Faixa que a Fase 2 ocupa na barra de progresso: 35 ao entrar, 55 ao concluir.
+# Os chunks se distribuem no meio para a fila mostrar avanço enquanto renderiza.
+_OVERLAYS_PROGRESSO_INICIO = 35
+_OVERLAYS_PROGRESSO_FIM = 55
+
+
+def _progresso_overlays(concluidos: int, total: int) -> int:
+    """Posição na barra depois de `concluidos` de `total` chunks renderizados."""
+    if total <= 0:
+        return _OVERLAYS_PROGRESSO_FIM
+    faixa = _OVERLAYS_PROGRESSO_FIM - _OVERLAYS_PROGRESSO_INICIO
+    return _OVERLAYS_PROGRESSO_INICIO + round(faixa * min(concluidos, total) / total)
+
+
 async def _fase_overlays(ctx: _RenderCtx) -> None:
     """Fase 2/4: prepara e renderiza os chunks de overlay transparentes.
 
@@ -576,6 +596,10 @@ async def _fase_overlays(ctx: _RenderCtx) -> None:
                     render_cfg,
                     bundle_dir=bundle_dir,
                     render_config=ctx.render_config,
+                    progresso=lambda feitos, total: ctx.report(
+                        _progresso_overlays(feitos, total),
+                        f"Fase 2/4: overlay {feitos}/{total}",
+                    ),
                 )
                 for chunk_id, erro in falhados:
                     ctx.event_log.emit(
@@ -785,6 +809,7 @@ async def _executar_batch_overlay_chunks_parallel(
     render_cfg: RenderSettings,
     bundle_dir: Path | None = None,
     render_config: ProjetoRenderConfig | None = None,
+    progresso: Callable[[int, int], None] | None = None,
 ) -> list[tuple[str, BaseException]]:
     """Renderiza chunks de overlays. Falhas isoladas não derrubam o batch.
 
@@ -796,6 +821,10 @@ async def _executar_batch_overlay_chunks_parallel(
     Quando `bundle_dir` vem como `None`, prepara o bundle aqui. Quando
     vem pronto (caso do orquestrador, que dispara o bundle em paralelo
     com a Fase 1), reaproveita — esse é o caminho rápido.
+
+    `progresso(concluidos, total)` é chamado ao fim de cada lote. Sem ele a
+    fase inteira ficava muda: a fila mostrava 35% e o mesmo texto por dezenas
+    de minutos, indistinguível de um travamento (D-424).
     """
     perfil = overlay_codec_profile(render_cfg.overlay_codec)
     cfg = render_config or ProjetoRenderConfig()
@@ -841,6 +870,9 @@ async def _executar_batch_overlay_chunks_parallel(
                     f"❌ Chunk {chunk['id']} falhou após {render_cfg.overlay_max_attempts} tentativas: "
                     f"{type(result).__name__}: {result}",
                 )
+
+        if progresso is not None:
+            progresso(min(batch_start + len(batch), total), total)
 
         await _aguardar_cooldown(
             render_cfg.cooldown_sec, batch_start + _MAX_OVERLAYS_PARALLEL < total
@@ -1171,6 +1203,9 @@ async def _executar_render_overlay_chunk(
         ),
         policy=policy,
         rotulo=f"chunk_{chunk['id']}",
+        # Cancelamento não é falha transitória: re-tentar ressuscitaria três
+        # vezes o chunk que o operador acabou de mandar parar (D-426).
+        nao_retentar=(WorkerJobCancelled,),
     )
 
 
