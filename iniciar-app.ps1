@@ -3,8 +3,11 @@
 # esconde o console e o iniciar-app.vbs, que chama este script.
 #
 # D-432. Duas garantias que valem mais que o resto do arquivo:
-#   1. NUNCA derruba nada. Se o /api/health ja responde, so abre a janela.
-#      Um clique acidental com a aplicacao no ar nao pode reiniciar servico.
+#   1. Clicar no atalho REINICIA: encerra a execucao anterior e sobe uma nova.
+#      A unica excecao e trabalho pesado em andamento (render, upload) - ai
+#      pergunta antes, porque abortar um upload deixa video parcial no canal.
+#      Defina $ReiniciarSemPerguntar = $true no app.local.ps1 para nunca
+#      perguntar.
 #   2. Le as portas do PROPRIO checkout (dev.ports.local.ps1 quando existe),
 #      entao o atalho do DEV e o do PROD convivem sem disputar porta - a
 #      mesma regra do D-370.
@@ -20,9 +23,11 @@ $FrontendPort = 4300
 $portsOverride = Join-Path $PSScriptRoot 'dev.ports.local.ps1'
 if (Test-Path $portsOverride) { . $portsOverride }
 
-# Ajustes opcionais desta maquina (untracked): $AppName, $EdgeAppId.
+# Ajustes opcionais desta maquina (untracked): $AppName, $EdgeAppId,
+# $ReiniciarSemPerguntar.
 $AppName  = 'CutCut'
 $EdgeAppId = $null
+$ReiniciarSemPerguntar = $false
 $appOverride = Join-Path $PSScriptRoot 'app.local.ps1'
 if (Test-Path $appOverride) { . $appOverride }
 
@@ -107,19 +112,81 @@ function Open-Janela {
     }
 }
 
-if (-not (Test-NoAr -Url $healthUrl -Tentativas 3)) {
-    Start-Process -FilePath 'powershell' -WindowStyle Hidden -ArgumentList @(
-        '-NoProfile', '-ExecutionPolicy', 'Bypass',
-        '-File', (Join-Path $PSScriptRoot 'dev.ps1'), '-Silent'
-    )
+<#
+Trabalho pesado em andamento (bruto, render, upload) segundo a fila global.
+Em caso de duvida devolve lista vazia - o pedido do dono e reiniciar, entao
+uma API muda nao pode virar um bloqueio.
+#>
+function Get-JobsAtivos {
+    try {
+        $fila = Invoke-RestMethod -TimeoutSec 5 -Uri "http://localhost:$BackendPort/api/export/fila-global"
+        return @($fila.jobs | Where-Object { $_.estado -in @('aguardando', 'rodando') })
+    } catch { return @() }
+}
 
-    # Espera os DOIS: so o backend de pe ainda abriria a janela em branco. O
-    # primeiro boot inclui o bundle do Remotion, dai a folga de 2 minutos.
-    $limite = (Get-Date).AddSeconds(120)
-    while ((Get-Date) -lt $limite) {
-        if ((Test-NoAr -Url $healthUrl) -and (Test-NoAr -Url $appUrl)) { break }
-        Start-Sleep -Seconds 1
+<# Segue com o reinicio? So pergunta quando ha o que perder. #>
+function Confirm-Reinicio {
+    if ($ReiniciarSemPerguntar) { return $true }
+    $ativos = Get-JobsAtivos
+    if ($ativos.Count -eq 0) { return $true }
+
+    $lista = ($ativos | Select-Object -First 5 | ForEach-Object { "  - $($_.rotulo) ($($_.estado))" }) -join "`n"
+    $texto = "Ha $($ativos.Count) trabalho(s) em andamento:`n`n$lista`n`n" +
+             "Reiniciar aborta tudo isso. Upload do YouTube interrompido deixa video parcial no canal.`n`n" +
+             "Reiniciar mesmo assim?"
+    # 4 = Sim/Nao, 48 = icone de aviso, 65536 = traz para a frente (o script
+    # roda escondido, senao a caixa nasce atras das outras janelas).
+    $resposta = (New-Object -ComObject WScript.Shell).Popup($texto, 0, "$AppName - reiniciar?", 4 + 48 + 65536)
+    return $resposta -eq 6
+}
+
+<#
+Encerra o supervisor da execucao anterior. Nao precisa ser delicado com os
+filhos: o dev.ps1 novo comeca limpando portas e processos deste checkout, e
+e esse mesmo caminho que ja rodava a cada boot.
+#>
+function Stop-ExecucaoAnterior {
+    # Casa o "-File <caminho>\dev.ps1" com que o supervisor e lancado, e nao a
+    # simples MENCAO do caminho: um terminal aberto lendo ou editando o arquivo
+    # tem o caminho na linha de comando e nao pode ser confundido com ele.
+    $alvo = Join-Path $PSScriptRoot 'dev.ps1'
+    $padrao = '-File\s+"?' + [regex]::Escape($alvo) + '"?'
+    Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match $padrao -and $_.ProcessId -ne $PID } |
+        ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {} }
+}
+
+$estavaNoAr = Test-NoAr -Url $healthUrl -Tentativas 3
+
+if ($estavaNoAr -and -not (Confirm-Reinicio)) {
+    # Operador escolheu preservar o trabalho em andamento: so traz a janela.
+    Open-Janela -Url $appUrl
+    exit 0
+}
+
+Stop-ExecucaoAnterior
+Start-Process -FilePath 'powershell' -WindowStyle Hidden -ArgumentList @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass',
+    '-File', (Join-Path $PSScriptRoot 'dev.ps1'), '-Silent'
+)
+
+# Num reinicio, o backend antigo ainda responde por alguns segundos depois de
+# o supervisor morrer (quem encerra os filhos e o dev.ps1 novo, no boot).
+# Sem esperar a queda, a espera abaixo daria "pronto" na primeira tentativa e
+# a janela abriria contra um servidor prestes a sumir.
+if ($estavaNoAr) {
+    $ateCair = (Get-Date).AddSeconds(45)
+    while ((Get-Date) -lt $ateCair -and (Test-NoAr -Url $healthUrl)) {
+        Start-Sleep -Milliseconds 500
     }
+}
+
+# Espera os DOIS: so o backend de pe ainda abriria a janela em branco. O
+# primeiro boot inclui o bundle do Remotion, dai a folga de 2 minutos.
+$limite = (Get-Date).AddSeconds(120)
+while ((Get-Date) -lt $limite) {
+    if ((Test-NoAr -Url $healthUrl) -and (Test-NoAr -Url $appUrl)) { break }
+    Start-Sleep -Seconds 1
 }
 
 if (-not (Test-NoAr -Url $appUrl)) {
