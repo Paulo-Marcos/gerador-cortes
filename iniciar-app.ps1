@@ -219,15 +219,28 @@ Encerra o supervisor da execucao anterior. Nao precisa ser delicado com os
 filhos: o dev.ps1 novo comeca limpando portas e processos deste checkout, e
 e esse mesmo caminho que ja rodava a cada boot.
 #>
+<# Encerra o processo e TODOS os descendentes, das folhas para a raiz. #>
+function Stop-ArvoreDeProcessos {
+    param([int]$ProcessId)
+    Get-CimInstance Win32_Process -Filter "ParentProcessId = $ProcessId" -ErrorAction SilentlyContinue |
+        ForEach-Object { Stop-ArvoreDeProcessos -ProcessId $_.ProcessId }
+    try { Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue } catch {}
+}
+
 function Stop-ExecucaoAnterior {
     # Casa o "-File <caminho>\dev.ps1" com que o supervisor e lancado, e nao a
     # simples MENCAO do caminho: um terminal aberto lendo ou editando o arquivo
     # tem o caminho na linha de comando e nao pode ser confundido com ele.
     $alvo = Join-Path $PSScriptRoot 'dev.ps1'
     $padrao = '-File\s+"?' + [regex]::Escape($alvo) + '"?'
+    # D-436: pela ARVORE, nao so a raiz. Matar o supervisor a forca nao roda o
+    # finally dele (que era quem encerrava os filhos), e worker e backend sao
+    # lancados sem o caminho do checkout na linha de comando - orfaos, ficam
+    # invisiveis para a limpeza por caminho do dev.ps1 e sobrevivem a todo
+    # restart. Foi assim que tres native_worker.js acumularam.
     Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -match $padrao -and $_.ProcessId -ne $PID } |
-        ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {} }
+        ForEach-Object { Stop-ArvoreDeProcessos -ProcessId $_.ProcessId }
 }
 
 $estavaNoAr = Test-NoAr -Url $healthUrl -Tentativas 3

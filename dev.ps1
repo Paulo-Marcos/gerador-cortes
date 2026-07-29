@@ -81,9 +81,11 @@ function Test-CortadorProcess {
     # porta) foram removidos de proposito: eles NAO distinguem este DEV do PROD
     # (C:\PRD\gerador-cortes) nem de apps de terceiros que usam node/vite/porta
     # 3000 (ex.: BolsoFundo), e o sweep antigo matava esses processos alheios.
-    # Processos "pathless" (backend na 8000, worker) nao entram aqui; o Ctrl+C ja
-    # os encerra pela arvore no bloco finally. Melhor deixar uma porta presa (e
-    # avisar) do que derrubar o PROD ou um app sem relacao.
+    # D-436: backend e worker deixaram de ser "pathless" - agora sao lancados
+    # com o caminho absoluto na linha de comando (--app-dir e o .js completo),
+    # entao a prova de posse abaixo tambem os alcanca quando ficam orfaos. Antes
+    # so o Ctrl+C os encerrava, pela arvore, no bloco finally - e um restart que
+    # derruba o supervisor a forca deixava worker acumulado a cada inicio.
     param([string]$CommandLine, [string]$ExecutablePath)
 
     $cl  = if ($CommandLine)    { $CommandLine }    else { "" }
@@ -322,7 +324,10 @@ $services = @(
         Label = "[BACK] "
         Color = "Cyan"
         FileName = $CMD
-        Arguments = "/d /s /c `"python -m uvicorn app.main:app --host 0.0.0.0 --port $BackendPort --reload`""
+        # D-436: `--app-dir <caminho>` em vez de contar so com o cwd — mesma
+        # razao do worker: sem o checkout na linha de comando, um backend orfao
+        # nao e reconhecido pela limpeza e fica segurando a porta.
+        Arguments = "/d /s /c `"python -m uvicorn app.main:app --app-dir `"$(Join-Path $BASE 'backend')`" --host 0.0.0.0 --port $BackendPort --reload`""
         WorkingDirectory = Join-Path $BASE "backend"
         EnvVars = @{
             PYTHONUNBUFFERED = "1"
@@ -358,7 +363,11 @@ $services = @(
         Label = "[WORK] "
         Color = "Yellow"
         FileName = $CMD
-        Arguments = '/d /s /c "node native_worker.js"'
+        # D-436: caminho ABSOLUTO de proposito, embora o cwd ja seja este. E o
+        # que poe o checkout na linha de comando do node e devolve o worker ao
+        # alcance de Test-CortadorProcess; com "node native_worker.js" ele ficava
+        # invisivel para a limpeza e sobrevivia a cada reinicio.
+        Arguments = "/d /s /c `"node `"$(Join-Path $BASE 'video-renderer\native_worker.js')`"`""
         WorkingDirectory = Join-Path $BASE "video-renderer"
         EnvVars = @{
             LANG = "en_US.UTF-8"
