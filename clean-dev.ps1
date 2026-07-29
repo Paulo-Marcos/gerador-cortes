@@ -1,4 +1,4 @@
-# clean-dev.ps1 - Limpa processos locais do CortadorLive.
+# clean-dev.ps1 - Limpa processos locais do CutCut.
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
@@ -56,7 +56,7 @@ if ($allPids) {
             Write-Host "Encerrando: $($cim.Name) (PID $targetPid)..." -ForegroundColor Yellow
             Stop-ProcessTree -ProcessId $targetPid
         } else {
-            Write-Host "Porta ocupada por $($cim.Name) (PID $targetPid) alheio ao CortadorLive - ignorando." -ForegroundColor DarkGray
+            Write-Host "Porta ocupada por $($cim.Name) (PID $targetPid) alheio ao CutCut - ignorando." -ForegroundColor DarkGray
         }
     }
 } else {

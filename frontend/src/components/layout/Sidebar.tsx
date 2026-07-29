@@ -172,7 +172,7 @@ export function Sidebar({ onOpenSettings }: SidebarProps) {
       <div className="flex flex-col items-center gap-1">
         <div className="mb-2 flex h-[38px] w-[38px] items-center justify-center rounded-[var(--radius)] bg-[var(--wb-ink)] text-[var(--wb-ink-fg)]">
           <Film size={20} aria-hidden />
-          <span className="sr-only">CortadorLive</span>
+          <span className="sr-only">CutCut</span>
         </div>
 
         {globalItems.map((item) => (
