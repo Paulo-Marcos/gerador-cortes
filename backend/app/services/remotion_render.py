@@ -14,6 +14,7 @@ import shutil
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.models import Corte, MetadadoCorte, StatusCorte
+from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.pipeline_render import renderizar_pipeline_otimizado
 from app.services.render_progress import RenderProgressStore
 from sqlalchemy import select
@@ -68,11 +69,21 @@ class RemotionRenderService:
                 t.result()
                 RenderProgressStore.done(corte_id)
                 logger.info("[RemotionRender] Tarefa %s concluída com sucesso.", corte_id)
+            except asyncio.CancelledError:
+                # D-426: o operador mandou parar. `CancelledError` é
+                # BaseException, então o `except Exception` abaixo não a pegava
+                # e o render ficava eternamente "running" na fila.
+                RenderProgressStore.cancelled(corte_id)
+                logger.info("[RemotionRender] Tarefa %s cancelada pelo operador.", corte_id)
             except Exception as e:
                 RenderProgressStore.error(corte_id, str(e))
                 logger.exception("[RemotionRender] ERRO FATAL na tarefa %s: %s", corte_id, e)
 
         task.add_done_callback(handle_result)
+        # A fila global publica este render como `render:<corte>`; registrar com
+        # o mesmo id é o que dá à UI um botão de cancelar que funciona (D-426).
+        # O dono dos jobs do worker é o `corte_id`, definido pelo pipeline.
+        TrabalhoEmVoo.registrar(f"render:{corte_id}", task, owner=corte_id)
         return task
 
     @staticmethod

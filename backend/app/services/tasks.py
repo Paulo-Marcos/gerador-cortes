@@ -37,13 +37,52 @@ def fire_and_forget(
     aguardado (fire-and-forget). Retorna a `Task` caso o chamador queira
     inspecioná-la, mas não é necessário guardá-la.
     """
-    task = asyncio.create_task(coro, name=name)
+    task = asyncio.create_task(_sob_dono(coro, _chave(name)), name=name)
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
     task.add_done_callback(_log_task_exception)
     _anunciar_na_fila(name)
+    _registrar_cancelavel(name, task)
     task.add_done_callback(_encerrar_na_fila)
     return task
+
+
+async def _sob_dono(coro: Coroutine[Any, Any, Any], dono: str) -> Any:
+    """Roda `coro` marcando `dono` como responsável pelos jobs do native worker.
+
+    É o que permite matar o ffmpeg/Chromium que a task disparou ao cancelá-la
+    (D-426). O `ContextVar` é setado DENTRO da task, então cada uma tem o seu.
+
+    Ressalva conhecida: uma task que aninha o pipeline de render (o lote da
+    pós, por exemplo) tem o dono sobrescrito pelo `corte_id` de cada corte que
+    ela processa. Cancelar corte a corte (`pos:<corte>`) mata os processos;
+    cancelar o lote inteiro derruba a orquestração mas pode deixar o ffmpeg do
+    corte em curso terminar sozinho.
+    """
+    from app.infrastructure.worker_queue import definir_dono_dos_jobs
+
+    definir_dono_dos_jobs(dono)
+    return await coro
+
+
+def _registrar_cancelavel(name: str | None, task: asyncio.Task[Any]) -> None:
+    """Torna a task interrompível pela fila global (D-426).
+
+    Só entram as tasks que a fila global publica — o id registrado é o MESMO
+    que `jobs_globais` emite (`task:<nome>`), então a UI cancela com o id que
+    já tem em mãos. Task não publicada (sync de stats, OAuth) não aparece na
+    fila e portanto não tem botão de cancelar.
+    """
+    try:
+        from app.services.cancelamento_jobs import TrabalhoEmVoo
+        from app.services.tarefas_ativas import classificar_background
+
+        if classificar_background(name) is None:
+            return
+        chave = _chave(name)
+        TrabalhoEmVoo.registrar(chave, task, owner=chave)
+    except Exception as exc:  # noqa: BLE001 — registro é best-effort, nunca fatal
+        logger.warning("Falha ao registrar '%s' como cancelável: %s", name, exc)
 
 
 def _anunciar_na_fila(name: str | None) -> None:
@@ -78,7 +117,7 @@ def _encerrar_na_fila(task: asyncio.Task[Any]) -> None:
         from app.services.tarefas_ativas import TarefasAtivas
 
         if task.cancelled():
-            TarefasAtivas.encerrar(_chave(task.get_name()), sucesso=False, erro="cancelada")
+            TarefasAtivas.cancelar(_chave(task.get_name()))
             return
         exc = task.exception()
         TarefasAtivas.encerrar(

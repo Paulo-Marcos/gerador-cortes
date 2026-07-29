@@ -63,3 +63,56 @@ async def test_run_processar_queue_marca_erro_sem_derrubar_os_demais(monkeypatch
     assert fila["a"] == "concluido"
     assert fila["b"] == "erro"
     assert fila["c"] == "concluido"  # o erro em 'b' não impede 'c'
+
+
+@pytest.mark.asyncio
+async def test_item_cancelado_na_espera_e_pulado(monkeypatch):
+    """D-426: a fila é sequencial, então o corte pode ficar muito tempo
+    esperando a vez. Cancelar nessa janela precisa impedir que ele rode."""
+    ExportService._bulk_processar_sem = asyncio.Semaphore(_BULK_PROCESSAR_CONCORRENCIA)
+    ExportService._fila_processamento.clear()
+
+    processados: list[str] = []
+
+    async def fake_processar_clip(corte_id: str, filtro: str = "nenhum"):
+        processados.append(corte_id)
+        if corte_id == "a":
+            # Enquanto 'a' roda, o operador cancela 'b' (que ainda espera).
+            ExportService.cancelar_item_processamento("b")
+
+    monkeypatch.setattr(ExportService, "processar_clip", fake_processar_clip)
+
+    corte_ids = ["a", "b", "c"]
+    ExportService._fila_processamento["proj"] = {cid: "aguardando" for cid in corte_ids}
+
+    await ExportService._run_processar_queue("proj", corte_ids, "nenhum", cleanup_delay=None)
+
+    assert processados == ["a", "c"], "'b' foi cancelado antes da vez dele"
+    fila = ExportService._fila_processamento["proj"]
+    assert fila["b"] == "cancelado"
+    assert fila["c"] == "concluido"
+
+
+@pytest.mark.asyncio
+async def test_falha_causada_pelo_cancelamento_nao_vira_erro(monkeypatch):
+    """Matar os jobs do worker faz o `processar_clip` estourar. Reportar
+    'erro' mascararia a decisão do operador."""
+    ExportService._bulk_processar_sem = asyncio.Semaphore(_BULK_PROCESSAR_CONCORRENCIA)
+    ExportService._fila_processamento.clear()
+
+    async def fake_processar_clip(corte_id: str, filtro: str = "nenhum"):
+        ExportService.cancelar_item_processamento(corte_id)
+        raise RuntimeError("job do worker foi morto")
+
+    monkeypatch.setattr(ExportService, "processar_clip", fake_processar_clip)
+
+    ExportService._fila_processamento["proj"] = {"a": "aguardando"}
+    await ExportService._run_processar_queue("proj", ["a"], "nenhum", cleanup_delay=None)
+
+    assert ExportService._fila_processamento["proj"]["a"] == "cancelado"
+
+
+@pytest.mark.asyncio
+async def test_cancelar_item_fora_da_fila_devolve_false():
+    ExportService._fila_processamento.clear()
+    assert ExportService.cancelar_item_processamento("inexistente") is False

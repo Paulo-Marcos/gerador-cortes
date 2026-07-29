@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -35,6 +36,7 @@ from app.routers.cortes_schemas import (
     ValidarCenasRequest,
 )
 from app.routers.errors import erro_interno
+from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.corte import AtualizarCorteDTO, CorteService
 from app.services.deteccao_segmentos import (
@@ -504,10 +506,19 @@ async def gerar_bruto(
             else:
                 msg = resultado.get("mensagem", "erro desconhecido")
                 ExportService.set_tarefa_corte_status(corte_id, f"erro: {msg}")
+        except asyncio.CancelledError:
+            # Sem isto o status ficava em "cortando" para sempre e a fila
+            # mostrava o job rodando eternamente depois de cancelado (D-426).
+            ExportService.set_tarefa_corte_status(corte_id, "cancelado")
+            raise
         except Exception as exc:
             ExportService.set_tarefa_corte_status(corte_id, f"erro: {exc}")
 
-    fire_and_forget(_run(), name=f"gerar-bruto-{corte_id[:8]}")
+    task = fire_and_forget(_run(), name=f"gerar-bruto-{corte_id[:8]}")
+    # A fila global publica esta task como `bruto:<corte>` (vem do store do
+    # ExportService, não do nome da task), então o registro de cancelamento
+    # precisa desse id — senão o botão da fila não acha o que parar (D-426).
+    TrabalhoEmVoo.registrar(f"bruto:{corte_id}", task, owner=f"task:gerar-bruto-{corte_id[:8]}")
     return {"message": "Geração de bruto iniciada", "corte_id": corte_id}
 
 

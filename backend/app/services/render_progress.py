@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass
 from typing import Literal
 
-RenderState = Literal["idle", "running", "done", "error"]
+RenderState = Literal["idle", "running", "done", "error", "cancelled"]
 
 
 @dataclass
@@ -87,6 +87,23 @@ class RenderProgressStore:
             started_at=current.started_at if current else now,
             updated_at=now,
             error=error,
+        )
+
+    @classmethod
+    def cancelled(cls, corte_id: str, stage: str = "Render final cancelado") -> None:
+        """Desfecho de quem foi interrompido pelo operador (D-426).
+
+        Estado próprio, não `error`: a fila precisa distinguir "eu mandei
+        parar" de "quebrou" — senão todo cancelamento vira alarme vermelho.
+        """
+        current = cls._progress.get(corte_id)
+        now = time.time()
+        cls._progress[corte_id] = RenderProgress(
+            state="cancelled",
+            progress=current.progress if current else 0,
+            stage=stage,
+            started_at=current.started_at if current else now,
+            updated_at=now,
         )
 
     @classmethod

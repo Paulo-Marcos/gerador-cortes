@@ -32,14 +32,15 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 TipoJob = str
-EstadoJob = Literal["aguardando", "rodando", "concluido", "erro"]
+EstadoJob = Literal["aguardando", "rodando", "concluido", "erro", "cancelado"]
 
 ESTADOS_ATIVOS: frozenset[str] = frozenset({"aguardando", "rodando"})
 
-# Tempo que um job terminal continua sendo publicado depois de terminar. Só
-# precisa cobrir o intervalo de poll da UI com folga — 10 min também dá conta de
-# o operador abrir o app pouco depois de um render acabar.
-RETENCAO_TERMINAL_SEG = 600.0
+# Tempo que um job terminal continua sendo publicado depois de terminar. É o
+# mesmo prazo que a UI usa para sumir com o item (D-425): publicar por menos
+# tempo do que a fila exibe deixaria a lista com jobs que o backend já esqueceu
+# e que voltariam a aparecer se o operador recarregasse a página.
+RETENCAO_TERMINAL_SEG = 3600.0
 
 
 @dataclass(frozen=True)
@@ -166,13 +167,21 @@ _POS_ESTADO: dict[str, EstadoJob] = {
     "processando": "rodando",
     "concluido": "concluido",
     "erro": "erro",
+    "cancelado": "cancelado",
 }
-_POS_PROGRESSO = {"aguardando": 0, "processando": 50, "concluido": 100, "erro": 0}
+_POS_PROGRESSO = {
+    "aguardando": 0,
+    "processando": 50,
+    "concluido": 100,
+    "erro": 0,
+    "cancelado": 0,
+}
 _POS_ETAPA = {
     "aguardando": "Na fila da pós",
     "processando": "Processando clipe",
     "concluido": "Clipe processado",
     "erro": "Falha no processamento",
+    "cancelado": "Cancelado",
 }
 
 
@@ -206,6 +215,7 @@ _RENDER_ESTADO: dict[str, EstadoJob] = {
     "running": "rodando",
     "done": "concluido",
     "error": "erro",
+    "cancelled": "cancelado",
 }
 
 
@@ -287,7 +297,7 @@ def _jobs_youtube() -> list[JobGlobal]:
 # rodam síncronas no request) e as background tasks mapeadas (ingestão, render
 # multi-versão, palco). Sem progresso numérico — o estado é binário.
 
-_TAREFA_PROGRESSO = {"rodando": 50, "concluido": 100, "erro": 0}
+_TAREFA_PROGRESSO = {"rodando": 50, "concluido": 100, "erro": 0, "cancelado": 0}
 
 
 def _jobs_tarefas() -> list[JobGlobal]:

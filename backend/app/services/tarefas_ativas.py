@@ -83,9 +83,11 @@ TAREFAS_BACKGROUND: tuple[tuple[str, str, str, str], ...] = (
     ("deteccao-seg-", "bruto", "corte", "Detectando silêncios"),
 )
 
-# Tarefa terminal é descartada daqui depois disto. A fila global tem a própria
-# janela (menor); esta só evita que o dicionário cresça sem fim.
-RETENCAO_SEG = 1800.0
+# Tarefa terminal é descartada daqui depois disto. Precisa cobrir a janela de
+# `jobs_globais.RETENCAO_TERMINAL_SEG` (1 h, D-425): expirar antes faria o job
+# sumir da fila mais cedo do que o combinado. Duplicado em vez de importado
+# para não inverter a dependência — é `jobs_globais` que lê este módulo.
+RETENCAO_SEG = 3600.0
 
 
 @dataclass
@@ -162,6 +164,20 @@ class TarefasAtivas:
             return
         tarefa.estado = "concluido" if sucesso else "erro"
         tarefa.erro = "" if sucesso else erro
+        tarefa.atualizado_em = time.time()
+
+    @classmethod
+    def cancelar(cls, chave: str) -> None:
+        """Desfecho de quem o operador mandou parar (D-426).
+
+        Estado próprio, não `erro`: a fila precisa distinguir interrupção
+        deliberada de falha, senão todo cancelamento vira alarme vermelho.
+        """
+        tarefa = cls._tarefas.get(chave)
+        if tarefa is None:
+            return
+        tarefa.estado = "cancelado"
+        tarefa.erro = ""
         tarefa.atualizado_em = time.time()
 
     @classmethod

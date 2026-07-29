@@ -41,6 +41,23 @@ class _ExportBulkQueueMixin:
         return cls._fila_youtube
 
     @classmethod
+    def cancelar_item_processamento(cls, corte_id: str) -> bool:
+        """Marca um corte da fila de pós como cancelado (D-426).
+
+        Devolve False quando o corte não está numa fila ativa ou já chegou a um
+        estado terminal — não há o que cancelar. O item que ainda espera a vez é
+        PULADO por `_processar_com_sem`; o que já está processando depende do
+        cancelamento dos jobs no native worker (feito por quem chamou).
+        """
+        for fila in cls._fila_processamento.values():
+            status = fila.get(corte_id)
+            if status in ("aguardando", "processando"):
+                fila[corte_id] = "cancelado"
+                operational_info("ExportService", f"Cancelado na fila de pós: {corte_id}")
+                return True
+        return False
+
+    @classmethod
     async def bulk_processar_impl(cls, projeto_id: str, corte_ids: list[str], filtro: str):
         if cls._bulk_processar_sem is None:
             cls._bulk_processar_sem = asyncio.Semaphore(_BULK_PROCESSAR_CONCORRENCIA)
@@ -68,8 +85,16 @@ class _ExportBulkQueueMixin:
         """
         sem = cls._bulk_processar_sem
 
+        def _foi_cancelado(corte_id: str) -> bool:
+            return cls._fila_processamento.get(projeto_id, {}).get(corte_id) == "cancelado"
+
         async def _processar_com_sem(corte_id: str):
             async with sem:
+                # O cancelamento pode ter chegado enquanto o corte esperava a
+                # vez (D-426): a fila é sequencial, então essa espera é longa.
+                if _foi_cancelado(corte_id):
+                    operational_info("ExportService", f"Pulado (cancelado): {corte_id}")
+                    return
                 cls._fila_processamento[projeto_id][corte_id] = "processando"
                 operational_info("ExportService", f"Iniciando: {corte_id} com filtro '{filtro}'")
                 try:
@@ -77,6 +102,12 @@ class _ExportBulkQueueMixin:
                     cls._fila_processamento[projeto_id][corte_id] = "concluido"
                     operational_info("ExportService", f"Concluído: {corte_id}")
                 except Exception as e:
+                    # Cancelar mata os jobs do worker, e a falha resultante
+                    # chega aqui: reportar "erro" mascararia a decisão do
+                    # operador. O estado cancelado é o desfecho correto.
+                    if _foi_cancelado(corte_id):
+                        operational_info("ExportService", f"Interrompido: {corte_id}")
+                        return
                     cls._fila_processamento[projeto_id][corte_id] = "erro"
                     operational_error("ExportService", f"Erro: {corte_id}: {e}")
 

@@ -377,6 +377,13 @@ export const api = {
 
   filaGlobal: () => request<FilaGlobal>('/export/fila-global'),
 
+  /** D-426: interrompe um job da fila global sem derrubar a aplicação. */
+  cancelarJob: (jobId: string) =>
+    request<{ job_id: string; cancelado: boolean; jobs_worker_avisados: number }>(
+      '/export/fila-global/cancelar',
+      { method: 'POST', body: JSON.stringify({ job_id: jobId }) },
+    ),
+
   bulkYoutube: (projetoId: string, body: BulkYoutubeRequest) =>
     request<BulkYoutubeResponse>(`/export/projeto/${projetoId}/bulk-youtube`, {
       method: 'POST',

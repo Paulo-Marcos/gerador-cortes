@@ -13,6 +13,11 @@ from app.domain.cinema_filters import FILTROS_CINEMA
 from app.models import Corte, MetadadoCorte, StatusCorte
 from app.routers.errors import erro_interno
 from app.services.app_logging import operational_info
+from app.services.cancelamento_jobs import (
+    CancelamentoNaoSuportado,
+    JobNaoEstaEmVoo,
+    cancelar_job,
+)
 from app.services.export import ExportService
 from app.services.jobs_globais import JobsGlobais
 from app.services.render_progress import RenderProgressStore
@@ -413,6 +418,25 @@ async def fila_global(db: AsyncSession = Depends(get_db)):
         # intactos para quem já os consome.
         "jobs": await JobsGlobais.coletar_descritos(db),
     }
+
+
+class CancelarJobRequest(BaseModel):
+    job_id: str
+
+
+@router.post("/fila-global/cancelar")
+async def cancelar_job_da_fila(body: CancelarJobRequest):
+    """Interrompe um job da fila global (D-426).
+
+    Antes disso, a única saída para um render travado era derrubar a
+    aplicação. O `job_id` é o mesmo que `/fila-global` publica.
+    """
+    try:
+        return cancelar_job(body.job_id)
+    except CancelamentoNaoSuportado as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except JobNaoEstaEmVoo as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 class BulkYouTubeRequest(BaseModel):
