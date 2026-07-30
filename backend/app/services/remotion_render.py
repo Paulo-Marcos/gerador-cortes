@@ -26,15 +26,42 @@ logger = logging.getLogger(__name__)
 # pipelines concorrentes disputando o worker serial — em PRD a razão
 # render/clip foi de 1,16x (serial) para 4,68x (concorrente). O semáforo é
 # lazy porque precisa nascer dentro do event loop do uvicorn.
+# D-441: pool de 2 slots com back-pressure de RAM — o segundo render só
+# entra com RENDER_MIN_RAM_LIVRE_MB de folga (a grade já flerta com OOM,
+# D-322). Contador `_renders_ativos` diz se alguém já está rodando.
 _render_gate: asyncio.Semaphore | None = None
+_renders_ativos: int = 0
 
 
 def _obter_render_gate() -> asyncio.Semaphore:
     global _render_gate
     if _render_gate is None:
-        limite = max(1, int(os.getenv("RENDER_PIPELINE_CONCURRENCY", "1")))
+        limite = max(1, int(os.getenv("RENDER_PIPELINE_CONCURRENCY", "2")))
         _render_gate = asyncio.Semaphore(limite)
     return _render_gate
+
+
+def _ram_minima_para_segundo_slot_mb() -> float:
+    return max(0.0, float(os.getenv("RENDER_MIN_RAM_LIVRE_MB", "8192")))
+
+
+async def _aguardar_folga_de_ram(corte_id: str) -> None:
+    """Segura o slot extra enquanto a RAM estiver apertada.
+
+    Só se aplica quando já existe render ativo (o primeiro nunca espera).
+    Leitura de RAM indisponível (None) não veta — vira comportamento D-440.
+    """
+    from app.infrastructure.memoria import ram_disponivel_mb
+
+    limiar = _ram_minima_para_segundo_slot_mb()
+    while _renders_ativos > 0:
+        livre = ram_disponivel_mb()
+        if livre is None or livre >= limiar:
+            return
+        RenderProgressStore.update(
+            corte_id, 1, f"Aguardando RAM livre ({livre:.0f}MB < {limiar:.0f}MB)"
+        )
+        await asyncio.sleep(10)
 
 
 class RemotionRenderService:
@@ -67,20 +94,29 @@ class RemotionRenderService:
         RenderProgressStore.start(corte_id)
 
         async def _rodar_com_gate():
+            global _renders_ativos
             gate = _obter_render_gate()
             if gate.locked():
                 RenderProgressStore.update(corte_id, 1, "Aguardando vez na fila de render")
             async with gate:
-                return await renderizar_pipeline_otimizado(
-                    corte_id,
-                    filtro=filtro,
-                    continuar=continuar,
-                    start_from=start_from,
-                    parar_em=parar_em,
-                    progress_callback=lambda progress, stage: RenderProgressStore.update(
-                        corte_id, progress, stage
-                    ),
-                )
+                await _aguardar_folga_de_ram(corte_id)
+                _renders_ativos += 1
+                try:
+                    return await _rodar_pipeline()
+                finally:
+                    _renders_ativos -= 1
+
+        async def _rodar_pipeline():
+            return await renderizar_pipeline_otimizado(
+                corte_id,
+                filtro=filtro,
+                continuar=continuar,
+                start_from=start_from,
+                parar_em=parar_em,
+                progress_callback=lambda progress, stage: RenderProgressStore.update(
+                    corte_id, progress, stage
+                ),
+            )
 
         loop = asyncio.get_event_loop()
         task = loop.create_task(_rodar_com_gate())
