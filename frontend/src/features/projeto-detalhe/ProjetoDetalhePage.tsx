@@ -44,6 +44,93 @@ import { VotoQualidadeLive } from './VotoQualidadeLive';
 const UTILITARIO_CLASS =
   'flex h-[30px] w-8 items-center justify-center rounded-[6px] transition-colors hover:bg-[var(--wb-bg-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-40';
 
+interface ProntidaoPublicacao {
+  /** Cortes que ainda vão ao ar (fora rejeitados e já publicados). */
+  total: number;
+  prontos: number;
+  /** Libera o lote: há candidatos e nenhum deles está pendente. */
+  liberado: boolean;
+  /** Rótulo curto ao lado do botão. */
+  resumo: string;
+  /** Explicação do estado (tooltip do botão). */
+  detalhe: string;
+}
+
+const MAX_PENDENTES_LISTADOS = 6;
+
+const cortesPalavra = (quantidade: number) => (quantidade === 1 ? 'corte' : 'cortes');
+
+/** O que falta num corte para ele bater `pronto_publicar` no backend. */
+function faltasDoCorte(corte: StatusExportCorte): string[] {
+  const faltas: string[] = [];
+  if (!corte.video_pronto) faltas.push('render final');
+  if (!corte.titulo_youtube) faltas.push('título');
+  if (!corte.thumbnail_pronta) faltas.push('thumbnail');
+  // O backend pode reprovar por algo que a tira de flags não expõe; sem o
+  // fallback o tooltip sairia com "#3 ()".
+  return faltas.length > 0 ? faltas : ['pendência no backend'];
+}
+
+/** Rótulo curto do chip ao lado do botão. */
+function resumoDoLote(total: number, prontos: number, liberado: boolean): string {
+  if (total === 0) return 'nada a publicar';
+  if (liberado) return `tudo pronto · ${total} ${cortesPalavra(total)}`;
+  return `${prontos}/${total} prontos`;
+}
+
+/** Texto do tooltip: por que o lote está (ou não) liberado. */
+function detalheDoLote(total: number, pendentes: StatusExportCorte[]): string {
+  if (total === 0) {
+    return 'Nenhum corte aguardando publicação — todos já foram publicados ou rejeitados.';
+  }
+  if (pendentes.length === 0) {
+    return `Tudo pronto — abrir o agendamento de ${total} ${cortesPalavra(total)}.`;
+  }
+
+  const listados = pendentes
+    .slice(0, MAX_PENDENTES_LISTADOS)
+    .map((c) => `#${c.numero} (${faltasDoCorte(c).join(', ')})`)
+    .join(' · ');
+  const excedente = pendentes.length - MAX_PENDENTES_LISTADOS;
+
+  return (
+    `Publicação em massa só libera com todos prontos. Faltam ${pendentes.length} de ${total}: ` +
+    listados +
+    (excedente > 0 ? ` · e mais ${excedente}` : '')
+  );
+}
+
+/**
+ * D-439: o lote só abre quando NÃO sobra pendência — antes o botão habilitava
+ * com um único corte pronto, e não dava para ler na tela se a live inteira
+ * estava fechada ou se faltava metade.
+ *
+ * "Candidato" é o corte que ainda vai ao ar: rejeitado é decisão editorial de
+ * não publicar e publicado já foi — nenhum dos dois segura o lote. Corte ainda
+ * em `proposto` conta como pendência: enquanto não for avaliado, a live não
+ * está pronta.
+ */
+function avaliarProntidaoPublicacao(
+  cortes: StatusExportCorte[],
+  statusPorCorte: Map<string, Corte>,
+): ProntidaoPublicacao {
+  const candidatos = cortes.filter(
+    (c) => !c.youtube_url_publicado && statusPorCorte.get(c.corte_id)?.status !== 'rejeitado',
+  );
+  const pendentes = candidatos.filter((c) => !c.pronto_publicar);
+  const total = candidatos.length;
+  const prontos = total - pendentes.length;
+  const liberado = total > 0 && pendentes.length === 0;
+
+  return {
+    total,
+    prontos,
+    liberado,
+    resumo: resumoDoLote(total, prontos, liberado),
+    detalhe: detalheDoLote(total, pendentes),
+  };
+}
+
 export function ProjetoDetalhePage() {
   const { id = '' } = useParams<{ id: string }>();
   const projeto = useProjeto(id);
@@ -209,6 +296,10 @@ export function ProjetoDetalhePage() {
     () => new Map((cortesQuery.data ?? []).map((c) => [c.id, c])),
     [cortesQuery.data],
   );
+  const publicacao = useMemo(
+    () => avaliarProntidaoPublicacao(cortes, statusPorCorte),
+    [cortes, statusPorCorte],
+  );
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -276,9 +367,16 @@ export function ProjetoDetalhePage() {
                     </button>
                   </Tooltip>
                 </span>
-                {cortesProntos.length > 0 && (
-                  <span className="font-bold text-[var(--wb-warn-ink)]">
-                    🚀 {cortesProntos.length} prontos
+                {publicacao.total > 0 && (
+                  <span
+                    className={cn(
+                      'font-bold',
+                      publicacao.liberado
+                        ? 'text-[var(--wb-ok-ink)]'
+                        : 'text-[var(--wb-warn-ink)]',
+                    )}
+                  >
+                    🚀 {publicacao.prontos}/{publicacao.total} prontos
                   </span>
                 )}
                 {totalPublicados > 0 && (
@@ -337,10 +435,30 @@ export function ProjetoDetalhePage() {
             Antes tudo dividia a mesma linha e o mesmo peso — não dava para ler
             o que era primário. */}
         <div className="flex flex-wrap items-center gap-2.5 rounded-[11px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3.5 py-2.5">
-          <Button onClick={() => setPublicarOpen(true)} disabled={cortesProntos.length === 0}>
-            <Rocket size={16} />
-            Publicar em massa
-          </Button>
+          {/* D-439: gate duro do lote. O `span` é o gatilho do tooltip porque o
+              Button desabilitado tem `pointer-events-none` — sem ele o motivo do
+              bloqueio nunca apareceria. O chip ao lado repete o estado em texto
+              visível, que é o que resolve o "não dá para saber se está pronto". */}
+          <Tooltip label={publicacao.detalhe} side="bottom">
+            <span className="inline-flex">
+              <Button onClick={() => setPublicarOpen(true)} disabled={!publicacao.liberado}>
+                <Rocket size={16} />
+                Publicar em massa
+              </Button>
+            </span>
+          </Tooltip>
+          {publicacao.total > 0 && (
+            <span
+              className={cn(
+                'rounded-[6px] px-2.5 py-[3px] text-[10px] font-bold',
+                publicacao.liberado
+                  ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]'
+                  : 'bg-[var(--wb-warn-soft)] text-[var(--wb-warn-ink)]',
+              )}
+            >
+              {publicacao.liberado ? '✓' : '⏳'} {publicacao.resumo}
+            </span>
+          )}
           <Button variant="outline" onClick={() => setAnaliseOpen(true)}>
             <Brain size={16} />
             Análise IA
