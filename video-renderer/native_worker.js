@@ -488,6 +488,18 @@ async function executarJob(jobData, jobFile) {
   const resPath = path.join(filaDir, `res_${id}.json`);
   const reqPath = path.join(filaDir, jobFile);
   const jobStartedAt = Date.now();
+  // D-440: o res_*.json é apagado pelo backend após a leitura; o
+  // worker_debug.log do corte é o único registro durável da duração do job.
+  let debugCwd = null;
+  const registrarDesfecho = (status) => {
+    if (!debugCwd) return;
+    try {
+      fs.appendFileSync(
+        path.join(debugCwd, "worker_debug.log"),
+        `[${new Date().toISOString()}] Fim: ${id} status=${status} duration_ms=${Date.now() - jobStartedAt}\n`,
+      );
+    } catch (e) {}
+  };
 
   try {
     console.log(`\n----------------------------------------------------`);
@@ -537,6 +549,7 @@ async function executarJob(jobData, jobFile) {
     );
 
     // Log para arquivo no diretório de trabalho
+    debugCwd = finalCwd;
     try {
       const logPath = path.join(finalCwd, "worker_debug.log");
       fs.appendFileSync(
@@ -1028,7 +1041,14 @@ async function executarJob(jobData, jobFile) {
           console.log(
             `[${clockNow()}] ✅ [SmartRender] Tarefa ${id} concluída em ${formatDuration(Date.now() - jobStartedAt)} (sem stutter, audio-continuous).`,
           );
-          fs.writeFileSync(resPath, JSON.stringify({ status: "sucesso" }));
+          registrarDesfecho("sucesso");
+          fs.writeFileSync(
+            resPath,
+            JSON.stringify({
+              status: "sucesso",
+              duration_ms: Date.now() - jobStartedAt,
+            }),
+          );
           if (fs.existsSync(reqPath)) fs.unlinkSync(reqPath);
           return;
         }
@@ -1055,14 +1075,26 @@ async function executarJob(jobData, jobFile) {
       console.log(
         `[${clockNow()}] ✅ [Sucesso] Tarefa ${id} concluída em ${duracaoJob}.`,
       );
-      fs.writeFileSync(resPath, JSON.stringify({ status: "sucesso" }));
+      registrarDesfecho("sucesso");
+      fs.writeFileSync(
+        resPath,
+        JSON.stringify({
+          status: "sucesso",
+          duration_ms: Date.now() - jobStartedAt,
+        }),
+      );
     } else {
       console.error(
         `[${clockNow()}] ❌ [Erro] Falha na tarefa ${id} após ${duracaoJob}. Código: ${code}`,
       );
+      registrarDesfecho("erro");
       fs.writeFileSync(
         resPath,
-        JSON.stringify({ status: "erro", erro: `Exit code: ${code}` }),
+        JSON.stringify({
+          status: "erro",
+          erro: `Exit code: ${code}`,
+          duration_ms: Date.now() - jobStartedAt,
+        }),
       );
     }
 
@@ -1072,9 +1104,14 @@ async function executarJob(jobData, jobFile) {
       `[${clockNow()}] ❌ [Fatal] Erro na tarefa ${id} após ${formatDuration(Date.now() - jobStartedAt)}:`,
       err,
     );
+    registrarDesfecho("fatal");
     fs.writeFileSync(
       resPath,
-      JSON.stringify({ status: "erro", erro: err.message }),
+      JSON.stringify({
+        status: "erro",
+        erro: err.message,
+        duration_ms: Date.now() - jobStartedAt,
+      }),
     );
     if (fs.existsSync(reqPath)) fs.unlinkSync(reqPath);
   }
@@ -1115,6 +1152,15 @@ function runCommand(command, args, cwd, shell) {
     const outputPath = isFfmpegCommand ? findLikelyOutputPath(finalArgs) : null;
     const startedAt = Date.now();
     let lastProgress = {};
+    // D-440: watchdog de job preso. Em 26/07 jobs sem progresso ficaram 9-17h
+    // pendurados a noite inteira; sem nenhuma saída do processo por
+    // RENDER_WATCHDOG_MIN minutos (default 15), o watchdog mata a árvore e o
+    // job vira "erro" retentável em vez de bloquear a fila indefinidamente.
+    const watchdogMs =
+      Math.max(1, parseInt(process.env.RENDER_WATCHDOG_MIN || "15", 10)) *
+      60000;
+    let lastActivityAt = Date.now();
+    let watchdogDisparado = false;
 
     const heartbeat = setInterval(() => {
       const elapsed = formatDuration(Date.now() - startedAt);
@@ -1126,6 +1172,23 @@ function runCommand(command, args, cwd, shell) {
       console.log(
         `[${clockNow()}] [Exec] Processando há ${elapsed}${frame}${time}${speed}${describeOutputFile(outputPath)}`,
       );
+      if (Date.now() - lastActivityAt > watchdogMs && !watchdogDisparado) {
+        watchdogDisparado = true;
+        console.error(
+          `[${clockNow()}] 🛑 [Watchdog] Sem atividade há ${formatDuration(Date.now() - lastActivityAt)} — encerrando processo ${child.pid}.`,
+        );
+        try {
+          if (process.platform === "win32" && child.pid) {
+            spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+              stdio: "ignore",
+            });
+          } else {
+            child.kill("SIGKILL");
+          }
+        } catch (e) {
+          console.warn(`⚠️ [Watchdog] Falha ao encerrar: ${e.message}`);
+        }
+      }
     }, 15000);
 
     const child = spawn(executable, finalArgs, {
@@ -1140,6 +1203,7 @@ function runCommand(command, args, cwd, shell) {
     registrarFilho(child);
 
     child.stdout.on("data", (data) => {
+      lastActivityAt = Date.now();
       const text = data.toString();
       if (isFfmpegCommand) {
         const progress = parseFfmpegProgress(text);
@@ -1156,6 +1220,7 @@ function runCommand(command, args, cwd, shell) {
       if (currentLogLevel === "debug") process.stdout.write(text);
     });
     child.stderr.on("data", (data) => {
+      lastActivityAt = Date.now();
       const text = data.toString();
       if (
         currentLogLevel === "debug" ||

@@ -9,6 +9,7 @@ if sys.platform == "win32":
 
 import json
 import logging
+import os
 import shutil
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
@@ -20,6 +21,20 @@ from app.services.render_progress import RenderProgressStore
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
+
+# D-440: gate global do pipeline. Sem ele, N cliques de render disparam N
+# pipelines concorrentes disputando o worker serial — em PRD a razão
+# render/clip foi de 1,16x (serial) para 4,68x (concorrente). O semáforo é
+# lazy porque precisa nascer dentro do event loop do uvicorn.
+_render_gate: asyncio.Semaphore | None = None
+
+
+def _obter_render_gate() -> asyncio.Semaphore:
+    global _render_gate
+    if _render_gate is None:
+        limite = max(1, int(os.getenv("RENDER_PIPELINE_CONCURRENCY", "1")))
+        _render_gate = asyncio.Semaphore(limite)
+    return _render_gate
 
 
 class RemotionRenderService:
@@ -50,19 +65,25 @@ class RemotionRenderService:
             filtro = AppSettingsService.get().filtro_global_padrao
 
         RenderProgressStore.start(corte_id)
+
+        async def _rodar_com_gate():
+            gate = _obter_render_gate()
+            if gate.locked():
+                RenderProgressStore.update(corte_id, 1, "Aguardando vez na fila de render")
+            async with gate:
+                return await renderizar_pipeline_otimizado(
+                    corte_id,
+                    filtro=filtro,
+                    continuar=continuar,
+                    start_from=start_from,
+                    parar_em=parar_em,
+                    progress_callback=lambda progress, stage: RenderProgressStore.update(
+                        corte_id, progress, stage
+                    ),
+                )
+
         loop = asyncio.get_event_loop()
-        task = loop.create_task(
-            renderizar_pipeline_otimizado(
-                corte_id,
-                filtro=filtro,
-                continuar=continuar,
-                start_from=start_from,
-                parar_em=parar_em,
-                progress_callback=lambda progress, stage: RenderProgressStore.update(
-                    corte_id, progress, stage
-                ),
-            )
-        )
+        task = loop.create_task(_rodar_com_gate())
 
         def handle_result(t):
             try:

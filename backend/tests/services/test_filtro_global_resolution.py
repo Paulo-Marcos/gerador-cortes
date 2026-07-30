@@ -14,6 +14,7 @@ Estes testes garantem que:
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import MagicMock, patch
 
 from app.models import Projeto
@@ -60,8 +61,11 @@ def test_iniciar_render_resolve_filtro_global_quando_nao_especificado():
         patch("app.services.app_settings.AppSettingsService", _FakeService),
     ):
         # create_task tem que retornar algo com add_done_callback (mock de Task).
+        # D-440: o pipeline agora roda dentro de _rodar_com_gate; executar a
+        # corrotina (asyncio.run) é o que faz o fake_pipeline ser chamado.
         def _wrap(coro):
-            coro.close()
+            rr._render_gate = None
+            asyncio.run(coro)
             task = MagicMock()
             task.add_done_callback = MagicMock()
             return task
@@ -98,8 +102,11 @@ def test_iniciar_render_respeita_filtro_explicito_de_teste():
         patch.object(rr.asyncio, "get_event_loop") as mock_loop,
     ):
         # create_task tem que retornar algo com add_done_callback (mock de Task).
+        # D-440: o pipeline agora roda dentro de _rodar_com_gate; executar a
+        # corrotina (asyncio.run) é o que faz o fake_pipeline ser chamado.
         def _wrap(coro):
-            coro.close()
+            rr._render_gate = None
+            asyncio.run(coro)
             task = MagicMock()
             task.add_done_callback = MagicMock()
             return task
