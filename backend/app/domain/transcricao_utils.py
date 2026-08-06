@@ -1,5 +1,20 @@
 from app.domain.time_convert import hms_to_seg
 
+# Texto que a ingestão gravava no lugar da transcrição quando o yt-dlp não achava
+# legenda (D-444). Não é mais produzido, mas continua no banco dos projetos
+# baixados antes da correção — a guarda da análise (D-445) precisa reconhecê-lo.
+AVISO_LEGENDA_INDISPONIVEL = "[Legenda automática não disponível para este vídeo]"
+
+_PREFIXO_ERRO_PARSER = "[Erro no parser:"
+
+
+class TranscricaoIndisponivelError(RuntimeError):
+    """O YouTube não entregou legenda utilizável para o vídeo.
+
+    Erro de domínio, não falha técnica: a ingestão o converte em `status=erro`
+    com mensagem explicativa em vez de declarar o projeto pronto (D-444).
+    """
+
 
 def dividir_segmentos_longos(
     transcricao: list[dict], max_duracao: float = 4.0, max_palavras: int = 10
@@ -156,6 +171,68 @@ def _dividir_por_bordas_reais(
         partes.append(parte)
 
     return partes
+
+
+def _segundos(valor) -> float:
+    """Lê um instante de segmento em qualquer das formas gravadas: número,
+    string numérica ou `HH:MM:SS.mmm` (formato dos projetos antigos)."""
+    if isinstance(valor, (int, float)):
+        return float(valor)
+    try:
+        return float(valor)
+    except (ValueError, TypeError):
+        return hms_to_seg(str(valor))
+
+
+def _e_marcador_de_falha(texto: str) -> bool:
+    """O segmento é um aviso gravado pela ingestão no lugar da fala, não fala."""
+    limpo = texto.strip()
+    return limpo == AVISO_LEGENDA_INDISPONIVEL or limpo.startswith(_PREFIXO_ERRO_PARSER)
+
+
+# Vídeo curto tem cobertura naturalmente irregular (silêncio, vinheta); só faz
+# sentido cobrar proporção de material longo.
+_DURACAO_MINIMA_PARA_AFERIR_COBERTURA = 300.0
+_COBERTURA_MINIMA = 0.10
+
+_COMO_RESOLVER = (
+    "Use 'Refazer transcrição' no projeto para rebaixar as legendas do YouTube "
+    "e então rode a análise."
+)
+
+
+def motivo_transcricao_inutilizavel(
+    segmentos: list[dict], *, duracao_video_seg: float = 0
+) -> str | None:
+    """Explica por que a transcrição não dá para analisar — ou `None` se dá.
+
+    A frase volta pronta para o usuário: diz o que está errado E o que fazer.
+    Existe porque `if not transcricao_raw` não bastava (D-445): um placeholder
+    de legenda indisponível é uma transcrição não-vazia, passava pela guarda e
+    só era descoberto pelo modelo, depois de uma chamada paga.
+
+    `duracao_video_seg` é opcional; com ele detectamos também a transcrição
+    truncada — legenda que cobre os primeiros segundos de uma live de horas.
+    """
+    if not segmentos:
+        return f"A transcrição está vazia. {_COMO_RESOLVER}"
+
+    if all(_e_marcador_de_falha(seg.get("texto", "")) for seg in segmentos):
+        return (
+            "A transcrição não existe: o que está gravado é só o aviso de que o YouTube "
+            f"não tinha legenda para este vídeo quando ele foi baixado. {_COMO_RESOLVER}"
+        )
+
+    if duracao_video_seg > _DURACAO_MINIMA_PARA_AFERIR_COBERTURA:
+        fim = max(_segundos(seg.get("end", seg.get("fim", 0))) for seg in segmentos)
+        if fim < duracao_video_seg * _COBERTURA_MINIMA:
+            return (
+                f"A transcrição cobre só {fim / 60:.0f} min de um vídeo de "
+                f"{duracao_video_seg / 60:.0f} min — provavelmente veio truncada. "
+                f"{_COMO_RESOLVER}"
+            )
+
+    return None
 
 
 def limpar_e_ordenar_transcricao(transcricao: list[dict]) -> list[dict]:

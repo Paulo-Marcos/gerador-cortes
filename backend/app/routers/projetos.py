@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from app.channel_paths import projetos_dir
 from app.database import get_db
+from app.domain.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, MetadadoCorte, Projeto, StatusCorte, StatusProjeto
 from app.routers.errors import erro_interno
 from app.services import channels
@@ -846,6 +847,12 @@ async def refazer_transcricao(projeto_id: str, db: AsyncSession = Depends(get_db
 
         # 2. Atualizar transcrição no projeto
         projeto.transcricao_raw = json.dumps(transcricao, ensure_ascii=False)
+        # D-444: a ingestão para em `erro` quando o YouTube ainda não publicou a
+        # legenda. Conseguir a transcrição agora é justamente o que faltava —
+        # sem esta virada o projeto ficaria preso no erro para sempre.
+        if projeto.status == StatusProjeto.ERRO:
+            projeto.status = StatusProjeto.PRONTO
+            projeto.erro_msg = ""
         await db.commit()
 
         # 3. Sincronizar os cortes existentes
@@ -858,6 +865,12 @@ async def refazer_transcricao(projeto_id: str, db: AsyncSession = Depends(get_db
             "message": "Transcrição atualizada com sucesso.",
             "total_cortes_sincronizados": len(cortes),
         }
+    except TranscricaoIndisponivelError as e:
+        # Não é falha do servidor: o YouTube ainda não tem a legenda. O motivo é
+        # a única informação útil aqui — `erro_interno` o trocaria por um 500
+        # genérico, deixando o operador sem saber se espera ou se desiste (D-444).
+        logger.info("Refazer transcrição sem legenda disponível (%s): %s", projeto_id[:8], e)
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Erro ao refazer transcrição")
         raise erro_interno(e) from e

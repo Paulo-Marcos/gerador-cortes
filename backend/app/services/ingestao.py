@@ -14,6 +14,7 @@ from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.json3_parser import parse_json3
+from app.domain.transcricao_utils import TranscricaoIndisponivelError
 from app.domain.vtt_parser import parse_vtt
 from app.models import Projeto, StatusProjeto
 from app.services.app_logging import operational_debug, operational_error, operational_info
@@ -54,7 +55,15 @@ class IngestaoService:
             video_path = await IngestaoService._baixar_video(projeto_id, youtube_url, queue)
 
             await IngestaoService._atualizar_status(projeto_id, StatusProjeto.TRANSCREVENDO)
-            transcricao = await IngestaoService._extrair_legenda(projeto_id, youtube_url)
+            try:
+                transcricao = await IngestaoService._extrair_legenda(projeto_id, youtube_url)
+            except TranscricaoIndisponivelError:
+                # O vídeo é o ativo caro da ingestão (dezenas de minutos, GBs).
+                # Grava-o antes de propagar o erro: assim o projeto termina em
+                # `erro` com o motivo na tela, mas 'Refazer transcrição' já
+                # encontra o arquivo e conclui sem rebaixar nada (D-444).
+                await IngestaoService._salvar_transcricao(projeto_id, [], video_path)
+                raise
 
             await IngestaoService._salvar_transcricao(projeto_id, transcricao, video_path)
             await IngestaoService._atualizar_status(projeto_id, StatusProjeto.PRONTO)
@@ -222,13 +231,12 @@ class IngestaoService:
                 return limpar_e_ordenar_transcricao(trans_bruta)
 
             operational_error("INGESTAO", "Falha ao extrair legenda JSON3 ou VTT.")
-            return [
-                {
-                    "inicio": "00:00:00.000",
-                    "fim": "00:00:01.000",
-                    "texto": "[Legenda automática não disponível para este vídeo]",
-                }
-            ]
+            raise TranscricaoIndisponivelError(
+                "O YouTube ainda não publicou as legendas automáticas deste vídeo. "
+                "É o normal em live recém-encerrada: a geração pode levar horas. "
+                "O vídeo já está baixado — quando as legendas saírem, use "
+                "'Refazer transcrição' para concluir sem baixar de novo."
+            )
 
         # Se não vier VTT, o offset é zero
         offset_ms = 0
@@ -280,9 +288,10 @@ class IngestaoService:
             return limpar_e_ordenar_transcricao(trans_bruta)
         except Exception as e:
             operational_error("INGESTAO", f"Erro crítico ao parsear JSON3: {e}")
-            return [
-                {"inicio": "00:00:00.000", "fim": "00:00:01.000", "texto": f"[Erro no parser: {e}]"}
-            ]
+            raise TranscricaoIndisponivelError(
+                f"A legenda baixada do YouTube veio corrompida e não pôde ser lida ({e}). "
+                "Use 'Refazer transcrição' para baixá-la de novo."
+            ) from e
 
     @staticmethod
     async def _salvar_transcricao(projeto_id: str, transcricao: list[dict], video_path: str):
