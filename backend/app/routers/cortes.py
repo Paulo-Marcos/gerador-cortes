@@ -441,14 +441,17 @@ def _corte_ja_gerou_bruto(corte: Corte) -> bool:
 
 
 def _corte_tem_trabalho_derivado(corte: Corte) -> bool:
-    """True quando já existe transcrição sincronizada ou cenas para este corte.
+    """True quando já existem cenas geradas para este corte.
 
-    Ambas as colunas nascem com default JSON (`"[]"`), então checar o campo cru
-    daria sempre verdadeiro — é o CONTEÚDO que precisa ser inspecionado.
+    D-446 — `transcricao_final_texto` NÃO serve como prova: ela é gravada bem
+    antes do bruto por qualquer passo da fase 1 (gerar trechos, registrar
+    desvios, ajustar início/fim do corte no editor). Aceitá-la fazia o 1º
+    "Gerar bruto" ser lido como regeração, e a regeração pula as cenas por
+    design (D-160) — daí as cenas Remotion pararem de sair sozinhas.
+
+    A coluna nasce com default JSON (`"[]"`), então checar o campo cru daria
+    sempre verdadeiro — é o CONTEÚDO que precisa ser inspecionado.
     """
-    if corte.transcricao_final_texto:
-        return True
-
     try:
         cenas = json.loads(corte.cenas_remotion or "[]")
     except json.JSONDecodeError:

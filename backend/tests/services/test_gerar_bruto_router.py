@@ -231,9 +231,14 @@ class TestTrabalhoDerivado:
     def test_corte_zerado_nao_tem_trabalho_derivado(self):
         assert cortes_router._corte_tem_trabalho_derivado(_corte_com()) is False
 
-    def test_transcricao_sincronizada_conta_como_trabalho(self):
+    def test_transcricao_sincronizada_nao_conta_como_trabalho(self):
+        """D-446: a transcrição é sincronizada na fase 1, muito antes do bruto.
+
+        Contá-la fazia o 1º "Gerar bruto" virar regeração — e a regeração pula
+        as cenas por design (D-160).
+        """
         corte = _corte_com(transcricao_final_texto="texto ja sincronizado")
-        assert cortes_router._corte_tem_trabalho_derivado(corte) is True
+        assert cortes_router._corte_tem_trabalho_derivado(corte) is False
 
     def test_cenas_em_lista_contam_como_trabalho(self):
         corte = _corte_com(cenas_remotion='[{"tipo": "tela_cheia", "inicio": 0, "fim": 5}]')
@@ -264,3 +269,14 @@ class TestTrabalhoDerivado:
         monkeypatch.setattr(cortes_router, "projetos_dir", lambda: tmp_path)
 
         assert _JA_GEROU_BRUTO_REAL(_corte_com()) is False
+
+    def test_corte_editado_na_fase_1_ainda_e_primeira_geracao(self, monkeypatch, tmp_path):
+        """D-446: ajustar o recorte/gerar trechos sincroniza a transcrição.
+
+        Sem bruto e sem cenas, o próximo "Gerar bruto" é a 1ª geração — é ele
+        que precisa encadear transcrição + cenas.
+        """
+        monkeypatch.setattr(cortes_router, "projetos_dir", lambda: tmp_path)
+        corte = _corte_com(transcricao_final_texto="texto ja sincronizado")
+
+        assert _JA_GEROU_BRUTO_REAL(corte) is False
