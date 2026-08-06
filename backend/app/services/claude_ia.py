@@ -103,14 +103,14 @@ def _carregar_transcricao_raw(raw: str, projeto_id: str) -> list | dict:
 # Identificadores das skills editoriais. Funcionam como CHAVE do serviço
 # `editorial_skills`, que resolve por canal (E-021) o CORPO, as LENTES e os PARAMS
 # (modelo/thinking/timeout) — antes espalhados entre `.md`, `_LENTES` e `config`.
-# A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
-_LIMITE_MOTIVO_NA_TELA = 400
-
 _SKILL_CORTES = "cortador-expert"
 _SKILL_TRECHOS = "trechos-expert"
 _SKILL_CENAS = "cenas-expert"
 _SKILL_METADADOS = "metadados-expert"
 _SKILL_THUMBNAIL = "thumbnail-prompt-expert"
+
+# A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
+_LIMITE_MOTIVO_NA_TELA = 400
 
 
 def _args_claude(
