@@ -33,7 +33,11 @@ from app.domain.diarizacao_align import alinhar_falantes, prefixo_falante
 from app.domain.segment_calculator import normalizar_desvio
 from app.domain.snap_desvios import achatar_palavras, snap_desvio_a_palavras
 from app.domain.time_convert import hms_to_seg, seg_to_hms, seg_to_hms_short
-from app.domain.transcricao_utils import dividir_segmentos_longos, limpar_e_ordenar_transcricao
+from app.domain.transcricao_utils import (
+    dividir_segmentos_longos,
+    limpar_e_ordenar_transcricao,
+    motivo_transcricao_inutilizavel,
+)
 from app.domain.variacao_prompt import bloco_variacao_de
 from app.editorial_identity import identidade_do_mascote
 from app.infrastructure import claude_cli_client, fila_ia
@@ -99,6 +103,9 @@ def _carregar_transcricao_raw(raw: str, projeto_id: str) -> list | dict:
 # Identificadores das skills editoriais. Funcionam como CHAVE do serviço
 # `editorial_skills`, que resolve por canal (E-021) o CORPO, as LENTES e os PARAMS
 # (modelo/thinking/timeout) — antes espalhados entre `.md`, `_LENTES` e `config`.
+# A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
+_LIMITE_MOTIVO_NA_TELA = 400
+
 _SKILL_CORTES = "cortador-expert"
 _SKILL_TRECHOS = "trechos-expert"
 _SKILL_CENAS = "cenas-expert"
@@ -185,10 +192,27 @@ class ClaudeIaService:
         """
         async with AsyncSessionLocal() as db:
             projeto = await db.get(Projeto, projeto_id)
-            if not projeto or not projeto.transcricao_raw:
-                raise ValueError("Projeto não encontrado ou sem transcrição")
+            if not projeto:
+                raise ValueError("Projeto não encontrado")
+            if not projeto.transcricao_raw:
+                raise ValueError(
+                    "Este projeto não tem transcrição gravada. Use 'Refazer transcrição' "
+                    "para baixar as legendas do YouTube e então rode a análise."
+                )
 
             transcricao = _carregar_transcricao_raw(projeto.transcricao_raw, projeto_id)
+            # D-445: recusar ANTES da chamada paga. Sem esta guarda, uma
+            # transcrição que existe mas não tem fala (placeholder de legenda
+            # indisponível, dado truncado) só era rejeitada pelo próprio modelo
+            # — ~20s e ~US$0,10 de Opus para devolver "não retornou cortes",
+            # que não diz ao operador o que fazer.
+            motivo = motivo_transcricao_inutilizavel(
+                transcricao if isinstance(transcricao, list) else [],
+                duracao_video_seg=projeto.duracao_segundos or 0,
+            )
+            if motivo:
+                raise ValueError(motivo)
+
             meta = {
                 "projeto_id": projeto_id,  # D-353: contexto p/ telemetria da geração
                 "titulo_live": projeto.titulo_live or "",
@@ -209,7 +233,7 @@ class ClaudeIaService:
             cortes_data = payload.get("cortes", [])
             descartados = payload.get("descartados", [])
             if not cortes_data:
-                raise ValueError("Claude não retornou cortes para a transcrição")
+                raise ValueError(ClaudeIaService._motivo_de_zero_cortes(descartados))
 
             # Modo aditivo (D-298): lê os cortes e a auditoria que já existem
             # para pular quase-duplicatas e mesclar os descartados — sem apagar.
@@ -258,6 +282,29 @@ class ClaudeIaService:
         except Exception:  # noqa: BLE001 — restaura status e propaga (endpoint mostra o erro)
             await ClaudeIaService._restaurar_status(projeto_id, status_anterior)
             raise
+
+    @staticmethod
+    def _motivo_de_zero_cortes(descartados: list) -> str:
+        """Monta a mensagem de erro de uma análise que não propôs nada.
+
+        Quando o modelo descarta tudo, ele escreve o porquê em `descartados` —
+        e esse texto era jogado fora junto com a resposta, sobrando um "não
+        retornou cortes" mudo na tela (D-445). Aqui a explicação dele vira a
+        mensagem, que é a única que sabe se o problema foi o material ou a
+        régua editorial.
+        """
+        motivo = next(
+            (str(d.get("motivo", "")).strip() for d in descartados or [] if d.get("motivo")),
+            "",
+        )
+        if not motivo:
+            return (
+                "A IA não propôs nenhum corte para esta live e não registrou o motivo. "
+                "Confira se a transcrição tem fala de verdade antes de tentar de novo."
+            )
+        if len(motivo) > _LIMITE_MOTIVO_NA_TELA:
+            motivo = motivo[:_LIMITE_MOTIVO_NA_TELA].rstrip() + "…"
+        return f"A IA não propôs nenhum corte. Motivo que ela registrou: {motivo}"
 
     # ── modo aditivo: dedup por bucket de 30s + merge de descartados (D-298) ──
 

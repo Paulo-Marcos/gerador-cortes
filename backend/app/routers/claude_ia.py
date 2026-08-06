@@ -38,7 +38,13 @@ async def analisar_via_claude(
     if not projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
     if not projeto.transcricao_raw:
-        raise HTTPException(status_code=400, detail="Projeto ainda sem transcrição")
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Este projeto não tem transcrição gravada. Use 'Refazer transcrição' "
+                "para baixar as legendas do YouTube e então rode a análise."
+            ),
+        )
     try:
         resultado = await ClaudeIaService.analisar_via_claude(
             projeto_id, usar_diarizacao=usar_diarizacao
