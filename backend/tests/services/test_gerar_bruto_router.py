@@ -25,7 +25,7 @@ def _limpar_tarefas_corte():
 
 
 # Capturado antes do autouse abaixo trocar a função por um stub — os testes de
-# `TestTrabalhoDerivado` exercem a implementação real.
+# `TestCenasGeradas` exercem a implementação real.
 _JA_GEROU_BRUTO_REAL = cortes_router._corte_ja_gerou_bruto
 
 
@@ -221,42 +221,42 @@ def _corte_com(**campos) -> Corte:
     return Corte(id="corte-1", projeto_id="proj-1", numero=1, **{**base, **campos})
 
 
-class TestTrabalhoDerivado:
+class TestCenasGeradas:
     """D-430: bruto apagado na limpeza NÃO pode ser lido como 1ª geração.
 
     Se fosse, o botão "Regerar bruto" do Pós re-rodaria as cenas por IA e
     sobrescreveria o pós já editado.
     """
 
-    def test_corte_zerado_nao_tem_trabalho_derivado(self):
-        assert cortes_router._corte_tem_trabalho_derivado(_corte_com()) is False
+    def test_corte_zerado_nao_tem_cenas(self):
+        assert cortes_router._corte_tem_cenas_geradas(_corte_com()) is False
 
-    def test_transcricao_sincronizada_nao_conta_como_trabalho(self):
+    def test_transcricao_sincronizada_nao_conta_como_cenas(self):
         """D-446: a transcrição é sincronizada na fase 1, muito antes do bruto.
 
         Contá-la fazia o 1º "Gerar bruto" virar regeração — e a regeração pula
         as cenas por design (D-160).
         """
         corte = _corte_com(transcricao_final_texto="texto ja sincronizado")
-        assert cortes_router._corte_tem_trabalho_derivado(corte) is False
+        assert cortes_router._corte_tem_cenas_geradas(corte) is False
 
-    def test_cenas_em_lista_contam_como_trabalho(self):
+    def test_cenas_em_lista_contam(self):
         corte = _corte_com(cenas_remotion='[{"tipo": "tela_cheia", "inicio": 0, "fim": 5}]')
-        assert cortes_router._corte_tem_trabalho_derivado(corte) is True
+        assert cortes_router._corte_tem_cenas_geradas(corte) is True
 
-    def test_cenas_no_payload_com_formato_contam_como_trabalho(self):
+    def test_cenas_no_payload_com_formato_contam(self):
         corte = _corte_com(
             cenas_remotion='{"formato": "9:16", "cenas": [{"tipo": "t", "inicio": 0, "fim": 1}]}'
         )
-        assert cortes_router._corte_tem_trabalho_derivado(corte) is True
+        assert cortes_router._corte_tem_cenas_geradas(corte) is True
 
     def test_payload_com_cenas_vazias_nao_conta(self):
         corte = _corte_com(cenas_remotion='{"formato": "9:16", "cenas": []}')
-        assert cortes_router._corte_tem_trabalho_derivado(corte) is False
+        assert cortes_router._corte_tem_cenas_geradas(corte) is False
 
     def test_cenas_corrompidas_nao_derrubam_a_checagem(self):
         corte = _corte_com(cenas_remotion="{nao é json")
-        assert cortes_router._corte_tem_trabalho_derivado(corte) is False
+        assert cortes_router._corte_tem_cenas_geradas(corte) is False
 
     def test_bruto_apagado_com_pos_feito_ainda_e_regeracao(self, monkeypatch, tmp_path):
         """Sem arquivo em disco, mas com cenas editadas → regeração, não 1ª vez."""

@@ -429,18 +429,18 @@ def _corte_ja_gerou_bruto(corte: Corte) -> bool:
     D-430 — o bruto sobrevive ao render final, mas a limpeza do projeto ainda o
     apaga. Um corte já trabalhado pode então estar sem arquivo em disco, e ler
     isso como "1ª geração" faria o `gerar-bruto` re-rodar transcrição + cenas
-    por IA, SOBRESCREVENDO o pós já editado. Por isso o trabalho derivado
-    também conta como prova de que o corte já rodou.
+    por IA, SOBRESCREVENDO o pós já editado. Por isso as cenas geradas também
+    contam como prova de que o corte já rodou.
     """
     from app.services.pipeline_render import _find_clip_raw
 
     corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte.id
     if _find_clip_raw(corte_dir) is not None:
         return True
-    return _corte_tem_trabalho_derivado(corte)
+    return _corte_tem_cenas_geradas(corte)
 
 
-def _corte_tem_trabalho_derivado(corte: Corte) -> bool:
+def _corte_tem_cenas_geradas(corte: Corte) -> bool:
     """True quando já existem cenas geradas para este corte.
 
     D-446 — `transcricao_final_texto` NÃO serve como prova: ela é gravada bem
