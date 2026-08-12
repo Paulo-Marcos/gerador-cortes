@@ -15,6 +15,7 @@ from app.domain.corte_mapper import (
     tem_colapso_de_tempos_das_cenas,
 )
 from app.domain.desvio_categoria import SILENCIO
+from app.domain.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
 from app.domain.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
@@ -25,7 +26,7 @@ from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg
 from app.domain.youtube_layout import normalizar_layout_youtube
 from app.models import Corte, Projeto, StatusCorte
 from app.services.app_logging import operational_debug, operational_error
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -34,6 +35,15 @@ logger = logging.getLogger(__name__)
 # Margem mínima (s) que cada metade precisa ter para a divisão ser válida —
 # evita criar cortes degenerados quando o ponteiro fica colado na borda.
 _MARGEM_DIVISAO_SEG = 0.5
+
+
+def _ordenavel(corte: Corte) -> CorteOrdenavel:
+    """Projeção do corte para o domínio da ordem (D-448) — só tempo e pin."""
+    return CorteOrdenavel(
+        id=corte.id,
+        inicio_seg=float(corte.inicio_seg or 0.0),
+        posicao_fixada=corte.posicao_fixada,
+    )
 
 
 @dataclass(frozen=True)
@@ -178,6 +188,11 @@ class CorteService:
         if dados.desvios is not None or dados.inicio_seg is not None or dados.fim_seg is not None:
             await CorteService.sincronizar_transcricao_corte(corte_id)
 
+        # D-448: mexer no início move o corte na linha do tempo — a lista precisa
+        # acompanhar, senão a ordem volta a ser a de criação.
+        if dados.inicio_seg is not None or dados.inicio_hms is not None:
+            await CorteService.renumerar_por_tempo(db, corte.projeto_id)
+
         await db.refresh(corte)
         return corte
 
@@ -243,18 +258,6 @@ class CorteService:
                 desvios = []
             desvios_esq, desvios_dir = dividir_desvios_no_ponto(desvios, ponto)
 
-            # Abre espaço: empurra +1 todos os cortes posteriores ao original.
-            # Ordena desc pra evitar choque transitório caso algum dia exista
-            # UNIQUE(projeto_id, numero).
-            result = await db.execute(
-                select(Corte)
-                .where(Corte.projeto_id == corte.projeto_id, Corte.numero > corte.numero)
-                .order_by(Corte.numero.desc())
-            )
-            for posterior in result.scalars().all():
-                posterior.numero = posterior.numero + 1
-            await db.flush()
-
             novo_id = str(uuid.uuid4())
             titulo_base = (corte.titulo_proposto or "").strip() or f"Corte #{corte.numero}"
             novo_corte = Corte(
@@ -285,6 +288,10 @@ class CorteService:
             corte.desvios = json.dumps(desvios_esq, ensure_ascii=False)
 
             await db.commit()
+            # D-448: a metade nova entra logo depois da original porque começa
+            # depois dela — quem abre espaço é a ordem cronológica, não um +1
+            # manual nos posteriores.
+            await CorteService.renumerar_por_tempo(db, corte.projeto_id)
 
         # Fora do bloco de escrita: re-sincroniza a transcrição dos dois cortes.
         await CorteService.sincronizar_transcricao_corte(corte_id)
@@ -333,11 +340,6 @@ class CorteService:
         posteriores = [c for c in existentes if float(c.inicio_seg or 0) > inicio_seg]
         posicao = len(existentes) - len(posteriores) + 1
 
-        # Renumera de trás para frente para evitar choque transitório caso algum
-        # dia surja UNIQUE (projeto_id, numero).
-        for c in sorted(posteriores, key=lambda x: x.numero, reverse=True):
-            c.numero = c.numero + 1
-
         titulo = (titulo_proposto or "").strip() or f"Corte manual #{posicao}"
 
         novo_corte = Corte(
@@ -356,6 +358,9 @@ class CorteService:
         )
         db.add(novo_corte)
         await db.commit()
+        # D-448: o `numero` acima é provisório — a ordem canônica (e o empurrão
+        # nos cortes posteriores) sai da renumeração cronológica.
+        await CorteService.renumerar_por_tempo(db, projeto_id)
         await db.refresh(novo_corte)
 
         try:
@@ -370,14 +375,15 @@ class CorteService:
 
     @staticmethod
     async def reordenar(db: AsyncSession, projeto_id: str, cortes_ids: list[str]) -> list[Corte]:
-        """Renumera os cortes do projeto seguindo a ordem informada (F-057).
+        """Aplica a ordem informada pelo editor, FIXANDO quem saiu do tempo (D-448).
 
-        Migrado do router em D-078 — comportamento preservado. `cortes_ids`
-        precisa conter exatamente os ids existentes (mesmo conjunto, sem
-        repetições). A renumeração roda em duas passadas (todos para um offset
-        alto, depois os números finais) para evitar choque transitório entre
-        cortes renumerados ao mesmo tempo. Devolve a lista já na nova ordem,
-        com o metadado carregado.
+        Herdeira do F-057 (setas ↑↓ / arrastar): continua aceitando exatamente os
+        ids existentes e devolvendo a lista na nova ordem. O que mudou é que a
+        ordem manual deixou de ser um `numero` solto e passou a ser um PIN
+        explícito (`posicao_fixada`): fica fixado só quem realmente divergiu da
+        ordem cronológica, e quem voltou a coincidir com o tempo tem o pin limpo
+        e volta ao padrão. Assim mover um corte na mão não congela a lista
+        inteira — o resto continua se reorganizando pelo tempo.
 
         Levanta `ValueError("Projeto não encontrado")` (→404) ou
         `ValueError(<motivo>)` quando o conjunto de ids não bate (→400).
@@ -402,26 +408,89 @@ class CorteService:
             )
 
         corte_por_id = {c.id: c for c in cortes_existentes}
+        pins = pins_para_ordem(
+            [_ordenavel(c) for c in cortes_existentes],
+            ids_recebidos,
+        )
+        for corte_id, pin in pins.items():
+            corte_por_id[corte_id].posicao_fixada = pin
 
-        # Duas passadas para evitar choque transitório de numero entre cortes
-        # renumerados ao mesmo tempo: offset alto primeiro, números finais depois.
-        offset = max((c.numero for c in cortes_existentes), default=0) + 1
-        for c in cortes_existentes:
-            c.numero = c.numero + offset
-        await db.flush()
+        return await CorteService.renumerar_por_tempo(db, projeto_id)
 
-        for indice, corte_id in enumerate(ids_recebidos, start=1):
-            corte_por_id[corte_id].numero = indice
+    @staticmethod
+    async def renumerar_por_tempo(db: AsyncSession, projeto_id: str) -> list[Corte]:
+        """Recalcula `numero` a partir da ordem canônica do projeto (D-448).
 
-        await db.commit()
+        Chamada depois de toda operação que cria ou move corte — é ela que
+        mantém a promessa "a lista segue a live". Renumera em duas passadas
+        (offset alto, depois os números finais) para evitar choque transitório
+        entre cortes que trocam de número ao mesmo tempo. Devolve a lista já
+        ordenada, com o metadado carregado.
 
-        result_final = await db.execute(
+        Commita: as chamadas vêm de handlers que já fecharam sua própria
+        transação, e o número é dado derivado — não faz sentido deixá-lo
+        pendurado esperando um commit alheio.
+        """
+        result = await db.execute(
             select(Corte)
             .options(selectinload(Corte.metadado))
             .where(Corte.projeto_id == projeto_id)
-            .order_by(Corte.numero)
         )
-        return list(result_final.scalars().all())
+        cortes = list(result.scalars().all())
+        if not cortes:
+            return []
+
+        ordem = ordenar_por_tempo([_ordenavel(c) for c in cortes])
+        corte_por_id = {c.id: c for c in cortes}
+
+        offset = max((c.numero or 0 for c in cortes), default=0) + 1
+        for c in cortes:
+            c.numero = (c.numero or 0) + offset
+        await db.flush()
+
+        for indice, corte_id in enumerate(ordem, start=1):
+            corte_por_id[corte_id].numero = indice
+
+        await db.commit()
+        return [corte_por_id[corte_id] for corte_id in ordem]
+
+    @staticmethod
+    async def normalizar_ordem(db: AsyncSession, projeto_id: str) -> list[Corte]:
+        """Solta todos os pins do projeto e devolve a lista à ordem do tempo (D-448).
+
+        O desfazer do gesto manual: com nenhum corte fixado, a ordem volta a ser
+        inteiramente derivada de `inicio_seg`.
+        """
+        projeto = await db.get(Projeto, projeto_id)
+        if not projeto:
+            raise ValueError("Projeto não encontrado")
+
+        result = await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))
+        for corte in result.scalars().all():
+            corte.posicao_fixada = None
+
+        return await CorteService.renumerar_por_tempo(db, projeto_id)
+
+    @staticmethod
+    async def fixar_posicao(db: AsyncSession, corte_id: str, posicao: int | None) -> list[Corte]:
+        """Fixa (ou solta, com `posicao=None`) UM corte numa posição da lista (D-448).
+
+        Levanta `ValueError("Corte não encontrado")` (→404) ou
+        `ValueError(<motivo>)` quando a posição está fora da lista (→400).
+        """
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise ValueError("Corte não encontrado")
+
+        if posicao is not None:
+            total = await db.scalar(
+                select(func.count()).select_from(Corte).where(Corte.projeto_id == corte.projeto_id)
+            )
+            if posicao < 1 or posicao > int(total or 0):
+                raise ValueError(f"Posição precisa estar entre 1 e {int(total or 0)}.")
+
+        corte.posicao_fixada = posicao
+        return await CorteService.renumerar_por_tempo(db, corte.projeto_id)
 
     @staticmethod
     async def criar_corte_do_desvio(
@@ -429,9 +498,9 @@ class CorteService:
     ) -> Corte:
         """Cria um novo Corte a partir de um desvio e o remove do corte original.
 
-        Migrado do router em D-078 — comportamento preservado. O novo corte
-        entra ao final (maior numero + 1) e herda o intervalo do desvio; o
-        desvio é removido da lista do corte de origem.
+        Migrado do router em D-078. O novo corte herda o intervalo do desvio e
+        entra na posição CRONOLÓGICA correspondente (D-448); o desvio é removido
+        da lista do corte de origem.
 
         Levanta `ValueError("Corte não encontrado")` (→404) ou
         `ValueError("Índice de desvio inválido")` (→400).
@@ -473,6 +542,9 @@ class CorteService:
         corte.desvios = json.dumps(desvios, ensure_ascii=False)
 
         await db.commit()
+        # D-448: era aqui que a lista desandava — o corte do desvio nascia com
+        # `max(numero) + 1` e ia para o fim, mesmo começando no meio da live.
+        await CorteService.renumerar_por_tempo(db, corte.projeto_id)
         await db.refresh(novo_corte)
         return novo_corte
 

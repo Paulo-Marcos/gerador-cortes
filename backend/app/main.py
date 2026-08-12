@@ -25,6 +25,7 @@ from app.routers import (
     export,
     mascot,
     metadados,
+    ordem_cortes,
     presets,
     projetos,
     ranking_lives,
@@ -114,6 +115,8 @@ app.include_router(
 app.include_router(
     avaliacoes_thumbnail.router, prefix="/api/avaliacoes-thumbnail", tags=["Avaliações Thumbnail"]
 )
+# D-448: pin explícito de posição — a ordem padrão (cronológica) não tem endpoint.
+app.include_router(ordem_cortes.router, prefix="/api/ordem-cortes", tags=["Ordem dos Cortes"])
 app.include_router(channels.router, prefix="/api/channels", tags=["Canais"])
 app.include_router(
     editorial_skills.router, prefix="/api/editorial-skills", tags=["Skills editoriais"]

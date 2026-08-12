@@ -113,6 +113,13 @@ class Corte(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     projeto_id: Mapped[str] = mapped_column(String(36), ForeignKey("projetos.id"))
     numero: Mapped[int] = mapped_column(Integer)
+    # D-448: posição na lista quando o editor a fixou NA MÃO (1-based). NULL — o
+    # caso normal — significa "siga o tempo": `numero` é derivado de `inicio_seg`
+    # a cada operação que cria ou move corte. Antes o `numero` era carimbado na
+    # criação, então corte nascido depois (do desvio, da 2ª passada da análise)
+    # ia para o fim mesmo começando no meio da live. Ordem canônica em
+    # `domain/ordem_cortes.py`.
+    posicao_fixada: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     titulo_proposto: Mapped[str] = mapped_column(String(500), default="")
     resumo: Mapped[str] = mapped_column(Text, default="")
     tema_central: Mapped[str] = mapped_column(String(500), default="")

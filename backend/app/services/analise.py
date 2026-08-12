@@ -646,6 +646,14 @@ class AnaliseService:
                     projeto.descartados_analise = json.dumps(descartados, ensure_ascii=False)
             await db.commit()
 
+            # D-448: a numeração acima é só um lugar provisório na fila. Numa
+            # análise aditiva (2ª passada, D-298) os cortes novos costumam cair
+            # ANTES dos já existentes na live — quem decide a posição final é o
+            # tempo, não a ordem de chegada.
+            from app.services.corte import CorteService
+
+            await CorteService.renumerar_por_tempo(db, projeto_id)
+
     @staticmethod
     async def analisar_transcricao(projeto_id: str):
         """Analisa a transcrição via Claude e salva os cortes retornados.

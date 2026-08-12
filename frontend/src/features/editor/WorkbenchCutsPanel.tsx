@@ -6,6 +6,8 @@ import {
   ChevronUp,
   Film,
   Plus,
+  Pin,
+  PinOff,
   Scissors,
   Settings,
   Sparkles,
@@ -18,6 +20,8 @@ import { PanelShell } from '@/components/workbench/PanelShell';
 import { RetractableFooter } from '@/components/workbench/RetractableFooter';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { moverCorte, useReordenarCortes } from '@/hooks/useEditor';
+import { estaFixado, type CorteComPin } from '@/lib/ordemCortesApi';
+import { useFixarPosicao, useNormalizarOrdem } from './ordem/useOrdemCortes';
 import { MetadataModal } from '@/features/metadata/MetadataModal';
 import { AdicionarCorteModal } from './AdicionarCorteModal';
 import { resolveThumbUrl } from '@/lib/api';
@@ -200,8 +204,12 @@ export function WorkbenchCutsPanel({
   const [metaCorte, setMetaCorte] = useState<Corte | null>(null);
   const [ferramentasOpen, setFerramentasOpen] = useState(false);
   const reordenar = useReordenarCortes(projetoId);
+  // D-448: a ordem padrão é a da live; o pin é o desvio explícito dela.
+  const normalizarOrdem = useNormalizarOrdem(projetoId);
+  const fixarPosicao = useFixarPosicao(projetoId);
 
   const aprovados = cortes.filter((c) => APROVADO_STATUS.has(c.status)).length;
+  const fixados = (cortes as CorteComPin[]).filter(estaFixado).length;
 
   function mover(corteId: string, delta: -1 | 1) {
     const novaOrdem = moverCorte(cortes, corteId, delta);
@@ -244,8 +252,9 @@ export function WorkbenchCutsPanel({
               ativo={ativo}
               podeSubir={idx > 0}
               podeDescer={idx < cortes.length - 1}
-              reordenando={reordenar.isPending}
+              reordenando={reordenar.isPending || fixarPosicao.isPending}
               onMover={(delta) => mover(corte.id, delta)}
+              onSoltarPin={() => fixarPosicao.mutate({ corteId: corte.id, posicao: null })}
               href={getCortePath?.(corte) ?? `/projetos/${projetoId}/cortes/${corte.id}`}
               onAbrirMetadados={() => setMetaCorte(corte)}
             />
@@ -275,6 +284,19 @@ export function WorkbenchCutsPanel({
           <Scissors size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
           Adicionar corte manual
         </button>
+        {/* D-448: só aparece quando há o que desfazer — sem pin, a lista já
+            está na ordem do tempo e o botão não teria efeito nenhum. */}
+        {fixados > 0 && (
+          <button
+            type="button"
+            onClick={() => normalizarOrdem.mutate()}
+            disabled={normalizarOrdem.isPending}
+            className="flex items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-[11.5px] font-semibold text-[var(--wb-text)] hover:bg-[var(--wb-bg-inset)] disabled:opacity-60"
+          >
+            <PinOff size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
+            Voltar à ordem por tempo ({fixados} fixado{fixados === 1 ? '' : 's'})
+          </button>
+        )}
       </RetractableFooter>
 
       <AdicionarCorteModal
@@ -309,6 +331,8 @@ interface CorteCardProps {
   podeDescer: boolean;
   reordenando: boolean;
   onMover: (delta: -1 | 1) => void;
+  /** D-448: solta o pin deste corte, devolvendo-o à ordem cronológica. */
+  onSoltarPin: () => void;
   /** Rota do corte. É um <Link> de verdade — ver D-404 no corpo do card. */
   href: string;
   onAbrirMetadados: () => void;
@@ -328,9 +352,11 @@ function CorteCard({
   podeDescer,
   reordenando,
   onMover,
+  onSoltarPin,
   href,
   onAbrirMetadados,
 }: CorteCardProps) {
+  const fixado = estaFixado(corte as CorteComPin);
   const publicado = Boolean(status?.youtube_url_publicado);
   const temMetadados = Boolean(status?.metadados_completos);
   const flags: SinalFlags = {
@@ -360,6 +386,26 @@ function CorteCard({
         style={{ background: faixaDeSinais(flags) }}
         className="absolute bottom-2 left-1 top-2 w-[3px] rounded-full"
       />
+
+      {/* D-448: o pin fica SEMPRE visível (fora do grupo que só aparece no
+          hover) — um corte fora da ordem do tempo é justamente o que o editor
+          precisa enxergar sem procurar. Clicar solta e devolve à cronologia. */}
+      {fixado && (
+        <Tooltip
+          label={`Fixado na posição ${corte.numero} — soltar e voltar à ordem por tempo`}
+          side="right"
+        >
+          <button
+            type="button"
+            onClick={onSoltarPin}
+            disabled={reordenando}
+            aria-label={`Soltar corte ${corte.numero} da posição fixada`}
+            className="absolute right-5 top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--wb-bg-card)]/85 text-[var(--wb-accent)] shadow-sm hover:text-[var(--wb-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--wb-focus)] disabled:opacity-40"
+          >
+            <Pin size={10} strokeWidth={2.4} aria-hidden />
+          </button>
+        </Tooltip>
+      )}
 
       <div
         className={cn(

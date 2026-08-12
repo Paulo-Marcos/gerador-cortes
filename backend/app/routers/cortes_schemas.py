@@ -20,6 +20,9 @@ class CorteResponse(BaseModel):
     id: str
     projeto_id: str
     numero: int
+    # D-448: posição fixada na mão pelo editor (1-based). None = segue o tempo,
+    # que é o padrão — a UI usa isso para marcar o corte como "fora da ordem".
+    posicao_fixada: int | None = None
     titulo_proposto: str
     resumo: str
     tema_central: str
