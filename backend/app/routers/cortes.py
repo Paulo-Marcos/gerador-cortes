@@ -462,6 +462,22 @@ def _corte_tem_cenas_geradas(corte: Corte) -> bool:
     return bool(cenas)
 
 
+async def _avaliar_bruto_gerado(corte_id: str) -> None:
+    """Avalia a estrutura do bruto recém-gerado (D-447), sem poder derrubá-lo.
+
+    Roda DEPOIS de o status virar "pronto": a avaliação é uma observação sobre o
+    bruto, não parte da entrega dele — um erro de IA aqui não pode transformar
+    uma geração bem-sucedida em falha na tela do editor. Por isso o status já
+    está carimbado e a exceção morre no log.
+    """
+    from app.services.claude_ia import ClaudeIaService
+
+    try:
+        await ClaudeIaService.avaliar_bruto_via_claude(corte_id)
+    except Exception as exc:  # noqa: BLE001 — nunca fatal para a geração do bruto
+        logger.warning("[avaliacao-bruto] falhou no corte %s: %s", corte_id[:8], exc)
+
+
 @router.post("/{corte_id}/gerar-bruto")
 async def gerar_bruto(
     corte_id: str,
@@ -506,6 +522,7 @@ async def gerar_bruto(
             )
             if resultado.get("status") == "pronto":
                 ExportService.set_tarefa_corte_status(corte_id, "pronto")
+                await _avaliar_bruto_gerado(corte_id)
             else:
                 msg = resultado.get("mensagem", "erro desconhecido")
                 ExportService.set_tarefa_corte_status(corte_id, f"erro: {msg}")

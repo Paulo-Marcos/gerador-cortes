@@ -19,6 +19,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
 import { RetractableFooter } from '@/components/workbench/RetractableFooter';
 import { cn } from '@/lib/utils';
+import { AvaliacaoBrutoPanel } from '../avaliacao/AvaliacaoBrutoPanel';
 import { resolverBadgeTrecho } from './trechoBadge';
 import { hmsParaSeg } from '../timeUtils';
 import { useCorte } from '@/hooks/useEditor';
@@ -80,7 +81,10 @@ interface RightTabsPanelProps {
   variant?: 'legacy' | 'workbench';
 }
 
-type TabId = 'trechos' | 'transcricao';
+// D-447: a aba "Avaliação" mora aqui, e não numa tela nova, porque a
+// pergunta que ela responde — "o que sobrou se sustenta?" — só faz sentido
+// ao lado do material que a responde: os trechos removidos e a transcrição.
+type TabId = 'trechos' | 'transcricao' | 'avaliacao';
 
 /**
  * "00:22:09.000" → "22:09.0". O protótipo v3 mostra décimos: os
@@ -153,6 +157,12 @@ export function RightTabsPanel({
           label="Transcrição"
           count={transcricao?.length ?? 0}
         />
+        <TabButton
+          id="avaliacao"
+          active={tab === 'avaliacao'}
+          onClick={() => setTab('avaliacao')}
+          label="Avaliação"
+        />
         <div className="flex-1" />
         {/* AUDITORIA-v2 §9 (CP10): no Workbench o refresh sai do header
             (baixo uso) e migra pro rodapé "MAIS AÇÕES" abaixo; legacy
@@ -173,7 +183,9 @@ export function RightTabsPanel({
         )}
       </header>
 
-      {tab === 'trechos' ? (
+      {tab === 'avaliacao' ? (
+        <AvaliacaoBrutoPanel corteId={corteId} />
+      ) : tab === 'trechos' ? (
         <TrechosList
           desvios={desvios}
           selectedDesvioIdx={selectedDesvioIdx}
@@ -238,7 +250,8 @@ function TabButton({
   active: boolean;
   onClick: () => void;
   label: string;
-  count: number;
+  /** Ausente = aba sem contador (a de Avaliação não conta itens). */
+  count?: number;
   countTone?: 'err';
 }) {
   return (
@@ -254,16 +267,18 @@ function TabButton({
       aria-current={active ? 'page' : undefined}
     >
       {label}
-      <span
-        className={cn(
-          'rounded-[5px] px-1.5 py-px font-code text-[9px] font-bold',
-          countTone === 'err'
-            ? 'bg-[var(--wb-err-soft)] text-[var(--wb-err-ink)]'
-            : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
-        )}
-      >
-        {count}
-      </span>
+      {count !== undefined && (
+        <span
+          className={cn(
+            'rounded-[5px] px-1.5 py-px font-code text-[9px] font-bold',
+            countTone === 'err'
+              ? 'bg-[var(--wb-err-soft)] text-[var(--wb-err-ink)]'
+              : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
+          )}
+        >
+          {count}
+        </span>
+      )}
     </button>
   );
 }

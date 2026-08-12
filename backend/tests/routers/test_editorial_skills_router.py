@@ -30,7 +30,7 @@ def client(tmp_path: Path, monkeypatch) -> TestClient:
     return TestClient(app)
 
 
-def test_get_lista_as_cinco_com_default_e_atual(client: TestClient):
+def test_get_lista_o_catalogo_com_default_e_atual(client: TestClient):
     resp = client.get("/editorial-skills")
     assert resp.status_code == 200
     skills = resp.json()["skills"]
@@ -40,6 +40,7 @@ def test_get_lista_as_cinco_com_default_e_atual(client: TestClient):
         "cenas-expert",
         "metadados-expert",
         "thumbnail-prompt-expert",
+        "avaliador-bruto",
     ]
     cortador = skills[0]
     assert set(cortador["params"]) == {"modelo", "thinking_tokens", "timeout"}

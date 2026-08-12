@@ -380,6 +380,43 @@ class AvaliacaoThumbnail(Base):
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class AvaliacaoBruto(Base):
+    """Avaliação automática da ESTRUTURA do bruto de um corte (D-447).
+
+    Roda ao final de cada geração de bruto, sobre a transcrição já sem os
+    trechos removidos e com as emendas marcadas. Uma linha POR GERAÇÃO (não uma
+    por corte): o interesse é justamente a série — o corte que era `quebrada` na
+    primeira tentativa e virou `coesa` depois de o editor mexer nas bordas conta
+    uma história que o "estado atual" apagaria.
+
+    `projeto_id` é replicado (e não só derivado via corte) para que o
+    levantamento por live não precise de join, e sobreviva ao corte deletado.
+    Vocabulário e validação em `domain/avaliacao_bruto.py`.
+    """
+
+    __tablename__ = "avaliacoes_bruto"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    corte_id: Mapped[str] = mapped_column(String(36), ForeignKey("cortes.id"), index=True)
+    projeto_id: Mapped[str] = mapped_column(String(36), default="", index=True)
+    # Nota 1-5 na MESMA escala do voto humano por corte (D-419), de propósito:
+    # é o que permite cruzar o que a IA achou com o que o editor achou.
+    nota: Mapped[int] = mapped_column(Integer, default=0)
+    veredito: Mapped[str] = mapped_column(String(20), default="aceitavel")
+    parecer: Mapped[str] = mapped_column(Text, default="")
+    # Lista JSON de {tipo, gravidade, momento, descricao} — tipos do vocabulário.
+    apontamentos: Mapped[str] = mapped_column(Text, default="[]")
+    # Contexto da geração avaliada: sem isso a estatística não distingue "nota 2
+    # em bruto de 40s com 12 emendas" de "nota 2 em bruto de 8min sem emenda".
+    duracao_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    total_emendas: Mapped[int] = mapped_column(Integer, default=0)
+    removido_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    # Proveniência: qual modelo e qual corpo de skill produziram este parecer.
+    modelo: Mapped[str] = mapped_column(String(80), default="")
+    skill_sha: Mapped[str] = mapped_column(String(16), default="")
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class LiveCandidata(Base):
     """Live do canal-fonte avaliada para entrar na fila de cortes (F-052).
 

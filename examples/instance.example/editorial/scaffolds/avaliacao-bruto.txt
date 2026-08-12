@@ -1,0 +1,30 @@
+=== O CORTE AVALIADO ===
+titulo: {titulo}
+tema_central: {tema_central}
+duracao do bruto: {duracao_humana}
+emendas (pontos de costura): {total_emendas}
+tempo removido do original: {removido_humano}
+
+=== TRANSCRIÇÃO DO BRUTO (o que sobrou, com as emendas marcadas) ===
+{texto_avaliado}
+=== FIM DA TRANSCRIÇÃO ===
+
+Avalie agora a ESTRUTURA desta peça, seguindo exatamente os critérios da sua expertise acima.
+
+Tipos de apontamento permitidos (use o slug exato; qualquer outro é descartado):
+{tipos_apontamento}
+
+Retorne APENAS o JSON puro, sem markdown e sem texto fora do JSON:
+{{
+  "nota": 1,
+  "veredito": "coesa | aceitavel | quebrada",
+  "parecer": "2 a 4 frases sobre o que sustenta e o que fraqueja",
+  "apontamentos": [
+    {{
+      "tipo": "<slug da lista acima>",
+      "gravidade": "leve | media | grave",
+      "momento": "MM:SS",
+      "descricao": "o que quebra ali e por quê"
+    }}
+  ]
+}}

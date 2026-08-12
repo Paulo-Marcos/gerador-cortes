@@ -196,6 +196,27 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
         ),
         marcador="JSON",
     ),
+    ScaffoldCatalogo(
+        key="avaliacao-bruto",
+        skill_key="avaliador-bruto",
+        etapa="Avaliar o bruto",
+        descricao=(
+            "Invólucro que envia a transcrição do bruto com as emendas marcadas e "
+            "pede o parecer em JSON com nota, veredito e apontamentos. O corpo/"
+            "expertise (o que conta como incoerência) vem da skill 'Avaliar o bruto'."
+        ),
+        arquivo="avaliacao-bruto.txt",
+        placeholders=(
+            "titulo",
+            "tema_central",
+            "duracao_humana",
+            "total_emendas",
+            "removido_humano",
+            "tipos_apontamento",
+            "texto_avaliado",
+        ),
+        marcador="apontamentos",
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, ScaffoldCatalogo] = {c.key: c for c in _CATALOGO}

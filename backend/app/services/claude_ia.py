@@ -108,6 +108,7 @@ _SKILL_TRECHOS = "trechos-expert"
 _SKILL_CENAS = "cenas-expert"
 _SKILL_METADADOS = "metadados-expert"
 _SKILL_THUMBNAIL = "thumbnail-prompt-expert"
+_SKILL_AVALIACAO = "avaliador-bruto"
 
 # A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
 _LIMITE_MOTIVO_NA_TELA = 400
@@ -1055,6 +1056,54 @@ class ClaudeIaService:
 
         logger.info("[ClaudeIA] Resumo regerado via Claude p/ corte %s", corte_id[:8])
         return {"resumo": novo_resumo, "status": "sucesso"}
+
+    @staticmethod
+    async def avaliar_bruto_via_claude(corte_id: str) -> dict:
+        """Avalia a ESTRUTURA do bruto recém-gerado e registra o parecer (D-447).
+
+        Roda depois da geração do bruto, sobre a transcrição que sobrou com as
+        emendas marcadas — o único material em que os defeitos de costura são
+        visíveis. Persiste uma linha na série de avaliações do corte.
+
+        Levanta `LookupError` (corte inexistente) ou `ValueError` (sem
+        transcrição final, ou retorno do modelo sem nota utilizável). Quem chama
+        no fluxo automático trata a falha como não-fatal: a avaliação é
+        observação sobre o bruto, não parte da entrega dele.
+        """
+        from app.domain.avaliacao_bruto import normalizar_avaliacao, tipos_disponiveis
+        from app.services import avaliacao_bruto as avaliacao_store
+
+        contexto = await avaliacao_store.montar_contexto(corte_id)
+
+        skill = editorial_skills.resolver_skill(_SKILL_AVALIACAO)
+        scaffold = editorial_scaffolds.resolver_scaffold("avaliacao-bruto")
+        prompt = scaffold.format(
+            titulo=contexto.titulo,
+            tema_central=contexto.tema_central,
+            duracao_humana=seg_to_hms_short(contexto.duracao_seg),
+            total_emendas=contexto.total_emendas,
+            removido_humano=seg_to_hms_short(contexto.removido_seg),
+            tipos_apontamento="\n".join(
+                f"- {tipo['slug']}: {tipo['rotulo']}" for tipo in tipos_disponiveis()
+            ),
+            texto_avaliado=contexto.texto_avaliado,
+        )
+        _log_skill_usada(_SKILL_AVALIACAO, skill, scaffold)
+        resultado = await claude_cli_client.generate_json(
+            prompt,
+            **_args_claude(
+                skill,
+                _SKILL_AVALIACAO,
+                projeto_id=contexto.projeto_id,
+                corte_id=corte_id,
+            ),
+        )
+        return await avaliacao_store.registrar_avaliacao(
+            contexto,
+            normalizar_avaliacao(resultado),
+            modelo=skill.modelo,
+            skill_sha=_sha1_curto(skill.corpo),
+        )
 
     # ── Fase 4: prompt de thumbnail via Claude (skill capista) ────────────────
 

@@ -15,6 +15,7 @@ from app.channel_paths import projetos_dir
 from app.config import settings
 from app.database import init_db
 from app.routers import (
+    avaliacao_bruto,
     avaliacao_cortes,
     avaliacoes_thumbnail,
     channels,
@@ -114,6 +115,10 @@ app.include_router(
 )
 app.include_router(
     avaliacoes_thumbnail.router, prefix="/api/avaliacoes-thumbnail", tags=["Avaliações Thumbnail"]
+)
+# D-447: avaliação automática da estrutura do bruto (nota + apontamentos).
+app.include_router(
+    avaliacao_bruto.router, prefix="/api/avaliacao-bruto", tags=["Avaliação do Bruto"]
 )
 # D-448: pin explícito de posição — a ordem padrão (cronológica) não tem endpoint.
 app.include_router(ordem_cortes.router, prefix="/api/ordem-cortes", tags=["Ordem dos Cortes"])

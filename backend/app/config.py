@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     # sobre velocidade — extended thinking ligado SÓ neste caminho. 0 = herda o
     # global (desligado).
     claude_cli_thinking_tokens_thumbnail: int = 10000
+    # D-447: avaliar o bruto é julgar um texto já pronto contra um roteiro fixo
+    # (as emendas marcadas) — pede menos raciocínio que propor os cortes, e roda
+    # a cada geração de bruto, então economia importa.
+    claude_cli_thinking_tokens_avaliacao: int = 3000
     skills_dir: str = os.path.join(_PROJECT_ROOT, ".claude", "skills")
     # Modelos por etapa (alias do CLI: opus | sonnet | haiku, ou nome completo)
     claude_model_analise: str = "opus"
@@ -66,6 +70,7 @@ class Settings(BaseSettings):
     claude_model_metadados: str = "sonnet"
     claude_model_thumbnail: str = "opus"
     claude_model_ranking_sentimento: str = "haiku"
+    claude_model_avaliacao: str = "sonnet"
     # Janela da memória global anti-repetição de thumbnails: quantas das últimas
     # capas (de QUALQUER projeto, ordenadas por id desc) viram ELEMENTOS
     # PROIBIDOS no prompt. Janela maior = menos recorrência de roupa/cenário/

@@ -145,6 +145,22 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
         thinking_setting="claude_cli_thinking_tokens_thumbnail",
         lentes_tipo=None,
     ),
+    SkillCatalogo(
+        key="avaliador-bruto",
+        arquivo="avaliacao-bruto.md",
+        etapa="Avaliar o bruto",
+        descricao=(
+            "Lê o bruto pronto — a transcrição já sem os trechos removidos, com "
+            "as emendas marcadas — e devolve nota, veredito estrutural e os "
+            "pontos que não fecham. Roda sozinha ao fim de cada geração de "
+            "bruto; a série de notas alimenta o refino da skill 'Propor cortes'. "
+            "Sem lentes por design: avaliação precisa ser comparável entre "
+            "cortes, não variada."
+        ),
+        model_setting="claude_model_avaliacao",
+        thinking_setting="claude_cli_thinking_tokens_avaliacao",
+        lentes_tipo=None,
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, SkillCatalogo] = {c.key: c for c in _CATALOGO}
@@ -166,7 +182,7 @@ class SkillResolvida:
 
 
 def catalogo() -> tuple[SkillCatalogo, ...]:
-    """As 5 skills editoriais, na ordem de exibição."""
+    """As skills editoriais do canal, na ordem de exibição."""
     return _CATALOGO
 
 

@@ -243,7 +243,7 @@ def test_resetar_campo_invalido_levanta(tmp_path: Path):
         pass
 
 
-def test_descrever_skills_traz_as_cinco_com_default_e_atual(tmp_path: Path):
+def test_descrever_skills_traz_todas_com_default_e_atual(tmp_path: Path):
     db = _db(tmp_path)
     editorial = _editorial(tmp_path)
 
@@ -257,6 +257,7 @@ def test_descrever_skills_traz_as_cinco_com_default_e_atual(tmp_path: Path):
         "cenas-expert",
         "metadados-expert",
         "thumbnail-prompt-expert",
+        "avaliador-bruto",
     ]
     thumb = next(d for d in descritas if d.key == "thumbnail-prompt-expert")
     assert set(thumb.params) == {"modelo", "thinking_tokens", "timeout"}
@@ -266,13 +267,13 @@ def test_descrever_skills_traz_as_cinco_com_default_e_atual(tmp_path: Path):
     assert cortador.lentes_default == []  # D-301: sem lentes de sorteio por design
 
 
-def test_migracao_idempotente_semeia_cinco_uma_vez(tmp_path: Path):
+def test_migracao_idempotente_semeia_o_catalogo_uma_vez(tmp_path: Path):
     db = _db(tmp_path)
 
     primeira = editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
     segunda = editorial_skills.migrar_skills_do_canal_ativo(db_path=db, channel_id=_CANAL)
 
-    assert primeira == 5
+    assert primeira == len(editorial_skills.catalogo())
     assert segunda == 0
     assert set(settings_store.ler_skills_do_canal(db, _CANAL)) == {
         c.key for c in editorial_skills.catalogo()
