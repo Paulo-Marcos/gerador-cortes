@@ -39,6 +39,14 @@ const COR_GRAVIDADE: Record<GravidadeApontamento, string> = {
   grave: 'border-rose-400/60 text-rose-200',
 };
 
+// Os três mapas acima são indexados por valor que veio da REDE. O backend
+// normaliza para o vocabulário fechado, mas um `Record` indexado fora da chave
+// devolve `undefined` em silêncio — e `undefined` num rótulo vira texto vazio na
+// tela, sem erro nenhum para investigar depois. O fallback custa uma linha.
+const rotuloDoVeredito = (v: VereditoBruto) => ROTULO_VEREDITO[v] ?? v;
+const corDoVeredito = (v: VereditoBruto) => COR_VEREDITO[v] ?? COR_VEREDITO.aceitavel;
+const corDaGravidade = (g: GravidadeApontamento) => COR_GRAVIDADE[g] ?? COR_GRAVIDADE.media;
+
 function NotaEmEstrelas({ nota }: { nota: number }) {
   return (
     <span className="flex items-center gap-0.5" aria-label={`Nota ${nota} de 5`}>
@@ -64,7 +72,7 @@ function Apontamento({ item }: { item: ApontamentoBruto }) {
         <span
           className={cn(
             'rounded border px-1 py-px text-[9px] font-bold uppercase tracking-wide',
-            COR_GRAVIDADE[item.gravidade] ?? COR_GRAVIDADE.media,
+            corDaGravidade(item.gravidade),
           )}
         >
           {item.gravidade}
@@ -88,7 +96,7 @@ function LinhaDeSerie({ avaliacao }: { avaliacao: AvaliacaoBruto }) {
   return (
     <li className="flex items-center gap-2 text-[10.5px] text-[var(--wb-text-dim)]">
       <span className="font-bold text-[var(--wb-text)]">{avaliacao.nota}/5</span>
-      <span className={COR_VEREDITO[avaliacao.veredito]}>{avaliacao.veredito}</span>
+      <span className={corDoVeredito(avaliacao.veredito)}>{avaliacao.veredito}</span>
       <span className="ml-auto font-mono">{quando}</span>
     </li>
   );
@@ -147,10 +155,8 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
         <>
           <div className="flex items-center gap-2">
             <NotaEmEstrelas nota={avaliacao.nota} />
-            <span
-              className={cn('text-[11px] font-semibold', COR_VEREDITO[avaliacao.veredito])}
-            >
-              {ROTULO_VEREDITO[avaliacao.veredito]}
+            <span className={cn('text-[11px] font-semibold', corDoVeredito(avaliacao.veredito))}>
+              {rotuloDoVeredito(avaliacao.veredito)}
             </span>
           </div>
 
