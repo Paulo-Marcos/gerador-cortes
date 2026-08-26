@@ -13,7 +13,6 @@ from app.domain.ffmpeg_commands import (
     build_normalize_cmd,
     build_overlay_filter_string,
     build_remux_cmd,
-    build_silence_detect_cmd,
 )
 
 VIDEO = Path("video.mp4")
@@ -224,38 +223,6 @@ class TestBuildFilterComplexCmd:
             assert "end=110" in filter_str
             assert "start=200" in filter_str
             assert "end=210" in filter_str
-
-
-class TestBuildSilenceDetectCmd:
-    def test_comeca_com_ffmpeg(self):
-        cmd = build_silence_detect_cmd("audio.wav")
-        assert cmd[0] == "ffmpeg"
-
-    def test_contem_silencedetect(self):
-        cmd = build_silence_detect_cmd("audio.wav")
-        assert any("silencedetect" in arg for arg in cmd)
-
-    def test_contem_input(self):
-        cmd = build_silence_detect_cmd("audio.wav")
-        assert "audio.wav" in cmd
-
-    def test_sem_offset_nao_tem_ss(self):
-        cmd = build_silence_detect_cmd("audio.wav")
-        assert "-ss" not in cmd
-
-    def test_com_offset_tem_ss_e_t(self):
-        cmd = build_silence_detect_cmd("audio.wav", start_offset=10.0, duration=60.0)
-        assert "-ss" in cmd
-        assert "-t" in cmd
-
-    def test_noise_db_customizavel(self):
-        cmd = build_silence_detect_cmd("audio.wav", noise_db="-40dB")
-        assert any("-40dB" in arg for arg in cmd)
-
-    def test_saida_null(self):
-        cmd = build_silence_detect_cmd("audio.wav")
-        assert "-f" in cmd
-        assert "null" in cmd
 
 
 class TestBuildNormalizeCmd:

@@ -25,7 +25,6 @@ from app.domain.ffmpeg_basic import (
     build_lossless_cut_cmd,
     build_normalize_cmd,
     build_remux_cmd,
-    build_silence_detect_cmd,
 )
 from app.domain.ffmpeg_common import (
     _CANVAS_NORMALIZE,
@@ -85,7 +84,6 @@ __all__ = [
     "build_concat_cmd",
     "build_filter_string",
     "build_filter_complex_cmd",
-    "build_silence_detect_cmd",
     "build_normalize_cmd",
     "build_remux_cmd",
     # grade

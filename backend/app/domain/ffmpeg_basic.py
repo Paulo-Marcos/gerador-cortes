@@ -226,30 +226,6 @@ def build_filter_complex_cmd(
     ]
 
 
-def build_silence_detect_cmd(
-    input_path: str,
-    *,
-    start_offset: float | None = None,
-    duration: float | None = None,
-    noise_db: str = "-35dB",
-    min_duration: str = "0.4",
-) -> list[str]:
-    """Comando FFmpeg para detecção de silêncios via silencedetect."""
-    cmd = ["ffmpeg", "-y"]
-    if start_offset is not None and duration is not None:
-        cmd += ["-ss", str(start_offset), "-t", str(duration)]
-    cmd += [
-        "-i",
-        input_path,
-        "-af",
-        f"silencedetect=noise={noise_db}:d={min_duration}",
-        "-f",
-        "null",
-        "-",
-    ]
-    return cmd
-
-
 def build_normalize_cmd(
     input_path: Path,
     output_path: Path,
