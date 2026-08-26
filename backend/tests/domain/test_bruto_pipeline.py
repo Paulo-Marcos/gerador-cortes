@@ -134,6 +134,21 @@ class TestPerSegment:
         assert "-c:v libx264" in cmd
         assert "-preset ultrafast" in cmd
 
+    def test_fps_mode_cfr_ancora_video_em_zero(self):
+        """REGRESSAO (D-449): sem ``-fps_mode cfr``, o `-ss` corta o áudio no
+        instante exato mas o 1o frame de vídeo cai no próximo ponto da grade —
+        ~40% dos parts nasciam com v_start=0.033 e a_start=0.000.  O concat
+        preserva o vão e a grade (CFR estrito) depois o colapsa, encolhendo o
+        vídeo enquanto o áudio segue contínuo: dessincronia progressiva que
+        escala com o número de parts.
+        """
+        p = _build([(0.0, 10.0)])
+        cmd = _seg_lines(_bat(p))[0]
+        assert "-fps_mode cfr" in cmd
+        # opção de SAÍDA: precisa vir depois do `-i`, senão o ffmpeg a aplica
+        # ao input e o part volta a nascer desalinhado.
+        assert cmd.index("-fps_mode cfr") > cmd.index(" -i ")
+
     def test_codec_audio_pcm_lossless(self):
         """REGRESSAO: NUNCA AAC nos parts.  AAC adiciona ~21ms de priming
         samples a cada re-encode, acumulando 1-2s de drift em 80 parts.

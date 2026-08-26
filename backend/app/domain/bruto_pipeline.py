@@ -20,7 +20,8 @@ Várias abordagens foram testadas e descartadas:
 5. **Concat demuxer + re-encode**: lento e introduzia perda visual.
 
 A abordagem atual (LosslessCut-style) é a **única** que entrega:
-- Per-segment com PTS contíguo (`-fflags +genpts` + `-avoid_negative_ts make_zero`)
+- Per-segment com PTS contíguo e vídeo ancorado em 0 (`-fps_mode cfr` +
+  `-fflags +genpts` + `-avoid_negative_ts make_zero`)
 - Concat sem re-encode (`-c:0 copy` por índice, não por tipo)
 - Flags defensivas do muxer matroska (`-default_mode infer_no_subs`,
   `-ignore_unknown`, `-disposition:N default`)
@@ -87,13 +88,24 @@ def _per_segment_cmd(video_path: Path, seg_i: float, seg_f: float, out_path: Pat
 
     Flags-chave:
 
-    - ``-fflags +genpts``: regenera PTSes em sequência a partir de 0, mesmo
-      quando o seek (-ss) cai entre frames da fonte.  Sem isso, ~45% dos
-      parts saíam com ``first_dts=0.033s`` e o concat acumulava gaps de
-      ~33ms por part.
+    - ``-fflags +genpts``: regenera PTSes ausentes.  Defesa em profundidade —
+      NÃO resolve sozinho o part que nasce com ``v_start=0.033`` (ver
+      `-fps_mode cfr` abaixo): ali os PTSes existem e estão corretos, então
+      não há o que sintetizar.
     - ``-ss SEG_I -i video -t DUR``: fast seek + duração exata.
     - ``-c:v libx264 -preset ultrafast``: re-encode necessário porque
       `-c copy` não consegue cortar em pontos não-keyframe.
+    - ``-fps_mode cfr``: ancora o vídeo do part na grade de frames a partir de
+      0 (D-449).  O `-ss` corta o áudio no instante EXATO pedido, mas o vídeo
+      só tem frame a cada 1/fps — em ~40% dos parts o primeiro frame caía em
+      0.033 enquanto o áudio começava em 0.000.  O `make_zero` zera o menor
+      dos dois (o áudio) e o vídeo ficava 1 frame atrasado DENTRO do part; o
+      concat preservava esse vão e a grade (CFR estrito) depois o colapsava,
+      encolhendo o vídeo enquanto o áudio seguia contínuo → dessincronia
+      progressiva, proporcional ao número de parts (~1,5s em 116 parts).
+      Com `cfr` os dois streams nascem em 0.000 e a contagem de frames fecha
+      exata; o custo é ≤1 frame de deslocamento por part, LIMITADO e não
+      acumulativo.
     - ``-c:a pcm_s16le``: áudio lossless **sem** priming samples (AAC adicionaria
       ~21ms a cada part, acumulando 1-2s em 80 parts).  PCM é convertido pra
       formato final no pipeline de pós-produção.
@@ -105,7 +117,7 @@ def _per_segment_cmd(video_path: Path, seg_i: float, seg_f: float, out_path: Pat
         f"ffmpeg -y -nostdin -fflags +genpts "
         f'-ss {seg_to_hms(seg_i)} -i "{video_path}" '
         f"-t {seg_to_hms(duracao)} "
-        f"-c:v libx264 -preset ultrafast -c:a pcm_s16le "
+        f"-c:v libx264 -preset ultrafast -fps_mode cfr -c:a pcm_s16le "
         f"-avoid_negative_ts make_zero "
         f'"{out_path}"'
     )
