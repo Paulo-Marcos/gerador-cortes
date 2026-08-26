@@ -23,12 +23,9 @@ class TestSuperficePublica:
         "set_tarefa_corte_status",
         "get_fila_processamento",
         "get_fila_youtube",
-        "bulk_processar_impl",
         "bulk_upload_youtube_impl",
         "gerar_bruto_via_worker",
-        "processar_clip",
         "processar_multiversion",
-        "aplicar_faststart",
     ]
 
     METODOS_INTERNOS = [

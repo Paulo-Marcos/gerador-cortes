@@ -19,11 +19,6 @@ const RankingLivesPage = lazy(() =>
 const MetadataPage = lazy(() =>
   import('@/features/metadata/MetadataPage').then((m) => ({ default: m.MetadataPage })),
 );
-const PostProductionPage = lazy(() =>
-  import('@/features/post-production/PostProductionPage').then((m) => ({
-    default: m.PostProductionPage,
-  })),
-);
 const ScenesPostProductionPage = lazy(() =>
   import('@/features/post-production/ScenesPostProductionPage').then((m) => ({
     default: m.ScenesPostProductionPage,
@@ -64,7 +59,9 @@ export const router = createBrowserRouter([
       { path: 'projetos/:id/metadados', element: <MetadataPage /> },
       { path: 'projetos/:id/post-production', element: <ScenesPostProductionPage /> },
       { path: 'projetos/:id/final-review', element: <FinalReviewPage /> },
-      { path: 'projetos/:id/export', element: <PostProductionPage /> },
+      // /export foi aposentada (A6d): redireciona para a tela viva de pos-producao,
+      // preservando favoritos antigos em vez de devolver 404.
+      { path: 'projetos/:id/export', element: <Navigate to="../post-production" replace /> },
       { path: 'buscar-lives', element: <LiveSearchPage /> },
       { path: 'ranking-lives', element: <RankingLivesPage /> },
       { path: 'padroes-thumbnail', element: <ThumbnailPadroesPage /> },

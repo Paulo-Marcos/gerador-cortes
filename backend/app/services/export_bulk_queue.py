@@ -8,14 +8,13 @@ fila de upload com controle de cota. Todos os métodos resolvem irmãos via
 
 import asyncio
 
-from app.services.app_logging import operational_error, operational_info
+from app.services.app_logging import operational_info
 from app.services.tasks import fire_and_forget
 
 # D-364: o render final em lote roda SEQUENCIAL (1 corte por vez). Cada corte
 # dispara ffmpeg pesado (normalização + filtro + intro/outro); rodar vários em
 # paralelo estoura CPU/RAM da máquina do editor. A fila (`_fila_processamento`)
 # continua mostrando o progresso — só um fica "processando" de cada vez.
-_BULK_PROCESSAR_CONCORRENCIA = 1
 
 
 class _ExportBulkQueueMixin:
@@ -56,66 +55,6 @@ class _ExportBulkQueueMixin:
                 operational_info("ExportService", f"Cancelado na fila de pós: {corte_id}")
                 return True
         return False
-
-    @classmethod
-    async def bulk_processar_impl(cls, projeto_id: str, corte_ids: list[str], filtro: str):
-        if cls._bulk_processar_sem is None:
-            cls._bulk_processar_sem = asyncio.Semaphore(_BULK_PROCESSAR_CONCORRENCIA)
-
-        cls._fila_processamento[projeto_id] = {cid: "aguardando" for cid in corte_ids}
-
-        fire_and_forget(
-            cls._run_processar_queue(projeto_id, corte_ids, filtro),
-            name=f"processar-todos-{projeto_id[:8]}",
-        )
-
-    @classmethod
-    async def _run_processar_queue(
-        cls,
-        projeto_id: str,
-        corte_ids: list[str],
-        filtro: str,
-        cleanup_delay: float | None = 300,
-    ) -> None:
-        """Processa os cortes da fila respeitando `_bulk_processar_sem`.
-
-        Com o semáforo em 1 (D-364), os cortes rodam UM DE CADA VEZ — só um fica
-        "processando" na fila; os demais esperam. `cleanup_delay=None` preserva a
-        fila (usado em teste); em produção ela é limpa após o delay.
-        """
-        sem = cls._bulk_processar_sem
-
-        def _foi_cancelado(corte_id: str) -> bool:
-            return cls._fila_processamento.get(projeto_id, {}).get(corte_id) == "cancelado"
-
-        async def _processar_com_sem(corte_id: str):
-            async with sem:
-                # O cancelamento pode ter chegado enquanto o corte esperava a
-                # vez (D-426): a fila é sequencial, então essa espera é longa.
-                if _foi_cancelado(corte_id):
-                    operational_info("ExportService", f"Pulado (cancelado): {corte_id}")
-                    return
-                cls._fila_processamento[projeto_id][corte_id] = "processando"
-                operational_info("ExportService", f"Iniciando: {corte_id} com filtro '{filtro}'")
-                try:
-                    await cls.processar_clip(corte_id, filtro=filtro)
-                    cls._fila_processamento[projeto_id][corte_id] = "concluido"
-                    operational_info("ExportService", f"Concluído: {corte_id}")
-                except Exception as e:
-                    # Cancelar mata os jobs do worker, e a falha resultante
-                    # chega aqui: reportar "erro" mascararia a decisão do
-                    # operador. O estado cancelado é o desfecho correto.
-                    if _foi_cancelado(corte_id):
-                        operational_info("ExportService", f"Interrompido: {corte_id}")
-                        return
-                    cls._fila_processamento[projeto_id][corte_id] = "erro"
-                    operational_error("ExportService", f"Erro: {corte_id}: {e}")
-
-        await asyncio.gather(*[_processar_com_sem(cid) for cid in corte_ids])
-
-        if cleanup_delay is not None:
-            await asyncio.sleep(cleanup_delay)
-            cls._fila_processamento.pop(projeto_id, None)
 
     @classmethod
     async def bulk_upload_youtube_impl(

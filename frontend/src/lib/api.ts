@@ -17,7 +17,6 @@ import type {
   EnfileirarDownloadsResponse,
   ExportStatusResponse,
   FilaGlobal,
-  FilaProcessamento,
   FiltroExport,
   FontePreset,
   ImportarAnaliseRequest,
@@ -333,18 +332,6 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  processarClip: (corteId: string, filtro = 'nenhum') =>
-    request<{ message: string; corte_id: string }>(
-      `/export/corte/${corteId}/processar?filtro=${encodeURIComponent(filtro)}`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  aplicarFaststart: (corteId: string) =>
-    request<{ status: string; mensagem: string }>(`/export/corte/${corteId}/faststart`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
   listarFiltros: () => request<{ filtros: FiltroExport[] }>('/export/filtros'),
 
   listarVersoes: (corteId: string) =>
@@ -365,15 +352,6 @@ export const api = {
   // O antigo PATCH /export/projeto/{id}/filtro-padrao foi removido — não
   // existia "filtro por projeto" coerente com a fonte única definida em
   // AppSettings.filtro_global_padrao.
-
-  bulkProcessar: (projetoId: string, corteIds: string[], filtro: string) =>
-    request<{ message: string }>(`/export/projeto/${projetoId}/bulk-processar`, {
-      method: 'POST',
-      body: JSON.stringify({ corte_ids: corteIds, filtro }),
-    }),
-
-  filaProcessamento: (projetoId: string) =>
-    request<FilaProcessamento>(`/export/projeto/${projetoId}/fila-processamento`),
 
   filaGlobal: () => request<FilaGlobal>('/export/fila-global'),
 

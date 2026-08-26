@@ -49,7 +49,6 @@ class ExportService(
     _SEGMENT_FALLBACK_THRESHOLD: int = 10
 
     _tarefas_corte: dict[str, str] = {}
-    _bulk_processar_sem: asyncio.Semaphore | None = None
     _bulk_upload_sem: asyncio.Semaphore | None = None
     _fila_processamento: dict[str, dict[str, str]] = {}
     _fila_youtube: dict[str, dict[str, str]] = {}

@@ -1,6 +1,4 @@
-import asyncio
 import json
-import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -8,7 +6,7 @@ from app.channel_paths import (
     projetos_dir,
     resolver_do_projeto,
 )
-from app.database import AsyncSessionLocal, get_db
+from app.database import get_db
 from app.domain.cinema_filters import FILTROS_CINEMA
 from app.models import Corte, MetadadoCorte, StatusCorte
 from app.routers.errors import erro_interno
@@ -20,7 +18,6 @@ from app.services.cancelamento_jobs import (
 )
 from app.services.export import ExportService
 from app.services.jobs_globais import JobsGlobais
-from app.services.render_progress import RenderProgressStore
 from app.services.tasks import fire_and_forget
 from app.services.youtube import YouTubeService
 from fastapi import APIRouter, Depends, HTTPException
@@ -142,69 +139,6 @@ async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
         "clip_path": clip_path,
         "clip_gerado": bool(clip_resolvido and clip_resolvido.exists()),
     }
-
-
-@router.post("/corte/{corte_id}/processar")
-async def processar_clip(corte_id: str, filtro: str = "nenhum", db: AsyncSession = Depends(get_db)):
-    if RenderProgressStore.is_running(corte_id):
-        return {"message": "Processamento ja em andamento", "corte_id": corte_id}
-
-    operational_info("router", f"📥 Solicitação: Processar '{corte_id}' | Filtro: '{filtro}'")
-    started_at = time.time()
-    RenderProgressStore.start(corte_id)
-    RenderProgressStore.update(corte_id, 2, "Render final enfileirado")
-    operational_info("Render final", "2% - Render final enfileirado", started_at=started_at)
-
-    async def _run_with_progress():
-        task = asyncio.create_task(ExportService.processar_clip(corte_id, filtro=filtro))
-        progress = 5
-        try:
-            while not task.done():
-                RenderProgressStore.update(corte_id, progress, "Render final em processamento")
-                operational_info(
-                    "Render final",
-                    f"{progress}% - Render final em processamento",
-                    started_at=started_at,
-                )
-                progress = min(progress + 5, 95)
-                await asyncio.sleep(5)
-
-            await task
-            async with AsyncSessionLocal() as check_db:
-                corte = await check_db.get(Corte, corte_id)
-                final_path = (
-                    projetos_dir()
-                    / corte.projeto_id
-                    / "cortes"
-                    / corte_id
-                    / "upload_ready"
-                    / "video.mp4"
-                    if corte
-                    else None
-                )
-            if final_path and final_path.exists():
-                RenderProgressStore.done(corte_id)
-                operational_info(
-                    "Render final", "100% - Render final concluido", started_at=started_at
-                )
-            else:
-                RenderProgressStore.error(
-                    corte_id, "Video final nao foi encontrado apos processamento"
-                )
-        except Exception as exc:
-            RenderProgressStore.error(corte_id, str(exc))
-            operational_info("Render final", f"erro - {exc}", started_at=started_at)
-
-    fire_and_forget(_run_with_progress(), name=f"render-final-{corte_id[:8]}")
-    return {"message": "Processamento iniciado", "corte_id": corte_id}
-
-
-@router.post("/corte/{corte_id}/faststart")
-async def aplicar_faststart(corte_id: str, db: AsyncSession = Depends(get_db)):
-    result = await ExportService.aplicar_faststart(corte_id)
-    if result.get("status") == "erro":
-        raise HTTPException(status_code=500, detail=result.get("mensagem"))
-    return result
 
 
 @router.get("/filtros")
@@ -346,37 +280,6 @@ async def marcar_corte_publicado(
 class BulkProcessarRequest(BaseModel):
     corte_ids: list[str]
     filtro: str = "nenhum"
-
-
-@router.post("/projeto/{projeto_id}/bulk-processar")
-async def bulk_processar(
-    projeto_id: str, body: BulkProcessarRequest, db: AsyncSession = Depends(get_db)
-):
-    await ExportService.bulk_processar_impl(projeto_id, body.corte_ids, body.filtro)
-    return {
-        "message": f"{len(body.corte_ids)} cortes enfileirados para processamento",
-        "filtro": body.filtro,
-    }
-
-
-@router.get("/projeto/{projeto_id}/fila-processamento")
-async def status_fila_processamento(projeto_id: str):
-    fila = ExportService.get_fila_processamento().get(projeto_id, {})
-    total = len(fila)
-    concluidos = sum(1 for s in fila.values() if s == "concluido")
-    processando = sum(1 for s in fila.values() if s == "processando")
-    aguardando = sum(1 for s in fila.values() if s == "aguardando")
-    erros = sum(1 for s in fila.values() if s == "erro")
-    return {
-        "ativo": total > 0,
-        "total": total,
-        "concluidos": concluidos,
-        "processando": processando,
-        "aguardando": aguardando,
-        "erros": erros,
-        "pct": round(concluidos / total * 100) if total > 0 else 0,
-        "detalhes": fila,
-    }
 
 
 @router.get("/fila-global")

@@ -439,17 +439,6 @@ export interface VersaoExport {
   tamanho_mb?: number;
 }
 
-export interface FilaProcessamento {
-  ativo: boolean;
-  total: number;
-  concluidos: number;
-  processando: number;
-  aguardando: number;
-  erros: number;
-  pct: number;
-  detalhes?: Record<string, string>;
-}
-
 export interface FilaGlobal {
   pos_producao: {
     total: number;
