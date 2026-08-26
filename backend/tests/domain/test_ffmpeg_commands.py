@@ -9,10 +9,8 @@ from app.domain.ffmpeg_commands import (
     build_concat_cmd,
     build_filter_complex_cmd,
     build_filter_string,
-    build_final_encode_cmd,
     build_lossless_cut_cmd,
     build_normalize_cmd,
-    build_overlay_composition_cmd,
     build_overlay_filter_string,
     build_remux_cmd,
     build_silence_detect_cmd,
@@ -911,114 +909,6 @@ class TestBuildOverlayFilterString:
         result = build_overlay_filter_string(ovs)
         assert "[v1]" in result
         assert "[v2]" in result
-
-
-class TestBuildOverlayCompositionCmd:
-    def test_sem_overlays_usa_copy(self):
-        cmd = build_overlay_composition_cmd(VIDEO, [], [], OUTPUT)
-        assert _has(cmd, "-c", "copy")
-
-    def test_com_overlay_tem_filter_complex(self):
-        cmd = build_overlay_composition_cmd(
-            VIDEO,
-            [Path("ov1.webm")],
-            [{"start_sec": 0.0, "end_sec": 5.0}],
-            OUTPUT,
-        )
-        assert "-filter_complex" in cmd or "-filter_complex_script" in cmd
-
-    def test_inputs_incluem_todos_overlays(self):
-        ovs = [Path("ov1.webm"), Path("ov2.webm")]
-        cmd = build_overlay_composition_cmd(
-            VIDEO,
-            ovs,
-            [
-                {"start_sec": 0.0, "end_sec": 5.0},
-                {"start_sec": 10.0, "end_sec": 15.0},
-            ],
-            OUTPUT,
-        )
-        assert "ov1.webm" in cmd
-        assert "ov2.webm" in cmd
-
-    def test_webm_forca_decoder_vp9_com_alpha(self):
-        cmd = build_overlay_composition_cmd(
-            VIDEO,
-            [Path("ov1.webm")],
-            [{"start_sec": 0.0, "end_sec": 5.0}],
-            OUTPUT,
-        )
-        input_idx = cmd.index("ov1.webm")
-        assert cmd[input_idx - 3 : input_idx] == ["-c:v", "libvpx-vp9", "-i"]
-
-    def test_comeca_com_ffmpeg(self):
-        cmd = build_overlay_composition_cmd(VIDEO, [], [], OUTPUT)
-        assert cmd[0] == "ffmpeg"
-
-    def test_output_no_fim(self):
-        cmd = build_overlay_composition_cmd(VIDEO, [], [], OUTPUT)
-        assert cmd[-1] == str(OUTPUT)
-
-
-class TestBuildFinalEncodeCmd:
-    def test_comeca_com_ffmpeg(self):
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT)
-        assert cmd[0] == "ffmpeg"
-
-    def test_usa_h264_qsv(self):
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT)
-        assert "h264_qsv" in cmd
-
-    def test_tem_flag_r_30(self):
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT, fps=30)
-        assert "-r" in cmd
-        idx = cmd.index("-r")
-        assert cmd[idx + 1] == "30"
-
-    def test_fps_customizavel(self):
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT, fps=60)
-        idx = cmd.index("-r")
-        assert cmd[idx + 1] == "60"
-
-    def test_bitrate_customizavel(self):
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT, bitrate="4M")
-        assert "4M" in cmd
-
-    def test_maxrate_presente(self):
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT)
-        assert "-maxrate" in cmd
-
-    def test_faststart(self):
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT)
-        assert "+faststart" in cmd
-
-    def test_output_no_fim(self):
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT)
-        assert cmd[-1] == str(OUTPUT)
-
-    def test_normaliza_audio_por_padrao(self):
-        """LUFS-14 é o target YouTube/podcast — deve vir ligado por default."""
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT)
-        assert "-af" in cmd
-        idx = cmd.index("-af")
-        assert "loudnorm" in cmd[idx + 1]
-        assert "I=-14" in cmd[idx + 1]
-        assert "TP=-1.0" in cmd[idx + 1]
-
-    def test_normalize_audio_desligavel(self):
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT, normalize_audio=False)
-        # Quando desligado, nenhuma flag -af de loudnorm deve aparecer
-        if "-af" in cmd:
-            idx = cmd.index("-af")
-            assert "loudnorm" not in cmd[idx + 1]
-
-    def test_loudnorm_antes_do_output(self):
-        """A flag -af tem que vir antes do path de output, senão o FFmpeg
-        interpreta como input adicional e quebra."""
-        cmd = build_final_encode_cmd(VIDEO, OUTPUT)
-        af_idx = cmd.index("-af")
-        assert af_idx < len(cmd) - 1
-        assert cmd[-1] == str(OUTPUT)
 
 
 class TestBuildComposeAndEncodeCmd:

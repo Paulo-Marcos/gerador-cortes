@@ -63,8 +63,6 @@ from app.domain.ffmpeg_overlay import (
     _build_overlay_input_args,
     _build_youtube_encode_args,
     build_compose_and_encode_cmd,
-    build_final_encode_cmd,
-    build_overlay_composition_cmd,
     build_overlay_filter_string,
 )
 from app.domain.palco_derivados import PalcoDerivados, ensure_derivados_palco
@@ -120,9 +118,7 @@ __all__ = [
     "_shared_black_base_chain",
     # overlays + encode final
     "build_overlay_filter_string",
-    "build_overlay_composition_cmd",
     "build_compose_and_encode_cmd",
-    "build_final_encode_cmd",
     "_build_overlay_input_args",
     "_build_youtube_encode_args",
     "_build_audio_args",
