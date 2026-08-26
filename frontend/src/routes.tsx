@@ -60,8 +60,13 @@ export const router = createBrowserRouter([
       { path: 'projetos/:id/post-production', element: <ScenesPostProductionPage /> },
       { path: 'projetos/:id/final-review', element: <FinalReviewPage /> },
       // /export foi aposentada (A6d): redireciona para a tela viva de pos-producao,
-      // preservando favoritos antigos em vez de devolver 404.
-      { path: 'projetos/:id/export', element: <Navigate to="../post-production" replace /> },
+      // preservando favoritos antigos em vez de devolver 404. O relative="path" e
+      // obrigatorio: sem ele o `..` sobe um nivel de ROTA (as rotas aqui sao filhas
+      // planas de `/`) e o destino vira /post-production, sem o id do projeto.
+      {
+        path: 'projetos/:id/export',
+        element: <Navigate to="../post-production" replace relative="path" />,
+      },
       { path: 'buscar-lives', element: <LiveSearchPage /> },
       { path: 'ranking-lives', element: <RankingLivesPage /> },
       { path: 'padroes-thumbnail', element: <ThumbnailPadroesPage /> },
