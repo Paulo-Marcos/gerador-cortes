@@ -207,6 +207,8 @@ class IngestaoService:
                     )
                 )
 
+        await IngestaoService._baixar_chat_replay(url, subs_path)
+
         # Ler VTT e JSON3
         vtt_files = list(subs_path.glob("*.vtt"))
         json3_files = list(subs_path.glob("*.json3"))
@@ -292,6 +294,50 @@ class IngestaoService:
                 f"A legenda baixada do YouTube veio corrompida e não pôde ser lida ({e}). "
                 "Use 'Refazer transcrição' para baixá-la de novo."
             ) from e
+
+    @staticmethod
+    async def _baixar_chat_replay(url: str, subs_path: Path) -> None:
+        """Baixa o chat replay da live, quando existe (M1).
+
+        É o único sinal de audiência que a live traz de graça: os momentos em
+        que o chat se agitou viram pista para a análise propor cortes. Nem toda
+        live tem replay — de 4 lives medidas, 1 não tinha — então a falha aqui
+        é silenciosa por projeto: o pipeline segue sem a pista, como já segue
+        sem diarização.
+
+        Flags diferentes das legendas de propósito: o chat é `--write-subs`
+        (faixa real, não automática) na "língua" `live_chat`.
+        """
+        cmd = [
+            "yt-dlp",
+            "--write-subs",
+            "--sub-langs",
+            "live_chat",
+            "--skip-download",
+            "--output",
+            str(subs_path / "chat"),
+            url,
+        ]
+        try:
+            processo = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
+            )
+            await processo.wait()
+        except NotImplementedError:
+            import subprocess
+
+            await asyncio.to_thread(
+                lambda c=cmd: subprocess.run(c, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            )
+        except Exception as e:  # noqa: BLE001 — pista opcional não derruba ingestão
+            operational_info("INGESTAO", f"Chat replay indisponível: {e}")
+            return
+
+        achados = list(subs_path.glob("*.live_chat.json"))
+        if achados:
+            operational_info(
+                "INGESTAO", f"Chat replay salvo ({achados[0].stat().st_size // 1024} KB)."
+            )
 
     @staticmethod
     async def _salvar_transcricao(projeto_id: str, transcricao: list[dict], video_path: str):

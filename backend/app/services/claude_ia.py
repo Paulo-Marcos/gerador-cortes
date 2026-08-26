@@ -24,8 +24,10 @@ import time
 from datetime import datetime
 
 from app import editorial_scaffolds, editorial_skills
+from app.channel_paths import projetos_dir
 from app.config import settings
 from app.database import AsyncSessionLocal
+from app.domain import chat_heat
 from app.domain.ancora_match import ancorar_intervalo
 from app.domain.chunker import fatiar_transcricao
 from app.domain.desvio_categoria import classificar_desvio
@@ -154,6 +156,16 @@ def _mapa_falantes_para_meta(raw: str) -> dict | None:
     except json.JSONDecodeError:
         return None
     return mapa if isinstance(mapa, dict) and mapa else None
+
+
+def _janela_do_chunk(chunk: list) -> tuple[float, float]:
+    """Intervalo (início, fim) em segundos coberto por uma parte da transcrição."""
+    if not chunk:
+        return (0.0, 0.0)
+    inicio = _to_seg(chunk[0].get("inicio", chunk[0].get("start", 0)))
+    ultimo = chunk[-1]
+    fim = _to_seg(ultimo.get("fim", ultimo.get("end", ultimo.get("inicio", 0))))
+    return (float(inicio), float(max(fim, inicio)))
 
 
 def _strip_code_fences(texto: str) -> str:
@@ -365,10 +377,15 @@ class ClaudeIaService:
         segmentos = ClaudeIaService._granularizar(transcricao)
         texto_completo = ClaudeIaService._formatar_segmentos(segmentos, mapa_falantes)
 
+        picos_chat = ClaudeIaService._picos_do_chat(meta)
+
         if len(texto_completo) <= settings.claude_analise_max_chars_direto:
             logger.info("[ClaudeIA] Análise DIRETA (%d chars)", len(texto_completo))
             prompt = ClaudeIaService._montar_prompt(
-                texto_completo, meta, variacao=bloco_variacao_de(skill.lentes)
+                texto_completo,
+                meta,
+                dica_chat=chat_heat.formatar_dica(picos_chat),
+                variacao=bloco_variacao_de(skill.lentes),
             )
             _log_skill_usada(_SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
             resultado = await claude_cli_client.generate_json(
@@ -380,7 +397,7 @@ class ClaudeIaService:
             }
 
         return await ClaudeIaService._gerar_cortes_em_lote(
-            segmentos, meta, len(texto_completo), skill, mapa_falantes
+            segmentos, meta, len(texto_completo), skill, mapa_falantes, picos_chat
         )
 
     @staticmethod
@@ -390,6 +407,7 @@ class ClaudeIaService:
         total_chars: int,
         skill: editorial_skills.SkillResolvida,
         mapa_falantes: dict | None = None,
+        picos_chat: list | None = None,
     ) -> dict:
         """Fallback para transcrições muito longas: fatia em janelas e concatena,
         deduplicando cortes que começam quase no mesmo ponto (overlap dos chunks).
@@ -416,10 +434,17 @@ class ClaudeIaService:
         descartados: list = []
         for indice, chunk in enumerate(chunks):
             texto = ClaudeIaService._formatar_segmentos(chunk, mapa_falantes)
+            # A pista do chat é recortada para a janela DESTA parte: citar um
+            # instante que ficou noutro chunk mandaria a IA propor corte em
+            # material que ela não está vendo.
+            dica = chat_heat.formatar_dica(
+                chat_heat.picos_no_intervalo(picos_chat or [], *_janela_do_chunk(chunk))
+            )
             prompt = ClaudeIaService._montar_prompt(
                 texto,
                 meta,
                 cabecalho=f"PARTE {indice + 1} de {len(chunks)} da transcrição.",
+                dica_chat=dica,
                 variacao=variacao,
             )
             resultado = await claude_cli_client.generate_json(
@@ -440,19 +465,61 @@ class ClaudeIaService:
 
     @staticmethod
     def _montar_prompt(
-        texto_transcricao: str, meta: dict, *, cabecalho: str = "", variacao: str = ""
+        texto_transcricao: str,
+        meta: dict,
+        *,
+        cabecalho: str = "",
+        dica_chat: str = "",
+        variacao: str = "",
     ) -> str:
         # D-297: o scaffold (contrato de saída) vem do banco por canal; aqui só
         # calculamos os valores que envolvem lógica (duração humana, cabeçalho de lote).
+        #
+        # M1: a pista do chat entra pelo `cabecalho_section` — placeholder que já
+        # existe em todos os scaffolds. Criar um novo obrigaria a editar o
+        # scaffold de cada canal, e um `.format()` sem a chave nova quebraria a
+        # análise inteira. Os asteriscos ficam só no marcador de parte: são um
+        # rótulo curto, não um invólucro para blocos de várias linhas.
+        blocos = []
+        if cabecalho:
+            blocos.append(f"*** {cabecalho} ***")
+        if dica_chat:
+            blocos.append(dica_chat)
         duracao = int(meta.get("duracao_segundos") or 0)
         return editorial_scaffolds.resolver_scaffold("cortes").format(
             variacao=variacao,
-            cabecalho_section=f"*** {cabecalho} ***\n\n" if cabecalho else "",
+            cabecalho_section="\n\n".join(blocos) + "\n\n" if blocos else "",
             titulo_live=meta.get("titulo_live", ""),
             duracao_humana=f"{duracao // 3600}h{(duracao % 3600) // 60}m",
             youtube_url=meta.get("youtube_url", ""),
             texto_transcricao=texto_transcricao,
         )
+
+    @staticmethod
+    def _picos_do_chat(meta: dict) -> list:
+        """Momentos em que a audiência reagiu, lidos do chat replay (M1).
+
+        Devolve lista vazia em qualquer contratempo — sem arquivo, sem replay,
+        JSON corrompido: a pista é opcional e nunca pode derrubar a análise.
+        """
+        projeto_id = meta.get("projeto_id")
+        duracao = float(meta.get("duracao_segundos") or 0)
+        if not projeto_id or duracao <= 0:
+            return []
+        try:
+            arquivos = sorted(
+                (projetos_dir() / str(projeto_id) / "subtitles").glob("*.live_chat.json")
+            )
+            if not arquivos:
+                return []
+            conteudo = arquivos[0].read_text(encoding="utf-8", errors="replace")
+        except OSError as e:
+            logger.info("[ClaudeIA] Chat replay ilegível (%s); sigo sem a pista.", e)
+            return []
+        picos = chat_heat.picos_significativos(chat_heat.parse_live_chat(conteudo), duracao)
+        if picos:
+            logger.info("[ClaudeIA] Chat: %d momento(s) de reação acima do acaso.", len(picos))
+        return picos
 
     @staticmethod
     def _granularizar(transcricao: list) -> list:
