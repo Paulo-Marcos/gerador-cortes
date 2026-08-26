@@ -13,6 +13,7 @@ class TestGetFiltroVf:
     # Atualizar aqui quando adicionar/remover filtros mantém os testes em sincronia.
     FILTROS_ATIVOS = [
         "cinematic_iii",
+        "cinematic_iii_sem_colorbalance",
         "bypass_dourado_aberto",
     ]
 
@@ -39,6 +40,15 @@ class TestGetFiltroVf:
             partes = result.split(",")
             # Resultado deve ter múltiplas partes unidas por vírgula
             assert len(partes) >= len(vf_data)
+
+    def test_com_vinheta_tem_vinheta_mas_nao_colorbalance(self):
+        # Razao de existir do preset: entrega a assinatura visual do Cine III
+        # (a vinheta, barata) sem o colorbalance, que e o componente caro
+        # — +122% contra +23% no custo da grade (medido 26/08/2026).
+        result = get_filtro_vf("cinematic_iii_sem_colorbalance")
+        assert "vignette" in result
+        assert "colorbalance" not in result
+        assert "curves" in result
 
     def test_cinematic_iii_contem_curves(self):
         # Cine III é a única referência que ainda usa curves — checa que o

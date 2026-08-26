@@ -48,25 +48,36 @@ _BYPASS_COLORBALANCE = "colorbalance=rs=0.01:bs=-0.02:rm=0.04:bm=-0.03:rh=0.05:g
 _BYPASS_UNSHARP = "unsharp=5:5:0.45:5:5:0.0"
 
 
-# Throughputs medidos em clip de 60s a 1080p (clip60.mkv, sem layout shared)
-# — vide F-030 / docs/feature/F-030-*. Ganho indicado e relativo ao preset
-# completo (cinematic_iii ou bypass_dourado_aberto).
+# Custos revalidados em 26/08/2026 sobre 60s de video, com o comando REAL de
+# producao (layout de palco pre-composto + h264_qsv). Os numeros anteriores
+# vinham do F-030, medidos em clip60.mkv SEM layout shared — pipeline mais
+# simples, proporcoes diferentes; por isso foram reescritos aqui.
+# Achado da revalidacao: o componente caro do Cine III e o COLORBALANCE
+# (+122% sobre o leve), nao a vinheta (+23%).
 FILTROS_CINEMA: dict[str, dict] = {
     # ─── Cinematico III — referencia + variantes ─────────────────────────────
     "cinematic_iii": {
         "nome": "Cinematico III (completo)",
         "vf": com_letterbox(_CIII_CURVES, _CIII_COLORBALANCE, _CIII_EQ, _CIII_VIGNETTE),
-        "descricao": "Referencia completa. Grade ~0.75x (60s video -> 80s render).",
+        "descricao": "Referencia completa. O mais caro: 173s para 60s de video (2.2x o leve).",
     },
     "cinematic_iii_sem_vignette": {
         "nome": "Cinematico III SEM vinheta",
         "vf": com_letterbox(_CIII_CURVES, _CIII_COLORBALANCE, _CIII_EQ),
-        "descricao": "Sem escurecimento de borda. 1.66x mais rapido que o completo.",
+        "descricao": "Sem escurecimento de borda, mas mantem o colorbalance — que "
+        "e o componente caro. Custa o mesmo que o completo (173s/60s).",
+    },
+    "cinematic_iii_sem_colorbalance": {
+        "nome": "Cinematico III com vinheta",
+        "vf": com_letterbox(_CIII_CURVES, _CIII_EQ, _CIII_VIGNETTE),
+        "descricao": "Assinatura visual do Cine III (vinheta) sem o deslocamento "
+        "de cor para o frio. Custa +23% sobre o leve (96s/60s) contra +122% do "
+        "completo.",
     },
     "cinematic_iii_leve": {
         "nome": "Cinematico III leve (curves + eq)",
         "vf": com_letterbox(_CIII_CURVES, _CIII_EQ),
-        "descricao": "Sem vinheta e sem colorbalance. 5.79x mais rapido.",
+        "descricao": "Sem vinheta e sem colorbalance. O mais rapido dos quatro (78s/60s).",
     },
     # ─── Bypass Dourado ──────────────────────────────────────────────────────
     "bypass_dourado_aberto": {
