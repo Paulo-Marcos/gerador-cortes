@@ -16,6 +16,14 @@ from pathlib import Path
 import pytest
 from app.infrastructure import diarizacao_client as client
 
+# O cliente carrega o áudio como tensor torch antes de entregá-lo ao pipeline,
+# então estes testes precisam do torch — que é dependência OPT-IN (comentada no
+# requirements por pesar 2+ GB). Sem o skip, a suíte só passava em máquina que
+# tivesse torch instalado por outro motivo: no venv limpo do checkout, os três
+# testes quebravam com ModuleNotFoundError. Pular espelha o que o código de
+# produção faz — degradar quando a dependência opcional não está lá.
+pytest.importorskip("torch", reason="diarização é opt-in; sem torch não há o que testar")
+
 
 def _escrever_wav(path: Path, n_frames: int = 1600, sample_rate: int = 16000) -> None:
     """Grava um WAV mono 16 kHz PCM16 mínimo — mesmo formato que o ffmpeg gera."""

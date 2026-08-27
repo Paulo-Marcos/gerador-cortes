@@ -36,6 +36,15 @@ if ([string]::IsNullOrWhiteSpace($CMD)) {
     $CMD = "cmd.exe"
 }
 
+# A7: usa o Python DESTE checkout quando ele tem um venv, senao cai no global.
+# Sem venv, DEV e PROD compartilham a mesma instalacao: atualizar uma
+# dependencia "so para testar no DEV" mexia no PROD no mesmo ato, e o
+# `pip install -r requirements.txt` de qualquer um dos lados atingia o outro.
+# O fallback existe para um clone novo subir antes de qualquer setup — quem
+# nao criou o venv continua rodando exatamente como antes.
+$VenvPython = Join-Path $BASE "backend\.venv\Scripts\python.exe"
+$PythonExe = if (Test-Path $VenvPython) { $VenvPython } else { "python" }
+
 $env:PYTHONUNBUFFERED = "1"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -327,7 +336,7 @@ $services = @(
         # D-436: `--app-dir <caminho>` em vez de contar so com o cwd — mesma
         # razao do worker: sem o checkout na linha de comando, um backend orfao
         # nao e reconhecido pela limpeza e fica segurando a porta.
-        Arguments = "/d /s /c `"python -m uvicorn app.main:app --app-dir `"$(Join-Path $BASE 'backend')`" --host 0.0.0.0 --port $BackendPort --reload`""
+        Arguments = "/d /s /c `"`"$PythonExe`" -m uvicorn app.main:app --app-dir `"$(Join-Path $BASE 'backend')`" --host 0.0.0.0 --port $BackendPort --reload`""
         WorkingDirectory = Join-Path $BASE "backend"
         EnvVars = @{
             PYTHONUNBUFFERED = "1"

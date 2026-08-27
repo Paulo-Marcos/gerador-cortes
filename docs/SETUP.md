@@ -52,6 +52,16 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+> **O `dev.ps1` encontra esse venv sozinho.** Se `backend/.venv` existir, o
+> backend sobe com o Python dele; se não existir, cai no `python` do PATH — um
+> clone novo funciona antes de qualquer setup.
+>
+> Criar o venv **importa**: sem ele, todos os checkouts da máquina (DEV e PRD)
+> dividem a mesma instalação, e atualizar uma dependência "só para testar" mexe
+> em produção no mesmo ato. Para rodar os testes use o Python do venv
+> (`.venv\Scripts\python.exe -m pytest`), não o global — senão o gate valida um
+> ambiente que não é o que a aplicação usa.
+
 ### Frontend (React)
 
 ```bash
