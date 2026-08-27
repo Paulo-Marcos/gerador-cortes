@@ -221,24 +221,30 @@ class CenasRemotionService:
 
     @staticmethod
     @staticmethod
-    def _rejeitar_cenas_fora_do_corte(cenas: list, dur_bruta: float) -> None:
-        """Barra cena com tempo fora do corte antes de gravar.
+    def _descartar_cenas_fora_do_corte(cenas: list, dur_bruta: float) -> list:
+        """Remove cenas com tempo fora do corte e devolve só as aproveitáveis.
 
         `importar_cenas` e `gerar_cenas` escrevem `cenas_remotion` DIRETO, sem
-        passar pelo `atualizar_corte` — foi por aqui que tempo absoluto da live
-        entrou no banco. O teto é o span BRUTO (>= a duração líquida), então um
-        trecho removido nunca gera falso positivo.
+        passar pelo `atualizar_corte`. O teto é o span BRUTO (>= a duração
+        líquida), então um trecho removido nunca gera falso positivo.
+
+        DESCARTA em vez de abortar: abortar deixava as cenas ANTIGAS no banco e
+        o operador ficava preso — regerava, nada mudava, e o defeito continuava
+        na tela. Descartando, a regeneração sempre avança e o payload ruim não
+        entra. O que foi descartado vai para o log.
         """
         fora = cenas_fora_do_corte(cenas, dur_bruta)
         if not fora:
-            return
+            return cenas
         exemplo = max(fora, key=lambda c: c["inicio"])
-        raise ValueError(
-            f"{len(fora)} de {len(cenas)} cena(s) com tempo fora do corte "
-            f"(limite {dur_bruta:.0f}s; ex.: cena {exemplo['indice']} em "
-            f"{exemplo['inicio']:.0f}s-{exemplo['fim']:.0f}s). O tempo da cena é "
-            "relativo ao corte, não a posição na live."
+        operational_info(
+            "CenasRemotion",
+            f"⚠️ {len(fora)} de {len(cenas)} cena(s) descartadas por tempo fora do "
+            f"corte (limite {dur_bruta:.0f}s; maior: cena {exemplo['indice']} em "
+            f"{exemplo['inicio']:.0f}s-{exemplo['fim']:.0f}s).",
         )
+        descartados = {c["indice"] for c in fora}
+        return [cena for idx, cena in enumerate(cenas) if idx not in descartados]
 
     @staticmethod
     async def importar_cenas(corte_id: str, payload: dict) -> dict:
@@ -259,7 +265,9 @@ class CenasRemotionService:
         cenas_convertidas = CenasRemotionService._converter_startleg(
             cenas_raw, transcricao_granular
         )
-        CenasRemotionService._rejeitar_cenas_fora_do_corte(cenas_convertidas, dur_bruta)
+        cenas_convertidas = CenasRemotionService._descartar_cenas_fora_do_corte(
+            cenas_convertidas, dur_bruta
+        )
         retratos = await CenasRemotionService._preencher_retratos_cenas(cenas_convertidas)
 
         resultado = {
@@ -379,7 +387,7 @@ class CenasRemotionService:
             cenas_convertidas = CenasRemotionService._converter_startleg(
                 todas_cenas, transcricao_granular
             )
-            CenasRemotionService._rejeitar_cenas_fora_do_corte(
+            cenas_convertidas = CenasRemotionService._descartar_cenas_fora_do_corte(
                 cenas_convertidas, (corte.fim_seg or 0) - (corte.inicio_seg or 0)
             )
             retratos = await CenasRemotionService._preencher_retratos_cenas(cenas_convertidas)

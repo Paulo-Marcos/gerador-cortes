@@ -814,41 +814,36 @@ class TestGuardaCenasForaDoCorte:
     """`importar_cenas`/`gerar_cenas` gravam `cenas_remotion` DIRETO, sem passar
     pelo `atualizar_corte`.
 
-    O tempo da cena nao vem do payload: `_converter_startleg` SEMPRE resolve
-    `startLeg` (indice de legenda) contra a transcricao. Entao a cena so sai com
-    tempo absoluto se a TRANSCRICAO estiver absoluta na hora da geracao — e as
-    cenas ficam orfas quando ela e re-sincronizada depois. Foi assim que quatro
-    cortes de agosto/2026 chegaram ao editor com metade das cenas em tempo de
-    live, esticando a timeline para 38:14 num video de 9 min."""
+    A guarda DESCARTA as cenas fora do corte em vez de abortar. Abortar deixava
+    as cenas ANTIGAS no banco e prendia o operador: ele regerava, nada mudava, e
+    o defeito continuava na tela. Foi exatamente o que aconteceu no corte
+    `4004ed3f` — 12 cenas em tempo de live sobreviveram a uma regeneracao."""
 
     @staticmethod
-    def _trans_absoluta(offset: float, n: int = 30) -> list:
-        """Transcricao ainda em tempo de LIVE (nao rebaseada para o corte)."""
+    def _cenas_mistas() -> list:
         return [
-            {
-                "start": offset + i * 10.0,
-                "end": offset + i * 10.0 + 9.0,
-                "text": f"segmento absoluto {i}",
-            }
-            for i in range(n)
+            {"tipo": "enfase", "inicio": 10.0, "fim": 15.0},
+            {"tipo": "enfase", "inicio": 1370.88, "fim": 1375.88},
+            {"tipo": "enfase", "inicio": 2290.04, "fim": 2294.04},
         ]
 
+    def test_descarta_as_cenas_fora_e_preserva_as_boas(self):
+        restantes = CenasRemotionService._descartar_cenas_fora_do_corte(self._cenas_mistas(), 980.3)
+        assert len(restantes) == 1
+        assert restantes[0]["inicio"] == 10.0
+
+    def test_devolve_a_lista_intacta_quando_esta_tudo_dentro(self):
+        cenas = [{"inicio": 10.0, "fim": 15.0}, {"inicio": 900.0, "fim": 905.0}]
+        assert CenasRemotionService._descartar_cenas_fora_do_corte(cenas, 980.3) == cenas
+
+    def test_nao_descarta_nada_sem_duracao_de_referencia(self):
+        # Corte sem inicio/fim gravados: sem teto nao ha como julgar.
+        cenas = self._cenas_mistas()
+        assert CenasRemotionService._descartar_cenas_fora_do_corte(cenas, 0.0) == cenas
+
     @pytest.mark.asyncio
-    async def test_importar_rejeita_cena_ancorada_em_transcricao_absoluta(self):
-        trans = self._trans_absoluta(1342.7)
-        corte = _mock_corte(transcricao_final=trans)
-        corte.inicio_seg, corte.fim_seg = 1342.7, 2323.0  # corte de 980,3s
-        mock_ctx, _ = _mock_db_ctx(corte)
-
-        payload = {"cenas": [{"tipo": "enfase", "startLeg": 8, "duracao_s": 5}]}
-
-        with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=mock_ctx):
-            with pytest.raises(ValueError, match="fora do corte"):
-                await CenasRemotionService.importar_cenas("test-id", payload)
-
-    @pytest.mark.asyncio
-    async def test_importar_aceita_cena_ancorada_em_transcricao_relativa(self):
-        trans = _trans_longa(30)  # ja rebaseada: comeca em ~0
+    async def test_importar_grava_so_as_cenas_dentro_do_corte(self):
+        trans = _trans_longa(30)
         corte = _mock_corte(transcricao_final=trans)
         corte.inicio_seg, corte.fim_seg = 1342.7, 2323.0
         mock_ctx, _ = _mock_db_ctx(corte)
@@ -861,19 +856,12 @@ class TestGuardaCenasForaDoCorte:
         assert len(resultado["cenas"]) == 1
         assert resultado["cenas"][0]["inicio"] < 980.3
 
-    def test_mensagem_da_guarda_cita_a_cena_de_maior_inicio(self):
-        cenas = [
-            {"inicio": 10.0, "fim": 15.0},
-            {"inicio": 1370.88, "fim": 1375.88},
-            {"inicio": 2290.04, "fim": 2294.04},
-        ]
-        with pytest.raises(ValueError) as exc:
-            CenasRemotionService._rejeitar_cenas_fora_do_corte(cenas, 980.3)
-        assert "2 de 3" in str(exc.value)
-        assert "2290" in str(exc.value)  # a mais ilustrativa, nao a primeira
-
-    def test_guarda_nao_acusa_sem_duracao_de_referencia(self):
-        # Corte sem inicio/fim gravados: sem teto nao ha como julgar.
-        CenasRemotionService._rejeitar_cenas_fora_do_corte(
-            [{"inicio": 1370.88, "fim": 1375.88}], 0.0
-        )
+    def test_startleg_nunca_produz_tempo_fora_da_transcricao(self):
+        """Por que a regeneracao conserta: `_resolver_startleg` so devolve tempo
+        que EXISTE na transcricao — inclusive no ramo de fallback, que busca o
+        item mais proximo. Com a transcricao ja rebaseada, cena com tempo de
+        live e impossivel de gerar."""
+        trans = _trans_longa(30)
+        limite = max(s["end"] for s in trans)
+        for start_leg in (0, 8, 29, 500, 2294):  # inclui indices absurdos
+            assert CenasRemotionService._resolver_startleg(start_leg, trans) <= limite

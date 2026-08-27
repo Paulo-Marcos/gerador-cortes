@@ -33,9 +33,8 @@ export function AlertaCenasForaDoCorte({ fora, duracaoCorte }: Props) {
         {fora.length} cena(s) com tempo fora do corte
       </b>{' '}
       — o corte termina em {hms(duracaoCorte)} e a cena {pior.indice + 1} comeca em{' '}
-      {hms(pior.inicio)}. A timeline esticou para acomoda-la, entao o total exibido nao
-      corresponde ao video, que fica vazio depois do fim real. Regere as cenas para
-      reancora-las na transcricao do corte.
+      {hms(pior.inicio)}, depois do fim. Ela nao aparece na timeline nem no video.
+      Regere as cenas para reancora-las na transcricao do corte.
     </div>
   );
 }

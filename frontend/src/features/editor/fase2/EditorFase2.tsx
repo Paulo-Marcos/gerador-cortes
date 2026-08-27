@@ -203,10 +203,12 @@ export function EditorFase2({
     return real ?? calcularDuracaoLiquida(corte.inicio_seg, corte.fim_seg, corte.desvios);
   }, [corte.inicio_seg, corte.fim_seg, corte.desvios, corte.duracao_clip_seg]);
 
-  const timelineDuration = useMemo(() => {
-    const maxCena = cenas.reduce((max, cena) => Math.max(max, cena.fim), 0);
-    return Math.max(duracaoDoCorte, maxCena, 1);
-  }, [cenas, duracaoDoCorte]);
+  // A timeline e o VIDEO, nunca a maior cena. O `Math.max(..., maiorFimDeCena)`
+  // que vivia aqui esticava a regua para caber cena com tempo fora do corte, e
+  // a timeline passava a CONCORDAR com o erro: 38:14 exibidos sobre um video de
+  // 9:55. Cena alem do fim simplesmente nao aparece — porque no video ela nao
+  // existe mesmo; quem a denuncia e o AlertaCenasForaDoCorte.
+  const timelineDuration = useMemo(() => Math.max(duracaoDoCorte, 1), [duracaoDoCorte]);
 
   const cenasFora = useMemo(() => cenasForaDoCorte(cenas, duracaoDoCorte), [cenas, duracaoDoCorte]);
 

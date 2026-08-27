@@ -2,9 +2,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { AlertaCenasForaDoCorte } from '../AlertaCenasForaDoCorte';
 
-// Sem este alerta o defeito e SILENCIOSO: a timeline faz max(duracao, maiorFim)
-// e estica para caber a cena invalida, entao ela passa a concordar com o erro.
-// O operador via 38:14 num bruto de 9 min, sem nenhuma pista da causa.
+// A timeline e clampada no video, entao a cena alem do fim some dela: este
+// alerta e a UNICA pista de que ela existe.
 describe('AlertaCenasForaDoCorte', () => {
   it('nao renderiza nada quando esta tudo dentro do corte', () => {
     expect(renderToStaticMarkup(<AlertaCenasForaDoCorte fora={[]} duracaoCorte={980.3} />)).toBe('');
