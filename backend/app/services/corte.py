@@ -834,6 +834,15 @@ class CorteService:
                         # geração de cenas (D-307) precisava fazer.
                         if item.get("speaker"):
                             seg_bruto["speaker"] = item["speaker"]
+                        # O timing por palavra (D-337) vem do json3 e sobrevive à
+                        # limpeza, que já o preserva — mas morria AQUI, porque
+                        # este dicionário era montado à mão sem ele. Sem essa
+                        # linha o corte perde a granularidade que a live tem, e
+                        # qualquer recurso por palavra (âncora de citação,
+                        # detecção de hesitação) fica sem base no nível do corte.
+                        # Os tempos são absolutos, como `start`/`end` aqui.
+                        if item.get("palavras"):
+                            seg_bruto["palavras"] = item["palavras"]
                         trans_bruta.append(seg_bruto)
                 except Exception:
                     continue
