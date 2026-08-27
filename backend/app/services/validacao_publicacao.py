@@ -172,7 +172,16 @@ def _checar_cenas_no_intervalo(cenas_raw: str | list | None, duracao_esperada: f
             ok=True,
             detalhe=f"{len(cenas)} cena(s) dentro de {duracao_esperada:.0f}s",
         )
-    exemplo = fora[0]
+    exemplo = max(fora, key=lambda c: c["inicio"])
+    # Só aponta o tempo absoluto quando o excesso tem a ordem de grandeza de um
+    # offset de live. Um excesso pequeno é cena degenerada (começa no fim do
+    # corte, não renderiza nada) — dizer "tempo absoluto" ali seria enganoso.
+    excedente = exemplo["inicio"] - duracao_esperada
+    causa = (
+        " Provável tempo absoluto da live no roteiro visual."
+        if excedente > 60
+        else " A cena começa depois do fim do corte e não apareceria no vídeo."
+    )
     return Checagem(
         "cenas_intervalo",
         "Cenas dentro do corte",
@@ -180,8 +189,7 @@ def _checar_cenas_no_intervalo(cenas_raw: str | list | None, duracao_esperada: f
         detalhe=(
             f"{len(fora)} de {len(cenas)} cena(s) além do fim do corte "
             f"({duracao_esperada:.0f}s) — ex.: cena {exemplo['indice']} em "
-            f"{exemplo['inicio']:.0f}s-{exemplo['fim']:.0f}s. Provável tempo "
-            "absoluto da live no roteiro visual."
+            f"{exemplo['inicio']:.0f}s-{exemplo['fim']:.0f}s." + causa
         ),
     )
 

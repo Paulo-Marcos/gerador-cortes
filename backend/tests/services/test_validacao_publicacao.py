@@ -160,3 +160,14 @@ def test_relatorio_bloqueia_com_cena_fora_do_corte():
     )
     assert rel.bloqueado is True
     assert "Cenas dentro do corte" in rel.to_dict()["pendencias"]
+
+
+def test_cenas_no_intervalo_nomeia_tempo_absoluto_so_no_excesso_grande():
+    grande = _checar_cenas_no_intervalo({"cenas": [{"inicio": 1370.88, "fim": 1375.88}]}, 980.3)
+    assert "tempo absoluto" in grande.detalhe
+
+    # Corte de 20s com cena em 20s-25s: degenerada, não offset de live.
+    pequeno = _checar_cenas_no_intervalo({"cenas": [{"inicio": 20.0, "fim": 25.0}]}, 20.0)
+    assert pequeno.ok is False
+    assert "tempo absoluto" not in pequeno.detalhe
+    assert "não apareceria no vídeo" in pequeno.detalhe
