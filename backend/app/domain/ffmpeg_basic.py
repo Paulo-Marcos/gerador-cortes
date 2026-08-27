@@ -226,6 +226,75 @@ def build_filter_complex_cmd(
     ]
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Detecção de silêncio
+#
+# São DOIS comandos porque as duas fontes chegam em estados diferentes, e a
+# diferença entre eles é conhecimento que vivia espalhado em `services/corte.py`:
+#
+# - O **proxy FLAC** já nasce com `highpass=f=80` aplicado na geração
+#   (`media_proxy`), então repetir o filtro aqui seria filtrar duas vezes.
+# - O **vídeo bruto** não passou por filtro nenhum: sem o highpass, ruído de
+#   baixa frequência mascara o silêncio e a detecção erra.
+#
+# O `d` também difere de propósito: o serviço descarta blocos com menos de 0,6 s
+# depois de ajustar as margens, então o caminho do vídeo pode usar uma peneira
+# mais larga (0,3 s) e deixar o corte fino para o código; o proxy já entrega
+# direto no limiar final.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_SILENCIO_RUIDO = "-40dB"
+_SILENCIO_DUR_PROXY = "0.6"
+_SILENCIO_DUR_VIDEO = "0.3"
+
+
+def build_silence_detect_proxy_cmd(proxy_path: Path | str) -> list[str]:
+    """Detecta silêncios no proxy FLAC do corte.
+
+    Sem `highpass`: o proxy já foi filtrado quando gerado. Sem seek: o proxy
+    contém exatamente a janela de interesse, então o tempo é lido direto.
+    """
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(proxy_path),
+        "-af",
+        f"silencedetect=noise={_SILENCIO_RUIDO}:d={_SILENCIO_DUR_PROXY}",
+        "-f",
+        "null",
+        "-",
+    ]
+
+
+def build_silence_detect_video_cmd(
+    video_path: Path | str, inicio_seg: float, duracao_seg: float
+) -> list[str]:
+    """Detecta silêncios direto no vídeo — usado quando não há proxy.
+
+    `-ss`/`-t` vêm DEPOIS do `-i` de propósito: o seek de saída decodifica
+    desde o começo (mais lento) mas acerta o instante exato, e aqui a precisão
+    do tempo vale mais que a velocidade — um deslocamento vira trecho removido
+    no lugar errado.
+    """
+    return [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(video_path),
+        "-ss",
+        str(inicio_seg),
+        "-t",
+        str(duracao_seg),
+        "-vn",
+        "-af",
+        f"highpass=f=80,silencedetect=noise={_SILENCIO_RUIDO}:d={_SILENCIO_DUR_VIDEO}",
+        "-f",
+        "null",
+        "-",
+    ]
+
+
 def build_normalize_cmd(
     input_path: Path,
     output_path: Path,

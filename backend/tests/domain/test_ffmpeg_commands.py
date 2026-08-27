@@ -13,6 +13,8 @@ from app.domain.ffmpeg_commands import (
     build_normalize_cmd,
     build_overlay_filter_string,
     build_remux_cmd,
+    build_silence_detect_proxy_cmd,
+    build_silence_detect_video_cmd,
 )
 
 VIDEO = Path("video.mp4")
@@ -223,6 +225,66 @@ class TestBuildFilterComplexCmd:
             assert "end=110" in filter_str
             assert "start=200" in filter_str
             assert "end=210" in filter_str
+
+
+class TestBuildSilenceDetectCmds:
+    """Os dois comandos de silencedetect (A9).
+
+    Estes testes travam o comando INTEIRO, e não trechos: a lógica saiu de
+    dentro de `services/corte.py` e qualquer alteração de parâmetro muda quais
+    silêncios são detectados — o que reaparece como trecho removido no lugar
+    errado, sem erro nenhum na tela.
+    """
+
+    def test_proxy_monta_o_comando_exato(self):
+        assert build_silence_detect_proxy_cmd("p.flac") == [
+            "ffmpeg",
+            "-y",
+            "-i",
+            "p.flac",
+            "-af",
+            "silencedetect=noise=-40dB:d=0.6",
+            "-f",
+            "null",
+            "-",
+        ]
+
+    def test_video_monta_o_comando_exato(self):
+        assert build_silence_detect_video_cmd("v.mkv", 12.5, 30.0) == [
+            "ffmpeg",
+            "-y",
+            "-i",
+            "v.mkv",
+            "-ss",
+            "12.5",
+            "-t",
+            "30.0",
+            "-vn",
+            "-af",
+            "highpass=f=80,silencedetect=noise=-40dB:d=0.3",
+            "-f",
+            "null",
+            "-",
+        ]
+
+    def test_proxy_nao_repete_o_highpass(self):
+        # O proxy FLAC já nasce filtrado (media_proxy aplica highpass=f=80 na
+        # geração). Repetir aqui filtraria duas vezes o mesmo áudio.
+        assert "highpass" not in " ".join(build_silence_detect_proxy_cmd("p.flac"))
+
+    def test_video_aplica_o_highpass(self):
+        # O vídeo bruto não passou por filtro: sem o highpass, ruído de baixa
+        # frequência mascara o silêncio e a detecção erra.
+        assert "highpass=f=80" in " ".join(build_silence_detect_video_cmd("v.mkv", 0.0, 1.0))
+
+    def test_video_busca_depois_do_input(self):
+        # `-ss` DEPOIS do `-i` é seek de saída: mais lento, porém exato. Um
+        # deslocamento aqui vira trecho removido no instante errado.
+        cmd = build_silence_detect_video_cmd("v.mkv", 5.0, 10.0)
+        assert cmd.index("-ss") > cmd.index("-i")
+
+    def test_aceita_path_alem_de_str(self):
+        assert build_silence_detect_proxy_cmd(Path("dir") / "p.flac")[3].endswith("p.flac")
 
 
 class TestBuildNormalizeCmd:

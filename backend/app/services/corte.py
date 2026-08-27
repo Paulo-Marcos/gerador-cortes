@@ -15,6 +15,10 @@ from app.domain.corte_mapper import (
     tem_colapso_de_tempos_das_cenas,
 )
 from app.domain.desvio_categoria import SILENCIO
+from app.domain.ffmpeg_basic import (
+    build_silence_detect_proxy_cmd,
+    build_silence_detect_video_cmd,
+)
 from app.domain.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
 from app.domain.reading_metadata import (
     aplicar_emojis_texto_capa,
@@ -631,17 +635,7 @@ class CorteService:
             proxy_start_offset = p_start_proxy
 
             if proxy_path.exists():
-                cmd = [
-                    "ffmpeg",
-                    "-y",
-                    "-i",
-                    str(proxy_path),
-                    "-af",
-                    "silencedetect=noise=-40dB:d=0.6",
-                    "-f",
-                    "null",
-                    "-",
-                ]
+                cmd = build_silence_detect_proxy_cmd(proxy_path)
                 use_proxy = True
                 operational_debug(
                     "CorteService", f"Detectando silêncios via proxy FLAC: {proxy_path}"
@@ -649,22 +643,7 @@ class CorteService:
             else:
                 # Fallback: vídeo original (mais lento mas igualmente preciso com busca correta)
                 duration = float(corte.fim_seg) - float(corte.inicio_seg)
-                cmd = [
-                    "ffmpeg",
-                    "-y",
-                    "-i",
-                    video_path,
-                    "-ss",
-                    str(corte.inicio_seg),
-                    "-t",
-                    str(duration),
-                    "-vn",
-                    "-af",
-                    "highpass=f=80,silencedetect=noise=-40dB:d=0.3",
-                    "-f",
-                    "null",
-                    "-",
-                ]
+                cmd = build_silence_detect_video_cmd(video_path, corte.inicio_seg, duration)
                 use_proxy = False
                 operational_debug(
                     "CorteService",
