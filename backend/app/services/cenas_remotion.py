@@ -5,7 +5,7 @@ import time
 
 from app import editorial_scaffolds
 from app.database import AsyncSessionLocal
-from app.domain.corte_mapper import coalescer_chaves_mascote
+from app.domain.corte_mapper import cenas_fora_do_corte, coalescer_chaves_mascote
 from app.domain.diarizacao_align import prefixo_falante
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.time_convert import hms_to_seg
@@ -220,6 +220,27 @@ class CenasRemotionService:
         }
 
     @staticmethod
+    @staticmethod
+    def _rejeitar_cenas_fora_do_corte(cenas: list, dur_bruta: float) -> None:
+        """Barra cena com tempo fora do corte antes de gravar.
+
+        `importar_cenas` e `gerar_cenas` escrevem `cenas_remotion` DIRETO, sem
+        passar pelo `atualizar_corte` — foi por aqui que tempo absoluto da live
+        entrou no banco. O teto é o span BRUTO (>= a duração líquida), então um
+        trecho removido nunca gera falso positivo.
+        """
+        fora = cenas_fora_do_corte(cenas, dur_bruta)
+        if not fora:
+            return
+        exemplo = max(fora, key=lambda c: c["inicio"])
+        raise ValueError(
+            f"{len(fora)} de {len(cenas)} cena(s) com tempo fora do corte "
+            f"(limite {dur_bruta:.0f}s; ex.: cena {exemplo['indice']} em "
+            f"{exemplo['inicio']:.0f}s-{exemplo['fim']:.0f}s). O tempo da cena é "
+            "relativo ao corte, não a posição na live."
+        )
+
+    @staticmethod
     async def importar_cenas(corte_id: str, payload: dict) -> dict:
         """Recebe resultado de IA externa, normaliza e salva as cenas."""
         async with AsyncSessionLocal() as db:
@@ -230,6 +251,7 @@ class CenasRemotionService:
             transcricao_final = json.loads(corte.transcricao_final or "[]")
             if not transcricao_final:
                 raise ValueError("Transcrição final vazia.")
+            dur_bruta = (corte.fim_seg or 0) - (corte.inicio_seg or 0)
 
         # IMPORTANTE: Granularizar igual ao prompt para os índices baterem
         transcricao_granular = CenasRemotionService._get_granular(transcricao_final)
@@ -237,6 +259,7 @@ class CenasRemotionService:
         cenas_convertidas = CenasRemotionService._converter_startleg(
             cenas_raw, transcricao_granular
         )
+        CenasRemotionService._rejeitar_cenas_fora_do_corte(cenas_convertidas, dur_bruta)
         retratos = await CenasRemotionService._preencher_retratos_cenas(cenas_convertidas)
 
         resultado = {
@@ -355,6 +378,9 @@ class CenasRemotionService:
             operational_info("CenasRemotion", "Resposta da IA recebida. Processando cenas...")
             cenas_convertidas = CenasRemotionService._converter_startleg(
                 todas_cenas, transcricao_granular
+            )
+            CenasRemotionService._rejeitar_cenas_fora_do_corte(
+                cenas_convertidas, (corte.fim_seg or 0) - (corte.inicio_seg or 0)
             )
             retratos = await CenasRemotionService._preencher_retratos_cenas(cenas_convertidas)
             operational_info(

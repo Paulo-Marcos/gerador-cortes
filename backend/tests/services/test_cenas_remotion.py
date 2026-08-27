@@ -43,6 +43,14 @@ def _mock_corte(transcricao_final=None, cenas_remotion=None):
     corte.resumo = "resumo"
     corte.transcricao_final = json.dumps(transcricao_final or [])
     corte.cenas_remotion = json.dumps(cenas_remotion) if cenas_remotion else None
+    # O span bruto sai da propria transcricao: e o teto que a guarda de cenas
+    # fora do corte usa. MagicMock deixaria fim_seg nao-numerico e a guarda
+    # nao teria como julgar.
+    corte.inicio_seg = 0.0
+    corte.fim_seg = max(
+        (float(s.get("end", 0)) for s in (transcricao_final or []) if isinstance(s, dict)),
+        default=0.0,
+    )
     return corte
 
 
@@ -800,3 +808,72 @@ class TestDiarizacaoNasCenas:
             )
         prompt = result["prompt"]
         assert "[CANAL]" not in prompt and "[OUTRO]" not in prompt
+
+
+class TestGuardaCenasForaDoCorte:
+    """`importar_cenas`/`gerar_cenas` gravam `cenas_remotion` DIRETO, sem passar
+    pelo `atualizar_corte`.
+
+    O tempo da cena nao vem do payload: `_converter_startleg` SEMPRE resolve
+    `startLeg` (indice de legenda) contra a transcricao. Entao a cena so sai com
+    tempo absoluto se a TRANSCRICAO estiver absoluta na hora da geracao — e as
+    cenas ficam orfas quando ela e re-sincronizada depois. Foi assim que quatro
+    cortes de agosto/2026 chegaram ao editor com metade das cenas em tempo de
+    live, esticando a timeline para 38:14 num video de 9 min."""
+
+    @staticmethod
+    def _trans_absoluta(offset: float, n: int = 30) -> list:
+        """Transcricao ainda em tempo de LIVE (nao rebaseada para o corte)."""
+        return [
+            {
+                "start": offset + i * 10.0,
+                "end": offset + i * 10.0 + 9.0,
+                "text": f"segmento absoluto {i}",
+            }
+            for i in range(n)
+        ]
+
+    @pytest.mark.asyncio
+    async def test_importar_rejeita_cena_ancorada_em_transcricao_absoluta(self):
+        trans = self._trans_absoluta(1342.7)
+        corte = _mock_corte(transcricao_final=trans)
+        corte.inicio_seg, corte.fim_seg = 1342.7, 2323.0  # corte de 980,3s
+        mock_ctx, _ = _mock_db_ctx(corte)
+
+        payload = {"cenas": [{"tipo": "enfase", "startLeg": 8, "duracao_s": 5}]}
+
+        with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=mock_ctx):
+            with pytest.raises(ValueError, match="fora do corte"):
+                await CenasRemotionService.importar_cenas("test-id", payload)
+
+    @pytest.mark.asyncio
+    async def test_importar_aceita_cena_ancorada_em_transcricao_relativa(self):
+        trans = _trans_longa(30)  # ja rebaseada: comeca em ~0
+        corte = _mock_corte(transcricao_final=trans)
+        corte.inicio_seg, corte.fim_seg = 1342.7, 2323.0
+        mock_ctx, _ = _mock_db_ctx(corte)
+
+        payload = {"cenas": [{"tipo": "enfase", "startLeg": 8, "duracao_s": 5}]}
+
+        with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=mock_ctx):
+            resultado = await CenasRemotionService.importar_cenas("test-id", payload)
+
+        assert len(resultado["cenas"]) == 1
+        assert resultado["cenas"][0]["inicio"] < 980.3
+
+    def test_mensagem_da_guarda_cita_a_cena_de_maior_inicio(self):
+        cenas = [
+            {"inicio": 10.0, "fim": 15.0},
+            {"inicio": 1370.88, "fim": 1375.88},
+            {"inicio": 2290.04, "fim": 2294.04},
+        ]
+        with pytest.raises(ValueError) as exc:
+            CenasRemotionService._rejeitar_cenas_fora_do_corte(cenas, 980.3)
+        assert "2 de 3" in str(exc.value)
+        assert "2290" in str(exc.value)  # a mais ilustrativa, nao a primeira
+
+    def test_guarda_nao_acusa_sem_duracao_de_referencia(self):
+        # Corte sem inicio/fim gravados: sem teto nao ha como julgar.
+        CenasRemotionService._rejeitar_cenas_fora_do_corte(
+            [{"inicio": 1370.88, "fim": 1375.88}], 0.0
+        )
