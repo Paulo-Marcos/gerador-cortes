@@ -93,8 +93,16 @@ def _rodar_pipeline_sync(wav_path: Path) -> list[dict]:
     )
     diarizacao = pipeline(_carregar_waveform(wav_path))
 
+    # pyannote 3.x devolvia a `Annotation` direto; a 4.x embrulha tudo num
+    # `DiarizeOutput` e põe a anotação em `.speaker_diarization`. O getattr
+    # atende as duas: sem o campo (3.x), o próprio objeto já é a anotação.
+    # Sem isso, a 4.x estourava `'DiarizeOutput' object has no attribute
+    # 'itertracks'` — e como este cliente engole exceções para não derrubar a
+    # análise, a diarização falhava em silêncio desde o upgrade da lib.
+    anotacao = getattr(diarizacao, "speaker_diarization", diarizacao)
+
     turns: list[dict] = []
-    for turno, _track, speaker in diarizacao.itertracks(yield_label=True):
+    for turno, _track, speaker in anotacao.itertracks(yield_label=True):
         turns.append(
             {"start": float(turno.start), "end": float(turno.end), "speaker": str(speaker)}
         )

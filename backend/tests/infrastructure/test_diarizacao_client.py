@@ -38,22 +38,44 @@ class _FakeDiarizacao:
         yield _FakeTurn(1.5, 3.0), None, "SPEAKER_01"
 
 
+class _FakeDiarizeOutput:
+    """Formato da pyannote 4.x: a anotação vai ANINHADA, não solta.
+
+    O objeto de saída não tem `itertracks` — quem tem é o
+    `.speaker_diarization` lá dentro. Era exatamente essa diferença que
+    fazia a diarização falhar em silêncio em produção enquanto o teste
+    (que dublava o formato 3.x) seguia verde.
+    """
+
+    def __init__(self):
+        self.speaker_diarization = _FakeDiarizacao()
+        self.speaker_embeddings = None
+
+
 class _FakePipeline:
+    def __init__(self, saida_v4: bool = False):
+        self._saida_v4 = saida_v4
+
     def __call__(self, audio):
-        return _FakeDiarizacao()
+        return _FakeDiarizeOutput() if self._saida_v4 else _FakeDiarizacao()
 
 
 @pytest.fixture
-def _pyannote_fake(monkeypatch):
-    """Injeta um módulo `pyannote.audio` falso para não depender do modelo real."""
+def _pyannote_fake(monkeypatch, request):
+    """Injeta um módulo `pyannote.audio` falso para não depender do modelo real.
+
+    `request.param=True` faz o pipeline devolver o formato da 4.x (anotação
+    aninhada em `DiarizeOutput`); sem param, mantém o formato 3.x.
+    """
     calls: dict = {}
+    saida_v4 = getattr(request, "param", False)
 
     class _FakePipelineClass:
         @staticmethod
         def from_pretrained(checkpoint, **kwargs):
             calls["checkpoint"] = checkpoint
             calls["kwargs"] = kwargs
-            return _FakePipeline()
+            return _FakePipeline(saida_v4=saida_v4)
 
     fake_module = types.ModuleType("pyannote.audio")
     fake_module.Pipeline = _FakePipelineClass
@@ -84,6 +106,28 @@ def test_rodar_pipeline_sync_usa_kwarg_token(_pyannote_fake, monkeypatch, tmp_pa
     assert "token" in _pyannote_fake["kwargs"]
     assert "use_auth_token" not in _pyannote_fake["kwargs"]
     assert _pyannote_fake["kwargs"]["token"] == "hf_fake"
+    assert turns == [
+        {"start": 0.0, "end": 1.5, "speaker": "SPEAKER_00"},
+        {"start": 1.5, "end": 3.0, "speaker": "SPEAKER_01"},
+    ]
+
+
+@pytest.mark.parametrize("_pyannote_fake", [True], indirect=True)
+def test_le_a_anotacao_aninhada_da_pyannote_4x(_pyannote_fake, monkeypatch, tmp_path):
+    """A 4.x embrulha a anotação num `DiarizeOutput` sem `itertracks`.
+
+    Regressão: a lib subiu para 4.x e o cliente seguiu chamando
+    `itertracks()` no objeto de fora. Como o cliente engole exceções para
+    degradar em vez de derrubar a análise, a diarização passou a falhar em
+    silêncio — 135 projetos ficaram com o mapa de falantes vazio sem que
+    nada aparecesse na tela.
+    """
+    monkeypatch.setattr(client.settings, "huggingface_token", "hf_fake")
+    wav_path = tmp_path / "audio.wav"
+    _escrever_wav(wav_path)
+
+    turns = client._rodar_pipeline_sync(wav_path)
+
     assert turns == [
         {"start": 0.0, "end": 1.5, "speaker": "SPEAKER_00"},
         {"start": 1.5, "end": 3.0, "speaker": "SPEAKER_01"},
