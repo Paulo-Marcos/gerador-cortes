@@ -24,6 +24,8 @@ import { useToast } from '@/components/ui/toaster';
 import { CenaPlayerPanel } from './CenaPlayerPanel';
 import { CenasPanel, type CenasPanelHandle } from './CenasPanel';
 import { SceneTimeline } from './SceneTimeline';
+import { AlertaCenasForaDoCorte } from './AlertaCenasForaDoCorte';
+import { cenasForaDoCorte } from './sceneValidation';
 import { FiltroTestePanel } from '@/features/post-production/FiltroTestePanel';
 import { YoutubeLayoutPanel, type YoutubeLayoutPanelHandle } from './YoutubeLayoutPanel';
 import { SegmentoDetectadoPopover } from './SegmentoDetectadoPopover';
@@ -189,16 +191,24 @@ export function EditorFase2({
   // (`fim - inicio` − soma dos desvios), que pode diferir do arquivo real
   // em centenas de ms (drift acumulado no ffmpeg).  O usuário via "11:48"
   // quando o arquivo tinha 11:49.343 — exatamente esse drift.
-  const timelineDuration = useMemo(() => {
+  //
+  // A duracao do CORTE e a regua: e contra ela que as cenas sao julgadas. A
+  // `timelineDuration` deriva dela com um `max` que ESTICA para caber cena
+  // invalida — por isso ela nao serve de regua para si mesma.
+  const duracaoDoCorte = useMemo(() => {
     const real =
       typeof corte.duracao_clip_seg === 'number' && corte.duracao_clip_seg > 0
         ? corte.duracao_clip_seg
         : null;
-    const fallback = calcularDuracaoLiquida(corte.inicio_seg, corte.fim_seg, corte.desvios);
-    const base = real ?? fallback;
+    return real ?? calcularDuracaoLiquida(corte.inicio_seg, corte.fim_seg, corte.desvios);
+  }, [corte.inicio_seg, corte.fim_seg, corte.desvios, corte.duracao_clip_seg]);
+
+  const timelineDuration = useMemo(() => {
     const maxCena = cenas.reduce((max, cena) => Math.max(max, cena.fim), 0);
-    return Math.max(base, maxCena, 1);
-  }, [cenas, corte.inicio_seg, corte.fim_seg, corte.desvios, corte.duracao_clip_seg]);
+    return Math.max(duracaoDoCorte, maxCena, 1);
+  }, [cenas, duracaoDoCorte]);
+
+  const cenasFora = useMemo(() => cenasForaDoCorte(cenas, duracaoDoCorte), [cenas, duracaoDoCorte]);
 
   // I-029 v2: a selecao de cena pela timeline mudou de semantica — o click
   // normal so seek na posicao clicada (nao na inicio da cena); Ctrl+click
@@ -545,6 +555,7 @@ export function EditorFase2({
         </PanelShell>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2.5 p-2.5">
+          <AlertaCenasForaDoCorte fora={cenasFora} duracaoCorte={duracaoDoCorte} />
           <div className="min-h-0 flex-1">
             <CenaPlayerPanel
               ref={playerRef}
@@ -668,6 +679,7 @@ export function EditorFase2({
     <PanelGroup direction="horizontal" autoSaveId={PANEL_PERSIST} className="flex-1">
       <Panel defaultSize={70} minSize={40} order={1}>
         <div className="flex h-full min-h-0 flex-col gap-3">
+          <AlertaCenasForaDoCorte fora={cenasFora} duracaoCorte={duracaoDoCorte} />
           <div className="min-h-0 flex-1">
             <CenaPlayerPanel
               ref={playerRef}
