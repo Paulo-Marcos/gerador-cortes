@@ -1,5 +1,25 @@
-# Forca line endings LF nos arquivos do sistema de travas.
-# O hook git e executado via /bin/sh — CRLF quebra o shebang em Windows.
+# Normalizacao de fim de linha.
+#
+# O repositorio guardava blobs MISTOS: 58 dos 1.004 arquivos rastreados estavam
+# com CRLF, herdados de commits antigos feitos sem `core.autocrlf`. Editar
+# qualquer um deles convertia o arquivo INTEIRO na hora de commitar e inflava o
+# diff — uma remocao de 243 linhas chegou a aparecer como 1.035 insercoes e
+# 1.278 delecoes, enterrando a mudanca real e inutilizando o `git blame`.
+#
+# `text=auto` faz o git guardar SEMPRE LF no repositorio e entregar o fim de
+# linha nativo na arvore de trabalho. Um unico commit de renormalizacao paga a
+# divida inteira; daí em diante os diffs mostram so o que mudou de verdade.
+* text=auto
 
+# Binarios. O git ja detecta pelo conteudo, mas declarar evita que a heuristica
+# erre num arquivo pequeno e o corrompa numa conversao de fim de linha.
+*.png binary
+*.ico binary
+
+# Projeto do LosslessCut: UTF-16 LE com BOM. E texto para humanos, mas byte a
+# byte se comporta como binario — normalizar quebraria o arquivo.
+*.llc binary
+
+# Executados via /bin/sh: CRLF quebra o shebang no Windows.
 .githooks/commit-msg  text eol=lf
 bin/check-lock.py     text eol=lf
