@@ -3,6 +3,7 @@ import type { CenaRemotion } from '@/types/models';
 import {
   areScenesOverlapping,
   calculateMaxSimultaneous,
+  cenasForaDoCorte,
   validateSceneOverlaps,
 } from '../sceneValidation';
 
@@ -79,5 +80,48 @@ describe('sceneValidation', () => {
       // Em 5s uma termina e outra comeca, max deve ser 1
       expect(calculateMaxSimultaneous(cenas)).toBe(1);
     });
+  });
+});
+
+// Cortes de agosto/2026 sairam com metade das cenas no tempo ABSOLUTO da live:
+// o corte 1342,7s->2323,0s tinha cenas de 1370s a 2294s ao lado de cenas
+// relativas de 2s a 576s. A timeline faz max(duracao, maiorFim) e esticava para
+// 38:14 num video de 9 min, que rodava vazio depois do fim real.
+describe('cenasForaDoCorte', () => {
+  it('nao acusa cenas dentro do corte', () => {
+    const cenas = [makeScene(2.24, 6.24), makeScene(569.05, 576.05)];
+    expect(cenasForaDoCorte(cenas, 980.3)).toEqual([]);
+  });
+
+  it('acusa cena com o tempo absoluto da live', () => {
+    const cenas = [makeScene(2.24, 6.24), makeScene(1370.88, 1375.88)];
+    const fora = cenasForaDoCorte(cenas, 980.3);
+    expect(fora).toHaveLength(1);
+    expect(fora[0].indice).toBe(1);
+    expect(fora[0].inicio).toBe(1370.88);
+  });
+
+  it('reporta todas as infratoras, com o indice original', () => {
+    const cenas = [makeScene(10, 15), makeScene(1370.88, 1375.88), makeScene(2290.04, 2294.04)];
+    expect(cenasForaDoCorte(cenas, 980.3).map((c) => c.indice)).toEqual([1, 2]);
+  });
+
+  it('tolera a ultima cena estourando levemente o fim', () => {
+    expect(cenasForaDoCorte([makeScene(975, 981)], 980.3)).toEqual([]);
+  });
+
+  it('acusa fim muito alem da tolerancia', () => {
+    expect(cenasForaDoCorte([makeScene(900, 1500)], 980.3)).toHaveLength(1);
+  });
+
+  it('nao acusa sem uma duracao de referencia', () => {
+    const cenas = [makeScene(1370.88, 1375.88)];
+    expect(cenasForaDoCorte(cenas, 0)).toEqual([]);
+    expect(cenasForaDoCorte(cenas, -1)).toEqual([]);
+    expect(cenasForaDoCorte(cenas, Number.NaN)).toEqual([]);
+  });
+
+  it('nao acusa lista vazia', () => {
+    expect(cenasForaDoCorte([], 980.3)).toEqual([]);
   });
 });

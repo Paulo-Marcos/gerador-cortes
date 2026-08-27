@@ -24,6 +24,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain.corte_mapper import cenas_fora_do_corte, extrair_cenas_remotion
 from app.infrastructure.ffmpeg_runner import probe_duracao
 from app.models import Corte, MetadadoCorte
 from app.services.pipeline_corte_fields import _duracao_layout_corte
@@ -96,10 +97,27 @@ def _parse_lista_json(raw: str | list | None) -> list:
     return data if isinstance(data, list) else []
 
 
+def _parse_cenas(raw: str | list | dict | None) -> list:
+    """Lista de cenas do payload, seja lista direta ou dict ``{formato, cenas}``.
+
+    O serviço de roteiro visual grava um DICT (`{"formato", "paleta", "cenas"}`)
+    — é o formato de 100% dos cortes no banco. Usar `_parse_lista_json` aqui
+    devolvia `[]` para todos eles, e a checagem de cenas ficava cega.
+    """
+    if raw is None or raw == "":
+        return []
+    if isinstance(raw, (list, dict)):
+        return extrair_cenas_remotion(raw)
+    try:
+        return extrair_cenas_remotion(json.loads(raw))
+    except (ValueError, TypeError):
+        return []
+
+
 def _checar_cenas(cenas_raw: str | list | None) -> Checagem:
     # AVISO (não bloqueia): cenas são opcionais — nem todo corte usa o roteiro
     # visual (D-369). Mostramos no relatório, mas não travamos a publicação.
-    cenas = _parse_lista_json(cenas_raw)
+    cenas = _parse_cenas(cenas_raw)
     n = len(cenas)
     return Checagem(
         "cenas",
@@ -128,14 +146,55 @@ def _checar_tags(tags_raw: str | list | None) -> Checagem:
     return Checagem("tags", "Tags", ok=n > 0, detalhe=f"{n} tag(s)" if n else "nenhuma tag")
 
 
+def _checar_cenas_no_intervalo(cenas_raw: str | list | None, duracao_esperada: float) -> Checagem:
+    """BLOQUEANTE: nenhuma cena pode apontar para além do fim do corte.
+
+    Cena com o tempo ABSOLUTO da live (posição na live inteira) misturada às
+    relativas faz a timeline do editor esticar — `max(duracao, maiorFimDeCena)`
+    — e o player exibe um total muito maior que o vídeo, rodando vazio depois
+    do fim real. Bloqueia porque o vídeo publicado sairia com a cena renderizada
+    em cima de nada, ou simplesmente ausente.
+    """
+    cenas = _parse_cenas(cenas_raw)
+    if not cenas or duracao_esperada <= 0:
+        return Checagem(
+            "cenas_intervalo",
+            "Cenas dentro do corte",
+            ok=True,
+            detalhe="sem cenas para conferir" if not cenas else "duração do corte indisponível",
+            bloqueante=False,
+        )
+    fora = cenas_fora_do_corte(cenas, duracao_esperada)
+    if not fora:
+        return Checagem(
+            "cenas_intervalo",
+            "Cenas dentro do corte",
+            ok=True,
+            detalhe=f"{len(cenas)} cena(s) dentro de {duracao_esperada:.0f}s",
+        )
+    exemplo = fora[0]
+    return Checagem(
+        "cenas_intervalo",
+        "Cenas dentro do corte",
+        ok=False,
+        detalhe=(
+            f"{len(fora)} de {len(cenas)} cena(s) além do fim do corte "
+            f"({duracao_esperada:.0f}s) — ex.: cena {exemplo['indice']} em "
+            f"{exemplo['inicio']:.0f}s-{exemplo['fim']:.0f}s. Provável tempo "
+            "absoluto da live no roteiro visual."
+        ),
+    )
+
+
 def _checar_duracao(duracao_final: float | None, duracao_esperada: float) -> Checagem:
-    """Informa a duração do vídeo final (AVISO — nunca bloqueia).
+    """Duração do vídeo final: BLOQUEIA quando falta vídeo no fim.
 
     O vídeo de upload inclui abertura/encerramento concatenados
-    (`_adicionar_intro_outro`), então NÃO bate com a duração líquida do corte —
-    comparar-e-bloquear daria falso-positivo (D-369). Fica como aviso para o
-    operador conferir o tamanho de olho; um freeze do tipo D-362 apareceria aqui
-    como uma duração muito acima do esperado.
+    (`_adicionar_intro_outro`), então ele é sempre MAIOR que a duração líquida
+    do corte. Por isso comparar-e-bloquear pelo valor exato daria falso-positivo
+    (D-369) — mas a desigualdade vale sempre: um final MENOR que a líquida só
+    acontece se o vídeo foi truncado, e é isso que checamos. Acima do esperado
+    segue como informação (a diferença é a abertura/encerramento).
     """
     if duracao_final is None:
         return Checagem(
@@ -144,6 +203,21 @@ def _checar_duracao(duracao_final: float | None, duracao_esperada: float) -> Che
             ok=True,
             detalhe="não verificada (ffprobe indisponível)",
             bloqueante=False,
+        )
+    # 2% de folga absorve arredondamento de keyframe/concat sem mascarar
+    # truncamento real (que corta minutos, não centésimos).
+    minimo = duracao_esperada * 0.98
+    if duracao_esperada > 0 and duracao_final < minimo:
+        faltando = duracao_esperada - duracao_final
+        return Checagem(
+            "duracao",
+            "Duração final",
+            ok=False,
+            detalhe=(
+                f"{duracao_final:.1f}s — MENOR que o corte ({duracao_esperada:.0f}s). "
+                f"Faltam ~{faltando:.0f}s de vídeo no fim, e o upload ainda soma "
+                "abertura/encerramento por cima."
+            ),
         )
     return Checagem(
         "duracao",
@@ -203,6 +277,7 @@ class ValidacaoPublicacaoService:
         checagens.append(_checar_duracao(duracao_final, duracao_esperada))
 
         checagens.append(_checar_cenas(cenas_raw))
+        checagens.append(_checar_cenas_no_intervalo(cenas_raw, duracao_esperada))
         checagens.append(_checar_titulo(meta_snapshot and meta_snapshot["titulo_youtube"]))
         checagens.append(_checar_descricao(meta_snapshot and meta_snapshot["descricao_youtube"]))
         checagens.append(_checar_tags(meta_snapshot and meta_snapshot["tags_youtube"]))

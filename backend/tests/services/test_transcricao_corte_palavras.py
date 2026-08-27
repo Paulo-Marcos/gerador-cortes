@@ -108,9 +108,7 @@ async def test_convive_com_o_rotulo_de_falante(session_factory):
     # `speaker` (D-286) e `palavras` (D-337) são propagados no mesmo ponto;
     # um não pode apagar o outro.
     palavras = [{"texto": "oi", "inicio_seg": 121.0}]
-    segs = await _montar(
-        session_factory, [_segmento(121.0, "oi", palavras, speaker="SPEAKER_00")]
-    )
+    segs = await _montar(session_factory, [_segmento(121.0, "oi", palavras, speaker="SPEAKER_00")])
 
     assert segs[0]["speaker"] == "SPEAKER_00"
     assert segs[0]["palavras"] == palavras

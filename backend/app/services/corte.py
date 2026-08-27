@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 from app.database import AsyncSessionLocal
 from app.domain.corte_mapper import (
+    cenas_fora_do_corte,
     extrair_cenas_remotion,
     normalizar_cenas_remotion_payload,
     tem_colapso_de_tempos_das_cenas,
@@ -131,6 +132,21 @@ class CorteService:
             if tem_colapso_de_tempos_das_cenas(cenas_recebidas):
                 raise ValueError(
                     "Salvamento bloqueado: os tempos das cenas seriam sobrescritos em massa."
+                )
+            # Teto: o span BRUTO do corte, nunca a duracao liquida. O bruto e
+            # sempre >= a liquida, entao um trecho removido jamais gera falso
+            # positivo — so acusa cena inequivocamente fora (tempo absoluto da
+            # live vazando para o roteiro visual).
+            fora = cenas_fora_do_corte(
+                cenas_recebidas, (corte.fim_seg or 0) - (corte.inicio_seg or 0)
+            )
+            if fora:
+                exemplo = fora[0]
+                raise ValueError(
+                    f"Salvamento bloqueado: {len(fora)} cena(s) com tempo fora do corte "
+                    f"(ex.: cena {exemplo['indice']} em {exemplo['inicio']:.1f}s-"
+                    f"{exemplo['fim']:.1f}s). Tempo de cena e relativo ao corte, "
+                    "nao a posicao na live."
                 )
             cenas_remotion = normalizar_cenas_remotion_payload(dados.cenas_remotion)
             novo_payload = json.dumps(cenas_remotion, ensure_ascii=False)

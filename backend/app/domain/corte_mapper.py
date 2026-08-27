@@ -82,6 +82,39 @@ def normalizar_cenas_remotion_payload(payload: list | dict) -> list | dict:
     return payload
 
 
+# Uma cena pode estourar levemente o fim do corte sem que isso seja defeito: a
+# ultima cena ganha duracao fixa (~5-6s) e pode passar do ultimo segmento de
+# fala. O que denuncia tempo ABSOLUTO e o INICIO cair fora do corte.
+TOLERANCIA_FIM_CENA_SEG = 15.0
+
+
+def cenas_fora_do_corte(cenas: list, duracao_seg: float) -> list[dict]:
+    """Cenas cujo tempo nao cabe na duracao do corte.
+
+    O sintoma classico e a cena gravada com o tempo ABSOLUTO da live (posicao
+    na live inteira) convivendo com cenas de tempo relativo — acontece quando
+    o roteiro visual e gerado antes do rebase da transcricao e depois mesclado
+    com um gerado depois. A timeline do editor faz ``max(duracao, maiorFim)`` e
+    ESTICA para acomodar a cena invalida, exibindo um total muito maior que o
+    video, que roda vazio depois do fim real.
+
+    Retorna uma lista de ``{"indice", "inicio", "fim"}`` — vazia quando esta
+    tudo dentro. Com ``duracao_seg`` nao positiva nao ha como julgar, entao
+    devolve vazio (nunca acusa por falta de referencia).
+    """
+    if duracao_seg <= 0:
+        return []
+    fora = []
+    for indice, cena in enumerate(cenas):
+        if not isinstance(cena, dict):
+            continue
+        normalizada = normalizar_cena_remotion(cena)
+        inicio, fim = normalizada["inicio"], normalizada["fim"]
+        if inicio >= duracao_seg or fim > duracao_seg + TOLERANCIA_FIM_CENA_SEG:
+            fora.append({"indice": indice, "inicio": inicio, "fim": fim})
+    return fora
+
+
 def extrair_cenas_remotion(payload: list | dict) -> list:
     """Extrai a lista de cenas de um payload (lista direta ou dict com ``cenas``)."""
     if isinstance(payload, list):

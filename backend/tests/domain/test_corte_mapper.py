@@ -1,4 +1,5 @@
 from app.domain.corte_mapper import (
+    cenas_fora_do_corte,
     coalescer_chaves_mascote,
     extrair_cenas_remotion,
     normalizar_cena_remotion,
@@ -91,3 +92,61 @@ def test_tem_colapso_de_tempos_das_cenas():
 
     # Menos de 3 cenas nunca é colapso
     assert not tem_colapso_de_tempos_das_cenas([{"inicio": 0, "fim": 5}, {"inicio": 0, "fim": 5}])
+
+
+# --- cenas com tempo fora do corte (regressao do roteiro visual absoluto) ---
+#
+# Cortes de agosto/2026 sairam com metade das cenas gravadas no tempo ABSOLUTO
+# da live: o corte 1342,7s->2323,0s tinha cenas de 1370s a 2294s convivendo com
+# cenas relativas de 2s a 576s. A timeline do editor faz max(duracao, maiorFim)
+# e esticava para 38:14 num video de 9 min, que rodava vazio depois do fim.
+
+
+def test_cenas_fora_do_corte_ignora_cenas_dentro():
+    cenas = [{"inicio": 2.24, "fim": 6.24}, {"inicio": 569.05, "fim": 576.05}]
+    assert cenas_fora_do_corte(cenas, 980.3) == []
+
+
+def test_cenas_fora_do_corte_acusa_tempo_absoluto_da_live():
+    # 1370,88 e a posicao na live (corte comeca em 1342,7): rel = 28,2s.
+    cenas = [{"inicio": 2.24, "fim": 6.24}, {"inicio": 1370.88, "fim": 1375.88}]
+    fora = cenas_fora_do_corte(cenas, 980.3)
+    assert len(fora) == 1
+    assert fora[0]["indice"] == 1
+    assert fora[0]["inicio"] == 1370.88
+
+
+def test_cenas_fora_do_corte_reporta_todas_as_infratoras():
+    cenas = [{"inicio": 10.0, "fim": 15.0}] + [
+        {"inicio": t, "fim": t + 5.0} for t in (1370.88, 1439.4, 2290.04)
+    ]
+    fora = cenas_fora_do_corte(cenas, 980.3)
+    assert [c["indice"] for c in fora] == [1, 2, 3]
+
+
+def test_cenas_fora_do_corte_tolera_ultima_cena_estourando_o_fim():
+    # A ultima cena ganha duracao fixa e pode passar do ultimo segmento de fala;
+    # isso nao e defeito enquanto o INICIO estiver dentro do corte.
+    cenas = [{"inicio": 975.0, "fim": 981.0}]
+    assert cenas_fora_do_corte(cenas, 980.3) == []
+
+
+def test_cenas_fora_do_corte_acusa_fim_muito_alem_da_tolerancia():
+    cenas = [{"inicio": 900.0, "fim": 1500.0}]
+    assert len(cenas_fora_do_corte(cenas, 980.3)) == 1
+
+
+def test_cenas_fora_do_corte_sem_duracao_nao_acusa():
+    # Sem referencia de duracao nao ha como julgar — nunca acusa por falta dela.
+    cenas = [{"inicio": 1370.88, "fim": 1375.88}]
+    assert cenas_fora_do_corte(cenas, 0.0) == []
+    assert cenas_fora_do_corte(cenas, -1.0) == []
+
+
+def test_cenas_fora_do_corte_usa_chaves_seg_como_o_normalizador():
+    cenas = [{"inicio_seg": 1370.88, "fim_seg": 1375.88}]
+    assert len(cenas_fora_do_corte(cenas, 980.3)) == 1
+
+
+def test_cenas_fora_do_corte_ignora_itens_nao_dict():
+    assert cenas_fora_do_corte(["lixo", None, {"inicio": 5.0, "fim": 9.0}], 980.3) == []

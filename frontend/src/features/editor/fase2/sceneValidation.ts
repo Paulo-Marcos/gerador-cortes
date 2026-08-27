@@ -71,3 +71,37 @@ export function calculateMaxSimultaneous(scenes: CenaRemotion[]): number {
 
   return max;
 }
+
+/**
+ * Tolerancia para a cena estourar o fim do corte sem que isso seja defeito: a
+ * ultima cena ganha duracao fixa e pode passar do ultimo segmento de fala.
+ * Espelha `TOLERANCIA_FIM_CENA_SEG` do backend (`app/domain/corte_mapper.py`).
+ */
+export const TOLERANCIA_FIM_CENA_SEG = 15;
+
+export interface CenaForaDoCorte {
+  indice: number;
+  inicio: number;
+  fim: number;
+}
+
+/**
+ * Cenas cujo tempo nao cabe na duracao do corte.
+ *
+ * O sintoma classico e a cena gravada com o tempo ABSOLUTO da live convivendo
+ * com cenas relativas — a timeline faz `max(duracao, maiorFimDeCena)` e ESTICA
+ * para acomodar a invalida, exibindo um total muito maior que o video, que roda
+ * vazio depois do fim real. Sem uma `duracao` positiva nao ha como julgar, e a
+ * funcao nunca acusa por falta de referencia.
+ */
+export function cenasForaDoCorte(cenas: CenaRemotion[], duracaoSeg: number): CenaForaDoCorte[] {
+  if (!(duracaoSeg > 0)) return [];
+
+  const fora: CenaForaDoCorte[] = [];
+  cenas.forEach((cena, indice) => {
+    if (cena.inicio >= duracaoSeg || cena.fim > duracaoSeg + TOLERANCIA_FIM_CENA_SEG) {
+      fora.push({ indice, inicio: cena.inicio, fim: cena.fim });
+    }
+  });
+  return fora;
+}

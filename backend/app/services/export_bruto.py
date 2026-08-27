@@ -5,12 +5,11 @@ Extraído de `export` (E-006). Guarda os helpers puros usados por
 duração e resolução do caminho do vídeo original.
 """
 
-import asyncio
 from pathlib import Path
 
 from app.channel_paths import projetos_dir
 from app.domain.ffmpeg_commands import build_audio_offset_cmd
-from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
+from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 
 
 class _ExportBrutoMixin:
@@ -18,28 +17,18 @@ class _ExportBrutoMixin:
     async def _probe_duracao(file_path: Path) -> float | None:
         """Retorna a duração em segundos via ffprobe, ou None se falhar.
 
+        Delega ao `probe_duracao` da infraestrutura, que tem o fallback SÍNCRONO
+        em thread do D-369: sob o event loop Selector do uvicorn no Windows,
+        `create_subprocess_exec` levanta `NotImplementedError` e a cópia local
+        devolvia None em silêncio — o que pulava TANTO a validação de divergência
+        de duração QUANTO a gravação de `duracao_clip_seg` (que ficava 0.0).
+
         Exemplo:
             >>> dur = await ExportService._probe_duracao(Path("clip.mkv"))
             >>> dur > 0
             True
         """
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                "ffprobe",
-                "-v",
-                "error",
-                "-show_entries",
-                "format=duration",
-                "-of",
-                "default=noprint_wrappers=1:nokey=1",
-                str(file_path),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, _ = await proc.communicate()
-            return float(stdout.decode().strip())
-        except Exception:
-            return None
+        return await probe_duracao(file_path)
 
     @staticmethod
     def _resolver_video_path(projeto, projeto_id: str):
