@@ -502,3 +502,101 @@ def test_prompt_gigante_respeita_o_teto():
     from app.infrastructure.claude_cli_client import _TETO_TIMEOUT_SEG, _timeout_para_prompt
 
     assert _timeout_para_prompt("x" * 389_382, 600.0) == _TETO_TIMEOUT_SEG
+
+
+# --- gate com precedencia para o interativo ---
+#
+# Com CLAUDE_CLI_MAX_CONCURRENT=1 a fila era FIFO, e a varredura de ranking
+# despejava o lote inteiro de uma vez: medido em 29/08, `asyncio.gather` de 25
+# chamadas no mesmo segundo (02:24:03) e mais 27 as 02:30:26, levando a fila a
+# 65 contra 6 nos dias anteriores. Quem clicava no editor entrava ATRAS de tudo
+# isso — a mediana de espera do dia foi de ~200s para 1383s.
+
+
+@pytest.mark.asyncio
+async def test_interativo_passa_na_frente_do_lote_de_fundo():
+    from app.infrastructure.claude_cli_client import _GateClaudeCli
+
+    gate = _GateClaudeCli(limite=1)
+    ordem: list[str] = []
+    liberar_o_primeiro = asyncio.Event()
+
+    async def trabalho(rotulo: str, background: bool, espera: asyncio.Event | None = None):
+        async with gate.adquirir(background=background):
+            ordem.append(rotulo)
+            if espera is not None:
+                await espera.wait()
+
+    # Um job de fundo ocupa o gate e segura a vaga.
+    primeiro = asyncio.create_task(trabalho("fundo-0", True, liberar_o_primeiro))
+    await asyncio.sleep(0)
+    while "fundo-0" not in ordem:
+        await asyncio.sleep(0)
+
+    # O lote entra na fila ANTES do interativo — como no gather do ranking.
+    lote = [asyncio.create_task(trabalho(f"fundo-{i}", True)) for i in range(1, 6)]
+    await asyncio.sleep(0)
+    interativo = asyncio.create_task(trabalho("editor", False))
+    await asyncio.sleep(0)
+
+    liberar_o_primeiro.set()
+    await asyncio.wait_for(asyncio.gather(primeiro, interativo, *lote), timeout=5)
+
+    assert ordem[0] == "fundo-0"
+    assert ordem[1] == "editor", f"o editor esperou o lote inteiro: {ordem}"
+
+
+@pytest.mark.asyncio
+async def test_fundo_nao_sofre_starvation():
+    """O interativo sai da fila ao ENTRAR em voo, nao ao terminar — cada um
+    atendido reabre a passagem para o fundo."""
+    from app.infrastructure.claude_cli_client import _GateClaudeCli
+
+    gate = _GateClaudeCli(limite=1)
+    ordem: list[str] = []
+
+    async def trabalho(rotulo: str, background: bool):
+        async with gate.adquirir(background=background):
+            ordem.append(rotulo)
+            await asyncio.sleep(0)
+
+    tarefas = [asyncio.create_task(trabalho("fundo", True)) for _ in range(3)]
+    tarefas += [asyncio.create_task(trabalho("editor", False)) for _ in range(3)]
+    await asyncio.wait_for(asyncio.gather(*tarefas), timeout=5)
+
+    assert ordem.count("fundo") == 3, f"trabalho de fundo ficou preso: {ordem}"
+
+
+@pytest.mark.asyncio
+async def test_gate_respeita_o_limite_de_concorrencia():
+    from app.infrastructure.claude_cli_client import _GateClaudeCli
+
+    gate = _GateClaudeCli(limite=2)
+    em_voo = 0
+    pico = 0
+
+    async def trabalho():
+        nonlocal em_voo, pico
+        async with gate.adquirir():
+            em_voo += 1
+            pico = max(pico, em_voo)
+            await asyncio.sleep(0)
+            em_voo -= 1
+
+    await asyncio.wait_for(asyncio.gather(*(trabalho() for _ in range(8))), timeout=5)
+    assert pico == 2
+
+
+@pytest.mark.asyncio
+async def test_vaga_e_devolvida_quando_o_trabalho_falha():
+    from app.infrastructure.claude_cli_client import _GateClaudeCli
+
+    gate = _GateClaudeCli(limite=1)
+    with pytest.raises(RuntimeError):
+        async with gate.adquirir():
+            raise RuntimeError("boom")
+
+    # Se a vaga vazasse, este acquire penduraria.
+    async with asyncio.timeout(2):
+        async with gate.adquirir():
+            pass

@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
 from app.config import settings
@@ -45,6 +46,9 @@ class LlmCallContext:
     etapa: str | None = None
     projeto_id: str | None = None
     corte_id: str | None = None
+    # Trabalho de fundo (varredura de ranking, jobs em lote) cede a vez para o
+    # interativo na fila do CLI. Ver `_GateClaudeCli`.
+    background: bool = False
 
 
 class ClaudeCliError(RuntimeError):
@@ -59,19 +63,63 @@ class ClaudeCliError(RuntimeError):
         self.transient = transient
 
 
-# Semáforo por event-loop: limita chamadas `claude -p` simultâneas (evita estourar
-# o limite de concorrência da assinatura). Lazy e por-loop para não vazar entre
-# loops diferentes (ex.: vários asyncio.run em testes).
-_semaphores: dict[int, asyncio.Semaphore] = {}
+class _GateClaudeCli:
+    """Limita chamadas `claude -p` simultâneas, com PRECEDÊNCIA para o interativo.
+
+    Só limitar não basta. Com `CLAUDE_CLI_MAX_CONCURRENT=1` a fila é FIFO, e uma
+    varredura de ranking despeja o lote inteiro de uma vez: medido em 29/08,
+    `_avaliar_sentimentos_em_paralelo` fez `asyncio.gather` de 25 chamadas no
+    mesmo segundo (02:24:03) e mais 27 às 02:30:26, levando a fila a 65 chamadas
+    contra 6 nos dias anteriores. Quem clicava no editor entrava ATRÁS de tudo
+    isso, e a mediana de espera do dia foi de ~200s para 1383s.
+
+    Aqui o trabalho de fundo cede a vez: só entra quando não há ninguém
+    interativo esperando. Não há starvation do fundo — o interativo decrementa a
+    fila ao ENTRAR em voo, não ao terminar, então cada interativo atendido
+    reabre a passagem.
+    """
+
+    def __init__(self, limite: int):
+        self._limite = max(1, limite)
+        self._em_voo = 0
+        self._interativos_na_fila = 0
+        self._condicao = asyncio.Condition()
+
+    @asynccontextmanager
+    async def adquirir(self, *, background: bool = False):
+        async with self._condicao:
+            if background:
+                await self._condicao.wait_for(
+                    lambda: self._em_voo < self._limite and self._interativos_na_fila == 0
+                )
+            else:
+                self._interativos_na_fila += 1
+                try:
+                    await self._condicao.wait_for(lambda: self._em_voo < self._limite)
+                finally:
+                    self._interativos_na_fila -= 1
+                    self._condicao.notify_all()
+            self._em_voo += 1
+        try:
+            yield
+        finally:
+            async with self._condicao:
+                self._em_voo -= 1
+                self._condicao.notify_all()
 
 
-def _get_semaphore() -> asyncio.Semaphore:
+# Gate por event-loop: lazy e por-loop para não vazar entre loops diferentes
+# (ex.: vários asyncio.run em testes).
+_gates: dict[int, _GateClaudeCli] = {}
+
+
+def _get_gate() -> _GateClaudeCli:
     loop = asyncio.get_running_loop()
-    sem = _semaphores.get(id(loop))
-    if sem is None:
-        sem = asyncio.Semaphore(max(1, settings.claude_cli_max_concurrent))
-        _semaphores[id(loop)] = sem
-    return sem
+    gate = _gates.get(id(loop))
+    if gate is None:
+        gate = _GateClaudeCli(settings.claude_cli_max_concurrent)
+        _gates[id(loop)] = gate
+    return gate
 
 
 def _resolver_binario() -> str:
@@ -321,10 +369,12 @@ async def _run(
     timeout: float,
     skill_mode: bool = False,
     thinking_tokens: int | None = None,
+    background: bool = False,
 ) -> dict:
     """Wrapper async: roda o subprocess bloqueante numa thread (compatível com o
-    SelectorEventLoop do uvicorn no Windows), limitando concorrência via semáforo
-    e fazendo retry com backoff exponencial em erros transitórios (overload/529).
+    SelectorEventLoop do uvicorn no Windows), limitando concorrência via gate
+    (que dá precedência ao interativo) e fazendo retry com backoff exponencial em
+    erros transitórios (overload/529).
     """
     if not settings.claude_cli_enabled:
         raise ClaudeCliError("Provider Claude desabilitado (CLAUDE_CLI_ENABLED=false).")
@@ -333,7 +383,7 @@ async def _run(
     ultimo_erro: ClaudeCliError | None = None
     for tentativa in range(tentativas):
         try:
-            async with _get_semaphore():
+            async with _get_gate().adquirir(background=background):
                 return await asyncio.to_thread(
                     _run_sync,
                     prompt,
@@ -505,7 +555,7 @@ async def generate_text(
     else:
         entrada = f"/{skill}\n\n{prompt}" if skill else prompt
         skill_mode = skill is not None
-    # Latência de parede: cobre subprocess + retries + fila do semáforo (o que o
+    # Latência de parede: cobre subprocess + retries + fila do gate (o que o
     # operador realmente esperou), complementando o `duration_ms` do envelope.
     inicio = time.perf_counter()
     chave_fila = _anunciar_inicio(contexto, skill)
@@ -519,6 +569,7 @@ async def generate_text(
             ),
             skill_mode=skill_mode,
             thinking_tokens=thinking_tokens,
+            background=bool(contexto and contexto.background),
         )
     except ClaudeCliError as exc:
         _registrar_telemetria(
