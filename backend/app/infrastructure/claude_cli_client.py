@@ -87,6 +87,29 @@ def _resolver_binario() -> str:
     return encontrado
 
 
+# Folga de timeout por tamanho de prompt.
+#
+# O timeout era FIXO para prompts que vão de 3k (sentimento) a 389k chars
+# (cortador). Medição de 29/08 no prompt real de `trechos-expert` (19.870
+# chars): 137,8s de relógio com a máquina ociosa — 105,1s de API e 32,7s de
+# overhead do CLI. O teto era 300s, ou seja, 2,2x o tempo ocioso. Como render
+# concorrente e acúmulo térmico já custam +50% ou mais (E-023), a margem sumia
+# e a chamada morria por timeout mesmo sendo saudável: no histórico o p90 de
+# `trechos-expert` (605s) esta ACIMA do teto de 300s.
+#
+# `_SEG_POR_MIL_CHARS` sai dessa medição com folga de ~3x: 20k chars pedem
+# ~450s. O teto evita que um prompt gigante deixe uma trava real pendurada
+# por tempo indefinido.
+_SEG_POR_MIL_CHARS = 7.5
+_TETO_TIMEOUT_SEG = 1800.0
+
+
+def _timeout_para_prompt(prompt: str, base: float) -> float:
+    """Timeout proporcional ao tamanho do prompt, nunca abaixo do configurado."""
+    proporcional = base + (len(prompt) / 1000.0) * _SEG_POR_MIL_CHARS
+    return min(max(base, proporcional), _TETO_TIMEOUT_SEG)
+
+
 def _montar_argv(model: str, max_turns: int) -> list[str]:
     """Monta o argv do subprocess.
 
@@ -491,7 +514,9 @@ async def generate_text(
             entrada,
             model=model,
             max_turns=max_turns,
-            timeout=timeout if timeout is not None else settings.claude_cli_timeout,
+            timeout=_timeout_para_prompt(
+                entrada, timeout if timeout is not None else settings.claude_cli_timeout
+            ),
             skill_mode=skill_mode,
             thinking_tokens=thinking_tokens,
         )

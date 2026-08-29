@@ -462,3 +462,43 @@ class TestRetry529:
         with pytest.raises(ClaudeCliError, match="529"):
             asyncio.run(cli.generate_text("oi"))
         assert chamadas["n"] == 3  # tentou todas antes de desistir
+
+
+# --- timeout proporcional ao tamanho do prompt ---
+#
+# O teto era FIXO em 300s para prompts de 3k (sentimento) a 389k chars
+# (cortador). Medicao de 29/08 no prompt real de `trechos-expert` (19.870
+# chars): 137,8s com a maquina ociosa — 105,1s de API e 32,7s de overhead do
+# CLI. Margem de so 2,2x, que render concorrente e acumulo termico consomem: no
+# historico o p90 dessa etapa (605s) esta ACIMA do teto, e 16% das chamadas
+# morriam por timeout sendo saudaveis.
+
+
+def test_prompt_pequeno_mantem_o_timeout_configurado():
+    from app.infrastructure.claude_cli_client import _timeout_para_prompt
+
+    # sentimento-ranking: ~3k chars
+    assert _timeout_para_prompt("x" * 3000, 300.0) == pytest.approx(322.5)
+
+
+def test_prompt_de_trechos_ganha_folga_sobre_o_tempo_medido():
+    from app.infrastructure.claude_cli_client import _timeout_para_prompt
+
+    # 19.870 chars levaram 137,8s ocioso; o teto precisa cobrir a carga real.
+    timeout = _timeout_para_prompt("x" * 19870, 300.0)
+    assert timeout > 137.8 * 3, f"folga insuficiente: {timeout:.0f}s"
+    assert timeout == pytest.approx(449.0, abs=1.0)
+
+
+def test_nunca_fica_abaixo_do_configurado():
+    from app.infrastructure.claude_cli_client import _timeout_para_prompt
+
+    assert _timeout_para_prompt("", 300.0) == 300.0
+    assert _timeout_para_prompt("oi", 600.0) >= 600.0
+
+
+def test_prompt_gigante_respeita_o_teto():
+    """Sem teto, o cortador (389k chars) deixaria uma trava real pendurada."""
+    from app.infrastructure.claude_cli_client import _TETO_TIMEOUT_SEG, _timeout_para_prompt
+
+    assert _timeout_para_prompt("x" * 389_382, 600.0) == _TETO_TIMEOUT_SEG
