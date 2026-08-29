@@ -865,3 +865,55 @@ class TestGuardaCenasForaDoCorte:
         limite = max(s["end"] for s in trans)
         for start_leg in (0, 8, 29, 500, 2294):  # inclui indices absurdos
             assert CenasRemotionService._resolver_startleg(start_leg, trans) <= limite
+
+
+class TestTranscricaoDentroDoCorte:
+    """A geração para ANTES de chamar a IA quando a transcrição nao cabe no corte.
+
+    A cena herda o tempo da transcricao — `_resolver_startleg` devolve o `start`
+    de um segmento —, entao transcricao em tempo de LIVE produz cena em tempo de
+    live. Descartar so no fim ja custou a chamada inteira; checar antes falha em
+    milissegundos. Caso real: corte de 613s cuja transcricao granular ia ate
+    8866s, e a IA devolveu 7 de 12 cenas fora, todas descartadas.
+    """
+
+    @staticmethod
+    def _granular_absoluta(offset: float, n: int = 20) -> list:
+        return [
+            {"start": offset + i * 10.0, "end": offset + i * 10.0 + 4.0, "texto": f"seg {i}"}
+            for i in range(n)
+        ]
+
+    def test_barra_transcricao_em_tempo_de_live(self):
+        granular = self._granular_absoluta(8256.0)
+        with pytest.raises(ValueError, match="fora do intervalo"):
+            CenasRemotionService._exigir_transcricao_dentro_do_corte(granular, 613.2)
+
+    def test_aceita_transcricao_ja_rebaseada(self):
+        granular = self._granular_absoluta(0.0)
+        CenasRemotionService._exigir_transcricao_dentro_do_corte(granular, 613.2)
+
+    def test_nao_julga_sem_duracao_de_referencia(self):
+        granular = self._granular_absoluta(8256.0)
+        CenasRemotionService._exigir_transcricao_dentro_do_corte(granular, 0.0)
+
+    def test_nao_julga_transcricao_vazia(self):
+        CenasRemotionService._exigir_transcricao_dentro_do_corte([], 613.2)
+
+    def test_mensagem_diz_quantos_e_o_maior(self):
+        granular = self._granular_absoluta(8256.0, n=5)
+        with pytest.raises(ValueError) as exc:
+            CenasRemotionService._exigir_transcricao_dentro_do_corte(granular, 613.2)
+        assert "5 de 5" in str(exc.value)
+        assert "8296" in str(exc.value)  # 8256 + 4*10
+
+    @pytest.mark.asyncio
+    async def test_gerar_cenas_para_antes_de_chamar_a_ia(self):
+        """O gasto que a checagem evita: nem chega ao provedor."""
+        corte = _mock_corte(transcricao_final=self._granular_absoluta(8256.0, n=40))
+        corte.inicio_seg, corte.fim_seg = 8256.0, 8869.0
+        mock_ctx, _ = _mock_db_ctx(corte)
+
+        with patch("app.services.cenas_remotion.AsyncSessionLocal", return_value=mock_ctx):
+            with pytest.raises(ValueError, match="fora do intervalo"):
+                await CenasRemotionService.montar_prompt("test-id")

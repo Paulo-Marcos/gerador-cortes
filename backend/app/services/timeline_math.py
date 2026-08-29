@@ -98,9 +98,50 @@ class TimelineMath:
                 novo_item["inicio"] = novo_item["start"]
                 novo_item["fim"] = novo_item["end"]
 
+                # As `palavras` (D-337) vem em tempo ABSOLUTO, igual ao `start` do
+                # segmento, e o `item.copy()` acima as trazia INTACTAS para uma
+                # transcricao ja rebaseada. A granularizacao corta pelas bordas
+                # reais (`_dividir_por_bordas_reais`), entao todo segmento longo o
+                # bastante para ser dividido saia em tempo de LIVE no meio de uma
+                # transcricao relativa — e as cenas geradas dali nasciam com a
+                # posicao na live. Segmento curto passava intacto, o que produzia a
+                # mistura observada (cena 11 em 8804s num corte de 613s).
+                palavras_remapeadas = TimelineMath._remapear_palavras(
+                    item.get("palavras"), segmentos_mantidos
+                )
+                if palavras_remapeadas:
+                    novo_item["palavras"] = palavras_remapeadas
+                else:
+                    novo_item.pop("palavras", None)
+
                 nova_transcricao.append(novo_item)
 
         return nova_transcricao
+
+    @staticmethod
+    def _remapear_palavras(
+        palavras: object, segmentos_mantidos: list[dict[str, float]]
+    ) -> list[dict]:
+        """Reposiciona o timing por palavra na timeline editada.
+
+        Mesmo mapeamento do segmento que as contem. Palavra que cai dentro de um
+        trecho removido some — ela nao existe no video final.
+        """
+        if not isinstance(palavras, list):
+            return []
+        remapeadas = []
+        for palavra in palavras:
+            if not isinstance(palavra, dict):
+                continue
+            try:
+                original = float(palavra["inicio_seg"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            novo = TimelineMath.mapear_tempo_linear(original, segmentos_mantidos)
+            if novo is None:
+                continue
+            remapeadas.append({**palavra, "inicio_seg": round(novo, 3)})
+        return remapeadas
 
     @staticmethod
     def gerar_ffconcat_file(

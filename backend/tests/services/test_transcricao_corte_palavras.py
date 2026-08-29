@@ -112,3 +112,78 @@ async def test_convive_com_o_rotulo_de_falante(session_factory):
 
     assert segs[0]["speaker"] == "SPEAKER_00"
     assert segs[0]["palavras"] == palavras
+
+
+# --- as palavras precisam ser REBASEADAS junto com o segmento ---
+#
+# Regressao real: propagar `palavras` sem remapear deixou o timing em tempo de
+# LIVE dentro de uma transcricao ja rebaseada. A granularizacao corta pelas
+# bordas reais das palavras (`_dividir_por_bordas_reais`), entao todo segmento
+# longo o bastante para ser dividido saia com a posicao na live — e as cenas
+# geradas dali nasciam absolutas. Segmento curto passava intacto, o que produzia
+# a MISTURA observada: no corte dda14316 (live 8256->8869, 613s de span), a
+# transcricao do banco ia de 0,5 a 505,9 mas apos granularizar ia ate 8866,52, e
+# a IA devolveu "cena 11 em 8804s-8810s".
+
+
+def test_palavras_sao_remapeadas_para_a_timeline_do_corte():
+    from app.services.timeline_math import TimelineMath
+
+    # Corte que comeca aos 8256s da live; um unico trecho mantido.
+    mantidos = [{"start": 8256.0, "end": 8869.0}]
+    transcricao = [
+        {
+            "start": 8300.0,
+            "end": 8306.0,
+            "texto": "uma frase qualquer",
+            "palavras": [
+                {"texto": "uma", "inicio_seg": 8300.0},
+                {"texto": "frase", "inicio_seg": 8302.5},
+                {"texto": "qualquer", "inicio_seg": 8304.0},
+            ],
+        }
+    ]
+
+    resultado = TimelineMath.recalcular_transcricao(transcricao, mantidos)
+
+    assert len(resultado) == 1
+    segmento = resultado[0]
+    assert segmento["start"] == 44.0  # 8300 - 8256
+    tempos = [p["inicio_seg"] for p in segmento["palavras"]]
+    assert tempos == [44.0, 46.5, 48.0], "palavras ficaram em tempo de live"
+    assert max(tempos) < 613.0, "palavra alem da duracao do corte"
+
+
+def test_palavra_dentro_de_trecho_removido_desaparece():
+    """Ela nao existe no video final — nao pode virar borda de corte de cena."""
+    from app.services.timeline_math import TimelineMath
+
+    # Buraco entre 8302 e 8304 (trecho removido).
+    mantidos = [{"start": 8300.0, "end": 8302.0}, {"start": 8304.0, "end": 8310.0}]
+    transcricao = [
+        {
+            "start": 8300.0,
+            "end": 8310.0,
+            "texto": "antes buraco depois",
+            "palavras": [
+                {"texto": "antes", "inicio_seg": 8300.5},
+                {"texto": "buraco", "inicio_seg": 8303.0},  # cai no removido
+                {"texto": "depois", "inicio_seg": 8305.0},
+            ],
+        }
+    ]
+
+    resultado = TimelineMath.recalcular_transcricao(transcricao, mantidos)
+
+    textos = [p["texto"] for p in resultado[0]["palavras"]]
+    assert textos == ["antes", "depois"]
+
+
+def test_segmento_sem_palavras_segue_sem_a_chave():
+    from app.services.timeline_math import TimelineMath
+
+    mantidos = [{"start": 100.0, "end": 200.0}]
+    resultado = TimelineMath.recalcular_transcricao(
+        [{"start": 110.0, "end": 116.0, "texto": "sem timing"}], mantidos
+    )
+    assert "palavras" not in resultado[0]

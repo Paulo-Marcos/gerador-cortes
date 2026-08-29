@@ -126,6 +126,7 @@ class CenasRemotionService:
 
             if not transcricao_final:
                 raise ValueError("Transcrição final vazia.")
+            dur_bruta = (corte.fim_seg or 0) - (corte.inicio_seg or 0)
 
             operational_debug(
                 "CenasRemotion",
@@ -138,6 +139,9 @@ class CenasRemotionService:
             # 1. Primeiro garante a granularidade (evita blocos de texto gigantes)
             # 1. Granulariza a transcrição inteira primeiro e atribui índices globais
             transcricao_granular = CenasRemotionService._get_granular(transcricao_final)
+            CenasRemotionService._exigir_transcricao_dentro_do_corte(
+                transcricao_granular, dur_bruta
+            )
 
             # 1b. D-307: em projeto diarizado, anota o falante ([CANAL]/[OUTRO]) em
             # cada segmento para a IA distinguir a tese do canal da fala reagida.
@@ -221,6 +225,31 @@ class CenasRemotionService:
 
     @staticmethod
     @staticmethod
+    def _exigir_transcricao_dentro_do_corte(transcricao_granular: list, dur_bruta: float) -> None:
+        """Barra a geração quando a transcrição não cabe no corte.
+
+        A cena herda o tempo da transcrição (`_resolver_startleg` devolve o
+        `start` de um segmento), então uma transcrição em tempo de LIVE produz
+        cenas em tempo de live — e o descarte lá no fim já custou a chamada de
+        IA inteira. Verificar ANTES falha em milissegundos e não gasta recurso.
+        """
+        if dur_bruta <= 0 or not transcricao_granular:
+            return
+        fora = [
+            _to_seg(seg.get("start", seg.get("inicio", 0)))
+            for seg in transcricao_granular
+            if isinstance(seg, dict) and _to_seg(seg.get("start", seg.get("inicio", 0))) > dur_bruta
+        ]
+        if not fora:
+            return
+        raise ValueError(
+            f"Transcrição do corte fora do intervalo: {len(fora)} de "
+            f"{len(transcricao_granular)} segmento(s) além de {dur_bruta:.0f}s "
+            f"(maior: {max(fora):.0f}s). Sincronize a transcrição do corte antes "
+            "de gerar as cenas — gerar assim produziria cenas em tempo de live."
+        )
+
+    @staticmethod
     def _descartar_cenas_fora_do_corte(cenas: list, dur_bruta: float) -> list:
         """Remove cenas com tempo fora do corte e devolve só as aproveitáveis.
 
@@ -261,6 +290,7 @@ class CenasRemotionService:
 
         # IMPORTANTE: Granularizar igual ao prompt para os índices baterem
         transcricao_granular = CenasRemotionService._get_granular(transcricao_final)
+        CenasRemotionService._exigir_transcricao_dentro_do_corte(transcricao_granular, dur_bruta)
         cenas_raw = payload if isinstance(payload, list) else payload.get("cenas", [])
         cenas_convertidas = CenasRemotionService._converter_startleg(
             cenas_raw, transcricao_granular
@@ -305,6 +335,9 @@ class CenasRemotionService:
                 raise ValueError("Transcrição final vazia.")
 
             transcricao_granular = CenasRemotionService._get_granular(transcricao_final)
+            CenasRemotionService._exigir_transcricao_dentro_do_corte(
+                transcricao_granular, (corte.fim_seg or 0) - (corte.inicio_seg or 0)
+            )
             from app.domain.chunker import fatiar_transcricao
 
             chunks = fatiar_transcricao(
