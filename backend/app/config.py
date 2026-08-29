@@ -118,6 +118,16 @@ class Settings(BaseSettings):
     # Útil para investigar problemas; default off para não poluir o log.
     # Ative via env var: `BRUTO_VERBOSE_LOG=1` ou no .env.
     bruto_verbose_log: bool = False
+    # Porta do Remotion STUDIO (ferramenta de desenvolvimento, aberta pelo botao
+    # "Studio Remotion" do editor). Precisa ficar FORA da faixa 3000-3100, que e
+    # onde o `@remotion/renderer` sobe o servidor HTTP que serve o bundle durante
+    # o render (`serve-static.js`: `from: 3000, to: 3100`) — faixa hardcoded no
+    # pacote, nao configuravel. Com o Studio dentro dela havia corrida: o render
+    # testa se a porta esta livre e so DEPOIS faz o bind, entao com o Studio
+    # subindo a 3000 aparecia livre, o render a escolhia, e o rebuild do Studio
+    # derrubava a conexao (`ERR_CONNECTION_RESET at localhost:3000/index.html`).
+    # Deve casar com `$RemotionPort` do dev.ps1.
+    remotion_studio_port: int = 3200
 
     class Config:
         env_file = ".env"

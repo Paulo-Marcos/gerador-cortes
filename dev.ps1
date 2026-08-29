@@ -59,7 +59,13 @@ chcp 65001 | Out-Null
 # entao nao ha como o DEV falar com o backend do PROD por engano.
 $BackendPort  = 8000
 $FrontendPort = 4300
-$RemotionPort = 3000
+# Fora da faixa 3000-3100 que o @remotion/renderer usa para servir o bundle
+# durante o render (serve-static.js: from 3000, to 3100 — hardcoded no pacote).
+# Com o Studio dentro dela havia corrida de porta: o render testa se esta livre
+# e so DEPOIS faz o bind, entao com o Studio subindo a 3000 aparecia livre, o
+# render a escolhia, e o rebuild do Studio derrubava a conexao com
+# ERR_CONNECTION_RESET. Deve casar com `remotion_studio_port` do backend.
+$RemotionPort = 3200
 $WorkerPort   = 3001
 
 $portsOverride = Join-Path $PSScriptRoot "dev.ports.local.ps1"

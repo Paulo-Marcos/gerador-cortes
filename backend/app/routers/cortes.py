@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.config import settings
 from app.database import get_db
 from app.domain.corte_mapper import (
     extrair_cenas_remotion,
@@ -957,7 +958,9 @@ async def obter_remotion_studio_url(corte_id: str, db: AsyncSession = Depends(ge
     global _remotion_active_props
     _remotion_active_props = props
 
-    studio_url = f"http://localhost:3000/{composition_id}"
+    # Porta vem da config: o Studio precisa ficar fora da faixa 3000-3100 que
+    # o renderer usa para servir o bundle. Ver `remotion_studio_port`.
+    studio_url = f"http://localhost:{settings.remotion_studio_port}/{composition_id}"
 
     return {
         "studio_url": studio_url,

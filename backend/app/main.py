@@ -91,7 +91,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "*"
-    ],  # Simplifica para aceitar de qualquer porta (Remotion muda entre 3000-3010)
+    ],  # Qualquer porta: o renderer sobe seu servidor em 3000-3100 (porta variavel)
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*", "Range"],

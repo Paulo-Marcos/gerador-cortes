@@ -19,7 +19,7 @@
 Services started:
 - Backend (FastAPI) → http://localhost:8000 (docs at `/docs`)
 - Frontend (React) → http://localhost:4300
-- Remotion Studio → http://localhost:3000
+- Remotion Studio → http://localhost:3200
 - Native Worker (render job processor) → background Node.js process
 
 ### Backend (standalone)
@@ -40,7 +40,7 @@ npm run build    # Production build → dist/
 ```bash
 cd video-renderer
 npm install
-npm run dev      # Remotion Studio at http://localhost:3000
+npm run dev      # Remotion Studio at http://localhost:3200
 ```
 
 ## Architecture

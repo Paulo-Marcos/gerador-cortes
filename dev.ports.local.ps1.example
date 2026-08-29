@@ -1,4 +1,4 @@
-# Portas alternativas do dev.ps1 — copie para `dev.ports.local.ps1` (untracked)
+﻿# Portas alternativas do dev.ps1 — copie para `dev.ports.local.ps1` (untracked)
 # no checkout de DESENVOLVIMENTO.
 #
 # Por que: DEV e PROD (C:\PRD\gerador-cortes) rodam na mesma maquina. O PROD usa
@@ -11,5 +11,5 @@
 
 $BackendPort  = 8001
 $FrontendPort = 4301
-$RemotionPort = 3010
+$RemotionPort = 3210
 $WorkerPort   = 3011

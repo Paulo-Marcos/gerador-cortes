@@ -1,10 +1,10 @@
-# clean-dev.ps1 - Limpa processos locais do CutCut.
+﻿# clean-dev.ps1 - Limpa processos locais do CutCut.
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
 
 $BASE = $PSScriptRoot
-$projectPorts = @(8000, 4300, 3000, 3001)
+$projectPorts = @(8000, 4300, 3200, 3201)
 
 function Stop-ProcessTree {
     param([int]$ProcessId)

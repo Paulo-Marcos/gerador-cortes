@@ -272,7 +272,7 @@ node native_worker.js
 | Backend API | http://localhost:8000 |
 | Documentação da API | http://localhost:8000/docs |
 | Frontend | http://localhost:4300 |
-| Remotion Studio | http://localhost:3000 |
+| Remotion Studio | http://localhost:3200 |
 
 ---
 
