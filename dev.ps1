@@ -1,4 +1,4 @@
-# dev.ps1 - Inicia o ambiente local em um unico terminal.
+﻿# dev.ps1 - Inicia o ambiente local em um unico terminal.
 # WHY ReadLineAsync: event handlers .NET (OutputDataReceived) executam ScriptBlocks
 # em ThreadPool threads, o que crasha o host PowerShell (exit code 2).
 # ReadLineAsync le output de forma assincrona SEM threads extras.
@@ -277,33 +277,50 @@ function Write-ServiceLine {
     }
 }
 
-# Le output de todos os servicos via polling de Tasks assincronas
+# Le output de todos os servicos via polling de Tasks assincronas.
+#
+# Drena em LACO, nao uma linha por ciclo. A versao anterior lia UMA
+# linha de stdout e UMA de stderr por servico e dormia 100ms — vazao medida de
+# 8,7 linhas/s. Numa rajada de log (geracao de IA), o pipe de 4KB do Windows
+# enchia, `print` no backend BLOQUEAVA, e como `operational_info` roda dentro
+# do event loop do asyncio o servidor inteiro congelava: deletar um trecho no
+# editor so respondia quando a IA terminava, ~40s depois. Medido: 400 linhas
+# levavam 46s para drenar e o processo escritor seguia bloqueado; drenando em
+# laco, 1,56s (256 linhas/s) e o escritor termina em 0,6s.
+#
+# O teto por ciclo evita starvation: com um servico tagarela, o laco cede a vez
+# para os demais e para a checagem de processo morto em vez de girar sem fim.
+# Devolve $true se leu alguma linha — o chamador so dorme quando nao houve nada.
+$script:MaxLinhasPorCiclo = 500
+
 function Read-AllServiceOutput {
     param([array]$Services)
 
+    $leuAlgo = $false
+
     foreach ($svc in $Services) {
         # Stdout
-        if ($null -ne $svc.StdOutTask -and $svc.StdOutTask.IsCompleted) {
+        $n = 0
+        while ($null -ne $svc.StdOutTask -and $svc.StdOutTask.IsCompleted -and $n -lt $script:MaxLinhasPorCiclo) {
             $line = $svc.StdOutTask.Result
-            if ($null -ne $line) {
-                Write-ServiceLine -Label $svc.Label -Color $svc.Color -Line $line
-                $svc.StdOutTask = $svc.Process.StandardOutput.ReadLineAsync()
-            } else {
-                $svc.StdOutTask = $null
-            }
+            if ($null -eq $line) { $svc.StdOutTask = $null; break }
+            Write-ServiceLine -Label $svc.Label -Color $svc.Color -Line $line
+            $svc.StdOutTask = $svc.Process.StandardOutput.ReadLineAsync()
+            $n++; $leuAlgo = $true
         }
 
         # Stderr
-        if ($null -ne $svc.StdErrTask -and $svc.StdErrTask.IsCompleted) {
+        $n = 0
+        while ($null -ne $svc.StdErrTask -and $svc.StdErrTask.IsCompleted -and $n -lt $script:MaxLinhasPorCiclo) {
             $line = $svc.StdErrTask.Result
-            if ($null -ne $line) {
-                Write-ServiceLine -Label $svc.Label -Color $svc.Color -Line $line
-                $svc.StdErrTask = $svc.Process.StandardError.ReadLineAsync()
-            } else {
-                $svc.StdErrTask = $null
-            }
+            if ($null -eq $line) { $svc.StdErrTask = $null; break }
+            Write-ServiceLine -Label $svc.Label -Color $svc.Color -Line $line
+            $svc.StdErrTask = $svc.Process.StandardError.ReadLineAsync()
+            $n++; $leuAlgo = $true
         }
     }
+
+    return $leuAlgo
 }
 
 Clear-Host
@@ -393,7 +410,7 @@ try {
 
     while ($true) {
         # Le e imprime output dos servicos (tudo na thread principal)
-        Read-AllServiceOutput -Services $running
+        $leuAlgo = Read-AllServiceOutput -Services $running
 
         # Verifica se algum servico morreu
         foreach ($entry in $running) {
@@ -409,7 +426,9 @@ try {
             }
         }
 
-        Start-Sleep -Milliseconds 100
+        # So dorme quando nao havia nada para ler. Durante uma rajada o laco
+        # gira sem pausa e o pipe nunca chega a encher.
+        if (-not $leuAlgo) { Start-Sleep -Milliseconds 100 }
     }
 } finally {
     Write-Host ""

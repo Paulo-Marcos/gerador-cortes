@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import atexit
 import builtins
 import logging
+import queue
+import threading
 import time
 from collections.abc import Callable
 from typing import Any
@@ -77,29 +80,97 @@ def operational_info(scope: str, message: str, *, started_at: float | None = Non
     _print_seguro(f"[{epoch_to_hora_local(agora)}] [{scope}] {message}{elapsed}")
 
 
-def _print_seguro(linha: str) -> None:
-    """Imprime sem nunca derrubar quem chamou por causa de encoding.
+# Escrita de log em thread separada.
+#
+# `print` com o stdout num PIPE bloqueia quando o pipe enche (4KB no Windows) e
+# quem le nao drena. Como `operational_info` e chamado de dentro do event loop
+# do asyncio, esse bloqueio congelava o servidor INTEIRO: uma rajada de log da
+# geracao de IA prendia o backend por ~40s e o editor so respondia quando a IA
+# terminava. O `dev.ps1` foi corrigido para drenar em laco, mas o backend nao
+# pode depender da velocidade de quem le a saida dele — qualquer consumidor
+# lento (console minimizado, terminal fechado, redirecionamento para um disco
+# ocupado) traria o congelamento de volta.
+#
+# A fila e LIMITADA e DESCARTA quando enche: perder linha de log operacional e
+# barato; congelar o servidor nao e. O descarte e contabilizado e sai no log
+# assim que houver espaco, para nunca esconder que houve perda.
+_FILA_LOG: queue.Queue[str] = queue.Queue(maxsize=20_000)
+_thread_log: threading.Thread | None = None
+_descartadas = 0
+_lock_descarte = threading.Lock()
 
-    Os logs usam emojis (▶ ✅) e acentos. Num console nao-UTF-8 (ex.: cmd.exe
-    em cp1252) `print` levantaria UnicodeEncodeError — e um log JAMAIS pode
-    abortar o render. Em caso de erro, degrada para a codificacao do console
-    com `errors='replace'`.
+
+def _escrever_direto(linha: str) -> None:
+    """Escreve no stdout tolerando console nao-UTF-8.
+
+    Os logs usam emojis (▶ ✅) e acentos. Num console cp1252 `print` levantaria
+    UnicodeEncodeError — e um log JAMAIS pode abortar o render.
     """
     try:
         _ORIGINAL_PRINT(linha, flush=True)
     except UnicodeEncodeError:
-        # Console nao-UTF-8 (cp1252/ascii): degrada para ASCII em vez de
-        # abortar o render. Emojis/acentos nao codificaveis viram '?'.
         _ORIGINAL_PRINT(linha.encode("ascii", errors="replace").decode("ascii"), flush=True)
+
+
+def _drenar_fila_de_log() -> None:
+    """Consome a fila para sempre. Roda numa thread daemon."""
+    global _descartadas
+    while True:
+        linha = _FILA_LOG.get()
+        with _lock_descarte:
+            perdidas, _descartadas = _descartadas, 0
+        if perdidas:
+            _escrever_direto(f"[LOG] {perdidas} linha(s) descartada(s): fila cheia.")
+        _escrever_direto(linha)
+
+
+def iniciar_escrita_assincrona_de_log() -> None:
+    """Liga a escrita em thread. Idempotente.
+
+    Fica DESLIGADA por padrao: sem ela `_print_seguro` escreve direto, que e o
+    comportamento historico e o que os testes esperam (saida sincrona, capturavel
+    por capsys). O boot da aplicacao liga via `install_log_controls`.
+    """
+    global _thread_log
+    if _thread_log is not None and _thread_log.is_alive():
+        return
+    _thread_log = threading.Thread(target=_drenar_fila_de_log, name="app-log-writer", daemon=True)
+    _thread_log.start()
+    atexit.register(_drenar_restante_do_log)
+
+
+def _drenar_restante_do_log(timeout: float = 2.0) -> None:
+    """Da chance de a fila esvaziar no shutdown — a thread e daemon e morreria
+    com o processo, levando as ultimas linhas junto."""
+    fim = time.monotonic() + timeout
+    while not _FILA_LOG.empty() and time.monotonic() < fim:
+        time.sleep(0.01)
+
+
+def _print_seguro(linha: str) -> None:
+    """Emite uma linha de log sem NUNCA bloquear quem chamou.
+
+    Com a escrita assincrona ligada, enfileira e volta na hora. Sem ela (testes,
+    scripts), escreve direto — mesmo comportamento de antes.
+    """
+    global _descartadas
+    if _thread_log is None or not _thread_log.is_alive():
+        _escrever_direto(linha)
+        return
+    try:
+        _FILA_LOG.put_nowait(linha)
+    except queue.Full:
+        with _lock_descarte:
+            _descartadas += 1
 
 
 def operational_debug(scope: str, message: str) -> None:
     if is_debug_enabled():
-        _ORIGINAL_PRINT(f"[{scope}] {message}", flush=True)
+        _print_seguro(f"[{scope}] {message}")
 
 
 def operational_error(scope: str, message: str) -> None:
-    _ORIGINAL_PRINT(f"[{scope}] {message}", flush=True)
+    _print_seguro(f"[{scope}] {message}")
 
 
 class AppLogLevelFilter(logging.Filter):
@@ -116,6 +187,7 @@ class AppLogLevelFilter(logging.Filter):
 
 def install_log_controls() -> None:
     """Aplica filtro dinâmico para logging e prints operacionais."""
+    iniciar_escrita_assincrona_de_log()
     root_logger = logging.getLogger()
     if not any(isinstance(item, AppLogLevelFilter) for item in root_logger.filters):
         root_logger.addFilter(AppLogLevelFilter())

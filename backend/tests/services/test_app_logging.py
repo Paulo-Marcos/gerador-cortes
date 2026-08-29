@@ -1,6 +1,7 @@
 import logging
 import re
 
+from app.services import app_logging
 from app.services.app_logging import AppLogLevelFilter, operational_info
 from app.services.app_settings import AppSettingsService, LogLevel
 
@@ -92,3 +93,73 @@ def test_operational_info_nao_propaga_erro_de_encoding(tmp_path, monkeypatch):
 
     # Tentou o original e caiu no fallback (2 chamadas), sem propagar.
     assert len(chamadas) == 2
+
+
+# --- escrita assincrona de log ---
+#
+# `print` com o stdout num pipe BLOQUEIA quando o pipe enche e quem le nao
+# drena. Como `operational_info` roda dentro do event loop do asyncio, isso
+# congelava o servidor inteiro: uma rajada de log da geracao de IA prendia o
+# backend por ~40s e o editor so respondia quando a IA terminava. Medido no
+# dev.ps1 antigo: vazao de 8,7 linhas/s e o processo escritor bloqueado.
+
+
+def test_print_seguro_e_sincrono_enquanto_a_thread_nao_esta_ligada(capsys):
+    """Padrao preservado: sem a thread, escreve direto — o que os testes esperam."""
+    app_logging._print_seguro("linha direta")
+    assert "linha direta" in capsys.readouterr().out
+
+
+def test_print_seguro_nao_bloqueia_com_consumidor_travado(monkeypatch):
+    """A propriedade que importa: com quem le TRAVADO, emitir log volta na hora."""
+    import queue
+    import threading
+    import time
+
+    liberar = threading.Event()
+
+    def escrita_travada(linha):
+        liberar.wait(timeout=30)  # simula o pipe cheio
+
+    monkeypatch.setattr(app_logging, "_escrever_direto", escrita_travada)
+    monkeypatch.setattr(app_logging, "_FILA_LOG", queue.Queue(maxsize=50))
+    monkeypatch.setattr(app_logging, "_thread_log", None)
+    app_logging.iniciar_escrita_assincrona_de_log()
+    try:
+        inicio = time.monotonic()
+        for i in range(500):  # 10x a capacidade da fila
+            app_logging._print_seguro(f"linha {i}")
+        decorrido = time.monotonic() - inicio
+    finally:
+        liberar.set()
+
+    # Sem a fila, a primeira linha ja travaria por 30s.
+    assert decorrido < 1.0, f"emitir log bloqueou por {decorrido:.2f}s"
+
+
+def test_fila_cheia_descarta_em_vez_de_bloquear(monkeypatch):
+    """Perder linha de log e barato; congelar o servidor nao e."""
+    import queue
+    import threading
+
+    liberar = threading.Event()
+    monkeypatch.setattr(app_logging, "_escrever_direto", lambda linha: liberar.wait(timeout=30))
+    monkeypatch.setattr(app_logging, "_FILA_LOG", queue.Queue(maxsize=10))
+    monkeypatch.setattr(app_logging, "_thread_log", None)
+    monkeypatch.setattr(app_logging, "_descartadas", 0)
+    app_logging.iniciar_escrita_assincrona_de_log()
+    try:
+        for i in range(200):
+            app_logging._print_seguro(f"linha {i}")
+    finally:
+        liberar.set()
+
+    assert app_logging._descartadas > 0, "deveria ter descartado ao encher"
+
+
+def test_iniciar_escrita_assincrona_e_idempotente(monkeypatch):
+    monkeypatch.setattr(app_logging, "_thread_log", None)
+    app_logging.iniciar_escrita_assincrona_de_log()
+    primeira = app_logging._thread_log
+    app_logging.iniciar_escrita_assincrona_de_log()
+    assert app_logging._thread_log is primeira
