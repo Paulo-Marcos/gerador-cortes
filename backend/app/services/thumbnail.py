@@ -12,6 +12,7 @@ from app.channel_paths import (
 )
 from app.config import settings
 from app.database import AsyncSessionLocal
+from app.domain.thumbnail_encode import LIMITE_YOUTUBE_BYTES, preparar_para_youtube
 from app.domain.variacao_prompt import strip_variation_tags
 from app.infrastructure import gemini_client
 from app.models import Corte, MetadadoCorte
@@ -94,8 +95,6 @@ class ThumbnailService:
 
     @staticmethod
     async def comprimir_manual(corte_id: str) -> dict:
-        from PIL import Image
-
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte:
@@ -114,24 +113,24 @@ class ThumbnailService:
             raise ValueError("Arquivo da thumbnail não encontrado no disco")
 
         tamanho = os.path.getsize(thumb_path)
-        if tamanho <= 2000000:
+        if tamanho <= LIMITE_YOUTUBE_BYTES:
             return {
                 "message": f"A capa já está abaixo de 2MB ({tamanho} bytes). Nenhuma ação necessária."
             }
 
-        img = Image.open(thumb_path)
-        if img.mode != "RGB":
-            img = img.convert("RGB")
-
-        quality = 98
-        while quality > 20:
-            img.save(thumb_path, "JPEG", quality=quality, optimize=True)
-            if os.path.getsize(thumb_path) <= 2000000:
-                break
-            quality -= 1
+        # Delega ao domínio: croma em 4:4:4 e a melhor qualidade que couber. O que
+        # havia aqui usava o subsampling PADRÃO do PIL (4:2:0), que descarta 3/4
+        # da informação de cor — o dano concentrado justamente na borda colorida
+        # do texto da capa. E descia a qualidade de 1 em 1 a partir de 98,
+        # reencodando até 78 vezes para chegar no mesmo lugar.
+        with open(thumb_path, "rb") as arquivo:
+            dados = arquivo.read()
+        convertido, _mimetype, nota = preparar_para_youtube(dados)
+        with open(thumb_path, "wb") as arquivo:
+            arquivo.write(convertido)
 
         novo_tamanho = os.path.getsize(thumb_path)
-        return {"message": f"Capa comprimida com sucesso! Novo tamanho: {novo_tamanho} bytes."}
+        return {"message": f"Capa comprimida ({nota}). Novo tamanho: {novo_tamanho} bytes."}
 
     @staticmethod
     async def gerar(corte_id: str):

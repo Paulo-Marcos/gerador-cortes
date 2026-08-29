@@ -10,6 +10,7 @@ from app.channel_paths import (
     youtube_token_path,
 )
 from app.database import AsyncSessionLocal
+from app.domain.thumbnail_encode import preparar_para_youtube
 from app.domain.youtube_urls import extract_youtube_video_id
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services.app_logging import operational_debug, operational_error, operational_info
@@ -512,32 +513,35 @@ class YouTubeService:
                     )
 
                 if _thumb_found and video_id:
+                    # A preparação vive no domínio (`thumbnail_encode`) porque a
+                    # escolha certa não é óbvia: o que havia aqui salvava com o
+                    # subsampling PADRÃO do PIL (4:2:0), que guarda a cor em blocos
+                    # de 2x2 pixels. Em borda de texto isso borra; em gradiente de
+                    # luz/neon o degradê perde continuidade e fica picotado — o
+                    # sintoma que o operador relatou. Medido numa capa real, na
+                    # zona de maior cor: 34,0 dB com 4:2:0 contra 41,4 dB com
+                    # 4:4:4, e ainda usando menos da metade dos 2 MB permitidos.
+                    _dados_thumb = _thumb_found.read_bytes()
+                    _preparada, _mimetype, _nota = preparar_para_youtube(_dados_thumb)
                     _actual = str(_thumb_found)
-                    if _thumb_found.stat().st_size > 2_000_000:
-                        operational_info("YouTube", "Thumbnail > 2MB. Comprimindo...")
-                        from PIL import Image
-
-                        _img = Image.open(_thumb_found)
-                        if _img.mode != "RGB":
-                            _img = _img.convert("RGB")
+                    if _preparada != _dados_thumb:
                         _tmp = _thumb_found.with_name("temp_thumb_upload.jpg")
-                        _q = 92
-                        while _q > 20:
-                            _img.save(_tmp, "JPEG", quality=_q, optimize=True)
-                            if _tmp.stat().st_size <= 2_000_000:
-                                break
-                            _q -= 5
+                        _tmp.write_bytes(_preparada)
                         _actual = str(_tmp)
-                        operational_debug(
-                            "YouTube",
-                            f"Thumbnail comprimida -> qualidade {_q} ({_tmp.stat().st_size} bytes)",
-                        )
+                    operational_debug(
+                        "YouTube",
+                        f"Thumbnail: {_nota} ({len(_preparada)} bytes, {_mimetype})",
+                    )
 
                     operational_info("YouTube", f"Enviando thumbnail: {_actual}")
                     try:
                         youtube.thumbnails().set(
                             videoId=video_id,
-                            media_body=MediaFileUpload(_actual, mimetype="image/jpeg"),
+                            # O mimetype sai do CONTEUDO: as capas eram gravadas
+                            # como `thumbnail.jpg` contendo PNG e declaradas como
+                            # image/jpeg — o arquivo dizia uma coisa e o cabecalho
+                            # outra.
+                            media_body=MediaFileUpload(_actual, mimetype=_mimetype),
                         ).execute()
                         operational_info("YouTube", "Thumbnail enviada!")
                     except Exception as _te:
