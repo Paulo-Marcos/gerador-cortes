@@ -131,12 +131,29 @@ def cancelar_owner(owner: str) -> int:
     pedidos = 0
     for queue_id, fila_dir in list(em_voo.items()):
         try:
-            _escrever_json(fila_dir / f"cancel_{queue_id}.json", {"id": queue_id})
+            escrever_json_atomico(fila_dir / f"cancel_{queue_id}.json", {"id": queue_id})
             pedidos += 1
         except OSError as e:
             logger.warning("[WorkerQueue] Falha ao pedir cancelamento de %s: %s", queue_id, e)
     logger.info("[WorkerQueue] Cancelamento pedido para %d job(s) de '%s'", pedidos, owner)
     return pedidos
+
+
+def escrever_json_atomico(path: Path, payload: dict) -> None:
+    """Grava `payload` em `path` de forma atômica — o arquivo nunca aparece pela metade.
+
+    Escreve num `.tmp` e renomeia (`os.replace` é atômico no NTFS). Sem isso o
+    worker, que reage ao evento de CRIAÇÃO do arquivo, lê um `req_*.json` vazio
+    ou truncado e trata como erro fatal do job. O `.tmp` não casa com o filtro
+    `req_*.json` do worker, então nunca é pego no meio da escrita.
+
+    Público de propósito: qualquer produtor da fila (inclusive quem ainda não
+    usa `RemotionWorkerQueue`) precisa desta garantia.
+    """
+    tmp = path.with_name(f"{path.name}.tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False)
+    os.replace(tmp, path)
 
 
 def jobs_em_voo(owner: str) -> int:
@@ -193,7 +210,7 @@ class RemotionWorkerQueue:
             queue_id,
             job.category.value,
         )
-        _escrever_json(req_file, payload)
+        escrever_json_atomico(req_file, payload)
         owner = job.owner or _DONO_ATUAL.get()
         _registrar_em_voo(owner, queue_id, self._fila_dir)
 
@@ -210,7 +227,7 @@ class RemotionWorkerQueue:
             # o MESMO nome, que o worker ignora (já está em `activeJobs`) — o
             # retry então esperava o timeout inteiro por uma resposta que
             # ninguém mais ia escrever (D-424).
-            _escrever_json(self._fila_dir / f"cancel_{queue_id}.json", {"id": queue_id})
+            escrever_json_atomico(self._fila_dir / f"cancel_{queue_id}.json", {"id": queue_id})
             raise WorkerJobTimeout(
                 f"Worker não respondeu para job '{job.id}' em {job.timeout_sec}s de execução"
             )
@@ -272,17 +289,6 @@ def _remover_arquivos_legados(fila_dir: Path, job_id: str, queue_id: str) -> Non
 
     _remover_se_existir(fila_dir / f"req_{job_id}.json")
     _remover_se_existir(fila_dir / f"res_{job_id}.json")
-
-
-def _escrever_json(path: Path, payload: dict) -> None:
-    # Escrita ATOMICA: grava num `.tmp` e renomeia (os.replace e atomico no
-    # NTFS). Sem isso, o worker podia ler um req_*.json pela metade (JSON
-    # parcial) sob carga e tratar como erro. O `.tmp` nao casa o filtro do
-    # worker (req_*.json), entao nunca e pego no meio da escrita.
-    tmp = path.with_name(f"{path.name}.tmp")
-    with tmp.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False)
-    os.replace(tmp, path)
 
 
 def _ler_e_remover_resposta(res_file: Path, *, job_id: str) -> dict:

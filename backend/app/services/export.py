@@ -25,6 +25,7 @@ from app.domain.segment_calculator import (
     mesclar_desvios_sobrepostos,
     normalizar_desvio,
 )
+from app.infrastructure.worker_queue import escrever_json_atomico
 from app.models import Corte, Projeto
 from app.services.app_logging import (
     current_log_level,
@@ -252,8 +253,11 @@ class ExportService(
                 print(
                     f"[ExportService] Enfileirando geração de bruto para {corte_id}...", flush=True
                 )
-            with open(req_file, "w", encoding="utf-8") as f:
-                json.dump(job_data, f, ensure_ascii=False)
+            # Escrita ATOMICA (.tmp + rename): o worker reage ao evento de
+            # CRIACAO do arquivo, entao um `open(...,'w')` — que trunca para 0
+            # bytes antes de gravar — fazia o `JSON.parse` estourar com
+            # "Unexpected end of JSON input" e o job ser descartado.
+            escrever_json_atomico(req_file, job_data)
 
             # Aguarda o Native Worker processar (polling com timeout de 10min)
             timeout = 600

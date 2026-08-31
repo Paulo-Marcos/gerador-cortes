@@ -34,6 +34,7 @@ from app.infrastructure.worker_queue import (
     _queue_job_id,
     _watch_until_present,
     cancelar_owner,
+    escrever_json_atomico,
     jobs_em_voo,
 )
 
@@ -460,3 +461,48 @@ class TestCancelarOwner:
     def test_dono_sem_job_em_voo_e_noop(self, tmp_path):
         assert cancelar_owner("ninguem") == 0
         assert jobs_em_voo("ninguem") == 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# escrever_json_atomico
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestEscreverJsonAtomico:
+    def test_grava_payload_legivel(self, tmp_path):
+        alvo = tmp_path / "req_job.json"
+
+        escrever_json_atomico(alvo, {"id": "job", "cmd": ["ffmpeg", "-i", "ação.mp4"]})
+
+        assert json.loads(alvo.read_text(encoding="utf-8")) == {
+            "id": "job",
+            "cmd": ["ffmpeg", "-i", "ação.mp4"],
+        }
+
+    def test_nao_deixa_alvo_parcial_quando_a_serializacao_falha(self, tmp_path, monkeypatch):
+        """O worker reage à CRIAÇÃO do arquivo: um alvo truncado seria lido vazio.
+
+        Regressão do `Unexpected end of JSON input` — com `open(...,'w')` direto,
+        o alvo existiria com 0 byte antes do conteúdo chegar.
+        """
+        alvo = tmp_path / "req_job.json"
+
+        def dump_que_falha(*_args, **_kwargs):
+            raise ValueError("payload inválido")
+
+        monkeypatch.setattr(json, "dump", dump_que_falha)
+
+        with pytest.raises(ValueError):
+            escrever_json_atomico(alvo, {"id": "job"})
+
+        assert not alvo.exists()
+
+    def test_intermediario_nao_casa_o_filtro_do_worker(self, tmp_path):
+        """O `.tmp` não pode ser confundido com um pedido: o worker varre
+        `req_*.json` e pegaria o arquivo no meio da escrita."""
+        alvo = tmp_path / "req_job.json"
+
+        escrever_json_atomico(alvo, {"id": "job"})
+
+        assert [p.name for p in tmp_path.iterdir()] == ["req_job.json"]
+        assert not alvo.with_name(f"{alvo.name}.tmp").name.endswith(".json")
