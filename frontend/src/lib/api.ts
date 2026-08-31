@@ -142,6 +142,8 @@ export const api = {
           log_level?: LogLevel;
           filtro_global_padrao?: string;
           youtube_layout_padrao_global?: string;
+          // D-450: velocidade inicial dos players de preview.
+          velocidade_player_padrao?: number;
           // D-191: bloco completo de render (editável pela UI).
           render?: RenderSettings;
         },

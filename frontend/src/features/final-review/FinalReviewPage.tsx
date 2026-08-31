@@ -41,6 +41,10 @@ import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts'
 import { SceneTimeline } from '@/features/editor/fase2/SceneTimeline';
 import { calcularDuracaoLiquida } from '@/features/editor/timeUtils';
 import { MetadataModal } from '@/features/metadata/MetadataModal';
+import {
+  useVelocidadeNoVideo,
+  useVelocidadePlayerPadrao,
+} from '@/hooks/useVelocidadePlayerPadrao';
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from '@/features/post-production/RenderStepsModal';
 import type { FaseRender } from '@/features/post-production/renderEtapas';
@@ -789,6 +793,12 @@ function FinalPlayerPanel({
   onTimeUpdate: (segundos: number) => void;
   filtroLabel: string | null;
 }) {
+  // D-450: abre na velocidade configurada em Ajustes. Aplicado aqui, junto ao
+  // <video>, para reagir tambem a troca de `src` (outro corte) — Ctrl+J/K
+  // continuam ajustando pontualmente por cima.
+  const velocidadePadrao = useVelocidadePlayerPadrao();
+  useVelocidadeNoVideo(videoRef, velocidadePadrao, src);
+
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
       <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">

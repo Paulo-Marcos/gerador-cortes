@@ -53,3 +53,24 @@ def test_put_render_persiste_e_reflete(client: TestClient):
 
     # Releitura reflete o persistido.
     assert client.get("/settings").json()["render"]["overlay_max_attempts"] == 5
+
+
+def test_get_expoe_velocidade_player_padrao_default(client: TestClient):
+    assert client.get("/settings").json()["velocidade_player_padrao"] == 1.0
+
+
+def test_put_velocidade_player_persiste_e_reflete(client: TestClient):
+    resp = client.put("/settings", json={"velocidade_player_padrao": 1.5})
+
+    assert resp.status_code == 200
+    assert resp.json()["velocidade_player_padrao"] == 1.5
+    assert client.get("/settings").json()["velocidade_player_padrao"] == 1.5
+
+
+def test_put_velocidade_player_fora_de_faixa_e_clampada(client: TestClient):
+    assert (
+        client.put("/settings", json={"velocidade_player_padrao": 99}).json()[
+            "velocidade_player_padrao"
+        ]
+        == 4.0
+    )

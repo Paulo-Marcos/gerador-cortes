@@ -22,6 +22,8 @@ class AppSettingsResponse(BaseModel):
     log_level: LogLevel
     filtro_global_padrao: str
     youtube_layout_padrao_global: str = "{}"
+    # D-450: velocidade com que os players de preview abrem.
+    velocidade_player_padrao: float = 1.0
     render: RenderSettingsModel
     # D-285: nome do mascote do canal ativo (identidade editorial no banco).
     # "" quando ainda não definido (fallback neutro) — a UI mostra placeholder.
@@ -34,6 +36,8 @@ class UpdateAppSettingsRequest(BaseModel):
     # F-024: padrao GLOBAL do layout YouTube (escopo da aplicacao, nao do
     # projeto). JSON string com o preset compartilhado.
     youtube_layout_padrao_global: str | None = None
+    # D-450: velocidade inicial dos players de preview (clampada no serviço).
+    velocidade_player_padrao: float | None = None
     # D-191: bloco de render editável pela UI (bloco completo).
     render: RenderSettingsModel | None = None
     # D-285: nome do mascote editável pela UI (grava no banco + espelha no yaml).
@@ -54,6 +58,7 @@ def _to_response(app: AppSettings) -> AppSettingsResponse:
         log_level=app.log_level,
         filtro_global_padrao=app.filtro_global_padrao,
         youtube_layout_padrao_global=app.youtube_layout_padrao_global,
+        velocidade_player_padrao=app.velocidade_player_padrao,
         render=RenderSettingsModel(
             cooldown_sec=app.render.cooldown_sec,
             overlay_concurrency=app.render.overlay_concurrency,
@@ -82,6 +87,8 @@ async def update_settings(body: UpdateAppSettingsRequest):
         updated = AppSettingsService.update_youtube_layout_padrao_global(
             body.youtube_layout_padrao_global
         )
+    if body.velocidade_player_padrao is not None:
+        updated = AppSettingsService.update_velocidade_player_padrao(body.velocidade_player_padrao)
     if body.render is not None:
         updated = AppSettingsService.update_render(
             RenderSettings(

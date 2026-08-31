@@ -35,7 +35,13 @@ export function useVideoPlayer(videoRef: RefObject<HTMLVideoElement>): PlayerHan
       },
       setPlaybackRate: (rate) => {
         const video = videoRef.current;
-        if (video) video.playbackRate = Math.max(MIN_RATE, Math.min(MAX_RATE, rate));
+        if (!video) return;
+        const limitado = Math.max(MIN_RATE, Math.min(MAX_RATE, rate));
+        // D-450: `playbackRate` e resetado para `defaultPlaybackRate` a cada
+        // carga de midia — gravar os dois faz a velocidade sobreviver a troca
+        // de corte em vez de voltar sozinha para 1,00x.
+        video.defaultPlaybackRate = limitado;
+        video.playbackRate = limitado;
       },
       getPlaybackRate: () => videoRef.current?.playbackRate ?? 1,
       getCurrentTime: () => videoRef.current?.currentTime ?? 0,

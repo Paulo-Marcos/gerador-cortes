@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FolderOpen, Keyboard, Loader2, Play, RotateCcw, Star } from 'lucide-react';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
+import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
 import {
   type RenderStartFrom,
   useCorte,
@@ -81,7 +82,9 @@ export function ScenesPostProductionPage() {
 
   const [cenas, setCenas] = useState<CenaRemotion[]>([]);
   const [currentTime, setCurrentTime] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  // D-450: velocidade padrao vinda de Ajustes (app_settings).
+  const velocidadePadrao = useVelocidadePlayerPadrao();
+  const [playbackRate, setPlaybackRate] = useState(velocidadePadrao);
   // Cache-buster do <video>: bumpado automaticamente quando a geração do
   // bruto termina (status -> 'pronto') para o Remotion Player remontar com a
   // URL nova (via `key={src}` no Player) e re-fetchar o arquivo do disco.
@@ -107,6 +110,12 @@ export function ScenesPostProductionPage() {
 
   const brutoEmGeracao =
     statusBruto.data?.status === 'cortando' || statusBruto.data?.status === 'processando';
+
+  // D-450: o Player abre na velocidade configurada em Ajustes — reaplica
+  // quando a preferencia chega da API ou muda no painel.
+  useEffect(() => {
+    setPlaybackRate(velocidadePadrao);
+  }, [velocidadePadrao]);
 
   useEffect(() => {
     const anterior = ultimoStatusBrutoRef.current;

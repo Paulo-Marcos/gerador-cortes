@@ -3,6 +3,7 @@ import { Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hmsParaSeg, segParaMmSs } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
+import { useVelocidadeNoVideo } from '@/hooks/useVelocidadePlayerPadrao';
 import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
 import type { Desvio } from '@/types/models';
@@ -184,6 +185,12 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
       video.removeEventListener('loadedmetadata', onLoaded);
     };
   }, [src, inicioSeg, fimSeg, desvios, smartPlay, posicaoKey]);
+
+  // D-450: a prop `playbackRate` era so rotulo — quem aplicava era o
+  // `playerRef` do EditorPage, ainda nulo quando a preferencia chega, e o
+  // chip anunciava 1,50x com o video rodando em 1,00x. Agora o estado do
+  // React e a fonte unica: o <video> segue a prop.
+  useVelocidadeNoVideo(videoRef, playbackRate, src);
 
   const duracao = Math.max(0, fimSeg - inicioSeg);
   const rateLabel = `${playbackRate.toFixed(2)}×`;

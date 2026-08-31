@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
@@ -15,6 +16,14 @@ from app.domain.overlay_codec import OverlayCodec
 from app.services import settings_store
 
 DEFAULT_FILTRO_GLOBAL_PADRAO = "bypass_dourado_aberto"
+
+# Faixa aceita para a velocidade inicial dos players de preview (D-450).
+# Espelha SPEED_MIN/SPEED_MAX do frontend: o backend é a última linha de
+# defesa, para que um valor fora de faixa vindo do banco ou de um PUT
+# manual nunca chegue ao <video> como playbackRate inválido.
+VELOCIDADE_PLAYER_MIN = 0.25
+VELOCIDADE_PLAYER_MAX = 4.0
+DEFAULT_VELOCIDADE_PLAYER = 1.0
 
 
 class LogLevel(StrEnum):
@@ -104,6 +113,10 @@ class AppSettings:
     # usuario possa "Usar Global" sem afetar o padrao de projeto.
     # Default "{}" significa "sem padrao global definido".
     youtube_layout_padrao_global: str = "{}"
+    # D-450: velocidade com que os players de preview (Editor, Revisao Final,
+    # Pos-producao) ABREM. Preferencia de leitura do operador, nao afeta o
+    # render — o clipe exportado sai sempre em 1x. Default 1.0.
+    velocidade_player_padrao: float = DEFAULT_VELOCIDADE_PLAYER
     render: RenderSettings = field(default_factory=RenderSettings)
 
     def to_dict(self) -> dict[str, object]:
@@ -111,6 +124,7 @@ class AppSettings:
             "log_level": self.log_level.value,
             "filtro_global_padrao": self.filtro_global_padrao,
             "youtube_layout_padrao_global": self.youtube_layout_padrao_global,
+            "velocidade_player_padrao": self.velocidade_player_padrao,
             "render": self.render.to_dict(),
         }
 
@@ -156,6 +170,11 @@ class AppSettingsService:
         nao do projeto). Recebe JSON string ja serializada (mesmo formato do
         `Projeto.layout_youtube_padrao`)."""
         return cls._update(youtube_layout_padrao_global=_coerce_layout_global(layout_json))
+
+    @classmethod
+    def update_velocidade_player_padrao(cls, velocidade: float) -> AppSettings:
+        """Atualiza a velocidade com que os players de preview abrem (D-450)."""
+        return cls._update(velocidade_player_padrao=_coerce_velocidade_player(velocidade))
 
     @classmethod
     def _update(cls, **campos: object) -> AppSettings:
@@ -237,6 +256,9 @@ class AppSettingsService:
             youtube_layout_padrao_global=_coerce_layout_global(
                 data.get("youtube_layout_padrao_global")
             ),
+            velocidade_player_padrao=_coerce_velocidade_player(
+                data.get("velocidade_player_padrao")
+            ),
             render=RenderSettings.from_dict(data.get("render")),
         )
 
@@ -267,6 +289,7 @@ def _app_settings_from_row(row: dict) -> AppSettings:
         log_level=_coerce_log_level(row.get("log_level")),
         filtro_global_padrao=_coerce_filtro_global(row.get("filtro_global_padrao")),
         youtube_layout_padrao_global=_coerce_layout_global(row.get("youtube_layout_padrao_global")),
+        velocidade_player_padrao=_coerce_velocidade_player(row.get("velocidade_player_padrao")),
         render=render,
     )
 
@@ -283,6 +306,7 @@ def _row_from_app_settings(app: AppSettings) -> dict:
         "render_overlay_codec": app.render.overlay_codec.value,
         "render_overlay_max_attempts": app.render.overlay_max_attempts,
         "render_grade_global_quality": app.render.grade_global_quality,
+        "velocidade_player_padrao": app.velocidade_player_padrao,
     }
 
 
@@ -309,6 +333,23 @@ def _coerce_layout_global(raw: object) -> str:
     except (TypeError, ValueError, json.JSONDecodeError):
         return "{}"
     return raw
+
+
+def _coerce_velocidade_player(raw: object) -> float:
+    """Clampa a velocidade na faixa do player e arredonda a 2 casas.
+
+    Valor ausente/ilegível cai no default 1.0 — nunca propaga `None` para o
+    `playbackRate`, que rejeitaria o valor e deixaria o player mudo sobre o erro.
+    """
+    try:
+        valor = float(raw)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return DEFAULT_VELOCIDADE_PLAYER
+    # NaN atravessaria o clamp (toda comparação com NaN é falsa) e viraria o teto.
+    if not math.isfinite(valor):
+        return DEFAULT_VELOCIDADE_PLAYER
+    limitado = max(VELOCIDADE_PLAYER_MIN, min(VELOCIDADE_PLAYER_MAX, valor))
+    return round(limitado, 2)
 
 
 def _coerce_non_negative_int(raw: object, default: int) -> int:

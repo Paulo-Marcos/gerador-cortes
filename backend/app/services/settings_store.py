@@ -44,6 +44,7 @@ _APP_COLUNAS = (
     "render_overlay_codec",
     "render_overlay_max_attempts",
     "render_grade_global_quality",
+    "velocidade_player_padrao",
 )
 
 _IDENTIDADE_COLUNAS = (
@@ -121,7 +122,8 @@ _DDL = (
         render_bundle_cache_enabled INTEGER NOT NULL DEFAULT 1,
         render_overlay_codec TEXT NOT NULL DEFAULT 'prores_4444',
         render_overlay_max_attempts INTEGER NOT NULL DEFAULT 3,
-        render_grade_global_quality INTEGER NOT NULL DEFAULT 30
+        render_grade_global_quality INTEGER NOT NULL DEFAULT 30,
+        velocidade_player_padrao REAL NOT NULL DEFAULT 1.0
     )
     """,
     """
@@ -225,6 +227,14 @@ _MIGRACOES_COLUNA = (
         "ranking_pesos",
         "vph",
         "ALTER TABLE ranking_pesos ADD COLUMN vph REAL NOT NULL DEFAULT 0",
+    ),
+    # D-450: velocidade inicial dos players de preview (Editor, Revisao Final,
+    # Pos-producao). Default 1.0 preserva o comportamento anterior em bancos
+    # que ja existiam — quem nao mexer no ajuste nao percebe diferenca.
+    (
+        "app_settings",
+        "velocidade_player_padrao",
+        "ALTER TABLE app_settings ADD COLUMN velocidade_player_padrao REAL NOT NULL DEFAULT 1.0",
     ),
 )
 

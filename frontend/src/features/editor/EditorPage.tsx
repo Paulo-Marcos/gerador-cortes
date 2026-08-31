@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
+import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
 import {
   corteKey,
   useAdicionarDesvio,
@@ -169,7 +170,9 @@ export function EditorPage() {
   const statusBruto = useStatusBruto(corteId);
 
   const [currentTime, setCurrentTime] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState(1);
+  // D-450: velocidade padrao vinda de Ajustes (app_settings).
+  const velocidadePadrao = useVelocidadePlayerPadrao();
+  const [playbackRate, setPlaybackRate] = useState(velocidadePadrao);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [trechosManualOpen, setTrechosManualOpen] = useState(false);
@@ -341,7 +344,6 @@ export function EditorPage() {
 
   useEffect(() => {
     resetEditHistory({});
-    setPlaybackRate(1);
     setCurrentTime(0);
     setWaveformRefreshKey(0);
     waveformWindowRef.current = null;
@@ -349,6 +351,14 @@ export function EditorPage() {
     // usuario tenha travado e mudado de corte, comeca o proximo destravado).
     setTrechoLocked(false);
   }, [corteId, resetEditHistory]);
+
+  // D-450: o player abre na velocidade configurada em Ajustes. Efeito
+  // proprio (e nao o reset por troca de corte acima) porque tambem dispara
+  // quando a preferencia chega da API ou muda no painel — sem arrastar
+  // junto o reset do historico de edicao.
+  useEffect(() => {
+    setPlaybackRate(velocidadePadrao);
+  }, [corteId, velocidadePadrao]);
 
   // Quando a geração do bruto termina, traz o corte atualizado (clip_path +
   // transcricao_final re-sincronizada com os desvios removidos).

@@ -235,3 +235,54 @@ def test_render_settings_imutavel():
     render = RenderSettings()
     with pytest.raises(Exception):
         render.cooldown_sec = 99  # type: ignore[misc]
+
+
+# ─────────────────────────────────────────────────────────────
+# Velocidade padrao do player (D-450)
+# ─────────────────────────────────────────────────────────────
+
+
+def test_velocidade_player_padrao_default_e_1x(tmp_path: Path):
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+
+    assert AppSettingsService.get().velocidade_player_padrao == 1.0
+
+
+def test_update_velocidade_player_persiste_e_sobrevive_ao_reload(tmp_path: Path):
+    settings_path = tmp_path / "app_settings.json"
+    AppSettingsService.set_settings_path_for_tests(settings_path)
+
+    AppSettingsService.update_velocidade_player_padrao(1.5)
+
+    assert json.loads(settings_path.read_text(encoding="utf-8"))["velocidade_player_padrao"] == 1.5
+    # Reabre a partir do banco (cache derrubado) — o valor tem de voltar.
+    AppSettingsService.set_settings_path_for_tests(settings_path)
+    assert AppSettingsService.get().velocidade_player_padrao == 1.5
+
+
+def test_update_velocidade_player_preserva_demais_campos(tmp_path: Path):
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+    AppSettingsService.update_log_level(LogLevel.DEBUG)
+
+    atualizado = AppSettingsService.update_velocidade_player_padrao(2.0)
+
+    assert atualizado.log_level == LogLevel.DEBUG
+    assert atualizado.velocidade_player_padrao == 2.0
+
+
+@pytest.mark.parametrize(
+    ("entrada", "esperado"),
+    [
+        (9.0, 4.0),  # acima do teto → clampa
+        (0.0, 0.25),  # abaixo do piso → clampa
+        (float("nan"), 1.0),  # NaN atravessaria o clamp → cai no default
+        ("rapido", 1.0),  # ilegivel → default
+        (None, 1.0),  # ausente → default
+    ],
+)
+def test_velocidade_player_fora_de_faixa_e_coagida(tmp_path: Path, entrada, esperado):
+    settings_path = tmp_path / "app_settings.json"
+    settings_path.write_text(json.dumps({"velocidade_player_padrao": entrada}), encoding="utf-8")
+    AppSettingsService.set_settings_path_for_tests(settings_path)
+
+    assert AppSettingsService.get().velocidade_player_padrao == esperado

@@ -605,6 +605,9 @@ export interface AppSettings {
   // `Projeto.layout_youtube_padrao` que e por-projeto). JSON string;
   // "{}" significa "sem padrao global definido".
   youtube_layout_padrao_global?: string;
+  // D-450: velocidade com que os players de preview ABREM (Editor, Revisao
+  // Final, Pos-producao). Preferencia de leitura — nao afeta o render.
+  velocidade_player_padrao?: number;
   // D-191: bloco de render exposto pela API (settings vivem no banco).
   render?: RenderSettings;
 }

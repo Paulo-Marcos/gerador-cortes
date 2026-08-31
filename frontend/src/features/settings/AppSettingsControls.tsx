@@ -30,6 +30,10 @@ export const LOG_OPTIONS: Array<{ value: LogLevel; label: string; description: s
 ];
 
 const DEFAULT_FILTER = 'bypass_dourado_aberto';
+// D-450: velocidades oferecidas para o padrao dos players. Mesmo passo de
+// 0,25x dos atalhos Ctrl+J/K, da faixa minima a maxima aceita pelo <video>.
+const VELOCIDADES_PLAYER = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4];
+const DEFAULT_VELOCIDADE_PLAYER = 1;
 const DEFAULT_RENDER: RenderSettings = {
   cooldown_sec: 0,
   overlay_concurrency: 4,
@@ -91,6 +95,7 @@ export function AppSettingsControls() {
   const filtros = filtersQuery.data?.filtros?.length ? filtersQuery.data.filtros : FALLBACK_FILTERS;
   const selectedFilter = data?.filtro_global_padrao ?? DEFAULT_FILTER;
   const render = data?.render ?? DEFAULT_RENDER;
+  const velocidadePlayer = data?.velocidade_player_padrao ?? DEFAULT_VELOCIDADE_PLAYER;
   const layoutGlobal = data?.youtube_layout_padrao_global ?? '{}';
   const temLayoutGlobal = layoutGlobal.trim() !== '' && layoutGlobal.trim() !== '{}';
   const mascoteNome = mascoteQuery.data ?? '';
@@ -131,6 +136,28 @@ export function AppSettingsControls() {
             </option>
           ))}
         </select>
+      </label>
+
+      <label className="grid gap-1.5">
+        <span className={sectionLabelCls}>Velocidade padrao do player</span>
+        <select
+          value={velocidadePlayer}
+          disabled={isBusy}
+          onChange={(event) =>
+            updateMutation.mutate({ velocidade_player_padrao: Number(event.target.value) })
+          }
+          className={controlCls}
+        >
+          {VELOCIDADES_PLAYER.map((velocidade) => (
+            <option key={velocidade} value={velocidade}>
+              {velocidade.toFixed(2)}×
+            </option>
+          ))}
+        </select>
+        <span className="text-xs font-normal text-[var(--wb-text-mute)]">
+          Velocidade com que Editor, Revisao Final e Pos-producao abrem. So afeta a
+          reproducao na tela &mdash; o video exportado sai sempre em 1,00×.
+        </span>
       </label>
 
       <div className="grid gap-1.5">

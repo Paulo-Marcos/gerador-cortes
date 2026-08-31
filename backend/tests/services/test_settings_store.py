@@ -37,6 +37,7 @@ def test_app_settings_round_trip(tmp_path: Path):
         "render_overlay_codec": "vp9",
         "render_overlay_max_attempts": 4,
         "render_grade_global_quality": 27,
+        "velocidade_player_padrao": 1.5,
     }
     settings_store.gravar_app_settings(db, "canal-a", valores)
 
@@ -57,6 +58,7 @@ def test_app_settings_upsert_sobrescreve(tmp_path: Path):
         "render_overlay_codec": "prores_4444",
         "render_overlay_max_attempts": 3,
         "render_grade_global_quality": 30,
+        "velocidade_player_padrao": 1.0,
     }
     settings_store.gravar_app_settings(db, "c", base)
     settings_store.gravar_app_settings(db, "c", {**base, "log_level": "debug"})
