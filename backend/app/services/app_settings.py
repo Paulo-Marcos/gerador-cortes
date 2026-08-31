@@ -25,6 +25,16 @@ VELOCIDADE_PLAYER_MIN = 0.25
 VELOCIDADE_PLAYER_MAX = 4.0
 DEFAULT_VELOCIDADE_PLAYER = 1.0
 
+# Faixa aceita para a janela de contexto do editor (D-451). O piso 0 permite
+# desligar o respiro de um dos lados; o teto existe porque a janela vira um
+# proxy FLAC gerado por ffmpeg a cada corte aberto — quanto maior, mais demora
+# a primeira abertura. Defaults reproduzem o comportamento anterior.
+CONTEXTO_SEG_MIN = 0
+CONTEXTO_ANTES_SEG_MAX = 600
+CONTEXTO_DEPOIS_SEG_MAX = 1800
+DEFAULT_CONTEXTO_ANTES_SEG = 60
+DEFAULT_CONTEXTO_DEPOIS_SEG = 300
+
 
 class LogLevel(StrEnum):
     DISABLED = "disabled"
@@ -117,6 +127,11 @@ class AppSettings:
     # Pos-producao) ABREM. Preferencia de leitura do operador, nao afeta o
     # render — o clipe exportado sai sempre em 1x. Default 1.0.
     velocidade_player_padrao: float = DEFAULT_VELOCIDADE_PLAYER
+    # D-451: respiro (em segundos) que o editor mostra ANTES do inicio e DEPOIS
+    # do fim do corte. E a janela de audio/onda que sobra para o operador
+    # entender o contexto e, quando precisa, esticar a borda do corte.
+    contexto_antes_seg: int = DEFAULT_CONTEXTO_ANTES_SEG
+    contexto_depois_seg: int = DEFAULT_CONTEXTO_DEPOIS_SEG
     render: RenderSettings = field(default_factory=RenderSettings)
 
     def to_dict(self) -> dict[str, object]:
@@ -125,6 +140,8 @@ class AppSettings:
             "filtro_global_padrao": self.filtro_global_padrao,
             "youtube_layout_padrao_global": self.youtube_layout_padrao_global,
             "velocidade_player_padrao": self.velocidade_player_padrao,
+            "contexto_antes_seg": self.contexto_antes_seg,
+            "contexto_depois_seg": self.contexto_depois_seg,
             "render": self.render.to_dict(),
         }
 
@@ -175,6 +192,28 @@ class AppSettingsService:
     def update_velocidade_player_padrao(cls, velocidade: float) -> AppSettings:
         """Atualiza a velocidade com que os players de preview abrem (D-450)."""
         return cls._update(velocidade_player_padrao=_coerce_velocidade_player(velocidade))
+
+    @classmethod
+    def update_contexto_corte(
+        cls, antes_seg: int | None = None, depois_seg: int | None = None
+    ) -> AppSettings:
+        """Atualiza a janela de contexto do editor (D-451).
+
+        Aceita os lados de forma independente: `None` significa "nao mexe neste
+        lado", entao a UI pode salvar so o campo que o operador editou.
+        """
+        campos: dict[str, object] = {}
+        if antes_seg is not None:
+            campos["contexto_antes_seg"] = _coerce_contexto_seg(
+                antes_seg, DEFAULT_CONTEXTO_ANTES_SEG, CONTEXTO_ANTES_SEG_MAX
+            )
+        if depois_seg is not None:
+            campos["contexto_depois_seg"] = _coerce_contexto_seg(
+                depois_seg, DEFAULT_CONTEXTO_DEPOIS_SEG, CONTEXTO_DEPOIS_SEG_MAX
+            )
+        if not campos:
+            return cls.get()
+        return cls._update(**campos)
 
     @classmethod
     def _update(cls, **campos: object) -> AppSettings:
@@ -259,6 +298,16 @@ class AppSettingsService:
             velocidade_player_padrao=_coerce_velocidade_player(
                 data.get("velocidade_player_padrao")
             ),
+            contexto_antes_seg=_coerce_contexto_seg(
+                data.get("contexto_antes_seg"),
+                DEFAULT_CONTEXTO_ANTES_SEG,
+                CONTEXTO_ANTES_SEG_MAX,
+            ),
+            contexto_depois_seg=_coerce_contexto_seg(
+                data.get("contexto_depois_seg"),
+                DEFAULT_CONTEXTO_DEPOIS_SEG,
+                CONTEXTO_DEPOIS_SEG_MAX,
+            ),
             render=RenderSettings.from_dict(data.get("render")),
         )
 
@@ -290,6 +339,12 @@ def _app_settings_from_row(row: dict) -> AppSettings:
         filtro_global_padrao=_coerce_filtro_global(row.get("filtro_global_padrao")),
         youtube_layout_padrao_global=_coerce_layout_global(row.get("youtube_layout_padrao_global")),
         velocidade_player_padrao=_coerce_velocidade_player(row.get("velocidade_player_padrao")),
+        contexto_antes_seg=_coerce_contexto_seg(
+            row.get("contexto_antes_seg"), DEFAULT_CONTEXTO_ANTES_SEG, CONTEXTO_ANTES_SEG_MAX
+        ),
+        contexto_depois_seg=_coerce_contexto_seg(
+            row.get("contexto_depois_seg"), DEFAULT_CONTEXTO_DEPOIS_SEG, CONTEXTO_DEPOIS_SEG_MAX
+        ),
         render=render,
     )
 
@@ -307,6 +362,8 @@ def _row_from_app_settings(app: AppSettings) -> dict:
         "render_overlay_max_attempts": app.render.overlay_max_attempts,
         "render_grade_global_quality": app.render.grade_global_quality,
         "velocidade_player_padrao": app.velocidade_player_padrao,
+        "contexto_antes_seg": app.contexto_antes_seg,
+        "contexto_depois_seg": app.contexto_depois_seg,
     }
 
 
@@ -350,6 +407,20 @@ def _coerce_velocidade_player(raw: object) -> float:
         return DEFAULT_VELOCIDADE_PLAYER
     limitado = max(VELOCIDADE_PLAYER_MIN, min(VELOCIDADE_PLAYER_MAX, valor))
     return round(limitado, 2)
+
+
+def _coerce_contexto_seg(raw: object, default: int, maximo: int) -> int:
+    """Clampa um lado da janela de contexto em [CONTEXTO_SEG_MIN, `maximo`].
+
+    Valor ausente/ilegivel cai no `default` — o editor precisa de um numero
+    para calcular o offset da onda, e um `None` propagado viraria NaN no
+    frontend, desalinhando audio e video na timeline.
+    """
+    try:
+        valor = int(round(float(raw)))  # type: ignore[arg-type]
+    except (TypeError, ValueError, OverflowError):
+        return default
+    return max(CONTEXTO_SEG_MIN, min(maximo, valor))
 
 
 def _coerce_non_negative_int(raw: object, default: int) -> int:

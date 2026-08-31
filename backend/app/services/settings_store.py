@@ -45,6 +45,8 @@ _APP_COLUNAS = (
     "render_overlay_max_attempts",
     "render_grade_global_quality",
     "velocidade_player_padrao",
+    "contexto_antes_seg",
+    "contexto_depois_seg",
 )
 
 _IDENTIDADE_COLUNAS = (
@@ -123,7 +125,9 @@ _DDL = (
         render_overlay_codec TEXT NOT NULL DEFAULT 'prores_4444',
         render_overlay_max_attempts INTEGER NOT NULL DEFAULT 3,
         render_grade_global_quality INTEGER NOT NULL DEFAULT 30,
-        velocidade_player_padrao REAL NOT NULL DEFAULT 1.0
+        velocidade_player_padrao REAL NOT NULL DEFAULT 1.0,
+        contexto_antes_seg INTEGER NOT NULL DEFAULT 60,
+        contexto_depois_seg INTEGER NOT NULL DEFAULT 300
     )
     """,
     """
@@ -235,6 +239,19 @@ _MIGRACOES_COLUNA = (
         "app_settings",
         "velocidade_player_padrao",
         "ALTER TABLE app_settings ADD COLUMN velocidade_player_padrao REAL NOT NULL DEFAULT 1.0",
+    ),
+    # D-451: janela de contexto do editor (respiro antes/depois do corte). Os
+    # defaults sao os valores que estavam fixos no codigo, entao bancos ja
+    # existentes seguem com exatamente o mesmo recorte de antes.
+    (
+        "app_settings",
+        "contexto_antes_seg",
+        "ALTER TABLE app_settings ADD COLUMN contexto_antes_seg INTEGER NOT NULL DEFAULT 60",
+    ),
+    (
+        "app_settings",
+        "contexto_depois_seg",
+        "ALTER TABLE app_settings ADD COLUMN contexto_depois_seg INTEGER NOT NULL DEFAULT 300",
     ),
 )
 

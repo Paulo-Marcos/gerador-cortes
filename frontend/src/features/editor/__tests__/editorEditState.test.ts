@@ -92,6 +92,34 @@ describe('janela incremental da waveform', () => {
     expect(next).toMatchObject({ startSec: 0, endSec: 500 });
   });
 
+  // D-451: o respiro vem de um ajuste que chega da API DEPOIS do primeiro
+  // render. Sem invalidar a janela memoizada, o `startSec` congelaria no
+  // padrão e a onda ficaria deslocada do vídeo pela diferença.
+  it('recria a janela quando o contexto configurado muda', () => {
+    const initial = resolveWaveformWindow({
+      current: null,
+      corteId: 'corte-1',
+      inicioSeg: 1000,
+      fimSeg: 1100,
+      refreshKey: 0,
+      preloadBeforeSec: 60,
+      preloadAfterSec: 300,
+    });
+
+    const next = resolveWaveformWindow({
+      current: initial,
+      corteId: 'corte-1',
+      inicioSeg: 1000,
+      fimSeg: 1100,
+      refreshKey: 0,
+      preloadBeforeSec: 180,
+      preloadAfterSec: 600,
+    });
+
+    expect(next).not.toBe(initial);
+    expect(next).toMatchObject({ startSec: 820, endSec: 1700 });
+  });
+
   it('força nova janela quando o usuário pede atualização da onda', () => {
     const initial = resolveWaveformWindow({
       current: null,

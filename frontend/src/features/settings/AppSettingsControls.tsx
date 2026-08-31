@@ -10,6 +10,15 @@ import type { FiltroExport, LogLevel, RenderSettings } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toaster';
 import { obterMascoteNome, salvarMascoteNome } from './mascoteSettingsApi';
+// D-451: faixa e padroes da janela de contexto vivem no hook que o editor le —
+// aqui so refletimos os mesmos limites, sem uma segunda copia dos numeros.
+import {
+  CONTEXTO_ANTES_MAX_SEG,
+  CONTEXTO_ANTES_PADRAO_SEG,
+  CONTEXTO_DEPOIS_MAX_SEG,
+  CONTEXTO_DEPOIS_PADRAO_SEG,
+  CONTEXTO_MIN_SEG,
+} from '@/hooks/useContextoCorte';
 
 export const LOG_OPTIONS: Array<{ value: LogLevel; label: string; description: string }> = [
   {
@@ -96,6 +105,8 @@ export function AppSettingsControls() {
   const selectedFilter = data?.filtro_global_padrao ?? DEFAULT_FILTER;
   const render = data?.render ?? DEFAULT_RENDER;
   const velocidadePlayer = data?.velocidade_player_padrao ?? DEFAULT_VELOCIDADE_PLAYER;
+  const contextoAntes = data?.contexto_antes_seg ?? CONTEXTO_ANTES_PADRAO_SEG;
+  const contextoDepois = data?.contexto_depois_seg ?? CONTEXTO_DEPOIS_PADRAO_SEG;
   const layoutGlobal = data?.youtube_layout_padrao_global ?? '{}';
   const temLayoutGlobal = layoutGlobal.trim() !== '' && layoutGlobal.trim() !== '{}';
   const mascoteNome = mascoteQuery.data ?? '';
@@ -105,6 +116,18 @@ export function AppSettingsControls() {
     const valor = e.target.value.trim();
     if (valor !== mascoteNome) mascoteMutation.mutate(valor);
   };
+
+  // Salva no blur so quando o numero mudou de fato — evita um PUT (e a
+  // regeneracao da janela nos editores abertos) a cada vez que o campo perde o
+  // foco sem edicao.
+  const onBlurContexto =
+    (lado: 'antes' | 'depois', atual: number) => (e: React.FocusEvent<HTMLInputElement>) => {
+      const valor = Number(e.target.value);
+      if (!Number.isFinite(valor) || valor === atual) return;
+      updateMutation.mutate(
+        lado === 'antes' ? { contexto_antes_seg: valor } : { contexto_depois_seg: valor },
+      );
+    };
 
   const patchRender = (patch: Partial<RenderSettings>) =>
     updateMutation.mutate({ render: { ...render, ...patch } });
@@ -159,6 +182,44 @@ export function AppSettingsControls() {
           reproducao na tela &mdash; o video exportado sai sempre em 1,00×.
         </span>
       </label>
+
+      <div className="grid gap-1.5">
+        <span className={sectionLabelCls}>Contexto ao redor do corte</span>
+        <div className="grid grid-cols-2 gap-3">
+          <label className={labelCls}>
+            Antes do inicio (s)
+            <input
+              type="number"
+              min={CONTEXTO_MIN_SEG}
+              max={CONTEXTO_ANTES_MAX_SEG}
+              key={`ctx-antes-${contextoAntes}`}
+              defaultValue={contextoAntes}
+              disabled={isBusy}
+              onBlur={onBlurContexto('antes', contextoAntes)}
+              className={controlCls}
+            />
+          </label>
+          <label className={labelCls}>
+            Depois do fim (s)
+            <input
+              type="number"
+              min={CONTEXTO_MIN_SEG}
+              max={CONTEXTO_DEPOIS_MAX_SEG}
+              key={`ctx-depois-${contextoDepois}`}
+              defaultValue={contextoDepois}
+              disabled={isBusy}
+              onBlur={onBlurContexto('depois', contextoDepois)}
+              className={controlCls}
+            />
+          </label>
+        </div>
+        <span className="text-xs font-normal text-[var(--wb-text-mute)]">
+          Quanto da live o editor carrega alem do corte, para voce ouvir o que veio
+          antes/depois e esticar a borda quando faltar contexto. Padrao 60s e 300s.
+          Janela maior demora mais para abrir o corte na primeira vez, porque o audio
+          precisa ser extraido de novo.
+        </span>
+      </div>
 
       <div className="grid gap-1.5">
         <span className={sectionLabelCls}>Layout YouTube padrao global</span>

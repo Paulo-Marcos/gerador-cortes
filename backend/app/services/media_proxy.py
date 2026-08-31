@@ -12,6 +12,7 @@ from pathlib import Path
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.infrastructure.ffmpeg_runner import run_ffmpeg
 from app.models import Corte, Projeto
+from app.services.app_settings import AppSettingsService
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -42,11 +43,9 @@ class MediaProxyService:
     WAVEFORM_SAMPLE_RATE = 8000
     MIN_PROXY_BYTES = 64 * 1024
     STALE_PROXY_SECONDS = 3600
-    # Buffer (em segundos) ao redor do intervalo do corte usado para gerar
-    # o proxy de áudio + waveform da fase 1.  Folga generosa no fim para
-    # permitir estender o `fim_seg` sem regenerar o proxy do zero.
-    PROXY_PRE_SEC = 60
-    PROXY_POST_SEC = 300
+    # O buffer ao redor do intervalo do corte (folga antes/depois, que dá ao
+    # operador o que analisar e a margem para esticar a borda) deixou de ser
+    # constante no D-451: agora é ajuste do app, lido em `contexto_seg()`.
     # Seek híbrido: fast-seek (antes do -i) até `start - SEEK_REWIND_SEC`,
     # depois trim preciso (depois do -i) do resto. Evita decodificar o vídeo
     # inteiro desde o segundo 0 (lentidão em cortes tardios) SEM perder a
@@ -125,9 +124,21 @@ class MediaProxyService:
         return os.path.join(proxy_dir, f"waveform_{corte_id}_v1_{params_hash}.json")
 
     @staticmethod
+    def contexto_seg() -> tuple[int, int]:
+        """Respiro (antes, depois) que o editor mostra ao redor do corte (D-451).
+
+        FONTE ÚNICA da janela: o proxy gerado aqui e o offset que o frontend usa
+        para casar o tempo do áudio com o do vídeo têm de sair do mesmo número —
+        se divergirem, a onda da timeline aparece deslocada da imagem.
+        """
+        ajustes = AppSettingsService.get()
+        return ajustes.contexto_antes_seg, ajustes.contexto_depois_seg
+
+    @staticmethod
     def _calcular_janela_proxy(corte: Corte, projeto: Projeto) -> tuple[float, float]:
-        start_sec = max(0.0, float(corte.inicio_seg) - MediaProxyService.PROXY_PRE_SEC)
-        requested_end_sec = float(corte.fim_seg) + MediaProxyService.PROXY_POST_SEC
+        antes_seg, depois_seg = MediaProxyService.contexto_seg()
+        start_sec = max(0.0, float(corte.inicio_seg) - antes_seg)
+        requested_end_sec = float(corte.fim_seg) + depois_seg
         video_duration = float(projeto.duracao_segundos or 0.0)
 
         if video_duration > start_sec:

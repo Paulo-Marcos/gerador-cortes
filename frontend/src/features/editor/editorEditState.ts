@@ -5,6 +5,12 @@ export type WaveformWindow = {
   startSec: number;
   endSec: number;
   version: string;
+  // D-451: o respiro com que ESTA janela foi montada. Guardado junto porque a
+  // janela e memoizada entre renders: sem isso, um ajuste que chega da API
+  // depois do primeiro render nunca seria aplicado, e o `startSec` congelado
+  // deslocaria a onda em relacao ao video pela diferenca entre os dois valores.
+  preloadBeforeSec: number;
+  preloadAfterSec: number;
 };
 
 type ResolveWaveformWindowParams = {
@@ -51,10 +57,14 @@ export function resolveWaveformWindow({
   preloadAfterSec,
 }: ResolveWaveformWindowParams): WaveformWindow {
   const forceRefresh = refreshKey > 0;
+  const mesmoContexto =
+    current?.preloadBeforeSec === preloadBeforeSec &&
+    current?.preloadAfterSec === preloadAfterSec;
   const currentContainsCut =
     current?.corteId === corteId &&
     inicioSeg >= current.startSec &&
     fimSeg <= current.endSec &&
+    mesmoContexto &&
     !forceRefresh;
 
   if (currentContainsCut) return current;
@@ -67,5 +77,7 @@ export function resolveWaveformWindow({
     startSec,
     endSec,
     version: `${startSec}_${endSec}_${refreshKey}`,
+    preloadBeforeSec,
+    preloadAfterSec,
   };
 }

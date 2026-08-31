@@ -1,6 +1,21 @@
+from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+from app.services.app_settings import AppSettingsService
 from app.services.media_proxy import MediaProxyService, _KeyedLocks
+
+
+@pytest.fixture(autouse=True)
+def ajustes_isolados(tmp_path: Path):
+    """Isola a janela de contexto (D-451) num settings vazio.
+
+    Sem isto os testes de janela leriam o `settings.db` real da máquina e
+    passariam a depender do respiro que o operador tiver configurado.
+    """
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+    yield
+    AppSettingsService.set_settings_path_for_tests(None)
 
 
 def test_calcular_janela_proxy_clampa_fim_no_fim_do_video():
@@ -22,6 +37,24 @@ def test_calcular_janela_proxy_preserva_buffer_quando_cabe_no_video():
 
     assert start_sec == 60.0
     assert end_sec == 540.0
+
+
+def test_calcular_janela_proxy_segue_o_contexto_configurado():
+    """D-451: o respiro vem dos ajustes, não mais de constante no código."""
+    AppSettingsService.update_contexto_corte(antes_seg=180, depois_seg=600)
+    corte = SimpleNamespace(inicio_seg=1000.0, fim_seg=1100.0)
+    projeto = SimpleNamespace(duracao_segundos=5000)
+
+    start_sec, end_sec = MediaProxyService._calcular_janela_proxy(corte, projeto)
+
+    assert start_sec == 820.0
+    assert end_sec == 1700.0
+
+
+def test_contexto_seg_clampa_valor_fora_de_faixa():
+    AppSettingsService.update_contexto_corte(antes_seg=99999, depois_seg=-5)
+
+    assert MediaProxyService.contexto_seg() == (600, 0)
 
 
 def _seek_pairs(cmd: list[str]) -> tuple[float, float]:

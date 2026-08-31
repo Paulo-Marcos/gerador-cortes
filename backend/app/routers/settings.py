@@ -24,6 +24,9 @@ class AppSettingsResponse(BaseModel):
     youtube_layout_padrao_global: str = "{}"
     # D-450: velocidade com que os players de preview abrem.
     velocidade_player_padrao: float = 1.0
+    # D-451: respiro (s) que o editor mostra antes/depois do corte.
+    contexto_antes_seg: int = 60
+    contexto_depois_seg: int = 300
     render: RenderSettingsModel
     # D-285: nome do mascote do canal ativo (identidade editorial no banco).
     # "" quando ainda não definido (fallback neutro) — a UI mostra placeholder.
@@ -38,6 +41,10 @@ class UpdateAppSettingsRequest(BaseModel):
     youtube_layout_padrao_global: str | None = None
     # D-450: velocidade inicial dos players de preview (clampada no serviço).
     velocidade_player_padrao: float | None = None
+    # D-451: janela de contexto do editor (clampada no serviço). Lados
+    # independentes — a UI salva só o campo que o operador editou.
+    contexto_antes_seg: int | None = None
+    contexto_depois_seg: int | None = None
     # D-191: bloco de render editável pela UI (bloco completo).
     render: RenderSettingsModel | None = None
     # D-285: nome do mascote editável pela UI (grava no banco + espelha no yaml).
@@ -59,6 +66,8 @@ def _to_response(app: AppSettings) -> AppSettingsResponse:
         filtro_global_padrao=app.filtro_global_padrao,
         youtube_layout_padrao_global=app.youtube_layout_padrao_global,
         velocidade_player_padrao=app.velocidade_player_padrao,
+        contexto_antes_seg=app.contexto_antes_seg,
+        contexto_depois_seg=app.contexto_depois_seg,
         render=RenderSettingsModel(
             cooldown_sec=app.render.cooldown_sec,
             overlay_concurrency=app.render.overlay_concurrency,
@@ -89,6 +98,11 @@ async def update_settings(body: UpdateAppSettingsRequest):
         )
     if body.velocidade_player_padrao is not None:
         updated = AppSettingsService.update_velocidade_player_padrao(body.velocidade_player_padrao)
+    if body.contexto_antes_seg is not None or body.contexto_depois_seg is not None:
+        updated = AppSettingsService.update_contexto_corte(
+            antes_seg=body.contexto_antes_seg,
+            depois_seg=body.contexto_depois_seg,
+        )
     if body.render is not None:
         updated = AppSettingsService.update_render(
             RenderSettings(

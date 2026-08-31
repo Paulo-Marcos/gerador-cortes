@@ -144,6 +144,9 @@ export const api = {
           youtube_layout_padrao_global?: string;
           // D-450: velocidade inicial dos players de preview.
           velocidade_player_padrao?: number;
+          // D-451: janela de contexto do editor (antes/depois do corte).
+          contexto_antes_seg?: number;
+          contexto_depois_seg?: number;
           // D-191: bloco completo de render (editável pela UI).
           render?: RenderSettings;
         },

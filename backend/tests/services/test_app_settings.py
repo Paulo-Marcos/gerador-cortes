@@ -286,3 +286,57 @@ def test_velocidade_player_fora_de_faixa_e_coagida(tmp_path: Path, entrada, espe
     AppSettingsService.set_settings_path_for_tests(settings_path)
 
     assert AppSettingsService.get().velocidade_player_padrao == esperado
+
+
+def test_contexto_corte_nasce_com_os_valores_historicos(tmp_path: Path):
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+
+    ajustes = AppSettingsService.get()
+
+    assert (ajustes.contexto_antes_seg, ajustes.contexto_depois_seg) == (60, 300)
+
+
+def test_update_contexto_corte_aceita_um_lado_de_cada_vez(tmp_path: Path):
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+
+    so_antes = AppSettingsService.update_contexto_corte(antes_seg=180)
+    assert (so_antes.contexto_antes_seg, so_antes.contexto_depois_seg) == (180, 300)
+
+    so_depois = AppSettingsService.update_contexto_corte(depois_seg=600)
+    assert (so_depois.contexto_antes_seg, so_depois.contexto_depois_seg) == (180, 600)
+
+
+def test_update_contexto_corte_preserva_demais_campos(tmp_path: Path):
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+    AppSettingsService.update_log_level(LogLevel.DEBUG)
+
+    atualizado = AppSettingsService.update_contexto_corte(antes_seg=120, depois_seg=400)
+
+    assert atualizado.log_level == LogLevel.DEBUG
+    assert (atualizado.contexto_antes_seg, atualizado.contexto_depois_seg) == (120, 400)
+
+
+@pytest.mark.parametrize(
+    ("entrada", "esperado_antes", "esperado_depois"),
+    [
+        (99999, 600, 1800),  # acima do teto de cada lado → clampa
+        (-30, 0, 0),  # negativo → piso (desliga o respiro daquele lado)
+        (float("nan"), 60, 300),  # NaN é ilegível como inteiro → default
+        ("muito", 60, 300),  # ilegível → default
+        (None, 60, 300),  # ausente → default
+    ],
+)
+def test_contexto_corte_fora_de_faixa_e_coagido(
+    tmp_path: Path, entrada, esperado_antes, esperado_depois
+):
+    settings_path = tmp_path / "app_settings.json"
+    settings_path.write_text(
+        json.dumps({"contexto_antes_seg": entrada, "contexto_depois_seg": entrada}),
+        encoding="utf-8",
+    )
+    AppSettingsService.set_settings_path_for_tests(settings_path)
+
+    ajustes = AppSettingsService.get()
+
+    assert ajustes.contexto_antes_seg == esperado_antes
+    assert ajustes.contexto_depois_seg == esperado_depois

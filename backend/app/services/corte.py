@@ -646,7 +646,10 @@ class CorteService:
             from app.services.media_proxy import MediaProxyService
 
             # Sincroniza parâmetros de janela com MediaProxyService.gerar_audio_proxy
-            p_start_proxy = max(0, float(corte.inicio_seg) - MediaProxyService.PROXY_PRE_SEC)
+            # (D-451: a janela é configurável, então lê do mesmo acessor — um
+            # número divergente aqui deslocaria TODOS os silêncios detectados).
+            contexto_antes_seg, _ = MediaProxyService.contexto_seg()
+            p_start_proxy = max(0, float(corte.inicio_seg) - contexto_antes_seg)
             proxy_path = Path(await MediaProxyService.gerar_audio_proxy(corte_id, db, force=False))
             proxy_start_offset = p_start_proxy
 

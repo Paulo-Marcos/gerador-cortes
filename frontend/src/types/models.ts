@@ -608,6 +608,11 @@ export interface AppSettings {
   // D-450: velocidade com que os players de preview ABREM (Editor, Revisao
   // Final, Pos-producao). Preferencia de leitura — nao afeta o render.
   velocidade_player_padrao?: number;
+  // D-451: respiro (em segundos) que o editor mostra ANTES do inicio e DEPOIS
+  // do fim do corte — a janela de onda/audio usada para analisar o trecho e,
+  // quando preciso, esticar a borda.
+  contexto_antes_seg?: number;
+  contexto_depois_seg?: number;
   // D-191: bloco de render exposto pela API (settings vivem no banco).
   render?: RenderSettings;
 }

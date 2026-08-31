@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
 import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
+import { useContextoCorte } from '@/hooks/useContextoCorte';
 import {
   corteKey,
   useAdicionarDesvio,
@@ -109,8 +110,6 @@ const VIDEOS_BASE = (
 
 const SPEED_MIN = 0.25;
 const SPEED_MAX = 4;
-const WAVEFORM_PRELOAD_BEFORE_SEC = 60;
-const WAVEFORM_PRELOAD_AFTER_SEC = 300;
 
 function appendQueryParams(url: string, params: Record<string, string>): string {
   const search = new URLSearchParams(params).toString();
@@ -172,6 +171,9 @@ export function EditorPage() {
   const [currentTime, setCurrentTime] = useState(0);
   // D-450: velocidade padrao vinda de Ajustes (app_settings).
   const velocidadePadrao = useVelocidadePlayerPadrao();
+  // D-451: respiro configuravel antes/depois do corte — define a janela de onda
+  // carregada e, com ela, o offset que casa o tempo do audio com o do video.
+  const contextoCorte = useContextoCorte();
   const [playbackRate, setPlaybackRate] = useState(velocidadePadrao);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -662,8 +664,8 @@ export function EditorPage() {
       inicioSeg: persistedInicioSeg,
       fimSeg: persistedFimSeg,
       refreshKey: waveformRefreshKey,
-      preloadBeforeSec: WAVEFORM_PRELOAD_BEFORE_SEC,
-      preloadAfterSec: WAVEFORM_PRELOAD_AFTER_SEC,
+      preloadBeforeSec: contextoCorte.antesSeg,
+      preloadAfterSec: contextoCorte.depoisSeg,
     });
     waveformWindowRef.current = next;
     return next;

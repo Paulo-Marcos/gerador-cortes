@@ -74,3 +74,28 @@ def test_put_velocidade_player_fora_de_faixa_e_clampada(client: TestClient):
         ]
         == 4.0
     )
+
+
+def test_get_expoe_contexto_corte_default(client: TestClient):
+    body = client.get("/settings").json()
+
+    assert (body["contexto_antes_seg"], body["contexto_depois_seg"]) == (60, 300)
+
+
+def test_put_contexto_corte_persiste_um_lado_sem_zerar_o_outro(client: TestClient):
+    resp = client.put("/settings", json={"contexto_antes_seg": 180})
+
+    assert resp.status_code == 200
+    assert resp.json()["contexto_antes_seg"] == 180
+    assert resp.json()["contexto_depois_seg"] == 300
+
+    body = client.get("/settings").json()
+    assert (body["contexto_antes_seg"], body["contexto_depois_seg"]) == (180, 300)
+
+
+def test_put_contexto_corte_fora_de_faixa_e_clampado(client: TestClient):
+    body = client.put(
+        "/settings", json={"contexto_antes_seg": 9999, "contexto_depois_seg": -1}
+    ).json()
+
+    assert (body["contexto_antes_seg"], body["contexto_depois_seg"]) == (600, 0)
