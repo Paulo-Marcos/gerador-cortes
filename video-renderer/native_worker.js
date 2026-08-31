@@ -696,6 +696,16 @@ function tratarCancelamentos(files) {
   return removidos;
 }
 
+// req_ lido com erro CONSECUTIVAMENTE, por arquivo. O `fs.watch` dispara no
+// evento de CRIACAO do arquivo -- em Windows, antes de o conteudo chegar ao
+// disco quando o produtor nao escreve de forma atomica. A primeira leitura
+// pega "" e o JSON.parse estoura com "Unexpected end of JSON input".
+// Tratar isso como falha definitiva (res_ de erro + req_ apagado) matava um
+// job valido; aqui a leitura so vira erro depois de N tentativas seguidas,
+// dando ao poll de 1,5s a chance de reler o arquivo ja completo.
+const leiturasFalhas = new Map();
+const MAX_LEITURAS_FALHAS = 3;
+
 async function checkFilaParallel() {
   try {
     const files = fs.readdirSync(filaDir);
@@ -713,6 +723,7 @@ async function checkFilaParallel() {
       const jobPath = path.join(filaDir, jobFile);
       try {
         const jobData = JSON.parse(fs.readFileSync(jobPath, "utf8"));
+        leiturasFalhas.delete(jobFile);
         if (!canStartJob(jobData)) continue;
 
         const category = categoryOf(jobData);
@@ -728,7 +739,14 @@ async function checkFilaParallel() {
         // Só "break" quando a categoria é exclusiva (default, render_final).
         if (!overlay && !COMPATIBLE_CATEGORIES[category]) break;
       } catch (err) {
-        console.error(`âŒ Erro ao ler a tarefa ${jobFile}:`, err);
+        const tentativas = (leiturasFalhas.get(jobFile) || 0) + 1;
+        leiturasFalhas.set(jobFile, tentativas);
+        if (tentativas < MAX_LEITURAS_FALHAS) {
+          // Provavel escrita em andamento: ignora e deixa o poll reler.
+          continue;
+        }
+        leiturasFalhas.delete(jobFile);
+        console.error(`❌ Erro ao ler a tarefa ${jobFile}:`, err);
         const id = jobFile.replace("req_", "").replace(".json", "");
         const resPath = path.join(filaDir, `res_${id}.json`);
         fs.writeFileSync(
@@ -737,6 +755,9 @@ async function checkFilaParallel() {
         );
         if (fs.existsSync(jobPath)) fs.unlinkSync(jobPath);
       }
+    }
+    for (const jobFile of leiturasFalhas.keys()) {
+      if (!reqFiles.includes(jobFile)) leiturasFalhas.delete(jobFile);
     }
   } catch (err) {
     console.error("Erro ao ler a fila:", err);
