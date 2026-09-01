@@ -20,3 +20,8 @@ scenedetect[opencv]==0.7
 # Requer token gratuito do HuggingFace (ver docs/SETUP.md). Deixado comentado
 # para não impor a dependência a quem não usa; o app degrada sem ela.
 # pyannote.audio==3.3.2
+# Transcricao fiel do short (D-461) — OPCIONAL. Sem ela o app cai na
+# auto-legenda do YouTube, que ja traz timing por palavra (D-337) mas com
+# grafia pior. Instale se for queimar legenda no video:
+# `pip install faster-whisper` e ligue `ASR_LOCAL_HABILITADO=true` no .env.
+# faster-whisper==1.1.1

@@ -91,6 +91,12 @@ class Settings(BaseSettings):
     # Fire. Kill-switch no mesmo espirito de `claude_auto_cenas_no_bruto` — a
     # etapa e derivada, entao precisa poder ser desligada sem tocar em codigo.
     claude_auto_shorts_no_bruto: bool = True
+    # D-461: transcricao fiel do short por ASR local. Desligado por padrao
+    # porque a lib (`pip install faster-whisper`) e o modelo sao opcionais e
+    # pesados; sem ela a auto-legenda do YouTube assume, com grafia pior.
+    asr_local_habilitado: bool = False
+    asr_modelo: str = "small"
+    asr_idioma: str = "pt"
     # Janela da memória global anti-repetição de thumbnails: quantas das últimas
     # capas (de QUALQUER projeto, ordenadas por id desc) viram ELEMENTOS
     # PROIBIDOS no prompt. Janela maior = menos recorrência de roupa/cenário/
