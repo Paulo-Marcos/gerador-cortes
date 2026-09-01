@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Circle, Loader2, RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useBrutoProgress } from '@/hooks/useEditor';
 import { FabricaShortsSection } from './FabricaShortsSection';
+import { posicionarDropdown, type PosicaoDropdown } from './posicaoDropdownBruto';
 import {
   OPCOES_REGERAR_VAZIAS,
   type RegerarBrutoOpcoes,
@@ -16,6 +17,9 @@ import {
 // processo rodando": o botão libera quando o VÍDEO fica pronto, e este dropdown
 // mostra que cenas/metadados (Claude) ainda estão rodando depois.
 // ─────────────────────────────────────────────────────────────
+
+/** Espelha o `w-64` do painel — a conta de posicao precisa do numero. */
+const LARGURA_PAINEL = 256;
 
 type StepStatus = 'pendente' | 'rodando' | 'concluido' | 'erro';
 
@@ -80,6 +84,27 @@ export function BrutoStepsDropdown({
   const open = openProp ?? openState;
   const setOpen = onOpenChange ?? setOpenState;
   const [opts, setOpts] = useState<RegerarBrutoOpcoes>(OPCOES_REGERAR_VAZIAS);
+  const ancora = useRef<HTMLDivElement>(null);
+  const [posicao, setPosicao] = useState<PosicaoDropdown | null>(null);
+
+  // Mede no layout, antes da pintura: assim o painel nunca aparece no lugar
+  // errado por um frame antes de saltar para o certo.
+  useLayoutEffect(() => {
+    if (!open) {
+      setPosicao(null);
+      return;
+    }
+    const alvo = ancora.current;
+    if (!alvo) return;
+    const rect = alvo.getBoundingClientRect();
+    setPosicao(
+      posicionarDropdown(
+        { left: rect.left, right: rect.right, bottom: rect.bottom },
+        { largura: window.innerWidth, altura: window.innerHeight },
+        LARGURA_PAINEL,
+      ),
+    );
+  }, [open]);
   const { data } = useBrutoProgress(corteId, ativo || open);
 
   const mostrarOptIns = brutoPronto && !!onRegerar;
@@ -103,7 +128,7 @@ export function BrutoStepsDropdown({
   // Quando `hideTrigger` (CP2 — ícone ⟳ da toolbar controla por fora), não
   // funde borda nenhuma: o wrapper só serve de âncora para o painel absoluto.
   return (
-    <div className={hideTrigger ? 'relative' : 'relative -ml-px'}>
+    <div ref={ancora} className={hideTrigger ? 'relative' : 'relative -ml-px'}>
       {!hideTrigger && (
         <Tooltip label="Passos do bruto" side="bottom">
           <Button
@@ -123,8 +148,12 @@ export function BrutoStepsDropdown({
         <>
           {/* backdrop p/ fechar ao clicar fora */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
+          {/* D-474: posicao calculada contra a VIEWPORT. Com `absolute right-0`
+              o painel se estendia para fora da tela quando o gatilho ficava na
+              esquerda — era o caso do icone de regerar, na barra do Bruto. */}
           <div
-            className="absolute right-0 z-50 mt-1 w-64 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-2 shadow-lg"
+            className="fixed z-50 w-64 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-2 shadow-lg"
+            style={posicao ?? { visibility: 'hidden' }}
             role="menu"
           >
             {mostrarOptIns && (
