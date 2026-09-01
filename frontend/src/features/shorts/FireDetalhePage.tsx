@@ -31,6 +31,7 @@ import {
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
+import { BordasFinasPanel } from './BordasFinasPanel';
 import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
@@ -302,6 +303,19 @@ export default function FireDetalhePage() {
     [atualizar],
   );
 
+  // D-482: a timeline e o painel fino gravam pelo MESMO caminho. Duas rotas de
+  // escrita para o mesmo campo acabariam divergindo no arredondamento.
+  const gravarBordas = useCallback(
+    (shortId: string, bordas: { inicio?: number; fim?: number }) => {
+      atualizar.mutate({
+        shortId,
+        ...(bordas.inicio !== undefined && { inicio_seg: Number(bordas.inicio.toFixed(2)) }),
+        ...(bordas.fim !== undefined && { fim_seg: Number(bordas.fim.toFixed(2)) }),
+      });
+    },
+    [atualizar],
+  );
+
   const moverBorda = useCallback(
     (short: ShortSugerido, campo: 'inicio_seg' | 'fim_seg') => {
       const el = video.current;
@@ -472,14 +486,21 @@ export default function FireDetalhePage() {
                 emFoco={emQuadro}
                 tempoAtual={tempoAtual}
                 onSeek={irPara}
-                onBordas={(shortId, bordas) =>
-                  atualizar.mutate({
-                    shortId,
-                    ...(bordas.inicio !== undefined && { inicio_seg: bordas.inicio }),
-                    ...(bordas.fim !== undefined && { fim_seg: bordas.fim }),
-                  })
-                }
+                onBordas={gravarBordas}
               />
+
+              {/* O painel fino age sobre o candidato em foco — o mesmo da
+                  timeline e da mascara. Sem candidato nao ha borda a ajustar. */}
+              {emQuadro && (
+                <div className="mt-2">
+                  <BordasFinasPanel
+                    bordas={{ inicio: emQuadro.inicio_seg, fim: emQuadro.fim_seg }}
+                    duracaoSeg={duracaoRegua}
+                    ocupado={atualizar.isPending}
+                    onAplicar={(bordas) => gravarBordas(emQuadro.id, bordas)}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
