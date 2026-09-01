@@ -86,7 +86,11 @@ class ExportService(
             if not corte:
                 return {"status": "erro", "mensagem": "Corte não encontrado"}
 
-            BrutoProgress.iniciar(corte_id)
+            # D-455: o corte marcado com Fire ganha uma etapa a mais no fim da
+            # esteira — a fábrica de shorts. Lida aqui, antes de qualquer passo,
+            # para o dropdown de progresso já nascer com a lista certa.
+            e_fire = bool(corte.metadado.is_fire) if corte.metadado else False
+            BrutoProgress.iniciar(corte_id, incluir_shorts=e_fire)
             BrutoProgress.marcar(corte_id, "silencios", "rodando")
             # Salvaguarda F-017: roda retirada de silencios antes de calcular
             # segmentos. Garante que cliques em "Bruto" ou "Regerar bruto"
@@ -384,6 +388,25 @@ class ExportService(
                     BrutoProgress.marcar(corte_id, "cenas", "erro")
                     operational_error(
                         "ExportService", f"Cenas via Claude falharam para {corte_id}: {exc}"
+                    )
+
+            # D-455 — a fábrica de shorts do corte Fire, o "segundo passo" da
+            # geração do bruto. Roda DEPOIS da transcrição (é dela, já rebaseada
+            # na timeline do bruto, que os candidatos nascem) e é gateada por
+            # Fire: só o corte que o editor marcou como top vira short.
+            # Falha é não-fatal — a sugestão é derivada do bruto, não parte da
+            # entrega dele, exatamente como as cenas acima.
+            if e_fire and settings.claude_auto_shorts_no_bruto:
+                BrutoProgress.marcar(corte_id, "shorts", "rodando")
+                try:
+                    from app.services.claude_ia import ClaudeIaService
+
+                    await ClaudeIaService.sugerir_shorts_via_claude(corte_id)
+                    BrutoProgress.marcar(corte_id, "shorts", "concluido")
+                except Exception as exc:
+                    BrutoProgress.marcar(corte_id, "shorts", "erro")
+                    operational_error(
+                        "ExportService", f"Sugestão de shorts falhou para {corte_id}: {exc}"
                     )
 
             if settings.bruto_verbose_log or is_debug_enabled():

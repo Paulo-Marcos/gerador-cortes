@@ -17,6 +17,11 @@ PASSOS_BRUTO: list[tuple[str, str]] = [
     ("cenas", "Gerar cenas (Claude)"),
 ]
 
+# D-455: só o corte marcado com Fire vira fábrica de shorts, então o passo é
+# CONDICIONAL. Listá-lo sempre deixaria um "pendente" eterno na tela dos cortes
+# comuns — a UI mostraria uma etapa que nunca vai rodar.
+PASSO_SHORTS: tuple[str, str] = ("shorts", "Propor shorts (Claude)")
+
 # status possíveis por passo: "pendente" | "rodando" | "concluido" | "erro"
 
 
@@ -26,10 +31,15 @@ class BrutoProgress:
     _store: dict[str, list[dict]] = {}
 
     @classmethod
-    def iniciar(cls, corte_id: str) -> None:
-        """Reseta os passos do corte para 'pendente' (início de uma geração)."""
+    def iniciar(cls, corte_id: str, *, incluir_shorts: bool = False) -> None:
+        """Reseta os passos do corte para 'pendente' (início de uma geração).
+
+        `incluir_shorts` acrescenta a etapa da fábrica de shorts ao fim da lista
+        — só faz sentido em corte marcado com Fire (D-455).
+        """
+        passos = [*PASSOS_BRUTO, PASSO_SHORTS] if incluir_shorts else list(PASSOS_BRUTO)
         cls._store[corte_id] = [
-            {"chave": chave, "label": label, "status": "pendente"} for chave, label in PASSOS_BRUTO
+            {"chave": chave, "label": label, "status": "pendente"} for chave, label in passos
         ]
 
     @classmethod

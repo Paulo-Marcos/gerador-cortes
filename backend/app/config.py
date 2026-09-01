@@ -87,6 +87,10 @@ class Settings(BaseSettings):
     shorts_duracao_max_seg: float = 90.0
     shorts_quantidade_min: int = 5
     shorts_quantidade_max: int = 8
+    # D-455: disparo automatico da fabrica de shorts ao fim do bruto de um corte
+    # Fire. Kill-switch no mesmo espirito de `claude_auto_cenas_no_bruto` — a
+    # etapa e derivada, entao precisa poder ser desligada sem tocar em codigo.
+    claude_auto_shorts_no_bruto: bool = True
     # Janela da memória global anti-repetição de thumbnails: quantas das últimas
     # capas (de QUALQUER projeto, ordenadas por id desc) viram ELEMENTOS
     # PROIBIDOS no prompt. Janela maior = menos recorrência de roupa/cenário/

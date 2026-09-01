@@ -31,6 +31,7 @@ from app.routers import (
     projetos,
     ranking_lives,
     retratos,
+    shorts,
     youtube_browser,
 )
 from app.routers import (
@@ -120,6 +121,7 @@ app.include_router(
 app.include_router(
     avaliacao_bruto.router, prefix="/api/avaliacao-bruto", tags=["Avaliação do Bruto"]
 )
+app.include_router(shorts.router, prefix="/api/shorts", tags=["Shorts"])
 # D-448: pin explícito de posição — a ordem padrão (cronológica) não tem endpoint.
 app.include_router(ordem_cortes.router, prefix="/api/ordem-cortes", tags=["Ordem dos Cortes"])
 app.include_router(channels.router, prefix="/api/channels", tags=["Canais"])
