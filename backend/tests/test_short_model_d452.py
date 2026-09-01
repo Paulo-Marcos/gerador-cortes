@@ -98,10 +98,12 @@ async def test_short_nasce_ligado_ao_corte_com_metadado(session_factory):
 
     async with session_factory() as db:
         corte = await db.get(Corte, "corte-1")
-        shorts = (await db.scalars(select(Short).where(Short.corte_id == corte.id))).all()
+        # Carga explicita: a relacao entra com `lazy` default de proposito, entao
+        # tocar `corte.shorts` sem pedir levantaria MissingGreenlet no async.
+        await db.refresh(corte, ["shorts"])
 
-        assert [s.id for s in shorts] == ["short-1"]
-        short = shorts[0]
+        assert [s.id for s in corte.shorts] == ["short-1"]
+        short = corte.shorts[0]
         assert short.status == StatusShort.SUGERIDO
         assert short.score == 8.5
         assert short.gancho.startswith("Ninguém")
