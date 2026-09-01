@@ -23,6 +23,7 @@ import { cn, formatarDuracao } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
+import { PainelPublicacao } from './PainelPublicacao';
 import { useFires } from './useFires';
 import {
   useAtualizarShort,
@@ -173,6 +174,9 @@ function Candidato({
           </BotaoAcao>
         )}
       </div>
+
+      {/* D-468/469/470: so ha o que publicar depois do render. */}
+      {short.status === 'renderizado' && <PainelPublicacao shortId={short.id} />}
     </article>
   );
 }

@@ -51,3 +51,20 @@ export function useRenderizarShort(corteId: string) {
     },
   });
 }
+
+export function usePreviaPublicacao(shortId: string | null) {
+  return useQuery({
+    queryKey: ['shorts', 'publicacao', shortId],
+    queryFn: () => shortsApi.previaPublicacao(shortId as string),
+    enabled: Boolean(shortId),
+  });
+}
+
+// D-468/469/470: um mutate so para os dois modos. Quem decide se e upload por
+// API ou pasta pronta e o destino, no backend — a tela nao precisa saber.
+export function usePublicarShort() {
+  return useMutation({
+    mutationFn: ({ shortId, plataforma }: { shortId: string; plataforma: string }) =>
+      shortsApi.publicar(shortId, plataforma),
+  });
+}

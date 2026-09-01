@@ -78,6 +78,17 @@ export function brutoUrl(corteId: string): string {
   return `${API_BASE}/cortes/${corteId}/video-bruto`;
 }
 
+export interface PacotePublicacao {
+  plataforma: string;
+  rotulo: string;
+  modo: 'api' | 'manual';
+  titulo: string;
+  titulo_visivel: string;
+  descricao: string;
+  hashtags: string[];
+  avisos: string[];
+}
+
 export const shortsApi = {
   listarFires: () => request<{ fires: FireComBruto[] }>('/shorts/fires'),
 
@@ -101,6 +112,14 @@ export const shortsApi = {
       `/shorts/${shortId}/renderizar`,
       { method: 'POST' },
     ),
+
+  previaPublicacao: (shortId: string) =>
+    request<{ pacotes: PacotePublicacao[] }>(`/shorts/${shortId}/publicacao`),
+
+  publicar: (shortId: string, plataforma: string) =>
+    request<Record<string, unknown>>(`/shorts/${shortId}/publicar/${plataforma}`, {
+      method: 'POST',
+    }),
 
   sugerirAgora: (corteId: string) =>
     request<{ shorts: ShortSugerido[]; descartes: string[] }>(
