@@ -352,6 +352,14 @@ class Short(Base):
     desvios: Mapped[str] = mapped_column(Text, default="[]")
     status: Mapped[str] = mapped_column(String(50), default=StatusShort.SUGERIDO)
     arquivo_short_path: Mapped[str] = mapped_column(String(1000), default="")
+    # D-483: o MP4 de PREVIA — vertical com legenda e cenas, sem o filtro. Serve
+    # para julgar antes de gastar a passada boa, e e descartavel: finalizar
+    # reprocessa do zero, nao incrementa este arquivo.
+    #
+    # Coluna separada, e nao um novo valor de StatusShort, de proposito: o enum
+    # e contrato (vale para a API e para os 13 registros que ja existem em
+    # PROD), e o estagio se deduz sem ele — tem previa, tem final, ou nenhum.
+    arquivo_previa_path: Mapped[str] = mapped_column(String(1000), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

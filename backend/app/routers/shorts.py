@@ -8,7 +8,9 @@ Endpoints:
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
   GET  /corte/{corte_id}/transcricao — palavras com tempo, para a prévia de legenda
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
-  POST /{short_id}/renderizar     — produz o MP4 vertical do candidato
+  POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
+  POST /{short_id}/renderizar     — produz o MP4 final do candidato
+  GET  /{short_id}/video          — assiste a previa ou ao final
   GET  /{short_id}/publicacao     — os pacotes prontos, por plataforma
   POST /{short_id}/publicar/{plataforma} — envia (API) ou monta o pacote (manual)
   POST /corte/{corte_id}/publicar/tiktok-horizontal — o MP4 16:9 no TikTok
@@ -25,6 +27,7 @@ relação com isto), no mesmo padrão de `avaliacao_bruto`.
 
 from __future__ import annotations
 
+from app.database import AsyncSessionLocal
 from app.services import shorts as shorts_store
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -157,6 +160,72 @@ async def renderizar(short_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/{short_id}/previa")
+async def renderizar_previa(short_id: str):
+    """Produz a PRÉVIA: vertical com legenda e cenas, sem o filtro (D-483).
+
+    Serve para julgar antes de gastar a passada boa. Não é um passo do final —
+    finalizar reprocessa do zero, porque o filtro tem de rodar junto com o
+    recorte e antes do overlay.
+    """
+    from app.services import render_short
+
+    try:
+        return await render_short.renderizar_previa(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/{short_id}/video")
+async def obter_video(short_id: str, estagio: str = "final"):
+    """Serve o MP4 do short — a prévia ou o final (D-483).
+
+    Redireciona para o mount `/videos` com `?v=<mtime>`, no mesmo arranjo de
+    `cortes/{id}/video-bruto`: sem o cache-buster o navegador serve o arquivo
+    antigo depois de um render novo, e o operador julga o vídeo errado.
+
+    Até aqui NÃO havia como assistir a um short renderizado — o MP4 ia para o
+    disco e só a publicação o lia. Uma prévia que não se pode ver não serve para
+    nada, então a rota nasce junto com ela.
+    """
+    from app.channel_paths import resolver_do_projeto
+    from app.models import Corte, Short
+    from fastapi.responses import RedirectResponse
+
+    if estagio not in {"previa", "final"}:
+        raise HTTPException(status_code=404, detail=f"Estagio {estagio!r} desconhecido.")
+
+    async with AsyncSessionLocal() as db:
+        short = await db.get(Short, short_id)
+        if not short:
+            raise HTTPException(status_code=404, detail="Short nao encontrado")
+        corte = await db.get(Corte, short.corte_id)
+        if not corte:
+            raise HTTPException(status_code=404, detail="Corte do short nao encontrado")
+        relativo = short.arquivo_short_path if estagio == "final" else short.arquivo_previa_path
+        projeto_id = corte.projeto_id
+
+    if not relativo:
+        raise HTTPException(status_code=404, detail=f"Este short ainda nao tem {estagio}.")
+
+    caminho = resolver_do_projeto(relativo, projeto_id)
+    if not caminho.is_file():
+        raise HTTPException(
+            status_code=404, detail="O arquivo foi registrado mas nao esta mais em disco."
+        )
+
+    try:
+        mtime = int(caminho.stat().st_mtime)
+    except OSError:
+        mtime = 0
+    return RedirectResponse(
+        url=f"/videos/{projeto_id}/{relativo}?v={mtime}",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get("/{short_id}/publicacao")

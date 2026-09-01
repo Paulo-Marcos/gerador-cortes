@@ -490,6 +490,7 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "foco_x": short.foco_x,
         "foco_efetivo": foco_efetivo(short, corte),
         "arquivo_short_path": short.arquivo_short_path,
+        "arquivo_previa_path": short.arquivo_previa_path,
     }
 
 

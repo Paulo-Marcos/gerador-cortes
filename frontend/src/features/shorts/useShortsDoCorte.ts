@@ -52,6 +52,18 @@ export function useRenderizarShort(corteId: string) {
   });
 }
 
+// D-483: a previa e um render inteiro (ffmpeg + Remotion + composicao), so que
+// sem o filtro. O botao fica preso pelo isPending, como o final — fingir que
+// terminou seria pior aqui, porque o operador ficaria esperando um video que
+// ainda nao existe.
+export function useRenderizarPrevia(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (shortId: string) => shortsApi.renderizarPrevia(shortId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) }),
+  });
+}
+
 export function usePreviaPublicacao(shortId: string | null) {
   return useQuery({
     queryKey: ['shorts', 'publicacao', shortId],

@@ -103,7 +103,13 @@ def jobs(monkeypatch):
 async def test_os_tres_passos_saem_na_ordem(ambiente, jobs):
     await render_short.renderizar_short("s1")
 
-    assert [j["id"] for j in jobs] == ["s1_recorte", "s1_camada", "s1_composicao"]
+    # D-483: o estagio entrou no id. Previa e final compartilham os tres passos,
+    # entao sem isso um job sobrescreveria o outro na fila.
+    assert [j["id"] for j in jobs] == [
+        "s1_final_recorte",
+        "s1_final_camada",
+        "s1_final_composicao",
+    ]
 
 
 @pytest.mark.asyncio
@@ -137,7 +143,7 @@ async def test_props_da_camada_levam_cenas_captions_e_duracao(ambiente, jobs):
     await render_short.renderizar_short("s1")
 
     props = json.loads(
-        (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada.props.json").read_text(
+        (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada_final.props.json").read_text(
             encoding="utf-8"
         )
     )
@@ -244,3 +250,85 @@ async def test_bruto_que_nao_da_para_medir_falha_antes_de_gastar_render(
         await render_short.renderizar_short("s1")
 
     assert jobs == [], "despachou trabalho mesmo sem saber o tamanho do quadro"
+
+
+# ─── D-483: os dois estagios ────────────────────────────────────────────────
+
+
+def _vf_do_recorte(jobs: list[dict]) -> str:
+    recorte = next(j for j in jobs if j["id"].endswith("_recorte"))
+    return recorte["cmd"][recorte["cmd"].index("-vf") + 1]
+
+
+@pytest.mark.asyncio
+async def test_previa_sai_sem_filtro(ambiente, jobs):
+    """A previa mostra o enquadramento, a legenda e as cenas — nao a cor final.
+
+    Ela existe para julgar antes de gastar a passada boa; o filtro e justamente
+    a parte cara, e a que so faz sentido no arquivo que vai publicar.
+    """
+    await render_short.renderizar_previa("s1")
+
+    vf = _vf_do_recorte(jobs)
+
+    assert vf.startswith("crop=")
+    assert "," not in vf.split("setsar=1")[-1], f"sobrou grade na previa: {vf}"
+
+
+@pytest.mark.asyncio
+async def test_final_sai_com_filtro(ambiente, jobs, monkeypatch):
+    from app.services import app_settings
+
+    monkeypatch.setattr(
+        app_settings.AppSettingsService,
+        "get",
+        staticmethod(lambda: type("S", (), {"filtro_global_padrao": "cinematic_iii"})()),
+    )
+
+    await render_short.renderizar_short("s1")
+
+    assert _vf_do_recorte(jobs).count(",") > 2, "o final saiu sem grade"
+
+
+@pytest.mark.asyncio
+async def test_previa_nao_carimba_renderizado(ambiente, jobs):
+    """Previa e rascunho, nao decisao de curadoria.
+
+    Se ela mexesse no status, o painel de publicacao apareceria sobre um arquivo
+    sem filtro — e o operador publicaria o rascunho.
+    """
+    await render_short.renderizar_previa("s1")
+
+    factory, _ = ambiente
+    async with factory() as db:
+        short = await db.get(Short, "s1")
+
+        assert short.status != StatusShort.RENDERIZADO.value
+        assert short.arquivo_previa_path.endswith("previa.mp4")
+        assert short.arquivo_short_path == ""
+
+
+@pytest.mark.asyncio
+async def test_final_depois_da_previa_nao_sobrescreve_o_rascunho(ambiente, jobs):
+    """Os dois arquivos coexistem: comparar antes e depois e o ponto da previa."""
+    await render_short.renderizar_previa("s1")
+    await render_short.renderizar_short("s1")
+
+    factory, _ = ambiente
+    async with factory() as db:
+        short = await db.get(Short, "s1")
+
+        assert short.arquivo_previa_path.endswith("previa.mp4")
+        assert short.arquivo_short_path.endswith("short.mp4")
+        assert short.status == StatusShort.RENDERIZADO.value
+
+
+@pytest.mark.asyncio
+async def test_os_dois_estagios_nao_disputam_o_mesmo_intermediario(ambiente, jobs):
+    """Base e camada levam o estagio no nome, senao um render pisa no outro."""
+    await render_short.renderizar_previa("s1")
+    await render_short.renderizar_short("s1")
+
+    ids = [j["id"] for j in jobs]
+
+    assert len(set(ids)) == len(ids), f"ids repetidos na fila: {ids}"

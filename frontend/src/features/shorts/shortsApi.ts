@@ -61,6 +61,8 @@ export interface ShortSugerido {
   /** O enquadramento que o render vai usar de fato: ajuste ou layout. */
   foco_efetivo: number;
   arquivo_short_path: string;
+  /** D-483: o MP4 sem filtro, para julgar antes de gastar a passada boa. */
+  arquivo_previa_path: string;
 }
 
 // ─── Endpoints ─────────────────────────────────────────────────────────────
@@ -76,6 +78,11 @@ export interface AtualizarShortBody {
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
 export function brutoUrl(corteId: string): string {
   return `${API_BASE}/cortes/${corteId}/video-bruto`;
+}
+
+/** URL do MP4 do short. `estagio` escolhe entre o rascunho e o que vai publicar. */
+export function shortVideoUrl(shortId: string, estagio: 'previa' | 'final'): string {
+  return `${API_BASE}/shorts/${shortId}/video?estagio=${estagio}`;
 }
 
 export interface PacotePublicacao {
@@ -137,6 +144,12 @@ export const shortsApi = {
     request<{ liberado_mb: number; removidos: string[]; erros: string[] }>(
       `/shorts/corte/${corteId}/bruto`,
       { method: 'DELETE' },
+    ),
+
+  renderizarPrevia: (shortId: string) =>
+    request<{ arquivo_previa_path: string; fonte_legenda: string; palavras: number }>(
+      `/shorts/${shortId}/previa`,
+      { method: 'POST' },
     ),
 
   renderizar: (shortId: string) =>

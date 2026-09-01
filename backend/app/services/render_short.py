@@ -49,39 +49,81 @@ _ENTRYPOINT_REMOTION = "src/index.ts"
 
 @dataclass(frozen=True)
 class ResultadoRender:
-    """O MP4 pronto e o caminho relativo que ficou gravado no short."""
+    """O MP4 pronto, onde ele ficou, e de onde veio a legenda."""
 
     arquivo: Path
     caminho_relativo: str
+    fonte_legenda: str
+    palavras: int
+
+
+async def renderizar_previa(short_id: str) -> dict:
+    """Produz a PRÉVIA do short: vertical com legenda e cenas, SEM o filtro (D-483).
+
+    Existe para o operador julgar enquadramento, legenda e cenas antes de gastar
+    a passada boa. O que ela NÃO é: um passo intermediário do final. O filtro
+    roda junto com o recorte e antes do overlay de propósito — aplicado depois,
+    mexeria na cor da legenda já desenhada. Então finalizar reprocessa do zero,
+    e este arquivo é descartável.
+
+    Não mexe no `status`: prévia não é decisão de curadoria, é rascunho.
+    """
+    resultado = await _produzir(short_id, com_filtro=False, nome="previa.mp4")
+    await _gravar_caminho(short_id, resultado, final=False)
+    return {
+        "arquivo_previa_path": resultado.caminho_relativo,
+        "fonte_legenda": resultado.fonte_legenda,
+        "palavras": resultado.palavras,
+    }
 
 
 async def renderizar_short(short_id: str) -> dict:
-    """Produz o MP4 vertical do short e marca o candidato como renderizado.
+    """Produz o MP4 final do short e marca o candidato como renderizado.
+
+    É o que a publicação leva: recorte + filtro + legenda + cenas. Roda direto,
+    sem exigir prévia — quem confia no candidato não precisa passar por ela.
 
     Levanta `LookupError` (short/corte inexistente) e `ValueError` (sem bruto em
     disco ou intervalo impossível). Falha de render propaga: diferente da
     sugestão, aqui o arquivo É a entrega.
+    """
+    resultado = await _produzir(short_id, com_filtro=True, nome="short.mp4")
+    await _gravar_caminho(short_id, resultado, final=True)
+    return {
+        "arquivo_short_path": resultado.caminho_relativo,
+        "fonte_legenda": resultado.fonte_legenda,
+        "palavras": resultado.palavras,
+    }
+
+
+async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoRender:
+    """Os três passos do render. Prévia e final diferem só no filtro e no nome.
+
+    Os intermediários levam o nome do estágio no arquivo: rodar a prévia e
+    depois finalizar não pode fazer um sobrescrever o base do outro no meio do
+    caminho.
     """
     contexto = await _montar_contexto(short_id)
     legenda = await legendas_short.montar_do_short(
         contexto.corte_id, contexto.inicio_seg, contexto.fim_seg
     )
 
+    estagio = "final" if com_filtro else "previa"
     saida_dir = contexto.diretorio
     saida_dir.mkdir(parents=True, exist_ok=True)
-    base = saida_dir / "base_vertical.mp4"
-    camada = saida_dir / "camada.mov"
-    final = saida_dir / "short.mp4"
+    base = saida_dir / f"base_{estagio}.mp4"
+    camada = saida_dir / f"camada_{estagio}.mov"
+    final = saida_dir / nome
 
     await _despachar(
-        f"{short_id}_recorte",
+        f"{short_id}_{estagio}_recorte",
         build_recorte_vertical_cmd(
             contexto.bruto,
             base,
             inicio_seg=contexto.inicio_seg,
             duracao_seg=contexto.duracao_seg,
             foco_x=contexto.foco_x,
-            filtro=contexto.filtro,
+            filtro=contexto.filtro if com_filtro else None,
             origem=contexto.origem,
             destino=VERTICAL,
         ),
@@ -90,7 +132,7 @@ async def renderizar_short(short_id: str) -> dict:
         timeout=_TIMEOUT_RECORTE_SEG,
     )
 
-    props_file = saida_dir / "camada.props.json"
+    props_file = saida_dir / f"camada_{estagio}.props.json"
     props_file.write_text(
         json.dumps(
             {
@@ -104,7 +146,7 @@ async def renderizar_short(short_id: str) -> dict:
     )
 
     await _despachar(
-        f"{short_id}_camada",
+        f"{short_id}_{estagio}_camada",
         _build_overlay_render_cmd(
             composition=COMPOSICAO_CAMADA,
             bundle_arg=_ENTRYPOINT_REMOTION,
@@ -120,30 +162,26 @@ async def renderizar_short(short_id: str) -> dict:
     )
 
     await _despachar(
-        f"{short_id}_composicao",
+        f"{short_id}_{estagio}_composicao",
         build_composicao_short_cmd(base, camada, final),
         cwd=saida_dir,
         category=WorkerJobCategory.RENDER_FINAL,
         timeout=_TIMEOUT_COMPOSICAO_SEG,
     )
 
-    resultado = ResultadoRender(
-        arquivo=final,
-        caminho_relativo=para_relativo_ao_projeto(final, contexto.projeto_id),
-    )
-    await _registrar_renderizado(short_id, resultado)
     logger.info(
-        "[RenderShort] short=%s pronto em %s (legenda: %s, %d palavras)",
+        "[RenderShort] short=%s estagio=%s pronto (legenda: %s, %d palavras)",
         short_id[:8],
-        resultado.caminho_relativo,
+        estagio,
         legenda.fonte,
         legenda.total,
     )
-    return {
-        "arquivo_short_path": resultado.caminho_relativo,
-        "fonte_legenda": legenda.fonte,
-        "palavras": legenda.total,
-    }
+    return ResultadoRender(
+        arquivo=final,
+        caminho_relativo=para_relativo_ao_projeto(final, contexto.projeto_id),
+        fonte_legenda=legenda.fonte,
+        palavras=legenda.total,
+    )
 
 
 @dataclass(frozen=True)
@@ -230,13 +268,22 @@ def _bruto_em_disco(corte: Corte) -> Path | None:
     return caminho if caminho.is_file() else None
 
 
-async def _registrar_renderizado(short_id: str, resultado: ResultadoRender) -> None:
+async def _gravar_caminho(short_id: str, resultado: ResultadoRender, *, final: bool) -> None:
+    """Aponta o short para o arquivo que acabou de sair.
+
+    Só o FINAL mexe no status: `renderizado` significa "há o que publicar", e a
+    prévia não é publicável. Carimbá-la faria o painel de publicação aparecer
+    sobre um arquivo sem filtro.
+    """
     async with AsyncSessionLocal() as db:
         short = await db.get(Short, short_id)
         if not short:
             return
-        short.arquivo_short_path = resultado.caminho_relativo
-        short.status = StatusShort.RENDERIZADO
+        if final:
+            short.arquivo_short_path = resultado.caminho_relativo
+            short.status = StatusShort.RENDERIZADO
+        else:
+            short.arquivo_previa_path = resultado.caminho_relativo
         await db.commit()
 
 

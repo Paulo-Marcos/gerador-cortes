@@ -13,6 +13,7 @@ import {
   Check,
   Clapperboard,
   Crop,
+  Eye,
   MoveHorizontal,
   Play,
   Clapperboard as Render,
@@ -29,7 +30,7 @@ import {
   useVelocidadePlayerPadrao,
 } from '@/hooks/useVelocidadePlayerPadrao';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
-import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
+import { brutoUrl, shortVideoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
 import { BordasFinasPanel } from './BordasFinasPanel';
 import { LegendaPrevia } from './LegendaPrevia';
@@ -40,6 +41,7 @@ import { useFires } from './useFires';
 import {
   useAtualizarShort,
   useDescartarBruto,
+  useRenderizarPrevia,
   useRenderizarShort,
   useShortsDoCorte,
   useTranscricaoDoCorte,
@@ -85,6 +87,7 @@ interface CandidatoProps {
   onStatus: (status: StatusShort) => void;
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
   onFoco: (delta: number) => void;
+  onPrevia: () => void;
   onRenderizar: () => void;
 }
 
@@ -105,6 +108,7 @@ function Candidato({
   onStatus,
   onBorda,
   onFoco,
+  onPrevia,
   onRenderizar,
 }: CandidatoProps) {
   const rejeitado = short.status === 'rejeitado';
@@ -198,16 +202,66 @@ function Candidato({
             voltar
           </BotaoAcao>
         )}
+        {/* D-483: dois estagios. A previa mostra enquadramento, legenda e cenas
+            sem gastar a passada do filtro; "finalizar" produz o que publica.
+            Finalizar NAO exige previa — quem confia no candidato vai direto. */}
         {short.status === 'aprovado' && (
-          <BotaoAcao onClick={onRenderizar} disabled={ocupado} icon={<Render size={12} />}>
-            renderizar
-          </BotaoAcao>
+          <>
+            <BotaoAcao onClick={onPrevia} disabled={ocupado} icon={<Eye size={12} />}>
+              {short.arquivo_previa_path ? 'refazer previa' : 'gerar previa'}
+            </BotaoAcao>
+            <BotaoAcao onClick={onRenderizar} disabled={ocupado} icon={<Render size={12} />}>
+              finalizar
+            </BotaoAcao>
+          </>
         )}
       </div>
+
+      {short.arquivo_previa_path && short.status !== 'renderizado' && (
+        <PlayerDoArquivo
+          titulo="prévia · sem filtro"
+          src={shortVideoUrl(short.id, 'previa')}
+          nota="O filtro entra só no finalizar, junto com o recorte — se viesse depois, mexeria na cor da legenda."
+        />
+      )}
+
+      {short.status === 'renderizado' && (
+        <PlayerDoArquivo titulo="final · pronto para publicar" src={shortVideoUrl(short.id, 'final')} />
+      )}
 
       {/* D-468/469/470: so ha o que publicar depois do render. */}
       {short.status === 'renderizado' && <PainelPublicacao shortId={short.id} />}
     </article>
+  );
+}
+
+/** O MP4 do short, no formato em que ele vai sair. */
+function PlayerDoArquivo({
+  titulo,
+  src,
+  nota,
+}: {
+  titulo: string;
+  src: string;
+  nota?: string;
+}) {
+  return (
+    <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
+      <p className="mb-1.5 font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)]">
+        {titulo}
+      </p>
+      {/* 9:16 e estreito: limitar a largura evita um player de meia tela dentro
+          de um card de lista. */}
+      <video
+        src={src}
+        controls
+        preload="metadata"
+        className="mx-auto max-h-[320px] w-auto rounded-[8px] bg-black"
+      />
+      {nota && (
+        <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">{nota}</p>
+      )}
+    </div>
   );
 }
 
@@ -267,6 +321,7 @@ export default function FireDetalhePage() {
   const atualizar = useAtualizarShort(corteId);
   const descartar = useDescartarBruto();
   const renderizar = useRenderizarShort(corteId);
+  const previa = useRenderizarPrevia(corteId);
   const transcricao = useTranscricaoDoCorte(corteId);
   const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
@@ -532,7 +587,7 @@ export default function FireDetalhePage() {
               short={short}
               emFoco={emQuadro?.id === short.id}
               onSelecionar={() => setSelecionado(short.id)}
-              ocupado={atualizar.isPending || renderizar.isPending}
+              ocupado={atualizar.isPending || renderizar.isPending || previa.isPending}
               onTocar={() => {
                 setSelecionado(short.id);
                 tocarTrecho(short);
@@ -540,6 +595,7 @@ export default function FireDetalhePage() {
               onStatus={(status) => atualizar.mutate({ shortId: short.id, status })}
               onBorda={(campo) => moverBorda(short, campo)}
               onFoco={(delta) => moverFoco(short, delta)}
+              onPrevia={() => previa.mutate(short.id)}
               onRenderizar={() => renderizar.mutate(short.id)}
             />
           ))}
@@ -547,6 +603,18 @@ export default function FireDetalhePage() {
           {atualizar.isError && (
             <p className="rounded-[8px] bg-[var(--wb-bg-inset)] p-2 text-[12px] text-[var(--wb-text-dim)]">
               {(atualizar.error as Error)?.message ?? 'nao consegui salvar'}
+            </p>
+          )}
+
+          {/* D-483: render que falha precisa DIZER. O erro do crop 9:16 (D-481)
+              so aparecia no log do worker — a tela ficava calada e o operador
+              nao tinha como saber que o arquivo nunca foi gerado. */}
+          {(previa.isError || renderizar.isError) && (
+            <p className="rounded-[8px] border border-[var(--wb-warn-ink)] bg-[var(--wb-bg-inset)] p-2 text-[12px] leading-relaxed text-[var(--wb-text-dim)]">
+              <span className="font-bold text-[var(--wb-warn-ink)]">
+                {previa.isError ? 'A previa falhou.' : 'A finalizacao falhou.'}
+              </span>{' '}
+              {((previa.error ?? renderizar.error) as Error)?.message ?? 'erro desconhecido'}
             </p>
           )}
         </aside>
