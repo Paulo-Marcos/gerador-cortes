@@ -30,6 +30,7 @@ import {
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
+import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PainelPublicacao } from './PainelPublicacao';
 import { useFires } from './useFires';
@@ -64,8 +65,9 @@ function mmss(segundos: number): string {
 
 interface CandidatoProps {
   short: ShortSugerido;
-  /** Destaca o candidato que está tocando agora. */
+  /** Destaca o candidato que a timeline e a máscara estão mostrando. */
   emFoco: boolean;
+  onSelecionar: () => void;
   ocupado: boolean;
   onTocar: () => void;
   onStatus: (status: StatusShort) => void;
@@ -74,12 +76,18 @@ interface CandidatoProps {
   onRenderizar: () => void;
 }
 
-// O destaque segue o que está TOCANDO, não um clique de seleção à parte: um
-// clique que só pinta a borda não decide nada, e um `onClick` no card exigiria
-// foco e teclado para não deixar o teclado de fora.
+// D-478: até aqui o destaque seguia só o que estava TOCANDO, porque um clique
+// que apenas pinta a borda não decidia nada. Com a timeline isso mudou: as
+// alças de arraste agem sobre o candidato em foco, então escolher passou a ter
+// consequência — e o clique no card virou uma seleção legítima.
+//
+// A seleção também acontece no `focus` de qualquer botão de dentro: assim o
+// teclado seleciona sem precisar de um controle novo, e sem disputar o Espaço
+// com o play/pause global.
 function Candidato({
   short,
   emFoco,
+  onSelecionar,
   ocupado,
   onTocar,
   onStatus,
@@ -91,8 +99,10 @@ function Candidato({
 
   return (
     <article
+      onClick={onSelecionar}
+      onFocusCapture={onSelecionar}
       className={cn(
-        'rounded-[10px] border bg-[var(--wb-bg-panel)] p-3 transition-colors',
+        'cursor-pointer rounded-[10px] border bg-[var(--wb-bg-panel)] p-3 transition-colors',
         emFoco ? 'border-[var(--wb-accent)]' : 'border-[var(--wb-border)]',
         rejeitado && 'opacity-60',
       )}
@@ -218,10 +228,17 @@ export default function FireDetalhePage() {
   const { corteId = '' } = useParams();
   const navigate = useNavigate();
   const video = useRef<HTMLVideoElement>(null);
-  const [tocando, setTocando] = useState<string | null>(null);
+  // D-478: o candidato que a timeline, a mascara e as alcas de arraste seguem.
+  // Tocar um trecho tambem seleciona — a acao de assistir ja declara a escolha.
+  const [selecionado, setSelecionado] = useState<string | null>(null);
   // Dimensoes REAIS do arquivo: a janela 9:16 e proporcional ao quadro, e o
   // bruto nem sempre e exatamente 16:9.
   const [dimensoes, setDimensoes] = useState({ largura: 0, altura: 0 });
+  // A regua precisa da duracao do BRUTO. A do proprio arquivo e a fonte mais
+  // honesta: e o mesmo video que esta na tela. `fire.duracao_seg` cobre o
+  // intervalo entre abrir a pagina e o metadata chegar.
+  const [duracaoVideo, setDuracaoVideo] = useState(0);
+  const [tempoAtual, setTempoAtual] = useState(0);
   // D-476: abre na velocidade de Ajustes, como os outros players (D-450), e
   // deixa o operador mexer dali com Ctrl+J/Ctrl+K.
   const velocidadePadrao = useVelocidadePlayerPadrao();
@@ -238,14 +255,20 @@ export default function FireDetalhePage() {
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
   // A mascara segue o candidato que esta tocando; sem nenhum, mostra o de maior
   // nota — assim a tela ja abre dizendo o que o melhor candidato vai cortar.
-  const emQuadro = shorts.find((s) => s.id === tocando) ?? shorts[0];
+  const emQuadro = shorts.find((s) => s.id === selecionado) ?? shorts[0];
   const fire = fires.data?.fires.find((f) => f.corte_id === corteId);
+  const duracaoRegua = duracaoVideo || fire?.duracao_seg || 0;
 
   const tocarTrecho = useCallback((short: ShortSugerido) => {
     const el = video.current;
     if (!el) return;
     el.currentTime = short.inicio_seg;
     void el.play();
+  }, []);
+
+  const irPara = useCallback((segundos: number) => {
+    const el = video.current;
+    if (el) el.currentTime = segundos;
   }, []);
 
   // O tempo corrente do player é a fonte da borda nova: o operador acabou de
@@ -357,7 +380,7 @@ export default function FireDetalhePage() {
             preenche por inteiro. Sem isso a mascara se ancorava na celula da
             grade — que e mais alta que o video — e as faixas escuras vazavam
             para baixo do player. */}
-        <div className="flex min-h-0 justify-center">
+        <div className="flex min-h-0 flex-col items-center gap-3">
           <div
             className="relative max-h-full w-full overflow-hidden rounded-[10px] bg-black"
             style={{ aspectRatio: `${dimensoes.largura || 16} / ${dimensoes.altura || 9}` }}
@@ -366,12 +389,14 @@ export default function FireDetalhePage() {
               ref={video}
               src={brutoUrl(corteId)}
               controls
-              onLoadedMetadata={(e) =>
+              onLoadedMetadata={(e) => {
                 setDimensoes({
                   largura: e.currentTarget.videoWidth,
                   altura: e.currentTarget.videoHeight,
-                })
-              }
+                });
+                setDuracaoVideo(e.currentTarget.duration || 0);
+              }}
+              onTimeUpdate={(e) => setTempoAtual(e.currentTarget.currentTime)}
               className="absolute inset-0 h-full w-full"
             />
             {emQuadro && (
@@ -382,6 +407,28 @@ export default function FireDetalhePage() {
               />
             )}
           </div>
+
+          {/* D-478: a regua so aparece quando ha o que desenhar nela. Uma faixa
+              vazia diria "carreguei e nao achei nada", que e mentira enquanto o
+              metadata do video nao chegou. */}
+          {duracaoRegua > 0 && shorts.length > 0 && (
+            <div className="w-full">
+              <LinhaDoTempo
+                duracaoSeg={duracaoRegua}
+                shorts={shorts}
+                emFoco={emQuadro}
+                tempoAtual={tempoAtual}
+                onSeek={irPara}
+                onBordas={(shortId, bordas) =>
+                  atualizar.mutate({
+                    shortId,
+                    ...(bordas.inicio !== undefined && { inicio_seg: bordas.inicio }),
+                    ...(bordas.fim !== undefined && { fim_seg: bordas.fim }),
+                  })
+                }
+              />
+            </div>
+          )}
         </div>
 
         <aside className="flex min-h-0 flex-col gap-2 overflow-auto">
@@ -409,10 +456,11 @@ export default function FireDetalhePage() {
             <Candidato
               key={short.id}
               short={short}
-              emFoco={tocando === short.id}
+              emFoco={emQuadro?.id === short.id}
+              onSelecionar={() => setSelecionado(short.id)}
               ocupado={atualizar.isPending || renderizar.isPending}
               onTocar={() => {
-                setTocando(short.id);
+                setSelecionado(short.id);
                 tocarTrecho(short);
               }}
               onStatus={(status) => atualizar.mutate({ shortId: short.id, status })}
