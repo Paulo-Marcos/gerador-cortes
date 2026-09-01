@@ -35,33 +35,25 @@ function mmss(segundos: number): string {
 
 interface CandidatoProps {
   short: ShortSugerido;
-  selecionado: boolean;
+  /** Destaca o candidato que está tocando agora. */
+  emFoco: boolean;
   ocupado: boolean;
-  onSelecionar: () => void;
   onTocar: () => void;
   onStatus: (status: StatusShort) => void;
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
 }
 
-function Candidato({
-  short,
-  selecionado,
-  ocupado,
-  onSelecionar,
-  onTocar,
-  onStatus,
-  onBorda,
-}: CandidatoProps) {
+// O destaque segue o que está TOCANDO, não um clique de seleção à parte: um
+// clique que só pinta a borda não decide nada, e um `onClick` no card exigiria
+// foco e teclado para não deixar o teclado de fora.
+function Candidato({ short, emFoco, ocupado, onTocar, onStatus, onBorda }: CandidatoProps) {
   const rejeitado = short.status === 'rejeitado';
 
   return (
     <article
-      onClick={onSelecionar}
       className={cn(
-        'cursor-pointer rounded-[10px] border p-3 transition-colors',
-        selecionado
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-bg-panel)]'
-          : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] hover:border-[var(--wb-text-dim)]',
+        'rounded-[10px] border bg-[var(--wb-bg-panel)] p-3 transition-colors',
+        emFoco ? 'border-[var(--wb-accent)]' : 'border-[var(--wb-border)]',
         rejeitado && 'opacity-60',
       )}
     >
@@ -148,10 +140,7 @@ function BotaoAcao({
     <button
       type="button"
       disabled={disabled}
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
+      onClick={onClick}
       className="inline-flex items-center gap-1 rounded-[6px] bg-[var(--wb-bg-inset)] px-2 py-1 text-[11.5px] font-semibold text-[var(--wb-text-dim)] transition-colors hover:text-[var(--wb-text)] disabled:cursor-not-allowed disabled:opacity-45"
     >
       {icon}
@@ -164,7 +153,7 @@ export default function FireDetalhePage() {
   const workbench = isWorkbenchEnabled();
   const { corteId = '' } = useParams();
   const video = useRef<HTMLVideoElement>(null);
-  const [selecionado, setSelecionado] = useState<string | null>(null);
+  const [tocando, setTocando] = useState<string | null>(null);
 
   const { data, isLoading, isError, error } = useShortsDoCorte(corteId);
   const fires = useFires();
@@ -261,11 +250,10 @@ export default function FireDetalhePage() {
             <Candidato
               key={short.id}
               short={short}
-              selecionado={selecionado === short.id}
+              emFoco={tocando === short.id}
               ocupado={atualizar.isPending}
-              onSelecionar={() => setSelecionado(short.id)}
               onTocar={() => {
-                setSelecionado(short.id);
+                setTocando(short.id);
                 tocarTrecho(short);
               }}
               onStatus={(status) => atualizar.mutate({ shortId: short.id, status })}
