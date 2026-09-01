@@ -6,6 +6,7 @@ Endpoints:
   GET  /corte/{corte_id}/elegibilidade — se a tela do bruto deve oferecer a fábrica
   POST /corte/{corte_id}/gerar    — caminho MANUAL: regera o bruto se preciso e propõe
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
+  GET  /corte/{corte_id}/transcricao — palavras com tempo, para a prévia de legenda
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
   POST /{short_id}/renderizar     — produz o MP4 vertical do candidato
   GET  /{short_id}/publicacao     — os pacotes prontos, por plataforma
@@ -73,6 +74,35 @@ async def gerar_manualmente(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/corte/{corte_id}/transcricao")
+async def transcricao_do_bruto(corte_id: str):
+    """As palavras com tempo do bruto — a matéria-prima da prévia de legenda.
+
+    Serve a tela de curadoria (D-479), que precisa mostrar a legenda ANTES do
+    render: 85% das visualizações de short acontecem no mudo, então aprovar um
+    candidato sem ver a legenda é julgar metade do produto.
+
+    Vai direto à auto-legenda do YouTube: o ASR local roda o modelo sobre o
+    áudio inteiro e leva minutos, o que serve a um render mas congelaria a tela.
+    A grafia é pior, e o campo `fonte` diz isso — quando a transcrição fiel
+    entrar aqui, a tela não muda, só o rótulo.
+    """
+    from app.services import transcricao_fiel
+
+    try:
+        resultado = await transcricao_fiel.obter_do_corte(corte_id, permitir_asr=False)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return {
+        "fonte": resultado.fonte,
+        "palavras": [
+            {"texto": p.texto, "inicio_seg": p.inicio_seg, "fim_seg": p.fim_seg}
+            for p in resultado.palavras
+        ],
+    }
 
 
 @router.post("/corte/{corte_id}/sugerir")

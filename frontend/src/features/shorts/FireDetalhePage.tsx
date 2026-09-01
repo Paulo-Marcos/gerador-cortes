@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
+  Captions,
   Check,
   Clapperboard,
   Crop,
@@ -30,6 +31,7 @@ import {
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
+import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PainelPublicacao } from './PainelPublicacao';
@@ -39,7 +41,16 @@ import {
   useDescartarBruto,
   useRenderizarShort,
   useShortsDoCorte,
+  useTranscricaoDoCorte,
 } from './useShortsDoCorte';
+
+// D-479: o operador precisa saber a QUALIDADE do que esta lendo. A auto-legenda
+// erra grafia, e erro de grafia num short vira o produto — o texto e o conteudo,
+// nao um apoio. Quando a transcricao fiel entrar, so este rotulo muda.
+const ROTULO_FONTE: Record<string, string> = {
+  auto_legenda: 'auto do YouTube',
+  asr_local: 'transcricao fiel',
+};
 
 const ROTULO_STATUS: Record<StatusShort, string> = {
   sugerido: 'sugerido',
@@ -239,6 +250,10 @@ export default function FireDetalhePage() {
   // intervalo entre abrir a pagina e o metadata chegar.
   const [duracaoVideo, setDuracaoVideo] = useState(0);
   const [tempoAtual, setTempoAtual] = useState(0);
+  // D-479: a previa da legenda comeca LIGADA. Ela e o produto no mudo, entao
+  // o padrao precisa ser ve-la; o desligar existe para quando o operador quer
+  // olhar so a imagem.
+  const [legendaVisivel, setLegendaVisivel] = useState(true);
   // D-476: abre na velocidade de Ajustes, como os outros players (D-450), e
   // deixa o operador mexer dali com Ctrl+J/Ctrl+K.
   const velocidadePadrao = useVelocidadePlayerPadrao();
@@ -251,6 +266,7 @@ export default function FireDetalhePage() {
   const atualizar = useAtualizarShort(corteId);
   const descartar = useDescartarBruto();
   const renderizar = useRenderizarShort(corteId);
+  const transcricao = useTranscricaoDoCorte(corteId);
 
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
   // A mascara segue o candidato que esta tocando; sem nenhum, mostra o de maior
@@ -357,6 +373,15 @@ export default function FireDetalhePage() {
             </span>
           )}
           <div className="flex-1" />
+          {transcricao.data && (
+            <BotaoAcao
+              onClick={() => setLegendaVisivel((v) => !v)}
+              icon={<Captions size={12} />}
+            >
+              legenda {legendaVisivel ? 'on' : 'off'} ·{' '}
+              {ROTULO_FONTE[transcricao.data.fonte] ?? transcricao.data.fonte}
+            </BotaoAcao>
+          )}
           <span
             className="font-code text-[11.5px] tabular-nums text-[var(--wb-text-mute)]"
             title="Velocidade do player (Ctrl+J / Ctrl+K)"
@@ -404,7 +429,16 @@ export default function FireDetalhePage() {
                 largura={dimensoes.largura}
                 altura={dimensoes.altura}
                 focoX={emQuadro.foco_efetivo}
-              />
+              >
+                {legendaVisivel && transcricao.data && (
+                  <LegendaPrevia
+                    palavras={transcricao.data.palavras}
+                    inicioSeg={emQuadro.inicio_seg}
+                    fimSeg={emQuadro.fim_seg}
+                    tempoAtualSeg={tempoAtual}
+                  />
+                )}
+              </MascaraEnquadramento>
             )}
           </div>
 

@@ -45,11 +45,17 @@ class TranscricaoFiel:
         return len(self.palavras)
 
 
-async def obter_do_corte(corte_id: str) -> TranscricaoFiel:
+async def obter_do_corte(corte_id: str, *, permitir_asr: bool = True) -> TranscricaoFiel:
     """Palavras com tempo do bruto do corte, pela melhor fonte disponível.
 
     Levanta `LookupError` quando o corte não existe. NUNCA levanta por causa do
     ASR: sem ele, a auto-legenda assume.
+
+    `permitir_asr=False` corta a fonte 1 e vai direto à auto-legenda. Existe
+    para quem precisa de resposta AGORA: o ASR roda o modelo inteiro sobre o
+    áudio do bruto e leva minutos, o que serve a um render mas congelaria uma
+    tela que só quer mostrar a prévia (D-479). A `fonte` no resultado diz ao
+    operador qual qualidade ele está vendo.
     """
     async with AsyncSessionLocal() as db:
         corte = await db.get(Corte, corte_id)
@@ -59,7 +65,7 @@ async def obter_do_corte(corte_id: str) -> TranscricaoFiel:
         projeto_id = corte.projeto_id
         transcricao_final = corte.transcricao_final
 
-    bruto = _bruto_em_disco(clip_path, projeto_id)
+    bruto = _bruto_em_disco(clip_path, projeto_id) if permitir_asr else None
     if bruto is not None:
         palavras_asr = await asr_local.transcrever_palavras(bruto)
         if palavras_asr:

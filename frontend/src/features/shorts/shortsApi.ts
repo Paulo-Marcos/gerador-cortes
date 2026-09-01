@@ -89,6 +89,19 @@ export interface PacotePublicacao {
   avisos: string[];
 }
 
+/** Uma palavra com tempo, na timeline do BRUTO. */
+export interface PalavraTranscrita {
+  texto: string;
+  inicio_seg: number;
+  fim_seg: number;
+}
+
+/** As palavras do bruto + de onde vieram (`auto_legenda` ou `asr_local`). */
+export interface TranscricaoDoBruto {
+  fonte: string;
+  palavras: PalavraTranscrita[];
+}
+
 /** O que a tela do bruto precisa saber para oferecer (ou nao) a fabrica. */
 export interface ElegibilidadeShorts {
   is_fire: boolean;
@@ -110,6 +123,9 @@ export const shortsApi = {
 
   listarDoCorte: (corteId: string) =>
     request<{ shorts: ShortSugerido[] }>(`/shorts/corte/${corteId}`),
+
+  transcricaoDoCorte: (corteId: string) =>
+    request<TranscricaoDoBruto>(`/shorts/corte/${corteId}/transcricao`),
 
   atualizar: (shortId: string, body: AtualizarShortBody) =>
     request<{ short: ShortSugerido }>(`/shorts/${shortId}`, {

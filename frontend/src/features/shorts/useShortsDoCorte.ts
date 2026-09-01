@@ -68,3 +68,16 @@ export function usePublicarShort() {
       shortsApi.publicar(shortId, plataforma),
   });
 }
+
+// D-479: as palavras do bruto mudam so quando a transcricao muda — nunca por
+// causa de uma aprovacao ou de um arraste de borda. Fica fora do
+// `shortsDoCorteKey` de proposito: senao cada PATCH refaria um download de
+// milhares de palavras para redesenhar a mesma legenda.
+export function useTranscricaoDoCorte(corteId: string) {
+  return useQuery({
+    queryKey: ['shorts', 'transcricao', corteId],
+    queryFn: () => shortsApi.transcricaoDoCorte(corteId),
+    enabled: Boolean(corteId),
+    staleTime: Infinity,
+  });
+}

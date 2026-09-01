@@ -171,3 +171,27 @@ def test_recorte_rebaseia_para_o_zero_do_short():
     palavras = [Palavra("antes", 5.0, 5.4), Palavra("dentro", 12.0, 12.5)]
 
     assert [(p.texto, p.inicio_seg) for p in recortar(palavras, 10.0, 20.0)] == [("dentro", 2.0)]
+
+
+@pytest.mark.asyncio
+async def test_permitir_asr_falso_nem_toca_no_modelo(ambiente, monkeypatch):
+    """D-479: a previa da legenda precisa de resposta AGORA, nao da melhor.
+
+    O ASR roda o modelo sobre o audio inteiro do bruto e leva minutos. Isso
+    serve a um render, mas congelaria a tela de curadoria enquanto o operador
+    espera para ver uma legenda. `permitir_asr=False` e o que garante que a
+    chamada volte na hora — e este teste e o que garante que ela nem TENTA.
+    """
+    chamou = []
+
+    async def _espia(video_path):
+        chamou.append(video_path)
+        return [{"texto": "Ninguém", "inicio_seg": 10.0, "fim_seg": 10.35}]
+
+    monkeypatch.setattr(servico.asr_local, "transcrever_palavras", _espia)
+
+    resultado = await servico.obter_do_corte("c1", permitir_asr=False)
+
+    assert chamou == [], "o ASR foi chamado mesmo com permitir_asr=False"
+    assert resultado.fonte == servico.FONTE_AUTO_LEGENDA
+    assert [p.texto for p in resultado.palavras] == ["ninguem", "te", "conta"]
