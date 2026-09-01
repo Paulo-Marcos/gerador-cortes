@@ -3,6 +3,7 @@ import { Check, ChevronDown, Circle, Loader2, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useBrutoProgress } from '@/hooks/useEditor';
+import { FabricaShortsSection } from './FabricaShortsSection';
 import {
   OPCOES_REGERAR_VAZIAS,
   type RegerarBrutoOpcoes,
@@ -185,6 +186,9 @@ export function BrutoStepsDropdown({
                 </li>
               ))}
             </ul>
+
+            {/* D-472: so aparece em corte Fire — a secao se esconde sozinha. */}
+            <FabricaShortsSection corteId={corteId} ocupado={ativo} />
           </div>
         </>
       )}

@@ -257,6 +257,76 @@ async def listar_shorts(corte_id: str) -> list[dict]:
         return [_serializar(short, corte) for short in shorts]
 
 
+async def elegibilidade(corte_id: str) -> dict:
+    """O que a tela do bruto precisa saber para oferecer (ou nao) a fabrica.
+
+    Levanta `LookupError` quando o corte nao existe.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+        total = await db.scalar(
+            select(func.count()).select_from(Short).where(Short.corte_id == corte_id)
+        )
+        return {
+            "is_fire": bool(corte.metadado.is_fire) if corte.metadado else False,
+            "tem_bruto": _bruto_em_disco(corte) is not None,
+            "total_shorts": int(total or 0),
+        }
+
+
+async def gerar_shorts_do_corte(corte_id: str) -> dict:
+    """Caminho MANUAL da fabrica: regera o bruto se preciso e propoe os shorts.
+
+    Serve os cortes que o automatico nao alcanca — os que ja tinham bruto antes
+    da E-030, os que tiveram o bruto descartado, e o teste da esteira sem
+    reprocessar a live inteira.
+
+    O ponto delicado e a regeneracao do bruto. Ela roda com
+    `refazer_transcricao=False, refazer_cenas=False`, o modo que a D-160 criou
+    justamente para isto: refaz o VIDEO e nao encosta no texto nem nas cenas.
+    Assim a pos-producao ja feita — cenas, layout, metadados, thumbnail —
+    sobrevive intacta; o que muda no banco e so o ponteiro do clip e a duracao,
+    que sao recalculados iguais porque as bordas do corte nao mudaram.
+
+    Levanta `LookupError` (corte inexistente) e `ValueError` (corte sem Fire, ou
+    bruto que nao pode ser regerado).
+    """
+    from app.services.claude_ia import ClaudeIaService
+
+    estado = await elegibilidade(corte_id)
+    if not estado["is_fire"]:
+        raise ValueError("So corte marcado com Fire vira short. Marque o Fire e tente de novo.")
+
+    regerou = False
+    if not estado["tem_bruto"]:
+        await _regerar_bruto_preservando_pos_producao(corte_id)
+        regerou = True
+
+    resultado = await ClaudeIaService.sugerir_shorts_via_claude(corte_id)
+    logger.info(
+        "[Shorts] geracao manual corte=%s bruto_regerado=%s candidatos=%d",
+        corte_id[:8],
+        regerou,
+        len(resultado.get("shorts", [])),
+    )
+    return {**resultado, "bruto_regerado": regerou}
+
+
+async def _regerar_bruto_preservando_pos_producao(corte_id: str) -> None:
+    """Refaz so o video do bruto — nem transcricao, nem cenas (D-160)."""
+    from app.services.export import ExportService
+
+    resultado = await ExportService.gerar_bruto_via_worker(
+        corte_id, refazer_transcricao=False, refazer_cenas=False
+    )
+    if resultado.get("status") != "pronto":
+        raise ValueError(
+            f"Nao consegui regerar o bruto: {resultado.get('mensagem', 'erro desconhecido')}"
+        )
+
+
 async def listar_fires_com_bruto() -> list[dict]:
     """Os cortes Fire cujo bruto ainda existe em disco — a porta da tela de Shorts.
 

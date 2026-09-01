@@ -3,6 +3,8 @@
 Endpoints:
   GET  /fires                     — os cortes Fire cujo bruto ainda esta em disco
   GET  /corte/{corte_id}          — os shorts do corte, do melhor palpite ao pior
+  GET  /corte/{corte_id}/elegibilidade — se a tela do bruto deve oferecer a fábrica
+  POST /corte/{corte_id}/gerar    — caminho MANUAL: regera o bruto se preciso e propõe
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
   POST /{short_id}/renderizar     — produz o MP4 vertical do candidato
@@ -47,6 +49,30 @@ async def descartar_bruto(corte_id: str):
         return await shorts_store.descartar_bruto(corte_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/corte/{corte_id}/elegibilidade")
+async def elegibilidade(corte_id: str):
+    """Se o corte é Fire, se tem bruto, e quantos candidatos já existem."""
+    try:
+        return await shorts_store.elegibilidade(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/corte/{corte_id}/gerar")
+async def gerar_manualmente(corte_id: str):
+    """Caminho manual da fábrica: regera o bruto se preciso e propõe os shorts.
+
+    Serve os cortes antigos e o teste da esteira. A regeração do bruto NÃO toca
+    na pós-produção — refaz só o vídeo (D-160).
+    """
+    try:
+        return await shorts_store.gerar_shorts_do_corte(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/corte/{corte_id}/sugerir")

@@ -89,8 +89,24 @@ export interface PacotePublicacao {
   avisos: string[];
 }
 
+/** O que a tela do bruto precisa saber para oferecer (ou nao) a fabrica. */
+export interface ElegibilidadeShorts {
+  is_fire: boolean;
+  tem_bruto: boolean;
+  total_shorts: number;
+}
+
 export const shortsApi = {
   listarFires: () => request<{ fires: FireComBruto[] }>('/shorts/fires'),
+
+  elegibilidade: (corteId: string) =>
+    request<ElegibilidadeShorts>(`/shorts/corte/${corteId}/elegibilidade`),
+
+  gerarManualmente: (corteId: string) =>
+    request<{ shorts: ShortSugerido[]; descartes: string[]; bruto_regerado: boolean }>(
+      `/shorts/corte/${corteId}/gerar`,
+      { method: 'POST' },
+    ),
 
   listarDoCorte: (corteId: string) =>
     request<{ shorts: ShortSugerido[] }>(`/shorts/corte/${corteId}`),
