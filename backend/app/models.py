@@ -32,6 +32,21 @@ class StatusCorte(str, enum.Enum):
     PROCESSADO = "processado"
 
 
+class StatusShort(str, enum.Enum):
+    """Estagio de um short dentro da fabrica (E-030).
+
+    SUGERIDO    -> a IA propos o trecho; aguarda curadoria humana.
+    APROVADO    -> o operador aceitou o candidato; entra na fila de producao.
+    REJEITADO   -> descartado na curadoria; fica no historico, nao some.
+    RENDERIZADO -> MP4 vertical pronto em `arquivo_short_path`.
+    """
+
+    SUGERIDO = "sugerido"
+    APROVADO = "aprovado"
+    REJEITADO = "rejeitado"
+    RENDERIZADO = "renderizado"
+
+
 class StatusLiveCandidata(str, enum.Enum):
     """Estado de uma live na fila de ranking (F-052).
 
@@ -217,6 +232,11 @@ class Corte(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    # E-030: shorts extraidos deste corte. `lazy` default (nao selectin) de
+    # proposito — a esteira de cortes nao carrega shorts sem pedir.
+    shorts: Mapped[list["Short"]] = relationship(
+        "Short", back_populates="corte", cascade="all, delete-orphan"
+    )
 
 
 class CorteSnapshot(Base):
@@ -296,6 +316,76 @@ class YoutubeVideoStat(Base):
     )
     match_por_titulo: Mapped[int] = mapped_column(Integer, default=0)
     sincronizado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
+
+
+class Short(Base):
+    """Trecho vertical extraido de um corte Fire (E-030, D-452).
+
+    Reativa as tabelas que a D-345 deixou ORFAS (sem DROP) ao remover a feature
+    morta — os registros de PROD continuam la e voltam a ter modelo.
+
+    INVARIANTE: `inicio_seg`/`fim_seg` estao no espaco de tempo do BRUTO (o clip
+    ja sem os desvios removidos), NAO no da live. E do bruto que o short e
+    recortado; usar os tempos da live dessincroniza todo candidato.
+    """
+
+    __tablename__ = "shorts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    corte_id: Mapped[str] = mapped_column(String(36), ForeignKey("cortes.id"))
+    numero: Mapped[int] = mapped_column(Integer)
+    titulo_sugerido: Mapped[str] = mapped_column(String(500), default="")
+    inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    # E-030: o que a IA usa para o operador escolher entre bons candidatos.
+    # `gancho` e a frase que precisa segurar os 3 primeiros segundos; `score`
+    # ordena a lista; `justificativa` explica a nota (colunas novas sobre as
+    # tabelas antigas — a reconciliacao da D-403 as adiciona sozinha no boot).
+    gancho: Mapped[str] = mapped_column(String(500), default="")
+    score: Mapped[float] = mapped_column(Float, default=0.0)
+    justificativa: Mapped[str] = mapped_column(Text, default="")
+    cenas_remotion: Mapped[str] = mapped_column(Text, default="[]")
+    desvios: Mapped[str] = mapped_column(Text, default="[]")
+    status: Mapped[str] = mapped_column(String(50), default=StatusShort.SUGERIDO)
+    arquivo_short_path: Mapped[str] = mapped_column(String(1000), default="")
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    atualizado_em: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    corte: Mapped["Corte"] = relationship("Corte", back_populates="shorts")
+    metadado: Mapped["MetadadoShort"] = relationship(
+        "MetadadoShort",
+        back_populates="short",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class MetadadoShort(Base):
+    """Metadados de publicacao de um short (E-030, D-452).
+
+    Espelha `MetadadoCorte` no que o short precisa. Campos por plataforma
+    (Instagram, TikTok) sao escopo do E-035 e entram quando houver destino.
+    """
+
+    __tablename__ = "metadados_shorts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    short_id: Mapped[str] = mapped_column(String(36), ForeignKey("shorts.id"), unique=True)
+    titulo_youtube: Mapped[str] = mapped_column(String(100), default="")
+    descricao_youtube: Mapped[str] = mapped_column(Text, default="")
+    tags_youtube: Mapped[str] = mapped_column(Text, default="[]")
+    frase_capa: Mapped[str] = mapped_column(String(100), default="")
+    youtube_video_id: Mapped[str] = mapped_column(String(50), default="")
+    youtube_url_publicado: Mapped[str] = mapped_column(String(200), default="")
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    atualizado_em: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    short: Mapped["Short"] = relationship("Short", back_populates="metadado")
 
 
 class LayoutPreset(Base):
