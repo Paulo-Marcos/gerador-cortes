@@ -1,0 +1,28 @@
+=== O CORTE DE ORIGEM (ja aprovado pelo operador) ===
+titulo: {titulo}
+tema_central: {tema_central}
+duracao do bruto: {duracao_humana}
+
+=== TRANSCRICAO DO BRUTO (o que sobrou depois dos trechos removidos) ===
+{texto_transcricao}
+=== FIM DA TRANSCRICAO ===
+
+Os `[MM:SS]` acima estao no relogio do BRUTO, nao no do video original. Os tempos
+que voce devolver serao usados para recortar exatamente este arquivo.
+
+Proponha ate {quantidade_alvo} trechos verticais, cada um com {faixa_duracao} de
+duracao, seguindo exatamente os criterios da sua expertise acima.
+
+Retorne APENAS o JSON puro, sem markdown e sem texto fora do JSON:
+{{
+  "shorts": [
+    {{
+      "titulo": "titulo curto, o peso nos primeiros 40 caracteres",
+      "gancho": "a frase que segura os 3 primeiros segundos",
+      "inicio": "MM:SS",
+      "fim": "MM:SS",
+      "score": 0.0,
+      "justificativa": "por que este trecho e nao o vizinho"
+    }}
+  ]
+}}

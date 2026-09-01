@@ -161,6 +161,22 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
         thinking_setting="claude_cli_thinking_tokens_avaliacao",
         lentes_tipo=None,
     ),
+    SkillCatalogo(
+        key="shorts-expert",
+        arquivo="shorts.md",
+        etapa="Propor shorts",
+        descricao=(
+            "Le a transcricao do bruto de um corte marcado com Fire e propoe os "
+            "trechos que funcionam sozinhos como video vertical (inicio/fim, "
+            "titulo, gancho, nota e justificativa). Roda automaticamente ao fim "
+            "da geracao do bruto dos Fires; a curadoria acontece depois, na tela "
+            "de Shorts. Sem lentes por design: a selecao precisa ser comparavel "
+            "entre cortes, nao variada."
+        ),
+        model_setting="claude_model_shorts",
+        thinking_setting="claude_cli_thinking_tokens_shorts",
+        lentes_tipo=None,
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, SkillCatalogo] = {c.key: c for c in _CATALOGO}

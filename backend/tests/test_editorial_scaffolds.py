@@ -131,6 +131,7 @@ def test_descrever_scaffolds_traz_todos_na_ordem(tmp_path: Path):
         "resumo",
         "metadados",
         "avaliacao-bruto",
+        "shorts",
     ]
     cortes = next(d for d in descritos if d.key == "cortes")
     assert cortes.marcador == "JSON"

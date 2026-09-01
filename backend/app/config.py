@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     # (as emendas marcadas) — pede menos raciocínio que propor os cortes, e roda
     # a cada geração de bruto, então economia importa.
     claude_cli_thinking_tokens_avaliacao: int = 3000
+    # D-453: propor shorts julga um texto que JA passou pela curadoria humana —
+    # o trabalho e achar bordas auto-contidas, nao decidir o que presta. Pede mais
+    # raciocinio que avaliar o bruto (que segue um roteiro fixo) e bem menos que
+    # propor cortes (que le a live inteira).
+    claude_cli_thinking_tokens_shorts: int = 6000
     skills_dir: str = os.path.join(_PROJECT_ROOT, ".claude", "skills")
     # Modelos por etapa (alias do CLI: opus | sonnet | haiku, ou nome completo)
     claude_model_analise: str = "opus"
@@ -71,6 +76,9 @@ class Settings(BaseSettings):
     claude_model_thumbnail: str = "opus"
     claude_model_ranking_sentimento: str = "haiku"
     claude_model_avaliacao: str = "sonnet"
+    # D-453: roda a cada bruto de corte Fire, sobre texto ja curado — sonnet da
+    # conta e mantem o custo da esteira baixo.
+    claude_model_shorts: str = "sonnet"
     # Janela da memória global anti-repetição de thumbnails: quantas das últimas
     # capas (de QUALQUER projeto, ordenadas por id desc) viram ELEMENTOS
     # PROIBIDOS no prompt. Janela maior = menos recorrência de roupa/cenário/

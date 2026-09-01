@@ -258,6 +258,7 @@ def test_descrever_skills_traz_todas_com_default_e_atual(tmp_path: Path):
         "metadados-expert",
         "thumbnail-prompt-expert",
         "avaliador-bruto",
+        "shorts-expert",
     ]
     thumb = next(d for d in descritas if d.key == "thumbnail-prompt-expert")
     assert set(thumb.params) == {"modelo", "thinking_tokens", "timeout"}
