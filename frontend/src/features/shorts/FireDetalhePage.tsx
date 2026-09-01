@@ -1,0 +1,285 @@
+// D-459: a curadoria dos candidatos de um Fire.
+//
+// A premissa editorial manda no desenho: o corte Fire já passou pelo funil
+// inteiro, então esta tela não é de garimpo — é de ESCOLHA ENTRE BONS. Por isso
+// tudo que o operador precisa para decidir (gancho, nota, justificativa,
+// duração) fica visível sem clique, e a ação principal — assistir ao trecho —
+// está a um botão de distância.
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Check, Clapperboard, Play, Undo2, X } from 'lucide-react';
+import { cn, formatarDuracao } from '@/lib/utils';
+import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
+import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
+import { useFires } from './useFires';
+import { useAtualizarShort, useShortsDoCorte } from './useShortsDoCorte';
+
+const ROTULO_STATUS: Record<StatusShort, string> = {
+  sugerido: 'sugerido',
+  aprovado: 'aprovado',
+  rejeitado: 'rejeitado',
+  renderizado: 'pronto',
+};
+
+const CLASSE_STATUS: Record<StatusShort, string> = {
+  sugerido: 'text-[var(--wb-text-mute)]',
+  aprovado: 'text-[var(--wb-ok-ink)]',
+  rejeitado: 'text-[var(--wb-text-dim)] line-through',
+  renderizado: 'text-[var(--wb-accent)]',
+};
+
+function mmss(segundos: number): string {
+  const total = Math.max(0, Math.round(segundos));
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+interface CandidatoProps {
+  short: ShortSugerido;
+  selecionado: boolean;
+  ocupado: boolean;
+  onSelecionar: () => void;
+  onTocar: () => void;
+  onStatus: (status: StatusShort) => void;
+  onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
+}
+
+function Candidato({
+  short,
+  selecionado,
+  ocupado,
+  onSelecionar,
+  onTocar,
+  onStatus,
+  onBorda,
+}: CandidatoProps) {
+  const rejeitado = short.status === 'rejeitado';
+
+  return (
+    <article
+      onClick={onSelecionar}
+      className={cn(
+        'cursor-pointer rounded-[10px] border p-3 transition-colors',
+        selecionado
+          ? 'border-[var(--wb-accent)] bg-[var(--wb-bg-panel)]'
+          : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] hover:border-[var(--wb-text-dim)]',
+        rejeitado && 'opacity-60',
+      )}
+    >
+      <div className="flex items-start gap-2">
+        <span className="font-code text-[15px] font-bold tabular-nums text-[var(--wb-accent)]">
+          {short.score.toFixed(1)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3
+            className={cn('truncate text-[13.5px] font-bold', CLASSE_STATUS[short.status])}
+            title={short.titulo}
+          >
+            {short.titulo}
+          </h3>
+          {short.gancho && (
+            <p className="mt-0.5 line-clamp-2 text-[12px] italic text-[var(--wb-text-dim)]">
+              “{short.gancho}”
+            </p>
+          )}
+        </div>
+        <span className="flex-none font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)]">
+          {ROTULO_STATUS[short.status]}
+        </span>
+      </div>
+
+      {short.justificativa && (
+        <p className="mt-2 text-[12px] leading-relaxed text-[var(--wb-text-mute)]">
+          {short.justificativa}
+        </p>
+      )}
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 font-code text-[11.5px] tabular-nums text-[var(--wb-text-mute)]">
+        <span>
+          {mmss(short.inicio_seg)} → {mmss(short.fim_seg)}
+        </span>
+        <span className="font-semibold text-[var(--wb-text-dim)]">
+          {Math.round(short.duracao_seg)}s
+        </span>
+      </div>
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <BotaoAcao onClick={onTocar} disabled={ocupado} icon={<Play size={12} />}>
+          tocar trecho
+        </BotaoAcao>
+        <BotaoAcao onClick={() => onBorda('inicio_seg')} disabled={ocupado}>
+          início aqui
+        </BotaoAcao>
+        <BotaoAcao onClick={() => onBorda('fim_seg')} disabled={ocupado}>
+          fim aqui
+        </BotaoAcao>
+        <div className="flex-1" />
+        {short.status !== 'aprovado' && (
+          <BotaoAcao onClick={() => onStatus('aprovado')} disabled={ocupado} icon={<Check size={12} />}>
+            aprovar
+          </BotaoAcao>
+        )}
+        {short.status === 'sugerido' && (
+          <BotaoAcao onClick={() => onStatus('rejeitado')} disabled={ocupado} icon={<X size={12} />}>
+            rejeitar
+          </BotaoAcao>
+        )}
+        {short.status !== 'sugerido' && (
+          <BotaoAcao onClick={() => onStatus('sugerido')} disabled={ocupado} icon={<Undo2 size={12} />}>
+            voltar
+          </BotaoAcao>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function BotaoAcao({
+  onClick,
+  disabled,
+  icon,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className="inline-flex items-center gap-1 rounded-[6px] bg-[var(--wb-bg-inset)] px-2 py-1 text-[11.5px] font-semibold text-[var(--wb-text-dim)] transition-colors hover:text-[var(--wb-text)] disabled:cursor-not-allowed disabled:opacity-45"
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+export default function FireDetalhePage() {
+  const workbench = isWorkbenchEnabled();
+  const { corteId = '' } = useParams();
+  const video = useRef<HTMLVideoElement>(null);
+  const [selecionado, setSelecionado] = useState<string | null>(null);
+
+  const { data, isLoading, isError, error } = useShortsDoCorte(corteId);
+  const fires = useFires();
+  const atualizar = useAtualizarShort(corteId);
+
+  const shorts = useMemo(() => data?.shorts ?? [], [data]);
+  const fire = fires.data?.fires.find((f) => f.corte_id === corteId);
+
+  const tocarTrecho = useCallback((short: ShortSugerido) => {
+    const el = video.current;
+    if (!el) return;
+    el.currentTime = short.inicio_seg;
+    void el.play();
+  }, []);
+
+  // O tempo corrente do player é a fonte da borda nova: o operador acabou de
+  // ver onde o trecho deveria começar ou terminar, então pedir que ele digite
+  // um número seria fazê-lo traduzir o que já sabe.
+  const moverBorda = useCallback(
+    (short: ShortSugerido, campo: 'inicio_seg' | 'fim_seg') => {
+      const el = video.current;
+      if (!el) return;
+      atualizar.mutate({ shortId: short.id, [campo]: Number(el.currentTime.toFixed(2)) });
+    },
+    [atualizar],
+  );
+
+  return (
+    <div
+      className={cn(
+        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
+        workbench ? 'h-full' : 'h-screen',
+      )}
+    >
+      <header
+        className={cn(
+          'flex-none border-b border-[var(--wb-border-soft)]',
+          workbench ? 'px-4 py-3' : 'px-7 py-5',
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <Link
+            to="/shorts"
+            className="inline-flex items-center gap-1 text-[12px] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
+          >
+            <ArrowLeft size={14} aria-hidden />
+            Shorts
+          </Link>
+          <span className="text-[var(--wb-text-mute)]">/</span>
+          <Clapperboard size={16} className="text-[var(--wb-accent)]" aria-hidden />
+          <h1 className="truncate text-[15px] font-extrabold">
+            {fire?.titulo || 'Candidatos do Fire'}
+          </h1>
+          {fire && (
+            <span className="truncate text-xs text-[var(--wb-text-mute)]">
+              {fire.projeto_titulo} · bruto de {formatarDuracao(fire.duracao_seg)}
+            </span>
+          )}
+        </div>
+      </header>
+
+      <main className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-h-0">
+          <video
+            ref={video}
+            src={brutoUrl(corteId)}
+            controls
+            className="max-h-full w-full rounded-[10px] bg-black"
+          />
+        </div>
+
+        <aside className="flex min-h-0 flex-col gap-2 overflow-auto">
+          {isLoading && (
+            <p className="py-8 text-center text-[13px] text-[var(--wb-text-mute)]">
+              Carregando candidatos…
+            </p>
+          )}
+
+          {/* Falha de rede NAO pode se parecer com "nao ha candidatos": a primeira
+              pede para tentar de novo, a segunda pede para gerar o bruto. */}
+          {isError && (
+            <p className="py-8 text-center text-[13px] leading-relaxed text-[var(--wb-text-dim)]">
+              Nao consegui carregar os candidatos: {(error as Error)?.message ?? 'erro desconhecido'}
+            </p>
+          )}
+
+          {!isLoading && !isError && shorts.length === 0 && (
+            <p className="py-8 text-center text-[13px] leading-relaxed text-[var(--wb-text-mute)]">
+              Nenhum candidato ainda. Gere o bruto de novo para a IA propor os trechos.
+            </p>
+          )}
+
+          {shorts.map((short) => (
+            <Candidato
+              key={short.id}
+              short={short}
+              selecionado={selecionado === short.id}
+              ocupado={atualizar.isPending}
+              onSelecionar={() => setSelecionado(short.id)}
+              onTocar={() => {
+                setSelecionado(short.id);
+                tocarTrecho(short);
+              }}
+              onStatus={(status) => atualizar.mutate({ shortId: short.id, status })}
+              onBorda={(campo) => moverBorda(short, campo)}
+            />
+          ))}
+
+          {atualizar.isError && (
+            <p className="rounded-[8px] bg-[var(--wb-bg-inset)] p-2 text-[12px] text-[var(--wb-text-dim)]">
+              {(atualizar.error as Error)?.message ?? 'nao consegui salvar'}
+            </p>
+          )}
+        </aside>
+      </main>
+    </div>
+  );
+}

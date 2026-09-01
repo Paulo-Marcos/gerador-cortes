@@ -7,6 +7,7 @@
 //
 // O trabalho aqui é assíncrono por desenho — os candidatos nascem na geração do
 // bruto (E-030) e a curadoria acontece quando o operador quiser.
+import { Link } from 'react-router-dom';
 import { Clapperboard, Clock, HardDrive } from 'lucide-react';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
@@ -41,7 +42,10 @@ function ContagemChips({ shorts }: { shorts: ContagemShorts }) {
 
 function FireCard({ fire }: { fire: FireComBruto }) {
   return (
-    <article className="flex flex-col gap-2 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-3.5">
+    <Link
+      to={`/shorts/${fire.corte_id}`}
+      className="flex flex-col gap-2 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-3.5 transition-colors hover:border-[var(--wb-text-dim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]"
+    >
       <div className="flex items-start gap-2">
         <span aria-hidden className="text-[15px] leading-none">
           🔥
@@ -69,7 +73,7 @@ function FireCard({ fire }: { fire: FireComBruto }) {
       </div>
 
       <ContagemChips shorts={fire.shorts} />
-    </article>
+    </Link>
   );
 }
 

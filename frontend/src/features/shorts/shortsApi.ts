@@ -61,11 +61,29 @@ export interface ShortSugerido {
 
 // ─── Endpoints ─────────────────────────────────────────────────────────────
 
+/** A decisão da curadoria: só o que veio é aplicado. */
+export interface AtualizarShortBody {
+  status?: StatusShort;
+  inicio_seg?: number;
+  fim_seg?: number;
+}
+
+/** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
+export function brutoUrl(corteId: string): string {
+  return `${API_BASE}/cortes/${corteId}/video-bruto`;
+}
+
 export const shortsApi = {
   listarFires: () => request<{ fires: FireComBruto[] }>('/shorts/fires'),
 
   listarDoCorte: (corteId: string) =>
     request<{ shorts: ShortSugerido[] }>(`/shorts/corte/${corteId}`),
+
+  atualizar: (shortId: string, body: AtualizarShortBody) =>
+    request<{ short: ShortSugerido }>(`/shorts/${shortId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
 
   sugerirAgora: (corteId: string) =>
     request<{ shorts: ShortSugerido[]; descartes: string[] }>(

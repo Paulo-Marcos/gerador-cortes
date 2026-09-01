@@ -138,6 +138,67 @@ async def registrar_sugestoes(
     return serializados
 
 
+# Estagios que a curadoria humana pode atribuir. RENDERIZADO fica de fora de
+# proposito: quem carimba isso e o render, quando o MP4 existe em disco (D-459).
+_STATUS_DA_CURADORIA = frozenset(
+    {StatusShort.SUGERIDO.value, StatusShort.APROVADO.value, StatusShort.REJEITADO.value}
+)
+
+
+async def atualizar_short(
+    short_id: str,
+    *,
+    status: str | None = None,
+    inicio_seg: float | None = None,
+    fim_seg: float | None = None,
+) -> dict:
+    """Aplica a decisao do operador sobre um candidato (D-459).
+
+    As bordas sao validadas contra o BRUTO, nao contra a faixa de duracao da
+    skill: a faixa existe para disciplinar a IA, e o humano que assistiu ao
+    trecho tem o direito de discordar dela. O que ele NAO pode e apontar para
+    fora do arquivo — dai o teto ser a duracao do bruto.
+
+    Levanta `LookupError` (short inexistente) e `ValueError` (status invalido ou
+    bordas impossiveis).
+    """
+    async with AsyncSessionLocal() as db:
+        short = await db.get(Short, short_id)
+        if not short:
+            raise LookupError(f"Short {short_id!r} nao encontrado")
+
+        if status is not None:
+            if status not in _STATUS_DA_CURADORIA:
+                raise ValueError(f"Status {status!r} nao e uma decisao de curadoria.")
+            short.status = status
+
+        if inicio_seg is not None or fim_seg is not None:
+            corte = await db.get(Corte, short.corte_id)
+            novo_inicio = short.inicio_seg if inicio_seg is None else float(inicio_seg)
+            novo_fim = short.fim_seg if fim_seg is None else float(fim_seg)
+            _validar_bordas(novo_inicio, novo_fim, corte)
+            short.inicio_seg = round(novo_inicio, 2)
+            short.fim_seg = round(novo_fim, 2)
+
+        await db.commit()
+        return _serializar(short)
+
+
+def _validar_bordas(inicio: float, fim: float, corte: Corte | None) -> None:
+    if inicio < 0:
+        raise ValueError("O inicio nao pode ser negativo.")
+    if fim <= inicio:
+        raise ValueError("O fim precisa vir depois do inicio.")
+    duracao = float(corte.duracao_clip_seg or 0.0) if corte else 0.0
+    if duracao > 0 and fim > duracao + _FOLGA_BORDA_SEG:
+        raise ValueError("O fim passa da duracao do bruto.")
+
+
+# O player devolve o tempo com casas decimais; um piscar alem do fim do arquivo
+# e arredondamento, nao erro do operador.
+_FOLGA_BORDA_SEG = 1.0
+
+
 async def listar_shorts(corte_id: str) -> list[dict]:
     """Todos os shorts do corte, do melhor palpite ao pior."""
     async with AsyncSessionLocal() as db:

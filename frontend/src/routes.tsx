@@ -45,6 +45,9 @@ const AnalisesPage = lazy(() =>
 const ShortsPage = lazy(() =>
   import('./features/shorts/ShortsPage').then((m) => ({ default: m.default })),
 );
+const FireDetalhePage = lazy(() =>
+  import('./features/shorts/FireDetalhePage').then((m) => ({ default: m.default })),
+);
 const AtalhosPage = lazy(() =>
   import('@/features/atalhos/AtalhosPage').then((m) => ({ default: m.AtalhosPage })),
 );
@@ -76,6 +79,7 @@ export const router = createBrowserRouter([
       { path: 'canais', element: <ChannelsPage /> },
       { path: 'analises', element: <AnalisesPage /> },
       { path: 'shorts', element: <ShortsPage /> },
+      { path: 'shorts/:corteId', element: <FireDetalhePage /> },
       { path: 'atalhos', element: <AtalhosPage /> },
       { path: '*', element: <StubPage titulo="Pagina nao encontrada" /> },
     ],

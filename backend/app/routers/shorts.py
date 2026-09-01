@@ -4,6 +4,7 @@ Endpoints:
   GET  /fires                     — os cortes Fire cujo bruto ainda esta em disco
   GET  /corte/{corte_id}          — os shorts do corte, do melhor palpite ao pior
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
+  PATCH /{short_id}               — a decisão do operador: status e/ou bordas
 
 O disparo padrão é o fim da geração do bruto de um corte marcado com Fire. O POST
 existe para o caso que o automático não cobre: o corte virou Fire **depois** de o
@@ -18,6 +19,7 @@ from __future__ import annotations
 
 from app.services import shorts as shorts_store
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -40,6 +42,32 @@ async def sugerir_agora(corte_id: str):
 
     try:
         return await ClaudeIaService.sugerir_shorts_via_claude(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class AtualizarShortRequest(BaseModel):
+    """A decisão da curadoria. Todo campo é opcional — só o que veio é aplicado."""
+
+    status: str | None = None
+    inicio_seg: float | None = None
+    fim_seg: float | None = None
+
+
+@router.patch("/{short_id}")
+async def atualizar(short_id: str, body: AtualizarShortRequest):
+    """Aprova, rejeita ou reposiciona as bordas de um candidato."""
+    try:
+        return {
+            "short": await shorts_store.atualizar_short(
+                short_id,
+                status=body.status,
+                inicio_seg=body.inicio_seg,
+                fim_seg=body.fim_seg,
+            )
+        }
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
