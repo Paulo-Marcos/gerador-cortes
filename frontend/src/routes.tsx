@@ -42,6 +42,9 @@ const AnalisesPage = lazy(() =>
   import('@/features/analises/AnalisesPage').then((m) => ({ default: m.AnalisesPage })),
 );
 // Workbench Etapa 7: página de Atalhos renderizada do shortcutsRegistry.
+const ShortsPage = lazy(() =>
+  import('./features/shorts/ShortsPage').then((m) => ({ default: m.default })),
+);
 const AtalhosPage = lazy(() =>
   import('@/features/atalhos/AtalhosPage').then((m) => ({ default: m.AtalhosPage })),
 );
@@ -72,6 +75,7 @@ export const router = createBrowserRouter([
       { path: 'padroes-thumbnail', element: <ThumbnailPadroesPage /> },
       { path: 'canais', element: <ChannelsPage /> },
       { path: 'analises', element: <AnalisesPage /> },
+      { path: 'shorts', element: <ShortsPage /> },
       { path: 'atalhos', element: <AtalhosPage /> },
       { path: '*', element: <StubPage titulo="Pagina nao encontrada" /> },
     ],

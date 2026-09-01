@@ -31,6 +31,7 @@ export type GlobalTabId =
   | 'ranking'
   | 'buscar'
   | 'thumbnails'
+  | 'shorts'
   | 'analises'
   | 'atalhos'
   | 'config';
@@ -40,6 +41,7 @@ const GLOBAIS: readonly GlobalTabId[] = [
   'ranking',
   'buscar',
   'thumbnails',
+  'shorts',
   'analises',
   'atalhos',
   'config',

@@ -2,6 +2,7 @@ import { Link, useLocation, useMatch } from 'react-router-dom';
 import {
   BarChart3,
   Check,
+  Clapperboard,
   FileText,
   Film,
   Folder,
@@ -53,6 +54,13 @@ const globalItems: NavItem[] = [
     label: 'Padrões de thumbnail',
     Icon: Sparkles,
     isActive: (pathname) => pathname.startsWith('/padroes-thumbnail'),
+  },
+  // D-458: fábrica de shorts — os cortes Fire cujo bruto ainda está guardado.
+  {
+    to: '/shorts',
+    label: 'Shorts',
+    Icon: Clapperboard,
+    isActive: (pathname) => pathname.startsWith('/shorts'),
   },
   // E-022: Área de Análises (telemetria proposta×final + desempenho YouTube).
   {

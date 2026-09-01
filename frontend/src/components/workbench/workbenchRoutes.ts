@@ -27,6 +27,7 @@ export const GLOBAL_TABS: readonly GlobalTabInfo[] = [
   { id: 'ranking', path: '/ranking-lives', label: 'Ranking de lives', emoji: '🏆' },
   { id: 'buscar', path: '/buscar-lives', label: 'Buscar lives', emoji: '📡' },
   { id: 'thumbnails', path: '/padroes-thumbnail', label: 'Padrões de thumbnail', emoji: '✨' },
+  { id: 'shorts', path: '/shorts', label: 'Shorts', emoji: '🎬' },
   { id: 'analises', path: '/analises', label: 'Análises', emoji: '📊' },
   { id: 'atalhos', path: '/atalhos', label: 'Atalhos', emoji: '⌨', divisor: true },
   { id: 'config', path: '/canais', label: 'Configurações', emoji: '⚙' },

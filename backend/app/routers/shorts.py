@@ -1,6 +1,7 @@
 """Router: fábrica de shorts do corte Fire (D-455).
 
 Endpoints:
+  GET  /fires                     — os cortes Fire cujo bruto ainda esta em disco
   GET  /corte/{corte_id}          — os shorts do corte, do melhor palpite ao pior
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
 
@@ -19,6 +20,12 @@ from app.services import shorts as shorts_store
 from fastapi import APIRouter, HTTPException
 
 router = APIRouter()
+
+
+@router.get("/fires")
+async def listar_fires():
+    """A porta da tela de Shorts: os Fires que ainda tem de onde recortar."""
+    return {"fires": await shorts_store.listar_fires_com_bruto()}
 
 
 @router.get("/corte/{corte_id}")

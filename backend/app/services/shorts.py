@@ -20,11 +20,13 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
+from app.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
-from app.models import Corte, Short, StatusShort
+from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -143,6 +145,96 @@ async def listar_shorts(corte_id: str) -> list[dict]:
             )
         ).all()
     return [_serializar(short) for short in shorts]
+
+
+async def listar_fires_com_bruto() -> list[dict]:
+    """Os cortes Fire cujo bruto ainda existe em disco — a porta da tela de Shorts.
+
+    O filtro de DISCO e o que importa aqui: um corte Fire cujo bruto ja foi
+    descartado nao tem do que recortar short, entao listá-lo so daria trabalho
+    ao operador. A D-456 faz esse bruto sobreviver a limpeza; aqui a gente
+    confere que ele sobreviveu MESMO (o arquivo pode ter sumido por fora do app).
+
+    Ordena do trabalho mais recente para o mais antigo: quem abre a tela quer
+    ver a live que acabou de processar.
+    """
+    async with AsyncSessionLocal() as db:
+        linhas = (
+            await db.execute(
+                select(Corte, Projeto)
+                .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
+                .join(Projeto, Projeto.id == Corte.projeto_id)
+                .where(MetadadoCorte.is_fire)
+                .order_by(Corte.atualizado_em.desc())
+            )
+        ).all()
+
+        fires = []
+        for corte, projeto in linhas:
+            bruto = _bruto_em_disco(corte)
+            if bruto is None:
+                continue
+            fires.append(_descrever_fire(corte, projeto, bruto))
+
+        if fires:
+            contagens = await _contar_shorts_por_corte(db, [f["corte_id"] for f in fires])
+            for fire in fires:
+                fire["shorts"] = contagens.get(fire["corte_id"], _CONTAGEM_VAZIA.copy())
+
+    return fires
+
+
+_CONTAGEM_VAZIA: dict[str, int] = {
+    "total": 0,
+    StatusShort.SUGERIDO.value: 0,
+    StatusShort.APROVADO.value: 0,
+    StatusShort.REJEITADO.value: 0,
+    StatusShort.RENDERIZADO.value: 0,
+}
+
+
+def _bruto_em_disco(corte: Corte) -> Path | None:
+    """O arquivo do bruto, ou `None` se o ponteiro nao aponta para nada."""
+    if not corte.arquivo_clip_path:
+        return None
+    caminho = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
+    return caminho if caminho.is_file() else None
+
+
+def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path) -> dict:
+    return {
+        "corte_id": corte.id,
+        "projeto_id": projeto.id,
+        "projeto_titulo": projeto.titulo_live or "",
+        "numero": corte.numero,
+        "titulo": corte.titulo_proposto or "",
+        "tema_central": corte.tema_central or "",
+        "duracao_seg": round(float(corte.duracao_clip_seg or 0.0), 2),
+        "bruto_mb": round(bruto.stat().st_size / 1_000_000, 1),
+    }
+
+
+async def _contar_shorts_por_corte(db: AsyncSession, corte_ids: list[str]) -> dict[str, dict]:
+    """Quantos shorts cada corte tem, por status — numa consulta so.
+
+    Consultar dentro do laco daria uma query por Fire; a tela abre com a lista
+    inteira, entao o N+1 apareceria como lentidao ja no primeiro uso real.
+    """
+    linhas = (
+        await db.execute(
+            select(Short.corte_id, Short.status, func.count())
+            .where(Short.corte_id.in_(corte_ids))
+            .group_by(Short.corte_id, Short.status)
+        )
+    ).all()
+
+    contagens: dict[str, dict] = {}
+    for corte_id, status, quantos in linhas:
+        contagem = contagens.setdefault(corte_id, _CONTAGEM_VAZIA.copy())
+        contagem["total"] += quantos
+        if status in contagem:
+            contagem[status] += quantos
+    return contagens
 
 
 async def _proximo_numero_apos_os_curados(db: AsyncSession, corte_id: str) -> int:
