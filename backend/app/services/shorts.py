@@ -25,7 +25,8 @@ from app.database import AsyncSessionLocal
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
 from app.models import Corte, Short, StatusShort
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,10 @@ async def registrar_sugestoes(
     palpite da IA, não desfazer a curadoria de quem já passou por ali.
     """
     async with AsyncSessionLocal() as db:
+        # A numeracao continua depois do que SOBREVIVE, entao ela e lida antes do
+        # delete — depois dele os candidatos removidos ainda estariam na sessao.
+        proximo_numero = await _proximo_numero_apos_os_curados(db, contexto.corte_id)
+
         antigos = (
             await db.scalars(
                 select(Short)
@@ -107,7 +112,6 @@ async def registrar_sugestoes(
         for antigo in antigos:
             await db.delete(antigo)
 
-        proximo_numero = await _proximo_numero(db, contexto.corte_id, ignorados=antigos)
         novos = [
             _para_modelo(contexto.corte_id, proximo_numero + posicao, sugestao)
             for posicao, sugestao in enumerate(resultado.sugestoes)
@@ -141,15 +145,14 @@ async def listar_shorts(corte_id: str) -> list[dict]:
     return [_serializar(short) for short in shorts]
 
 
-async def _proximo_numero(db, corte_id: str, *, ignorados: list[Short]) -> int:
-    """Continua a numeração para não colidir com os shorts que sobreviveram."""
-    descartados = {short.id for short in ignorados}
-    numeros = [
-        short.numero
-        for short in (await db.scalars(select(Short).where(Short.corte_id == corte_id))).all()
-        if short.id not in descartados
-    ]
-    return max(numeros, default=0) + 1
+async def _proximo_numero_apos_os_curados(db: AsyncSession, corte_id: str) -> int:
+    """Primeiro número livre acima dos shorts que a regeração NÃO apaga."""
+    maior = await db.scalar(
+        select(func.max(Short.numero))
+        .where(Short.corte_id == corte_id)
+        .where(Short.status != StatusShort.SUGERIDO)
+    )
+    return int(maior or 0) + 1
 
 
 def _duracao_do_bruto(corte: Corte, transcricao: list[dict]) -> float:

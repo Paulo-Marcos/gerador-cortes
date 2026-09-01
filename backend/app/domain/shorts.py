@@ -131,7 +131,8 @@ def normalizar_sugestoes(
         candidatos.append(candidato)
 
     candidatos.sort(key=lambda c: (-c.score, c.inicio_seg))
-    aprovados = _sem_sobreposicao(candidatos, descartes)
+    aprovados, sobrepostos = _sem_sobreposicao(candidatos)
+    descartes.extend(sobrepostos)
 
     if len(aprovados) > faixa.quantidade_max:
         for excedente in aprovados[faixa.quantidade_max :]:
@@ -209,19 +210,22 @@ def _nota(valor: object) -> float:
     return round(min(max(nota, _NOTA_MINIMA), _NOTA_MAXIMA), 2)
 
 
-def _sem_sobreposicao(candidatos: list[SugestaoShort], descartes: list[str]) -> list[SugestaoShort]:
-    """Mantém, entre candidatos que dividem a mesma fala, só o de maior nota.
+def _sem_sobreposicao(
+    candidatos: list[SugestaoShort],
+) -> tuple[list[SugestaoShort], list[str]]:
+    """Os aprovados e os motivos dos que caíram por dividir a fala de um melhor.
 
     Depende de `candidatos` já vir ordenado por nota decrescente: o primeiro a
     ocupar um intervalo é, por construção, o melhor daquele trecho.
     """
     aprovados: list[SugestaoShort] = []
+    descartados: list[str] = []
     for candidato in candidatos:
         if any(_colidem(candidato, aceito) for aceito in aprovados):
-            descartes.append(f"{_rotulo(candidato)}: sobrepõe um candidato de nota maior")
+            descartados.append(f"{_rotulo(candidato)}: sobrepõe um candidato de nota maior")
             continue
         aprovados.append(candidato)
-    return aprovados
+    return aprovados, descartados
 
 
 def _colidem(a: SugestaoShort, b: SugestaoShort) -> bool:
