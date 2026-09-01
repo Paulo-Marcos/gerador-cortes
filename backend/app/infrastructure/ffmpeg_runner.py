@@ -263,6 +263,58 @@ async def probe_codecs(path: Path) -> tuple[str, str]:
     return v_codec, a_codec
 
 
+def _parse_resolucao(raw: str) -> tuple[int, int] | None:
+    """`"1280x720"` -> `(1280, 720)`. Qualquer outra coisa -> `None`."""
+    largura, _, altura = (raw or "").strip().partition("x")
+    try:
+        valores = (int(largura), int(altura))
+    except ValueError:
+        return None
+    return valores if valores[0] > 0 and valores[1] > 0 else None
+
+
+async def probe_resolucao(path: Path) -> tuple[int, int] | None:
+    """Largura e altura do vídeo, ou `None` quando não dá para medir.
+
+    Quem recorta PRECISA disto: um crop calculado sobre uma resolução presumida
+    estoura o quadro e o ffmpeg aborta com -22 no meio do render (D-481). Medir
+    é barato; presumir custou um render inteiro.
+
+    Mesmo fallback do `probe_duracao`: `create_subprocess_exec` levanta
+    `NotImplementedError` sob o event loop Selector do uvicorn no Windows, e sem
+    o caminho síncrono em thread o probe falharia calado (D-369).
+    """
+    cmd = [
+        "ffprobe",
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height",
+        "-of",
+        "csv=s=x:p=0",
+        str(path),
+    ]
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    except NotImplementedError:
+        _, out, _ = await asyncio.to_thread(_run_ffmpeg_sync, cmd, "ffprobe-resolucao")
+        return _parse_resolucao(out)
+    except Exception:
+        return None
+
+    try:
+        out, _ = await proc.communicate()
+    except Exception:
+        return None
+    return _parse_resolucao(out.decode())
+
+
 def _parse_duracao(raw: str) -> float | None:
     try:
         return float(raw.strip())

@@ -48,6 +48,14 @@ async def ambiente(monkeypatch, tmp_path):
     monkeypatch.setattr(transcricao_fiel, "obter_do_corte", _transcricao)
     monkeypatch.setattr(legendas_short.transcricao_fiel, "obter_do_corte", _transcricao)
 
+    # D-481: o bruto destes testes e um arquivo de mentira, entao o ffprobe nao
+    # o mede. O render agora EXIGE a medida — presumir 1920x1080 foi o que
+    # estourou o crop em PROD — entao aqui a medida vem mockada.
+    async def _resolucao(_path):
+        return (1920, 1080)
+
+    monkeypatch.setattr(render_short, "probe_resolucao", _resolucao)
+
     async with factory() as db:
         db.add(Projeto(id="p1", youtube_url="u"))
         db.add(
@@ -194,3 +202,45 @@ async def test_short_inexistente_levanta_lookup(ambiente, jobs):
 async def _render_e_pegar(jobs: list[dict], indice: int) -> dict:
     await render_short.renderizar_short("s1")
     return jobs[indice]
+
+
+@pytest.mark.asyncio
+async def test_recorte_usa_a_resolucao_MEDIDA_do_bruto(ambiente, jobs, monkeypatch):
+    """D-481: um bruto 720p tem de gerar um crop que cabe em 720p.
+
+    Antes o comando trazia `origem=HORIZONTAL` como default e o servico nunca
+    passava a medida: o crop saia 608x1080 e o ffmpeg abortava com -22. Este
+    teste falha se alguem voltar a presumir.
+    """
+
+    async def _720p(_path):
+        return (1280, 720)
+
+    monkeypatch.setattr(render_short, "probe_resolucao", _720p)
+
+    await render_short.renderizar_short("s1")
+
+    recorte = next(j for j in jobs if j["id"].endswith("_recorte"))
+    cmd = recorte["cmd"]
+    vf = cmd[cmd.index("-vf") + 1]
+    largura, altura = (int(v) for v in vf.split("crop=")[1].split(",")[0].split(":")[:2])
+
+    assert altura <= 720, f"crop de {altura}px de altura num bruto de 720p"
+    assert largura <= 1280
+
+
+@pytest.mark.asyncio
+async def test_bruto_que_nao_da_para_medir_falha_antes_de_gastar_render(
+    ambiente, jobs, monkeypatch
+):
+    """Falhar alto e mais barato que falhar no meio do ffmpeg, com -22."""
+
+    async def _sem_medida(_path):
+        return None
+
+    monkeypatch.setattr(render_short, "probe_resolucao", _sem_medida)
+
+    with pytest.raises(ValueError, match="medir a resolucao"):
+        await render_short.renderizar_short("s1")
+
+    assert jobs == [], "despachou trabalho mesmo sem saber o tamanho do quadro"

@@ -26,8 +26,9 @@ from pathlib import Path
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.ffmpeg_short import build_composicao_short_cmd, build_recorte_vertical_cmd
-from app.domain.formato_video import VERTICAL
+from app.domain.formato_video import VERTICAL, Resolucao
 from app.domain.overlay_codec import OverlayCodec, overlay_codec_profile
+from app.infrastructure.ffmpeg_runner import probe_resolucao
 from app.infrastructure.worker_queue import RemotionWorkerQueue, WorkerJob, WorkerJobCategory
 from app.models import Corte, Short, StatusShort
 from app.services import legendas_short
@@ -81,6 +82,7 @@ async def renderizar_short(short_id: str) -> dict:
             duracao_seg=contexto.duracao_seg,
             foco_x=contexto.foco_x,
             filtro=contexto.filtro,
+            origem=contexto.origem,
             destino=VERTICAL,
         ),
         cwd=saida_dir,
@@ -156,6 +158,10 @@ class _ContextoRender:
     foco_x: float
     filtro: str | None
     cenas: list[dict]
+    # D-481: a resolucao MEDIDA do bruto. Nao tem default de proposito — foi um
+    # default (HORIZONTAL) que fez o crop 9:16 ser calculado sobre 1920x1080 num
+    # bruto 720p e estourar o quadro.
+    origem: Resolucao
 
     @property
     def duracao_seg(self) -> float:
@@ -183,6 +189,8 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
                 "O bruto deste corte nao esta mais em disco — sem ele nao da para recortar."
             )
 
+        origem = await _medir(bruto)
+
         return _ContextoRender(
             short_id=short.id,
             corte_id=corte.id,
@@ -194,7 +202,25 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             foco_x=foco_efetivo(short, corte),
             filtro=filtro,
             cenas=_json_lista(short.cenas_remotion),
+            origem=origem,
         )
+
+
+async def _medir(bruto: Path) -> Resolucao:
+    """A resolucao real do bruto (D-481).
+
+    Falha ALTO em vez de assumir 1920x1080. Um palpite errado aqui nao produz um
+    short torto: produz um crop maior que o quadro, e o ffmpeg aborta com -22 no
+    meio do render, com uma mensagem que nao aponta para a causa. Se o ffprobe
+    nao le o arquivo, o ffmpeg tambem nao leria — melhor dizer isso agora.
+    """
+    medida = await probe_resolucao(bruto)
+    if medida is None:
+        raise ValueError(
+            f"Nao consegui medir a resolucao de {bruto.name} — sem ela o recorte 9:16 "
+            "seria um chute e o ffmpeg falharia no meio do render."
+        )
+    return Resolucao(largura=medida[0], altura=medida[1])
 
 
 def _bruto_em_disco(corte: Corte) -> Path | None:

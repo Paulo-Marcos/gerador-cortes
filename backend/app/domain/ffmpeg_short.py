@@ -23,7 +23,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.domain.cinema_filters import get_filtro_vf
-from app.domain.formato_video import HORIZONTAL, VERTICAL, Resolucao, filtro_reenquadrar
+from app.domain.formato_video import (
+    HORIZONTAL,  # noqa: F401 — usado nos doctests; deixou de ser default na D-481
+    VERTICAL,
+    Resolucao,
+    filtro_reenquadrar,
+)
 
 # ProRes 4444 é o único codec com alpha que o overlay do Remotion entrega de
 # forma confiável neste projeto — VP9/.webm foi testado e não funciona.
@@ -38,21 +43,34 @@ def build_recorte_vertical_cmd(
     duracao_seg: float,
     foco_x: float = 0.5,
     filtro: str | None = "cinematic_iii",
-    origem: Resolucao = HORIZONTAL,
+    origem: Resolucao,
     destino: Resolucao = VERTICAL,
     crf: int = 18,
 ) -> list[str]:
     """Extrai o trecho do bruto já em 9:16 e com o filtro aplicado.
 
+    `origem` é OBRIGATÓRIO e deve ser a resolução MEDIDA do arquivo. Ele já teve
+    `HORIZONTAL` como default, e o default mentiu: num bruto 720p o crop saía
+    608x1080 — mais alto que o quadro — e o ffmpeg abortava com -22 no meio do
+    render (D-481). Medir é barato; presumir custou um render inteiro.
+
     Exemplo:
         >>> cmd = build_recorte_vertical_cmd(
         ...     Path("bruto.mkv"), Path("base.mp4"),
-        ...     inicio_seg=10.0, duracao_seg=30.0, filtro=None,
+        ...     inicio_seg=10.0, duracao_seg=30.0, filtro=None, origem=HORIZONTAL,
         ... )
         >>> cmd[:5]
         ['ffmpeg', '-y', '-hide_banner', '-ss', '10.0']
         >>> "crop=608:1080:656:0,scale=1080:1920,setsar=1" in cmd[cmd.index("-vf") + 1]
         True
+
+    Num bruto 720p a janela encolhe junto, em vez de estourar:
+        >>> cmd = build_recorte_vertical_cmd(
+        ...     Path("b.mkv"), Path("o.mp4"), inicio_seg=0.0, duracao_seg=5.0,
+        ...     filtro=None, origem=Resolucao(1280, 720),
+        ... )
+        >>> cmd[cmd.index("-vf") + 1]
+        'crop=404:720:438:0,scale=1080:1920,setsar=1'
     """
     cadeia = [filtro_reenquadrar(origem, destino, foco_x)]
     grade = get_filtro_vf(filtro) if filtro else None
