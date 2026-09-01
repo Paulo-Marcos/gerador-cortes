@@ -111,6 +111,7 @@ _SKILL_CENAS = "cenas-expert"
 _SKILL_METADADOS = "metadados-expert"
 _SKILL_THUMBNAIL = "thumbnail-prompt-expert"
 _SKILL_AVALIACAO = "avaliador-bruto"
+_SKILL_SHORTS = "shorts-expert"
 
 # A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
 _LIMITE_MOTIVO_NA_TELA = 400
@@ -1171,6 +1172,55 @@ class ClaudeIaService:
             modelo=skill.modelo,
             skill_sha=_sha1_curto(skill.corpo),
         )
+
+    @staticmethod
+    async def sugerir_shorts_via_claude(corte_id: str) -> dict:
+        """Propõe os trechos verticais do bruto recém-gerado e os persiste (D-454).
+
+        Roda sobre `Corte.transcricao_final` — a transcrição já sem os desvios e
+        com os tempos **rebaseados na timeline do bruto**. É desse arquivo que o
+        short será recortado, então é nesse relógio que os candidatos nascem.
+
+        Levanta `LookupError` (corte inexistente) ou `ValueError` (sem transcrição
+        final). Quem chama no fluxo automático trata a falha como não-fatal: a
+        sugestão de shorts é derivada do bruto, não parte da entrega dele.
+        """
+        from app.domain.shorts import FaixaShort, normalizar_sugestoes
+        from app.services import shorts as shorts_store
+
+        contexto = await shorts_store.montar_contexto(corte_id)
+        faixa = FaixaShort(
+            duracao_min_seg=settings.shorts_duracao_min_seg,
+            duracao_max_seg=settings.shorts_duracao_max_seg,
+            quantidade_min=settings.shorts_quantidade_min,
+            quantidade_max=settings.shorts_quantidade_max,
+        )
+
+        skill = editorial_skills.resolver_skill(_SKILL_SHORTS)
+        scaffold = editorial_scaffolds.resolver_scaffold("shorts")
+        prompt = scaffold.format(
+            titulo=contexto.titulo,
+            tema_central=contexto.tema_central,
+            duracao_humana=seg_to_hms_short(contexto.duracao_seg),
+            quantidade_alvo=faixa.quantidade_humana,
+            faixa_duracao=faixa.duracao_humana,
+            texto_transcricao=contexto.texto_transcricao,
+        )
+        _log_skill_usada(_SKILL_SHORTS, skill, scaffold)
+        resposta = await claude_cli_client.generate_json(
+            prompt,
+            **_args_claude(
+                skill,
+                _SKILL_SHORTS,
+                projeto_id=contexto.projeto_id,
+                corte_id=corte_id,
+            ),
+        )
+        resultado = normalizar_sugestoes(
+            resposta, duracao_bruto_seg=contexto.duracao_seg, faixa=faixa
+        )
+        shorts = await shorts_store.registrar_sugestoes(contexto, resultado)
+        return {"shorts": shorts, "descartes": resultado.descartes}
 
     # ── Fase 4: prompt de thumbnail via Claude (skill capista) ────────────────
 

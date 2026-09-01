@@ -43,6 +43,20 @@ def seg_to_hms_short(seconds: float) -> str:
     return str(timedelta(seconds=seconds)).split(".")[0].zfill(8)
 
 
+def seg_to_mmss(seg: float) -> str:
+    """Converte segundos para MM:SS — o dialeto dos marcadores de transcricao.
+
+    Diferente de `seg_to_hms_short`, nao volta a hora: transcricao de corte e de
+    bruto vive em minutos, e `[MM:SS]` e o que os prompts editoriais leem.
+
+    Exemplo:
+        >>> seg_to_mmss(125.4)
+        '02:05'
+    """
+    total = max(0, int(round(float(seg or 0.0))))
+    return f"{total // 60:02d}:{total % 60:02d}"
+
+
 def to_seg(val) -> float:
     """Helper universal para converter tempos (float, int ou HH:MM:SS) em segundos.
 

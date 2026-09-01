@@ -79,6 +79,14 @@ class Settings(BaseSettings):
     # D-453: roda a cada bruto de corte Fire, sobre texto ja curado — sonnet da
     # conta e mantem o custo da esteira baixo.
     claude_model_shorts: str = "sonnet"
+    # D-454: faixa que o operador aceita num candidato a short. 15-30s serve
+    # Reels, ate 90s serve conteudo denso; abaixo de 15 nao entrega ideia e acima
+    # de 90 e o corte de novo. A quantidade e TETO de trabalho, nao cota: a skill
+    # manda explicitamente nao encher linguica para bater o numero.
+    shorts_duracao_min_seg: float = 15.0
+    shorts_duracao_max_seg: float = 90.0
+    shorts_quantidade_min: int = 5
+    shorts_quantidade_max: int = 8
     # Janela da memória global anti-repetição de thumbnails: quantas das últimas
     # capas (de QUALQUER projeto, ordenadas por id desc) viram ELEMENTOS
     # PROIBIDOS no prompt. Janela maior = menos recorrência de roupa/cenário/
