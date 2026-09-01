@@ -187,3 +187,45 @@ Cancelada: `D-358` — absorvida por este programa.
   `[unlock:adicoes-exigem-autorizacao]`; `cenas-v2/` fica intocado
   (`remotion-v2-card-contracts`) — dai as cenas verticais irem para `cenas-shorts/`.
 - Nao-regressao do render horizontal e criterio de aceite da D-463, nao um cuidado.
+
+
+---
+
+## 8. Execucao (2026-09-01)
+
+Os seis epicos foram entregues na branch `codex/shorts`, 23 commits, cada
+demanda com gate CI completo verde. Estado final dos gates: backend **2252
+passed** com ruff limpo, frontend **542 passed** com tsc/eslint zerados,
+video-renderer tsc/eslint zerados.
+
+### Desvios do plano, com motivo
+
+**D-463 nao parametrizou o `ffmpeg_grade`.** A grade compoe o palco editorial do
+video LONGO e o short nao passa por ela — ele nasce de um recorte do bruto.
+Mexer no arquivo mais sensivel do render para alimentar um caminho que nao o usa
+contraria o criterio de aceite da propria demanda ("o horizontal nao pode
+regredir"). O vocabulario de formato virou `domain/formato_video.py`, e a grade
+segue 1920x1080 por decisao registrada. Detalhe no docstring do modulo.
+
+**D-461 entregou o ASR desligado.** A arquitetura esta completa (contrato
+`Palavra`, adaptador isolado, degradacao para a auto-legenda), mas
+`faster-whisper` e dependencia pesada com download de modelo. Instalar sem o dev
+por perto seria decidir por ele. Documentado no `requirements.txt`.
+
+**D-459 nao desenhou faixa de candidatos na timeline.** O `<video controls>`
+nativo nao aceita marcacao; a faixa exige um player customizado inteiro. Com 4 a
+5 candidatos num bruto de 10 minutos, o `MM:SS` + "tocar trecho" responde a mesma
+pergunta. Registrado como pendencia para decidir depois do uso.
+
+**D-468 e D-469 sairam num commit so.** Os dois destinos vivem no mesmo arquivo e
+diferem em poucas linhas cada; dividir exigiria fatiar hunks sem ganho de
+leitura. Motivo no corpo do commit, conforme a convencao permite.
+
+### O que NUNCA rodou junto
+
+FFmpeg, Remotion e composicao. Os testes da D-466 dublam o worker: eles provam a
+DECISAO (ordem dos passos, intervalo, 9:16, alpha, props), nao a execucao.
+Renderizar um short de verdade e o teste que valida a E-033 e a E-034 de uma vez.
+
+Da mesma forma, nenhum candidato foi gerado por IA de verdade: a qualidade do que
+a `shorts-expert` propoe so se conhece rodando um bruto de Fire real.
