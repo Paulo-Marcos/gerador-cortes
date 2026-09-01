@@ -64,6 +64,7 @@ class AtualizarShortRequest(BaseModel):
     status: str | None = None
     inicio_seg: float | None = None
     fim_seg: float | None = None
+    foco_x: float | None = None
 
 
 @router.patch("/{short_id}")
@@ -76,6 +77,7 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 status=body.status,
                 inicio_seg=body.inicio_seg,
                 fim_seg=body.fim_seg,
+                foco_x=body.foco_x,
             )
         }
     except LookupError as exc:

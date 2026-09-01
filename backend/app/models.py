@@ -344,6 +344,10 @@ class Short(Base):
     gancho: Mapped[str] = mapped_column(String(500), default="")
     score: Mapped[float] = mapped_column(Float, default=0.0)
     justificativa: Mapped[str] = mapped_column(Text, default="")
+    # D-464: onde o recorte 9:16 se centra na horizontal (0.0 a 1.0). NULL = deriva
+    # do layout do corte (a facecam), que e o default certo na maioria das lives;
+    # valor gravado = o operador discordou depois de ver o enquadramento.
+    foco_x: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
     cenas_remotion: Mapped[str] = mapped_column(Text, default="[]")
     desvios: Mapped[str] = mapped_column(Text, default="[]")
     status: Mapped[str] = mapped_column(String(50), default=StatusShort.SUGERIDO)

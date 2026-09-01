@@ -56,6 +56,10 @@ export interface ShortSugerido {
   score: number;
   justificativa: string;
   status: StatusShort;
+  /** Ajuste do operador (null = ainda seguindo o layout do corte). */
+  foco_x: number | null;
+  /** O enquadramento que o render vai usar de fato: ajuste ou layout. */
+  foco_efetivo: number;
   arquivo_short_path: string;
 }
 
@@ -66,6 +70,7 @@ export interface AtualizarShortBody {
   status?: StatusShort;
   inicio_seg?: number;
   fim_seg?: number;
+  foco_x?: number;
 }
 
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */

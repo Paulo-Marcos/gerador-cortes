@@ -24,6 +24,7 @@ from pathlib import Path
 
 from app.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain.formato_video import foco_de_regiao
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
@@ -183,6 +184,7 @@ async def atualizar_short(
     status: str | None = None,
     inicio_seg: float | None = None,
     fim_seg: float | None = None,
+    foco_x: float | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -212,6 +214,11 @@ async def atualizar_short(
             short.inicio_seg = round(novo_inicio, 2)
             short.fim_seg = round(novo_fim, 2)
 
+        if foco_x is not None:
+            if not 0.0 <= foco_x <= 1.0:
+                raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
+            short.foco_x = round(float(foco_x), 3)
+
         await db.commit()
         return _serializar(short)
 
@@ -232,8 +239,14 @@ _FOLGA_BORDA_SEG = 1.0
 
 
 async def listar_shorts(corte_id: str) -> list[dict]:
-    """Todos os shorts do corte, do melhor palpite ao pior."""
+    """Todos os shorts do corte, do melhor palpite ao pior.
+
+    Cada item leva tambem o `foco_efetivo` — o enquadramento que o render vai
+    usar de fato. Sem ele a tela nao teria de onde partir para ajustar: o
+    `foco_x` e NULL enquanto o operador nao discordou do layout.
+    """
     async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
         shorts = (
             await db.scalars(
                 select(Short)
@@ -241,7 +254,7 @@ async def listar_shorts(corte_id: str) -> list[dict]:
                 .order_by(Short.score.desc(), Short.numero.asc())
             )
         ).all()
-    return [_serializar(short) for short in shorts]
+        return [_serializar(short, corte) for short in shorts]
 
 
 async def listar_fires_com_bruto() -> list[dict]:
@@ -364,7 +377,34 @@ def _para_modelo(corte_id: str, numero: int, sugestao: SugestaoShort) -> Short:
     )
 
 
-def _serializar(short: Short) -> dict:
+def foco_efetivo(short: Short, corte: Corte | None) -> float:
+    """O `foco_x` que o recorte vai usar: o do operador, ou o derivado do layout.
+
+    O default nao e o meio do quadro: e a FACECAM. Num short vertical quem
+    carrega o video e a pessoa falando, e centralizar no meio deixa o rosto na
+    borda sempre que a facecam vive num canto — o normal numa live.
+    """
+    if short.foco_x is not None:
+        return float(short.foco_x)
+    return foco_de_regiao(_primeira_facecam(corte))
+
+
+def _primeira_facecam(corte: Corte | None) -> dict | None:
+    """O `crop_facecam` da primeira regiao do layout do corte, se houver."""
+    if corte is None:
+        return None
+    try:
+        layout = json.loads(corte.layout_youtube or "{}")
+    except json.JSONDecodeError:
+        return None
+    regioes = layout.get("regioes") if isinstance(layout, dict) else None
+    if not isinstance(regioes, list) or not regioes:
+        return None
+    primeira = regioes[0]
+    return primeira.get("crop_facecam") if isinstance(primeira, dict) else None
+
+
+def _serializar(short: Short, corte: Corte | None = None) -> dict:
     return {
         "id": short.id,
         "corte_id": short.corte_id,
@@ -377,6 +417,8 @@ def _serializar(short: Short) -> dict:
         "score": short.score,
         "justificativa": short.justificativa,
         "status": short.status,
+        "foco_x": short.foco_x,
+        "foco_efetivo": foco_efetivo(short, corte),
         "arquivo_short_path": short.arquivo_short_path,
     }
 

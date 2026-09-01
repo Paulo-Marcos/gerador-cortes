@@ -7,7 +7,17 @@
 // está a um botão de distância.
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Clapperboard, Play, Trash2, Undo2, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  Clapperboard,
+  Crop,
+  MoveHorizontal,
+  Play,
+  Trash2,
+  Undo2,
+  X,
+} from 'lucide-react';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
@@ -29,6 +39,9 @@ const CLASSE_STATUS: Record<StatusShort, string> = {
   renderizado: 'text-[var(--wb-accent)]',
 };
 
+/** Quanto cada clique move o enquadramento. 5% do quadro = ~96px em 1920. */
+const PASSO_FOCO = 0.05;
+
 function mmss(segundos: number): string {
   const total = Math.max(0, Math.round(segundos));
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
@@ -42,12 +55,21 @@ interface CandidatoProps {
   onTocar: () => void;
   onStatus: (status: StatusShort) => void;
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
+  onFoco: (delta: number) => void;
 }
 
 // O destaque segue o que está TOCANDO, não um clique de seleção à parte: um
 // clique que só pinta a borda não decide nada, e um `onClick` no card exigiria
 // foco e teclado para não deixar o teclado de fora.
-function Candidato({ short, emFoco, ocupado, onTocar, onStatus, onBorda }: CandidatoProps) {
+function Candidato({
+  short,
+  emFoco,
+  ocupado,
+  onTocar,
+  onStatus,
+  onBorda,
+  onFoco,
+}: CandidatoProps) {
   const rejeitado = short.status === 'rejeitado';
 
   return (
@@ -93,6 +115,12 @@ function Candidato({ short, emFoco, ocupado, onTocar, onStatus, onBorda }: Candi
         <span className="font-semibold text-[var(--wb-text-dim)]">
           {Math.round(short.duracao_seg)}s
         </span>
+        {/* D-464: o enquadramento 9:16. Sem ajuste, segue a facecam do layout. */}
+        <span className="inline-flex items-center gap-1" title="Enquadramento horizontal do 9:16">
+          <Crop size={11} aria-hidden />
+          {Math.round(short.foco_efetivo * 100)}%
+          {short.foco_x !== null && <span className="text-[var(--wb-accent)]">·ajustado</span>}
+        </span>
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -104,6 +132,16 @@ function Candidato({ short, emFoco, ocupado, onTocar, onStatus, onBorda }: Candi
         </BotaoAcao>
         <BotaoAcao onClick={() => onBorda('fim_seg')} disabled={ocupado}>
           fim aqui
+        </BotaoAcao>
+        <BotaoAcao
+          onClick={() => onFoco(-PASSO_FOCO)}
+          disabled={ocupado}
+          icon={<MoveHorizontal size={12} />}
+        >
+          ←
+        </BotaoAcao>
+        <BotaoAcao onClick={() => onFoco(PASSO_FOCO)} disabled={ocupado}>
+          →
         </BotaoAcao>
         <div className="flex-1" />
         {short.status !== 'aprovado' && (
@@ -175,6 +213,17 @@ export default function FireDetalhePage() {
   // O tempo corrente do player é a fonte da borda nova: o operador acabou de
   // ver onde o trecho deveria começar ou terminar, então pedir que ele digite
   // um número seria fazê-lo traduzir o que já sabe.
+  // O enquadramento se ajusta a partir do EFETIVO, nao do zero: o operador
+  // empurra o que esta vendo, e o primeiro clique num short sem ajuste parte da
+  // facecam do layout em vez de pular para o meio do quadro.
+  const moverFoco = useCallback(
+    (short: ShortSugerido, delta: number) => {
+      const alvo = Math.min(1, Math.max(0, short.foco_efetivo + delta));
+      atualizar.mutate({ shortId: short.id, foco_x: Number(alvo.toFixed(3)) });
+    },
+    [atualizar],
+  );
+
   const moverBorda = useCallback(
     (short: ShortSugerido, campo: 'inicio_seg' | 'fim_seg') => {
       const el = video.current;
@@ -279,6 +328,7 @@ export default function FireDetalhePage() {
               }}
               onStatus={(status) => atualizar.mutate({ shortId: short.id, status })}
               onBorda={(campo) => moverBorda(short, campo)}
+              onFoco={(delta) => moverFoco(short, delta)}
             />
           ))}
 
