@@ -31,7 +31,15 @@ export function FabricaShortsSection({ corteId, ocupado = false }: Props) {
   const elegibilidade = useElegibilidadeShorts(corteId);
   const gerar = useGerarShortsManualmente(corteId);
 
-  const plano = planoDaFabrica(elegibilidade.data);
+  const plano = planoDaFabrica(elegibilidade.data, { falhou: elegibilidade.isError });
+
+  if (plano.indisponivel) {
+    return (
+      <p className="mt-1.5 border-t border-[var(--wb-border-soft)] px-1 pt-1.5 text-[11px] leading-tight text-[var(--wb-text-dim)]">
+        {plano.indisponivel}
+      </p>
+    );
+  }
   if (!plano.oferecer) return null;
 
   return (

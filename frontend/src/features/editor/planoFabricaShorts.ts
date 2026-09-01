@@ -10,17 +10,36 @@ import type { ElegibilidadeShorts } from '@/features/shorts/shortsApi';
 //   2. sem bruto em disco, o rótulo AVISA que haverá regeração antes. O clique
 //      dispara um render de vários minutos — quem clica precisa saber disso;
 //   3. candidatos já existentes viram aviso, porque regerar substitui os
-//      sugeridos (os aprovados e rejeitados sobrevivem, D-454).
+//      sugeridos (os aprovados e rejeitados sobrevivem, D-454);
+//   4. **falha NÃO é o mesmo que "não é Fire"** (D-473). Some sem explicação e
+//      o operador não tem como distinguir "este corte não é Fire" de "o backend
+//      não tem essa funcionalidade" — foi exatamente o que aconteceu com um
+//      backend rodando código anterior ao endpoint. Falha aparece, e diz o que
+//      fazer.
 
 export interface PlanoFabrica {
   oferecer: boolean;
   rotulo: string;
   avisos: string[];
+  /** Mensagem de diagnóstico; quando presente, a seção mostra só ela. */
+  indisponivel?: string;
 }
 
 const PLANO_OCULTO: PlanoFabrica = { oferecer: false, rotulo: '', avisos: [] };
 
-export function planoDaFabrica(estado: ElegibilidadeShorts | undefined): PlanoFabrica {
+export function planoDaFabrica(
+  estado: ElegibilidadeShorts | undefined,
+  { falhou = false }: { falhou?: boolean } = {},
+): PlanoFabrica {
+  if (falhou) {
+    return {
+      oferecer: false,
+      rotulo: '',
+      avisos: [],
+      indisponivel:
+        'Nao consegui checar a fabrica de shorts. Se o backend acabou de ser atualizado, reinicie-o.',
+    };
+  }
   if (!estado?.is_fire) return PLANO_OCULTO;
 
   const avisos: string[] = [];

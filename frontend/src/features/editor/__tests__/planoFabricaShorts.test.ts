@@ -41,3 +41,24 @@ describe('planoDaFabrica', () => {
     expect(plano.avisos).toHaveLength(2);
   });
 });
+
+describe('planoDaFabrica quando a checagem falha', () => {
+  it('NAO se esconde: falha e "nao e Fire" sao coisas diferentes', () => {
+    const plano = planoDaFabrica(undefined, { falhou: true });
+
+    expect(plano.oferecer).toBe(false);
+    expect(plano.indisponivel).toBeTruthy();
+  });
+
+  it('a mensagem diz o que fazer, nao so que deu errado', () => {
+    const plano = planoDaFabrica(undefined, { falhou: true });
+
+    expect(plano.indisponivel).toContain('reinicie');
+  });
+
+  it('sucesso nao carrega mensagem de indisponivel', () => {
+    const plano = planoDaFabrica({ is_fire: true, tem_bruto: true, total_shorts: 0 });
+
+    expect(plano.indisponivel).toBeUndefined();
+  });
+});
