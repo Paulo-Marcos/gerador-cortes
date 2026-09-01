@@ -186,6 +186,20 @@ class MediaRetentionService:
         return report
 
     @classmethod
+    def descartar_bruto(cls, corte: Corte) -> RetentionReport:
+        """Remove o `clip_raw*` de UM corte, a pedido explicito do operador (D-460).
+
+        E o outro lado da retencao do D-456: o bruto do Fire fica guardado por
+        padrao, e este e o caminho para devolver o disco quando o trabalho de
+        shorts daquele corte acabou. Descarte pontual, sem varrer o projeto.
+        """
+        report = RetentionReport()
+        for caminho in sorted(cls.corte_dir(corte).glob("clip_raw*")):
+            if caminho.is_file():
+                cls._remover_arquivo(caminho, report)
+        return report
+
+    @classmethod
     def previa_brutos_fire(cls, cortes: list[Corte]) -> tuple[int, int]:
         """Quantos brutos de Fire existem em disco e quantos bytes ocupam (D-457).
 

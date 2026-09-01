@@ -28,3 +28,13 @@ export function useAtualizarShort(corteId: string) {
     },
   });
 }
+
+// D-460: descartar o bruto encerra a fabrica de shorts daquele corte, entao o
+// Fire some da lista — invalidar FIRES_KEY e o que faz a tela contar a verdade.
+export function useDescartarBruto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (corteId: string) => shortsApi.descartarBruto(corteId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: FIRES_KEY }),
+  });
+}

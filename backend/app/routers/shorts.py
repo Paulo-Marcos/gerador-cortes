@@ -5,6 +5,7 @@ Endpoints:
   GET  /corte/{corte_id}          — os shorts do corte, do melhor palpite ao pior
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
+  DELETE /corte/{corte_id}/bruto  — libera o disco e encerra a fábrica do corte
 
 O disparo padrão é o fim da geração do bruto de um corte marcado com Fire. O POST
 existe para o caso que o automático não cobre: o corte virou Fire **depois** de o
@@ -33,6 +34,15 @@ async def listar_fires():
 @router.get("/corte/{corte_id}")
 async def listar(corte_id: str):
     return {"shorts": await shorts_store.listar_shorts(corte_id)}
+
+
+@router.delete("/corte/{corte_id}/bruto")
+async def descartar_bruto(corte_id: str):
+    """Descarta o bruto guardado — o corte deixa de poder gerar shorts."""
+    try:
+        return await shorts_store.descartar_bruto(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/corte/{corte_id}/sugerir")

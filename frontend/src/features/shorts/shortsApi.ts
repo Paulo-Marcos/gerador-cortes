@@ -85,6 +85,12 @@ export const shortsApi = {
       body: JSON.stringify(body),
     }),
 
+  descartarBruto: (corteId: string) =>
+    request<{ liberado_mb: number; removidos: string[]; erros: string[] }>(
+      `/shorts/corte/${corteId}/bruto`,
+      { method: 'DELETE' },
+    ),
+
   sugerirAgora: (corteId: string) =>
     request<{ shorts: ShortSugerido[]; descartes: string[] }>(
       `/shorts/corte/${corteId}/sugerir`,

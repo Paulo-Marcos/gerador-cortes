@@ -6,13 +6,14 @@
 // duração) fica visível sem clique, e a ação principal — assistir ao trecho —
 // está a um botão de distância.
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Clapperboard, Play, Undo2, X } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Check, Clapperboard, Play, Trash2, Undo2, X } from 'lucide-react';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
+import { avisoDescarteBruto } from './descarteBruto';
 import { useFires } from './useFires';
-import { useAtualizarShort, useShortsDoCorte } from './useShortsDoCorte';
+import { useAtualizarShort, useDescartarBruto, useShortsDoCorte } from './useShortsDoCorte';
 
 const ROTULO_STATUS: Record<StatusShort, string> = {
   sugerido: 'sugerido',
@@ -152,12 +153,14 @@ function BotaoAcao({
 export default function FireDetalhePage() {
   const workbench = isWorkbenchEnabled();
   const { corteId = '' } = useParams();
+  const navigate = useNavigate();
   const video = useRef<HTMLVideoElement>(null);
   const [tocando, setTocando] = useState<string | null>(null);
 
   const { data, isLoading, isError, error } = useShortsDoCorte(corteId);
   const fires = useFires();
   const atualizar = useAtualizarShort(corteId);
+  const descartar = useDescartarBruto();
 
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
   const fire = fires.data?.fires.find((f) => f.corte_id === corteId);
@@ -180,6 +183,14 @@ export default function FireDetalhePage() {
     },
     [atualizar],
   );
+
+  // Descartar tira o Fire da lista, entao a tela em que estamos deixa de fazer
+  // sentido — voltar para /shorts e a continuacao honesta da acao.
+  const onDescartar = () => {
+    if (!fire) return;
+    if (!confirm(avisoDescarteBruto(fire.titulo || `Corte ${fire.numero}`, fire.bruto_mb))) return;
+    descartar.mutate(corteId, { onSuccess: () => navigate('/shorts') });
+  };
 
   return (
     <div
@@ -211,6 +222,16 @@ export default function FireDetalhePage() {
             <span className="truncate text-xs text-[var(--wb-text-mute)]">
               {fire.projeto_titulo} · bruto de {formatarDuracao(fire.duracao_seg)}
             </span>
+          )}
+          <div className="flex-1" />
+          {fire && (
+            <BotaoAcao
+              onClick={onDescartar}
+              disabled={descartar.isPending}
+              icon={<Trash2 size={12} />}
+            >
+              descartar bruto ({fire.bruto_mb} MB)
+            </BotaoAcao>
           )}
         </div>
       </header>

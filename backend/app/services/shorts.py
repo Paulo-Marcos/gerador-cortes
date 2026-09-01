@@ -138,6 +138,38 @@ async def registrar_sugestoes(
     return serializados
 
 
+async def descartar_bruto(corte_id: str) -> dict:
+    """Libera o disco do bruto de um Fire, encerrando a fabrica daquele corte (D-460).
+
+    Sem o bruto nao ha de onde recortar: os candidatos ja aprovados continuam
+    registrados, mas nenhum short novo sai dali e os existentes nao podem mais
+    ser renderizados. Por isso a tela avisa antes — aqui a decisao ja foi tomada.
+
+    Levanta `LookupError` quando o corte nao existe.
+    """
+    from app.services.media_retention import MediaRetentionService
+
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+
+        report = MediaRetentionService.descartar_bruto(corte)
+        # O ponteiro so cai se o arquivo caiu: com o bruto travado pelo player o
+        # descarte falha, e mentir no banco esconderia o disco ainda ocupado.
+        if not report.erros:
+            corte.arquivo_clip_path = ""
+        await db.commit()
+
+    logger.info(
+        "[Shorts] corte=%s bruto descartado: %s MB liberados, %d erro(s)",
+        corte_id[:8],
+        report.liberado_mb,
+        len(report.erros),
+    )
+    return {"liberado_mb": report.liberado_mb, "removidos": report.removidos, "erros": report.erros}
+
+
 # Estagios que a curadoria humana pode atribuir. RENDERIZADO fica de fora de
 # proposito: quem carimba isso e o render, quando o MP4 existe em disco (D-459).
 _STATUS_DA_CURADORIA = frozenset(
