@@ -267,6 +267,7 @@ export default function FireDetalhePage() {
   const descartar = useDescartarBruto();
   const renderizar = useRenderizarShort(corteId);
   const transcricao = useTranscricaoDoCorte(corteId);
+  const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
   // A mascara segue o candidato que esta tocando; sem nenhum, mostra o de maior
@@ -373,7 +374,12 @@ export default function FireDetalhePage() {
             </span>
           )}
           <div className="flex-1" />
-          {transcricao.data && (
+          {/* D-480: sem palavras nao ha o que prever, e o botao precisa DIZER
+              isso. Levantamento em PROD: 92 dos 104 cortes Fire sao anteriores
+              a D-337 e nao tem timing por palavra. Oferecer um "legenda on" que
+              nao desenha nada faria o operador achar que a tela quebrou — a
+              mesma falha silenciosa que a D-473 corrigiu na fabrica. */}
+          {transcricao.data && temPalavras && (
             <BotaoAcao
               onClick={() => setLegendaVisivel((v) => !v)}
               icon={<Captions size={12} />}
@@ -381,6 +387,19 @@ export default function FireDetalhePage() {
               legenda {legendaVisivel ? 'on' : 'off'} ·{' '}
               {ROTULO_FONTE[transcricao.data.fonte] ?? transcricao.data.fonte}
             </BotaoAcao>
+          )}
+          {transcricao.data && !temPalavras && (
+            <span
+              className="font-code text-[11px] text-[var(--wb-text-mute)]"
+              title="A transcricao deste corte nao tem tempo por palavra (anterior a D-337). A previa volta quando o ASR local gerar a transcricao fiel."
+            >
+              sem legenda · transcricao sem palavras
+            </span>
+          )}
+          {transcricao.isError && (
+            <span className="font-code text-[11px] text-[var(--wb-warn-ink)]">
+              legenda indisponivel
+            </span>
           )}
           <span
             className="font-code text-[11.5px] tabular-nums text-[var(--wb-text-mute)]"
@@ -430,7 +449,7 @@ export default function FireDetalhePage() {
                 altura={dimensoes.altura}
                 focoX={emQuadro.foco_efetivo}
               >
-                {legendaVisivel && transcricao.data && (
+                {legendaVisivel && temPalavras && transcricao.data && (
                   <LegendaPrevia
                     palavras={transcricao.data.palavras}
                     inicioSeg={emQuadro.inicio_seg}
