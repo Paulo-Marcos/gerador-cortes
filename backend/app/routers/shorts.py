@@ -5,6 +5,7 @@ Endpoints:
   GET  /corte/{corte_id}          — os shorts do corte, do melhor palpite ao pior
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
+  POST /{short_id}/renderizar     — produz o MP4 vertical do candidato
   DELETE /corte/{corte_id}/bruto  — libera o disco e encerra a fábrica do corte
 
 O disparo padrão é o fim da geração do bruto de um corte marcado com Fire. O POST
@@ -80,6 +81,19 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 foco_x=body.foco_x,
             )
         }
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/{short_id}/renderizar")
+async def renderizar(short_id: str):
+    """Produz o MP4 vertical do short (recorte 9:16 + legenda + cenas)."""
+    from app.services import render_short
+
+    try:
+        return await render_short.renderizar_short(short_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

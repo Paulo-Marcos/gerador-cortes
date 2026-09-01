@@ -14,6 +14,7 @@ import {
   Crop,
   MoveHorizontal,
   Play,
+  Clapperboard as Render,
   Trash2,
   Undo2,
   X,
@@ -23,7 +24,12 @@ import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
 import { useFires } from './useFires';
-import { useAtualizarShort, useDescartarBruto, useShortsDoCorte } from './useShortsDoCorte';
+import {
+  useAtualizarShort,
+  useDescartarBruto,
+  useRenderizarShort,
+  useShortsDoCorte,
+} from './useShortsDoCorte';
 
 const ROTULO_STATUS: Record<StatusShort, string> = {
   sugerido: 'sugerido',
@@ -56,6 +62,7 @@ interface CandidatoProps {
   onStatus: (status: StatusShort) => void;
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
   onFoco: (delta: number) => void;
+  onRenderizar: () => void;
 }
 
 // O destaque segue o que está TOCANDO, não um clique de seleção à parte: um
@@ -69,6 +76,7 @@ function Candidato({
   onStatus,
   onBorda,
   onFoco,
+  onRenderizar,
 }: CandidatoProps) {
   const rejeitado = short.status === 'rejeitado';
 
@@ -159,6 +167,11 @@ function Candidato({
             voltar
           </BotaoAcao>
         )}
+        {short.status === 'aprovado' && (
+          <BotaoAcao onClick={onRenderizar} disabled={ocupado} icon={<Render size={12} />}>
+            renderizar
+          </BotaoAcao>
+        )}
       </div>
     </article>
   );
@@ -199,6 +212,7 @@ export default function FireDetalhePage() {
   const fires = useFires();
   const atualizar = useAtualizarShort(corteId);
   const descartar = useDescartarBruto();
+  const renderizar = useRenderizarShort(corteId);
 
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
   const fire = fires.data?.fires.find((f) => f.corte_id === corteId);
@@ -321,7 +335,7 @@ export default function FireDetalhePage() {
               key={short.id}
               short={short}
               emFoco={tocando === short.id}
-              ocupado={atualizar.isPending}
+              ocupado={atualizar.isPending || renderizar.isPending}
               onTocar={() => {
                 setTocando(short.id);
                 tocarTrecho(short);
@@ -329,6 +343,7 @@ export default function FireDetalhePage() {
               onStatus={(status) => atualizar.mutate({ shortId: short.id, status })}
               onBorda={(campo) => moverBorda(short, campo)}
               onFoco={(delta) => moverFoco(short, delta)}
+              onRenderizar={() => renderizar.mutate(short.id)}
             />
           ))}
 

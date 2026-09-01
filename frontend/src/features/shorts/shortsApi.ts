@@ -96,6 +96,12 @@ export const shortsApi = {
       { method: 'DELETE' },
     ),
 
+  renderizar: (shortId: string) =>
+    request<{ arquivo_short_path: string; fonte_legenda: string; palavras: number }>(
+      `/shorts/${shortId}/renderizar`,
+      { method: 'POST' },
+    ),
+
   sugerirAgora: (corteId: string) =>
     request<{ shorts: ShortSugerido[]; descartes: string[] }>(
       `/shorts/corte/${corteId}/sugerir`,

@@ -12,6 +12,10 @@ import {
   previewCenasV2Schema,
   previewCenasV2Count,
 } from "./PreviewCenasV2";
+import {
+  CamadaShortComposition,
+  camadaShortSchema,
+} from "./cenas-shorts/CamadaShortComposition";
 import { overlaySchema, overlayTimelineSchema } from "./overlay-schema";
 import { youtubeSchema, reacaoSchema } from "./schema";
 import { getVideoMetadata } from "@remotion/media-utils";
@@ -206,6 +210,23 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ segundosPorCena: 4 }}
         width={1920}
         height={1080}
+      />
+
+      {/* ─── Camada do short (1080×1920, fundo transparente) ─── */}
+      {/* D-466: só cenas + legenda. O vídeo entra depois, no FFmpeg — a grade
+          precisa rodar ANTES do texto, senão o filtro mexe na cor da legenda. */}
+      <Composition
+        id="CamadaShort"
+        component={CamadaShortComposition}
+        schema={camadaShortSchema}
+        calculateMetadata={async ({ props }) => ({
+          durationInFrames: Math.max(1, Math.round((props.duracaoSeg ?? 30) * 30)),
+          fps: 30,
+          props,
+        })}
+        defaultProps={{ cenas: [], captions: [], duracaoSeg: 30 }}
+        width={1080}
+        height={1920}
       />
     </>
   );

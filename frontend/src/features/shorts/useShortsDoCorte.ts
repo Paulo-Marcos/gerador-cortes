@@ -38,3 +38,16 @@ export function useDescartarBruto() {
     onSuccess: () => qc.invalidateQueries({ queryKey: FIRES_KEY }),
   });
 }
+
+// D-466: o render e sincrono e demora (ffmpeg + Remotion + composicao). A tela
+// segura o botao pelo isPending em vez de fingir que terminou.
+export function useRenderizarShort(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (shortId: string) => shortsApi.renderizar(shortId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+      void qc.invalidateQueries({ queryKey: FIRES_KEY });
+    },
+  });
+}
