@@ -5,7 +5,7 @@
 // tudo que o operador precisa para decidir (gancho, nota, justificativa,
 // duração) fica visível sem clique, e a ação principal — assistir ao trecho —
 // está a um botão de distância.
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -20,9 +20,17 @@ import {
   X,
 } from 'lucide-react';
 import { cn, formatarDuracao } from '@/lib/utils';
+import { useShortcuts } from '@/features/editor/shortcuts';
+import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
+import {
+  normalizarVelocidade,
+  useVelocidadeNoVideo,
+  useVelocidadePlayerPadrao,
+} from '@/hooks/useVelocidadePlayerPadrao';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
+import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PainelPublicacao } from './PainelPublicacao';
 import { useFires } from './useFires';
 import {
@@ -125,9 +133,9 @@ function Candidato({
           {Math.round(short.duracao_seg)}s
         </span>
         {/* D-464: o enquadramento 9:16. Sem ajuste, segue a facecam do layout. */}
-        <span className="inline-flex items-center gap-1" title="Enquadramento horizontal do 9:16">
+        <span className="inline-flex items-center gap-1" title="Onde a janela 9:16 se centra na horizontal">
           <Crop size={11} aria-hidden />
-          {Math.round(short.foco_efetivo * 100)}%
+          enquadramento {Math.round(short.foco_efetivo * 100)}%
           {short.foco_x !== null && <span className="text-[var(--wb-accent)]">·ajustado</span>}
         </span>
       </div>
@@ -211,6 +219,15 @@ export default function FireDetalhePage() {
   const navigate = useNavigate();
   const video = useRef<HTMLVideoElement>(null);
   const [tocando, setTocando] = useState<string | null>(null);
+  // Dimensoes REAIS do arquivo: a janela 9:16 e proporcional ao quadro, e o
+  // bruto nem sempre e exatamente 16:9.
+  const [dimensoes, setDimensoes] = useState({ largura: 0, altura: 0 });
+  // D-476: abre na velocidade de Ajustes, como os outros players (D-450), e
+  // deixa o operador mexer dali com Ctrl+J/Ctrl+K.
+  const velocidadePadrao = useVelocidadePlayerPadrao();
+  const [velocidade, setVelocidade] = useState(velocidadePadrao);
+  useVelocidadeNoVideo(video, velocidade, corteId);
+  useEffect(() => setVelocidade(velocidadePadrao), [velocidadePadrao, corteId]);
 
   const { data, isLoading, isError, error } = useShortsDoCorte(corteId);
   const fires = useFires();
@@ -219,6 +236,9 @@ export default function FireDetalhePage() {
   const renderizar = useRenderizarShort(corteId);
 
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
+  // A mascara segue o candidato que esta tocando; sem nenhum, mostra o de maior
+  // nota — assim a tela ja abre dizendo o que o melhor candidato vai cortar.
+  const emQuadro = shorts.find((s) => s.id === tocando) ?? shorts[0];
   const fire = fires.data?.fires.find((f) => f.corte_id === corteId);
 
   const tocarTrecho = useCallback((short: ShortSugerido) => {
@@ -259,6 +279,29 @@ export default function FireDetalhePage() {
     descartar.mutate(corteId, { onSuccess: () => navigate('/shorts') });
   };
 
+  // Espelham as teclas do Bruto: quem cura shorts acabou de sair do editor.
+  const ajustarVelocidade = useCallback((passo: number) => {
+    setVelocidade((atual) => normalizarVelocidade(atual + passo));
+  }, []);
+
+  const mover = useCallback((segundos: number) => {
+    const el = video.current;
+    if (el) el.currentTime = Math.max(0, el.currentTime + segundos);
+  }, []);
+
+  useShortcuts([
+    shortcutFromRegistry('player.togglePlay', () => {
+      const el = video.current;
+      if (!el) return;
+      if (el.paused) void el.play();
+      else el.pause();
+    }),
+    shortcutFromRegistry('shorts.seekBack5s', () => mover(-5)),
+    shortcutFromRegistry('shorts.seekFwd5s', () => mover(5)),
+    shortcutFromRegistry('shorts.speedDown', () => ajustarVelocidade(-0.25)),
+    shortcutFromRegistry('shorts.speedUp', () => ajustarVelocidade(0.25)),
+  ]);
+
   return (
     <div
       className={cn(
@@ -291,6 +334,12 @@ export default function FireDetalhePage() {
             </span>
           )}
           <div className="flex-1" />
+          <span
+            className="font-code text-[11.5px] tabular-nums text-[var(--wb-text-mute)]"
+            title="Velocidade do player (Ctrl+J / Ctrl+K)"
+          >
+            {velocidade.toFixed(2)}×
+          </span>
           {fire && (
             <BotaoAcao
               onClick={onDescartar}
@@ -304,13 +353,35 @@ export default function FireDetalhePage() {
       </header>
 
       <main className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-h-0">
-          <video
-            ref={video}
-            src={brutoUrl(corteId)}
-            controls
-            className="max-h-full w-full rounded-[10px] bg-black"
-          />
+        {/* D-475: o wrapper tem a MESMA proporcao do arquivo e o video o
+            preenche por inteiro. Sem isso a mascara se ancorava na celula da
+            grade — que e mais alta que o video — e as faixas escuras vazavam
+            para baixo do player. */}
+        <div className="flex min-h-0 justify-center">
+          <div
+            className="relative max-h-full w-full overflow-hidden rounded-[10px] bg-black"
+            style={{ aspectRatio: `${dimensoes.largura || 16} / ${dimensoes.altura || 9}` }}
+          >
+            <video
+              ref={video}
+              src={brutoUrl(corteId)}
+              controls
+              onLoadedMetadata={(e) =>
+                setDimensoes({
+                  largura: e.currentTarget.videoWidth,
+                  altura: e.currentTarget.videoHeight,
+                })
+              }
+              className="absolute inset-0 h-full w-full"
+            />
+            {emQuadro && (
+              <MascaraEnquadramento
+                largura={dimensoes.largura}
+                altura={dimensoes.altura}
+                focoX={emQuadro.foco_efetivo}
+              />
+            )}
+          </div>
         </div>
 
         <aside className="flex min-h-0 flex-col gap-2 overflow-auto">

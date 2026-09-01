@@ -25,6 +25,7 @@ const TELAS: Array<{ id: ShortcutScreen | 'todas'; rotulo: string }> = [
   { id: 'todas', rotulo: 'Todas' },
   { id: 'global', rotulo: 'Global / Shell' },
   { id: 'bruto', rotulo: 'Editor Bruto' },
+  { id: 'shorts', rotulo: 'Shorts' },
   { id: 'pos', rotulo: 'Pós-produção' },
   { id: 'pos-timeline', rotulo: 'Timeline da Pós' },
 ];
@@ -32,6 +33,7 @@ const TELAS: Array<{ id: ShortcutScreen | 'todas'; rotulo: string }> = [
 const TELA_LABEL: Record<ShortcutScreen, string> = {
   global: 'Global',
   bruto: 'Bruto',
+  shorts: 'Shorts',
   pos: 'Pós',
   'pos-timeline': 'Timeline · Pós',
   'pos-layout': 'Layout YT',

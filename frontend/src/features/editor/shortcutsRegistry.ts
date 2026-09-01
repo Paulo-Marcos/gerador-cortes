@@ -25,9 +25,15 @@ export type ShortcutScreen =
   | 'pos' // tela de pos (ScenesPostProductionPage + EditorFase2)
   | 'pos-timeline' // atalhos especificos da Timeline da Pos
   | 'pos-layout' // atalhos do YoutubeLayoutPanel
-  | 'pos-cenas'; // atalhos do CenasPanel
+  | 'pos-cenas' // atalhos do CenasPanel
+  | 'shorts'; // curadoria dos candidatos a short (D-476)
 
 export type ShortcutId =
+  // Curadoria de shorts (D-476)
+  | 'shorts.seekBack5s'
+  | 'shorts.seekFwd5s'
+  | 'shorts.speedDown'
+  | 'shorts.speedUp'
   // Global / Player
   | 'player.togglePlay'
   | 'player.seekBackward3s'
@@ -306,6 +312,40 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
   {
     id: 'bruto.speedUp',
     screen: 'bruto',
+    key: 'k',
+    mod: 'ctrl',
+    description: 'Velocidade +0.25x',
+    group: 'player',
+  },
+  // D-476: espelham as teclas do Bruto de proposito. Quem cura shorts acabou de
+  // sair do editor; trocar a tecla ali seria pedir para reaprender o que ja
+  // esta na memoria muscular. O play/pause NAO entra aqui: espaco ja e
+  // `player.togglePlay` no escopo global, e repeti-lo seria conflito real.
+  {
+    id: 'shorts.seekBack5s',
+    screen: 'shorts',
+    key: 'ArrowLeft',
+    description: 'Retroceder 5 segundos',
+    group: 'player',
+  },
+  {
+    id: 'shorts.seekFwd5s',
+    screen: 'shorts',
+    key: 'ArrowRight',
+    description: 'Avançar 5 segundos',
+    group: 'player',
+  },
+  {
+    id: 'shorts.speedDown',
+    screen: 'shorts',
+    key: 'j',
+    mod: 'ctrl',
+    description: 'Velocidade -0.25x',
+    group: 'player',
+  },
+  {
+    id: 'shorts.speedUp',
+    screen: 'shorts',
     key: 'k',
     mod: 'ctrl',
     description: 'Velocidade +0.25x',
@@ -644,12 +684,13 @@ export function assertNoShortcutConflicts(
 ): void {
   // Grupos que co-existem na mesma tela.
   const COEXIST: Record<ShortcutScreen, ShortcutScreen[]> = {
-    global: ['global', 'bruto', 'pos', 'pos-timeline', 'pos-layout', 'pos-cenas'],
+    global: ['global', 'bruto', 'pos', 'pos-timeline', 'pos-layout', 'pos-cenas', 'shorts'],
     bruto: ['bruto', 'global'],
     pos: ['pos', 'global', 'pos-timeline', 'pos-layout', 'pos-cenas'],
     'pos-timeline': ['pos-timeline', 'pos', 'global'],
     'pos-layout': ['pos-layout', 'pos', 'global'],
     'pos-cenas': ['pos-cenas', 'pos', 'global'],
+    shorts: ['shorts', 'global'],
   };
   const conflitos: string[] = [];
   for (let i = 0; i < registry.length; i += 1) {
