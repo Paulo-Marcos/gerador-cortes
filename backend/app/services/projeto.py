@@ -25,7 +25,30 @@ class ProjetoService:
         return True
 
     @staticmethod
-    async def limpar_arquivos_projeto(projeto_id: str, db: AsyncSession) -> dict | None:
+    async def previa_limpeza(projeto_id: str, db: AsyncSession) -> dict | None:
+        """O que a limpeza preservaria por padrao (D-457).
+
+        A tela precisa saber ANTES de perguntar: quantos brutos de corte Fire
+        existem e quanto disco eles seguram. Sem o numero, a pergunta "quer
+        limpar tambem?" pede uma decisao no escuro.
+        """
+        projeto = await db.get(Projeto, projeto_id)
+        if not projeto:
+            return None
+
+        result = await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))
+        arquivos, bytes_retidos = MediaRetentionService.previa_brutos_fire(
+            list(result.scalars().all())
+        )
+        return {
+            "brutos_fire": arquivos,
+            "retido_mb": round(bytes_retidos / 1_000_000, 1),
+        }
+
+    @staticmethod
+    async def limpar_arquivos_projeto(
+        projeto_id: str, db: AsyncSession, *, limpar_brutos_fire: bool = False
+    ) -> dict | None:
         projeto = await db.get(Projeto, projeto_id)
         if not projeto:
             return None
@@ -40,7 +63,9 @@ class ProjetoService:
 
         result = await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))
         cortes = list(result.scalars().all())
-        report = MediaRetentionService.limpar_projeto(projeto, cortes)
+        report = MediaRetentionService.limpar_projeto(
+            projeto, cortes, preservar_brutos_fire=not limpar_brutos_fire
+        )
 
         projeto.arquivos_limpos = not report.pulados and not report.erros
         await db.commit()

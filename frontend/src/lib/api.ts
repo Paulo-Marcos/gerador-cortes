@@ -21,6 +21,7 @@ import type {
   FontePreset,
   ImportarAnaliseRequest,
   LimparArquivosResponse,
+  PreviaLimpezaResponse,
   LogLevel,
   MetadadoCorte,
   RenderSettings,
@@ -164,10 +165,15 @@ export const api = {
   removerProjeto: (id: string) =>
     request<{ message: string }>(`/projetos/${id}`, { method: 'DELETE' }),
 
-  limparArquivosProjeto: (id: string) =>
+  previaLimpezaProjeto: (id: string) =>
+    request<PreviaLimpezaResponse>(`/projetos/${id}/limpeza/previa`),
+
+  // D-457: `limparBrutosFire` e opt-in. O bruto do corte Fire e a materia-prima
+  // dos shorts, entao o default do backend (false) preserva.
+  limparArquivosProjeto: (id: string, limparBrutosFire = false) =>
     request<LimparArquivosResponse>(`/projetos/${id}/limpar-arquivos`, {
       method: 'POST',
-      body: '{}',
+      body: JSON.stringify({ limpar_brutos_fire: limparBrutosFire }),
     }),
 
   reiniciarDownload: (id: string) =>

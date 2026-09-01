@@ -186,6 +186,17 @@ class MediaRetentionService:
         return report
 
     @classmethod
+    def previa_brutos_fire(cls, cortes: list[Corte]) -> tuple[int, int]:
+        """Quantos brutos de Fire existem em disco e quantos bytes ocupam (D-457).
+
+        Le sem remover nada: e o que a tela precisa saber ANTES de perguntar se o
+        operador quer o espaco de volta. Perguntar sem o numero seria pedir uma
+        decisao no escuro.
+        """
+        protegidos = cls._brutos_de_fire(cortes)
+        return len(protegidos), sum(caminho.stat().st_size for caminho in protegidos)
+
+    @classmethod
     def _brutos_de_fire(cls, cortes: list[Corte]) -> set[Path]:
         """Os `clip_raw*` dos cortes marcados com Fire, resolvidos em disco."""
         protegidos: set[Path] = set()

@@ -44,9 +44,17 @@ export function useRemoverProjeto() {
 export function useLimparArquivos() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.limparArquivosProjeto(id),
+    // D-457: o bruto do corte Fire so sai quando o operador pede — a decisao
+    // viaja junto com o id em vez de virar um segundo endpoint.
+    mutationFn: ({ id, limparBrutosFire = false }: LimparArquivosArgs) =>
+      api.limparArquivosProjeto(id, limparBrutosFire),
     onSuccess: () => qc.invalidateQueries({ queryKey: PROJETOS_KEY }),
   });
+}
+
+export interface LimparArquivosArgs {
+  id: string;
+  limparBrutosFire?: boolean;
 }
 
 export function useReiniciarFalhados() {

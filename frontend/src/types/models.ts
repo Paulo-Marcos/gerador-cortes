@@ -578,10 +578,18 @@ export interface ReiniciarFalhadosResponse {
 export interface LimparArquivosResponse {
   message: string;
   liberado_mb: number;
+  /** D-456: disco que ficou para tras de proposito (brutos de cortes Fire). */
+  retido_mb?: number;
   removidos: string[];
   preservados?: string[];
   pulados?: string[];
   erros?: string[];
+}
+
+/** D-457: o que a limpeza preservaria por padrao, lido ANTES de perguntar. */
+export interface PreviaLimpezaResponse {
+  brutos_fire: number;
+  retido_mb: number;
 }
 
 export type LogLevel = 'disabled' | 'info' | 'debug';

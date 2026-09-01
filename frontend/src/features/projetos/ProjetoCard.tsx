@@ -5,7 +5,9 @@ import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn, formatarDataLive, formatarDuracao, thumbnailUrl } from '@/lib/utils';
 import { useLimparArquivos, useRemoverProjeto } from '@/hooks/useProjetos';
+import { api } from '@/lib/api';
 import type { Projeto } from '@/types/models';
+import { perguntaBrutosFire } from './limpezaBrutosFire';
 import { PipelineProgress } from './PipelineProgress';
 import { estadoDoProjeto } from './statusMaps';
 
@@ -52,7 +54,11 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
     remover.mutate(projeto.id);
   };
 
-  const onLimpar = () => {
+  // D-457: quando a live tem corte Fire, a limpeza faz UMA pergunta a mais —
+  // o bruto do Fire e a materia-prima da fabrica de shorts, e apaga-lo por
+  // engano custa re-extrair o trecho da live inteira. Cancelar a segunda
+  // pergunta (ou apertar Esc) PRESERVA: o caminho mais seguro e o default.
+  const onLimpar = async () => {
     if (limpo) return;
     if (
       !confirm(
@@ -60,7 +66,16 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
       )
     )
       return;
-    limpar.mutate(projeto.id);
+
+    // Falha na prévia não bloqueia a limpeza: sem o número, o caminho seguro é
+    // simplesmente preservar os brutos (o default do backend).
+    const previa = await api.previaLimpezaProjeto(projeto.id).catch(() => null);
+    const pergunta = perguntaBrutosFire(previa);
+
+    limpar.mutate({
+      id: projeto.id,
+      limparBrutosFire: pergunta ? confirm(pergunta) : false,
+    });
   };
 
   return (
