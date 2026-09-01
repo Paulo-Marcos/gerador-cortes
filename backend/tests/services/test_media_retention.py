@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.models import Corte, Projeto
+from app.models import Corte, MetadadoCorte, Projeto
 from app.services import media_retention as media_retention_module
 from app.services.media_retention import MediaRetentionService
 
@@ -168,3 +168,84 @@ def test_limpeza_projeto_sem_pasta_no_disco_nao_quebra(monkeypatch, tmp_path):
     assert report.freed_bytes == 0
     assert not report.pulados
     assert not report.erros
+
+
+# --------------------------------------------------------------------------- #
+# D-456 — o bruto do corte Fire e materia-prima da fabrica de shorts (E-030).
+# Limpar a live junto destruiria a unica fonte de onde os shorts sao recortados.
+# --------------------------------------------------------------------------- #
+
+
+def _corte_fire(projeto_id: str, corte_id: str, raw_path: Path, *, fire: bool) -> Corte:
+    corte = _corte(projeto_id, corte_id, raw_path)
+    corte.metadado = MetadadoCorte(id=f"m-{corte_id}", corte_id=corte_id, is_fire=fire)
+    return corte
+
+
+def test_limpeza_poupa_o_bruto_do_corte_fire_e_leva_o_resto(monkeypatch, tmp_path):
+    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
+    projeto_dir = tmp_path / "p1"
+    original = _video_aproveitavel(projeto_dir / "video.mkv")
+    corte_dir = projeto_dir / "cortes" / "c1"
+    raw = _video_aproveitavel(corte_dir / "clip_raw_123.mkv")
+    graded = _video_aproveitavel(corte_dir / "graded" / "clip_graded.mp4")
+    projeto = Projeto(id="p1", youtube_url="https://youtu.be/x", arquivo_video_path=str(original))
+    corte = _corte_fire("p1", "c1", raw, fire=True)
+
+    report = MediaRetentionService.limpar_projeto(projeto, [corte])
+
+    assert raw.exists(), "o bruto do Fire e a materia-prima dos shorts"
+    assert not original.exists()
+    assert not graded.exists()
+    # Preservado NAO e pulado: em `pulados` o projeto nunca mais seria limpo.
+    assert any("bruto de corte Fire" in item for item in report.preservados)
+    assert not report.pulados
+    assert report.retido_mb > 0
+
+
+def test_corte_comum_continua_perdendo_o_bruto(monkeypatch, tmp_path):
+    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
+    corte_dir = tmp_path / "p1" / "cortes" / "c1"
+    raw = _video_aproveitavel(corte_dir / "clip_raw_123.mkv")
+    projeto = Projeto(id="p1", youtube_url="https://youtu.be/x")
+    corte = _corte_fire("p1", "c1", raw, fire=False)
+
+    report = MediaRetentionService.limpar_projeto(projeto, [corte])
+
+    assert not raw.exists()
+    assert report.retido_bytes == 0
+
+
+def test_operador_pode_pedir_o_disco_de_volta_explicitamente(monkeypatch, tmp_path):
+    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
+    corte_dir = tmp_path / "p1" / "cortes" / "c1"
+    raw = _video_aproveitavel(corte_dir / "clip_raw_123.mkv")
+    projeto = Projeto(id="p1", youtube_url="https://youtu.be/x")
+    corte = _corte_fire("p1", "c1", raw, fire=True)
+
+    report = MediaRetentionService.limpar_projeto(projeto, [corte], preservar_brutos_fire=False)
+
+    assert not raw.exists()
+    assert report.retido_bytes == 0
+
+
+def test_ponteiro_do_bruto_preservado_nao_e_zerado_no_banco(monkeypatch, tmp_path):
+    """O arquivo sobreviveu, entao `arquivo_clip_path` tem de continuar apontando.
+
+    `resolver_do_projeto` (D-172) reancora o path relativo na raiz de dados
+    vigente, entao o dublê precisa valer tambem em `channel_paths` — senao a
+    checagem de existencia procuraria na raiz real e zeraria o ponteiro.
+    """
+    from app import channel_paths
+
+    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
+    monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)
+    corte_dir = tmp_path / "p1" / "cortes" / "c1"
+    _video_aproveitavel(corte_dir / "clip_raw_123.mkv")
+    projeto = Projeto(id="p1", youtube_url="https://youtu.be/x")
+    corte = _corte_fire("p1", "c1", Path("cortes/c1/clip_raw_123.mkv"), fire=True)
+
+    MediaRetentionService.limpar_projeto(projeto, [corte])
+
+    assert corte.arquivo_clip_path, "o ponteiro do bruto poupado nao pode ser zerado"
+    assert channel_paths.resolver_do_projeto(corte.arquivo_clip_path, "p1").exists()

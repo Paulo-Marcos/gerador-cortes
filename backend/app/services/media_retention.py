@@ -16,6 +16,12 @@ reconstruir a partir da pasta do corte — refazer exige re-extrair o trecho da
 live — e apaga-lo no fim do render final deixava o usuario sem material quando
 o proprio render final saia com erro. Com isso a etapa `aplicar_apos_grade`
 ficou sem nada para fazer e foi removida.
+
+D-456: o `clip_raw` de um corte marcado com FIRE tambem sobrevive a limpeza
+terminal, por padrao. Ele deixou de ser so um artefato do render e virou a
+materia-prima da fabrica de shorts (E-030) — limpar a live junto destruiria a
+unica fonte de onde os shorts sao recortados. Quem quiser o disco de volta
+precisa dizer isso explicitamente (`preservar_brutos_fire=False`).
 """
 
 from __future__ import annotations
@@ -73,6 +79,9 @@ SCRATCH_GLOBS = (
 @dataclass
 class RetentionReport:
     freed_bytes: int = 0
+    # D-456: quanto disco ficou para tras de proposito (brutos de Fire). E o
+    # numero que a tela precisa mostrar para o operador decidir se quer o espaco.
+    retido_bytes: int = 0
     removidos: list[str] = field(default_factory=list)
     preservados: list[str] = field(default_factory=list)
     pulados: list[str] = field(default_factory=list)
@@ -82,8 +91,13 @@ class RetentionReport:
     def liberado_mb(self) -> float:
         return round(self.freed_bytes / 1_000_000, 1)
 
+    @property
+    def retido_mb(self) -> float:
+        return round(self.retido_bytes / 1_000_000, 1)
+
     def merge(self, other: RetentionReport) -> None:
         self.freed_bytes += other.freed_bytes
+        self.retido_bytes += other.retido_bytes
         self.removidos.extend(other.removidos)
         self.preservados.extend(other.preservados)
         self.pulados.extend(other.pulados)
@@ -92,6 +106,7 @@ class RetentionReport:
     def to_dict(self) -> dict[str, object]:
         return {
             "liberado_mb": self.liberado_mb,
+            "retido_mb": self.retido_mb,
             "removidos": self.removidos,
             "preservados": self.preservados,
             "pulados": self.pulados,
@@ -124,7 +139,13 @@ class MediaRetentionService:
         return report
 
     @classmethod
-    def limpar_projeto(cls, projeto: Projeto, cortes: list[Corte]) -> RetentionReport:
+    def limpar_projeto(
+        cls,
+        projeto: Projeto,
+        cortes: list[Corte],
+        *,
+        preservar_brutos_fire: bool = True,
+    ) -> RetentionReport:
         """Limpeza TERMINAL: zera a midia pesada e mantem so o que documenta o trabalho.
 
         POR QUE nao reusa `aplicar_apos_upload` (D-398): aquela e a retencao de MEIO
@@ -134,6 +155,11 @@ class MediaRetentionService:
         `tmp_rerender_*` e os proxies de audio — o botao dizia "limpo" com dezenas de
         GB intactos. Aqui a regra e a inversa: sai tudo que e midia, fica o que
         permite REPLICAR o trabalho (metadados, legendas, thumbnails, logs).
+
+        D-456 — `preservar_brutos_fire` (default) poupa o `clip_raw` dos cortes
+        marcados com Fire: e dele que os shorts sao recortados. O bruto poupado
+        entra em `preservados` e seus bytes em `retido_bytes`, NAO em `pulados` —
+        senao o projeto nunca mais seria marcado como limpo.
         """
         report = RetentionReport()
         # `projetos_dir() / ""` resolve para a RAIZ de dados: sem id a varredura
@@ -146,15 +172,37 @@ class MediaRetentionService:
         if not projeto_dir.is_dir():
             return report
 
+        protegidos = cls._brutos_de_fire(cortes) if preservar_brutos_fire else set()
+
         for scratch in cls._scratch_dirs(projeto_dir):
             cls._remover_diretorio(scratch, report)
 
-        for arquivo in cls._midia_pesada(projeto_dir):
+        for arquivo in cls._midia_pesada(projeto_dir, protegidos):
             cls._remover_arquivo(arquivo, report)
 
+        cls._registrar_preservados(protegidos, report)
         cls._esquecer_paths_de_midia(projeto, cortes)
-        cls._registrar_residuo(projeto_dir, report)
+        cls._registrar_residuo(projeto_dir, report, protegidos)
         return report
+
+    @classmethod
+    def _brutos_de_fire(cls, cortes: list[Corte]) -> set[Path]:
+        """Os `clip_raw*` dos cortes marcados com Fire, resolvidos em disco."""
+        protegidos: set[Path] = set()
+        for corte in cortes:
+            metadado = getattr(corte, "metadado", None)
+            if not (metadado and metadado.is_fire):
+                continue
+            protegidos.update(
+                caminho for caminho in cls.corte_dir(corte).glob("clip_raw*") if caminho.is_file()
+            )
+        return protegidos
+
+    @classmethod
+    def _registrar_preservados(cls, protegidos: set[Path], report: RetentionReport) -> None:
+        for caminho in sorted(protegidos):
+            report.retido_bytes += caminho.stat().st_size
+            report.preservados.append(f"{cls._display(caminho)}: bruto de corte Fire")
 
     @classmethod
     def _scratch_dirs(cls, projeto_dir: Path) -> list[Path]:
@@ -166,11 +214,14 @@ class MediaRetentionService:
         ]
 
     @classmethod
-    def _midia_pesada(cls, projeto_dir: Path) -> list[Path]:
+    def _midia_pesada(cls, projeto_dir: Path, protegidos: set[Path] | None = None) -> list[Path]:
+        poupados = protegidos or set()
         return sorted(
             caminho
             for caminho in projeto_dir.rglob("*")
-            if caminho.suffix.lower() in MEDIA_PESADA_SUFIXOS and caminho.is_file()
+            if caminho.suffix.lower() in MEDIA_PESADA_SUFIXOS
+            and caminho.is_file()
+            and caminho not in poupados
         )
 
     @classmethod
@@ -183,14 +234,16 @@ class MediaRetentionService:
                 corte.arquivo_clip_path = ""
 
     @classmethod
-    def _registrar_residuo(cls, projeto_dir: Path, report: RetentionReport) -> None:
+    def _registrar_residuo(
+        cls, projeto_dir: Path, report: RetentionReport, protegidos: set[Path] | None = None
+    ) -> None:
         """Anota em `pulados` a midia que sobreviveu — arquivo em uso, por exemplo.
 
         `ProjetoService` deriva `arquivos_limpos` de `pulados`/`erros`, entao a
         varredura de sobra e o que impede o projeto de ser marcado como limpo
         enquanto ainda houver midia pesada no disco.
         """
-        for restante in cls._midia_pesada(projeto_dir):
+        for restante in cls._midia_pesada(projeto_dir, protegidos):
             report.pulados.append(f"{cls._display(restante)}: midia pesada nao removida")
 
     @staticmethod
