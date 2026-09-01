@@ -6,6 +6,9 @@ Endpoints:
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
   POST /{short_id}/renderizar     — produz o MP4 vertical do candidato
+  GET  /{short_id}/publicacao     — os pacotes prontos, por plataforma
+  POST /{short_id}/publicar/{plataforma} — envia (API) ou monta o pacote (manual)
+  POST /corte/{corte_id}/publicar/tiktok-horizontal — o MP4 16:9 no TikTok
   DELETE /corte/{corte_id}/bruto  — libera o disco e encerra a fábrica do corte
 
 O disparo padrão é o fim da geração do bruto de um corte marcado com Fire. O POST
@@ -94,6 +97,92 @@ async def renderizar(short_id: str):
 
     try:
         return await render_short.renderizar_short(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/{short_id}/publicacao")
+async def previa_publicacao(short_id: str):
+    """O que cada plataforma receberia, com os avisos — sem publicar nada."""
+    from app.domain.publicacao import LIMITES
+    from app.services import (
+        destinos_shorts,  # noqa: F401 — registra os destinos
+        publicacao_destinos,
+    )
+
+    try:
+        contexto = await publicacao_destinos.montar_contexto(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    pacotes = []
+    for destino in publicacao_destinos.destinos_disponiveis():
+        pacote = await destino.preparar(contexto)
+        pacotes.append(
+            {
+                "plataforma": pacote.plataforma.value,
+                "rotulo": LIMITES[pacote.plataforma].rotulo,
+                "modo": pacote.modo.value,
+                "titulo": pacote.metadados.titulo,
+                "titulo_visivel": pacote.metadados.titulo_visivel,
+                "descricao": pacote.metadados.descricao,
+                "hashtags": pacote.metadados.hashtags,
+                "avisos": pacote.avisos,
+            }
+        )
+    return {"pacotes": pacotes}
+
+
+@router.post("/{short_id}/publicar/{plataforma}")
+async def publicar(short_id: str, plataforma: str):
+    """Publica pela API ou monta o pacote manual, conforme o destino."""
+    from app.domain.publicacao import Plataforma
+    from app.services import (
+        destinos_shorts,  # noqa: F401 — registra os destinos
+        publicacao_destinos,
+    )
+
+    try:
+        alvo = Plataforma(plataforma)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404, detail=f"Plataforma {plataforma!r} desconhecida."
+        ) from exc
+
+    try:
+        destino = publicacao_destinos.obter_destino(alvo)
+        contexto = await publicacao_destinos.montar_contexto(short_id)
+        return await destino.publicar(await destino.preparar(contexto))
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+
+
+@router.post("/corte/{corte_id}/publicar/tiktok-horizontal")
+async def publicar_corte_no_tiktok(corte_id: str):
+    """Monta o pacote do MP4 HORIZONTAL do corte para o TikTok (D-470).
+
+    Mora neste router porque reusa toda a camada de destinos que a fabrica de
+    shorts trouxe. O video e o mesmo que foi para o YouTube: nao ha render novo,
+    so metadados adaptados e uma pasta pronta.
+    """
+    from app.domain.publicacao import Plataforma
+    from app.services import (
+        destinos_shorts,  # noqa: F401 — registra os destinos
+        publicacao_destinos,
+    )
+
+    try:
+        destino = publicacao_destinos.obter_destino(Plataforma.TIKTOK_HORIZONTAL)
+        contexto = await publicacao_destinos.montar_contexto_do_corte(corte_id)
+        return await destino.publicar(await destino.preparar(contexto))
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

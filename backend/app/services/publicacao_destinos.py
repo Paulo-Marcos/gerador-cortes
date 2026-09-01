@@ -19,7 +19,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from app.channel_paths import resolver_do_projeto
+from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.publicacao import (
     LIMITES,
@@ -145,6 +145,46 @@ async def montar_contexto(short_id: str) -> ContextoPublicacao:
                 descricao=short.gancho or "",
                 hashtags=_hashtags_do_corte(corte),
                 url_video_longo=corte.youtube_url_publicado or "",
+            ),
+        )
+
+
+async def montar_contexto_do_corte(corte_id: str) -> ContextoPublicacao:
+    """O MP4 HORIZONTAL do corte, para o TikTok (D-470).
+
+    O TikTok aceita 16:9 e ainda da impulso a landscape acima de 60s. O ganho e
+    presenca e descoberta, nao watch time — video deitado toca em janela pequena
+    com tarjas. Como o arquivo ja existe (e o mesmo que foi para o YouTube), o
+    custo de estar la tambem e so o upload.
+
+    Reusa o MESMO contrato do short: muda a origem do arquivo e o `vertical`.
+    Levanta `LookupError`/`ValueError` como o caminho do short.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+
+        arquivo = (
+            projetos_dir() / corte.projeto_id / "cortes" / corte.id / "upload_ready" / "video.mp4"
+        )
+        if not arquivo.is_file():
+            raise ValueError(
+                "O video final deste corte nao esta em upload_ready — gere o corte antes."
+            )
+
+        return ContextoPublicacao(
+            short_id=corte.id,
+            arquivo=arquivo,
+            duracao_seg=round(float(corte.duracao_clip_seg or 0.0), 2),
+            vertical=False,
+            base=MetadadosBase(
+                titulo=corte.titulo_proposto or "",
+                descricao=corte.resumo or "",
+                hashtags=_hashtags_do_corte(corte),
+                # O corte E o video longo: repetir o proprio link como CTA seria
+                # mandar o espectador de volta para onde ele ja esta.
+                url_video_longo="",
             ),
         )
 
