@@ -32,6 +32,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+# Contagem zerada de shorts por estagio, DERIVADA do enum: acrescentar um status
+# novo em StatusShort passa a aparecer na tela sozinho, sem editar esta lista.
+_CONTAGEM_VAZIA: dict[str, int] = {"total": 0, **{s.value: 0 for s in StatusShort}}
+
 
 @dataclass(frozen=True)
 class ContextoShorts:
@@ -182,15 +186,6 @@ async def listar_fires_com_bruto() -> list[dict]:
                 fire["shorts"] = contagens.get(fire["corte_id"], _CONTAGEM_VAZIA.copy())
 
     return fires
-
-
-_CONTAGEM_VAZIA: dict[str, int] = {
-    "total": 0,
-    StatusShort.SUGERIDO.value: 0,
-    StatusShort.APROVADO.value: 0,
-    StatusShort.REJEITADO.value: 0,
-    StatusShort.RENDERIZADO.value: 0,
-}
 
 
 def _bruto_em_disco(corte: Corte) -> Path | None:
