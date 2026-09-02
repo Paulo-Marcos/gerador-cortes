@@ -2,10 +2,34 @@ import { describe, expect, it } from 'vitest';
 import { planoDaFabrica } from '../planoFabricaShorts';
 
 describe('planoDaFabrica', () => {
-  it('nao oferece nada em corte sem Fire', () => {
-    expect(planoDaFabrica({ is_fire: false, tem_bruto: true, total_shorts: 0 }).oferecer).toBe(
-      false,
-    );
+  it('corte fora da fabrica recebe o CONVITE, nao o botao de gerar', () => {
+    // D-502 mudou esta regra. Antes so o Fire era elegivel e o resto nao via
+    // nada — o que obrigava o operador a marcar Fire, mentindo sobre o corte
+    // inteiro, para chegar num trecho bom dentro dele.
+    const plano = planoDaFabrica({
+      is_fire: false,
+      candidato_shorts: false,
+      elegivel: false,
+      tem_bruto: true,
+      total_shorts: 0,
+    });
+
+    expect(plano.oferecer).toBe(true);
+    expect(plano.convidar).toBe(true);
+    expect(plano.rotulo).toContain('Indicar');
+  });
+
+  it('indicado a mao ja recebe o botao de gerar, mesmo sem Fire', () => {
+    const plano = planoDaFabrica({
+      is_fire: false,
+      candidato_shorts: true,
+      elegivel: true,
+      tem_bruto: true,
+      total_shorts: 0,
+    });
+
+    expect(plano.convidar).toBeUndefined();
+    expect(plano.rotulo).toBe('Gerar shorts');
   });
 
   it('nao oferece nada enquanto a elegibilidade nao carregou', () => {
@@ -13,7 +37,7 @@ describe('planoDaFabrica', () => {
   });
 
   it('com bruto em disco, o rotulo nao promete regeracao', () => {
-    const plano = planoDaFabrica({ is_fire: true, tem_bruto: true, total_shorts: 0 });
+    const plano = planoDaFabrica({ is_fire: true, candidato_shorts: false, elegivel: true, tem_bruto: true, total_shorts: 0 });
 
     expect(plano.rotulo).toBe('Gerar shorts');
     expect(plano.avisos).toEqual([]);
@@ -21,14 +45,14 @@ describe('planoDaFabrica', () => {
 
   it('sem bruto, o rotulo AVISA que havera regeracao', () => {
     // O clique dispara um render de varios minutos; quem clica precisa saber.
-    const plano = planoDaFabrica({ is_fire: true, tem_bruto: false, total_shorts: 0 });
+    const plano = planoDaFabrica({ is_fire: true, candidato_shorts: false, elegivel: true, tem_bruto: false, total_shorts: 0 });
 
     expect(plano.rotulo).toBe('Regerar bruto e gerar shorts');
     expect(plano.avisos[0]).toContain('sem tocar em cenas');
   });
 
   it('candidatos existentes viram aviso sobre o que sobrevive', () => {
-    const plano = planoDaFabrica({ is_fire: true, tem_bruto: true, total_shorts: 4 });
+    const plano = planoDaFabrica({ is_fire: true, candidato_shorts: false, elegivel: true, tem_bruto: true, total_shorts: 4 });
 
     expect(plano.avisos).toHaveLength(1);
     expect(plano.avisos[0]).toContain('4 candidato');
@@ -36,7 +60,7 @@ describe('planoDaFabrica', () => {
   });
 
   it('corte antigo sem bruto e com candidatos junta os dois avisos', () => {
-    const plano = planoDaFabrica({ is_fire: true, tem_bruto: false, total_shorts: 2 });
+    const plano = planoDaFabrica({ is_fire: true, candidato_shorts: false, elegivel: true, tem_bruto: false, total_shorts: 2 });
 
     expect(plano.avisos).toHaveLength(2);
   });
@@ -57,7 +81,7 @@ describe('planoDaFabrica quando a checagem falha', () => {
   });
 
   it('sucesso nao carrega mensagem de indisponivel', () => {
-    const plano = planoDaFabrica({ is_fire: true, tem_bruto: true, total_shorts: 0 });
+    const plano = planoDaFabrica({ is_fire: true, candidato_shorts: false, elegivel: true, tem_bruto: true, total_shorts: 0 });
 
     expect(plano.indisponivel).toBeUndefined();
   });

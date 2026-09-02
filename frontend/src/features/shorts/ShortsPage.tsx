@@ -66,10 +66,24 @@ function FireCard({ fire }: { fire: FireComBruto }) {
           <Clock size={12} aria-hidden />
           {formatarDuracao(fire.duracao_seg)}
         </span>
-        <span className="inline-flex items-center gap-1">
-          <HardDrive size={12} aria-hidden />
-          {fire.bruto_mb} MB de bruto
-        </span>
+        {/* D-502: sem bruto o corte aparece assim mesmo — dizer "0 MB" seria
+            fingir um arquivo. O que ele precisa é de um aviso do que falta. */}
+        {fire.tem_bruto ? (
+          <span className="inline-flex items-center gap-1">
+            <HardDrive size={12} aria-hidden />
+            {fire.bruto_mb} MB de bruto
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[var(--wb-warn-ink)]">
+            <HardDrive size={12} aria-hidden />
+            sem bruto — será gerado
+          </span>
+        )}
+        {!fire.is_fire && fire.indicado && (
+          <span className="rounded-[4px] bg-[var(--wb-bg-inset)] px-1.5 text-[10px] uppercase tracking-wide">
+            indicado
+          </span>
+        )}
       </div>
 
       <ContagemChips shorts={fire.shorts} />
@@ -84,10 +98,10 @@ function Vazio() {
         🔥
       </span>
       <p className="mt-3 text-[14px] font-semibold text-[var(--wb-text)]">
-        Nenhum corte Fire com bruto em disco
+        Nenhum corte na fábrica de shorts
       </p>
       <p className="mt-2 text-[13px] leading-relaxed text-[var(--wb-text-mute)]">
-        Marque um corte com Fire e gere o bruto: a IA propõe os trechos verticais no fim da
+        Marque um corte com Fire, ou indique um para shorts na tela do corte: a IA propõe os trechos verticais no fim da
         esteira, e eles aparecem aqui para você trabalhar quando quiser.
       </p>
     </div>

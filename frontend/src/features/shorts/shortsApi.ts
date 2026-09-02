@@ -51,7 +51,12 @@ export interface FireComBruto {
   titulo: string;
   tema_central: string;
   duracao_seg: number;
+  /** D-502: sem bruto o corte AINDA aparece — a tela oferece regerar. */
+  tem_bruto: boolean;
   bruto_mb: number;
+  is_fire: boolean;
+  /** Indicado à mão, sem depender do Fire. */
+  indicado: boolean;
   shorts: ContagemShorts;
 }
 
@@ -203,12 +208,21 @@ export interface TranscricaoDoBruto {
 /** O que a tela do bruto precisa saber para oferecer (ou nao) a fabrica. */
 export interface ElegibilidadeShorts {
   is_fire: boolean;
+  candidato_shorts: boolean;
+  /** Fire OU indicado — a tela pergunta uma coisa só. */
+  elegivel: boolean;
   tem_bruto: boolean;
   total_shorts: number;
 }
 
 export const shortsApi = {
   listarFires: () => request<{ fires: FireComBruto[] }>('/shorts/fires'),
+
+  indicarParaShorts: (corteId: string, indicado: boolean) =>
+    request<ElegibilidadeShorts>(`/shorts/corte/${corteId}/indicar`, {
+      method: 'POST',
+      body: JSON.stringify({ indicado }),
+    }),
 
   elegibilidade: (corteId: string) =>
     request<ElegibilidadeShorts>(`/shorts/corte/${corteId}/elegibilidade`),

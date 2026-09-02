@@ -31,7 +31,7 @@ from app.domain.palco_short import MODELOS
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -384,6 +384,34 @@ async def listar_shorts(corte_id: str) -> list[dict]:
         return [_serializar(short, corte) for short in shorts]
 
 
+async def indicar_para_shorts(corte_id: str, indicado: bool = True) -> dict:
+    """Marca o corte como candidato a short, sem tocar no Fire (D-502).
+
+    Cria o `MetadadoCorte` se ainda nao existe: um corte que nunca passou pela
+    etapa de metadados tambem pode ter um trecho bom, e exigir que ele passe
+    antes seria uma dependencia inventada.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+
+        metadado = corte.metadado
+        if metadado is None:
+            metadado = MetadadoCorte(id=str(uuid.uuid4()), corte_id=corte_id)
+            db.add(metadado)
+
+        metadado.candidato_shorts = bool(indicado)
+        await db.commit()
+
+    logger.info(
+        "[Shorts] corte=%s %s a fabrica de shorts",
+        corte_id[:8],
+        "indicado para" if indicado else "removido da",
+    )
+    return await elegibilidade(corte_id)
+
+
 async def elegibilidade(corte_id: str) -> dict:
     """O que a tela do bruto precisa saber para oferecer (ou nao) a fabrica.
 
@@ -396,8 +424,14 @@ async def elegibilidade(corte_id: str) -> dict:
         total = await db.scalar(
             select(func.count()).select_from(Short).where(Short.corte_id == corte_id)
         )
+        indicado = bool(corte.metadado.candidato_shorts) if corte.metadado else False
         return {
             "is_fire": bool(corte.metadado.is_fire) if corte.metadado else False,
+            "candidato_shorts": indicado,
+            # D-502: a fabrica abre para Fire OU para indicacao manual. Sao
+            # julgamentos diferentes: o Fire e sobre o corte, a indicacao e
+            # sobre um trecho dele.
+            "elegivel": (bool(corte.metadado.is_fire) if corte.metadado else False) or indicado,
             "tem_bruto": _bruto_em_disco(corte) is not None,
             "total_shorts": int(total or 0),
         }
@@ -423,8 +457,11 @@ async def gerar_shorts_do_corte(corte_id: str) -> dict:
     from app.services.claude_ia import ClaudeIaService
 
     estado = await elegibilidade(corte_id)
-    if not estado["is_fire"]:
-        raise ValueError("So corte marcado com Fire vira short. Marque o Fire e tente de novo.")
+    if not estado["elegivel"]:
+        raise ValueError(
+            "Este corte nao esta na fabrica de shorts. Marque o Fire, ou indique-o "
+            "para shorts, e tente de novo."
+        )
 
     regerou = False
     if not estado["tem_bruto"]:
@@ -471,7 +508,8 @@ async def listar_fires_com_bruto() -> list[dict]:
                 select(Corte, Projeto)
                 .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
                 .join(Projeto, Projeto.id == Corte.projeto_id)
-                .where(MetadadoCorte.is_fire)
+                # D-502: Fire OU indicado a mao — dois caminhos para a mesma fila.
+                .where(or_(MetadadoCorte.is_fire, MetadadoCorte.candidato_shorts))
                 .order_by(Corte.atualizado_em.desc())
             )
         ).all()
@@ -479,8 +517,13 @@ async def listar_fires_com_bruto() -> list[dict]:
         fires = []
         for corte, projeto in linhas:
             bruto = _bruto_em_disco(corte)
-            if bruto is None:
-                continue
+            # D-502: corte SEM bruto tambem entra, e nao e mais pulado.
+            #
+            # A regra antiga ("sem bruto nao ha o que recortar") descrevia um
+            # beco sem saida que deixou de existir: a fabrica sabe regerar o
+            # bruto sem tocar na pos-producao (D-472). Esconder o corte aqui
+            # obrigava o operador a voltar ao editor, regerar, e so entao vir —
+            # trabalho que a propria tela pode oferecer.
             fires.append(_descrever_fire(corte, projeto, bruto))
 
         if fires:
@@ -499,7 +542,7 @@ def _bruto_em_disco(corte: Corte) -> Path | None:
     return caminho if caminho.is_file() else None
 
 
-def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path) -> dict:
+def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path | None) -> dict:
     return {
         "corte_id": corte.id,
         "projeto_id": projeto.id,
@@ -508,7 +551,12 @@ def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path) -> dict:
         "titulo": corte.titulo_proposto or "",
         "tema_central": corte.tema_central or "",
         "duracao_seg": round(float(corte.duracao_clip_seg or 0.0), 2),
-        "bruto_mb": round(bruto.stat().st_size / 1_000_000, 1),
+        # Sem bruto, 0 MB e `tem_bruto` falso — a tela mostra "gerar bruto" no
+        # lugar de "descartar", e nao finge um tamanho que nao existe.
+        "tem_bruto": bruto is not None,
+        "bruto_mb": round(bruto.stat().st_size / 1_000_000, 1) if bruto else 0.0,
+        "is_fire": bool(corte.metadado.is_fire) if corte.metadado else False,
+        "indicado": bool(corte.metadado.candidato_shorts) if corte.metadado else False,
     }
 
 

@@ -5,8 +5,11 @@ import type { ElegibilidadeShorts } from '@/features/shorts/shortsApi';
 // Regra, não JSX — por isso mora aqui e não dentro do componente. São três
 // decisões, e cada uma tem um porquê:
 //
-//   1. corte sem Fire não recebe oferta nenhuma. Mostrar um botão que vai ser
-//      recusado é pior que não mostrar;
+//   1. corte fora da fábrica recebe o convite para ENTRAR nela, e não o botão
+//      de gerar. Antes só o Fire era elegível e o resto não via nada; desde a
+//      D-502 dá para indicar um corte à mão, e esconder essa porta obrigava o
+//      operador a marcar Fire — mentindo sobre o corte inteiro — para chegar
+//      num trecho bom dentro dele;
 //   2. sem bruto em disco, o rótulo AVISA que haverá regeração antes. O clique
 //      dispara um render de vários minutos — quem clica precisa saber disso;
 //   3. candidatos já existentes viram aviso, porque regerar substitui os
@@ -21,6 +24,8 @@ export interface PlanoFabrica {
   oferecer: boolean;
   rotulo: string;
   avisos: string[];
+  /** D-502: o corte ainda não está na fábrica — oferecer entrar, não gerar. */
+  convidar?: boolean;
   /** Mensagem de diagnóstico; quando presente, a seção mostra só ela. */
   indisponivel?: string;
 }
@@ -40,7 +45,20 @@ export function planoDaFabrica(
         'Nao consegui checar a fabrica de shorts. Se o backend acabou de ser atualizado, reinicie-o.',
     };
   }
-  if (!estado?.is_fire) return PLANO_OCULTO;
+  if (!estado) return PLANO_OCULTO;
+
+  // D-502: fora da fábrica, o que falta não é o bruto — é a decisão de que
+  // este corte tem um trecho que vale. O botão diz isso.
+  if (!estado.elegivel) {
+    return {
+      oferecer: true,
+      convidar: true,
+      rotulo: 'Indicar para shorts',
+      avisos: [
+        'Este corte não é Fire. Indicá-lo poe só ELE na fábrica de shorts, sem mudar o julgamento do corte.',
+      ],
+    };
+  }
 
   const avisos: string[] = [];
   if (!estado.tem_bruto) {

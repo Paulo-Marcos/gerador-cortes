@@ -101,6 +101,10 @@ async def test_elegibilidade_conta_fire_bruto_e_candidatos(ambiente):
 
     assert await servico.elegibilidade("c1") == {
         "is_fire": True,
+        # D-502: a indicacao manual e uma marca SEPARADA do Fire, e `elegivel`
+        # e o OU das duas — a tela pergunta uma coisa so.
+        "candidato_shorts": False,
+        "elegivel": True,
         "tem_bruto": True,
         "total_shorts": 1,
     }

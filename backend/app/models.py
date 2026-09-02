@@ -470,6 +470,14 @@ class MetadadoCorte(Base):
     prompt_thumbnail: Mapped[str] = mapped_column(Text, default="")
     thumbnail_path: Mapped[str] = mapped_column(String(1000), default="")
     is_fire: Mapped[bool] = mapped_column(Integer, default=0)
+    # D-502: o corte foi indicado para a fabrica de shorts A MAO.
+    #
+    # Separado do Fire de proposito. Fire e um julgamento editorial sobre o CORTE
+    # ("isso e bom"); indicar para shorts e uma aposta sobre um TRECHO dele
+    # ("tem um pedaco que renderia"). Um corte mediano pode ter um momento
+    # otimo, e amarrar as duas marcas obrigaria a mentir sobre o corte inteiro
+    # para chegar no trecho.
+    candidato_shorts: Mapped[bool] = mapped_column(Integer, default=0)
     numero_serie: Mapped[int] = mapped_column(Integer, default=1)
     cor_serie: Mapped[str] = mapped_column(String(100), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

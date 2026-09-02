@@ -43,7 +43,13 @@ def _criar_bruto(raiz, corte_id: str) -> str:
 
 
 async def _semear(
-    factory, *, corte_id: str, fire: bool, clip_path: str = "", numero: int = 1
+    factory,
+    *,
+    corte_id: str,
+    fire: bool,
+    clip_path: str = "",
+    numero: int = 1,
+    com_metadado: bool = True,
 ) -> None:
     async with factory() as db:
         if await db.get(Projeto, "p1") is None:
@@ -59,7 +65,8 @@ async def _semear(
                 arquivo_clip_path=clip_path,
             )
         )
-        db.add(MetadadoCorte(id=f"m-{corte_id}", corte_id=corte_id, is_fire=fire))
+        if com_metadado:
+            db.add(MetadadoCorte(id=f"m-{corte_id}", corte_id=corte_id, is_fire=fire))
         await db.commit()
 
 
@@ -86,20 +93,77 @@ async def test_corte_comum_nao_entra_na_lista(ambiente):
 
 
 @pytest.mark.asyncio
-async def test_fire_sem_bruto_no_disco_fica_de_fora(ambiente):
-    """Ponteiro preenchido nao basta: o arquivo pode ter sumido por fora do app."""
+async def test_fire_sem_bruto_no_disco_APARECE_marcado_como_sem_bruto(ambiente):
+    """D-502 mudou esta regra, e o teste mudou junto em vez de sumir.
+
+    Antes: "sem bruto nao ha o que recortar", entao o corte era escondido. Essa
+    regra descrevia um beco sem saida que deixou de existir — a fabrica sabe
+    regerar o bruto sem tocar na pos-producao (D-472). Escondendo, o operador
+    tinha de voltar ao editor, regerar, e so entao vir; agora a propria tela
+    oferece.
+
+    Ponteiro preenchido continua nao bastando: o que vale e o arquivo em disco.
+    """
     factory, _ = ambiente
     await _semear(factory, corte_id="c1", fire=True, clip_path="cortes/c1/clip_raw_1.mkv")
+
+    fires = await servico.listar_fires_com_bruto()
+
+    assert len(fires) == 1
+    assert fires[0]["tem_bruto"] is False
+    assert fires[0]["bruto_mb"] == 0.0, "sem arquivo nao se inventa tamanho"
+
+
+@pytest.mark.asyncio
+async def test_fire_sem_ponteiro_de_bruto_tambem_aparece(ambiente):
+    factory, _ = ambiente
+    await _semear(factory, corte_id="c1", fire=True, clip_path="")
+
+    fires = await servico.listar_fires_com_bruto()
+
+    assert len(fires) == 1 and fires[0]["tem_bruto"] is False
+
+
+@pytest.mark.asyncio
+async def test_corte_INDICADO_a_mao_entra_sem_ser_fire(ambiente):
+    """D-502: Fire e sobre o CORTE; indicar e sobre um TRECHO dele.
+
+    Um corte mediano pode ter um momento otimo, e obrigar a marcar Fire para
+    chegar nele seria mentir sobre o corte inteiro.
+    """
+    factory, _ = ambiente
+    await _semear(factory, corte_id="c1", fire=False, clip_path="")
+
+    assert await servico.listar_fires_com_bruto() == []
+
+    await servico.indicar_para_shorts("c1", True)
+    fires = await servico.listar_fires_com_bruto()
+
+    assert len(fires) == 1
+    assert fires[0]["is_fire"] is False and fires[0]["indicado"] is True
+
+
+@pytest.mark.asyncio
+async def test_desindicar_tira_da_fila(ambiente):
+    factory, _ = ambiente
+    await _semear(factory, corte_id="c1", fire=False, clip_path="")
+    await servico.indicar_para_shorts("c1", True)
+
+    await servico.indicar_para_shorts("c1", False)
 
     assert await servico.listar_fires_com_bruto() == []
 
 
 @pytest.mark.asyncio
-async def test_fire_sem_ponteiro_de_bruto_fica_de_fora(ambiente):
+async def test_indicar_corte_sem_metadado_nao_exige_etapa_anterior(ambiente):
+    """Um corte que nunca passou por metadados tambem pode ter trecho bom."""
     factory, _ = ambiente
-    await _semear(factory, corte_id="c1", fire=True, clip_path="")
+    await _semear(factory, corte_id="c1", fire=False, clip_path="", com_metadado=False)
 
-    assert await servico.listar_fires_com_bruto() == []
+    estado = await servico.indicar_para_shorts("c1", True)
+
+    assert estado["candidato_shorts"] is True
+    assert estado["elegivel"] is True
 
 
 @pytest.mark.asyncio

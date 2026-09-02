@@ -32,3 +32,16 @@ export function useGerarShortsManualmente(corteId: string) {
     },
   });
 }
+
+// D-502: indicar o corte poe SO ELE na fabrica, sem mexer no Fire — que e um
+// julgamento sobre o corte inteiro, nao sobre um trecho dele.
+export function useIndicarParaShorts(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (indicado: boolean) => shortsApi.indicarParaShorts(corteId, indicado),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: elegibilidadeKey(corteId) });
+      void qc.invalidateQueries({ queryKey: FIRES_KEY });
+    },
+  });
+}

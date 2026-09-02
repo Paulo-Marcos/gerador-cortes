@@ -4,6 +4,7 @@ Endpoints:
   GET  /fires                     — os cortes Fire cujo bruto ainda esta em disco
   GET  /corte/{corte_id}          — os shorts do corte, do melhor palpite ao pior
   POST /corte/{corte_id}          — cria um short a mao, que a regeracao nao apaga
+  POST /corte/{corte_id}/indicar  — poe o corte na fabrica sem depender do Fire
   GET  /corte/{corte_id}/elegibilidade — se a tela do bruto deve oferecer a fábrica
   POST /corte/{corte_id}/gerar    — caminho MANUAL: regera o bruto se preciso e propõe
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
@@ -88,6 +89,26 @@ async def descartar_bruto(corte_id: str):
     """Descarta o bruto guardado — o corte deixa de poder gerar shorts."""
     try:
         return await shorts_store.descartar_bruto(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class IndicarRequest(BaseModel):
+    """Marca (ou desmarca) o corte como candidato a virar short."""
+
+    indicado: bool = True
+
+
+@router.post("/corte/{corte_id}/indicar")
+async def indicar_para_shorts(corte_id: str, body: IndicarRequest):
+    """Poe o corte na fabrica de shorts sem depender do Fire (D-502).
+
+    Fire e um julgamento sobre o CORTE; indicar e uma aposta sobre um TRECHO
+    dele. Um corte mediano pode ter um momento otimo, e obrigar a marcar Fire
+    para chegar nele seria mentir sobre o corte inteiro.
+    """
+    try:
+        return await shorts_store.indicar_para_shorts(corte_id, body.indicado)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

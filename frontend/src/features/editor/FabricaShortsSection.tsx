@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import {
   useElegibilidadeShorts,
   useGerarShortsManualmente,
+  useIndicarParaShorts,
 } from '@/features/shorts/useFabricaDoCorte';
 import { planoDaFabrica } from './planoFabricaShorts';
 
@@ -18,8 +19,10 @@ import { planoDaFabrica } from './planoFabricaShorts';
 // lá — se o botão morasse na tela de Shorts, ele nunca alcançaria justamente os
 // cortes para os quais foi feito.
 //
-// A seção some por completo quando o corte não é Fire. Oferecer uma ação que
-// vai ser recusada é pior que não oferecer.
+// D-502: a seção deixou de sumir em corte que não é Fire. Ela passa a oferecer
+// INDICAR — porque Fire é um julgamento sobre o corte, e indicar é uma aposta
+// sobre um trecho dele. Sumir obrigava o operador a marcar Fire, mentindo sobre
+// o corte inteiro, só para chegar num momento bom lá dentro.
 
 interface Props {
   corteId: string;
@@ -30,6 +33,7 @@ interface Props {
 export function FabricaShortsSection({ corteId, ocupado = false }: Props) {
   const elegibilidade = useElegibilidadeShorts(corteId);
   const gerar = useGerarShortsManualmente(corteId);
+  const indicar = useIndicarParaShorts(corteId);
 
   const plano = planoDaFabrica(elegibilidade.data, { falhou: elegibilidade.isError });
 
@@ -62,10 +66,10 @@ export function FabricaShortsSection({ corteId, ocupado = false }: Props) {
         variant="outline"
         size="sm"
         className="w-full"
-        disabled={ocupado || gerar.isPending}
-        onClick={() => gerar.mutate()}
+        disabled={ocupado || gerar.isPending || indicar.isPending}
+        onClick={() => (plano.convidar ? indicar.mutate(true) : gerar.mutate())}
       >
-        {gerar.isPending ? (
+        {gerar.isPending || indicar.isPending ? (
           <Loader2 size={13} className="animate-spin" />
         ) : (
           <Clapperboard size={13} />
