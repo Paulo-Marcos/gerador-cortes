@@ -28,6 +28,7 @@ function short(over: Partial<ShortSugerido> = {}): ShortSugerido {
     modelo_palco: '',
     origem: 'ia',
     ajustes_palco: {},
+    cenas: [],
     ...over,
   };
 }

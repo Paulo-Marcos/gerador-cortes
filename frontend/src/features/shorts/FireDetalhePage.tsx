@@ -26,6 +26,7 @@ import { avisoDescarteBruto } from './descarteBruto';
 import { janelaNova } from './linhaDoTempoShort';
 import { BordasFinasPanel } from './BordasFinasPanel';
 import { CandidatoCard } from './CandidatoCard';
+import { CenasDoShort } from './CenasDoShort';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
@@ -36,6 +37,7 @@ import { useFires } from './useFires';
 import {
   useAtualizarShort,
   useCriarShortManual,
+  useDefinirCenas,
   useDescartarBruto,
   usePalcoDoShort,
   useRenderizarPrevia,
@@ -86,6 +88,7 @@ export default function FireDetalhePage() {
   const renderizar = useRenderizarShort(corteId);
   const previa = useRenderizarPrevia(corteId);
   const criarManual = useCriarShortManual(corteId);
+  const definirCenas = useDefinirCenas(corteId);
   const transcricao = useTranscricaoDoCorte(corteId);
   const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
@@ -369,6 +372,23 @@ export default function FireDetalhePage() {
                     ocupado={atualizar.isPending}
                     onAplicar={(bordas) => gravarBordas(emQuadro.id, bordas)}
                   />
+                  {emQuadro && (
+                    <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
+                      <CenasDoShort
+                        cenas={emQuadro.cenas}
+                        duracaoSeg={emQuadro.duracao_seg}
+                        ocupado={definirCenas.isPending}
+                        erro={
+                          definirCenas.isError
+                            ? ((definirCenas.error as Error)?.message ?? 'não consegui salvar')
+                            : null
+                        }
+                        onGravar={(cenas) =>
+                          definirCenas.mutate({ shortId: emQuadro.id, cenas })
+                        }
+                      />
+                    </div>
+                  )}
                   {editandoPalco && palcoDoShort.data && temPalco && (
                     <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
                       <CamposDoPalco

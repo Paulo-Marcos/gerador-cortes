@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { shortsApi, type AtualizarShortBody } from './shortsApi';
+import { shortsApi, type AtualizarShortBody, type CenaShort } from './shortsApi';
 import { FIRES_KEY } from './useFires';
 
 export const shortsDoCorteKey = (corteId: string) => ['shorts', 'corte', corteId] as const;
@@ -199,5 +199,16 @@ export function useCriarShortManual(corteId: string) {
       void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
       void qc.invalidateQueries({ queryKey: FIRES_KEY });
     },
+  });
+}
+
+// D-494: as cenas mudam o que o render desenha por cima, entao invalidam a lista
+// (de onde vem `cenas`) — nao o plano do palco, que so descreve o recorte.
+export function useDefinirCenas(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ shortId, cenas }: { shortId: string; cenas: CenaShort[] }) =>
+      shortsApi.definirCenas(shortId, cenas),
+    onSuccess: () => qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) }),
   });
 }

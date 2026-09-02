@@ -22,6 +22,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export type StatusShort = 'sugerido' | 'aprovado' | 'rejeitado' | 'renderizado';
 
+/** Os quatro tipos de cena vertical — espelha `cenas-shorts/schema.ts`. */
+export type TipoCenaShort = 'hook' | 'numero' | 'citacao' | 'cta';
+
+export interface CenaShort {
+  tipo: TipoCenaShort;
+  inicio: number;
+  fim: number;
+  texto: string;
+  apoio?: string;
+}
+
 /** Quantos shorts o Fire tem, por estágio da curadoria. */
 export interface ContagemShorts {
   total: number;
@@ -69,6 +80,8 @@ export interface ShortSugerido {
   origem: string;
   /** Slots que o operador moveu, como sobreposição parcial sobre o modelo. */
   ajustes_palco: Record<string, Retangulo>;
+  /** Cenas desenhadas sobre o short, na timeline DELE (começa no zero). */
+  cenas: CenaShort[];
 }
 
 // ─── Endpoints ─────────────────────────────────────────────────────────────
@@ -232,6 +245,12 @@ export const shortsApi = {
     ),
 
   // D-485: os dois disparam e voltam na hora. Quem acompanha e o progresso.
+  definirCenas: (shortId: string, cenas: CenaShort[]) =>
+    request<{ short: ShortSugerido }>(`/shorts/${shortId}/cenas`, {
+      method: 'PUT',
+      body: JSON.stringify({ cenas }),
+    }),
+
   renderizarPrevia: (shortId: string) =>
     request<{ status: string; estagio: string }>(`/shorts/${shortId}/previa`, {
       method: 'POST',

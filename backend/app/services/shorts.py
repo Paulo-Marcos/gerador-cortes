@@ -24,6 +24,7 @@ from pathlib import Path
 
 from app.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
 from app.domain.formato_video import foco_de_regiao
 from app.domain.palco_short import MODELOS
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
@@ -197,6 +198,34 @@ async def criar_manual(
         inicio_seg,
         fim_seg,
     )
+    return serializado
+
+
+async def definir_cenas(short_id: str, cenas: list[dict]) -> dict:
+    """Grava as cenas de um short, validadas contra a duração DELE (D-494).
+
+    A duração vem do próprio short e não do corte: a cena vive na timeline do
+    short, que começa no zero. Validar contra o bruto deixaria passar uma cena
+    que só aparece depois do fim do arquivo.
+
+    Levanta `LookupError` (short inexistente) e `CenaInvalida` — que é um
+    `ValueError`, então o router já o traduz em 422 com o motivo dentro.
+    """
+    async with AsyncSessionLocal() as db:
+        short = await db.get(Short, short_id)
+        if not short:
+            raise LookupError(f"Short {short_id!r} nao encontrado")
+
+        duracao = round(float(short.fim_seg) - float(short.inicio_seg), 2)
+        validadas = normalizar_lista_de_cenas(cenas, duracao)
+
+        short.cenas_remotion = json.dumps(
+            [cena.para_json() for cena in validadas], ensure_ascii=False
+        )
+        await db.commit()
+        serializado = _serializar(short)
+
+    logger.info("[Shorts] short=%s cenas=%d", short_id[:8], len(validadas))
     return serializado
 
 
@@ -583,6 +612,7 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "modelo_palco": short.modelo_palco,
         "ajustes_palco": _json_dict_seguro(short.ajustes_palco),
         "origem": short.origem,
+        "cenas": _json_lista(short.cenas_remotion),
     }
 
 
