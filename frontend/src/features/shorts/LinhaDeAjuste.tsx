@@ -91,11 +91,11 @@ export function LinhaDeAjuste({
           longo do tempo, então o trecho pode precisar de regiões diferentes das
           do resto do corte. Vazio herda o do corte, que segue sendo o default. */}
       <Grupo
-        rotulo="palco"
-        dica="As regiões que este trecho recorta. Vazio usa o palco do corte."
+        rotulo="recortes"
+        dica="De onde saem os recortes deste trecho. Vazio usa o preset do corte."
       >
         <select
-          aria-label="Preset de palco deste short"
+          aria-label="Preset de recortes deste short"
           value={short.palco_preset}
           disabled={ocupado || !palcoDoCorte.data}
           onChange={(e) => onPreset(e.target.value)}
@@ -143,7 +143,7 @@ export function LinhaDeAjuste({
         dica={
           temRegiao
             ? (escolhido?.porque ?? 'Deduz o arranjo das regiões disponíveis')
-            : 'Escolha um preset de palco no topo da coluna para o arranjo ter efeito'
+            : 'Escolha um preset de recortes no topo da coluna para o arranjo ter efeito'
         }
       >
         <Layers size={12} className="text-[var(--wb-text-mute)]" aria-hidden />

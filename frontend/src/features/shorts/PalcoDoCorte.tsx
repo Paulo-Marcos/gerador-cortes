@@ -1,4 +1,4 @@
-import { Layers, TriangleAlert } from 'lucide-react';
+import { Crop, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { EstadoPalco } from './shortsApi';
 import { useEscolherPreset, usePalcoDoCorte } from './useShortsDoCorte';
@@ -49,13 +49,19 @@ export function PalcoDoCorte({ corteId }: { corteId: string }) {
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      {/* D-505: "recortes", e nao "palco".
+          O seletor escolhe o PRESET DO CANAL, cujos nomes sao cenas do OBS
+          ("Comp. 2 OBS", "FULL OBS") — nomes legitimos do horizontal, que sob o
+          rotulo "palco" pareciam nomes de palco malfeitos. Eles nao nomeiam o
+          palco: dizem de onde saem os recortes. O palco do short e o ARRANJO,
+          que tem nomes proprios ("Tela em cima, pessoa embaixo"). */}
       <span className="inline-flex items-center gap-1 font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)]">
-        <Layers size={11} aria-hidden />
-        palco
+        <Crop size={11} aria-hidden />
+        recortes
       </span>
 
       <select
-        aria-label="Preset que alimenta o palco vertical"
+        aria-label="Preset do canal de onde saem os recortes"
         value={estado.presets_disponiveis.find((p) => p.nome === estado.preset)?.id ?? ''}
         disabled={escolher.isPending}
         onChange={(e) => escolher.mutate(e.target.value)}
