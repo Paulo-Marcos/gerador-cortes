@@ -177,6 +177,22 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
         thinking_setting="claude_cli_thinking_tokens_shorts",
         lentes_tipo=None,
     ),
+    SkillCatalogo(
+        key="cenas-short-expert",
+        arquivo="cenas-short.md",
+        etapa="Propor cenas do short",
+        descricao=(
+            "Le a transcricao de UM trecho vertical ja escolhido e propoe os "
+            "cartoes que entram por cima do video: gancho, numero, citacao e "
+            "chamada. Roda sob demanda, na tela de Shorts, depois de o operador "
+            "aprovar o trecho. Separada de 'Gerar cenas' porque o repertorio e "
+            "outro: la sao fichas e enfases num video de 10 minutos, aqui sao "
+            "quatro cartoes disputando 30 segundos de tela vertical."
+        ),
+        model_setting="claude_model_cenas_short",
+        thinking_setting="claude_cli_thinking_tokens_cenas_short",
+        lentes_tipo=None,
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, SkillCatalogo] = {c.key: c for c in _CATALOGO}
@@ -417,7 +433,7 @@ def descrever_skills(
     channel_id: str | None = None,
     editorial_root: Path | None = None,
 ) -> list[SkillDescrita]:
-    """As 5 skills do canal ativo com valor-do-canal + default, para a UI."""
+    """As skills do catálogo, resolvidas no canal ativo, para a UI."""
     return [
         _descrever(
             cat,

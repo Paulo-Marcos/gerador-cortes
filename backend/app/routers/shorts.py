@@ -14,6 +14,7 @@ Endpoints:
   PUT  /corte/{corte_id}/palco    — aponta um preset do canal para o corte
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
   PUT  /{short_id}/cenas          — as cenas do short (hook, numero, citacao, cta)
+  POST /{short_id}/cenas/sugerir  — a IA propoe os cartoes deste trecho
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
   GET  /{short_id}/palco          — o palco em coordenadas de desenho (previa)
@@ -279,6 +280,25 @@ async def definir_cenas(short_id: str, body: DefinirCenasRequest):
     """Grava as cenas do short — hook, número, citação, CTA (D-494)."""
     try:
         return {"short": await shorts_store.definir_cenas(short_id, body.cenas)}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/{short_id}/cenas/sugerir")
+async def sugerir_cenas(short_id: str):
+    """A IA propõe os cartões deste trecho e já os grava (D-497).
+
+    Síncrono de propósito: o operador está olhando para o painel de cenas quando
+    pede, e um fire-and-forget o obrigaria a ficar recarregando para saber se
+    chegou. A chamada leva alguns segundos — menos que a de propor os shorts,
+    porque a transcrição é a de um trecho, não a do bruto inteiro.
+    """
+    from app.services.claude_ia import ClaudeIaService
+
+    try:
+        return await ClaudeIaService.sugerir_cenas_do_short_via_claude(short_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

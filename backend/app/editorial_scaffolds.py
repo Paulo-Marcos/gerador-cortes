@@ -238,6 +238,27 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
         ),
         marcador="shorts",
     ),
+    ScaffoldCatalogo(
+        key="cenas-short",
+        skill_key="cenas-short-expert",
+        etapa="Propor cenas do short",
+        descricao=(
+            "Involucro que envia a transcricao do TRECHO e pede os cartoes em "
+            "JSON com a chave 'cenas'. Os [MM:SS] vao rebaseados no relogio do "
+            "SHORT (00:00 = primeiro frame), porque e nesse relogio que o "
+            "renderer desenha. O corpo/expertise (quando um cartao ajuda e "
+            "quando atrapalha) vem da skill 'Propor cenas do short'."
+        ),
+        arquivo="cenas-short.txt",
+        placeholders=(
+            "titulo",
+            "gancho",
+            "duracao_humana",
+            "tipos_disponiveis",
+            "texto_transcricao",
+        ),
+        marcador="cenas",
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, ScaffoldCatalogo] = {c.key: c for c in _CATALOGO}

@@ -276,6 +276,12 @@ export const shortsApi = {
       body: JSON.stringify({ cenas }),
     }),
 
+  /** D-497: a IA lê a transcrição do trecho e propõe os cartões — já gravados. */
+  sugerirCenas: (shortId: string) =>
+    request<{ short: ShortSugerido; descartes: string[] }>(`/shorts/${shortId}/cenas/sugerir`, {
+      method: 'POST',
+    }),
+
   renderizarPrevia: (shortId: string) =>
     request<{ status: string; estagio: string }>(`/shorts/${shortId}/previa`, {
       method: 'POST',

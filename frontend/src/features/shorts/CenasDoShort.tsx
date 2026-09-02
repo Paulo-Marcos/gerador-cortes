@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Quote, Sparkles, Trash2, TrendingUp } from 'lucide-react';
+import { Plus, Quote, Sparkles, Trash2, TrendingUp, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { CenaShort, TipoCenaShort } from './shortsApi';
@@ -36,9 +36,23 @@ interface Props {
   ocupado: boolean;
   erro: string | null;
   onGravar: (cenas: CenaShort[]) => void;
+  /** D-497: pede o palpite da IA para ESTE trecho. */
+  onSugerir?: () => void;
+  sugerindo?: boolean;
+  /** O que a IA propôs e o filtro recusou, com o motivo. */
+  descartes?: string[];
 }
 
-export function CenasDoShort({ cenas, duracaoSeg, ocupado, erro, onGravar }: Props) {
+export function CenasDoShort({
+  cenas,
+  duracaoSeg,
+  ocupado,
+  erro,
+  onGravar,
+  onSugerir,
+  sugerindo = false,
+  descartes = [],
+}: Props) {
   const [tipoNovo, setTipoNovo] = useState<TipoCenaShort>('hook');
 
   // A lista é EDITADA localmente e persistida em momentos escolhidos.
@@ -132,7 +146,29 @@ export function CenasDoShort({ cenas, duracaoSeg, ocupado, erro, onGravar }: Pro
           <Plus />
           Adicionar
         </Button>
+        {onSugerir && (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={ocupado || sugerindo || duracaoSeg <= 0}
+            onClick={onSugerir}
+            title="A IA lê a transcrição deste trecho e propõe os cartões — substituindo os atuais"
+          >
+            <Wand2 />
+            {sugerindo ? 'pensando…' : 'Sugerir'}
+          </Button>
+        )}
       </div>
+
+      {/* Os descartes são o que explica por que a IA "propôs cinco" e a lista
+          mostra três. Sem eles a diferença vira desconfiança da ferramenta. */}
+      {descartes.length > 0 && (
+        <ul className="space-y-0.5 rounded-[8px] bg-[var(--wb-bg-inset)] p-2 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+          {descartes.map((motivo) => (
+            <li key={motivo}>· {motivo}</li>
+          ))}
+        </ul>
+      )}
 
       {rascunho.length === 0 && (
         <p className="rounded-[8px] bg-[var(--wb-bg-inset)] p-2 text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">

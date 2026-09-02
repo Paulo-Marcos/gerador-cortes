@@ -49,6 +49,7 @@ import {
   useAtualizarShort,
   useCriarShortManual,
   useDefinirCenas,
+  useSugerirCenas,
   useDescartarBruto,
   usePalcoDoShort,
   useRenderizarPrevia,
@@ -104,6 +105,7 @@ export default function FireDetalhePage() {
   const previa = useRenderizarPrevia(corteId);
   const criarManual = useCriarShortManual(corteId);
   const definirCenas = useDefinirCenas(corteId);
+  const sugerirCenas = useSugerirCenas(corteId);
   const transcricao = useTranscricaoDoCorte(corteId);
   const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
@@ -421,15 +423,19 @@ export default function FireDetalhePage() {
                       <CenasDoShort
                         cenas={emQuadro.cenas}
                         duracaoSeg={emQuadro.duracao_seg}
-                        ocupado={definirCenas.isPending}
+                        ocupado={definirCenas.isPending || sugerirCenas.isPending}
                         erro={
-                          definirCenas.isError
-                            ? ((definirCenas.error as Error)?.message ?? 'não consegui salvar')
+                          definirCenas.isError || sugerirCenas.isError
+                            ? (((definirCenas.error ?? sugerirCenas.error) as Error)?.message ??
+                              'não consegui salvar')
                             : null
                         }
                         onGravar={(cenas) =>
                           definirCenas.mutate({ shortId: emQuadro.id, cenas })
                         }
+                        onSugerir={() => sugerirCenas.mutate(emQuadro.id)}
+                        sugerindo={sugerirCenas.isPending}
+                        descartes={sugerirCenas.data?.descartes ?? []}
                       />
                     </div>
                   )}

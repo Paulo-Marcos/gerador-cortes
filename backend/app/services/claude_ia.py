@@ -112,6 +112,7 @@ _SKILL_METADADOS = "metadados-expert"
 _SKILL_THUMBNAIL = "thumbnail-prompt-expert"
 _SKILL_AVALIACAO = "avaliador-bruto"
 _SKILL_SHORTS = "shorts-expert"
+_SKILL_CENAS_SHORT = "cenas-short-expert"
 
 # A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
 _LIMITE_MOTIVO_NA_TELA = 400
@@ -1221,6 +1222,63 @@ class ClaudeIaService:
         )
         shorts = await shorts_store.registrar_sugestoes(contexto, resultado)
         return {"shorts": shorts, "descartes": resultado.descartes}
+
+    @staticmethod
+    async def sugerir_cenas_do_short_via_claude(short_id: str) -> dict:
+        """Propõe os cartões que entram por cima de UM trecho vertical (D-497).
+
+        No horizontal a IA propõe as cenas desde sempre; aqui o painel da D-494
+        só sabia criar à mão. A skill é OUTRA (`cenas-short-expert`) porque o
+        repertório é outro: lá são fichas e ênfases num vídeo de dez minutos,
+        aqui são quatro cartões disputando trinta segundos de tela vertical, com
+        a legenda queimada embaixo.
+
+        As cenas voltam GRAVADAS, substituindo as que existiam. Propor sem
+        gravar deixaria o operador com uma lista que ele teria de reescrever à
+        mão para usar; e o que existia antes é ou vazio (o caso comum) ou um
+        palpite anterior da própria IA. Um short com cenas escritas à mão só
+        chega aqui se o operador pedir de novo — e aí ele pediu.
+
+        Levanta `LookupError` (short inexistente) ou `ValueError` (trecho sem
+        transcrição). Devolve o short atualizado e os descartes, que são o que
+        explica por que a IA falou em cinco cenas e a tela mostra três.
+        """
+        from app.domain.cenas_short import TipoCenaShort
+        from app.domain.cenas_short_ia import normalizar_sugestoes as normalizar_cenas
+        from app.services import shorts as shorts_store
+
+        contexto = await shorts_store.montar_contexto_de_cenas(short_id)
+
+        skill = editorial_skills.resolver_skill(_SKILL_CENAS_SHORT)
+        scaffold = editorial_scaffolds.resolver_scaffold("cenas-short")
+        prompt = scaffold.format(
+            titulo=contexto.titulo,
+            gancho=contexto.gancho,
+            duracao_humana=f"{contexto.duracao_seg:.0f} segundos",
+            tipos_disponiveis=", ".join(t.value for t in TipoCenaShort),
+            texto_transcricao=contexto.texto_transcricao,
+        )
+        _log_skill_usada(_SKILL_CENAS_SHORT, skill, scaffold)
+        resposta = await claude_cli_client.generate_json(
+            prompt,
+            **_args_claude(
+                skill,
+                _SKILL_CENAS_SHORT,
+                projeto_id=contexto.projeto_id,
+                corte_id=contexto.corte_id,
+            ),
+        )
+        resultado = normalizar_cenas(resposta, duracao_short=contexto.duracao_seg)
+        short = await shorts_store.definir_cenas(
+            short_id, [cena.para_json() for cena in resultado.cenas]
+        )
+        logger.info(
+            "[Shorts] cenas IA short=%s aceitas=%d descartadas=%d",
+            short_id[:8],
+            len(resultado.cenas),
+            len(resultado.descartes),
+        )
+        return {"short": short, "descartes": resultado.descartes}
 
     # ── Fase 4: prompt de thumbnail via Claude (skill capista) ────────────────
 

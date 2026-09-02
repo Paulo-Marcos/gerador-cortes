@@ -204,6 +204,21 @@ export function useCriarShortManual(corteId: string) {
 
 // D-494: as cenas mudam o que o render desenha por cima, entao invalidam a lista
 // (de onde vem `cenas`) — nao o plano do palco, que so descreve o recorte.
+/**
+ * D-497: pede o palpite da IA para as cenas de um trecho.
+ *
+ * Sincrono e sem otimismo: a resposta traz o short JA gravado, entao invalidar
+ * a lista basta. Os `descartes` ficam no resultado da mutation e a tela os
+ * mostra — sao eles que explicam por que a IA propos cinco e a lista tem tres.
+ */
+export function useSugerirCenas(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (shortId: string) => shortsApi.sugerirCenas(shortId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) }),
+  });
+}
+
 export function useDefinirCenas(corteId: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -42,6 +42,7 @@ def test_get_lista_o_catalogo_com_default_e_atual(client: TestClient):
         "thumbnail-prompt-expert",
         "avaliador-bruto",
         "shorts-expert",
+        "cenas-short-expert",
     ]
     cortador = skills[0]
     assert set(cortador["params"]) == {"modelo", "thinking_tokens", "timeout"}

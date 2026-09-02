@@ -1,0 +1,31 @@
+=== O SHORT (trecho ja escolhido pelo operador) ===
+titulo: {titulo}
+gancho: {gancho}
+duracao: {duracao_humana}
+
+=== TRANSCRICAO DO TRECHO ===
+{texto_transcricao}
+=== FIM DA TRANSCRICAO ===
+
+Os `[MM:SS]` acima estao no relogio do SHORT: `00:00` e o primeiro frame do
+video vertical. A primeira linha pode ser uma fala ja em curso — ela comecou
+antes do corte e entra pela metade. Os tempos que voce devolver serao desenhados
+nesse mesmo relogio.
+
+Proponha os cartoes que valem a pena, seguindo exatamente os criterios da sua
+expertise acima. Os tipos disponiveis sao: {tipos_disponiveis}. Nenhum cartao e
+obrigatorio — devolver uma lista vazia e a resposta certa para um trecho que se
+sustenta sozinho.
+
+Retorne APENAS o JSON puro, sem markdown e sem texto fora do JSON:
+{{
+  "cenas": [
+    {{
+      "tipo": "hook",
+      "inicio": 0.0,
+      "fim": 3.0,
+      "texto": "o que faz o dedo parar",
+      "apoio": "linha secundaria, opcional"
+    }}
+  ]
+}}

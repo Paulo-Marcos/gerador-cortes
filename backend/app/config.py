@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     # raciocinio que avaliar o bruto (que segue um roteiro fixo) e bem menos que
     # propor cortes (que le a live inteira).
     claude_cli_thinking_tokens_shorts: int = 6000
+    claude_cli_thinking_tokens_cenas_short: int = 3000
     skills_dir: str = os.path.join(_PROJECT_ROOT, ".claude", "skills")
     # Modelos por etapa (alias do CLI: opus | sonnet | haiku, ou nome completo)
     claude_model_analise: str = "opus"
@@ -79,6 +80,7 @@ class Settings(BaseSettings):
     # D-453: roda a cada bruto de corte Fire, sobre texto ja curado — sonnet da
     # conta e mantem o custo da esteira baixo.
     claude_model_shorts: str = "sonnet"
+    claude_model_cenas_short: str = "sonnet"
     # D-454: faixa que o operador aceita num candidato a short. 15-30s serve
     # Reels, ate 90s serve conteudo denso; abaixo de 15 nao entrega ideia e acima
     # de 90 e o corte de novo. A quantidade e TETO de trabalho, nao cota: a skill

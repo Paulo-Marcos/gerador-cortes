@@ -177,3 +177,138 @@ class TestSimularPalco:
         resposta = client.post("/api/shorts/sumido/palco/simular", json={"ajustes_palco": {}})
 
         assert resposta.status_code == 404
+
+
+class TestSugerirCenas:
+    """D-497: a IA propoe os cartoes de UM trecho.
+
+    O que o teste guarda nao e a qualidade do palpite — e o CONTRATO: o prompt
+    recebe a transcricao do trecho no relogio do short, e o que volta ja esta
+    gravado. O modelo e trocado por um dublê; a chamada real custa dinheiro e
+    devolve coisa diferente a cada vez.
+    """
+
+    @pytest_asyncio.fixture
+    async def short(self, session_factory):
+        from app.models import Short
+
+        async with session_factory() as db:
+            corte = await db.get(Corte, "c1")
+            corte.transcricao_final = json.dumps(
+                [
+                    {"start": 0.0, "fim": 8.0, "texto": "abertura que fica de fora"},
+                    {"start": 10.0, "fim": 18.0, "texto": "o dado importante e trinta por cento"},
+                    {"start": 20.0, "fim": 28.0, "texto": "o fecho do raciocinio"},
+                ]
+            )
+            db.add(
+                Short(
+                    id="s-cenas",
+                    corte_id="c1",
+                    numero=1,
+                    inicio_seg=10.0,
+                    fim_seg=30.0,
+                    titulo_sugerido="O trecho",
+                    gancho="olha o dado",
+                )
+            )
+            # Um trecho cuja janela cai depois do fim da fala: o caso "sem
+            # transcricao" acontece de verdade quando o operador marca um
+            # trecho no silencio do fim do bruto.
+            db.add(Short(id="s-mudo", corte_id="c1", numero=2, inicio_seg=200.0, fim_seg=220.0))
+            await db.commit()
+        return session_factory
+
+    @pytest.fixture()
+    def modelo(self, monkeypatch):
+        """Captura o prompt e devolve o que mandarmos.
+
+        O scaffold da fixture geral e o de PROPOR SHORTS (outros placeholders);
+        aqui ele e trocado pelo desta etapa, senao o `.format` estoura antes de
+        a chamada acontecer.
+        """
+        monkeypatch.setattr(
+            editorial_scaffolds,
+            "resolver_scaffold",
+            lambda key, **kw: (
+                "{titulo} {gancho} {duracao_humana} {tipos_disponiveis} {texto_transcricao}"
+            ),
+        )
+        capturado: dict = {}
+
+        def responder(resposta):
+            async def _fake(prompt, **kwargs):
+                capturado["prompt"] = prompt
+                return resposta
+
+            monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", _fake)
+            return capturado
+
+        return responder
+
+    def test_o_prompt_leva_so_a_fala_do_trecho(self, client, short, modelo):
+        capturado = modelo({"cenas": []})
+
+        client.post("/api/shorts/s-cenas/cenas/sugerir")
+
+        assert "o dado importante" in capturado["prompt"]
+        assert "abertura que fica de fora" not in capturado["prompt"]
+
+    def test_o_prompt_conta_o_tempo_no_relogio_do_short(self, client, short, modelo):
+        """A fala do segundo 10 do bruto e o segundo ZERO do short.
+
+        Levar o relogio do bruto faria toda cena voltar deslocada pelo inicio do
+        trecho, e o sintoma apareceria so no render.
+        """
+        capturado = modelo({"cenas": []})
+
+        client.post("/api/shorts/s-cenas/cenas/sugerir")
+
+        assert "[00:00] o dado importante" in capturado["prompt"]
+
+    def test_as_cenas_propostas_ja_ficam_gravadas(self, client, short, modelo):
+        modelo(
+            {
+                "cenas": [
+                    {"tipo": "hook", "inicio": 0, "fim": 3, "texto": "30%"},
+                    {"tipo": "numero", "inicio": 5, "fim": 9, "texto": "30%", "apoio": "do total"},
+                ]
+            }
+        )
+
+        resposta = client.post("/api/shorts/s-cenas/cenas/sugerir")
+
+        assert resposta.status_code == 200
+        assert [c["tipo"] for c in resposta.json()["short"]["cenas"]] == ["hook", "numero"]
+        gravadas = client.get("/api/shorts/corte/c1").json()["shorts"][0]["cenas"]
+        assert len(gravadas) == 2
+
+    def test_o_descarte_volta_com_o_motivo(self, client, short, modelo):
+        """Sem isso a IA "propoe duas" e a tela mostra uma, sem explicacao."""
+        modelo(
+            {
+                "cenas": [
+                    {"tipo": "citacao", "inicio": 5, "fim": 9, "texto": "vale"},
+                    {"tipo": "cta", "inicio": 1, "fim": 4, "texto": "cedo demais"},
+                ]
+            }
+        )
+
+        corpo = client.post("/api/shorts/s-cenas/cenas/sugerir").json()
+
+        assert len(corpo["short"]["cenas"]) == 1
+        assert len(corpo["descartes"]) == 1
+
+    def test_trecho_sem_fala_e_422_com_o_porque(self, client, short, modelo):
+        """Cena inventada sobre um titulo e o cartao que repete o que o video diz."""
+        modelo({"cenas": []})
+
+        resposta = client.post("/api/shorts/s-mudo/cenas/sugerir")
+
+        assert resposta.status_code == 422
+        assert "fala" in resposta.json()["detail"]
+
+    def test_short_inexistente_e_404(self, client, short, modelo):
+        modelo({"cenas": []})
+
+        assert client.post("/api/shorts/sumido/cenas/sugerir").status_code == 404

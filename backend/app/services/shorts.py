@@ -25,6 +25,7 @@ from pathlib import Path
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
+from app.domain.cenas_short_ia import recortar_transcricao
 from app.domain.formato_video import foco_de_regiao
 from app.domain.moldura_short import Moldura
 from app.domain.palco_short import MODELOS
@@ -228,6 +229,60 @@ async def definir_cenas(short_id: str, cenas: list[dict]) -> dict:
 
     logger.info("[Shorts] short=%s cenas=%d", short_id[:8], len(validadas))
     return serializado
+
+
+@dataclass(frozen=True)
+class ContextoCenasDoShort:
+    """O material que o proponente de cenas precisa ver — e só ele.
+
+    A transcrição aqui é a do TRECHO, já rebaseada no relógio do short. Mandar a
+    do bruto inteiro faria o modelo propor cenas para falas que o short não
+    contém, e os tempos voltariam no relógio errado.
+    """
+
+    short_id: str
+    corte_id: str
+    projeto_id: str
+    titulo: str
+    gancho: str
+    duracao_seg: float
+    texto_transcricao: str
+
+
+async def montar_contexto_de_cenas(short_id: str) -> ContextoCenasDoShort:
+    """Reúne a janela do short com a transcrição recortada e zerada nela.
+
+    Levanta `LookupError` (short ou corte inexistente) e `ValueError` quando o
+    trecho não tem fala nenhuma — sem transcrição o modelo só teria o título
+    para trabalhar, e cena inventada em cima de título é exatamente o cartão que
+    repete o que o vídeo já diz.
+    """
+    async with AsyncSessionLocal() as db:
+        short = await db.get(Short, short_id)
+        if not short:
+            raise LookupError(f"Short {short_id!r} nao encontrado")
+        corte = await db.get(Corte, short.corte_id)
+        if not corte:
+            raise LookupError(f"Corte {short.corte_id!r} nao encontrado")
+
+        transcricao = _json_lista(corte.transcricao_final)
+        inicio = float(short.inicio_seg)
+        fim = float(short.fim_seg)
+        janela = recortar_transcricao(transcricao, inicio, fim)
+        if not janela:
+            raise ValueError(
+                "Este trecho não tem fala transcrita — sem ela não há o que apoiar com cenas."
+            )
+
+        return ContextoCenasDoShort(
+            short_id=short.id,
+            corte_id=corte.id,
+            projeto_id=corte.projeto_id,
+            titulo=short.titulo_sugerido or corte.titulo_proposto or "",
+            gancho=short.gancho or "",
+            duracao_seg=round(fim - inicio, 2),
+            texto_transcricao=montar_texto_transcricao(janela),
+        )
 
 
 async def descartar_bruto(corte_id: str) -> dict:
