@@ -135,6 +135,12 @@ class DestinoManual(Destino):
             "pasta": str(destino_dir),
             "video": str(pacote.arquivo),
             "avisos": pacote.avisos,
+            # D-503: os metadados voltam na resposta, e nao so no arquivo.
+            # A macro copia a legenda para a area de transferencia; le-la do
+            # `pacote.txt` exigiria que a tela abrisse um arquivo do disco.
+            "titulo": pacote.metadados.titulo,
+            "descricao": pacote.metadados.descricao,
+            "hashtags": pacote.metadados.hashtags,
         }
 
 

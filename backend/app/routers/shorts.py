@@ -22,6 +22,7 @@ Endpoints:
   GET  /{short_id}/publicacao     — os pacotes prontos, por plataforma
   POST /{short_id}/publicar/{plataforma} — envia (API) ou monta o pacote (manual)
   POST /corte/{corte_id}/publicar/tiktok-horizontal — o MP4 16:9 no TikTok
+  POST /corte/{corte_id}/publicar/tiktok-horizontal/staging — pacote + pasta aberta
   DELETE /corte/{corte_id}/bruto  — libera o disco e encerra a fábrica do corte
 
 O disparo padrão é o fim da geração do bruto de um corte marcado com Fire. O POST
@@ -35,12 +36,19 @@ relação com isto), no mesmo padrão de `avaliacao_bruto`.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from app.database import AsyncSessionLocal
 from app.services import shorts as shorts_store
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter()
+
+# A pagina de upload do TikTok no desktop. Constante nomeada porque ela e um
+# fato externo que pode mudar sem aviso — e uma URL solta no meio do codigo e
+# uma que ninguem acha quando muda.
+URL_UPLOAD_TIKTOK = "https://www.tiktok.com/tiktokstudio/upload?from=upload"
 
 
 @router.get("/fires")
@@ -435,6 +443,55 @@ async def publicar(short_id: str, plataforma: str):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except NotImplementedError as exc:
         raise HTTPException(status_code=501, detail=str(exc)) from exc
+
+
+class StagingRequest(BaseModel):
+    """Se a macro deve abrir a pasta do pacote no explorador."""
+
+    abrir_pasta: bool = True
+
+
+@router.post("/corte/{corte_id}/publicar/tiktok-horizontal/staging")
+async def staging_tiktok_horizontal(corte_id: str, body: StagingRequest):
+    """Monta o pacote e deixa TUDO a um passo do upload (D-503).
+
+    A "macro" que dá para fazer com honestidade. O que ela faz:
+
+      - monta o pacote (MP4 + texto + metadados) na pasta do corte;
+      - abre essa pasta no explorador, para o arquivo estar à mão;
+      - devolve a legenda e a URL de upload, que a tela abre numa aba nova.
+
+    O que ela NÃO faz, e por quê: logar. Automatizar o login exigiria guardar a
+    senha do operador e viola os Termos do TikTok, que proíbem acesso
+    automatizado. O risco não é a macro falhar — é a CONTA ser banida, e aí ele
+    perde o canal, não a automação. Abrindo a aba, o navegador dele já está
+    logado e nenhuma credencial passa por este app.
+
+    Publicar por API tampouco resolve hoje: cliente não auditado só posta
+    SELF_ONLY, com a conta privada no momento do post (pesquisa de 2026-09).
+    """
+    from app.services import abrir_no_sistema
+
+    resultado = await publicar_corte_no_tiktok(corte_id)
+
+    pasta = resultado.get("pasta")
+    aberta, erro_ao_abrir = False, None
+    if body.abrir_pasta and pasta:
+        try:
+            abrir_no_sistema.abrir_pasta(Path(pasta))
+            aberta = True
+        except abrir_no_sistema.NaoConsegueAbrir as exc:
+            # Nao derruba o fluxo: o pacote esta em disco e o caminho volta na
+            # resposta. Falhar aqui perderia o trabalho ja feito por causa do
+            # passo mais dispensavel dos tres.
+            erro_ao_abrir = str(exc)
+
+    return {
+        **resultado,
+        "pasta_aberta": aberta,
+        "erro_ao_abrir": erro_ao_abrir,
+        "url_upload": URL_UPLOAD_TIKTOK,
+    }
 
 
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal")

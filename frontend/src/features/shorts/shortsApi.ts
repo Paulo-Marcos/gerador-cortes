@@ -57,6 +57,8 @@ export interface FireComBruto {
   is_fire: boolean;
   /** Indicado à mão, sem depender do Fire. */
   indicado: boolean;
+  /** D-503: há MP4 final para publicar no TikTok? */
+  tem_video_final: boolean;
   shorts: ContagemShorts;
 }
 
@@ -292,6 +294,22 @@ export const shortsApi = {
 
   previaPublicacao: (shortId: string) =>
     request<{ pacotes: PacotePublicacao[] }>(`/shorts/${shortId}/publicacao`),
+
+  /** D-503: monta o pacote, abre a pasta, e devolve legenda + URL de upload. */
+  stagingTiktokHorizontal: (corteId: string) =>
+    request<{
+      pasta: string;
+      video: string;
+      pasta_aberta: boolean;
+      erro_ao_abrir: string | null;
+      url_upload: string;
+      titulo?: string;
+      descricao?: string;
+      hashtags?: string[];
+    }>(`/shorts/corte/${corteId}/publicar/tiktok-horizontal/staging`, {
+      method: 'POST',
+      body: JSON.stringify({ abrir_pasta: true }),
+    }),
 
   publicar: (shortId: string, plataforma: string) =>
     request<Record<string, unknown>>(`/shorts/${shortId}/publicar/${plataforma}`, {

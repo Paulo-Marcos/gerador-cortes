@@ -22,7 +22,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.channel_paths import resolver_do_projeto
+from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
 from app.domain.formato_video import foco_de_regiao
@@ -557,7 +557,21 @@ def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path | None) -> dict:
         "bruto_mb": round(bruto.stat().st_size / 1_000_000, 1) if bruto else 0.0,
         "is_fire": bool(corte.metadado.is_fire) if corte.metadado else False,
         "indicado": bool(corte.metadado.candidato_shorts) if corte.metadado else False,
+        # D-503: so ha o que publicar no TikTok quando o MP4 final existe. Sem
+        # isto a tela ofereceria um botao que o backend recusa — o mesmo defeito
+        # que a D-495 corrigiu no seletor de arranjo.
+        "tem_video_final": _video_final_em_disco(corte),
     }
+
+
+def _video_final_em_disco(corte: Corte) -> bool:
+    """Se o MP4 de publicacao do corte existe.
+
+    Espelha o caminho que `publicacao_destinos.montar_contexto_do_corte` exige;
+    aqui a pergunta e so "da para oferecer o botao?".
+    """
+    caminho = projetos_dir() / corte.projeto_id / "cortes" / corte.id / "upload_ready" / "video.mp4"
+    return caminho.is_file()
 
 
 async def _contar_shorts_por_corte(db: AsyncSession, corte_ids: list[str]) -> dict[str, dict]:
