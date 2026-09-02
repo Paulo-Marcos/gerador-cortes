@@ -5,6 +5,9 @@ import { FIRES_KEY } from './useFires';
 
 export const shortsDoCorteKey = (corteId: string) => ['shorts', 'corte', corteId] as const;
 
+/** Prefixo de tudo que descreve palco — invalidar aqui atinge o corte E os shorts. */
+export const PALCO_KEY = ['shorts', 'palco'] as const;
+
 export function useShortsDoCorte(corteId: string) {
   return useQuery({
     queryKey: shortsDoCorteKey(corteId),
@@ -127,7 +130,7 @@ export function useTranscricaoDoCorte(corteId: string) {
 // E-036/D-487: o catalogo e do sistema, nao do corte — cabe cache eterno.
 export function useModelosDePalco() {
   return useQuery({
-    queryKey: ['shorts', 'palco', 'modelos'],
+    queryKey: [...PALCO_KEY, 'modelos'],
     queryFn: () => shortsApi.modelosDePalco(),
     staleTime: Infinity,
   });
@@ -135,7 +138,7 @@ export function useModelosDePalco() {
 
 export function usePalcoDoCorte(corteId: string) {
   return useQuery({
-    queryKey: ['shorts', 'palco', corteId],
+    queryKey: [...PALCO_KEY, 'corte', corteId],
     queryFn: () => shortsApi.palcoDoCorte(corteId),
     enabled: Boolean(corteId),
   });
@@ -147,19 +150,30 @@ export function useEscolherPreset(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (presetId: string) => shortsApi.escolherPreset(corteId, presetId),
+    // D-490: trocar o preset muda TAMBEM o plano desenhavel de cada short, e
+    // essa query nao era invalidada. A chave dela carrega o modelo, nao o
+    // preset, entao permanecia identica e o React Query servia o plano em cache
+    // — o operador escolhia o palco e a tela nao mudava nada.
+    //
+    // O catalogo de modelos fica de fora de proposito: ele e do sistema e nao
+    // muda com o preset (e tem staleTime infinito justamente por isso).
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['shorts', 'palco', corteId] });
+      void qc.invalidateQueries({ queryKey: [...PALCO_KEY, 'corte'] });
+      void qc.invalidateQueries({ queryKey: [...PALCO_KEY, 'desenho'] });
       void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
     },
   });
 }
 
-// D-489: o palco desenhavel do candidato em foco. Muda quando o preset do corte
-// ou o modelo do short mudam — os dois ja invalidam a lista, entao a chave
-// carrega o modelo para nao servir um palco velho depois da troca.
+// D-489/D-490: o palco desenhavel do candidato em foco.
+//
+// A chave carrega o modelo porque trocar o arranjo do short muda o desenho. O
+// PRESET do corte tambem muda, e esse nao aparece na chave — quem cuida dele e
+// a invalidacao por prefixo em `useEscolherPreset`. Foi confiar so na chave que
+// deixou a previa presa num plano vazio (D-490).
 export function usePalcoDoShort(shortId: string | null, modelo: string) {
   return useQuery({
-    queryKey: ['shorts', 'palco-desenho', shortId, modelo],
+    queryKey: [...PALCO_KEY, 'desenho', shortId, modelo],
     queryFn: () => shortsApi.palcoDoShort(shortId as string),
     enabled: Boolean(shortId),
   });
