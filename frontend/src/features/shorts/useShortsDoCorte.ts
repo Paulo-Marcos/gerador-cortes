@@ -123,3 +123,33 @@ export function useTranscricaoDoCorte(corteId: string) {
     staleTime: Infinity,
   });
 }
+
+// E-036/D-487: o catalogo e do sistema, nao do corte — cabe cache eterno.
+export function useModelosDePalco() {
+  return useQuery({
+    queryKey: ['shorts', 'palco', 'modelos'],
+    queryFn: () => shortsApi.modelosDePalco(),
+    staleTime: Infinity,
+  });
+}
+
+export function usePalcoDoCorte(corteId: string) {
+  return useQuery({
+    queryKey: ['shorts', 'palco', corteId],
+    queryFn: () => shortsApi.palcoDoCorte(corteId),
+    enabled: Boolean(corteId),
+  });
+}
+
+// Trocar o preset muda as regioes, e as regioes mudam o modelo sugerido de TODO
+// candidato do corte — dai invalidar a lista tambem.
+export function useEscolherPreset(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (presetId: string) => shortsApi.escolherPreset(corteId, presetId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['shorts', 'palco', corteId] });
+      void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+    },
+  });
+}

@@ -63,6 +63,8 @@ export interface ShortSugerido {
   arquivo_short_path: string;
   /** D-483: o MP4 sem filtro, para julgar antes de gastar a passada boa. */
   arquivo_previa_path: string;
+  /** Arranjo escolhido pelo operador. Vazio = automático, deduzido das regiões. */
+  modelo_palco: string;
 }
 
 // ─── Endpoints ─────────────────────────────────────────────────────────────
@@ -73,11 +75,29 @@ export interface AtualizarShortBody {
   inicio_seg?: number;
   fim_seg?: number;
   foco_x?: number;
+  modelo_palco?: string;
 }
 
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
 export function brutoUrl(corteId: string): string {
   return `${API_BASE}/cortes/${corteId}/video-bruto`;
+}
+
+/** Um arranjo de palco vertical. */
+export interface ModeloPalco {
+  id: string;
+  nome: string;
+  porque: string;
+  regioes_exigidas: string[];
+}
+
+/** De onde saem as regiões deste corte. */
+export interface EstadoPalco {
+  preset: string;
+  origem: 'preset' | 'layout_do_corte' | 'nenhuma';
+  regioes: Record<string, { x: number; y: number; w: number; h: number }>;
+  modelo_sugerido: string;
+  presets_disponiveis: { id: string; nome: string; regioes: string[] }[];
 }
 
 /** Um passo do render e onde ele está. */
@@ -146,6 +166,16 @@ export const shortsApi = {
 
   listarDoCorte: (corteId: string) =>
     request<{ shorts: ShortSugerido[] }>(`/shorts/corte/${corteId}`),
+
+  modelosDePalco: () => request<{ modelos: ModeloPalco[] }>('/shorts/palco/modelos'),
+
+  palcoDoCorte: (corteId: string) => request<EstadoPalco>(`/shorts/corte/${corteId}/palco`),
+
+  escolherPreset: (corteId: string, presetId: string) =>
+    request<EstadoPalco>(`/shorts/corte/${corteId}/palco`, {
+      method: 'PUT',
+      body: JSON.stringify({ preset_id: presetId }),
+    }),
 
   transcricaoDoCorte: (corteId: string) =>
     request<TranscricaoDoBruto>(`/shorts/corte/${corteId}/transcricao`),

@@ -7,6 +7,9 @@ Endpoints:
   POST /corte/{corte_id}/gerar    — caminho MANUAL: regera o bruto se preciso e propõe
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
   GET  /corte/{corte_id}/transcricao — palavras com tempo, para a prévia de legenda
+  GET  /palco/modelos             — os arranjos de palco vertical disponiveis
+  GET  /corte/{corte_id}/palco    — de onde vem as regioes deste corte
+  PUT  /corte/{corte_id}/palco    — aponta um preset do canal para o corte
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
@@ -80,6 +83,50 @@ async def gerar_manualmente(corte_id: str):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/palco/modelos")
+async def modelos_de_palco():
+    """Os arranjos de palco vertical, com o porquê de cada um (E-036).
+
+    Rota sem `{corte_id}` de propósito: o catálogo é do sistema, não do corte.
+    Declarada ANTES de `/corte/...` porque o FastAPI casa na ordem — se viesse
+    depois, `/palco/modelos` seria capturado por nada, mas a inversa (uma rota
+    `/{algo}` antes desta) engoliria o catálogo.
+    """
+    from app.services import palco_shorts
+
+    return {"modelos": palco_shorts.catalogo_modelos()}
+
+
+@router.get("/corte/{corte_id}/palco")
+async def descrever_palco(corte_id: str):
+    """De onde vêm as regiões deste corte, e o que há para escolher."""
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.descrever(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class EscolherPresetRequest(BaseModel):
+    """`""` volta ao automático (deduzir do layout do corte, ou nada)."""
+
+    preset_id: str = ""
+
+
+@router.put("/corte/{corte_id}/palco")
+async def escolher_preset_do_palco(corte_id: str, body: EscolherPresetRequest):
+    """Aponta um preset do canal para alimentar o palco vertical deste corte."""
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.escolher_preset(corte_id, body.preset_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @router.get("/corte/{corte_id}/transcricao")
 async def transcricao_do_bruto(corte_id: str):
     """As palavras com tempo do bruto — a matéria-prima da prévia de legenda.
@@ -129,6 +176,7 @@ class AtualizarShortRequest(BaseModel):
     inicio_seg: float | None = None
     fim_seg: float | None = None
     foco_x: float | None = None
+    modelo_palco: str | None = None
 
 
 @router.patch("/{short_id}")
@@ -142,6 +190,7 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 inicio_seg=body.inicio_seg,
                 fim_seg=body.fim_seg,
                 foco_x=body.foco_x,
+                modelo_palco=body.modelo_palco,
             )
         }
     except LookupError as exc:

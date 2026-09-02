@@ -204,3 +204,15 @@ class TestRegioesDoLayout:
         quadro = {"x": 225, "y": 139, "w": 1482, "h": 808}
 
         assert regioes_do_layout({"crop": quadro}) == {"quadro": quadro}
+
+    def test_preset_de_modo_full_tambem_da_a_regiao_quadro(self):
+        """Payload real do tipo "posicionamento_full", em PROD.
+
+        O crop do FULL ja nasce recortado PARA DENTRO das bordas da live — e o
+        antidoto mais direto contra o chrome verde. Ler so `crop` no topo
+        deixava esse preset de fora da lista, invisivel para o operador.
+        """
+        quadro = {"x": 225, "y": 139, "w": 1482, "h": 808}
+        preset = {"full": {"crop": quadro, "slot": {"x": 150, "y": 130, "w": 1630, "h": 889}}}
+
+        assert regioes_do_layout(preset) == {"quadro": quadro}

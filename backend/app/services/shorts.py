@@ -25,6 +25,7 @@ from pathlib import Path
 from app.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.formato_video import foco_de_regiao
+from app.domain.palco_short import MODELOS
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
@@ -185,6 +186,7 @@ async def atualizar_short(
     inicio_seg: float | None = None,
     fim_seg: float | None = None,
     foco_x: float | None = None,
+    modelo_palco: str | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -218,6 +220,14 @@ async def atualizar_short(
             if not 0.0 <= foco_x <= 1.0:
                 raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
             short.foco_x = round(float(foco_x), 3)
+
+        if modelo_palco is not None:
+            # "" e valido: volta ao automatico, que deduz das regioes. Um id
+            # desconhecido NAO e — ele viraria um palco silenciosamente diferente
+            # do que a tela mostra (E-036/D-487).
+            if modelo_palco and modelo_palco not in MODELOS:
+                raise ValueError(f"Modelo de palco {modelo_palco!r} nao existe.")
+            short.modelo_palco = modelo_palco
 
         await db.commit()
         return _serializar(short)
@@ -491,6 +501,7 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "foco_efetivo": foco_efetivo(short, corte),
         "arquivo_short_path": short.arquivo_short_path,
         "arquivo_previa_path": short.arquivo_previa_path,
+        "modelo_palco": short.modelo_palco,
     }
 
 

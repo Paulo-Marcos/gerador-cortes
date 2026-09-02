@@ -320,8 +320,15 @@ def regioes_do_layout(layout: dict | None) -> dict[str, dict]:
     for destino, origem in (("pessoa", "crop_facecam"), ("tela", "crop_tela")):
         if _crop_valido(fonte.get(origem)):
             regioes[destino] = dict(fonte[origem])
-    if _crop_valido(layout.get("crop")):
-        regioes["quadro"] = dict(layout["crop"])
+    # O preset de modo FULL guarda o recorte em `full.crop` (tipo
+    # "posicionamento_full"), e nao no topo. Ler so o topo deixava de fora
+    # justamente o preset mais util contra o chrome da live: o crop do FULL ja
+    # nasce recortado PARA DENTRO das bordas da transmissao.
+    full = layout.get("full") if isinstance(layout.get("full"), dict) else {}
+    for candidato in (layout.get("crop"), full.get("crop")):
+        if _crop_valido(candidato):
+            regioes["quadro"] = dict(candidato)
+            break
     return regioes
 
 

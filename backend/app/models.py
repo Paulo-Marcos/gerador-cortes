@@ -182,6 +182,12 @@ class Corte(Base):
         Text,
         default='{"modo_padrao":"full","regioes":[]}',
     )
+    # E-036/D-487: o preset cujos crops alimentam o PALCO VERTICAL do short.
+    # Coluna propria, e nao um campo dentro de `layout_youtube`: aquele bloco e
+    # do pipeline horizontal (e do i-035, travado), e escrever nele para servir
+    # os shorts arriscaria o render que ja funciona. Vazio = deduzir do proprio
+    # layout do corte, ou nada.
+    palco_short_preset: Mapped[str] = mapped_column(String(200), default="")
     # F-054: lista JSON de segmentos detectados via PySceneDetect no bruto do
     # corte. Cada item: {inicio, fim, score, status}. Status: sugerido /
     # aceito_full / aceito_compartilhada / rejeitado. Aceitar materializa uma
@@ -360,6 +366,10 @@ class Short(Base):
     # e contrato (vale para a API e para os 13 registros que ja existem em
     # PROD), e o estagio se deduz sem ele — tem previa, tem final, ou nenhum.
     arquivo_previa_path: Mapped[str] = mapped_column(String(1000), default="")
+    # E-036/D-487: o arranjo do palco deste candidato. Vazio = automatico, que
+    # deduz das regioes disponiveis. Por SHORT e nao por corte porque o estilo
+    # muda dentro do mesmo corte: um trecho mostra a tela, o seguinte e so fala.
+    modelo_palco: Mapped[str] = mapped_column(String(60), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

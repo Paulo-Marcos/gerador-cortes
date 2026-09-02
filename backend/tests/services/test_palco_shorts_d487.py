@@ -1,0 +1,225 @@
+"""D-487: de onde vêm as regiões do palco de um corte.
+
+A armadilha que motivou esta demanda vir ANTES da composição: sem região
+marcada, o palco cai em "pessoa cheia" usando o quadro INTEIRO — e o chrome
+verde da live volta, que é justamente o que o palco existe para evitar. O corte
+real do dev está assim (`{"modo_padrao": "full", "regioes": []}`).
+
+Por isso `origem` volta em toda resposta: um palco montado errado precisa dizer
+POR QUE está assim, senão o operador mexe no arranjo achando que o problema é o
+modelo, quando é a falta de região.
+"""
+
+import json
+
+import pytest
+import pytest_asyncio
+from app.models import Base, Corte, LayoutPreset, Projeto, Short
+from app.services import palco_shorts as servico
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
+
+FACECAM = {"x": 24, "y": 410, "w": 340, "h": 260}
+TELA = {"x": 365, "y": 180, "w": 1325, "h": 720}
+
+PRESET_COMPARTILHADO = {
+    "compartilhada": {"telas": 2, "crop_facecam": FACECAM, "crop_tela": TELA},
+    "fundo": "hud-topo",
+}
+PRESET_VAZIO = {"fundo": "hud-topo", "placa": {"nome": "", "papel": ""}}
+
+
+@pytest_asyncio.fixture
+async def ambiente(monkeypatch):
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    monkeypatch.setattr(servico, "AsyncSessionLocal", factory)
+
+    async with factory() as db:
+        db.add(Projeto(id="p1", youtube_url="u"))
+        db.add(
+            Corte(
+                id="c1",
+                projeto_id="p1",
+                numero=1,
+                inicio_seg=0.0,
+                fim_seg=100.0,
+                inicio_hms="00:00:00.000",
+                fim_hms="00:01:40.000",
+                # O caso real: corte nunca posicionado.
+                layout_youtube=json.dumps({"modo_padrao": "full", "regioes": []}),
+            )
+        )
+        db.add(Short(id="s1", corte_id="c1", numero=1, inicio_seg=10.0, fim_seg=40.0))
+        db.add(
+            LayoutPreset(
+                id="pre-1",
+                nome="Comp. 2 OBS",
+                tipo="posicionamento",
+                payload=json.dumps(PRESET_COMPARTILHADO),
+            )
+        )
+        db.add(
+            LayoutPreset(
+                id="pre-vazio",
+                nome="Sem regiao",
+                tipo="posicionamento",
+                payload=json.dumps(PRESET_VAZIO),
+            )
+        )
+        await db.commit()
+
+    yield factory
+    await engine.dispose()
+
+
+class TestCatalogo:
+    def test_traz_os_quatro_com_o_porque(self):
+        catalogo = servico.catalogo_modelos()
+
+        assert len(catalogo) == 4
+        for modelo in catalogo:
+            assert modelo["porque"], "escolher sem saber para que serve e adivinhacao"
+            assert modelo["regioes_exigidas"]
+
+
+class TestDescrever:
+    @pytest.mark.asyncio
+    async def test_corte_sem_posicionamento_admite_que_nao_tem_regiao(self, ambiente):
+        """O caso real. Sem isto o operador nao entende por que o verde ficou."""
+        estado = await servico.descrever("c1")
+
+        assert estado["origem"] == servico.ORIGEM_NENHUMA
+        assert estado["regioes"] == {}
+
+    @pytest.mark.asyncio
+    async def test_oferece_os_presets_que_tem_regiao(self, ambiente):
+        estado = await servico.descrever("c1")
+        nomes = [p["nome"] for p in estado["presets_disponiveis"]]
+
+        assert "Comp. 2 OBS" in nomes
+        assert "Sem regiao" not in nomes, "preset sem crop nao serve de nada aqui"
+
+    @pytest.mark.asyncio
+    async def test_layout_do_corte_serve_sem_cadastro_nenhum(self, ambiente):
+        """Corte ja posicionado para o horizontal ja tem os crops."""
+        async with ambiente() as db:
+            corte = await db.get(Corte, "c1")
+            corte.layout_youtube = json.dumps({"crop_facecam": FACECAM, "crop_tela": TELA})
+            await db.commit()
+
+        estado = await servico.descrever("c1")
+
+        assert estado["origem"] == servico.ORIGEM_LAYOUT
+        assert estado["regioes"] == {"pessoa": FACECAM, "tela": TELA}
+        assert estado["modelo_sugerido"] == "tela_cima_pessoa_baixo"
+
+    @pytest.mark.asyncio
+    async def test_corte_inexistente_e_404(self, ambiente):
+        with pytest.raises(LookupError):
+            await servico.descrever("nao-existe")
+
+
+class TestEscolherPreset:
+    @pytest.mark.asyncio
+    async def test_o_preset_escolhido_passa_a_mandar(self, ambiente):
+        estado = await servico.escolher_preset("c1", "pre-1")
+
+        assert estado["origem"] == servico.ORIGEM_PRESET
+        assert estado["preset"] == "Comp. 2 OBS"
+        assert estado["regioes"] == {"pessoa": FACECAM, "tela": TELA}
+
+    @pytest.mark.asyncio
+    async def test_preset_vence_o_layout_do_corte(self, ambiente):
+        """A escolha explicita do operador ganha da deducao."""
+        outro = {"x": 0, "y": 0, "w": 100, "h": 100}
+        async with ambiente() as db:
+            corte = await db.get(Corte, "c1")
+            corte.layout_youtube = json.dumps({"crop_facecam": outro})
+            await db.commit()
+
+        estado = await servico.escolher_preset("c1", "pre-1")
+
+        assert estado["regioes"]["pessoa"] == FACECAM
+
+    @pytest.mark.asyncio
+    async def test_preset_sem_regiao_e_recusado(self, ambiente):
+        """Apontar para um preset vazio deixaria o corte PARECENDO configurado."""
+        with pytest.raises(ValueError, match="quadro inteiro"):
+            await servico.escolher_preset("c1", "pre-vazio")
+
+    @pytest.mark.asyncio
+    async def test_vazio_volta_ao_automatico(self, ambiente):
+        await servico.escolher_preset("c1", "pre-1")
+
+        estado = await servico.escolher_preset("c1", "")
+
+        assert estado["origem"] == servico.ORIGEM_NENHUMA
+
+    @pytest.mark.asyncio
+    async def test_preset_inexistente_e_404(self, ambiente):
+        with pytest.raises(LookupError):
+            await servico.escolher_preset("c1", "nao-existe")
+
+
+class TestResolverParaRender:
+    @pytest.mark.asyncio
+    async def test_sem_regiao_devolve_plano_nulo_e_diz_o_porque(self, ambiente):
+        """Degradar para o recorte antigo e melhor que abortar — mas tem de constar."""
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["plano"] is None
+        assert resolvido["origem"] == servico.ORIGEM_NENHUMA
+
+    @pytest.mark.asyncio
+    async def test_com_preset_monta_o_plano_sugerido(self, ambiente):
+        await servico.escolher_preset("c1", "pre-1")
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["modelo"] == "tela_cima_pessoa_baixo"
+        assert {r.regiao for r in resolvido["plano"].recortes} == {"pessoa", "tela"}
+
+    @pytest.mark.asyncio
+    async def test_a_escolha_do_operador_vence_o_sugerido(self, ambiente):
+        await servico.escolher_preset("c1", "pre-1")
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.modelo_palco = "pessoa_com_insert"
+            await db.commit()
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["modelo"] == "pessoa_com_insert"
+
+    @pytest.mark.asyncio
+    async def test_modelo_que_as_regioes_nao_comportam_cai_no_sugerido(self, ambiente, caplog):
+        """Preset so com facecam + operador pedindo tela: render segue, com aviso.
+
+        Abortar o render por causa de uma escolha de arranjo seria punir o
+        operador por experimentar; seguir calado esconderia que ele nao recebeu
+        o que pediu.
+        """
+        async with ambiente() as db:
+            preset = await db.get(LayoutPreset, "pre-1")
+            preset.payload = json.dumps({"crop_facecam": FACECAM})
+            short = await db.get(Short, "s1")
+            short.modelo_palco = "tela_cima_pessoa_baixo"
+            await db.commit()
+        await servico.escolher_preset("c1", "pre-1")
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["modelo"] == "pessoa_cheia"
+        assert "nao serve" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_short_inexistente_e_404(self, ambiente):
+        with pytest.raises(LookupError):
+            await servico.resolver_para_render("nao-existe")

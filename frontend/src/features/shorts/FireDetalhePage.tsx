@@ -34,6 +34,7 @@ import { brutoUrl, shortVideoUrl, type ShortSugerido, type StatusShort } from '.
 import { avisoDescarteBruto } from './descarteBruto';
 import { BordasFinasPanel } from './BordasFinasPanel';
 import { LegendaPrevia } from './LegendaPrevia';
+import { PalcoDoCorte } from './PalcoDoCorte';
 import { ProgressoRenderPanel } from './ProgressoRenderPanel';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
@@ -42,6 +43,7 @@ import { useFires } from './useFires';
 import {
   useAtualizarShort,
   useDescartarBruto,
+  useModelosDePalco,
   useProgressoRender,
   useRenderizarPrevia,
   useRenderizarShort,
@@ -91,6 +93,7 @@ interface CandidatoProps {
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
   onFoco: (delta: number) => void;
   onPrevia: () => void;
+  onModelo: (modeloId: string) => void;
   onRenderizar: () => void;
 }
 
@@ -113,6 +116,7 @@ function Candidato({
   onBorda,
   onFoco,
   onPrevia,
+  onModelo,
   onRenderizar,
 }: CandidatoProps) {
   const rejeitado = short.status === 'rejeitado';
@@ -172,6 +176,9 @@ function Candidato({
           {Math.round(short.duracao_seg)}s
         </span>
         {/* D-464: o enquadramento 9:16. Sem ajuste, segue a facecam do layout. */}
+        {/* E-036/D-487: o arranjo e por SHORT, nao por corte — dentro do mesmo
+            corte um trecho mostra a tela e o seguinte e so fala. */}
+        <SeletorDeArranjo valor={short.modelo_palco} ocupado={ocupado} onEscolher={onModelo} />
         <span className="inline-flex items-center gap-1" title="Onde a janela 9:16 se centra na horizontal">
           <Crop size={11} aria-hidden />
           enquadramento {Math.round(short.foco_efetivo * 100)}%
@@ -255,6 +262,41 @@ function Candidato({
       {/* D-468/469/470: so ha o que publicar depois do render. */}
       {short.status === 'renderizado' && <PainelPublicacao shortId={short.id} />}
     </article>
+  );
+}
+
+/** Qual arranjo de palco este candidato usa. */
+function SeletorDeArranjo({
+  valor,
+  ocupado,
+  onEscolher,
+}: {
+  valor: string;
+  ocupado: boolean;
+  onEscolher: (modeloId: string) => void;
+}) {
+  const modelos = useModelosDePalco();
+  const escolhido = modelos.data?.modelos.find((m) => m.id === valor);
+
+  return (
+    <select
+      aria-label="Arranjo do palco deste short"
+      value={valor}
+      disabled={ocupado || !modelos.data}
+      // O card inteiro seleciona ao clicar; sem isto, mexer no select
+      // selecionaria o candidato E abriria a lista, que confunde.
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => onEscolher(e.target.value)}
+      title={escolhido?.porque ?? 'Deduz o arranjo das regiões disponíveis'}
+      className="rounded-[4px] border border-transparent bg-[var(--wb-bg-inset)] px-1 py-0.5 font-code text-[11px] text-[var(--wb-text-dim)] outline-none focus:border-[var(--wb-accent)] disabled:opacity-45"
+    >
+      <option value="">arranjo automático</option>
+      {modelos.data?.modelos.map((modelo) => (
+        <option key={modelo.id} value={modelo.id}>
+          {modelo.nome}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -584,6 +626,11 @@ export default function FireDetalhePage() {
         </div>
 
         <aside className="flex min-h-0 flex-col gap-2 overflow-auto">
+          {/* O palco e do CORTE: as regioes valem para todos os candidatos. */}
+          <div className="flex-none rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
+            <PalcoDoCorte corteId={corteId} />
+          </div>
+
           {isLoading && (
             <p className="py-8 text-center text-[13px] text-[var(--wb-text-mute)]">
               Carregando candidatos…
@@ -620,6 +667,7 @@ export default function FireDetalhePage() {
               onBorda={(campo) => moverBorda(short, campo)}
               onFoco={(delta) => moverFoco(short, delta)}
               onPrevia={() => previa.mutate(short.id)}
+              onModelo={(modeloId) => atualizar.mutate({ shortId: short.id, modelo_palco: modeloId })}
               onRenderizar={() => renderizar.mutate(short.id)}
             />
           ))}
