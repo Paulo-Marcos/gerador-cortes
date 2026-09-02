@@ -25,13 +25,17 @@ from pathlib import Path
 
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain.ffmpeg_short import build_composicao_short_cmd, build_recorte_vertical_cmd
+from app.domain.ffmpeg_short import (
+    build_composicao_short_cmd,
+    build_palco_vertical_cmd,
+    build_recorte_vertical_cmd,
+)
 from app.domain.formato_video import VERTICAL, Resolucao
 from app.domain.overlay_codec import OverlayCodec, overlay_codec_profile
 from app.infrastructure.ffmpeg_runner import probe_resolucao
 from app.infrastructure.worker_queue import RemotionWorkerQueue, WorkerJob, WorkerJobCategory
 from app.models import Corte, Short, StatusShort
-from app.services import legendas_short
+from app.services import legendas_short, palco_shorts
 from app.services.app_settings import AppSettingsService
 from app.services.pipeline_render_helpers import _build_overlay_render_cmd
 from app.services.shorts import foco_efetivo
@@ -160,16 +164,7 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
     ShortsProgress.marcar(short_id, "recorte", "rodando")
     await _despachar(
         f"{short_id}_{estagio}_recorte",
-        build_recorte_vertical_cmd(
-            contexto.bruto,
-            base,
-            inicio_seg=contexto.inicio_seg,
-            duracao_seg=contexto.duracao_seg,
-            foco_x=contexto.foco_x,
-            filtro=contexto.filtro if com_filtro else None,
-            origem=contexto.origem,
-            destino=VERTICAL,
-        ),
+        _comando_do_quadro(contexto, base, com_filtro=com_filtro),
         cwd=saida_dir,
         category=WorkerJobCategory.GRADE,
         timeout=_TIMEOUT_RECORTE_SEG,
@@ -251,6 +246,9 @@ class _ContextoRender:
     # default (HORIZONTAL) que fez o crop 9:16 ser calculado sobre 1920x1080 num
     # bruto 720p e estourar o quadro.
     origem: Resolucao
+    # E-036/D-488: o palco deste short, ou None quando o corte nao tem regiao.
+    plano: object
+    origem_palco: str
 
     @property
     def duracao_seg(self) -> float:
@@ -280,6 +278,12 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
 
         origem = await _medir(bruto)
 
+    palco = await palco_shorts.resolver_para_render(short_id)
+
+    async with AsyncSessionLocal() as db:
+        short = await db.get(Short, short_id)
+        corte = await db.get(Corte, short.corte_id)
+
         return _ContextoRender(
             short_id=short.id,
             corte_id=corte.id,
@@ -292,7 +296,51 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             filtro=filtro,
             cenas=_json_lista(short.cenas_remotion),
             origem=origem,
+            plano=palco["plano"],
+            origem_palco=palco["origem"],
         )
+
+
+def _comando_do_quadro(contexto: _ContextoRender, saida: Path, *, com_filtro: bool) -> list[str]:
+    """O palco quando ha regiao; o recorte 9:16 do quadro cru quando nao ha.
+
+    Degradar e melhor que falhar: um corte sem preset aplicado continua virando
+    short, do jeito que virava antes. Mas o log diz que foi degradacao — sem
+    isso o operador veria o chrome da live de volta e nao saberia que a causa e
+    a falta de regiao, nao o palco (E-036/D-488).
+    """
+    filtro = contexto.filtro if com_filtro else None
+    if contexto.plano is None:
+        logger.info(
+            "[Palco] short=%s sem regiao (%s) — recorte do quadro cru",
+            contexto.short_id[:8],
+            contexto.origem_palco,
+        )
+        return build_recorte_vertical_cmd(
+            contexto.bruto,
+            saida,
+            inicio_seg=contexto.inicio_seg,
+            duracao_seg=contexto.duracao_seg,
+            foco_x=contexto.foco_x,
+            filtro=filtro,
+            origem=contexto.origem,
+            destino=VERTICAL,
+        )
+
+    logger.info(
+        "[Palco] short=%s modelo=%s regioes=%s",
+        contexto.short_id[:8],
+        contexto.plano.modelo.id,
+        [r.regiao for r in contexto.plano.recortes],
+    )
+    return build_palco_vertical_cmd(
+        contexto.bruto,
+        saida,
+        inicio_seg=contexto.inicio_seg,
+        duracao_seg=contexto.duracao_seg,
+        plano=contexto.plano,
+        filtro=filtro,
+    )
 
 
 async def _medir(bruto: Path) -> Resolucao:

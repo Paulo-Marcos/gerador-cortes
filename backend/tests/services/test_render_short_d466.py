@@ -56,6 +56,14 @@ async def ambiente(monkeypatch, tmp_path):
 
     monkeypatch.setattr(render_short, "probe_resolucao", _resolucao)
 
+    # E-036/D-488: o render passou a consultar `palco_shorts`, que tem a PROPRIA
+    # sessao. Sem trocar tambem a dele, o teste lia o banco de desenvolvimento
+    # de verdade — e passava por coincidencia, porque la existe um short com o
+    # mesmo id "s1" deste fixture.
+    from app.services import palco_shorts
+
+    monkeypatch.setattr(palco_shorts, "AsyncSessionLocal", factory)
+
     async with factory() as db:
         db.add(Projeto(id="p1", youtube_url="u"))
         db.add(

@@ -191,6 +191,35 @@ class Recorte:
             max(0, (self.escala[1] - self.slot.h) // 2),
         )
 
+    @property
+    def corte_interno(self) -> tuple[int, int, int, int] | None:
+        """`(w, h, x, y)` do corte a aplicar DEPOIS de escalar, ou `None`.
+
+        Só existe em COBRIR: ali o conteúdo transborda o slot de propósito, e o
+        excesso precisa sair em algum momento. Em CABER não há o que cortar —
+        aplicar um corte de mesmo tamanho seria um passo de ffmpeg pago para não
+        fazer nada.
+        """
+        if self.slot.ajuste != Ajuste.COBRIR:
+            return None
+        dx, dy = self.desloca
+        return (self.slot.w, self.slot.h, dx, dy)
+
+    @property
+    def posicao(self) -> tuple[int, int]:
+        """Onde o conteúdo é sobreposto, em coordenadas do quadro do short.
+
+        COBRIR já saiu do corte com o tamanho exato do slot, então pousa na
+        origem dele. CABER saiu menor: a sobra é dividida entre os dois lados,
+        senão a tela compartilhada ficaria colada num canto do próprio slot.
+        """
+        if self.slot.ajuste == Ajuste.COBRIR:
+            return (self.slot.x, self.slot.y)
+        return (
+            self.slot.x + max(0, (self.slot.w - self.escala[0]) // 2),
+            self.slot.y + max(0, (self.slot.h - self.escala[1]) // 2),
+        )
+
 
 @dataclass(frozen=True)
 class PlanoPalco:

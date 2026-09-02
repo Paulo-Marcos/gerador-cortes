@@ -29,10 +29,16 @@ from app.domain.formato_video import (
     Resolucao,
     filtro_reenquadrar,
 )
+from app.domain.palco_short import PlanoPalco, Recorte
 
 # ProRes 4444 é o único codec com alpha que o overlay do Remotion entrega de
 # forma confiável neste projeto — VP9/.webm foi testado e não funciona.
 CODEC_OVERLAY = "prores_ks"
+
+# O fundo do palco vertical. Espelha `fundoPalco` da paleta do renderer — onde a
+# tela compartilhada nao preenche o slot, e esta cor que aparece, e ela precisa
+# pertencer ao canal, nao ser um preto qualquer.
+FUNDO_PADRAO = "0x0f1410"
 
 
 def build_recorte_vertical_cmd(
@@ -106,6 +112,112 @@ def build_recorte_vertical_cmd(
         "+faststart",
         str(saida),
     ]
+
+
+def build_palco_vertical_cmd(
+    entrada: Path,
+    saida: Path,
+    *,
+    inicio_seg: float,
+    duracao_seg: float,
+    plano: PlanoPalco,
+    fundo_cor: str = FUNDO_PADRAO,
+    filtro: str | None = "cinematic_iii",
+    crf: int = 18,
+) -> list[str]:
+    """Compõe o short num PALCO: fundo + regiões recortadas nos seus slots.
+
+    A alternativa a `build_recorte_vertical_cmd`, e a razão de o palco existir:
+    aquele copia uma janela do quadro cru e traz junto o chrome da live; este
+    recorta só as regiões nomeadas, então o que ficou de fora não existe no
+    resultado.
+
+    O FILTRO roda sobre o quadro JÁ COMPOSTO, não região a região. Gradar cada
+    pedaço separado deixaria a pessoa e a tela com curvas diferentes lado a lado
+    — e a ordem que importa (grade antes do overlay do Remotion) fica intacta,
+    porque o overlay é um passo depois, noutro comando.
+
+    Exemplo (pessoa cheia, sem grade):
+        >>> from app.domain.palco_short import montar_plano
+        >>> plano = montar_plano(
+        ...     "pessoa_cheia", {"pessoa": {"x": 24, "y": 410, "w": 340, "h": 260}}
+        ... )
+        >>> cmd = build_palco_vertical_cmd(
+        ...     Path("b.mkv"), Path("o.mp4"),
+        ...     inicio_seg=10.0, duracao_seg=30.0, plano=plano, filtro=None,
+        ... )
+        >>> print(cmd[cmd.index("-filter_complex") + 1])
+        color=c=0x0f1410:s=1080x1920:r=30:d=30.0,format=rgba[palco];[0:v]crop=340:260:24:410,scale=2510:1920,crop=1080:1920:715:0,setsar=1,format=rgba[r0];[palco][r0]overlay=x=0:y=0:format=auto[comp];[comp]format=yuv420p[v]
+    """
+    partes = [
+        # `d=` NAO e opcional: fonte `color` e infinita, e sem duracao o encode
+        # so termina pelo -t — licao que este projeto ja pagou com um render de
+        # base preta que nunca fechava.
+        f"color=c={fundo_cor}:s={VERTICAL.largura}x{VERTICAL.altura}:r=30:"
+        f"d={duracao_seg},format=rgba[palco]"
+    ]
+
+    acumulador = "[palco]"
+    for indice, recorte in enumerate(plano.recortes):
+        partes.append(f"[0:v]{_cadeia_do_recorte(recorte)}[r{indice}]")
+        x, y = recorte.posicao
+        saida_overlay = "[comp]" if indice == len(plano.recortes) - 1 else f"[c{indice}]"
+        partes.append(f"{acumulador}[r{indice}]overlay=x={x}:y={y}:format=auto{saida_overlay}")
+        acumulador = saida_overlay
+
+    grade = get_filtro_vf(filtro) if filtro else None
+    partes.append(f"[comp]{grade + ',' if grade else ''}format=yuv420p[v]")
+
+    return [
+        "ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-ss",
+        str(inicio_seg),
+        "-i",
+        str(entrada),
+        "-t",
+        str(duracao_seg),
+        "-filter_complex",
+        # Sem quebra de linha: o parser de filtergraph do ffmpeg trata espaço em
+        # branco como significativo em alguns pontos, e legibilidade não vale o risco.
+        ";".join(partes),
+        "-map",
+        "[v]",
+        # `?` porque bruto sem faixa de audio nao pode derrubar o render.
+        "-map",
+        "0:a?",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        str(crf),
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-movflags",
+        "+faststart",
+        str(saida),
+    ]
+
+
+def _cadeia_do_recorte(recorte: Recorte) -> str:
+    """crop da fonte → escala → (corte do excesso) → rgba, para um recorte."""
+    crop = recorte.crop
+    largura, altura = recorte.escala
+    cadeia = [
+        f"crop={int(crop['w'])}:{int(crop['h'])}:{int(crop['x'])}:{int(crop['y'])}",
+        f"scale={largura}:{altura}",
+    ]
+    interno = recorte.corte_interno
+    if interno:
+        cadeia.append("crop={}:{}:{}:{}".format(*interno))
+    cadeia.extend(["setsar=1", "format=rgba"])
+    return ",".join(cadeia)
 
 
 def build_composicao_short_cmd(
