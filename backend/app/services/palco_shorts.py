@@ -26,7 +26,9 @@ import json
 import logging
 
 from app.database import AsyncSessionLocal
+from app.domain.ffmpeg_short import FUNDO_PADRAO
 from app.domain.palco_short import (
+    CANVAS,
     MODELOS,
     modelo_sugerido,
     montar_plano,
@@ -149,6 +151,29 @@ async def resolver_para_render(short_id: str) -> dict:
         plano = montar_plano(modelo_id, regioes)
 
     return {"plano": plano, "origem": origem, "modelo": modelo_id}
+
+
+async def plano_desenhavel(short_id: str) -> dict:
+    """O palco deste short em coordenadas de DESENHO, para a prévia (D-489).
+
+    A tela não recalcula nada: ela recebe, por recorte, de onde tirar da fonte,
+    onde colar e onde cortar — e aplica no canvas. É a mesma conta que virou o
+    `filter_complex`, servida noutro vocabulário.
+
+    Reimplementar a geometria no frontend seria criar uma segunda versão dela, e
+    aí a prévia poderia discordar do arquivo sem que nada quebrasse. É o risco
+    que este épico inteiro existe para evitar.
+    """
+    resolvido = await resolver_para_render(short_id)
+    plano = resolvido["plano"]
+
+    return {
+        "origem": resolvido["origem"],
+        "modelo": resolvido["modelo"],
+        "canvas": {"largura": CANVAS.largura, "altura": CANVAS.altura},
+        "fundo": FUNDO_PADRAO,
+        "recortes": [r.desenho for r in plano.recortes] if plano else [],
+    }
 
 
 def _resolver(corte: Corte, presets: list[LayoutPreset]) -> tuple[dict, str, str]:

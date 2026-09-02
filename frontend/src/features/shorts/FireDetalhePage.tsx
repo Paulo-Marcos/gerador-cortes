@@ -35,6 +35,7 @@ import { avisoDescarteBruto } from './descarteBruto';
 import { BordasFinasPanel } from './BordasFinasPanel';
 import { LegendaPrevia } from './LegendaPrevia';
 import { PalcoDoCorte } from './PalcoDoCorte';
+import { PalcoPrevia } from './PalcoPrevia';
 import { ProgressoRenderPanel } from './ProgressoRenderPanel';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
@@ -44,6 +45,7 @@ import {
   useAtualizarShort,
   useDescartarBruto,
   useModelosDePalco,
+  usePalcoDoShort,
   useProgressoRender,
   useRenderizarPrevia,
   useRenderizarShort,
@@ -395,7 +397,11 @@ export default function FireDetalhePage() {
   // nota — assim a tela ja abre dizendo o que o melhor candidato vai cortar.
   const emQuadro = shorts.find((s) => s.id === selecionado) ?? shorts[0];
   const fire = fires.data?.fires.find((f) => f.corte_id === corteId);
+  const palcoDoShort = usePalcoDoShort(emQuadro?.id ?? null, emQuadro?.modelo_palco ?? '');
   const duracaoRegua = duracaoVideo || fire?.duracao_seg || 0;
+  // Sem recorte resolvido nao ha palco a desenhar: a mascara sobre o quadro cru
+  // continua sendo a descricao honesta do que o render vai produzir.
+  const temPalco = (palcoDoShort.data?.recortes.length ?? 0) > 0;
 
   const tocarTrecho = useCallback((short: ShortSugerido) => {
     const el = video.current;
@@ -559,6 +565,7 @@ export default function FireDetalhePage() {
             grade — que e mais alta que o video — e as faixas escuras vazavam
             para baixo do player. */}
         <div className="flex min-h-0 flex-col items-center gap-3">
+          <div className="flex min-h-0 w-full flex-1 items-stretch justify-center gap-3">
           <div
             className="relative max-h-full w-full overflow-hidden rounded-[10px] bg-black"
             style={{ aspectRatio: `${dimensoes.largura || 16} / ${dimensoes.altura || 9}` }}
@@ -583,7 +590,10 @@ export default function FireDetalhePage() {
                 altura={dimensoes.altura}
                 focoX={emQuadro.foco_efetivo}
               >
-                {legendaVisivel && temPalavras && transcricao.data && (
+                {/* D-489: com palco, a janela 9:16 sobre o quadro cru deixa de
+                    descrever o short — quem descreve e a previa ao lado. A
+                    legenda vai para la junto. */}
+                {!temPalco && legendaVisivel && temPalavras && transcricao.data && (
                   <LegendaPrevia
                     palavras={transcricao.data.palavras}
                     inicioSeg={emQuadro.inicio_seg}
@@ -593,6 +603,25 @@ export default function FireDetalhePage() {
                 )}
               </MascaraEnquadramento>
             )}
+          </div>
+
+          {temPalco && palcoDoShort.data && emQuadro && (
+            <div className="flex min-h-0 flex-none flex-col items-center gap-1">
+              <PalcoPrevia plano={palcoDoShort.data} video={video}>
+                {legendaVisivel && temPalavras && transcricao.data && (
+                  <LegendaPrevia
+                    palavras={transcricao.data.palavras}
+                    inicioSeg={emQuadro.inicio_seg}
+                    fimSeg={emQuadro.fim_seg}
+                    tempoAtualSeg={tempoAtual}
+                  />
+                )}
+              </PalcoPrevia>
+              <span className="font-code text-[10px] uppercase tracking-wide text-[var(--wb-text-mute)]">
+                como vai sair
+              </span>
+            </div>
+          )}
           </div>
 
           {/* D-478: a regua so aparece quando ha o que desenhar nela. Uma faixa

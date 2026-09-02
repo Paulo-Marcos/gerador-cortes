@@ -216,3 +216,63 @@ class TestRegioesDoLayout:
         preset = {"full": {"crop": quadro, "slot": {"x": 150, "y": 130, "w": 1630, "h": 889}}}
 
         assert regioes_do_layout(preset) == {"quadro": quadro}
+
+
+class TestDesenhoConcordaComOFiltro:
+    """D-489: a previa desenha pelos numeros de `desenho`; o arquivo sai pelos
+    de `posicao`/`corte_interno`. Se os dois discordarem, a tela mostra um
+    enquadramento e o MP4 entrega outro — sem nada quebrar para avisar.
+
+    Este bug ACONTECEU: `desenho` derivava do slot cru e ignorava a
+    centralizacao do CABER, deixando a tela 54px a esquerda no canvas e
+    centralizada no ffmpeg. Pego lendo os numeros que o endpoint servia.
+    """
+
+    @pytest.mark.parametrize("modelo_id", sorted(MODELOS))
+    def test_o_canto_desenhado_bate_com_o_que_o_filtro_sobrepoe(self, modelo_id):
+        regioes = {
+            "pessoa": FACECAM,
+            "tela": TELA,
+            "quadro": {"x": 0, "y": 0, "w": 1920, "h": 1080},
+        }
+        for recorte in montar_plano(modelo_id, regioes).recortes:
+            desenho = recorte.desenho
+            px, py = recorte.posicao
+            dx, dy = recorte.desloca
+
+            assert desenho["destino"]["x"] == px - dx, f"{modelo_id}/{recorte.regiao} em x"
+            assert desenho["destino"]["y"] == py - dy, f"{modelo_id}/{recorte.regiao} em y"
+
+    def test_em_caber_o_desenho_centraliza_como_o_overlay(self):
+        """O caso exato do bug, com o retangulo real do preset "Comp. 2 OBS".
+
+        1117x699 e mais estreito que o slot 1080x608, entao a tela escala por
+        altura e sobra largura — 54px de cada lado. Era essa sobra que o canvas
+        ignorava.
+        """
+        tela_real = {"x": 706, "y": 141, "w": 1117, "h": 699}
+        recorte = next(
+            r
+            for r in montar_plano(
+                "tela_cima_pessoa_baixo", {"pessoa": FACECAM, "tela": tela_real}
+            ).recortes
+            if r.regiao == "tela"
+        )
+
+        sobra = (recorte.slot.w - recorte.escala[0]) // 2
+
+        assert sobra > 0, "escolha um TELA que realmente sobre, senao o teste nao prova nada"
+        assert recorte.desenho["destino"]["x"] == recorte.slot.x + sobra
+
+    @pytest.mark.parametrize("modelo_id", sorted(MODELOS))
+    def test_a_area_de_clip_e_sempre_o_slot(self, modelo_id):
+        regioes = {
+            "pessoa": FACECAM,
+            "tela": TELA,
+            "quadro": {"x": 0, "y": 0, "w": 1920, "h": 1080},
+        }
+        for recorte in montar_plano(modelo_id, regioes).recortes:
+            recorta = recorte.desenho["recorta"]
+
+            assert (recorta["x"], recorta["y"]) == (recorte.slot.x, recorte.slot.y)
+            assert (recorta["w"], recorta["h"]) == (recorte.slot.w, recorte.slot.h)

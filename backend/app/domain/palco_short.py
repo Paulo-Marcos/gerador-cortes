@@ -206,6 +206,52 @@ class Recorte:
         return (self.slot.w, self.slot.h, dx, dy)
 
     @property
+    def desenho(self) -> dict:
+        """As coordenadas do recorte em forma de DESENHO, não de filtro.
+
+        O `filter_complex` e o `drawImage` do canvas fazem a mesma coisa com
+        vocabulários diferentes: recortar um retângulo da fonte e colá-lo
+        escalado, limitado a uma área. Esta propriedade fala o que os dois
+        entendem — de onde tirar, onde colar, e onde cortar o que sobrou.
+
+        Existe para a PRÉVIA (D-489). Sem ela, a tela reimplementaria a
+        geometria em CSS e passaria a poder discordar do arquivo — o risco que
+        este épico inteiro existe para evitar. Aqui a conta continua sendo uma
+        só, no domínio; a tela apenas aplica os números.
+
+        Exemplo (pessoa cheia, facecam 340x260):
+            >>> facecam = {"x": 24, "y": 410, "w": 340, "h": 260}
+            >>> plano = montar_plano("pessoa_cheia", {"pessoa": facecam})
+            >>> plano.recortes[0].desenho == {
+            ...     "origem": {"x": 24, "y": 410, "w": 340, "h": 260},
+            ...     "destino": {"x": -715, "y": 0, "w": 2510, "h": 1920},
+            ...     "recorta": {"x": 0, "y": 0, "w": 1080, "h": 1920},
+            ... }
+            True
+        """
+        dx, dy = self.desloca
+        # O destino sai de `posicao` MENOS o deslocamento, e nao de `slot`: em
+        # CABER a `posicao` ja carrega a centralizacao da sobra, e derivar do
+        # slot cru punha a tela colada na borda esquerda no canvas enquanto o
+        # ffmpeg a centralizava. Divergencia de 54px pega lendo os numeros
+        # servidos — exatamente o tipo de erro que esta propriedade existe para
+        # nao deixar acontecer.
+        px, py = self.posicao
+        return {
+            "origem": {
+                "x": int(self.crop["x"]),
+                "y": int(self.crop["y"]),
+                "w": int(self.crop["w"]),
+                "h": int(self.crop["h"]),
+            },
+            # O destino pode começar FORA do slot (x/y negativos em COBRIR): é
+            # assim que o excesso fica de fora sem que ninguém precise cortá-lo
+            # antes. Quem limita é `recorta`.
+            "destino": {"x": px - dx, "y": py - dy, "w": self.escala[0], "h": self.escala[1]},
+            "recorta": {"x": self.slot.x, "y": self.slot.y, "w": self.slot.w, "h": self.slot.h},
+        }
+
+    @property
     def posicao(self) -> tuple[int, int]:
         """Onde o conteúdo é sobreposto, em coordenadas do quadro do short.
 

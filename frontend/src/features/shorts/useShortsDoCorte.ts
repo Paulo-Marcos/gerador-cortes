@@ -153,3 +153,14 @@ export function useEscolherPreset(corteId: string) {
     },
   });
 }
+
+// D-489: o palco desenhavel do candidato em foco. Muda quando o preset do corte
+// ou o modelo do short mudam — os dois ja invalidam a lista, entao a chave
+// carrega o modelo para nao servir um palco velho depois da troca.
+export function usePalcoDoShort(shortId: string | null, modelo: string) {
+  return useQuery({
+    queryKey: ['shorts', 'palco-desenho', shortId, modelo],
+    queryFn: () => shortsApi.palcoDoShort(shortId as string),
+    enabled: Boolean(shortId),
+  });
+}

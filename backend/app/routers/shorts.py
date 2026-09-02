@@ -13,6 +13,7 @@ Endpoints:
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
+  GET  /{short_id}/palco          — o palco em coordenadas de desenho (previa)
   POST /{short_id}/renderizar     — produz o MP4 final do candidato
   GET  /{short_id}/video          — assiste a previa ou ao final
   GET  /{short_id}/publicacao     — os pacotes prontos, por plataforma
@@ -285,6 +286,17 @@ async def progresso_do_render(short_id: str):
     from app.services.shorts_progress import ShortsProgress
 
     return {"render": ShortsProgress.get(short_id)}
+
+
+@router.get("/{short_id}/palco")
+async def palco_do_short(short_id: str):
+    """O palco deste short em coordenadas de desenho — a matéria da prévia (D-489)."""
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.plano_desenhavel(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/{short_id}/publicacao")

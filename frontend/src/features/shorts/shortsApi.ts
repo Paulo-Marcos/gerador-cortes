@@ -100,6 +100,30 @@ export interface EstadoPalco {
   presets_disponiveis: { id: string; nome: string; regioes: string[] }[];
 }
 
+/** Um retângulo em pixels. */
+export interface Retangulo {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Um recorte em coordenadas de desenho: de onde tirar, onde colar, onde cortar. */
+export interface RecorteDesenhavel {
+  origem: Retangulo;
+  destino: Retangulo;
+  recorta: Retangulo;
+}
+
+/** O palco de um short, pronto para o canvas. Calculado no backend. */
+export interface PlanoDesenhavel {
+  origem: 'preset' | 'layout_do_corte' | 'nenhuma';
+  modelo: string | null;
+  canvas: { largura: number; altura: number };
+  fundo: string;
+  recortes: RecorteDesenhavel[];
+}
+
 /** Um passo do render e onde ele está. */
 export interface PassoRender {
   chave: string;
@@ -197,6 +221,9 @@ export const shortsApi = {
     request<{ status: string; estagio: string }>(`/shorts/${shortId}/previa`, {
       method: 'POST',
     }),
+
+  palcoDoShort: (shortId: string) =>
+    request<PlanoDesenhavel>(`/shorts/${shortId}/palco`),
 
   progresso: (shortId: string) =>
     request<{ render: ProgressoRender | null }>(`/shorts/${shortId}/progresso`),
