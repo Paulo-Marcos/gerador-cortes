@@ -276,3 +276,94 @@ class TestDesenhoConcordaComOFiltro:
 
             assert (recorta["x"], recorta["y"]) == (recorte.slot.x, recorte.slot.y)
             assert (recorta["w"], recorta["h"]) == (recorte.slot.w, recorte.slot.h)
+
+
+class TestAjustesDoOperador:
+    """D-493: o slot passa a vir do modelo OU do ajuste.
+
+    A mudanca de eixo do arquivo. O que estes testes protegem e a HERANCA
+    PARCIAL: chave ausente nao e slot zerado, e o slot do modelo. Materializar
+    os defaults ao gravar congelaria o arranjo — trocar de modelo depois nao
+    moveria mais nada. E a mesma regra do layout do horizontal.
+    """
+
+    def test_sem_ajuste_o_modelo_manda(self):
+        from app.domain.palco_short import aplicar_ajustes
+
+        assert aplicar_ajustes(MODELOS["pessoa_cheia"], None) is MODELOS["pessoa_cheia"]
+        assert aplicar_ajustes(MODELOS["pessoa_cheia"], {}) is MODELOS["pessoa_cheia"]
+
+    def test_ajuste_de_um_slot_nao_mexe_no_outro(self):
+        """A heranca parcial, escrita como caso."""
+        from app.domain.palco_short import aplicar_ajustes
+
+        base = MODELOS["tela_cima_pessoa_baixo"]
+        ajustado = aplicar_ajustes(base, {"tela": {"x": 100, "y": 200, "w": 800, "h": 450}})
+
+        assert (ajustado.slots["tela"].x, ajustado.slots["tela"].w) == (100, 800)
+        assert ajustado.slots["pessoa"] == base.slots["pessoa"], "o outro slot mudou"
+
+    def test_o_ajuste_nao_troca_a_regra_de_encaixe(self):
+        """Cobrir/caber e do tipo de conteudo, nao do arraste.
+
+        Deixar o operador inverter isso movendo um bloco seria dar-lhe uma
+        alavanca cujo efeito ele nao ve na hora.
+        """
+        from app.domain.palco_short import aplicar_ajustes
+
+        base = MODELOS["tela_cima_pessoa_baixo"]
+        ajustado = aplicar_ajustes(base, {"tela": {"x": 0, "y": 0, "w": 500, "h": 300}})
+
+        assert ajustado.slots["tela"].ajuste == base.slots["tela"].ajuste
+
+    def test_slot_ajustado_nao_sai_do_quadro(self):
+        from app.domain.palco_short import aplicar_ajustes
+
+        ajustado = aplicar_ajustes(
+            MODELOS["pessoa_cheia"], {"pessoa": {"x": -50, "y": 9999, "w": 99999, "h": 10}}
+        )
+        slot = ajustado.slots["pessoa"]
+
+        assert slot.x >= 0
+        assert slot.y <= CANVAS.altura
+        assert slot.w <= CANVAS.largura
+        assert slot.h >= 40, "bloco menor que a alca sumiria sem como traze-lo de volta"
+
+    def test_ajuste_invalido_cai_no_modelo_em_vez_de_virar_bloco_fantasma(self):
+        """Largura zero de um arraste malfeito nao pode gerar um bloco invisivel."""
+        from app.domain.palco_short import aplicar_ajustes
+
+        base = MODELOS["pessoa_cheia"]
+        for lixo in [{"x": 0, "y": 0, "w": 0, "h": 0}, {"x": 0}, "nao e dict", None]:
+            ajustado = aplicar_ajustes(base, {"pessoa": lixo})
+
+            assert ajustado.slots["pessoa"] == base.slots["pessoa"], f"aceitou {lixo!r}"
+
+    def test_ajuste_de_regiao_que_o_modelo_nao_tem_e_ignorado(self):
+        """Sobrou de quando o operador usava outro arranjo — nao deve criar slot."""
+        from app.domain.palco_short import aplicar_ajustes
+
+        ajustado = aplicar_ajustes(
+            MODELOS["pessoa_cheia"], {"tela": {"x": 0, "y": 0, "w": 500, "h": 300}}
+        )
+
+        assert set(ajustado.slots) == {"pessoa"}
+
+    def test_coordenada_fracionaria_vira_inteira(self):
+        """Slot fracionario viraria crop fracionario, e o ffmpeg arredonda sozinho."""
+        from app.domain.palco_short import aplicar_ajustes
+
+        ajustado = aplicar_ajustes(
+            MODELOS["pessoa_cheia"], {"pessoa": {"x": 10.6, "y": 20.4, "w": 500.5, "h": 300.5}}
+        )
+        slot = ajustado.slots["pessoa"]
+
+        assert all(isinstance(v, int) for v in (slot.x, slot.y, slot.w, slot.h))
+
+    def test_montar_plano_aceita_os_ajustes(self):
+        plano = montar_plano(
+            "pessoa_cheia", {"pessoa": FACECAM}, {"pessoa": {"x": 40, "y": 60, "w": 600, "h": 900}}
+        )
+
+        assert plano.recortes[0].slot.x == 40
+        assert plano.recortes[0].desenho["recorta"] == {"x": 40, "y": 60, "w": 600, "h": 900}

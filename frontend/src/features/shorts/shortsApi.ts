@@ -67,6 +67,8 @@ export interface ShortSugerido {
   modelo_palco: string;
   /** `ia` ou `manual`. O manual sobrevive a uma regeração. */
   origem: string;
+  /** Slots que o operador moveu, como sobreposição parcial sobre o modelo. */
+  ajustes_palco: Record<string, Retangulo>;
 }
 
 // ─── Endpoints ─────────────────────────────────────────────────────────────
@@ -78,6 +80,7 @@ export interface AtualizarShortBody {
   fim_seg?: number;
   foco_x?: number;
   modelo_palco?: string;
+  ajustes_palco?: Record<string, Retangulo>;
 }
 
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
@@ -124,6 +127,10 @@ export interface PlanoDesenhavel {
   canvas: { largura: number; altura: number };
   fundo: string;
   recortes: RecorteDesenhavel[];
+  /** Slots RESOLVIDOS (modelo + ajuste) — o que o editor arrasta. */
+  slots: Record<string, Retangulo>;
+  /** Regiões que o operador moveu; as demais herdam do modelo. */
+  ajustados: string[];
 }
 
 /** Um passo do render e onde ele está. */

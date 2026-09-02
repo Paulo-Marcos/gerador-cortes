@@ -26,9 +26,18 @@ export function useAtualizarShort(corteId: string) {
     mutationFn: ({ shortId, ...body }: AtualizarArgs) => shortsApi.atualizar(shortId, body),
     // A lista de Fires mostra a contagem por status, entao aprovar/rejeitar aqui
     // muda o card la tambem — invalidar as duas evita a tela mentir.
+    //
+    // O PLANO DESENHAVEL tambem entra, e essa foi a licao da D-490 se repetindo
+    // na D-493: bordas, foco, modelo e ajustes mudam o desenho, mas a chave dele
+    // nao carrega nenhum desses. Sem invalidar, o operador arrasta um bloco, o
+    // banco grava, e a tela continua mostrando o slot antigo.
+    //
+    // A regra que fica: TODA view derivada precisa ser invalidada por quem muda
+    // a origem dela — nao basta a chave carregar parte dos insumos.
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
       void qc.invalidateQueries({ queryKey: FIRES_KEY });
+      void qc.invalidateQueries({ queryKey: [...PALCO_KEY, 'desenho'] });
     },
   });
 }

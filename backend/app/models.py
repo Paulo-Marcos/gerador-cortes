@@ -378,6 +378,11 @@ class Short(Base):
     # deduz das regioes disponiveis. Por SHORT e nao por corte porque o estilo
     # muda dentro do mesmo corte: um trecho mostra a tela, o seguinte e so fala.
     modelo_palco: Mapped[str] = mapped_column(String(60), default="")
+    # D-493: os slots que o operador MOVEU, como sobreposicao PARCIAL sobre o
+    # modelo — `{"pessoa": {"x":..,"y":..,"w":..,"h":..}}`. Chave ausente herda
+    # do modelo; materializar os defaults ao gravar apagaria a heranca, e trocar
+    # de modelo depois nao moveria mais nada (mesma regra do layout horizontal).
+    ajustes_palco: Mapped[str] = mapped_column(Text, default="{}")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

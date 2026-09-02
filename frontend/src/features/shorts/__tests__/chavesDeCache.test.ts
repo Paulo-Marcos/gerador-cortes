@@ -70,3 +70,23 @@ describe('as chaves de palco vivem sob um prefixo comum', () => {
     );
   });
 });
+
+describe('invalidacao ao atualizar um short', () => {
+  // D-493: a licao da D-490 se repetiu. Bordas, foco, modelo e ajustes mudam o
+  // desenho, e a chave do desenho nao carrega nenhum desses. Sem invalidar, o
+  // operador arrasta um bloco, o banco grava, e a tela mostra o slot antigo.
+  it('alcanca a previa desenhavel', () => {
+    const invalidada = [...PALCO_KEY, 'desenho'] as const;
+
+    expect(invalidacaoAlcanca(invalidada, chaveDoDesenho('s1', ''))).toBe(true);
+  });
+
+  it('a regra: view derivada e invalidada por quem muda a origem dela', () => {
+    // A chave carregar PARTE dos insumos (o modelo) nao basta — o preset, as
+    // bordas, o foco e os ajustes ficam de fora dela.
+    const chaveIgnoraAjustes = chaveDoDesenho('s1', 'pessoa_cheia');
+
+    expect(chaveIgnoraAjustes).toEqual([...PALCO_KEY, 'desenho', 's1', 'pessoa_cheia']);
+    expect(chaveIgnoraAjustes).not.toContain('ajustes');
+  });
+});

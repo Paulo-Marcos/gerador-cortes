@@ -9,7 +9,7 @@
 // de botões que o operador reclamou (D-492).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Captions, Clapperboard, Gauge, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Captions, Clapperboard, Gauge, Move, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { cn, formatarDuracao } from '@/lib/utils';
@@ -26,6 +26,7 @@ import { avisoDescarteBruto } from './descarteBruto';
 import { janelaNova } from './linhaDoTempoShort';
 import { BordasFinasPanel } from './BordasFinasPanel';
 import { CandidatoCard } from './CandidatoCard';
+import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
@@ -69,6 +70,9 @@ export default function FireDetalhePage() {
   const [duracaoVideo, setDuracaoVideo] = useState(0);
   const [tempoAtual, setTempoAtual] = useState(0);
   const [legendaVisivel, setLegendaVisivel] = useState(true);
+  // D-493: o modo de edição do palco. Fora dele o overlay não existe — as alças
+  // sobre o vídeo atrapalhariam quem só quer assistir ao trecho.
+  const [editandoPalco, setEditandoPalco] = useState(false);
 
   const velocidadePadrao = useVelocidadePlayerPadrao();
   const [velocidade, setVelocidade] = useState(velocidadePadrao);
@@ -153,6 +157,16 @@ export default function FireDetalhePage() {
         },
       },
     );
+  };
+
+  // D-493: o ajuste é PARCIAL. Mandamos o mapa inteiro já mesclado, porque o
+  // PATCH substitui o campo — mandar só o bloco movido apagaria o outro.
+  const gravarAjuste = (ajustes: Record<string, { x: number; y: number; w: number; h: number }>) => {
+    if (!emQuadro) return;
+    atualizar.mutate({
+      shortId: emQuadro.id,
+      ajustes_palco: { ...emQuadro.ajustes_palco, ...ajustes },
+    });
   };
 
   const onDescartar = () => {
@@ -314,10 +328,25 @@ export default function FireDetalhePage() {
               <div className="flex min-h-0 flex-none flex-col items-center gap-1">
                 <PalcoPrevia plano={palcoDoShort.data} video={video}>
                   {legenda}
+                  <EditorDePalco
+                    slots={palcoDoShort.data.slots}
+                    ativo={editandoPalco}
+                    onGravar={gravarAjuste}
+                  />
                 </PalcoPrevia>
-                <span className="font-code text-[9.5px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
-                  como vai sair
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setEditandoPalco((v) => !v)}
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-[6px] px-1.5 py-0.5 font-code text-[9.5px] uppercase tracking-[0.06em] transition-colors',
+                    editandoPalco
+                      ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent-strong)]'
+                      : 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)]',
+                  )}
+                >
+                  <Move size={10} aria-hidden />
+                  {editandoPalco ? 'editando o palco' : 'como vai sair'}
+                </button>
               </div>
             )}
           </div>
@@ -340,6 +369,20 @@ export default function FireDetalhePage() {
                     ocupado={atualizar.isPending}
                     onAplicar={(bordas) => gravarBordas(emQuadro.id, bordas)}
                   />
+                  {editandoPalco && palcoDoShort.data && temPalco && (
+                    <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
+                      <CamposDoPalco
+                        slots={palcoDoShort.data.slots}
+                        ajustados={palcoDoShort.data.ajustados}
+                        ocupado={atualizar.isPending}
+                        onGravar={gravarAjuste}
+                        onDesfazer={() =>
+                          emQuadro &&
+                          atualizar.mutate({ shortId: emQuadro.id, ajustes_palco: {} })
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

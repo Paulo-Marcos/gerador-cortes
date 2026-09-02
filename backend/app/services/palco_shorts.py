@@ -130,13 +130,14 @@ async def resolver_para_render(short_id: str) -> dict:
         presets = (await db.scalars(select(LayoutPreset))).all()
         regioes, origem, _ = _resolver(corte, presets)
         escolhido = short.modelo_palco
+        ajustes = _json_dict(short.ajustes_palco)
 
     if not regioes:
-        return {"plano": None, "origem": ORIGEM_NENHUMA, "modelo": None}
+        return {"plano": None, "origem": ORIGEM_NENHUMA, "modelo": None, "ajustes": {}}
 
     modelo_id = escolhido or modelo_sugerido(regioes)
     try:
-        plano = montar_plano(modelo_id, regioes)
+        plano = montar_plano(modelo_id, regioes, ajustes)
     except (KeyError, ValueError) as exc:
         # O operador escolheu um arranjo que as regiões deste corte não
         # comportam (ex.: pediu tela e o preset só tem facecam). Cair no
@@ -148,9 +149,9 @@ async def resolver_para_render(short_id: str) -> dict:
             exc,
         )
         modelo_id = modelo_sugerido(regioes)
-        plano = montar_plano(modelo_id, regioes)
+        plano = montar_plano(modelo_id, regioes, ajustes)
 
-    return {"plano": plano, "origem": origem, "modelo": modelo_id}
+    return {"plano": plano, "origem": origem, "modelo": modelo_id, "ajustes": ajustes}
 
 
 async def plano_desenhavel(short_id: str) -> dict:
@@ -173,6 +174,18 @@ async def plano_desenhavel(short_id: str) -> dict:
         "canvas": {"largura": CANVAS.largura, "altura": CANVAS.altura},
         "fundo": FUNDO_PADRAO,
         "recortes": [r.desenho for r in plano.recortes] if plano else [],
+        # Os slots RESOLVIDOS (modelo + ajuste), que sao o que o editor arrasta.
+        # Mandar o modelo cru obrigaria a tela a reaplicar os ajustes por conta
+        # propria — a segunda implementacao de sempre.
+        "slots": (
+            {
+                r.regiao: {"x": r.slot.x, "y": r.slot.y, "w": r.slot.w, "h": r.slot.h}
+                for r in plano.recortes
+            }
+            if plano
+            else {}
+        ),
+        "ajustados": sorted(resolvido["ajustes"]),
     }
 
 

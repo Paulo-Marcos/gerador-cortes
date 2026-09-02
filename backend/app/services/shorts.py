@@ -247,6 +247,7 @@ async def atualizar_short(
     fim_seg: float | None = None,
     foco_x: float | None = None,
     modelo_palco: str | None = None,
+    ajustes_palco: dict | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -280,6 +281,19 @@ async def atualizar_short(
             if not 0.0 <= foco_x <= 1.0:
                 raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
             short.foco_x = round(float(foco_x), 3)
+
+        if ajustes_palco is not None:
+            # Dicionario VAZIO e valido: e como o operador desfaz os ajustes e
+            # volta ao modelo. Guardar so o que veio mantem a heranca parcial —
+            # materializar os slots do modelo aqui congelaria o arranjo.
+            short.ajustes_palco = json.dumps(
+                {
+                    nome: {c: float(ret[c]) for c in "xywh"}
+                    for nome, ret in ajustes_palco.items()
+                    if isinstance(ret, dict) and all(c in ret for c in "xywh")
+                },
+                ensure_ascii=False,
+            )
 
         if modelo_palco is not None:
             # "" e valido: volta ao automatico, que deduz das regioes. Um id
@@ -567,8 +581,17 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "arquivo_short_path": short.arquivo_short_path,
         "arquivo_previa_path": short.arquivo_previa_path,
         "modelo_palco": short.modelo_palco,
+        "ajustes_palco": _json_dict_seguro(short.ajustes_palco),
         "origem": short.origem,
     }
+
+
+def _json_dict_seguro(bruto: str | None) -> dict:
+    try:
+        dados = json.loads(bruto or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return dados if isinstance(dados, dict) else {}
 
 
 def _json_lista(bruto: str | None) -> list[dict]:

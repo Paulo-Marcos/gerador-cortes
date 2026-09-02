@@ -41,6 +41,10 @@ CANVAS = VERTICAL
 SAFE_ZONE = 0.18
 _TOPO_SEGURO = int(CANVAS.altura * SAFE_ZONE)  # 345
 
+# Menor lado de um slot ajustado. Abaixo disso o bloco some da tela e o operador
+# perde a alça para trazê-lo de volta — o mesmo motivo do mínimo das bordas.
+_LADO_MINIMO = 40
+
 
 class Ajuste(str, Enum):
     """Como o recorte se acomoda no slot quando as proporções não batem.
@@ -284,7 +288,60 @@ class RegiaoFaltando(ValueError):
     """
 
 
-def montar_plano(modelo_id: str, regioes: dict[str, dict]) -> PlanoPalco:
+def aplicar_ajustes(modelo: ModeloPalco, ajustes: dict[str, dict] | None) -> ModeloPalco:
+    """O modelo com os slots que o operador moveu (D-493).
+
+    ## A mudança de conceito
+
+    O eixo deste arquivo era "o slot vem do modelo". Passa a ser "o slot vem do
+    modelo OU do ajuste do operador" — com o modelo como DEFAULT e o ajuste como
+    sobreposição explícita, nunca como substituto silencioso.
+
+    A diferença importa: um ajuste ausente não é um slot em (0,0), é o slot do
+    modelo. Materializar os defaults ao gravar apagaria a herança — trocar de
+    modelo depois não moveria mais nada, porque tudo estaria fixado. É a mesma
+    razão pela qual o layout do horizontal grava escopo PARCIAL.
+
+    Ajuste com retângulo inválido é IGNORADO, não corrigido: um slot de largura
+    zero vindo de um arraste malfeito deve cair no modelo, e não virar um bloco
+    invisível que o operador não entende por que sumiu.
+    """
+    if not ajustes:
+        return modelo
+
+    slots = dict(modelo.slots)
+    for nome, retangulo in ajustes.items():
+        base = slots.get(nome)
+        if base is None or not _slot_valido(retangulo):
+            continue
+        slots[nome] = Slot(
+            x=_inteiro_na_faixa(retangulo["x"], 0, CANVAS.largura),
+            y=_inteiro_na_faixa(retangulo["y"], 0, CANVAS.altura),
+            w=_inteiro_na_faixa(retangulo["w"], _LADO_MINIMO, CANVAS.largura),
+            h=_inteiro_na_faixa(retangulo["h"], _LADO_MINIMO, CANVAS.altura),
+            # O AJUSTE guarda posição e tamanho, não a regra de encaixe: cortar
+            # ou caber continua sendo do tipo de conteúdo (rosto corta, tela
+            # não), e deixar o operador inverter isso por arraste seria dar-lhe
+            # uma alavanca cujo efeito ele não vê.
+            ajuste=base.ajuste,
+        )
+    return ModeloPalco(id=modelo.id, nome=modelo.nome, porque=modelo.porque, slots=slots)
+
+
+def _slot_valido(retangulo: object) -> bool:
+    if not isinstance(retangulo, dict):
+        return False
+    try:
+        return all(float(retangulo[c]) >= 0 for c in "xy") and all(
+            float(retangulo[c]) >= _LADO_MINIMO for c in "wh"
+        )
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def montar_plano(
+    modelo_id: str, regioes: dict[str, dict], ajustes: dict[str, dict] | None = None
+) -> PlanoPalco:
     """Resolve modelo + regiões num plano de composição.
 
     `regioes` mapeia nome → crop (`{x, y, w, h}` no quadro-fonte), tipicamente
@@ -297,7 +354,7 @@ def montar_plano(modelo_id: str, regioes: dict[str, dict]) -> PlanoPalco:
     empilhamento: quem vem depois fica por cima. Por isso o insert é declarado
     depois da pessoa.
     """
-    modelo = MODELOS[modelo_id]
+    modelo = aplicar_ajustes(MODELOS[modelo_id], ajustes)
 
     ausentes = sorted(nome for nome in modelo.slots if not _crop_valido(regioes.get(nome)))
     if ausentes:
@@ -425,3 +482,13 @@ def _crop_valido(crop: object) -> bool:
 def _par(valor: float) -> int:
     """O inteiro PAR mais próximo — o ffmpeg recusa dimensão ímpar em yuv420p."""
     return max(2, int(round(valor / 2)) * 2)
+
+
+def _inteiro_na_faixa(valor: object, minimo: int, maximo: int) -> int:
+    """Coordenada de slot ajustado: inteira e dentro do quadro.
+
+    O arraste produz fração, e um slot fracionário viraria crop fracionário no
+    ffmpeg — que arredonda por conta própria, e aí a prévia e o arquivo divergem
+    por um pixel sem ninguém saber de onde veio.
+    """
+    return max(minimo, min(int(round(float(valor))), maximo))
