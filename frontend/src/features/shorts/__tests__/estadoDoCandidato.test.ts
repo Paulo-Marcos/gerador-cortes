@@ -27,6 +27,7 @@ function short(over: Partial<ShortSugerido> = {}): ShortSugerido {
     arquivo_previa_path: '',
     modelo_palco: '',
     origem: 'ia',
+    palco_preset: '',
     ajustes_palco: {},
     cenas: [],
     ...over,

@@ -39,6 +39,8 @@ interface Props {
   short: ShortSugerido;
   corteId: string;
   emFoco: boolean;
+  /** D-495: o corte tem regiao de palco? Sem ela o arranjo nao muda nada. */
+  temRegiao: boolean;
   ocupado: boolean;
   aberto: boolean;
   onAlternarAjuste: () => void;
@@ -48,6 +50,7 @@ interface Props {
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
   onFoco: (delta: number) => void;
   onModelo: (modeloId: string) => void;
+  onPreset: (presetId: string) => void;
   onPrevia: () => void;
   onRenderizar: () => void;
 }
@@ -61,6 +64,7 @@ export function CandidatoCard({
   short,
   corteId,
   emFoco,
+  temRegiao,
   ocupado,
   aberto,
   onAlternarAjuste,
@@ -70,6 +74,7 @@ export function CandidatoCard({
   onBorda,
   onFoco,
   onModelo,
+  onPreset,
   onPrevia,
   onRenderizar,
 }: Props) {
@@ -95,6 +100,48 @@ export function CandidatoCard({
     refazerFinal: { rotulo: 'Refazer o final', icone: <Clapperboard />, ao: onRenderizar },
   };
 
+  // D-495: rejeitado COLAPSA. Ele ja foi decidido — manter o card inteiro
+  // ocupando a coluna faz o operador rolar por cima do que descartou para
+  // chegar no que interessa. Uma linha basta para lembrar que existe e permitir
+  // voltar atras.
+  if (short.status === 'rejeitado') {
+    return (
+      <article
+        onClick={onSelecionar}
+        className={cn(
+          'flex cursor-pointer items-center gap-2 rounded-[10px] border px-3 py-1.5 opacity-70 transition-opacity hover:opacity-100',
+          emFoco ? 'border-[var(--wb-accent)]' : 'border-[var(--wb-border)]',
+          'bg-[var(--wb-bg-inset)]',
+        )}
+      >
+        <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-mute)]">
+          {notaVisivel(short)}
+        </span>
+        <span
+          className="min-w-0 flex-1 truncate text-[12px] text-[var(--wb-text-dim)] line-through"
+          title={short.titulo}
+        >
+          {short.titulo}
+        </span>
+        <span className="flex-none font-code text-[10px] tabular-nums text-[var(--wb-text-mute)]">
+          {mmss(short.inicio_seg)} · {Math.round(short.duracao_seg)}s
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={ocupado}
+          onClick={(e) => {
+            e.stopPropagation();
+            onStatus('sugerido');
+          }}
+        >
+          <Undo2 />
+          Voltar
+        </Button>
+      </article>
+    );
+  }
+
   return (
     <article
       onClick={onSelecionar}
@@ -104,7 +151,6 @@ export function CandidatoCard({
         emFoco
           ? 'border-[var(--wb-accent)] shadow-[var(--wb-shadow)]'
           : 'border-[var(--wb-border)] hover:border-[var(--wb-text-dim)]',
-        short.status === 'rejeitado' && 'opacity-65',
       )}
     >
       {/* ── Identidade ─────────────────────────────────────────────── */}
@@ -180,10 +226,13 @@ export function CandidatoCard({
       {aberto && (
         <LinhaDeAjuste
           short={short}
+          corteId={corteId}
+          temRegiao={temRegiao}
           ocupado={ocupado}
           onBorda={onBorda}
           onFoco={onFoco}
           onModelo={onModelo}
+          onPreset={onPreset}
           onTocar={onTocar}
         />
       )}

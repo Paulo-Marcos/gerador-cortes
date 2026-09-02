@@ -78,6 +78,8 @@ export interface ShortSugerido {
   modelo_palco: string;
   /** `ia` ou `manual`. O manual sobrevive a uma regeração. */
   origem: string;
+  /** Preset DESTE short. Vazio = herda o do corte (D-498). */
+  palco_preset: string;
   /** Slots que o operador moveu, como sobreposição parcial sobre o modelo. */
   ajustes_palco: Record<string, Retangulo>;
   /** Cenas desenhadas sobre o short, na timeline DELE (começa no zero). */
@@ -94,6 +96,7 @@ export interface AtualizarShortBody {
   foco_x?: number;
   modelo_palco?: string;
   ajustes_palco?: Record<string, Retangulo>;
+  palco_preset?: string;
 }
 
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
@@ -112,7 +115,7 @@ export interface ModeloPalco {
 /** De onde saem as regiões deste corte. */
 export interface EstadoPalco {
   preset: string;
-  origem: 'preset' | 'layout_do_corte' | 'nenhuma';
+  origem: 'preset_do_short' | 'preset' | 'layout_do_corte' | 'nenhuma';
   regioes: Record<string, { x: number; y: number; w: number; h: number }>;
   modelo_sugerido: string;
   presets_disponiveis: { id: string; nome: string; regioes: string[] }[];
@@ -135,7 +138,7 @@ export interface RecorteDesenhavel {
 
 /** O palco de um short, pronto para o canvas. Calculado no backend. */
 export interface PlanoDesenhavel {
-  origem: 'preset' | 'layout_do_corte' | 'nenhuma';
+  origem: 'preset_do_short' | 'preset' | 'layout_do_corte' | 'nenhuma';
   modelo: string | null;
   canvas: { largura: number; altura: number };
   fundo: string;

@@ -39,6 +39,7 @@ from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
+ORIGEM_PRESET_SHORT = "preset_do_short"
 ORIGEM_PRESET = "preset"
 ORIGEM_LAYOUT = "layout_do_corte"
 ORIGEM_NENHUMA = "nenhuma"
@@ -128,7 +129,7 @@ async def resolver_para_render(short_id: str) -> dict:
             raise LookupError(f"Corte {short.corte_id!r} nao encontrado")
 
         presets = (await db.scalars(select(LayoutPreset))).all()
-        regioes, origem, _ = _resolver(corte, presets)
+        regioes, origem, _ = _resolver(corte, presets, short.palco_preset)
         escolhido = short.modelo_palco
         ajustes = _json_dict(short.ajustes_palco)
 
@@ -189,14 +190,27 @@ async def plano_desenhavel(short_id: str) -> dict:
     }
 
 
-def _resolver(corte: Corte, presets: list[LayoutPreset]) -> tuple[dict, str, str]:
-    """(regiões, origem, nome do preset) — a cascata de três degraus."""
-    if corte.palco_short_preset:
-        preset = next((p for p in presets if p.id == corte.palco_short_preset), None)
+def _resolver(
+    corte: Corte, presets: list[LayoutPreset], preset_do_short: str = ""
+) -> tuple[dict, str, str]:
+    """(regiões, origem, nome do preset) — a cascata, agora de quatro degraus.
+
+    O preset DO SHORT vem primeiro (D-498): numa live longa a cena do OBS muda
+    ao longo do tempo, então um trecho pode precisar de regiões diferentes das
+    do resto do corte. O corte continua sendo o default — o short só discorda
+    quando precisa.
+    """
+    for candidato, origem in (
+        (preset_do_short, ORIGEM_PRESET_SHORT),
+        (corte.palco_short_preset, ORIGEM_PRESET),
+    ):
+        if not candidato:
+            continue
+        preset = next((p for p in presets if p.id == candidato), None)
         if preset:
             regioes = _regioes_do_preset(preset)
             if regioes:
-                return regioes, ORIGEM_PRESET, preset.nome
+                return regioes, origem, preset.nome
 
     regioes = regioes_do_layout(_json_dict(corte.layout_youtube))
     if regioes:

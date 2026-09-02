@@ -377,6 +377,11 @@ class Short(Base):
     # E-036/D-487: o arranjo do palco deste candidato. Vazio = automatico, que
     # deduz das regioes disponiveis. Por SHORT e nao por corte porque o estilo
     # muda dentro do mesmo corte: um trecho mostra a tela, o seguinte e so fala.
+    # D-498: o preset DESTE short, quando ele discorda do corte. Numa live longa
+    # a cena do OBS muda — minuto 3 e rosto cheio, minuto 11 e tela
+    # compartilhada — e as regioes mudam junto. Vazio = herda do corte, que
+    # segue sendo o default para a maioria dos trechos.
+    palco_preset: Mapped[str] = mapped_column(String(200), default="")
     modelo_palco: Mapped[str] = mapped_column(String(60), default="")
     # D-493: os slots que o operador MOVEU, como sobreposicao PARCIAL sobre o
     # modelo — `{"pessoa": {"x":..,"y":..,"w":..,"h":..}}`. Chave ausente herda

@@ -14,6 +14,7 @@ import { useEscolherPreset, usePalcoDoCorte } from './useShortsDoCorte';
 // problema é o modelo, quando é a falta de região.
 
 const ROTULO_ORIGEM: Record<EstadoPalco['origem'], string> = {
+  preset_do_short: 'preset do short',
   preset: 'preset escolhido',
   layout_do_corte: 'posicionamento do corte',
   nenhuma: 'sem região marcada',

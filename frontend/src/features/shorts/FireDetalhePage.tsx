@@ -459,6 +459,7 @@ export default function FireDetalhePage() {
               short={short}
               corteId={corteId}
               emFoco={emQuadro?.id === short.id}
+              temRegiao={temPalco}
               ocupado={ocupado}
               aberto={ajusteAberto === short.id}
               onAlternarAjuste={() =>
@@ -474,6 +475,9 @@ export default function FireDetalhePage() {
               onFoco={(delta) => moverFoco(short, delta)}
               onModelo={(modeloId) =>
                 atualizar.mutate({ shortId: short.id, modelo_palco: modeloId })
+              }
+              onPreset={(presetId) =>
+                atualizar.mutate({ shortId: short.id, palco_preset: presetId })
               }
               onPrevia={() => previa.mutate(short.id)}
               onRenderizar={() => renderizar.mutate(short.id)}

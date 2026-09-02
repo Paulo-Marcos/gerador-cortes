@@ -277,6 +277,7 @@ async def atualizar_short(
     foco_x: float | None = None,
     modelo_palco: str | None = None,
     ajustes_palco: dict | None = None,
+    palco_preset: str | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -310,6 +311,12 @@ async def atualizar_short(
             if not 0.0 <= foco_x <= 1.0:
                 raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
             short.foco_x = round(float(foco_x), 3)
+
+        if palco_preset is not None:
+            # "" volta a herdar do corte. Nao validamos a existencia do preset
+            # aqui: quem resolve a cascata ja ignora id que nao acha, e recusar
+            # aqui exigiria uma consulta so para dizer o que a tela ja sabe.
+            short.palco_preset = palco_preset
 
         if ajustes_palco is not None:
             # Dicionario VAZIO e valido: e como o operador desfaz os ajustes e
@@ -610,6 +617,7 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "arquivo_short_path": short.arquivo_short_path,
         "arquivo_previa_path": short.arquivo_previa_path,
         "modelo_palco": short.modelo_palco,
+        "palco_preset": short.palco_preset,
         "ajustes_palco": _json_dict_seguro(short.ajustes_palco),
         "origem": short.origem,
         "cenas": _json_lista(short.cenas_remotion),

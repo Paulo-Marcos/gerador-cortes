@@ -211,6 +211,7 @@ class AtualizarShortRequest(BaseModel):
     foco_x: float | None = None
     modelo_palco: str | None = None
     ajustes_palco: dict | None = None
+    palco_preset: str | None = None
 
 
 @router.patch("/{short_id}")
@@ -226,6 +227,7 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 foco_x=body.foco_x,
                 modelo_palco=body.modelo_palco,
                 ajustes_palco=body.ajustes_palco,
+                palco_preset=body.palco_preset,
             )
         }
     except LookupError as exc:
