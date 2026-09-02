@@ -14,6 +14,7 @@ import {
   Clapperboard,
   Crop,
   Eye,
+  Plus,
   MoveHorizontal,
   Play,
   Clapperboard as Render,
@@ -32,6 +33,7 @@ import {
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, shortVideoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
+import { janelaNova } from './linhaDoTempoShort';
 import { BordasFinasPanel } from './BordasFinasPanel';
 import { LegendaPrevia } from './LegendaPrevia';
 import { PalcoDoCorte } from './PalcoDoCorte';
@@ -43,6 +45,7 @@ import { PainelPublicacao } from './PainelPublicacao';
 import { useFires } from './useFires';
 import {
   useAtualizarShort,
+  useCriarShortManual,
   useDescartarBruto,
   useModelosDePalco,
   usePalcoDoShort,
@@ -143,8 +146,11 @@ function Candidato({
       )}
     >
       <div className="flex items-start gap-2">
-        <span className="font-code text-[15px] font-bold tabular-nums text-[var(--wb-accent)]">
-          {short.score.toFixed(1)}
+        <span
+          className="font-code text-[15px] font-bold tabular-nums text-[var(--wb-accent)]"
+          title={short.origem === 'manual' ? 'Trecho manual — sem nota da IA' : 'Nota da IA'}
+        >
+          {short.origem === 'manual' ? '—' : short.score.toFixed(1)}
         </span>
         <div className="min-w-0 flex-1">
           <h3
@@ -160,6 +166,13 @@ function Candidato({
           )}
         </div>
         <span className="flex-none font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)]">
+          {/* D-484: o manual se identifica. Sem isso ele se parece com um
+              palpite de nota zero, que e o oposto do que ele e. */}
+          {short.origem === 'manual' && (
+            <span className="mr-1 text-[var(--wb-accent)]" title="Trecho marcado a mao — a regeração não o apaga">
+              manual ·
+            </span>
+          )}
           {ROTULO_STATUS[short.status]}
         </span>
       </div>
@@ -387,6 +400,7 @@ export default function FireDetalhePage() {
   const fires = useFires();
   const atualizar = useAtualizarShort(corteId);
   const descartar = useDescartarBruto();
+  const criarManual = useCriarShortManual(corteId);
   const renderizar = useRenderizarShort(corteId);
   const previa = useRenderizarPrevia(corteId);
   const transcricao = useTranscricaoDoCorte(corteId);
@@ -450,6 +464,16 @@ export default function FireDetalhePage() {
     },
     [atualizar],
   );
+
+  // O trecho novo ja nasce selecionado: quem acabou de cria-lo quer ajustar as
+  // bordas, e as alcas agem sobre o candidato em foco.
+  const onCriarManual = () => {
+    const janela = janelaNova(tempoAtual, duracaoRegua);
+    criarManual.mutate(
+      { inicio_seg: janela.inicio, fim_seg: janela.fim },
+      { onSuccess: ({ short }) => setSelecionado(short.id) },
+    );
+  };
 
   // Descartar tira o Fire da lista, entao a tela em que estamos deixa de fazer
   // sentido — voltar para /shorts e a continuacao honesta da acao.
@@ -658,6 +682,23 @@ export default function FireDetalhePage() {
           {/* O palco e do CORTE: as regioes valem para todos os candidatos. */}
           <div className="flex-none rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
             <PalcoDoCorte corteId={corteId} />
+          </div>
+
+          {/* D-484: o trecho que a IA nao propos. Nasce onde o player esta,
+              porque o operador acabou de assistir ao que quer recortar. */}
+          <div className="flex flex-none items-center gap-2">
+            <BotaoAcao
+              onClick={onCriarManual}
+              disabled={criarManual.isPending || duracaoRegua <= 0}
+              icon={<Plus size={12} />}
+            >
+              novo trecho aqui ({mmss(tempoAtual)})
+            </BotaoAcao>
+            {criarManual.isError && (
+              <span className="text-[11px] text-[var(--wb-warn-ink)]">
+                {(criarManual.error as Error)?.message ?? 'nao consegui criar'}
+              </span>
+            )}
           </div>
 
           {isLoading && (

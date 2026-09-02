@@ -29,10 +29,13 @@ from app.domain.palco_short import MODELOS
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
+
+ORIGEM_IA = "ia"
+ORIGEM_MANUAL = "manual"
 
 # Contagem zerada de shorts por estagio, DERIVADA do enum: acrescentar um status
 # novo em StatusShort passa a aparecer na tela sozinho, sem editar esta lista.
@@ -110,11 +113,15 @@ async def registrar_sugestoes(
         # delete — depois dele os candidatos removidos ainda estariam na sessao.
         proximo_numero = await _proximo_numero_apos_os_curados(db, contexto.corte_id)
 
+        # D-484: so os SUGERIDOS DA IA sao descartados. Regerar e refazer o
+        # palpite da maquina; o trecho que o operador marcou a mao nao e palpite
+        # de ninguem, e some-lo aqui seria apagar trabalho humano em silencio.
         antigos = (
             await db.scalars(
                 select(Short)
                 .where(Short.corte_id == contexto.corte_id)
                 .where(Short.status == StatusShort.SUGERIDO)
+                .where(Short.origem == ORIGEM_IA)
             )
         ).all()
         for antigo in antigos:
@@ -138,6 +145,59 @@ async def registrar_sugestoes(
     for motivo in resultado.descartes:
         logger.info("[Shorts] corte=%s descarte: %s", contexto.corte_id[:8], motivo)
     return serializados
+
+
+async def criar_manual(
+    corte_id: str, *, inicio_seg: float, fim_seg: float, titulo: str = ""
+) -> dict:
+    """Cria um short que a IA não propôs (D-484).
+
+    O operador viu no bruto um trecho que o palpite da máquina deixou passar. O
+    candidato nasce SUGERIDO — ele ainda passa pela mesma curadoria, aparece nas
+    mesmas contagens e usa os mesmos botões — mas com `origem="manual"`, que é o
+    que o poupa da próxima regeração.
+
+    As bordas passam pela MESMA validação do PATCH: não pode ser negativa, o fim
+    vem depois do início, e nada aponta para fora do bruto. Um caminho de escrita
+    com regra própria acabaria discordando do outro.
+
+    Levanta `LookupError` (corte inexistente) e `ValueError` (bordas impossíveis).
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+
+        _validar_bordas(float(inicio_seg), float(fim_seg), corte)
+        numero = await _proximo_numero_apos_os_curados(db, corte_id)
+
+        short = Short(
+            id=str(uuid.uuid4()),
+            corte_id=corte_id,
+            numero=numero,
+            titulo_sugerido=titulo.strip() or f"Trecho manual #{numero}",
+            inicio_seg=round(float(inicio_seg), 2),
+            fim_seg=round(float(fim_seg), 2),
+            # Sem nota: o score ordena os palpites da IA entre si, e dar uma
+            # nota inventada ao trecho humano o misturaria nessa fila como se
+            # fosse mais um chute. A origem na tela diz o que ele é.
+            score=0.0,
+            justificativa="Marcado a mao pelo operador.",
+            status=StatusShort.SUGERIDO,
+            origem=ORIGEM_MANUAL,
+        )
+        db.add(short)
+        await db.commit()
+        serializado = _serializar(short, corte)
+
+    logger.info(
+        "[Shorts] corte=%s short MANUAL #%d criado (%.2fs a %.2fs)",
+        corte_id[:8],
+        numero,
+        inicio_seg,
+        fim_seg,
+    )
+    return serializado
 
 
 async def descartar_bruto(corte_id: str) -> dict:
@@ -419,11 +479,16 @@ async def _contar_shorts_por_corte(db: AsyncSession, corte_ids: list[str]) -> di
 
 
 async def _proximo_numero_apos_os_curados(db: AsyncSession, corte_id: str) -> int:
-    """Primeiro número livre acima dos shorts que a regeração NÃO apaga."""
+    """Primeiro número livre acima dos shorts que a regeração NÃO apaga.
+
+    Sobrevivem os já curados E os manuais (D-484). Contar só os curados daria um
+    número que já pertence a um short manual, e dois candidatos do mesmo corte
+    passariam a se chamar "#3".
+    """
     maior = await db.scalar(
         select(func.max(Short.numero))
         .where(Short.corte_id == corte_id)
-        .where(Short.status != StatusShort.SUGERIDO)
+        .where(~and_(Short.status == StatusShort.SUGERIDO, Short.origem == ORIGEM_IA))
     )
     return int(maior or 0) + 1
 
@@ -502,6 +567,7 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "arquivo_short_path": short.arquivo_short_path,
         "arquivo_previa_path": short.arquivo_previa_path,
         "modelo_palco": short.modelo_palco,
+        "origem": short.origem,
     }
 
 

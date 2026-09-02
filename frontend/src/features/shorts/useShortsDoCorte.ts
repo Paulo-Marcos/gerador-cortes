@@ -164,3 +164,17 @@ export function usePalcoDoShort(shortId: string | null, modelo: string) {
     enabled: Boolean(shortId),
   });
 }
+
+// D-484: o candidato manual entra na mesma lista e nas mesmas contagens, entao
+// invalida as duas — a tela de Fires mostra o total por status.
+export function useCriarShortManual(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { inicio_seg: number; fim_seg: number; titulo?: string }) =>
+      shortsApi.criarManual(corteId, body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+      void qc.invalidateQueries({ queryKey: FIRES_KEY });
+    },
+  });
+}

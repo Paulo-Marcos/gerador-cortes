@@ -3,6 +3,7 @@
 Endpoints:
   GET  /fires                     — os cortes Fire cujo bruto ainda esta em disco
   GET  /corte/{corte_id}          — os shorts do corte, do melhor palpite ao pior
+  POST /corte/{corte_id}          — cria um short a mao, que a regeracao nao apaga
   GET  /corte/{corte_id}/elegibilidade — se a tela do bruto deve oferecer a fábrica
   POST /corte/{corte_id}/gerar    — caminho MANUAL: regera o bruto se preciso e propõe
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
@@ -49,6 +50,36 @@ async def listar_fires():
 @router.get("/corte/{corte_id}")
 async def listar(corte_id: str):
     return {"shorts": await shorts_store.listar_shorts(corte_id)}
+
+
+class CriarShortManualRequest(BaseModel):
+    """Um trecho que a IA nao propos, marcado pelo operador."""
+
+    inicio_seg: float
+    fim_seg: float
+    titulo: str = ""
+
+
+@router.post("/corte/{corte_id}")
+async def criar_manual(corte_id: str, body: CriarShortManualRequest):
+    """Cria um candidato a short a partir de um trecho escolhido a mão (D-484).
+
+    Nasce SUGERIDO, como os da IA — passa pela mesma curadoria — mas marcado
+    como manual, o que o poupa da próxima regeração.
+    """
+    try:
+        return {
+            "short": await shorts_store.criar_manual(
+                corte_id,
+                inicio_seg=body.inicio_seg,
+                fim_seg=body.fim_seg,
+                titulo=body.titulo,
+            )
+        }
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.delete("/corte/{corte_id}/bruto")

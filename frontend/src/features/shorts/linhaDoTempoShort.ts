@@ -104,6 +104,30 @@ export function diferenca(antes: Bordas, depois: Bordas): Partial<Bordas> | null
   return Object.keys(mudou).length > 0 ? mudou : null;
 }
 
+/** Duração de um trecho recém-criado à mão. */
+export const DURACAO_NOVO_SEG = 30;
+
+/**
+ * As bordas de um short novo, criado a partir de onde o player está (D-484).
+ *
+ * Trinta segundos porque é o meio da faixa recomendada — sai já dentro do que
+ * as plataformas premiam, e o operador ajusta pelas alças. Começar com um ponto
+ * só, ou com o vídeo inteiro, transferiria para ele um trabalho que a tela pode
+ * adiantar.
+ *
+ * Perto do fim do arquivo, a janela recua em vez de estourar: o que não cabe
+ * para a frente é tomado para trás.
+ */
+export function janelaNova(tempoAtual: number, duracaoSeg: number): Bordas {
+  const teto = duracaoSeg > 0 ? duracaoSeg : tempoAtual + DURACAO_NOVO_SEG;
+  const inicio = limitar(tempoAtual, 0, Math.max(0, teto - DURACAO_MINIMA_SEG));
+  const fim = Math.min(teto, inicio + DURACAO_NOVO_SEG);
+  return {
+    inicio: arredondar(Math.max(0, Math.min(inicio, fim - DURACAO_MINIMA_SEG))),
+    fim: arredondar(fim),
+  };
+}
+
 function limitar(valor: number, minimo: number, maximo: number): number {
   return Math.max(minimo, Math.min(valor, maximo));
 }

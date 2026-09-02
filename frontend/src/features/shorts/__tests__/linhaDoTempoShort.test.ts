@@ -4,6 +4,7 @@ import {
   diferenca,
   DURACAO_MINIMA_SEG,
   foraDaFaixaRecomendada,
+  janelaNova,
   posicaoPct,
   segundoNoPonteiro,
 } from '../linhaDoTempoShort';
@@ -111,5 +112,32 @@ describe('diferenca', () => {
     expect(diferenca({ inicio: 10, fim: 40 }, { inicio: 11.5678, fim: 40 })).toEqual({
       inicio: 11.57,
     });
+  });
+});
+
+describe('janelaNova', () => {
+  it('abre 30s a partir de onde o player esta', () => {
+    expect(janelaNova(100, BRUTO_SEG)).toEqual({ inicio: 100, fim: 130 });
+  });
+
+  it('perto do fim, recua em vez de estourar', () => {
+    // O que nao cabe para a frente e tomado para tras.
+    const janela = janelaNova(BRUTO_SEG - 5, BRUTO_SEG);
+
+    expect(janela.fim).toBe(BRUTO_SEG);
+    expect(janela.inicio).toBeLessThan(janela.fim);
+  });
+
+  it('no ultimo instante ainda gera um trecho valido', () => {
+    const janela = janelaNova(BRUTO_SEG, BRUTO_SEG);
+
+    expect(janela.fim - janela.inicio).toBeGreaterThanOrEqual(DURACAO_MINIMA_SEG);
+    expect(janela.fim).toBeLessThanOrEqual(BRUTO_SEG);
+  });
+
+  it('duracao do bruto ainda desconhecida nao gera janela invertida', () => {
+    const janela = janelaNova(10, 0);
+
+    expect(janela.fim).toBeGreaterThan(janela.inicio);
   });
 });

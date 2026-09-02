@@ -357,6 +357,14 @@ class Short(Base):
     cenas_remotion: Mapped[str] = mapped_column(Text, default="[]")
     desvios: Mapped[str] = mapped_column(Text, default="[]")
     status: Mapped[str] = mapped_column(String(50), default=StatusShort.SUGERIDO)
+    # D-484: quem propos este trecho — "ia" ou "manual".
+    #
+    # NAO e informativo: e o que mantem o short manual VIVO. `registrar_sugestoes`
+    # apaga todos os candidatos ainda SUGERIDOS ao regerar, porque refazer o
+    # palpite da maquina e descartar o palpite anterior. Sem esta coluna, um
+    # trecho marcado a mao pelo operador seria varrido junto — e em silencio, na
+    # proxima vez que alguem clicasse em gerar shorts.
+    origem: Mapped[str] = mapped_column(String(20), default="ia")
     arquivo_short_path: Mapped[str] = mapped_column(String(1000), default="")
     # D-483: o MP4 de PREVIA — vertical com legenda e cenas, sem o filtro. Serve
     # para julgar antes de gastar a passada boa, e e descartavel: finalizar

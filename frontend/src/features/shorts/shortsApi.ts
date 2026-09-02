@@ -65,6 +65,8 @@ export interface ShortSugerido {
   arquivo_previa_path: string;
   /** Arranjo escolhido pelo operador. Vazio = automático, deduzido das regiões. */
   modelo_palco: string;
+  /** `ia` ou `manual`. O manual sobrevive a uma regeração. */
+  origem: string;
 }
 
 // ─── Endpoints ─────────────────────────────────────────────────────────────
@@ -187,6 +189,12 @@ export const shortsApi = {
       `/shorts/corte/${corteId}/gerar`,
       { method: 'POST' },
     ),
+
+  criarManual: (corteId: string, body: { inicio_seg: number; fim_seg: number; titulo?: string }) =>
+    request<{ short: ShortSugerido }>(`/shorts/corte/${corteId}`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 
   listarDoCorte: (corteId: string) =>
     request<{ shorts: ShortSugerido[] }>(`/shorts/corte/${corteId}`),
