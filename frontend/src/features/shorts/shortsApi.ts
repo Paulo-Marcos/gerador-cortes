@@ -284,6 +284,13 @@ export const shortsApi = {
   palcoDoShort: (shortId: string) =>
     request<PlanoDesenhavel>(`/shorts/${shortId}/palco`),
 
+  /** D-500: o palco que ESTES ajustes dariam, sem gravar. Para o arraste. */
+  simularPalco: (shortId: string, ajustes: Record<string, Retangulo>) =>
+    request<PlanoDesenhavel>(`/shorts/${shortId}/palco/simular`, {
+      method: 'POST',
+      body: JSON.stringify({ ajustes_palco: ajustes }),
+    }),
+
   progresso: (shortId: string) =>
     request<{ render: ProgressoRender | null }>(`/shorts/${shortId}/progresso`),
 

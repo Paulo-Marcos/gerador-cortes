@@ -115,12 +115,18 @@ async def escolher_preset(corte_id: str, preset_id: str) -> dict:
     return await descrever(corte_id)
 
 
-async def resolver_para_render(short_id: str) -> dict:
+async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None = None) -> dict:
     """O plano de palco de UM short, pronto para virar filtro.
 
     Devolve `plano=None` quando não há região: o render então segue pelo caminho
     antigo (recorte 9:16 do quadro cru). Degradar é melhor que falhar — mas o
     campo `origem` diz que foi degradação, não escolha.
+
+    `ajustes_hipoteticos` (D-500) substitui os ajustes gravados SEM tocar no
+    banco. É o que permite a prévia redesenhar durante o arraste: a alternativa
+    seria portar a matemática de recorte para o frontend — a segunda
+    implementação de geometria que este épico inteiro evitou, e que já custou
+    dois bugs de divergência (D-490, D-493).
     """
     async with AsyncSessionLocal() as db:
         short = await db.get(Short, short_id)
@@ -133,7 +139,11 @@ async def resolver_para_render(short_id: str) -> dict:
         presets = (await db.scalars(select(LayoutPreset))).all()
         regioes, origem, _ = _resolver(corte, presets, short.palco_preset)
         escolhido = short.modelo_palco
-        ajustes = _json_dict(short.ajustes_palco)
+        # MESCLA, não substitui: o arraste manda só o bloco que está na mão,
+        # e trocar o mapa inteiro por ele apagaria da prévia os ajustes dos
+        # OUTROS blocos — que voltariam ao lugar padrão enquanto o operador
+        # mexe num terceiro, sem nada na tela explicando o pulo.
+        ajustes = {**_json_dict(short.ajustes_palco), **(ajustes_hipoteticos or {})}
         moldura = short.moldura
 
     if not regioes:
@@ -170,7 +180,7 @@ async def resolver_para_render(short_id: str) -> dict:
     }
 
 
-async def plano_desenhavel(short_id: str) -> dict:
+async def plano_desenhavel(short_id: str, ajustes_hipoteticos: dict | None = None) -> dict:
     """O palco deste short em coordenadas de DESENHO, para a prévia (D-489).
 
     A tela não recalcula nada: ela recebe, por recorte, de onde tirar da fonte,
@@ -181,7 +191,7 @@ async def plano_desenhavel(short_id: str) -> dict:
     aí a prévia poderia discordar do arquivo sem que nada quebrasse. É o risco
     que este épico inteiro existe para evitar.
     """
-    resolvido = await resolver_para_render(short_id)
+    resolvido = await resolver_para_render(short_id, ajustes_hipoteticos)
     plano = resolvido["plano"]
 
     return {

@@ -17,6 +17,7 @@ Endpoints:
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
   GET  /{short_id}/palco          — o palco em coordenadas de desenho (previa)
+  POST /{short_id}/palco/simular  — o palco que certos ajustes dariam, sem gravar
   POST /{short_id}/renderizar     — produz o MP4 final do candidato
   GET  /{short_id}/video          — assiste a previa ou ao final
   GET  /{short_id}/publicacao     — os pacotes prontos, por plataforma
@@ -379,6 +380,32 @@ async def palco_do_short(short_id: str):
 
     try:
         return await palco_shorts.plano_desenhavel(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class SimularPalcoRequest(BaseModel):
+    """Ajustes de RASCUNHO — nada disto e gravado."""
+
+    ajustes_palco: dict = {}
+
+
+@router.post("/{short_id}/palco/simular")
+async def simular_palco(short_id: str, body: SimularPalcoRequest):
+    """O palco que ESTES ajustes produziriam, sem gravar nada (D-500).
+
+    Existe para a prévia redesenhar DURANTE o arraste. A alternativa seria
+    recalcular no frontend, o que exigiria portar `escalar`/cobrir-caber para
+    lá — a segunda implementação de geometria que este épico evitou, e que já
+    custou dois bugs de divergência silenciosa.
+
+    Assim a conta continua sendo uma só, no domínio, e o banco só é tocado
+    quando o operador solta o bloco.
+    """
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.plano_desenhavel(short_id, body.ajustes_palco)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

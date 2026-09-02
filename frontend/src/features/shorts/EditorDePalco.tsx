@@ -41,9 +41,13 @@ interface Props {
   slots: Record<string, Retangulo>;
   ativo: boolean;
   onGravar: (ajustes: Record<string, Retangulo>) => void;
+  /** D-500: cada movimento, para a prévia redesenhar durante o arraste. */
+  onArrastando?: (ajustes: Record<string, Retangulo>) => void;
+  /** D-500: soltou — descarta o rascunho e volta ao plano gravado. */
+  onSoltou?: () => void;
 }
 
-export function EditorDePalco({ slots, ativo, onGravar }: Props) {
+export function EditorDePalco({ slots, ativo, onGravar, onArrastando, onSoltou }: Props) {
   const caixa = useRef<HTMLDivElement>(null);
   // O rascunho vive num REF e é espelhado no estado só para desenhar.
   //
@@ -79,15 +83,14 @@ export function EditorDePalco({ slots, ativo, onGravar }: Props) {
     const largura = caixa.current?.getBoundingClientRect().width ?? 0;
     if (!partida || !largura) return;
 
-    anotar({
-      regiao,
-      retangulo: arrastarSlot(
-        partida.base,
-        partida.pega,
-        paraCanvas(evento.clientX - partida.x, largura),
-        paraCanvas(evento.clientY - partida.y, largura),
-      ),
-    });
+    const retangulo = arrastarSlot(
+      partida.base,
+      partida.pega,
+      paraCanvas(evento.clientX - partida.x, largura),
+      paraCanvas(evento.clientY - partida.y, largura),
+    );
+    anotar({ regiao, retangulo });
+    onArrastando?.({ [regiao]: retangulo });
   };
 
   const soltar = (evento: ReactPointerEvent<HTMLElement>) => {
@@ -100,6 +103,7 @@ export function EditorDePalco({ slots, ativo, onGravar }: Props) {
     }
     inicio.current = null;
     anotar(null);
+    onSoltou?.();
   };
 
   return (

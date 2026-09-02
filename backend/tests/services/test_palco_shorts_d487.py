@@ -223,3 +223,111 @@ class TestResolverParaRender:
     async def test_short_inexistente_e_404(self, ambiente):
         with pytest.raises(LookupError):
             await servico.resolver_para_render("nao-existe")
+
+
+class TestSimular:
+    """D-500: o plano que ESTES ajustes dariam, sem tocar no banco.
+
+    É o que permite a prévia redesenhar durante o arraste. A alternativa era
+    portar a matemática de recorte para o frontend — a segunda implementação de
+    geometria que este épico inteiro evitou, e que já custou dois bugs de
+    divergência silenciosa (D-490, D-493).
+    """
+
+    @pytest_asyncio.fixture
+    async def com_regiao(self, ambiente):
+        await servico.escolher_preset("c1", "pre-1")
+        return ambiente
+
+    @pytest.mark.asyncio
+    async def test_o_ajuste_hipotetico_muda_o_desenho(self, com_regiao):
+        gravado = await servico.plano_desenhavel("s1")
+        alvo = {"x": 40, "y": 900, "w": 500, "h": 500}
+
+        simulado = await servico.plano_desenhavel("s1", {"pessoa": alvo})
+
+        assert simulado["slots"]["pessoa"] == alvo
+        assert simulado["slots"]["pessoa"] != gravado["slots"]["pessoa"]
+
+    @pytest.mark.asyncio
+    async def test_simular_nao_grava(self, com_regiao):
+        """Se gravasse, cada quadro do arraste viraria um estado do banco."""
+        await servico.plano_desenhavel("s1", {"pessoa": {"x": 40, "y": 900, "w": 500, "h": 500}})
+
+        async with com_regiao() as db:
+            short = await db.get(Short, "s1")
+            assert short.ajustes_palco in ("", "{}")
+
+        assert (await servico.plano_desenhavel("s1"))["ajustados"] == []
+
+    @pytest.mark.asyncio
+    async def test_o_video_dentro_do_bloco_reflui_junto(self, com_regiao):
+        """O ponto da demanda.
+
+        Antes, arrastar movia um retângulo vazio: o `destino` do recorte só
+        mudava depois do refetch. Se a simulação devolvesse o slot novo com o
+        desenho velho, o arraste continuaria mentindo — só que mais rápido.
+        """
+        gravado = await servico.plano_desenhavel("s1")
+
+        simulado = await servico.plano_desenhavel(
+            "s1", {"pessoa": {"x": 40, "y": 900, "w": 500, "h": 500}}
+        )
+
+        # A ordem dos recortes e a de empilhamento do modelo, e nao muda.
+        indice = list(gravado["slots"]).index("pessoa")
+        antes, depois = gravado["recortes"][indice], simulado["recortes"][indice]
+
+        assert depois["destino"] != antes["destino"]
+        assert depois["recorta"] != antes["recorta"]
+
+    @pytest.mark.asyncio
+    async def test_ajuste_vazio_e_o_plano_gravado(self, com_regiao):
+        """`{}` significa "sem override", não "apague os ajustes"."""
+        async with com_regiao() as db:
+            short = await db.get(Short, "s1")
+            short.ajustes_palco = json.dumps({"pessoa": {"x": 10, "y": 20, "w": 300, "h": 300}})
+            await db.commit()
+
+        simulado = await servico.plano_desenhavel("s1", {})
+
+        assert simulado["slots"]["pessoa"] == {"x": 10, "y": 20, "w": 300, "h": 300}
+
+    @pytest.mark.asyncio
+    async def test_arrastar_um_bloco_nao_devolve_o_outro_ao_lugar(self, com_regiao):
+        """O arraste manda só o bloco na mão; o resto continua como está.
+
+        Substituir o mapa inteiro faria a tela pular de volta ao padrão sempre
+        que o operador mexesse na pessoa — e o pulo não teria explicação nenhuma
+        na tela.
+        """
+        fixo = {"x": 0, "y": 0, "w": 1080, "h": 600}
+        async with com_regiao() as db:
+            short = await db.get(Short, "s1")
+            short.ajustes_palco = json.dumps({"tela": fixo})
+            await db.commit()
+
+        simulado = await servico.plano_desenhavel(
+            "s1", {"pessoa": {"x": 40, "y": 900, "w": 500, "h": 500}}
+        )
+
+        assert simulado["slots"]["tela"] == fixo
+
+    @pytest.mark.asyncio
+    async def test_simular_nao_esconde_a_moldura(self, com_regiao):
+        """A assinatura do canal não é ajuste de bloco; ela fica.
+
+        Sem isso o operador arrastaria vendo um enquadramento sem moldura e
+        renderizaria outro com — a prévia deixaria de descrever o arquivo
+        exatamente no momento em que ele está decidindo o enquadramento.
+        """
+        simulado = await servico.plano_desenhavel(
+            "s1", {"pessoa": {"x": 40, "y": 900, "w": 500, "h": 500}}
+        )
+
+        assert simulado["faixas"], "a moldura sumiu no rascunho"
+
+    @pytest.mark.asyncio
+    async def test_short_inexistente_e_404(self, ambiente):
+        with pytest.raises(LookupError):
+            await servico.plano_desenhavel("nao-existe", {})

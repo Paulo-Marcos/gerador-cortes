@@ -9,7 +9,16 @@
 // de botões que o operador reclamou (D-492).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Captions, Clapperboard, Gauge, Move, Plus, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Captions,
+  Clapperboard,
+  Gauge,
+  LayoutTemplate,
+  Move,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { cn, formatarDuracao } from '@/lib/utils';
@@ -34,6 +43,7 @@ import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PalcoDoCorte } from './PalcoDoCorte';
 import { PalcoPrevia } from './PalcoPrevia';
+import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
 import {
   useAtualizarShort,
@@ -76,6 +86,10 @@ export default function FireDetalhePage() {
   // D-493: o modo de edição do palco. Fora dele o overlay não existe — as alças
   // sobre o vídeo atrapalhariam quem só quer assistir ao trecho.
   const [editandoPalco, setEditandoPalco] = useState(false);
+  // D-500: ver o short montado ou o quadro cru. Desligado, a prévia volta a ser
+  // a janela 9:16 sobre o bruto — que é o que serve para escolher o TRECHO,
+  // enquanto o palco serve para escolher o ENQUADRAMENTO.
+  const [verPalco, setVerPalco] = useState(true);
 
   const velocidadePadrao = useVelocidadePlayerPadrao();
   const [velocidade, setVelocidade] = useState(velocidadePadrao);
@@ -99,7 +113,20 @@ export default function FireDetalhePage() {
   const palcoDoShort = usePalcoDoShort(emQuadro?.id ?? null, emQuadro?.modelo_palco ?? '');
   const duracaoRegua = duracaoVideo || fire?.duracao_seg || 0;
   const temPalco = (palcoDoShort.data?.recortes.length ?? 0) > 0;
+  const palcoNaTela = temPalco && verPalco;
+  // D-500: durante o arraste o backend resolve um plano hipotético; a tela
+  // desenha esse, e volta ao gravado assim que ele chega.
+  const simulacao = useSimulacaoDePalco(emQuadro?.id ?? null);
+  const planoNaTela = simulacao.simulado ?? palcoDoShort.data;
   const ocupado = atualizar.isPending || renderizar.isPending || previa.isPending;
+
+  // O rascunho vive até o plano GRAVADO chegar — ou até a gravação falhar, e aí
+  // manter o desenho seria mostrar um ajuste que o banco não tem.
+  const descartarSimulacao = simulacao.descartar;
+  useEffect(
+    () => descartarSimulacao(),
+    [palcoDoShort.data, atualizar.status, descartarSimulacao],
+  );
 
   const tocarTrecho = useCallback((short: ShortSugerido) => {
     const el = video.current;
@@ -246,6 +273,20 @@ export default function FireDetalhePage() {
 
           <div className="flex-1" />
 
+          {temPalco && (
+            <Button
+              variant={verPalco ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => {
+                setVerPalco((v) => !v);
+                setEditandoPalco(false);
+              }}
+              title="Ver o short montado no palco, ou o quadro cru com a janela 9:16"
+            >
+              <LayoutTemplate />
+              Palco {verPalco ? 'on' : 'off'}
+            </Button>
+          )}
           {transcricao.data && temPalavras && (
             <Button
               variant={legendaVisivel ? 'secondary' : 'ghost'}
@@ -323,19 +364,21 @@ export default function FireDetalhePage() {
                   {/* Com palco, a janela sobre o quadro cru deixa de descrever o
                       short — quem descreve é a prévia ao lado, e a legenda vai
                       para lá junto. */}
-                  {!temPalco && legenda}
+                  {!palcoNaTela && legenda}
                 </MascaraEnquadramento>
               )}
             </div>
 
-            {temPalco && palcoDoShort.data && (
+            {palcoNaTela && planoNaTela && (
               <div className="flex min-h-0 flex-none flex-col items-center gap-1">
-                <PalcoPrevia plano={palcoDoShort.data} video={video}>
+                <PalcoPrevia plano={planoNaTela} video={video}>
                   {legenda}
                   <EditorDePalco
-                    slots={palcoDoShort.data.slots}
+                    slots={planoNaTela.slots}
                     ativo={editandoPalco}
                     onGravar={gravarAjuste}
+                    onArrastando={simulacao.simular}
+                    onSoltou={simulacao.encerrar}
                   />
                 </PalcoPrevia>
                 <button
@@ -390,7 +433,10 @@ export default function FireDetalhePage() {
                       />
                     </div>
                   )}
-                  {editandoPalco && palcoDoShort.data && temPalco && (
+                  {/* Com o palco oculto os campos editariam algo que ninguém
+                      está vendo — a mesma cegueira que o arraste sem prévia
+                      tinha. Desligar a visualização desliga a edição junto. */}
+                  {editandoPalco && palcoNaTela && palcoDoShort.data && (
                     <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
                       <CamposDoPalco
                         slots={palcoDoShort.data.slots}

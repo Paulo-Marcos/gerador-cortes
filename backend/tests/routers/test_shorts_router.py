@@ -134,3 +134,46 @@ def test_corte_inexistente_vira_404(client):
 
 def test_corte_sem_bruto_vira_422(client):
     assert client.post("/api/shorts/corte/c-sem-bruto/sugerir").status_code == 422
+
+
+class TestSimularPalco:
+    """D-500: o palco que ESTES ajustes dariam, sem gravar nada.
+
+    É a rota que o arraste chama ~12 vezes por segundo. Duas coisas dela são
+    contrato e não detalhe: o corpo chega inteiro ao serviço (senão a prévia
+    desenha outro enquadramento) e nada aqui escreve no banco.
+    """
+
+    @pytest.fixture()
+    def espiao(self, monkeypatch):
+        from app.services import palco_shorts
+
+        recebidos: list[tuple[str, dict]] = []
+
+        async def _fake(short_id, ajustes_hipoteticos=None):
+            if short_id == "sumido":
+                raise LookupError("short nao encontrado")
+            recebidos.append((short_id, ajustes_hipoteticos))
+            return {"modelo": "pessoa_cheia", "recortes": [], "slots": {}}
+
+        monkeypatch.setattr(palco_shorts, "plano_desenhavel", _fake)
+        return recebidos
+
+    def test_os_ajustes_chegam_ao_servico(self, client, espiao):
+        ajustes = {"pessoa": {"x": 40, "y": 900, "w": 500, "h": 500}}
+
+        resposta = client.post("/api/shorts/s1/palco/simular", json={"ajustes_palco": ajustes})
+
+        assert resposta.status_code == 200
+        assert espiao == [("s1", ajustes)]
+
+    def test_corpo_vazio_e_o_plano_gravado(self, client, espiao):
+        resposta = client.post("/api/shorts/s1/palco/simular", json={})
+
+        assert resposta.status_code == 200
+        assert espiao[0][1] == {}
+
+    def test_short_inexistente_e_404(self, client, espiao):
+        resposta = client.post("/api/shorts/sumido/palco/simular", json={"ajustes_palco": {}})
+
+        assert resposta.status_code == 404
