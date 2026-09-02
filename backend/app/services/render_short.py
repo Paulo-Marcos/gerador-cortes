@@ -35,6 +35,8 @@ from app.services import legendas_short
 from app.services.app_settings import AppSettingsService
 from app.services.pipeline_render_helpers import _build_overlay_render_cmd
 from app.services.shorts import foco_efetivo
+from app.services.shorts_progress import ShortsProgress
+from app.services.tasks import fire_and_forget
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +98,46 @@ async def renderizar_short(short_id: str) -> dict:
     }
 
 
+def disparar(short_id: str, *, final: bool) -> dict:
+    """Põe o render em segundo plano e devolve na hora (D-485).
+
+    Síncrono, o POST segurava o navegador por mais de cinco minutos: a aba
+    ficava presa, e uma queda de conexão perdia o retorno mesmo com o arquivo
+    já pronto em disco. Agora quem acompanha é `GET /{id}/progresso`.
+
+    Recusa disparar por cima de um render em curso. Dois renders do mesmo short
+    escreveriam no mesmo arquivo ao mesmo tempo — e o segundo ainda sobrescreveria
+    os passos do primeiro, deixando a tela mentindo sobre qual deles está rodando.
+    """
+    if ShortsProgress.em_curso(short_id):
+        raise ValueError("Este short ja tem um render em andamento.")
+
+    estagio = "final" if final else "previa"
+    ShortsProgress.iniciar(short_id, estagio=estagio)
+    fire_and_forget(
+        _renderizar_em_background(short_id, final=final),
+        name=f"short-{estagio}-{short_id[:8]}",
+    )
+    return {"status": "iniciado", "short_id": short_id, "estagio": estagio}
+
+
+async def _renderizar_em_background(short_id: str, *, final: bool) -> None:
+    """Roda o render e garante que a falha chegue ao store.
+
+    Sem o `except`, um erro morreria no log do worker e a tela ficaria em
+    "rodando" para sempre — pior que o silêncio que esta demanda veio resolver.
+    """
+    try:
+        if final:
+            await renderizar_short(short_id)
+        else:
+            await renderizar_previa(short_id)
+        ShortsProgress.concluir(short_id)
+    except Exception as exc:  # noqa: BLE001 — a falha PRECISA chegar a tela
+        logger.exception("[RenderShort] short=%s falhou", short_id[:8])
+        ShortsProgress.falhar(short_id, str(exc) or exc.__class__.__name__)
+
+
 async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoRender:
     """Os três passos do render. Prévia e final diferem só no filtro e no nome.
 
@@ -115,6 +157,7 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
     camada = saida_dir / f"camada_{estagio}.mov"
     final = saida_dir / nome
 
+    ShortsProgress.marcar(short_id, "recorte", "rodando")
     await _despachar(
         f"{short_id}_{estagio}_recorte",
         build_recorte_vertical_cmd(
@@ -132,6 +175,8 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
         timeout=_TIMEOUT_RECORTE_SEG,
     )
 
+    ShortsProgress.marcar(short_id, "recorte", "concluido")
+
     props_file = saida_dir / f"camada_{estagio}.props.json"
     props_file.write_text(
         json.dumps(
@@ -145,6 +190,7 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
         encoding="utf-8",
     )
 
+    ShortsProgress.marcar(short_id, "camada", "rodando")
     await _despachar(
         f"{short_id}_{estagio}_camada",
         _build_overlay_render_cmd(
@@ -161,6 +207,9 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
         timeout=_TIMEOUT_CAMADA_SEG,
     )
 
+    ShortsProgress.marcar(short_id, "camada", "concluido")
+
+    ShortsProgress.marcar(short_id, "composicao", "rodando")
     await _despachar(
         f"{short_id}_{estagio}_composicao",
         build_composicao_short_cmd(base, camada, final),
@@ -168,6 +217,8 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
         category=WorkerJobCategory.RENDER_FINAL,
         timeout=_TIMEOUT_COMPOSICAO_SEG,
     )
+
+    ShortsProgress.marcar(short_id, "composicao", "concluido")
 
     logger.info(
         "[RenderShort] short=%s estagio=%s pronto (legenda: %s, %d palavras)",

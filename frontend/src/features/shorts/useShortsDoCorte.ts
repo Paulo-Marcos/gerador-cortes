@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { shortsApi, type AtualizarShortBody } from './shortsApi';
 import { FIRES_KEY } from './useFires';
@@ -52,16 +53,45 @@ export function useRenderizarShort(corteId: string) {
   });
 }
 
-// D-483: a previa e um render inteiro (ffmpeg + Remotion + composicao), so que
-// sem o filtro. O botao fica preso pelo isPending, como o final — fingir que
-// terminou seria pior aqui, porque o operador ficaria esperando um video que
-// ainda nao existe.
+// D-485: o disparo volta na hora; quem acompanha e o `useProgressoRender`.
 export function useRenderizarPrevia(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (shortId: string) => shortsApi.renderizarPrevia(shortId),
     onSuccess: () => qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) }),
   });
+}
+
+/**
+ * D-485: acompanha o render de UM short enquanto ele corre.
+ *
+ * O polling so existe enquanto ha algo rodando — sem isso a tela bateria no
+ * backend de dois em dois segundos para sempre, por candidato, mesmo com todos
+ * parados. `refetchInterval` devolvendo `false` desliga sozinho.
+ *
+ * Quando termina, invalida a lista: e la que o caminho do arquivo aparece.
+ */
+export function useProgressoRender(shortId: string, corteId: string, ativo: boolean) {
+  const qc = useQueryClient();
+  const jaInvalidou = useRef(false);
+
+  const query = useQuery({
+    queryKey: ['shorts', 'progresso', shortId],
+    queryFn: () => shortsApi.progresso(shortId),
+    enabled: ativo,
+    refetchInterval: (q) => (q.state.data?.render?.concluido === false ? 2000 : false),
+  });
+
+  const concluido = query.data?.render?.concluido;
+  useEffect(() => {
+    if (concluido && !jaInvalidou.current) {
+      jaInvalidou.current = true;
+      void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+    }
+    if (concluido === false) jaInvalidou.current = false;
+  }, [concluido, corteId, qc]);
+
+  return query.data?.render ?? null;
 }
 
 export function usePreviaPublicacao(shortId: string | null) {

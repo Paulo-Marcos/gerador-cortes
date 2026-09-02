@@ -34,6 +34,7 @@ import { brutoUrl, shortVideoUrl, type ShortSugerido, type StatusShort } from '.
 import { avisoDescarteBruto } from './descarteBruto';
 import { BordasFinasPanel } from './BordasFinasPanel';
 import { LegendaPrevia } from './LegendaPrevia';
+import { ProgressoRenderPanel } from './ProgressoRenderPanel';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PainelPublicacao } from './PainelPublicacao';
@@ -41,6 +42,7 @@ import { useFires } from './useFires';
 import {
   useAtualizarShort,
   useDescartarBruto,
+  useProgressoRender,
   useRenderizarPrevia,
   useRenderizarShort,
   useShortsDoCorte,
@@ -79,6 +81,7 @@ function mmss(segundos: number): string {
 
 interface CandidatoProps {
   short: ShortSugerido;
+  corteId: string;
   /** Destaca o candidato que a timeline e a máscara estão mostrando. */
   emFoco: boolean;
   onSelecionar: () => void;
@@ -101,6 +104,7 @@ interface CandidatoProps {
 // com o play/pause global.
 function Candidato({
   short,
+  corteId,
   emFoco,
   onSelecionar,
   ocupado,
@@ -112,6 +116,15 @@ function Candidato({
   onRenderizar,
 }: CandidatoProps) {
   const rejeitado = short.status === 'rejeitado';
+  // D-485: so candidatos que podem ter render sao acompanhados. O hook consulta
+  // uma vez ao montar e so entra em polling se achar algo rodando — inclusive
+  // depois de um F5 no meio do render, que antes perdia o rastro por completo.
+  const progresso = useProgressoRender(
+    short.id,
+    corteId,
+    short.status === 'aprovado' || short.status === 'renderizado',
+  );
+  const renderizando = progresso !== null && !progresso.concluido;
 
   return (
     <article
@@ -207,15 +220,25 @@ function Candidato({
             Finalizar NAO exige previa — quem confia no candidato vai direto. */}
         {short.status === 'aprovado' && (
           <>
-            <BotaoAcao onClick={onPrevia} disabled={ocupado} icon={<Eye size={12} />}>
+            <BotaoAcao
+              onClick={onPrevia}
+              disabled={ocupado || renderizando}
+              icon={<Eye size={12} />}
+            >
               {short.arquivo_previa_path ? 'refazer previa' : 'gerar previa'}
             </BotaoAcao>
-            <BotaoAcao onClick={onRenderizar} disabled={ocupado} icon={<Render size={12} />}>
+            <BotaoAcao
+              onClick={onRenderizar}
+              disabled={ocupado || renderizando}
+              icon={<Render size={12} />}
+            >
               finalizar
             </BotaoAcao>
           </>
         )}
       </div>
+
+      {progresso && <ProgressoRenderPanel progresso={progresso} />}
 
       {short.arquivo_previa_path && short.status !== 'renderizado' && (
         <PlayerDoArquivo
@@ -585,6 +608,7 @@ export default function FireDetalhePage() {
             <Candidato
               key={short.id}
               short={short}
+              corteId={corteId}
               emFoco={emQuadro?.id === short.id}
               onSelecionar={() => setSelecionado(short.id)}
               ocupado={atualizar.isPending || renderizar.isPending || previa.isPending}
@@ -606,14 +630,12 @@ export default function FireDetalhePage() {
             </p>
           )}
 
-          {/* D-483: render que falha precisa DIZER. O erro do crop 9:16 (D-481)
-              so aparecia no log do worker — a tela ficava calada e o operador
-              nao tinha como saber que o arquivo nunca foi gerado. */}
+          {/* D-485: aqui e falha de DISPARO (ex.: ja ha render em andamento). A
+              falha do render em si chega pelo progresso, no card — desde que
+              virou assincrono, ela nao volta mais pela resposta do POST. */}
           {(previa.isError || renderizar.isError) && (
             <p className="rounded-[8px] border border-[var(--wb-warn-ink)] bg-[var(--wb-bg-inset)] p-2 text-[12px] leading-relaxed text-[var(--wb-text-dim)]">
-              <span className="font-bold text-[var(--wb-warn-ink)]">
-                {previa.isError ? 'A previa falhou.' : 'A finalizacao falhou.'}
-              </span>{' '}
+              <span className="font-bold text-[var(--wb-warn-ink)]">Nao consegui iniciar.</span>{' '}
               {((previa.error ?? renderizar.error) as Error)?.message ?? 'erro desconhecido'}
             </p>
           )}

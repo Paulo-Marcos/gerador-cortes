@@ -9,6 +9,7 @@ Endpoints:
   GET  /corte/{corte_id}/transcricao — palavras com tempo, para a prévia de legenda
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
+  GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
   POST /{short_id}/renderizar     — produz o MP4 final do candidato
   GET  /{short_id}/video          — assiste a previa ou ao final
   GET  /{short_id}/publicacao     — os pacotes prontos, por plataforma
@@ -155,11 +156,9 @@ async def renderizar(short_id: str):
     from app.services import render_short
 
     try:
-        return await render_short.renderizar_short(short_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return render_short.disparar(short_id, final=True)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/{short_id}/previa")
@@ -173,11 +172,9 @@ async def renderizar_previa(short_id: str):
     from app.services import render_short
 
     try:
-        return await render_short.renderizar_previa(short_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return render_short.disparar(short_id, final=False)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/{short_id}/video")
@@ -226,6 +223,19 @@ async def obter_video(short_id: str, estagio: str = "final"):
         url=f"/videos/{projeto_id}/{relativo}?v={mtime}",
         headers={"Cache-Control": "no-store"},
     )
+
+
+@router.get("/{short_id}/progresso")
+async def progresso_do_render(short_id: str):
+    """Em que passo o render está e há quanto tempo (D-485).
+
+    `render` é `null` quando não houve render deste short neste processo — a
+    tela cai no estado do banco (tem prévia, tem final, ou nenhum), que é a
+    fonte de verdade que sobrevive a um reload do uvicorn.
+    """
+    from app.services.shorts_progress import ShortsProgress
+
+    return {"render": ShortsProgress.get(short_id)}
 
 
 @router.get("/{short_id}/publicacao")

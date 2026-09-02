@@ -80,6 +80,22 @@ export function brutoUrl(corteId: string): string {
   return `${API_BASE}/cortes/${corteId}/video-bruto`;
 }
 
+/** Um passo do render e onde ele está. */
+export interface PassoRender {
+  chave: string;
+  label: string;
+  status: 'pendente' | 'rodando' | 'concluido' | 'erro';
+}
+
+/** O render em curso (ou o último deste processo). */
+export interface ProgressoRender {
+  estagio: 'previa' | 'final';
+  concluido: boolean;
+  erro: string | null;
+  decorrido_seg: number;
+  passos: PassoRender[];
+}
+
 /** URL do MP4 do short. `estagio` escolhe entre o rascunho e o que vai publicar. */
 export function shortVideoUrl(shortId: string, estagio: 'previa' | 'final'): string {
   return `${API_BASE}/shorts/${shortId}/video?estagio=${estagio}`;
@@ -146,17 +162,19 @@ export const shortsApi = {
       { method: 'DELETE' },
     ),
 
+  // D-485: os dois disparam e voltam na hora. Quem acompanha e o progresso.
   renderizarPrevia: (shortId: string) =>
-    request<{ arquivo_previa_path: string; fonte_legenda: string; palavras: number }>(
-      `/shorts/${shortId}/previa`,
-      { method: 'POST' },
-    ),
+    request<{ status: string; estagio: string }>(`/shorts/${shortId}/previa`, {
+      method: 'POST',
+    }),
+
+  progresso: (shortId: string) =>
+    request<{ render: ProgressoRender | null }>(`/shorts/${shortId}/progresso`),
 
   renderizar: (shortId: string) =>
-    request<{ arquivo_short_path: string; fonte_legenda: string; palavras: number }>(
-      `/shorts/${shortId}/renderizar`,
-      { method: 'POST' },
-    ),
+    request<{ status: string; estagio: string }>(`/shorts/${shortId}/renderizar`, {
+      method: 'POST',
+    }),
 
   previaPublicacao: (shortId: string) =>
     request<{ pacotes: PacotePublicacao[] }>(`/shorts/${shortId}/publicacao`),
