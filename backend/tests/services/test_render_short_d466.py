@@ -340,3 +340,86 @@ async def test_os_dois_estagios_nao_disputam_o_mesmo_intermediario(ambiente, job
     ids = [j["id"] for j in jobs]
 
     assert len(set(ids)) == len(ids), f"ids repetidos na fila: {ids}"
+
+
+class TestMolduraChegaAoRender:
+    """D-504: a faixa do canal precisa sair NO ARQUIVO, nao so no dominio.
+
+    O bug: `_ContextoRender.moldura` era preenchido por `faixas_do_canal()` e
+    nunca usado — `_comando_do_quadro` montava o filtro sem ele. A D-501 tinha
+    sido verificada com uma chamada DIRETA ao ffmpeg (contando pixels do quadro),
+    caminho que nao passa por aqui; o operador ligava "moldura: faixas" na tela e
+    o short saia sem faixa nenhuma.
+
+    Por isso este teste olha o comando que o render DESPACHA, e nao a funcao que
+    desenha: o elo que faltava era exatamente o de ligar as duas.
+    """
+
+    @pytest_asyncio.fixture
+    async def com_palco(self, ambiente):
+        """Da regiao ao corte — sem regiao nao ha palco, e sem palco nao ha moldura."""
+        from app.models import LayoutPreset
+
+        factory, tmp = ambiente
+        async with factory() as db:
+            corte = await db.get(Corte, "c1")
+            corte.layout_youtube = json.dumps(
+                {
+                    "crop_facecam": {"x": 24, "y": 410, "w": 340, "h": 260},
+                    "crop_tela": {"x": 365, "y": 180, "w": 1325, "h": 720},
+                }
+            )
+            await db.commit()
+        assert LayoutPreset is not None
+        return factory, tmp
+
+    def _filtro(self, job: dict) -> str:
+        cmd = job["cmd"]
+        return cmd[cmd.index("-filter_complex") + 1]
+
+    def _faixas_da_moldura(self, job: dict) -> int:
+        """Quantos `drawbox` sao DA MOLDURA.
+
+        Contar `drawbox=` cru nao serve: o filtro de cinema ja desenha dois, de
+        letterbox preto. Foi essa mesma confusao que fez a D-501 quase adotar
+        uma faixa de 7% dentro da tarja de 8% do filtro. A cor do canal e o que
+        distingue uma coisa da outra.
+        """
+        from app.services.render_short import faixas_do_canal
+
+        cor = faixas_do_canal("faixas")[0].cor
+        return self._filtro(job).count(f"color={cor}")
+
+    @pytest.mark.asyncio
+    async def test_o_recorte_desenha_as_faixas_do_canal(self, com_palco, jobs):
+        await render_short.renderizar_short("s1")
+
+        assert self._faixas_da_moldura(jobs[0]) > 0, "a moldura nao chegou ao ffmpeg"
+
+    @pytest.mark.asyncio
+    async def test_sao_duas_faixas_uma_em_cima_e_outra_embaixo(self, com_palco, jobs):
+        await render_short.renderizar_short("s1")
+
+        assert self._faixas_da_moldura(jobs[0]) == 2
+
+    @pytest.mark.asyncio
+    async def test_a_cor_vem_do_tema_e_nao_do_codigo(self, com_palco, jobs, monkeypatch):
+        """Cravar a cor faria o canal trocar a paleta e o short sair com a velha."""
+        monkeypatch.setattr(render_short, "cor_do_tema", lambda chave, padrao: "#ff00ff")
+
+        await render_short.renderizar_short("s1")
+
+        assert "color=#ff00ff" in self._filtro(jobs[0])
+
+    @pytest.mark.asyncio
+    async def test_moldura_desligada_nao_desenha_faixa(self, com_palco, jobs):
+        """O letterbox do filtro continua; o que some e a assinatura do canal."""
+        factory, _ = com_palco
+        async with factory() as db:
+            short = await db.get(Short, "s1")
+            short.moldura = "nenhuma"
+            await db.commit()
+
+        await render_short.renderizar_short("s1")
+
+        assert self._faixas_da_moldura(jobs[0]) == 0

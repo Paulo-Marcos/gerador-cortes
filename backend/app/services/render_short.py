@@ -349,6 +349,7 @@ def _comando_do_quadro(contexto: _ContextoRender, saida: Path, *, com_filtro: bo
         inicio_seg=contexto.inicio_seg,
         duracao_seg=contexto.duracao_seg,
         plano=contexto.plano,
+        moldura=contexto.moldura,
         filtro=filtro,
     )
 
