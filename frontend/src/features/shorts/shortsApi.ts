@@ -80,6 +80,8 @@ export interface ShortSugerido {
   origem: string;
   /** Preset DESTE short. Vazio = herda o do corte (D-498). */
   palco_preset: string;
+  /** `faixas` ou `nenhuma` — a assinatura do canal em volta (D-501). */
+  moldura: string;
   /** Slots que o operador moveu, como sobreposição parcial sobre o modelo. */
   ajustes_palco: Record<string, Retangulo>;
   /** Cenas desenhadas sobre o short, na timeline DELE (começa no zero). */
@@ -97,6 +99,7 @@ export interface AtualizarShortBody {
   modelo_palco?: string;
   ajustes_palco?: Record<string, Retangulo>;
   palco_preset?: string;
+  moldura?: string;
 }
 
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
@@ -147,6 +150,9 @@ export interface PlanoDesenhavel {
   slots: Record<string, Retangulo>;
   /** Regiões que o operador moveu; as demais herdam do modelo. */
   ajustados: string[];
+  moldura: string;
+  /** As faixas já resolvidas, com a cor do CANAL — a tela só desenha. */
+  faixas: (Retangulo & { cor: string })[];
 }
 
 /** Um passo do render e onde ele está. */

@@ -26,6 +26,7 @@ from app.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
 from app.domain.formato_video import foco_de_regiao
+from app.domain.moldura_short import Moldura
 from app.domain.palco_short import MODELOS
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
@@ -278,6 +279,7 @@ async def atualizar_short(
     modelo_palco: str | None = None,
     ajustes_palco: dict | None = None,
     palco_preset: str | None = None,
+    moldura: str | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -311,6 +313,11 @@ async def atualizar_short(
             if not 0.0 <= foco_x <= 1.0:
                 raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
             short.foco_x = round(float(foco_x), 3)
+
+        if moldura is not None:
+            if moldura not in {m.value for m in Moldura}:
+                raise ValueError(f"Moldura {moldura!r} nao existe.")
+            short.moldura = moldura
 
         if palco_preset is not None:
             # "" volta a herdar do corte. Nao validamos a existencia do preset
@@ -618,6 +625,7 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "arquivo_previa_path": short.arquivo_previa_path,
         "modelo_palco": short.modelo_palco,
         "palco_preset": short.palco_preset,
+        "moldura": short.moldura,
         "ajustes_palco": _json_dict_seguro(short.ajustes_palco),
         "origem": short.origem,
         "cenas": _json_lista(short.cenas_remotion),

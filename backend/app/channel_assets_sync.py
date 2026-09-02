@@ -26,6 +26,7 @@ de move — os dois pontos em que os assets do canal ativo podem ter mudado de l
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
@@ -167,3 +168,23 @@ def _espelhar_arquivo(origem: Path, destino: Path) -> bool:
     destino.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(origem, destino)
     return True
+
+
+def cor_do_tema(chave: str, padrao: str) -> str:
+    """Uma cor da paleta do canal, lida do `theme.config.json` sincronizado.
+
+    Existe para que o BACKEND possa usar as cores do canal — a moldura do short
+    (D-501) precisa da mesma `verdeMoldura` que o renderer usa. Cravar o valor
+    aqui criaria uma segunda fonte: o canal trocaria a paleta e o short sairia
+    com a cor antiga, sem nada indicando por quê.
+
+    Devolve `padrao` quando o arquivo não existe ou não tem a chave — cor
+    ausente não pode derrubar um render.
+    """
+    try:
+        dados = json.loads(_RENDERER_THEME.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return padrao
+    paleta = dados.get("palette") if isinstance(dados, dict) else None
+    valor = paleta.get(chave) if isinstance(paleta, dict) else None
+    return valor if isinstance(valor, str) and valor.strip() else padrao

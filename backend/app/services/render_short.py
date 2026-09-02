@@ -23,6 +23,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.channel_assets_sync import cor_do_tema
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.ffmpeg_short import (
@@ -31,6 +32,7 @@ from app.domain.ffmpeg_short import (
     build_recorte_vertical_cmd,
 )
 from app.domain.formato_video import VERTICAL, Resolucao
+from app.domain.moldura_short import COR_PADRAO, faixas
 from app.domain.overlay_codec import OverlayCodec, overlay_codec_profile
 from app.infrastructure.ffmpeg_runner import probe_resolucao
 from app.infrastructure.worker_queue import RemotionWorkerQueue, WorkerJob, WorkerJobCategory
@@ -249,6 +251,8 @@ class _ContextoRender:
     # E-036/D-488: o palco deste short, ou None quando o corte nao tem regiao.
     plano: object
     origem_palco: str
+    # D-501: as faixas do canal, ja resolvidas com a cor do tema.
+    moldura: list
 
     @property
     def duracao_seg(self) -> float:
@@ -298,7 +302,13 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             origem=origem,
             plano=palco["plano"],
             origem_palco=palco["origem"],
+            moldura=faixas_do_canal(palco["moldura"]),
         )
+
+
+def faixas_do_canal(moldura: str) -> list:
+    """As faixas da moldura com a cor do canal, prontas para o filtro."""
+    return faixas(moldura, cor_do_tema("verdeMoldura", COR_PADRAO))
 
 
 def _comando_do_quadro(contexto: _ContextoRender, saida: Path, *, com_filtro: bool) -> list[str]:

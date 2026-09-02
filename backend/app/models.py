@@ -382,6 +382,10 @@ class Short(Base):
     # compartilhada — e as regioes mudam junto. Vazio = herda do corte, que
     # segue sendo o default para a maioria dos trechos.
     palco_preset: Mapped[str] = mapped_column(String(200), default="")
+    # D-501: a assinatura do canal em volta — "faixas" (duas barras verdes) ou
+    # "nenhuma". Ortogonal ao arranjo: vale para os quatro modelos, e amarra-la
+    # a um deles exigiria duplicar cada arranjo em duas versoes.
+    moldura: Mapped[str] = mapped_column(String(20), default="faixas")
     modelo_palco: Mapped[str] = mapped_column(String(60), default="")
     # D-493: os slots que o operador MOVEU, como sobreposicao PARCIAL sobre o
     # modelo — `{"pessoa": {"x":..,"y":..,"w":..,"h":..}}`. Chave ausente herda

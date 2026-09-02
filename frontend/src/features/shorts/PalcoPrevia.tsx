@@ -73,6 +73,13 @@ export function PalcoPrevia({ plano, video, children }: Props) {
         );
         ctx.restore();
       }
+
+      // D-501: a moldura por CIMA de tudo, como no ffmpeg — ela é a assinatura
+      // do canal, e conteúdo passando por baixo dela quebraria a borda.
+      for (const faixa of plano.faixas ?? []) {
+        ctx.fillStyle = faixa.cor;
+        ctx.fillRect(faixa.x, faixa.y, faixa.w, faixa.h);
+      }
     };
 
     requestAnimationFrame(desenhar);

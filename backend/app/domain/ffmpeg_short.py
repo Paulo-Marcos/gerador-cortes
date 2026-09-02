@@ -29,6 +29,7 @@ from app.domain.formato_video import (
     Resolucao,
     filtro_reenquadrar,
 )
+from app.domain.moldura_short import Faixa
 from app.domain.palco_short import PlanoPalco, Recorte
 
 # ProRes 4444 é o único codec com alpha que o overlay do Remotion entrega de
@@ -121,6 +122,7 @@ def build_palco_vertical_cmd(
     inicio_seg: float,
     duracao_seg: float,
     plano: PlanoPalco,
+    moldura: list[Faixa] | None = None,
     fundo_cor: str = FUNDO_PADRAO,
     filtro: str | None = "cinematic_iii",
     crf: int = 18,
@@ -166,7 +168,13 @@ def build_palco_vertical_cmd(
         acumulador = saida_overlay
 
     grade = get_filtro_vf(filtro) if filtro else None
-    partes.append(f"[comp]{grade + ',' if grade else ''}format=yuv420p[v]")
+    # A MOLDURA vai DEPOIS da grade, de proposito: ela e a cor do canal, e a
+    # grade mexe em curva e saturacao. Gradada junto, a assinatura sairia num
+    # verde diferente a cada filtro — e o operador nao teria como saber por que.
+    cadeia_final = [grade] if grade else []
+    cadeia_final.extend(_desenhar_faixa(faixa) for faixa in (moldura or []))
+    cadeia_final.append("format=yuv420p")
+    partes.append(f"[comp]{','.join(cadeia_final)}[v]")
 
     return [
         "ffmpeg",
@@ -203,6 +211,11 @@ def build_palco_vertical_cmd(
         "+faststart",
         str(saida),
     ]
+
+
+def _desenhar_faixa(faixa: Faixa) -> str:
+    """Uma barra da moldura, opaca, sobre o quadro composto."""
+    return f"drawbox=x={faixa.x}:y={faixa.y}:w={faixa.w}:h={faixa.h}:color={faixa.cor}@1.0:t=fill"
 
 
 def _cadeia_do_recorte(recorte: Recorte) -> str:

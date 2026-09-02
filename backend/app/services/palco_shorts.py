@@ -25,8 +25,10 @@ from __future__ import annotations
 import json
 import logging
 
+from app.channel_assets_sync import cor_do_tema
 from app.database import AsyncSessionLocal
 from app.domain.ffmpeg_short import FUNDO_PADRAO
+from app.domain.moldura_short import COR_PADRAO, faixas
 from app.domain.palco_short import (
     CANVAS,
     MODELOS,
@@ -132,9 +134,16 @@ async def resolver_para_render(short_id: str) -> dict:
         regioes, origem, _ = _resolver(corte, presets, short.palco_preset)
         escolhido = short.modelo_palco
         ajustes = _json_dict(short.ajustes_palco)
+        moldura = short.moldura
 
     if not regioes:
-        return {"plano": None, "origem": ORIGEM_NENHUMA, "modelo": None, "ajustes": {}}
+        return {
+            "plano": None,
+            "origem": ORIGEM_NENHUMA,
+            "modelo": None,
+            "ajustes": {},
+            "moldura": moldura,
+        }
 
     modelo_id = escolhido or modelo_sugerido(regioes)
     try:
@@ -152,7 +161,13 @@ async def resolver_para_render(short_id: str) -> dict:
         modelo_id = modelo_sugerido(regioes)
         plano = montar_plano(modelo_id, regioes, ajustes)
 
-    return {"plano": plano, "origem": origem, "modelo": modelo_id, "ajustes": ajustes}
+    return {
+        "plano": plano,
+        "origem": origem,
+        "modelo": modelo_id,
+        "ajustes": ajustes,
+        "moldura": moldura,
+    }
 
 
 async def plano_desenhavel(short_id: str) -> dict:
@@ -187,6 +202,14 @@ async def plano_desenhavel(short_id: str) -> dict:
             else {}
         ),
         "ajustados": sorted(resolvido["ajustes"]),
+        "moldura": resolvido["moldura"],
+        # As faixas ja resolvidas, com a cor do CANAL — a tela nao escolhe cor,
+        # so desenha. Cravar a cor no frontend faria o canal trocar a paleta e o
+        # short sair com a antiga, sem nada indicando por que.
+        "faixas": [
+            {"x": f.x, "y": f.y, "w": f.w, "h": f.h, "cor": f.cor}
+            for f in faixas(resolvido["moldura"], cor_do_tema("verdeMoldura", COR_PADRAO))
+        ],
     }
 
 

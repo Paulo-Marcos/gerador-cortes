@@ -158,8 +158,11 @@ def sugerir_janela(cenas: list[CenaShort], duracao_short: float) -> tuple[float,
 
 
 def _tipo_de(valor: object) -> TipoCenaShort:
+    # `.value` quando ja e membro: `str(membro)` num enum com mixin `str` devolve
+    # "TipoCenaShort.HOOK", nao "hook" — e o proprio membro seria recusado.
+    bruto = valor.value if isinstance(valor, TipoCenaShort) else str(valor)
     try:
-        return TipoCenaShort(str(valor))
+        return TipoCenaShort(bruto)
     except ValueError as exc:
         validos = ", ".join(t.value for t in TipoCenaShort)
         raise CenaInvalida(f"Tipo {valor!r} não existe. Os tipos são: {validos}.") from exc

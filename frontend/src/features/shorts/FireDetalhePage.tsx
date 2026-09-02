@@ -479,6 +479,7 @@ export default function FireDetalhePage() {
               onPreset={(presetId) =>
                 atualizar.mutate({ shortId: short.id, palco_preset: presetId })
               }
+              onMoldura={(moldura) => atualizar.mutate({ shortId: short.id, moldura })}
               onPrevia={() => previa.mutate(short.id)}
               onRenderizar={() => renderizar.mutate(short.id)}
             />

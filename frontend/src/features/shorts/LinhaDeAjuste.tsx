@@ -25,6 +25,7 @@ interface Props {
   onFoco: (delta: number) => void;
   onModelo: (modeloId: string) => void;
   onPreset: (presetId: string) => void;
+  onMoldura: (moldura: string) => void;
   corteId: string;
   onTocar: () => void;
 }
@@ -38,6 +39,7 @@ export function LinhaDeAjuste({
   onFoco,
   onModelo,
   onPreset,
+  onMoldura,
 }: Props) {
   const modelos = useModelosDePalco();
   const palcoDoCorte = usePalcoDoCorte(corteId);
@@ -115,6 +117,22 @@ export function LinhaDeAjuste({
             só deste short
           </span>
         )}
+      </Grupo>
+
+      <Grupo
+        rotulo="moldura"
+        dica="As faixas do canal em cima e embaixo — a assinatura do short"
+      >
+        <select
+          aria-label="Moldura do short"
+          value={short.moldura}
+          disabled={ocupado}
+          onChange={(e) => onMoldura(e.target.value)}
+          className="h-7 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+        >
+          <option value="faixas">Faixas do canal</option>
+          <option value="nenhuma">Sem moldura</option>
+        </select>
       </Grupo>
 
       {/* D-495: sem região, o arranjo não muda NADA — o short cai no recorte cru

@@ -176,3 +176,58 @@ class TestComando:
 
         assert partes[0].startswith("color=")
         assert partes[-1].endswith("[v]")
+
+
+class TestMoldura:
+    """D-501: a assinatura do canal em volta do short."""
+
+    def _com_moldura(self, **kw):
+        from app.domain.moldura_short import Moldura, faixas
+
+        return montar(
+            "pessoa_cheia",
+            {"pessoa": FACECAM},
+            moldura=faixas(Moldura.FAIXAS, "#6aaa84"),
+            **kw,
+        )
+
+    def test_as_faixas_sao_desenhadas_no_quadro_final(self):
+        final = grafo(self._com_moldura(filtro=None))[-1]
+
+        assert final.count("drawbox=") == 2, "esperava uma faixa em cima e outra embaixo"
+        assert "color=#6aaa84@1.0" in final
+
+    def test_a_moldura_vem_DEPOIS_da_grade(self):
+        """A cor e do canal; a grade mexe em curva e saturacao.
+
+        Gradada junto, a assinatura sairia num verde diferente a cada filtro — e
+        o operador nao teria como saber por que.
+        """
+        final = grafo(self._com_moldura(filtro="cinematic_iii"))[-1]
+
+        assert (
+            final.index("drawbox=") > final.index("eq=")
+            or "curves=" in final[: final.index("drawbox=")]
+        ), "a moldura foi desenhada antes da grade"
+
+    def test_sem_moldura_e_sem_filtro_nao_ha_drawbox(self):
+        semm = grafo(montar("pessoa_cheia", {"pessoa": FACECAM}, filtro=None))[-1]
+
+        assert "drawbox=" not in semm
+
+    def test_a_faixa_cobre_a_tarja_que_o_filtro_desenha(self):
+        """O filtro de cinema JA desenha letterbox preto de 8%.
+
+        A moldura vem depois dele. Menor que 8%, o verde ficaria DENTRO do preto
+        e sobraria uma nesga escura na borda — descoberto porque um teste
+        tropecou no `drawbox` que o proprio filtro emitia.
+        """
+        from app.domain.moldura_short import cobre_o_letterbox_do_filtro
+
+        assert cobre_o_letterbox_do_filtro()
+
+    def test_a_conversao_de_pixel_fica_por_ultimo(self):
+        """yuv420p depois de tudo: e o formato de saida, nao um passo do meio."""
+        final = grafo(self._com_moldura(filtro=None))[-1]
+
+        assert final.endswith("format=yuv420p[v]")

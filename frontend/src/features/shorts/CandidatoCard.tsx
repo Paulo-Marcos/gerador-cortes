@@ -51,6 +51,7 @@ interface Props {
   onFoco: (delta: number) => void;
   onModelo: (modeloId: string) => void;
   onPreset: (presetId: string) => void;
+  onMoldura: (moldura: string) => void;
   onPrevia: () => void;
   onRenderizar: () => void;
 }
@@ -75,6 +76,7 @@ export function CandidatoCard({
   onFoco,
   onModelo,
   onPreset,
+  onMoldura,
   onPrevia,
   onRenderizar,
 }: Props) {
@@ -233,6 +235,7 @@ export function CandidatoCard({
           onFoco={onFoco}
           onModelo={onModelo}
           onPreset={onPreset}
+          onMoldura={onMoldura}
           onTocar={onTocar}
         />
       )}
