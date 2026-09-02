@@ -32,6 +32,7 @@ from app.routers import (
     ranking_lives,
     retratos,
     shorts,
+    sincronizacao,
     youtube_browser,
 )
 from app.routers import (
@@ -122,6 +123,10 @@ app.include_router(
     avaliacao_bruto.router, prefix="/api/avaliacao-bruto", tags=["Avaliação do Bruto"]
 )
 app.include_router(shorts.router, prefix="/api/shorts", tags=["Shorts"])
+# D-491: quatro vezes numa sessao so, um bug foi cacado onde ele nao estava —
+# backend velho no ar, npm install faltando, coluna que so nasce no boot. Este
+# router torna visivel a diferenca entre o que roda e o que esta no disco.
+app.include_router(sincronizacao.router, prefix="/api/sincronizacao", tags=["Sincronizacao"])
 # D-448: pin explícito de posição — a ordem padrão (cronológica) não tem endpoint.
 app.include_router(ordem_cortes.router, prefix="/api/ordem-cortes", tags=["Ordem dos Cortes"])
 app.include_router(channels.router, prefix="/api/channels", tags=["Canais"])
