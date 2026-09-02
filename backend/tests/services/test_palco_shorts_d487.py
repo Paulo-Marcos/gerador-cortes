@@ -331,3 +331,158 @@ class TestSimular:
     async def test_short_inexistente_e_404(self, ambiente):
         with pytest.raises(LookupError):
             await servico.plano_desenhavel("nao-existe", {})
+
+
+class TestRecorteDoShort:
+    """D-499: o short marca o proprio recorte sobre o quadro-fonte.
+
+    Ate aqui o CROP vinha pronto do preset e so o SLOT era editavel: dava para
+    dizer onde o bloco cai, nao o que ele mostra. Numa live em que a facecam
+    muda de lugar no meio, o preset do corte fica errado para UM trecho — e nao
+    havia como consertar so aquele sem estragar os vizinhos.
+    """
+
+    OUTRO = {"x": 100, "y": 100, "w": 400, "h": 300}
+
+    @pytest_asyncio.fixture
+    async def com_preset(self, ambiente):
+        await servico.escolher_preset("c1", "pre-1")
+        return ambiente
+
+    async def _gravar(self, ambiente, recortes):
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.recortes_palco = json.dumps(recortes)
+            await db.commit()
+
+    @pytest.mark.asyncio
+    async def test_o_recorte_do_short_vence_o_do_preset(self, com_preset):
+        await self._gravar(com_preset, {"pessoa": self.OUTRO})
+
+        resolvido = await servico.resolver_para_render("s1")
+        pessoa = next(r for r in resolvido["plano"].recortes if r.regiao == "pessoa")
+
+        assert (pessoa.crop["x"], pessoa.crop["w"]) == (self.OUTRO["x"], self.OUTRO["w"])
+
+    @pytest.mark.asyncio
+    async def test_o_que_o_short_nao_marcou_continua_vindo_do_preset(self, com_preset):
+        """Heranca PARCIAL, como no resto do projeto.
+
+        Materializar as regioes do preset ao gravar apagaria a heranca: trocar
+        de preset depois nao mudaria mais nada, e nada na tela diria por que.
+        """
+        await self._gravar(com_preset, {"pessoa": self.OUTRO})
+
+        resolvido = await servico.resolver_para_render("s1")
+        tela = next(r for r in resolvido["plano"].recortes if r.regiao == "tela")
+
+        assert (tela.crop["x"], tela.crop["w"]) == (TELA["x"], TELA["w"])
+
+    @pytest.mark.asyncio
+    async def test_a_origem_passa_a_dizer_que_a_mao_entrou(self, com_preset):
+        """ "preset" seria mentira depois de o operador arrastar o retangulo."""
+        await self._gravar(com_preset, {"pessoa": self.OUTRO})
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["origem"] == servico.ORIGEM_RECORTE_DO_SHORT
+
+    @pytest.mark.asyncio
+    async def test_recorte_sem_area_e_ignorado(self, com_preset):
+        """`crop=0:...` mata o ffmpeg com -22 no meio do render, longe daqui."""
+        await self._gravar(com_preset, {"pessoa": {"x": 0, "y": 0, "w": 0, "h": 300}})
+
+        resolvido = await servico.resolver_para_render("s1")
+        pessoa = next(r for r in resolvido["plano"].recortes if r.regiao == "pessoa")
+
+        assert pessoa.crop["w"] == FACECAM["w"]
+        assert resolvido["origem"] == servico.ORIGEM_PRESET
+
+    @pytest.mark.asyncio
+    async def test_recorte_proprio_dispensa_preset(self, ambiente):
+        """Um corte nunca posicionado ganha palco so com o retangulo da mao."""
+        await self._gravar(ambiente, {"pessoa": self.OUTRO})
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["plano"] is not None
+        assert resolvido["origem"] == servico.ORIGEM_RECORTE_DO_SHORT
+
+
+class TestFundoDoPalco:
+    """D-499: a cor de fundo sai da paleta do canal, nao de uma constante."""
+
+    @pytest.mark.asyncio
+    async def test_o_default_e_o_fundo_do_tema(self, ambiente):
+        from app.channel_assets_sync import paleta_do_tema
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["fundo"] == paleta_do_tema().get("fundoPalco", "#0f1410")
+
+    @pytest.mark.asyncio
+    async def test_a_escolha_do_operador_manda(self, ambiente, monkeypatch):
+        monkeypatch.setattr(
+            servico, "paleta_do_tema", lambda: {"fundoPalco": "#0f1410", "outra": "#123456"}
+        )
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.fundo_palco = "outra"
+            await db.commit()
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["fundo"] == "#123456"
+
+    @pytest.mark.asyncio
+    async def test_cor_que_saiu_da_paleta_cai_no_default(self, ambiente, monkeypatch):
+        """Guardamos a CHAVE, e o tema pode mudar. Isso nao pode virar erro."""
+        monkeypatch.setattr(servico, "paleta_do_tema", lambda: {"fundoPalco": "#0f1410"})
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.fundo_palco = "cor-que-sumiu"
+            await db.commit()
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["fundo"] == "#0f1410"
+
+    @pytest.mark.asyncio
+    async def test_a_previa_desenha_o_mesmo_fundo_do_render(self, ambiente, monkeypatch):
+        """Duas leituras da mesma cor divergiriam sem ninguem notar."""
+        monkeypatch.setattr(
+            servico, "paleta_do_tema", lambda: {"fundoPalco": "#0f1410", "outra": "#123456"}
+        )
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.fundo_palco = "outra"
+            await db.commit()
+
+        desenho = await servico.plano_desenhavel("s1")
+        render = await servico.resolver_para_render("s1")
+
+        assert desenho["fundo"] == render["fundo"]
+
+    def test_o_catalogo_so_oferece_cores_opacas(self, monkeypatch):
+        """rgba() de fundo revelaria o preto do encoder — a cor certa, lavada."""
+        monkeypatch.setattr(
+            servico,
+            "paleta_do_tema",
+            lambda: {"fundoPalco": "#0f1410", "verdeCard1": "rgba(44, 68, 56, 0.96)"},
+        )
+
+        chaves = [f["chave"] for f in servico.catalogo_fundos()]
+
+        assert chaves == ["fundoPalco"]
+
+    def test_o_default_vem_primeiro_no_seletor(self, monkeypatch):
+        monkeypatch.setattr(
+            servico,
+            "paleta_do_tema",
+            lambda: {"outra": "#123456", "fundoPalco": "#0f1410"},
+        )
+
+        catalogo = servico.catalogo_fundos()
+
+        assert catalogo[0]["chave"] == "fundoPalco"
+        assert catalogo[0]["padrao"] is True

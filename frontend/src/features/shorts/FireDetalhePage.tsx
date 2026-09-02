@@ -42,7 +42,9 @@ import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PalcoDoCorte } from './PalcoDoCorte';
+import { ControlesDoRecorte, EditorDeRecorte } from './EditorDeRecorte';
 import { PalcoPrevia } from './PalcoPrevia';
+import { SeletorDeFundo } from './SeletorDeFundo';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
 import {
@@ -91,6 +93,10 @@ export default function FireDetalhePage() {
   // a janela 9:16 sobre o bruto — que é o que serve para escolher o TRECHO,
   // enquanto o palco serve para escolher o ENQUADRAMENTO.
   const [verPalco, setVerPalco] = useState(true);
+  // D-499: marcar o recorte sobre o quadro-fonte. Modo à parte do palco: um
+  // edita o que o bloco MOSTRA, o outro onde ele CAI, e as alças dos dois ao
+  // mesmo tempo sobre telas diferentes seriam duas conversas de uma vez.
+  const [recortando, setRecortando] = useState(false);
 
   const velocidadePadrao = useVelocidadePlayerPadrao();
   const [velocidade, setVelocidade] = useState(velocidadePadrao);
@@ -120,6 +126,15 @@ export default function FireDetalhePage() {
   // desenha esse, e volta ao gravado assim que ele chega.
   const simulacao = useSimulacaoDePalco(emQuadro?.id ?? null);
   const planoNaTela = simulacao.simulado ?? palcoDoShort.data;
+  // A região vem junto de cada recorte (D-499) — casar esta lista com `slots`
+  // pela posição quebraria em silêncio no dia em que a ordem mudasse.
+  const recortesDaFonte = useMemo(
+    () =>
+      Object.fromEntries(
+        (palcoDoShort.data?.recortes ?? []).map((r) => [r.regiao, r.origem]),
+      ),
+    [palcoDoShort.data],
+  );
   const ocupado = atualizar.isPending || renderizar.isPending || previa.isPending;
 
   // O rascunho vive até o plano GRAVADO chegar — ou até a gravação falhar, e aí
@@ -199,6 +214,19 @@ export default function FireDetalhePage() {
     atualizar.mutate({
       shortId: emQuadro.id,
       ajustes_palco: { ...emQuadro.ajustes_palco, ...ajustes },
+    });
+  };
+
+  // D-499: o recorte é PARCIAL, como o ajuste — mandar só o que mudou apagaria
+  // as outras regiões, porque o PATCH substitui o campo inteiro.
+  const gravarRecorte = (recortes: Record<string, { x: number; y: number; w: number; h: number }>) => {
+    if (!emQuadro) return;
+    atualizar.mutate({
+      shortId: emQuadro.id,
+      // `?? {}` porque o campo pode faltar: uma aba aberta desde antes do
+      // deploy segue com o payload antigo em cache, e `Object.keys(undefined)`
+      // derruba a página inteira em vez de só esconder um botão.
+      recortes_palco: { ...(emQuadro.recortes_palco ?? {}), ...recortes },
     });
   };
 
@@ -338,7 +366,7 @@ export default function FireDetalhePage() {
       <main className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[minmax(0,1fr)_400px]">
         {/* ── Material: o que existe para olhar ───────────────────────── */}
         <section className="flex min-h-0 flex-col gap-3">
-          <div className="flex min-h-0 w-full flex-1 items-stretch justify-center gap-3">
+          <div className="flex min-h-0 w-full flex-[2] items-stretch justify-center gap-3">
             <div
               className="relative max-h-full w-full overflow-hidden rounded-[10px] bg-black"
               style={{ aspectRatio: `${dimensoes.largura || 16} / ${dimensoes.altura || 9}` }}
@@ -357,7 +385,7 @@ export default function FireDetalhePage() {
                 onTimeUpdate={(e) => setTempoAtual(e.currentTarget.currentTime)}
                 className="absolute inset-0 h-full w-full"
               />
-              {emQuadro && (
+              {emQuadro && !recortando && (
                 <MascaraEnquadramento
                   largura={dimensoes.largura}
                   altura={dimensoes.altura}
@@ -368,6 +396,17 @@ export default function FireDetalhePage() {
                       para lá junto. */}
                   {!palcoNaTela && legenda}
                 </MascaraEnquadramento>
+              )}
+              {/* D-499: as alças do recorte substituem a máscara enquanto se
+                  marca. Sobrepostas, a janela 9:16 competiria com o retângulo
+                  que o operador está tentando ver. */}
+              {emQuadro && (
+                <EditorDeRecorte
+                  recortes={recortesDaFonte}
+                  fonte={{ largura: dimensoes.largura, altura: dimensoes.altura }}
+                  ativo={recortando}
+                  onGravar={gravarRecorte}
+                />
               )}
             </div>
 
@@ -400,8 +439,15 @@ export default function FireDetalhePage() {
             )}
           </div>
 
+          {/* O painel abaixo ROLA em vez de ser cortado (D-499). Ele cresce com
+              o número de cenas e ganhou o recorte e o fundo; com `flex-none` e o
+              `overflow-hidden` do grid, as últimas linhas simplesmente sumiam —
+              sem barra, sem sinal, sem jeito de chegar nelas numa janela de
+              800px de altura.
+              O vídeo leva 2 partes e o painel 1: deixar os dois em `flex-1`
+              espremia o player para uma tira, e é nele que se decide o corte. */}
           {duracaoRegua > 0 && shorts.length > 0 && (
-            <div className="flex-none rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
               <LinhaDoTempo
                 duracaoSeg={duracaoRegua}
                 shorts={shorts}
@@ -436,6 +482,30 @@ export default function FireDetalhePage() {
                         onSugerir={() => sugerirCenas.mutate(emQuadro.id)}
                         sugerindo={sugerirCenas.isPending}
                         descartes={sugerirCenas.data?.descartes ?? []}
+                      />
+                    </div>
+                  )}
+                  {/* D-499: o outro lado do palco — o que cada bloco MOSTRA
+                      da live, e a cor por trás de tudo. Fica fora do bloco de
+                      edição do palco de propósito: o recorte se marca sobre o
+                      player à esquerda, não sobre a prévia. */}
+                  {emQuadro && temPalco && (
+                    <div className="mt-2.5 space-y-1.5 border-t border-[var(--wb-border-soft)] pt-2.5">
+                      <ControlesDoRecorte
+                        ativo={recortando}
+                        marcados={Object.keys(emQuadro.recortes_palco ?? {})}
+                        ocupado={atualizar.isPending}
+                        onAlternar={() => setRecortando((v) => !v)}
+                        onDesfazer={() =>
+                          atualizar.mutate({ shortId: emQuadro.id, recortes_palco: {} })
+                        }
+                      />
+                      <SeletorDeFundo
+                        escolhido={emQuadro.fundo_palco ?? ''}
+                        ocupado={atualizar.isPending}
+                        onEscolher={(chave) =>
+                          atualizar.mutate({ shortId: emQuadro.id, fundo_palco: chave })
+                        }
                       />
                     </div>
                   )}

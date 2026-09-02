@@ -170,6 +170,23 @@ def _espelhar_arquivo(origem: Path, destino: Path) -> bool:
     return True
 
 
+def paleta_do_tema() -> dict:
+    """A paleta do canal inteira, lida do `theme.config.json` sincronizado.
+
+    D-499: o fundo do short passou a ser ESCOLHIDO dentro da paleta, e escolher
+    exige ver a lista — não dá para oferecer opções lendo uma chave por vez.
+
+    Dicionário vazio quando o arquivo não existe ou está quebrado; quem chama
+    decide o default, porque tema ausente não pode derrubar um render.
+    """
+    try:
+        dados = json.loads(_RENDERER_THEME.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    paleta = dados.get("palette") if isinstance(dados, dict) else None
+    return paleta if isinstance(paleta, dict) else {}
+
+
 def cor_do_tema(chave: str, padrao: str) -> str:
     """Uma cor da paleta do canal, lida do `theme.config.json` sincronizado.
 
@@ -181,10 +198,5 @@ def cor_do_tema(chave: str, padrao: str) -> str:
     Devolve `padrao` quando o arquivo não existe ou não tem a chave — cor
     ausente não pode derrubar um render.
     """
-    try:
-        dados = json.loads(_RENDERER_THEME.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return padrao
-    paleta = dados.get("palette") if isinstance(dados, dict) else None
-    valor = paleta.get(chave) if isinstance(paleta, dict) else None
+    valor = paleta_do_tema().get(chave)
     return valor if isinstance(valor, str) and valor.strip() else padrao

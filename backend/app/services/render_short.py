@@ -32,6 +32,7 @@ from app.domain.ffmpeg_short import (
     build_recorte_vertical_cmd,
 )
 from app.domain.formato_video import VERTICAL, Resolucao
+from app.domain.fundo_short import para_ffmpeg
 from app.domain.moldura_short import COR_PADRAO, faixas
 from app.domain.overlay_codec import OverlayCodec, overlay_codec_profile
 from app.infrastructure.ffmpeg_runner import probe_resolucao
@@ -253,6 +254,8 @@ class _ContextoRender:
     origem_palco: str
     # D-501: as faixas do canal, ja resolvidas com a cor do tema.
     moldura: list
+    # D-499: a cor de fundo do palco, ja resolvida na paleta do canal.
+    fundo: str
 
     @property
     def duracao_seg(self) -> float:
@@ -303,6 +306,7 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             plano=palco["plano"],
             origem_palco=palco["origem"],
             moldura=faixas_do_canal(palco["moldura"]),
+            fundo=para_ffmpeg(palco["fundo"]),
         )
 
 
@@ -350,6 +354,7 @@ def _comando_do_quadro(contexto: _ContextoRender, saida: Path, *, com_filtro: bo
         duracao_seg=contexto.duracao_seg,
         plano=contexto.plano,
         moldura=contexto.moldura,
+        fundo_cor=contexto.fundo,
         filtro=filtro,
     )
 

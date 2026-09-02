@@ -25,9 +25,10 @@ from __future__ import annotations
 import json
 import logging
 
-from app.channel_assets_sync import cor_do_tema
+from app.channel_assets_sync import cor_do_tema, paleta_do_tema
 from app.database import AsyncSessionLocal
-from app.domain.ffmpeg_short import FUNDO_PADRAO
+from app.domain.fundo_short import fundos_disponiveis
+from app.domain.fundo_short import resolver as resolver_fundo
 from app.domain.moldura_short import COR_PADRAO, faixas
 from app.domain.palco_short import (
     CANVAS,
@@ -45,6 +46,10 @@ ORIGEM_PRESET_SHORT = "preset_do_short"
 ORIGEM_PRESET = "preset"
 ORIGEM_LAYOUT = "layout_do_corte"
 ORIGEM_NENHUMA = "nenhuma"
+# D-499: o short marcou o proprio recorte. Precisa de nome porque a tela explica
+# a origem, e "preset" seria mentira depois de o operador ter arrastado o
+# retangulo com a mao.
+ORIGEM_RECORTE_DO_SHORT = "recorte_do_short"
 
 
 def catalogo_modelos() -> list[dict]:
@@ -62,6 +67,41 @@ def catalogo_modelos() -> list[dict]:
         }
         for modelo in MODELOS.values()
     ]
+
+
+def catalogo_fundos() -> list[dict]:
+    """As cores do canal oferecíveis como fundo do short (D-499).
+
+    A `chave` é o que se grava; a `cor` é só para a tela pintar a amostra.
+    Gravar o hex congelaria a paleta do dia — trocar o tema do canal deixaria os
+    shorts antigos com a cor velha, e ninguém ligaria uma coisa à outra.
+    """
+    paleta = paleta_do_tema()
+    padrao = resolver_fundo("", paleta)
+    cores = [
+        {"chave": fundo.chave, "cor": fundo.cor, "padrao": fundo.cor == padrao}
+        for fundo in fundos_disponiveis(paleta)
+    ]
+    # O default primeiro. O domínio preserva a ordem da paleta, que é a ordem
+    # em que o tema declara as cores; num seletor, porém, o primeiro item é o
+    # que a maioria vai manter, e deixá-lo no fim faria procurar por ele.
+    cores.sort(key=lambda c: not c["padrao"])
+    return cores
+
+
+def _e_retangulo(valor: object) -> bool:
+    """Um recorte utilizável: as quatro chaves, numéricas e com área.
+
+    Um retângulo de largura zero vira `crop=0:...` e o ffmpeg morre com -22 no
+    meio do render — longe daqui, e sem dizer de onde veio o zero.
+    """
+    if not isinstance(valor, dict):
+        return False
+    try:
+        lados = {chave: float(valor[chave]) for chave in ("x", "y", "w", "h")}
+    except (KeyError, TypeError, ValueError):
+        return False
+    return lados["w"] > 0 and lados["h"] > 0 and lados["x"] >= 0 and lados["y"] >= 0
 
 
 async def descrever(corte_id: str) -> dict:
@@ -138,6 +178,18 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
 
         presets = (await db.scalars(select(LayoutPreset))).all()
         regioes, origem, _ = _resolver(corte, presets, short.palco_preset)
+        # D-499: o recorte DESTE short vence o do preset, região a região. O
+        # preset segue sendo o atalho que preenche tudo — quem não quer mexer
+        # não mexe —, mas quando a facecam anda no meio da live é aqui que um
+        # trecho conserta o próprio enquadramento sem estragar os vizinhos.
+        proprios = {
+            regiao: retangulo
+            for regiao, retangulo in _json_dict(short.recortes_palco).items()
+            if _e_retangulo(retangulo)
+        }
+        if proprios:
+            regioes = {**regioes, **proprios}
+            origem = ORIGEM_RECORTE_DO_SHORT
         escolhido = short.modelo_palco
         # MESCLA, não substitui: o arraste manda só o bloco que está na mão,
         # e trocar o mapa inteiro por ele apagaria da prévia os ajustes dos
@@ -145,6 +197,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         # mexe num terceiro, sem nada na tela explicando o pulo.
         ajustes = {**_json_dict(short.ajustes_palco), **(ajustes_hipoteticos or {})}
         moldura = short.moldura
+        fundo = resolver_fundo(short.fundo_palco, paleta_do_tema())
 
     if not regioes:
         return {
@@ -153,6 +206,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
             "modelo": None,
             "ajustes": {},
             "moldura": moldura,
+            "fundo": fundo,
         }
 
     modelo_id = escolhido or modelo_sugerido(regioes)
@@ -177,6 +231,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         "modelo": modelo_id,
         "ajustes": ajustes,
         "moldura": moldura,
+        "fundo": fundo,
     }
 
 
@@ -198,8 +253,11 @@ async def plano_desenhavel(short_id: str, ajustes_hipoteticos: dict | None = Non
         "origem": resolvido["origem"],
         "modelo": resolvido["modelo"],
         "canvas": {"largura": CANVAS.largura, "altura": CANVAS.altura},
-        "fundo": FUNDO_PADRAO,
-        "recortes": [r.desenho for r in plano.recortes] if plano else [],
+        "fundo": resolvido["fundo"],
+        # A regiao vai JUNTO do desenho: sem ela a tela teria de casar esta
+        # lista com `slots` pela posicao, e um acoplamento implicito desses
+        # quebra em silencio no dia em que a ordem mudar.
+        "recortes": ([{"regiao": r.regiao, **r.desenho} for r in plano.recortes] if plano else []),
         # Os slots RESOLVIDOS (modelo + ajuste), que sao o que o editor arrasta.
         # Mandar o modelo cru obrigaria a tela a reaplicar os ajustes por conta
         # propria — a segunda implementacao de sempre.

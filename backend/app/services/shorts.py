@@ -335,6 +335,8 @@ async def atualizar_short(
     ajustes_palco: dict | None = None,
     palco_preset: str | None = None,
     moldura: str | None = None,
+    recortes_palco: dict | None = None,
+    fundo_palco: str | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -392,6 +394,28 @@ async def atualizar_short(
                 },
                 ensure_ascii=False,
             )
+
+        if recortes_palco is not None:
+            # D-499: o recorte sobre o quadro-FONTE, em pixels do bruto. Mesma
+            # regra do `ajustes_palco`: vazio desfaz e volta ao preset, e o que
+            # nao vier continua herdando — materializar as regioes do preset
+            # aqui congelaria a heranca, e trocar de preset depois nao mudaria
+            # mais nada.
+            short.recortes_palco = json.dumps(
+                {
+                    nome: {c: float(ret[c]) for c in "xywh"}
+                    for nome, ret in recortes_palco.items()
+                    if isinstance(ret, dict) and all(c in ret for c in "xywh")
+                },
+                ensure_ascii=False,
+            )
+
+        if fundo_palco is not None:
+            # A CHAVE da paleta, nao a cor. "" volta ao default do canal. Nao
+            # validamos contra a paleta: ela pode mudar, e um short antigo
+            # apontando para uma cor que saiu do tema deve cair no default
+            # (o resolvedor faz isso) em vez de virar erro de gravacao.
+            short.fundo_palco = fundo_palco
 
         if modelo_palco is not None:
             # "" e valido: volta ao automatico, que deduz das regioes. Um id
@@ -744,6 +768,8 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "palco_preset": short.palco_preset,
         "moldura": short.moldura,
         "ajustes_palco": _json_dict_seguro(short.ajustes_palco),
+        "recortes_palco": _json_dict_seguro(short.recortes_palco),
+        "fundo_palco": short.fundo_palco,
         "origem": short.origem,
         "cenas": _json_lista(short.cenas_remotion),
     }

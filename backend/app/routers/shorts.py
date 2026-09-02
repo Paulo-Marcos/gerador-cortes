@@ -10,6 +10,7 @@ Endpoints:
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
   GET  /corte/{corte_id}/transcricao — palavras com tempo, para a prévia de legenda
   GET  /palco/modelos             — os arranjos de palco vertical disponiveis
+  GET  /palco/fundos              — as cores do canal oferecidas como fundo
   GET  /corte/{corte_id}/palco    — de onde vem as regioes deste corte
   PUT  /corte/{corte_id}/palco    — aponta um preset do canal para o corte
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
@@ -147,6 +148,18 @@ async def gerar_manualmente(corte_id: str):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/palco/fundos")
+async def fundos_de_palco():
+    """As cores do canal oferecidas como fundo do short (D-499).
+
+    Sai da paleta do tema, e não de uma lista aqui: cravar as cores criaria uma
+    segunda fonte, e o canal trocaria o tema sem o seletor saber.
+    """
+    from app.services import palco_shorts
+
+    return {"fundos": palco_shorts.catalogo_fundos()}
+
+
 @router.get("/palco/modelos")
 async def modelos_de_palco():
     """Os arranjos de palco vertical, com o porquê de cada um (E-036).
@@ -244,6 +257,8 @@ class AtualizarShortRequest(BaseModel):
     ajustes_palco: dict | None = None
     palco_preset: str | None = None
     moldura: str | None = None
+    recortes_palco: dict | None = None
+    fundo_palco: str | None = None
 
 
 @router.patch("/{short_id}")
@@ -259,6 +274,8 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 foco_x=body.foco_x,
                 modelo_palco=body.modelo_palco,
                 ajustes_palco=body.ajustes_palco,
+                recortes_palco=body.recortes_palco,
+                fundo_palco=body.fundo_palco,
                 palco_preset=body.palco_preset,
                 moldura=body.moldura,
             )

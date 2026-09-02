@@ -25,6 +25,20 @@ export interface Retangulo {
 export type Pega = 'mover' | 'ne' | 'nw' | 'se' | 'sw';
 
 /**
+ * O quadro dentro do qual o retângulo se move.
+ *
+ * D-499: a mesma matemática passou a servir a dois quadros. O SLOT vive no
+ * canvas do short (1080x1920); o RECORTE vive no quadro-fonte, que tem a
+ * resolução do bruto e varia de live para live. A conta é a mesma — o que muda
+ * é onde ficam as bordas —, e escrevê-la duas vezes criaria a divergência que
+ * este épico passou inteiro evitando.
+ */
+export interface Limites {
+  largura: number;
+  altura: number;
+}
+
+/**
  * O retângulo depois de arrastar por (dx, dy), em pixels do CANVAS.
  *
  * Mover desliza inteiro e encosta nas bordas sem encolher — encolher ao bater
@@ -33,11 +47,17 @@ export type Pega = 'mover' | 'ne' | 'nw' | 'se' | 'sw';
  *
  * Redimensionar mantém o canto oposto parado, que é o que a mão espera.
  */
-export function arrastarSlot(base: Retangulo, pega: Pega, dx: number, dy: number): Retangulo {
+export function arrastarSlot(
+  base: Retangulo,
+  pega: Pega,
+  dx: number,
+  dy: number,
+  limites: Limites = CANVAS,
+): Retangulo {
   if (pega === 'mover') {
     return {
-      x: limitar(base.x + dx, 0, CANVAS.largura - base.w),
-      y: limitar(base.y + dy, 0, CANVAS.altura - base.h),
+      x: limitar(base.x + dx, 0, limites.largura - base.w),
+      y: limitar(base.y + dy, 0, limites.altura - base.h),
       w: base.w,
       h: base.h,
     };
@@ -55,14 +75,14 @@ export function arrastarSlot(base: Retangulo, pega: Pega, dx: number, dy: number
     x = limitar(base.x + dx, 0, direita - LADO_MINIMO);
     w = direita - x;
   } else {
-    w = limitar(base.w + dx, LADO_MINIMO, CANVAS.largura - base.x);
+    w = limitar(base.w + dx, LADO_MINIMO, limites.largura - base.x);
   }
 
   if (puxaTopo) {
     y = limitar(base.y + dy, 0, baixo - LADO_MINIMO);
     h = baixo - y;
   } else {
-    h = limitar(base.h + dy, LADO_MINIMO, CANVAS.altura - base.y);
+    h = limitar(base.h + dy, LADO_MINIMO, limites.altura - base.y);
   }
 
   return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
@@ -79,23 +99,28 @@ export function aplicarCampo(
   base: Retangulo,
   lado: keyof Retangulo,
   texto: string,
+  limites: Limites = CANVAS,
 ): Retangulo | null {
   const limpo = (texto ?? '').trim().replace(',', '.');
   if (!/^-?\d+(\.\d+)?$/.test(limpo)) return null;
 
   const bruto = { ...base, [lado]: Math.round(Number(limpo)) };
   return {
-    x: limitar(bruto.x, 0, CANVAS.largura - LADO_MINIMO),
-    y: limitar(bruto.y, 0, CANVAS.altura - LADO_MINIMO),
-    w: limitar(bruto.w, LADO_MINIMO, CANVAS.largura - bruto.x),
-    h: limitar(bruto.h, LADO_MINIMO, CANVAS.altura - bruto.y),
+    x: limitar(bruto.x, 0, limites.largura - LADO_MINIMO),
+    y: limitar(bruto.y, 0, limites.altura - LADO_MINIMO),
+    w: limitar(bruto.w, LADO_MINIMO, limites.largura - bruto.x),
+    h: limitar(bruto.h, LADO_MINIMO, limites.altura - bruto.y),
   };
 }
 
-/** Converte um deslocamento em pixels de TELA para pixels do canvas. */
-export function paraCanvas(deltaTela: number, larguraNaTela: number): number {
+/** Converte um deslocamento em pixels de TELA para pixels do quadro. */
+export function paraCanvas(
+  deltaTela: number,
+  larguraNaTela: number,
+  larguraDoQuadro: number = CANVAS.largura,
+): number {
   if (!(larguraNaTela > 0)) return 0;
-  return (deltaTela * CANVAS.largura) / larguraNaTela;
+  return (deltaTela * larguraDoQuadro) / larguraNaTela;
 }
 
 function limitar(valor: number, minimo: number, maximo: number): number {

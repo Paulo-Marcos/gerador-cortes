@@ -29,6 +29,8 @@ from app.domain.formato_video import (
     Resolucao,
     filtro_reenquadrar,
 )
+from app.domain.fundo_short import FUNDO_PADRAO as FUNDO_DE_ULTIMO_RECURSO
+from app.domain.fundo_short import para_ffmpeg as fundo_ffmpeg
 from app.domain.moldura_short import Faixa
 from app.domain.palco_short import PlanoPalco, Recorte
 
@@ -36,10 +38,15 @@ from app.domain.palco_short import PlanoPalco, Recorte
 # forma confiável neste projeto — VP9/.webm foi testado e não funciona.
 CODEC_OVERLAY = "prores_ks"
 
-# O fundo do palco vertical. Espelha `fundoPalco` da paleta do renderer — onde a
-# tela compartilhada nao preenche o slot, e esta cor que aparece, e ela precisa
-# pertencer ao canal, nao ser um preto qualquer.
-FUNDO_PADRAO = "0x0f1410"
+# O fundo do palco vertical: onde a tela compartilhada nao preenche o slot, e
+# esta cor que aparece, e ela precisa pertencer ao canal, nao ser um preto
+# qualquer.
+#
+# Ultimo recurso, so para quem chama sem escolher. O caminho de producao resolve
+# na paleta do canal (D-499); o literal mora em `fundo_short`, para o valor nao
+# existir em dois lugares e o canal poder trocar a paleta sem deixar um deles
+# para tras.
+FUNDO_PADRAO = fundo_ffmpeg(FUNDO_DE_ULTIMO_RECURSO)
 
 
 def build_recorte_vertical_cmd(

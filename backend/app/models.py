@@ -392,6 +392,21 @@ class Short(Base):
     # do modelo; materializar os defaults ao gravar apagaria a heranca, e trocar
     # de modelo depois nao moveria mais nada (mesma regra do layout horizontal).
     ajustes_palco: Mapped[str] = mapped_column(Text, default="{}")
+    # D-499: o RECORTE deste short sobre o quadro-fonte — o que sai da live, em
+    # pixels do bruto. `{"pessoa": {"x":..,"y":..,"w":..,"h":..}}`, sobreposicao
+    # PARCIAL sobre as regioes do preset, mesma regra de heranca do
+    # `ajustes_palco`.
+    #
+    # Ate aqui o crop vinha pronto do preset do canal e so o SLOT era editavel:
+    # dava para dizer onde o bloco cai, nao o que ele mostra. Numa live em que a
+    # facecam muda de lugar no meio, o preset do corte fica errado para UM
+    # trecho — e nao havia como consertar so aquele.
+    recortes_palco: Mapped[str] = mapped_column(Text, default="{}")
+    # D-499: a CHAVE da paleta do canal usada como fundo (ex.: "fundoPalco").
+    # Vazio = o default do canal. Guardamos a chave e nao a cor: gravar o hex
+    # congelaria a paleta do dia, e trocar o tema do canal deixaria os shorts
+    # antigos com a cor velha.
+    fundo_palco: Mapped[str] = mapped_column(String(60), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

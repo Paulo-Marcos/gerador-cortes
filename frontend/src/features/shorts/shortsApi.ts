@@ -91,6 +91,10 @@ export interface ShortSugerido {
   moldura: string;
   /** Slots que o operador moveu, como sobreposição parcial sobre o modelo. */
   ajustes_palco: Record<string, Retangulo>;
+  /** D-499: recortes que ESTE short marcou sobre o quadro-fonte, em px do bruto. */
+  recortes_palco: Record<string, Retangulo>;
+  /** D-499: a CHAVE da paleta usada como fundo. Vazio = o default do canal. */
+  fundo_palco: string;
   /** Cenas desenhadas sobre o short, na timeline DELE (começa no zero). */
   cenas: CenaShort[];
 }
@@ -107,6 +111,8 @@ export interface AtualizarShortBody {
   ajustes_palco?: Record<string, Retangulo>;
   palco_preset?: string;
   moldura?: string;
+  recortes_palco?: Record<string, Retangulo>;
+  fundo_palco?: string;
 }
 
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
@@ -125,7 +131,7 @@ export interface ModeloPalco {
 /** De onde saem as regiões deste corte. */
 export interface EstadoPalco {
   preset: string;
-  origem: 'preset_do_short' | 'preset' | 'layout_do_corte' | 'nenhuma';
+  origem: 'recorte_do_short' | 'preset_do_short' | 'preset' | 'layout_do_corte' | 'nenhuma';
   regioes: Record<string, { x: number; y: number; w: number; h: number }>;
   modelo_sugerido: string;
   presets_disponiveis: { id: string; nome: string; regioes: string[] }[];
@@ -141,6 +147,8 @@ export interface Retangulo {
 
 /** Um recorte em coordenadas de desenho: de onde tirar, onde colar, onde cortar. */
 export interface RecorteDesenhavel {
+  /** D-499: qual bloco é este. Vem junto para a tela não casar por posição. */
+  regiao: string;
   origem: Retangulo;
   destino: Retangulo;
   recorta: Retangulo;
@@ -160,6 +168,14 @@ export interface PlanoDesenhavel {
   moldura: string;
   /** As faixas já resolvidas, com a cor do CANAL — a tela só desenha. */
   faixas: (Retangulo & { cor: string })[];
+}
+
+/** Uma cor do canal oferecível como fundo do short (D-499). */
+export interface FundoDoCanal {
+  /** O que se grava. A cor pode mudar quando o canal trocar o tema. */
+  chave: string;
+  cor: string;
+  padrao: boolean;
 }
 
 /** Um passo do render e onde ele está. */
@@ -289,6 +305,9 @@ export const shortsApi = {
 
   palcoDoShort: (shortId: string) =>
     request<PlanoDesenhavel>(`/shorts/${shortId}/palco`),
+
+  /** D-499: as cores do canal oferecidas como fundo do short. */
+  fundosDoPalco: () => request<{ fundos: FundoDoCanal[] }>('/shorts/palco/fundos'),
 
   /** D-500: o palco que ESTES ajustes dariam, sem gravar. Para o arraste. */
   simularPalco: (shortId: string, ajustes: Record<string, Retangulo>) =>
