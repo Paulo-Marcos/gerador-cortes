@@ -26,6 +26,7 @@ import { useCorte } from '@/hooks/useEditor';
 import { useDiarizarCorte, useFalantes } from '@/hooks/useDiarizacao';
 import type { FalantesMap } from '@/lib/api';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
+import { textoDoTrecho } from './legendaDoTrecho';
 
 // ─────────────────────────────────────────────────────────────
 // RightTabsPanel — replica `design_reference/src/v2_bruto.jsx:405-624`.
@@ -188,6 +189,7 @@ export function RightTabsPanel({
       ) : tab === 'trechos' ? (
         <TrechosList
           desvios={desvios}
+          transcricao={transcricao}
           selectedDesvioIdx={selectedDesvioIdx}
           onSeek={onSeek}
           onAdicionarDesvio={onAdicionarDesvio}
@@ -291,6 +293,7 @@ function TabButton({
 
 function TrechosList({
   desvios,
+  transcricao,
   selectedDesvioIdx,
   onSeek,
   onAdicionarDesvio,
@@ -300,6 +303,8 @@ function TrechosList({
   pending,
 }: {
   desvios: Desvio[];
+  /** D-511: para mostrar no card o que está sendo dito no trecho. */
+  transcricao?: TranscricaoLinha[];
   selectedDesvioIdx: number | null;
   onSeek: (seg: number) => void;
   onAdicionarDesvio: (d: Desvio) => void;
@@ -448,11 +453,23 @@ function TrechosList({
                       −{delta.toFixed(1)}s
                     </span>
                   </div>
-                  {/* DE-PARA-v3 §3: texto em 2 linhas e em --wb-text-mute —
-                      o motivo é apoio, não o conteúdo principal da linha. */}
-                  <div className="line-clamp-2 text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
+                  {/* DE-PARA-v3 §3: o motivo é apoio, não o conteúdo principal
+                      da linha — daí o tom mudo.
+
+                      D-511: mas ele deixou de ser CORTADO. Com `line-clamp-2` o
+                      motivo terminava no meio de uma frase, e conferir o corte
+                      exigia sair da tela. Um motivo longo ocupa mais três
+                      linhas; um motivo pela metade custa uma ida e volta. */}
+                  <div className="whitespace-pre-wrap break-words text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
                     {d.motivo || '—'}
                   </div>
+                  {/* D-511: o que está sendo DITO ali. O motivo diz por que sai;
+                      isto diz o que sai, que é o que se julga. */}
+                  {textoDoTrecho(transcricao ?? [], d) && (
+                    <p className="mt-1 border-l-2 border-[var(--wb-border)] pl-2 text-[11px] italic leading-[1.45] text-[var(--wb-text-dim)]">
+                      “{textoDoTrecho(transcricao ?? [], d)}”
+                    </p>
+                  )}
                 </div>
               </button>
               <Tooltip label="Remover" side="left">

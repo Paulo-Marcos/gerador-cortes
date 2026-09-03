@@ -137,6 +137,7 @@ export function EditorFase1({
               inicioSeg={corte.inicio_seg}
               fimSeg={corte.fim_seg}
               desvios={corte.desvios ?? []}
+              transcricao={corte.transcricao_corte ?? []}
               playbackRate={playbackRate}
               smartPlay={smartPlay}
               onTimeUpdate={onTimeUpdate}

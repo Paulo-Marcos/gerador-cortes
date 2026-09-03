@@ -6,7 +6,8 @@ import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useVelocidadeNoVideo } from '@/hooks/useVelocidadePlayerPadrao';
 import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
-import type { Desvio } from '@/types/models';
+import { legendaEm } from './legendaDoTrecho';
+import type { Desvio, TranscricaoLinha } from '@/types/models';
 
 export type { PlayerHandle };
 
@@ -77,6 +78,8 @@ interface Props {
   inicioSeg: number;
   fimSeg: number;
   desvios?: Desvio[];
+  /** D-511: a transcrição do corte, para a legenda do trecho a remover. */
+  transcricao?: TranscricaoLinha[];
   /** Velocidade atual do player (1.25 etc). Exibida no header. */
   playbackRate?: number;
   smartPlay?: boolean;
@@ -103,6 +106,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     inicioSeg,
     fimSeg,
     desvios,
+    transcricao,
     playbackRate = 1,
     smartPlay,
     onTimeUpdate,
@@ -139,6 +143,12 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   // D-409: ultimo segundo ja persistido, para nao escrever no localStorage a
   // cada `timeupdate` (o evento dispara ~4x/s).
   const posicaoGravadaRef = useRef(-1);
+  // D-511: o segundo corrente EM ESTADO, e não só no ref.
+  //
+  // O ref existe para não re-renderizar a cada `timeupdate` (~4x/s); a legenda
+  // precisa do contrário — ela SÓ existe se a tela redesenhar. Guardar os dois
+  // é o preço de mostrar algo que muda com o tempo sem redesenhar o resto.
+  const [segundoNaTela, setSegundoNaTela] = useState(inicioSeg);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -148,6 +158,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
       const prev = lastTimeRef.current;
       lastTimeRef.current = t;
       currentTimeRef.current = t;
+      setSegundoNaTela(t);
       onTimeUpdateRef.current?.(t);
 
       if (Math.abs(t - posicaoGravadaRef.current) >= 1) {
@@ -189,6 +200,10 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   // D-450: a prop `playbackRate` era so rotulo — quem aplicava era o
   // `playerRef` do EditorPage, ainda nulo quando a preferencia chega, e o
   // chip anunciava 1,50x com o video rodando em 1,00x. Agora o estado do
+  // D-511: recalculada a cada `timeupdate`. Barato: uma varredura sobre uma
+  // lista de trechos que raramente passa de uma dezena.
+  const legenda = legendaEm(desvios ?? [], transcricao ?? [], segundoNaTela);
+
   // React e a fonte unica: o <video> segue a prop.
   useVelocidadeNoVideo(videoRef, playbackRate, src);
 
@@ -240,6 +255,20 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
           crossOrigin="anonymous"
           className="h-full w-full"
         />
+        {/* D-511: o que está sendo dito no trecho marcado para SAIR.
+            Ver o que se perde no instante em que se perde é o que permite
+            discordar do corte — antes o texto só existia no card, cortado em
+            duas linhas, e conferir exigia abrir a transcrição à parte. */}
+        {legenda && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-14 flex justify-center px-6">
+            <div className="max-w-[92%] rounded-[10px] border border-[var(--wb-err-ink)]/40 bg-black/80 px-3 py-2 text-center">
+              <span className="font-code text-[9.5px] uppercase tracking-[0.08em] text-[var(--wb-err-ink)]">
+                sai do bruto{legenda.motivo ? ` · ${legenda.motivo}` : ''}
+              </span>
+              <p className="mt-0.5 text-[13px] leading-[1.45] text-white">{legenda.texto}</p>
+            </div>
+          </div>
+        )}
         {/* D-410: os chips BRUTO / velocidade / intervalo eram `absolute`
             sobre a imagem e brigavam com o conteudo do quadro — sobre um fundo
             claro sumiam, sobre um escuro tapavam o rosto. Migraram para a
