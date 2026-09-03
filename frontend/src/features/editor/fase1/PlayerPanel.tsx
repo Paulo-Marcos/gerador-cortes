@@ -260,13 +260,32 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
             discordar do corte — antes o texto só existia no card, cortado em
             duas linhas, e conferir exigia abrir a transcrição à parte. */}
         {legenda && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-14 flex justify-center px-6">
-            <div className="max-w-[92%] rounded-[10px] border border-[var(--wb-err-ink)]/40 bg-black/80 px-3 py-2 text-center">
-              <span className="font-code text-[9.5px] uppercase tracking-[0.08em] text-[var(--wb-err-ink)]">
-                sai do bruto{legenda.motivo ? ` · ${legenda.motivo}` : ''}
-              </span>
-              <p className="mt-0.5 text-[13px] leading-[1.45] text-white">{legenda.texto}</p>
-            </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-14 flex flex-col items-center gap-1 px-6">
+            {/* Legenda de verdade: branca, grande, com CONTORNO.
+                A primeira versão pintava o texto de vermelho sobre a imagem — e
+                vermelho escuro sobre vídeo é o pior caso de contraste que
+                existe, porque muda a cada quadro. O contorno resolve o
+                problema na raiz: o texto fica legível sobre qualquer fundo,
+                claro ou escuro, sem depender de uma caixa opaca tapando o
+                quadro que se quer justamente avaliar. */}
+            <span
+              className="rounded-full bg-black/75 px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.08em] text-[#ff9b9b]"
+              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}
+            >
+              sai do bruto{legenda.rotulo ? ` · ${legenda.rotulo}` : ''}
+            </span>
+            <p
+              className="max-w-[92%] text-center text-[19px] font-bold leading-[1.35] text-white"
+              style={{
+                // `paint-order: stroke` desenha o contorno ATRÁS das hastes, e
+                // não por cima — sem ele o traço come as letras finas.
+                paintOrder: 'stroke fill',
+                WebkitTextStroke: '4px rgba(0,0,0,0.85)',
+                textShadow: '0 2px 6px rgba(0,0,0,0.75)',
+              }}
+            >
+              {legenda.texto}
+            </p>
           </div>
         )}
         {/* D-410: os chips BRUTO / velocidade / intervalo eram `absolute`

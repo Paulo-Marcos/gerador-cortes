@@ -466,7 +466,7 @@ function TrechosList({
                   {/* D-511: o que está sendo DITO ali. O motivo diz por que sai;
                       isto diz o que sai, que é o que se julga. */}
                   {textoDoTrecho(transcricao ?? [], d) && (
-                    <p className="mt-1 border-l-2 border-[var(--wb-border)] pl-2 text-[11px] italic leading-[1.45] text-[var(--wb-text-dim)]">
+                    <p className="mt-1 border-l-2 border-[var(--wb-accent)]/50 pl-2 text-[11.5px] italic leading-[1.45] text-[var(--wb-text)]">
                       “{textoDoTrecho(transcricao ?? [], d)}”
                     </p>
                   )}

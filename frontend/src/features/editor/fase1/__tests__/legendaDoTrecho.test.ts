@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { janelaDo, legendaEm, textoDoTrecho, trechoEm } from '../legendaDoTrecho';
+import { janelaDo, legendaEm, rotuloDo, textoDoTrecho, trechoEm } from '../legendaDoTrecho';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
 
 // D-511: o texto do trecho que vai ser removido.
@@ -100,15 +100,30 @@ describe('legendaEm', () => {
     expect(legendaEm([TRECHO], [], 12)?.texto).toBe('digressao');
   });
 
-  it('o motivo viaja junto do texto', () => {
-    const legenda = legendaEm([TRECHO], FALA, 12);
+  it('o rotulo e curto: a categoria, nao o motivo inteiro', () => {
+    // Um motivo de tres linhas no rotulo ocuparia meio quadro, tapando
+    // justamente o video que se esta avaliando.
+    const comCategoria: Desvio = { ...TRECHO, categoria: 'tangente' };
 
-    expect(legenda?.motivo).toBe('digressao');
-    expect(legenda?.texto).not.toBe(legenda?.motivo);
+    expect(legendaEm([comCategoria], FALA, 12)?.rotulo).toBe('tangente');
+  });
+
+  it('sem categoria, motivo curto vira rotulo e motivo longo nao', () => {
+    const curto = desvio('00:00:10.000', '00:00:20.000', 'repeticao');
+    const longo = desvio('00:00:10.000', '00:00:20.000', 'x'.repeat(80));
+
+    expect(legendaEm([curto], FALA, 12)?.rotulo).toBe('repeticao');
+    expect(legendaEm([longo], FALA, 12)?.rotulo).toBe('');
   });
 
   it('fora de trecho nao ha legenda nenhuma', () => {
     expect(legendaEm([TRECHO], FALA, 25)).toBeNull();
+  });
+});
+
+describe('rotuloDo', () => {
+  it('a categoria manda quando existe', () => {
+    expect(rotuloDo({ ...TRECHO, categoria: 'tangente', motivo: 'texto longo' })).toBe('tangente');
   });
 });
 

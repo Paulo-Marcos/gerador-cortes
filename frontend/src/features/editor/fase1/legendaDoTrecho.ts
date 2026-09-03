@@ -83,10 +83,27 @@ export function legendaEm(
   desvios: Desvio[],
   linhas: TranscricaoLinha[],
   segundo: number,
-): { texto: string; motivo: string } | null {
+): { texto: string; rotulo: string } | null {
   const desvio = trechoEm(desvios, segundo);
   if (!desvio) return null;
 
   const texto = textoDoTrecho(linhas, desvio);
-  return { texto: texto || desvio.motivo || '', motivo: desvio.motivo || '' };
+  return { texto: texto || desvio.motivo || '', rotulo: rotuloDo(desvio) };
 }
+
+/**
+ * O rótulo curto do trecho: a categoria, e não o motivo inteiro.
+ *
+ * A primeira versão pôs o motivo no rótulo — e um motivo de três linhas ocupava
+ * meio quadro, tapando justamente o vídeo que se está avaliando. O motivo tem
+ * lugar: o card, onde cabe inteiro. Aqui só precisa caber a etiqueta.
+ */
+export function rotuloDo(desvio: Desvio): string {
+  const categoria = (desvio.categoria || '').trim();
+  if (categoria) return categoria;
+  const motivo = (desvio.motivo || '').trim();
+  return motivo.length <= LIMITE_DO_ROTULO ? motivo : '';
+}
+
+/** Acima disso o rótulo vira parágrafo e come o quadro. */
+const LIMITE_DO_ROTULO = 28;
