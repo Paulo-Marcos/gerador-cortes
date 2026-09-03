@@ -49,6 +49,9 @@ interface Props {
   onStatus: (status: StatusShort) => void;
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
   onFoco: (delta: number) => void;
+  onEnquadrarPeloRosto: () => void;
+  enquadrando: boolean;
+  vereditoDoRosto: string;
   onModelo: (modeloId: string) => void;
   onPreset: (presetId: string) => void;
   onMoldura: (moldura: string) => void;
@@ -74,6 +77,9 @@ export function CandidatoCard({
   onStatus,
   onBorda,
   onFoco,
+  onEnquadrarPeloRosto,
+  enquadrando,
+  vereditoDoRosto,
   onModelo,
   onPreset,
   onMoldura,
@@ -233,6 +239,9 @@ export function CandidatoCard({
           ocupado={ocupado}
           onBorda={onBorda}
           onFoco={onFoco}
+          onEnquadrarPeloRosto={onEnquadrarPeloRosto}
+          enquadrando={enquadrando}
+          vereditoDoRosto={vereditoDoRosto}
           onModelo={onModelo}
           onPreset={onPreset}
           onMoldura={onMoldura}

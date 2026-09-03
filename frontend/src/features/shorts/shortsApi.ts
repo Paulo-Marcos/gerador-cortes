@@ -170,6 +170,19 @@ export interface PlanoDesenhavel {
   faixas: (Retangulo & { cor: string })[];
 }
 
+/** O que o detector de rosto viu num trecho (D-477). */
+export interface VereditoDoRosto {
+  short: ShortSugerido;
+  /** `false` NÃO é erro: é o detector dizendo que não viu rosto suficiente. */
+  achou: boolean;
+  foco_x: number | null;
+  motivo: string;
+  quadros_analisados: number;
+  quadros_com_rosto: number;
+  /** Preenchido quando a pessoa se move muito e um foco fixo é meio-termo. */
+  aviso: string;
+}
+
 /** Uma cor do canal oferecível como fundo do short (D-499). */
 export interface FundoDoCanal {
   /** O que se grava. A cor pode mudar quando o canal trocar o tema. */
@@ -305,6 +318,10 @@ export const shortsApi = {
 
   palcoDoShort: (shortId: string) =>
     request<PlanoDesenhavel>(`/shorts/${shortId}/palco`),
+
+  /** D-477: acha o rosto no trecho e centra o 9:16 nele — ja gravado. */
+  enquadrarPeloRosto: (shortId: string) =>
+    request<VereditoDoRosto>(`/shorts/${shortId}/enquadrar`, { method: 'POST' }),
 
   /** D-499: as cores do canal oferecidas como fundo do short. */
   fundosDoPalco: () => request<{ fundos: FundoDoCanal[] }>('/shorts/palco/fundos'),

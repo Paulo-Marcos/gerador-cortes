@@ -219,6 +219,24 @@ export function useSugerirCenas(corteId: string) {
   });
 }
 
+/**
+ * D-477: pede ao detector para enquadrar o trecho pelo rosto.
+ *
+ * O foco volta JA gravado, entao invalidar a lista basta. O veredito fica no
+ * resultado da mutation e a tela o mostra — inclusive o "nao achei", que sem
+ * texto na tela seria indistinguivel de um botao quebrado.
+ */
+export function useEnquadrarPeloRosto(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (shortId: string) => shortsApi.enquadrarPeloRosto(shortId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+      void qc.invalidateQueries({ queryKey: [...PALCO_KEY, 'desenho'] });
+    },
+  });
+}
+
 export function useDefinirCenas(corteId: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -312,3 +312,118 @@ class TestSugerirCenas:
         modelo({"cenas": []})
 
         assert client.post("/api/shorts/sumido/cenas/sugerir").status_code == 404
+
+
+class TestEnquadrarPeloRosto:
+    """D-477: achar o rosto e centrar o 9:16 nele.
+
+    O detector e trocado por um dublê: rodar cv2 sobre um bruto de mentira aqui
+    testaria o cv2, nao a rota. O que se guarda e o contrato — o foco fica
+    GRAVADO quando acha, NADA muda quando nao acha, e cada falha tem o seu
+    proprio codigo.
+    """
+
+    @pytest_asyncio.fixture
+    async def short(self, session_factory, tmp_path, monkeypatch):
+        from app.models import Short
+        from app.services import enquadramento_shorts
+
+        bruto = tmp_path / "bruto.mkv"
+        bruto.write_bytes(b"x" * 512)
+        monkeypatch.setattr(enquadramento_shorts, "AsyncSessionLocal", session_factory)
+        monkeypatch.setattr("app.services.render_short._bruto_em_disco", lambda corte: bruto)
+
+        async with session_factory() as db:
+            db.add(Short(id="s-foco", corte_id="c1", numero=1, inicio_seg=5.0, fim_seg=35.0))
+            await db.commit()
+        return session_factory
+
+    @pytest.fixture()
+    def detector(self, monkeypatch):
+        from app.domain.enquadramento_rosto import RostoDetectado
+        from app.services import enquadramento_shorts
+
+        def responder(quadros):
+            async def _fake(video, instantes):
+                return [
+                    [RostoDetectado(centro_x=x, largura=0.3)] if x is not None else []
+                    for x in quadros
+                ]
+
+            monkeypatch.setattr(enquadramento_shorts, "detectar_nos_instantes", _fake)
+
+        return responder
+
+    async def _foco_no_banco(self, factory):
+        from app.models import Short
+
+        async with factory() as db:
+            return (await db.get(Short, "s-foco")).foco_x
+
+    def test_o_foco_achado_fica_gravado(self, client, short, detector):
+        """Sem gravar, o operador nao teria como julgar: foco e um numero, e o
+        que se julga e a janela 9:16 andando sobre o quadro."""
+        detector([0.8, 0.81, 0.79])
+
+        corpo = client.post("/api/shorts/s-foco/enquadrar").json()
+
+        assert corpo["achou"] is True
+        assert corpo["short"]["foco_x"] == pytest.approx(0.8, abs=0.01)
+
+    def test_sem_rosto_nada_e_gravado(self, client, short, detector):
+        """0.5 gravado seria indistinguivel de o detector ter escolhido o centro."""
+        detector([None, None, None])
+
+        corpo = client.post("/api/shorts/s-foco/enquadrar").json()
+
+        assert corpo["achou"] is False
+        assert corpo["foco_x"] is None
+        assert corpo["short"]["foco_x"] is None
+
+    def test_a_resposta_diz_em_quantos_quadros_achou(self, client, short, detector):
+        detector([0.8, None, 0.82, None])
+
+        corpo = client.post("/api/shorts/s-foco/enquadrar").json()
+
+        assert corpo["quadros_com_rosto"] == 2
+        assert corpo["quadros_analisados"] == 4
+
+    def test_pessoa_que_anda_ganha_aviso_mas_e_enquadrada(self, client, short, detector):
+        detector([0.2, 0.5, 0.8])
+
+        corpo = client.post("/api/shorts/s-foco/enquadrar").json()
+
+        assert corpo["achou"] is True
+        assert corpo["aviso"]
+
+    def test_rosto_parado_nao_gera_aviso(self, client, short, detector):
+        detector([0.6, 0.61, 0.6])
+
+        assert client.post("/api/shorts/s-foco/enquadrar").json()["aviso"] == ""
+
+    def test_sem_bruto_em_disco_e_422(self, client, short, detector, monkeypatch):
+        detector([0.8])
+        monkeypatch.setattr("app.services.render_short._bruto_em_disco", lambda corte: None)
+
+        resposta = client.post("/api/shorts/s-foco/enquadrar")
+
+        assert resposta.status_code == 422
+
+    def test_detector_indisponivel_e_503_e_nao_422(self, client, short, monkeypatch):
+        """O trecho esta bom; quem faltou foi o detector.
+
+        A tela precisa dizer "tente de novo", nao "arrume o corte".
+        """
+        from app.services import enquadramento_shorts
+
+        async def _explode(video, instantes):
+            raise enquadramento_shorts.DeteccaoIndisponivel("sem OpenCV")
+
+        monkeypatch.setattr(enquadramento_shorts, "detectar_nos_instantes", _explode)
+
+        assert client.post("/api/shorts/s-foco/enquadrar").status_code == 503
+
+    def test_short_inexistente_e_404(self, client, short, detector):
+        detector([0.8])
+
+        assert client.post("/api/shorts/sumido/enquadrar").status_code == 404

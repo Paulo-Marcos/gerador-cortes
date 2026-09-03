@@ -30,7 +30,7 @@ import {
   useVelocidadePlayerPadrao,
 } from '@/hooks/useVelocidadePlayerPadrao';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
-import { brutoUrl, type ShortSugerido } from './shortsApi';
+import { brutoUrl, type ShortSugerido, type VereditoDoRosto } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
 import { janelaNova } from './linhaDoTempoShort';
 import { BordasFinasPanel } from './BordasFinasPanel';
@@ -52,6 +52,7 @@ import {
   useCriarShortManual,
   useDefinirCenas,
   useSugerirCenas,
+  useEnquadrarPeloRosto,
   useDescartarBruto,
   usePalcoDoShort,
   useRenderizarPrevia,
@@ -66,6 +67,18 @@ const ROTULO_FONTE: Record<string, string> = {
   auto_legenda: 'auto do YouTube',
   asr_local: 'transcrição fiel',
 };
+
+/**
+ * D-477: o veredito do detector em uma linha.
+ *
+ * "Não achei" precisa de texto tanto quanto "achei": sem ele, um clique sem
+ * efeito visível fica indistinguível de um botão quebrado.
+ */
+function textoDoVeredito(v: VereditoDoRosto): string {
+  if (!v.achou) return `Não achei rosto — ${v.motivo}.`;
+  const onde = `Enquadrado em ${Math.round((v.foco_x ?? 0) * 100)}% da largura (${v.motivo}).`;
+  return v.aviso ? `${onde} ${v.aviso}` : onde;
+}
 
 function mmss(segundos: number): string {
   const total = Math.max(0, Math.round(segundos));
@@ -112,6 +125,7 @@ export default function FireDetalhePage() {
   const criarManual = useCriarShortManual(corteId);
   const definirCenas = useDefinirCenas(corteId);
   const sugerirCenas = useSugerirCenas(corteId);
+  const enquadrarPeloRosto = useEnquadrarPeloRosto(corteId);
   const transcricao = useTranscricaoDoCorte(corteId);
   const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
@@ -606,6 +620,13 @@ export default function FireDetalhePage() {
               onStatus={(status) => atualizar.mutate({ shortId: short.id, status })}
               onBorda={(campo) => moverBorda(short, campo)}
               onFoco={(delta) => moverFoco(short, delta)}
+              onEnquadrarPeloRosto={() => enquadrarPeloRosto.mutate(short.id)}
+              enquadrando={enquadrarPeloRosto.isPending && enquadrarPeloRosto.variables === short.id}
+              vereditoDoRosto={
+                enquadrarPeloRosto.data && enquadrarPeloRosto.variables === short.id
+                  ? textoDoVeredito(enquadrarPeloRosto.data)
+                  : ''
+              }
               onModelo={(modeloId) =>
                 atualizar.mutate({ shortId: short.id, modelo_palco: modeloId })
               }

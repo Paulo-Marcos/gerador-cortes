@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Crop, Layers, TriangleAlert } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crop, Layers, ScanFace, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useModelosDePalco, usePalcoDoCorte } from './useShortsDoCorte';
 import type { ShortSugerido } from './shortsApi';
@@ -23,6 +23,11 @@ interface Props {
   ocupado: boolean;
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
   onFoco: (delta: number) => void;
+  /** D-477: acha o rosto no trecho e centra a janela nele. */
+  onEnquadrarPeloRosto: () => void;
+  enquadrando: boolean;
+  /** O veredito da ultima deteccao — inclusive "nao achei", que e resposta. */
+  vereditoDoRosto: string;
   onModelo: (modeloId: string) => void;
   onPreset: (presetId: string) => void;
   onMoldura: (moldura: string) => void;
@@ -37,6 +42,9 @@ export function LinhaDeAjuste({
   ocupado,
   onBorda,
   onFoco,
+  onEnquadrarPeloRosto,
+  enquadrando,
+  vereditoDoRosto,
   onModelo,
   onPreset,
   onMoldura,
@@ -85,7 +93,28 @@ export function LinhaDeAjuste({
         >
           <ChevronRight />
         </Button>
+        {/* D-477: o atalho para o caso comum — uma pessoa falando de frente.
+            Fica AO LADO das setas, e não no lugar delas: o detector erra, e
+            corrigir na mão precisa estar à mesma distância. */}
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={ocupado || enquadrando}
+          onClick={onEnquadrarPeloRosto}
+          title="Procura o rosto de quem fala neste trecho e centra a janela nele"
+        >
+          <ScanFace />
+          {enquadrando ? 'olhando…' : 'pelo rosto'}
+        </Button>
       </Grupo>
+
+      {/* O veredito precisa aparecer mesmo quando é "não achei": sem isso, um
+          clique sem efeito visível fica indistinguível de um botão quebrado. */}
+      {vereditoDoRosto && (
+        <p className="w-full font-code text-[10.5px] leading-relaxed text-[var(--wb-text-mute)]">
+          {vereditoDoRosto}
+        </p>
+      )}
 
       {/* D-498: o preset DESTE short. Numa live longa a cena do OBS muda ao
           longo do tempo, então o trecho pode precisar de regiões diferentes das

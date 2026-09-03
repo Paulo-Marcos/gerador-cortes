@@ -16,6 +16,7 @@ Endpoints:
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
   PUT  /{short_id}/cenas          — as cenas do short (hook, numero, citacao, cta)
   POST /{short_id}/cenas/sugerir  — a IA propoe os cartoes deste trecho
+  POST /{short_id}/enquadrar      — acha o rosto no trecho e centra o 9:16 nele
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
   GET  /{short_id}/palco          — o palco em coordenadas de desenho (previa)
@@ -299,6 +300,28 @@ async def definir_cenas(short_id: str, body: DefinirCenasRequest):
         return {"short": await shorts_store.definir_cenas(short_id, body.cenas)}
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/{short_id}/enquadrar")
+async def enquadrar(short_id: str):
+    """Acha o rosto de quem fala e centra o recorte 9:16 nele (D-477).
+
+    Síncrono: são ~2 segundos, e o operador está olhando para a janela de
+    enquadramento quando pede. Devolve o short já com o foco gravado, mais o
+    veredito — inclusive quando ele é "não achei", que é resposta e não erro.
+    """
+    from app.services import enquadramento_shorts
+
+    try:
+        return await enquadramento_shorts.enquadrar_pelo_rosto(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except enquadramento_shorts.DeteccaoIndisponivel as exc:
+        # 503 e nao 422: o trecho esta bom, quem nao esta disponivel e o
+        # detector. A tela precisa dizer "tente de novo", nao "arrume o corte".
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
