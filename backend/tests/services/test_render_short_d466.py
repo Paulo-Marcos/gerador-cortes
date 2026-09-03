@@ -343,23 +343,22 @@ async def test_os_dois_estagios_nao_disputam_o_mesmo_intermediario(ambiente, job
 
 
 class TestMolduraChegaAoRender:
-    """D-504: a faixa do canal precisa sair NO ARQUIVO, nao so no dominio.
+    """D-504/D-508: a assinatura do canal precisa sair NO ARQUIVO.
 
-    O bug: `_ContextoRender.moldura` era preenchido por `faixas_do_canal()` e
-    nunca usado — `_comando_do_quadro` montava o filtro sem ele. A D-501 tinha
-    sido verificada com uma chamada DIRETA ao ffmpeg (contando pixels do quadro),
-    caminho que nao passa por aqui; o operador ligava "moldura: faixas" na tela e
-    o short saia sem faixa nenhuma.
+    O bug original (D-504): `_ContextoRender.moldura` era preenchido e nunca
+    usado — o operador ligava a moldura, a previa desenhava, e o MP4 saia sem
+    nada. Tinha passado porque a D-501 foi verificada com uma chamada DIRETA ao
+    ffmpeg, caminho que nao passa por `render_short`.
 
-    Por isso este teste olha o comando que o render DESPACHA, e nao a funcao que
-    desenha: o elo que faltava era exatamente o de ligar as duas.
+    A D-508 trocou o MECANISMO (duas faixas chapadas viraram o palco em PNG, com
+    textura e chrome) e a garantia continua a mesma: o que a tela promete tem de
+    chegar ao comando. Por isso estes testes olham o comando DESPACHADO, nunca a
+    funcao que desenha.
     """
 
     @pytest_asyncio.fixture
     async def com_palco(self, ambiente):
         """Da regiao ao corte — sem regiao nao ha palco, e sem palco nao ha moldura."""
-        from app.models import LayoutPreset
-
         factory, tmp = ambiente
         async with factory() as db:
             corte = await db.get(Corte, "c1")
@@ -370,8 +369,30 @@ class TestMolduraChegaAoRender:
                 }
             )
             await db.commit()
-        assert LayoutPreset is not None
         return factory, tmp
+
+    @pytest.fixture
+    def palco_png(self, monkeypatch, tmp_path):
+        """Troca o gerador do PNG por um dublê.
+
+        Rodar `remotion still` aqui levaria dezenas de segundos e exigiria Node
+        com o bundle pronto. O que precisa de teste e se o PNG CHEGA ao comando,
+        nao se o Remotion sabe desenhar.
+        """
+        from app.services import palco_short_png
+
+        def instalar(caminho):
+            async def _fake(fundo, janelas):
+                instalar.recebido = {"fundo": fundo, "janelas": janelas}
+                return caminho
+
+            monkeypatch.setattr(palco_short_png, "obter", _fake)
+
+        instalar.recebido = None
+        pronto = tmp_path / "palco.png"
+        pronto.write_bytes(b"fake-png")
+        instalar.pronto = pronto
+        return instalar
 
     def _filtro(self, job: dict) -> str:
         cmd = job["cmd"]
@@ -381,30 +402,53 @@ class TestMolduraChegaAoRender:
         """Quantos `drawbox` sao DA MOLDURA.
 
         Contar `drawbox=` cru nao serve: o filtro de cinema ja desenha dois, de
-        letterbox preto. Foi essa mesma confusao que fez a D-501 quase adotar
-        uma faixa de 7% dentro da tarja de 8% do filtro. A cor do canal e o que
-        distingue uma coisa da outra.
+        letterbox preto. Foi essa confusao que quase fez a D-501 adotar uma
+        faixa de 7% dentro da tarja de 8% do filtro.
         """
         from app.services.render_short import faixas_do_canal
 
-        cor = faixas_do_canal("faixas")[0].cor
+        cor = faixas_do_canal("palco")[0].cor
         return self._filtro(job).count(f"color={cor}")
 
     @pytest.mark.asyncio
-    async def test_o_recorte_desenha_as_faixas_do_canal(self, com_palco, jobs):
+    async def test_o_palco_em_png_e_empilhado_sobre_o_video(self, com_palco, jobs, palco_png):
+        palco_png(palco_png.pronto)
+
         await render_short.renderizar_short("s1")
 
-        assert self._faixas_da_moldura(jobs[0]) > 0, "a moldura nao chegou ao ffmpeg"
+        assert "[1:v]overlay" in self._filtro(jobs[0]), "o palco nao chegou ao ffmpeg"
+        assert str(palco_png.pronto) in jobs[0]["cmd"], "o PNG nao entrou como entrada"
 
     @pytest.mark.asyncio
-    async def test_sao_duas_faixas_uma_em_cima_e_outra_embaixo(self, com_palco, jobs):
+    async def test_o_palco_recebe_as_JANELAS_e_nao_os_slots(self, com_palco, jobs, palco_png):
+        """Em CABER o video sai menor que o slot e fica centralizado.
+
+        Recortar o buraco no tamanho do SLOT deixaria uma borda de fundo em
+        volta do video — um quadro vazio em torno da tela compartilhada.
+        """
+        palco_png(palco_png.pronto)
+
+        await render_short.renderizar_short("s1")
+
+        janelas = palco_png.recebido["janelas"]
+        assert len(janelas) == 2
+        for janela in janelas:
+            assert set(janela) == {"x", "y", "w", "h"}
+
+    @pytest.mark.asyncio
+    async def test_sem_o_png_as_faixas_seguram_a_identidade(self, com_palco, jobs, palco_png):
+        """Plano B: Node fora do ar nao pode significar short sem canal nenhum."""
+        palco_png(None)
+
         await render_short.renderizar_short("s1")
 
         assert self._faixas_da_moldura(jobs[0]) == 2
+        assert "[1:v]overlay" not in self._filtro(jobs[0])
 
     @pytest.mark.asyncio
-    async def test_a_cor_vem_do_tema_e_nao_do_codigo(self, com_palco, jobs, monkeypatch):
+    async def test_a_cor_do_plano_B_vem_do_tema(self, com_palco, jobs, palco_png, monkeypatch):
         """Cravar a cor faria o canal trocar a paleta e o short sair com a velha."""
+        palco_png(None)
         monkeypatch.setattr(render_short, "cor_do_tema", lambda chave, padrao: "#ff00ff")
 
         await render_short.renderizar_short("s1")
@@ -412,8 +456,9 @@ class TestMolduraChegaAoRender:
         assert "color=#ff00ff" in self._filtro(jobs[0])
 
     @pytest.mark.asyncio
-    async def test_moldura_desligada_nao_desenha_faixa(self, com_palco, jobs):
-        """O letterbox do filtro continua; o que some e a assinatura do canal."""
+    async def test_moldura_desligada_nao_desenha_nada(self, com_palco, jobs, palco_png):
+        """Nem PNG nem faixa. O letterbox do filtro continua — ele e do filtro."""
+        palco_png(palco_png.pronto)
         factory, _ = com_palco
         async with factory() as db:
             short = await db.get(Short, "s1")
@@ -423,3 +468,4 @@ class TestMolduraChegaAoRender:
         await render_short.renderizar_short("s1")
 
         assert self._faixas_da_moldura(jobs[0]) == 0
+        assert "[1:v]overlay" not in self._filtro(jobs[0])

@@ -212,7 +212,7 @@ class TestMoldura:
         return montar(
             "pessoa_cheia",
             {"pessoa": FACECAM},
-            moldura=faixas(Moldura.FAIXAS, "#6aaa84"),
+            moldura=faixas(Moldura.PALCO, "#6aaa84"),
             **kw,
         )
 

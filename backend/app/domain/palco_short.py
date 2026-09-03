@@ -136,6 +136,29 @@ class Recorte:
         return (self.slot.w, self.slot.h, dx, dy)
 
     @property
+    def janela(self) -> dict:
+        """O retângulo que o VÍDEO de fato ocupa no quadro do short (D-508).
+
+        Diferente do slot em CABER: ali o conteúdo sai menor e fica centralizado,
+        então a moldura desenhada em volta do slot inteiro sobraria dos dois
+        lados — um quadro vazio em torno do vídeo.
+
+        É o que o palco em PNG precisa: o buraco transparente tem de ter o
+        tamanho do vídeo, não o do espaço reservado para ele.
+
+        Exemplo (tela 1325x720 num slot 1080x608: enche a largura e sobra 22px
+        de altura, 11 de cada lado):
+            >>> tela = {"x": 0, "y": 0, "w": 1325, "h": 720}
+            >>> slot = Slot(x=0, y=352, w=1080, h=608, ajuste=Ajuste.CABER)
+            >>> Recorte("tela", tela, slot, escalar(tela, slot)).janela
+            {'x': 0, 'y': 363, 'w': 1080, 'h': 586}
+        """
+        if self.slot.ajuste == Ajuste.COBRIR:
+            return {"x": self.slot.x, "y": self.slot.y, "w": self.slot.w, "h": self.slot.h}
+        x, y = self.posicao
+        return {"x": x, "y": y, "w": self.escala[0], "h": self.escala[1]}
+
+    @property
     def desenho(self) -> dict:
         """As coordenadas do recorte em forma de DESENHO, não de filtro.
 

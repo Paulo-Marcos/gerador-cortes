@@ -26,6 +26,7 @@ from pathlib import Path
 from app.channel_assets_sync import cor_do_tema
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain import moldura_short
 from app.domain.ffmpeg_short import (
     build_composicao_short_cmd,
     build_palco_vertical_cmd,
@@ -35,6 +36,7 @@ from app.domain.formato_video import VERTICAL, Resolucao
 from app.domain.fundo_short import para_ffmpeg
 from app.domain.moldura_short import COR_PADRAO, faixas
 from app.domain.overlay_codec import OverlayCodec, overlay_codec_profile
+from app.domain.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_resolucao
 from app.infrastructure.worker_queue import RemotionWorkerQueue, WorkerJob, WorkerJobCategory
 from app.models import Corte, Short, StatusShort
@@ -256,6 +258,9 @@ class _ContextoRender:
     moldura: list
     # D-499: a cor de fundo do palco, ja resolvida na paleta do canal.
     fundo: str
+    # D-508: o PNG do palco (fundo com textura + chrome), ou None quando nao ha
+    # o que desenhar — sem regiao, moldura desligada, ou o gerador falhou.
+    palco_png: object
 
     @property
     def duracao_seg(self) -> float:
@@ -307,7 +312,26 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             origem_palco=palco["origem"],
             moldura=faixas_do_canal(palco["moldura"]),
             fundo=para_ffmpeg(palco["fundo"]),
+            palco_png=await _palco_em_png(palco),
         )
+
+
+async def _palco_em_png(palco: dict):
+    """O PNG do palco deste short, ou `None` para seguir sem ele (D-508).
+
+    O fundo EDITORIAL (a textura) e a cor do fundo são coisas diferentes: a cor
+    preenche o que sobra dentro do ffmpeg, e a textura vem no PNG. Enquanto o
+    seletor da tela ainda oferece cores da paleta, a textura fica no default do
+    canal — trocá-la é a D-509.
+    """
+    from app.services import palco_short_png
+
+    plano = palco.get("plano")
+    if plano is None or moldura_short.Moldura(palco["moldura"]) is moldura_short.Moldura.NENHUMA:
+        return None
+
+    janelas = [recorte.janela for recorte in plano.recortes]
+    return await palco_short_png.obter(FUNDO_EDITORIAL_PADRAO, janelas)
 
 
 def faixas_do_canal(moldura: str) -> list:
@@ -355,6 +379,7 @@ def _comando_do_quadro(contexto: _ContextoRender, saida: Path, *, com_filtro: bo
         plano=contexto.plano,
         moldura=contexto.moldura,
         fundo_cor=contexto.fundo,
+        palco_png=contexto.palco_png,
         filtro=filtro,
     )
 

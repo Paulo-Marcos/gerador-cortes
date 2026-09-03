@@ -159,7 +159,7 @@ export function LinhaDeAjuste({
           onChange={(e) => onMoldura(e.target.value)}
           className="h-7 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
         >
-          <option value="faixas">Faixas do canal</option>
+          <option value="palco">Palco do canal</option>
           <option value="nenhuma">Sem moldura</option>
         </select>
       </Grupo>

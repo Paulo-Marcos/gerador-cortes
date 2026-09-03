@@ -53,15 +53,23 @@ COR_PADRAO = "#6aaa84"
 class Moldura(str, Enum):
     """Se o short leva a assinatura do canal em volta.
 
-    NENHUMA — o quadro cru, como era antes.
-    FAIXAS  — duas barras da cor do canal, no topo e no rodapé.
+    NENHUMA — o quadro cru.
+    PALCO   — o palco do canal: fundo com textura, chrome, molduras nas janelas.
+
+    D-508: era `FAIXAS`, e eram literalmente duas barras verdes chapadas —
+    "um lembrete da identidade, não ela". O horizontal sempre teve palco de
+    verdade; agora o short usa o MESMO, rasterizado em PNG pelo Remotion.
+
+    As faixas continuam no código como PLANO B: sem o PNG (Node fora do ar,
+    render do palco falhando) o short sai com a cor do canal em vez de sair sem
+    identidade nenhuma.
     """
 
     NENHUMA = "nenhuma"
-    FAIXAS = "faixas"
+    PALCO = "palco"
 
 
-MOLDURA_PADRAO = Moldura.FAIXAS
+MOLDURA_PADRAO = Moldura.PALCO
 """O short do canal leva a marca do canal. Quem não quer, desliga."""
 
 
@@ -83,11 +91,11 @@ def faixas(moldura: Moldura | str, cor: str = COR_PADRAO) -> list[Faixa]:
     precisar de um `if` sobre o tipo da moldura em cada lugar.
 
     Exemplos:
-        >>> [ (f.y, f.h) for f in faixas(Moldura.FAIXAS) ]
+        >>> [ (f.y, f.h) for f in faixas(Moldura.PALCO) ]
         [(0, 154), (1766, 154)]
         >>> faixas(Moldura.NENHUMA)
         []
-        >>> faixas("faixas", "#ff0000")[0].cor
+        >>> faixas("palco", "#ff0000")[0].cor
         '#ff0000'
     """
     if _normalizar(moldura) is Moldura.NENHUMA:

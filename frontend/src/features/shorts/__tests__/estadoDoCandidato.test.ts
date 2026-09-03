@@ -29,7 +29,7 @@ function short(over: Partial<ShortSugerido> = {}): ShortSugerido {
     janela_cheia: '',
     origem: 'ia',
     palco_preset: '',
-    moldura: 'faixas',
+    moldura: 'palco',
     ajustes_palco: {},
     recortes_palco: {},
     fundo_palco: '',

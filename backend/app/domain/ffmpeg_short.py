@@ -130,6 +130,7 @@ def build_palco_vertical_cmd(
     duracao_seg: float,
     plano: PlanoPalco,
     moldura: list[Faixa] | None = None,
+    palco_png: Path | None = None,
     fundo_cor: str = FUNDO_PADRAO,
     filtro: str | None = "cinematic_iii",
     crf: int = 18,
@@ -147,10 +148,10 @@ def build_palco_vertical_cmd(
     porque o overlay é um passo depois, noutro comando.
 
     Exemplo (pessoa cheia, sem grade):
+        >>> from app.domain.arranjo_short import Arranjo, montar_modelo
         >>> from app.domain.palco_short import montar_plano
-        >>> plano = montar_plano(
-        ...     "pessoa_cheia", {"pessoa": {"x": 24, "y": 410, "w": 340, "h": 260}}
-        ... )
+        >>> regioes = {"pessoa": {"x": 24, "y": 410, "w": 340, "h": 260}}
+        >>> plano = montar_plano(montar_modelo(Arranjo(), regioes), regioes)
         >>> cmd = build_palco_vertical_cmd(
         ...     Path("b.mkv"), Path("o.mp4"),
         ...     inicio_seg=10.0, duracao_seg=30.0, plano=plano, filtro=None,
@@ -179,9 +180,21 @@ def build_palco_vertical_cmd(
     # grade mexe em curva e saturacao. Gradada junto, a assinatura sairia num
     # verde diferente a cada filtro — e o operador nao teria como saber por que.
     cadeia_final = [grade] if grade else []
-    cadeia_final.extend(_desenhar_faixa(faixa) for faixa in (moldura or []))
-    cadeia_final.append("format=yuv420p")
-    partes.append(f"[comp]{','.join(cadeia_final)}[v]")
+    if palco_png is None:
+        cadeia_final.extend(_desenhar_faixa(faixa) for faixa in (moldura or []))
+    cadeia_final.append("format=yuv420p" if palco_png is None else "format=rgba")
+    partes.append(f"[comp]{','.join(cadeia_final)}[base]")
+
+    if palco_png is None:
+        partes[-1] = partes[-1].replace("[base]", "[v]")
+    else:
+        # D-508: o PALCO em PNG por cima de tudo — fundo com textura, chrome e
+        # molduras do canal, com as janelas de video transparentes. Substitui as
+        # faixas chapadas: elas eram um lembrete da identidade, nao ela.
+        #
+        # Depois da grade pelo mesmo motivo das faixas, e o `format=yuv420p` so
+        # no fim: converter antes jogaria fora o alpha que este overlay usa.
+        partes.append("[base][1:v]overlay=x=0:y=0:format=auto,format=yuv420p[v]")
 
     return [
         "ffmpeg",
@@ -191,6 +204,7 @@ def build_palco_vertical_cmd(
         str(inicio_seg),
         "-i",
         str(entrada),
+        *(("-i", str(palco_png)) if palco_png else ()),
         "-t",
         str(duracao_seg),
         "-filter_complex",

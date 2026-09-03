@@ -382,10 +382,11 @@ class Short(Base):
     # compartilhada — e as regioes mudam junto. Vazio = herda do corte, que
     # segue sendo o default para a maioria dos trechos.
     palco_preset: Mapped[str] = mapped_column(String(200), default="")
-    # D-501: a assinatura do canal em volta — "faixas" (duas barras verdes) ou
-    # "nenhuma". Ortogonal ao arranjo: vale para os quatro modelos, e amarra-la
-    # a um deles exigiria duplicar cada arranjo em duas versoes.
-    moldura: Mapped[str] = mapped_column(String(20), default="faixas")
+    # D-501/D-508: a assinatura do canal em volta — "palco" (fundo com textura,
+    # chrome e molduras, em PNG do Remotion) ou "nenhuma". Ortogonal ao arranjo:
+    # vale para qualquer montagem, e amarra-la a uma exigiria duplicar cada
+    # arranjo em duas versoes.
+    moldura: Mapped[str] = mapped_column(String(20), default="palco")
     # D-507: como a tela e montada — "cheia", "dividida_empilhada" ou
     # "dividida_insert". Vazio deduz das regioes marcadas.
     #

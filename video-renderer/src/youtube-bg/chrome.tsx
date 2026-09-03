@@ -220,12 +220,22 @@ export const SpeakerLabel: FC<{
   );
 };
 
-/** Chrome do palco — contorno + 4 brackets, com padding interno. */
-export const StageChrome: FC<{ pad?: number }> = ({ pad = 32 }) => {
+/** Chrome do palco — contorno + 4 brackets, com padding interno.
+ *
+ * D-508: `canvasW`/`canvasH` entram com o default 1920x1080 para o palco
+ * HORIZONTAL sair byte a byte igual ao de antes. O short precisa do mesmo
+ * chrome num quadro 1080x1920 — e a alternativa era copiar estas oito linhas,
+ * que é como duas molduras do mesmo canal começam a divergir.
+ */
+export const StageChrome: FC<{ pad?: number; canvasW?: number; canvasH?: number }> = ({
+  pad = 32,
+  canvasW = 1920,
+  canvasH = 1080,
+}) => {
   const opts: ChromeOpts = { radius: 24, chamferTR: 52, chamferBR: 30, offset: 12, bracketLen: 62 };
   return (
     <div style={{ position: "absolute", left: pad, top: pad, right: pad, bottom: pad, pointerEvents: "none" }}>
-      <CardChrome width={1920 - pad * 2} height={1080 - pad * 2} opts={opts} bracketScale={0.36} outlineScale={0.3} />
+      <CardChrome width={canvasW - pad * 2} height={canvasH - pad * 2} opts={opts} bracketScale={0.36} outlineScale={0.3} />
     </div>
   );
 };
