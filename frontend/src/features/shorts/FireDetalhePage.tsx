@@ -286,7 +286,12 @@ export default function FireDetalhePage() {
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
-        workbench ? 'h-full' : 'h-screen',
+        // No shell LEGADO a pagina fica ABAIXO de um cabecalho de 3.5rem, e
+        // `h-screen` a fazia medir a viewport inteira — transbordando por
+        // exatamente a altura desse cabecalho. Com o conteudo rolando dentro
+        // (D-499), a ultima linha ficava inalcancavel. No workbench a pagina ja
+        // recebe a altura do pai, e `h-full` continua certo.
+        workbench ? 'h-full' : 'h-[calc(100vh-3.5rem)]',
       )}
     >
       <header
