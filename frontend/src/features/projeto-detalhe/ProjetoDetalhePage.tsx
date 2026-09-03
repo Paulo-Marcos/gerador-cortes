@@ -10,6 +10,7 @@ import {
   RotateCw,
   Scissors,
   Search,
+  Send,
 } from 'lucide-react';
 import { AdicionarCorteModal } from '@/features/editor/AdicionarCorteModal';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ import type { Corte, StatusExportCorte } from '@/types/models';
 import { AnaliseIaModal } from './AnaliseIaModal';
 import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
 import { PublicarMassaModal } from './PublicarMassaModal';
+import { PublicarTiktokModal } from './PublicarTiktokModal';
 import { StatusPipStrip } from './StatusPills';
 import { VotoQualidadeLive } from './VotoQualidadeLive';
 
@@ -142,6 +144,7 @@ export function ProjetoDetalhePage() {
   const [analiseOpen, setAnaliseOpen] = useState(false);
   const [auditoriaOpen, setAuditoriaOpen] = useState(false);
   const [publicarOpen, setPublicarOpen] = useState(false);
+  const [tiktokOpen, setTiktokOpen] = useState(false);
   const [adicionarCorteOpen, setAdicionarCorteOpen] = useState(false);
   const [uploadingCorteId, setUploadingCorteId] = useState<string | null>(null);
   const [manualPublishCorte, setManualPublishCorte] = useState<StatusExportCorte | null>(null);
@@ -447,6 +450,14 @@ export function ProjetoDetalhePage() {
               </Button>
             </span>
           </Tooltip>
+          {/* D-510: o TikTok ao lado do YouTube, porque publicar o horizontal é
+              a mesma decisão em dois destinos. Sem o gate do lote: o TikTok não
+              publica por API (envio manual), então nada aqui depende de TODOS
+              os cortes estarem prontos — só dos que estiverem. */}
+          <Button variant="outline" onClick={() => setTiktokOpen(true)}>
+            <Send size={16} />
+            TikTok
+          </Button>
           {publicacao.total > 0 && (
             <span
               className={cn(
@@ -651,6 +662,11 @@ export function ProjetoDetalhePage() {
         open={publicarOpen}
         onClose={() => setPublicarOpen(false)}
         projetoId={id}
+        cortesProntos={cortesProntos}
+      />
+      <PublicarTiktokModal
+        open={tiktokOpen}
+        onClose={() => setTiktokOpen(false)}
         cortesProntos={cortesProntos}
       />
       <AdicionarCorteModal

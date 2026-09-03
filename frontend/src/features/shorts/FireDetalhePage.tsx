@@ -35,7 +35,6 @@ import { avisoDescarteBruto } from './descarteBruto';
 import { janelaNova } from './linhaDoTempoShort';
 import { BordasFinasPanel } from './BordasFinasPanel';
 import { CandidatoCard } from './CandidatoCard';
-import { BotaoTiktokHorizontal } from './BotaoTiktokHorizontal';
 import { CenasDoShort } from './CenasDoShort';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { LegendaPrevia } from './LegendaPrevia';
@@ -555,16 +554,6 @@ export default function FireDetalhePage() {
         <aside className="flex min-h-0 flex-col gap-2.5 overflow-auto">
           <div className="flex-none space-y-2 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
             <PalcoDoCorte corteId={corteId} />
-            {/* D-503: o corte HORIZONTAL tambem publica — e o mesmo MP4 que foi
-                para o YouTube, sem render novo. Fica aqui porque a tela do Fire
-                e onde o operador ja esta olhando este corte. */}
-            <div className="border-t border-[var(--wb-border-soft)] pt-2">
-              <BotaoTiktokHorizontal
-                corteId={corteId}
-                habilitado={Boolean(fire?.tem_video_final)}
-              />
-            </div>
-
             <div className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] pt-2">
               <Button
                 variant="outline"
