@@ -24,11 +24,11 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain.arranjo_short import de_chave as arranjo_de_chave
 from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
 from app.domain.cenas_short_ia import recortar_transcricao
 from app.domain.formato_video import foco_de_regiao
 from app.domain.moldura_short import Moldura
-from app.domain.palco_short import MODELOS
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
@@ -331,7 +331,8 @@ async def atualizar_short(
     inicio_seg: float | None = None,
     fim_seg: float | None = None,
     foco_x: float | None = None,
-    modelo_palco: str | None = None,
+    arranjo_palco: str | None = None,
+    janela_cheia: str | None = None,
     ajustes_palco: dict | None = None,
     palco_preset: str | None = None,
     moldura: str | None = None,
@@ -417,13 +418,18 @@ async def atualizar_short(
             # (o resolvedor faz isso) em vez de virar erro de gravacao.
             short.fundo_palco = fundo_palco
 
-        if modelo_palco is not None:
-            # "" e valido: volta ao automatico, que deduz das regioes. Um id
-            # desconhecido NAO e — ele viraria um palco silenciosamente diferente
-            # do que a tela mostra (E-036/D-487).
-            if modelo_palco and modelo_palco not in MODELOS:
-                raise ValueError(f"Modelo de palco {modelo_palco!r} nao existe.")
-            short.modelo_palco = modelo_palco
+        if arranjo_palco is not None:
+            # "" e valido: volta ao automatico, que deduz das regioes. Uma chave
+            # desconhecida NAO e — ela viraria um palco silenciosamente diferente
+            # do que a tela mostra (mesma regra que o modelo antigo tinha).
+            if arranjo_palco and arranjo_de_chave(arranjo_palco).chave != arranjo_palco:
+                raise ValueError(f"Arranjo {arranjo_palco!r} nao existe.")
+            short.arranjo_palco = arranjo_palco
+
+        if janela_cheia is not None:
+            # Sem validar contra as regioes: elas mudam com o preset, e o
+            # resolvedor ja cai numa regiao disponivel quando a escolhida sumiu.
+            short.janela_cheia = janela_cheia
 
         await db.commit()
         return _serializar(short)
@@ -764,7 +770,8 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "foco_efetivo": foco_efetivo(short, corte),
         "arquivo_short_path": short.arquivo_short_path,
         "arquivo_previa_path": short.arquivo_previa_path,
-        "modelo_palco": short.modelo_palco,
+        "arranjo_palco": short.arranjo_palco,
+        "janela_cheia": short.janela_cheia,
         "palco_preset": short.palco_preset,
         "moldura": short.moldura,
         "ajustes_palco": _json_dict_seguro(short.ajustes_palco),

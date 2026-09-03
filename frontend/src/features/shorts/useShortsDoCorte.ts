@@ -136,11 +136,15 @@ export function useTranscricaoDoCorte(corteId: string) {
   });
 }
 
-// E-036/D-487: o catalogo e do sistema, nao do corte — cabe cache eterno.
-export function useModelosDePalco() {
+// D-507: o catalogo passou a depender do CORTE, e nao so do sistema: o que ele
+// devolve inclui o que as regioes daquele corte permitem montar. Cache eterno
+// por corte — as regioes so mudam quando o operador troca o preset, e isso ja
+// invalida a chave do palco.
+export function useArranjosDePalco(corteId: string) {
   return useQuery({
-    queryKey: [...PALCO_KEY, 'modelos'],
-    queryFn: () => shortsApi.modelosDePalco(),
+    queryKey: [...PALCO_KEY, 'arranjos', corteId],
+    queryFn: () => shortsApi.arranjosDePalco(corteId),
+    enabled: Boolean(corteId),
     staleTime: Infinity,
   });
 }

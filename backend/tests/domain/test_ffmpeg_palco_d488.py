@@ -16,11 +16,36 @@ O que eles protegem:
 from pathlib import Path
 
 import pytest
+from app.domain.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_modelo
 from app.domain.ffmpeg_short import FUNDO_PADRAO, build_palco_vertical_cmd
-from app.domain.palco_short import MODELOS, montar_plano
+from app.domain.palco_short import montar_plano
 
 FACECAM = {"x": 24, "y": 410, "w": 340, "h": 260}
 TELA = {"x": 365, "y": 180, "w": 1325, "h": 720}
+
+# D-507: os quatro modelos viraram (modo, disposicao, fonte). Este adaptador
+# mantem os testes de GEOMETRIA falando o vocabulario antigo de proposito — se
+# um numero tivesse se movido na refatoracao, eles cairiam aqui. Passaram todos
+# sem tocar num assert: a geometria e a mesma, so o caminho ate ela mudou.
+_ARRANJO_DO_MODELO = {
+    "pessoa_cheia": Arranjo(fonte="pessoa"),
+    "quadro_com_moldura": Arranjo(fonte="quadro"),
+    "tela_cima_pessoa_baixo": Arranjo(modo=ModoPalco.DIVIDIDA, disposicao=Disposicao.EMPILHADA),
+    "pessoa_com_insert": Arranjo(modo=ModoPalco.DIVIDIDA, disposicao=Disposicao.INSERT),
+}
+
+TODAS_AS_REGIOES = {
+    "pessoa": FACECAM,
+    "tela": TELA,
+    "quadro": {"x": 0, "y": 0, "w": 1920, "h": 1080},
+}
+
+
+def modelo_de(modelo_id: str, regioes: dict | None = None):
+    return montar_modelo(_ARRANJO_DO_MODELO[modelo_id], regioes or TODAS_AS_REGIOES)
+
+
+MODELOS = {chave: modelo_de(chave) for chave in _ARRANJO_DO_MODELO}
 
 
 def montar(modelo_id: str, regioes: dict, **kwargs) -> list[str]:
@@ -29,7 +54,7 @@ def montar(modelo_id: str, regioes: dict, **kwargs) -> list[str]:
         Path("saida.mp4"),
         inicio_seg=kwargs.pop("inicio_seg", 10.0),
         duracao_seg=kwargs.pop("duracao_seg", 30.0),
-        plano=montar_plano(modelo_id, regioes),
+        plano=montar_plano(modelo_de(modelo_id, regioes), regioes),
         **kwargs,
     )
 

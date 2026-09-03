@@ -52,7 +52,7 @@ interface Props {
   onEnquadrarPeloRosto: () => void;
   enquadrando: boolean;
   vereditoDoRosto: string;
-  onModelo: (modeloId: string) => void;
+  onArranjo: (chave: string) => void;
   onPreset: (presetId: string) => void;
   onMoldura: (moldura: string) => void;
   onPrevia: () => void;
@@ -80,7 +80,7 @@ export function CandidatoCard({
   onEnquadrarPeloRosto,
   enquadrando,
   vereditoDoRosto,
-  onModelo,
+  onArranjo,
   onPreset,
   onMoldura,
   onPrevia,
@@ -242,7 +242,7 @@ export function CandidatoCard({
           onEnquadrarPeloRosto={onEnquadrarPeloRosto}
           enquadrando={enquadrando}
           vereditoDoRosto={vereditoDoRosto}
-          onModelo={onModelo}
+          onArranjo={onArranjo}
           onPreset={onPreset}
           onMoldura={onMoldura}
           onTocar={onTocar}

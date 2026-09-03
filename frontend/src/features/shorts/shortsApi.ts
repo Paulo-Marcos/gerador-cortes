@@ -82,7 +82,10 @@ export interface ShortSugerido {
   /** D-483: o MP4 sem filtro, para julgar antes de gastar a passada boa. */
   arquivo_previa_path: string;
   /** Arranjo escolhido pelo operador. Vazio = automático, deduzido das regiões. */
-  modelo_palco: string;
+  /** D-507: como a tela é montada — "cheia", "dividida_empilhada", "dividida_insert". */
+  arranjo_palco: string;
+  /** D-507: em modo cheia, qual região preenche a janela. Vazio deduz. */
+  janela_cheia: string;
   /** `ia` ou `manual`. O manual sobrevive a uma regeração. */
   origem: string;
   /** Preset DESTE short. Vazio = herda o do corte (D-498). */
@@ -107,7 +110,8 @@ export interface AtualizarShortBody {
   inicio_seg?: number;
   fim_seg?: number;
   foco_x?: number;
-  modelo_palco?: string;
+  arranjo_palco?: string;
+  janela_cheia?: string;
   ajustes_palco?: Record<string, Retangulo>;
   palco_preset?: string;
   moldura?: string;
@@ -120,12 +124,19 @@ export function brutoUrl(corteId: string): string {
   return `${API_BASE}/cortes/${corteId}/video-bruto`;
 }
 
-/** Um arranjo de palco vertical. */
-export interface ModeloPalco {
-  id: string;
+/** Como a tela do short pode ser montada (D-507). */
+export interface ArranjoPalco {
+  /** O que se grava: "cheia", "dividida_empilhada", "dividida_insert". */
+  chave: string;
+  modo: 'cheia' | 'dividida';
+  disposicao: string;
   nome: string;
   porque: string;
-  regioes_exigidas: string[];
+  janelas: number;
+  /** `false` quando as regiões deste corte não comportam o arranjo. */
+  possivel: boolean;
+  /** O que falta marcar para ele passar a servir. Vazio quando é possível. */
+  impedimento: string;
 }
 
 /** De onde saem as regiões deste corte. */
@@ -133,7 +144,7 @@ export interface EstadoPalco {
   preset: string;
   origem: 'recorte_do_short' | 'preset_do_short' | 'preset' | 'layout_do_corte' | 'nenhuma';
   regioes: Record<string, { x: number; y: number; w: number; h: number }>;
-  modelo_sugerido: string;
+  arranjo_sugerido: string;
   presets_disponiveis: { id: string; nome: string; regioes: string[] }[];
 }
 
@@ -273,7 +284,11 @@ export const shortsApi = {
   listarDoCorte: (corteId: string) =>
     request<{ shorts: ShortSugerido[] }>(`/shorts/corte/${corteId}`),
 
-  modelosDePalco: () => request<{ modelos: ModeloPalco[] }>('/shorts/palco/modelos'),
+  /** D-507: os arranjos possíveis. Com `corteId`, diz o que as regiões dele permitem. */
+  arranjosDePalco: (corteId = '') =>
+    request<{ arranjos: ArranjoPalco[] }>(
+      `/shorts/palco/arranjos${corteId ? `?corte_id=${corteId}` : ''}`,
+    ),
 
   palcoDoCorte: (corteId: string) => request<EstadoPalco>(`/shorts/corte/${corteId}/palco`),
 

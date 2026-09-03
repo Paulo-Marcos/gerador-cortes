@@ -9,7 +9,7 @@ Endpoints:
   POST /corte/{corte_id}/gerar    — caminho MANUAL: regera o bruto se preciso e propõe
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
   GET  /corte/{corte_id}/transcricao — palavras com tempo, para a prévia de legenda
-  GET  /palco/modelos             — os arranjos de palco vertical disponiveis
+  GET  /palco/arranjos            — como a tela pode ser montada, e o que falta
   GET  /palco/fundos              — as cores do canal oferecidas como fundo
   GET  /corte/{corte_id}/palco    — de onde vem as regioes deste corte
   PUT  /corte/{corte_id}/palco    — aponta um preset do canal para o corte
@@ -161,18 +161,24 @@ async def fundos_de_palco():
     return {"fundos": palco_shorts.catalogo_fundos()}
 
 
-@router.get("/palco/modelos")
-async def modelos_de_palco():
-    """Os arranjos de palco vertical, com o porquê de cada um (E-036).
+@router.get("/palco/arranjos")
+async def arranjos_de_palco(corte_id: str = ""):
+    """Como a tela do short pode ser montada (D-507).
 
-    Rota sem `{corte_id}` de propósito: o catálogo é do sistema, não do corte.
-    Declarada ANTES de `/corte/...` porque o FastAPI casa na ordem — se viesse
-    depois, `/palco/modelos` seria capturado por nada, mas a inversa (uma rota
-    `/{algo}` antes desta) engoliria o catálogo.
+    Aceita `corte_id` para dizer o que as regiões DAQUELE corte permitem: sem
+    isso a tela ofereceria tela dividida a um corte que só tem a pessoa marcada,
+    e o operador descobriria pelo resultado.
     """
     from app.services import palco_shorts
 
-    return {"modelos": palco_shorts.catalogo_modelos()}
+    regioes = None
+    if corte_id:
+        try:
+            regioes = (await palco_shorts.descrever(corte_id))["regioes"]
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return {"arranjos": palco_shorts.catalogo_arranjos(regioes)}
 
 
 @router.get("/corte/{corte_id}/palco")
@@ -254,7 +260,8 @@ class AtualizarShortRequest(BaseModel):
     inicio_seg: float | None = None
     fim_seg: float | None = None
     foco_x: float | None = None
-    modelo_palco: str | None = None
+    arranjo_palco: str | None = None
+    janela_cheia: str | None = None
     ajustes_palco: dict | None = None
     palco_preset: str | None = None
     moldura: str | None = None
@@ -273,7 +280,8 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 inicio_seg=body.inicio_seg,
                 fim_seg=body.fim_seg,
                 foco_x=body.foco_x,
-                modelo_palco=body.modelo_palco,
+                arranjo_palco=body.arranjo_palco,
+                janela_cheia=body.janela_cheia,
                 ajustes_palco=body.ajustes_palco,
                 recortes_palco=body.recortes_palco,
                 fundo_palco=body.fundo_palco,

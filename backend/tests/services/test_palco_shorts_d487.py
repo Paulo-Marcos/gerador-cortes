@@ -80,13 +80,28 @@ async def ambiente(monkeypatch):
 
 
 class TestCatalogo:
-    def test_traz_os_quatro_com_o_porque(self):
-        catalogo = servico.catalogo_modelos()
+    def test_traz_os_arranjos_com_o_porque(self):
+        """D-507: tres arranjos, nao quatro modelos — os dois "cheia" eram um so."""
+        catalogo = servico.catalogo_arranjos()
 
-        assert len(catalogo) == 4
-        for modelo in catalogo:
-            assert modelo["porque"], "escolher sem saber para que serve e adivinhacao"
-            assert modelo["regioes_exigidas"]
+        assert [a["chave"] for a in catalogo] == [
+            "cheia",
+            "dividida_empilhada",
+            "dividida_insert",
+        ]
+        for arranjo in catalogo:
+            assert arranjo["porque"], "escolher sem saber para que serve e adivinhacao"
+
+    def test_o_catalogo_diz_o_que_as_regioes_do_corte_permitem(self):
+        """Oferecer tela dividida a um corte so com a pessoa e mentir devagar."""
+        catalogo = servico.catalogo_arranjos({"pessoa": FACECAM})
+
+        possiveis = {a["chave"]: a["possivel"] for a in catalogo}
+        assert possiveis == {
+            "cheia": True,
+            "dividida_empilhada": False,
+            "dividida_insert": False,
+        }
 
 
 class TestDescrever:
@@ -118,7 +133,7 @@ class TestDescrever:
 
         assert estado["origem"] == servico.ORIGEM_LAYOUT
         assert estado["regioes"] == {"pessoa": FACECAM, "tela": TELA}
-        assert estado["modelo_sugerido"] == "tela_cima_pessoa_baixo"
+        assert estado["arranjo_sugerido"] == "dividida_empilhada"
 
     @pytest.mark.asyncio
     async def test_corte_inexistente_e_404(self, ambiente):
@@ -183,7 +198,7 @@ class TestResolverParaRender:
 
         resolvido = await servico.resolver_para_render("s1")
 
-        assert resolvido["modelo"] == "tela_cima_pessoa_baixo"
+        assert resolvido["arranjo"] == "dividida_empilhada"
         assert {r.regiao for r in resolvido["plano"].recortes} == {"pessoa", "tela"}
 
     @pytest.mark.asyncio
@@ -191,15 +206,15 @@ class TestResolverParaRender:
         await servico.escolher_preset("c1", "pre-1")
         async with ambiente() as db:
             short = await db.get(Short, "s1")
-            short.modelo_palco = "pessoa_com_insert"
+            short.arranjo_palco = "dividida_insert"
             await db.commit()
 
         resolvido = await servico.resolver_para_render("s1")
 
-        assert resolvido["modelo"] == "pessoa_com_insert"
+        assert resolvido["arranjo"] == "dividida_insert"
 
     @pytest.mark.asyncio
-    async def test_modelo_que_as_regioes_nao_comportam_cai_no_sugerido(self, ambiente, caplog):
+    async def test_arranjo_que_as_regioes_nao_comportam_cai_no_sugerido(self, ambiente, caplog):
         """Preset so com facecam + operador pedindo tela: render segue, com aviso.
 
         Abortar o render por causa de uma escolha de arranjo seria punir o
@@ -210,14 +225,15 @@ class TestResolverParaRender:
             preset = await db.get(LayoutPreset, "pre-1")
             preset.payload = json.dumps({"crop_facecam": FACECAM})
             short = await db.get(Short, "s1")
-            short.modelo_palco = "tela_cima_pessoa_baixo"
+            short.arranjo_palco = "dividida_empilhada"
             await db.commit()
         await servico.escolher_preset("c1", "pre-1")
 
         resolvido = await servico.resolver_para_render("s1")
 
-        assert resolvido["modelo"] == "pessoa_cheia"
-        assert "nao serve" in caplog.text
+        assert resolvido["arranjo"] == "cheia"
+        assert "nao monta" in caplog.text
+        assert "pessoa" in caplog.text, "o aviso precisa dizer com o QUE nao monta"
 
     @pytest.mark.asyncio
     async def test_short_inexistente_e_404(self, ambiente):

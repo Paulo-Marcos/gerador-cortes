@@ -16,20 +16,42 @@ espremido entre tarjas, ou uma tela compartilhada com as bordas cortadas.
 """
 
 import pytest
+from app.domain.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_modelo
 from app.domain.palco_short import (
     CANVAS,
-    MODELO_PADRAO,
-    MODELOS,
     Ajuste,
     RegiaoFaltando,
     escalar,
-    modelo_sugerido,
     montar_plano,
     regioes_do_layout,
 )
 
 FACECAM = {"x": 24, "y": 410, "w": 340, "h": 260}
 TELA = {"x": 365, "y": 180, "w": 1325, "h": 720}
+
+# D-507: os quatro modelos viraram (modo, disposicao, fonte). Este adaptador
+# mantem os testes de GEOMETRIA falando o vocabulario antigo de proposito — se
+# um numero tivesse se movido na refatoracao, eles cairiam aqui. Passaram todos
+# sem tocar num assert: a geometria e a mesma, so o caminho ate ela mudou.
+_ARRANJO_DO_MODELO = {
+    "pessoa_cheia": Arranjo(fonte="pessoa"),
+    "quadro_com_moldura": Arranjo(fonte="quadro"),
+    "tela_cima_pessoa_baixo": Arranjo(modo=ModoPalco.DIVIDIDA, disposicao=Disposicao.EMPILHADA),
+    "pessoa_com_insert": Arranjo(modo=ModoPalco.DIVIDIDA, disposicao=Disposicao.INSERT),
+}
+
+TODAS_AS_REGIOES = {
+    "pessoa": FACECAM,
+    "tela": TELA,
+    "quadro": {"x": 0, "y": 0, "w": 1920, "h": 1080},
+}
+
+
+def modelo_de(modelo_id: str, regioes: dict | None = None):
+    return montar_modelo(_ARRANJO_DO_MODELO[modelo_id], regioes or TODAS_AS_REGIOES)
+
+
+MODELOS = {chave: modelo_de(chave) for chave in _ARRANJO_DO_MODELO}
 
 
 class TestModelos:
@@ -121,7 +143,7 @@ class TestEscalar:
 class TestMontarPlano:
     def test_o_crop_vem_da_regiao_e_o_slot_do_modelo(self):
         """A regra central do arquivo, escrita como caso."""
-        plano = montar_plano("tela_cima_pessoa_baixo", {"pessoa": FACECAM, "tela": TELA})
+        plano = montar_plano(modelo_de("tela_cima_pessoa_baixo"), {"pessoa": FACECAM, "tela": TELA})
 
         por_regiao = {r.regiao: r for r in plano.recortes}
 
@@ -132,19 +154,19 @@ class TestMontarPlano:
     def test_regiao_faltando_e_erro_explicito_e_diz_qual(self):
         """Arranjo meia-boca em silencio deixaria um buraco que so aparece no arquivo."""
         with pytest.raises(RegiaoFaltando, match="tela"):
-            montar_plano("tela_cima_pessoa_baixo", {"pessoa": FACECAM})
+            montar_plano(modelo_de("tela_cima_pessoa_baixo"), {"pessoa": FACECAM})
 
     def test_regiao_com_area_zero_conta_como_faltando(self):
         with pytest.raises(RegiaoFaltando):
-            montar_plano("pessoa_cheia", {"pessoa": {"x": 0, "y": 0, "w": 0, "h": 100}})
+            montar_plano(modelo_de("pessoa_cheia"), {"pessoa": {"x": 0, "y": 0, "w": 0, "h": 100}})
 
     def test_modelo_desconhecido_falha_alto(self):
         with pytest.raises(KeyError):
-            montar_plano("nao_existe", {"pessoa": FACECAM})
+            montar_plano(modelo_de("nao_existe"), {"pessoa": FACECAM})
 
     def test_o_deslocamento_centraliza_o_excesso(self):
         """Cortar so de um lado jogaria o rosto para a borda."""
-        plano = montar_plano("pessoa_cheia", {"pessoa": FACECAM})
+        plano = montar_plano(modelo_de("pessoa_cheia"), {"pessoa": FACECAM})
         recorte = plano.recortes[0]
 
         dx, dy = recorte.desloca
@@ -153,27 +175,10 @@ class TestMontarPlano:
         assert dy >= 0
 
     def test_quem_cabe_no_slot_nao_desloca(self):
-        plano = montar_plano("tela_cima_pessoa_baixo", {"pessoa": FACECAM, "tela": TELA})
+        plano = montar_plano(modelo_de("tela_cima_pessoa_baixo"), {"pessoa": FACECAM, "tela": TELA})
         tela = next(r for r in plano.recortes if r.regiao == "tela")
 
         assert tela.desloca == (0, 0)
-
-
-class TestModeloSugerido:
-    def test_com_tela_marcada_usa_as_duas_faixas(self):
-        assert modelo_sugerido({"pessoa": FACECAM, "tela": TELA}) == "tela_cima_pessoa_baixo"
-
-    def test_so_pessoa_vira_quadro_cheio(self):
-        assert modelo_sugerido({"pessoa": FACECAM}) == "pessoa_cheia"
-
-    def test_sem_regiao_nenhuma_cai_no_padrao(self):
-        """Corte sem preset aplicado — o caso do corte que o dev renderizou."""
-        assert modelo_sugerido({}) == MODELO_PADRAO
-
-    def test_o_sugerido_sempre_monta(self):
-        """De nada adianta sugerir um modelo cujas regioes nao existem."""
-        for regioes in ({"pessoa": FACECAM, "tela": TELA}, {"pessoa": FACECAM}):
-            montar_plano(modelo_sugerido(regioes), regioes)
 
 
 class TestRegioesDoLayout:
@@ -235,7 +240,7 @@ class TestDesenhoConcordaComOFiltro:
             "tela": TELA,
             "quadro": {"x": 0, "y": 0, "w": 1920, "h": 1080},
         }
-        for recorte in montar_plano(modelo_id, regioes).recortes:
+        for recorte in montar_plano(modelo_de(modelo_id, regioes), regioes).recortes:
             desenho = recorte.desenho
             px, py = recorte.posicao
             dx, dy = recorte.desloca
@@ -254,7 +259,7 @@ class TestDesenhoConcordaComOFiltro:
         recorte = next(
             r
             for r in montar_plano(
-                "tela_cima_pessoa_baixo", {"pessoa": FACECAM, "tela": tela_real}
+                modelo_de("tela_cima_pessoa_baixo"), {"pessoa": FACECAM, "tela": tela_real}
             ).recortes
             if r.regiao == "tela"
         )
@@ -271,7 +276,7 @@ class TestDesenhoConcordaComOFiltro:
             "tela": TELA,
             "quadro": {"x": 0, "y": 0, "w": 1920, "h": 1080},
         }
-        for recorte in montar_plano(modelo_id, regioes).recortes:
+        for recorte in montar_plano(modelo_de(modelo_id, regioes), regioes).recortes:
             recorta = recorte.desenho["recorta"]
 
             assert (recorta["x"], recorta["y"]) == (recorte.slot.x, recorte.slot.y)
@@ -362,7 +367,9 @@ class TestAjustesDoOperador:
 
     def test_montar_plano_aceita_os_ajustes(self):
         plano = montar_plano(
-            "pessoa_cheia", {"pessoa": FACECAM}, {"pessoa": {"x": 40, "y": 60, "w": 600, "h": 900}}
+            modelo_de("pessoa_cheia"),
+            {"pessoa": FACECAM},
+            {"pessoa": {"x": 40, "y": 60, "w": 600, "h": 900}},
         )
 
         assert plano.recortes[0].slot.x == 40

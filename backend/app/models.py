@@ -386,7 +386,17 @@ class Short(Base):
     # "nenhuma". Ortogonal ao arranjo: vale para os quatro modelos, e amarra-la
     # a um deles exigiria duplicar cada arranjo em duas versoes.
     moldura: Mapped[str] = mapped_column(String(20), default="faixas")
-    modelo_palco: Mapped[str] = mapped_column(String(60), default="")
+    # D-507: como a tela e montada — "cheia", "dividida_empilhada" ou
+    # "dividida_insert". Vazio deduz das regioes marcadas.
+    #
+    # Substitui o `modelo_palco`, que oferecia quatro opcoes onde havia duas
+    # decisoes: os quatro modelos misturavam "quantas janelas" com "qual regiao
+    # alimenta cada uma", e por isso pareciam repetir o recorte.
+    arranjo_palco: Mapped[str] = mapped_column(String(40), default="")
+    # D-507: em modo CHEIA, qual regiao preenche a janela unica. E aqui que o
+    # enquadramento deixa de ser botao a parte: com uma janela so, o recorte
+    # dela E o enquadramento.
+    janela_cheia: Mapped[str] = mapped_column(String(20), default="")
     # D-493: os slots que o operador MOVEU, como sobreposicao PARCIAL sobre o
     # modelo — `{"pessoa": {"x":..,"y":..,"w":..,"h":..}}`. Chave ausente herda
     # do modelo; materializar os defaults ao gravar apagaria a heranca, e trocar

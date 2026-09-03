@@ -99,80 +99,6 @@ class ModeloPalco:
         return frozenset(self.slots)
 
 
-# ── Os quatro modelos ───────────────────────────────────────────────────────
-#
-# As alturas saem de duas âncoras, não de gosto: a safe zone (345px em cima e
-# embaixo) e o meio do quadro (960), que é onde o olho divide a tela sem
-# esforço quando há dois blocos.
-
-_TELA_CIMA_PESSOA_BAIXO = ModeloPalco(
-    id="tela_cima_pessoa_baixo",
-    nome="Tela em cima, pessoa embaixo",
-    porque=(
-        "O arranjo clássico de short com compartilhamento. A tela ocupa a metade "
-        "superior inteira e a pessoa a inferior — quem fala fica perto da legenda, "
-        "que é onde o olho já está."
-    ),
-    slots={
-        # 352 = logo abaixo da safe zone; 608 = 1080 em 16:9. A tela fecha
-        # exatamente no meio do quadro.
-        "tela": Slot(x=0, y=352, w=CANVAS.largura, h=608, ajuste=Ajuste.CABER),
-        "pessoa": Slot(x=0, y=960, w=CANVAS.largura, h=960, ajuste=Ajuste.COBRIR),
-    },
-)
-
-_PESSOA_CHEIA = ModeloPalco(
-    id="pessoa_cheia",
-    nome="Só a pessoa, quadro cheio",
-    porque=(
-        "Talking head: a facecam preenche o short inteiro. É o modelo do corte "
-        "sem tela compartilhada — e o único que não deixa nada do quadro original "
-        "aparecer, porque só a região da pessoa é recortada."
-    ),
-    slots={"pessoa": Slot(x=0, y=0, w=CANVAS.largura, h=CANVAS.altura, ajuste=Ajuste.COBRIR)},
-)
-
-_PESSOA_COM_INSERT = ModeloPalco(
-    id="pessoa_com_insert",
-    nome="Pessoa grande, tela num insert",
-    porque=(
-        "Quando a tela ilustra mas não é o assunto. A pessoa domina o quadro e a "
-        "tela entra como card na área superior, acima da legenda e abaixo da "
-        "safe zone."
-    ),
-    slots={
-        "pessoa": Slot(x=0, y=0, w=CANVAS.largura, h=CANVAS.altura, ajuste=Ajuste.COBRIR),
-        # Margem de 64px dos dois lados para o insert ler como card sobreposto,
-        # e não como uma segunda faixa colada na borda.
-        "tela": Slot(x=64, y=400, w=952, h=536, ajuste=Ajuste.CABER),
-    },
-)
-
-_QUADRO_COM_MOLDURA = ModeloPalco(
-    id="quadro_com_moldura",
-    nome="Quadro da live, com moldura",
-    porque=(
-        "O mais barato: um recorte só, como era antes. A diferença é que a região "
-        "'quadro' é do operador — marcada PARA DENTRO do chrome da transmissão, "
-        "ela deixa a moldura da live de fora em vez de arrastá-la para o short."
-    ),
-    slots={"quadro": Slot(x=0, y=0, w=CANVAS.largura, h=CANVAS.altura, ajuste=Ajuste.COBRIR)},
-)
-
-MODELOS: dict[str, ModeloPalco] = {
-    modelo.id: modelo
-    for modelo in (
-        _TELA_CIMA_PESSOA_BAIXO,
-        _PESSOA_CHEIA,
-        _PESSOA_COM_INSERT,
-        _QUADRO_COM_MOLDURA,
-    )
-}
-
-MODELO_PADRAO = _PESSOA_CHEIA.id
-"""Sem tela compartilhada marcada, é o arranjo que sempre funciona."""
-
-
 @dataclass(frozen=True)
 class Recorte:
     """Uma região da fonte com destino definido: de onde sai, para onde vai."""
@@ -224,8 +150,10 @@ class Recorte:
         só, no domínio; a tela apenas aplica os números.
 
         Exemplo (pessoa cheia, facecam 340x260):
+            >>> from app.domain.arranjo_short import Arranjo, montar_modelo
             >>> facecam = {"x": 24, "y": 410, "w": 340, "h": 260}
-            >>> plano = montar_plano("pessoa_cheia", {"pessoa": facecam})
+            >>> regioes = {"pessoa": facecam}
+            >>> plano = montar_plano(montar_modelo(Arranjo(), regioes), regioes)
             >>> plano.recortes[0].desenho == {
             ...     "origem": {"x": 24, "y": 410, "w": 340, "h": 260},
             ...     "destino": {"x": -715, "y": 0, "w": 2510, "h": 1920},
@@ -340,21 +268,25 @@ def _slot_valido(retangulo: object) -> bool:
 
 
 def montar_plano(
-    modelo_id: str, regioes: dict[str, dict], ajustes: dict[str, dict] | None = None
+    modelo: ModeloPalco, regioes: dict[str, dict], ajustes: dict[str, dict] | None = None
 ) -> PlanoPalco:
     """Resolve modelo + regiões num plano de composição.
 
     `regioes` mapeia nome → crop (`{x, y, w, h}` no quadro-fonte), tipicamente
     vindo do preset do canal: `crop_facecam` → "pessoa", `crop_tela` → "tela".
 
-    Levanta `KeyError` para modelo desconhecido e `RegiaoFaltando` quando o
-    preset não cobre o que o modelo exige.
+    Recebe o modelo JÁ RESOLVIDO e não um id (D-507): desde que o arranjo virou
+    modo + disposição, não existe mais catálogo fixo de onde buscar por chave —
+    quem monta é `arranjo_short.montar_modelo`, e é lá que a viabilidade se
+    decide. Aqui sobra a geometria.
+
+    Levanta `RegiaoFaltando` quando o preset não cobre o que os slots exigem.
 
     Os recortes saem NA ORDEM DOS SLOTS do modelo, que é a ordem de
     empilhamento: quem vem depois fica por cima. Por isso o insert é declarado
     depois da pessoa.
     """
-    modelo = aplicar_ajustes(MODELOS[modelo_id], ajustes)
+    modelo = aplicar_ajustes(modelo, ajustes)
 
     ausentes = sorted(nome for nome in modelo.slots if not _crop_valido(regioes.get(nome)))
     if ausentes:
@@ -388,10 +320,12 @@ def escalar(crop: dict, slot: Slot) -> tuple[int, int]:
 
     Exemplos:
         >>> facecam = {"x": 0, "y": 0, "w": 340, "h": 260}
-        >>> escalar(facecam, MODELOS["pessoa_cheia"].slots["pessoa"])
+        >>> cheia = Slot(x=0, y=0, w=1080, h=1920, ajuste=Ajuste.COBRIR)
+        >>> escalar(facecam, cheia)
         (2510, 1920)
         >>> tela = {"x": 0, "y": 0, "w": 1600, "h": 900}
-        >>> escalar(tela, MODELOS["tela_cima_pessoa_baixo"].slots["tela"])
+        >>> metade = Slot(x=0, y=352, w=1080, h=608, ajuste=Ajuste.CABER)
+        >>> escalar(tela, metade)
         (1080, 608)
     """
     largura = max(1, int(crop["w"]))
@@ -403,34 +337,6 @@ def escalar(crop: dict, slot: Slot) -> tuple[int, int]:
     # `is` escolheria silenciosamente o ajuste errado — CABER onde devia COBRIR.
     fator = max(fator_x, fator_y) if slot.ajuste == Ajuste.COBRIR else min(fator_x, fator_y)
     return (_par(largura * fator), _par(altura * fator))
-
-
-def modelo_sugerido(regioes: dict[str, dict]) -> str:
-    """O modelo que as regiões disponíveis comportam — o "automático".
-
-    Regra: havendo tela marcada, o arranjo de duas faixas é o que aproveita o
-    material; havendo só a pessoa, o quadro cheio. `quadro` sozinho significa
-    que o operador marcou o recorte à mão, e a intenção dele manda.
-
-    Exemplos:
-        >>> um = {"x": 0, "y": 0, "w": 10, "h": 10}
-        >>> modelo_sugerido({"pessoa": um, "tela": um})
-        'tela_cima_pessoa_baixo'
-        >>> modelo_sugerido({"pessoa": um})
-        'pessoa_cheia'
-        >>> modelo_sugerido({"quadro": um})
-        'quadro_com_moldura'
-        >>> modelo_sugerido({})
-        'pessoa_cheia'
-    """
-    tem = {nome for nome, crop in regioes.items() if _crop_valido(crop)}
-    if {"pessoa", "tela"} <= tem:
-        return _TELA_CIMA_PESSOA_BAIXO.id
-    if "pessoa" in tem:
-        return _PESSOA_CHEIA.id
-    if "quadro" in tem:
-        return _QUADRO_COM_MOLDURA.id
-    return MODELO_PADRAO
 
 
 def regioes_do_layout(layout: dict | None) -> dict[str, dict]:

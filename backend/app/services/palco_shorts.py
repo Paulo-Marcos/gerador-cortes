@@ -27,16 +27,14 @@ import logging
 
 from app.channel_assets_sync import cor_do_tema, paleta_do_tema
 from app.database import AsyncSessionLocal
+from app.domain.arranjo_short import catalogo as catalogo_de_arranjos
+from app.domain.arranjo_short import de_chave as arranjo_de_chave
+from app.domain.arranjo_short import fonte_efetiva, montar_modelo
+from app.domain.arranjo_short import sugerir as arranjo_sugerido
 from app.domain.fundo_short import fundos_disponiveis
 from app.domain.fundo_short import resolver as resolver_fundo
 from app.domain.moldura_short import COR_PADRAO, faixas
-from app.domain.palco_short import (
-    CANVAS,
-    MODELOS,
-    modelo_sugerido,
-    montar_plano,
-    regioes_do_layout,
-)
+from app.domain.palco_short import CANVAS, montar_plano, regioes_do_layout
 from app.models import Corte, LayoutPreset, Short
 from sqlalchemy import select
 
@@ -52,21 +50,33 @@ ORIGEM_NENHUMA = "nenhuma"
 ORIGEM_RECORTE_DO_SHORT = "recorte_do_short"
 
 
-def catalogo_modelos() -> list[dict]:
-    """Os arranjos disponíveis, com o porquê de cada um.
+def catalogo_arranjos(regioes: dict | None = None) -> list[dict]:
+    """Os arranjos possíveis, com o porquê e o que falta quando não dá (D-507).
 
-    O `porque` vai junto de propósito: escolher entre quatro arranjos sem saber
-    para que cada um serve é adivinhação, e a tela não deveria pedir isso.
+    Recebe as REGIÕES de propósito: sem elas a tela ofereceria tela dividida a
+    um corte que só tem a pessoa marcada, o operador escolheria, e o palco cairia
+    no sugerido sem nada explicando o pulo.
     """
-    return [
-        {
-            "id": modelo.id,
-            "nome": modelo.nome,
-            "porque": modelo.porque,
-            "regioes_exigidas": sorted(modelo.regioes_exigidas),
-        }
-        for modelo in MODELOS.values()
-    ]
+    return catalogo_de_arranjos(regioes)
+
+
+def _sem_palco(moldura: str, fundo: str) -> dict:
+    """A resposta de quando não há palco a montar.
+
+    Uma função só, porque os dois caminhos que chegam aqui — sem região marcada,
+    e arranjo que não monta nem no sugerido — precisam devolver EXATAMENTE o
+    mesmo formato. Dois literais divergiriam no dia em que um campo entrasse.
+    """
+    return {
+        "plano": None,
+        "origem": ORIGEM_NENHUMA,
+        "arranjo": "",
+        "janela_cheia": "",
+        "modelo": None,
+        "ajustes": {},
+        "moldura": moldura,
+        "fundo": fundo,
+    }
 
 
 def catalogo_fundos() -> list[dict]:
@@ -118,7 +128,7 @@ async def descrever(corte_id: str) -> dict:
         "preset": preset_nome,
         "origem": origem,
         "regioes": regioes,
-        "modelo_sugerido": modelo_sugerido(regioes),
+        "arranjo_sugerido": arranjo_sugerido(regioes).chave,
         "presets_disponiveis": [
             {"id": p.id, "nome": p.nome, "regioes": sorted(_regioes_do_preset(p))}
             for p in presets
@@ -190,7 +200,8 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         if proprios:
             regioes = {**regioes, **proprios}
             origem = ORIGEM_RECORTE_DO_SHORT
-        escolhido = short.modelo_palco
+        escolhido = short.arranjo_palco
+        janela = short.janela_cheia
         # MESCLA, não substitui: o arraste manda só o bloco que está na mão,
         # e trocar o mapa inteiro por ele apagaria da prévia os ajustes dos
         # OUTROS blocos — que voltariam ao lugar padrão enquanto o operador
@@ -200,35 +211,34 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         fundo = resolver_fundo(short.fundo_palco, paleta_do_tema())
 
     if not regioes:
-        return {
-            "plano": None,
-            "origem": ORIGEM_NENHUMA,
-            "modelo": None,
-            "ajustes": {},
-            "moldura": moldura,
-            "fundo": fundo,
-        }
+        return _sem_palco(moldura, fundo)
 
-    modelo_id = escolhido or modelo_sugerido(regioes)
-    try:
-        plano = montar_plano(modelo_id, regioes, ajustes)
-    except (KeyError, ValueError) as exc:
-        # O operador escolheu um arranjo que as regiões deste corte não
-        # comportam (ex.: pediu tela e o preset só tem facecam). Cair no
-        # sugerido é melhor que abortar o render, mas precisa ficar no log.
+    arranjo = arranjo_de_chave(escolhido, janela) if escolhido else arranjo_sugerido(regioes)
+    modelo = montar_modelo(arranjo, regioes)
+    if modelo is None:
+        # O arranjo gravado não monta com as regiões de hoje — o preset mudou,
+        # ou o corte perdeu uma marcação. Cair no sugerido é melhor que abortar
+        # o render, mas precisa ficar no log: a tela mostra um arranjo e o
+        # arquivo sai com outro.
         logger.warning(
-            "[Palco] short=%s modelo=%s nao serve (%s); usando o sugerido",
+            "[Palco] short=%s arranjo=%s nao monta com %s; usando o sugerido",
             short_id[:8],
-            modelo_id,
-            exc,
+            arranjo.chave,
+            sorted(regioes),
         )
-        modelo_id = modelo_sugerido(regioes)
-        plano = montar_plano(modelo_id, regioes, ajustes)
+        arranjo = arranjo_sugerido(regioes)
+        modelo = montar_modelo(arranjo, regioes)
+    if modelo is None:
+        return _sem_palco(moldura, fundo)
+
+    plano = montar_plano(modelo, regioes, ajustes)
 
     return {
         "plano": plano,
         "origem": origem,
-        "modelo": modelo_id,
+        "arranjo": arranjo.chave,
+        "janela_cheia": fonte_efetiva(arranjo.fonte, regioes),
+        "modelo": modelo.id,
         "ajustes": ajustes,
         "moldura": moldura,
         "fundo": fundo,

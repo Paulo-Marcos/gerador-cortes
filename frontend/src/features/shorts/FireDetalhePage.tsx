@@ -132,7 +132,7 @@ export default function FireDetalhePage() {
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
   const emQuadro = shorts.find((s) => s.id === selecionado) ?? shorts[0];
   const fire = fires.data?.fires.find((f) => f.corte_id === corteId);
-  const palcoDoShort = usePalcoDoShort(emQuadro?.id ?? null, emQuadro?.modelo_palco ?? '');
+  const palcoDoShort = usePalcoDoShort(emQuadro?.id ?? null, emQuadro?.arranjo_palco ?? '');
   const duracaoRegua = duracaoVideo || fire?.duracao_seg || 0;
   const temPalco = (palcoDoShort.data?.recortes.length ?? 0) > 0;
   const palcoNaTela = temPalco && verPalco;
@@ -632,8 +632,8 @@ export default function FireDetalhePage() {
                   ? textoDoVeredito(enquadrarPeloRosto.data)
                   : ''
               }
-              onModelo={(modeloId) =>
-                atualizar.mutate({ shortId: short.id, modelo_palco: modeloId })
+              onArranjo={(chave) =>
+                atualizar.mutate({ shortId: short.id, arranjo_palco: chave })
               }
               onPreset={(presetId) =>
                 atualizar.mutate({ shortId: short.id, palco_preset: presetId })

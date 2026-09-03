@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Crop, Layers, ScanFace, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useModelosDePalco, usePalcoDoCorte } from './useShortsDoCorte';
+import { useArranjosDePalco, usePalcoDoCorte } from './useShortsDoCorte';
 import type { ShortSugerido } from './shortsApi';
 
 // D-492: os refinos de um candidato, reunidos e recolhidos.
@@ -28,7 +28,7 @@ interface Props {
   enquadrando: boolean;
   /** O veredito da ultima deteccao — inclusive "nao achei", que e resposta. */
   vereditoDoRosto: string;
-  onModelo: (modeloId: string) => void;
+  onArranjo: (chave: string) => void;
   onPreset: (presetId: string) => void;
   onMoldura: (moldura: string) => void;
   corteId: string;
@@ -45,13 +45,13 @@ export function LinhaDeAjuste({
   onEnquadrarPeloRosto,
   enquadrando,
   vereditoDoRosto,
-  onModelo,
+  onArranjo,
   onPreset,
   onMoldura,
 }: Props) {
-  const modelos = useModelosDePalco();
+  const arranjos = useArranjosDePalco(corteId);
   const palcoDoCorte = usePalcoDoCorte(corteId);
-  const escolhido = modelos.data?.modelos.find((m) => m.id === short.modelo_palco);
+  const escolhido = arranjos.data?.arranjos.find((a) => a.chave === short.arranjo_palco);
 
   return (
     <div
@@ -176,17 +176,22 @@ export function LinhaDeAjuste({
         }
       >
         <Layers size={12} className="text-[var(--wb-text-mute)]" aria-hidden />
+        {/* D-507: o que as regiões deste corte NÃO comportam sai desabilitado,
+            com o motivo no próprio rótulo. Antes tudo aparecia igual: o
+            operador escolhia tela dividida num corte só com a pessoa, o palco
+            caía no sugerido, e nada ligava uma coisa à outra. */}
         <select
-          aria-label="Arranjo do palco deste short"
-          value={short.modelo_palco}
-          disabled={ocupado || !modelos.data || !temRegiao}
-          onChange={(e) => onModelo(e.target.value)}
+          aria-label="Como a tela deste short é montada"
+          value={short.arranjo_palco}
+          disabled={ocupado || !arranjos.data || !temRegiao}
+          onChange={(e) => onArranjo(e.target.value)}
           className="h-7 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] text-[var(--wb-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
         >
           <option value="">automático</option>
-          {modelos.data?.modelos.map((modelo) => (
-            <option key={modelo.id} value={modelo.id}>
-              {modelo.nome}
+          {arranjos.data?.arranjos.map((arranjo) => (
+            <option key={arranjo.chave} value={arranjo.chave} disabled={!arranjo.possivel}>
+              {arranjo.nome}
+              {arranjo.possivel ? '' : ` — ${arranjo.impedimento}`}
             </option>
           ))}
         </select>
