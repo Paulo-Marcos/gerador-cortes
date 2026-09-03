@@ -32,11 +32,26 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.domain.retencao_publicacao import DestinoDoCorte, pode_apagar_o_mp4
 from app.models import Corte, Projeto
 
 logger = logging.getLogger(__name__)
 
 MIN_VIDEO_BYTES = 1024 * 1024
+
+
+def destinos_do_corte(corte: Corte) -> list[DestinoDoCorte]:
+    """Os destinos do video HORIZONTAL deste corte, e se cada um ja publicou.
+
+    Uma funcao, e nao uma lista cravada no `aplicar_apos_upload`: quando o
+    Instagram entrar (D-471) o destino novo aparece aqui e a retencao passa a
+    esperar por ele sem que ninguem lembre de ir mexer na retencao.
+    """
+    return [
+        DestinoDoCorte("YouTube", publicado=bool(corte.youtube_video_id)),
+        DestinoDoCorte("TikTok", publicado=corte.tiktok_publicado_em is not None),
+    ]
+
 
 # Extensoes de midia PESADA que a limpeza terminal remove. Enumerar por extensao
 # — e nao por nome de arquivo — porque a pasta do corte acumula video com nome
@@ -117,9 +132,16 @@ class RetentionReport:
 class MediaRetentionService:
     @classmethod
     def aplicar_apos_upload(cls, corte: Corte) -> RetentionReport:
-        """Remove `upload_ready/video.mp4` e as previews de filtro apos o upload.
+        """Remove as previews de filtro e, se TODOS os destinos ja publicaram,
+        o `upload_ready/video.mp4`.
 
         O `clip_raw` NAO entra aqui (D-430) — so a limpeza terminal o descarta.
+
+        D-512: o MP4 de publicacao deixou de sair no fim do upload do YouTube.
+        Ele e o MESMO arquivo que o TikTok sobe, e apagar depois do primeiro
+        destino publicava num e inviabilizava o outro — sem volta, porque
+        refazer exige render novo. Agora a decisao e do dominio
+        (`retencao_publicacao`), que preserva na duvida.
         """
         report = RetentionReport()
         corte_dir = cls.corte_dir(corte)
@@ -134,6 +156,14 @@ class MediaRetentionService:
         overlays_dir = corte_dir / "overlays"
         if overlays_dir.exists():
             report.preservados.append(cls._display(overlays_dir))
+
+        veredito = pode_apagar_o_mp4(destinos_do_corte(corte))
+        if not veredito.liberado:
+            mp4 = corte_dir / "upload_ready" / "video.mp4"
+            if mp4.exists():
+                report.preservados.append(cls._display(mp4))
+            report.pulados.append(f"{corte.id}: {veredito.motivo}; upload_ready preservado")
+            return report
 
         cls._remover_arquivo(corte_dir / "upload_ready" / "video.mp4", report)
         return report

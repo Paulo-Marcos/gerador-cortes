@@ -171,6 +171,20 @@ class Corte(Base):
     youtube_video_id: Mapped[str] = mapped_column(String(50), default="")
     youtube_url_publicado: Mapped[str] = mapped_column(String(200), default="")
     youtube_scheduled_at: Mapped[str] = mapped_column(String(30), default="")
+    # D-512: quando o operador confirmou que subiu ESTE corte para o TikTok.
+    #
+    # O TikTok e publicacao MANUAL (a API so posta em modo privado sem
+    # auditoria), entao ninguem alem dele sabe que aconteceu. A marca existe
+    # porque a limpeza automatica do `upload_ready/video.mp4` passou a depender
+    # de TODOS os destinos: antes ela apagava o arquivo no fim do upload do
+    # YouTube, e o TikTok — que usa o MESMO MP4 — ficava sem material.
+    #
+    # NULL nao e "nao publicou": e "nao se sabe". A retencao trata os dois
+    # igual, preservando o arquivo, porque disco a mais e incomodo e arquivo a
+    # menos e re-render.
+    tiktok_publicado_em: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, default=None
+    )
     is_leitura: Mapped[int] = mapped_column(Integer, default=0)
     autor_leitura: Mapped[str] = mapped_column(String(200), default="")
     parte_leitura: Mapped[int] = mapped_column(Integer, default=1)

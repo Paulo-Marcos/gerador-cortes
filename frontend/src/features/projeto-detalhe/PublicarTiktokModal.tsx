@@ -75,6 +75,9 @@ function LinhaDoCorte({
   onEnviado: () => void;
 }) {
   const [copiada, setCopiada] = useState(false);
+  const confirmado = useMutation({
+    mutationFn: () => shortsApi.confirmarTiktokHorizontal(corte.corte_id),
+  });
 
   const staging = useMutation({
     mutationFn: () => shortsApi.stagingTiktokHorizontal(corte.corte_id),
@@ -136,10 +139,30 @@ function LinhaDoCorte({
           {(staging.error as Error)?.message ?? 'não consegui montar o pacote'}
         </span>
       )}
-      {staging.isSuccess && (
-        <span className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-text-mute)]">
+      {staging.isSuccess && !confirmado.isSuccess && (
+        <span className="inline-flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--wb-text-mute)]">
           <ExternalLink size={11} aria-hidden />
           arraste o MP4 na aba que abriu
+          {/* D-512: o passo que faltava. O TikTok é publicação manual, então
+              ninguém além do operador sabe que aconteceu — e a limpeza
+              automática do MP4 espera por esta confirmação. Sem ela o arquivo
+              fica, que é o lado seguro de errar. */}
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={confirmado.isPending}
+            onClick={() => confirmado.mutate()}
+            title="Libera a limpeza automática deste MP4. Sem isto ele fica no disco."
+          >
+            {confirmado.isPending ? <Loader2 className="animate-spin" /> : <Check />}
+            publiquei
+          </Button>
+        </span>
+      )}
+      {confirmado.isSuccess && (
+        <span className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-ok-ink)]">
+          <Check size={11} aria-hidden />
+          publicado no TikTok
         </span>
       )}
     </li>

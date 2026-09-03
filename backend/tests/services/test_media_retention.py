@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 from app.models import Corte, MetadadoCorte, Projeto
@@ -15,12 +16,28 @@ def _video_aproveitavel(path: Path) -> Path:
     return _arquivo(path, size=1024 * 1024 + 1)
 
 
-def _corte(projeto_id: str, corte_id: str, raw_path: Path | None = None) -> Corte:
+def _corte(
+    projeto_id: str,
+    corte_id: str,
+    raw_path: Path | None = None,
+    *,
+    no_youtube: bool = True,
+    no_tiktok: bool = True,
+) -> Corte:
+    """Um corte, por padrao JA PUBLICADO nos dois destinos.
+
+    D-512: o default e "publicado" porque e o unico estado em que a retencao de
+    meio de pipeline pode apagar o MP4 — os testes que checam a remocao querem
+    esse cenario, e os que checam a PRESERVACAO dizem explicitamente o que
+    falta.
+    """
     return Corte(
         id=corte_id,
         projeto_id=projeto_id,
         numero=1,
         arquivo_clip_path=str(raw_path) if raw_path else "",
+        youtube_video_id="abc123" if no_youtube else "",
+        tiktok_publicado_em=datetime(2026, 9, 3) if no_tiktok else None,
     )
 
 
@@ -249,3 +266,85 @@ def test_ponteiro_do_bruto_preservado_nao_e_zerado_no_banco(monkeypatch, tmp_pat
 
     assert corte.arquivo_clip_path, "o ponteiro do bruto poupado nao pode ser zerado"
     assert channel_paths.resolver_do_projeto(corte.arquivo_clip_path, "p1").exists()
+
+
+# ── D-512: o MP4 de publicacao espera TODOS os destinos ────────────────────
+#
+# O bug em producao: a retencao apagava `upload_ready/video.mp4` no fim do
+# upload do YouTube. O TikTok sobe o MESMO arquivo, entao publicar num
+# inviabilizava o outro — e refazer exige render novo.
+
+
+def _cenario(monkeypatch, tmp_path, **destinos):
+    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
+    corte_dir = tmp_path / "p1" / "cortes" / "c1"
+    _video_aproveitavel(corte_dir / "graded" / "clip_graded.mp4")
+    mp4 = _video_aproveitavel(corte_dir / "upload_ready" / "video.mp4")
+    corte = _corte("p1", "c1", _arquivo(corte_dir / "clip_raw.mkv"), **destinos)
+    return corte, mp4
+
+
+def test_publicado_so_no_youtube_preserva_o_mp4(monkeypatch, tmp_path):
+    """A REGRESSAO exata: era aqui que o arquivo do TikTok desaparecia."""
+    corte, mp4 = _cenario(monkeypatch, tmp_path, no_youtube=True, no_tiktok=False)
+
+    report = MediaRetentionService.aplicar_apos_upload(corte)
+
+    assert mp4.exists(), "o MP4 que o TikTok ainda vai subir foi apagado"
+    assert any("TikTok" in item for item in report.pulados)
+
+
+def test_publicado_so_no_tiktok_tambem_preserva(monkeypatch, tmp_path):
+    """Simetrico: o YouTube pode ter falhado e ir ser reenviado."""
+    corte, mp4 = _cenario(monkeypatch, tmp_path, no_youtube=False, no_tiktok=True)
+
+    MediaRetentionService.aplicar_apos_upload(corte)
+
+    assert mp4.exists()
+
+
+def test_sem_destino_nenhum_preserva(monkeypatch, tmp_path):
+    """O pior caso possivel seria apagar antes da PRIMEIRA publicacao."""
+    corte, mp4 = _cenario(monkeypatch, tmp_path, no_youtube=False, no_tiktok=False)
+
+    MediaRetentionService.aplicar_apos_upload(corte)
+
+    assert mp4.exists()
+
+
+def test_com_os_dois_publicados_o_mp4_sai(monkeypatch, tmp_path):
+    """A limpeza automatica continua existindo — so espera a vez dela."""
+    corte, mp4 = _cenario(monkeypatch, tmp_path, no_youtube=True, no_tiktok=True)
+
+    report = MediaRetentionService.aplicar_apos_upload(corte)
+
+    assert not mp4.exists()
+    assert any("upload_ready" in item and "video.mp4" in item for item in report.removidos)
+
+
+def test_o_motivo_da_preservacao_entra_no_relatorio(monkeypatch, tmp_path):
+    """ "Nao apaguei" sem explicacao vira suspeita de bug — e a suspeita
+    anterior custou um arquivo apagado antes da hora."""
+    corte, _ = _cenario(monkeypatch, tmp_path, no_youtube=True, no_tiktok=False)
+
+    report = MediaRetentionService.aplicar_apos_upload(corte)
+
+    assert any("falta publicar em: TikTok" in item for item in report.pulados)
+
+
+def test_a_limpeza_terminal_nao_espera_destino(monkeypatch, tmp_path):
+    """O botao da biblioteca e o operador dizendo que acabou.
+
+    Amarra-lo aos destinos deixaria o disco preso por um TikTok que ele nunca
+    vai publicar — e era justamente a saida que ele pediu.
+    """
+    from app.models import Projeto
+
+    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
+    corte_dir = tmp_path / "p1" / "cortes" / "c1"
+    mp4 = _video_aproveitavel(corte_dir / "upload_ready" / "video.mp4")
+    corte = _corte("p1", "c1", None, no_youtube=False, no_tiktok=False)
+
+    MediaRetentionService.limpar_projeto(Projeto(id="p1", youtube_url="u"), [corte])
+
+    assert not mp4.exists()

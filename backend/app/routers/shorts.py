@@ -27,6 +27,7 @@ Endpoints:
   POST /{short_id}/publicar/{plataforma} — envia (API) ou monta o pacote (manual)
   POST /corte/{corte_id}/publicar/tiktok-horizontal — o MP4 16:9 no TikTok
   POST /corte/{corte_id}/publicar/tiktok-horizontal/staging — pacote + pasta aberta
+  POST /corte/{corte_id}/publicar/tiktok-horizontal/confirmar — marca que subiu
   DELETE /corte/{corte_id}/bruto  — libera o disco e encerra a fábrica do corte
 
 O disparo padrão é o fim da geração do bruto de um corte marcado com Fire. O POST
@@ -544,6 +545,32 @@ class StagingRequest(BaseModel):
     """Se a macro deve abrir a pasta do pacote no explorador."""
 
     abrir_pasta: bool = True
+
+
+@router.post("/corte/{corte_id}/publicar/tiktok-horizontal/confirmar")
+async def confirmar_tiktok_horizontal(corte_id: str):
+    """Marca que o operador subiu ESTE corte para o TikTok (D-512).
+
+    Precisa ser um passo explícito porque o TikTok é publicação manual — a API
+    só posta em modo privado sem auditoria, então o app não tem como saber.
+
+    A marca não é enfeite: a limpeza automática do `upload_ready/video.mp4` só
+    roda quando TODOS os destinos publicaram. Antes ela apagava o arquivo no fim
+    do upload do YouTube, e o TikTok — que sobe o MESMO MP4 — ficava sem
+    material, sem volta a não ser render novo.
+    """
+    from datetime import datetime
+
+    from app.database import AsyncSessionLocal
+    from app.models import Corte
+
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise HTTPException(status_code=404, detail=f"Corte {corte_id!r} nao encontrado")
+        corte.tiktok_publicado_em = datetime.utcnow()
+        await db.commit()
+        return {"tiktok_publicado_em": corte.tiktok_publicado_em.isoformat()}
 
 
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal/staging")

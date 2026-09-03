@@ -334,6 +334,13 @@ export const shortsApi = {
   palcoDoShort: (shortId: string) =>
     request<PlanoDesenhavel>(`/shorts/${shortId}/palco`),
 
+  /** D-512: marca que o corte subiu para o TikTok — libera a limpeza do MP4. */
+  confirmarTiktokHorizontal: (corteId: string) =>
+    request<{ tiktok_publicado_em: string }>(
+      `/shorts/corte/${corteId}/publicar/tiktok-horizontal/confirmar`,
+      { method: 'POST' },
+    ),
+
   /** D-477: acha o rosto no trecho e centra o 9:16 nele — ja gravado. */
   enquadrarPeloRosto: (shortId: string) =>
     request<VereditoDoRosto>(`/shorts/${shortId}/enquadrar`, { method: 'POST' }),
