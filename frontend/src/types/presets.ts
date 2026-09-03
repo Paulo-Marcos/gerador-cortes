@@ -13,7 +13,20 @@ import type {
   YoutubeSharedConfig,
 } from '@/features/editor/fase2/youtubeLayout';
 
-export type LayoutPresetTipo = 'completo' | 'posicionamento' | 'posicionamento_full';
+export type LayoutPresetTipo =
+  | 'completo'
+  | 'posicionamento'
+  | 'posicionamento_full'
+  /** D-509: o palco do SHORT — catálogo próprio, vocabulário próprio. */
+  | 'palco_short';
+
+/** O que um preset de palco de short guarda (D-509). */
+export interface PalcoShortPreset {
+  arranjo: string;
+  janela_cheia: string;
+  recortes: Record<string, { x: number; y: number; w: number; h: number }>;
+  fundo: string;
+}
 
 /**
  * F-060: payload novo do preset de posicionamento compartilhado. Presets
@@ -64,10 +77,18 @@ export type LayoutPreset =
 export interface CriarLayoutPresetRequest {
   nome: string;
   tipo: LayoutPresetTipo;
-  payload: YoutubeLayout | LayoutPosicionamentoPayload | LayoutPosicionamentoFullPayload;
+  payload:
+    | YoutubeLayout
+    | LayoutPosicionamentoPayload
+    | LayoutPosicionamentoFullPayload
+    | PalcoShortPreset;
 }
 
 export interface AtualizarLayoutPresetRequest {
   nome?: string;
-  payload?: YoutubeLayout | LayoutPosicionamentoPayload | LayoutPosicionamentoFullPayload;
+  payload?:
+    | YoutubeLayout
+    | LayoutPosicionamentoPayload
+    | LayoutPosicionamentoFullPayload
+    | PalcoShortPreset;
 }

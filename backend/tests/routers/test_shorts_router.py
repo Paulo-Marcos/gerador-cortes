@@ -427,3 +427,112 @@ class TestEnquadrarPeloRosto:
         detector([0.8])
 
         assert client.post("/api/shorts/sumido/enquadrar").status_code == 404
+
+
+class TestPresetDePalcoDoShort:
+    """D-509: os presets de palco do SHORT, com catalogo proprio.
+
+    O short so sabia SELECIONAR presets do canal — e os nomes deles sao cenas do
+    OBS ("Comp. 2 OBS", "FULL OBS"), vocabulario do horizontal. Agora ele guarda
+    os proprios, com o que o palco vertical precisa: arranjo, janela cheia,
+    recortes e fundo.
+    """
+
+    @pytest.fixture()
+    def app_presets(self, session_factory):
+        """O router de presets com a sessao do TESTE.
+
+        Ele resolve o banco por `Depends(get_db)`, e nao pelo
+        `AsyncSessionLocal` que o resto deste arquivo troca. Sem o override, os
+        presets iam parar no banco de DESENVOLVIMENTO — e o teste passava por
+        coincidencia enquanto o banco estivesse limpo. Mesma armadilha que a
+        D-488 pagou no render.
+        """
+        from app.database import get_db
+        from app.routers import presets as presets_mod
+
+        async def _sessao_do_teste():
+            # Espelha o `get_db` de verdade, inclusive o COMMIT na saida: o
+            # router so faz `flush`, e sem o commit aqui o preset nasceria e
+            # sumiria dentro da mesma requisicao.
+            async with session_factory() as db:
+                try:
+                    yield db
+                    await db.commit()
+                except Exception:
+                    await db.rollback()
+                    raise
+
+        app = FastAPI()
+        app.include_router(presets_mod.router, prefix="/api/presets")
+        app.dependency_overrides[get_db] = _sessao_do_teste
+        return TestClient(app)
+
+    def _payload(self, **over):
+        base = {
+            "arranjo": "dividida_empilhada",
+            "janela_cheia": "",
+            "recortes": {"pessoa": {"x": 10, "y": 20, "w": 300, "h": 200}},
+            "fundo": "marromQuente",
+        }
+        return {**base, **over}
+
+    def test_grava_e_devolve_o_palco_inteiro(self, app_presets):
+        resposta = app_presets.post(
+            "/api/presets/layout",
+            json={"nome": "Rosto cheio", "tipo": "palco_short", "payload": self._payload()},
+        )
+
+        assert resposta.status_code in (200, 201)
+        payload = resposta.json()["payload"]
+        assert payload["arranjo"] == "dividida_empilhada"
+        assert payload["fundo"] == "marromQuente"
+        assert payload["recortes"]["pessoa"]["w"] == 300
+
+    def test_recorte_sem_area_e_descartado_e_nao_corrigido(self, app_presets):
+        """Um preset que "conserta" um recorte quebrado aplicaria uma janela que
+        ninguem marcou — e o operador veria o enquadramento errado sem saber de
+        onde veio."""
+        resposta = app_presets.post(
+            "/api/presets/layout",
+            json={
+                "nome": "Torto",
+                "tipo": "palco_short",
+                "payload": self._payload(
+                    recortes={
+                        "pessoa": {"x": 0, "y": 0, "w": 0, "h": 100},
+                        "tela": {"x": 5, "y": 5, "w": 50, "h": 50},
+                    }
+                ),
+            },
+        )
+
+        recortes = resposta.json()["payload"]["recortes"]
+        assert "pessoa" not in recortes
+        assert "tela" in recortes
+
+    def test_chave_ausente_vira_vazio_e_nao_default_inventado(self, app_presets):
+        """Vazio e HERANCA: o resolvedor deduz. Materializar um default aqui
+        congelaria o palco do dia em que o preset foi salvo."""
+        resposta = app_presets.post(
+            "/api/presets/layout",
+            json={"nome": "So o fundo", "tipo": "palco_short", "payload": {"fundo": "branco"}},
+        )
+
+        payload = resposta.json()["payload"]
+        assert payload["arranjo"] == ""
+        assert payload["janela_cheia"] == ""
+        assert payload["recortes"] == {}
+
+    def test_o_tipo_separa_os_catalogos(self, app_presets):
+        """Os presets do horizontal continuam servindo de atalho para os
+        recortes; o que nao pode e o short listar cenas do OBS como se fossem
+        palcos dele."""
+        app_presets.post(
+            "/api/presets/layout",
+            json={"nome": "Do short", "tipo": "palco_short", "payload": self._payload()},
+        )
+
+        so_do_short = app_presets.get("/api/presets/layout?tipo=palco_short").json()
+
+        assert [p["nome"] for p in so_do_short] == ["Do short"]

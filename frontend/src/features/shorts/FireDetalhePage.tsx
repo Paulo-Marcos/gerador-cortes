@@ -17,6 +17,7 @@ import {
   LayoutTemplate,
   Move,
   Plus,
+  SlidersHorizontal,
   Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,9 +42,9 @@ import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PalcoDoCorte } from './PalcoDoCorte';
+import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { ControlesDoRecorte, EditorDeRecorte } from './EditorDeRecorte';
 import { PalcoPrevia } from './PalcoPrevia';
-import { SeletorDeFundo } from './SeletorDeFundo';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
 import {
@@ -109,6 +110,8 @@ export default function FireDetalhePage() {
   // edita o que o bloco MOSTRA, o outro onde ele CAI, e as alças dos dois ao
   // mesmo tempo sobre telas diferentes seriam duas conversas de uma vez.
   const [recortando, setRecortando] = useState(false);
+  // D-509: o modal onde a tela do short se monta inteira, num lugar so.
+  const [definindoPalco, setDefinindoPalco] = useState(false);
 
   const velocidadePadrao = useVelocidadePlayerPadrao();
   const [velocidade, setVelocidade] = useState(velocidadePadrao);
@@ -507,8 +510,20 @@ export default function FireDetalhePage() {
                       da live, e a cor por trás de tudo. Fica fora do bloco de
                       edição do palco de propósito: o recorte se marca sobre o
                       player à esquerda, não sobre a prévia. */}
-                  {emQuadro && temPalco && (
-                    <div className="mt-2.5 space-y-1.5 border-t border-[var(--wb-border-soft)] pt-2.5">
+                  {/* D-509: um botão no lugar da fileira de controles. Como a
+                      tela monta, de onde vem cada janela, o fundo e os presets
+                      eram cinco perguntas soltas com pesos iguais; agora são
+                      uma sequência, dentro do modal, com a prévia ao lado. */}
+                  {emQuadro && (
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--wb-border-soft)] pt-2.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDefinindoPalco(true)}
+                      >
+                        <SlidersHorizontal />
+                        Definir o palco
+                      </Button>
                       <ControlesDoRecorte
                         ativo={recortando}
                         marcados={Object.keys(emQuadro.recortes_palco ?? {})}
@@ -516,13 +531,6 @@ export default function FireDetalhePage() {
                         onAlternar={() => setRecortando((v) => !v)}
                         onDesfazer={() =>
                           atualizar.mutate({ shortId: emQuadro.id, recortes_palco: {} })
-                        }
-                      />
-                      <SeletorDeFundo
-                        escolhido={emQuadro.fundo_palco ?? ''}
-                        ocupado={atualizar.isPending}
-                        onEscolher={(chave) =>
-                          atualizar.mutate({ shortId: emQuadro.id, fundo_palco: chave })
                         }
                       />
                     </div>
@@ -649,6 +657,19 @@ export default function FireDetalhePage() {
           )}
         </aside>
       </main>
+      {emQuadro && (
+        <DefinirPalcoModal
+          open={definindoPalco}
+          onClose={() => setDefinindoPalco(false)}
+          short={emQuadro}
+          corteId={corteId}
+          plano={palcoDoShort.data ?? null}
+          fonte={{ largura: dimensoes.largura, altura: dimensoes.altura }}
+          video={video}
+          ocupado={atualizar.isPending}
+          onAplicar={(mudanca) => atualizar.mutate({ shortId: emQuadro.id, ...mudanca })}
+        />
+      )}
     </div>
   );
 }

@@ -5,6 +5,9 @@ Tipos suportados:
   - posicionamento: payload e `{compartilhada, fundo, placa}` (F-060). Payloads
     legados (bloco compartilhada direto) sao aceitos na escrita e re-embrulhados.
   - posicionamento_full: payload e `{full: {crop, slot}, fundo, placa}` (F-060).
+  - palco_short: payload e `{arranjo, janela_cheia, recortes, fundo}` (D-509) — o
+    palco VERTICAL, com catalogo proprio. Separado dos de cima porque os nomes
+    deles sao cenas do OBS ("Comp. 2 OBS") e o vocabulario do short e outro.
 
 Os payloads sao normalizados via app.domain.youtube_layout antes de persistir,
 garantindo que o que sai pelo GET ja vem no shape consumido pelo painel.
@@ -40,7 +43,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
-TIPOS_VALIDOS = {"completo", "posicionamento", "posicionamento_full"}
+TIPOS_VALIDOS = {"completo", "posicionamento", "posicionamento_full", "palco_short"}
 
 
 class LayoutPresetResponse(BaseModel):
@@ -57,7 +60,7 @@ class LayoutPresetResponse(BaseModel):
 
 class CriarPresetRequest(BaseModel):
     nome: str = Field(..., min_length=1, max_length=120)
-    tipo: str = Field(..., pattern="^(completo|posicionamento|posicionamento_full)$")
+    tipo: str = Field(..., pattern="^(completo|posicionamento|posicionamento_full|palco_short)$")
     payload: dict[str, Any]
 
 
@@ -72,6 +75,23 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
 
     if tipo == "completo":
         return normalizar_layout_youtube(payload)
+
+    if tipo == "palco_short":
+        # D-509: o palco do SHORT — como a tela monta, o que cada janela mostra
+        # e a cor por tras. Nao reaproveita `posicionamento` porque la o payload
+        # fala de facecam/tela em 1920x1080, e aqui fala de arranjo e regioes
+        # num quadro vertical.
+        #
+        # Sem defaults inventados: chave ausente e HERANCA, e materializar aqui
+        # congelaria o palco do dia em que o preset foi salvo (mesma regra do
+        # layout do horizontal).
+        recortes = payload.get("recortes")
+        return {
+            "arranjo": str(payload.get("arranjo") or ""),
+            "janela_cheia": str(payload.get("janela_cheia") or ""),
+            "recortes": _normalizar_recortes(recortes),
+            "fundo": str(payload.get("fundo") or ""),
+        }
 
     if tipo == "posicionamento_full":
         # F-060: {full: {crop, slot}, fundo, placa}. Aceita tambem {crop, slot}
@@ -102,6 +122,28 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
         "fundo": _normalizar_fundo(payload.get("fundo")),
         "placa": _normalizar_placa(payload.get("placa")),
     }
+
+
+def _normalizar_recortes(valor: Any) -> dict[str, dict[str, int]]:
+    """Os recortes de um preset de palco de short, em pixels do quadro-fonte.
+
+    Retangulo invalido e DESCARTADO, nao substituido por um default: um preset
+    que "conserta" um recorte quebrado aplicaria uma janela que ninguem marcou,
+    e o operador veria o enquadramento errado sem saber de onde veio.
+    """
+    if not isinstance(valor, dict):
+        return {}
+    limpos: dict[str, dict[str, int]] = {}
+    for nome, retangulo in valor.items():
+        if not isinstance(retangulo, dict):
+            continue
+        try:
+            lados = {lado: int(float(retangulo[lado])) for lado in ("x", "y", "w", "h")}
+        except (KeyError, TypeError, ValueError):
+            continue
+        if lados["w"] > 0 and lados["h"] > 0:
+            limpos[str(nome)] = lados
+    return limpos
 
 
 def _serializar(preset: LayoutPreset) -> dict[str, Any]:
