@@ -41,12 +41,15 @@ relação com isto), no mesmo padrão de `avaliacao_bruto`.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from app.database import AsyncSessionLocal
 from app.services import shorts as shorts_store
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -548,9 +551,15 @@ class StagingRequest(BaseModel):
 
 
 class CapaTikTokRequest(BaseModel):
-    """A etiqueta da capa e, opcionalmente, de onde tirar o frame."""
+    """A etiqueta da capa e, opcionalmente, de onde tirar o frame.
+
+    `etiqueta` vazia com `sugerir_etiqueta` ligado manda a skill escrever — o
+    caminho normal. Vazia sem sugerir, a capa sai só com o frame e o selo, que é
+    um resultado legítimo: 0 palavras está dentro da recomendação do TikTok.
+    """
 
     etiqueta: str = ""
+    sugerir_etiqueta: bool = True
     instante_seg: float | None = None
 
 
@@ -564,15 +573,27 @@ async def gerar_capa_tiktok(corte_id: str, body: CapaTikTokRequest):
     16:9 do YouTube, que e outra imagem para outro trabalho.
     """
     from app.services import capa_tiktok
+    from app.services.claude_ia import ClaudeIaService
+
+    etiqueta = body.etiqueta.strip()
+    if not etiqueta and body.sugerir_etiqueta:
+        try:
+            etiqueta = await ClaudeIaService.sugerir_etiqueta_capa_via_claude(corte_id)
+        except Exception:
+            # A etiqueta e desejavel, nao obrigatoria: uma capa so com o frame e
+            # o selo continua valendo, e ficar sem capa por causa de tres
+            # palavras seria trocar o principal pelo acessorio.
+            logger.exception("[CapaTikTok] nao consegui sugerir a etiqueta de %s", corte_id)
+            etiqueta = ""
 
     try:
         caminho = await capa_tiktok.gerar(
-            corte_id, etiqueta=body.etiqueta, instante_seg=body.instante_seg
+            corte_id, etiqueta=etiqueta, instante_seg=body.instante_seg
         )
     except capa_tiktok.CapaTikTokError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    return {"capa": str(caminho), "nome": caminho.name}
+    return {"capa": str(caminho), "nome": caminho.name, "etiqueta": etiqueta}
 
 
 @router.post("/corte/{corte_id}/capa-tiktok/upload")

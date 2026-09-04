@@ -42,6 +42,9 @@ def test_get_lista_o_catalogo_com_default_e_atual(client: TestClient):
         "thumbnail-prompt-expert",
         "avaliador-bruto",
         "shorts-expert",
+        # D-520: a etiqueta da capa do TikTok entra antes das cenas do short, na
+        # ordem do catalogo.
+        "capa-tiktok-expert",
         "cenas-short-expert",
     ]
     cortador = skills[0]

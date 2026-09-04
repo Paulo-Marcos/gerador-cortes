@@ -516,6 +516,10 @@ class MetadadoCorte(Base):
     # do perfil, onde nove capas sao vistas juntas. Guardar uma so faria a
     # errada aparecer em algum dos dois lugares.
     thumbnail_tiktok_path: Mapped[str] = mapped_column(String(1000), default="")
+    # D-520: as 2-3 palavras da capa vertical. Guardadas porque formam o
+    # vocabulario do canal: a skill le as etiquetas recentes para REPETIR o nome
+    # do assunto entre cortes, que e o que da coerencia a grade do perfil.
+    etiqueta_tiktok: Mapped[str] = mapped_column(String(80), default="")
     is_fire: Mapped[bool] = mapped_column(Integer, default=0)
     # D-502: o corte foi indicado para a fabrica de shorts A MAO.
     #

@@ -239,6 +239,26 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
         marcador="shorts",
     ),
     ScaffoldCatalogo(
+        key="capa-tiktok",
+        skill_key="capa-tiktok-expert",
+        etapa="Etiqueta da capa do TikTok",
+        descricao=(
+            "Involucro que manda titulo, tema e resumo do corte e pede a etiqueta "
+            "de 2-3 palavras da capa vertical. Manda tambem as etiquetas recentes "
+            "do canal — nao para evitar repeticao, como no resto da esteira, e sim "
+            "para PERMITI-LA: a grade do perfil fica coerente quando o mesmo "
+            "assunto recebe o mesmo nome."
+        ),
+        arquivo="capa-tiktok.txt",
+        placeholders=(
+            "titulo_proposto",
+            "tema_central",
+            "resumo",
+            "etiquetas_recentes",
+        ),
+        marcador="ETIQUETA",
+    ),
+    ScaffoldCatalogo(
         key="cenas-short",
         skill_key="cenas-short-expert",
         etapa="Propor cenas do short",

@@ -1,0 +1,16 @@
+=== O CORTE ===
+titulo: {titulo_proposto}
+tema_central: {tema_central}
+resumo: {resumo}
+
+=== ETIQUETAS JA USADAS NESTE CANAL (as mais recentes primeiro) ===
+{etiquetas_recentes}
+
+Escreva a ETIQUETA da capa deste corte no TikTok, seguindo a sua expertise acima.
+
+Lembre: 2 a 3 palavras, substantivo e nao frase, sem pontuacao decorativa.
+Repetir uma etiqueta ja usada e PERMITIDO e ate desejavel quando o assunto e o
+mesmo — a grade do perfil ganha coerencia com a repeticao.
+
+Responda com a ETIQUETA e nada mais: uma linha, sem aspas, sem explicacao, sem
+markdown.

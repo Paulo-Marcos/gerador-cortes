@@ -178,6 +178,24 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
         lentes_tipo=None,
     ),
     SkillCatalogo(
+        key="capa-tiktok-expert",
+        arquivo="capa-tiktok.md",
+        etapa="Etiqueta da capa do TikTok",
+        descricao=(
+            "Escreve as 2-3 palavras que vao no alto da capa vertical do corte "
+            "no TikTok. Nao e a manchete: a thumb do YouTube e um cartaz que "
+            "disputa o clique numa lista, e a capa do TikTok e a vitrine do "
+            "perfil, onde nove capas sao vistas juntas. A imagem em si e MONTADA "
+            "pelo sistema, sempre no mesmo layout — esta skill entrega so o "
+            "texto. Sem lentes por design, e pelo motivo inverso ao da capa do "
+            "YouTube: aqui repetir o assunto entre cortes e o que da coerencia a "
+            "grade."
+        ),
+        model_setting="claude_model_capa_tiktok",
+        thinking_setting="claude_cli_thinking_tokens_capa_tiktok",
+        lentes_tipo=None,
+    ),
+    SkillCatalogo(
         key="cenas-short-expert",
         arquivo="cenas-short.md",
         etapa="Propor cenas do short",

@@ -42,6 +42,13 @@ _SAIDA_TAIL = 1200
 
 NOME_DA_CAPA = "capa_tiktok"
 
+# Quantas etiquetas anteriores vão no prompt. O bastante para o modelo enxergar
+# o vocabulário do canal, pouco o bastante para não virar uma lista que ele
+# tenta cobrir.
+_ETIQUETAS_NO_HISTORICO = 20
+# O resumo é contexto, não a fonte do texto — a etiqueta sai do tema.
+_RESUMO_NO_PROMPT = 1200
+
 
 class CapaTikTokError(RuntimeError):
     """A capa não pôde ser montada. A mensagem é para o operador ler na tela."""
@@ -83,7 +90,7 @@ async def gerar(corte_id: str, *, etiqueta: str, instante_seg: float | None = No
     if not destino.is_file() or destino.stat().st_size == 0:
         raise CapaTikTokError("O gerador rodou mas nao escreveu a imagem.")
 
-    await _gravar_caminho(corte_id, contexto["projeto_id"], destino)
+    await _gravar_caminho(corte_id, contexto["projeto_id"], destino, etiqueta=texto)
     logger.info("[CapaTikTok] %s gerada", destino.name)
     return destino
 
@@ -104,6 +111,37 @@ async def salvar_upload(corte_id: str, conteudo: bytes, nome_arquivo: str) -> Pa
 
     await _gravar_caminho(corte_id, contexto["projeto_id"], destino)
     return destino
+
+
+async def montar_contexto_da_etiqueta(corte_id: str) -> dict:
+    """O material que a skill da etiqueta precisa ler (D-520).
+
+    Inclui as etiquetas RECENTES do canal, e o motivo é o inverso do resto da
+    esteira: em toda parte o histórico serve para evitar repetição; aqui serve
+    para permiti-la. Três cortes sobre a Selic devem dizer SELIC — é a repetição
+    que faz nove capas parecerem um canal, e não nove cartazes.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+
+        resultado = await db.execute(
+            select(MetadadoCorte)
+            .where(MetadadoCorte.etiqueta_tiktok != "")
+            .where(MetadadoCorte.corte_id != corte_id)
+            .order_by(MetadadoCorte.atualizado_em.desc())
+            .limit(_ETIQUETAS_NO_HISTORICO)
+        )
+        recentes = [meta.etiqueta_tiktok for meta in resultado.scalars().all()]
+
+        return {
+            "projeto_id": corte.projeto_id,
+            "titulo": corte.titulo_proposto or "",
+            "tema_central": corte.tema_central or "",
+            "resumo": (corte.resumo or "")[:_RESUMO_NO_PROMPT],
+            "etiquetas_recentes": "\n".join(f"- {etiqueta}" for etiqueta in recentes),
+        }
 
 
 async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
@@ -232,8 +270,15 @@ async def _rodar_node(destino: Path, props_path: str) -> tuple[int, str]:
         return resultado.returncode, resultado.stdout
 
 
-async def _gravar_caminho(corte_id: str, projeto_id: str, destino: Path) -> None:
-    """Persiste RELATIVO ao projeto, reancorável pelo canal ativo (D-158)."""
+async def _gravar_caminho(
+    corte_id: str, projeto_id: str, destino: Path, *, etiqueta: str | None = None
+) -> None:
+    """Persiste RELATIVO ao projeto, reancorável pelo canal ativo (D-158).
+
+    A etiqueta é gravada junto porque ela alimenta o histórico do canal — sem
+    isso a skill nunca veria o vocabulário que ela mesma criou, e a coerência da
+    grade dependeria de o modelo adivinhar o mesmo nome duas vezes.
+    """
     async with AsyncSessionLocal() as db:
         resultado = await db.execute(
             select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)
@@ -242,4 +287,6 @@ async def _gravar_caminho(corte_id: str, projeto_id: str, destino: Path) -> None
         if not meta:
             raise CapaTikTokError("Metadados deste corte nao existem ainda.")
         meta.thumbnail_tiktok_path = para_relativo_ao_projeto(str(destino), projeto_id)
+        if etiqueta is not None:
+            meta.etiqueta_tiktok = etiqueta
         await db.commit()

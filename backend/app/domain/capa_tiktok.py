@@ -174,6 +174,34 @@ def normalizar_etiqueta(texto: str) -> str:
     return " ".join(palavras).upper()
 
 
+def etiqueta_da_resposta(bruto: str) -> str:
+    r"""A etiqueta dentro do que o modelo devolveu (D-520).
+
+    O contrato pede uma linha e nada mais, mas contrato de saída é promessa, não
+    garantia: um modelo eventualmente explica a escolha embaixo, envolve em
+    aspas ou embrulha em crase. Sem esta limpeza, a explicação inteira viraria a
+    etiqueta — e o corte cortaria no meio dela, produzindo um rótulo sem sentido
+    que ninguém entenderia olhando só a capa.
+
+    >>> etiqueta_da_resposta('JURO COMPOSTO')
+    'JURO COMPOSTO'
+    >>> etiqueta_da_resposta('"teto de gastos"')
+    'TETO DE GASTOS'
+    >>> etiqueta_da_resposta('SELIC\n\nEscolhi porque o corte fala da taxa.')
+    'SELIC'
+    >>> etiqueta_da_resposta('   ')
+    ''
+    """
+    texto = (bruto or "").strip()
+    if not texto:
+        return ""
+
+    primeira = texto.splitlines()[0]
+    # Crase, aspas retas e curvas: o modelo às vezes trata a etiqueta como
+    # citação, e a aspa entraria na imagem.
+    return normalizar_etiqueta(primeira.strip("`\"'“”‘’ "))
+
+
 def instante_do_frame(duracao_seg: float) -> float:
     """Onde tirar o still, quando ninguém escolheu.
 

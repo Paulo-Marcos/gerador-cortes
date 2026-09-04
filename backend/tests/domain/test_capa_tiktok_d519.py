@@ -16,6 +16,7 @@ from app.domain.capa_tiktok import (
     MARGEM_DO_CHROME,
     MAX_CARACTERES_DA_ETIQUETA,
     TOPO_SEGURO,
+    etiqueta_da_resposta,
     instante_do_frame,
     montar_layout,
     normalizar_etiqueta,
@@ -100,3 +101,28 @@ class TestInstanteDoFrame:
     def test_duracao_negativa_vira_zero(self):
         """`probe_duracao` pode devolver lixo; o instante nunca pode ser negativo."""
         assert instante_do_frame(-10.0) == 0.0
+
+
+class TestRespostaDoModelo:
+    """D-520: o contrato de saida da skill e promessa, nao garantia."""
+
+    def test_a_explicacao_embaixo_nao_entra_na_etiqueta(self):
+        resposta = "TETO DE GASTOS\n\nEscolhi porque o corte discute o limite."
+
+        assert etiqueta_da_resposta(resposta) == "TETO DE GASTOS"
+
+    def test_tira_aspas_e_crase(self):
+        """A aspa entraria na imagem, e ninguem revisa uma capa ja publicada."""
+        assert etiqueta_da_resposta('"selic"') == "SELIC"
+        assert etiqueta_da_resposta("`selic`") == "SELIC"
+        assert etiqueta_da_resposta("“selic”") == "SELIC"
+
+    def test_resposta_vazia_nao_quebra(self):
+        assert etiqueta_da_resposta("") == ""
+        assert etiqueta_da_resposta("   \n  ") == ""
+
+    def test_resposta_longa_ainda_e_cortada(self):
+        """A rede da normalizacao continua valendo depois da limpeza."""
+        resposta = "O erro que todo mundo comete com juros compostos"
+
+        assert len(etiqueta_da_resposta(resposta).split()) <= 5

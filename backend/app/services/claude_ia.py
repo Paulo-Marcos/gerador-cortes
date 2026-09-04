@@ -113,6 +113,7 @@ _SKILL_THUMBNAIL = "thumbnail-prompt-expert"
 _SKILL_AVALIACAO = "avaliador-bruto"
 _SKILL_SHORTS = "shorts-expert"
 _SKILL_CENAS_SHORT = "cenas-short-expert"
+_SKILL_CAPA_TIKTOK = "capa-tiktok-expert"
 
 # A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
 _LIMITE_MOTIVO_NA_TELA = 400
@@ -1281,6 +1282,49 @@ class ClaudeIaService:
         return {"short": short, "descartes": resultado.descartes}
 
     # ── Fase 4: prompt de thumbnail via Claude (skill capista) ────────────────
+
+    @staticmethod
+    async def sugerir_etiqueta_capa_via_claude(corte_id: str) -> str:
+        """As 2-3 palavras que vão no alto da capa vertical do TikTok (D-520).
+
+        Skill separada da do YouTube, e não um parâmetro dela, porque as duas
+        escrevem coisas de gêneros diferentes: lá a manchete INTEIRA de um cartaz
+        que disputa o clique numa lista; aqui o nome do assunto numa prateleira
+        onde nove capas são vistas juntas.
+
+        A diferença mais contra-intuitiva está no histórico. Toda a esteira manda
+        o passado para EVITAR repetição; aqui ele vai para permiti-la — três
+        cortes sobre a Selic devem dizer SELIC, e é essa repetição que faz a
+        grade parecer um canal.
+
+        Levanta `LookupError` (corte inexistente). Devolve a etiqueta já
+        normalizada; string vazia quando o modelo não produziu nada aproveitável,
+        e nesse caso a capa sai sem texto em vez de não sair.
+        """
+        from app.domain.capa_tiktok import etiqueta_da_resposta
+        from app.services import capa_tiktok as capa_store
+
+        contexto = await capa_store.montar_contexto_da_etiqueta(corte_id)
+
+        skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK)
+        scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok")
+        prompt = scaffold.format(
+            titulo_proposto=contexto["titulo"],
+            tema_central=contexto["tema_central"],
+            resumo=contexto["resumo"],
+            etiquetas_recentes=contexto["etiquetas_recentes"] or "(nenhuma ainda)",
+        )
+        _log_skill_usada(_SKILL_CAPA_TIKTOK, skill, scaffold)
+        bruto = await claude_cli_client.generate_text(
+            prompt,
+            **_args_claude(
+                skill,
+                _SKILL_CAPA_TIKTOK,
+                projeto_id=contexto["projeto_id"],
+                corte_id=corte_id,
+            ),
+        )
+        return etiqueta_da_resposta(bruto)
 
     @staticmethod
     async def gerar_prompt_thumbnail_via_claude(corte_id: str) -> dict:
