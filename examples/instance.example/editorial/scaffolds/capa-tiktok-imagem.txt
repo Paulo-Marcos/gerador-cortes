@@ -1,0 +1,15 @@
+=== O CORTE ===
+titulo: {titulo_proposto}
+tema_central: {tema_central}
+texto da capa (a etiqueta que sera desenhada POR CIMA da imagem): {texto_capa}
+resumo: {resumo}
+
+Escreva o PROMPT DE IMAGEM da faixa central desta capa, seguindo a sua expertise
+acima.
+
+Lembre: 16:9, um unico ponto de interesse, alto contraste, e a imagem NAO pode
+conter texto — a etiqueta "{texto_capa}" ja vai ser desenhada por cima pelo
+sistema. Nao repita essa palavra dentro da cena.
+
+Responda com o PROMPT em ingles e nada mais: um paragrafo, sem markdown, sem
+aspas, sem explicacao.

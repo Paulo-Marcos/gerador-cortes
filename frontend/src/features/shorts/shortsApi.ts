@@ -331,8 +331,7 @@ export const shortsApi = {
       method: 'POST',
     }),
 
-  palcoDoShort: (shortId: string) =>
-    request<PlanoDesenhavel>(`/shorts/${shortId}/palco`),
+  palcoDoShort: (shortId: string) => request<PlanoDesenhavel>(`/shorts/${shortId}/palco`),
 
   /** D-512: marca que o corte subiu para o TikTok — libera a limpeza do MP4. */
   confirmarTiktokHorizontal: (corteId: string) =>
@@ -391,19 +390,29 @@ export const shortsApi = {
 
   // D-519/D-521: a capa VERTICAL do corte. Mora no router de shorts, e nao no de
   // metadados, porque ela so existe por causa do quadro 9:16 do TikTok.
-  gerarCapaTiktok: (corteId: string, opcoes: { etiqueta?: string } = {}) =>
+  gerarCapaTiktok: (
+    corteId: string,
+    opcoes: { etiqueta?: string; origem?: 'ia' | 'frame'; refazerArte?: boolean } = {},
+  ) =>
     request<{ capa: string; nome: string; etiqueta: string }>(
       `/shorts/corte/${corteId}/capa-tiktok`,
-      { method: 'POST', body: JSON.stringify({ etiqueta: opcoes.etiqueta ?? '' }) },
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          etiqueta: opcoes.etiqueta ?? '',
+          origem: opcoes.origem ?? 'ia',
+          refazer_arte: opcoes.refazerArte ?? false,
+        }),
+      },
     ),
 
   subirCapaTiktok: (corteId: string, arquivo: File) => {
     const formData = new FormData();
     formData.append('arquivo', arquivo);
-    return request<{ capa: string; nome: string }>(
-      `/shorts/corte/${corteId}/capa-tiktok/upload`,
-      { method: 'POST', body: formData },
-    );
+    return request<{ capa: string; nome: string }>(`/shorts/corte/${corteId}/capa-tiktok/upload`, {
+      method: 'POST',
+      body: formData,
+    });
   },
 
   publicar: (shortId: string, plataforma: string) =>
@@ -412,8 +421,7 @@ export const shortsApi = {
     }),
 
   sugerirAgora: (corteId: string) =>
-    request<{ shorts: ShortSugerido[]; descartes: string[] }>(
-      `/shorts/corte/${corteId}/sugerir`,
-      { method: 'POST' },
-    ),
+    request<{ shorts: ShortSugerido[]; descartes: string[] }>(`/shorts/corte/${corteId}/sugerir`, {
+      method: 'POST',
+    }),
 };

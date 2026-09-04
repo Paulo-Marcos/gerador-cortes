@@ -135,6 +135,7 @@ def test_descrever_scaffolds_traz_todos_na_ordem(tmp_path: Path):
         # D-520: a etiqueta da capa do TikTok, na mesma posicao do catalogo
         # de skills.
         "capa-tiktok",
+        "capa-tiktok-imagem",
         "cenas-short",
     ]
     cortes = next(d for d in descritos if d.key == "cortes")

@@ -73,6 +73,7 @@ class Settings(BaseSettings):
     # ESCOLHA, nao de redacao: ler o tema e nomear o assunto. Thinking alto aqui
     # so produziria justificativa para um texto de tres palavras.
     claude_cli_thinking_tokens_capa_tiktok: int = 1500
+    claude_cli_thinking_tokens_capa_tiktok_imagem: int = 4000
     skills_dir: str = os.path.join(_PROJECT_ROOT, ".claude", "skills")
     # Modelos por etapa (alias do CLI: opus | sonnet | haiku, ou nome completo)
     claude_model_analise: str = "opus"
@@ -87,6 +88,9 @@ class Settings(BaseSettings):
     claude_model_cenas_short: str = "sonnet"
     # D-520: nomear o assunto de um corte ja resumido cabe no modelo mais barato.
     claude_model_capa_tiktok: str = "haiku"
+    # D-523: escrever a cena da capa e trabalho de capista, nao de etiqueta —
+    # mesmo peso que o prompt da thumbnail do YouTube.
+    claude_model_capa_tiktok_imagem: str = "sonnet"
     # D-454: faixa que o operador aceita num candidato a short. 15-30s serve
     # Reels, ate 90s serve conteudo denso; abaixo de 15 nao entrega ideia e acima
     # de 90 e o corte de novo. A quantidade e TETO de trabalho, nao cota: a skill

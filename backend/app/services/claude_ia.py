@@ -114,6 +114,7 @@ _SKILL_AVALIACAO = "avaliador-bruto"
 _SKILL_SHORTS = "shorts-expert"
 _SKILL_CENAS_SHORT = "cenas-short-expert"
 _SKILL_CAPA_TIKTOK = "capa-tiktok-expert"
+_SKILL_CAPA_TIKTOK_IMAGEM = "capa-tiktok-imagem-expert"
 
 # A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
 _LIMITE_MOTIVO_NA_TELA = 400
@@ -1325,6 +1326,47 @@ class ClaudeIaService:
             ),
         )
         return etiqueta_da_resposta(bruto)
+
+    @staticmethod
+    async def prompt_da_arte_da_capa_via_claude(corte_id: str, texto_capa: str) -> str:
+        """O prompt de imagem da faixa central da capa do TikTok (D-523).
+
+        A primeira versão da capa usava um frame do próprio vídeo. Ficou ruim por
+        um motivo estrutural: o vídeo é deitado e cheio de texto na tela — um
+        documento, um slide —, e nada disso sobrevive à miniatura da grade do
+        perfil. Aqui a faixa passa a receber uma cena feita para ser vista
+        pequena.
+
+        A imagem nasce SEM texto de propósito: a etiqueta e o selo são desenhados
+        por cima, com a tipografia do canal. Gerador de imagem não escreve
+        tipografia confiável, e duas camadas de texto brigariam.
+
+        Levanta `LookupError` (corte inexistente).
+        """
+        from app.domain.capa_tiktok import prompt_da_arte
+        from app.services import capa_tiktok as capa_store
+
+        contexto = await capa_store.montar_contexto_da_etiqueta(corte_id)
+
+        skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK_IMAGEM)
+        scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok-imagem")
+        prompt = scaffold.format(
+            titulo_proposto=contexto.titulo,
+            tema_central=contexto.tema_central,
+            texto_capa=texto_capa or "(sem etiqueta)",
+            resumo=contexto.resumo,
+        )
+        _log_skill_usada(_SKILL_CAPA_TIKTOK_IMAGEM, skill, scaffold)
+        bruto = await claude_cli_client.generate_text(
+            prompt,
+            **_args_claude(
+                skill,
+                _SKILL_CAPA_TIKTOK_IMAGEM,
+                projeto_id=contexto.projeto_id,
+                corte_id=corte_id,
+            ),
+        )
+        return prompt_da_arte(bruto)
 
     @staticmethod
     async def gerar_prompt_thumbnail_via_claude(corte_id: str) -> dict:

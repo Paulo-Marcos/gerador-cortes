@@ -202,6 +202,40 @@ def etiqueta_da_resposta(bruto: str) -> str:
     return normalizar_etiqueta(primeira.strip("`\"'“”‘’ "))
 
 
+# O prompt da arte TEM de proibir texto na imagem — é a regra central da skill,
+# e é o que distingue esta cena da capa do YouTube, que embute a manchete. Usamos
+# a proibição como MARCADOR de contrato: se ela não veio, o que voltou não é um
+# prompt de imagem.
+MARCADOR_DO_PROMPT = "no text"
+
+
+def prompt_da_arte(bruto: str) -> str:
+    """O prompt de imagem dentro do que a skill devolveu (D-523).
+
+    Devolve `""` quando a resposta não é um prompt. Isso acontece de verdade: na
+    primeira execução o modelo, diante de um corpo de skill ainda com o texto
+    genérico do template, respondeu com uma PERGUNTA pedindo a identidade do
+    mascote. Sem esta checagem, aquele parágrafo em português iria para o
+    gerador de imagem e voltaria uma ilustração de nada.
+
+    >>> prompt_da_arte('Editorial illustration of a hand. No text, no letters.')
+    'Editorial illustration of a hand. No text, no letters.'
+    >>> prompt_da_arte('Me diga como e o mascote do seu canal e eu escrevo.')
+    ''
+    >>> prompt_da_arte('')
+    ''
+    """
+    texto = (bruto or "").strip()
+    # Cerca de markdown: o contrato pede texto puro, mas modelo gosta de ```.
+    if texto.startswith("```"):
+        linhas = [linha for linha in texto.splitlines() if not linha.strip().startswith("```")]
+        texto = "\n".join(linhas).strip()
+
+    if MARCADOR_DO_PROMPT not in texto.lower():
+        return ""
+    return texto
+
+
 def instante_do_frame(duracao_seg: float) -> float:
     """Onde tirar o still, quando ninguém escolheu.
 

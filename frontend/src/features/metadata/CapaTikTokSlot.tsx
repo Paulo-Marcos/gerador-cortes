@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Loader2, Sparkles } from 'lucide-react';
+import { Film, ImagePlus, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
@@ -16,6 +16,11 @@ import { shortsApi } from '@/features/shorts/shortsApi';
 //
 // A miniatura é 9:16 mesmo sendo pequena. Um preview 16:9 aqui repetiria em
 // miniatura o erro que esta frente inteira corrige.
+//
+// D-523: a faixa central leva ARTE gerada, e não um frame do vídeo. O frame
+// parecia a escolha honesta — a capa citaria o que vai tocar —, mas o vídeo é
+// deitado e costuma ter texto na tela, e nada disso sobrevive à miniatura da
+// grade. "Usar frame" ficou como escape hatch, no lugar de padrão.
 
 interface Props {
   projetoId: string;
@@ -41,7 +46,8 @@ export function CapaTikTokSlot({ projetoId, corteId, capaPath, etiqueta, onAtual
   };
 
   const gerar = useMutation({
-    mutationFn: () => shortsApi.gerarCapaTiktok(corteId),
+    mutationFn: (opcoes: { origem?: 'ia' | 'frame'; refazerArte?: boolean } = {}) =>
+      shortsApi.gerarCapaTiktok(corteId, opcoes),
     onSuccess: aoTerminar,
     onError: (e: Error) => setErro(e.message),
   });
@@ -78,12 +84,26 @@ export function CapaTikTokSlot({ projetoId, corteId, capaPath, etiqueta, onAtual
             size="sm"
             variant="outline"
             disabled={ocupado}
-            onClick={() => gerar.mutate()}
-            title="Monta a capa com um frame do vídeo e a etiqueta escrita pela IA."
+            onClick={() => gerar.mutate({})}
+            title="Gera a arte com IA e monta a capa. Reusa a arte que já existe."
           >
             {gerar.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {capaPath ? 'Refazer' : 'Gerar capa'}
+            {capaPath ? 'Refazer capa' : 'Gerar capa'}
           </Button>
+
+          {capaPath && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={ocupado}
+              onClick={() => gerar.mutate({ refazerArte: true })}
+              title="Descarta a arte atual e pede outra à IA. Custa uma imagem."
+            >
+              <RefreshCw />
+              Nova arte
+            </Button>
+          )}
 
           <Button
             type="button"
@@ -111,6 +131,20 @@ export function CapaTikTokSlot({ projetoId, corteId, capaPath, etiqueta, onAtual
               event.currentTarget.value = '';
             }}
           />
+
+          {/* O frame do vídeo, que já foi o padrão. Fica discreto porque quase
+              sempre é a pior escolha — só ganha quando a arte não convence e o
+              vídeo tem um plano bonito. */}
+          <button
+            type="button"
+            disabled={ocupado}
+            onClick={() => gerar.mutate({ origem: 'frame' })}
+            className="inline-flex items-center gap-1 text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
+            title="Usa um quadro do próprio vídeo no lugar da arte."
+          >
+            <Film size={10} aria-hidden />
+            usar frame do vídeo
+          </button>
 
           {etiqueta && (
             <p className="truncate font-code text-[10px] uppercase text-[var(--wb-text-mute)]">

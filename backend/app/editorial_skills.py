@@ -196,6 +196,22 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
         lentes_tipo=None,
     ),
     SkillCatalogo(
+        key="capa-tiktok-imagem-expert",
+        arquivo="capa-tiktok-imagem.md",
+        etapa="Arte da capa do TikTok",
+        descricao=(
+            "Escreve o prompt de imagem da faixa central da capa vertical. A "
+            "diferenca para o capista do YouTube e que aqui a imagem NAO leva "
+            "texto: a etiqueta e o selo sao desenhados por cima, com a "
+            "tipografia do canal. A cena tambem precisa de um unico ponto de "
+            "interesse — na grade do perfil a capa chega a menos de um terco da "
+            "largura da tela, e composicao detalhada some."
+        ),
+        model_setting="claude_model_capa_tiktok_imagem",
+        thinking_setting="claude_cli_thinking_tokens_capa_tiktok_imagem",
+        lentes_tipo=None,
+    ),
+    SkillCatalogo(
         key="cenas-short-expert",
         arquivo="cenas-short.md",
         etapa="Propor cenas do short",

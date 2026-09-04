@@ -20,6 +20,7 @@ from app.domain.capa_tiktok import (
     instante_do_frame,
     montar_layout,
     normalizar_etiqueta,
+    prompt_da_arte,
 )
 
 
@@ -126,3 +127,32 @@ class TestRespostaDoModelo:
         resposta = "O erro que todo mundo comete com juros compostos"
 
         assert len(etiqueta_da_resposta(resposta).split()) <= 5
+
+
+class TestPromptDaArte:
+    """D-523: a resposta da skill da arte tambem e promessa, nao garantia."""
+
+    def test_aceita_o_prompt_que_proibe_texto(self):
+        prompt = "Editorial illustration of a coin. No text, no letters."
+
+        assert prompt_da_arte(prompt) == prompt
+
+    def test_recusa_uma_pergunta_no_lugar_do_prompt(self):
+        """Aconteceu de verdade na primeira execucao.
+
+        Com o corpo da skill ainda no texto generico do template, o modelo
+        respondeu pedindo a identidade do mascote. Aquele paragrafo em
+        portugues iria para o gerador de imagem e voltaria uma ilustracao de
+        nada — sem erro, so uma capa ruim.
+        """
+        resposta = "Me diga como e o mascote do seu canal e eu devolvo o prompt."
+
+        assert prompt_da_arte(resposta) == ""
+
+    def test_tira_a_cerca_de_markdown(self):
+        resposta = "```\nEditorial illustration. No text, no letters.\n```"
+
+        assert prompt_da_arte(resposta) == "Editorial illustration. No text, no letters."
+
+    def test_resposta_vazia_nao_quebra(self):
+        assert prompt_da_arte("") == ""

@@ -1,11 +1,17 @@
 """Montagem da capa vertical do TikTok (D-519).
 
-Três passos, nenhum deles caro: o FFmpeg tira um still 16:9 do MP4, o still vira
-data URI, e o Remotion rasteriza o quadro 1080x1920 com o fundo e o chrome do
-canal. Não há geração de imagem por IA aqui — a decisão de projeto foi montar,
-não inventar: a identidade da grade do TikTok vem de o layout ser SEMPRE o mesmo,
-e um gerador criativo trabalharia contra isso (além de custar uma chamada por
-corte).
+O LAYOUT é montado, sempre igual — é dele que vem a identidade da grade. O que
+entra na faixa central é que mudou (D-523).
+
+A primeira versão usava um frame do próprio vídeo, e a ideia tinha lógica: a
+capa citaria o que o espectador vai ver. Na prática saiu ruim por um motivo
+estrutural — o vídeo é deitado e costuma ter texto na tela (um documento, um
+slide, um navegador), e nada disso sobrevive à miniatura da grade do perfil.
+
+Agora a faixa recebe uma ARTE gerada, como no horizontal: uma skill escreve a
+cena e o Gemini desenha. A imagem nasce sem texto de propósito — a etiqueta e o
+selo são desenhados por cima, com a tipografia do canal. O frame continua
+disponível como escape hatch, não como padrão.
 
 A geometria vem pronta de `app/domain/capa_tiktok.py`. Este módulo é a
 plumbing: arquivos, subprocessos e o caminho gravado no metadado.
@@ -25,6 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
+from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain import capa_tiktok as layout_capa
 from app.domain.youtube_layout import FUNDO_PADRAO
@@ -42,6 +49,9 @@ _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-capa-tiktok.mjs"
 _SAIDA_TAIL = 1200
 
 NOME_DA_CAPA = "capa_tiktok"
+# A arte fica em disco ao lado da capa: refazer a montagem (etiqueta nova, ajuste
+# de layout) não deve custar outra imagem do Gemini.
+NOME_DA_ARTE = "capa_tiktok_arte"
 
 # Quantas etiquetas anteriores vão no prompt. O bastante para o modelo enxergar
 # o vocabulário do canal, pouco o bastante para não virar uma lista que ele
@@ -51,39 +61,62 @@ _ETIQUETAS_NO_HISTORICO = 20
 _RESUMO_NO_PROMPT = 1200
 
 
+ORIGEM_IA = "ia"
+ORIGEM_FRAME = "frame"
+
+
 class CapaTikTokError(RuntimeError):
     """A capa não pôde ser montada. A mensagem é para o operador ler na tela."""
 
 
-async def gerar(corte_id: str, *, etiqueta: str, instante_seg: float | None = None) -> Path:
+async def gerar(
+    corte_id: str,
+    *,
+    etiqueta: str = "",
+    origem: str = ORIGEM_IA,
+    refazer_arte: bool = False,
+    instante_seg: float | None = None,
+) -> Path:
     """Monta a capa deste corte e grava o caminho no metadado.
 
-    `instante_seg` escolhe o frame; sem ele, o primeiro terço do vídeo
-    (`instante_do_frame`). Levanta `CapaTikTokError` com o motivo em português —
-    quem chama devolve isso para a tela em vez de um traceback.
-    """
-    contexto = await _contexto(corte_id)
-    video = contexto["video"]
+    `origem` decide o que vai na faixa central: `"ia"` (padrão) manda uma skill
+    escrever a cena e o Gemini desenhá-la; `"frame"` tira um still do MP4, que é
+    o escape hatch para quando a arte não convence.
 
-    instante = instante_seg
-    if instante is None:
-        duracao = await probe_duracao(video) or 0.0
-        instante = layout_capa.instante_do_frame(duracao)
+    `etiqueta` vazia usa o `texto_capa` do metadado — o MESMO texto curado que
+    vai na thumbnail do YouTube. Não há razão para inventar outro: quem escolheu
+    aquela palavra já decidiu como o corte se chama, e uma segunda versão só
+    criaria duas identidades para o mesmo vídeo.
+
+    Levanta `CapaTikTokError` com o motivo em português — quem chama devolve isso
+    para a tela em vez de um traceback.
+    """
+    contexto = await _contexto(corte_id, exigir_video=origem == ORIGEM_FRAME)
 
     faixas = layout_capa.montar_layout()
-    texto = layout_capa.normalizar_etiqueta(etiqueta)
+    texto = layout_capa.normalizar_etiqueta(etiqueta or contexto["texto_capa"])
 
     destino = contexto["thumb_dir"] / f"{NOME_DA_CAPA}_{corte_id[:8]}.png"
     destino.parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory(prefix="capa-tiktok-") as tmp:
-        still = Path(tmp) / "frame.jpg"
-        await _extrair_frame(video, still, instante, faixas.frame.w, faixas.frame.h)
+        if origem == ORIGEM_FRAME:
+            imagem = Path(tmp) / "frame.jpg"
+            instante = instante_seg
+            if instante is None:
+                duracao = await probe_duracao(contexto["video"]) or 0.0
+                instante = layout_capa.instante_do_frame(duracao)
+            await _extrair_frame(
+                contexto["video"], imagem, instante, faixas.frame.w, faixas.frame.h
+            )
+        else:
+            imagem = await _obter_arte(corte_id, contexto, texto, refazer=refazer_arte)
+
         props = {
             "fundo": FUNDO_PADRAO,
             "etiqueta": texto,
             "selo": contexto["selo"],
-            "frameDataUri": _data_uri(still),
+            "frameDataUri": _data_uri(imagem),
             "faixas": faixas.como_dict(),
         }
         await _rasterizar(destino, props)
@@ -156,12 +189,28 @@ async def montar_contexto_da_etiqueta(corte_id: str) -> ContextoDaEtiqueta:
         )
 
 
+async def tem_texto_de_capa(corte_id: str) -> bool:
+    """Se o corte já tem `texto_capa`, a skill da etiqueta não precisa rodar."""
+    async with AsyncSessionLocal() as db:
+        resultado = await db.execute(
+            select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)
+        )
+        meta = resultado.scalar_one_or_none()
+        return bool(meta and (meta.texto_capa or "").strip())
+
+
 async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
     async with AsyncSessionLocal() as db:
         corte = await db.get(Corte, corte_id)
         if not corte:
             raise CapaTikTokError("Corte nao encontrado.")
         projeto_id = corte.projeto_id
+
+        resultado = await db.execute(
+            select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)
+        )
+        meta = resultado.scalar_one_or_none()
+        texto_capa = (meta.texto_capa if meta else "") or ""
 
     video = projetos_dir() / projeto_id / "cortes" / corte_id / "upload_ready" / "video.mp4"
     if exigir_video and not video.is_file():
@@ -179,7 +228,56 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
         "video": video,
         "thumb_dir": projetos_dir() / projeto_id / "thumbnails",
         "selo": selo,
+        "texto_capa": texto_capa,
     }
+
+
+async def _obter_arte(corte_id: str, contexto: dict, etiqueta: str, *, refazer: bool) -> Path:
+    """A arte da faixa central, gerada pelo Gemini a partir de um prompt de skill.
+
+    Reusa o arquivo em disco quando ele existe: refazer a montagem — etiqueta
+    nova, ajuste de layout — não deve custar outra imagem. `refazer=True` é o
+    botão de "não gostei desta arte".
+    """
+    from app.infrastructure import gemini_client
+    from app.services.claude_ia import ClaudeIaService
+
+    arte = contexto["thumb_dir"] / f"{NOME_DA_ARTE}_{corte_id[:8]}.png"
+    if arte.is_file() and arte.stat().st_size > 0 and not refazer:
+        return arte
+
+    if not settings.gemini_api_key:
+        raise CapaTikTokError("GEMINI_API_KEY nao configurada — sem ela nao ha arte a gerar.")
+
+    try:
+        prompt = await ClaudeIaService.prompt_da_arte_da_capa_via_claude(corte_id, etiqueta)
+    except Exception as exc:
+        raise CapaTikTokError(f"Nao consegui escrever o prompt da arte: {exc}") from exc
+    if not prompt:
+        # Aconteceu de verdade: com o corpo da skill ainda no texto generico do
+        # template, o modelo respondeu com uma PERGUNTA pedindo a identidade do
+        # mascote. Mandar aquilo para o gerador voltaria uma ilustracao de nada.
+        raise CapaTikTokError(
+            "A skill nao devolveu um prompt de imagem valido. Personalize o corpo de "
+            "'Arte da capa do TikTok' em /canais — em especial a identidade do mascote."
+        )
+
+    try:
+        imagem = await gemini_client.generate_image(
+            prompt,
+            contexto=gemini_client.GeminiCallContext(
+                etapa="capa-tiktok-imagem",
+                projeto_id=contexto["projeto_id"],
+                corte_id=corte_id,
+            ),
+        )
+    except Exception as exc:
+        raise CapaTikTokError(f"O Gemini nao devolveu a imagem: {exc}") from exc
+
+    arte.parent.mkdir(parents=True, exist_ok=True)
+    arte.write_bytes(imagem)
+    logger.info("[CapaTikTok] arte de %s gerada", corte_id[:8])
+    return arte
 
 
 async def _extrair_frame(
@@ -225,8 +323,9 @@ def _data_uri(imagem: Path) -> str:
     cada corte (D-190), e o cache do Remotion pararia de acertar — cada capa
     custaria um bundle novo.
     """
+    tipo = "png" if imagem.suffix.lower() == ".png" else "jpeg"
     dados = base64.b64encode(imagem.read_bytes()).decode("ascii")
-    return f"data:image/jpeg;base64,{dados}"
+    return f"data:image/{tipo};base64,{dados}"
 
 
 async def _rasterizar(destino: Path, props: dict) -> None:

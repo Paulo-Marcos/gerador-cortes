@@ -260,6 +260,7 @@ def test_descrever_skills_traz_todas_com_default_e_atual(tmp_path: Path):
         "avaliador-bruto",
         "shorts-expert",
         "capa-tiktok-expert",
+        "capa-tiktok-imagem-expert",
         "cenas-short-expert",
     ]
     thumb = next(d for d in descritas if d.key == "thumbnail-prompt-expert")

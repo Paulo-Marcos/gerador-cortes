@@ -551,14 +551,20 @@ class StagingRequest(BaseModel):
 
 
 class CapaTikTokRequest(BaseModel):
-    """A etiqueta da capa e, opcionalmente, de onde tirar o frame.
+    """O que vai na faixa central e qual texto vai por cima.
 
-    `etiqueta` vazia com `sugerir_etiqueta` ligado manda a skill escrever — o
-    caminho normal. Vazia sem sugerir, a capa sai só com o frame e o selo, que é
-    um resultado legítimo: 0 palavras está dentro da recomendação do TikTok.
+    `origem="ia"` (padrão) manda gerar a arte; `"frame"` tira um still do vídeo,
+    que é o escape hatch. `refazer_arte` força uma imagem nova em vez de reusar
+    a que já está em disco.
+
+    `etiqueta` vazia usa o `texto_capa` do metadado — o mesmo texto da thumbnail
+    do YouTube. Só quando ele também está vazio a skill entra, e só se
+    `sugerir_etiqueta` permitir.
     """
 
     etiqueta: str = ""
+    origem: str = "ia"
+    refazer_arte: bool = False
     sugerir_etiqueta: bool = True
     instante_seg: float | None = None
 
@@ -575,20 +581,27 @@ async def gerar_capa_tiktok(corte_id: str, body: CapaTikTokRequest):
     from app.services import capa_tiktok
     from app.services.claude_ia import ClaudeIaService
 
+    # O texto da capa ja curado tem prioridade sobre a skill: quem escolheu
+    # aquela palavra para a thumbnail do YouTube ja decidiu como o corte se
+    # chama, e uma segunda versao criaria duas identidades para o mesmo video.
     etiqueta = body.etiqueta.strip()
-    if not etiqueta and body.sugerir_etiqueta:
+    if not etiqueta and body.sugerir_etiqueta and not await capa_tiktok.tem_texto_de_capa(corte_id):
         try:
             etiqueta = await ClaudeIaService.sugerir_etiqueta_capa_via_claude(corte_id)
         except Exception:
-            # A etiqueta e desejavel, nao obrigatoria: uma capa so com o frame e
-            # o selo continua valendo, e ficar sem capa por causa de tres
-            # palavras seria trocar o principal pelo acessorio.
+            # A etiqueta e desejavel, nao obrigatoria: uma capa com a arte e o
+            # selo continua valendo, e ficar sem capa por causa de tres palavras
+            # seria trocar o principal pelo acessorio.
             logger.exception("[CapaTikTok] nao consegui sugerir a etiqueta de %s", corte_id)
             etiqueta = ""
 
     try:
         caminho = await capa_tiktok.gerar(
-            corte_id, etiqueta=etiqueta, instante_seg=body.instante_seg
+            corte_id,
+            etiqueta=etiqueta,
+            origem=body.origem,
+            refazer_arte=body.refazer_arte,
+            instante_seg=body.instante_seg,
         )
     except capa_tiktok.CapaTikTokError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
