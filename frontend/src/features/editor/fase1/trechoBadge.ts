@@ -13,17 +13,46 @@ export interface BadgeTrecho {
   titulo: string;
   bg: string;
   fg: string;
+  /**
+   * D-515: o token da cor forte, para o segmento na timeline.
+   *
+   * É o MESMO `fg` do badge, num campo próprio: a timeline precisa do token
+   * puro para aplicar alpha com `color-mix`, e depender do `fg` por acidente
+   * quebraria no dia em que o badge quisesse um tom diferente do da barra.
+   */
+  token: string;
 }
 
 // Paleta por FAMÍLIA, não por categoria: cor carrega urgência (o que revisar),
 // o rótulo carrega a distinção. Oito cores diferentes numa lista de 20 trechos
 // viram ruído.
-const AVISO = { bg: 'var(--wb-warn-soft)', fg: 'var(--wb-warn-ink)' };
-const REDUNDANCIA = { bg: 'var(--wb-violet-soft)', fg: 'var(--wb-violet)' };
-const FORA_DO_ASSUNTO = { bg: 'var(--wb-info-soft)', fg: 'var(--wb-info)' };
-const PROBLEMA = { bg: 'var(--wb-err-soft)', fg: 'var(--wb-err-ink)' };
-const NEUTRO = { bg: 'var(--wb-bg-inset)', fg: 'var(--wb-text-mute)' };
-const IA = { bg: 'var(--wb-accent-soft)', fg: 'var(--wb-accent)' };
+//
+// D-515: a mesma paleta pinta o segmento na TIMELINE. É o que faz a associação
+// funcionar — a barra e o card do mesmo trecho têm a mesma cor, e o olho liga
+// as duas metades sem ler. Uma paleta própria para a timeline destruiria
+// exatamente o que ela veio resolver.
+const AVISO = { bg: 'var(--wb-warn-soft)', fg: 'var(--wb-warn-ink)', token: 'var(--wb-warn)' };
+const REDUNDANCIA = {
+  bg: 'var(--wb-violet-soft)',
+  fg: 'var(--wb-violet)',
+  token: 'var(--wb-violet)',
+};
+const FORA_DO_ASSUNTO = { bg: 'var(--wb-info-soft)', fg: 'var(--wb-info)', token: 'var(--wb-info)' };
+const PROBLEMA = { bg: 'var(--wb-err-soft)', fg: 'var(--wb-err-ink)', token: 'var(--wb-err)' };
+const NEUTRO = {
+  bg: 'var(--wb-bg-inset)',
+  fg: 'var(--wb-text-mute)',
+  token: 'var(--wb-text-mute)',
+};
+const IA = { bg: 'var(--wb-accent-soft)', fg: 'var(--wb-accent)', token: 'var(--wb-accent)' };
+
+// D-515: o silêncio SAIU de `FORA_DO_ASSUNTO`.
+//
+// Ele dividia o azul com tangente e chat, e é a categoria de maior volume —
+// numa timeline cheia, quase tudo ficava azul e a cor parava de distinguir
+// coisa alguma. Também é a única de origem TÉCNICA: as outras são julgamento
+// editorial, esta é o detector. Cor própria, e o card acompanha.
+const SILENCIO = { bg: 'var(--wb-bg-inset)', fg: 'var(--wb-ok-ink)', token: 'var(--wb-ok)' };
 
 const BADGE_POR_CATEGORIA: Record<DesvioCategoria, BadgeTrecho> = {
   imprecisao: {
@@ -38,7 +67,7 @@ const BADGE_POR_CATEGORIA: Record<DesvioCategoria, BadgeTrecho> = {
     ...FORA_DO_ASSUNTO,
   },
   chat: { label: 'chat', titulo: 'Interação com o chat ao vivo', ...FORA_DO_ASSUNTO },
-  silencio: { label: 'silencio', titulo: 'Silêncio detectado (técnico)', ...FORA_DO_ASSUNTO },
+  silencio: { label: 'silencio', titulo: 'Silêncio detectado (técnico)', ...SILENCIO },
   disfluencia: {
     label: 'muleta',
     titulo: 'Muleta, gagueira, falso começo ou autocorreção',
@@ -72,6 +101,21 @@ const BADGE_POR_ORIGEM: Record<DesvioOrigem, BadgeTrecho> = {
  *
  * Sempre devolve um badge; nunca lança.
  */
+/**
+ * A cor do segmento deste trecho na timeline (D-515).
+ *
+ * `color-mix` porque o token é uma variável CSS: aplicar alpha por string
+ * (`oklch(... / 0.35)`) exigiria conhecer o formato do token, e ele muda com a
+ * paleta que o operador escolher no seletor de tema.
+ *
+ * O alpha é alto o bastante para a cor ler sobre a forma de onda e baixo o
+ * bastante para a onda continuar visível por baixo — o segmento marca uma
+ * região, não a esconde.
+ */
+export function corDoSegmento(desvio: Desvio): string {
+  return `color-mix(in oklab, ${resolverBadgeTrecho(desvio).token} 42%, transparent)`;
+}
+
 export function resolverBadgeTrecho(desvio: Desvio): BadgeTrecho {
   const categoria = desvio.categoria;
   if (categoria && categoria !== 'outro' && BADGE_POR_CATEGORIA[categoria]) {

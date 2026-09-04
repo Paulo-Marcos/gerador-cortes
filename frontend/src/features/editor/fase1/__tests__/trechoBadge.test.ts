@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { resolverBadgeTrecho } from '../trechoBadge';
-import type { Desvio } from '@/types/models';
+import { corDoSegmento, resolverBadgeTrecho } from '../trechoBadge';
+import type { Desvio, DesvioCategoria } from '@/types/models';
 
 function desvio(patch: Partial<Desvio> = {}): Desvio {
   return { inicio_hms: '00:10:00', fim_hms: '00:10:08', motivo: '', ...patch };
@@ -71,5 +71,46 @@ describe('resolverBadgeTrecho — fallback por origem (sem categoria)', () => {
     expect(resolverBadgeTrecho(desvio({ categoria: 'outro', origem: 'gemini' })).label).toBe(
       'IA Gemini',
     );
+  });
+});
+
+describe('corDoSegmento (D-515)', () => {
+  const trecho = (categoria?: DesvioCategoria): Desvio => ({
+    inicio_hms: '00:00:01.000',
+    fim_hms: '00:00:02.000',
+    motivo: 'x',
+    categoria,
+  });
+
+  it('a barra usa a MESMA cor do badge do card', () => {
+    // E o ponto inteiro da demanda: a cor liga as duas metades da tela. Se a
+    // timeline tivesse paleta propria, a associacao que ela veio criar seria
+    // justamente a que ela quebraria.
+    const desvio = trecho('repeticao');
+
+    expect(corDoSegmento(desvio)).toContain(resolverBadgeTrecho(desvio).token);
+  });
+
+  it('categorias de familias diferentes pintam diferente', () => {
+    expect(corDoSegmento(trecho('repeticao'))).not.toBe(corDoSegmento(trecho('tangente')));
+    expect(corDoSegmento(trecho('tom'))).not.toBe(corDoSegmento(trecho('imprecisao')));
+  });
+
+  it('o silencio tem cor propria, separada de tangente e chat', () => {
+    // Ele dividia o azul com as duas e e a categoria de maior volume: numa
+    // timeline cheia, quase tudo ficava azul e a cor parava de distinguir.
+    const silencio = corDoSegmento(trecho('silencio'));
+
+    expect(silencio).not.toBe(corDoSegmento(trecho('tangente')));
+    expect(silencio).not.toBe(corDoSegmento(trecho('chat')));
+  });
+
+  it('a cor e translucida — o segmento marca a regiao, nao tapa a onda', () => {
+    expect(corDoSegmento(trecho('silencio'))).toContain('transparent');
+  });
+
+  it('trecho sem categoria ainda recebe cor', () => {
+    // Desvio legado (anterior a D-422) nao pode sair invisivel na timeline.
+    expect(corDoSegmento(trecho(undefined))).toContain('color-mix');
   });
 });

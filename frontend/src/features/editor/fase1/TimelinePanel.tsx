@@ -31,6 +31,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import type { Desvio } from '@/types/models';
+import { corDoSegmento } from './trechoBadge';
 import type { PlayerHandle } from '@/hooks/useVideoPlayer';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -208,11 +209,14 @@ function drawRegions(
       const start = hmsParaSeg(d.inicio_hms) - offset;
       const end = hmsParaSeg(d.fim_hms) - offset;
       if (end <= start) return;
+      // D-515: a cor vem da CATEGORIA, e da mesma fonte que pinta o badge do
+      // card. Antes era um vermelho unico cravado aqui: vinte trechos, vinte
+      // barras iguais, e a unica forma de saber qual era qual era clicar.
       const region = regions.addRegion({
         id: `desvio-${idx}`,
         start: Math.max(0, start),
         end: Math.max(0.1, end),
-        color: 'oklch(0.63 0.21 25 / 0.35)',
+        color: corDoSegmento(d),
         drag: canMove,
         resize: canMove,
       });
