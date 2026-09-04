@@ -37,6 +37,7 @@ import { AnaliseIaModal } from './AnaliseIaModal';
 import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
 import { PublicarMassaModal } from './PublicarMassaModal';
 import { PublicarTiktokModal } from './PublicarTiktokModal';
+import { cortesParaTiktok, cortesParaYoutube } from './listasDePublicacao';
 import { StatusPipStrip } from './StatusPills';
 import { VotoQualidadeLive } from './VotoQualidadeLive';
 
@@ -277,10 +278,11 @@ export function ProjetoDetalhePage() {
     });
   }, [cortesQuery.data, exportStatus.data]);
 
-  const cortesProntos = useMemo(
-    () => cortes.filter((c) => c.pronto_publicar && !c.youtube_url_publicado),
-    [cortes],
-  );
+  // D-516: cada destino tem a SUA lista. Elas moram em `listasDePublicacao`,
+  // fora do componente, porque foi compartilhando uma delas que o TikTok herdou
+  // a regra do YouTube e os cortes sumiram da lista dele.
+  const cortesProntos = useMemo(() => cortesParaYoutube(cortes), [cortes]);
+  const cortesComVideo = useMemo(() => cortesParaTiktok(cortes), [cortes]);
   const totalPublicados = cortes.filter((c) => !!c.youtube_url_publicado).length;
 
   // Warmup: ao abrir o projeto, gera proxies/waveforms dos cortes em background
@@ -667,7 +669,7 @@ export function ProjetoDetalhePage() {
       <PublicarTiktokModal
         open={tiktokOpen}
         onClose={() => setTiktokOpen(false)}
-        cortesProntos={cortesProntos}
+        cortes={cortesComVideo}
       />
       <AdicionarCorteModal
         open={adicionarCorteOpen}

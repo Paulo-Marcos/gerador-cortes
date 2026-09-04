@@ -1,61 +1,62 @@
 import { useState } from 'react';
-import { Check, ExternalLink, Loader2, Send } from 'lucide-react';
+import { Check, ExternalLink, Loader2, Send, Youtube } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
+import { cn } from '@/lib/utils';
 import { shortsApi } from '@/features/shorts/shortsApi';
 import type { StatusExportCorte } from '@/types/models';
 
-// D-510: o TikTok horizontal ao lado da publicação em massa, no workspace do
-// projeto — que é onde a publicação do horizontal já mora.
+// D-510/D-516: o TikTok horizontal, no workspace do projeto.
 //
-// Estava na tela de Shorts (D-503), com a justificativa de que era onde o
-// operador já olhava o corte. Justificativa errada: a tela de Shorts é sobre o
-// VERTICAL, e um botão de horizontal ali é uma pista falsa toda vez que alguém
-// abre a tela para outra coisa.
+// A lista é por VÍDEO PRONTO, não por "falta publicar no YouTube".
 //
-// ## Por que uma lista, e não um lote de verdade
+// A primeira versão reusou `cortesProntos`, a lista do botão do YouTube — que
+// exclui o que já subiu, porque o YouTube não republica. Para o TikTok isso é o
+// avesso do certo: o corte que acabou de ir para o YouTube é justamente o que
+// tem MP4 e ainda falta aqui. O sintoma foi exato: os cortes SUMIAM da lista do
+// TikTok conforme eram publicados no YouTube.
 //
-// O YouTube publica N cortes numa tacada porque tem API para isso. O TikTok não:
-// cliente sem auditoria só posta SELF_ONLY, e automatizar o login viola os
-// Termos — o risco não é a macro falhar, é a CONTA ser banida.
-//
-// Então o "em massa" aqui é a LISTA: os cortes prontos reunidos, cada um a um
-// clique de ter o pacote montado, a pasta aberta, a legenda copiada e a aba de
-// upload na frente. O envio continua manual, um por vez, porque é o que o
-// TikTok permite. O que a tela economiza é a procura, não o upload.
+// Agora o critério é ter vídeo final, e o estado dos dois destinos aparece na
+// linha como contexto. Filtro e informação são coisas diferentes: uma tira da
+// vista, a outra ajuda a decidir.
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  cortesProntos: StatusExportCorte[];
+  /** Cortes com MP4 final — o único requisito para montar um pacote. */
+  cortes: StatusExportCorte[];
 }
 
-export function PublicarTiktokModal({ open, onClose, cortesProntos }: Props) {
-  const [enviados, setEnviados] = useState<Record<string, boolean>>({});
+export function PublicarTiktokModal({ open, onClose, cortes }: Props) {
+  // Preparados NESTA sessão do modal. O que foi confirmado como publicado vem
+  // do servidor (`tiktok_publicado_em`) e sobrevive a fechar e reabrir; o
+  // "pacote montado" não precisa sobreviver — refazer é barato.
+  const [preparados, setPreparados] = useState<Record<string, boolean>>({});
 
   return (
     <Modal open={open} onClose={onClose} title="TikTok — cortes horizontais">
       <div className="space-y-3">
         <p className="text-[12px] leading-relaxed text-[var(--wb-text-mute)]">
           O TikTok aceita 16:9, e o MP4 já existe — é o mesmo que foi para o YouTube, sem
-          render novo. Cada botão monta o pacote, abre a pasta, copia a legenda e abre a
-          aba de upload. <strong>O envio é manual</strong>: a API só publica em modo
-          privado enquanto o app não passar pela auditoria deles.
+          render novo. <strong>O envio é manual</strong>: a API só publica em modo privado
+          enquanto o app não passar pela auditoria deles.
         </p>
 
-        {cortesProntos.length === 0 ? (
+        {cortes.length === 0 ? (
           <p className="rounded-[8px] bg-[var(--wb-bg-inset)] p-3 text-[12px] text-[var(--wb-text-mute)]">
             Nenhum corte com vídeo final ainda. O pacote sai do MP4 exportado.
           </p>
         ) : (
           <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">
-            {cortesProntos.map((corte) => (
+            {cortes.map((corte) => (
               <LinhaDoCorte
                 key={corte.corte_id}
                 corte={corte}
-                enviado={Boolean(enviados[corte.corte_id])}
-                onEnviado={() => setEnviados((atual) => ({ ...atual, [corte.corte_id]: true }))}
+                preparado={Boolean(preparados[corte.corte_id])}
+                onPreparado={() =>
+                  setPreparados((atual) => ({ ...atual, [corte.corte_id]: true }))
+                }
               />
             ))}
           </ul>
@@ -67,19 +68,23 @@ export function PublicarTiktokModal({ open, onClose, cortesProntos }: Props) {
 
 function LinhaDoCorte({
   corte,
-  enviado,
-  onEnviado,
+  preparado,
+  onPreparado,
 }: {
   corte: StatusExportCorte;
-  enviado: boolean;
-  onEnviado: () => void;
+  preparado: boolean;
+  onPreparado: () => void;
 }) {
   const [copiada, setCopiada] = useState(false);
-  const confirmado = useMutation({
+  const [confirmadoAgora, setConfirmadoAgora] = useState(false);
+  const publicado = Boolean(corte.tiktok_publicado_em) || confirmadoAgora;
+
+  const confirmar = useMutation({
     mutationFn: () => shortsApi.confirmarTiktokHorizontal(corte.corte_id),
+    onSuccess: () => setConfirmadoAgora(true),
   });
 
-  const staging = useMutation({
+  const abrir = useMutation({
     mutationFn: () => shortsApi.stagingTiktokHorizontal(corte.corte_id),
     onSuccess: async (dados) => {
       const legenda = [dados.descricao, (dados.hashtags ?? []).join(' ')]
@@ -96,7 +101,7 @@ function LinhaDoCorte({
         // ele, só não ganha o atalho.
         setCopiada(false);
       }
-      onEnviado();
+      onPreparado();
       // A aba por último: abrir antes tira o foco da página, e a API de
       // clipboard exige documento em foco.
       window.open(dados.url_upload, '_blank', 'noopener');
@@ -104,65 +109,82 @@ function LinhaDoCorte({
   });
 
   return (
-    <li className="flex flex-wrap items-center gap-2 rounded-[8px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-2.5 py-2">
+    <li
+      className={cn(
+        'flex flex-wrap items-center gap-2 rounded-[8px] border px-2.5 py-2',
+        publicado
+          ? 'border-[var(--wb-ok)]/40 bg-[var(--wb-ok-soft)]/30'
+          : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]',
+      )}
+    >
       <span className="font-code text-[11px] text-[var(--wb-text-mute)]">#{corte.numero}</span>
       <span className="min-w-0 flex-1 truncate text-[12px]">{corte.titulo || 'sem título'}</span>
 
-      {enviado && !staging.isPending && (
+      {/* D-516: o estado do YouTube é CONTEXTO, não filtro. Saber que o corte já
+          subiu lá ajuda a decidir a ordem aqui; escondê-lo por isso era o bug. */}
+      {corte.youtube_url_publicado && (
         <span
-          className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-ok-ink)]"
-          title={copiada ? 'Legenda copiada' : 'A legenda está no pacote.txt'}
+          className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-text-dim)]"
+          title="Já publicado no YouTube"
         >
+          <Youtube size={11} aria-hidden />
+          no YouTube
+        </span>
+      )}
+
+      {publicado ? (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--wb-ok-ink)]">
           <Check size={11} aria-hidden />
-          pacote pronto
+          publicado no TikTok
         </span>
-      )}
-
-      <Button
-        variant={enviado ? 'ghost' : 'outline'}
-        size="sm"
-        disabled={staging.isPending}
-        onClick={() => staging.mutate()}
-        title="Monta o pacote, abre a pasta e a página de upload. O login é seu, no navegador."
-      >
-        {staging.isPending ? <Loader2 className="animate-spin" /> : <Send />}
-        {enviado ? 'de novo' : 'Preparar'}
-      </Button>
-
-      {staging.isSuccess && staging.data?.erro_ao_abrir && (
-        <span className="w-full text-[11px] text-[var(--wb-warn-ink)]">
-          Não consegui abrir a pasta: {staging.data.pasta}
-        </span>
-      )}
-      {staging.isError && (
-        <span className="w-full text-[11px] text-[var(--wb-warn-ink)]">
-          {(staging.error as Error)?.message ?? 'não consegui montar o pacote'}
-        </span>
-      )}
-      {staging.isSuccess && !confirmado.isSuccess && (
-        <span className="inline-flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--wb-text-mute)]">
-          <ExternalLink size={11} aria-hidden />
-          arraste o MP4 na aba que abriu
-          {/* D-512: o passo que faltava. O TikTok é publicação manual, então
-              ninguém além do operador sabe que aconteceu — e a limpeza
-              automática do MP4 espera por esta confirmação. Sem ela o arquivo
-              fica, que é o lado seguro de errar. */}
+      ) : (
+        <>
+          {preparado && !abrir.isPending && (
+            <span
+              className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-text-mute)]"
+              title={copiada ? 'Legenda copiada' : 'A legenda está no pacote.txt'}
+            >
+              <Check size={11} aria-hidden />
+              pacote pronto
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={abrir.isPending}
+            onClick={() => abrir.mutate()}
+            title="Monta o pacote se preciso, abre a pasta, copia a legenda e abre a aba de upload."
+          >
+            {abrir.isPending ? <Loader2 className="animate-spin" /> : <Send />}
+            {preparado ? 'abrir' : 'Preparar'}
+          </Button>
           <Button
             size="sm"
             variant="secondary"
-            disabled={confirmado.isPending}
-            onClick={() => confirmado.mutate()}
+            disabled={confirmar.isPending}
+            onClick={() => confirmar.mutate()}
             title="Libera a limpeza automática deste MP4. Sem isto ele fica no disco."
           >
-            {confirmado.isPending ? <Loader2 className="animate-spin" /> : <Check />}
+            {confirmar.isPending ? <Loader2 className="animate-spin" /> : <Check />}
             publiquei
           </Button>
+        </>
+      )}
+
+      {abrir.isSuccess && abrir.data?.erro_ao_abrir && (
+        <span className="w-full text-[11px] text-[var(--wb-warn-ink)]">
+          Não consegui abrir a pasta: {abrir.data.pasta}
         </span>
       )}
-      {confirmado.isSuccess && (
-        <span className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-ok-ink)]">
-          <Check size={11} aria-hidden />
-          publicado no TikTok
+      {abrir.isError && (
+        <span className="w-full text-[11px] text-[var(--wb-warn-ink)]">
+          {(abrir.error as Error)?.message ?? 'não consegui montar o pacote'}
+        </span>
+      )}
+      {abrir.isSuccess && !publicado && (
+        <span className="inline-flex w-full items-center gap-1 text-[11px] text-[var(--wb-text-mute)]">
+          <ExternalLink size={11} aria-hidden />
+          arraste o MP4 na aba que abriu e confirme em “publiquei”
         </span>
       )}
     </li>

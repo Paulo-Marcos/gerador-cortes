@@ -326,6 +326,8 @@ export interface StatusExportCorte {
   /** Marca manual do editor de que as cenas estao revisadas. */
   cenas_validadas?: boolean;
   video_pronto: boolean;
+  /** D-516: quando o operador confirmou que subiu no TikTok. "" = ainda não. */
+  tiktok_publicado_em?: string;
   thumbnail_pronta: boolean;
   metadados_completos: boolean;
   pronto_publicar: boolean;
