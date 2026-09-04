@@ -509,6 +509,13 @@ class MetadadoCorte(Base):
     )
     prompt_thumbnail: Mapped[str] = mapped_column(Text, default="")
     thumbnail_path: Mapped[str] = mapped_column(String(1000), default="")
+    # D-519: a capa VERTICAL, do TikTok. Coluna propria e nao reuso da de cima
+    # porque as duas imagens tem formatos e trabalhos diferentes: a do YouTube e
+    # 16:9 e disputa um clique numa lista; esta e 9:16 (o TikTok mostra o video
+    # deitado com tarjas, mas a capa ocupa o quadro inteiro) e serve a vitrine
+    # do perfil, onde nove capas sao vistas juntas. Guardar uma so faria a
+    # errada aparecer em algum dos dois lugares.
+    thumbnail_tiktok_path: Mapped[str] = mapped_column(String(1000), default="")
     is_fire: Mapped[bool] = mapped_column(Integer, default=0)
     # D-502: o corte foi indicado para a fabrica de shorts A MAO.
     #

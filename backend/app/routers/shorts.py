@@ -45,7 +45,7 @@ from pathlib import Path
 
 from app.database import AsyncSessionLocal
 from app.services import shorts as shorts_store
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -545,6 +545,53 @@ class StagingRequest(BaseModel):
     """Se a macro deve abrir a pasta do pacote no explorador."""
 
     abrir_pasta: bool = True
+
+
+class CapaTikTokRequest(BaseModel):
+    """A etiqueta da capa e, opcionalmente, de onde tirar o frame."""
+
+    etiqueta: str = ""
+    instante_seg: float | None = None
+
+
+@router.post("/corte/{corte_id}/capa-tiktok")
+async def gerar_capa_tiktok(corte_id: str, body: CapaTikTokRequest):
+    """Monta a capa VERTICAL do corte para o TikTok (D-519).
+
+    Mora neste router, e nao no de metadados, porque a capa pertence ao destino:
+    ela so existe por causa do quadro 9:16 do TikTok, e e este modulo que ja
+    cuida da publicacao la. O router de metadados continua dono da thumbnail
+    16:9 do YouTube, que e outra imagem para outro trabalho.
+    """
+    from app.services import capa_tiktok
+
+    try:
+        caminho = await capa_tiktok.gerar(
+            corte_id, etiqueta=body.etiqueta, instante_seg=body.instante_seg
+        )
+    except capa_tiktok.CapaTikTokError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return {"capa": str(caminho), "nome": caminho.name}
+
+
+@router.post("/corte/{corte_id}/capa-tiktok/upload")
+async def subir_capa_tiktok(corte_id: str, arquivo: UploadFile = File(...)):
+    """Recebe uma capa 9:16 feita por fora, no lugar da montada."""
+    from app.services import capa_tiktok
+
+    conteudo = await arquivo.read()
+    if not conteudo:
+        raise HTTPException(status_code=422, detail="Arquivo vazio.")
+
+    try:
+        caminho = await capa_tiktok.salvar_upload(
+            corte_id, conteudo, arquivo.filename or "capa.png"
+        )
+    except capa_tiktok.CapaTikTokError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return {"capa": str(caminho), "nome": caminho.name}
 
 
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal/confirmar")
