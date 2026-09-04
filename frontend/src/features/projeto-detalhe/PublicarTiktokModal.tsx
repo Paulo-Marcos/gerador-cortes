@@ -1,15 +1,17 @@
-import { useState } from 'react';
-import { Check, ExternalLink, Loader2, Send, Youtube } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Check, ExternalLink, Loader2, Package, Send, Youtube } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import { shortsApi } from '@/features/shorts/shortsApi';
 import type { StatusExportCorte } from '@/types/models';
+import { pendentesNoTiktok } from './listasDePublicacao';
 
-// D-510/D-516: o TikTok horizontal, no workspace do projeto.
+// D-510/D-516/D-517: o TikTok horizontal, no workspace do projeto.
 //
-// A lista é por VÍDEO PRONTO, não por "falta publicar no YouTube".
+// ## A lista é por VÍDEO PRONTO, não por "falta publicar no YouTube"
 //
 // A primeira versão reusou `cortesProntos`, a lista do botão do YouTube — que
 // exclui o que já subiu, porque o YouTube não republica. Para o TikTok isso é o
@@ -20,6 +22,19 @@ import type { StatusExportCorte } from '@/types/models';
 // Agora o critério é ter vídeo final, e o estado dos dois destinos aparece na
 // linha como contexto. Filtro e informação são coisas diferentes: uma tira da
 // vista, a outra ajuda a decidir.
+//
+// ## Por que o "em massa" só prepara
+//
+// O YouTube publica N cortes numa tacada porque tem API. O TikTok não: cliente
+// sem auditoria só posta SELF_ONLY, e automatizar o login viola os Termos — o
+// risco não é a macro falhar, é a CONTA ser banida.
+//
+// E há um limite físico: a pasta do pacote é POR CORTE. Não existe pasta-mãe
+// para abrir uma vez só, e abrir dez exploradores com dez abas seria pior que
+// fazer à mão. Então o lote faz a parte lenta — montar os pacotes — e para aí.
+// O upload segue um por vez, e o botão de cada linha abre a pasta, a aba e
+// copia a legenda DAQUELE corte, que é a única forma de a área de transferência
+// ter a legenda certa.
 
 interface Props {
   open: boolean;
@@ -33,6 +48,24 @@ export function PublicarTiktokModal({ open, onClose, cortes }: Props) {
   // do servidor (`tiktok_publicado_em`) e sobrevive a fechar e reabrir; o
   // "pacote montado" não precisa sobreviver — refazer é barato.
   const [preparados, setPreparados] = useState<Record<string, boolean>>({});
+  const [quantidade, setQuantidade] = useState(0);
+
+  const pendentes = useMemo(() => pendentesNoTiktok(cortes), [cortes]);
+  const alvo = quantidade > 0 ? quantidade : pendentes.length;
+
+  const lote = useMutation({
+    mutationFn: async () => {
+      const fila = pendentes.slice(0, alvo);
+      for (const corte of fila) {
+        // Em série, e não em paralelo: cada pacote copia um MP4 inteiro, e dez
+        // cópias simultâneas disputam o mesmo disco sem terminar mais cedo.
+        // `abrir_pasta: false` — no lote ninguém quer dez exploradores.
+        await shortsApi.stagingTiktokHorizontal(corte.corte_id, { abrirPasta: false });
+        setPreparados((atual) => ({ ...atual, [corte.corte_id]: true }));
+      }
+      return fila.length;
+    },
+  });
 
   return (
     <Modal open={open} onClose={onClose} title="TikTok — cortes horizontais">
@@ -48,18 +81,55 @@ export function PublicarTiktokModal({ open, onClose, cortes }: Props) {
             Nenhum corte com vídeo final ainda. O pacote sai do MP4 exportado.
           </p>
         ) : (
-          <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">
-            {cortes.map((corte) => (
-              <LinhaDoCorte
-                key={corte.corte_id}
-                corte={corte}
-                preparado={Boolean(preparados[corte.corte_id])}
-                onPreparado={() =>
-                  setPreparados((atual) => ({ ...atual, [corte.corte_id]: true }))
-                }
-              />
-            ))}
-          </ul>
+          <>
+            {/* D-517: o lote monta os pacotes; o upload continua um por vez. */}
+            <div className="flex flex-wrap items-center gap-2 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 py-2">
+              <label className="flex items-center gap-1.5 text-[12px]">
+                Preparar
+                <Input
+                  type="number"
+                  min={1}
+                  max={pendentes.length}
+                  value={quantidade || ''}
+                  placeholder={String(pendentes.length)}
+                  onChange={(e) => setQuantidade(Number(e.target.value) || 0)}
+                  className="h-7 w-[68px] text-center text-[12px]"
+                  aria-label="Quantos pacotes preparar"
+                />
+                de {pendentes.length}
+              </label>
+              <Button
+                size="sm"
+                disabled={lote.isPending || pendentes.length === 0}
+                onClick={() => lote.mutate()}
+              >
+                {lote.isPending ? <Loader2 className="animate-spin" /> : <Package />}
+                {lote.isPending ? 'montando…' : 'Preparar pacotes'}
+              </Button>
+              <span className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+                Monta as pastas de uma vez, sem abrir nada. Depois use “abrir” em cada linha
+                para subir.
+              </span>
+              {lote.isError && (
+                <span className="w-full text-[11px] text-[var(--wb-warn-ink)]">
+                  {(lote.error as Error)?.message ?? 'não consegui montar os pacotes'}
+                </span>
+              )}
+            </div>
+
+            <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">
+              {cortes.map((corte) => (
+                <LinhaDoCorte
+                  key={corte.corte_id}
+                  corte={corte}
+                  preparado={Boolean(preparados[corte.corte_id])}
+                  onPreparado={() =>
+                    setPreparados((atual) => ({ ...atual, [corte.corte_id]: true }))
+                  }
+                />
+              ))}
+            </ul>
+          </>
         )}
       </div>
     </Modal>

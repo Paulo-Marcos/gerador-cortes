@@ -367,7 +367,14 @@ export const shortsApi = {
     request<{ pacotes: PacotePublicacao[] }>(`/shorts/${shortId}/publicacao`),
 
   /** D-503: monta o pacote, abre a pasta, e devolve legenda + URL de upload. */
-  stagingTiktokHorizontal: (corteId: string) =>
+  /**
+   * Monta o pacote do corte para o TikTok.
+   *
+   * D-517: `abrirPasta` existe para o LOTE — montar dez pacotes abrindo dez
+   * exploradores seria pior que fazer à mão. No clique de uma linha só ela
+   * continua abrindo, que é o passo que leva o operador ao upload.
+   */
+  stagingTiktokHorizontal: (corteId: string, opcoes: { abrirPasta?: boolean } = {}) =>
     request<{
       pasta: string;
       video: string;
@@ -379,7 +386,7 @@ export const shortsApi = {
       hashtags?: string[];
     }>(`/shorts/corte/${corteId}/publicar/tiktok-horizontal/staging`, {
       method: 'POST',
-      body: JSON.stringify({ abrir_pasta: true }),
+      body: JSON.stringify({ abrir_pasta: opcoes.abrirPasta ?? true }),
     }),
 
   publicar: (shortId: string, plataforma: string) =>
