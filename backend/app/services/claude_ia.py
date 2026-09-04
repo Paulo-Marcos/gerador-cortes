@@ -1309,10 +1309,10 @@ class ClaudeIaService:
         skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK)
         scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok")
         prompt = scaffold.format(
-            titulo_proposto=contexto["titulo"],
-            tema_central=contexto["tema_central"],
-            resumo=contexto["resumo"],
-            etiquetas_recentes=contexto["etiquetas_recentes"] or "(nenhuma ainda)",
+            titulo_proposto=contexto.titulo,
+            tema_central=contexto.tema_central,
+            resumo=contexto.resumo,
+            etiquetas_recentes=contexto.etiquetas_recentes or "(nenhuma ainda)",
         )
         _log_skill_usada(_SKILL_CAPA_TIKTOK, skill, scaffold)
         bruto = await claude_cli_client.generate_text(
@@ -1320,7 +1320,7 @@ class ClaudeIaService:
             **_args_claude(
                 skill,
                 _SKILL_CAPA_TIKTOK,
-                projeto_id=contexto["projeto_id"],
+                projeto_id=contexto.projeto_id,
                 corte_id=corte_id,
             ),
         )

@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
@@ -113,7 +114,18 @@ async def salvar_upload(corte_id: str, conteudo: bytes, nome_arquivo: str) -> Pa
     return destino
 
 
-async def montar_contexto_da_etiqueta(corte_id: str) -> dict:
+@dataclass(frozen=True)
+class ContextoDaEtiqueta:
+    """O que a skill da etiqueta lê para nomear o assunto do corte."""
+
+    projeto_id: str
+    titulo: str
+    tema_central: str
+    resumo: str
+    etiquetas_recentes: str
+
+
+async def montar_contexto_da_etiqueta(corte_id: str) -> ContextoDaEtiqueta:
     """O material que a skill da etiqueta precisa ler (D-520).
 
     Inclui as etiquetas RECENTES do canal, e o motivo é o inverso do resto da
@@ -135,13 +147,13 @@ async def montar_contexto_da_etiqueta(corte_id: str) -> dict:
         )
         recentes = [meta.etiqueta_tiktok for meta in resultado.scalars().all()]
 
-        return {
-            "projeto_id": corte.projeto_id,
-            "titulo": corte.titulo_proposto or "",
-            "tema_central": corte.tema_central or "",
-            "resumo": (corte.resumo or "")[:_RESUMO_NO_PROMPT],
-            "etiquetas_recentes": "\n".join(f"- {etiqueta}" for etiqueta in recentes),
-        }
+        return ContextoDaEtiqueta(
+            projeto_id=corte.projeto_id,
+            titulo=corte.titulo_proposto or "",
+            tema_central=corte.tema_central or "",
+            resumo=(corte.resumo or "")[:_RESUMO_NO_PROMPT],
+            etiquetas_recentes="\n".join(f"- {etiqueta}" for etiqueta in recentes),
+        )
 
 
 async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
