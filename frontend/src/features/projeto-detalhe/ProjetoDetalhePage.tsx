@@ -669,6 +669,7 @@ export function ProjetoDetalhePage() {
       <PublicarTiktokModal
         open={tiktokOpen}
         onClose={() => setTiktokOpen(false)}
+        projetoId={id}
         cortes={cortesComVideo}
       />
       <AdicionarCorteModal

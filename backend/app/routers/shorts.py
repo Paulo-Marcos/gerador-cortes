@@ -579,7 +579,7 @@ async def staging_tiktok_horizontal(corte_id: str, body: StagingRequest):
 
     A "macro" que dá para fazer com honestidade. O que ela faz:
 
-      - monta o pacote (MP4 + texto + metadados) na pasta do corte;
+      - monta o pacote (MP4 + texto + metadados + capa) na pasta do corte;
       - abre essa pasta no explorador, para o arquivo estar à mão;
       - devolve a legenda e a URL de upload, que a tela abre numa aba nova.
 

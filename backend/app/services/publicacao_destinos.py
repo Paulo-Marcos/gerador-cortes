@@ -30,7 +30,7 @@ from app.domain.publicacao import (
     adaptar,
     validar,
 )
-from app.models import Corte, Short
+from app.models import Corte, MetadadoCorte, Short
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +44,11 @@ class ContextoPublicacao:
     duracao_seg: float
     vertical: bool
     base: MetadadosBase
+    # D-518: a imagem de capa, quando existe. O TikTok deixa escolher a capa no
+    # upload, e sem ela ele congela um frame qualquer do video — normalmente um
+    # meio-piscar. `None` e um estado legitimo: nem todo corte tem thumbnail
+    # gerada ainda, e o pacote precisa dizer isso em vez de omitir.
+    capa: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -59,6 +64,7 @@ class PacotePublicacao:
     modo: ModoPublicacao
     arquivo: Path
     metadados: MetadadosPublicacao
+    capa: Path | None = None
     avisos: list[str] = field(default_factory=list)
 
     @property
@@ -78,6 +84,7 @@ class Destino:
             plataforma=self.plataforma,
             modo=self.modo,
             arquivo=contexto.arquivo,
+            capa=contexto.capa,
             metadados=adaptar(contexto.base, self.plataforma),
             avisos=validar(
                 self.plataforma,
@@ -178,6 +185,7 @@ async def montar_contexto_do_corte(corte_id: str) -> ContextoPublicacao:
             arquivo=arquivo,
             duracao_seg=round(float(corte.duracao_clip_seg or 0.0), 2),
             vertical=False,
+            capa=await _capa_do_corte(db, corte),
             base=MetadadosBase(
                 titulo=corte.titulo_proposto or "",
                 descricao=corte.resumo or "",
@@ -187,6 +195,27 @@ async def montar_contexto_do_corte(corte_id: str) -> ContextoPublicacao:
                 url_video_longo="",
             ),
         )
+
+
+async def _capa_do_corte(db, corte: Corte) -> Path | None:
+    """A thumbnail do corte, se ela existe em disco (D-518).
+
+    E a MESMA imagem que vai para o YouTube: 16:9, feita para o video deitado
+    que o TikTok vai receber. Nao ha capa propria a gerar.
+
+    Devolve `None` quando nao ha thumbnail ou quando o caminho gravado nao
+    aponta mais para um arquivo — a limpeza de retencao apaga imagem antiga, e
+    um caminho morto no pacote e pior que a ausencia declarada.
+    """
+    from sqlalchemy import select
+
+    resultado = await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == corte.id))
+    meta = resultado.scalar_one_or_none()
+    if not meta or not meta.thumbnail_path:
+        return None
+
+    caminho = resolver_do_projeto(meta.thumbnail_path, corte.projeto_id)
+    return caminho if caminho.is_file() else None
 
 
 def _hashtags_do_corte(corte: Corte) -> list[str]:

@@ -22,12 +22,18 @@ from app.services.destinos_shorts import (
     UPLOADS_POR_DIA,
     DestinoManual,
     DestinoYouTubeShorts,
+    copiar_capa,
     montar_texto_do_pacote,
 )
 from app.services.publicacao_destinos import ContextoPublicacao, PacotePublicacao
 
 
-def _pacote(plataforma: Plataforma, arquivo: Path, avisos: list[str] | None = None):
+def _pacote(
+    plataforma: Plataforma,
+    arquivo: Path,
+    avisos: list[str] | None = None,
+    capa: Path | None = None,
+):
     return PacotePublicacao(
         plataforma=plataforma,
         modo=ModoPublicacao.MANUAL,
@@ -41,6 +47,7 @@ def _pacote(plataforma: Plataforma, arquivo: Path, avisos: list[str] | None = No
             ),
             plataforma,
         ),
+        capa=capa,
         avisos=avisos or [],
     )
 
@@ -170,3 +177,83 @@ async def test_contexto_vertical_nao_gera_aviso_de_formato(tmp_path):
     pacote = await DestinoYouTubeShorts().preparar(contexto)
 
     assert pacote.avisos == []
+
+
+# D-518: a capa.
+#
+# O TikTok deixa escolher a capa no upload; sem escolha ele congela um frame
+# qualquer do video. O pacote nao mencionava a imagem que o corte JA tem — o
+# operador subia sem capa por nao saber que havia uma.
+
+
+def _capa(tmp_path: Path, nome: str = "thumb.jpg") -> Path:
+    imagem = tmp_path / nome
+    imagem.write_bytes(b"jpeg-falso")
+    return imagem
+
+
+@pytest.mark.asyncio
+async def test_capa_entra_na_pasta_do_pacote(tmp_path):
+    """Ao lado do texto, e nao a tres pastas de distancia.
+
+    A pasta abre no explorador durante o upload: a capa precisa estar ali para
+    ser arrastada, senao o operador tem de sair procurando no meio do gesto.
+    """
+    video = tmp_path / "short.mp4"
+    video.write_bytes(b"v")
+
+    resultado = await DestinoManual(Plataforma.TIKTOK).publicar(
+        _pacote(Plataforma.TIKTOK, video, capa=_capa(tmp_path))
+    )
+
+    copiada = Path(resultado["capa"])
+    assert copiada.parent == Path(resultado["pasta"])
+    assert copiada.read_bytes() == b"jpeg-falso"
+
+
+@pytest.mark.asyncio
+async def test_capa_preserva_a_extensao_original(tmp_path):
+    """O TikTok recusa PNG servido como .jpg — a extensao vem da imagem."""
+    video = tmp_path / "short.mp4"
+    video.write_bytes(b"v")
+
+    resultado = await DestinoManual(Plataforma.TIKTOK).publicar(
+        _pacote(Plataforma.TIKTOK, video, capa=_capa(tmp_path, "thumb.PNG"))
+    )
+
+    assert Path(resultado["capa"]).name == "capa.png"
+
+
+@pytest.mark.asyncio
+async def test_sem_capa_o_pacote_sai_do_mesmo_jeito(tmp_path):
+    """Ausencia de capa nao pode derrubar o pacote — so aparecer como ausencia."""
+    video = tmp_path / "short.mp4"
+    video.write_bytes(b"v")
+
+    resultado = await DestinoManual(Plataforma.TIKTOK).publicar(_pacote(Plataforma.TIKTOK, video))
+
+    assert resultado["capa"] == ""
+    assert (Path(resultado["pasta"]) / "publicar.txt").is_file()
+
+
+def test_capa_apontando_para_arquivo_sumido_nao_e_copiada(tmp_path):
+    """A retencao apaga thumbnail antiga; caminho morto e pior que nada."""
+    sumida = tmp_path / "apagada.jpg"
+
+    assert copiar_capa(_pacote(Plataforma.TIKTOK, Path("s.mp4"), capa=sumida), tmp_path) is None
+
+
+def test_texto_do_pacote_lista_a_capa(tmp_path):
+    capa = _capa(tmp_path)
+
+    texto = montar_texto_do_pacote(_pacote(Plataforma.TIKTOK, Path("s.mp4"), capa=capa), capa)
+
+    assert "-- CAPA --" in texto
+    assert str(capa) in texto
+
+
+def test_texto_diz_quando_nao_ha_capa():
+    """Silencio aqui viraria upload sem capa descoberto depois de publicado."""
+    texto = montar_texto_do_pacote(_pacote(Plataforma.TIKTOK, Path("s.mp4")))
+
+    assert "sem capa" in texto

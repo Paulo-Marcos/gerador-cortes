@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from pathlib import Path
 
 from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma
@@ -31,6 +32,9 @@ QUOTA_DIARIA = 10_000
 UPLOADS_POR_DIA = QUOTA_DIARIA // CUSTO_QUOTA_UPLOAD
 
 NOME_PACOTE = "publicar.txt"
+# A capa entra na pasta com nome fixo: o operador acha sem procurar, e a
+# extensao vem da imagem original porque o TikTok recusa PNG disfarcado de JPG.
+NOME_CAPA = "capa"
 
 
 class DestinoYouTubeShorts(Destino):
@@ -110,8 +114,10 @@ class DestinoManual(Destino):
         destino_dir = pacote.arquivo.parent / "publicar" / self.plataforma.value
         destino_dir.mkdir(parents=True, exist_ok=True)
 
+        capa = copiar_capa(pacote, destino_dir)
+
         texto = destino_dir / NOME_PACOTE
-        texto.write_text(montar_texto_do_pacote(pacote), encoding="utf-8")
+        texto.write_text(montar_texto_do_pacote(pacote, capa), encoding="utf-8")
         (destino_dir / "metadados.json").write_text(
             json.dumps(
                 {
@@ -120,6 +126,7 @@ class DestinoManual(Destino):
                     "descricao": pacote.metadados.descricao,
                     "hashtags": pacote.metadados.hashtags,
                     "video": str(pacote.arquivo),
+                    "capa": str(capa) if capa else "",
                     "avisos": pacote.avisos,
                 },
                 ensure_ascii=False,
@@ -134,6 +141,9 @@ class DestinoManual(Destino):
             "modo": self.modo.value,
             "pasta": str(destino_dir),
             "video": str(pacote.arquivo),
+            # D-518: vazio quando o corte nao tem thumbnail — a tela usa isso
+            # para avisar, em vez de deixar o operador subir sem capa sem saber.
+            "capa": str(capa) if capa else "",
             "avisos": pacote.avisos,
             # D-503: os metadados voltam na resposta, e nao so no arquivo.
             # A macro copia a legenda para a area de transferencia; le-la do
@@ -144,7 +154,31 @@ class DestinoManual(Destino):
         }
 
 
-def montar_texto_do_pacote(pacote: PacotePublicacao) -> str:
+def copiar_capa(pacote: PacotePublicacao, destino_dir: Path) -> Path | None:
+    """Poe a capa DENTRO da pasta do pacote, e nao so o caminho dela (D-518).
+
+    Aqui a copia se paga, ao contrario do MP4 — sao dezenas de KB, e o ganho e
+    o gesto: a pasta ja abre no explorador, entao a capa fica ao lado do texto,
+    a um arrastar do seletor de capa do TikTok. Apontar para a pasta de
+    thumbnails obrigaria o operador a navegar ate outro canto do projeto no
+    meio do upload.
+
+    Devolve `None` quando nao ha capa, e tambem quando a copia falha: ficar sem
+    capa e um contratempo, perder o pacote inteiro por causa dela nao.
+    """
+    if not pacote.capa or not pacote.capa.is_file():
+        return None
+
+    alvo = destino_dir / f"{NOME_CAPA}{pacote.capa.suffix.lower()}"
+    try:
+        shutil.copy2(pacote.capa, alvo)
+    except OSError as exc:
+        logger.warning("[Publicacao] nao consegui copiar a capa: %s", exc)
+        return None
+    return alvo
+
+
+def montar_texto_do_pacote(pacote: PacotePublicacao, capa: Path | None = None) -> str:
     """O `publicar.txt`: o que copiar, na ordem em que a plataforma pergunta.
 
     Campos separados por marcadores para o operador achar o que colar sem ler o
@@ -169,6 +203,12 @@ def montar_texto_do_pacote(pacote: PacotePublicacao) -> str:
         "",
         "-- ARQUIVO --",
         str(pacote.arquivo),
+        "",
+        "-- CAPA --",
+        # Sem capa o TikTok congela um frame qualquer do video, que costuma
+        # pegar alguem de olho fechado. Dizer isso aqui e o que transforma a
+        # ausencia em decisao do operador, e nao em surpresa depois do upload.
+        str(capa) if capa else "sem capa — o TikTok vai usar um frame do video",
         "",
     ]
     return "\n".join(linhas)

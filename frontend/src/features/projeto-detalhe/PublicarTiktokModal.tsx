@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Check, ExternalLink, Loader2, Package, Send, Youtube } from 'lucide-react';
+import { Check, ExternalLink, ImageOff, Loader2, Package, Send, Youtube } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
+import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
 import type { StatusExportCorte } from '@/types/models';
 import { pendentesNoTiktok } from './listasDePublicacao';
@@ -36,15 +37,25 @@ import { pendentesNoTiktok } from './listasDePublicacao';
 // O upload segue um por vez, e o botão de cada linha abre a pasta, a aba e
 // copia a legenda DAQUELE corte, que é a única forma de a área de transferência
 // ter a legenda certa.
+//
+// ## A capa (D-518)
+//
+// O TikTok deixa escolher a capa no upload e, sem escolha, congela um frame
+// qualquer do vídeo. O corte já tem uma imagem feita — a mesma do YouTube —, e
+// ela agora vai dentro da pasta do pacote. A miniatura aqui é conferência: ver
+// QUAL imagem vai subir antes de abrir o explorador, e saber quando não há
+// nenhuma.
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** Para montar a URL da capa, que o backend serve em `/videos/<projeto>/…`. */
+  projetoId: string;
   /** Cortes com MP4 final — o único requisito para montar um pacote. */
   cortes: StatusExportCorte[];
 }
 
-export function PublicarTiktokModal({ open, onClose, cortes }: Props) {
+export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props) {
   // Preparados NESTA sessão do modal. O que foi confirmado como publicado vem
   // do servidor (`tiktok_publicado_em`) e sobrevive a fechar e reabrir; o
   // "pacote montado" não precisa sobreviver — refazer é barato.
@@ -126,6 +137,7 @@ export function PublicarTiktokModal({ open, onClose, cortes }: Props) {
                 <LinhaDoCorte
                   key={corte.corte_id}
                   corte={corte}
+                  projetoId={projetoId}
                   preparado={Boolean(preparados[corte.corte_id])}
                   onPreparado={() =>
                     setPreparados((atual) => ({ ...atual, [corte.corte_id]: true }))
@@ -142,16 +154,19 @@ export function PublicarTiktokModal({ open, onClose, cortes }: Props) {
 
 function LinhaDoCorte({
   corte,
+  projetoId,
   preparado,
   onPreparado,
 }: {
   corte: StatusExportCorte;
+  projetoId: string;
   preparado: boolean;
   onPreparado: () => void;
 }) {
   const [copiada, setCopiada] = useState(false);
   const [confirmadoAgora, setConfirmadoAgora] = useState(false);
   const publicado = Boolean(corte.tiktok_publicado_em) || confirmadoAgora;
+  const capa = resolveThumbUrl(projetoId, corte.thumbnail_path);
 
   const confirmar = useMutation({
     mutationFn: () => shortsApi.confirmarTiktokHorizontal(corte.corte_id),
@@ -191,6 +206,28 @@ function LinhaDoCorte({
           : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]',
       )}
     >
+      {/* D-518: a capa, que o pacote copia para dentro da pasta. Aqui ela e
+          conferencia — o operador ve QUAL imagem vai subir antes de abrir o
+          explorador, e o clique abre a imagem inteira numa aba. */}
+      {capa ? (
+        <a
+          href={capa}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Ver a capa em tamanho real. Ela tambem vai na pasta do pacote."
+          className="shrink-0 overflow-hidden rounded-[4px] border border-[var(--wb-border-soft)]"
+        >
+          <img src={capa} alt="" className="h-[24px] w-[42px] object-cover" />
+        </a>
+      ) : (
+        <span
+          className="inline-flex shrink-0 items-center gap-1 text-[11px] text-[var(--wb-warn-ink)]"
+          title="Sem thumbnail gerada: o TikTok vai congelar um frame qualquer do video."
+        >
+          <ImageOff size={11} aria-hidden />
+          sem capa
+        </span>
+      )}
       <span className="font-code text-[11px] text-[var(--wb-text-mute)]">#{corte.numero}</span>
       <span className="min-w-0 flex-1 truncate text-[12px]">{corte.titulo || 'sem título'}</span>
 
