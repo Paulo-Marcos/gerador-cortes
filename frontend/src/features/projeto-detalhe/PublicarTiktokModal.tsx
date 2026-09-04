@@ -31,7 +31,8 @@ import { pendentesNoTiktok } from './listasDePublicacao';
 //
 // E há um limite físico: a pasta do pacote é POR CORTE. Não existe pasta-mãe
 // para abrir uma vez só, e abrir dez exploradores com dez abas seria pior que
-// fazer à mão. Então o lote faz a parte lenta — montar os pacotes — e para aí.
+// fazer à mão. Então o lote faz o trabalho repetitivo — montar as pastas e
+// escrever a legenda de cada uma — e para aí.
 // O upload segue um por vez, e o botão de cada linha abre a pasta, a aba e
 // copia a legenda DAQUELE corte, que é a única forma de a área de transferência
 // ter a legenda certa.
@@ -57,8 +58,11 @@ export function PublicarTiktokModal({ open, onClose, cortes }: Props) {
     mutationFn: async () => {
       const fila = pendentes.slice(0, alvo);
       for (const corte of fila) {
-        // Em série, e não em paralelo: cada pacote copia um MP4 inteiro, e dez
-        // cópias simultâneas disputam o mesmo disco sem terminar mais cedo.
+        // Em série, e não em paralelo. O pacote não copia o MP4 — aponta para
+        // ele —, então o ganho de disparar tudo junto seria pequeno, e o custo
+        // é grande: numa rajada de dez chamadas, uma que falhe não diz qual
+        // corte ficou sem pasta. Em fila, o `preparados` marca linha a linha e
+        // o erro para exatamente onde parou.
         // `abrir_pasta: false` — no lote ninguém quer dez exploradores.
         await shortsApi.stagingTiktokHorizontal(corte.corte_id, { abrirPasta: false });
         setPreparados((atual) => ({ ...atual, [corte.corte_id]: true }));
