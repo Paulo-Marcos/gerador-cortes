@@ -1016,7 +1016,6 @@ export function EditorPage() {
               inicioSeg={corteUI.inicio_seg}
               fimSeg={corteUI.fim_seg}
               desvios={corteUI.desvios ?? []}
-              transcricao={corteUI.transcricao_corte ?? []}
               playbackRate={playbackRate}
               smartPlay={smartPlay}
               onTimeUpdate={setCurrentTime}

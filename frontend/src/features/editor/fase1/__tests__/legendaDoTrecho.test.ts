@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { janelaDo, legendaEm, rotuloDo, textoDoTrecho, trechoEm } from '../legendaDoTrecho';
-import type { Desvio, TranscricaoLinha } from '@/types/models';
+import { janelaDo, legendaEm, rotuloDo, trechoEm } from '../legendaDoTrecho';
+import type { Desvio } from '@/types/models';
 
-// D-511: o texto do trecho que vai ser removido.
+// D-511/D-514: a justificativa do trecho que vai ser removido.
 //
-// O que se guarda aqui e o RECORTE da transcricao. Errar por pouco nao levanta
-// erro nenhum: sai uma legenda com a frase do vizinho, e o operador julga o
-// corte pelo texto errado — o pior tipo de defeito, porque parece que funciona.
+// A D-511 mostrava tambem a fala recortada da transcricao, e a D-514 tirou: o
+// operador ja esta OUVINDO a fala; o que ele nao sabia era por que aquele
+// pedaco foi marcado. Os testes do recorte sairam junto — codigo que nao existe
+// mais nao precisa de guarda.
+//
+// O que sobra e a fronteira do trecho, que ainda erra em silencio: um limite
+// trocado faz a legenda aparecer sobre a fala vizinha, e o operador julga o
+// corte pelo motivo errado.
 
 const desvio = (inicio: string, fim: string, motivo = 'digressao'): Desvio => ({
   inicio_hms: inicio,
@@ -14,63 +19,7 @@ const desvio = (inicio: string, fim: string, motivo = 'digressao'): Desvio => ({
   motivo,
 });
 
-const linha = (start: number, end: number, texto: string): TranscricaoLinha => ({
-  start,
-  end,
-  texto,
-});
-
-const FALA: TranscricaoLinha[] = [
-  linha(0, 5, 'abertura do corte'),
-  linha(10, 14, 'aqui comeca a digressao'),
-  linha(14, 19, 'e ela continua por aqui'),
-  linha(30, 34, 'de volta ao assunto'),
-];
-
 const TRECHO = desvio('00:00:10.000', '00:00:20.000');
-
-describe('textoDoTrecho', () => {
-  it('junta as linhas que caem na janela', () => {
-    expect(textoDoTrecho(FALA, TRECHO)).toBe('aqui comeca a digressao e ela continua por aqui');
-  });
-
-  it('deixa de fora o que esta fora', () => {
-    const texto = textoDoTrecho(FALA, TRECHO);
-
-    expect(texto).not.toContain('abertura');
-    expect(texto).not.toContain('de volta');
-  });
-
-  it('a linha que so ENCOSTA na borda nao entra', () => {
-    // A transcricao vem em blocos de varios segundos. A linha que termina no
-    // instante em que o trecho comeca nao diz nada sobre ele — mostra-la seria
-    // atribuir ao corte uma frase que nao e dele.
-    const encostando = [linha(5, 10, 'termina exatamente no comeco')];
-
-    expect(textoDoTrecho(encostando, TRECHO)).toBe('');
-  });
-
-  it('a linha que atravessa a borda entra', () => {
-    // a fala comecou antes e segue dentro do trecho
-    const atravessa = [linha(8, 13, 'comecou antes e invade')];
-
-    expect(textoDoTrecho(atravessa, TRECHO)).toBe('comecou antes e invade');
-  });
-
-  it('sem transcricao devolve vazio, nao quebra', () => {
-    expect(textoDoTrecho([], TRECHO)).toBe('');
-  });
-
-  it('janela invertida nao recorta nada', () => {
-    expect(textoDoTrecho(FALA, desvio('00:00:20.000', '00:00:10.000'))).toBe('');
-  });
-
-  it('ignora linha vazia em vez de somar espacos', () => {
-    const comBuraco = [linha(10, 12, '  '), linha(12, 15, 'a que vale')];
-
-    expect(textoDoTrecho(comBuraco, TRECHO)).toBe('a que vale');
-  });
-});
 
 describe('trechoEm', () => {
   it('acha o trecho que contem o instante', () => {
@@ -87,43 +36,48 @@ describe('trechoEm', () => {
   it('fora de qualquer trecho nao ha legenda', () => {
     expect(trechoEm([TRECHO], 25)).toBeNull();
   });
+
+  it('lista vazia nao quebra', () => {
+    expect(trechoEm([], 12)).toBeNull();
+  });
 });
 
 describe('legendaEm', () => {
-  it('mostra o que foi dito no trecho', () => {
-    expect(legendaEm([TRECHO], FALA, 12)?.texto).toContain('digressao');
+  it('mostra a justificativa do trecho', () => {
+    expect(legendaEm([TRECHO], 12)?.texto).toBe('digressao');
   });
 
-  it('sem transcricao casada, cai no motivo', () => {
-    // Legenda vazia seria indistinguivel de um bug; o motivo ao menos diz por
-    // que aquele pedaco foi marcado.
-    expect(legendaEm([TRECHO], [], 12)?.texto).toBe('digressao');
-  });
+  it('o motivo vai INTEIRO, sem corte', () => {
+    // O pedido que originou tudo isto: "tem um texto e fica pela metade".
+    const longo = 'x'.repeat(300);
 
-  it('o rotulo e curto: a categoria, nao o motivo inteiro', () => {
-    // Um motivo de tres linhas no rotulo ocuparia meio quadro, tapando
-    // justamente o video que se esta avaliando.
-    const comCategoria: Desvio = { ...TRECHO, categoria: 'tangente' };
-
-    expect(legendaEm([comCategoria], FALA, 12)?.rotulo).toBe('tangente');
-  });
-
-  it('sem categoria, motivo curto vira rotulo e motivo longo nao', () => {
-    const curto = desvio('00:00:10.000', '00:00:20.000', 'repeticao');
-    const longo = desvio('00:00:10.000', '00:00:20.000', 'x'.repeat(80));
-
-    expect(legendaEm([curto], FALA, 12)?.rotulo).toBe('repeticao');
-    expect(legendaEm([longo], FALA, 12)?.rotulo).toBe('');
+    expect(legendaEm([desvio('00:00:10.000', '00:00:20.000', longo)], 12)?.texto).toBe(longo);
   });
 
   it('fora de trecho nao ha legenda nenhuma', () => {
-    expect(legendaEm([TRECHO], FALA, 25)).toBeNull();
+    expect(legendaEm([TRECHO], 25)).toBeNull();
+  });
+
+  it('trecho sem motivo devolve texto vazio, nao quebra', () => {
+    const semMotivo = desvio('00:00:10.000', '00:00:20.000', '');
+
+    expect(legendaEm([semMotivo], 12)?.texto).toBe('');
   });
 });
 
 describe('rotuloDo', () => {
   it('a categoria manda quando existe', () => {
     expect(rotuloDo({ ...TRECHO, categoria: 'tangente', motivo: 'texto longo' })).toBe('tangente');
+  });
+
+  it('sem categoria, motivo curto vira rotulo', () => {
+    expect(rotuloDo(desvio('00:00:10.000', '00:00:20.000', 'repeticao'))).toBe('repeticao');
+  });
+
+  it('motivo longo NAO vira rotulo', () => {
+    // Um rotulo de tres linhas ocuparia meio quadro, tapando justamente o video
+    // que se esta avaliando. O motivo tem lugar: a legenda.
+    expect(rotuloDo(desvio('00:00:10.000', '00:00:20.000', 'x'.repeat(80)))).toBe('');
   });
 });
 

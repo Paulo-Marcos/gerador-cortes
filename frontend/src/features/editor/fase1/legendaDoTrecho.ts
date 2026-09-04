@@ -1,22 +1,18 @@
 import { hmsParaSeg } from '../timeUtils';
-import type { Desvio, TranscricaoLinha } from '@/types/models';
+import type { Desvio } from '@/types/models';
 
-// D-511: o que está sendo dito no trecho que vai ser removido.
+// D-511/D-514: a JUSTIFICATIVA do trecho que vai ser removido, sobre o vídeo.
 //
-// O card do trecho mostra o MOTIVO — "digressão", "repetição" — cortado em duas
-// linhas. Duas coisas faltavam: o motivo inteiro, e o que a pessoa realmente
-// falou ali. Sem o segundo, julgar um corte exige abrir a transcrição, achar o
-// intervalo à mão e voltar; e com o texto cortado no meio nem o motivo dá para
-// conferir.
+// O pedido original era "tem um texto e fica pela metade e eu não consigo
+// verificar" — e o texto pela metade era o MOTIVO, cortado por um `line-clamp`
+// de duas linhas. A D-511 leu isso como falta da transcrição e entregou as
+// duas coisas: o motivo inteiro E a fala recortada da janela.
 //
-// A legenda resolve o caso comum: assistindo ao bruto, quando a reprodução
-// entra num trecho marcado para sair, o texto dele aparece sobre o vídeo. Ver o
-// que se perde no momento em que se perde é o que permite discordar do corte.
+// A transcrição saiu (D-514). Quem julga o corte já está ouvindo a fala — ela
+// não precisa estar escrita também; o que não dava para saber era POR QUE
+// aquele pedaço foi marcado. Menos texto sobre o vídeo é mais vídeo visível.
 //
-// Funções puras: recebem transcrição e desvio, devolvem texto. Nada de I/O.
-
-/** Quanto uma linha precisa invadir a janela para contar como dela. */
-const SOBREPOSICAO_MINIMA_SEG = 0.15;
+// Funções puras: recebem o desvio, devolvem texto. Nada de I/O.
 
 export interface JanelaDoTrecho {
   inicio: number;
@@ -31,31 +27,6 @@ export interface JanelaDoTrecho {
  */
 export function janelaDo(desvio: Desvio): JanelaDoTrecho {
   return { inicio: hmsParaSeg(desvio.inicio_hms), fim: hmsParaSeg(desvio.fim_hms) };
-}
-
-/**
- * O texto falado dentro do trecho, juntando as linhas que caem nele.
- *
- * Uma linha entra quando SOBREPÕE a janela de verdade, não quando apenas
- * encosta: a transcrição vem em blocos de vários segundos, e a linha que termina
- * no instante em que o trecho começa não diz nada sobre ele — incluí-la
- * mostraria uma frase que não é o motivo do corte.
- *
- * Devolve string vazia quando não há transcrição, e a tela então diz isso em
- * vez de mostrar uma legenda em branco.
- */
-export function textoDoTrecho(linhas: TranscricaoLinha[], desvio: Desvio): string {
-  const { inicio, fim } = janelaDo(desvio);
-  if (!(fim > inicio)) return '';
-
-  return linhas
-    .filter((linha) => {
-      const cobre = Math.min(linha.end, fim) - Math.max(linha.start, inicio);
-      return cobre >= SOBREPOSICAO_MINIMA_SEG;
-    })
-    .map((linha) => linha.texto.trim())
-    .filter(Boolean)
-    .join(' ');
 }
 
 /**
@@ -74,29 +45,26 @@ export function trechoEm(desvios: Desvio[], segundo: number): Desvio | null {
 }
 
 /**
- * A legenda a mostrar num instante: o texto do trecho, ou o motivo.
+ * A legenda a mostrar num instante: a justificativa do trecho.
  *
- * Sem transcrição casada, o motivo é melhor que nada — ele ao menos diz por que
- * aquele pedaço foi marcado. Uma legenda vazia seria indistinguível de um bug.
+ * `rotulo` é a etiqueta curta (a categoria) e `texto` é o motivo por extenso.
+ * Os dois separados porque ocupam lugares diferentes na tela — a etiqueta numa
+ * pílula, o motivo como legenda —, e juntá-los daria a primeira versão desta
+ * demanda: um rótulo de três linhas tapando o quadro.
  */
-export function legendaEm(
-  desvios: Desvio[],
-  linhas: TranscricaoLinha[],
-  segundo: number,
-): { texto: string; rotulo: string } | null {
+export function legendaEm(desvios: Desvio[], segundo: number): { texto: string; rotulo: string } | null {
   const desvio = trechoEm(desvios, segundo);
   if (!desvio) return null;
 
-  const texto = textoDoTrecho(linhas, desvio);
-  return { texto: texto || desvio.motivo || '', rotulo: rotuloDo(desvio) };
+  return { texto: (desvio.motivo || '').trim(), rotulo: rotuloDo(desvio) };
 }
 
 /**
  * O rótulo curto do trecho: a categoria, e não o motivo inteiro.
  *
  * A primeira versão pôs o motivo no rótulo — e um motivo de três linhas ocupava
- * meio quadro, tapando justamente o vídeo que se está avaliando. O motivo tem
- * lugar: o card, onde cabe inteiro. Aqui só precisa caber a etiqueta.
+ * meio quadro, tapando justamente o vídeo que se está avaliando. O motivo é a
+ * legenda; aqui só precisa caber a etiqueta.
  */
 export function rotuloDo(desvio: Desvio): string {
   const categoria = (desvio.categoria || '').trim();

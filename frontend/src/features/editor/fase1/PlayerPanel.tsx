@@ -7,7 +7,7 @@ import { useVelocidadeNoVideo } from '@/hooks/useVelocidadePlayerPadrao';
 import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
 import { legendaEm } from './legendaDoTrecho';
-import type { Desvio, TranscricaoLinha } from '@/types/models';
+import type { Desvio } from '@/types/models';
 
 export type { PlayerHandle };
 
@@ -78,8 +78,6 @@ interface Props {
   inicioSeg: number;
   fimSeg: number;
   desvios?: Desvio[];
-  /** D-511: a transcrição do corte, para a legenda do trecho a remover. */
-  transcricao?: TranscricaoLinha[];
   /** Velocidade atual do player (1.25 etc). Exibida no header. */
   playbackRate?: number;
   smartPlay?: boolean;
@@ -106,7 +104,6 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     inicioSeg,
     fimSeg,
     desvios,
-    transcricao,
     playbackRate = 1,
     smartPlay,
     onTimeUpdate,
@@ -202,7 +199,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   // chip anunciava 1,50x com o video rodando em 1,00x. Agora o estado do
   // D-511: recalculada a cada `timeupdate`. Barato: uma varredura sobre uma
   // lista de trechos que raramente passa de uma dezena.
-  const legenda = legendaEm(desvios ?? [], transcricao ?? [], segundoNaTela);
+  const legenda = legendaEm(desvios ?? [], segundoNaTela);
 
   // React e a fonte unica: o <video> segue a prop.
   useVelocidadeNoVideo(videoRef, playbackRate, src);
