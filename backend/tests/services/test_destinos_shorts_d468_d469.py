@@ -257,3 +257,15 @@ def test_texto_diz_quando_nao_ha_capa():
     texto = montar_texto_do_pacote(_pacote(Plataforma.TIKTOK, Path("s.mp4")))
 
     assert "sem capa" in texto
+
+
+def test_a_ausencia_de_capa_diz_o_que_fazer(tmp_path):
+    """D-522: a thumbnail 16:9 do YouTube NAO e reserva desta capa.
+
+    Sem alternativa escrita, o operador tenderia a arrastar a capa do YouTube —
+    que no quadro 9:16 vira uma faixa fina e some na grade do perfil.
+    """
+    texto = montar_texto_do_pacote(_pacote(Plataforma.TIKTOK, Path("s.mp4")))
+
+    assert "Metadados" in texto
+    assert "frame" in texto

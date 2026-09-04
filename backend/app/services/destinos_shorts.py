@@ -36,6 +36,14 @@ NOME_PACOTE = "publicar.txt"
 # extensao vem da imagem original porque o TikTok recusa PNG disfarcado de JPG.
 NOME_CAPA = "capa"
 
+# D-522: a capa do TikTok e 9:16, e a thumbnail do YouTube NAO serve de reserva —
+# 16:9 vira uma faixa fina no quadro vertical e some na grade do perfil. Dizer o
+# que fazer vale mais que dizer que falta.
+SEM_CAPA = (
+    "sem capa vertical — gere a capa do TikTok em Metadados, ou escolha um frame "
+    "no proprio TikTok na hora do upload"
+)
+
 
 class DestinoYouTubeShorts(Destino):
     """Upload direto pela Data API v3 — não existe endpoint de Shorts.
@@ -208,7 +216,7 @@ def montar_texto_do_pacote(pacote: PacotePublicacao, capa: Path | None = None) -
         # Sem capa o TikTok congela um frame qualquer do video, que costuma
         # pegar alguem de olho fechado. Dizer isso aqui e o que transforma a
         # ausencia em decisao do operador, e nao em surpresa depois do upload.
-        str(capa) if capa else "sem capa — o TikTok vai usar um frame do video",
+        str(capa) if capa else SEM_CAPA,
         "",
     ]
     return "\n".join(linhas)

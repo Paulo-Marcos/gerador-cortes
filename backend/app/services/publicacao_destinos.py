@@ -198,23 +198,31 @@ async def montar_contexto_do_corte(corte_id: str) -> ContextoPublicacao:
 
 
 async def _capa_do_corte(db, corte: Corte) -> Path | None:
-    """A thumbnail do corte, se ela existe em disco (D-518).
+    """A capa VERTICAL do corte, se ela existe em disco (D-518, D-522).
 
-    E a MESMA imagem que vai para o YouTube: 16:9, feita para o video deitado
-    que o TikTok vai receber. Nao ha capa propria a gerar.
+    A D-518 usava aqui a thumbnail do YouTube, e a premissa estava errada: a
+    capa do TikTok e 9:16 mesmo para o video deitado — o video toca com tarjas
+    dentro do quadro vertical, mas a capa ocupa o quadro inteiro. A imagem 16:9
+    virava uma faixa fina num retangulo vazio, e na grade do perfil, que recorta
+    a capa no quadrado central, quase desaparecia.
 
-    Devolve `None` quando nao ha thumbnail ou quando o caminho gravado nao
-    aponta mais para um arquivo — a limpeza de retencao apaga imagem antiga, e
-    um caminho morto no pacote e pior que a ausencia declarada.
+    Sem capa vertical, devolve `None` — e NAO cai para a 16:9. Entregar a capa
+    errada e pior que declarar a ausencia: no segundo caso o operador escolhe um
+    frame na hora do upload; no primeiro ele publica um retangulo vazio sem
+    saber.
+
+    Tambem `None` quando o caminho gravado nao aponta mais para um arquivo: a
+    limpeza de retencao apaga imagem antiga, e um caminho morto no pacote e pior
+    que a ausencia declarada.
     """
     from sqlalchemy import select
 
     resultado = await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == corte.id))
     meta = resultado.scalar_one_or_none()
-    if not meta or not meta.thumbnail_path:
+    if not meta or not meta.thumbnail_tiktok_path:
         return None
 
-    caminho = resolver_do_projeto(meta.thumbnail_path, corte.projeto_id)
+    caminho = resolver_do_projeto(meta.thumbnail_tiktok_path, corte.projeto_id)
     return caminho if caminho.is_file() else None
 
 
