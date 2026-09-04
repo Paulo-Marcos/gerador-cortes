@@ -358,6 +358,11 @@ export interface MetadadoCorte {
   canal_credito?: string;
   prompt_thumbnail: string;
   thumbnail_path: string;
+  // D-519/D-520: a capa VERTICAL do TikTok e a etiqueta dela. Campos proprios, e
+  // nao reuso dos de cima: 16:9 e 9:16 sao imagens diferentes para trabalhos
+  // diferentes, e guardar uma so faria a errada aparecer em algum dos dois.
+  thumbnail_tiktok_path?: string;
+  etiqueta_tiktok?: string;
   numero_serie?: number;
   cor_serie?: string;
   criado_em?: string;

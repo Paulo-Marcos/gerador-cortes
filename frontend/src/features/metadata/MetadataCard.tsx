@@ -27,6 +27,7 @@ import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
 import { api, resolveThumbUrl } from '@/lib/api';
+import { CapaTikTokSlot } from './CapaTikTokSlot';
 import { applyCoverEmojis, applyReadingTitlePrefix } from '@/lib/readingMetadata';
 import { cn } from '@/lib/utils';
 import { PromptManualPanel } from '@/components/PromptManualPanel';
@@ -584,6 +585,14 @@ export function MetadataCard({
                 </div>
               )}
             </button>
+            {/* D-521: a capa vertical do TikTok, irmã da thumbnail acima. */}
+            <CapaTikTokSlot
+              projetoId={projetoId}
+              corteId={cut.id}
+              capaPath={meta?.thumbnail_tiktok_path}
+              etiqueta={meta?.etiqueta_tiktok}
+              onAtualizou={invalidate}
+            />
             {/* D-413: copiar o prompt é a ação principal do fluxo manual de capa
                 (cola no agente capista e traz a imagem de volta por Ctrl+V). Ela
                 só existia no ⋯ do header do card, que o modal não renderiza —
@@ -856,6 +865,14 @@ export function MetadataCard({
                 </div>
               )}
             </button>
+            {/* D-521: a capa vertical do TikTok, irmã da thumbnail acima. */}
+            <CapaTikTokSlot
+              projetoId={projetoId}
+              corteId={cut.id}
+              capaPath={meta?.thumbnail_tiktok_path}
+              etiqueta={meta?.etiqueta_tiktok}
+              onAtualizou={invalidate}
+            />
             {/* DE-PARA-v3 §5: "Trocar thumbnail" é o primário (sólido em
                 acento); "Gerar" fica em outline; e as ações raras (copiar
                 pasta, comprimir, remover) saem da pilha de botões para um ⋯. */}

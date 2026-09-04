@@ -389,6 +389,23 @@ export const shortsApi = {
       body: JSON.stringify({ abrir_pasta: opcoes.abrirPasta ?? true }),
     }),
 
+  // D-519/D-521: a capa VERTICAL do corte. Mora no router de shorts, e nao no de
+  // metadados, porque ela so existe por causa do quadro 9:16 do TikTok.
+  gerarCapaTiktok: (corteId: string, opcoes: { etiqueta?: string } = {}) =>
+    request<{ capa: string; nome: string; etiqueta: string }>(
+      `/shorts/corte/${corteId}/capa-tiktok`,
+      { method: 'POST', body: JSON.stringify({ etiqueta: opcoes.etiqueta ?? '' }) },
+    ),
+
+  subirCapaTiktok: (corteId: string, arquivo: File) => {
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    return request<{ capa: string; nome: string }>(
+      `/shorts/corte/${corteId}/capa-tiktok/upload`,
+      { method: 'POST', body: formData },
+    );
+  },
+
   publicar: (shortId: string, plataforma: string) =>
     request<Record<string, unknown>>(`/shorts/${shortId}/publicar/${plataforma}`, {
       method: 'POST',
