@@ -6,9 +6,28 @@
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
+/**
+ * Os cabeçalhos de uma requisição — e a regra que a D-529 corrigiu.
+ *
+ * Com `FormData`, quem monta o `Content-Type` é o BROWSER: ele precisa incluir
+ * o `boundary` que separa as partes. Declarar `application/json` por cima faz o
+ * servidor tentar ler JSON num corpo multipart, e o campo do arquivo chega como
+ * ausente — foi o 422 "Field required" ao subir a arte da capa.
+ *
+ * `lib/api.ts` já tinha essa guarda; este módulo nasceu antes de existir upload
+ * aqui e ficou sem ela.
+ */
+export function cabecalhosDa(init?: RequestInit): HeadersInit {
+  const ehFormData = init?.body instanceof FormData;
+  return {
+    ...(ehFormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(init?.headers ?? {}),
+  };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    headers: cabecalhosDa(init),
     ...init,
   });
   if (!res.ok) {
