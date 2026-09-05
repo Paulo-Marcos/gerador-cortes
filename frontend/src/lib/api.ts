@@ -168,6 +168,14 @@ export const api = {
   previaLimpezaProjeto: (id: string) =>
     request<PreviaLimpezaResponse>(`/projetos/${id}/limpeza/previa`),
 
+  // D-527: traz de volta o video de uma live ja limpa, preservando o resto.
+  // NAO confundir com `reiniciarDownload`, que zera transcricao, titulo e
+  // duracao — os cortes apontam para tempos daquela transcricao.
+  rebaixarVideoProjeto: (id: string) =>
+    request<{ message: string; projeto_id: string }>(`/projetos/${id}/rebaixar-video`, {
+      method: 'POST',
+    }),
+
   // D-457: `limparBrutosFire` e opt-in. O bruto do corte Fire e a materia-prima
   // dos shorts, entao o default do backend (false) preserva.
   limparArquivosProjeto: (id: string, limparBrutosFire = false) =>

@@ -52,6 +52,16 @@ export function useLimparArquivos() {
   });
 }
 
+export function useRebaixarVideo() {
+  const qc = useQueryClient();
+  return useMutation({
+    // D-527: a volta da limpeza. O download roda em background; o card se
+    // atualiza pelo polling da lista, como o resto do workspace.
+    mutationFn: (id: string) => api.rebaixarVideoProjeto(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: PROJETOS_KEY }),
+  });
+}
+
 export interface LimparArquivosArgs {
   id: string;
   limparBrutosFire?: boolean;

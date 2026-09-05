@@ -1,10 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Eraser, FolderOpen, Sparkles, Trash2, Trophy } from 'lucide-react';
+import {
+  Clock,
+  DownloadCloud,
+  Eraser,
+  FolderOpen,
+  Loader2,
+  Sparkles,
+  Trash2,
+  Trophy,
+} from 'lucide-react';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn, formatarDataLive, formatarDuracao, thumbnailUrl } from '@/lib/utils';
-import { useLimparArquivos, useRemoverProjeto } from '@/hooks/useProjetos';
+import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/hooks/useProjetos';
 import { api } from '@/lib/api';
 import type { Projeto } from '@/types/models';
 import { perguntaBrutosFire } from './limpezaBrutosFire';
@@ -34,6 +43,7 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
   const navigate = useNavigate();
   const remover = useRemoverProjeto();
   const limpar = useLimparArquivos();
+  const rebaixar = useRebaixarVideo();
   const [thumbErr, setThumbErr] = useState(false);
 
   const estado = estadoDoProjeto(projeto);
@@ -42,6 +52,7 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
   const thumb = thumbnailUrl(projeto.youtube_url, 'mq');
   const baixando = projeto.status === 'baixando';
   const limpo = projeto.arquivos_limpos;
+  const rebaixando = Boolean(projeto.rebaixando_video) || rebaixar.isPending;
   const placeholderHue = PLACEHOLDER_HUES[index % PLACEHOLDER_HUES.length];
 
   const onCardClick = () => {
@@ -58,6 +69,22 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
   // o bruto do Fire e a materia-prima da fabrica de shorts, e apaga-lo por
   // engano custa re-extrair o trecho da live inteira. Cancelar a segunda
   // pergunta (ou apertar Esc) PRESERVA: o caminho mais seguro e o default.
+  // Confirma porque baixa uma live inteira: dezenas de minutos e GBs. O texto
+  // diz o que PRESERVA, que é a diferença para o "reiniciar download" da tela
+  // de erro — aquele refaz a transcrição e deslocaria todos os cortes.
+  const onRebaixar = () => {
+    if (rebaixando) return;
+    if (
+      !confirm(
+        `Baixar o video de "${projeto.titulo_live}" de novo?
+
+` + 'Transcricao, cortes e metadados sao preservados — so o arquivo pesado volta.',
+      )
+    )
+      return;
+    rebaixar.mutate(projeto.id);
+  };
+
   const onLimpar = async () => {
     if (limpo) return;
     if (
@@ -198,6 +225,26 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
           <FolderOpen size={13} strokeWidth={2.3} aria-hidden />
           Abrir
         </button>
+
+        {/* D-527: a limpeza deixou de ser mão única. Só aparece quando ela já
+            aconteceu — antes disso não há o que rebaixar, e um botão que baixa
+            uma live inteira não deve ficar à mão sem motivo. */}
+        {limpo && (
+          <button
+            type="button"
+            onClick={onRebaixar}
+            disabled={rebaixando}
+            aria-label="Baixar o vídeo da live de novo"
+            title="Baixar o vídeo da live de novo. Preserva transcrição, cortes e metadados."
+            className={cn(BOTAO_ICONE, 'text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]')}
+          >
+            {rebaixando ? (
+              <Loader2 size={14} strokeWidth={2.3} className="animate-spin" aria-hidden />
+            ) : (
+              <DownloadCloud size={14} strokeWidth={2.3} aria-hidden />
+            )}
+          </button>
+        )}
 
         <button
           type="button"

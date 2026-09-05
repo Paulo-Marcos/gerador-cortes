@@ -52,6 +52,7 @@ export interface Projeto {
   progresso_download: number;
   arquivo_video_path: string;
   arquivos_limpos: boolean;
+  rebaixando_video?: boolean;
   criado_em: string;
   ultima_analise_em: string | null;
   /** Renderer das cenas Remotion deste projeto: "v1" (estável) ou "v2" (nova identidade). */
