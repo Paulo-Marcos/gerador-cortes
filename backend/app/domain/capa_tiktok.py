@@ -23,21 +23,36 @@ fundo, não conteúdo.
 
 ## O desenho
 
-Três faixas, todas dentro do quadrado central:
+A arte 4:5 ocupa o quadro; a etiqueta e o selo vão POR CIMA dela, dentro do
+quadrado seguro:
 
-    y=0     ┌──────────────┐  fundo (só aparece no feed)
-    y=420   ├──────────────┤  ← início do quadrado seguro
-            │   ETIQUETA   │  2-3 palavras
-            ├──────────────┤
-            │  frame 16:9  │  o still do vídeo
-            ├──────────────┤
-            │  selo canal  │
-    y=1500  ├──────────────┤  ← fim do quadrado seguro
+    y=0     ┌──────────────┐  fundo
+    y=335   ├──────────────┤  ← topo da arte (sangra o quadrado seguro)
+    y=420   │ ···········  │  ← início do quadrado seguro
+            │   ETIQUETA   │  sobre a arte, com véu escuro
+            │              │
+            │     ARTE     │  1000x1250, o assunto da capa
+            │              │
+            │  selo canal  │  sobre a arte
+    y=1500  │ ···········  │  ← fim do quadrado seguro
+    y=1585  ├──────────────┤  ← base da arte
     y=1920  └──────────────┘  fundo
 
-Assumir o formato deitado em vez de escondê-lo é decisão de projeto: a faixa
-central mostra exatamente o que o espectador vai ver, e a repetição das três
-bandas é o que faz a grade parecer um canal e não um amontoado.
+Duas regras diferentes governam a arte e o texto, e confundi-las foi o erro da
+primeira versão.
+
+**O texto** fica dentro do quadrado seguro, sempre: a grade do perfil recorta a
+capa, e uma etiqueta cortada pela metade não se lê.
+
+**A arte** sangra além dele de propósito. Ela é imagem: o recorte da grade mostra
+o miolo, que é justamente onde o assunto está. Prendê-la ao quadrado seguro
+obrigaria a encolhê-la a menos da metade da largura — e a arte deixaria de ser o
+que a pessoa vê primeiro.
+
+Foi por isso que a faixa deixou de ser 16:9. Enquanto ela mostrava um quadro do
+vídeo, a proporção deitada era honesta: citava o formato do que ia tocar. Com uma
+ilustração feita sob medida essa razão caiu, e sobrava uma tira ocupando um terço
+da altura de uma capa vertical.
 
 Módulo puro: só aritmética e texto. Sem I/O, sem Remotion, sem ffmpeg.
 """
@@ -59,18 +74,23 @@ BASE_SEGURA = TOPO_SEGURO + LADO_SEGURO
 # divergem entre 1:1 e 3:4.
 MARGEM_SEGURA = 50
 
-# O trilho do chrome do palco (`StageChrome pad`). A faixa do vídeo encosta
-# nele em vez de sangrar até a borda: sangrada, ela ATRAVESSA o contorno do
-# palco, e a capa deixa de ler como um cartão único.
+# O trilho do chrome do palco (`StageChrome pad`). A arte encosta nele em vez de
+# sangrar até a borda: sangrada, ela ATRAVESSA o contorno do palco, e a capa
+# deixa de ler como um cartão único.
 MARGEM_DO_CHROME = 40
 
-# A faixa do vídeo vai de trilho a trilho; a altura sai do 16:9 dela.
+# A arte vai de trilho a trilho; a altura sai do 4:5 dela.
 LARGURA_DO_FRAME = LARGURA - 2 * MARGEM_DO_CHROME
-ALTURA_DO_FRAME = round(LARGURA_DO_FRAME * 9 / 16)
+ALTURA_DO_FRAME = round(LARGURA_DO_FRAME * 5 / 4)
 
-ALTURA_DA_ETIQUETA = 300
+# Faixas de TEXTO, sobrepostas à arte. A etiqueta cabe em duas linhas; o rodapé
+# leva só o selo.
+ALTURA_DA_ETIQUETA = 250
 ALTURA_DO_SELO = 84
-ESPACO_ENTRE_FAIXAS = 22
+
+# Respiro entre o texto e a borda do quadrado seguro. O texto não encosta no
+# limite porque as fontes divergem sobre o recorte exato da grade.
+FOLGA_DO_TEXTO = 30
 
 # Acima disso a etiqueta deixa de ser etiqueta. O mercado recomenda de 0 a 3
 # palavras; 5 é o teto do conteúdo educativo, e é onde este módulo corta.
@@ -102,10 +122,12 @@ class Layout:
 
     @property
     def cabe_no_quadrado_seguro(self) -> bool:
-        """Nenhuma faixa escapa do território que a grade preserva."""
-        topo = self.etiqueta.y
-        base = self.selo.y + self.selo.h
-        return topo >= TOPO_SEGURO and base <= BASE_SEGURA
+        """O TEXTO cabe no território que a grade preserva.
+
+        Só o texto: a arte sangra além do quadrado de propósito, e cobrá-la aqui
+        obrigaria a encolhê-la a menos da metade da largura do quadro.
+        """
+        return self.etiqueta.y >= TOPO_SEGURO and self.selo.y + self.selo.h <= BASE_SEGURA
 
     def como_dict(self) -> dict[str, dict[str, int]]:
         return {
@@ -116,36 +138,39 @@ class Layout:
 
 
 def montar_layout() -> Layout:
-    """As três faixas, centradas no quadrado seguro.
+    """A arte centrada no quadro; o texto por cima, dentro do quadrado seguro.
 
-    O bloco inteiro é centrado em vez de ancorado no topo: sobrando espaço, ele
-    sobra igual em cima e embaixo, e a capa continua equilibrada se um dia a
-    altura de alguma faixa mudar.
+    A arte é centrada no CANVAS, e não no quadrado seguro: assim o miolo dela —
+    o que a grade do perfil vai mostrar — coincide com o centro da imagem, que é
+    onde a skill manda o assunto ficar.
 
     >>> layout = montar_layout()
     >>> (layout.frame.w, layout.frame.h)
-    (1000, 562)
+    (1000, 1250)
     >>> layout.cabe_no_quadrado_seguro
     True
+    >>> layout.frame.y < TOPO_SEGURO      # a arte sangra, de propósito
+    True
     """
-    alto_total = (
-        ALTURA_DA_ETIQUETA
-        + ESPACO_ENTRE_FAIXAS
-        + ALTURA_DO_FRAME
-        + ESPACO_ENTRE_FAIXAS
-        + ALTURA_DO_SELO
+    frame = Faixa(
+        MARGEM_DO_CHROME,
+        (ALTURA - ALTURA_DO_FRAME) // 2,
+        LARGURA_DO_FRAME,
+        ALTURA_DO_FRAME,
     )
-    y = TOPO_SEGURO + (LADO_SEGURO - alto_total) // 2
 
-    etiqueta = Faixa(MARGEM_SEGURA, y, LARGURA - 2 * MARGEM_SEGURA, ALTURA_DA_ETIQUETA)
-    y += ALTURA_DA_ETIQUETA + ESPACO_ENTRE_FAIXAS
-
-    # O frame encosta no trilho do chrome, e não na borda do quadro: ele é a
-    # citação do vídeo dentro do cartão, não uma tira passando por cima dele.
-    frame = Faixa(MARGEM_DO_CHROME, y, LARGURA_DO_FRAME, ALTURA_DO_FRAME)
-    y += ALTURA_DO_FRAME + ESPACO_ENTRE_FAIXAS
-
-    selo = Faixa(MARGEM_SEGURA, y, LARGURA - 2 * MARGEM_SEGURA, ALTURA_DO_SELO)
+    etiqueta = Faixa(
+        MARGEM_SEGURA,
+        TOPO_SEGURO + FOLGA_DO_TEXTO,
+        LARGURA - 2 * MARGEM_SEGURA,
+        ALTURA_DA_ETIQUETA,
+    )
+    selo = Faixa(
+        MARGEM_SEGURA,
+        BASE_SEGURA - FOLGA_DO_TEXTO - ALTURA_DO_SELO,
+        LARGURA - 2 * MARGEM_SEGURA,
+        ALTURA_DO_SELO,
+    )
     return Layout(etiqueta=etiqueta, frame=frame, selo=selo)
 
 

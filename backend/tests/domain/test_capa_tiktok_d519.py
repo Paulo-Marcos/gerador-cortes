@@ -2,9 +2,12 @@
 
 O que precisa de guarda aqui não é o desenho bonito — é o QUADRADO CENTRAL. A
 grade do perfil recorta a capa, e as fontes de 2026 divergem entre corte 1:1 e
-~3:4. Se uma faixa escapar do quadrado de 1080x1080, o sintoma não aparece na
+~3:4. Se o TEXTO escapar do quadrado de 1080x1080, o sintoma não aparece na
 imagem gerada (que sai perfeita) e sim no perfil, depois de publicado: a etiqueta
 cortada pela metade, ou o selo sumido.
+
+A arte é o contrário: ela sangra além do quadrado de propósito (D-526), e um
+teste que a prendesse ali obrigaria a encolhê-la a menos da metade da largura.
 
 O segundo alvo é a etiqueta. A skill do YouTube manda a manchete INTEIRA; se
 esse texto vazar para cá, a capa vira um parágrafo ilegível em miniatura.
@@ -28,19 +31,32 @@ class TestQuadradoSeguro:
     def test_todas_as_faixas_cabem_no_quadrado_central(self):
         assert montar_layout().cabe_no_quadrado_seguro
 
-    def test_nenhuma_faixa_invade_a_zona_recortada(self):
-        """Checagem faixa a faixa, e não só das pontas do bloco."""
+    def test_o_texto_nao_invade_a_zona_recortada(self):
+        """Checagem faixa a faixa do TEXTO — a arte tem regra própria."""
         layout = montar_layout()
 
-        for nome, faixa in layout.como_dict().items():
-            assert faixa["y"] >= TOPO_SEGURO, f"{nome} comeca acima do quadrado seguro"
-            assert faixa["y"] + faixa["h"] <= BASE_SEGURA, f"{nome} passa do quadrado seguro"
+        for nome in ("etiqueta", "selo"):
+            faixa = getattr(layout, nome)
+            assert faixa.y >= TOPO_SEGURO, f"{nome} comeca acima do quadrado seguro"
+            assert faixa.y + faixa.h <= BASE_SEGURA, f"{nome} passa do quadrado seguro"
 
-    def test_o_frame_e_16_por_9(self):
-        """A faixa central cita o formato do vídeo; distorcê-la seria mentir."""
-        frame = montar_layout().frame
+    def test_a_arte_e_4_por_5(self):
+        """D-526: vertical, e não deitada.
 
-        assert round(frame.w / frame.h, 2) == 1.78
+        A proporção deitada fazia sentido enquanto a faixa citava um quadro do
+        vídeo. Com uma ilustração feita sob medida, sobrava uma tira ocupando um
+        terço da altura de uma capa vertical.
+        """
+        arte = montar_layout().frame
+
+        assert round(arte.w / arte.h, 2) == 0.8
+
+    def test_a_arte_sangra_o_quadrado_seguro(self):
+        """De propósito: o recorte da grade mostra o miolo, que é onde o assunto está."""
+        arte = montar_layout().frame
+
+        assert arte.y < TOPO_SEGURO
+        assert arte.y + arte.h > BASE_SEGURA
 
     def test_o_frame_encosta_no_trilho_do_chrome(self):
         """Sangrado ate a borda, ele atravessaria o contorno do palco."""
@@ -49,12 +65,17 @@ class TestQuadradoSeguro:
         assert frame.x == MARGEM_DO_CHROME
         assert frame.x + frame.w == LARGURA - MARGEM_DO_CHROME
 
-    def test_as_faixas_nao_se_sobrepoem(self):
-        """Sobreposição aqui seria texto por cima do vídeo, sem ninguém pedir."""
+    def test_o_texto_fica_sobre_a_arte(self):
+        """D-526: agora é camada, não vizinho de faixa.
+
+        Se o texto cair fora da arte, ele volta a boiar sobre o fundo — e os véus
+        que garantem a leitura, desenhados dentro da arte, deixam de proteger.
+        """
         layout = montar_layout()
 
-        assert layout.etiqueta.y + layout.etiqueta.h <= layout.frame.y
-        assert layout.frame.y + layout.frame.h <= layout.selo.y
+        for faixa in (layout.etiqueta, layout.selo):
+            assert faixa.y >= layout.frame.y
+            assert faixa.y + faixa.h <= layout.frame.y + layout.frame.h
 
 
 class TestEtiqueta:

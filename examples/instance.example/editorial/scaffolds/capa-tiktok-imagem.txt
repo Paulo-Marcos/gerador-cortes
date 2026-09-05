@@ -15,8 +15,9 @@ canal, outro enquadramento.
 Escreva o PROMPT DE IMAGEM da faixa central desta capa, seguindo a sua expertise
 acima.
 
-Lembre: 16:9, um unico ponto de interesse, alto contraste, e a imagem NAO pode
-conter texto — a etiqueta "{texto_capa}" ja vai ser desenhada por cima pelo
+Lembre: 4:5 VERTICAL (1080x1350), um unico ponto de interesse no miolo, terco
+superior livre para a etiqueta, alto contraste, e a imagem NAO pode conter
+texto — a etiqueta "{texto_capa}" ja vai ser desenhada por cima pelo
 sistema. Nao repita essa palavra dentro da cena.
 
 Responda com o PROMPT em ingles e nada mais: um paragrafo, sem markdown, sem

@@ -336,12 +336,15 @@ async def salvar_arte(corte_id: str, conteudo: bytes, nome_arquivo: str) -> Path
 async def _extrair_frame(
     video: Path, destino: Path, instante: float, largura: int, altura: int
 ) -> None:
-    """Um quadro do vídeo, já no tamanho exato da faixa central.
+    """Um quadro do vídeo, já no tamanho exato da área da arte.
 
-    `increase` + `crop` em vez de `decrease`: o vídeo é 16:9 como a faixa, então
-    na prática é um redimensionamento — mas se um dia entrar um MP4 com outra
-    proporção, é melhor cortar as bordas do que devolver uma imagem com tarjas
-    dentro de uma capa que já é sobre não ter tarjas.
+    `increase` + `crop` em vez de `decrease`: melhor cortar as bordas do que
+    devolver uma imagem com tarjas dentro de uma capa que já é sobre não ter
+    tarjas.
+
+    O corte é agressivo desde a D-526 — a área virou 4:5 e o vídeo é 16:9, então
+    sobram só os 45% centrais da largura. É o preço de um escape hatch: quem
+    escolhe o frame já sabe que a arte não veio.
     """
     cmd = [
         "ffmpeg",
