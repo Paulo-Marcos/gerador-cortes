@@ -225,6 +225,7 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
         )
         meta = resultado.scalar_one_or_none()
         texto_capa = (meta.texto_capa if meta else "") or ""
+        prompt_thumbnail = (meta.prompt_thumbnail if meta else "") or ""
 
     video = projetos_dir() / projeto_id / "cortes" / corte_id / "upload_ready" / "video.mp4"
     if exigir_video and not video.is_file():
@@ -243,6 +244,7 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
         "thumb_dir": projetos_dir() / projeto_id / "thumbnails",
         "selo": selo,
         "texto_capa": texto_capa,
+        "prompt_thumbnail": prompt_thumbnail,
     }
 
 
@@ -270,6 +272,16 @@ async def gerar_prompt_da_arte(corte_id: str) -> str:
     from app.services.claude_ia import ClaudeIaService
 
     contexto = await _contexto(corte_id, exigir_video=False)
+    if not contexto["prompt_thumbnail"]:
+        # A arte HERDA o estilo do prompt do YouTube: mascote, paleta, luz. Sem
+        # ele a skill compoe do zero, e o resultado e uma cena bonita de outro
+        # canal — o pior tipo de erro aqui, porque parece certo na miniatura e
+        # so quebra a identidade quando a grade e vista inteira.
+        raise CapaTikTokError(
+            "Gere antes o prompt da thumbnail do YouTube: e dele que a arte herda "
+            "o personagem, a paleta e a luz do canal."
+        )
+
     etiqueta = layout_capa.normalizar_etiqueta(contexto["texto_capa"])
 
     try:

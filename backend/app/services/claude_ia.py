@@ -45,6 +45,7 @@ from app.editorial_identity import identidade_do_mascote
 from app.infrastructure import claude_cli_client, fila_ia
 from app.models import Corte, Projeto, StatusProjeto
 from app.services.analise import AnaliseService, _to_seg
+from app.services.tasks import fire_and_forget
 from sqlalchemy import select as sa_select
 
 logger = logging.getLogger(__name__)
@@ -1429,7 +1430,33 @@ class ClaudeIaService:
 
         await MetadadosService.importar_prompt_thumbnail(corte_id, prompt_thumbnail)
         logger.info("[ClaudeIA] Prompt de thumbnail gerado via Claude p/ corte %s", corte_id[:8])
+
+        # D-525: a capa do TikTok herda deste prompt — mascote, paleta, luz. Só
+        # agora ela TEM base, então é aqui que o encadeamento pertence: encostado
+        # na gravação, e não num botão que o operador pode clicar antes da hora.
+        #
+        # Em background porque é acessório: o prompt do YouTube é a entrega desta
+        # chamada, e fazer o operador esperar mais uma volta de modelo por causa
+        # de uma etiqueta de TikTok inverteria as prioridades. Falhar aqui só
+        # custa um clique no botão da capa depois.
+        fire_and_forget(
+            ClaudeIaService._encadear_prompt_da_capa_tiktok(corte_id),
+            name=f"capa-tiktok-prompt-{corte_id[:8]}",
+        )
         return {"ok": True}
+
+    @staticmethod
+    async def _encadear_prompt_da_capa_tiktok(corte_id: str) -> None:
+        """Escreve o prompt da capa do TikTok logo depois do prompt do YouTube."""
+        from app.services import capa_tiktok
+
+        try:
+            await capa_tiktok.gerar_prompt_da_arte(corte_id)
+            logger.info("[ClaudeIA] Prompt da capa do TikTok encadeado p/ %s", corte_id[:8])
+        except Exception:
+            logger.exception(
+                "[ClaudeIA] nao consegui encadear o prompt da capa do TikTok de %s", corte_id[:8]
+            )
 
     @staticmethod
     def _montar_prompt_thumbnail(
