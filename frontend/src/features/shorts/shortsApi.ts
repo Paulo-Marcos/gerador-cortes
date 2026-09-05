@@ -390,10 +390,7 @@ export const shortsApi = {
 
   // D-519/D-521: a capa VERTICAL do corte. Mora no router de shorts, e nao no de
   // metadados, porque ela so existe por causa do quadro 9:16 do TikTok.
-  gerarCapaTiktok: (
-    corteId: string,
-    opcoes: { etiqueta?: string; origem?: 'ia' | 'frame'; refazerArte?: boolean } = {},
-  ) =>
+  gerarCapaTiktok: (corteId: string, opcoes: { etiqueta?: string; origem?: 'ia' | 'frame' } = {}) =>
     request<{ capa: string; nome: string; etiqueta: string }>(
       `/shorts/corte/${corteId}/capa-tiktok`,
       {
@@ -401,10 +398,24 @@ export const shortsApi = {
         body: JSON.stringify({
           etiqueta: opcoes.etiqueta ?? '',
           origem: opcoes.origem ?? 'ia',
-          refazer_arte: opcoes.refazerArte ?? false,
         }),
       },
     ),
+
+  // D-524: o app escreve o prompt; quem desenha e o operador, no agente capista.
+  gerarPromptCapaTiktok: (corteId: string) =>
+    request<{ prompt: string }>(`/shorts/corte/${corteId}/capa-tiktok/prompt`, {
+      method: 'POST',
+    }),
+
+  subirArteCapaTiktok: (corteId: string, arquivo: File) => {
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    return request<{ capa: string; nome: string }>(`/shorts/corte/${corteId}/capa-tiktok/arte`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
 
   subirCapaTiktok: (corteId: string, arquivo: File) => {
     const formData = new FormData();

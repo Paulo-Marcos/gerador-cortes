@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Film, ImagePlus, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { Check, Copy, Film, ImagePlus, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
@@ -14,29 +14,45 @@ import { shortsApi } from '@/features/shorts/shortsApi';
 // las de tela esconderia do operador que existem duas, e a errada acabaria
 // subindo.
 //
-// A miniatura é 9:16 mesmo sendo pequena. Um preview 16:9 aqui repetiria em
-// miniatura o erro que esta frente inteira corrige.
-//
-// D-523: a faixa central leva ARTE gerada, e não um frame do vídeo. O frame
+// D-523/D-524: a faixa central leva ARTE, e não um frame do vídeo. O frame
 // parecia a escolha honesta — a capa citaria o que vai tocar —, mas o vídeo é
 // deitado e costuma ter texto na tela, e nada disso sobrevive à miniatura da
-// grade. "Usar frame" ficou como escape hatch, no lugar de padrão.
+// grade.
+//
+// ## O fluxo é manual, igual ao do horizontal
+//
+// O app escreve o prompt; quem desenha é o operador, no agente capista dele. É
+// o mesmo caminho que a D-413 consolidou na thumbnail do YouTube — copiar o
+// prompt, gerar a imagem, trazer de volta —, e a razão é a mesma: capa é peça
+// editorial, e ninguém publica a primeira que sai sem olhar.
+//
+// Daí a ordem dos botões ser a ordem do trabalho: prompt, arte, capa.
 
 interface Props {
   projetoId: string;
   corteId: string;
   /** `thumbnail_tiktok_path` do metadado, relativo ao projeto. */
   capaPath?: string;
-  /** As 2-3 palavras que a skill escreveu, quando já houve uma geração. */
+  /** O prompt da arte, quando já foi escrito. */
+  promptArte?: string;
+  /** A etiqueta gravada na última montagem. */
   etiqueta?: string;
-  /** Recarrega o metadado depois de gerar ou subir. */
+  /** Recarrega o metadado depois de cada passo. */
   onAtualizou: () => void;
 }
 
-export function CapaTikTokSlot({ projetoId, corteId, capaPath, etiqueta, onAtualizou }: Props) {
+export function CapaTikTokSlot({
+  projetoId,
+  corteId,
+  capaPath,
+  promptArte,
+  etiqueta,
+  onAtualizou,
+}: Props) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [erro, setErro] = useState('');
+  const [copiado, setCopiado] = useState(false);
   const capaUrl = resolveThumbUrl(projetoId, capaPath);
 
   const aoTerminar = () => {
@@ -45,20 +61,37 @@ export function CapaTikTokSlot({ projetoId, corteId, capaPath, etiqueta, onAtual
     void queryClient.invalidateQueries({ queryKey: ['export-status'] });
   };
 
-  const gerar = useMutation({
-    mutationFn: (opcoes: { origem?: 'ia' | 'frame'; refazerArte?: boolean } = {}) =>
+  const escreverPrompt = useMutation({
+    mutationFn: () => shortsApi.gerarPromptCapaTiktok(corteId),
+    onSuccess: aoTerminar,
+    onError: (e: Error) => setErro(e.message),
+  });
+
+  const subirArte = useMutation({
+    mutationFn: (arquivo: File) => shortsApi.subirArteCapaTiktok(corteId, arquivo),
+    onSuccess: aoTerminar,
+    onError: (e: Error) => setErro(e.message),
+  });
+
+  const montar = useMutation({
+    mutationFn: (opcoes: { origem?: 'ia' | 'frame' } = {}) =>
       shortsApi.gerarCapaTiktok(corteId, opcoes),
     onSuccess: aoTerminar,
     onError: (e: Error) => setErro(e.message),
   });
 
-  const subir = useMutation({
-    mutationFn: (arquivo: File) => shortsApi.subirCapaTiktok(corteId, arquivo),
-    onSuccess: aoTerminar,
-    onError: (e: Error) => setErro(e.message),
-  });
+  const ocupado = escreverPrompt.isPending || subirArte.isPending || montar.isPending;
 
-  const ocupado = gerar.isPending || subir.isPending;
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(promptArte ?? '');
+      setCopiado(true);
+    } catch {
+      // Área de transferência negada (foco, permissão). O prompt continua na
+      // tela para seleção manual — o operador não fica sem ele.
+      setErro('Não consegui copiar. Selecione o prompt abaixo e copie à mão.');
+    }
+  };
 
   return (
     <section className="grid gap-2 rounded-[10px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2.5">
@@ -79,42 +112,45 @@ export function CapaTikTokSlot({ projetoId, corteId, capaPath, etiqueta, onAtual
         </div>
 
         <div className="grid min-w-0 flex-1 content-start gap-1.5">
+          {/* Passo 1: o prompt. */}
           <Button
             type="button"
             size="sm"
             variant="outline"
             disabled={ocupado}
-            onClick={() => gerar.mutate({})}
-            title="Gera a arte com IA e monta a capa. Reusa a arte que já existe."
+            onClick={() => escreverPrompt.mutate()}
+            title="Escreve o prompt da arte 16:9, no estilo da thumbnail do YouTube."
           >
-            {gerar.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {capaPath ? 'Refazer capa' : 'Gerar capa'}
+            {escreverPrompt.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
+            {promptArte ? 'Refazer prompt' : 'Gerar prompt'}
           </Button>
 
-          {capaPath && (
+          {promptArte && (
             <Button
               type="button"
               size="sm"
               variant="outline"
               disabled={ocupado}
-              onClick={() => gerar.mutate({ refazerArte: true })}
-              title="Descarta a arte atual e pede outra à IA. Custa uma imagem."
+              onClick={() => void copiar()}
+              title="Copiar para colar no agente capista."
             >
-              <RefreshCw />
-              Nova arte
+              {copiado ? <Check /> : <Copy />}
+              {copiado ? 'copiado' : 'Copiar prompt'}
             </Button>
           )}
 
+          {/* Passo 2: a arte de volta. Subir já monta a capa — quem acabou de
+              trazer a imagem quer ver o resultado, não um segundo botão. */}
           <Button
             type="button"
             size="sm"
             variant="outline"
             disabled={ocupado}
             onClick={() => inputRef.current?.click()}
-            title="Usar uma imagem 1080x1920 feita por fora."
+            title="A ilustração 16:9 gerada no agente. O sistema desenha a etiqueta por cima."
           >
-            {subir.isPending ? <Loader2 className="animate-spin" /> : <ImagePlus />}
-            Subir 9:16
+            {subirArte.isPending ? <Loader2 className="animate-spin" /> : <ImagePlus />}
+            Subir arte 16:9
           </Button>
           {/* Input próprio, disparado por clique, e não um `<label>` embrulhando
               o botão: o card em volta captura Ctrl+V para a thumbnail do
@@ -127,20 +163,29 @@ export function CapaTikTokSlot({ projetoId, corteId, capaPath, etiqueta, onAtual
             className="hidden"
             onChange={(event) => {
               const arquivo = event.target.files?.[0];
-              if (arquivo) subir.mutate(arquivo);
+              if (arquivo) subirArte.mutate(arquivo);
               event.currentTarget.value = '';
             }}
           />
 
-          {/* O frame do vídeo, que já foi o padrão. Fica discreto porque quase
-              sempre é a pior escolha — só ganha quando a arte não convence e o
-              vídeo tem um plano bonito. */}
+          {capaPath && (
+            <button
+              type="button"
+              disabled={ocupado}
+              onClick={() => montar.mutate({})}
+              className="text-left text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
+              title="Remonta com a mesma arte — útil quando o texto de capa mudou."
+            >
+              remontar com a arte atual
+            </button>
+          )}
+
           <button
             type="button"
             disabled={ocupado}
-            onClick={() => gerar.mutate({ origem: 'frame' })}
+            onClick={() => montar.mutate({ origem: 'frame' })}
             className="inline-flex items-center gap-1 text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
-            title="Usa um quadro do próprio vídeo no lugar da arte."
+            title="Sem arte: usa um quadro do próprio vídeo. Costuma ficar pior."
           >
             <Film size={10} aria-hidden />
             usar frame do vídeo
@@ -153,6 +198,16 @@ export function CapaTikTokSlot({ projetoId, corteId, capaPath, etiqueta, onAtual
           )}
         </div>
       </div>
+
+      {promptArte && (
+        <textarea
+          readOnly
+          value={promptArte}
+          rows={3}
+          onFocus={(event) => event.currentTarget.select()}
+          className="w-full resize-y rounded-[6px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 py-1.5 font-code text-[10px] leading-[1.5] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
+        />
+      )}
 
       {erro && <p className="text-[11px] leading-snug text-[var(--wb-warn-ink)]">{erro}</p>}
     </section>

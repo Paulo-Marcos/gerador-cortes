@@ -1329,7 +1329,7 @@ class ClaudeIaService:
 
     @staticmethod
     async def prompt_da_arte_da_capa_via_claude(corte_id: str, texto_capa: str) -> str:
-        """O prompt de imagem da faixa central da capa do TikTok (D-523).
+        """O prompt de imagem da faixa central da capa do TikTok (D-523, D-524).
 
         A primeira versão da capa usava um frame do próprio vídeo. Ficou ruim por
         um motivo estrutural: o vídeo é deitado e cheio de texto na tela — um
@@ -1340,6 +1340,11 @@ class ClaudeIaService:
         A imagem nasce SEM texto de propósito: a etiqueta e o selo são desenhados
         por cima, com a tipografia do canal. Gerador de imagem não escreve
         tipografia confiável, e duas camadas de texto brigariam.
+
+        O estilo é herdado, não redescrito: o prompt que o Capista já escreveu
+        para a thumbnail do YouTube vai junto como referência. Manter a
+        identidade do mascote em dois corpos de skill é garantir que um dia os
+        dois discordem — e aí o mesmo canal teria dois personagens.
 
         Levanta `LookupError` (corte inexistente).
         """
@@ -1355,6 +1360,7 @@ class ClaudeIaService:
             tema_central=contexto.tema_central,
             texto_capa=texto_capa or "(sem etiqueta)",
             resumo=contexto.resumo,
+            prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
         )
         _log_skill_usada(_SKILL_CAPA_TIKTOK_IMAGEM, skill, scaffold)
         bruto = await claude_cli_client.generate_text(

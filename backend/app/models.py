@@ -520,6 +520,10 @@ class MetadadoCorte(Base):
     # vocabulario do canal: a skill le as etiquetas recentes para REPETIR o nome
     # do assunto entre cortes, que e o que da coerencia a grade do perfil.
     etiqueta_tiktok: Mapped[str] = mapped_column(String(80), default="")
+    # D-524: o prompt da ARTE da capa vertical. O app nao desenha: escreve o
+    # prompt, o operador gera no agente capista dele e sobe a imagem de volta —
+    # o mesmo fluxo manual que a D-413 consolidou no horizontal.
+    prompt_capa_tiktok: Mapped[str] = mapped_column(Text, default="")
     is_fire: Mapped[bool] = mapped_column(Integer, default=0)
     # D-502: o corte foi indicado para a fabrica de shorts A MAO.
     #

@@ -4,6 +4,14 @@ tema_central: {tema_central}
 texto da capa (a etiqueta que sera desenhada POR CIMA da imagem): {texto_capa}
 resumo: {resumo}
 
+=== PROMPT DA THUMBNAIL DO YOUTUBE (sua referencia de ESTILO) ===
+{prompt_thumbnail}
+=== FIM DO PROMPT DO YOUTUBE ===
+
+Preserve dali o mascote, a paleta, a luz e o registro da ilustracao. Descarte a
+manchete, a tipografia e o layout de texto. Componha uma CENA PROPRIA — mesmo
+canal, outro enquadramento.
+
 Escreva o PROMPT DE IMAGEM da faixa central desta capa, seguindo a sua expertise
 acima.
 

@@ -363,6 +363,7 @@ export interface MetadadoCorte {
   // diferentes, e guardar uma so faria a errada aparecer em algum dos dois.
   thumbnail_tiktok_path?: string;
   etiqueta_tiktok?: string;
+  prompt_capa_tiktok?: string;
   numero_serie?: number;
   cor_serie?: string;
   criado_em?: string;

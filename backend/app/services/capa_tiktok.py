@@ -8,10 +8,14 @@ capa citaria o que o espectador vai ver. Na prática saiu ruim por um motivo
 estrutural — o vídeo é deitado e costuma ter texto na tela (um documento, um
 slide, um navegador), e nada disso sobrevive à miniatura da grade do perfil.
 
-Agora a faixa recebe uma ARTE gerada, como no horizontal: uma skill escreve a
-cena e o Gemini desenha. A imagem nasce sem texto de propósito — a etiqueta e o
-selo são desenhados por cima, com a tipografia do canal. O frame continua
-disponível como escape hatch, não como padrão.
+Agora a faixa recebe uma ARTE, e o app NÃO a desenha (D-524). Ele escreve o
+prompt; o operador gera a imagem no agente capista dele e sobe de volta. É o
+mesmo fluxo manual que a D-413 consolidou no horizontal, e a razão é a mesma:
+capa é peça editorial, e o operador quer ver e escolher antes de publicar.
+
+A imagem nasce sem texto de propósito — a etiqueta e o selo são desenhados por
+cima, com a tipografia do canal. O frame do vídeo continua disponível como
+escape hatch.
 
 A geometria vem pronta de `app/domain/capa_tiktok.py`. Este módulo é a
 plumbing: arquivos, subprocessos e o caminho gravado no metadado.
@@ -31,7 +35,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
-from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain import capa_tiktok as layout_capa
 from app.domain.youtube_layout import FUNDO_PADRAO
@@ -49,8 +52,8 @@ _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-capa-tiktok.mjs"
 _SAIDA_TAIL = 1200
 
 NOME_DA_CAPA = "capa_tiktok"
-# A arte fica em disco ao lado da capa: refazer a montagem (etiqueta nova, ajuste
-# de layout) não deve custar outra imagem do Gemini.
+# A arte fica em disco ao lado da capa: refazer a montagem — etiqueta nova,
+# ajuste de layout — não deve exigir que o operador gere a imagem de novo.
 NOME_DA_ARTE = "capa_tiktok_arte"
 
 # Quantas etiquetas anteriores vão no prompt. O bastante para o modelo enxergar
@@ -74,14 +77,13 @@ async def gerar(
     *,
     etiqueta: str = "",
     origem: str = ORIGEM_IA,
-    refazer_arte: bool = False,
     instante_seg: float | None = None,
 ) -> Path:
     """Monta a capa deste corte e grava o caminho no metadado.
 
-    `origem` decide o que vai na faixa central: `"ia"` (padrão) manda uma skill
-    escrever a cena e o Gemini desenhá-la; `"frame"` tira um still do MP4, que é
-    o escape hatch para quando a arte não convence.
+    `origem` decide o que vai na faixa central: `"ia"` (padrão) usa a arte que o
+    operador subiu; `"frame"` tira um still do MP4, que é o escape hatch para
+    quando não há arte e o vídeo tem um plano que serve.
 
     `etiqueta` vazia usa o `texto_capa` do metadado — o MESMO texto curado que
     vai na thumbnail do YouTube. Não há razão para inventar outro: quem escolheu
@@ -110,7 +112,13 @@ async def gerar(
                 contexto["video"], imagem, instante, faixas.frame.w, faixas.frame.h
             )
         else:
-            imagem = await _obter_arte(corte_id, contexto, texto, refazer=refazer_arte)
+            arte = _arte_existente(contexto["thumb_dir"], corte_id)
+            if arte is None:
+                raise CapaTikTokError(
+                    "Nao ha arte para esta capa. Gere o prompt, crie a imagem 16:9 no "
+                    "agente capista e suba com 'Subir arte'."
+                )
+            imagem = arte
 
         props = {
             "fundo": FUNDO_PADRAO,
@@ -156,6 +164,8 @@ class ContextoDaEtiqueta:
     tema_central: str
     resumo: str
     etiquetas_recentes: str
+    # O prompt da thumbnail 16:9 — referência de estilo para a arte (D-524).
+    prompt_thumbnail: str = ""
 
 
 async def montar_contexto_da_etiqueta(corte_id: str) -> ContextoDaEtiqueta:
@@ -180,12 +190,16 @@ async def montar_contexto_da_etiqueta(corte_id: str) -> ContextoDaEtiqueta:
         )
         recentes = [meta.etiqueta_tiktok for meta in resultado.scalars().all()]
 
+        meu = await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id))
+        meta_do_corte = meu.scalar_one_or_none()
+
         return ContextoDaEtiqueta(
             projeto_id=corte.projeto_id,
             titulo=corte.titulo_proposto or "",
             tema_central=corte.tema_central or "",
             resumo=(corte.resumo or "")[:_RESUMO_NO_PROMPT],
             etiquetas_recentes="\n".join(f"- {etiqueta}" for etiqueta in recentes),
+            prompt_thumbnail=(meta_do_corte.prompt_thumbnail if meta_do_corte else "") or "",
         )
 
 
@@ -232,52 +246,79 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
     }
 
 
-async def _obter_arte(corte_id: str, contexto: dict, etiqueta: str, *, refazer: bool) -> Path:
-    """A arte da faixa central, gerada pelo Gemini a partir de um prompt de skill.
+def caminho_da_arte(thumb_dir: Path, corte_id: str, extensao: str = ".png") -> Path:
+    """Onde a arte 16:9 daquele corte mora."""
+    return thumb_dir / f"{NOME_DA_ARTE}_{corte_id[:8]}{extensao}"
 
-    Reusa o arquivo em disco quando ele existe: refazer a montagem — etiqueta
-    nova, ajuste de layout — não deve custar outra imagem. `refazer=True` é o
-    botão de "não gostei desta arte".
+
+def _arte_existente(thumb_dir: Path, corte_id: str) -> Path | None:
+    """A arte já subida, em qualquer extensão de imagem que o operador usou."""
+    for extensao in (".png", ".jpg", ".jpeg", ".webp"):
+        caminho = caminho_da_arte(thumb_dir, corte_id, extensao)
+        if caminho.is_file() and caminho.stat().st_size > 0:
+            return caminho
+    return None
+
+
+async def gerar_prompt_da_arte(corte_id: str) -> str:
+    """Escreve o prompt da arte e o guarda no metadado (D-524).
+
+    O app para aqui: quem desenha é o operador, no agente capista dele. Guardar
+    o prompt — em vez de só devolvê-lo — é o que torna o fluxo retomável: ele
+    fecha a tela, gera a imagem com calma e volta para subir a arte.
     """
-    from app.infrastructure import gemini_client
     from app.services.claude_ia import ClaudeIaService
 
-    arte = contexto["thumb_dir"] / f"{NOME_DA_ARTE}_{corte_id[:8]}.png"
-    if arte.is_file() and arte.stat().st_size > 0 and not refazer:
-        return arte
-
-    if not settings.gemini_api_key:
-        raise CapaTikTokError("GEMINI_API_KEY nao configurada — sem ela nao ha arte a gerar.")
+    contexto = await _contexto(corte_id, exigir_video=False)
+    etiqueta = layout_capa.normalizar_etiqueta(contexto["texto_capa"])
 
     try:
         prompt = await ClaudeIaService.prompt_da_arte_da_capa_via_claude(corte_id, etiqueta)
     except Exception as exc:
         raise CapaTikTokError(f"Nao consegui escrever o prompt da arte: {exc}") from exc
+
     if not prompt:
         # Aconteceu de verdade: com o corpo da skill ainda no texto generico do
         # template, o modelo respondeu com uma PERGUNTA pedindo a identidade do
-        # mascote. Mandar aquilo para o gerador voltaria uma ilustracao de nada.
+        # mascote em vez de escrever o prompt.
         raise CapaTikTokError(
             "A skill nao devolveu um prompt de imagem valido. Personalize o corpo de "
-            "'Arte da capa do TikTok' em /canais — em especial a identidade do mascote."
+            "'Arte da capa do TikTok' em /canais."
         )
 
-    try:
-        imagem = await gemini_client.generate_image(
-            prompt,
-            contexto=gemini_client.GeminiCallContext(
-                etapa="capa-tiktok-imagem",
-                projeto_id=contexto["projeto_id"],
-                corte_id=corte_id,
-            ),
+    async with AsyncSessionLocal() as db:
+        resultado = await db.execute(
+            select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)
         )
-    except Exception as exc:
-        raise CapaTikTokError(f"O Gemini nao devolveu a imagem: {exc}") from exc
+        meta = resultado.scalar_one_or_none()
+        if not meta:
+            raise CapaTikTokError("Metadados deste corte nao existem ainda.")
+        meta.prompt_capa_tiktok = prompt
+        await db.commit()
 
-    arte.parent.mkdir(parents=True, exist_ok=True)
-    arte.write_bytes(imagem)
-    logger.info("[CapaTikTok] arte de %s gerada", corte_id[:8])
-    return arte
+    return prompt
+
+
+async def salvar_arte(corte_id: str, conteudo: bytes, nome_arquivo: str) -> Path:
+    """Recebe a arte 16:9 feita a mao, que vai na faixa central.
+
+    Diferente de `salvar_upload`, que recebe a CAPA inteira já montada: aqui
+    entra só a ilustração, e o sistema ainda desenha a etiqueta e o selo por
+    cima. É o caminho normal — a capa pronta é para quando o operador quer
+    controle total.
+    """
+    contexto = await _contexto(corte_id, exigir_video=False)
+    extensao = "." + ((nome_arquivo.rsplit(".", 1)[-1] or "png").lower())
+
+    # Uma arte por corte: subir um JPG por cima de um PNG antigo deixaria os dois
+    # em disco, e `_arte_existente` pegaria o errado pela ordem da busca.
+    for antiga in (".png", ".jpg", ".jpeg", ".webp"):
+        caminho_da_arte(contexto["thumb_dir"], corte_id, antiga).unlink(missing_ok=True)
+
+    destino = caminho_da_arte(contexto["thumb_dir"], corte_id, extensao)
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_bytes(conteudo)
+    return destino
 
 
 async def _extrair_frame(

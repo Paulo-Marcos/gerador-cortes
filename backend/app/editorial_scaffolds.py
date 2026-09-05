@@ -263,9 +263,11 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
         skill_key="capa-tiktok-imagem-expert",
         etapa="Arte da capa do TikTok",
         descricao=(
-            "Involucro que manda titulo, tema, resumo e o texto da capa, e pede o "
-            "prompt de imagem em ingles. Manda o texto da capa justamente para a "
-            "cena NAO o repetir: ele ja vai desenhado por cima."
+            "Involucro que manda titulo, tema, resumo, o texto da capa e o PROMPT "
+            "DA THUMBNAIL do YouTube, e pede o prompt de imagem em ingles. O "
+            "prompt do YouTube vai como referencia de ESTILO — e assim a "
+            "identidade do mascote vive num lugar so, em vez de ser copiada para "
+            "dois corpos de skill que um dia discordariam."
         ),
         arquivo="capa-tiktok-imagem.txt",
         placeholders=(
@@ -273,6 +275,7 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
             "tema_central",
             "texto_capa",
             "resumo",
+            "prompt_thumbnail",
         ),
         marcador="PROMPT",
     ),

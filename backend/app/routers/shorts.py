@@ -553,9 +553,8 @@ class StagingRequest(BaseModel):
 class CapaTikTokRequest(BaseModel):
     """O que vai na faixa central e qual texto vai por cima.
 
-    `origem="ia"` (padrão) manda gerar a arte; `"frame"` tira um still do vídeo,
-    que é o escape hatch. `refazer_arte` força uma imagem nova em vez de reusar
-    a que já está em disco.
+    `origem="ia"` (padrão) usa a arte que o operador subiu; `"frame"` tira um
+    still do vídeo, que é o escape hatch.
 
     `etiqueta` vazia usa o `texto_capa` do metadado — o mesmo texto da thumbnail
     do YouTube. Só quando ele também está vazio a skill entra, e só se
@@ -564,7 +563,6 @@ class CapaTikTokRequest(BaseModel):
 
     etiqueta: str = ""
     origem: str = "ia"
-    refazer_arte: bool = False
     sugerir_etiqueta: bool = True
     instante_seg: float | None = None
 
@@ -600,13 +598,52 @@ async def gerar_capa_tiktok(corte_id: str, body: CapaTikTokRequest):
             corte_id,
             etiqueta=etiqueta,
             origem=body.origem,
-            refazer_arte=body.refazer_arte,
             instante_seg=body.instante_seg,
         )
     except capa_tiktok.CapaTikTokError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     return {"capa": str(caminho), "nome": caminho.name, "etiqueta": etiqueta}
+
+
+@router.post("/corte/{corte_id}/capa-tiktok/prompt")
+async def gerar_prompt_da_capa_tiktok(corte_id: str):
+    """Escreve o prompt da ARTE da capa e o guarda no metadado (D-524).
+
+    O app para aqui de proposito: quem desenha e o operador, no agente capista
+    dele. E o mesmo fluxo manual do horizontal — copiar o prompt, gerar a
+    imagem, trazer de volta.
+    """
+    from app.services import capa_tiktok
+
+    try:
+        prompt = await capa_tiktok.gerar_prompt_da_arte(corte_id)
+    except capa_tiktok.CapaTikTokError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return {"prompt": prompt}
+
+
+@router.post("/corte/{corte_id}/capa-tiktok/arte")
+async def subir_arte_da_capa_tiktok(corte_id: str, arquivo: UploadFile = File(...)):
+    """Recebe a ilustracao 16:9 que vai na faixa central, e monta a capa.
+
+    Monta na sequencia porque e o gesto natural: quem acabou de subir a arte
+    quer ver a capa, nao clicar num segundo botao para descobrir se ficou boa.
+    """
+    from app.services import capa_tiktok
+
+    conteudo = await arquivo.read()
+    if not conteudo:
+        raise HTTPException(status_code=422, detail="Arquivo vazio.")
+
+    try:
+        await capa_tiktok.salvar_arte(corte_id, conteudo, arquivo.filename or "arte.png")
+        caminho = await capa_tiktok.gerar(corte_id)
+    except capa_tiktok.CapaTikTokError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return {"capa": str(caminho), "nome": caminho.name}
 
 
 @router.post("/corte/{corte_id}/capa-tiktok/upload")

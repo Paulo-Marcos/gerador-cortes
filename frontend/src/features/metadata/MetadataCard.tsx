@@ -590,6 +590,7 @@ export function MetadataCard({
               projetoId={projetoId}
               corteId={cut.id}
               capaPath={meta?.thumbnail_tiktok_path}
+              promptArte={meta?.prompt_capa_tiktok}
               etiqueta={meta?.etiqueta_tiktok}
               onAtualizou={invalidate}
             />
@@ -870,6 +871,7 @@ export function MetadataCard({
               projetoId={projetoId}
               corteId={cut.id}
               capaPath={meta?.thumbnail_tiktok_path}
+              promptArte={meta?.prompt_capa_tiktok}
               etiqueta={meta?.etiqueta_tiktok}
               onAtualizou={invalidate}
             />
