@@ -1,9 +1,13 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Copy, Film, ImagePlus, Loader2, Sparkles } from 'lucide-react';
+import { Check, Clipboard, Copy, Film, ImagePlus, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
+import {
+  lerImagemColada,
+  SemImagemColada,
+} from '@/features/shorts/imagemDaAreaDeTransferencia';
 
 // D-521: a capa VERTICAL, ao lado da thumbnail do YouTube.
 //
@@ -27,6 +31,13 @@ import { shortsApi } from '@/features/shorts/shortsApi';
 // editorial, e ninguém publica a primeira que sai sem olhar.
 //
 // Daí a ordem dos botões ser a ordem do trabalho: prompt, arte, capa.
+//
+// ## Por que COLAR é botão, e não Ctrl+V
+//
+// A thumbnail do YouTube aceita Ctrl+V porque o card inteiro escuta `paste`.
+// Herdar isso aqui poria dois ouvintes do mesmo evento na mesma árvore, e a
+// imagem cairia no slot errado — o de cima, que é 16:9. O botão não tem essa
+// ambiguidade: o alvo é onde se clicou.
 
 interface Props {
   projetoId: string;
@@ -74,6 +85,23 @@ export function CapaTikTokSlot({
     onError: (e: Error) => setErro(e.message),
   });
 
+  const colar = useMutation({
+    mutationFn: async () => {
+      const arquivo = await lerImagemColada();
+      return shortsApi.subirArteCapaTiktok(corteId, arquivo);
+    },
+    onSuccess: aoTerminar,
+    onError: (e: Error) => {
+      // Sem imagem e permissão negada pedem coisas diferentes do operador:
+      // copiar de novo, ou liberar o acesso no navegador.
+      setErro(
+        e instanceof SemImagemColada
+          ? e.message
+          : `Não consegui ler a área de transferência: ${e.message}`,
+      );
+    },
+  });
+
   const subirCapaPronta = useMutation({
     mutationFn: (arquivo: File) => shortsApi.subirCapaTiktok(corteId, arquivo),
     onSuccess: aoTerminar,
@@ -90,6 +118,7 @@ export function CapaTikTokSlot({
   const ocupado =
     escreverPrompt.isPending ||
     subirArte.isPending ||
+    colar.isPending ||
     subirCapaPronta.isPending ||
     montar.isPending;
 
@@ -163,6 +192,17 @@ export function CapaTikTokSlot({
             {subirArte.isPending ? <Loader2 className="animate-spin" /> : <ImagePlus />}
             Subir arte 16:9
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={ocupado}
+            onClick={() => colar.mutate()}
+            title="Sobe a imagem que está na área de transferência e monta a capa."
+          >
+            {colar.isPending ? <Loader2 className="animate-spin" /> : <Clipboard />}
+            Colar arte
+          </Button>
+
           {/* Input próprio, disparado por clique, e não um `<label>` embrulhando
               o botão: o card em volta captura Ctrl+V para a thumbnail do
               YouTube, e um segundo alvo de arquivo no fluxo de foco disputaria
