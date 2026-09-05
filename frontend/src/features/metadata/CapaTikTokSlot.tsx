@@ -51,6 +51,7 @@ export function CapaTikTokSlot({
 }: Props) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputCapaRef = useRef<HTMLInputElement>(null);
   const [erro, setErro] = useState('');
   const [copiado, setCopiado] = useState(false);
   const capaUrl = resolveThumbUrl(projetoId, capaPath);
@@ -73,6 +74,12 @@ export function CapaTikTokSlot({
     onError: (e: Error) => setErro(e.message),
   });
 
+  const subirCapaPronta = useMutation({
+    mutationFn: (arquivo: File) => shortsApi.subirCapaTiktok(corteId, arquivo),
+    onSuccess: aoTerminar,
+    onError: (e: Error) => setErro(e.message),
+  });
+
   const montar = useMutation({
     mutationFn: (opcoes: { origem?: 'ia' | 'frame' } = {}) =>
       shortsApi.gerarCapaTiktok(corteId, opcoes),
@@ -80,7 +87,11 @@ export function CapaTikTokSlot({
     onError: (e: Error) => setErro(e.message),
   });
 
-  const ocupado = escreverPrompt.isPending || subirArte.isPending || montar.isPending;
+  const ocupado =
+    escreverPrompt.isPending ||
+    subirArte.isPending ||
+    subirCapaPronta.isPending ||
+    montar.isPending;
 
   const copiar = async () => {
     try {
@@ -179,6 +190,30 @@ export function CapaTikTokSlot({
               remontar com a arte atual
             </button>
           )}
+
+          {/* A capa PRONTA, montada por fora. Escape hatch de quem quer controle
+              total do quadro — some do fluxo normal porque, usada por engano no
+              lugar da arte, entrega uma imagem sem a etiqueta e sem o selo. */}
+          <button
+            type="button"
+            disabled={ocupado}
+            onClick={() => inputCapaRef.current?.click()}
+            className="text-left text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
+            title="Sobe a capa 1080x1920 inteira, já com texto — o sistema não desenha nada por cima."
+          >
+            subir capa pronta 9:16
+          </button>
+          <input
+            ref={inputCapaRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(event) => {
+              const arquivo = event.target.files?.[0];
+              if (arquivo) subirCapaPronta.mutate(arquivo);
+              event.currentTarget.value = '';
+            }}
+          />
 
           <button
             type="button"
