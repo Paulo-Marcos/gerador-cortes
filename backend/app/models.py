@@ -83,6 +83,14 @@ class Projeto(Base):
     arquivos_limpos: Mapped[bool] = mapped_column(
         Integer, default=0
     )  # 0=não, 1=sim (SQLite usa Integer p/ bool)
+    # D-527: o rebaixe da live limpa esta em curso.
+    #
+    # Campo proprio, e NAO o status BAIXANDO, de proposito: `reiniciar-download`
+    # aceita projetos naquele status e apaga transcricao, titulo e duracao —
+    # feito para download que falhou, nao para live ja analisada. Reusar o
+    # status poria um botao destrutivo a um clique do projeto pronto.
+    # Integer como o vizinho acima: SQLite guarda bool assim neste schema.
+    rebaixando_video: Mapped[bool] = mapped_column(Integer, default=0)
     legenda_offset_ms: Mapped[int] = mapped_column(Integer, default=0)
     ultima_analise_em: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True, default=None

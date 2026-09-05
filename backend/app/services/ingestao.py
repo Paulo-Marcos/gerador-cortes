@@ -84,6 +84,62 @@ class IngestaoService:
             _progress_queues.pop(projeto_id, None)
 
     @staticmethod
+    async def rebaixar_video(projeto_id: str) -> None:
+        """Baixa SÓ o vídeo de uma live já limpa, preservando o resto (D-527).
+
+        Diferente de `processar_projeto`, que é a ingestão inteira, e diferente
+        de `reiniciar-download`, que zera transcrição, título e duração. Aqui a
+        live já foi baixada, transcrita, analisada e cortada uma vez: o que
+        sumiu foi o arquivo pesado, e é só ele que volta.
+
+        Refazer a transcrição junto seria pior que inútil — os cortes apontam
+        para tempos daquela transcrição, e uma nova (o YouTube reprocessa
+        legendas) deslocaria tudo.
+
+        Ao fim, `arquivos_limpos` volta a `False`: a live pesada está no disco de
+        novo, e a limpeza precisa voltar a ser oferecida — senão o operador
+        rebaixa e não tem como liberar depois.
+        """
+        queue: asyncio.Queue = asyncio.Queue()
+        _progress_queues[projeto_id] = queue
+        try:
+            async with AsyncSessionLocal() as db:
+                projeto = await db.get(Projeto, projeto_id)
+                if not projeto:
+                    return
+                url = projeto.youtube_url
+
+            operational_info("INGESTAO", f"Rebaixando video da live {projeto_id[:8]}")
+            video_path = await IngestaoService._baixar_video(projeto_id, url, queue)
+
+            async with AsyncSessionLocal() as db:
+                projeto = await db.get(Projeto, projeto_id)
+                if projeto:
+                    projeto.arquivo_video_path = para_relativo_ao_projeto(video_path, projeto_id)
+                    projeto.arquivos_limpos = 0
+                    projeto.rebaixando_video = 0
+                    projeto.progresso_download = 100
+                    await db.commit()
+            await queue.put({"status": "pronto", "progresso": 100})
+            operational_info("INGESTAO", f"Video da live {projeto_id[:8]} de volta ao disco")
+
+        except Exception as e:
+            operational_error(
+                "INGESTAO",
+                f"Erro ao rebaixar o video do projeto {projeto_id}: {type(e).__name__}: {e}",
+            )
+            async with AsyncSessionLocal() as db:
+                projeto = await db.get(Projeto, projeto_id)
+                if projeto:
+                    # O status NAO vira ERRO: a live continua analisada e com os
+                    # cortes de pe. Falhou o download, nao o projeto.
+                    projeto.rebaixando_video = 0
+                    await db.commit()
+            await queue.put({"status": "erro", "mensagem": str(e)})
+        finally:
+            _progress_queues.pop(projeto_id, None)
+
+    @staticmethod
     async def _baixar_video(projeto_id: str, url: str, queue: asyncio.Queue) -> str:
         """Executa yt-dlp para baixar o vídeo."""
         projeto_dir = projetos_dir() / projeto_id

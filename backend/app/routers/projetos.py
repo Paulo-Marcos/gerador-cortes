@@ -3,7 +3,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from app.channel_paths import projetos_dir
+from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import get_db
 from app.domain.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, MetadadoCorte, Projeto, StatusCorte, StatusProjeto
@@ -54,6 +54,7 @@ class ProjetoResponse(BaseModel):
     # I-023: filtro_padrao por projeto removido (vivia em Projeto.filtro_padrao).
     # Quem precisa do filtro de render usa GET /api/settings → filtro_global_padrao.
     arquivos_limpos: bool = False
+    rebaixando_video: bool = False
     criado_em: datetime
     ultima_analise_em: datetime | None = None
     # Renderer V1 desativado — projetos sempre operam em V2.
@@ -146,6 +147,45 @@ async def reiniciar_download(projeto_id: str, db: AsyncSession = Depends(get_db)
         name=f"ingestao-retry-{projeto_id[:8]}",
     )
     return {"message": "Download reiniciado", "projeto_id": projeto_id}
+
+
+@router.post("/{projeto_id}/rebaixar-video")
+async def rebaixar_video(projeto_id: str, db: AsyncSession = Depends(get_db)):
+    """Traz de volta o video de uma live ja limpa, preservando o resto (D-527).
+
+    Existe porque a limpeza e um caminho de mao unica hoje: liberado o disco, o
+    projeto perde a materia-prima de qualquer bruto novo e nao ha como reaver.
+
+    Nao confundir com `reiniciar-download`: aquele zera transcricao, titulo e
+    duracao, e serve a download que falhou. Este preserva tudo — os cortes
+    apontam para tempos daquela transcricao, e uma nova deslocaria todos.
+    """
+    projeto = await db.get(Projeto, projeto_id)
+    if not projeto:
+        raise HTTPException(status_code=404, detail="Projeto nao encontrado")
+    if projeto.rebaixando_video:
+        raise HTTPException(status_code=409, detail="O download ja esta em andamento.")
+    if not projeto.youtube_url:
+        raise HTTPException(
+            status_code=400, detail="Este projeto nao tem URL de origem para rebaixar."
+        )
+
+    ja_em_disco = (
+        bool(projeto.arquivo_video_path)
+        and resolver_do_projeto(projeto.arquivo_video_path, projeto_id).exists()
+    )
+    if ja_em_disco:
+        raise HTTPException(status_code=400, detail="O video desta live ja esta no disco.")
+
+    projeto.rebaixando_video = 1
+    projeto.progresso_download = 0
+    await db.commit()
+
+    fire_and_forget(
+        IngestaoService.rebaixar_video(projeto_id),
+        name=f"rebaixar-{projeto_id[:8]}",
+    )
+    return {"message": "Download do video reiniciado", "projeto_id": projeto_id}
 
 
 @router.post("/reiniciar-downloads-falhados")
