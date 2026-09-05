@@ -53,6 +53,7 @@ export interface FireComBruto {
   duracao_seg: number;
   /** D-502: sem bruto o corte AINDA aparece — a tela oferece regerar. */
   tem_bruto: boolean;
+  live_em_disco: boolean;
   bruto_mb: number;
   is_fire: boolean;
   /** Indicado à mão, sem depender do Fire. */

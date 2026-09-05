@@ -550,6 +550,9 @@ async def gerar_shorts_do_corte(corte_id: str) -> dict:
 
     regerou = False
     if not estado["tem_bruto"]:
+        # Mesma checagem do caminho explicito: sem a live, o FFmpeg falharia com
+        # uma mensagem que nao diz o que fazer.
+        await _exigir_video_da_live(corte_id)
         await _regerar_bruto_preservando_pos_producao(corte_id)
         regerou = True
 
@@ -561,6 +564,34 @@ async def gerar_shorts_do_corte(corte_id: str) -> dict:
         len(resultado.get("shorts", [])),
     )
     return {**resultado, "bruto_regerado": regerou}
+
+
+async def _exigir_video_da_live(corte_id: str) -> None:
+    """O bruto sai da live; sem ela em disco, o FFmpeg falharia sem explicar (D-528).
+
+    Vale para o caminho implícito — pedir sugestões num corte sem bruto regera o
+    bruto de carona. O caminho explícito da tela nem chega aqui: ela desabilita o
+    botão quando `live_em_disco` é falso, que é a regra da D-495 (não oferecer o
+    que o backend vai recusar).
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+        projeto = await db.get(Projeto, corte.projeto_id)
+        if not projeto:
+            raise LookupError(f"Projeto {corte.projeto_id!r} nao encontrado")
+
+        em_disco = (
+            bool(projeto.arquivo_video_path)
+            and resolver_do_projeto(projeto.arquivo_video_path, projeto.id).is_file()
+        )
+
+    if not em_disco:
+        raise ValueError(
+            "O video desta live foi limpo do disco. Baixe a live de novo no workspace "
+            "e depois gere o bruto."
+        )
 
 
 async def _regerar_bruto_preservando_pos_producao(corte_id: str) -> None:
@@ -646,7 +677,18 @@ def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path | None) -> dict:
         # isto a tela ofereceria um botao que o backend recusa — o mesmo defeito
         # que a D-495 corrigiu no seletor de arranjo.
         "tem_video_final": _video_final_em_disco(corte),
+        # D-528: sem a live nao ha de onde extrair o bruto. A tela usa isto para
+        # desabilitar o botao e dizer o que fazer, em vez de deixar o operador
+        # descobrir no clique — mesma regra da D-495.
+        "live_em_disco": _live_em_disco(projeto),
     }
+
+
+def _live_em_disco(projeto: Projeto) -> bool:
+    """Se o vídeo da live ainda está no disco — a matéria-prima do bruto."""
+    if not projeto.arquivo_video_path:
+        return False
+    return resolver_do_projeto(projeto.arquivo_video_path, projeto.id).is_file()
 
 
 def _video_final_em_disco(corte: Corte) -> bool:

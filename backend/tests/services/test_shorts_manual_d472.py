@@ -35,8 +35,15 @@ async def ambiente(monkeypatch, tmp_path):
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     monkeypatch.setattr(servico, "AsyncSessionLocal", factory)
 
+    # D-528: a live precisa estar em disco — sem ela nao ha de onde extrair o
+    # bruto, e o servico passou a recusar antes de acionar o worker.
+    (tmp_path / "p1").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "p1" / "video.mkv").write_bytes(b"live")
+
     async with factory() as db:
-        db.add(Projeto(id="p1", youtube_url="u", titulo_live="Live"))
+        db.add(
+            Projeto(id="p1", youtube_url="u", titulo_live="Live", arquivo_video_path="video.mkv")
+        )
         db.add(
             Corte(
                 id="c1",
@@ -188,3 +195,33 @@ async def test_falha_na_regeracao_nao_chama_a_ia(ambiente, monkeypatch, espioes)
 async def test_corte_inexistente_levanta_lookup(ambiente, espioes):
     with pytest.raises(LookupError):
         await servico.gerar_shorts_do_corte("nao-existe")
+
+
+@pytest.mark.asyncio
+async def test_sem_a_live_em_disco_a_regeracao_nem_comeca(ambiente, monkeypatch):
+    """D-528: recusa antes de acionar o worker, e diz o que fazer.
+
+    Sem o video da live nao ha de onde extrair o trecho. Deixar o FFmpeg
+    descobrir isso custaria a espera inteira para devolver uma mensagem que nao
+    aponta caminho nenhum — e o caminho existe: rebaixar a live (D-527).
+    """
+    factory, tmp_path = ambiente
+    (tmp_path / "p1" / "video.mkv").unlink()
+
+    chamou_worker = False
+
+    async def nao_deveria_chamar(*_a, **_k):
+        nonlocal chamou_worker
+        chamou_worker = True
+        return {"status": "pronto"}
+
+    monkeypatch.setattr(servico, "_regerar_bruto_preservando_pos_producao", nao_deveria_chamar)
+    async with factory() as db:
+        corte = await db.get(Corte, "c1")
+        corte.arquivo_clip_path = ""
+        await db.commit()
+
+    with pytest.raises(ValueError, match="Baixe a live de novo"):
+        await servico.gerar_shorts_do_corte("c1")
+
+    assert not chamou_worker
