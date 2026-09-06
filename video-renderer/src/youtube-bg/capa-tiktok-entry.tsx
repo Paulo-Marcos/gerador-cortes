@@ -27,13 +27,14 @@ import {
  *
  * ## O desenho, e por que ele é sempre o mesmo
  *
- * A arte 4:5 ocupa o quadro; a etiqueta e o selo vão POR CIMA dela, dentro do
- * quadrado central de 1080x1080 — o que sobrevive ao recorte da grade do perfil.
+ * Três faixas empilhadas dentro da faixa central de 1080x1344 — o que sobrevive
+ * ao recorte da vitrine do perfil, medido em 3:4 pela D-536.
  *
  * A D-526 pôs o texto POR CIMA da arte para poder dá-la de largura cheia, e a
  * primeira capa real mostrou o custo: a etiqueta caiu sobre o rosto do
  * personagem. A D-531 devolveu cada um à sua faixa — a arte encolhe um pouco e
- * aparece inteira.
+ * aparece inteira. A D-536 puxou a pilha inteira para dentro do recorte: antes
+ * o selo ficava embaixo dele, e a vitrine comia a assinatura do canal.
  *
  * A repetição é o ponto: identidade de grade nasce de layout constante, não de
  * cada capa ser inventiva. O backend manda a geometria pronta
@@ -291,9 +292,9 @@ const DEFAULT_PROPS: CapaTikTokProps = {
   selo: "@canal",
   frameDataUri: "",
   faixas: {
-    etiqueta: { x: 50, y: 450, w: 980, h: 220 },
-    frame: { x: 125, y: 700, w: 829, h: 1036 },
-    selo: { x: 50, y: 1766, w: 980, h: 84 },
+    etiqueta: { x: 50, y: 288, w: 980, h: 200 },
+    frame: { x: 130, y: 512, w: 819, h: 1024 },
+    selo: { x: 50, y: 1560, w: 980, h: 72 },
   },
 };
 

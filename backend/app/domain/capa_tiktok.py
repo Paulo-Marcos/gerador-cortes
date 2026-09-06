@@ -13,29 +13,37 @@ vistas de uma vez. Por isso a recomendação de mercado é de 0 a 3 palavras (3 
 no limite do conteúdo educativo), contra a manchete inteira que o Capista escreve
 para o YouTube. Lá é cartaz; aqui é prateleira.
 
-## O quadrado central manda
+## A faixa central manda
 
-A grade do perfil RECORTA a capa, e as fontes de 2026 divergem entre corte
-quadrado (1:1) e ~3:4. A regra que sobrevive às duas é a mesma: tudo que importa
-mora no quadrado central de 1080x1080. Os 420px de cima e os 420 de baixo são
-território perdido na grade — no feed eles aparecem, e é por isso que levam
-fundo, não conteúdo.
+A grade do perfil RECORTA a capa no centro, e a D-519 chutou o recorte errado.
+Sem dado de campo, escolhemos a hipótese mais apertada — quadrado 1:1 — e
+tratamos o selo como perda aceitável: ele caía fora do quadrado de propósito.
+
+A capa real desmentiu isso. O próprio uploader do TikTok rotula a vitrine como
+3:4, e as medidas de 2026 convergem: o recorte é ~1080x1440, com as guias de
+safe zone pedindo ainda mais folga (~15% escondidos em cima e embaixo). O
+recorte verdadeiro é MAIS generoso que o nosso palpite — e mesmo assim comia o
+selo, porque o desenho o havia empurrado para y=1766, fora de qualquer hipótese.
+
+Ficamos com a mais restritiva das duas medidas, 1344px de altura: errar para
+dentro custa margem, errar para fora custa um componente inteiro. E agora a capa
+INTEIRA vive lá dentro — nada é sacrificado, porque não precisa mais ser.
 
 ## O desenho
 
-Três faixas que NÃO se tocam. A arte fica contida; texto nenhum passa por cima:
+Três faixas que NÃO se tocam, empilhadas dentro da faixa segura:
 
-    y=0     ┌──────────────┐  fundo
-    y=420   ├──────────────┤  ← início do quadrado seguro
-            │   ETIQUETA   │  sobre o fundo
+    y=0     ┌──────────────┐  fundo (só o feed vê)
+    y=288   ├──────────────┤  ← início da faixa segura
+            │   ETIQUETA   │
             ├──────────────┤
             │              │
             │     ARTE     │  4:5, contida
-    y=1500  │ ···········  │  ← fim do quadrado seguro
             │              │
             ├──────────────┤
-            │  selo canal  │  sobre o fundo
-    y=1920  └──────────────┘
+            │  selo canal  │
+    y=1632  ├──────────────┤  ← fim da faixa segura
+    y=1920  └──────────────┘  fundo
 
 A D-526 pôs o texto POR CIMA da arte para poder dá-la de largura cheia. Foi
 trocar a coisa pela moldura dela: na primeira capa real a etiqueta caiu
@@ -48,16 +56,13 @@ menor e visível vale mais que um maior com a cara tapada.
 
 ## Onde cada coisa cai no recorte da grade
 
-A ETIQUETA fica dentro do quadrado seguro — é o que precisa sobreviver ao
-recorte do perfil.
+Todas dentro. A etiqueta abre a faixa, a arte ocupa o meio, o selo fecha — e o
+recorte da vitrine não tira nada. As sobras de cima e de baixo levam fundo, que
+é o que pode desaparecer sem custo.
 
-O SELO fica FORA, embaixo. E está certo assim: na grade do perfil o handle é
-redundante (quem olha já está no perfil do canal), e ele existe para o feed e
-para o print que alguém compartilha. Prendê-lo ao quadrado seguro custaria
-altura da arte por nada.
-
-A ARTE ocupa o resto, e o miolo dela — que é o que a grade mostra — é onde a
-skill manda o assunto ficar.
+O preço foi 12px de altura da arte (1036 para 1024). Barato: a arte continua
+sendo o maior elemento da capa, enquanto o selo deixou de ser uma assinatura que
+só o feed via.
 
 Módulo puro: só aritmética e texto. Sem I/O, sem Remotion, sem ffmpeg.
 """
@@ -69,34 +74,35 @@ from dataclasses import dataclass
 LARGURA = 1080
 ALTURA = 1920
 
-# O quadrado central que sobrevive ao recorte da grade do perfil.
-LADO_SEGURO = LARGURA
-TOPO_SEGURO = (ALTURA - LADO_SEGURO) // 2
-BASE_SEGURA = TOPO_SEGURO + LADO_SEGURO
+# A faixa central que sobrevive ao recorte da vitrine do perfil (D-536).
+#
+# O recorte medido é 3:4 — 1080x1440. As guias de safe zone pedem mais: ~15% de
+# cima e de baixo escondidos, o que deixa 1344. Adotamos a mais apertada das
+# duas. A largura NÃO é recortada; o corte da grade é só vertical.
+ALTURA_SEGURA = 1344
+TOPO_SEGURO = (ALTURA - ALTURA_SEGURA) // 2
+BASE_SEGURA = TOPO_SEGURO + ALTURA_SEGURA
 
-# Respiro entre a borda do quadrado seguro e o conteúdo. Encostar exatamente no
-# limite é apostar que o recorte da grade é o que as fontes dizem — e elas
-# divergem entre 1:1 e 3:4.
+# Margem lateral das faixas de texto. Nada aqui protege contra a grade — ela não
+# corta na horizontal —, é só respiro de leitura.
 MARGEM_SEGURA = 50
 
 # O trilho do chrome do palco (`StageChrome pad`).
 MARGEM_DO_CHROME = 40
 
-# Faixas de TEXTO, em cima e embaixo da arte.
-ALTURA_DA_ETIQUETA = 220
-ALTURA_DO_SELO = 84
+# Faixas de TEXTO, em cima e embaixo da arte. Encolheram junto com a mudança de
+# alvo: o espaço que a faixa segura dá vai para a arte, e não para o ar em volta
+# do texto, que já tem corpo elástico (D-533).
+ALTURA_DA_ETIQUETA = 200
+ALTURA_DO_SELO = 72
 
-# Respiro entre as faixas, e entre o selo e o trilho de baixo.
-ESPACO_ENTRE_FAIXAS = 30
+# Respiro entre as faixas.
+ESPACO_ENTRE_FAIXAS = 24
 
-# A arte é 4:5 e cabe no que sobra entre a etiqueta e o selo. A largura sai da
-# ALTURA disponível, e não o contrário — é a altura que está apertada num quadro
-# de 1920 com texto nas duas pontas.
-ALTURA_DO_FRAME = (
-    ALTURA
-    - (TOPO_SEGURO + ESPACO_ENTRE_FAIXAS + ALTURA_DA_ETIQUETA + ESPACO_ENTRE_FAIXAS)
-    - (ALTURA_DO_SELO + ESPACO_ENTRE_FAIXAS + MARGEM_DO_CHROME + ESPACO_ENTRE_FAIXAS)
-)
+# A arte é 4:5 e ocupa o que sobra DENTRO da faixa segura — não mais o que sobra
+# do quadro de 1920. A largura sai da altura disponível, e não o contrário: é a
+# altura que está apertada, com texto nas duas pontas.
+ALTURA_DO_FRAME = ALTURA_SEGURA - (ALTURA_DA_ETIQUETA + ALTURA_DO_SELO + 2 * ESPACO_ENTRE_FAIXAS)
 LARGURA_DO_FRAME = round(ALTURA_DO_FRAME * 4 / 5)
 
 # Guarda contra texto absurdo, e não regra editorial (D-533). O limite de 2-3
@@ -128,14 +134,20 @@ class Layout:
     selo: Faixa
 
     @property
-    def cabe_no_quadrado_seguro(self) -> bool:
-        """A ETIQUETA cabe no território que a grade preserva.
+    def cabe_na_faixa_segura(self) -> bool:
+        """Os TRÊS componentes cabem no território que a grade preserva.
 
-        Só a etiqueta. O selo fica fora de propósito: na grade do perfil o handle
-        é redundante — quem olha já está no perfil — e prendê-lo aqui custaria
-        altura da arte por nada.
+        Até a D-533 só a etiqueta era verificada, e o selo ficava fora "de
+        propósito". A justificativa era boa (na vitrine o handle é redundante) e
+        a consequência era ruim: o selo sumia do único lugar onde as capas são
+        vistas em conjunto. Com o recorte real — mais largo que o palpite
+        antigo — sacrificar deixou de ser necessário, então ninguém é
+        sacrificado.
         """
-        return self.etiqueta.y >= TOPO_SEGURO and self.etiqueta.y + self.etiqueta.h <= BASE_SEGURA
+        return all(
+            faixa.y >= TOPO_SEGURO and faixa.y + faixa.h <= BASE_SEGURA
+            for faixa in (self.etiqueta, self.frame, self.selo)
+        )
 
     def como_dict(self) -> dict[str, dict[str, int]]:
         return {
@@ -157,20 +169,24 @@ COMPONENTES = ("etiqueta", "arte", "selo")
 def layout_padrao() -> Layout:
     """As três faixas empilhadas, sem sobreposição — o ponto de partida.
 
-    A etiqueta abre o quadrado seguro; a arte vem logo abaixo, centrada na
-    largura; o selo fecha embaixo, já fora do quadrado.
+    A pilha PREENCHE a faixa segura: a etiqueta encosta no topo dela e o selo
+    no fim. Isso resolve duas coisas de uma vez — a capa fica centrada no
+    quadro (a faixa segura é centrada por construção) e a vitrine do perfil
+    mostra a composição inteira.
 
     >>> layout = layout_padrao()
     >>> round(layout.frame.w / layout.frame.h, 2)
     0.8
-    >>> layout.cabe_no_quadrado_seguro
+    >>> layout.cabe_na_faixa_segura
     True
     >>> layout.etiqueta.y + layout.etiqueta.h <= layout.frame.y   # nada tapa a arte
     True
     >>> layout.frame.y + layout.frame.h <= layout.selo.y
     True
+    >>> layout.selo.y + layout.selo.h == BASE_SEGURA   # a pilha fecha a faixa
+    True
     """
-    y = TOPO_SEGURO + ESPACO_ENTRE_FAIXAS
+    y = TOPO_SEGURO
     etiqueta = Faixa(MARGEM_SEGURA, y, LARGURA - 2 * MARGEM_SEGURA, ALTURA_DA_ETIQUETA)
 
     y += ALTURA_DA_ETIQUETA + ESPACO_ENTRE_FAIXAS

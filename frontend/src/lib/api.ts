@@ -139,7 +139,7 @@ export const api = {
   obterLayoutCapaTiktok: () =>
     request<{
       quadro: { largura: number; altura: number };
-      quadrado_seguro: { y: number; h: number };
+      faixa_segura: { y: number; h: number };
       componentes: string[];
       lado_minimo: number;
       padrao: Record<string, { x: number; y: number; w: number; h: number }>;

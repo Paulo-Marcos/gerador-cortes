@@ -1,13 +1,15 @@
 """D-519: a geometria e o texto da capa vertical do TikTok.
 
-O que precisa de guarda aqui não é o desenho bonito — é o QUADRADO CENTRAL. A
-grade do perfil recorta a capa, e as fontes de 2026 divergem entre corte 1:1 e
-~3:4. Se o TEXTO escapar do quadrado de 1080x1080, o sintoma não aparece na
+O que precisa de guarda aqui não é o desenho bonito — é a FAIXA CENTRAL. A
+vitrine do perfil recorta a capa, e o sintoma de escapar dela não aparece na
 imagem gerada (que sai perfeita) e sim no perfil, depois de publicado: a etiqueta
 cortada pela metade, ou o selo sumido.
 
-O SELO é a exceção deliberada: ele fica fora do quadrado (D-531), porque na
-grade do perfil o handle é redundante e prendê-lo ali custaria altura da arte.
+Foi exatamente o que aconteceu. A D-519 assumiu recorte 1:1 e declarou o selo
+perda aceitável; o recorte real é 3:4, mais generoso — e mesmo assim comia o
+selo, que o desenho havia empurrado para y=1766. A D-536 mediu a faixa e puxou a
+pilha inteira para dentro dela. Estes testes são o que impede o palpite de
+voltar.
 
 O segundo alvo é a etiqueta. A skill do YouTube manda a manchete INTEIRA; se
 esse texto vazar para cá, a capa vira um parágrafo ilegível em miniatura.
@@ -15,6 +17,7 @@ esse texto vazar para cá, a capa vira um parágrafo ilegível em miniatura.
 
 from app.domain.capa_tiktok import (
     ALTURA,
+    ALTURA_SEGURA,
     BASE_SEGURA,
     LADO_MINIMO,
     LARGURA,
@@ -33,8 +36,8 @@ from app.domain.capa_tiktok import (
 
 
 class TestGeometria:
-    def test_a_etiqueta_cabe_no_quadrado_central(self):
-        assert montar_layout().cabe_no_quadrado_seguro
+    def test_a_capa_inteira_cabe_na_faixa_central(self):
+        assert montar_layout().cabe_na_faixa_segura
 
     def test_nada_passa_por_cima_da_arte(self):
         """D-531: o que a primeira capa real quebrou.
@@ -65,24 +68,38 @@ class TestGeometria:
 
         assert abs(arte.x - (LARGURA - arte.w - arte.x)) <= 1
 
-    def test_a_etiqueta_fica_dentro_do_quadrado_seguro(self):
-        """E ela que precisa sobreviver ao recorte da grade do perfil."""
-        etiqueta = montar_layout().etiqueta
+    def test_cada_componente_fica_dentro_da_faixa_segura(self):
+        """O que a vitrine recorta some do unico lugar onde as capas convivem."""
+        layout = montar_layout()
 
-        assert etiqueta.y >= TOPO_SEGURO
-        assert etiqueta.y + etiqueta.h <= BASE_SEGURA
+        for faixa in (layout.etiqueta, layout.frame, layout.selo):
+            assert faixa.y >= TOPO_SEGURO
+            assert faixa.y + faixa.h <= BASE_SEGURA
 
-    def test_o_selo_fica_fora_do_quadrado_seguro_de_proposito(self):
-        """Na grade do perfil o handle e redundante — quem olha ja esta la.
+    def test_a_faixa_segura_e_mais_apertada_que_o_recorte_3_por_4(self):
+        """A medida vem de duas fontes que discordam — vale a mais restritiva.
 
-        Prende-lo ao quadrado custaria altura da arte por nada. O teste existe
-        para que isso seja lido como decisao, e nao como descuido.
+        O recorte medido da vitrine e 1080x1440 (3:4). As guias de safe zone
+        pedem ~15% de folga em cima e embaixo, o que da 1344. Adotar a maior
+        seria apostar na fonte mais otimista para ganhar 96px de arte.
         """
-        selo = montar_layout().selo
+        recorte_3_por_4 = round(LARGURA * 4 / 3)
 
-        assert selo.y > BASE_SEGURA
+        assert ALTURA_SEGURA <= recorte_3_por_4
+        assert BASE_SEGURA - TOPO_SEGURO == ALTURA_SEGURA
 
-    def test_o_selo_nao_encosta_na_borda_do_quadro(self):
+    def test_a_faixa_segura_e_centrada_no_quadro(self):
+        """O recorte da vitrine e central; uma faixa torta erraria dos dois lados."""
+        assert TOPO_SEGURO == ALTURA - BASE_SEGURA
+
+    def test_a_pilha_preenche_a_faixa_de_ponta_a_ponta(self):
+        """Sobra dentro da faixa e area de vitrine desperdicada."""
+        layout = montar_layout()
+
+        assert layout.etiqueta.y == TOPO_SEGURO
+        assert layout.selo.y + layout.selo.h == BASE_SEGURA
+
+    def test_o_selo_nao_encosta_no_trilho_do_chrome(self):
         """Embaixo dele passa o trilho do chrome; encostado, os dois brigam."""
         selo = montar_layout().selo
 

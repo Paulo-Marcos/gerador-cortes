@@ -97,9 +97,10 @@ def obter_layout_da_capa_tiktok():
 
     return {
         "quadro": {"largura": layout_capa.LARGURA, "altura": layout_capa.ALTURA},
-        # A area que a grade do perfil preserva. O editor desenha como guia: e
-        # olhando para ela que o operador decide o que aceita perder no recorte.
-        "quadrado_seguro": {
+        # A faixa que a vitrine do perfil preserva (D-536). O editor desenha
+        # como guia: e olhando para ela que o operador decide o que aceita
+        # perder no recorte.
+        "faixa_segura": {
             "y": layout_capa.TOPO_SEGURO,
             "h": layout_capa.BASE_SEGURA - layout_capa.TOPO_SEGURO,
         },
