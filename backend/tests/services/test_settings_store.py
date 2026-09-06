@@ -31,6 +31,8 @@ def test_app_settings_round_trip(tmp_path: Path):
         "log_level": "debug",
         "filtro_global_padrao": "cinematic_iii",
         "youtube_layout_padrao_global": '{"modo_padrao":"full"}',
+        # D-532: onde cada componente da capa do TikTok fica.
+        "capa_tiktok_layout": '{"etiqueta":{"y":300}}',
         "render_cooldown_sec": 5,
         "render_overlay_concurrency": 2,
         "render_bundle_cache_enabled": 0,
@@ -54,6 +56,7 @@ def test_app_settings_upsert_sobrescreve(tmp_path: Path):
         "log_level": "info",
         "filtro_global_padrao": "bypass_dourado_aberto",
         "youtube_layout_padrao_global": "{}",
+        "capa_tiktok_layout": "{}",
         "render_cooldown_sec": 0,
         "render_overlay_concurrency": 4,
         "render_bundle_cache_enabled": 1,

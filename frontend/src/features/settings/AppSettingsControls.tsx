@@ -19,6 +19,7 @@ import {
   CONTEXTO_DEPOIS_PADRAO_SEG,
   CONTEXTO_MIN_SEG,
 } from '@/hooks/useContextoCorte';
+import { CapaTikTokLayoutEditor } from './CapaTikTokLayoutEditor';
 
 export const LOG_OPTIONS: Array<{ value: LogLevel; label: string; description: string }> = [
   {
@@ -52,7 +53,12 @@ const DEFAULT_RENDER: RenderSettings = {
   grade_global_quality: 30,
 };
 const FALLBACK_FILTERS: FiltroExport[] = [
-  { id: 'cinematic_iii', nome: 'Cinematico III', descricao: 'Referencia pesada', tem_filtro_visual: true },
+  {
+    id: 'cinematic_iii',
+    nome: 'Cinematico III',
+    descricao: 'Referencia pesada',
+    tem_filtro_visual: true,
+  },
   {
     id: 'bypass_dourado_aberto',
     nome: 'Bypass Cinematico Dourado',
@@ -66,15 +72,17 @@ type UpdateBody = Exclude<Parameters<typeof api.atualizarSettings>[0], LogLevel>
 const controlCls =
   'h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-sm font-semibold text-[var(--wb-text)] outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60';
 const labelCls = 'grid gap-1.5 text-xs font-semibold text-[var(--wb-text-mute)]';
-const sectionLabelCls =
-  'text-xs font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]';
+const sectionLabelCls = 'text-xs font-bold uppercase tracking-[0.08em] text-[var(--wb-text-mute)]';
 
 export function AppSettingsControls() {
   const queryClient = useQueryClient();
   const { notify } = useToast();
 
   const settingsQuery = useQuery({ queryKey: ['app-settings'], queryFn: api.obterSettings });
-  const filtersQuery = useQuery({ queryKey: ['export-filtros'], queryFn: () => api.listarFiltros() });
+  const filtersQuery = useQuery({
+    queryKey: ['export-filtros'],
+    queryFn: () => api.listarFiltros(),
+  });
   // D-285: nome do mascote (identidade editorial no banco), query própria pois
   // vive fora do tipo AppSettings (models.ts sob lock).
   const mascoteQuery = useQuery({ queryKey: ['mascote-nome'], queryFn: obterMascoteNome });
@@ -178,8 +186,8 @@ export function AppSettingsControls() {
           ))}
         </select>
         <span className="text-xs font-normal text-[var(--wb-text-mute)]">
-          Velocidade com que Editor, Revisao Final e Pos-producao abrem. So afeta a
-          reproducao na tela &mdash; o video exportado sai sempre em 1,00×.
+          Velocidade com que Editor, Revisao Final e Pos-producao abrem. So afeta a reproducao na
+          tela &mdash; o video exportado sai sempre em 1,00×.
         </span>
       </label>
 
@@ -214,10 +222,9 @@ export function AppSettingsControls() {
           </label>
         </div>
         <span className="text-xs font-normal text-[var(--wb-text-mute)]">
-          Quanto da live o editor carrega alem do corte, para voce ouvir o que veio
-          antes/depois e esticar a borda quando faltar contexto. Padrao 60s e 300s.
-          Janela maior demora mais para abrir o corte na primeira vez, porque o audio
-          precisa ser extraido de novo.
+          Quanto da live o editor carrega alem do corte, para voce ouvir o que veio antes/depois e
+          esticar a borda quando faltar contexto. Padrao 60s e 300s. Janela maior demora mais para
+          abrir o corte na primeira vez, porque o audio precisa ser extraido de novo.
         </span>
       </div>
 
@@ -367,7 +374,9 @@ export function AppSettingsControls() {
               value={render.overlay_codec}
               disabled={isBusy}
               onChange={(event) =>
-                patchRender({ overlay_codec: event.target.value as RenderSettings['overlay_codec'] })
+                patchRender({
+                  overlay_codec: event.target.value as RenderSettings['overlay_codec'],
+                })
               }
               className={controlCls}
             >
@@ -386,6 +395,11 @@ export function AppSettingsControls() {
           </label>
         </div>
       </div>
+
+      {/* D-532: o layout da capa do TikTok. Salva sozinho, com o proprio botao —
+          nao entra no `isBusy` dos ajustes de cima porque nao compartilha
+          mutation com eles. */}
+      <CapaTikTokLayoutEditor />
 
       {isBusy && (
         <p className="inline-flex items-center gap-2 text-xs text-[var(--wb-text-mute)]">

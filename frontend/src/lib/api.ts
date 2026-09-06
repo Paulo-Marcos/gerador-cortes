@@ -134,6 +134,18 @@ export interface FalantesResponse {
 export const api = {
   listarProjetos: () => request<Projeto[]>('/projetos'),
 
+  // D-532: a geometria resolvida da capa do TikTok, para o editor de layout.
+  // O frontend nao recalcula: pede pronta e devolve a que o operador soltou.
+  obterLayoutCapaTiktok: () =>
+    request<{
+      quadro: { largura: number; altura: number };
+      quadrado_seguro: { y: number; h: number };
+      componentes: string[];
+      lado_minimo: number;
+      padrao: Record<string, { x: number; y: number; w: number; h: number }>;
+      atual: Record<string, { x: number; y: number; w: number; h: number }>;
+    }>('/settings/capa-tiktok/layout'),
+
   obterSettings: () => request<AppSettings>('/settings'),
 
   atualizarSettings: (
@@ -143,6 +155,7 @@ export const api = {
           log_level?: LogLevel;
           filtro_global_padrao?: string;
           youtube_layout_padrao_global?: string;
+          capa_tiktok_layout?: string;
           // D-450: velocidade inicial dos players de preview.
           velocidade_player_padrao?: number;
           // D-451: janela de contexto do editor (antes/depois do corte).

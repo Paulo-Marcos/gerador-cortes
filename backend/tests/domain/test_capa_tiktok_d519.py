@@ -16,12 +16,16 @@ esse texto vazar para cá, a capa vira um parágrafo ilegível em miniatura.
 from app.domain.capa_tiktok import (
     ALTURA,
     BASE_SEGURA,
+    LADO_MINIMO,
     LARGURA,
     MARGEM_DO_CHROME,
     MAX_CARACTERES_DA_ETIQUETA,
     TOPO_SEGURO,
+    Faixa,
+    encaixar,
     etiqueta_da_resposta,
     instante_do_frame,
+    layout_padrao,
     montar_layout,
     normalizar_etiqueta,
     prompt_da_arte,
@@ -184,3 +188,64 @@ class TestPromptDaArte:
 
     def test_resposta_vazia_nao_quebra(self):
         assert prompt_da_arte("") == ""
+
+class TestAjusteDoOperador:
+    """D-532: o operador manda no layout, e o ajuste e PARCIAL.
+
+    Chave ausente herda o padrao — o mesmo mecanismo de heranca do resto da
+    cascata de layout deste projeto. Quem move so o titulo grava so o titulo, e
+    a arte continua acompanhando qualquer mudanca futura no default.
+    """
+
+    def test_sem_ajuste_e_o_padrao(self):
+        assert montar_layout(None) == layout_padrao()
+        assert montar_layout({}) == layout_padrao()
+
+    def test_mexer_num_componente_nao_move_os_outros(self):
+        padrao = layout_padrao()
+
+        layout = montar_layout({"etiqueta": {"y": 120}})
+
+        assert layout.etiqueta.y == 120
+        assert layout.frame == padrao.frame
+        assert layout.selo == padrao.selo
+
+    def test_campo_ausente_dentro_do_componente_herda(self):
+        """Mover no eixo Y nao pode zerar a largura que o operador nao tocou."""
+        padrao = layout_padrao()
+
+        etiqueta = montar_layout({"etiqueta": {"y": 120}}).etiqueta
+
+        assert etiqueta.x == padrao.etiqueta.x
+        assert etiqueta.w == padrao.etiqueta.w
+        assert etiqueta.h == padrao.etiqueta.h
+
+    def test_valor_impossivel_vira_o_mais_proximo_que_cabe(self):
+        """JSON editado a mao, ou um default que mudou sob um ajuste antigo."""
+        layout = montar_layout({"arte": {"x": 5000, "y": -300}})
+
+        assert 0 <= layout.frame.x <= LARGURA - layout.frame.w
+        assert layout.frame.y == 0
+
+    def test_valor_nao_numerico_cai_no_padrao(self):
+        padrao = layout_padrao()
+
+        assert montar_layout({"selo": {"y": "meio"}}).selo.y == padrao.selo.y
+
+    def test_componente_desconhecido_e_ignorado(self):
+        """Chave estranha no JSON nao pode derrubar a montagem da capa."""
+        assert montar_layout({"rodape": {"y": 10}}) == layout_padrao()
+
+
+class TestEncaixar:
+    def test_bloco_minusculo_cresce_ate_o_minimo(self):
+        """Abaixo do minimo o bloco some e leva a alca de arraste junto."""
+        assert encaixar(Faixa(0, 0, 1, 1)).w == LADO_MINIMO
+
+    def test_bloco_maior_que_o_quadro_encolhe_antes_de_mover(self):
+        """Encolher primeiro evita empurrar a origem para negativo so para caber."""
+        faixa = encaixar(Faixa(0, 0, 2000, 3000))
+
+        assert faixa.w == LARGURA
+        assert faixa.h == ALTURA
+        assert faixa.x == 0

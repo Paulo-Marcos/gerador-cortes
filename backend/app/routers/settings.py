@@ -22,6 +22,7 @@ class AppSettingsResponse(BaseModel):
     log_level: LogLevel
     filtro_global_padrao: str
     youtube_layout_padrao_global: str = "{}"
+    capa_tiktok_layout: str = "{}"
     # D-450: velocidade com que os players de preview abrem.
     velocidade_player_padrao: float = 1.0
     # D-451: respiro (s) que o editor mostra antes/depois do corte.
@@ -39,6 +40,7 @@ class UpdateAppSettingsRequest(BaseModel):
     # F-024: padrao GLOBAL do layout YouTube (escopo da aplicacao, nao do
     # projeto). JSON string com o preset compartilhado.
     youtube_layout_padrao_global: str | None = None
+    capa_tiktok_layout: str | None = None
     # D-450: velocidade inicial dos players de preview (clampada no serviço).
     velocidade_player_padrao: float | None = None
     # D-451: janela de contexto do editor (clampada no serviço). Lados
@@ -65,6 +67,7 @@ def _to_response(app: AppSettings) -> AppSettingsResponse:
         log_level=app.log_level,
         filtro_global_padrao=app.filtro_global_padrao,
         youtube_layout_padrao_global=app.youtube_layout_padrao_global,
+        capa_tiktok_layout=app.capa_tiktok_layout,
         velocidade_player_padrao=app.velocidade_player_padrao,
         contexto_antes_seg=app.contexto_antes_seg,
         contexto_depois_seg=app.contexto_depois_seg,
@@ -78,6 +81,42 @@ def _to_response(app: AppSettings) -> AppSettingsResponse:
         ),
         mascote_nome=_mascote_nome(),
     )
+
+
+@router.get("/capa-tiktok/layout")
+def obter_layout_da_capa_tiktok():
+    """Onde cada componente da capa do TikTok esta, e onde estaria no padrao.
+
+    O editor NAO recalcula a geometria: recebe a resolvida. Duplicar a conta no
+    frontend criaria a divergencia que este epico passou inteiro evitando — um
+    pixel de diferenca entre o que o operador arrasta e o que o Remotion
+    desenha, sem erro nenhum aparecendo.
+    """
+    from app.domain import capa_tiktok as layout_capa
+    from app.services.capa_tiktok import _ajuste_do_layout
+
+    return {
+        "quadro": {"largura": layout_capa.LARGURA, "altura": layout_capa.ALTURA},
+        # A area que a grade do perfil preserva. O editor desenha como guia: e
+        # olhando para ela que o operador decide o que aceita perder no recorte.
+        "quadrado_seguro": {
+            "y": layout_capa.TOPO_SEGURO,
+            "h": layout_capa.BASE_SEGURA - layout_capa.TOPO_SEGURO,
+        },
+        "componentes": list(layout_capa.COMPONENTES),
+        "lado_minimo": layout_capa.LADO_MINIMO,
+        "padrao": _em_componentes(layout_capa.layout_padrao()),
+        "atual": _em_componentes(layout_capa.montar_layout(_ajuste_do_layout())),
+    }
+
+
+def _em_componentes(layout) -> dict:
+    """O layout no vocabulario do editor: etiqueta, arte, selo."""
+    return {
+        "etiqueta": layout.etiqueta.como_dict(),
+        "arte": layout.frame.como_dict(),
+        "selo": layout.selo.como_dict(),
+    }
 
 
 @router.get("", response_model=AppSettingsResponse)
@@ -96,6 +135,8 @@ async def update_settings(body: UpdateAppSettingsRequest):
         updated = AppSettingsService.update_youtube_layout_padrao_global(
             body.youtube_layout_padrao_global
         )
+    if body.capa_tiktok_layout is not None:
+        updated = AppSettingsService.update_capa_tiktok_layout(body.capa_tiktok_layout)
     if body.velocidade_player_padrao is not None:
         updated = AppSettingsService.update_velocidade_player_padrao(body.velocidade_player_padrao)
     if body.contexto_antes_seg is not None or body.contexto_depois_seg is not None:

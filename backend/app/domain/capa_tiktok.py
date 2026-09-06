@@ -145,13 +145,22 @@ class Layout:
         }
 
 
-def montar_layout() -> Layout:
-    """As três faixas, empilhadas sem sobreposição.
+# O menor lado que um componente pode ter. Abaixo disso ele some da capa e leva
+# junto a alça de arraste do editor — o operador perderia o bloco sem entender.
+LADO_MINIMO = 40
+
+# Os nomes dos três componentes, na ordem em que aparecem de cima para baixo.
+# São a chave do layout salvo e o rótulo no editor: um vocabulário só.
+COMPONENTES = ("etiqueta", "arte", "selo")
+
+
+def layout_padrao() -> Layout:
+    """As três faixas empilhadas, sem sobreposição — o ponto de partida.
 
     A etiqueta abre o quadrado seguro; a arte vem logo abaixo, centrada na
     largura; o selo fecha embaixo, já fora do quadrado.
 
-    >>> layout = montar_layout()
+    >>> layout = layout_padrao()
     >>> round(layout.frame.w / layout.frame.h, 2)
     0.8
     >>> layout.cabe_no_quadrado_seguro
@@ -170,6 +179,78 @@ def montar_layout() -> Layout:
     y += ALTURA_DO_FRAME + ESPACO_ENTRE_FAIXAS
     selo = Faixa(MARGEM_SEGURA, y, LARGURA - 2 * MARGEM_SEGURA, ALTURA_DO_SELO)
     return Layout(etiqueta=etiqueta, frame=frame, selo=selo)
+
+
+def montar_layout(ajuste: dict | None = None) -> Layout:
+    """O layout da capa, com o ajuste do operador por cima do padrão (D-532).
+
+    O ajuste é PARCIAL, como toda a cascata de layout deste projeto: a chave
+    ausente herda o padrão. Quem move só a etiqueta grava só a etiqueta, e a
+    arte continua acompanhando qualquer mudança futura no default.
+
+    Cada componente é encaixado no quadro (`encaixar`), então um valor
+    impossível — vindo de um arraste, de um JSON editado à mão, ou de um default
+    que mudou embaixo de um ajuste antigo — vira o valor mais próximo que cabe,
+    em vez de uma capa quebrada.
+
+    >>> montar_layout({"etiqueta": {"y": 200}}).etiqueta.y
+    200
+    >>> montar_layout({"etiqueta": {"y": -50}}).etiqueta.y
+    0
+    >>> montar_layout(None) == layout_padrao()
+    True
+    """
+    padrao = layout_padrao()
+    if not ajuste:
+        return padrao
+
+    return Layout(
+        etiqueta=_com_ajuste(padrao.etiqueta, ajuste.get("etiqueta")),
+        frame=_com_ajuste(padrao.frame, ajuste.get("arte")),
+        selo=_com_ajuste(padrao.selo, ajuste.get("selo")),
+    )
+
+
+def _com_ajuste(padrao: Faixa, campos: dict | None) -> Faixa:
+    """Uma faixa com os campos que o operador mexeu, encaixada no quadro."""
+    if not campos:
+        return padrao
+    return encaixar(
+        Faixa(
+            _inteiro(campos.get("x"), padrao.x),
+            _inteiro(campos.get("y"), padrao.y),
+            _inteiro(campos.get("w"), padrao.w),
+            _inteiro(campos.get("h"), padrao.h),
+        )
+    )
+
+
+def _inteiro(valor: object, padrao: int) -> int:
+    """Um campo do JSON salvo, ou o padrão quando ele não é número."""
+    try:
+        return int(round(float(valor)))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return padrao
+
+
+def encaixar(faixa: Faixa) -> Faixa:
+    """A faixa mais próxima que cabe no quadro de 1080x1920.
+
+    Primeiro o tamanho, depois a posição: encolher um bloco maior que o quadro
+    antes de movê-lo evita empurrá-lo para uma origem negativa só para caber.
+
+    >>> encaixar(Faixa(-30, 0, 200, 100)).x
+    0
+    >>> encaixar(Faixa(1000, 0, 200, 100)).x
+    880
+    >>> encaixar(Faixa(0, 0, 5, 5)).w
+    40
+    """
+    w = min(max(faixa.w, LADO_MINIMO), LARGURA)
+    h = min(max(faixa.h, LADO_MINIMO), ALTURA)
+    x = min(max(faixa.x, 0), LARGURA - w)
+    y = min(max(faixa.y, 0), ALTURA - h)
+    return Faixa(x, y, w, h)
 
 
 def normalizar_etiqueta(texto: str) -> str:

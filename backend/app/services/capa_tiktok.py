@@ -95,7 +95,7 @@ async def gerar(
     """
     contexto = await _contexto(corte_id, exigir_video=origem == ORIGEM_FRAME)
 
-    faixas = layout_capa.montar_layout()
+    faixas = layout_capa.montar_layout(_ajuste_do_layout())
     texto = layout_capa.normalizar_etiqueta(etiqueta or contexto["texto_capa"])
 
     destino = contexto["thumb_dir"] / f"{NOME_DA_CAPA}_{corte_id[:8]}.png"
@@ -201,6 +201,21 @@ async def montar_contexto_da_etiqueta(corte_id: str) -> ContextoDaEtiqueta:
             etiquetas_recentes="\n".join(f"- {etiqueta}" for etiqueta in recentes),
             prompt_thumbnail=(meta_do_corte.prompt_thumbnail if meta_do_corte else "") or "",
         )
+
+
+def _ajuste_do_layout() -> dict:
+    """Onde o operador pôs cada componente, das configurações globais (D-532).
+
+    JSON inválido vira `{}` — a capa sai no padrão em vez de não sair. Config de
+    posição não é motivo para uma capa falhar.
+    """
+    from app.services.app_settings import AppSettingsService
+
+    try:
+        return json.loads(AppSettingsService.get().capa_tiktok_layout or "{}")
+    except (ValueError, TypeError):
+        logger.warning("[CapaTikTok] layout salvo nao e um JSON valido; usando o padrao")
+        return {}
 
 
 async def tem_texto_de_capa(corte_id: str) -> bool:

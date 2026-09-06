@@ -123,6 +123,10 @@ class AppSettings:
     # usuario possa "Usar Global" sem afetar o padrao de projeto.
     # Default "{}" significa "sem padrao global definido".
     youtube_layout_padrao_global: str = "{}"
+    # D-532: onde cada componente da capa do TikTok fica no quadro 1080x1920.
+    # JSON PARCIAL — chave ausente herda o padrão, como o resto da cascata de
+    # layout deste projeto. "{}" significa "tudo no padrão".
+    capa_tiktok_layout: str = "{}"
     # D-450: velocidade com que os players de preview (Editor, Revisao Final,
     # Pos-producao) ABREM. Preferencia de leitura do operador, nao afeta o
     # render — o clipe exportado sai sempre em 1x. Default 1.0.
@@ -139,6 +143,7 @@ class AppSettings:
             "log_level": self.log_level.value,
             "filtro_global_padrao": self.filtro_global_padrao,
             "youtube_layout_padrao_global": self.youtube_layout_padrao_global,
+            "capa_tiktok_layout": self.capa_tiktok_layout,
             "velocidade_player_padrao": self.velocidade_player_padrao,
             "contexto_antes_seg": self.contexto_antes_seg,
             "contexto_depois_seg": self.contexto_depois_seg,
@@ -187,6 +192,16 @@ class AppSettingsService:
         nao do projeto). Recebe JSON string ja serializada (mesmo formato do
         `Projeto.layout_youtube_padrao`)."""
         return cls._update(youtube_layout_padrao_global=_coerce_layout_global(layout_json))
+
+    @classmethod
+    def update_capa_tiktok_layout(cls, layout_json: str) -> AppSettings:
+        """Atualiza onde cada componente da capa do TikTok fica (D-532).
+
+        Recebe o JSON já serializado. Passa pelo MESMO coerce do layout do
+        YouTube: um JSON inválido vira "{}", que o domínio lê como "tudo no
+        padrão" — a capa continua saindo, só sem o ajuste.
+        """
+        return cls._update(capa_tiktok_layout=_coerce_layout_global(layout_json))
 
     @classmethod
     def update_velocidade_player_padrao(cls, velocidade: float) -> AppSettings:
@@ -295,6 +310,7 @@ class AppSettingsService:
             youtube_layout_padrao_global=_coerce_layout_global(
                 data.get("youtube_layout_padrao_global")
             ),
+            capa_tiktok_layout=_coerce_layout_global(data.get("capa_tiktok_layout")),
             velocidade_player_padrao=_coerce_velocidade_player(
                 data.get("velocidade_player_padrao")
             ),
@@ -338,6 +354,7 @@ def _app_settings_from_row(row: dict) -> AppSettings:
         log_level=_coerce_log_level(row.get("log_level")),
         filtro_global_padrao=_coerce_filtro_global(row.get("filtro_global_padrao")),
         youtube_layout_padrao_global=_coerce_layout_global(row.get("youtube_layout_padrao_global")),
+        capa_tiktok_layout=_coerce_layout_global(row.get("capa_tiktok_layout")),
         velocidade_player_padrao=_coerce_velocidade_player(row.get("velocidade_player_padrao")),
         contexto_antes_seg=_coerce_contexto_seg(
             row.get("contexto_antes_seg"), DEFAULT_CONTEXTO_ANTES_SEG, CONTEXTO_ANTES_SEG_MAX
@@ -355,6 +372,7 @@ def _row_from_app_settings(app: AppSettings) -> dict:
         "log_level": app.log_level.value,
         "filtro_global_padrao": app.filtro_global_padrao,
         "youtube_layout_padrao_global": app.youtube_layout_padrao_global,
+        "capa_tiktok_layout": app.capa_tiktok_layout,
         "render_cooldown_sec": app.render.cooldown_sec,
         "render_overlay_concurrency": app.render.overlay_concurrency,
         "render_bundle_cache_enabled": 1 if app.render.bundle_cache_enabled else 0,

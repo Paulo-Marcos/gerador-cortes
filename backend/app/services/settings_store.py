@@ -38,6 +38,7 @@ _APP_COLUNAS = (
     "log_level",
     "filtro_global_padrao",
     "youtube_layout_padrao_global",
+    "capa_tiktok_layout",
     "render_cooldown_sec",
     "render_overlay_concurrency",
     "render_bundle_cache_enabled",
@@ -119,6 +120,7 @@ _DDL = (
         log_level TEXT NOT NULL DEFAULT 'disabled',
         filtro_global_padrao TEXT NOT NULL DEFAULT 'bypass_dourado_aberto',
         youtube_layout_padrao_global TEXT NOT NULL DEFAULT '{}',
+        capa_tiktok_layout TEXT NOT NULL DEFAULT '{}',
         render_cooldown_sec INTEGER NOT NULL DEFAULT 0,
         render_overlay_concurrency INTEGER NOT NULL DEFAULT 4,
         render_bundle_cache_enabled INTEGER NOT NULL DEFAULT 1,
@@ -252,6 +254,12 @@ _MIGRACOES_COLUNA = (
         "app_settings",
         "contexto_depois_seg",
         "ALTER TABLE app_settings ADD COLUMN contexto_depois_seg INTEGER NOT NULL DEFAULT 300",
+    ),
+    # D-532: onde cada componente da capa do TikTok fica no quadro.
+    (
+        "app_settings",
+        "capa_tiktok_layout",
+        "ALTER TABLE app_settings ADD COLUMN capa_tiktok_layout TEXT NOT NULL DEFAULT '{}'",
     ),
 )
 

@@ -622,6 +622,8 @@ export interface AppSettings {
   // `Projeto.layout_youtube_padrao` que e por-projeto). JSON string;
   // "{}" significa "sem padrao global definido".
   youtube_layout_padrao_global?: string;
+  /** D-532: onde cada componente da capa do TikTok fica, em JSON parcial. */
+  capa_tiktok_layout?: string;
   // D-450: velocidade com que os players de preview ABREM (Editor, Revisao
   // Final, Pos-producao). Preferencia de leitura — nao afeta o render.
   velocidade_player_padrao?: number;
