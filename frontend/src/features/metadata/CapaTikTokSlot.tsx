@@ -1,13 +1,19 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Clipboard, Copy, Film, ImagePlus, Loader2, Sparkles } from 'lucide-react';
+import {
+  Check,
+  Clipboard,
+  Copy,
+  Film,
+  ImagePlus,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
-import {
-  lerImagemColada,
-  SemImagemColada,
-} from '@/features/shorts/imagemDaAreaDeTransferencia';
+import { lerImagemColada, SemImagemColada } from '@/features/shorts/imagemDaAreaDeTransferencia';
 
 // D-521: a capa VERTICAL, ao lado da thumbnail do YouTube.
 //
@@ -48,6 +54,15 @@ interface Props {
   promptArte?: string;
   /** A etiqueta gravada na última montagem. */
   etiqueta?: string;
+  /**
+   * O texto de capa COMO ESTÁ NA TELA (D-534).
+   *
+   * Não é redundante com o que o backend leria do metadado: o campo salva no
+   * `blur`, e o clique neste bloco dispara o blur e a montagem quase juntos.
+   * Duas requisições independentes, sem ordem garantida — a capa saía com o
+   * texto ANTERIOR, e o operador via o botão "funcionar" sem mudar nada.
+   */
+  textoCapa?: string;
   /** Recarrega o metadado depois de cada passo. */
   onAtualizou: () => void;
 }
@@ -58,6 +73,7 @@ export function CapaTikTokSlot({
   capaPath,
   promptArte,
   etiqueta,
+  textoCapa,
   onAtualizou,
 }: Props) {
   const queryClient = useQueryClient();
@@ -65,10 +81,16 @@ export function CapaTikTokSlot({
   const inputCapaRef = useRef<HTMLInputElement>(null);
   const [erro, setErro] = useState('');
   const [copiado, setCopiado] = useState(false);
-  const capaUrl = resolveThumbUrl(projetoId, capaPath);
+  // D-534: o caminho da capa nao muda quando ela e refeita — mesmo arquivo,
+  // mesma URL —, entao o navegador servia a imagem do cache e o preview ficava
+  // na versao velha. O contador quebra o cache a cada acao concluida.
+  const [versao, setVersao] = useState(0);
+  const base = resolveThumbUrl(projetoId, capaPath);
+  const capaUrl = base ? `${base}${base.includes('?') ? '&' : '?'}v=${versao}` : base;
 
   const aoTerminar = () => {
     setErro('');
+    setVersao((n) => n + 1);
     onAtualizou();
     void queryClient.invalidateQueries({ queryKey: ['export-status'] });
   };
@@ -109,8 +131,10 @@ export function CapaTikTokSlot({
   });
 
   const montar = useMutation({
+    // O texto vai EXPLICITO: manda o que esta na tela em vez de deixar o
+    // backend reler o metadado, que pode nao ter sido gravado ainda.
     mutationFn: (opcoes: { origem?: 'ia' | 'frame' } = {}) =>
-      shortsApi.gerarCapaTiktok(corteId, opcoes),
+      shortsApi.gerarCapaTiktok(corteId, { etiqueta: textoCapa?.trim() || '', ...opcoes }),
     onSuccess: aoTerminar,
     onError: (e: Error) => setErro(e.message),
   });
@@ -219,16 +243,23 @@ export function CapaTikTokSlot({
             }}
           />
 
+          {/* D-534: era um link chamado "remontar com a arte atual", e o nome
+              escondia a única coisa que se faz com ele. Quem muda o texto de
+              capa procura um botão de ATUALIZAR O TEXTO — e desistia de achar,
+              porque o rótulo falava de arte. A ação é a mesma; o nome agora é o
+              da intenção. */}
           {capaPath && (
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant="outline"
               disabled={ocupado}
               onClick={() => montar.mutate({})}
-              className="text-left text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
-              title="Remonta com a mesma arte — útil quando o texto de capa mudou."
+              title="Refaz a capa com o texto de capa atual, reusando a mesma arte."
             >
-              remontar com a arte atual
-            </button>
+              {montar.isPending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              Atualizar texto
+            </Button>
           )}
 
           {/* A capa PRONTA, montada por fora. Escape hatch de quem quer controle

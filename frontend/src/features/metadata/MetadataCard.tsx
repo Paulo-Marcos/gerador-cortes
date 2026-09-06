@@ -592,6 +592,7 @@ export function MetadataCard({
               capaPath={meta?.thumbnail_tiktok_path}
               promptArte={meta?.prompt_capa_tiktok}
               etiqueta={meta?.etiqueta_tiktok}
+              textoCapa={coverText}
               onAtualizou={invalidate}
             />
             {/* D-413: copiar o prompt é a ação principal do fluxo manual de capa
@@ -873,6 +874,7 @@ export function MetadataCard({
               capaPath={meta?.thumbnail_tiktok_path}
               promptArte={meta?.prompt_capa_tiktok}
               etiqueta={meta?.etiqueta_tiktok}
+              textoCapa={coverText}
               onAtualizou={invalidate}
             />
             {/* DE-PARA-v3 §5: "Trocar thumbnail" é o primário (sólido em
