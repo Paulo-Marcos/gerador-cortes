@@ -23,36 +23,41 @@ fundo, não conteúdo.
 
 ## O desenho
 
-A arte 4:5 ocupa o quadro; a etiqueta e o selo vão POR CIMA dela, dentro do
-quadrado seguro:
+Três faixas que NÃO se tocam. A arte fica contida; texto nenhum passa por cima:
 
     y=0     ┌──────────────┐  fundo
-    y=335   ├──────────────┤  ← topo da arte (sangra o quadrado seguro)
-    y=420   │ ···········  │  ← início do quadrado seguro
-            │   ETIQUETA   │  sobre a arte, com véu escuro
+    y=420   ├──────────────┤  ← início do quadrado seguro
+            │   ETIQUETA   │  sobre o fundo
+            ├──────────────┤
             │              │
-            │     ARTE     │  1000x1250, o assunto da capa
-            │              │
-            │  selo canal  │  sobre a arte
+            │     ARTE     │  4:5, contida
     y=1500  │ ···········  │  ← fim do quadrado seguro
-    y=1585  ├──────────────┤  ← base da arte
-    y=1920  └──────────────┘  fundo
+            │              │
+            ├──────────────┤
+            │  selo canal  │  sobre o fundo
+    y=1920  └──────────────┘
 
-Duas regras diferentes governam a arte e o texto, e confundi-las foi o erro da
-primeira versão.
+A D-526 pôs o texto POR CIMA da arte para poder dá-la de largura cheia. Foi
+trocar a coisa pela moldura dela: na primeira capa real a etiqueta caiu
+exatamente sobre o rosto do personagem — o único elemento que a capa tinha para
+vender.
 
-**O texto** fica dentro do quadrado seguro, sempre: a grade do perfil recorta a
-capa, e uma etiqueta cortada pela metade não se lê.
+Agora a arte encolhe um pouco em troca de aparecer inteira, e o texto volta às
+suas próprias faixas. O que se perde em área se ganha em leitura: um personagem
+menor e visível vale mais que um maior com a cara tapada.
 
-**A arte** sangra além dele de propósito. Ela é imagem: o recorte da grade mostra
-o miolo, que é justamente onde o assunto está. Prendê-la ao quadrado seguro
-obrigaria a encolhê-la a menos da metade da largura — e a arte deixaria de ser o
-que a pessoa vê primeiro.
+## Onde cada coisa cai no recorte da grade
 
-Foi por isso que a faixa deixou de ser 16:9. Enquanto ela mostrava um quadro do
-vídeo, a proporção deitada era honesta: citava o formato do que ia tocar. Com uma
-ilustração feita sob medida essa razão caiu, e sobrava uma tira ocupando um terço
-da altura de uma capa vertical.
+A ETIQUETA fica dentro do quadrado seguro — é o que precisa sobreviver ao
+recorte do perfil.
+
+O SELO fica FORA, embaixo. E está certo assim: na grade do perfil o handle é
+redundante (quem olha já está no perfil do canal), e ele existe para o feed e
+para o print que alguém compartilha. Prendê-lo ao quadrado seguro custaria
+altura da arte por nada.
+
+A ARTE ocupa o resto, e o miolo dela — que é o que a grade mostra — é onde a
+skill manda o assunto ficar.
 
 Módulo puro: só aritmética e texto. Sem I/O, sem Remotion, sem ffmpeg.
 """
@@ -74,23 +79,25 @@ BASE_SEGURA = TOPO_SEGURO + LADO_SEGURO
 # divergem entre 1:1 e 3:4.
 MARGEM_SEGURA = 50
 
-# O trilho do chrome do palco (`StageChrome pad`). A arte encosta nele em vez de
-# sangrar até a borda: sangrada, ela ATRAVESSA o contorno do palco, e a capa
-# deixa de ler como um cartão único.
+# O trilho do chrome do palco (`StageChrome pad`).
 MARGEM_DO_CHROME = 40
 
-# A arte vai de trilho a trilho; a altura sai do 4:5 dela.
-LARGURA_DO_FRAME = LARGURA - 2 * MARGEM_DO_CHROME
-ALTURA_DO_FRAME = round(LARGURA_DO_FRAME * 5 / 4)
-
-# Faixas de TEXTO, sobrepostas à arte. A etiqueta cabe em duas linhas; o rodapé
-# leva só o selo.
-ALTURA_DA_ETIQUETA = 250
+# Faixas de TEXTO, em cima e embaixo da arte.
+ALTURA_DA_ETIQUETA = 220
 ALTURA_DO_SELO = 84
 
-# Respiro entre o texto e a borda do quadrado seguro. O texto não encosta no
-# limite porque as fontes divergem sobre o recorte exato da grade.
-FOLGA_DO_TEXTO = 30
+# Respiro entre as faixas, e entre o selo e o trilho de baixo.
+ESPACO_ENTRE_FAIXAS = 30
+
+# A arte é 4:5 e cabe no que sobra entre a etiqueta e o selo. A largura sai da
+# ALTURA disponível, e não o contrário — é a altura que está apertada num quadro
+# de 1920 com texto nas duas pontas.
+ALTURA_DO_FRAME = (
+    ALTURA
+    - (TOPO_SEGURO + ESPACO_ENTRE_FAIXAS + ALTURA_DA_ETIQUETA + ESPACO_ENTRE_FAIXAS)
+    - (ALTURA_DO_SELO + ESPACO_ENTRE_FAIXAS + MARGEM_DO_CHROME + ESPACO_ENTRE_FAIXAS)
+)
+LARGURA_DO_FRAME = round(ALTURA_DO_FRAME * 4 / 5)
 
 # Acima disso a etiqueta deixa de ser etiqueta. O mercado recomenda de 0 a 3
 # palavras; 5 é o teto do conteúdo educativo, e é onde este módulo corta.
@@ -122,12 +129,13 @@ class Layout:
 
     @property
     def cabe_no_quadrado_seguro(self) -> bool:
-        """O TEXTO cabe no território que a grade preserva.
+        """A ETIQUETA cabe no território que a grade preserva.
 
-        Só o texto: a arte sangra além do quadrado de propósito, e cobrá-la aqui
-        obrigaria a encolhê-la a menos da metade da largura do quadro.
+        Só a etiqueta. O selo fica fora de propósito: na grade do perfil o handle
+        é redundante — quem olha já está no perfil — e prendê-lo aqui custaria
+        altura da arte por nada.
         """
-        return self.etiqueta.y >= TOPO_SEGURO and self.selo.y + self.selo.h <= BASE_SEGURA
+        return self.etiqueta.y >= TOPO_SEGURO and self.etiqueta.y + self.etiqueta.h <= BASE_SEGURA
 
     def como_dict(self) -> dict[str, dict[str, int]]:
         return {
@@ -138,39 +146,29 @@ class Layout:
 
 
 def montar_layout() -> Layout:
-    """A arte centrada no quadro; o texto por cima, dentro do quadrado seguro.
+    """As três faixas, empilhadas sem sobreposição.
 
-    A arte é centrada no CANVAS, e não no quadrado seguro: assim o miolo dela —
-    o que a grade do perfil vai mostrar — coincide com o centro da imagem, que é
-    onde a skill manda o assunto ficar.
+    A etiqueta abre o quadrado seguro; a arte vem logo abaixo, centrada na
+    largura; o selo fecha embaixo, já fora do quadrado.
 
     >>> layout = montar_layout()
-    >>> (layout.frame.w, layout.frame.h)
-    (1000, 1250)
+    >>> round(layout.frame.w / layout.frame.h, 2)
+    0.8
     >>> layout.cabe_no_quadrado_seguro
     True
-    >>> layout.frame.y < TOPO_SEGURO      # a arte sangra, de propósito
+    >>> layout.etiqueta.y + layout.etiqueta.h <= layout.frame.y   # nada tapa a arte
+    True
+    >>> layout.frame.y + layout.frame.h <= layout.selo.y
     True
     """
-    frame = Faixa(
-        MARGEM_DO_CHROME,
-        (ALTURA - ALTURA_DO_FRAME) // 2,
-        LARGURA_DO_FRAME,
-        ALTURA_DO_FRAME,
-    )
+    y = TOPO_SEGURO + ESPACO_ENTRE_FAIXAS
+    etiqueta = Faixa(MARGEM_SEGURA, y, LARGURA - 2 * MARGEM_SEGURA, ALTURA_DA_ETIQUETA)
 
-    etiqueta = Faixa(
-        MARGEM_SEGURA,
-        TOPO_SEGURO + FOLGA_DO_TEXTO,
-        LARGURA - 2 * MARGEM_SEGURA,
-        ALTURA_DA_ETIQUETA,
-    )
-    selo = Faixa(
-        MARGEM_SEGURA,
-        BASE_SEGURA - FOLGA_DO_TEXTO - ALTURA_DO_SELO,
-        LARGURA - 2 * MARGEM_SEGURA,
-        ALTURA_DO_SELO,
-    )
+    y += ALTURA_DA_ETIQUETA + ESPACO_ENTRE_FAIXAS
+    frame = Faixa((LARGURA - LARGURA_DO_FRAME) // 2, y, LARGURA_DO_FRAME, ALTURA_DO_FRAME)
+
+    y += ALTURA_DO_FRAME + ESPACO_ENTRE_FAIXAS
+    selo = Faixa(MARGEM_SEGURA, y, LARGURA - 2 * MARGEM_SEGURA, ALTURA_DO_SELO)
     return Layout(etiqueta=etiqueta, frame=frame, selo=selo)
 
 

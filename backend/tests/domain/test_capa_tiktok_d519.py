@@ -6,14 +6,15 @@ grade do perfil recorta a capa, e as fontes de 2026 divergem entre corte 1:1 e
 imagem gerada (que sai perfeita) e sim no perfil, depois de publicado: a etiqueta
 cortada pela metade, ou o selo sumido.
 
-A arte é o contrário: ela sangra além do quadrado de propósito (D-526), e um
-teste que a prendesse ali obrigaria a encolhê-la a menos da metade da largura.
+O SELO é a exceção deliberada: ele fica fora do quadrado (D-531), porque na
+grade do perfil o handle é redundante e prendê-lo ali custaria altura da arte.
 
 O segundo alvo é a etiqueta. A skill do YouTube manda a manchete INTEIRA; se
 esse texto vazar para cá, a capa vira um parágrafo ilegível em miniatura.
 """
 
 from app.domain.capa_tiktok import (
+    ALTURA,
     BASE_SEGURA,
     LARGURA,
     MARGEM_DO_CHROME,
@@ -27,55 +28,61 @@ from app.domain.capa_tiktok import (
 )
 
 
-class TestQuadradoSeguro:
-    def test_todas_as_faixas_cabem_no_quadrado_central(self):
+class TestGeometria:
+    def test_a_etiqueta_cabe_no_quadrado_central(self):
         assert montar_layout().cabe_no_quadrado_seguro
 
-    def test_o_texto_nao_invade_a_zona_recortada(self):
-        """Checagem faixa a faixa do TEXTO — a arte tem regra própria."""
+    def test_nada_passa_por_cima_da_arte(self):
+        """D-531: o que a primeira capa real quebrou.
+
+        Com o texto sobreposto, a etiqueta caiu exatamente sobre o rosto do
+        personagem — o unico elemento que a capa tinha para vender. As faixas
+        voltaram a ser vizinhas, e este teste e o que impede a volta.
+        """
         layout = montar_layout()
 
-        for nome in ("etiqueta", "selo"):
-            faixa = getattr(layout, nome)
-            assert faixa.y >= TOPO_SEGURO, f"{nome} comeca acima do quadrado seguro"
-            assert faixa.y + faixa.h <= BASE_SEGURA, f"{nome} passa do quadrado seguro"
+        assert layout.etiqueta.y + layout.etiqueta.h <= layout.frame.y
+        assert layout.frame.y + layout.frame.h <= layout.selo.y
 
     def test_a_arte_e_4_por_5(self):
-        """D-526: vertical, e não deitada.
-
-        A proporção deitada fazia sentido enquanto a faixa citava um quadro do
-        vídeo. Com uma ilustração feita sob medida, sobrava uma tira ocupando um
-        terço da altura de uma capa vertical.
-        """
+        """Vertical, e nao deitada: a capa e vista num celular."""
         arte = montar_layout().frame
 
         assert round(arte.w / arte.h, 2) == 0.8
 
-    def test_a_arte_sangra_o_quadrado_seguro(self):
-        """De propósito: o recorte da grade mostra o miolo, que é onde o assunto está."""
+    def test_a_arte_esta_contida_no_quadro(self):
         arte = montar_layout().frame
 
-        assert arte.y < TOPO_SEGURO
-        assert arte.y + arte.h > BASE_SEGURA
+        assert arte.x >= 0
+        assert arte.x + arte.w <= LARGURA
 
-    def test_o_frame_encosta_no_trilho_do_chrome(self):
-        """Sangrado ate a borda, ele atravessaria o contorno do palco."""
-        frame = montar_layout().frame
+    def test_a_arte_e_centrada_na_largura(self):
+        arte = montar_layout().frame
 
-        assert frame.x == MARGEM_DO_CHROME
-        assert frame.x + frame.w == LARGURA - MARGEM_DO_CHROME
+        assert abs(arte.x - (LARGURA - arte.w - arte.x)) <= 1
 
-    def test_o_texto_fica_sobre_a_arte(self):
-        """D-526: agora é camada, não vizinho de faixa.
+    def test_a_etiqueta_fica_dentro_do_quadrado_seguro(self):
+        """E ela que precisa sobreviver ao recorte da grade do perfil."""
+        etiqueta = montar_layout().etiqueta
 
-        Se o texto cair fora da arte, ele volta a boiar sobre o fundo — e os véus
-        que garantem a leitura, desenhados dentro da arte, deixam de proteger.
+        assert etiqueta.y >= TOPO_SEGURO
+        assert etiqueta.y + etiqueta.h <= BASE_SEGURA
+
+    def test_o_selo_fica_fora_do_quadrado_seguro_de_proposito(self):
+        """Na grade do perfil o handle e redundante — quem olha ja esta la.
+
+        Prende-lo ao quadrado custaria altura da arte por nada. O teste existe
+        para que isso seja lido como decisao, e nao como descuido.
         """
-        layout = montar_layout()
+        selo = montar_layout().selo
 
-        for faixa in (layout.etiqueta, layout.selo):
-            assert faixa.y >= layout.frame.y
-            assert faixa.y + faixa.h <= layout.frame.y + layout.frame.h
+        assert selo.y > BASE_SEGURA
+
+    def test_o_selo_nao_encosta_na_borda_do_quadro(self):
+        """Embaixo dele passa o trilho do chrome; encostado, os dois brigam."""
+        selo = montar_layout().selo
+
+        assert selo.y + selo.h <= ALTURA - MARGEM_DO_CHROME
 
 
 class TestEtiqueta:

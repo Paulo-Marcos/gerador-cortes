@@ -30,9 +30,10 @@ import {
  * A arte 4:5 ocupa o quadro; a etiqueta e o selo vão POR CIMA dela, dentro do
  * quadrado central de 1080x1080 — o que sobrevive ao recorte da grade do perfil.
  *
- * Duas regras diferentes: o TEXTO fica preso ao quadrado seguro, porque uma
- * etiqueta cortada pela metade não se lê; a ARTE sangra além dele de propósito,
- * porque o recorte mostra o miolo dela, que é onde o assunto está.
+ * A D-526 pôs o texto POR CIMA da arte para poder dá-la de largura cheia, e a
+ * primeira capa real mostrou o custo: a etiqueta caiu sobre o rosto do
+ * personagem. A D-531 devolveu cada um à sua faixa — a arte encolhe um pouco e
+ * aparece inteira.
  *
  * A repetição é o ponto: identidade de grade nasce de layout constante, não de
  * cada capa ser inventiva. O backend manda a geometria pronta
@@ -76,14 +77,6 @@ const OPTS_DO_FRAME: ChromeOpts = {
   chamferBR: 32,
   offset: 10,
 };
-
-// Véus escuros nas pontas da arte. A etiqueta tem contorno pesado, mas contorno
-// não salva texto branco sobre uma área clara da ilustração — e a arte muda a
-// cada corte, então não dá para contar com o fundo dela.
-const VEU_DE_CIMA =
-  "linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0) 100%)";
-const VEU_DE_BAIXO =
-  "linear-gradient(to top, rgba(0,0,0,0.68) 0%, rgba(0,0,0,0.30) 60%, rgba(0,0,0,0) 100%)";
 
 const SOMBRA_DO_FRAME =
   "drop-shadow(0 30px 60px rgba(0,0,0,0.55)) drop-shadow(0 10px 22px rgba(0,0,0,0.45))";
@@ -157,46 +150,20 @@ const CapaTikTokStill: FC<CapaTikTokProps> = ({
       w={faixas.frame.w}
       h={faixas.frame.h}
     >
+      {/* D-531: a moldura ganhou corpo. O contorno a 0.3 sumia contra a arte —
+          ficava um fio, e a imagem parecia colada no fundo em vez de emoldurada.
+          Os brackets nos cantos são os mesmos do palco do vídeo — o que faz a
+          capa e o corte parecerem do mesmo canal —, mas em escala reduzida: no
+          tamanho do palco eles gritavam mais que a ilustração, e a moldura não
+          é o assunto. */}
       <CardChrome
         width={faixas.frame.w}
         height={faixas.frame.h}
         opts={OPTS_DO_FRAME}
-        outlineScale={0.3}
-        showBrackets={false}
+        outlineScale={0.6}
+        bracketScale={0.22}
+        showBrackets
       />
-    </SlotBox>
-
-    {/* Os véus, entre a arte e o texto. */}
-    <SlotBox
-      x={faixas.frame.x}
-      y={faixas.frame.y}
-      w={faixas.frame.w}
-      h={faixas.frame.h}
-      clip
-      opts={OPTS_DO_FRAME}
-    >
-      <div style={{ position: "absolute", inset: 0 }}>
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 520,
-            background: VEU_DE_CIMA,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 360,
-            background: VEU_DE_BAIXO,
-          }}
-        />
-      </div>
     </SlotBox>
 
     {/* A etiqueta. Duas linhas no máximo: o backend já cortou o texto para caber,
@@ -272,9 +239,9 @@ const DEFAULT_PROPS: CapaTikTokProps = {
   selo: "@canal",
   frameDataUri: "",
   faixas: {
-    etiqueta: { x: 50, y: 450, w: 980, h: 250 },
-    frame: { x: 40, y: 335, w: 1000, h: 1250 },
-    selo: { x: 50, y: 1386, w: 980, h: 84 },
+    etiqueta: { x: 50, y: 450, w: 980, h: 220 },
+    frame: { x: 125, y: 700, w: 829, h: 1036 },
+    selo: { x: 50, y: 1766, w: 980, h: 84 },
   },
 };
 
