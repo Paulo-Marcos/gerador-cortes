@@ -90,10 +90,20 @@ class TestGeometria:
 
 
 class TestEtiqueta:
-    def test_corta_pelo_numero_de_palavras(self):
-        longa = "primeira segunda terceira quarta quinta sexta setima"
+    def test_nao_apaga_palavra_de_texto_curado(self):
+        """D-533: o defeito que o dev viu, em uma linha.
 
-        assert len(normalizar_etiqueta(longa).split()) <= 5
+        O texto vem do `texto_capa`, escrito a mao para a thumbnail do YouTube.
+        Sumir com a ultima palavra dele e silencioso, e por isso pior que
+        qualquer corpo de fonte pequeno — quem resolve o espaco agora e o
+        renderizador, encolhendo a fonte e usando ate tres linhas.
+        """
+        for texto in (
+            "TODO MUNDO ASSINOU EMBAIXO",
+            "BANCO ANTISSISTEMA, CORRUPCAO IGUAL",
+            "NAO TEM PAIS QUE SOBREVIVE",
+        ):
+            assert normalizar_etiqueta(texto) == texto
 
     def test_a_manchete_inteira_do_youtube_nao_passa(self):
         """O caso que motivou o módulo: o texto do cartaz vazando para a vitrine."""
@@ -119,9 +129,15 @@ class TestEtiqueta:
         assert normalizar_etiqueta("") == ""
         assert normalizar_etiqueta("   ") == ""
 
-    def test_uma_palavra_gigante_nao_vira_etiqueta(self):
-        """Cair para vazio é melhor que estourar a faixa com uma palavra só."""
-        assert normalizar_etiqueta("a" * 60) == ""
+    def test_uma_palavra_gigante_sobrevive(self):
+        """Ela nao cabe bem, mas apaga-la deixaria a capa sem etiqueta nenhuma."""
+        assert normalizar_etiqueta("a" * 60) == "A" * 60
+
+    def test_paragrafo_inteiro_ainda_e_cortado(self):
+        """A guarda que restou: acima disso nem tres linhas salvam."""
+        paragrafo = " ".join(["palavra"] * 40)
+
+        assert len(normalizar_etiqueta(paragrafo)) <= MAX_CARACTERES_DA_ETIQUETA
 
 
 class TestInstanteDoFrame:
@@ -154,11 +170,11 @@ class TestRespostaDoModelo:
         assert etiqueta_da_resposta("") == ""
         assert etiqueta_da_resposta("   \n  ") == ""
 
-    def test_resposta_longa_ainda_e_cortada(self):
-        """A rede da normalizacao continua valendo depois da limpeza."""
-        resposta = "O erro que todo mundo comete com juros compostos"
+    def test_resposta_longa_passa_inteira_ate_a_guarda(self):
+        """A limpeza tira o embrulho; encurtar o texto e trabalho da skill."""
+        resposta = "O erro que todo mundo comete"
 
-        assert len(etiqueta_da_resposta(resposta).split()) <= 5
+        assert etiqueta_da_resposta(resposta) == "O ERRO QUE TODO MUNDO COMETE"
 
 
 class TestPromptDaArte:
@@ -188,6 +204,7 @@ class TestPromptDaArte:
 
     def test_resposta_vazia_nao_quebra(self):
         assert prompt_da_arte("") == ""
+
 
 class TestAjusteDoOperador:
     """D-532: o operador manda no layout, e o ajuste e PARCIAL.

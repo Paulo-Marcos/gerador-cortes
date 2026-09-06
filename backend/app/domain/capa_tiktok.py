@@ -99,11 +99,11 @@ ALTURA_DO_FRAME = (
 )
 LARGURA_DO_FRAME = round(ALTURA_DO_FRAME * 4 / 5)
 
-# Acima disso a etiqueta deixa de ser etiqueta. O mercado recomenda de 0 a 3
-# palavras; 5 é o teto do conteúdo educativo, e é onde este módulo corta.
-MAX_PALAVRAS_DA_ETIQUETA = 5
-# Caracteres que ainda cabem em duas linhas com corpo legível na grade.
-MAX_CARACTERES_DA_ETIQUETA = 34
+# Guarda contra texto absurdo, e não regra editorial (D-533). O limite de 2-3
+# palavras vive na SKILL, que escreve o texto; aqui o papel é só impedir que um
+# parágrafo inteiro chegue à capa. Até este tamanho o renderizador dá conta
+# encolhendo o corpo e usando até três linhas.
+MAX_CARACTERES_DA_ETIQUETA = 72
 
 
 @dataclass(frozen=True)
@@ -254,16 +254,25 @@ def encaixar(faixa: Faixa) -> Faixa:
 
 
 def normalizar_etiqueta(texto: str) -> str:
-    """Deixa a etiqueta no tamanho que a grade aguenta.
+    """Arruma o texto da etiqueta — sem apagar palavra nenhuma (D-533).
 
-    Corta pelo número de PALAVRAS, e não de caracteres, porque cortar no meio de
-    uma palavra produz um rótulo que parece defeito. Se ainda assim passar do
-    comprimento legível, cai palavra a palavra até caber.
+    Antes ela CORTAVA, por palavras e por caracteres, para caber num corpo de
+    fonte fixo. O resultado era o defeito que o dev viu: "TODO MUNDO ASSINOU
+    EMBAIXO" virava "TODO MUNDO ASSINOU…", e "🔥 NÃO TEM PAÍS QUE SOBREVIVE"
+    perdia o verbo.
+
+    Apagar a última palavra de um texto que o operador escreveu à mão é pior que
+    qualquer corpo pequeno, e é silencioso — o que faz dele um defeito e não uma
+    escolha. Quem resolve o espaço agora é o renderizador, que calcula o corpo
+    a partir da faixa e usa até três linhas.
+
+    O teto que restou é guarda contra texto absurdo, não regra editorial: acima
+    dele nem três linhas salvam, e cortar vira o menos pior.
 
     >>> normalizar_etiqueta('  o juro   composto  ')
     'O JURO COMPOSTO'
-    >>> normalizar_etiqueta('uma frase inteira que jamais caberia numa etiqueta curta')
-    'UMA FRASE INTEIRA QUE JAMAIS'
+    >>> normalizar_etiqueta('TODO MUNDO ASSINOU EMBAIXO')
+    'TODO MUNDO ASSINOU EMBAIXO'
     >>> normalizar_etiqueta('')
     ''
     """
@@ -271,8 +280,7 @@ def normalizar_etiqueta(texto: str) -> str:
     if not palavras:
         return ""
 
-    palavras = palavras[:MAX_PALAVRAS_DA_ETIQUETA]
-    while palavras and len(" ".join(palavras)) > MAX_CARACTERES_DA_ETIQUETA:
+    while len(palavras) > 1 and len(" ".join(palavras)) > MAX_CARACTERES_DA_ETIQUETA:
         palavras.pop()
 
     return " ".join(palavras).upper()
