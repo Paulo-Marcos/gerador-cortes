@@ -87,9 +87,12 @@ LIMITES: dict[Plataforma, LimitesPlataforma] = {
         hashtags_max=10,
         caixa_unica=True,
     ),
+    # 4000 e nao 2200: o contador da propria caixa de legenda diz "16/4000"
+    # (medido na pagina em 06/09/2026). O numero antigo veio de material de
+    # terceiros e ja estava desatualizado.
     Plataforma.TIKTOK: LimitesPlataforma(
         rotulo="TikTok",
-        titulo_max=2200,
+        titulo_max=4000,
         titulo_visivel=100,
         duracao_min_seg=3.0,
         duracao_max_seg=600.0,
@@ -101,7 +104,7 @@ LIMITES: dict[Plataforma, LimitesPlataforma] = {
     # é presença e descoberta, não watch time: 16:9 toca em janela pequena.
     Plataforma.TIKTOK_HORIZONTAL: LimitesPlataforma(
         rotulo="TikTok (horizontal)",
-        titulo_max=2200,
+        titulo_max=4000,
         titulo_visivel=100,
         duracao_min_seg=60.0,
         duracao_max_seg=3600.0,

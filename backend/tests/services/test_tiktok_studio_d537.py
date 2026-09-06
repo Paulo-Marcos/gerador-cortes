@@ -53,6 +53,15 @@ class PaginaFalsa:
         self.chamadas.append(("existe", alvo))
         return alvo not in self.ausentes
 
+    def remover(self, alvo):
+        self.chamadas.append(("remover", alvo))
+        self.ausentes.add(alvo)
+
+    def esperar_texto(self, alvo, padrao, *, segundos):
+        self.chamadas.append(("texto", alvo))
+        if alvo in self.falhar:
+            raise RuntimeError(f"texto de {alvo} nunca apareceu")
+
     def esperar_habilitado(self, alvo, *, segundos):
         self._registrar("habilitado", alvo)
 
@@ -229,6 +238,77 @@ class TestFalhas:
 
         assert erro.value.passo is Passo.PROCESSAMENTO
 
+    def test_upload_incompleto_nao_devolve_a_aba_como_pronta(self, arquivos):
+        """O botao de publicar acende cedo — num clipe de 23 KB ja estava aceso.
+
+        Sozinho, ele devolveria a aba no meio do upload de um corte de 300 MB.
+        O cartao de status e quem diz que o arquivo chegou inteiro.
+        """
+        pagina = PaginaFalsa(falhar={"status_do_upload"})
+
+        with pytest.raises(RoteiroInterrompido) as erro:
+            _rodar(pagina, arquivos)
+
+        assert erro.value.passo is Passo.PROCESSAMENTO
+
+    def test_espera_o_status_antes_de_olhar_o_botao(self, arquivos):
+        pagina = PaginaFalsa()
+
+        _rodar(pagina, arquivos)
+
+        ordem = [c[1] for c in pagina.chamadas]
+        assert ordem.index("status_do_upload") < ordem.index("botao_publicar")
+
+
+class TestTutorial:
+    """O tour de novidades do TikTok cobre a pagina com um overlay."""
+
+    def test_dispensa_o_tour_antes_de_escrever(self, arquivos):
+        """Ele apareceu no ensaio real e travou tudo o que vinha depois.
+
+        O overlay intercepta pointer events: com o tour aberto, o clique na
+        caixa da legenda e retentado por 30s e morre em "elemento nao
+        clicavel" — um sintoma que nao aponta a causa nenhuma vez.
+        """
+        pagina = PaginaFalsa()
+
+        _rodar(pagina, arquivos)
+
+        ordem = [c[1] for c in pagina.chamadas]
+        assert ordem.index("tutorial") < ordem.index("editor_da_legenda")
+
+    def test_sem_overlay_nao_procura_botao_de_tour(self, arquivos):
+        """O caso comum. Nao pode custar clique nem espera extra."""
+        pagina = PaginaFalsa()
+        pagina.ausentes.add("overlay_do_tutorial")
+
+        relatorio = _rodar(pagina, arquivos)
+
+        assert ("clicar", "tutorial") not in pagina.chamadas
+        assert ("remover", "overlay_do_tutorial") not in pagina.chamadas
+        assert relatorio["capa_aplicada"] is True
+
+    def test_overlay_teimoso_e_removido_do_DOM(self, arquivos):
+        """A segunda camada, e o motivo de ela existir.
+
+        O botao do tour nem sempre diz "Entendi": num passo intermediario diz
+        "Avancar", e clicar ali so avanca o tour. Clicar e a educacao; remover
+        e a garantia.
+        """
+        pagina = PaginaFalsa()
+        pagina.ausentes.add("tutorial")  # overlay presente, botao nao
+
+        _rodar(pagina, arquivos)
+
+        assert ("remover", "overlay_do_tutorial") in pagina.chamadas
+
+    def test_tour_que_falha_ao_fechar_nao_derruba_o_upload(self, arquivos):
+        pagina = PaginaFalsa(falhar={"tutorial"})
+
+        relatorio = _rodar(pagina, arquivos)
+
+        assert relatorio["publicado"] is False
+
 
 class TestCapa:
     """A capa e o unico passo que reporta em vez de interromper."""
@@ -264,14 +344,32 @@ class TestCapa:
         assert relatorio["capa_aplicada"] is False
         assert "congelar um frame" in relatorio["avisos"][0]
 
-    def test_a_confirmacao_do_modal_e_opcional(self, arquivos):
-        """Nem toda versao do modal tem botao de confirmar; a ausencia nao e falha."""
+    def test_modal_sem_botao_de_salvar_vira_aviso(self, arquivos):
+        """Salvar e obrigatorio: sem o clique, a capa escolhida nao e aplicada.
+
+        Antes isto era tratado como opcional, e o relatorio diria "capa
+        aplicada" tendo aberto um modal e desistido no meio.
+        """
         pagina = PaginaFalsa()
         pagina.ausentes.add("confirmar_capa")
 
         relatorio = _rodar(pagina, arquivos)
 
-        assert relatorio["capa_aplicada"] is True
+        assert relatorio["capa_aplicada"] is False
+        assert "salvar" in relatorio["avisos"][0].lower()
+
+    def test_nunca_encosta_no_salvar_rascunho(self, arquivos):
+        """ "Salvar" casa por substring com "Salvar rascunho", na MESMA pagina.
+
+        Um `has-text("Salvar")` solto salvaria um rascunho em vez de aplicar a
+        capa. O seletor esta ancorado no dialogo, e este teste guarda isso.
+        """
+        assert '[role="dialog"]' in tiktok_studio.SELETORES["confirmar_capa"]
+        assert "rascunho" not in tiktok_studio.SELETORES["confirmar_capa"]
+
+    def test_o_botao_de_publicar_usa_o_gancho_do_proprio_tiktok(self):
+        """`data-e2e` sobrevive a troca de idioma; texto nao."""
+        assert tiktok_studio.SELETORES["botao_publicar"] == '[data-e2e="post_video_button"]'
 
 
 class TestContrato:

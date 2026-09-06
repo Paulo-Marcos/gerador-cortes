@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import shutil
 import socket
 import subprocess
@@ -79,31 +80,51 @@ SEGUNDOS_PARA_ABRIR = 45.0
 SEGUNDOS_PARA_SESSAO = 20.0
 SEGUNDOS_PARA_ELEMENTO = 30.0
 SEGUNDOS_PARA_CAPA = 20.0
+SEGUNDOS_PARA_TUTORIAL = 8.0
 SEGUNDOS_PARA_PROCESSAR = 900.0
 
 
-# Os seletores, num lugar só. Quando o TikTok redesenhar o Studio, o conserto
-# mora aqui — e a mensagem de falha já vai ter dito qual chave não casou.
+# Os seletores, num lugar só, MEDIDOS na página real em 06/09/2026 e não
+# adivinhados. Quando o TikTok redesenhar o Studio, o conserto mora aqui — e a
+# mensagem de falha já vai ter dito qual chave não casou.
 #
-# Cada um aceita mais de uma redação porque a interface é traduzida: a conta
-# está em pt-BR hoje, mas o TikTok volta para o inglês sozinho quando bem
-# entende, e um seletor que só sabe "Publicar" quebra sem nada ter mudado.
+# A preferência é por `data-e2e`: são os ganchos de teste do próprio TikTok, e
+# sobrevivem a troca de idioma e a rearranjo de CSS. Onde não há, ancoramos no
+# container que TEM um, para não pescar no documento inteiro.
+#
+# Três palpites meus morreram aqui, e vale registrar quais:
+#
+# 1. A capa não é um `<button>`. É uma `div.edit-container` dentro de
+#    `[data-e2e=cover_container]` — nenhum seletor de botão a encontrava.
+# 2. O modal confirma com "Salvar", não "Confirmar". E "Salvar" casaria por
+#    substring com "Salvar rascunho", que está na MESMA página: um
+#    `has-text("Salvar")` solto salvaria um rascunho em vez de aplicar a capa.
+#    Daí a âncora no diálogo e na classe `header-button`.
+# 3. O `<input type=file>` do vídeo é invisível por CSS, e some do DOM depois do
+#    upload — o da capa, que nasce no lugar dele, aceita só imagem. Por isso os
+#    dois filtram por `accept`, e não por posição.
 SELETORES: dict[str, str] = {
-    "campo_do_arquivo": 'input[type="file"]',
-    "editor_da_legenda": 'div[contenteditable="true"]',
-    "botao_da_capa": (
-        'button:has-text("Editar capa"), button:has-text("Edit cover"), '
-        'div[role="button"]:has-text("Editar capa"), '
-        'div[role="button"]:has-text("Edit cover")'
+    "campo_do_arquivo": 'input[type="file"][accept*="video"]',
+    "tutorial": (
+        '.react-joyride__tooltip button:has-text("Entendi"), '
+        '.react-joyride__tooltip button:has-text("Got it")'
     ),
-    "aba_de_upload_da_capa": ("text=/Fazer upload|Carregar imagem|Upload cover|Upload image/i"),
+    "overlay_do_tutorial": "#react-joyride-portal",
+    "editor_da_legenda": '[data-e2e="caption_container"] div[contenteditable="true"]',
+    "status_do_upload": '[data-e2e="upload_status_container"]',
+    "botao_da_capa": '[data-e2e="cover_container"] .edit-container',
     "campo_da_capa": 'input[type="file"][accept*="image"]',
     "confirmar_capa": (
-        'button:has-text("Confirmar"), button:has-text("Confirm"), '
-        'button:has-text("Concluir"), button:has-text("Done")'
+        '[role="dialog"] button.header-button:has-text("Salvar"), '
+        '[role="dialog"] button.header-button:has-text("Save")'
     ),
-    "botao_publicar": 'button:has-text("Publicar"), button:has-text("Post")',
+    "botao_publicar": '[data-e2e="post_video_button"]',
 }
+
+# O texto que o cartão de status mostra quando o arquivo terminou de subir.
+# Esperar por ELE, e não só pelo botão de publicar acender, é o que impede
+# devolver a aba no meio do upload de um corte de 300 MB.
+ENVIO_CONCLUIDO = r"enviad|carregad|uploaded"
 
 
 class Pagina(Protocol):
@@ -120,7 +141,9 @@ class Pagina(Protocol):
     def escrever(self, alvo: str, texto: str, *, segundos: float) -> None: ...
     def clicar(self, alvo: str, *, segundos: float) -> None: ...
     def existe(self, alvo: str, *, segundos: float, visivel: bool = True) -> bool: ...
+    def esperar_texto(self, alvo: str, padrao: str, *, segundos: float) -> None: ...
     def esperar_habilitado(self, alvo: str, *, segundos: float) -> None: ...
+    def remover(self, alvo: str) -> None: ...
 
 
 def executar_roteiro(
@@ -179,6 +202,11 @@ def executar_roteiro(
     )
     feitos.append(Passo.ARQUIVO)
 
+    # O TikTok abre um tour de novidades por cima da página, com um OVERLAY que
+    # engole cliques. Ele apareceu na primeira execução real e travaria tudo o
+    # que vem depois. Dispensar é best-effort: não achar o tour é o caso normal.
+    _dispensar_tutorial(pagina)
+
     _passo(
         pagina.escrever,
         Passo.LEGENDA,
@@ -200,11 +228,22 @@ def executar_roteiro(
     elif capa:
         avisos.append("A capa nao esta mais em disco; o TikTok vai congelar um frame.")
 
+    # Duas condições, e as duas importam. O botão de publicar acende cedo — num
+    # clipe de 23 KB ele já estava aceso quando olhamos —, então sozinho ele
+    # devolveria a aba no meio do upload de um corte grande. O cartão de status
+    # é quem diz que o arquivo chegou inteiro.
+    _passo(
+        pagina.esperar_texto,
+        Passo.PROCESSAMENTO,
+        "status_do_upload",
+        ENVIO_CONCLUIDO,
+        segundos=SEGUNDOS_PARA_PROCESSAR,
+    )
     _passo(
         pagina.esperar_habilitado,
         Passo.PROCESSAMENTO,
         "botao_publicar",
-        segundos=SEGUNDOS_PARA_PROCESSAR,
+        segundos=SEGUNDOS_PARA_ELEMENTO,
     )
     feitos.append(Passo.PROCESSAMENTO)
     feitos.append(Passo.REVISAO)
@@ -218,25 +257,62 @@ def executar_roteiro(
     }
 
 
+def _dispensar_tutorial(pagina: Pagina) -> None:
+    """Tira o tour de novidades da frente. Nunca falha, e insiste até sair.
+
+    Não é firula. O tour vem com um `react-joyride__overlay` que cobre a página
+    inteira e intercepta pointer events: com ele aberto, o clique na caixa da
+    legenda é retentado por 30s e morre em "elemento não clicável" — um sintoma
+    que não aponta para a causa nenhuma vez.
+
+    A primeira versão disto clicava em "Entendi" e pronto. O ensaio contra a
+    página real mostrou os dois furos: o tour aparece DEPOIS do upload começar
+    (a checagem de 3s chegava antes dele), e o botão nem sempre diz "Entendi" —
+    num passo intermediário do tour diz "Avançar", e clicar ali só avança.
+
+    Então são duas camadas. Primeiro esperamos o overlay APARECER e tentamos
+    fechá-lo como uma pessoa fecharia. Se ele insistir, removemos o portal do
+    DOM — é um tooltip decorativo, não um controle da publicação, e deixá-lo
+    ali custa o roteiro inteiro.
+    """
+    try:
+        # `visivel=False`: interessa que o portal esteja no DOM. Este mesmo
+        # wait dá ao tour o tempo de nascer — ele vem depois do upload.
+        if not pagina.existe("overlay_do_tutorial", segundos=SEGUNDOS_PARA_TUTORIAL, visivel=False):
+            return
+
+        if pagina.existe("tutorial", segundos=2.0):
+            pagina.clicar("tutorial", segundos=5.0)
+            logger.info("[TikTokStudio] tour dispensado no botao")
+
+        if pagina.existe("overlay_do_tutorial", segundos=2.0, visivel=False):
+            pagina.remover("overlay_do_tutorial")
+            logger.info("[TikTokStudio] overlay do tour removido do DOM")
+    except Exception as exc:  # noqa: BLE001 — o tour nunca pode derrubar o upload
+        logger.debug("[TikTokStudio] tour: %s", exc)
+
+
 def _tentar_capa(pagina: Pagina, capa: Path) -> str:
     """Troca a capa, devolvendo o motivo quando não dá — e nunca levantando.
 
-    Três cliques num modal que muda de nome conforme o idioma. É o passo mais
-    frágil do roteiro e o menos importante dos cinco, nesta ordem exata; por
-    isso ele é o único que reporta em vez de interromper.
+    Abrir um modal, entregar o arquivo ao input escondido e salvar. É o passo
+    mais frágil do roteiro e o menos importante dos cinco, nesta ordem exata;
+    por isso ele é o único que reporta em vez de interromper.
+
+    Não há passo de "clicar em Upload cover": o `<input type=file>` do modal já
+    nasce no DOM, e entregar o arquivo direto a ele dispensa o clique na área
+    de arrastar — que é só a fachada dele.
     """
     try:
         if not pagina.existe("botao_da_capa", segundos=SEGUNDOS_PARA_CAPA):
             return "Nao achei o botao de editar capa."
         pagina.clicar("botao_da_capa", segundos=SEGUNDOS_PARA_CAPA)
 
-        if pagina.existe("aba_de_upload_da_capa", segundos=5.0):
-            pagina.clicar("aba_de_upload_da_capa", segundos=SEGUNDOS_PARA_CAPA)
-
         pagina.enviar_arquivo("campo_da_capa", capa, segundos=SEGUNDOS_PARA_CAPA)
 
-        if pagina.existe("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA):
-            pagina.clicar("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
+        if not pagina.existe("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA):
+            return "O modal da capa abriu, mas nao achei o botao de salvar."
+        pagina.clicar("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
         return ""
     except Exception as exc:  # noqa: BLE001 — qualquer falha aqui vira aviso
         return f"{type(exc).__name__}: {exc}"
@@ -296,6 +372,9 @@ class PaginaDoPlaywright:
         # sugestão de hashtag a cada "#", e a primeira sugestão aceita no
         # caminho trocaria a tag escrita por outra parecida.
         self._page.keyboard.insert_text(texto)
+        # O "#" abre o menu de sugestão de hashtag do TikTok. Deixá-lo aberto
+        # faz o próximo clique cair na sugestão em vez de no que se queria.
+        self._page.keyboard.press("Escape")
 
     def clicar(self, alvo: str, *, segundos: float) -> None:
         self._page.locator(self._css(alvo)).first.click(timeout=segundos * 1000)
@@ -308,6 +387,17 @@ class PaginaDoPlaywright:
             return True
         except Exception:  # noqa: BLE001 — ausência não é erro, é resposta
             return False
+
+    def remover(self, alvo: str) -> None:
+        self._page.evaluate(
+            "(css) => document.querySelectorAll(css).forEach((el) => el.remove())",
+            self._css(alvo),
+        )
+
+    def esperar_texto(self, alvo: str, padrao: str, *, segundos: float) -> None:
+        self._page.locator(self._css(alvo)).filter(
+            has_text=re.compile(padrao, re.IGNORECASE)
+        ).first.wait_for(state="attached", timeout=segundos * 1000)
 
     def esperar_habilitado(self, alvo: str, *, segundos: float) -> None:
         botao = self._page.locator(self._css(alvo)).first
