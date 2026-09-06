@@ -233,6 +233,24 @@ MAX_PALAVRAS_POR_HASHTAG = 3
 MAX_CARACTERES_POR_HASHTAG = 28
 
 
+def legenda_unica(titulo: str, descricao: str) -> str:
+    """Título e descrição na única caixa que a plataforma tem.
+
+    TikTok e Instagram não têm campo de título: têm a legenda, e o "título" é a
+    primeira linha dela. A separação existe do nosso lado porque o YouTube
+    Shorts precisa dela — aqui os dois voltam a ser um texto só.
+
+    A linha em branco no meio não é enfeite: é o que faz o TikTok cortar no
+    "mais" depois do gancho, e não no meio dele.
+
+    >>> legenda_unica("O juro composto", "Corte completo: x #pix")
+    'O juro composto\n\nCorte completo: x #pix'
+    >>> legenda_unica("", "so a descricao")
+    'so a descricao'
+    """
+    return "\n\n".join(p for p in (titulo.strip(), descricao.strip()) if p)
+
+
 def _normalizar_hashtags(hashtags: list[str], maximo: int) -> list[str]:
     """Termos de busca: minusculos, sem pontuacao, sem frase, sem repeticao.
 

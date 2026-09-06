@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ExternalLink, Loader2, Send } from 'lucide-react';
+import { Bot, Check, ExternalLink, Loader2, Send } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { shortsApi } from './shortsApi';
@@ -15,14 +15,22 @@ import { shortsApi } from './shortsApi';
 // legenda para a área de transferência e abre a página de upload numa aba.
 // Sobra arrastar o arquivo e colar.
 //
-// NÃO FAZ: logar. Automatizar o login exigiria guardar a senha do operador e
-// viola os Termos do TikTok, que proíbem acesso automatizado. O risco não é a
-// macro falhar — é a CONTA ser banida, e aí ele perde o canal, não a
-// automação. Abrindo a aba, o navegador dele já está logado e nenhuma
-// credencial passa por aqui.
+// NÃO FAZ: logar. Automatizar o login exigiria guardar a senha do operador —
+// e senha é justamente o que não pode chegar perto de automação. Abrindo a
+// aba, o navegador dele já está logado e nenhuma credencial passa por aqui.
 //
 // Publicar por API também não resolveria hoje: cliente não auditado só posta
 // SELF_ONLY, com a conta privada no momento do post.
+//
+// ## D-537: o botão de cima faz os quatro passos
+//
+// A macro parava onde o trabalho repetitivo começava. O assistido arrasta o
+// MP4, cola a legenda, sobe a capa e espera o processamento — no Chrome dele,
+// com a sessão que ele mesmo abriu — e para com o *Publicar* aceso.
+//
+// Os dois convivem, e não é indecisão: o assistido depende de seletores de uma
+// página que não é nossa. No dia em que o TikTok redesenhar o Studio, a macro
+// continua funcionando enquanto os seletores não são consertados.
 
 interface Props {
   corteId: string;
@@ -32,6 +40,10 @@ interface Props {
 
 export function BotaoTiktokHorizontal({ corteId, habilitado }: Props) {
   const [copiada, setCopiada] = useState(false);
+
+  const assistido = useMutation({
+    mutationFn: () => shortsApi.assistidoTiktokHorizontal(corteId),
+  });
 
   const staging = useMutation({
     mutationFn: () => shortsApi.stagingTiktokHorizontal(corteId),
@@ -60,16 +72,53 @@ export function BotaoTiktokHorizontal({ corteId, habilitado }: Props) {
 
   return (
     <div className="space-y-1">
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={staging.isPending}
-        onClick={() => staging.mutate()}
-        title="Monta o pacote, abre a pasta e a página de upload. O login é seu, no navegador."
-      >
-        {staging.isPending ? <Loader2 className="animate-spin" /> : <Send />}
-        TikTok (horizontal)
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          disabled={assistido.isPending || staging.isPending}
+          onClick={() => assistido.mutate()}
+          title="Sobe o vídeo, escreve a legenda e põe a capa no seu Chrome. Para antes de publicar."
+        >
+          {assistido.isPending ? <Loader2 className="animate-spin" /> : <Bot />}
+          TikTok assistido
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={assistido.isPending || staging.isPending}
+          onClick={() => staging.mutate()}
+          title="Só monta o pacote e abre a pasta e a aba. O login é seu, no navegador."
+        >
+          {staging.isPending ? <Loader2 className="animate-spin" /> : <Send />}
+          Só o pacote
+        </Button>
+      </div>
+
+      {assistido.isPending && (
+        <p className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+          Subindo no Chrome… o TikTok ainda precisa processar o vídeo, o que num corte longo leva
+          minutos. Não feche a janela que abriu.
+        </p>
+      )}
+
+      {assistido.isSuccess && (
+        <p className="flex flex-wrap items-center gap-1 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+          <Check size={11} className="text-[var(--wb-ok-ink)]" aria-hidden />
+          Pronto para conferir: {assistido.data.resumo}. Revise e clique em Publicar na aba.
+          {assistido.data.avisos.map((aviso) => (
+            <span key={aviso} className="text-[var(--wb-warn-ink)]">
+              {aviso}
+            </span>
+          ))}
+        </p>
+      )}
+
+      {assistido.isError && (
+        <p className="text-[11px] leading-relaxed text-[var(--wb-warn-ink)]">
+          {(assistido.error as Error)?.message ?? 'não consegui subir'}
+        </p>
+      )}
 
       {staging.isSuccess && (
         <p className="flex flex-wrap items-center gap-1 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">

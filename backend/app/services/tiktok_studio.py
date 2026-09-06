@@ -1,0 +1,430 @@
+"""Upload assistido no TikTok Studio, por automação de navegador (D-537).
+
+## O que este módulo é, em uma frase
+
+O braço que executa o roteiro de `domain/tiktok_studio.py`: abre o Chrome do
+operador, sobe o MP4, escreve a legenda, troca a capa — e para com a aba pronta
+e o botão *Publicar* aceso, sem tocar nele.
+
+## Por que o Chrome DELE, e por CDP
+
+Duas alternativas foram descartadas, e as duas por motivos práticos.
+
+Um navegador do Playwright, com perfil próprio, exigiria login. Login é o único
+lugar deste app onde uma senha apareceria, e senha é exatamente o que a gente
+não quer perto de automação — nem no código, nem no disco, nem na memória.
+
+Um `launch_persistent_context` resolveria o login (perfil guardado) mas não a
+saída: quando o Playwright para, ele mata o contexto que criou — e a aba que o
+operador precisa revisar fecha na cara dele.
+
+Conectar por CDP resolve os dois. O Chrome é um processo INDEPENDENTE, iniciado
+com um perfil dedicado (`instance/channels/<canal>/browser/tiktok`); o operador
+loga ali uma vez, à mão, e a sessão fica. Nós conectamos, fazemos o trabalho e
+desconectamos — e o Chrome continua vivo, com a aba pronta. De quebra é um
+Chrome de verdade, que é o que o TikTok espera ver.
+
+## A costura que permite testar isto
+
+Um roteiro de automação sem teste é um roteiro que só falha em produção. Mas
+testar Playwright de verdade exigiria um navegador e uma conta do TikTok — nada
+disso cabe num `pytest`.
+
+Então o roteiro (`executar_roteiro`) não fala com o Playwright: fala com um
+`Pagina`, que tem sete verbos e nenhum seletor. O `PaginaDoPlaywright` é a
+implementação real; nos testes entra um dublê. E os seletores ficam todos em
+`SELETORES`, num lugar só — quando o TikTok redesenhar, o conserto é uma linha,
+e a falha já disse qual.
+
+## O que este módulo deliberadamente NÃO faz
+
+Não digita senha, não cria conta, não resolve captcha. Se o TikTok pedir
+verificação, o roteiro para e entrega a janela aberta — a intervenção humana ali
+não é um contratempo, é o desenho.
+
+E não clica em *Publicar*. Ver o docstring do módulo de domínio.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import shutil
+import socket
+import subprocess
+import time
+from pathlib import Path
+from typing import Protocol
+
+from app.channel_paths import active_channel_root
+from app.domain.tiktok_studio import (
+    Passo,
+    RoteiroInterrompido,
+    descricao_do_progresso,
+)
+
+logger = logging.getLogger(__name__)
+
+URL_DO_UPLOAD = "https://www.tiktok.com/tiktokstudio/upload?from=upload"
+
+# Porta do protocolo de depuração do Chrome. Fixa e alta de propósito: o
+# operador roda um canal por vez, e uma porta previsível é o que permite
+# reaproveitar a janela já aberta em vez de abrir uma nova a cada corte.
+PORTA_DE_DEPURACAO = 9222
+
+# Quanto esperamos em cada passo. O processamento é o único generoso: um corte
+# horizontal de meia hora leva minutos, e desistir no meio deixaria o operador
+# com um upload órfão que ele nem sabe que existe.
+SEGUNDOS_PARA_ABRIR = 45.0
+SEGUNDOS_PARA_SESSAO = 20.0
+SEGUNDOS_PARA_ELEMENTO = 30.0
+SEGUNDOS_PARA_CAPA = 20.0
+SEGUNDOS_PARA_PROCESSAR = 900.0
+
+
+# Os seletores, num lugar só. Quando o TikTok redesenhar o Studio, o conserto
+# mora aqui — e a mensagem de falha já vai ter dito qual chave não casou.
+#
+# Cada um aceita mais de uma redação porque a interface é traduzida: a conta
+# está em pt-BR hoje, mas o TikTok volta para o inglês sozinho quando bem
+# entende, e um seletor que só sabe "Publicar" quebra sem nada ter mudado.
+SELETORES: dict[str, str] = {
+    "campo_do_arquivo": 'input[type="file"]',
+    "editor_da_legenda": 'div[contenteditable="true"]',
+    "botao_da_capa": (
+        'button:has-text("Editar capa"), button:has-text("Edit cover"), '
+        'div[role="button"]:has-text("Editar capa"), '
+        'div[role="button"]:has-text("Edit cover")'
+    ),
+    "aba_de_upload_da_capa": ("text=/Fazer upload|Carregar imagem|Upload cover|Upload image/i"),
+    "campo_da_capa": 'input[type="file"][accept*="image"]',
+    "confirmar_capa": (
+        'button:has-text("Confirmar"), button:has-text("Confirm"), '
+        'button:has-text("Concluir"), button:has-text("Done")'
+    ),
+    "botao_publicar": 'button:has-text("Publicar"), button:has-text("Post")',
+}
+
+
+class Pagina(Protocol):
+    """Os sete verbos de que o roteiro precisa — e nenhum seletor.
+
+    O roteiro fala em chaves de `SELETORES` ("campo_do_arquivo"), não em CSS.
+    Isso é o que mantém o roteiro legível como uma sequência de intenções e o
+    torna testável com um dublê de vinte linhas.
+    """
+
+    def abrir(self, url: str, *, segundos: float) -> None: ...
+    def url_atual(self) -> str: ...
+    def enviar_arquivo(self, alvo: str, caminho: Path, *, segundos: float) -> None: ...
+    def escrever(self, alvo: str, texto: str, *, segundos: float) -> None: ...
+    def clicar(self, alvo: str, *, segundos: float) -> None: ...
+    def existe(self, alvo: str, *, segundos: float, visivel: bool = True) -> bool: ...
+    def esperar_habilitado(self, alvo: str, *, segundos: float) -> None: ...
+
+
+def executar_roteiro(
+    pagina: Pagina,
+    *,
+    video: Path,
+    legenda: str,
+    capa: Path | None,
+) -> dict:
+    """O roteiro, do jeito que um humano faria — e parando onde ele decide.
+
+    A ordem não é a óbvia. A legenda e a capa entram ANTES de esperar o
+    processamento, porque é isso que uma pessoa faz: enquanto a barra sobe, ela
+    escreve. Esperar primeiro seria somar os dois tempos por nada.
+
+    Devolve o relatório do que foi feito. Levanta `RoteiroInterrompido` no
+    primeiro passo obrigatório que falhar — com a janela SEMPRE aberta, porque
+    quem chama nunca fecha o navegador.
+    """
+    feitos: list[Passo] = []
+    avisos: list[str] = []
+
+    _passo(pagina.abrir, Passo.ABRIR, URL_DO_UPLOAD, segundos=SEGUNDOS_PARA_ABRIR)
+    feitos.append(Passo.ABRIR)
+
+    from app.domain.tiktok_studio import pede_login
+
+    if pede_login(pagina.url_atual()):
+        raise RoteiroInterrompido(Passo.SESSAO)
+
+    # O redirecionamento para o login é do CLIENTE, e chega DEPOIS do `goto`
+    # retornar. Olhar a URL só naquele instante pega a antiga: o roteiro segue
+    # achando que está logado, gasta o timeout inteiro procurando o campo de
+    # arquivo numa tela de login e então reporta "a página mudou de layout" —
+    # exatamente o diagnóstico errado que este passo existe para evitar.
+    #
+    # Aconteceu no primeiro teste de fumaça, e o teste existe por isso. Agora
+    # esperamos uma DECISÃO: ou o campo de upload aparece, ou a URL vira login.
+    #
+    # `visivel=False` porque o campo é um <input type=file> escondido por CSS —
+    # a "área de arrastar" é a fachada dele. Esperar por visibilidade aqui
+    # daria falso negativo em toda página de upload legítima.
+    if not pagina.existe("campo_do_arquivo", segundos=SEGUNDOS_PARA_SESSAO, visivel=False):
+        raise RoteiroInterrompido(
+            Passo.SESSAO if pede_login(pagina.url_atual()) else Passo.ARQUIVO,
+            "a pagina de upload nao carregou",
+        )
+    feitos.append(Passo.SESSAO)
+
+    _passo(
+        pagina.enviar_arquivo,
+        Passo.ARQUIVO,
+        "campo_do_arquivo",
+        video,
+        segundos=SEGUNDOS_PARA_ELEMENTO,
+    )
+    feitos.append(Passo.ARQUIVO)
+
+    _passo(
+        pagina.escrever,
+        Passo.LEGENDA,
+        "editor_da_legenda",
+        legenda,
+        segundos=SEGUNDOS_PARA_ELEMENTO,
+    )
+    feitos.append(Passo.LEGENDA)
+
+    if capa and capa.is_file():
+        erro = _tentar_capa(pagina, capa)
+        if erro:
+            # Passo opcional: o vídeo já subiu e a legenda já está escrita.
+            # Derrubar tudo aqui trocaria um contratempo por um retrabalho.
+            avisos.append(erro)
+            logger.warning("[TikTokStudio] capa nao entrou: %s", erro)
+        else:
+            feitos.append(Passo.CAPA)
+    elif capa:
+        avisos.append("A capa nao esta mais em disco; o TikTok vai congelar um frame.")
+
+    _passo(
+        pagina.esperar_habilitado,
+        Passo.PROCESSAMENTO,
+        "botao_publicar",
+        segundos=SEGUNDOS_PARA_PROCESSAR,
+    )
+    feitos.append(Passo.PROCESSAMENTO)
+    feitos.append(Passo.REVISAO)
+
+    return {
+        "passos": [p.value for p in feitos],
+        "resumo": descricao_do_progresso(feitos),
+        "capa_aplicada": Passo.CAPA in feitos,
+        "avisos": avisos,
+        "publicado": False,
+    }
+
+
+def _tentar_capa(pagina: Pagina, capa: Path) -> str:
+    """Troca a capa, devolvendo o motivo quando não dá — e nunca levantando.
+
+    Três cliques num modal que muda de nome conforme o idioma. É o passo mais
+    frágil do roteiro e o menos importante dos cinco, nesta ordem exata; por
+    isso ele é o único que reporta em vez de interromper.
+    """
+    try:
+        if not pagina.existe("botao_da_capa", segundos=SEGUNDOS_PARA_CAPA):
+            return "Nao achei o botao de editar capa."
+        pagina.clicar("botao_da_capa", segundos=SEGUNDOS_PARA_CAPA)
+
+        if pagina.existe("aba_de_upload_da_capa", segundos=5.0):
+            pagina.clicar("aba_de_upload_da_capa", segundos=SEGUNDOS_PARA_CAPA)
+
+        pagina.enviar_arquivo("campo_da_capa", capa, segundos=SEGUNDOS_PARA_CAPA)
+
+        if pagina.existe("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA):
+            pagina.clicar("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
+        return ""
+    except Exception as exc:  # noqa: BLE001 — qualquer falha aqui vira aviso
+        return f"{type(exc).__name__}: {exc}"
+
+
+def _passo(funcao, passo: Passo, *args, **kwargs) -> None:
+    """Roda um verbo da página traduzindo qualquer falha para o passo.
+
+    Sem isto, o que chega à tela é o `TimeoutError` cru do Playwright com um
+    seletor CSS dentro — verdadeiro, inútil, e assustador para quem só queria
+    publicar um corte.
+    """
+    try:
+        funcao(*args, **kwargs)
+    except RoteiroInterrompido:
+        raise
+    except Exception as exc:  # noqa: BLE001 — a origem varia, o destino não
+        raise RoteiroInterrompido(passo, f"{type(exc).__name__}: {exc}") from exc
+
+
+# --------------------------------------------------------------------------
+# A camada que fala Playwright
+# --------------------------------------------------------------------------
+
+
+class PaginaDoPlaywright:
+    """`Pagina` de verdade, sobre uma `page` do Playwright síncrono."""
+
+    def __init__(self, page) -> None:
+        self._page = page
+
+    def _css(self, alvo: str) -> str:
+        return SELETORES[alvo]
+
+    def abrir(self, url: str, *, segundos: float) -> None:
+        self._page.goto(url, timeout=segundos * 1000, wait_until="domcontentloaded")
+
+    def url_atual(self) -> str:
+        return self._page.url
+
+    def enviar_arquivo(self, alvo: str, caminho: Path, *, segundos: float) -> None:
+        # `set_input_files` fala com o <input type=file> direto. A área de
+        # arrastar do TikTok É um input escondido por CSS — não há nada a
+        # arrastar, e simular o arrasto seria inventar dificuldade.
+        campo = self._page.locator(self._css(alvo)).first
+        campo.wait_for(state="attached", timeout=segundos * 1000)
+        campo.set_input_files(str(caminho), timeout=segundos * 1000)
+
+    def escrever(self, alvo: str, texto: str, *, segundos: float) -> None:
+        campo = self._page.locator(self._css(alvo)).first
+        campo.wait_for(state="visible", timeout=segundos * 1000)
+        campo.click(timeout=segundos * 1000)
+        self._page.keyboard.press("Control+A")
+        self._page.keyboard.press("Delete")
+        # `insert_text` entrega o texto de uma vez, sem disparar o teclado
+        # tecla a tecla. Digitar caractere a caractere abriria o menu de
+        # sugestão de hashtag a cada "#", e a primeira sugestão aceita no
+        # caminho trocaria a tag escrita por outra parecida.
+        self._page.keyboard.insert_text(texto)
+
+    def clicar(self, alvo: str, *, segundos: float) -> None:
+        self._page.locator(self._css(alvo)).first.click(timeout=segundos * 1000)
+
+    def existe(self, alvo: str, *, segundos: float, visivel: bool = True) -> bool:
+        try:
+            self._page.locator(self._css(alvo)).first.wait_for(
+                state="visible" if visivel else "attached", timeout=segundos * 1000
+            )
+            return True
+        except Exception:  # noqa: BLE001 — ausência não é erro, é resposta
+            return False
+
+    def esperar_habilitado(self, alvo: str, *, segundos: float) -> None:
+        botao = self._page.locator(self._css(alvo)).first
+        botao.wait_for(state="visible", timeout=segundos * 1000)
+        limite = time.monotonic() + segundos
+        while time.monotonic() < limite:
+            if botao.is_enabled():
+                return
+            self._page.wait_for_timeout(1000)
+        raise TimeoutError(f"{alvo} nao habilitou em {segundos:.0f}s")
+
+
+def perfil_do_chrome() -> Path:
+    """Onde mora a sessão do TikTok deste canal.
+
+    Dentro do canal, e não num temp: a graça é o operador logar UMA vez. E por
+    canal, e não global, porque quem tem dois canais tem duas contas — um perfil
+    só faria o segundo canal publicar no primeiro, silenciosamente.
+    """
+    return active_channel_root() / "browser" / "tiktok"
+
+
+def _chrome_no_disco() -> Path | None:
+    candidatos = [
+        Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
+        Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
+        Path.home() / "AppData/Local/Google/Chrome/Application/chrome.exe",
+    ]
+    for caminho in candidatos:
+        if caminho.is_file():
+            return caminho
+    achado = shutil.which("chrome") or shutil.which("google-chrome")
+    return Path(achado) if achado else None
+
+
+def _porta_responde(porta: int) -> bool:
+    with socket.socket() as s:
+        s.settimeout(0.4)
+        return s.connect_ex(("127.0.0.1", porta)) == 0
+
+
+def garantir_chrome() -> bool:
+    """Deixa um Chrome de depuração no ar, e diz se precisou abrir um.
+
+    Reaproveita o que já estiver escutando na porta: publicar cinco cortes
+    seguidos deve usar a mesma janela, e não empilhar cinco.
+    """
+    if _porta_responde(PORTA_DE_DEPURACAO):
+        return False
+
+    chrome = _chrome_no_disco()
+    if chrome is None:
+        raise RoteiroInterrompido(Passo.ABRIR, "nao encontrei o Chrome instalado nesta maquina")
+
+    perfil = perfil_do_chrome()
+    perfil.mkdir(parents=True, exist_ok=True)
+    subprocess.Popen(  # noqa: S603 — caminho conhecido, argumentos nossos
+        [
+            str(chrome),
+            f"--remote-debugging-port={PORTA_DE_DEPURACAO}",
+            f"--user-data-dir={perfil}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            URL_DO_UPLOAD,
+        ],
+        creationflags=getattr(subprocess, "DETACHED_PROCESS", 0),
+    )
+
+    limite = time.monotonic() + 30
+    while time.monotonic() < limite:
+        if _porta_responde(PORTA_DE_DEPURACAO):
+            return True
+        time.sleep(0.5)
+    raise RoteiroInterrompido(Passo.ABRIR, "o Chrome nao abriu a porta de depuracao")
+
+
+def _assistir(video: Path, legenda: str, capa: Path | None) -> dict:
+    """Tudo o que fala Playwright, num thread só (síncrono de propósito).
+
+    A API assíncrona do Playwright cria subprocessos pelo event loop, e no
+    Windows sob uvicorn isso falha (D-369). A síncrona num thread é o padrão
+    que o resto deste projeto já usa pelo mesmo motivo.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        # Dependencia opcional: sem ela o app inteiro continua de pe e so este
+        # botao para. Dizer isso aqui e o que evita um ImportError cru na tela.
+        raise RoteiroInterrompido(
+            Passo.ABRIR,
+            "o Playwright nao esta instalado; rode `pip install playwright`",
+        ) from exc
+
+    abriu_agora = garantir_chrome()
+
+    pw = sync_playwright().start()
+    try:
+        navegador = pw.chromium.connect_over_cdp(f"http://127.0.0.1:{PORTA_DE_DEPURACAO}")
+        contexto = navegador.contexts[0] if navegador.contexts else navegador.new_context()
+        page = contexto.new_page()
+        relatorio = executar_roteiro(
+            PaginaDoPlaywright(page), video=video, legenda=legenda, capa=capa
+        )
+        return {**relatorio, "chrome_aberto_agora": abriu_agora}
+    finally:
+        # `stop` desconecta; não fecha o Chrome, que é um processo à parte.
+        # É exatamente por isso que a aba sobrevive para o operador revisar.
+        pw.stop()
+
+
+async def subir_assistido(*, video: Path, legenda: str, capa: Path | None = None) -> dict:
+    """Deixa o post pronto para o operador conferir e publicar.
+
+    Levanta `RoteiroInterrompido`, cuja mensagem já é a instrução para a tela.
+    """
+    if not video.is_file():
+        raise RoteiroInterrompido(Passo.ARQUIVO, "o MP4 do pacote nao esta em disco")
+
+    logger.info("[TikTokStudio] subindo %s", video.name)
+    return await asyncio.to_thread(_assistir, video, legenda, capa)

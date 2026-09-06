@@ -393,6 +393,27 @@ export const shortsApi = {
    * exploradores seria pior que fazer à mão. No clique de uma linha só ela
    * continua abrindo, que é o passo que leva o operador ao upload.
    */
+  /**
+   * D-537: o robô faz os quatro passos repetitivos e para antes de publicar.
+   *
+   * Demora de propósito — ele espera o TikTok processar o vídeo, que num corte
+   * longo leva minutos. Quem chama precisa mostrar isso, senão a tela parece
+   * travada bem no passo em que ela mais parece.
+   */
+  assistidoTiktokHorizontal: (corteId: string) =>
+    request<{
+      passos: string[];
+      resumo: string;
+      capa_aplicada: boolean;
+      avisos: string[];
+      publicado: boolean;
+      chrome_aberto_agora: boolean;
+      legenda: string;
+      pasta: string;
+    }>(`/shorts/corte/${corteId}/publicar/tiktok-horizontal/assistido`, {
+      method: 'POST',
+    }),
+
   stagingTiktokHorizontal: (corteId: string, opcoes: { abrirPasta?: boolean } = {}) =>
     request<{
       pasta: string;

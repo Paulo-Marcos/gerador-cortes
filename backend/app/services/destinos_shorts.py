@@ -21,7 +21,7 @@ import logging
 import shutil
 from pathlib import Path
 
-from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma
+from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
 from app.services.publicacao_destinos import Destino, PacotePublicacao, registrar
 
 logger = logging.getLogger(__name__)
@@ -213,9 +213,7 @@ def _campos_de_texto(pacote: PacotePublicacao) -> list[str]:
     return [
         "",
         f"-- LEGENDA (caixa unica; {visivel}) --",
-        pacote.metadados.titulo,
-        "",
-        pacote.metadados.descricao,
+        legenda_unica(pacote.metadados.titulo, pacote.metadados.descricao),
     ]
 
 

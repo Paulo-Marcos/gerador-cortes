@@ -25,3 +25,9 @@ scenedetect[opencv]==0.7
 # grafia pior. Instale se for queimar legenda no video:
 # `pip install faster-whisper` e ligue `ASR_LOCAL_HABILITADO=true` no .env.
 # faster-whisper==1.1.1
+
+# Upload assistido no TikTok Studio (D-537). So o pacote Python: ele conecta ao
+# Chrome JA INSTALADO do operador por CDP, entao nao ha `playwright install`
+# nem 130 MB de Chromium baixado. Sem ele o app degrada para a macro (D-503),
+# que monta o pacote e abre a aba.
+playwright==1.62.0

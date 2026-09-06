@@ -27,6 +27,7 @@ Endpoints:
   POST /{short_id}/publicar/{plataforma} — envia (API) ou monta o pacote (manual)
   POST /corte/{corte_id}/publicar/tiktok-horizontal — o MP4 16:9 no TikTok
   POST /corte/{corte_id}/publicar/tiktok-horizontal/staging — pacote + pasta aberta
+  POST /corte/{corte_id}/publicar/tiktok-horizontal/assistido — robo deixa pronto
   POST /corte/{corte_id}/publicar/tiktok-horizontal/confirmar — marca que subiu
   DELETE /corte/{corte_id}/bruto  — libera o disco e encerra a fábrica do corte
 
@@ -732,6 +733,58 @@ async def staging_tiktok_horizontal(corte_id: str, body: StagingRequest):
         "erro_ao_abrir": erro_ao_abrir,
         "url_upload": URL_UPLOAD_TIKTOK,
     }
+
+
+@router.post("/corte/{corte_id}/publicar/tiktok-horizontal/assistido")
+async def assistido_tiktok_horizontal(corte_id: str):
+    """O robô faz os quatro passos repetitivos e para antes de publicar (D-537).
+
+    A staging (D-503) montava o pacote e abria a aba; o resto — arrastar o MP4,
+    colar a legenda, subir a capa, esperar — sobrava para o operador, toda vez.
+
+    Isto faz esses quatro, no Chrome dele, com a sessão que ele mesmo abriu. E
+    para com o *Publicar* aceso sem tocar nele: até ali tudo é reversível com um
+    F5, e depois dali uma legenda errada é um post público no canal.
+    """
+    return await _assistir_no_tiktok(await publicar_corte_no_tiktok(corte_id))
+
+
+@router.post("/{short_id}/publicar/tiktok/assistido")
+async def assistido_tiktok_do_short(short_id: str):
+    """O mesmo robô, para o short vertical."""
+    return await _assistir_no_tiktok(await publicar(short_id, "tiktok"))
+
+
+async def _assistir_no_tiktok(pacote: dict) -> dict:
+    """Monta a legenda do pacote e entrega o roteiro ao navegador.
+
+    Recebe o pacote JÁ montado em vez de montá-lo: assim o corte horizontal e o
+    short vertical — que chegam por caminhos diferentes — compartilham este
+    trecho sem que nenhum dos dois precise saber do outro.
+    """
+    from app.domain.publicacao import legenda_unica
+    from app.domain.tiktok_studio import RoteiroInterrompido
+    from app.services import tiktok_studio
+
+    legenda = legenda_unica(pacote.get("titulo", ""), pacote.get("descricao", ""))
+    capa = pacote.get("capa") or ""
+
+    try:
+        relatorio = await tiktok_studio.subir_assistido(
+            video=Path(pacote["video"]),
+            legenda=legenda,
+            capa=Path(capa) if capa else None,
+        )
+    except RoteiroInterrompido as exc:
+        # 422 e nao 500: nao e defeito nosso, e uma condicao que o operador
+        # resolve — logar, subir a mao, ou avisar que a pagina mudou. A tela
+        # mostra `detail` direto, e ele ja e a instrucao.
+        raise HTTPException(
+            status_code=422,
+            detail={"mensagem": str(exc), "passo": exc.passo.value},
+        ) from exc
+
+    return {**pacote, **relatorio, "legenda": legenda}
 
 
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal")
