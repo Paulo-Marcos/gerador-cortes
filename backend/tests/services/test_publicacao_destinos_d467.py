@@ -11,7 +11,7 @@ import json
 import pytest
 import pytest_asyncio
 from app.domain.publicacao import ModoPublicacao, Plataforma
-from app.models import Base, Corte, Projeto, Short
+from app.models import Base, Corte, MetadadoCorte, Projeto, Short
 from app.services import publicacao_destinos as destinos
 from app.services.publicacao_destinos import ContextoPublicacao, Destino
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -163,3 +163,111 @@ def test_plataforma_sem_destino_registrado_levanta_lookup(monkeypatch):
 
     with pytest.raises(LookupError):
         destinos.obter_destino(Plataforma.YOUTUBE_SHORTS)
+
+
+# ---------------------------------------------------------------------------
+# D-535: de onde saem as hashtags, e por que nao do tema
+# ---------------------------------------------------------------------------
+#
+# O sintoma foi um pacote com "#Ofetichedaderrotaearomantizacaodafraqueza": 50
+# caracteres emendados que ninguem digita, ninguem clica e nenhuma pagina de
+# hashtag indexa. A causa nao era o normalizador — era a FONTE. `tema_central` e
+# uma frase editorial, escrita para o dev entender o corte, nao para ser um
+# termo de busca.
+#
+# As `tags_youtube` do metadado sempre foram o que uma hashtag quer ser: termos
+# curtos, escritos por quem conhece o assunto. Estavam ali, ignoradas.
+
+
+@pytest_asyncio.fixture
+async def com_metadado(ambiente):
+    """O mesmo ambiente, com as tags curadas que o metadado ja guardava."""
+    factory, raiz = ambiente
+    async with factory() as db:
+        db.add(
+            MetadadoCorte(
+                id="m1",
+                corte_id="c1",
+                tags_youtube=json.dumps(
+                    ["banco master", "Daniel Vorcaro", "pix", "fgc fundo garantidor"]
+                ),
+            )
+        )
+        await db.commit()
+    return factory, raiz
+
+
+@pytest.mark.asyncio
+async def test_as_hashtags_saem_das_tags_curadas(com_metadado):
+    contexto = await destinos.montar_contexto("s1")
+
+    assert contexto.base.hashtags[:3] == ["banco master", "Daniel Vorcaro", "pix"]
+
+
+@pytest.mark.asyncio
+async def test_o_tema_entra_depois_das_tags_e_nao_no_lugar_delas(com_metadado):
+    """Reserva, e nao fonte: sem tag curada o tema ainda e melhor que nada."""
+    contexto = await destinos.montar_contexto("s1")
+
+    assert contexto.base.hashtags[-1] == "Economia"
+
+
+@pytest.mark.asyncio
+async def test_o_pacote_sai_com_termos_e_nao_com_a_frase(com_metadado):
+    """O teste que descreve o defeito de ponta a ponta."""
+    contexto = await destinos.montar_contexto("s1")
+
+    pacote = await _DestinoFalso().preparar(contexto)
+
+    assert pacote.metadados.hashtags == [
+        "#bancomaster",
+        "#danielvorcaro",
+        "#pix",
+        "#fgcfundogarantidor",
+        "#economia",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_tema_longo_demais_nao_vira_hashtag(ambiente):
+    """A frase editorial e descartada, e o pacote sai sem hashtag nenhuma.
+
+    Sem hashtag e melhor que com a errada: a tag gigante nao traz alcance e
+    ainda ocupa a legenda, que e onde o gancho deveria estar.
+    """
+    factory, _ = ambiente
+    async with factory() as db:
+        corte = await db.get(Corte, "c1")
+        corte.tema_central = "O fetiche da derrota e a romantizacao da fraqueza"
+        await db.commit()
+
+    pacote = await _DestinoFalso().preparar(await destinos.montar_contexto("s1"))
+
+    assert pacote.metadados.hashtags == []
+
+
+@pytest.mark.asyncio
+async def test_tags_corrompidas_nao_derrubam_o_pacote(ambiente):
+    """JSON invalido na coluna vira zero tag, e nao um 500 na tela de publicar."""
+    factory, _ = ambiente
+    async with factory() as db:
+        db.add(MetadadoCorte(id="m1", corte_id="c1", tags_youtube="{nao e json"))
+        await db.commit()
+
+    contexto = await destinos.montar_contexto("s1")
+
+    assert contexto.base.hashtags == ["Economia"]
+
+
+@pytest.mark.asyncio
+async def test_o_corte_horizontal_usa_a_mesma_fonte(com_metadado, monkeypatch):
+    """Dois construtores de contexto, uma regra so — senao divergem no proximo ajuste."""
+    factory, raiz = com_metadado
+    monkeypatch.setattr(destinos, "projetos_dir", lambda: raiz)
+    pasta = raiz / "p1" / "cortes" / "c1" / "upload_ready"
+    pasta.mkdir(parents=True)
+    (pasta / "video.mp4").write_bytes(b"video")
+
+    contexto = await destinos.montar_contexto_do_corte("c1")
+
+    assert contexto.base.hashtags[:2] == ["banco master", "Daniel Vorcaro"]

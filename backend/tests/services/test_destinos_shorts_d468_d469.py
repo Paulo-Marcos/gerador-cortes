@@ -139,11 +139,31 @@ async def test_cada_plataforma_ganha_sua_propria_pasta(tmp_path):
 def test_texto_do_pacote_traz_o_que_colar(tmp_path):
     texto = montar_texto_do_pacote(_pacote(Plataforma.TIKTOK, tmp_path / "short.mp4"))
 
-    assert "-- TITULO" in texto
     assert "A conta que nao fecha" in texto
-    assert "-- DESCRICAO" in texto
     assert "https://youtu.be/longo" in texto
     assert "#economia" in texto
+
+
+def test_o_tiktok_tem_legenda_e_nao_titulo(tmp_path):
+    """D-535: o pacote nomeia as caixas que existem de verdade.
+
+    O TikTok tem UMA caixa de texto. Anunciar "TITULO" e "DESCRICAO" mandava o
+    operador procurar um campo inexistente — a duvida chegou como pergunta, o
+    que e o sinal de que o pacote estava ensinando errado.
+    """
+    texto = montar_texto_do_pacote(_pacote(Plataforma.TIKTOK, tmp_path / "short.mp4"))
+
+    assert "-- LEGENDA" in texto
+    assert "-- TITULO" not in texto
+    assert "-- DESCRICAO" not in texto
+
+
+def test_o_youtube_shorts_continua_com_dois_campos():
+    """La os dois campos existem — juntar tudo numa caixa so seria perder um."""
+    texto = montar_texto_do_pacote(_pacote(Plataforma.YOUTUBE_SHORTS, Path("s.mp4")))
+
+    assert "-- TITULO" in texto
+    assert "-- DESCRICAO" in texto
 
 
 def test_avisos_vem_antes_de_tudo_no_texto():
@@ -152,7 +172,7 @@ def test_avisos_vem_antes_de_tudo_no_texto():
         _pacote(Plataforma.INSTAGRAM_REELS, Path("s.mp4"), avisos=["passa de 90s"])
     )
 
-    assert texto.index("ANTES DE SUBIR") < texto.index("-- TITULO")
+    assert texto.index("ANTES DE SUBIR") < texto.index("-- LEGENDA")
 
 
 def test_texto_diz_quantos_caracteres_aparecem_no_feed():

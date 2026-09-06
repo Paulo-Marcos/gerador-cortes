@@ -186,6 +186,39 @@ def copiar_capa(pacote: PacotePublicacao, destino_dir: Path) -> Path | None:
     return alvo
 
 
+def _campos_de_texto(pacote: PacotePublicacao) -> list[str]:
+    """As caixas de texto que a plataforma REALMENTE tem (D-535).
+
+    O TikTok e o Instagram nao tem titulo: tem uma legenda so, e o "titulo" e a
+    primeira linha dela. Escrever "-- TITULO --" e "-- DESCRICAO --" no pacote
+    mandava o operador procurar um campo inexistente e decidir na hora como
+    juntar os dois — decisao que o pacote existe para poupar.
+
+    No YouTube Shorts os dois campos existem de verdade, e ali continuam
+    separados.
+    """
+    limites = LIMITES[pacote.plataforma]
+    visivel = f"aparecem ~{limites.titulo_visivel} caracteres antes do 'mais'"
+
+    if not limites.caixa_unica:
+        return [
+            "",
+            f"-- TITULO ({visivel}) --",
+            pacote.metadados.titulo,
+            "",
+            "-- DESCRICAO --",
+            pacote.metadados.descricao,
+        ]
+
+    return [
+        "",
+        f"-- LEGENDA (caixa unica; {visivel}) --",
+        pacote.metadados.titulo,
+        "",
+        pacote.metadados.descricao,
+    ]
+
+
 def montar_texto_do_pacote(pacote: PacotePublicacao, capa: Path | None = None) -> str:
     """O `publicar.txt`: o que copiar, na ordem em que a plataforma pergunta.
 
@@ -201,13 +234,8 @@ def montar_texto_do_pacote(pacote: PacotePublicacao, capa: Path | None = None) -
         linhas.append("!! ANTES DE SUBIR:")
         linhas.extend(f"   - {aviso}" for aviso in pacote.avisos)
 
+    linhas += _campos_de_texto(pacote)
     linhas += [
-        "",
-        f"-- TITULO (aparecem ~{limites.titulo_visivel} caracteres no feed) --",
-        pacote.metadados.titulo,
-        "",
-        "-- DESCRICAO --",
-        pacote.metadados.descricao,
         "",
         "-- ARQUIVO --",
         str(pacote.arquivo),

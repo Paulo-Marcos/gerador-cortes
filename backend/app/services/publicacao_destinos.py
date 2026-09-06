@@ -15,6 +15,7 @@ registro e nada mais muda: nem a tela, nem o preparo, nem os metadados.
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -150,7 +151,7 @@ async def montar_contexto(short_id: str) -> ContextoPublicacao:
             base=MetadadosBase(
                 titulo=short.titulo_sugerido or corte.titulo_proposto or "",
                 descricao=short.gancho or "",
-                hashtags=_hashtags_do_corte(corte),
+                hashtags=await _hashtags_do_corte(db, corte),
                 url_video_longo=corte.youtube_url_publicado or "",
             ),
         )
@@ -189,7 +190,7 @@ async def montar_contexto_do_corte(corte_id: str) -> ContextoPublicacao:
             base=MetadadosBase(
                 titulo=corte.titulo_proposto or "",
                 descricao=corte.resumo or "",
-                hashtags=_hashtags_do_corte(corte),
+                hashtags=await _hashtags_do_corte(db, corte),
                 # O corte E o video longo: repetir o proprio link como CTA seria
                 # mandar o espectador de volta para onde ele ja esta.
                 url_video_longo="",
@@ -226,7 +227,34 @@ async def _capa_do_corte(db, corte: Corte) -> Path | None:
     return caminho if caminho.is_file() else None
 
 
-def _hashtags_do_corte(corte: Corte) -> list[str]:
-    """Hashtags derivadas do tema — sem inventar termo que o canal não usa."""
+async def _hashtags_do_corte(db, corte: Corte) -> list[str]:
+    """As hashtags do corte — das TAGS curadas, não do tema (D-535).
+
+    O tema central é uma frase editorial: "O fetiche da derrota e a romantização
+    da fraqueza na simbologia de esquerda". Usá-lo como hashtag produzia aquilo
+    tudo junto e sem espaços — uma etiqueta que ninguém digita e nenhuma página
+    de hashtag indexa.
+
+    As `tags_youtube` do metadado já são o que uma hashtag quer ser: termos
+    curtos e buscáveis, escritos por quem conhece o assunto — "banco master",
+    "daniel vorcaro", "pix". Estavam ali o tempo todo, ignoradas.
+
+    O tema sobra como reserva, e só quando ele mesmo é curto: um tema de duas
+    palavras vira uma hashtag legítima; a normalização descarta o resto.
+    """
+    from sqlalchemy import select as _select
+
+    resultado = await db.execute(_select(MetadadoCorte).where(MetadadoCorte.corte_id == corte.id))
+    meta = resultado.scalar_one_or_none()
+
+    tags: list[str] = []
+    if meta and meta.tags_youtube:
+        try:
+            tags = [str(t) for t in json.loads(meta.tags_youtube)]
+        except (ValueError, TypeError):
+            logger.warning("[Publicacao] tags_youtube de %s nao e JSON", corte.id[:8])
+
     tema = (corte.tema_central or "").strip()
-    return [tema] if tema else []
+    if tema:
+        tags.append(tema)
+    return tags

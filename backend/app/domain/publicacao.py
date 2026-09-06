@@ -15,6 +15,7 @@ revisar precisa saber de quando eles são.
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -52,6 +53,14 @@ class LimitesPlataforma:
     vertical: bool
     """True = 9:16 é requisito; False = aceita horizontal."""
     hashtags_max: int
+    caixa_unica: bool = False
+    """A plataforma tem UMA caixa de texto, e não título + descrição.
+
+    TikTok e Instagram só têm a legenda: o "título" é a primeira linha dela, e
+    não um campo. O pacote manual precisa saber disso, senão manda o operador
+    procurar um campo que não existe — foi o que aconteceu, e a dúvida chegou
+    como pergunta.
+    """
 
 
 LIMITES: dict[Plataforma, LimitesPlataforma] = {
@@ -76,6 +85,7 @@ LIMITES: dict[Plataforma, LimitesPlataforma] = {
         duracao_max_seg=90.0,
         vertical=True,
         hashtags_max=10,
+        caixa_unica=True,
     ),
     Plataforma.TIKTOK: LimitesPlataforma(
         rotulo="TikTok",
@@ -85,6 +95,7 @@ LIMITES: dict[Plataforma, LimitesPlataforma] = {
         duracao_max_seg=600.0,
         vertical=True,
         hashtags_max=5,
+        caixa_unica=True,
     ),
     # O TikTok aceita 16:9 e ainda dá impulso a landscape acima de 60s. O ganho
     # é presença e descoberta, não watch time: 16:9 toca em janela pequena.
@@ -96,6 +107,7 @@ LIMITES: dict[Plataforma, LimitesPlataforma] = {
         duracao_max_seg=3600.0,
         vertical=False,
         hashtags_max=5,
+        caixa_unica=True,
     ),
 }
 
@@ -211,12 +223,52 @@ def truncar_por_palavra(texto: str, limite: int) -> str:
     return cortado[:espaco] if espaco > 0 else cortado
 
 
+# D-535: uma hashtag e um TERMO DE BUSCA, nao uma frase.
+#
+# A versao anterior so tirava os espacos, e o resultado com um tema editorial
+# real foi "#Ofetichedaderrotaearomantizacaodafraquezanasimbologiadeesquerda":
+# 64 caracteres que ninguem digita, ninguem clica e nenhuma pagina de hashtag
+# indexa. Estes dois tetos separam termo de frase.
+MAX_PALAVRAS_POR_HASHTAG = 3
+MAX_CARACTERES_POR_HASHTAG = 28
+
+
 def _normalizar_hashtags(hashtags: list[str], maximo: int) -> list[str]:
-    """`#` garantido, sem espaço, sem repetição, respeitando o teto."""
+    """Termos de busca: minusculos, sem pontuacao, sem frase, sem repeticao.
+
+    A pontuacao sai porque a plataforma QUEBRA a tag nela — "mestre-aprendiz"
+    viraria a tag "mestre" e o resto vira texto solto. Minusculas porque e a
+    convencao das duas redes, e porque "#Pix" e "#pix" sao a mesma pagina: sem
+    normalizar, a deduplicacao deixaria as duas passarem.
+
+    O acento tambem sai. "#educacao" e "#educação" sao duas paginas distintas, e
+    a que tem volume e a sem acento — o teclado do celular nao acentua sozinho.
+    Publicar na acentuada e entrar na sala vazia.
+
+    >>> _normalizar_hashtags(['banco master', 'Daniel Vorcaro', 'pix'], 5)
+    ['#bancomaster', '#danielvorcaro', '#pix']
+    >>> _normalizar_hashtags(['mestre-aprendiz'], 5)
+    ['#mestreaprendiz']
+    >>> _normalizar_hashtags(['Precarizacao', 'Precarização'], 5)
+    ['#precarizacao']
+    >>> _normalizar_hashtags(['O fetiche da derrota e a romantizacao da fraqueza'], 5)
+    []
+    >>> _normalizar_hashtags(['Pix', 'pix'], 5)
+    ['#pix']
+    """
     vistas: list[str] = []
     for bruta in hashtags:
-        tag = "#" + "".join(str(bruta).split()).lstrip("#")
-        if tag != "#" and tag not in vistas:
+        palavras = str(bruta).lstrip("#").split()
+        if not palavras or len(palavras) > MAX_PALAVRAS_POR_HASHTAG:
+            continue
+
+        junto = unicodedata.normalize("NFKD", "".join(palavras))
+        corpo = "".join(c for c in junto if c.isalnum() and not unicodedata.combining(c)).lower()
+        if not corpo or len(corpo) > MAX_CARACTERES_POR_HASHTAG:
+            continue
+
+        tag = f"#{corpo}"
+        if tag not in vistas:
             vistas.append(tag)
     return vistas[:maximo]
 
