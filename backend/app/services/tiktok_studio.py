@@ -48,6 +48,7 @@ E não clica em *Publicar*. Ver o docstring do módulo de domínio.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 import shutil
@@ -104,6 +105,9 @@ SEGUNDOS_PARA_PROCESSAR = 900.0
 #    upload — o da capa, que nasce no lugar dele, aceita só imagem. Por isso os
 #    dois filtram por `accept`, e não por posição.
 SELETORES: dict[str, str] = {
+    # As duas chaves de ARQUIVO tem de ser CSS puro: quem as resolve e o
+    # `querySelector` do navegador, via CDP (D-544), e nao o Playwright — nada
+    # de `:has-text` aqui.
     "campo_do_arquivo": 'input[type="file"][accept*="video"]',
     "tutorial": (
         '.react-joyride__tooltip button:has-text("Entendi"), '
@@ -354,12 +358,53 @@ class PaginaDoPlaywright:
         return self._page.url
 
     def enviar_arquivo(self, alvo: str, caminho: Path, *, segundos: float) -> None:
-        # `set_input_files` fala com o <input type=file> direto. A área de
-        # arrastar do TikTok É um input escondido por CSS — não há nada a
-        # arrastar, e simular o arrasto seria inventar dificuldade.
+        """Entrega o arquivo ao `<input type=file>` — por CDP, e não pelo Playwright.
+
+        A área de arrastar do TikTok é um input escondido por CSS: não há nada a
+        arrastar, e simular o arrasto seria inventar dificuldade.
+
+        O que NÃO dá para usar é o `set_input_files` do Playwright. Ele empacota
+        o conteúdo do arquivo e manda pelo protocolo, e recusa acima de 50 MB
+        ("Cannot transfer files larger than 50Mb to a browser not co-located
+        with the server"). O TikTok aceita 30 GB; o teto é nosso, e nasce de a
+        gente falar com o Chrome por CDP em vez de tê-lo lançado.
+
+        `DOM.setFileInputFiles` resolve porque inverte quem lê o arquivo: nós
+        mandamos o CAMINHO, e o Chrome abre do disco dele. Como ele roda na
+        mesma máquina, o caminho vale — e o tamanho deixa de passar por nós.
+        """
         campo = self._page.locator(self._css(alvo)).first
         campo.wait_for(state="attached", timeout=segundos * 1000)
-        campo.set_input_files(str(caminho), timeout=segundos * 1000)
+        try:
+            self._entregar_por_cdp(self._css(alvo), caminho)
+        except Exception as exc:  # noqa: BLE001 — o caminho do Playwright é a retaguarda
+            logger.info("[TikTokStudio] CDP nao entregou o arquivo (%s); tentando direto", exc)
+            campo.set_input_files(str(caminho), timeout=segundos * 1000)
+
+    def _entregar_por_cdp(self, css: str, caminho: Path) -> None:
+        """Diz ao Chrome QUAL arquivo abrir, em vez de mandar os bytes.
+
+        O seletor tem de ser CSS de verdade: quem resolve aqui é o
+        `querySelector` do navegador, que não conhece os pseudo-seletores do
+        Playwright (`:has-text`). Há teste guardando isso para as duas chaves
+        que passam por aqui.
+        """
+        sessao = self._page.context.new_cdp_session(self._page)
+        try:
+            sessao.send("DOM.enable")
+            achado = sessao.send(
+                "Runtime.evaluate",
+                {"expression": f"document.querySelector({json.dumps(css)})"},
+            )
+            identificador = achado.get("result", {}).get("objectId")
+            if not identificador:
+                raise RuntimeError(f"{css} nao resolveu para um elemento")
+            sessao.send(
+                "DOM.setFileInputFiles",
+                {"files": [str(caminho.resolve())], "objectId": identificador},
+            )
+        finally:
+            sessao.detach()
 
     def escrever(self, alvo: str, texto: str, *, segundos: float) -> None:
         campo = self._page.locator(self._css(alvo)).first

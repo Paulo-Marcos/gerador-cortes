@@ -367,6 +367,20 @@ class TestCapa:
         assert '[role="dialog"]' in tiktok_studio.SELETORES["confirmar_capa"]
         assert "rascunho" not in tiktok_studio.SELETORES["confirmar_capa"]
 
+    def test_os_campos_de_arquivo_sao_CSS_puro(self):
+        """D-544: quem resolve estes dois e o `querySelector` do navegador.
+
+        O arquivo vai por `DOM.setFileInputFiles` (CDP), porque o
+        `set_input_files` do Playwright empacota os bytes e recusa acima de
+        50 MB — teto nosso, nao do TikTok, que aceita 30 GB. O navegador nao
+        conhece `:has-text` e afins: um pseudo-seletor do Playwright aqui
+        derrubaria o upload de volta para o caminho limitado, em silencio.
+        """
+        for chave in ("campo_do_arquivo", "campo_da_capa"):
+            seletor = tiktok_studio.SELETORES[chave]
+            assert ":has-text" not in seletor
+            assert "text=" not in seletor
+
     def test_o_botao_de_publicar_usa_o_gancho_do_proprio_tiktok(self):
         """`data-e2e` sobrevive a troca de idioma; texto nao."""
         assert tiktok_studio.SELETORES["botao_publicar"] == '[data-e2e="post_video_button"]'
