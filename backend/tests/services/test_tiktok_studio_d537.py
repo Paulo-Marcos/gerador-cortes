@@ -26,6 +26,12 @@ class PaginaFalsa:
         self.falhar = set(falhar)
         self.chamadas: list[tuple] = []
         self.ausentes: set[str] = set()
+        # D-545: a pagina passou a ser LIDA de volta, entao o duble precisa
+        # guardar o que foi escrito — e poder mentir sobre isso, que e como se
+        # reproduz o preenchimento automatico do TikTok por cima do texto.
+        self.escrito: dict[str, str] = {}
+        self.sobrescreve = 0
+        self.miniatura = "blob:antes"
 
     def _registrar(self, verbo, alvo):
         self.chamadas.append((verbo, alvo))
@@ -45,9 +51,28 @@ class PaginaFalsa:
         self.chamadas.append(("escrever", alvo, texto))
         if alvo in self.falhar:
             raise RuntimeError(f"seletor {alvo} nao casou")
+        self.escrito[alvo] = texto
+
+    def texto_de(self, alvo):
+        self.chamadas.append(("ler", alvo))
+        if self.sobrescreve > 0:
+            # O TikTok acabou de por o nome do arquivo por cima do que
+            # escrevemos — exatamente o que acontecia no upload de verdade.
+            self.sobrescreve -= 1
+            return "grande"
+        return self.escrito.get(alvo, "")
+
+    def atributo_de(self, alvo, atributo):
+        return self.miniatura
+
+    def esperar_sumir(self, alvo, *, segundos):
+        self.chamadas.append(("sumir", alvo))
+        self.ausentes.add(alvo)
 
     def clicar(self, alvo, *, segundos):
         self._registrar("clicar", alvo)
+        if alvo == "confirmar_capa":
+            self.miniatura = "blob:depois"
 
     def existe(self, alvo, *, segundos, visivel=True):
         self.chamadas.append(("existe", alvo))
@@ -86,7 +111,7 @@ def _rodar(pagina, arquivos, **kwargs):
 
 
 class TestCaminhoFeliz:
-    def test_faz_os_cinco_passos_e_nao_publica(self, arquivos):
+    def test_faz_todos_os_passos_e_nao_publica(self, arquivos):
         pagina = PaginaFalsa()
 
         relatorio = _rodar(pagina, arquivos)
@@ -105,18 +130,25 @@ class TestCaminhoFeliz:
             ("escrever", "editor_da_legenda", "TODO MUNDO ASSINOU\n\n#pix #economia")
         ]
 
-    def test_escreve_antes_de_esperar_o_processamento(self, arquivos):
-        """A ordem que um humano usa: enquanto a barra sobe, ele digita.
+    def test_escreve_DEPOIS_do_upload_terminar(self, arquivos):
+        """D-545: a inversao que fez a legenda sumir no uso real.
 
-        Esperar primeiro somaria os dois tempos por nada — e o teste existe
-        porque a ordem "obvia" (subir, esperar, escrever) e a errada.
+        A ordem anterior era "escreve enquanto a barra sobe", pela analogia com
+        o que uma pessoa faz. A analogia falhava num detalhe que decide tudo: ao
+        aceitar o arquivo, o TikTok PREENCHE a caixa com o nome dele. Uma pessoa
+        ve isso por cima do que digitou e corrige; o robo escrevia antes, era
+        sobrescrito, e seguia convencido.
+
+        Num clipe de teste de 23 KB o preenchimento chegava ANTES de nos e nada
+        aparecia. Num corte de verdade chega depois. O ensaio passava e a
+        execucao real falhava — a assinatura de uma corrida, nao de lentidao.
         """
         pagina = PaginaFalsa()
 
         _rodar(pagina, arquivos)
 
-        verbos = [c[1] if c[0] != "escrever" else "editor_da_legenda" for c in pagina.chamadas]
-        assert verbos.index("editor_da_legenda") < verbos.index("botao_publicar")
+        ordem = [c[1] for c in pagina.chamadas]
+        assert ordem.index("status_do_upload") < ordem.index("editor_da_legenda")
 
     def test_o_resumo_lista_so_o_que_aconteceu(self, arquivos):
         relatorio = _rodar(PaginaFalsa(), arquivos)
@@ -310,6 +342,49 @@ class TestTutorial:
         assert relatorio["publicado"] is False
 
 
+class TestConferencia:
+    """D-545: escrever nao e o mesmo que ter escrito."""
+
+    def test_reescreve_quando_o_tiktok_sobrescreve(self, arquivos):
+        """O defeito, em um teste.
+
+        Um `escrever` que nao levanta excecao nao prova que o texto ficou:
+        prova que o clique e as teclas foram aceitos. Numa pagina que se
+        redesenha sozinha, as duas coisas sao diferentes.
+        """
+        pagina = PaginaFalsa()
+        pagina.sobrescreve = 1  # a primeira leitura devolve o nome do arquivo
+
+        relatorio = _rodar(pagina, arquivos)
+
+        escritas = [c for c in pagina.chamadas if c[0] == "escrever"]
+        assert len(escritas) == 2
+        assert Passo.LEGENDA.value in relatorio["passos"]
+        assert relatorio["avisos"] == []
+
+    def test_desiste_avisando_em_vez_de_mentir(self, arquivos):
+        """Tres tentativas, e dai o problema e outro.
+
+        O video ja subiu: derrubar tudo aqui trocaria um contratempo por
+        retrabalho. Mas dizer "legenda escrita" sem ter conferido e pior — foi
+        assim que o defeito passou despercebido na primeira vez.
+        """
+        pagina = PaginaFalsa()
+        pagina.sobrescreve = 99
+
+        relatorio = _rodar(pagina, arquivos)
+
+        assert Passo.LEGENDA.value not in relatorio["passos"]
+        assert any("confirmar" in a for a in relatorio["avisos"])
+
+    def test_legenda_que_bate_de_primeira_nao_reescreve(self, arquivos):
+        pagina = PaginaFalsa()
+
+        _rodar(pagina, arquivos)
+
+        assert len([c for c in pagina.chamadas if c[0] == "escrever"]) == 1
+
+
 class TestCapa:
     """A capa e o unico passo que reporta em vez de interromper."""
 
@@ -343,6 +418,40 @@ class TestCapa:
 
         assert relatorio["capa_aplicada"] is False
         assert "congelar um frame" in relatorio["avisos"][0]
+
+    def test_espera_o_salvar_habilitar_antes_de_clicar(self, arquivos):
+        """O relato foi exato: a imagem estava la, escolhida e nao salva.
+
+        O TikTok mantem o Salvar desabilitado enquanto processa a imagem que
+        acabou de receber, e um clique nesse intervalo nao e recusado com erro —
+        ele simplesmente nao acontece.
+        """
+        pagina = PaginaFalsa()
+
+        _rodar(pagina, arquivos)
+
+        ordem = [(c[0], c[1]) for c in pagina.chamadas if c[1] == "confirmar_capa"]
+        assert ("habilitado", "confirmar_capa") in ordem
+        assert ordem.index(("habilitado", "confirmar_capa")) < ordem.index(
+            ("clicar", "confirmar_capa")
+        )
+
+    def test_capa_que_nao_muda_a_miniatura_vira_aviso(self, arquivos):
+        """O TikTok SEMPRE mostra alguma capa — um quadro do video.
+
+        Entao "existe capa" nao prova nada; o que prova e ela ter MUDADO. Sem
+        esta conferencia, o relatorio diria "capa aplicada" tendo clicado num
+        botao que nao fez efeito.
+        """
+
+        class NaoTroca(PaginaFalsa):
+            def clicar(self, alvo, *, segundos):
+                self._registrar("clicar", alvo)  # sem mexer na miniatura
+
+        relatorio = _rodar(NaoTroca(), arquivos)
+
+        assert relatorio["capa_aplicada"] is False
+        assert any("continua a mesma" in a for a in relatorio["avisos"])
 
     def test_modal_sem_botao_de_salvar_vira_aviso(self, arquivos):
         """Salvar e obrigatorio: sem o clique, a capa escolhida nao e aplicada.

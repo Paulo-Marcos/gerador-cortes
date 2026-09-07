@@ -52,7 +52,6 @@ import json
 import logging
 import re
 import shutil
-import socket
 import subprocess
 import time
 from pathlib import Path
@@ -117,6 +116,12 @@ SELETORES: dict[str, str] = {
     "editor_da_legenda": '[data-e2e="caption_container"] div[contenteditable="true"]',
     "status_do_upload": '[data-e2e="upload_status_container"]',
     "botao_da_capa": '[data-e2e="cover_container"] .edit-container',
+    # D-545: a impressão digital do que está na capa hoje. É um blob, e blob
+    # novo significa imagem nova — o que distingue "salvei" de "achei que
+    # salvei". O TikTok SEMPRE mostra alguma capa (um quadro do vídeo), então
+    # "existe capa" não prova nada; o que prova é ela ter mudado.
+    "miniatura_da_capa": '[data-e2e="cover_container"] img',
+    "dialogo": '[role="dialog"]',
     "campo_da_capa": 'input[type="file"][accept*="image"]',
     "confirmar_capa": (
         '[role="dialog"] button.header-button:has-text("Salvar"), '
@@ -148,6 +153,9 @@ class Pagina(Protocol):
     def esperar_texto(self, alvo: str, padrao: str, *, segundos: float) -> None: ...
     def esperar_habilitado(self, alvo: str, *, segundos: float) -> None: ...
     def remover(self, alvo: str) -> None: ...
+    def texto_de(self, alvo: str) -> str: ...
+    def atributo_de(self, alvo: str, atributo: str) -> str: ...
+    def esperar_sumir(self, alvo: str, *, segundos: float) -> None: ...
 
 
 def executar_roteiro(
@@ -211,31 +219,18 @@ def executar_roteiro(
     # que vem depois. Dispensar é best-effort: não achar o tour é o caso normal.
     _dispensar_tutorial(pagina)
 
-    _passo(
-        pagina.escrever,
-        Passo.LEGENDA,
-        "editor_da_legenda",
-        legenda,
-        segundos=SEGUNDOS_PARA_ELEMENTO,
-    )
-    feitos.append(Passo.LEGENDA)
-
-    if capa and capa.is_file():
-        erro = _tentar_capa(pagina, capa)
-        if erro:
-            # Passo opcional: o vídeo já subiu e a legenda já está escrita.
-            # Derrubar tudo aqui trocaria um contratempo por um retrabalho.
-            avisos.append(erro)
-            logger.warning("[TikTokStudio] capa nao entrou: %s", erro)
-        else:
-            feitos.append(Passo.CAPA)
-    elif capa:
-        avisos.append("A capa nao esta mais em disco; o TikTok vai congelar um frame.")
-
-    # Duas condições, e as duas importam. O botão de publicar acende cedo — num
-    # clipe de 23 KB ele já estava aceso quando olhamos —, então sozinho ele
-    # devolveria a aba no meio do upload de um corte grande. O cartão de status
-    # é quem diz que o arquivo chegou inteiro.
+    # D-545: esperar o upload TERMINAR antes de escrever qualquer coisa.
+    #
+    # A ordem anterior era "escreve enquanto a barra sobe", pela analogia com o
+    # que uma pessoa faz. A analogia falhava num detalhe que decide tudo: ao
+    # aceitar o arquivo, o TikTok PREENCHE a caixa da legenda com o nome dele.
+    # Uma pessoa vê isso acontecer por cima do que digitou e corrige; o robô
+    # escrevia antes, era sobrescrito, e seguia em frente convencido.
+    #
+    # Num clipe de teste de 23 KB o preenchimento chegava antes de nós e nada
+    # aparecia. Num corte de verdade ele chega depois. O ensaio passou e a
+    # execução real falhou pelo mesmo motivo — a assinatura de uma corrida, e
+    # não de lentidão.
     _passo(
         pagina.esperar_texto,
         Passo.PROCESSAMENTO,
@@ -250,6 +245,37 @@ def executar_roteiro(
         segundos=SEGUNDOS_PARA_ELEMENTO,
     )
     feitos.append(Passo.PROCESSAMENTO)
+
+    # Escrever e CONFERIR. Um `escrever` que não levanta exceção não prova que o
+    # texto ficou: prova que o clique e as teclas foram aceitos. Numa página que
+    # se redesenha sozinha, as duas coisas são diferentes.
+    _passo(
+        pagina.escrever,
+        Passo.LEGENDA,
+        "editor_da_legenda",
+        legenda,
+        segundos=SEGUNDOS_PARA_ELEMENTO,
+    )
+    if _confirmar_legenda(pagina, legenda):
+        feitos.append(Passo.LEGENDA)
+    else:
+        avisos.append(
+            "Escrevi a legenda mas nao consegui confirmar que ela ficou. "
+            "Confira na aba antes de publicar."
+        )
+
+    if capa and capa.is_file():
+        erro = _tentar_capa(pagina, capa)
+        if erro:
+            # Passo opcional: o vídeo já subiu e a legenda já está escrita.
+            # Derrubar tudo aqui trocaria um contratempo por um retrabalho.
+            avisos.append(erro)
+            logger.warning("[TikTokStudio] capa nao entrou: %s", erro)
+        else:
+            feitos.append(Passo.CAPA)
+    elif capa:
+        avisos.append("A capa nao esta mais em disco; o TikTok vai congelar um frame.")
+
     feitos.append(Passo.REVISAO)
 
     return {
@@ -259,6 +285,52 @@ def executar_roteiro(
         "avisos": avisos,
         "publicado": False,
     }
+
+
+def _mesma_linha(a: str, b: str) -> bool:
+    r"""Compara ignorando como cada lado quebrou os espaços.
+
+    O editor da legenda é um DraftJS: devolve o texto com quebras próprias, e
+    comparar caractere a caractere acusaria diferença onde não há.
+
+    >>> _mesma_linha("O juro\n\n#pix", "O  juro #pix")
+    True
+    >>> _mesma_linha("uma coisa", "outra coisa")
+    False
+    """
+    return " ".join(a.split()) == " ".join(b.split())
+
+
+def _confirmar_legenda(pagina: Pagina, legenda: str, tentativas: int = 3) -> bool:
+    """Lê a legenda de volta, e reescreve enquanto não bater.
+
+    A corrida com o preenchimento automático do TikTok não tem instante fixo
+    para acabar — depende do tamanho do arquivo e da rede. Em vez de escolher
+    uma espera e torcer, escrevemos, LEMOS e repetimos. Três tentativas porque
+    a partir daí o problema é outro, e insistir só atrasa a entrega da aba.
+    """
+    for tentativa in range(tentativas):
+        try:
+            if _mesma_linha(pagina.texto_de("editor_da_legenda"), legenda):
+                return True
+            pagina.escrever("editor_da_legenda", legenda, segundos=SEGUNDOS_PARA_ELEMENTO)
+        except Exception as exc:  # noqa: BLE001 — vira aviso, não interrupção
+            logger.warning("[TikTokStudio] nao consegui reescrever a legenda: %s", exc)
+            return False
+        logger.info("[TikTokStudio] legenda nao bateu; reescrevi (%s)", tentativa + 1)
+
+    try:
+        return _mesma_linha(pagina.texto_de("editor_da_legenda"), legenda)
+    except Exception:  # noqa: BLE001 — não conseguir ler não é o mesmo que falhar
+        return False
+
+
+def _miniatura_da_capa(pagina: Pagina) -> str:
+    """O `src` da miniatura da capa, ou vazio quando não dá para ler."""
+    try:
+        return pagina.atributo_de("miniatura_da_capa", "src")
+    except Exception:  # noqa: BLE001 — sem miniatura a comparação é inconclusiva
+        return ""
 
 
 def _dispensar_tutorial(pagina: Pagina) -> None:
@@ -312,11 +384,33 @@ def _tentar_capa(pagina: Pagina, capa: Path) -> str:
             return "Nao achei o botao de editar capa."
         pagina.clicar("botao_da_capa", segundos=SEGUNDOS_PARA_CAPA)
 
+        # A miniatura de ANTES: é ela que dirá se a troca pegou.
+        antes = _miniatura_da_capa(pagina)
+
         pagina.enviar_arquivo("campo_da_capa", capa, segundos=SEGUNDOS_PARA_CAPA)
 
         if not pagina.existe("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA):
             return "O modal da capa abriu, mas nao achei o botao de salvar."
+
+        # D-545: ESPERAR o Salvar habilitar antes de clicar.
+        #
+        # O relato foi exato: abrindo o editor depois, a imagem estava lá,
+        # escolhida e não salva. Ou seja, o `set_input_files` pegou e o clique
+        # em Salvar não. O TikTok mantém o botão desabilitado enquanto processa
+        # a imagem que acabou de receber, e um clique nesse intervalo não é
+        # recusado com erro — ele simplesmente não acontece.
+        pagina.esperar_habilitado("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
         pagina.clicar("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
+        pagina.esperar_sumir("dialogo", segundos=SEGUNDOS_PARA_CAPA)
+
+        # Diálogo ainda aberto = o clique não fechou nada. Uma segunda tentativa
+        # cobre o caso de o primeiro ter pego o botão no meio da habilitação.
+        if pagina.existe("dialogo", segundos=1.0):
+            pagina.clicar("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
+            pagina.esperar_sumir("dialogo", segundos=SEGUNDOS_PARA_CAPA)
+
+        if _miniatura_da_capa(pagina) == antes:
+            return "Cliquei em salvar, mas a capa na pagina continua a mesma."
         return ""
     except Exception as exc:  # noqa: BLE001 — qualquer falha aqui vira aviso
         return f"{type(exc).__name__}: {exc}"
@@ -433,6 +527,20 @@ class PaginaDoPlaywright:
         except Exception:  # noqa: BLE001 — ausência não é erro, é resposta
             return False
 
+    def texto_de(self, alvo: str) -> str:
+        return self._page.locator(self._css(alvo)).first.inner_text()
+
+    def atributo_de(self, alvo: str, atributo: str) -> str:
+        return self._page.locator(self._css(alvo)).first.get_attribute(atributo) or ""
+
+    def esperar_sumir(self, alvo: str, *, segundos: float) -> None:
+        try:
+            self._page.locator(self._css(alvo)).first.wait_for(
+                state="detached", timeout=segundos * 1000
+            )
+        except Exception:  # noqa: BLE001 — não sumir não é motivo para parar
+            logger.debug("[TikTokStudio] %s continuou na tela", alvo)
+
     def remover(self, alvo: str) -> None:
         self._page.evaluate(
             "(css) => document.querySelectorAll(css).forEach((el) => el.remove())",
@@ -479,9 +587,29 @@ def _chrome_no_disco() -> Path | None:
 
 
 def _porta_responde(porta: int) -> bool:
-    with socket.socket() as s:
-        s.settimeout(0.4)
-        return s.connect_ex(("127.0.0.1", porta)) == 0
+    """Há um Chrome VIVO falando DevTools nesta porta?
+
+    A primeira versão disto abria um socket e considerava resposta de TCP como
+    "está no ar". Não é: quando o operador fecha a janela, a porta continua
+    aceitando conexão por um tempo, e aí `garantir_chrome` decide que não
+    precisa abrir nada. O que chegava depois era um `TargetClosedError` cru do
+    Playwright — verdadeiro, e mudo sobre a única coisa que importava: a janela
+    tinha sido fechada.
+
+    Perguntar ao endpoint do DevTools resolve porque só um Chrome de verdade
+    responde a ele.
+    """
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(  # noqa: S310 — localhost, porta nossa
+            f"http://127.0.0.1:{porta}/json/version", timeout=1.5
+        ) as resposta:
+            return "webSocketDebuggerUrl" in _json.loads(resposta.read())
+    except (urllib.error.URLError, OSError, ValueError, TimeoutError):
+        return False
 
 
 def garantir_chrome() -> bool:

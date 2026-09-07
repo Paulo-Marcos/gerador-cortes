@@ -34,9 +34,9 @@ class Passo(StrEnum):
     ABRIR = "abrir"
     SESSAO = "sessao"
     ARQUIVO = "arquivo"
+    PROCESSAMENTO = "processamento"
     LEGENDA = "legenda"
     CAPA = "capa"
-    PROCESSAMENTO = "processamento"
     REVISAO = "revisao"
 
 
@@ -47,9 +47,9 @@ ROTULOS: dict[Passo, str] = {
     Passo.ABRIR: "abrindo o TikTok Studio",
     Passo.SESSAO: "conferindo a sessão",
     Passo.ARQUIVO: "enviando o vídeo",
+    Passo.PROCESSAMENTO: "esperando o TikTok processar",
     Passo.LEGENDA: "escrevendo a legenda",
     Passo.CAPA: "trocando a capa",
-    Passo.PROCESSAMENTO: "esperando o TikTok processar",
     Passo.REVISAO: "deixando pronto para você conferir",
 }
 
