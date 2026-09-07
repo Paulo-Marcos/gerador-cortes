@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, ExternalLink, ImageOff, Loader2, Package, Send, Youtube } from 'lucide-react';
+import { Bot, Check, ExternalLink, ImageOff, Loader2, Package, Send, Youtube } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -173,6 +173,16 @@ function LinhaDoCorte({
     onSuccess: () => setConfirmadoAgora(true),
   });
 
+  // D-540: o robô do D-537, no lugar onde o operador realmente publica.
+  //
+  // Ele nasceu num componente que NENHUMA tela renderiza — o botão existia, os
+  // testes passavam, e a tela seguia com os dois manuais. Um botão que não está
+  // montado é indistinguível de um botão que não existe.
+  const assistido = useMutation({
+    mutationFn: () => shortsApi.assistidoTiktokHorizontal(corte.corte_id),
+    onSuccess: () => onPreparado(),
+  });
+
   const abrir = useMutation({
     mutationFn: () => shortsApi.stagingTiktokHorizontal(corte.corte_id),
     onSuccess: async (dados) => {
@@ -259,15 +269,28 @@ function LinhaDoCorte({
               pacote pronto
             </span>
           )}
+          {/* O assistido vem primeiro e em destaque: é o caminho normal. O
+              manual fica ao lado porque depende de seletores de uma página que
+              não é nossa — no dia em que o TikTok redesenhar o Studio, ele é o
+              que continua funcionando. */}
+          <Button
+            size="sm"
+            disabled={assistido.isPending || abrir.isPending}
+            onClick={() => assistido.mutate()}
+            title="Sobe o vídeo, escreve a legenda e põe a capa no seu Chrome. Para antes de publicar, para você conferir."
+          >
+            {assistido.isPending ? <Loader2 className="animate-spin" /> : <Bot />}
+            {assistido.isPending ? 'subindo…' : 'Assistido'}
+          </Button>
           <Button
             variant="outline"
             size="sm"
-            disabled={abrir.isPending}
+            disabled={abrir.isPending || assistido.isPending}
             onClick={() => abrir.mutate()}
-            title="Monta o pacote se preciso, abre a pasta, copia a legenda e abre a aba de upload."
+            title="Só monta o pacote, abre a pasta, copia a legenda e abre a aba. Você sobe à mão."
           >
             {abrir.isPending ? <Loader2 className="animate-spin" /> : <Send />}
-            {preparado ? 'abrir' : 'Preparar'}
+            {preparado ? 'abrir' : 'Só o pacote'}
           </Button>
           <Button
             size="sm"
@@ -282,6 +305,28 @@ function LinhaDoCorte({
         </>
       )}
 
+      {assistido.isPending && (
+        <span className="w-full text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+          Subindo no Chrome… o TikTok ainda precisa processar o vídeo, o que num corte longo leva
+          minutos. Não feche a janela que abriu.
+        </span>
+      )}
+      {assistido.isSuccess && (
+        <span className="inline-flex w-full flex-wrap items-center gap-1 text-[11px] text-[var(--wb-text-mute)]">
+          <Check size={11} className="text-[var(--wb-ok-ink)]" aria-hidden />
+          Pronto para conferir: {assistido.data.resumo}. Revise e clique em Publicar na aba.
+          {assistido.data.avisos.map((aviso) => (
+            <span key={aviso} className="text-[var(--wb-warn-ink)]">
+              {aviso}
+            </span>
+          ))}
+        </span>
+      )}
+      {assistido.isError && (
+        <span className="w-full text-[11px] leading-relaxed text-[var(--wb-warn-ink)]">
+          {(assistido.error as Error)?.message ?? 'não consegui subir'}
+        </span>
+      )}
       {abrir.isSuccess && abrir.data?.erro_ao_abrir && (
         <span className="w-full text-[11px] text-[var(--wb-warn-ink)]">
           Não consegui abrir a pasta: {abrir.data.pasta}
