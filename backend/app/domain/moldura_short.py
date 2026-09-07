@@ -108,6 +108,39 @@ def faixas(moldura: Moldura | str, cor: str = COR_PADRAO) -> list[Faixa]:
     ]
 
 
+def janela_entre_as_faixas(moldura: Moldura | str) -> dict | None:
+    """A área que sobra entre as duas faixas — a janela do short SEM palco.
+
+    Existe por causa de um caso que a D-508 deixou de fora. Ela trocou as barras
+    verdes chapadas pelo palco texturizado, mas só no caminho em que HÁ plano de
+    palco. Num corte sem preset de recortes o plano é `None`, o render degrada
+    para o recorte 9:16 do quadro cru — e a moldura voltava a ser duas barras de
+    cor sólida, que foi exatamente a queixa: "só o verde puro não fica legal".
+
+    A degradação é do CONTEÚDO (uma janela cheia em vez de duas), e não da
+    identidade. Descrevendo essa janela aqui, o mesmo palco texturizado serve
+    aos dois caminhos: as faixas ganham a textura do canal e o miolo continua
+    transparente para o vídeo passar.
+
+    Exemplos:
+        >>> janela_entre_as_faixas(Moldura.PALCO)
+        {'x': 0, 'y': 154, 'w': 1080, 'h': 1612}
+        >>> janela_entre_as_faixas(Moldura.NENHUMA) is None
+        True
+    """
+    barras = faixas(moldura)
+    if not barras:
+        return None
+
+    altura = barras[0].h
+    return {
+        "x": 0,
+        "y": altura,
+        "w": CANVAS.largura,
+        "h": CANVAS.altura - 2 * altura,
+    }
+
+
 def cabe_na_safe_zone() -> bool:
     """A moldura não pode invadir a área de conteúdo.
 

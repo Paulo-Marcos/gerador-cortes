@@ -326,9 +326,18 @@ async def _palco_em_png(palco: dict):
     """
     from app.services import palco_short_png
 
-    plano = palco.get("plano")
-    if plano is None or moldura_short.Moldura(palco["moldura"]) is moldura_short.Moldura.NENHUMA:
+    if moldura_short.Moldura(palco["moldura"]) is moldura_short.Moldura.NENHUMA:
         return None
+
+    plano = palco.get("plano")
+    if plano is None:
+        # D-543: sem plano de palco o render degrada para o recorte 9:16 do
+        # quadro cru — mas a MOLDURA nao precisa degradar junto. Aqui a janela e
+        # uma so, o que sobra entre as duas faixas, e o palco texturizado serve
+        # aos dois caminhos. Sem isto, um corte sem preset saia com duas barras
+        # de verde chapado.
+        janela = moldura_short.janela_entre_as_faixas(palco["moldura"])
+        return await palco_short_png.obter(FUNDO_EDITORIAL_PADRAO, [janela] if janela else [])
 
     janelas = [recorte.janela for recorte in plano.recortes]
     return await palco_short_png.obter(FUNDO_EDITORIAL_PADRAO, janelas)
