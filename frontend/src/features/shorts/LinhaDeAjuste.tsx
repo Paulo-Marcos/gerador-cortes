@@ -1,57 +1,57 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Crop, Layers, ScanFace, TriangleAlert } from 'lucide-react';
+import { ScanFace, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useArranjosDePalco, usePalcoDoCorte } from './useShortsDoCorte';
+import { usePalcoDoCorte } from './useShortsDoCorte';
 import type { ShortSugerido } from './shortsApi';
 
-// D-492: os refinos de um candidato, reunidos e recolhidos.
+// D-542: dois assuntos no painel do candidato, e não seis.
 //
-// Eles estavam soltos entre os botões de decisão, competindo pelo mesmo espaço:
-// "início aqui" ao lado de "aprovar", o seletor de arranjo no meio dos números.
-// São coisas de momentos diferentes — decidir é uma vez, refinar é iterativo —
-// e misturá-las obriga a reler a fileira inteira a cada passada.
+// A D-492 já tinha juntado os refinos num bloco recolhido, e ainda assim o
+// operador leu "muito misturado": bordas, enquadramento, recortes, moldura e
+// arranjo empilhados, cinco perguntas com o mesmo peso visual e nenhuma pista
+// de qual delas ele precisava agora.
 //
-// Aqui eles ficam num bloco próprio, com fundo recuado, aberto sob demanda.
-
-/** Quanto cada clique move o enquadramento. 5% do quadro ≈ 96px em 1920. */
-const PASSO_FOCO = 0.05;
+// O problema não era a quantidade de controles — era a ausência de HIERARQUIA.
+// Três daqueles cinco (enquadramento fino, moldura, arranjo) são decisões de
+// COMO A TELA MONTA, e já existia um lugar para elas: o modal do palco, onde
+// aparecem com prévia ao lado e na ordem em que uma depende da outra.
+//
+// Aqui ficam os dois assuntos que são deste trecho e de mais nada:
+//
+//   BORDAS  onde ele começa e termina
+//   PALCO   qual preset, e a porta para ajustar o resto
+//
+// O "pelo rosto" fica de fora do modal por frequência, não por categoria: é um
+// clique que resolve o caso comum (uma pessoa falando de frente), e mandá-lo
+// para dentro do modal cobraria dois cliques e um contexto por algo que
+// costuma ser a primeira coisa que se faz.
 
 interface Props {
   short: ShortSugerido;
-  /** D-495: sem região marcada no corte, o arranjo não tem o que arrumar. */
-  temRegiao: boolean;
+  corteId: string;
   ocupado: boolean;
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
-  onFoco: (delta: number) => void;
   /** D-477: acha o rosto no trecho e centra a janela nele. */
   onEnquadrarPeloRosto: () => void;
   enquadrando: boolean;
   /** O veredito da ultima deteccao — inclusive "nao achei", que e resposta. */
   vereditoDoRosto: string;
-  onArranjo: (chave: string) => void;
   onPreset: (presetId: string) => void;
-  onMoldura: (moldura: string) => void;
-  corteId: string;
-  onTocar: () => void;
+  /** Abre o modal do palco JÁ neste candidato. */
+  onDefinirPalco: () => void;
 }
 
 export function LinhaDeAjuste({
   short,
   corteId,
-  temRegiao,
   ocupado,
   onBorda,
-  onFoco,
   onEnquadrarPeloRosto,
   enquadrando,
   vereditoDoRosto,
-  onArranjo,
   onPreset,
-  onMoldura,
+  onDefinirPalco,
 }: Props) {
-  const arranjos = useArranjosDePalco(corteId);
   const palcoDoCorte = usePalcoDoCorte(corteId);
-  const escolhido = arranjos.data?.arranjos.find((a) => a.chave === short.arranjo_palco);
 
   return (
     <div
@@ -69,66 +69,16 @@ export function LinhaDeAjuste({
         </Button>
       </Grupo>
 
-      <Grupo rotulo="enquadramento" dica="Move o centro da janela 9:16 na horizontal">
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Mover o enquadramento para a esquerda"
-          disabled={ocupado}
-          onClick={() => onFoco(-PASSO_FOCO)}
-        >
-          <ChevronLeft />
-        </Button>
-        <CampoDeFoco
-          valor={short.foco_efetivo}
-          ocupado={ocupado}
-          onAplicar={(fracao) => onFoco(fracao - short.foco_efetivo)}
-        />
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Mover o enquadramento para a direita"
-          disabled={ocupado}
-          onClick={() => onFoco(PASSO_FOCO)}
-        >
-          <ChevronRight />
-        </Button>
-        {/* D-477: o atalho para o caso comum — uma pessoa falando de frente.
-            Fica AO LADO das setas, e não no lugar delas: o detector erra, e
-            corrigir na mão precisa estar à mesma distância. */}
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={ocupado || enquadrando}
-          onClick={onEnquadrarPeloRosto}
-          title="Procura o rosto de quem fala neste trecho e centra a janela nele"
-        >
-          <ScanFace />
-          {enquadrando ? 'olhando…' : 'pelo rosto'}
-        </Button>
-      </Grupo>
-
-      {/* O veredito precisa aparecer mesmo quando é "não achei": sem isso, um
-          clique sem efeito visível fica indistinguível de um botão quebrado. */}
-      {vereditoDoRosto && (
-        <p className="w-full font-code text-[10.5px] leading-relaxed text-[var(--wb-text-mute)]">
-          {vereditoDoRosto}
-        </p>
-      )}
-
       {/* D-498: o preset DESTE short. Numa live longa a cena do OBS muda ao
           longo do tempo, então o trecho pode precisar de regiões diferentes das
           do resto do corte. Vazio herda o do corte, que segue sendo o default. */}
-      <Grupo
-        rotulo="recortes"
-        dica="De onde saem os recortes deste trecho. Vazio usa o preset do corte."
-      >
+      <Grupo rotulo="palco" dica="O preset deste trecho. Vazio usa o do corte.">
         <select
-          aria-label="Preset de recortes deste short"
+          aria-label="Palco deste short"
           value={short.palco_preset}
           disabled={ocupado || !palcoDoCorte.data}
           onChange={(e) => onPreset(e.target.value)}
-          className="h-7 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+          className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
         >
           <option value="">
             {palcoDoCorte.data?.preset
@@ -141,6 +91,18 @@ export function LinhaDeAjuste({
             </option>
           ))}
         </select>
+
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={ocupado}
+          onClick={onDefinirPalco}
+          title="Como a tela monta, o enquadramento, de onde vem cada janela, o fundo, a moldura e os presets"
+        >
+          <SlidersHorizontal />
+          Definir palco
+        </Button>
+
         {short.palco_preset && (
           <span className="font-code text-[10px] uppercase tracking-wide text-[var(--wb-accent)]">
             só deste short
@@ -148,125 +110,30 @@ export function LinhaDeAjuste({
         )}
       </Grupo>
 
-      <Grupo
-        rotulo="moldura"
-        dica="As faixas do canal em cima e embaixo — a assinatura do short"
-      >
-        <select
-          aria-label="Moldura do short"
-          value={short.moldura}
-          disabled={ocupado}
-          onChange={(e) => onMoldura(e.target.value)}
-          className="h-7 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+      <Grupo rotulo="rosto" dica="Procura quem fala neste trecho e centra a janela 9:16 nele">
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={ocupado || enquadrando}
+          onClick={onEnquadrarPeloRosto}
         >
-          <option value="palco">Palco do canal</option>
-          <option value="nenhuma">Sem moldura</option>
-        </select>
+          <ScanFace />
+          {enquadrando ? 'olhando…' : 'enquadrar pelo rosto'}
+        </Button>
       </Grupo>
 
-      {/* D-495: sem região, o arranjo não muda NADA — o short cai no recorte cru
-          e o modelo é irrelevante. Antes o seletor ficava habilitado: o operador
-          escolhia, gravava no banco, e a tela não mudava nem dizia por quê. */}
-      <Grupo
-        rotulo="arranjo"
-        dica={
-          temRegiao
-            ? (escolhido?.porque ?? 'Deduz o arranjo das regiões disponíveis')
-            : 'Escolha um preset de recortes no topo da coluna para o arranjo ter efeito'
-        }
-      >
-        <Layers size={12} className="text-[var(--wb-text-mute)]" aria-hidden />
-        {/* D-507: o que as regiões deste corte NÃO comportam sai desabilitado,
-            com o motivo no próprio rótulo. Antes tudo aparecia igual: o
-            operador escolhia tela dividida num corte só com a pessoa, o palco
-            caía no sugerido, e nada ligava uma coisa à outra. */}
-        <select
-          aria-label="Como a tela deste short é montada"
-          value={short.arranjo_palco}
-          disabled={ocupado || !arranjos.data || !temRegiao}
-          onChange={(e) => onArranjo(e.target.value)}
-          className="h-7 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] text-[var(--wb-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
-        >
-          <option value="">automático</option>
-          {arranjos.data?.arranjos.map((arranjo) => (
-            <option key={arranjo.chave} value={arranjo.chave} disabled={!arranjo.possivel}>
-              {arranjo.nome}
-              {arranjo.possivel ? '' : ` — ${arranjo.impedimento}`}
-            </option>
-          ))}
-        </select>
-        {!temRegiao && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-[var(--wb-warn-ink)]">
-            <TriangleAlert size={11} aria-hidden />
-            sem palco — escolha um preset acima
-          </span>
-        )}
-      </Grupo>
+      {/* O veredito precisa aparecer mesmo quando é "não achei": sem isso, um
+          clique sem efeito visível fica indistinguível de um botão quebrado. */}
+      {vereditoDoRosto && (
+        <p className="w-full font-code text-[10.5px] leading-relaxed text-[var(--wb-text-mute)]">
+          {vereditoDoRosto}
+        </p>
+      )}
     </div>
   );
 }
 
-/**
- * D-496: o enquadramento como valor digitável, não só as setas.
- *
- * As setas servem para tatear (empurra e olha); o campo serve para repetir um
- * valor que já se conhece — "essa live sempre fica em 62%". Um exige o outro:
- * só setas obriga a contar cliques, só campo obriga a adivinhar o número antes
- * de ver.
- *
- * Recebe e devolve FRAÇÃO (0 a 1), que é o que o backend guarda; a porcentagem
- * é só a roupa. Converter aqui evita que a tela invente uma segunda unidade.
- */
-function CampoDeFoco({
-  valor,
-  ocupado,
-  onAplicar,
-}: {
-  valor: number;
-  ocupado: boolean;
-  onAplicar: (fracao: number) => void;
-}) {
-  const [texto, setTexto] = useState('');
-  const [editando, setEditando] = useState(false);
-  const porcento = Math.round(valor * 100);
-
-  const confirmar = () => {
-    setEditando(false);
-    const numero = Number(texto.trim().replace(',', '.').replace('%', ''));
-    // Texto que não é número mantém o valor anterior. `Number('')` é 0, e um
-    // campo que zera sozinho joga o enquadramento para a borda esquerda.
-    if (!Number.isFinite(numero) || texto.trim() === '') return;
-    onAplicar(Math.min(1, Math.max(0, numero / 100)));
-  };
-
-  return (
-    <span className="inline-flex items-center gap-1">
-      <Crop size={11} className="text-[var(--wb-text-mute)]" aria-hidden />
-      <input
-        value={editando ? texto : String(porcento)}
-        disabled={ocupado}
-        aria-label="Centro do enquadramento, em porcentagem"
-        onFocus={() => {
-          setTexto(String(porcento));
-          setEditando(true);
-        }}
-        onChange={(e) => setTexto(e.target.value)}
-        onBlur={confirmar}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur();
-          if (e.key === 'Escape') {
-            setEditando(false);
-            e.currentTarget.blur();
-          }
-        }}
-        className="w-[42px] rounded-[5px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-1 py-0.5 text-center font-code text-[11px] tabular-nums outline-none focus-visible:border-[var(--wb-accent)] disabled:opacity-50"
-      />
-      <span className="font-code text-[11px] text-[var(--wb-text-mute)]">%</span>
-    </span>
-  );
-}
-
-/** Um refino, com o nome do que ele mexe à esquerda — o olho varre a coluna. */
+/** Uma linha rotulada. O rótulo à esquerda dá o eixo de leitura da coluna. */
 function Grupo({
   rotulo,
   dica,
@@ -278,7 +145,7 @@ function Grupo({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5" title={dica}>
-      <span className="w-[104px] flex-none font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+      <span className="w-[74px] shrink-0 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
         {rotulo}
       </span>
       {children}

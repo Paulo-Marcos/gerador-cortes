@@ -39,8 +39,6 @@ interface Props {
   short: ShortSugerido;
   corteId: string;
   emFoco: boolean;
-  /** D-495: o corte tem regiao de palco? Sem ela o arranjo nao muda nada. */
-  temRegiao: boolean;
   ocupado: boolean;
   aberto: boolean;
   onAlternarAjuste: () => void;
@@ -48,13 +46,12 @@ interface Props {
   onTocar: () => void;
   onStatus: (status: StatusShort) => void;
   onBorda: (campo: 'inicio_seg' | 'fim_seg') => void;
-  onFoco: (delta: number) => void;
   onEnquadrarPeloRosto: () => void;
   enquadrando: boolean;
   vereditoDoRosto: string;
-  onArranjo: (chave: string) => void;
   onPreset: (presetId: string) => void;
-  onMoldura: (moldura: string) => void;
+  /** D-542: abre o modal do palco já neste candidato. */
+  onDefinirPalco: () => void;
   onPrevia: () => void;
   onRenderizar: () => void;
 }
@@ -68,7 +65,6 @@ export function CandidatoCard({
   short,
   corteId,
   emFoco,
-  temRegiao,
   ocupado,
   aberto,
   onAlternarAjuste,
@@ -76,13 +72,11 @@ export function CandidatoCard({
   onTocar,
   onStatus,
   onBorda,
-  onFoco,
   onEnquadrarPeloRosto,
   enquadrando,
   vereditoDoRosto,
-  onArranjo,
   onPreset,
-  onMoldura,
+  onDefinirPalco,
   onPrevia,
   onRenderizar,
 }: Props) {
@@ -235,17 +229,13 @@ export function CandidatoCard({
         <LinhaDeAjuste
           short={short}
           corteId={corteId}
-          temRegiao={temRegiao}
           ocupado={ocupado}
           onBorda={onBorda}
-          onFoco={onFoco}
           onEnquadrarPeloRosto={onEnquadrarPeloRosto}
           enquadrando={enquadrando}
           vereditoDoRosto={vereditoDoRosto}
-          onArranjo={onArranjo}
           onPreset={onPreset}
-          onMoldura={onMoldura}
-          onTocar={onTocar}
+          onDefinirPalco={onDefinirPalco}
         />
       )}
 

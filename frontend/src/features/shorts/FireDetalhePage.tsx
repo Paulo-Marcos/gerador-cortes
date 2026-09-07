@@ -205,15 +205,7 @@ export default function FireDetalhePage() {
     [atualizar],
   );
 
-  // Ajusta a partir do EFETIVO, não do zero: o operador empurra o que está
-  // vendo, e o primeiro clique parte da facecam do layout.
-  const moverFoco = useCallback(
-    (short: ShortSugerido, delta: number) => {
-      const alvo = Math.min(1, Math.max(0, short.foco_efetivo + delta));
-      atualizar.mutate({ shortId: short.id, foco_x: Number(alvo.toFixed(3)) });
-    },
-    [atualizar],
-  );
+
 
   // O trecho novo já nasce selecionado e com os ajustes abertos: quem acabou de
   // criá-lo vai mexer nas bordas, e as alças agem sobre o candidato em foco.
@@ -625,7 +617,6 @@ export default function FireDetalhePage() {
               short={short}
               corteId={corteId}
               emFoco={emQuadro?.id === short.id}
-              temRegiao={temPalco}
               ocupado={ocupado}
               aberto={ajusteAberto === short.id}
               onAlternarAjuste={() =>
@@ -638,7 +629,6 @@ export default function FireDetalhePage() {
               }}
               onStatus={(status) => atualizar.mutate({ shortId: short.id, status })}
               onBorda={(campo) => moverBorda(short, campo)}
-              onFoco={(delta) => moverFoco(short, delta)}
               onEnquadrarPeloRosto={() => enquadrarPeloRosto.mutate(short.id)}
               enquadrando={enquadrarPeloRosto.isPending && enquadrarPeloRosto.variables === short.id}
               vereditoDoRosto={
@@ -646,13 +636,16 @@ export default function FireDetalhePage() {
                   ? textoDoVeredito(enquadrarPeloRosto.data)
                   : ''
               }
-              onArranjo={(chave) =>
-                atualizar.mutate({ shortId: short.id, arranjo_palco: chave })
-              }
               onPreset={(presetId) =>
                 atualizar.mutate({ shortId: short.id, palco_preset: presetId })
               }
-              onMoldura={(moldura) => atualizar.mutate({ shortId: short.id, moldura })}
+              // D-542: seleciona ANTES de abrir. O modal edita `emQuadro`, e
+              // abri-lo a partir de um card que nao esta em foco editaria outro
+              // trecho — sem erro nenhum, que e o pior jeito de errar.
+              onDefinirPalco={() => {
+                setSelecionado(short.id);
+                setDefinindoPalco(true);
+              }}
               onPrevia={() => previa.mutate(short.id)}
               onRenderizar={() => renderizar.mutate(short.id)}
             />

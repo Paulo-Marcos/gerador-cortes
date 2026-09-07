@@ -14,6 +14,7 @@ import type { PalcoShortPreset } from '@/types/presets';
 import { EditorDeRecorte } from './EditorDeRecorte';
 import { PalcoPrevia } from './PalcoPrevia';
 import { SeletorDeFundo } from './SeletorDeFundo';
+import { ControlesDeFoco } from './CampoDeFoco';
 import { useArranjosDePalco } from './useShortsDoCorte';
 import type { AtualizarShortBody, PlanoDesenhavel, Retangulo, ShortSugerido } from './shortsApi';
 
@@ -97,7 +98,7 @@ export function DefinirPalcoModal({
     });
 
   return (
-    <Modal open={open} onClose={onClose} title="Definir o palco deste short">
+    <Modal open={open} onClose={onClose} title="Definir o palco deste short" size="2xl">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="space-y-4">
           <Secao numero={1} titulo="Como a tela monta">
@@ -183,7 +184,37 @@ export function DefinirPalcoModal({
             )}
           </Secao>
 
-          <Secao numero={3} titulo="O fundo">
+          <Secao numero={3} titulo="O enquadramento">
+            {/* D-542: veio do painel do candidato, onde as setas empurravam a
+                janela 9:16 SEM previa ao lado — metade do trabalho. Aqui o
+                resultado esta na tela enquanto se empurra. */}
+            <ControlesDeFoco
+              valor={short.foco_efetivo}
+              ocupado={ocupado}
+              onAplicar={(fracao) => onAplicar({ foco_x: Number(fracao.toFixed(3)) })}
+            />
+            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+              Onde fica o centro da janela vertical, em % da largura do quadro.
+            </p>
+          </Secao>
+
+          <Secao numero={4} titulo="A moldura">
+            <select
+              aria-label="Moldura do short"
+              value={short.moldura}
+              disabled={ocupado}
+              onChange={(e) => onAplicar({ moldura: e.target.value })}
+              className="h-7 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+            >
+              <option value="palco">Palco do canal</option>
+              <option value="nenhuma">Sem moldura</option>
+            </select>
+            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+              A assinatura do canal em volta do short.
+            </p>
+          </Secao>
+
+          <Secao numero={5} titulo="O fundo">
             <SeletorDeFundo
               escolhido={short.fundo_palco ?? ''}
               ocupado={ocupado}
@@ -191,7 +222,7 @@ export function DefinirPalcoModal({
             />
           </Secao>
 
-          <Secao numero={4} titulo="Guardar como preset">
+          <Secao numero={6} titulo="Guardar como preset">
             <div className="flex flex-wrap items-center gap-1.5">
               <Input
                 value={nomeNovo}

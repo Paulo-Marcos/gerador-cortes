@@ -9,7 +9,7 @@ interface ModalProps {
   description?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
 const SIZES = {
@@ -17,6 +17,10 @@ const SIZES = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
+  // D-542: para o modal que existe para MARCAR algo sobre um quadro de vídeo.
+  // Ali a largura não é estética: abaixo de ~600px o retângulo de recorte fica
+  // menor que a alça que o arrasta, e a precisão vira sorte.
+  '2xl': 'max-w-6xl',
 } as const;
 
 export function Modal({
