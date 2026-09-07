@@ -20,7 +20,15 @@ interface Props {
   bordas: Bordas;
   duracaoSeg: number;
   ocupado: boolean;
-  onAplicar: (bordas: Bordas) => void;
+  /**
+   * D-539: `borda` diz QUAL das duas mudou.
+   *
+   * Sem isso o chamador recebe as duas e não sabe onde pôr o cursor — e pôr no
+   * lugar errado é pior que não pôr, porque manda conferir a borda que não se
+   * mexeu. A alça da régua já levava o player junto; estes botões não, e era
+   * exatamente aqui que a precisão de um quadro era decidida no escuro.
+   */
+  onAplicar: (bordas: Bordas, borda: Borda) => void;
 }
 
 export function BordasFinasPanel({ bordas, duracaoSeg, ocupado, onAplicar }: Props) {
@@ -70,7 +78,7 @@ function LinhaDaBorda({
           key={`-${passo.rotulo}`}
           titulo={`Recuar ${passo.rotulo}`}
           disabled={ocupado}
-          onClick={() => onAplicar(empurrar(bordas, borda, passo, -1, duracaoSeg))}
+          onClick={() => onAplicar(empurrar(bordas, borda, passo, -1, duracaoSeg), borda)}
         >
           <ChevronLeft size={10} aria-hidden />
           {passo.rotulo}
@@ -91,7 +99,7 @@ function LinhaDaBorda({
           key={`+${passo.rotulo}`}
           titulo={`Avançar ${passo.rotulo}`}
           disabled={ocupado}
-          onClick={() => onAplicar(empurrar(bordas, borda, passo, 1, duracaoSeg))}
+          onClick={() => onAplicar(empurrar(bordas, borda, passo, 1, duracaoSeg), borda)}
         >
           {passo.rotulo}
           <ChevronRight size={10} aria-hidden />
@@ -152,7 +160,7 @@ function CampoDeTempo({
       return;
     }
     setInvalido(false);
-    onAplicar(novas);
+    onAplicar(novas, borda);
   };
 
   return (

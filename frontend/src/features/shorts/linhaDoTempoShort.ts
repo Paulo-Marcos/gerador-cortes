@@ -15,6 +15,21 @@
 // arquivo, avisa sobre a faixa, e deixa o humano decidir.
 
 /** Faixa recomendada, espelhando `domain/shorts.FaixaShort`. Aviso, não trava. */
+/**
+ * `m:ss` — o relógio que a régua e os botões de navegação falam.
+ *
+ * Vivia copiado em dois arquivos, e a D-539 precisou de um terceiro. Duas
+ * cópias é coincidência; três é uma regra querendo sair.
+ *
+ * @example
+ * mmss(75)   // '01:15'
+ * mmss(9)    // '00:09'
+ */
+export function mmss(segundos: number): string {
+  const total = Math.max(0, Math.round(segundos));
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
 export const DURACAO_RECOMENDADA = { minSeg: 15, maxSeg: 90 } as const;
 
 /**

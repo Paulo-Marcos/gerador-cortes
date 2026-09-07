@@ -33,7 +33,9 @@ import {
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type VereditoDoRosto } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
-import { janelaNova } from './linhaDoTempoShort';
+import { janelaNova, mmss, type Borda } from './linhaDoTempoShort';
+import { NavegacaoDoPlayer } from './NavegacaoDoPlayer';
+import { useParadaNoFim } from './useParadaNoFim';
 import { BordasFinasPanel } from './BordasFinasPanel';
 import { CandidatoCard } from './CandidatoCard';
 import { CenasDoShort } from './CenasDoShort';
@@ -80,10 +82,6 @@ function textoDoVeredito(v: VereditoDoRosto): string {
   return v.aviso ? `${onde} ${v.aviso}` : onde;
 }
 
-function mmss(segundos: number): string {
-  const total = Math.max(0, Math.round(segundos));
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-}
 
 export default function FireDetalhePage() {
   const workbench = isWorkbenchEnabled();
@@ -161,29 +159,34 @@ export default function FireDetalhePage() {
     [palcoDoShort.data, atualizar.status, descartarSimulacao],
   );
 
-  const tocarTrecho = useCallback((short: ShortSugerido) => {
-    const el = video.current;
-    if (!el) return;
-    el.currentTime = short.inicio_seg;
-    void el.play();
-  }, []);
+  // D-539: assistir um trecho para NO FIM dele. O player é o bruto inteiro, e
+  // sem isso o vídeo seguia pelo assunto seguinte — o operador só percebia que
+  // passou do fim quando o tema mudava, que é tarde para julgar se o corte
+  // fecha bem.
+  const { tocarAte, irPara, aoBuscar } = useParadaNoFim(video);
 
-  const irPara = useCallback((segundos: number) => {
-    const el = video.current;
-    if (el) el.currentTime = segundos;
-  }, []);
+  const tocarTrecho = useCallback(
+    (short: ShortSugerido) => tocarAte(short.inicio_seg, short.fim_seg),
+    [tocarAte],
+  );
 
   // Timeline e painel fino gravam pelo MESMO caminho: duas rotas de escrita para
   // o mesmo campo divergiriam no arredondamento.
   const gravarBordas = useCallback(
-    (shortId: string, bordas: { inicio?: number; fim?: number }) => {
+    (shortId: string, bordas: { inicio?: number; fim?: number }, focar?: Borda) => {
       atualizar.mutate({
         shortId,
         ...(bordas.inicio !== undefined && { inicio_seg: Number(bordas.inicio.toFixed(2)) }),
         ...(bordas.fim !== undefined && { fim_seg: Number(bordas.fim.toFixed(2)) }),
       });
+      // D-539: o cursor vai para a borda que acabou de mudar. A alça da régua
+      // já fazia isso; o ajuste fino não, e é justamente ele que move de um
+      // quadro por vez — precisão que só serve se der para CONFERIR.
+      if (!focar) return;
+      const alvo = focar === 'inicio' ? bordas.inicio : bordas.fim;
+      if (alvo !== undefined) irPara(alvo);
     },
-    [atualizar],
+    [atualizar, irPara],
   );
 
   // O tempo corrente do player é a fonte da borda nova: o operador acabou de ver
@@ -404,6 +407,10 @@ export default function FireDetalhePage() {
                   setDuracaoVideo(e.currentTarget.duration || 0);
                 }}
                 onTimeUpdate={(e) => setTempoAtual(e.currentTarget.currentTime)}
+                // Mexer no cursor com a mão cancela a parada armada pelo
+                // "Assistir" — senão um `pause` dispararia minutos depois, num
+                // ponto que não tem nada a ver com o trecho que se mandou tocar.
+                onSeeking={aoBuscar}
                 className="absolute inset-0 h-full w-full"
               />
               {emQuadro && !recortando && (
@@ -460,6 +467,11 @@ export default function FireDetalhePage() {
             )}
           </div>
 
+          {/* D-539: os endereços fixos do player. Ficam colados nele, e não no
+              painel da régua: são gesto de ASSISTIR, e quem está olhando o
+              vídeo não deveria ter que descer os olhos para voltar ao começo. */}
+          <NavegacaoDoPlayer trecho={emQuadro ?? null} onIrPara={irPara} />
+
           {/* O painel abaixo ROLA em vez de ser cortado (D-499). Ele cresce com
               o número de cenas e ganhou o recorte e o fundo; com `flex-none` e o
               `overflow-hidden` do grid, as últimas linhas simplesmente sumiam —
@@ -483,7 +495,7 @@ export default function FireDetalhePage() {
                     bordas={{ inicio: emQuadro.inicio_seg, fim: emQuadro.fim_seg }}
                     duracaoSeg={duracaoRegua}
                     ocupado={atualizar.isPending}
-                    onAplicar={(bordas) => gravarBordas(emQuadro.id, bordas)}
+                    onAplicar={(bordas, borda) => gravarBordas(emQuadro.id, bordas, borda)}
                   />
                   {emQuadro && (
                     <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
