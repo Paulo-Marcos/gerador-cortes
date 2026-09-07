@@ -60,6 +60,7 @@ import {
   useRenderizarPrevia,
   useRenderizarShort,
   useShortsDoCorte,
+  useOndaDoBruto,
   useTranscricaoDoCorte,
 } from './useShortsDoCorte';
 
@@ -127,6 +128,9 @@ export default function FireDetalhePage() {
   const sugerirCenas = useSugerirCenas(corteId);
   const enquadrarPeloRosto = useEnquadrarPeloRosto(corteId);
   const transcricao = useTranscricaoDoCorte(corteId);
+  // D-541: a onda do bruto por tras da regua. Falha em silencio — sem bruto
+  // legivel a regua fica lisa, que e exatamente como ela era antes disto.
+  const onda = useOndaDoBruto(corteId);
   const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
@@ -482,6 +486,7 @@ export default function FireDetalhePage() {
           {duracaoRegua > 0 && shorts.length > 0 && (
             <div className="min-h-0 flex-1 overflow-y-auto rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
               <LinhaDoTempo
+                picos={onda.data?.peaks}
                 duracaoSeg={duracaoRegua}
                 shorts={shorts}
                 emFoco={emQuadro}

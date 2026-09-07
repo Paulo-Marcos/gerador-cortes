@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { cn } from '@/lib/utils';
+import { OndaDoBruto } from './OndaDoBruto';
 import {
   arrastar,
   diferenca,
@@ -26,6 +27,8 @@ import type { ShortSugerido } from './shortsApi';
 // exatamente começam e terminam.
 
 interface Props {
+  /** D-541: os picos do bruto. Vazio = régua lisa, como era antes. */
+  picos?: readonly number[];
   /** Duração do bruto — a régua inteira. */
   duracaoSeg: number;
   /** Todos os candidatos, para o operador ver a distribuição. */
@@ -44,6 +47,7 @@ export function LinhaDoTempo({
   shorts,
   emFoco,
   tempoAtual,
+  picos = [],
   onSeek,
   onBordas,
 }: Props) {
@@ -125,8 +129,13 @@ export function LinhaDoTempo({
         ref={faixa}
         role="presentation"
         onPointerDown={(e) => onSeek(segundoDoEvento(e.clientX))}
-        className="relative h-11 w-full cursor-pointer rounded-[8px] bg-[var(--wb-bg-inset)]"
+        className="relative h-20 w-full cursor-pointer overflow-hidden rounded-[8px] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]"
       >
+        {/* A onda vem PRIMEIRO na ordem de pintura: ela é o fundo sobre o qual
+            os trechos são marcados, do mesmo jeito que na tela do bruto. A
+            altura subiu de 44 para 80px porque um envelope de 44px é um
+            borrão — e o ponto de ter a onda é enxergar a pausa entre frases. */}
+        <OndaDoBruto picos={picos} />
         {/* Os outros candidatos, apagados: mostram a distribuição sem competir
             com quem está sendo curado. */}
         {shorts.map((short) => {
@@ -136,8 +145,11 @@ export function LinhaDoTempo({
             <div
               key={short.id}
               title={`${short.titulo} · ${mmss(short.inicio_seg)}`}
+              // D-541: região TRANSLÚCIDA de altura cheia, como os trechos a
+              // remover do editor. O bloco opaco de antes tapava a onda
+              // justamente onde ela mais importa — dentro do trecho.
               className={cn(
-                'absolute inset-y-2 rounded-[3px] bg-[var(--wb-border)]',
+                'absolute inset-y-0 border-x border-[var(--wb-border)] bg-[var(--wb-border)]/30',
                 short.status === 'rejeitado' && 'opacity-40',
               )}
               style={{

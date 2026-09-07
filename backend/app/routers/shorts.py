@@ -216,6 +216,27 @@ async def escolher_preset_do_palco(corte_id: str, body: EscolherPresetRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@router.get("/corte/{corte_id}/waveform-peaks")
+async def waveform_do_bruto(corte_id: str, refresh: bool = False, points: int | None = None):
+    """Os picos de audio do BRUTO, para a regua da curadoria (D-541).
+
+    Nao reusa `/cortes/{id}/waveform-peaks`: aquele desenha o PROXY do corte —
+    uma janela da live, com respiro antes e depois. O bruto e outro arquivo, mais
+    curto, e os instantes internos nao batem, porque tudo o que foi removido
+    desloca o que vem depois. A onda errada e pior que onda nenhuma: ela parece
+    certa e manda cortar no silencio que esta noutro lugar.
+    """
+    from app.services import waveform_bruto
+
+    try:
+        return await waveform_bruto.picos_do_bruto(corte_id, force=refresh, pontos=points)
+    except waveform_bruto.OndaIlegivel as exc:
+        # 422 e nao 500: o arquivo e que esta quebrado, e a mensagem diz qual.
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.get("/corte/{corte_id}/transcricao")
 async def transcricao_do_bruto(corte_id: str):
     """As palavras com tempo do bruto — a matéria-prima da prévia de legenda.

@@ -136,6 +136,25 @@ export function useTranscricaoDoCorte(corteId: string) {
   });
 }
 
+/**
+ * D-541: a onda do bruto. Cache eterno — o arquivo não muda enquanto está lá, e
+ * quando é regerado o backend troca a chave do cache dele sozinho (o hash
+ * inclui mtime e tamanho), então um refetch traria o mesmo JSON.
+ *
+ * `retry: false` porque as duas falhas possíveis são definitivas até o operador
+ * agir: não há bruto (404) ou o arquivo está quebrado (422). Insistir três
+ * vezes só atrasaria a régua lisa que a tela já sabe mostrar.
+ */
+export function useOndaDoBruto(corteId: string) {
+  return useQuery({
+    queryKey: ['shorts', 'onda-bruto', corteId],
+    queryFn: () => shortsApi.picosDoBruto(corteId),
+    enabled: Boolean(corteId),
+    staleTime: Infinity,
+    retry: false,
+  });
+}
+
 // D-507: o catalogo passou a depender do CORTE, e nao so do sistema: o que ele
 // devolve inclui o que as regioes daquele corte permitem montar. Cache eterno
 // por corte — as regioes so mudam quando o operador troca o preset, e isso ja

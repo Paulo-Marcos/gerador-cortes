@@ -318,6 +318,20 @@ export const shortsApi = {
       body: JSON.stringify({ preset_id: presetId }),
     }),
 
+  /**
+   * D-541: os picos de áudio do BRUTO deste corte.
+   *
+   * NÃO é `/cortes/{id}/waveform-peaks`: aquele desenha o proxy da live, com
+   * respiro antes e depois e os instantes deslocados por tudo o que foi
+   * removido. A onda errada parece certa e manda cortar no lugar errado.
+   */
+  picosDoBruto: (corteId: string) =>
+    request<{
+      duration_sec: number;
+      points: number;
+      peaks: number[];
+    }>(`/shorts/corte/${corteId}/waveform-peaks`),
+
   transcricaoDoCorte: (corteId: string) =>
     request<TranscricaoDoBruto>(`/shorts/corte/${corteId}/transcricao`),
 
