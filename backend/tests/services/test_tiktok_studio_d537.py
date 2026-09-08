@@ -14,7 +14,14 @@ falhar dizendo QUAL passo quebrou, em vez de morrer com um timeout anonimo.
 from pathlib import Path
 
 import pytest
-from app.domain.tiktok_studio import ORIENTACOES, PASSOS, ROTULOS, Passo, RoteiroInterrompido
+from app.domain.tiktok_studio import (
+    ORIENTACOES,
+    PASSOS,
+    ROTULOS,
+    Passo,
+    RoteiroInterrompido,
+    publicou,
+)
 from app.services import tiktok_studio
 
 
@@ -534,6 +541,36 @@ async def test_video_sumido_recusa_antes_de_abrir_o_navegador(tmp_path):
         )
 
     assert erro.value.passo is Passo.ARQUIVO
+
+
+class TestPublicou:
+    """D-546: o sinal que marca um corte como publicado no TikTok.
+
+    A marca LIBERA a limpeza automatica do `upload_ready/video.mp4` (D-512):
+    um falso positivo apaga o arquivo, e a volta e render novo. Errar para
+    menos custa um clique no "publiquei"; errar para mais custa o material.
+    Todo teste aqui existe para manter essa assimetria.
+    """
+
+    def test_sair_da_pagina_de_upload_e_o_sinal(self):
+        assert publicou("https://www.tiktok.com/tiktokstudio/content") is True
+
+    def test_continuar_no_upload_nao_e(self):
+        # Descartar reseta a propria pagina de upload: a aba fica onde estava.
+        # E essa assimetria que separa publicar de descartar sem ambiguidade.
+        assert publicou("https://www.tiktok.com/tiktokstudio/upload?from=upload") is False
+
+    def test_cair_no_login_nao_e_publicacao(self):
+        # A sessao pode expirar no meio da revisao. Marcar publicado ali seria
+        # apagar o MP4 de um video que nunca subiu.
+        assert publicou("https://www.tiktok.com/login?redirect_url=x") is False
+
+    def test_sair_do_tiktok_nao_e_publicacao(self):
+        assert publicou("https://www.google.com") is False
+
+    def test_url_vazia_nao_e_publicacao(self):
+        # Aba fechada, pagina em branco: "nao sei" tem de dar em nao marcar.
+        assert publicou("") is False
 
 
 def test_a_porta_de_depuracao_nao_e_a_do_dev(tmp_path):

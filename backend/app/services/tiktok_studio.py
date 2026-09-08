@@ -83,6 +83,13 @@ SEGUNDOS_PARA_CAPA = 20.0
 SEGUNDOS_PARA_TUTORIAL = 8.0
 SEGUNDOS_PARA_PROCESSAR = 900.0
 
+# Quanto tempo ficamos de olho na aba esperando o operador publicar, e de quanto
+# em quanto. Meia hora cobre revisar com calma e ir buscar um cafe; passar disso
+# seria manter uma conexao CDP viva por nada. Tres segundos de intervalo porque
+# a unica coisa que se le e a URL — custa nada e nao ha pressa de milissegundo.
+SEGUNDOS_DE_VIGILIA = 1800.0
+INTERVALO_DA_VIGILIA = 3.0
+
 
 # Os seletores, num lugar só, MEDIDOS na página real em 06/09/2026 e não
 # adivinhados. Quando o TikTok redesenhar o Studio, o conserto mora aqui — e a
@@ -679,6 +686,56 @@ def _assistir(video: Path, legenda: str, capa: Path | None) -> dict:
         # `stop` desconecta; não fecha o Chrome, que é um processo à parte.
         # É exatamente por isso que a aba sobrevive para o operador revisar.
         pw.stop()
+
+
+def _vigiar_publicacao(segundos: float) -> bool:
+    """Fica de olho na aba até o operador publicar. Síncrono, para rodar em thread.
+
+    Devolve `True` só quando VIU a publicação acontecer. Aba fechada, tempo
+    esgotado ou qualquer tropeço devolvem `False` — e `False` aqui significa
+    "não sei", não "não publicou". A tela mantém o botão "publiquei" justamente
+    para esse caso.
+    """
+    from app.domain.tiktok_studio import publicou
+
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return False
+
+    pw = sync_playwright().start()
+    try:
+        navegador = pw.chromium.connect_over_cdp(f"http://127.0.0.1:{PORTA_DE_DEPURACAO}")
+        contexto = navegador.contexts[0] if navegador.contexts else None
+        if contexto is None:
+            return False
+
+        # A aba que ESTE roteiro deixou pronta é a que está na página de upload.
+        alvo = next((p for p in contexto.pages if "tiktokstudio/upload" in p.url), None)
+        if alvo is None:
+            return False
+
+        limite = time.monotonic() + segundos
+        while time.monotonic() < limite:
+            if alvo.is_closed():
+                logger.info("[TikTokStudio] a aba foi fechada; nao da para saber se publicou")
+                return False
+            if publicou(alvo.url):
+                logger.info("[TikTokStudio] publicacao detectada em %s", alvo.url[:60])
+                return True
+            time.sleep(INTERVALO_DA_VIGILIA)
+        logger.info("[TikTokStudio] %ss sem publicar; encerrando a vigilia", int(segundos))
+        return False
+    except Exception as exc:  # noqa: BLE001 — vigilia nunca derruba nada
+        logger.info("[TikTokStudio] vigilia interrompida: %s", exc)
+        return False
+    finally:
+        pw.stop()
+
+
+async def aguardar_publicacao(*, segundos: float = SEGUNDOS_DE_VIGILIA) -> bool:
+    """Espera o operador clicar em Publicar, sem prender a requisicao HTTP."""
+    return await asyncio.to_thread(_vigiar_publicacao, segundos)
 
 
 async def subir_assistido(*, video: Path, legenda: str, capa: Path | None = None) -> dict:

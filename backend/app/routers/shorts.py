@@ -42,6 +42,7 @@ relação com isto), no mesmo padrão de `avaliacao_bruto`.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -767,16 +768,18 @@ async def assistido_tiktok_horizontal(corte_id: str):
     para com o *Publicar* aceso sem tocar nele: até ali tudo é reversível com um
     F5, e depois dali uma legenda errada é um post público no canal.
     """
-    return await _assistir_no_tiktok(await publicar_corte_no_tiktok(corte_id))
+    return await _assistir_no_tiktok(await publicar_corte_no_tiktok(corte_id), corte_id=corte_id)
 
 
 @router.post("/{short_id}/publicar/tiktok/assistido")
 async def assistido_tiktok_do_short(short_id: str):
     """O mesmo robô, para o short vertical."""
+    # Sem `corte_id`: a marca de publicado e do CORTE horizontal, e um short
+    # vertical publicado nao diz nada sobre o MP4 do corte.
     return await _assistir_no_tiktok(await publicar(short_id, "tiktok"))
 
 
-async def _assistir_no_tiktok(pacote: dict) -> dict:
+async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "") -> dict:
     """Monta a legenda do pacote e entrega o roteiro ao navegador.
 
     Recebe o pacote JÁ montado em vez de montá-lo: assim o corte horizontal e o
@@ -805,7 +808,37 @@ async def _assistir_no_tiktok(pacote: dict) -> dict:
             detail={"mensagem": str(exc), "passo": exc.passo.value},
         ) from exc
 
-    return {**pacote, **relatorio, "legenda": legenda}
+    # D-546: a partir daqui o app FICA DE OLHO na aba. Quando o operador
+    # publicar, o corte se marca sozinho — ele nao precisa voltar aqui para
+    # clicar em "publiquei".
+    #
+    # Fire-and-forget porque a espera e de minutos e a requisicao ja tem o que
+    # devolver: a aba esta pronta. Prender o HTTP ate ele decidir publicar
+    # seguraria uma conexao por meia hora para nao entregar nada de novo.
+    if corte_id:
+        asyncio.create_task(_marcar_quando_publicar(corte_id))
+
+    return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}
+
+
+async def _marcar_quando_publicar(corte_id: str) -> None:
+    """Espera a publicacao e so entao marca o corte. Nunca marca no escuro.
+
+    `aguardar_publicacao` devolve `False` tanto para "nao publicou" quanto para
+    "nao consegui saber", e as duas dao no mesmo aqui: nao marcar. A marca
+    LIBERA a limpeza automatica do `upload_ready/video.mp4` (D-512), entao um
+    falso positivo apaga o arquivo e a volta e render novo. Errar para menos
+    custa um clique no "publiquei".
+    """
+    from app.services import tiktok_studio
+
+    try:
+        if not await tiktok_studio.aguardar_publicacao():
+            return
+        await confirmar_tiktok_horizontal(corte_id)
+        logger.info("[TikTokStudio] corte %s marcado como publicado", corte_id[:8])
+    except Exception as exc:  # noqa: BLE001 — tarefa de fundo nao derruba nada
+        logger.warning("[TikTokStudio] nao consegui marcar %s: %s", corte_id[:8], exc)
 
 
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal")

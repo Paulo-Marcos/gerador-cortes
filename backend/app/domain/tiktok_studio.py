@@ -143,6 +143,37 @@ def descricao_do_progresso(feitos: list[Passo]) -> str:
     return f"{', '.join(rotulos[:-1])} e {rotulos[-1]}"
 
 
+def publicou(url: str) -> bool:
+    """A aba saiu da página de upload — o único sinal forte de publicação.
+
+    Ele existe porque a alternativa é pior de um jeito caro. Marcar um corte
+    como publicado no TikTok LIBERA a limpeza automática do
+    `upload_ready/video.mp4` (D-512): um falso positivo apaga o arquivo, e a
+    volta é render novo. Errar para menos custa um clique no "publiquei";
+    errar para mais custa o material.
+
+    Por isso não olhamos toasts nem textos de sucesso, que aparecem em várias
+    situações e mudam de redação. Olhamos a NAVEGAÇÃO: ao publicar, o TikTok
+    leva a aba para a lista de publicações. Descartar, não — ele reseta a
+    própria página de upload, e a aba continua onde estava. É essa assimetria
+    que separa os dois eventos sem ambiguidade.
+
+    >>> publicou("https://www.tiktok.com/tiktokstudio/content")
+    True
+    >>> publicou("https://www.tiktok.com/tiktokstudio/upload?from=upload")
+    False
+    >>> publicou("https://www.tiktok.com/login")
+    False
+    >>> publicou("")
+    False
+    """
+    if not url or "tiktok.com" not in url:
+        return False
+    if pede_login(url):
+        return False
+    return "/tiktokstudio" in url and "/upload" not in url
+
+
 def pede_login(url: str) -> bool:
     """A URL indica que o TikTok jogou a sessão para a tela de login.
 

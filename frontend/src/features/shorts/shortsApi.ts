@@ -424,6 +424,8 @@ export const shortsApi = {
       chrome_aberto_agora: boolean;
       legenda: string;
       pasta: string;
+      /** D-546: o backend ficou de olho na aba esperando o Publicar. */
+      vigiando: boolean;
     }>(`/shorts/corte/${corteId}/publicar/tiktok-horizontal/assistido`, {
       method: 'POST',
     }),

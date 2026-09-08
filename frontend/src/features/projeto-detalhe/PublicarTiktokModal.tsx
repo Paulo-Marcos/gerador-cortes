@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { exportStatusKey } from '@/hooks/useProjetoDetalhe';
 import { Bot, Check, ExternalLink, ImageOff, Loader2, Package, Send, Youtube } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -183,6 +185,22 @@ function LinhaDoCorte({
     onSuccess: () => onPreparado(),
   });
 
+  // D-546: depois que a aba fica pronta, o backend continua de olho nela. Aqui
+  // só perguntamos ao servidor de tempos em tempos se ele já viu a publicação.
+  //
+  // Perguntar é mais simples que ser avisado, e o custo é uma requisição a cada
+  // cinco segundos enquanto UMA linha espera. Um canal de tempo real para isso
+  // seria infra nova para transportar um booleano que muda uma vez.
+  const esperandoPublicar = assistido.isSuccess && assistido.data.vigiando && !publicado;
+  const cliente = useQueryClient();
+  useEffect(() => {
+    if (!esperandoPublicar) return;
+    const relogio = setInterval(() => {
+      void cliente.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
+    }, 5000);
+    return () => clearInterval(relogio);
+  }, [esperandoPublicar, cliente, projetoId]);
+
   const abrir = useMutation({
     mutationFn: () => shortsApi.stagingTiktokHorizontal(corte.corte_id),
     onSuccess: async (dados) => {
@@ -292,6 +310,11 @@ function LinhaDoCorte({
             {abrir.isPending ? <Loader2 className="animate-spin" /> : <Send />}
             {preparado ? 'abrir' : 'Só o pacote'}
           </Button>
+          {/* D-546: continua aqui como retaguarda. A vigilia devolve "nao sei"
+              tanto para "nao publicou" quanto para "nao consegui ver" — aba
+              fechada, meia hora de espera — e nesses casos a marca precisa de
+              alguem que SAIBA. Errar para menos custa este clique; errar para
+              mais apaga o MP4, porque a marca libera a limpeza (D-512). */}
           <Button
             size="sm"
             variant="secondary"
@@ -313,8 +336,18 @@ function LinhaDoCorte({
       )}
       {assistido.isSuccess && (
         <span className="inline-flex w-full flex-wrap items-center gap-1 text-[11px] text-[var(--wb-text-mute)]">
-          <Check size={11} className="text-[var(--wb-ok-ink)]" aria-hidden />
-          Pronto para conferir: {assistido.data.resumo}. Revise e clique em Publicar na aba.
+          {esperandoPublicar ? (
+            <>
+              <Loader2 size={11} className="animate-spin" aria-hidden />
+              Pronto na aba. Revise e clique em <strong>Publicar</strong> — daqui eu vejo e marco
+              sozinho.
+            </>
+          ) : (
+            <>
+              <Check size={11} className="text-[var(--wb-ok-ink)]" aria-hidden />
+              Pronto para conferir: {assistido.data.resumo}.
+            </>
+          )}
           {assistido.data.avisos.map((aviso) => (
             <span key={aviso} className="text-[var(--wb-warn-ink)]">
               {aviso}
