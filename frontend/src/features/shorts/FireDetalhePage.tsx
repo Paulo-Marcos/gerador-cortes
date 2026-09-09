@@ -42,6 +42,7 @@ import { CenasDoShort } from './CenasDoShort';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
+import { ReguaDeOnda } from './ReguaDeOnda';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PalcoDoCorte } from './PalcoDoCorte';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
@@ -481,15 +482,32 @@ export default function FireDetalhePage() {
                   desenha os blocos coloridos. Ela ja tem onda e zoom, mas os
                   trechos nao aparecem — e perder a cor de cada trecho custa
                   mais do que ganhar o zoom. O componente fica no repo. */}
-              <LinhaDoTempo
-                picos={onda.data?.peaks}
-                duracaoSeg={duracaoRegua}
-                shorts={shorts}
-                emFoco={emQuadro}
-                tempoAtual={tempoAtual}
-                onSeek={irPara}
-                onBordas={gravarBordas}
-              />
+              {/* D-551: a regua e o mesmo instrumento do editor de bruto —
+                  onda, zoom, scroll e um bloco colorido por trecho, com alca
+                  no que esta em foco. Sem picos (bruto ausente ou ilegivel)
+                  cai na regua lisa, que ainda serve para ver a distribuicao. */}
+              {onda.data?.peaks?.length ? (
+                <ReguaDeOnda
+                  corteId={corteId}
+                  duracaoSeg={duracaoRegua}
+                  picos={onda.data.peaks}
+                  shorts={shorts}
+                  emFoco={emQuadro}
+                  tempoAtual={tempoAtual}
+                  onSeek={irPara}
+                  onBordas={gravarBordas}
+                  onSelecionar={setSelecionado}
+                />
+              ) : (
+                <LinhaDoTempo
+                  duracaoSeg={duracaoRegua}
+                  shorts={shorts}
+                  emFoco={emQuadro}
+                  tempoAtual={tempoAtual}
+                  onSeek={irPara}
+                  onBordas={gravarBordas}
+                />
+              )}
               {emQuadro && (
                 <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
                   <BordasFinasPanel

@@ -38,6 +38,15 @@ import { BORDA_DO_REJEITADO, COR_DO_REJEITADO, bordaDoShort, corDoShort } from '
 // dão 21.900px de onda para ~740px de painel, e o operador via os primeiros
 // quinze segundos achando que via tudo. Pior: as regiões são virtualizadas, e
 // nenhuma delas caía na janela visível — a régua ficava sem bloco nenhum.
+// De quanto em quanto perguntamos se a onda já pode receber os blocos.
+//
+// `setTimeout` e não `requestAnimationFrame`, e a diferença não é estilo: rAF
+// NÃO DISPARA em aba que o navegador não está pintando. A régua montada numa
+// aba de fundo — ou numa janela minimizada — nunca desenharia bloco nenhum, e
+// o sintoma seria exatamente o que se viu: as regiões existindo no plugin e
+// nenhuma no DOM, sem erro em lugar nenhum.
+const INTERVALO_DA_ESPERA = 60;
+
 const ZOOM_MINIMO = 1;
 const ZOOM_MAXIMO = 12;
 const PASSO_DO_ZOOM = 1;
@@ -168,7 +177,7 @@ export function ReguaDeOnda({
     // porquê custou caro e não mudaria o que a régua precisa: perguntar pelas
     // duas condições é mais curto que descobrir por que o mensageiro sumiu, e
     // não depende de um detalhe interno da biblioteca continuar valendo.
-    let quadro = 0;
+    let relogio: ReturnType<typeof setTimeout> | undefined;
     const esperarParaDesenhar = () => {
       if (cancelado) return;
       const duracao = ws.getDuration();
@@ -188,9 +197,9 @@ export function ReguaDeOnda({
         setProntidao((n) => n + 1);
         return;
       }
-      quadro = requestAnimationFrame(esperarParaDesenhar);
+      relogio = setTimeout(esperarParaDesenhar, INTERVALO_DA_ESPERA);
     };
-    quadro = requestAnimationFrame(esperarParaDesenhar);
+    esperarParaDesenhar();
 
     plugin.on('region-clicked', (regiao, evento) => {
       evento.stopPropagation();
@@ -225,7 +234,7 @@ export function ReguaDeOnda({
 
     return () => {
       cancelado = true;
-      cancelAnimationFrame(quadro);
+      clearTimeout(relogio);
       pronta.current = false;
       ws.destroy();
       onda.current = null;
