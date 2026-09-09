@@ -42,6 +42,7 @@ import { CenasDoShort } from './CenasDoShort';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
+import { ReguaDeOnda } from './ReguaDeOnda';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PalcoDoCorte } from './PalcoDoCorte';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
@@ -477,15 +478,32 @@ export default function FireDetalhePage() {
               espremia o player para uma tira, e é nele que se decide o corte. */}
           {duracaoRegua > 0 && shorts.length > 0 && (
             <div className="min-h-0 flex-1 overflow-y-auto rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
-              <LinhaDoTempo
-                picos={onda.data?.peaks}
-                duracaoSeg={duracaoRegua}
-                shorts={shorts}
-                emFoco={emQuadro}
-                tempoAtual={tempoAtual}
-                onSeek={irPara}
-                onBordas={gravarBordas}
-              />
+              {/* D-548: com a onda carregada, a regua e o mesmo instrumento do
+                  editor de bruto — zoom, scroll e alcas sobre a forma de onda.
+                  Sem picos (bruto ausente ou ilegivel) cai na regua lisa, que
+                  continua servindo para ver a distribuicao dos trechos. */}
+              {onda.data?.peaks?.length ? (
+                <ReguaDeOnda
+                  corteId={corteId}
+                  duracaoSeg={duracaoRegua}
+                  picos={onda.data.peaks}
+                  shorts={shorts}
+                  emFoco={emQuadro}
+                  tempoAtual={tempoAtual}
+                  onSeek={irPara}
+                  onBordas={gravarBordas}
+                  onSelecionar={setSelecionado}
+                />
+              ) : (
+                <LinhaDoTempo
+                  duracaoSeg={duracaoRegua}
+                  shorts={shorts}
+                  emFoco={emQuadro}
+                  tempoAtual={tempoAtual}
+                  onSeek={irPara}
+                  onBordas={gravarBordas}
+                />
+              )}
               {emQuadro && (
                 <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
                   <BordasFinasPanel
