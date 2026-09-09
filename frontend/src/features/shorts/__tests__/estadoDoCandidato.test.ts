@@ -141,3 +141,26 @@ describe('nota', () => {
     expect(notaVisivel(short({ score: 9 }))).toBe('9.0');
   });
 });
+
+describe('status que a tela nao conhece', () => {
+  it('nao derruba a pagina', () => {
+    // D-548: sem o ramo default o `switch` devolve `undefined`, e quem chama
+    // faz `plano.secundarias` — tela branca com stack trace, para o app
+    // inteiro, por causa de UMA linha do banco. Aconteceu com um registro
+    // semeado a mao, e o mesmo vale para uma linha antiga que sobreviveu a uma
+    // migracao de enum.
+    const plano = planoDeAcoes(short({ status: 'inventado' as StatusShort }), false);
+
+    expect(plano).toEqual({ principal: null, secundarias: [], noMenu: [] });
+  });
+
+  it('nao oferece acao nenhuma', () => {
+    // Nenhuma acao e a resposta segura: o card ainda mostra o trecho, e o
+    // operador ve que aquele esta num estado que o app nao sabe tratar.
+    const plano = planoDeAcoes(short({ status: '' as StatusShort }), false);
+
+    expect(plano.principal).toBeNull();
+    expect(plano.secundarias).toHaveLength(0);
+    expect(plano.noMenu).toHaveLength(0);
+  });
+});

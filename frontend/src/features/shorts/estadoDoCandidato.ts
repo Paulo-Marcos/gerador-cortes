@@ -83,6 +83,19 @@ export function planoDeAcoes(short: ShortSugerido, renderizando: boolean): Plano
     case 'rejeitado':
       // Um único caminho de volta. Nada mais faz sentido aqui.
       return { principal: null, secundarias: ['voltar'], noMenu: [] };
+
+    default:
+      // D-548: status que a tela não conhece não pode derrubá-la.
+      //
+      // Sem este ramo o `switch` devolve `undefined`, e quem chama faz
+      // `plano.secundarias` — tela branca com stack trace, para o app inteiro,
+      // por causa de UMA linha do banco. Aconteceu com um registro semeado à
+      // mão, e o mesmo vale para uma linha antiga que sobreviveu a uma
+      // migração de enum.
+      //
+      // Nenhuma ação é a resposta segura: o card ainda mostra o trecho, e o
+      // operador vê que aquele ali está num estado que o app não sabe tratar.
+      return { principal: null, secundarias: [], noMenu: [] };
   }
 }
 
