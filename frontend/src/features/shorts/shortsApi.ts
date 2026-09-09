@@ -191,6 +191,8 @@ export interface PlanoDesenhavel {
   modelo: string | null;
   canvas: { largura: number; altura: number };
   fundo: string;
+  /** D-549: a TEXTURA do palco — o mesmo id que o render manda para o PNG. */
+  fundo_editorial: string;
   recortes: RecorteDesenhavel[];
   /** Slots RESOLVIDOS (modelo + ajuste) — o que o editor arrasta. */
   slots: Record<string, Retangulo>;

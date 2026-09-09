@@ -35,6 +35,11 @@ from app.domain.fundo_short import fundos_disponiveis
 from app.domain.fundo_short import resolver as resolver_fundo
 from app.domain.moldura_short import COR_PADRAO, faixas
 from app.domain.palco_short import CANVAS, montar_plano, regioes_do_layout
+
+# A textura do palco vertical: a MESMA que o render usa para rasterizar o PNG
+# (`render_short._palco_em_png`). Duas fontes para este id fariam a previa e o
+# arquivo divergirem sem nada quebrar.
+from app.domain.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL
 from app.models import Corte, LayoutPreset, Short
 from sqlalchemy import select
 
@@ -76,6 +81,11 @@ def _sem_palco(moldura: str, fundo: str) -> dict:
         "ajustes": {},
         "moldura": moldura,
         "fundo": fundo,
+        # D-549: a TEXTURA do palco, que ate aqui so o PNG do render conhecia.
+        # A previa pintava `fundo` (uma cor chapada da paleta) e por isso
+        # mostrava uma moldura que o arquivo nao teria. Mandando o mesmo id que
+        # o PNG usa, a tela passa a desenhar o que vai sair.
+        "fundo_editorial": FUNDO_EDITORIAL,
     }
 
 
@@ -242,6 +252,11 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         "ajustes": ajustes,
         "moldura": moldura,
         "fundo": fundo,
+        # D-549: a TEXTURA do palco, que ate aqui so o PNG do render conhecia.
+        # A previa pintava `fundo` (uma cor chapada da paleta) e por isso
+        # mostrava uma moldura que o arquivo nao teria. Mandando o mesmo id que
+        # o PNG usa, a tela passa a desenhar o que vai sair.
+        "fundo_editorial": FUNDO_EDITORIAL,
     }
 
 
@@ -264,6 +279,11 @@ async def plano_desenhavel(short_id: str, ajustes_hipoteticos: dict | None = Non
         "modelo": resolvido["modelo"],
         "canvas": {"largura": CANVAS.largura, "altura": CANVAS.altura},
         "fundo": resolvido["fundo"],
+        # D-549: a TEXTURA do palco. A previa pintava so `fundo` — uma cor
+        # chapada da paleta — e por isso mostrava uma moldura que o arquivo nao
+        # teria: o render sobrepoe um PNG com a textura editorial do canal.
+        # Mandando o mesmo id que o PNG usa, as duas telas passam a concordar.
+        "fundo_editorial": resolvido["fundo_editorial"],
         # A regiao vai JUNTO do desenho: sem ela a tela teria de casar esta
         # lista com `slots` pela posicao, e um acoplamento implicito desses
         # quebra em silencio no dia em que a ordem mudar.

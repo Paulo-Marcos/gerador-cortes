@@ -1,26 +1,41 @@
 import { useEffect, useRef, type RefObject } from 'react';
+import { YoutubeBackground } from '@/features/editor/fase2/youtubeBackgrounds';
+import type { YoutubeBackgroundId } from '@/features/editor/fase2/youtubeLayout';
+import { CardChrome, StageChrome, chromeClipPath } from '@/features/editor/fase2/youtubeChrome';
 import type { PlanoDesenhavel } from './shortsApi';
 
 // E-036/D-489: o palco desenhado ao vivo, como o arquivo vai sair.
 //
-// Até aqui a prévia mostrava o recorte 9:16 do quadro cru com a legenda por
-// cima — ou seja, mostrava o que o short DEIXOU de ser quando o palco entrou.
+// ## D-549: a prévia mostrava uma moldura que o arquivo não teria
 //
-// ## Por que canvas, e não um Remotion Player
+// Ela pintava as faixas do canal como retângulos de COR CHAPADA e o fundo como
+// uma cor da paleta. O arquivo nunca teve isso: o render sobrepõe um PNG com a
+// textura editorial do canal, chrome e molduras (D-508). Duas telas do mesmo
+// short discordando — e a que o operador julga é esta.
 //
-// O palco é composto por FFMPEG, não por Remotion. Montar uma composição
-// Remotion equivalente criaria uma SEGUNDA implementação da geometria, e a
-// prévia passaria a poder discordar do arquivo sem nada quebrar — o risco que
-// este épico inteiro existe para evitar (e que a máscara da D-475 já custou
-// oito testes para apenas *guardar*).
+// O horizontal já resolvia isso, e resolvia do jeito certo: a prévia de cenas
+// (`CenasRemotionPreview`) monta `YoutubeBackground` como CAMADA REACT, com os
+// mesmos componentes que o renderer usa. Existe uma cópia deles no frontend
+// exatamente para isso.
 //
-// O `drawImage` do canvas tem exatamente a semântica do crop + scale + overlay
-// do ffmpeg: retângulo de origem, retângulo de destino, área de clip. Então o
-// backend manda os três números por recorte e a tela só os aplica. A conta
-// continua sendo uma só, no domínio.
+// Então esta prévia passou a compor as mesmas três camadas do
+// `palco-short-entry.tsx`:
 //
-// A camada de legenda continua sendo do Remotion e é desenhada por cima em DOM
-// (`LegendaPrevia`), que já usa a função de agrupamento real do render.
+//   1. fundo editorial com textura   (atrás de tudo)
+//   2. o vídeo, recortado nos slots  (canvas — transparente fora deles)
+//   3. chrome: moldura das janelas e trilho do palco
+//
+// ## Por que o vídeo continua em canvas
+//
+// O `drawImage` tem exatamente a semântica do crop + scale + overlay do ffmpeg:
+// retângulo de origem, retângulo de destino, área de clip. O backend manda os
+// três números por recorte e a tela só os aplica — a conta continua sendo uma
+// só, no domínio. Trocar isso por DOM criaria a segunda implementação da
+// geometria, que é o risco que este épico existe para evitar.
+//
+// O que mudou é que o canvas parou de pintar FUNDO. Ele agora é transparente
+// fora dos recortes, e é isso que deixa a textura aparecer por baixo — do mesmo
+// jeito que o PNG do render tem as janelas vazadas.
 
 interface Props {
   plano: PlanoDesenhavel;
@@ -28,6 +43,13 @@ interface Props {
   video: RefObject<HTMLVideoElement | null>;
   children?: React.ReactNode;
 }
+
+/** O mesmo recorte das janelas do palco vertical (`OPTS_COM_MARGEM`). */
+const OPTS_DA_JANELA = { radius: 26, chamferTR: 58, chamferBR: 32, offset: 10 };
+const OPTS_COLADA = { radius: 0, chamferTR: 0, chamferBR: 0, offset: 8 };
+
+/** O trilho do chrome, em px do quadro — espelha `StageChrome pad` do renderer. */
+const PAD_DO_TRILHO = 40;
 
 export function PalcoPrevia({ plano, video, children }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -49,8 +71,9 @@ export function PalcoPrevia({ plano, video, children }: Props) {
       // outros.
       if (!fonte || fonte.readyState < 2) return;
 
-      ctx.fillStyle = plano.fundo.replace('0x', '#');
-      ctx.fillRect(0, 0, tela.width, tela.height);
+      // LIMPA, não preenche: o que estiver fora dos recortes tem de deixar a
+      // textura do fundo aparecer, como as janelas vazadas do PNG do render.
+      ctx.clearRect(0, 0, tela.width, tela.height);
 
       for (const recorte of plano.recortes) {
         const { origem, destino, recorta } = recorte;
@@ -73,13 +96,6 @@ export function PalcoPrevia({ plano, video, children }: Props) {
         );
         ctx.restore();
       }
-
-      // D-501: a moldura por CIMA de tudo, como no ffmpeg — ela é a assinatura
-      // do canal, e conteúdo passando por baixo dela quebraria a borda.
-      for (const faixa of plano.faixas ?? []) {
-        ctx.fillStyle = faixa.cor;
-        ctx.fillRect(faixa.x, faixa.y, faixa.w, faixa.h);
-      }
     };
 
     requestAnimationFrame(desenhar);
@@ -87,6 +103,9 @@ export function PalcoPrevia({ plano, video, children }: Props) {
       vivo = false;
     };
   }, [plano, video]);
+
+  const { largura, altura } = plano.canvas;
+  const comMoldura = plano.moldura !== 'nenhuma';
 
   return (
     <div
@@ -96,18 +115,77 @@ export function PalcoPrevia({ plano, video, children }: Props) {
       className="relative h-full w-auto overflow-hidden rounded-[10px] bg-black"
       // O container é um container de consulta para a legenda se dimensionar
       // em `cqw`, como faz sobre a máscara.
-      style={{
-        aspectRatio: `${plano.canvas.largura} / ${plano.canvas.altura}`,
-        containerType: 'inline-size',
-      }}
+      style={{ aspectRatio: `${largura} / ${altura}`, containerType: 'inline-size' }}
     >
+      {/* Camada 1 — o fundo editorial do canal. O mesmo id que o render manda
+          para o PNG, então a textura aqui é a textura de lá. */}
+      {comMoldura && (
+        <div className="absolute inset-0">
+          <YoutubeBackground fundo={plano.fundo_editorial as YoutubeBackgroundId} />
+        </div>
+      )}
+
+      {/* Camada 2 — o vídeo nos slots, transparente no resto. */}
       <canvas
         ref={canvas}
-        width={plano.canvas.largura}
-        height={plano.canvas.altura}
+        width={largura}
+        height={altura}
         className="absolute inset-0 h-full w-full"
       />
+
+      {/* Camada 3 — o chrome: a moldura de cada janela e o trilho do palco.
+          Em px do QUADRO, escalados junto com ele por `viewBox`. */}
+      {comMoldura && (
+        <svg
+          viewBox={`0 0 ${largura} ${altura}`}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          aria-hidden
+        >
+          <foreignObject x={0} y={0} width={largura} height={altura}>
+            <div style={{ position: 'relative', width: largura, height: altura }}>
+              {plano.recortes.map((recorte) => (
+                <div
+                  key={`${recorte.recorta.x}-${recorte.recorta.y}-${recorte.recorta.w}`}
+                  style={{
+                    position: 'absolute',
+                    left: recorte.recorta.x,
+                    top: recorte.recorta.y,
+                    width: recorte.recorta.w,
+                    height: recorte.recorta.h,
+                  }}
+                >
+                  <CardChrome
+                    width={recorte.recorta.w}
+                    height={recorte.recorta.h}
+                    opts={coladaNoQuadro(recorte.recorta, largura, altura) ? OPTS_COLADA : OPTS_DA_JANELA}
+                    showBrackets
+                  />
+                </div>
+              ))}
+              <StageChrome pad={PAD_DO_TRILHO} />
+            </div>
+          </foreignObject>
+        </svg>
+      )}
+
       {children}
     </div>
   );
 }
+
+/**
+ * Uma janela colada nas bordas não leva canto arredondado.
+ *
+ * Mesma regra do `optsDa` no `palco-short-entry.tsx`: arredondar uma janela de
+ * tela cheia deixaria quatro cantos de fundo aparecendo num short que era para
+ * ser, justamente, tela cheia.
+ */
+function coladaNoQuadro(
+  r: { x: number; y: number; w: number; h: number },
+  largura: number,
+  altura: number,
+): boolean {
+  return r.x <= 1 && r.y <= 1 && r.w >= largura - 1 && r.h >= altura - 1;
+}
+
+export { chromeClipPath };
