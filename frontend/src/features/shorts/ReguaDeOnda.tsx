@@ -30,7 +30,14 @@ import { BORDA_DO_REJEITADO, COR_DO_REJEITADO, bordaDoShort, corDoShort } from '
 // prontos do backend. O operador reconhece o instrumento; o código não herda a
 // bagagem.
 
-const PX_POR_SEGUNDO = 50;
+// Zoom 1 = o corte INTEIRO cabendo na régua. O px/s base sai da largura medida
+// dividida pela duração, e não de uma constante.
+//
+// O editor usa 50px/s fixos porque a janela dele é a do corte — poucos minutos,
+// e o começo fica perto do x=0. Aqui a régua é o bruto inteiro: 438s a 50px/s
+// dão 21.900px de onda para ~740px de painel, e o operador via os primeiros
+// quinze segundos achando que via tudo. Pior: as regiões são virtualizadas, e
+// nenhuma delas caía na janela visível — a régua ficava sem bloco nenhum.
 const ZOOM_MINIMO = 1;
 const ZOOM_MAXIMO = 12;
 const PASSO_DO_ZOOM = 1;
@@ -98,6 +105,9 @@ export function ReguaDeOnda({
   const onda = useRef<WaveSurfer | null>(null);
   const regioes = useRef<ReturnType<typeof RegionsPlugin.create> | null>(null);
   const pronta = useRef(false);
+  // px/s que faz o corte inteiro caber. Medido no `ready`, quando a caixa já
+  // tem largura — antes disso qualquer conta daria zero.
+  const base = useRef(1);
   const [zoom, setZoom] = useState(1);
   // D-548: o plugin de regiões só posiciona um bloco depois que a onda tem
   // DURAÇÃO, e a duração só existe no `ready`. Desenhar antes disso não levanta
@@ -109,8 +119,8 @@ export function ReguaDeOnda({
   // Os handlers mudam a cada render e o wavesurfer só recebe os seus uma vez.
   // Guardá-los numa ref é o que permite criar a onda UMA vez — recriá-la a cada
   // mudança de props recarregaria o áudio e perderia o scroll do operador.
-  const atual = useRef({ shorts, emFoco, onSeek, onBordas, onSelecionar, duracaoSeg, picos });
-  atual.current = { shorts, emFoco, onSeek, onBordas, onSelecionar, duracaoSeg, picos };
+  const atual = useRef({ shorts, emFoco, onSeek, onBordas, onSelecionar, duracaoSeg, picos, zoom });
+  atual.current = { shorts, emFoco, onSeek, onBordas, onSelecionar, duracaoSeg, picos, zoom };
 
   // O gatilho é "já HÁ picos", e não "quais picos": o array chega uma vez e não
   // muda, e depender do conteúdo dele reintroduziria a recriação que a D-548
@@ -136,7 +146,8 @@ export function ReguaDeOnda({
       height: 'auto',
       autoCenter: false,
       autoScroll: false,
-      minPxPerSec: PX_POR_SEGUNDO * zoom,
+      // Provisório: a escala real é calculada no `ready`, com a largura medida.
+      minPxPerSec: 1,
     });
     ws.registerPlugin(plugin);
     // Mudo: quem toca é o `<video>` ao lado. Dois áudios do mesmo arquivo
@@ -145,19 +156,41 @@ export function ReguaDeOnda({
     onda.current = ws;
 
     ws.on('interaction', (segundos: number) => atual.current.onSeek(segundos));
-    ws.on('ready', () => {
-      pronta.current = true;
-      // Desenhar AQUI, e não num efeito disparado por estado.
-      //
-      // O plugin guarda o container que pegou do wavesurfer, e adiar o desenho
-      // para depois do ciclo do React deixava esse container obsoleto: as
-      // regiões eram criadas (o plugin as listava) mas nasciam órfãs, sem pai
-      // no DOM. Nada quebrava e nada aparecia — o pior par possível.
-      //
-      // É o que o painel do editor faz, e é por isso que lá funciona.
-      desenhar(plugin, atual.current.shorts, atual.current.emFoco);
-      setProntidao((n) => n + 1);
-    });
+    // Esperar a CONDIÇÃO, e não o evento `ready`.
+    //
+    // O plugin de regiões precisa de duas coisas para pintar um bloco: uma
+    // duração (senão `addRegion` fica esperando `ready` para sempre) e uma
+    // largura medida (a virtualização compara a posição do bloco com
+    // `getWidth()`, e com zero ele conclui que nada está visível).
+    //
+    // `ready` deveria anunciar as duas, e neste caminho ele não chega — a onda
+    // desenha, `getDuration()` responde, e o evento não vem. Perseguir o
+    // porquê custou caro e não mudaria o que a régua precisa: perguntar pelas
+    // duas condições é mais curto que descobrir por que o mensageiro sumiu, e
+    // não depende de um detalhe interno da biblioteca continuar valendo.
+    let quadro = 0;
+    const esperarParaDesenhar = () => {
+      if (cancelado) return;
+      const duracao = ws.getDuration();
+      const largura = ws.getWidth();
+      if (duracao > 0 && largura > 0) {
+        pronta.current = true;
+        // Zoom 1 = o corte inteiro na régua. Sem isto a onda sai a 50px/s: um
+        // bruto de sete minutos vira 21.900px para ~740px de painel, e o
+        // operador vê os primeiros quinze segundos achando que vê tudo.
+        base.current = largura / duracao;
+        try {
+          ws.zoom(base.current * atual.current.zoom);
+        } catch {
+          // Sem duração ainda; o próximo clique de zoom acerta.
+        }
+        desenhar(plugin, atual.current.shorts, atual.current.emFoco);
+        setProntidao((n) => n + 1);
+        return;
+      }
+      quadro = requestAnimationFrame(esperarParaDesenhar);
+    };
+    quadro = requestAnimationFrame(esperarParaDesenhar);
 
     plugin.on('region-clicked', (regiao, evento) => {
       evento.stopPropagation();
@@ -192,6 +225,7 @@ export function ReguaDeOnda({
 
     return () => {
       cancelado = true;
+      cancelAnimationFrame(quadro);
       pronta.current = false;
       ws.destroy();
       onda.current = null;
@@ -215,7 +249,7 @@ export function ReguaDeOnda({
   useEffect(() => {
     if (!pronta.current) return;
     try {
-      onda.current?.zoom(PX_POR_SEGUNDO * zoom);
+      onda.current?.zoom(base.current * zoom);
     } catch {
       // `zoom` levanta se a onda ainda não tem duração. Não é motivo para
       // derrubar a tela: o próximo clique acerta.
