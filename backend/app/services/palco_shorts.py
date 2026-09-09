@@ -65,7 +65,7 @@ def catalogo_arranjos(regioes: dict | None = None) -> list[dict]:
     return catalogo_de_arranjos(regioes)
 
 
-def _sem_palco(moldura: str, fundo: str) -> dict:
+def _sem_palco(moldura: str, fundo: str, textura: str = FUNDO_EDITORIAL) -> dict:
     """A resposta de quando não há palco a montar.
 
     Uma função só, porque os dois caminhos que chegam aqui — sem região marcada,
@@ -85,7 +85,7 @@ def _sem_palco(moldura: str, fundo: str) -> dict:
         # A previa pintava `fundo` (uma cor chapada da paleta) e por isso
         # mostrava uma moldura que o arquivo nao teria. Mandando o mesmo id que
         # o PNG usa, a tela passa a desenhar o que vai sair.
-        "fundo_editorial": FUNDO_EDITORIAL,
+        "fundo_editorial": textura,
     }
 
 
@@ -219,9 +219,11 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         ajustes = {**_json_dict(short.ajustes_palco), **(ajustes_hipoteticos or {})}
         moldura = short.moldura
         fundo = resolver_fundo(short.fundo_palco, paleta_do_tema())
+        # D-552: a textura do short, ou a do canal quando ele nao escolheu.
+        textura = short.fundo_editorial or FUNDO_EDITORIAL
 
     if not regioes:
-        return _sem_palco(moldura, fundo)
+        return _sem_palco(moldura, fundo, textura)
 
     arranjo = arranjo_de_chave(escolhido, janela) if escolhido else arranjo_sugerido(regioes)
     modelo = montar_modelo(arranjo, regioes)
@@ -239,7 +241,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         arranjo = arranjo_sugerido(regioes)
         modelo = montar_modelo(arranjo, regioes)
     if modelo is None:
-        return _sem_palco(moldura, fundo)
+        return _sem_palco(moldura, fundo, textura)
 
     plano = montar_plano(modelo, regioes, ajustes)
 
@@ -252,11 +254,10 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         "ajustes": ajustes,
         "moldura": moldura,
         "fundo": fundo,
-        # D-549: a TEXTURA do palco, que ate aqui so o PNG do render conhecia.
-        # A previa pintava `fundo` (uma cor chapada da paleta) e por isso
-        # mostrava uma moldura que o arquivo nao teria. Mandando o mesmo id que
-        # o PNG usa, a tela passa a desenhar o que vai sair.
-        "fundo_editorial": FUNDO_EDITORIAL,
+        # D-549/D-552: a TEXTURA do palco — a do short, ou a do canal quando
+        # ele nao escolheu. A previa pintava `fundo` (uma cor chapada da
+        # paleta) e por isso mostrava uma moldura que o arquivo nao teria.
+        "fundo_editorial": textura,
     }
 
 

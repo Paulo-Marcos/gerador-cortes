@@ -440,6 +440,26 @@ class Short(Base):
     # congelaria a paleta do dia, e trocar o tema do canal deixaria os shorts
     # antigos com a cor velha.
     fundo_palco: Mapped[str] = mapped_column(String(60), default="")
+    # D-552: a TEXTURA do palco deste short — um id de `YOUTUBE_BACKGROUND`,
+    # nao uma cor.
+    #
+    # Coluna propria, e nao reaproveitar `fundo_palco`: aquela guarda uma CHAVE
+    # DA PALETA e alimenta a cor de base do ffmpeg. Trocar o significado dela
+    # faria os shorts ja gravados apontarem para uma textura inexistente, e o
+    # sintoma seria o palco cair no default sem ninguem entender por que.
+    #
+    # Vazio = a textura padrao do canal.
+    fundo_editorial: Mapped[str] = mapped_column(String(60), default="")
+    # D-552: qual preset de PALCO foi aplicado neste short.
+    #
+    # Aplicar um preset COPIA valores (arranjo, janela, recortes, textura) — nao
+    # cria um vinculo vivo. Sem guardar de onde vieram, a tela nao tinha como
+    # dizer "este e o palco tal", e o operador criava um preset que nunca mais
+    # aparecia em lugar nenhum.
+    #
+    # A marca e limpa assim que qualquer um desses valores muda por fora, para
+    # ela nunca afirmar uma origem que deixou de ser verdade.
+    palco_short_preset: Mapped[str] = mapped_column(String(200), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

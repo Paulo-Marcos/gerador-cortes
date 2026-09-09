@@ -338,6 +338,8 @@ async def atualizar_short(
     moldura: str | None = None,
     recortes_palco: dict | None = None,
     fundo_palco: str | None = None,
+    fundo_editorial: str | None = None,
+    palco_short_preset: str | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -410,6 +412,28 @@ async def atualizar_short(
                 },
                 ensure_ascii=False,
             )
+
+        if fundo_editorial is not None:
+            # O id da textura. "" volta ao default do canal. Nao validamos
+            # contra o catalogo pelo mesmo motivo do `fundo_palco`: o catalogo
+            # muda com o tema, e um short antigo apontando para uma textura que
+            # saiu deve cair no default em vez de virar erro de gravacao.
+            short.fundo_editorial = fundo_editorial
+
+        # D-552: a marca do preset e escrita PRIMEIRO e apagada por qualquer
+        # mudanca posterior no mesmo PATCH.
+        #
+        # Aplicar um preset manda tudo junto — a marca e os valores dela. Mexer
+        # no arranjo depois manda so o arranjo, e ai a marca precisa cair: um
+        # rotulo que sobrevive a edicao do que ele descreve passa a mentir, e
+        # mentir sobre a origem e pior que nao dizer nada.
+        if palco_short_preset is not None:
+            short.palco_short_preset = palco_short_preset
+        elif any(
+            campo is not None
+            for campo in (arranjo_palco, janela_cheia, recortes_palco, fundo_editorial)
+        ):
+            short.palco_short_preset = ""
 
         if fundo_palco is not None:
             # A CHAVE da paleta, nao a cor. "" volta ao default do canal. Nao
@@ -819,6 +843,8 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "ajustes_palco": _json_dict_seguro(short.ajustes_palco),
         "recortes_palco": _json_dict_seguro(short.recortes_palco),
         "fundo_palco": short.fundo_palco,
+        "fundo_editorial": short.fundo_editorial,
+        "palco_short_preset": short.palco_short_preset,
         "origem": short.origem,
         "cenas": _json_lista(short.cenas_remotion),
     }

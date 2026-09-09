@@ -13,7 +13,9 @@ import {
 import type { PalcoShortPreset } from '@/types/presets';
 import { EditorDeRecorte } from './EditorDeRecorte';
 import { PalcoPrevia } from './PalcoPrevia';
-import { SeletorDeFundo } from './SeletorDeFundo';
+import { SeletorDeTextura } from './SeletorDeTextura';
+import { mudancaDoPalco } from './aplicarPalco';
+import { usePalcoDoCorte } from './useShortsDoCorte';
 import { ControlesDeFoco } from './CampoDeFoco';
 import { useArranjosDePalco } from './useShortsDoCorte';
 import type { AtualizarShortBody, PlanoDesenhavel, Retangulo, ShortSugerido } from './shortsApi';
@@ -89,13 +91,16 @@ export function DefinirPalcoModal({
     fundo: short.fundo_palco ?? '',
   });
 
-  const aplicarPreset = (payload: PalcoShortPreset) =>
-    onAplicar({
-      arranjo_palco: payload.arranjo ?? '',
-      janela_cheia: payload.janela_cheia ?? '',
-      recortes_palco: payload.recortes ?? {},
-      fundo_palco: payload.fundo ?? '',
-    });
+  // D-552: aplicar um preset COPIA os valores — e agora marca de onde vieram.
+  //
+  // Sem a marca, o operador criava um palco, aplicava, e o select do painel
+  // seguia dizendo "ajustado à mão". A marca cai sozinha assim que ele mexer em
+  // qualquer um destes campos por fora (o backend cuida disso), porque um
+  // rótulo que sobrevive à edição do que descreve passa a mentir.
+  const aplicarPreset = (id: string, payload: PalcoShortPreset) =>
+    onAplicar(mudancaDoPalco(id, payload));
+
+  const presetDoCorte = usePalcoDoCorte(corteId);
 
   return (
     <Modal open={open} onClose={onClose} title="Definir o palco deste short" size="2xl">
@@ -133,6 +138,34 @@ export function DefinirPalcoModal({
           </Secao>
 
           <Secao numero={2} titulo="De onde vem cada janela">
+            {/* D-552: o preset de RECORTES do canal (o que traz as regiões)
+                mudou de lugar. Ele vivia no painel do candidato, ao lado do
+                select de palco, e os dois pareciam a mesma coisa — foi assim
+                que o operador criou um palco e foi procurá-lo na lista errada.
+                Aqui ele está junto do que descreve: de onde sai cada janela. */}
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+                preset de recortes
+              </span>
+              <select
+                aria-label="Preset de recortes deste short"
+                value={short.palco_preset}
+                disabled={ocupado || !presetDoCorte.data}
+                onChange={(e) => onAplicar({ palco_preset: e.target.value })}
+                className="h-7 max-w-[220px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+              >
+                <option value="">
+                  {presetDoCorte.data?.preset
+                    ? `do corte (${presetDoCorte.data.preset})`
+                    : 'do corte (nenhum)'}
+                </option>
+                {presetDoCorte.data?.presets_disponiveis.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
             {regioesEmJogo.length === 0 ? (
               <p className="text-[11.5px] text-[var(--wb-text-mute)]">
                 Nenhuma região marcada neste corte — escolha um preset de recortes ou marque à
@@ -215,11 +248,19 @@ export function DefinirPalcoModal({
           </Secao>
 
           <Secao numero={5} titulo="O fundo">
-            <SeletorDeFundo
-              escolhido={short.fundo_palco ?? ''}
+            {/* D-552: a TEXTURA, e não uma cor da paleta.
+                O seletor anterior oferecia cores e escolher uma não mudava nada
+                em lugar nenhum: no arquivo o PNG do palco cobre a cor, e na
+                prévia os recortes cobrem. Era um controle com efeito zero. */}
+            <SeletorDeTextura
+              escolhida={short.fundo_editorial ?? ''}
+              padrao={plano?.fundo_editorial ?? ''}
               ocupado={ocupado}
-              onEscolher={(chave) => onAplicar({ fundo_palco: chave })}
+              onEscolher={(id) => onAplicar({ fundo_editorial: id })}
             />
+            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+              A textura do canal por trás das janelas. Aparece na prévia ao lado.
+            </p>
           </Secao>
 
           <Secao numero={6} titulo="Guardar como preset">
@@ -287,7 +328,7 @@ export function DefinirPalcoModal({
                         variant="outline"
                         disabled={ocupado}
                         onClick={() =>
-                          aplicarPreset(preset.payload as unknown as PalcoShortPreset)
+                          aplicarPreset(preset.id, preset.payload as unknown as PalcoShortPreset)
                         }
                       >
                         aplicar

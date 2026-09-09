@@ -34,6 +34,7 @@ import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { brutoUrl, type ShortSugerido, type VereditoDoRosto } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
 import { janelaNova, mmss, type Borda } from './linhaDoTempoShort';
+import { mudancaDoPalco } from './aplicarPalco';
 import { NavegacaoDoPlayer } from './NavegacaoDoPlayer';
 import { useParadaNoFim } from './useParadaNoFim';
 import { BordasFinasPanel } from './BordasFinasPanel';
@@ -658,8 +659,10 @@ export default function FireDetalhePage() {
                   ? textoDoVeredito(enquadrarPeloRosto.data)
                   : ''
               }
-              onPreset={(presetId) =>
-                atualizar.mutate({ shortId: short.id, palco_preset: presetId })
+              // D-552: aplicar um palco copia os valores E marca a origem, para
+              // o select poder dizer qual preset descreve este trecho.
+              onPalco={(presetId, payload) =>
+                atualizar.mutate({ shortId: short.id, ...mudancaDoPalco(presetId, payload) })
               }
               // D-542: seleciona ANTES de abrir. O modal edita `emQuadro`, e
               // abri-lo a partir de um card que nao esta em foco editaria outro

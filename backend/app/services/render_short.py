@@ -337,10 +337,19 @@ async def _palco_em_png(palco: dict):
         # aos dois caminhos. Sem isto, um corte sem preset saia com duas barras
         # de verde chapado.
         janela = moldura_short.janela_entre_as_faixas(palco["moldura"])
-        return await palco_short_png.obter(FUNDO_EDITORIAL_PADRAO, [janela] if janela else [])
+        return await palco_short_png.obter(_textura(palco), [janela] if janela else [])
 
     janelas = [recorte.janela for recorte in plano.recortes]
-    return await palco_short_png.obter(FUNDO_EDITORIAL_PADRAO, janelas)
+    return await palco_short_png.obter(_textura(palco), janelas)
+
+
+def _textura(palco: dict) -> str:
+    """A textura escolhida para este short, ou a padrao do canal (D-552).
+
+    O PNG e a PREVIA leem daqui. Duas fontes para este id fariam a tela e o
+    arquivo divergirem sem nada quebrar — que e como a D-549 nasceu.
+    """
+    return palco.get("fundo_editorial") or FUNDO_EDITORIAL_PADRAO
 
 
 def faixas_do_canal(moldura: str) -> list:

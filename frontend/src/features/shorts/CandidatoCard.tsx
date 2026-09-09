@@ -13,6 +13,7 @@ import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { StatusChip } from '@/components/ui/status-chip';
 import { cn } from '@/lib/utils';
 import { APARENCIA, notaVisivel, planoDeAcoes, tomDaNota, type AcaoId } from './estadoDoCandidato';
+import type { PalcoShortPreset } from '@/types/presets';
 import { LinhaDeAjuste } from './LinhaDeAjuste';
 import { PainelPublicacao } from './PainelPublicacao';
 import { ProgressoRenderPanel } from './ProgressoRenderPanel';
@@ -49,7 +50,7 @@ interface Props {
   onEnquadrarPeloRosto: () => void;
   enquadrando: boolean;
   vereditoDoRosto: string;
-  onPreset: (presetId: string) => void;
+  onPalco: (presetId: string, payload: PalcoShortPreset | null) => void;
   /** D-542: abre o modal do palco já neste candidato. */
   onDefinirPalco: () => void;
   onPrevia: () => void;
@@ -75,7 +76,7 @@ export function CandidatoCard({
   onEnquadrarPeloRosto,
   enquadrando,
   vereditoDoRosto,
-  onPreset,
+  onPalco,
   onDefinirPalco,
   onPrevia,
   onRenderizar,
@@ -228,13 +229,12 @@ export function CandidatoCard({
       {aberto && (
         <LinhaDeAjuste
           short={short}
-          corteId={corteId}
           ocupado={ocupado}
           onBorda={onBorda}
           onEnquadrarPeloRosto={onEnquadrarPeloRosto}
           enquadrando={enquadrando}
           vereditoDoRosto={vereditoDoRosto}
-          onPreset={onPreset}
+          onPalco={onPalco}
           onDefinirPalco={onDefinirPalco}
         />
       )}

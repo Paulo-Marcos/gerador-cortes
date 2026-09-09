@@ -294,6 +294,9 @@ class AtualizarShortRequest(BaseModel):
     moldura: str | None = None
     recortes_palco: dict | None = None
     fundo_palco: str | None = None
+    # D-552: a TEXTURA do palco (id de fundo), e qual preset a trouxe.
+    fundo_editorial: str | None = None
+    palco_short_preset: str | None = None
 
 
 @router.patch("/{short_id}")
@@ -312,6 +315,8 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 ajustes_palco=body.ajustes_palco,
                 recortes_palco=body.recortes_palco,
                 fundo_palco=body.fundo_palco,
+                fundo_editorial=body.fundo_editorial,
+                palco_short_preset=body.palco_short_preset,
                 palco_preset=body.palco_preset,
                 moldura=body.moldura,
             )

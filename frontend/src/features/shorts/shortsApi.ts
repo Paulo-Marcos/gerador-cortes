@@ -118,6 +118,10 @@ export interface ShortSugerido {
   recortes_palco: Record<string, Retangulo>;
   /** D-499: a CHAVE da paleta usada como fundo. Vazio = o default do canal. */
   fundo_palco: string;
+  /** D-552: a TEXTURA do palco. Vazio = a padrão do canal. */
+  fundo_editorial: string;
+  /** D-552: de qual preset de palco estes valores vieram. */
+  palco_short_preset: string;
   /** Cenas desenhadas sobre o short, na timeline DELE (começa no zero). */
   cenas: CenaShort[];
 }
@@ -137,6 +141,8 @@ export interface AtualizarShortBody {
   moldura?: string;
   recortes_palco?: Record<string, Retangulo>;
   fundo_palco?: string;
+  fundo_editorial?: string;
+  palco_short_preset?: string;
 }
 
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
