@@ -381,6 +381,20 @@ function Secao({
 function VideoEspelho({ origem }: { origem: React.RefObject<HTMLVideoElement | null> }) {
   const tela = useRef<HTMLCanvasElement>(null);
 
+  // D-547: PAUSAR o player ao abrir o modal.
+  //
+  // O espelho segue o video ao vivo, entao com o player rodando o quadro
+  // escorria enquanto o operador tentava marcar o recorte sobre ele — mirar um
+  // retangulo num alvo em movimento. Congelar o espelho sozinho nao serve: ele
+  // pararia no instante da montagem, e ao mexer na regua o operador marcaria
+  // olhando para outro momento.
+  //
+  // Pausar a FONTE resolve os dois: o quadro fica parado para marcar, e
+  // continua obedecendo a regua quando ele quiser outro instante.
+  useEffect(() => {
+    origem.current?.pause();
+  }, [origem]);
+
   // Um laço, e não um desenho único: sem ele o espelho congela no quadro que
   // existia quando o modal montou, e o operador marca o recorte olhando para um
   // instante que não é o que ele escolheu na régua.
