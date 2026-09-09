@@ -31,6 +31,7 @@ from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg
 from app.domain.youtube_layout import normalizar_layout_youtube
 from app.models import Corte, Projeto, StatusCorte
 from app.services.app_logging import operational_debug, operational_error
+from app.services.thumbnail import ThumbnailService
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -212,6 +213,13 @@ class CorteService:
         # acompanhar, senão a ordem volta a ser a de criação.
         if dados.inicio_seg is not None or dados.inicio_hms is not None:
             await CorteService.renumerar_por_tempo(db, corte.projeto_id)
+
+        # A moldura da capa lê as mesmas marcas que o 📖 do texto e o prefixo do
+        # título, aplicados logo acima. Marcar Leitura depois que a capa entrou é
+        # o caminho normal — o julgamento vem na revisão, a arte às vezes chega
+        # antes —, e sem isto a moldura ficaria congelada na marca antiga.
+        if dados.is_leitura is not None:
+            await ThumbnailService.reaplicar_moldura(corte_id)
 
         await db.refresh(corte)
         return corte

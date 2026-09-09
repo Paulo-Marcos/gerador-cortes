@@ -23,6 +23,7 @@ from app.domain.reading_metadata import (
 from app.editorial_identity import identidade_do_mascote
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services.app_logging import operational_error
+from app.services.thumbnail import ThumbnailService
 from sqlalchemy import select
 
 # Gradê de cores da série (ciclo)
@@ -171,7 +172,14 @@ class MetadadosService:
                 )
 
             await db.commit()
-            return {"is_fire": bool(meta.is_fire), "titulo_youtube": meta.titulo_youtube}
+            resposta = {"is_fire": bool(meta.is_fire), "titulo_youtube": meta.titulo_youtube}
+
+        # A moldura da capa lê o mesmo par de marcas que os emojis logo acima. Se
+        # o 🔥 entrou no texto, a moldura Fire entra em volta — senão a capa diria
+        # uma coisa no texto e outra na borda. Fora do `async with` porque a
+        # recomposição abre a própria sessão.
+        await ThumbnailService.reaplicar_moldura(corte_id)
+        return resposta
 
     @staticmethod
     async def _obter_transcricao_final(corte_id: str) -> str:

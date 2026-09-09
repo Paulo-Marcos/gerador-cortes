@@ -149,6 +149,26 @@ def retratos_dir() -> Path:
     return _BACKEND_ROOT / "assets" / "retratos"
 
 
+def moldura_thumbnail_path(arquivo: str) -> Path | None:
+    """O PNG de UMA moldura de capa (pelo nome), ou None se ela não existir.
+
+    Moldura é identidade: cada canal tem o seu jogo, e um canal recém-criado não
+    tem nenhum. Por isso devolve `Path | None` em vez de um caminho que pode não
+    existir — quem chama decide o que fazer com a ausência, e a resposta certa é
+    publicar a capa crua, não falhar.
+
+    Resolve UM nome de propósito. Qual moldura o corte merece, e para qual cair
+    quando ela falta, é regra editorial e mora em `domain.moldura_thumbnail`.
+    """
+    for base in (_channel_assets_root(), _BACKEND_ROOT / "assets"):
+        if base is None:
+            continue
+        caminho = base / "moldura" / arquivo
+        if caminho.is_file():
+            return caminho
+    return None
+
+
 def _subdir_mascote(base: Path) -> Path | None:
     """Subpasta de PNGs do mascote em `base`: `mascote/` (canônica) ou `sapo/` (legada).
 
