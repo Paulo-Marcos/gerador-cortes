@@ -37,9 +37,7 @@ import { janelaNova, mmss, type Borda } from './linhaDoTempoShort';
 import { mudancaDoPalco } from './aplicarPalco';
 import { NavegacaoDoPlayer } from './NavegacaoDoPlayer';
 import { useParadaNoFim } from './useParadaNoFim';
-import { BordasFinasPanel } from './BordasFinasPanel';
 import { CandidatoCard } from './CandidatoCard';
-import { CenasDoShort } from './CenasDoShort';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
@@ -47,15 +45,12 @@ import { ReguaDeOnda } from './ReguaDeOnda';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PalcoDoCorte } from './PalcoDoCorte';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
-import { ControlesDoRecorte, EditorDeRecorte } from './EditorDeRecorte';
 import { PalcoPrevia } from './PalcoPrevia';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
 import {
   useAtualizarShort,
   useCriarShortManual,
-  useDefinirCenas,
-  useSugerirCenas,
   useEnquadrarPeloRosto,
   useDescartarBruto,
   usePalcoDoShort,
@@ -110,7 +105,6 @@ export default function FireDetalhePage() {
   // D-499: marcar o recorte sobre o quadro-fonte. Modo à parte do palco: um
   // edita o que o bloco MOSTRA, o outro onde ele CAI, e as alças dos dois ao
   // mesmo tempo sobre telas diferentes seriam duas conversas de uma vez.
-  const [recortando, setRecortando] = useState(false);
   // D-509: o modal onde a tela do short se monta inteira, num lugar so.
   const [definindoPalco, setDefinindoPalco] = useState(false);
 
@@ -126,8 +120,6 @@ export default function FireDetalhePage() {
   const renderizar = useRenderizarShort(corteId);
   const previa = useRenderizarPrevia(corteId);
   const criarManual = useCriarShortManual(corteId);
-  const definirCenas = useDefinirCenas(corteId);
-  const sugerirCenas = useSugerirCenas(corteId);
   const enquadrarPeloRosto = useEnquadrarPeloRosto(corteId);
   const transcricao = useTranscricaoDoCorte(corteId);
   // D-541: a onda do bruto por tras da regua. Falha em silencio — sem bruto
@@ -146,15 +138,6 @@ export default function FireDetalhePage() {
   // desenha esse, e volta ao gravado assim que ele chega.
   const simulacao = useSimulacaoDePalco(emQuadro?.id ?? null);
   const planoNaTela = simulacao.simulado ?? palcoDoShort.data;
-  // A região vem junto de cada recorte (D-499) — casar esta lista com `slots`
-  // pela posição quebraria em silêncio no dia em que a ordem mudasse.
-  const recortesDaFonte = useMemo(
-    () =>
-      Object.fromEntries(
-        (palcoDoShort.data?.recortes ?? []).map((r) => [r.regiao, r.origem]),
-      ),
-    [palcoDoShort.data],
-  );
   const ocupado = atualizar.isPending || renderizar.isPending || previa.isPending;
 
   // O rascunho vive até o plano GRAVADO chegar — ou até a gravação falhar, e aí
@@ -231,19 +214,6 @@ export default function FireDetalhePage() {
     atualizar.mutate({
       shortId: emQuadro.id,
       ajustes_palco: { ...emQuadro.ajustes_palco, ...ajustes },
-    });
-  };
-
-  // D-499: o recorte é PARCIAL, como o ajuste — mandar só o que mudou apagaria
-  // as outras regiões, porque o PATCH substitui o campo inteiro.
-  const gravarRecorte = (recortes: Record<string, { x: number; y: number; w: number; h: number }>) => {
-    if (!emQuadro) return;
-    atualizar.mutate({
-      shortId: emQuadro.id,
-      // `?? {}` porque o campo pode faltar: uma aba aberta desde antes do
-      // deploy segue com o payload antigo em cache, e `Object.keys(undefined)`
-      // derruba a página inteira em vez de só esconder um botão.
-      recortes_palco: { ...(emQuadro.recortes_palco ?? {}), ...recortes },
     });
   };
 
@@ -416,7 +386,7 @@ export default function FireDetalhePage() {
                   janela 9:16 sobre o quadro cru não descreve o short que vai
                   sair. Quem descreve é a prévia ao lado. Sem palco ela é a
                   única prévia que existe, e continua. */}
-              {emQuadro && !recortando && !temPalco && (
+              {emQuadro && !temPalco && (
                 <MascaraEnquadramento
                   largura={dimensoes.largura}
                   altura={dimensoes.altura}
@@ -427,18 +397,8 @@ export default function FireDetalhePage() {
               )}
               {/* Com palco a legenda não perde o pai: ela vinha dentro da
                   máscara e sairia de cena junto com ela. */}
-              {emQuadro && !recortando && temPalco && !palcoNaTela && legenda}
-              {/* D-499: as alças do recorte substituem a máscara enquanto se
-                  marca. Sobrepostas, a janela 9:16 competiria com o retângulo
-                  que o operador está tentando ver. */}
-              {emQuadro && (
-                <EditorDeRecorte
-                  recortes={recortesDaFonte}
-                  fonte={{ largura: dimensoes.largura, altura: dimensoes.altura }}
-                  ativo={recortando}
-                  onGravar={gravarRecorte}
-                />
-              )}
+              {emQuadro && temPalco && !palcoNaTela && legenda}
+
             </div>
 
             {palcoNaTela && planoNaTela && (
@@ -531,43 +491,28 @@ export default function FireDetalhePage() {
                   )}
                 </>
               )}
+              {/* D-560: o painel de bordas finas saiu. Ele existia porque a
+                  régua não tinha resolução para encostar no milésimo — os
+                  campos eram a única via. Agora a régua abre a 50px/s e vai a
+                  20x, e cada pixel vale milissegundos: a alça faz o que os
+                  campos faziam, olhando para a onda em vez de para um número. */}
               {emQuadro && (
                 <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
-                  <BordasFinasPanel
-                    bordas={{ inicio: emQuadro.inicio_seg, fim: emQuadro.fim_seg }}
-                    duracaoSeg={duracaoRegua}
-                    ocupado={atualizar.isPending}
-                    onAplicar={(bordas, borda) => gravarBordas(emQuadro.id, bordas, borda)}
-                  />
-                  {emQuadro && (
-                    <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
-                      <CenasDoShort
-                        cenas={emQuadro.cenas}
-                        duracaoSeg={emQuadro.duracao_seg}
-                        ocupado={definirCenas.isPending || sugerirCenas.isPending}
-                        erro={
-                          definirCenas.isError || sugerirCenas.isError
-                            ? (((definirCenas.error ?? sugerirCenas.error) as Error)?.message ??
-                              'não consegui salvar')
-                            : null
-                        }
-                        onGravar={(cenas) =>
-                          definirCenas.mutate({ shortId: emQuadro.id, cenas })
-                        }
-                        onSugerir={() => sugerirCenas.mutate(emQuadro.id)}
-                        sugerindo={sugerirCenas.isPending}
-                        descartes={sugerirCenas.data?.descartes ?? []}
-                      />
-                    </div>
-                  )}
-                  {/* D-499: o outro lado do palco — o que cada bloco MOSTRA
-                      da live, e a cor por trás de tudo. Fica fora do bloco de
-                      edição do palco de propósito: o recorte se marca sobre o
-                      player à esquerda, não sobre a prévia. */}
+                  {/* D-560: as CENAS saíram da tela junto com o render.
+                      "É tudo texto, e jogar texto no shorts acho que é ruim. Já
+                      tem a legenda, ficar adicionando mais texto polui demais."
+                      O `CENAS_LIGADAS` do `render_short.py` é o outro lado
+                      disto — e o interruptor único para religar as duas pontas.
+                      O componente e os dados ficam onde estão. */}
                   {/* D-509: um botão no lugar da fileira de controles. Como a
                       tela monta, de onde vem cada janela, o fundo e os presets
                       eram cinco perguntas soltas com pesos iguais; agora são
-                      uma sequência, dentro do modal, com a prévia ao lado. */}
+                      uma sequência, dentro do modal, com a prévia ao lado.
+
+                      D-560: e o "Recortar da live" foi junto. Ele e a seção 2
+                      do modal são o MESMO `EditorDeRecorte` gravando no MESMO
+                      `recortes_palco` — dois caminhos para uma decisão só, o de
+                      fora sem a prévia ao lado que diz o que a marcação fez. */}
                   {emQuadro && (
                     <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--wb-border-soft)] pt-2.5">
                       <Button
@@ -578,15 +523,6 @@ export default function FireDetalhePage() {
                         <SlidersHorizontal />
                         Definir o palco
                       </Button>
-                      <ControlesDoRecorte
-                        ativo={recortando}
-                        marcados={Object.keys(emQuadro.recortes_palco ?? {})}
-                        ocupado={atualizar.isPending}
-                        onAlternar={() => setRecortando((v) => !v)}
-                        onDesfazer={() =>
-                          atualizar.mutate({ shortId: emQuadro.id, recortes_palco: {} })
-                        }
-                      />
                     </div>
                   )}
                   {/* Com o palco oculto os campos editariam algo que ninguém
