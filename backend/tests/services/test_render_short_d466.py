@@ -146,7 +146,7 @@ async def test_camada_renderiza_a_composicao_vertical_com_alpha(ambiente, jobs):
 
 
 @pytest.mark.asyncio
-async def test_props_da_camada_levam_cenas_captions_e_duracao(ambiente, jobs):
+async def test_props_da_camada_levam_captions_e_duracao(ambiente, jobs):
     _, raiz = ambiente
     await render_short.renderizar_short("s1")
 
@@ -156,8 +156,27 @@ async def test_props_da_camada_levam_cenas_captions_e_duracao(ambiente, jobs):
         )
     )
     assert props["duracaoSeg"] == 35.0
-    assert props["cenas"][0]["tipo"] == "hook"
     assert props["captions"] == []
+
+
+@pytest.mark.asyncio
+async def test_short_com_cenas_gravadas_nao_renderiza_texto_nenhum(ambiente, jobs):
+    """D-560: as cenas estao desligadas, e o dado gravado nao ressuscita.
+
+    Esconder so a UI deixaria um short antigo — o `s1` deste ambiente tem uma
+    cena `hook` gravada — renderizando o texto dela para sempre, e sem lugar
+    nenhum onde apaga-la. O interruptor tem de estar no caminho que ESCREVE o
+    arquivo.
+    """
+    _, raiz = ambiente
+    await render_short.renderizar_short("s1")
+
+    props = json.loads(
+        (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada_final.props.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert props["cenas"] == []
 
 
 @pytest.mark.asyncio

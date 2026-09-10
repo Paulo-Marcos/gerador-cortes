@@ -307,7 +307,7 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             fim_seg=float(short.fim_seg),
             foco_x=foco_efetivo(short, corte),
             filtro=filtro,
-            cenas=_json_lista(short.cenas_remotion),
+            cenas=[] if not CENAS_LIGADAS else _json_lista(short.cenas_remotion),
             origem=origem,
             plano=palco["plano"],
             origem_palco=palco["origem"],
@@ -342,6 +342,19 @@ async def _palco_em_png(palco: dict):
 
     janelas = [recorte.janela for recorte in plano.recortes]
     return await palco_short_png.obter(_textura(palco), janelas)
+
+
+# D-560: as cenas estao DESLIGADAS.
+#
+# "E tudo texto, e jogar texto no shorts acho que e ruim. Ja tem a legenda,
+# ficar adicionando mais texto polui demais." A legenda ja ocupa a faixa de
+# leitura do short, e as cenas empilhavam um segundo bloco de texto por cima.
+#
+# Desligar aqui, e nao so esconder a UI: um short gravado com cenas continuaria
+# renderizando o texto delas para sempre, e o operador nao teria mais onde
+# apaga-las. O dado fica no banco — nada e destruido, e religar e mudar esta
+# constante de volta.
+CENAS_LIGADAS = False
 
 
 def _textura(palco: dict) -> str:
