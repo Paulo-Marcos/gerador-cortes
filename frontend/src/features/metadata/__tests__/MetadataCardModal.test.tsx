@@ -82,6 +82,17 @@ describe('MetadataCard — corpo do modal', () => {
     expect(markup).toMatch(/border-dashed/);
   });
 
+  // D-555: a moldura entrou pelo ⋯ do header do card — que o modal nao
+  // renderiza —, repetindo a falha que a D-413 corrigiu logo acima. Este teste
+  // e a trava: a acao vive na fileira que opera a capa existente, nao no header.
+  it('oferece aplicar a moldura na capa', () => {
+    expect(render(metadado())).toContain('Aplicar moldura');
+  });
+
+  it('nao oferece aplicar moldura quando nao ha capa', () => {
+    expect(render(metadado({ thumbnail_path: '' }))).not.toContain('Aplicar moldura');
+  });
+
   it('mostra as sugestoes de titulo e de capa como chips', () => {
     const markup = render(metadado());
     expect(markup).toContain('Primeira opcao');

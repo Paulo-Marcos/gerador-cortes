@@ -399,15 +399,6 @@ export function MetadataCard({
                     onFile: (file) => uploadThumbnail.mutate(file),
                   },
                   {
-                    icon: Frame,
-                    label: applyFrame.isPending ? 'Aplicando moldura...' : 'Aplicar moldura',
-                    title: meta?.thumbnail_path
-                      ? 'Cola a moldura do canal na capa atual.'
-                      : 'Suba uma capa primeiro.',
-                    disabled: applyFrame.isPending || !meta?.thumbnail_path,
-                    onClick: () => applyFrame.mutate(),
-                  },
-                  {
                     icon: Folder,
                     label: 'Copiar pasta da thumbnail',
                     onClick: () =>
@@ -695,6 +686,20 @@ export function MetadataCard({
                     <RefreshCw />
                   )}
                 </IconButton>
+                {/* D-555: entrou aqui, e não no ⋯ do header, porque o header é
+                    do card e o modal não o renderiza — a mesma armadilha que a
+                    D-413 já tinha desarmado para o "Copiar prompt". O lugar da
+                    ação é ao lado das irmãs que também operam a capa existente. */}
+                <IconButton
+                  size="sm"
+                  variant="inset"
+                  aria-label="Aplicar moldura"
+                  title="Aplicar a moldura do canal nesta capa"
+                  onClick={() => applyFrame.mutate()}
+                  disabled={applyFrame.isPending}
+                >
+                  {applyFrame.isPending ? <Loader2 className="animate-spin" /> : <Frame />}
+                </IconButton>
                 <IconButton
                   size="sm"
                   variant="inset"
@@ -941,6 +946,13 @@ export function MetadataCard({
                       icon: Folder,
                       label: 'Copiar pasta',
                       onClick: () => void copy(meta?.thumbnail_path ?? '', 'Endereco copiado.'),
+                    },
+                    {
+                      icon: Frame,
+                      label: applyFrame.isPending ? 'Aplicando moldura…' : 'Aplicar moldura',
+                      title: 'Aplicar a moldura do canal nesta capa',
+                      disabled: applyFrame.isPending,
+                      onClick: () => applyFrame.mutate(),
                     },
                     {
                       icon: RefreshCw,
