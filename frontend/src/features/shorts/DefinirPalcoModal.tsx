@@ -88,11 +88,27 @@ export function DefinirPalcoModal({
   );
   const regioesEmJogo = Object.keys(plano?.slots ?? {});
 
+  /**
+   * O palco deste short, no formato que o preset guarda.
+   *
+   * D-561: dois campos estavam errados aqui, e os dois só apareciam DEPOIS,
+   * quando o preset era aplicado noutro trecho.
+   *
+   * `fundo` gravava `fundo_palco` — a chave de COR da paleta. Na D-552 o campo
+   * do preset passou a significar a TEXTURA, e quem aplica escreve o valor em
+   * `fundo_editorial`. Ou seja: todo preset salvo desde então guardava uma cor
+   * onde se espera uma textura, e aplicá-lo caía no padrão do canal. Foi
+   * exatamente essa cor ("verdeProfundo") que derrubou a tela na D-554 — lá eu
+   * fiz a leitura degradar, e a origem continuou intacta até agora.
+   *
+   * `ajustes` não existia, e é o tamanho das janelas (D-559).
+   */
   const comoEstaHoje = (): PalcoShortPreset => ({
     arranjo: short.arranjo_palco,
     janela_cheia: short.janela_cheia,
     recortes: short.recortes_palco ?? {},
-    fundo: short.fundo_palco ?? '',
+    ajustes: short.ajustes_palco ?? {},
+    fundo: short.fundo_editorial ?? '',
   });
 
   // D-552: aplicar um preset COPIA os valores — e agora marca de onde vieram.
