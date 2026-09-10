@@ -4,6 +4,7 @@ import {
   Eye,
   MoveHorizontal,
   Play,
+  Type,
   Undo2,
   X,
 } from 'lucide-react';
@@ -52,6 +53,8 @@ interface Props {
   onPalco: (presetId: string, payload: PalcoShortPreset | null) => void;
   /** D-542: abre o modal do palco já neste candidato. */
   onDefinirPalco: () => void;
+  /** D-565: abre o modal do gancho já neste candidato. */
+  onEscreverGancho: () => void;
   onPrevia: () => void;
   onRenderizar: () => void;
 }
@@ -77,6 +80,7 @@ export function CandidatoCard({
   vereditoDoRosto,
   onPalco,
   onDefinirPalco,
+  onEscreverGancho,
   onPrevia,
   onRenderizar,
 }: Props) {
@@ -178,6 +182,31 @@ export function CandidatoCard({
               “{short.gancho}”
             </p>
           )}
+          {/* D-565: o gancho de ABERTURA — o que vai virar pixel nos primeiros
+              segundos. Fica na identidade, e nao no bloco de ajuste, porque e
+              CONTEUDO: decide o que o short promete, nao como ele fica.
+
+              Uma linha so, que abre o modal. Um campo de texto aqui reabriria a
+              parede de controles que a D-492 desfez — em cinco cards ao mesmo
+              tempo. */}
+          <button
+            type="button"
+            disabled={ocupado}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEscreverGancho();
+            }}
+            title="Escrever o gancho que aparece nos primeiros segundos"
+            className={cn(
+              'mt-1 flex w-full items-center gap-1 rounded-[6px] px-1 py-0.5 text-left text-[11.5px] leading-snug transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-45',
+              short.gancho_tela ? 'text-[var(--wb-text)]' : 'text-[var(--wb-text-mute)]',
+            )}
+          >
+            <Type size={11} className="flex-none opacity-70" aria-hidden />
+            <span className="truncate">
+              {short.gancho_tela || 'sem gancho na abertura'}
+            </span>
+          </button>
         </div>
 
         <div className="flex flex-none flex-col items-end gap-1">

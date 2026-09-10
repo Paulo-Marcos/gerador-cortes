@@ -26,7 +26,7 @@ from pathlib import Path
 from app.channel_assets_sync import cor_do_tema
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain import moldura_short
+from app.domain import gancho_short, moldura_short
 from app.domain.ffmpeg_short import (
     build_composicao_short_cmd,
     build_palco_vertical_cmd,
@@ -183,6 +183,7 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
         json.dumps(
             {
                 "cenas": contexto.cenas,
+                "gancho": contexto.gancho,
                 "captions": legenda.captions,
                 "duracaoSeg": contexto.duracao_seg,
             },
@@ -248,6 +249,10 @@ class _ContextoRender:
     foco_x: float
     filtro: str | None
     cenas: list[dict]
+    # D-565: o titulo-gancho da abertura, ou None quando este short nao tem.
+    # Campo PROPRIO, fora de `cenas`: as cenas estao desligadas (`CENAS_LIGADAS`)
+    # e o gancho nao pode depender daquele interruptor — nem ser religado por ele.
+    gancho: dict | None
     # D-481: a resolucao MEDIDA do bruto. Nao tem default de proposito — foi um
     # default (HORIZONTAL) que fez o crop 9:16 ser calculado sobre 1920x1080 num
     # bruto 720p e estourar o quadro.
@@ -308,6 +313,11 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             foco_x=foco_efetivo(short, corte),
             filtro=filtro,
             cenas=[] if not CENAS_LIGADAS else _json_lista(short.cenas_remotion),
+            gancho=gancho_short.para_payload(
+                short.gancho_tela,
+                short.gancho_ate_seg,
+                duracao_short_seg=float(short.fim_seg) - float(short.inicio_seg),
+            ),
             origem=origem,
             plano=palco["plano"],
             origem_palco=palco["origem"],

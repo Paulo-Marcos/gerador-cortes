@@ -87,7 +87,12 @@ export interface ShortSugerido {
   corte_id: string;
   numero: number;
   titulo: string;
+  /** O gancho de CURADORIA que a IA escreveu — vira a descricao do post. */
   gancho: string;
+  /** D-565: o titulo-gancho que aparece na ABERTURA. Vazio = sem gancho. */
+  gancho_tela: string;
+  /** D-565: quanto tempo o gancho fica em tela. 0 = o padrao. */
+  gancho_ate_seg: number;
   inicio_seg: number;
   fim_seg: number;
   duracao_seg: number;
@@ -143,6 +148,9 @@ export interface AtualizarShortBody {
   fundo_palco?: string;
   fundo_editorial?: string;
   palco_short_preset?: string;
+  /** D-565: o titulo-gancho da abertura. "" apaga. */
+  gancho_tela?: string;
+  gancho_ate_seg?: number;
 }
 
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */

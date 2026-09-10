@@ -45,6 +45,8 @@ import { ReguaDeOnda } from './ReguaDeOnda';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
 import { PalcoDoCorte } from './PalcoDoCorte';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
+import { GanchoModal } from './GanchoModal';
+import { GanchoPrevia } from './GanchoPrevia';
 import { PalcoPrevia } from './PalcoPrevia';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
@@ -107,6 +109,7 @@ export default function FireDetalhePage() {
   // mesmo tempo sobre telas diferentes seriam duas conversas de uma vez.
   // D-509: o modal onde a tela do short se monta inteira, num lugar so.
   const [definindoPalco, setDefinindoPalco] = useState(false);
+  const [escrevendoGancho, setEscrevendoGancho] = useState(false);
 
   const velocidadePadrao = useVelocidadePlayerPadrao();
   const [velocidade, setVelocidade] = useState(velocidadePadrao);
@@ -246,13 +249,27 @@ export default function FireDetalhePage() {
   ]);
 
   const legendaAtiva = legendaVisivel && temPalavras && transcricao.data;
-  const legenda = emQuadro && legendaAtiva && transcricao.data && (
-    <LegendaPrevia
-      palavras={transcricao.data.palavras}
-      inicioSeg={emQuadro.inicio_seg}
-      fimSeg={emQuadro.fim_seg}
-      tempoAtualSeg={tempoAtual}
-    />
+  // D-565: o gancho e a legenda coexistem na tela — ele no terco superior, ela
+  // no rodape. Viajam no MESMO no para nunca aparecerem em previas diferentes:
+  // e a coexistencia que precisa ser julgada, nao cada um por si.
+  const legenda = emQuadro && (
+    <>
+      <GanchoPrevia
+        texto={emQuadro.gancho_tela}
+        ateSeg={emQuadro.gancho_ate_seg}
+        inicioSeg={emQuadro.inicio_seg}
+        fimSeg={emQuadro.fim_seg}
+        tempoAtualSeg={tempoAtual}
+      />
+      {legendaAtiva && transcricao.data && (
+        <LegendaPrevia
+          palavras={transcricao.data.palavras}
+          inicioSeg={emQuadro.inicio_seg}
+          fimSeg={emQuadro.fim_seg}
+          tempoAtualSeg={tempoAtual}
+        />
+      )}
+    </>
   );
 
   return (
@@ -629,6 +646,12 @@ export default function FireDetalhePage() {
                 setSelecionado(short.id);
                 setDefinindoPalco(true);
               }}
+              // Mesma regra do palco (D-542): seleciona ANTES de abrir, senao o
+              // modal editaria o gancho de outro trecho sem erro nenhum.
+              onEscreverGancho={() => {
+                setSelecionado(short.id);
+                setEscrevendoGancho(true);
+              }}
               onPrevia={() => previa.mutate(short.id)}
               onRenderizar={() => renderizar.mutate(short.id)}
             />
@@ -661,6 +684,25 @@ export default function FireDetalhePage() {
           video={video}
           ocupado={atualizar.isPending}
           onAplicar={(mudanca) => atualizar.mutate({ shortId: emQuadro.id, ...mudanca })}
+        />
+      )}
+      {emQuadro && (
+        <GanchoModal
+          open={escrevendoGancho}
+          onClose={() => setEscrevendoGancho(false)}
+          short={emQuadro}
+          plano={palcoNaTela ? (palcoDoShort.data ?? null) : null}
+          video={video}
+          palavras={transcricao.data?.palavras ?? []}
+          ocupado={atualizar.isPending}
+          onGravar={(texto, ateSeg) => {
+            atualizar.mutate({
+              shortId: emQuadro.id,
+              gancho_tela: texto,
+              gancho_ate_seg: ateSeg,
+            });
+            setEscrevendoGancho(false);
+          }}
         />
       )}
     </div>

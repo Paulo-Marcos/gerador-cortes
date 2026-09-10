@@ -24,6 +24,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain import gancho_short
 from app.domain.arranjo_short import de_chave as arranjo_de_chave
 from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
 from app.domain.cenas_short_ia import recortar_transcricao
@@ -340,6 +341,8 @@ async def atualizar_short(
     fundo_palco: str | None = None,
     fundo_editorial: str | None = None,
     palco_short_preset: str | None = None,
+    gancho_tela: str | None = None,
+    gancho_ate_seg: float | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -373,6 +376,15 @@ async def atualizar_short(
             if not 0.0 <= foco_x <= 1.0:
                 raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
             short.foco_x = round(float(foco_x), 3)
+
+        if gancho_tela is not None:
+            # "" apaga o gancho, e e assim que o operador o remove. Normalizar
+            # aqui e nao so no render: o que a tela mostra de volta tem de ser o
+            # que vai para o arquivo, senao a previa mente sobre o espaco.
+            short.gancho_tela = gancho_short.normalizar_gancho(gancho_tela)
+
+        if gancho_ate_seg is not None:
+            short.gancho_ate_seg = gancho_short.normalizar_duracao(gancho_ate_seg)
 
         if moldura is not None:
             if moldura not in {m.value for m in Moldura}:
@@ -826,6 +838,10 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "numero": short.numero,
         "titulo": short.titulo_sugerido,
         "gancho": short.gancho,
+        # D-565: o gancho de TELA, que e outro texto — ver o comentario da
+        # coluna em `models.Short`. O `gancho` acima segue sendo o da curadoria.
+        "gancho_tela": short.gancho_tela,
+        "gancho_ate_seg": short.gancho_ate_seg,
         "inicio_seg": short.inicio_seg,
         "fim_seg": short.fim_seg,
         "duracao_seg": round(short.fim_seg - short.inicio_seg, 2),

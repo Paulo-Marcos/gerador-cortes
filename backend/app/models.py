@@ -377,6 +377,25 @@ class Short(Base):
     # valor gravado = o operador discordou depois de ver o enquadramento.
     foco_x: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
     cenas_remotion: Mapped[str] = mapped_column(Text, default="[]")
+    # D-565: o titulo-gancho que aparece na ABERTURA do short. Vazio = sem
+    # gancho, que e o comportamento de antes desta demanda.
+    #
+    # Coluna NOVA, e nao reuso do `gancho` acima, por um motivo concreto: aquele
+    # ja e a DESCRICAO do post publicado (`publicacao_destinos.montar_contexto_
+    # do_short`). Reaproveita-lo reescreveria em silencio a descricao de todo
+    # short ja curado — e o operador so descobriria depois de publicado.
+    #
+    # Os dois textos tambem sao de generos diferentes: o `gancho` da IA e uma
+    # frase de curadoria ("qual e a graca deste trecho"), e este e o cartao de
+    # 4 a 7 palavras que segura o dedo no feed. O primeiro alimenta o gerador do
+    # segundo; nao sao a mesma frase.
+    #
+    # E NAO e uma cena (`cenas_remotion`, hoje desligada em `CENAS_LIGADAS`):
+    # cena era texto em qualquer momento, N vezes; o gancho e um so, ancorado no
+    # zero. Campos separados para que religar um nunca mexa no outro.
+    gancho_tela: Mapped[str] = mapped_column(String(200), default="")
+    # Quanto tempo o gancho fica em tela. 0 = o padrao de `domain/gancho_short`.
+    gancho_ate_seg: Mapped[float] = mapped_column(Float, default=0.0)
     desvios: Mapped[str] = mapped_column(Text, default="[]")
     status: Mapped[str] = mapped_column(String(50), default=StatusShort.SUGERIDO)
     # D-484: quem propos este trecho — "ia" ou "manual".
@@ -678,3 +697,4 @@ class LiveCandidata(Base):
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+

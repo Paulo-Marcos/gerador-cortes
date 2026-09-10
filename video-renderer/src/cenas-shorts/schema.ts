@@ -33,3 +33,16 @@ export const TIPOS_CENA_SHORT: readonly TipoCenaShort[] = [
 export function ehTipoCenaShort(valor: unknown): valor is TipoCenaShort {
   return typeof valor === "string" && (TIPOS_CENA_SHORT as readonly string[]).includes(valor);
 }
+
+// D-565: o titulo-gancho da abertura.
+//
+// NAO entra em `CenaShort`. Cena e texto em qualquer momento, N vezes, e esse
+// repertorio esta desligado (`CENAS_LIGADAS`); o gancho e UM, ancorado no zero
+// do short. Tipos separados para que religar cenas nunca implique gancho, nem
+// o contrario.
+export interface GanchoShort {
+  /** As 4 a 7 palavras que seguram os primeiros segundos. */
+  texto: string;
+  /** Segundo em que ele sai de cena. */
+  ateSeg: number;
+}

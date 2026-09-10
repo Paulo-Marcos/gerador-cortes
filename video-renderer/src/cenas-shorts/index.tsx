@@ -3,12 +3,25 @@ import { Sequence, useVideoConfig } from "remotion";
 import type { Caption } from "@remotion/captions";
 import { CenaCitacaoShort } from "./CenaCitacaoShort";
 import { CenaCtaShort } from "./CenaCtaShort";
+import { GanchoAbertura } from "./GanchoAbertura";
 import { CenaHook } from "./CenaHook";
 import { CenaNumeroShort } from "./CenaNumeroShort";
 import { LegendaShort } from "./LegendaShort";
-import { ehTipoCenaShort, type CenaShort, type TipoCenaShort } from "./schema";
+import {
+  ehTipoCenaShort,
+  type CenaShort,
+  type GanchoShort,
+  type TipoCenaShort,
+} from "./schema";
 
-export { CenaCitacaoShort, CenaCtaShort, CenaHook, CenaNumeroShort, LegendaShort };
+export {
+  CenaCitacaoShort,
+  CenaCtaShort,
+  CenaHook,
+  CenaNumeroShort,
+  GanchoAbertura,
+  LegendaShort,
+};
 export * from "./schema";
 
 // D-465: o mapa tipo → componente das cenas verticais.
@@ -28,6 +41,8 @@ const CENAS: Record<TipoCenaShort, React.FC<{ cena: CenaShort }>> = {
 export interface CamadaShortProps {
   cenas: CenaShort[];
   captions: Caption[];
+  /** D-565: o gancho da abertura, ou `null` quando este short nao tem. */
+  gancho?: GanchoShort | null;
 }
 
 /**
@@ -37,11 +52,24 @@ export interface CamadaShortProps {
  * escreve esse JSON, e um tipo inventado num short não pode custar o vídeo
  * inteiro — o pior caso aceitável é o short sair sem aquela cena.
  */
-export const CamadaShort: React.FC<CamadaShortProps> = ({ cenas, captions }) => {
+export const CamadaShort: React.FC<CamadaShortProps> = ({
+  cenas,
+  captions,
+  gancho = null,
+}) => {
   const { fps } = useVideoConfig();
 
   return (
     <>
+      {/* D-565: o gancho SEMPRE do zero — nao e uma cena posicionada na
+          timeline, e a abertura. Ele e a legenda coexistem: ele no terco
+          superior, ela no rodape, cada um na sua safe zone. */}
+      {gancho?.texto ? (
+        <Sequence from={0} durationInFrames={Math.max(1, Math.round(gancho.ateSeg * fps))}>
+          <GanchoAbertura texto={gancho.texto} ateSeg={gancho.ateSeg} />
+        </Sequence>
+      ) : null}
+
       {cenas.filter((cena) => ehTipoCenaShort(cena.tipo)).map((cena, indice) => {
         const Componente = CENAS[cena.tipo];
         const de = Math.max(0, Math.round(cena.inicio * fps));

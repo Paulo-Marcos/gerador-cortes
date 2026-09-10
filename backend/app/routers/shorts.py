@@ -297,6 +297,9 @@ class AtualizarShortRequest(BaseModel):
     # D-552: a TEXTURA do palco (id de fundo), e qual preset a trouxe.
     fundo_editorial: str | None = None
     palco_short_preset: str | None = None
+    # D-565: o titulo-gancho da abertura e quanto tempo ele fica em tela.
+    gancho_tela: str | None = None
+    gancho_ate_seg: float | None = None
 
 
 @router.patch("/{short_id}")
@@ -319,6 +322,8 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 palco_short_preset=body.palco_short_preset,
                 palco_preset=body.palco_preset,
                 moldura=body.moldura,
+                gancho_tela=body.gancho_tela,
+                gancho_ate_seg=body.gancho_ate_seg,
             )
         }
     except LookupError as exc:
@@ -868,3 +873,4 @@ async def publicar_corte_no_tiktok(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
