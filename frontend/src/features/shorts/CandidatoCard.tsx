@@ -1,7 +1,6 @@
 import {
   Check,
   Clapperboard,
-  Crop,
   Eye,
   MoveHorizontal,
   Play,
@@ -200,11 +199,10 @@ export function CandidatoCard({
           {mmss(short.inicio_seg)} → {mmss(short.fim_seg)}
         </span>
         <span>{Math.round(short.duracao_seg)}s</span>
-        <span className="inline-flex items-center gap-1" title="Centro da janela 9:16">
-          <Crop size={11} aria-hidden />
-          {Math.round(short.foco_efetivo * 100)}%
-          {short.foco_x !== null && <span className="text-[var(--wb-accent)]">·ajustado</span>}
-        </span>
+        {/* D-558: o "50%" do enquadramento saiu daqui junto com o controle.
+            Ele mostrava onde a janela 9:16 se centra no quadro cru — número que
+            só age quando o trecho NÃO tem palco, e que num trecho com palco
+            ficava na linha dos que decidem sem decidir nada. */}
         <div className="flex-1" />
         <Button
           variant="ghost"

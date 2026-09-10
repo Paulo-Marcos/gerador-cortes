@@ -411,18 +411,23 @@ export default function FireDetalhePage() {
                 onSeeking={aoBuscar}
                 className="absolute inset-0 h-full w-full"
               />
-              {emQuadro && !recortando && (
+              {/* D-558: a máscara é o enquadramento DESENHADO, e some pelo
+                  mesmo motivo que o controle sumiu do modal — com palco, a
+                  janela 9:16 sobre o quadro cru não descreve o short que vai
+                  sair. Quem descreve é a prévia ao lado. Sem palco ela é a
+                  única prévia que existe, e continua. */}
+              {emQuadro && !recortando && !temPalco && (
                 <MascaraEnquadramento
                   largura={dimensoes.largura}
                   altura={dimensoes.altura}
                   focoX={emQuadro.foco_efetivo}
                 >
-                  {/* Com palco, a janela sobre o quadro cru deixa de descrever o
-                      short — quem descreve é a prévia ao lado, e a legenda vai
-                      para lá junto. */}
-                  {!palcoNaTela && legenda}
+                  {legenda}
                 </MascaraEnquadramento>
               )}
+              {/* Com palco a legenda não perde o pai: ela vinha dentro da
+                  máscara e sairia de cena junto com ela. */}
+              {emQuadro && !recortando && temPalco && !palcoNaTela && legenda}
               {/* D-499: as alças do recorte substituem a máscara enquanto se
                   marca. Sobrepostas, a janela 9:16 competiria com o retângulo
                   que o operador está tentando ver. */}

@@ -16,7 +16,6 @@ import { PalcoPrevia } from './PalcoPrevia';
 import { SeletorDeTextura } from './SeletorDeTextura';
 import { mudancaDoPalco } from './aplicarPalco';
 import { usePalcoDoCorte } from './useShortsDoCorte';
-import { ControlesDeFoco } from './CampoDeFoco';
 import { useArranjosDePalco } from './useShortsDoCorte';
 import type { AtualizarShortBody, PlanoDesenhavel, Retangulo, ShortSugerido } from './shortsApi';
 
@@ -217,21 +216,17 @@ export function DefinirPalcoModal({
             )}
           </Secao>
 
-          <Secao numero={3} titulo="O enquadramento">
-            {/* D-542: veio do painel do candidato, onde as setas empurravam a
-                janela 9:16 SEM previa ao lado — metade do trabalho. Aqui o
-                resultado esta na tela enquanto se empurra. */}
-            <ControlesDeFoco
-              valor={short.foco_efetivo}
-              ocupado={ocupado}
-              onAplicar={(fracao) => onAplicar({ foco_x: Number(fracao.toFixed(3)) })}
-            />
-            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
-              Onde fica o centro da janela vertical, em % da largura do quadro.
-            </p>
-          </Secao>
-
-          <Secao numero={4} titulo="A moldura">
+          {/* D-558: "O enquadramento" saiu daqui, e o operador estava certo.
+              O `foco_x` é onde a janela 9:16 se centra no quadro CRU — e o
+              `arranjo_short` já dizia, desde que nasceu, que ele "só vale
+              quando não há região marcada". Dentro deste modal sempre há: as
+              seções 1 e 2 acabaram de definir o arranjo e o recorte de cada
+              janela. O controle empurrava um número que o render nunca ia ler.
+              Um botão que não faz nada é pior que um botão que falta: ele
+              consome atenção e ensina uma mecânica errada.
+              O campo continua no banco e continua governando o caminho SEM
+              palco — que é o único onde ele age. */}
+          <Secao numero={3} titulo="A moldura">
             <select
               aria-label="Moldura do short"
               value={short.moldura}
@@ -247,7 +242,7 @@ export function DefinirPalcoModal({
             </p>
           </Secao>
 
-          <Secao numero={5} titulo="O fundo">
+          <Secao numero={4} titulo="O fundo">
             {/* D-552: a TEXTURA, e não uma cor da paleta.
                 O seletor anterior oferecia cores e escolher uma não mudava nada
                 em lugar nenhum: no arquivo o PNG do palco cobre a cor, e na
@@ -263,7 +258,7 @@ export function DefinirPalcoModal({
             </p>
           </Secao>
 
-          <Secao numero={6} titulo="Guardar como preset">
+          <Secao numero={5} titulo="Guardar como preset">
             <div className="flex flex-wrap items-center gap-1.5">
               <Input
                 value={nomeNovo}
@@ -368,8 +363,17 @@ export function DefinirPalcoModal({
         </div>
 
         {/* A prévia acompanha cada decisão. Decidir olhando para o resultado é
-            o que dispensa entender a mecânica por trás. */}
-        <div className="flex flex-col items-center gap-1">
+            o que dispensa entender a mecânica por trás.
+
+            D-558: e para acompanhar, ela precisa ficar PARADA. A coluna rolava
+            junto com as seções, então escolher a moldura ou o fundo — que são
+            justamente as decisões do fim da lista — se fazia às cegas: o
+            operador descia até o controle e a prévia já tinha saído da tela.
+            Uma prévia que some na hora de decidir não é prévia.
+
+            `self-start` antes do `sticky`: item de grid estica por padrão, e um
+            item da altura da linha inteira não tem para onde grudar. */}
+        <div className="flex flex-col items-center gap-1 lg:sticky lg:top-0 lg:self-start">
           <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
             como vai sair
           </span>
