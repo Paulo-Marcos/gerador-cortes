@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Loader2, Pencil, Save, Trash2 } from 'lucide-react';
+import { Check, Loader2, Maximize2, Minimize2, Pencil, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -12,6 +12,7 @@ import {
 } from '@/features/editor/fase2/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { EditorDeRecorte } from './EditorDeRecorte';
+import { ocupacaoDoPalco, redimensionarPalco } from './arrastarSlot';
 import { PalcoPrevia } from './PalcoPrevia';
 import { SeletorDeTextura } from './SeletorDeTextura';
 import { mudancaDoPalco } from './aplicarPalco';
@@ -35,6 +36,10 @@ import type { AtualizarShortBody, PlanoDesenhavel, Retangulo, ShortSugerido } fr
 //
 // E a prévia fica ao lado o tempo inteiro: decidir olhando para o resultado é o
 // que dispensa entender a mecânica.
+
+// 5% por clique. Menos que isso não se vê na prévia e o operador clica dez
+// vezes achando que travou; mais que isso pula o tamanho que ele queria.
+const PASSO_DO_TAMANHO = 1.05;
 
 const REGIAO: Record<string, string> = {
   pessoa: 'a pessoa',
@@ -100,6 +105,19 @@ export function DefinirPalcoModal({
     onAplicar(mudancaDoPalco(id, payload));
 
   const presetDoCorte = usePalcoDoCorte(corteId);
+
+  // D-559: o tamanho do palco dentro do quadro.
+  //
+  // Redimensiona a partir dos slots RESOLVIDOS (modelo + ajustes), e não do
+  // modelo cru: é assim que cada clique compõe com o anterior e com o que o
+  // operador já tinha arrastado à mão. O caminho de volta é limpar os ajustes,
+  // que devolve o tamanho do arranjo sem precisar guardar percentual nenhum —
+  // uma coluna a mais aqui seria um segundo lugar dizendo a mesma coisa, e os
+  // dois divergiriam no primeiro arraste.
+  const slotsAgora = plano?.slots ?? {};
+  const ocupacao = ocupacaoDoPalco(slotsAgora);
+  const redimensionar = (fator: number) =>
+    onAplicar({ ajustes_palco: redimensionarPalco(slotsAgora, fator) });
 
   return (
     <Modal open={open} onClose={onClose} title="Definir o palco deste short" size="2xl">
@@ -226,7 +244,45 @@ export function DefinirPalcoModal({
               consome atenção e ensina uma mecânica errada.
               O campo continua no banco e continua governando o caminho SEM
               palco — que é o único onde ele age. */}
-          <Secao numero={3} titulo="A moldura">
+          <Secao numero={3} titulo="O tamanho na tela">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                aria-label="Diminuir o palco"
+                disabled={ocupado || !plano}
+                onClick={() => redimensionar(1 / PASSO_DO_TAMANHO)}
+              >
+                <Minimize2 />
+              </Button>
+              <span className="w-[46px] text-center font-code text-[12px] tabular-nums">
+                {Math.round(ocupacao * 100)}%
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                aria-label="Aumentar o palco"
+                disabled={ocupado || !plano}
+                onClick={() => redimensionar(PASSO_DO_TAMANHO)}
+              >
+                <Maximize2 />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={ocupado || !plano}
+                onClick={() => onAplicar({ ajustes_palco: {} })}
+              >
+                voltar ao tamanho do arranjo
+              </Button>
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+              Quanto da largura do quadro o vídeo ocupa. Em tela cheia ele cobre os 100% e o
+              fundo não aparece; abaixo disso o palco do canal fica visível em volta.
+            </p>
+          </Secao>
+
+          <Secao numero={4} titulo="A moldura">
             <select
               aria-label="Moldura do short"
               value={short.moldura}
@@ -242,7 +298,7 @@ export function DefinirPalcoModal({
             </p>
           </Secao>
 
-          <Secao numero={4} titulo="O fundo">
+          <Secao numero={5} titulo="O fundo">
             {/* D-552: a TEXTURA, e não uma cor da paleta.
                 O seletor anterior oferecia cores e escolher uma não mudava nada
                 em lugar nenhum: no arquivo o PNG do palco cobre a cor, e na
@@ -258,7 +314,7 @@ export function DefinirPalcoModal({
             </p>
           </Secao>
 
-          <Secao numero={5} titulo="Guardar como preset">
+          <Secao numero={6} titulo="Guardar como preset">
             <div className="flex flex-wrap items-center gap-1.5">
               <Input
                 value={nomeNovo}

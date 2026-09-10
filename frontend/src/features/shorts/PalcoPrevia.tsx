@@ -128,10 +128,22 @@ export function PalcoPrevia({ plano, video, children }: Props) {
       // `h-full w-auto` + aspectRatio: a altura vem da linha (que o player
       // define) e a largura sai da proporcao. Sem a altura definida, um
       // contentor que so tem aspect-ratio colapsa para largura zero.
-      className="relative h-full w-auto overflow-hidden rounded-[10px] bg-black"
+      className="relative h-full w-auto overflow-hidden rounded-[10px]"
       // O container é um container de consulta para a legenda se dimensionar
       // em `cqw`, como faz sobre a máscara.
-      style={{ aspectRatio: `${largura} / ${altura}`, containerType: 'inline-size' }}
+      //
+      // D-559: e o fundo é PRETO só quando há moldura — ali a textura cobre e a
+      // cor não aparece nem no arquivo. Sem moldura não há PNG, e o que o
+      // ffmpeg pinta debaixo de tudo é justamente `plano.fundo`, a cor da
+      // paleta do canal. Isso não fazia diferença enquanto a janela cobria o
+      // quadro inteiro; passou a fazer agora que ela pode encolher, e um preto
+      // aqui contra uma cor lá seria a divergência da D-549 de novo, só que do
+      // outro lado.
+      style={{
+        aspectRatio: `${largura} / ${altura}`,
+        containerType: 'inline-size',
+        background: comMoldura ? '#000' : plano.fundo,
+      }}
     >
       {/* Camada 1 — o fundo editorial do canal. O mesmo id que o render manda
           para o PNG, então a textura aqui é a textura de lá. */}

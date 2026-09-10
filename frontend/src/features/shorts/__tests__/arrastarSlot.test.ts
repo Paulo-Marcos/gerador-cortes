@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { aplicarCampo, arrastarSlot, CANVAS, LADO_MINIMO, paraCanvas } from '../arrastarSlot';
+import {
+  aplicarCampo,
+  arrastarSlot,
+  CANVAS,
+  LADO_MINIMO,
+  ocupacaoDoPalco,
+  paraCanvas,
+  redimensionarPalco,
+} from '../arrastarSlot';
 
 // D-493: o arraste dos blocos do palco.
 //
@@ -99,5 +107,62 @@ describe('paraCanvas', () => {
 
   it('largura ainda desconhecida nao gera NaN', () => {
     expect(paraCanvas(10, 0)).toBe(0);
+  });
+});
+
+describe('redimensionarPalco', () => {
+  it('encolhe em torno do centro, e nao para o canto', () => {
+    // O erro classico: mexer em w/h e esquecer x/y. O bloco encolhe grudado no
+    // canto superior esquerdo e a moldura aparece so de dois lados.
+    const saida = redimensionarPalco({ cheia: { x: 0, y: 0, w: 1080, h: 1920 } }, 0.9);
+
+    expect(saida.cheia).toEqual({ x: 54, y: 96, w: 972, h: 1728 });
+  });
+
+  it('abre a moldura por igual dos quatro lados', () => {
+    const saida = redimensionarPalco({ cheia: { x: 0, y: 0, w: 1080, h: 1920 } }, 0.8);
+    const { x, y, w, h } = saida.cheia;
+
+    expect(x).toBe(1080 - (x + w));
+    expect(y).toBe(1920 - (y + h));
+  });
+
+  it('mantem a composicao de duas janelas empilhadas', () => {
+    // Cada uma em torno do proprio centro: o que era de cima continua em cima.
+    const saida = redimensionarPalco(
+      {
+        tela: { x: 0, y: 352, w: 1080, h: 608 },
+        pessoa: { x: 0, y: 960, w: 1080, h: 960 },
+      },
+      0.9,
+    );
+
+    expect(saida.tela.y).toBeLessThan(saida.pessoa.y);
+    expect(saida.tela.w).toBe(972);
+    expect(saida.pessoa.w).toBe(972);
+  });
+
+  it('nao deixa o bloco sumir nem transbordar', () => {
+    const minusculo = redimensionarPalco({ a: { x: 500, y: 900, w: 60, h: 60 } }, 0.1);
+    expect(minusculo.a.w).toBe(LADO_MINIMO);
+
+    const gigante = redimensionarPalco({ a: { x: 0, y: 0, w: 1080, h: 1920 } }, 3);
+    expect(gigante.a).toEqual({ x: 0, y: 0, w: 1080, h: 1920 });
+  });
+});
+
+describe('ocupacaoDoPalco', () => {
+  it('e a fracao da largura do bloco mais largo', () => {
+    expect(ocupacaoDoPalco({ a: { x: 0, y: 0, w: 1080, h: 1920 } })).toBe(1);
+    expect(
+      ocupacaoDoPalco({
+        estreito: { x: 0, y: 0, w: 540, h: 400 },
+        largo: { x: 0, y: 0, w: 972, h: 400 },
+      }),
+    ).toBeCloseTo(0.9);
+  });
+
+  it('sem bloco nenhum e zero, e nao NaN', () => {
+    expect(ocupacaoDoPalco({})).toBe(0);
   });
 });
