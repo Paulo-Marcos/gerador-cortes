@@ -250,6 +250,22 @@ async def importar_prompt_thumbnail(
         raise erro_interno(e) from e
 
 
+@router.post("/corte/{corte_id}/aplicar-moldura")
+async def aplicar_moldura_thumbnail(corte_id: str, db: AsyncSession = Depends(get_db)):
+    """Cola a moldura do canal na capa que já está publicada.
+
+    Capas novas já saem emolduradas; este endpoint existe para as do acervo,
+    para as que entraram antes da moldura existir, e para reaplicar depois de
+    trocar o PNG. Clicar duas vezes não empilha moldura.
+    """
+    try:
+        return await ThumbnailService.aplicar_moldura(corte_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except Exception as e:
+        raise erro_interno(e) from e
+
+
 @router.post("/corte/{corte_id}/comprimir-thumbnail")
 async def comprimir_thumbnail_manual(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Comprime manualmente a thumbnail se ela exceder 2MB e salva sob a antiga."""

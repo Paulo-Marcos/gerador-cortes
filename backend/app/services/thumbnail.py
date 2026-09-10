@@ -71,6 +71,31 @@ async def _emoldurar_capa(conteudo: bytes, is_fire: bool, is_leitura: bool) -> b
         return conteudo
 
 
+async def _capa_e_marcas(corte_id: str) -> tuple[str, bool, bool] | None:
+    """Onde está a capa publicada do corte, e sob que marcas ela deve ser lida.
+
+    None quando não há corte, metadado ou capa — os três casos em que não existe
+    nada para emoldurar. As marcas moram em tabelas diferentes (Fire é
+    julgamento do metadado, Leitura é natureza do corte) e são lidas com a
+    sessão viva.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            return None
+
+        result = await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id))
+        meta = result.scalar_one_or_none()
+        if not meta or not meta.thumbnail_path:
+            return None
+
+        return (
+            str(resolver_do_projeto(meta.thumbnail_path, corte.projeto_id)),
+            bool(meta.is_fire),
+            bool(corte.is_leitura),
+        )
+
+
 async def _gravar_capa(
     thumb_path: str, conteudo: bytes, *, is_fire: bool, is_leitura: bool
 ) -> None:
@@ -142,21 +167,10 @@ class ThumbnailService:
         Devolve se a capa foi de fato refeita — quem chama não deve prometer ao
         operador uma troca que não houve.
         """
-        async with AsyncSessionLocal() as db:
-            corte = await db.get(Corte, corte_id)
-            if not corte:
-                return False
-
-            result = await db.execute(
-                select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id)
-            )
-            meta = result.scalar_one_or_none()
-            if not meta or not meta.thumbnail_path:
-                return False
-
-            thumb_path = str(resolver_do_projeto(meta.thumbnail_path, corte.projeto_id))
-            is_fire = bool(meta.is_fire)
-            is_leitura = bool(corte.is_leitura)
+        dados = await _capa_e_marcas(corte_id)
+        if dados is None:
+            return False
+        thumb_path, is_fire, is_leitura = dados
 
         arte = _caminho_da_arte(thumb_path)
         if not os.path.exists(arte):
@@ -169,6 +183,60 @@ class ThumbnailService:
         async with aiofiles.open(thumb_path, "wb") as arquivo:
             await arquivo.write(emoldurada)
         return True
+
+    @staticmethod
+    async def aplicar_moldura(corte_id: str) -> dict:
+        """Emoldura a capa que já está publicada — a ação do botão na tela.
+
+        Difere de `reaplicar_moldura` num ponto só, e é o ponto que importa:
+        aceita capa SEM arte crua ao lado. Uma capa anterior a este fluxo nunca
+        passou por aqui, então o arquivo publicado É a arte — guardá-lo como
+        `_arte` ANTES de colar é o que impede o segundo clique de empilhar
+        moldura sobre moldura.
+
+        `reaplicar_moldura` recusa esse caso de propósito: ela dispara sozinha
+        quando uma marca muda, e agir sobre um arquivo de origem desconhecida
+        sem ninguém pedir é exatamente como se carimbam capas duas vezes. Aqui
+        há um operador clicando e esperando resposta.
+
+        E por isso a falha aqui SOBE, em vez de degradar para capa crua como no
+        caminho automático: quem clicou em "aplicar moldura" precisa saber que
+        não foi aplicada.
+        """
+        dados = await _capa_e_marcas(corte_id)
+        if dados is None:
+            raise ValueError("Nenhuma capa para emoldurar")
+        thumb_path, is_fire, is_leitura = dados
+
+        if not os.path.exists(thumb_path):
+            raise ValueError("Arquivo da capa não encontrado no disco")
+
+        moldura = _moldura_do_corte(is_fire, is_leitura)
+        if moldura is None:
+            raise ValueError(
+                "Este canal não tem moldura cadastrada. Coloque os PNGs em "
+                "assets/moldura/ (thumb_padrao.png, thumb_fire.png, "
+                "thumb_livro.png, thumb_fire_livro.png)."
+            )
+
+        arte = _caminho_da_arte(thumb_path)
+        if not os.path.exists(arte):
+            async with aiofiles.open(thumb_path, "rb") as arquivo:
+                publicada = await arquivo.read()
+            async with aiofiles.open(arte, "wb") as arquivo:
+                await arquivo.write(publicada)
+
+        async with aiofiles.open(arte, "rb") as arquivo:
+            original = await arquivo.read()
+
+        emoldurada = await asyncio.to_thread(emoldurar, original, moldura.read_bytes())
+        async with aiofiles.open(thumb_path, "wb") as arquivo:
+            await arquivo.write(emoldurada)
+
+        return {
+            "message": f"Moldura aplicada ({moldura.name}).",
+            "moldura": moldura.name,
+        }
 
     @staticmethod
     async def remover(corte_id: str) -> dict:

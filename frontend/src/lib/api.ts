@@ -510,6 +510,12 @@ export const api = {
     );
   },
 
+  aplicarMolduraThumbnail: (corteId: string) =>
+    request<{ message: string; moldura: string }>(
+      `/metadados/corte/${corteId}/aplicar-moldura`,
+      { method: 'POST', body: '{}' },
+    ),
+
   comprimirThumbnail: (corteId: string) =>
     request<{ message: string }>(`/metadados/corte/${corteId}/comprimir-thumbnail`, {
       method: 'POST',

@@ -7,6 +7,7 @@ import {
   Clipboard,
   FileText,
   Folder,
+  Frame,
   Image,
   Loader2,
   Palette,
@@ -197,6 +198,21 @@ export function MetadataCard({
       }),
   });
 
+  // Capa nova já sai emoldurada. Este botão é para as do acervo, para as que
+  // entraram antes da moldura existir, e para reaplicar depois de trocar o PNG
+  // da moldura do canal. Clicar duas vezes não empilha moldura.
+  const applyFrame = useMutation({
+    mutationFn: () => api.aplicarMolduraThumbnail(cut.id),
+    onSuccess: (res) => {
+      invalidate();
+      notify(res.message || 'Moldura aplicada.', { tone: 'success' });
+    },
+    onError: (error) =>
+      notify(error instanceof Error ? error.message : 'Erro ao aplicar a moldura.', {
+        tone: 'error',
+      }),
+  });
+
   const compressThumbnail = useMutation({
     mutationFn: () => api.comprimirThumbnail(cut.id),
     onSuccess: (res) => {
@@ -381,6 +397,15 @@ export function MetadataCard({
                     label: 'Subir thumbnail',
                     accept: 'image/*',
                     onFile: (file) => uploadThumbnail.mutate(file),
+                  },
+                  {
+                    icon: Frame,
+                    label: applyFrame.isPending ? 'Aplicando moldura...' : 'Aplicar moldura',
+                    title: meta?.thumbnail_path
+                      ? 'Cola a moldura do canal na capa atual.'
+                      : 'Suba uma capa primeiro.',
+                    disabled: applyFrame.isPending || !meta?.thumbnail_path,
+                    onClick: () => applyFrame.mutate(),
                   },
                   {
                     icon: Folder,

@@ -271,3 +271,96 @@ def test_o_diretorio_de_molduras_do_canal_resolve_um_nome_por_vez(tmp_path, monk
     assert os.path.basename(str(channel_paths.moldura_thumbnail_path("thumb_fire.png"))) == (
         "thumb_fire.png"
     )
+
+
+class TestBotaoAplicarMoldura:
+    """O botão da tela: emoldurar a capa que já está publicada."""
+
+    @pytest.mark.asyncio
+    async def test_emoldura_capa_antiga_que_nunca_passou_por_aqui(self, cenario):
+        """As capas do acervo não têm `_arte`; o publicado É a arte delas."""
+        sf, molduras, tmp_path = cenario
+        _escrever_molduras(molduras)
+        thumb_dir = tmp_path / "projetos" / "proj-1" / "thumbnails"
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        antiga = thumb_dir / "thumb_corte-1.png"
+        antiga.write_bytes(_capa_crua())
+        async with sf() as db:
+            meta = await db.get(MetadadoCorte, "meta-1")
+            meta.thumbnail_path = str(antiga)
+            await db.commit()
+
+        resultado = await ThumbnailService.aplicar_moldura("corte-1")
+
+        assert resultado["moldura"] == "thumb_padrao.png"
+        assert _moldura_usada(str(antiga)) == "thumb_padrao.png"
+
+    @pytest.mark.asyncio
+    async def test_clicar_duas_vezes_nao_empilha_moldura(self, cenario):
+        """A prova de que guardar o `_arte` ANTES de colar era o essencial.
+
+        Sem isso, o segundo clique leria a capa já emoldurada como se fosse arte
+        e somaria uma banda à outra, encolhendo a imagem a cada clique.
+        """
+        sf, molduras, tmp_path = cenario
+        _escrever_molduras(molduras)
+        thumb_dir = tmp_path / "projetos" / "proj-1" / "thumbnails"
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        antiga = thumb_dir / "thumb_corte-1.png"
+        antiga.write_bytes(_capa_crua())
+        async with sf() as db:
+            meta = await db.get(MetadadoCorte, "meta-1")
+            meta.thumbnail_path = str(antiga)
+            await db.commit()
+
+        await ThumbnailService.aplicar_moldura("corte-1")
+        primeira = antiga.read_bytes()
+        await ThumbnailService.aplicar_moldura("corte-1")
+
+        assert antiga.read_bytes() == primeira
+        # O pixel logo dentro da banda continua sendo capa, não segunda moldura.
+        assert Image.open(antiga).convert("RGB").getpixel((BANDA + 2, BANDA + 2)) == CAPA
+
+    @pytest.mark.asyncio
+    async def test_respeita_as_marcas_do_corte(self, cenario):
+        sf, molduras, tmp_path = cenario
+        _escrever_molduras(molduras)
+        thumb_dir = tmp_path / "projetos" / "proj-1" / "thumbnails"
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        antiga = thumb_dir / "thumb_corte-1.png"
+        antiga.write_bytes(_capa_crua())
+        async with sf() as db:
+            meta = await db.get(MetadadoCorte, "meta-1")
+            meta.thumbnail_path = str(antiga)
+            await db.commit()
+        await _marcar(sf, fire=1, leitura=1)
+
+        resultado = await ThumbnailService.aplicar_moldura("corte-1")
+
+        assert resultado["moldura"] == "thumb_fire_livro.png"
+
+    @pytest.mark.asyncio
+    async def test_sem_capa_o_operador_ouve_o_motivo(self, cenario):
+        """Botão clicado tem que responder — silêncio aqui é o pior desfecho."""
+        sf, molduras, _ = cenario
+        _escrever_molduras(molduras)
+
+        with pytest.raises(ValueError, match="Nenhuma capa"):
+            await ThumbnailService.aplicar_moldura("corte-1")
+
+    @pytest.mark.asyncio
+    async def test_canal_sem_moldura_avisa_em_vez_de_fingir_sucesso(self, cenario):
+        sf, _, tmp_path = cenario
+        thumb_dir = tmp_path / "projetos" / "proj-1" / "thumbnails"
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        antiga = thumb_dir / "thumb_corte-1.png"
+        antiga.write_bytes(_capa_crua())
+        async with sf() as db:
+            meta = await db.get(MetadadoCorte, "meta-1")
+            meta.thumbnail_path = str(antiga)
+            await db.commit()
+
+        with pytest.raises(ValueError, match="não tem moldura"):
+            await ThumbnailService.aplicar_moldura("corte-1")
+
+        assert antiga.read_bytes() == _capa_crua()
