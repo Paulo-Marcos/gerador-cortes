@@ -178,6 +178,29 @@ def _fundo_borrado(capa: Image.Image) -> Image.Image:
     return pequena.filter(ImageFilter.GaussianBlur(raio)).resize(capa.size, Image.LANCZOS)
 
 
+def _encaixar(capa: Image.Image, folga: tuple[float, float]) -> Image.Image:
+    """A capa reduzida para dentro da janela da moldura, sobre o fundo borrado.
+
+    `folga` é a espessura da faixa como FRAÇÃO de cada lado, não em pixels: a
+    mesma moldura serve capas de 928 a 2752 de largura.
+    """
+    largura, altura = capa.size
+    janela_larg = largura - round(folga[0] * largura) * 2
+    janela_alt = altura - round(folga[1] * altura) * 2
+    if janela_larg <= 0 or janela_alt <= 0:
+        # Moldura tão grossa que não sobra janela: melhor a capa inteira por
+        # baixo do que uma imagem de um pixel.
+        return capa
+
+    escala = min(janela_larg / largura, janela_alt / altura)
+    reduzida = capa.resize(
+        (max(1, round(largura * escala)), max(1, round(altura * escala))), Image.LANCZOS
+    )
+    tela = _fundo_borrado(capa)
+    tela.paste(reduzida, ((largura - reduzida.width) // 2, (altura - reduzida.height) // 2))
+    return tela
+
+
 def emoldurar(arte: bytes, moldura: bytes) -> bytes:
     """A capa com a moldura colada, no MESMO formato em que ela chegou.
 
@@ -216,28 +239,10 @@ def emoldurar(arte: bytes, moldura: bytes) -> bytes:
         # depois de esticar para a capa custaria proporcional ao tamanho dela — e
         # a capa chega a 2752x1536, o que levava a colagem a quase dois segundos.
         faixa_x, faixa_y = espessura_da_faixa(aparada)
-        fracao_x = faixa_x / aparada.width
-        fracao_y = faixa_y / aparada.height
+        folga = (faixa_x / aparada.width, faixa_y / aparada.height)
         contorno = aparada.resize(capa.size, Image.LANCZOS)
 
-    largura, altura = capa.size
-    folga_x = round(fracao_x * largura)
-    folga_y = round(fracao_y * altura)
-    janela = (largura - folga_x * 2, altura - folga_y * 2)
-
-    if janela[0] > 0 and janela[1] > 0:
-        escala = min(janela[0] / largura, janela[1] / altura)
-        reduzida = capa.resize(
-            (max(1, round(largura * escala)), max(1, round(altura * escala))), Image.LANCZOS
-        )
-        tela = _fundo_borrado(capa)
-        tela.paste(reduzida, ((largura - reduzida.width) // 2, (altura - reduzida.height) // 2))
-    else:
-        # Moldura tão grossa que não sobra janela: melhor a capa por baixo do
-        # que uma imagem de um pixel.
-        tela = capa
-
-    emoldurada = Image.alpha_composite(tela, contorno)
+    emoldurada = Image.alpha_composite(_encaixar(capa, folga), contorno)
 
     saida = io.BytesIO()
     if formato == "JPEG":

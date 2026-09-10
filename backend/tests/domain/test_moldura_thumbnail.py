@@ -220,3 +220,14 @@ class TestArteNaoEComida:
         )
 
         assert (0, 0, 0) not in _cores(emoldurada)
+
+
+class TestMolduraSemJanela:
+    def test_moldura_que_cobre_tudo_nao_reduz_a_capa_a_nada(self):
+        """Guarda contra o absurdo: sem janela, a capa vai inteira por baixo em
+        vez de virar uma imagem de um pixel."""
+        cheia = Image.new("RGBA", (LARGURA, ALTURA), (255, 190, 0, 255))
+
+        emoldurada = Image.open(io.BytesIO(emoldurar(_capa(), _bytes_da(cheia))))
+
+        assert emoldurada.size == (LARGURA, ALTURA)
