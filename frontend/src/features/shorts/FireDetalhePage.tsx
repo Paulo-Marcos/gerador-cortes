@@ -500,14 +500,31 @@ export default function FireDetalhePage() {
                   onSelecionar={setSelecionado}
                 />
               ) : (
-                <LinhaDoTempo
-                  duracaoSeg={duracaoRegua}
-                  shorts={shorts}
-                  emFoco={emQuadro}
-                  tempoAtual={tempoAtual}
-                  onSeek={irPara}
-                  onBordas={gravarBordas}
-                />
+                <>
+                  <LinhaDoTempo
+                    duracaoSeg={duracaoRegua}
+                    shorts={shorts}
+                    emFoco={emQuadro}
+                    tempoAtual={tempoAtual}
+                    onSeek={irPara}
+                    onBordas={gravarBordas}
+                  />
+                  {/* D-554: a queda para a régua lisa era MUDA.
+                      A onda e o zoom existem desde a D-551, mas dependem dos
+                      picos do bruto — e sem bruto em disco a tela trocava de
+                      instrumento sem dizer nada. De fora, isso é
+                      indistinguível de "pediram zoom e não implementaram":
+                      o operador procura o botão, não acha, e conclui que a
+                      funcionalidade não veio. A régua lisa continua sendo a
+                      resposta certa; o que faltava era ela se explicar. */}
+                  {!onda.isLoading && (
+                    <p className="mt-1.5 font-code text-[10.5px] leading-relaxed text-[var(--wb-text-mute)]">
+                      {fire?.tem_bruto === false
+                        ? 'Régua lisa: sem o bruto em disco não há onda nem zoom. Gere o bruto deste corte para ter a régua do editor.'
+                        : 'Régua lisa: não deu para ler o áudio do bruto, então não há onda nem zoom neste corte.'}
+                    </p>
+                  )}
+                </>
               )}
               {emQuadro && (
                 <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
