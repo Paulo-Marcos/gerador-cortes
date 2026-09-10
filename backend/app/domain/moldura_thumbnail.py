@@ -80,6 +80,16 @@ _POR_MARCAS = {
 }
 
 
+def nomes_das_molduras() -> tuple[str, ...]:
+    """Os nomes que um canal precisa ter em `assets/moldura/`.
+
+    Existe para que a mensagem mostrada ao operador saia DAQUI. Escrita à mão lá
+    fora, ela vira uma segunda lista para manter — e a primeira moldura nova
+    faria a tela ensinar um nome que o código não procura mais.
+    """
+    return tuple(dict.fromkeys(_POR_MARCAS.values()))
+
+
 def arquivos_da_moldura(is_fire: bool, is_leitura: bool) -> tuple[str, ...]:
     """Os nomes de moldura aceitáveis para o corte, do melhor para o pior.
 

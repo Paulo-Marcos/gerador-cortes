@@ -15,13 +15,27 @@ from app.channel_paths import (
 )
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain.moldura_thumbnail import arquivos_da_moldura, emoldurar
+from app.domain.moldura_thumbnail import (
+    arquivos_da_moldura,
+    emoldurar,
+    nomes_das_molduras,
+)
 from app.domain.thumbnail_encode import LIMITE_YOUTUBE_BYTES, preparar_para_youtube
 from app.domain.variacao_prompt import strip_variation_tags
 from app.infrastructure import gemini_client
 from app.models import Corte, MetadadoCorte
 from app.services.app_logging import operational_error, operational_info
 from sqlalchemy import select
+
+
+async def _ler_bytes(caminho: str) -> bytes:
+    async with aiofiles.open(caminho, "rb") as arquivo:
+        return await arquivo.read()
+
+
+async def _gravar_bytes(caminho: str, dados: bytes) -> None:
+    async with aiofiles.open(caminho, "wb") as arquivo:
+        await arquivo.write(dados)
 
 
 def _caminho_da_arte(thumb_path: str) -> str:
@@ -100,12 +114,8 @@ async def _gravar_capa(
     thumb_path: str, conteudo: bytes, *, is_fire: bool, is_leitura: bool
 ) -> None:
     """Grava a capa emoldurada em `thumb_path` e a arte crua ao lado."""
-    async with aiofiles.open(_caminho_da_arte(thumb_path), "wb") as arquivo:
-        await arquivo.write(conteudo)
-
-    emoldurada = await _emoldurar_capa(conteudo, is_fire, is_leitura)
-    async with aiofiles.open(thumb_path, "wb") as arquivo:
-        await arquivo.write(emoldurada)
+    await _gravar_bytes(_caminho_da_arte(thumb_path), conteudo)
+    await _gravar_bytes(thumb_path, await _emoldurar_capa(conteudo, is_fire, is_leitura))
 
 
 class ThumbnailService:
@@ -176,12 +186,8 @@ class ThumbnailService:
         if not os.path.exists(arte):
             return False
 
-        async with aiofiles.open(arte, "rb") as arquivo:
-            original = await arquivo.read()
-
-        emoldurada = await _emoldurar_capa(original, is_fire, is_leitura)
-        async with aiofiles.open(thumb_path, "wb") as arquivo:
-            await arquivo.write(emoldurada)
+        original = await _ler_bytes(arte)
+        await _gravar_bytes(thumb_path, await _emoldurar_capa(original, is_fire, is_leitura))
         return True
 
     @staticmethod
@@ -213,25 +219,24 @@ class ThumbnailService:
 
         moldura = _moldura_do_corte(is_fire, is_leitura)
         if moldura is None:
+            esperados = ", ".join(nomes_das_molduras())
             raise ValueError(
-                "Este canal não tem moldura cadastrada. Coloque os PNGs em "
-                "assets/moldura/ (thumb_padrao.png, thumb_fire.png, "
-                "thumb_livro.png, thumb_fire_livro.png)."
+                f"Este canal não tem moldura cadastrada. Coloque os PNGs em "
+                f"assets/moldura/ ({esperados})."
             )
 
         arte = _caminho_da_arte(thumb_path)
-        if not os.path.exists(arte):
-            async with aiofiles.open(thumb_path, "rb") as arquivo:
-                publicada = await arquivo.read()
-            async with aiofiles.open(arte, "wb") as arquivo:
-                await arquivo.write(publicada)
-
-        async with aiofiles.open(arte, "rb") as arquivo:
-            original = await arquivo.read()
+        if os.path.exists(arte):
+            original = await _ler_bytes(arte)
+        else:
+            # A capa publicada É a arte desta: ela nunca passou por aqui. Guardar
+            # antes de colar é o que faz o segundo clique ler o original em vez
+            # da imagem que o primeiro emoldurou.
+            original = await _ler_bytes(thumb_path)
+            await _gravar_bytes(arte, original)
 
         emoldurada = await asyncio.to_thread(emoldurar, original, moldura.read_bytes())
-        async with aiofiles.open(thumb_path, "wb") as arquivo:
-            await arquivo.write(emoldurada)
+        await _gravar_bytes(thumb_path, emoldurada)
 
         return {
             "message": f"Moldura aplicada ({moldura.name}).",

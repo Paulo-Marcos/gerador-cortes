@@ -17,6 +17,7 @@ from app.domain.moldura_thumbnail import (
     aparar_margem,
     arquivos_da_moldura,
     emoldurar,
+    nomes_das_molduras,
 )
 from PIL import Image
 
@@ -144,3 +145,19 @@ class TestEscolhaPelasMarcas:
         """`is_fire`/`is_leitura` são colunas INTEGER: chegam 0 e 1, não False/True."""
         assert arquivos_da_moldura(1, 0)[0] == "thumb_fire.png"
         assert arquivos_da_moldura(0, 1)[0] == "thumb_livro.png"
+
+
+class TestNomesDasMolduras:
+    def test_lista_o_que_o_canal_precisa_ter(self):
+        """A mensagem de erro da tela sai daqui, e não de uma lista escrita à mão."""
+        assert set(nomes_das_molduras()) == {
+            ARQUIVO_PADRAO,
+            "thumb_fire.png",
+            "thumb_livro.png",
+            "thumb_fire_livro.png",
+        }
+
+    def test_nao_repete_nome(self):
+        nomes = nomes_das_molduras()
+
+        assert len(nomes) == len(set(nomes))
