@@ -30,14 +30,52 @@ import { BORDA_DO_REJEITADO, COR_DO_REJEITADO, bordaDoShort, corDoShort } from '
 // prontos do backend. O operador reconhece o instrumento; o código não herda a
 // bagagem.
 
-// Zoom 1 = o corte INTEIRO cabendo na régua. O px/s base sai da largura medida
-// dividida pela duração, e não de uma constante.
+// ## D-558: a régua tinha zoom, e mesmo assim não dava para trabalhar nela
 //
-// O editor usa 50px/s fixos porque a janela dele é a do corte — poucos minutos,
-// e o começo fica perto do x=0. Aqui a régua é o bruto inteiro: 438s a 50px/s
-// dão 21.900px de onda para ~740px de painel, e o operador via os primeiros
-// quinze segundos achando que via tudo. Pior: as regiões são virtualizadas, e
-// nenhuma delas caía na janela visível — a régua ficava sem bloco nenhum.
+// A D-551 fez zoom 1 = "o corte inteiro cabendo na régua", medindo px/s como
+// largura÷duração. Parecia certo — a tela abria mostrando tudo — e era o erro.
+//
+// Um bruto de sete minutos num painel de mil pixels dá 2,4 px/s. No teto de
+// 12× isso vira 29 px/s, ainda ABAIXO dos 50 px/s com que o editor de bruto
+// COMEÇA. O operador tinha um botão de zoom que funcionava e nunca chegava
+// onde ele precisava chegar: "não dá para ver onde acaba uma fala e onde
+// começa outra". A queixa não era do controle, era do alcance.
+//
+// Agora a escala é a MESMA do editor: 50 px/s × nível, 0,1× a 20×, botões em
+// passo multiplicativo e Ctrl+roda sobre a onda. Zoom 1 já nasce com a onda
+// mais larga que o painel — que é o ponto: a régua rola, e a barra de rolagem
+// é o que diz que há mais coisa fora da vista.
+//
+// O que a D-551 tentava evitar com o "cabe tudo" continua real: as regiões são
+// VIRTUALIZADAS, e uma que cai fora da janela visível não existe no DOM. A
+// resposta certa não era espremer a onda até tudo caber — era ROLAR até o
+// trecho em foco, que é o que o editor faz e o que `centrarEm` faz aqui.
+
+/** O px/s do editor de bruto (`TimelinePanel`). Zoom 1 = a escala de lá. */
+const PX_POR_SEGUNDO = 50;
+
+const ZOOM_MINIMO = 0.1;
+const ZOOM_MAXIMO = 20;
+/** Passo dos botões e da roda — multiplicativo, como no editor. */
+const FATOR_DO_BOTAO = 1.5;
+const FATOR_DA_RODA = 1.1;
+
+/** Quanto o cursor pode chegar perto da borda antes da janela correr atrás. */
+const MARGEM_DO_CURSOR = 24;
+
+// A onda em altura FIXA, e a caixa um pouco maior que ela.
+//
+// Com `height: 'auto'` o wavesurfer faz a onda ocupar a caixa inteira — e aí a
+// barra de rolagem, que ele acrescenta POR FORA do conteúdo, fica 10px além do
+// fundo da caixa e é cortada. É por isso que o `::part(scroll)` do `index.css`
+// existia há meses sem nunca ter aparecido para ninguém: o editor de bruto tem
+// o mesmo arranjo, e lá a barra também nunca coube.
+//
+// Reservando a tira aqui, ela passa a ser visível — que era o pedido: sem barra
+// não há como o operador saber que existe mais onda fora da vista.
+const ALTURA_DA_ONDA = 88;
+const ALTURA_DA_BARRA = 12;
+
 // De quanto em quanto perguntamos se a onda já pode receber os blocos.
 //
 // `setTimeout` e não `requestAnimationFrame`, e a diferença não é estilo: rAF
@@ -46,10 +84,6 @@ import { BORDA_DO_REJEITADO, COR_DO_REJEITADO, bordaDoShort, corDoShort } from '
 // o sintoma seria exatamente o que se viu: as regiões existindo no plugin e
 // nenhuma no DOM, sem erro em lugar nenhum.
 const INTERVALO_DA_ESPERA = 60;
-
-const ZOOM_MINIMO = 1;
-const ZOOM_MAXIMO = 12;
-const PASSO_DO_ZOOM = 1;
 
 interface Props {
   corteId: string;
@@ -99,6 +133,19 @@ function desenhar(plugin: Plugin, shorts: ShortSugerido[], emFoco: ShortSugerido
   }
 }
 
+/**
+ * Rola a régua até `segundos` ficar no meio da janela visível.
+ *
+ * É a peça que substitui o "cabe tudo" da D-551. Com a onda maior que o painel,
+ * abrir no minuto zero mostraria silêncio — e os blocos, que são virtualizados,
+ * nem entrariam no DOM. Rolar até o trecho em foco resolve os dois de uma vez.
+ */
+function centrarEm(ws: WaveSurfer, segundos: number, zoom: number): void {
+  const visivel = ws.getWidth();
+  if (visivel <= 0) return;
+  ws.setScroll(Math.max(0, segundos * PX_POR_SEGUNDO * zoom - visivel / 2));
+}
+
 export function ReguaDeOnda({
   corteId,
   duracaoSeg,
@@ -114,9 +161,6 @@ export function ReguaDeOnda({
   const onda = useRef<WaveSurfer | null>(null);
   const regioes = useRef<ReturnType<typeof RegionsPlugin.create> | null>(null);
   const pronta = useRef(false);
-  // px/s que faz o corte inteiro caber. Medido no `ready`, quando a caixa já
-  // tem largura — antes disso qualquer conta daria zero.
-  const base = useRef(1);
   const [zoom, setZoom] = useState(1);
   // D-548: o plugin de regiões só posiciona um bloco depois que a onda tem
   // DURAÇÃO, e a duração só existe no `ready`. Desenhar antes disso não levanta
@@ -152,11 +196,10 @@ export function ReguaDeOnda({
       cursorWidth: 2,
       barWidth: 1.5,
       barGap: 0.6,
-      height: 'auto',
+      height: ALTURA_DA_ONDA,
       autoCenter: false,
       autoScroll: false,
-      // Provisório: a escala real é calculada no `ready`, com a largura medida.
-      minPxPerSec: 1,
+      minPxPerSec: PX_POR_SEGUNDO * atual.current.zoom,
     });
     ws.registerPlugin(plugin);
     // Mudo: quem toca é o `<video>` ao lado. Dois áudios do mesmo arquivo
@@ -184,16 +227,11 @@ export function ReguaDeOnda({
       const largura = ws.getWidth();
       if (duracao > 0 && largura > 0) {
         pronta.current = true;
-        // Zoom 1 = o corte inteiro na régua. Sem isto a onda sai a 50px/s: um
-        // bruto de sete minutos vira 21.900px para ~740px de painel, e o
-        // operador vê os primeiros quinze segundos achando que vê tudo.
-        base.current = largura / duracao;
-        try {
-          ws.zoom(base.current * atual.current.zoom);
-        } catch {
-          // Sem duração ainda; o próximo clique de zoom acerta.
-        }
         desenhar(plugin, atual.current.shorts, atual.current.emFoco);
+        // A régua abre NO TRECHO, e não no minuto zero. A 50px/s um bruto de
+        // sete minutos tem 21 mil pixels, e o bloco que interessa quase nunca
+        // cai nos primeiros mil.
+        centrarEm(ws, atual.current.emFoco?.inicio_seg ?? 0, atual.current.zoom);
         setProntidao((n) => n + 1);
         return;
       }
@@ -256,14 +294,28 @@ export function ReguaDeOnda({
 
   // ── zoom, sem recarregar nada ──────────────────────────────────────────
   useEffect(() => {
-    if (!pronta.current) return;
+    const ws = onda.current;
+    if (!pronta.current || !ws) return;
     try {
-      onda.current?.zoom(base.current * zoom);
+      ws.zoom(PX_POR_SEGUNDO * zoom);
+      // Ampliar em volta do NADA é o que faz um zoom parecer quebrado: a onda
+      // cresce, a janela fica onde estava, e o operador perde de vista o que
+      // estava olhando. O ponto de referência é o trecho em foco.
+      centrarEm(ws, atual.current.emFoco?.inicio_seg ?? 0, zoom);
     } catch {
       // `zoom` levanta se a onda ainda não tem duração. Não é motivo para
       // derrubar a tela: o próximo clique acerta.
     }
   }, [zoom]);
+
+  // ── trocar de trecho leva a janela junto ───────────────────────────────
+  const idEmFoco = emFoco?.id;
+  useEffect(() => {
+    const ws = onda.current;
+    if (!pronta.current || !ws || !idEmFoco) return;
+    const alvo = atual.current.shorts.find((s) => s.id === idEmFoco);
+    if (alvo) centrarEm(ws, alvo.inicio_seg, atual.current.zoom);
+  }, [idEmFoco, prontidao]);
 
   // ── os blocos, redesenhados quando os trechos mudam ────────────────────
   useEffect(() => {
@@ -273,24 +325,60 @@ export function ReguaDeOnda({
     desenhar(plugin, shorts, emFoco);
   }, [shorts, emFoco, prontidao]);
 
-  // ── o cursor segue o player ────────────────────────────────────────────
+  // ── o cursor segue o player, e a janela segue o cursor ─────────────────
+  const tempoAnterior = useRef(tempoAtual);
   useEffect(() => {
-    if (!pronta.current || !onda.current) return;
-    const duracao = onda.current.getDuration() || 0;
+    const ws = onda.current;
+    if (!pronta.current || !ws) return;
+    const duracao = ws.getDuration() || 0;
     if (duracao <= 0) return;
-    onda.current.setTime(Math.min(tempoAtual, duracao));
+    const instante = Math.min(tempoAtual, duracao);
+    ws.setTime(instante);
+
+    // Correr atrás do cursor SÓ quando ele sai da janela.
+    //
+    // Recentrar a cada quadro brigaria com o scroll que o operador acabou de
+    // dar com a mão: ele arrasta para ver o fim da frase, o player avança
+    // meio segundo, e a régua o joga de volta. Aqui a janela só se mexe
+    // quando de fato perdeu o cursor de vista — ou quando ele pulou.
+    const visivel = ws.getWidth();
+    const scroll = ws.getScroll();
+    const x = instante * PX_POR_SEGUNDO * atual.current.zoom;
+    const pulou = Math.abs(instante - tempoAnterior.current) > 0.75;
+    tempoAnterior.current = instante;
+    if (pulou || x < scroll + MARGEM_DO_CURSOR || x > scroll + visivel - MARGEM_DO_CURSOR) {
+      centrarEm(ws, instante, atual.current.zoom);
+    }
   }, [tempoAtual]);
 
-  const mudarZoom = useCallback((delta: number) => {
-    setZoom((n) => Math.min(ZOOM_MAXIMO, Math.max(ZOOM_MINIMO, n + delta)));
+  // Passo MULTIPLICATIVO, como o editor: somar 1 em 12 níveis é imperceptível,
+  // e somar 1 em 0,1 é um salto de dez vezes. Multiplicar dá o mesmo degrau
+  // percebido em toda a faixa.
+  const mudarZoom = useCallback((fator: number) => {
+    setZoom((n) => Math.min(ZOOM_MAXIMO, Math.max(ZOOM_MINIMO, n * fator)));
   }, []);
+
+  // Ctrl+roda sobre a onda — o mesmo gesto do editor de bruto. `passive: false`
+  // porque precisamos do `preventDefault`: sem ele o navegador dá zoom na
+  // página inteira em vez de na régua.
+  useEffect(() => {
+    const alvo = caixa.current;
+    if (!alvo) return;
+    const naRoda = (evento: WheelEvent) => {
+      if (!evento.ctrlKey && !evento.metaKey) return;
+      evento.preventDefault();
+      mudarZoom(evento.deltaY < 0 ? FATOR_DA_RODA : 1 / FATOR_DA_RODA);
+    };
+    alvo.addEventListener('wheel', naRoda, { passive: false });
+    return () => alvo.removeEventListener('wheel', naRoda);
+  }, [mudarZoom]);
 
   if (picos.length === 0) return null;
 
   return (
     <div className="flex-none select-none">
       <div className="mb-1 flex items-center gap-2 font-code text-[10.5px] tabular-nums text-[var(--wb-text-mute)]">
-        <span>00:00</span>
+        <span title="Duração do bruto inteiro">{mmss(duracaoSeg)}</span>
         <div className="flex-1" />
         {emFoco && (
           <span>
@@ -304,28 +392,49 @@ export function ReguaDeOnda({
           size="icon-sm"
           aria-label="Diminuir o zoom da régua"
           disabled={zoom <= ZOOM_MINIMO}
-          onClick={() => mudarZoom(-PASSO_DO_ZOOM)}
+          onClick={() => mudarZoom(1 / FATOR_DO_BOTAO)}
         >
           <Minus />
         </Button>
-        <span className="w-[30px] text-center">{zoom.toFixed(0)}×</span>
+        <span className="w-[38px] text-center" title="Ctrl + roda do mouse sobre a onda">
+          {zoom.toFixed(1)}×
+        </span>
         <Button
           variant="ghost"
           size="icon-sm"
           aria-label="Aumentar o zoom da régua"
           disabled={zoom >= ZOOM_MAXIMO}
-          onClick={() => mudarZoom(PASSO_DO_ZOOM)}
+          onClick={() => mudarZoom(FATOR_DO_BOTAO)}
         >
           <Plus />
         </Button>
-        <span>{mmss(duracaoSeg)}</span>
       </div>
 
-      {/* `overflow-x-auto` é do wavesurfer: com zoom a onda fica mais larga que
-          o painel, e é o scroll dela que leva as alças junto. */}
+      {/* A barra de rolagem é do wavesurfer, dentro do shadow DOM dele — por
+          isso a classe, e não um `overflow-x-auto` aqui: o seletor
+          `::part(scroll)` do `index.css` é o único jeito de alcançá-la. A regra
+          já existia lá desde o editor e nunca tinha sido usada por ninguém.
+
+          Sem barra visível a onda larga vira um bug: o operador não tem como
+          saber que há mais coisa fora da vista — e foi exatamente assim que
+          "não quero ela toda contida no visível" virou "coloca aí barra de
+          rolagem".
+
+          O `--wb-border` local é o polegar dela. A regra do `index.css` pinta o
+          polegar com esse token, e no tema claro ele (L 0,90) fica a quatro
+          centésimos do fundo da caixa (L 0,945): a barra existia, ocupava os
+          seus 10px, e era invisível. Repontar o token AQUI a torna legível sem
+          mexer no arquivo de tokens — dentro desta caixa o único que lê
+          `--wb-border` é a própria barra. */}
       <div
         ref={caixa}
-        className="h-24 w-full rounded-[8px] bg-[var(--wb-bg-inset)]"
+        className="timeline-waveform-host w-full rounded-[8px] bg-[var(--wb-bg-inset)]"
+        style={
+          {
+            height: ALTURA_DA_ONDA + ALTURA_DA_BARRA,
+            '--wb-border': 'var(--wb-text-dim)',
+          } as React.CSSProperties
+        }
         role="presentation"
       />
     </div>
