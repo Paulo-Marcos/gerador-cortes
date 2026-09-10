@@ -383,7 +383,21 @@ export const NamePlate: FC<{
  *  Brackets: bracketScale 0.36, bracketLen 62 (−20% vs. a 1a entrega).
  *  Linha do contorno (clara + halo/sombra via ghost) mais fina: outlineScale
  *  0.5 — só a grossura da linha; brackets e geometria mantidos. */
-export const StageChrome: FC<{ pad?: number }> = ({ pad = 32 }) => {
+export const StageChrome: FC<{ pad?: number; canvasW?: number; canvasH?: number }> = ({
+  pad = 32,
+  // D-558: o quadro por PARAMETRO, como no `chrome.tsx` do renderer.
+  //
+  // Esta copia nasceu so para o horizontal e trazia 1920x1080 cravado. Quando a
+  // previa do short (1080x1920) passou a usa-la, o contorno saiu com 1840 de
+  // largura dentro de uma caixa de 1000 — desenhado deitado num quadro em pe.
+  // Na tela virou uma borda que nao contornava nada, e era exatamente isso que
+  // o operador estava vendo.
+  //
+  // O default mantem o horizontal intacto: quem nao passa nada continua no
+  // 1920x1080 de sempre.
+  canvasW = 1920,
+  canvasH = 1080,
+}) => {
   const opts: ChromeOpts = { radius: 24, chamferTR: 52, chamferBR: 30, offset: 12, bracketLen: 62 };
   return (
     <div
@@ -397,8 +411,8 @@ export const StageChrome: FC<{ pad?: number }> = ({ pad = 32 }) => {
       }}
     >
       <CardChrome
-        width={1920 - pad * 2}
-        height={1080 - pad * 2}
+        width={canvasW - pad * 2}
+        height={canvasH - pad * 2}
         opts={opts}
         bracketScale={0.36}
         outlineScale={0.3}

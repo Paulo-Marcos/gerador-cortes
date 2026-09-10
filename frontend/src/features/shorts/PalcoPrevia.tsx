@@ -178,7 +178,11 @@ export function PalcoPrevia({ plano, video, children }: Props) {
                   />
                 </div>
               ))}
-              <StageChrome pad={PAD_DO_TRILHO} />
+              {/* D-558: o quadro VAI JUNTO. Sem ele o trilho saia com a
+                  geometria do horizontal (1920x1080) dentro de um quadro em pe
+                  — a "borda que nao contorna nada". O renderer sempre passou;
+                  era esta copia que nao sabia perguntar. */}
+              <StageChrome pad={PAD_DO_TRILHO} canvasW={largura} canvasH={altura} />
             </div>
           </foreignObject>
         </svg>
