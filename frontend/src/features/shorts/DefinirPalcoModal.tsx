@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Loader2, Maximize2, Minimize2, Pencil, Save, Trash2 } from 'lucide-react';
+import {
+  Check,
+  Loader2,
+  Maximize2,
+  Minimize2,
+  Pencil,
+  RefreshCw,
+  Save,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -77,6 +86,10 @@ export function DefinirPalcoModal({
   const presets = useLayoutPresets({ tipo: 'palco_short' });
   const salvar = useSaveLayoutPreset();
   const renomear = useUpdateLayoutPreset();
+  // D-561: instância separada da do rename de propósito. As duas chamam o mesmo
+  // endpoint, e compartilhá-las faria o aviso de "regravado" piscar também ao
+  // renomear — um retorno que mentiria sobre o que acabou de acontecer.
+  const regravar = useUpdateLayoutPreset();
   const apagar = useDeleteLayoutPreset();
 
   const [nomeNovo, setNomeNovo] = useState('');
@@ -400,6 +413,34 @@ export function DefinirPalcoModal({
                       >
                         aplicar
                       </Button>
+                      {/* D-561: regravar o preset com o palco de agora.
+                          Faltava a metade de trás do ciclo. Dava para criar,
+                          renomear e apagar; para MUDAR um preset, o caminho era
+                          salvar outro com nome parecido — e a lista virava
+                          quatro variações da mesma ideia, sem dizer qual valia.
+                          O endpoint sempre aceitou payload; era a tela que só
+                          oferecia o nome. */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        title="Grava neste preset o palco que está montado agora"
+                        disabled={ocupado || regravar.isPending}
+                        onClick={() =>
+                          regravar.mutate({ id: preset.id, body: { payload: comoEstaHoje() } })
+                        }
+                      >
+                        <RefreshCw />
+                        regravar
+                      </Button>
+                      {/* Regravar não muda nada visível — o nome continua o
+                          mesmo. Sem este aviso, o clique fica indistinguível de
+                          um botão quebrado, que é a mesma lição do veredito do
+                          rosto e da régua lisa. */}
+                      {regravar.isSuccess && regravar.variables?.id === preset.id && (
+                        <span className="font-code text-[10px] uppercase tracking-wide text-[var(--wb-accent-strong)]">
+                          regravado
+                        </span>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"
