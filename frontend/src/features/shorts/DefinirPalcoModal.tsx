@@ -4,6 +4,7 @@ import {
   Loader2,
   Maximize2,
   Minimize2,
+  Move,
   Pencil,
   RefreshCw,
   Save,
@@ -21,6 +22,8 @@ import {
 } from '@/features/editor/fase2/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { EditorDeRecorte } from './EditorDeRecorte';
+import { EditorDePalco } from './EditorDePalco';
+import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { ocupacaoDoPalco, redimensionarPalco } from './arrastarSlot';
 import { PalcoPrevia } from './PalcoPrevia';
 import { SeletorDeTextura } from './SeletorDeTextura';
@@ -92,6 +95,14 @@ export function DefinirPalcoModal({
   const regravar = useUpdateLayoutPreset();
   const apagar = useDeleteLayoutPreset();
 
+  // D-562: mover as janelas dentro do quadro, aqui dentro.
+  //
+  // O gesto existia na página, sobre a prévia pequena ao lado do player, e o
+  // operador gostou dele. O lugar é que era errado: mover uma janela é a mesma
+  // decisão que dimensioná-la, e dimensionar já mora na seção 3 daqui. Ter as
+  // duas metades em telas diferentes obrigava a sair do modal no meio da
+  // decisão — e a prévia da página não é fixa.
+  const [movendo, setMovendo] = useState(false);
   const [nomeNovo, setNomeNovo] = useState('');
   const [renomeando, setRenomeando] = useState<string | null>(null);
   const [nomeEditado, setNomeEditado] = useState('');
@@ -134,6 +145,17 @@ export function DefinirPalcoModal({
     onAplicar(mudancaDoPalco(id, payload));
 
   const presetDoCorte = usePalcoDoCorte(corteId);
+
+  // D-500 aplicada aqui: durante o arraste o backend resolve um plano
+  // hipotético e a prévia desenha ESSE. Sem isto o retângulo andaria vazio —
+  // o vídeo dentro dele só reflui no refetch, depois de soltar — que é
+  // exatamente o defeito que a D-500 corrigiu na página.
+  const simulacao = useSimulacaoDePalco(short.id);
+  const planoNaTela = simulacao.simulado ?? plano;
+
+  /** Ajuste é PARCIAL: mandar só o bloco na mão apagaria a posição dos outros. */
+  const gravarAjuste = (ajustes: Record<string, Retangulo>) =>
+    onAplicar({ ajustes_palco: { ...(short.ajustes_palco ?? {}), ...ajustes } });
 
   // D-559: o tamanho do palco dentro do quadro.
   //
@@ -273,7 +295,7 @@ export function DefinirPalcoModal({
               consome atenção e ensina uma mecânica errada.
               O campo continua no banco e continua governando o caminho SEM
               palco — que é o único onde ele age. */}
-          <Secao numero={3} titulo="O tamanho na tela">
+          <Secao numero={3} titulo="O tamanho e o lugar na tela">
             <div className="flex flex-wrap items-center gap-1.5">
               <Button
                 size="sm"
@@ -296,6 +318,20 @@ export function DefinirPalcoModal({
               >
                 <Maximize2 />
               </Button>
+              {/* D-562: o mesmo gesto que vivia na página, agora ao lado do
+                  controle de tamanho — mover e dimensionar são a mesma decisão,
+                  e estavam em duas telas. As alças aparecem sobre a prévia da
+                  direita, que é fixa desde a D-558: dá para descer até aqui sem
+                  perder de vista o que se está movendo. */}
+              <Button
+                size="sm"
+                variant={movendo ? 'secondary' : 'outline'}
+                disabled={ocupado || !plano}
+                onClick={() => setMovendo((v) => !v)}
+              >
+                <Move />
+                {movendo ? 'movendo' : 'mover no quadro'}
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"
@@ -308,6 +344,7 @@ export function DefinirPalcoModal({
             <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
               Quanto da largura do quadro o vídeo ocupa. Em tela cheia ele cobre os 100% e o
               fundo não aparece; abaixo disso o palco do canal fica visível em volta.
+              {movendo && ' Arraste os blocos na prévia ao lado; os cantos redimensionam.'}
             </p>
           </Secao>
 
@@ -490,9 +527,21 @@ export function DefinirPalcoModal({
           <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
             como vai sair
           </span>
-          {plano ? (
-            <div className="w-full max-w-[220px]">
-              <PalcoPrevia plano={plano} video={video} />
+          {planoNaTela ? (
+            // Ao mover, a prévia cresce: as alças de canto ficam sobre a borda
+            // do bloco, e num quadro de 220px de largura elas se sobrepõem umas
+            // às outras. Foi por isso que redimensionar em tela cheia era
+            // impossível de acertar com a mão antes da D-559.
+            <div className={cn('w-full', movendo ? 'max-w-[300px]' : 'max-w-[220px]')}>
+              <PalcoPrevia plano={planoNaTela} video={video}>
+                <EditorDePalco
+                  slots={planoNaTela.slots}
+                  ativo={movendo}
+                  onGravar={gravarAjuste}
+                  onArrastando={simulacao.simular}
+                  onSoltou={simulacao.encerrar}
+                />
+              </PalcoPrevia>
             </div>
           ) : (
             <p className="text-[11.5px] text-[var(--wb-text-mute)]">
