@@ -33,6 +33,9 @@ export const DURACAO_MIN_SEG = 1.5;
 /** Espelha `DURACAO_MAX_SEG` em `backend/app/domain/gancho_short.py`. */
 export const DURACAO_MAX_SEG = 5.0;
 
+/** Espelha `MAX_VARIACOES` em `backend/app/domain/gancho_short.py`. */
+export const MAX_VARIACOES = 6;
+
 /** Passo do ajuste de duração, em segundos. */
 export const DURACAO_PASSO_SEG = 0.5;
 

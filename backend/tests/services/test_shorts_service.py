@@ -176,3 +176,102 @@ async def test_listar_ordena_pelo_score(session_factory):
     listados = await servico.listar_shorts("c1")
 
     assert [s["titulo"] for s in listados] == ["alto", "baixo"]
+
+
+class TestContextoDoGancho:
+    """D-565: o material que a skill do gancho le.
+
+    Este bloco nasceu de um erro que so aparecia em runtime: um campo novo no
+    dataclass, a construcao sem ele, e um 500 na cara do operador. Nenhum teste
+    de dominio pegaria — a montagem e que estava incompleta.
+
+    O resto vigia as duas escolhas editoriais do contexto: a base e a
+    TRANSCRICAO DO TRECHO (nao o resumo do corte), e o historico serve para
+    EVITAR repeticao — o inverso da etiqueta da capa do TikTok.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_base_e_a_fala_do_trecho_e_nao_o_bruto_inteiro(self, session_factory):
+        """Gancho escrito sobre o bruto todo prometeria os outros minutos."""
+        await _seed_corte(
+            session_factory,
+            transcricao_final=[
+                {"start": 0.0, "end": 4.0, "texto": "antes do trecho"},
+                {"start": 20.0, "end": 25.0, "texto": "dentro do trecho"},
+                {"start": 90.0, "end": 95.0, "texto": "depois do trecho"},
+            ],
+        )
+        async with session_factory() as db:
+            db.add(Short(id="s1", corte_id="c1", numero=1, inicio_seg=15.0, fim_seg=40.0))
+            await db.commit()
+
+        contexto = await servico.montar_contexto_do_gancho("s1")
+
+        assert "dentro do trecho" in contexto.texto_transcricao
+        assert "antes do trecho" not in contexto.texto_transcricao
+        assert "depois do trecho" not in contexto.texto_transcricao
+        assert contexto.duracao_seg == 25.0
+
+    @pytest.mark.asyncio
+    async def test_o_historico_vem_nas_duas_formas(self, session_factory):
+        """Uma para o prompt (texto), outra para o parser (lista).
+
+        O prompt PEDE para nao repetir; a lista e o que deixa o parser GARANTIR.
+        Foi o campo que faltou na construcao e derrubou a primeira chamada real.
+        """
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(Short(id="s1", corte_id="c1", numero=1, inicio_seg=0.0, fim_seg=60.0))
+            db.add(
+                Short(
+                    id="s2",
+                    corte_id="c1",
+                    numero=2,
+                    inicio_seg=0.0,
+                    fim_seg=30.0,
+                    gancho_tela="um gancho ja gasto",
+                )
+            )
+            await db.commit()
+
+        contexto = await servico.montar_contexto_do_gancho("s1")
+
+        assert contexto.ganchos_gastos == ["um gancho ja gasto"]
+        assert "um gancho ja gasto" in contexto.ganchos_recentes
+
+    @pytest.mark.asyncio
+    async def test_o_proprio_gancho_nao_entra_no_historico(self, session_factory):
+        """Senao o modelo evitaria justamente o texto que se quer melhorar."""
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(
+                Short(
+                    id="s1",
+                    corte_id="c1",
+                    numero=1,
+                    inicio_seg=0.0,
+                    fim_seg=60.0,
+                    gancho_tela="o meu proprio gancho",
+                )
+            )
+            await db.commit()
+
+        contexto = await servico.montar_contexto_do_gancho("s1")
+
+        assert contexto.ganchos_gastos == []
+
+    @pytest.mark.asyncio
+    async def test_trecho_sem_fala_recusa_em_vez_de_inventar(self, session_factory):
+        await _seed_corte(session_factory, transcricao_final=[])
+        async with session_factory() as db:
+            db.add(Short(id="s1", corte_id="c1", numero=1, inicio_seg=0.0, fim_seg=30.0))
+            await db.commit()
+
+        with pytest.raises(ValueError, match="fala transcrita"):
+            await servico.montar_contexto_do_gancho("s1")
+
+    @pytest.mark.asyncio
+    async def test_short_inexistente_levanta_lookup(self, session_factory):
+        await _seed_corte(session_factory)
+        with pytest.raises(LookupError):
+            await servico.montar_contexto_do_gancho("nao-existe")

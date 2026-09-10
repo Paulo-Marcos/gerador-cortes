@@ -227,6 +227,24 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
         thinking_setting="claude_cli_thinking_tokens_cenas_short",
         lentes_tipo=None,
     ),
+    SkillCatalogo(
+        key="gancho-short-expert",
+        arquivo="gancho-short.md",
+        etapa="Gancho da abertura do short",
+        descricao=(
+            "Escreve as variacoes do texto que aparece nos primeiros segundos de "
+            "um short e some antes dos tres — o que faz a promessa chegar a quem "
+            "assiste sem som. Le a transcricao do TRECHO, nao o resumo do corte: "
+            "gancho que promete o que o short nao entrega gera abandono no "
+            "segundo 10. Nao confundir com a etiqueta da capa do TikTok: la sao "
+            "2-3 palavras nomeando o assunto numa prateleira, e repetir e bom; "
+            "aqui e uma frase de 4-7 palavras que abre uma pergunta, e repetir "
+            "entre shorts parece robo no feed."
+        ),
+        model_setting="claude_model_gancho_short",
+        thinking_setting="claude_cli_thinking_tokens_gancho_short",
+        lentes_tipo=None,
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, SkillCatalogo] = {c.key: c for c in _CATALOGO}

@@ -10,6 +10,7 @@ import {
   duracaoNoShort,
   ganchoVisivelEm,
   MAX_CARACTERES,
+  MAX_VARIACOES,
   PALAVRAS_MAX,
   PALAVRAS_MIN,
   recadoDoTom,
@@ -40,6 +41,7 @@ describe('acordo com o domínio do backend', () => {
     ['DURACAO_PADRAO_SEG', DURACAO_PADRAO_SEG],
     ['DURACAO_MIN_SEG', DURACAO_MIN_SEG],
     ['DURACAO_MAX_SEG', DURACAO_MAX_SEG],
+    ['MAX_VARIACOES', MAX_VARIACOES],
   ])('%s é o mesmo dos dois lados', (nome, naTela) => {
     expect(numeroDoDominio(nome)).toBe(naTela);
   });

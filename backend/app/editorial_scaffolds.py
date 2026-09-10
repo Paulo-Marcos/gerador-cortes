@@ -300,6 +300,31 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
         ),
         marcador="cenas",
     ),
+    ScaffoldCatalogo(
+        key="gancho-short",
+        skill_key="gancho-short-expert",
+        etapa="Gancho da abertura do short",
+        descricao=(
+            "Involucro que manda a transcricao do TRECHO (nao o resumo do corte) "
+            "e pede as variacoes do gancho, uma por linha. Manda tambem os "
+            "ganchos recentes do canal — e aqui para EVITAR repeticao, o inverso "
+            "do scaffold da capa do TikTok: no feed os shorts aparecem em "
+            "sequencia, e dois ganchos iguais parecem robo. O 'gancho da "
+            "curadoria' vai junto como materia-prima: e o que a skill de shorts "
+            "ja achou que era a graca do trecho."
+        ),
+        arquivo="gancho-short.txt",
+        placeholders=(
+            "titulo_proposto",
+            "tema_central",
+            "duracao_seg",
+            "texto_transcricao",
+            "gancho_da_curadoria",
+            "ganchos_recentes",
+            "quantidade",
+        ),
+        marcador="GANCHO",
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, ScaffoldCatalogo] = {c.key: c for c in _CATALOGO}

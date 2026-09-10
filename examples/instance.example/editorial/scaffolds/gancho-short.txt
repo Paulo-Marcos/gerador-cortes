@@ -1,0 +1,30 @@
+=== O CORTE DE ONDE O SHORT SAIU ===
+titulo: {titulo_proposto}
+tema_central: {tema_central}
+
+=== O TRECHO (o que este short mostra, do segundo 0 ao {duracao_seg}) ===
+{texto_transcricao}
+
+=== O QUE A IA JA ACHOU QUE ERA A GRACA DESTE TRECHO ===
+{gancho_da_curadoria}
+
+=== GANCHOS JA USADOS NESTE CANAL (os mais recentes primeiro) ===
+{ganchos_recentes}
+
+Escreva ate {quantidade} variacoes do GANCHO deste short, seguindo a sua
+expertise acima.
+
+Lembre: 4 a 7 palavras, concreto e nao categoria, sem pontuacao decorativa, e a
+promessa TEM de estar na transcricao acima — gancho que promete o que o trecho
+nao entrega gera abandono no segundo 10.
+
+Diferente da capa do TikTok, aqui repetir e RUIM: no feed os shorts aparecem em
+sequencia, e um gancho igual a um ja usado parece robo. Escreva angulos que se
+excluem, nao sinonimos da mesma ideia.
+
+Um gancho da lista acima nao deve aparecer na sua resposta — nem para ser
+comentado. Nao anote nada na linha: sem "(ja usado)", sem "(mais forte)", sem
+observacao entre parenteses. A linha inteira vai para a tela como esta.
+
+Responda com UMA VARIACAO POR LINHA e nada mais: sem numeracao, sem marcador,
+sem aspas, sem explicacao, sem markdown, sem linha de introducao.

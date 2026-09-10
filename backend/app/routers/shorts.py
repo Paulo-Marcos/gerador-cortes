@@ -16,6 +16,7 @@ Endpoints:
   PATCH /{short_id}               — a decisão do operador: status e/ou bordas
   PUT  /{short_id}/cenas          — as cenas do short (hook, numero, citacao, cta)
   POST /{short_id}/cenas/sugerir  — a IA propoe os cartoes deste trecho
+  POST /{short_id}/ganchos        — a IA propoe variacoes do gancho de abertura
   POST /{short_id}/enquadrar      — acha o rosto no trecho e centra o 9:16 nele
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
@@ -384,6 +385,30 @@ async def sugerir_cenas(short_id: str):
 
     try:
         return await ClaudeIaService.sugerir_cenas_do_short_via_claude(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/{short_id}/ganchos")
+async def sugerir_ganchos(short_id: str):
+    """A IA propoe variacoes do gancho da abertura — e NAO grava (D-565).
+
+    Diferente do `cenas/sugerir`, que persiste o resultado. Aqui o retorno e uma
+    lista para o operador comparar: as variacoes so viram gancho quando ele
+    clica numa, pelo PATCH normal. Gravar por conta propria escolheria por ele,
+    e o gancho e a promessa do short — a decisao mais editorial que existe nesta
+    tela.
+
+    Sincrono pelo mesmo motivo do `cenas/sugerir`: o operador esta com o modal
+    aberto olhando para o campo, e um fire-and-forget o obrigaria a recarregar
+    para saber se chegou.
+    """
+    from app.services.claude_ia import ClaudeIaService
+
+    try:
+        return {"variacoes": await ClaudeIaService.sugerir_ganchos_via_claude(short_id)}
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -873,4 +898,3 @@ async def publicar_corte_no_tiktok(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-

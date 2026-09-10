@@ -286,6 +286,88 @@ async def montar_contexto_de_cenas(short_id: str) -> ContextoCenasDoShort:
         )
 
 
+# D-565: quantos ganchos ja usados vao no prompt. Poucos nao mostram o padrao do
+# canal; muitos empurram o modelo a imita-los em vez de evitar a repeticao.
+_GANCHOS_NO_HISTORICO = 15
+
+
+@dataclass(frozen=True)
+class ContextoGanchoDoShort:
+    """O material que a skill do gancho precisa ler (D-565).
+
+    A base e a TRANSCRICAO DO TRECHO, e nao o resumo do corte. A diferenca nao e
+    de detalhe: o gancho promete, e a promessa tem de estar no que o short mostra.
+    Escrito a partir do resumo do corte inteiro, ele prometeria coisas dos outros
+    minutos — e o espectador abandona no segundo 10, o que e pior que nao prender,
+    porque queima a confianca do perfil.
+    """
+
+    short_id: str
+    projeto_id: str
+    corte_id: str
+    titulo: str
+    tema_central: str
+    duracao_seg: float
+    texto_transcricao: str
+    gancho_da_curadoria: str
+    ganchos_recentes: str
+    # A mesma lista, crua. O texto acima e para o PROMPT; esta e para o
+    # parser garantir o que o prompt so pede (D-565).
+    ganchos_gastos: list[str]
+
+
+async def montar_contexto_do_gancho(short_id: str) -> ContextoGanchoDoShort:
+    """Reune o trecho + o historico de ganchos do canal.
+
+    O historico vai para EVITAR repeticao — o inverso da etiqueta da capa do
+    TikTok, onde ele existe para permiti-la. Sao vitrines diferentes: a grade do
+    perfil ganha coerencia quando tres cortes sobre a Selic dizem SELIC, mas no
+    feed os shorts aparecem em sequencia, e dois ganchos iguais parecem robo.
+
+    Levanta `LookupError` (short ou corte inexistente) e `ValueError` quando o
+    trecho nao tem fala — sem transcricao o modelo so teria o titulo, e gancho
+    escrito em cima de titulo e exatamente o que promete o que o short nao tem.
+    """
+    async with AsyncSessionLocal() as db:
+        short = await db.get(Short, short_id)
+        if not short:
+            raise LookupError(f"Short {short_id!r} nao encontrado")
+        corte = await db.get(Corte, short.corte_id)
+        if not corte:
+            raise LookupError(f"Corte {short.corte_id!r} nao encontrado")
+
+        inicio = float(short.inicio_seg)
+        fim = float(short.fim_seg)
+        janela = recortar_transcricao(_json_lista(corte.transcricao_final), inicio, fim)
+        if not janela:
+            raise ValueError(
+                "Este trecho nao tem fala transcrita — sem ela o gancho seria inventado."
+            )
+
+        recentes = (
+            await db.scalars(
+                select(Short.gancho_tela)
+                .where(Short.gancho_tela != "")
+                .where(Short.id != short_id)
+                .order_by(Short.atualizado_em.desc())
+                .limit(_GANCHOS_NO_HISTORICO)
+            )
+        ).all()
+
+        return ContextoGanchoDoShort(
+            short_id=short.id,
+            projeto_id=corte.projeto_id,
+            corte_id=corte.id,
+            titulo=short.titulo_sugerido or corte.titulo_proposto or "",
+            tema_central=corte.tema_central or "",
+            duracao_seg=round(fim - inicio, 2),
+            texto_transcricao=montar_texto_transcricao(janela),
+            gancho_da_curadoria=short.gancho or "(a IA nao escreveu um)",
+            ganchos_recentes="\n".join(f"- {g}" for g in recentes) or "(nenhum ainda)",
+            ganchos_gastos=list(recentes),
+        )
+
+
 async def descartar_bruto(corte_id: str) -> dict:
     """Libera o disco do bruto de um Fire, encerrando a fabrica daquele corte (D-460).
 

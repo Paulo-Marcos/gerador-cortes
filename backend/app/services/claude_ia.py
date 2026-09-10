@@ -114,6 +114,7 @@ _SKILL_THUMBNAIL = "thumbnail-prompt-expert"
 _SKILL_AVALIACAO = "avaliador-bruto"
 _SKILL_SHORTS = "shorts-expert"
 _SKILL_CENAS_SHORT = "cenas-short-expert"
+_SKILL_GANCHO_SHORT = "gancho-short-expert"
 _SKILL_CAPA_TIKTOK = "capa-tiktok-expert"
 _SKILL_CAPA_TIKTOK_IMAGEM = "capa-tiktok-imagem-expert"
 
@@ -1282,6 +1283,61 @@ class ClaudeIaService:
             len(resultado.descartes),
         )
         return {"short": short, "descartes": resultado.descartes}
+
+    @staticmethod
+    async def sugerir_ganchos_via_claude(short_id: str) -> list[str]:
+        """As variacoes do texto que abre o short (D-565).
+
+        Skill separada da capa do TikTok, e nao um parametro dela, porque as duas
+        escrevem coisas de generos opostos. La sao 2-3 palavras que NOMEIAM o
+        assunto numa prateleira onde nove capas sao vistas juntas, e repetir da
+        coerencia. Aqui e uma frase de 4-7 palavras que ABRE uma pergunta em quem
+        esta com o dedo em movimento — e repetir, no feed, parece robo.
+
+        A base e a transcricao do TRECHO, nao o resumo do corte: o gancho promete,
+        e a promessa tem de estar no que este short mostra.
+
+        NAO grava nada. As variacoes vao para a tela e o operador escolhe uma,
+        escreve a dele, ou ignora todas — a decisao editorial continua sendo
+        humana, e gravar por conta propria tiraria dele a chance de comparar.
+
+        Levanta `LookupError` (short inexistente) e `ValueError` (trecho sem
+        fala). Lista vazia quando o modelo nao produziu nada aproveitavel.
+        """
+        from app.domain.gancho_short import MAX_VARIACOES, ganchos_da_resposta
+        from app.services import shorts as shorts_store
+
+        contexto = await shorts_store.montar_contexto_do_gancho(short_id)
+
+        skill = editorial_skills.resolver_skill(_SKILL_GANCHO_SHORT)
+        scaffold = editorial_scaffolds.resolver_scaffold("gancho-short")
+        prompt = scaffold.format(
+            titulo_proposto=contexto.titulo,
+            tema_central=contexto.tema_central,
+            duracao_seg=contexto.duracao_seg,
+            texto_transcricao=contexto.texto_transcricao,
+            gancho_da_curadoria=contexto.gancho_da_curadoria,
+            ganchos_recentes=contexto.ganchos_recentes,
+            quantidade=MAX_VARIACOES,
+        )
+        _log_skill_usada(_SKILL_GANCHO_SHORT, skill, scaffold)
+        bruto = await claude_cli_client.generate_text(
+            prompt,
+            **_args_claude(
+                skill,
+                _SKILL_GANCHO_SHORT,
+                projeto_id=contexto.projeto_id,
+                corte_id=contexto.corte_id,
+            ),
+        )
+        # O historico vai ao prompt E ao parser: um pede, o outro garante.
+        variacoes = ganchos_da_resposta(bruto, ja_usados=contexto.ganchos_gastos)
+        logger.info(
+            "[Shorts] ganchos IA short=%s variacoes=%d",
+            short_id[:8],
+            len(variacoes),
+        )
+        return variacoes
 
     # ── Fase 4: prompt de thumbnail via Claude (skill capista) ────────────────
 

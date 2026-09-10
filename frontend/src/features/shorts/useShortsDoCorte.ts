@@ -243,6 +243,19 @@ export function useSugerirCenas(corteId: string) {
 }
 
 /**
+ * D-565: pede as variacoes do gancho da abertura.
+ *
+ * NAO invalida a lista de shorts, porque nada foi gravado — as variacoes vivem
+ * no resultado da mutation ate o operador clicar numa. Invalidar aqui seria
+ * pedir de volta um dado que nao mudou, e piscaria a tela sem motivo.
+ */
+export function useSugerirGanchos() {
+  return useMutation({
+    mutationFn: (shortId: string) => shortsApi.sugerirGanchos(shortId),
+  });
+}
+
+/**
  * D-477: pede ao detector para enquadrar o trecho pelo rosto.
  *
  * O foco volta JA gravado, entao invalidar a lista basta. O veredito fica no

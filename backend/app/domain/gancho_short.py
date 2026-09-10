@@ -137,3 +137,108 @@ def para_payload(texto: str, ate_seg: object, *, duracao_short_seg: float) -> di
     if duracao_short_seg > 0:
         ate = min(ate, round(float(duracao_short_seg), 2))
     return {"texto": limpo, "ateSeg": ate}
+
+
+# Quantas variacoes o gerador entrega. Seis cabem na tela sem rolagem e ja
+# cobrem os angulos possiveis; acima disso a escolha vira trabalho, e o operador
+# passa a ler lista em vez de decidir.
+MAX_VARIACOES = 6
+
+# Marcadores de lista que o modelo poe mesmo quando o contrato pede uma por
+# linha. Tira-los aqui e mais barato que insistir no prompt.
+_MARCADORES = ("-", "*", "•", "–", "—")
+
+
+def ganchos_da_resposta(bruto: str, ja_usados: list[str] | None = None) -> list[str]:
+    r"""As variacoes de gancho dentro do que o modelo devolveu.
+
+    Contrato de saida e promessa, nao garantia — a mesma licao que a etiqueta da
+    capa aprendeu (D-520). O modelo numera, embrulha em aspas, poe um titulo
+    antes da lista ou explica a escolha depois. Sem esta limpeza, "Aqui estao as
+    opcoes:" viraria a primeira variacao, e o operador leria isso como um gancho
+    que a maquina propos a serio.
+
+    `ja_usados` sao os ganchos que o canal ja gastou. O prompt PEDE para nao
+    repeti-los; aqui isso passa a ser garantido — e a diferenca apareceu na
+    primeira execucao real: o modelo devolveu um gancho ja usado com a ressalva
+    "(ja usado — evitar)" colada no texto. Ele entendeu a regra e escolheu
+    COMENTA-LA em vez de obedece-la, e a ressalva iria para a tela como se fosse
+    parte da frase.
+
+    Devolve lista VAZIA quando nada aproveitavel voltou: a tela diz que nao saiu
+    nada e o operador escreve o dele, que e melhor que oferecer lixo.
+
+    >>> ganchos_da_resposta('o juro trabalha contra voce\nninguem te conta isso')
+    ['o juro trabalha contra voce', 'ninguem te conta isso']
+    >>> ganchos_da_resposta('1. "primeira aqui"\n2. - segunda aqui')
+    ['primeira aqui', 'segunda aqui']
+    >>> ganchos_da_resposta('boa frase nova aqui', ja_usados=['BOA FRASE NOVA AQUI'])
+    []
+    >>> ganchos_da_resposta('   ')
+    []
+    """
+    gastos = {g.strip().lower() for g in (ja_usados or []) if g and g.strip()}
+    variacoes: list[str] = []
+    for linha in (bruto or "").splitlines():
+        limpa = _sem_enfeite(linha)
+        if not limpa:
+            continue
+        if limpa.lower() in gastos:
+            continue
+        # Duplicata acontece quando o modelo repete a melhor opcao com outra
+        # pontuacao. Duas linhas iguais na tela parecem defeito, nao escolha.
+        if limpa.lower() in {v.lower() for v in variacoes}:
+            continue
+        variacoes.append(limpa)
+        if len(variacoes) == MAX_VARIACOES:
+            break
+    return variacoes
+
+
+def _sem_enfeite(linha: str) -> str:
+    """Uma linha da resposta sem numeracao, marcador, aspas ou cerca.
+
+    >>> _sem_enfeite('  3) "o erro que todo mundo comete" ')
+    'o erro que todo mundo comete'
+    >>> _sem_enfeite('```')
+    ''
+    """
+    texto = (linha or "").strip()
+    if not texto or texto.startswith("```"):
+        return ""
+
+    # Numeracao: "1.", "2)", "3 -".
+    while texto and texto[0].isdigit():
+        resto = texto.lstrip("0123456789").lstrip()
+        if resto.startswith((".", ")", "-", ":")):
+            texto = resto[1:].strip()
+        else:
+            break
+
+    for marcador in _MARCADORES:
+        if texto.startswith(marcador):
+            texto = texto[len(marcador) :].strip()
+
+    texto = _sem_ressalva(texto)
+    return normalizar_gancho(texto.strip("`\"'“”‘’ "))
+
+
+def _sem_ressalva(texto: str) -> str:
+    """A linha sem o comentario entre parenteses que o modelo cola no fim.
+
+    Num gancho de 4 a 7 palavras o parenteses final e sempre META — "(ja usado)",
+    "(mais forte)", "(angulo do custo)" —, nunca parte da frase que vai a tela.
+    A skill ja proibe pontuacao decorativa, mas proibir no prompt nao impede: foi
+    exatamente assim que o modelo devolveu "... (ja usado — evitar)" na primeira
+    execucao real.
+
+    >>> _sem_ressalva('seu financiamento custa o dobro (ja usado)')
+    'seu financiamento custa o dobro'
+    >>> _sem_ressalva('(so um comentario)')
+    ''
+    >>> _sem_ressalva('uma frase inteira sem parenteses')
+    'uma frase inteira sem parenteses'
+    """
+    if not texto.endswith(")") or "(" not in texto:
+        return texto
+    return texto[: texto.rindex("(")].strip()

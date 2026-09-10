@@ -1,10 +1,11 @@
 import { useEffect, useState, type RefObject } from 'react';
-import { Eraser, Minus, Plus } from 'lucide-react';
+import { Eraser, Loader2, Minus, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import {
   contarPalavras,
+  MAX_VARIACOES,
   DURACAO_MAX_SEG,
   DURACAO_MIN_SEG,
   DURACAO_PASSO_SEG,
@@ -18,6 +19,7 @@ import {
 import { GanchoPrevia } from './GanchoPrevia';
 import { LegendaPrevia } from './LegendaPrevia';
 import { PalcoPrevia } from './PalcoPrevia';
+import { useSugerirGanchos } from './useShortsDoCorte';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
 
 // D-565: onde o título-gancho é escrito.
@@ -84,7 +86,17 @@ export function GanchoModal({
     if (!open) return;
     setTexto(short.gancho_tela ?? '');
     setAteSeg(duracaoEfetiva(short.gancho_ate_seg));
+    gerar.reset();
+    // `gerar` fora das dependencias de proposito: a mutation muda de identidade
+    // a cada resultado, e inclui-la faria este efeito rodar de novo logo apos
+    // as variacoes chegarem — apagando-as no instante em que aparecem.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, short.id, short.gancho_tela, short.gancho_ate_seg]);
+
+  const gerar = useSugerirGanchos();
+  // Fechar o modal e reabrir noutro candidato nao pode manter as variacoes do
+  // anterior na tela: elas foram escritas para OUTRO trecho.
+  const variacoes = gerar.data?.variacoes ?? [];
 
   const tom = tomDoGancho(texto);
   const palavrasEscritas = contarPalavras(texto);
@@ -141,6 +153,83 @@ export function GanchoModal({
                 {recadoDoTom(tom)}
               </span>
             </div>
+          </section>
+
+          {/* D-565: o gerador. Ele PROPOE e nao grava — as variacoes ficam aqui
+              ate um clique levar uma para o campo, onde ainda da para editar.
+              O gancho e a promessa do short: escolher por ele seria a decisao
+              mais editorial da tela tomada pela maquina. */}
+          <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={ocupado || gerar.isPending}
+                onClick={() => gerar.mutate(short.id)}
+              >
+                {gerar.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                {gerar.isPending
+                  ? 'escrevendo…'
+                  : variacoes.length > 0
+                    ? 'Gerar outras'
+                    : `Gerar ${MAX_VARIACOES} variações`}
+              </Button>
+              {gerar.isPending && (
+                <span className="text-[11.5px] text-[var(--wb-text-mute)]">
+                  lendo a transcrição deste trecho…
+                </span>
+              )}
+            </div>
+
+            {gerar.isError && (
+              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
+                {(gerar.error as Error)?.message ?? 'não consegui gerar'}
+              </p>
+            )}
+
+            {/* Sucesso com lista vazia NAO pode parecer botao quebrado: o
+                modelo pode nao ter produzido nada aproveitavel, e isso e uma
+                resposta, nao uma falha silenciosa. */}
+            {gerar.isSuccess && variacoes.length === 0 && (
+              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
+                A IA não devolveu nada aproveitável desta vez. Tente de novo ou escreva o seu.
+              </p>
+            )}
+
+            {variacoes.length > 0 && (
+              <ul className="space-y-1">
+                {variacoes.map((variacao) => {
+                  const tomDela = tomDoGancho(variacao);
+                  return (
+                    <li key={variacao}>
+                      <button
+                        type="button"
+                        disabled={ocupado}
+                        onClick={() => setTexto(variacao)}
+                        className={cn(
+                          'flex w-full items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors disabled:opacity-45',
+                          variacao === texto
+                            ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+                            : 'border-[var(--wb-border-soft)] hover:bg-[var(--wb-bg-inset)]',
+                        )}
+                      >
+                        <span className="flex-1 text-[13px] font-semibold leading-snug">
+                          {variacao}
+                        </span>
+                        <span
+                          className={cn(
+                            'flex-none font-code text-[10px] tabular-nums',
+                            TONS[tomDela],
+                          )}
+                        >
+                          {contarPalavras(variacao)}p
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
 
           <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">

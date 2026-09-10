@@ -18,10 +18,12 @@ from app.domain.gancho_short import (
     DURACAO_MIN_SEG,
     DURACAO_PADRAO_SEG,
     MAX_CARACTERES,
+    MAX_VARIACOES,
     PALAVRAS_MAX,
     PALAVRAS_MIN,
     contar_palavras,
     esta_na_faixa,
+    ganchos_da_resposta,
     normalizar_duracao,
     normalizar_gancho,
     para_payload,
@@ -100,3 +102,97 @@ class TestPayload:
         payload = para_payload("oi", 2.5, duracao_short_seg=0.0)
         assert payload is not None
         assert payload["ateSeg"] == 2.5
+
+
+class TestGanchosDaResposta:
+    """O que o modelo devolve nunca e exatamente o que o contrato pediu.
+
+    A etiqueta da capa ja pagou por essa licao (D-520): sem limpeza, a frase
+    "Aqui estao as opcoes:" vira a primeira variacao — e o operador le isso como
+    um gancho que a maquina propos a serio.
+    """
+
+    def test_uma_por_linha_e_o_caso_feliz(self):
+        assert ganchos_da_resposta("o juro trabalha contra voce\nninguem te conta isso") == [
+            "o juro trabalha contra voce",
+            "ninguem te conta isso",
+        ]
+
+    @pytest.mark.parametrize(
+        "linha",
+        [
+            '1. "o erro que todo mundo comete"',
+            "- o erro que todo mundo comete",
+            "2) o erro que todo mundo comete",
+            "• o erro que todo mundo comete",
+            "  `o erro que todo mundo comete`  ",
+            "“o erro que todo mundo comete”",
+        ],
+    )
+    def test_tira_o_enfeite_que_o_modelo_poe(self, linha):
+        assert ganchos_da_resposta(linha) == ["o erro que todo mundo comete"]
+
+    def test_cerca_de_markdown_nao_vira_variacao(self):
+        assert ganchos_da_resposta("```\numa opcao aqui\n```") == ["uma opcao aqui"]
+
+    def test_repetida_entra_uma_vez_so(self):
+        """Duas linhas iguais na tela parecem defeito, nao escolha."""
+        assert ganchos_da_resposta("mesma frase aqui\nMESMA FRASE AQUI") == ["mesma frase aqui"]
+
+    def test_para_no_teto_de_variacoes(self):
+        muitas = "\n".join(f"variacao numero {i} aqui" for i in range(20))
+        assert len(ganchos_da_resposta(muitas)) == MAX_VARIACOES
+
+    @pytest.mark.parametrize("nada", ["", "   ", "\n\n"])
+    def test_resposta_vazia_devolve_lista_vazia(self, nada):
+        """A tela diz que nao saiu nada; oferecer lixo seria pior."""
+        assert ganchos_da_resposta(nada) == []
+
+
+class TestRessalvaEHistorico:
+    """Defeitos vistos na PRIMEIRA execucao real do gerador (D-565).
+
+    O modelo devolveu `o juro composto trabalha contra voce (ja usado — evitar)`:
+    ele leu a regra de nao repetir, concordou com ela, e escolheu COMENTA-LA em
+    vez de obedece-la. A ressalva iria para a tela como parte da frase.
+
+    Duas licoes, e as duas viraram codigo: parenteses no fim de um gancho e
+    sempre meta, e o que o prompt PEDE o parser tem de GARANTIR.
+    """
+
+    def test_ressalva_no_fim_nao_vai_para_a_tela(self):
+        assert ganchos_da_resposta("seu financiamento custa o dobro (mais forte)") == [
+            "seu financiamento custa o dobro"
+        ]
+
+    def test_a_linha_que_so_tem_ressalva_e_descartada(self):
+        assert ganchos_da_resposta("(estas sao as opcoes)") == []
+
+    def test_parenteses_no_meio_nao_e_ressalva(self):
+        """So o SUFIXO e meta — cortar no meio mutilaria a frase."""
+        assert ganchos_da_resposta("o (falso) consenso sobre juros") == [
+            "o (falso) consenso sobre juros"
+        ]
+
+    def test_gancho_ja_usado_nao_volta_como_novidade(self):
+        bruto = "o juro trabalha contra voce\numa frase realmente nova aqui"
+        assert ganchos_da_resposta(bruto, ja_usados=["o juro trabalha contra voce"]) == [
+            "uma frase realmente nova aqui"
+        ]
+
+    def test_o_ja_usado_e_comparado_sem_ligar_para_caixa(self):
+        assert ganchos_da_resposta("Uma Frase Aqui", ja_usados=["uma frase aqui"]) == []
+
+    def test_ressalva_removida_revela_o_ja_usado(self):
+        """As duas defesas se completam: o caso real precisou das duas.
+
+        Sem tirar a ressalva, a linha nao casaria com o historico; sem o
+        historico, a frase limpa entraria como se fosse nova.
+        """
+        bruto = "o juro trabalha contra voce (ja usado — evitar)"
+        assert ganchos_da_resposta(bruto, ja_usados=["o juro trabalha contra voce"]) == []
+
+    def test_historico_vazio_nao_atrapalha(self):
+        assert ganchos_da_resposta("uma frase qualquer aqui", ja_usados=[]) == [
+            "uma frase qualquer aqui"
+        ]

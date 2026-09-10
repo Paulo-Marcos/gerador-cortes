@@ -376,6 +376,19 @@ export const shortsApi = {
       method: 'POST',
     }),
 
+  /**
+   * D-565: a IA propoe variacoes do gancho da abertura — e NAO grava.
+   *
+   * Diferente do `sugerirCenas`, que volta com o short ja alterado. Aqui o
+   * retorno e so a lista: o operador compara e escolhe, e a gravacao passa pelo
+   * PATCH normal. O gancho e a promessa do short, e escolher por ele seria a
+   * decisao mais editorial da tela tomada pela maquina.
+   */
+  sugerirGanchos: (shortId: string) =>
+    request<{ variacoes: string[] }>(`/shorts/${shortId}/ganchos`, {
+      method: 'POST',
+    }),
+
   renderizarPrevia: (shortId: string) =>
     request<{ status: string; estagio: string }>(`/shorts/${shortId}/previa`, {
       method: 'POST',
