@@ -18,6 +18,7 @@ from app.services.cancelamento_jobs import (
 )
 from app.services.export import ExportService
 from app.services.jobs_globais import JobsGlobais
+from app.services.liberacao_publicacao import liberar_publicacao
 from app.services.tasks import fire_and_forget
 from app.services.youtube import YouTubeService
 from fastapi import APIRouter, Depends, HTTPException
@@ -276,6 +277,44 @@ async def marcar_corte_publicado(
 
     if resultado.get("status") == "erro":
         mensagem = resultado.get("mensagem", "Erro ao marcar corte como publicado.")
+        mensagem_lower = mensagem.lower()
+        if "não encontrado" in mensagem_lower or "nao encontrado" in mensagem_lower:
+            raise HTTPException(status_code=404, detail=mensagem)
+        raise HTTPException(status_code=400, detail=mensagem)
+
+    return resultado
+
+
+class LiberarPublicacaoRequest(BaseModel):
+    """Qual destino deixou de ter este vídeo. Default no YouTube: é o destino
+    que bloqueia o re-upload, e o motivo de 9 em 10 chamadas."""
+
+    destino: str = "youtube"
+
+
+@router.post("/corte/{corte_id}/publicacao/liberar")
+async def liberar_publicacao_do_corte(corte_id: str, body: LiberarPublicacaoRequest):
+    """Desfaz a marca de publicação de um destino (D-566).
+
+    O espelho de `marcar-publicado`: aquele ensina o app que o vídeo está lá
+    fora, este ensina que não está mais. Existe porque apagar o vídeo no
+    YouTube para reprocessar deixava o corte preso — o botão de enviar some
+    quando há URL publicada, a lista de massa filtra publicados fora e o
+    próprio upload responde "já publicado; upload ignorado".
+
+    Não apaga nada na plataforma nem no disco: só a memória do app.
+    """
+    operational_info(
+        "router",
+        f"📥 Solicitação: liberar publicação de '{corte_id}' em {body.destino}",
+    )
+    try:
+        resultado = await liberar_publicacao(corte_id, body.destino)
+    except Exception as e:
+        raise erro_interno(e) from e
+
+    if resultado.get("status") == "erro":
+        mensagem = resultado.get("mensagem", "Erro ao liberar a publicação do corte.")
         mensagem_lower = mensagem.lower()
         if "não encontrado" in mensagem_lower or "nao encontrado" in mensagem_lower:
             raise HTTPException(status_code=404, detail=mensagem)

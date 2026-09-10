@@ -573,6 +573,31 @@ export interface YouTubePublishResponse {
   scheduled_at?: string;
 }
 
+/**
+ * D-566: destinos que sabem ser LIBERADOS (despublicados).
+ *
+ * O app não descobre sozinho que um vídeo saiu do ar — quem apaga lá fora é o
+ * operador. Isto é o vocabulário para ele contar.
+ */
+export type DestinoPublicacao = 'youtube' | 'tiktok';
+
+export interface LiberarPublicacaoRequest {
+  destino: DestinoPublicacao;
+}
+
+export interface LiberarPublicacaoResponse {
+  status: string;
+  corte_id: string;
+  destino: DestinoPublicacao;
+  rotulo: string;
+  /** `false` = não havia marca; clicar de novo não é engano, é no-op. */
+  liberado: boolean;
+  campos_limpos: string[];
+  /** Sem o MP4 final na pasta o botão de enviar não volta — precisa re-render. */
+  video_pronto: boolean;
+  mensagem: string;
+}
+
 export interface CriarProjetoRequest {
   youtube_url: string;
   canal_origem?: string;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   cortesParaTiktok,
   cortesParaYoutube,
+  destinosPublicados,
   pendentesNoTiktok,
 } from '../listasDePublicacao';
 import type { StatusExportCorte } from '@/types/models';
@@ -93,5 +94,47 @@ describe('pendentesNoTiktok', () => {
 
   it('quem nao tem video nunca entra na fila', () => {
     expect(pendentesNoTiktok([corte({ video_pronto: false })])).toEqual([]);
+  });
+});
+
+// D-566: "publicado" deixou de ser estado terminal.
+//
+// O video pode ser apagado la fora — foi o que aconteceu num reprocessamento —
+// e o corte ficava preso: sem botao de enviar, fora da lista de massa, e com o
+// backend respondendo "ja publicado; upload ignorado". Esta lista e o primeiro
+// passo da volta: mostrar em que destinos o app ACHA que o video esta.
+describe('destinosPublicados', () => {
+  it('corte virgem nao tem nada a liberar', () => {
+    expect(destinosPublicados(corte())).toEqual([]);
+  });
+
+  it('lista o YouTube com a URL que o operador confere antes de soltar', () => {
+    const marcados = destinosPublicados(
+      corte({ youtube_url_publicado: 'https://youtu.be/ZcvZLOResPc' }),
+    );
+
+    expect(marcados).toHaveLength(1);
+    expect(marcados[0].destino).toBe('youtube');
+    expect(marcados[0].detalhe).toContain('ZcvZLOResPc');
+  });
+
+  it('pega o corte preso so pelo video_id, sem URL', () => {
+    // E o `youtube_video_id` que o upload consulta para se declarar
+    // idempotente: sem esta linha, o corte preso nao apareceria para ser solto.
+    const marcados = destinosPublicados(corte({ youtube_video_id: 'ZcvZLOResPc' }));
+
+    expect(marcados.map((d) => d.destino)).toEqual(['youtube']);
+  });
+
+  it('enxerga os dois destinos de forma independente', () => {
+    const marcados = destinosPublicados(
+      corte({
+        youtube_url_publicado: 'https://youtu.be/ZcvZLOResPc',
+        tiktok_publicado_em: '2026-09-04T10:00:00',
+      }),
+    );
+
+    expect(marcados.map((d) => d.destino)).toEqual(['youtube', 'tiktok']);
+    expect(marcados[1].detalhe).toContain('2026-09-04');
   });
 });

@@ -7,6 +7,7 @@ import {
   Loader2,
   Plus,
   Rocket,
+  RotateCcw,
   RotateCw,
   Scissors,
   Search,
@@ -21,6 +22,7 @@ import {
   useAbrirPasta,
   useAnalisarDesviosTodos,
   useExportStatus,
+  useLiberarPublicacao,
   useMarcarPublicadoYouTube,
   useProjeto,
   useProjetoProgressoWS,
@@ -32,12 +34,12 @@ import { useFalantes } from '@/hooks/useDiarizacao';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import { cn, formatarDataLive, formatarDuracaoHMS, thumbnailUrl } from '@/lib/utils';
 import { resolveThumbUrl } from '@/lib/api';
-import type { Corte, StatusExportCorte } from '@/types/models';
+import type { Corte, DestinoPublicacao, StatusExportCorte } from '@/types/models';
 import { AnaliseIaModal } from './AnaliseIaModal';
 import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
 import { PublicarMassaModal } from './PublicarMassaModal';
 import { PublicarTiktokModal } from './PublicarTiktokModal';
-import { cortesParaTiktok, cortesParaYoutube } from './listasDePublicacao';
+import { cortesParaTiktok, cortesParaYoutube, destinosPublicados } from './listasDePublicacao';
 import { StatusPipStrip } from './StatusPills';
 import { VotoQualidadeLive } from './VotoQualidadeLive';
 
@@ -149,6 +151,8 @@ export function ProjetoDetalhePage() {
   const [adicionarCorteOpen, setAdicionarCorteOpen] = useState(false);
   const [uploadingCorteId, setUploadingCorteId] = useState<string | null>(null);
   const [manualPublishCorte, setManualPublishCorte] = useState<StatusExportCorte | null>(null);
+  // D-566: corte cuja publicacao o operador quer desfazer (e em qual destino).
+  const [liberarCorte, setLiberarCorte] = useState<StatusExportCorte | null>(null);
   const [manualYoutubeUrl, setManualYoutubeUrl] = useState('');
   const [, setManualPublishCorteId] = useState<string | null>(null);
 
@@ -156,6 +160,7 @@ export function ProjetoDetalhePage() {
   const refazerTranscricao = useRefazerTranscricao(id);
   const uploadYoutube = useUploadYouTube();
   const marcarPublicado = useMarcarPublicadoYouTube();
+  const liberarPublicacao = useLiberarPublicacao();
   const reordenar = useReordenarCortes(id);
   const analisarDesviosTodos = useAnalisarDesviosTodos(id);
 
@@ -251,6 +256,36 @@ export function ProjetoDetalhePage() {
         onSettled: () => setManualPublishCorteId(null),
       },
     );
+  }
+
+  /**
+   * D-566: desfaz a marca de publicacao de UM destino.
+   *
+   * Nao apaga nada no YouTube nem no disco — so a memoria do app. Depois disso
+   * o corte volta a aparecer no botao de enviar e na lista de massa, porque as
+   * duas coisas sempre olharam para a marca que acabou de sair.
+   */
+  function confirmarLiberarPublicacao(destino: DestinoPublicacao) {
+    if (!liberarCorte) return;
+    liberarPublicacao.mutate(
+      { corteId: liberarCorte.corte_id, body: { destino } },
+      {
+        onSuccess: (data) => {
+          notify(data.mensagem, { tone: data.video_pronto ? 'success' : 'warning' });
+          setLiberarCorte(null);
+          atualizarDadosEstudio();
+        },
+        onError: (error) =>
+          notify(error instanceof Error ? error.message : 'Falha ao liberar a publicacao.', {
+            tone: 'error',
+          }),
+      },
+    );
+  }
+
+  function fecharLiberarPublicacao() {
+    if (liberarPublicacao.isPending) return;
+    setLiberarCorte(null);
   }
 
   // Mescla: todos os cortes (incluindo 'proposto') enriquecidos com dados de export quando disponíveis
@@ -639,6 +674,7 @@ export function ProjetoDetalhePage() {
                 onUploadYoutube={() => publicarCorteIndividual(corte.corte_id)}
                 uploadPending={uploadingCorteId === corte.corte_id}
                 onMarcarPublicado={() => abrirMarcarPublicado(corte)}
+                onLiberarPublicacao={() => setLiberarCorte(corte)}
                 onMover={(delta) => moverCorteNaLista(corte.corte_id, delta)}
                 podeSubir={idx > 0}
                 podeDescer={idx < cortes.length - 1}
@@ -717,6 +753,56 @@ export function ProjetoDetalhePage() {
           />
         </label>
       </Modal>
+      <Modal
+        open={Boolean(liberarCorte)}
+        onClose={fecharLiberarPublicacao}
+        title="Liberar publicação"
+        description={liberarCorte ? `Corte #${liberarCorte.numero}` : undefined}
+        footer={
+          <Button
+            type="button"
+            variant="outline"
+            onClick={fecharLiberarPublicacao}
+            disabled={liberarPublicacao.isPending}
+          >
+            Fechar
+          </Button>
+        }
+      >
+        <div className="grid gap-3">
+          <p className="text-sm text-text-300">
+            Use quando o vídeo saiu do ar no destino — apagado para reprocessar, por exemplo.
+            Isto <strong className="text-text-100">não apaga nada</strong> na plataforma nem no
+            disco: só desfaz a marca aqui, e o corte volta para a fila de publicação.
+          </p>
+          {(liberarCorte ? destinosPublicados(liberarCorte) : []).map((alvo) => (
+            <div
+              key={alvo.destino}
+              className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-text-100">{alvo.rotulo}</div>
+                <div className="truncate text-xs text-text-300" title={alvo.detalhe}>
+                  {alvo.detalhe}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => confirmarLiberarPublicacao(alvo.destino)}
+                disabled={liberarPublicacao.isPending}
+              >
+                {liberarPublicacao.isPending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <RotateCcw size={16} />
+                )}
+                Liberar
+              </Button>
+            </div>
+          ))}
+        </div>
+      </Modal>
     </TooltipProvider>
   );
 }
@@ -767,6 +853,7 @@ function CorteLinhaCompacta({
   onUploadYoutube,
   uploadPending,
   onMarcarPublicado,
+  onLiberarPublicacao,
   onMover,
   podeSubir,
   podeDescer,
@@ -778,6 +865,8 @@ function CorteLinhaCompacta({
   onUploadYoutube: () => void;
   uploadPending: boolean;
   onMarcarPublicado: () => void;
+  /** D-566: abre o diálogo que desfaz a marca de publicação de um destino. */
+  onLiberarPublicacao: () => void;
   onMover: (delta: -1 | 1) => void;
   podeSubir: boolean;
   podeDescer: boolean;
@@ -790,6 +879,8 @@ function CorteLinhaCompacta({
     : status.pronto_publicar;
   const rejeitado = corteFull?.status === 'rejeitado';
   const publicado = Boolean(status.youtube_url_publicado);
+  // D-566: qualquer marca de publicação (YouTube ou TikTok) tem volta.
+  const temPublicacao = destinosPublicados(status).length > 0;
   const durSeg = corteFull ? Math.max(0, corteFull.fim_seg - corteFull.inicio_seg) : 0;
   const capa = resolveThumbUrl(projetoId, status.thumbnail_path);
   const irEditor = () => navigate(`/projetos/${projetoId}/cortes/${status.corte_id}`);
@@ -888,6 +979,17 @@ function CorteLinhaCompacta({
               className="rounded bg-black/60 px-1 text-[10px] text-white"
             >
               ▶
+            </button>
+          )}
+          {temPublicacao && (
+            <button
+              type="button"
+              onClick={onLiberarPublicacao}
+              aria-label="Liberar publicacao para subir de novo"
+              title="Liberar publicação (subir de novo)"
+              className="rounded bg-black/60 px-1 text-[10px] text-white"
+            >
+              ↺
             </button>
           )}
           <button

@@ -36,6 +36,8 @@ import type {
   WaveformPeaksResponse,
   RankingLivesResponse,
   YoutubeLivesResponse,
+  LiberarPublicacaoRequest,
+  LiberarPublicacaoResponse,
   YouTubeManualPublishRequest,
   YouTubePublishResponse,
   YouTubeUploadRequest,
@@ -360,6 +362,20 @@ export const api = {
 
   marcarPublicadoYouTube: (corteId: string, body: YouTubeManualPublishRequest) =>
     request<YouTubePublishResponse>(`/export/corte/${corteId}/youtube/marcar-publicado`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /**
+   * D-566: desfaz a marca de publicação de um destino.
+   *
+   * O espelho de `marcarPublicadoYouTube`: aquele conta que o vídeo está lá
+   * fora, este conta que não está mais. Sem ele, apagar o vídeo do YouTube
+   * para reprocessar deixava o corte preso — o botão de enviar some quando há
+   * URL publicada e o backend responde "já publicado; upload ignorado".
+   */
+  liberarPublicacao: (corteId: string, body: LiberarPublicacaoRequest) =>
+    request<LiberarPublicacaoResponse>(`/export/corte/${corteId}/publicacao/liberar`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),

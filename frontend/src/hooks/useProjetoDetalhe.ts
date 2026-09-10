@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/toaster';
 import type {
   AnalisarIntervaloRequest,
   ImportarAnaliseRequest,
+  LiberarPublicacaoRequest,
   ProgressoUpdate,
   YouTubeManualPublishRequest,
   YouTubeUploadRequest,
@@ -192,6 +193,20 @@ export function useMarcarPublicadoYouTube() {
   return useMutation({
     mutationFn: ({ corteId, body }: { corteId: string; body: YouTubeManualPublishRequest }) =>
       api.marcarPublicadoYouTube(corteId, body),
+  });
+}
+
+/**
+ * D-566: devolve um corte publicado para a fila de publicação.
+ *
+ * Não é um upload: é o app aceitando ser informado de que o vídeo saiu do ar
+ * lá fora. Depois disso o botão de enviar reaparece sozinho, porque ele sempre
+ * olhou para a marca — e agora a marca não está mais lá.
+ */
+export function useLiberarPublicacao() {
+  return useMutation({
+    mutationFn: ({ corteId, body }: { corteId: string; body: LiberarPublicacaoRequest }) =>
+      api.liberarPublicacao(corteId, body),
   });
 }
 
