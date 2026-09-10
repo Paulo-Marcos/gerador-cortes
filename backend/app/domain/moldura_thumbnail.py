@@ -57,7 +57,7 @@ from __future__ import annotations
 
 import io
 
-from PIL import Image, ImageFilter
+from PIL import Image
 
 # Abaixo disto o pixel é resíduo do PNG, não desenho. Medido na moldura real:
 # com limiar 1 o aparo não corta nada (há respingos de alfa ~2 na borda); de 25
@@ -68,11 +68,6 @@ LIMIAR_DE_APARO = 25
 # `thumbnail_encode`: 4:4:4 (subsampling=0), porque o dano do croma 4:2:0 cai
 # justamente na borda colorida de texto — e agora também no fio da moldura.
 _QUALIDADE_JPEG = 95
-
-# Raio do borrão do fundo, em fração da largura. O bastante para a tira lateral
-# deixar de ser reconhecível como cópia da imagem, e pouco o bastante para as
-# cores continuarem sendo as da capa.
-_BORRAO_DO_FUNDO = 0.012
 
 ARQUIVO_PADRAO = "thumb_padrao.png"
 
@@ -163,40 +158,32 @@ def espessura_da_faixa(contorno: Image.Image) -> tuple[int, int]:
     return max(esquerda, direita), max(topo, base)
 
 
-def _fundo_borrado(capa: Image.Image) -> Image.Image:
-    """A capa borrada, para ficar atrás da arte reduzida.
-
-    Borra numa miniatura e reamplia, em vez de borrar o quadro inteiro: uma
-    gaussiana de raio grande sobre 2752x1536 custa mais de um segundo, e o
-    resultado de um borrão não distingue as duas rotas — é justamente a
-    informação fina que ele existe para jogar fora.
-    """
-    largura, altura = capa.size
-    escala = 8
-    pequena = capa.resize((max(1, largura // escala), max(1, altura // escala)), Image.LANCZOS)
-    raio = max(1.0, largura * _BORRAO_DO_FUNDO / escala)
-    return pequena.filter(ImageFilter.GaussianBlur(raio)).resize(capa.size, Image.LANCZOS)
-
-
 def _encaixar(capa: Image.Image, folga: tuple[float, float]) -> Image.Image:
     """A capa reduzida para dentro da janela da moldura, sobre o fundo borrado.
 
     `folga` é a espessura da faixa como FRAÇÃO de cada lado, não em pixels: a
     mesma moldura serve capas de 928 a 2752 de largura.
     """
-    largura, altura = capa.size
-    janela_larg = largura - round(folga[0] * largura) * 2
-    janela_alt = altura - round(folga[1] * altura) * 2
-    if janela_larg <= 0 or janela_alt <= 0:
+    # O recuo é o MENOR dos dois lados, não o maior. Recuando pelo eixo mais
+    # exigente — a faixa é mais grossa em cima que nas laterais —, a arte se
+    # afastava mais do que a moldura cobria e sobrava uma tira entre as duas.
+    # Pelo menor, o recuo nunca ultrapassa a faixa: ela sempre encobre a emenda,
+    # e não existe tira nenhuma para preencher (D-556).
+    escala = 1 - 2 * min(folga)
+    if escala <= 0:
         # Moldura tão grossa que não sobra janela: melhor a capa inteira por
         # baixo do que uma imagem de um pixel.
         return capa
 
-    escala = min(janela_larg / largura, janela_alt / altura)
+    largura, altura = capa.size
     reduzida = capa.resize(
         (max(1, round(largura * escala)), max(1, round(altura * escala))), Image.LANCZOS
     )
-    tela = _fundo_borrado(capa)
+    # A capa em tamanho cheio no fundo: as quinas comidas da moldura são buracos
+    # de poucos pixels, e ali aparece a própria imagem — não um vazio. Não
+    # precisa de borrão porque não é mais uma FAIXA que se vê, e sim um respingo:
+    # o borrão só existia para disfarçar a tira, e disfarçando ficava à mostra.
+    tela = capa.copy()
     tela.paste(reduzida, ((largura - reduzida.width) // 2, (altura - reduzida.height) // 2))
     return tela
 
