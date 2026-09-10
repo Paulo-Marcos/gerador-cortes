@@ -5,7 +5,12 @@ import {
   YOUTUBE_BACKGROUND_IDS,
   type YoutubeBackgroundId,
 } from '@/features/editor/fase2/youtubeLayout';
-import { CardChrome, StageChrome, chromeClipPath } from '@/features/editor/fase2/youtubeChrome';
+import {
+  CardChrome,
+  StageChrome,
+  buildChromePaths,
+  chromeClipPath,
+} from '@/features/editor/fase2/youtubeChrome';
 import type { PlanoDesenhavel } from './shortsApi';
 
 // E-036/D-489: o palco desenhado ao vivo, como o arquivo vai sair.
@@ -84,9 +89,26 @@ export function PalcoPrevia({ plano, video, children }: Props) {
         ctx.save();
         // O clip é o que faz o excesso do COBRIR ficar de fora — o destino
         // começa fora do slot de propósito, exatamente como no filtergraph.
-        ctx.beginPath();
-        ctx.rect(recorta.x, recorta.y, recorta.w, recorta.h);
-        ctx.clip();
+        //
+        // D-559: e o clip é o CHANFRO, não um retângulo.
+        //
+        // O canto superior direito do chrome é cortado na diagonal (e o
+        // inferior direito também, mais discreto). Com `ctx.rect` o vídeo
+        // mantinha os cantos quadrados e escapava POR FORA da linha ali —
+        // "no canto direito a imagem está passando da borda". O arquivo nunca
+        // teve isso: o `palco-short-entry.tsx` vaza as janelas do PNG com
+        // `buildChromePaths(...).main`, este mesmo desenho.
+        //
+        // `Path2D` aceita a string de path do SVG, então a forma é literalmente
+        // a mesma dos dois lados — nada de reimplementar o chanfro em canvas.
+        // De `plano.canvas`, e não das constantes desestruturadas lá embaixo:
+        // o efeito depende de `plano`, e ler daqui mantém a dependência única.
+        const opts = optsDa(recorta, plano.canvas.largura, plano.canvas.altura);
+        ctx.translate(recorta.x, recorta.y);
+        ctx.clip(new Path2D(buildChromePaths(recorta.w, recorta.h, opts).main));
+        // Volta ao referencial do quadro: o clip já ficou gravado onde estava,
+        // e `destino` vem em coordenadas do canvas.
+        ctx.translate(-recorta.x, -recorta.y);
         ctx.drawImage(
           fonte,
           origem.x,
@@ -182,11 +204,22 @@ export function PalcoPrevia({ plano, video, children }: Props) {
                     height: recorte.recorta.h,
                   }}
                 >
+                  {/* D-559: linha fina e SEM brackets — os mesmos parâmetros
+                      da camada 3 do `palco-short-entry.tsx`.
+
+                      A prévia usava os defaults (`outlineScale` 1 e brackets
+                      ligados), então cada janela vinha com um contorno três
+                      vezes mais grosso que o do arquivo, mais quatro cantos que
+                      o arquivo não tem. Com a janela encolhida isso encostou no
+                      trilho do palco e virou o que se via: duas bordas, uma
+                      dentro da outra. Os cantos são a assinatura do PALCO; o
+                      que a janela leva é só o fio que a separa do fundo. */}
                   <CardChrome
                     width={recorte.recorta.w}
                     height={recorte.recorta.h}
-                    opts={coladaNoQuadro(recorte.recorta, largura, altura) ? OPTS_COLADA : OPTS_DA_JANELA}
-                    showBrackets
+                    opts={optsDa(recorte.recorta, largura, altura)}
+                    outlineScale={0.3}
+                    showBrackets={false}
                   />
                 </div>
               ))}
@@ -206,18 +239,24 @@ export function PalcoPrevia({ plano, video, children }: Props) {
 }
 
 /**
- * Uma janela colada nas bordas não leva canto arredondado.
+ * O chanfro desta janela — o mesmo `optsDa` do `palco-short-entry.tsx`.
  *
- * Mesma regra do `optsDa` no `palco-short-entry.tsx`: arredondar uma janela de
- * tela cheia deixaria quatro cantos de fundo aparecendo num short que era para
- * ser, justamente, tela cheia.
+ * Uma janela colada nas bordas não leva canto arredondado: arredondar uma
+ * janela de tela cheia deixaria quatro cantos de fundo aparecendo num short que
+ * era para ser, justamente, tela cheia.
+ *
+ * D-559: virou função porque agora tem DOIS leitores — o clip do canvas e o
+ * contorno do chrome. Enquanto era uma expressão repetida, nada impedia os dois
+ * de discordarem, e a divergência apareceria como uma sobra de vídeo do lado de
+ * fora da linha.
  */
-function coladaNoQuadro(
+function optsDa(
   r: { x: number; y: number; w: number; h: number },
   largura: number,
   altura: number,
-): boolean {
-  return r.x <= 1 && r.y <= 1 && r.w >= largura - 1 && r.h >= altura - 1;
+): typeof OPTS_DA_JANELA {
+  const colada = r.x <= 1 && r.y <= 1 && r.w >= largura - 1 && r.h >= altura - 1;
+  return colada ? OPTS_COLADA : OPTS_DA_JANELA;
 }
 
 export { chromeClipPath };
