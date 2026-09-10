@@ -179,6 +179,98 @@ async def test_short_com_cenas_gravadas_nao_renderiza_texto_nenhum(ambiente, job
     assert props["cenas"] == []
 
 
+class TestGanchoDaAbertura:
+    """D-565: o titulo-gancho chega ao arquivo — e nao pela porta das cenas.
+
+    Este e o ponto de juncao mais fragil da demanda. Se o gancho cair fora do
+    payload, ele some do MP4 EM SILENCIO: a tela continua mostrando o texto na
+    previa, o render nao falha, e o operador so descobre assistindo ao arquivo
+    pronto — depois de gastar a passada boa.
+    """
+
+    @pytest.mark.asyncio
+    async def test_short_sem_gancho_manda_nulo(self, ambiente, jobs):
+        """Nao ter gancho e o caso COMUM, e continua sendo uma resposta valida."""
+        _, raiz = ambiente
+        await render_short.renderizar_short("s1")
+
+        props = json.loads(
+            (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada_final.props.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert props["gancho"] is None
+
+    @pytest.mark.asyncio
+    async def test_gancho_escrito_chega_ao_payload(self, ambiente, jobs):
+        factory, raiz = ambiente
+        async with factory() as db:
+            short = await db.get(Short, "s1")
+            short.gancho_tela = "o juro composto trabalha contra voce"
+            short.gancho_ate_seg = 2.5
+            await db.commit()
+
+        await render_short.renderizar_short("s1")
+
+        props = json.loads(
+            (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada_final.props.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert props["gancho"] == {
+            "texto": "o juro composto trabalha contra voce",
+            "ateSeg": 2.5,
+        }
+
+    @pytest.mark.asyncio
+    async def test_o_gancho_nao_entra_pela_porta_das_cenas(self, ambiente, jobs):
+        """A separacao e estrutural, nao combinada.
+
+        O `s1` do fixture TEM uma cena `hook` gravada. Se o gancho viajasse no
+        array de cenas, religa-lo religaria aquele texto antigo junto — que e
+        exatamente o que a D-560 mandou desligar. Os dois canais sao
+        independentes, e `CENAS_LIGADAS` continua valendo so para um deles.
+        """
+        factory, raiz = ambiente
+        async with factory() as db:
+            short = await db.get(Short, "s1")
+            short.gancho_tela = "quatro palavras aqui agora"
+            await db.commit()
+
+        await render_short.renderizar_short("s1")
+
+        props = json.loads(
+            (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada_final.props.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert props["cenas"] == []
+        assert props["gancho"]["texto"] == "quatro palavras aqui agora"
+
+    @pytest.mark.asyncio
+    async def test_gancho_nao_passa_da_duracao_do_trecho(self, ambiente, jobs):
+        """O operador encurta as bordas DEPOIS de escrever o gancho.
+
+        Sem o corte, o Remotion receberia uma sequencia maior que a composicao.
+        """
+        factory, raiz = ambiente
+        async with factory() as db:
+            short = await db.get(Short, "s1")
+            short.gancho_tela = "curto"
+            short.gancho_ate_seg = 5.0
+            short.fim_seg = short.inicio_seg + 2.0
+            await db.commit()
+
+        await render_short.renderizar_short("s1")
+
+        props = json.loads(
+            (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada_final.props.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert props["gancho"]["ateSeg"] == 2.0
+
+
 @pytest.mark.asyncio
 async def test_composicao_poe_a_camada_por_cima_do_video(ambiente, jobs):
     cmd = (await _render_e_pegar(jobs, 2))["cmd"]
