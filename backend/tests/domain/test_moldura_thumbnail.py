@@ -17,6 +17,7 @@ from app.domain.moldura_thumbnail import (
     aparar_margem,
     arquivos_da_moldura,
     emoldurar,
+    espessura_da_faixa,
     nomes_das_molduras,
 )
 from PIL import Image
@@ -26,9 +27,20 @@ MARGEM_VAZIA = 12
 FAIXA = 8
 
 
-def _capa(cor=(200, 30, 30), formato="PNG") -> bytes:
+MARCA = (0, 255, 64)
+
+
+def _capa(cor=(200, 30, 30), formato="PNG", marca_na_borda=False) -> bytes:
+    """Uma capa lisa; com `marca_na_borda`, uma listra colada na margem esquerda.
+
+    A listra imita o que o capista faz de verdade: texto encostado no limite do
+    quadro. É por ela que se sabe se a moldura comeu conteúdo.
+    """
+    capa = Image.new("RGB", (LARGURA, ALTURA), cor)
+    if marca_na_borda:
+        capa.paste(Image.new("RGB", (6, ALTURA), MARCA), (0, 0))
     buffer = io.BytesIO()
-    Image.new("RGB", (LARGURA, ALTURA), cor).save(buffer, formato)
+    capa.save(buffer, formato)
     return buffer.getvalue()
 
 
@@ -44,6 +56,12 @@ def _moldura(margem: int = MARGEM_VAZIA, faixa: int = FAIXA) -> Image.Image:
     desenho.paste(vazado, (faixa, faixa))
     moldura.paste(desenho, (margem, margem))
     return moldura
+
+
+def _cores(imagem: Image.Image) -> set[tuple[int, int, int]]:
+    """As cores presentes na imagem. `getcolors` em vez de `getdata` porque este
+    ja esta marcado para sumir no Pillow 14."""
+    return {cor for _, cor in imagem.getcolors(maxcolors=1 << 20)}
 
 
 def _bytes_da(imagem: Image.Image) -> bytes:
@@ -161,3 +179,44 @@ class TestNomesDasMolduras:
         nomes = nomes_das_molduras()
 
         assert len(nomes) == len(set(nomes))
+
+
+class TestEspessuraDaFaixa:
+    def test_mede_a_faixa_da_propria_moldura(self):
+        """A espessura sai do arquivo, não de um número escrito no código."""
+        assert espessura_da_faixa(aparar_margem(_moldura(faixa=8))) == (8, 8)
+
+    def test_moldura_mais_grossa_da_medida_maior(self):
+        fina = espessura_da_faixa(aparar_margem(_moldura(faixa=4)))
+        grossa = espessura_da_faixa(aparar_margem(_moldura(faixa=16)))
+
+        assert grossa > fina
+
+
+class TestArteNaoEComida:
+    """D-556: a faixa cobria o texto que a arte poe na borda."""
+
+    def test_conteudo_colado_na_margem_sobrevive(self):
+        """Colando por cima, esta listra sumia inteira debaixo da faixa."""
+        emoldurada = Image.open(
+            io.BytesIO(emoldurar(_capa(marca_na_borda=True), _bytes_da(_moldura())))
+        ).convert("RGB")
+
+        assert MARCA in _cores(emoldurada)
+
+    def test_a_moldura_continua_encostada_no_limite(self):
+        """Recuar a arte nao pode ter afastado a moldura da borda."""
+        emoldurada = Image.open(
+            io.BytesIO(emoldurar(_capa(marca_na_borda=True), _bytes_da(_moldura())))
+        ).convert("RGB")
+
+        assert emoldurada.getpixel((0, 0)) == (255, 190, 0)
+
+    def test_nao_sobra_buraco_preto_em_volta(self):
+        """O fundo borrado existe para isto: onde a moldura falha, aparece a
+        capa — nunca preto."""
+        emoldurada = Image.open(io.BytesIO(emoldurar(_capa(), _bytes_da(_moldura())))).convert(
+            "RGB"
+        )
+
+        assert (0, 0, 0) not in _cores(emoldurada)
