@@ -697,4 +697,3 @@ class LiveCandidata(Base):
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
-
