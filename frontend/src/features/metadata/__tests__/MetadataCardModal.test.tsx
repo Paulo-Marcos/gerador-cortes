@@ -93,6 +93,13 @@ describe('MetadataCard — corpo do modal', () => {
     expect(render(metadado({ thumbnail_path: '' }))).not.toContain('Aplicar moldura');
   });
 
+  // D-556: conferir a moldura exige ver a capa grande. O clique na imagem deixou
+  // de copiar o caminho — que continua no icone de pasta e no ... — e passou a
+  // ampliar, que e o que alguem espera ao clicar numa imagem.
+  it('oferece ampliar a capa ao clicar nela', () => {
+    expect(render(metadado())).toContain('Ampliar a capa');
+  });
+
   it('mostra as sugestoes de titulo e de capa como chips', () => {
     const markup = render(metadado());
     expect(markup).toContain('Primeira opcao');

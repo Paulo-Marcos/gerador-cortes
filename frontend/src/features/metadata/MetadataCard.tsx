@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BookOpen,
@@ -107,7 +107,17 @@ export function MetadataCard({
   const meta = metaQuery.data;
   const generated = Boolean(meta?.titulo_youtube);
   const promptReady = Boolean(meta?.prompt_thumbnail);
-  const thumbnailUrl = resolveThumbUrl(projetoId, meta?.thumbnail_path);
+  // Emoldurar, comprimir e trocar gravam por cima do MESMO nome de arquivo.
+  // Sem trocar a URL, o navegador serve a imagem antiga do cache e a tela passa
+  // a mentir sobre o que existe em disco — foi o que aconteceu ao aplicar a
+  // moldura e nada parecer mudar (D-556).
+  const [versaoDaCapa, setVersaoDaCapa] = useState(0);
+  const thumbnailUrl = useMemo(() => {
+    const arquivo = resolveThumbUrl(projetoId, meta?.thumbnail_path);
+    if (!arquivo || versaoDaCapa === 0) return arquivo;
+    return `${arquivo}${arquivo.includes('?') ? '&' : '?'}v=${versaoDaCapa}`;
+  }, [projetoId, meta?.thumbnail_path, versaoDaCapa]);
+  const [capaAmpliada, setCapaAmpliada] = useState(false);
   const thumbnailReady = Boolean(status?.thumbnail_pronta || thumbnailUrl);
 
   // Foco da lista manda no expandido: seleciona outro corte → este recolhe.
@@ -190,6 +200,7 @@ export function MetadataCard({
     mutationFn: (file: File) => api.uploadThumbnail(cut.id, file),
     onSuccess: () => {
       invalidate();
+      setVersaoDaCapa((atual) => atual + 1);
       notify('Thumbnail enviada.', { tone: 'success' });
     },
     onError: (error) =>
@@ -205,6 +216,7 @@ export function MetadataCard({
     mutationFn: () => api.aplicarMolduraThumbnail(cut.id),
     onSuccess: (res) => {
       invalidate();
+      setVersaoDaCapa((atual) => atual + 1);
       notify(res.message || 'Moldura aplicada.', { tone: 'success' });
     },
     onError: (error) =>
@@ -217,6 +229,7 @@ export function MetadataCard({
     mutationFn: () => api.comprimirThumbnail(cut.id),
     onSuccess: (res) => {
       invalidate();
+      setVersaoDaCapa((atual) => atual + 1);
       notify(res.message || 'Thumbnail comprimida.', { tone: 'success' });
     },
     onError: (error) =>
@@ -585,12 +598,14 @@ export function MetadataCard({
           </div>
 
           <aside className="grid content-start gap-2.5">
+            {/* D-556: clicar na capa AMPLIA. Copiar o endereço saiu daqui sem
+                perda: continua no ícone de pasta logo abaixo e no ⋯ do card —
+                e ninguém clica numa imagem esperando copiar um caminho. */}
             <button
               type="button"
-              title="Copiar o endereço do arquivo da thumbnail"
-              onClick={() =>
-                void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.')
-              }
+              title={thumbnailUrl ? 'Ampliar a capa' : 'Sem thumbnail'}
+              disabled={!thumbnailUrl}
+              onClick={() => setCapaAmpliada(true)}
               className="aspect-video overflow-hidden rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)]"
             >
               {thumbnailUrl ? (
@@ -884,9 +899,9 @@ export function MetadataCard({
           <aside className="grid content-start gap-2.5">
             <button
               type="button"
-              onClick={() =>
-                void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.')
-              }
+              title={thumbnailUrl ? 'Ampliar a capa' : 'Sem thumbnail'}
+              disabled={!thumbnailUrl}
+              onClick={() => setCapaAmpliada(true)}
               className="aspect-video overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)]"
             >
               {thumbnailUrl ? (
@@ -976,6 +991,25 @@ export function MetadataCard({
           </aside>
         </section>
       )}
+
+      {/* D-556: conferir a moldura de perto exige ver a capa grande. `contain`
+          e não `cover`: aqui o assunto é justamente a borda, e recortá-la para
+          preencher a caixa esconderia o que se veio olhar. */}
+      <Modal
+        open={capaAmpliada && Boolean(thumbnailUrl)}
+        onClose={() => setCapaAmpliada(false)}
+        title="Capa"
+        description={meta?.titulo_youtube || undefined}
+        size="2xl"
+      >
+        {thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={meta?.titulo_youtube ?? 'Capa do corte'}
+            className="max-h-[72vh] w-full rounded-[var(--radius-sm)] object-contain"
+          />
+        ) : null}
+      </Modal>
 
       <PromptImportModal
         corteId={cut.id}
