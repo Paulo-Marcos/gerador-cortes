@@ -469,3 +469,18 @@ class TestMolduraChegaAoRender:
 
         assert self._faixas_da_moldura(jobs[0]) == 0
         assert "[1:v]overlay" not in self._filtro(jobs[0])
+
+
+def test_textura_invalida_no_palco_cai_na_padrao_do_canal():
+    """D-554: mesma regra da previa, no caminho que escreve o arquivo.
+
+    Se so a previa normalizasse, um preset antigo daria tela certa e MP4 com um
+    fundo inexistente — a divergencia silenciosa que a D-549 ja custou uma vez.
+    """
+    from app.domain.youtube_layout import FUNDO_PADRAO
+    from app.services.render_short import _textura
+
+    assert _textura({"fundo_editorial": "verdeProfundo"}) == FUNDO_PADRAO
+    assert _textura({"fundo_editorial": ""}) == FUNDO_PADRAO
+    assert _textura({}) == FUNDO_PADRAO
+    assert _textura({"fundo_editorial": "cosmograph"}) == "cosmograph"

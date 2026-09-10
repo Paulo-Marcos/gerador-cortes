@@ -1,6 +1,10 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { YoutubeBackground } from '@/features/editor/fase2/youtubeBackgrounds';
-import type { YoutubeBackgroundId } from '@/features/editor/fase2/youtubeLayout';
+import {
+  DEFAULT_YOUTUBE_BACKGROUND,
+  YOUTUBE_BACKGROUND_IDS,
+  type YoutubeBackgroundId,
+} from '@/features/editor/fase2/youtubeLayout';
 import { CardChrome, StageChrome, chromeClipPath } from '@/features/editor/fase2/youtubeChrome';
 import type { PlanoDesenhavel } from './shortsApi';
 
@@ -106,6 +110,18 @@ export function PalcoPrevia({ plano, video, children }: Props) {
 
   const { largura, altura } = plano.canvas;
   const comMoldura = plano.moldura !== 'nenhuma';
+  // D-554: um `as YoutubeBackgroundId` no id que vem do backend era uma
+  // promessa que o TypeScript não tinha como cobrar. O dia em que ela foi
+  // quebrada — um preset antigo trazia a chave de paleta "verdeProfundo" no
+  // campo que virou textura — o componente de fundo recebeu um id sem
+  // componente, devolveu `undefined`, e a tela inteira dos shorts caiu.
+  //
+  // O backend já não deixa mais o id inválido sair, e mesmo assim a checagem
+  // fica aqui: é a prévia que morre se ela falhar, e uma prévia com a textura
+  // errada é infinitamente melhor que uma tela em branco.
+  const textura = (YOUTUBE_BACKGROUND_IDS as readonly string[]).includes(plano.fundo_editorial)
+    ? (plano.fundo_editorial as YoutubeBackgroundId)
+    : DEFAULT_YOUTUBE_BACKGROUND;
 
   return (
     <div
@@ -121,7 +137,7 @@ export function PalcoPrevia({ plano, video, children }: Props) {
           para o PNG, então a textura aqui é a textura de lá. */}
       {comMoldura && (
         <div className="absolute inset-0">
-          <YoutubeBackground fundo={plano.fundo_editorial as YoutubeBackgroundId} />
+          <YoutubeBackground fundo={textura} />
         </div>
       )}
 

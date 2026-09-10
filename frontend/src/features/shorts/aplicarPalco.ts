@@ -30,7 +30,11 @@ import type { AtualizarShortBody } from './shortsApi';
  */
 export function mudancaDoPalco(
   presetId: string,
-  payload: PalcoShortPreset | null,
+  // `Partial` e o tipo honesto: um preset gravado antes da D-552 nao tem todas
+  // as chaves, e e por isso que cada campo abaixo traz o seu default. Declarar
+  // o tipo cheio obrigava quem chama a mentir com um cast — e foi um cast desses
+  // (`as YoutubeBackgroundId` na previa) que derrubou a tela na D-554.
+  payload: Partial<PalcoShortPreset> | null,
 ): AtualizarShortBody {
   if (!payload) return { palco_short_preset: presetId };
 

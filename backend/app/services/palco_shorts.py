@@ -40,6 +40,7 @@ from app.domain.palco_short import CANVAS, montar_plano, regioes_do_layout
 # (`render_short._palco_em_png`). Duas fontes para este id fariam a previa e o
 # arquivo divergirem sem nada quebrar.
 from app.domain.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL
+from app.domain.youtube_layout import _normalizar_fundo as textura_valida
 from app.models import Corte, LayoutPreset, Short
 from sqlalchemy import select
 
@@ -220,7 +221,18 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         moldura = short.moldura
         fundo = resolver_fundo(short.fundo_palco, paleta_do_tema())
         # D-552: a textura do short, ou a do canal quando ele nao escolheu.
-        textura = short.fundo_editorial or FUNDO_EDITORIAL
+        #
+        # D-554: e a do canal tambem quando o que esta gravado NAO E uma
+        # textura. A gravacao aceita qualquer string de proposito (o catalogo
+        # muda com o tema, e um short antigo nao deve virar erro de escrita) —
+        # o preco disso e que a validacao tem de acontecer AQUI, na leitura.
+        #
+        # Ela nao acontecia, e um preset de palco salvo antes da D-552 trazia no
+        # campo `fundo` uma CHAVE DE PALETA ("verdeProfundo"). Aplicar o preset
+        # copiava a chave para ca, o payload a entregava intacta, e a previa
+        # procurava um componente de textura com esse nome — nao achava, e a
+        # tela inteira dos shorts caia com "Element type is invalid".
+        textura = textura_valida(short.fundo_editorial, FUNDO_EDITORIAL)
 
     if not regioes:
         return _sem_palco(moldura, fundo, textura)

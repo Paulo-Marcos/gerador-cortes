@@ -502,3 +502,55 @@ class TestFundoDoPalco:
 
         assert catalogo[0]["chave"] == "fundoPalco"
         assert catalogo[0]["padrao"] is True
+
+
+class TestTexturaInvalida:
+    """D-554: a chave que nao e textura cai no padrao, e nao na tela em branco.
+
+    A gravacao de `fundo_editorial` aceita qualquer string de proposito — o
+    catalogo de texturas muda com o tema, e um short antigo apontando para uma
+    que saiu deve degradar, nao virar erro de escrita. O preco disso e que a
+    validacao TEM de acontecer na leitura, e nao acontecia.
+
+    Quem cobrou a conta foi um preset de palco salvo antes da D-552: naquela
+    versao o campo `fundo` guardava uma CHAVE DE PALETA. Aplicar o preset
+    copiava "verdeProfundo" para o campo que virou textura, o payload a
+    entregava intacta, e a previa procurava um componente de fundo com esse
+    nome. Nao existia — e a tela inteira dos shorts caiu com "Element type is
+    invalid".
+    """
+
+    @pytest.mark.asyncio
+    async def test_chave_de_paleta_no_lugar_da_textura_cai_no_padrao(self, ambiente):
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.fundo_editorial = "verdeProfundo"
+            await db.commit()
+
+        desenho = await servico.plano_desenhavel("s1")
+
+        assert desenho["fundo_editorial"] == servico.FUNDO_EDITORIAL
+
+    @pytest.mark.asyncio
+    async def test_a_textura_valida_continua_passando(self, ambiente):
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.fundo_editorial = "cosmograph"
+            await db.commit()
+
+        desenho = await servico.plano_desenhavel("s1")
+
+        assert desenho["fundo_editorial"] == "cosmograph"
+
+    @pytest.mark.asyncio
+    async def test_a_previa_e_o_arquivo_leem_a_mesma_textura(self, ambiente):
+        """Divergir aqui e a D-549 de novo: a tela mostra um fundo, o MP4 sai com outro."""
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.fundo_editorial = "verdeProfundo"
+            await db.commit()
+
+        desenho = await servico.plano_desenhavel("s1")
+        render = await servico.resolver_para_render("s1")
+
+        assert desenho["fundo_editorial"] == render["fundo_editorial"]

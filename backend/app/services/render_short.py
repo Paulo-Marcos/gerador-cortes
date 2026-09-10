@@ -37,6 +37,7 @@ from app.domain.fundo_short import para_ffmpeg
 from app.domain.moldura_short import COR_PADRAO, faixas
 from app.domain.overlay_codec import OverlayCodec, overlay_codec_profile
 from app.domain.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
+from app.domain.youtube_layout import _normalizar_fundo as textura_valida
 from app.infrastructure.ffmpeg_runner import probe_resolucao
 from app.infrastructure.worker_queue import RemotionWorkerQueue, WorkerJob, WorkerJobCategory
 from app.models import Corte, Short, StatusShort
@@ -349,7 +350,10 @@ def _textura(palco: dict) -> str:
     O PNG e a PREVIA leem daqui. Duas fontes para este id fariam a tela e o
     arquivo divergirem sem nada quebrar — que e como a D-549 nasceu.
     """
-    return palco.get("fundo_editorial") or FUNDO_EDITORIAL_PADRAO
+    # D-554: `or` so pega o vazio. Um id que nao e textura (uma chave de
+    # paleta vinda de preset antigo) passaria por aqui e o rasterizador
+    # procuraria um fundo inexistente.
+    return textura_valida(palco.get("fundo_editorial"), FUNDO_EDITORIAL_PADRAO)
 
 
 def faixas_do_canal(moldura: str) -> list:
