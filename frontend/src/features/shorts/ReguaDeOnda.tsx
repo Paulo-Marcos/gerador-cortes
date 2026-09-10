@@ -73,7 +73,11 @@ const MARGEM_DO_CURSOR = 24;
 //
 // Reservando a tira aqui, ela passa a ser visível — que era o pedido: sem barra
 // não há como o operador saber que existe mais onda fora da vista.
-const ALTURA_DA_ONDA = 88;
+// D-560: mais alta. A régua deixou de ser um resumo e virou o instrumento de
+// trabalho — é nela que se acha o começo da frase agora que o painel de bordas
+// finas saiu. Altura é resolução vertical: com 88px o envelope de uma fala
+// baixa quase encosta no de um silêncio.
+const ALTURA_DA_ONDA = 148;
 const ALTURA_DA_BARRA = 12;
 
 // De quanto em quanto perguntamos se a onda já pode receber os blocos.
