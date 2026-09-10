@@ -24,7 +24,11 @@ export type LayoutPresetTipo =
 export interface PalcoShortPreset {
   arranjo: string;
   janela_cheia: string;
+  /** O que cada janela mostra da live, em pixels do quadro-FONTE. */
   recortes: Record<string, { x: number; y: number; w: number; h: number }>;
+  /** D-561: o tamanho/posição de cada janela no quadro do SHORT (1080x1920). */
+  ajustes: Record<string, { x: number; y: number; w: number; h: number }>;
+  /** A TEXTURA editorial (D-552). Presets antigos trazem aqui uma cor da paleta. */
   fundo: string;
 }
 

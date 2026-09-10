@@ -8,11 +8,12 @@ import { mudancaDoPalco } from '../aplicarPalco';
 // existia como conceito porque aplicar copiava sem deixar rastro.
 
 describe('mudancaDoPalco', () => {
-  it('copia os quatro campos do preset', () => {
+  it('copia os cinco campos do preset', () => {
     const corpo = mudancaDoPalco('p1', {
       arranjo: 'dividida_empilhada',
       janela_cheia: 'pessoa',
       recortes: { pessoa: { x: 1, y: 2, w: 3, h: 4 } },
+      ajustes: { pessoa: { x: 5, y: 6, w: 7, h: 8 } },
       fundo: 'topographic',
     });
 
@@ -21,6 +22,7 @@ describe('mudancaDoPalco', () => {
       arranjo_palco: 'dividida_empilhada',
       janela_cheia: 'pessoa',
       recortes_palco: { pessoa: { x: 1, y: 2, w: 3, h: 4 } },
+      ajustes_palco: { pessoa: { x: 5, y: 6, w: 7, h: 8 } },
       fundo_editorial: 'topographic',
     });
   });
@@ -55,5 +57,26 @@ describe('mudancaDoPalco', () => {
 
     expect(corpo.fundo_editorial).toBe('verdeCard1');
     expect(corpo).not.toHaveProperty('fundo_palco');
+  });
+});
+
+describe('D-561: o preset guarda o palco inteiro', () => {
+  it('traz o tamanho das janelas junto', () => {
+    // Sem `ajustes` o preset descrevia meio palco: arranjo e recortes vinham, o
+    // tamanho voltava ao do arranjo, e parecia ter funcionado.
+    const corpo = mudancaDoPalco('p1', {
+      arranjo: 'cheia',
+      ajustes: { pessoa: { x: 54, y: 96, w: 972, h: 1728 } },
+    });
+
+    expect(corpo.ajustes_palco).toEqual({ pessoa: { x: 54, y: 96, w: 972, h: 1728 } });
+  });
+
+  it('preset sem a chave volta ao tamanho do arranjo, e nao ao ultimo usado', () => {
+    // `{}` significa "nenhum ajuste". Omitir o campo deixaria o short com o
+    // tamanho do trecho ANTERIOR, que nunca fez parte deste preset.
+    const corpo = mudancaDoPalco('p1', { arranjo: 'cheia' });
+
+    expect(corpo.ajustes_palco).toEqual({});
   });
 });

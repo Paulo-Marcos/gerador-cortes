@@ -5,7 +5,7 @@ Tipos suportados:
   - posicionamento: payload e `{compartilhada, fundo, placa}` (F-060). Payloads
     legados (bloco compartilhada direto) sao aceitos na escrita e re-embrulhados.
   - posicionamento_full: payload e `{full: {crop, slot}, fundo, placa}` (F-060).
-  - palco_short: payload e `{arranjo, janela_cheia, recortes, fundo}` (D-509) — o
+  - palco_short: payload e `{arranjo, janela_cheia, recortes, ajustes, fundo}` — o
     palco VERTICAL, com catalogo proprio. Separado dos de cima porque os nomes
     deles sao cenas do OBS ("Comp. 2 OBS") e o vocabulario do short e outro.
 
@@ -90,6 +90,18 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
             "arranjo": str(payload.get("arranjo") or ""),
             "janela_cheia": str(payload.get("janela_cheia") or ""),
             "recortes": _normalizar_recortes(recortes),
+            # D-561: o TAMANHO das janelas no quadro do short.
+            #
+            # A D-559 deu ao operador um jeito de encolher o palco para o fundo
+            # do canal aparecer — e o preset nao guardava isso. Ele montava o
+            # palco, salvava, aplicava noutro trecho e o tamanho voltava ao do
+            # arranjo, sem nada na tela explicando o pulo. Um preset que descreve
+            # meio palco e pior que nenhum: parece que funcionou.
+            #
+            # Sao os mesmos retangulos nomeados dos recortes, so que no quadro do
+            # short (1080x1920) em vez do quadro-fonte. Quem trava a faixa e o
+            # `aplicar_ajustes` do dominio, na leitura, como sempre foi.
+            "ajustes": _normalizar_recortes(payload.get("ajustes")),
             "fundo": str(payload.get("fundo") or ""),
         }
 

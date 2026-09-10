@@ -46,6 +46,11 @@ export function mudancaDoPalco(
     arranjo_palco: payload.arranjo ?? '',
     janela_cheia: payload.janela_cheia ?? '',
     recortes_palco: payload.recortes ?? {},
+    // D-561: o tamanho das janelas vem junto. Sem isto o preset descrevia meio
+    // palco — arranjo e recortes vinham, o tamanho voltava ao do arranjo — e
+    // parecia ter funcionado. Preset antigo não tem a chave, e `{}` é a
+    // resposta certa: nenhum ajuste, ou seja, o tamanho que o arranjo monta.
+    ajustes_palco: payload.ajustes ?? {},
     // `fundo` no preset é a TEXTURA (D-552), e não a cor da paleta que o campo
     // guardava quando a D-509 o criou. Presets salvos antes disso trazem uma
     // chave de cor aqui; ela não casa com nenhuma textura e o resolvedor cai no
