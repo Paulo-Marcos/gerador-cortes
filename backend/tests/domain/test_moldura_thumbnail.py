@@ -213,8 +213,8 @@ class TestArteNaoEComida:
         assert emoldurada.getpixel((0, 0)) == (255, 190, 0)
 
     def test_nao_sobra_buraco_preto_em_volta(self):
-        """O fundo borrado existe para isto: onde a moldura falha, aparece a
-        capa — nunca preto."""
+        """O fundo existe para isto: onde a moldura falha, aparece a capa —
+        nunca preto."""
         emoldurada = Image.open(io.BytesIO(emoldurar(_capa(), _bytes_da(_moldura())))).convert(
             "RGB"
         )

@@ -48,9 +48,9 @@ faixa (uns 6% de espessura) comeu o "EU" de "EU MEREÇO", e perder uma palavra d
 manchete é pior que qualquer coisa (D-556).
 
 Hoje a capa recua para a JANELA da moldura, e o buraco das quinas é resolvido
-com um fundo em vez de com a desistência: a própria capa, ampliada e borrada,
-atrás de tudo. A moldura segue no limite do quadro; quem sai de baixo dela é a
-arte. O detalhe de cada escolha está em `emoldurar`.
+com um fundo em vez de com a desistência: a própria capa em tamanho cheio, atrás
+de tudo. A moldura segue no limite do quadro; quem sai de baixo dela é a arte.
+O detalhe de cada escolha está em `emoldurar`.
 """
 
 from __future__ import annotations
@@ -159,7 +159,7 @@ def espessura_da_faixa(contorno: Image.Image) -> tuple[int, int]:
 
 
 def _encaixar(capa: Image.Image, folga: tuple[float, float]) -> Image.Image:
-    """A capa reduzida para dentro da janela da moldura, sobre o fundo borrado.
+    """A capa reduzida para dentro da janela da moldura, sobre a capa em tamanho cheio.
 
     `folga` é a espessura da faixa como FRAÇÃO de cada lado, não em pixels: a
     mesma moldura serve capas de 928 a 2752 de largura.
@@ -179,10 +179,9 @@ def _encaixar(capa: Image.Image, folga: tuple[float, float]) -> Image.Image:
     reduzida = capa.resize(
         (max(1, round(largura * escala)), max(1, round(altura * escala))), Image.LANCZOS
     )
-    # A capa em tamanho cheio no fundo: as quinas comidas da moldura são buracos
-    # de poucos pixels, e ali aparece a própria imagem — não um vazio. Não
-    # precisa de borrão porque não é mais uma FAIXA que se vê, e sim um respingo:
-    # o borrão só existia para disfarçar a tira, e disfarçando ficava à mostra.
+    # A capa em tamanho cheio no fundo: nas quinas comidas da moldura aparece a
+    # própria imagem, e não um vazio. O porquê de ela ir nítida está em
+    # `emoldurar`.
     tela = capa.copy()
     tela.paste(reduzida, ((largura - reduzida.width) // 2, (altura - reduzida.height) // 2))
     return tela
@@ -198,16 +197,16 @@ def emoldurar(arte: bytes, moldura: bytes) -> bytes:
     capa é reduzida até caber na JANELA da moldura — a moldura continua no
     limite do quadro, e é a arte que sai de baixo dela.
 
-    ## Por que há a própria capa, borrada, no fundo
+    ## Por que há a própria capa em tamanho cheio no fundo
 
-    Duas coisas exigem um fundo. A moldura tem quinas comidas — linhas inteiras
-    sem tinta —, e sem nada atrás elas virariam tarja preta, o defeito que a
-    primeira versão já cometera. E a janela é mais larga que a capa reduzida,
-    então sobra uma tira nas laterais.
+    A moldura tem quinas comidas — linhas inteiras sem tinta —, e sem nada atrás
+    elas virariam tarja preta, o defeito que a primeira versão já cometera.
 
-    O fundo é a própria capa ampliada e borrada. Nítida, a tira lateral viraria
-    um fantasma da imagem deslocado alguns pixels — o olho pega na hora. Borrada,
-    lê como sombra da arte, que é o que uma moldura de cartaz teria mesmo.
+    Houve uma fase em que esse fundo era BORRADO, porque o recuo então deixava
+    uma tira inteira à mostra e uma cópia nítida deslocada virava um fantasma
+    visível. Com o recuo calculado pelo menor lado (D-557) a tira deixou de
+    existir: o fundo só aparece em respingos de poucos pixels, e ali o borrão
+    não disfarçava nada — só se denunciava.
 
     ## Por que a redução é uniforme
 
