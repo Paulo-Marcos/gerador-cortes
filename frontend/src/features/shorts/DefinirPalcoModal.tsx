@@ -1,27 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Check,
-  Loader2,
-  Maximize2,
-  Minimize2,
-  Move,
-  Pencil,
-  RefreshCw,
-  Save,
-  Trash2,
-} from 'lucide-react';
+import { Check, Maximize2, Minimize2, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
-import {
-  useDeleteLayoutPreset,
-  useLayoutPresets,
-  useSaveLayoutPreset,
-  useUpdateLayoutPreset,
-} from '@/features/editor/fase2/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { EditorDeRecorte } from './EditorDeRecorte';
+import { PresetsDoPalco } from './PresetsDoPalco';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA, LegendaPrevia } from './LegendaPrevia';
 import { useTranscricaoDoCorte } from './useShortsDoCorte';
@@ -91,14 +75,6 @@ export function DefinirPalcoModal({
   onAplicar,
 }: Props) {
   const arranjos = useArranjosDePalco(corteId);
-  const presets = useLayoutPresets({ tipo: 'palco_short' });
-  const salvar = useSaveLayoutPreset();
-  const renomear = useUpdateLayoutPreset();
-  // D-561: instância separada da do rename de propósito. As duas chamam o mesmo
-  // endpoint, e compartilhá-las faria o aviso de "regravado" piscar também ao
-  // renomear — um retorno que mentiria sobre o que acabou de acontecer.
-  const regravar = useUpdateLayoutPreset();
-  const apagar = useDeleteLayoutPreset();
 
   // D-562: mover as janelas dentro do quadro, aqui dentro.
   //
@@ -108,9 +84,6 @@ export function DefinirPalcoModal({
   // duas metades em telas diferentes obrigava a sair do modal no meio da
   // decisão — e a prévia da página não é fixa.
   const [movendo, setMovendo] = useState(false);
-  const [nomeNovo, setNomeNovo] = useState('');
-  const [renomeando, setRenomeando] = useState<string | null>(null);
-  const [nomeEditado, setNomeEditado] = useState('');
 
   const recortesDaFonte: Record<string, Retangulo> = Object.fromEntries(
     (plano?.recortes ?? []).map((r) => [r.regiao, r.origem]),
@@ -483,134 +456,18 @@ export function DefinirPalcoModal({
           </Secao>
 
           <Secao numero={7} titulo="Guardar como preset">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Input
-                value={nomeNovo}
-                onChange={(e) => setNomeNovo(e.target.value)}
-                placeholder="ex.: rosto cheio da live de terça"
-                className="h-8 max-w-[260px] text-[12px]"
-              />
-              <Button
-                size="sm"
-                disabled={!nomeNovo.trim() || salvar.isPending}
-                onClick={() =>
-                  salvar.mutate(
-                    {
-                      nome: nomeNovo.trim(),
-                      tipo: 'palco_short',
-                      payload: comoEstaHoje(),
-                    },
-                    { onSuccess: () => setNomeNovo('') },
-                  )
-                }
-              >
-                {salvar.isPending ? <Loader2 className="animate-spin" /> : <Save />}
-                Salvar
-              </Button>
-            </div>
-
-            <ul className="mt-2 space-y-1">
-              {(presets.data ?? []).map((preset) => (
-                <li
-                  key={preset.id}
-                  className="flex flex-wrap items-center gap-1.5 rounded-[7px] border border-[var(--wb-border-soft)] px-2 py-1.5"
-                >
-                  {renomeando === preset.id ? (
-                    <>
-                      <Input
-                        value={nomeEditado}
-                        onChange={(e) => setNomeEditado(e.target.value)}
-                        className="h-7 max-w-[200px] text-[12px]"
-                        autoFocus
-                      />
-                      <Button
-                        size="sm"
-                        disabled={!nomeEditado.trim() || renomear.isPending}
-                        onClick={() =>
-                          renomear.mutate(
-                            { id: preset.id, body: { nome: nomeEditado.trim() } },
-                            { onSuccess: () => setRenomeando(null) },
-                          )
-                        }
-                      >
-                        ok
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setRenomeando(null)}>
-                        cancelar
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="min-w-0 flex-1 truncate text-[12px]">{preset.nome}</span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={ocupado}
-                        onClick={() =>
-                          aplicarPreset(preset.id, preset.payload as unknown as PalcoShortPreset)
-                        }
-                      >
-                        aplicar
-                      </Button>
-                      {/* D-561: regravar o preset com o palco de agora.
-                          Faltava a metade de trás do ciclo. Dava para criar,
-                          renomear e apagar; para MUDAR um preset, o caminho era
-                          salvar outro com nome parecido — e a lista virava
-                          quatro variações da mesma ideia, sem dizer qual valia.
-                          O endpoint sempre aceitou payload; era a tela que só
-                          oferecia o nome. */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        title="Grava neste preset o palco que está montado agora"
-                        disabled={ocupado || regravar.isPending}
-                        onClick={() =>
-                          regravar.mutate({ id: preset.id, body: { payload: comoEstaHoje() } })
-                        }
-                      >
-                        <RefreshCw />
-                        regravar
-                      </Button>
-                      {/* Regravar não muda nada visível — o nome continua o
-                          mesmo. Sem este aviso, o clique fica indistinguível de
-                          um botão quebrado, que é a mesma lição do veredito do
-                          rosto e da régua lisa. */}
-                      {regravar.isSuccess && regravar.variables?.id === preset.id && (
-                        <span className="font-code text-[10px] uppercase tracking-wide text-[var(--wb-accent-strong)]">
-                          regravado
-                        </span>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        aria-label={`Renomear ${preset.nome}`}
-                        onClick={() => {
-                          setRenomeando(preset.id);
-                          setNomeEditado(preset.nome);
-                        }}
-                      >
-                        <Pencil />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        aria-label={`Apagar ${preset.nome}`}
-                        disabled={apagar.isPending}
-                        onClick={() => apagar.mutate(preset.id)}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </>
-                  )}
-                </li>
-              ))}
-              {(presets.data ?? []).length === 0 && (
-                <li className="text-[11.5px] text-[var(--wb-text-mute)]">
-                  Nenhum preset de short ainda. Os do horizontal têm nomes de cena do OBS e
-                  continuam servindo de atalho para os recortes — estes aqui são seus.
-                </li>
-              )}
-            </ul>
+            {/* D-567: o ciclo do preset mora em `PresetsDoPalco`.
+                Ele era uma classe escondida aqui dentro — 130 linhas, tres
+                estados e quatro mutacoes declaradas no topo deste componente, e
+                nenhum deles usado em mais lugar nenhum. O que sobrou aqui e o
+                que e mesmo deste modal: o numero da secao e a foto do palco de
+                agora, que so ele sabe tirar porque so ele conhece os sete
+                controles que a compoem. */}
+            <PresetsDoPalco
+              comoEstaHoje={comoEstaHoje}
+              onAplicar={aplicarPreset}
+              ocupado={ocupado}
+            />
           </Secao>
         </div>
 
