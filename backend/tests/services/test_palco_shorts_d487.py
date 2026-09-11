@@ -554,3 +554,61 @@ class TestTexturaInvalida:
         render = await servico.resolver_para_render("s1")
 
         assert desenho["fundo_editorial"] == render["fundo_editorial"]
+
+
+class TestPalcoPadraoDoCorte:
+    """D-570: o corte tem um palco, e o short so decide o que quer mudar.
+
+    "Tem que ter uma definicao que atinja todos os cortes por default, e dai eu
+    posso customizar cada um." A heranca e VIVA: resolvida na leitura, nunca
+    materializada na gravacao — copiar congelaria o palco do dia em que foi
+    escolhido, e trocar o padrao viraria uma operacao sem efeito no que existe.
+    """
+
+    def test_o_short_que_nao_decidiu_usa_o_do_corte(self):
+        herdado = servico.com_palco_do_corte(
+            {"arranjo": "", "fundo": "", "legenda_cor": ""},
+            {"arranjo": "dividida_empilhada", "fundo": "topographic", "legenda_cor": "#2f5f43"},
+        )
+
+        assert herdado == {
+            "arranjo": "dividida_empilhada",
+            "fundo": "topographic",
+            "legenda_cor": "#2f5f43",
+        }
+
+    def test_o_que_o_short_decidiu_vence(self):
+        """O customizado fica INTOCADO — e essa a metade que faz a heranca servir."""
+        herdado = servico.com_palco_do_corte(
+            {"arranjo": "cheia", "fundo": ""},
+            {"arranjo": "dividida_empilhada", "fundo": "cosmograph"},
+        )
+
+        assert herdado["arranjo"] == "cheia"
+        assert herdado["fundo"] == "cosmograph"
+
+    def test_campo_a_campo_e_nao_tudo_ou_nada(self):
+        """Mexer no arranjo de um trecho nao pode custar a ele o resto do palco."""
+        herdado = servico.com_palco_do_corte(
+            {"arranjo": "cheia", "ajustes": {}, "legenda_fonte": ""},
+            {"arranjo": "dividida", "ajustes": {"pessoa": {"x": 1}}, "legenda_fonte": "Anton"},
+        )
+
+        assert herdado["arranjo"] == "cheia"
+        assert herdado["ajustes"] == {"pessoa": {"x": 1}}
+        assert herdado["legenda_fonte"] == "Anton"
+
+    def test_corte_sem_palco_padrao_nao_muda_nada(self):
+        proprio = {"arranjo": "cheia", "fundo": "hud-forte"}
+
+        assert servico.com_palco_do_corte(proprio, None) == proprio
+        assert servico.com_palco_do_corte(proprio, {}) == proprio
+
+    def test_os_recortes_ficam_de_fora_de_proposito(self):
+        """Eles respondem DE ONDE VEM, tem cascata propria, e sao justamente o
+        eixo que o operador disse nao querer pensar."""
+        herdado = servico.com_palco_do_corte(
+            {"arranjo": ""}, {"arranjo": "cheia", "recortes": {"pessoa": {"x": 9}}}
+        )
+
+        assert "recortes" not in herdado

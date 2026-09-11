@@ -210,6 +210,20 @@ class Corte(Base):
     # os shorts arriscaria o render que ja funciona. Vazio = deduzir do proprio
     # layout do corte, ou nada.
     palco_short_preset: Mapped[str] = mapped_column(String(200), default="")
+    # D-570: o PALCO padrao deste corte — o preset que os shorts herdam.
+    #
+    # NAO confundir com o `palco_short_preset` logo acima, que apesar do nome
+    # guarda o preset de RECORTES (de onde saem as janelas). Os dois nomes
+    # colidem desde a E-036; a D-571 vai desfazer isso, e ate la este comentario
+    # e o unico aviso. Foi exatamente essa colisao que fez a tela mostrar
+    # "RECORTES" onde o operador esperava "PALCO".
+    #
+    # HERANCA VIVA, e nao copia: o short que nao decidiu um campo le o do corte,
+    # e trocar o padrao reflete na hora em todos que ninguem customizou. E a
+    # mesma regra do resto da cascata de layout — chave ausente e heranca, e
+    # materializar o default ao GRAVAR congelaria o palco do dia em que foi
+    # escolhido.
+    palco_padrao: Mapped[str] = mapped_column(String(200), default="")
     # F-054: lista JSON de segmentos detectados via PySceneDetect no bruto do
     # corte. Cada item: {inicio, fim, score, status}. Status: sugerido /
     # aceito_full / aceito_compartilhada / rejeitado. Aceitar materializa uma

@@ -161,6 +161,29 @@ export function useLogDoRender(shortId: string, ativo: boolean) {
   });
 }
 
+/** D-570: o palco padrão do corte — o que todos os shorts herdam. */
+export function usePalcoPadrao(corteId: string) {
+  return useQuery({
+    queryKey: ['shorts', 'palco-padrao', corteId],
+    queryFn: () => shortsApi.palcoPadrao(corteId),
+    enabled: Boolean(corteId),
+  });
+}
+
+export function useDefinirPalcoPadrao(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (presetId: string) => shortsApi.definirPalcoPadrao(corteId, presetId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['shorts', 'palco-padrao', corteId] });
+      // A herança é resolvida na LEITURA, então trocar o padrão muda o plano de
+      // todo short que não customizou — e é a lista e os palcos que os mostram.
+      void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+      void qc.invalidateQueries({ queryKey: PALCO_KEY });
+    },
+  });
+}
+
 export function usePreviaPublicacao(shortId: string | null) {
   return useQuery({
     queryKey: ['shorts', 'publicacao', shortId],

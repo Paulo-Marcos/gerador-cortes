@@ -322,8 +322,11 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             foco_x=foco_efetivo(short, corte),
             filtro=filtro,
             cenas=[] if not CENAS_LIGADAS else _json_lista(short.cenas_remotion),
-            legenda_cor=short.legenda_cor,
-            legenda_fonte=short.legenda_fonte,
+            # D-570: do PLANO, e nao do short. E la que a heranca do palco do
+            # corte foi resolvida; ler do short de novo a ignoraria, e o arquivo
+            # sairia com um realce que a previa nao mostrou.
+            legenda_cor=palco.get("legenda_cor", ""),
+            legenda_fonte=palco.get("legenda_fonte", ""),
             gancho=gancho_short.para_payload(
                 short.gancho_tela,
                 short.gancho_ate_seg,

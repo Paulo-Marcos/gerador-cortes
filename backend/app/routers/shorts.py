@@ -27,6 +27,8 @@ Endpoints:
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
   GET  /{short_id}/log            — o log do worker: o que rodou e quanto levou
+  GET  /corte/{corte_id}/palco-padrao — o palco que vale para todos os shorts
+  PUT  /corte/{corte_id}/palco-padrao — escolhe esse palco
   GET  /{short_id}/palco          — o palco em coordenadas de desenho (previa)
   POST /{short_id}/palco/simular  — o palco que certos ajustes dariam, sem gravar
   POST /{short_id}/renderizar     — produz o MP4 final do candidato
@@ -291,6 +293,10 @@ async def sugerir_agora(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class PalcoPadraoRequest(BaseModel):
+    preset_id: str | None = None
 
 
 class AtualizarShortRequest(BaseModel):
@@ -655,6 +661,28 @@ async def progresso_do_render(short_id: str):
     from app.services.shorts_progress import ShortsProgress
 
     return {"render": ShortsProgress.get(short_id)}
+
+
+@router.get("/corte/{corte_id}/palco-padrao")
+async def palco_padrao_do_corte(corte_id: str):
+    """O palco que vale para todos os shorts deste corte (D-570)."""
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.descrever_palco_padrao(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put("/corte/{corte_id}/palco-padrao")
+async def definir_palco_padrao(corte_id: str, body: PalcoPadraoRequest):
+    """Escolhe o palco padrao do corte. Nao copia nada: a heranca e na leitura."""
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.escolher_palco_padrao(corte_id, body.preset_id or "")
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/{short_id}/log")

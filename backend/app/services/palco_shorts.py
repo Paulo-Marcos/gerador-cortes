@@ -66,7 +66,28 @@ def catalogo_arranjos(regioes: dict | None = None) -> list[dict]:
     return catalogo_de_arranjos(regioes)
 
 
-def _sem_palco(moldura: str, fundo: str, textura: str = FUNDO_EDITORIAL) -> dict:
+def _payload_do_preset(presets: list, preset_id: str) -> dict | None:
+    """O payload do preset de palco apontado, ou None quando nao ha.
+
+    Preset apagado depois de escolhido devolve None, e o short volta aos
+    defaults do sistema — degradar, e nao quebrar, e a regra desta cascata
+    inteira (D-554).
+    """
+    if not preset_id:
+        return None
+    for preset in presets:
+        if preset.id == preset_id and preset.tipo == "palco_short":
+            return _json_dict(preset.payload)
+    return None
+
+
+def _sem_palco(
+    moldura: str,
+    fundo: str,
+    textura: str = FUNDO_EDITORIAL,
+    legenda_cor: str = "",
+    legenda_fonte: str = "",
+) -> dict:
     """A resposta de quando não há palco a montar.
 
     Uma função só, porque os dois caminhos que chegam aqui — sem região marcada,
@@ -87,6 +108,10 @@ def _sem_palco(moldura: str, fundo: str, textura: str = FUNDO_EDITORIAL) -> dict
         # mostrava uma moldura que o arquivo nao teria. Mandando o mesmo id que
         # o PNG usa, a tela passa a desenhar o que vai sair.
         "fundo_editorial": textura,
+        # D-570: a legenda vem pelo plano, e nao lida do short no `render_short`.
+        # Um lugar so resolve a heranca; dois a resolveriam diferente.
+        "legenda_cor": legenda_cor,
+        "legenda_fonte": legenda_fonte,
     }
 
 
@@ -108,6 +133,51 @@ def catalogo_fundos() -> list[dict]:
     # que a maioria vai manter, e deixá-lo no fim faria procurar por ele.
     cores.sort(key=lambda c: not c["padrao"])
     return cores
+
+
+# D-570: os campos que o short herda do palco padrao do corte.
+#
+# So os de COMO A TELA MONTA. Os `recortes` ficam de fora de proposito: eles
+# respondem DE ONDE VEM cada janela, tem cascata propria (recorte do short >
+# preset do short > preset do corte > layout do corte) e sao o eixo que o
+# operador disse nao querer pensar. Misturar os dois aqui seria refazer no
+# palco a pergunta que o RECORTES ja responde.
+CAMPOS_HERDADOS = ("arranjo", "janela_cheia", "ajustes", "fundo", "legenda_cor", "legenda_fonte")
+
+
+def com_palco_do_corte(proprio: dict, padrao: dict | None) -> dict:
+    """Os campos do short, com os do palco do corte onde ele nao decidiu.
+
+    HERANCA VIVA: vazio no short significa "nao decidi", e nao "quero o default
+    do sistema". Trocar o palco do corte reflete na hora em todos os trechos que
+    ninguem customizou; os customizados ficam intocados.
+
+    E a mesma regra do resto da cascata de layout — chave ausente e heranca. A
+    alternativa, copiar os valores para cada short no momento de escolher,
+    congelaria o palco do dia e faria "trocar o padrao" virar uma operacao sem
+    efeito sobre o que ja existe.
+
+    >>> com_palco_do_corte({"arranjo": "cheia"}, {"arranjo": "dividida", "fundo": "topographic"})
+    {'arranjo': 'cheia', 'fundo': 'topographic'}
+    >>> com_palco_do_corte({"arranjo": ""}, {"arranjo": "dividida"})
+    {'arranjo': 'dividida'}
+    >>> com_palco_do_corte({"arranjo": "cheia"}, None)
+    {'arranjo': 'cheia'}
+    """
+    if not padrao:
+        return dict(proprio)
+
+    resolvido = dict(proprio)
+    for campo in CAMPOS_HERDADOS:
+        if campo not in proprio and campo not in padrao:
+            continue
+        # `{}` e `""` sao "nao decidi". `0` nao aparece nestes campos, entao a
+        # falsidade generica nao esconde nenhum valor legitimo aqui.
+        if not proprio.get(campo):
+            herdado = padrao.get(campo)
+            if herdado:
+                resolvido[campo] = herdado
+    return resolvido
 
 
 def _e_retangulo(valor: object) -> bool:
@@ -176,6 +246,46 @@ async def escolher_preset(corte_id: str, preset_id: str) -> dict:
     return await descrever(corte_id)
 
 
+async def escolher_palco_padrao(corte_id: str, preset_id: str) -> dict:
+    """Aponta um preset de PALCO como o padrao deste corte. `""` volta ao nada.
+
+    Nao copia nada para os shorts: a heranca e resolvida na leitura. Trocar o
+    padrao reflete na hora em todos que ninguem customizou — que e o ponto.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+
+        if preset_id:
+            preset = await db.get(LayoutPreset, preset_id)
+            if not preset or preset.tipo != "palco_short":
+                raise LookupError(f"Preset de palco {preset_id!r} nao encontrado")
+
+        corte.palco_padrao = preset_id
+        await db.commit()
+
+    return {"corte_id": corte_id, "palco_padrao": preset_id}
+
+
+async def descrever_palco_padrao(corte_id: str) -> dict:
+    """Qual palco este corte usa por padrao, e quais existem para escolher."""
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+        presets = (
+            await db.scalars(select(LayoutPreset).where(LayoutPreset.tipo == "palco_short"))
+        ).all()
+        escolhido = corte.palco_padrao
+
+    return {
+        "palco_padrao": escolhido,
+        "nome": next((p.nome for p in presets if p.id == escolhido), ""),
+        "disponiveis": [{"id": p.id, "nome": p.nome} for p in presets],
+    }
+
+
 async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None = None) -> dict:
     """O plano de palco de UM short, pronto para virar filtro.
 
@@ -199,6 +309,21 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
 
         presets = (await db.scalars(select(LayoutPreset))).all()
         regioes, origem, _ = _resolver(corte, presets, short.palco_preset)
+
+        # D-570: o palco padrao do corte, se houver. O short que nao decidiu um
+        # campo le o daqui — heranca viva, resolvida na LEITURA.
+        padrao = _payload_do_preset(presets, corte.palco_padrao)
+        herdado = com_palco_do_corte(
+            {
+                "arranjo": short.arranjo_palco,
+                "janela_cheia": short.janela_cheia,
+                "ajustes": _json_dict(short.ajustes_palco),
+                "fundo": short.fundo_editorial,
+                "legenda_cor": short.legenda_cor,
+                "legenda_fonte": short.legenda_fonte,
+            },
+            padrao,
+        )
         # D-499: o recorte DESTE short vence o do preset, região a região. O
         # preset segue sendo o atalho que preenche tudo — quem não quer mexer
         # não mexe —, mas quando a facecam anda no meio da live é aqui que um
@@ -211,13 +336,13 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         if proprios:
             regioes = {**regioes, **proprios}
             origem = ORIGEM_RECORTE_DO_SHORT
-        escolhido = short.arranjo_palco
-        janela = short.janela_cheia
+        escolhido = herdado.get("arranjo", "")
+        janela = herdado.get("janela_cheia", "")
         # MESCLA, não substitui: o arraste manda só o bloco que está na mão,
         # e trocar o mapa inteiro por ele apagaria da prévia os ajustes dos
         # OUTROS blocos — que voltariam ao lugar padrão enquanto o operador
         # mexe num terceiro, sem nada na tela explicando o pulo.
-        ajustes = {**_json_dict(short.ajustes_palco), **(ajustes_hipoteticos or {})}
+        ajustes = {**herdado.get("ajustes", {}), **(ajustes_hipoteticos or {})}
         moldura = short.moldura
         fundo = resolver_fundo(short.fundo_palco, paleta_do_tema())
         # D-552: a textura do short, ou a do canal quando ele nao escolheu.
@@ -232,10 +357,12 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         # copiava a chave para ca, o payload a entregava intacta, e a previa
         # procurava um componente de textura com esse nome — nao achava, e a
         # tela inteira dos shorts caia com "Element type is invalid".
-        textura = textura_valida(short.fundo_editorial, FUNDO_EDITORIAL)
+        textura = textura_valida(herdado.get("fundo", ""), FUNDO_EDITORIAL)
+        legenda_cor = herdado.get("legenda_cor", "")
+        legenda_fonte = herdado.get("legenda_fonte", "")
 
     if not regioes:
-        return _sem_palco(moldura, fundo, textura)
+        return _sem_palco(moldura, fundo, textura, legenda_cor, legenda_fonte)
 
     arranjo = arranjo_de_chave(escolhido, janela) if escolhido else arranjo_sugerido(regioes)
     modelo = montar_modelo(arranjo, regioes)
@@ -253,7 +380,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         arranjo = arranjo_sugerido(regioes)
         modelo = montar_modelo(arranjo, regioes)
     if modelo is None:
-        return _sem_palco(moldura, fundo, textura)
+        return _sem_palco(moldura, fundo, textura, legenda_cor, legenda_fonte)
 
     plano = montar_plano(modelo, regioes, ajustes)
 
@@ -270,6 +397,8 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         # ele nao escolheu. A previa pintava `fundo` (uma cor chapada da
         # paleta) e por isso mostrava uma moldura que o arquivo nao teria.
         "fundo_editorial": textura,
+        "legenda_cor": legenda_cor,
+        "legenda_fonte": legenda_fonte,
     }
 
 
@@ -297,6 +426,11 @@ async def plano_desenhavel(short_id: str, ajustes_hipoteticos: dict | None = Non
         # teria: o render sobrepoe um PNG com a textura editorial do canal.
         # Mandando o mesmo id que o PNG usa, as duas telas passam a concordar.
         "fundo_editorial": resolvido["fundo_editorial"],
+        # D-570: a previa desenha a legenda com a cor e a fonte JA HERDADAS.
+        # Lidas do short, elas ignorariam o palco do corte e a previa mostraria
+        # um realce que o arquivo nao teria.
+        "legenda_cor": resolvido.get("legenda_cor", ""),
+        "legenda_fonte": resolvido.get("legenda_fonte", ""),
         # A regiao vai JUNTO do desenho: sem ela a tela teria de casar esta
         # lista com `slots` pela posicao, e um acoplamento implicito desses
         # quebra em silencio no dia em que a ordem mudar.

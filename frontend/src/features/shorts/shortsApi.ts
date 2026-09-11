@@ -285,6 +285,14 @@ export interface PassoRender {
 }
 
 /** O render em curso (ou o último deste processo). */
+export interface PalcoPadrao {
+  /** Id do preset escolhido. Vazio = o corte não tem palco padrão. */
+  palco_padrao: string;
+  /** O nome dele, para a tela não ter que cruzar a lista. */
+  nome: string;
+  disponiveis: { id: string; nome: string }[];
+}
+
 export interface LogDoRender {
   linhas: string[];
   /** Houve mais linhas do que as devolvidas. */
@@ -474,6 +482,16 @@ export const shortsApi = {
       points: number;
       peaks: number[];
     }>(`/shorts/corte/${corteId}/waveform-peaks`),
+
+  /** D-570: o palco que vale para todos os shorts deste corte. */
+  palcoPadrao: (corteId: string) =>
+    request<PalcoPadrao>(`/shorts/corte/${corteId}/palco-padrao`),
+
+  definirPalcoPadrao: (corteId: string, presetId: string) =>
+    request<{ palco_padrao: string }>(`/shorts/corte/${corteId}/palco-padrao`, {
+      method: 'PUT',
+      body: JSON.stringify({ preset_id: presetId }),
+    }),
 
   /** D-568: o log do worker deste short — o que rodou e quanto levou. */
   logDoRender: (shortId: string) =>
