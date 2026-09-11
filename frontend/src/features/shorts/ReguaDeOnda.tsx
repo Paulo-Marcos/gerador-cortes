@@ -243,8 +243,18 @@ export function ReguaDeOnda({
     };
     esperarParaDesenhar();
 
-    plugin.on('region-clicked', (regiao, evento) => {
-      evento.stopPropagation();
+    // D-569: clicar num bloco SELECIONA e move o ponteiro — as duas coisas.
+    //
+    // O `stopPropagation` daqui era o que impedia a segunda. O wavesurfer ouve
+    // o clique no wrapper e emite `interaction`, que é quem chama o `onSeek`;
+    // barrar a subida do evento fazia o bloco virar uma camada surda. Na
+    // prática: dentro do trecho o ponteiro não ia, e a única forma de chegar
+    // num instante dali era arrastar o cursor de fora para dentro.
+    //
+    // Deixar subir é melhor que calcular o instante aqui: o tempo sob o mouse
+    // passaria a ter DUAS contas, a do wavesurfer e a minha, e elas divergiriam
+    // no primeiro ajuste de escala — a mesma armadilha da D-558 e da D-568.
+    plugin.on('region-clicked', (regiao) => {
       atual.current.onSelecionar(regiao.id);
     });
 
@@ -297,19 +307,36 @@ export function ReguaDeOnda({
   }, [corteId, temPicos]);
 
   // ── zoom, sem recarregar nada ──────────────────────────────────────────
+  //
+  // D-569: amplia em volta do que está NA TELA, e não do trecho em foco.
+  //
+  // Recentrar no início do bloco parecia atencioso e era o contrário: o
+  // operador arrastava até o meio da frase que queria examinar, clicava em
+  // ampliar, e a régua o levava de volta ao começo do trecho — desfazendo
+  // justamente a navegação que ele tinha acabado de fazer. Zoom é para olhar
+  // mais de perto o que já se está olhando.
+  //
+  // A âncora é o CENTRO da janela: mede-se o instante que está no meio antes
+  // de mudar a escala e repõe-se ele no meio depois. O trecho em foco continua
+  // mandando na abertura da régua e na troca de candidato, que são os dois
+  // momentos em que ele é, de fato, o assunto.
+  const zoomAnterior = useRef(zoom);
   useEffect(() => {
     const ws = onda.current;
     if (!pronta.current || !ws) return;
     try {
+      const visivel = ws.getWidth();
+      const centroSeg =
+        visivel > 0
+          ? (ws.getScroll() + visivel / 2) / (PX_POR_SEGUNDO * zoomAnterior.current)
+          : (atual.current.emFoco?.inicio_seg ?? 0);
       ws.zoom(PX_POR_SEGUNDO * zoom);
-      // Ampliar em volta do NADA é o que faz um zoom parecer quebrado: a onda
-      // cresce, a janela fica onde estava, e o operador perde de vista o que
-      // estava olhando. O ponto de referência é o trecho em foco.
-      centrarEm(ws, atual.current.emFoco?.inicio_seg ?? 0, zoom);
+      centrarEm(ws, centroSeg, zoom);
     } catch {
       // `zoom` levanta se a onda ainda não tem duração. Não é motivo para
       // derrubar a tela: o próximo clique acerta.
     }
+    zoomAnterior.current = zoom;
   }, [zoom]);
 
   // ── trocar de trecho leva a janela junto ───────────────────────────────
