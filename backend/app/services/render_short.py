@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -375,6 +376,75 @@ async def _palco_em_png(palco: dict):
 # apaga-las. O dado fica no banco — nada e destruido, e religar e mudar esta
 # constante de volta.
 CENAS_LIGADAS = False
+
+
+# D-568: o log do worker, que ja existe e ninguem lia.
+#
+# O `native_worker` escreve um `worker_debug.log` no `cwd` de cada job — e o
+# render do short passa o diretorio DELE como cwd, entao o arquivo ja nasce por
+# short, com uma entrada por passo:
+#
+#   [iso] Job: <id>            CMD: ...            CWD: ...
+#   [iso] Fim: <id> status=sucesso duration_ms=409048
+#
+# E o que o operador acompanha no horizontal ("vai atualizando o status de
+# execucao, e no final mostra ate quanto tempo demorou"). Faltava so servir.
+LINHAS_DO_LOG = 80
+LARGURA_DA_LINHA = 400
+
+_FIM = re.compile(r"Fim: \S+ status=(\w+) duration_ms=(\d+)")
+
+
+def resumir_log(texto: str, *, linhas: int = LINHAS_DO_LOG) -> dict:
+    """As ultimas linhas do log do worker, e quanto cada passo levou.
+
+    A linha de CMD do ffmpeg tem varios kilobytes — um filtergraph inteiro numa
+    linha so. Cortar em `LARGURA_DA_LINHA` mantem o log legivel numa caixa de
+    tela sem esconder o que importa: o inicio dela ja diz qual binario rodou.
+
+    >>> resumir_log("[t] Fim: j_1 status=sucesso duration_ms=1500")["duracoes_ms"]
+    [1500]
+    """
+    todas = [linha.rstrip() for linha in texto.splitlines() if linha.strip()]
+    recorte = todas[-linhas:]
+    return {
+        "linhas": [
+            linha if len(linha) <= LARGURA_DA_LINHA else linha[:LARGURA_DA_LINHA] + " […]"
+            for linha in recorte
+        ],
+        "truncado": len(todas) > len(recorte),
+        # Uma duracao por passo concluido, na ordem em que sairam.
+        "duracoes_ms": [int(m.group(2)) for m in _FIM.finditer(texto)],
+    }
+
+
+async def log_do_render(short_id: str) -> dict:
+    """O `worker_debug.log` deste short, resumido.
+
+    Sem arquivo nao e erro: significa que nenhum passo chegou a ser despachado
+    ainda. A tela mostra "ainda nao ha log" em vez de um 404 que pareceria
+    defeito.
+    """
+    async with AsyncSessionLocal() as db:
+        short = await db.get(Short, short_id)
+        if not short:
+            raise LookupError(f"Short {short_id!r} nao encontrado")
+        corte = await db.get(Corte, short.corte_id)
+        if not corte:
+            raise LookupError("Corte do short nao encontrado")
+        projeto_id = corte.projeto_id
+        corte_id = corte.id
+
+    arquivo = (
+        projetos_dir() / projeto_id / "cortes" / corte_id / "shorts" / short_id / "worker_debug.log"
+    )
+    if not arquivo.is_file():
+        return {"linhas": [], "truncado": False, "duracoes_ms": [], "existe": False}
+
+    # `errors="replace"`: o ffmpeg escreve caminho com acento em codepage do
+    # Windows, e um byte invalido nao pode custar o log inteiro.
+    texto = arquivo.read_text(encoding="utf-8", errors="replace")
+    return {**resumir_log(texto), "existe": True}
 
 
 def _textura(palco: dict) -> str:

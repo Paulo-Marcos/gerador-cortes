@@ -26,6 +26,7 @@ Endpoints:
   POST /{short_id}/enquadrar      — acha o rosto no trecho e centra o 9:16 nele
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
+  GET  /{short_id}/log            — o log do worker: o que rodou e quanto levou
   GET  /{short_id}/palco          — o palco em coordenadas de desenho (previa)
   POST /{short_id}/palco/simular  — o palco que certos ajustes dariam, sem gravar
   POST /{short_id}/renderizar     — produz o MP4 final do candidato
@@ -645,6 +646,22 @@ async def progresso_do_render(short_id: str):
     from app.services.shorts_progress import ShortsProgress
 
     return {"render": ShortsProgress.get(short_id)}
+
+
+@router.get("/{short_id}/log")
+async def log_do_render(short_id: str):
+    """O log do worker deste short — o que rodou, e quanto cada passo levou.
+
+    O painel de passos diz QUAL etapa corre; isto diz o que ela esta fazendo e
+    quanto a anterior demorou. E o mesmo acompanhamento que o horizontal tem, e
+    que o short nao tinha: "fico no escuro".
+    """
+    from app.services import render_short
+
+    try:
+        return await render_short.log_do_render(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/{short_id}/palco")

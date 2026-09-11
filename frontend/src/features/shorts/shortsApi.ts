@@ -283,6 +283,16 @@ export interface PassoRender {
 }
 
 /** O render em curso (ou o último deste processo). */
+export interface LogDoRender {
+  linhas: string[];
+  /** Houve mais linhas do que as devolvidas. */
+  truncado: boolean;
+  /** Uma duração por passo concluído, na ordem em que saíram. */
+  duracoes_ms: number[];
+  /** `false` enquanto nenhum passo foi despachado. */
+  existe: boolean;
+}
+
 export interface ProgressoRender {
   estagio: 'previa' | 'final';
   concluido: boolean;
@@ -462,6 +472,10 @@ export const shortsApi = {
       points: number;
       peaks: number[];
     }>(`/shorts/corte/${corteId}/waveform-peaks`),
+
+  /** D-568: o log do worker deste short — o que rodou e quanto levou. */
+  logDoRender: (shortId: string) =>
+    request<LogDoRender>(`/shorts/${shortId}/log`),
 
   transcricaoDoCorte: (corteId: string) =>
     request<TranscricaoDoBruto>(`/shorts/corte/${corteId}/transcricao`),

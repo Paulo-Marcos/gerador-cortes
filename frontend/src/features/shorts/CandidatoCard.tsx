@@ -344,7 +344,7 @@ export function CandidatoCard({
         )}
       </footer>
 
-      {progresso && <ProgressoRenderPanel progresso={progresso} />}
+      {progresso && <ProgressoRenderPanel progresso={progresso} shortId={short.id} />}
 
       {short.arquivo_previa_path && short.status !== 'renderizado' && !renderizando && (
         <PlayerDoArquivo

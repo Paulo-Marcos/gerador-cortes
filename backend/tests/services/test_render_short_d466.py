@@ -621,3 +621,44 @@ def test_textura_invalida_no_palco_cai_na_padrao_do_canal():
     assert _textura({"fundo_editorial": ""}) == FUNDO_PADRAO
     assert _textura({}) == FUNDO_PADRAO
     assert _textura({"fundo_editorial": "cosmograph"}) == "cosmograph"
+
+
+class TestResumirLog:
+    """D-568: o log do worker, que ja existia em disco e ninguem lia."""
+
+    def test_tira_a_duracao_de_cada_passo_concluido(self):
+        texto = (
+            "[t1] Job: a\nCMD: ffmpeg\n[t2] Fim: a status=sucesso duration_ms=29883\n"
+            "[t3] Job: b\nCMD: remotion\n[t4] Fim: b status=sucesso duration_ms=140200\n"
+        )
+
+        assert render_short.resumir_log(texto)["duracoes_ms"] == [29883, 140200]
+
+    def test_corta_a_linha_do_filtergraph_sem_perder_o_comeco(self):
+        """A CMD do ffmpeg tem kilobytes numa linha so — um filtergraph inteiro.
+
+        Cortar mantem o log legivel numa caixa de tela sem esconder o que
+        importa: o comeco ja diz qual binario rodou e com que entrada.
+        """
+        texto = "CMD: ffmpeg -i entrada.mkv " + "x" * 900
+
+        linha = render_short.resumir_log(texto)["linhas"][0]
+
+        assert linha.startswith("CMD: ffmpeg -i entrada.mkv")
+        assert linha.endswith(" […]")
+        assert len(linha) == render_short.LARGURA_DA_LINHA + 4
+
+    def test_devolve_so_o_fim_do_log_e_avisa_que_cortou(self):
+        """Um render que falhou e foi refeito acumula tudo no mesmo arquivo."""
+        texto = "\n".join(f"linha {n}" for n in range(200))
+
+        resumo = render_short.resumir_log(texto, linhas=10)
+
+        assert resumo["linhas"][0] == "linha 190"
+        assert resumo["truncado"] is True
+
+    def test_log_curto_nao_se_diz_truncado(self):
+        resumo = render_short.resumir_log("uma linha so")
+
+        assert resumo["truncado"] is False
+        assert resumo["duracoes_ms"] == []

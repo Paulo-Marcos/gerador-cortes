@@ -143,6 +143,24 @@ export function useProgressoRender(shortId: string, corteId: string, ativo: bool
   return query.data?.render ?? null;
 }
 
+/**
+ * D-568: o log do worker, enquanto o render corre.
+ *
+ * Acompanha o mesmo ritmo do progresso e pela mesma razão: o arquivo cresce
+ * durante a execução, e olhar uma vez mostraria só o começo. Depois que termina
+ * ele para de mudar, então o polling se desliga junto — a última leitura já traz
+ * a linha de `Fim` com a duração, que é o que se quer ver no fim.
+ */
+export function useLogDoRender(shortId: string, ativo: boolean) {
+  return useQuery({
+    queryKey: ['shorts', 'log', shortId],
+    queryFn: () => shortsApi.logDoRender(shortId),
+    enabled: ativo,
+    refetchInterval: ativo ? 3000 : false,
+    refetchIntervalInBackground: true,
+  });
+}
+
 export function usePreviaPublicacao(shortId: string | null) {
   return useQuery({
     queryKey: ['shorts', 'publicacao', shortId],

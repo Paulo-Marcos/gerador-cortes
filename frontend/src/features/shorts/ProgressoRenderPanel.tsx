@@ -1,5 +1,7 @@
-import { Check, CircleDashed, Loader2, X } from 'lucide-react';
+import { useState } from 'react';
+import { Check, ChevronDown, ChevronRight, CircleDashed, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLogDoRender } from './useShortsDoCorte';
 import type { PassoRender, ProgressoRender } from './shortsApi';
 
 // D-485: o que estava faltando durante cinco minutos e meio de silêncio.
@@ -16,6 +18,8 @@ import type { PassoRender, ProgressoRender } from './shortsApi';
 
 interface Props {
   progresso: ProgressoRender;
+  /** D-568: de quem é este render — o log é lido por short. */
+  shortId: string;
 }
 
 const ICONE: Record<PassoRender['status'], React.ReactNode> = {
@@ -30,8 +34,17 @@ function decorrido(segundos: number): string {
   return total < 60 ? `${total}s` : `${Math.floor(total / 60)}min ${total % 60}s`;
 }
 
-export function ProgressoRenderPanel({ progresso }: Props) {
+export function ProgressoRenderPanel({ progresso, shortId }: Props) {
   const { estagio, concluido, erro, decorrido_seg: decorridoSeg, passos } = progresso;
+
+  // D-568: o log do worker, atrás de um clique.
+  //
+  // Aberto por padrão ele empurraria os passos para fora da vista em cinco
+  // cards ao mesmo tempo — e na maioria das vezes basta saber QUAL etapa corre.
+  // O log é para quando isso não basta: "fico no escuro".
+  const [verLog, setVerLog] = useState(false);
+  const log = useLogDoRender(shortId, verLog && !concluido);
+  const linhas = log.data?.linhas ?? [];
 
   // Terminou sem erro: o card já mostra o player, e um painel de "tudo pronto"
   // ao lado dele seria ruído sobre um fato que a tela já conta melhor.
@@ -83,6 +96,33 @@ export function ProgressoRenderPanel({ progresso }: Props) {
           Desenhar a legenda e as cenas é o passo demorado — costuma levar alguns minutos.
           Pode sair desta tela: o render continua.
         </p>
+      )}
+
+      {/* D-568: o mesmo `worker_debug.log` que o horizontal deixa acompanhar.
+          Uma entrada por passo: o comando que rodou e, ao fechar, a duração. */}
+      <button
+        type="button"
+        onClick={() => setVerLog((v) => !v)}
+        className="mt-2 flex items-center gap-1 font-code text-[10.5px] uppercase tracking-wide text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
+      >
+        {verLog ? <ChevronDown size={11} aria-hidden /> : <ChevronRight size={11} aria-hidden />}
+        log do worker
+      </button>
+
+      {verLog && (
+        <div className="mt-1 max-h-[180px] overflow-auto rounded-[6px] bg-[var(--wb-bg)] p-1.5">
+          {linhas.length === 0 ? (
+            <p className="font-code text-[10.5px] text-[var(--wb-text-mute)]">
+              {log.data?.existe === false
+                ? 'Nenhum passo despachado ainda — o log nasce quando o worker pega o primeiro.'
+                : 'lendo…'}
+            </p>
+          ) : (
+            <pre className="whitespace-pre-wrap break-all font-code text-[10px] leading-relaxed text-[var(--wb-text-dim)]">
+              {linhas.join('\n')}
+            </pre>
+          )}
+        </div>
       )}
     </div>
   );
