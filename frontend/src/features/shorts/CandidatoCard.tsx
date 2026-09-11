@@ -4,6 +4,7 @@ import {
   Eye,
   MoveHorizontal,
   Play,
+  Plus,
   Type,
   Undo2,
   X,
@@ -197,14 +198,30 @@ export function CandidatoCard({
               onEscreverGancho();
             }}
             title="Escrever o gancho que aparece nos primeiros segundos"
+            // D-568: vazio, precisa PARECER um botão.
+            //
+            // A D-565 acertou em deixar uma linha só — um campo de texto aqui
+            // reabriria a parede de controles que a D-492 desfez, em cinco
+            // cards ao mesmo tempo. Mas "sem gancho na abertura" em cinza, sem
+            // borda, lia-se como uma etiqueta descrevendo um fato, e não como
+            // um lugar onde clicar: "não aparece em nenhum lugar a opção".
+            //
+            // Preenchido ele volta a ser texto, que é o certo — ali o conteúdo
+            // é o assunto, e a moldura seria ruído sobre algo já resolvido.
             className={cn(
               'mt-1 flex w-full items-center gap-1 rounded-[6px] px-1 py-0.5 text-left text-[11.5px] leading-snug transition-colors hover:bg-[var(--wb-bg-inset)] disabled:opacity-45',
-              short.gancho_tela ? 'text-[var(--wb-text)]' : 'text-[var(--wb-text-mute)]',
+              short.gancho_tela
+                ? 'text-[var(--wb-text)]'
+                : 'border border-dashed border-[var(--wb-border)] text-[var(--wb-text-mute)] hover:border-[var(--wb-accent)] hover:text-[var(--wb-text)]',
             )}
           >
-            <Type size={11} className="flex-none opacity-70" aria-hidden />
+            {short.gancho_tela ? (
+              <Type size={11} className="flex-none opacity-70" aria-hidden />
+            ) : (
+              <Plus size={11} className="flex-none opacity-70" aria-hidden />
+            )}
             <span className="truncate">
-              {short.gancho_tela || 'sem gancho na abertura'}
+              {short.gancho_tela || 'escrever o gancho da abertura'}
             </span>
           </button>
         </div>
