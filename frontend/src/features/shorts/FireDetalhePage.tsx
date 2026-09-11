@@ -42,7 +42,7 @@ import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { ReguaDeOnda } from './ReguaDeOnda';
 import { MascaraEnquadramento } from './MascaraEnquadramento';
-import { PalcoDoCorte } from './PalcoDoCorte';
+import { PalcoPadraoDoCorte } from './PalcoPadraoDoCorte';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { GanchoModal } from './GanchoModal';
 import { GanchoPrevia } from './GanchoPrevia';
@@ -564,7 +564,11 @@ export default function FireDetalhePage() {
         {/* ── Decisões: o que fazer com o material ────────────────────── */}
         <aside className="flex min-h-0 flex-col gap-2.5 overflow-auto">
           <div className="flex-none space-y-2 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
-            <PalcoDoCorte corteId={corteId} />
+            {/* D-570: o PALCO toma o lugar do RECORTES aqui.
+                O RECORTES não sumiu — foi para a seção 2 do "Definir o palco",
+                junto do que ele descreve: de onde sai cada janela. Aqui em cima
+                fica a decisão que se repete a cada trecho. */}
+            <PalcoPadraoDoCorte corteId={corteId} />
             <div className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] pt-2">
               <Button
                 variant="outline"

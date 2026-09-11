@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import type { PalcoShortPreset } from '@/types/presets';
 import { EditorDeRecorte } from './EditorDeRecorte';
 import { PresetsDoPalco } from './PresetsDoPalco';
+import { PalcoDoCorte } from './PalcoDoCorte';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA, LegendaPrevia } from './LegendaPrevia';
 import { useTranscricaoDoCorte } from './useShortsDoCorte';
@@ -191,6 +192,20 @@ export function DefinirPalcoModal({
           </Secao>
 
           <Secao numero={2} titulo="De onde vem cada janela">
+            {/* D-570: o RECORTES DO CORTE mudou de casa — estava no topo da
+                tela, ocupando o lugar que o palco merecia.
+                Ele responde de onde sai cada janela: onde estão a pessoa e a
+                tela dentro do quadro do OBS. Por isso os nomes são cenas do OBS
+                — eles descrevem a transmissão, não o short. É infraestrutura,
+                quase sempre já resolvida pelas regiões marcadas no editor do
+                horizontal; o operador raramente precisa tocá-lo, e mesmo assim
+                era a primeira pergunta da tela.
+                O diagnóstico vem junto, e é o que mais importa aqui: sem região
+                marcada o palco usa o quadro inteiro e a moldura da live entra
+                no short. Um short torto tem que dizer por que está torto. */}
+            <div className="mb-2 rounded-[7px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2">
+              <PalcoDoCorte corteId={corteId} />
+            </div>
             {/* D-552: o preset de RECORTES do canal (o que traz as regiões)
                 mudou de lugar. Ele vivia no painel do candidato, ao lado do
                 select de palco, e os dois pareciam a mesma coisa — foi assim
