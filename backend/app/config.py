@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     # angulo que prende — e conferir se a promessa esta mesmo la. Por isso o
     # dobro do thinking da etiqueta, ainda longe do custo de propor cortes.
     claude_cli_thinking_tokens_gancho_short: int = 3000
+    # D-565: o post do short e redacao curta sobre um trecho ja recortado, e o
+    # peso editorial mora na skill. Mesmo patamar do gancho.
+    claude_cli_thinking_tokens_metadados_short: int = 3000
     skills_dir: str = os.path.join(_PROJECT_ROOT, ".claude", "skills")
     # Modelos por etapa (alias do CLI: opus | sonnet | haiku, ou nome completo)
     claude_model_analise: str = "opus"
@@ -99,6 +102,7 @@ class Settings(BaseSettings):
     # D-565: escrever o gancho e redacao curta sobre um texto que ja veio
     # recortado — sonnet da conta, e esta etapa roda uma vez por candidato.
     claude_model_gancho_short: str = "sonnet"
+    claude_model_metadados_short: str = "sonnet"
     # D-454: faixa que o operador aceita num candidato a short. 15-30s serve
     # Reels, ate 90s serve conteudo denso; abaixo de 15 nao entrega ideia e acima
     # de 90 e o corte de novo. A quantidade e TETO de trabalho, nao cota: a skill

@@ -153,6 +153,22 @@ export interface AtualizarShortBody {
   gancho_ate_seg?: number;
 }
 
+/** D-565 (onda 3): o texto que acompanha o short no feed. */
+export interface PostDoShortApi {
+  titulo: string;
+  descricao: string;
+  hashtags: string[];
+  /** Ja ha texto escrito? A tela usa isto para nao mostrar tres campos vazios
+   *  que parecem defeito quando na verdade a etapa ainda nao rodou. */
+  gerado: boolean;
+}
+
+export interface AtualizarPostBody {
+  titulo?: string;
+  descricao?: string;
+  hashtags?: string[];
+}
+
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
 export function brutoUrl(corteId: string): string {
   return `${API_BASE}/cortes/${corteId}/video-bruto`;
@@ -387,6 +403,20 @@ export const shortsApi = {
   sugerirGanchos: (shortId: string) =>
     request<{ variacoes: string[] }>(`/shorts/${shortId}/ganchos`, {
       method: 'POST',
+    }),
+
+  /** D-565 (onda 3): o texto de publicacao gravado deste short. */
+  obterPost: (shortId: string) => request<PostDoShortApi>(`/shorts/${shortId}/post`),
+
+  /** A IA escreve titulo, descricao e hashtags para o feed — e GRAVA. */
+  gerarPost: (shortId: string) =>
+    request<PostDoShortApi>(`/shorts/${shortId}/post/gerar`, { method: 'POST' }),
+
+  /** A ultima palavra sobre o texto e do operador. "" apaga o campo. */
+  atualizarPost: (shortId: string, body: AtualizarPostBody) =>
+    request<PostDoShortApi>(`/shorts/${shortId}/post`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
     }),
 
   renderizarPrevia: (shortId: string) =>

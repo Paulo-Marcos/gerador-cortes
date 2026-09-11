@@ -245,6 +245,23 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
         thinking_setting="claude_cli_thinking_tokens_gancho_short",
         lentes_tipo=None,
     ),
+    SkillCatalogo(
+        key="metadados-short-expert",
+        arquivo="metadados-short.md",
+        etapa="Post do short",
+        descricao=(
+            "Escreve o titulo, a descricao e as hashtags que acompanham o short "
+            "no feed — nao o texto que aparece DENTRO do video, que e o gancho. "
+            "Separada dos 'Metadados YouTube' porque os leitores sao outros: la "
+            "o titulo e um cartaz que disputa o clique numa lista de resultados; "
+            "aqui ele e lido por quem JA parou, com ~40 caracteres visiveis, e "
+            "vira a primeira linha da legenda no TikTok e no Instagram, que nao "
+            "tem campo de titulo."
+        ),
+        model_setting="claude_model_metadados_short",
+        thinking_setting="claude_cli_thinking_tokens_metadados_short",
+        lentes_tipo=None,
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, SkillCatalogo] = {c.key: c for c in _CATALOGO}

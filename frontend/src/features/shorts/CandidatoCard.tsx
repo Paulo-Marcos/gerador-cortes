@@ -344,7 +344,7 @@ export function CandidatoCard({
         />
       )}
 
-      {short.status === 'renderizado' && <PainelPublicacao shortId={short.id} />}
+      {short.status === 'renderizado' && <PainelPublicacao short={short} />}
     </article>
   );
 }

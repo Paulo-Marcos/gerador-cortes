@@ -325,6 +325,31 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
         ),
         marcador="GANCHO",
     ),
+    ScaffoldCatalogo(
+        key="metadados-short",
+        skill_key="metadados-short-expert",
+        etapa="Post do short",
+        descricao=(
+            "Involucro que manda a transcricao do TRECHO, o gancho que ja aparece "
+            "dentro do video e os titulos de shorts recentes, e pede titulo, "
+            "descricao e hashtags em JSON. Manda tambem os LIMITES da plataforma "
+            "mais apertada (YouTube Shorts), porque e o que define onde o peso do "
+            "titulo tem de cair. O gancho vai para NAO ser repetido: quem le o "
+            "titulo ja o viu no video."
+        ),
+        arquivo="metadados-short.txt",
+        placeholders=(
+            "titulo_proposto",
+            "tema_central",
+            "duracao_seg",
+            "texto_transcricao",
+            "gancho_na_tela",
+            "titulos_recentes",
+            "titulo_visivel",
+            "titulo_max",
+        ),
+        marcador="JSON",
+    ),
 )
 
 _CATALOGO_POR_KEY: dict[str, ScaffoldCatalogo] = {c.key: c for c in _CATALOGO}

@@ -1,0 +1,28 @@
+=== O CORTE DE ONDE O SHORT SAIU ===
+titulo: {titulo_proposto}
+tema_central: {tema_central}
+
+=== O TRECHO (o que este short mostra, do segundo 0 ao {duracao_seg}) ===
+{texto_transcricao}
+
+=== O GANCHO QUE JA APARECE DENTRO DO VIDEO ===
+{gancho_na_tela}
+
+=== TITULOS DE SHORTS RECENTES DESTE CANAL (evite repetir estrutura e tom) ===
+{titulos_recentes}
+
+=== ONDE ESTE TEXTO VAI ===
+O titulo aparece abaixo do video no YouTube Shorts (~{titulo_visivel} dos
+{titulo_max} caracteres visiveis antes do corte) e vira a PRIMEIRA LINHA da
+legenda no TikTok e no Instagram, que nao tem campo de titulo.
+
+Escreva o POST deste short seguindo a sua expertise acima.
+
+Lembre: o peso do titulo vai nos primeiros caracteres; nao repita o gancho, que
+quem le o titulo ja viu; nao escreva o link do video longo, que o sistema
+acrescenta sozinho; e hashtags sao TERMOS, sem o sinal de cerquilha.
+
+Responda com APENAS o objeto JSON — sem cerca de markdown, sem linha de
+introducao, sem explicacao depois:
+
+{{"titulo": "...", "descricao": "...", "hashtags": ["...", "...", "..."]}}

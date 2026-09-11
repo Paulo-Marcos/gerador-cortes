@@ -31,7 +31,7 @@ from app.domain.publicacao import (
     adaptar,
     validar,
 )
-from app.models import Corte, MetadadoCorte, Short
+from app.models import Corte, MetadadoCorte, MetadadoShort, Short
 
 logger = logging.getLogger(__name__)
 
@@ -148,13 +148,49 @@ async def montar_contexto(short_id: str) -> ContextoPublicacao:
             # Todo short que este pipeline produz e vertical (D-463/D-466); o
             # horizontal entra por outro caminho, com o MP4 do corte longo.
             vertical=True,
-            base=MetadadosBase(
-                titulo=short.titulo_sugerido or corte.titulo_proposto or "",
-                descricao=short.gancho or "",
-                hashtags=await _hashtags_do_corte(db, corte),
-                url_video_longo=corte.youtube_url_publicado or "",
-            ),
+            base=await _texto_do_short(db, short, corte),
         )
+
+
+async def _texto_do_short(db, short: Short, corte: Corte) -> MetadadosBase:
+    """O texto de publicacao do short: o escrito, ou o de antes (D-565, onda 3).
+
+    A PREFERENCIA e o `MetadadoShort` — escrito pela skill do post e revisado
+    pelo operador, para o feed. O FALLBACK e o que esta funcao fazia sozinha ate
+    aqui: `titulo_sugerido` + `gancho`, dois campos que a skill de shorts produz
+    para a CURADORIA, nao para quem assiste.
+
+    O fallback fica, e nao e transitorio: short que nunca passou pelo modal de
+    post continua publicavel, com o texto de sempre. Exigir a etapa nova
+    quebraria os candidatos que ja existem em PROD, e por um motivo burocratico
+    — o video esta pronto.
+
+    As hashtags seguem o mesmo criterio, mas SEPARADAS do titulo: um post pode
+    ter titulo proprio e nenhuma hashtag escrita, e nesse caso as do corte ainda
+    sao melhores que nenhuma.
+    """
+    from sqlalchemy import select
+
+    meta = await db.scalar(select(MetadadoShort).where(MetadadoShort.short_id == short.id))
+    proprio = meta.titulo_youtube if meta else ""
+
+    return MetadadosBase(
+        titulo=proprio or short.titulo_sugerido or corte.titulo_proposto or "",
+        descricao=(meta.descricao_youtube if meta and proprio else "") or short.gancho or "",
+        hashtags=_hashtags_do_post(meta) or await _hashtags_do_corte(db, corte),
+        url_video_longo=corte.youtube_url_publicado or "",
+    )
+
+
+def _hashtags_do_post(meta: MetadadoShort | None) -> list[str]:
+    """As hashtags escritas para ESTE short, se houver."""
+    if not meta:
+        return []
+    try:
+        valor = json.loads(meta.tags_youtube or "[]")
+    except (ValueError, TypeError):
+        return []
+    return [str(t) for t in valor] if isinstance(valor, list) else []
 
 
 async def montar_contexto_do_corte(corte_id: str) -> ContextoPublicacao:

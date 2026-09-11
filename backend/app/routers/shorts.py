@@ -17,6 +17,9 @@ Endpoints:
   PUT  /{short_id}/cenas          — as cenas do short (hook, numero, citacao, cta)
   POST /{short_id}/cenas/sugerir  — a IA propoe os cartoes deste trecho
   POST /{short_id}/ganchos        — a IA propoe variacoes do gancho de abertura
+  GET  /{short_id}/post           — o texto de publicacao gravado deste short
+  POST /{short_id}/post/gerar     — a IA escreve titulo, descricao e hashtags
+  PATCH /{short_id}/post          — a edicao manual do texto de publicacao
   POST /{short_id}/enquadrar      — acha o rosto no trecho e centra o 9:16 nele
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
@@ -413,6 +416,61 @@ async def sugerir_ganchos(short_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class AtualizarPostRequest(BaseModel):
+    """A edicao manual do post. Todo campo e opcional — so o que veio e aplicado.
+
+    String vazia APAGA, de proposito: e assim que o operador tira um texto que a
+    IA escreveu e ele nao quer.
+    """
+
+    titulo: str | None = None
+    descricao: str | None = None
+    hashtags: list[str] | None = None
+
+
+@router.get("/{short_id}/post")
+async def obter_post(short_id: str):
+    """O texto de publicacao deste short, ou os campos vazios (D-565)."""
+    from app.services import metadados_short
+
+    return await metadados_short.obter(short_id)
+
+
+@router.post("/{short_id}/post/gerar")
+async def gerar_post(short_id: str):
+    """A IA escreve titulo, descricao e hashtags para o feed — e GRAVA.
+
+    Diferente do `/ganchos`, que so propoe. O gancho vira PIXEL no video e a
+    escolha e editorial demais para a maquina fechar sozinha; o post e texto que
+    o operador le e edita antes de subir — e que ate esta demanda era montado
+    automaticamente, sem ninguem revisar.
+    """
+    from app.services.claude_ia import ClaudeIaService
+
+    try:
+        return await ClaudeIaService.gerar_post_do_short_via_claude(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.patch("/{short_id}/post")
+async def atualizar_post(short_id: str, body: AtualizarPostRequest):
+    """A ultima palavra sobre o texto de publicacao e do operador."""
+    from app.services import metadados_short
+
+    try:
+        return await metadados_short.atualizar(
+            short_id,
+            titulo=body.titulo,
+            descricao=body.descricao,
+            hashtags=body.hashtags,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/{short_id}/renderizar")

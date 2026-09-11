@@ -275,3 +275,223 @@ class TestContextoDoGancho:
         await _seed_corte(session_factory)
         with pytest.raises(LookupError):
             await servico.montar_contexto_do_gancho("nao-existe")
+
+
+class TestPostDoShort:
+    """D-565 (onda 3): o texto de publicacao, gravado no MetadadoShort.
+
+    A tabela existe desde a D-452 e nunca foi preenchida. O risco desta onda nao
+    e a geracao — e o FALLBACK: um short que nunca passou pelo modal do post
+    precisa continuar publicavel com o texto de sempre. Exigir a etapa nova
+    quebraria os candidatos que ja existem em PROD por um motivo burocratico.
+    """
+
+    @pytest_asyncio.fixture
+    async def store(self, session_factory):
+        """O servico do post ligado ao mesmo banco em memoria do fixture.
+
+        Ele tem a PROPRIA `AsyncSessionLocal`; sem troca-la tambem, estes testes
+        leriam o banco de desenvolvimento de verdade.
+        """
+        from app.services import metadados_short as post_store
+
+        original = post_store.AsyncSessionLocal
+        post_store.AsyncSessionLocal = servico.AsyncSessionLocal
+        yield post_store
+        post_store.AsyncSessionLocal = original
+
+    @pytest_asyncio.fixture
+    async def com_short(self, session_factory, **kwargs):
+        """Um corte com transcricao e um short `s1` sobre ele."""
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(Short(id="s1", corte_id="c1", numero=1, inicio_seg=0.0, fim_seg=60.0))
+            await db.commit()
+
+    @pytest.mark.asyncio
+    async def test_o_contexto_manda_o_gancho_para_nao_ser_repetido(self, session_factory, store):
+        """Quem le o titulo ja viu o gancho dentro do video."""
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(
+                Short(
+                    id="s1",
+                    corte_id="c1",
+                    numero=1,
+                    inicio_seg=0.0,
+                    fim_seg=60.0,
+                    gancho_tela="o juro trabalha contra voce",
+                )
+            )
+            await db.commit()
+
+        contexto = await store.montar_contexto("s1")
+
+        assert contexto.gancho_na_tela == "o juro trabalha contra voce"
+        # A plataforma mais apertada e a que define onde o peso do titulo cai.
+        assert contexto.titulo_visivel == 40
+        assert contexto.titulo_max == 100
+
+    @pytest.mark.asyncio
+    async def test_short_sem_gancho_avisa_em_vez_de_mandar_vazio(self, store, com_short):
+
+        contexto = await store.montar_contexto("s1")
+
+        assert "nao tem gancho" in contexto.gancho_na_tela
+
+    @pytest.mark.asyncio
+    async def test_gravar_cria_o_registro_que_nunca_existiu(self, store, com_short):
+        from app.domain.metadados_short import PostDoShort
+
+        gravado = await store.gravar(
+            "s1", PostDoShort(titulo="Um titulo", descricao="contexto", hashtags=["juros"])
+        )
+
+        assert gravado["titulo"] == "Um titulo"
+        assert gravado["hashtags"] == ["juros"]
+        assert gravado["gerado"] is True
+
+    @pytest.mark.asyncio
+    async def test_post_vazio_nao_apaga_o_que_o_operador_escreveu(self, store, com_short):
+        """A skill devolver lixo nao pode custar o texto escrito a mao."""
+        from app.domain.metadados_short import PostDoShort
+
+        await store.atualizar("s1", titulo="escrito a mao")
+        depois = await store.gravar("s1", PostDoShort())
+
+        assert depois["titulo"] == "escrito a mao"
+
+    @pytest.mark.asyncio
+    async def test_editar_com_string_vazia_apaga(self, store, com_short):
+        """E assim que o operador tira um texto que a IA escreveu."""
+        await store.atualizar("s1", titulo="vai sair")
+        depois = await store.atualizar("s1", titulo="")
+
+        assert depois["titulo"] == ""
+        assert depois["gerado"] is False
+
+    @pytest.mark.asyncio
+    async def test_hashtags_editadas_a_mao_passam_pela_limpeza(self, store, com_short):
+        depois = await store.atualizar("s1", hashtags=["#juros", "juros", "taxa de juros"])
+
+        assert depois["hashtags"] == ["juros", "taxadejuros"]
+
+
+class TestTextoDaPublicacao:
+    """D-565 (onda 3): qual texto vai para o feed.
+
+    Este e o ponto de REGRESSAO da onda. A publicacao do short funciona desde a
+    D-468 montando o texto na hora; se a preferencia pelo `MetadadoShort` for
+    escrita errada, o sintoma nao e um erro — e um short subindo com titulo
+    vazio, descoberto depois de publicado.
+    """
+
+    @pytest_asyncio.fixture
+    async def cenario(self, session_factory):
+        """Um corte, um short renderizado, e a sessao para consultar."""
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(
+                Short(
+                    id="s1",
+                    corte_id="c1",
+                    numero=1,
+                    inicio_seg=0.0,
+                    fim_seg=60.0,
+                    titulo_sugerido="titulo da curadoria",
+                    gancho="gancho da curadoria",
+                )
+            )
+            await db.commit()
+        return session_factory
+
+    async def _texto(self, factory, short_id="s1"):
+        from app.services.publicacao_destinos import _texto_do_short
+
+        async with factory() as db:
+            short = await db.get(Short, short_id)
+            corte = await db.get(Corte, "c1")
+            return await _texto_do_short(db, short, corte)
+
+    @pytest.mark.asyncio
+    async def test_sem_post_escrito_cai_no_texto_de_antes(self, cenario):
+        """Short que nunca passou pelo modal continua publicavel."""
+        base = await self._texto(cenario)
+
+        assert base.titulo == "titulo da curadoria"
+        assert base.descricao == "gancho da curadoria"
+
+    @pytest.mark.asyncio
+    async def test_post_escrito_tem_preferencia(self, cenario):
+        from app.models import MetadadoShort
+
+        async with cenario() as db:
+            db.add(
+                MetadadoShort(
+                    id="m1",
+                    short_id="s1",
+                    titulo_youtube="titulo do feed",
+                    descricao_youtube="contexto do feed",
+                    tags_youtube='["juros"]',
+                )
+            )
+            await db.commit()
+
+        base = await self._texto(cenario)
+
+        assert base.titulo == "titulo do feed"
+        assert base.descricao == "contexto do feed"
+        assert base.hashtags == ["juros"]
+
+    @pytest.mark.asyncio
+    async def test_registro_vazio_nao_apaga_o_fallback(self, cenario):
+        """`MetadadoShort` criado mas nunca preenchido nao pode zerar o post.
+
+        Acontece de verdade: abrir o modal e fechar sem gerar ja cria a linha.
+        """
+        from app.models import MetadadoShort
+
+        async with cenario() as db:
+            db.add(MetadadoShort(id="m1", short_id="s1"))
+            await db.commit()
+
+        base = await self._texto(cenario)
+
+        assert base.titulo == "titulo da curadoria"
+        assert base.descricao == "gancho da curadoria"
+
+    @pytest.mark.asyncio
+    async def test_titulo_proprio_sem_hashtags_ainda_usa_as_do_corte(self, cenario):
+        """Titulo e hashtags sao decisoes separadas.
+
+        As do corte, nesse caso, sao melhores que nenhuma.
+        """
+        from app.models import MetadadoShort
+
+        async with cenario() as db:
+            db.add(MetadadoShort(id="m1", short_id="s1", titulo_youtube="so o titulo"))
+            await db.commit()
+
+        base = await self._texto(cenario)
+
+        assert base.titulo == "so o titulo"
+        # O corte deste fixture tem tema "Economia", e e dele que a hashtag sai.
+        assert base.hashtags == ["Economia"]
+
+    @pytest.mark.asyncio
+    async def test_tags_corrompidas_no_banco_nao_derrubam_a_publicacao(self, cenario):
+        from app.models import MetadadoShort
+
+        async with cenario() as db:
+            db.add(
+                MetadadoShort(
+                    id="m1", short_id="s1", titulo_youtube="tem titulo", tags_youtube="{quebrado"
+                )
+            )
+            await db.commit()
+
+        base = await self._texto(cenario)
+
+        assert base.titulo == "tem titulo"
+        # JSON quebrado vira lista vazia, e a publicacao cai nas tags do corte.
+        assert base.hashtags == ["Economia"]

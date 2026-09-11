@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { shortsApi, type AtualizarShortBody, type CenaShort } from './shortsApi';
+import { type AtualizarPostBody, shortsApi, type AtualizarShortBody, type CenaShort } from './shortsApi';
 import { FIRES_KEY } from './useFires';
 
 export const shortsDoCorteKey = (corteId: string) => ['shorts', 'corte', corteId] as const;
+
+/** D-565 (onda 3): o texto de publicacao de UM short. */
+export const postDoShortKey = (shortId: string) => ['shorts', 'post', shortId] as const;
 
 /** Prefixo de tudo que descreve palco — invalidar aqui atinge o corte E os shorts. */
 export const PALCO_KEY = ['shorts', 'palco'] as const;
@@ -252,6 +255,36 @@ export function useSugerirCenas(corteId: string) {
 export function useSugerirGanchos() {
   return useMutation({
     mutationFn: (shortId: string) => shortsApi.sugerirGanchos(shortId),
+  });
+}
+
+/** D-565 (onda 3): o texto de publicacao gravado deste short. */
+export function usePostDoShort(shortId: string, habilitado = true) {
+  return useQuery({
+    queryKey: postDoShortKey(shortId),
+    queryFn: () => shortsApi.obterPost(shortId),
+    enabled: habilitado,
+  });
+}
+
+/**
+ * Pede o post a IA. Diferente do gerador de ganchos, este GRAVA — entao a
+ * resposta substitui o cache em vez de viver so no resultado da mutation.
+ */
+export function useGerarPost(shortId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => shortsApi.gerarPost(shortId),
+    onSuccess: (post) => qc.setQueryData(postDoShortKey(shortId), post),
+  });
+}
+
+/** A edicao manual do operador. */
+export function useAtualizarPost(shortId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AtualizarPostBody) => shortsApi.atualizarPost(shortId, body),
+    onSuccess: (post) => qc.setQueryData(postDoShortKey(shortId), post),
   });
 }
 

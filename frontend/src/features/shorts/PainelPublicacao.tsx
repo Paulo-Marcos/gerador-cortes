@@ -7,32 +7,62 @@
 //
 // Os avisos aparecem ANTES do botão. Descobrir que o vídeo passa do limite
 // depois de subir é o erro que esta tela existe para evitar.
-import { Send, Upload } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, Send, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PacotePublicacao } from './shortsApi';
-import { usePreviaPublicacao, usePublicarShort } from './useShortsDoCorte';
+import { usePostDoShort, usePreviaPublicacao, usePublicarShort } from './useShortsDoCorte';
+import { PostModal } from './PostModal';
+import type { ShortSugerido } from './shortsApi';
 
 interface Props {
-  shortId: string;
+  /** D-565: o short inteiro, e nao so o id — o modal do post precisa dele. */
+  short: ShortSugerido;
 }
 
-export function PainelPublicacao({ shortId }: Props) {
+export function PainelPublicacao({ short }: Props) {
+  const shortId = short.id;
   const previa = usePreviaPublicacao(shortId);
   const publicar = usePublicarShort();
-
-  if (previa.isLoading) {
-    return <p className="p-3 text-[12px] text-[var(--wb-text-mute)]">Montando os pacotes…</p>;
-  }
-  if (previa.isError) {
-    return (
-      <p className="p-3 text-[12px] text-[var(--wb-text-dim)]">
-        {(previa.error as Error)?.message ?? 'nao consegui montar os pacotes'}
-      </p>
-    );
-  }
+  const post = usePostDoShort(shortId);
+  const [escrevendoPost, setEscrevendoPost] = useState(false);
 
   return (
     <div className="flex flex-col gap-2 p-3">
+      {/* D-565 (onda 3): o texto que vai junto com o video.
+          Fica ANTES dos destinos por duas razoes. A primeira e de ordem: e a
+          ultima coisa a decidir antes de subir, e descobrir que o titulo estava
+          errado depois de publicado e o erro que este painel existe para evitar.
+          A segunda e que ele fica FORA dos early-returns da previa — o texto nao
+          depende do arquivo estar em disco, e prende-lo ali faria um MP4 sumido
+          levar junto o acesso ao post, que continua editavel. */}
+      <button
+        type="button"
+        onClick={() => setEscrevendoPost(true)}
+        className="flex items-center gap-2 rounded-[8px] border border-[var(--wb-border-soft)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
+      >
+        <FileText size={13} className="flex-none opacity-70" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[12.5px] font-semibold text-[var(--wb-text)]">
+            {post.data?.titulo || 'Escrever o post'}
+          </span>
+          <span className="block truncate text-[11px] text-[var(--wb-text-mute)]">
+            {post.data?.gerado
+              ? `${post.data.hashtags.length} hashtags`
+              : `sem texto proprio — vai publicar como "${short.titulo}"`}
+          </span>
+        </span>
+      </button>
+
+      {previa.isLoading && (
+        <p className="text-[12px] text-[var(--wb-text-mute)]">Montando os pacotes…</p>
+      )}
+      {previa.isError && (
+        <p className="text-[12px] text-[var(--wb-text-dim)]">
+          {(previa.error as Error)?.message ?? 'nao consegui montar os pacotes'}
+        </p>
+      )}
+
       {(previa.data?.pacotes ?? []).map((pacote) => (
         <Destino
           key={pacote.plataforma}
@@ -51,6 +81,12 @@ export function PainelPublicacao({ shortId }: Props) {
           {(publicar.error as Error)?.message ?? 'falhou'}
         </p>
       )}
+
+      <PostModal
+        open={escrevendoPost}
+        onClose={() => setEscrevendoPost(false)}
+        short={short}
+      />
     </div>
   );
 }
