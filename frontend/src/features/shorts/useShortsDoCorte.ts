@@ -60,13 +60,17 @@ export function useDescartarBruto() {
 
 // D-466: o render e sincrono e demora (ffmpeg + Remotion + composicao). A tela
 // segura o botao pelo isPending em vez de fingir que terminou.
+/** D-568: a chave do progresso de um short — o disparo precisa alcançá-la. */
+export const progressoKey = (shortId: string) => ['shorts', 'progresso', shortId] as const;
+
 export function useRenderizarShort(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (shortId: string) => shortsApi.renderizar(shortId),
-    onSuccess: () => {
+    onSuccess: (_dados, shortId) => {
       void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
       void qc.invalidateQueries({ queryKey: FIRES_KEY });
+      void qc.invalidateQueries({ queryKey: progressoKey(shortId) });
     },
   });
 }
@@ -76,7 +80,10 @@ export function useRenderizarPrevia(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (shortId: string) => shortsApi.renderizarPrevia(shortId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) }),
+    onSuccess: (_dados, shortId) => {
+      void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+      void qc.invalidateQueries({ queryKey: progressoKey(shortId) });
+    },
   });
 }
 
@@ -88,16 +95,40 @@ export function useRenderizarPrevia(corteId: string) {
  * parados. `refetchInterval` devolvendo `false` desliga sozinho.
  *
  * Quando termina, invalida a lista: e la que o caminho do arquivo aparece.
+ *
+ * ## D-568: por que clicar em "Gerar previa" nao mostrava nada
+ *
+ * Este desligar-sozinho era o problema. Ao montar, o card consulta uma vez, nao
+ * ha render em curso, `concluido` vem indefinido — e o `refetchInterval` decide
+ * `false` PARA SEMPRE. O disparo comecava no backend (que registra o progresso
+ * de forma sincrona, em `render_short.disparar`), e a tela nunca mais
+ * perguntava. Dai os tres sintomas de um defeito so: o clique parecia nao fazer
+ * nada, o painel de passos nunca aparecia, e o arquivo pronto so surgia com F5.
+ *
+ * A correcao nao e polling eterno — e o DISPARO avisar. As duas mutations
+ * invalidam esta chave, o que forca uma releitura; ela volta com
+ * `concluido: false` e o intervalo religa sozinho.
  */
 export function useProgressoRender(shortId: string, corteId: string, ativo: boolean) {
   const qc = useQueryClient();
   const jaInvalidou = useRef(false);
 
   const query = useQuery({
-    queryKey: ['shorts', 'progresso', shortId],
+    queryKey: progressoKey(shortId),
     queryFn: () => shortsApi.progresso(shortId),
     enabled: ativo,
     refetchInterval: (q) => (q.state.data?.render?.concluido === false ? 2000 : false),
+    // D-568: continuar perguntando mesmo com a aba em segundo plano.
+    //
+    // Por padrao o react-query PAUSA o intervalo quando `document.hidden` e
+    // verdadeiro — e o proprio painel convida o operador a sair ("Pode sair
+    // desta tela: o render continua"). Com a pausa, ele saia, voltava e via o
+    // cronometro parado no instante em que virou as costas; o arquivo pronto so
+    // aparecia com F5.
+    //
+    // O custo e limitado por construcao: este intervalo so existe enquanto
+    // `concluido === false`, ou seja, enquanto ha de fato um render em curso.
+    refetchIntervalInBackground: true,
   });
 
   const concluido = query.data?.render?.concluido;
