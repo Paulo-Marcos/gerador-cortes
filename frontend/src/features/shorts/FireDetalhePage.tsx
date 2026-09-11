@@ -466,7 +466,26 @@ export default function FireDetalhePage() {
               {onda.data?.peaks?.length ? (
                 <ReguaDeOnda
                   corteId={corteId}
-                  duracaoSeg={duracaoRegua}
+                  // D-572: a duração dos PICOS, e não a da tela.
+                  //
+                  // `duracaoRegua` é `duracaoVideo || fire.duracao_seg`, e no
+                  // instante em que a régua nasce o `<video>` quase nunca leu os
+                  // metadados ainda — então ela nasce com o valor do BANCO. A
+                  // onda é criada uma vez só (de propósito: recriá-la a cada
+                  // refino de milissegundo foi o que quebrou a D-551), então
+                  // esse valor fica.
+                  //
+                  // E `duracao_clip_seg` envelhece: a D-362 já registrou isso
+                  // como risco residual. Quando ele envelhece, o wavesurfer
+                  // espalha os picos sobre uma duração que não é a do arquivo,
+                  // a onda ESTICA, e o desencontro cresce com o tempo — o áudio
+                  // deixa de bater com o desenho justamente no fim, que é onde
+                  // se marca o fim do trecho.
+                  //
+                  // `duration_sec` vem medido de `len(amostras)/sample_rate`
+                  // sobre o mesmo arquivo que o player toca. É a única das três
+                  // durações que não pode discordar dos picos.
+                  duracaoSeg={onda.data.duration_sec || duracaoRegua}
                   picos={onda.data.peaks}
                   shorts={shorts}
                   emFoco={emQuadro}
