@@ -94,9 +94,17 @@ export function GanchoModal({
   }, [open, short.id, short.gancho_tela, short.gancho_ate_seg]);
 
   const gerar = useSugerirGanchos();
-  // Fechar o modal e reabrir noutro candidato nao pode manter as variacoes do
-  // anterior na tela: elas foram escritas para OUTRO trecho.
-  const variacoes = gerar.data?.variacoes ?? [];
+  // D-573: as da geração de agora, ou as que ficaram gravadas deste short.
+  //
+  // A mutation continua mandando enquanto está fresca — é ela que traz o
+  // resultado sem esperar o refetch da lista. O que mudou é o que acontece
+  // depois: antes, fechar o modal zerava tudo, e uma chamada real leva minutos
+  // (231s no log do canal). Agora as propostas ficam com o short, então reabrir
+  // encontra o que a última geração produziu.
+  //
+  // Continuam sendo DESTE trecho, e não do anterior: elas vêm de `short`, que
+  // troca junto com o candidato.
+  const variacoes = gerar.data?.variacoes ?? short.gancho_sugestoes ?? [];
 
   const tom = tomDoGancho(texto);
   const palavrasEscritas = contarPalavras(texto);
@@ -177,8 +185,12 @@ export function GanchoModal({
                     : `Gerar ${MAX_VARIACOES} variações`}
               </Button>
               {gerar.isPending && (
+                // O tempo real medido no canal foi de quase quatro minutos. Sem
+                // dizer isso, o spinner vira a mesma escuridão do render antes
+                // da D-568 — e aqui é pior, porque a tentação é fechar a janela.
                 <span className="text-[11.5px] text-[var(--wb-text-mute)]">
-                  lendo a transcrição deste trecho…
+                  lendo a transcrição deste trecho — costuma levar alguns minutos. Pode fechar:
+                  as variações ficam guardadas.
                 </span>
               )}
             </div>
@@ -192,7 +204,7 @@ export function GanchoModal({
             {/* Sucesso com lista vazia NAO pode parecer botao quebrado: o
                 modelo pode nao ter produzido nada aproveitavel, e isso e uma
                 resposta, nao uma falha silenciosa. */}
-            {gerar.isSuccess && variacoes.length === 0 && (
+            {gerar.isSuccess && gerar.data?.variacoes.length === 0 && (
               <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-dim)]">
                 A IA não devolveu nada aproveitável desta vez. Tente de novo ou escreva o seu.
               </p>

@@ -396,6 +396,18 @@ class Short(Base):
     gancho_tela: Mapped[str] = mapped_column(String(200), default="")
     # Quanto tempo o gancho fica em tela. 0 = o padrao de `domain/gancho_short`.
     gancho_ate_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    # D-573: as ultimas variacoes que a IA propos, em JSON.
+    #
+    # A D-565 decidiu NAO gravar o resultado do gerador, e a razao era boa:
+    # gravar ESCOLHERIA pelo operador, e o gancho e a decisao mais editorial
+    # desta tela. Mas a razao era sobre ESCOLHER, nao sobre LEMBRAR.
+    #
+    # Medido no log do canal: uma chamada real levou 231 segundos. Guardadas so
+    # no estado do modal, essas variacoes morriam se ele fechasse a janela,
+    # trocasse de trecho ou recarregasse — quase quatro minutos de espera
+    # jogados fora, sem aviso. Agora elas sobrevivem; escolher continua sendo
+    # dele, por PATCH, como sempre foi.
+    gancho_sugestoes: Mapped[str] = mapped_column(Text, default="[]")
     desvios: Mapped[str] = mapped_column(Text, default="[]")
     status: Mapped[str] = mapped_column(String(50), default=StatusShort.SUGERIDO)
     # D-484: quem propos este trecho — "ia" ou "manual".

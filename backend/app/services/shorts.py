@@ -941,6 +941,9 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         # D-565: o gancho de TELA, que e outro texto — ver o comentario da
         # coluna em `models.Short`. O `gancho` acima segue sendo o da curadoria.
         "gancho_tela": short.gancho_tela,
+        # D-573: as propostas da IA viajam com o short — assim reabrir o modal
+        # encontra o que a ultima geracao produziu, em vez de uma tela limpa.
+        "gancho_sugestoes": _json_textos(short.gancho_sugestoes),
         "gancho_ate_seg": short.gancho_ate_seg,
         "inicio_seg": short.inicio_seg,
         "fim_seg": short.fim_seg,
@@ -974,6 +977,36 @@ def _json_dict_seguro(bruto: str | None) -> dict:
     except json.JSONDecodeError:
         return {}
     return dados if isinstance(dados, dict) else {}
+
+
+def _json_textos(bruto: str | None) -> list[str]:
+    """Uma lista de STRINGS, descartando o que nao for.
+
+    D-573: a tela chama `.trim()` em cada item. Um objeto entre eles derruba a
+    pagina inteira com "texto.trim is not a function" — nao so o modal, a rota
+    toda. Garantir o tipo na leitura e a mesma regra do `fundo_editorial` na
+    D-554: o que esta gravado degrada, nunca quebra.
+    """
+    try:
+        dados = json.loads(bruto or "[]")
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(dados, list):
+        return []
+    return [item for item in dados if isinstance(item, str) and item.strip()]
+
+
+async def gravar_sugestoes_de_gancho(short_id: str, variacoes: list[str]) -> None:
+    """Guarda o que a IA acabou de propor, sem escolher nada (D-573)."""
+    async with AsyncSessionLocal() as db:
+        short = await db.get(Short, short_id)
+        if not short:
+            return
+        short.gancho_sugestoes = json.dumps(
+            [v for v in variacoes if isinstance(v, str) and v.strip()],
+            ensure_ascii=False,
+        )
+        await db.commit()
 
 
 def _json_lista(bruto: str | None) -> list[dict]:

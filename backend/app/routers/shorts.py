@@ -421,10 +421,19 @@ async def sugerir_ganchos(short_id: str):
     aberto olhando para o campo, e um fire-and-forget o obrigaria a recarregar
     para saber se chegou.
     """
+    from app.services import shorts as shorts_store
     from app.services.claude_ia import ClaudeIaService
 
     try:
-        return {"variacoes": await ClaudeIaService.sugerir_ganchos_via_claude(short_id)}
+        variacoes = await ClaudeIaService.sugerir_ganchos_via_claude(short_id)
+        # D-573: GRAVA AS PROPOSTAS, e continua sem escolher.
+        #
+        # A chamada real leva minutos (231s no log do canal). Enquanto o
+        # resultado so vivia no estado do modal, fechar a janela nesse intervalo
+        # jogava a espera inteira fora. A razao da D-565 para nao gravar era nao
+        # DECIDIR pelo operador — e decidir continua sendo dele, pelo PATCH.
+        await shorts_store.gravar_sugestoes_de_gancho(short_id, variacoes)
+        return {"variacoes": variacoes}
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

@@ -91,6 +91,8 @@ export interface ShortSugerido {
   gancho: string;
   /** D-565: o titulo-gancho que aparece na ABERTURA. Vazio = sem gancho. */
   gancho_tela: string;
+  /** D-573: as últimas variações que a IA propôs para este short. */
+  gancho_sugestoes: string[];
   /** D-565: quanto tempo o gancho fica em tela. 0 = o padrao. */
   gancho_ate_seg: number;
   inicio_seg: number;

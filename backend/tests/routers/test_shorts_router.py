@@ -536,3 +536,26 @@ class TestPresetDePalcoDoShort:
         so_do_short = app_presets.get("/api/presets/layout?tipo=palco_short").json()
 
         assert [p["nome"] for p in so_do_short] == ["Do short"]
+
+
+class TestSugestoesDeGancho:
+    """D-573: as propostas da IA sobrevivem ao fechar o modal."""
+
+    def test_json_textos_descarta_o_que_nao_e_string(self):
+        """A tela chama `.trim()` em cada item.
+
+        Um objeto entre eles derruba a ROTA inteira com
+        "texto.trim is not a function" — nao so o modal. Garantir o tipo na
+        leitura e a mesma regra do `fundo_editorial` na D-554: degrada, nunca
+        quebra.
+        """
+        from app.services.shorts import _json_textos
+
+        assert _json_textos('["um", {"texto": "dois"}, 3, "  ", "tres"]') == ["um", "tres"]
+
+    def test_json_textos_aguenta_lixo_no_lugar_da_lista(self):
+        from app.services.shorts import _json_textos
+
+        assert _json_textos("nao e json") == []
+        assert _json_textos('{"variacoes": []}') == []
+        assert _json_textos(None) == []
