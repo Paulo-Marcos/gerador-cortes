@@ -224,7 +224,10 @@ export const RemotionRoot: React.FC = () => {
           fps: 30,
           props,
         })}
-        defaultProps={{ cenas: [], captions: [], duracaoSeg: 30 }}
+        // `gancho` e `legendaCor` explicitos: o schema os declara com default,
+        // mas `defaultProps` e tipado pela saida do zod (ja com defaults
+        // aplicados), entao omitir aqui deixa o Studio vermelho.
+        defaultProps={{ cenas: [], captions: [], gancho: null, legendaCor: "", duracaoSeg: 30 }}
         width={1080}
         height={1920}
       />
