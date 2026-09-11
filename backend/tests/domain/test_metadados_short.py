@@ -14,6 +14,7 @@ from app.domain.metadados_short import (
     MAX_HASHTAGS,
     MAX_TITULO,
     PostDoShort,
+    hashtags_gravadas,
     normalizar_hashtag,
     normalizar_hashtags,
     post_da_resposta,
@@ -106,3 +107,23 @@ class TestPostDaResposta:
     def test_titulo_gigante_para_no_teto_de_seguranca(self):
         post = post_da_resposta({"titulo": "x" * 5000})
         assert len(post.titulo) == MAX_TITULO
+
+
+class TestHashtagsGravadas:
+    """A leitura do que esta no banco — a mesma nos dois lugares que a fazem.
+
+    A tela le para editar; a publicacao le para mandar a plataforma. As duas
+    tinham tratamento de erro proprio e ja divergiam (`json.JSONDecodeError` de
+    um lado, `(ValueError, TypeError)` do outro).
+    """
+
+    def test_json_gravado_vira_lista(self):
+        assert hashtags_gravadas('["juros", "selic"]') == ["juros", "selic"]
+
+    @pytest.mark.parametrize("quebrado", ["{quebrado", "", None, "null", '"texto"'])
+    def test_json_invalido_vira_lista_vazia(self, quebrado):
+        """Uma tag corrompida nao pode impedir a publicacao de um video pronto."""
+        assert hashtags_gravadas(quebrado) == []
+
+    def test_item_que_nao_e_texto_vira_texto(self):
+        assert hashtags_gravadas("[1, 2]") == ["1", "2"]

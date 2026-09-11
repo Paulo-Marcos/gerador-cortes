@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from app.database import AsyncSessionLocal
 from app.domain.cenas_short_ia import recortar_transcricao
-from app.domain.metadados_short import PostDoShort, normalizar_hashtags
+from app.domain.metadados_short import PostDoShort, hashtags_gravadas, normalizar_hashtags
 from app.domain.publicacao import LIMITES, Plataforma
 from app.models import Corte, MetadadoShort, Short
 from sqlalchemy import select
@@ -187,7 +187,7 @@ def _serializar(meta: MetadadoShort) -> dict:
     return {
         "titulo": meta.titulo_youtube,
         "descricao": meta.descricao_youtube,
-        "hashtags": _json_lista(meta.tags_youtube),
+        "hashtags": hashtags_gravadas(meta.tags_youtube),
         # A tela usa isto para dizer "ainda nao escrevi" em vez de mostrar
         # tres campos vazios que parecem defeito.
         "gerado": bool(meta.titulo_youtube),
@@ -195,6 +195,13 @@ def _serializar(meta: MetadadoShort) -> dict:
 
 
 def _json_lista(bruto: str) -> list:
+    """A transcricao do corte, desserializada.
+
+    Fica aqui, e nao no dominio, porque e o mesmo utilitario local que os outros
+    cinco servicos deste projeto ja repetem para o mesmo fim — unifica-los todos
+    seria um refactor a parte. As HASHTAGS, essas sim, vao pelo dominio: elas sao
+    lidas em dois lugares que ja tinham comecado a divergir.
+    """
     try:
         valor = json.loads(bruto or "[]")
     except (ValueError, TypeError):

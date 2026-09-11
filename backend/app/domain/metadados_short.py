@@ -115,6 +115,29 @@ def normalizar_hashtags(brutas: object) -> list[str]:
     return limpas
 
 
+def hashtags_gravadas(bruto_json: object) -> list[str]:
+    """As hashtags que estao no banco, a partir do JSON gravado.
+
+    Existe porque o campo e lido em DOIS lugares — a tela (que as mostra para
+    edicao) e a publicacao (que as manda a plataforma) — e as duas leituras ja
+    tinham comecado a divergir no tratamento de erro. JSON quebrado vira lista
+    vazia nas duas: uma tag corrompida nao pode impedir a publicacao de um video
+    que esta pronto.
+
+    >>> hashtags_gravadas('["juros", "selic"]')
+    ['juros', 'selic']
+    >>> hashtags_gravadas('{quebrado')
+    []
+    >>> hashtags_gravadas(None)
+    []
+    """
+    try:
+        valor = json.loads(bruto_json or "[]")  # type: ignore[arg-type]
+    except (ValueError, TypeError):
+        return []
+    return [str(item) for item in valor] if isinstance(valor, list) else []
+
+
 def post_da_resposta(bruto: object) -> PostDoShort:
     """O post dentro do que o modelo devolveu.
 

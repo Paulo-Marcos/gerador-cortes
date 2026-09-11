@@ -206,14 +206,14 @@ async def _texto_do_short(db, short: Short, corte: Corte) -> MetadadosBase:
 
 
 def _hashtags_do_post(meta: MetadadoShort | None) -> list[str]:
-    """As hashtags escritas para ESTE short, se houver."""
-    if not meta:
-        return []
-    try:
-        valor = json.loads(meta.tags_youtube or "[]")
-    except (ValueError, TypeError):
-        return []
-    return [str(t) for t in valor] if isinstance(valor, list) else []
+    """As hashtags escritas para ESTE short, se houver.
+
+    A desserializacao vem do dominio: a tela le o mesmo campo para edita-las, e
+    duas leituras com tratamento de erro proprio ja tinham comecado a divergir.
+    """
+    from app.domain.metadados_short import hashtags_gravadas
+
+    return hashtags_gravadas(meta.tags_youtube) if meta else []
 
 
 async def montar_contexto_do_corte(corte_id: str) -> ContextoPublicacao:
