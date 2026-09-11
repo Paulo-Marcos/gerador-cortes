@@ -15,6 +15,29 @@ import type { PalavraTranscrita } from './shortsApi';
 // prévia serve para julgar legibilidade e quebra de linha, e as duas dependem
 // disso. A QUEBRA em si não é imitada — vem da mesma função do render.
 
+// D-563: as cores oferecidas para a palavra corrente.
+//
+// O catálogo é de APRESENTAÇÃO — o que se grava no short é o hex, não a chave.
+// Assim o renderer não precisa conhecer esta lista: ele recebe a cor pronta.
+// Uma chave obrigaria os dois lados a manterem a mesma tabela, e a D-558 já
+// mostrou o preço disso (o `StageChrome` do frontend ficou anos com o quadro do
+// horizontal cravado enquanto o do renderer aprendia a receber o dele).
+//
+// As duas primeiras vêm da identidade do canal: o azul do HUD é o realce de
+// hoje, e o verde é o dos brackets do palco. O verde-escuro é o que o operador
+// pediu para combinar com o fundo — fica na lista mesmo sendo o mais arriscado
+// sobre vídeo claro, porque é ele quem julga isso olhando.
+export const CORES_DA_LEGENDA: readonly { hex: string; nome: string }[] = [
+  { hex: '#9bcfe3', nome: 'azul do HUD (padrão)' },
+  { hex: '#6aaa84', nome: 'verde do palco' },
+  { hex: '#2f5f43', nome: 'verde escuro' },
+  { hex: '#facc15', nome: 'amarelo' },
+  { hex: '#ff8a3d', nome: 'laranja' },
+  { hex: '#ff5a72', nome: 'rosa' },
+  { hex: '#c9a4ff', nome: 'lilás' },
+  { hex: '#ffffff', nome: 'branco (sem realce)' },
+];
+
 interface Props {
   palavras: PalavraTranscrita[];
   /** Bordas do short, na timeline do bruto. */
@@ -22,9 +45,17 @@ interface Props {
   fimSeg: number;
   /** Onde o player está, na timeline do bruto. */
   tempoAtualSeg: number;
+  /** D-563: hex da palavra corrente. Vazio = o acento do canal. */
+  cor?: string;
 }
 
-export function LegendaPrevia({ palavras, inicioSeg, fimSeg, tempoAtualSeg }: Props) {
+export function LegendaPrevia({
+  palavras,
+  inicioSeg,
+  fimSeg,
+  tempoAtualSeg,
+  cor = '',
+}: Props) {
   const paginas = useMemo(
     () => paginasDoTrecho(palavras, inicioSeg, fimSeg),
     [palavras, inicioSeg, fimSeg],
@@ -58,7 +89,7 @@ export function LegendaPrevia({ palavras, inicioSeg, fimSeg, tempoAtualSeg }: Pr
               key={`${token.deSeg}-${indice}`}
               style={{
                 whiteSpace: 'pre',
-                color: corrente ? 'var(--wb-accent)' : '#ffffff',
+                color: corrente ? cor || 'var(--wb-accent)' : '#ffffff',
               }}
             >
               {token.texto}

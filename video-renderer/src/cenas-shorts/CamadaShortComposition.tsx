@@ -42,6 +42,8 @@ export const camadaShortSchema = z.object({
   /** D-565: o gancho da abertura. `null` = este short nao tem, que e o comum. */
   gancho: ganchoShortSchema.nullable().default(null),
   captions: z.array(captionShortSchema),
+  /** D-563: hex da palavra corrente da legenda. "" = o acento do canal. */
+  legendaCor: z.string().default(""),
   /** Duração do short em segundos — define o tamanho da composição. */
   duracaoSeg: z.number(),
 });
@@ -52,6 +54,7 @@ export const CamadaShortComposition: React.FC<CamadaShortSchema> = ({
   cenas,
   captions,
   gancho,
+  legendaCor,
 }) => (
   // Fundo transparente: o alpha é o produto desta composição.
   <AbsoluteFill style={{ backgroundColor: "transparent" }}>
@@ -59,6 +62,7 @@ export const CamadaShortComposition: React.FC<CamadaShortSchema> = ({
       cenas={cenas as CamadaShortSchema["cenas"] as never}
       captions={captions as never}
       gancho={gancho ?? null}
+      legendaCor={legendaCor}
     />
   </AbsoluteFill>
 );

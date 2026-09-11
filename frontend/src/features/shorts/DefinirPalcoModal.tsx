@@ -23,6 +23,8 @@ import {
 import type { PalcoShortPreset } from '@/types/presets';
 import { EditorDeRecorte } from './EditorDeRecorte';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
+import { CORES_DA_LEGENDA, LegendaPrevia } from './LegendaPrevia';
+import { useTranscricaoDoCorte } from './useShortsDoCorte';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { ocupacaoDoPalco, redimensionarPalco } from './arrastarSlot';
 import { PalcoPrevia } from './PalcoPrevia';
@@ -71,6 +73,8 @@ interface Props {
   /** O player do bruto: a prévia desenha os quadros dele. */
   video: React.RefObject<HTMLVideoElement | null>;
   ocupado: boolean;
+  /** D-563: onde o player parou — a legenda da prévia desenha ESTE instante. */
+  tempoAtualSeg: number;
   onAplicar: (mudanca: AtualizarShortBody) => void;
 }
 
@@ -83,6 +87,7 @@ export function DefinirPalcoModal({
   fonte,
   video,
   ocupado,
+  tempoAtualSeg,
   onAplicar,
 }: Props) {
   const arranjos = useArranjosDePalco(corteId);
@@ -133,6 +138,7 @@ export function DefinirPalcoModal({
     recortes: short.recortes_palco ?? {},
     ajustes: short.ajustes_palco ?? {},
     fundo: short.fundo_editorial ?? '',
+    legenda_cor: short.legenda_cor ?? '',
   });
 
   // D-552: aplicar um preset COPIA os valores — e agora marca de onde vieram.
@@ -145,6 +151,11 @@ export function DefinirPalcoModal({
     onAplicar(mudancaDoPalco(id, payload));
 
   const presetDoCorte = usePalcoDoCorte(corteId);
+  // D-563: escolher a cor do realce sem ver a legenda seria escolher no escuro —
+  // o mesmo defeito do seletor de fundo antes da D-552. O player fica pausado
+  // enquanto o modal está aberto (`VideoEspelho`), então o instante é o que ele
+  // deixou na régua, e a palavra realçada é a daquele momento.
+  const transcricao = useTranscricaoDoCorte(corteId);
 
   // D-500 aplicada aqui: durante o arraste o backend resolve um plano
   // hipotético e a prévia desenha ESSE. Sem isto o retângulo andaria vazio —
@@ -397,7 +408,47 @@ export function DefinirPalcoModal({
             </p>
           </Secao>
 
-          <Secao numero={6} titulo="Guardar como preset">
+          <Secao numero={6} titulo="A legenda">
+            {/* D-563: a cor da palavra CORRENTE, e só dela.
+                O resto da frase fica branco em short praticamente sempre — é o
+                realce que diferencia, e é ele que precisa combinar com o palco.
+                Dar cor às duas abriria a porta para uma legenda inteira num tom
+                que some sobre o vídeo, e o contorno preto não salva o que já é
+                escuro. */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {CORES_DA_LEGENDA.map((opcao) => {
+                const ativa = (short.legenda_cor || CORES_DA_LEGENDA[0].hex) === opcao.hex;
+                return (
+                  <button
+                    key={opcao.hex}
+                    type="button"
+                    disabled={ocupado}
+                    title={opcao.nome}
+                    aria-label={`Cor da legenda: ${opcao.nome}`}
+                    aria-pressed={ativa}
+                    // Clicar na que já está marcada volta ao acento do canal —
+                    // é como se desfaz a escolha sem um botão "limpar" só disso.
+                    onClick={() =>
+                      onAplicar({ legenda_cor: opcao.hex === short.legenda_cor ? '' : opcao.hex })
+                    }
+                    className={cn(
+                      'h-7 w-7 rounded-full border-2 transition-transform disabled:opacity-50',
+                      ativa
+                        ? 'border-[var(--wb-accent)] ring-2 ring-[var(--wb-accent)]/40'
+                        : 'border-[var(--wb-border)] hover:scale-110',
+                    )}
+                    style={{ background: opcao.hex }}
+                  />
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+              A cor da palavra que está sendo dita. O resto da frase fica branco. Dá para ver
+              na prévia ao lado enquanto o player anda.
+            </p>
+          </Secao>
+
+          <Secao numero={7} titulo="Guardar como preset">
             <div className="flex flex-wrap items-center gap-1.5">
               <Input
                 value={nomeNovo}
@@ -551,6 +602,15 @@ export function DefinirPalcoModal({
             // impossível de acertar com a mão antes da D-559.
             <div className={cn('w-full', movendo ? 'max-w-[300px]' : 'max-w-[220px]')}>
               <PalcoPrevia plano={planoNaTela} video={video}>
+                {transcricao.data && (
+                  <LegendaPrevia
+                    palavras={transcricao.data.palavras}
+                    inicioSeg={short.inicio_seg}
+                    fimSeg={short.fim_seg}
+                    tempoAtualSeg={tempoAtualSeg}
+                    cor={short.legenda_cor}
+                  />
+                )}
                 <EditorDePalco
                   slots={planoNaTela.slots}
                   ativo={movendo}

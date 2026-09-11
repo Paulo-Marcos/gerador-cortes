@@ -8,13 +8,14 @@ import { mudancaDoPalco } from '../aplicarPalco';
 // existia como conceito porque aplicar copiava sem deixar rastro.
 
 describe('mudancaDoPalco', () => {
-  it('copia os cinco campos do preset', () => {
+  it('copia os seis campos do preset', () => {
     const corpo = mudancaDoPalco('p1', {
       arranjo: 'dividida_empilhada',
       janela_cheia: 'pessoa',
       recortes: { pessoa: { x: 1, y: 2, w: 3, h: 4 } },
       ajustes: { pessoa: { x: 5, y: 6, w: 7, h: 8 } },
       fundo: 'topographic',
+      legenda_cor: '#6aaa84',
     });
 
     expect(corpo).toEqual({
@@ -24,6 +25,7 @@ describe('mudancaDoPalco', () => {
       recortes_palco: { pessoa: { x: 1, y: 2, w: 3, h: 4 } },
       ajustes_palco: { pessoa: { x: 5, y: 6, w: 7, h: 8 } },
       fundo_editorial: 'topographic',
+      legenda_cor: '#6aaa84',
     });
   });
 
@@ -78,5 +80,19 @@ describe('D-561: o preset guarda o palco inteiro', () => {
     const corpo = mudancaDoPalco('p1', { arranjo: 'cheia' });
 
     expect(corpo.ajustes_palco).toEqual({});
+  });
+});
+
+describe('D-563: a cor da legenda viaja com o palco', () => {
+  it('vem junto quando o preset a tem', () => {
+    const corpo = mudancaDoPalco('p1', { arranjo: 'cheia', legenda_cor: '#2f5f43' });
+
+    expect(corpo.legenda_cor).toBe('#2f5f43');
+  });
+
+  it('preset antigo volta ao acento do canal, e nao ao realce do trecho anterior', () => {
+    const corpo = mudancaDoPalco('p1', { arranjo: 'cheia' });
+
+    expect(corpo.legenda_cor).toBe('');
   });
 });

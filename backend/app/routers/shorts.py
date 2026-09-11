@@ -303,6 +303,7 @@ class AtualizarShortRequest(BaseModel):
     fundo_palco: str | None = None
     # D-552: a TEXTURA do palco (id de fundo), e qual preset a trouxe.
     fundo_editorial: str | None = None
+    legenda_cor: str | None = None
     palco_short_preset: str | None = None
     # D-565: o titulo-gancho da abertura e quanto tempo ele fica em tela.
     gancho_tela: str | None = None
@@ -326,6 +327,7 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 recortes_palco=body.recortes_palco,
                 fundo_palco=body.fundo_palco,
                 fundo_editorial=body.fundo_editorial,
+                legenda_cor=body.legenda_cor,
                 palco_short_preset=body.palco_short_preset,
                 palco_preset=body.palco_preset,
                 moldura=body.moldura,

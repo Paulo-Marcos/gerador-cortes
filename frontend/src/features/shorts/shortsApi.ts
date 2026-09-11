@@ -125,6 +125,8 @@ export interface ShortSugerido {
   fundo_palco: string;
   /** D-552: a TEXTURA do palco. Vazio = a padrão do canal. */
   fundo_editorial: string;
+  /** D-563: hex da palavra corrente da legenda. Vazio = o acento do canal. */
+  legenda_cor: string;
   /** D-552: de qual preset de palco estes valores vieram. */
   palco_short_preset: string;
   /** Cenas desenhadas sobre o short, na timeline DELE (começa no zero). */
@@ -147,6 +149,7 @@ export interface AtualizarShortBody {
   recortes_palco?: Record<string, Retangulo>;
   fundo_palco?: string;
   fundo_editorial?: string;
+  legenda_cor?: string;
   palco_short_preset?: string;
   /** D-565: o titulo-gancho da abertura. "" apaga. */
   gancho_tela?: string;

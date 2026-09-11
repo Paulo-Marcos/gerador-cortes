@@ -479,6 +479,19 @@ class Short(Base):
     # A marca e limpa assim que qualquer um desses valores muda por fora, para
     # ela nunca afirmar uma origem que deixou de ser verdade.
     palco_short_preset: Mapped[str] = mapped_column(String(200), default="")
+    # D-563: a cor da palavra CORRENTE da legenda, em hex ("#9bcfe3").
+    #
+    # Guardamos o hex resolvido, e nao uma chave de catalogo, porque quem
+    # desenha a legenda sao DOIS lugares — a previa no navegador e o Remotion no
+    # render. Uma chave obrigaria os dois a manterem a mesma tabela de cores, e
+    # a licao da D-558 e que duas copias da mesma tabela divergem: o
+    # `StageChrome` do frontend ficou com 1920x1080 cravado enquanto o do
+    # renderer aprendia a receber o quadro, e ninguem percebeu por meses.
+    #
+    # O hex nao tem esse problema: e o proprio valor, igual nos dois lados.
+    #
+    # Vazio = a cor de acento do canal, que e o que sempre foi.
+    legenda_cor: Mapped[str] = mapped_column(String(20), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

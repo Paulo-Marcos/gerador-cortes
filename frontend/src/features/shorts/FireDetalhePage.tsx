@@ -254,6 +254,7 @@ export default function FireDetalhePage() {
           inicioSeg={emQuadro.inicio_seg}
           fimSeg={emQuadro.fim_seg}
           tempoAtualSeg={tempoAtual}
+          cor={emQuadro.legenda_cor}
         />
       )}
     </>
@@ -638,6 +639,7 @@ export default function FireDetalhePage() {
           fonte={{ largura: dimensoes.largura, altura: dimensoes.altura }}
           video={video}
           ocupado={atualizar.isPending}
+          tempoAtualSeg={tempoAtual}
           onAplicar={(mudanca) => atualizar.mutate({ shortId: emQuadro.id, ...mudanca })}
         />
       )}

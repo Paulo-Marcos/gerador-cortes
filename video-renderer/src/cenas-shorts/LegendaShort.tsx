@@ -26,11 +26,21 @@ export interface LegendaShortProps {
   captions: Caption[];
   /** Sobe a legenda quando há algo desenhado no rodapé (CTA, marca). */
   deslocamentoRodape?: number;
+  /**
+   * D-563: a cor da palavra CORRENTE, em hex. Vazio = o acento do canal.
+   *
+   * Só a corrente. O resto da frase fica branco em short praticamente sempre —
+   * é o realce que diferencia, e é ele que o operador quer combinar com o
+   * palco. Dar cor às duas abriria a porta para uma legenda inteira num tom que
+   * some sobre o vídeo, e o contorno preto não salva o que já é escuro.
+   */
+  cor?: string;
 }
 
 export const LegendaShort: React.FC<LegendaShortProps> = ({
   captions,
   deslocamentoRodape = 0,
+  cor = "",
 }) => {
   const frame = useCurrentFrame();
   const { fps, height } = useVideoConfig();
@@ -81,7 +91,7 @@ export const LegendaShort: React.FC<LegendaShortProps> = ({
           <span
             key={`${token.fromMs}-${indice}`}
             style={{
-              color: corrente ? COLORS_V2.azulAcento : COLORS_V2.branco,
+              color: corrente ? cor || COLORS_V2.azulAcento : COLORS_V2.branco,
               whiteSpace: "pre",
             }}
           >

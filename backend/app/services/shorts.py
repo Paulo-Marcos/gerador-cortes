@@ -423,6 +423,7 @@ async def atualizar_short(
     fundo_palco: str | None = None,
     fundo_editorial: str | None = None,
     palco_short_preset: str | None = None,
+    legenda_cor: str | None = None,
     gancho_tela: str | None = None,
     gancho_ate_seg: float | None = None,
 ) -> dict:
@@ -514,6 +515,11 @@ async def atualizar_short(
             # saiu deve cair no default em vez de virar erro de gravacao.
             short.fundo_editorial = fundo_editorial
 
+        if legenda_cor is not None:
+            # D-563: o hex da palavra corrente. "" volta ao acento do canal.
+            # Mesma regra dos outros: nao validamos aqui, degrada na leitura.
+            short.legenda_cor = legenda_cor
+
         # D-552: a marca do preset e escrita PRIMEIRO e apagada por qualquer
         # mudanca posterior no mesmo PATCH.
         #
@@ -525,7 +531,13 @@ async def atualizar_short(
             short.palco_short_preset = palco_short_preset
         elif any(
             campo is not None
-            for campo in (arranjo_palco, janela_cheia, recortes_palco, fundo_editorial)
+            for campo in (
+                arranjo_palco,
+                janela_cheia,
+                recortes_palco,
+                fundo_editorial,
+                legenda_cor,
+            )
         ):
             short.palco_short_preset = ""
 
@@ -942,6 +954,7 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "recortes_palco": _json_dict_seguro(short.recortes_palco),
         "fundo_palco": short.fundo_palco,
         "fundo_editorial": short.fundo_editorial,
+        "legenda_cor": short.legenda_cor,
         "palco_short_preset": short.palco_short_preset,
         "origem": short.origem,
         "cenas": _json_lista(short.cenas_remotion),

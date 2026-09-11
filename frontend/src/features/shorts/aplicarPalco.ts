@@ -56,5 +56,9 @@ export function mudancaDoPalco(
     // chave de cor aqui; ela não casa com nenhuma textura e o resolvedor cai no
     // padrão do canal — degradar para o default é melhor que recusar o preset.
     fundo_editorial: payload.fundo ?? '',
+    // D-563: a legenda faz parte do palco — é a camada que vai por cima dele, e
+    // a cor do realce foi escolhida OLHANDO para o fundo. Deixá-la de fora
+    // faria o preset entregar o palco certo com o realce do trecho anterior.
+    legenda_cor: payload.legenda_cor ?? '',
   };
 }

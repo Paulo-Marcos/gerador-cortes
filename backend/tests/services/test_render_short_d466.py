@@ -160,6 +160,30 @@ async def test_props_da_camada_levam_captions_e_duracao(ambiente, jobs):
 
 
 @pytest.mark.asyncio
+async def test_a_cor_da_legenda_chega_na_camada(ambiente, jobs):
+    """D-563: quem pinta a palavra corrente e o Remotion, e ele so sabe o que recebe.
+
+    A cor e escolhida na tela e gravada no short; se ela parasse no banco, a
+    previa mostraria o realce novo e o arquivo sairia com o acento de sempre —
+    a divergencia previa/arquivo que a D-549 custou caro para consertar.
+    """
+    sessao, raiz = ambiente
+    async with sessao() as db:
+        short = await db.get(Short, "s1")
+        short.legenda_cor = "#2f5f43"
+        await db.commit()
+
+    await render_short.renderizar_short("s1")
+
+    props = json.loads(
+        (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada_final.props.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert props["legendaCor"] == "#2f5f43"
+
+
+@pytest.mark.asyncio
 async def test_short_com_cenas_gravadas_nao_renderiza_texto_nenhum(ambiente, jobs):
     """D-560: as cenas estao desligadas, e o dado gravado nao ressuscita.
 

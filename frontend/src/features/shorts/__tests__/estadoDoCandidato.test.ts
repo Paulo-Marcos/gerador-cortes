@@ -11,6 +11,7 @@ import type { ShortSugerido, StatusShort } from '../shortsApi';
 function short(over: Partial<ShortSugerido> = {}): ShortSugerido {
   return {
     fundo_editorial: '',
+    legenda_cor: '',
     palco_short_preset: '',
     id: 's1',
     corte_id: 'c1',

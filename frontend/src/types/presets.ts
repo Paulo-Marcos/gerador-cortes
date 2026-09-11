@@ -30,6 +30,8 @@ export interface PalcoShortPreset {
   ajustes: Record<string, { x: number; y: number; w: number; h: number }>;
   /** A TEXTURA editorial (D-552). Presets antigos trazem aqui uma cor da paleta. */
   fundo: string;
+  /** D-563: hex da palavra corrente da legenda. Vazio = o acento do canal. */
+  legenda_cor: string;
 }
 
 /**

@@ -43,6 +43,8 @@ export interface CamadaShortProps {
   captions: Caption[];
   /** D-565: o gancho da abertura, ou `null` quando este short nao tem. */
   gancho?: GanchoShort | null;
+  /** D-563: hex da palavra corrente da legenda. "" = o acento do canal. */
+  legendaCor?: string;
 }
 
 /**
@@ -56,6 +58,7 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
   cenas,
   captions,
   gancho = null,
+  legendaCor = "",
 }) => {
   const { fps } = useVideoConfig();
 
@@ -81,7 +84,7 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
         );
       })}
 
-      <LegendaShort captions={captions} />
+      <LegendaShort captions={captions} cor={legendaCor} />
     </>
   );
 };
