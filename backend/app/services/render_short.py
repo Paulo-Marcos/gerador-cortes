@@ -316,7 +316,7 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             corte_id=corte.id,
             projeto_id=corte.projeto_id,
             bruto=bruto,
-            diretorio=projetos_dir() / corte.projeto_id / "cortes" / corte.id / "shorts" / short.id,
+            diretorio=_diretorio_do_short(corte.projeto_id, corte.id, short.id),
             inicio_seg=float(short.inicio_seg),
             fim_seg=float(short.fim_seg),
             foco_x=foco_efetivo(short, corte),
@@ -418,6 +418,19 @@ def resumir_log(texto: str, *, linhas: int = LINHAS_DO_LOG) -> dict:
     }
 
 
+def _diretorio_do_short(projeto_id: str, corte_id: str, short_id: str) -> Path:
+    """Onde moram os artefatos deste short: MP4, props e o log do worker.
+
+    D-568: escrito num lugar so porque o LOG depende de concordar com o RENDER.
+    Enquanto eram duas expressoes iguais, o dia em que o render mudasse de pasta
+    — e ele ja mudou uma vez, quando os shorts ganharam subdiretorio proprio —
+    o log passaria a ler onde ninguem escreve, SEM ERRO NENHUM: `is_file()` da
+    falso, a funcao devolve `existe: false`, e a tela diz educadamente que nao ha
+    log ainda. Mentira plausivel, que e a pior categoria.
+    """
+    return projetos_dir() / projeto_id / "cortes" / corte_id / "shorts" / short_id
+
+
 async def log_do_render(short_id: str) -> dict:
     """O `worker_debug.log` deste short, resumido.
 
@@ -435,9 +448,7 @@ async def log_do_render(short_id: str) -> dict:
         projeto_id = corte.projeto_id
         corte_id = corte.id
 
-    arquivo = (
-        projetos_dir() / projeto_id / "cortes" / corte_id / "shorts" / short_id / "worker_debug.log"
-    )
+    arquivo = _diretorio_do_short(projeto_id, corte_id, short_id) / "worker_debug.log"
     if not arquivo.is_file():
         return {"linhas": [], "truncado": False, "duracoes_ms": [], "existe": False}
 

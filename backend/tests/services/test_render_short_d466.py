@@ -662,3 +662,27 @@ class TestResumirLog:
 
         assert resumo["truncado"] is False
         assert resumo["duracoes_ms"] == []
+
+
+@pytest.mark.asyncio
+async def test_o_log_e_lido_da_mesma_pasta_em_que_o_render_escreve(ambiente, jobs):
+    """D-568: o log so funciona porque as duas pontas concordam sobre a pasta.
+
+    Enquanto o caminho estava escrito duas vezes, mudar a pasta do render faria o
+    log ler onde ninguem escreve — e sem erro: `is_file()` daria falso e a tela
+    diria, educadamente, que ainda nao ha log. Este teste prende as duas ao mesmo
+    diretorio, que e o que a extracao de `_diretorio_do_short` garante.
+    """
+    _, raiz = ambiente
+    await render_short.renderizar_short("s1")
+
+    pasta = raiz / "p1" / "cortes" / "c1" / "shorts" / "s1"
+    assert (pasta / "camada_final.props.json").is_file(), "o render escreve aqui"
+
+    (pasta / "worker_debug.log").write_text(
+        "[t] Fim: s1_final_recorte status=sucesso duration_ms=4200", encoding="utf-8"
+    )
+    lido = await render_short.log_do_render("s1")
+
+    assert lido["existe"] is True
+    assert lido["duracoes_ms"] == [4200]
