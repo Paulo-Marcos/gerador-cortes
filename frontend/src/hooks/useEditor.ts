@@ -216,6 +216,25 @@ export function useDividirCorte(corteId: string, projetoId?: string) {
   });
 }
 
+// D-575: funde o corte com o vizinho seguinte. O sobrevivente pode ser OUTRO
+// corte (quem comeca antes ganha), entao o cache do corte da rota tambem cai —
+// se ele foi o absorvido, ja nao existe.
+export function useJuntarCortes(corteId: string, projetoId?: string) {
+  const qc = useQueryClient();
+  const { notify } = useToast();
+  return useMutation({
+    mutationFn: (body: { outro_corte_id?: string } = {}) => api.juntarCortes(corteId, body),
+    onSuccess: (corte) => {
+      qc.setQueryData(corteKey(corte.id), corte);
+      invalidaCorte(qc, corteId, projetoId);
+      notify('Cortes juntados. Gere o bruto de novo para ver o resultado.', { tone: 'success' });
+    },
+    onError: (error) => {
+      notify(error instanceof Error ? error.message : 'Erro ao juntar cortes.', { tone: 'error' });
+    },
+  });
+}
+
 export function useAprovar(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -62,6 +62,9 @@ interface Props {
   onCriarCorteDaSelecao: (inicioHms: string, fimHms: string, titulo: string) => void;
   onDividirCorteAqui: () => void;
   dividindoCorte: boolean;
+  onJuntarProximoCorte?: () => void;
+  juntandoCorte?: boolean;
+  onAlternarVelocidade?: () => void;
   onGerarManual: () => void;
   onGerarTrechosClaude: () => void;
   pending: {
@@ -112,6 +115,9 @@ export function EditorFase1({
   onCriarCorteDaSelecao,
   onDividirCorteAqui,
   dividindoCorte,
+  onJuntarProximoCorte,
+  juntandoCorte,
+  onAlternarVelocidade,
   onGerarManual,
   onGerarTrechosClaude,
   pending,
@@ -176,6 +182,9 @@ export function EditorFase1({
               onCriarCorteDaSelecao={onCriarCorteDaSelecao}
               onDividirAqui={onDividirCorteAqui}
               dividindo={dividindoCorte}
+              onJuntarProximo={onJuntarProximoCorte}
+              juntando={juntandoCorte}
+              onAlternarVelocidade={onAlternarVelocidade}
               onGerarBruto={onGerarBruto}
               brutoPronto={brutoPronto}
               brutoStatus={statusBruto}

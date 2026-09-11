@@ -4,10 +4,13 @@ Serviço de Cortes — integrações pós-análise via IA e utilitários
 
 import json
 import logging
+import shutil
 import traceback
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
+from app.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain.corte_mapper import (
     cenas_fora_do_corte,
@@ -20,6 +23,15 @@ from app.domain.ffmpeg_basic import (
     build_silence_detect_proxy_cmd,
     build_silence_detect_video_cmd,
 )
+from app.domain.juncao_cortes import (
+    CAMPOS_TEMPO_CENA,
+    CAMPOS_TEMPO_REGIAO,
+    CAMPOS_TEMPO_SEGMENTO,
+    deslocar_tempos,
+    duracao_liquida,
+    emendar_texto,
+    juntar_desvios,
+)
 from app.domain.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
 from app.domain.reading_metadata import (
     aplicar_emojis_texto_capa,
@@ -29,7 +41,7 @@ from app.domain.reading_metadata import (
 from app.domain.segment_calculator import dividir_desvios_no_ponto, normalizar_desvio
 from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg
 from app.domain.youtube_layout import normalizar_layout_youtube
-from app.models import Corte, Projeto, StatusCorte
+from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
 from app.services.app_logging import operational_debug, operational_error
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import func, select
@@ -41,6 +53,174 @@ logger = logging.getLogger(__name__)
 # Margem mínima (s) que cada metade precisa ter para a divisão ser válida —
 # evita criar cortes degenerados quando o ponteiro fica colado na borda.
 _MARGEM_DIVISAO_SEG = 0.5
+
+
+def _desvios_do_corte(corte: Corte) -> list[dict]:
+    """Lê os trechos a remover do corte, tolerando JSON corrompido."""
+    try:
+        desvios = json.loads(corte.desvios or "[]")
+    except json.JSONDecodeError:
+        logger.warning(
+            "[corte] desvios do corte %s corrompidos (JSON inválido); assumindo lista vazia.",
+            corte.id,
+        )
+        return []
+    return desvios if isinstance(desvios, list) else []
+
+
+def _lista_json(bruto: str) -> list:
+    """Parse tolerante de coluna que guarda lista JSON (cenas, segmentos)."""
+    try:
+        valor = json.loads(bruto or "[]")
+    except json.JSONDecodeError:
+        return []
+    if isinstance(valor, dict):
+        valor = valor.get("cenas", [])
+    return valor if isinstance(valor, list) else []
+
+
+def _juntar_marcacoes_de_bruto(primeiro: Corte, segundo: Corte, offset_seg: float) -> None:
+    """Traz para o primeiro corte tudo que é marcado em tempo de BRUTO (D-575).
+
+    Cenas, regiões do layout e segmentos detectados do segundo corte andam
+    `offset_seg` para a frente — a duração líquida do primeiro —, porque na
+    timeline mesclada o material dele só começa depois que o primeiro termina.
+
+    Do layout, só as REGIÕES se juntam. Modo padrão, fundo, placa e a geometria
+    da compartilhada são decisões únicas sobre o corte inteiro: ficam as do
+    primeiro, que é quem sobrevive.
+    """
+    primeiro.cenas_remotion = json.dumps(
+        [
+            *_lista_json(primeiro.cenas_remotion),
+            *deslocar_tempos(_lista_json(segundo.cenas_remotion), offset_seg, CAMPOS_TEMPO_CENA),
+        ],
+        ensure_ascii=False,
+    )
+
+    primeiro.segmentos_detectados = json.dumps(
+        [
+            *_lista_json(primeiro.segmentos_detectados),
+            *deslocar_tempos(
+                _lista_json(segundo.segmentos_detectados), offset_seg, CAMPOS_TEMPO_SEGMENTO
+            ),
+        ],
+        ensure_ascii=False,
+    )
+
+    layout = normalizar_layout_youtube(_dict_json(primeiro.layout_youtube))
+    regioes_segundo = normalizar_layout_youtube(_dict_json(segundo.layout_youtube)).get(
+        "regioes", []
+    )
+    layout["regioes"] = [
+        *layout.get("regioes", []),
+        *deslocar_tempos(regioes_segundo, offset_seg, CAMPOS_TEMPO_REGIAO),
+    ]
+    primeiro.layout_youtube = json.dumps(normalizar_layout_youtube(layout), ensure_ascii=False)
+
+    # Palco e preset de recortes: o do primeiro manda; herda o do segundo só
+    # quando o primeiro nunca escolheu (chave vazia é herança, não decisão).
+    primeiro.palco_padrao = primeiro.palco_padrao or segundo.palco_padrao
+    primeiro.palco_short_preset = primeiro.palco_short_preset or segundo.palco_short_preset
+
+
+def _dict_json(bruto: str) -> dict:
+    """Parse tolerante de coluna que guarda objeto JSON (layout)."""
+    try:
+        valor = json.loads(bruto or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return valor if isinstance(valor, dict) else {}
+
+
+def _juntar_texto_editorial(primeiro: Corte, segundo: Corte) -> None:
+    """Emenda o texto que é matéria-prima dos metadados; o resto fica do primeiro.
+
+    Título, tema, frase-gancho e score descrevem a ENTRADA do corte, e a entrada
+    do corte mesclado continua sendo a do primeiro. Já resumo e justificativa
+    descrevem o CONTEÚDO — jogar fora os do segundo apagaria em silêncio uma
+    rodada de análise.
+    """
+    primeiro.resumo = emendar_texto(primeiro.resumo, segundo.resumo)
+    primeiro.justificativa = emendar_texto(primeiro.justificativa, segundo.justificativa)
+    primeiro.hints_thumbnail = emendar_texto(primeiro.hints_thumbnail, segundo.hints_thumbnail)
+
+
+async def _adotar_filhos_do_corte(
+    db: AsyncSession, primeiro: Corte, segundo: Corte, offset_seg: float
+) -> None:
+    """Move shorts (e o metadado órfão) do corte absorvido para o sobrevivente.
+
+    Sem isto o `cascade="all, delete-orphan"` apagaria os shorts junto com o
+    corte — trechos já curados a mão, que ninguém pediu para perder. Os tempos
+    do short são do BRUTO (invariante declarada no modelo), então andam pelo
+    mesmo offset das cenas.
+
+    O metadado só é adotado quando o sobrevivente ainda não tem um: título,
+    descrição e capa são uma escolha só por corte, e a do primeiro prevalece.
+
+    A adoção termina com `flush` + `expire`: sem isso o `delete` do corte
+    absorvido recarrega as relações dele, ainda vê os filhos que acabamos de
+    remarcar e os apaga pelo cascade — o metadado sumia mesmo depois de já
+    pertencer ao sobrevivente.
+    """
+    shorts = (await db.execute(select(Short).where(Short.corte_id == segundo.id))).scalars().all()
+    for short in shorts:
+        short.corte_id = primeiro.id
+        short.inicio_seg = round(float(short.inicio_seg or 0.0) + offset_seg, 3)
+        short.fim_seg = round(float(short.fim_seg or 0.0) + offset_seg, 3)
+        short.cenas_remotion = json.dumps(
+            deslocar_tempos(_lista_json(short.cenas_remotion), offset_seg, CAMPOS_TEMPO_CENA),
+            ensure_ascii=False,
+        )
+
+    if primeiro.metadado is None:
+        metadado = (
+            await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == segundo.id))
+        ).scalar_one_or_none()
+        if metadado is not None:
+            metadado.corte_id = primeiro.id
+
+    await db.flush()
+    db.expire(segundo, ["metadado", "shorts"])
+
+
+def _apagar_pasta_do_corte(projeto_id: str, corte_id: str) -> None:
+    """Remove a pasta do corte absorvido — mesmo gesto do DELETE /cortes/{id}."""
+    pasta = projetos_dir() / projeto_id / "cortes" / corte_id
+    if pasta.exists():
+        shutil.rmtree(pasta, ignore_errors=True)
+
+
+# Artefatos derivados do span do corte. Ao juntar, todos passam a cobrir só a
+# primeira metade — nenhum é aproveitável nem parcialmente (o contrário do
+# `dividir`, onde o bruto ainda serve para a metade esquerda).
+_ARTEFATOS_DE_VIDEO = ("graded", "overlays", "temp", "upload_ready")
+
+
+def _apagar_artefatos_de_video(projeto_id: str, corte_id: str) -> None:
+    """Apaga bruto, grade, overlays e render final do corte mesclado (D-575).
+
+    Deixá-los em disco seria pior que apagá-los: `_corte_ja_gerou_bruto` olha o
+    ARQUIVO, não o banco, então a UI anunciaria "bruto pronto" para um vídeo que
+    termina no meio do corte — e o render final partiria dele. A thumbnail não
+    entra na lista: é arte editorial, não deriva do span.
+    """
+    pasta = projetos_dir() / projeto_id / "cortes" / corte_id
+    if not pasta.exists():
+        return
+    for bruto in pasta.glob("clip_raw*"):
+        _remover_caminho(bruto)
+    for nome in _ARTEFATOS_DE_VIDEO:
+        _remover_caminho(pasta / nome)
+
+
+def _remover_caminho(caminho: Path) -> None:
+    """Apaga arquivo ou diretório sem explodir quando ele já não existe."""
+    if caminho.is_dir():
+        shutil.rmtree(caminho, ignore_errors=True)
+    elif caminho.exists():
+        caminho.unlink(missing_ok=True)
 
 
 def _ordenavel(corte: Corte) -> CorteOrdenavel:
@@ -326,6 +506,131 @@ class CorteService:
         await CorteService.sincronizar_transcricao_corte(novo_id)
 
         return corte_id, novo_id
+
+    @staticmethod
+    async def juntar_cortes(corte_id: str, outro_corte_id: str) -> str:
+        """Funde dois cortes vizinhos num só (D-575) — o inverso de `dividir_corte`.
+
+        Nasce de um caso concreto: o corte termina antes do argumento fechar e o
+        corte seguinte o completa. Regerar os dois do zero jogaria fora os
+        trechos a remover (que custam uma rodada de IA), as cenas, o layout e os
+        shorts — por isso a junção CARREGA tudo isso em vez de recomeçar.
+
+        Quem sobrevive é o corte que começa antes: ele mantém o `id`, e com ele
+        a pasta, a URL do editor e o metadado. O outro é apagado.
+
+        O que é feito com cada coisa:
+
+        * **Bordas** — início do primeiro, fim do segundo.
+        * **Desvios** — concatenados (são tempo absoluto da live, então nenhum
+          número muda de sentido) MAIS o vão entre os dois cortes, que vira
+          trecho removido. Sem esse vão, material nunca aprovado entraria de
+          carona no meio do corte.
+        * **Cenas, regiões do layout, segmentos detectados e shorts** — vivem em
+          tempo de BRUTO, então os do segundo corte andam para a frente pela
+          duração líquida do primeiro.
+        * **Resumo e justificativa** — emendados; título, tema, gancho e score
+          ficam os do primeiro, que é por onde o corte mesclado entra.
+        * **Artefatos de vídeo** — bruto, grade, overlays e render final são
+          APAGADOS: o span mudou e todos eles cobrem só a primeira metade. Ao
+          contrário do `dividir`, aqui o arquivo velho não é aproveitável nem em
+          parte, e deixá-lo em disco faria a UI anunciar "bruto pronto" para um
+          vídeo errado.
+
+        Retorna o id do corte sobrevivente. Levanta ValueError quando os cortes
+        não existem, são o mesmo, estão em projetos diferentes, já foram
+        publicados no YouTube, ou têm outro corte entre eles.
+        """
+        async with AsyncSessionLocal() as db:
+            resultado = await db.execute(
+                select(Corte)
+                .options(selectinload(Corte.metadado))
+                .where(Corte.id.in_([corte_id, outro_corte_id]))
+            )
+            por_id = {c.id: c for c in resultado.scalars().all()}
+
+            if corte_id == outro_corte_id:
+                raise ValueError("Selecione dois cortes diferentes para juntar.")
+            for cid in (corte_id, outro_corte_id):
+                if cid not in por_id:
+                    raise ValueError("Corte não encontrado.")
+
+            primeiro, segundo = sorted(
+                por_id.values(), key=lambda c: (float(c.inicio_seg or 0.0), c.id)
+            )
+            if primeiro.projeto_id != segundo.projeto_id:
+                raise ValueError("Só dá para juntar cortes do mesmo projeto.")
+
+            publicado = next(
+                (c for c in (primeiro, segundo) if (c.youtube_video_id or "").strip()), None
+            )
+            if publicado is not None:
+                raise ValueError(
+                    f"O corte #{publicado.numero} já foi publicado no YouTube; "
+                    "juntar mudaria um vídeo que já está no ar."
+                )
+
+            entre = await db.execute(
+                select(func.count())
+                .select_from(Corte)
+                .where(
+                    Corte.projeto_id == primeiro.projeto_id,
+                    Corte.id.notin_([primeiro.id, segundo.id]),
+                    Corte.inicio_seg >= float(primeiro.fim_seg or 0.0),
+                    Corte.inicio_seg < float(segundo.inicio_seg or 0.0),
+                )
+            )
+            if entre.scalar_one() > 0:
+                raise ValueError(
+                    "Há outro corte entre os dois. Junte primeiro os vizinhos imediatos."
+                )
+
+            desvios_primeiro = _desvios_do_corte(primeiro)
+            desvios_segundo = _desvios_do_corte(segundo)
+            # Quanto de bruto o primeiro corte produz: é exatamente onde o
+            # material do segundo passa a começar na timeline mesclada.
+            offset = duracao_liquida(
+                float(primeiro.inicio_seg or 0.0),
+                float(primeiro.fim_seg or 0.0),
+                desvios_primeiro,
+            )
+
+            primeiro.desvios = json.dumps(
+                juntar_desvios(
+                    desvios_primeiro,
+                    desvios_segundo,
+                    fim_primeiro=float(primeiro.fim_seg or 0.0),
+                    inicio_segundo=float(segundo.inicio_seg or 0.0),
+                ),
+                ensure_ascii=False,
+            )
+            primeiro.fim_seg = float(segundo.fim_seg or 0.0)
+            primeiro.fim_hms = segundo.fim_hms
+
+            _juntar_marcacoes_de_bruto(primeiro, segundo, offset)
+            _juntar_texto_editorial(primeiro, segundo)
+            await _adotar_filhos_do_corte(db, primeiro, segundo, offset)
+
+            # O corte mesclado volta a ser matéria-prima: os artefatos que
+            # provavam "pronto" acabaram de ser invalidados pelo novo span.
+            primeiro.arquivo_clip_path = ""
+            primeiro.duracao_clip_seg = 0.0
+            primeiro.cenas_validadas = 0
+            primeiro.cenas_validadas_em = None
+
+            projeto_id = primeiro.projeto_id
+            sobrevivente_id = primeiro.id
+            absorvido_id = segundo.id
+            await db.delete(segundo)
+            await db.commit()
+
+            await CorteService.renumerar_por_tempo(db, projeto_id)
+
+        _apagar_pasta_do_corte(projeto_id, absorvido_id)
+        _apagar_artefatos_de_video(projeto_id, sobrevivente_id)
+
+        await CorteService.sincronizar_transcricao_corte(sobrevivente_id)
+        return sobrevivente_id
 
     @staticmethod
     async def criar_manual(

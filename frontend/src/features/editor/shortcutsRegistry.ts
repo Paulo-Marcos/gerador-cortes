@@ -82,6 +82,8 @@ export type ShortcutId =
   | 'bruto.modoPonteiro'
   | 'bruto.adicionarTrecho'
   | 'bruto.dividirCorte'
+  | 'bruto.juntarCorte'
+  | 'bruto.alternarVelocidade'
   | 'bruto.removerTrecho'
   | 'bruto.smartPlay'
   | 'bruto.sincroniaNudgeMenos'
@@ -317,6 +319,17 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     description: 'Velocidade +0.25x',
     group: 'player',
   },
+  // D-575: ir e voltar entre 1x e a velocidade de trabalho. Afinar um corte
+  // exige ouvir devagar, mas conferir o resultado exige 1x — e com Ctrl+J/K
+  // isso custava varias teclas em cada troca.
+  {
+    id: 'bruto.alternarVelocidade',
+    screen: 'bruto',
+    key: 'u',
+    mod: 'ctrl',
+    description: 'Alternar 1x <-> velocidade de trabalho',
+    group: 'player',
+  },
   // D-476: espelham as teclas do Bruto de proposito. Quem cura shorts acabou de
   // sair do editor; trocar a tecla ali seria pedir para reaprender o que ja
   // esta na memoria muscular. O play/pause NAO entra aqui: espaco ja e
@@ -436,6 +449,14 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     screen: 'bruto',
     key: 'd',
     description: 'Dividir corte no ponteiro',
+    group: 'edicao',
+  },
+  {
+    id: 'bruto.juntarCorte',
+    screen: 'bruto',
+    key: 'j',
+    mod: 'ctrl+alt',
+    description: 'Juntar com o proximo corte',
     group: 'edicao',
   },
   {

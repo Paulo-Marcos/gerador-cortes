@@ -112,6 +112,16 @@ class DividirCorteRequest(BaseModel):
     ponto_hms: str | None = None
 
 
+class JuntarCortesRequest(BaseModel):
+    """D-575: qual corte deve ser absorvido pelo corte da rota.
+
+    Omitido, o backend usa o VIZINHO SEGUINTE na linha do tempo — o caso que
+    motivou a feature (o corte acaba cedo e o próximo completa o argumento).
+    """
+
+    outro_corte_id: str | None = None
+
+
 class ReordenarCortesRequest(BaseModel):
     """F-057: nova ordem dos cortes do projeto.
 

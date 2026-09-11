@@ -448,6 +448,15 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  // D-575: funde este corte com o vizinho seguinte (ou com `outro_corte_id`).
+  // Sobrevive o que comeca antes — ele herda bordas, trechos a remover, cenas,
+  // layout e shorts do outro. Retorna o corte resultante.
+  juntarCortes: (corteId: string, body: { outro_corte_id?: string } = {}) =>
+    request<Corte>(`/cortes/${corteId}/juntar`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
   obterCorte: (corteId: string) => request<Corte>(`/cortes/${corteId}`),
 
   atualizarCorte: (corteId: string, patch: Partial<Corte>) =>

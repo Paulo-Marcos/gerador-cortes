@@ -25,6 +25,7 @@ import {
   RotateCw,
   Scissors,
   Settings,
+  Merge,
   SplitSquareHorizontal,
   Unlock,
   ZoomIn,
@@ -87,6 +88,11 @@ interface Props {
   // F-061: divide o corte em dois no ponteiro do player.
   onDividirAqui?: () => void;
   dividindo?: boolean;
+  // D-575: funde este corte com o proximo — a operacao inversa do dividir.
+  onJuntarProximo?: () => void;
+  juntando?: boolean;
+  /** D-575: alterna entre 1x e a velocidade de trabalho (a ultima != 1x). */
+  onAlternarVelocidade?: () => void;
   onGerarBruto?: () => void;
   brutoPronto?: boolean;
   brutoStatus?: 'idle' | 'processando' | 'concluido' | 'erro';
@@ -805,24 +811,104 @@ function TransportGroup({
   );
 }
 
-function SpeedDisplay({ playbackRate }: { playbackRate: number }) {
-  // v2_bruto.jsx:236-255 — pill mono warn, NAO botao
+// D-575: a pilula da velocidade virou GATILHO. Afinar a borda de um corte
+// pede ouvir devagar; conferir o resultado pede 1x — e a ida e volta era sempre
+// entre esses dois valores, custando varios Ctrl+J/K por troca. Clicar alterna
+// direto. Sem `onAlternar` ela continua sendo o indicador nao-clicavel de antes
+// (v2_bruto.jsx:236-255), preservando o variant legacy.
+function SpeedDisplay({
+  playbackRate,
+  onAlternar,
+}: {
+  playbackRate: number;
+  onAlternar?: () => void;
+}) {
+  const classes =
+    'flex h-7 items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 font-code text-[11px] font-bold text-[var(--wb-warn)]';
+  const numero = { fontVariantNumeric: 'tabular-nums' } as const;
+  const rotulo = `⚡ ${playbackRate.toFixed(2)}×`;
+
+  if (!onAlternar) {
+    return (
+      <Tooltip label="Velocidade atual (use Ctrl + J/K)" side="bottom">
+        <span className={classes} style={numero}>
+          {rotulo}
+        </span>
+      </Tooltip>
+    );
+  }
+
+  const normal = Math.abs(playbackRate - 1) < 0.01;
   return (
-    <Tooltip label="Velocidade atual (use Ctrl + J/K)" side="bottom">
-      <span
-        className="flex h-7 items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 font-code text-[11px] font-bold text-[var(--wb-warn)]"
-        style={{ fontVariantNumeric: 'tabular-nums' }}
+    <Tooltip
+      label={
+        normal
+          ? 'Voltar para a velocidade de trabalho (Ctrl+U)'
+          : 'Voltar para 1,00× (Ctrl+U)'
+      }
+      side="bottom"
+    >
+      <button
+        type="button"
+        onClick={onAlternar}
+        aria-label="Alternar velocidade"
+        className={cn(classes, 'transition-colors hover:border-[var(--wb-warn)]')}
+        style={numero}
       >
-        ⚡ {playbackRate.toFixed(2)}×
-      </span>
+        {rotulo}
+      </button>
     </Tooltip>
   );
+}
+
+interface PosicaoMenu {
+  /** Ancora vertical: `top` quando abre para baixo, `bottom` quando abre para cima. */
+  top?: number;
+  bottom?: number;
+  right: number;
+  /** Altura maxima ja descontada da ancora — o menu rola em vez de vazar. */
+  maxHeight: number;
+}
+
+const MENU_MARGEM = 6;
+const MENU_RESPIRO_TELA = 12;
+// Altura do menu cheio (zoom, velocidade, os 4 toggles e as 4 acoes de corte).
+// Serve so para decidir o LADO — a altura real e limitada pelo espaco medido.
+const MENU_ALTURA_NATURAL = 480;
+
+/**
+ * Onde a gaveta do ⚙ cabe: abaixo do botao, ou acima quando nao ha espaco.
+ *
+ * D-575 — antes o menu era sempre ancorado em `top: rect.bottom` com
+ * `maxHeight: calc(100vh - 100px)`: um teto que ignora a POSICAO do botao. Como a
+ * timeline mora no rodape da tela, o menu nascia ja passando do fim da janela e
+ * so dava para ler o fim dele tirando o zoom do navegador.
+ *
+ * A regra agora tem dois passos, nessa ordem:
+ *
+ * 1. Se o menu INTEIRO cabe abaixo, abre abaixo — e o sentido natural de uma
+ *    gaveta, e trocar de lado sem precisar seria desorientador.
+ * 2. Senao, vai para o lado com mais espaco. Com a timeline no rodape isso quase
+ *    sempre significa abrir para CIMA, onde sobra a tela toda.
+ *
+ * Em qualquer caso a altura maxima e o espaco REAL daquele lado, entao o menu
+ * rola dentro de si em vez de vazar pela janela.
+ */
+function posicionarMenu(rect: DOMRect, alturaTela: number, larguraTela: number): PosicaoMenu {
+  const right = larguraTela - rect.right;
+  const abaixo = alturaTela - rect.bottom - MENU_MARGEM - MENU_RESPIRO_TELA;
+  const acima = rect.top - MENU_MARGEM - MENU_RESPIRO_TELA;
+
+  const cabeAbaixo = abaixo >= MENU_ALTURA_NATURAL;
+  if (!cabeAbaixo && acima > abaixo) {
+    return { bottom: alturaTela - rect.top + MENU_MARGEM, right, maxHeight: Math.max(acima, 0) };
+  }
+  return { top: rect.bottom + MENU_MARGEM, right, maxHeight: Math.max(abaixo, 0) };
 }
 
 // AdvancedMenu — auto-contido, renderiza via createPortal pra escapar
 // do overflow:hidden dos containers (Panel/react-resizable-panels) e nao
 // ficar cortado. Position:fixed calculado pelo bounding rect do botao.
-// Fallback de scroll caso a tela seja muito baixa.
 function AdvancedMenu({
   variant = 'legacy',
   onZoomIn,
@@ -841,6 +927,8 @@ function AdvancedMenu({
   onChangeSpeed,
   onDividirAqui,
   dividindo,
+  onJuntarProximo,
+  juntando,
   onAddSegment,
   onRefreshAudio,
   refreshing,
@@ -865,12 +953,14 @@ function AdvancedMenu({
   onChangeSpeed?: (delta: number) => void;
   onDividirAqui?: () => void;
   dividindo?: boolean;
+  onJuntarProximo?: () => void;
+  juntando?: boolean;
   onAddSegment?: () => void;
   onRefreshAudio?: () => void;
   refreshing?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [pos, setPos] = useState<PosicaoMenu | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -884,8 +974,7 @@ function AdvancedMenu({
     const compute = () => {
       const btn = buttonRef.current;
       if (!btn) return;
-      const rect = btn.getBoundingClientRect();
-      setPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+      setPos(posicionarMenu(btn.getBoundingClientRect(), window.innerHeight, window.innerWidth));
     };
     compute();
     window.addEventListener('resize', compute);
@@ -948,9 +1037,10 @@ function AdvancedMenu({
             style={{
               position: 'fixed',
               top: pos.top,
+              bottom: pos.bottom,
               right: pos.right,
               zIndex: 100,
-              maxHeight: 'calc(100vh - 100px)',
+              maxHeight: pos.maxHeight,
             }}
             className="flex w-[240px] flex-col gap-0.5 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-2 shadow-[shadow:var(--wb-shadow)]"
           >
@@ -1080,7 +1170,7 @@ function AdvancedMenu({
                 </span>
               </button>
             )}
-            {isWorkbench && (onDividirAqui || onAddSegment || onRefreshAudio) && (
+            {isWorkbench && (onDividirAqui || onJuntarProximo || onAddSegment || onRefreshAudio) && (
               <>
                 <div className="my-1 h-px bg-[var(--wb-border-soft)]" />
                 {onDividirAqui && (
@@ -1096,6 +1186,21 @@ function AdvancedMenu({
                     <SplitSquareHorizontal size={13} className="text-[var(--wb-text-mute)]" />
                     <span className="flex-1">Dividir corte aqui</span>
                     <span className={kbd}>D</span>
+                  </button>
+                )}
+                {onJuntarProximo && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      close();
+                      onJuntarProximo();
+                    }}
+                    disabled={juntando}
+                    className={item}
+                  >
+                    <Merge size={13} className="text-[var(--wb-text-mute)]" />
+                    <span className="flex-1">Juntar com o proximo corte</span>
+                    <span className={kbd}>^⌥J</span>
                   </button>
                 )}
                 {onAddSegment && (
@@ -1173,6 +1278,9 @@ export function TimelinePanel({
   onCriarCorteDaSelecao,
   onDividirAqui,
   dividindo,
+  onJuntarProximo,
+  juntando,
+  onAlternarVelocidade,
   onChangeSpeed,
   proximoInicioSeg,
   proximoNumero,
@@ -1326,7 +1434,7 @@ export function TimelinePanel({
             {/* D-402: a velocidade em vigor precisa ser legivel sem abrir o ⚙.
                 O CP7 mandou o CONTROLE pro AdvancedMenu; aqui volta so o
                 INDICADOR (pill nao-clicavel), como no header legacy. */}
-            <SpeedDisplay playbackRate={playbackRate} />
+            <SpeedDisplay playbackRate={playbackRate} onAlternar={onAlternarVelocidade} />
 
             <AdvancedMenu
               variant="workbench"
@@ -1346,6 +1454,8 @@ export function TimelinePanel({
               onChangeSpeed={onChangeSpeed}
               onDividirAqui={onDividirAqui}
               dividindo={dividindo}
+              onJuntarProximo={onJuntarProximo}
+              juntando={juntando}
               onAddSegment={handleAddSegment}
               onRefreshAudio={onAtualizarAudioTimeline ? handleRefreshAudio : undefined}
               refreshing={audioRefreshing}

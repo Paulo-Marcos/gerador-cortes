@@ -31,6 +31,7 @@ from app.routers.cortes_schemas import (
     GerarBrutoRequest,
     ImportarCenasRequest,
     ImportarDesviosRequest,
+    JuntarCortesRequest,
     RemoverDesvioRequest,
     RenderPipelineRequest,
     ReordenarCortesRequest,
@@ -280,6 +281,58 @@ async def dividir_corte(
     )
     por_id = {c.id: c for c in result.scalars().all()}
     return [_corte_to_dict(por_id[original_id]), _corte_to_dict(por_id[novo_id])]
+
+
+@router.post("/{corte_id}/juntar", response_model=CorteResponse)
+async def juntar_cortes(
+    corte_id: str, body: JuntarCortesRequest | None = None, db: AsyncSession = Depends(get_db)
+):
+    """D-575: funde este corte com o vizinho, devolvendo o corte resultante.
+
+    Sem `outro_corte_id` no corpo, junta com o corte SEGUINTE na linha do tempo.
+    O corte que começa antes sobrevive (mantém id, pasta e metadado) e absorve
+    bordas, trechos a remover, cenas, layout e shorts do outro — o vão entre os
+    dois vira trecho removido, para que nada que não estava em nenhum dos dois
+    cortes entre de carona.
+    """
+    outro_id = (body.outro_corte_id if body else None) or await _proximo_corte_id(db, corte_id)
+    if not outro_id:
+        raise HTTPException(
+            status_code=400, detail="Este é o último corte: não há com quem juntar."
+        )
+
+    try:
+        sobrevivente_id = await CorteService.juntar_cortes(corte_id, outro_id)
+    except ValueError as e:
+        msg = str(e)
+        raise HTTPException(status_code=404 if "não encontrado" in msg else 400, detail=msg) from e
+
+    result = await db.execute(
+        select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == sobrevivente_id)
+    )
+    corte = result.scalar_one_or_none()
+    if not corte:
+        raise HTTPException(status_code=404, detail="Corte não encontrado após a junção")
+    return _corte_to_dict(corte)
+
+
+async def _proximo_corte_id(db: AsyncSession, corte_id: str) -> str | None:
+    """Id do corte que começa logo depois deste, no mesmo projeto."""
+    corte = await db.get(Corte, corte_id)
+    if not corte:
+        raise HTTPException(status_code=404, detail="Corte não encontrado")
+
+    proximo = await db.execute(
+        select(Corte.id)
+        .where(
+            Corte.projeto_id == corte.projeto_id,
+            Corte.id != corte.id,
+            Corte.inicio_seg >= float(corte.inicio_seg or 0.0),
+        )
+        .order_by(Corte.inicio_seg.asc(), Corte.id.asc())
+        .limit(1)
+    )
+    return proximo.scalar_one_or_none()
 
 
 @router.post("/{corte_id}/analisar-desvios")

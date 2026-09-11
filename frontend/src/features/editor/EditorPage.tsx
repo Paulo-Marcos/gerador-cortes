@@ -12,6 +12,7 @@ import {
   useCortesProjeto,
   useDeletarCorte,
   useDividirCorte,
+  useJuntarCortes,
   useGerarBruto,
   useGerarMetadadosClaude,
   useGerarTrechosClaude,
@@ -110,6 +111,12 @@ const VIDEOS_BASE = (
 
 const SPEED_MIN = 0.25;
 const SPEED_MAX = 4;
+// D-575: os dois polos da alternancia de velocidade. 1x e onde se confere o
+// resultado; a "de trabalho" e a ultima velocidade != 1x que esteve em uso.
+const VELOCIDADE_NORMAL = 1;
+// Semente para quem nunca saiu do 1x: o pedido nasceu de precisar ouvir
+// DEVAGAR para acertar a borda do corte, entao o primeiro toque desacelera.
+const VELOCIDADE_TRABALHO_INICIAL = 0.75;
 
 function appendQueryParams(url: string, params: Record<string, string>): string {
   const search = new URLSearchParams(params).toString();
@@ -175,6 +182,12 @@ export function EditorPage() {
   // carregada e, com ela, o offset que casa o tempo do audio com o do video.
   const contextoCorte = useContextoCorte();
   const [playbackRate, setPlaybackRate] = useState(velocidadePadrao);
+  // D-575: a ultima velocidade != 1x que esteve em uso. Afinar a borda de um
+  // corte pede ouvir devagar e conferir pede 1x, e a ida e volta e sempre entre
+  // esses dois valores — guardar o "devagar" evita refazer o caminho no Ctrl+J/K
+  // a cada troca. Ref, e nao state: e memoria do gatilho, nao coisa que a tela
+  // desenha, e os bindings de atalho sao memoizados (state ficaria stale).
+  const velocidadeTrabalhoRef = useRef(VELOCIDADE_TRABALHO_INICIAL);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [trechosManualOpen, setTrechosManualOpen] = useState(false);
@@ -266,6 +279,7 @@ export function EditorPage() {
   const adicionarDesvio = useAdicionarDesvio(corteId);
   const removerDesvio = useRemoverDesvio(corteId);
   const dividirCorte = useDividirCorte(corteId, projetoId);
+  const juntarCortes = useJuntarCortes(corteId, projetoId);
   const abrirPasta = useAbrirPasta();
   const brutoMutationPendenteNoCorteAtual = gerarBruto.isPending && gerandoBrutoCorteId === corteId;
   // D-420 — as gerações via Claude são longas (dezenas de segundos) e o editor
@@ -361,6 +375,17 @@ export function EditorPage() {
   useEffect(() => {
     setPlaybackRate(velocidadePadrao);
   }, [corteId, velocidadePadrao]);
+
+  // D-575: a "velocidade de trabalho" aprende OBSERVANDO, e nao so quando a
+  // troca passa por `aplicarVelocidade`. A velocidade tambem e redefinida pelo
+  // efeito acima (troca de corte, chegada dos Ajustes), e semear a ref na
+  // montagem a prendia no valor anterior ao carregamento: alternar caia no
+  // fallback de 0,75x em vez de voltar para a velocidade que estava em uso.
+  useEffect(() => {
+    if (Math.abs(playbackRate - VELOCIDADE_NORMAL) > 0.01) {
+      velocidadeTrabalhoRef.current = playbackRate;
+    }
+  }, [playbackRate]);
 
   // Quando a geração do bruto termina, traz o corte atualizado (clip_path +
   // transcricao_final re-sincronizada com os desvios removidos).
@@ -515,11 +540,52 @@ export function EditorPage() {
   }
 
   function onChangeSpeed(delta: number) {
-    setPlaybackRate((rate) => {
-      const next = Math.max(SPEED_MIN, Math.min(SPEED_MAX, rate + delta));
-      playerRef.current?.setPlaybackRate(next);
-      return next;
+    aplicarVelocidade((rate) => rate + delta);
+  }
+
+  function aplicarVelocidade(resolver: (atual: number) => number) {
+    setPlaybackRate((atual) => {
+      const alvo = Math.max(SPEED_MIN, Math.min(SPEED_MAX, resolver(atual)));
+      playerRef.current?.setPlaybackRate(alvo);
+      return alvo;
     });
+  }
+
+  function alternarVelocidade() {
+    aplicarVelocidade((atual) =>
+      Math.abs(atual - VELOCIDADE_NORMAL) < 0.01
+        ? velocidadeTrabalhoRef.current
+        : VELOCIDADE_NORMAL,
+    );
+  }
+
+  // D-575: funde este corte com o proximo. Como o dividir, exige salvar antes —
+  // o backend le as bordas e os trechos PERSISTIDOS, entao edicao pendente seria
+  // ignorada em silencio. O aviso do confirm e forte de proposito: o outro corte
+  // deixa de existir e os artefatos de video sao apagados.
+  function onJuntarProximoCorte() {
+    if (!corteUI || juntarCortes.isPending) return;
+    if (isDirty) {
+      notifyToast('Salve as alterações antes de juntar os cortes.', { tone: 'error' });
+      return;
+    }
+    if (!nextCut) {
+      notifyToast('Este é o último corte: não há com quem juntar.', { tone: 'error' });
+      return;
+    }
+    const rotulo = nextCut.titulo_proposto?.trim() || `corte #${nextCut.numero}`;
+    if (
+      !window.confirm(
+        `Juntar este corte com ${rotulo}?\n\n` +
+          'Trechos a remover, cenas, layout e shorts dos dois são preservados, e o ' +
+          'intervalo entre eles vira trecho removido.\n\n' +
+          'O outro corte deixa de existir, e o bruto/render já gerados são apagados ' +
+          '(precisam ser gerados de novo).',
+      )
+    ) {
+      return;
+    }
+    juntarCortes.mutate({ outro_corte_id: nextCut.id });
   }
 
   // AUDITORIA-v2 §5 (CP5): atalhos ',' / '.' (Ctrl) para o nudge fino da
@@ -602,6 +668,8 @@ export function EditorPage() {
       shortcutFromRegistry('bruto.modoPonteiro', () => setPointerMode((v) => !v)),
       shortcutFromRegistry('bruto.adicionarTrecho', adicionarTrechoAqui),
       shortcutFromRegistry('bruto.dividirCorte', onDividirCorteAqui),
+      shortcutFromRegistry('bruto.juntarCorte', onJuntarProximoCorte),
+      shortcutFromRegistry('bruto.alternarVelocidade', alternarVelocidade),
       shortcutFromRegistry('bruto.removerTrecho', onRemoverTrechoSelecionado),
       shortcutFromRegistry('bruto.smartPlay', () => setSmartPlay((v) => !v)),
       shortcutFromRegistry('bruto.sincroniaNudgeMenos', () => nudgeSincronia(-STEP_FINO)),
@@ -1109,6 +1177,9 @@ export function EditorPage() {
               onCriarCorteDaSelecao={onCriarCorteDaSelecao}
               onDividirAqui={onDividirCorteAqui}
               dividindo={dividirCorte.isPending}
+              onJuntarProximo={onJuntarProximoCorte}
+              juntando={juntarCortes.isPending}
+              onAlternarVelocidade={alternarVelocidade}
               onGerarBruto={handleGerarBrutoPrincipal}
               brutoPronto={brutoPronto}
               brutoStatus={brutoStatusAtual}
@@ -1264,6 +1335,9 @@ export function EditorPage() {
             onCriarCorteDaSelecao={onCriarCorteDaSelecao}
             onDividirCorteAqui={onDividirCorteAqui}
             dividindoCorte={dividirCorte.isPending}
+            onJuntarProximoCorte={onJuntarProximoCorte}
+            juntandoCorte={juntarCortes.isPending}
+            onAlternarVelocidade={alternarVelocidade}
             onGerarManual={() => setTrechosManualOpen(true)}
             onGerarTrechosClaude={handleGerarTrechosClaude}
             pending={{
