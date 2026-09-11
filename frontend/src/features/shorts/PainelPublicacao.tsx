@@ -8,11 +8,18 @@
 // Os avisos aparecem ANTES do botão. Descobrir que o vídeo passa do limite
 // depois de subir é o erro que esta tela existe para evitar.
 import { useState } from 'react';
-import { FileText, Send, Upload } from 'lucide-react';
+import { FileText, Image, Send, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PacotePublicacao } from './shortsApi';
-import { usePostDoShort, usePreviaPublicacao, usePublicarShort } from './useShortsDoCorte';
+import {
+  useCapaDoShort,
+  usePostDoShort,
+  usePreviaPublicacao,
+  usePublicarShort,
+} from './useShortsDoCorte';
 import { PostModal } from './PostModal';
+import { CapaModal } from './CapaModal';
+import { comSegundos } from './capaDoShort';
 import type { ShortSugerido } from './shortsApi';
 
 interface Props {
@@ -25,7 +32,9 @@ export function PainelPublicacao({ short }: Props) {
   const previa = usePreviaPublicacao(shortId);
   const publicar = usePublicarShort();
   const post = usePostDoShort(shortId);
+  const capa = useCapaDoShort(shortId);
   const [escrevendoPost, setEscrevendoPost] = useState(false);
+  const [escolhendoCapa, setEscolhendoCapa] = useState(false);
 
   return (
     <div className="flex flex-col gap-2 p-3">
@@ -50,6 +59,27 @@ export function PainelPublicacao({ short }: Props) {
             {post.data?.gerado
               ? `${post.data.hashtags.length} hashtags`
               : `sem texto proprio — vai publicar como "${short.titulo}"`}
+          </span>
+        </span>
+      </button>
+
+      {/* D-565 (onda 4): o quadro que a plataforma mostra na grade do perfil.
+          Ao lado do post porque as duas sao a mesma decisao — o que acompanha o
+          video — e ambas sao as ultimas antes de subir. */}
+      <button
+        type="button"
+        onClick={() => setEscolhendoCapa(true)}
+        className="flex items-center gap-2 rounded-[8px] border border-[var(--wb-border-soft)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
+      >
+        <Image size={13} className="flex-none opacity-70" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[12.5px] font-semibold text-[var(--wb-text)]">
+            {capa.data?.tem_capa ? 'Capa escolhida' : 'Escolher a capa'}
+          </span>
+          <span className="block truncate text-[11px] text-[var(--wb-text-mute)]">
+            {capa.data?.tem_capa
+              ? `o quadro de ${comSegundos(capa.data.instante_seg)}`
+              : 'sem capa — a plataforma escolhe um quadro sozinha'}
           </span>
         </span>
       </button>
@@ -85,6 +115,11 @@ export function PainelPublicacao({ short }: Props) {
       <PostModal
         open={escrevendoPost}
         onClose={() => setEscrevendoPost(false)}
+        short={short}
+      />
+      <CapaModal
+        open={escolhendoCapa}
+        onClose={() => setEscolhendoCapa(false)}
         short={short}
       />
     </div>

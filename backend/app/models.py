@@ -509,6 +509,18 @@ class MetadadoShort(Base):
     descricao_youtube: Mapped[str] = mapped_column(Text, default="")
     tags_youtube: Mapped[str] = mapped_column(Text, default="[]")
     frase_capa: Mapped[str] = mapped_column(String(100), default="")
+    # D-565 (onda 4): o QUADRO de capa deste short, relativo ao projeto.
+    #
+    # Um frame do proprio short, e nao uma arte montada como a do corte. A capa
+    # vertical do corte existe porque o video dele e DEITADO — a imagem 16:9
+    # viraria uma faixa fina num quadro vertical. O short ja nasce 9:16, com o
+    # palco, a moldura e o fundo do canal em volta: montar arte por cima dele
+    # trocaria um quadro que ja e do canal por uma ilustracao.
+    capa_path: Mapped[str] = mapped_column(String(1000), default="")
+    # Em que segundo do SHORT o quadro foi tirado. Guardado para o operador
+    # poder reabrir a escolha, e para refazer a capa depois de um render novo
+    # sem ter de procurar o instante outra vez.
+    capa_instante_seg: Mapped[float] = mapped_column(Float, default=0.0)
     youtube_video_id: Mapped[str] = mapped_column(String(50), default="")
     youtube_url_publicado: Mapped[str] = mapped_column(String(200), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

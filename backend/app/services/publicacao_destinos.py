@@ -148,8 +148,31 @@ async def montar_contexto(short_id: str) -> ContextoPublicacao:
             # Todo short que este pipeline produz e vertical (D-463/D-466); o
             # horizontal entra por outro caminho, com o MP4 do corte longo.
             vertical=True,
+            capa=await _capa_do_short(db, short, corte),
             base=await _texto_do_short(db, short, corte),
         )
+
+
+async def _capa_do_short(db, short: Short, corte: Corte) -> Path | None:
+    """O quadro de capa do short, se ele existe em disco (D-565, onda 4).
+
+    Diferente da capa do CORTE, que e uma arte montada: aqui e um frame do
+    proprio short, porque ele ja e 9:16 e ja veste a identidade do canal — a
+    montagem existe la para resolver o problema do video deitado, que este nao
+    tem.
+
+    `None` quando nao ha capa escolhida, e tambem quando o caminho gravado nao
+    aponta mais para um arquivo. E a mesma regra do corte: o operador escolhe um
+    quadro na hora do upload, o que e melhor que o pacote levar um caminho morto.
+    """
+    from sqlalchemy import select
+
+    meta = await db.scalar(select(MetadadoShort).where(MetadadoShort.short_id == short.id))
+    if not meta or not meta.capa_path:
+        return None
+
+    caminho = resolver_do_projeto(meta.capa_path, corte.projeto_id)
+    return caminho if caminho.is_file() else None
 
 
 async def _texto_do_short(db, short: Short, corte: Corte) -> MetadadosBase:

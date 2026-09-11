@@ -20,6 +20,9 @@ Endpoints:
   GET  /{short_id}/post           — o texto de publicacao gravado deste short
   POST /{short_id}/post/gerar     — a IA escreve titulo, descricao e hashtags
   PATCH /{short_id}/post          — a edicao manual do texto de publicacao
+  GET  /{short_id}/capa           — o quadro de capa gravado, e o instante sugerido
+  POST /{short_id}/capa           — tira o quadro no instante escolhido
+  GET  /{short_id}/capa/imagem    — serve o arquivo da capa
   POST /{short_id}/enquadrar      — acha o rosto no trecho e centra o 9:16 nele
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
   GET  /{short_id}/progresso      — em que passo o render esta e ha quanto tempo
@@ -546,6 +549,80 @@ async def obter_video(short_id: str, estagio: str = "final"):
         url=f"/videos/{projeto_id}/{relativo}?v={mtime}",
         headers={"Cache-Control": "no-store"},
     )
+
+
+class GerarCapaRequest(BaseModel):
+    """Onde tirar o quadro. Ausente usa o padrao — o meio do gancho, ou o terco."""
+
+    instante_seg: float | None = None
+
+
+@router.get("/{short_id}/capa")
+async def obter_capa(short_id: str):
+    """O quadro de capa gravado, ou o instante SUGERIDO quando ainda nao ha (D-565)."""
+    from app.services import capa_short
+
+    try:
+        return await capa_short.obter(short_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/{short_id}/capa")
+async def gerar_capa(short_id: str, body: GerarCapaRequest):
+    """Tira o quadro do MP4 do short no instante escolhido e grava o caminho.
+
+    O quadro sai do PROPRIO short, e nao de uma arte montada como a do corte: o
+    short ja e 9:16, com o palco e a moldura do canal, e desde a onda 1 com o
+    gancho escrito em cima. Montar arte por cima trocaria um quadro que ja e do
+    canal por uma ilustracao.
+    """
+    from app.services import capa_short
+
+    try:
+        return await capa_short.gerar(short_id, body.instante_seg)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except capa_short.CapaShortError as exc:
+        # 502: quem falhou foi o FFmpeg, nao o pedido. A distincao importa na
+        # tela — "tente de novo" e util aqui e nao no 422.
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/{short_id}/capa/imagem")
+async def obter_capa_imagem(short_id: str):
+    """Serve o arquivo da capa, no mesmo arranjo de `/video`.
+
+    Cache-buster pelo mtime: sem ele o navegador serve a capa antiga depois de o
+    operador escolher outro instante, e a tela mentiria sobre o que foi gravado.
+    """
+    from app.channel_paths import resolver_do_projeto
+    from app.models import Corte, MetadadoShort, Short
+    from fastapi.responses import FileResponse
+    from sqlalchemy import select
+
+    async with AsyncSessionLocal() as db:
+        short = await db.get(Short, short_id)
+        if not short:
+            raise HTTPException(status_code=404, detail="Short nao encontrado")
+        corte = await db.get(Corte, short.corte_id)
+        if not corte:
+            raise HTTPException(status_code=404, detail="Corte do short nao encontrado")
+        meta = await db.scalar(select(MetadadoShort).where(MetadadoShort.short_id == short_id))
+        relativo = meta.capa_path if meta else ""
+        projeto_id = corte.projeto_id
+
+    if not relativo:
+        raise HTTPException(status_code=404, detail="Este short ainda nao tem capa.")
+
+    caminho = resolver_do_projeto(relativo, projeto_id)
+    if not caminho.is_file():
+        raise HTTPException(
+            status_code=404, detail="A capa foi registrada mas nao esta mais em disco."
+        )
+    return FileResponse(caminho, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
 @router.get("/{short_id}/progresso")

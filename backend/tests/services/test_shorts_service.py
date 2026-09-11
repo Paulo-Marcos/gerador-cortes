@@ -495,3 +495,147 @@ class TestTextoDaPublicacao:
         assert base.titulo == "tem titulo"
         # JSON quebrado vira lista vazia, e a publicacao cai nas tags do corte.
         assert base.hashtags == ["Economia"]
+
+
+class TestCapaDoShort:
+    """D-565 (onda 4): o quadro de capa.
+
+    A capa do short e um FRAME dele mesmo, e nao a arte montada do corte —
+    aquela existe para resolver o problema do video DEITADO, que este nao tem.
+
+    O que precisa de guarda aqui e o INSTANTE: e ele que decide a capa de todo
+    short que o operador nao abrir, e ele vem de duas fontes (o gravado e o
+    sugerido) que nao podem se confundir.
+    """
+
+    @pytest_asyncio.fixture
+    async def store(self, session_factory):
+        from app.services import capa_short
+
+        original = capa_short.AsyncSessionLocal
+        capa_short.AsyncSessionLocal = servico.AsyncSessionLocal
+        yield capa_short
+        capa_short.AsyncSessionLocal = original
+
+    @pytest.mark.asyncio
+    async def test_sem_capa_sugere_o_meio_do_gancho(self, session_factory, store):
+        """Com gancho, a capa ja sai com a promessa escrita em cima."""
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(
+                Short(
+                    id="s1",
+                    corte_id="c1",
+                    numero=1,
+                    inicio_seg=0.0,
+                    fim_seg=30.0,
+                    gancho_ate_seg=2.5,
+                )
+            )
+            await db.commit()
+
+        capa = await store.obter("s1")
+
+        assert capa["tem_capa"] is False
+        assert capa["instante_seg"] == 1.25
+        assert capa["duracao_seg"] == 30.0
+        assert capa["gancho_ate_seg"] == 2.5
+
+    @pytest.mark.asyncio
+    async def test_sem_gancho_sugere_o_primeiro_terco(self, session_factory, store):
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(Short(id="s1", corte_id="c1", numero=1, inicio_seg=0.0, fim_seg=30.0))
+            await db.commit()
+
+        assert (await store.obter("s1"))["instante_seg"] == 10.0
+
+    @pytest.mark.asyncio
+    async def test_com_capa_gravada_devolve_o_instante_dela(self, session_factory, store):
+        """O gravado tem precedencia sobre o sugerido — senao reabrir a tela
+        jogaria o operador de volta ao palpite, perdendo a escolha dele."""
+        from app.models import MetadadoShort
+
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(
+                Short(
+                    id="s1",
+                    corte_id="c1",
+                    numero=1,
+                    inicio_seg=0.0,
+                    fim_seg=30.0,
+                    gancho_ate_seg=2.5,
+                )
+            )
+            db.add(
+                MetadadoShort(
+                    id="m1",
+                    short_id="s1",
+                    capa_path="cortes/c1/shorts/s1/capa.jpg",
+                    capa_instante_seg=7.5,
+                )
+            )
+            await db.commit()
+
+        capa = await store.obter("s1")
+
+        assert capa["tem_capa"] is True
+        assert capa["instante_seg"] == 7.5
+
+    @pytest.mark.asyncio
+    async def test_short_sem_mp4_recusa_antes_de_chamar_o_ffmpeg(self, session_factory, store):
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(Short(id="s1", corte_id="c1", numero=1, inicio_seg=0.0, fim_seg=30.0))
+            await db.commit()
+
+        with pytest.raises(ValueError, match="renderizado"):
+            await store.gerar("s1")
+
+    @pytest.mark.asyncio
+    async def test_short_inexistente_levanta_lookup(self, session_factory, store):
+        await _seed_corte(session_factory)
+        with pytest.raises(LookupError):
+            await store.obter("nao-existe")
+
+
+class TestCapaNaPublicacao:
+    """A capa escolhida tem de chegar ao pacote — e a ausencia tem de ser calada."""
+
+    @pytest_asyncio.fixture
+    async def cenario(self, session_factory):
+        await _seed_corte(session_factory)
+        async with session_factory() as db:
+            db.add(Short(id="s1", corte_id="c1", numero=1, inicio_seg=0.0, fim_seg=30.0))
+            await db.commit()
+        return session_factory
+
+    async def _capa(self, factory):
+        from app.services.publicacao_destinos import _capa_do_short
+
+        async with factory() as db:
+            short = await db.get(Short, "s1")
+            corte = await db.get(Corte, "c1")
+            return await _capa_do_short(db, short, corte)
+
+    @pytest.mark.asyncio
+    async def test_sem_capa_escolhida_o_pacote_sai_sem_ela(self, cenario):
+        """A plataforma congela um quadro sozinha; isso e um estado legitimo."""
+        assert await self._capa(cenario) is None
+
+    @pytest.mark.asyncio
+    async def test_caminho_morto_conta_como_ausencia(self, cenario):
+        """A limpeza de retencao apaga imagem antiga.
+
+        Um caminho morto no pacote e pior que a ausencia declarada: no segundo
+        caso o operador escolhe um quadro no upload; no primeiro ele descobre o
+        arquivo faltando depois.
+        """
+        from app.models import MetadadoShort
+
+        async with cenario() as db:
+            db.add(MetadadoShort(id="m1", short_id="s1", capa_path="cortes/c1/shorts/s1/sumiu.jpg"))
+            await db.commit()
+
+        assert await self._capa(cenario) is None

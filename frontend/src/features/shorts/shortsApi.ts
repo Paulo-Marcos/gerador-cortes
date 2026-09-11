@@ -169,6 +169,21 @@ export interface AtualizarPostBody {
   hashtags?: string[];
 }
 
+/** D-565 (onda 4): o quadro de capa do short. */
+export interface CapaDoShortApi {
+  capa_path: string;
+  /** O gravado quando ha capa; o SUGERIDO quando ainda nao ha. */
+  instante_seg: number;
+  tem_capa: boolean;
+  duracao_seg: number;
+  /** Ate onde o gancho aparece — a regua marca esse bloco. */
+  gancho_ate_seg: number;
+}
+
+export interface GerarCapaBody {
+  instante_seg?: number;
+}
+
 /** URL do bruto do corte — reusa o redirect com cache-buster de `/cortes`. */
 export function brutoUrl(corteId: string): string {
   return `${API_BASE}/cortes/${corteId}/video-bruto`;
@@ -273,6 +288,16 @@ export interface ProgressoRender {
 /** URL do MP4 do short. `estagio` escolhe entre o rascunho e o que vai publicar. */
 export function shortVideoUrl(shortId: string, estagio: 'previa' | 'final'): string {
   return `${API_BASE}/shorts/${shortId}/video?estagio=${estagio}`;
+}
+
+/**
+ * D-565 (onda 4): a imagem da capa gravada.
+ *
+ * `v` e o INSTANTE, e nao um contador: trocar o quadro muda o instante, e e
+ * exatamente quando o navegador precisa parar de servir a imagem antiga.
+ */
+export function capaImagemUrl(shortId: string, v: number): string {
+  return `${API_BASE}/shorts/${shortId}/capa/imagem?v=${v}`;
 }
 
 export interface PacotePublicacao {
@@ -418,6 +443,16 @@ export const shortsApi = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+
+  /** D-565 (onda 4): o quadro de capa gravado, e o instante sugerido. */
+  obterCapa: (shortId: string) => request<CapaDoShortApi>(`/shorts/${shortId}/capa`),
+
+  /** Tira o quadro no instante escolhido e grava o caminho. */
+  gerarCapa: (shortId: string, body: GerarCapaBody) =>
+    request<{ capa_path: string; instante_seg: number; tem_capa: boolean }>(
+      `/shorts/${shortId}/capa`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
 
   renderizarPrevia: (shortId: string) =>
     request<{ status: string; estagio: string }>(`/shorts/${shortId}/previa`, {

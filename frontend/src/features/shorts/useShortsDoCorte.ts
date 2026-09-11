@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type AtualizarPostBody, shortsApi, type AtualizarShortBody, type CenaShort } from './shortsApi';
+import { type AtualizarPostBody, type CapaDoShortApi, type GerarCapaBody, shortsApi, type AtualizarShortBody, type CenaShort } from './shortsApi';
 import { FIRES_KEY } from './useFires';
 
 export const shortsDoCorteKey = (corteId: string) => ['shorts', 'corte', corteId] as const;
 
 /** D-565 (onda 3): o texto de publicacao de UM short. */
 export const postDoShortKey = (shortId: string) => ['shorts', 'post', shortId] as const;
+
+/** D-565 (onda 4): o quadro de capa de UM short. */
+export const capaDoShortKey = (shortId: string) => ['shorts', 'capa', shortId] as const;
 
 /** Prefixo de tudo que descreve palco — invalidar aqui atinge o corte E os shorts. */
 export const PALCO_KEY = ['shorts', 'palco'] as const;
@@ -285,6 +288,32 @@ export function useAtualizarPost(shortId: string) {
   return useMutation({
     mutationFn: (body: AtualizarPostBody) => shortsApi.atualizarPost(shortId, body),
     onSuccess: (post) => qc.setQueryData(postDoShortKey(shortId), post),
+  });
+}
+
+/** D-565 (onda 4): o quadro de capa gravado, e o instante sugerido. */
+export function useCapaDoShort(shortId: string, habilitado = true) {
+  return useQuery({
+    queryKey: capaDoShortKey(shortId),
+    queryFn: () => shortsApi.obterCapa(shortId),
+    enabled: habilitado,
+  });
+}
+
+/**
+ * Tira o quadro e grava. A resposta NAO substitui o cache inteiro: ela traz so
+ * o que mudou (caminho e instante), e sobrescrever apagaria `duracao_seg` e
+ * `gancho_ate_seg`, que a regua usa — a tela ficaria sem escala depois do
+ * primeiro clique.
+ */
+export function useGerarCapa(shortId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: GerarCapaBody) => shortsApi.gerarCapa(shortId, body),
+    onSuccess: (parcial) =>
+      qc.setQueryData(capaDoShortKey(shortId), (antigo: CapaDoShortApi | undefined) =>
+        antigo ? { ...antigo, ...parcial } : antigo,
+      ),
   });
 }
 
