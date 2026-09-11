@@ -158,16 +158,26 @@ def mesclar_desvios_sobrepostos(desvios: list[dict]) -> list[dict]:
     return mesclados
 
 
-def calcular_segmentos(inicio: float, fim: float, desvios: list[dict]) -> list[dict]:
+def calcular_segmentos(
+    inicio: float, fim: float, desvios: list[dict], fallback: bool = True
+) -> list[dict]:
     """Retorna intervalos {"start": s, "end": f} após remover desvios do range [inicio, fim].
 
     Desvios fora do intervalo ou com coordenadas inválidas são ignorados.
     Aplica um threshold defensivo de 0.1s para evitar micro-segmentos que causam
     drift na transcrição e erros no FFmpeg.
 
+    `fallback=True` (o default histórico) devolve o intervalo inteiro quando os
+    desvios engoliram tudo — rede de segurança para o corte nunca sair vazio.
+    O arranjo de blocos (D-576) chama com `fallback=False` porque ali a rede é
+    do corte, não da fatia: um bloco todo coberto por desvio deve sumir, e devolver
+    o intervalo cheio o ressuscitaria exatamente onde o editor mandou removê-lo.
+
     Exemplo:
         >>> calcular_segmentos(0, 100, [{"inicio_seg": 30, "fim_seg": 40}])
         [{'start': 0.0, 'end': 30.0}, {'start': 40.0, 'end': 100.0}]
+        >>> calcular_segmentos(0, 100, [{"inicio_seg": 0, "fim_seg": 100}], fallback=False)
+        []
     """
     segmentos: list[dict] = []
     cursor = inicio
@@ -198,7 +208,9 @@ def calcular_segmentos(inicio: float, fim: float, desvios: list[dict]) -> list[d
     if cursor < fim and (fim - cursor) > 0.1:
         segmentos.append({"start": round(cursor, 3), "end": round(fim, 3)})
 
-    return segmentos if segmentos else [{"start": round(inicio, 3), "end": round(fim, 3)}]
+    if segmentos:
+        return segmentos
+    return [{"start": round(inicio, 3), "end": round(fim, 3)}] if fallback else []
 
 
 def _desvio_com_tempos(desvio: dict, ini: float, fim: float) -> dict:

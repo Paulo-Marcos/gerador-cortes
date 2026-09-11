@@ -81,6 +81,12 @@ def _corte_to_dict(corte: Corte) -> dict:
         d["segmentos_detectados"] = json.loads(getattr(corte, "segmentos_detectados", None) or "[]")
     except Exception:
         d["segmentos_detectados"] = []
+    # D-576: ordem de exibição dos blocos. Lista vazia = ordem cronológica, que
+    # é o caso da esmagadora maioria dos cortes — e o que os legados devolvem.
+    try:
+        d["arranjo_blocos"] = json.loads(getattr(corte, "arranjo_blocos", None) or "[]")
+    except Exception:
+        d["arranjo_blocos"] = []
     # D-334: log de invocações da skill trechos-expert (telemetria D-303).
     try:
         d["trechos_geracoes_log"] = json.loads(getattr(corte, "trechos_geracoes_log", None) or "[]")

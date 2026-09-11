@@ -80,6 +80,13 @@ def calcular_emendas(segmentos_mantidos: list[dict], desvios: list[dict]) -> lis
     cortou não sobrevive nela — mas sobrevive nos segmentos mantidos: o fim de um
     e o começo do seguinte delimitam exatamente o buraco.
 
+    D-576: `segmentos_mantidos` vem na ORDEM DE EXIBIÇÃO e é percorrido assim.
+    Ordenar aqui era inofensivo enquanto exibição e cronologia eram a mesma
+    coisa; com o arranjo de blocos apagaria justamente o salto que o avaliador
+    precisa enxergar. Nem toda emenda é remoção: onde o editor só trocou a ordem
+    nada foi cortado, e contar aquele vão como "tempo removido" inflaria o total
+    (podendo até dar negativo num bloco que voltou para trás).
+
     Exemplo:
         >>> emendas = calcular_emendas(
         ...     [{"start": 10.0, "end": 40.0}, {"start": 70.0, "end": 90.0}],
@@ -87,23 +94,59 @@ def calcular_emendas(segmentos_mantidos: list[dict], desvios: list[dict]) -> lis
         ... )
         >>> emendas[0].posicao_seg, emendas[0].removido_seg, emendas[0].motivo
         (30.0, 30.0, 'papo com o chat')
+
+    Exemplo (bloco movido para trás — costura, não corte):
+        >>> emendas = calcular_emendas(
+        ...     [{"start": 300.0, "end": 480.0}, {"start": 0.0, "end": 300.0}], []
+        ... )
+        >>> emendas[0].removido_seg, emendas[0].motivo
+        (0.0, 'ordem trocada pelo editor')
     """
-    ordenados = sorted(segmentos_mantidos, key=lambda s: float(s.get("start", 0.0)))
     emendas: list[Emenda] = []
     acumulado = 0.0
 
-    for atual, proximo in zip(ordenados, ordenados[1:], strict=False):
+    for atual, proximo in zip(segmentos_mantidos, segmentos_mantidos[1:], strict=False):
         fim = float(atual.get("end", 0.0))
         acumulado += fim - float(atual.get("start", 0.0))
         inicio_proximo = float(proximo.get("start", 0.0))
-        emendas.append(
-            Emenda(
-                posicao_seg=round(acumulado, 2),
-                removido_seg=round(inicio_proximo - fim, 2),
-                motivo=_motivo_do_intervalo(desvios, fim, inicio_proximo),
+
+        if _vao_apenas_mudou_de_lugar(segmentos_mantidos, fim, inicio_proximo):
+            emendas.append(
+                Emenda(
+                    posicao_seg=round(acumulado, 2),
+                    removido_seg=0.0,
+                    motivo="ordem trocada pelo editor",
+                )
             )
-        )
+        else:
+            emendas.append(
+                Emenda(
+                    posicao_seg=round(acumulado, 2),
+                    removido_seg=round(inicio_proximo - fim, 2),
+                    motivo=_motivo_do_intervalo(desvios, fim, inicio_proximo),
+                )
+            )
     return emendas
+
+
+def _vao_apenas_mudou_de_lugar(segmentos: list[dict], inicio: float, fim: float) -> bool:
+    """O material do vão `[inicio, fim]` reaparece noutro ponto da fila?
+
+    Este é o critério exato para separar as duas emendas, e ele se decide só com
+    os segmentos — sem consultar desvios, que podem estar incompletos ou
+    mesclados. Se o que falta aqui toca em outro lugar do vídeo, nada foi
+    removido: o bloco só mudou de posição, e contar aquele tempo como removido
+    inflaria a telemetria do corte.
+
+    Vão nulo ou negativo já é, por si, um salto de ordem — o bloco seguinte veio
+    de antes na live.
+    """
+    if fim - inicio <= 0.05:
+        return True
+    return any(
+        float(s.get("start", 0.0)) < fim - 0.05 and float(s.get("end", 0.0)) > inicio + 0.05
+        for s in segmentos
+    )
 
 
 def _motivo_do_intervalo(desvios: list[dict], inicio: float, fim: float) -> str:

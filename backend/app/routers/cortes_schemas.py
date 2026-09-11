@@ -50,6 +50,8 @@ class CorteResponse(BaseModel):
     audio_offset_ms: int = 0
     # F-054: sugestões de mudança de cena detectadas no bruto.
     segmentos_detectados: list = []
+    # D-576: ordem de exibição dos blocos ([] = cronológica).
+    arranjo_blocos: list = []
     is_fire: bool = False
     is_pos_producao: int = 0
     # F-058: influência manual do editor no prompt da thumbnail.
@@ -78,6 +80,42 @@ class AtualizarCorteRequest(BaseModel):
     hints_thumbnail: str | None = None
     # F-063: offset fino de áudio (lip-sync) por corte, em milissegundos.
     audio_offset_ms: int | None = None
+
+
+class BlocoArranjoSchema(BaseModel):
+    """Um bloco na fila de exibição do corte (D-576)."""
+
+    posicao: int
+    inicio_seg: float
+    fim_seg: float
+    duracao_seg: float
+    # Duração já descontados os desvios DESTE bloco — é a que o editor vê.
+    duracao_liquida_seg: float
+
+
+class ArranjoResponse(BaseModel):
+    corte_id: str
+    inicio_seg: float
+    fim_seg: float
+    blocos: list[BlocoArranjoSchema]
+    # True quando a ordem é a da live — inclusive num corte fatiado e não movido.
+    cronologico: bool
+    # A ordem mudou e já existe bruto gerado: ele está velho. Aviso, não ação —
+    # nenhum artefato é apagado pelas costas do editor.
+    bruto_desatualizado: bool
+
+
+class DividirBlocoRequest(BaseModel):
+    ponto_seg: float
+
+
+class MoverBlocoRequest(BaseModel):
+    de_indice: int
+    para_indice: int
+
+
+class FundirBlocoRequest(BaseModel):
+    indice: int
 
 
 class RemoverDesvioRequest(BaseModel):

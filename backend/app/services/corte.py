@@ -329,6 +329,24 @@ class CorteService:
             corte.fim_seg = dados.fim_seg
         if dados.desvios is not None:
             corte.desvios = json.dumps(dados.desvios)
+        # D-576: mexeu na borda, o arranjo de blocos acompanha. Descartá-lo seria
+        # perder o trabalho do editor por causa de um ajuste de meio segundo;
+        # confiar nele cegamente mandaria o ffmpeg cortar fora do intervalo.
+        # `reconciliar` estica as fatias até o novo intervalo mantendo a ORDEM.
+        if dados.inicio_seg is not None or dados.fim_seg is not None:
+            from app.domain.arranjo_blocos import parse as parse_arranjo
+            from app.domain.arranjo_blocos import reconciliar, serializar
+
+            arranjo = parse_arranjo(corte.arranjo_blocos)
+            if arranjo:
+                corte.arranjo_blocos = json.dumps(
+                    serializar(
+                        reconciliar(
+                            arranjo, float(corte.inicio_seg or 0.0), float(corte.fim_seg or 0.0)
+                        )
+                    ),
+                    ensure_ascii=False,
+                )
         if dados.status is not None:
             corte.status = dados.status
         if dados.is_leitura is not None:
@@ -502,6 +520,17 @@ class CorteService:
                 desvios = []
             desvios_esq, desvios_dir = dividir_desvios_no_ponto(desvios, ponto)
 
+            # D-576: o arranjo é uma permutação do intervalo, então partir o
+            # intervalo parte o arranjo. Cada metade fica com os blocos que lhe
+            # cabem, esticados para ladrilhar a própria borda nova e NA ORDEM que
+            # o editor tinha escolhido. Corte sem arranjo continua sem arranjo.
+            from app.domain.arranjo_blocos import parse as parse_arranjo
+            from app.domain.arranjo_blocos import reconciliar, serializar
+
+            arranjo = parse_arranjo(corte.arranjo_blocos)
+            arranjo_esq = serializar(reconciliar(arranjo, inicio, ponto))
+            arranjo_dir = serializar(reconciliar(arranjo, ponto, fim))
+
             novo_id = str(uuid.uuid4())
             titulo_base = (corte.titulo_proposto or "").strip() or f"Corte #{corte.numero}"
             novo_corte = Corte(
@@ -516,6 +545,7 @@ class CorteService:
                 inicio_seg=ponto,
                 fim_seg=fim,
                 desvios=json.dumps(desvios_dir, ensure_ascii=False),
+                arranjo_blocos=json.dumps(arranjo_dir, ensure_ascii=False),
                 status=StatusCorte.PROPOSTO,
                 is_leitura=corte.is_leitura,
                 autor_leitura=corte.autor_leitura,
@@ -530,6 +560,7 @@ class CorteService:
             corte.fim_seg = ponto
             corte.fim_hms = seg_to_hms(ponto)
             corte.desvios = json.dumps(desvios_esq, ensure_ascii=False)
+            corte.arranjo_blocos = json.dumps(arranjo_esq, ensure_ascii=False)
 
             await db.commit()
             # D-448: a metade nova entra logo depois da original porque começa
@@ -640,6 +671,24 @@ class CorteService:
                 ),
                 ensure_ascii=False,
             )
+            # D-576: a ordem escolhida em cada metade sobrevive à junção — a do
+            # primeiro toca inteira, depois a do segundo. Perder isso seria o
+            # mesmo tipo de estrago que a junção existe para evitar nos trechos e
+            # nas cenas: trabalho editorial jogado fora por uma operação de
+            # fronteira. Dois cortes sem arranjo continuam sem arranjo.
+            from app.domain.arranjo_blocos import concatenar, serializar
+            from app.domain.arranjo_blocos import parse as parse_arranjo
+
+            arranjo_mesclado = concatenar(
+                parse_arranjo(primeiro.arranjo_blocos),
+                parse_arranjo(segundo.arranjo_blocos),
+                float(primeiro.inicio_seg or 0.0),
+                float(primeiro.fim_seg or 0.0),
+                float(segundo.inicio_seg or 0.0),
+                float(segundo.fim_seg or 0.0),
+            )
+            primeiro.arranjo_blocos = json.dumps(serializar(arranjo_mesclado), ensure_ascii=False)
+
             primeiro.fim_seg = float(segundo.fim_seg or 0.0)
             primeiro.fim_hms = segundo.fim_hms
 
@@ -1227,9 +1276,16 @@ class CorteService:
                 return hms_to_seg(d.get(k_hms, ""))
 
             # ── 2. Calcular Segmentos Mantidos (Lógica unificada com ExportService) ──
-            from app.domain.segment_calculator import calcular_segmentos
+            # D-576: na ORDEM DE EXIBIÇÃO, não na cronológica. Se o corte tem
+            # arranjo de blocos, a transcrição final precisa nascer embaralhada
+            # do mesmo jeito que o vídeo — senão a legenda descreve um bruto que
+            # não existe mais, e as cenas (que leem daqui) apontam para o lugar
+            # errado. Sem arranjo, é o mesmo `calcular_segmentos` de sempre.
+            from app.domain.arranjo_blocos import parse as parse_arranjo
+            from app.domain.arranjo_blocos import reconciliar, segmentos_na_ordem
 
-            segmentos_mantidos = calcular_segmentos(c_inicio, c_fim, desvios)
+            arranjo = reconciliar(parse_arranjo(corte.arranjo_blocos), c_inicio, c_fim)
+            segmentos_mantidos = segmentos_na_ordem(arranjo, c_inicio, c_fim, desvios)
             operational_debug("CorteService", f"  Segmentos mantidos ({len(segmentos_mantidos)}):")
             for sm in segmentos_mantidos:
                 operational_debug(

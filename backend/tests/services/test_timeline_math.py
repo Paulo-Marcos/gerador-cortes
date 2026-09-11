@@ -159,15 +159,18 @@ class TestRecalcularTranscricao:
         assert "antes_do_corte" not in textos
         assert "dentro_do_corte" in textos
 
-    def test_ordem_saida_preserva_ordem_entrada(self):
-        # recalcular_transcricao NÃO ordena a transcrição de entrada.
-        # A saída mantém a mesma ordem da entrada. Cabe ao chamador passar
-        # a transcrição pré-ordenada (ex: via limpar_e_ordenar_transcricao).
+    def test_ordem_saida_segue_o_tempo_novo(self):
+        # D-576 inverteu este contrato. Antes a saída repetia a ordem da entrada
+        # ("cabe ao chamador pré-ordenar"), o que só funcionava porque a ordem da
+        # live e a ordem do vídeo eram a mesma coisa. Com o arranjo de blocos elas
+        # se separam: a entrada continua em tempo de live e a saída precisa sair
+        # em tempo de VÍDEO, senão a legenda descreve um bruto que não existe.
         trans = _trans((5.0, 6.0, "a"), (25.0, 26.0, "b"), (2.0, 3.0, "c"))
         segs = _segs((0.0, 10.0), (20.0, 30.0))
         result = TimelineMath.recalcular_transcricao(trans, segs)
         textos = [r["texto"] for r in result]
-        assert textos == ["a", "b", "c"]  # preserva ordem da entrada
+        assert textos == ["c", "a", "b"]  # 2s, 5s, 25s→15s
+        assert [r["start"] for r in result] == sorted(r["start"] for r in result)
 
     def test_duracao_zero_descartada(self):
         # Palavra onde início e fim caem no mesmo ponto da timeline editada
@@ -198,14 +201,17 @@ class TestRecalcularTranscricao:
         assert len(result) == 1
         assert result[0]["start"] == pytest.approx(25.0)
 
-    def test_segs_desordenados_ordena_internamente(self):
-        # recalcular_transcricao ordena os segmentos antes de processar
+    def test_segs_fora_de_ordem_sao_ordem_de_exibicao(self):
+        # D-576 inverteu este contrato. Ordenar os segmentos aqui dentro era
+        # seguro enquanto "fora de ordem" só podia ser erro do chamador; com o
+        # arranjo de blocos passou a ser a INFORMAÇÃO — a ordem em que o vídeo
+        # toca. Ordená-la de volta apagaria a decisão do editor.
         trans = _trans((22.0, 24.0, "palavra"))
-        segs = _segs((20.0, 30.0), (0.0, 10.0))  # desordenados
+        segs = _segs((20.0, 30.0), (0.0, 10.0))  # [20-30] toca PRIMEIRO
         result = TimelineMath.recalcular_transcricao(trans, segs)
-        # Com segs ordenados: [0-10][20-30], tempo 22 → 10+(22-20)=12
+        # 22s cai no 1º segmento da fila, que começa em 0 no vídeo: 22-20 = 2
         assert len(result) == 1
-        assert result[0]["start"] == pytest.approx(12.0)
+        assert result[0]["start"] == pytest.approx(2.0)
 
 
 # ─────────────────────────────────────────────────────────────

@@ -22,22 +22,27 @@ from app.routers.cortes_helpers import (
 )
 from app.routers.cortes_schemas import (
     AdicionarDesvioRequest,
+    ArranjoResponse,
     AtualizarCorteRequest,
     CorteResponse,
     CriarCorteDesvioRequest,
     CriarCorteManualRequest,
     DecisaoSegmentoRequest,
+    DividirBlocoRequest,
     DividirCorteRequest,
+    FundirBlocoRequest,
     GerarBrutoRequest,
     ImportarCenasRequest,
     ImportarDesviosRequest,
     JuntarCortesRequest,
+    MoverBlocoRequest,
     RemoverDesvioRequest,
     RenderPipelineRequest,
     ReordenarCortesRequest,
     ValidarCenasRequest,
 )
 from app.routers.errors import erro_interno
+from app.services import arranjo as arranjo_service
 from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.corte import AtualizarCorteDTO, CorteService
@@ -315,6 +320,74 @@ async def juntar_cortes(
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado após a junção")
     return _corte_to_dict(corte)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# D-576: ordem de exibição dos blocos do corte
+#
+# Endpoints separados dos de desvio de propósito. São duas decisões editoriais
+# diferentes — o que SAI (desvio) e em que ORDEM entra o que ficou (arranjo) —
+# e juntá-las num PATCH genérico faria a UI ter de reenviar uma para mexer na
+# outra. Toda operação devolve o arranjo INTEIRO já recalculado: o cliente nunca
+# precisa deduzir o estado novo a partir do que mandou.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _erro_de_arranjo(e: ValueError) -> HTTPException:
+    msg = str(e)
+    if "não encontrado" in msg:
+        return HTTPException(status_code=404, detail=msg)
+    return HTTPException(status_code=400, detail=f"Arranjo inválido: {msg}")
+
+
+@router.get("/{corte_id}/arranjo", response_model=ArranjoResponse)
+async def obter_arranjo(corte_id: str):
+    """A fila de blocos do corte. Corte nunca reordenado devolve um bloco só."""
+    try:
+        return await arranjo_service.obter(corte_id)
+    except ValueError as e:
+        raise _erro_de_arranjo(e) from e
+
+
+@router.post("/{corte_id}/arranjo/dividir", response_model=ArranjoResponse)
+async def dividir_bloco(corte_id: str, body: DividirBlocoRequest):
+    """Passa a lâmina no instante absoluto informado, criando uma junta.
+
+    Não confundir com `POST /{corte_id}/dividir` (F-061), que parte o CORTE em
+    dois cortes. Aqui o corte continua um só; o que se parte é o material dentro
+    dele, para poder trocar de lugar.
+    """
+    try:
+        return await arranjo_service.dividir(corte_id, float(body.ponto_seg))
+    except ValueError as e:
+        raise _erro_de_arranjo(e) from e
+
+
+@router.post("/{corte_id}/arranjo/mover", response_model=ArranjoResponse)
+async def mover_bloco(corte_id: str, body: MoverBlocoRequest):
+    """Move o bloco de uma posição da fila para outra."""
+    try:
+        return await arranjo_service.mover(corte_id, body.de_indice, body.para_indice)
+    except ValueError as e:
+        raise _erro_de_arranjo(e) from e
+
+
+@router.post("/{corte_id}/arranjo/fundir", response_model=ArranjoResponse)
+async def fundir_bloco(corte_id: str, body: FundirBlocoRequest):
+    """Desfaz a junta entre o bloco e o vizinho seguinte NA LIVE."""
+    try:
+        return await arranjo_service.fundir(corte_id, body.indice)
+    except ValueError as e:
+        raise _erro_de_arranjo(e) from e
+
+
+@router.post("/{corte_id}/arranjo/restaurar", response_model=ArranjoResponse)
+async def restaurar_arranjo(corte_id: str):
+    """Esquece blocos e ordem: o corte volta a tocar como foi falado."""
+    try:
+        return await arranjo_service.restaurar(corte_id)
+    except ValueError as e:
+        raise _erro_de_arranjo(e) from e
 
 
 @router.post("/{corte_id}/analisar-desvios")

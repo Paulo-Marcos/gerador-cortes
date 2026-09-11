@@ -10,6 +10,14 @@ class TimelineMath:
         """
         Mapeia um timestamp do vídeo original para a nova timeline contínua (Editada).
         Usa uma pequena tolerância (epsilon) para lidar com arredondamentos de float.
+
+        `segmentos_mantidos` vem na ORDEM EM QUE TOCAM, que desde o D-576 pode não
+        ser a cronológica (arranjo de blocos). Por isso a varredura percorre a lista
+        inteira: o atalho antigo — `return None` assim que o tempo ficava atrás do
+        segmento da vez — só valia para entrada ordenada, e com a ordem embaralhada
+        descartaria em silêncio toda palavra de um bloco movido para trás. Para
+        entrada cronológica o resultado é idêntico (tempo em buraco de desvio não
+        casa com nenhum segmento e cai no `None` do fim).
         """
         tempo_acumulado = 0.0
         epsilon = 0.005  # 5ms de tolerância
@@ -17,20 +25,14 @@ class TimelineMath:
         for seg in segmentos_mantidos:
             start = float(seg["start"])
             end = float(seg["end"])
-            duracao_seg = end - start
 
             # Se o tempo original está dentro do segmento (com tolerância)
             if (start - epsilon) <= tempo_original <= (end + epsilon):
                 # Clipa o offset para garantir que não seja negativo
                 offset_dentro_do_seg = max(0.0, tempo_original - start)
-                res = round(tempo_acumulado + offset_dentro_do_seg, 4)
-                # print(f"[TimelineMath] mapear({tempo_original}) -> {res} (seg [{start}-{end}], acum={tempo_acumulado})")
-                return res
+                return round(tempo_acumulado + offset_dentro_do_seg, 4)
 
-            if tempo_original < (start - epsilon):
-                return None
-
-            tempo_acumulado += duracao_seg
+            tempo_acumulado += end - start
 
         return None
 
@@ -38,9 +40,15 @@ class TimelineMath:
     def recalcular_transcricao(
         transcricao_original: list[dict], segmentos_mantidos: list[dict[str, float]]
     ) -> list[dict]:
-        """Remapeia timestamps da transcrição para a timeline editada (sem desvios)."""
-        segmentos_mantidos = sorted(segmentos_mantidos, key=lambda x: float(x["start"]))
-        min_start = float(segmentos_mantidos[0]["start"]) if segmentos_mantidos else 0.0
+        """Remapeia timestamps da transcrição para a timeline editada (sem desvios).
+
+        D-576: `segmentos_mantidos` chega na ORDEM DE EXIBIÇÃO e é consumido assim —
+        ordená-lo aqui destruiria justamente a informação que o arranjo de blocos
+        carrega. A transcrição de saída é reordenada no fim pelos tempos NOVOS,
+        porque a leitura da live deixa de valer como ordem quando os blocos trocam
+        de lugar.
+        """
+        min_start = min((float(s["start"]) for s in segmentos_mantidos), default=0.0)
         epsilon = 0.005
         nova_transcricao = []
 
@@ -116,6 +124,7 @@ class TimelineMath:
 
                 nova_transcricao.append(novo_item)
 
+        nova_transcricao.sort(key=lambda item: float(item["start"]))
         return nova_transcricao
 
     @staticmethod

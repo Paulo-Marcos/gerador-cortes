@@ -230,6 +230,18 @@ class Corte(Base):
     # região correspondente em `layout_youtube.regioes`; o segmento continua
     # aqui para auditoria do que a IA propôs.
     segmentos_detectados: Mapped[str] = mapped_column(Text, default="[]")
+    # D-576: a ORDEM em que o material deste corte toca. Lista JSON de blocos
+    # `{inicio_seg, fim_seg}` em tempo de LIVE, na ordem de exibição — a EDL do
+    # corte. Regra e vocabulário em `domain/arranjo_blocos.py`.
+    #
+    # NÃO confundir com `desvios`, que a UI chama de "trechos": desvio decide o
+    # que SAI, arranjo decide em que ORDEM entra o que ficou. São decisões
+    # independentes e se compõem (cada bloco é subtraído dos seus desvios).
+    #
+    # Vazio é o caso normal e significa "ordem cronológica" — ausência como
+    # herança, igual à cascata de layout. Corte que nunca foi reordenado não
+    # carrega arranjo, e o pipeline roda o caminho de antes do D-576.
+    arranjo_blocos: Mapped[str] = mapped_column(Text, default="[]")
     # Marca explicita do operador de que as cenas do roteiro visual ja foram revisadas
     # e estao prontas. Usada como pill na pagina de cortes (entre Graded e Final).
     cenas_validadas: Mapped[int] = mapped_column(Integer, default=0)

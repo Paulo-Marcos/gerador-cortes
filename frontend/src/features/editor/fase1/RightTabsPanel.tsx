@@ -20,6 +20,7 @@ import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
 import { RetractableFooter } from '@/components/workbench/RetractableFooter';
 import { cn } from '@/lib/utils';
 import { AvaliacaoBrutoPanel } from '../avaliacao/AvaliacaoBrutoPanel';
+import { BlocosTab } from './BlocosTab';
 import { resolverBadgeTrecho } from './trechoBadge';
 import { hmsParaSeg } from '../timeUtils';
 import { useCorte } from '@/hooks/useEditor';
@@ -84,7 +85,11 @@ interface RightTabsPanelProps {
 // D-447: a aba "Avaliação" mora aqui, e não numa tela nova, porque a
 // pergunta que ela responde — "o que sobrou se sustenta?" — só faz sentido
 // ao lado do material que a responde: os trechos removidos e a transcrição.
-type TabId = 'trechos' | 'transcricao' | 'avaliacao';
+// D-576: a aba "Ordem" fica ao lado de "Trechos a remover" porque as duas
+// respondem perguntas vizinhas sobre o MESMO material — o que sai e em que
+// ordem entra o que ficou. Separadas para o editor não confundir remover com
+// mover; vizinhas para ele não ter de trocar de tela entre as duas.
+type TabId = 'trechos' | 'ordem' | 'transcricao' | 'avaliacao';
 
 /**
  * "00:22:09.000" → "22:09.0". O protótipo v3 mostra décimos: os
@@ -151,6 +156,12 @@ export function RightTabsPanel({
           countTone="err"
         />
         <TabButton
+          id="ordem"
+          active={tab === 'ordem'}
+          onClick={() => setTab('ordem')}
+          label="Ordem"
+        />
+        <TabButton
           id="transcricao"
           active={tab === 'transcricao'}
           onClick={() => setTab('transcricao')}
@@ -185,6 +196,13 @@ export function RightTabsPanel({
 
       {tab === 'avaliacao' ? (
         <AvaliacaoBrutoPanel corteId={corteId} />
+      ) : tab === 'ordem' ? (
+        <BlocosTab
+          corteId={corteId}
+          projetoId={projetoId}
+          pontoSeg={currentTime}
+          onSeek={onSeek}
+        />
       ) : tab === 'trechos' ? (
         <TrechosList
           desvios={desvios}

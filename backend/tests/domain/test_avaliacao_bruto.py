@@ -35,10 +35,37 @@ def test_emenda_sem_desvio_correspondente_fica_sem_motivo():
     assert emendas[0].motivo == ""
 
 
-def test_segmentos_fora_de_ordem_sao_ordenados_antes_de_costurar():
+def test_segmentos_fora_de_ordem_sao_a_ordem_de_exibicao():
+    # D-576 inverteu este contrato. Ordenar antes de costurar era seguro enquanto
+    # "fora de ordem" só podia ser engano do chamador; com o arranjo de blocos
+    # virou a informação — o vídeo toca [70-90] e só depois [10-40].
     emendas = calcular_emendas([{"start": 70.0, "end": 90.0}, {"start": 10.0, "end": 40.0}], [])
 
-    assert [e.posicao_seg for e in emendas] == [30.0]
+    # A emenda cai aos 20s do bruto (a duração do primeiro bloco na fila).
+    assert [e.posicao_seg for e in emendas] == [20.0]
+
+
+def test_bloco_movido_nao_conta_como_tempo_removido():
+    """O que mudou de lugar não sumiu — contá-lo inflaria a telemetria do corte."""
+    emendas = calcular_emendas([{"start": 300.0, "end": 480.0}, {"start": 0.0, "end": 300.0}], [])
+
+    assert emendas[0].removido_seg == 0.0
+    assert emendas[0].motivo == "ordem trocada pelo editor"
+
+
+def test_vao_com_material_que_toca_adiante_e_reordenacao_e_nao_corte():
+    """[A][C] com B jogado para o fim: o vão entre A e C não é remoção."""
+    emendas = calcular_emendas(
+        [
+            {"start": 0.0, "end": 180.0},
+            {"start": 300.0, "end": 480.0},
+            {"start": 180.0, "end": 300.0},
+        ],
+        [],
+    )
+
+    assert emendas[0].removido_seg == 0.0
+    assert emendas[1].removido_seg == 0.0
 
 
 # ─── texto avaliado ──────────────────────────────────────────────────────────

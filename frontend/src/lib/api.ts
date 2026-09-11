@@ -3,6 +3,7 @@ import type {
   AnalisarIntervaloRequest,
   AnalisePromptResponse,
   AppSettings,
+  ArranjoBlocos,
   AuditoriaAnaliseResponse,
   AvaliacaoThumbnail,
   AvaliacaoThumbnailHistorico,
@@ -456,6 +457,31 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
+  // D-576: ordem de exibição dos blocos do corte. Toda operação devolve o
+  // arranjo inteiro recalculado — o cliente não deduz estado, só desenha.
+  obterArranjo: (corteId: string) => request<ArranjoBlocos>(`/cortes/${corteId}/arranjo`),
+
+  dividirBloco: (corteId: string, body: { ponto_seg: number }) =>
+    request<ArranjoBlocos>(`/cortes/${corteId}/arranjo/dividir`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  moverBloco: (corteId: string, body: { de_indice: number; para_indice: number }) =>
+    request<ArranjoBlocos>(`/cortes/${corteId}/arranjo/mover`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  fundirBloco: (corteId: string, body: { indice: number }) =>
+    request<ArranjoBlocos>(`/cortes/${corteId}/arranjo/fundir`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  restaurarArranjo: (corteId: string) =>
+    request<ArranjoBlocos>(`/cortes/${corteId}/arranjo/restaurar`, { method: 'POST' }),
 
   obterCorte: (corteId: string) => request<Corte>(`/cortes/${corteId}`),
 

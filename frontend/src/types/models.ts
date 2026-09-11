@@ -81,6 +81,34 @@ export type StatusSegmentoDetectado =
   | 'aceito_compartilhada'
   | 'rejeitado';
 
+/**
+ * D-576 — um bloco na fila de exibição do corte.
+ *
+ * `inicio_seg`/`fim_seg` são tempo de LIVE (de onde o material vem);
+ * `posicao` é onde ele toca. As duas coisas deixam de coincidir assim que o
+ * editor reordena — é justamente essa separação que a funcionalidade existe
+ * para permitir.
+ */
+export interface BlocoArranjo {
+  posicao: number;
+  inicio_seg: number;
+  fim_seg: number;
+  duracao_seg: number;
+  /** Duração já descontados os desvios DESTE bloco — a que aparece no vídeo. */
+  duracao_liquida_seg: number;
+}
+
+export interface ArranjoBlocos {
+  corte_id: string;
+  inicio_seg: number;
+  fim_seg: number;
+  blocos: BlocoArranjo[];
+  /** True quando a ordem é a da live — inclusive fatiado e não movido. */
+  cronologico: boolean;
+  /** A ordem mudou e o bruto já gerado ficou velho. Aviso, não ação. */
+  bruto_desatualizado: boolean;
+}
+
 export interface SegmentoDetectado {
   inicio: number;
   fim: number;
@@ -192,6 +220,8 @@ export interface Corte {
    * bruto do corte. Vazio quando a detecção ainda não rodou (corte legado
    * ou bruto recém-gerado antes do scan terminar). */
   segmentos_detectados?: SegmentoDetectado[];
+  /** D-576: ordem de exibição dos blocos. Vazio/ausente = ordem da live. */
+  arranjo_blocos?: { inicio_seg: number; fim_seg: number }[];
   transcricao_corte?: TranscricaoLinha[];
   /** Transcricao limpa: sem duplicacao, com tempos remapeados para o video bruto (sem trechos). */
   transcricao_final?: TranscricaoLinha[];

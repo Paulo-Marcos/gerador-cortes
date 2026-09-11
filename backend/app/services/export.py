@@ -19,9 +19,10 @@ from pathlib import Path
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.config import settings
 from app.database import AsyncSessionLocal
+from app.domain.arranjo_blocos import parse as parse_arranjo
+from app.domain.arranjo_blocos import reconciliar, segmentos_na_ordem
 from app.domain.bruto_pipeline import build_bruto_pipeline
 from app.domain.segment_calculator import (
-    calcular_segmentos,
     mesclar_desvios_sobrepostos,
     normalizar_desvio,
 )
@@ -167,7 +168,13 @@ class ExportService(
             # blocos de remoção únicos existem.
             desvios_mesclados = mesclar_desvios_sobrepostos(desvios)
 
-            segmentos_data = calcular_segmentos(inicio_seg, fim_seg, desvios_mesclados)
+            # D-576: a ORDEM sai do arranjo de blocos; o que SAI continua vindo
+            # dos desvios. `reconciliar` reencaixa o arranjo no intervalo já
+            # limitado à duração real do vídeo — sem isso um bloco poderia
+            # apontar para além do fim do arquivo. Corte sem arranjo cai no
+            # `calcular_segmentos` de sempre, byte a byte.
+            arranjo = reconciliar(parse_arranjo(corte.arranjo_blocos), inicio_seg, fim_seg)
+            segmentos_data = segmentos_na_ordem(arranjo, inicio_seg, fim_seg, desvios_mesclados)
             segmentos = [(s["start"], s["end"]) for s in segmentos_data]
 
             if not segmentos:

@@ -63,6 +63,8 @@ async def init_db():
             "ALTER TABLE cortes ADD COLUMN hints_thumbnail TEXT DEFAULT ''",
             # F-063: offset fino de áudio (lip-sync) por corte, em milissegundos.
             "ALTER TABLE cortes ADD COLUMN audio_offset_ms INTEGER DEFAULT 0",
+            # D-576: ordem de exibição dos blocos do corte. Vazio = cronológica.
+            "ALTER TABLE cortes ADD COLUMN arranjo_blocos TEXT DEFAULT '[]'",
             "ALTER TABLE projetos ADD COLUMN versao_renderer VARCHAR(10) DEFAULT 'v2'",
             "ALTER TABLE projetos ADD COLUMN sombra_nivel_padrao VARCHAR(20) DEFAULT 'nenhuma'",
             "ALTER TABLE projetos ADD COLUMN layout_card_padrao VARCHAR(20) DEFAULT 'vertical'",

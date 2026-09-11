@@ -19,6 +19,8 @@ import uuid
 from dataclasses import dataclass
 
 from app.database import AsyncSessionLocal
+from app.domain.arranjo_blocos import parse as parse_arranjo
+from app.domain.arranjo_blocos import reconciliar, segmentos_na_ordem
 from app.domain.avaliacao_bruto import (
     AvaliacaoNormalizada,
     Emenda,
@@ -26,7 +28,7 @@ from app.domain.avaliacao_bruto import (
     montar_texto_avaliado,
     rotulo_do_tipo,
 )
-from app.domain.segment_calculator import calcular_segmentos, normalizar_desvio
+from app.domain.segment_calculator import normalizar_desvio
 from app.domain.time_convert import seg_to_hms_short
 from app.models import AvaliacaoBruto, Corte
 from sqlalchemy import select
@@ -72,9 +74,13 @@ async def montar_contexto(corte_id: str) -> ContextoAvaliacao:
             raise ValueError("O corte não tem transcrição final — gere o bruto antes de avaliá-lo.")
 
         desvios = [normalizar_desvio(d) for d in _json_lista(corte.desvios)]
-        segmentos = calcular_segmentos(
-            float(corte.inicio_seg or 0.0), float(corte.fim_seg or 0.0), desvios
-        )
+        inicio = float(corte.inicio_seg or 0.0)
+        fim = float(corte.fim_seg or 0.0)
+        # D-576: as emendas são as do bruto REAL, que segue o arranjo de blocos.
+        # Calculá-las em ordem cronológica descreveria um vídeo que não existe —
+        # e é justamente na emenda que o avaliador julga se o corte se sustenta.
+        arranjo = reconciliar(parse_arranjo(corte.arranjo_blocos), inicio, fim)
+        segmentos = segmentos_na_ordem(arranjo, inicio, fim, desvios)
         emendas = calcular_emendas(segmentos, desvios)
         duracao = float(corte.duracao_clip_seg or 0.0) or sum(
             float(s["end"]) - float(s["start"]) for s in segmentos
