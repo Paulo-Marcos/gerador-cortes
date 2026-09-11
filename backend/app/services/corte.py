@@ -55,6 +55,42 @@ logger = logging.getLogger(__name__)
 _MARGEM_DIVISAO_SEG = 0.5
 
 
+async def _recusar_juncao_invalida(db: AsyncSession, primeiro: Corte, segundo: Corte) -> None:
+    """Barra as junções que produziriam um corte incoerente (D-575).
+
+    Levanta ValueError com a razão; o router traduz para 400.
+
+    - **Projetos diferentes**: os tempos medem lives distintas; somar não
+      significa nada.
+    - **Já publicado**: juntar reescreveria um vídeo que está no ar.
+    - **Corte no meio**: o vão entre os dois vira trecho removido, e esse vão
+      engoliria inteiro o corte do meio — que continuaria existindo, agora
+      sobreposto ao mesclado.
+    """
+    if primeiro.projeto_id != segundo.projeto_id:
+        raise ValueError("Só dá para juntar cortes do mesmo projeto.")
+
+    publicado = next((c for c in (primeiro, segundo) if (c.youtube_video_id or "").strip()), None)
+    if publicado is not None:
+        raise ValueError(
+            f"O corte #{publicado.numero} já foi publicado no YouTube; "
+            "juntar mudaria um vídeo que já está no ar."
+        )
+
+    entre = await db.execute(
+        select(func.count())
+        .select_from(Corte)
+        .where(
+            Corte.projeto_id == primeiro.projeto_id,
+            Corte.id.notin_([primeiro.id, segundo.id]),
+            Corte.inicio_seg >= float(primeiro.fim_seg or 0.0),
+            Corte.inicio_seg < float(segundo.inicio_seg or 0.0),
+        )
+    )
+    if entre.scalar_one() > 0:
+        raise ValueError("Há outro corte entre os dois. Junte primeiro os vizinhos imediatos.")
+
+
 def _desvios_do_corte(corte: Corte) -> list[dict]:
     """Lê os trechos a remover do corte, tolerando JSON corrompido."""
     try:
@@ -508,6 +544,31 @@ class CorteService:
         return corte_id, novo_id
 
     @staticmethod
+    async def proximo_corte_id(db: AsyncSession, corte_id: str) -> str | None:
+        """Id do corte que começa logo depois deste, no mesmo projeto (D-575).
+
+        Vive no serviço e não no router porque "qual é o próximo" é conhecimento
+        do domínio — a ordem dos cortes é dada pelo tempo, com desempate estável
+        por id. Devolve None quando este é o último. Levanta ValueError se o
+        corte não existir.
+        """
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise ValueError("Corte não encontrado.")
+
+        proximo = await db.execute(
+            select(Corte.id)
+            .where(
+                Corte.projeto_id == corte.projeto_id,
+                Corte.id != corte.id,
+                Corte.inicio_seg >= float(corte.inicio_seg or 0.0),
+            )
+            .order_by(Corte.inicio_seg.asc(), Corte.id.asc())
+            .limit(1)
+        )
+        return proximo.scalar_one_or_none()
+
+    @staticmethod
     async def juntar_cortes(corte_id: str, outro_corte_id: str) -> str:
         """Funde dois cortes vizinhos num só (D-575) — o inverso de `dividir_corte`.
 
@@ -558,32 +619,7 @@ class CorteService:
             primeiro, segundo = sorted(
                 por_id.values(), key=lambda c: (float(c.inicio_seg or 0.0), c.id)
             )
-            if primeiro.projeto_id != segundo.projeto_id:
-                raise ValueError("Só dá para juntar cortes do mesmo projeto.")
-
-            publicado = next(
-                (c for c in (primeiro, segundo) if (c.youtube_video_id or "").strip()), None
-            )
-            if publicado is not None:
-                raise ValueError(
-                    f"O corte #{publicado.numero} já foi publicado no YouTube; "
-                    "juntar mudaria um vídeo que já está no ar."
-                )
-
-            entre = await db.execute(
-                select(func.count())
-                .select_from(Corte)
-                .where(
-                    Corte.projeto_id == primeiro.projeto_id,
-                    Corte.id.notin_([primeiro.id, segundo.id]),
-                    Corte.inicio_seg >= float(primeiro.fim_seg or 0.0),
-                    Corte.inicio_seg < float(segundo.inicio_seg or 0.0),
-                )
-            )
-            if entre.scalar_one() > 0:
-                raise ValueError(
-                    "Há outro corte entre os dois. Junte primeiro os vizinhos imediatos."
-                )
+            await _recusar_juncao_invalida(db, primeiro, segundo)
 
             desvios_primeiro = _desvios_do_corte(primeiro)
             desvios_segundo = _desvios_do_corte(segundo)

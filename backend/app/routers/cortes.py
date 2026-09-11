@@ -295,13 +295,14 @@ async def juntar_cortes(
     dois vira trecho removido, para que nada que não estava em nenhum dos dois
     cortes entre de carona.
     """
-    outro_id = (body.outro_corte_id if body else None) or await _proximo_corte_id(db, corte_id)
-    if not outro_id:
-        raise HTTPException(
-            status_code=400, detail="Este é o último corte: não há com quem juntar."
-        )
-
     try:
+        outro_id = (body.outro_corte_id if body else None) or await CorteService.proximo_corte_id(
+            db, corte_id
+        )
+        if not outro_id:
+            raise HTTPException(
+                status_code=400, detail="Este é o último corte: não há com quem juntar."
+            )
         sobrevivente_id = await CorteService.juntar_cortes(corte_id, outro_id)
     except ValueError as e:
         msg = str(e)
@@ -314,25 +315,6 @@ async def juntar_cortes(
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado após a junção")
     return _corte_to_dict(corte)
-
-
-async def _proximo_corte_id(db: AsyncSession, corte_id: str) -> str | None:
-    """Id do corte que começa logo depois deste, no mesmo projeto."""
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    proximo = await db.execute(
-        select(Corte.id)
-        .where(
-            Corte.projeto_id == corte.projeto_id,
-            Corte.id != corte.id,
-            Corte.inicio_seg >= float(corte.inicio_seg or 0.0),
-        )
-        .order_by(Corte.inicio_seg.asc(), Corte.id.asc())
-        .limit(1)
-    )
-    return proximo.scalar_one_or_none()
 
 
 @router.post("/{corte_id}/analisar-desvios")
