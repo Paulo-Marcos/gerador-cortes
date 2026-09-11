@@ -15,7 +15,6 @@ import {
   Clapperboard,
   Gauge,
   LayoutTemplate,
-  Move,
   Plus,
   SlidersHorizontal,
   Trash2,
@@ -38,7 +37,6 @@ import { mudancaDoPalco } from './aplicarPalco';
 import { NavegacaoDoPlayer } from './NavegacaoDoPlayer';
 import { useParadaNoFim } from './useParadaNoFim';
 import { CandidatoCard } from './CandidatoCard';
-import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { LegendaPrevia } from './LegendaPrevia';
 import { LinhaDoTempo } from './LinhaDoTempo';
 import { ReguaDeOnda } from './ReguaDeOnda';
@@ -99,7 +97,6 @@ export default function FireDetalhePage() {
   const [legendaVisivel, setLegendaVisivel] = useState(true);
   // D-493: o modo de edição do palco. Fora dele o overlay não existe — as alças
   // sobre o vídeo atrapalhariam quem só quer assistir ao trecho.
-  const [editandoPalco, setEditandoPalco] = useState(false);
   // D-500: ver o short montado ou o quadro cru. Desligado, a prévia volta a ser
   // a janela 9:16 sobre o bruto — que é o que serve para escolher o TRECHO,
   // enquanto o palco serve para escolher o ENQUADRAMENTO.
@@ -210,16 +207,6 @@ export default function FireDetalhePage() {
     );
   };
 
-  // D-493: o ajuste é PARCIAL. Mandamos o mapa inteiro já mesclado, porque o
-  // PATCH substitui o campo — mandar só o bloco movido apagaria o outro.
-  const gravarAjuste = (ajustes: Record<string, { x: number; y: number; w: number; h: number }>) => {
-    if (!emQuadro) return;
-    atualizar.mutate({
-      shortId: emQuadro.id,
-      ajustes_palco: { ...emQuadro.ajustes_palco, ...ajustes },
-    });
-  };
-
   const onDescartar = () => {
     if (!fire) return;
     if (!confirm(avisoDescarteBruto(fire.titulo || `Corte ${fire.numero}`, fire.bruto_mb))) return;
@@ -316,10 +303,7 @@ export default function FireDetalhePage() {
             <Button
               variant={verPalco ? 'secondary' : 'ghost'}
               size="sm"
-              onClick={() => {
-                setVerPalco((v) => !v);
-                setEditandoPalco(false);
-              }}
+              onClick={() => setVerPalco((v) => !v)}
               title="Ver o short montado no palco, ou o quadro cru com a janela 9:16"
             >
               <LayoutTemplate />
@@ -422,27 +406,15 @@ export default function FireDetalhePage() {
               <div className="flex min-h-0 flex-none flex-col items-center gap-1">
                 <PalcoPrevia plano={planoNaTela} video={video}>
                   {legenda}
-                  <EditorDePalco
-                    slots={planoNaTela.slots}
-                    ativo={editandoPalco}
-                    onGravar={gravarAjuste}
-                    onArrastando={simulacao.simular}
-                    onSoltou={simulacao.encerrar}
-                  />
                 </PalcoPrevia>
-                <button
-                  type="button"
-                  onClick={() => setEditandoPalco((v) => !v)}
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded-[6px] px-1.5 py-0.5 font-code text-[9.5px] uppercase tracking-[0.06em] transition-colors',
-                    editandoPalco
-                      ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent-strong)]'
-                      : 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)]',
-                  )}
-                >
-                  <Move size={10} aria-hidden />
-                  {editandoPalco ? 'editando o palco' : 'como vai sair'}
-                </button>
+                {/* D-562: aqui a prévia só MOSTRA. Mover e dimensionar as
+                    janelas passaram os dois para a seção 3 do "Definir o
+                    palco", onde a prévia é fixa e o controle de tamanho já
+                    morava — eram metades da mesma decisão em telas diferentes.
+                    O gesto era bom; o lugar é que estava errado. */}
+                <span className="font-code text-[9.5px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+                  como vai sair
+                </span>
               </div>
             )}
           </div>
@@ -540,23 +512,6 @@ export default function FireDetalhePage() {
                         <SlidersHorizontal />
                         Definir o palco
                       </Button>
-                    </div>
-                  )}
-                  {/* Com o palco oculto os campos editariam algo que ninguém
-                      está vendo — a mesma cegueira que o arraste sem prévia
-                      tinha. Desligar a visualização desliga a edição junto. */}
-                  {editandoPalco && palcoNaTela && palcoDoShort.data && (
-                    <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
-                      <CamposDoPalco
-                        slots={palcoDoShort.data.slots}
-                        ajustados={palcoDoShort.data.ajustados}
-                        ocupado={atualizar.isPending}
-                        onGravar={gravarAjuste}
-                        onDesfazer={() =>
-                          emQuadro &&
-                          atualizar.mutate({ shortId: emQuadro.id, ajustes_palco: {} })
-                        }
-                      />
                     </div>
                   )}
                 </div>

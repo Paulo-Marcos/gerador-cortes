@@ -22,7 +22,7 @@ import {
 } from '@/features/editor/fase2/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { EditorDeRecorte } from './EditorDeRecorte';
-import { EditorDePalco } from './EditorDePalco';
+import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { ocupacaoDoPalco, redimensionarPalco } from './arrastarSlot';
 import { PalcoPrevia } from './PalcoPrevia';
@@ -346,6 +346,23 @@ export function DefinirPalcoModal({
               fundo não aparece; abaixo disso o palco do canal fica visível em volta.
               {movendo && ' Arraste os blocos na prévia ao lado; os cantos redimensionam.'}
             </p>
+
+            {/* D-562: os números vieram junto do arraste, e pelo mesmo motivo.
+                Eles eram a metade PRECISA do mesmo gesto e viviam na página; se
+                só o arraste tivesse mudado de lugar, eles ficariam sem nenhum
+                jeito de aparecer. O arraste aproxima, o campo fecha — é a mesma
+                dupla da régua e das bordas finas, só que aqui as duas ficam. */}
+            {movendo && planoNaTela && (
+              <div className="mt-2 border-t border-[var(--wb-border-soft)] pt-2">
+                <CamposDoPalco
+                  slots={planoNaTela.slots}
+                  ajustados={planoNaTela.ajustados}
+                  ocupado={ocupado}
+                  onGravar={gravarAjuste}
+                  onDesfazer={() => onAplicar({ ajustes_palco: {} })}
+                />
+              </div>
+            )}
           </Secao>
 
           <Secao numero={4} titulo="A moldura">
