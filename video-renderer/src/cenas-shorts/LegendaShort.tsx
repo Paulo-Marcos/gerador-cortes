@@ -43,6 +43,15 @@ const CARREGADAS: Record<string, string> = Object.fromEntries(
 /** Agrupamento em página. 200-500ms = palavra a palavra; 1200ms+ = frase. */
 const AGRUPAMENTO_MS = 1200;
 
+/**
+ * D-568: a faixa que a legenda ocupa, com margem dos dois lados.
+ *
+ * Era 84%. No 9:16 o texto colado na borda é o primeiro a ser cortado pela
+ * moldura de qualquer player, e a legenda é o conteúdo — 85% assiste no mudo.
+ * Espelha `LARGURA_DA_LEGENDA` da `LegendaPrevia.tsx`.
+ */
+const LARGURA = "80%";
+
 /** Fração da altura ocupada pela UI dos apps, em cima e embaixo. */
 const SAFE_ZONE = 0.18;
 
@@ -100,13 +109,16 @@ export const LegendaShort: React.FC<LegendaShortProps> = ({
         left: "50%",
         transform: "translateX(-50%)",
         bottom: height * SAFE_ZONE + deslocamentoRodape,
-        width: "84%",
+        width: LARGURA,
         textAlign: "center",
         fontFamily: CARREGADAS[fonte] ?? FONTS_V2.display,
         fontSize: Math.round(height * 0.042),
         fontWeight: 800,
         lineHeight: 1.18,
         letterSpacing: "-0.01em",
+        // D-568: palavra longa QUEBRA em vez de furar a caixa. Sem isto ela
+        // saía por fora do quadro e aparecia cortada pela borda.
+        overflowWrap: "break-word",
         // Contorno em vez de caixa: a caixa esconde o vídeo, e o vídeo é o que
         // segura o dedo. O contorno mantém o contraste sobre qualquer fundo.
         textShadow:

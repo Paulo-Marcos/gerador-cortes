@@ -15,6 +15,16 @@ import type { PalavraTranscrita } from './shortsApi';
 // prévia serve para julgar legibilidade e quebra de linha, e as duas dependem
 // disso. A QUEBRA em si não é imitada — vem da mesma função do render.
 
+// D-568: a faixa que a legenda ocupa, com margem dos dois lados.
+//
+// 80% deixa 10% de cada lado. Era 84%, e com o tamanho certo (que a prévia
+// escondia) a linha encostava nas bordas. A margem não é estética: no 9:16 o
+// texto colado na borda é o primeiro a ser cortado pela moldura de qualquer
+// player, e a legenda é o conteúdo — 85% assiste no mudo.
+//
+// Espelha `LARGURA` do `LegendaShort.tsx` do renderer.
+const LARGURA_DA_LEGENDA = '80%';
+
 // D-563: as cores oferecidas para a palavra corrente.
 //
 // O catálogo é de APRESENTAÇÃO — o que se grava no short é o hex, não a chave.
@@ -101,9 +111,22 @@ export function LegendaPrevia({
       aria-hidden
     >
       <p
-        className="mx-auto font-display text-[clamp(11px,2.6cqw,26px)] font-extrabold leading-[1.18] tracking-[-0.01em]"
+        // D-568: `7.47cqw` é o tamanho do ARQUIVO, convertido.
+        //
+        // O render usa `height * 0.042` — 81px num quadro de 1920 de altura, que
+        // são 7,47% dos 1080 de largura. A prévia usava 2,6cqw e um teto de
+        // 26px: mostrava a legenda a 4,6% do quadro, quase três vezes menor que
+        // a que ia sair. O operador aprovava um texto que cabia e recebia outro
+        // que não cabia — "fica muito grande, às vezes até some".
+        //
+        // A `GanchoPrevia` já fazia essa conta certa (8.89cqw = 0,05 × 16/9); a
+        // legenda é que ficou para trás desde a D-479.
+        className="mx-auto font-display text-[clamp(9px,7.47cqw,96px)] font-extrabold leading-[1.18] tracking-[-0.01em]"
         style={{
-          width: '84%',
+          width: LARGURA_DA_LEGENDA,
+          // Palavra longa QUEBRA em vez de furar a caixa. Sem isto ela passava
+          // por fora do quadro e sumia recortada — o "some" do relato.
+          overflowWrap: 'break-word',
           // Vazio cai na `font-display` da classe, que e a do canal.
           fontFamily: fonte || undefined,
           textShadow:
