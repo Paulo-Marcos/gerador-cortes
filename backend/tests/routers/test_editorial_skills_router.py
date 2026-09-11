@@ -47,6 +47,8 @@ def test_get_lista_o_catalogo_com_default_e_atual(client: TestClient):
         "capa-tiktok-expert",
         "capa-tiktok-imagem-expert",
         "cenas-short-expert",
+        "gancho-short-expert",
+        "metadados-short-expert",
     ]
     cortador = skills[0]
     assert set(cortador["params"]) == {"modelo", "thinking_tokens", "timeout"}
