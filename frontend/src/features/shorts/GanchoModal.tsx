@@ -118,6 +118,7 @@ export function GanchoModal({
           fimSeg={short.fim_seg}
           tempoAtualSeg={tempoDaPrevia}
           cor={short.legenda_cor}
+          fonte={short.legenda_fonte}
         />
       )}
     </>

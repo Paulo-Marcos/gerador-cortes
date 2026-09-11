@@ -424,6 +424,7 @@ async def atualizar_short(
     fundo_editorial: str | None = None,
     palco_short_preset: str | None = None,
     legenda_cor: str | None = None,
+    legenda_fonte: str | None = None,
     gancho_tela: str | None = None,
     gancho_ate_seg: float | None = None,
 ) -> dict:
@@ -520,6 +521,10 @@ async def atualizar_short(
             # Mesma regra dos outros: nao validamos aqui, degrada na leitura.
             short.legenda_cor = legenda_cor
 
+        if legenda_fonte is not None:
+            # A familia da fonte. "" volta a do canal. Idem: degrada na leitura.
+            short.legenda_fonte = legenda_fonte
+
         # D-552: a marca do preset e escrita PRIMEIRO e apagada por qualquer
         # mudanca posterior no mesmo PATCH.
         #
@@ -537,6 +542,7 @@ async def atualizar_short(
                 recortes_palco,
                 fundo_editorial,
                 legenda_cor,
+                legenda_fonte,
             )
         ):
             short.palco_short_preset = ""
@@ -955,6 +961,7 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "fundo_palco": short.fundo_palco,
         "fundo_editorial": short.fundo_editorial,
         "legenda_cor": short.legenda_cor,
+        "legenda_fonte": short.legenda_fonte,
         "palco_short_preset": short.palco_short_preset,
         "origem": short.origem,
         "cenas": _json_lista(short.cenas_remotion),

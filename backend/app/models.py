@@ -492,6 +492,10 @@ class Short(Base):
     #
     # Vazio = a cor de acento do canal, que e o que sempre foi.
     legenda_cor: Mapped[str] = mapped_column(String(20), default="")
+    # D-563: a familia da fonte da legenda ("Anton"), pela mesma razao do hex:
+    # o valor viaja, e nao uma chave que previa e renderer teriam de traduzir.
+    # Vazio — ou uma familia que o renderer nao carrega — cai na fonte do canal.
+    legenda_fonte: Mapped[str] = mapped_column(String(60), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

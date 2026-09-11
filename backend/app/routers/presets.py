@@ -6,7 +6,7 @@ Tipos suportados:
     legados (bloco compartilhada direto) sao aceitos na escrita e re-embrulhados.
   - posicionamento_full: payload e `{full: {crop, slot}, fundo, placa}` (F-060).
   - palco_short: payload e `{arranjo, janela_cheia, recortes, ajustes, fundo,
-    legenda_cor}` — o
+    legenda_cor, legenda_fonte}` — o
     palco VERTICAL, com catalogo proprio. Separado dos de cima porque os nomes
     deles sao cenas do OBS ("Comp. 2 OBS") e o vocabulario do short e outro.
 
@@ -107,6 +107,7 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
             # D-563: a cor do realce da legenda. Faz parte do palco porque foi
             # escolhida olhando para ele — a legenda e a camada que vai por cima.
             "legenda_cor": str(payload.get("legenda_cor") or ""),
+            "legenda_fonte": str(payload.get("legenda_fonte") or ""),
         }
 
     if tipo == "posicionamento_full":

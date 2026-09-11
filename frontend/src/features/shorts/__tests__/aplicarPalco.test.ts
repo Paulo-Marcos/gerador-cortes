@@ -8,7 +8,7 @@ import { mudancaDoPalco } from '../aplicarPalco';
 // existia como conceito porque aplicar copiava sem deixar rastro.
 
 describe('mudancaDoPalco', () => {
-  it('copia os seis campos do preset', () => {
+  it('copia os sete campos do preset', () => {
     const corpo = mudancaDoPalco('p1', {
       arranjo: 'dividida_empilhada',
       janela_cheia: 'pessoa',
@@ -16,6 +16,7 @@ describe('mudancaDoPalco', () => {
       ajustes: { pessoa: { x: 5, y: 6, w: 7, h: 8 } },
       fundo: 'topographic',
       legenda_cor: '#6aaa84',
+      legenda_fonte: 'Anton',
     });
 
     expect(corpo).toEqual({
@@ -26,6 +27,7 @@ describe('mudancaDoPalco', () => {
       ajustes_palco: { pessoa: { x: 5, y: 6, w: 7, h: 8 } },
       fundo_editorial: 'topographic',
       legenda_cor: '#6aaa84',
+      legenda_fonte: 'Anton',
     });
   });
 
@@ -94,5 +96,12 @@ describe('D-563: a cor da legenda viaja com o palco', () => {
     const corpo = mudancaDoPalco('p1', { arranjo: 'cheia' });
 
     expect(corpo.legenda_cor).toBe('');
+    expect(corpo.legenda_fonte).toBe('');
+  });
+
+  it('a fonte vem junto quando o preset a tem', () => {
+    const corpo = mudancaDoPalco('p1', { arranjo: 'cheia', legenda_fonte: 'Bebas Neue' });
+
+    expect(corpo.legenda_fonte).toBe('Bebas Neue');
   });
 });

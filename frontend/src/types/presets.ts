@@ -32,6 +32,8 @@ export interface PalcoShortPreset {
   fundo: string;
   /** D-563: hex da palavra corrente da legenda. Vazio = o acento do canal. */
   legenda_cor: string;
+  /** D-563: família da fonte da legenda. Vazio = a do canal. */
+  legenda_fonte: string;
 }
 
 /**

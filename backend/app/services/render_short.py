@@ -188,6 +188,7 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
                 # D-563: a cor da palavra corrente. Vazio = o acento do canal,
                 # resolvido pelo renderer — o backend nao conhece a paleta dele.
                 "legendaCor": contexto.legenda_cor,
+                "legendaFonte": contexto.legenda_fonte,
                 "duracaoSeg": contexto.duracao_seg,
             },
             ensure_ascii=False,
@@ -258,6 +259,8 @@ class _ContextoRender:
     gancho: dict | None
     # D-563: hex da palavra corrente da legenda, ou "" para o acento do canal.
     legenda_cor: str
+    # D-563: familia da fonte da legenda, ou "" para a do canal.
+    legenda_fonte: str
     # D-481: a resolucao MEDIDA do bruto. Nao tem default de proposito — foi um
     # default (HORIZONTAL) que fez o crop 9:16 ser calculado sobre 1920x1080 num
     # bruto 720p e estourar o quadro.
@@ -319,6 +322,7 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             filtro=filtro,
             cenas=[] if not CENAS_LIGADAS else _json_lista(short.cenas_remotion),
             legenda_cor=short.legenda_cor,
+            legenda_fonte=short.legenda_fonte,
             gancho=gancho_short.para_payload(
                 short.gancho_tela,
                 short.gancho_ate_seg,

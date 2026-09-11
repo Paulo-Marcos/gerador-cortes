@@ -255,6 +255,7 @@ export default function FireDetalhePage() {
           fimSeg={emQuadro.fim_seg}
           tempoAtualSeg={tempoAtual}
           cor={emQuadro.legenda_cor}
+          fonte={emQuadro.legenda_fonte}
         />
       )}
     </>

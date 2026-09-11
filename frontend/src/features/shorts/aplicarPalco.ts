@@ -60,5 +60,6 @@ export function mudancaDoPalco(
     // a cor do realce foi escolhida OLHANDO para o fundo. Deixá-la de fora
     // faria o preset entregar o palco certo com o realce do trecho anterior.
     legenda_cor: payload.legenda_cor ?? '',
+    legenda_fonte: payload.legenda_fonte ?? '',
   };
 }

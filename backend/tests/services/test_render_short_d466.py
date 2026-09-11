@@ -160,7 +160,7 @@ async def test_props_da_camada_levam_captions_e_duracao(ambiente, jobs):
 
 
 @pytest.mark.asyncio
-async def test_a_cor_da_legenda_chega_na_camada(ambiente, jobs):
+async def test_a_cor_e_a_fonte_da_legenda_chegam_na_camada(ambiente, jobs):
     """D-563: quem pinta a palavra corrente e o Remotion, e ele so sabe o que recebe.
 
     A cor e escolhida na tela e gravada no short; se ela parasse no banco, a
@@ -171,6 +171,7 @@ async def test_a_cor_da_legenda_chega_na_camada(ambiente, jobs):
     async with sessao() as db:
         short = await db.get(Short, "s1")
         short.legenda_cor = "#2f5f43"
+        short.legenda_fonte = "Anton"
         await db.commit()
 
     await render_short.renderizar_short("s1")
@@ -181,6 +182,7 @@ async def test_a_cor_da_legenda_chega_na_camada(ambiente, jobs):
         )
     )
     assert props["legendaCor"] == "#2f5f43"
+    assert props["legendaFonte"] == "Anton"
 
 
 @pytest.mark.asyncio

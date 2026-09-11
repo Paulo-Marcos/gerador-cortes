@@ -12,6 +12,7 @@ function short(over: Partial<ShortSugerido> = {}): ShortSugerido {
   return {
     fundo_editorial: '',
     legenda_cor: '',
+    legenda_fonte: '',
     palco_short_preset: '',
     id: 's1',
     corte_id: 'c1',

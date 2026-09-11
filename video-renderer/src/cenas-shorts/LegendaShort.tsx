@@ -2,6 +2,11 @@ import React, { useMemo } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { createTikTokStyleCaptions, type Caption } from "@remotion/captions";
 import { COLORS_V2, FONTS_V2 } from "../theme-v2";
+import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
+import { loadFont as loadBebasNeue } from "@remotion/google-fonts/BebasNeue";
+import { loadFont as loadMontserrat } from "@remotion/google-fonts/Montserrat";
+import { loadFont as loadOswald } from "@remotion/google-fonts/Oswald";
+import { loadFont as loadPoppins } from "@remotion/google-fonts/Poppins";
 
 // D-462: a legenda queimada do short.
 //
@@ -14,6 +19,26 @@ import { COLORS_V2, FONTS_V2 } from "../theme-v2";
 //   - realce na palavra corrente, para o olho seguir em vez de reler;
 //   - dentro da SAFE ZONE — topo e base pertencem à UI dos apps, e legenda
 //     debaixo do botão de curtir é legenda que ninguém leu.
+
+// D-563: as fontes que a legenda pode usar, carregadas de uma vez.
+//
+// O short grava o NOME DA FAMILIA, nao uma chave — a mesma decisao da cor, e
+// pelo mesmo motivo: uma chave obrigaria esta lista e a do frontend a
+// concordarem sobre o que cada codigo significa, e duas tabelas iguais sempre
+// acabam diferentes (D-558). Aqui o nome ja e o valor.
+//
+// O que esta lista faz, entao, nao e traduzir: e dizer o que esta CARREGADO.
+// Uma familia fora dela cai na fonte do canal em vez de virar um render com
+// texto invisivel — degradar na leitura, como o `fundo_editorial` aprendeu a
+// fazer na D-554.
+//
+// Espelha `FONTES_DA_LEGENDA` do frontend. Acrescentar la sem acrescentar aqui
+// faz a previa mostrar a fonte nova e o arquivo sair com a padrao.
+const CARREGADAS: Record<string, string> = Object.fromEntries(
+  [loadAnton(), loadBebasNeue(), loadMontserrat(), loadOswald(), loadPoppins()].map(
+    (f) => [f.fontFamily, f.fontFamily],
+  ),
+);
 
 /** Agrupamento em página. 200-500ms = palavra a palavra; 1200ms+ = frase. */
 const AGRUPAMENTO_MS = 1200;
@@ -35,12 +60,15 @@ export interface LegendaShortProps {
    * some sobre o vídeo, e o contorno preto não salva o que já é escuro.
    */
   cor?: string;
+  /** D-563: nome da família da fonte. Vazio (ou não carregada) = a do canal. */
+  fonte?: string;
 }
 
 export const LegendaShort: React.FC<LegendaShortProps> = ({
   captions,
   deslocamentoRodape = 0,
   cor = "",
+  fonte = "",
 }) => {
   const frame = useCurrentFrame();
   const { fps, height } = useVideoConfig();
@@ -74,7 +102,7 @@ export const LegendaShort: React.FC<LegendaShortProps> = ({
         bottom: height * SAFE_ZONE + deslocamentoRodape,
         width: "84%",
         textAlign: "center",
-        fontFamily: FONTS_V2.display,
+        fontFamily: CARREGADAS[fonte] ?? FONTS_V2.display,
         fontSize: Math.round(height * 0.042),
         fontWeight: 800,
         lineHeight: 1.18,
