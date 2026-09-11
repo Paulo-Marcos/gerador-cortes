@@ -33,10 +33,17 @@ class ModoPublicacao(StrEnum):
     API é automático; MANUAL entrega um pacote pronto para o operador subir.
     Instagram e TikTok exigem app review de 2 a 4 semanas para o modo API, então
     MANUAL não é gambiarra — é o caminho principal enquanto o audit não sai.
+
+    ASSISTIDO (D-564) é o terceiro, e ele existe porque o TikTok não cabe nos
+    dois primeiros: a máquina faz o upload inteiro num Chrome de verdade e para
+    no botão *Publicar*, que é do humano. Chamar isso de API mentiria sobre
+    quem termina o trabalho; chamar de manual apagaria os quatro passos que o
+    robô já fez.
     """
 
     API = "api"
     MANUAL = "manual"
+    ASSISTIDO = "assistido"
 
 
 @dataclass(frozen=True)

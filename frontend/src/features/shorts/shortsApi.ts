@@ -317,6 +317,74 @@ export interface PacotePublicacao {
   avisos: string[];
 }
 
+// ─── D-564: o lote — vários shorts, várias plataformas, cada uma no seu passo ──
+
+/** O estado de um item na raia. Espelha `EstadoItem` do domínio. */
+export type EstadoItemLote =
+  | 'aguardando'
+  | 'preparando'
+  | 'sua_vez'
+  | 'publicado'
+  | 'erro'
+  | 'pulado'
+  | 'cancelado';
+
+export interface ItemDoLote {
+  alvo_tipo: 'short' | 'corte';
+  alvo_id: string;
+  plataforma: string;
+  plataforma_rotulo: string;
+  rotulo: string;
+  estado: EstadoItemLote;
+  detalhe: string;
+  url: string;
+}
+
+/**
+ * Uma plataforma dentro do lote, com seus itens.
+ *
+ * `exige_humano` é o que faz a raia do TikTok e a do Instagram serem desenhadas
+ * diferente: nelas o fim da máquina não é o fim do trabalho.
+ */
+export interface RaiaDoLote {
+  plataforma: string;
+  rotulo: string;
+  exige_humano: boolean;
+  aviso: string;
+  itens: ItemDoLote[];
+}
+
+export interface LotePublicacao {
+  lote_id: string;
+  criado_em: string;
+  cancelado: boolean;
+  terminou: boolean;
+  /** D-564: o robô do TikTok subiu pelo Chrome, em vez de só montar a pasta. */
+  tiktok_assistido: boolean;
+  /** D-564: o mesmo robô, no compositor do instagram.com. */
+  instagram_assistido: boolean;
+  /** D-564: e também apertou o Publicar. */
+  publicar_sozinho: boolean;
+  raias: RaiaDoLote[];
+}
+
+/** As escolhas que mudam COMO o TikTok é publicado neste lote. */
+export interface OpcoesDoLote {
+  tiktokAssistido: boolean;
+  instagramAssistido: boolean;
+  publicarSozinho: boolean;
+}
+
+/** Uma publicação já registrada — o que a tela de seleção usa para nascer sabendo. */
+export interface PublicacaoRegistrada {
+  alvo_id: string;
+  plataforma: string;
+  estado: EstadoItemLote;
+  url: string;
+  detalhe: string;
+  publicado_em: string;
+}
+
 /** Uma palavra com tempo, na timeline do BRUTO. */
 export interface PalavraTranscrita {
   texto: string;
@@ -587,6 +655,39 @@ export const shortsApi = {
     request<Record<string, unknown>>(`/shorts/${shortId}/publicar/${plataforma}`, {
       method: 'POST',
     }),
+
+  // ─── D-564: o lote ────────────────────────────────────────────
+
+  /**
+   * Dispara o lote. `alvos` vão prefixados por tipo ("short:uuid"), porque o
+   * mesmo lote mistura o vertical do short e o 16:9 do corte.
+   */
+  criarLote: (alvos: string[], plataformas: string[], opcoes: OpcoesDoLote) =>
+    request<LotePublicacao>('/shorts/lote', {
+      method: 'POST',
+      body: JSON.stringify({
+        alvos,
+        plataformas,
+        tiktok_assistido: opcoes.tiktokAssistido,
+        instagram_assistido: opcoes.instagramAssistido,
+        publicar_sozinho: opcoes.publicarSozinho,
+      }),
+    }),
+
+  verLote: () => request<{ lote: LotePublicacao | null }>('/shorts/lote'),
+
+  cancelarLote: () =>
+    request<{ cancelado: boolean }>('/shorts/lote/cancelar', { method: 'POST' }),
+
+  /** O "publiquei" do destino manual, onde o upload acontece longe daqui. */
+  confirmarPublicacao: (alvoId: string, plataforma: string) =>
+    request<{ confirmado: boolean }>('/shorts/lote/confirmar', {
+      method: 'POST',
+      body: JSON.stringify({ alvo_id: alvoId, plataforma }),
+    }),
+
+  publicacoesDoCorte: (corteId: string) =>
+    request<{ publicacoes: PublicacaoRegistrada[] }>(`/shorts/corte/${corteId}/publicacoes`),
 
   sugerirAgora: (corteId: string) =>
     request<{ shorts: ShortSugerido[]; descartes: string[] }>(`/shorts/corte/${corteId}/sugerir`, {

@@ -726,3 +726,42 @@ class LiveCandidata(Base):
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+
+
+class PublicacaoShort(Base):
+    """Onde cada vídeo já foi parar, e quando (D-564).
+
+    Antes disto o app só sabia de UMA publicação: `Corte.tiktok_publicado_em`.
+    Para um short, nada — e sem esse registro o lote republicaria em silêncio o
+    que já subiu, que é o erro mais caro que uma fila pode cometer.
+
+    A linha nasce quando o item entra no lote e acompanha o item até o fim. Ela
+    é a memória durável de três coisas que a fila em memória perde num restart:
+    o que já foi (não repetir), quantos saíram hoje (a cota do YouTube) e o que
+    ficou esperando o clique do operador.
+
+    `alvo_tipo` distingue "short" (o vertical, 9:16) de "corte" (o MP4 16:9 que
+    também vai para o TikTok, D-470): os dois publicam pelo mesmo contrato, e
+    uma tabela só evita duas metades da mesma pergunta.
+    """
+
+    __tablename__ = "publicacoes_shorts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    alvo_tipo: Mapped[str] = mapped_column(String(10), default="short")
+    alvo_id: Mapped[str] = mapped_column(String(36), index=True)
+    plataforma: Mapped[str] = mapped_column(String(30))
+    estado: Mapped[str] = mapped_column(String(20), default="aguardando")
+    lote_id: Mapped[str] = mapped_column(String(36), default="", index=True)
+    url: Mapped[str] = mapped_column(String(500), default="")
+    # O que a tela mostra quando algo saiu do trilho: a orientação do roteiro do
+    # TikTok, o erro da API, ou a pasta do pacote manual. Texto pronto para ler,
+    # não código de erro — quem lê é o operador.
+    detalhe: Mapped[str] = mapped_column(Text, default="")
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    atualizado_em: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+    # Só quando a publicação foi CONFIRMADA. Nulo enquanto espera o clique: é
+    # este campo que conta a cota do dia, e enchê-lo no escuro inflaria a conta.
+    publicado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

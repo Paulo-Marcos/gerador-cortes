@@ -526,8 +526,16 @@ class TestContrato:
 
         Um perfil global faria o segundo canal publicar no primeiro — sem erro
         nenhum, que e o pior jeito de errar.
+
+        D-564: o `active_channel_root` mudou de casa junto com a camada de
+        navegador; o que se guarda aqui continua sendo o mesmo — o caminho que
+        `tiktok_studio.perfil_do_chrome()` devolve.
         """
-        monkeypatch.setattr(tiktok_studio, "active_channel_root", lambda: tmp_path / "canal-b")
+        from app.services import navegador_assistido
+
+        monkeypatch.setattr(
+            navegador_assistido, "active_channel_root", lambda: tmp_path / "canal-b"
+        )
 
         assert tiktok_studio.perfil_do_chrome() == tmp_path / "canal-b" / "browser" / "tiktok"
 

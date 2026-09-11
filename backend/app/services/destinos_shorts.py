@@ -22,14 +22,15 @@ import shutil
 from pathlib import Path
 
 from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
+from app.domain.ritmo_publicacao import UPLOADS_YOUTUBE_POR_DIA
 from app.services.publicacao_destinos import Destino, PacotePublicacao, registrar
 
 logger = logging.getLogger(__name__)
 
-# `videos.insert` custa 1.600 de um teto diário de 10.000 unidades.
-CUSTO_QUOTA_UPLOAD = 1600
-QUOTA_DIARIA = 10_000
-UPLOADS_POR_DIA = QUOTA_DIARIA // CUSTO_QUOTA_UPLOAD
+# D-564: a conta da cota (1.600 de 10.000 por upload) mudou de casa. Aqui ela
+# era só documentação; quem precisa dela é a FILA, que decide quantos ainda
+# cabem hoje. O nome antigo fica como apelido para quem já importa daqui.
+UPLOADS_POR_DIA = UPLOADS_YOUTUBE_POR_DIA
 
 NOME_PACOTE = "publicar.txt"
 # A capa entra na pasta com nome fixo: o operador acha sem procurar, e a
@@ -262,3 +263,139 @@ registrar_destinos_padrao()
 def pasta_do_pacote(arquivo: Path, plataforma: Plataforma) -> Path:
     """Onde o pacote manual daquela plataforma é escrito."""
     return arquivo.parent / "publicar" / plataforma.value
+
+
+class DestinoTikTokAssistido(DestinoManual):
+    """O TikTok com o robô no volante, e o dedo do operador no botão (D-564).
+
+    ## O terceiro modo, e por que ele não é nenhum dos dois
+
+    O pacote manual entrega uma pasta e vai embora; a API sobe e acabou. Este
+    fica no meio e é o que o TikTok permite hoje: o robô abre o Chrome do
+    operador, sobe o MP4, escreve a legenda, põe a capa — e **espera**. O post
+    só existe quando o humano aperta *Publicar*.
+
+    ## Por que ele BLOQUEIA até a publicação
+
+    Porque é isso que encadeia o lote. A raia é sequencial e este `publicar`
+    só retorna quando o item saiu; então o próximo começa a subir no instante
+    em que o operador terminou o anterior — sem ele voltar aqui para pedir.
+
+    É também o que impede o erro caro: duas abas de upload abertas ao mesmo
+    tempo confundem a vigília, e marcar o vídeo errado como publicado libera a
+    limpeza do MP4 (D-512). Uma de cada vez não é lentidão, é a garantia.
+
+    ## `publicar_sozinho`
+
+    Desligado por padrão, e ligado por lote — nunca por conta própria. Com ele o
+    robô também clica em *Publicar*: até esse clique tudo é reversível com um
+    F5, e depois dele uma legenda errada é um post público no canal.
+    """
+
+    modo = ModoPublicacao.ASSISTIDO
+
+    def __init__(
+        self,
+        plataforma: Plataforma,
+        *,
+        publicar_sozinho: bool = False,
+        ao_ficar_pronta=None,
+        segundos_de_vigilia: float | None = None,
+    ) -> None:
+        super().__init__(plataforma)
+        self.publicar_sozinho = publicar_sozinho
+        # Chamado quando a aba está pronta e a bola passa para o operador. É o
+        # que faz a tela dizer "sua vez" DURANTE a espera, em vez de fingir que
+        # ainda está trabalhando por meia hora.
+        self.ao_ficar_pronta = ao_ficar_pronta
+        self.segundos_de_vigilia = segundos_de_vigilia
+
+    async def publicar(self, pacote: PacotePublicacao) -> dict:
+        from uuid import uuid4
+
+        from app.domain.tiktok_studio import marca_da_aba
+        from app.services import tiktok_studio
+
+        pronto = await super().publicar(pacote)
+
+        # A marca é por ITEM, e não por lote: é ela que diz qual das abas
+        # abertas é esta, e duas abas do mesmo lote precisam de nomes diferentes.
+        marca = marca_da_aba(uuid4().hex[:12])
+        capa = pronto.get("capa") or ""
+
+        relatorio = await tiktok_studio.subir_assistido(
+            video=Path(pronto["video"]),
+            legenda=legenda_unica(pronto.get("titulo", ""), pronto.get("descricao", "")),
+            capa=Path(capa) if capa else None,
+            marca=marca,
+            publicar_sozinho=self.publicar_sozinho,
+        )
+
+        if relatorio.get("publicado"):
+            return {**pronto, **relatorio, "modo": self.modo.value}
+
+        if self.ao_ficar_pronta is not None:
+            await self.ao_ficar_pronta()
+
+        espera = {"segundos": self.segundos_de_vigilia} if self.segundos_de_vigilia else {}
+        publicado = await tiktok_studio.aguardar_publicacao(marca=marca, **espera)
+
+        return {**pronto, **relatorio, "modo": self.modo.value, "publicado": publicado}
+
+
+class DestinoInstagramReelsAssistido(DestinoManual):
+    """O Reels com o robô no volante, e o dedo do operador no Compartilhar (D-564).
+
+    Mesmo contrato do TikTok assistido, e as diferenças estão todas debaixo:
+
+      - o compositor é um MODAL, então não há navegação para provar que saiu.
+        A vigília espera o modal fechar e procura o aviso de sucesso, porque
+        fechar sozinho também é o que acontece quando alguém descarta;
+      - não há capa: o Instagram escolhe a dele, e a nossa é 9:16 do TikTok.
+
+    A API oficial publicaria isto sem navegador nenhum — mas cobra conta
+    Business ligada a uma Página, app review, e o MP4 servido por uma URL
+    pública. O app roda na máquina do operador, com os vídeos em disco.
+    """
+
+    modo = ModoPublicacao.ASSISTIDO
+
+    def __init__(
+        self,
+        plataforma: Plataforma = Plataforma.INSTAGRAM_REELS,
+        *,
+        publicar_sozinho: bool = False,
+        ao_ficar_pronta=None,
+        segundos_de_vigilia: float | None = None,
+    ) -> None:
+        super().__init__(plataforma)
+        self.publicar_sozinho = publicar_sozinho
+        self.ao_ficar_pronta = ao_ficar_pronta
+        self.segundos_de_vigilia = segundos_de_vigilia
+
+    async def publicar(self, pacote: PacotePublicacao) -> dict:
+        from uuid import uuid4
+
+        from app.domain.tiktok_studio import marca_da_aba
+        from app.services import instagram_reels
+
+        pronto = await super().publicar(pacote)
+        marca = marca_da_aba(uuid4().hex[:12])
+
+        relatorio = await instagram_reels.subir_assistido(
+            video=Path(pronto["video"]),
+            legenda=legenda_unica(pronto.get("titulo", ""), pronto.get("descricao", "")),
+            marca=marca,
+            publicar_sozinho=self.publicar_sozinho,
+        )
+
+        if relatorio.get("publicado"):
+            return {**pronto, **relatorio, "modo": self.modo.value}
+
+        if self.ao_ficar_pronta is not None:
+            await self.ao_ficar_pronta()
+
+        espera = {"segundos": self.segundos_de_vigilia} if self.segundos_de_vigilia else {}
+        publicado = await instagram_reels.aguardar_publicacao(marca=marca, **espera)
+
+        return {**pronto, **relatorio, "modo": self.modo.value, "publicado": publicado}

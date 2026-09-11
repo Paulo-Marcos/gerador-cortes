@@ -36,6 +36,11 @@ Endpoints:
   POST /corte/{corte_id}/publicar/tiktok-horizontal/staging — pacote + pasta aberta
   POST /corte/{corte_id}/publicar/tiktok-horizontal/assistido — robo deixa pronto
   POST /corte/{corte_id}/publicar/tiktok-horizontal/confirmar — marca que subiu
+  POST /lote                      — publica vários, nas plataformas escolhidas
+  GET  /lote                      — o lote em andamento, raia por raia
+  POST /lote/cancelar             — interrompe o lote
+  POST /lote/confirmar            — o "publiquei" do destino manual
+  GET  /corte/{corte_id}/publicacoes — o que já foi publicado deste corte
   DELETE /corte/{corte_id}/bruto  — libera o disco e encerra a fábrica do corte
 
 O disparo padrão é o fim da geração do bruto de um corte marcado com Fire. O POST
@@ -1037,3 +1042,129 @@ async def publicar_corte_no_tiktok(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+class LoteRequest(BaseModel):
+    """O lote que o operador montou na tela.
+
+    `alvos` são pares `tipo:id` ("short:uuid" ou "corte:uuid") na ORDEM em que
+    ele escolheu — a ordem da tela vira a ordem da fila. `plataformas` são os
+    destinos que ele marcou; o mesmo conjunto vale para todos os alvos, que é
+    como a seleção acontece na prática ("estes cinco, nestas duas redes").
+    """
+
+    alvos: list[str]
+    plataformas: list[str]
+    # D-564: o robo do TikTok sobe pelo Chrome, em vez de so montar a pasta.
+    tiktok_assistido: bool = False
+    # D-564 onda 3: o mesmo robo, no compositor do instagram.com.
+    instagram_assistido: bool = False
+    # D-564: e, se ligado, tambem aperta o Publicar. Desligado por padrao de
+    # proposito — ate o clique tudo e reversivel com um F5.
+    publicar_sozinho: bool = False
+
+
+@router.post("/lote")
+async def criar_lote(body: LoteRequest):
+    """Dispara o lote: uma raia por plataforma, cada uma no seu passo (D-564)."""
+    from app.domain.publicacao import Plataforma
+    from app.services import publicacao_lote
+
+    try:
+        plataformas = [Plataforma(p) for p in body.plataformas]
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=f"Plataforma desconhecida: {exc}") from exc
+    if not plataformas or not body.alvos:
+        raise HTTPException(status_code=422, detail="Escolha ao menos um video e uma plataforma.")
+
+    alvos = [_ler_alvo(bruto) for bruto in body.alvos]
+
+    try:
+        lote = await publicacao_lote.criar(
+            alvos=alvos,
+            plataformas=plataformas,
+            opcoes=publicacao_lote.OpcoesDoLote(
+                tiktok_assistido=body.tiktok_assistido,
+                instagram_assistido=body.instagram_assistido,
+                publicar_sozinho=body.publicar_sozinho,
+            ),
+        )
+    except publicacao_lote.LoteEmAndamento as exc:
+        # 409 e nao 422: nao ha nada de errado com o pedido — ele so chegou na
+        # hora em que outro lote ainda esta rodando.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    return lote.como_dict()
+
+
+def _ler_alvo(bruto: str) -> tuple[str, str]:
+    """ "short:uuid" vira ("short", "uuid"); sem prefixo, assume short.
+
+    O prefixo existe porque o MESMO lote mistura os dois: o short vertical e o
+    MP4 horizontal do corte vao pelo mesmo contrato, e sem o tipo o servico nao
+    saberia de qual arquivo montar o pacote.
+    """
+    from app.services import publicacao_lote
+
+    tipo, _, identificador = bruto.partition(":")
+    if not identificador:
+        return publicacao_lote.ALVO_SHORT, tipo
+    if tipo not in (publicacao_lote.ALVO_SHORT, publicacao_lote.ALVO_CORTE):
+        raise HTTPException(status_code=422, detail=f"Tipo de alvo desconhecido: {tipo!r}")
+    return tipo, identificador
+
+
+@router.get("/lote")
+async def ver_lote():
+    """O lote em andamento, ou o ultimo que rodou. `null` quando nunca houve um."""
+    from app.services import publicacao_lote
+
+    lote = publicacao_lote.lote_atual()
+    return {"lote": lote.como_dict() if lote else None}
+
+
+@router.post("/lote/cancelar")
+async def cancelar_lote():
+    """Interrompe o lote. O item em curso termina; os que esperam nao comecam."""
+    from app.services import publicacao_lote
+
+    return {"cancelado": publicacao_lote.cancelar()}
+
+
+class ConfirmarPublicacaoRequest(BaseModel):
+    """O "publiquei" do destino manual, onde o upload acontece longe daqui."""
+
+    alvo_id: str
+    plataforma: str
+
+
+@router.post("/lote/confirmar")
+async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
+    """Marca que ESTE item subiu — o que a maquina nao tem como saber sozinha."""
+    from app.domain.publicacao import Plataforma
+    from app.services import publicacao_lote
+
+    try:
+        plataforma = Plataforma(body.plataforma)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404, detail=f"Plataforma {body.plataforma!r} desconhecida."
+        ) from exc
+
+    if not await publicacao_lote.confirmar(body.alvo_id, plataforma):
+        raise HTTPException(status_code=404, detail="Nao ha publicacao pendente para marcar.")
+    return {"confirmado": True}
+
+
+@router.get("/corte/{corte_id}/publicacoes")
+async def publicacoes_do_corte(corte_id: str):
+    """O que ja foi publicado dos shorts deste corte — e do proprio corte.
+
+    A tela de selecao nasce sabendo o que falta, em vez de o operador descobrir
+    depois que o lote pulou metade dos itens.
+    """
+    from app.services import publicacao_lote
+
+    return {"publicacoes": await publicacao_lote.historico_do_corte(corte_id)}

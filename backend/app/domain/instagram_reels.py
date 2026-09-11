@@ -1,0 +1,198 @@
+"""O roteiro do upload assistido de Reels no instagram.com (D-564, onda 3).
+
+## Por que o Instagram entrou pelo navegador, e não pela API
+
+A API oficial existe e publica Reels — mas cobra um pedágio que este app não tem
+como pagar hoje: conta Business ligada a uma Página, app review, e o vídeo
+acessível por uma **URL pública**. O app roda na máquina do operador, com os MP4
+em disco; servir cada corte por HTTP para o Facebook baixar seria montar
+infraestrutura de hospedagem para publicar num perfil só.
+
+O navegador não cobra nada disso. A sessão é a que ele já usa.
+
+## Onde este roteiro para, e por quê
+
+No botão *Compartilhar*, pelo mesmo motivo do TikTok (D-537): até ali tudo é
+reversível fechando o modal; depois dali é um post público.
+
+## O sinal de "publicou" é OUTRO, e isso muda o desenho
+
+No TikTok a prova é a NAVEGAÇÃO: ao publicar, a aba sai de `/upload`. Aqui não
+existe navegação — o Instagram cria o Reel dentro de um modal e a URL não muda.
+Assumir a URL como sinal daria um falso positivo permanente.
+
+A primeira versão disto apostou no modal FECHAR. Errado, e medido publicando de
+verdade em 10/09/2026: ao compartilhar, o compositor não fecha — ele é
+**substituído** por um diálogo de confirmação ("Reels compartilhados / Concluir /
+Seu reel foi compartilhado."). Uma vigília esperando o modal sumir esperaria os
+trinta minutos inteiros por um evento que nunca acontece, e terminaria devolvendo
+"não sei" sobre um post que estava no ar.
+
+Então a prova é a PRESENÇA da confirmação, e não a ausência do compositor. É um
+sinal positivo, o que também resolve a ambiguidade do descarte: descartar fecha
+tudo sem confirmar nada.
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+
+
+class Passo(StrEnum):
+    """Os passos do roteiro, na ordem em que acontecem."""
+
+    ABRIR = "abrir"
+    SESSAO = "sessao"
+    COMPOSITOR = "compositor"
+    ARQUIVO = "arquivo"
+    AVANCAR = "avancar"
+    LEGENDA = "legenda"
+    REVISAO = "revisao"
+    PUBLICAR = "publicar"
+
+
+PASSOS: tuple[Passo, ...] = tuple(Passo)
+
+
+ROTULOS: dict[Passo, str] = {
+    Passo.ABRIR: "abrindo o Instagram",
+    Passo.SESSAO: "conferindo a sessão",
+    Passo.COMPOSITOR: "abrindo o compositor",
+    Passo.ARQUIVO: "enviando o vídeo",
+    Passo.AVANCAR: "passando pelas etapas de edição",
+    Passo.LEGENDA: "escrevendo a legenda",
+    Passo.REVISAO: "deixando pronto para você conferir",
+    Passo.PUBLICAR: "compartilhando",
+}
+
+
+ORIENTACOES: dict[Passo, str] = {
+    Passo.ABRIR: "Nao consegui abrir o Instagram. Confira se o Chrome abriu e se ha internet.",
+    Passo.SESSAO: (
+        "Este Chrome nao esta logado no Instagram. Faca login na janela que abriu — "
+        "uma vez so, a sessao fica guardada — e rode de novo."
+    ),
+    Passo.COMPOSITOR: (
+        "Nao achei o botao de criar publicacao. O Instagram muda esse menu com "
+        "frequencia: suba este Reel a mao e me avise para eu ajustar."
+    ),
+    Passo.ARQUIVO: (
+        "O compositor nao aceitou o arquivo. Ele pode ter mudado de layout: "
+        "suba este video a mao e me avise para eu ajustar."
+    ),
+    Passo.AVANCAR: (
+        "Travei numa das etapas de edicao (cortar, filtros). O modal ficou aberto — "
+        "siga a mao a partir dali."
+    ),
+    Passo.LEGENDA: (
+        "Nao achei a caixa da legenda. Ela esta na area de transferencia: cole com "
+        "Ctrl+V no modal que ficou aberto."
+    ),
+    Passo.REVISAO: (
+        "O botao de compartilhar nao acendeu. Pode ser processamento ainda em curso "
+        "ou um aviso do proprio Instagram: confira no modal que ficou aberto."
+    ),
+    Passo.PUBLICAR: (
+        "Cliquei em Compartilhar e o compositor nao fechou. Confira no modal que "
+        "ficou aberto: pode ter aparecido um aviso do proprio Instagram."
+    ),
+}
+
+
+# Nenhum passo é opcional aqui, ao contrário do TikTok — lá a capa podia falhar
+# sem custo porque o vídeo já estava no ar. O Reels não tem passo decorativo: se
+# um quebra, não há post.
+PASSOS_OPCIONAIS: frozenset[Passo] = frozenset()
+
+
+class RoteiroInterrompido(RuntimeError):
+    """Um passo falhou, e a mensagem já diz o que fazer.
+
+    Classe própria (e não a do TikTok) porque os passos são outros: um `except`
+    que pegasse as duas trataria "nao achei o compositor" e "a sessao caiu" como
+    o mesmo problema.
+    """
+
+    def __init__(self, passo: Passo, detalhe: str = "") -> None:
+        self.passo = passo
+        self.detalhe = detalhe
+        super().__init__(orientacao_da_falha(passo, detalhe))
+
+
+def orientacao_da_falha(passo: Passo, detalhe: str = "") -> str:
+    """O que o operador faz agora, em uma frase.
+
+    >>> orientacao_da_falha(Passo.SESSAO)[:24]
+    'Este Chrome nao esta log'
+    >>> orientacao_da_falha(Passo.LEGENDA, "timeout de 30s").endswith("(timeout de 30s)")
+    True
+    """
+    base = ORIENTACOES.get(passo, f"Falhou {ROTULOS.get(passo, passo.value)}.")
+    return f"{base} ({detalhe})" if detalhe else base
+
+
+def descricao_do_progresso(feitos: list[Passo]) -> str:
+    """O que o robô conseguiu fazer, para a tela contar sem inventar.
+
+    >>> descricao_do_progresso([])
+    'nada foi feito'
+    >>> descricao_do_progresso([Passo.ARQUIVO])
+    'enviando o vídeo'
+    >>> descricao_do_progresso([Passo.ARQUIVO, Passo.LEGENDA])
+    'enviando o vídeo e escrevendo a legenda'
+    """
+    rotulos = [ROTULOS[p] for p in feitos if p in ROTULOS]
+    if not rotulos:
+        return "nada foi feito"
+    if len(rotulos) == 1:
+        return rotulos[0]
+    return f"{', '.join(rotulos[:-1])} e {rotulos[-1]}"
+
+
+# As telas de porta de entrada do Instagram. `emailsignup` esta na lista porque
+# ele manda para la sozinho quem chega deslogado e clica em qualquer coisa — e
+# ela NAO casa com "/accounts/signup", que era o teste anterior.
+TELAS_DE_ENTRADA = ("/accounts/login", "/accounts/signup", "/accounts/emailsignup")
+
+
+def pede_login(url: str) -> bool:
+    """A URL indica que o Instagram jogou a sessão para a porta de entrada.
+
+    **Cuidado: `False` aqui NÃO prova que há sessão.** Medido na página real em
+    10/09/2026: deslogado, o Instagram serve o formulário de login em `/` mesmo,
+    sem redirecionar — ao contrário do TikTok, que redireciona sempre.
+
+    Por isso quem decide de verdade é a TELA, e não a URL: ver
+    `marca_de_login` no roteiro. Esta função continua valendo para o caso
+    explícito, que é barato de checar e evita ir mais longe à toa.
+
+    >>> pede_login("https://www.instagram.com/accounts/login/?next=%2F")
+    True
+    >>> pede_login("https://www.instagram.com/accounts/emailsignup/")
+    True
+    >>> pede_login("https://www.instagram.com/")
+    False
+    >>> pede_login("")
+    False
+    """
+    return any(tela in url for tela in TELAS_DE_ENTRADA)
+
+
+def publicou(confirmacao_visivel: bool) -> bool:
+    """O Reel saiu?
+
+    Um argumento só, e ele é um sinal POSITIVO: o diálogo de confirmação está na
+    tela. Medido publicando de verdade em 10/09/2026 — ver o cabeçalho do módulo
+    para por que a versão anterior, que olhava o compositor fechar, estava errada.
+
+    Positivo importa porque descartar e publicar terminam parecidos: os dois
+    tiram o compositor da frente. Só um dos dois confirma. E na dúvida a resposta
+    é `False`, que significa "não sei" e mantém o botão "publiquei" à mão —
+    marcar no escuro libera a limpeza do MP4 (D-512), e a volta é render novo.
+
+    >>> publicou(confirmacao_visivel=True)
+    True
+    >>> publicou(confirmacao_visivel=False)
+    False
+    """
+    return confirmacao_visivel

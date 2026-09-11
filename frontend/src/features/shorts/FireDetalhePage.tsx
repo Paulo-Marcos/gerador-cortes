@@ -16,6 +16,7 @@ import {
   Gauge,
   LayoutTemplate,
   Plus,
+  Send,
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react';
@@ -45,6 +46,8 @@ import { PalcoDoCorte } from './PalcoDoCorte';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { GanchoModal } from './GanchoModal';
 import { GanchoPrevia } from './GanchoPrevia';
+import { PublicarEmLoteModal } from './PublicarEmLoteModal';
+import { shortsPublicaveis } from './selecaoDoLote';
 import { PalcoPrevia } from './PalcoPrevia';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
@@ -107,6 +110,8 @@ export default function FireDetalhePage() {
   // D-509: o modal onde a tela do short se monta inteira, num lugar so.
   const [definindoPalco, setDefinindoPalco] = useState(false);
   const [escrevendoGancho, setEscrevendoGancho] = useState(false);
+  // D-564: publicar vários de uma vez, nas plataformas escolhidas.
+  const [publicandoEmLote, setPublicandoEmLote] = useState(false);
 
   const velocidadePadrao = useVelocidadePlayerPadrao();
   const [velocidade, setVelocidade] = useState(velocidadePadrao);
@@ -128,6 +133,9 @@ export default function FireDetalhePage() {
   const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
+  // D-564: o botão do lote só existe quando há o que publicar — sem MP4 final,
+  // ele abriria um modal para dizer que não há nada.
+  const temPublicavel = useMemo(() => shortsPublicaveis(shorts).length > 0, [shorts]);
   const emQuadro = shorts.find((s) => s.id === selecionado) ?? shorts[0];
   const fire = fires.data?.fires.find((f) => f.corte_id === corteId);
   const palcoDoShort = usePalcoDoShort(emQuadro?.id ?? null, emQuadro?.arranjo_palco ?? '');
@@ -339,6 +347,18 @@ export default function FireDetalhePage() {
             <Gauge size={11} aria-hidden />
             {velocidade.toFixed(2)}×
           </span>
+
+          {temPublicavel && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setPublicandoEmLote(true)}
+              title="Publicar vários trechos deste Fire, nas plataformas escolhidas"
+            >
+              <Send />
+              Publicar em lote
+            </Button>
+          )}
 
           {fire && (
             <OverflowMenu
@@ -663,6 +683,12 @@ export default function FireDetalhePage() {
           }}
         />
       )}
+      <PublicarEmLoteModal
+        open={publicandoEmLote}
+        onClose={() => setPublicandoEmLote(false)}
+        corteId={corteId}
+        shorts={shorts}
+      />
     </div>
   );
 }

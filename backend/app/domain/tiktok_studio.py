@@ -38,6 +38,9 @@ class Passo(StrEnum):
     LEGENDA = "legenda"
     CAPA = "capa"
     REVISAO = "revisao"
+    # D-564: so acontece quando o operador LIGA o publicar automatico. Fora
+    # disso o roteiro termina em REVISAO, como sempre terminou.
+    PUBLICAR = "publicar"
 
 
 PASSOS: tuple[Passo, ...] = tuple(Passo)
@@ -51,6 +54,7 @@ ROTULOS: dict[Passo, str] = {
     Passo.LEGENDA: "escrevendo a legenda",
     Passo.CAPA: "trocando a capa",
     Passo.REVISAO: "deixando pronto para você conferir",
+    Passo.PUBLICAR: "publicando",
 }
 
 
@@ -88,6 +92,10 @@ ORIENTACOES: dict[Passo, str] = {
     Passo.REVISAO: (
         "O botao de publicar nao acendeu. Pode ser processamento ainda em curso ou "
         "um aviso da propria pagina: confira na aba que ficou aberta."
+    ),
+    Passo.PUBLICAR: (
+        "Cliquei em Publicar e a pagina nao saiu do upload. Confira na aba que ficou "
+        "aberta: pode ter aparecido um aviso da propria plataforma."
     ),
 }
 
@@ -188,3 +196,142 @@ def pede_login(url: str) -> bool:
     False
     """
     return "/login" in url or "/signup" in url
+
+
+# D-564: o prefixo da marca que identifica UMA aba do lote.
+#
+# `window.name` é a única propriedade de uma aba que SOBREVIVE à navegação dela
+# — é para isso que ela existe. Isso é exatamente o que a vigília precisa: ela
+# procura a aba antes de o TikTok publicar (ainda em `/upload`) e confirma
+# depois (já na lista de publicações), e é a MESMA aba nos dois instantes.
+PREFIXO_DA_MARCA = "cortadorlive-"
+
+
+def marca_da_aba(identificador: str) -> str:
+    """A etiqueta que o roteiro cola na aba, para a vigília reencontrá-la.
+
+    Sem ela a vigília procurava "alguma aba em /upload" (D-546) — o que basta
+    quando há um upload por vez e vira loteria num lote: duas abas de upload
+    abertas e ela não sabe qual é qual. Marcar o vídeo errado como publicado
+    libera a limpeza do MP4 (D-512), e a volta é render novo.
+
+    >>> marca_da_aba("abc123")
+    'cortadorlive-abc123'
+    >>> marca_da_aba("")
+    ''
+    """
+    identificador = identificador.strip()
+    return f"{PREFIXO_DA_MARCA}{identificador}" if identificador else ""
+
+
+def e_a_aba_marcada(nome_da_janela: str, marca: str) -> bool:
+    """Esta aba é a que o roteiro marcou?
+
+    Sem marca, qualquer aba serve — é o comportamento de antes da D-564, que o
+    botão avulso do TikTok ainda usa.
+
+    >>> e_a_aba_marcada("cortadorlive-abc", "cortadorlive-abc")
+    True
+    >>> e_a_aba_marcada("", "cortadorlive-abc")
+    False
+    >>> e_a_aba_marcada("qualquer coisa", "")
+    True
+    """
+    return True if not marca else nome_da_janela == marca
+
+
+# D-564: a porta de depuração é DO PERFIL, e não uma porta global.
+#
+# A porta fixa 9222 foi o que permitiu o acidente: o backend de DEV encontrou um
+# Chrome vivo naquela porta, concluiu "já tem um aberto" e conectou — só que o
+# Chrome era o de PRODUÇÃO, com a conta real logada. Ninguém programou isso; a
+# porta era um nome global, e nome global casa com quem chegar primeiro.
+#
+# É a mesma lição da D-370, quando o launcher matava processos por porta e
+# derrubava PROD junto: identidade de processo se ancora no CAMINHO ABSOLUTO,
+# nunca num token que dois checkouts compartilham.
+#
+# Cem portas bastam — é um operador com um punhado de canais, não um datacenter.
+PORTA_MINIMA_DE_DEPURACAO = 9222
+PORTAS_DE_DEPURACAO = 100
+
+
+def porta_de_depuracao(perfil: str) -> int:
+    """Uma porta estável e exclusiva para cada perfil de navegador.
+
+    Estável porque precisa reencontrar o Chrome já aberto entre um item do lote
+    e o seguinte; exclusiva porque dois checkouts NÃO podem se encontrar.
+
+    O caminho entra em minúsculas: no Windows `C:/PRD` e `c:/prd` são a mesma
+    pasta, e derivar portas diferentes para elas faria o mesmo perfil abrir dois
+    Chromes — que é justamente o que o Chrome não permite.
+
+    >>> porta_de_depuracao("C:/PRD/instance/channels/default/browser/tiktok") == porta_de_depuracao(
+    ...     "c:/prd/instance/channels/default/browser/tiktok"
+    ... )
+    True
+    >>> porta_de_depuracao("C:/DEV/a") == porta_de_depuracao("C:/DEV/b")
+    False
+    >>> PORTA_MINIMA_DE_DEPURACAO <= porta_de_depuracao("qualquer") < 9322
+    True
+    >>> porta_de_depuracao("")
+    9222
+    """
+    import hashlib
+
+    if not perfil:
+        return PORTA_MINIMA_DE_DEPURACAO
+    digest = hashlib.sha1(perfil.casefold().encode("utf-8")).digest()
+    return PORTA_MINIMA_DE_DEPURACAO + int.from_bytes(digest[:4], "big") % PORTAS_DE_DEPURACAO
+
+
+ARGUMENTO_DO_PERFIL = "--user-data-dir="
+
+
+def perfil_na_linha_de_comando(argumentos: list[str]) -> str:
+    """O `--user-data-dir` de uma linha de comando do Chrome, ou vazio.
+
+    É com isto que se pergunta "esta janela é MINHA?" antes de mandar nela — a
+    pergunta que faltava quando o robô de DEV dirigiu o Chrome de PROD.
+
+    >>> perfil_na_linha_de_comando(["chrome.exe", "--user-data-dir=C:/a/b", "--no-first-run"])
+    'C:/a/b'
+    >>> perfil_na_linha_de_comando(["chrome.exe", "--user-data-dir", "C:/a/b"])
+    'C:/a/b'
+    >>> perfil_na_linha_de_comando(["chrome.exe"])
+    ''
+    """
+    for indice, argumento in enumerate(argumentos):
+        if argumento.startswith(ARGUMENTO_DO_PERFIL):
+            return argumento[len(ARGUMENTO_DO_PERFIL) :]
+        # O Chrome aceita as duas formas, e quem lança nem sempre é a gente.
+        if argumento == ARGUMENTO_DO_PERFIL.rstrip("=") and indice + 1 < len(argumentos):
+            return argumentos[indice + 1]
+    return ""
+
+
+def mesma_pasta(um: str, outro: str) -> bool:
+    r"""Dois caminhos apontam para a mesma pasta?
+
+    Normaliza o que o Windows considera irrelevante e o `==` nao: barra
+    invertida contra barra normal, caixa, e a barra final. Sem isso, o mesmo
+    perfil escrito de dois jeitos pareceria dois perfis — e o robo abriria um
+    segundo Chrome sobre um perfil ja aberto, coisa que o Chrome recusa.
+
+    O caso com barra invertida vive no teste, onde a string nao precisa
+    sobreviver a um docstring: `mesma_pasta` normaliza os dois sentidos.
+
+    >>> mesma_pasta("C:/a/b", "C:/A/B/")
+    True
+    >>> mesma_pasta("C:/a/b", "C:/a/c")
+    False
+    >>> mesma_pasta("", "C:/a/b")
+    False
+    """
+    if not um or not outro:
+        return False
+    return _normalizar(um) == _normalizar(outro)
+
+
+def _normalizar(caminho: str) -> str:
+    return caminho.replace("\\", "/").rstrip("/").casefold()

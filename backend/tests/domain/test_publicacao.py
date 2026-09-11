@@ -101,6 +101,13 @@ def test_truncar_nao_estraga_texto_curto():
     assert truncar_por_palavra("  espacos   demais ", 100) == "espacos demais"
 
 
-def test_modos_de_publicacao_sao_dois():
-    """API e MANUAL: o segundo nao e gambiarra, e o caminho enquanto nao ha audit."""
-    assert {m.value for m in ModoPublicacao} == {"api", "manual"}
+def test_modos_de_publicacao_sao_tres():
+    """API, MANUAL e ASSISTIDO — e o terceiro nasceu do TikTok (D-564).
+
+    Eram dois, e o teste dizia isso. O ASSISTIDO entrou porque o TikTok nao cabe
+    em nenhum dos dois: a maquina faz o upload inteiro num Chrome de verdade e
+    para no botao Publicar, que e do humano. Chamar isso de API mentiria sobre
+    quem termina o trabalho; chamar de manual apagaria os quatro passos que o
+    robo ja fez.
+    """
+    assert {m.value for m in ModoPublicacao} == {"api", "manual", "assistido"}
