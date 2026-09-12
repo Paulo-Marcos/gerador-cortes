@@ -18,6 +18,8 @@ import { SeloDeGravacao } from './SeloDeGravacao';
 import type { FireComBruto } from './shortsApi';
 import type { EdicaoDoShort } from './useEdicaoDoShort';
 
+// D-479: o operador precisa saber a QUALIDADE do que está lendo. A auto-legenda
+// erra grafia, e erro de grafia num short vira o produto — o texto é o conteúdo.
 const ROTULO_FONTE: Record<string, string> = {
   auto_legenda: 'auto do YouTube',
   asr_local: 'transcrição fiel',

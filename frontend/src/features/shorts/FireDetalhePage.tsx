@@ -45,8 +45,6 @@ import {
   useTranscricaoDoCorte,
 } from './useShortsDoCorte';
 
-// D-479: o operador precisa saber a QUALIDADE do que está lendo. A auto-legenda
-// erra grafia, e erro de grafia num short vira o produto — o texto é o conteúdo.
 // D-581: o par que o Ctrl+U alterna. Espelha o do Bruto (D-575) de proposito:
 // a semente desacelera porque o pedido nasceu de precisar ouvir DEVAGAR para
 // acertar a borda, e conferir o resultado exige 1x.
