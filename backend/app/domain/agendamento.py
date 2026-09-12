@@ -113,17 +113,6 @@ class Agendamento:
         """
         return self.quando.strftime("%M")
 
-    def mesmo_mes(self, referencia: datetime) -> bool:
-        """O instante cai no mes que o calendario ja esta mostrando?
-
-        >>> from datetime import datetime
-        >>> Agendamento.de_texto("2030-09-30T10:00").mesmo_mes(datetime(2030, 9, 1))
-        True
-        >>> Agendamento.de_texto("2030-10-01T10:00").mesmo_mes(datetime(2030, 9, 1))
-        False
-        """
-        return (self.quando.year, self.quando.month) == (referencia.year, referencia.month)
-
     def em_utc_iso(self) -> str:
         """`publishAt` do YouTube: ISO 8601 em UTC, com `Z`.
 
