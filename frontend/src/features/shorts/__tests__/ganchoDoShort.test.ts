@@ -14,6 +14,10 @@ import {
   PALAVRAS_MAX,
   PALAVRAS_MIN,
   recadoDoTom,
+  REALCE_PADRAO,
+  REALCES_DO_GANCHO,
+  estiloDoRealce,
+  realceValido,
   tomDoGancho,
 } from '../ganchoDoShort';
 
@@ -44,6 +48,70 @@ describe('acordo com o domínio do backend', () => {
     ['MAX_VARIACOES', MAX_VARIACOES],
   ])('%s é o mesmo dos dois lados', (nome, naTela) => {
     expect(numeroDoDominio(nome)).toBe(naTela);
+  });
+
+  // D-581: o catálogo de realces também é cópia. Se o backend ganhar ou perder
+  // um, a tela precisa cair aqui em vez de oferecer um destaque que o render
+  // não sabe desenhar — ou esconder um que ele sabe.
+  //
+  // Compara como CONJUNTO, e não como sequência: a ordem do backend é uma
+  // tupla de validade, e a da tela é a ordem em que os realces são OFERECIDOS
+  // (do mais seguro ao mais arriscado). Exigir a mesma sequência amarraria uma
+  // decisão de apresentação a uma de domínio.
+  it('os realces são os mesmos dos dois lados', () => {
+    const bloco = /^REALCES\s*=\s*\(([^)]*)\)/m.exec(fonte);
+    expect(bloco, 'REALCES sumiu do domínio do backend').not.toBeNull();
+    const noBackend = [...(bloco?.[1] ?? '').matchAll(/REALCE_([A-Z]+)/g)].map((m) =>
+      m[1].toLowerCase(),
+    );
+    expect(noBackend.slice().sort()).toEqual(
+      REALCES_DO_GANCHO.map((r) => r.id)
+        .slice()
+        .sort(),
+    );
+  });
+
+  it('o realce padrão é o mesmo dos dois lados', () => {
+    const encontrado = /^REALCE_PADRAO\s*=\s*REALCE_([A-Z]+)/m.exec(fonte);
+    expect(encontrado?.[1].toLowerCase()).toBe(REALCE_PADRAO);
+  });
+});
+
+describe('realceValido', () => {
+  it('aceita os do catálogo', () => {
+    expect(realceValido('caixa')).toBe('caixa');
+    expect(realceValido('CONTORNO')).toBe('contorno');
+  });
+
+  it('degrada em vez de quebrar', () => {
+    // Um short gravado com um realce que saiu do catálogo cai no padrão — como
+    // o backend faz. Levantar aqui derrubaria a tela por causa de uma linha
+    // antiga do banco.
+    expect(realceValido('roxo-neon')).toBe(REALCE_PADRAO);
+    expect(realceValido('')).toBe(REALCE_PADRAO);
+    expect(realceValido(null)).toBe(REALCE_PADRAO);
+  });
+});
+
+describe('estiloDoRealce', () => {
+  it('só o véu desenha o degradê de topo', () => {
+    expect(estiloDoRealce('veu', 40).veu).toBe(true);
+    for (const id of ['caixa', 'contorno', 'sombra', 'nenhum']) {
+      expect(estiloDoRealce(id, 40).veu).toBe(false);
+    }
+  });
+
+  it('a espessura do contorno sai do corpo, não de um pixel fixo', () => {
+    // Um contorno de 6px é halo num quadro de 1920 e mancha numa prévia de
+    // 300px — foi por não derivar do corpo que a legenda mostrou anos um
+    // tamanho que o arquivo não tinha (D-568).
+    const pequeno = estiloDoRealce('contorno', 20).texto.WebkitTextStroke;
+    const grande = estiloDoRealce('contorno', 96).texto.WebkitTextStroke;
+    expect(pequeno).not.toBe(grande);
+  });
+
+  it('"nenhum" não desenha nada — a cor é que separa', () => {
+    expect(estiloDoRealce('nenhum', 40).texto).toEqual({});
   });
 });
 

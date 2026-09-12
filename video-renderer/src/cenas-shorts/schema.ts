@@ -45,4 +45,10 @@ export interface GanchoShort {
   texto: string;
   /** Segundo em que ele sai de cena. */
   ateSeg: number;
+  /** D-581: hex da cor. "" = branco. Existe para o gancho nao se confundir
+   *  com a legenda, que tambem e texto branco no mesmo quadro. */
+  cor?: string;
+  /** D-581: como ele se separa do fundo — veu (padrao), caixa, contorno,
+   *  sombra ou nenhum. */
+  realce?: string;
 }

@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     # so produziria justificativa para um texto de tres palavras.
     claude_cli_thinking_tokens_capa_tiktok: int = 1500
     claude_cli_thinking_tokens_capa_tiktok_imagem: int = 4000
+    # D-581: a capa do short pensa um pouco mais que a do TikTok — ela tem de
+    # conciliar tres recortes diferentes no mesmo quadro, e nao so compor uma
+    # faixa que o sistema vai emoldurar depois.
+    claude_cli_thinking_tokens_capa_short: int = 5000
     # D-565: o gancho sao 4-7 palavras, mas o trabalho NAO e de escolha como o
     # da etiqueta da capa: e preciso ler a transcricao do trecho e achar o
     # angulo que prende — e conferir se a promessa esta mesmo la. Por isso o
@@ -99,6 +103,9 @@ class Settings(BaseSettings):
     # D-523: escrever a cena da capa e trabalho de capista, nao de etiqueta —
     # mesmo peso que o prompt da thumbnail do YouTube.
     claude_model_capa_tiktok_imagem: str = "sonnet"
+    # D-581: o capista da capa do short. Mesmo default dos vizinhos — a etapa e
+    # de redacao curta sobre material que ja veio mastigado.
+    claude_model_capa_short: str = "sonnet"
     # D-565: escrever o gancho e redacao curta sobre um texto que ja veio
     # recortado — sonnet da conta, e esta etapa roda uma vez por candidato.
     claude_model_gancho_short: str = "sonnet"

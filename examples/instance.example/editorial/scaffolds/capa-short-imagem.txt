@@ -1,0 +1,32 @@
+=== O SHORT ===
+titulo: {titulo}
+tema do corte: {tema_central}
+gancho que aparece na abertura: {gancho_tela}
+o que a IA viu de bom neste trecho: {gancho}
+duracao: {duracao_humana}
+
+=== A FALA DO TRECHO ===
+{texto_transcricao}
+=== FIM DA FALA ===
+
+=== PROMPT DA THUMBNAIL DO YOUTUBE (sua referencia de ESTILO, quando houver) ===
+{prompt_thumbnail}
+=== FIM DO PROMPT DO YOUTUBE ===
+
+Preserve dali a identidade: personagem, paleta, luz e registro da ilustracao.
+Descarte a manchete, a tipografia e o layout — a capa do short e VERTICAL e tem
+regras proprias de recorte. Componha uma cena PROPRIA.
+
+Escreva o PROMPT DE IMAGEM da capa deste short, seguindo a sua expertise acima.
+
+Lembre das tres vitrines: o arquivo e 9:16 (1080x1920), mas a grade do perfil do
+Instagram e do TikTok mostra so o QUADRADO CENTRAL de 1080x1080. Assunto e texto
+ficam dentro dele; os 270px de cima e de baixo sao cenario e podem ser cortados.
+
+O texto da capa e "{texto_capa}". Ele deve aparecer NA IMAGEM, dentro do
+quadrado central, com a COR declarada explicitamente e com contorno ou caixa
+atras — sem isso o gerador devolve branco e a capa some sobre fundo claro. Nao
+acrescente subtitulo, assinatura nem segunda linha.
+
+Responda com o PROMPT em ingles e nada mais: um paragrafo, sem markdown, sem
+aspas em volta do prompt inteiro, sem explicacao.

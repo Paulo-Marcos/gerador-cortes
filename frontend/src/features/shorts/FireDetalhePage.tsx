@@ -12,13 +12,18 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Captions,
+  Check,
   Clapperboard,
   Gauge,
+  LayoutGrid,
   LayoutTemplate,
+  Loader2,
   Plus,
-  Send,
+  Redo2,
   SlidersHorizontal,
   Trash2,
+  TriangleAlert,
+  Undo2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
@@ -46,13 +51,11 @@ import { PalcoPadraoDoCorte } from './PalcoPadraoDoCorte';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { GanchoModal } from './GanchoModal';
 import { GanchoPrevia } from './GanchoPrevia';
-import { PublicarEmLoteModal } from './PublicarEmLoteModal';
-import { shortsPublicaveis } from './selecaoDoLote';
 import { PalcoPrevia } from './PalcoPrevia';
+import { useEdicaoDoShort, type EstadoDaGravacao } from './useEdicaoDoShort';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
 import {
-  useAtualizarShort,
   useCriarShortManual,
   useEnquadrarPeloRosto,
   useDescartarBruto,
@@ -66,6 +69,12 @@ import {
 
 // D-479: o operador precisa saber a QUALIDADE do que está lendo. A auto-legenda
 // erra grafia, e erro de grafia num short vira o produto — o texto é o conteúdo.
+// D-581: o par que o Ctrl+U alterna. Espelha o do Bruto (D-575) de proposito:
+// a semente desacelera porque o pedido nasceu de precisar ouvir DEVAGAR para
+// acertar a borda, e conferir o resultado exige 1x.
+const VELOCIDADE_NORMAL = 1;
+const VELOCIDADE_TRABALHO_INICIAL = 0.75;
+
 const ROTULO_FONTE: Record<string, string> = {
   auto_legenda: 'auto do YouTube',
   asr_local: 'transcrição fiel',
@@ -83,6 +92,82 @@ function textoDoVeredito(v: VereditoDoRosto): string {
   return v.aviso ? `${onde} ${v.aviso}` : onde;
 }
 
+
+/**
+ * D-581: um botão dentro de um cluster do cabeçalho.
+ *
+ * Existe para que os controles do MESMO assunto pareçam um controle só. Como
+ * `Button` variant/size, cada um trazia borda e fundo próprios — e seis caixas
+ * iguais em fila são exatamente o que faz o olho parar de distinguir grupos.
+ * Aqui a caixa é do cluster; os botões só se acendem.
+ */
+function BotaoDeCluster({
+  ativo,
+  onClick,
+  titulo,
+  rotulo,
+  desabilitado = false,
+  soIcone = false,
+  children,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  titulo: string;
+  rotulo: string;
+  desabilitado?: boolean;
+  soIcone?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={desabilitado}
+      title={titulo}
+      aria-label={rotulo}
+      aria-pressed={ativo}
+      className={cn(
+        'inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2 text-[12px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+        ativo
+          ? 'bg-[var(--wb-bg-panel)] text-[var(--wb-text)] shadow-[var(--wb-shadow)]'
+          : 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-panel)] hover:text-[var(--wb-text)]',
+      )}
+    >
+      {children}
+      {!soIcone && rotulo}
+    </button>
+  );
+}
+
+/**
+ * D-581: a prova de que gravou.
+ *
+ * Com auto-save, o silêncio é ambíguo: "não mudou nada" e "mudou e salvou" têm
+ * a mesma cara. O selo é o que separa os dois — e é também o que torna o Ctrl+Z
+ * honesto, porque quem vê "salvo" sabe que há o que desfazer.
+ *
+ * Some sozinho depois de uns segundos: um selo permanente vira decoração, e
+ * decoração que pisca no canto do olho é ruído numa tela que já estava cheia.
+ */
+function SeloDeGravacao({ estado }: { estado: EstadoDaGravacao }) {
+  if (estado === 'parado') return null;
+
+  const aparencia = {
+    gravando: { icone: <Loader2 size={11} className="animate-spin" />, texto: 'salvando…', classe: 'text-[var(--wb-text-mute)]' },
+    gravado: { icone: <Check size={11} />, texto: 'salvo', classe: 'text-[var(--wb-ok-ink)]' },
+    falhou: { icone: <TriangleAlert size={11} />, texto: 'não salvou', classe: 'text-[var(--wb-warn-ink)]' },
+  }[estado];
+
+  return (
+    <span
+      role="status"
+      className={cn('inline-flex items-center gap-1 text-[11.5px] font-semibold', aparencia.classe)}
+    >
+      {aparencia.icone}
+      {aparencia.texto}
+    </span>
+  );
+}
 
 export default function FireDetalhePage() {
   const workbench = isWorkbenchEnabled();
@@ -110,17 +195,35 @@ export default function FireDetalhePage() {
   // D-509: o modal onde a tela do short se monta inteira, num lugar so.
   const [definindoPalco, setDefinindoPalco] = useState(false);
   const [escrevendoGancho, setEscrevendoGancho] = useState(false);
-  // D-564: publicar vários de uma vez, nas plataformas escolhidas.
-  const [publicandoEmLote, setPublicandoEmLote] = useState(false);
 
   const velocidadePadrao = useVelocidadePlayerPadrao();
   const [velocidade, setVelocidade] = useState(velocidadePadrao);
+  // D-581: a ultima velocidade != 1x em uso, para o Ctrl+U ir e voltar sem
+  // reconstruir o caminho no Ctrl+J/K. Ref e nao state, como no Bruto (D-575):
+  // e memoria do gatilho, nao coisa que a tela desenha, e os bindings de atalho
+  // sao memoizados — state ficaria stale dentro deles.
+  const velocidadeTrabalhoRef = useRef(VELOCIDADE_TRABALHO_INICIAL);
   useVelocidadeNoVideo(video, velocidade, corteId);
   useEffect(() => setVelocidade(velocidadePadrao), [velocidadePadrao, corteId]);
 
+  // D-581: a "velocidade de trabalho" aprende OBSERVANDO — o mesmo arranjo que
+  // a D-575 adotou no Bruto, e pela mesma razao.
+  //
+  // Prende-la so no `ajustarVelocidade` (Ctrl+J/K) a deixaria cega para a via
+  // que mais importa: a velocidade tambem chega pelo efeito acima, quando os
+  // Ajustes carregam ou o corte troca. Quem configurou 1,50x via o Ctrl+U ir
+  // para 1x (certo) e voltar para 0,75x (errado) — perdendo, na primeira ida e
+  // volta, a velocidade em que escolheu trabalhar. Medido na tela.
+  //
+  // A semente de 0,75x continua valendo para quem abre em 1x e nunca ajustou.
+  useEffect(() => {
+    if (Math.abs(velocidade - VELOCIDADE_NORMAL) > 0.01) {
+      velocidadeTrabalhoRef.current = velocidade;
+    }
+  }, [velocidade]);
+
   const { data, isLoading, isError, error } = useShortsDoCorte(corteId);
   const fires = useFires();
-  const atualizar = useAtualizarShort(corteId);
   const descartar = useDescartarBruto();
   const renderizar = useRenderizarShort(corteId);
   const previa = useRenderizarPrevia(corteId);
@@ -133,9 +236,10 @@ export default function FireDetalhePage() {
   const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
-  // D-564: o botão do lote só existe quando há o que publicar — sem MP4 final,
-  // ele abriria um modal para dizer que não há nada.
-  const temPublicavel = useMemo(() => shortsPublicaveis(shorts).length > 0, [shorts]);
+  // D-581: o caminho UNICO de escrita desta tela. Todo PATCH passa por aqui
+  // para o Ctrl+Z enxergar tudo — um segundo caminho seria uma mudanca que o
+  // historico nao viu, e um desfazer que pula um passo e pior que nenhum.
+  const edicao = useEdicaoDoShort(corteId, shorts);
   const emQuadro = shorts.find((s) => s.id === selecionado) ?? shorts[0];
   const fire = fires.data?.fires.find((f) => f.corte_id === corteId);
   const palcoDoShort = usePalcoDoShort(emQuadro?.id ?? null, emQuadro?.arranjo_palco ?? '');
@@ -146,14 +250,14 @@ export default function FireDetalhePage() {
   // desenha esse, e volta ao gravado assim que ele chega.
   const simulacao = useSimulacaoDePalco(emQuadro?.id ?? null);
   const planoNaTela = simulacao.simulado ?? palcoDoShort.data;
-  const ocupado = atualizar.isPending || renderizar.isPending || previa.isPending;
+  const ocupado = edicao.ocupado || renderizar.isPending || previa.isPending;
 
   // O rascunho vive até o plano GRAVADO chegar — ou até a gravação falhar, e aí
   // manter o desenho seria mostrar um ajuste que o banco não tem.
   const descartarSimulacao = simulacao.descartar;
   useEffect(
     () => descartarSimulacao(),
-    [palcoDoShort.data, atualizar.status, descartarSimulacao],
+    [palcoDoShort.data, edicao.estado, descartarSimulacao],
   );
 
   // D-539: assistir um trecho para NO FIM dele. O player é o bruto inteiro, e
@@ -171,8 +275,7 @@ export default function FireDetalhePage() {
   // o mesmo campo divergiriam no arredondamento.
   const gravarBordas = useCallback(
     (shortId: string, bordas: { inicio?: number; fim?: number }, focar?: Borda) => {
-      atualizar.mutate({
-        shortId,
+      edicao.gravar(shortId, {
         ...(bordas.inicio !== undefined && { inicio_seg: Number(bordas.inicio.toFixed(2)) }),
         ...(bordas.fim !== undefined && { fim_seg: Number(bordas.fim.toFixed(2)) }),
       });
@@ -183,7 +286,7 @@ export default function FireDetalhePage() {
       const alvo = focar === 'inicio' ? bordas.inicio : bordas.fim;
       if (alvo !== undefined) irPara(alvo);
     },
-    [atualizar, irPara],
+    [edicao, irPara],
   );
 
   // O tempo corrente do player é a fonte da borda nova: o operador acabou de ver
@@ -193,9 +296,9 @@ export default function FireDetalhePage() {
     (short: ShortSugerido, campo: 'inicio_seg' | 'fim_seg') => {
       const el = video.current;
       if (!el) return;
-      atualizar.mutate({ shortId: short.id, [campo]: Number(el.currentTime.toFixed(2)) });
+      edicao.gravar(short.id, { [campo]: Number(el.currentTime.toFixed(2)) });
     },
-    [atualizar],
+    [edicao],
   );
 
 
@@ -225,6 +328,14 @@ export default function FireDetalhePage() {
     setVelocidade((atual) => normalizarVelocidade(atual + passo));
   }, []);
 
+  const alternarVelocidade = useCallback(() => {
+    setVelocidade((atual) =>
+      Math.abs(atual - VELOCIDADE_NORMAL) < 0.01
+        ? normalizarVelocidade(velocidadeTrabalhoRef.current)
+        : VELOCIDADE_NORMAL,
+    );
+  }, []);
+
   const mover = useCallback((segundos: number) => {
     const el = video.current;
     if (el) el.currentTime = Math.max(0, el.currentTime + segundos);
@@ -241,6 +352,9 @@ export default function FireDetalhePage() {
     shortcutFromRegistry('shorts.seekFwd5s', () => mover(5)),
     shortcutFromRegistry('shorts.speedDown', () => ajustarVelocidade(-0.25)),
     shortcutFromRegistry('shorts.speedUp', () => ajustarVelocidade(0.25)),
+    shortcutFromRegistry('shorts.alternarVelocidade', alternarVelocidade),
+    shortcutFromRegistry('shorts.undo', edicao.desfazer),
+    shortcutFromRegistry('shorts.redo', edicao.refazer),
   ]);
 
   const legendaAtiva = legendaVisivel && temPalavras && transcricao.data;
@@ -255,6 +369,8 @@ export default function FireDetalhePage() {
         inicioSeg={emQuadro.inicio_seg}
         fimSeg={emQuadro.fim_seg}
         tempoAtualSeg={tempoAtual}
+        cor={emQuadro.gancho_cor}
+        realce={emQuadro.gancho_realce}
       />
       {legendaAtiva && transcricao.data && (
         <LegendaPrevia
@@ -309,56 +425,104 @@ export default function FireDetalhePage() {
 
           <div className="flex-1" />
 
-          {temPalco && (
-            <Button
-              variant={verPalco ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setVerPalco((v) => !v)}
-              title="Ver o short montado no palco, ou o quadro cru com a janela 9:16"
-            >
-              <LayoutTemplate />
-              Palco {verPalco ? 'on' : 'off'}
-            </Button>
-          )}
-          {transcricao.data && temPalavras && (
-            <Button
-              variant={legendaVisivel ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setLegendaVisivel((v) => !v)}
-              title={`Fonte: ${ROTULO_FONTE[transcricao.data.fonte] ?? transcricao.data.fonte}`}
-            >
-              <Captions />
-              Legenda {legendaVisivel ? 'on' : 'off'}
-            </Button>
-          )}
-          {transcricao.data && !temPalavras && (
-            <span
-              className="font-code text-[11px] text-[var(--wb-text-mute)]"
-              title="A transcrição deste corte não tem tempo por palavra (anterior a D-337)."
-            >
-              sem legenda
-            </span>
-          )}
+          {/* D-581: os controles em GRUPOS, e nao numa fileira.
+              Antes eram seis botoes de peso identico lado a lado — palco,
+              legenda, velocidade, lote, menu — e nada dizia que tres deles sao
+              do MESMO assunto (o que a previa mostra) e dois de outro (o que
+              acabou de ser gravado). A fileira era o "muito poluido e dificil
+              de encontrar as coisas": a tela nao agrupava, entao o olho tinha
+              de agrupar a cada vez.
 
-          <span
-            className="inline-flex items-center gap-1 rounded-[7px] bg-[var(--wb-bg-inset)] px-2 py-1 font-code text-[11px] tabular-nums text-[var(--wb-text-mute)]"
-            title="Velocidade do player (Ctrl+J / Ctrl+K)"
-          >
-            <Gauge size={11} aria-hidden />
-            {velocidade.toFixed(2)}×
-          </span>
+              Tres clusters, cada um com uma pergunta: o que eu VEJO, o que
+              acabei de FAZER, e para onde eu VOU. */}
+          <SeloDeGravacao estado={edicao.estado} />
 
-          {temPublicavel && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPublicandoEmLote(true)}
-              title="Publicar vários trechos deste Fire, nas plataformas escolhidas"
+          {/* ── o que eu vejo ─────────────────────────────────────────── */}
+          <div className="flex items-center gap-0.5 rounded-[8px] bg-[var(--wb-bg-inset)] p-0.5">
+            {temPalco && (
+              <BotaoDeCluster
+                ativo={verPalco}
+                onClick={() => setVerPalco((v) => !v)}
+                titulo="Ver o short montado no palco, ou o quadro cru com a janela 9:16"
+                rotulo="Palco"
+              >
+                <LayoutTemplate size={13} aria-hidden />
+              </BotaoDeCluster>
+            )}
+            {transcricao.data && temPalavras && (
+              <BotaoDeCluster
+                ativo={legendaVisivel}
+                onClick={() => setLegendaVisivel((v) => !v)}
+                titulo={`Legenda na prévia — fonte: ${ROTULO_FONTE[transcricao.data.fonte] ?? transcricao.data.fonte}`}
+                rotulo="Legenda"
+              >
+                <Captions size={13} aria-hidden />
+              </BotaoDeCluster>
+            )}
+            {transcricao.data && !temPalavras && (
+              <span
+                className="px-1.5 font-code text-[10.5px] text-[var(--wb-text-mute)]"
+                title="A transcrição deste corte não tem tempo por palavra (anterior a D-337)."
+              >
+                sem legenda
+              </span>
+            )}
+            {/* A velocidade vira BOTAO: era so um mostrador, e o pedido foi
+                exatamente poder ir e voltar do 1x sem caçar Ctrl+J/K. */}
+            <button
+              type="button"
+              onClick={alternarVelocidade}
+              title="Alternar entre 1x e a velocidade de trabalho (Ctrl+U). Ctrl+J / Ctrl+K ajustam."
+              className={cn(
+                'inline-flex h-7 items-center gap-1 rounded-[6px] px-2 font-code text-[11px] tabular-nums transition-colors',
+                Math.abs(velocidade - VELOCIDADE_NORMAL) < 0.01
+                  ? 'text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-panel)] hover:text-[var(--wb-text)]'
+                  : 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent-strong,var(--wb-accent))]',
+              )}
             >
-              <Send />
-              Publicar em lote
-            </Button>
-          )}
+              <Gauge size={11} aria-hidden />
+              {velocidade.toFixed(2)}×
+            </button>
+          </div>
+
+          {/* ── o que acabei de fazer ─────────────────────────────────── */}
+          <div className="flex items-center gap-0.5 rounded-[8px] bg-[var(--wb-bg-inset)] p-0.5">
+            <BotaoDeCluster
+              ativo={false}
+              onClick={edicao.desfazer}
+              desabilitado={!edicao.podeDesfazer}
+              titulo={
+                edicao.podeDesfazer
+                  ? `Desfazer ${edicao.proximoDesfazer} (Ctrl+Z)`
+                  : 'Nada para desfazer nesta sessão'
+              }
+              rotulo="Desfazer"
+              soIcone
+            >
+              <Undo2 size={13} aria-hidden />
+            </BotaoDeCluster>
+            <BotaoDeCluster
+              ativo={false}
+              onClick={edicao.refazer}
+              desabilitado={!edicao.podeRefazer}
+              titulo={edicao.podeRefazer ? 'Refazer (Ctrl+Y)' : 'Nada para refazer'}
+              rotulo="Refazer"
+              soIcone
+            >
+              <Redo2 size={13} aria-hidden />
+            </BotaoDeCluster>
+          </div>
+
+          {/* ── para onde eu vou ──────────────────────────────────────── */}
+          <Button variant="secondary" size="sm" asChild>
+            <Link
+              to={`/shorts/${corteId}/workspace`}
+              title="A prateleira dos aprovados: prévia lado a lado e publicação em massa"
+            >
+              <LayoutGrid />
+              Workspace
+            </Link>
+          </Button>
 
           {fire && (
             <OverflowMenu
@@ -625,7 +789,7 @@ export default function FireDetalhePage() {
                 setSelecionado(short.id);
                 tocarTrecho(short);
               }}
-              onStatus={(status) => atualizar.mutate({ shortId: short.id, status })}
+              onStatus={(status) => edicao.gravar(short.id, { status })}
               onBorda={(campo) => moverBorda(short, campo)}
               onEnquadrarPeloRosto={() => enquadrarPeloRosto.mutate(short.id)}
               enquadrando={enquadrarPeloRosto.isPending && enquadrarPeloRosto.variables === short.id}
@@ -637,7 +801,7 @@ export default function FireDetalhePage() {
               // D-552: aplicar um palco copia os valores E marca a origem, para
               // o select poder dizer qual preset descreve este trecho.
               onPalco={(presetId, payload) =>
-                atualizar.mutate({ shortId: short.id, ...mudancaDoPalco(presetId, payload) })
+                edicao.gravar(short.id, mudancaDoPalco(presetId, payload))
               }
               // D-542: seleciona ANTES de abrir. O modal edita `emQuadro`, e
               // abri-lo a partir de um card que nao esta em foco editaria outro
@@ -657,9 +821,9 @@ export default function FireDetalhePage() {
             />
           ))}
 
-          {atualizar.isError && (
+          {edicao.erro && (
             <p className="rounded-[9px] bg-[var(--wb-bg-inset)] p-2 text-[12px] text-[var(--wb-text-dim)]">
-              {(atualizar.error as Error)?.message ?? 'não consegui salvar'}
+              {edicao.erro}
             </p>
           )}
 
@@ -682,9 +846,9 @@ export default function FireDetalhePage() {
           plano={palcoDoShort.data ?? null}
           fonte={{ largura: dimensoes.largura, altura: dimensoes.altura }}
           video={video}
-          ocupado={atualizar.isPending}
+          ocupado={edicao.ocupado}
           tempoAtualSeg={tempoAtual}
-          onAplicar={(mudanca) => atualizar.mutate({ shortId: emQuadro.id, ...mudanca })}
+          onAplicar={(mudanca) => edicao.gravar(emQuadro.id, mudanca)}
         />
       )}
       {emQuadro && (
@@ -695,23 +859,18 @@ export default function FireDetalhePage() {
           plano={palcoNaTela ? (palcoDoShort.data ?? null) : null}
           video={video}
           palavras={transcricao.data?.palavras ?? []}
-          ocupado={atualizar.isPending}
-          onGravar={(texto, ateSeg) => {
-            atualizar.mutate({
-              shortId: emQuadro.id,
+          ocupado={edicao.ocupado}
+          onGravar={(texto, ateSeg, cor, realce) => {
+            edicao.gravar(emQuadro.id, {
               gancho_tela: texto,
               gancho_ate_seg: ateSeg,
+              gancho_cor: cor,
+              gancho_realce: realce,
             });
             setEscrevendoGancho(false);
           }}
         />
       )}
-      <PublicarEmLoteModal
-        open={publicandoEmLote}
-        onClose={() => setPublicandoEmLote(false)}
-        corteId={corteId}
-        shorts={shorts}
-      />
     </div>
   );
 }

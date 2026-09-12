@@ -22,6 +22,9 @@ Endpoints:
   PATCH /{short_id}/post          — a edicao manual do texto de publicacao
   GET  /{short_id}/capa           — o quadro de capa gravado, e o instante sugerido
   POST /{short_id}/capa           — tira o quadro no instante escolhido
+  GET  /{short_id}/capa/prompt    — o prompt da arte ja escrito
+  POST /{short_id}/capa/prompt    — escreve o prompt da arte (D-581)
+  POST /{short_id}/capa/arte      — sobe a imagem desenhada como capa
   GET  /{short_id}/capa/imagem    — serve o arquivo da capa
   POST /{short_id}/enquadrar      — acha o rosto no trecho e centra o 9:16 nele
   POST /{short_id}/previa         — o vertical SEM filtro, para julgar antes
@@ -321,6 +324,9 @@ class AtualizarShortRequest(BaseModel):
     # D-565: o titulo-gancho da abertura e quanto tempo ele fica em tela.
     gancho_tela: str | None = None
     gancho_ate_seg: float | None = None
+    # D-581: a aparencia do gancho — hex da cor e o realce que o separa do fundo.
+    gancho_cor: str | None = None
+    gancho_realce: str | None = None
 
 
 @router.patch("/{short_id}")
@@ -347,6 +353,8 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 moldura=body.moldura,
                 gancho_tela=body.gancho_tela,
                 gancho_ate_seg=body.gancho_ate_seg,
+                gancho_cor=body.gancho_cor,
+                gancho_realce=body.gancho_realce,
             )
         }
     except LookupError as exc:
@@ -614,6 +622,58 @@ async def gerar_capa(short_id: str, body: GerarCapaRequest):
         # 502: quem falhou foi o FFmpeg, nao o pedido. A distincao importa na
         # tela — "tente de novo" e util aqui e nao no 422.
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/{short_id}/capa/prompt")
+async def obter_prompt_da_capa(short_id: str):
+    """O prompt da arte ja escrito para este short, ou "" quando ainda nao ha.
+
+    GET separado do POST de proposito: escrever custa uma chamada de IA de
+    minutos, e abrir o modal nao pode dispara-la. A tela le o gravado ao abrir e
+    so escreve quando o operador pedir.
+    """
+    from app.services import capa_short
+
+    return {"prompt": await capa_short.obter_prompt(short_id)}
+
+
+@router.post("/{short_id}/capa/prompt")
+async def gerar_prompt_da_capa(short_id: str):
+    """Escreve o prompt de imagem da capa deste short (D-581).
+
+    O app nao desenha: ele entrega o prompt, o operador gera a imagem no agente
+    capista dele e sobe a arte de volta em `/capa/arte`. Mesma divisao da capa
+    do TikTok (D-524) — gerador de imagem dentro da esteira seria custo e
+    imprevisibilidade num passo que se julga com o olho.
+    """
+    from app.services import capa_short
+
+    try:
+        return {"prompt": await capa_short.gerar_prompt(short_id)}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except capa_short.CapaShortError as exc:
+        # 502: quem falhou foi a skill/CLI, nao o pedido — a tela oferece
+        # "tentar de novo", que nao faria sentido num 422.
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.post("/{short_id}/capa/arte")
+async def subir_arte_da_capa(short_id: str, arquivo: UploadFile = File(...)):
+    """Grava a imagem desenhada pelo operador como a capa deste short.
+
+    Ela SUBSTITUI o quadro extraido do video: para quem publica as duas sao o
+    mesmo arquivo, e manter as duas em paralelo faria a tela ter de perguntar
+    qual vale na hora de subir.
+    """
+    from app.services import capa_short
+
+    try:
+        return await capa_short.subir_arte(short_id, await arquivo.read(), arquivo.filename or "")
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/{short_id}/capa/imagem")

@@ -46,6 +46,10 @@ def test_get_lista_o_catalogo_com_default_e_atual(client: TestClient):
         # ordem do catalogo.
         "capa-tiktok-expert",
         "capa-tiktok-imagem-expert",
+        # D-581: o capista da capa do SHORT, vizinho do TikTok e oposto dele num
+        # ponto — la a imagem sai sem texto (o sistema desenha por cima), aqui o
+        # texto nasce dentro da arte.
+        "capa-short-imagem-expert",
         "cenas-short-expert",
         "gancho-short-expert",
         "metadados-short-expert",

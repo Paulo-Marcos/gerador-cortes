@@ -72,7 +72,12 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
           superior, ela no rodape, cada um na sua safe zone. */}
       {gancho?.texto ? (
         <Sequence from={0} durationInFrames={Math.max(1, Math.round(gancho.ateSeg * fps))}>
-          <GanchoAbertura texto={gancho.texto} ateSeg={gancho.ateSeg} />
+          <GanchoAbertura
+            texto={gancho.texto}
+            ateSeg={gancho.ateSeg}
+            cor={gancho.cor ?? ""}
+            realce={gancho.realce ?? "veu"}
+          />
         </Sequence>
       ) : null}
 

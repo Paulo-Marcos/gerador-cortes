@@ -261,6 +261,7 @@ def test_descrever_skills_traz_todas_com_default_e_atual(tmp_path: Path):
         "shorts-expert",
         "capa-tiktok-expert",
         "capa-tiktok-imagem-expert",
+        "capa-short-imagem-expert",
         "cenas-short-expert",
         "gancho-short-expert",
         "metadados-short-expert",

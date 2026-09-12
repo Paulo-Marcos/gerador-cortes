@@ -422,6 +422,19 @@ class Short(Base):
     gancho_tela: Mapped[str] = mapped_column(String(200), default="")
     # Quanto tempo o gancho fica em tela. 0 = o padrao de `domain/gancho_short`.
     gancho_ate_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    # D-581: a cor do gancho, em hex. Vazio = branco, que e como ele sempre saiu.
+    #
+    # O relato que originou isto: "ele aparece branco e igual a legenda e da
+    # conflito". Sao dois textos brancos no mesmo quadro ao mesmo tempo, e o
+    # unico jeito de o olho separar promessa de fala e um deles mudar.
+    #
+    # Hex e nao chave de paleta, pela razao da D-563: quem desenha o gancho sao
+    # a previa e o Remotion, e uma chave obrigaria os dois a manterem a mesma
+    # tabela de cores — que e exatamente o que diverge com o tempo.
+    gancho_cor: Mapped[str] = mapped_column(String(20), default="")
+    # D-581: como o gancho se separa do fundo — veu, caixa, contorno, sombra ou
+    # nenhum. Vazio cai no `REALCE_PADRAO` (veu), que e o de antes desta coluna.
+    gancho_realce: Mapped[str] = mapped_column(String(20), default="")
     # D-573: as ultimas variacoes que a IA propos, em JSON.
     #
     # A D-565 decidiu NAO gravar o resultado do gerador, e a razao era boa:
@@ -576,6 +589,16 @@ class MetadadoShort(Base):
     # poder reabrir a escolha, e para refazer a capa depois de um render novo
     # sem ter de procurar o instante outra vez.
     capa_instante_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    # D-581: o prompt de imagem da capa, escrito pelo capista.
+    #
+    # GRAVADO, e nao so devolvido, pelo mesmo motivo da capa do TikTok (D-524):
+    # e isso que torna o fluxo retomavel. O operador gera o prompt aqui, sai do
+    # app para desenhar no agente dele, e volta minutos depois para subir a
+    # arte — sem gravar, o prompt teria morrido no fechar do modal.
+    #
+    # Coluna propria e nao reuso de `frase_capa`: aquela e o TEXTO que vai na
+    # capa (poucas palavras), este e o paragrafo em ingles que descreve a cena.
+    prompt_capa: Mapped[str] = mapped_column(Text, default="")
     youtube_video_id: Mapped[str] = mapped_column(String(50), default="")
     youtube_url_publicado: Mapped[str] = mapped_column(String(200), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

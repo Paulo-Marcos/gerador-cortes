@@ -1,4 +1,5 @@
-import { duracaoNoShort, ganchoVisivelEm } from './ganchoDoShort';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { duracaoNoShort, estiloDoRealce, ganchoVisivelEm } from './ganchoDoShort';
 import { SAFE_ZONE } from './previaLegenda';
 
 // D-565: o título-gancho desenhado por cima do player, como sairá no arquivo.
@@ -12,6 +13,10 @@ import { SAFE_ZONE } from './previaLegenda';
 // a decisão que esta demanda tomou, e é aqui que ela fica visível ANTES do
 // render — que é o ponto de ter prévia. Se ficar poluído, dá para ver e mudar
 // sem gastar uma passada de render.
+//
+// D-581: e agora com a COR e o REALCE escolhidos. Foi essa coexistência que o
+// operador viu ficar poluída — dois textos brancos disputando o mesmo quadro —
+// e é aqui, antes do render, que ele julga se a cor nova resolveu.
 
 interface Props {
   /** Pode chegar vazio: short sem gancho e o caso comum. */
@@ -23,10 +28,46 @@ interface Props {
   fimSeg: number;
   /** Onde o player está, na timeline do bruto. */
   tempoAtualSeg: number;
+  /** D-581: hex do texto. Vazio = branco. */
+  cor?: string;
+  /** D-581: veu | caixa | contorno | sombra | nenhum. */
+  realce?: string;
 }
 
-export function GanchoPrevia({ texto, ateSeg, inicioSeg, fimSeg, tempoAtualSeg }: Props) {
+export function GanchoPrevia({
+  texto,
+  ateSeg,
+  inicioSeg,
+  fimSeg,
+  tempoAtualSeg,
+  cor = '',
+  realce = 'veu',
+}: Props) {
+  // O contorno e a caixa têm espessura proporcional ao CORPO, e o corpo aqui é
+  // uma `cqw` — um valor que só o layout conhece. Medi-lo é o único jeito de a
+  // prévia mostrar a mesma proporção que o arquivo terá: com um número fixo, o
+  // mesmo contorno vira halo numa janela grande e mancha numa pequena.
+  const paragrafo = useRef<HTMLParagraphElement>(null);
+  const [corpoPx, setCorpoPx] = useState(16);
+
   const limpo = (texto ?? '').trim();
+
+  useLayoutEffect(() => {
+    const el = paragrafo.current;
+    if (!el) return;
+    const medir = () => {
+      const medido = Number.parseFloat(getComputedStyle(el).fontSize);
+      if (Number.isFinite(medido) && medido > 0) setCorpoPx(medido);
+    };
+    medir();
+    // A janela 9:16 cresce e encolhe com o painel (o palco abre, o modal
+    // redimensiona). Sem observar, o realce ficaria com a proporção da primeira
+    // medição — certo ao abrir e errado depois do primeiro arraste.
+    const observer = new ResizeObserver(medir);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [limpo]);
+
   if (!limpo) return null;
 
   // O tempo do player corre na timeline do BRUTO; o gancho nasce ancorado no
@@ -40,19 +81,23 @@ export function GanchoPrevia({ texto, ateSeg, inicioSeg, fimSeg, tempoAtualSeg }
   // julgar uma saída que o arquivo não tem.
   const restante = duracaoNoShort(ateSeg, duracaoShort) - noShort;
   const opacidade = Math.min(1, Math.max(0, restante / 0.3));
+  const estilo = estiloDoRealce(realce, corpoPx);
 
   return (
     <div className="pointer-events-none absolute inset-0" style={{ opacity: opacidade }} aria-hidden>
       {/* Véu só no topo — o vídeo é o que segura o dedo, e escurecer o quadro
-          inteiro enquanto a legenda também está lá é o que viraria poluição. */}
-      <div
-        className="absolute inset-x-0 top-0"
-        style={{
-          height: '46%',
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0) 100%)',
-        }}
-      />
+          inteiro enquanto a legenda também está lá é o que viraria poluição.
+          D-581: e agora ele é UM dos realces, não mais o único desenho. */}
+      {estilo.veu && (
+        <div
+          className="absolute inset-x-0 top-0"
+          style={{
+            height: '46%',
+            background:
+              'linear-gradient(180deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0) 100%)',
+          }}
+        />
+      )}
       <div
         className="absolute inset-x-0 text-center"
         style={{ top: `${SAFE_ZONE * 100}%`, paddingLeft: '7%', paddingRight: '7%' }}
@@ -64,8 +109,9 @@ export function GanchoPrevia({ texto, ateSeg, inicioSeg, fimSeg, tempoAtualSeg }
             arquivo cabia em UMA na prévia. Aí a prévia deixa de responder a
             pergunta que a fez existir: isto polui a tela? */}
         <p
-          className="font-display text-[clamp(9px,8.89cqw,96px)] font-black leading-[1.08] tracking-[-0.02em] text-white"
-          style={{ textShadow: '0 6px 28px rgba(0,0,0,0.7)' }}
+          ref={paragrafo}
+          className="font-display text-[clamp(9px,8.89cqw,96px)] font-black leading-[1.08] tracking-[-0.02em]"
+          style={{ color: cor || '#ffffff', ...estilo.texto }}
         >
           {limpo}
         </p>

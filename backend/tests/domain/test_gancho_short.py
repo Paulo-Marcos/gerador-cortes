@@ -85,7 +85,25 @@ class TestPayload:
         assert para_payload("ninguem te conta isso", 2.5, duracao_short_seg=30.0) == {
             "texto": "ninguem te conta isso",
             "ateSeg": 2.5,
+            # D-581: a aparencia viaja JUNTO do texto, e os defaults sao os de
+            # antes desta demanda — branco com o veu de topo. Um short curado
+            # antes dela sai exatamente como saia.
+            "cor": "",
+            "realce": "veu",
         }
+
+    def test_aparencia_escolhida_chega_normalizada(self):
+        payload = para_payload("oi", 2.5, duracao_short_seg=30.0, cor="#FACC15", realce="CAIXA")
+        assert payload is not None
+        assert payload["cor"] == "#facc15"
+        assert payload["realce"] == "caixa"
+
+    def test_aparencia_invalida_degrada_em_vez_de_quebrar(self):
+        """Um valor torto no banco nao pode custar o render do short."""
+        payload = para_payload("oi", 2.5, duracao_short_seg=30.0, cor="vermelho", realce="neon")
+        assert payload is not None
+        assert payload["cor"] == ""
+        assert payload["realce"] == "veu"
 
     def test_sem_texto_nao_ha_gancho(self):
         """Short sem gancho e o caso comum, nao um erro."""

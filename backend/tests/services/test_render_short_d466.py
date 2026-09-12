@@ -243,9 +243,14 @@ class TestGanchoDaAbertura:
                 encoding="utf-8"
             )
         )
+        # D-581: o payload ganhou cor e realce. Os defaults sao os de antes —
+        # branco com o veu de topo —, entao um short curado antes dela sai
+        # exatamente como saia.
         assert props["gancho"] == {
             "texto": "o juro composto trabalha contra voce",
             "ateSeg": 2.5,
+            "cor": "",
+            "realce": "veu",
         }
 
     @pytest.mark.asyncio

@@ -118,6 +118,7 @@ _SKILL_GANCHO_SHORT = "gancho-short-expert"
 _SKILL_METADADOS_SHORT = "metadados-short-expert"
 _SKILL_CAPA_TIKTOK = "capa-tiktok-expert"
 _SKILL_CAPA_TIKTOK_IMAGEM = "capa-tiktok-imagem-expert"
+_SKILL_CAPA_SHORT = "capa-short-imagem-expert"
 
 # A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
 _LIMITE_MOTIVO_NA_TELA = 400
@@ -1441,6 +1442,64 @@ class ClaudeIaService:
             ),
         )
         return etiqueta_da_resposta(bruto)
+
+    @staticmethod
+    async def prompt_da_capa_do_short_via_claude(short_id: str) -> str:
+        """O prompt de imagem da capa de um short vertical (D-581).
+
+        Skill separada da capa do TikTok por uma diferenca concreta, e nao por
+        organizacao: la a imagem sai SEM texto, porque o sistema desenha a
+        etiqueta e o selo por cima com a tipografia do canal. Aqui nao ha
+        montagem nenhuma — a capa do short e a imagem inteira —, entao a frase
+        precisa nascer dentro da arte, com cor e contorno declarados.
+
+        A outra diferenca e o recorte. A capa do corte vive numa vitrine so; a
+        do short aparece em tres, e as duas grades de perfil (Instagram e TikTok)
+        mostram apenas o QUADRADO CENTRAL do quadro 9:16. E isso que a skill
+        precisa conciliar, e e por isso que ela pensa um pouco mais que a vizinha.
+
+        A cor explicita nao e capricho: a D-343 mediu que 90% dos prompts sem cor
+        declarada voltaram com texto branco — e branco sobre fundo claro e uma
+        capa que nao diz nada.
+
+        O estilo e herdado do prompt da thumbnail do YouTube quando ele existe,
+        pelo motivo da D-524: a identidade do canal em dois corpos de skill e a
+        garantia de que um dia os dois discordem.
+
+        NAO grava — quem grava e `capa_short.gerar_prompt`, que e quem sabe onde
+        o metadado do short mora.
+
+        Levanta `LookupError` (short inexistente).
+        """
+        from app.services import capa_short as capa_store
+
+        contexto = await capa_store.montar_contexto_da_capa(short_id)
+
+        skill = editorial_skills.resolver_skill(_SKILL_CAPA_SHORT)
+        scaffold = editorial_scaffolds.resolver_scaffold("capa-short-imagem")
+        prompt = scaffold.format(
+            titulo=contexto.titulo or "(sem titulo)",
+            tema_central=contexto.tema_central or "(sem tema)",
+            gancho_tela=contexto.gancho_tela or "(este short nao tem gancho escrito)",
+            gancho=contexto.gancho_da_curadoria or "(sem nota da curadoria)",
+            duracao_humana=contexto.duracao_humana,
+            texto_transcricao=contexto.texto_transcricao or "(trecho sem fala transcrita)",
+            prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
+            texto_capa=capa_store.texto_da_capa(contexto),
+        )
+        _log_skill_usada(_SKILL_CAPA_SHORT, skill, scaffold)
+        bruto = await claude_cli_client.generate_text(
+            prompt,
+            **_args_claude(
+                skill,
+                _SKILL_CAPA_SHORT,
+                projeto_id=contexto.projeto_id,
+                corte_id=contexto.corte_id,
+            ),
+        )
+        from app.domain.capa_tiktok import prompt_da_arte
+
+        return prompt_da_arte(bruto)
 
     @staticmethod
     async def prompt_da_arte_da_capa_via_claude(corte_id: str, texto_capa: str) -> str:

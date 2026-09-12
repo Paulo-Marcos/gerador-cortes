@@ -136,6 +136,11 @@ def test_descrever_scaffolds_traz_todos_na_ordem(tmp_path: Path):
         # de skills.
         "capa-tiktok",
         "capa-tiktok-imagem",
+        # D-581: o capista da capa do SHORT. Entra logo apos o do TikTok — sao
+        # vizinhos de assunto, e opostos num ponto: la a imagem sai sem texto
+        # (o sistema desenha a etiqueta por cima), aqui o texto nasce dentro
+        # dela, porque a capa do short nao e montada em faixas.
+        "capa-short-imagem",
         "cenas-short",
         "gancho-short",
         "metadados-short",

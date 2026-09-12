@@ -331,6 +331,11 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
                 short.gancho_tela,
                 short.gancho_ate_seg,
                 duracao_short_seg=float(short.fim_seg) - float(short.inicio_seg),
+                # D-581: a aparencia viaja junto do texto, direto do short. O
+                # gancho inteiro e por short e nao herda do palco do corte —
+                # so a legenda herda, e por isso ela vem do `palco`.
+                cor=short.gancho_cor,
+                realce=short.gancho_realce,
             ),
             origem=origem,
             plano=palco["plano"],

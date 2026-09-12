@@ -10,6 +10,8 @@ export const postDoShortKey = (shortId: string) => ['shorts', 'post', shortId] a
 
 /** D-565 (onda 4): o quadro de capa de UM short. */
 export const capaDoShortKey = (shortId: string) => ['shorts', 'capa', shortId] as const;
+export const promptDaCapaKey = (shortId: string) =>
+  ['shorts', 'capa', 'prompt', shortId] as const;
 
 /** Prefixo de tudo que descreve palco — invalidar aqui atinge o corte E os shorts. */
 export const PALCO_KEY = ['shorts', 'palco'] as const;
@@ -382,6 +384,48 @@ export function useGerarCapa(shortId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: GerarCapaBody) => shortsApi.gerarCapa(shortId, body),
+    onSuccess: (parcial) =>
+      qc.setQueryData(capaDoShortKey(shortId), (antigo: CapaDoShortApi | undefined) =>
+        antigo ? { ...antigo, ...parcial } : antigo,
+      ),
+  });
+}
+
+/**
+ * D-581: o prompt da arte da capa que ja esta gravado.
+ *
+ * Query separada da mutation, e GET separado do POST no backend, pelo mesmo
+ * motivo: escrever custa uma chamada de IA de minutos, e abrir o modal nao pode
+ * dispara-la. A tela le o gravado ao abrir; escrever e um clique.
+ */
+export function usePromptDaCapa(shortId: string, habilitado = true) {
+  return useQuery({
+    queryKey: promptDaCapaKey(shortId),
+    queryFn: () => shortsApi.obterPromptDaCapa(shortId),
+    enabled: habilitado,
+  });
+}
+
+/**
+ * D-581: pede o prompt ao capista.
+ *
+ * O resultado entra no cache na hora — igual as variacoes do gancho depois da
+ * D-573. A chamada leva minutos, e esperar o refetch para o texto aparecer
+ * faria o operador achar que o botao nao fez nada.
+ */
+export function useGerarPromptDaCapa(shortId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => shortsApi.gerarPromptDaCapa(shortId),
+    onSuccess: (dados) => qc.setQueryData(promptDaCapaKey(shortId), dados),
+  });
+}
+
+/** D-581: sobe a arte desenhada como capa. Ela substitui o quadro do video. */
+export function useSubirArteDaCapa(shortId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (arquivo: File) => shortsApi.subirArteDaCapa(shortId, arquivo),
     onSuccess: (parcial) =>
       qc.setQueryData(capaDoShortKey(shortId), (antigo: CapaDoShortApi | undefined) =>
         antigo ? { ...antigo, ...parcial } : antigo,

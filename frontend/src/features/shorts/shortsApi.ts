@@ -79,6 +79,9 @@ export interface FireComBruto {
   indicado: boolean;
   /** D-503: há MP4 final para publicar no TikTok? */
   tem_video_final: boolean;
+  /** D-581: a mão humana já passou por aqui? Alimenta o filtro "onde eu parei".
+   *  Opcional porque um backend ainda não reiniciado não manda o campo. */
+  tem_edicao?: boolean;
   shorts: ContagemShorts;
 }
 
@@ -95,6 +98,10 @@ export interface ShortSugerido {
   gancho_sugestoes: string[];
   /** D-565: quanto tempo o gancho fica em tela. 0 = o padrao. */
   gancho_ate_seg: number;
+  /** D-581: hex da cor do gancho. Vazio = branco, como sempre foi. */
+  gancho_cor: string;
+  /** D-581: veu | caixa | contorno | sombra | nenhum. Vazio cai no veu. */
+  gancho_realce: string;
   inicio_seg: number;
   fim_seg: number;
   duracao_seg: number;
@@ -159,6 +166,9 @@ export interface AtualizarShortBody {
   /** D-565: o titulo-gancho da abertura. "" apaga. */
   gancho_tela?: string;
   gancho_ate_seg?: number;
+  /** D-581: a aparencia do gancho. "" na cor volta ao branco. */
+  gancho_cor?: string;
+  gancho_realce?: string;
 }
 
 /** D-565 (onda 3): o texto que acompanha o short no feed. */
@@ -561,6 +571,26 @@ export const shortsApi = {
       `/shorts/${shortId}/capa`,
       { method: 'POST', body: JSON.stringify(body) },
     ),
+
+  /** D-581: o prompt da arte da capa ja escrito, ou "" quando ainda nao ha. */
+  obterPromptDaCapa: (shortId: string) =>
+    request<{ prompt: string }>(`/shorts/${shortId}/capa/prompt`),
+
+  /** D-581: pede o prompt da arte ao capista. Leva minutos — e uma chamada de IA. */
+  gerarPromptDaCapa: (shortId: string) =>
+    request<{ prompt: string }>(`/shorts/${shortId}/capa/prompt`, { method: 'POST' }),
+
+  /** D-581: sobe a imagem desenhada como a capa deste short. */
+  subirArteDaCapa: (shortId: string, arquivo: File) => {
+    const form = new FormData();
+    form.append('arquivo', arquivo);
+    // Sem `Content-Type` proprio: com FormData quem monta o cabecalho (com o
+    // boundary) e o BROWSER — o `cabecalhosDa` ja cuida disso desde a D-529.
+    return request<{ capa_path: string; instante_seg: number; tem_capa: boolean }>(
+      `/shorts/${shortId}/capa/arte`,
+      { method: 'POST', body: form },
+    );
+  },
 
   renderizarPrevia: (shortId: string) =>
     request<{ status: string; estagio: string }>(`/shorts/${shortId}/previa`, {

@@ -48,6 +48,13 @@ const ShortsPage = lazy(() =>
 const FireDetalhePage = lazy(() =>
   import('./features/shorts/FireDetalhePage').then((m) => ({ default: m.default })),
 );
+// D-581: a segunda tela de cada Fire — a prateleira dos aprovados, com o
+// despacho em massa. Rota irma da edicao, e nao aba dentro dela: sao dois
+// trabalhos com posturas opostas, e a URL propria e o que deixa cada um
+// linkavel e recarregavel no lugar onde o operador estava.
+const WorkspaceDoFirePage = lazy(() =>
+  import('./features/shorts/WorkspaceDoFirePage').then((m) => ({ default: m.default })),
+);
 const AtalhosPage = lazy(() =>
   import('@/features/atalhos/AtalhosPage').then((m) => ({ default: m.AtalhosPage })),
 );
@@ -80,6 +87,7 @@ export const router = createBrowserRouter([
       { path: 'analises', element: <AnalisesPage /> },
       { path: 'shorts', element: <ShortsPage /> },
       { path: 'shorts/:corteId', element: <FireDetalhePage /> },
+      { path: 'shorts/:corteId/workspace', element: <WorkspaceDoFirePage /> },
       { path: 'atalhos', element: <AtalhosPage /> },
       { path: '*', element: <StubPage titulo="Pagina nao encontrada" /> },
     ],

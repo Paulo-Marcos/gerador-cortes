@@ -39,6 +39,70 @@ DURACAO_PADRAO_SEG = 2.5
 DURACAO_MIN_SEG = 1.5
 DURACAO_MAX_SEG = 5.0
 
+# D-581: como o gancho se separa do resto do quadro.
+#
+# Ate aqui ele saia branco, com o mesmo corpo pesado e a mesma sombra da
+# legenda, e o resultado foi o relato do operador: "ele aparece branco e igual a
+# legenda e da conflito". Sao dois textos brancos na mesma tela, ao mesmo tempo,
+# e nada dizendo ao olho qual e a promessa e qual e a fala.
+#
+# A pesquisa de formato converge em tres tecnicas, e elas nao competem: contorno
+# (o mais confiavel sobre fundo que muda), caixa (o mais legivel sobre fundo
+# sujo) e sombra (o mais discreto, para imagem limpa). O veu em degrade e o que
+# o gancho ja fazia, e continua sendo o padrao — trocar o default mudaria o
+# visual de todo short ja curado sem ninguem pedir.
+#
+# O `nenhum` existe para quem escolheu uma COR forte: com amarelo sobre video
+# escuro, qualquer reforco vira excesso.
+REALCE_VEU = "veu"
+REALCE_CAIXA = "caixa"
+REALCE_CONTORNO = "contorno"
+REALCE_SOMBRA = "sombra"
+REALCE_NENHUM = "nenhum"
+
+REALCE_PADRAO = REALCE_VEU
+
+REALCES = (REALCE_VEU, REALCE_CAIXA, REALCE_CONTORNO, REALCE_SOMBRA, REALCE_NENHUM)
+
+
+def normalizar_realce(valor: object) -> str:
+    """O destaque do gancho, ou o padrao quando o valor nao e um dos conhecidos.
+
+    Degradar, e nao levantar: o catalogo pode encolher entre versoes, e um short
+    gravado com um realce que deixou de existir nao pode custar o render. O
+    sintoma aceitavel e ele sair com o veu de sempre.
+
+    >>> normalizar_realce('caixa')
+    'caixa'
+    >>> normalizar_realce('roxo-neon')
+    'veu'
+    >>> normalizar_realce(None)
+    'veu'
+    """
+    texto = str(valor or "").strip().lower()
+    return texto if texto in REALCES else REALCE_PADRAO
+
+
+def normalizar_cor(valor: object) -> str:
+    """O hex da cor do gancho, ou "" para o branco de sempre.
+
+    Guardamos o HEX e nao uma chave de catalogo pelo motivo que a D-563 ja
+    registrou na legenda: quem desenha o gancho sao dois lugares — a previa no
+    navegador e o Remotion no render — e uma chave obrigaria os dois a manterem
+    a mesma tabela de cores. Duas copias da mesma tabela divergem.
+
+    >>> normalizar_cor('#FACC15')
+    '#facc15'
+    >>> normalizar_cor('facc15')
+    '#facc15'
+    >>> normalizar_cor('vermelho')
+    ''
+    """
+    texto = str(valor or "").strip().lower().lstrip("#")
+    if len(texto) not in (3, 6) or any(c not in "0123456789abcdef" for c in texto):
+        return ""
+    return f"#{texto}"
+
 
 def normalizar_gancho(texto: str) -> str:
     """Arruma o texto do gancho sem apagar palavra nenhuma.
@@ -111,7 +175,14 @@ def normalizar_duracao(valor: object) -> float:
     return min(max(duracao, DURACAO_MIN_SEG), DURACAO_MAX_SEG)
 
 
-def para_payload(texto: str, ate_seg: object, *, duracao_short_seg: float) -> dict | None:
+def para_payload(
+    texto: str,
+    ate_seg: object,
+    *,
+    duracao_short_seg: float,
+    cor: object = "",
+    realce: object = "",
+) -> dict | None:
     """O gancho como o renderer o consome, ou `None` quando nao ha gancho.
 
     `None` e uma resposta valida e comum: short sem gancho sai so com video e
@@ -123,11 +194,13 @@ def para_payload(texto: str, ate_seg: object, *, duracao_short_seg: float) -> di
     o sintoma seria um erro de render, nao um gancho comprido.
 
     >>> para_payload('ninguem te conta isso', 2.5, duracao_short_seg=30.0)
-    {'texto': 'ninguem te conta isso', 'ateSeg': 2.5}
+    {'texto': 'ninguem te conta isso', 'ateSeg': 2.5, 'cor': '', 'realce': 'veu'}
     >>> para_payload('  ', 2.5, duracao_short_seg=30.0) is None
     True
-    >>> para_payload('oi', 5.0, duracao_short_seg=3.0)
-    {'texto': 'oi', 'ateSeg': 3.0}
+    >>> para_payload('oi', 5.0, duracao_short_seg=3.0)['ateSeg']
+    3.0
+    >>> para_payload('oi', 2.5, duracao_short_seg=9.0, cor='#FACC15')['cor']
+    '#facc15'
     """
     limpo = normalizar_gancho(texto)
     if not limpo:
@@ -136,7 +209,16 @@ def para_payload(texto: str, ate_seg: object, *, duracao_short_seg: float) -> di
     ate = normalizar_duracao(ate_seg)
     if duracao_short_seg > 0:
         ate = min(ate, round(float(duracao_short_seg), 2))
-    return {"texto": limpo, "ateSeg": ate}
+    return {
+        "texto": limpo,
+        "ateSeg": ate,
+        # D-581: viajam JUNTO do texto, e nao pelo plano do palco como a
+        # legenda. O gancho inteiro (texto e duracao) e por short e nao herda do
+        # palco do corte; fazer a aparencia dele herdar e o resto nao daria dois
+        # donos para a mesma decisao.
+        "cor": normalizar_cor(cor),
+        "realce": normalizar_realce(realce),
+    }
 
 
 # Quantas variacoes o gerador entrega. Seis cabem na tela sem rolagem e ja

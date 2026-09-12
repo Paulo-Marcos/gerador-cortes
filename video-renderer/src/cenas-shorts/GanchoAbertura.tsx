@@ -22,18 +22,43 @@ import { SAFE_ZONE } from "./_shared";
 // dentro da sua safe zone. É por isso que o véu NÃO é de quadro cheio como o
 // das cenas — escurecer a tela inteira por 2,5s enquanto a legenda também está
 // lá transformaria a coexistência em poluição, e o vídeo é o que segura o dedo.
+//
+// ## D-581: por que ele deixou de ser sempre branco
+//
+// Porque a coexistência estava saindo pela culatra. Gancho branco e legenda
+// branca, no mesmo quadro, ao mesmo tempo, com o mesmo peso e a mesma sombra:
+// nada dizia ao olho qual dos dois é a promessa e qual é a fala. O relato do
+// operador foi exatamente esse — "dá conflito".
+//
+// A saída não é mexer no lugar de nenhum dos dois (a safe zone já separa em
+// cima e embaixo), e sim dar ao gancho uma IDENTIDADE VISUAL própria: uma cor
+// que só ele tem, e um realce que o separa do vídeo de um jeito diferente do
+// contorno da legenda. Quem escolhe é o operador, porque quem olha o trecho é
+// ele — o que o código garante é que a prévia mostre a mesma coisa.
 
 /** Frames de entrada e de saída. Curto: o gancho tem 2,5s de vida inteira. */
 const FRAMES_ENTRADA = 7;
 const FRAMES_SAIDA = 9;
 
+/** Espelha `REALCES` em `backend/app/domain/gancho_short.py`. */
+export type RealceDoGancho = "veu" | "caixa" | "contorno" | "sombra" | "nenhum";
+
 export interface GanchoAberturaProps {
   texto: string;
   /** Segundo em que o gancho sai de cena. */
   ateSeg: number;
+  /** Hex da cor do texto. "" = o branco de sempre. */
+  cor?: string;
+  /** Como o gancho se separa do fundo. "" = o véu, que é o padrão. */
+  realce?: RealceDoGancho | string;
 }
 
-export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({ texto, ateSeg }) => {
+export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
+  texto,
+  ateSeg,
+  cor = "",
+  realce = "veu",
+}) => {
   const frame = useCurrentFrame();
   const { fps, height } = useVideoConfig();
   const fim = Math.max(1, Math.round(ateSeg * fps));
@@ -54,23 +79,31 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({ texto, ateSeg })
   // esforço. Curto: 22px em 7 frames é percebido como firmeza, não animação.
   const subida = interpolate(entrada, [0, 1], [22, 0]);
 
+  // O corpo sai da ALTURA do quadro. Menor que o do `CenaHook` (0.062): lá o
+  // texto ERA o conteúdo com o quadro parado atrás; aqui ele divide a tela com
+  // o vídeo tocando e com a legenda embaixo.
+  const corpo = Math.round(height * 0.05);
+  const estilo = estiloDoRealce(realce, corpo);
+
   return (
     <>
-      {/* Véu SÓ no topo, atrás do texto. Um degradê que morre antes da metade
-          do quadro deixa o vídeo intacto onde ele importa — e não disputa
-          contraste com a legenda, que tem o contorno dela. */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "46%",
-          opacity,
-          background:
-            "linear-gradient(180deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0) 100%)",
-        }}
-      />
+      {/* O véu é o único realce que vive FORA da caixa do texto: ele escurece
+          uma faixa do quadro, e não o retângulo da frase. Os outros três agem
+          sobre as letras, então viajam no `style` do parágrafo. */}
+      {estilo.veu ? (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "46%",
+            opacity,
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0) 100%)",
+          }}
+        />
+      ) : null}
       <div
         style={{
           position: "absolute",
@@ -86,15 +119,12 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({ texto, ateSeg })
           style={{
             margin: 0,
             fontFamily: F.display,
-            // Menor que o do `CenaHook` (0.062): lá o texto ERA o conteúdo com
-            // o quadro parado atrás; aqui ele divide a tela com o vídeo tocando
-            // e com a legenda embaixo.
-            fontSize: Math.round(height * 0.05),
+            fontSize: corpo,
             fontWeight: 900,
             lineHeight: 1.08,
             letterSpacing: "-0.02em",
-            color: C.branco,
-            textShadow: "0 6px 28px rgba(0,0,0,0.7)",
+            color: cor || C.branco,
+            ...estilo.texto,
           }}
         >
           {texto}
@@ -103,3 +133,81 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({ texto, ateSeg })
     </>
   );
 };
+
+interface EstiloDoRealce {
+  /** O degradê de topo entra? Só o `veu` o usa. */
+  veu: boolean;
+  /** O que se aplica ao parágrafo — sombra, contorno ou caixa. */
+  texto: React.CSSProperties;
+}
+
+/**
+ * O realce traduzido em CSS — a MESMA tabela que a prévia do navegador aplica.
+ *
+ * Exportada porque `GanchoPrevia.tsx` do frontend a espelha campo a campo: os
+ * dois projetos não compartilham módulo (mesma situação da `LegendaShort`), e o
+ * que impede a divergência é o espelho ser declarado e pequeno o bastante para
+ * caber numa leitura.
+ *
+ * Realce desconhecido cai no véu em silêncio. O backend já normaliza, mas um
+ * props.json antigo não pode custar o render do short inteiro.
+ */
+export function estiloDoRealce(realce: string, corpo: number): EstiloDoRealce {
+  // A espessura sai do CORPO, e não de pixels fixos: o gancho é desenhado tanto
+  // num quadro de 1920 de altura (render) quanto numa prévia de 300px, e um
+  // contorno de 6px é halo num e mancha no outro.
+  const traco = Math.max(2, Math.round(corpo * 0.055));
+
+  switch (realce) {
+    case "caixa":
+      // A mais legível sobre imagem suja — e a que mais come vídeo. Por isso é
+      // escolha, e não padrão: quem tem um quadro limpo não deve pagar por ela.
+      return {
+        veu: false,
+        texto: {
+          backgroundColor: "rgba(0,0,0,0.78)",
+          // O padding e o `box-decoration-break` fazem a caixa abraçar CADA
+          // linha em vez de virar um retângulo único com buracos nas pontas —
+          // é o que dá o desenho de etiqueta em vez de bloco.
+          padding: `${Math.round(corpo * 0.16)}px ${Math.round(corpo * 0.3)}px`,
+          borderRadius: Math.round(corpo * 0.16),
+          boxDecorationBreak: "clone",
+          WebkitBoxDecorationBreak: "clone",
+          display: "inline",
+        },
+      };
+
+    case "contorno":
+      // A mais confiável quando o fundo muda ao longo do trecho: o halo separa
+      // as letras de qualquer coisa que passe atrás.
+      return {
+        veu: false,
+        texto: {
+          WebkitTextStroke: `${traco}px rgba(0,0,0,0.92)`,
+          // `paint-order` desenha o traço ANTES do preenchimento; sem ele o
+          // contorno come metade da espessura da letra por dentro e o texto
+          // afina — visível justamente nas fontes pesadas que o formato pede.
+          paintOrder: "stroke fill",
+          textShadow: "0 4px 16px rgba(0,0,0,0.5)",
+        },
+      };
+
+    case "sombra":
+      // A mais discreta. Para imagem limpa, onde o véu já seria demais.
+      return {
+        veu: false,
+        texto: { textShadow: "0 6px 28px rgba(0,0,0,0.85), 0 2px 6px rgba(0,0,0,0.7)" },
+      };
+
+    case "nenhum":
+      // Existe para quem escolheu uma COR forte: amarelo sobre vídeo escuro já
+      // se separa sozinho, e qualquer reforço vira excesso.
+      return { veu: false, texto: {} };
+
+    default:
+      return {
+        veu: true,
+        texto: { textShadow: "0 6px 28px rgba(0,0,0,0.7)" },
+      };
+  }
+}

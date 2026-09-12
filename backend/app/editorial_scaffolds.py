@@ -280,6 +280,31 @@ _CATALOGO: tuple[ScaffoldCatalogo, ...] = (
         marcador="PROMPT",
     ),
     ScaffoldCatalogo(
+        key="capa-short-imagem",
+        skill_key="capa-short-imagem-expert",
+        etapa="Capa do short",
+        descricao=(
+            "Involucro que manda o titulo, o tema, o gancho da abertura, a fala "
+            "do trecho e o PROMPT DA THUMBNAIL do YouTube, e pede o prompt de "
+            "imagem em ingles. Reforca a regra das tres vitrines (o quadrado "
+            "central e o que sobra na grade) e a exigencia de cor explicita no "
+            "texto — a licao da D-343, em que 90% dos prompts sem cor "
+            "devolveram branco."
+        ),
+        arquivo="capa-short-imagem.txt",
+        placeholders=(
+            "titulo",
+            "tema_central",
+            "gancho_tela",
+            "gancho",
+            "duracao_humana",
+            "texto_transcricao",
+            "prompt_thumbnail",
+            "texto_capa",
+        ),
+        marcador="PROMPT",
+    ),
+    ScaffoldCatalogo(
         key="cenas-short",
         skill_key="cenas-short-expert",
         etapa="Propor cenas do short",

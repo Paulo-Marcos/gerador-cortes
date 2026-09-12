@@ -15,6 +15,8 @@
 // lado mudar sozinho, o teste cai em vez de a tela mentir sobre o que o render
 // vai fazer.
 
+import type { CSSProperties } from 'react';
+
 /** Espelha `PALAVRAS_MIN` em `backend/app/domain/gancho_short.py`. */
 export const PALAVRAS_MIN = 4;
 
@@ -38,6 +40,122 @@ export const MAX_VARIACOES = 6;
 
 /** Passo do ajuste de duração, em segundos. */
 export const DURACAO_PASSO_SEG = 0.5;
+
+// D-581: como o gancho se separa do quadro.
+//
+// O problema que originou isto: gancho branco e legenda branca no mesmo quadro,
+// ao mesmo tempo, com o mesmo peso — "dá conflito". A safe zone já separa os
+// dois no ESPAÇO (ele no terço superior, ela no rodapé); o que faltava era
+// separá-los na APARÊNCIA.
+//
+// Espelha `REALCES` em `backend/app/domain/gancho_short.py`, e o CSS espelha
+// `estiloDoRealce` do `GanchoAbertura.tsx` do renderer. Três cópias parece
+// muito — é o preço de os projetos não compartilharem módulo, e o teto contra a
+// divergência é o `ganchoDoShort.test.ts`, que lê o arquivo do backend.
+export type RealceDoGancho = 'veu' | 'caixa' | 'contorno' | 'sombra' | 'nenhum';
+
+export const REALCE_PADRAO: RealceDoGancho = 'veu';
+
+export const REALCES_DO_GANCHO: readonly {
+  id: RealceDoGancho;
+  nome: string;
+  nota: string;
+}[] = [
+  { id: 'veu', nome: 'Véu', nota: 'escurece o topo — o padrão, bom em quase tudo' },
+  { id: 'contorno', nome: 'Contorno', nota: 'halo preto na letra — o mais seguro se o fundo muda' },
+  { id: 'caixa', nome: 'Caixa', nota: 'etiqueta preta atrás — o mais legível em imagem suja' },
+  { id: 'sombra', nome: 'Sombra', nota: 'discreto — para quadro limpo' },
+  { id: 'nenhum', nome: 'Nenhum', nota: 'só a cor separa — use com cor forte' },
+];
+
+// As cores oferecidas ao gancho. Mesma regra do catálogo da legenda: o que se
+// grava é o HEX, não a chave — o renderer recebe a cor pronta e não precisa
+// manter uma tabela igual a esta.
+//
+// A lista abre com o branco porque ele é o de sempre, e a ordem seguinte é a de
+// quem mais se separa de uma legenda branca: amarelo e laranja são os que o
+// formato consagrou para "isto aqui é a promessa".
+export const CORES_DO_GANCHO: readonly { hex: string; nome: string }[] = [
+  { hex: '', nome: 'branco (padrão)' },
+  { hex: '#facc15', nome: 'amarelo' },
+  { hex: '#ff8a3d', nome: 'laranja' },
+  { hex: '#9bcfe3', nome: 'azul do HUD' },
+  { hex: '#6aaa84', nome: 'verde do palco' },
+  { hex: '#ff5a72', nome: 'rosa' },
+  { hex: '#c9a4ff', nome: 'lilás' },
+  { hex: '#111111', nome: 'preto (use com caixa clara)' },
+];
+
+/** O realce gravado, ou o padrão quando o valor não é um dos conhecidos. */
+export function realceValido(valor: string | null | undefined): RealceDoGancho {
+  const id = (valor ?? '').trim().toLowerCase() as RealceDoGancho;
+  return REALCES_DO_GANCHO.some((r) => r.id === id) ? id : REALCE_PADRAO;
+}
+
+/** O que o realce desenha: um véu atrás, e/ou estilo sobre as letras. */
+export interface EstiloDoRealce {
+  /** O degradê de topo entra? Só o `veu` o usa. */
+  veu: boolean;
+  /** O que se aplica ao parágrafo. */
+  texto: CSSProperties;
+}
+
+/**
+ * O realce traduzido em CSS — o espelho de `estiloDoRealce` do renderer.
+ *
+ * `corpoPx` é o tamanho real do texto NA TELA em que ele está sendo desenhado,
+ * e não o do arquivo: a espessura do contorno e o respiro da caixa saem dele.
+ * Um contorno de 6px é halo num quadro de 1920 e mancha numa prévia de 300px —
+ * foi por não derivar do corpo que a legenda passou anos mostrando um tamanho
+ * que o arquivo não tinha (D-568).
+ */
+export function estiloDoRealce(
+  realce: string | null | undefined,
+  corpoPx: number,
+): EstiloDoRealce {
+  const traco = Math.max(1, Math.round(corpoPx * 0.055));
+
+  switch (realceValido(realce)) {
+    case 'caixa':
+      return {
+        veu: false,
+        texto: {
+          backgroundColor: 'rgba(0,0,0,0.78)',
+          padding: `${Math.round(corpoPx * 0.16)}px ${Math.round(corpoPx * 0.3)}px`,
+          borderRadius: Math.round(corpoPx * 0.16),
+          // A caixa abraça CADA linha em vez de virar um retângulo só com
+          // buracos nas pontas — é o que dá o desenho de etiqueta.
+          boxDecorationBreak: 'clone',
+          WebkitBoxDecorationBreak: 'clone',
+          display: 'inline',
+        } as CSSProperties,
+      };
+
+    case 'contorno':
+      return {
+        veu: false,
+        texto: {
+          WebkitTextStroke: `${traco}px rgba(0,0,0,0.92)`,
+          // Sem `paint-order` o traço come metade da espessura por dentro e a
+          // letra afina — visível justamente nas fontes pesadas do formato.
+          paintOrder: 'stroke fill',
+          textShadow: '0 4px 16px rgba(0,0,0,0.5)',
+        } as CSSProperties,
+      };
+
+    case 'sombra':
+      return {
+        veu: false,
+        texto: { textShadow: '0 6px 28px rgba(0,0,0,0.85), 0 2px 6px rgba(0,0,0,0.7)' },
+      };
+
+    case 'nenhum':
+      return { veu: false, texto: {} };
+
+    default:
+      return { veu: true, texto: { textShadow: '0 6px 28px rgba(0,0,0,0.7)' } };
+  }
+}
 
 export type TomDoGancho = 'vazio' | 'curto' | 'ideal' | 'longo';
 

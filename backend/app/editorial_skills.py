@@ -212,6 +212,22 @@ _CATALOGO: tuple[SkillCatalogo, ...] = (
         lentes_tipo=None,
     ),
     SkillCatalogo(
+        key="capa-short-imagem-expert",
+        arquivo="capa-short-imagem.md",
+        etapa="Capa do short",
+        descricao=(
+            "Escreve o prompt de imagem da capa de um short vertical. A "
+            "diferenca para o capista do TikTok e que aqui a imagem LEVA o "
+            "texto: a capa do short nao e montada em faixas pelo sistema, "
+            "entao a frase precisa nascer dentro da arte, com cor e contorno "
+            "declarados. E a composicao tem de sobreviver a TRES recortes — a "
+            "grade do Instagram e a do TikTok mostram so o quadrado central."
+        ),
+        model_setting="claude_model_capa_short",
+        thinking_setting="claude_cli_thinking_tokens_capa_short",
+        lentes_tipo=None,
+    ),
+    SkillCatalogo(
         key="cenas-short-expert",
         arquivo="cenas-short.md",
         etapa="Propor cenas do short",

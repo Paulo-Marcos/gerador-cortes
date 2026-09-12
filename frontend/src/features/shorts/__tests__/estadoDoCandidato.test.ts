@@ -22,6 +22,8 @@ function short(over: Partial<ShortSugerido> = {}): ShortSugerido {
     gancho_tela: '',
     gancho_sugestoes: [],
     gancho_ate_seg: 0,
+    gancho_cor: '',
+    gancho_realce: '',
     inicio_seg: 10,
     fim_seg: 40,
     duracao_seg: 30,

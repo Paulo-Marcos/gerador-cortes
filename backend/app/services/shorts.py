@@ -33,7 +33,7 @@ from app.domain.moldura_short import Moldura
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -427,6 +427,8 @@ async def atualizar_short(
     legenda_fonte: str | None = None,
     gancho_tela: str | None = None,
     gancho_ate_seg: float | None = None,
+    gancho_cor: str | None = None,
+    gancho_realce: str | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -469,6 +471,15 @@ async def atualizar_short(
 
         if gancho_ate_seg is not None:
             short.gancho_ate_seg = gancho_short.normalizar_duracao(gancho_ate_seg)
+
+        if gancho_cor is not None:
+            # D-581: "" volta ao branco. Normaliza aqui pelo mesmo motivo do
+            # texto: o que a tela recebe de volta tem de ser o que vai para o
+            # arquivo, senao a previa pinta uma cor que o render nao usa.
+            short.gancho_cor = gancho_short.normalizar_cor(gancho_cor)
+
+        if gancho_realce is not None:
+            short.gancho_realce = gancho_short.normalizar_realce(gancho_realce)
 
         if moldura is not None:
             if moldura not in {m.value for m in Moldura}:
@@ -779,9 +790,12 @@ async def listar_fires_com_bruto() -> list[dict]:
             fires.append(_descrever_fire(corte, projeto, bruto))
 
         if fires:
-            contagens = await _contar_shorts_por_corte(db, [f["corte_id"] for f in fires])
+            ids = [f["corte_id"] for f in fires]
+            contagens = await _contar_shorts_por_corte(db, ids)
+            edicoes = await _edicao_por_corte(db, ids)
             for fire in fires:
                 fire["shorts"] = contagens.get(fire["corte_id"], _CONTAGEM_VAZIA.copy())
+                fire["tem_edicao"] = edicoes.get(fire["corte_id"], False)
 
     return fires
 
@@ -817,6 +831,9 @@ def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path | None) -> dict:
         # desabilitar o botao e dizer o que fazer, em vez de deixar o operador
         # descobrir no clique — mesma regra da D-495.
         "live_em_disco": _live_em_disco(projeto),
+        # D-581: preenchido depois, junto das contagens — uma consulta para a
+        # lista inteira em vez de uma por Fire.
+        "tem_edicao": False,
     }
 
 
@@ -835,6 +852,49 @@ def _video_final_em_disco(corte: Corte) -> bool:
     """
     caminho = projetos_dir() / corte.projeto_id / "cortes" / corte.id / "upload_ready" / "video.mp4"
     return caminho.is_file()
+
+
+async def _edicao_por_corte(db: AsyncSession, corte_ids: list[str]) -> dict[str, bool]:
+    """Em quais cortes a MAO HUMANA ja passou — o filtro "onde eu parei" (D-581).
+
+    A pergunta que o operador faz ao abrir a tela nao e "quantos candidatos a IA
+    propos", e sim "em qual destes eu estava trabalhando". Sao coisas diferentes:
+    um corte com dez sugestoes e nenhuma decisao esta intocado, e um corte com
+    uma sugestao e um gancho escrito esta no meio do caminho.
+
+    Por isso a conta olha para os sinais que SO existem se alguem agiu:
+
+      - o candidato foi julgado (qualquer status que nao seja `sugerido`);
+      - o trecho foi marcado a mao (`origem = manual`);
+      - o gancho da abertura foi escrito;
+      - o palco deste trecho foi mexido — arranjo, recorte, ajuste, textura,
+        preset aplicado ou cor/fonte da legenda.
+
+    Nenhum deles nasce preenchido pela geracao: `registrar_sugestoes` cria o
+    candidato com status `sugerido`, origem `ia` e os campos de palco vazios.
+
+    Uma consulta so, pela mesma razao do `_contar_shorts_por_corte`: a tela abre
+    com a lista inteira, e uma query por Fire viraria lentidao no primeiro uso.
+    """
+    tocado = or_(
+        Short.status != StatusShort.SUGERIDO,
+        Short.origem == "manual",
+        func.coalesce(Short.gancho_tela, "") != "",
+        func.coalesce(Short.arranjo_palco, "") != "",
+        func.coalesce(Short.palco_short_preset, "") != "",
+        func.coalesce(Short.fundo_editorial, "") != "",
+        func.coalesce(Short.legenda_cor, "") != "",
+        func.coalesce(Short.recortes_palco, "{}") != "{}",
+        func.coalesce(Short.ajustes_palco, "{}") != "{}",
+    )
+    linhas = (
+        await db.execute(
+            select(Short.corte_id, func.max(case((tocado, 1), else_=0)))
+            .where(Short.corte_id.in_(corte_ids))
+            .group_by(Short.corte_id)
+        )
+    ).all()
+    return {corte_id: bool(marca) for corte_id, marca in linhas}
 
 
 async def _contar_shorts_por_corte(db: AsyncSession, corte_ids: list[str]) -> dict[str, dict]:
@@ -945,6 +1005,8 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         # encontra o que a ultima geracao produziu, em vez de uma tela limpa.
         "gancho_sugestoes": _json_textos(short.gancho_sugestoes),
         "gancho_ate_seg": short.gancho_ate_seg,
+        "gancho_cor": short.gancho_cor or "",
+        "gancho_realce": short.gancho_realce or "",
         "inicio_seg": short.inicio_seg,
         "fim_seg": short.fim_seg,
         "duracao_seg": round(short.fim_seg - short.inicio_seg, 2),

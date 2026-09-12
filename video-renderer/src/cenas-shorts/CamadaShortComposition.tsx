@@ -35,6 +35,10 @@ export const captionShortSchema = z.object({
 export const ganchoShortSchema = z.object({
   texto: z.string(),
   ateSeg: z.number(),
+  /** D-581: hex da cor do gancho. "" = o branco de sempre. */
+  cor: z.string().default(""),
+  /** D-581: veu | caixa | contorno | sombra | nenhum. "" cai no veu. */
+  realce: z.string().default("veu"),
 });
 
 export const camadaShortSchema = z.object({

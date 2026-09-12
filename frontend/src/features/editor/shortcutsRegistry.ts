@@ -34,6 +34,9 @@ export type ShortcutId =
   | 'shorts.seekFwd5s'
   | 'shorts.speedDown'
   | 'shorts.speedUp'
+  | 'shorts.alternarVelocidade'
+  | 'shorts.undo'
+  | 'shorts.redo'
   // Global / Player
   | 'player.togglePlay'
   | 'player.seekBackward3s'
@@ -363,6 +366,39 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     mod: 'ctrl',
     description: 'Velocidade +0.25x',
     group: 'player',
+  },
+  // D-581: o mesmo par que o Bruto ganhou na D-575, pela mesma razao e na
+  // mesma tecla. Quem cura shorts acabou de sair do editor de bruto — afinar a
+  // borda de um trecho pede ouvir devagar, conferir pede 1x, e com Ctrl+J/K
+  // cada ida e volta custava varias teclas.
+  {
+    id: 'shorts.alternarVelocidade',
+    screen: 'shorts',
+    key: 'u',
+    mod: 'ctrl',
+    description: 'Alternar 1x <-> velocidade de trabalho',
+    group: 'player',
+  },
+  // D-581: desfazer/refazer a curadoria. Mesmas teclas do Bruto — as duas
+  // telas nunca coexistem, e trocar a tecla seria pedir para reaprender o que
+  // ja esta na memoria muscular.
+  {
+    id: 'shorts.undo',
+    screen: 'shorts',
+    key: 'z',
+    mod: 'ctrl',
+    description: 'Desfazer a ultima gravacao (bordas, gancho, palco, decisao)',
+    group: 'edicao',
+    skipInEditable: true,
+  },
+  {
+    id: 'shorts.redo',
+    screen: 'shorts',
+    key: 'y',
+    mod: 'ctrl',
+    description: 'Refazer a gravacao desfeita',
+    group: 'edicao',
+    skipInEditable: true,
   },
   {
     id: 'bruto.corteAnterior',

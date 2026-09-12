@@ -5,7 +5,6 @@ import {
   MoveHorizontal,
   Play,
   Plus,
-  Type,
   Undo2,
   X,
 } from 'lucide-react';
@@ -216,7 +215,22 @@ export function CandidatoCard({
             )}
           >
             {short.gancho_tela ? (
-              <Type size={11} className="flex-none opacity-70" aria-hidden />
+              // D-581: a AMOSTRA da cor no lugar do ícone genérico.
+              //
+              // A cor do gancho existe para ele não se confundir com a legenda
+              // — e escondê-la atrás de um modal deixaria o operador sem saber,
+              // varrendo cinco cards, qual trecho já ganhou cor e qual ainda
+              // sai branco. O ponto responde isso sem ele abrir nada.
+              <span
+                aria-hidden
+                title={
+                  short.gancho_cor
+                    ? `Gancho em ${short.gancho_cor}`
+                    : 'Gancho em branco (o padrão)'
+                }
+                className="h-2.5 w-2.5 flex-none rounded-full border border-[var(--wb-border)]"
+                style={{ backgroundColor: short.gancho_cor || '#ffffff' }}
+              />
             ) : (
               <Plus size={11} className="flex-none opacity-70" aria-hidden />
             )}

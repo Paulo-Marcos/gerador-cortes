@@ -5,6 +5,9 @@ import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import {
   contarPalavras,
+  CORES_DO_GANCHO,
+  REALCES_DO_GANCHO,
+  realceValido,
   MAX_VARIACOES,
   DURACAO_MAX_SEG,
   DURACAO_MIN_SEG,
@@ -60,7 +63,7 @@ interface Props {
   /** Palavras da transcrição, para mostrar a legenda que coexiste com o gancho. */
   palavras: PalavraTranscrita[];
   ocupado: boolean;
-  onGravar: (texto: string, ateSeg: number) => void;
+  onGravar: (texto: string, ateSeg: number, cor: string, realce: string) => void;
 }
 
 export function GanchoModal({
@@ -78,6 +81,11 @@ export function GanchoModal({
   // campo para de responder ao estado a partir da primeira tecla.
   const [texto, setTexto] = useState(short.gancho_tela ?? '');
   const [ateSeg, setAteSeg] = useState(() => duracaoEfetiva(short.gancho_ate_seg));
+  // D-581: a aparencia do gancho. Mesma regra do texto — o estado nasce do
+  // short e e re-semeado ao reabrir, senao o modal levaria a cor de um trecho
+  // para outro sem erro nenhum, que e o pior jeito de errar (D-542).
+  const [cor, setCor] = useState(short.gancho_cor ?? '');
+  const [realce, setRealce] = useState(() => realceValido(short.gancho_realce));
 
   // Reabrir o modal em outro candidato tem de trazer o gancho DELE. Sem isto o
   // estado do anterior ficaria na tela e o operador salvaria o texto errado no
@@ -86,12 +94,14 @@ export function GanchoModal({
     if (!open) return;
     setTexto(short.gancho_tela ?? '');
     setAteSeg(duracaoEfetiva(short.gancho_ate_seg));
+    setCor(short.gancho_cor ?? '');
+    setRealce(realceValido(short.gancho_realce));
     gerar.reset();
     // `gerar` fora das dependencias de proposito: a mutation muda de identidade
     // a cada resultado, e inclui-la faria este efeito rodar de novo logo apos
     // as variacoes chegarem — apagando-as no instante em que aparecem.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, short.id, short.gancho_tela, short.gancho_ate_seg]);
+  }, [open, short.id, short.gancho_tela, short.gancho_ate_seg, short.gancho_cor, short.gancho_realce]);
 
   const gerar = useSugerirGanchos();
   // D-573: as da geração de agora, ou as que ficaram gravadas deste short.
@@ -118,6 +128,8 @@ export function GanchoModal({
         inicioSeg={short.inicio_seg}
         fimSeg={short.fim_seg}
         tempoAtualSeg={tempoDaPrevia}
+        cor={cor}
+        realce={realce}
       />
       {palavras.length > 0 && (
         <LegendaPrevia
@@ -246,6 +258,72 @@ export function GanchoModal({
             )}
           </section>
 
+          {/* D-581: a aparência, logo abaixo do texto e ANTES da duração.
+              A ordem é a da dúvida real: escrita a frase, a pergunta seguinte é
+              "dá para ler?" — e era ali que o gancho branco sumia dentro da
+              legenda branca. Quanto tempo ela fica é a decisão de depois. */}
+          <section className="space-y-2.5 border-t border-[var(--wb-border-soft)] pt-3">
+            <div>
+              <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">Cor do gancho</p>
+              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+                A legenda também é branca e divide o quadro com ele. Uma cor só do gancho é o que
+                diz ao olho qual dos dois é a promessa.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {CORES_DO_GANCHO.map(({ hex, nome }) => (
+                <button
+                  key={hex || 'branco'}
+                  type="button"
+                  disabled={ocupado}
+                  onClick={() => setCor(hex)}
+                  title={nome}
+                  aria-label={nome}
+                  aria-pressed={cor === hex}
+                  className={cn(
+                    'h-7 w-7 rounded-[7px] border-2 transition-transform disabled:opacity-45',
+                    cor === hex
+                      ? 'border-[var(--wb-accent)] scale-110'
+                      : 'border-[var(--wb-border)] hover:border-[var(--wb-text-dim)]',
+                  )}
+                  // Amostra sobre xadrez escuro: a cor do gancho é julgada
+                  // CONTRA vídeo, e um fundo claro faria o branco desaparecer
+                  // do seletor justamente por ser a opção padrão.
+                  style={{ backgroundColor: hex || '#ffffff' }}
+                />
+              ))}
+            </div>
+
+            <div>
+              <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">Destaque</p>
+              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+                O que separa o texto do vídeo por trás. Veja o efeito na prévia ao lado.
+              </p>
+            </div>
+            <div className="grid gap-1">
+              {REALCES_DO_GANCHO.map(({ id, nome, nota }) => (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={ocupado}
+                  onClick={() => setRealce(id)}
+                  aria-pressed={realce === id}
+                  className={cn(
+                    'flex items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors disabled:opacity-45',
+                    realce === id
+                      ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+                      : 'border-[var(--wb-border-soft)] hover:bg-[var(--wb-bg-inset)]',
+                  )}
+                >
+                  <span className="flex-none text-[12.5px] font-semibold">{nome}</span>
+                  <span className="text-[11px] leading-snug text-[var(--wb-text-mute)]">
+                    {nota}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
           <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
             <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">
               Quanto tempo em tela
@@ -280,7 +358,7 @@ export function GanchoModal({
           </section>
 
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--wb-border-soft)] pt-3">
-            <Button size="sm" disabled={ocupado} onClick={() => onGravar(texto, ateSeg)}>
+            <Button size="sm" disabled={ocupado} onClick={() => onGravar(texto, ateSeg, cor, realce)}>
               Gravar o gancho
             </Button>
             {short.gancho_tela && (
@@ -288,7 +366,7 @@ export function GanchoModal({
                 variant="outline"
                 size="sm"
                 disabled={ocupado}
-                onClick={() => onGravar('', ateSeg)}
+                onClick={() => onGravar('', ateSeg, cor, realce)}
               >
                 <Eraser />
                 Tirar o gancho
