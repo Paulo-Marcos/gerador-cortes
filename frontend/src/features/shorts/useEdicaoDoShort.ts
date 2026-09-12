@@ -51,8 +51,24 @@ const SEGUNDOS_DO_SELO = 2500;
 
 export function useEdicaoDoShort(corteId: string, shorts: ShortSugerido[]): EdicaoDoShort {
   const atualizar = useAtualizarShort(corteId);
-  const [historico, setHistorico] = useState<HistoricoDeEdicao>(HISTORICO_VAZIO);
+  // O histórico mora num REF, e o state só força o re-render — o mesmo arranjo
+  // do `useEditHistory` do editor de bruto (D-361), e aqui ele não é estilo: é
+  // correção.
+  //
+  // A versão anterior calculava o passo DENTRO do `setHistorico(atual => …)` e
+  // disparava o PATCH ali. Um updater de estado tem de ser PURO: sob
+  // `StrictMode` (ligado em `main.tsx`) o React o invoca duas vezes em
+  // desenvolvimento, e o efeito colateral ia junto — dois PATCHes por Ctrl+Z,
+  // um deles gravando por cima do outro. Com o ref, o passo é lido fora e o
+  // envio acontece uma vez só.
+  const historicoRef = useRef<HistoricoDeEdicao>(HISTORICO_VAZIO);
+  const [, setVersao] = useState(0);
   const [estado, setEstado] = useState<EstadoDaGravacao>('parado');
+
+  const gravarHistorico = useCallback((proximo: HistoricoDeEdicao) => {
+    historicoRef.current = proximo;
+    setVersao((v) => v + 1);
+  }, []);
 
   // A lista em ref para o `gravar` não mudar de identidade a cada refetch: ele
   // entra em `useCallback` de outros componentes e em bindings de atalho
@@ -63,7 +79,7 @@ export function useEdicaoDoShort(corteId: string, shorts: ShortSugerido[]): Edic
   // Trocar de corte zera o histórico. Sem isto um Ctrl+Z depois de navegar
   // mandaria um PATCH para um short de OUTRO corte — que existe, aceita, e
   // desfaz algo que não está na tela.
-  useEffect(() => setHistorico(HISTORICO_VAZIO), [corteId]);
+  useEffect(() => gravarHistorico(HISTORICO_VAZIO), [corteId, gravarHistorico]);
 
   useEffect(() => {
     if (estado !== 'gravado') return;
@@ -97,30 +113,27 @@ export function useEdicaoDoShort(corteId: string, shorts: ShortSugerido[]): Edic
       // Mudança irreversível grava igual, mas NÃO entra na pilha: um passo que
       // o desfazer não sabe reverter viraria um Ctrl+Z que consome o clique e
       // não muda nada na tela.
-      if (ehReversivel(passo)) setHistorico((atual) => empilhar(atual, passo));
+      if (ehReversivel(passo)) gravarHistorico(empilhar(historicoRef.current, passo));
       enviar(shortId, mudanca);
     },
-    [enviar],
+    [enviar, gravarHistorico],
   );
 
   const desfazer = useCallback(() => {
-    setHistorico((atual) => {
-      const saida = desfazerPasso(atual);
-      if (!saida) return atual;
-      enviar(saida.passo.shortId, saida.passo.antes);
-      return saida.historico;
-    });
-  }, [enviar]);
+    const saida = desfazerPasso(historicoRef.current);
+    if (!saida) return;
+    gravarHistorico(saida.historico);
+    enviar(saida.passo.shortId, saida.passo.antes);
+  }, [enviar, gravarHistorico]);
 
   const refazer = useCallback(() => {
-    setHistorico((atual) => {
-      const saida = refazerPasso(atual);
-      if (!saida) return atual;
-      enviar(saida.passo.shortId, saida.passo.depois);
-      return saida.historico;
-    });
-  }, [enviar]);
+    const saida = refazerPasso(historicoRef.current);
+    if (!saida) return;
+    gravarHistorico(saida.historico);
+    enviar(saida.passo.shortId, saida.passo.depois);
+  }, [enviar, gravarHistorico]);
 
+  const historico = historicoRef.current;
   return {
     gravar,
     desfazer,

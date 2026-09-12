@@ -39,6 +39,7 @@ import { StatusChip } from '@/components/ui/status-chip';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { capaImagemUrl, shortVideoUrl, type ShortSugerido } from './shortsApi';
+import { mmss } from './linhaDoTempoShort';
 import { PainelPublicacao } from './PainelPublicacao';
 import { ProgressoRenderPanel } from './ProgressoRenderPanel';
 import { PublicarEmLoteModal } from './PublicarEmLoteModal';
@@ -59,11 +60,6 @@ const NOME_DA_PLATAFORMA: Record<string, string> = {
   tiktok: 'TikTok',
   instagram_reels: 'Instagram',
 };
-
-function mmss(segundos: number): string {
-  const total = Math.max(0, Math.round(segundos));
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-}
 
 /**
  * Um short na prateleira.
