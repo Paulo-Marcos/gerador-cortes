@@ -31,3 +31,12 @@ scenedetect[opencv]==0.7
 # nem 130 MB de Chromium baixado. Sem ele o app degrada para a macro (D-503),
 # que monta o pacote e abre a aba.
 playwright==1.62.0
+
+# Quem e o dono da janela (D-537/D-564). O robo deriva a porta de depuracao do
+# CAMINHO do perfil e, antes de reaproveitar uma porta ocupada, pergunta de quem
+# e o Chrome que atende ali — e quem le a linha de comando do processo e o
+# psutil. Sem ele a resposta e sempre "nao sei", o robo desiste da porta do
+# proprio perfil, tenta abrir um SEGUNDO Chrome sobre um perfil ja aberto, e o
+# Chrome apenas manda a URL para a janela existente sem abrir porta nenhuma:
+# a aba aparece e o upload nunca comeca. Nao e opcional.
+psutil==7.2.2

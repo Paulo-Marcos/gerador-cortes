@@ -311,7 +311,20 @@ def perfil_na_porta(porta: int) -> str:
     """
     try:
         import psutil
-    except ImportError:  # pragma: no cover - psutil e dependencia do ambiente
+    except ImportError:  # pragma: no cover - so acontece em ambiente incompleto
+        # Em voz alta, e nao com um `return ""` mudo: sem psutil a resposta e
+        # SEMPRE "nao sei", e "nao sei" faz o robo abandonar a porta do proprio
+        # perfil e tentar abrir um segundo Chrome sobre um perfil ja aberto —
+        # que o Chrome recusa entregando a URL para a janela existente. O
+        # sintoma que chega ao operador e "a aba abriu e nada subiu", a tres
+        # camadas de distancia da causa. Custou uma investigacao; agora o log
+        # diz o que instalar.
+        logger.warning(
+            "[Navegador] psutil ausente: nao da para saber de quem e a janela na "
+            "porta %s, e o robo vai evitar uma porta que talvez seja dele mesmo. "
+            "Instale psutil (esta no requirements.txt).",
+            porta,
+        )
         return ""
 
     try:
