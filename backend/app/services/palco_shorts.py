@@ -81,15 +81,43 @@ def _payload_do_preset(presets: list, preset_id: str) -> dict | None:
     return None
 
 
-def _sem_palco(
-    moldura: str,
-    fundo: str,
-    textura: str = FUNDO_EDITORIAL,
-    legenda_cor: str = "",
-    legenda_fonte: str = "",
-    gancho_cor: str = "",
-    gancho_realce: str = "",
-) -> dict:
+def _aparencia(moldura: str, fundo: str, textura: str, herdado: dict) -> dict:
+    """Tudo que descreve como o palco SE PARECE, num objeto só.
+
+    Existe por dois motivos, e o segundo e o que importa.
+
+    O primeiro e que estes campos eram escritos DUAS vezes — no retorno com
+    palco e no `_sem_palco` —, e uma lista repetida em dois literais diverge no
+    dia em que um campo entra. Aconteceu tres vezes ja: `fundo_editorial` na
+    D-549, a legenda na D-570, o gancho na D-585.
+
+    O segundo: sem este objeto, `_sem_palco` chegou a SETE parametros, seis
+    deles `str`, passados por POSICAO nos dois pontos de chamada. Trocar
+    `legenda_cor` com `gancho_cor` ali nao produz erro nenhum — produz uma
+    previa pintando a cor errada, em silencio. Um agrupamento que o tipo nao
+    distingue e um bug esperando a proxima edicao distraida.
+
+    A HERANCA ja vem resolvida em `herdado`: aqui so se le.
+    """
+    return {
+        "moldura": moldura,
+        "fundo": fundo,
+        # D-549: a TEXTURA do palco, que ate aqui so o PNG do render conhecia.
+        # A previa pintava `fundo` (uma cor chapada da paleta) e por isso
+        # mostrava uma moldura que o arquivo nao teria. Mandando o mesmo id que
+        # o PNG usa, a tela passa a desenhar o que vai sair.
+        "fundo_editorial": textura,
+        # D-570: a legenda vem pelo plano, e nao lida do short no `render_short`.
+        # Um lugar so resolve a heranca; dois a resolveriam diferente.
+        "legenda_cor": herdado.get("legenda_cor", ""),
+        "legenda_fonte": herdado.get("legenda_fonte", ""),
+        # D-585: a aparencia do gancho, pela mesma razao e pelo mesmo caminho.
+        "gancho_cor": herdado.get("gancho_cor", ""),
+        "gancho_realce": herdado.get("gancho_realce", ""),
+    }
+
+
+def _sem_palco(aparencia: dict) -> dict:
     """A resposta de quando não há palco a montar.
 
     Uma função só, porque os dois caminhos que chegam aqui — sem região marcada,
@@ -103,22 +131,7 @@ def _sem_palco(
         "janela_cheia": "",
         "modelo": None,
         "ajustes": {},
-        "moldura": moldura,
-        "fundo": fundo,
-        # D-549: a TEXTURA do palco, que ate aqui so o PNG do render conhecia.
-        # A previa pintava `fundo` (uma cor chapada da paleta) e por isso
-        # mostrava uma moldura que o arquivo nao teria. Mandando o mesmo id que
-        # o PNG usa, a tela passa a desenhar o que vai sair.
-        "fundo_editorial": textura,
-        # D-570: a legenda vem pelo plano, e nao lida do short no `render_short`.
-        # Um lugar so resolve a heranca; dois a resolveriam diferente.
-        "legenda_cor": legenda_cor,
-        "legenda_fonte": legenda_fonte,
-        # D-585: a aparencia do gancho ja RESOLVIDA (a do short, ou a do palco
-        # do corte). Um lugar so resolve a heranca; dois a resolveriam
-        # diferente — a licao que a D-570 registrou para a legenda.
-        "gancho_cor": gancho_cor,
-        "gancho_realce": gancho_realce,
+        **aparencia,
     }
 
 
@@ -392,15 +405,10 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         # procurava um componente de textura com esse nome — nao achava, e a
         # tela inteira dos shorts caia com "Element type is invalid".
         textura = textura_valida(herdado.get("fundo", ""), FUNDO_EDITORIAL)
-        legenda_cor = herdado.get("legenda_cor", "")
-        legenda_fonte = herdado.get("legenda_fonte", "")
-        gancho_cor = herdado.get("gancho_cor", "")
-        gancho_realce = herdado.get("gancho_realce", "")
+        aparencia = _aparencia(moldura, fundo, textura, herdado)
 
     if not regioes:
-        return _sem_palco(
-            moldura, fundo, textura, legenda_cor, legenda_fonte, gancho_cor, gancho_realce
-        )
+        return _sem_palco(aparencia)
 
     arranjo = arranjo_de_chave(escolhido, janela) if escolhido else arranjo_sugerido(regioes)
     modelo = montar_modelo(arranjo, regioes)
@@ -418,9 +426,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         arranjo = arranjo_sugerido(regioes)
         modelo = montar_modelo(arranjo, regioes)
     if modelo is None:
-        return _sem_palco(
-            moldura, fundo, textura, legenda_cor, legenda_fonte, gancho_cor, gancho_realce
-        )
+        return _sem_palco(aparencia)
 
     plano = montar_plano(modelo, regioes, ajustes)
 
@@ -431,16 +437,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         "janela_cheia": fonte_efetiva(arranjo.fonte, regioes),
         "modelo": modelo.id,
         "ajustes": ajustes,
-        "moldura": moldura,
-        "fundo": fundo,
-        # D-549/D-552: a TEXTURA do palco — a do short, ou a do canal quando
-        # ele nao escolheu. A previa pintava `fundo` (uma cor chapada da
-        # paleta) e por isso mostrava uma moldura que o arquivo nao teria.
-        "fundo_editorial": textura,
-        "legenda_cor": legenda_cor,
-        "legenda_fonte": legenda_fonte,
-        "gancho_cor": gancho_cor,
-        "gancho_realce": gancho_realce,
+        **aparencia,
     }
 
 
