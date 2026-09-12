@@ -2,6 +2,7 @@ import {
   Check,
   Clapperboard,
   Eye,
+  Image as ImageIcon,
   MoveHorizontal,
   Play,
   Plus,
@@ -18,7 +19,8 @@ import { LinhaDeAjuste } from './LinhaDeAjuste';
 import { PainelPublicacao } from './PainelPublicacao';
 import { ProgressoRenderPanel } from './ProgressoRenderPanel';
 import { shortVideoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
-import { useProgressoRender } from './useShortsDoCorte';
+import { useCapaDoShort, useProgressoRender } from './useShortsDoCorte';
+import { useFechoDoShort } from './useFechoDoShort';
 
 // D-492: o card de um candidato, reorganizado.
 //
@@ -93,6 +95,11 @@ export function CandidatoCard({
     short.status === 'aprovado' || short.status === 'renderizado',
   );
   const renderizando = progresso !== null && !progresso.concluido;
+  // D-585: o fecho do short. A capa só entra quando há MP4 em disco — ela é um
+  // QUADRO do vídeo, e sem arquivo o modal só saberia dizer "ainda não dá".
+  const temArquivo = short.status === 'renderizado' && Boolean(short.arquivo_short_path);
+  const fecho = useFechoDoShort(short, temArquivo);
+  const capa = useCapaDoShort(short.id, temArquivo);
   const plano = planoDeAcoes(short, renderizando);
   const aparencia = APARENCIA[short.status];
 
@@ -102,7 +109,16 @@ export function CandidatoCard({
     voltar: { rotulo: 'Voltar para sugerido', icone: <Undo2 />, ao: () => onStatus('sugerido') },
     previa: { rotulo: 'Gerar prévia', icone: <Eye />, ao: onPrevia },
     refazerPrevia: { rotulo: 'Refazer prévia', icone: <Eye />, ao: onPrevia },
-    finalizar: { rotulo: 'Finalizar', icone: <Clapperboard />, ao: onRenderizar },
+    // D-585: finalizar dispara o render E abre o post. O texto não depende do
+    // arquivo, então esses minutos de render são justamente o tempo em que ele
+    // se escreve — e o operador disse que sempre vai querê-lo.
+    finalizar: {
+      rotulo: 'Finalizar',
+      icone: <Clapperboard />,
+      ao: () => fecho.finalizar(onRenderizar),
+    },
+    // Refazer NÃO reabre o post: o texto já existe, e o que se está refazendo é
+    // o arquivo. Abrir o modal aqui interromperia quem só queria re-renderizar.
     refazerFinal: { rotulo: 'Refazer o final', icone: <Clapperboard />, ao: onRenderizar },
   };
 
@@ -375,7 +391,33 @@ export function CandidatoCard({
         />
       )}
 
-      {short.status === 'renderizado' && <PainelPublicacao short={short} />}
+      {short.status === 'renderizado' && (
+        <PainelPublicacao
+          short={short}
+          onEscreverPost={fecho.abrirPost}
+          onEscolherCapa={fecho.abrirCapa}
+        />
+      )}
+
+      {/* D-585: a capa que ficou para trás.
+          Quando o render termina DEPOIS de o operador fechar o post, a corrente
+          se quebra — e sem isto a pendência ficaria só na memória dele. A linha
+          some sozinha assim que a capa existe. */}
+      {temArquivo && capa.data && !capa.data.tem_capa && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            fecho.abrirCapa();
+          }}
+          className="flex w-full items-center gap-1.5 border-t border-[var(--wb-border-soft)] px-3 py-2 text-left text-[11.5px] text-[var(--wb-warn-ink)] transition-colors hover:bg-[var(--wb-bg-inset)]"
+        >
+          <ImageIcon size={12} className="flex-none" aria-hidden />
+          Falta escolher a capa — sem ela a plataforma pega um quadro qualquer.
+        </button>
+      )}
+
+      {fecho.modais}
     </article>
   );
 }

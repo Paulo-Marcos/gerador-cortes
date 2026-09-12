@@ -331,11 +331,14 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
                 short.gancho_tela,
                 short.gancho_ate_seg,
                 duracao_short_seg=float(short.fim_seg) - float(short.inicio_seg),
-                # D-581: a aparencia viaja junto do texto, direto do short. O
-                # gancho inteiro e por short e nao herda do palco do corte —
-                # so a legenda herda, e por isso ela vem do `palco`.
-                cor=short.gancho_cor,
-                realce=short.gancho_realce,
+                # D-585: a aparencia vem do PALCO, ja com a heranca resolvida.
+                #
+                # A D-581 lia direto do short, e por isso o padrao do corte nao
+                # alcancava o gancho. Quem resolve a cascata e `palco_shorts`, e
+                # ler por fora dele seria a segunda implementacao da mesma regra
+                # — exatamente o que a D-570 corrigiu na legenda.
+                cor=palco.get("gancho_cor", ""),
+                realce=palco.get("gancho_realce", ""),
             ),
             origem=origem,
             plano=palco["plano"],

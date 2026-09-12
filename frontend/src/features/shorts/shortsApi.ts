@@ -264,6 +264,9 @@ export interface PlanoDesenhavel {
   moldura: string;
   /** As faixas já resolvidas, com a cor do CANAL — a tela só desenha. */
   faixas: (Retangulo & { cor: string })[];
+  /** D-585: a aparência do gancho, JÁ com a herança do corte resolvida. */
+  gancho_cor?: string;
+  gancho_realce?: string;
 }
 
 /** O que o detector de rosto viu num trecho (D-477). */

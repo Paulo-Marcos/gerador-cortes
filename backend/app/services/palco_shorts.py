@@ -87,6 +87,8 @@ def _sem_palco(
     textura: str = FUNDO_EDITORIAL,
     legenda_cor: str = "",
     legenda_fonte: str = "",
+    gancho_cor: str = "",
+    gancho_realce: str = "",
 ) -> dict:
     """A resposta de quando não há palco a montar.
 
@@ -112,6 +114,11 @@ def _sem_palco(
         # Um lugar so resolve a heranca; dois a resolveriam diferente.
         "legenda_cor": legenda_cor,
         "legenda_fonte": legenda_fonte,
+        # D-585: a aparencia do gancho ja RESOLVIDA (a do short, ou a do palco
+        # do corte). Um lugar so resolve a heranca; dois a resolveriam
+        # diferente — a licao que a D-570 registrou para a legenda.
+        "gancho_cor": gancho_cor,
+        "gancho_realce": gancho_realce,
     }
 
 
@@ -142,7 +149,32 @@ def catalogo_fundos() -> list[dict]:
 # preset do short > preset do corte > layout do corte) e sao o eixo que o
 # operador disse nao querer pensar. Misturar os dois aqui seria refazer no
 # palco a pergunta que o RECORTES ja responde.
-CAMPOS_HERDADOS = ("arranjo", "janela_cheia", "ajustes", "fundo", "legenda_cor", "legenda_fonte")
+# D-585: o gancho entra na heranca, e isto REVISA a decisao da D-581.
+#
+# La eu escrevi que a aparencia do gancho viajaria junto do texto, direto do
+# short, porque "o gancho inteiro e por short e nao herda; fazer so a aparencia
+# herdar daria dois donos para a mesma decisao".
+#
+# O raciocinio estava certo sobre o TEXTO e errado sobre a APARENCIA, e o
+# operador achou o furo com uma pergunta simples: "tem algum lugar onde eu
+# configure o padrao de todos os shorts do corte?". Nao tinha — e a consequencia
+# e que escolher amarelo-com-caixa custava repetir a escolha em cada trecho, num
+# corte que rende oito.
+#
+# Sao decisoes de naturezas diferentes, e e por isso que podem ter donos
+# diferentes sem contradicao: o TEXTO e editorial e unico por trecho (cada short
+# promete uma coisa), enquanto a COR e o REALCE sao identidade visual — a mesma
+# razao pela qual `legenda_cor` ja herdava desde a D-570.
+CAMPOS_HERDADOS = (
+    "arranjo",
+    "janela_cheia",
+    "ajustes",
+    "fundo",
+    "legenda_cor",
+    "legenda_fonte",
+    "gancho_cor",
+    "gancho_realce",
+)
 
 
 def com_palco_do_corte(proprio: dict, padrao: dict | None) -> dict:
@@ -321,6 +353,8 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
                 "fundo": short.fundo_editorial,
                 "legenda_cor": short.legenda_cor,
                 "legenda_fonte": short.legenda_fonte,
+                "gancho_cor": short.gancho_cor,
+                "gancho_realce": short.gancho_realce,
             },
             padrao,
         )
@@ -360,9 +394,13 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         textura = textura_valida(herdado.get("fundo", ""), FUNDO_EDITORIAL)
         legenda_cor = herdado.get("legenda_cor", "")
         legenda_fonte = herdado.get("legenda_fonte", "")
+        gancho_cor = herdado.get("gancho_cor", "")
+        gancho_realce = herdado.get("gancho_realce", "")
 
     if not regioes:
-        return _sem_palco(moldura, fundo, textura, legenda_cor, legenda_fonte)
+        return _sem_palco(
+            moldura, fundo, textura, legenda_cor, legenda_fonte, gancho_cor, gancho_realce
+        )
 
     arranjo = arranjo_de_chave(escolhido, janela) if escolhido else arranjo_sugerido(regioes)
     modelo = montar_modelo(arranjo, regioes)
@@ -380,7 +418,9 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         arranjo = arranjo_sugerido(regioes)
         modelo = montar_modelo(arranjo, regioes)
     if modelo is None:
-        return _sem_palco(moldura, fundo, textura, legenda_cor, legenda_fonte)
+        return _sem_palco(
+            moldura, fundo, textura, legenda_cor, legenda_fonte, gancho_cor, gancho_realce
+        )
 
     plano = montar_plano(modelo, regioes, ajustes)
 
@@ -399,6 +439,8 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         "fundo_editorial": textura,
         "legenda_cor": legenda_cor,
         "legenda_fonte": legenda_fonte,
+        "gancho_cor": gancho_cor,
+        "gancho_realce": gancho_realce,
     }
 
 
@@ -431,6 +473,11 @@ async def plano_desenhavel(short_id: str, ajustes_hipoteticos: dict | None = Non
         # um realce que o arquivo nao teria.
         "legenda_cor": resolvido.get("legenda_cor", ""),
         "legenda_fonte": resolvido.get("legenda_fonte", ""),
+        # D-585: a previa desenha o gancho com a aparencia JA HERDADA. Lida do
+        # short, ela ignoraria o padrao do corte e a previa mostraria uma cor
+        # que o arquivo nao teria.
+        "gancho_cor": resolvido.get("gancho_cor", ""),
+        "gancho_realce": resolvido.get("gancho_realce", ""),
         # A regiao vai JUNTO do desenho: sem ela a tela teria de casar esta
         # lista com `slots` pela posicao, e um acoplamento implicito desses
         # quebra em silencio no dia em que a ordem mudar.

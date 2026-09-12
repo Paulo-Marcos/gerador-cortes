@@ -61,5 +61,10 @@ export function mudancaDoPalco(
     // faria o preset entregar o palco certo com o realce do trecho anterior.
     legenda_cor: payload.legenda_cor ?? '',
     legenda_fonte: payload.legenda_fonte ?? '',
+    // D-585: a aparência do gancho segue a mesma lógica da legenda — ela foi
+    // escolhida OLHANDO para este fundo. Um preset que traz o palco e deixa o
+    // gancho para trás entrega o quadro certo com a cor do trecho anterior.
+    gancho_cor: payload.gancho_cor ?? '',
+    gancho_realce: payload.gancho_realce ?? '',
   };
 }

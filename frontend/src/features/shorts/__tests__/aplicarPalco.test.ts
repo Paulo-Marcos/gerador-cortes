@@ -8,7 +8,9 @@ import { mudancaDoPalco } from '../aplicarPalco';
 // existia como conceito porque aplicar copiava sem deixar rastro.
 
 describe('mudancaDoPalco', () => {
-  it('copia os sete campos do preset', () => {
+  // D-585: eram sete campos e viraram nove — a aparencia do gancho (cor e
+  // realce) entrou no preset para poder ser definida UMA vez por corte.
+  it('copia os nove campos do preset', () => {
     const corpo = mudancaDoPalco('p1', {
       arranjo: 'dividida_empilhada',
       janela_cheia: 'pessoa',
@@ -17,6 +19,8 @@ describe('mudancaDoPalco', () => {
       fundo: 'topographic',
       legenda_cor: '#6aaa84',
       legenda_fonte: 'Anton',
+      gancho_cor: '#facc15',
+      gancho_realce: 'caixa',
     });
 
     expect(corpo).toEqual({
@@ -28,7 +32,19 @@ describe('mudancaDoPalco', () => {
       fundo_editorial: 'topographic',
       legenda_cor: '#6aaa84',
       legenda_fonte: 'Anton',
+      gancho_cor: '#facc15',
+      gancho_realce: 'caixa',
     });
+  });
+
+  it('preset antigo, sem o gancho, nao quebra nem inventa cor', () => {
+    // Preset salvo antes da D-585 nao tem as chaves. `''` e a resposta certa:
+    // "nao decidi" — que e o que faz a heranca continuar viva em vez de
+    // carimbar branco no short.
+    const corpo = mudancaDoPalco('p1', { arranjo: 'cheia' });
+
+    expect(corpo.gancho_cor).toBe('');
+    expect(corpo.gancho_realce).toBe('');
   });
 
   it('preenche o que o preset nao tem, em vez de omitir', () => {

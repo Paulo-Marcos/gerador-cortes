@@ -84,6 +84,13 @@ export function GanchoModal({
   // D-581: a aparencia do gancho. Mesma regra do texto — o estado nasce do
   // short e e re-semeado ao reabrir, senao o modal levaria a cor de um trecho
   // para outro sem erro nenhum, que e o pior jeito de errar (D-542).
+  // D-585: abre no que o short TEM, e não no que ele vai usar.
+  //
+  // Parece contraintuitivo — o campo mostra vazio enquanto a prévia ao lado
+  // desenha amarelo —, mas é o que mantém a herança viva: gravar aqui o valor
+  // herdado transformaria "não decidi" em "decidi isto", e trocar o padrão do
+  // corte depois deixaria de alcançar este trecho. É a mesma regra da cascata
+  // de layout, onde chave ausente É o mecanismo de herança.
   const [cor, setCor] = useState(short.gancho_cor ?? '');
   const [realce, setRealce] = useState(() => realceValido(short.gancho_realce));
 
@@ -128,8 +135,10 @@ export function GanchoModal({
         inicioSeg={short.inicio_seg}
         fimSeg={short.fim_seg}
         tempoAtualSeg={tempoDaPrevia}
-        cor={cor}
-        realce={realce}
+        // Enquanto o operador não escolhe, a prévia mostra o que o corte manda
+        // — que é o que o arquivo vai ter.
+        cor={cor || plano?.gancho_cor || ''}
+        realce={realce || plano?.gancho_realce || 'veu'}
       />
       {palavras.length > 0 && (
         <LegendaPrevia

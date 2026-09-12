@@ -52,6 +52,7 @@ import {
   useShortsDoCorte,
 } from './useShortsDoCorte';
 import { usePublicacoesDoCorte } from './useLotePublicacao';
+import { useFechoDoShort } from './useFechoDoShort';
 import type { PublicacaoRegistrada } from './shortsApi';
 
 /** Como cada plataforma se chama na prateleira. */
@@ -87,6 +88,7 @@ function CartaoDoPronto({
   const renderizando = progresso !== null && !progresso.concluido;
   const pronto = short.status === 'renderizado' && Boolean(short.arquivo_short_path);
   const capa = useCapaDoShort(short.id, pronto);
+  const fecho = useFechoDoShort(short, pronto);
   const jaFoi = useMemo(
     () => plataformasJaPublicadas(publicacoes, short.id),
     [publicacoes, short.id],
@@ -126,7 +128,7 @@ function CartaoDoPronto({
                 size="sm"
                 className="mt-2"
                 disabled={renderizando || renderizar.isPending}
-                onClick={() => renderizar.mutate(short.id)}
+                onClick={() => fecho.finalizar(() => renderizar.mutate(short.id))}
               >
                 {renderizando || renderizar.isPending ? (
                   <Loader2 className="animate-spin" />
@@ -192,12 +194,18 @@ function CartaoDoPronto({
 
       {progresso && <ProgressoRenderPanel progresso={progresso} shortId={short.id} />}
 
+      {fecho.modais}
+
       {/* O painel individual continua existindo — publicar UM é um caso real, e
           o lote não deve ser o único caminho. Ele abre sob demanda para o
           cartão não voltar a ser a parede de controles da tela de edição. */}
       {pronto && aberto && (
         <div className="border-t border-[var(--wb-border-soft)]">
-          <PainelPublicacao short={short} />
+          <PainelPublicacao
+            short={short}
+            onEscreverPost={fecho.abrirPost}
+            onEscolherCapa={fecho.abrirCapa}
+          />
         </div>
       )}
     </article>

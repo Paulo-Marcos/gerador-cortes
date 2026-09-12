@@ -604,6 +604,36 @@ class TestPalcoPadraoDoCorte:
         assert servico.com_palco_do_corte(proprio, None) == proprio
         assert servico.com_palco_do_corte(proprio, {}) == proprio
 
+    def test_a_aparencia_do_gancho_herda_e_o_texto_nao(self):
+        """D-585: a divisao que faz a heranca do gancho fazer sentido.
+
+        A COR e o REALCE sao identidade visual — o operador escolhe uma vez e
+        vale para os oito trechos que o corte rende. O TEXTO e editorial e unico
+        por trecho: cada short promete uma coisa, e um gancho herdado prometeria
+        a mesma para oito videos diferentes.
+
+        Por isso `gancho_cor` e `gancho_realce` entraram em CAMPOS_HERDADOS e
+        `gancho_tela` nao — e este teste e o que impede alguem de "completar" a
+        lista por simetria um dia.
+        """
+        herdado = servico.com_palco_do_corte(
+            {"gancho_cor": "", "gancho_realce": "", "gancho_tela": ""},
+            {"gancho_cor": "#facc15", "gancho_realce": "caixa", "gancho_tela": "o juro te come"},
+        )
+
+        assert herdado["gancho_cor"] == "#facc15"
+        assert herdado["gancho_realce"] == "caixa"
+        assert herdado["gancho_tela"] == ""
+
+    def test_o_gancho_que_o_short_escolheu_vence_o_do_corte(self):
+        herdado = servico.com_palco_do_corte(
+            {"gancho_cor": "#ff5a72", "gancho_realce": ""},
+            {"gancho_cor": "#facc15", "gancho_realce": "contorno"},
+        )
+
+        assert herdado["gancho_cor"] == "#ff5a72"
+        assert herdado["gancho_realce"] == "contorno"
+
     def test_os_recortes_ficam_de_fora_de_proposito(self):
         """Eles respondem DE ONDE VEM, tem cascata propria, e sao justamente o
         eixo que o operador disse nao querer pensar."""

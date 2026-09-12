@@ -7,7 +7,6 @@
 //
 // Os avisos aparecem ANTES do botão. Descobrir que o vídeo passa do limite
 // depois de subir é o erro que esta tela existe para evitar.
-import { useState } from 'react';
 import { FileText, Image, Send, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PacotePublicacao } from './shortsApi';
@@ -17,24 +16,31 @@ import {
   usePreviaPublicacao,
   usePublicarShort,
 } from './useShortsDoCorte';
-import { PostModal } from './PostModal';
-import { CapaModal } from './CapaModal';
 import { comSegundos } from './capaDoShort';
 import type { ShortSugerido } from './shortsApi';
 
 interface Props {
   /** D-565: o short inteiro, e nao so o id — o modal do post precisa dele. */
   short: ShortSugerido;
+  /**
+   * D-585: quem ABRE o post e a capa agora e de fora.
+   *
+   * Os dois modais saíram daqui porque o "Finalizar" precisa abrir o post
+   * ANTES de este painel existir — ele só é montado quando o short já está
+   * renderizado, e o post se escreve enquanto o render corre. Deixá-los aqui
+   * obrigaria a montar o painel cedo só para alcançar um modal, e o painel
+   * inteiro passaria a ter de saber lidar com um MP4 que ainda não existe.
+   */
+  onEscreverPost: () => void;
+  onEscolherCapa: () => void;
 }
 
-export function PainelPublicacao({ short }: Props) {
+export function PainelPublicacao({ short, onEscreverPost, onEscolherCapa }: Props) {
   const shortId = short.id;
   const previa = usePreviaPublicacao(shortId);
   const publicar = usePublicarShort();
   const post = usePostDoShort(shortId);
   const capa = useCapaDoShort(shortId);
-  const [escrevendoPost, setEscrevendoPost] = useState(false);
-  const [escolhendoCapa, setEscolhendoCapa] = useState(false);
 
   return (
     <div className="flex flex-col gap-2 p-3">
@@ -47,7 +53,7 @@ export function PainelPublicacao({ short }: Props) {
           levar junto o acesso ao post, que continua editavel. */}
       <button
         type="button"
-        onClick={() => setEscrevendoPost(true)}
+        onClick={onEscreverPost}
         className="flex items-center gap-2 rounded-[8px] border border-[var(--wb-border-soft)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
       >
         <FileText size={13} className="flex-none opacity-70" aria-hidden />
@@ -68,7 +74,7 @@ export function PainelPublicacao({ short }: Props) {
           video — e ambas sao as ultimas antes de subir. */}
       <button
         type="button"
-        onClick={() => setEscolhendoCapa(true)}
+        onClick={onEscolherCapa}
         className="flex items-center gap-2 rounded-[8px] border border-[var(--wb-border-soft)] px-2.5 py-2 text-left transition-colors hover:bg-[var(--wb-bg-inset)]"
       >
         <Image size={13} className="flex-none opacity-70" aria-hidden />
@@ -111,17 +117,6 @@ export function PainelPublicacao({ short }: Props) {
           {(publicar.error as Error)?.message ?? 'falhou'}
         </p>
       )}
-
-      <PostModal
-        open={escrevendoPost}
-        onClose={() => setEscrevendoPost(false)}
-        short={short}
-      />
-      <CapaModal
-        open={escolhendoCapa}
-        onClose={() => setEscolhendoCapa(false)}
-        short={short}
-      />
     </div>
   );
 }

@@ -17,6 +17,13 @@ import { useDefinirPalcoPadrao, usePalcoPadrao } from './useShortsDoCorte';
 // O PALCO é a decisão que ele repete a cada trecho: como a tela monta, que
 // tamanho, que textura, que legenda. Essa é que merecia o lugar.
 //
+// D-585: e a APARÊNCIA DO GANCHO entrou no pacote, pela mesma lógica. Ela
+// nascera por-short (D-581), e a pergunta que expôs o erro foi direta: "tem
+// algum lugar onde eu configure o padrão de todos os shorts do corte?". Não
+// tinha — e escolher amarelo-com-caixa custava repetir a escolha em cada um dos
+// oito trechos que um corte rende. O TEXTO do gancho continua por trecho: cada
+// short promete uma coisa.
+//
 // A herança é VIVA: trocar aqui reflete na hora em todo short que ninguém
 // customizou, e não encosta nos customizados. Nada é copiado — quem resolve é
 // a leitura, no `com_palco_do_corte`.
@@ -37,7 +44,7 @@ export function PalcoPadraoDoCorte({ corteId }: { corteId: string }) {
       </span>
 
       <select
-        aria-label="Palco padrão deste corte"
+        aria-label="Palco padrão deste corte — vale também para a legenda e a aparência do gancho"
         value={padrao.data?.palco_padrao ?? ''}
         disabled={definir.isPending}
         onChange={(e) => definir.mutate(e.target.value)}

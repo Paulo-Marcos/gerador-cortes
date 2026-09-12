@@ -240,8 +240,13 @@ export default function FireDetalhePage() {
         inicioSeg={emQuadro.inicio_seg}
         fimSeg={emQuadro.fim_seg}
         tempoAtualSeg={tempoAtual}
-        cor={emQuadro.gancho_cor}
-        realce={emQuadro.gancho_realce}
+        // D-585: a aparência RESOLVIDA vem do plano, e o valor do short é só o
+        // fallback de enquanto o plano não chegou. Lida direto do short, a
+        // prévia ignoraria o padrão do corte e mostraria branco onde o arquivo
+        // vai sair amarelo — a prévia mentindo sobre o render, que é o defeito
+        // que o épico do palco inteiro existe para evitar.
+        cor={planoNaTela?.gancho_cor ?? emQuadro.gancho_cor}
+        realce={planoNaTela?.gancho_realce ?? emQuadro.gancho_realce}
       />
       {legendaAtiva && transcricao.data && (
         <LegendaPrevia

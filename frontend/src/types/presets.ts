@@ -34,6 +34,10 @@ export interface PalcoShortPreset {
   legenda_cor: string;
   /** D-563: família da fonte da legenda. Vazio = a do canal. */
   legenda_fonte: string;
+  /** D-585: hex do gancho da abertura. Vazio = branco. */
+  gancho_cor?: string;
+  /** D-585: veu | caixa | contorno | sombra | nenhum. Vazio = veu. */
+  gancho_realce?: string;
 }
 
 /**

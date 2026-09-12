@@ -114,6 +114,18 @@ export function DefinirPalcoModal({
     fundo: short.fundo_editorial ?? '',
     legenda_cor: short.legenda_cor ?? '',
     legenda_fonte: short.legenda_fonte ?? '',
+    // D-585: a aparência do gancho entra no preset, e com isso ela ganha um
+    // lugar para ser definida UMA vez por corte — que é o que faltava.
+    //
+    // O caminho vira: ajuste a cor num trecho, salve este palco como preset,
+    // escolha-o como o padrão do corte. Daí em diante todo short que não
+    // decidiu a própria cor usa essa, viva: trocar o preset reflete na hora.
+    //
+    // Só a APARÊNCIA entra. O texto do gancho continua por trecho, e tem de
+    // continuar — cada short promete uma coisa, e um gancho herdado prometeria
+    // a mesma para oito vídeos diferentes.
+    gancho_cor: short.gancho_cor ?? '',
+    gancho_realce: short.gancho_realce ?? '',
   });
 
   // D-552: aplicar um preset COPIA os valores — e agora marca de onde vieram.
