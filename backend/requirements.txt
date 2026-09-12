@@ -9,12 +9,35 @@ python-multipart==0.0.32
 yt-dlp>=2026.8.19
 aiofiles==24.1.0
 websockets==13.1
+
+# Estes dois — como o `websockets` acima — chegam de carona no extra
+# `[standard]` do uvicorn, mas o app os IMPORTA direto, e o que vem de carona
+# pode descer na proxima versao sem aviso. O `websockets` ja era declarado por
+# isso; estes faltavam (D-583):
+#   `yaml`       le o channel.yaml, fonte unica da identidade do canal
+#                (services/channels.py) — sem ele o app nao sobe;
+#   `watchfiles` e o `awatch` que espera o `res_{job_id}.json` do worker de
+#                render (infrastructure/worker_queue.py) — sem ele nenhum
+#                render termina.
+PyYAML==6.0.3
+watchfiles==1.2.0
 google-genai>=0.5.0
 google-api-python-client==2.118.0
 google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
 Pillow==12.3.0
 scenedetect[opencv]==0.7
+
+# O opencv vem como dependencia do scenedetect, mas a VERSAO e nossa (D-583).
+# O 5.0 aposentou os Haar cascades: sumiram tanto `cv2.CascadeClassifier` quanto
+# os XMLs de `cv2.data.haarcascades` (a pasta vem vazia). Sem eles o detector de
+# rosto do D-477 nao levanta `DeteccaoIndisponivel` — levanta `AttributeError`,
+# que ninguem espera, e o `POST /shorts/{id}/enquadrar` devolve 500 em vez do
+# 503 que a tela sabe tratar. Enquanto o detector for Haar, o teto e a 4.x.
+# Para subir para o 5: trocar por `cv2.FaceDetectorYN` (rede neural, exige
+# baixar pesos) e reaferir o enquadramento — e demanda, nao upgrade de pin.
+opencv-python==4.14.0.94
+
 # Diarização de falantes (D-286) — OPCIONAL e pesado (torch + pyannote).
 # Instale só se for usar o rótulo canal/reagidos: `pip install pyannote.audio`.
 # Requer token gratuito do HuggingFace (ver docs/SETUP.md). Deixado comentado
