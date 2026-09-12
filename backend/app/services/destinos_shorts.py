@@ -376,11 +376,15 @@ class DestinoInstagramReelsAssistido(DestinoManual):
 
     modo = ModoPublicacao.ASSISTIDO
 
-    # D-580: continua `False`, e de proposito. O compositor do Instagram TEM
-    # agendamento, mas os seletores dele nunca foram medidos numa sessao real —
-    # e este modulo nao chuta seletor (ver a lista de palpites mortos no
-    # `tiktok_studio`). Enquanto isso, a data chega ao operador como recado em
-    # vez de virar um clique inventado.
+    # D-580: `False`, e agora por um motivo MEDIDO e nao suposto. Em 12/09/2026,
+    # no Chrome do robo ja logado, o compositor de Reels do instagram.com foi
+    # varrido controle a controle: marcar pessoas, legenda, localizacao,
+    # colaboradores, acessibilidade e configuracoes avancadas — e dentro das
+    # avancadas so ocultar curtidas e desativar comentarios. Nao existe
+    # agendamento naquela tela, e nao e falta de conta profissional.
+    #
+    # Agendar Reels mora no Meta Business Suite: outro dominio, outro login,
+    # exige Pagina do Facebook. Superficie nova inteira, e nao uma emenda aqui.
     agenda_sozinho = False
 
     def __init__(
@@ -421,8 +425,9 @@ class DestinoInstagramReelsAssistido(DestinoManual):
                 **relatorio,
                 "avisos": [
                     *relatorio.get("avisos", []),
-                    f"Marque o agendamento para {self.agendamento.legivel()} a mao no "
-                    "compositor: o robo do Instagram ainda nao faz esse passo.",
+                    f"Este Reel NAO fica agendado para {self.agendamento.legivel()}: o "
+                    "compositor do instagram.com nao tem agendamento (so o Meta "
+                    "Business Suite tem). Compartilhe na hora que quiser publicar.",
                 ],
             }
 

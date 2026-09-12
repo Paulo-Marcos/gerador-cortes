@@ -54,7 +54,7 @@ export function notasDeAgendamento(
     notas.push({
       plataforma: 'Instagram Reels',
       como: 'a_mao',
-      texto: 'o robô ainda não marca agendamento: a data vai no aviso, para você marcar',
+      texto: 'não agenda: o compositor do Instagram não tem essa opção — publique na hora',
     });
   }
 
