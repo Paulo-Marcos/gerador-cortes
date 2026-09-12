@@ -1497,9 +1497,16 @@ class ClaudeIaService:
                 corte_id=contexto.corte_id,
             ),
         )
-        from app.domain.capa_tiktok import prompt_da_arte
+        # D-584: o parser do SHORT, e nao o da capa do TikTok.
+        #
+        # Aquele exige o literal "no text" na resposta, porque a arte DELE nasce
+        # sem texto — o sistema desenha a etiqueta por cima. Aqui e o contrario:
+        # a frase nasce DENTRO da imagem, entao um prompt bom nunca contem essa
+        # marca. O reuso errado fazia toda geracao voltar 502 dizendo que a
+        # skill nao devolveu prompt valido, com um prompt perfeito na mao.
+        from app.domain.capa_short import prompt_da_capa
 
-        return prompt_da_arte(bruto)
+        return prompt_da_capa(bruto)
 
     @staticmethod
     async def prompt_da_arte_da_capa_via_claude(corte_id: str, texto_capa: str) -> str:

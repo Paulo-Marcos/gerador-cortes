@@ -225,6 +225,7 @@ export default function FireDetalhePage() {
     shortcutFromRegistry('shorts.alternarVelocidade', alternarVelocidade),
     shortcutFromRegistry('shorts.undo', edicao.desfazer),
     shortcutFromRegistry('shorts.redo', edicao.refazer),
+    shortcutFromRegistry('shorts.salvar', edicao.confirmarSalvo),
   ]);
 
   const legendaAtiva = legendaVisivel && temPalavras && transcricao.data;

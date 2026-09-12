@@ -68,10 +68,15 @@ def test_cada_plataforma_tem_seu_teto_de_hashtags():
 
 
 def test_reels_recusa_video_curto_demais():
-    """Abaixo de 5s o Instagram recusa; melhor saber antes de subir."""
-    avisos = validar(Plataforma.INSTAGRAM_REELS, duracao_seg=3, vertical=True)
+    """Abaixo de 3s o Instagram recusa; melhor saber antes de subir.
+
+    D-584: o piso era 5s e desceu para 3, que e o minimo real da plataforma —
+    entao 3s passou a ser VALIDO e o caso do teste virou 2s.
+    """
+    avisos = validar(Plataforma.INSTAGRAM_REELS, duracao_seg=2, vertical=True)
 
     assert any("pelo menos" in a for a in avisos)
+    assert validar(Plataforma.INSTAGRAM_REELS, duracao_seg=3, vertical=True) == []
 
 
 def test_shorts_aceita_ate_tres_minutos():
@@ -92,9 +97,22 @@ def test_tiktok_horizontal_nao_reclama_de_video_deitado():
 
 def test_aviso_e_frase_pronta_para_a_tela():
     """Quem le e o operador as onze da noite, nao um dev lendo stack trace."""
-    (aviso,) = validar(Plataforma.INSTAGRAM_REELS, duracao_seg=120, vertical=True)
+    (aviso,) = validar(Plataforma.INSTAGRAM_REELS, duracao_seg=200, vertical=True)
 
-    assert aviso == "Instagram Reels aceita ate 90s; este video tem 120s."
+    assert aviso == "Instagram Reels aceita ate 180s; este video tem 200s."
+
+
+def test_reels_aceita_ate_tres_minutos():
+    """D-584: o teto de 90s envelheceu e reprovava short que a plataforma aceita.
+
+    Um short de 104s era barrado por um numero que ja nao valia — o operador
+    recebia um aviso mandando cortar video publicavel. Hoje Reels e Shorts tem o
+    mesmo teto, e nao por coincidencia: 180s e onde as DUAS plataformas param de
+    empurrar o video para quem nao segue.
+    """
+    assert validar(Plataforma.INSTAGRAM_REELS, duracao_seg=104, vertical=True) == []
+    assert validar(Plataforma.INSTAGRAM_REELS, duracao_seg=179, vertical=True) == []
+    assert validar(Plataforma.INSTAGRAM_REELS, duracao_seg=181, vertical=True)
 
 
 def test_truncar_nao_estraga_texto_curto():

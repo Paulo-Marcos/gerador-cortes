@@ -62,12 +62,24 @@ def test_destino_do_youtube_e_por_api_os_outros_nao():
     assert DestinoManual(Plataforma.TIKTOK).modo is ModoPublicacao.MANUAL
 
 
-def test_todos_os_destinos_padrao_estao_registrados():
+def test_o_registro_dos_shorts_nao_inclui_o_tiktok_horizontal():
+    """D-584: o registro e dos destinos do SHORT, e nem toda plataforma cabe.
+
+    O teste antes dizia `registradas == set(Plataforma)` — "todas as plataformas
+    estao registradas" —, e era essa afirmacao que estava errada. O
+    `TIKTOK_HORIZONTAL` e destino do CORTE (o arquivo 16:9, publicado pela tela
+    do projeto). Registrado aqui, ele aparecia no painel de publicacao de todo
+    short oferecendo um destino que a validacao reprova SEMPRE: os limites dele
+    pedem horizontal e no minimo 60s, e um short e 9:16 com 15 a 90s.
+
+    O operador perguntou duas vezes o que o TikTok horizontal fazia na tela de
+    shorts. A resposta era esta linha.
+    """
     from app.services import publicacao_destinos
 
     registradas = {d.plataforma for d in publicacao_destinos.destinos_disponiveis()}
 
-    assert registradas == set(Plataforma)
+    assert registradas == set(Plataforma) - {Plataforma.TIKTOK_HORIZONTAL}
 
 
 @pytest.mark.asyncio

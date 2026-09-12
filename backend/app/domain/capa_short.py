@@ -126,3 +126,82 @@ def encaixar_instante(instante: object, duracao_seg: float) -> float:
     except (TypeError, ValueError):
         return 0.0
     return round(min(max(valor, 0.0), max(0.0, float(duracao_seg))), 2)
+
+
+# ─── D-584: o prompt da arte da capa, validado ────────────────────────────
+#
+# Esta funcao existe porque a D-581 reusou `capa_tiktok.prompt_da_arte` aqui, e
+# o contrato dele e o CONTRARIO deste.
+#
+# La a arte nasce SEM texto: a etiqueta e o selo sao desenhados por cima pelo
+# sistema, com a tipografia do canal. Por isso aquele parser exige o literal
+# "no text" na resposta — e a exigencia e correta LA.
+#
+# A capa do short nao e montada em faixas: ela e a imagem inteira, e a frase
+# precisa nascer dentro dela. Um prompt bom para esta capa NUNCA contem "no
+# text" — ele contem o oposto. O resultado foi 502 em toda geracao, com a
+# mensagem dizendo que a skill nao devolveu prompt valido quando ela tinha
+# devolvido um prompt perfeito.
+#
+# O que a validacao precisa pegar continua sendo o mesmo RISCO: o modelo, diante
+# de um corpo de skill ainda generico, responder com uma PERGUNTA em portugues
+# em vez de um prompt. Entao a checagem muda de marcador para forma.
+
+# Um prompt de imagem e um paragrafo. Abaixo disto e recusa, pergunta ou
+# preambulo — nenhum dos tres serve ao gerador.
+TAMANHO_MINIMO_DO_PROMPT = 120
+
+# Palavras que so aparecem se o modelo respondeu em portugues — ou seja, se ele
+# esta conversando com o operador em vez de escrever o prompt em ingles que o
+# contrato pede. Funcionais e curtas de proposito: nomes de coisa ("sapo",
+# "verde") sairiam em ingles num prompt legitimo.
+_PALAVRAS_DE_CONVERSA = (
+    " voce ",
+    " você ",
+    " nao ",
+    " não ",
+    " qual ",
+    " favor ",
+    " preciso ",
+    " poderia ",
+    " me diga ",
+)
+
+
+def prompt_da_capa(bruto: str) -> str:
+    """O prompt de imagem dentro do que a skill devolveu, ou "" se nao for um.
+
+    Recusa por FORMA, e nao por marcador: o prompt desta capa leva texto dentro
+    da arte, entao nao ha frase obrigatoria que ele sempre contenha.
+
+    >>> prompt_da_capa('Bold editorial illustration, vertical 9:16 1080x1920, ' \
+        'subject centered inside the middle square, headline "JUROS" in bright ' \
+        'yellow with a thick black outline, high contrast, no watermark.')[:12]
+    'Bold editori'
+    >>> prompt_da_capa('Me diga qual e o mascote do seu canal que eu escrevo o prompt.')
+    ''
+    >>> prompt_da_capa('Sure!')
+    ''
+    >>> prompt_da_capa('')
+    ''
+    """
+    texto = (bruto or "").strip()
+
+    # Cerca de markdown: o contrato pede texto puro, mas modelo gosta de ```.
+    if texto.startswith("```"):
+        linhas = [linha for linha in texto.splitlines() if not linha.strip().startswith("```")]
+        texto = "\n".join(linhas).strip()
+
+    if len(texto) < TAMANHO_MINIMO_DO_PROMPT:
+        return ""
+
+    # Pergunta nao e prompt. O modelo pergunta quando a skill ainda esta
+    # generica — foi o caso real que originou a checagem da capa do TikTok.
+    if texto.rstrip().endswith("?"):
+        return ""
+
+    minusculo = f" {texto.lower()} "
+    if any(palavra in minusculo for palavra in _PALAVRAS_DE_CONVERSA):
+        return ""
+
+    return texto

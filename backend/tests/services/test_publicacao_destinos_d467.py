@@ -123,12 +123,17 @@ async def test_preparar_e_comum_a_todos_os_destinos(ambiente):
 
 @pytest.mark.asyncio
 async def test_avisos_nao_bloqueiam_o_pacote(ambiente):
-    """Reels de 95s ainda pode ser cortado e subido a mao — quem decide e o operador."""
+    """Reels longo demais ainda pode ser cortado e subido a mao — quem decide e o operador.
+
+    D-584: eram 95s, que o teto de 90 reprovava. O teto subiu para 180 (o real),
+    entao o caso do teste subiu junto — o que se testa aqui e que o AVISO nao
+    bloqueia o pacote, e nao o numero em si.
+    """
     contexto = await destinos.montar_contexto("s1")
     apertado = ContextoPublicacao(
         short_id=contexto.short_id,
         arquivo=contexto.arquivo,
-        duracao_seg=95.0,
+        duracao_seg=200.0,
         vertical=True,
         base=contexto.base,
     )

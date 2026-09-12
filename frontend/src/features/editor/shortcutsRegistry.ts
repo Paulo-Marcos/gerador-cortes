@@ -37,6 +37,7 @@ export type ShortcutId =
   | 'shorts.alternarVelocidade'
   | 'shorts.undo'
   | 'shorts.redo'
+  | 'shorts.salvar'
   // Global / Player
   | 'player.togglePlay'
   | 'player.seekBackward3s'
@@ -399,6 +400,21 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     description: 'Refazer a gravacao desfeita',
     group: 'edicao',
     skipInEditable: true,
+  },
+  // D-584: Ctrl+S CONFIRMA, porque nesta tela nao ha o que salvar.
+  //
+  // Toda mudanca aqui ja e um PATCH imediato (e tem de ser: a previa do palco
+  // le o estado GRAVADO). Mas a mao vai no Ctrl+S sozinha, e um atalho que nao
+  // existe nao e "nada acontece" — no navegador ele abre o "salvar pagina".
+  // Capturar a tecla e responder "tudo salvo" e o unico desfecho honesto: diz a
+  // verdade e tira o dialogo do Chrome do caminho.
+  {
+    id: 'shorts.salvar',
+    screen: 'shorts',
+    key: 's',
+    mod: 'any',
+    description: 'Confirmar que esta tudo salvo (aqui a gravacao e automatica)',
+    group: 'global',
   },
   {
     id: 'bruto.corteAnterior',

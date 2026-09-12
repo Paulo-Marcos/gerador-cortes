@@ -19,6 +19,10 @@ export function SeloDeGravacao({ estado }: { estado: EstadoDaGravacao }) {
     gravando: { icone: <Loader2 size={11} className="animate-spin" />, texto: 'salvando…', classe: 'text-[var(--wb-text-mute)]' },
     gravado: { icone: <Check size={11} />, texto: 'salvo', classe: 'text-[var(--wb-ok-ink)]' },
     falhou: { icone: <TriangleAlert size={11} />, texto: 'não salvou', classe: 'text-[var(--wb-warn-ink)]' },
+    // D-584: a resposta ao Ctrl+S. Texto diferente de "salvo" de propósito —
+    // "salvo" relata um evento que acabou de acontecer, e aqui nada aconteceu:
+    // o que se afirma é um ESTADO, o de não haver pendência.
+    'em-dia': { icone: <Check size={11} />, texto: 'tudo salvo', classe: 'text-[var(--wb-text-mute)]' },
   }[estado];
 
   return (

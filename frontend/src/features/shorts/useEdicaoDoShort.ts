@@ -29,13 +29,15 @@ import {
 } from './historicoDeEdicao';
 
 /** O que o selo de salvamento mostra. */
-export type EstadoDaGravacao = 'parado' | 'gravando' | 'gravado' | 'falhou';
+export type EstadoDaGravacao = 'parado' | 'gravando' | 'gravado' | 'falhou' | 'em-dia';
 
 export interface EdicaoDoShort {
   /** Grava e registra no histórico. O caminho único de escrita da tela. */
   gravar: (shortId: string, mudanca: MudancaDoShort) => void;
   desfazer: () => void;
   refazer: () => void;
+  /** D-584: o Ctrl+S. Não grava nada — confirma que não há o que gravar. */
+  confirmarSalvo: () => void;
   podeDesfazer: boolean;
   podeRefazer: boolean;
   /** O que o próximo Ctrl+Z devolve, em palavras — vira o `title` do botão. */
@@ -81,8 +83,22 @@ export function useEdicaoDoShort(corteId: string, shorts: ShortSugerido[]): Edic
   // desfaz algo que não está na tela.
   useEffect(() => gravarHistorico(HISTORICO_VAZIO), [corteId, gravarHistorico]);
 
+  // D-584: o Ctrl+S desta tela.
+  //
+  // Ele NÃO força gravação, e isso não é preguiça: não existe nada pendente
+  // para forçar. O que ele resolve é outra coisa — a mão vai no Ctrl+S por
+  // reflexo, vinda do editor de bruto, e sem um handler a tecla cai no
+  // navegador e abre o "salvar página". Capturá-la e responder "tudo salvo" diz
+  // a verdade e tira o diálogo do Chrome do caminho.
+  //
+  // Durante uma gravação em voo ele se cala: o selo já está dizendo "salvando…",
+  // e trocar para "tudo salvo" naquele instante seria mentir por um segundo.
+  const confirmarSalvo = useCallback(() => {
+    setEstado((atual) => (atual === 'gravando' ? atual : 'em-dia'));
+  }, []);
+
   useEffect(() => {
-    if (estado !== 'gravado') return;
+    if (estado !== 'gravado' && estado !== 'em-dia') return;
     const timer = setTimeout(() => setEstado('parado'), SEGUNDOS_DO_SELO);
     return () => clearTimeout(timer);
   }, [estado]);
@@ -138,6 +154,7 @@ export function useEdicaoDoShort(corteId: string, shorts: ShortSugerido[]): Edic
     gravar,
     desfazer,
     refazer,
+    confirmarSalvo,
     podeDesfazer: historico.passados.length > 0,
     podeRefazer: historico.futuros.length > 0,
     proximoDesfazer: historico.passados.at(-1)?.rotulo ?? '',

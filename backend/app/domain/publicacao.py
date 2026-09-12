@@ -82,14 +82,25 @@ LIMITES: dict[Plataforma, LimitesPlataforma] = {
         vertical=True,
         hashtags_max=3,
     ),
-    # Reels: 5 a 90s. Abaixo de 5 a plataforma recusa; acima de 90 nem todos os
-    # perfis conseguem publicar pela API.
+    # D-584: Reels vai a 3 MINUTOS, e nao a 90s.
+    #
+    # O teto de 90 era real quando foi escrito e envelheceu: hoje o upload de
+    # video pre-gravado aceita ate 180s na conta comum (alguns perfis de criador
+    # chegam a 20 min, mas isso e distribuicao limitada e nao da para contar).
+    # O numero velho reprovava short legitimo de 104s com um aviso que mandava
+    # cortar video que a plataforma aceita.
+    #
+    # 180 tambem e onde a DISTRIBUICAO muda: acima disso o Reels deixa de ser
+    # empurrado para quem nao segue. Ou seja, o teto tecnico e o editorial
+    # coincidem — o que faz dele um limite honesto de verdade.
+    #
+    # O piso desce de 5 para 3, que e o minimo da plataforma.
     Plataforma.INSTAGRAM_REELS: LimitesPlataforma(
         rotulo="Instagram Reels",
         titulo_max=2200,
         titulo_visivel=125,
-        duracao_min_seg=5.0,
-        duracao_max_seg=90.0,
+        duracao_min_seg=3.0,
+        duracao_max_seg=180.0,
         vertical=True,
         hashtags_max=10,
         caixa_unica=True,

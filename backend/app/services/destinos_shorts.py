@@ -262,11 +262,24 @@ def montar_texto_do_pacote(pacote: PacotePublicacao, capa: Path | None = None) -
 
 
 def registrar_destinos_padrao() -> None:
-    """Deixa disponíveis os destinos que existem hoje."""
+    """Deixa disponíveis os destinos que existem hoje.
+
+    D-584: o `TIKTOK_HORIZONTAL` NÃO entra aqui, e a ausência é a regra.
+
+    Ele é destino do CORTE — o arquivo 16:9, que o `PublicarTiktokModal` publica
+    a partir da tela do projeto. Registrá-lo no registro dos SHORTS o fazia
+    aparecer no painel de publicação de todo short, onde ele nunca cabe: os
+    limites dele pedem `vertical=False` e no mínimo 60s, e um short é 9:16 com
+    15 a 90s. Ou seja, uma linha permanente na tela oferecendo um destino que a
+    validação reprova sempre.
+
+    O operador perguntou duas vezes o que o TikTok horizontal fazia ali. Era
+    isto — e não o componente morto que a D-581 removeu por engano achando que
+    respondia à pergunta.
+    """
     registrar(DestinoYouTubeShorts())
     registrar(DestinoManual(Plataforma.INSTAGRAM_REELS))
     registrar(DestinoManual(Plataforma.TIKTOK))
-    registrar(DestinoManual(Plataforma.TIKTOK_HORIZONTAL))
 
 
 registrar_destinos_padrao()
