@@ -346,8 +346,11 @@ class TestRaiaAssistidaDoTikTok:
         eventos: list[str] = []
         estado = {"publica": True, "explode": False, "sozinho": False}
 
-        async def _subir(*, video, legenda, capa=None, marca="", publicar_sozinho=False):
+        async def _subir(
+            *, video, legenda, capa=None, marca="", publicar_sozinho=False, agendamento=None
+        ):
             eventos.append(f"subiu:{Path(video).parent.name}")
+            estado["agendamento"] = agendamento
             if estado["explode"]:
                 raise RoteiroInterrompido(Passo.SESSAO, "este Chrome nao esta logado no TikTok")
             estado["sozinho"] = publicar_sozinho

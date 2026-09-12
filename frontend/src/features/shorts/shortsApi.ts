@@ -395,6 +395,8 @@ export interface LotePublicacao {
   instagram_assistido: boolean;
   /** D-564: e também apertou o Publicar. */
   publicar_sozinho: boolean;
+  /** D-580: para quando o lote foi marcado, ou vazio. */
+  agendar_para?: string;
   raias: RaiaDoLote[];
 }
 
@@ -403,6 +405,8 @@ export interface OpcoesDoLote {
   tiktokAssistido: boolean;
   instagramAssistido: boolean;
   publicarSozinho: boolean;
+  /** D-580: `AAAA-MM-DDTHH:mm` no relógio do operador. Vazio = publicar agora. */
+  agendarPara: string;
 }
 
 /** Uma publicação já registrada — o que a tela de seleção usa para nascer sabendo. */
@@ -646,7 +650,7 @@ export const shortsApi = {
    * longo leva minutos. Quem chama precisa mostrar isso, senão a tela parece
    * travada bem no passo em que ela mais parece.
    */
-  assistidoTiktokHorizontal: (corteId: string) =>
+  assistidoTiktokHorizontal: (corteId: string, agendarPara = '') =>
     request<{
       passos: string[];
       resumo: string;
@@ -658,8 +662,11 @@ export const shortsApi = {
       pasta: string;
       /** D-546: o backend ficou de olho na aba esperando o Publicar. */
       vigiando: boolean;
+      /** D-580: para quando ficou marcado, já em português. */
+      agendado_para: string;
     }>(`/shorts/corte/${corteId}/publicar/tiktok-horizontal/assistido`, {
       method: 'POST',
+      body: JSON.stringify({ agendar_para: agendarPara }),
     }),
 
   stagingTiktokHorizontal: (corteId: string, opcoes: { abrirPasta?: boolean } = {}) =>
@@ -735,6 +742,7 @@ export const shortsApi = {
         tiktok_assistido: opcoes.tiktokAssistido,
         instagram_assistido: opcoes.instagramAssistido,
         publicar_sozinho: opcoes.publicarSozinho,
+        agendar_para: opcoes.agendarPara,
       }),
     }),
 

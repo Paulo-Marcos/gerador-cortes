@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
+from app.domain.agendamento import Agendamento
 from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma
 from app.domain.ritmo_publicacao import (
     Cadencia,
@@ -86,6 +87,11 @@ class OpcoesDoLote:
     tiktok_assistido: bool = False
     instagram_assistido: bool = False
     publicar_sozinho: bool = False
+    # D-580: quando o operador marca dia e hora, ela vale para o LOTE inteiro —
+    # cada destino a honra do jeito que consegue (a API do YouTube com
+    # `publishAt`, o robo do TikTok clicando no Studio) e os que nao conseguem
+    # dizem isso em vez de engolir a data.
+    agendamento: Agendamento | None = None
 
 
 class LoteEmAndamento(RuntimeError):
@@ -288,7 +294,9 @@ def _destino_do_item(item: ItemDoLote, lote: Lote) -> Destino:
     """
     robo = _robo_do_lote(item.plataforma, lote.opcoes)
     if robo is None:
-        return publicacao_destinos.obter_destino(item.plataforma)
+        return publicacao_destinos.com_agendamento(
+            publicacao_destinos.obter_destino(item.plataforma), lote.opcoes.agendamento
+        )
 
     async def ao_ficar_pronta() -> None:
         await _mudar(item, EstadoItem.SUA_VEZ, detalhe=RECADO_DA_ABA)
@@ -297,6 +305,7 @@ def _destino_do_item(item: ItemDoLote, lote: Lote) -> Destino:
         item.plataforma,
         publicar_sozinho=lote.opcoes.publicar_sozinho,
         ao_ficar_pronta=ao_ficar_pronta,
+        agendamento=lote.opcoes.agendamento,
     )
 
 

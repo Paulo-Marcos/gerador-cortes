@@ -5,6 +5,10 @@ import { Bot, Check, ExternalLink, ImageOff, Loader2, Package, Send, Youtube } f
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  PASSO_EM_SEGUNDOS,
+  sugestaoDeHorario,
+} from '@/features/shorts/agendamentoDoLote';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import { resolveThumbUrl } from '@/lib/api';
@@ -63,6 +67,10 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
   // "pacote montado" não precisa sobreviver — refazer é barato.
   const [preparados, setPreparados] = useState<Record<string, boolean>>({});
   const [quantidade, setQuantidade] = useState(0);
+  // D-580: uma data para o modal inteiro, e não uma por linha. O operador vem
+  // aqui com uma janela em mente ("solta às 19h") e manda os cortes um a um; um
+  // campo por linha seria a mesma data digitada N vezes.
+  const [agendarPara, setAgendarPara] = useState('');
 
   const pendentes = useMemo(() => pendentesNoTiktok(cortes), [cortes]);
   const alvo = quantidade > 0 ? quantidade : pendentes.length;
@@ -134,6 +142,32 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
               )}
             </div>
 
+            <div className="flex flex-wrap items-center gap-2 rounded-[8px] bg-[var(--wb-bg-inset)] px-2.5 py-2">
+              <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]">
+                <input
+                  type="checkbox"
+                  checked={Boolean(agendarPara)}
+                  onChange={(e) => setAgendarPara(e.target.checked ? sugestaoDeHorario() : '')}
+                />
+                Marcar dia e hora
+              </label>
+              {Boolean(agendarPara) && (
+                <>
+                  <Input
+                    type="datetime-local"
+                    value={agendarPara}
+                    step={PASSO_EM_SEGUNDOS}
+                    onChange={(e) => setAgendarPara(e.target.value)}
+                    className="w-[210px]"
+                  />
+                  <span className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+                    O robô liga o “Programar” no Studio e marca a data antes de devolver a aba.
+                    Vale para os cortes que você mandar daqui pra frente.
+                  </span>
+                </>
+              )}
+            </div>
+
             <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">
               {cortes.map((corte) => (
                 <LinhaDoCorte
@@ -141,6 +175,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
                   corte={corte}
                   projetoId={projetoId}
                   preparado={Boolean(preparados[corte.corte_id])}
+                  agendarPara={agendarPara}
                   onPreparado={() =>
                     setPreparados((atual) => ({ ...atual, [corte.corte_id]: true }))
                   }
@@ -158,11 +193,13 @@ function LinhaDoCorte({
   corte,
   projetoId,
   preparado,
+  agendarPara,
   onPreparado,
 }: {
   corte: StatusExportCorte;
   projetoId: string;
   preparado: boolean;
+  agendarPara: string;
   onPreparado: () => void;
 }) {
   const [copiada, setCopiada] = useState(false);
@@ -181,7 +218,7 @@ function LinhaDoCorte({
   // testes passavam, e a tela seguia com os dois manuais. Um botão que não está
   // montado é indistinguível de um botão que não existe.
   const assistido = useMutation({
-    mutationFn: () => shortsApi.assistidoTiktokHorizontal(corte.corte_id),
+    mutationFn: () => shortsApi.assistidoTiktokHorizontal(corte.corte_id, agendarPara),
     onSuccess: () => onPreparado(),
   });
 

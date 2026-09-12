@@ -76,6 +76,12 @@ class PacotePublicacao:
 class Destino:
     """Base dos destinos. Subclasse define `plataforma`, `modo` e `publicar`."""
 
+    # Este destino consegue marcar dia e hora SOZINHO? A API do YouTube
+    # consegue; o robo do TikTok consegue; um pacote numa pasta nao — ali a data
+    # e so um recado para o humano. Distinguir os dois evita a pior das falhas:
+    # aceitar a data, nao agendar nada, e nao dizer nada.
+    agenda_sozinho: bool = False
+
     plataforma: Plataforma
     modo: ModoPublicacao = ModoPublicacao.MANUAL
 
@@ -102,6 +108,22 @@ class Destino:
 
 
 _REGISTRO: dict[Plataforma, Destino] = {}
+
+
+def com_agendamento(destino: Destino, agendamento) -> Destino:
+    """O mesmo destino, ciente da data — ou ele proprio, quando nao sabe agendar.
+
+    Uma FUNCAO e nao um metodo mutante porque o registro guarda INSTANCIAS
+    compartilhadas: escrever a data dentro do destino registrado faria o lote de
+    hoje vazar para o proximo, e dois lotes simultaneos disputarem o mesmo
+    objeto. Aqui cada pedido recebe a sua copia.
+
+    Destinos que nao agendam devolvem a si mesmos, e quem chama descobre isso
+    pelo `agenda_sozinho` — nao pelo silencio.
+    """
+    if agendamento is None or not getattr(destino, "agenda_sozinho", False):
+        return destino
+    return type(destino)(agendamento=agendamento)
 
 
 def registrar(destino: Destino) -> None:

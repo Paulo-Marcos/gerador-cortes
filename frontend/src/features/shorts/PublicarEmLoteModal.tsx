@@ -21,6 +21,7 @@
 import { useMemo, useState } from 'react';
 import { Check, CircleDashed, Clock, Hand, Loader2, Send, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import type { EstadoItemLote, ItemDoLote, RaiaDoLote, ShortSugerido } from './shortsApi';
@@ -38,6 +39,11 @@ import {
   useLoteAtual,
   usePublicacoesDoCorte,
 } from './useLotePublicacao';
+import {
+  notasDeAgendamento,
+  PASSO_EM_SEGUNDOS,
+  sugestaoDeHorario,
+} from './agendamentoDoLote';
 
 interface Props {
   open: boolean;
@@ -63,6 +69,10 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
   const [tiktokAssistido, setTiktokAssistido] = useState(false);
   const [instagramAssistido, setInstagramAssistido] = useState(false);
   const [publicarSozinho, setPublicarSozinho] = useState(false);
+  // D-580: vazio é "agora", que continua sendo o padrão. A data só nasce quando
+  // o operador liga o agendamento — e nasce já dentro da grade de 5 minutos que
+  // o TikTok aceita, para ele não descobrir a regra levando erro.
+  const [agendarPara, setAgendarPara] = useState('');
 
   const publicacoes = usePublicacoesDoCorte(corteId, open);
   const loteAtual = useLoteAtual();
@@ -82,6 +92,7 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
   // O "publicar sozinho" vale para os dois robôs, então basta um deles ligado
   // para a pergunta fazer sentido.
   const temRobo = (temTiktok && tiktokAssistido) || (temInstagram && instagramAssistido);
+  const notas = notasDeAgendamento(plataformas, { tiktokAssistido, instagramAssistido });
 
   return (
     <Modal
@@ -113,6 +124,7 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
                     // Apertar o botão sozinho só existe DENTRO do assistido: sem
                     // robô no volante não há botão nenhum para apertar.
                     publicarSozinho: temRobo && publicarSozinho,
+                    agendarPara,
                   },
                 })
               }
@@ -177,6 +189,52 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
                       alerta
                     />
                   )}
+                </div>
+              )}
+            </Secao>
+
+            <Secao titulo="Quando">
+              <Interruptor
+                ligado={Boolean(agendarPara)}
+                onChange={(ligado) => setAgendarPara(ligado ? sugestaoDeHorario() : '')}
+                titulo="Marcar dia e hora"
+                nota="desligado, cada destino publica assim que ficar pronto"
+              />
+              {Boolean(agendarPara) && (
+                <div className="space-y-2 rounded-[9px] bg-[var(--wb-bg-inset)] p-2.5">
+                  <Input
+                    type="datetime-local"
+                    value={agendarPara}
+                    /* `step` põe o seletor do navegador na mesma grade de 5 em 5
+                       do TikTok. Não é validação — o backend recusa de todo
+                       jeito —, é não deixar o operador escolher 14:03 para
+                       depois ouvir que 14:03 não existe. */
+                    step={PASSO_EM_SEGUNDOS}
+                    onChange={(e) => setAgendarPara(e.target.value)}
+                    className="w-[220px]"
+                  />
+                  <ul className="space-y-1">
+                    {notas.map((nota) => (
+                      <li
+                        key={nota.plataforma}
+                        className="flex gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]"
+                      >
+                        <span
+                          className={
+                            nota.como === 'sozinho'
+                              ? 'text-[var(--wb-accent)]'
+                              : 'text-[var(--wb-text-mute)]'
+                          }
+                        >
+                          {nota.como === 'sozinho' ? '●' : '○'}
+                        </span>
+                        <span>
+                          <b className="font-medium text-[var(--wb-text)]">{nota.plataforma}</b> —{' '}
+                          {nota.texto}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </Secao>

@@ -52,6 +52,7 @@ import logging
 import time
 from pathlib import Path
 
+from app.domain.agendamento import Agendamento
 from app.domain.tiktok_studio import (
     PORTA_MINIMA_DE_DEPURACAO,
     Passo,
@@ -102,6 +103,23 @@ SEGUNDOS_PARA_ELEMENTO = 30.0
 SEGUNDOS_PARA_CAPA = 20.0
 SEGUNDOS_PARA_TUTORIAL = 8.0
 SEGUNDOS_PARA_PROCESSAR = 900.0
+SEGUNDOS_PARA_AGENDAR = 15.0
+
+# Quantas vezes viramos o mes procurando o dia pedido. Um basta: a janela de
+# agendamento do TikTok e curta, e um alvo que nao apareceu depois de virar uma
+# vez esta fora dela — insistir so trocaria "fora da janela" por "demorou".
+MESES_A_VIRAR = 1
+
+# Quantas vezes reabrimos o relogio ate ele parar no minuto pedido.
+#
+# MEDIDO em 12/09/2026 contra a pagina real: o seletor de hora e uma LISTA QUE
+# ROLA, e ao abrir ela se anima ate o valor atual. Um clique que chega durante a
+# animacao acerta o vizinho — pedi 00:05 e o campo ficou 00:25, quatro posicoes
+# adiante. Na segunda passada a lista ja esta parada e o clique cai onde deve.
+#
+# Tres tentativas e folga para isso; mais que isso nao seria lentidao, seria
+# outro problema — e ai a falha tem de aparecer.
+TENTATIVAS_DO_RELOGIO = 3
 
 # Quanto tempo ficamos de olho na aba esperando o operador publicar, e de quanto
 # em quanto. Meia hora cobre revisar com calma e ir buscar um cafe; passar disso
@@ -160,6 +178,36 @@ SELETORES: dict[str, str] = {
         '[role="dialog"] button.header-button:has-text("Save")'
     ),
     "botao_publicar": '[data-e2e="post_video_button"]',
+    # D-580, MEDIDOS em 11/09/2026 — e mais dois palpites mortos para a lista:
+    #
+    # 4. O rotulo NAO e "Agendar": e "Programar". Procurar pelo texto obvio nao
+    #    achava nada. Por isso a ancora aqui e o `value` do radio, que e do
+    #    formulario e nao da traducao.
+    # 5. O campo da HORA vem ANTES do de data no DOM, ao contrario do que a
+    #    leitura da tela sugere. Trocar os dois preencheria data no seletor de
+    #    hora, em silencio.
+    #
+    # Os dois campos sao `readonly`: nao ha o que digitar, so o que clicar.
+    "ligar_agendamento": '[data-e2e="schedule_container"] label:has(input[value="schedule"])',
+    "agendamento_ligado": '[data-e2e="schedule_container"] input[value="schedule"]:checked',
+    "campo_da_hora": ':nth-match([data-e2e="schedule_container"] input.TUXTextInputCore-input, 1)',
+    "campo_da_data": ':nth-match([data-e2e="schedule_container"] input.TUXTextInputCore-input, 2)',
+    # So os dias DENTRO da janela de agendamento tem `valid`. Os de fora — e os
+    # do mes vizinho que aparecem na mesma grade — ficam sem a classe, entao
+    # pedir `.valid` ja e pedir "um dia que da para escolher".
+    "dia_do_calendario": ".calendar-wrapper .day-span-container .day.valid",
+    "mes_seguinte": ":nth-match(.calendar-wrapper .arrow, 2)",
+    # O seletor de hora vive no DOM o tempo todo, invisivel. Sem o `:not(...)`
+    # o robo clicaria numa opcao escondida e ficaria esperando um efeito que
+    # nunca vem.
+    "hora_do_seletor": (
+        ".tiktok-timepicker-time-picker-container:not(.tiktok-timepicker-invisible) "
+        ".tiktok-timepicker-option-text.tiktok-timepicker-left"
+    ),
+    "minuto_do_seletor": (
+        ".tiktok-timepicker-time-picker-container:not(.tiktok-timepicker-invisible) "
+        ".tiktok-timepicker-option-text.tiktok-timepicker-right"
+    ),
 }
 
 # O texto que o cartão de status mostra quando o arquivo terminou de subir.
@@ -176,6 +224,7 @@ def executar_roteiro(
     capa: Path | None,
     marca: str = "",
     publicar_sozinho: bool = False,
+    agendamento: Agendamento | None = None,
 ) -> dict:
     """O roteiro, do jeito que um humano faria — e parando onde ele decide.
 
@@ -288,6 +337,13 @@ def executar_roteiro(
     elif capa:
         avisos.append("A capa nao esta mais em disco; o TikTok vai congelar um frame.")
 
+    # D-580. Depois da capa e ANTES da revisao, por dois motivos: o formulario
+    # de agendamento so existe com o video ja aceito, e a revisao e o momento em
+    # que o operador confere — entao o que ele confere tem de ja incluir a data.
+    if agendamento:
+        _agendar(pagina, agendamento)
+        feitos.append(Passo.AGENDAMENTO)
+
     feitos.append(Passo.REVISAO)
 
     # D-564: a etiqueta na aba, antes de qualquer coisa que possa navegar. E o
@@ -306,9 +362,89 @@ def executar_roteiro(
         "passos": [p.value for p in feitos],
         "resumo": descricao_do_progresso(feitos),
         "capa_aplicada": Passo.CAPA in feitos,
+        "agendado_para": agendamento.legivel() if agendamento else "",
         "avisos": avisos,
         "publicado": publicado,
     }
+
+
+def _agendar(pagina: Pagina, agendamento: Agendamento) -> None:
+    """Liga o Programar e marca dia e hora — conferindo cada um.
+
+    Conferir nao e zelo excessivo: os dois campos sao `readonly` e so mudam por
+    clique num seletor. Um clique que erra o alvo NAO da erro — ele acerta outra
+    coisa. Sem ler o que ficou no campo, o robo entregaria a aba com uma data
+    qualquer e a certeza de ter feito o pedido.
+    """
+    if not pagina.existe("agendamento_ligado", segundos=1.0, visivel=False):
+        pagina.clicar("ligar_agendamento", segundos=SEGUNDOS_PARA_AGENDAR)
+    if not pagina.existe("agendamento_ligado", segundos=SEGUNDOS_PARA_AGENDAR, visivel=False):
+        raise RoteiroInterrompido(Passo.AGENDAMENTO, "o Programar nao ligou")
+
+    _marcar_dia(pagina, agendamento)
+    _marcar_hora(pagina, agendamento)
+    logger.info("[TikTokStudio] agendado para %s", agendamento.legivel())
+
+
+def _marcar_dia(pagina: Pagina, agendamento: Agendamento) -> None:
+    """Abre o calendario e clica o dia — virando o mes se ele nao estiver a vista."""
+    pagina.clicar("campo_da_data", segundos=SEGUNDOS_PARA_AGENDAR)
+
+    for tentativa in range(MESES_A_VIRAR + 1):
+        if pagina.clicar_opcao("dia_do_calendario", agendamento.dia(), segundos=3.0):
+            break
+        if tentativa < MESES_A_VIRAR:
+            pagina.clicar("mes_seguinte", segundos=SEGUNDOS_PARA_AGENDAR)
+    else:
+        raise RoteiroInterrompido(
+            Passo.AGENDAMENTO,
+            f"o dia {agendamento.dia()} nao esta selecionavel no calendario; "
+            "o TikTok so agenda dentro de uma janela curta",
+        )
+
+    if pagina.valor_de("campo_da_data") == agendamento.data_iso():
+        return
+
+    # Segunda chance pelo mesmo motivo do relogio: a grade pode ter se
+    # redesenhado sob o cursor. Com ela ja parada, o clique cai onde deve.
+    pagina.clicar("campo_da_data", segundos=SEGUNDOS_PARA_AGENDAR)
+    pagina.clicar_opcao("dia_do_calendario", agendamento.dia(), segundos=3.0)
+
+    escrito = pagina.valor_de("campo_da_data")
+    if escrito != agendamento.data_iso():
+        raise RoteiroInterrompido(
+            Passo.AGENDAMENTO, f"pedi {agendamento.data_iso()} e o campo ficou {escrito!r}"
+        )
+
+
+def _marcar_hora(pagina: Pagina, agendamento: Agendamento) -> None:
+    """Escolhe hora e minuto nas duas colunas do seletor.
+
+    Reabrir o seletor entre uma coluna e outra e deliberado: escolher a hora
+    pode fecha-lo, e um segundo clique no campo custa nada e e idempotente —
+    bem mais barato que descobrir na producao que o minuto nunca entrou.
+    """
+    alvo = f"{agendamento.hora()}:{agendamento.minuto()}"
+    achou = False
+
+    for _ in range(TENTATIVAS_DO_RELOGIO):
+        pagina.clicar("campo_da_hora", segundos=SEGUNDOS_PARA_AGENDAR)
+        hora_ok = pagina.clicar_opcao("hora_do_seletor", agendamento.hora(), segundos=5.0)
+        minuto_ok = pagina.clicar_opcao("minuto_do_seletor", agendamento.minuto(), segundos=5.0)
+        achou = achou or (hora_ok and minuto_ok)
+
+        if pagina.valor_de("campo_da_hora") == alvo:
+            return
+
+    escrito = pagina.valor_de("campo_da_hora")
+    if not achou:
+        raise RoteiroInterrompido(
+            Passo.AGENDAMENTO, f"nao achei {alvo} nas colunas do seletor de hora"
+        )
+    raise RoteiroInterrompido(
+        Passo.AGENDAMENTO,
+        f"pedi {alvo} e o campo ficou {escrito!r} depois de {TENTATIVAS_DO_RELOGIO} tentativas",
+    )
 
 
 def _marcar_aba(pagina: Pagina, marca: str) -> None:
@@ -503,6 +639,7 @@ def _assistir(
     capa: Path | None,
     marca: str = "",
     publicar_sozinho: bool = False,
+    agendamento: Agendamento | None = None,
 ) -> dict:
     """Tudo o que fala Playwright, num thread só (síncrono de propósito).
 
@@ -539,6 +676,7 @@ def _assistir(
             capa=capa,
             marca=marca,
             publicar_sozinho=publicar_sozinho,
+            agendamento=agendamento,
         )
         return {**relatorio, "chrome_aberto_agora": abriu_agora}
     finally:
@@ -608,6 +746,7 @@ async def subir_assistido(
     capa: Path | None = None,
     marca: str = "",
     publicar_sozinho: bool = False,
+    agendamento: Agendamento | None = None,
 ) -> dict:
     """Deixa o post pronto para o operador conferir e publicar.
 
@@ -619,4 +758,6 @@ async def subir_assistido(
         raise RoteiroInterrompido(Passo.ARQUIVO, "o MP4 do pacote nao esta em disco")
 
     logger.info("[TikTokStudio] subindo %s", video.name)
-    return await asyncio.to_thread(_assistir, video, legenda, capa, marca, publicar_sozinho)
+    return await asyncio.to_thread(
+        _assistir, video, legenda, capa, marca, publicar_sozinho, agendamento
+    )

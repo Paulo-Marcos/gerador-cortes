@@ -21,6 +21,7 @@ import logging
 import shutil
 from pathlib import Path
 
+from app.domain.agendamento import Agendamento
 from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
 from app.domain.ritmo_publicacao import UPLOADS_YOUTUBE_POR_DIA
 from app.services.publicacao_destinos import Destino, PacotePublicacao, registrar
@@ -56,6 +57,10 @@ class DestinoYouTubeShorts(Destino):
 
     plataforma = Plataforma.YOUTUBE_SHORTS
     modo = ModoPublicacao.API
+    agenda_sozinho = True
+
+    def __init__(self, *, agendamento: Agendamento | None = None) -> None:
+        self.agendamento = agendamento
 
     async def publicar(self, pacote: PacotePublicacao) -> dict:
         from app.services.youtube import YouTubeService
@@ -84,12 +89,19 @@ class DestinoYouTubeShorts(Destino):
                     "tags": [t.lstrip("#") for t in pacote.metadados.hashtags],
                     "categoryId": "22",
                 },
-                # Sobe como `unlisted`: o operador confere o resultado no Studio
-                # antes de tornar público. O mesmo cuidado do upload do corte.
+                # Sem data, sobe como `unlisted`: o operador confere o resultado
+                # no Studio antes de tornar público. O mesmo cuidado do upload do
+                # corte.
+                #
+                # COM data é obrigatoriamente `private`, e não é escolha nossa:
+                # o YouTube ignora `publishAt` em qualquer outra privacidade. Um
+                # agendamento em `unlisted` não daria erro — simplesmente nunca
+                # aconteceria, que é a pior das duas falhas.
                 "status": {
-                    "privacyStatus": "unlisted",
+                    "privacyStatus": "private" if self.agendamento else "unlisted",
                     "madeForKids": False,
                     "selfDeclaredMadeForKids": False,
+                    **({"publishAt": self.agendamento.em_utc_iso()} if self.agendamento else {}),
                 },
             }
             media = MediaFileUpload(
@@ -293,6 +305,7 @@ class DestinoTikTokAssistido(DestinoManual):
     """
 
     modo = ModoPublicacao.ASSISTIDO
+    agenda_sozinho = True
 
     def __init__(
         self,
@@ -301,9 +314,11 @@ class DestinoTikTokAssistido(DestinoManual):
         publicar_sozinho: bool = False,
         ao_ficar_pronta=None,
         segundos_de_vigilia: float | None = None,
+        agendamento: Agendamento | None = None,
     ) -> None:
         super().__init__(plataforma)
         self.publicar_sozinho = publicar_sozinho
+        self.agendamento = agendamento
         # Chamado quando a aba está pronta e a bola passa para o operador. É o
         # que faz a tela dizer "sua vez" DURANTE a espera, em vez de fingir que
         # ainda está trabalhando por meia hora.
@@ -329,6 +344,7 @@ class DestinoTikTokAssistido(DestinoManual):
             capa=Path(capa) if capa else None,
             marca=marca,
             publicar_sozinho=self.publicar_sozinho,
+            agendamento=self.agendamento,
         )
 
         if relatorio.get("publicado"):
@@ -360,6 +376,13 @@ class DestinoInstagramReelsAssistido(DestinoManual):
 
     modo = ModoPublicacao.ASSISTIDO
 
+    # D-580: continua `False`, e de proposito. O compositor do Instagram TEM
+    # agendamento, mas os seletores dele nunca foram medidos numa sessao real —
+    # e este modulo nao chuta seletor (ver a lista de palpites mortos no
+    # `tiktok_studio`). Enquanto isso, a data chega ao operador como recado em
+    # vez de virar um clique inventado.
+    agenda_sozinho = False
+
     def __init__(
         self,
         plataforma: Plataforma = Plataforma.INSTAGRAM_REELS,
@@ -367,11 +390,13 @@ class DestinoInstagramReelsAssistido(DestinoManual):
         publicar_sozinho: bool = False,
         ao_ficar_pronta=None,
         segundos_de_vigilia: float | None = None,
+        agendamento: Agendamento | None = None,
     ) -> None:
         super().__init__(plataforma)
         self.publicar_sozinho = publicar_sozinho
         self.ao_ficar_pronta = ao_ficar_pronta
         self.segundos_de_vigilia = segundos_de_vigilia
+        self.agendamento = agendamento
 
     async def publicar(self, pacote: PacotePublicacao) -> dict:
         from uuid import uuid4
@@ -388,6 +413,18 @@ class DestinoInstagramReelsAssistido(DestinoManual):
             marca=marca,
             publicar_sozinho=self.publicar_sozinho,
         )
+
+        if self.agendamento:
+            # Dito em voz alta, e no relatorio que a tela mostra: engolir a data
+            # aqui seria o mesmo erro do video que sobe `unlisted` e some.
+            relatorio = {
+                **relatorio,
+                "avisos": [
+                    *relatorio.get("avisos", []),
+                    f"Marque o agendamento para {self.agendamento.legivel()} a mao no "
+                    "compositor: o robo do Instagram ainda nao faz esse passo.",
+                ],
+            }
 
         if relatorio.get("publicado"):
             return {**pronto, **relatorio, "modo": self.modo.value}

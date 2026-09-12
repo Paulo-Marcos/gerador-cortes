@@ -1050,8 +1050,14 @@ async def staging_tiktok_horizontal(corte_id: str, body: StagingRequest):
     }
 
 
+class AssistidoRequest(BaseModel):
+    """D-580: `AAAA-MM-DDTHH:MM` no relogio do operador, ou vazio para agora."""
+
+    agendar_para: str = ""
+
+
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal/assistido")
-async def assistido_tiktok_horizontal(corte_id: str):
+async def assistido_tiktok_horizontal(corte_id: str, body: AssistidoRequest | None = None):
     """O robô faz os quatro passos repetitivos e para antes de publicar (D-537).
 
     A staging (D-503) montava o pacote e abria a aba; o resto — arrastar o MP4,
@@ -1061,18 +1067,42 @@ async def assistido_tiktok_horizontal(corte_id: str):
     para com o *Publicar* aceso sem tocar nele: até ali tudo é reversível com um
     F5, e depois dali uma legenda errada é um post público no canal.
     """
-    return await _assistir_no_tiktok(await publicar_corte_no_tiktok(corte_id), corte_id=corte_id)
+    agendamento = _ler_agendamento(body.agendar_para if body else "", "tiktok_horizontal")
+    return await _assistir_no_tiktok(
+        await publicar_corte_no_tiktok(corte_id), corte_id=corte_id, agendamento=agendamento
+    )
 
 
 @router.post("/{short_id}/publicar/tiktok/assistido")
-async def assistido_tiktok_do_short(short_id: str):
+async def assistido_tiktok_do_short(short_id: str, body: AssistidoRequest | None = None):
     """O mesmo robô, para o short vertical."""
     # Sem `corte_id`: a marca de publicado e do CORTE horizontal, e um short
     # vertical publicado nao diz nada sobre o MP4 do corte.
-    return await _assistir_no_tiktok(await publicar(short_id, "tiktok"))
+    agendamento = _ler_agendamento(body.agendar_para if body else "", "tiktok")
+    return await _assistir_no_tiktok(await publicar(short_id, "tiktok"), agendamento=agendamento)
 
 
-async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "") -> dict:
+def _ler_agendamento(texto: str | None, plataforma: str):
+    """Le a data da tela e RECUSA aqui o que a plataforma recusaria la.
+
+    422 e nao 500: uma data no passado, ou um minuto que o seletor do TikTok nao
+    tem, nao e defeito nosso — e uma escolha que o operador refaz em dois
+    segundos, desde que alguem lhe diga qual e o problema.
+    """
+    from app.domain.agendamento import Agendamento, AgendamentoInvalido
+
+    try:
+        agendamento = Agendamento.de_texto(texto)
+        if agendamento:
+            from app.domain.agendamento import validar
+
+            validar(agendamento, plataforma)
+    except AgendamentoInvalido as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return agendamento
+
+
+async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", agendamento=None) -> dict:
     """Monta a legenda do pacote e entrega o roteiro ao navegador.
 
     Recebe o pacote JÁ montado em vez de montá-lo: assim o corte horizontal e o
@@ -1091,6 +1121,7 @@ async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "") -> dict:
             video=Path(pacote["video"]),
             legenda=legenda,
             capa=Path(capa) if capa else None,
+            agendamento=agendamento,
         )
     except RoteiroInterrompido as exc:
         # 422 e nao 500: nao e defeito nosso, e uma condicao que o operador
@@ -1176,6 +1207,9 @@ class LoteRequest(BaseModel):
     # D-564: e, se ligado, tambem aperta o Publicar. Desligado por padrao de
     # proposito — ate o clique tudo e reversivel com um F5.
     publicar_sozinho: bool = False
+    # D-580: uma data para o lote inteiro. Cada destino a honra como consegue —
+    # e os que nao conseguem avisam, em vez de engolir.
+    agendar_para: str = ""
 
 
 @router.post("/lote")
@@ -1193,6 +1227,12 @@ async def criar_lote(body: LoteRequest):
 
     alvos = [_ler_alvo(bruto) for bruto in body.alvos]
 
+    # Validado contra CADA plataforma escolhida: 14:03 serve para o YouTube e
+    # nao serve para o TikTok, e o lote que mistura os dois tem de recusar.
+    agendamento = None
+    for plataforma in plataformas:
+        agendamento = _ler_agendamento(body.agendar_para, plataforma.value)
+
     try:
         lote = await publicacao_lote.criar(
             alvos=alvos,
@@ -1201,6 +1241,7 @@ async def criar_lote(body: LoteRequest):
                 tiktok_assistido=body.tiktok_assistido,
                 instagram_assistido=body.instagram_assistido,
                 publicar_sozinho=body.publicar_sozinho,
+                agendamento=agendamento,
             ),
         )
     except publicacao_lote.LoteEmAndamento as exc:

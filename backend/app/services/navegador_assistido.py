@@ -66,6 +66,8 @@ class Pagina(Protocol):
     def enviar_arquivo(self, alvo: str, caminho: Path, *, segundos: float) -> None: ...
     def escrever(self, alvo: str, texto: str, *, segundos: float) -> None: ...
     def clicar(self, alvo: str, *, segundos: float) -> None: ...
+    def clicar_opcao(self, alvo: str, texto: str, *, segundos: float) -> bool: ...
+    def valor_de(self, alvo: str) -> str: ...
     def existe(self, alvo: str, *, segundos: float, visivel: bool = True) -> bool: ...
     def esperar_texto(self, alvo: str, padrao: str, *, segundos: float) -> None: ...
     def esperar_habilitado(self, alvo: str, *, segundos: float) -> None: ...
@@ -177,6 +179,45 @@ class PaginaDoPlaywright:
 
     def clicar(self, alvo: str, *, segundos: float) -> None:
         self._page.locator(self._css(alvo)).first.click(timeout=segundos * 1000)
+
+    def clicar_opcao(self, alvo: str, texto: str, *, segundos: float) -> bool:
+        """Clica a opcao cujo texto e EXATAMENTE `texto`, e diz se conseguiu.
+
+        Existe porque calendario e seletor de hora nao tem chave propria por
+        opcao: sao trinta e um dias com a mesma classe, distinguidos so pelo
+        que esta escrito. A alternativa seria o roteiro montar CSS com o dia
+        dentro — e aí a plataforma teria vazado para fora do mapa.
+
+        Ancorado nas pontas (`^...$`) de proposito: sem isso, procurar o dia 1
+        casaria com 1, 10, 11 e 21, e o robo clicaria no primeiro que achasse.
+
+        Devolve `False` em vez de levantar porque "essa opcao nao esta na tela"
+        e uma resposta que o roteiro sabe usar — virar o mes, por exemplo.
+        """
+        opcao = (
+            self._page.locator(self._css(alvo))
+            .filter(has_text=re.compile(rf"^\s*{re.escape(texto)}\s*$"))
+            .first
+        )
+        try:
+            opcao.click(timeout=segundos * 1000)
+            return True
+        except Exception:  # noqa: BLE001 — ausência é resposta, não falha
+            return False
+
+    def valor_de(self, alvo: str) -> str:
+        """O que o campo mostra AGORA — a propriedade, nao o atributo.
+
+        `atributo_de(alvo, "value")` devolveria o valor que veio no HTML, que
+        numa tela React e o inicial e nao o atual. Aqui a diferenca nao e
+        teorica: os campos de data e hora do TikTok sao `readonly` e so mudam
+        por clique no seletor, entao o atributo nunca acompanha. Ler a
+        propriedade e o unico jeito de CONFERIR que o clique pegou.
+        """
+        try:
+            return self._page.locator(self._css(alvo)).first.input_value(timeout=5000)
+        except Exception:  # noqa: BLE001 — campo sumiu ou nao e input
+            return ""
 
     def existe(self, alvo: str, *, segundos: float, visivel: bool = True) -> bool:
         try:

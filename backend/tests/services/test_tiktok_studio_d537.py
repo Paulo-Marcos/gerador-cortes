@@ -39,6 +39,15 @@ class PaginaFalsa:
         self.escrito: dict[str, str] = {}
         self.sobrescreve = 0
         self.miniatura = "blob:antes"
+        # D-580: os campos de data e hora sao `readonly` e so mudam por clique
+        # no seletor. O duble imita isso — escrever neles nao existe.
+        self.campos = {"campo_da_data": "2026-09-12", "campo_da_hora": "00:00"}
+        self.mes_visivel = "2026-09"
+        # Opcoes que o seletor NAO oferece, no formato "chave:texto". E assim
+        # que se encena "esse dia esta fora da janela de agendamento".
+        self.opcoes_ausentes: set[str] = set()
+        # Quantas vezes o seletor de minuto se fecha sozinho antes de aceitar.
+        self.minutos_teimosos = 0
 
     def _registrar(self, verbo, alvo):
         self.chamadas.append((verbo, alvo))
@@ -80,6 +89,11 @@ class PaginaFalsa:
         self._registrar("clicar", alvo)
         if alvo == "confirmar_capa":
             self.miniatura = "blob:depois"
+        if alvo == "mes_seguinte":
+            ano, mes = (int(x) for x in self.mes_visivel.split("-"))
+            ano, mes = (ano + 1, 1) if mes == 12 else (ano, mes + 1)
+            self.mes_visivel = f"{ano}-{mes:02d}"
+            self.opcoes_ausentes = {o for o in self.opcoes_ausentes if not o.startswith("dia_")}
 
     def existe(self, alvo, *, segundos, visivel=True):
         self.chamadas.append(("existe", alvo))
@@ -96,6 +110,27 @@ class PaginaFalsa:
 
     def esperar_habilitado(self, alvo, *, segundos):
         self._registrar("habilitado", alvo)
+
+    def clicar_opcao(self, alvo, texto, *, segundos):
+        self.chamadas.append(("opcao", alvo, texto))
+        if f"{alvo}:{texto}" in self.opcoes_ausentes:
+            return False
+        if alvo == "dia_do_calendario":
+            self.campos["campo_da_data"] = f"{self.mes_visivel}-{texto.zfill(2)}"
+        elif alvo == "hora_do_seletor":
+            _, minuto = self.campos["campo_da_hora"].split(":")
+            self.campos["campo_da_hora"] = f"{texto}:{minuto}"
+        elif alvo == "minuto_do_seletor":
+            if self.minutos_teimosos > 0:
+                self.minutos_teimosos -= 1
+                return False
+            hora, _ = self.campos["campo_da_hora"].split(":")
+            self.campos["campo_da_hora"] = f"{hora}:{texto}"
+        return True
+
+    def valor_de(self, alvo):
+        self.chamadas.append(("valor", alvo))
+        return self.campos.get(alvo, "")
 
 
 @pytest.fixture
@@ -114,6 +149,7 @@ def _rodar(pagina, arquivos, **kwargs):
         video=video,
         legenda=kwargs.pop("legenda", "O juro composto\n\n#pix"),
         capa=kwargs.pop("capa", capa),
+        **kwargs,
     )
 
 
@@ -592,3 +628,128 @@ def test_o_roteiro_nao_conhece_a_senha_de_ninguem():
 
     for proibido in ("password", "senha =", "captcha_solver", "type_password"):
         assert proibido not in fonte
+
+
+class TestAgendamento:
+    """D-580: dia e hora marcados no proprio Studio, antes da revisao.
+
+    O que estes testes protegem nao e o clique — e a CONFERENCIA. Num formulario
+    onde os dois campos sao `readonly`, um clique que erra o alvo nao levanta
+    erro nenhum: ele acerta outro dia. Sem ler o campo de volta, o robo
+    devolveria a aba com a data errada e a consciencia tranquila.
+    """
+
+    def _amanha(self, hora="14:05"):
+        from datetime import datetime, timedelta
+
+        from app.domain.agendamento import Agendamento
+
+        dia = datetime.now().astimezone() + timedelta(days=1)
+        return Agendamento.de_texto(f"{dia.strftime('%Y-%m-%d')}T{hora}")
+
+    def _preparar(self, pagina, agendamento):
+        """Poe o duble no mes do alvo — o calendario real abre no mes corrente."""
+        pagina.mes_visivel = agendamento.quando.strftime("%Y-%m")
+
+    def test_sem_data_nada_muda(self, arquivos):
+        pagina = PaginaFalsa()
+
+        relatorio = _rodar(pagina, arquivos)
+
+        assert Passo.AGENDAMENTO.value not in relatorio["passos"]
+        assert relatorio["agendado_para"] == ""
+        assert ("clicar", "ligar_agendamento") not in pagina.chamadas
+
+    def test_marca_dia_e_hora_e_confere_os_dois(self, arquivos):
+        agendamento = self._amanha("14:05")
+        pagina = PaginaFalsa()
+        self._preparar(pagina, agendamento)
+
+        relatorio = _rodar(pagina, arquivos, agendamento=agendamento)
+
+        assert Passo.AGENDAMENTO.value in relatorio["passos"]
+        assert relatorio["agendado_para"] == agendamento.legivel()
+        assert pagina.campos["campo_da_data"] == agendamento.data_iso()
+        assert pagina.campos["campo_da_hora"] == "14:05"
+
+    def test_o_agendamento_vem_antes_da_revisao(self, arquivos):
+        agendamento = self._amanha()
+        pagina = PaginaFalsa()
+        self._preparar(pagina, agendamento)
+
+        passos = _rodar(pagina, arquivos, agendamento=agendamento)["passos"]
+
+        assert passos.index(Passo.AGENDAMENTO.value) < passos.index(Passo.REVISAO.value)
+
+    def test_vira_o_mes_quando_o_dia_nao_esta_a_vista(self, arquivos):
+        """O alvo cai no mes seguinte — e o calendario abre no corrente.
+
+        E o caso de virada de mes: pedir dia 2 no fim de janeiro nao significa
+        2 de janeiro, que ja passou. Sem virar a pagina do calendario o robo
+        so acharia dias que nao servem.
+        """
+        from datetime import datetime
+
+        from app.domain.agendamento import Agendamento
+
+        hoje = datetime.now().astimezone()
+        ano, mes = (hoje.year + 1, 1) if hoje.month == 12 else (hoje.year, hoje.month + 1)
+        agendamento = Agendamento.de_texto(f"{ano}-{mes:02d}-02T10:00")
+
+        pagina = PaginaFalsa()
+        pagina.mes_visivel = hoje.strftime("%Y-%m")
+        pagina.opcoes_ausentes = {f"dia_do_calendario:{agendamento.dia()}"}
+
+        _rodar(pagina, arquivos, agendamento=agendamento)
+
+        assert ("clicar", "mes_seguinte") in pagina.chamadas
+        assert pagina.campos["campo_da_data"] == agendamento.data_iso()
+
+    def test_dia_fora_da_janela_interrompe_no_passo_certo(self, arquivos):
+        agendamento = self._amanha()
+        pagina = PaginaFalsa()
+        self._preparar(pagina, agendamento)
+        # Ausente antes E depois de virar o mes: e um dia que nao da para pedir.
+        pagina.opcoes_ausentes = {f"dia_do_calendario:{agendamento.dia()}"}
+        original = pagina.clicar
+
+        def clicar(alvo, *, segundos):
+            original(alvo, segundos=segundos)
+            if alvo == "mes_seguinte":  # o dia continua fora da janela
+                pagina.opcoes_ausentes = {f"dia_do_calendario:{agendamento.dia()}"}
+
+        pagina.clicar = clicar
+
+        with pytest.raises(RoteiroInterrompido) as erro:
+            _rodar(pagina, arquivos, agendamento=agendamento)
+
+        assert erro.value.passo == Passo.AGENDAMENTO
+
+    def test_campo_com_data_diferente_da_pedida_interrompe(self, arquivos):
+        agendamento = self._amanha()
+        pagina = PaginaFalsa()
+        self._preparar(pagina, agendamento)
+        # O clique "funciona", mas o calendario estava noutro mes: o campo fica
+        # com uma data que nao e a pedida. E o bug que a conferencia pega.
+        pagina.mes_visivel = "2019-01"
+
+        with pytest.raises(RoteiroInterrompido) as erro:
+            _rodar(pagina, arquivos, agendamento=agendamento)
+
+        assert erro.value.passo == Passo.AGENDAMENTO
+        assert "2019-01" in str(erro.value)
+
+    def test_reabre_o_seletor_quando_o_minuto_nao_entra_de_primeira(self, arquivos):
+        agendamento = self._amanha("09:30")
+        pagina = PaginaFalsa()
+        self._preparar(pagina, agendamento)
+        pagina.minutos_teimosos = 1
+
+        _rodar(pagina, arquivos, agendamento=agendamento)
+
+        assert pagina.campos["campo_da_hora"] == "09:30"
+        assert pagina.chamadas.count(("clicar", "campo_da_hora")) == 2
+
+    def test_a_falha_do_agendamento_avisa_para_marcar_a_mao(self):
+        assert "a mao" in ORIENTACOES[Passo.AGENDAMENTO]
+        assert "agora" in ORIENTACOES[Passo.AGENDAMENTO]

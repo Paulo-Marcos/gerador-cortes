@@ -37,6 +37,9 @@ class Passo(StrEnum):
     PROCESSAMENTO = "processamento"
     LEGENDA = "legenda"
     CAPA = "capa"
+    # D-580: so acontece quando o operador escolhe dia e hora. Sem data, o
+    # roteiro pula daqui direto para a revisao, como sempre fez.
+    AGENDAMENTO = "agendamento"
     REVISAO = "revisao"
     # D-564: so acontece quando o operador LIGA o publicar automatico. Fora
     # disso o roteiro termina em REVISAO, como sempre terminou.
@@ -53,11 +56,17 @@ ROTULOS: dict[Passo, str] = {
     Passo.PROCESSAMENTO: "esperando o TikTok processar",
     Passo.LEGENDA: "escrevendo a legenda",
     Passo.CAPA: "trocando a capa",
+    Passo.AGENDAMENTO: "marcando dia e hora",
     Passo.REVISAO: "deixando pronto para você conferir",
     Passo.PUBLICAR: "publicando",
 }
 
 
+# O agendamento NÃO entra nos opcionais, e a diferença com a capa é exatamente o
+# que ela ensina: capa que falha custa uma imagem feia, agendamento que falha
+# custa um post no ar na hora errada. Quando o operador pede 14h de quinta, o
+# silêncio não é uma degradação aceitável — é publicar agora sem avisar.
+#
 # A capa é o único passo cuja falha NÃO cancela o upload: o vídeo já subiu e a
 # legenda já está escrita, e o TikTok congela um frame qualquer quando ninguém
 # escolhe. Perder o pacote inteiro por causa do passo mais decorativo seria
@@ -88,6 +97,11 @@ ORIENTACOES: dict[Passo, str] = {
     Passo.CAPA: (
         "Subi o video e escrevi a legenda, mas nao consegui trocar a capa. Ela esta "
         "na pasta do pacote — poe a mao antes de publicar."
+    ),
+    Passo.AGENDAMENTO: (
+        "Nao consegui marcar o dia e a hora no TikTok. O video subiu e a legenda "
+        "esta escrita: marque o agendamento a mao na aba que ficou aberta, ANTES "
+        "de publicar — senao ele vai ao ar agora."
     ),
     Passo.REVISAO: (
         "O botao de publicar nao acendeu. Pode ser processamento ainda em curso ou "
