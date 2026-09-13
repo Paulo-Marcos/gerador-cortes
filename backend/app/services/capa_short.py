@@ -328,8 +328,9 @@ async def gerar_prompt(short_id: str) -> str:
 
     if not prompt:
         raise CapaShortError(
-            "A skill nao devolveu um prompt de imagem valido. Personalize o corpo de "
-            "'Capa do short' em /canais com a identidade visual do seu canal."
+            "A resposta da skill nao parece um prompt de imagem (curta demais, uma "
+            "pergunta ou conversa em portugues). Tente de novo; se repetir, confira o "
+            "corpo de 'Capa do short' em /canais."
         )
 
     async with AsyncSessionLocal() as db:

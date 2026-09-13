@@ -1506,7 +1506,18 @@ class ClaudeIaService:
         # skill nao devolveu prompt valido, com um prompt perfeito na mao.
         from app.domain.capa_short import prompt_da_capa
 
-        return prompt_da_capa(bruto)
+        prompt_valido = prompt_da_capa(bruto)
+        if not prompt_valido:
+            # D-587: o llm_calls registra a chamada como sucesso, e a recusa
+            # acontece depois dele. Sem este aviso, o log diz "deu certo" sobre
+            # uma geracao que nunca chegou a tela.
+            logger.warning(
+                "[CapaShort] short=%s resposta recusada pelo validador (%d chars): %.160r",
+                short_id[:8],
+                len(bruto or ""),
+                bruto,
+            )
+        return prompt_valido
 
     @staticmethod
     async def prompt_da_arte_da_capa_via_claude(corte_id: str, texto_capa: str) -> str:

@@ -28,6 +28,7 @@ Modulo puro: so aritmetica. Sem I/O, sem ffmpeg.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 # A faixa que sobrevive ao recorte da vitrine, em FRACAO da altura. Os pixels
@@ -167,6 +168,14 @@ _PALAVRAS_DE_CONVERSA = (
     " me diga ",
 )
 
+# D-587: a frase da capa nasce em portugues DENTRO da arte, e o prompt a cita
+# entre aspas — "a vida do outro não é a sua desculpa". Procurar conversa no
+# prompt inteiro recusava justamente o conteudo que o contrato pede. As aspas
+# saem antes da busca: aspas duplas retas, curvas e angulares, e simples so
+# quando nao estao coladas numa letra, para o apostrofo de "frog's" nao abrir
+# uma citacao que engoliria o resto do prompt.
+_TRECHOS_CITADOS = re.compile(r"\"[^\"]*\"|“[^”]*”|«[^»]*»|(?<!\w)'[^']*'(?!\w)")
+
 
 def prompt_da_capa(bruto: str) -> str:
     """O prompt de imagem dentro do que a skill devolveu, ou "" se nao for um.
@@ -200,8 +209,8 @@ def prompt_da_capa(bruto: str) -> str:
     if texto.rstrip().endswith("?"):
         return ""
 
-    minusculo = f" {texto.lower()} "
-    if any(palavra in minusculo for palavra in _PALAVRAS_DE_CONVERSA):
+    fora_das_aspas = f" {_TRECHOS_CITADOS.sub(' ', texto).lower()} "
+    if any(palavra in fora_das_aspas for palavra in _PALAVRAS_DE_CONVERSA):
         return ""
 
     return texto

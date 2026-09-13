@@ -19,6 +19,7 @@ from app.domain.capa_short import (
     encaixar_instante,
     guia_da_vitrine,
     instante_padrao,
+    prompt_da_capa,
 )
 from app.domain.capa_tiktok import ALTURA, ALTURA_SEGURA, TOPO_SEGURO
 
@@ -88,3 +89,40 @@ class TestEncaixarInstante:
 
     def test_arredonda_para_centesimo(self):
         assert encaixar_instante(1.23456, 30.0) == 1.23
+
+
+# D-587: trechos das respostas reais que o PROD recusou em 13/09. O prompt vem em
+# ingles, mas a frase da capa nasce DENTRO da arte — em portugues, entre aspas.
+_ESTILO = (
+    "Vertical 9:16, 1080x1920, editorial 2D illustrated cover, subject and text fully "
+    "contained within the central 1080x1080 square, hand-inked contours, cel-shaded "
+)
+
+
+class TestPromptDaCapa:
+    @pytest.mark.parametrize(
+        "frase",
+        [
+            'bold uppercase text "a vida do outro não é a sua desculpa" in acid yellow',
+            'bold uppercase text "tá dado, e agora você faz o quê" in ultra-black',
+            "the text “quem vai parar de fumar por você?” in a single line",
+            "the frog's hand points at the text 'você pode fugir' in white outline",
+        ],
+    )
+    def test_frase_da_capa_em_portugues_entre_aspas_nao_recusa(self, frase):
+        bruto = _ESTILO + frase + ", high contrast, no watermark."
+        assert prompt_da_capa(bruto) == bruto
+
+    def test_resposta_conversando_com_o_operador_continua_recusada(self):
+        bruto = (
+            "Para escrever o prompt eu preciso saber mais: você poderia me dizer qual e "
+            "o mascote do canal e a paleta que ele usa nas capas do YouTube, por favor."
+        )
+        assert prompt_da_capa(bruto) == ""
+
+    def test_aspas_nao_escondem_conversa_fora_delas(self):
+        bruto = (
+            _ESTILO + 'text "JUROS". Antes de seguir, você confirma se o mascote e esse mesmo, '
+            "ou quer outro personagem na capa?"
+        )
+        assert prompt_da_capa(bruto) == ""
