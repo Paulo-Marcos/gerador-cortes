@@ -350,6 +350,14 @@ export interface PacotePublicacao {
   avisos: string[];
 }
 
+/** O que volta de um publicar avulso: `url` pela API, `pasta` no pacote manual. */
+export interface ResultadoPublicacao {
+  url?: string;
+  pasta?: string;
+  /** D-588: o que deu errado sem derrubar o upload — hoje, a capa. */
+  avisos?: string[];
+}
+
 // ─── D-564: o lote — vários shorts, várias plataformas, cada uma no seu passo ──
 
 /** O estado de um item na raia. Espelha `EstadoItem` do domínio. */
@@ -726,7 +734,7 @@ export const shortsApi = {
   },
 
   publicar: (shortId: string, plataforma: string) =>
-    request<Record<string, unknown>>(`/shorts/${shortId}/publicar/${plataforma}`, {
+    request<ResultadoPublicacao>(`/shorts/${shortId}/publicar/${plataforma}`, {
       method: 'POST',
     }),
 

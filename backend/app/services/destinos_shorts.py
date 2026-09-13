@@ -72,7 +72,59 @@ class DestinoYouTubeShorts(Destino):
         video_id = await self._enviar(creds, pacote)
         url = f"https://youtu.be/{video_id}"
         logger.info("[Publicacao] short no YouTube: %s", url)
-        return {"plataforma": self.plataforma.value, "video_id": video_id, "url": url}
+
+        aviso = await self._enviar_capa(creds, video_id, pacote.capa)
+        return {
+            "plataforma": self.plataforma.value,
+            "video_id": video_id,
+            "url": url,
+            "capa_aplicada": pacote.capa is not None and not aviso,
+            "avisos": [aviso] if aviso else [],
+        }
+
+    async def _enviar_capa(self, creds, video_id: str, capa: Path | None) -> str:
+        """Cola a capa no vídeo que acabou de subir (D-588). Devolve o aviso, ou "".
+
+        O YouTube recebe vídeo e capa em duas chamadas, e este destino fazia só
+        a primeira: a capa escolhida chegava no `pacote` e morria aqui. O upload
+        do corte (`youtube.py`) sempre fez as duas.
+
+        NUNCA levanta. Quando a capa chega, o vídeo já está no canal — derrubar o
+        item por causa dela faria a fila tratar como erro um short que subiu, e
+        a próxima tentativa o subiria DE NOVO.
+
+        Onde a capa aparece não é decisão nossa: Short com capa própria entrou em
+        liberação gradual em jul/2026, para canais do Programa de Parcerias. A
+        chamada pode dar certo e o feed de Shorts ainda mostrar um quadro.
+        """
+        if capa is None:
+            return ""
+        if not capa.is_file():
+            return "A capa nao esta mais em disco; o YouTube vai usar um quadro do video."
+
+        import asyncio
+
+        from app.domain.thumbnail_encode import preparar_para_youtube
+
+        # A mesma preparação do corte: sem ela, capa acima de 2 MB é recusada, e
+        # reencodar com o subsampling padrão do PIL borrava a cor (D-343).
+        dados, mimetype, _ = preparar_para_youtube(capa.read_bytes())
+        try:
+            await asyncio.to_thread(self._subir_capa, creds, video_id, dados, mimetype)
+        except Exception as exc:  # noqa: BLE001 — a capa reporta, o vídeo já subiu
+            logger.warning("[Publicacao] capa do short nao entrou: %s", exc)
+            return f"O short subiu, mas a capa nao entrou ({exc}). Troque no YouTube Studio."
+        return ""
+
+    @staticmethod
+    def _subir_capa(creds, video_id: str, dados: bytes, mimetype: str) -> None:
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaInMemoryUpload
+
+        youtube = build("youtube", "v3", credentials=creds)
+        youtube.thumbnails().set(
+            videoId=video_id, media_body=MediaInMemoryUpload(dados, mimetype=mimetype)
+        ).execute()
 
     async def _enviar(self, creds, pacote: PacotePublicacao) -> str:
         import asyncio
@@ -364,7 +416,7 @@ class DestinoTikTokAssistido(DestinoManual):
             return {**pronto, **relatorio, "modo": self.modo.value}
 
         if self.ao_ficar_pronta is not None:
-            await self.ao_ficar_pronta()
+            await self.ao_ficar_pronta(relatorio.get("avisos", []))
 
         espera = {"segundos": self.segundos_de_vigilia} if self.segundos_de_vigilia else {}
         publicado = await tiktok_studio.aguardar_publicacao(marca=marca, **espera)
@@ -380,7 +432,9 @@ class DestinoInstagramReelsAssistido(DestinoManual):
       - o compositor é um MODAL, então não há navegação para provar que saiu.
         A vigília espera o modal fechar e procura o aviso de sucesso, porque
         fechar sozinho também é o que acontece quando alguém descarta;
-      - não há capa: o Instagram escolhe a dele, e a nossa é 9:16 do TikTok.
+      - a capa ainda não é aplicada pelo robô: a etapa existe no compositor,
+        mas os seletores dela não foram medidos. Por isso ele AVISA quando há
+        capa (D-588), em vez de deixar o Reel sair com um quadro qualquer.
 
     A API oficial publicaria isto sem navegador nenhum — mas cobra conta
     Business ligada a uma Página, app review, e o MP4 servido por uma URL
@@ -444,11 +498,24 @@ class DestinoInstagramReelsAssistido(DestinoManual):
                 ],
             }
 
+        if pronto.get("capa"):
+            # D-588: o robo ainda nao sabe trocar a capa — a etapa existe no
+            # compositor, mas os seletores dela nunca foram medidos. Enquanto
+            # isso, o aviso aponta o arquivo que ja esta na pasta do pacote.
+            relatorio = {
+                **relatorio,
+                "avisos": [
+                    *relatorio.get("avisos", []),
+                    "A capa NAO entra sozinha no Reels: troque na etapa de capa do "
+                    f"compositor, antes da legenda. O arquivo esta em {pronto['capa']}.",
+                ],
+            }
+
         if relatorio.get("publicado"):
             return {**pronto, **relatorio, "modo": self.modo.value}
 
         if self.ao_ficar_pronta is not None:
-            await self.ao_ficar_pronta()
+            await self.ao_ficar_pronta(relatorio.get("avisos", []))
 
         espera = {"segundos": self.segundos_de_vigilia} if self.segundos_de_vigilia else {}
         publicado = await instagram_reels.aguardar_publicacao(marca=marca, **espera)

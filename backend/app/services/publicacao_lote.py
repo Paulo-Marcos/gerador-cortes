@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -298,8 +299,11 @@ def _destino_do_item(item: ItemDoLote, lote: Lote) -> Destino:
             publicacao_destinos.obter_destino(item.plataforma), lote.opcoes.agendamento
         )
 
-    async def ao_ficar_pronta() -> None:
-        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=RECADO_DA_ABA)
+    async def ao_ficar_pronta(avisos: Sequence[str] = ()) -> None:
+        # D-588: os avisos entram JUNTO do "sua vez", e não depois. É durante a
+        # espera que o operador pode agir — pôr a capa que o robô não pôs, por
+        # exemplo; no fim da vigília o post já saiu sem ela.
+        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_com_avisos(RECADO_DA_ABA, avisos))
 
     return robo(
         item.plataforma,
@@ -352,8 +356,18 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
         await _mudar(item, EstadoItem.ERRO, detalhe=str(exc))
         return EstadoItem.ERRO
 
+    avisos = resultado.get("avisos") or []
+
     if destino.modo is ModoPublicacao.API:
-        await _mudar(item, EstadoItem.PUBLICADO, url=str(resultado.get("url", "")), publicado=True)
+        # D-588: PUBLICADO com ressalva ainda é PUBLICADO — o vídeo está no ar.
+        # Mas a ressalva (a capa que não entrou) precisa aparecer no item.
+        await _mudar(
+            item,
+            EstadoItem.PUBLICADO,
+            url=str(resultado.get("url", "")),
+            detalhe=_com_avisos("", avisos),
+            publicado=True,
+        )
         return EstadoItem.PUBLICADO
 
     if destino.modo is ModoPublicacao.ASSISTIDO:
@@ -363,7 +377,7 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
         # `False` aqui é "não sei", e não "não publicou" — a aba pode ter sido
         # fechada. Deixar em SUA_VEZ mantém o botão "publiquei" à mão, que é o
         # jeito barato de errar: marcar no escuro libera a limpeza do MP4.
-        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=NAO_DEU_PARA_CONFIRMAR)
+        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos))
         return EstadoItem.SUA_VEZ
 
     await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_recado_do_pacote(resultado, ritmo))
@@ -373,9 +387,16 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
 def _recado_do_pacote(resultado: dict, ritmo: Cadencia) -> str:
     """O que o operador faz agora, com o pacote já montado."""
     pasta = str(resultado.get("pasta", ""))
-    avisos = resultado.get("avisos") or []
     recado = f"pacote pronto em {pasta}" if pasta else f"pacote do {ritmo.rotulo} pronto"
-    return f"{recado} — {'; '.join(str(a) for a in avisos)}" if avisos else recado
+    return _com_avisos(recado, resultado.get("avisos") or [])
+
+
+def _com_avisos(recado: str, avisos: Sequence[str]) -> str:
+    """O recado do item, seguido dos avisos quando há — ou só os avisos."""
+    juntos = "; ".join(str(a) for a in avisos)
+    if not juntos:
+        return recado
+    return f"{recado} — {juntos}" if recado else juntos
 
 
 async def _montar_contexto(item: ItemDoLote):

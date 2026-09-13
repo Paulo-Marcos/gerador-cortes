@@ -167,6 +167,29 @@ async def test_api_termina_publicado_e_pacote_termina_na_sua_vez(ambiente):
     assert "/pacotes/instagram_reels" in por_plataforma[Plataforma.INSTAGRAM_REELS].detalhe
 
 
+class _DestinoDeApiComRessalva(_DestinoDeApi):
+    """Sobe, mas a capa não entrou — o caso da D-588."""
+
+    async def publicar(self, pacote):
+        resultado = await super().publicar(pacote)
+        return {**resultado, "avisos": ["a capa nao entrou"]}
+
+
+@pytest.mark.asyncio
+async def test_publicado_com_ressalva_mostra_o_aviso_no_item(ambiente):
+    """D-588: PUBLICADO continua PUBLICADO, mas a capa que falhou aparece."""
+    _, raias = ambiente
+    destinos.registrar(_DestinoDeApiComRessalva(Plataforma.YOUTUBE_SHORTS))
+
+    lote = await lote_svc.criar(
+        alvos=[(lote_svc.ALVO_SHORT, "s1")], plataformas=[Plataforma.YOUTUBE_SHORTS]
+    )
+    await _rodar(raias)
+
+    assert lote.itens[0].estado is EstadoItem.PUBLICADO
+    assert "a capa nao entrou" in lote.itens[0].detalhe
+
+
 @pytest.mark.asyncio
 async def test_a_raia_sobe_os_dois_shorts_na_ordem_da_tela(ambiente):
     _, raias = ambiente
@@ -354,7 +377,12 @@ class TestRaiaAssistidaDoTikTok:
             if estado["explode"]:
                 raise RoteiroInterrompido(Passo.SESSAO, "este Chrome nao esta logado no TikTok")
             estado["sozinho"] = publicar_sozinho
-            return {"passos": [], "resumo": "ok", "avisos": [], "publicado": publicar_sozinho}
+            return {
+                "passos": [],
+                "resumo": "ok",
+                "avisos": estado.get("avisos", []),
+                "publicado": publicar_sozinho,
+            }
 
         async def _aguardar(*, marca="", segundos=None):
             eventos.append(f"esperou:{marca[:16]}")
@@ -425,6 +453,40 @@ class TestRaiaAssistidaDoTikTok:
 
         assert lote.itens[0].estado is EstadoItem.SUA_VEZ
         assert "marque aqui" in lote.itens[0].detalhe
+
+    @pytest.mark.asyncio
+    async def test_os_avisos_do_robo_chegam_junto_do_sua_vez(self, ambiente, robo):
+        """D-588: é DURANTE a espera que o operador pode pôr a capa que o robô
+        não pôs. Mostrar o aviso só no fim seria avisar com o post já no ar."""
+        _, raias = ambiente
+        _, estado = robo
+        estado["publica"] = False
+        estado["avisos"] = ["a capa nao entrou"]
+        detalhes: list[str] = []
+
+        original = lote_svc._mudar
+
+        async def _espiar(item, novo_estado, **kwargs):
+            if novo_estado is EstadoItem.SUA_VEZ:
+                detalhes.append(kwargs.get("detalhe", ""))
+            await original(item, novo_estado, **kwargs)
+
+        lote_svc._mudar = _espiar
+        try:
+            await lote_svc.criar(
+                alvos=[(lote_svc.ALVO_SHORT, "s1")],
+                plataformas=[Plataforma.TIKTOK],
+                opcoes=lote_svc.OpcoesDoLote(tiktok_assistido=True),
+            )
+            await _rodar(raias)
+        finally:
+            lote_svc._mudar = original
+
+        espera, fim = detalhes
+        assert "confira e clique em Publicar" in espera
+        assert "a capa nao entrou" in espera
+        assert "marque aqui" in fim
+        assert "a capa nao entrou" in fim
 
     @pytest.mark.asyncio
     async def test_publicar_sozinho_dispensa_a_vigilia(self, ambiente, robo):

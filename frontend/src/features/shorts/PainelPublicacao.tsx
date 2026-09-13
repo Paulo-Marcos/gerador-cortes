@@ -109,9 +109,17 @@ export function PainelPublicacao({ short, onEscreverPost, onEscolherCapa }: Prop
       ))}
       {publicar.isSuccess && (
         <p className="text-[12px] text-[var(--wb-ok-ink)]">
-          {String(publicar.data?.url ?? publicar.data?.pasta ?? 'pronto')}
+          {publicar.data?.url ?? publicar.data?.pasta ?? 'pronto'}
         </p>
       )}
+      {/* D-588: sucesso com ressalva. O short subiu, mas a capa pode nao ter
+          entrado — e so este aviso separa isso de "deu tudo certo". */}
+      {publicar.isSuccess &&
+        (publicar.data?.avisos ?? []).map((aviso) => (
+          <p key={aviso} className="text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]">
+            ⚠ {aviso}
+          </p>
+        ))}
       {publicar.isError && (
         <p className="text-[12px] text-[var(--wb-text-dim)]">
           {(publicar.error as Error)?.message ?? 'falhou'}

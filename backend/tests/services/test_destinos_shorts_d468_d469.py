@@ -301,3 +301,90 @@ def test_a_ausencia_de_capa_diz_o_que_fazer(tmp_path):
 
     assert "Metadados" in texto
     assert "frame" in texto
+
+
+# D-588: a capa do short no YouTube.
+#
+# O destino fazia so o `videos.insert` e jogava fora a capa que o pacote trazia.
+# O operador testou, e o short subiu com um quadro qualquer.
+
+
+@pytest.fixture
+def youtube_dublado(monkeypatch):
+    """Upload e capa de mentira: o que se prova e a ORDEM e a tolerancia a falha."""
+    from app.services import youtube as youtube_module
+
+    monkeypatch.setattr(
+        youtube_module.YouTubeService, "_get_credentials", staticmethod(lambda: ("creds", None))
+    )
+
+    async def _fake_enviar(self, creds, pacote):
+        return "vid42"
+
+    monkeypatch.setattr(DestinoYouTubeShorts, "_enviar", _fake_enviar)
+
+    capas: list[tuple[str, bytes]] = []
+    estado = {"falha": None}
+
+    def _fake_subir_capa(creds, video_id, dados, mimetype):
+        if estado["falha"]:
+            raise estado["falha"]
+        capas.append((video_id, dados))
+
+    monkeypatch.setattr(DestinoYouTubeShorts, "_subir_capa", staticmethod(_fake_subir_capa))
+    return capas, estado
+
+
+def _png(tmp_path: Path) -> Path:
+    from PIL import Image
+
+    caminho = tmp_path / "capa.png"
+    Image.new("RGB", (9, 16), "red").save(caminho)
+    return caminho
+
+
+@pytest.mark.asyncio
+async def test_a_capa_do_short_vai_para_o_video_que_acabou_de_subir(tmp_path, youtube_dublado):
+    capas, _ = youtube_dublado
+    video = tmp_path / "short.mp4"
+    video.write_bytes(b"v")
+    capa = _png(tmp_path)
+
+    resultado = await DestinoYouTubeShorts().publicar(
+        _pacote(Plataforma.YOUTUBE_SHORTS, video, capa=capa)
+    )
+
+    assert capas == [("vid42", capa.read_bytes())]
+    assert resultado["capa_aplicada"] is True
+    assert resultado["avisos"] == []
+
+
+@pytest.mark.asyncio
+async def test_capa_que_falha_nao_desfaz_o_short_que_subiu(tmp_path, youtube_dublado):
+    """Levantar aqui faria a fila marcar ERRO num video que ja esta no canal —
+    e a proxima tentativa o subiria de novo."""
+    _, estado = youtube_dublado
+    estado["falha"] = RuntimeError("canal sem permissao de capa")
+    video = tmp_path / "short.mp4"
+    video.write_bytes(b"v")
+
+    resultado = await DestinoYouTubeShorts().publicar(
+        _pacote(Plataforma.YOUTUBE_SHORTS, video, capa=_png(tmp_path))
+    )
+
+    assert resultado["url"] == "https://youtu.be/vid42"
+    assert resultado["capa_aplicada"] is False
+    assert "Studio" in resultado["avisos"][0]
+
+
+@pytest.mark.asyncio
+async def test_short_sem_capa_nao_chama_a_api_de_capa(tmp_path, youtube_dublado):
+    capas, _ = youtube_dublado
+    video = tmp_path / "short.mp4"
+    video.write_bytes(b"v")
+
+    resultado = await DestinoYouTubeShorts().publicar(_pacote(Plataforma.YOUTUBE_SHORTS, video))
+
+    assert capas == []
+    assert resultado["capa_aplicada"] is False
+    assert resultado["avisos"] == []
