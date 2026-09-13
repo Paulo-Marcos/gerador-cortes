@@ -199,3 +199,46 @@ async def test_contagem_nao_vaza_entre_cortes(ambiente):
     }
 
     assert por_corte == {"c1": 1, "c2": 0}
+
+
+@pytest.mark.asyncio
+async def test_finalizar_carimba_o_corte_e_a_lista_informa(ambiente):
+    """D-593: o finalizado continua na lista — quem o tira da fila e a tela."""
+    factory, raiz = ambiente
+    await _semear(factory, corte_id="c1", fire=True, clip_path=_criar_bruto(raiz, "c1"))
+
+    resposta = await servico.marcar_finalizado("c1", True)
+
+    fires = await servico.listar_fires_com_bruto()
+    assert resposta["finalizado_em"] is not None
+    assert fires[0]["finalizado_em"] == resposta["finalizado_em"]
+
+
+@pytest.mark.asyncio
+async def test_finalizar_de_novo_nao_renova_a_data(ambiente):
+    """O carimbo responde "quando fechei"; um segundo clique nao reescreve isso."""
+    factory, _ = ambiente
+    await _semear(factory, corte_id="c1", fire=True)
+
+    primeira = await servico.marcar_finalizado("c1", True)
+    segunda = await servico.marcar_finalizado("c1", True)
+
+    assert segunda["finalizado_em"] == primeira["finalizado_em"]
+
+
+@pytest.mark.asyncio
+async def test_reabrir_apaga_o_carimbo(ambiente):
+    factory, _ = ambiente
+    await _semear(factory, corte_id="c1", fire=True)
+    await servico.marcar_finalizado("c1", True)
+
+    resposta = await servico.marcar_finalizado("c1", False)
+
+    assert resposta["finalizado_em"] is None
+    assert (await servico.listar_fires_com_bruto())[0]["finalizado_em"] is None
+
+
+@pytest.mark.asyncio
+async def test_finalizar_corte_inexistente_recusa(ambiente):
+    with pytest.raises(LookupError):
+        await servico.marcar_finalizado("nao-existe", True)

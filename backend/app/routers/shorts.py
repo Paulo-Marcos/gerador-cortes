@@ -5,6 +5,7 @@ Endpoints:
   GET  /corte/{corte_id}          — os shorts do corte, do melhor palpite ao pior
   POST /corte/{corte_id}          — cria um short a mao, que a regeracao nao apaga
   POST /corte/{corte_id}/indicar  — poe o corte na fabrica sem depender do Fire
+  PUT  /corte/{corte_id}/finalizado — shorts ja nas redes: tira (ou devolve) da fila
   GET  /corte/{corte_id}/elegibilidade — se a tela do bruto deve oferecer a fábrica
   POST /corte/{corte_id}/gerar    — caminho MANUAL: regera o bruto se preciso e propõe
   POST /corte/{corte_id}/sugerir  — propõe agora (o fluxo normal é automático)
@@ -145,6 +146,21 @@ async def indicar_para_shorts(corte_id: str, body: IndicarRequest):
     """
     try:
         return await shorts_store.indicar_para_shorts(corte_id, body.indicado)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+class FinalizadoRequest(BaseModel):
+    """Declara (ou desfaz) que os shorts do corte ja subiram para todas as redes."""
+
+    finalizado: bool = True
+
+
+@router.put("/corte/{corte_id}/finalizado")
+async def marcar_finalizado(corte_id: str, body: FinalizadoRequest):
+    """Tira o corte da fila de trabalho, ou o devolve a ela (D-593)."""
+    try:
+        return await shorts_store.marcar_finalizado(corte_id, body.finalizado)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

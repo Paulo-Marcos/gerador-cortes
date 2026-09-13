@@ -15,7 +15,13 @@
 // YouTube e os cortes começaram a sumir dela.
 import type { FireComBruto } from './shortsApi';
 
-export type FiltroDeFire = 'todos' | 'editando' | 'novos' | 'prontos' | 'sem_bruto';
+export type FiltroDeFire =
+  | 'todos'
+  | 'editando'
+  | 'novos'
+  | 'prontos'
+  | 'sem_bruto'
+  | 'finalizados';
 
 export interface OpcaoDeFiltro {
   id: FiltroDeFire;
@@ -25,7 +31,7 @@ export interface OpcaoDeFiltro {
 }
 
 export const FILTROS: readonly OpcaoDeFiltro[] = [
-  { id: 'todos', rotulo: 'Todos', nota: 'Todos os cortes na fábrica de shorts' },
+  { id: 'todos', rotulo: 'Todos', nota: 'Todos os cortes que ainda pedem trabalho' },
   {
     id: 'editando',
     rotulo: 'Estou mexendo',
@@ -38,7 +44,22 @@ export const FILTROS: readonly OpcaoDeFiltro[] = [
   },
   { id: 'prontos', rotulo: 'Tem pronto', nota: 'Já existe pelo menos um MP4 final' },
   { id: 'sem_bruto', rotulo: 'Sem bruto', nota: 'O vídeo do bruto saiu do disco — precisa regerar' },
+  {
+    id: 'finalizados',
+    rotulo: 'Finalizados',
+    nota: 'Shorts já publicados no YouTube, TikTok e Instagram',
+  },
 ];
+
+/**
+ * D-593: o operador declarou que os shorts deste corte já estão nas redes?
+ *
+ * Declaração, e não dedução do histórico de publicação: parte dos uploads
+ * acontece fora do app, e só quem subiu sabe que não falta nada.
+ */
+export function estaFinalizado(fire: FireComBruto): boolean {
+  return Boolean(fire.finalizado_em);
+}
 
 /**
  * O corte já recebeu trabalho humano?
@@ -58,6 +79,12 @@ export function temEdicao(fire: FireComBruto): boolean {
 
 /** Um Fire passa neste filtro? */
 export function passaNoFiltro(fire: FireComBruto, filtro: FiltroDeFire): boolean {
+  // D-593: finalizado é SAÍDA da fila, não mais um estado dentro dela. Sem esta
+  // porta ele seguiria contando em "tem pronto" e "estou mexendo" — justamente
+  // o ruído que marcar serviu para calar.
+  if (filtro === 'finalizados') return estaFinalizado(fire);
+  if (estaFinalizado(fire)) return false;
+
   switch (filtro) {
     case 'editando':
       return temEdicao(fire);

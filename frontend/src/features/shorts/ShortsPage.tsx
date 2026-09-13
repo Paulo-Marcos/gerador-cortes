@@ -23,6 +23,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  CheckCheck,
   Clapperboard,
   Clock,
   HardDrive,
@@ -38,8 +39,11 @@ import { cn, formatarDuracao } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import type { ContagemShorts, FireComBruto } from './shortsApi';
 import { FIRES_KEY, useFires } from './useFires';
+import { useMarcarFinalizado } from './useShortsDoCorte';
+import { SeloFinalizado } from './CabecalhoDoFire';
 import {
   contarPorFiltro,
+  estaFinalizado,
   FILTROS,
   filtrarFires,
   progressoDaCuradoria,
@@ -109,6 +113,7 @@ function BarraDeProgresso({ fire }: { fire: FireComBruto }) {
 }
 
 function FireCard({ fire }: { fire: FireComBruto }) {
+  const finalizado = estaFinalizado(fire);
   const editado = temEdicao(fire);
   const temPronto = fire.shorts.renderizado > 0;
 
@@ -147,7 +152,8 @@ function FireCard({ fire }: { fire: FireComBruto }) {
           {/* D-581: a marca de "você mexeu aqui". É o que o filtro seleciona, e
               mostrá-la no cartão evita que o chip pareça mágica: o operador vê
               no item POR QUE ele entrou na aba. */}
-          {editado && (
+          {finalizado && <SeloFinalizado />}
+          {editado && !finalizado && (
             <span
               className="flex-none rounded-[5px] bg-[var(--wb-accent-soft)] px-1.5 py-0.5 font-code text-[9.5px] uppercase tracking-wide text-[var(--wb-accent-strong,var(--wb-accent))]"
               title="Você já decidiu, marcou trecho, escreveu gancho ou mexeu no palco deste corte"
@@ -217,14 +223,51 @@ function FireCard({ fire }: { fire: FireComBruto }) {
           <LayoutGrid size={12} aria-hidden />
           Workspace
         </Link>
+        <AlternarFinalizado fire={fire} />
       </footer>
     </article>
   );
 }
 
+/**
+ * D-593: fecha o corte — os shorts já estão nas três redes — ou o devolve à fila.
+ *
+ * Sem confirmação de propósito: é reversível no mesmo lugar, a um clique, e o
+ * corte continua a um chip de distância na aba "Finalizados".
+ */
+function AlternarFinalizado({ fire }: { fire: FireComBruto }) {
+  const marcar = useMarcarFinalizado();
+  const finalizado = estaFinalizado(fire);
+
+  return (
+    <button
+      type="button"
+      disabled={marcar.isPending}
+      onClick={() => marcar.mutate({ corteId: fire.corte_id, finalizado: !finalizado })}
+      className="inline-flex h-7 flex-1 items-center justify-center gap-1.5 rounded-[7px] text-[12px] font-semibold text-[var(--wb-text-dim)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)] disabled:opacity-60"
+      title={
+        finalizado
+          ? 'Devolver este corte para a fila de trabalho'
+          : 'Os shorts deste corte já subiram para YouTube, TikTok e Instagram — tirar da fila'
+      }
+    >
+      {marcar.isPending ? (
+        <Loader2 size={12} className="animate-spin" aria-hidden />
+      ) : finalizado ? (
+        <RotateCcw size={12} aria-hidden />
+      ) : (
+        <CheckCheck size={12} aria-hidden />
+      )}
+      {finalizado ? 'Reabrir' : 'Finalizar'}
+    </button>
+  );
+}
+
 /** O card e a ação: o botão mora fora do `Link`, senão o clique navegaria junto. */
 function ItemDaFila({ fire }: { fire: FireComBruto }) {
-  if (fire.tem_bruto) return <FireCard fire={fire} />;
+  // D-593: corte finalizado sem bruto não pede "gerar bruto" — não há mais o
+  // que recortar dele, e o convite seria ruído na aba de concluídos.
+  if (fire.tem_bruto || estaFinalizado(fire)) return <FireCard fire={fire} />;
 
   return (
     <div className="flex flex-col gap-1.5">

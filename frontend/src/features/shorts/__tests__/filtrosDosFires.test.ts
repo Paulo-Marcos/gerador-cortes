@@ -102,6 +102,20 @@ describe('passaNoFiltro', () => {
     expect(passaNoFiltro(fire({ tem_bruto: false }), 'sem_bruto')).toBe(true);
     expect(passaNoFiltro(comPronto, 'sem_bruto')).toBe(false);
   });
+
+  it('D-593: o finalizado sai de toda aba da fila e só aparece na própria', () => {
+    const fechado = { ...comPronto, tem_bruto: false, finalizado_em: '2026-09-13T10:00:00' };
+    for (const aba of ['todos', 'editando', 'novos', 'prontos', 'sem_bruto'] as const) {
+      expect(passaNoFiltro(fechado, aba)).toBe(false);
+    }
+    expect(passaNoFiltro(fechado, 'finalizados')).toBe(true);
+  });
+
+  it('D-593: reaberto (carimbo nulo) volta para a fila', () => {
+    const reaberto = { ...comPronto, finalizado_em: null };
+    expect(passaNoFiltro(reaberto, 'todos')).toBe(true);
+    expect(passaNoFiltro(reaberto, 'finalizados')).toBe(false);
+  });
 });
 
 describe('contarPorFiltro', () => {
@@ -116,6 +130,7 @@ describe('contarPorFiltro', () => {
     expect(contagem.novos).toBe(1);
     expect(contagem.prontos).toBe(1);
     expect(contagem.sem_bruto).toBe(0);
+    expect(contagem.finalizados).toBe(0);
   });
 });
 

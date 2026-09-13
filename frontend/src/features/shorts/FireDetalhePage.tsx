@@ -38,8 +38,10 @@ import { GanchoPrevia } from './GanchoPrevia';
 import { useEdicaoDoShort } from './useEdicaoDoShort';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
+import { estaFinalizado } from './filtrosDosFires';
 import {
   useDescartarBruto,
+  useMarcarFinalizado,
   usePalcoDoShort,
   useShortsDoCorte,
   useTranscricaoDoCorte,
@@ -104,6 +106,7 @@ export default function FireDetalhePage() {
   const { data, isLoading, isError, error } = useShortsDoCorte(corteId);
   const fires = useFires();
   const descartar = useDescartarBruto();
+  const marcarFinalizado = useMarcarFinalizado();
   const transcricao = useTranscricaoDoCorte(corteId);
   const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
@@ -192,6 +195,11 @@ export default function FireDetalhePage() {
     if (!fire) return;
     if (!confirm(avisoDescarteBruto(fire.titulo || `Corte ${fire.numero}`, fire.bruto_mb))) return;
     descartar.mutate(corteId, { onSuccess: () => navigate('/shorts') });
+  };
+
+  const onAlternarFinalizado = () => {
+    if (!fire) return;
+    marcarFinalizado.mutate({ corteId, finalizado: !estaFinalizado(fire) });
   };
 
   const ajustarVelocidade = useCallback((passo: number) => {
@@ -290,6 +298,9 @@ export default function FireDetalhePage() {
         onAlternarVelocidade={alternarVelocidade}
         descartando={descartar.isPending}
         onDescartar={onDescartar}
+        finalizado={fire ? estaFinalizado(fire) : false}
+        alternandoFinalizado={marcarFinalizado.isPending}
+        onAlternarFinalizado={onAlternarFinalizado}
       />
 
       <main className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[minmax(0,1fr)_400px]">

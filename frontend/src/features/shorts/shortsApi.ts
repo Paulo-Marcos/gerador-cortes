@@ -82,6 +82,9 @@ export interface FireComBruto {
   /** D-581: a mão humana já passou por aqui? Alimenta o filtro "onde eu parei".
    *  Opcional porque um backend ainda não reiniciado não manda o campo. */
   tem_edicao?: boolean;
+  /** D-593: quando o operador declarou os shorts já publicados em todas as redes.
+   *  `null` = ainda na fila. Opcional pelo mesmo motivo do `tem_edicao`. */
+  finalizado_em?: string | null;
   shorts: ContagemShorts;
 }
 
@@ -463,6 +466,13 @@ export const shortsApi = {
       method: 'POST',
       body: JSON.stringify({ indicado }),
     }),
+
+  /** D-593: tira o corte da fila (shorts já nas redes) ou o devolve a ela. */
+  marcarFinalizado: (corteId: string, finalizado: boolean) =>
+    request<{ corte_id: string; finalizado_em: string | null }>(
+      `/shorts/corte/${corteId}/finalizado`,
+      { method: 'PUT', body: JSON.stringify({ finalizado }) },
+    ),
 
   elegibilidade: (corteId: string) =>
     request<ElegibilidadeShorts>(`/shorts/corte/${corteId}/elegibilidade`),

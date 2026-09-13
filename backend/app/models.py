@@ -193,6 +193,17 @@ class Corte(Base):
     tiktok_publicado_em: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True, default=None
     )
+    # D-593: quando o operador declarou que os shorts deste corte ja subiram
+    # para todas as redes (YouTube, TikTok, Instagram) e o corte saiu da fila.
+    #
+    # E uma DECLARACAO, e nao algo deduzido de `PublicacaoShort`: parte das
+    # publicacoes acontece fora do app (o upload manual no celular, o Reels
+    # postado a mao), e so o operador sabe que nada mais falta. Carimbo de data
+    # e nao booleano pelo mesmo motivo do `tiktok_publicado_em`: "quando fechei"
+    # e o que se pergunta depois.
+    shorts_finalizados_em: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, default=None
+    )
     is_leitura: Mapped[int] = mapped_column(Integer, default=0)
     autor_leitura: Mapped[str] = mapped_column(String(200), default="")
     parte_leitura: Mapped[int] = mapped_column(Integer, default=1)

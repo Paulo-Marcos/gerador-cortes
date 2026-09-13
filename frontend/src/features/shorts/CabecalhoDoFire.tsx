@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Captions,
+  CheckCheck,
   Clapperboard,
   Gauge,
   LayoutGrid,
   LayoutTemplate,
   Redo2,
+  RotateCcw,
   Trash2,
   Undo2,
 } from 'lucide-react';
@@ -45,6 +47,22 @@ interface Props {
   onAlternarVelocidade: () => void;
   descartando: boolean;
   onDescartar: () => void;
+  /** D-593: os shorts deste corte já estão em todas as redes? */
+  finalizado: boolean;
+  alternandoFinalizado: boolean;
+  onAlternarFinalizado: () => void;
+}
+
+/** D-593: o mesmo selo do card da fila — quem abre um corte fechado precisa saber. */
+export function SeloFinalizado() {
+  return (
+    <span
+      className="flex-none rounded-[5px] bg-[var(--wb-bg-inset)] px-1.5 py-0.5 font-code text-[9.5px] uppercase tracking-wide text-[var(--wb-ok-ink)]"
+      title="Os shorts deste corte já estão no YouTube, TikTok e Instagram"
+    >
+      finalizado
+    </span>
+  );
 }
 
 /**
@@ -76,6 +94,9 @@ export function CabecalhoDoFire({
   onAlternarVelocidade,
   descartando,
   onDescartar,
+  finalizado,
+  alternandoFinalizado,
+  onAlternarFinalizado,
 }: Props) {
   return (
     <header
@@ -103,6 +124,7 @@ export function CabecalhoDoFire({
             </p>
           )}
         </div>
+        {finalizado && <SeloFinalizado />}
 
         <div className="flex-1" />
 
@@ -200,6 +222,12 @@ export function CabecalhoDoFire({
             label="Mais ações deste Fire"
             align="right"
             items={[
+              {
+                label: finalizado ? 'Reabrir (voltar para a fila)' : 'Marcar como finalizado',
+                icon: finalizado ? RotateCcw : CheckCheck,
+                disabled: alternandoFinalizado,
+                onClick: onAlternarFinalizado,
+              },
               {
                 label: `Descartar o bruto (${fire.bruto_mb} MB)`,
                 icon: Trash2,

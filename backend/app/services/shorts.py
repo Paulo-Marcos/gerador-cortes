@@ -20,6 +20,7 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
@@ -644,6 +645,33 @@ async def indicar_para_shorts(corte_id: str, indicado: bool = True) -> dict:
     return await elegibilidade(corte_id)
 
 
+async def marcar_finalizado(corte_id: str, finalizado: bool = True) -> dict:
+    """Declara (ou desfaz) que os shorts do corte ja subiram para todas as redes (D-593).
+
+    Marcar de novo um corte ja finalizado NAO renova a data: o carimbo responde
+    "quando eu fechei", e um segundo clique distraido reescreveria a resposta.
+    Reabrir apaga o carimbo e devolve o corte a fila.
+
+    Levanta `LookupError` quando o corte nao existe.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+
+        if not finalizado:
+            corte.shorts_finalizados_em = None
+        elif corte.shorts_finalizados_em is None:
+            corte.shorts_finalizados_em = datetime.utcnow()
+        await db.commit()
+        carimbo = corte.shorts_finalizados_em
+
+    logger.info(
+        "[Shorts] corte=%s %s", corte_id[:8], "finalizado" if carimbo else "reaberto na fila"
+    )
+    return {"corte_id": corte_id, "finalizado_em": carimbo.isoformat() if carimbo else None}
+
+
 async def elegibilidade(corte_id: str) -> dict:
     """O que a tela do bruto precisa saber para oferecer (ou nao) a fabrica.
 
@@ -834,6 +862,11 @@ def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path | None) -> dict:
         # D-581: preenchido depois, junto das contagens — uma consulta para a
         # lista inteira em vez de uma por Fire.
         "tem_edicao": False,
+        # D-593: o corte cujos shorts ja subiram para todas as redes. Continua
+        # na lista (o operador pode reabrir), e a tela o tira da fila.
+        "finalizado_em": (
+            corte.shorts_finalizados_em.isoformat() if corte.shorts_finalizados_em else None
+        ),
     }
 
 

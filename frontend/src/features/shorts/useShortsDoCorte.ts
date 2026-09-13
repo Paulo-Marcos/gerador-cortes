@@ -60,6 +60,18 @@ export function useDescartarBruto() {
   });
 }
 
+// D-593: finalizar tira o corte da fila e reabrir o devolve. O estado mora na
+// lista de Fires — de onde a fila E o cabeçalho do corte leem —, então é ela
+// que precisa ser invalidada.
+export function useMarcarFinalizado() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ corteId, finalizado }: { corteId: string; finalizado: boolean }) =>
+      shortsApi.marcarFinalizado(corteId, finalizado),
+    onSuccess: () => qc.invalidateQueries({ queryKey: FIRES_KEY }),
+  });
+}
+
 // D-466: o render e sincrono e demora (ffmpeg + Remotion + composicao). A tela
 // segura o botao pelo isPending em vez de fingir que terminou.
 /** D-568: a chave do progresso de um short — o disparo precisa alcançá-la. */
