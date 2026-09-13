@@ -11,6 +11,7 @@ do operador se alguém "simplificar" a fila mais tarde:
      junto — é exatamente por isso que elas são raias separadas.
 """
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -143,6 +144,15 @@ async def _rodar(raias: list) -> None:
     for coro in raias:
         await coro
     raias.clear()
+
+
+async def _esperar_ate(condicao, segundos: float = 2.0) -> None:
+    """Espera um estado que OUTRA tarefa produz — com teto, para não pendurar a suíte."""
+    limite = asyncio.get_running_loop().time() + segundos
+    while not condicao():
+        if asyncio.get_running_loop().time() > limite:
+            raise AssertionError("o estado esperado nao chegou")
+        await asyncio.sleep(0.01)
 
 
 @pytest.mark.asyncio
@@ -358,10 +368,44 @@ async def test_cancelar_impede_os_que_ainda_nao_comecaram(ambiente):
         alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
         plataformas=[Plataforma.YOUTUBE_SHORTS],
     )
-    assert lote_svc.cancelar() is True
+    assert await lote_svc.cancelar() is lote
     await _rodar(raias)
 
     assert all(i.estado is EstadoItem.CANCELADO for i in lote.itens)
+
+
+@pytest.mark.asyncio
+async def test_cancelar_marca_os_que_esperam_na_hora_e_no_banco(ambiente):
+    """D-591: sem esperar a raia chegar neles — era essa espera que fazia o
+    botão parecer morto."""
+    factory, raias = ambiente
+    destinos.registrar(_DestinoDeApi(Plataforma.YOUTUBE_SHORTS))
+
+    lote = await lote_svc.criar(
+        alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
+        plataformas=[Plataforma.YOUTUBE_SHORTS],
+    )
+    await lote_svc.cancelar()
+
+    assert all(i.estado is EstadoItem.CANCELADO for i in lote.itens)
+    assert lote.terminou
+    async with factory() as db:
+        registros = (await db.execute(select(PublicacaoShort))).scalars().all()
+    assert {r.estado for r in registros} == {EstadoItem.CANCELADO.value}
+    await _rodar(raias)
+
+
+@pytest.mark.asyncio
+async def test_cancelar_lote_que_terminou_nao_faz_nada(ambiente):
+    _, raias = ambiente
+    destinos.registrar(_DestinoDeApi(Plataforma.YOUTUBE_SHORTS))
+
+    await lote_svc.criar(
+        alvos=[(lote_svc.ALVO_SHORT, "s1")], plataformas=[Plataforma.YOUTUBE_SHORTS]
+    )
+    await _rodar(raias)
+
+    assert await lote_svc.cancelar() is None
 
 
 @pytest.mark.asyncio
@@ -413,8 +457,12 @@ class TestRaiaAssistidaDoTikTok:
                 "publicado": publicar_sozinho,
             }
 
-        async def _aguardar(*, marca="", segundos=None):
+        async def _aguardar(*, marca="", segundos=None, parar=None):
             eventos.append(f"esperou:{marca[:16]}")
+            if estado.get("segura"):
+                # D-591: imita a vigília real — só sai quando o lote dá o sinal.
+                await _esperar_ate(lambda: parar is not None and parar.is_set())
+                return False
             return estado["publica"]
 
         monkeypatch.setattr(tiktok_studio, "subir_assistido", _subir)
@@ -518,6 +566,68 @@ class TestRaiaAssistidaDoTikTok:
         assert "a capa nao entrou" in fim
 
     @pytest.mark.asyncio
+    async def test_publiquei_solta_a_vigilia_e_a_raia_segue(self, ambiente, robo):
+        """D-591, o relato: "subiu o primeiro, mas os demais ficaram parados".
+
+        O banco de PROD mostrou o item 1 marcado pelo "publiquei" e os outros
+        em `aguardando`: a marcação mudava o estado, mas a raia seguia presa na
+        vigília por até meia hora.
+        """
+        _, raias = ambiente
+        eventos, estado = robo
+        estado["segura"] = True
+
+        lote = await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
+            plataformas=[Plataforma.TIKTOK],
+            opcoes=lote_svc.OpcoesDoLote(tiktok_assistido=True),
+        )
+        tarefa = asyncio.create_task(_rodar(raias))
+        primeiro, segundo = lote.itens
+
+        await _esperar_ate(lambda: primeiro.estado is EstadoItem.SUA_VEZ)
+        assert await lote_svc.confirmar("s1", Plataforma.TIKTOK)
+        await _esperar_ate(lambda: segundo.estado is EstadoItem.SUA_VEZ)
+
+        # A raia não rebaixou a confirmação do operador para SUA_VEZ.
+        assert primeiro.estado is EstadoItem.PUBLICADO
+        assert primeiro.detalhe == lote_svc.CONFIRMADO_A_MAO
+
+        assert await lote_svc.confirmar("s2", Plataforma.TIKTOK)
+        await asyncio.wait_for(tarefa, timeout=2)
+        assert [e.split(":")[0] for e in eventos] == ["subiu", "esperou", "subiu", "esperou"]
+        assert all(i.estado is EstadoItem.PUBLICADO for i in lote.itens)
+
+    @pytest.mark.asyncio
+    async def test_cancelar_solta_a_vigilia_em_curso(self, ambiente, robo):
+        """D-591: o botão "Cancelar o lote" que não fazia nada.
+
+        O item em curso termina em SUA_VEZ, com o "publiquei" à mão — o operador
+        pode ter publicado antes de cancelar. O que esperava vira CANCELADO.
+        """
+        _, raias = ambiente
+        eventos, estado = robo
+        estado["segura"] = True
+
+        lote = await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
+            plataformas=[Plataforma.TIKTOK],
+            opcoes=lote_svc.OpcoesDoLote(tiktok_assistido=True),
+        )
+        tarefa = asyncio.create_task(_rodar(raias))
+        primeiro, segundo = lote.itens
+
+        await _esperar_ate(lambda: primeiro.estado is EstadoItem.SUA_VEZ)
+        assert await lote_svc.cancelar() is lote
+        assert segundo.estado is EstadoItem.CANCELADO
+
+        await asyncio.wait_for(tarefa, timeout=2)
+        assert primeiro.estado is EstadoItem.SUA_VEZ
+        assert "marque aqui" in primeiro.detalhe
+        assert lote.terminou
+        assert [e.split(":")[0] for e in eventos] == ["subiu", "esperou"]
+
+    @pytest.mark.asyncio
     async def test_publicar_sozinho_dispensa_a_vigilia(self, ambiente, robo):
         _, raias = ambiente
         eventos, estado = robo
@@ -598,7 +708,7 @@ class TestRaiaAssistidaDoInstagram:
             eventos.append("subiu")
             return {"passos": [], "resumo": "ok", "avisos": [], "publicado": publicar_sozinho}
 
-        async def _aguardar(*, marca="", segundos=None):
+        async def _aguardar(*, marca="", segundos=None, parar=None):
             eventos.append("esperou")
             return estado["publica"]
 

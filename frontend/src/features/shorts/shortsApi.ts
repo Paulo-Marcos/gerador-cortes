@@ -763,7 +763,9 @@ export const shortsApi = {
   verLote: () => request<{ lote: LotePublicacao | null }>('/shorts/lote'),
 
   cancelarLote: () =>
-    request<{ cancelado: boolean }>('/shorts/lote/cancelar', { method: 'POST' }),
+    request<{ cancelado: boolean; lote: LotePublicacao | null }>('/shorts/lote/cancelar', {
+      method: 'POST',
+    }),
 
   /** O "publiquei" do destino manual, onde o upload acontece longe daqui. */
   confirmarPublicacao: (alvoId: string, plataforma: string) =>

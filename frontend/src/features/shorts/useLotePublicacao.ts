@@ -55,7 +55,12 @@ export function useCancelarLote() {
   const cliente = useQueryClient();
   return useMutation({
     mutationFn: () => shortsApi.cancelarLote(),
-    onSuccess: () => cliente.invalidateQueries({ queryKey: LOTE_KEY }),
+    onSuccess: ({ lote }) => {
+      // D-591: o lote já volta cancelado na resposta. Escrever direto no cache
+      // faz a tela mudar no clique, e não dois segundos depois.
+      if (lote) cliente.setQueryData(LOTE_KEY, { lote });
+      cliente.invalidateQueries({ queryKey: LOTE_KEY });
+    },
   });
 }
 

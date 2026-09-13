@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 import time
 from pathlib import Path
 
@@ -511,7 +512,7 @@ def _assistir(
         pw.stop()
 
 
-def _vigiar_publicacao(segundos: float, marca: str) -> bool:
+def _vigiar_publicacao(segundos: float, marca: str, parar: threading.Event | None = None) -> bool:
     """Espera o operador compartilhar. Devolve `True` só quando VIU acontecer.
 
     E "ver" aqui é mais difícil que no TikTok. Lá a aba navega, e navegação é
@@ -542,6 +543,10 @@ def _vigiar_publicacao(segundos: float, marca: str) -> bool:
         pagina = PaginaDoPlaywright(alvo, SELETORES, escapar_apos_escrever=False)
         limite = time.monotonic() + segundos
         while time.monotonic() < limite:
+            if parar is not None and parar.is_set():
+                # D-591: o lote foi cancelado, ou o operador ja marcou "publiquei".
+                logger.info("[InstagramReels] vigilia encerrada a pedido do lote")
+                return False
             if alvo.is_closed():
                 logger.info("[InstagramReels] a aba foi fechada; nao da para saber se publicou")
                 return False
@@ -580,6 +585,15 @@ async def subir_assistido(
     return await asyncio.to_thread(_assistir, video, legenda, capa, marca, publicar_sozinho)
 
 
-async def aguardar_publicacao(*, segundos: float = SEGUNDOS_DE_VIGILIA, marca: str = "") -> bool:
-    """Espera o operador clicar em Compartilhar, sem prender a requisição HTTP."""
-    return await asyncio.to_thread(_vigiar_publicacao, segundos, marca)
+async def aguardar_publicacao(
+    *,
+    segundos: float = SEGUNDOS_DE_VIGILIA,
+    marca: str = "",
+    parar: threading.Event | None = None,
+) -> bool:
+    """Espera o operador clicar em Compartilhar, sem prender a requisição HTTP.
+
+    `parar` encerra a espera antes do tempo (D-591): o lote cancelado, ou o
+    "publiquei" do operador.
+    """
+    return await asyncio.to_thread(_vigiar_publicacao, segundos, marca, parar)

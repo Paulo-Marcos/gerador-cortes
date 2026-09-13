@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 import time
 from pathlib import Path
 
@@ -685,7 +686,9 @@ def _assistir(
         pw.stop()
 
 
-def _vigiar_publicacao(segundos: float, marca: str = "") -> bool:
+def _vigiar_publicacao(
+    segundos: float, marca: str = "", parar: threading.Event | None = None
+) -> bool:
     """Fica de olho na aba até o operador publicar. Síncrono, para rodar em thread.
 
     Devolve `True` só quando VIU a publicação acontecer. Aba fechada, tempo
@@ -718,6 +721,10 @@ def _vigiar_publicacao(segundos: float, marca: str = "") -> bool:
 
         limite = time.monotonic() + segundos
         while time.monotonic() < limite:
+            if parar is not None and parar.is_set():
+                # D-591: o lote foi cancelado, ou o operador ja marcou "publiquei".
+                logger.info("[TikTokStudio] vigilia encerrada a pedido do lote")
+                return False
             if alvo.is_closed():
                 logger.info("[TikTokStudio] a aba foi fechada; nao da para saber se publicou")
                 return False
@@ -734,9 +741,18 @@ def _vigiar_publicacao(segundos: float, marca: str = "") -> bool:
         pw.stop()
 
 
-async def aguardar_publicacao(*, segundos: float = SEGUNDOS_DE_VIGILIA, marca: str = "") -> bool:
-    """Espera o operador clicar em Publicar, sem prender a requisicao HTTP."""
-    return await asyncio.to_thread(_vigiar_publicacao, segundos, marca)
+async def aguardar_publicacao(
+    *,
+    segundos: float = SEGUNDOS_DE_VIGILIA,
+    marca: str = "",
+    parar: threading.Event | None = None,
+) -> bool:
+    """Espera o operador clicar em Publicar, sem prender a requisicao HTTP.
+
+    `parar` encerra a espera antes do tempo (D-591) — é como o lote cancela, ou
+    avisa que o operador já marcou "publiquei".
+    """
+    return await asyncio.to_thread(_vigiar_publicacao, segundos, marca, parar)
 
 
 async def subir_assistido(

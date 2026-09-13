@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import shutil
+import threading
 from pathlib import Path
 
 from app.domain.agendamento import Agendamento
@@ -380,10 +381,15 @@ class DestinoTikTokAssistido(DestinoManual):
         ao_ficar_pronta=None,
         segundos_de_vigilia: float | None = None,
         agendamento: Agendamento | None = None,
+        parar_espera: threading.Event | None = None,
     ) -> None:
         super().__init__(plataforma)
         self.publicar_sozinho = publicar_sozinho
         self.agendamento = agendamento
+        # D-591: o lote acende isto para tirar a vigília da espera — cancelando,
+        # ou porque o operador já marcou "publiquei". Sem ele o `publicar`
+        # ficava preso por até meia hora, e a raia inteira junto.
+        self.parar_espera = parar_espera
         # Chamado quando a aba está pronta e a bola passa para o operador. É o
         # que faz a tela dizer "sua vez" DURANTE a espera, em vez de fingir que
         # ainda está trabalhando por meia hora.
@@ -419,7 +425,9 @@ class DestinoTikTokAssistido(DestinoManual):
             await self.ao_ficar_pronta(relatorio.get("avisos", []))
 
         espera = {"segundos": self.segundos_de_vigilia} if self.segundos_de_vigilia else {}
-        publicado = await tiktok_studio.aguardar_publicacao(marca=marca, **espera)
+        publicado = await tiktok_studio.aguardar_publicacao(
+            marca=marca, parar=self.parar_espera, **espera
+        )
 
         return {**pronto, **relatorio, "modo": self.modo.value, "publicado": publicado}
 
@@ -461,12 +469,15 @@ class DestinoInstagramReelsAssistido(DestinoManual):
         ao_ficar_pronta=None,
         segundos_de_vigilia: float | None = None,
         agendamento: Agendamento | None = None,
+        parar_espera: threading.Event | None = None,
     ) -> None:
         super().__init__(plataforma)
         self.publicar_sozinho = publicar_sozinho
         self.ao_ficar_pronta = ao_ficar_pronta
         self.segundos_de_vigilia = segundos_de_vigilia
         self.agendamento = agendamento
+        # D-591: o mesmo sinal do TikTok assistido.
+        self.parar_espera = parar_espera
 
     async def publicar(self, pacote: PacotePublicacao) -> dict:
         from uuid import uuid4
@@ -506,6 +517,8 @@ class DestinoInstagramReelsAssistido(DestinoManual):
             await self.ao_ficar_pronta(relatorio.get("avisos", []))
 
         espera = {"segundos": self.segundos_de_vigilia} if self.segundos_de_vigilia else {}
-        publicado = await instagram_reels.aguardar_publicacao(marca=marca, **espera)
+        publicado = await instagram_reels.aguardar_publicacao(
+            marca=marca, parar=self.parar_espera, **espera
+        )
 
         return {**pronto, **relatorio, "modo": self.modo.value, "publicado": publicado}

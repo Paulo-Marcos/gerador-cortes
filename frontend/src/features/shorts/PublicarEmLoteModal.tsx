@@ -111,9 +111,26 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
       size="xl"
       footer={
         rodando ? (
-          <Button variant="ghost" size="sm" onClick={() => cancelar.mutate()}>
-            Cancelar o lote
-          </Button>
+          // D-591: o botão precisa DIZER que pegou. O item em curso ainda
+          // termina de subir; sem o "cancelando", a espera dele parecia um
+          // clique que não fez nada.
+          <div className="flex items-center gap-2">
+            {cancelar.isError && (
+              <span className="text-[11.5px] text-[var(--wb-text-dim)]">
+                não consegui cancelar — tente de novo
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={cancelar.isPending || Boolean(lote?.cancelado)}
+              title={lote?.cancelado ? 'o item em curso termina; os que esperavam foram cancelados' : undefined}
+              onClick={() => cancelar.mutate()}
+            >
+              {(cancelar.isPending || lote?.cancelado) && <Loader2 className="animate-spin" />}
+              {lote?.cancelado ? 'Cancelando…' : 'Cancelar o lote'}
+            </Button>
+          </div>
         ) : (
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>

@@ -29,6 +29,7 @@ mesma cota, e o segundo estragaria o primeiro sem que ninguém tivesse pedido.
 from __future__ import annotations
 
 import logging
+import threading
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -63,6 +64,7 @@ NAO_DEU_PARA_CONFIRMAR = (
     "nao consegui confirmar a publicacao (a aba pode ter sido fechada); "
     "marque aqui se voce publicou"
 )
+CONFIRMADO_A_MAO = "voce marcou como publicado"
 
 ALVO_SHORT = "short"
 ALVO_CORTE = "corte"
@@ -116,6 +118,13 @@ class ItemDoLote:
     estado: EstadoItem = EstadoItem.AGUARDANDO
     detalhe: str = ""
     url: str = ""
+    # D-591: o sinal que tira a raia da vigília do robô. Sem ele, "cancelar" e
+    # "publiquei" mudavam o estado, mas a raia seguia presa esperando a aba — e
+    # os itens seguintes ficavam parados por até meia hora.
+    #
+    # `threading` e não `asyncio`: quem lê o sinal é a vigília, que roda num
+    # thread (Playwright síncrono, D-369).
+    espera: threading.Event = field(default_factory=threading.Event, repr=False, compare=False)
 
     def como_dict(self) -> dict:
         return {
@@ -249,13 +258,30 @@ async def criar(
     return lote
 
 
-def cancelar() -> bool:
-    """Interrompe o lote atual. O item em curso termina; os que esperam morrem."""
-    if _lote_atual is None or _lote_atual.terminou:
-        return False
-    _lote_atual.cancelado = True
+async def cancelar() -> Lote | None:
+    """Interrompe o lote atual — na hora, e não no próximo item. Devolve o lote.
+
+    D-591: antes isto só ligava uma bandeira, e a raia só a lia ANTES de começar
+    o item seguinte. Com o robô esperando o clique do operador (vigília de até
+    meia hora), ninguém lia: a tela continuava igual e o botão parecia morto.
+
+    Agora os que esperam viram CANCELADO no ato, e o item em curso recebe o
+    sinal de largar a vigília. A aba que o robô preparou continua aberta — e o
+    item fica em SUA_VEZ, com o "publiquei" à mão, porque o operador pode ter
+    publicado antes de cancelar.
+    """
+    lote = _lote_atual
+    if lote is None or lote.terminou:
+        return None
+
+    lote.cancelado = True
+    for item in lote.itens:
+        if item.estado is EstadoItem.AGUARDANDO:
+            await _mudar(item, EstadoItem.CANCELADO, detalhe="lote cancelado")
+        else:
+            item.espera.set()
     logger.info("[Lote] cancelado a pedido do operador")
-    return True
+    return lote
 
 
 async def _rodar_raia(lote: Lote, plataforma: Plataforma) -> None:
@@ -314,6 +340,7 @@ def _destino_do_item(item: ItemDoLote, lote: Lote) -> Destino:
         publicar_sozinho=lote.opcoes.publicar_sozinho,
         ao_ficar_pronta=ao_ficar_pronta,
         agendamento=lote.opcoes.agendamento,
+        parar_espera=item.espera,
     )
 
 
@@ -377,6 +404,10 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
     if destino.modo is ModoPublicacao.ASSISTIDO:
         if resultado.get("publicado"):
             await _mudar(item, EstadoItem.PUBLICADO, detalhe=SUBIU_NO_TIKTOK, publicado=True)
+            return EstadoItem.PUBLICADO
+        if item.estado is EstadoItem.PUBLICADO:
+            # D-591: o operador clicou "publiquei" DURANTE a vigília, e foi isso
+            # que a encerrou. Rebaixar para SUA_VEZ desfaria a confirmação dele.
             return EstadoItem.PUBLICADO
         # `False` aqui é "não sei", e não "não publicou" — a aba pode ter sido
         # fechada. Deixar em SUA_VEZ mantém o botão "publiquei" à mão, que é o
@@ -539,6 +570,7 @@ async def confirmar(alvo_id: str, plataforma: Plataforma) -> bool:
         if registro is None:
             return False
         registro.estado = EstadoItem.PUBLICADO.value
+        registro.detalhe = CONFIRMADO_A_MAO
         registro.publicado_em = datetime.utcnow()
         await db.commit()
 
@@ -546,6 +578,11 @@ async def confirmar(alvo_id: str, plataforma: Plataforma) -> bool:
         for item in _lote_atual.itens:
             if item.alvo_id == alvo_id and item.plataforma is plataforma:
                 item.estado = EstadoItem.PUBLICADO
+                item.detalhe = CONFIRMADO_A_MAO
+                # D-591: e solta a vigília. Sem isto a raia seguia esperando a
+                # aba por até meia hora, com o item já marcado, e os seguintes
+                # parados — exatamente o "subiu o primeiro e o resto travou".
+                item.espera.set()
     return True
 
 

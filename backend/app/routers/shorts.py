@@ -1285,10 +1285,15 @@ async def ver_lote():
 
 @router.post("/lote/cancelar")
 async def cancelar_lote():
-    """Interrompe o lote. O item em curso termina; os que esperam nao comecam."""
+    """Interrompe o lote na hora: os que esperam viram cancelados e o robo larga a vigilia.
+
+    Devolve o lote ja mudado (D-591), para a tela trocar sem esperar o proximo
+    ciclo do polling — o atraso era parte de o botao parecer morto.
+    """
     from app.services import publicacao_lote
 
-    return {"cancelado": publicacao_lote.cancelar()}
+    lote = await publicacao_lote.cancelar()
+    return {"cancelado": lote is not None, "lote": lote.como_dict() if lote else None}
 
 
 class ConfirmarPublicacaoRequest(BaseModel):
