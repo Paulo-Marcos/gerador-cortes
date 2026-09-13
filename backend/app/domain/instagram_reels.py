@@ -46,6 +46,9 @@ class Passo(StrEnum):
     COMPOSITOR = "compositor"
     ARQUIVO = "arquivo"
     AVANCAR = "avancar"
+    # D-589: acontece DURANTE o avancar (mora na etapa "Editar"), e so e
+    # registrado depois dele porque so ali se sabe se entrou.
+    CAPA = "capa"
     LEGENDA = "legenda"
     REVISAO = "revisao"
     PUBLICAR = "publicar"
@@ -60,6 +63,7 @@ ROTULOS: dict[Passo, str] = {
     Passo.COMPOSITOR: "abrindo o compositor",
     Passo.ARQUIVO: "enviando o vídeo",
     Passo.AVANCAR: "passando pelas etapas de edição",
+    Passo.CAPA: "trocando a capa",
     Passo.LEGENDA: "escrevendo a legenda",
     Passo.REVISAO: "deixando pronto para você conferir",
     Passo.PUBLICAR: "compartilhando",
@@ -84,6 +88,10 @@ ORIENTACOES: dict[Passo, str] = {
         "Travei numa das etapas de edicao (cortar, filtros). O modal ficou aberto — "
         "siga a mao a partir dali."
     ),
+    Passo.CAPA: (
+        "Subi o video, mas nao consegui trocar a capa. Ela esta na pasta do pacote: "
+        "volte pela seta ate a etapa Editar e troque antes de compartilhar."
+    ),
     Passo.LEGENDA: (
         "Nao achei a caixa da legenda. Ela esta na area de transferencia: cole com "
         "Ctrl+V no modal que ficou aberto."
@@ -99,10 +107,10 @@ ORIENTACOES: dict[Passo, str] = {
 }
 
 
-# Nenhum passo é opcional aqui, ao contrário do TikTok — lá a capa podia falhar
-# sem custo porque o vídeo já estava no ar. O Reels não tem passo decorativo: se
-# um quebra, não há post.
-PASSOS_OPCIONAIS: frozenset[Passo] = frozenset()
+# Só a capa é opcional (D-589), pelo mesmo motivo do TikTok: quando ela entra, o
+# vídeo já subiu, e derrubar o Reel por causa dela trocaria um contratempo por um
+# retrabalho. Os demais continuam obrigatórios: se um quebra, não há post.
+PASSOS_OPCIONAIS: frozenset[Passo] = frozenset({Passo.CAPA})
 
 
 class RoteiroInterrompido(RuntimeError):

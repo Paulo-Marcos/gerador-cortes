@@ -25,6 +25,17 @@ quais — é o que poupa a próxima pessoa:
 E o compositor tem **duas** etapas de "Avançar" hoje (cortar → editar/capa →
 legenda). O roteiro não conta cliques de propósito: espera pela legenda.
 
+## A capa, MEDIDA em 13/09/2026 (D-589)
+
+Mora na etapa do meio ("Editar"), num bloco "Foto da capa". Duas surpresas,
+nos dois sentidos:
+
+5. **Não há modal nem "Salvar"**, ao contrário do TikTok. A imagem entregue ao
+   `<input type=file>` escondido vale na hora, e sobrevive até a legenda.
+6. **A tira de quadros NÃO muda** com a capa nova — quem muda é o preview
+   grande. E ele já mostra um blob ANTES (um quadro do vídeo), então a prova é
+   o blob ter mudado, não ele existir.
+
 O que continua sem prova, e é honesto dizer: `aviso_de_sucesso`. Ele só aparece
 depois de um post de verdade, e a calibração parou antes disso. É por isso que
 não achá-lo devolve "não sei" em vez de "não publicou".
@@ -74,6 +85,12 @@ SEGUNDOS_PARA_PROCESSAR = 600.0
 # O cartao do Reels nasce depois do upload comecar; esta espera e o que da tempo
 # de ele aparecer. Curta: nao achar e o caso normal.
 SEGUNDOS_PARA_AVISO = 6.0
+# D-589: quanto cada etapa espera o campo da capa aparecer. Curta porque so uma
+# etapa tem o campo, e o `existe` da legenda que vem antes ja deu tempo de a
+# etapa renderizar. O preview, MEDIDO, troca em ~0,06s; os 10s sao folga.
+SEGUNDOS_PARA_ETAPA_DA_CAPA = 3.0
+SEGUNDOS_PARA_CAPA = 10.0
+INTERVALO_DA_CAPA = 0.25
 INTERVALO_DA_VIGILIA = 3.0
 SEGUNDOS_DE_VIGILIA = 1800.0
 SEGUNDOS_PARA_CONFIRMAR_PUBLICACAO = 120.0
@@ -140,6 +157,18 @@ SELETORES: dict[str, str] = {
         'div[role="dialog"] div[role="button"]:text-is("Avançar"), '
         'div[role="dialog"] div[role="button"]:text-is("Next")'
     ),
+    # D-589, MEDIDOS em 13/09/2026 na etapa "Editar". O "Selecionar do
+    # computador" e fachada deste input escondido, como no TikTok: entregar a
+    # imagem a ele basta. So existe um input de imagem no compositor, e so ali.
+    #
+    # Sem variante pt/en de proposito: nenhum dos dois ancora em texto. O
+    # `accept` e do formulario e o `style` e do React — nenhum passa pela
+    # traducao. E CSS puro, porque o arquivo vai por CDP (D-544).
+    "campo_da_capa": 'div[role="dialog"] input[type="file"][accept*="image"]',
+    # A prova da troca: a DIV irma do `<video>` do preview, cuja
+    # `background-image` e a capa em blob. Ela ja existe ANTES da capa, com um
+    # quadro do video — o que conta e o blob mudar (ver o topo do modulo).
+    "miniatura_da_capa": 'div[role="dialog"] video + div[style*="background-image"]',
     # MEDIDA em 10/09/2026: e um contenteditable com
     # `aria-label="Adicione uma legenda..."`, e nao um <textarea>. O rotulo vem
     # primeiro porque `div[contenteditable]` sozinho e generico demais — ele
@@ -180,10 +209,12 @@ def executar_roteiro(
     *,
     video: Path,
     legenda: str,
+    capa: Path | None = None,
     marca: str = "",
     publicar_sozinho: bool = False,
 ) -> dict:
-    """Abre o compositor, sobe o Reel, escreve a legenda — e para no Compartilhar.
+    """Abre o compositor, sobe o Reel, põe a capa, escreve a legenda — e para no
+    Compartilhar.
 
     Levanta `RoteiroInterrompido` no primeiro passo que falhar, sempre com a
     janela aberta: quem chama nunca fecha o navegador, e o modal pela metade é
@@ -231,8 +262,22 @@ def executar_roteiro(
     # a pagina. Dispensar e best-effort: nao achar e o caso normal.
     _dispensar_aviso(pagina)
 
-    _avancar_ate_a_legenda(pagina)
+    capa_em_disco = capa if capa and capa.is_file() else None
+    if capa and not capa_em_disco:
+        avisos.append("A capa nao esta mais em disco; o Instagram vai usar um quadro do video.")
+
+    erro_da_capa = _avancar_ate_a_legenda(pagina, capa_em_disco)
     feitos.append(Passo.AVANCAR)
+    if capa_em_disco and erro_da_capa:
+        # Passo opcional, como no TikTok: o video ja subiu. Derrubar o Reel por
+        # causa da capa trocaria um contratempo por um retrabalho.
+        avisos.append(
+            f"{erro_da_capa} Volte pela seta ate a etapa Editar e troque a capa antes "
+            f"de compartilhar; o arquivo esta em {capa_em_disco}."
+        )
+        logger.warning("[InstagramReels] capa nao entrou: %s", erro_da_capa)
+    elif capa_em_disco:
+        feitos.append(Passo.CAPA)
 
     _passo(
         pagina.escrever,
@@ -269,6 +314,7 @@ def executar_roteiro(
     return {
         "passos": [p.value for p in feitos],
         "resumo": descricao_do_progresso(feitos),
+        "capa_aplicada": Passo.CAPA in feitos,
         "avisos": avisos,
         "publicado": publicado,
     }
@@ -289,16 +335,29 @@ def _dispensar_aviso(pagina: Pagina) -> None:
         logger.debug("[InstagramReels] aviso: %s", exc)
 
 
-def _avancar_ate_a_legenda(pagina: Pagina) -> None:
-    """Clica em Avançar até a caixa da legenda aparecer.
+def _avancar_ate_a_legenda(pagina: Pagina, capa: Path | None = None) -> str:
+    """Clica em Avançar até a caixa da legenda aparecer — e põe a capa no caminho.
 
     Contar cliques seria acertar a versão de hoje: as etapas intermediárias do
     compositor (recorte, filtros) vêm e vão. O que não muda é o DESTINO — a
     caixa da legenda —, então é por ela que a gente espera.
+
+    A capa (D-589) entra DURANTE a travessia porque mora na etapa "Editar", que
+    só existe entre o recorte e a legenda. E a etapa certa é reconhecida pelo
+    campo da capa aparecer, e não pela posição — pelo mesmo motivo acima.
+
+    Devolve o motivo de a capa não ter entrado, ou "" (entrou, ou não havia).
     """
+    erro_da_capa = "Nao achei a etapa da capa no compositor." if capa else ""
+    pendente = capa
     for tentativa in range(MAXIMO_DE_AVANCOS):
         if pagina.existe("editor_da_legenda", segundos=3.0):
-            return
+            return erro_da_capa
+        if pendente and pagina.existe(
+            "campo_da_capa", segundos=SEGUNDOS_PARA_ETAPA_DA_CAPA, visivel=False
+        ):
+            erro_da_capa = _tentar_capa(pagina, pendente)
+            pendente = None
         if not pagina.existe("botao_avancar", segundos=SEGUNDOS_PARA_ELEMENTO):
             raise RoteiroInterrompido(
                 Passo.AVANCAR, f"nao achei o botao de avancar na etapa {tentativa + 1}"
@@ -309,6 +368,45 @@ def _avancar_ate_a_legenda(pagina: Pagina) -> None:
         raise RoteiroInterrompido(
             Passo.AVANCAR, f"a caixa da legenda nao apareceu em {MAXIMO_DE_AVANCOS} etapas"
         )
+    return erro_da_capa
+
+
+def _tentar_capa(pagina: Pagina, capa: Path) -> str:
+    """Troca a capa, devolvendo o motivo quando não dá — e nunca levantando.
+
+    O irmão do `_tentar_capa` do TikTok, mais curto por uma diferença MEDIDA em
+    13/09/2026: aqui não há modal nem "Salvar", a imagem entregue ao input vale
+    na hora.
+
+    A desconfiança é a mesma: entregar sem erro prova só que o input aceitou. A
+    prova é o blob do preview MUDAR — e ele sempre tem um, o quadro do vídeo.
+    """
+    try:
+        if not pagina.existe("miniatura_da_capa", segundos=SEGUNDOS_PARA_CAPA):
+            return "Achei a etapa da capa, mas nao o preview para conferir a troca."
+        antes = _miniatura_da_capa(pagina)
+
+        pagina.enviar_arquivo("campo_da_capa", capa, segundos=SEGUNDOS_PARA_CAPA)
+        if not antes:
+            return "Entreguei a capa, mas nao consegui ler o preview para conferir."
+
+        limite = time.monotonic() + SEGUNDOS_PARA_CAPA
+        while time.monotonic() < limite:
+            if _miniatura_da_capa(pagina) not in ("", antes):
+                logger.info("[InstagramReels] capa aplicada")
+                return ""
+            time.sleep(INTERVALO_DA_CAPA)
+        return "Entreguei a capa, mas o preview continua com o quadro do video."
+    except Exception as exc:  # noqa: BLE001 — qualquer falha aqui vira aviso
+        return f"{type(exc).__name__}: {exc}"
+
+
+def _miniatura_da_capa(pagina: Pagina) -> str:
+    """O `style` do preview — onde mora o blob da capa —, ou vazio."""
+    try:
+        return pagina.atributo_de("miniatura_da_capa", "style")
+    except Exception:  # noqa: BLE001 — sem leitura a comparação é inconclusiva
+        return ""
 
 
 def _legenda_ficou(pagina: Pagina, legenda: str) -> bool:
@@ -377,7 +475,9 @@ def perfil_do_chrome() -> Path:
     return perfil_do_canal(PERFIL)
 
 
-def _assistir(video: Path, legenda: str, marca: str, publicar_sozinho: bool) -> dict:
+def _assistir(
+    video: Path, legenda: str, capa: Path | None, marca: str, publicar_sozinho: bool
+) -> dict:
     """Tudo o que fala Playwright, num thread só (síncrono por causa da D-369)."""
     try:
         from playwright.sync_api import sync_playwright
@@ -401,6 +501,7 @@ def _assistir(video: Path, legenda: str, marca: str, publicar_sozinho: bool) -> 
             PaginaDoPlaywright(page, SELETORES, escapar_apos_escrever=False),
             video=video,
             legenda=legenda,
+            capa=capa,
             marca=marca,
             publicar_sozinho=publicar_sozinho,
         )
@@ -467,6 +568,7 @@ async def subir_assistido(
     *,
     video: Path,
     legenda: str,
+    capa: Path | None = None,
     marca: str = "",
     publicar_sozinho: bool = False,
 ) -> dict:
@@ -475,7 +577,7 @@ async def subir_assistido(
         raise RoteiroInterrompido(Passo.ARQUIVO, "o MP4 do pacote nao esta em disco")
 
     logger.info("[InstagramReels] subindo %s", video.name)
-    return await asyncio.to_thread(_assistir, video, legenda, marca, publicar_sozinho)
+    return await asyncio.to_thread(_assistir, video, legenda, capa, marca, publicar_sozinho)
 
 
 async def aguardar_publicacao(*, segundos: float = SEGUNDOS_DE_VIGILIA, marca: str = "") -> bool:

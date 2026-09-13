@@ -36,9 +36,20 @@ class PaginaFalsa:
     """
 
     def __init__(
-        self, *, url=FEED, etapas=2, falhar=(), ausentes=(), confirma_ao_compartilhar=True
+        self,
+        *,
+        url=FEED,
+        etapas=2,
+        falhar=(),
+        ausentes=(),
+        confirma_ao_compartilhar=True,
+        troca_a_capa=True,
     ):
         self.url = url
+        # D-589, MEDIDO em 13/09/2026: o preview ja tem um blob antes da capa (um
+        # quadro do video), e a capa entregue troca esse blob na hora.
+        self.miniatura = "background-image: url(blob:quadro-do-video)"
+        self.troca_a_capa = troca_a_capa
         self.etapas = etapas
         self.falhar = set(falhar)
         self.ausentes = set(ausentes)
@@ -64,6 +75,8 @@ class PaginaFalsa:
 
     def enviar_arquivo(self, alvo, caminho, *, segundos):
         self._registrar("enviar", alvo)
+        if alvo == "campo_da_capa" and self.troca_a_capa:
+            self.miniatura = "background-image: url(blob:capa)"
 
     def escrever(self, alvo, texto, *, segundos):
         self._registrar("escrever", alvo)
@@ -73,7 +86,7 @@ class PaginaFalsa:
         return self.escrito.get(alvo, "")
 
     def atributo_de(self, alvo, atributo):
-        return ""
+        return self.miniatura
 
     def esperar_sumir(self, alvo, *, segundos):
         pass
@@ -91,6 +104,9 @@ class PaginaFalsa:
         if alvo == "editor_da_legenda":
             # A legenda só aparece depois de vencidas as etapas intermediárias.
             return self.etapas == 0
+        if alvo == "campo_da_capa":
+            # MEDIDO: o campo so existe na etapa "Editar", a ultima antes da legenda.
+            return self.etapas == 1
         if alvo == "dialogo":
             return self.dialogo_aberto
         if alvo == "confirmacao_de_envio":
@@ -126,6 +142,15 @@ def video(tmp_path):
 def sem_espera_real(monkeypatch):
     monkeypatch.setattr(instagram_reels, "INTERVALO_DA_VIGILIA", 0.0)
     monkeypatch.setattr(instagram_reels, "SEGUNDOS_PARA_CONFIRMAR_PUBLICACAO", 0.2)
+    monkeypatch.setattr(instagram_reels, "INTERVALO_DA_CAPA", 0.0)
+    monkeypatch.setattr(instagram_reels, "SEGUNDOS_PARA_CAPA", 0.2)
+
+
+@pytest.fixture
+def capa(tmp_path):
+    caminho = tmp_path / "capa.jpg"
+    caminho.write_bytes(b"jpg")
+    return caminho
 
 
 class TestCaminhoFeliz:
@@ -274,6 +299,108 @@ class TestCompartilharSozinho:
         instagram_reels.executar_roteiro(pagina, video=video, legenda="oi", publicar_sozinho=True)
 
         assert "clicar:botao_concluir" in pagina.cliques
+
+
+class TestCapa:
+    """D-589: a capa é o único passo que reporta em vez de interromper.
+
+    Seletores MEDIDOS em 13/09/2026 no Chrome do robô de DEV, sem compartilhar.
+    """
+
+    def test_a_capa_entra_na_etapa_editar(self, video, capa):
+        pagina = PaginaFalsa(etapas=2)
+
+        relatorio = instagram_reels.executar_roteiro(pagina, video=video, legenda="oi", capa=capa)
+
+        assert relatorio["capa_aplicada"] is True
+        assert Passo.CAPA.value in relatorio["passos"]
+        assert relatorio["avisos"] == []
+
+    def test_a_capa_vai_antes_do_ultimo_avancar(self, video, capa):
+        """Depois do último Avançar a etapa "Editar" não existe mais."""
+        pagina = PaginaFalsa(etapas=2)
+
+        instagram_reels.executar_roteiro(pagina, video=video, legenda="oi", capa=capa)
+
+        avancos = [i for i, c in enumerate(pagina.cliques) if c == "clicar:botao_avancar"]
+        entrega = pagina.cliques.index("enviar:campo_da_capa")
+        assert avancos[0] < entrega < avancos[1]
+
+    def test_preview_que_nao_muda_vira_aviso(self, video, capa):
+        """O preview SEMPRE tem um blob — um quadro do vídeo.
+
+        Então "existe preview" não prova nada; o que prova é ele ter MUDADO. Sem
+        a conferência, o relatório diria "capa aplicada" com o input mudo.
+        """
+        pagina = PaginaFalsa(troca_a_capa=False)
+
+        relatorio = instagram_reels.executar_roteiro(pagina, video=video, legenda="oi", capa=capa)
+
+        assert relatorio["capa_aplicada"] is False
+        assert any("quadro do video" in a for a in relatorio["avisos"])
+
+    def test_capa_que_falha_nao_derruba_o_reel(self, video, capa):
+        pagina = PaginaFalsa(falhar=("campo_da_capa",))
+
+        relatorio = instagram_reels.executar_roteiro(pagina, video=video, legenda="oi", capa=capa)
+
+        assert relatorio["capa_aplicada"] is False
+        assert relatorio["avisos"]
+        assert relatorio["passos"][-2:] == ["legenda", "revisao"]
+
+    def test_sem_a_etapa_da_capa_o_aviso_diz_isso(self, video, capa):
+        """O Instagram tira e põe etapas; sumir com a da capa não pode travar o Reel."""
+        pagina = PaginaFalsa(ausentes=("campo_da_capa",))
+
+        relatorio = instagram_reels.executar_roteiro(pagina, video=video, legenda="oi", capa=capa)
+
+        assert relatorio["capa_aplicada"] is False
+        assert "etapa da capa" in relatorio["avisos"][0]
+
+    def test_o_aviso_aponta_o_arquivo(self, video, capa):
+        """Com a capa que não entrou, o operador precisa achar o arquivo sem procurar."""
+        pagina = PaginaFalsa(troca_a_capa=False)
+
+        relatorio = instagram_reels.executar_roteiro(pagina, video=video, legenda="oi", capa=capa)
+
+        assert str(capa) in relatorio["avisos"][0]
+
+    def test_sem_capa_nem_procura_a_etapa(self, video):
+        pagina = PaginaFalsa()
+
+        relatorio = instagram_reels.executar_roteiro(pagina, video=video, legenda="oi")
+
+        assert "enviar:campo_da_capa" not in pagina.cliques
+        assert relatorio["capa_aplicada"] is False
+        assert relatorio["avisos"] == []
+
+    def test_capa_apagada_por_fora_vira_aviso(self, video, tmp_path):
+        pagina = PaginaFalsa()
+
+        relatorio = instagram_reels.executar_roteiro(
+            pagina, video=video, legenda="oi", capa=tmp_path / "sumiu.jpg"
+        )
+
+        assert relatorio["capa_aplicada"] is False
+        assert "nao esta mais em disco" in relatorio["avisos"][0]
+        assert "enviar:campo_da_capa" not in pagina.cliques
+
+    def test_com_capa_o_robo_continua_sem_compartilhar(self, video, capa):
+        pagina = PaginaFalsa()
+
+        instagram_reels.executar_roteiro(pagina, video=video, legenda="oi", capa=capa)
+
+        assert "clicar:botao_compartilhar" not in pagina.cliques
+
+    def test_os_seletores_da_capa_sao_CSS_puro_e_presos_ao_dialogo(self):
+        """D-544: o arquivo vai por `querySelector` via CDP, que não conhece os
+        pseudo-seletores do Playwright. E fora do diálogo não há capa nenhuma."""
+        for chave in ("campo_da_capa", "miniatura_da_capa"):
+            seletor = instagram_reels.SELETORES[chave]
+            assert ":has-text" not in seletor
+            assert ":text-is" not in seletor
+            assert "text=" not in seletor
+            assert seletor.startswith('div[role="dialog"]')
 
 
 class TestSinalDePublicacao:

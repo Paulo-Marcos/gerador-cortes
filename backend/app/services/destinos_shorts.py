@@ -432,9 +432,8 @@ class DestinoInstagramReelsAssistido(DestinoManual):
       - o compositor é um MODAL, então não há navegação para provar que saiu.
         A vigília espera o modal fechar e procura o aviso de sucesso, porque
         fechar sozinho também é o que acontece quando alguém descarta;
-      - a capa ainda não é aplicada pelo robô: a etapa existe no compositor,
-        mas os seletores dela não foram medidos. Por isso ele AVISA quando há
-        capa (D-588), em vez de deixar o Reel sair com um quadro qualquer.
+      - a capa entra na etapa "Editar" do compositor (D-589), e como no TikTok
+        é o único passo que reporta em vez de interromper.
 
     A API oficial publicaria isto sem navegador nenhum — mas cobra conta
     Business ligada a uma Página, app review, e o MP4 servido por uma URL
@@ -477,10 +476,12 @@ class DestinoInstagramReelsAssistido(DestinoManual):
 
         pronto = await super().publicar(pacote)
         marca = marca_da_aba(uuid4().hex[:12])
+        capa = pronto.get("capa") or ""
 
         relatorio = await instagram_reels.subir_assistido(
             video=Path(pronto["video"]),
             legenda=legenda_unica(pronto.get("titulo", ""), pronto.get("descricao", "")),
+            capa=Path(capa) if capa else None,
             marca=marca,
             publicar_sozinho=self.publicar_sozinho,
         )
@@ -495,19 +496,6 @@ class DestinoInstagramReelsAssistido(DestinoManual):
                     f"Este Reel NAO fica agendado para {self.agendamento.legivel()}: o "
                     "compositor do instagram.com nao tem agendamento (so o Meta "
                     "Business Suite tem). Compartilhe na hora que quiser publicar.",
-                ],
-            }
-
-        if pronto.get("capa"):
-            # D-588: o robo ainda nao sabe trocar a capa — a etapa existe no
-            # compositor, mas os seletores dela nunca foram medidos. Enquanto
-            # isso, o aviso aponta o arquivo que ja esta na pasta do pacote.
-            relatorio = {
-                **relatorio,
-                "avisos": [
-                    *relatorio.get("avisos", []),
-                    "A capa NAO entra sozinha no Reels: troque na etapa de capa do "
-                    f"compositor, antes da legenda. O arquivo esta em {pronto['capa']}.",
                 ],
             }
 

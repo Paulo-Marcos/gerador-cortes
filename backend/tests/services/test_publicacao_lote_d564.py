@@ -594,7 +594,7 @@ class TestRaiaAssistidaDoInstagram:
         eventos: list[str] = []
         estado = {"publica": True}
 
-        async def _subir(*, video, legenda, marca="", publicar_sozinho=False):
+        async def _subir(*, video, legenda, capa=None, marca="", publicar_sozinho=False):
             eventos.append("subiu")
             return {"passos": [], "resumo": "ok", "avisos": [], "publicado": publicar_sozinho}
 
