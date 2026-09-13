@@ -21,6 +21,7 @@ from app.domain.instagram_reels import (
     RoteiroInterrompido,
     pede_login,
     publicou,
+    recorte_vertical,
 )
 from app.services import instagram_reels
 
@@ -44,8 +45,14 @@ class PaginaFalsa:
         ausentes=(),
         confirma_ao_compartilhar=True,
         troca_a_capa=True,
+        recorte="height: 510px; width: 510px;",
+        aceita_recorte=True,
     ):
         self.url = url
+        # D-592, MEDIDO em 13/09/2026: a etapa "Cortar" abre em 1:1, e escolher
+        # Original estreita a janela para 287x510 no `style` dela.
+        self.recorte = recorte
+        self.aceita_recorte = aceita_recorte
         # D-589, MEDIDO em 13/09/2026: o preview ja tem um blob antes da capa (um
         # quadro do video), e a capa entregue troca esse blob na hora.
         self.miniatura = "background-image: url(blob:quadro-do-video)"
@@ -86,6 +93,8 @@ class PaginaFalsa:
         return self.escrito.get(alvo, "")
 
     def atributo_de(self, alvo, atributo):
+        if alvo == "janela_do_recorte":
+            return self.recorte
         return self.miniatura
 
     def esperar_sumir(self, alvo, *, segundos):
@@ -95,6 +104,8 @@ class PaginaFalsa:
         self._registrar("clicar", alvo)
         if alvo == "botao_avancar":
             self.etapas = max(0, self.etapas - 1)
+        if alvo == "recorte_original" and self.aceita_recorte:
+            self.recorte = "height: 510px; width: 287px;"
         if alvo == "botao_compartilhar" and self.confirma_ao_compartilhar:
             self.confirmado = True
 
@@ -144,6 +155,8 @@ def sem_espera_real(monkeypatch):
     monkeypatch.setattr(instagram_reels, "SEGUNDOS_PARA_CONFIRMAR_PUBLICACAO", 0.2)
     monkeypatch.setattr(instagram_reels, "INTERVALO_DA_CAPA", 0.0)
     monkeypatch.setattr(instagram_reels, "SEGUNDOS_PARA_CAPA", 0.2)
+    monkeypatch.setattr(instagram_reels, "INTERVALO_DO_RECORTE", 0.0)
+    monkeypatch.setattr(instagram_reels, "SEGUNDOS_PARA_RECORTE", 0.2)
 
 
 @pytest.fixture
@@ -164,6 +177,7 @@ class TestCaminhoFeliz:
             "sessao",
             "compositor",
             "arquivo",
+            "recorte",
             "avancar",
             "legenda",
             "revisao",
@@ -299,6 +313,74 @@ class TestCompartilharSozinho:
         instagram_reels.executar_roteiro(pagina, video=video, legenda="oi", publicar_sozinho=True)
 
         assert "clicar:botao_concluir" in pagina.cliques
+
+
+class TestRecorte:
+    """D-592: o compositor abre o recorte em 1:1, e um 9:16 perdia metade da altura.
+
+    MEDIDO em 13/09/2026 com um short real de PROD (1080x1920), sem compartilhar.
+    """
+
+    def test_escolhe_original_antes_de_avancar(self, video):
+        pagina = PaginaFalsa()
+
+        relatorio = instagram_reels.executar_roteiro(pagina, video=video, legenda="oi")
+
+        original = pagina.cliques.index("clicar:recorte_original")
+        assert pagina.cliques.index("enviar:campo_do_arquivo") < original
+        assert original < pagina.cliques.index("clicar:botao_avancar")
+        assert recorte_vertical(pagina.recorte)
+        assert Passo.RECORTE.value in relatorio["passos"]
+
+    def test_recorte_que_continua_quadrado_interrompe_antes_de_avancar(self, video):
+        """Obrigatório, e não aviso: com "publicar sozinho" o Reel iria ao ar cortado."""
+        pagina = PaginaFalsa(aceita_recorte=False)
+
+        with pytest.raises(RoteiroInterrompido) as erro:
+            instagram_reels.executar_roteiro(
+                pagina, video=video, legenda="oi", publicar_sozinho=True
+            )
+
+        assert erro.value.passo is Passo.RECORTE
+        assert "clicar:botao_avancar" not in pagina.cliques
+        assert "clicar:botao_compartilhar" not in pagina.cliques
+
+    def test_ja_vertical_nao_mexe_no_recorte(self, video):
+        pagina = PaginaFalsa(recorte="height: 510px; width: 287px;")
+
+        instagram_reels.executar_roteiro(pagina, video=video, legenda="oi")
+
+        assert "clicar:botao_do_recorte" not in pagina.cliques
+
+    def test_sem_a_etapa_de_recorte_interrompe(self, video):
+        pagina = PaginaFalsa(ausentes=("janela_do_recorte",))
+
+        with pytest.raises(RoteiroInterrompido) as erro:
+            instagram_reels.executar_roteiro(pagina, video=video, legenda="oi")
+
+        assert erro.value.passo is Passo.RECORTE
+        assert "recorte" in str(erro.value).lower()
+
+    def test_fecha_o_menu_depois_de_escolher(self, video):
+        """MEDIDO: o menu continua aberto depois da escolha — o ícone o fecha."""
+        pagina = PaginaFalsa()
+
+        instagram_reels.executar_roteiro(pagina, video=video, legenda="oi")
+
+        assert pagina.cliques.count("clicar:botao_do_recorte") == 2
+
+    @pytest.mark.parametrize(
+        ("estilo", "vertical"),
+        [
+            ("height: 510px; width: 287px; display: flex", True),
+            ("height: 510px; width: 510px;", False),
+            ("width: 906px; height: 510px", False),
+            ("max-width: 100px; height: 510px; width: 510px", False),
+            ("display: flex", False),
+        ],
+    )
+    def test_so_e_vertical_quando_a_altura_passa_a_largura(self, estilo, vertical):
+        assert recorte_vertical(estilo) is vertical
 
 
 class TestCapa:

@@ -36,6 +36,13 @@ nos dois sentidos:
    grande. E ele já mostra um blob ANTES (um quadro do vídeo), então a prova é
    o blob ter mudado, não ele existir.
 
+## O recorte, MEDIDO em 13/09/2026 (D-592)
+
+7. **A etapa "Cortar" abre em 1:1.** Um short 9:16 recortado em quadrado perdia
+   quase metade da altura, sem ninguém ter pedido. O ícone "Selecionar corte"
+   abre Original, 1:1, 9:16 e 16:9; o roteiro escolhe Original e confere que a
+   janela de recorte ficou vertical (510x510 → 287x510) antes de avançar.
+
 O que continua sem prova, e é honesto dizer: `aviso_de_sucesso`. Ele só aparece
 depois de um post de verdade, e a calibração parou antes disso. É por isso que
 não achá-lo devolve "não sei" em vez de "não publicou".
@@ -61,6 +68,7 @@ from app.domain.instagram_reels import (
     descricao_do_progresso,
     pede_login,
     publicou,
+    recorte_vertical,
 )
 from app.services.navegador_assistido import (
     NavegadorIndisponivel,
@@ -92,6 +100,9 @@ SEGUNDOS_PARA_AVISO = 6.0
 SEGUNDOS_PARA_ETAPA_DA_CAPA = 3.0
 SEGUNDOS_PARA_CAPA = 10.0
 INTERVALO_DA_CAPA = 0.25
+# D-592: a janela de recorte muda na hora (MEDIDO); os 5s sao folga.
+SEGUNDOS_PARA_RECORTE = 5.0
+INTERVALO_DO_RECORTE = 0.25
 INTERVALO_DA_VIGILIA = 3.0
 SEGUNDOS_DE_VIGILIA = 1800.0
 SEGUNDOS_PARA_CONFIRMAR_PUBLICACAO = 120.0
@@ -158,6 +169,22 @@ SELETORES: dict[str, str] = {
         'div[role="dialog"] div[role="button"]:text-is("Avançar"), '
         'div[role="dialog"] div[role="button"]:text-is("Next")'
     ),
+    # D-592, MEDIDOS em 13/09/2026 na etapa "Cortar", com um short real de PROD.
+    # Ela abre em 1:1 — e um 9:16 recortado em quadrado perde quase metade da
+    # altura.
+    #
+    # O gatilho do menu e o proprio `<svg>`: clicar no `div[role=button]` que o
+    # contem NAO abriu o menu (medido). As opcoes trazem a proporcao num span, e
+    # esses textos nao passam pela traducao; o aria do icone passa, e "Select
+    # crop" e a rede do ingles, NAO medida (a conta e em portugues).
+    "botao_do_recorte": (
+        'div[role="dialog"] svg[aria-label="Selecionar corte"], '
+        'div[role="dialog"] svg[aria-label="Select crop"]'
+    ),
+    "recorte_original": 'div[role="dialog"] span:text-is("Original")',
+    # A prova: a DIV que recorta o video — a avo do `<video>` — escreve largura
+    # e altura no `style` inline: 510x510 em 1:1, 287x510 em Original.
+    "janela_do_recorte": 'div[role="dialog"] div:has(> div > video)',
     # D-589, MEDIDOS em 13/09/2026 na etapa "Editar". O "Selecionar do
     # computador" e fachada deste input escondido, como no TikTok: entregar a
     # imagem a ele basta. So existe um input de imagem no compositor, e so ali.
@@ -263,6 +290,9 @@ def executar_roteiro(
     # a pagina. Dispensar e best-effort: nao achar e o caso normal.
     _dispensar_aviso(pagina)
 
+    _manter_video_inteiro(pagina)
+    feitos.append(Passo.RECORTE)
+
     capa_em_disco = capa if capa and capa.is_file() else None
     if capa and not capa_em_disco:
         avisos.append("A capa nao esta mais em disco; o Instagram vai usar um quadro do video.")
@@ -334,6 +364,52 @@ def _dispensar_aviso(pagina: Pagina) -> None:
             logger.info("[InstagramReels] aviso do Reels dispensado")
     except Exception as exc:  # noqa: BLE001 — o aviso nunca derruba o upload
         logger.debug("[InstagramReels] aviso: %s", exc)
+
+
+def _manter_video_inteiro(pagina: Pagina) -> None:
+    """Troca o recorte para Original e confere que a janela ficou vertical (D-592).
+
+    Obrigatório, e não best-effort como a capa: um Reel recortado em quadrado é
+    um post com metade do vídeo, e com o "publicar sozinho" ligado ele iria ao
+    ar assim. Parar aqui entrega o modal aberto justamente na etapa a corrigir.
+
+    Original, e não 9:16: para um short as duas dão a mesma janela (medido), e
+    só a Original nunca corta nada se um arquivo sair fora da proporção.
+    """
+    if not pagina.existe("janela_do_recorte", segundos=SEGUNDOS_PARA_ELEMENTO):
+        raise RoteiroInterrompido(Passo.RECORTE, "a etapa de recorte nao apareceu")
+    if _recorte_ficou_vertical(pagina):
+        return
+
+    _passo(pagina.clicar, Passo.RECORTE, "botao_do_recorte", segundos=SEGUNDOS_PARA_ELEMENTO)
+    _passo(pagina.clicar, Passo.RECORTE, "recorte_original", segundos=SEGUNDOS_PARA_ELEMENTO)
+
+    limite = time.monotonic() + SEGUNDOS_PARA_RECORTE
+    while not _recorte_ficou_vertical(pagina):
+        if time.monotonic() >= limite:
+            raise RoteiroInterrompido(
+                Passo.RECORTE, "escolhi Original e a janela de recorte continuou quadrada"
+            )
+        time.sleep(INTERVALO_DO_RECORTE)
+
+    logger.info("[InstagramReels] recorte em Original")
+    _fechar_menu_do_recorte(pagina)
+
+
+def _recorte_ficou_vertical(pagina: Pagina) -> bool:
+    try:
+        return recorte_vertical(pagina.atributo_de("janela_do_recorte", "style"))
+    except Exception:  # noqa: BLE001 — sem leitura não dá para afirmar que ficou
+        return False
+
+
+def _fechar_menu_do_recorte(pagina: Pagina) -> None:
+    """MEDIDO: o menu continua aberto depois da escolha. Fechar é best-effort."""
+    try:
+        if pagina.existe("recorte_original", segundos=1.0):
+            pagina.clicar("botao_do_recorte", segundos=5.0)
+    except Exception as exc:  # noqa: BLE001 — menu aberto não estraga o recorte
+        logger.debug("[InstagramReels] menu do recorte continuou aberto: %s", exc)
 
 
 def _avancar_ate_a_legenda(pagina: Pagina, capa: Path | None = None) -> str:

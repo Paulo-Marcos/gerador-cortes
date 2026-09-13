@@ -35,6 +35,7 @@ tudo sem confirmar nada.
 
 from __future__ import annotations
 
+import re
 from enum import StrEnum
 
 
@@ -45,6 +46,8 @@ class Passo(StrEnum):
     SESSAO = "sessao"
     COMPOSITOR = "compositor"
     ARQUIVO = "arquivo"
+    # D-592: a etapa "Cortar" abre em 1:1; sem este passo o 9:16 saía cortado.
+    RECORTE = "recorte"
     AVANCAR = "avancar"
     # D-589: acontece DURANTE o avancar (mora na etapa "Editar"), e so e
     # registrado depois dele porque so ali se sabe se entrou.
@@ -62,6 +65,7 @@ ROTULOS: dict[Passo, str] = {
     Passo.SESSAO: "conferindo a sessão",
     Passo.COMPOSITOR: "abrindo o compositor",
     Passo.ARQUIVO: "enviando o vídeo",
+    Passo.RECORTE: "mantendo o vídeo inteiro no recorte",
     Passo.AVANCAR: "passando pelas etapas de edição",
     Passo.CAPA: "trocando a capa",
     Passo.LEGENDA: "escrevendo a legenda",
@@ -83,6 +87,11 @@ ORIENTACOES: dict[Passo, str] = {
     Passo.ARQUIVO: (
         "O compositor nao aceitou o arquivo. Ele pode ter mudado de layout: "
         "suba este video a mao e me avise para eu ajustar."
+    ),
+    Passo.RECORTE: (
+        "Nao consegui manter o video inteiro: o Instagram abre o recorte em quadrado. "
+        "No modal que ficou aberto, clique no icone de recorte (canto inferior "
+        "esquerdo), escolha Original e siga a mao."
     ),
     Passo.AVANCAR: (
         "Travei numa das etapas de edicao (cortar, filtros). O modal ficou aberto — "
@@ -204,3 +213,31 @@ def publicou(confirmacao_visivel: bool) -> bool:
     False
     """
     return confirmacao_visivel
+
+
+def recorte_vertical(estilo: str) -> bool:
+    r"""A janela de recorte do compositor está mais alta que larga? (D-592)
+
+    Lê o `style` inline da janela, onde o Instagram escreve o tamanho que o
+    recorte usa — MEDIDO em 13/09/2026: 510x510 em 1:1, 287x510 em Original.
+
+    A âncora `(?<![\w-])` existe porque `max-width` e `border-width` também
+    terminam em "width", e casar com eles mediria a coisa errada.
+
+    >>> recorte_vertical("height: 510px; width: 287px; display: flex")
+    True
+    >>> recorte_vertical("height: 510px; width: 510px;")
+    False
+    >>> recorte_vertical("max-width: 100px; height: 510px; width: 510px")
+    False
+    >>> recorte_vertical("")
+    False
+    """
+    largura = _medida_em_px(estilo, "width")
+    altura = _medida_em_px(estilo, "height")
+    return largura is not None and altura is not None and largura < altura
+
+
+def _medida_em_px(estilo: str, propriedade: str) -> float | None:
+    achado = re.search(rf"(?<![\w-]){propriedade}\s*:\s*([\d.]+)px", estilo)
+    return float(achado.group(1)) if achado else None
