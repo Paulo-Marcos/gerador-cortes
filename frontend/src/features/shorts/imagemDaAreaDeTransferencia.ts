@@ -26,6 +26,38 @@ export function nomeParaTipo(tipo: string): string {
   return `colado.${extensao === 'jpeg' ? 'jpg' : extensao}`;
 }
 
+/** O pedaço de um `DataTransferItem` que o evento `paste` entrega e que importa aqui. */
+export interface ItemColado {
+  kind: string;
+  type: string;
+  getAsFile(): File | null;
+}
+
+/**
+ * D-586: a imagem de um Ctrl+V, ou `null` quando o que se colou não é imagem.
+ *
+ * Diferente de `lerImagemColada`, não pede permissão: o evento `paste` já traz
+ * os itens, porque foi o operador quem apertou a tecla. É por isso que o modal
+ * da capa do short pode escutar a janela inteira — enquanto ele está aberto,
+ * não há outro slot na tela disputando a imagem.
+ */
+export function imagemDoColar(itens: readonly ItemColado[]): File | null {
+  const arquivos = itens.filter((item) => item.kind === 'file');
+  const tipo = primeiroTipoDeImagem(arquivos.map((item) => item.type));
+  if (!tipo) return null;
+  const arquivo = arquivos.find((item) => item.type === tipo)?.getAsFile();
+  return arquivo ? new File([arquivo], nomeParaTipo(tipo), { type: tipo }) : null;
+}
+
+/** Colar dentro de um campo de texto é colar texto — não pode virar capa. */
+export function alvoEditavel(alvo: EventTarget | null): boolean {
+  // Pela forma, e não por `instanceof HTMLElement`: o alvo pode ser o próprio
+  // `document` (foco em lugar nenhum), e assim o teste roda sem DOM.
+  const elemento = alvo as Partial<HTMLElement> | null;
+  if (typeof elemento?.closest !== 'function') return false;
+  return Boolean(elemento.isContentEditable) || elemento.closest('input, textarea, select') !== null;
+}
+
 export class SemImagemColada extends Error {
   constructor() {
     super('Não há imagem na área de transferência. Copie a arte e tente de novo.');

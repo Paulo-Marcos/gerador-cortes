@@ -22,6 +22,7 @@ import {
   posicaoNaRegua,
   recadoDoInstante,
 } from './capaDoShort';
+import { alvoEditavel, imagemDoColar } from './imagemDaAreaDeTransferencia';
 import {
   useCapaDoShort,
   useGerarCapa,
@@ -81,9 +82,31 @@ interface Props {
 export function CapaModal({ open, onClose, short }: Props) {
   const capa = useCapaDoShort(short.id, open);
   const gerar = useGerarCapa(short.id);
+  // Mora aqui, e não no `ArteDaCapa`: o Ctrl+V vale nas duas abas, e o
+  // "subindo…" precisa ser o do MESMO envio que o colar disparou.
+  const subir = useSubirArteDaCapa(short.id);
   const video = useRef<HTMLVideoElement>(null);
   const [seg, setSeg] = useState(0);
   const [origem, setOrigem] = useState<Origem>('quadro');
+  const { mutate: subirArte } = subir;
+
+  // D-586: Ctrl+V com uma imagem vira a arte da capa. Escuta a janela porque o
+  // foco pode estar em qualquer lugar do modal — exigir clicar numa "área de
+  // colar" antes seria o mesmo passo a mais que o atalho existe para tirar.
+  // Colar imagem é, por definição, trazer uma arte: por isso a aba muda sozinha.
+  useEffect(() => {
+    if (!open) return;
+    const aoColar = (evento: ClipboardEvent) => {
+      if (alvoEditavel(evento.target)) return;
+      const arquivo = imagemDoColar(Array.from(evento.clipboardData?.items ?? []));
+      if (!arquivo) return;
+      evento.preventDefault();
+      setOrigem('arte');
+      subirArte(arquivo);
+    };
+    window.addEventListener('paste', aoColar);
+    return () => window.removeEventListener('paste', aoColar);
+  }, [open, subirArte]);
 
   const duracao = capa.data?.duracao_seg ?? 0;
   const ganchoAte = capa.data?.gancho_ate_seg ?? 0;
@@ -190,7 +213,7 @@ export function CapaModal({ open, onClose, short }: Props) {
         </div>
 
         <div className="space-y-4">
-          {origem === 'arte' && <ArteDaCapa short={short} />}
+          {origem === 'arte' && <ArteDaCapa short={short} subir={subir} />}
 
           {origem === 'quadro' && (
           <section className="space-y-2">
@@ -334,10 +357,15 @@ export function CapaModal({ open, onClose, short }: Props) {
  * O prompt fica gravado no short justamente por causa dessa viagem — fechar o
  * modal não pode custar a chamada de IA de novo.
  */
-function ArteDaCapa({ short }: { short: ShortSugerido }) {
+function ArteDaCapa({
+  short,
+  subir,
+}: {
+  short: ShortSugerido;
+  subir: ReturnType<typeof useSubirArteDaCapa>;
+}) {
   const prompt = usePromptDaCapa(short.id);
   const gerarPrompt = useGerarPromptDaCapa(short.id);
-  const subir = useSubirArteDaCapa(short.id);
   const seletor = useRef<HTMLInputElement>(null);
   const [copiado, setCopiado] = useState(false);
 
@@ -448,6 +476,14 @@ function ArteDaCapa({ short }: { short: ShortSugerido }) {
             {subir.isPending ? <Loader2 className="animate-spin" /> : <Upload />}
             {subir.isPending ? 'subindo…' : 'Escolher a imagem'}
           </Button>
+          {!subir.isPending && (
+            <span className="text-[11.5px] text-[var(--wb-text-mute)]">
+              ou copie a imagem e cole com{' '}
+              <kbd className="rounded-[4px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] px-1 font-code text-[10.5px] text-[var(--wb-text-dim)]">
+                Ctrl+V
+              </kbd>
+            </span>
+          )}
           {subir.isSuccess && (
             <span className="text-[11.5px] text-[var(--wb-ok-ink)]">
               arte gravada como a capa deste short
