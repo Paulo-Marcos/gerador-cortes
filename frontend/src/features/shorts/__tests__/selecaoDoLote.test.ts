@@ -3,6 +3,7 @@ import type { PublicacaoRegistrada, ShortSugerido } from '../shortsApi';
 import {
   alternar,
   contarEnvios,
+  contarRepublicacoes,
   montarAlvos,
   plataformasJaPublicadas,
   shortsPublicaveis,
@@ -70,6 +71,27 @@ describe('contarEnvios', () => {
 
   it('é zero quando não há plataforma marcada', () => {
     expect(contarEnvios(['s1'], [], [])).toBe(0);
+  });
+
+  it('com republicar, o que já foi volta a contar', () => {
+    const registros = [publicacao({ alvo_id: 's1', plataforma: 'youtube_shorts' })];
+
+    expect(contarEnvios(['s1'], ['youtube_shorts'], registros, true)).toBe(1);
+  });
+});
+
+describe('contarRepublicacoes', () => {
+  it('conta só os pares da seleção que já estão no ar', () => {
+    const registros = [
+      publicacao({ alvo_id: 's1', plataforma: 'youtube_shorts' }),
+      publicacao({ alvo_id: 's1', plataforma: 'tiktok' }),
+      // Fora da seleção: não pode acender a opção de republicar.
+      publicacao({ alvo_id: 's9', plataforma: 'youtube_shorts' }),
+    ];
+
+    expect(contarRepublicacoes(['s1', 's2'], ['youtube_shorts', 'instagram_reels'], registros)).toBe(
+      1,
+    );
   });
 });
 

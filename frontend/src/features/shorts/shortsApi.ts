@@ -418,6 +418,8 @@ export interface OpcoesDoLote {
   publicarSozinho: boolean;
   /** D-580: `AAAA-MM-DDTHH:mm` no relógio do operador. Vazio = publicar agora. */
   agendarPara: string;
+  /** D-590: sobe de novo o que já foi publicado, em vez de pular. */
+  republicar: boolean;
 }
 
 /** Uma publicação já registrada — o que a tela de seleção usa para nascer sabendo. */
@@ -754,6 +756,7 @@ export const shortsApi = {
         instagram_assistido: opcoes.instagramAssistido,
         publicar_sozinho: opcoes.publicarSozinho,
         agendar_para: opcoes.agendarPara,
+        republicar: opcoes.republicar,
       }),
     }),
 

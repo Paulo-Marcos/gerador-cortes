@@ -1210,6 +1210,8 @@ class LoteRequest(BaseModel):
     # D-580: uma data para o lote inteiro. Cada destino a honra como consegue —
     # e os que nao conseguem avisam, em vez de engolir.
     agendar_para: str = ""
+    # D-590: sobe de novo o que ja foi publicado, em vez de pular.
+    republicar: bool = False
 
 
 @router.post("/lote")
@@ -1242,6 +1244,7 @@ async def criar_lote(body: LoteRequest):
                 instagram_assistido=body.instagram_assistido,
                 publicar_sozinho=body.publicar_sozinho,
                 agendamento=agendamento,
+                republicar=body.republicar,
             ),
         )
     except publicacao_lote.LoteEmAndamento as exc:

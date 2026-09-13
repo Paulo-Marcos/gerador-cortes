@@ -35,15 +35,36 @@ export function plataformasJaPublicadas(
   );
 }
 
-/** Quantos pares (vídeo × plataforma) o lote realmente vai tentar subir. */
+/**
+ * Quantos pares (vídeo × plataforma) o lote realmente vai tentar subir.
+ *
+ * D-590: com `republicar`, o que já foi volta a contar — é o mesmo pedido que o
+ * backend recebe, e o número do botão não pode prometer menos do que sobe.
+ */
 export function contarEnvios(
+  ids: string[],
+  plataformas: string[],
+  publicacoes: PublicacaoRegistrada[],
+  republicar = false,
+): number {
+  if (republicar) return ids.length * plataformas.length;
+  return ids.length * plataformas.length - contarRepublicacoes(ids, plataformas, publicacoes);
+}
+
+/**
+ * D-590: quantos pares da seleção JÁ estão no ar.
+ *
+ * É o que decide se a opção de republicar aparece: oferecê-la sem nada
+ * repetido na seleção seria uma pergunta sem assunto.
+ */
+export function contarRepublicacoes(
   ids: string[],
   plataformas: string[],
   publicacoes: PublicacaoRegistrada[],
 ): number {
   return ids.reduce((total, id) => {
     const jaFoi = plataformasJaPublicadas(publicacoes, id);
-    return total + plataformas.filter((p) => !jaFoi.has(p)).length;
+    return total + plataformas.filter((p) => jaFoi.has(p)).length;
   }, 0);
 }
 

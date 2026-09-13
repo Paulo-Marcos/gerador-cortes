@@ -28,6 +28,7 @@ import type { EstadoItemLote, ItemDoLote, RaiaDoLote, ShortSugerido } from './sh
 import {
   alternar,
   contarEnvios,
+  contarRepublicacoes,
   montarAlvos,
   plataformasJaPublicadas,
   shortsPublicaveis,
@@ -73,6 +74,9 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
   // o operador liga o agendamento — e nasce já dentro da grade de 5 minutos que
   // o TikTok aceita, para ele não descobrir a regra levando erro.
   const [agendarPara, setAgendarPara] = useState('');
+  // D-590: nasce desligado pelo mesmo motivo do "publicar sozinho" — subir de
+  // novo o que já está no ar cria um segundo vídeo, e isso tem de ser pedido.
+  const [republicar, setRepublicar] = useState(false);
 
   const publicacoes = usePublicacoesDoCorte(corteId, open);
   const loteAtual = useLoteAtual();
@@ -81,7 +85,11 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
 
   const candidatos = useMemo(() => shortsPublicaveis(shorts), [shorts]);
   const registradas = useMemo(() => publicacoes.data?.publicacoes ?? [], [publicacoes.data]);
-  const envios = contarEnvios(selecionados, plataformas, registradas);
+  const repetidos = contarRepublicacoes(selecionados, plataformas, registradas);
+  // Um interruptor ligado que sumiu da tela (a seleção deixou de ter repetido)
+  // não pode continuar valendo às escondidas.
+  const vaiRepublicar = repetidos > 0 && republicar;
+  const envios = contarEnvios(selecionados, plataformas, registradas, vaiRepublicar);
 
   const lote = loteAtual.data?.lote ?? null;
   const rodando = Boolean(lote && !lote.terminou);
@@ -125,6 +133,7 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
                     // robô no volante não há botão nenhum para apertar.
                     publicarSozinho: temRobo && publicarSozinho,
                     agendarPara,
+                    republicar: vaiRepublicar,
                   },
                 })
               }
@@ -273,6 +282,20 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
                     />
                   ))}
                 </ul>
+              )}
+              {/* D-590: só aparece quando a seleção tem algo já no ar — é a
+                  única hora em que a pergunta tem assunto. Vale para as três
+                  plataformas: "já subiu" não quer dizer "subiu certo". */}
+              {repetidos > 0 && (
+                <div className="rounded-[9px] bg-[var(--wb-bg-inset)] p-2.5">
+                  <Interruptor
+                    ligado={republicar}
+                    onChange={setRepublicar}
+                    titulo={`Republicar ${repetidos} ${repetidos === 1 ? 'envio que já foi' : 'envios que já foram'}`}
+                    nota="sobe um vídeo novo; o antigo continua no ar até você apagar na plataforma"
+                    alerta
+                  />
+                </div>
               )}
             </Secao>
           </>

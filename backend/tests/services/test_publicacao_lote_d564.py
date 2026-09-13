@@ -229,6 +229,35 @@ async def test_o_que_ja_subiu_entra_pulado_e_nao_sobe_de_novo(ambiente):
 
 
 @pytest.mark.asyncio
+async def test_republicar_sobe_de_novo_o_que_ja_foi(ambiente):
+    """D-590: "já subiu" não é "subiu certo" — pedido explícito volta para a fila."""
+    _, raias = ambiente
+    youtube = _DestinoDeApi(Plataforma.YOUTUBE_SHORTS)
+    reels = _DestinoDePacote(Plataforma.INSTAGRAM_REELS)
+    destinos.registrar(youtube)
+    destinos.registrar(reels)
+    plataformas = [Plataforma.YOUTUBE_SHORTS, Plataforma.INSTAGRAM_REELS]
+
+    primeiro = await lote_svc.criar(alvos=[(lote_svc.ALVO_SHORT, "s1")], plataformas=plataformas)
+    await _rodar(raias)
+    await lote_svc.confirmar("s1", Plataforma.INSTAGRAM_REELS)
+    assert primeiro.terminou
+
+    segundo = await lote_svc.criar(
+        alvos=[(lote_svc.ALVO_SHORT, "s1")],
+        plataformas=plataformas,
+        opcoes=lote_svc.OpcoesDoLote(republicar=True),
+    )
+    await _rodar(raias)
+
+    por_plataforma = {i.plataforma: i for i in segundo.itens}
+    assert por_plataforma[Plataforma.YOUTUBE_SHORTS].estado is EstadoItem.PUBLICADO
+    assert por_plataforma[Plataforma.INSTAGRAM_REELS].estado is EstadoItem.SUA_VEZ
+    assert len(youtube.enviados) == 2
+    assert len(reels.preparados) == 2
+
+
+@pytest.mark.asyncio
 async def test_a_cota_do_youtube_para_a_raia_dele_e_so_a_dele(ambiente, monkeypatch):
     """O Instagram não tem por que esperar o dia do YouTube virar."""
     _, raias = ambiente

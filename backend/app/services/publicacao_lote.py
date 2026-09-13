@@ -93,6 +93,10 @@ class OpcoesDoLote:
     # `publishAt`, o robo do TikTok clicando no Studio) e os que nao conseguem
     # dizem isso em vez de engolir a data.
     agendamento: Agendamento | None = None
+    # D-590: sobe de novo o que já foi publicado. Existe porque "já subiu" não
+    # quer dizer "subiu certo" — um short com a capa errada no ar precisa voltar
+    # para a fila. Desligado por padrão: republicar em silêncio duplicaria vídeo.
+    republicar: bool = False
 
 
 class LoteEmAndamento(RuntimeError):
@@ -217,7 +221,7 @@ async def criar(
         criado_em=datetime.utcnow(),
         opcoes=opcoes or OpcoesDoLote(),
     )
-    publicados = await _ja_publicados([a for _, a in alvos])
+    publicados = {} if lote.opcoes.republicar else await _ja_publicados([a for _, a in alvos])
     rotulos = await _rotulos_dos_alvos(alvos)
 
     for alvo_tipo, alvo_id in alvos:
