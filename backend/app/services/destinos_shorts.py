@@ -25,7 +25,12 @@ from pathlib import Path
 from app.domain.agendamento import Agendamento
 from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
 from app.domain.ritmo_publicacao import UPLOADS_YOUTUBE_POR_DIA
-from app.services.publicacao_destinos import Destino, PacotePublicacao, registrar
+from app.services.publicacao_destinos import (
+    Destino,
+    PacotePublicacao,
+    registrar,
+    registrar_do_corte,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -329,10 +334,14 @@ def registrar_destinos_padrao() -> None:
     O operador perguntou duas vezes o que o TikTok horizontal fazia ali. Era
     isto — e não o componente morto que a D-581 removeu por engano achando que
     respondia à pergunta.
+
+    Fora do painel, mas não fora do app — ele vai para o registro do
+    corte, que é onde a tela horizontal e o lote o procuram.
     """
     registrar(DestinoYouTubeShorts())
     registrar(DestinoManual(Plataforma.INSTAGRAM_REELS))
     registrar(DestinoManual(Plataforma.TIKTOK))
+    registrar_do_corte(DestinoManual(Plataforma.TIKTOK_HORIZONTAL))
 
 
 registrar_destinos_padrao()

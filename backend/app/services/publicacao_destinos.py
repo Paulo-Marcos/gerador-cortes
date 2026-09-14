@@ -109,6 +109,13 @@ class Destino:
 
 _REGISTRO: dict[Plataforma, Destino] = {}
 
+# Destinos do CORTE (o MP4 16:9), guardados à parte. A D-584 tirou o
+# TikTok horizontal do `_REGISTRO` para ele sumir do painel dos shorts — e com
+# isso a tela do corte, que o busca por `obter_destino`, passou a dar 404. Dois
+# registros separam as duas perguntas: "o que listar no painel do short" e
+# "quem publica esta plataforma".
+_REGISTRO_DO_CORTE: dict[Plataforma, Destino] = {}
+
 
 def com_agendamento(destino: Destino, agendamento) -> Destino:
     """O mesmo destino, ciente da data — ou ele proprio, quando nao sabe agendar.
@@ -131,13 +138,18 @@ def registrar(destino: Destino) -> None:
     _REGISTRO[destino.plataforma] = destino
 
 
+def registrar_do_corte(destino: Destino) -> None:
+    """Torna um destino publicável sem oferecê-lo no painel dos shorts."""
+    _REGISTRO_DO_CORTE[destino.plataforma] = destino
+
+
 def destinos_disponiveis() -> list[Destino]:
-    """Os destinos registrados, na ordem canônica das plataformas."""
+    """Os destinos do SHORT, na ordem canônica das plataformas."""
     return [_REGISTRO[p] for p in Plataforma if p in _REGISTRO]
 
 
 def obter_destino(plataforma: Plataforma) -> Destino:
-    destino = _REGISTRO.get(plataforma)
+    destino = _REGISTRO.get(plataforma) or _REGISTRO_DO_CORTE.get(plataforma)
     if destino is None:
         raise LookupError(f"Plataforma {plataforma!r} nao tem destino registrado.")
     return destino

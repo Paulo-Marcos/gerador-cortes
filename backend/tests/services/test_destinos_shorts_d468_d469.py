@@ -82,6 +82,20 @@ def test_o_registro_dos_shorts_nao_inclui_o_tiktok_horizontal():
     assert registradas == set(Plataforma) - {Plataforma.TIKTOK_HORIZONTAL}
 
 
+def test_o_tiktok_horizontal_segue_publicavel_pela_tela_do_corte():
+    """Sair do painel do short nao pode tirar o destino do app.
+
+    A D-584 so desregistrou, e a tela do corte (que chama `obter_destino`)
+    passou a responder 404 "nao tem destino registrado".
+    """
+    from app.services import publicacao_destinos
+
+    destino = publicacao_destinos.obter_destino(Plataforma.TIKTOK_HORIZONTAL)
+
+    assert destino.plataforma is Plataforma.TIKTOK_HORIZONTAL
+    assert destino.modo is ModoPublicacao.MANUAL
+
+
 @pytest.mark.asyncio
 async def test_upload_mapeia_titulo_descricao_e_tags(tmp_path, monkeypatch):
     video = tmp_path / "short.mp4"
