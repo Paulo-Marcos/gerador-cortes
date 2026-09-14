@@ -185,9 +185,43 @@ class AppLogLevelFilter(logging.Filter):
         return False
 
 
+_STATUS_DE_FALHA = 400
+
+
+class AccessLogFilter(logging.Filter):
+    """Log de acesso HTTP e acompanhamento, nao processo: so no Debug.
+
+    O front faz polling (ex.: fila global de export a cada segundo), e cada GET
+    virava uma linha no Informativo, enterrando as etapas reais. Requisicao que
+    FALHOU continua no Informativo — ali ela conta o que deu errado.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        level = current_log_level()
+        if level == LogLevel.DEBUG:
+            return True
+        return level == LogLevel.INFO and _status_http(record) >= _STATUS_DE_FALHA
+
+
+def _status_http(record: logging.LogRecord) -> int:
+    """O uvicorn passa (cliente, metodo, caminho, versao, status) em `args`."""
+    args = record.args
+    if isinstance(args, tuple) and len(args) == 5 and isinstance(args[4], int):
+        return args[4]
+    return 0
+
+
+def instalar_filtro_de_acesso_http() -> None:
+    # `uvicorn.access` nao propaga para o root: precisa do filtro no proprio logger.
+    access_logger = logging.getLogger("uvicorn.access")
+    if not any(isinstance(item, AccessLogFilter) for item in access_logger.filters):
+        access_logger.addFilter(AccessLogFilter())
+
+
 def install_log_controls() -> None:
     """Aplica filtro dinâmico para logging e prints operacionais."""
     iniciar_escrita_assincrona_de_log()
+    instalar_filtro_de_acesso_http()
     root_logger = logging.getLogger()
     if not any(isinstance(item, AppLogLevelFilter) for item in root_logger.filters):
         root_logger.addFilter(AppLogLevelFilter())

@@ -2,7 +2,7 @@ import logging
 import re
 
 from app.services import app_logging
-from app.services.app_logging import AppLogLevelFilter, operational_info
+from app.services.app_logging import AccessLogFilter, AppLogLevelFilter, operational_info
 from app.services.app_settings import AppSettingsService, LogLevel
 
 
@@ -40,6 +40,53 @@ def test_debug_keeps_debug(tmp_path):
     AppSettingsService.update_log_level(LogLevel.DEBUG)
 
     assert AppLogLevelFilter().filter(_record(logging.DEBUG)) is True
+
+
+# --- log de acesso HTTP do uvicorn ---
+#
+# O uvicorn registra `uvicorn.access` com handler proprio e propagate=False, entao
+# o filtro instalado no root nunca o via: o polling da fila global enchia o
+# console em QUALQUER nivel, inclusive Desabilitado.
+
+
+def _acesso(status: int) -> logging.LogRecord:
+    args = ("127.0.0.1:58493", "GET", "/api/export/fila-global", "1.1", status)
+    return logging.LogRecord(
+        "uvicorn.access", logging.INFO, __file__, 1, '%s - "%s %s HTTP/%s" %d', args, None
+    )
+
+
+def test_acesso_http_so_aparece_no_debug(tmp_path):
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+    filtro = AccessLogFilter()
+
+    AppSettingsService.update_log_level(LogLevel.INFO)
+    assert filtro.filter(_acesso(200)) is False
+
+    AppSettingsService.update_log_level(LogLevel.DEBUG)
+    assert filtro.filter(_acesso(200)) is True
+
+
+def test_requisicao_que_falhou_aparece_no_informativo(tmp_path):
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+    filtro = AccessLogFilter()
+
+    AppSettingsService.update_log_level(LogLevel.INFO)
+    assert filtro.filter(_acesso(500)) is True
+    assert filtro.filter(_acesso(404)) is True
+
+    AppSettingsService.update_log_level(LogLevel.DISABLED)
+    assert filtro.filter(_acesso(500)) is False
+
+
+def test_filtro_de_acesso_vai_no_proprio_logger_do_uvicorn(monkeypatch):
+    access_logger = logging.getLogger("uvicorn.access")
+    monkeypatch.setattr(access_logger, "filters", [])
+
+    app_logging.instalar_filtro_de_acesso_http()
+    app_logging.instalar_filtro_de_acesso_http()  # idempotente
+
+    assert sum(isinstance(f, AccessLogFilter) for f in access_logger.filters) == 1
 
 
 def test_operational_info_prefixa_hora_real(tmp_path, capsys):
