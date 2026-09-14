@@ -1,5 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useDeleteLayoutPreset,
+  useSaveLayoutPreset,
+  useUpdateLayoutPreset,
+} from '@/features/editor/fase2/useLayoutPresets';
+import type {
+  AtualizarLayoutPresetRequest,
+  CriarLayoutPresetRequest,
+  GanchoShortPreset,
+  LayoutPresetTipo,
+  PalcoShortPreset,
+} from '@/types/presets';
 import { type AtualizarPostBody, type CapaDoShortApi, type GerarCapaBody, shortsApi, type AtualizarShortBody, type CenaShort } from './shortsApi';
 import { FIRES_KEY } from './useFires';
 
@@ -242,6 +254,112 @@ export function useInvalidarPadroes(corteId: string) {
     invalidarGancho(qc, corteId);
     void qc.invalidateQueries({ queryKey: ['shorts', 'palco-padrao', corteId] });
   };
+}
+
+/** D-595: os dois presets que o menu de padrões do corte cria e edita. */
+export type TipoDePresetPadrao = Extract<LayoutPresetTipo, 'palco_short' | 'gancho_short'>;
+
+interface PresetEmEdicao {
+  id: string;
+  nome: string;
+}
+
+/** As gravações de que guardar um preset padrão depende. */
+export interface PassosDaGuarda {
+  criar: (body: CriarLayoutPresetRequest) => Promise<{ id: string }>;
+  regravar: (args: { id: string; body: AtualizarLayoutPresetRequest }) => Promise<{ id: string }>;
+  definirPadrao: (presetId: string) => Promise<unknown>;
+  invalidarPadroes: () => void;
+}
+
+export interface GuardaDePreset {
+  tipo: TipoDePresetPadrao;
+  /** `null` = preset novo. */
+  editando: PresetEmEdicao | null;
+  nome: string;
+  payload: PalcoShortPreset | GanchoShortPreset;
+  virarPadrao: boolean;
+}
+
+/**
+ * D-594/D-595: cria ou regrava o preset e decide o que o corte passa a herdar.
+ *
+ * Fica fora do hook para ser testada sem React: a ordem das gravações é a
+ * parte que pode quebrar, e ela não depende de tela.
+ */
+export async function guardarPresetPadrao(passos: PassosDaGuarda, guarda: GuardaDePreset) {
+  const nome = guarda.nome.trim();
+  const salvo = guarda.editando
+    ? await passos.regravar({ id: guarda.editando.id, body: { nome, payload: guarda.payload } })
+    : await passos.criar({ nome, tipo: guarda.tipo, payload: guarda.payload });
+  // Regravar o preset que já é o padrão muda o que os trechos herdam sem
+  // trocar o id — sem invalidar, a página seguiria desenhando a versão velha.
+  if (guarda.virarPadrao) await passos.definirPadrao(salvo.id);
+  else passos.invalidarPadroes();
+}
+
+const ROTULO_DO_PRESET: Record<TipoDePresetPadrao, string> = {
+  palco_short: 'palco',
+  gancho_short: 'gancho',
+};
+
+/** D-595: o ciclo salvar/apagar dos editores de preset do menu de padrões. */
+export function useGuardarPresetPadrao({
+  tipo,
+  corteId,
+  editando,
+  onClose,
+}: {
+  tipo: TipoDePresetPadrao;
+  corteId: string;
+  editando: PresetEmEdicao | null;
+  onClose: () => void;
+}) {
+  const criar = useSaveLayoutPreset();
+  const regravar = useUpdateLayoutPreset();
+  const apagarPreset = useDeleteLayoutPreset();
+  // Os dois montados sempre: escolher um só exigiria chamar hook condicionalmente.
+  const definirPalco = useDefinirPalcoPadrao(corteId);
+  const definirGancho = useDefinirGanchoPadrao(corteId);
+  const definirPadrao = tipo === 'palco_short' ? definirPalco : definirGancho;
+  const invalidarPadroes = useInvalidarPadroes(corteId);
+
+  const gravando = criar.isPending || regravar.isPending || definirPadrao.isPending;
+  const erro = (criar.error ?? regravar.error ?? definirPadrao.error ?? apagarPreset.error)
+    ?.message;
+
+  const salvar = async (
+    nome: string,
+    payload: GuardaDePreset['payload'],
+    virarPadrao: boolean,
+  ) => {
+    const passos: PassosDaGuarda = {
+      criar: criar.mutateAsync,
+      regravar: regravar.mutateAsync,
+      definirPadrao: definirPadrao.mutateAsync,
+      invalidarPadroes,
+    };
+    try {
+      await guardarPresetPadrao(passos, { tipo, editando, nome, payload, virarPadrao });
+      onClose();
+    } catch {
+      // O erro já está no estado da mutation e aparece no rodapé.
+    }
+  };
+
+  const apagar = () => {
+    if (!editando || !confirm(`Apagar o preset de ${ROTULO_DO_PRESET[tipo]} "${editando.nome}"?`)) {
+      return;
+    }
+    apagarPreset.mutate(editando.id, {
+      onSuccess: () => {
+        invalidarPadroes();
+        onClose();
+      },
+    });
+  };
+
+  return { gravando, erro, apagando: apagarPreset.isPending, salvar, apagar };
 }
 
 export function usePreviaPublicacao(shortId: string | null) {

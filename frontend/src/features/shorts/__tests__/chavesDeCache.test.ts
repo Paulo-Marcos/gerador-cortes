@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { PALCO_KEY, shortsDoCorteKey } from '../useShortsDoCorte';
+import { describe, expect, it, vi } from 'vitest';
+import { duracaoEfetiva, realceValido, tamanhoEfetivo } from '../ganchoDoShort';
+import {
+  guardarPresetPadrao,
+  PALCO_KEY,
+  shortsDoCorteKey,
+  type PassosDaGuarda,
+} from '../useShortsDoCorte';
 
 // D-490: o bug que estes testes existem para impedir.
 //
@@ -88,5 +94,65 @@ describe('invalidacao ao atualizar um short', () => {
 
     expect(chaveIgnoraAjustes).toEqual([...PALCO_KEY, 'desenho', 's1', 'pessoa_cheia']);
     expect(chaveIgnoraAjustes).not.toContain('ajustes');
+  });
+});
+
+describe('guardar um preset do menu de padroes (D-594/D-595)', () => {
+  const payload = {
+    cor: '#ffd400',
+    realce: realceValido(undefined),
+    fonte: '',
+    tamanho: tamanhoEfetivo(undefined),
+    duracao: duracaoEfetiva(undefined),
+  };
+
+  function passosGravados() {
+    const chamadas: string[] = [];
+    const passos: PassosDaGuarda = {
+      criar: vi.fn(async (body) => {
+        chamadas.push(`criar:${body.tipo}:${body.nome}`);
+        return { id: 'novo' };
+      }),
+      regravar: vi.fn(async ({ id }) => {
+        chamadas.push(`regravar:${id}`);
+        return { id };
+      }),
+      definirPadrao: vi.fn(async (id) => {
+        chamadas.push(`padrao:${id}`);
+      }),
+      invalidarPadroes: vi.fn(() => {
+        chamadas.push('invalidar');
+      }),
+    };
+    return { passos, chamadas };
+  }
+
+  it('preset novo e criado e vira o padrao do corte, nessa ordem', async () => {
+    const { passos, chamadas } = passosGravados();
+
+    await guardarPresetPadrao(passos, {
+      tipo: 'gancho_short',
+      editando: null,
+      nome: '  amarelo com caixa ',
+      payload,
+      virarPadrao: true,
+    });
+
+    expect(chamadas).toEqual(['criar:gancho_short:amarelo com caixa', 'padrao:novo']);
+  });
+
+  it('regravar sem virar padrao invalida, porque o id herdado nao muda', async () => {
+    const { passos, chamadas } = passosGravados();
+
+    await guardarPresetPadrao(passos, {
+      tipo: 'gancho_short',
+      editando: { id: 'p1', nome: 'antigo' },
+      nome: 'novo nome',
+      payload,
+      virarPadrao: false,
+    });
+
+    expect(chamadas).toEqual(['regravar:p1', 'invalidar']);
+    expect(passos.regravar).toHaveBeenCalledWith({ id: 'p1', body: { nome: 'novo nome', payload } });
   });
 });

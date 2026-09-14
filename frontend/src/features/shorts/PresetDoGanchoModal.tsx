@@ -4,12 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
-import {
-  useDeleteLayoutPreset,
-  useLayoutPresets,
-  useSaveLayoutPreset,
-  useUpdateLayoutPreset,
-} from '@/features/editor/fase2/useLayoutPresets';
+import { useLayoutPresets } from '@/features/editor/fase2/useLayoutPresets';
 import type { GanchoShortPreset } from '@/types/presets';
 import {
   CORES_DO_GANCHO,
@@ -28,7 +23,7 @@ import { GanchoPrevia } from './GanchoPrevia';
 import { FONTES_DA_LEGENDA, LegendaPrevia } from './LegendaPrevia';
 import { PalcoPrevia } from './PalcoPrevia';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
-import { useDefinirGanchoPadrao, useInvalidarPadroes } from './useShortsDoCorte';
+import { useGuardarPresetPadrao } from './useShortsDoCorte';
 
 // D-594: onde a APARÊNCIA do gancho vira um preset com nome.
 //
@@ -110,40 +105,12 @@ function EditorDoPresetDeGancho({
   // valendo para o corte. Desmarcar é a exceção.
   const [virarPadrao, setVirarPadrao] = useState(true);
 
-  const salvar = useSaveLayoutPreset();
-  const regravar = useUpdateLayoutPreset();
-  const apagar = useDeleteLayoutPreset();
-  const definirPadrao = useDefinirGanchoPadrao(corteId);
-  const invalidarPadroes = useInvalidarPadroes(corteId);
-
-  const gravando = salvar.isPending || regravar.isPending || definirPadrao.isPending;
-  const erro = (salvar.error ?? regravar.error ?? definirPadrao.error ?? apagar.error)?.message;
-
-  const onSalvar = async () => {
-    const payload: GanchoShortPreset = { cor, realce, fonte, tamanho, duracao };
-    try {
-      const salvo = preset
-        ? await regravar.mutateAsync({ id: preset.id, body: { nome: nome.trim(), payload } })
-        : await salvar.mutateAsync({ nome: nome.trim(), tipo: 'gancho_short', payload });
-      // Regravar o preset que já é o padrão muda o que os trechos herdam sem
-      // trocar o id — sem invalidar, a prévia da página seguiria a cor velha.
-      if (virarPadrao) await definirPadrao.mutateAsync(salvo.id);
-      else invalidarPadroes();
-      onClose();
-    } catch {
-      // O erro já está no estado da mutation e aparece no rodapé.
-    }
-  };
-
-  const onApagar = () => {
-    if (!preset || !confirm(`Apagar o preset de gancho "${preset.nome}"?`)) return;
-    apagar.mutate(preset.id, {
-      onSuccess: () => {
-        invalidarPadroes();
-        onClose();
-      },
-    });
-  };
+  const { gravando, erro, apagando, salvar, apagar } = useGuardarPresetPadrao({
+    tipo: 'gancho_short',
+    corteId,
+    editando: preset,
+    onClose,
+  });
 
   const inicio = amostra?.inicio_seg ?? 0;
   const fim = amostra?.fim_seg ?? 30;
@@ -298,12 +265,18 @@ function EditorDoPresetDeGancho({
                 placeholder="ex.: amarelo com caixa"
                 className="h-8 max-w-[260px] text-[12px]"
               />
-              <Button size="sm" disabled={!nome.trim() || gravando} onClick={() => void onSalvar()}>
+              <Button
+                size="sm"
+                disabled={!nome.trim() || gravando}
+                onClick={() =>
+                  void salvar(nome, { cor, realce, fonte, tamanho, duracao }, virarPadrao)
+                }
+              >
                 {gravando ? <Loader2 className="animate-spin" /> : <Save />}
                 {preset ? 'Salvar alterações' : 'Criar preset'}
               </Button>
               {preset && (
-                <Button size="sm" variant="ghost" disabled={apagar.isPending} onClick={onApagar}>
+                <Button size="sm" variant="ghost" disabled={apagando} onClick={apagar}>
                   <Trash2 />
                   apagar
                 </Button>

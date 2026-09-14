@@ -4,22 +4,12 @@ import { Loader2, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
-import {
-  useDeleteLayoutPreset,
-  useLayoutPresets,
-  useSaveLayoutPreset,
-  useUpdateLayoutPreset,
-} from '@/features/editor/fase2/useLayoutPresets';
+import { useLayoutPresets } from '@/features/editor/fase2/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { mudancaDoPalco, palcoDoShort } from './aplicarPalco';
 import { shortsApi, type AtualizarShortBody, type ShortSugerido } from './shortsApi';
-import {
-  PALCO_KEY,
-  useDefinirPalcoPadrao,
-  useInvalidarPadroes,
-  usePalcoPadrao,
-} from './useShortsDoCorte';
+import { PALCO_KEY, useGuardarPresetPadrao, usePalcoPadrao } from './useShortsDoCorte';
 
 // D-594: criar e editar um PALCO a partir do menu de padrões do corte.
 //
@@ -131,40 +121,12 @@ function EditorDoPresetDePalco({
     placeholderData: keepPreviousData,
   });
 
-  const salvar = useSaveLayoutPreset();
-  const regravar = useUpdateLayoutPreset();
-  const apagar = useDeleteLayoutPreset();
-  const definirPadrao = useDefinirPalcoPadrao(corteId);
-  const invalidarPadroes = useInvalidarPadroes(corteId);
-
-  const gravando = salvar.isPending || regravar.isPending || definirPadrao.isPending;
-  const erro = (salvar.error ?? regravar.error ?? definirPadrao.error ?? apagar.error)?.message;
-
-  const onSalvar = async () => {
-    const payload = palcoDoShort(rascunho);
-    try {
-      const salvo = editando
-        ? await regravar.mutateAsync({ id: editando.id, body: { nome: nome.trim(), payload } })
-        : await salvar.mutateAsync({ nome: nome.trim(), tipo: 'palco_short', payload });
-      // Regravar o palco que já é o padrão muda o que os trechos herdam sem
-      // trocar o id — sem invalidar, a página seguiria desenhando o antigo.
-      if (virarPadrao) await definirPadrao.mutateAsync(salvo.id);
-      else invalidarPadroes();
-      onClose();
-    } catch {
-      // O erro já está no estado da mutation e aparece no rodapé.
-    }
-  };
-
-  const onApagar = () => {
-    if (!editando || !confirm(`Apagar o preset de palco "${editando.nome}"?`)) return;
-    apagar.mutate(editando.id, {
-      onSuccess: () => {
-        invalidarPadroes();
-        onClose();
-      },
-    });
-  };
+  const { gravando, erro, apagando, salvar, apagar } = useGuardarPresetPadrao({
+    tipo: 'palco_short',
+    corteId,
+    editando,
+    onClose,
+  });
 
   const rodape = (
     <div className="space-y-2">
@@ -176,12 +138,16 @@ function EditorDoPresetDePalco({
           placeholder="ex.: rosto cheio com a textura do canal"
           className="h-8 max-w-[260px] text-[12px]"
         />
-        <Button size="sm" disabled={!nome.trim() || gravando} onClick={() => void onSalvar()}>
+        <Button
+          size="sm"
+          disabled={!nome.trim() || gravando}
+          onClick={() => void salvar(nome, palcoDoShort(rascunho), virarPadrao)}
+        >
           {gravando ? <Loader2 className="animate-spin" /> : <Save />}
           {editando ? 'Salvar alterações' : 'Criar preset'}
         </Button>
         {editando && (
-          <Button size="sm" variant="ghost" disabled={apagar.isPending} onClick={onApagar}>
+          <Button size="sm" variant="ghost" disabled={apagando} onClick={apagar}>
             <Trash2 />
             apagar
           </Button>
