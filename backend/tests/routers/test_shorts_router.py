@@ -148,12 +148,15 @@ class TestSimularPalco:
     def espiao(self, monkeypatch):
         from app.services import palco_shorts
 
-        recebidos: list[tuple[str, dict]] = []
+        recebidos: list[tuple[str, dict, dict | None]] = []
 
-        async def _fake(short_id, ajustes_hipoteticos=None):
+        # A assinatura acompanha a do servico: quando o D-594 trouxe o
+        # `palco_rascunho`, um dublê de dois argumentos derrubou a classe inteira
+        # com TypeError antes de qualquer assert.
+        async def _fake(short_id, ajustes_hipoteticos=None, palco_rascunho=None):
             if short_id == "sumido":
                 raise LookupError("short nao encontrado")
-            recebidos.append((short_id, ajustes_hipoteticos))
+            recebidos.append((short_id, ajustes_hipoteticos, palco_rascunho))
             return {"modelo": "pessoa_cheia", "recortes": [], "slots": {}}
 
         monkeypatch.setattr(palco_shorts, "plano_desenhavel", _fake)
@@ -165,13 +168,22 @@ class TestSimularPalco:
         resposta = client.post("/api/shorts/s1/palco/simular", json={"ajustes_palco": ajustes})
 
         assert resposta.status_code == 200
-        assert espiao == [("s1", ajustes)]
+        assert espiao == [("s1", ajustes, None)]
+
+    def test_o_palco_de_rascunho_chega_ao_servico(self, client, espiao):
+        """D-594: o preset em edicao e julgado pelo que ELE e, nao pelo do short."""
+        rascunho = {"arranjo": "cheia", "fundo": "topographic"}
+
+        resposta = client.post("/api/shorts/s1/palco/simular", json={"palco": rascunho})
+
+        assert resposta.status_code == 200
+        assert espiao == [("s1", {}, rascunho)]
 
     def test_corpo_vazio_e_o_plano_gravado(self, client, espiao):
         resposta = client.post("/api/shorts/s1/palco/simular", json={})
 
         assert resposta.status_code == 200
-        assert espiao[0][1] == {}
+        assert espiao == [("s1", {}, None)]
 
     def test_short_inexistente_e_404(self, client, espiao):
         resposta = client.post("/api/shorts/sumido/palco/simular", json={"ajustes_palco": {}})
