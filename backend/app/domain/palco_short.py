@@ -358,8 +358,18 @@ def escalar(crop: dict, slot: Slot) -> tuple[int, int]:
     # Comparação por VALOR, não por identidade: sob duplo import (pytest
     # coletando o módulo por outro caminho) existem dois objetos `Ajuste`, e o
     # `is` escolheria silenciosamente o ajuste errado — CABER onde devia COBRIR.
-    fator = max(fator_x, fator_y) if slot.ajuste == Ajuste.COBRIR else min(fator_x, fator_y)
-    return (_par(largura * fator), _par(altura * fator))
+    if slot.ajuste != Ajuste.COBRIR:
+        fator = min(fator_x, fator_y)
+        return (_par(largura * fator), _par(altura * fator))
+
+    # COBRIR promete escala >= slot, porque o corte interno recorta o slot de
+    # dentro dela. Slot ajustado a mao sai impar (1365), e o par mais proximo
+    # (1364) ficava 1px abaixo: crop maior que o quadro, -22 no ffmpeg.
+    fator = max(fator_x, fator_y)
+    return (
+        max(_par(largura * fator), _par_acima(slot.w)),
+        max(_par(altura * fator), _par_acima(slot.h)),
+    )
 
 
 def regioes_do_layout(layout: dict | None) -> dict[str, dict]:
@@ -411,6 +421,11 @@ def _crop_valido(crop: object) -> bool:
 def _par(valor: float) -> int:
     """O inteiro PAR mais próximo — o ffmpeg recusa dimensão ímpar em yuv420p."""
     return max(2, int(round(valor / 2)) * 2)
+
+
+def _par_acima(valor: int) -> int:
+    """O menor inteiro PAR que não fica abaixo de `valor`."""
+    return valor + valor % 2
 
 
 def _inteiro_na_faixa(valor: object, minimo: int, maximo: int) -> int:

@@ -20,7 +20,9 @@ from app.domain.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_mode
 from app.domain.palco_short import (
     CANVAS,
     Ajuste,
+    Recorte,
     RegiaoFaltando,
+    Slot,
     escalar,
     montar_plano,
     regioes_do_layout,
@@ -135,6 +137,21 @@ class TestEscalar:
 
         assert largura % 2 == 0 and altura % 2 == 0
         assert largura >= 2 and altura >= 2
+
+    def test_cobrir_num_slot_impar_ainda_cobre_o_slot_inteiro(self):
+        """O slot ajustado a mao pode sair impar (769x1365), e a escala e par.
+
+        Arredondar 1365 para o par mais proximo deu 1364 — e o corte interno
+        pedia 1365 de um quadro de 1364. O ffmpeg abortava com -22 ao finalizar
+        o short ("Invalid too big or non positive size").
+        """
+        slot = Slot(x=158, y=358, w=769, h=1365, ajuste=Ajuste.COBRIR)
+        crop = {"x": 479, "y": 94, "w": 357, "h": 532}
+
+        recorte = Recorte("pessoa", crop, slot, escalar(crop, slot))
+        largura, altura, x, y = recorte.corte_interno
+
+        assert x + largura <= recorte.escala[0] and y + altura <= recorte.escala[1]
 
     def test_crop_degenerado_nao_divide_por_zero(self):
         assert escalar({"x": 0, "y": 0, "w": 0, "h": 0}, MODELOS["pessoa_cheia"].slots["pessoa"])
