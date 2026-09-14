@@ -1,4 +1,5 @@
-import { LayoutTemplate } from 'lucide-react';
+import { LayoutTemplate, Pencil, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useDefinirPalcoPadrao, usePalcoPadrao } from './useShortsDoCorte';
 
 // D-570: o palco que vale para TODOS os shorts deste corte.
@@ -28,27 +29,42 @@ import { useDefinirPalcoPadrao, usePalcoPadrao } from './useShortsDoCorte';
 // customizou, e não encosta nos customizados. Nada é copiado — quem resolve é
 // a leitura, no `com_palco_do_corte`.
 
-export function PalcoPadraoDoCorte({ corteId }: { corteId: string }) {
+//
+// D-594: e o palco ganhou "editar" e "novo" aqui mesmo. Escolher da lista não
+// bastava — "às vezes eu vou ter que criar". O editor abre sobre um rascunho,
+// com o trecho em foco emprestando o quadro (`PresetDoPalcoModal`).
+
+interface Props {
+  corteId: string;
+  /** Sem trecho não há quadro da live para montar um palco em cima. */
+  podeEditar: boolean;
+  /** `null` = criar um preset novo. */
+  onEditar: (presetId: string | null) => void;
+}
+
+export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
   const padrao = usePalcoPadrao(corteId);
   const definir = useDefinirPalcoPadrao(corteId);
 
   if (padrao.isLoading || padrao.isError) return null;
 
   const disponiveis = padrao.data?.disponiveis ?? [];
+  const escolhido = padrao.data?.palco_padrao ?? '';
+  const semTrecho = 'Crie um trecho antes: o palco é montado sobre o quadro dele.';
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="inline-flex items-center gap-1 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+      <span className="inline-flex w-[58px] items-center gap-1 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
         <LayoutTemplate size={11} aria-hidden />
         palco
       </span>
 
       <select
-        aria-label="Palco padrão deste corte — vale também para a legenda e a aparência do gancho"
-        value={padrao.data?.palco_padrao ?? ''}
+        aria-label="Palco padrão deste corte — vale também para a legenda"
+        value={escolhido}
         disabled={definir.isPending}
         onChange={(e) => definir.mutate(e.target.value)}
-        className="h-7 max-w-[230px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+        className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
       >
         {/* "cada trecho decide" e não "nenhum": sem padrão o short não fica sem
             palco — ele cai no automático, que é o que sempre foi. */}
@@ -60,11 +76,27 @@ export function PalcoPadraoDoCorte({ corteId }: { corteId: string }) {
         ))}
       </select>
 
-      <span className="text-[11px] text-[var(--wb-text-mute)]">
-        {disponiveis.length === 0
-          ? 'nenhum palco salvo — monte um em Definir o palco, num trecho'
-          : 'vale para todos os trechos; o que você ajustar num trecho continua valendo lá'}
-      </span>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={!escolhido || !podeEditar}
+        title={podeEditar ? undefined : semTrecho}
+        aria-label="Editar o palco padrão"
+        onClick={() => onEditar(escolhido)}
+      >
+        <Pencil />
+        editar
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={!podeEditar}
+        title={podeEditar ? undefined : semTrecho}
+        onClick={() => onEditar(null)}
+      >
+        <Plus />
+        novo
+      </Button>
     </div>
   );
 }

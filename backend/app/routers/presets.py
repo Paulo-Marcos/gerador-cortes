@@ -9,6 +9,8 @@ Tipos suportados:
     legenda_cor, legenda_fonte}` — o
     palco VERTICAL, com catalogo proprio. Separado dos de cima porque os nomes
     deles sao cenas do OBS ("Comp. 2 OBS") e o vocabulario do short e outro.
+  - gancho_short (D-594): payload e `{cor, realce, fonte, tamanho, duracao}` — a
+    aparencia do titulo-gancho da abertura, escolhida uma vez por corte.
 
 Os payloads sao normalizados via app.domain.youtube_layout antes de persistir,
 garantindo que o que sai pelo GET ja vem no shape consumido pelo painel.
@@ -22,6 +24,7 @@ from datetime import datetime
 from typing import Any
 
 from app.database import get_db
+from app.domain import gancho_short
 from app.domain.youtube_layout import (
     DEFAULT_CROP_FACECAM,
     DEFAULT_CROP_TELA,
@@ -44,7 +47,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
-TIPOS_VALIDOS = {"completo", "posicionamento", "posicionamento_full", "palco_short"}
+TIPOS_VALIDOS = {
+    "completo",
+    "posicionamento",
+    "posicionamento_full",
+    "palco_short",
+    "gancho_short",
+}
 
 
 class LayoutPresetResponse(BaseModel):
@@ -61,7 +70,9 @@ class LayoutPresetResponse(BaseModel):
 
 class CriarPresetRequest(BaseModel):
     nome: str = Field(..., min_length=1, max_length=120)
-    tipo: str = Field(..., pattern="^(completo|posicionamento|posicionamento_full|palco_short)$")
+    tipo: str = Field(
+        ..., pattern="^(completo|posicionamento|posicionamento_full|palco_short|gancho_short)$"
+    )
     payload: dict[str, Any]
 
 
@@ -109,6 +120,14 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
             "legenda_cor": str(payload.get("legenda_cor") or ""),
             "legenda_fonte": str(payload.get("legenda_fonte") or ""),
         }
+
+    if tipo == "gancho_short":
+        # D-594: a aparencia do gancho ganhou preset proprio, e SAIU do palco.
+        # Na D-585 ela viajava dentro do preset de palco, mas o normalizador
+        # acima nunca a guardou — todo palco salvo desde entao chegava sem cor.
+        # Dar ao gancho um preset seu separa donos: o palco cuida da tela, este
+        # cuida do letreiro.
+        return gancho_short.normalizar_preset(payload)
 
     if tipo == "posicionamento_full":
         # F-060: {full: {crop, slot}, fundo, placa}. Aceita tambem {crop, slot}

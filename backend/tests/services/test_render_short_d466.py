@@ -251,6 +251,9 @@ class TestGanchoDaAbertura:
             "ateSeg": 2.5,
             "cor": "",
             "realce": "veu",
+            # D-594: fonte do canal e o corpo de sempre quando nada decidiu.
+            "fonte": "",
+            "tamanho": 1.0,
         }
 
     @pytest.mark.asyncio

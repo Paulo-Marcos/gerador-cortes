@@ -1,5 +1,5 @@
 import type { PalcoShortPreset } from '@/types/presets';
-import type { AtualizarShortBody } from './shortsApi';
+import type { AtualizarShortBody, ShortSugerido } from './shortsApi';
 
 // D-552: o que gravar quando o operador escolhe um palco salvo.
 //
@@ -61,10 +61,30 @@ export function mudancaDoPalco(
     // faria o preset entregar o palco certo com o realce do trecho anterior.
     legenda_cor: payload.legenda_cor ?? '',
     legenda_fonte: payload.legenda_fonte ?? '',
-    // D-585: a aparência do gancho segue a mesma lógica da legenda — ela foi
-    // escolhida OLHANDO para este fundo. Um preset que traz o palco e deixa o
-    // gancho para trás entrega o quadro certo com a cor do trecho anterior.
-    gancho_cor: payload.gancho_cor ?? '',
-    gancho_realce: payload.gancho_realce ?? '',
+    // D-594: a aparência do gancho SAIU daqui. Ela tem preset próprio, e um
+    // palco que a carregasse daria dois donos para a cor do mesmo letreiro.
+  };
+}
+
+/**
+ * O palco de um short no formato que o preset guarda — o caminho de volta do
+ * `mudancaDoPalco`.
+ *
+ * D-594: mora aqui, e não dentro do modal, porque agora são dois a tirar essa
+ * foto: o modal do trecho ("guardar como preset") e o editor de preset do menu
+ * de padrões. Duas cópias da lista de campos divergiriam no dia em que um
+ * entrasse — foi assim que `fundo` e `ajustes` chegaram errados na D-561.
+ */
+export function palcoDoShort(short: ShortSugerido): PalcoShortPreset {
+  return {
+    arranjo: short.arranjo_palco,
+    janela_cheia: short.janela_cheia,
+    recortes: short.recortes_palco ?? {},
+    ajustes: short.ajustes_palco ?? {},
+    // `fundo` no preset é a TEXTURA (`fundo_editorial`), não a chave de cor
+    // da paleta que `fundo_palco` guarda — a troca que a D-561 corrigiu.
+    fundo: short.fundo_editorial ?? '',
+    legenda_cor: short.legenda_cor ?? '',
+    legenda_fonte: short.legenda_fonte ?? '',
   };
 }

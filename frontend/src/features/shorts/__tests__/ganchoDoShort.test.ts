@@ -18,8 +18,25 @@ import {
   REALCES_DO_GANCHO,
   estiloDoRealce,
   realceValido,
+  TAMANHO_MAX,
+  TAMANHO_MIN,
+  TAMANHO_PADRAO,
+  tamanhoEfetivo,
   tomDoGancho,
 } from '../ganchoDoShort';
+
+describe('tamanhoEfetivo (D-594)', () => {
+  it('ausente ou zero é o corpo de sempre', () => {
+    expect(tamanhoEfetivo(undefined)).toBe(TAMANHO_PADRAO);
+    expect(tamanhoEfetivo(0)).toBe(TAMANHO_PADRAO);
+  });
+
+  it('fica na faixa em que a frase ainda se lê', () => {
+    expect(tamanhoEfetivo(9)).toBe(TAMANHO_MAX);
+    expect(tamanhoEfetivo(0.2)).toBe(TAMANHO_MIN);
+    expect(tamanhoEfetivo(1.2)).toBe(1.2);
+  });
+});
 
 const DOMINIO_DO_BACKEND = resolve(
   __dirname,
@@ -46,6 +63,9 @@ describe('acordo com o domínio do backend', () => {
     ['DURACAO_MIN_SEG', DURACAO_MIN_SEG],
     ['DURACAO_MAX_SEG', DURACAO_MAX_SEG],
     ['MAX_VARIACOES', MAX_VARIACOES],
+    ['TAMANHO_PADRAO', TAMANHO_PADRAO],
+    ['TAMANHO_MIN', TAMANHO_MIN],
+    ['TAMANHO_MAX', TAMANHO_MAX],
   ])('%s é o mesmo dos dois lados', (nome, naTela) => {
     expect(numeroDoDominio(nome)).toBe(naTela);
   });

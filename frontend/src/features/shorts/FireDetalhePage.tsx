@@ -35,12 +35,15 @@ import { LegendaPrevia } from './LegendaPrevia';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { GanchoModal } from './GanchoModal';
 import { GanchoPrevia } from './GanchoPrevia';
+import { PresetDoGanchoModal } from './PresetDoGanchoModal';
+import { PresetDoPalcoModal } from './PresetDoPalcoModal';
 import { useEdicaoDoShort } from './useEdicaoDoShort';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
 import { estaFinalizado } from './filtrosDosFires';
 import {
   useDescartarBruto,
+  useGanchoPadrao,
   useMarcarFinalizado,
   usePalcoDoShort,
   useShortsDoCorte,
@@ -76,6 +79,10 @@ export default function FireDetalhePage() {
   // D-509: o modal onde a tela do short se monta inteira, num lugar so.
   const [definindoPalco, setDefinindoPalco] = useState(false);
   const [escrevendoGancho, setEscrevendoGancho] = useState(false);
+  // D-594: o editor de preset aberto pelo menu de padrões. `id: null` = novo;
+  // o estado inteiro nulo = fechado.
+  const [presetDePalco, setPresetDePalco] = useState<{ id: string | null } | null>(null);
+  const [presetDeGancho, setPresetDeGancho] = useState<{ id: string | null } | null>(null);
 
   const velocidadePadrao = useVelocidadePlayerPadrao();
   const [velocidade, setVelocidade] = useState(velocidadePadrao);
@@ -108,6 +115,7 @@ export default function FireDetalhePage() {
   const descartar = useDescartarBruto();
   const marcarFinalizado = useMarcarFinalizado();
   const transcricao = useTranscricaoDoCorte(corteId);
+  const ganchoPadrao = useGanchoPadrao(corteId);
   const temPalavras = (transcricao.data?.palavras.length ?? 0) > 0;
 
   const shorts = useMemo(() => data?.shorts ?? [], [data]);
@@ -244,7 +252,10 @@ export default function FireDetalhePage() {
     <>
       <GanchoPrevia
         texto={emQuadro.gancho_tela}
-        ateSeg={emQuadro.gancho_ate_seg}
+        // D-594: a duração, a fonte e o corpo também herdam do gancho padrão.
+        ateSeg={planoNaTela?.gancho_ate_seg || emQuadro.gancho_ate_seg}
+        fonte={planoNaTela?.gancho_fonte}
+        tamanho={planoNaTela?.gancho_tamanho}
         inicioSeg={emQuadro.inicio_seg}
         fimSeg={emQuadro.fim_seg}
         tempoAtualSeg={tempoAtual}
@@ -360,6 +371,8 @@ export default function FireDetalhePage() {
           onBorda={moverBorda}
           onDefinirPalco={abrirPalcoDe}
           onEscreverGancho={abrirGanchoDe}
+          onEditarPalcoPadrao={(id) => setPresetDePalco({ id })}
+          onEditarGanchoPadrao={(id) => setPresetDeGancho({ id })}
         />
       </main>
       {emQuadro && (
@@ -385,6 +398,7 @@ export default function FireDetalhePage() {
           video={video}
           palavras={transcricao.data?.palavras ?? []}
           ocupado={edicao.ocupado}
+          padrao={ganchoPadrao.data?.gancho_padrao ? ganchoPadrao.data.payload : null}
           onGravar={(texto, ateSeg, cor, realce) => {
             edicao.gravar(emQuadro.id, {
               gancho_tela: texto,
@@ -394,6 +408,30 @@ export default function FireDetalhePage() {
             });
             setEscrevendoGancho(false);
           }}
+        />
+      )}
+      {/* D-594: montados só quando abertos — o estado do editor nasce do
+          preset a cada abertura, sem efeito de re-semeadura. */}
+      {emQuadro && presetDePalco && (
+        <PresetDoPalcoModal
+          onClose={() => setPresetDePalco(null)}
+          corteId={corteId}
+          presetId={presetDePalco.id}
+          base={emQuadro}
+          fonte={{ largura: dimensoes.largura, altura: dimensoes.altura }}
+          video={video}
+          tempoAtualSeg={tempoAtual}
+        />
+      )}
+      {presetDeGancho && (
+        <PresetDoGanchoModal
+          onClose={() => setPresetDeGancho(null)}
+          corteId={corteId}
+          presetId={presetDeGancho.id}
+          amostra={emQuadro}
+          plano={palcoNaTela ? (palcoDoShort.data ?? null) : null}
+          video={video}
+          palavras={transcricao.data?.palavras ?? []}
         />
       )}
     </div>

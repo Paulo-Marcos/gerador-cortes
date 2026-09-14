@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { duracaoNoShort, estiloDoRealce, ganchoVisivelEm } from './ganchoDoShort';
+import { duracaoNoShort, estiloDoRealce, ganchoVisivelEm, tamanhoEfetivo } from './ganchoDoShort';
 import { SAFE_ZONE } from './previaLegenda';
 
 // D-565: o título-gancho desenhado por cima do player, como sairá no arquivo.
@@ -32,6 +32,10 @@ interface Props {
   cor?: string;
   /** D-581: veu | caixa | contorno | sombra | nenhum. */
   realce?: string;
+  /** D-594: família da fonte. Vazio = a do canal. */
+  fonte?: string;
+  /** D-594: escala do corpo. 0/ausente = 1,0. */
+  tamanho?: number;
 }
 
 export function GanchoPrevia({
@@ -42,6 +46,8 @@ export function GanchoPrevia({
   tempoAtualSeg,
   cor = '',
   realce = 'veu',
+  fonte = '',
+  tamanho = 0,
 }: Props) {
   // O contorno e a caixa têm espessura proporcional ao CORPO, e o corpo aqui é
   // uma `cqw` — um valor que só o layout conhece. Medi-lo é o único jeito de a
@@ -82,6 +88,7 @@ export function GanchoPrevia({
   const restante = duracaoNoShort(ateSeg, duracaoShort) - noShort;
   const opacidade = Math.min(1, Math.max(0, restante / 0.3));
   const estilo = estiloDoRealce(realce, corpoPx);
+  const escala = tamanhoEfetivo(tamanho);
 
   return (
     <div className="pointer-events-none absolute inset-0" style={{ opacity: opacidade }} aria-hidden>
@@ -110,8 +117,15 @@ export function GanchoPrevia({
             pergunta que a fez existir: isto polui a tela? */}
         <p
           ref={paragrafo}
-          className="font-display text-[clamp(9px,8.89cqw,96px)] font-black leading-[1.08] tracking-[-0.02em]"
-          style={{ color: cor || '#ffffff', ...estilo.texto }}
+          className="font-display font-black leading-[1.08] tracking-[-0.02em]"
+          style={{
+            // D-594: a escala multiplica a MESMA conta (8,89cqw = 5% da altura
+            // do quadro), para prévia e arquivo seguirem concordando.
+            fontSize: `clamp(9px, ${(8.89 * escala).toFixed(2)}cqw, ${Math.round(96 * escala)}px)`,
+            fontFamily: fonte || undefined,
+            color: cor || '#ffffff',
+            ...estilo.texto,
+          }}
         >
           {limpo}
         </p>

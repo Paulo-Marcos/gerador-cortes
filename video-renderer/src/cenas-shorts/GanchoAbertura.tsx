@@ -2,6 +2,7 @@ import React from "react";
 import { interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { COLORS_V2 as C, FONTS_V2 as F } from "../theme-v2";
 import { SAFE_ZONE } from "./_shared";
+import { FONTES_CARREGADAS } from "./LegendaShort";
 
 // D-565: o título-gancho da abertura.
 //
@@ -51,6 +52,10 @@ export interface GanchoAberturaProps {
   cor?: string;
   /** Como o gancho se separa do fundo. "" = o véu, que é o padrão. */
   realce?: RealceDoGancho | string;
+  /** D-594: família da fonte. "" (ou não carregada) = a display do canal. */
+  fonte?: string;
+  /** D-594: escala do corpo sobre 5% da altura. O backend já trava a faixa. */
+  tamanho?: number;
 }
 
 export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
@@ -58,6 +63,8 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
   ateSeg,
   cor = "",
   realce = "veu",
+  fonte = "",
+  tamanho = 1,
 }) => {
   const frame = useCurrentFrame();
   const { fps, height } = useVideoConfig();
@@ -82,7 +89,7 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
   // O corpo sai da ALTURA do quadro. Menor que o do `CenaHook` (0.062): lá o
   // texto ERA o conteúdo com o quadro parado atrás; aqui ele divide a tela com
   // o vídeo tocando e com a legenda embaixo.
-  const corpo = Math.round(height * 0.05);
+  const corpo = Math.round(height * 0.05 * (tamanho > 0 ? tamanho : 1));
   const estilo = estiloDoRealce(realce, corpo);
 
   return (
@@ -118,7 +125,7 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
         <p
           style={{
             margin: 0,
-            fontFamily: F.display,
+            fontFamily: FONTES_CARREGADAS[fonte] ?? F.display,
             fontSize: corpo,
             fontWeight: 900,
             lineHeight: 1.08,

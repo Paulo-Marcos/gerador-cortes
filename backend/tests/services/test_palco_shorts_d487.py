@@ -604,35 +604,103 @@ class TestPalcoPadraoDoCorte:
         assert servico.com_palco_do_corte(proprio, None) == proprio
         assert servico.com_palco_do_corte(proprio, {}) == proprio
 
-    def test_a_aparencia_do_gancho_herda_e_o_texto_nao(self):
-        """D-585: a divisao que faz a heranca do gancho fazer sentido.
+    def test_o_gancho_nao_herda_mais_do_palco(self):
+        """D-594: a aparencia do gancho tem preset proprio.
 
-        A COR e o REALCE sao identidade visual — o operador escolhe uma vez e
-        vale para os oito trechos que o corte rende. O TEXTO e editorial e unico
-        por trecho: cada short promete uma coisa, e um gancho herdado prometeria
-        a mesma para oito videos diferentes.
-
-        Por isso `gancho_cor` e `gancho_realce` entraram em CAMPOS_HERDADOS e
-        `gancho_tela` nao — e este teste e o que impede alguem de "completar" a
-        lista por simetria um dia.
+        O palco cuida da tela; o preset de gancho cuida do letreiro. Se alguem
+        devolver `gancho_*` a CAMPOS_HERDADOS por simetria, o mesmo trecho passa
+        a ter dois donos para a cor — e o que vencer vai depender da ordem.
         """
         herdado = servico.com_palco_do_corte(
-            {"gancho_cor": "", "gancho_realce": "", "gancho_tela": ""},
-            {"gancho_cor": "#facc15", "gancho_realce": "caixa", "gancho_tela": "o juro te come"},
+            {"gancho_cor": "", "gancho_tela": ""},
+            {"gancho_cor": "#facc15", "gancho_tela": "o juro te come"},
         )
 
-        assert herdado["gancho_cor"] == "#facc15"
-        assert herdado["gancho_realce"] == "caixa"
+        assert herdado["gancho_cor"] == ""
         assert herdado["gancho_tela"] == ""
 
-    def test_o_gancho_que_o_short_escolheu_vence_o_do_corte(self):
-        herdado = servico.com_palco_do_corte(
-            {"gancho_cor": "#ff5a72", "gancho_realce": ""},
-            {"gancho_cor": "#facc15", "gancho_realce": "contorno"},
-        )
 
-        assert herdado["gancho_cor"] == "#ff5a72"
-        assert herdado["gancho_realce"] == "contorno"
+class TestGanchoPadrao:
+    """D-594: o gancho padrao do corte chega ao plano, e trecho customizado vence."""
+
+    @staticmethod
+    async def _com_preset_de_gancho(ambiente, payload: dict) -> None:
+        async with ambiente() as db:
+            db.add(
+                LayoutPreset(
+                    id="gancho-1",
+                    nome="Amarelo com caixa",
+                    tipo="gancho_short",
+                    payload=json.dumps(payload),
+                )
+            )
+            await db.commit()
+
+    @pytest.mark.asyncio
+    async def test_o_trecho_que_nao_decidiu_usa_o_gancho_do_corte(self, ambiente):
+        await self._com_preset_de_gancho(
+            ambiente,
+            {"cor": "#facc15", "realce": "caixa", "fonte": "Anton", "tamanho": 1.2, "duracao": 3},
+        )
+        await servico.escolher_gancho_padrao("c1", "gancho-1")
+
+        plano = await servico.plano_desenhavel("s1")
+
+        assert plano["gancho_cor"] == "#facc15"
+        assert plano["gancho_realce"] == "caixa"
+        assert plano["gancho_fonte"] == "Anton"
+        assert plano["gancho_tamanho"] == 1.2
+        assert plano["gancho_ate_seg"] == 3.0
+
+    @pytest.mark.asyncio
+    async def test_o_trecho_customizado_vence_e_seguir_o_padrao_o_libera(self, ambiente):
+        await self._com_preset_de_gancho(ambiente, {"cor": "#facc15", "realce": "caixa"})
+        await servico.escolher_gancho_padrao("c1", "gancho-1")
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.gancho_tela = "o juro te come"
+            short.gancho_cor = "#ff5a72"
+            await db.commit()
+
+        assert (await servico.plano_desenhavel("s1"))["gancho_cor"] == "#ff5a72"
+        assert (await servico.descrever_gancho_padrao("c1"))["customizados"] == 1
+
+        resultado = await servico.seguir_gancho_padrao_em_todos("c1")
+
+        assert resultado["liberados"] == 1
+        assert (await servico.plano_desenhavel("s1"))["gancho_cor"] == "#facc15"
+        async with ambiente() as db:
+            assert (await db.get(Short, "s1")).gancho_tela == "o juro te come"
+
+    @pytest.mark.asyncio
+    async def test_preset_de_palco_nao_serve_de_gancho(self, ambiente):
+        with pytest.raises(LookupError):
+            await servico.escolher_gancho_padrao("c1", "pre-1")
+
+
+class TestPalcoDeRascunho:
+    """D-594: o editor de preset desenha um palco sem gravar no trecho."""
+
+    @pytest.mark.asyncio
+    async def test_o_rascunho_substitui_o_palco_e_ignora_o_padrao_do_corte(self, ambiente):
+        async with ambiente() as db:
+            db.add(
+                LayoutPreset(
+                    id="palco-1",
+                    nome="Padrao",
+                    tipo="palco_short",
+                    payload=json.dumps({"fundo": "cosmograph", "legenda_cor": "#2f5f43"}),
+                )
+            )
+            await db.commit()
+        await servico.escolher_palco_padrao("c1", "palco-1")
+
+        rascunho = await servico.plano_desenhavel("s1", None, {"legenda_cor": "#facc15"})
+
+        assert rascunho["legenda_cor"] == "#facc15"
+        assert rascunho["fundo_editorial"] != "cosmograph"
+        async with ambiente() as db:
+            assert (await db.get(Short, "s1")).legenda_cor == ""
 
     def test_os_recortes_ficam_de_fora_de_proposito(self):
         """Eles respondem DE ONDE VEM, tem cascata propria, e sao justamente o

@@ -3,6 +3,8 @@
 // `llmCallsApi`/`rankingPesosApi`. Aqui não há duplicação a temer: nenhuma
 // função de shorts existe em `api.ts`, então nada fica órfão lá.
 
+import type { GanchoShortPreset } from '@/types/presets';
+
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
@@ -270,6 +272,10 @@ export interface PlanoDesenhavel {
   /** D-585: a aparência do gancho, JÁ com a herança do corte resolvida. */
   gancho_cor?: string;
   gancho_realce?: string;
+  /** D-594: o resto da aparência herdada. 0/'' = o de sempre. */
+  gancho_ate_seg?: number;
+  gancho_fonte?: string;
+  gancho_tamanho?: number;
 }
 
 /** O que o detector de rosto viu num trecho (D-477). */
@@ -307,6 +313,18 @@ export interface PalcoPadrao {
   /** O nome dele, para a tela não ter que cruzar a lista. */
   nome: string;
   disponiveis: { id: string; nome: string }[];
+}
+
+/** D-594: o gancho padrão do corte — a aparência que todos os trechos herdam. */
+export interface GanchoPadrao {
+  /** Id do preset escolhido. Vazio = cada trecho decide. */
+  gancho_padrao: string;
+  nome: string;
+  /** O payload do escolhido, para o modal do trecho mostrar "do padrão". */
+  payload: Partial<GanchoShortPreset>;
+  disponiveis: { id: string; nome: string }[];
+  /** Trechos com aparência própria — eles não seguem o padrão. */
+  customizados: number;
 }
 
 export interface LogDoRender {
@@ -506,6 +524,22 @@ export const shortsApi = {
       body: JSON.stringify({ preset_id: presetId }),
     }),
 
+  /** D-594: o gancho padrão do corte. */
+  ganchoPadrao: (corteId: string) =>
+    request<GanchoPadrao>(`/shorts/corte/${corteId}/gancho-padrao`),
+
+  definirGanchoPadrao: (corteId: string, presetId: string) =>
+    request<{ gancho_padrao: string }>(`/shorts/corte/${corteId}/gancho-padrao`, {
+      method: 'PUT',
+      body: JSON.stringify({ preset_id: presetId }),
+    }),
+
+  /** D-594: todos os trechos voltam a seguir o padrão. O texto do gancho fica. */
+  seguirGanchoPadrao: (corteId: string) =>
+    request<{ liberados: number }>(`/shorts/corte/${corteId}/gancho-padrao/seguir`, {
+      method: 'POST',
+    }),
+
   /**
    * D-541: os picos de áudio do BRUTO deste corte.
    *
@@ -641,10 +675,18 @@ export const shortsApi = {
   fundosDoPalco: () => request<{ fundos: FundoDoCanal[] }>('/shorts/palco/fundos'),
 
   /** D-500: o palco que ESTES ajustes dariam, sem gravar. Para o arraste. */
-  simularPalco: (shortId: string, ajustes: Record<string, Retangulo>) =>
+  /**
+   * `palco` (D-594) é o palco inteiro de um RASCUNHO de preset: presente, ele
+   * substitui o do trecho e o padrão do corte sai da conta. Nada é gravado.
+   */
+  simularPalco: (
+    shortId: string,
+    ajustes: Record<string, Retangulo>,
+    palco?: Record<string, unknown>,
+  ) =>
     request<PlanoDesenhavel>(`/shorts/${shortId}/palco/simular`, {
       method: 'POST',
-      body: JSON.stringify({ ajustes_palco: ajustes }),
+      body: JSON.stringify({ ajustes_palco: ajustes, palco: palco ?? null }),
     }),
 
   progresso: (shortId: string) =>

@@ -7,7 +7,6 @@ import {
   contarPalavras,
   CORES_DO_GANCHO,
   REALCES_DO_GANCHO,
-  realceValido,
   MAX_VARIACOES,
   DURACAO_MAX_SEG,
   DURACAO_MIN_SEG,
@@ -19,6 +18,7 @@ import {
   tomDoGancho,
   type TomDoGancho,
 } from './ganchoDoShort';
+import type { GanchoShortPreset } from '@/types/presets';
 import { GanchoPrevia } from './GanchoPrevia';
 import { LegendaPrevia } from './LegendaPrevia';
 import { PalcoPrevia } from './PalcoPrevia';
@@ -63,6 +63,13 @@ interface Props {
   /** Palavras da transcrição, para mostrar a legenda que coexiste com o gancho. */
   palavras: PalavraTranscrita[];
   ocupado: boolean;
+  /**
+   * D-594: o gancho padrão do corte. Vazio/zero aqui significam "do padrão", e
+   * o modal precisa saber qual é para mostrá-lo — e para a prévia desenhar a
+   * fonte e o tamanho, que só o padrão decide.
+   */
+  padrao: Partial<GanchoShortPreset> | null;
+  /** `ateSeg` 0 e `realce`/`cor` vazios = seguir o padrão do corte. */
   onGravar: (texto: string, ateSeg: number, cor: string, realce: string) => void;
 }
 
@@ -74,13 +81,16 @@ export function GanchoModal({
   video,
   palavras,
   ocupado,
+  padrao,
   onGravar,
 }: Props) {
   // `?? ''` porque um backend ainda nao reiniciado nao manda o campo, e um
   // textarea que comeca `undefined` vira uncontrolled — o React reclama e o
   // campo para de responder ao estado a partir da primeira tecla.
   const [texto, setTexto] = useState(short.gancho_tela ?? '');
-  const [ateSeg, setAteSeg] = useState(() => duracaoEfetiva(short.gancho_ate_seg));
+  // D-594: 0 = "do padrão". Abrir já com 2,5s e gravar de volta carimbava o
+  // default no trecho — e um trecho carimbado não segue preset nenhum.
+  const [ateSeg, setAteSeg] = useState(short.gancho_ate_seg ?? 0);
   // D-581: a aparencia do gancho. Mesma regra do texto — o estado nasce do
   // short e e re-semeado ao reabrir, senao o modal levaria a cor de um trecho
   // para outro sem erro nenhum, que e o pior jeito de errar (D-542).
@@ -92,7 +102,8 @@ export function GanchoModal({
   // corte depois deixaria de alcançar este trecho. É a mesma regra da cascata
   // de layout, onde chave ausente É o mecanismo de herança.
   const [cor, setCor] = useState(short.gancho_cor ?? '');
-  const [realce, setRealce] = useState(() => realceValido(short.gancho_realce));
+  // D-594: mesma regra da duração — vazio é "do padrão", e não o véu.
+  const [realce, setRealce] = useState(short.gancho_realce ?? '');
 
   // Reabrir o modal em outro candidato tem de trazer o gancho DELE. Sem isto o
   // estado do anterior ficaria na tela e o operador salvaria o texto errado no
@@ -100,9 +111,9 @@ export function GanchoModal({
   useEffect(() => {
     if (!open) return;
     setTexto(short.gancho_tela ?? '');
-    setAteSeg(duracaoEfetiva(short.gancho_ate_seg));
+    setAteSeg(short.gancho_ate_seg ?? 0);
     setCor(short.gancho_cor ?? '');
-    setRealce(realceValido(short.gancho_realce));
+    setRealce(short.gancho_realce ?? '');
     gerar.reset();
     // `gerar` fora das dependencias de proposito: a mutation muda de identidade
     // a cada resultado, e inclui-la faria este efeito rodar de novo logo apos
@@ -126,19 +137,23 @@ export function GanchoModal({
   const tom = tomDoGancho(texto);
   const palavrasEscritas = contarPalavras(texto);
   const tempoDaPrevia = short.inicio_seg + INSTANTE_DA_PREVIA_SEG;
+  // O que vai sair: o que o trecho decidiu, ou o do padrão do corte.
+  const duracaoNaTela = duracaoEfetiva(ateSeg || padrao?.duracao);
 
   const sobreposicoes = (
     <>
       <GanchoPrevia
         texto={texto}
-        ateSeg={ateSeg}
+        ateSeg={duracaoNaTela}
         inicioSeg={short.inicio_seg}
         fimSeg={short.fim_seg}
         tempoAtualSeg={tempoDaPrevia}
         // Enquanto o operador não escolhe, a prévia mostra o que o corte manda
         // — que é o que o arquivo vai ter.
-        cor={cor || plano?.gancho_cor || ''}
-        realce={realce || plano?.gancho_realce || 'veu'}
+        cor={cor || padrao?.cor || ''}
+        realce={realce || padrao?.realce || 'veu'}
+        fonte={padrao?.fonte}
+        tamanho={padrao?.tamanho}
       />
       {palavras.length > 0 && (
         <LegendaPrevia
@@ -286,8 +301,10 @@ export function GanchoModal({
                   type="button"
                   disabled={ocupado}
                   onClick={() => setCor(hex)}
-                  title={nome}
-                  aria-label={nome}
+                  // D-594: com padrão no corte, a amostra vazia deixa de ser
+                  // "branco" e passa a ser "a do padrão" — e pinta a cor dele.
+                  title={!hex && padrao?.cor ? 'do padrão do corte' : nome}
+                  aria-label={!hex && padrao?.cor ? 'do padrão do corte' : nome}
                   aria-pressed={cor === hex}
                   className={cn(
                     'h-7 w-7 rounded-[7px] border-2 transition-transform disabled:opacity-45',
@@ -298,7 +315,7 @@ export function GanchoModal({
                   // Amostra sobre xadrez escuro: a cor do gancho é julgada
                   // CONTRA vídeo, e um fundo claro faria o branco desaparecer
                   // do seletor justamente por ser a opção padrão.
-                  style={{ backgroundColor: hex || '#ffffff' }}
+                  style={{ backgroundColor: hex || padrao?.cor || '#ffffff' }}
                 />
               ))}
             </div>
@@ -310,6 +327,25 @@ export function GanchoModal({
               </p>
             </div>
             <div className="grid gap-1">
+              <button
+                type="button"
+                disabled={ocupado}
+                onClick={() => setRealce('')}
+                aria-pressed={realce === ''}
+                className={cn(
+                  'flex items-baseline gap-2 rounded-[7px] border px-2 py-1.5 text-left transition-colors disabled:opacity-45',
+                  realce === ''
+                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+                    : 'border-[var(--wb-border-soft)] hover:bg-[var(--wb-bg-inset)]',
+                )}
+              >
+                <span className="flex-none text-[12.5px] font-semibold">Do padrão</span>
+                <span className="text-[11px] leading-snug text-[var(--wb-text-mute)]">
+                  {padrao?.realce
+                    ? `o do corte (${REALCES_DO_GANCHO.find((r) => r.id === padrao.realce)?.nome ?? padrao.realce})`
+                    : 'véu, enquanto o corte não tiver padrão'}
+                </span>
+              </button>
               {REALCES_DO_GANCHO.map(({ id, nome, nota }) => (
                 <button
                   key={id}
@@ -342,23 +378,35 @@ export function GanchoModal({
                 variant="outline"
                 size="sm"
                 aria-label="Menos tempo"
-                disabled={ocupado || ateSeg <= DURACAO_MIN_SEG}
-                onClick={() => setAteSeg((v) => Math.max(DURACAO_MIN_SEG, v - DURACAO_PASSO_SEG))}
+                disabled={ocupado || duracaoNaTela <= DURACAO_MIN_SEG}
+                onClick={() => setAteSeg(Math.max(DURACAO_MIN_SEG, duracaoNaTela - DURACAO_PASSO_SEG))}
               >
                 <Minus />
               </Button>
               <span className="font-code text-[13px] tabular-nums text-[var(--wb-text)]">
-                {ateSeg.toFixed(1)}s
+                {duracaoNaTela.toFixed(1)}s
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 aria-label="Mais tempo"
-                disabled={ocupado || ateSeg >= DURACAO_MAX_SEG}
-                onClick={() => setAteSeg((v) => Math.min(DURACAO_MAX_SEG, v + DURACAO_PASSO_SEG))}
+                disabled={ocupado || duracaoNaTela >= DURACAO_MAX_SEG}
+                onClick={() => setAteSeg(Math.min(DURACAO_MAX_SEG, duracaoNaTela + DURACAO_PASSO_SEG))}
               >
                 <Plus />
               </Button>
+              {ateSeg > 0 ? (
+                <button
+                  type="button"
+                  disabled={ocupado}
+                  onClick={() => setAteSeg(0)}
+                  className="text-[11.5px] text-[var(--wb-accent)] underline-offset-2 hover:underline disabled:opacity-45"
+                >
+                  usar a do padrão
+                </button>
+              ) : (
+                <span className="text-[11px] text-[var(--wb-text-mute)]">do padrão</span>
+              )}
             </div>
             <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
               Abaixo de {DURACAO_MIN_SEG.toFixed(1)}s a frase é vista, não lida. Acima de{' '}

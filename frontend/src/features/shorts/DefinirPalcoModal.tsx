@@ -14,7 +14,7 @@ import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { ocupacaoDoPalco, redimensionarPalco } from './arrastarSlot';
 import { PalcoPrevia } from './PalcoPrevia';
 import { SeletorDeTextura } from './SeletorDeTextura';
-import { mudancaDoPalco } from './aplicarPalco';
+import { mudancaDoPalco, palcoDoShort } from './aplicarPalco';
 import { usePalcoDoCorte } from './useShortsDoCorte';
 import { useArranjosDePalco } from './useShortsDoCorte';
 import type { AtualizarShortBody, PlanoDesenhavel, Retangulo, ShortSugerido } from './shortsApi';
@@ -61,6 +61,15 @@ interface Props {
   /** D-563: onde o player parou — a legenda da prévia desenha ESTE instante. */
   tempoAtualSeg: number;
   onAplicar: (mudanca: AtualizarShortBody) => void;
+  /**
+   * D-594: montar um PRESET em vez do trecho, a partir do menu de padrões.
+   *
+   * Quem chama guarda as escritas num rascunho; aqui a simulação passa a
+   * desenhar esse rascunho, e somem os controles que o preset não guarda —
+   * moldura e preset de recortes. Um controle cuja escolha não é salva é pior
+   * que um que falta: o operador ajusta, salva, e o preset sai sem aquilo.
+   */
+  rascunho?: { campos: Record<string, unknown>; titulo: string; rodape: React.ReactNode };
 }
 
 export function DefinirPalcoModal({
@@ -74,6 +83,7 @@ export function DefinirPalcoModal({
   ocupado,
   tempoAtualSeg,
   onAplicar,
+  rascunho,
 }: Props) {
   const arranjos = useArranjosDePalco(corteId);
 
@@ -91,42 +101,8 @@ export function DefinirPalcoModal({
   );
   const regioesEmJogo = Object.keys(plano?.slots ?? {});
 
-  /**
-   * O palco deste short, no formato que o preset guarda.
-   *
-   * D-561: dois campos estavam errados aqui, e os dois só apareciam DEPOIS,
-   * quando o preset era aplicado noutro trecho.
-   *
-   * `fundo` gravava `fundo_palco` — a chave de COR da paleta. Na D-552 o campo
-   * do preset passou a significar a TEXTURA, e quem aplica escreve o valor em
-   * `fundo_editorial`. Ou seja: todo preset salvo desde então guardava uma cor
-   * onde se espera uma textura, e aplicá-lo caía no padrão do canal. Foi
-   * exatamente essa cor ("verdeProfundo") que derrubou a tela na D-554 — lá eu
-   * fiz a leitura degradar, e a origem continuou intacta até agora.
-   *
-   * `ajustes` não existia, e é o tamanho das janelas (D-559).
-   */
-  const comoEstaHoje = (): PalcoShortPreset => ({
-    arranjo: short.arranjo_palco,
-    janela_cheia: short.janela_cheia,
-    recortes: short.recortes_palco ?? {},
-    ajustes: short.ajustes_palco ?? {},
-    fundo: short.fundo_editorial ?? '',
-    legenda_cor: short.legenda_cor ?? '',
-    legenda_fonte: short.legenda_fonte ?? '',
-    // D-585: a aparência do gancho entra no preset, e com isso ela ganha um
-    // lugar para ser definida UMA vez por corte — que é o que faltava.
-    //
-    // O caminho vira: ajuste a cor num trecho, salve este palco como preset,
-    // escolha-o como o padrão do corte. Daí em diante todo short que não
-    // decidiu a própria cor usa essa, viva: trocar o preset reflete na hora.
-    //
-    // Só a APARÊNCIA entra. O texto do gancho continua por trecho, e tem de
-    // continuar — cada short promete uma coisa, e um gancho herdado prometeria
-    // a mesma para oito vídeos diferentes.
-    gancho_cor: short.gancho_cor ?? '',
-    gancho_realce: short.gancho_realce ?? '',
-  });
+  /** O palco deste short, no formato que o preset guarda (ver `palcoDoShort`). */
+  const comoEstaHoje = (): PalcoShortPreset => palcoDoShort(short);
 
   // D-552: aplicar um preset COPIA os valores — e agora marca de onde vieram.
   //
@@ -148,8 +124,14 @@ export function DefinirPalcoModal({
   // hipotético e a prévia desenha ESSE. Sem isto o retângulo andaria vazio —
   // o vídeo dentro dele só reflui no refetch, depois de soltar — que é
   // exatamente o defeito que a D-500 corrigiu na página.
-  const simulacao = useSimulacaoDePalco(short.id);
+  const simulacao = useSimulacaoDePalco(short.id, rascunho?.campos);
   const planoNaTela = simulacao.simulado ?? plano;
+
+  // O rascunho do arraste vive até o plano novo chegar — a mesma regra da
+  // página. Sem isto a última simulação ficava por cima para sempre, e trocar
+  // o fundo depois de mover um bloco não mudava nada na prévia.
+  const descartarSimulacao = simulacao.descartar;
+  useEffect(() => descartarSimulacao(), [plano, descartarSimulacao]);
 
   /** Ajuste é PARCIAL: mandar só o bloco na mão apagaria a posição dos outros. */
   const gravarAjuste = (ajustes: Record<string, Retangulo>) =>
@@ -169,7 +151,12 @@ export function DefinirPalcoModal({
     onAplicar({ ajustes_palco: redimensionarPalco(slotsAgora, fator) });
 
   return (
-    <Modal open={open} onClose={onClose} title="Definir o palco deste short" size="2xl">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={rascunho?.titulo ?? 'Definir o palco deste short'}
+      size="2xl"
+    >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="space-y-4">
           <Secao numero={1} titulo="Como a tela monta">
@@ -223,6 +210,7 @@ export function DefinirPalcoModal({
                 select de palco, e os dois pareciam a mesma coisa — foi assim
                 que o operador criou um palco e foi procurá-lo na lista errada.
                 Aqui ele está junto do que descreve: de onde sai cada janela. */}
+            {!rascunho && (
             <div className="mb-2 flex flex-wrap items-center gap-1.5">
               <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
                 preset de recortes
@@ -246,6 +234,7 @@ export function DefinirPalcoModal({
                 ))}
               </select>
             </div>
+            )}
             {regioesEmJogo.length === 0 ? (
               <p className="text-[11.5px] text-[var(--wb-text-mute)]">
                 Nenhuma região marcada neste corte — escolha um preset de recortes ou marque à
@@ -377,6 +366,7 @@ export function DefinirPalcoModal({
             )}
           </Secao>
 
+          {!rascunho && (
           <Secao numero={4} titulo="A moldura">
             <select
               aria-label="Moldura do short"
@@ -392,8 +382,9 @@ export function DefinirPalcoModal({
               A assinatura do canal em volta do short.
             </p>
           </Secao>
+          )}
 
-          <Secao numero={5} titulo="O fundo">
+          <Secao numero={rascunho ? 4 : 5} titulo="O fundo">
             {/* D-552: a TEXTURA, e não uma cor da paleta.
                 O seletor anterior oferecia cores e escolher uma não mudava nada
                 em lugar nenhum: no arquivo o PNG do palco cobre a cor, e na
@@ -409,7 +400,7 @@ export function DefinirPalcoModal({
             </p>
           </Secao>
 
-          <Secao numero={6} titulo="A legenda">
+          <Secao numero={rascunho ? 5 : 6} titulo="A legenda">
             {/* D-563: a cor da palavra CORRENTE, e só dela.
                 O resto da frase fica branco em short praticamente sempre — é o
                 realce que diferencia, e é ele que precisa combinar com o palco.
@@ -482,6 +473,11 @@ export function DefinirPalcoModal({
             </p>
           </Secao>
 
+          {rascunho ? (
+            <Secao numero={6} titulo="Guardar o preset">
+              {rascunho.rodape}
+            </Secao>
+          ) : (
           <Secao numero={7} titulo="Guardar como preset">
             {/* D-567: o ciclo do preset mora em `PresetsDoPalco`.
                 Ele era uma classe escondida aqui dentro — 130 linhas, tres
@@ -496,6 +492,7 @@ export function DefinirPalcoModal({
               ocupado={ocupado}
             />
           </Secao>
+          )}
         </div>
 
         {/* A prévia acompanha cada decisão. Decidir olhando para o resultado é

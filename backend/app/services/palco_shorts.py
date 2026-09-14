@@ -27,6 +27,7 @@ import logging
 
 from app.channel_assets_sync import cor_do_tema, paleta_do_tema
 from app.database import AsyncSessionLocal
+from app.domain import gancho_short
 from app.domain.arranjo_short import catalogo as catalogo_de_arranjos
 from app.domain.arranjo_short import de_chave as arranjo_de_chave
 from app.domain.arranjo_short import fonte_efetiva, montar_modelo
@@ -55,6 +56,9 @@ ORIGEM_NENHUMA = "nenhuma"
 # retangulo com a mao.
 ORIGEM_RECORTE_DO_SHORT = "recorte_do_short"
 
+TIPO_PALCO = "palco_short"
+TIPO_GANCHO = "gancho_short"
+
 
 def catalogo_arranjos(regioes: dict | None = None) -> list[dict]:
     """Os arranjos possíveis, com o porquê e o que falta quando não dá (D-507).
@@ -66,8 +70,8 @@ def catalogo_arranjos(regioes: dict | None = None) -> list[dict]:
     return catalogo_de_arranjos(regioes)
 
 
-def _payload_do_preset(presets: list, preset_id: str) -> dict | None:
-    """O payload do preset de palco apontado, ou None quando nao ha.
+def _payload_do_preset(presets: list, preset_id: str, tipo: str = TIPO_PALCO) -> dict | None:
+    """O payload do preset apontado, do tipo pedido, ou None quando nao ha.
 
     Preset apagado depois de escolhido devolve None, e o short volta aos
     defaults do sistema — degradar, e nao quebrar, e a regra desta cascata
@@ -76,12 +80,35 @@ def _payload_do_preset(presets: list, preset_id: str) -> dict | None:
     if not preset_id:
         return None
     for preset in presets:
-        if preset.id == preset_id and preset.tipo == "palco_short":
+        if preset.id == preset_id and preset.tipo == tipo:
             return _json_dict(preset.payload)
     return None
 
 
-def _aparencia(moldura: str, fundo: str, textura: str, herdado: dict) -> dict:
+def _campos_de_palco(short: Short, rascunho: dict | None) -> dict:
+    """Os campos do short que descrevem o palco — gravados, ou os do rascunho.
+
+    D-594: o editor de PRESET monta o palco sobre um trecho sem gravar nele. O
+    rascunho substitui campo a campo o que o short tem; o que ele nao trouxer
+    continua o do short, que e o quadro de onde a previa tira o video.
+    """
+    gravados = {
+        "arranjo_palco": short.arranjo_palco,
+        "janela_cheia": short.janela_cheia,
+        "ajustes_palco": _json_dict(short.ajustes_palco),
+        "recortes_palco": _json_dict(short.recortes_palco),
+        "fundo_editorial": short.fundo_editorial,
+        "legenda_cor": short.legenda_cor,
+        "legenda_fonte": short.legenda_fonte,
+        "palco_preset": short.palco_preset,
+        "moldura": short.moldura,
+    }
+    if rascunho is None:
+        return gravados
+    return {campo: rascunho.get(campo, valor) for campo, valor in gravados.items()}
+
+
+def _aparencia(moldura: str, fundo: str, textura: str, herdado: dict, gancho: dict) -> dict:
     """Tudo que descreve como o palco SE PARECE, num objeto só.
 
     Existe por dois motivos, e o segundo e o que importa.
@@ -97,7 +124,7 @@ def _aparencia(moldura: str, fundo: str, textura: str, herdado: dict) -> dict:
     previa pintando a cor errada, em silencio. Um agrupamento que o tipo nao
     distingue e um bug esperando a proxima edicao distraida.
 
-    A HERANCA ja vem resolvida em `herdado`: aqui so se le.
+    A HERANCA ja vem resolvida em `herdado` e em `gancho`: aqui so se le.
     """
     return {
         "moldura": moldura,
@@ -112,8 +139,12 @@ def _aparencia(moldura: str, fundo: str, textura: str, herdado: dict) -> dict:
         "legenda_cor": herdado.get("legenda_cor", ""),
         "legenda_fonte": herdado.get("legenda_fonte", ""),
         # D-585: a aparencia do gancho, pela mesma razao e pelo mesmo caminho.
-        "gancho_cor": herdado.get("gancho_cor", ""),
-        "gancho_realce": herdado.get("gancho_realce", ""),
+        # D-594: e ela vem do GANCHO PADRAO do corte, nao mais do palco.
+        "gancho_cor": gancho["cor"],
+        "gancho_realce": gancho["realce"],
+        "gancho_ate_seg": gancho["ate_seg"],
+        "gancho_fonte": gancho["fonte"],
+        "gancho_tamanho": gancho["tamanho"],
     }
 
 
@@ -162,22 +193,11 @@ def catalogo_fundos() -> list[dict]:
 # preset do short > preset do corte > layout do corte) e sao o eixo que o
 # operador disse nao querer pensar. Misturar os dois aqui seria refazer no
 # palco a pergunta que o RECORTES ja responde.
-# D-585: o gancho entra na heranca, e isto REVISA a decisao da D-581.
-#
-# La eu escrevi que a aparencia do gancho viajaria junto do texto, direto do
-# short, porque "o gancho inteiro e por short e nao herda; fazer so a aparencia
-# herdar daria dois donos para a mesma decisao".
-#
-# O raciocinio estava certo sobre o TEXTO e errado sobre a APARENCIA, e o
-# operador achou o furo com uma pergunta simples: "tem algum lugar onde eu
-# configure o padrao de todos os shorts do corte?". Nao tinha — e a consequencia
-# e que escolher amarelo-com-caixa custava repetir a escolha em cada trecho, num
-# corte que rende oito.
-#
-# Sao decisoes de naturezas diferentes, e e por isso que podem ter donos
-# diferentes sem contradicao: o TEXTO e editorial e unico por trecho (cada short
-# promete uma coisa), enquanto a COR e o REALCE sao identidade visual — a mesma
-# razao pela qual `legenda_cor` ja herdava desde a D-570.
+# D-594: o gancho SAIU daqui. A D-585 o pos na heranca do palco para a
+# aparencia ser definida uma vez por corte — a intencao continua, o dono mudou.
+# Ele agora tem preset proprio (`Corte.gancho_padrao`, resolvido em
+# `gancho_short.aparencia_resolvida`): o palco cuida da tela, o preset de gancho
+# cuida do letreiro, e cada um se troca sem arrastar o outro.
 CAMPOS_HERDADOS = (
     "arranjo",
     "janela_cheia",
@@ -185,8 +205,6 @@ CAMPOS_HERDADOS = (
     "fundo",
     "legenda_cor",
     "legenda_fonte",
-    "gancho_cor",
-    "gancho_realce",
 )
 
 
@@ -331,7 +349,91 @@ async def descrever_palco_padrao(corte_id: str) -> dict:
     }
 
 
-async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None = None) -> dict:
+async def escolher_gancho_padrao(corte_id: str, preset_id: str) -> dict:
+    """Aponta um preset de GANCHO como o padrao deste corte. `""` volta ao nada.
+
+    D-594. Mesma regra do palco: nada e copiado para os shorts, a heranca e
+    resolvida na leitura.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+
+        if preset_id:
+            preset = await db.get(LayoutPreset, preset_id)
+            if not preset or preset.tipo != TIPO_GANCHO:
+                raise LookupError(f"Preset de gancho {preset_id!r} nao encontrado")
+
+        corte.gancho_padrao = preset_id
+        await db.commit()
+
+    return {"corte_id": corte_id, "gancho_padrao": preset_id}
+
+
+def _tem_aparencia_propria(short: Short) -> bool:
+    """O trecho decidiu alguma parte da aparencia do gancho por conta propria."""
+    return bool(short.gancho_cor or short.gancho_realce or (short.gancho_ate_seg or 0) > 0)
+
+
+async def descrever_gancho_padrao(corte_id: str) -> dict:
+    """Qual gancho o corte usa, os que existem, e quantos trechos fogem dele.
+
+    `customizados` existe porque, antes da D-594, gravar o gancho carimbava o
+    veu e os 2,5s no trecho — e um trecho carimbado nao segue padrao nenhum. A
+    tela precisa dizer isso, senao o operador escolhe um preset e nada muda.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+        presets = (
+            await db.scalars(select(LayoutPreset).where(LayoutPreset.tipo == TIPO_GANCHO))
+        ).all()
+        shorts = (await db.scalars(select(Short).where(Short.corte_id == corte_id))).all()
+        escolhido = corte.gancho_padrao
+
+    preset = next((p for p in presets if p.id == escolhido), None)
+    return {
+        "gancho_padrao": escolhido,
+        "nome": preset.nome if preset else "",
+        # O payload vai junto: o modal do trecho mostra "do padrao" com a cor e
+        # o realce DELE, e sem isto teria de cruzar a lista de presets sozinho.
+        "payload": _json_dict(preset.payload) if preset else {},
+        "disponiveis": [{"id": p.id, "nome": p.nome} for p in presets],
+        "customizados": sum(1 for s in shorts if _tem_aparencia_propria(s)),
+    }
+
+
+async def seguir_gancho_padrao_em_todos(corte_id: str) -> dict:
+    """Limpa a aparencia propria do gancho em todos os trechos do corte (D-594).
+
+    So a APARENCIA: cor, realce e duracao. O texto de cada trecho fica — cada
+    short promete uma coisa, e apagar oito ganchos escritos para "seguir o
+    padrao" seria destruir o trabalho mais editorial da tela.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+        shorts = (await db.scalars(select(Short).where(Short.corte_id == corte_id))).all()
+        liberados = 0
+        for short in shorts:
+            if _tem_aparencia_propria(short):
+                liberados += 1
+            short.gancho_cor = ""
+            short.gancho_realce = ""
+            short.gancho_ate_seg = 0.0
+        await db.commit()
+
+    return {"corte_id": corte_id, "liberados": liberados}
+
+
+async def resolver_para_render(
+    short_id: str,
+    ajustes_hipoteticos: dict | None = None,
+    palco_rascunho: dict | None = None,
+) -> dict:
     """O plano de palco de UM short, pronto para virar filtro.
 
     Devolve `plano=None` quando não há região: o render então segue pelo caminho
@@ -353,23 +455,37 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
             raise LookupError(f"Corte {short.corte_id!r} nao encontrado")
 
         presets = (await db.scalars(select(LayoutPreset))).all()
-        regioes, origem, _ = _resolver(corte, presets, short.palco_preset)
+        campos = _campos_de_palco(short, palco_rascunho)
+        regioes, origem, _ = _resolver(corte, presets, campos["palco_preset"])
 
         # D-570: o palco padrao do corte, se houver. O short que nao decidiu um
         # campo le o daqui — heranca viva, resolvida na LEITURA.
-        padrao = _payload_do_preset(presets, corte.palco_padrao)
+        #
+        # D-594: menos quando ha RASCUNHO. Um preset em edicao tem de ser
+        # julgado pelo que ELE e: misturado ao padrao, a previa mostraria um
+        # fundo que o preset nao guarda, e aplicado noutro corte ele sairia
+        # diferente do que foi aprovado.
+        padrao = (
+            None if palco_rascunho is not None else _payload_do_preset(presets, corte.palco_padrao)
+        )
         herdado = com_palco_do_corte(
             {
-                "arranjo": short.arranjo_palco,
-                "janela_cheia": short.janela_cheia,
-                "ajustes": _json_dict(short.ajustes_palco),
-                "fundo": short.fundo_editorial,
-                "legenda_cor": short.legenda_cor,
-                "legenda_fonte": short.legenda_fonte,
-                "gancho_cor": short.gancho_cor,
-                "gancho_realce": short.gancho_realce,
+                "arranjo": campos["arranjo_palco"],
+                "janela_cheia": campos["janela_cheia"],
+                "ajustes": campos["ajustes_palco"],
+                "fundo": campos["fundo_editorial"],
+                "legenda_cor": campos["legenda_cor"],
+                "legenda_fonte": campos["legenda_fonte"],
             },
             padrao,
+        )
+        gancho = gancho_short.aparencia_resolvida(
+            {
+                "cor": short.gancho_cor,
+                "realce": short.gancho_realce,
+                "ate_seg": short.gancho_ate_seg,
+            },
+            _payload_do_preset(presets, corte.gancho_padrao, TIPO_GANCHO),
         )
         # D-499: o recorte DESTE short vence o do preset, região a região. O
         # preset segue sendo o atalho que preenche tudo — quem não quer mexer
@@ -377,7 +493,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         # trecho conserta o próprio enquadramento sem estragar os vizinhos.
         proprios = {
             regiao: retangulo
-            for regiao, retangulo in _json_dict(short.recortes_palco).items()
+            for regiao, retangulo in campos["recortes_palco"].items()
             if _e_retangulo(retangulo)
         }
         if proprios:
@@ -390,7 +506,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         # OUTROS blocos — que voltariam ao lugar padrão enquanto o operador
         # mexe num terceiro, sem nada na tela explicando o pulo.
         ajustes = {**herdado.get("ajustes", {}), **(ajustes_hipoteticos or {})}
-        moldura = short.moldura
+        moldura = campos["moldura"]
         fundo = resolver_fundo(short.fundo_palco, paleta_do_tema())
         # D-552: a textura do short, ou a do canal quando ele nao escolheu.
         #
@@ -405,7 +521,7 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
         # procurava um componente de textura com esse nome — nao achava, e a
         # tela inteira dos shorts caia com "Element type is invalid".
         textura = textura_valida(herdado.get("fundo", ""), FUNDO_EDITORIAL)
-        aparencia = _aparencia(moldura, fundo, textura, herdado)
+        aparencia = _aparencia(moldura, fundo, textura, herdado, gancho)
 
     if not regioes:
         return _sem_palco(aparencia)
@@ -441,7 +557,11 @@ async def resolver_para_render(short_id: str, ajustes_hipoteticos: dict | None =
     }
 
 
-async def plano_desenhavel(short_id: str, ajustes_hipoteticos: dict | None = None) -> dict:
+async def plano_desenhavel(
+    short_id: str,
+    ajustes_hipoteticos: dict | None = None,
+    palco_rascunho: dict | None = None,
+) -> dict:
     """O palco deste short em coordenadas de DESENHO, para a prévia (D-489).
 
     A tela não recalcula nada: ela recebe, por recorte, de onde tirar da fonte,
@@ -452,7 +572,7 @@ async def plano_desenhavel(short_id: str, ajustes_hipoteticos: dict | None = Non
     aí a prévia poderia discordar do arquivo sem que nada quebrasse. É o risco
     que este épico inteiro existe para evitar.
     """
-    resolvido = await resolver_para_render(short_id, ajustes_hipoteticos)
+    resolvido = await resolver_para_render(short_id, ajustes_hipoteticos, palco_rascunho)
     plano = resolvido["plano"]
 
     return {
@@ -475,6 +595,10 @@ async def plano_desenhavel(short_id: str, ajustes_hipoteticos: dict | None = Non
         # que o arquivo nao teria.
         "gancho_cor": resolvido.get("gancho_cor", ""),
         "gancho_realce": resolvido.get("gancho_realce", ""),
+        # D-594: o resto da aparencia herdada — fonte, corpo e duracao.
+        "gancho_ate_seg": resolvido.get("gancho_ate_seg", 0.0),
+        "gancho_fonte": resolvido.get("gancho_fonte", ""),
+        "gancho_tamanho": resolvido.get("gancho_tamanho", 0.0),
         # A regiao vai JUNTO do desenho: sem ela a tela teria de casar esta
         # lista com `slots` pela posicao, e um acoplamento implicito desses
         # quebra em silencio no dia em que a ordem mudar.

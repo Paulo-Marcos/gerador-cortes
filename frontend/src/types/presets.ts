@@ -18,7 +18,26 @@ export type LayoutPresetTipo =
   | 'posicionamento'
   | 'posicionamento_full'
   /** D-509: o palco do SHORT — catálogo próprio, vocabulário próprio. */
-  | 'palco_short';
+  | 'palco_short'
+  /** D-594: a aparência do gancho da abertura. */
+  | 'gancho_short';
+
+/**
+ * D-594: o que um preset de GANCHO guarda. Parcial de propósito: vazio e zero
+ * são "este preset não decide", e o render cai no de sempre.
+ */
+export interface GanchoShortPreset {
+  /** Hex do texto. Vazio = branco. */
+  cor: string;
+  /** veu | caixa | contorno | sombra | nenhum. Vazio = véu. */
+  realce: string;
+  /** Família da fonte. Vazio = a do canal. */
+  fonte: string;
+  /** Escala do corpo sobre 5% da altura. 0 = 1,0. */
+  tamanho: number;
+  /** Segundos em tela. 0 = 2,5s. */
+  duracao: number;
+}
 
 /** O que um preset de palco de short guarda (D-509). */
 export interface PalcoShortPreset {
@@ -34,10 +53,6 @@ export interface PalcoShortPreset {
   legenda_cor: string;
   /** D-563: família da fonte da legenda. Vazio = a do canal. */
   legenda_fonte: string;
-  /** D-585: hex do gancho da abertura. Vazio = branco. */
-  gancho_cor?: string;
-  /** D-585: veu | caixa | contorno | sombra | nenhum. Vazio = veu. */
-  gancho_realce?: string;
 }
 
 /**
@@ -93,7 +108,8 @@ export interface CriarLayoutPresetRequest {
     | YoutubeLayout
     | LayoutPosicionamentoPayload
     | LayoutPosicionamentoFullPayload
-    | PalcoShortPreset;
+    | PalcoShortPreset
+    | GanchoShortPreset;
 }
 
 export interface AtualizarLayoutPresetRequest {
@@ -102,5 +118,6 @@ export interface AtualizarLayoutPresetRequest {
     | YoutubeLayout
     | LayoutPosicionamentoPayload
     | LayoutPosicionamentoFullPayload
-    | PalcoShortPreset;
+    | PalcoShortPreset
+    | GanchoShortPreset;
 }

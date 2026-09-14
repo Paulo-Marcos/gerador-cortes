@@ -471,7 +471,12 @@ async def atualizar_short(
             short.gancho_tela = gancho_short.normalizar_gancho(gancho_tela)
 
         if gancho_ate_seg is not None:
-            short.gancho_ate_seg = gancho_short.normalizar_duracao(gancho_ate_seg)
+            # D-594: 0 e "nao decidi" — o trecho segue a duracao do gancho
+            # padrao do corte. Normalizar o zero para 2,5s aqui carimbaria o
+            # default no short e o preset nunca mais o alcancaria.
+            short.gancho_ate_seg = (
+                gancho_short.normalizar_duracao(gancho_ate_seg) if gancho_ate_seg > 0 else 0.0
+            )
 
         if gancho_cor is not None:
             # D-581: "" volta ao branco. Normaliza aqui pelo mesmo motivo do
@@ -480,7 +485,11 @@ async def atualizar_short(
             short.gancho_cor = gancho_short.normalizar_cor(gancho_cor)
 
         if gancho_realce is not None:
-            short.gancho_realce = gancho_short.normalizar_realce(gancho_realce)
+            # D-594: "" fica "" pelo mesmo motivo da duracao — vazio herda do
+            # padrao do corte; o veu so entra na leitura, quando nada decidiu.
+            short.gancho_realce = (
+                gancho_short.normalizar_realce(gancho_realce) if gancho_realce.strip() else ""
+            )
 
         if moldura is not None:
             if moldura not in {m.value for m in Moldura}:

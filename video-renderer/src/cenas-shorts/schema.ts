@@ -51,4 +51,8 @@ export interface GanchoShort {
   /** D-581: como ele se separa do fundo — veu (padrao), caixa, contorno,
    *  sombra ou nenhum. */
   realce?: string;
+  /** D-594: familia da fonte. "" = a display do canal. */
+  fonte?: string;
+  /** D-594: escala do corpo. 1 = o de sempre. */
+  tamanho?: number;
 }

@@ -41,6 +41,26 @@ export const MAX_VARIACOES = 6;
 /** Passo do ajuste de duração, em segundos. */
 export const DURACAO_PASSO_SEG = 0.5;
 
+/** D-594: espelha `TAMANHO_PADRAO` em `backend/app/domain/gancho_short.py`. */
+export const TAMANHO_PADRAO = 1.0;
+
+/** D-594: espelha `TAMANHO_MIN` em `backend/app/domain/gancho_short.py`. */
+export const TAMANHO_MIN = 0.7;
+
+/** D-594: espelha `TAMANHO_MAX` em `backend/app/domain/gancho_short.py`. */
+export const TAMANHO_MAX = 1.6;
+
+/** Passo do ajuste de tamanho: 10% por clique, visível na prévia. */
+export const TAMANHO_PASSO = 0.1;
+
+/** A escala efetiva do corpo. Espelha `normalizar_tamanho`. */
+export function tamanhoEfetivo(tamanho: number | null | undefined): number {
+  if (typeof tamanho !== 'number' || !Number.isFinite(tamanho) || tamanho <= 0) {
+    return TAMANHO_PADRAO;
+  }
+  return Math.round(Math.min(Math.max(tamanho, TAMANHO_MIN), TAMANHO_MAX) * 100) / 100;
+}
+
 // D-581: como o gancho se separa do quadro.
 //
 // O problema que originou isto: gancho branco e legenda branca no mesmo quadro,

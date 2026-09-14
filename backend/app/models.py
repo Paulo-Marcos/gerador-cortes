@@ -235,6 +235,10 @@ class Corte(Base):
     # materializar o default ao GRAVAR congelaria o palco do dia em que foi
     # escolhido.
     palco_padrao: Mapped[str] = mapped_column(String(200), default="")
+    # D-594: o preset de GANCHO que vale para todos os shorts do corte — cor,
+    # realce, fonte, tamanho e duracao. Mesma heranca viva do `palco_padrao`:
+    # id vazio = cada trecho decide, e nada e copiado para os shorts.
+    gancho_padrao: Mapped[str] = mapped_column(String(200), default="")
     # F-054: lista JSON de segmentos detectados via PySceneDetect no bruto do
     # corte. Cada item: {inicio, fim, score, status}. Status: sugerido /
     # aceito_full / aceito_compartilhada / rejeitado. Aceitar materializa uma

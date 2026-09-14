@@ -5,6 +5,7 @@ import type { ShortSugerido, VereditoDoRosto } from './shortsApi';
 import { janelaNova, mmss } from './linhaDoTempoShort';
 import { mudancaDoPalco } from './aplicarPalco';
 import { CandidatoCard } from './CandidatoCard';
+import { GanchoPadraoDoCorte } from './GanchoPadraoDoCorte';
 import { PalcoPadraoDoCorte } from './PalcoPadraoDoCorte';
 import type { EdicaoDoShort } from './useEdicaoDoShort';
 import {
@@ -43,6 +44,9 @@ interface Props {
   onBorda: (short: ShortSugerido, campo: 'inicio_seg' | 'fim_seg') => void;
   onDefinirPalco: (shortId: string) => void;
   onEscreverGancho: (shortId: string) => void;
+  /** D-594: abrir o editor de preset de palco/gancho. `null` = novo. */
+  onEditarPalcoPadrao: (presetId: string | null) => void;
+  onEditarGanchoPadrao: (presetId: string | null) => void;
 }
 
 /**
@@ -71,6 +75,8 @@ export function ColunaDeDecisoes({
   onBorda,
   onDefinirPalco,
   onEscreverGancho,
+  onEditarPalcoPadrao,
+  onEditarGanchoPadrao,
 }: Props) {
   // Só UM card mostra os ajustes por vez: cinco blocos de refino abertos ao
   // mesmo tempo reconstroem a parede de controles que a D-492 desmontou.
@@ -104,7 +110,18 @@ export function ColunaDeDecisoes({
             O RECORTES não sumiu — foi para a seção 2 do "Definir o palco",
             junto do que ele descreve: de onde sai cada janela. Aqui em cima
             fica a decisão que se repete a cada trecho. */}
-        <PalcoPadraoDoCorte corteId={corteId} />
+        {/* D-594: os PADRÕES do corte num bloco só — o palco e o gancho, cada
+            um com escolher, editar e criar. São as duas decisões que valem
+            para todos os trechos, e o operador as procura no mesmo lugar. */}
+        <p className="font-code text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+          padrões do corte
+        </p>
+        <PalcoPadraoDoCorte
+          corteId={corteId}
+          podeEditar={shorts.length > 0}
+          onEditar={onEditarPalcoPadrao}
+        />
+        <GanchoPadraoDoCorte corteId={corteId} onEditar={onEditarGanchoPadrao} />
         <div className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] pt-2">
           <Button
             variant="outline"

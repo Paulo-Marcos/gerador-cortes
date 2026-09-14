@@ -329,9 +329,10 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             legenda_fonte=palco.get("legenda_fonte", ""),
             gancho=gancho_short.para_payload(
                 short.gancho_tela,
-                short.gancho_ate_seg,
+                # D-594: a duracao tambem herda do gancho padrao do corte.
+                palco.get("gancho_ate_seg", 0.0),
                 duracao_short_seg=float(short.fim_seg) - float(short.inicio_seg),
-                # D-585: a aparencia vem do PALCO, ja com a heranca resolvida.
+                # D-585: a aparencia vem do PLANO, ja com a heranca resolvida.
                 #
                 # A D-581 lia direto do short, e por isso o padrao do corte nao
                 # alcancava o gancho. Quem resolve a cascata e `palco_shorts`, e
@@ -339,6 +340,8 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
                 # — exatamente o que a D-570 corrigiu na legenda.
                 cor=palco.get("gancho_cor", ""),
                 realce=palco.get("gancho_realce", ""),
+                fonte=palco.get("gancho_fonte", ""),
+                tamanho=palco.get("gancho_tamanho", 0.0),
             ),
             origem=origem,
             plano=palco["plano"],

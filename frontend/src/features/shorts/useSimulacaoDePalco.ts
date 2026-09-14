@@ -25,16 +25,25 @@ import {
 // A decisão de quando chamar e o que aceitar mora em `simulacaoDePalco.ts`,
 // pura e testada. Aqui fica só a ligação com o React e com o relógio.
 
-export function useSimulacaoDePalco(shortId: string | null) {
+/**
+ * `rascunho` (D-594): o palco inteiro de um preset em edição. Com ele, o arraste
+ * simula sobre o RASCUNHO, e não sobre o que o trecho tem gravado — senão os
+ * blocos andariam no palco errado enquanto o operador monta o preset.
+ */
+export function useSimulacaoDePalco(shortId: string | null, rascunho?: Record<string, unknown>) {
   const [simulado, setSimulado] = useState<PlanoDesenhavel | null>(null);
   const estado = useRef<EstadoSimulacao>(INICIAL);
+  // Ref e não dependência: o rascunho muda a cada clique, e recriar `chamar`
+  // no meio de um arraste descartaria a chamada que já está em voo.
+  const rascunhoRef = useRef(rascunho);
+  rascunhoRef.current = rascunho;
 
   const chamar = useCallback(
     async (ajustes: Ajustes, geracao: number) => {
       if (!shortId) return;
       let plano: PlanoDesenhavel | null = null;
       try {
-        plano = await shortsApi.simularPalco(shortId, ajustes);
+        plano = await shortsApi.simularPalco(shortId, ajustes, rascunhoRef.current);
       } catch {
         // Simulação é conforto, não correção: falhar aqui só faz o canvas
         // seguir mostrando o último plano bom. O valor real é gravado no

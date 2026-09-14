@@ -34,7 +34,10 @@ import { loadFont as loadPoppins } from "@remotion/google-fonts/Poppins";
 //
 // Espelha `FONTES_DA_LEGENDA` do frontend. Acrescentar la sem acrescentar aqui
 // faz a previa mostrar a fonte nova e o arquivo sair com a padrao.
-const CARREGADAS: Record<string, string> = Object.fromEntries(
+//
+// D-594: exportada porque o gancho da abertura escolhe do MESMO catálogo — uma
+// segunda lista de `loadFont` carregaria as fontes duas vezes e divergiria.
+export const FONTES_CARREGADAS: Record<string, string> = Object.fromEntries(
   [loadAnton(), loadBebasNeue(), loadMontserrat(), loadOswald(), loadPoppins()].map(
     (f) => [f.fontFamily, f.fontFamily],
   ),
@@ -111,7 +114,7 @@ export const LegendaShort: React.FC<LegendaShortProps> = ({
         bottom: height * SAFE_ZONE + deslocamentoRodape,
         width: LARGURA,
         textAlign: "center",
-        fontFamily: CARREGADAS[fonte] ?? FONTS_V2.display,
+        fontFamily: FONTES_CARREGADAS[fonte] ?? FONTS_V2.display,
         fontSize: Math.round(height * 0.042),
         fontWeight: 800,
         lineHeight: 1.18,

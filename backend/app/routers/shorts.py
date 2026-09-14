@@ -761,6 +761,43 @@ async def definir_palco_padrao(corte_id: str, body: PalcoPadraoRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+class GanchoPadraoRequest(BaseModel):
+    preset_id: str | None = None
+
+
+@router.get("/corte/{corte_id}/gancho-padrao")
+async def gancho_padrao_do_corte(corte_id: str):
+    """O preset de gancho que vale para todos os shorts deste corte (D-594)."""
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.descrever_gancho_padrao(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put("/corte/{corte_id}/gancho-padrao")
+async def definir_gancho_padrao(corte_id: str, body: GanchoPadraoRequest):
+    """Escolhe o gancho padrao do corte. Heranca na leitura, como a do palco."""
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.escolher_gancho_padrao(corte_id, body.preset_id or "")
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/corte/{corte_id}/gancho-padrao/seguir")
+async def seguir_gancho_padrao(corte_id: str):
+    """Todos os trechos voltam a seguir o gancho padrao (D-594). O texto fica."""
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.seguir_gancho_padrao_em_todos(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.get("/{short_id}/log")
 async def log_do_render(short_id: str):
     """O log do worker deste short — o que rodou, e quanto cada passo levou.
@@ -792,6 +829,10 @@ class SimularPalcoRequest(BaseModel):
     """Ajustes de RASCUNHO — nada disto e gravado."""
 
     ajustes_palco: dict = {}
+    # D-594: o palco INTEIRO de um rascunho de preset — arranjo, recortes,
+    # fundo, legenda. Presente, ele substitui o do short e o padrao do corte
+    # sai da conta: um preset em edicao tem de ser julgado pelo que ELE e.
+    palco: dict | None = None
 
 
 @router.post("/{short_id}/palco/simular")
@@ -809,7 +850,7 @@ async def simular_palco(short_id: str, body: SimularPalcoRequest):
     from app.services import palco_shorts
 
     try:
-        return await palco_shorts.plano_desenhavel(short_id, body.ajustes_palco)
+        return await palco_shorts.plano_desenhavel(short_id, body.ajustes_palco, body.palco)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

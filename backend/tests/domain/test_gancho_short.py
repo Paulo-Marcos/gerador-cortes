@@ -21,13 +21,76 @@ from app.domain.gancho_short import (
     MAX_VARIACOES,
     PALAVRAS_MAX,
     PALAVRAS_MIN,
+    TAMANHO_MAX,
+    TAMANHO_MIN,
+    aparencia_resolvida,
     contar_palavras,
     esta_na_faixa,
     ganchos_da_resposta,
     normalizar_duracao,
     normalizar_gancho,
+    normalizar_preset,
+    normalizar_tamanho,
     para_payload,
 )
+
+
+class TestPresetDoGancho:
+    """D-594: o preset de gancho e PARCIAL — vazio e zero sao "nao decido"."""
+
+    def test_guarda_so_o_que_foi_decidido(self):
+        assert normalizar_preset({"cor": "#FACC15", "realce": "caixa"}) == {
+            "cor": "#facc15",
+            "realce": "caixa",
+            "fonte": "",
+            "tamanho": 0.0,
+            "duracao": 0.0,
+        }
+
+    def test_valores_tortos_viram_nao_decidido_ou_faixa(self):
+        preset = normalizar_preset({"realce": "neon", "tamanho": 0.1, "duracao": 99})
+        assert preset["realce"] == ""
+        assert preset["tamanho"] == TAMANHO_MIN
+        assert preset["duracao"] == DURACAO_MAX_SEG
+
+    def test_tamanho_ausente_e_o_corpo_de_sempre(self):
+        assert normalizar_tamanho(None) == 1.0
+
+
+class TestAparenciaResolvida:
+    """A heranca viva do gancho: o trecho decide, ou segue o padrao do corte."""
+
+    def test_o_trecho_que_nao_decidiu_segue_o_padrao(self):
+        resolvida = aparencia_resolvida(
+            {"cor": "", "realce": "", "ate_seg": 0.0},
+            {"cor": "#facc15", "realce": "caixa", "fonte": "Anton", "tamanho": 1.2, "duracao": 3.0},
+        )
+        assert resolvida == {
+            "cor": "#facc15",
+            "realce": "caixa",
+            "ate_seg": 3.0,
+            "fonte": "Anton",
+            "tamanho": 1.2,
+        }
+
+    def test_o_que_o_trecho_decidiu_vence(self):
+        resolvida = aparencia_resolvida(
+            {"cor": "#ff5a72", "realce": "", "ate_seg": 2.0},
+            {"cor": "#facc15", "realce": "contorno", "duracao": 4.0},
+        )
+        assert resolvida["cor"] == "#ff5a72"
+        assert resolvida["realce"] == "contorno"
+        assert resolvida["ate_seg"] == 2.0
+
+    def test_fonte_e_tamanho_sao_so_do_padrao(self):
+        """Oito trechos do mesmo corte com oito corpos diferentes nao e identidade."""
+        resolvida = aparencia_resolvida({"fonte": "Oswald", "tamanho": 1.5}, None)
+        assert resolvida["fonte"] == ""
+        assert resolvida["tamanho"] == 0.0
+
+    def test_o_texto_nunca_herda(self):
+        resolvida = aparencia_resolvida({}, {"texto": "o juro te come", "cor": "#facc15"})
+        assert "texto" not in resolvida
 
 
 class TestNormalizarGancho:
@@ -90,7 +153,16 @@ class TestPayload:
             # antes dela sai exatamente como saia.
             "cor": "",
             "realce": "veu",
+            "fonte": "",
+            "tamanho": 1.0,
         }
+
+    def test_fonte_e_tamanho_chegam_normalizados(self):
+        """D-594: o tamanho e escala, travada na faixa em que a frase se le."""
+        payload = para_payload("oi", 2.5, duracao_short_seg=30.0, fonte=" Anton ", tamanho=4.0)
+        assert payload is not None
+        assert payload["fonte"] == "Anton"
+        assert payload["tamanho"] == TAMANHO_MAX
 
     def test_aparencia_escolhida_chega_normalizada(self):
         payload = para_payload("oi", 2.5, duracao_short_seg=30.0, cor="#FACC15", realce="CAIXA")

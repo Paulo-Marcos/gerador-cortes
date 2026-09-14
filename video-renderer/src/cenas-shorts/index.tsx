@@ -77,6 +77,8 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
             ateSeg={gancho.ateSeg}
             cor={gancho.cor ?? ""}
             realce={gancho.realce ?? "veu"}
+            fonte={gancho.fonte ?? ""}
+            tamanho={gancho.tamanho ?? 1}
           />
         </Sequence>
       ) : null}

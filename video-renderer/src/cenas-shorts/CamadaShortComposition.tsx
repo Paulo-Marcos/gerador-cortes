@@ -39,6 +39,10 @@ export const ganchoShortSchema = z.object({
   cor: z.string().default(""),
   /** D-581: veu | caixa | contorno | sombra | nenhum. "" cai no veu. */
   realce: z.string().default("veu"),
+  /** D-594: familia da fonte. "" = a display do canal. */
+  fonte: z.string().default(""),
+  /** D-594: escala do corpo. 1 = o de sempre. */
+  tamanho: z.number().default(1),
 });
 
 export const camadaShortSchema = z.object({

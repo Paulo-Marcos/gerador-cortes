@@ -64,6 +64,23 @@ REALCE_PADRAO = REALCE_VEU
 
 REALCES = (REALCE_VEU, REALCE_CAIXA, REALCE_CONTORNO, REALCE_SOMBRA, REALCE_NENHUM)
 
+# D-594: a escala do corpo do gancho sobre o tamanho de sempre (5% da altura).
+#
+# E multiplicador, e nao pixel: o gancho e desenhado num quadro de 1920 de
+# altura no render e numa previa de 300px, e so uma proporcao significa a mesma
+# coisa nos dois. A faixa e estreita de proposito — abaixo de 0,7 as 4 a 7
+# palavras deixam de ser lidas numa sacada; acima de 1,6 a frase de sete
+# palavras passa de tres linhas e invade o video.
+TAMANHO_PADRAO = 1.0
+TAMANHO_MIN = 0.7
+TAMANHO_MAX = 1.6
+
+# D-594: a familia da fonte e guardada pelo NOME, como a da legenda (D-563) —
+# quem desenha e a previa e o Remotion, e o nome ja e o valor nos dois. O teto
+# so barra lixo; quem sabe se a familia existe e o renderer, que degrada para a
+# do canal quando nao a carregou.
+MAX_FONTE = 60
+
 
 def normalizar_realce(valor: object) -> str:
     """O destaque do gancho, ou o padrao quando o valor nao e um dos conhecidos.
@@ -175,6 +192,88 @@ def normalizar_duracao(valor: object) -> float:
     return min(max(duracao, DURACAO_MIN_SEG), DURACAO_MAX_SEG)
 
 
+def normalizar_tamanho(valor: object) -> float:
+    """A escala do corpo, encaixada na faixa util. Ausente ou torto = 1.0.
+
+    >>> normalizar_tamanho(1.2)
+    1.2
+    >>> normalizar_tamanho(9)
+    1.6
+    >>> normalizar_tamanho(None)
+    1.0
+    """
+    try:
+        tamanho = float(valor)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return TAMANHO_PADRAO
+
+    if tamanho <= 0:
+        return TAMANHO_PADRAO
+    return round(min(max(tamanho, TAMANHO_MIN), TAMANHO_MAX), 2)
+
+
+def normalizar_fonte(valor: object) -> str:
+    """O nome da familia, sem espaco nas pontas. "" = a fonte do canal.
+
+    >>> normalizar_fonte('  Anton ')
+    'Anton'
+    >>> normalizar_fonte(None)
+    ''
+    """
+    return str(valor or "").strip()[:MAX_FONTE]
+
+
+def normalizar_preset(payload: dict) -> dict:
+    """O payload de um preset de GANCHO (D-594), parcial de proposito.
+
+    Vazio e zero significam "este preset nao decide" — e nao "branco" ou "2,5s".
+    Materializar os defaults aqui congelaria o sistema do dia em que o preset
+    foi salvo, a mesma armadilha que a cascata de layout ja registrou.
+
+    >>> normalizar_preset({'cor': 'FACC15', 'realce': 'caixa', 'tamanho': 1.2})
+    {'cor': '#facc15', 'realce': 'caixa', 'fonte': '', 'tamanho': 1.2, 'duracao': 0.0}
+    >>> normalizar_preset({})
+    {'cor': '', 'realce': '', 'fonte': '', 'tamanho': 0.0, 'duracao': 0.0}
+    """
+    realce = str(payload.get("realce") or "").strip().lower()
+    return {
+        "cor": normalizar_cor(payload.get("cor")),
+        "realce": realce if realce in REALCES else "",
+        "fonte": normalizar_fonte(payload.get("fonte")),
+        "tamanho": normalizar_tamanho(payload["tamanho"]) if payload.get("tamanho") else 0.0,
+        "duracao": normalizar_duracao(payload["duracao"]) if payload.get("duracao") else 0.0,
+    }
+
+
+def aparencia_resolvida(proprio: dict, padrao: dict | None) -> dict:
+    """A aparencia do gancho de um short: o que ele decidiu, ou o do corte.
+
+    D-594: o dono do padrao passou a ser o PRESET DE GANCHO escolhido no corte,
+    e nao mais o palco (que era o caminho da D-585). Mesma heranca viva: vazio
+    no short e "nao decidi", e trocar o padrao reflete na hora em quem nao
+    customizou.
+
+    `fonte` e `tamanho` so existem no preset: sao identidade do canal, e dar a
+    cada trecho um tamanho proprio seria abrir a porta para oito shorts do mesmo
+    corte com oito corpos diferentes.
+
+    O TEXTO fica de fora, e tem de ficar: cada short promete uma coisa.
+
+    >>> aparencia_resolvida({'cor': '', 'realce': 'caixa', 'ate_seg': 0}, {'cor': '#facc15', 'realce': 'sombra', 'duracao': 3.0})
+    {'cor': '#facc15', 'realce': 'caixa', 'ate_seg': 3.0, 'fonte': '', 'tamanho': 0.0}
+    >>> aparencia_resolvida({'cor': '#ff5a72'}, None)
+    {'cor': '#ff5a72', 'realce': '', 'ate_seg': 0.0, 'fonte': '', 'tamanho': 0.0}
+    """
+    base = padrao or {}
+    return {
+        "cor": proprio.get("cor") or base.get("cor") or "",
+        "realce": proprio.get("realce") or base.get("realce") or "",
+        "ate_seg": float(proprio.get("ate_seg") or base.get("duracao") or 0.0),
+        "fonte": base.get("fonte") or "",
+        "tamanho": float(base.get("tamanho") or 0.0),
+    }
+
+
 def para_payload(
     texto: str,
     ate_seg: object,
@@ -182,6 +281,8 @@ def para_payload(
     duracao_short_seg: float,
     cor: object = "",
     realce: object = "",
+    fonte: object = "",
+    tamanho: object = 0.0,
 ) -> dict | None:
     """O gancho como o renderer o consome, ou `None` quando nao ha gancho.
 
@@ -194,7 +295,7 @@ def para_payload(
     o sintoma seria um erro de render, nao um gancho comprido.
 
     >>> para_payload('ninguem te conta isso', 2.5, duracao_short_seg=30.0)
-    {'texto': 'ninguem te conta isso', 'ateSeg': 2.5, 'cor': '', 'realce': 'veu'}
+    {'texto': 'ninguem te conta isso', 'ateSeg': 2.5, 'cor': '', 'realce': 'veu', 'fonte': '', 'tamanho': 1.0}
     >>> para_payload('  ', 2.5, duracao_short_seg=30.0) is None
     True
     >>> para_payload('oi', 5.0, duracao_short_seg=3.0)['ateSeg']
@@ -212,12 +313,13 @@ def para_payload(
     return {
         "texto": limpo,
         "ateSeg": ate,
-        # D-581: viajam JUNTO do texto, e nao pelo plano do palco como a
-        # legenda. O gancho inteiro (texto e duracao) e por short e nao herda do
-        # palco do corte; fazer a aparencia dele herdar e o resto nao daria dois
-        # donos para a mesma decisao.
+        # A aparencia chega aqui JA resolvida (`aparencia_resolvida`): quem
+        # chama decide a heranca, e este payload so normaliza o que o renderer
+        # vai desenhar.
         "cor": normalizar_cor(cor),
         "realce": normalizar_realce(realce),
+        "fonte": normalizar_fonte(fonte),
+        "tamanho": normalizar_tamanho(tamanho),
     }
 
 

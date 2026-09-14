@@ -198,6 +198,52 @@ export function useDefinirPalcoPadrao(corteId: string) {
   });
 }
 
+/** D-594: o gancho padrão do corte — a aparência que todos os trechos herdam. */
+export const ganchoPadraoKey = (corteId: string) => ['shorts', 'gancho-padrao', corteId] as const;
+
+export function useGanchoPadrao(corteId: string) {
+  return useQuery({
+    queryKey: ganchoPadraoKey(corteId),
+    queryFn: () => shortsApi.ganchoPadrao(corteId),
+    enabled: Boolean(corteId),
+  });
+}
+
+/**
+ * Tudo que muda a aparência RESOLVIDA do gancho: o padrão, a lista (o contador
+ * de customizados) e os planos, que carregam a aparência já herdada.
+ */
+function invalidarGancho(qc: ReturnType<typeof useQueryClient>, corteId: string) {
+  void qc.invalidateQueries({ queryKey: ganchoPadraoKey(corteId) });
+  void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+  void qc.invalidateQueries({ queryKey: PALCO_KEY });
+}
+
+export function useDefinirGanchoPadrao(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (presetId: string) => shortsApi.definirGanchoPadrao(corteId, presetId),
+    onSuccess: () => invalidarGancho(qc, corteId),
+  });
+}
+
+export function useSeguirGanchoPadrao(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => shortsApi.seguirGanchoPadrao(corteId),
+    onSuccess: () => invalidarGancho(qc, corteId),
+  });
+}
+
+/** Regravar um preset muda o que os trechos herdam — sem trocar o id escolhido. */
+export function useInvalidarPadroes(corteId: string) {
+  const qc = useQueryClient();
+  return () => {
+    invalidarGancho(qc, corteId);
+    void qc.invalidateQueries({ queryKey: ['shorts', 'palco-padrao', corteId] });
+  };
+}
+
 export function usePreviaPublicacao(shortId: string | null) {
   return useQuery({
     queryKey: ['shorts', 'publicacao', shortId],
