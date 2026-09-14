@@ -242,3 +242,27 @@ export function ganchoVisivelEm(
 ): boolean {
   return segundoNoShort >= 0 && segundoNoShort < duracaoNoShort(ateSeg, duracaoShortSeg);
 }
+
+/**
+ * O trecho já decidiu algo da aparência, em vez de herdar tudo do corte?
+ *
+ * Vazio/zero são a herança (D-594), então basta um campo preenchido.
+ */
+export function temAparenciaPropria(short: {
+  gancho_cor?: string | null;
+  gancho_realce?: string | null;
+  gancho_ate_seg?: number | null;
+}): boolean {
+  return Boolean(short.gancho_cor || short.gancho_realce || (short.gancho_ate_seg ?? 0) > 0);
+}
+
+/** "amarelo · Caixa · 2.5s" — o que o trecho herda quando não personaliza. */
+export function resumoDaAparenciaPadrao(
+  padrao: { cor?: string; realce?: string; duracao?: number } | null,
+): string {
+  const cor = CORES_DO_GANCHO.find((c) => c.hex === (padrao?.cor ?? ''))?.nome ?? padrao?.cor;
+  const realce = REALCES_DO_GANCHO.find((r) => r.id === realceValido(padrao?.realce))?.nome;
+  return [cor, realce, `${duracaoEfetiva(padrao?.duracao).toFixed(1)}s`]
+    .filter(Boolean)
+    .join(' · ');
+}

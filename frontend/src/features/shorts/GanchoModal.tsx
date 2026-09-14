@@ -15,6 +15,8 @@ import {
   PALAVRAS_MAX,
   PALAVRAS_MIN,
   recadoDoTom,
+  resumoDaAparenciaPadrao,
+  temAparenciaPropria,
   tomDoGancho,
   type TomDoGancho,
 } from './ganchoDoShort';
@@ -104,6 +106,10 @@ export function GanchoModal({
   const [cor, setCor] = useState(short.gancho_cor ?? '');
   // D-594: mesma regra da duração — vazio é "do padrão", e não o véu.
   const [realce, setRealce] = useState(short.gancho_realce ?? '');
+  // Em quase todo short a aparência é a do padrão do corte, então as opções
+  // nascem escondidas. Só abrem sozinhas quando o trecho JÁ tem algo próprio —
+  // escondê-lo ali faria uma personalização gravada passar despercebida.
+  const [personalizado, setPersonalizado] = useState(temAparenciaPropria(short));
 
   // Reabrir o modal em outro candidato tem de trazer o gancho DELE. Sem isto o
   // estado do anterior ficaria na tela e o operador salvaria o texto errado no
@@ -114,6 +120,7 @@ export function GanchoModal({
     setAteSeg(short.gancho_ate_seg ?? 0);
     setCor(short.gancho_cor ?? '');
     setRealce(short.gancho_realce ?? '');
+    setPersonalizado(temAparenciaPropria(short));
     gerar.reset();
     // `gerar` fora das dependencias de proposito: a mutation muda de identidade
     // a cada resultado, e inclui-la faria este efeito rodar de novo logo apos
@@ -139,6 +146,18 @@ export function GanchoModal({
   const tempoDaPrevia = short.inicio_seg + INSTANTE_DA_PREVIA_SEG;
   // O que vai sair: o que o trecho decidiu, ou o do padrão do corte.
   const duracaoNaTela = duracaoEfetiva(ateSeg || padrao?.duracao);
+
+  // Desligar devolve o trecho ao padrão de verdade: esconder os campos com
+  // valores próprios ainda dentro gravaria uma personalização invisível.
+  const alternarPersonalizado = () => {
+    if (personalizado) {
+      setCor('');
+      setRealce('');
+      setAteSeg(0);
+    }
+    setPersonalizado(!personalizado);
+  };
+
 
   const sobreposicoes = (
     <>
@@ -286,6 +305,44 @@ export function GanchoModal({
               A ordem é a da dúvida real: escrita a frase, a pergunta seguinte é
               "dá para ler?" — e era ali que o gancho branco sumia dentro da
               legenda branca. Quanto tempo ela fica é a decisão de depois. */}
+          <section className="border-t border-[var(--wb-border-soft)] pt-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={personalizado}
+              disabled={ocupado}
+              onClick={alternarPersonalizado}
+              className="flex w-full items-center gap-2.5 text-left disabled:opacity-45"
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  'relative h-4 w-7 flex-none rounded-full transition-colors',
+                  personalizado ? 'bg-[var(--wb-accent)]' : 'bg-[var(--wb-border)]',
+                )}
+              >
+                <span
+                  className={cn(
+                    'absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform',
+                    personalizado ? 'translate-x-3.5' : 'translate-x-0.5',
+                  )}
+                />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12.5px] font-semibold text-[var(--wb-text)]">
+                  Aparência própria neste trecho
+                </span>
+                <span className="block truncate text-[11px] text-[var(--wb-text-mute)]">
+                  {personalizado
+                    ? 'cor, destaque e tempo só deste short'
+                    : `segue o padrão do corte — ${resumoDaAparenciaPadrao(padrao)}`}
+                </span>
+              </span>
+            </button>
+          </section>
+
+          {personalizado && (
+          <>
           <section className="space-y-2.5 border-t border-[var(--wb-border-soft)] pt-3">
             <div>
               <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">Cor do gancho</p>
@@ -413,6 +470,8 @@ export function GanchoModal({
               {DURACAO_MAX_SEG.toFixed(1)}s ela deixa de ser abertura e vira uma segunda legenda.
             </p>
           </section>
+          </>
+          )}
 
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--wb-border-soft)] pt-3">
             <Button size="sm" disabled={ocupado} onClick={() => onGravar(texto, ateSeg, cor, realce)}>

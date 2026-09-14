@@ -23,7 +23,36 @@ import {
   TAMANHO_PADRAO,
   tamanhoEfetivo,
   tomDoGancho,
+  resumoDaAparenciaPadrao,
+  temAparenciaPropria,
 } from '../ganchoDoShort';
+
+describe('temAparenciaPropria', () => {
+  it('tudo vazio é herança do corte — as opções ficam escondidas', () => {
+    expect(temAparenciaPropria({ gancho_cor: '', gancho_realce: '', gancho_ate_seg: 0 })).toBe(false);
+    expect(temAparenciaPropria({})).toBe(false);
+  });
+
+  it('um campo próprio basta para abrir as opções', () => {
+    expect(temAparenciaPropria({ gancho_cor: '#facc15' })).toBe(true);
+    expect(temAparenciaPropria({ gancho_realce: 'caixa' })).toBe(true);
+    expect(temAparenciaPropria({ gancho_ate_seg: 3 })).toBe(true);
+  });
+});
+
+describe('resumoDaAparenciaPadrao', () => {
+  it('sem padrão no corte, descreve o default do render', () => {
+    expect(resumoDaAparenciaPadrao(null)).toBe(
+      `branco (padrão) · Véu · ${DURACAO_PADRAO_SEG.toFixed(1)}s`,
+    );
+  });
+
+  it('com padrão, usa os nomes do catálogo', () => {
+    expect(resumoDaAparenciaPadrao({ cor: '#facc15', realce: 'caixa', duracao: 3 })).toBe(
+      'amarelo · Caixa · 3.0s',
+    );
+  });
+});
 
 describe('tamanhoEfetivo (D-594)', () => {
   it('ausente ou zero é o corpo de sempre', () => {
