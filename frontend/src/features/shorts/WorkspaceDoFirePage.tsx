@@ -88,7 +88,7 @@ function CartaoDoPronto({
   const renderizando = progresso !== null && !progresso.concluido;
   const pronto = short.status === 'renderizado' && Boolean(short.arquivo_short_path);
   const capa = useCapaDoShort(short.id, pronto);
-  const fecho = useFechoDoShort(short, pronto);
+  const fecho = useFechoDoShort(short);
   const jaFoi = useMemo(
     () => plataformasJaPublicadas(publicacoes, short.id),
     [publicacoes, short.id],

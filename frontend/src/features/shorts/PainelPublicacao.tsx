@@ -8,9 +8,11 @@
 // Os avisos aparecem ANTES do botão. Descobrir que o vídeo passa do limite
 // depois de subir é o erro que esta tela existe para evitar.
 import { FileText, Image, Send, Upload } from 'lucide-react';
+import { useIsMutating } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import type { PacotePublicacao } from './shortsApi';
 import {
+  gerarPostKey,
   useCapaDoShort,
   usePostDoShort,
   usePreviaPublicacao,
@@ -25,8 +27,8 @@ interface Props {
   /**
    * D-585: quem ABRE o post e a capa agora e de fora.
    *
-   * Os dois modais saíram daqui porque o "Finalizar" precisa abrir o post
-   * ANTES de este painel existir — ele só é montado quando o short já está
+   * Os dois modais saíram daqui porque o "Finalizar" cuida do post ANTES de
+   * este painel existir — ele só é montado quando o short já está
    * renderizado, e o post se escreve enquanto o render corre. Deixá-los aqui
    * obrigaria a montar o painel cedo só para alcançar um modal, e o painel
    * inteiro passaria a ter de saber lidar com um MP4 que ainda não existe.
@@ -40,6 +42,7 @@ export function PainelPublicacao({ short, onEscreverPost, onEscolherCapa }: Prop
   const previa = usePreviaPublicacao(shortId);
   const publicar = usePublicarShort();
   const post = usePostDoShort(shortId);
+  const escrevendoPost = useIsMutating({ mutationKey: gerarPostKey(shortId) }) > 0;
   const capa = useCapaDoShort(shortId);
 
   return (
@@ -62,9 +65,11 @@ export function PainelPublicacao({ short, onEscreverPost, onEscolherCapa }: Prop
             {post.data?.titulo || 'Escrever o post'}
           </span>
           <span className="block truncate text-[11px] text-[var(--wb-text-mute)]">
-            {post.data?.gerado
-              ? `${post.data.hashtags.length} hashtags`
-              : `sem texto proprio — vai publicar como "${short.titulo}"`}
+            {escrevendoPost
+              ? 'a IA está escrevendo o post…'
+              : post.data?.gerado
+                ? `${post.data.hashtags.length} hashtags`
+                : `sem texto proprio — vai publicar como "${short.titulo}"`}
           </span>
         </span>
       </button>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useIsMutating } from '@tanstack/react-query';
 import { Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -14,7 +15,12 @@ import {
   tomDoTitulo,
   type TomDoTitulo,
 } from './postDoShort';
-import { useAtualizarPost, useGerarPost, usePostDoShort } from './useShortsDoCorte';
+import {
+  gerarPostKey,
+  useAtualizarPost,
+  useGerarPost,
+  usePostDoShort,
+} from './useShortsDoCorte';
 import type { ShortSugerido } from './shortsApi';
 
 // D-565 (onda 3): o texto que acompanha o short no feed.
@@ -64,9 +70,15 @@ export function PostModal({ open, onClose, short }: Props) {
     setTags(textoDasHashtags(post.data.hashtags));
   }, [open, post.data]);
 
+  // O Finalizar manda a IA escrever sozinho, numa mutation de outro componente.
+  // Abrir o modal no meio disso tem de mostrar "escrevendo…", e não campos
+  // vazios com um botão que dispararia uma segunda escrita por cima.
+  const escrevendoPorFora = useIsMutating({ mutationKey: gerarPostKey(short.id) }) > 0;
+  const escrevendo = gerar.isPending || escrevendoPorFora;
+
   const tom = tomDoTitulo(titulo);
   const hashtags = hashtagsDoTexto(tags);
-  const ocupado = gerar.isPending || salvar.isPending;
+  const ocupado = escrevendo || salvar.isPending;
 
   return (
     <Modal open={open} onClose={onClose} title="Escrever o post deste short" size="2xl">
@@ -78,10 +90,10 @@ export function PostModal({ open, onClose, short }: Props) {
             disabled={ocupado}
             onClick={() => gerar.mutate()}
           >
-            {gerar.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {gerar.isPending ? 'escrevendo…' : post.data?.gerado ? 'Escrever de novo' : 'Escrever com a IA'}
+            {escrevendo ? <Loader2 className="animate-spin" /> : <Sparkles />}
+            {escrevendo ? 'escrevendo…' : post.data?.gerado ? 'Escrever de novo' : 'Escrever com a IA'}
           </Button>
-          {gerar.isPending && (
+          {escrevendo && (
             <span className="text-[11.5px] text-[var(--wb-text-mute)]">
               lendo a transcrição deste trecho…
             </span>

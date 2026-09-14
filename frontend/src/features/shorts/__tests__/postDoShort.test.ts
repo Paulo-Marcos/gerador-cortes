@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   cortePorPlataforma,
+  escreverPostSeFaltar,
   hashtagsDoTexto,
   MAX_HASHTAGS,
   parteEscondida,
@@ -117,5 +118,25 @@ describe('hashtagsDoTexto', () => {
   it('ida e volta pelo campo preserva os termos', () => {
     const tags = ['juros', 'selic'];
     expect(hashtagsDoTexto(textoDasHashtags(tags))).toEqual(tags);
+  });
+});
+
+describe('escreverPostSeFaltar', () => {
+  it('sem post gerado, o Finalizar manda a IA escrever', async () => {
+    const escrever = vi.fn();
+    await escreverPostSeFaltar(async () => ({ gerado: false }), escrever);
+    expect(escrever).toHaveBeenCalledOnce();
+  });
+
+  it('post já gerado não é reescrito — pode ter sido revisado', async () => {
+    const escrever = vi.fn();
+    await escreverPostSeFaltar(async () => ({ gerado: true }), escrever);
+    expect(escrever).not.toHaveBeenCalled();
+  });
+
+  it('sem conseguir ler o post, não arrisca escrever por cima', async () => {
+    const escrever = vi.fn();
+    await escreverPostSeFaltar(() => Promise.reject(new Error('offline')), escrever);
+    expect(escrever).not.toHaveBeenCalled();
   });
 });

@@ -97,3 +97,22 @@ export function hashtagsDoTexto(texto: string): string[] {
 export function textoDasHashtags(hashtags: string[]): string {
   return hashtags.join(' ');
 }
+
+/**
+ * O Finalizar escreve o post sozinho — mas só quando ainda não há um.
+ *
+ * Um texto já gerado pode ter sido revisado à mão; reescrevê-lo num Finalizar
+ * seria apagar a revisão sem aviso. Se nem dá para saber se existe, não
+ * escreve: o botão "Escrever com a IA" continua no painel.
+ */
+export async function escreverPostSeFaltar(
+  buscarPost: () => Promise<{ gerado: boolean }>,
+  escrever: () => void,
+): Promise<void> {
+  try {
+    const post = await buscarPost();
+    if (!post.gerado) escrever();
+  } catch {
+    // Sem saber, não escreve — ver acima.
+  }
+}

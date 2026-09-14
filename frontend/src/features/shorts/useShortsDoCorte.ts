@@ -7,6 +7,8 @@ export const shortsDoCorteKey = (corteId: string) => ['shorts', 'corte', corteId
 
 /** D-565 (onda 3): o texto de publicacao de UM short. */
 export const postDoShortKey = (shortId: string) => ['shorts', 'post', shortId] as const;
+/** A escrita do post pela IA — quem não a disparou precisa saber que ela corre. */
+export const gerarPostKey = (shortId: string) => ['shorts', 'post', 'gerar', shortId] as const;
 
 /** D-565 (onda 4): o quadro de capa de UM short. */
 export const capaDoShortKey = (shortId: string) => ['shorts', 'capa', shortId] as const;
@@ -409,6 +411,7 @@ export function usePostDoShort(shortId: string, habilitado = true) {
 export function useGerarPost(shortId: string) {
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: gerarPostKey(shortId),
     mutationFn: () => shortsApi.gerarPost(shortId),
     onSuccess: (post) => qc.setQueryData(postDoShortKey(shortId), post),
   });

@@ -98,7 +98,7 @@ export function CandidatoCard({
   // D-585: o fecho do short. A capa só entra quando há MP4 em disco — ela é um
   // QUADRO do vídeo, e sem arquivo o modal só saberia dizer "ainda não dá".
   const temArquivo = short.status === 'renderizado' && Boolean(short.arquivo_short_path);
-  const fecho = useFechoDoShort(short, temArquivo);
+  const fecho = useFechoDoShort(short);
   const capa = useCapaDoShort(short.id, temArquivo);
   const plano = planoDeAcoes(short, renderizando);
   const aparencia = APARENCIA[short.status];
@@ -109,16 +109,16 @@ export function CandidatoCard({
     voltar: { rotulo: 'Voltar para sugerido', icone: <Undo2 />, ao: () => onStatus('sugerido') },
     previa: { rotulo: 'Gerar prévia', icone: <Eye />, ao: onPrevia },
     refazerPrevia: { rotulo: 'Refazer prévia', icone: <Eye />, ao: onPrevia },
-    // D-585: finalizar dispara o render E abre o post. O texto não depende do
-    // arquivo, então esses minutos de render são justamente o tempo em que ele
-    // se escreve — e o operador disse que sempre vai querê-lo.
+    // D-585: finalizar dispara o render E a IA escreve o post, sem modal. O
+    // texto não depende do arquivo, então esses minutos de render são
+    // justamente o tempo em que ele se escreve — revisar fica no painel.
     finalizar: {
       rotulo: 'Finalizar',
       icone: <Clapperboard />,
       ao: () => fecho.finalizar(onRenderizar),
     },
-    // Refazer NÃO reabre o post: o texto já existe, e o que se está refazendo é
-    // o arquivo. Abrir o modal aqui interromperia quem só queria re-renderizar.
+    // Refazer NÃO mexe no post: o texto já existe, e o que se está refazendo é
+    // o arquivo.
     refazerFinal: { rotulo: 'Refazer o final', icone: <Clapperboard />, ao: onRenderizar },
   };
 
