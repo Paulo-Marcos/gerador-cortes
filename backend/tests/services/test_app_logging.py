@@ -1,6 +1,7 @@
 import logging
 import re
 
+import pytest
 from app.services import app_logging
 from app.services.app_logging import AccessLogFilter, AppLogLevelFilter, operational_info
 from app.services.app_settings import AppSettingsService, LogLevel
@@ -49,22 +50,36 @@ def test_debug_keeps_debug(tmp_path):
 # console em QUALQUER nivel, inclusive Desabilitado.
 
 
-def _acesso(status: int) -> logging.LogRecord:
-    args = ("127.0.0.1:58493", "GET", "/api/export/fila-global", "1.1", status)
+def _acesso(status: int, metodo: str = "GET") -> logging.LogRecord:
+    args = ("127.0.0.1:58493", metodo, "/api/export/fila-global", "1.1", status)
     return logging.LogRecord(
         "uvicorn.access", logging.INFO, __file__, 1, '%s - "%s %s HTTP/%s" %d', args, None
     )
 
 
-def test_acesso_http_so_aparece_no_debug(tmp_path):
+def test_consulta_http_so_aparece_no_debug(tmp_path):
     AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
     filtro = AccessLogFilter()
 
     AppSettingsService.update_log_level(LogLevel.INFO)
-    assert filtro.filter(_acesso(200)) is False
+    assert filtro.filter(_acesso(200, "GET")) is False
+    assert filtro.filter(_acesso(200, "OPTIONS")) is False  # preflight do CORS
 
     AppSettingsService.update_log_level(LogLevel.DEBUG)
-    assert filtro.filter(_acesso(200)) is True
+    assert filtro.filter(_acesso(200, "GET")) is True
+
+
+def test_acao_http_aparece_no_informativo(tmp_path):
+    """POST/PUT/PATCH/DELETE e iniciativa do operador; GET e a tela consultando."""
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+    filtro = AccessLogFilter()
+
+    AppSettingsService.update_log_level(LogLevel.INFO)
+    for metodo in ("POST", "PUT", "PATCH", "DELETE"):
+        assert filtro.filter(_acesso(200, metodo)) is True
+
+    AppSettingsService.update_log_level(LogLevel.DISABLED)
+    assert filtro.filter(_acesso(200, "POST")) is False
 
 
 def test_requisicao_que_falhou_aparece_no_informativo(tmp_path):
@@ -87,6 +102,58 @@ def test_filtro_de_acesso_vai_no_proprio_logger_do_uvicorn(monkeypatch):
     app_logging.instalar_filtro_de_acesso_http()  # idempotente
 
     assert sum(isinstance(f, AccessLogFilter) for f in access_logger.filters) == 1
+
+
+# --- saida dos loggers `app.*` ---
+#
+# TikTok, Instagram, shorts e lote logam com `logging.getLogger(__name__)`. Sem
+# handler no logger `app`, o Python so deixava passar WARNING: "subindo video.mp4"
+# nunca chegava ao console, em nenhum nivel.
+
+
+@pytest.fixture
+def logger_app_isolado(monkeypatch):
+    logger_app = logging.getLogger("app")
+    nivel_original = logger_app.level
+    monkeypatch.setattr(logger_app, "handlers", [])
+    yield logger_app
+    logger_app.setLevel(nivel_original)  # setLevel limpa o cache de nivel dos filhos
+
+
+def test_log_de_acao_da_app_aparece_no_informativo(tmp_path, logger_app_isolado, capsys):
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+    AppSettingsService.update_log_level(LogLevel.INFO)
+    app_logging.instalar_saida_dos_loggers_da_app()
+    logger = logging.getLogger("app.services.tiktok_studio")
+
+    logger.info("[TikTokStudio] subindo %s", "short.mp4")
+    logger.debug("[TikTokStudio] detalhe")
+
+    saida = capsys.readouterr().out
+    assert _CLOCK_PREFIX.match(saida), f"sem prefixo de hora: {saida!r}"
+    assert "[TikTokStudio] subindo short.mp4" in saida
+    assert "detalhe" not in saida
+
+
+def test_log_da_app_desabilitado_so_mostra_problema(tmp_path, logger_app_isolado, capsys):
+    AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
+    AppSettingsService.update_log_level(LogLevel.DISABLED)
+    app_logging.instalar_saida_dos_loggers_da_app()
+    logger = logging.getLogger("app.services.tiktok_studio")
+
+    logger.info("[TikTokStudio] subindo short.mp4")
+    logger.warning("[TikTokStudio] capa nao entrou")
+
+    saida = capsys.readouterr().out
+    assert "subindo" not in saida
+    assert "capa nao entrou" in saida
+
+
+def test_saida_dos_loggers_da_app_e_idempotente(logger_app_isolado):
+    app_logging.instalar_saida_dos_loggers_da_app()
+    app_logging.instalar_saida_dos_loggers_da_app()
+
+    assert len(logger_app_isolado.handlers) == 1
 
 
 def test_operational_info_prefixa_hora_real(tmp_path, capsys):

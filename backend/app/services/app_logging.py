@@ -186,29 +186,61 @@ class AppLogLevelFilter(logging.Filter):
 
 
 _STATUS_DE_FALHA = 400
+# GET/HEAD e a tela consultando sozinha (polling); OPTIONS e o preflight do CORS
+# que o navegador manda antes de cada acao. Nenhum dos tres e iniciativa do operador.
+_METODOS_DE_CONSULTA = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 class AccessLogFilter(logging.Filter):
-    """Log de acesso HTTP e acompanhamento, nao processo: so no Debug.
+    """No Informativo, o log de acesso HTTP mostra acao e falha — nunca consulta.
 
     O front faz polling (ex.: fila global de export a cada segundo), e cada GET
-    virava uma linha no Informativo, enterrando as etapas reais. Requisicao que
-    FALHOU continua no Informativo — ali ela conta o que deu errado.
+    virava uma linha no Informativo, enterrando as etapas reais. POST/PUT/PATCH/
+    DELETE nascem de um clique do operador; requisicao que FALHOU conta o que deu
+    errado. O resto so no Debug.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
         level = current_log_level()
         if level == LogLevel.DEBUG:
             return True
-        return level == LogLevel.INFO and _status_http(record) >= _STATUS_DE_FALHA
+        if level != LogLevel.INFO:
+            return False
+        metodo, status = _metodo_e_status_http(record)
+        return metodo not in _METODOS_DE_CONSULTA or status >= _STATUS_DE_FALHA
 
 
-def _status_http(record: logging.LogRecord) -> int:
+def _metodo_e_status_http(record: logging.LogRecord) -> tuple[str, int]:
     """O uvicorn passa (cliente, metodo, caminho, versao, status) em `args`."""
     args = record.args
     if isinstance(args, tuple) and len(args) == 5 and isinstance(args[4], int):
-        return args[4]
-    return 0
+        return str(args[1]).upper(), args[4]
+    return "GET", 0
+
+
+class _SaidaOperacional(logging.Handler):
+    """Leva os loggers `app.*` ao console pelo mesmo caminho do `operational_info`:
+    hora real na frente e escrita que nunca bloqueia o event loop."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            _print_seguro(f"[{epoch_to_hora_local(record.created)}] {self.format(record)}")
+        except Exception:  # noqa: BLE001 — log jamais derruba quem logou
+            self.handleError(record)
+
+
+def instalar_saida_dos_loggers_da_app() -> None:
+    # Sem handler no logger `app`, o Python usa o `lastResort`, que so passa
+    # WARNING: todo `logger.info` de TikTok, Instagram, shorts e lote sumia.
+    logger_app = logging.getLogger("app")
+    if any(isinstance(item, _SaidaOperacional) for item in logger_app.handlers):
+        return
+    saida = _SaidaOperacional()
+    saida.addFilter(AppLogLevelFilter())
+    logger_app.addHandler(saida)
+    # Quem decide o que aparece e o filtro (muda em runtime pela tela); o nivel
+    # herdado do root cortaria o INFO antes de chegar nele.
+    logger_app.setLevel(logging.DEBUG)
 
 
 def instalar_filtro_de_acesso_http() -> None:
@@ -222,6 +254,7 @@ def install_log_controls() -> None:
     """Aplica filtro dinâmico para logging e prints operacionais."""
     iniciar_escrita_assincrona_de_log()
     instalar_filtro_de_acesso_http()
+    instalar_saida_dos_loggers_da_app()
     root_logger = logging.getLogger()
     if not any(isinstance(item, AppLogLevelFilter) for item in root_logger.filters):
         root_logger.addFilter(AppLogLevelFilter())
