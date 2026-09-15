@@ -16,9 +16,22 @@ export function avisoDescarteBruto(titulo: string, brutoMb: number): string {
   );
 }
 
-/** Um Fire rejeitado e um Fire resolvido: nenhum candidato restou para publicar. */
+/** Um Fire com todos os candidatos rejeitados já está resolvido: nada restou para publicar. */
 export function todosOsShortsForamRejeitados(
   shorts: Pick<ContagemShorts, 'total' | 'rejeitado'>,
 ): boolean {
   return shorts.total > 0 && shorts.rejeitado === shorts.total;
+}
+
+/**
+ * O item do menu diz o que a ação FAZ: descartar o bruto. Ela não marca o Fire
+ * como rejeitado — só libera o disco. Quando todos os candidatos já foram
+ * rejeitados, o rótulo lembra que é a hora natural de descartar.
+ */
+export function rotuloDescarteBruto(
+  shorts: Pick<ContagemShorts, 'total' | 'rejeitado'>,
+  brutoMb: number,
+): string {
+  const acao = `Descartar o bruto (${brutoMb} MB)`;
+  return todosOsShortsForamRejeitados(shorts) ? `${acao}: nenhum candidato restou` : acao;
 }
