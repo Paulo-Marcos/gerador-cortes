@@ -10,7 +10,7 @@ import logging
 from app.database import get_db
 from app.models import Corte, Projeto
 from app.services import llm_calls_store
-from app.services.claude_ia import ClaudeIaService
+from app.services.claude_ia import ClaudeIaService, ProviderIA
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +22,10 @@ router = APIRouter()
 
 @router.post("/projeto/{projeto_id}/analisar")
 async def analisar_via_claude(
-    projeto_id: str, usar_diarizacao: bool = True, provider: str = "claude", db: AsyncSession = Depends(get_db)
+    projeto_id: str,
+    usar_diarizacao: bool = True,
+    provider: ProviderIA = "claude",
+    db: AsyncSession = Depends(get_db),
 ):
     """Analisa a transcrição via Claude (SÍNCRONO).
 
@@ -63,7 +66,9 @@ async def analisar_via_claude(
 
 
 @router.post("/corte/{corte_id}/gerar-trechos")
-async def gerar_trechos_via_claude(corte_id: str, provider: str = "claude", db: AsyncSession = Depends(get_db)):
+async def gerar_trechos_via_claude(
+    corte_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
+):
     """Regenera os trechos a remover (desvios) de um corte via Claude e
     ressincroniza a transcrição final.
 
@@ -75,7 +80,12 @@ async def gerar_trechos_via_claude(corte_id: str, provider: str = "claude", db: 
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     try:
         resultado = await ClaudeIaService.gerar_trechos_via_claude(corte_id, provider=provider)
-        return {"message": "Trechos regerados via IA", "corte_id": corte_id, "provider": provider, **resultado}
+        return {
+            "message": "Trechos regerados via IA",
+            "corte_id": corte_id,
+            "provider": provider,
+            **resultado,
+        }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
@@ -84,14 +94,21 @@ async def gerar_trechos_via_claude(corte_id: str, provider: str = "claude", db: 
 
 
 @router.post("/corte/{corte_id}/gerar-cenas")
-async def gerar_cenas_via_claude(corte_id: str, provider: str = "claude", db: AsyncSession = Depends(get_db)):
+async def gerar_cenas_via_claude(
+    corte_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
+):
     """Gera as cenas Remotion do corte via Claude (skill cenas-expert)."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     try:
         resultado = await ClaudeIaService.gerar_cenas_via_claude(corte_id, provider=provider)
-        return {"message": "Cenas geradas via IA", "corte_id": corte_id, "provider": provider, **resultado}
+        return {
+            "message": "Cenas geradas via IA",
+            "corte_id": corte_id,
+            "provider": provider,
+            **resultado,
+        }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
@@ -100,14 +117,21 @@ async def gerar_cenas_via_claude(corte_id: str, provider: str = "claude", db: As
 
 
 @router.post("/corte/{corte_id}/gerar-metadados")
-async def gerar_metadados_via_claude(corte_id: str, provider: str = "claude", db: AsyncSession = Depends(get_db)):
+async def gerar_metadados_via_claude(
+    corte_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
+):
     """Gera os metadados do corte via Claude (skill metadados-expert)."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     try:
         resultado = await ClaudeIaService.gerar_metadados_via_claude(corte_id, provider=provider)
-        return {"message": "Metadados gerados via IA", "corte_id": corte_id, "provider": provider, **resultado}
+        return {
+            "message": "Metadados gerados via IA",
+            "corte_id": corte_id,
+            "provider": provider,
+            **resultado,
+        }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
@@ -116,13 +140,17 @@ async def gerar_metadados_via_claude(corte_id: str, provider: str = "claude", db
 
 
 @router.post("/corte/{corte_id}/gerar-prompt-thumbnail")
-async def gerar_prompt_thumbnail_via_claude(corte_id: str, provider: str = "claude", db: AsyncSession = Depends(get_db)):
+async def gerar_prompt_thumbnail_via_claude(
+    corte_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
+):
     """Gera o prompt de imagem da thumbnail via Claude (skill thumbnail-prompt-expert)."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     try:
-        resultado = await ClaudeIaService.gerar_prompt_thumbnail_via_claude(corte_id, provider=provider)
+        resultado = await ClaudeIaService.gerar_prompt_thumbnail_via_claude(
+            corte_id, provider=provider
+        )
         return {
             "message": "Prompt de thumbnail gerado via IA",
             "corte_id": corte_id,

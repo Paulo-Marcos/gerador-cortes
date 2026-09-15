@@ -129,9 +129,16 @@ export function useAnalisarComDiarizacao(projetoId: string) {
   const { notify } = useToast();
   return useMutation({
     mutationKey: analiseClaudeKey(projetoId),
-    mutationFn: ({ usarDiarizacao, provider = 'claude' }: { usarDiarizacao: boolean, provider?: 'claude' | 'gemini' }) => api.analisarViaClaude(projetoId, usarDiarizacao, provider),
+    mutationFn: ({
+      usarDiarizacao,
+      provider = 'claude',
+    }: {
+      usarDiarizacao: boolean;
+      provider?: 'claude' | 'gemini';
+    }) => api.analisarViaClaude(projetoId, usarDiarizacao, provider),
     onSuccess: (data) => {
-      notify(`Análise via Claude concluída: ${data.total_cortes ?? 0} corte(s).`, {
+      const via = data.provider === 'gemini' ? 'Gemini' : 'Claude';
+      notify(`Análise via ${via} concluída: ${data.total_cortes ?? 0} corte(s).`, {
         tone: 'success',
       });
       qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
@@ -139,7 +146,7 @@ export function useAnalisarComDiarizacao(projetoId: string) {
       qc.invalidateQueries({ queryKey: ['projetos'] });
     },
     onError: (error) => {
-      notify(error instanceof Error ? error.message : 'Erro na análise via Claude.', {
+      notify(error instanceof Error ? error.message : 'Erro na análise por IA.', {
         tone: 'error',
       });
     },

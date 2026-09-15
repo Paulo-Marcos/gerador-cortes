@@ -265,7 +265,7 @@ async def test_analisar_transcricao_repassa_descartados_via_claude(monkeypatch):
         "descartados": [{"tema": "x", "motivo": "y"}],
     }
 
-    async def fake_gerar_cortes(_transcricao, _meta):
+    async def fake_gerar_cortes(_transcricao, _meta, provider="claude"):
         return claude_payload
 
     monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
@@ -314,7 +314,7 @@ async def test_analisar_intervalo_injeta_falantes_map_quando_diarizado(monkeypat
 
     capturado: dict = {}
 
-    async def fake_gerar_cortes(transcricao, meta):
+    async def fake_gerar_cortes(transcricao, meta, provider="claude"):
         capturado["transcricao"] = transcricao
         capturado["meta"] = meta
         return {
@@ -355,7 +355,7 @@ async def test_analisar_intervalo_sem_diarizacao_falantes_map_none(monkeypatch):
 
     capturado: dict = {}
 
-    async def fake_gerar_cortes(transcricao, meta):
+    async def fake_gerar_cortes(transcricao, meta, provider="claude"):
         capturado["meta"] = meta
         return {
             "cortes": [
@@ -569,7 +569,7 @@ async def test_analisar_intervalo_tambem_congela_snapshot(monkeypatch):
     projeto.falantes_map = "{}"
     monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
 
-    async def fake_gerar_cortes(_transcricao, _meta):
+    async def fake_gerar_cortes(_transcricao, _meta, provider="claude"):
         return {
             "cortes": [
                 {

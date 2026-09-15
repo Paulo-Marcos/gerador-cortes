@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BookOpen,
@@ -39,9 +39,9 @@ import type { Corte, MetadadoCorte, MetadadoPatch, StatusExportCorte } from '@/t
 
 export const metadataKey = (corteId: string) => ['metadado', corteId] as const;
 
-// D-413: os botÃƒÆ’Ã‚Âµes da coluna da thumbnail (modal) herdavam o `size=default` do
-// primitivo ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 11,5px, ilegÃƒÆ’Ã‚Â­vel ao lado do corpo jÃƒÆ’Ã‚Â¡ ampliado. Sobrescrito sÃƒÆ’Ã‚Â³
-// aqui: o `Button` ÃƒÆ’Ã‚Â© compartilhado com o app inteiro.
+// D-413: os botões da coluna da thumbnail (modal) herdavam o `size=default` do
+// primitivo — 11,5px, ilegível ao lado do corpo já ampliado. Sobrescrito só
+// aqui: o `Button` é compartilhado com o app inteiro.
 const MODAL_ASIDE_BUTTON = 'h-10 px-3.5 text-[13px]';
 
 type PromptModalKind = 'metadata' | 'thumbnail' | 'thumbnail-agent' | 'thumbnail-agent-livre';
@@ -74,20 +74,20 @@ export function MetadataCard({
   projetoId: string;
   cut: Corte;
   status?: StatusExportCorte;
-  /** Corte em foco na lista: sÃƒÆ’Ã‚Â³ ele nasce expandido (DE-PARA-v3 Ãƒâ€šÃ‚Â§5). */
+  /** Corte em foco na lista: só ele nasce expandido (DE-PARA-v3 §5). */
   active?: boolean;
   innerRef?: (element: HTMLElement | null) => void;
   onMetaLoaded?: (corteId: string, meta: MetadadoCorte) => void;
-  /** 'modal' = corpo denso do protÃƒÆ’Ã‚Â³tipo (AUDITORIA-v3 Ãƒâ€šÃ‚Â§6): sem header prÃƒÆ’Ã‚Â³prio,
-      labels mono com contador ÃƒÆ’Ã‚Â  direita, descriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o+tags sempre visÃƒÆ’Ã‚Â­veis. */
+  /** 'modal' = corpo denso do protótipo (AUDITORIA-v3 §6): sem header próprio,
+      labels mono com contador à direita, descrição+tags sempre visíveis. */
   variant?: 'card' | 'modal';
   onRequestClose?: () => void;
 }) {
   const modal = variant === 'modal';
   const { notify } = useToast();
   const queryClient = useQueryClient();
-  // DE-PARA-v3 Ãƒâ€šÃ‚Â§5: "cards nÃƒÆ’Ã‚Â£o-focados ficam recolhidos (sÃƒÆ’Ã‚Â³ header)" ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â o card
-  // em foco na lista ÃƒÆ’Ã‚Â© o expandido; trocar o foco recolhe o anterior. O clique
+  // DE-PARA-v3 §5: "cards não-focados ficam recolhidos (só header)" — o card
+  // em foco na lista é o expandido; trocar o foco recolhe o anterior. O clique
   // no header continua alternando manualmente.
   const [expanded, setExpanded] = useState(modal || active);
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
@@ -110,7 +110,7 @@ export function MetadataCard({
   const promptReady = Boolean(meta?.prompt_thumbnail);
   // Emoldurar, comprimir e trocar gravam por cima do MESMO nome de arquivo.
   // Sem trocar a URL, o navegador serve a imagem antiga do cache e a tela passa
-  // a mentir sobre o que existe em disco ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â foi o que aconteceu ao aplicar a
+  // a mentir sobre o que existe em disco — foi o que aconteceu ao aplicar a
   // moldura e nada parecer mudar (D-556).
   const [versaoDaCapa, setVersaoDaCapa] = useState(0);
   const thumbnailUrl = useMemo(() => {
@@ -121,7 +121,7 @@ export function MetadataCard({
   const [capaAmpliada, setCapaAmpliada] = useState(false);
   const thumbnailReady = Boolean(status?.thumbnail_pronta || thumbnailUrl);
 
-  // Foco da lista manda no expandido: seleciona outro corte ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ este recolhe.
+  // Foco da lista manda no expandido: seleciona outro corte → este recolhe.
   useEffect(() => {
     if (modal) return;
     setExpanded(active);
@@ -185,6 +185,11 @@ export function MetadataCard({
       notify(error instanceof Error ? error.message : 'Erro ao gerar por IA.', { tone: 'error' }),
   });
 
+  // Uma mutation serve aos dois providers: o `variables` diz quem disparou,
+  // para só o botão dele girar e o outro não abrir uma segunda geração.
+  const metadadosEmVoo = providerEmVoo(generateMetadataClaude);
+  const promptCapaEmVoo = providerEmVoo(generatePromptThumbnailClaude);
+
   const generateThumbnail = useMutation({
     mutationFn: () => api.gerarThumbnail(cut.id),
     onSuccess: () => {
@@ -210,9 +215,9 @@ export function MetadataCard({
       }),
   });
 
-  // Capa nova jÃƒÆ’Ã‚Â¡ sai emoldurada. Este botÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© para as do acervo, para as que
+  // Capa nova já sai emoldurada. Este botão é para as do acervo, para as que
   // entraram antes da moldura existir, e para reaplicar depois de trocar o PNG
-  // da moldura do canal. Clicar duas vezes nÃƒÆ’Ã‚Â£o empilha moldura.
+  // da moldura do canal. Clicar duas vezes não empilha moldura.
   const applyFrame = useMutation({
     mutationFn: () => api.aplicarMolduraThumbnail(cut.id),
     onSuccess: (res) => {
@@ -352,9 +357,9 @@ export function MetadataCard({
               </button>
             )}
             <div className="min-w-0">
-              {/* DE-PARA-v2 Ãƒâ€šÃ‚Â§6: PROD mostra o tÃƒÆ’Ã‚Â­tulo inteiro; truncate (1
-                  linha) cortava mesmo sobrando espaÃƒÆ’Ã‚Â§o horizontal. 2 linhas
-                  antes de reticÃƒÆ’Ã‚Âªncias. */}
+              {/* DE-PARA-v2 §6: PROD mostra o título inteiro; truncate (1
+                  linha) cortava mesmo sobrando espaço horizontal. 2 linhas
+                  antes de reticências. */}
               <h3 className="line-clamp-2 font-editorial text-[25px] font-medium leading-[1.05] text-[var(--wb-text)]">
                 {generated ? title || cut.titulo_proposto : cut.titulo_proposto}
               </h3>
@@ -378,16 +383,16 @@ export function MetadataCard({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* DE-PARA-v3 Ãƒâ€šÃ‚Â§5: os 5 icon-buttons do header (documento, tags,
-                clipboard, upload, pasta) viraram um ÃƒÆ’Ã‚Âºnico ÃƒÂ¢Ã¢â‚¬Â¹Ã‚Â¯ ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â o header fica
-                com tÃƒÆ’Ã‚Â­tulo + status + recolher. */}
+            {/* DE-PARA-v3 §5: os 5 icon-buttons do header (documento, tags,
+                clipboard, upload, pasta) viraram um único ⋯ — o header fica
+                com título + status + recolher. */}
             {generated && (
               <OverflowMenu
-                label="Mais aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes do corte"
+                label="Mais ações do corte"
                 items={[
                   {
                     icon: FileText,
-                    label: showDescription ? 'Ocultar descriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o' : 'Ver descriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o',
+                    label: showDescription ? 'Ocultar descrição' : 'Ver descrição',
                     onClick: () => {
                       setExpanded(true);
                       setShowDescription((current) => !current);
@@ -462,14 +467,15 @@ export function MetadataCard({
             <div className="flex flex-wrap items-center justify-center gap-2">
               <ClaudeAiButton
                 size="md"
-                pending={generateMetadataClaude.isPending && generateMetadataClaude.variables === 'claude'}
+                pending={metadadosEmVoo === 'claude'}
+                disabled={metadadosEmVoo === 'gemini'}
                 onClick={() => generateMetadataClaude.mutate('claude')}
                 title="Gerar metadados via Claude"
               />
               <GeminiAiButton
                 size="md"
-                pending={generateMetadataClaude.isPending && generateMetadataClaude.variables === 'gemini'}
-                disabled={generateMetadataClaude.isPending && generateMetadataClaude.variables !== 'gemini'}
+                pending={metadadosEmVoo === 'gemini'}
+                disabled={metadadosEmVoo === 'claude'}
                 onClick={() => generateMetadataClaude.mutate('gemini')}
                 title="Gerar metadados via Gemini"
               />
@@ -492,7 +498,7 @@ export function MetadataCard({
           <div className="flex min-w-0 flex-col gap-4">
             <div>
               <ModalFieldLabel
-                label="TÃƒÆ’Ã‚Â­tulo YouTube"
+                label="Título YouTube"
                 counter={`${title.length}/100`}
                 over={title.length > 100}
               />
@@ -521,7 +527,7 @@ export function MetadataCard({
                 <ModalActionButton
                   accent
                   icon={Sparkles}
-                  pending={generateMetadataClaude.isPending && generateMetadataClaude.variables === 'claude'}
+                  pending={metadadosEmVoo !== null}
                   onClick={() => generateMetadataClaude.mutate('claude')}
                 >
                   Regerar por IA
@@ -580,7 +586,7 @@ export function MetadataCard({
 
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <ModalFieldLabel label="DescriÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o" />
+                <ModalFieldLabel label="Descrição" />
                 <textarea
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
@@ -601,14 +607,14 @@ export function MetadataCard({
               </div>
             </div>
 
-            {/* F-058: influÃƒÆ’Ã‚Âªncia manual do editor no prompt da thumbnail. */}
+            {/* F-058: influência manual do editor no prompt da thumbnail. */}
             <ThumbnailHintsEditor corteId={cut.id} initialValue={cut.hints_thumbnail} />
           </div>
 
           <aside className="grid content-start gap-2.5">
-            {/* D-556: clicar na capa AMPLIA. Copiar o endereÃƒÆ’Ã‚Â§o saiu daqui sem
-                perda: continua no ÃƒÆ’Ã‚Â­cone de pasta logo abaixo e no ÃƒÂ¢Ã¢â‚¬Â¹Ã‚Â¯ do card ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â
-                e ninguÃƒÆ’Ã‚Â©m clica numa imagem esperando copiar um caminho. */}
+            {/* D-556: clicar na capa AMPLIA. Copiar o endereço saiu daqui sem
+                perda: continua no ícone de pasta logo abaixo e no ⋯ do card —
+                e ninguém clica numa imagem esperando copiar um caminho. */}
             <button
               type="button"
               title={thumbnailUrl ? 'Ampliar a capa' : 'Sem thumbnail'}
@@ -624,7 +630,7 @@ export function MetadataCard({
                 </div>
               )}
             </button>
-            {/* D-521: a capa vertical do TikTok, irmÃƒÆ’Ã‚Â£ da thumbnail acima. */}
+            {/* D-521: a capa vertical do TikTok, irmã da thumbnail acima. */}
             <CapaTikTokSlot
               projetoId={projetoId}
               corteId={cut.id}
@@ -634,9 +640,9 @@ export function MetadataCard({
               textoCapa={coverText}
               onAtualizou={invalidate}
             />
-            {/* D-413: copiar o prompt ÃƒÆ’Ã‚Â© a aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o principal do fluxo manual de capa
+            {/* D-413: copiar o prompt é a ação principal do fluxo manual de capa
                 (cola no agente capista e traz a imagem de volta por Ctrl+V). Ela
-                sÃƒÆ’Ã‚Â³ existia no ÃƒÂ¢Ã¢â‚¬Â¹Ã‚Â¯ do header do card, que o modal nÃƒÆ’Ã‚Â£o renderiza ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â
+                só existia no ⋯ do header do card, que o modal não renderiza —
                 logo, sumiu da tela desde o D-396. */}
             <Button
               type="button"
@@ -709,10 +715,10 @@ export function MetadataCard({
                     <RefreshCw />
                   )}
                 </IconButton>
-                {/* D-555: entrou aqui, e nÃƒÆ’Ã‚Â£o no ÃƒÂ¢Ã¢â‚¬Â¹Ã‚Â¯ do header, porque o header ÃƒÆ’Ã‚Â©
-                    do card e o modal nÃƒÆ’Ã‚Â£o o renderiza ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a mesma armadilha que a
-                    D-413 jÃƒÆ’Ã‚Â¡ tinha desarmado para o "Copiar prompt". O lugar da
-                    aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© ao lado das irmÃƒÆ’Ã‚Â£s que tambÃƒÆ’Ã‚Â©m operam a capa existente. */}
+                {/* D-555: entrou aqui, e não no ⋯ do header, porque o header é
+                    do card e o modal não o renderiza — a mesma armadilha que a
+                    D-413 já tinha desarmado para o "Copiar prompt". O lugar da
+                    ação é ao lado das irmãs que também operam a capa existente. */}
                 <IconButton
                   size="sm"
                   variant="inset"
@@ -736,15 +742,15 @@ export function MetadataCard({
                 </IconButton>
               </div>
             )}
-            {/* D-066: avaliaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do par prompt+imagem (histÃƒÆ’Ã‚Â³rico de qualidade). */}
+            {/* D-066: avaliação do par prompt+imagem (histórico de qualidade). */}
             {promptReady && <ThumbnailAvaliacaoPanel corteId={cut.id} />}
           </aside>
 
           <footer className="-mx-4 -mb-3.5 mt-0.5 flex items-center gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-4 py-2.5 lg:col-span-2">
             <span className="font-code text-[12px] text-[var(--wb-text-dim)]">
               {lastSavedAt
-                ? `salvo hÃƒÆ’Ã‚Â¡ ${relativeMinutes(lastSavedAt)}`
-                : 'alteraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes salvam ao sair do campo'}
+                ? `salvo há ${relativeMinutes(lastSavedAt)}`
+                : 'alterações salvam ao sair do campo'}
             </span>
             <span className="flex-1" />
             <Button
@@ -847,30 +853,30 @@ export function MetadataCard({
               className="h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-sm font-extrabold outline-none focus:border-[var(--wb-accent)]"
             />
 
-            {/* DE-PARA-v3 Ãƒâ€šÃ‚Â§5: dois segmented compactos no lugar das caixas
+            {/* DE-PARA-v3 §5: dois segmented compactos no lugar das caixas
                 coloridas (que ainda usavam oklch solto, fora dos tokens). O
-                lado AI mantÃƒÆ’Ã‚Â©m o laranja oficial da Claude ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â falso positivo
-                declarado no hand-off, ÃƒÆ’Ã‚Â© cor de marca. */}
+                lado AI mantém o laranja oficial da Claude — falso positivo
+                declarado no hand-off, é cor de marca. */}
             <div className="flex flex-wrap gap-2 pt-1">
               <SegmentedAiManual
                 label="Regerar metadados"
-                aiPending={generateMetadataClaude.isPending && generateMetadataClaude.variables === 'claude'}
-                aiTitle="Regerar metadados via Claude"
+                emVoo={metadadosEmVoo}
+                aiTitle="Regerar metadados"
                 onAi={(provider) => generateMetadataClaude.mutate(provider)}
                 manualIcon={Wand2}
                 onManual={() => setManualKind('metadata')}
               />
               <SegmentedAiManual
                 label="Prompt thumbnail"
-                aiPending={generatePromptThumbnailClaude.isPending}
-                aiTitle={promptReady ? 'Regerar prompt via Claude' : 'Gerar prompt via Claude'}
+                emVoo={promptCapaEmVoo}
+                aiTitle={promptReady ? 'Regerar prompt' : 'Gerar prompt'}
                 onAi={(provider) => generatePromptThumbnailClaude.mutate(provider)}
                 manualIcon={Palette}
                 onManual={() => setManualKind('thumbnail-agent-livre')}
               />
             </div>
 
-            {/* F-058: influÃƒÆ’Ã‚Âªncia manual do editor no prompt da thumbnail. */}
+            {/* F-058: influência manual do editor no prompt da thumbnail. */}
             <ThumbnailHintsEditor corteId={cut.id} initialValue={cut.hints_thumbnail} />
 
             {showDescription && (
@@ -890,7 +896,7 @@ export function MetadataCard({
                   Tags (SEO oculto)
                 </span>
                 <span className="text-[11px] leading-snug text-[var(--wb-text-dim)]">
-                  Nomes citados/soletraveis + marca. Nao sao as hashtags ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â essas ja vao na
+                  Nomes citados/soletraveis + marca. Nao sao as hashtags — essas ja vao na
                   descricao.
                 </span>
                 <textarea
@@ -920,7 +926,7 @@ export function MetadataCard({
                 </div>
               )}
             </button>
-            {/* D-521: a capa vertical do TikTok, irmÃƒÆ’Ã‚Â£ da thumbnail acima. */}
+            {/* D-521: a capa vertical do TikTok, irmã da thumbnail acima. */}
             <CapaTikTokSlot
               projetoId={projetoId}
               corteId={cut.id}
@@ -930,9 +936,9 @@ export function MetadataCard({
               textoCapa={coverText}
               onAtualizou={invalidate}
             />
-            {/* DE-PARA-v3 Ãƒâ€šÃ‚Â§5: "Trocar thumbnail" ÃƒÆ’Ã‚Â© o primÃƒÆ’Ã‚Â¡rio (sÃƒÆ’Ã‚Â³lido em
-                acento); "Gerar" fica em outline; e as aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes raras (copiar
-                pasta, comprimir, remover) saem da pilha de botÃƒÆ’Ã‚Âµes para um ÃƒÂ¢Ã¢â‚¬Â¹Ã‚Â¯. */}
+            {/* DE-PARA-v3 §5: "Trocar thumbnail" é o primário (sólido em
+                acento); "Gerar" fica em outline; e as ações raras (copiar
+                pasta, comprimir, remover) saem da pilha de botões para um ⋯. */}
             <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--wb-accent)] px-4 text-sm font-bold text-[var(--wb-accent-fg)] shadow-[shadow:var(--wb-shadow-btn)] hover:bg-[var(--wb-accent-strong)]">
               <UploadCloud size={16} aria-hidden />
               Trocar thumbnail
@@ -963,7 +969,7 @@ export function MetadataCard({
               {thumbnailUrl && (
                 <OverflowMenu
                   compact
-                  label="Mais aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes da thumbnail"
+                  label="Mais ações da thumbnail"
                   items={[
                     {
                       icon: Folder,
@@ -972,14 +978,14 @@ export function MetadataCard({
                     },
                     {
                       icon: Frame,
-                      label: applyFrame.isPending ? 'Aplicando molduraÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : 'Aplicar moldura',
+                      label: applyFrame.isPending ? 'Aplicando moldura…' : 'Aplicar moldura',
                       title: 'Aplicar a moldura do canal nesta capa',
                       disabled: applyFrame.isPending,
                       onClick: () => applyFrame.mutate(),
                     },
                     {
                       icon: RefreshCw,
-                      label: compressThumbnail.isPending ? 'ComprimindoÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦' : 'Comprimir',
+                      label: compressThumbnail.isPending ? 'Comprimindo…' : 'Comprimir',
                       disabled: compressThumbnail.isPending,
                       onClick: () => compressThumbnail.mutate(),
                     },
@@ -994,14 +1000,14 @@ export function MetadataCard({
                 />
               )}
             </div>
-            {/* D-066: avaliaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do par prompt+imagem (histÃƒÆ’Ã‚Â³rico de qualidade). */}
+            {/* D-066: avaliação do par prompt+imagem (histórico de qualidade). */}
             {promptReady && <ThumbnailAvaliacaoPanel corteId={cut.id} />}
           </aside>
         </section>
       )}
 
       {/* D-556: conferir a moldura de perto exige ver a capa grande. `contain`
-          e nÃƒÆ’Ã‚Â£o `cover`: aqui o assunto ÃƒÆ’Ã‚Â© justamente a borda, e recortÃƒÆ’Ã‚Â¡-la para
+          e não `cover`: aqui o assunto é justamente a borda, e recortá-la para
           preencher a caixa esconderia o que se veio olhar. */}
       <Modal
         open={capaAmpliada && Boolean(thumbnailUrl)}
@@ -1062,8 +1068,8 @@ function IconAction({
   );
 }
 
-// AUDITORIA-v3 Ãƒâ€šÃ‚Â§6 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â label de campo do corpo de modal: mono uppercase ÃƒÆ’Ã‚Â 
-// esquerda, contador ÃƒÆ’Ã‚Â  direita (na MESMA linha, como no protÃƒÆ’Ã‚Â³tipo).
+// AUDITORIA-v3 §6 — label de campo do corpo de modal: mono uppercase à
+// esquerda, contador à direita (na MESMA linha, como no protótipo).
 function ModalFieldLabel({
   label,
   counter,
@@ -1093,17 +1099,17 @@ function ModalFieldLabel({
 }
 
 /**
- * D-413 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a faixa de sugestÃƒÆ’Ã‚Âµes e as aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes de geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o dividiam o MESMO
+ * D-413 — a faixa de sugestões e as ações de geração dividiam o MESMO
  * flex-wrap de `ModalChip`: "regerar por IA" e "manual" liam como se fossem
- * mais duas opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes de tÃƒÆ’Ã‚Â­tulo. Agora as sugestÃƒÆ’Ã‚Âµes ficam rotuladas e as aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes
- * vÃƒÆ’Ã‚Â£o para uma barra prÃƒÆ’Ã‚Â³pria, separada por um filete e com botÃƒÆ’Ã‚Âµes de outra
- * forma (retangulares, com ÃƒÆ’Ã‚Â­cone) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â pill = escolha, retÃƒÆ’Ã‚Â¢ngulo = aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o.
+ * mais duas opções de título. Agora as sugestões ficam rotuladas e as ações
+ * vão para uma barra própria, separada por um filete e com botões de outra
+ * forma (retangulares, com ícone) — pill = escolha, retângulo = ação.
  */
 function ModalSuggestionRow({ children }: { children: React.ReactNode }) {
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
       <span className="font-code text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-        sugestÃƒÆ’Ã‚Âµes
+        sugestões
       </span>
       {children}
     </div>
@@ -1153,8 +1159,8 @@ function ModalActionButton({
   );
 }
 
-// Pill de SUGESTÃƒÆ’Ã†â€™O do corpo de modal (protÃƒÆ’Ã‚Â³tipo: rounded-full, inset). D-413
-// tirou daqui a variante `accent`: aÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o de geraÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o agora ÃƒÆ’Ã‚Â© ModalActionButton.
+// Pill de SUGESTÃO do corpo de modal (protótipo: rounded-full, inset). D-413
+// tirou daqui a variante `accent`: ação de geração agora é ModalActionButton.
 function ModalChip({
   active,
   onClick,
@@ -1243,20 +1249,30 @@ function SuggestionButton({
   );
 }
 
+type ProviderIA = 'claude' | 'gemini';
+
+function providerEmVoo(mutation: {
+  isPending: boolean;
+  variables: ProviderIA | undefined;
+}): ProviderIA | null {
+  return mutation.isPending ? (mutation.variables ?? 'claude') : null;
+}
+
 /**
- * Par AI | Manual em segmented compacto (DE-PARA-v3 Ãƒâ€šÃ‚Â§5). Substitui as
- * caixas `ActionGroup` coloridas: mesma funÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o, um terÃƒÆ’Ã‚Â§o do peso visual.
+ * Par AI | Manual em segmented compacto (DE-PARA-v3 §5). Substitui as
+ * caixas `ActionGroup` coloridas: mesma função, um terço do peso visual.
  */
 function SegmentedAiManual({
   label,
-  aiPending,
+  emVoo,
   aiTitle,
   onAi,
   manualIcon: ManualIcon,
   onManual,
 }: {
   label: string;
-  aiPending: boolean;
+  /** Qual provider está gerando agora: só ele gira, o outro fica desabilitado. */
+  emVoo: ProviderIA | null;
   aiTitle: string;
   onAi: (provider: 'claude' | 'gemini') => void;
   manualIcon: LucideIcon;
@@ -1270,7 +1286,8 @@ function SegmentedAiManual({
       <div className="inline-flex gap-0.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
         <ClaudeAiButton
           size="sm"
-          pending={aiPending}
+          pending={emVoo === 'claude'}
+          disabled={emVoo === 'gemini'}
           onClick={() => onAi('claude')}
           className="h-[24px] gap-1 px-2.5 text-[10px]"
           label="Claude"
@@ -1278,7 +1295,8 @@ function SegmentedAiManual({
         />
         <GeminiAiButton
           size="sm"
-          pending={aiPending}
+          pending={emVoo === 'gemini'}
+          disabled={emVoo === 'claude'}
           onClick={() => onAi('gemini')}
           className="h-[24px] gap-1 px-2.5 text-[10px]"
           label="Gemini"

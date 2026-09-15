@@ -1,5 +1,4 @@
-﻿import {
-  
+import {
   useMutation,
   useMutationState,
   useQuery,
@@ -99,8 +98,8 @@ export function useStatusBruto(corteId: string | undefined) {
     queryKey: statusBrutoKey(corteId ?? ''),
     queryFn: () => api.statusClipBruto(corteId!),
     enabled: !!corteId,
-    // Polling enquanto o backend processa ('cortando' Ã© o valor real enviado).
-    // 2,5s para o botÃ£o liberar logo que o vÃ­deo fica pronto (antes era 15s).
+    // Polling enquanto o backend processa ('cortando' é o valor real enviado).
+    // 2,5s para o botão liberar logo que o vídeo fica pronto (antes era 15s).
     refetchInterval: (query) => {
       const status = query.state.data?.status;
       return status === 'processando' || status === 'cortando' ? 2_500 : false;
@@ -108,9 +107,9 @@ export function useStatusBruto(corteId: string | undefined) {
   });
 }
 
-// F-038 â€” passos do gerar/regerar bruto, para o dropdown de acompanhamento.
+// F-038 — passos do gerar/regerar bruto, para o dropdown de acompanhamento.
 // Faz polling enquanto o bruto processa (ativo) OU enquanto algum passo do
-// backend ainda estÃ¡ rodando (ex.: cenas via Claude depois do vÃ­deo pronto).
+// backend ainda está rodando (ex.: cenas via Claude depois do vídeo pronto).
 export function useBrutoProgress(corteId: string | undefined, ativo: boolean) {
   return useQuery({
     queryKey: ['corte', corteId, 'bruto-progress'],
@@ -217,7 +216,7 @@ export function useDividirCorte(corteId: string, projetoId?: string) {
 }
 
 // D-575: funde o corte com o vizinho seguinte. O sobrevivente pode ser OUTRO
-// corte (quem comeca antes ganha), entao o cache do corte da rota tambem cai â€”
+// corte (quem comeca antes ganha), entao o cache do corte da rota tambem cai —
 // se ele foi o absorvido, ja nao existe.
 export function useJuntarCortes(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
@@ -279,15 +278,15 @@ export function useGerarBruto(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
-    // D-160 â€” opts opcionais gateiam transcriÃ§Ã£o/cenas na regeraÃ§Ã£o; ausÃªncia
-    // (1Âª geraÃ§Ã£o) faz o backend rodar a cadeia completa.
+    // D-160 — opts opcionais gateiam transcrição/cenas na regeração; ausência
+    // (1ª geração) faz o backend rodar a cadeia completa.
     mutationFn: (opts?: GerarBrutoOpcoes) => api.cortarClipBruto(corteId, opts),
     // Optimistic update: marca o status como 'cortando' antes mesmo da
-    // requisiÃ§Ã£o voltar.  Sem isso, a API retorna em ~100ms (porque Ã©
-    // fire-and-forget) e o polling sÃ³ refetcha 2s depois â€” nessa janela
-    // o botÃ£o "Regerar bruto" volta a ficar disponÃ­vel, e cliques rÃ¡pidos
-    // do usuÃ¡rio disparam uma nova confirmaÃ§Ã£o de 2 cliques (4 cliques no
-    // total para 1 geraÃ§Ã£o).
+    // requisição voltar.  Sem isso, a API retorna em ~100ms (porque é
+    // fire-and-forget) e o polling só refetcha 2s depois — nessa janela
+    // o botão "Regerar bruto" volta a ficar disponível, e cliques rápidos
+    // do usuário disparam uma nova confirmação de 2 cliques (4 cliques no
+    // total para 1 geração).
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: statusBrutoKey(corteId) });
       const previous = qc.getQueryData<StatusBrutoResponse>(statusBrutoKey(corteId));
@@ -301,7 +300,7 @@ export function useGerarBruto(corteId: string, projetoId?: string) {
     onSuccess: () => {
       notify('Recorte bruto enfileirado.', { tone: 'success' });
       // Refetcha pra confirmar com a verdade do backend (caso o status
-      // tenha avanÃ§ado pra "pronto" ou "erro" muito rÃ¡pido).
+      // tenha avançado pra "pronto" ou "erro" muito rápido).
       qc.invalidateQueries({ queryKey: statusBrutoKey(corteId) });
       invalidaCorte(qc, corteId, projetoId);
     },
@@ -428,18 +427,18 @@ export function useRemoverDesvio(corteId: string) {
   });
 }
 
-// D-420 â€” chaves das geraÃ§Ãµes via Claude, POR CORTE.
+// D-420 — chaves das gerações via Claude, POR CORTE.
 //
 // A rota `/projetos/:id/cortes/:corteId` renderiza o MESMO elemento para todos
-// os cortes, entÃ£o trocar de corte nÃ£o remonta o editor: um `isPending` de
-// componente sobrevivia Ã  troca e desabilitava o botÃ£o do corte novo por causa
-// da execuÃ§Ã£o do anterior. Com a mutaÃ§Ã£o chaveada, o estado de execuÃ§Ã£o vive no
-// cache do react-query e Ã© individual por corte â€” mesmo padrÃ£o do D-418.
+// os cortes, então trocar de corte não remonta o editor: um `isPending` de
+// componente sobrevivia à troca e desabilitava o botão do corte novo por causa
+// da execução do anterior. Com a mutação chaveada, o estado de execução vive no
+// cache do react-query e é individual por corte — mesmo padrão do D-418.
 export const metadadosClaudeKey = (corteId: string) => ['claude-metadados', corteId] as const;
 export const trechosClaudeKey = (corteId: string) => ['claude-trechos', corteId] as const;
 
-/** Estado da geraÃ§Ã£o de metadados via Claude DESTE corte. `concluido`/`erro`
- * valem atÃ© o react-query coletar a mutaÃ§Ã£o encerrada (gcTime). */
+/** Estado da geração de metadados via Claude DESTE corte. `concluido`/`erro`
+ * valem até o react-query coletar a mutação encerrada (gcTime). */
 export function useStatusMetadadosClaude(
   corteId: string,
 ): 'pendente' | 'rodando' | 'concluido' | 'erro' {
@@ -454,7 +453,7 @@ export function useStatusMetadadosClaude(
   return 'pendente';
 }
 
-/** Estado da geraÃ§ao de trechos via IA. */
+/** Geração de trechos em voo DESTE corte e qual provider a disparou. */
 export function useTrechosClaudeEmAndamento(corteId: string) {
   const mutations = useMutationState({
     filters: { mutationKey: trechosClaudeKey(corteId), exact: true, status: 'pending' },
@@ -463,8 +462,8 @@ export function useTrechosClaudeEmAndamento(corteId: string) {
   return { isPending: mutations.length > 0, provider: mutations[0] };
 }
 
-// F-038 â€” regera os trechos a remover (desvios) do corte via Claude e
-// ressincroniza a transcriÃ§Ã£o final. O endpoint nÃ£o devolve o Corte, entÃ£o
+// F-038 — regera os trechos a remover (desvios) do corte via Claude e
+// ressincroniza a transcrição final. O endpoint não devolve o Corte, então
 // invalidamos a query para refetch do corte atualizado.
 export function useGerarTrechosClaude(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
@@ -488,7 +487,7 @@ export function useGerarTrechosClaude(corteId: string, projetoId?: string) {
   });
 }
 
-// F-038 â€” gera as cenas Remotion do corte via Claude (skill cenas-expert).
+// F-038 — gera as cenas Remotion do corte via Claude (skill cenas-expert).
 export function useGerarCenasClaude(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
@@ -506,7 +505,7 @@ export function useGerarCenasClaude(corteId: string, projetoId?: string) {
   });
 }
 
-// F-038 â€” gera os metadados do corte via Claude (skill metadados-expert).
+// F-038 — gera os metadados do corte via Claude (skill metadados-expert).
 export function useGerarMetadadosClaude(corteId: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
@@ -525,7 +524,7 @@ export function useGerarMetadadosClaude(corteId: string) {
   });
 }
 
-// â”€â”€â”€ Cenas Remotion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Cenas Remotion ─────────────────────────────────────────────────
 
 export function useGerarCenasRemotion(corteId: string) {
   const qc = useQueryClient();

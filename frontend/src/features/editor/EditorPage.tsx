@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
@@ -123,14 +123,14 @@ function appendQueryParams(url: string, params: Record<string, string>): string 
   return `${url}${url.includes('?') ? '&' : '?'}${search}`;
 }
 
-// BotÃƒÂ£o dentro do cluster de ferramentas do Bruto: sem borda e sem fundo
-// prÃƒÂ³prios (quem tem ÃƒÂ© o cluster), tamanho igual ao dos vizinhos. A cor do
+// Botão dentro do cluster de ferramentas do Bruto: sem borda e sem fundo
+// próprios (quem tem é o cluster), tamanho igual ao dos vizinhos. A cor do
 // glifo vem de fora, por ferramenta.
 const FERRAMENTA_CLASS =
   'flex aspect-square min-w-[24px] flex-[0_1_34px] items-center justify-center rounded-[6px] transition-colors hover:bg-[var(--wb-bg-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-40';
 
-// D-410: par rÃƒÂ³tulo/valor da faixa acima do vÃƒÂ­deo. RÃƒÂ³tulo miÃƒÂºdo em caixa alta
-// e valor em tabular-nums, para os nÃƒÂºmeros nÃƒÂ£o danÃƒÂ§arem enquanto o player anda.
+// D-410: par rótulo/valor da faixa acima do vídeo. Rótulo miúdo em caixa alta
+// e valor em tabular-nums, para os números não dançarem enquanto o player anda.
 const TOM_FAIXA_VIDEO = {
   padrao: 'text-[var(--wb-text)]',
   ok: 'text-[var(--wb-ok)]',
@@ -178,31 +178,31 @@ export function EditorPage() {
   const [currentTime, setCurrentTime] = useState(0);
   // D-450: velocidade padrao vinda de Ajustes (app_settings).
   const velocidadePadrao = useVelocidadePlayerPadrao();
-  // D-451: respiro configuravel antes/depois do corte Ã¢â‚¬â€ define a janela de onda
+  // D-451: respiro configuravel antes/depois do corte — define a janela de onda
   // carregada e, com ela, o offset que casa o tempo do audio com o do video.
   const contextoCorte = useContextoCorte();
   const [playbackRate, setPlaybackRate] = useState(velocidadePadrao);
   // D-575: a ultima velocidade != 1x que esteve em uso. Afinar a borda de um
   // corte pede ouvir devagar e conferir pede 1x, e a ida e volta e sempre entre
-  // esses dois valores Ã¢â‚¬â€ guardar o "devagar" evita refazer o caminho no Ctrl+J/K
+  // esses dois valores — guardar o "devagar" evita refazer o caminho no Ctrl+J/K
   // a cada troca. Ref, e nao state: e memoria do gatilho, nao coisa que a tela
   // desenha, e os bindings de atalho sao memoizados (state ficaria stale).
   const velocidadeTrabalhoRef = useRef(VELOCIDADE_TRABALHO_INICIAL);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [trechosManualOpen, setTrechosManualOpen] = useState(false);
-  // D-419: avaliaÃƒÂ§ÃƒÂ£o da qualidade do corte, perguntada uma ÃƒÂºnica vez Ã¢â‚¬â€ no
-  // clique que dispara a 1Ã‚Âª geraÃƒÂ§ÃƒÂ£o do bruto.
+  // D-419: avaliação da qualidade do corte, perguntada uma única vez — no
+  // clique que dispara a 1ª geração do bruto.
   const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
   const [intervaloAberto, setIntervaloAberto] = useState(false);
-  // AUDITORIA-v2 Ã‚Â§2/Ã‚Â§5/Ã‚Â§6 (CP2): toggles da toolbar do Workbench. ComeÃƒÂ§am
-  // FECHADOS Ã¢â‚¬â€ Sincronia/Tempos ficam ocultos por padrÃƒÂ£o (sÃƒÂ³ o estado do
-  // ÃƒÂ­cone muda nesta etapa; a prÃƒÂ³xima liga a visibilidade de
+  // AUDITORIA-v2 §2/§5/§6 (CP2): toggles da toolbar do Workbench. Começam
+  // FECHADOS — Sincronia/Tempos ficam ocultos por padrão (só o estado do
+  // ícone muda nesta etapa; a próxima liga a visibilidade de
   // BrutoContextStrip/AudioSyncControl a partir destes mesmos booleans).
   const [temposAbertos, setTemposAbertos] = useState(false);
   const [sincroniaAberta, setSincroniaAberta] = useState(false);
-  // Painel "passos do bruto" (BrutoStepsDropdown), agora aberto pelo ÃƒÂ­cone
-  // Ã¢Å¸Â³ da toolbar (controlado por fora Ã¢â‚¬â€ ver CP2).
+  // Painel "passos do bruto" (BrutoStepsDropdown), agora aberto pelo ícone
+  // ⟳ da toolbar (controlado por fora — ver CP2).
   const [brutoDropdownOpen, setBrutoDropdownOpen] = useState(false);
   // Trecho comeca DESTRAVADO por default (decisao Paulo): usuario pode
   // gerenciar tamanho dos trechos na waveform sem precisar destravar manualmente.
@@ -217,7 +217,7 @@ export function EditorPage() {
     selectedDesvioIdxRef.current = selectedDesvioIdx;
   }, [selectedDesvioIdx]);
   const [waveformRefreshKey, setWaveformRefreshKey] = useState(0);
-  // D-361: histÃƒÂ³rico das ediÃƒÂ§ÃƒÂµes locais (dirty) com Ctrl+Z / Ctrl+Y.
+  // D-361: histórico das edições locais (dirty) com Ctrl+Z / Ctrl+Y.
   const editHistory = useEditHistory<Partial<Corte>>({});
   const dirty = editHistory.present;
   const { reset: resetEditHistory } = editHistory;
@@ -232,7 +232,7 @@ export function EditorPage() {
   );
   const isDirty = Object.keys(dirty).length > 0;
 
-  // Contexto do BrutoContextStrip Ã¢â‚¬â€ corte anterior aprovado, proximo corte,
+  // Contexto do BrutoContextStrip — corte anterior aprovado, proximo corte,
   // duracoes. Computados antes de qualquer early return p/ respeitar rules-of-hooks.
   const previousCut = useMemo(
     () => (corteUI ? findPreviousApprovedCorte(cortes, corteUI) : null),
@@ -252,8 +252,8 @@ export function EditorPage() {
   const exportStatusAtual = exportStatusQ.data?.cortes.find(
     (status) => status.corte_id === corteUI?.id,
   );
-  // exportStatus sÃƒÂ³ lista APROVADO/EDITADO/PROCESSADO. is_pos_producao do
-  // prÃƒÂ³prio corte cobre cortes em outros status que jÃƒÂ¡ tem video.mp4 no disco.
+  // exportStatus só lista APROVADO/EDITADO/PROCESSADO. is_pos_producao do
+  // próprio corte cobre cortes em outros status que já tem video.mp4 no disco.
   const videoPronto = Boolean(exportStatusAtual?.video_pronto || corteUI?.is_pos_producao === 1);
   const brutoPronto = Boolean(
     statusBruto.data?.clip_gerado ||
@@ -282,9 +282,9 @@ export function EditorPage() {
   const juntarCortes = useJuntarCortes(corteId, projetoId);
   const abrirPasta = useAbrirPasta();
   const brutoMutationPendenteNoCorteAtual = gerarBruto.isPending && gerandoBrutoCorteId === corteId;
-  // D-420 Ã¢â‚¬â€ as geraÃƒÂ§ÃƒÂµes via Claude sÃƒÂ£o longas (dezenas de segundos) e o editor
-  // NÃƒÆ’O remonta ao trocar de corte: lidas direto do `isPending` da mutaÃƒÂ§ÃƒÂ£o, elas
-  // desabilitavam o botÃƒÂ£o do corte novo por causa da execuÃƒÂ§ÃƒÂ£o do anterior. Estes
+  // D-420 — as gerações via Claude são longas (dezenas de segundos) e o editor
+  // NÃO remonta ao trocar de corte: lidas direto do `isPending` da mutação, elas
+  // desabilitavam o botão do corte novo por causa da execução do anterior. Estes
   // dois leem o estado no cache, chaveado pelo corte que pediu.
   const metaClaudeStatus = useStatusMetadadosClaude(corteId);
   const trechosClaudePendente = useTrechosClaudeEmAndamento(corteId);
@@ -304,39 +304,39 @@ export function EditorPage() {
     });
   };
 
-  // F-038 â€” 1Âª geraÃ§Ã£o (corte sem bruto): cadeia completa. Dispara metadados via
-  // Claude em paralelo (texto nÃ£o depende dos silÃªncios); o backend, ao ver que
-  // nÃ£o hÃ¡ bruto, encadeia transcriÃ§Ã£o + cenas sozinho.
+  // F-038 — 1ª geração (corte sem bruto): cadeia completa. Dispara metadados via
+  // Claude em paralelo (texto não depende dos silêncios); o backend, ao ver que
+  // não há bruto, encadeia transcrição + cenas sozinho.
   const handleGerarBrutoInicial = () => {
     if (brutoOcupado()) return;
     dispararBruto(undefined);
     gerarMetadadosClaude.mutate('claude');
-    // D-419: pergunta a qualidade AGORA, nÃ£o quando o bruto ficar pronto â€” Ã©
-    // neste clique que o editor acabou de ver e ajustar o corte. A geraÃ§Ã£o jÃ¡
-    // saiu acima e corre em segundo plano; o modal nÃ£o a bloqueia.
+    // D-419: pergunta a qualidade AGORA, não quando o bruto ficar pronto — é
+    // neste clique que o editor acabou de ver e ajustar o corte. A geração já
+    // saiu acima e corre em segundo plano; o modal não a bloqueia.
     setAvaliacaoOpen(true);
   };
 
-  // D-160 â€” regeraÃ§Ã£o (bruto jÃ¡ existe): por DEFAULT roda sÃ³ o bruto. Os opt-ins
-  // marcados no dropdown ("TambÃ©m refazer") ligam transcriÃ§Ã£o/cenas (flags do
+  // D-160 — regeração (bruto já existe): por DEFAULT roda só o bruto. Os opt-ins
+  // marcados no dropdown ("Também refazer") ligam transcrição/cenas (flags do
   // endpoint) e metadados/desvios (mutations separadas). Desvios alteram o
-  // recorte, entÃ£o rodam ANTES do bruto.
+  // recorte, então rodam ANTES do bruto.
   const executarRegeracaoBruto = async (opts: RegerarBrutoOpcoes) => {
     const plano = planejarRegeracaoBruto(opts);
     if (plano.desvios) {
       try {
         await gerarTrechosClaude.mutateAsync('claude');
       } catch {
-        // Erro jÃ¡ Ã© notificado pelo hook; segue com o bruto assim mesmo.
+        // Erro já é notificado pelo hook; segue com o bruto assim mesmo.
       }
     }
     dispararBruto(plano.bruto);
     if (plano.metadados) gerarMetadadosClaude.mutate('claude');
   };
 
-  // D-428 Ã¢â‚¬â€ com bruto jÃƒÂ¡ na mÃƒÂ£o, regerar substitui o vÃƒÂ­deo atual: passa pela
-  // confirmaÃƒÂ§ÃƒÂ£o antes de sair. Cobre o Ctrl+G, o botÃƒÂ£o principal e o "Regerar
-  // bruto" do dropdown, que caÃƒÂ­am todos aqui.
+  // D-428 — com bruto já na mão, regerar substitui o vídeo atual: passa pela
+  // confirmação antes de sair. Cobre o Ctrl+G, o botão principal e o "Regerar
+  // bruto" do dropdown, que caíam todos aqui.
   const handleRegerarBruto = (opts: RegerarBrutoOpcoes = OPCOES_REGERAR_VAZIAS) => {
     if (brutoOcupado()) return;
     confirmacao.executarOuPedir(confirmacaoRegerarBruto(brutoPronto, opts), () =>
@@ -344,13 +344,13 @@ export function EditorPage() {
     );
   };
 
-  // BotÃƒÂ£o/atalho principal: 1Ã‚Âª vez Ã¢â€ â€™ cadeia completa; regeraÃƒÂ§ÃƒÂ£o Ã¢â€ â€™ sÃƒÂ³ o bruto.
+  // Botão/atalho principal: 1ª vez → cadeia completa; regeração → só o bruto.
   const handleGerarBrutoPrincipal = () => {
     if (brutoPronto) handleRegerarBruto();
     else handleGerarBrutoInicial();
   };
 
-  // D-428 Ã¢â‚¬â€ analisar trechos de novo acrescenta ÃƒÂ  lista jÃƒÂ¡ revisada e custa
+  // D-428 — analisar trechos de novo acrescenta à lista já revisada e custa
   // Claude: com trechos marcados, confirma antes.
   const handleGerarTrechosIA = (provider: 'claude' | 'gemini') => {
     confirmacao.executarOuPedir(confirmacaoRegerarTrechos(corteUI?.desvios?.length ?? 0), () =>
@@ -370,7 +370,7 @@ export function EditorPage() {
 
   // D-450: o player abre na velocidade configurada em Ajustes. Efeito
   // proprio (e nao o reset por troca de corte acima) porque tambem dispara
-  // quando a preferencia chega da API ou muda no painel Ã¢â‚¬â€ sem arrastar
+  // quando a preferencia chega da API ou muda no painel — sem arrastar
   // junto o reset do historico de edicao.
   useEffect(() => {
     setPlaybackRate(velocidadePadrao);
@@ -387,7 +387,7 @@ export function EditorPage() {
     }
   }, [playbackRate]);
 
-  // Quando a geraÃƒÂ§ÃƒÂ£o do bruto termina, traz o corte atualizado (clip_path +
+  // Quando a geração do bruto termina, traz o corte atualizado (clip_path +
   // transcricao_final re-sincronizada com os desvios removidos).
   // Quando o status vira erro, mostra toast com a mensagem do backend.
   const brutoStatusRaw = statusBruto.data?.status;
@@ -400,13 +400,13 @@ export function EditorPage() {
     const eraProcessando = anterior === 'cortando' || anterior === 'processando';
     if (eraProcessando && atual === 'pronto') {
       qc.invalidateQueries({ queryKey: corteKey(corteId) });
-      // GeraÃƒÂ§ÃƒÂ£o completa do bruto (vÃƒÂ­deo + cenas) Ã¢â€ â€™ leva para o pÃƒÂ³s-produÃƒÂ§ÃƒÂ£o.
+      // Geração completa do bruto (vídeo + cenas) → leva para o pós-produção.
       navigate(postProductionPath(projetoId, corteId, true));
     }
     // Transitou para erro (vindo de qualquer outro estado): notificar.
     if (atual && atual.startsWith('erro:') && anterior !== atual) {
       const msg = atual.replace(/^erro:\s*/, '');
-      notifyToast(`GeraÃƒÂ§ÃƒÂ£o de bruto falhou: ${msg}`, { tone: 'error' });
+      notifyToast(`Geração de bruto falhou: ${msg}`, { tone: 'error' });
     }
   }, [brutoStatusRaw, corteId, qc, notifyToast, navigate, projetoId]);
 
@@ -511,13 +511,13 @@ export function EditorPage() {
     void onCriarCorteDaSelecao(segParaHms(start, true), segParaHms(end, true), 'Trecho manual');
   }
 
-  // F-061: divide o corte em dois no ponteiro do player. Exige salvar antes Ã¢â‚¬â€
-  // o backend usa os limites/desvios persistidos, entÃƒÂ£o ediÃƒÂ§ÃƒÂµes pendentes
+  // F-061: divide o corte em dois no ponteiro do player. Exige salvar antes —
+  // o backend usa os limites/desvios persistidos, então edições pendentes
   // seriam ignoradas silenciosamente.
   function onDividirCorteAqui() {
     if (!corteUI || dividirCorte.isPending) return;
     if (isDirty) {
-      notifyToast('Salve as alteraÃƒÂ§ÃƒÂµes antes de dividir o corte.', { tone: 'error' });
+      notifyToast('Salve as alterações antes de dividir o corte.', { tone: 'error' });
       return;
     }
     const ponto = playerRef.current?.getCurrentTime() ?? currentTime;
@@ -559,27 +559,27 @@ export function EditorPage() {
     );
   }
 
-  // D-575: funde este corte com o proximo. Como o dividir, exige salvar antes Ã¢â‚¬â€
+  // D-575: funde este corte com o proximo. Como o dividir, exige salvar antes —
   // o backend le as bordas e os trechos PERSISTIDOS, entao edicao pendente seria
   // ignorada em silencio. O aviso do confirm e forte de proposito: o outro corte
   // deixa de existir e os artefatos de video sao apagados.
   function onJuntarProximoCorte() {
     if (!corteUI || juntarCortes.isPending) return;
     if (isDirty) {
-      notifyToast('Salve as alteraÃƒÂ§ÃƒÂµes antes de juntar os cortes.', { tone: 'error' });
+      notifyToast('Salve as alterações antes de juntar os cortes.', { tone: 'error' });
       return;
     }
     if (!nextCut) {
-      notifyToast('Este ÃƒÂ© o ÃƒÂºltimo corte: nÃƒÂ£o hÃƒÂ¡ com quem juntar.', { tone: 'error' });
+      notifyToast('Este é o último corte: não há com quem juntar.', { tone: 'error' });
       return;
     }
     const rotulo = nextCut.titulo_proposto?.trim() || `corte #${nextCut.numero}`;
     if (
       !window.confirm(
         `Juntar este corte com ${rotulo}?\n\n` +
-          'Trechos a remover, cenas, layout e shorts dos dois sÃƒÂ£o preservados, e o ' +
+          'Trechos a remover, cenas, layout e shorts dos dois são preservados, e o ' +
           'intervalo entre eles vira trecho removido.\n\n' +
-          'O outro corte deixa de existir, e o bruto/render jÃƒÂ¡ gerados sÃƒÂ£o apagados ' +
+          'O outro corte deixa de existir, e o bruto/render já gerados são apagados ' +
           '(precisam ser gerados de novo).',
       )
     ) {
@@ -588,12 +588,12 @@ export function EditorPage() {
     juntarCortes.mutate({ outro_corte_id: nextCut.id });
   }
 
-  // AUDITORIA-v2 Ã‚Â§5 (CP5): atalhos ',' / '.' (Ctrl) para o nudge fino da
-  // Sincronia do ÃƒÂ¡udio Ã¢â‚¬â€ mesmo STEP_FINO dos botÃƒÂµes -10/+10, mesma lÃƒÂ³gica
-  // de offset jÃƒÂ¡ usada pelo AudioSyncControl (clamp em MIN_MS/MAX_MS).
-  // LÃƒÂª a base via editHistory.getPresent() (igual salvarMudancas/patchDirty)
-  // em vez de corteUI fechado no closure Ã¢â‚¬â€ os bindings sÃƒÂ£o memoizados e nÃƒÂ£o
-  // recalculam a cada tecla, entÃƒÂ£o um valor capturado no closure ficaria
+  // AUDITORIA-v2 §5 (CP5): atalhos ',' / '.' (Ctrl) para o nudge fino da
+  // Sincronia do áudio — mesmo STEP_FINO dos botões -10/+10, mesma lógica
+  // de offset já usada pelo AudioSyncControl (clamp em MIN_MS/MAX_MS).
+  // Lê a base via editHistory.getPresent() (igual salvarMudancas/patchDirty)
+  // em vez de corteUI fechado no closure — os bindings são memoizados e não
+  // recalculam a cada tecla, então um valor capturado no closure ficaria
   // desatualizado entre pressionamentos sucessivos.
   function nudgeSincronia(delta: number) {
     if (!corte) return;
@@ -644,9 +644,9 @@ export function EditorPage() {
     }
   }
 
-  // D-394: bindings vÃƒÂªm do registro central (ids bruto.*) Ã¢â‚¬â€ assim TODA
-  // funcionalidade do editor pode ter o atalho reatribuÃƒÂ­do pelo usuÃƒÂ¡rio
-  // na pÃƒÂ¡gina Atalhos (overlay wb-keybindings-v1).
+  // D-394: bindings vêm do registro central (ids bruto.*) — assim TODA
+  // funcionalidade do editor pode ter o atalho reatribuído pelo usuário
+  // na página Atalhos (overlay wb-keybindings-v1).
   const bindings: ShortcutBinding[] = useMemo(
     () => [
       shortcutFromRegistry('player.togglePlay', () => playerRef.current?.togglePlay()),
@@ -748,7 +748,7 @@ export function EditorPage() {
   });
   const waveformOffsetSec = waveformWindow.startSec;
 
-  // Loading enquanto QUALQUER passo roda: vÃƒÂ­deo+cenas (status fica "cortando" atÃƒÂ©
+  // Loading enquanto QUALQUER passo roda: vídeo+cenas (status fica "cortando" até
   // o worker inteiro terminar) OU metadados (mutation paralela do front).
   const brutoBusy =
     brutoStatusAtual === 'processando' ||
@@ -808,7 +808,7 @@ export function EditorPage() {
         open={avaliacaoOpen}
         corteId={corteId}
         onClose={() => setAvaliacaoOpen(false)}
-        descricao="O bruto estÃƒÂ¡ sendo gerado em segundo plano"
+        descricao="O bruto está sendo gerado em segundo plano"
       />
       <ConfirmDialog
         pedido={confirmacao.pedido}
@@ -818,11 +818,11 @@ export function EditorPage() {
     </>
   );
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Shell Workbench (Etapa 3): mesma orquestraÃƒÂ§ÃƒÂ£o, re-hospedada Ã¢â€â‚¬Ã¢â€â‚¬
-  // Painel CORTES retrÃƒÂ¡til + centro (player 16:9 com cap Ã¢â€ â€™ transporte Ã¢â€ â€™
-  // contexto Ã¢â€ â€™ timeline flex:1) + painel direito retrÃƒÂ¡til. A lÃƒÂ³gica acima
-  // (hooks, atalhos, dirty, waveform window) ÃƒÂ© EXATAMENTE a mesma do
-  // layout legado Ã¢â‚¬â€ sÃƒÂ³ o container muda.
+  // ── Shell Workbench (Etapa 3): mesma orquestração, re-hospedada ──
+  // Painel CORTES retrátil + centro (player 16:9 com cap → transporte →
+  // contexto → timeline flex:1) + painel direito retrátil. A lógica acima
+  // (hooks, atalhos, dirty, waveform window) é EXATAMENTE a mesma do
+  // layout legado — só o container muda.
   if (isWorkbenchEnabled()) {
     return (
       <>
@@ -845,7 +845,7 @@ export function EditorPage() {
             />
           }
           rightPanel={
-            <PanelShell id="right" side="right" title="TRECHOS Ã‚Â· TRANSCRIÃƒâ€¡ÃƒÆ’O">
+            <PanelShell id="right" side="right" title="TRECHOS · TRANSCRIÇÃO">
               <div className="min-h-0 flex-1 px-1.5 pb-1.5">
                 <RightTabsPanel
                   variant="workbench"
@@ -872,11 +872,11 @@ export function EditorPage() {
             </PanelShell>
           }
         >
-          {/* Toolbar do Bruto (AUDITORIA-v2 Ã‚Â§2/Ã‚Â§3, CP2/CP3): veredito em
-              ÃƒÂ­cones (reaproveita StatusToggleRow, sÃƒÂ³ muda a apresentaÃƒÂ§ÃƒÂ£o) +
-              regerar/pasta/tempos/sincronia/info + chip do vÃƒÂ­deo original +
-              pÃƒÂ­lula Salvar flutuante (ÃƒÂºltimo filho flex Ã¢â‚¬â€ reserva a prÃƒÂ³pria
-              largura; NÃƒÆ’O ÃƒÂ© position:absolute, nada desliza por baixo). */}
+          {/* Toolbar do Bruto (AUDITORIA-v2 §2/§3, CP2/CP3): veredito em
+              ícones (reaproveita StatusToggleRow, só muda a apresentação) +
+              regerar/pasta/tempos/sincronia/info + chip do vídeo original +
+              pílula Salvar flutuante (último filho flex — reserva a própria
+              largura; NÃO é position:absolute, nada desliza por baixo). */}
           <div className="flex flex-none items-center gap-1.5">
             <StatusToggleRow
               corte={corteUI}
@@ -901,9 +901,9 @@ export function EditorPage() {
             <div className="h-6 w-px flex-none bg-[var(--wb-border)]" aria-hidden />
 
             {/* Cluster de ferramentas do corte: UM fundo/borda para o grupo
-                inteiro (cada botÃƒÂ£o era uma caixa com borda prÃƒÂ³pria, e a do
+                inteiro (cada botão era uma caixa com borda própria, e a do
                 "regerar" ainda destoava por causa do wrapper do dropdown).
-                Cor fica sÃƒÂ³ no glifo Ã¢â‚¬â€ identidade sem o peso de um chip cheio. */}
+                Cor fica só no glifo — identidade sem o peso de um chip cheio. */}
             <div className="inline-flex flex-none items-center gap-0.5 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
               <div className="relative">
                 <Tooltip
@@ -915,9 +915,9 @@ export function EditorPage() {
                     aria-label={brutoPronto ? 'Regerar bruto' : 'Gerar bruto'}
                     className={cn(FERRAMENTA_CLASS, 'text-[var(--wb-accent)]')}
                     onClick={() => {
-                      // brutoPronto: abre o dropdown p/ escolher o que tambÃƒÂ©m
-                      // refazer (mesmo handleRegerarBruto de sempre). 1Ã‚Âª geraÃƒÂ§ÃƒÂ£o
-                      // nÃƒÂ£o tem opt-ins Ã¢â‚¬â€ dispara direto (mesmo Ctrl+G/botÃƒÂ£o de
+                      // brutoPronto: abre o dropdown p/ escolher o que também
+                      // refazer (mesmo handleRegerarBruto de sempre). 1ª geração
+                      // não tem opt-ins — dispara direto (mesmo Ctrl+G/botão de
                       // sempre): handleGerarBrutoPrincipal.
                       if (brutoPronto) setBrutoDropdownOpen((v) => !v);
                       else handleGerarBrutoPrincipal();
@@ -959,7 +959,7 @@ export function EditorPage() {
               </Tooltip>
 
               {/* D-408: a tecla entra no rotulo (como "Regerar bruto (Ctrl+G)"
-                  e "Abrir pasta (Ctrl+O)" ao lado) Ã¢â‚¬â€ atalho que so vive no
+                  e "Abrir pasta (Ctrl+O)" ao lado) — atalho que so vive no
                   registro nao e descoberto por ninguem. */}
               <Tooltip label="Tempos do corte (T)" side="bottom">
                 <button
@@ -978,10 +978,10 @@ export function EditorPage() {
                 </button>
               </Tooltip>
 
-              <Tooltip label="Sincronia do ÃƒÂ¡udio (H)" side="bottom">
+              <Tooltip label="Sincronia do áudio (H)" side="bottom">
                 <button
                   type="button"
-                  aria-label="Alternar sincronia do ÃƒÂ¡udio"
+                  aria-label="Alternar sincronia do áudio"
                   aria-pressed={sincroniaAberta}
                   className={cn(
                     FERRAMENTA_CLASS,
@@ -996,26 +996,26 @@ export function EditorPage() {
               </Tooltip>
             </div>
 
-            {/* Ã¢â€žÂ¹Ã¯Â¸Â Ã¢â‚¬â€ SÃƒâ€œ tooltip via atributo title (AUDITORIA-v2 Ã‚Â§2): sem
-                onClick, sem modal. O atalho continua na pÃƒÂ¡gina Atalhos. */}
+            {/* ℹ️ — SÓ tooltip via atributo title (AUDITORIA-v2 §2): sem
+                onClick, sem modal. O atalho continua na página Atalhos. */}
             <span
-              title="Aprovar A Ã‚Â· Rejeitar R Ã‚Â· Fire F Ã‚Â· Tempos T Ã‚Â· Sincronia H Ã‚Â· In/Out [ ] Ã‚Â· Navegar Ã¢â€ ÂÃ¢â€ â€™ 5s Ã‚Â· Desfazer Ctrl+Z"
+              title="Aprovar A · Rejeitar R · Fire F · Tempos T · Sincronia H · In/Out [ ] · Navegar ←→ 5s · Desfazer Ctrl+Z"
               className="flex aspect-square min-w-[24px] flex-[0_1_34px] cursor-help items-center justify-center text-[var(--wb-text-dim)]"
             >
               <Info size={14} aria-hidden />
             </span>
 
             <span className="min-w-0 flex-[0_1_auto] overflow-hidden whitespace-nowrap text-ellipsis rounded-[5px] bg-[var(--wb-bg-inset)] px-2 py-0.5 font-code text-[8.5px] font-bold uppercase text-[var(--wb-text-mute)]">
-              VÃƒÂ­deo original Ã‚Â· 4K
+              Vídeo original · 4K
             </span>
-            {/* D-410: "corte de MM:SS" saiu daqui Ã¢â‚¬â€ virou o campo DuraÃƒÂ§ÃƒÂ£o da
-                faixa acima do vÃƒÂ­deo, ao lado da lÃƒÂ­quida. Repetir na toolbar sÃƒÂ³
-                gastava largura, que jÃƒÂ¡ faltava em janelas estreitas. */}
+            {/* D-410: "corte de MM:SS" saiu daqui — virou o campo Duração da
+                faixa acima do vídeo, ao lado da líquida. Repetir na toolbar só
+                gastava largura, que já faltava em janelas estreitas. */}
 
             <div className="min-w-2 flex-1" />
 
             {/* D-407: o Salvar era permanente e so ficava `disabled` quando
-                limpo Ã¢â‚¬â€ ocupava a ponta da toolbar sem dizer nada. Agora so
+                limpo — ocupava a ponta da toolbar sem dizer nada. Agora so
                 existe enquanto ha o que salvar (ou enquanto salva, para o
                 clique nao sumir sob o cursor) e usa a cor de alerta, virando
                 o aviso de "corte sujo" em vez de mais um botao morto. Sem
@@ -1047,31 +1047,31 @@ export function EditorPage() {
             )}
           </div>
 
-          {/* D-410: faixa de leitura do vÃƒÂ­deo. Vem ACIMA do PlayerCap, nunca
-              dentro Ã¢â‚¬â€ pela mesma razÃƒÂ£o da Sincronia/Tempos (CP5/CP6): dentro
-              ela disputaria altura com o vÃƒÂ­deo no teto de 44vh. ReÃƒÂºne o que
-              antes eram chips sobrepostos ÃƒÂ  imagem (BRUTO, velocidade,
-              intervalo) e acrescenta duraÃƒÂ§ÃƒÂ£o lÃƒÂ­quida e tempo no corte, que sÃƒÂ³
+          {/* D-410: faixa de leitura do vídeo. Vem ACIMA do PlayerCap, nunca
+              dentro — pela mesma razão da Sincronia/Tempos (CP5/CP6): dentro
+              ela disputaria altura com o vídeo no teto de 44vh. Reúne o que
+              antes eram chips sobrepostos à imagem (BRUTO, velocidade,
+              intervalo) e acrescenta duração líquida e tempo no corte, que só
               existiam no painel Tempos. */}
           <div className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1 rounded-[9px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-1.5">
             <span className="flex-none rounded-[5px] bg-[var(--wb-ink)] px-1.5 py-0.5 font-code text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--wb-ink-fg)]">
               Bruto
             </span>
-            <CampoFaixaVideo rotulo="Velocidade" valor={`${playbackRate.toFixed(2)}Ãƒâ€”`} />
-            <CampoFaixaVideo rotulo="InÃƒÂ­cio" valor={segParaHms(corteUI.inicio_seg)} />
+            <CampoFaixaVideo rotulo="Velocidade" valor={`${playbackRate.toFixed(2)}×`} />
+            <CampoFaixaVideo rotulo="Início" valor={segParaHms(corteUI.inicio_seg)} />
             <CampoFaixaVideo rotulo="Fim" valor={segParaHms(corteUI.fim_seg)} />
-            <CampoFaixaVideo rotulo="DuraÃƒÂ§ÃƒÂ£o" valor={segParaMmSs(durSeg, true)} />
+            <CampoFaixaVideo rotulo="Duração" valor={segParaMmSs(durSeg, true)} />
             <CampoFaixaVideo
-              rotulo="LÃƒÂ­quido"
+              rotulo="Líquido"
               valor={segParaMmSs(liquidoSeg, true)}
               tom="ok"
-              titulo="DuraÃƒÂ§ÃƒÂ£o apÃƒÂ³s remover os trechos marcados"
+              titulo="Duração após remover os trechos marcados"
             />
             <CampoFaixaVideo
               rotulo="No corte"
               valor={segParaMmSs(Math.max(0, currentTime - corteUI.inicio_seg), true)}
               tom="accent"
-              titulo="PosiÃƒÂ§ÃƒÂ£o do player contada a partir do inÃƒÂ­cio do corte"
+              titulo="Posição do player contada a partir do início do corte"
             />
           </div>
 
@@ -1094,9 +1094,9 @@ export function EditorPage() {
             />
           </PlayerCap>
 
-          {/* Sincronia (AUDITORIA-v2 Ã‚Â§5, CP5): oculta por padrao, alterna
-              pelo icone Ã°Å¸Å½Â§ da toolbar. Fica entre o video e o painel de
-              Tempos Ã¢â‚¬â€ nunca dentro do PlayerCap (senao disputaria altura
+          {/* Sincronia (AUDITORIA-v2 §5, CP5): oculta por padrao, alterna
+              pelo icone 🎧 da toolbar. Fica entre o video e o painel de
+              Tempos — nunca dentro do PlayerCap (senao disputaria altura
               com o video no teto de 44vh). */}
           {sincroniaAberta && (
             <AudioSyncControl
@@ -1107,8 +1107,8 @@ export function EditorPage() {
             />
           )}
 
-          {/* Tempos (AUDITORIA-v2 Ã‚Â§6, CP6): oculto por padrao, alterna pelo
-              icone Ã°Å¸â€¢â€˜ da toolbar. Hospeda titulo/trechos/Intervalo Ã¢â‚¬â€ o
+          {/* Tempos (AUDITORIA-v2 §6, CP6): oculto por padrao, alterna pelo
+              icone 🕑 da toolbar. Hospeda titulo/trechos/Intervalo — o
               bloco que antes ficava sempre visivel solto no centro. */}
           {temposAbertos && (
             <BrutoContextStrip
@@ -1132,11 +1132,11 @@ export function EditorPage() {
             />
           )}
 
-          {/* Os 200px do DE-PARA Ã‚Â§3 (quanto mais alto o painel, mais legÃƒÂ­vel a
-              onda) eram um `min-height`, e min-height RÃƒÂGIDO nao encolhe: com
+          {/* Os 200px do DE-PARA §3 (quanto mais alto o painel, mais legível a
+              onda) eram um `min-height`, e min-height RÍGIDO nao encolhe: com
               Tempos e/ou Sincronia abertos numa janela baixa a soma dos irmaos
               estourava a coluna e a onda vazava por baixo do `overflow-hidden`
-              Ã¢â‚¬â€ media 77px fora em 1600x720 (D-411).
+              — media 77px fora em 1600x720 (D-411).
               Vira `flex: 1 1 200px`: 200px continua sendo a altura PREFERIDA e
               a onda ainda cresce quando sobra espaco, mas agora e um basis, que
               o flex pode encolher quando falta. O piso de 110px (cabecalho da

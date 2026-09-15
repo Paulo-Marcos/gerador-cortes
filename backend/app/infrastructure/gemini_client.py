@@ -115,7 +115,9 @@ async def generate_text(
             contents=prompt,
             config=config,
         )
-        text = response.text.strip()
+        # `response.text` vem None quando o modelo bloqueia a resposta (safety)
+        # ou termina sem conteúdo; o chamador trata texto vazio com mensagem própria.
+        text = (response.text or "").strip()
         logger.info("[GeminiClient] Resposta texto recebida (%d chars).", len(text))
         return text
 

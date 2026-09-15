@@ -1,62 +1,62 @@
 # Mapeamento de Funcionalidades de IA (Claude e Gemini)
 
-Este documento descreve quais áreas e funcionalidades do projeto **CortadorLive** fazem uso de requisições de Inteligência Artificial, de forma a facilitar a manutenção e o entendimento da arquitetura de requisições para LLMs.
+Este documento descreve quais áreas do **CortadorLive** fazem requisições de IA, para facilitar a manutenção e o entendimento de como as chamadas a LLMs são roteadas.
 
-Todas essas funcionalidades agora suportam a utilização do **Claude** (via n8n/cli) ou do **Gemini** (via API) como provedores, permitindo trocar entre os modelos pela interface, reduzindo a chance de bloqueios por limite de uso.
+As funcionalidades abaixo aceitam **Claude** (via Claude CLI, assinatura local) ou **Gemini** (via API) como provedor, escolhido na interface. Isso reduz a chance de ficar parado por limite de uso de um deles.
 
 ## 1. Visão Geral da Arquitetura de IA
 
-As requisições de IA são orquestradas principalmente no backend através do serviço `backend/app/services/claude_ia.py` (que, apesar do nome, agora funciona como um _proxy/router_ entre provedores). 
+As requisições são orquestradas no backend pelo serviço `backend/app/services/claude_ia.py`. Apesar do nome, ele roteia entre os provedores.
 
-Os métodos de geração (ex: `_gerar_json_provider` e `_gerar_text_provider`) roteiam a requisição para:
-- **Claude**: `backend/app/infrastructure/claude_cli_client.py` 
-- **Gemini**: `backend/app/infrastructure/gemini_client.py`
+Os wrappers `_gerar_json_provider` e `_gerar_text_provider` recebem `provider: ProviderIA` (`"claude" | "gemini"`) e chamam:
+- **Claude**: `backend/app/infrastructure/claude_cli_client.py`. A skill vai como expertise do CLI (`_args_claude`).
+- **Gemini**: `backend/app/infrastructure/gemini_client.py`. O corpo da skill vai à frente do prompt, e o modelo sai de `_modelo_gemini`: skill em Haiku → `gemini-2.5-flash`; Opus/Sonnet → `gemini-2.5-pro`.
+
+O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `provider` como `Literal`: um valor desconhecido devolve 422 em vez de cair em silêncio no Claude.
 
 ## 2. Mapa de Funcionalidades
 
-Abaixo estão listadas as principais funcionalidades (Skills) e suas respectivas localizações no código onde a IA é invocada.
+### 2.1 Análise da live (cortes)
+- **Descrição**: analisa a transcrição da live inteira e propõe os cortes (início/fim, título, tema), encadeando o refazer-transcrição.
+- **Rota**: `POST /api/claude/projeto/{projeto_id}/analisar?usar_diarizacao=&provider=`
+- **Service**: `ClaudeIaService.analisar_via_claude` → `_gerar_cortes` / `_gerar_cortes_em_lote`
+- **Hook**: `useAnalisarComDiarizacao` (`frontend/src/hooks/useDiarizacao.ts`)
+- **UI**: `AnaliseIaModal.tsx`
 
-### 2.1 Análise de Trechos (Diarização e Remoção de Silêncios)
-- **Descrição**: Analisa a transcrição da livestream para identificar os melhores pontos para cortes, gerando as marcações de início e fim.
-- **Backend Router**: `POST /api/claude/analisar/{projeto_id}`
-- **Backend Service**: `ClaudeIAService.analisar_transcricao`
-- **Frontend Hook**: `useAnalisarComDiarizacao` (`frontend/src/hooks/useDiarizacao.ts`)
-- **UI Component**: `AnaliseIaModal.tsx`
+### 2.2 Trechos a remover (desvios)
+- **Descrição**: aponta, dentro de um corte, os trechos que fogem da tese central e devem sair.
+- **Rota**: `POST /api/claude/corte/{corte_id}/gerar-trechos?provider=`
+- **Service**: `ClaudeIaService.gerar_trechos_via_claude` → `_gerar_desvios`
+- **Hook**: `useGerarTrechosClaude` (`frontend/src/hooks/useEditor.ts`)
+- **UI**: `RightTabsPanel.tsx` (Fase 1 do Editor)
 
-### 2.2 Geração e Análise de Desvios (Trechos Ruins a Remover)
-- **Descrição**: Processa um corte bruto gerando e analisando "desvios", que são trechos menos interessantes ou ruídos recomendados para remoção.
-- **Backend Router**: `POST /api/claude/trechos/{corte_id}`
-- **Backend Service**: `ClaudeIAService.gerar_trechos`
-- **Frontend Hook**: `useGerarTrechosClaude` (`frontend/src/hooks/useEditor.ts`)
-- **UI Component**: `RightTabsPanel.tsx` (Fase 1 do Editor)
+### 2.3 Cenas (roteiro visual do Remotion)
+- **Descrição**: gera as cenas sobrepostas ao corte (cards, citações, ênfases) renderizadas no Remotion.
+- **Rota**: `POST /api/claude/corte/{corte_id}/gerar-cenas?provider=`
+- **Service**: `ClaudeIaService.gerar_cenas_via_claude` → `_gerar_cenas`
+- **Hook**: `useGerarCenasClaude` (`frontend/src/hooks/useEditor.ts`)
+- **UI**: `CenasPanel.tsx` (Fase 2 do Editor)
 
-### 2.3 Geração de Cenas (Roteiro Visual/Remotion)
-- **Descrição**: Monta o roteiro de edição estruturado definindo a sequência de câmeras, close-ups e b-rolls (cenas) para ser renderizado no Remotion.
-- **Backend Router**: `POST /api/claude/cenas/{corte_id}`
-- **Backend Service**: `ClaudeIAService.gerar_cenas`
-- **Frontend Hook**: `useGerarCenasClaude` (`frontend/src/hooks/useEditor.ts`)
-- **UI Component**: `CenasPanel.tsx` (Fase 2 do Editor)
+### 2.4 Metadados (título e descrição)
+- **Descrição**: produz título, descrição e tags para publicação no YouTube.
+- **Rota**: `POST /api/claude/corte/{corte_id}/gerar-metadados?provider=`
+- **Service**: `ClaudeIaService.gerar_metadados_via_claude`
+- **Hook**: `useGerarMetadadosClaude` (`frontend/src/hooks/useEditor.ts`), usado no fluxo do editor; a tela de metadados tem a própria mutation dentro de `MetadataCard.tsx`
+- **UI**: `MetadataCard.tsx`
 
-### 2.4 Geração de Metadados (Título e Descrição)
-- **Descrição**: Produz os títulos cativantes e a descrição otimizada para SEO e publicação no YouTube.
-- **Backend Router**: `POST /api/claude/metadados/{corte_id}`
-- **Backend Service**: `ClaudeIAService.gerar_metadados`
-- **Frontend Hook**: `useGerarMetadadosClaude` (`frontend/src/hooks/useEditor.ts`)
-- **UI Component**: `MetadataCard.tsx` (Tela de Post-Production)
-
-### 2.5 Geração de Prompt para Thumbnail
-- **Descrição**: Produz prompts de geração de imagens baseados no conteúdo do corte, focando em gerar a miniatura/thumbnail ideal.
-- **Backend Router**: `POST /api/claude/prompt-thumbnail/{corte_id}`
-- **Backend Service**: `ClaudeIAService.gerar_prompt_thumbnail`
-- **Frontend Hook**: `useGerarPromptThumbnailClaude` (`frontend/src/hooks/useEditor.ts`)
-- **UI Component**: `MetadataCard.tsx` (Tela de Post-Production)
+### 2.5 Prompt da thumbnail
+- **Descrição**: escreve o prompt de imagem da capa a partir do conteúdo do corte.
+- **Rota**: `POST /api/claude/corte/{corte_id}/gerar-prompt-thumbnail?provider=`
+- **Service**: `ClaudeIaService.gerar_prompt_thumbnail_via_claude`
+- **Hook**: mutation local em `MetadataCard.tsx` (`generatePromptThumbnailClaude`)
+- **UI**: `MetadataCard.tsx`
 
 ---
 
-## 3. Como adicionar novas chamadas de IA?
+## 3. Como adicionar uma nova chamada de IA
 
-1. Adicione a rota no backend em `backend/app/routers/claude_ia.py`, incluindo o query_parameter `provider: str = 'claude'`.
-2. Adicione a implementação do prompt/skill em `ClaudeIAService` (`claude_ia.py`), utilizando os wrappers `_gerar_json_provider` ou `_gerar_text_provider` passando o parâmetro `provider`.
-3. Atualize o client de API no frontend `frontend/src/lib/api.ts` para enviar a chamada.
-4. Crie ou atualize o React Query mutation no frontend em `useEditor.ts` ou arquivo relevante, passando o `provider`.
-5. Utilize os componentes `<ClaudeAiButton />` e `<GeminiAiButton />` exportados de `frontend/src/components/ui/` nas views em que o usuário irá interagir.
+1. Crie a rota em `backend/app/routers/claude_ia.py` com o query param `provider: ProviderIA = "claude"`.
+2. No `ClaudeIaService`, chame `_gerar_json_provider` ou `_gerar_text_provider` e **repasse `provider` por todos os métodos intermediários**. Métodos estáticos não enxergam variáveis do método que os chamou (rode `ruff check`: o F821 pega o esquecimento).
+3. Adicione a chamada em `frontend/src/lib/api.ts`.
+4. Crie a mutation passando o `provider` como `variables`. Assim a tela sabe qual botão está gerando.
+5. Use `<ClaudeAiButton />` e `<GeminiAiButton />` (`frontend/src/components/ui/`). Só o botão do provider em voo fica `pending`; o outro fica `disabled`.

@@ -129,6 +129,35 @@ class TestGerarCortes:
         assert payload["cortes"] == [{"titulo_proposto": "A", "inicio_seg": 10}]
         assert payload["descartados"] == []
 
+    def test_provider_gemini_chega_ao_gemini_e_nao_ao_claude(self, monkeypatch):
+        """O `provider` precisa atravessar os métodos estáticos até o wrapper.
+
+        Regressão: `_gerar_cortes` usava `provider` sem recebê-lo e a análise
+        morria com NameError nos DOIS providers.
+        """
+        chamadas_gemini: list[dict] = []
+
+        async def fake_gemini(**kwargs):
+            chamadas_gemini.append(kwargs)
+            return {"cortes": [{"titulo_proposto": "G", "inicio_seg": 5}]}
+
+        fake_claude = _FakeGenerate({"cortes": []})
+        monkeypatch.setattr(claude_ia.gemini_client, "generate_json", fake_gemini)
+        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake_claude)
+        monkeypatch.setattr(
+            ClaudeIaService,
+            "_granularizar",
+            staticmethod(lambda t: [_seg(0, 0, "fala curta")]),
+        )
+
+        payload = asyncio.run(
+            ClaudeIaService._gerar_cortes([{"x": 1}], {"duracao_segundos": 100}, "gemini")
+        )
+
+        assert payload["cortes"] == [{"titulo_proposto": "G", "inicio_seg": 5}]
+        assert len(chamadas_gemini) == 1
+        assert fake_claude.chamadas == 0
+
     def test_caminho_direto_inclui_descartados_da_skill(self, monkeypatch):
         """I-034: o array `descartados` da skill chega ao payload via direto."""
         retorno = {
@@ -325,7 +354,7 @@ class TestAnaliseAditiva:
         )
         monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
 
-        async def fake_gerar_cortes(_transcricao, _meta):
+        async def fake_gerar_cortes(_transcricao, _meta, provider="claude"):
             return {
                 "cortes": [
                     # 110s cai no bucket 3 (mesmo do existente) → deve ser pulado
@@ -386,7 +415,7 @@ class TestAnaliseAditiva:
         factory, executados = self._montar_factory(inicios_existentes=[], descartados_existentes=[])
         monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
 
-        async def fake_gerar_cortes(_transcricao, _meta):
+        async def fake_gerar_cortes(_transcricao, _meta, provider="claude"):
             return {
                 "cortes": [
                     {
@@ -640,7 +669,7 @@ class TestGerarTrechosAditivoPuro:
         )
         monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
 
-        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             # A skill devolve um desvio NOVO, um DUPLICADO do manual (deve pular)
             # e — como skill v2-com-revisão legada — um `revisoes` que mandaria
             # remover o desvio 'claude'. A revogação IGNORA `revisoes`.
@@ -693,7 +722,7 @@ class TestGerarTrechosAditivoPuro:
         )
         monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
 
-        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             return {"desvios": []}  # skill sem nada novo, sem chave revisoes
 
         monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
@@ -726,7 +755,7 @@ class TestGerarTrechosAditivoPuro:
         )
         monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
 
-        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             return {"desvios": [{"inicio_hms": "00:20:00", "fim_hms": "00:20:15", "motivo": "x"}]}
 
         monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
@@ -815,7 +844,7 @@ class TestSnapDesviosNoFluxo:
         )
         monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
 
-        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             # Início/fim caídos no meio das palavras: 100.2 → 100.0; 101.5 → 101.2.
             return {
                 "desvios": [
@@ -854,7 +883,7 @@ class TestSnapDesviosNoFluxo:
         )
         monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
 
-        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None):
+        async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             return {
                 "desvios": [
                     {"inicio_hms": "00:01:40.200", "fim_hms": "00:01:41.500", "motivo": "novo"}
@@ -1155,3 +1184,22 @@ class TestPromptThumbnail:
 
         assert "ombro do mascote" in enviado
         assert "mascote sozinho é fallback" in enviado
+
+
+# ── _modelo_gemini: faixa equivalente ao modelo Claude da skill ─────────────────
+
+
+@pytest.mark.parametrize(
+    ("modelo_claude", "esperado"),
+    [
+        ("opus", "gemini-2.5-pro"),
+        ("claude-sonnet-5", "gemini-2.5-pro"),
+        ("haiku", "gemini-2.5-flash"),
+        ("", "gemini-2.5-pro"),
+    ],
+)
+def test_modelo_gemini_segue_a_faixa_da_skill(modelo_claude, esperado):
+    skill = claude_ia.editorial_skills.SkillResolvida(
+        key="k", corpo="", modelo=modelo_claude, thinking_tokens=0, timeout=60.0, lentes=[]
+    )
+    assert claude_ia._modelo_gemini(skill) == esperado
