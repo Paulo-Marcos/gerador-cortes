@@ -141,7 +141,9 @@ export function LinhaDeAjuste({
           Definir palco
         </Button>
 
-        {(presets.data ?? []).length === 0 && (
+        {/* Só depois de carregar: enquanto a lista não chega, `data` é
+            vazio e o aviso piscava mesmo com presets salvos. */}
+        {presets.isSuccess && presets.data.length === 0 && (
           <span className="text-[11px] text-[var(--wb-text-mute)]">
             nenhum palco salvo — monte um em Definir palco
           </span>
