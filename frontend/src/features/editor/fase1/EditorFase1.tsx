@@ -5,8 +5,8 @@ import { PlayerPanel, type PlayerHandle } from './PlayerPanel';
 import { TimelinePanel } from './TimelinePanel';
 import { RightTabsPanel } from './RightTabsPanel';
 
-// ─────────────────────────────────────────────────────────────
-// EditorFase1 — layout do Bruto (`01_BRUTO.md > Layout geral`)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// EditorFase1 â€” layout do Bruto (`01_BRUTO.md > Layout geral`)
 // adaptado por decisao Paulo: containers redimensionaveis via
 // react-resizable-panels (em vez de grid CSS fixo).
 //
@@ -18,7 +18,7 @@ import { RightTabsPanel } from './RightTabsPanel';
 // Container do Player CRESCE para ocupar espaco quando a Timeline e
 // reduzida (resize). O waveform interno usa height:'auto' do WaveSurfer
 // para preencher o painel sem deixar faixa cinza embaixo.
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const PANEL_PERSIST = 'editor-fase1-panels-v2';
 
@@ -33,7 +33,7 @@ interface Props {
   brutoStatus?: StatusBrutoResponse;
   brutoPronto?: boolean;
   playerRef: RefObject<PlayerHandle>;
-  // F-063: sincronia fina de áudio (lip-sync).
+  // F-063: sincronia fina de Ã¡udio (lip-sync).
   audioPreviewSrc?: string;
   audioPreviewStartSec?: number;
   audioOffsetMs?: number;
@@ -66,7 +66,7 @@ interface Props {
   juntandoCorte?: boolean;
   onAlternarVelocidade?: () => void;
   onGerarManual: () => void;
-  onGerarTrechosClaude: () => void;
+  onGerarTrechosIA: (provider: 'claude' | 'gemini') => void;
   pending: {
     bruto?: boolean;
     transcricao?: boolean;
@@ -119,7 +119,7 @@ export function EditorFase1({
   juntandoCorte,
   onAlternarVelocidade,
   onGerarManual,
-  onGerarTrechosClaude,
+  onGerarTrechosIA,
   pending,
 }: Props) {
   const brutoPronto = brutoProntoProp ?? !!brutoStatus?.clip_gerado;
@@ -206,7 +206,7 @@ export function EditorFase1({
           onAdicionarDesvio={onAdicionarDesvio}
           onRemoverDesvio={onRemoverDesvio}
           onGerarManual={onGerarManual}
-          onGerarTrechosClaude={onGerarTrechosClaude}
+          onGerarTrechosIA={onGerarTrechosIA}
           pendingTrechos={{
             adicionando: pending.adicionando,
             removendo: pending.removendo,

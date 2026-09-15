@@ -12,7 +12,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ClaudeIcon } from '@/components/ui/claude-button';
+import { ClaudeAiButton } from '@/components/ui/claude-button';
+import { GeminiAiButton } from '@/components/ui/gemini-button';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -116,9 +117,9 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
 
   // D-428: gerar cenas SUBSTITUI o roteiro visual inteiro. Com cenas ja na
   // tela, o clique passa pela confirmacao; sem nenhuma, dispara direto.
-  const handleGerarCenas = () => {
+  const handleGerarCenas = (provider: 'claude' | 'gemini') => {
     confirmacao.executarOuPedir(confirmacaoRegerarCenas(cenasOrdenadas.length), () =>
-      gerarClaude.mutate(),
+      gerarClaude.mutate(provider),
     );
   };
 
@@ -256,19 +257,24 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             Padrões moram no ⋯, com os mesmos disabled/tooltip/loading. */}
         <div className="mb-2 flex items-stretch gap-1.5">
           <Tooltip label="Gerar cenas automaticamente via Claude" side="bottom">
-            <button
-              type="button"
-              onClick={handleGerarCenas}
-              disabled={gerarClaude.isPending}
-              className="flex flex-1 items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--wb-accent)] px-3 py-2 text-[11px] font-bold text-[var(--wb-accent-fg)] shadow-[shadow:var(--wb-shadow-btn)] transition-colors hover:bg-[var(--wb-accent-strong)] disabled:pointer-events-none disabled:opacity-60"
-            >
-              {gerarClaude.isPending ? (
-                <Loader2 size={13} className="animate-spin" aria-hidden />
-              ) : (
-                <ClaudeIcon size={13} />
-              )}
-              {gerarClaude.isPending ? 'Gerando…' : 'Gerar cenas'}
-            </button>
+            <ClaudeAiButton
+              size="md"
+              pending={gerarClaude.isPending}
+              onClick={() => handleGerarCenas('claude')}
+              className="flex-1 text-[11px] h-[34px]"
+              label="Claude"
+              pendingLabel="Gerando..."
+            />
+          </Tooltip>
+          <Tooltip label="Gerar cenas automaticamente via Gemini" side="bottom">
+            <GeminiAiButton
+              size="md"
+              pending={gerarClaude.isPending}
+              onClick={() => handleGerarCenas('gemini')}
+              className="flex-1 text-[11px] h-[34px]"
+              label="Gemini"
+              pendingLabel="Gerando..."
+            />
           </Tooltip>
           <OverflowMenu
             label="Outras ações das cenas"

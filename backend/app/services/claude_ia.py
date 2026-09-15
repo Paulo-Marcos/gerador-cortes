@@ -42,7 +42,7 @@ from app.domain.transcricao_utils import (
 )
 from app.domain.variacao_prompt import bloco_variacao_de
 from app.editorial_identity import identidade_do_mascote
-from app.infrastructure import claude_cli_client, fila_ia
+from app.infrastructure import claude_cli_client, fila_ia, gemini_client
 from app.models import Corte, Projeto, StatusProjeto
 from app.services.analise import AnaliseService, _to_seg
 from app.services.tasks import fire_and_forget
@@ -151,6 +151,57 @@ def _args_claude(
     }
 
 
+async def _gerar_json_provider(
+    provider: str,
+    prompt: str,
+    skill: editorial_skills.SkillResolvida,
+    skill_key: str,
+    *,
+    projeto_id: str | None = None,
+    corte_id: str | None = None,
+) -> dict:
+    """Wrapper que roteia a geração de JSON para Claude CLI ou Gemini."""
+    if provider == "gemini":
+        prompt_completo = f"{skill.corpo}\n\n{prompt}" if skill.corpo else prompt
+        
+        # Mapeamento simples de modelo
+        modelo = "gemini-2.5-pro" if "sonnet" in skill.modelo.lower() else "gemini-2.5-flash"
+        
+        return await gemini_client.generate_json(
+            model=modelo,
+            prompt=prompt_completo,
+            contexto=gemini_client.GeminiCallContext(etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id),
+        )
+    else:
+        args = _args_claude(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
+        return await claude_cli_client.generate_json(prompt, **args)
+
+
+async def _gerar_text_provider(
+    provider: str,
+    prompt: str,
+    skill: editorial_skills.SkillResolvida,
+    skill_key: str,
+    *,
+    projeto_id: str | None = None,
+    corte_id: str | None = None,
+) -> str:
+    """Wrapper que roteia a geração de texto livre para Claude CLI ou Gemini."""
+    if provider == "gemini":
+        prompt_completo = f"{skill.corpo}\n\n{prompt}" if skill.corpo else prompt
+        
+        modelo = "gemini-2.5-pro" if "sonnet" in skill.modelo.lower() else "gemini-2.5-flash"
+        
+        return await gemini_client.generate_text(
+            model=modelo,
+            prompt=prompt_completo,
+            contexto=gemini_client.GeminiCallContext(etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id),
+        )
+    else:
+        args = _args_claude(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
+        return await claude_cli_client.generate_text(prompt, **args)
+
+
 def _mapa_falantes_para_meta(raw: str) -> dict | None:
     """Parse tolerante do `falantes_map` para injetar na meta da análise (D-286).
 
@@ -194,7 +245,7 @@ class ClaudeIaService:
 
     @staticmethod
     async def analisar_via_claude(
-        projeto_id: str, *, encadear_transcricao: bool = True, usar_diarizacao: bool = True
+        projeto_id: str, *, encadear_transcricao: bool = True, usar_diarizacao: bool = True, provider: str = "claude"
     ) -> dict:
         """Analisa a transcrição via Claude e ADICIONA os cortes gerados aos que
         já existem no projeto, encadeando (opcional) o refazer-transcrição.
@@ -396,8 +447,8 @@ class ClaudeIaService:
                 variacao=bloco_variacao_de(skill.lentes),
             )
             _log_skill_usada(_SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
-            resultado = await claude_cli_client.generate_json(
-                prompt, **_args_claude(skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id"))
+            resultado = await _gerar_json_provider(
+                provider, prompt, skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id")
             )
             return {
                 "cortes": resultado.get("cortes", []),
@@ -455,8 +506,8 @@ class ClaudeIaService:
                 dica_chat=dica,
                 variacao=variacao,
             )
-            resultado = await claude_cli_client.generate_json(
-                prompt, **_args_claude(skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id"))
+            resultado = await _gerar_json_provider(
+                provider, prompt, skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id")
             )
             for corte in resultado.get("cortes", []):
                 chave = ClaudeIaService._bucket_30s(corte.get("inicio_seg"))
@@ -593,7 +644,7 @@ class ClaudeIaService:
     # ── Fase 2b: regerar trechos a remover (desvios) de UM corte ──────────────
 
     @staticmethod
-    async def gerar_trechos_via_claude(corte_id: str) -> dict:
+    async def gerar_trechos_via_claude(corte_id: str, provider: str = "claude") -> dict:
         """Regenera os trechos a remover (desvios) de um corte via Claude e
         ressincroniza a transcrição final. Usa a skill `trechos-expert`.
 
@@ -855,14 +906,13 @@ class ClaudeIaService:
                 texto_chunk, cabecalho_meta, indice + 1, len(chunks)
             )
             t = time.perf_counter()
-            resultado = await claude_cli_client.generate_json(
+            resultado = await _gerar_json_provider(
+                provider,
                 prompt,
-                **_args_claude(
-                    skill,
-                    _SKILL_TRECHOS,
-                    projeto_id=meta.get("projeto_id"),
-                    corte_id=meta.get("corte_id"),
-                ),
+                skill,
+                _SKILL_TRECHOS,
+                projeto_id=meta.get("projeto_id"),
+                corte_id=corte_id,
             )
             # WHY: a skill trechos-expert pede `desvios`; o prompt rico pode também
             # devolver `trechos` (chave do fluxo manual). Aceitamos ambos.
@@ -944,7 +994,7 @@ class ClaudeIaService:
     # ── Fase 3: cenas e metadados via Claude (incremental ou em paralelo) ─────
 
     @staticmethod
-    async def gerar_cenas_via_claude(corte_id: str) -> dict:
+    async def gerar_cenas_via_claude(corte_id: str, provider: str = "claude") -> dict:
         """Gera as cenas Remotion de um corte via Claude (skill cenas-expert).
 
         Reaproveita o prompt detalhado (que carrega o schema) e o importador de
@@ -955,19 +1005,18 @@ class ClaudeIaService:
         # chamada, então montar o prompt, importar retratos e qualquer falha
         # antes da 1ª chamada aconteciam sem item nenhum na fila — e a geração
         # automática disparada pelo bruto parecia não existir. Anunciamos a fase
-        # inteira sob a MESMA chave que as chamadas internas usam, de modo que
-        # elas apenas atualizam este item em vez de criar outro.
-        chave_fila = fila_ia.anunciar_inicio(_SKILL_CENAS, corte_id=corte_id)
+        # inteira para englobar os sub-passos.
+        chave = fila_ia.anunciar_inicio(_SKILL_CENAS, corte_id=corte_id)
         try:
-            resultado = await ClaudeIaService._gerar_cenas(corte_id)
-        except BaseException as exc:
-            fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
+            res = await ClaudeIaService._gerar_cenas(corte_id, provider)
+            fila_ia.anunciar_fim(chave, sucesso=True)
+            return res
+        except Exception as e:
+            fila_ia.anunciar_fim(chave, sucesso=False, erro=fila_ia.mensagem_de(e))
             raise
-        fila_ia.anunciar_fim(chave_fila, sucesso=True)
-        return resultado
 
     @staticmethod
-    async def _gerar_cenas(corte_id: str) -> dict:
+    async def _gerar_cenas(corte_id: str, provider: str = "claude") -> dict:
         """Corpo da geração de cenas — ver `gerar_cenas_via_claude`."""
         from app.services.cenas_remotion import CenasRemotionService
 
@@ -991,8 +1040,8 @@ class ClaudeIaService:
         for indice, parte in enumerate(prompts):
             prompt = f"{variacao}\n\n{parte['texto']}"
             t = time.perf_counter()
-            resultado = await claude_cli_client.generate_json(
-                prompt, **_args_claude(skill, _SKILL_CENAS, corte_id=corte_id)
+            resultado = await _gerar_json_provider(
+                provider, prompt, skill, _SKILL_CENAS, corte_id=corte_id
             )
             novas = resultado.get("cenas", [])
             cenas.extend(novas)
@@ -1023,7 +1072,7 @@ class ClaudeIaService:
         return {"total_cenas": len(cenas)}
 
     @staticmethod
-    async def gerar_metadados_via_claude(corte_id: str) -> dict:
+    async def gerar_metadados_via_claude(corte_id: str, provider: str = "claude") -> dict:
         """Gera metadados do corte via Claude usando contexto puro + skill.
 
         WHY: a expertise editorial (regras de título, lista negra, famílias,
@@ -1048,8 +1097,8 @@ class ClaudeIaService:
             historico_titulos=ctx["historico_titulos"],
         )
         _log_skill_usada(_SKILL_METADADOS, skill, scaffold_meta)
-        resultado = await claude_cli_client.generate_json(
-            prompt, **_args_claude(skill, _SKILL_METADADOS, corte_id=corte_id)
+        resultado = await _gerar_json_provider(
+            provider, prompt, skill, _SKILL_METADADOS, corte_id=corte_id
         )
         await MetadadosService.importar_resultado_meta(corte_id, resultado)
         logger.info("[ClaudeIA] Metadados gerados via Claude p/ corte %s", corte_id[:8])
@@ -1567,7 +1616,7 @@ class ClaudeIaService:
         return prompt_da_arte(bruto)
 
     @staticmethod
-    async def gerar_prompt_thumbnail_via_claude(corte_id: str) -> dict:
+    async def gerar_prompt_thumbnail_via_claude(corte_id: str, provider: str = "claude") -> dict:
         """Gera o prompt de imagem da thumbnail via Claude (skill
         thumbnail-prompt-expert), reusando o builder e o importador existentes.
 
@@ -1612,8 +1661,8 @@ class ClaudeIaService:
         _log_skill_usada(
             _SKILL_THUMBNAIL, skill, editorial_scaffolds.resolver_scaffold("thumbnail")
         )
-        texto = await claude_cli_client.generate_text(
-            prompt, **_args_claude(skill, _SKILL_THUMBNAIL, corte_id=corte_id)
+        texto = await _gerar_text_provider(
+            provider, prompt, skill, _SKILL_THUMBNAIL, corte_id=corte_id
         )
         prompt_thumbnail = _strip_code_fences(texto)
         if not prompt_thumbnail:

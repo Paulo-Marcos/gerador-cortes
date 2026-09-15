@@ -1,4 +1,4 @@
-import { renderToStaticMarkup } from 'react-dom/server';
+﻿import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -37,7 +37,7 @@ function baseProps(desvios: Desvio[] = []) {
     onAdicionarDesvio: noop,
     onRemoverDesvio: noop,
     onGerarManual: noop,
-    onGerarTrechosClaude: noop,
+    onGerarTrechosIA: noop,
     pendingTrechos: {},
     transcricao: [],
     currentTime: 0,
@@ -59,67 +59,67 @@ function render(variant?: 'legacy' | 'workbench', desvios?: Desvio[]) {
   );
 }
 
-describe('RightTabsPanel — variant legacy (default) preserva o header atual', () => {
-  it('mantém "Atualizar transcricao" no header e NÃO renderiza o rodapé "Mais ações"', () => {
+describe('RightTabsPanel â€” variant legacy (default) preserva o header atual', () => {
+  it('mantÃ©m "Atualizar transcricao" no header e NÃƒO renderiza o rodapÃ© "Mais aÃ§Ãµes"', () => {
     const html = render();
 
     expect(html).toContain('aria-label="Atualizar transcricao"');
-    expect(html).not.toContain('Mais ações');
+    expect(html).not.toContain('Mais aÃ§Ãµes');
   });
 
-  it('mesmo comportamento quando variant não é passado (EditorFase1/shell antigo)', () => {
+  it('mesmo comportamento quando variant nÃ£o Ã© passado (EditorFase1/shell antigo)', () => {
     const html = render('legacy');
 
     expect(html).toContain('aria-label="Atualizar transcricao"');
-    expect(html).not.toContain('Mais ações');
+    expect(html).not.toContain('Mais aÃ§Ãµes');
   });
 });
 
-describe('RightTabsPanel — variant workbench move "Regerar transcrição" pro rodapé (AUDITORIA-v2 §9, CP10)', () => {
-  it('remove o refresh do header e mostra o rodapé "Mais ações" fechado por padrão', () => {
+describe('RightTabsPanel â€” variant workbench move "Regerar transcriÃ§Ã£o" pro rodapÃ© (AUDITORIA-v2 Â§9, CP10)', () => {
+  it('remove o refresh do header e mostra o rodapÃ© "Mais aÃ§Ãµes" fechado por padrÃ£o', () => {
     const html = render('workbench');
 
     expect(html).not.toContain('aria-label="Atualizar transcricao"');
-    expect(html).toContain('Mais ações');
+    expect(html).toContain('Mais aÃ§Ãµes');
     expect(html).toContain('aria-expanded="false"');
-    // Fechado por padrão: a ação "Regerar transcrição" ainda não aparece no HTML.
-    expect(html).not.toContain('Regerar transcrição');
+    // Fechado por padrÃ£o: a aÃ§Ã£o "Regerar transcriÃ§Ã£o" ainda nÃ£o aparece no HTML.
+    expect(html).not.toContain('Regerar transcriÃ§Ã£o');
   });
 
-  it('mantém a busca na transcrição e o "Influenciar a capa" como estão (não movidos)', () => {
+  it('mantÃ©m a busca na transcriÃ§Ã£o e o "Influenciar a capa" como estÃ£o (nÃ£o movidos)', () => {
     const html = render('workbench');
 
-    // ThumbnailHintsEditor continua sempre visível no topo do painel.
+    // ThumbnailHintsEditor continua sempre visÃ­vel no topo do painel.
     expect(html).toContain('Influenciar');
   });
 });
 
-describe('RightTabsPanel — badge do trecho varia pelo motivo da remoção (D-422)', () => {
+describe('RightTabsPanel â€” badge do trecho varia pelo motivo da remoÃ§Ã£o (D-422)', () => {
   const desviosDaIa: Desvio[] = [
     {
       inicio_hms: '00:27:57',
       fim_hms: '00:29:30',
-      motivo: 'digressão sobre utilitarismo',
+      motivo: 'digressÃ£o sobre utilitarismo',
       origem: 'claude',
       categoria: 'tangente',
     },
     {
       inicio_hms: '00:37:10',
       fim_hms: '00:37:16',
-      motivo: 'checagem com a audiência e repetição',
+      motivo: 'checagem com a audiÃªncia e repetiÃ§Ã£o',
       origem: 'claude',
       categoria: 'repeticao',
     },
     {
       inicio_hms: '00:38:02',
       fim_hms: '00:38:09',
-      motivo: 'Possível imprecisão — atribui a frase a Platão',
+      motivo: 'PossÃ­vel imprecisÃ£o â€” atribui a frase a PlatÃ£o',
       origem: 'claude',
       categoria: 'imprecisao',
     },
   ];
 
-  it('três trechos da MESMA origem (claude) rendem três badges distintos, sem "IA" genérico', () => {
+  it('trÃªs trechos da MESMA origem (claude) rendem trÃªs badges distintos, sem "IA" genÃ©rico', () => {
     const html = render('workbench', desviosDaIa);
 
     expect(html).toContain('>tangente<');
@@ -128,10 +128,10 @@ describe('RightTabsPanel — badge do trecho varia pelo motivo da remoção (D-4
     expect(html).not.toContain('>IA<');
   });
 
-  it('o trecho impreciso avisa na mensagem, não só na cor do badge', () => {
+  it('o trecho impreciso avisa na mensagem, nÃ£o sÃ³ na cor do badge', () => {
     const html = render('workbench', desviosDaIa);
 
-    expect(html).toContain('Possível imprecisão');
+    expect(html).toContain('PossÃ­vel imprecisÃ£o');
     expect(html).toContain('var(--wb-warn-soft)');
   });
 
@@ -141,7 +141,7 @@ describe('RightTabsPanel — badge do trecho varia pelo motivo da remoção (D-4
       {
         inicio_hms: '00:40:00',
         fim_hms: '00:40:05',
-        motivo: 'Silêncio Detectado (IA/Técnico)',
+        motivo: 'SilÃªncio Detectado (IA/TÃ©cnico)',
         origem: 'tecnico',
       },
     ]);

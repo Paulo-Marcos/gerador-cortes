@@ -285,9 +285,9 @@ export const api = {
   // Provider Claude (geração alternativa via `claude -p`) — F-038
   // D-286: `usarDiarizacao` (default true) injeta o rótulo de falante no prompt
   // quando o projeto já foi diarizado; false analisa ignorando os falantes.
-  analisarViaClaude: (projetoId: string, usarDiarizacao = true) =>
+  analisarViaClaude: (projetoId: string, usarDiarizacao = true, provider: 'claude' | 'gemini' = 'claude') =>
     request<{ message: string; projeto_id: string; provider: string; total_cortes?: number }>(
-      `/claude/projeto/${projetoId}/analisar?usar_diarizacao=${usarDiarizacao}`,
+      `/claude/projeto/${projetoId}/analisar?usar_diarizacao=${usarDiarizacao}&provider=${provider}`,
       { method: 'POST', body: '{}' },
     ),
 
@@ -307,29 +307,30 @@ export const api = {
       body: JSON.stringify({ falantes }),
     }),
 
-  gerarTrechosClaude: (corteId: string) =>
+  gerarTrechosClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
     request<{ message: string; corte_id: string; total_desvios: number; novos: number }>(
-      `/claude/corte/${corteId}/gerar-trechos`,
+      `/claude/corte/${corteId}/gerar-trechos?provider=${provider}`,
       { method: 'POST', body: '{}' },
     ),
 
-  gerarCenasClaude: (corteId: string) =>
+  gerarCenasClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
     request<{ message: string; corte_id: string; total_cenas: number }>(
-      `/claude/corte/${corteId}/gerar-cenas`,
+      `/claude/corte/${corteId}/gerar-cenas?provider=${provider}`,
       { method: 'POST', body: '{}' },
     ),
 
-  gerarMetadadosClaude: (corteId: string) =>
+  gerarMetadadosClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
     request<{ message: string; corte_id: string; ok: boolean }>(
-      `/claude/corte/${corteId}/gerar-metadados`,
+      `/claude/corte/${corteId}/gerar-metadados?provider=${provider}`,
       { method: 'POST', body: '{}' },
     ),
 
-  gerarPromptThumbnailClaude: (corteId: string) =>
+  gerarPromptThumbnailClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
     request<{ message: string; corte_id: string; ok: boolean }>(
-      `/claude/corte/${corteId}/gerar-prompt-thumbnail`,
+      `/claude/corte/${corteId}/gerar-prompt-thumbnail?provider=${provider}`,
       { method: 'POST', body: '{}' },
     ),
+
 
   // D-066: histórico de avaliações do par prompt+imagem de thumbnail.
   registrarAvaliacaoThumbnail: (corteId: string, body: RegistrarAvaliacaoThumbnailBody) =>

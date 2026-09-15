@@ -22,7 +22,7 @@ router = APIRouter()
 
 @router.post("/projeto/{projeto_id}/analisar")
 async def analisar_via_claude(
-    projeto_id: str, usar_diarizacao: bool = True, db: AsyncSession = Depends(get_db)
+    projeto_id: str, usar_diarizacao: bool = True, provider: str = "claude", db: AsyncSession = Depends(get_db)
 ):
     """Analisa a transcrição via Claude (SÍNCRONO).
 
@@ -47,23 +47,23 @@ async def analisar_via_claude(
         )
     try:
         resultado = await ClaudeIaService.analisar_via_claude(
-            projeto_id, usar_diarizacao=usar_diarizacao
+            projeto_id, usar_diarizacao=usar_diarizacao, provider=provider
         )
         return {
-            "message": "Análise via Claude concluída",
+            "message": "Análise via IA concluída",
             "projeto_id": projeto_id,
-            "provider": "claude",
+            "provider": provider,
             **resultado,
         }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Erro na análise via Claude")
+        logger.exception("Erro na análise via Claude/Gemini")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/corte/{corte_id}/gerar-trechos")
-async def gerar_trechos_via_claude(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def gerar_trechos_via_claude(corte_id: str, provider: str = "claude", db: AsyncSession = Depends(get_db)):
     """Regenera os trechos a remover (desvios) de um corte via Claude e
     ressincroniza a transcrição final.
 
@@ -74,64 +74,65 @@ async def gerar_trechos_via_claude(corte_id: str, db: AsyncSession = Depends(get
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     try:
-        resultado = await ClaudeIaService.gerar_trechos_via_claude(corte_id)
-        return {"message": "Trechos regerados via Claude", "corte_id": corte_id, **resultado}
+        resultado = await ClaudeIaService.gerar_trechos_via_claude(corte_id, provider=provider)
+        return {"message": "Trechos regerados via IA", "corte_id": corte_id, "provider": provider, **resultado}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Erro ao gerar trechos via Claude")
+        logger.exception("Erro ao gerar trechos via Claude/Gemini")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/corte/{corte_id}/gerar-cenas")
-async def gerar_cenas_via_claude(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def gerar_cenas_via_claude(corte_id: str, provider: str = "claude", db: AsyncSession = Depends(get_db)):
     """Gera as cenas Remotion do corte via Claude (skill cenas-expert)."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     try:
-        resultado = await ClaudeIaService.gerar_cenas_via_claude(corte_id)
-        return {"message": "Cenas geradas via Claude", "corte_id": corte_id, **resultado}
+        resultado = await ClaudeIaService.gerar_cenas_via_claude(corte_id, provider=provider)
+        return {"message": "Cenas geradas via IA", "corte_id": corte_id, "provider": provider, **resultado}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Erro ao gerar cenas via Claude")
+        logger.exception("Erro ao gerar cenas via Claude/Gemini")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/corte/{corte_id}/gerar-metadados")
-async def gerar_metadados_via_claude(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def gerar_metadados_via_claude(corte_id: str, provider: str = "claude", db: AsyncSession = Depends(get_db)):
     """Gera os metadados do corte via Claude (skill metadados-expert)."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     try:
-        resultado = await ClaudeIaService.gerar_metadados_via_claude(corte_id)
-        return {"message": "Metadados gerados via Claude", "corte_id": corte_id, **resultado}
+        resultado = await ClaudeIaService.gerar_metadados_via_claude(corte_id, provider=provider)
+        return {"message": "Metadados gerados via IA", "corte_id": corte_id, "provider": provider, **resultado}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Erro ao gerar metadados via Claude")
+        logger.exception("Erro ao gerar metadados via Claude/Gemini")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/corte/{corte_id}/gerar-prompt-thumbnail")
-async def gerar_prompt_thumbnail_via_claude(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def gerar_prompt_thumbnail_via_claude(corte_id: str, provider: str = "claude", db: AsyncSession = Depends(get_db)):
     """Gera o prompt de imagem da thumbnail via Claude (skill thumbnail-prompt-expert)."""
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     try:
-        resultado = await ClaudeIaService.gerar_prompt_thumbnail_via_claude(corte_id)
+        resultado = await ClaudeIaService.gerar_prompt_thumbnail_via_claude(corte_id, provider=provider)
         return {
-            "message": "Prompt de thumbnail gerado via Claude",
+            "message": "Prompt de thumbnail gerado via IA",
             "corte_id": corte_id,
+            "provider": provider,
             **resultado,
         }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Erro ao gerar prompt de thumbnail via Claude")
+        logger.exception("Erro ao gerar prompt de thumbnail via Claude/Gemini")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

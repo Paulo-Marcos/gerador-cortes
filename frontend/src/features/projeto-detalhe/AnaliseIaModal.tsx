@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Brain, CheckCircle2, Clock, Info, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClaudeAiButton, ClaudeIcon } from '@/components/ui/claude-button';
+import { GeminiAiButton, GeminiIcon } from '@/components/ui/gemini-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/modal';
@@ -26,7 +27,7 @@ interface Props {
 }
 
 type Modo = 'reanalisar' | 'intervalo';
-type Origem = 'auto' | 'manual' | 'claude';
+type Origem = 'auto' | 'manual' | 'claude' | 'gemini';
 
 /**
  * D-418 — o modal é remontado a cada live (`key`), porque a página de detalhe
@@ -106,8 +107,8 @@ function AnaliseIaModalDaLive({
     }
   };
 
-  const onSubmitClaude = () => {
-    analisarClaude.mutate(usarDiarizacao, { onSuccess: fechar });
+  const onSubmitIA = (provider: 'claude' | 'gemini') => {
+    analisarClaude.mutate({ usarDiarizacao, provider }, { onSuccess: fechar });
   };
 
   const onSubmitManual = () => {
@@ -257,7 +258,10 @@ function AnaliseIaModalDaLive({
         <div className="flex items-center gap-1 self-start rounded-full bg-bg-800 p-0.5 text-xs">
           <button
             type="button"
-            onClick={() => setOrigem('claude')}
+            onClick={() => {
+              setJsonErr(null);
+              setOrigem('claude');
+            }}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold transition-colors',
               origem !== 'claude' && 'text-text-300 hover:text-text-100',
@@ -267,7 +271,23 @@ function AnaliseIaModalDaLive({
             }
           >
             <ClaudeIcon size={13} />
-            AI
+            Claude
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setJsonErr(null);
+              setOrigem('gemini');
+            }}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold transition-colors',
+              origem !== 'gemini' && 'text-text-300 hover:text-text-100',
+            )}
+            style={
+              origem === 'gemini' ? { backgroundColor: '#4285F4', color: '#fff' } : undefined
+            }
+          >
+            Gemini
           </button>
           <button
             type="button"
@@ -283,24 +303,24 @@ function AnaliseIaModalDaLive({
           </button>
         </div>
 
-        {origem === 'claude' && (
+        {(origem === 'claude' || origem === 'gemini') && (
           <>
             <div className="rounded-[var(--radius-sm)] border border-accent-500/40 bg-accent-500/10 p-3 text-xs text-text-200">
               <p className="flex items-center gap-1.5 font-semibold text-text-100">
-                <ClaudeIcon size={14} className="text-accent-300" /> Analise completa por IA
+                {origem === 'claude' ? <ClaudeIcon size={14} className="text-accent-300" /> : <GeminiIcon size={14} className="text-accent-300" />} Analise completa por IA
               </p>
               <p className="mt-1 text-text-300">
                 Usa a skill <code>cortador-expert</code> para gerar os cortes e os trechos a remover
                 da <strong>live inteira</strong>, e em seguida emenda o{' '}
                 <strong>refazer transcrição</strong> de cada corte. Pode levar{' '}
-                <strong>1–3 minutos</strong> em lives longas — aguarde o spinner. Os cortes gerados
+                <strong>1-3 minutos</strong> em lives longas — aguarde o spinner. Os cortes gerados
                 são <strong>adicionados</strong> aos existentes; um corte que começa quase no mesmo
                 ponto de um atual é pulado. Nada é apagado.
               </p>
             </div>
             <DiarizacaoPanel
               projetoId={projetoId}
-              enabled={open && origem === 'claude'}
+              enabled={open && (origem === 'claude' || origem === 'gemini')}
               usarDiarizacao={usarDiarizacao}
               onToggleUsar={setUsarDiarizacao}
             />
@@ -346,10 +366,20 @@ function AnaliseIaModalDaLive({
           <ClaudeAiButton
             size="md"
             pending={isPending}
-            onClick={onSubmitClaude}
-            label="Gerar por IA"
+            onClick={() => onSubmitIA('claude')}
+            label="Gerar por Claude"
             pendingLabel="Gerando..."
             title="Rodar analise completa via Claude"
+          />
+        )}
+        {origem === 'gemini' && (
+          <GeminiAiButton
+            size="md"
+            pending={isPending}
+            onClick={() => onSubmitIA('gemini')}
+            label="Gerar por Gemini"
+            pendingLabel="Gerando..."
+            title="Rodar analise completa via Gemini"
           />
         )}
       </div>

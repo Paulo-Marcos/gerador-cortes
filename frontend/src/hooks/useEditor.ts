@@ -467,17 +467,17 @@ export function useGerarTrechosClaude(corteId: string, projetoId?: string) {
   const { notify } = useToast();
   return useMutation({
     mutationKey: trechosClaudeKey(corteId),
-    mutationFn: () => api.gerarTrechosClaude(corteId),
+    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => api.gerarTrechosClaude(corteId, provider),
     onSuccess: (data) => {
       const msg =
         data.novos > 0
-          ? `+${data.novos} novo(s) trecho(s) via Claude (total: ${data.total_desvios}).`
+          ? `+${data.novos} novo(s) trecho(s) via IA (total: ${data.total_desvios}).`
           : `Nenhum trecho novo a remover (total: ${data.total_desvios}).`;
       notify(msg, { tone: 'success' });
       invalidaCorte(qc, corteId, projetoId);
     },
     onError: (error) => {
-      notify(error instanceof Error ? error.message : 'Erro ao gerar trechos via Claude.', {
+      notify(error instanceof Error ? error.message : 'Erro ao gerar trechos via IA.', {
         tone: 'error',
       });
     },
@@ -489,13 +489,13 @@ export function useGerarCenasClaude(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
-    mutationFn: () => api.gerarCenasClaude(corteId),
+    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => api.gerarCenasClaude(corteId, provider),
     onSuccess: (data) => {
-      notify(`${data.total_cenas} cena(s) gerada(s) via Claude.`, { tone: 'success' });
+      notify(`${data.total_cenas} cena(s) gerada(s) via IA.`, { tone: 'success' });
       invalidaCorte(qc, corteId, projetoId);
     },
     onError: (error) => {
-      notify(error instanceof Error ? error.message : 'Erro ao gerar cenas via Claude.', {
+      notify(error instanceof Error ? error.message : 'Erro ao gerar cenas via IA.', {
         tone: 'error',
       });
     },
@@ -508,13 +508,13 @@ export function useGerarMetadadosClaude(corteId: string) {
   const { notify } = useToast();
   return useMutation({
     mutationKey: metadadosClaudeKey(corteId),
-    mutationFn: () => api.gerarMetadadosClaude(corteId),
+    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => api.gerarMetadadosClaude(corteId, provider),
     onSuccess: () => {
-      notify('Metadados gerados via Claude.', { tone: 'success' });
+      notify('Metadados gerados via IA.', { tone: 'success' });
       qc.invalidateQueries({ queryKey: ['metadado', corteId] });
     },
     onError: (error) => {
-      notify(error instanceof Error ? error.message : 'Erro ao gerar metadados via Claude.', {
+      notify(error instanceof Error ? error.message : 'Erro ao gerar metadados via IA.', {
         tone: 'error',
       });
     },

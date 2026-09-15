@@ -129,7 +129,7 @@ export function useAnalisarComDiarizacao(projetoId: string) {
   const { notify } = useToast();
   return useMutation({
     mutationKey: analiseClaudeKey(projetoId),
-    mutationFn: (usarDiarizacao: boolean) => api.analisarViaClaude(projetoId, usarDiarizacao),
+    mutationFn: ({ usarDiarizacao, provider = 'claude' }: { usarDiarizacao: boolean, provider?: 'claude' | 'gemini' }) => api.analisarViaClaude(projetoId, usarDiarizacao, provider),
     onSuccess: (data) => {
       notify(`Análise via Claude concluída: ${data.total_cortes ?? 0} corte(s).`, {
         tone: 'success',
