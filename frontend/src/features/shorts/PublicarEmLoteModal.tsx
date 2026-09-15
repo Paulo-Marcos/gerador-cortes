@@ -18,7 +18,7 @@
 // No Instagram o upload acontece no celular, longe deste app. `sua_vez` é o
 // estado honesto para isso — e o botão que o fecha é o único jeito de o app
 // saber. Marcar sozinho seria inventar um fato.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Check, CircleDashed, Clock, Hand, Loader2, Send, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,8 +43,31 @@ import {
 import {
   notasDeAgendamento,
   PASSO_EM_SEGUNDOS,
+  problemaDoHorario,
   sugestaoDeHorario,
 } from './agendamentoDoLote';
+
+// De quanto em quanto tempo o aviso do horário reavalia sozinho. Trinta segundos
+// bastam: a margem do backend é de cinco minutos, não de segundos.
+const RELOGIO_MS = 30_000;
+
+/**
+ * O "agora" que o aviso do horário usa, avançando enquanto `ligado`.
+ *
+ * Sem ele o aviso só mudaria quando o operador mexesse na data — e o problema
+ * que ele existe para pegar é justamente o horário que envelhece parado.
+ */
+function useAgora(ligado: boolean): [Date, () => void] {
+  const [agora, setAgora] = useState(() => new Date());
+
+  useEffect(() => {
+    if (!ligado) return;
+    const id = window.setInterval(() => setAgora(new Date()), RELOGIO_MS);
+    return () => window.clearInterval(id);
+  }, [ligado]);
+
+  return [agora, () => setAgora(new Date())];
+}
 
 interface Props {
   open: boolean;
@@ -101,6 +124,8 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
   // para a pergunta fazer sentido.
   const temRobo = (temTiktok && tiktokAssistido) || (temInstagram && instagramAssistido);
   const notas = notasDeAgendamento(plataformas, { tiktokAssistido, instagramAssistido });
+  const [agora, acertarRelogio] = useAgora(open && Boolean(agendarPara));
+  const problemaDoAgendamento = problemaDoHorario(agendarPara, plataformas, agora);
 
   return (
     <Modal
@@ -138,7 +163,8 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
             </Button>
             <Button
               size="sm"
-              disabled={envios === 0 || criar.isPending}
+              disabled={envios === 0 || criar.isPending || Boolean(problemaDoAgendamento)}
+              title={problemaDoAgendamento ?? undefined}
               onClick={() =>
                 criar.mutate({
                   alvos: montarAlvos(selecionados),
@@ -222,7 +248,10 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
             <Secao titulo="Quando">
               <Interruptor
                 ligado={Boolean(agendarPara)}
-                onChange={(ligado) => setAgendarPara(ligado ? sugestaoDeHorario() : '')}
+                onChange={(ligado) => {
+                  acertarRelogio();
+                  setAgendarPara(ligado ? sugestaoDeHorario() : '');
+                }}
                 titulo="Marcar dia e hora"
                 nota="desligado, cada destino publica assim que ficar pronto"
               />
@@ -236,9 +265,21 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
                        jeito —, é não deixar o operador escolher 14:03 para
                        depois ouvir que 14:03 não existe. */
                     step={PASSO_EM_SEGUNDOS}
-                    onChange={(e) => setAgendarPara(e.target.value)}
+                    onChange={(e) => {
+                      acertarRelogio();
+                      setAgendarPara(e.target.value);
+                    }}
                     className="w-[220px]"
                   />
+                  {problemaDoAgendamento && (
+                    <p
+                      role="alert"
+                      className="flex items-start gap-1 text-[11.5px] text-[var(--wb-warn-ink,var(--wb-text-dim))]"
+                    >
+                      <TriangleAlert className="mt-px size-3.5 shrink-0" />
+                      {problemaDoAgendamento}
+                    </p>
+                  )}
                   <ul className="space-y-1">
                     {notas.map((nota) => (
                       <li

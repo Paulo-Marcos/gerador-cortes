@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { notasDeAgendamento, sugestaoDeHorario } from '../agendamentoDoLote';
+import { notasDeAgendamento, problemaDoHorario, sugestaoDeHorario } from '../agendamentoDoLote';
 
 /**
  * D-580. O que estes testes guardam é a HONESTIDADE da tela: a caixa de data
@@ -55,5 +55,48 @@ describe('sugestão de horário', () => {
     const sugestao = sugestaoDeHorario(new Date('2026-09-12T10:00:00'));
 
     expect(sugestao).toBe('2026-09-12T11:00');
+  });
+});
+
+/**
+ * A mesma regra que o backend aplica em `domain/agendamento.py`, dita ANTES do
+ * clique. O backend continua recusando; o que muda é o operador não precisar
+ * levar um 422 para descobrir que o horário ficou para trás com o modal aberto.
+ */
+describe('problema do horário', () => {
+  const agora = new Date('2026-09-12T10:00:00');
+
+  it('horário válido não tem problema', () => {
+    expect(problemaDoHorario('2026-09-12T11:00', ['youtube_shorts'], agora)).toBeNull();
+  });
+
+  it('sem agendamento não tem problema', () => {
+    expect(problemaDoHorario('', ['youtube_shorts'], agora)).toBeNull();
+  });
+
+  it('horário que já passou pede ao menos 5 minutos à frente', () => {
+    expect(problemaDoHorario('2026-09-12T09:30', ['youtube_shorts'], agora)).toContain(
+      '5 minutos',
+    );
+  });
+
+  it('a menos de 5 minutos também é recusado, como no backend', () => {
+    expect(problemaDoHorario('2026-09-12T10:05', ['youtube_shorts'], agora)).not.toBeNull();
+    expect(problemaDoHorario('2026-09-12T10:10', ['youtube_shorts'], agora)).toBeNull();
+  });
+
+  it('fora da janela da plataforma diz até quantos dias', () => {
+    expect(problemaDoHorario('2026-09-23T10:00', ['tiktok'], agora)).toContain('10 dias');
+  });
+
+  it('a janela que vale é a da plataforma mais curta do lote', () => {
+    expect(
+      problemaDoHorario('2026-09-23T10:00', ['youtube_shorts', 'tiktok'], agora),
+    ).toContain('TikTok');
+  });
+
+  it('minuto fora da grade só importa com TikTok no lote', () => {
+    expect(problemaDoHorario('2026-09-12T11:03', ['tiktok'], agora)).toContain('5 em 5');
+    expect(problemaDoHorario('2026-09-12T11:03', ['youtube_shorts'], agora)).toBeNull();
   });
 });

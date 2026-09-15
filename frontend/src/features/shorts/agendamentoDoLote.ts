@@ -69,6 +69,57 @@ export const PASSO_EM_SEGUNDOS = 300;
  * para baixo na grade de cinco minutos. Começar com um valor aceitável poupa o
  * operador de descobrir a regra pelo erro.
  */
+// Espelha `MARGEM_MINIMA` e `HORIZONTE_EM_DIAS` de `backend/app/domain/agendamento.py`.
+// O backend continua sendo quem recusa; aqui a regra só é dita antes do clique.
+// Se os números divergirem, o pior caso é o 422 de antes — não um post fora de hora.
+const MARGEM_MINIMA_MS = 5 * 60 * 1000;
+const DIA_MS = 24 * 60 * 60 * 1000;
+const JANELA_DE_AGENDA: Record<string, { rotulo: string; dias: number }> = {
+  tiktok: { rotulo: 'TikTok', dias: 10 },
+  instagram_reels: { rotulo: 'Instagram', dias: 75 },
+  youtube_shorts: { rotulo: 'YouTube', dias: 365 },
+};
+
+/**
+ * Por que o horário escolhido não vai passar, ou `null` se vai.
+ *
+ * Existe porque o horário envelhece sozinho: a sugestão nasce uma hora à
+ * frente, mas um modal esquecido aberto a deixa para trás sem ninguém mexer
+ * em nada — e o operador só descobria no 422.
+ */
+export function problemaDoHorario(
+  texto: string,
+  plataformas: string[],
+  agora: Date = new Date(),
+): string | null {
+  if (!texto.trim()) return null;
+
+  const quando = new Date(texto);
+  if (Number.isNaN(quando.getTime())) {
+    return 'não entendi essa data — escolha dia e hora no seletor';
+  }
+
+  if (quando.getTime() <= agora.getTime() + MARGEM_MINIMA_MS) {
+    return 'esse horário já passou ou está perto demais — escolha ao menos 5 minutos à frente';
+  }
+
+  // Um lote tem uma data só, então quem manda é a janela mais curta entre as
+  // plataformas escolhidas: o YouTube aceitar 30 dias não ajuda o TikTok.
+  const maisCurta = plataformas
+    .map((p) => JANELA_DE_AGENDA[p])
+    .filter(Boolean)
+    .sort((a, b) => a.dias - b.dias)[0];
+  if (maisCurta && quando.getTime() > agora.getTime() + maisCurta.dias * DIA_MS) {
+    return `o ${maisCurta.rotulo} só agenda até ${maisCurta.dias} dias à frente — escolha uma data mais próxima`;
+  }
+
+  if (plataformas.includes('tiktok') && quando.getMinutes() % 5 !== 0) {
+    return 'o TikTok só agenda de 5 em 5 minutos — escolha um minuto redondo';
+  }
+
+  return null;
+}
+
 export function sugestaoDeHorario(agora: Date = new Date()): string {
   const alvo = new Date(agora.getTime() + 60 * 60 * 1000);
   alvo.setMinutes(Math.floor(alvo.getMinutes() / 5) * 5, 0, 0);
