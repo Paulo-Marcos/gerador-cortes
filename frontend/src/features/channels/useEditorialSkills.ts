@@ -21,6 +21,17 @@ export function useEditorialSkills() {
   });
 }
 
+// Os modelos do `agy` só mudam quando o CLI atualiza: busca uma vez, ao abrir o
+// modal, e reaproveita. Cada consulta roda um processo `agy models` no backend.
+export function useModelosGemini(ativo: boolean) {
+  return useQuery({
+    queryKey: ['editorial-skills', 'modelos-gemini'] as const,
+    queryFn: editorialSkillsApi.listarModelosGemini,
+    enabled: ativo,
+    staleTime: Infinity,
+  });
+}
+
 /** Invalida a lista de skills E o histórico da skill afetada (uma edição gera
  * uma nova versão, então o histórico precisa refazer o fetch). */
 function useInvalidarSkill() {

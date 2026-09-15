@@ -296,6 +296,9 @@ class SkillResolvida:
     thinking_tokens: int
     timeout: float
     lentes: list[str]
+    # Modelo do provider "Gemini" (Antigravity CLI). O default vazio só existe para
+    # quem constrói a skill à mão; a resolução pelo banco sempre preenche.
+    modelo_gemini: str = ""
 
 
 def catalogo() -> tuple[SkillCatalogo, ...]:
@@ -324,10 +327,23 @@ def _default_corpo(cat: SkillCatalogo, exemplo_root: Path | None) -> str:
     return caminho.read_text(encoding="utf-8").strip()
 
 
+def modelo_gemini_equivalente(modelo_claude: str) -> str:
+    """Modelo Gemini padrão para a faixa do modelo Claude da skill.
+
+    Haiku é escolha de rapidez → modelo rápido; Opus e Sonnet são de qualidade →
+    modelo de qualidade. É só o PADRÃO: cada skill troca na tela de Canais.
+    """
+    if "haiku" in (modelo_claude or "").lower():
+        return settings.agy_model_rapido
+    return settings.agy_model_qualidade
+
+
 def _default_params(cat: SkillCatalogo) -> dict:
     """Params default a partir dos globais de `config.settings`."""
+    modelo = str(getattr(settings, cat.model_setting))
     return {
-        "modelo": str(getattr(settings, cat.model_setting)),
+        "modelo": modelo,
+        "modelo_gemini": modelo_gemini_equivalente(modelo),
         "thinking_tokens": int(getattr(settings, cat.thinking_setting)),
         "timeout": float(getattr(settings, cat.timeout_setting)),
     }
@@ -366,8 +382,11 @@ def _coerce_params(raw: dict, cat: SkillCatalogo) -> dict:
     defaults = _default_params(cat)
     if not isinstance(raw, dict):
         return defaults
+    modelo = str(raw.get("modelo") or defaults["modelo"])
     return {
-        "modelo": str(raw.get("modelo") or defaults["modelo"]),
+        "modelo": modelo,
+        # Linhas gravadas antes do Antigravity não têm o campo: derivam do Claude.
+        "modelo_gemini": str(raw.get("modelo_gemini") or modelo_gemini_equivalente(modelo)),
         "thinking_tokens": _coerce_int(
             raw.get("thinking_tokens"), defaults["thinking_tokens"], minimo=0
         ),
@@ -430,6 +449,7 @@ def _linha_para_resolvida(cat: SkillCatalogo, linha: dict) -> SkillResolvida:
         thinking_tokens=params["thinking_tokens"],
         timeout=params["timeout"],
         lentes=_coerce_lentes(lentes_raw, cat),
+        modelo_gemini=params["modelo_gemini"],
     )
 
 
@@ -581,6 +601,7 @@ def _params_de(resolvida: SkillResolvida) -> dict:
     """Extrai o dict de params de uma `SkillResolvida` (para regravar/descrever)."""
     return {
         "modelo": resolvida.modelo,
+        "modelo_gemini": resolvida.modelo_gemini,
         "thinking_tokens": resolvida.thinking_tokens,
         "timeout": resolvida.timeout,
     }

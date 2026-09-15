@@ -14,6 +14,7 @@ import { EditorialSkillHistory } from './EditorialSkillHistory';
 import {
   useEditarSkill,
   useEditorialSkills,
+  useModelosGemini,
   useResetarSkill,
   useReverterSkill,
   useVersoesSkill,
@@ -23,10 +24,13 @@ function mensagemErro(erro: unknown, fallback: string): string {
   return erro instanceof Error ? erro.message : fallback;
 }
 
-/** Igualdade rasa de params (modelo/thinking/timeout). */
+/** Igualdade rasa de params (modelos dos dois providers, thinking e timeout). */
 function paramsIguais(a: EditorialSkill['params'], b: EditorialSkill['params']): boolean {
   return (
-    a.modelo === b.modelo && a.thinking_tokens === b.thinking_tokens && a.timeout === b.timeout
+    a.modelo === b.modelo &&
+    a.modelo_gemini === b.modelo_gemini &&
+    a.thinking_tokens === b.thinking_tokens &&
+    a.timeout === b.timeout
   );
 }
 
@@ -48,6 +52,7 @@ export function EditorialSkillsSection() {
 
   const [editandoKey, setEditandoKey] = useState<string | null>(null);
   const versoesQuery = useVersoesSkill(editandoKey);
+  const modelosGeminiQuery = useModelosGemini(editandoKey !== null);
   const pending = editar.isPending || resetar.isPending || reverter.isPending;
 
   const skills = skillsQuery.data?.skills ?? [];
@@ -142,6 +147,7 @@ export function EditorialSkillsSection() {
           <div className="grid gap-5">
             <EditorialSkillForm
               skill={skillEditando}
+              modelosGemini={modelosGeminiQuery.data?.modelos ?? []}
               pending={pending}
               onSave={aoSalvar}
               onReset={aoResetar}

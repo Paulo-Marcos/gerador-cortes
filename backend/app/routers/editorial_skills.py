@@ -12,7 +12,10 @@ skills editoriais são uma preocupação própria, então ganham seu próprio en
 
 from __future__ import annotations
 
+import asyncio
+
 from app import editorial_scaffolds, editorial_skills, prompts_utilitarios, ranking_settings
+from app.infrastructure import antigravity_cli_client
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -20,11 +23,25 @@ router = APIRouter()
 
 
 class SkillParamsModel(BaseModel):
-    """Params da etapa (Claude): modelo + thinking tokens + timeout."""
+    """Params da etapa: modelo Claude + modelo Gemini (Antigravity) + thinking + timeout.
+
+    `modelo_gemini` vazio no request = derivar do modelo Claude (compat com
+    clientes que ainda não conhecem o campo).
+    """
 
     modelo: str
+    modelo_gemini: str = ""
     thinking_tokens: int
     timeout: float
+
+
+class ModeloGeminiResponse(BaseModel):
+    id: str
+    nome: str
+
+
+class ListaModelosGeminiResponse(BaseModel):
+    modelos: list[ModeloGeminiResponse]
 
 
 class SkillDescritaResponse(BaseModel):
@@ -77,6 +94,18 @@ def _para_response(skill: editorial_skills.SkillDescrita) -> SkillDescritaRespon
 async def listar_skills():
     return ListaSkillsResponse(
         skills=[_para_response(s) for s in editorial_skills.descrever_skills()]
+    )
+
+
+@router.get("/modelos-gemini", response_model=ListaModelosGeminiResponse)
+async def listar_modelos_gemini():
+    """Os modelos que o `agy` desta máquina oferece, para a escolha no modal.
+
+    Vazio quando o CLI não está instalado ou logado — o campo aceita texto livre.
+    """
+    modelos = await asyncio.to_thread(antigravity_cli_client.listar_modelos)
+    return ListaModelosGeminiResponse(
+        modelos=[ModeloGeminiResponse(id=id_, nome=nome) for id_, nome in modelos]
     )
 
 

@@ -10,10 +10,20 @@ const base: EditorialSkill = {
   etapa: 'Propor cortes',
   descricao: 'Analisa a live e propõe os cortes.',
   corpo: 'CORPO',
-  params: { modelo: 'opus', thinking_tokens: 0, timeout: 300 },
+  params: {
+    modelo: 'opus',
+    modelo_gemini: 'gemini-3.1-pro-high',
+    thinking_tokens: 0,
+    timeout: 300,
+  },
   lentes: ['a', 'b'],
   corpo_default: 'CORPO',
-  params_default: { modelo: 'opus', thinking_tokens: 0, timeout: 300 },
+  params_default: {
+    modelo: 'opus',
+    modelo_gemini: 'gemini-3.1-pro-high',
+    thinking_tokens: 0,
+    timeout: 300,
+  },
   lentes_default: ['a', 'b'],
 };
 
@@ -30,19 +40,25 @@ describe('skillCustomizada', () => {
     expect(skillCustomizada({ ...base, params: { ...base.params, modelo: 'haiku' } })).toBe(true);
   });
 
+  it('detecta modelo Gemini alterado', () => {
+    const params = { ...base.params, modelo_gemini: 'gemini-3.8-flash-low' };
+    expect(skillCustomizada({ ...base, params })).toBe(true);
+  });
+
   it('detecta lentes alteradas', () => {
     expect(skillCustomizada({ ...base, lentes: ['a'] })).toBe(true);
   });
 });
 
 describe('EditorialSkillCard', () => {
-  it('mostra a etapa, a descrição e o modelo em uso', () => {
+  it('mostra a etapa, a descrição e o modelo de cada provider', () => {
     const html = renderToStaticMarkup(
       <EditorialSkillCard skill={base} customizada={false} onEditar={vi.fn()} />,
     );
     expect(html).toContain('Propor cortes');
     expect(html).toContain('Analisa a live e propõe os cortes.');
-    expect(html).toContain('modelo: opus');
+    expect(html).toContain('claude: opus');
+    expect(html).toContain('gemini: gemini-3.1-pro-high');
     expect(html).toContain('Padrão');
   });
 

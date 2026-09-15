@@ -86,6 +86,19 @@ class Settings(BaseSettings):
     # D-565: o post do short e redacao curta sobre um trecho ja recortado, e o
     # peso editorial mora na skill. Mesmo patamar do gancho.
     claude_cli_thinking_tokens_metadados_short: int = 3000
+    # --- Antigravity CLI (`agy -p`): o provider "Gemini" pela assinatura Google ---
+    # Mesmo papel do `claude -p`: login da conta, sem API key. Ver
+    # `infrastructure/antigravity_cli_client.py` para o protocolo medido.
+    agy_cli_path: str = ""  # vazio = PATH ou %LOCALAPPDATA%\agy\bin\agy.exe
+    agy_cli_timeout: float = 300.0
+    # 1 = serializa: cada chamada já gasta ~37k tokens fixos da cota.
+    agy_cli_max_concurrent: int = 1
+    agy_cli_retries: int = 1
+    # Modelo Gemini padrão de cada skill, derivado da faixa do modelo Claude dela:
+    # Haiku (rapidez) → rápido; Opus/Sonnet (qualidade) → qualidade. Editável por
+    # skill na tela de Canais.
+    agy_model_qualidade: str = "gemini-3.1-pro-high"
+    agy_model_rapido: str = "gemini-3.8-flash-medium"
     skills_dir: str = os.path.join(_PROJECT_ROOT, ".claude", "skills")
     # Modelos por etapa (alias do CLI: opus | sonnet | haiku, ou nome completo)
     claude_model_analise: str = "opus"

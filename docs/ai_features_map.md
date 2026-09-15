@@ -2,7 +2,7 @@
 
 Este documento descreve quais áreas do **CortadorLive** fazem requisições de IA, para facilitar a manutenção e o entendimento de como as chamadas a LLMs são roteadas.
 
-As funcionalidades abaixo aceitam **Claude** (via Claude CLI, assinatura local) ou **Gemini** (via API) como provedor, escolhido na interface. Isso reduz a chance de ficar parado por limite de uso de um deles.
+As funcionalidades abaixo aceitam **Claude** (via Claude CLI, assinatura do Claude) ou **Gemini** (via Antigravity CLI, assinatura do Google) como provedor, escolhido na interface. Nenhum dos dois usa chave de API: cada um roda o CLI oficial já logado na máquina. Isso reduz a chance de ficar parado por limite de uso de um deles.
 
 ## 1. Visão Geral da Arquitetura de IA
 
@@ -10,7 +10,11 @@ As requisições são orquestradas no backend pelo serviço `backend/app/service
 
 Os wrappers `_gerar_json_provider` e `_gerar_text_provider` recebem `provider: ProviderIA` (`"claude" | "gemini"`) e chamam:
 - **Claude**: `backend/app/infrastructure/claude_cli_client.py`. A skill vai como expertise do CLI (`_args_claude`).
-- **Gemini**: `backend/app/infrastructure/gemini_client.py`. O corpo da skill vai à frente do prompt, e o modelo sai de `_modelo_gemini`: skill em Haiku → `gemini-2.5-flash`; Opus/Sonnet → `gemini-2.5-pro`.
+- **Gemini**: `backend/app/infrastructure/antigravity_cli_client.py`, que roda `agy -p` com o prompt pela entrada padrão (`stream-json`). A skill vai como expertise, e o modelo é o `modelo_gemini` da skill, editável em Canais → Skills. O padrão deriva do modelo Claude: Haiku → `AGY_MODEL_RAPIDO` (`gemini-3.8-flash-medium`); Opus/Sonnet → `AGY_MODEL_QUALIDADE` (`gemini-3.1-pro-high`).
+
+**Pré-requisito do Gemini:** instalar o Antigravity CLI e rodar `agy` uma vez no terminal para logar com a conta Google. Cada chamada consome ~37 mil tokens fixos da cota (prompt de sistema do agente) além do prompt. A geração de **imagem** da capa continua no `gemini_client.py` (API), porque o `agy` não devolve imagem.
+
+**Termos do Antigravity:** usar o login dele em ferramenta de terceiros dá banimento. O backend só executa o binário oficial `agy`; nunca extrair o token nem chamar os servidores do Google por fora.
 
 O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `provider` como `Literal`: um valor desconhecido devolve 422 em vez de cair em silêncio no Claude.
 

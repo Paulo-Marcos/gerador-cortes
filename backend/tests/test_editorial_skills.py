@@ -267,7 +267,7 @@ def test_descrever_skills_traz_todas_com_default_e_atual(tmp_path: Path):
         "metadados-short-expert",
     ]
     thumb = next(d for d in descritas if d.key == "thumbnail-prompt-expert")
-    assert set(thumb.params) == {"modelo", "thinking_tokens", "timeout"}
+    assert set(thumb.params) == {"modelo", "modelo_gemini", "thinking_tokens", "timeout"}
     trechos = next(d for d in descritas if d.key == "trechos-expert")
     assert trechos.lentes_default == []  # sem lentes por design
     cortador = next(d for d in descritas if d.key == "cortador-expert")
@@ -612,3 +612,51 @@ def test_listar_versoes_skill_desconhecida_levanta(tmp_path: Path):
         raise AssertionError("esperava KeyError")
     except KeyError:
         pass
+
+
+# --------------------------------------------------------------------------- #
+# Modelo Gemini (Antigravity CLI) por skill
+# --------------------------------------------------------------------------- #
+
+
+def test_modelo_gemini_padrao_segue_a_faixa_do_modelo_claude():
+    """Haiku é escolha de rapidez; Opus e Sonnet, de qualidade."""
+    assert editorial_skills.modelo_gemini_equivalente("opus") == settings.agy_model_qualidade
+    assert editorial_skills.modelo_gemini_equivalente("sonnet") == settings.agy_model_qualidade
+    assert editorial_skills.modelo_gemini_equivalente("haiku") == settings.agy_model_rapido
+
+
+def test_linha_gravada_antes_do_antigravity_deriva_o_modelo_gemini(tmp_path: Path):
+    """Linhas antigas não têm `modelo_gemini`: sem migração, o valor sai do Claude."""
+    db = _db(tmp_path)
+    _semear_linha_crua(db, _SKILL, thinking_tokens=0, timeout=300.0, modelo="haiku")
+
+    skill = editorial_skills.resolver_skill(
+        _SKILL, db_path=db, channel_id=_CANAL, editorial_root=_editorial(tmp_path)
+    )
+
+    assert skill.modelo_gemini == settings.agy_model_rapido
+
+
+def test_modelo_gemini_editado_pela_ui_e_preservado(tmp_path: Path):
+    db = _db(tmp_path)
+    editorial = _editorial(tmp_path)
+
+    editorial_skills.definir_skill(
+        _SKILL,
+        params={
+            "modelo": "opus",
+            "modelo_gemini": "gemini-3.8-flash-low",
+            "thinking_tokens": 0,
+            "timeout": 300.0,
+        },
+        db_path=db,
+        channel_id=_CANAL,
+        editorial_root=editorial,
+    )
+    skill = editorial_skills.resolver_skill(
+        _SKILL, db_path=db, channel_id=_CANAL, editorial_root=editorial
+    )
+
+    assert skill.modelo == "opus"
+    assert skill.modelo_gemini == "gemini-3.8-flash-low"

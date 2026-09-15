@@ -20,11 +20,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ─── Contratos (espelham backend/app/routers/editorial_skills.py) ──────────
 
-/** Params da etapa (provider Claude): sem temperature (só existe no Gemini). */
+/** Params da etapa. Cada botão de IA usa o modelo do seu provider. */
 export interface SkillParams {
+  /** Modelo do Claude CLI (opus | sonnet | haiku). */
   modelo: string;
+  /** Modelo do Antigravity CLI (`agy`), usado pelo botão Gemini. */
+  modelo_gemini: string;
+  /** Só o Claude usa thinking tokens; o timeout vale para os dois. */
   thinking_tokens: number;
   timeout: number;
+}
+
+/** Um modelo que o `agy` da máquina oferece. */
+export interface ModeloGemini {
+  id: string;
+  nome: string;
 }
 
 /** Uma skill editorial do canal: metadados + valor-do-canal + default (reset). */
@@ -80,6 +90,10 @@ export interface ListaVersoesResponse {
 
 export const editorialSkillsApi = {
   listar: () => request<ListaSkillsResponse>('/editorial-skills'),
+
+  /** Vazio quando o `agy` não está instalado ou logado: o campo aceita texto livre. */
+  listarModelosGemini: () =>
+    request<{ modelos: ModeloGemini[] }>('/editorial-skills/modelos-gemini'),
 
   editar: (key: string, body: UpdateSkillPayload) =>
     request<EditorialSkill>(`/editorial-skills/${encodeURIComponent(key)}`, {

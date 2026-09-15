@@ -137,12 +137,12 @@ class TestGerarCortes:
         """
         chamadas_gemini: list[dict] = []
 
-        async def fake_gemini(**kwargs):
+        async def fake_gemini(prompt, **kwargs):
             chamadas_gemini.append(kwargs)
             return {"cortes": [{"titulo_proposto": "G", "inicio_seg": 5}]}
 
         fake_claude = _FakeGenerate({"cortes": []})
-        monkeypatch.setattr(claude_ia.gemini_client, "generate_json", fake_gemini)
+        monkeypatch.setattr(claude_ia.antigravity_cli_client, "generate_json", fake_gemini)
         monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake_claude)
         monkeypatch.setattr(
             ClaudeIaService,
@@ -156,6 +156,8 @@ class TestGerarCortes:
 
         assert payload["cortes"] == [{"titulo_proposto": "G", "inicio_seg": 5}]
         assert len(chamadas_gemini) == 1
+        # O modelo é o Gemini DA SKILL, nunca o alias Claude (opus/sonnet/haiku).
+        assert chamadas_gemini[0]["model"].startswith("gemini-")
         assert fake_claude.chamadas == 0
 
     def test_caminho_direto_inclui_descartados_da_skill(self, monkeypatch):
@@ -1184,22 +1186,3 @@ class TestPromptThumbnail:
 
         assert "ombro do mascote" in enviado
         assert "mascote sozinho é fallback" in enviado
-
-
-# ── _modelo_gemini: faixa equivalente ao modelo Claude da skill ─────────────────
-
-
-@pytest.mark.parametrize(
-    ("modelo_claude", "esperado"),
-    [
-        ("opus", "gemini-2.5-pro"),
-        ("claude-sonnet-5", "gemini-2.5-pro"),
-        ("haiku", "gemini-2.5-flash"),
-        ("", "gemini-2.5-pro"),
-    ],
-)
-def test_modelo_gemini_segue_a_faixa_da_skill(modelo_claude, esperado):
-    skill = claude_ia.editorial_skills.SkillResolvida(
-        key="k", corpo="", modelo=modelo_claude, thinking_tokens=0, timeout=60.0, lentes=[]
-    )
-    assert claude_ia._modelo_gemini(skill) == esperado

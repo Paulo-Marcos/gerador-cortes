@@ -55,7 +55,7 @@ def test_get_lista_o_catalogo_com_default_e_atual(client: TestClient):
         "metadados-short-expert",
     ]
     cortador = skills[0]
-    assert set(cortador["params"]) == {"modelo", "thinking_tokens", "timeout"}
+    assert set(cortador["params"]) == {"modelo", "modelo_gemini", "thinking_tokens", "timeout"}
     assert "corpo_default" in cortador and "params_default" in cortador
     assert cortador["descricao"]  # explicação funcional presente
 

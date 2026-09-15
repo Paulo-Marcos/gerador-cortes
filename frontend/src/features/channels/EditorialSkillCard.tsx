@@ -37,7 +37,10 @@ export function EditorialSkillCard({ skill, customizada, onEditar }: Props) {
       </div>
       <div className="flex flex-wrap gap-1.5 text-[11px] text-[var(--wb-text-dim)]">
         <span className="rounded border border-[var(--wb-border-soft)] px-1.5 py-0.5">
-          modelo: {skill.params.modelo}
+          claude: {skill.params.modelo}
+        </span>
+        <span className="rounded border border-[var(--wb-border-soft)] px-1.5 py-0.5">
+          gemini: {skill.params.modelo_gemini}
         </span>
         <span className="rounded border border-[var(--wb-border-soft)] px-1.5 py-0.5">
           thinking: {skill.params.thinking_tokens}

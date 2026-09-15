@@ -8,10 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { CampoReset, EditorialSkill, UpdateSkillPayload } from '@/lib/editorialSkillsApi';
+import type {
+  CampoReset,
+  EditorialSkill,
+  ModeloGemini,
+  UpdateSkillPayload,
+} from '@/lib/editorialSkillsApi';
 
 interface Props {
   skill: EditorialSkill;
+  /** Sugestões para o campo do modelo Gemini (lista do `agy`). */
+  modelosGemini: ModeloGemini[];
   pending: boolean;
   onSave: (payload: UpdateSkillPayload) => void;
   onReset: (campos: CampoReset[]) => void;
@@ -45,9 +52,17 @@ function ResetButton({ onClick, disabled }: { onClick: () => void; disabled: boo
   );
 }
 
-export function EditorialSkillForm({ skill, pending, onSave, onReset, onCancel }: Props) {
+export function EditorialSkillForm({
+  skill,
+  modelosGemini,
+  pending,
+  onSave,
+  onReset,
+  onCancel,
+}: Props) {
   const [corpo, setCorpo] = useState(skill.corpo);
   const [modelo, setModelo] = useState(skill.params.modelo);
+  const [modeloGemini, setModeloGemini] = useState(skill.params.modelo_gemini);
   const [thinking, setThinking] = useState(String(skill.params.thinking_tokens));
   const [timeout, setTimeout] = useState(String(skill.params.timeout));
   const [lentesText, setLentesText] = useState(lentesParaTexto(skill.lentes));
@@ -56,6 +71,7 @@ export function EditorialSkillForm({ skill, pending, onSave, onReset, onCancel }
   useEffect(() => {
     setCorpo(skill.corpo);
     setModelo(skill.params.modelo);
+    setModeloGemini(skill.params.modelo_gemini);
     setThinking(String(skill.params.thinking_tokens));
     setTimeout(String(skill.params.timeout));
     setLentesText(lentesParaTexto(skill.lentes));
@@ -68,6 +84,7 @@ export function EditorialSkillForm({ skill, pending, onSave, onReset, onCancel }
       corpo,
       params: {
         modelo: modelo.trim(),
+        modelo_gemini: modeloGemini.trim(),
         thinking_tokens: Number(thinking) || 0,
         timeout: Number(timeout) || skill.params_default.timeout,
       },
@@ -98,7 +115,7 @@ export function EditorialSkillForm({ skill, pending, onSave, onReset, onCancel }
         </p>
       </div>
 
-      {/* Params da etapa (Claude) */}
+      {/* Params da etapa: um modelo por provider */}
       <fieldset className="grid gap-2">
         <div className="flex items-center justify-between">
           <legend className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
@@ -106,10 +123,10 @@ export function EditorialSkillForm({ skill, pending, onSave, onReset, onCancel }
           </legend>
           <ResetButton onClick={() => onReset(['params'])} disabled={pending} />
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="grid gap-1.5">
             <Label htmlFor="skill-modelo" className="text-xs">
-              Modelo
+              Modelo Claude
             </Label>
             <Input
               id="skill-modelo"
@@ -117,6 +134,25 @@ export function EditorialSkillForm({ skill, pending, onSave, onReset, onCancel }
               onChange={(e) => setModelo(e.target.value)}
               placeholder="opus | sonnet | haiku"
             />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="skill-modelo-gemini" className="text-xs">
+              Modelo Gemini
+            </Label>
+            <Input
+              id="skill-modelo-gemini"
+              list="skill-modelos-gemini"
+              value={modeloGemini}
+              onChange={(e) => setModeloGemini(e.target.value)}
+              placeholder={skill.params_default.modelo_gemini}
+            />
+            <datalist id="skill-modelos-gemini">
+              {modelosGemini.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+            </datalist>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="skill-thinking" className="text-xs">
@@ -143,6 +179,10 @@ export function EditorialSkillForm({ skill, pending, onSave, onReset, onCancel }
             />
           </div>
         </div>
+        <p className="text-xs text-[var(--wb-text-dim)]">
+          O botão Claude usa o modelo Claude; o botão Gemini usa o modelo Gemini, pela assinatura
+          do Antigravity. Thinking tokens só vale para o Claude; o timeout vale para os dois.
+        </p>
       </fieldset>
 
       {/* Lentes de variação */}

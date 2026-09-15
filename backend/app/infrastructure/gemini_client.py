@@ -86,44 +86,6 @@ async def generate_json(
     return await _com_anuncio(asyncio.to_thread(_call_sync), contexto)
 
 
-async def generate_text(
-    model: str,
-    prompt: str,
-    *,
-    temperature: float = 0.7,
-    top_p: float = 0.9,
-    contexto: GeminiCallContext | None = None,
-) -> str:
-    """Chama Gemini e retorna texto livre.
-
-    Exemplo:
-        >>> text = await generate_text("gemini-2.0-flash", "Escreva um poema", temperature=0.7)
-    """
-
-    def _call_sync() -> str:
-        client = _get_client()
-        config: dict[str, Any] = {
-            "response_mime_type": "text/plain",
-            "temperature": temperature,
-            "top_p": top_p,
-            "http_options": {"timeout": int(settings.gemini_timeout_seg * 1000)},
-        }
-
-        logger.info("[GeminiClient] Gerando texto com modelo %s (temp=%.1f)...", model, temperature)
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=config,
-        )
-        # `response.text` vem None quando o modelo bloqueia a resposta (safety)
-        # ou termina sem conteúdo; o chamador trata texto vazio com mensagem própria.
-        text = (response.text or "").strip()
-        logger.info("[GeminiClient] Resposta texto recebida (%d chars).", len(text))
-        return text
-
-    return await _com_anuncio(asyncio.to_thread(_call_sync), contexto)
-
-
 async def generate_image(
     prompt: str,
     *,

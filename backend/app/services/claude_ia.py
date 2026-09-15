@@ -43,7 +43,7 @@ from app.domain.transcricao_utils import (
 )
 from app.domain.variacao_prompt import bloco_variacao_de
 from app.editorial_identity import identidade_do_mascote
-from app.infrastructure import claude_cli_client, fila_ia, gemini_client
+from app.infrastructure import antigravity_cli_client, claude_cli_client, fila_ia
 from app.models import Corte, Projeto, StatusProjeto
 from app.services.analise import AnaliseService, _to_seg
 from app.services.tasks import fire_and_forget
@@ -155,20 +155,26 @@ def _args_claude(
 ProviderIA = Literal["claude", "gemini"]
 
 
-def _modelo_gemini(skill: editorial_skills.SkillResolvida) -> str:
-    """Traduz o modelo Claude da skill para a faixa equivalente do Gemini.
+def _args_antigravity(
+    skill: editorial_skills.SkillResolvida,
+    skill_key: str,
+    *,
+    projeto_id: str | None = None,
+    corte_id: str | None = None,
+) -> dict:
+    """kwargs do `antigravity_cli_client`: a MESMA skill, com o modelo Gemini dela.
 
-    Haiku é a escolha de velocidade → flash; Opus e Sonnet são a de qualidade →
-    pro. Olhar só por "sonnet" mandava as skills em Opus, justamente as mais
-    exigentes, para o flash.
+    O provider "gemini" roda pelo `agy -p` (assinatura do Antigravity), não pela
+    API: corpo, timeout e contexto de telemetria são os mesmos do Claude.
     """
-    return "gemini-2.5-flash" if "haiku" in (skill.modelo or "").lower() else "gemini-2.5-pro"
-
-
-def _prompt_gemini(prompt: str, skill: editorial_skills.SkillResolvida) -> str:
-    # O Claude CLI recebe a skill como expertise (`_args_claude`); o Gemini não
-    # tem esse canal, então o corpo da skill vai à frente do prompt.
-    return f"{skill.corpo}\n\n{prompt}" if skill.corpo else prompt
+    return {
+        "model": skill.modelo_gemini,
+        "expertise": skill.corpo,
+        "timeout": skill.timeout,
+        "contexto": claude_cli_client.LlmCallContext(
+            etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id
+        ),
+    }
 
 
 async def _gerar_json_provider(
@@ -180,15 +186,10 @@ async def _gerar_json_provider(
     projeto_id: str | None = None,
     corte_id: str | None = None,
 ) -> dict:
-    """Roteia a geração de JSON para o Claude CLI ou para o Gemini."""
+    """Roteia a geração de JSON para o Claude CLI ou para o Antigravity CLI."""
     if provider == "gemini":
-        return await gemini_client.generate_json(
-            model=_modelo_gemini(skill),
-            prompt=_prompt_gemini(prompt, skill),
-            contexto=gemini_client.GeminiCallContext(
-                etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id
-            ),
-        )
+        args = _args_antigravity(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
+        return await antigravity_cli_client.generate_json(prompt, **args)
     args = _args_claude(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
     return await claude_cli_client.generate_json(prompt, **args)
 
@@ -202,15 +203,10 @@ async def _gerar_text_provider(
     projeto_id: str | None = None,
     corte_id: str | None = None,
 ) -> str:
-    """Roteia a geração de texto livre para o Claude CLI ou para o Gemini."""
+    """Roteia a geração de texto livre para o Claude CLI ou para o Antigravity CLI."""
     if provider == "gemini":
-        return await gemini_client.generate_text(
-            model=_modelo_gemini(skill),
-            prompt=_prompt_gemini(prompt, skill),
-            contexto=gemini_client.GeminiCallContext(
-                etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id
-            ),
-        )
+        args = _args_antigravity(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
+        return await antigravity_cli_client.generate_text(prompt, **args)
     args = _args_claude(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
     return await claude_cli_client.generate_text(prompt, **args)
 
