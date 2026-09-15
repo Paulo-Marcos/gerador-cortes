@@ -14,7 +14,7 @@ import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { ocupacaoDoPalco, recorteInicial, redimensionarPalco } from './arrastarSlot';
 import { PalcoPrevia } from './PalcoPrevia';
 import { SeletorDeTextura } from './SeletorDeTextura';
-import { mudancaDoPalco, palcoDoShort } from './aplicarPalco';
+import { mudancaDoArranjo, mudancaDoPalco, palcoDoShort } from './aplicarPalco';
 import { usePalcoDoCorte } from './useShortsDoCorte';
 import { useArranjosDePalco } from './useShortsDoCorte';
 import type { AtualizarShortBody, PlanoDesenhavel, Retangulo, ShortSugerido } from './shortsApi';
@@ -188,8 +188,20 @@ export function DefinirPalcoModal({
                 <button
                   key={arranjo.chave}
                   type="button"
-                  disabled={ocupado || !arranjo.possivel}
-                  onClick={() => onAplicar({ arranjo_palco: arranjo.chave })}
+                  // Bloqueado só por falta de região NÃO é bloqueado: o clique
+                  // marca o que falta e aplica o arranjo. Travar aqui e mandar
+                  // marcar lá embaixo fazia a dividida parecer quebrada.
+                  disabled={ocupado || (!arranjo.possivel && !fonteMedida)}
+                  onClick={() =>
+                    onAplicar(
+                      mudancaDoArranjo(
+                        arranjo.chave,
+                        arranjo.possivel ? [] : faltando,
+                        short.recortes_palco ?? {},
+                        fonte,
+                      ),
+                    )
+                  }
                   className={cn(
                     'w-full rounded-[8px] border px-2.5 py-2 text-left transition-colors disabled:opacity-45',
                     arranjoEmUso === arranjo.chave
@@ -208,7 +220,7 @@ export function DefinirPalcoModal({
                   <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
                     {arranjo.possivel
                       ? arranjo.porque
-                      : `${arranjo.impedimento} — marque em "De onde vem cada janela", logo abaixo.`}
+                      : `${arranjo.impedimento} — clique para marcar e ajuste o retângulo em "De onde vem cada janela".`}
                   </p>
                 </button>
               ))}

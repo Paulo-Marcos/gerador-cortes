@@ -1,4 +1,5 @@
 import type { PalcoShortPreset } from '@/types/presets';
+import { recorteInicial, type Limites, type Retangulo } from './arrastarSlot';
 import type { AtualizarShortBody, ShortSugerido } from './shortsApi';
 
 // D-552: o que gravar quando o operador escolhe um palco salvo.
@@ -67,15 +68,6 @@ export function mudancaDoPalco(
 }
 
 /**
- * O palco de um short no formato que o preset guarda — o caminho de volta do
- * `mudancaDoPalco`.
- *
- * D-594: mora aqui, e não dentro do modal, porque agora são dois a tirar essa
- * foto: o modal do trecho ("guardar como preset") e o editor de preset do menu
- * de padrões. Duas cópias da lista de campos divergiriam no dia em que um
- * entrasse — foi assim que `fundo` e `ajustes` chegaram errados na D-561.
- */
-/**
  * O trecho decidiu alguma parte do palco — espelho de `_tem_palco_proprio`.
  *
  * Sem nenhuma, ele SEGUE o palco padrão do corte, e o select tem de dizer isso.
@@ -111,6 +103,43 @@ export const SEGUIR_O_PALCO_PADRAO: AtualizarShortBody = {
   palco_preset: '',
 };
 
+/**
+ * O PATCH de escolher um arranjo.
+ *
+ * `faltando` são as regiões que o arranjo pede e o trecho ainda não tem. Elas
+ * nascem num lugar plausível no MESMO PATCH: a tela dividida vinha travada com
+ * "falta marcar: tela", o clique não fazia nada, e o operador lia isso como
+ * tela quebrada. Depois ele só ajusta o retângulo.
+ *
+ * @example
+ * mudancaDoArranjo('cheia', [], {}, { largura: 1920, altura: 1080 })
+ * // { arranjo_palco: 'cheia' }
+ */
+export function mudancaDoArranjo(
+  chave: string,
+  faltando: string[],
+  recortesAtuais: Record<string, Retangulo>,
+  fonte: Limites,
+): AtualizarShortBody {
+  if (faltando.length === 0) return { arranjo_palco: chave };
+  return {
+    arranjo_palco: chave,
+    recortes_palco: {
+      ...recortesAtuais,
+      ...Object.fromEntries(faltando.map((regiao) => [regiao, recorteInicial(regiao, fonte)])),
+    },
+  };
+}
+
+/**
+ * O palco de um short no formato que o preset guarda — o caminho de volta do
+ * `mudancaDoPalco`.
+ *
+ * D-594: mora aqui, e não dentro do modal, porque agora são dois a tirar essa
+ * foto: o modal do trecho ("guardar como preset") e o editor de preset do menu
+ * de padrões. Duas cópias da lista de campos divergiriam no dia em que um
+ * entrasse — foi assim que `fundo` e `ajustes` chegaram errados na D-561.
+ */
 export function palcoDoShort(short: ShortSugerido): PalcoShortPreset {
   return {
     arranjo: short.arranjo_palco,

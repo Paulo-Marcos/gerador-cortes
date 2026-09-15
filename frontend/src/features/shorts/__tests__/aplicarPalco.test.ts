@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { mudancaDoPalco, SEGUIR_O_PALCO_PADRAO, temPalcoProprio } from '../aplicarPalco';
+import {
+  mudancaDoArranjo,
+  mudancaDoPalco,
+  SEGUIR_O_PALCO_PADRAO,
+  temPalcoProprio,
+} from '../aplicarPalco';
 import type { ShortSugerido } from '../shortsApi';
 
 // D-552: aplicar um palco salvo COPIA valores e MARCA a origem.
@@ -154,5 +159,32 @@ describe('o trecho que ninguém tocou segue o palco padrão', () => {
     expect(temPalcoProprio({ ...aplicado, ...SEGUIR_O_PALCO_PADRAO } as ShortSugerido)).toBe(false);
     expect(SEGUIR_O_PALCO_PADRAO).not.toHaveProperty('gancho_cor');
     expect(SEGUIR_O_PALCO_PADRAO).not.toHaveProperty('inicio_seg');
+  });
+});
+
+describe('escolher um arranjo que falta região', () => {
+  const FULL_HD = { largura: 1920, altura: 1080 };
+  const PESSOA = { x: 10, y: 20, w: 300, h: 400 };
+
+  it('arranjo possível só troca o arranjo', () => {
+    expect(mudancaDoArranjo('cheia', [], { pessoa: PESSOA }, FULL_HD)).toEqual({
+      arranjo_palco: 'cheia',
+    });
+  });
+
+  it('marca a região que falta e aplica o arranjo no mesmo gesto', () => {
+    // A dividida vinha travada com "falta marcar: tela" e o clique não fazia
+    // nada — o operador lia como tela quebrada.
+    const corpo = mudancaDoArranjo('dividida_empilhada', ['tela'], {}, FULL_HD);
+
+    expect(corpo.arranjo_palco).toBe('dividida_empilhada');
+    expect(Object.keys(corpo.recortes_palco ?? {})).toEqual(['tela']);
+  });
+
+  it('não mexe no recorte que o trecho já marcou', () => {
+    const corpo = mudancaDoArranjo('dividida_empilhada', ['tela'], { pessoa: PESSOA }, FULL_HD);
+
+    expect(corpo.recortes_palco?.pessoa).toEqual(PESSOA);
+    expect(corpo.recortes_palco).toHaveProperty('tela');
   });
 });
