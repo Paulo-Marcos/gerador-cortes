@@ -168,9 +168,15 @@ class DestinoYouTubeShorts(Destino):
             requisicao = youtube.videos().insert(
                 part="snippet,status", body=corpo, media_body=media
             )
+            megas = pacote.arquivo.stat().st_size / (1024 * 1024)
+            logger.info("[Publicacao] enviando %s ao YouTube (%.1f MB)", pacote.arquivo.name, megas)
             resposta = None
             while resposta is None:
-                _, resposta = requisicao.next_chunk()
+                progresso, resposta = requisicao.next_chunk()
+                if progresso:
+                    logger.info(
+                        "[Publicacao] upload do short: %d%%", int(progresso.progress() * 100)
+                    )
             return resposta["id"]
 
         return await asyncio.to_thread(_upload)

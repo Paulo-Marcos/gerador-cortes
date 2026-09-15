@@ -137,6 +137,49 @@ async def test_upload_sem_credencial_falha_com_motivo(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_upload_do_short_loga_o_percentual(tmp_path, monkeypatch, caplog):
+    """O operador acompanha o upload pelo console: sem percentual, parece travado."""
+    import logging
+
+    import googleapiclient.discovery
+    import googleapiclient.http
+
+    class _Progresso:
+        def __init__(self, fracao: float) -> None:
+            self.fracao = fracao
+
+        def progress(self) -> float:
+            return self.fracao
+
+    class _Requisicao:
+        passos = [(_Progresso(0.5), None), (None, {"id": "abc123"})]
+
+        def next_chunk(self):
+            return self.passos.pop(0)
+
+    class _YouTube:
+        def videos(self):
+            return self
+
+        def insert(self, **_):
+            return _Requisicao()
+
+    monkeypatch.setattr(googleapiclient.discovery, "build", lambda *a, **k: _YouTube())
+    monkeypatch.setattr(googleapiclient.http, "MediaFileUpload", lambda *a, **k: object())
+    caplog.set_level(logging.INFO, logger="app.services.destinos_shorts")
+    video = tmp_path / "short.mp4"
+    video.write_bytes(b"v")
+
+    video_id = await DestinoYouTubeShorts()._enviar(
+        "creds", _pacote(Plataforma.YOUTUBE_SHORTS, video)
+    )
+
+    assert video_id == "abc123"
+    assert "enviando short.mp4 ao YouTube" in caplog.text
+    assert "upload do short: 50%" in caplog.text
+
+
+@pytest.mark.asyncio
 async def test_pacote_manual_escreve_pasta_com_texto_e_metadados(tmp_path):
     video = tmp_path / "short.mp4"
     video.write_bytes(b"v")
