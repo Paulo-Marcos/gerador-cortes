@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { avisoDescarteBruto } from '../descarteBruto';
+import { avisoDescarteBruto, todosOsShortsForamRejeitados } from '../descarteBruto';
 
 describe('avisoDescarteBruto', () => {
   const aviso = avisoDescarteBruto('O erro dos juros', 812.4);
@@ -15,5 +15,16 @@ describe('avisoDescarteBruto', () => {
 
   it('avisa que refazer custa re-extrair a live', () => {
     expect(aviso).toContain('re-extrair o trecho da live');
+  });
+});
+
+describe('todosOsShortsForamRejeitados', () => {
+  it('só libera a rejeição do Fire quando todos os candidatos foram rejeitados', () => {
+    expect(todosOsShortsForamRejeitados({ total: 3, rejeitado: 3 })).toBe(true);
+    expect(todosOsShortsForamRejeitados({ total: 3, rejeitado: 2 })).toBe(false);
+  });
+
+  it('não trata Fire sem candidatos como rejeitado', () => {
+    expect(todosOsShortsForamRejeitados({ total: 0, rejeitado: 0 })).toBe(false);
   });
 });

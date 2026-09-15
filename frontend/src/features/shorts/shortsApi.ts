@@ -282,8 +282,18 @@ export interface RecorteDesenhavel {
 
 /** O palco de um short, pronto para o canvas. Calculado no backend. */
 export interface PlanoDesenhavel {
-  origem: 'preset_do_short' | 'preset' | 'layout_do_corte' | 'nenhuma';
+  origem:
+    | 'recorte_do_short'
+    | 'palco_padrao_do_corte'
+    | 'preset_do_short'
+    | 'preset'
+    | 'layout_do_corte'
+    | 'nenhuma';
   modelo: string | null;
+  /** O arranjo RESOLVIDO — com a herança do palco padrão. Vazio sem palco. */
+  arranjo?: string;
+  /** Os arranjos que as regiões DESTE trecho permitem (as do corte não bastam). */
+  arranjos?: ArranjoPalco[];
   canvas: { largura: number; altura: number };
   fundo: string;
   /** D-549: a TEXTURA do palco — o mesmo id que o render manda para o PNG. */
@@ -340,6 +350,8 @@ export interface PalcoPadrao {
   /** O nome dele, para a tela não ter que cruzar a lista. */
   nome: string;
   disponiveis: { id: string; nome: string }[];
+  /** Trechos com palco próprio — eles não seguem o padrão. */
+  customizados: number;
 }
 
 /** D-594: o gancho padrão do corte — a aparência que todos os trechos herdam. */
@@ -589,6 +601,12 @@ export const shortsApi = {
     request<{ palco_padrao: string }>(`/shorts/corte/${corteId}/palco-padrao`, {
       method: 'PUT',
       body: JSON.stringify({ preset_id: presetId }),
+    }),
+
+  /** Todos os trechos voltam a seguir o palco padrão. Bordas e gancho ficam. */
+  seguirPalcoPadrao: (corteId: string) =>
+    request<{ liberados: number }>(`/shorts/corte/${corteId}/palco-padrao/seguir`, {
+      method: 'POST',
     }),
 
   /** D-568: o log do worker deste short — o que rodou e quanto levou. */

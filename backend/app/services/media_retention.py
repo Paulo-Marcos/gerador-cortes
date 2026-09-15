@@ -186,10 +186,12 @@ class MediaRetentionService:
         GB intactos. Aqui a regra e a inversa: sai tudo que e midia, fica o que
         permite REPLICAR o trabalho (metadados, legendas, thumbnails, logs).
 
-        D-456 — `preservar_brutos_fire` (default) poupa o `clip_raw` dos cortes
-        marcados com Fire: e dele que os shorts sao recortados. O bruto poupado
-        entra em `preservados` e seus bytes em `retido_bytes`, NAO em `pulados` —
-        senao o projeto nunca mais seria marcado como limpo.
+        O `clip_raw` de Fire so fica protegido enquanto os shorts daquele corte
+        estao pendentes. Um Fire finalizado ja cumpriu sua funcao e pode sair na
+        limpeza normal; um Fire rejeitado ja teve seu bruto descartado na tela de
+        Shorts. O bruto poupado entra em `preservados` e seus bytes em
+        `retido_bytes`, NAO em `pulados` — senao o projeto nunca mais seria
+        marcado como limpo.
         """
         report = RetentionReport()
         # `projetos_dir() / ""` resolve para a RAIZ de dados: sem id a varredura
@@ -202,7 +204,7 @@ class MediaRetentionService:
         if not projeto_dir.is_dir():
             return report
 
-        protegidos = cls._brutos_de_fire(cortes) if preservar_brutos_fire else set()
+        protegidos = cls._brutos_de_fire_pendentes(cortes) if preservar_brutos_fire else set()
 
         for scratch in cls._scratch_dirs(projeto_dir):
             cls._remover_diretorio(scratch, report)
@@ -252,6 +254,16 @@ class MediaRetentionService:
                 caminho for caminho in cls.corte_dir(corte).glob("clip_raw*") if caminho.is_file()
             )
         return protegidos
+
+    @classmethod
+    def _brutos_de_fire_pendentes(cls, cortes: list[Corte]) -> set[Path]:
+        """Brutos de Fire que ainda podem gerar shorts e, portanto, nao podem sair."""
+        return {
+            caminho
+            for corte in cortes
+            if corte.shorts_finalizados_em is None
+            for caminho in cls._brutos_de_fire([corte])
+        }
 
     @classmethod
     def _registrar_preservados(cls, protegidos: set[Path], report: RetentionReport) -> None:

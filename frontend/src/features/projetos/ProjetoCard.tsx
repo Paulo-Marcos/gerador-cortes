@@ -6,6 +6,7 @@ import {
   Eraser,
   FolderOpen,
   Loader2,
+  ShieldCheck,
   Sparkles,
   Trash2,
   Trophy,
@@ -14,9 +15,7 @@ import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn, formatarDataLive, formatarDuracao, thumbnailUrl } from '@/lib/utils';
 import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/hooks/useProjetos';
-import { api } from '@/lib/api';
 import type { Projeto } from '@/types/models';
-import { perguntaBrutosFire } from './limpezaBrutosFire';
 import { PipelineProgress } from './PipelineProgress';
 import { estadoDoProjeto } from './statusMaps';
 
@@ -52,6 +51,8 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
   const thumb = thumbnailUrl(projeto.youtube_url, 'mq');
   const baixando = projeto.status === 'baixando';
   const limpo = projeto.arquivos_limpos;
+  const firesPendentes = projeto.fires_pendentes > 0;
+  const prontoParaLimpar = !limpo && !firesPendentes;
   const rebaixando = Boolean(projeto.rebaixando_video) || rebaixar.isPending;
   const placeholderHue = PLACEHOLDER_HUES[index % PLACEHOLDER_HUES.length];
 
@@ -94,15 +95,7 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
     )
       return;
 
-    // Falha na prévia não bloqueia a limpeza: sem o número, o caminho seguro é
-    // simplesmente preservar os brutos (o default do backend).
-    const previa = await api.previaLimpezaProjeto(projeto.id).catch(() => null);
-    const pergunta = perguntaBrutosFire(previa);
-
-    limpar.mutate({
-      id: projeto.id,
-      limparBrutosFire: pergunta ? confirm(pergunta) : false,
-    });
+    limpar.mutate({ id: projeto.id });
   };
 
   return (
@@ -144,6 +137,23 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
           {estado.label}
           {baixando && ` ${Math.round(projeto.progresso_download)}%`}
         </span>
+        {firesPendentes && (
+          <span
+            className="ml-auto inline-flex items-center gap-1 rounded-[5px] bg-[var(--wb-fire-soft)] px-1.5 py-0.5 font-code text-[9.5px] font-bold normal-case tracking-normal text-[var(--wb-fire)]"
+            title={`${projeto.fires_pendentes} Fire${projeto.fires_pendentes === 1 ? '' : 's'} ainda precisa${projeto.fires_pendentes === 1 ? '' : 'm'} de shorts`}
+          >
+            🔥 {projeto.fires_pendentes} pendente{projeto.fires_pendentes === 1 ? '' : 's'}
+          </span>
+        )}
+        {prontoParaLimpar && (
+          <span
+            className="ml-auto inline-flex items-center gap-1 rounded-[5px] bg-[var(--wb-ok-soft)] px-1.5 py-0.5 font-code text-[9.5px] font-bold normal-case tracking-normal text-[var(--wb-ok-ink)]"
+            title="Todos os Fires foram finalizados ou rejeitados. É seguro limpar a mídia pesada."
+          >
+            <ShieldCheck size={11} aria-hidden />
+            pronto para limpar
+          </span>
+        )}
         <div className="flex-1" />
         {nota > 0 && (
           <Tooltip label={`Nota do projeto no ranking de lives: ${nota}/100`} side="top">
@@ -251,7 +261,13 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
           onClick={onLimpar}
           disabled={limpo || limpar.isPending}
           aria-label={limpo ? 'Mídia pesada já limpa' : 'Limpar mídia pesada'}
-          title={limpo ? 'Mídia pesada já limpa' : 'Limpar mídia pesada'}
+          title={
+            limpo
+              ? 'Mídia pesada já limpa'
+              : firesPendentes
+                ? `Limpar mídia pesada e preservar ${projeto.fires_pendentes} Fire${projeto.fires_pendentes === 1 ? '' : 's'} pendente${projeto.fires_pendentes === 1 ? '' : 's'}`
+                : 'Limpar mídia pesada: todos os Fires já estão resolvidos'
+          }
           className={cn(
             BOTAO_ICONE,
             limpo

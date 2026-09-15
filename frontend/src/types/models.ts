@@ -72,6 +72,8 @@ export interface Projeto {
   total_video_pronto: number;
   total_publicos: number;
   proxima_publicacao: string;
+  /** Fires com bruto em disco que ainda aguardam finalizacao ou rejeicao. */
+  fires_pendentes: number;
 }
 
 // F-054: status de um segmento detectado automaticamente.

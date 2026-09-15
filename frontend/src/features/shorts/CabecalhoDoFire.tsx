@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { BotaoDeCluster } from './BotaoDeCluster';
+import { todosOsShortsForamRejeitados } from './descarteBruto';
 import { SeloDeGravacao } from './SeloDeGravacao';
 import type { FireComBruto } from './shortsApi';
 import type { EdicaoDoShort } from './useEdicaoDoShort';
@@ -98,6 +99,8 @@ export function CabecalhoDoFire({
   alternandoFinalizado,
   onAlternarFinalizado,
 }: Props) {
+  const fireRejeitado = fire ? todosOsShortsForamRejeitados(fire.shorts) : false;
+
   return (
     <header
       className={cn(
@@ -229,7 +232,9 @@ export function CabecalhoDoFire({
                 onClick: onAlternarFinalizado,
               },
               {
-                label: `Descartar o bruto (${fire.bruto_mb} MB)`,
+                label: fireRejeitado
+                  ? `Rejeitar Fire e liberar ${fire.bruto_mb} MB`
+                  : `Descartar o bruto (${fire.bruto_mb} MB)`,
                 icon: Trash2,
                 danger: true,
                 disabled: descartando,

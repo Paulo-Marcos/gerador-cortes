@@ -1,3 +1,5 @@
+import type { ContagemShorts } from './shortsApi';
+
 // D-460: o aviso antes de liberar o disco do bruto de um Fire.
 //
 // A frase é o produto desta demanda tanto quanto o botão. Descartar o bruto não
@@ -12,4 +14,11 @@ export function avisoDescarteBruto(titulo: string, brutoMb: number): string {
     'existem deixam de poder ser renderizados.\n\n' +
     'Refazer o bruto exige re-extrair o trecho da live inteira.'
   );
+}
+
+/** Um Fire rejeitado e um Fire resolvido: nenhum candidato restou para publicar. */
+export function todosOsShortsForamRejeitados(
+  shorts: Pick<ContagemShorts, 'total' | 'rejeitado'>,
+): boolean {
+  return shorts.total > 0 && shorts.rejeitado === shorts.total;
 }

@@ -73,6 +73,8 @@ class ProjetoResponse(BaseModel):
     total_com_meta: int = 0
     total_publicos: int = 0  # cortes já visíveis ao público
     proxima_publicacao: str = ""  # ISO8601 do próximo corte que ainda não é público
+    # Brutos de Fire que a limpeza ainda deve preservar para a fabrica de Shorts.
+    fires_pendentes: int = 0
     erro_msg: str | None = None
 
     class Config:
@@ -307,6 +309,20 @@ async def listar_projetos(db: AsyncSession = Depends(get_db)):
     )
     meta_stats = {row.projeto_id: row.com_meta for row in meta_stats_res.all()}
 
+    fires_pendentes_res = await db.execute(
+        select(Corte.projeto_id, func.count(Corte.id).label("total"))
+        .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
+        .where(
+            Corte.projeto_id.in_([p.id for p in projetos]),
+            MetadadoCorte.is_fire,
+            Corte.arquivo_clip_path.is_not(None),
+            Corte.arquivo_clip_path != "",
+            Corte.shorts_finalizados_em.is_(None),
+        )
+        .group_by(Corte.projeto_id)
+    )
+    fires_pendentes = {row.projeto_id: row.total for row in fires_pendentes_res.all()}
+
     aprovados_res = await db.execute(
         select(
             Corte.projeto_id,
@@ -370,6 +386,7 @@ async def listar_projetos(db: AsyncSession = Depends(get_db)):
         d["total_video_pronto"] = video_pronto_count.get(p.id, 0)
         d["total_publicos"] = publicos_count.get(p.id, 0)
         d["proxima_publicacao"] = proxima_pub.get(p.id, "")
+        d["fires_pendentes"] = fires_pendentes.get(p.id, 0)
         resp.append(d)
 
     return resp

@@ -6,6 +6,8 @@ decisao sem informacao. E o opt-in tem de ser mesmo opt-in — o teste do
 `limpar_brutos_fire=True` guarda contra a inversao silenciosa do default.
 """
 
+from datetime import UTC, datetime
+
 import pytest
 import pytest_asyncio
 from app.models import Base, Corte, MetadadoCorte, Projeto
@@ -42,7 +44,7 @@ def raiz(monkeypatch, tmp_path):
     return tmp_path
 
 
-async def _semear(factory, raiz, *, fire: bool):
+async def _semear(factory, raiz, *, fire: bool, shorts_finalizados: bool = False):
     corte_dir = raiz / "p1" / "cortes" / "c1"
     corte_dir.mkdir(parents=True)
     bruto = corte_dir / "clip_raw_1.mkv"
@@ -50,7 +52,14 @@ async def _semear(factory, raiz, *, fire: bool):
 
     async with factory() as db:
         db.add(Projeto(id="p1", youtube_url="u", titulo_live="t", canal_origem="c"))
-        db.add(Corte(id="c1", projeto_id="p1", numero=1))
+        db.add(
+            Corte(
+                id="c1",
+                projeto_id="p1",
+                numero=1,
+                shorts_finalizados_em=datetime.now(UTC) if shorts_finalizados else None,
+            )
+        )
         db.add(MetadadoCorte(id="m1", corte_id="c1", is_fire=fire))
         await db.commit()
     return bruto
@@ -91,6 +100,17 @@ async def test_limpeza_padrao_preserva_o_bruto_do_fire(session_factory, raiz):
 
     assert bruto.exists()
     assert resultado["retido_mb"] > 0
+
+
+@pytest.mark.asyncio
+async def test_limpeza_padrao_remove_o_bruto_do_fire_finalizado(session_factory, raiz):
+    bruto = await _semear(session_factory, raiz, fire=True, shorts_finalizados=True)
+
+    async with session_factory() as db:
+        resultado = await ProjetoService.limpar_arquivos_projeto("p1", db)
+
+    assert not bruto.exists()
+    assert resultado["retido_mb"] == 0
 
 
 @pytest.mark.asyncio
