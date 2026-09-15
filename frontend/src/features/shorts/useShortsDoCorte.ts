@@ -48,6 +48,10 @@ export function useAtualizarShort(corteId: string) {
       void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
       void qc.invalidateQueries({ queryKey: FIRES_KEY });
       void qc.invalidateQueries({ queryKey: [...PALCO_KEY, 'desenho'] });
+      // Mexer no palco ou no gancho de um trecho muda quantos seguem o padrão:
+      // o "N trechos não seguem" do menu de padrões é derivado daqui.
+      void qc.invalidateQueries({ queryKey: ['shorts', 'palco-padrao', corteId] });
+      void qc.invalidateQueries({ queryKey: ganchoPadraoKey(corteId) });
     },
   });
 }

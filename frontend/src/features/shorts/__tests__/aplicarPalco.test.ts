@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { mudancaDoPalco } from '../aplicarPalco';
+import { mudancaDoPalco, SEGUIR_O_PALCO_PADRAO, temPalcoProprio } from '../aplicarPalco';
+import type { ShortSugerido } from '../shortsApi';
 
 // D-552: aplicar um palco salvo COPIA valores e MARCA a origem.
 //
@@ -112,5 +113,46 @@ describe('D-563: a cor da legenda viaja com o palco', () => {
     const corpo = mudancaDoPalco('p1', { arranjo: 'cheia', legenda_fonte: 'Bebas Neue' });
 
     expect(corpo.legenda_fonte).toBe('Bebas Neue');
+  });
+});
+
+describe('o trecho que ninguém tocou segue o palco padrão', () => {
+  const intocado = {
+    arranjo_palco: '',
+    janela_cheia: '',
+    fundo_editorial: '',
+    legenda_cor: '',
+    legenda_fonte: '',
+    palco_preset: '',
+    palco_short_preset: '',
+    ajustes_palco: {},
+    recortes_palco: {},
+  } as unknown as ShortSugerido;
+
+  it('sem nada gravado ele segue — e não aparece como "ajustado à mão"', () => {
+    expect(temPalcoProprio(intocado)).toBe(false);
+  });
+
+  it('um preset aplicado conta como próprio: os valores foram copiados', () => {
+    const aplicado = { ...intocado, ...mudancaDoPalco('p1', { legenda_cor: '#2f5f43' }) };
+
+    expect(temPalcoProprio(aplicado as ShortSugerido)).toBe(true);
+  });
+
+  it('um recorte da mão conta como próprio', () => {
+    const recortado = { ...intocado, recortes_palco: { pessoa: { x: 1, y: 2, w: 3, h: 4 } } };
+
+    expect(temPalcoProprio(recortado)).toBe(true);
+  });
+
+  it('seguir o padrão devolve o trecho a "sem palco próprio", sem tocar no gancho', () => {
+    const aplicado = {
+      ...intocado,
+      ...mudancaDoPalco('p1', { arranjo: 'cheia', recortes: { pessoa: { x: 1, y: 2, w: 3, h: 4 } } }),
+    } as ShortSugerido;
+
+    expect(temPalcoProprio({ ...aplicado, ...SEGUIR_O_PALCO_PADRAO } as ShortSugerido)).toBe(false);
+    expect(SEGUIR_O_PALCO_PADRAO).not.toHaveProperty('gancho_cor');
+    expect(SEGUIR_O_PALCO_PADRAO).not.toHaveProperty('inicio_seg');
   });
 });

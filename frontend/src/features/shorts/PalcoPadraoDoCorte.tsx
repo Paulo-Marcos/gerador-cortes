@@ -67,65 +67,65 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
 
   return (
     <div className="space-y-1">
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="inline-flex w-[58px] items-center gap-1 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
-        <LayoutTemplate size={11} aria-hidden />
-        palco
-      </span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex w-[58px] items-center gap-1 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+          <LayoutTemplate size={11} aria-hidden />
+          palco
+        </span>
 
-      <select
-        aria-label="Palco padrão deste corte — vale também para a legenda"
-        value={escolhido}
-        disabled={definir.isPending}
-        onChange={(e) => definir.mutate(e.target.value)}
-        className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
-      >
-        {/* "cada trecho decide" e não "nenhum": sem padrão o short não fica sem
-            palco — ele cai no automático, que é o que sempre foi. */}
-        <option value="">cada trecho decide</option>
-        {disponiveis.map((preset) => (
-          <option key={preset.id} value={preset.id}>
-            {preset.nome}
-          </option>
-        ))}
-      </select>
-
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={!escolhido || !podeEditar}
-        title={podeEditar ? undefined : semTrecho}
-        aria-label="Editar o palco padrão"
-        onClick={() => onEditar(escolhido)}
-      >
-        <Pencil />
-        editar
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={!podeEditar}
-        title={podeEditar ? undefined : semTrecho}
-        onClick={() => onEditar(null)}
-      >
-        <Plus />
-        novo
-      </Button>
-    </div>
-
-    {escolhido && customizados > 0 && (
-      <p className="pl-[64px] text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
-        {customizados} {customizados === 1 ? 'trecho não segue' : 'trechos não seguem'} o padrão.{' '}
-        <button
-          type="button"
-          disabled={seguir.isPending}
-          onClick={fazerTodosSeguirem}
-          className="text-[var(--wb-accent)] underline-offset-2 hover:underline disabled:opacity-45"
+        <select
+          aria-label="Palco padrão deste corte — vale também para a legenda"
+          value={escolhido}
+          disabled={definir.isPending}
+          onChange={(e) => definir.mutate(e.target.value)}
+          className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
         >
-          fazer todos seguirem
-        </button>
-      </p>
-    )}
+          {/* "cada trecho decide" e não "nenhum": sem padrão o short não fica sem
+              palco — ele cai no automático, que é o que sempre foi. */}
+          <option value="">cada trecho decide</option>
+          {disponiveis.map((preset) => (
+            <option key={preset.id} value={preset.id}>
+              {preset.nome}
+            </option>
+          ))}
+        </select>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!escolhido || !podeEditar}
+          title={podeEditar ? undefined : semTrecho}
+          aria-label="Editar o palco padrão"
+          onClick={() => onEditar(escolhido)}
+        >
+          <Pencil />
+          editar
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!podeEditar}
+          title={podeEditar ? undefined : semTrecho}
+          onClick={() => onEditar(null)}
+        >
+          <Plus />
+          novo
+        </Button>
+      </div>
+
+      {escolhido && customizados > 0 && (
+        <p className="pl-[64px] text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+          {customizados} {customizados === 1 ? 'trecho não segue' : 'trechos não seguem'} o padrão.{' '}
+          <button
+            type="button"
+            disabled={seguir.isPending}
+            onClick={fazerTodosSeguirem}
+            className="text-[var(--wb-accent)] underline-offset-2 hover:underline disabled:opacity-45"
+          >
+            fazer todos seguirem
+          </button>
+        </p>
+      )}
     </div>
   );
 }
