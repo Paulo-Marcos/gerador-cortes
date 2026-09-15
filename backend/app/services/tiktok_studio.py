@@ -69,6 +69,7 @@ from app.services.navegador_assistido import (
     Pagina,
     PaginaDoPlaywright,
     aba_marcada,
+    apagar_copias_do_upload,
     garantir_chrome,
     perfil_do_canal,
     porta_do_chrome,
@@ -77,6 +78,8 @@ from app.services.navegador_assistido import (
 logger = logging.getLogger(__name__)
 
 URL_DO_UPLOAD = "https://www.tiktok.com/tiktokstudio/upload?from=upload"
+ORIGEM_DO_TIKTOK = "https://www.tiktok.com"
+TRECHO_DA_ABA_DE_UPLOAD = "tiktokstudio/upload"
 
 # Porta do protocolo de depuração do Chrome. Alta e PREVISÍVEL para reaproveitar
 # a janela já aberta entre um corte e o seguinte — mas previsível POR PERFIL, e
@@ -727,6 +730,9 @@ def _assistir(
     try:
         navegador = pw.chromium.connect_over_cdp(f"http://127.0.0.1:{porta_do_chrome(perfil)}")
         contexto = navegador.contexts[0] if navegador.contexts else navegador.new_context()
+        # A vigilia so apaga a copia quando VE a publicacao; o "publiquei" clicado
+        # a mao escapa dela. Antes de subir o proximo, a sobra do anterior sai.
+        apagar_copias_do_upload(contexto, ORIGEM_DO_TIKTOK, TRECHO_DA_ABA_DE_UPLOAD)
         page = contexto.new_page()
         relatorio = executar_roteiro(
             PaginaDoPlaywright(page, SELETORES),
@@ -788,6 +794,8 @@ def _vigiar_publicacao(
                 return False
             if publicou(alvo.url):
                 logger.info("[TikTokStudio] publicacao detectada em %s", alvo.url[:60])
+                if apagar_copias_do_upload(contexto, ORIGEM_DO_TIKTOK, TRECHO_DA_ABA_DE_UPLOAD):
+                    logger.info("[TikTokStudio] copia do video apagada do perfil do robo")
                 return True
             time.sleep(INTERVALO_DA_VIGILIA)
         logger.info("[TikTokStudio] %ss sem publicar; encerrando a vigilia", int(segundos))

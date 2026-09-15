@@ -233,3 +233,52 @@ def test_navegador_indisponivel_e_excecao_propria():
     """Esta camada não sabe em que passo de que plataforma foi chamada — quem
     traduz isso para "falhou ao abrir" é o roteiro."""
     assert issubclass(NavegadorIndisponivel, RuntimeError)
+
+
+# ── D-598: o robo nao guarda copia do que ja subiu ─────────────────────────
+
+
+class SessaoCdpFalsa:
+    def __init__(self) -> None:
+        self.enviados: list[tuple[str, dict]] = []
+
+    def send(self, metodo: str, parametros: dict) -> None:
+        self.enviados.append((metodo, parametros))
+
+
+class AbaFalsa:
+    def __init__(self, url: str) -> None:
+        self.url = url
+
+
+class ContextoFalso:
+    def __init__(self, *urls: str) -> None:
+        self.pages = [AbaFalsa(url) for url in urls]
+        self.sessao = SessaoCdpFalsa()
+
+    def new_cdp_session(self, pagina) -> SessaoCdpFalsa:
+        return self.sessao
+
+
+def test_depois_de_publicar_apaga_a_copia_do_site_sem_tocar_nos_cookies():
+    from app.services.navegador_assistido import apagar_copias_do_upload
+
+    contexto = ContextoFalso("https://www.tiktok.com/tiktokstudio/content")
+
+    assert apagar_copias_do_upload(contexto, "https://www.tiktok.com", "tiktokstudio/upload")
+    metodo, parametros = contexto.sessao.enviados[0]
+    assert metodo == "Storage.clearDataForOrigin"
+    assert parametros["origin"] == "https://www.tiktok.com"
+    assert "cookies" not in parametros["storageTypes"]
+
+
+def test_nao_apaga_enquanto_outra_aba_de_upload_espera_o_operador():
+    from app.services.navegador_assistido import apagar_copias_do_upload
+
+    contexto = ContextoFalso(
+        "https://www.tiktok.com/tiktokstudio/content",
+        "https://www.tiktok.com/tiktokstudio/upload?from=lote",
+    )
+
+    assert not apagar_copias_do_upload(contexto, "https://www.tiktok.com", "tiktokstudio/upload")
+    assert not contexto.sessao.enviados

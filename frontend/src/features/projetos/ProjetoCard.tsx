@@ -92,7 +92,10 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
     if (limpo) return;
     if (
       !confirm(
-        `Limpar midia pesada de "${projeto.titulo_live}" preservando graded, overlays, logs e metadados?`,
+        `Apagar os videos e audios de "${projeto.titulo_live}"? Textos e metadados ficam.` +
+          (firesPendentes
+            ? `\n\nOs ${projeto.fires_pendentes} Fire(s) pendente(s) guardam o bruto, os shorts e o video ainda nao publicado.`
+            : ''),
       )
     )
       return;

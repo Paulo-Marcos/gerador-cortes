@@ -199,6 +199,59 @@ def _corte_fire(projeto_id: str, corte_id: str, raw_path: Path, *, fire: bool) -
     return corte
 
 
+def test_fire_pendente_guarda_o_que_ainda_vai_subir_e_leva_o_intermediario(monkeypatch, tmp_path):
+    """D-598: shorts renderizados e o MP4 ainda nao publicado sao o que o Fire vai subir."""
+    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
+    corte_dir = tmp_path / "p1" / "cortes" / "c1"
+    raw = _video_aproveitavel(corte_dir / "clip_raw_123.mkv")
+    short = _video_aproveitavel(corte_dir / "shorts" / "s1" / "short.mov")
+    mp4 = _video_aproveitavel(corte_dir / "upload_ready" / "video.mp4")
+    overlay = _video_aproveitavel(corte_dir / "overlays" / "chunk_001.mov")
+    graded = _video_aproveitavel(corte_dir / "graded" / "clip_graded.mp4")
+    corte = _corte_fire("p1", "c1", raw, fire=True)
+    corte.tiktok_publicado_em = None
+
+    report = MediaRetentionService.limpar_projeto(Projeto(id="p1", youtube_url="u"), [corte])
+
+    for guardado in (raw, short, mp4):
+        assert guardado.exists(), guardado
+    assert not overlay.exists()
+    assert not graded.exists()
+    assert not report.pulados
+
+
+def test_fire_pendente_ja_publicado_nos_destinos_perde_o_mp4(monkeypatch, tmp_path):
+    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
+    corte_dir = tmp_path / "p1" / "cortes" / "c1"
+    raw = _video_aproveitavel(corte_dir / "clip_raw_123.mkv")
+    short = _video_aproveitavel(corte_dir / "shorts" / "s1" / "short.mov")
+    mp4 = _video_aproveitavel(corte_dir / "upload_ready" / "video.mp4")
+    corte = _corte_fire("p1", "c1", raw, fire=True)
+
+    MediaRetentionService.limpar_projeto(Projeto(id="p1", youtube_url="u"), [corte])
+
+    assert raw.exists()
+    assert short.exists()
+    assert not mp4.exists()
+
+
+def test_fire_com_shorts_finalizados_perde_toda_a_midia(monkeypatch, tmp_path):
+    monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
+    corte_dir = tmp_path / "p1" / "cortes" / "c1"
+    raw = _video_aproveitavel(corte_dir / "clip_raw_123.mkv")
+    short = _video_aproveitavel(corte_dir / "shorts" / "s1" / "short.mov")
+    capa = _arquivo(corte_dir / "shorts" / "s1" / "capa_arte.png")
+    corte = _corte_fire("p1", "c1", raw, fire=True)
+    corte.shorts_finalizados_em = datetime(2026, 9, 10)
+
+    report = MediaRetentionService.limpar_projeto(Projeto(id="p1", youtube_url="u"), [corte])
+
+    assert not raw.exists()
+    assert not short.exists()
+    assert capa.exists(), "texto e imagem de metadado ficam; so a midia sai"
+    assert report.retido_bytes == 0
+
+
 def test_limpeza_poupa_o_bruto_do_corte_fire_e_leva_o_resto(monkeypatch, tmp_path):
     monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
     projeto_dir = tmp_path / "p1"
@@ -215,7 +268,7 @@ def test_limpeza_poupa_o_bruto_do_corte_fire_e_leva_o_resto(monkeypatch, tmp_pat
     assert not original.exists()
     assert not graded.exists()
     # Preservado NAO e pulado: em `pulados` o projeto nunca mais seria limpo.
-    assert any("bruto de corte Fire" in item for item in report.preservados)
+    assert any("corte Fire pendente" in item for item in report.preservados)
     assert not report.pulados
     assert report.retido_mb > 0
 

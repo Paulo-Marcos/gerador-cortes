@@ -461,3 +461,29 @@ def aba_marcada(contexto, marca: str, url_padrao: str = ""):
         if e_a_aba_marcada(PaginaDoPlaywright(pagina).nome_da_janela(), marca):
             return pagina
     return None
+
+
+def apagar_copias_do_upload(contexto, origem: str, trecho_da_aba_de_upload: str) -> bool:
+    """Apaga a copia do video que o site guardou no perfil do robo, e diz se apagou (D-598).
+
+    O TikTok Studio grava o arquivo enviado no IndexedDB do site (e o Chrome
+    espelha em `blob_storage`): em poucos dias o perfil passou de 23 GB, com o
+    video ja publicado e o original ainda no disco do projeto. Copia sem funcao.
+
+    So o armazenamento do site sai — cookies ficam, e o login junto. E nada sai
+    enquanto houver OUTRA aba de upload aberta: num lote, o item seguinte pode
+    estar esperando o clique do operador com o arquivo justamente ali.
+    """
+    paginas = list(contexto.pages)
+    if not paginas or any(trecho_da_aba_de_upload in pagina.url for pagina in paginas):
+        return False
+    try:
+        sessao = contexto.new_cdp_session(paginas[0])
+        sessao.send(
+            "Storage.clearDataForOrigin",
+            {"origin": origem, "storageTypes": "indexeddb,cache_storage"},
+        )
+    except Exception as exc:  # noqa: BLE001 — faxina nunca derruba a publicacao
+        logger.info("[Navegador] nao consegui apagar as copias de %s: %s", origem, exc)
+        return False
+    return True

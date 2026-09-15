@@ -204,7 +204,7 @@ class MediaRetentionService:
         if not projeto_dir.is_dir():
             return report
 
-        protegidos = cls._brutos_de_fire_pendentes(cortes) if preservar_brutos_fire else set()
+        protegidos = cls._midia_de_fire_pendente(cortes) if preservar_brutos_fire else set()
 
         for scratch in cls._scratch_dirs(projeto_dir):
             cls._remover_diretorio(scratch, report)
@@ -245,20 +245,34 @@ class MediaRetentionService:
         return protegidos
 
     @classmethod
-    def _brutos_de_fire_pendentes(cls, cortes: list[Corte]) -> set[Path]:
-        """Brutos de Fire que ainda podem gerar shorts e, portanto, nao podem sair."""
-        return {
-            caminho
-            for corte in cortes
-            if corte.shorts_finalizados_em is None
-            for caminho in cls._brutos_de_fire([corte])
-        }
+    def _midia_de_fire_pendente(cls, cortes: list[Corte]) -> set[Path]:
+        """A midia que o Fire com shorts pendentes ainda vai publicar (D-598).
+
+        Poupar so o bruto nao bastava: a limpeza levava junto os shorts ja
+        renderizados e o MP4 horizontal que ainda faltava subir — exatamente o
+        material que o operador guarda o Fire para publicar. O MP4 so fica
+        enquanto algum destino nao publicou; overlays e graded saem sempre.
+
+        Marcar os shorts como finalizados e o operador dizendo que ja subiu tudo:
+        dali em diante o Fire limpa como qualquer corte.
+        """
+        protegidos: set[Path] = set()
+        for corte in cortes:
+            if corte.shorts_finalizados_em is not None or not cls._brutos_de_fire([corte]):
+                continue
+            corte_dir = cls.corte_dir(corte)
+            protegidos.update(cls._brutos_de_fire([corte]))
+            protegidos.update(cls._midia_pesada(corte_dir / "shorts"))
+            mp4 = corte_dir / "upload_ready" / "video.mp4"
+            if mp4.is_file() and not pode_apagar_o_mp4(destinos_do_corte(corte)).liberado:
+                protegidos.add(mp4)
+        return protegidos
 
     @classmethod
     def _registrar_preservados(cls, protegidos: set[Path], report: RetentionReport) -> None:
         for caminho in sorted(protegidos):
             report.retido_bytes += caminho.stat().st_size
-            report.preservados.append(f"{cls._display(caminho)}: bruto de corte Fire")
+            report.preservados.append(f"{cls._display(caminho)}: midia de corte Fire pendente")
 
     @classmethod
     def _scratch_dirs(cls, projeto_dir: Path) -> list[Path]:
