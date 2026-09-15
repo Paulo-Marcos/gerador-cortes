@@ -33,20 +33,20 @@ import { TIPOS_CENA } from './sceneTypes';
 import { SceneTypeIcon, sceneTypeStyle } from './SceneTypeIcon';
 import { validateSceneOverlaps } from './sceneValidation';
 
-// ─────────────────────────────────────────────────────────────
-// CenasPanel — replica `design_reference/src/v3_pos.jsx > TabCenas (449-647)`.
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// CenasPanel â€” replica `design_reference/src/v3_pos.jsx > TabCenas (449-647)`.
 // Header reorganizado por frequencia de uso:
 //   1. Linha de titulo: Film + serif 17/500 + Chip contagem + Chip "N sem
 //      retrato" warn + caption "roteiro visual"
-//   2. Acao primaria (AUDITORIA-v4 §1): UMA linha — "Gerar cenas" (accent) +
-//      menu ⋯ com Retratos / Manual / Studio / Padroes do palco
-//   3. Padroes do palco: so aparece quando acionado pelo ⋯ (nao e mais linha fixa)
-//   4. Stats (AUDITORIA-v4 §2): uma linha inline "Ns duracao · N cenas · N% cobertura"
+//   2. Acao primaria (AUDITORIA-v4 Â§1): UMA linha â€” "Gerar cenas" (accent) +
+//      menu â‹¯ com Retratos / Manual / Studio / Padroes do palco
+//   3. Padroes do palco: so aparece quando acionado pelo â‹¯ (nao e mais linha fixa)
+//   4. Stats (AUDITORIA-v4 Â§2): uma linha inline "Ns duracao Â· N cenas Â· N% cobertura"
 // Lista: CenaItem expansivel.
-// Footer: "Tipos disponiveis ▾" + spacer + "Marcar validadas" (ok).
+// Footer: "Tipos disponiveis â–¾" + spacer + "Marcar validadas" (ok).
 //
 // Mantem as acoes visiveis de IA, retratos, edicao e validacao de cenas.
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface Props {
   corteId: string;
@@ -115,12 +115,15 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       ? 'Nenhuma ficha biografica para buscar'
       : 'Buscar retratos das fichas biograficas';
 
-  // D-428: gerar cenas SUBSTITUI o roteiro visual inteiro. Com cenas ja na
+  const [providerAtivo, setProviderAtivo] = useState<'claude' | 'gemini' | null>(null);
+
+  // F-047: para a geracao, se o corte ja tem cenas e elas nao estao na mesma
   // tela, o clique passa pela confirmacao; sem nenhuma, dispara direto.
   const handleGerarCenas = (provider: 'claude' | 'gemini') => {
-    confirmacao.executarOuPedir(confirmacaoRegerarCenas(cenasOrdenadas.length), () =>
-      gerarClaude.mutate(provider),
-    );
+    confirmacao.executarOuPedir(confirmacaoRegerarCenas(cenasOrdenadas.length), () => {
+      setProviderAtivo(provider);
+      gerarClaude.mutate(provider, { onSettled: () => setProviderAtivo(null) });
+    });
   };
 
   const handleChange = (idx: number, next: CenaRemotion) => {
@@ -222,7 +225,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
 
   return (
     <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-      {/* Header — v3_pos.jsx:454-585 */}
+      {/* Header â€” v3_pos.jsx:454-585 */}
       <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
         {/* L1: titulo + chips + caption */}
         <div className="mb-2.5 flex items-center gap-2">
@@ -250,16 +253,17 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <div className="flex-1" />
         </div>
 
-        {/* L2: uma única linha de ação (AUDITORIA-v4 §1) — primário
-            "Gerar cenas" + ⋯. Antes eram dois botões lado a lado MAIS a linha
-            fixa "Padrões · avançado": duas fileiras de controles só para
-            chegar na lista de cenas. Nada sumiu — Retratos, Manual, Studio e
-            Padrões moram no ⋯, com os mesmos disabled/tooltip/loading. */}
+        {/* L2: uma Ãºnica linha de aÃ§Ã£o (AUDITORIA-v4 Â§1) â€” primÃ¡rio
+            "Gerar cenas" + â‹¯. Antes eram dois botÃµes lado a lado MAIS a linha
+            fixa "PadrÃµes Â· avanÃ§ado": duas fileiras de controles sÃ³ para
+            chegar na lista de cenas. Nada sumiu â€” Retratos, Manual, Studio e
+            PadrÃµes moram no â‹¯, com os mesmos disabled/tooltip/loading. */}
         <div className="mb-2 flex items-stretch gap-1.5">
           <Tooltip label="Gerar cenas automaticamente via Claude" side="bottom">
             <ClaudeAiButton
               size="md"
-              pending={gerarClaude.isPending}
+              pending={gerarClaude.isPending && providerAtivo === 'claude'}
+              disabled={gerarClaude.isPending && providerAtivo !== 'claude'}
               onClick={() => handleGerarCenas('claude')}
               className="flex-1 text-[11px] h-[34px]"
               label="Claude"
@@ -269,7 +273,8 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           <Tooltip label="Gerar cenas automaticamente via Gemini" side="bottom">
             <GeminiAiButton
               size="md"
-              pending={gerarClaude.isPending}
+              pending={gerarClaude.isPending && providerAtivo === 'gemini'}
+              disabled={gerarClaude.isPending && providerAtivo !== 'gemini'}
               onClick={() => handleGerarCenas('gemini')}
               className="flex-1 text-[11px] h-[34px]"
               label="Gemini"
@@ -277,7 +282,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             />
           </Tooltip>
           <OverflowMenu
-            label="Outras ações das cenas"
+            label="Outras aÃ§Ãµes das cenas"
             items={[
               {
                 icon: ImageIcon,
@@ -294,14 +299,14 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
               },
               {
                 icon: Settings2,
-                label: padroesOpen ? 'Ocultar padrões do palco' : 'Padrões do palco',
+                label: padroesOpen ? 'Ocultar padrÃµes do palco' : 'PadrÃµes do palco',
                 onClick: () => setPadroesOpen((v) => !v),
               },
             ]}
           />
         </div>
 
-        {/* Padrões do palco — agora só aparece quando pedido pelo ⋯. Traz
+        {/* PadrÃµes do palco â€” agora sÃ³ aparece quando pedido pelo â‹¯. Traz
             junto o card de config do renderer, que era a antiga linha fixa. */}
         {padroesOpen && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-[var(--radius-sm)] border border-dashed border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-1.5">
@@ -310,22 +315,22 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
           </div>
         )}
 
-        {/* L4: stats numa linha (AUDITORIA-v4 §2) — eram 3 cards com borda e
-            fundo, um bloco alto só para 3 números. Mesmos dados, uma linha. */}
+        {/* L4: stats numa linha (AUDITORIA-v4 Â§2) â€” eram 3 cards com borda e
+            fundo, um bloco alto sÃ³ para 3 nÃºmeros. Mesmos dados, uma linha. */}
         <div className="flex flex-wrap items-center gap-2 font-code text-[10.5px] tabular-nums">
           <span>
             <b className="font-bold text-[var(--wb-text)]">{duracaoCenas.toFixed(0)}s</b>{' '}
-            <span className="text-[var(--wb-text-dim)]">duração</span>
+            <span className="text-[var(--wb-text-dim)]">duraÃ§Ã£o</span>
           </span>
           <span aria-hidden className="text-[var(--wb-border)]">
-            ·
+            Â·
           </span>
           <span>
             <b className="font-bold text-[var(--wb-text)]">{cenasOrdenadas.length}</b>{' '}
             <span className="text-[var(--wb-text-dim)]">cenas</span>
           </span>
           <span aria-hidden className="text-[var(--wb-border)]">
-            ·
+            Â·
           </span>
           <span>
             <b className="font-bold text-[var(--wb-text)]">{cobertura.toFixed(0)}%</b>{' '}
@@ -394,7 +399,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
         )}
       </div>
 
-      {/* Footer — "Tipos disponiveis ▾" + spacer + "Marcar validadas" (ok) */}
+      {/* Footer â€” "Tipos disponiveis â–¾" + spacer + "Marcar validadas" (ok) */}
       <footer className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-2.5">
         <button
           type="button"
@@ -469,5 +474,5 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
   );
 });
 
-// SceneStat (3 cards Duração/Densidade/Cobertura) saiu na AUDITORIA-v4 §2 —
-// os mesmos números agora vivem numa linha inline no header do painel.
+// SceneStat (3 cards DuraÃ§Ã£o/Densidade/Cobertura) saiu na AUDITORIA-v4 Â§2 â€”
+// os mesmos nÃºmeros agora vivem numa linha inline no header do painel.

@@ -29,34 +29,34 @@ import { useDiarizarCorte, useFalantes } from '@/hooks/useDiarizacao';
 import type { FalantesMap } from '@/lib/api';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// RightTabsPanel â€” replica `design_reference/src/v2_bruto.jsx:405-624`.
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// RightTabsPanel Ã¢â‚¬â€ replica `design_reference/src/v2_bruto.jsx:405-624`.
 // Funde TrechosPanel + TranscriptPanel num painel com abas.
 // Header: grip + 2 abas (Trechos default + Transcricao) + refresh sempre
 // visivel a direita.
 // Preserva 100% da logica funcional (filtros IA/Manual/Silencios, busca,
 // scroll-to, modal manual via `usePromptDesvios`).
 //
-// `variant="workbench"` (AUDITORIA-v2 Â§9, CP10) â€” move "âŸ³ Regerar
-// transcriÃ§Ã£o" do header pro rodapÃ© retrÃ¡til "â­ MAIS AÃ‡Ã•ES" (fechado por
-// padrÃ£o): Ã© uma aÃ§Ã£o de baixo uso, entÃ£o ganha com o rodapÃ© em vez de
-// ocupar o header sempre visÃ­vel. `variant="legacy"` (default) preserva
-// 100% o header atual (EditorFase1/shell antigo) â€” nada muda ali.
-// DecisÃµes que NÃƒO mudam em nenhum variant (ver deviations do commit):
-//   - "ðŸ” Buscar na transcriÃ§Ã£o" fica onde estÃ¡ (topo da aba TranscriÃ§Ã£o,
-//     sempre visÃ­vel): Ã© usada com frequÃªncia ao revisar um corte â€”
-//     escondÃª-la atrÃ¡s de um rodapÃ© fechado por padrÃ£o pioraria o fluxo
-//     comum, entÃ£o a etapa pediu "sÃ³ mover se fizer sentido" e aqui nÃ£o
+// `variant="workbench"` (AUDITORIA-v2 Ã‚Â§9, CP10) Ã¢â‚¬â€ move "Ã¢Å¸Â³ Regerar
+// transcriÃƒÂ§ÃƒÂ£o" do header pro rodapÃƒÂ© retrÃƒÂ¡til "Ã¢Â­Â MAIS AÃƒâ€¡Ãƒâ€¢ES" (fechado por
+// padrÃƒÂ£o): ÃƒÂ© uma aÃƒÂ§ÃƒÂ£o de baixo uso, entÃƒÂ£o ganha com o rodapÃƒÂ© em vez de
+// ocupar o header sempre visÃƒÂ­vel. `variant="legacy"` (default) preserva
+// 100% o header atual (EditorFase1/shell antigo) Ã¢â‚¬â€ nada muda ali.
+// DecisÃƒÂµes que NÃƒÆ’O mudam em nenhum variant (ver deviations do commit):
+//   - "Ã°Å¸â€Â Buscar na transcriÃƒÂ§ÃƒÂ£o" fica onde estÃƒÂ¡ (topo da aba TranscriÃƒÂ§ÃƒÂ£o,
+//     sempre visÃƒÂ­vel): ÃƒÂ© usada com frequÃƒÂªncia ao revisar um corte Ã¢â‚¬â€
+//     escondÃƒÂª-la atrÃƒÂ¡s de um rodapÃƒÂ© fechado por padrÃƒÂ£o pioraria o fluxo
+//     comum, entÃƒÂ£o a etapa pediu "sÃƒÂ³ mover se fizer sentido" e aqui nÃƒÂ£o
 //     fez.
-//   - "â­ Influenciar a capa" (ThumbnailHintsEditor) nÃ£o Ã© tocado â€” mover
-//     o trigger sem virar uma aÃ§Ã£o por-trecho mudaria o comportamento
-//     (hoje Ã© um editor sempre visÃ­vel), fora do escopo desta etapa.
-//   - "â¤“ Exportar transcriÃ§Ã£o (SRT)" nÃ£o existe (sem hook/endpoint) â€”
-//     decisÃ£o jÃ¡ tomada fora desta etapa: nÃ£o construir agora.
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//   - "Ã¢Â­Â Influenciar a capa" (ThumbnailHintsEditor) nÃƒÂ£o ÃƒÂ© tocado Ã¢â‚¬â€ mover
+//     o trigger sem virar uma aÃƒÂ§ÃƒÂ£o por-trecho mudaria o comportamento
+//     (hoje ÃƒÂ© um editor sempre visÃƒÂ­vel), fora do escopo desta etapa.
+//   - "Ã¢Â¤â€œ Exportar transcriÃƒÂ§ÃƒÂ£o (SRT)" nÃƒÂ£o existe (sem hook/endpoint) Ã¢â‚¬â€
+//     decisÃƒÂ£o jÃƒÂ¡ tomada fora desta etapa: nÃƒÂ£o construir agora.
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 interface RightTabsPanelProps {
-  // F-058: influÃªncia manual do editor no prompt da thumbnail.
+  // F-058: influÃƒÂªncia manual do editor no prompt da thumbnail.
   corteId: string;
   hintsThumbnail?: string;
   // Trechos
@@ -70,32 +70,32 @@ interface RightTabsPanelProps {
   pendingTrechos: {
     adicionando?: boolean;
     removendo?: boolean;
-    claude?: boolean;
+    claude?: { isPending: boolean; provider?: string };
   };
   // Transcricao
   transcricao?: TranscricaoLinha[];
   currentTime: number;
   onAtualizarTranscricao: () => void;
   transcricaoAtualizando: boolean;
-  /** AUDITORIA-v2 Â§9 (CP10): 'legacy' (default) preserva o header atual
-   *  (EditorFase1). 'workbench' move "Regerar transcriÃ§Ã£o" pro rodapÃ©
-   *  retrÃ¡til "MAIS AÃ‡Ã•ES". */
+  /** AUDITORIA-v2 Ã‚Â§9 (CP10): 'legacy' (default) preserva o header atual
+   *  (EditorFase1). 'workbench' move "Regerar transcriÃƒÂ§ÃƒÂ£o" pro rodapÃƒÂ©
+   *  retrÃƒÂ¡til "MAIS AÃƒâ€¡Ãƒâ€¢ES". */
   variant?: 'legacy' | 'workbench';
 }
 
-// D-447: a aba "AvaliaÃ§Ã£o" mora aqui, e nÃ£o numa tela nova, porque a
-// pergunta que ela responde â€” "o que sobrou se sustenta?" â€” sÃ³ faz sentido
-// ao lado do material que a responde: os trechos removidos e a transcriÃ§Ã£o.
+// D-447: a aba "AvaliaÃƒÂ§ÃƒÂ£o" mora aqui, e nÃƒÂ£o numa tela nova, porque a
+// pergunta que ela responde Ã¢â‚¬â€ "o que sobrou se sustenta?" Ã¢â‚¬â€ sÃƒÂ³ faz sentido
+// ao lado do material que a responde: os trechos removidos e a transcriÃƒÂ§ÃƒÂ£o.
 // D-576: a aba "Ordem" fica ao lado de "Trechos a remover" porque as duas
-// respondem perguntas vizinhas sobre o MESMO material â€” o que sai e em que
-// ordem entra o que ficou. Separadas para o editor nÃ£o confundir remover com
-// mover; vizinhas para ele nÃ£o ter de trocar de tela entre as duas.
+// respondem perguntas vizinhas sobre o MESMO material Ã¢â‚¬â€ o que sai e em que
+// ordem entra o que ficou. Separadas para o editor nÃƒÂ£o confundir remover com
+// mover; vizinhas para ele nÃƒÂ£o ter de trocar de tela entre as duas.
 type TabId = 'trechos' | 'ordem' | 'transcricao' | 'avaliacao';
 
 /**
- * "00:22:09.000" â†’ "22:09.0". O protÃ³tipo v3 mostra dÃ©cimos: os
+ * "00:22:09.000" Ã¢â€ â€™ "22:09.0". O protÃƒÂ³tipo v3 mostra dÃƒÂ©cimos: os
  * milissegundos cheios alargavam a coluna de tempo e empurravam o texto
- * do trecho, sem acrescentar precisÃ£o Ãºtil na leitura.
+ * do trecho, sem acrescentar precisÃƒÂ£o ÃƒÂºtil na leitura.
  */
 function mmssDecimo(hms: string): string {
   const semHora = hms.slice(3);
@@ -124,8 +124,8 @@ export function RightTabsPanel({
   const [maisAcoesOpen, setMaisAcoesOpen] = useState(false);
   const isWorkbench = variant === 'workbench';
 
-  // D-360: diarizaÃ§Ã£o por corte. projetoId sai do corte jÃ¡ em cache; o mapa de
-  // falantes resolve SPEAKER_xx â†’ nome/canal na etiqueta inline da transcriÃ§Ã£o.
+  // D-360: diarizaÃƒÂ§ÃƒÂ£o por corte. projetoId sai do corte jÃƒÂ¡ em cache; o mapa de
+  // falantes resolve SPEAKER_xx Ã¢â€ â€™ nome/canal na etiqueta inline da transcriÃƒÂ§ÃƒÂ£o.
   const projetoId = useCorte(corteId).data?.projeto_id;
   const falantes = useFalantes(projetoId, tab === 'transcricao').data?.falantes;
   const diarizar = useDiarizarCorte(corteId, projetoId);
@@ -139,13 +139,13 @@ export function RightTabsPanel({
 
   return (
     <section className="flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
-      {/* F-058: influÃªncia manual do editor no prompt da thumbnail. */}
+      {/* F-058: influÃƒÂªncia manual do editor no prompt da thumbnail. */}
       <div className="flex-shrink-0 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
         <ThumbnailHintsEditor corteId={corteId} initialValue={hintsThumbnail} />
       </div>
-      {/* Tabs planas com sublinhado (DE-PARA-v3 Â§3): sem caixa e sem sombra,
-          alinhadas ao TabStrip fino do shell. O fundo `inset` saiu junto â€”
-          a faixa agora sÃ³ tem a divisÃ³ria inferior. */}
+      {/* Tabs planas com sublinhado (DE-PARA-v3 Ã‚Â§3): sem caixa e sem sombra,
+          alinhadas ao TabStrip fino do shell. O fundo `inset` saiu junto Ã¢â‚¬â€
+          a faixa agora sÃƒÂ³ tem a divisÃƒÂ³ria inferior. */}
       <header className="flex flex-shrink-0 items-center gap-2.5 border-b border-[var(--wb-border-soft)] px-3 pt-2">
         <GripVertical size={13} className="mb-2 text-[var(--wb-text-dim)]" aria-hidden />
         <TabButton
@@ -166,19 +166,19 @@ export function RightTabsPanel({
           id="transcricao"
           active={tab === 'transcricao'}
           onClick={() => setTab('transcricao')}
-          label="TranscriÃ§Ã£o"
+          label="TranscriÃƒÂ§ÃƒÂ£o"
           count={transcricao?.length ?? 0}
         />
         <TabButton
           id="avaliacao"
           active={tab === 'avaliacao'}
           onClick={() => setTab('avaliacao')}
-          label="AvaliaÃ§Ã£o"
+          label="AvaliaÃƒÂ§ÃƒÂ£o"
         />
         <div className="flex-1" />
-        {/* AUDITORIA-v2 Â§9 (CP10): no Workbench o refresh sai do header
-            (baixo uso) e migra pro rodapÃ© "MAIS AÃ‡Ã•ES" abaixo; legacy
-            mantÃ©m 100% como sempre. */}
+        {/* AUDITORIA-v2 Ã‚Â§9 (CP10): no Workbench o refresh sai do header
+            (baixo uso) e migra pro rodapÃƒÂ© "MAIS AÃƒâ€¡Ãƒâ€¢ES" abaixo; legacy
+            mantÃƒÂ©m 100% como sempre. */}
         {!isWorkbench && (
           <Tooltip label={refreshTitle} side="bottom">
             <IconButton
@@ -229,7 +229,7 @@ export function RightTabsPanel({
       {isWorkbench && (
         <RetractableFooter
           icon={<Star size={13} />}
-          label="Mais aÃ§Ãµes"
+          label="Mais aÃƒÂ§ÃƒÂµes"
           open={maisAcoesOpen}
           onToggle={() => setMaisAcoesOpen((v) => !v)}
         >
@@ -244,7 +244,7 @@ export function RightTabsPanel({
             ) : (
               <RotateCw size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
             )}
-            {refreshPending ? 'Atualizando transcriÃ§Ã£oâ€¦' : 'Regerar transcriÃ§Ã£o'}
+            {refreshPending ? 'Atualizando transcriÃƒÂ§ÃƒÂ£oÃ¢â‚¬Â¦' : 'Regerar transcriÃƒÂ§ÃƒÂ£o'}
           </button>
         </RetractableFooter>
       )}
@@ -253,9 +253,9 @@ export function RightTabsPanel({
 }
 
 /**
- * Aba plana com sublinhado (DE-PARA-v3 Â§3). Antes era uma caixa com borda,
- * fundo prÃ³prio e `shadow-sm` â€” visual de tab antigo, destoando do TabStrip
- * fino e plano do resto do shell. Agora: sÃ³ rÃ³tulo + contador, ativo marcado
+ * Aba plana com sublinhado (DE-PARA-v3 Ã‚Â§3). Antes era uma caixa com borda,
+ * fundo prÃƒÂ³prio e `shadow-sm` Ã¢â‚¬â€ visual de tab antigo, destoando do TabStrip
+ * fino e plano do resto do shell. Agora: sÃƒÂ³ rÃƒÂ³tulo + contador, ativo marcado
  * por `border-bottom: 2px var(--wb-accent)`. Sem caixa, sem sombra.
  */
 function TabButton({
@@ -269,7 +269,7 @@ function TabButton({
   active: boolean;
   onClick: () => void;
   label: string;
-  /** Ausente = aba sem contador (a de AvaliaÃ§Ã£o nÃ£o conta itens). */
+  /** Ausente = aba sem contador (a de AvaliaÃƒÂ§ÃƒÂ£o nÃƒÂ£o conta itens). */
   count?: number;
   countTone?: 'err';
 }) {
@@ -302,11 +302,11 @@ function TabButton({
   );
 }
 
-// â”€â”€â”€â”€â”€ TrechosList â€” v2_bruto.jsx:484-548 â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ TrechosList Ã¢â‚¬â€ v2_bruto.jsx:484-548 Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-// D-422: o badge do trecho passou a mostrar o MOTIVO da remoÃ§Ã£o (repetiÃ§Ã£o,
-// tangente, imprecisÃ£oâ€¦) em vez de um "IA" Ãºnico para tudo que a IA propÃ´s. A
-// resoluÃ§Ã£o vive em `trechoBadge.ts` (testÃ¡vel, cobre legados sem `categoria`).
+// D-422: o badge do trecho passou a mostrar o MOTIVO da remoÃƒÂ§ÃƒÂ£o (repetiÃƒÂ§ÃƒÂ£o,
+// tangente, imprecisÃƒÂ£oÃ¢â‚¬Â¦) em vez de um "IA" ÃƒÂºnico para tudo que a IA propÃƒÂ´s. A
+// resoluÃƒÂ§ÃƒÂ£o vive em `trechoBadge.ts` (testÃƒÂ¡vel, cobre legados sem `categoria`).
 
 function TrechosList({
   desvios,
@@ -328,7 +328,7 @@ function TrechosList({
   pending: {
     adicionando?: boolean;
     removendo?: boolean;
-    claude?: boolean;
+    claude?: { isPending: boolean; provider?: string };
   };
 }) {
   const sortedWithOriginalIdx = useMemo(
@@ -358,21 +358,22 @@ function TrechosList({
     onAdicionarDesvio({
       inicio_hms: '00:00:00',
       fim_hms: '00:00:05',
-      motivo: 'Manual â€” recortado pelo editor',
+      motivo: 'Manual Ã¢â‚¬â€ recortado pelo editor',
     });
   }
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Sub-barra compacta do protÃ³tipo v3: AI|Manual num segmented pequeno
-          (antes eram dois botÃµes de altura cheia, que pesavam mais que as
-          prÃ³prias linhas de trecho) e o ï¼‹ em acento suave, 30Ã—30. */}
+      {/* Sub-barra compacta do protÃƒÂ³tipo v3: AI|Manual num segmented pequeno
+          (antes eram dois botÃƒÂµes de altura cheia, que pesavam mais que as
+          prÃƒÂ³prias linhas de trecho) e o Ã¯Â¼â€¹ em acento suave, 30Ãƒâ€”30. */}
       <div className="flex flex-shrink-0 items-center gap-1.5 px-3 pb-2 pt-2">
         <div className="inline-flex gap-0.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
           <Tooltip label="Gerar trechos a remover via Claude" side="bottom">
             <ClaudeAiButton
               size="sm"
-              pending={pending.claude}
+              pending={pending.claude?.isPending && pending.claude?.provider === 'claude'}
+              disabled={pending.claude?.isPending && pending.claude?.provider !== 'claude'}
               onClick={() => onGerarTrechosIA('claude')}
               className="h-[26px] gap-1.5 rounded-[6px] px-3 text-[10.5px]"
             />
@@ -380,7 +381,8 @@ function TrechosList({
           <Tooltip label="Gerar trechos a remover via Gemini" side="bottom">
             <GeminiAiButton
               size="sm"
-              pending={pending.claude}
+              pending={pending.claude?.isPending && pending.claude?.provider === 'gemini'}
+              disabled={pending.claude?.isPending && pending.claude?.provider !== 'gemini'}
               onClick={() => onGerarTrechosIA('gemini')}
               className="h-[26px] gap-1.5 rounded-[6px] px-3 text-[10.5px] ml-1"
             />
@@ -410,7 +412,7 @@ function TrechosList({
         </Tooltip>
       </div>
 
-      {/* Lista â€” v2_bruto.jsx:507-547 */}
+      {/* Lista Ã¢â‚¬â€ v2_bruto.jsx:507-547 */}
       <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-2.5 py-2">
         {sortedWithOriginalIdx.length === 0 && (
           <div className="m-auto flex flex-col items-center gap-1 py-8 text-center text-[12px] text-[var(--wb-text-dim)]">
@@ -472,18 +474,18 @@ function TrechosList({
                       className="font-code text-[10px] font-semibold text-[var(--wb-err-ink)]"
                       style={{ fontVariantNumeric: 'tabular-nums' }}
                     >
-                      âˆ’{delta.toFixed(1)}s
+                      Ã¢Ë†â€™{delta.toFixed(1)}s
                     </span>
                   </div>
-                  {/* DE-PARA-v3 Â§3: o motivo Ã© apoio, nÃ£o o conteÃºdo principal
-                      da linha â€” daÃ­ o tom mudo.
+                  {/* DE-PARA-v3 Ã‚Â§3: o motivo ÃƒÂ© apoio, nÃƒÂ£o o conteÃƒÂºdo principal
+                      da linha Ã¢â‚¬â€ daÃƒÂ­ o tom mudo.
 
                       D-511: mas ele deixou de ser CORTADO. Com `line-clamp-2` o
                       motivo terminava no meio de uma frase, e conferir o corte
-                      exigia sair da tela. Um motivo longo ocupa mais trÃªs
+                      exigia sair da tela. Um motivo longo ocupa mais trÃƒÂªs
                       linhas; um motivo pela metade custa uma ida e volta. */}
                   <div className="whitespace-pre-wrap break-words text-[11px] leading-[1.4] text-[var(--wb-text-mute)]">
-                    {d.motivo || 'â€”'}
+                    {d.motivo || 'Ã¢â‚¬â€'}
                   </div>
                 </div>
               </button>
@@ -508,7 +510,7 @@ function TrechosList({
   );
 }
 
-// â”€â”€â”€â”€â”€ TranscriptList â€” v2_bruto.jsx:550-624 â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ TranscriptList Ã¢â‚¬â€ v2_bruto.jsx:550-624 Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 function TranscriptList({
   linhas,
@@ -527,7 +529,7 @@ function TranscriptList({
 }) {
   const [busca, setBusca] = useState('');
 
-  // D-360: sÃ³ mostra a etiqueta quando ao menos uma linha tem falante.
+  // D-360: sÃƒÂ³ mostra a etiqueta quando ao menos uma linha tem falante.
   const temFalante = useMemo(() => linhas.some((l) => l.speaker), [linhas]);
 
   const linhasFiltradas = useMemo(() => {
@@ -559,7 +561,7 @@ function TranscriptList({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Busca â€” v2_bruto.jsx:553-582 */}
+      {/* Busca Ã¢â‚¬â€ v2_bruto.jsx:553-582 */}
       <div className="flex-shrink-0 space-y-2 border-b border-[var(--wb-border-soft)] px-3 py-2.5">
         <div className="flex h-[30px] items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5">
           <Search size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
@@ -569,11 +571,11 @@ function TranscriptList({
             placeholder="Buscar palavra..."
             className="flex-1 bg-transparent text-[12.5px] text-[var(--wb-text)] outline-none placeholder:text-[var(--wb-text-dim)]"
           />
-          <span className="font-code text-[10px] text-[var(--wb-text-dim)]">âŒ˜F</span>
+          <span className="font-code text-[10px] text-[var(--wb-text-dim)]">Ã¢Å’ËœF</span>
         </div>
-        {/* D-360: diariza sÃ³ este corte (evita rodar o vÃ­deo inteiro). */}
+        {/* D-360: diariza sÃƒÂ³ este corte (evita rodar o vÃƒÂ­deo inteiro). */}
         <Tooltip
-          label="Identifica os falantes sÃ³ neste corte (nÃ£o roda o vÃ­deo todo)"
+          label="Identifica os falantes sÃƒÂ³ neste corte (nÃƒÂ£o roda o vÃƒÂ­deo todo)"
           side="bottom"
         >
           <Button
@@ -590,7 +592,7 @@ function TranscriptList({
         </Tooltip>
       </div>
 
-      {/* Linhas â€” v2_bruto.jsx:584-621 */}
+      {/* Linhas Ã¢â‚¬â€ v2_bruto.jsx:584-621 */}
       <div className="flex-1 overflow-y-auto py-1">
         {linhasFiltradas.length === 0 && (
           <div className="m-auto py-8 text-center text-[12px] text-[var(--wb-text-dim)]">
@@ -640,9 +642,9 @@ function TranscriptList({
   );
 }
 
-// D-360: chip inline do falante. Resolve SPEAKER_xx â†’ nome/canal via mapa; sem
+// D-360: chip inline do falante. Resolve SPEAKER_xx Ã¢â€ â€™ nome/canal via mapa; sem
 // nome batizado cai para "Falante N". Linhas sem `speaker` (fora da janela
-// diarizada) nÃ£o renderizam badge.
+// diarizada) nÃƒÂ£o renderizam badge.
 function FalanteBadge({ speaker, falantes }: { speaker?: string; falantes?: FalantesMap }) {
   if (!speaker) return null;
   const info = falantes?.[speaker];
