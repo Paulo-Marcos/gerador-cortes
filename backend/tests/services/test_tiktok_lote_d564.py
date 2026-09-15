@@ -53,6 +53,8 @@ class PaginaFalsa:
         self.escrito[alvo] = texto
 
     def texto_de(self, alvo):
+        if alvo == "status_do_upload":
+            return "short.mp4\n1080P\nEnviado（1MB）"  # o cartao MEDIDO ao terminar
         return self.escrito.get(alvo, "")
 
     def atributo_de(self, alvo, atributo):
@@ -99,6 +101,7 @@ def video(tmp_path):
 def sem_espera_real(monkeypatch):
     """O roteiro espera de 3 em 3 segundos; num teste isso é só demora."""
     monkeypatch.setattr(tiktok_studio, "INTERVALO_DA_VIGILIA", 0.0)
+    monkeypatch.setattr(tiktok_studio, "INTERVALO_DO_ENVIO", 0.0)
     monkeypatch.setattr(tiktok_studio, "SEGUNDOS_PARA_CONFIRMAR_PUBLICACAO", 0.2)
 
 

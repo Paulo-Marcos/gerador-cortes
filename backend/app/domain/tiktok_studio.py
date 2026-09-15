@@ -25,6 +25,8 @@ insubstituível — nos outros quatro ele só estava sendo repetitivo.
 
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
 from enum import StrEnum
 
 
@@ -349,3 +351,77 @@ def mesma_pasta(um: str, outro: str) -> bool:
 
 def _normalizar(caminho: str) -> str:
     return caminho.replace("\\", "/").rstrip("/").casefold()
+
+
+# O cartao de status durante o envio, MEDIDO em 14/09/2026 com um short de 68 MB:
+#
+#     short.mp4 / 1080P / 5.34MB/68.3MB / Duração: 0m40s / Faltam 39 segundos /
+#     Cancelar / 7.82%
+#
+# O percentual vem com DUAS casas e e a ultima linha; ao terminar, o cartao troca
+# tudo por "Enviado（68.3MB）" — sem numero nenhum com %.
+_PERCENTUAL = re.compile(r"(\d{1,3}(?:[.,]\d+)?)\s*%")
+_TAMANHO_ENVIADO = re.compile(
+    r"\d+(?:[.,]\d+)?\s*[KMGT]?B\s*/\s*\d+(?:[.,]\d+)?\s*[KMGT]?B", re.IGNORECASE
+)
+_TEMPO_RESTANTE = re.compile(
+    r"^\s*(faltam?\b.*|.*\b(?:left|remaining)\b.*)$", re.IGNORECASE | re.MULTILINE
+)
+
+# De quanto em quanto o log do envio fala. A pagina atualiza a cada segundo;
+# repetir isso no console enterraria as etapas que o operador quer ver.
+PASSO_DO_LOG_DO_ENVIO = 10
+
+
+@dataclass(frozen=True)
+class LeituraDoEnvio:
+    """O que o cartao de status diz sobre o envio, num instante."""
+
+    percentual: float
+    enviado: str = ""
+    restante: str = ""
+
+    @property
+    def detalhe(self) -> str:
+        return ", ".join(parte for parte in (self.enviado, self.restante) if parte)
+
+
+def leitura_do_envio(texto: str) -> LeituraDoEnvio | None:
+    """Le o cartao de status, ou `None` quando ele nao mostra percentual.
+
+    `None` e resposta, nao erro: o cartao passa um instante sem numero antes de
+    comecar, e fica sem numero de novo ao terminar.
+
+    >>> leitura_do_envio("a.mp4\\n1080P\\n5.34MB/68.3MB\\nFaltam 39 segundos\\nCancelar\\n7.82%")
+    LeituraDoEnvio(percentual=7.82, enviado='5.34MB/68.3MB', restante='faltam 39 segundos')
+    >>> leitura_do_envio("a.mp4\\n1080P\\nEnviado（68.3MB）\\nSubstituir") is None
+    True
+    """
+    achados = _PERCENTUAL.findall(texto or "")
+    if not achados:
+        return None
+    tamanho = _TAMANHO_ENVIADO.search(texto)
+    restante = _TEMPO_RESTANTE.search(texto)
+    return LeituraDoEnvio(
+        percentual=min(float(achados[-1].replace(",", ".")), 100.0),
+        enviado=re.sub(r"\s+", "", tamanho.group(0)) if tamanho else "",
+        restante=restante.group(1).strip().lower() if restante else "",
+    )
+
+
+def marco_do_envio(
+    percentual: float, ultimo_marco: int, passo: int = PASSO_DO_LOG_DO_ENVIO
+) -> int | None:
+    """O marco que este percentual cruzou, se for novo.
+
+    >>> marco_do_envio(7.82, 0) is None
+    True
+    >>> marco_do_envio(14.41, 0)
+    10
+    >>> marco_do_envio(18.8, 10) is None
+    True
+    >>> marco_do_envio(41.15, 10)
+    40
+    """
+    marco = int(percentual // passo) * passo
+    return marco if marco > ultimo_marco else None

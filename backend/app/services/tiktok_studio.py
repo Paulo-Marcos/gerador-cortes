@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import threading
 import time
 from pathlib import Path
@@ -59,7 +60,10 @@ from app.domain.tiktok_studio import (
     Passo,
     RoteiroInterrompido,
     descricao_do_progresso,
+    leitura_do_envio,
+    marco_do_envio,
 )
+from app.domain.time_convert import seg_to_duracao_humana
 from app.services.navegador_assistido import (
     NavegadorIndisponivel,
     Pagina,
@@ -105,6 +109,14 @@ SEGUNDOS_PARA_CAPA = 20.0
 SEGUNDOS_PARA_TUTORIAL = 8.0
 SEGUNDOS_PARA_PROCESSAR = 900.0
 SEGUNDOS_PARA_AGENDAR = 15.0
+
+# O acompanhamento do envio le o cartao de status de meio em meio segundo. E
+# desiste de acompanhar depois de dez segundos sem ver percentual: o cartao
+# MEDIDO fica sem numero por ~1,5s antes de comecar, e sem numero por mais que
+# isso so se o TikTok tiver mudado o cartao — ai o log fica mudo, e a espera que
+# decide segue sozinha.
+INTERVALO_DO_ENVIO = 0.5
+LEITURAS_SEM_PERCENTUAL = 20
 
 # Quantas vezes viramos o mes procurando o dia pedido. Um basta: a janela de
 # agendamento do TikTok e curta, e um alvo que nao apareceu depois de virar uma
@@ -293,6 +305,7 @@ def executar_roteiro(
     # aparecia. Num corte de verdade ele chega depois. O ensaio passou e a
     # execução real falhou pelo mesmo motivo — a assinatura de uma corrida, e
     # não de lentidão.
+    _acompanhar_envio(pagina)
     _passo(
         pagina.esperar_texto,
         Passo.PROCESSAMENTO,
@@ -612,6 +625,51 @@ def _tentar_capa(pagina: Pagina, capa: Path) -> str:
         return ""
     except Exception as exc:  # noqa: BLE001 — qualquer falha aqui vira aviso
         return f"{type(exc).__name__}: {exc}"
+
+
+def _acompanhar_envio(pagina: Pagina) -> None:
+    """Conta no log o percentual do envio, lendo o cartao de status. Nunca decide.
+
+    O operador acompanha o upload pelo console; sem isto, um corte de 300 MB
+    ficava minutos numa linha so ("subindo video.mp4") e parecia travado.
+
+    Quem decide se o envio terminou continua sendo o `esperar_texto` logo depois:
+    se o TikTok mudar o cartao, este acompanhamento para de falar e o roteiro
+    segue exatamente como antes.
+    """
+    if not pagina.existe("status_do_upload", segundos=SEGUNDOS_PARA_ELEMENTO, visivel=False):
+        return
+    inicio = time.monotonic()
+    ultimo_marco = 0
+    sem_percentual = 0
+    while time.monotonic() - inicio < SEGUNDOS_PARA_PROCESSAR:
+        texto = _ler_status_do_envio(pagina)
+        if re.search(ENVIO_CONCLUIDO, texto, re.IGNORECASE):
+            decorrido = seg_to_duracao_humana(time.monotonic() - inicio)
+            logger.info("[TikTokStudio] envio concluido em %s", decorrido)
+            return
+        leitura = leitura_do_envio(texto)
+        if leitura is None:
+            sem_percentual += 1
+            if sem_percentual > LEITURAS_SEM_PERCENTUAL:
+                logger.debug("[TikTokStudio] cartao de status sem percentual; paro de acompanhar")
+                return
+        else:
+            sem_percentual = 0
+            marco = marco_do_envio(leitura.percentual, ultimo_marco)
+            if marco is not None:
+                ultimo_marco = marco
+                logger.info(
+                    "[TikTokStudio] envio %d%% (%s)", int(leitura.percentual), leitura.detalhe
+                )
+        time.sleep(INTERVALO_DO_ENVIO)
+
+
+def _ler_status_do_envio(pagina: Pagina) -> str:
+    try:
+        return pagina.texto_de("status_do_upload")
+    except Exception:  # noqa: BLE001 — cartao redesenhando entre duas leituras
+        return ""
 
 
 def _passo(funcao, passo: Passo, *args, **kwargs) -> None:

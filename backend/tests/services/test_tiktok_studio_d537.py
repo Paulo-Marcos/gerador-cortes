@@ -71,6 +71,10 @@ class PaginaFalsa:
 
     def texto_de(self, alvo):
         self.chamadas.append(("ler", alvo))
+        if alvo == "status_do_upload":
+            # O cartao MEDIDO quando o arquivo terminou de subir. Falhando, ele
+            # nunca mostra nada — nem percentual, nem "Enviado".
+            return "" if alvo in self.falhar else "video.mp4\n1080P\nEnviado（1MB）"
         if self.sobrescreve > 0:
             # O TikTok acabou de por o nome do arquivo por cima do que
             # escrevemos — exatamente o que acontecia no upload de verdade.
@@ -140,6 +144,12 @@ def arquivos(tmp_path):
     capa = tmp_path / "capa.png"
     capa.write_bytes(b"png")
     return video, capa
+
+
+@pytest.fixture(autouse=True)
+def sem_espera_no_envio(monkeypatch):
+    """O acompanhamento le o cartao de meio em meio segundo; num teste e so demora."""
+    monkeypatch.setattr(tiktok_studio, "INTERVALO_DO_ENVIO", 0.0)
 
 
 def _rodar(pagina, arquivos, **kwargs):
@@ -333,6 +343,77 @@ class TestFalhas:
 
         ordem = [c[1] for c in pagina.chamadas]
         assert ordem.index("status_do_upload") < ordem.index("botao_publicar")
+
+
+# Textos do cartao de status copiados da medicao de 14/09/2026 (short de 68 MB).
+CARTAO_A_7 = "short.mp4\n1080P\n5.34MB/68.3MB\nDuração: 0m40s\nFaltam 39 segundos\nCancelar\n7.82%"
+CARTAO_A_14 = (
+    "short.mp4\n1080P\n9.84MB/68.3MB\nDuração: 0m40s\nFaltam 26 segundos\nCancelar\n14.41%"
+)
+CARTAO_A_18 = (
+    "short.mp4\n1080P\n12.84MB/68.3MB\nDuração: 0m40s\nFaltam 23 segundos\nCancelar\n18.8%"
+)
+CARTAO_A_41 = (
+    "short.mp4\n1080P\n28.1MB/68.3MB\nDuração: 0m40s\nFaltam 17 segundos\nCancelar\n41.15%"
+)
+CARTAO_ENVIADO = "short.mp4\n1080P\nEnviado（68.3MB）\nSubstituir"
+
+
+class TestAcompanhamentoDoEnvio:
+    """O percentual do envio no log, lido do cartao de status."""
+
+    def test_le_percentual_tamanho_e_tempo_do_cartao_medido(self):
+        from app.domain.tiktok_studio import leitura_do_envio
+
+        leitura = leitura_do_envio(CARTAO_A_14)
+
+        assert leitura.percentual == 14.41
+        assert leitura.detalhe == "9.84MB/68.3MB, faltam 26 segundos"
+
+    def test_o_cartao_concluido_nao_tem_percentual_mas_casa_com_enviado(self):
+        import re
+
+        from app.domain.tiktok_studio import leitura_do_envio
+
+        assert leitura_do_envio(CARTAO_ENVIADO) is None
+        assert re.search(tiktok_studio.ENVIO_CONCLUIDO, CARTAO_ENVIADO, re.IGNORECASE)
+
+    def test_o_log_fala_de_dez_em_dez_e_avisa_o_fim(self, arquivos, caplog):
+        import logging
+
+        class CartaoQueSobe(PaginaFalsa):
+            cartoes = [CARTAO_A_7, CARTAO_A_14, CARTAO_A_18, CARTAO_A_41, CARTAO_ENVIADO]
+
+            def texto_de(self, alvo):
+                if alvo == "status_do_upload":
+                    return self.cartoes.pop(0) if len(self.cartoes) > 1 else self.cartoes[0]
+                return super().texto_de(alvo)
+
+        caplog.set_level(logging.INFO, logger="app.services.tiktok_studio")
+
+        _rodar(CartaoQueSobe(), arquivos)
+
+        assert "envio 7%" not in caplog.text  # abaixo do primeiro marco
+        assert "envio 14% (9.84MB/68.3MB, faltam 26 segundos)" in caplog.text
+        assert "envio 18%" not in caplog.text  # mesmo marco dos 14%
+        assert "envio 41%" in caplog.text
+        assert "envio concluido" in caplog.text
+
+    def test_cartao_sem_percentual_para_de_acompanhar_e_o_roteiro_segue(self, arquivos):
+        class CartaoMudo(PaginaFalsa):
+            def texto_de(self, alvo):
+                if alvo == "status_do_upload":
+                    self.chamadas.append(("ler", alvo))
+                    return "short.mp4\n1080P"  # layout novo: nem numero, nem "Enviado"
+                return super().texto_de(alvo)
+
+        pagina = CartaoMudo()
+
+        relatorio = _rodar(pagina, arquivos)
+
+        leituras = [c for c in pagina.chamadas if c == ("ler", "status_do_upload")]
+        assert len(leituras) == tiktok_studio.LEITURAS_SEM_PERCENTUAL + 1
+        assert "enviando o vídeo" in relatorio["resumo"]
 
 
 class TestTutorial:
