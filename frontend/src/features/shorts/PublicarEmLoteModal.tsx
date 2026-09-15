@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
+import { motivoDoErro } from './shortsApi';
 import type { EstadoItemLote, ItemDoLote, RaiaDoLote, ShortSugerido } from './shortsApi';
 import {
   alternar,
@@ -191,7 +192,7 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
       <div className="space-y-4">
         {criar.isError && (
           <p className="rounded-[8px] bg-[var(--wb-bg-inset)] p-2.5 text-[12px] text-[var(--wb-text-dim)]">
-            {(criar.error as Error)?.message ?? 'nao consegui criar o lote'}
+            {motivoDoErro(criar.error, 'não consegui criar o lote')}
           </p>
         )}
 

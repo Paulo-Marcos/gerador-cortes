@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cabecalhosDa } from '../shortsApi';
+import { cabecalhosDa, motivoDoErro } from '../shortsApi';
 
 // D-529: o 422 ao subir a arte da capa do TikTok.
 //
@@ -42,5 +42,32 @@ describe('cabecalhosDa', () => {
     }) as Record<string, string>;
 
     expect(cabecalhos['X-Teste']).toBe('sim');
+  });
+});
+
+// O 422 do agendamento chegava na tela como
+// `422 Unprocessable Content — {"detail":"..."}`: o motivo estava lá, afogado
+// no JSON. O operador precisa ler a frase, não o envelope.
+describe('motivoDoErro', () => {
+  it('tira a frase do detail', () => {
+    const erro = new Error('422 Unprocessable Content — {"detail":"escolha outro horário"}');
+
+    expect(motivoDoErro(erro, 'falhou')).toBe('escolha outro horário');
+  });
+
+  it('junta as mensagens quando o detail é a lista do FastAPI', () => {
+    const erro = new Error(
+      '422 Unprocessable Content — {"detail":[{"msg":"campo obrigatório"},{"msg":"tipo errado"}]}',
+    );
+
+    expect(motivoDoErro(erro, 'falhou')).toBe('campo obrigatório; tipo errado');
+  });
+
+  it('sem JSON, devolve a mensagem como veio', () => {
+    expect(motivoDoErro(new Error('502 Bad Gateway'), 'falhou')).toBe('502 Bad Gateway');
+  });
+
+  it('sem erro legível, usa o texto padrão', () => {
+    expect(motivoDoErro(undefined, 'nao consegui criar o lote')).toBe('nao consegui criar o lote');
   });
 });

@@ -27,6 +27,33 @@ export function cabecalhosDa(init?: RequestInit): HeadersInit {
   };
 }
 
+/**
+ * A frase que o backend escreveu em `detail`, sem o envelope do `request`.
+ *
+ * O `request` lança `"<status> <texto> — <corpo>"`: bom para log, ruim para a
+ * tela, onde o motivo de um 422 ficava afogado em JSON.
+ */
+export function motivoDoErro(erro: unknown, padrao: string): string {
+  if (!(erro instanceof Error) || !erro.message) return padrao;
+
+  const inicioDoCorpo = erro.message.indexOf('{');
+  if (inicioDoCorpo < 0) return erro.message;
+
+  try {
+    const { detail } = JSON.parse(erro.message.slice(inicioDoCorpo)) as { detail?: unknown };
+    if (typeof detail === 'string' && detail) return detail;
+    if (Array.isArray(detail)) {
+      const mensagens = detail
+        .map((item) => (item as { msg?: unknown })?.msg)
+        .filter((msg): msg is string => typeof msg === 'string');
+      if (mensagens.length) return mensagens.join('; ');
+    }
+  } catch {
+    // Corpo que não é JSON: a mensagem crua ainda diz mais que o texto padrão.
+  }
+  return erro.message;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: cabecalhosDa(init),
