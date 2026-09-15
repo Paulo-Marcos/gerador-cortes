@@ -761,6 +761,17 @@ async def definir_palco_padrao(corte_id: str, body: PalcoPadraoRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.post("/corte/{corte_id}/palco-padrao/seguir")
+async def seguir_palco_padrao(corte_id: str):
+    """Todos os trechos voltam a herdar o palco padrao. Bordas e gancho ficam."""
+    from app.services import palco_shorts
+
+    try:
+        return await palco_shorts.seguir_palco_padrao_em_todos(corte_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 class GanchoPadraoRequest(BaseModel):
     preset_id: str | None = None
 

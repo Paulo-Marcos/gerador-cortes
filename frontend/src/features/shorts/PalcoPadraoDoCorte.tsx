@@ -1,6 +1,6 @@
 import { LayoutTemplate, Pencil, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useDefinirPalcoPadrao, usePalcoPadrao } from './useShortsDoCorte';
+import { useDefinirPalcoPadrao, usePalcoPadrao, useSeguirPalcoPadrao } from './useShortsDoCorte';
 
 // D-570: o palco que vale para TODOS os shorts deste corte.
 //
@@ -45,14 +45,28 @@ interface Props {
 export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
   const padrao = usePalcoPadrao(corteId);
   const definir = useDefinirPalcoPadrao(corteId);
+  const seguir = useSeguirPalcoPadrao(corteId);
 
   if (padrao.isLoading || padrao.isError) return null;
 
   const disponiveis = padrao.data?.disponiveis ?? [];
   const escolhido = padrao.data?.palco_padrao ?? '';
+  const customizados = padrao.data?.customizados ?? 0;
   const semTrecho = 'Crie um trecho antes: o palco é montado sobre o quadro dele.';
 
+  // Aplicar um palco num trecho COPIA os valores (D-552): o trecho parece
+  // seguir o padrão, mas congelou. Sem este aviso, trocar o padrão "não muda
+  // nada" justamente nele — a mesma armadilha que o gancho já resolveu assim.
+  const fazerTodosSeguirem = () => {
+    const pergunta =
+      `${customizados} ${customizados === 1 ? 'trecho tem' : 'trechos têm'} palco próprio ` +
+      '(arranjo, janelas, textura ou legenda). Eles passam a seguir o palco padrão do corte — ' +
+      'bordas e gancho continuam como estão. Continuar?';
+    if (confirm(pergunta)) seguir.mutate();
+  };
+
   return (
+    <div className="space-y-1">
     <div className="flex flex-wrap items-center gap-1.5">
       <span className="inline-flex w-[58px] items-center gap-1 font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
         <LayoutTemplate size={11} aria-hidden />
@@ -97,6 +111,21 @@ export function PalcoPadraoDoCorte({ corteId, podeEditar, onEditar }: Props) {
         <Plus />
         novo
       </Button>
+    </div>
+
+    {escolhido && customizados > 0 && (
+      <p className="pl-[64px] text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+        {customizados} {customizados === 1 ? 'trecho não segue' : 'trechos não seguem'} o padrão.{' '}
+        <button
+          type="button"
+          disabled={seguir.isPending}
+          onClick={fazerTodosSeguirem}
+          className="text-[var(--wb-accent)] underline-offset-2 hover:underline disabled:opacity-45"
+        >
+          fazer todos seguirem
+        </button>
+      </p>
+    )}
     </div>
   );
 }

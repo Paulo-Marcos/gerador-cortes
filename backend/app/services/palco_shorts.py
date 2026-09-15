@@ -55,6 +55,10 @@ ORIGEM_NENHUMA = "nenhuma"
 # a origem, e "preset" seria mentira depois de o operador ter arrastado o
 # retangulo com a mao.
 ORIGEM_RECORTE_DO_SHORT = "recorte_do_short"
+# Os recortes vieram do palco padrao do corte, que o trecho segue sem ter sido
+# tocado. Dizer "layout do corte" ali mandaria o operador procurar a causa no
+# lugar errado.
+ORIGEM_PALCO_PADRAO = "palco_padrao_do_corte"
 
 TIPO_PALCO = "palco_short"
 TIPO_GANCHO = "gancho_short"
@@ -148,7 +152,7 @@ def _aparencia(moldura: str, fundo: str, textura: str, herdado: dict, gancho: di
     }
 
 
-def _sem_palco(aparencia: dict) -> dict:
+def _sem_palco(aparencia: dict, regioes: dict) -> dict:
     """A resposta de quando não há palco a montar.
 
     Uma função só, porque os dois caminhos que chegam aqui — sem região marcada,
@@ -162,6 +166,7 @@ def _sem_palco(aparencia: dict) -> dict:
         "janela_cheia": "",
         "modelo": None,
         "ajustes": {},
+        "regioes": regioes,
         **aparencia,
     }
 
@@ -188,11 +193,10 @@ def catalogo_fundos() -> list[dict]:
 
 # D-570: os campos que o short herda do palco padrao do corte.
 #
-# So os de COMO A TELA MONTA. Os `recortes` ficam de fora de proposito: eles
-# respondem DE ONDE VEM cada janela, tem cascata propria (recorte do short >
-# preset do short > preset do corte > layout do corte) e sao o eixo que o
-# operador disse nao querer pensar. Misturar os dois aqui seria refazer no
-# palco a pergunta que o RECORTES ja responde.
+# So os de COMO A TELA MONTA. Os `recortes` nao passam por aqui: eles respondem
+# DE ONDE VEM cada janela e sao herdados REGIAO A REGIAO, na cascata propria
+# (`regioes_do_short`). Campo a campo, um padrao com so a pessoa apagaria a tela
+# que o corte ja tinha marcado.
 # D-594: o gancho SAIU daqui. A D-585 o pos na heranca do palco para a
 # aparencia ser definida uma vez por corte — a intencao continua, o dono mudou.
 # Ele agora tem preset proprio (`Corte.gancho_padrao`, resolvido em
@@ -256,6 +260,40 @@ def _e_retangulo(valor: object) -> bool:
     except (KeyError, TypeError, ValueError):
         return False
     return lados["w"] > 0 and lados["h"] > 0 and lados["x"] >= 0 and lados["y"] >= 0
+
+
+def _recortes_validos(recortes: object) -> dict:
+    """Só os retângulos utilizáveis de um mapa de recortes."""
+    if not isinstance(recortes, dict):
+        return {}
+    return {regiao: ret for regiao, ret in recortes.items() if _e_retangulo(ret)}
+
+
+def regioes_do_short(
+    do_corte: dict, origem: str, do_padrao: dict, proprias: dict
+) -> tuple[dict, str]:
+    """As regioes de UM short: as do corte, cobertas pelas do palco padrao e pelas dele.
+
+    Regiao a regiao, nesta ordem: o recorte do trecho > o do palco padrao do
+    corte > o que o corte ja resolvia (preset de recortes ou layout).
+
+    O padrao entrar aqui e o que faz "escolher o palco do corte" valer para
+    todos os trechos. Sem os recortes dele, um corte nunca posicionado nao tinha
+    regiao nenhuma: o trecho que ninguem tocou saia sem palco, enquanto o vizinho
+    em que o mesmo preset fora aplicado a mao saia montado — e trocar o padrao
+    parecia nao fazer nada.
+
+    >>> regioes_do_short({"tela": 1}, "layout_do_corte", {"pessoa": 2}, {})
+    ({'tela': 1, 'pessoa': 2}, 'palco_padrao_do_corte')
+    >>> regioes_do_short({}, "nenhuma", {"pessoa": 2}, {"pessoa": 3})
+    ({'pessoa': 3}, 'recorte_do_short')
+    """
+    regioes = {**do_corte, **do_padrao, **proprias}
+    if proprias:
+        return regioes, ORIGEM_RECORTE_DO_SHORT
+    if do_padrao:
+        return regioes, ORIGEM_PALCO_PADRAO
+    return regioes, origem
 
 
 async def descrever(corte_id: str) -> dict:
@@ -331,8 +369,27 @@ async def escolher_palco_padrao(corte_id: str, preset_id: str) -> dict:
     return {"corte_id": corte_id, "palco_padrao": preset_id}
 
 
+def _tem_palco_proprio(short: Short) -> bool:
+    """O trecho decidiu alguma parte do palco por conta propria.
+
+    Aplicar um preset no trecho COPIA os valores (D-552), entao um trecho com
+    o mesmo preset do padrao tambem conta: ele parece seguir, mas congelou o
+    preset do dia em que foi aplicado.
+    """
+    return bool(
+        short.arranjo_palco
+        or short.janela_cheia
+        or short.fundo_editorial
+        or short.legenda_cor
+        or short.legenda_fonte
+        or short.palco_preset
+        or _json_dict(short.ajustes_palco)
+        or _json_dict(short.recortes_palco)
+    )
+
+
 async def descrever_palco_padrao(corte_id: str) -> dict:
-    """Qual palco este corte usa por padrao, e quais existem para escolher."""
+    """Qual palco este corte usa por padrao, os que existem, e quantos fogem dele."""
     async with AsyncSessionLocal() as db:
         corte = await db.get(Corte, corte_id)
         if not corte:
@@ -340,13 +397,46 @@ async def descrever_palco_padrao(corte_id: str) -> dict:
         presets = (
             await db.scalars(select(LayoutPreset).where(LayoutPreset.tipo == "palco_short"))
         ).all()
+        shorts = (await db.scalars(select(Short).where(Short.corte_id == corte_id))).all()
         escolhido = corte.palco_padrao
 
     return {
         "palco_padrao": escolhido,
         "nome": next((p.nome for p in presets if p.id == escolhido), ""),
         "disponiveis": [{"id": p.id, "nome": p.nome} for p in presets],
+        # Mesmo motivo do gancho: sem o numero, trocar o padrao "nao muda nada"
+        # justamente nos trechos em que um preset ja tinha sido aplicado.
+        "customizados": sum(1 for s in shorts if _tem_palco_proprio(s)),
     }
+
+
+async def seguir_palco_padrao_em_todos(corte_id: str) -> dict:
+    """Limpa o palco proprio de todos os trechos do corte: todos passam a herdar.
+
+    So o PALCO — arranjo, janelas, recortes, textura e legenda. Bordas, gancho e
+    moldura ficam: nao sao do preset de palco.
+    """
+    async with AsyncSessionLocal() as db:
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise LookupError(f"Corte {corte_id!r} nao encontrado")
+        shorts = (await db.scalars(select(Short).where(Short.corte_id == corte_id))).all()
+        liberados = 0
+        for short in shorts:
+            if _tem_palco_proprio(short):
+                liberados += 1
+            short.arranjo_palco = ""
+            short.janela_cheia = ""
+            short.ajustes_palco = "{}"
+            short.recortes_palco = "{}"
+            short.fundo_editorial = ""
+            short.legenda_cor = ""
+            short.legenda_fonte = ""
+            short.palco_preset = ""
+            short.palco_short_preset = ""
+        await db.commit()
+
+    return {"corte_id": corte_id, "liberados": liberados}
 
 
 async def escolher_gancho_padrao(corte_id: str, preset_id: str) -> dict:
@@ -491,14 +581,18 @@ async def resolver_para_render(
         # preset segue sendo o atalho que preenche tudo — quem não quer mexer
         # não mexe —, mas quando a facecam anda no meio da live é aqui que um
         # trecho conserta o próprio enquadramento sem estragar os vizinhos.
-        proprios = {
-            regiao: retangulo
-            for regiao, retangulo in campos["recortes_palco"].items()
-            if _e_retangulo(retangulo)
-        }
-        if proprios:
-            regioes = {**regioes, **proprios}
-            origem = ORIGEM_RECORTE_DO_SHORT
+        #
+        # O palco padrão do corte entra no meio da cascata — menos para o trecho
+        # que escolheu o próprio preset de recortes (D-498): esse já disse de
+        # onde vem cada janela, e o padrão por cima o desfaria em silêncio.
+        do_padrao = (
+            {}
+            if origem == ORIGEM_PRESET_SHORT
+            else _recortes_validos((padrao or {}).get("recortes"))
+        )
+        regioes, origem = regioes_do_short(
+            regioes, origem, do_padrao, _recortes_validos(campos["recortes_palco"])
+        )
         escolhido = herdado.get("arranjo", "")
         janela = herdado.get("janela_cheia", "")
         # MESCLA, não substitui: o arraste manda só o bloco que está na mão,
@@ -524,7 +618,7 @@ async def resolver_para_render(
         aparencia = _aparencia(moldura, fundo, textura, herdado, gancho)
 
     if not regioes:
-        return _sem_palco(aparencia)
+        return _sem_palco(aparencia, regioes)
 
     arranjo = arranjo_de_chave(escolhido, janela) if escolhido else arranjo_sugerido(regioes)
     modelo = montar_modelo(arranjo, regioes)
@@ -542,7 +636,7 @@ async def resolver_para_render(
         arranjo = arranjo_sugerido(regioes)
         modelo = montar_modelo(arranjo, regioes)
     if modelo is None:
-        return _sem_palco(aparencia)
+        return _sem_palco(aparencia, regioes)
 
     plano = montar_plano(modelo, regioes, ajustes)
 
@@ -553,6 +647,7 @@ async def resolver_para_render(
         "janela_cheia": fonte_efetiva(arranjo.fonte, regioes),
         "modelo": modelo.id,
         "ajustes": ajustes,
+        "regioes": regioes,
         **aparencia,
     }
 
@@ -578,6 +673,12 @@ async def plano_desenhavel(
     return {
         "origem": resolvido["origem"],
         "modelo": resolvido["modelo"],
+        # O arranjo RESOLVIDO, e o que as regioes DESTE trecho permitem. O modal
+        # marcava o arranjo gravado no short (vazio quando ele herda) e julgava
+        # o possivel pelas regioes do CORTE: num corte sem regiao, tudo vinha
+        # desabilitado mesmo com o trecho montando palco pelos recortes.
+        "arranjo": resolvido["arranjo"],
+        "arranjos": catalogo_arranjos(resolvido["regioes"]),
         "canvas": {"largura": CANVAS.largura, "altura": CANVAS.altura},
         "fundo": resolvido["fundo"],
         # D-549: a TEXTURA do palco. A previa pintava so `fundo` — uma cor

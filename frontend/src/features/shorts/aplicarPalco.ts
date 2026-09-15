@@ -75,6 +75,42 @@ export function mudancaDoPalco(
  * de padrões. Duas cópias da lista de campos divergiriam no dia em que um
  * entrasse — foi assim que `fundo` e `ajustes` chegaram errados na D-561.
  */
+/**
+ * O trecho decidiu alguma parte do palco — espelho de `_tem_palco_proprio`.
+ *
+ * Sem nenhuma, ele SEGUE o palco padrão do corte, e o select tem de dizer isso.
+ * Dizia "ajustado à mão": o vazio da marca de preset era lido como mão, e o
+ * operador via "ajustado" num trecho em que nunca tinha tocado.
+ */
+export function temPalcoProprio(short: ShortSugerido): boolean {
+  return Boolean(
+    short.arranjo_palco ||
+      short.janela_cheia ||
+      short.fundo_editorial ||
+      short.legenda_cor ||
+      short.legenda_fonte ||
+      short.palco_preset ||
+      Object.keys(short.ajustes_palco ?? {}).length > 0 ||
+      Object.keys(short.recortes_palco ?? {}).length > 0,
+  );
+}
+
+/**
+ * O PATCH que devolve o trecho ao palco padrão do corte: apaga o que ele
+ * decidiu sobre o palco, e só isso — bordas e gancho não são do palco.
+ */
+export const SEGUIR_O_PALCO_PADRAO: AtualizarShortBody = {
+  palco_short_preset: '',
+  arranjo_palco: '',
+  janela_cheia: '',
+  recortes_palco: {},
+  ajustes_palco: {},
+  fundo_editorial: '',
+  legenda_cor: '',
+  legenda_fonte: '',
+  palco_preset: '',
+};
+
 export function palcoDoShort(short: ShortSugerido): PalcoShortPreset {
   return {
     arranjo: short.arranjo_palco,

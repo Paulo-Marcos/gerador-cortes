@@ -127,6 +127,13 @@ export function DefinirPalcoModal({
   const simulacao = useSimulacaoDePalco(short.id, rascunho?.campos);
   const planoNaTela = simulacao.simulado ?? plano;
 
+  // O catálogo e o arranjo em uso vêm do PLANO, que resolve as regiões deste
+  // trecho (recortes dele e do palco padrão). O catálogo por corte fica só
+  // enquanto o plano não chega: julgado pelas regiões do corte, um corte nunca
+  // posicionado desabilitava todos os arranjos de um trecho que monta palco.
+  const catalogoDeArranjos = planoNaTela?.arranjos ?? arranjos.data?.arranjos ?? [];
+  const arranjoEmUso = planoNaTela?.arranjo ?? short.arranjo_palco;
+
   // O rascunho do arraste vive até o plano novo chegar — a mesma regra da
   // página. Sem isto a última simulação ficava por cima para sempre, e trocar
   // o fundo depois de mover um bloco não mudava nada na prévia.
@@ -161,7 +168,7 @@ export function DefinirPalcoModal({
         <div className="space-y-4">
           <Secao numero={1} titulo="Como a tela monta">
             <div className="space-y-1">
-              {(arranjos.data?.arranjos ?? []).map((arranjo) => (
+              {catalogoDeArranjos.map((arranjo) => (
                 <button
                   key={arranjo.chave}
                   type="button"
@@ -169,14 +176,14 @@ export function DefinirPalcoModal({
                   onClick={() => onAplicar({ arranjo_palco: arranjo.chave })}
                   className={cn(
                     'w-full rounded-[8px] border px-2.5 py-2 text-left transition-colors disabled:opacity-45',
-                    short.arranjo_palco === arranjo.chave
+                    arranjoEmUso === arranjo.chave
                       ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
                       : 'border-[var(--wb-border-soft)] hover:bg-[var(--wb-bg-inset)]',
                   )}
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="text-[12.5px] font-semibold">{arranjo.nome}</span>
-                    {short.arranjo_palco === arranjo.chave && (
+                    {arranjoEmUso === arranjo.chave && (
                       <Check size={12} className="text-[var(--wb-accent-strong)]" aria-hidden />
                     )}
                   </div>

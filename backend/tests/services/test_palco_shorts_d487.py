@@ -702,11 +702,101 @@ class TestPalcoDeRascunho:
         async with ambiente() as db:
             assert (await db.get(Short, "s1")).legenda_cor == ""
 
-    def test_os_recortes_ficam_de_fora_de_proposito(self):
-        """Eles respondem DE ONDE VEM, tem cascata propria, e sao justamente o
-        eixo que o operador disse nao querer pensar."""
+    def test_os_recortes_nao_herdam_campo_a_campo(self):
+        """Eles herdam REGIAO A REGIAO, em `regioes_do_short`. Campo a campo, um
+        padrao com so a pessoa apagaria a tela que o corte ja tinha marcado."""
         herdado = servico.com_palco_do_corte(
             {"arranjo": ""}, {"arranjo": "cheia", "recortes": {"pessoa": {"x": 9}}}
         )
 
         assert "recortes" not in herdado
+
+
+class TestRecortesDoPalcoPadrao:
+    """O palco padrao do corte leva as JANELAS junto, e nao so a aparencia.
+
+    "Se eu altero os padroes do corte, e para todos os shorts ficarem com o
+    padrao selecionado." Sem os recortes do padrao, num corte nunca posicionado
+    o trecho que ninguem tocou saia sem palco — e trocar o padrao nao mudava
+    nada na tela.
+    """
+
+    PESSOA = {"x": 50, "y": 60, "w": 400, "h": 300}
+
+    @staticmethod
+    async def _com_padrao(ambiente, payload: dict) -> None:
+        async with ambiente() as db:
+            db.add(
+                LayoutPreset(
+                    id="palco-1", nome="Padrao", tipo="palco_short", payload=json.dumps(payload)
+                )
+            )
+            await db.commit()
+        await servico.escolher_palco_padrao("c1", "palco-1")
+
+    @pytest.mark.asyncio
+    async def test_corte_sem_regiao_ganha_palco_pelo_padrao(self, ambiente):
+        await self._com_padrao(ambiente, {"arranjo": "cheia", "recortes": {"pessoa": self.PESSOA}})
+
+        plano = await servico.plano_desenhavel("s1")
+
+        assert plano["recortes"]
+        assert plano["origem"] == servico.ORIGEM_PALCO_PADRAO
+        assert plano["arranjo"] == "cheia"
+
+    @pytest.mark.asyncio
+    async def test_o_catalogo_de_arranjos_segue_as_regioes_do_trecho(self, ambiente):
+        """O modal desabilitava todos os arranjos: julgava pelas regioes do CORTE."""
+        await self._com_padrao(ambiente, {"recortes": {"pessoa": self.PESSOA}})
+
+        plano = await servico.plano_desenhavel("s1")
+        cheia = next(a for a in plano["arranjos"] if a["chave"] == "cheia")
+
+        assert cheia["possivel"] is True
+
+    @pytest.mark.asyncio
+    async def test_o_padrao_cobre_so_as_regioes_que_traz(self, ambiente):
+        await servico.escolher_preset("c1", "pre-1")
+        await self._com_padrao(ambiente, {"recortes": {"pessoa": self.PESSOA}})
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["regioes"]["pessoa"] == self.PESSOA
+        assert resolvido["regioes"]["tela"]["x"] == TELA["x"]
+
+    @pytest.mark.asyncio
+    async def test_o_recorte_do_trecho_vence_o_do_padrao(self, ambiente):
+        outro = {"x": 100, "y": 100, "w": 400, "h": 300}
+        await self._com_padrao(ambiente, {"recortes": {"pessoa": self.PESSOA}})
+        async with ambiente() as db:
+            (await db.get(Short, "s1")).recortes_palco = json.dumps({"pessoa": outro})
+            await db.commit()
+
+        resolvido = await servico.resolver_para_render("s1")
+
+        assert resolvido["regioes"]["pessoa"] == outro
+        assert resolvido["origem"] == servico.ORIGEM_RECORTE_DO_SHORT
+
+    @pytest.mark.asyncio
+    async def test_seguir_o_padrao_libera_o_trecho_e_preserva_o_gancho(self, ambiente):
+        """Aplicar o preset no trecho COPIA os valores: ele parece seguir, mas
+        congelou. `fazer todos seguirem` o solta, sem encostar no gancho."""
+        await self._com_padrao(ambiente, {"legenda_cor": "#2f5f43"})
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            short.legenda_cor = "#facc15"
+            short.palco_short_preset = "palco-1"
+            short.gancho_tela = "o juro te come"
+            await db.commit()
+
+        assert (await servico.descrever_palco_padrao("c1"))["customizados"] == 1
+
+        resultado = await servico.seguir_palco_padrao_em_todos("c1")
+
+        assert resultado["liberados"] == 1
+        assert (await servico.descrever_palco_padrao("c1"))["customizados"] == 0
+        assert (await servico.plano_desenhavel("s1"))["legenda_cor"] == "#2f5f43"
+        async with ambiente() as db:
+            short = await db.get(Short, "s1")
+            assert short.gancho_tela == "o juro te come"
+            assert short.palco_short_preset == ""

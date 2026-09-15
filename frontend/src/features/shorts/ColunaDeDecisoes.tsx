@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ShortSugerido, VereditoDoRosto } from './shortsApi';
 import { janelaNova, mmss } from './linhaDoTempoShort';
-import { mudancaDoPalco } from './aplicarPalco';
+import { mudancaDoPalco, SEGUIR_O_PALCO_PADRAO } from './aplicarPalco';
 import { CandidatoCard } from './CandidatoCard';
 import { GanchoPadraoDoCorte } from './GanchoPadraoDoCorte';
 import { PalcoPadraoDoCorte } from './PalcoPadraoDoCorte';
@@ -189,6 +189,7 @@ export function ColunaDeDecisoes({
           onPalco={(presetId, payload) =>
             edicao.gravar(short.id, mudancaDoPalco(presetId, payload))
           }
+          onSeguirPadrao={() => edicao.gravar(short.id, SEGUIR_O_PALCO_PADRAO)}
           onDefinirPalco={() => onDefinirPalco(short.id)}
           onEscreverGancho={() => onEscreverGancho(short.id)}
           onPrevia={() => previa.mutate(short.id)}

@@ -19,7 +19,12 @@ import { LinhaDeAjuste } from './LinhaDeAjuste';
 import { PainelPublicacao } from './PainelPublicacao';
 import { ProgressoRenderPanel } from './ProgressoRenderPanel';
 import { shortVideoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
-import { useCapaDoShort, useProgressoRender } from './useShortsDoCorte';
+import {
+  useCapaDoShort,
+  useGanchoPadrao,
+  usePalcoPadrao,
+  useProgressoRender,
+} from './useShortsDoCorte';
 import { useFechoDoShort } from './useFechoDoShort';
 
 // D-492: o card de um candidato, reorganizado.
@@ -53,6 +58,7 @@ interface Props {
   enquadrando: boolean;
   vereditoDoRosto: string;
   onPalco: (presetId: string, payload: PalcoShortPreset | null) => void;
+  onSeguirPadrao: () => void;
   /** D-542: abre o modal do palco já neste candidato. */
   onDefinirPalco: () => void;
   /** D-565: abre o modal do gancho já neste candidato. */
@@ -81,11 +87,17 @@ export function CandidatoCard({
   enquadrando,
   vereditoDoRosto,
   onPalco,
+  onSeguirPadrao,
   onDefinirPalco,
   onEscreverGancho,
   onPrevia,
   onRenderizar,
 }: Props) {
+  // Os padrões do corte, lidos do cache que o menu de padrões já carregou: o
+  // card mostra o que o trecho HERDA, e não só o que ele gravou.
+  const palcoPadrao = usePalcoPadrao(corteId);
+  const ganchoPadrao = useGanchoPadrao(corteId);
+  const corDoGancho = short.gancho_cor || ganchoPadrao.data?.payload.cor || '';
   // O hook mora AQUI, e nao no pai: e um por candidato, e um laco no pai nao
   // pode chamar hooks. Consulta uma vez ao montar e so entra em polling se
   // achar algo rodando.
@@ -240,12 +252,15 @@ export function CandidatoCard({
               <span
                 aria-hidden
                 title={
-                  short.gancho_cor
-                    ? `Gancho em ${short.gancho_cor}`
+                  corDoGancho
+                    ? `Gancho em ${corDoGancho}${short.gancho_cor ? '' : ' (do padrão do corte)'}`
                     : 'Gancho em branco (o padrão)'
                 }
                 className="h-2.5 w-2.5 flex-none rounded-full border border-[var(--wb-border)]"
-                style={{ backgroundColor: short.gancho_cor || '#ffffff' }}
+                // A cor HERDADA: lida só do trecho, o ponto ficava branco em
+                // todo card que segue o gancho padrão — e trocar o padrão
+                // parecia não mudar nada.
+                style={{ backgroundColor: corDoGancho || '#ffffff' }}
               />
             ) : (
               <Plus size={11} className="flex-none opacity-70" aria-hidden />
@@ -309,6 +324,8 @@ export function CandidatoCard({
           enquadrando={enquadrando}
           vereditoDoRosto={vereditoDoRosto}
           onPalco={onPalco}
+          onSeguirPadrao={onSeguirPadrao}
+          nomeDoPadrao={palcoPadrao.data?.nome ?? ''}
           onDefinirPalco={onDefinirPalco}
         />
       )}

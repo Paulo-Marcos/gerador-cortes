@@ -2,6 +2,7 @@ import { ScanFace, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLayoutPresets } from '@/features/editor/fase2/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
+import { temPalcoProprio } from './aplicarPalco';
 import type { ShortSugerido } from './shortsApi';
 
 // D-542: dois assuntos no painel do candidato, e não seis.
@@ -37,9 +38,16 @@ interface Props {
   vereditoDoRosto: string;
   /** D-552: aplica um preset de PALCO — copia os valores e marca a origem. */
   onPalco: (presetId: string, payload: PalcoShortPreset | null) => void;
+  /** Apaga o palco próprio do trecho: ele volta a seguir o padrão do corte. */
+  onSeguirPadrao: () => void;
+  /** O nome do palco padrão do corte. Vazio = o corte não tem padrão. */
+  nomeDoPadrao: string;
   /** Abre o modal do palco JÁ neste candidato. */
   onDefinirPalco: () => void;
 }
+
+// Não é id de preset: é "sem palco próprio". Uma string que nenhum uuid repete.
+const VALOR_DO_PADRAO = '__padrao_do_corte__';
 
 export function LinhaDeAjuste({
   short,
@@ -49,8 +57,12 @@ export function LinhaDeAjuste({
   enquadrando,
   vereditoDoRosto,
   onPalco,
+  onSeguirPadrao,
+  nomeDoPadrao,
   onDefinirPalco,
 }: Props) {
+  const seguePadrao = !temPalcoProprio(short);
+
   // D-552: os presets de PALCO — os que o operador cria em "Definir palco".
   //
   // Antes este select listava os presets de RECORTE do canal (os que trazem
@@ -85,9 +97,13 @@ export function LinhaDeAjuste({
       <Grupo rotulo="palco" dica="Um palco salvo, ou o que este trecho tem hoje.">
         <select
           aria-label="Palco deste short"
-          value={short.palco_short_preset}
+          value={seguePadrao ? VALOR_DO_PADRAO : short.palco_short_preset}
           disabled={ocupado}
           onChange={(e) => {
+            if (e.target.value === VALOR_DO_PADRAO) {
+              onSeguirPadrao();
+              return;
+            }
             const escolhido = (presets.data ?? []).find((p) => p.id === e.target.value);
             onPalco(
               e.target.value,
@@ -96,9 +112,17 @@ export function LinhaDeAjuste({
           }}
           className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
         >
-          {/* "ajustado à mão" e não "nenhum": o short SEMPRE tem um palco. O
-              que pode não existir é um preset que o descreva. */}
-          <option value="">ajustado à mão</option>
+          {/* O trecho que ninguém tocou SEGUE o padrão — e escolher esta
+              opção num customizado o devolve a ele. Sem padrão no corte, o
+              que ele segue é o automático. */}
+          <option value={VALOR_DO_PADRAO}>
+            {nomeDoPadrao ? `padrão do corte · ${nomeDoPadrao}` : 'automático'}
+          </option>
+          {/* "ajustado à mão" só existe quando é verdade: há palco próprio e
+              nenhum preset o descreve. */}
+          {!seguePadrao && !short.palco_short_preset && (
+            <option value="">ajustado à mão</option>
+          )}
           {(presets.data ?? []).map((preset) => (
             <option key={preset.id} value={preset.id}>
               {preset.nome}

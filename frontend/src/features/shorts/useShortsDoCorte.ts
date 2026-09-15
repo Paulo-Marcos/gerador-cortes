@@ -186,17 +186,27 @@ export function usePalcoPadrao(corteId: string) {
   });
 }
 
+function invalidarPalco(qc: ReturnType<typeof useQueryClient>, corteId: string) {
+  void qc.invalidateQueries({ queryKey: ['shorts', 'palco-padrao', corteId] });
+  // A herança é resolvida na LEITURA, então trocar o padrão muda o plano de
+  // todo short que não customizou — e é a lista e os palcos que os mostram.
+  void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
+  void qc.invalidateQueries({ queryKey: PALCO_KEY });
+}
+
 export function useDefinirPalcoPadrao(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (presetId: string) => shortsApi.definirPalcoPadrao(corteId, presetId),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['shorts', 'palco-padrao', corteId] });
-      // A herança é resolvida na LEITURA, então trocar o padrão muda o plano de
-      // todo short que não customizou — e é a lista e os palcos que os mostram.
-      void qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) });
-      void qc.invalidateQueries({ queryKey: PALCO_KEY });
-    },
+    onSuccess: () => invalidarPalco(qc, corteId),
+  });
+}
+
+export function useSeguirPalcoPadrao(corteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => shortsApi.seguirPalcoPadrao(corteId),
+    onSuccess: () => invalidarPalco(qc, corteId),
   });
 }
 
