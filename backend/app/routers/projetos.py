@@ -681,16 +681,6 @@ class LimparArquivosRequest(BaseModel):
     limpar_brutos_fire: bool = False
 
 
-@router.get("/{projeto_id}/limpeza/previa")
-async def previa_limpeza_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    """Quantos brutos de Fire a limpeza preservaria, e quanto disco eles seguram."""
-    resultado = await ProjetoService.previa_limpeza(projeto_id, db)
-    if resultado is None:
-        raise HTTPException(status_code=404, detail="Projeto não encontrado")
-
-    return resultado
-
-
 @router.post("/{projeto_id}/limpar-arquivos")
 async def limpar_arquivos_projeto(
     projeto_id: str,

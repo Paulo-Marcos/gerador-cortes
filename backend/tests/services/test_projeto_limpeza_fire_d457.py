@@ -1,9 +1,7 @@
-"""D-457: a previa da limpeza e o opt-in de apagar os brutos dos Fires.
+"""D-457: a limpeza retem o bruto dos Fires pendentes e o opt-in de apagá-los.
 
-A previa existe para que a pergunta na tela nao seja no escuro: sem saber
-quantos brutos existem e quanto disco seguram, "quer limpar tambem?" pede uma
-decisao sem informacao. E o opt-in tem de ser mesmo opt-in — o teste do
-`limpar_brutos_fire=True` guarda contra a inversao silenciosa do default.
+O opt-in tem de ser mesmo opt-in — o teste do `limpar_brutos_fire=True`
+guarda contra a inversao silenciosa do default.
 """
 
 from datetime import UTC, datetime
@@ -63,43 +61,6 @@ async def _semear(factory, raiz, *, fire: bool, shorts_finalizados: bool = False
         db.add(MetadadoCorte(id="m1", corte_id="c1", is_fire=fire))
         await db.commit()
     return bruto
-
-
-@pytest.mark.asyncio
-async def test_previa_conta_os_brutos_de_fire_e_o_disco_que_seguram(session_factory, raiz):
-    await _semear(session_factory, raiz, fire=True)
-
-    async with session_factory() as db:
-        previa = await ProjetoService.previa_limpeza("p1", db)
-
-    assert previa == {"brutos_fire": 1, "retido_mb": 2.1}
-
-
-@pytest.mark.asyncio
-async def test_previa_nao_conta_fire_com_shorts_finalizados(session_factory, raiz):
-    """A previa segue a mesma regra da limpeza: Fire finalizado nao e retido."""
-    await _semear(session_factory, raiz, fire=True, shorts_finalizados=True)
-
-    async with session_factory() as db:
-        previa = await ProjetoService.previa_limpeza("p1", db)
-
-    assert previa == {"brutos_fire": 0, "retido_mb": 0.0}
-
-
-@pytest.mark.asyncio
-async def test_previa_de_live_sem_fire_nao_tem_nada_a_perguntar(session_factory, raiz):
-    await _semear(session_factory, raiz, fire=False)
-
-    async with session_factory() as db:
-        previa = await ProjetoService.previa_limpeza("p1", db)
-
-    assert previa == {"brutos_fire": 0, "retido_mb": 0.0}
-
-
-@pytest.mark.asyncio
-async def test_previa_de_projeto_inexistente_e_none(session_factory, raiz):
-    async with session_factory() as db:
-        assert await ProjetoService.previa_limpeza("nao-existe", db) is None
 
 
 @pytest.mark.asyncio

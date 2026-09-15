@@ -652,12 +652,6 @@ export interface LimparArquivosResponse {
   erros?: string[];
 }
 
-/** D-457: o que a limpeza preservaria por padrao, lido ANTES de perguntar. */
-export interface PreviaLimpezaResponse {
-  brutos_fire: number;
-  retido_mb: number;
-}
-
 export type LogLevel = 'disabled' | 'info' | 'debug';
 
 export type OverlayCodec = 'prores_4444' | 'vp9';

@@ -22,7 +22,6 @@ import type {
   FontePreset,
   ImportarAnaliseRequest,
   LimparArquivosResponse,
-  PreviaLimpezaResponse,
   LogLevel,
   MetadadoCorte,
   RenderSettings,
@@ -181,9 +180,6 @@ export const api = {
   removerProjeto: (id: string) =>
     request<{ message: string }>(`/projetos/${id}`, { method: 'DELETE' }),
 
-  previaLimpezaProjeto: (id: string) =>
-    request<PreviaLimpezaResponse>(`/projetos/${id}/limpeza/previa`),
-
   // D-527: traz de volta o video de uma live ja limpa, preservando o resto.
   // NAO confundir com `reiniciarDownload`, que zera transcricao, titulo e
   // duracao — os cortes apontam para tempos daquela transcricao.
@@ -192,13 +188,9 @@ export const api = {
       method: 'POST',
     }),
 
-  // D-457: `limparBrutosFire` e opt-in. O bruto do corte Fire e a materia-prima
-  // dos shorts, entao o default do backend (false) preserva.
-  limparArquivosProjeto: (id: string, limparBrutosFire = false) =>
-    request<LimparArquivosResponse>(`/projetos/${id}/limpar-arquivos`, {
-      method: 'POST',
-      body: JSON.stringify({ limpar_brutos_fire: limparBrutosFire }),
-    }),
+  // Sem corpo: o default do backend preserva o bruto dos Fires com shorts pendentes.
+  limparArquivosProjeto: (id: string) =>
+    request<LimparArquivosResponse>(`/projetos/${id}/limpar-arquivos`, { method: 'POST' }),
 
   reiniciarDownload: (id: string) =>
     request<{ message: string }>(`/projetos/${id}/reiniciar-download`, {
