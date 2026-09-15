@@ -76,6 +76,17 @@ async def test_previa_conta_os_brutos_de_fire_e_o_disco_que_seguram(session_fact
 
 
 @pytest.mark.asyncio
+async def test_previa_nao_conta_fire_com_shorts_finalizados(session_factory, raiz):
+    """A previa segue a mesma regra da limpeza: Fire finalizado nao e retido."""
+    await _semear(session_factory, raiz, fire=True, shorts_finalizados=True)
+
+    async with session_factory() as db:
+        previa = await ProjetoService.previa_limpeza("p1", db)
+
+    assert previa == {"brutos_fire": 0, "retido_mb": 0.0}
+
+
+@pytest.mark.asyncio
 async def test_previa_de_live_sem_fire_nao_tem_nada_a_perguntar(session_factory, raiz):
     await _semear(session_factory, raiz, fire=False)
 

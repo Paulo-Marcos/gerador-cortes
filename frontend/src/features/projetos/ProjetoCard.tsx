@@ -52,7 +52,9 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
   const baixando = projeto.status === 'baixando';
   const limpo = projeto.arquivos_limpos;
   const firesPendentes = projeto.fires_pendentes > 0;
-  const prontoParaLimpar = !limpo && !firesPendentes;
+  // Durante o download a mídia ainda está chegando: "pronto para limpar" ali
+  // convidaria a apagar o vídeo que o pipeline está gravando.
+  const prontoParaLimpar = !limpo && !firesPendentes && !baixando;
   const rebaixando = Boolean(projeto.rebaixando_video) || rebaixar.isPending;
   const placeholderHue = PLACEHOLDER_HUES[index % PLACEHOLDER_HUES.length];
 
@@ -148,7 +150,7 @@ export function ProjetoCard({ projeto, index = 0 }: Props) {
         {prontoParaLimpar && (
           <span
             className="ml-auto inline-flex items-center gap-1 rounded-[5px] bg-[var(--wb-ok-soft)] px-1.5 py-0.5 font-code text-[9.5px] font-bold normal-case tracking-normal text-[var(--wb-ok-ink)]"
-            title="Todos os Fires foram finalizados ou rejeitados. É seguro limpar a mídia pesada."
+            title="Nenhum Fire aguardando shorts. É seguro limpar a mídia pesada."
           >
             <ShieldCheck size={11} aria-hidden />
             pronto para limpar

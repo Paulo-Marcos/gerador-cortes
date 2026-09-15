@@ -239,7 +239,9 @@ class MediaRetentionService:
         operador quer o espaco de volta. Perguntar sem o numero seria pedir uma
         decisao no escuro.
         """
-        protegidos = cls._brutos_de_fire(cortes)
+        # Mesma regra da limpeza: Fire com shorts finalizados não é mais retido,
+        # então contá-lo aqui anunciaria um disco que a limpeza vai liberar.
+        protegidos = cls._brutos_de_fire_pendentes(cortes)
         return len(protegidos), sum(caminho.stat().st_size for caminho in protegidos)
 
     @classmethod
