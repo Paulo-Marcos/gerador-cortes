@@ -6,8 +6,40 @@ import {
   LADO_MINIMO,
   ocupacaoDoPalco,
   paraCanvas,
+  recorteInicial,
   redimensionarPalco,
 } from '../arrastarSlot';
+
+describe('recorteInicial', () => {
+  const FULL_HD = { largura: 1920, altura: 1080 };
+
+  it('a região nova nasce inteira dentro do quadro', () => {
+    // Fora do quadro vira crop inválido, e o ffmpeg morre com -22 no render.
+    for (const regiao of ['pessoa', 'tela', 'quadro']) {
+      const r = recorteInicial(regiao, FULL_HD);
+
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      expect(r.y).toBeGreaterThanOrEqual(0);
+      expect(r.x + r.w).toBeLessThanOrEqual(FULL_HD.largura);
+      expect(r.y + r.h).toBeLessThanOrEqual(FULL_HD.altura);
+    }
+  });
+
+  it('a pessoa e a tela nascem em lugares diferentes', () => {
+    // Nascendo uma em cima da outra, o operador acharia que marcou só uma.
+    const pessoa = recorteInicial('pessoa', FULL_HD);
+    const tela = recorteInicial('tela', FULL_HD);
+
+    expect(pessoa.x + pessoa.w).toBeLessThanOrEqual(tela.x + 100);
+  });
+
+  it('quadro minúsculo não gera retângulo menor que o lado mínimo', () => {
+    const r = recorteInicial('pessoa', { largura: 60, altura: 60 });
+
+    expect(r.w).toBeGreaterThanOrEqual(LADO_MINIMO);
+    expect(r.h).toBeGreaterThanOrEqual(LADO_MINIMO);
+  });
+});
 
 // D-493: o arraste dos blocos do palco.
 //

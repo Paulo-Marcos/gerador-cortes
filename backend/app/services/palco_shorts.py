@@ -679,6 +679,11 @@ async def plano_desenhavel(
         # desabilitado mesmo com o trecho montando palco pelos recortes.
         "arranjo": resolvido["arranjo"],
         "arranjos": catalogo_arranjos(resolvido["regioes"]),
+        # TODAS as regioes do trecho, e nao so as que o arranjo recorta. Em tela
+        # cheia o plano so tem uma janela: o editor de recortes, lendo dele, nao
+        # mostrava a tela — e a tela dividida, que precisa dela, ficava presa
+        # esperando uma regiao que nao havia onde marcar.
+        "regioes": resolvido["regioes"],
         "canvas": {"largura": CANVAS.largura, "altura": CANVAS.altura},
         "fundo": resolvido["fundo"],
         # D-549: a TEXTURA do palco. A previa pintava so `fundo` — uma cor

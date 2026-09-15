@@ -765,6 +765,19 @@ class TestRecortesDoPalcoPadrao:
         assert resolvido["regioes"]["tela"]["x"] == TELA["x"]
 
     @pytest.mark.asyncio
+    async def test_o_plano_mostra_todas_as_regioes_e_nao_so_as_do_arranjo(self, ambiente):
+        """Em tela cheia o plano recorta uma janela so; o editor precisa ver as duas."""
+        await servico.escolher_preset("c1", "pre-1")
+        async with ambiente() as db:
+            (await db.get(Short, "s1")).arranjo_palco = "cheia"
+            await db.commit()
+
+        plano = await servico.plano_desenhavel("s1")
+
+        assert len(plano["recortes"]) == 1
+        assert set(plano["regioes"]) == {"pessoa", "tela"}
+
+    @pytest.mark.asyncio
     async def test_o_recorte_do_trecho_vence_o_do_padrao(self, ambiente):
         outro = {"x": 100, "y": 100, "w": 400, "h": 300}
         await self._com_padrao(ambiente, {"recortes": {"pessoa": self.PESSOA}})

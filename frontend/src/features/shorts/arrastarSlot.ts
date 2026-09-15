@@ -170,6 +170,33 @@ export function ocupacaoDoPalco(
   return Math.max(...larguras) / limites.largura;
 }
 
+// Onde cada região costuma estar no quadro do OBS: a pessoa num canto de baixo,
+// a tela ocupando o resto. É só o ponto de partida — o operador arrasta dali.
+const PONTO_DE_PARTIDA: Record<string, Retangulo> = {
+  pessoa: { x: 0.02, y: 0.45, w: 0.3, h: 0.5 },
+  tela: { x: 0.35, y: 0.05, w: 0.62, h: 0.7 },
+};
+
+/**
+ * O retângulo com que uma região AINDA NÃO MARCADA nasce, em pixels do quadro.
+ *
+ * Existe porque o editor de recortes só arrastava o que já existia: sem a
+ * região da tela, a tela dividida ficava bloqueada e não havia onde marcá-la.
+ * Nasce num lugar plausível e dentro do quadro — um retângulo fora dele vira
+ * `crop` inválido e derruba o render.
+ */
+export function recorteInicial(regiao: string, fonte: Limites): Retangulo {
+  const fracao = PONTO_DE_PARTIDA[regiao] ?? { x: 0.25, y: 0.25, w: 0.5, h: 0.5 };
+  const w = limitar(Math.round(fonte.largura * fracao.w), LADO_MINIMO, fonte.largura);
+  const h = limitar(Math.round(fonte.altura * fracao.h), LADO_MINIMO, fonte.altura);
+  return {
+    x: limitar(Math.round(fonte.largura * fracao.x), 0, fonte.largura - w),
+    y: limitar(Math.round(fonte.altura * fracao.y), 0, fonte.altura - h),
+    w,
+    h,
+  };
+}
+
 /** Converte um deslocamento em pixels de TELA para pixels do quadro. */
 export function paraCanvas(
   deltaTela: number,

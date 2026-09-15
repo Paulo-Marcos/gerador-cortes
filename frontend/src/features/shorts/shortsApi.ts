@@ -294,6 +294,8 @@ export interface PlanoDesenhavel {
   arranjo?: string;
   /** Os arranjos que as regiões DESTE trecho permitem (as do corte não bastam). */
   arranjos?: ArranjoPalco[];
+  /** TODAS as regiões do trecho, em pixels do bruto — não só as do arranjo. */
+  regioes?: Record<string, Retangulo>;
   canvas: { largura: number; altura: number };
   fundo: string;
   /** D-549: a TEXTURA do palco — o mesmo id que o render manda para o PNG. */

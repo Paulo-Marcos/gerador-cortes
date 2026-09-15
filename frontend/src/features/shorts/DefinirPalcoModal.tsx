@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Maximize2, Minimize2, Move } from 'lucide-react';
+import { Check, Maximize2, Minimize2, Move, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,7 @@ import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA, LegendaPrevia } from './LegendaPrevia';
 import { useTranscricaoDoCorte } from './useShortsDoCorte';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
-import { ocupacaoDoPalco, redimensionarPalco } from './arrastarSlot';
+import { ocupacaoDoPalco, recorteInicial, redimensionarPalco } from './arrastarSlot';
 import { PalcoPrevia } from './PalcoPrevia';
 import { SeletorDeTextura } from './SeletorDeTextura';
 import { mudancaDoPalco, palcoDoShort } from './aplicarPalco';
@@ -45,6 +45,9 @@ const REGIAO: Record<string, string> = {
   tela: 'a tela compartilhada',
   quadro: 'o quadro da live',
 };
+
+/** As regiões que os arranjos pedem — as que faz sentido oferecer para marcar. */
+const REGIOES_MARCAVEIS = ['pessoa', 'tela'];
 
 interface Props {
   open: boolean;
@@ -96,10 +99,23 @@ export function DefinirPalcoModal({
   // decisão — e a prévia da página não é fixa.
   const [movendo, setMovendo] = useState(false);
 
-  const recortesDaFonte: Record<string, Retangulo> = Object.fromEntries(
-    (plano?.recortes ?? []).map((r) => [r.regiao, r.origem]),
-  );
-  const regioesEmJogo = Object.keys(plano?.slots ?? {});
+  // TODAS as regiões do trecho, e não só as que o arranjo recorta: em tela
+  // cheia o plano tem uma janela só, e a tela — que a dividida exige — sumia
+  // do editor. O mapa dos recortes fica de reserva para um backend antigo.
+  const recortesDaFonte: Record<string, Retangulo> =
+    plano?.regioes ??
+    Object.fromEntries((plano?.recortes ?? []).map((r) => [r.regiao, r.origem]));
+  const faltando = REGIOES_MARCAVEIS.filter((regiao) => !(regiao in recortesDaFonte));
+  const fonteMedida = fonte.largura > 0 && fonte.altura > 0;
+
+  /** Cria a região que falta num lugar plausível; dali o operador arrasta. */
+  const marcarRegiao = (regiao: string) =>
+    onAplicar({
+      recortes_palco: {
+        ...(short.recortes_palco ?? {}),
+        [regiao]: recorteInicial(regiao, fonte),
+      },
+    });
 
   /** O palco deste short, no formato que o preset guarda (ver `palcoDoShort`). */
   const comoEstaHoje = (): PalcoShortPreset => palcoDoShort(short);
@@ -190,7 +206,9 @@ export function DefinirPalcoModal({
                   {/* O impedimento no lugar do porquê: a opção desabilitada
                       precisa dizer o que falta, senão vira adivinhação. */}
                   <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
-                    {arranjo.possivel ? arranjo.porque : arranjo.impedimento}
+                    {arranjo.possivel
+                      ? arranjo.porque
+                      : `${arranjo.impedimento} — marque em "De onde vem cada janela", logo abaixo.`}
                   </p>
                 </button>
               ))}
@@ -242,16 +260,39 @@ export function DefinirPalcoModal({
               </select>
             </div>
             )}
-            {regioesEmJogo.length === 0 ? (
-              <p className="text-[11.5px] text-[var(--wb-text-mute)]">
-                Nenhuma região marcada neste corte — escolha um preset de recortes ou marque à
-                mão sobre o player.
-              </p>
-            ) : (
+            {/* O "marque à mão" precisava existir de verdade. O editor só
+                arrastava regiões que já havia: sem a tela, a dividida ficava
+                bloqueada e o texto mandava marcar num lugar sem botão. */}
+            {faltando.length > 0 && (
+              <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+                  marcar
+                </span>
+                {faltando.map((regiao) => (
+                  <Button
+                    key={regiao}
+                    size="sm"
+                    variant="outline"
+                    disabled={ocupado || !fonteMedida}
+                    title={fonteMedida ? undefined : 'Espere o vídeo carregar: o recorte usa a resolução dele.'}
+                    onClick={() => marcarRegiao(regiao)}
+                  >
+                    <Plus />
+                    {REGIAO[regiao] ?? regiao}
+                  </Button>
+                ))}
+                <span className="text-[11px] text-[var(--wb-text-mute)]">
+                  {Object.keys(recortesDaFonte).length === 0
+                    ? 'Nenhuma região ainda: escolha um preset de recortes ou marque aqui e ajuste o retângulo sobre a live.'
+                    : 'A tela dividida precisa da pessoa e da tela.'}
+                </span>
+              </div>
+            )}
+            {Object.keys(recortesDaFonte).length > 0 && (
               <>
                 {/* Em CHEIA há uma janela só, e escolher a fonte É escolher o
                     enquadramento — não são dois controles. */}
-                {short.arranjo_palco === 'cheia' && Object.keys(recortesDaFonte).length > 1 && (
+                {arranjoEmUso === 'cheia' && Object.keys(recortesDaFonte).length > 1 && (
                   <div className="mb-2 flex flex-wrap items-center gap-1.5">
                     <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
                       preenche com
