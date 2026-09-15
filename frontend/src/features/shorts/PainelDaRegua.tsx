@@ -1,5 +1,3 @@
-import { SlidersHorizontal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import type { ShortSugerido } from './shortsApi';
 import type { Borda } from './linhaDoTempoShort';
 import { LinhaDoTempo } from './LinhaDoTempo';
@@ -18,11 +16,14 @@ interface Props {
   onSeek: (segundos: number) => void;
   onBordas: (shortId: string, bordas: { inicio?: number; fim?: number }, focar?: Borda) => void;
   onSelecionar: (shortId: string) => void;
-  onDefinirPalco: () => void;
 }
 
 /**
- * D-499/D-551: a régua do corte, e o botão que abre o palco.
+ * D-499/D-551: a régua do corte.
+ *
+ * O botão "Definir o palco" saiu daqui: ele repetia o do card do trecho, que é
+ * onde a decisão mora, e a régua ficava com duas linhas e um botão a mais
+ * embaixo da onda.
  *
  * O painel ROLA em vez de ser cortado. Ele cresce com o número de cenas; com
  * `flex-none` e o `overflow-hidden` do grid, as últimas linhas simplesmente
@@ -44,7 +45,6 @@ export function PainelDaRegua({
   onSeek,
   onBordas,
   onSelecionar,
-  onDefinirPalco,
 }: Props) {
   // D-541: a onda do bruto por tras da regua. Falha em silencio — sem bruto
   // legivel a regua fica lisa, que e exatamente como ela era antes disto.
@@ -125,31 +125,9 @@ export function PainelDaRegua({
           campos eram a única via. Agora a régua abre a 50px/s e vai a
           20x, e cada pixel vale milissegundos: a alça faz o que os
           campos faziam, olhando para a onda em vez de para um número. */}
-      {emQuadro && (
-        <div className="mt-2.5 border-t border-[var(--wb-border-soft)] pt-2.5">
-          {/* D-560: as CENAS saíram da tela junto com o render.
-              "É tudo texto, e jogar texto no shorts acho que é ruim. Já
-              tem a legenda, ficar adicionando mais texto polui demais."
-              O `CENAS_LIGADAS` do `render_short.py` é o outro lado
-              disto — e o interruptor único para religar as duas pontas.
-              O componente e os dados ficam onde estão. */}
-          {/* D-509: um botão no lugar da fileira de controles. Como a
-              tela monta, de onde vem cada janela, o fundo e os presets
-              eram cinco perguntas soltas com pesos iguais; agora são
-              uma sequência, dentro do modal, com a prévia ao lado.
-
-              D-560: e o "Recortar da live" foi junto. Ele e a seção 2
-              do modal são o MESMO `EditorDeRecorte` gravando no MESMO
-              `recortes_palco` — dois caminhos para uma decisão só, o de
-              fora sem a prévia ao lado que diz o que a marcação fez. */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--wb-border-soft)] pt-2.5">
-            <Button variant="outline" size="sm" onClick={onDefinirPalco}>
-              <SlidersHorizontal />
-              Definir o palco
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* D-560: as CENAS saíram da tela junto com o render. O
+          `CENAS_LIGADAS` do `render_short.py` é o interruptor único para
+          religar as duas pontas; o componente e os dados ficam onde estão. */}
     </div>
   );
 }

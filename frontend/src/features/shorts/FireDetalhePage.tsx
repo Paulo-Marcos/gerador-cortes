@@ -351,7 +351,6 @@ export default function FireDetalhePage() {
             onSeek={irPara}
             onBordas={gravarBordas}
             onSelecionar={setSelecionado}
-            onDefinirPalco={() => setDefinindoPalco(true)}
           />
         </section>
 
