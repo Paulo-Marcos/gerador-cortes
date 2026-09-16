@@ -1,6 +1,12 @@
-import { ArrowDown, ArrowUp, Scissors, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowLeftToLine,
+  ArrowRightToLine,
+  ArrowUp,
+  Scissors,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { janelaNova, mmss } from './linhaDoTempoShort';
 import {
   comBordaDoSegmento,
@@ -90,95 +96,98 @@ export function ListaDeSegmentos({
         </Button>
       </div>
 
-      <ol className="space-y-1">
-        {segmentos.map((segmento, indice) => (
-          <li
-            key={`${segmento.inicio_seg}-${segmento.fim_seg}-${indice}`}
-            className="flex items-center gap-1.5 rounded-[7px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2 py-1"
-          >
-            {/* O número é a ORDEM DE TOQUE, e o tempo ao lado é onde ele fica no
-                bruto. Quando os dois discordam, foi escolha do operador. */}
-            <span className="font-code text-[10px] font-bold text-[var(--wb-text-dim)]">
-              {indice + 1}
-            </span>
-            <button
-              type="button"
-              onClick={() => onIr(segmento.inicio_seg)}
-              className="flex-1 text-left font-code text-[11px] tabular-nums hover:text-[var(--wb-accent-strong)]"
-              title="Ir até este segmento no player"
+      {/* Um segmento só não é colagem: a janela já aparece no card e as bordas
+          moram no ajuste do trecho. Listar uma linha com ordem, setas e lixeira
+          todas travadas seria controle sem uso. */}
+      {colado && (
+        <ol className="space-y-1">
+          {segmentos.map((segmento, indice) => (
+            <li
+              key={`${segmento.inicio_seg}-${segmento.fim_seg}-${indice}`}
+              className="flex items-center gap-1.5 rounded-[7px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2 py-1"
             >
-              {mmss(segmento.inicio_seg)} → {mmss(segmento.fim_seg)}
-              <span className="ml-1.5 text-[var(--wb-text-mute)]">
-                {Math.round(duracaoDe(segmento))}s
+              {/* O número é a ORDEM DE TOQUE, e o tempo ao lado é onde ele fica no
+                bruto. Quando os dois discordam, foi escolha do operador. */}
+              <span className="font-code text-[10px] font-bold text-[var(--wb-text-dim)]">
+                {indice + 1}
               </span>
-            </button>
-            {/* D-608: o ajuste fino DESTE segmento, pelo instante do player — o
+              <button
+                type="button"
+                onClick={() => onIr(segmento.inicio_seg)}
+                className="flex-1 text-left font-code text-[11px] tabular-nums hover:text-[var(--wb-accent-strong)]"
+                title="Ir até este segmento no player"
+              >
+                {mmss(segmento.inicio_seg)} → {mmss(segmento.fim_seg)}
+                <span className="ml-1.5 text-[var(--wb-text-mute)]">
+                  {Math.round(duracaoDe(segmento))}s
+                </span>
+              </button>
+              {/* D-608: o ajuste fino DESTE segmento, pelo instante do player — o
                 mesmo "início aqui / fim aqui" que o trecho comum tem. A alça da
                 régua resolve o grosso; isto é para acertar o quadro, que é onde
                 um pixel de régua vale meio segundo. */}
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={ocupado}
-              onClick={() =>
-                onGravar(
-                  comBordaDoSegmento(short, indice, 'inicio', tempoAtualSeg, duracaoBrutoSeg),
-                )
-              }
-              title={`Começar o segmento ${indice + 1} em ${mmss(tempoAtualSeg)}`}
-              aria-label={`Começar o segmento ${indice + 1} onde o player está`}
-            >
-              [
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={ocupado}
-              onClick={() =>
-                onGravar(comBordaDoSegmento(short, indice, 'fim', tempoAtualSeg, duracaoBrutoSeg))
-              }
-              title={`Terminar o segmento ${indice + 1} em ${mmss(tempoAtualSeg)}`}
-              aria-label={`Terminar o segmento ${indice + 1} onde o player está`}
-            >
-              ]
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={ocupado || indice === 0}
-              onClick={() => onGravar(comSegmentoMovido(short, indice, -1))}
-              aria-label={`Tocar o segmento ${indice + 1} mais cedo`}
-            >
-              <ArrowUp size={12} />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={ocupado || indice === segmentos.length - 1}
-              onClick={() => onGravar(comSegmentoMovido(short, indice, 1))}
-              aria-label={`Tocar o segmento ${indice + 1} mais tarde`}
-            >
-              <ArrowDown size={12} />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              // Um segmento só NÃO é colagem: não há o que remover, e o botão
-              // existir sugeriria que dá para deixar o short sem vídeo nenhum.
-              disabled={ocupado || segmentos.length <= 1}
-              onClick={() => onGravar(semOSegmento(short, indice))}
-              aria-label={`Tirar o segmento ${indice + 1}`}
-              className={cn(segmentos.length <= 1 && 'invisible')}
-            >
-              <Trash2 size={12} />
-            </Button>
-          </li>
-        ))}
-      </ol>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                disabled={ocupado}
+                onClick={() =>
+                  onGravar(
+                    comBordaDoSegmento(short, indice, 'inicio', tempoAtualSeg, duracaoBrutoSeg),
+                  )
+                }
+                title={`Começar o segmento ${indice + 1} em ${mmss(tempoAtualSeg)}`}
+                aria-label={`Começar o segmento ${indice + 1} onde o player está`}
+              >
+                <ArrowLeftToLine />
+              </Button>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                disabled={ocupado}
+                onClick={() =>
+                  onGravar(comBordaDoSegmento(short, indice, 'fim', tempoAtualSeg, duracaoBrutoSeg))
+                }
+                title={`Terminar o segmento ${indice + 1} em ${mmss(tempoAtualSeg)}`}
+                aria-label={`Terminar o segmento ${indice + 1} onde o player está`}
+              >
+                <ArrowRightToLine />
+              </Button>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                disabled={ocupado || indice === 0}
+                onClick={() => onGravar(comSegmentoMovido(short, indice, -1))}
+                aria-label={`Tocar o segmento ${indice + 1} mais cedo`}
+              >
+                <ArrowUp />
+              </Button>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                disabled={ocupado || indice === segmentos.length - 1}
+                onClick={() => onGravar(comSegmentoMovido(short, indice, 1))}
+                aria-label={`Tocar o segmento ${indice + 1} mais tarde`}
+              >
+                <ArrowDown />
+              </Button>
+              <Button
+                size="icon-sm"
+                variant="danger"
+                disabled={ocupado}
+                onClick={() => onGravar(semOSegmento(short, indice))}
+                title={`Tirar o segmento ${indice + 1}`}
+                aria-label={`Tirar o segmento ${indice + 1}`}
+              >
+                <Trash2 />
+              </Button>
+            </li>
+          ))}
+        </ol>
+      )}
 
       <p className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
         {colado
-          ? 'O short toca os segmentos nesta ordem, um atrás do outro. Arraste as bordas na régua, ou use [ e ] para começar/terminar um segmento onde o player está. As setas mudam a ordem.'
+          ? 'O short toca os segmentos nesta ordem, um atrás do outro. Arraste as bordas na régua ou acerte-as pelo player com ⇤ e ⇥; as setas mudam a ordem.'
           : 'Marque um segundo segmento para montar o short com trechos separados do bruto. O que fica entre eles não entra.'}
       </p>
     </div>

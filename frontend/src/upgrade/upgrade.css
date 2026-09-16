@@ -397,6 +397,7 @@
   --wb-text: var(--ink);
   --wb-text-mute: var(--mute);
   --wb-text-dim: var(--dim);
+  --wb-text-faint: var(--dim);
   --wb-accent: var(--accent);
   --wb-accent-strong: var(--accent2);
   --wb-accent-soft: var(--accent-soft);
@@ -406,6 +407,7 @@
   --wb-pill-bg: var(--solid);
   --wb-focus: var(--accent-soft);
   --wb-shadow: var(--shadow);
+  --wb-shadow-btn: var(--hi);
 
   --wb-ok: var(--ok);
   --wb-ok-soft: var(--ok-soft);
@@ -416,6 +418,10 @@
   --wb-err: var(--err);
   --wb-err-soft: var(--err-soft);
   --wb-err-ink: var(--err);
+  /* `danger` é o apelido que telas novas usam para `err` — sem a ponte, caíam
+     no fallback cru (#e5484d) ou em nada. */
+  --wb-danger: var(--err);
+  --wb-danger-ink: var(--err);
   --wb-info: var(--info);
   --wb-info-soft: var(--info-soft);
   --wb-violet: var(--info);

@@ -10,7 +10,7 @@
 import { useState } from 'react';
 import { Check, FileText, Image, Send, Upload } from 'lucide-react';
 import { useIsMutating } from '@tanstack/react-query';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { PacotePublicacao } from './shortsApi';
 import {
   gerarPostKey,
@@ -181,20 +181,10 @@ function Destino({
           ) : (
             <MarcaManual ocupado={marcando} onMarcar={onMarcar} />
           ))}
-        <button
-          type="button"
-          onClick={onPublicar}
-          disabled={ocupado}
-          className={cn(
-            'inline-flex items-center gap-1 rounded-[6px] px-2 py-1 text-[11.5px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45',
-            porApi
-              ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-              : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
-          )}
-        >
-          {porApi ? <Send size={12} aria-hidden /> : <Upload size={12} aria-hidden />}
+        <Button size="sm" variant="outline" onClick={onPublicar} disabled={ocupado}>
+          {porApi ? <Send aria-hidden /> : <Upload aria-hidden />}
           {porApi ? 'publicar' : 'preparar pacote'}
-        </button>
+        </Button>
       </div>
 
       {pacote.avisos.map((aviso) => (
@@ -224,37 +214,35 @@ function MarcaManual({ ocupado, onMarcar }: { ocupado: boolean; onMarcar: () => 
 
   if (!perguntando) {
     return (
-      <button
-        type="button"
+      <Button
+        size="sm"
+        variant="ghost"
         onClick={() => setPerguntando(true)}
-        className="flex-none text-[11px] text-[var(--wb-text-mute)] underline decoration-dotted hover:text-[var(--wb-text)]"
         title="marcar que este short já foi publicado à mão, fora do app"
       >
         já publiquei
-      </button>
+      </Button>
     );
   }
 
   return (
-    <span className="flex flex-none items-center gap-1.5 text-[11px]">
-      <button
-        type="button"
+    <span className="flex flex-none items-center gap-1">
+      <Button
+        size="sm"
+        variant="ghost"
         disabled={ocupado}
         onClick={() => {
           onMarcar();
           setPerguntando(false);
         }}
-        className="font-semibold text-[var(--wb-accent)] disabled:opacity-45"
+        className="text-[var(--wb-ok-ink)]"
       >
+        <Check aria-hidden />
         confirmar
-      </button>
-      <button
-        type="button"
-        onClick={() => setPerguntando(false)}
-        className="text-[var(--wb-text-mute)]"
-      >
+      </Button>
+      <Button size="sm" variant="ghost" onClick={() => setPerguntando(false)}>
         não
-      </button>
+      </Button>
     </span>
   );
 }
