@@ -115,20 +115,26 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  {
-    path: '/upgrade/kit',
-    element: (
-      <Suspense fallback={null}>
-        <UpgradeKitPage />
-      </Suspense>
-    ),
-  },
-  {
-    path: '/upgrade/shell',
-    element: (
-      <Suspense fallback={null}>
-        <UpgradeShellDemoPage />
-      </Suspense>
-    ),
-  },
+  // Andaime de dev: fora da casca e fora do build. `import.meta.env.DEV` é
+  // estático — em produção o Vite remove as rotas e os dois chunks junto.
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: '/upgrade/kit',
+          element: (
+            <Suspense fallback={null}>
+              <UpgradeKitPage />
+            </Suspense>
+          ),
+        },
+        {
+          path: '/upgrade/shell',
+          element: (
+            <Suspense fallback={null}>
+              <UpgradeShellDemoPage />
+            </Suspense>
+          ),
+        },
+      ]
+    : []),
 ]);

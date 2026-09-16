@@ -388,11 +388,6 @@ function VazioDoFiltro({ onLimpar }: { onLimpar: () => void }) {
 const CASCA_NOVA = isUpgradeShellEnabled();
 
 export default function ShortsPage() {
-  useDefinirChrome(
-    { sub: 'cortes fire com bruto guardado — a nata, pronta para virar vertical' },
-    [],
-  );
-
   const workbench = isWorkbenchEnabled();
   const { data, isLoading, isError, error } = useFires();
   const [filtro, setFiltro] = useState<FiltroDeFire>('todos');
@@ -400,6 +395,11 @@ export default function ShortsPage() {
 
   const fires = useMemo(() => data?.fires ?? [], [data]);
   const contagens = useMemo(() => contarPorFiltro(fires), [fires]);
+
+  useDefinirChrome(
+    { sub: `${fires.length} fire com bruto · ${contagens.prontos} com short pronto` },
+    [fires.length, contagens.prontos],
+  );
   const visiveis = useMemo(() => filtrarFires(fires, filtro, busca), [fires, filtro, busca]);
 
   const limpar = () => {

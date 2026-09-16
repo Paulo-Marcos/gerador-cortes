@@ -1,43 +1,54 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { EtapasEmLinha, IdentidadeDaLive, LinhaDeContexto } from './ContextColumn';
+import {
+  CabecalhoDeLista,
+  FiltrosDaLista,
+  IdentidadeDaLive,
+  LinhaDeLista,
+} from './ContextColumn';
 import { Icon } from './Icon';
-import type { ChromeContexto, ChromeSeletor } from './UpgradeChrome';
+import { BUSCA_LARGA_MIN_PX, useJanelaMin } from './medidas';
+import { AcoesDaTela, type ScreenAction } from './ScreenHeader';
+import type { ChromeAtual, ChromeEstado, ChromeLista } from './UpgradeChrome';
 import type { Migalha } from './upgradeRoutes';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A barra superior.
 //
 // Ela responde três perguntas, nesta ordem de leitura: onde estou
-// (trilha), em qual corte estou (seletor) e o app está bem (chip de
-// estado salvo). O seletor no centro-direita é a peça que muda o
-// ritmo do trabalho: trocar de corte deixa de ser "voltar à lista e
-// escolher" e vira J/K sem tirar os olhos do player.
+// (trilha), em qual item estou (seletor) e o app está bem (chip de
+// estado). O seletor é a peça que muda o ritmo do trabalho: trocar de
+// corte deixa de ser "voltar à lista e escolher" e vira J/K sem tirar os
+// olhos do player.
 //
-// RODADA 1 · duas correções de organização:
+// RODADA 2 · três mudanças:
 //
-// 1. A trilha voltou a ser navegação. Era um `<span>` por migalha, o
-//    que prometia "como cheguei aqui" e não deixava voltar: de um
-//    corte não havia caminho para a live a não ser pelo trilho.
-//
-// 2. O seletor tem dois tamanhos, e a casca escolhe. Com a coluna de
-//    contexto visível ele encolhe para `‹ #7 ›` — a MESMA lista em dois
-//    lugares ao mesmo tempo era a "sidebar dupla" que o handoff tinha
-//    recusado, reintroduzida como painel. Sem a coluna (janela abaixo
-//    de 1240 px) ele assume o painel inteiro e recebe, no topo, a
-//    identidade da live e a esteira que a coluna levava embora.
+//   1. ORDEM DE PRIORIDADE. Seis elementos disputavam 44 px de linha, e
+//      a busca ocupava 240 px fixos enquanto a trilha se reduzia a "…" —
+//      a informação mais barata empurrando a mais cara. Abaixo de
+//      1200 px a busca vira só o ícone e o chip de estado perde o texto.
+//   2. CABEÇALHO FUNDIDO. Em tela densa o subtítulo e as ações da tela
+//      entram aqui, e a faixa do `ScreenHeader` não é montada: ~46 px
+//      devolvidos ao player, sem perder informação (o título repetia a
+//      última migalha).
+//   3. UMA LISTA. O painel recebe a MESMA `lista` que a coluna receberia
+//      — não há mais dois formatos de item para a mesma tela. O lembrete
+//      de J/K saiu do pé do painel: a `ActionBar` o emite sempre que há
+//      seletor, e tê-lo nos dois lugares era escrevê-lo três vezes.
 // ─────────────────────────────────────────────────────────────────
 
 type TopBarProps = {
   trilha: Migalha[];
-  seletor?: ChromeSeletor;
-  /** `true` quando a coluna de contexto está na tela: o seletor vira
-   *  só navegação, sem painel. */
+  atual?: ChromeAtual;
+  /** `true` quando a coluna de contexto está na tela: o seletor vira só
+   *  navegação, sem painel. */
   seletorCompacto?: boolean;
-  /** O contexto quando ele NÃO está na coluna — vai para o topo do
-   *  painel do seletor, que passa a ser o único lugar que o tem. */
-  contextoNoPainel?: ChromeContexto;
-  estado?: { texto: string; icone: 'circle-check' | 'loader' | 'triangle-alert'; cor: string; bg: string };
+  /** A lista quando ela NÃO está na coluna — vai para o painel, que passa
+   *  a ser o único lugar que a tem. */
+  listaNoPainel?: ChromeLista;
+  estado?: ChromeEstado;
+  /** Cabeçalho de tela fundido (telas densas). */
+  cabecalho?: { sub?: string; acoes?: ScreenAction[] };
   tema: 'light' | 'dark';
   onAlternarTema: () => void;
   onAbrirBusca?: () => void;
@@ -103,34 +114,40 @@ function Trilha({ itens }: { itens: Migalha[] }) {
   );
 }
 
-function SeletorDeCorte({
-  seletor,
+function Seletor({
+  atual,
   compacto,
-  contexto,
+  lista,
 }: {
-  seletor: ChromeSeletor;
+  atual: ChromeAtual;
   compacto: boolean;
-  contexto?: ChromeContexto;
+  lista?: ChromeLista;
 }) {
   const [aberto, setAberto] = useState(false);
   const caixa = useRef<HTMLDivElement>(null);
 
-  // Fecha ao clicar fora ou no Esc. Sem isso o painel ficaria aberto
-  // por cima da tela enquanto a pessoa já trabalha noutro lugar.
+  // Fecha ao clicar fora ou no Esc. Sem isso o painel ficaria aberto por
+  // cima da tela enquanto a pessoa já trabalha noutro lugar.
   useEffect(() => {
     if (!aberto) return;
     const foraOuEsc = (e: MouseEvent | KeyboardEvent) => {
       if (e instanceof KeyboardEvent) {
-        if (e.key === 'Escape') setAberto(false);
+        if (e.key === 'Escape') {
+          // O Esc é NOSSO enquanto o painel está aberto: sem parar aqui ele
+          // segue para os listeners de documento e fecha também o que
+          // estiver atrás.
+          e.stopPropagation();
+          setAberto(false);
+        }
         return;
       }
       if (caixa.current && !caixa.current.contains(e.target as Node)) setAberto(false);
     };
     document.addEventListener('mousedown', foraOuEsc);
-    document.addEventListener('keydown', foraOuEsc);
+    document.addEventListener('keydown', foraOuEsc, true);
     return () => {
       document.removeEventListener('mousedown', foraOuEsc);
-      document.removeEventListener('keydown', foraOuEsc);
+      document.removeEventListener('keydown', foraOuEsc, true);
     };
   }, [aberto]);
 
@@ -138,6 +155,31 @@ function SeletorDeCorte({
   useEffect(() => {
     if (compacto) setAberto(false);
   }, [compacto]);
+
+  const rotulo = (
+    <>
+      <Icon name="scissors" size={12} style={{ color: 'var(--accent)' }} />
+      {atual.num ? (
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
+          #{atual.num}
+        </span>
+      ) : null}
+      <span
+        style={{
+          minWidth: 0,
+          flex: 1,
+          fontSize: 12,
+          fontWeight: 600,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          textAlign: 'left',
+        }}
+      >
+        {atual.titulo}
+      </span>
+    </>
+  );
 
   return (
     <div
@@ -147,16 +189,18 @@ function SeletorDeCorte({
       <button
         type="button"
         className="btn btn-icon"
-        title="Corte anterior · K"
-        onClick={seletor.onAnterior}
-        disabled={!seletor.onAnterior}
+        title="Item anterior · K"
+        aria-label="Item anterior"
+        aria-keyshortcuts="K"
+        onClick={atual.onAnterior}
+        disabled={!atual.onAnterior}
       >
         <Icon name="chevron-left" size={14} />
       </button>
 
       {compacto ? (
         <span
-          title={`#${seletor.num} · ${seletor.titulo}`}
+          title={atual.num ? `#${atual.num} · ${atual.titulo}` : atual.titulo}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -169,22 +213,7 @@ function SeletorDeCorte({
             maxWidth: 240,
           }}
         >
-          <Icon name="scissors" size={12} style={{ color: 'var(--accent)' }} />
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
-            #{seletor.num}
-          </span>
-          <span
-            style={{
-              minWidth: 0,
-              fontSize: 12,
-              fontWeight: 600,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {seletor.titulo}
-          </span>
+          {rotulo}
         </span>
       ) : (
         <button
@@ -192,23 +221,10 @@ function SeletorDeCorte({
           className="btn"
           onClick={() => setAberto((v) => !v)}
           aria-expanded={aberto}
+          aria-haspopup="true"
           style={{ borderColor: aberto ? 'var(--accent)' : 'var(--line)', minWidth: 190 }}
         >
-          <Icon name="scissors" size={12} style={{ color: 'var(--accent)' }} />
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
-            #{seletor.num}
-          </span>
-          <span
-            style={{
-              minWidth: 0,
-              flex: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              textAlign: 'left',
-            }}
-          >
-            {seletor.titulo}
-          </span>
+          {rotulo}
           <Icon name="chevron-down" size={12} style={{ color: 'var(--dim)' }} />
         </button>
       )}
@@ -216,14 +232,16 @@ function SeletorDeCorte({
       <button
         type="button"
         className="btn btn-icon"
-        title="Próximo corte · J"
-        onClick={seletor.onProximo}
-        disabled={!seletor.onProximo}
+        title="Próximo item · J"
+        aria-label="Próximo item"
+        aria-keyshortcuts="J"
+        onClick={atual.onProximo}
+        disabled={!atual.onProximo}
       >
         <Icon name="chevron-right" size={14} />
       </button>
 
-      {aberto && !compacto ? (
+      {aberto && !compacto && lista ? (
         <div
           className="card"
           style={{
@@ -237,101 +255,41 @@ function SeletorDeCorte({
             overflow: 'hidden',
             // Superfície SÓLIDA, não o vidro do `.card`. O painel mora dentro
             // do <header>, que já tem backdrop-filter, e o Chrome não desfoca o
-            // fundo de um elemento aninhado em outro com backdrop-filter: o vidro
-            // virava só transparência, com o conteúdo da tela legível através da
-            // lista de cortes.
+            // fundo de um elemento aninhado em outro com backdrop-filter: o
+            // vidro virava só transparência, com o conteúdo da tela legível
+            // através da lista de cortes.
             background: 'var(--solid)',
             backdropFilter: 'none',
             WebkitBackdropFilter: 'none',
             boxShadow: '0 18px 44px rgb(0 0 0/.28)',
           }}
         >
-          {/* O que a coluna de contexto mostraria se houvesse largura para
-              ela. Aqui não é repetição: é o único lugar onde a identidade
-              da live e a esteira existem nesta largura de janela. */}
-          {contexto ? (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-                padding: 11,
-                borderBottom: '1px solid var(--line2)',
-              }}
-            >
+          {/* Nesta largura de janela este é o ÚNICO lugar onde a identidade
+              do conjunto existe — a coluna não está montada. */}
+          {lista.cabecalho ? (
+            <div style={{ padding: 11, borderBottom: '1px solid var(--line2)' }}>
               <IdentidadeDaLive
-                titulo={contexto.titulo}
-                sub={contexto.sub}
-                thumb={contexto.thumb}
+                titulo={lista.cabecalho.titulo}
+                sub={lista.cabecalho.sub}
+                thumb={lista.cabecalho.thumb}
               />
-              {contexto.etapas?.length ? <EtapasEmLinha etapas={contexto.etapas} /> : null}
             </div>
           ) : null}
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '9px 11px',
-              borderBottom: '1px solid var(--line2)',
-            }}
-          >
-            <span className="lbl">{seletor.listaTitulo}</span>
-            <span style={{ flex: 1 }} />
-            {seletor.listaResumo ? (
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--mute)' }}>
-                {seletor.listaResumo}
-              </span>
-            ) : null}
-          </div>
+          <CabecalhoDeLista titulo={lista.titulo} resumo={lista.resumo} padding="9px 11px" />
 
-          {seletor.filtros?.length ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '9px 11px' }}>
-              {seletor.filtros.map((f) => (
-                <button
-                  key={f.texto}
-                  type="button"
-                  onClick={f.onClick}
-                  aria-pressed={f.ativo}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    height: 24,
-                    padding: '0 8px',
-                    border: `1px solid ${f.ativo ? 'var(--accent)' : 'var(--line)'}`,
-                    borderRadius: 'var(--r1)',
-                    background: f.ativo ? 'var(--accent-soft)' : 'var(--panel)',
-                    color: f.ativo ? 'var(--accent2)' : 'var(--mute)',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {f.texto}
-                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.7 }}>{f.n}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
+          {lista.filtros?.length ? <FiltrosDaLista filtros={lista.filtros} /> : null}
 
-          {/* A lista do painel é a MESMA linha da coluna de contexto — um
+          {/* A linha do painel é a MESMA da coluna de contexto — um
               componente, dois lugares que nunca aparecem juntos. */}
           <div style={{ maxHeight: 300, overflow: 'auto', padding: '0 7px 7px' }}>
-            {seletor.itens.map((c) => (
-              <LinhaDeContexto
-                key={c.id}
+            {lista.itens.map((item) => (
+              <LinhaDeLista
+                key={item.id}
                 item={{
-                  id: c.id,
-                  titulo: c.titulo,
-                  legenda: c.inicio ? `#${c.num} · ${c.inicio} → ${c.fim ?? ''}` : `#${c.num}`,
-                  dur: c.dur,
-                  thumb: c.thumb,
-                  dot: c.statusCor,
-                  ativo: c.ativo,
+                  ...item,
                   onClick: () => {
-                    c.onClick?.();
+                    item.onClick?.();
                     setAberto(false);
                   },
                 }}
@@ -339,44 +297,31 @@ function SeletorDeCorte({
             ))}
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '9px 11px',
-              borderTop: '1px solid var(--line2)',
-            }}
-          >
-            <span
+          {atual.onVerTodos ? (
+            <div
               style={{
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                gap: 5,
-                fontSize: 11,
-                color: 'var(--mute)',
+                gap: 6,
+                padding: '9px 11px',
+                borderTop: '1px solid var(--line2)',
               }}
             >
-              <kbd>J</kbd>
-              <kbd>K</kbd>
-              trocar de corte
-            </span>
-            <div style={{ flex: 1 }} />
-            {seletor.onVerTodos ? (
+              <div style={{ flex: 1 }} />
               <button
                 type="button"
                 className="btn"
                 style={{ height: 26 }}
                 onClick={() => {
-                  seletor.onVerTodos?.();
+                  atual.onVerTodos?.();
                   setAberto(false);
                 }}
               >
                 <Icon name="layout-grid" size={12} />
                 Ver todos
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -385,16 +330,22 @@ function SeletorDeCorte({
 
 export function TopBar({
   trilha,
-  seletor,
+  atual,
   seletorCompacto = false,
-  contextoNoPainel,
+  listaNoPainel,
   estado,
+  cabecalho,
   tema,
   onAlternarTema,
   onAbrirBusca,
   onAbrirAvisos,
   avisosAtivos = 0,
 }: TopBarProps) {
+  const cabeBusca = useJanelaMin(BUSCA_LARGA_MIN_PX);
+  // Com o cabeçalho fundido, as ações da tela também disputam a linha: a
+  // busca cede primeiro, porque tem atalho (⌘K) e a ação da tela não.
+  const buscaLarga = cabeBusca && !cabecalho?.acoes?.length;
+
   return (
     <header
       className="gl"
@@ -403,9 +354,10 @@ export function TopBar({
         alignItems: 'center',
         gap: 8,
         flex: 'none',
-        height: 44,
+        minHeight: 44,
         padding: '0 12px',
         borderBottom: '1px solid var(--line)',
+        overflow: 'hidden',
         // O backdrop-filter do `.gl` cria um contexto de empilhamento: o
         // z-index do painel do seletor fica preso AQUI dentro. Sem subir o
         // cabeçalho inteiro de camada, os cartões de vidro do miolo — que vêm
@@ -416,39 +368,73 @@ export function TopBar({
       }}
     >
       <Trilha itens={trilha} />
-      <div style={{ flex: 1 }} />
 
-      {seletor ? (
-        <SeletorDeCorte
-          seletor={seletor}
-          compacto={seletorCompacto}
-          contexto={contextoNoPainel}
-        />
+      {/* O subtítulo da tela densa: mesma linha, tom de instrumento. */}
+      {cabecalho?.sub && cabeBusca ? (
+        <span
+          style={{
+            minWidth: 0,
+            paddingLeft: 4,
+            fontSize: 11.5,
+            color: 'var(--mute)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {cabecalho.sub}
+        </span>
       ) : null}
 
-      <button
-        type="button"
-        className="fld"
-        onClick={onAbrirBusca}
-        style={{
-          width: 240,
-          color: 'var(--dim)',
-          background: 'var(--panel)',
-          backdropFilter: 'var(--glass)',
-          cursor: 'pointer',
-          textAlign: 'left',
-        }}
-      >
-        <Icon name="command" size={12} />
-        Buscar live, tela ou ação…
-        <span style={{ flex: 1 }} />
-        <kbd>⌘K</kbd>
-      </button>
+      <div style={{ flex: 1, minWidth: 8 }} />
+
+      {atual ? (
+        <Seletor atual={atual} compacto={seletorCompacto} lista={listaNoPainel} />
+      ) : null}
+
+      {cabecalho?.acoes?.length ? <AcoesDaTela acoes={cabecalho.acoes} /> : null}
+
+      {buscaLarga ? (
+        <button
+          type="button"
+          className="fld campo"
+          onClick={onAbrirBusca}
+          style={{
+            width: 240,
+            flex: 'none',
+            color: 'var(--dim)',
+            background: 'var(--panel)',
+            backdropFilter: 'var(--glass)',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <Icon name="command" size={12} />
+          Buscar live, tela ou ação…
+          <span style={{ flex: 1 }} />
+          <kbd>⌘K</kbd>
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-icon"
+          title="Buscar live, tela ou ação · ⌘K"
+          aria-label="Buscar live, tela ou ação"
+          aria-keyshortcuts="Meta+K"
+          onClick={onAbrirBusca}
+        >
+          <Icon name="search" size={14} />
+        </button>
+      )}
 
       {estado ? (
-        <span className="chip" style={{ background: estado.bg, color: estado.cor }}>
+        <span
+          className="chip"
+          title={estado.texto}
+          style={{ background: estado.bg, color: estado.cor, flex: 'none' }}
+        >
           <Icon name={estado.icone} size={12} />
-          {estado.texto}
+          {buscaLarga ? estado.texto : null}
         </span>
       ) : null}
 
@@ -456,8 +442,9 @@ export function TopBar({
         type="button"
         className="btn btn-icon"
         title={avisosAtivos > 0 ? `${avisosAtivos} job(s) rodando — abrir a fila` : 'Abrir a fila'}
+        aria-label="Abrir a fila"
         onClick={onAbrirAvisos}
-        style={{ position: 'relative' }}
+        style={{ position: 'relative', flex: 'none' }}
       >
         <Icon name="bell" size={14} />
         {avisosAtivos > 0 ? (
@@ -480,6 +467,8 @@ export function TopBar({
         className="btn btn-icon"
         onClick={onAlternarTema}
         title={tema === 'dark' ? 'Tema claro' : 'Tema escuro'}
+        aria-label={tema === 'dark' ? 'Tema claro' : 'Tema escuro'}
+        style={{ flex: 'none' }}
       >
         <Icon name={tema === 'dark' ? 'sun' : 'moon'} size={14} />
       </button>

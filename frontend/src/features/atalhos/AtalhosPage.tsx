@@ -142,8 +142,8 @@ export function AtalhosPage() {
   const totalCustom = Object.keys(overlay).length;
 
   useDefinirChrome(
-    { sub: 'tudo que a bancada faz sem o mouse — clique em ✎ e pressione a nova combinação' },
-    [],
+    { sub: `${specs.length} atalhos · ${totalCustom} personalizados` },
+    [specs.length, totalCustom],
   );
 
   return (

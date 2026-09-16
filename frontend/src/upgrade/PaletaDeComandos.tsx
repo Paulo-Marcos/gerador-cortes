@@ -2,34 +2,32 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProjetos } from '@/hooks/useProjetos';
 import { Icon, type IconName } from './Icon';
+import { destinosDaPaleta } from './upgradeRoutes';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A busca do ⌘K.
 //
-// A barra superior do design promete "Buscar live, corte, ação…". Um
-// campo que parece clicável e não faz nada é pior que campo nenhum, então
-// ele virou o que promete: uma lista única onde se digita e se vai.
-//
 // Três tipos de destino na mesma lista, porque a pergunta de quem abre o
-// ⌘K é sempre "onde está X" — e X pode ser uma tela, uma live ou uma ação.
-// Separar em abas obrigaria a saber o tipo antes de lembrar o nome.
+// ⌘K é sempre "onde está X" — e X pode ser uma tela, uma live ou uma
+// ação. Separar em abas obrigaria a saber o tipo antes de lembrar o nome.
 //
 // Enter vai no primeiro; setas escolhem; Esc fecha. Nada além disso: a
 // paleta é um atalho, e atalho com configuração vira mais uma tela.
+//
+// RODADA 2 · duas correções:
+//
+//   1. O Esc PARA AQUI. A paleta não interrompia a propagação, então o
+//      Esc fechava também o diálogo que estivesse atrás — o operador
+//      perdia o formulário que estava preenchendo. (A outra metade do
+//      conserto está em `teclasDaCasca`: com diálogo aberto, ⌘K não
+//      abre a paleta.)
+//   2. As telas vêm da tabela única (`destinosDaPaleta`), não de uma
+//      lista escrita à mão que já discordava do trilho.
 // ─────────────────────────────────────────────────────────────────
 
 type Destino = { id: string; icone: IconName; texto: string; dica: string; ir: string };
 
-const TELAS: Destino[] = [
-  { id: 't-bib', icone: 'home', texto: 'Biblioteca', dica: 'tela', ir: '/projetos' },
-  { id: 't-sho', icone: 'flame', texto: 'Shorts', dica: 'tela', ir: '/shorts' },
-  { id: 't-liv', icone: 'radio', texto: 'Buscar lives', dica: 'tela', ir: '/buscar-lives' },
-  { id: 't-ran', icone: 'trophy', texto: 'Ranking de lives', dica: 'tela', ir: '/ranking-lives' },
-  { id: 't-pad', icone: 'sparkles', texto: 'Padrões de capa', dica: 'tela', ir: '/padroes-thumbnail' },
-  { id: 't-ana', icone: 'bar-chart', texto: 'Análises', dica: 'tela', ir: '/analises' },
-  { id: 't-fil', icone: 'loader', texto: 'Fila de processamento', dica: 'tela', ir: '/fila' },
-  { id: 't-ata', icone: 'keyboard', texto: 'Atalhos', dica: 'tela', ir: '/atalhos' },
-  { id: 't-cfg', icone: 'settings', texto: 'Configurações', dica: 'tela', ir: '/canais' },
+const ACOES: Destino[] = [
   { id: 'a-liv', icone: 'plus', texto: 'Nova live', dica: 'ação', ir: '/buscar-lives' },
 ];
 
@@ -38,7 +36,7 @@ const MAX_RESULTADOS = 12;
 function normalizar(texto: string) {
   return texto
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 }
 
@@ -56,6 +54,8 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
     requestAnimationFrame(() => campo.current?.focus());
   }, [aberta]);
 
+  const telas = useMemo(() => destinosDaPaleta(), []);
+
   const resultados = useMemo(() => {
     const lives: Destino[] = (projetos ?? []).map((p) => ({
       id: `p-${p.id}`,
@@ -65,10 +65,10 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
       ir: `/projetos/${p.id}`,
     }));
     const q = normalizar(termo.trim());
-    const todos = [...TELAS, ...lives];
-    const filtrados = q ? todos.filter((d) => normalizar(d.texto).includes(q)) : TELAS;
+    const todos = [...telas, ...ACOES, ...lives];
+    const filtrados = q ? todos.filter((d) => normalizar(d.texto).includes(q)) : [...telas, ...ACOES];
     return filtrados.slice(0, MAX_RESULTADOS);
-  }, [projetos, termo]);
+  }, [projetos, telas, termo]);
 
   useEffect(() => setIndice(0), [termo]);
 
@@ -111,6 +111,7 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
         }}
       >
         <label
+          className="campo"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -125,7 +126,14 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
             value={termo}
             onChange={(e) => setTermo(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') onFechar();
+              if (e.key === 'Escape') {
+                // O Esc é da paleta, e só dela: sem parar aqui ele segue para
+                // os listeners de documento e fecha o diálogo de trás junto.
+                e.preventDefault();
+                e.stopPropagation();
+                onFechar();
+                return;
+              }
               if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setIndice((i) => Math.min(i + 1, resultados.length - 1));
@@ -134,13 +142,20 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
                 e.preventDefault();
                 setIndice((i) => Math.max(i - 1, 0));
               }
-              if (e.key === 'Enter') ir(resultados[indice]);
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                ir(resultados[indice]);
+              }
             }}
             placeholder="Buscar live, tela ou ação…"
+            aria-label="Buscar live, tela ou ação"
             style={{
               flex: 1,
               minWidth: 0,
               border: 0,
+              // O anel de foco fica no `.campo` (ver upgrade.css): dentro de
+              // uma caixa com borda, o anel no input desenharia dois retângulos.
               outline: 'none',
               background: 'transparent',
               fontSize: 14,

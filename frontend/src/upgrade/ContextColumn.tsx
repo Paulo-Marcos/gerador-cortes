@@ -1,28 +1,25 @@
 import { Icon } from './Icon';
-import type { ChromeContexto, EtapaProjeto } from './UpgradeChrome';
+import type { ChromeLista, ItemDeLista } from './UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A coluna de contexto (250 px).
 //
 // Ela só existe nas telas de bancada, e o motivo é econômico: nelas a
-// pessoa trabalha item a item e precisa ver a fila sem sair do que
-// está fazendo. Nas telas de lista a fila JÁ é o conteúdo, e repetir
-// a lista ao lado da lista seria ruído caro.
+// pessoa trabalha item a item e precisa ver a fila sem sair do que está
+// fazendo. Nas telas de lista a fila JÁ é o conteúdo, e repetir a lista
+// ao lado da lista seria ruído caro.
 //
-// RODADA 1 · quem decide se ela aparece é a CASCA, por medida de
-// janela (`UpgradeShell`), e não mais a regra `.ctx{display:none}` do
-// CSS. A diferença importa: com `display:none` a identidade da live e
-// a esteira clicável simplesmente evaporavam abaixo de 1240 px, sem
-// substituto. Agora a casca sabe que a coluna não está lá e manda as
-// duas peças para o painel do seletor — as duas moram aqui e são
-// exportadas para isso.
+// Quem decide se ela aparece é a CASCA, por medida de janela
+// (`medidas.ts`). Quando não cabe, as mesmas peças vão para o painel do
+// seletor — por isso elas moram aqui e são exportadas.
+//
+// RODADA 2 · três coisas saíram:
+//   · a esteira da live (virou a fita de `FitaDaLive`, um lugar só);
+//   · a caixa de miniatura quando não há miniatura — eram 14 retângulos
+//     cinza idênticos gastando 38 px de largura para não dizer nada;
+//   · o contrato duplo: agora entra UMA `lista`, a mesma que o painel
+//     do seletor recebe.
 // ─────────────────────────────────────────────────────────────────
-
-const ESTADO_ETAPA = {
-  feito: { bg: 'var(--ok-soft)', cor: 'var(--ok)', borda: 'var(--line)' },
-  agora: { bg: 'var(--accent)', cor: 'var(--on-accent)', borda: 'transparent' },
-  todo: { bg: 'var(--inset)', cor: 'var(--dim)', borda: 'var(--line)' },
-} satisfies Record<EtapaProjeto['estado'], { bg: string; cor: string; borda: string }>;
 
 /** Miniatura + nome da live. Reaproveitada no painel do seletor. */
 export function IdentidadeDaLive({
@@ -36,27 +33,26 @@ export function IdentidadeDaLive({
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
-      <span
-        style={{
-          width: 44,
-          height: 26,
-          flex: 'none',
-          borderRadius: 'var(--r1)',
-          overflow: 'hidden',
-          // Sem thumb real ainda: cinza de ausência, não gradiente de
-          // protótipo. Azul-bonito em 14 linhas iguais não identifica nada.
-          background: 'var(--inset)',
-        }}
-        aria-hidden
-      >
-        {thumb ? (
+      {thumb ? (
+        <span
+          style={{
+            width: 44,
+            height: 26,
+            flex: 'none',
+            borderRadius: 'var(--r1)',
+            overflow: 'hidden',
+            background: 'var(--inset)',
+          }}
+          aria-hidden
+        >
           <img
             src={thumb}
             alt=""
+            loading="lazy"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
-        ) : null}
-      </span>
+        </span>
+      ) : null}
       <span style={{ minWidth: 0 }}>
         <span
           style={{
@@ -89,47 +85,72 @@ export function IdentidadeDaLive({
   );
 }
 
-/** A esteira da live em uma linha de botões de 24 px. */
-export function EtapasEmLinha({ etapas }: { etapas: EtapaProjeto[] }) {
-  if (etapas.length === 0) return null;
+/** Título da lista + resumo em números. Igual nos dois lugares. */
+export function CabecalhoDeLista({
+  titulo,
+  resumo,
+  padding = '9px 12px',
+}: {
+  titulo: string;
+  resumo?: string;
+  padding?: string;
+}) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-      {etapas.map((e) => {
-        const tom = ESTADO_ETAPA[e.estado];
-        return (
-          <button
-            key={e.titulo}
-            type="button"
-            onClick={e.onClick}
-            title={e.titulo}
-            aria-label={e.titulo}
-            aria-current={e.estado === 'agora' ? 'step' : undefined}
-            style={{
-              display: 'grid',
-              placeItems: 'center',
-              width: '100%',
-              height: 24,
-              border: `1px solid ${tom.borda}`,
-              borderRadius: 'var(--r1)',
-              background: tom.bg,
-              color: tom.cor,
-              cursor: e.onClick ? 'pointer' : 'default',
-            }}
-          >
-            <Icon name={e.icone} size={12} />
-          </button>
-        );
-      })}
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding,
+        borderBottom: '1px solid var(--line2)',
+      }}
+    >
+      <span className="lbl">{titulo}</span>
+      <span style={{ flex: 1 }} />
+      {resumo ? (
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
+          {resumo}
+        </span>
+      ) : null}
     </div>
   );
 }
 
-/** Uma linha da lista de cortes. Compartilhada com o painel do seletor. */
-export function LinhaDeContexto({
-  item,
-}: {
-  item: ChromeContexto['itens'][number];
-}) {
+/** Filtros da lista, quando a tela os declara. */
+export function FiltrosDaLista({ filtros }: { filtros: NonNullable<ChromeLista['filtros']> }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '9px 11px' }}>
+      {filtros.map((f) => (
+        <button
+          key={f.texto}
+          type="button"
+          onClick={f.onClick}
+          aria-pressed={f.ativo}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            height: 24,
+            padding: '0 8px',
+            border: `1px solid ${f.ativo ? 'var(--accent)' : 'var(--line)'}`,
+            borderRadius: 'var(--r1)',
+            background: f.ativo ? 'var(--accent-soft)' : 'var(--panel)',
+            color: f.ativo ? 'var(--accent2)' : 'var(--mute)',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          {f.texto}
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.75 }}>{f.n}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Uma linha da lista. Compartilhada com o painel do seletor. */
+export function LinhaDeLista({ item }: { item: ItemDeLista }) {
   return (
     <button
       type="button"
@@ -150,41 +171,42 @@ export function LinhaDeContexto({
         marginBottom: 2,
       }}
     >
-      <span
-        style={{
-          position: 'relative',
-          width: 38,
-          height: 22,
-          flex: 'none',
-          borderRadius: 'var(--r1)',
-          overflow: 'hidden',
-          background: 'var(--inset)',
-        }}
-      >
-        {item.thumb ? (
+      {item.thumb ? (
+        <span
+          style={{
+            position: 'relative',
+            width: 38,
+            height: 22,
+            flex: 'none',
+            borderRadius: 'var(--r1)',
+            overflow: 'hidden',
+            background: 'var(--inset)',
+          }}
+        >
           <img
             src={item.thumb}
             alt=""
+            loading="lazy"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
-        ) : null}
-        {item.dur ? (
-          <span
-            style={{
-              position: 'absolute',
-              inset: 'auto 1px 1px auto',
-              padding: '0 2px',
-              borderRadius: 2,
-              background: 'rgb(0 0 0/.55)',
-              fontFamily: 'var(--mono)',
-              fontSize: 8,
-              color: '#fff',
-            }}
-          >
-            {item.dur}
-          </span>
-        ) : null}
-      </span>
+          {item.dur ? (
+            <span
+              style={{
+                position: 'absolute',
+                inset: 'auto 1px 1px auto',
+                padding: '0 2px',
+                borderRadius: 2,
+                background: 'rgb(0 0 0/.55)',
+                fontFamily: 'var(--mono)',
+                fontSize: 9,
+                color: '#fff',
+              }}
+            >
+              {item.dur}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
       <span style={{ minWidth: 0, flex: 1 }}>
         <span
           style={{
@@ -198,16 +220,23 @@ export function LinhaDeContexto({
         >
           {item.titulo}
         </span>
-        <span
-          style={{
-            display: 'block',
-            fontFamily: 'var(--mono)',
-            fontSize: 10,
-            color: 'var(--mute)',
-          }}
-        >
-          {item.legenda}
-        </span>
+        {item.legenda || item.dur ? (
+          <span
+            style={{
+              display: 'block',
+              fontFamily: 'var(--mono)',
+              fontSize: 11,
+              color: 'var(--mute)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {/* Sem miniatura, a duração perde o selo do canto e vem para a
+                legenda: ela é informação, não enfeite da imagem. */}
+            {[item.legenda, item.thumb ? null : item.dur].filter(Boolean).join(' · ')}
+          </span>
+        ) : null}
       </span>
       <span
         style={{ width: 7, height: 7, flex: 'none', borderRadius: 99, background: item.dot }}
@@ -217,7 +246,7 @@ export function LinhaDeContexto({
   );
 }
 
-export function ContextColumn({ contexto }: { contexto: ChromeContexto }) {
+export function ContextColumn({ lista }: { lista: ChromeLista }) {
   return (
     <aside
       className="gl ctx"
@@ -230,53 +259,43 @@ export function ContextColumn({ contexto }: { contexto: ChromeContexto }) {
         minHeight: 0,
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          padding: 12,
-          borderBottom: '1px solid var(--line2)',
-        }}
-      >
-        <IdentidadeDaLive titulo={contexto.titulo} sub={contexto.sub} thumb={contexto.thumb} />
-        {contexto.etapas?.length ? <EtapasEmLinha etapas={contexto.etapas} /> : null}
-      </div>
+      {lista.cabecalho ? (
+        <div style={{ padding: 12, borderBottom: '1px solid var(--line2)' }}>
+          <IdentidadeDaLive
+            titulo={lista.cabecalho.titulo}
+            sub={lista.cabecalho.sub}
+            thumb={lista.cabecalho.thumb}
+          />
+        </div>
+      ) : null}
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '9px 12px',
-          borderBottom: '1px solid var(--line2)',
-        }}
-      >
-        <span className="lbl">{contexto.listaTitulo}</span>
-        <span style={{ flex: 1 }} />
-        {contexto.listaResumo ? (
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--mute)' }}>
-            {contexto.listaResumo}
-          </span>
-        ) : null}
-      </div>
+      <CabecalhoDeLista titulo={lista.titulo} resumo={lista.resumo} />
+
+      {lista.filtros?.length ? <FiltrosDaLista filtros={lista.filtros} /> : null}
 
       <div style={{ flex: 1, overflow: 'auto', padding: 6 }}>
-        {contexto.itens.map((c) => (
-          <LinhaDeContexto key={c.id} item={c} />
+        {lista.itens.map((c) => (
+          <LinhaDeLista key={c.id} item={c} />
         ))}
       </div>
 
-      {contexto.acao ? (
-        <div style={{ display: 'flex', gap: 6, padding: '10px 12px', borderTop: '1px solid var(--line2)' }}>
+      {lista.acao ? (
+        <div
+          style={{
+            display: 'flex',
+            gap: 6,
+            padding: '10px 12px',
+            borderTop: '1px solid var(--line2)',
+          }}
+        >
           <button
             type="button"
             className="btn"
             style={{ flex: 1, justifyContent: 'center' }}
-            onClick={contexto.acao.onClick}
+            onClick={lista.acao.onClick}
           >
             <Icon name="plus" size={12} />
-            {contexto.acao.texto}
+            {lista.acao.texto}
           </button>
         </div>
       ) : null}

@@ -4,7 +4,8 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button';
 import { useCortesProjeto } from '@/hooks/useEditor';
 import { useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
-import { cn } from '@/lib/utils';
+import { resolveThumbUrl } from '@/lib/api';
+import { cn, thumbnailUrl } from '@/lib/utils';
 import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { PublicarMassaModal } from '@/features/projeto-detalhe/PublicarMassaModal';
@@ -103,55 +104,39 @@ export function MetadataPage() {
 
   useDefinirChrome(
     {
-      titulo: corteAtivo
-        ? `Metadados & capas — Corte #${corteAtivo.numero}`
-        : 'Metadados & capas',
+      titulo: corteAtivo ? `Metadados & capas — Corte #${corteAtivo.numero}` : 'Metadados & capas',
       sub: `${stats.ready} de ${stats.total} cortes prontos · ${stats.prompts} prompts de capa · ${stats.thumbs} capas`,
-      // O primeiro slot da trilha de Metadados e a LIVE, o segundo o corte. So o
-      // numero caia no lugar da live e a trilha lia "Biblioteca > #7 > Metadados".
+      // O primeiro slot da trilha de Metadados é a LIVE, o segundo o corte.
       rotulos: [
         projetoQuery.data?.titulo_live ?? 'Live',
         ...(corteAtivo ? [`#${corteAtivo.numero}`] : []),
       ],
-      contexto:
+      lista:
         cuts.length > 0
           ? {
+              cabecalho: {
+                titulo: projetoQuery.data?.titulo_live ?? 'Cortes aprovados',
+                sub: `${stats.total} cortes · ${stats.ready} prontos`,
+                thumb: thumbnailUrl(projetoQuery.data?.youtube_url ?? '', 'mq') ?? undefined,
+              },
               titulo: 'Cortes aprovados',
-              sub: `${stats.total} cortes`,
-              listaTitulo: 'Metadados',
-              listaResumo: `${stats.ready} prontos`,
+              resumo: `${stats.ready} de ${stats.total} prontos`,
               itens: cuts.map((c) => ({
                 id: c.id,
+                num: String(c.numero),
                 titulo: c.titulo_proposto,
                 legenda: `#${c.numero} · ${c.inicio_hms}`,
+                thumb: resolveThumbUrl(projetoId ?? '', metaById[c.id]?.thumbnail_path) ?? undefined,
                 dot: DOT[metadadoStatus(metaById[c.id], statusMap.get(c.id))],
                 ativo: c.id === activeId,
                 onClick: () => selectCut(c.id),
               })),
             }
           : undefined,
-      seletor: corteAtivo
+      atual: corteAtivo
         ? {
             num: String(corteAtivo.numero),
             titulo: corteAtivo.titulo_proposto,
-            listaTitulo: 'Cortes aprovados',
-            listaResumo: `${stats.ready} de ${stats.total} prontos`,
-            itens: cuts.map((c) => {
-              const st = metadadoStatus(metaById[c.id], statusMap.get(c.id));
-              return {
-                id: c.id,
-                num: String(c.numero),
-                titulo: c.titulo_proposto,
-                inicio: c.inicio_hms,
-                fim: c.fim_hms,
-                status: st === 'ready' ? 'pronto' : st === 'partial' ? 'parcial' : 'vazio',
-                statusBg:
-                  st === 'ready' ? 'var(--ok-soft)' : st === 'partial' ? 'var(--warn-soft)' : 'var(--inset)',
-                statusCor: DOT[st],
-                ativo: c.id === activeId,
-                onClick: () => selectCut(c.id),
-              };
-            }),
             onAnterior: () => irParaCorte(-1),
             onProximo: () => irParaCorte(1),
             onVerTodos: () => navigate(`/projetos/${projetoId}`),
@@ -160,7 +145,6 @@ export function MetadataPage() {
       barra:
         cuts.length > 0
           ? {
-              teclas: [{ teclas: ['J', 'K'], texto: 'trocar de corte' }],
               extra: (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
                   <span className="lbl">Pronto p/ YouTube</span>
@@ -195,7 +179,15 @@ export function MetadataPage() {
             }
           : undefined,
     },
-    [cuts, activeId, stats, metaById, statusMap, cortesProntos.length, projetoQuery.data?.titulo_live],
+    [
+      cuts,
+      activeId,
+      stats,
+      metaById,
+      statusMap,
+      cortesProntos.length,
+      projetoQuery.data?.titulo_live,
+    ],
   );
 
   if (!projetoId) {

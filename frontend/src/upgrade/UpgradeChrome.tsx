@@ -14,30 +14,42 @@ import type { Migalha } from './upgradeRoutes';
 // ─────────────────────────────────────────────────────────────────
 // D-599 · Como a tela conversa com a casca.
 //
-// No protótipo tudo vem de um objeto só porque existe um componente
-// só. Aqui a tela e a casca são vizinhas separadas pelo router, e
-// prop-drilling através do <Outlet/> não é opção.
-//
 // A regra que mantém isso honesto: a casca monta sozinha, pela ROTA,
-// tudo o que não depende de dados — título, ícone, trilha. O que a
-// tela declara aqui é o resto: quantos cortes, a lista lateral, o que
-// o botão primário faz. E declarar é também decidir: a coluna de
-// contexto, o seletor e a barra de ações aparecem exatamente quando a
-// tela os fornece. Sem dados, a casca ainda desenha — apenas mais
-// quieta.
+// tudo o que não depende de dados — título, ícone, trilha, esteira da
+// live. O que a tela declara aqui é o resto: quantos cortes, a lista
+// lateral, o que o botão primário faz. E declarar é também decidir: a
+// lista, o seletor e a barra de ações aparecem exatamente quando a tela
+// os fornece.
 //
-// RODADA 1 · duas frouxidões fechadas no contrato:
-//   · `rotulos` aceita `{ texto, to }` — a trilha virou navegação;
-//   · `thumb` existe em contexto e seletor, para as listas pararem de
-//     desenhar o gradiente azul do protótipo em 14 linhas iguais.
+// RODADA 2 · UMA lista no contrato, não duas.
+//
+// Até aqui a tela escrevia a mesma lista de cortes duas vezes —
+// `contexto.itens` (coluna) e `seletor.itens` (painel) —, com formatos
+// de legenda diferentes e títulos que já discordavam ("Cortes da live"
+// na coluna, "Cortes de LIVE 267" no painel). A rodada 1 garantiu que
+// as duas nunca aparecem juntas; esta garante que elas não podem
+// DIVERGIR, porque são a mesma declaração:
+//
+//   lista  → o que mais existe aqui (título, resumo, filtros, itens)
+//   atual  → o item em foco e como trocar dele (J/K, ‹ ›)
+//
+// A casca decide onde pintar: coluna quando a janela cabe, painel do
+// seletor quando não. `contexto` e `seletor` continuam aceitos e são
+// convertidos por `listaDoChrome` — nenhuma tela quebra ao aplicar o
+// patch; as que forem tocadas ficam ~40 linhas menores.
 // ─────────────────────────────────────────────────────────────────
 
-export type ContextoItem = {
+/** Uma linha de lista — na coluna de contexto ou no painel do seletor. */
+export type ItemDeLista = {
   id: string;
+  /** Número do corte, quando existe: entra em mono, antes do título. */
+  num?: string;
   titulo: string;
-  legenda: string;
+  legenda?: string;
   dur?: string;
-  /** URL da miniatura real (`thumbnailUrl` / `resolveThumbUrl`). */
+  /** URL da miniatura real (`thumbnailUrl` / `resolveThumbUrl`). Sem ela a
+   *  caixa não é desenhada: 14 retângulos cinza idênticos custavam 38 px de
+   *  largura para não identificar nada. */
   thumb?: string;
   /** Cor da bolinha de estado à direita. */
   dot: string;
@@ -45,6 +57,26 @@ export type ContextoItem = {
   onClick?: () => void;
 };
 
+export type ChromeLista = {
+  /** Identidade do conjunto — a live, o Fire. Aparece acima da lista. */
+  cabecalho?: { titulo: string; sub?: string; thumb?: string };
+  titulo: string;
+  resumo?: string;
+  filtros?: Array<{ texto: string; n: number; ativo?: boolean; onClick?: () => void }>;
+  itens: ItemDeLista[];
+  acao?: { texto: string; onClick?: () => void };
+};
+
+/** O item em foco e como trocar dele. */
+export type ChromeAtual = {
+  num?: string;
+  titulo: string;
+  onAnterior?: () => void;
+  onProximo?: () => void;
+  onVerTodos?: () => void;
+};
+
+/** Um passo da esteira da live, quando a tela conhece o estado real. */
 export type EtapaProjeto = {
   icone: IconName;
   titulo: string;
@@ -52,10 +84,45 @@ export type EtapaProjeto = {
   onClick?: () => void;
 };
 
+export type ChromeBarra = {
+  secundario?: { texto: string; icone: IconName; onClick?: () => void };
+  terciario?: { titulo: string; icone: IconName; onClick?: () => void };
+  /** `desabilitado` quando a decisão ainda não é possível (nada pronto para
+   *  publicar). O botão fica VISÍVEL e apagado, não some: a ausência dele
+   *  mudaria a barra de lugar e esconderia a resposta "ainda não dá". */
+  primario: { texto: string; icone: IconName; onClick?: () => void; desabilitado?: boolean };
+  /** Lembretes de teclado à esquerda. A casca injeta o de J/K quando há
+   *  `atual` — declare aqui só o que a TELA acrescenta (Space, etc.). */
+  teclas?: Array<{ teclas: string[]; texto: string }>;
+  /** Controles de lote (destinos, agendamento) à esquerda do fiel. */
+  extra?: ReactNode;
+};
+
+export type ChromeEstado = {
+  texto: string;
+  icone: 'circle-check' | 'loader' | 'triangle-alert';
+  cor: string;
+  bg: string;
+};
+
+// ── Contrato antigo (rodada 1). Aceito, convertido, a caminho da saída ──
+
+/** @deprecated use `lista`. */
+export type ContextoItem = {
+  id: string;
+  titulo: string;
+  legenda: string;
+  dur?: string;
+  thumb?: string;
+  dot: string;
+  ativo?: boolean;
+  onClick?: () => void;
+};
+
+/** @deprecated use `lista` + `chrome.etapas`. */
 export type ChromeContexto = {
   titulo: string;
   sub?: string;
-  /** Miniatura da live. */
   thumb?: string;
   etapas?: EtapaProjeto[];
   listaTitulo: string;
@@ -64,6 +131,7 @@ export type ChromeContexto = {
   acao?: { texto: string; onClick?: () => void };
 };
 
+/** @deprecated use `lista`. */
 export type SeletorItem = {
   id: string;
   num: string;
@@ -80,8 +148,8 @@ export type SeletorItem = {
   onClick?: () => void;
 };
 
+/** @deprecated use `lista` + `atual`. */
 export type ChromeSeletor = {
-  /** O que aparece fechado: "#7 · O erro do BC…". */
   num: string;
   titulo: string;
   listaTitulo: string;
@@ -93,27 +161,6 @@ export type ChromeSeletor = {
   onVerTodos?: () => void;
 };
 
-export type ChromeBarra = {
-  secundario?: { texto: string; icone: IconName; onClick?: () => void };
-  terciario?: { titulo: string; icone: IconName; onClick?: () => void };
-  /** `desabilitado` quando a decisão ainda não é possível (nada pronto para
-   *  publicar). O botão fica VISÍVEL e apagado, não some: a ausência dele
-   *  mudaria a barra de lugar e esconderia a resposta "ainda não dá". */
-  primario: { texto: string; icone: IconName; onClick?: () => void; desabilitado?: boolean };
-  /** Lembretes de teclado à esquerda. A casca já injeta o de J/K quando há
-   *  seletor — declarar aqui é para o que a TELA acrescenta (Space, etc.). */
-  teclas?: Array<{ teclas: string[]; texto: string }>;
-  /** Controles de lote (destinos, agendamento) à esquerda do fiel. */
-  extra?: ReactNode;
-};
-
-export type ChromeEstado = {
-  texto: string;
-  icone: 'circle-check' | 'loader' | 'triangle-alert';
-  cor: string;
-  bg: string;
-};
-
 export type Chrome = {
   /** Sobrescreve o título do cabeçalho quando ele depende de dados
       ("Corte #7 — O erro do BC"). Sem isso vale o título da rota. */
@@ -122,17 +169,91 @@ export type Chrome = {
   sub?: string;
   acoes?: ScreenAction[];
   /** Bancada: o miolo ocupa a altura toda e rola por dentro, não por fora.
-      Um player com barra de rolagem da página é um player que some. */
+      Um player com barra de rolagem da página é um player que some.
+      Nesta rodada `denso` também funde o cabeçalho de tela na barra
+      superior — são ~46 px devolvidos ao player. */
   denso?: boolean;
   /** Migalhas do meio: "LIVE 267", "#7". String usa o destino padrão da
       rota; `{ texto, to }` quando a tela quer mandar no destino. */
   rotulos?: Array<string | Migalha>;
   /** Chip de estado na barra superior ("salvo", "salvando…", "erro"). */
   estado?: ChromeEstado;
+  /** A lista do lado — coluna ou painel, a casca decide. */
+  lista?: ChromeLista;
+  /** O item em foco dentro dessa lista. */
+  atual?: ChromeAtual;
+  /** Estado real das fases da live, quando a tela o conhece. A fita já
+   *  existe sem isto (ela sabe em que fase a rota está). */
+  etapas?: EtapaProjeto[];
+  /** @deprecated use `lista` (+ `chrome.etapas`). */
   contexto?: ChromeContexto;
+  /** @deprecated use `lista` + `atual`. */
   seletor?: ChromeSeletor;
   barra?: ChromeBarra;
 };
+
+/**
+ * Converte o contrato antigo no novo. Uma fonte para as duas vistas: o que
+ * a coluna mostra e o que o painel mostra deixam de poder discordar.
+ */
+export function listaDoChrome(chrome: Chrome): { lista?: ChromeLista; atual?: ChromeAtual } {
+  if (chrome.lista) return { lista: chrome.lista, atual: chrome.atual };
+
+  const c = chrome.contexto;
+  const s = chrome.seletor;
+  if (!c && !s) return {};
+
+  const itens: ItemDeLista[] = c
+    ? c.itens.map((i) => ({
+        id: i.id,
+        titulo: i.titulo,
+        legenda: i.legenda,
+        dur: i.dur,
+        thumb: i.thumb,
+        dot: i.dot,
+        ativo: i.ativo,
+        onClick: i.onClick,
+      }))
+    : (s?.itens ?? []).map((i) => ({
+        id: i.id,
+        num: i.num,
+        titulo: i.titulo,
+        legenda: i.inicio ? `#${i.num} · ${i.inicio} → ${i.fim ?? ''}` : `#${i.num}`,
+        dur: i.dur,
+        thumb: i.thumb,
+        dot: i.statusCor,
+        ativo: i.ativo,
+        onClick: i.onClick,
+      }));
+
+  const lista: ChromeLista = {
+    cabecalho: c ? { titulo: c.titulo, sub: c.sub, thumb: c.thumb } : undefined,
+    titulo: c?.listaTitulo ?? s?.listaTitulo ?? 'Itens',
+    resumo: c?.listaResumo ?? s?.listaResumo,
+    filtros: s?.filtros,
+    itens,
+    acao: c?.acao,
+  };
+
+  const atual: ChromeAtual | undefined =
+    chrome.atual ??
+    (s
+      ? {
+          num: s.num,
+          titulo: s.titulo,
+          onAnterior: s.onAnterior,
+          onProximo: s.onProximo,
+          onVerTodos: s.onVerTodos,
+        }
+      : undefined);
+
+  return { lista, atual };
+}
+
+/** Estado real das fases, venha do campo novo ou do contexto antigo. */
+export function etapasDoChrome(chrome: Chrome): EtapaProjeto[] | undefined {
+  return chrome.etapas ?? chrome.contexto?.etapas;
+}
 
 type ChromeStore = {
   chrome: Chrome;

@@ -7,10 +7,16 @@ import { Icon, type IconName } from './Icon';
 //
 // Uma linha só, sempre com a mesma gramática: ícone em acento, título
 // que responde "onde estou", subtítulo que responde "como estão as
-// coisas aqui" e, à direita, as ações da tela inteira. Quem lê o
-// protótipo vê que o subtítulo nunca é decorativo — ele carrega
-// número ("14 cortes · 3 fire · 412 MB"). É o painel de instrumentos
-// da tela, não a legenda dela.
+// coisas aqui" e, à direita, as ações da tela inteira. O subtítulo nunca
+// é decorativo — ele carrega número ("14 cortes · 3 fire · 412 MB"). É o
+// painel de instrumentos da tela, não a legenda dela.
+//
+// RODADA 2 · nas telas densas (Bancada, Pós, Revisão) esta faixa não é
+// montada: subtítulo e ações vão para a barra superior, e o título sai —
+// a trilha já termina em "#7" e o título dizia "Corte #7 — …" 40 px
+// abaixo. Eram ~46 px de moldura repetindo informação numa tela cujo
+// trabalho é olhar vídeo. Por isso as ações viraram um componente
+// próprio: um desenho, dois lugares.
 // ─────────────────────────────────────────────────────────────────
 
 export type ScreenAction = {
@@ -29,6 +35,38 @@ type ScreenHeaderProps = {
   sub?: string;
   acoes?: ScreenAction[];
 };
+
+export function AcoesDaTela({ acoes = [] }: { acoes?: ScreenAction[] }) {
+  return (
+    <>
+      {acoes.map((a) =>
+        a.ia ? (
+          <AcaoDeIa
+            key={a.texto}
+            rotulo={a.texto}
+            tamanho="sm"
+            // A altura do `.btn` do design (30 px): lado a lado, os dois têm de
+            // parecer a mesma família de botão.
+            className="h-[30px]"
+            destaque={a.forte}
+            emVoo={a.ia.emVoo}
+            onGerar={a.ia.onGerar}
+          />
+        ) : (
+          <button
+            key={a.texto}
+            type="button"
+            className={a.forte ? 'btn btn-pri' : 'btn'}
+            onClick={a.onClick}
+          >
+            <Icon name={a.icone} size={13} />
+            {a.texto}
+          </button>
+        ),
+      )}
+    </>
+  );
+}
 
 export function ScreenHeader({ icone, titulo, sub, acoes = [] }: ScreenHeaderProps) {
   return (
@@ -73,31 +111,7 @@ export function ScreenHeader({ icone, titulo, sub, acoes = [] }: ScreenHeaderPro
         ) : null}
       </span>
       <div style={{ flex: 1 }} />
-      {acoes.map((a) =>
-        a.ia ? (
-          <AcaoDeIa
-            key={a.texto}
-            rotulo={a.texto}
-            tamanho="sm"
-            // A altura do `.btn` do design (30 px): lado a lado, os dois têm de
-            // parecer a mesma família de botão.
-            className="h-[30px]"
-            destaque={a.forte}
-            emVoo={a.ia.emVoo}
-            onGerar={a.ia.onGerar}
-          />
-        ) : (
-          <button
-            key={a.texto}
-            type="button"
-            className={a.forte ? 'btn btn-pri' : 'btn'}
-            onClick={a.onClick}
-          >
-            <Icon name={a.icone} size={13} />
-            {a.texto}
-          </button>
-        ),
-      )}
+      <AcoesDaTela acoes={acoes} />
     </div>
   );
 }

@@ -1,23 +1,29 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Icon, type IconName } from './Icon';
-import type { TelaId } from './upgradeRoutes';
+import { Icon } from './Icon';
+import type { DestinoDeMenu, Grupo, TelaId } from './upgradeRoutes';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O trilho global.
 //
 // Três blocos, e a divisão não é arrumação: "Produção" é o que se faz
-// com uma live específica (a esteira), "Inteligência" é o que se
-// pergunta ao acervo inteiro, e o rodapé é a ferramenta. Quem entende
-// essa separação acha qualquer tela sem ler rótulo.
+// com o acervo de lives, "Inteligência" é o que se pergunta a ele, e
+// "Ferramentas" é a ferramenta. Quem entende essa separação acha
+// qualquer tela sem ler rótulo.
 //
-// Recolhido ele vira 54 px de ícone puro — e por isso todo botão
-// carrega `title`: no estado estreito, o title É o rótulo.
+// Recolhido ele vira 54 px de ícone puro — e por isso todo botão carrega
+// `title`: no estado estreito, o title É o rótulo.
 //
-// RODADA 1 · cada item guarda AS TELAS que ele representa, não uma.
-// Antes, curar um Fire (`fire`), despachar a prateleira
-// (`prateleira`), a Fila, o kit e o 404 não acendiam nada: o trilho
-// inteiro ficava apagado justamente nas telas mais profundas do app,
-// onde "onde estou" é a pergunta mais cara.
+// RODADA 2 · duas correções estruturais:
+//
+//   1. A LISTA É FIXA. As cinco fases da live saíram daqui (viraram a
+//      fita de `FitaDaLive`): o trilho não muda mais de tamanho conforme
+//      a rota. "Biblioteca" acende em todas as telas de dentro de uma
+//      live — é de lá que a live veio —, então nenhuma tela profunda
+//      fica com o menu apagado.
+//   2. O TRILHO ROLA. Tinha `overflow:hidden` e todo item em
+//      `flex:'none'`: abaixo de ~640 px de altura os últimos itens
+//      (inclusive Configurações) sumiam sem nenhuma pista. Agora o
+//      cabeçalho e o pé ficam fixos e só a região dos itens rola.
 // ─────────────────────────────────────────────────────────────────
 
 export const TRILHO_LARGO = '212px';
@@ -31,26 +37,16 @@ export type FilaDoTrilho = {
   to: string;
 };
 
-export type ItemTrilho = {
-  icone: IconName;
-  texto: string;
-  to: string;
-  /** Todas as telas em que este item é o lugar onde a pessoa está —
-   *  a primeira é a canônica. Telas-filhas entram aqui, e não em itens
-   *  próprios: "Curar o Fire #7" não é um destino do menu, é um lugar
-   *  DENTRO de Shorts. */
-  telas: TelaId[];
-  badge?: string;
-};
-
 type GlobalRailProps = {
   expandido: boolean;
   onAlternar: () => void;
   telaAtual: TelaId;
-  producao: ItemTrilho[];
-  inteligencia: ItemTrilho[];
-  rodape: ItemTrilho[];
+  menu: Record<Grupo, DestinoDeMenu[]>;
   fila?: FilaDoTrilho;
+  /** `true` quando a rota atual É a Fila: o cartão é o item de navegação
+   *  daquela tela e precisa parecer aceso, não parecer um link para onde
+   *  a pessoa já está. */
+  filaAtiva?: boolean;
 };
 
 function ItemBotao({
@@ -58,7 +54,7 @@ function ItemBotao({
   ativo,
   mostrarTexto,
 }: {
-  item: ItemTrilho;
+  item: DestinoDeMenu;
   ativo: boolean;
   mostrarTexto: boolean;
 }) {
@@ -88,21 +84,6 @@ function ItemBotao({
       {mostrarTexto ? (
         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}>{item.texto}</span>
       ) : null}
-      {item.badge && mostrarTexto ? (
-        <span
-          style={{
-            marginLeft: 'auto',
-            fontFamily: 'var(--mono)',
-            fontSize: 10,
-            padding: '0 5px',
-            borderRadius: 'var(--r1)',
-            background: ativo ? 'var(--accent)' : 'var(--inset)',
-            color: ativo ? 'var(--on-accent)' : 'var(--mute)',
-          }}
-        >
-          {item.badge}
-        </span>
-      ) : null}
     </NavLink>
   );
 }
@@ -111,14 +92,13 @@ export function GlobalRail({
   expandido,
   onAlternar,
   telaAtual,
-  producao,
-  inteligencia,
-  rodape,
+  menu,
   fila,
+  filaAtiva = false,
 }: GlobalRailProps) {
   const navigate = useNavigate();
   const mostrarTexto = expandido;
-  const aceso = (item: ItemTrilho) => item.telas.includes(telaAtual);
+  const aceso = (item: DestinoDeMenu) => item.telas.includes(telaAtual);
 
   return (
     <aside
@@ -126,7 +106,7 @@ export function GlobalRail({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 2,
+        minHeight: 0,
         padding: '10px 8px',
         borderRight: '1px solid var(--line)',
         overflow: 'hidden',
@@ -143,6 +123,7 @@ export function GlobalRail({
           alignItems: 'center',
           gap: expandido ? 8 : 4,
           padding: '0 3px 10px',
+          flex: 'none',
         }}
       >
         <span
@@ -176,6 +157,7 @@ export function GlobalRail({
           onClick={onAlternar}
           className="btn btn-icon"
           title={expandido ? 'Recolher o trilho · ⌘B' : 'Expandir o trilho · ⌘B'}
+          aria-expanded={expandido}
           style={{
             marginLeft: expandido ? 'auto' : undefined,
             height: 24,
@@ -191,25 +173,36 @@ export function GlobalRail({
         </button>
       </div>
 
-      {mostrarTexto ? (
-        <span className="lbl" style={{ padding: '2px 4px 4px' }}>
-          Produção
-        </span>
-      ) : null}
-      {producao.map((i) => (
-        <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
-      ))}
+      {/* Só esta região rola. Cabeçalho e pé (fila + ferramentas) ficam. */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+      >
+        {mostrarTexto ? (
+          <span className="lbl" style={{ padding: '2px 4px 4px' }}>
+            Produção
+          </span>
+        ) : null}
+        {menu.producao.map((i) => (
+          <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
+        ))}
 
-      {mostrarTexto ? (
-        <span className="lbl" style={{ padding: '12px 4px 4px' }}>
-          Inteligência
-        </span>
-      ) : null}
-      {inteligencia.map((i) => (
-        <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
-      ))}
-
-      <div style={{ flex: 1 }} />
+        {mostrarTexto ? (
+          <span className="lbl" style={{ padding: '12px 4px 4px' }}>
+            Inteligência
+          </span>
+        ) : null}
+        {menu.inteligencia.map((i) => (
+          <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
+        ))}
+      </div>
 
       {fila ? (
         <button
@@ -217,15 +210,19 @@ export function GlobalRail({
           onClick={() => navigate(fila.to)}
           className="card"
           title={`${fila.titulo} · ${fila.sub}`}
+          aria-current={filaAtiva ? 'page' : undefined}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 8,
             padding: 8,
+            marginTop: 6,
             marginBottom: 6,
             cursor: 'pointer',
             textAlign: 'left',
             flex: 'none',
+            borderColor: filaAtiva ? 'var(--accent)' : 'var(--line)',
+            background: filaAtiva ? 'var(--accent-soft)' : undefined,
           }}
         >
           <span
@@ -253,7 +250,7 @@ export function GlobalRail({
               <span
                 style={{
                   display: 'block',
-                  fontSize: 10.5,
+                  fontSize: 11,
                   color: 'var(--mute)',
                   whiteSpace: 'nowrap',
                 }}
@@ -270,7 +267,7 @@ export function GlobalRail({
           Ferramentas
         </span>
       ) : null}
-      {rodape.map((i) => (
+      {menu.ferramentas.map((i) => (
         <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
       ))}
     </aside>

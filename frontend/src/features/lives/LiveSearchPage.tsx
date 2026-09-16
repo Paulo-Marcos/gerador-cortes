@@ -145,8 +145,10 @@ export function LiveSearchPage() {
   // D-599: na casca nova o cabecalho da tela e da CASCA. Manter o proprio
   // deixaria dois titulos identicos empilhados na mesma janela.
   useDefinirChrome(
-    { sub: 'o que já está no app aparece marcado — evite baixar duas vezes' },
-    [],
+    {
+      sub: `${lives.length} lives encontradas · ${lives.filter((live) => live.ja_baixado).length} já no app`,
+    },
+    [lives],
   );
 
   return (

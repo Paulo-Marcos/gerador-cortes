@@ -8,7 +8,7 @@ const base: Contexto = {
   ctrl: false,
   alt: false,
   digitando: false,
-  focoEmControle: false,
+  focoEmDecisao: false,
   overlayAberto: false,
   jaTratado: false,
   primarioDisponivel: true,
@@ -27,18 +27,29 @@ describe('acaoDaTecla', () => {
     expect(acaoDaTecla(com({ tecla: 'j', digitando: true }))).toBeNull();
   });
 
-  it('com dialogo aberto J/K e Enter sao do dialogo', () => {
+  it('com dialogo aberto nenhuma tecla e da casca — ⌘K inclusive', () => {
     expect(acaoDaTecla(com({ tecla: 'j', overlayAberto: true }))).toBeNull();
     expect(acaoDaTecla(com({ tecla: 'Enter', overlayAberto: true }))).toBeNull();
+    // Rodada 2: antes o modificador passava antes da trava, e ⌘K abria a
+    // paleta por cima de um formulario — o Esc seguinte fechava os dois.
+    expect(acaoDaTecla(com({ tecla: 'k', meta: true, overlayAberto: true }))).toBeNull();
+    expect(acaoDaTecla(com({ tecla: 'b', meta: true, overlayAberto: true }))).toBeNull();
   });
 
-  it('Enter dispara o primario quando o foco nao esta num controle', () => {
+  it('Enter dispara o primario quando o foco nao esta numa decisao', () => {
     expect(acaoDaTecla(com({ tecla: 'Enter' }))).toBe('primario');
   });
 
-  it('Enter com foco num botao NAO dispara o primario — seria acao dupla', () => {
+  it('Enter com foco num botao COMUM continua disparando o primario', () => {
+    // Rodada 2: este era o furo. O navegador deixa o foco no botao clicado,
+    // entao depois de clicar um corte na lista o Enter morria — com o ↵ ainda
+    // impresso na barra. So decisao engole o Enter.
+    expect(acaoDaTecla(com({ tecla: 'Enter', focoEmDecisao: false }))).toBe('primario');
+  });
+
+  it('Enter com foco num controle de DECISAO nao dispara — seria acao dupla', () => {
     // Foco em "Rejeitar": o navegador ja clica nele. Aprovar junto seria o bug.
-    expect(acaoDaTecla(com({ tecla: 'Enter', focoEmControle: true }))).toBeNull();
+    expect(acaoDaTecla(com({ tecla: 'Enter', focoEmDecisao: true }))).toBeNull();
   });
 
   it('Enter com primario desabilitado nao faz nada', () => {

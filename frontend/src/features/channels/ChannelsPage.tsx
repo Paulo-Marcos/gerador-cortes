@@ -160,10 +160,19 @@ const SECOES_CANAL: Record<Exclude<SecaoCanal, null>, { titulo: string }> = {
 const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function ChannelsPage() {
-  useDefinirChrome({ sub: 'canal ativo, áreas editoriais e aparência da aplicação' }, []);
-
   const { notify } = useToast();
   const canaisQuery = useCanais();
+
+  const totalCanais = canaisQuery.data?.canais.length ?? 0;
+  const nomeDoAtivo = canaisQuery.data?.canais.find((c) => c.ativo)?.nome;
+  useDefinirChrome(
+    {
+      sub: nomeDoAtivo
+        ? `${totalCanais} ${totalCanais === 1 ? 'canal' : 'canais'} · ativo: ${nomeDoAtivo}`
+        : `${totalCanais} ${totalCanais === 1 ? 'canal' : 'canais'} · nenhum ativo`,
+    },
+    [totalCanais, nomeDoAtivo],
+  );
   const criar = useCriarCanal();
   const editar = useEditarCanal();
   const selecionar = useSelecionarCanal();

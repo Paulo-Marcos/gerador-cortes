@@ -4,17 +4,18 @@ import type { ChromeBarra } from './UpgradeChrome';
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A barra de ações fixa.
 //
-// O comentário do protótipo diz tudo: "nunca exige rolagem". Ela fica
-// fora da área que rola, então a ação que fecha a tela — aprovar,
-// renderizar, publicar — está sempre visível, não importa onde a
-// pessoa esteja na página. A ordem também é fixa: lembretes de tecla
-// à esquerda, depois o fiel, depois secundário → terciário → primário.
+// Ela fica fora da área que rola, então a ação que fecha a tela —
+// aprovar, renderizar, publicar — está sempre visível, não importa onde
+// a pessoa esteja na página. A ordem também é fixa: lembretes de tecla à
+// esquerda, depois o fiel, depois secundário → terciário → primário.
 // Quem aprende a ordem uma vez a encontra em todas as telas.
 //
-// RODADA 1 · o ↵ só aparece quando ele FUNCIONA. A casca passou a
-// ligar Enter ao botão primário (ver `useAtalhosDaCasca`); com o botão
-// desabilitado, a tecla não faz nada e a legenda sai. Atalho anunciado
-// e não cumprido ensina a desconfiar de todos os outros.
+// RODADA 2 · os três botões passam a carregar `data-decisao`. É o que a
+// trava do Enter lê (`teclasDaCasca`): antes ela olhava para qualquer
+// controle focado, e como o navegador deixa o foco no botão clicado,
+// bastava clicar um corte na lista para o Enter morrer — com o ↵ ainda
+// impresso aqui. Agora o Enter só é engolido quando o foco está num
+// controle que TAMBÉM decide, que é o caso em que ele duplicaria a ação.
 // ─────────────────────────────────────────────────────────────────
 
 export function ActionBar({ barra }: { barra: ChromeBarra }) {
@@ -56,6 +57,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
         <button
           type="button"
           className="btn"
+          data-decisao
           style={{ color: 'var(--mute)' }}
           onClick={barra.secundario.onClick}
         >
@@ -68,6 +70,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
         <button
           type="button"
           className="btn btn-icon"
+          data-decisao
           title={barra.terciario.titulo}
           aria-label={barra.terciario.titulo}
           onClick={barra.terciario.onClick}
@@ -79,11 +82,10 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
       <button
         type="button"
         className="btn btn-pri"
+        data-decisao
+        aria-keyshortcuts={barra.primario.desabilitado ? undefined : 'Enter'}
         onClick={barra.primario.onClick}
         disabled={barra.primario.desabilitado}
-        style={
-          barra.primario.desabilitado ? { opacity: 0.45, cursor: 'not-allowed' } : undefined
-        }
       >
         <Icon name={barra.primario.icone} size={13} />
         {barra.primario.texto}

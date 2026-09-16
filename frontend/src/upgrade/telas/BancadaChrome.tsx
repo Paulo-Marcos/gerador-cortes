@@ -1,21 +1,30 @@
 import { useNavigate } from 'react-router-dom';
+import { useProjeto } from '@/hooks/useProjetoDetalhe';
+import { resolveThumbUrl } from '@/lib/api';
+import { thumbnailUrl } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { useDefinirChrome, type SeletorItem } from '../UpgradeChrome';
+import { useDefinirChrome, type ItemDeLista } from '../UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 Etapa 4 · a Bancada conversa com a casca.
 //
 // Este componente não desenha nada: ele traduz o estado do editor para
 // o vocabulário da casca. Existe separado porque a alternativa era
-// espalhar quarenta linhas de `useDefinirChrome` dentro de um arquivo
-// de 1357 linhas que está travado — e porque a tradução é a parte que
-// a Pós-produção e a Revisão final vão reaproveitar sem mudar uma
-// vírgula do editor.
+// espalhar quarenta linhas de `useDefinirChrome` dentro de um arquivo de
+// 1357 linhas que está travado — e porque a tradução é a parte que a
+// Pós-produção e a Revisão final vão reaproveitar sem mudar uma vírgula
+// do editor.
 //
-// O ganho para quem usa: a lista de cortes, o seletor com J/K e a
-// barra de decisão deixam de ser peças do editor e passam a ser as
-// MESMAS de todas as telas. Aprovar um corte na Bancada e aprovar na
-// lista do Workspace viram o mesmo gesto, no mesmo lugar.
+// RODADA 2 · a lista é declarada UMA vez.
+//
+// Antes eram duas: `contexto.itens` (coluna) e `seletor.itens` (painel),
+// com legendas de formato diferente e títulos que já discordavam —
+// "Cortes da live" na coluna, "Cortes de LIVE 267" no painel. Agora é
+// `lista` + `atual`, e a casca escolhe onde pintar. Saíram ~30 linhas.
+//
+// Saiu também o lembrete de J/K: a casca o injeta sempre que existe
+// `atual`, então declarar aqui era escrevê-lo duas vezes (e mantinha
+// morto o caminho da injeção).
 // ─────────────────────────────────────────────────────────────────
 
 const TOM: Record<string, { cor: string; bg: string }> = {
@@ -45,6 +54,11 @@ export type BancadaChromeProps = {
   salvando: boolean;
   brutoPronto: boolean;
   brutoOcupado: boolean;
+  /** Miniatura da live, quando a tela a tem (`thumbnailUrl`). Sem ela a
+   *  caixa não é desenhada — cinza vazio não identifica nada. */
+  thumbLive?: string;
+  /** Miniatura por corte, quando existir. */
+  thumbDoCorte?: (corte: Corte) => string | undefined;
   onSalvar: () => void;
   onGerarBruto: () => void;
   onToggleFire: () => void;
@@ -66,6 +80,8 @@ export function BancadaChrome({
   salvando,
   brutoPronto,
   brutoOcupado,
+  thumbLive,
+  thumbDoCorte,
   onSalvar,
   onGerarBruto,
   onToggleFire,
@@ -82,24 +98,29 @@ export function BancadaChrome({
     navigate(caminhoDoCorte(alvo));
   };
 
-  const itens: SeletorItem[] = cortes.map((c) => {
-    const t = tom(c.status);
-    return {
-      id: c.id,
-      num: String(c.numero),
-      titulo: c.titulo_proposto,
-      inicio: c.inicio_hms,
-      fim: c.fim_hms,
-      status: c.status,
-      statusBg: t.bg,
-      statusCor: t.cor,
-      fire: c.is_fire,
-      ativo: c.id === corte.id,
-      onClick: () => navigate(caminhoDoCorte(c)),
-    };
-  });
-
   const prontos = exportStatus.filter((s) => s.pronto_publicar).length;
+
+  // Miniaturas reais por padrão, sem cada tela repetir a conta: a da live vem
+  // do projeto (mesma query que as telas já fizeram, em cache) e a do corte é
+  // a capa do export, quando já existe. Sem capa, a caixa não é desenhada.
+  const projeto = useProjeto(projetoId);
+  const capaDaLive =
+    thumbLive ?? thumbnailUrl(projeto.data?.youtube_url ?? '', 'mq') ?? undefined;
+  const capaDoCorte = (c: Corte) =>
+    thumbDoCorte?.(c) ??
+    resolveThumbUrl(projetoId, exportStatus.find((s) => s.corte_id === c.id)?.thumbnail_path) ??
+    undefined;
+
+  const itens: ItemDeLista[] = cortes.map((c) => ({
+    id: c.id,
+    num: String(c.numero),
+    titulo: c.titulo_proposto,
+    legenda: `#${c.numero} · ${c.inicio_hms} → ${c.fim_hms}`,
+    thumb: capaDoCorte(c),
+    dot: tom(c.status).cor,
+    ativo: c.id === corte.id,
+    onClick: () => navigate(caminhoDoCorte(c)),
+  }));
 
   useDefinirChrome(
     {
@@ -128,36 +149,22 @@ export function BancadaChrome({
               bg: 'var(--warn-soft)',
             }
           : { texto: 'salvo', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' },
-      contexto: {
-        titulo: tituloLive,
-        sub: `${cortes.length} cortes · ${prontos} prontos`,
-        listaTitulo: 'Cortes da live',
-        listaResumo: `${cortes.length} · ${prontos} prontos`,
+      lista: {
+        cabecalho: { titulo: tituloLive, sub: `${cortes.length} cortes · ${prontos} prontos`, thumb: capaDaLive },
+        titulo: 'Cortes da live',
+        resumo: `${cortes.length} · ${prontos} prontos`,
+        itens,
         acao: onNovoTrecho ? { texto: 'Novo trecho', onClick: onNovoTrecho } : undefined,
-        itens: cortes.map((c) => ({
-          id: c.id,
-          titulo: c.titulo_proposto,
-          legenda: `#${c.numero} · ${c.inicio_hms}`,
-          dot: tom(c.status).cor,
-          ativo: c.id === corte.id,
-          onClick: () => navigate(caminhoDoCorte(c)),
-        })),
       },
-      seletor: {
+      atual: {
         num: String(corte.numero),
         titulo: corte.titulo_proposto,
-        listaTitulo: `Cortes de ${tituloLive}`,
-        listaResumo: `${cortes.length} · ${prontos} prontos`,
-        itens,
         onAnterior: () => irPara(-1),
         onProximo: () => irPara(1),
         onVerTodos: () => navigate(`/projetos/${projetoId}`),
       },
       barra: {
-        teclas: [
-          { teclas: ['J', 'K'], texto: 'trocar de corte' },
-          { teclas: ['Space'], texto: 'tocar' },
-        ],
+        teclas: [{ teclas: ['Space'], texto: 'tocar' }],
         secundario: { texto: 'Rejeitar', icone: 'x', onClick: onRejeitar },
         terciario: { titulo: 'Salvar (Ctrl+S)', icone: 'check', onClick: onSalvar },
         primario: {
@@ -179,6 +186,7 @@ export function BancadaChrome({
       salvando,
       brutoPronto,
       brutoOcupado,
+      capaDaLive,
     ],
   );
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Scissors } from 'lucide-react';
 import { MenuDeIa } from '@/components/ui/acao-de-ia';
+import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import { AdicionarCorteModal } from '@/features/editor/AdicionarCorteModal';
 import { AnaliseIaModal } from '@/features/projeto-detalhe/AnaliseIaModal';
@@ -133,6 +134,7 @@ export default function WorkspaceProjetoPage() {
   const abrirPasta = useAbrirPasta();
   const refazerTranscricao = useRefazerTranscricao(id);
   const analisarDesviosTodos = useAnalisarDesviosTodos(id);
+  const confirmacao = useConfirmacao();
   const reordenar = useReordenarCortes(id);
   const uploadYoutube = useUploadYouTube();
   const marcarPublicado = useMarcarPublicadoYouTube();
@@ -282,16 +284,18 @@ export default function WorkspaceProjetoPage() {
 
   function dispararTrechosTodos(provider: ProviderIA) {
     const nome = provider === 'gemini' ? 'Gemini' : 'Claude';
-    if (
-      !confirm(
-        `Gerar trechos a remover com o ${nome} para TODOS os cortes deste projeto?\n\n` +
-          'A operação roda em segundo plano, corte a corte (pode levar minutos) — ' +
-          'os desvios encontrados vão aparecendo aos poucos. Os trechos já marcados ' +
-          'NÃO são removidos: esta ação só ACRESCENTA.',
-      )
-    )
-      return;
-    analisarDesviosTodos.disparar(provider);
+    confirmacao.executarOuPedir(
+      {
+        titulo: `Gerar trechos a remover com o ${nome}`,
+        detalhe: 'Todos os cortes deste projeto',
+        descricao:
+          'A operação roda em segundo plano, corte a corte (pode levar minutos) — os desvios ' +
+          'encontrados vão aparecendo aos poucos. Os trechos já marcados NÃO são removidos: ' +
+          'esta ação só ACRESCENTA.',
+        confirmLabel: `Gerar com ${nome}`,
+      },
+      () => analisarDesviosTodos.disparar(provider),
+    );
   }
 
   const dados = projeto.data;
@@ -709,6 +713,12 @@ export default function WorkspaceProjetoPage() {
           }))}
         />
       </UpgradeModal>
+
+      <ConfirmDialog
+        pedido={confirmacao.pedido}
+        onCancel={confirmacao.cancelar}
+        onConfirm={confirmacao.confirmar}
+      />
     </div>
   );
 }

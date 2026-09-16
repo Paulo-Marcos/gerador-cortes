@@ -10,6 +10,15 @@
    Dois eixos de tema, como no protótipo:
      data-theme = light | dark
      data-glass = 1 (vidro translúcido) | 0 (superfície sólida)
+
+   RODADA 2 · duas mudanças estruturais:
+     · nasceu o estado de FOCO. A casca inteira foi desenhada para
+       trabalhar sem mouse (J/K, ↵, ⌘K, ⌘B) e não havia uma única regra
+       `:focus-visible` em 514 linhas — quem navegava por Tab não via
+       onde estava;
+     · a regra `.ctx { display:none }` saiu: quem decide se a coluna de
+       contexto existe é a casca, em `medidas.ts`. Dois números para a
+       mesma decisão um dia discordariam.
    ═══════════════════════════════════════════════════════════════════ */
 
 .ap {
@@ -136,6 +145,31 @@
   color: inherit;
 }
 
+/* ─── Foco ────────────────────────────────────────────────────────
+   Uma regra, todos os controles. `:focus-visible` (e não `:focus`) para
+   o anel aparecer para quem navega por teclado sem pintar contorno a
+   cada clique de mouse.
+
+   O `outline-offset` positivo é o que faz o anel funcionar sobre vidro:
+   encostado na borda de um `.card` translúcido ele desaparecia. */
+
+.ap :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r1);
+}
+
+/* Campos compostos (a caixa tem a borda, o input mora dentro sem
+   contorno próprio): o anel vai na CAIXA, senão apareceriam dois
+   retângulos aninhados. Use `class="campo"` no invólucro. */
+
+.ap .campo:focus-within,
+.ap .fld:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
+
 .ap kbd {
   padding: 1px 5px;
   border: 1px solid var(--line);
@@ -143,7 +177,7 @@
   background: var(--inset);
   color: var(--mute);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
   line-height: 1.4;
 }
@@ -180,6 +214,20 @@
   color: var(--accent);
 }
 
+/* Desabilitado é ESTADO, não estilo inline. Antes cada chamada apagava
+   o botão à mão (`opacity: .45`) e o `:hover` continuava prometendo
+   acento num botão que não responde. */
+.ap .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ap .btn:disabled:hover {
+  border-color: var(--line);
+  color: inherit;
+  filter: none;
+}
+
 .ap .btn-pri {
   border-color: transparent;
   background: var(--accent);
@@ -195,6 +243,11 @@
   border-color: transparent;
   color: var(--on-accent);
   filter: brightness(1.06);
+}
+
+.ap .btn-pri:disabled:hover {
+  border-color: transparent;
+  color: var(--on-accent);
 }
 
 .ap .btn-icon {
@@ -224,13 +277,15 @@
   white-space: nowrap;
 }
 
-/* `lbl` = rótulo de seção: mono, caixa alta, bem espaçado. */
+/* `lbl` = rótulo de seção: mono, caixa alta, bem espaçado.
+   Rodada 2 · 9,5 px era piso de legibilidade furado — e é rótulo
+   estrutural, lido de relance. 10,5 px não muda layout nenhum. */
 .ap .lbl {
   color: var(--dim);
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -253,7 +308,23 @@
 /* ─── Layouts de duas colunas ─────────────────────────────────────
    `two` rola com a página; `two-b` (bancada) prende a altura para o
    painel lateral rolar sozinho. Abaixo de 1240px ambos viram uma
-   coluna e a coluna de contexto some. */
+   coluna.
+
+   O limiar canônico mora em `medidas.ts` (CONTEXTO_MIN_PX = 1241): é a
+   CASCA que decide se a coluna de contexto é montada. Aqui ficou só o
+   que é puramente visual. */
+@media (max-width: 1240px) {
+  .ap .two,
+  .ap .two-b {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .ap .two-b > aside {
+    max-height: none;
+  }
+}
+
 .ap .two {
   display: grid;
   grid-template-columns: minmax(360px, 1fr) 320px;
@@ -272,22 +343,6 @@
 .ap .two > *,
 .ap .two-b > * {
   min-width: 0;
-}
-
-@media (max-width: 1240px) {
-  .ap .two,
-  .ap .two-b {
-    grid-template-columns: minmax(0, 1fr);
-    height: auto;
-  }
-
-  .ap .two-b > aside {
-    max-height: none;
-  }
-
-  .ap .ctx {
-    display: none !important;
-  }
 }
 
 .ap ::-webkit-scrollbar {

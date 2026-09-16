@@ -40,7 +40,10 @@ export function ThumbnailPadroesPage() {
 
   useDefinirChrome(
     {
-      sub: 'o que as capas melhor avaliadas têm em comum — valide antes de aplicar',
+      // Antes da primeira análise não há o que medir: a frase explica a tela.
+      sub: resultado
+        ? `${resultado.total_avaliacoes} capas avaliadas · ${resultado.total_melhores} melhores · ${eixos.length} eixos com padrão`
+        : 'o que as capas melhor avaliadas têm em comum — valide antes de aplicar',
       acoes: [
         {
           icone: 'wand',
@@ -50,7 +53,7 @@ export function ThumbnailPadroesPage() {
         },
       ],
     },
-    [emVoo],
+    [emVoo, resultado, eixos.length],
   );
 
   return (

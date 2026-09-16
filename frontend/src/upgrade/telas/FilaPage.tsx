@@ -1,18 +1,33 @@
-import { useWorkbenchQueue, type JobEstado, type QueueJob } from '@/components/workbench/useWorkbenchQueue';
+import {
+  useWorkbenchQueue,
+  type JobEstado,
+  type QueueJob,
+} from '@/components/workbench/useWorkbenchQueue';
 import { Icon, type IconName } from '../Icon';
 import { useDefinirChrome } from '../UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A Fila global como tela.
 //
-// Ela já existia como painel lateral do shell Workbench. O design lhe
-// dá uma tela inteira, e faz sentido: fila é o único lugar do app onde
-// a pergunta é "o que a máquina está fazendo agora", e responder isso
-// num painel de 260 px obrigava a escolher entre o progresso e o log.
-// Aqui cabem os dois, um embaixo do outro, por job.
+// Fila é o único lugar do app onde a pergunta é "o que a máquina está
+// fazendo agora", e responder isso num painel de 260 px obrigava a
+// escolher entre o progresso e o log. Aqui cabem os dois, por job.
 //
 // A fonte é a MESMA do painel (`useWorkbenchQueue`): não há segunda
 // fila, só uma segunda vista.
+//
+// RODADA 2 · a tela passou a poder PARAR a máquina.
+//
+// O botão único dizia "Tirar da fila" e chamava `removeJob`, que só
+// esconde: o render continuava rodando no servidor, gastando GPU, e
+// nunca mais reaparecia. `cancelJob` (que chama `api.cancelarJob`) já
+// existia no contexto e não era usado por ninguém aqui.
+//
+// E "Limpar a lista" dispensava até os jobs rodando — como o cartão do
+// trilho só existe enquanto há job ativo, um clique apagava a lista, o
+// cartão e o ponto do sino de uma vez: o app ficava sem nenhuma pista de
+// que ainda havia trabalho acontecendo. Agora o botão só varre o que já
+// terminou, e diz isso no rótulo.
 // ─────────────────────────────────────────────────────────────────
 
 const TOM: Record<JobEstado, { texto: string; cor: string; bg: string; barra: string }> = {
@@ -35,6 +50,11 @@ const ICONE_FAMILIA: Record<string, IconName> = {
   publicacao: 'rocket',
 };
 
+/** Um job que ainda pode ser interrompido. */
+function emAndamento(job: QueueJob): boolean {
+  return job.estado === 'rodando' || job.estado === 'aguardando';
+}
+
 /**
  * "4 min", "12 s" — quanto o job já levou. Devolve vazio quando não dá para
  * saber: job restaurado do armazenamento local não traz início confiável, e
@@ -49,9 +69,19 @@ function decorrido(job: QueueJob): string {
   return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
 }
 
-function LinhaJob({ job, onRemover }: { job: QueueJob; onRemover: () => void }) {
+function LinhaJob({
+  job,
+  onCancelar,
+  onRemover,
+}: {
+  job: QueueJob;
+  onCancelar: () => void;
+  onRemover: () => void;
+}) {
   const tom = TOM[job.estado];
   const pct = `${Math.round(job.progresso)}%`;
+  const tempo = decorrido(job);
+  const andando = emAndamento(job);
 
   return (
     <article
@@ -79,20 +109,37 @@ function LinhaJob({ job, onRemover }: { job: QueueJob; onRemover: () => void }) 
         <span className="chip" style={{ background: tom.bg, color: tom.cor }}>
           {tom.texto}
         </span>
-        {decorrido(job) ? (
+        {tempo ? (
           <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
-            {decorrido(job)}
+            {tempo}
           </span>
         ) : null}
-        <button
-          type="button"
-          className="btn btn-icon"
-          title="Tirar da fila"
-          aria-label={`Tirar ${job.rotulo} da fila`}
-          onClick={onRemover}
-        >
-          <Icon name="x" size={13} />
-        </button>
+
+        {/* Dois botões diferentes porque são dois atos diferentes: interromper
+            o trabalho, ou arquivar a linha de um trabalho que já acabou.
+            Oferecer só o segundo, com o nome do primeiro, era a falha. */}
+        {andando ? (
+          <button
+            type="button"
+            className="btn btn-sm btn-danger"
+            title="Cancelar este job — o processo é interrompido no servidor"
+            aria-label={`Cancelar ${job.rotulo}`}
+            onClick={onCancelar}
+          >
+            <Icon name="x" size={12} />
+            Cancelar
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-icon btn-sm"
+            title="Tirar da lista (o job já terminou)"
+            aria-label={`Tirar ${job.rotulo} da lista`}
+            onClick={onRemover}
+          >
+            <Icon name="x" size={12} />
+          </button>
+        )}
       </span>
 
       <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -125,7 +172,13 @@ function LinhaJob({ job, onRemover }: { job: QueueJob; onRemover: () => void }) 
 
       {/* O log em mono é a única linha da tela que muda sozinha. Ele responde
           "travou ou está andando?" sem abrir nada. */}
-      <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--dim)' }}>
+      <span
+        style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 11,
+          color: job.erro ? 'var(--err)' : 'var(--mute)',
+        }}
+      >
         {job.erro || job.etapa || '—'}
       </span>
     </article>
@@ -133,22 +186,36 @@ function LinhaJob({ job, onRemover }: { job: QueueJob; onRemover: () => void }) 
 }
 
 export default function FilaPage() {
-  const { jobs, removeJob, clearAll } = useWorkbenchQueue();
+  const { jobs, removeJob, cancelJob, clearAll } = useWorkbenchQueue();
 
   const rodando = jobs.filter((j) => j.estado === 'rodando').length;
   const esperando = jobs.filter((j) => j.estado === 'aguardando').length;
   const concluidos = jobs.filter((j) => j.estado === 'concluido').length;
+  const terminais = jobs.filter((j) => !emAndamento(j));
 
   useDefinirChrome(
     {
       sub: `${rodando} rodando · ${esperando} na espera · ${concluidos} concluído${concluidos === 1 ? '' : 's'}`,
       acoes:
-        jobs.length > 0
-          ? [{ icone: 'x' as const, texto: 'Limpar a lista', onClick: clearAll }]
+        terminais.length > 0
+          ? [
+              {
+                icone: 'trash' as const,
+                texto: `Limpar ${terminais.length} concluído${terminais.length === 1 ? '' : 's'}`,
+                // Varre só o que terminou. Quem está rodando fica: apagar a
+                // linha de um job ativo apaga também o cartão do trilho, e o
+                // app perde a única pista de que há trabalho acontecendo.
+                onClick: () => terminais.forEach((j) => removeJob(j.id)),
+              },
+            ]
           : [],
     },
-    [rodando, esperando, concluidos, jobs.length],
+    [rodando, esperando, concluidos, terminais.length],
   );
+
+  // `clearAll` continua existindo para o painel do Workbench; aqui ele não é
+  // oferecido de propósito (ver comentário acima).
+  void clearAll;
 
   if (jobs.length === 0) {
     return (
@@ -176,7 +243,12 @@ export default function FilaPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 960 }}>
       {jobs.map((job) => (
-        <LinhaJob key={job.id} job={job} onRemover={() => removeJob(job.id)} />
+        <LinhaJob
+          key={job.id}
+          job={job}
+          onCancelar={() => void cancelJob(job.id)}
+          onRemover={() => removeJob(job.id)}
+        />
       ))}
     </div>
   );
