@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   WorkbenchQueueProvider,
   useWorkbenchQueueOptional,
@@ -15,6 +15,7 @@ import {
   type ItemTrilho,
 } from './GlobalRail';
 import { Icon } from './Icon';
+import { PaletaDeComandos } from './PaletaDeComandos';
 import { ScreenHeader } from './ScreenHeader';
 import { TopBar } from './TopBar';
 import { UpgradeChromeProvider, useChrome, type Chrome } from './UpgradeChrome';
@@ -75,7 +76,7 @@ function useTrilho() {
 }
 
 /** Atalhos da casca: ⌘B recolhe o trilho, J/K trocam de corte. */
-function useAtalhosDaCasca(alternarTrilho: () => void, chrome: Chrome) {
+function useAtalhosDaCasca(alternarTrilho: () => void, abrirBusca: () => void, chrome: Chrome) {
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
       const alvo = e.target as HTMLElement | null;
@@ -90,13 +91,18 @@ function useAtalhosDaCasca(alternarTrilho: () => void, chrome: Chrome) {
         alternarTrilho();
         return;
       }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        abrirBusca();
+        return;
+      }
       if (digitando || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === 'j') chrome.seletor?.onProximo?.();
       if (e.key === 'k') chrome.seletor?.onAnterior?.();
     };
     window.addEventListener('keydown', aoTeclar);
     return () => window.removeEventListener('keydown', aoTeclar);
-  }, [alternarTrilho, chrome.seletor]);
+  }, [alternarTrilho, abrirBusca, chrome.seletor]);
 }
 
 function montarNavegacao(projetoId: string | null): {
@@ -172,7 +178,11 @@ function Casca({ children, fila }: CascaProps) {
   const nav = useMemo(() => montarNavegacao(projetoId), [projetoId]);
   const cab = CABECALHO[tela];
 
-  useAtalhosDaCasca(alternar, chrome);
+  const navigate = useNavigate();
+  const [buscaAberta, setBuscaAberta] = useState(false);
+  const abrirBusca = useCallback(() => setBuscaAberta(true), []);
+  useAtalhosDaCasca(alternar, abrirBusca, chrome);
+  const jobsRodando = (filaGlobal?.jobs ?? []).filter((j) => j.estado === 'rodando').length;
 
   // Quem decide se a coluna de contexto e o seletor aparecem é a TELA,
   // pelo simples ato de fornecer os dados. Duplicar essa decisão numa
@@ -209,7 +219,11 @@ function Casca({ children, fila }: CascaProps) {
           estado={chrome.estado}
           tema={theme}
           onAlternarTema={toggleTheme}
+          onAbrirBusca={abrirBusca}
+          onAbrirAvisos={() => navigate('/fila')}
+          avisosAtivos={jobsRodando}
         />
+        <PaletaDeComandos aberta={buscaAberta} onFechar={() => setBuscaAberta(false)} />
 
         <div style={{ display: 'flex', minHeight: 0, flex: 1 }}>
           {chrome.contexto ? <ContextColumn contexto={chrome.contexto} /> : null}

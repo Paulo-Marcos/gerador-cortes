@@ -19,6 +19,11 @@ type TopBarProps = {
   tema: 'light' | 'dark';
   onAlternarTema: () => void;
   onAbrirBusca?: () => void;
+  /** O sino leva à Fila: os avisos deste app SÃO os jobs — render, análise,
+   *  upload. Uma caixa de notificações à parte duplicaria a mesma lista. */
+  onAbrirAvisos?: () => void;
+  /** Quantos jobs estão rodando agora — o ponto no sino. */
+  avisosAtivos?: number;
 };
 
 function Trilha({ itens }: { itens: string[] }) {
@@ -333,6 +338,8 @@ export function TopBar({
   tema,
   onAlternarTema,
   onAbrirBusca,
+  onAbrirAvisos,
+  avisosAtivos = 0,
 }: TopBarProps) {
   return (
     <header
@@ -378,8 +385,28 @@ export function TopBar({
         </span>
       ) : null}
 
-      <button type="button" className="btn btn-icon" title="Notificações">
+      <button
+        type="button"
+        className="btn btn-icon"
+        title={avisosAtivos > 0 ? `${avisosAtivos} job(s) rodando — abrir a fila` : 'Abrir a fila'}
+        onClick={onAbrirAvisos}
+        style={{ position: 'relative' }}
+      >
         <Icon name="bell" size={14} />
+        {avisosAtivos > 0 ? (
+          <span
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: 5,
+              right: 5,
+              width: 7,
+              height: 7,
+              borderRadius: 99,
+              background: 'var(--accent)',
+            }}
+          />
+        ) : null}
       </button>
       <button
         type="button"
