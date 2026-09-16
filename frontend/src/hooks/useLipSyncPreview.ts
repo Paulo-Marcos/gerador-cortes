@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 
 interface Options {
   /** Liga o preview: muta o vídeo e passa a tocar o áudio do proxy deslocado. */
@@ -10,6 +10,14 @@ interface Options {
 }
 
 type AudioCtxCtor = typeof AudioContext;
+
+/**
+ * D-601: o preview não é instantâneo — decodificar o FLAC do corte inteiro leva
+ * ~7s (medido: 21 min de áudio, `decodeAudioData` em 7.194ms). Sem dizer isso, a
+ * espera é indistinguível de defeito: foi essa a queixa que abriu a demanda. O
+ * hook passa a declarar em que pé está, para quem desenha o botão poder contar.
+ */
+export type EstadoLipSync = 'desligado' | 'carregando' | 'pronto' | 'erro';
 
 /**
  * Cache de UM buffer decodificado por vez (chaveado pela URL do proxy). O FLAC
@@ -60,8 +68,13 @@ export function useLipSyncPreview(
   videoRef: RefObject<HTMLVideoElement>,
   audioRef: RefObject<HTMLAudioElement>,
   { enabled, proxyStartSec, offsetMs }: Options,
-): void {
+): EstadoLipSync {
   const ctxRef = useRef<AudioContext | null>(null);
+  const [estado, setEstado] = useState<EstadoLipSync>('desligado');
+  // Qual src já terminou de decodificar. O efeito re-roda a CADA nudge de offset,
+  // e sem isso o botão piscaria "carregando" a cada 10ms ajustados — mentindo
+  // sobre uma espera que não existe mais (o buffer está em cache).
+  const decodificadoRef = useRef<string | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -70,11 +83,16 @@ export function useLipSyncPreview(
 
     if (!enabled) {
       video.muted = false;
+      setEstado('desligado');
       return;
     }
 
     const src = audio.currentSrc || audio.src;
-    if (!src) return;
+    if (!src) {
+      setEstado('erro');
+      return;
+    }
+    setEstado(decodificadoRef.current === src ? 'pronto' : 'carregando');
 
     const Ctor: AudioCtxCtor | undefined =
       window.AudioContext ?? (window as unknown as { webkitAudioContext?: AudioCtxCtor }).webkitAudioContext;
@@ -123,10 +141,15 @@ export function useLipSyncPreview(
         if (cancelado) return;
         buffer = buf;
         video.muted = true;
+        decodificadoRef.current = src;
+        setEstado('pronto');
         if (!video.paused) iniciarSource();
       })
       .catch(() => {
-        // Falha de fetch/decode: preview silenciosamente não toca (não quebra o editor).
+        // Falha de fetch/decode: o editor segue de pé, mas o botão precisa dizer
+        // que não deu — antes isso morria em silêncio e virava "não funciona".
+        decodificadoRef.current = null;
+        if (!cancelado) setEstado('erro');
       });
 
     const onPlay = () => iniciarSource();
@@ -155,4 +178,6 @@ export function useLipSyncPreview(
       video.muted = false;
     };
   }, [videoRef, audioRef, enabled, proxyStartSec, offsetMs]);
+
+  return estado;
 }
