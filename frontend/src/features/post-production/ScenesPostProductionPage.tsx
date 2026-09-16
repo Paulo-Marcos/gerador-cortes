@@ -19,11 +19,13 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { CenaRemotion } from '@/types/models';
+import type { CenaRemotion, Corte } from '@/types/models';
 import type { PlayerHandle } from '@/features/editor/fase1/PlayerPanel';
 import { EditorFase2 } from '@/features/editor/fase2/EditorFase2';
 import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
 import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
+import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
 import { CommonTopBar, type MoreMenuItem } from '@/features/editor/CommonTopBar';
 import { PosTopbarExtra, type PosStep, type VideoTipo } from '@/features/editor/PosTopbarExtra';
@@ -38,6 +40,10 @@ import { MetadataModal } from '@/features/metadata/MetadataModal';
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from './RenderStepsModal';
 import type { FaseRender } from './renderEtapas';
+
+// D-599: com a casca nova quem desenha a lista de cortes, a trilha e a barra
+// de decisao e a CASCA — a tela apenas a alimenta (BancadaChrome).
+const CASCA_NOVA = isUpgradeShellEnabled();
 
 // Constante fora do componente p/ evitar useMemo + early-return (rules-of-hooks).
 const STEP_DONE_DEFAULT: Set<PosStep> = new Set([1]);
@@ -610,26 +616,56 @@ export function ScenesPostProductionPage() {
     );
   }
 
+  const caminhoDoCorte = (item: Corte) =>
+    resolveCorteStagePath({
+      projetoId,
+      corte: item,
+      status: exportStatuses.find((status) => status.corte_id === item.id),
+      forcePhase2,
+    });
+
   return (
     <>
+      {CASCA_NOVA ? (
+        <BancadaChrome
+          projetoId={projetoId}
+          tituloLive={projeto.data?.titulo_live ?? 'Live'}
+          cortes={cortes}
+          corte={corte}
+          exportStatus={exportStatusQ.data?.cortes ?? []}
+          caminhoDoCorte={caminhoDoCorte}
+          sub={`${cenas.length} cenas · ${payload.formato} · render ${renderFinalRunning ? `${renderFinalProgress}%` : 'pendente'}`}
+          fire={corte.is_fire}
+          sujo={false}
+          salvando={false}
+          brutoPronto
+          brutoOcupado={renderFinalRunning}
+          onSalvar={() => setMetadataOpen(true)}
+          onGerarBruto={renderizarFinal}
+          onToggleFire={() => undefined}
+          onAprovar={renderizarFinal}
+          onRejeitar={() => setMetadataOpen(true)}
+        />
+      ) : (
       <UnifiedSidebar
         projetoId={projetoId}
         cortes={cortes}
         corteAtivoId={corte.id}
         exportStatus={exportStatusQ.data?.cortes ?? []}
         activePhase="pos"
-        getCortePath={(item) =>
-          resolveCorteStagePath({
-            projetoId,
-            corte: item,
-            status: exportStatuses.find((status) => status.corte_id === item.id),
-            forcePhase2,
-          })
-        }
+        getCortePath={caminhoDoCorte}
         onOpenSettings={() => setSettingsOpen(true)}
       />
+      )}
 
-      <div className="ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)]">
+      <div
+        className={
+          CASCA_NOVA
+            ? 'flex h-full min-h-0 flex-col overflow-hidden'
+            : 'ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)]'
+        }
+      >
+        {CASCA_NOVA ? null : (
         <CommonTopBar
           projeto={projeto.data}
           corte={corte}
@@ -665,8 +701,9 @@ export function ScenesPostProductionPage() {
           }
           moreMenuItems={moreMenuItems}
         />
+        )}
 
-        <div className="min-h-0 flex-1 p-4">
+        <div className={CASCA_NOVA ? 'min-h-0 flex-1' : 'min-h-0 flex-1 p-4'}>
           <EditorFase2
             videoSrc={videoSrcEstavel}
             modoLabel="Cenas"

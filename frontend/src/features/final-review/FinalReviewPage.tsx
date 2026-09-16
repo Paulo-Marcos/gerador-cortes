@@ -32,6 +32,8 @@ import {
 } from '@/hooks/useEditor';
 import { useQuery } from '@tanstack/react-query';
 import { api, finalVideoUrl, resolveThumbUrl } from '@/lib/api';
+import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
 import { CommonTopBar, type MoreMenuItem } from '@/features/editor/CommonTopBar';
 import { WorkbenchCutsPanel } from '@/features/editor/WorkbenchCutsPanel';
@@ -71,6 +73,10 @@ const SPEED_STEP = 0.25;
 //   Player (col 1, row 1) + SceneTimelineReadOnly (col 1, row 2) +
 //   ChecklistCard + CapaCard empilhados a direita (col 2, row 1/span 2).
 // ─────────────────────────────────────────────────────────────
+
+// D-599: com a casca nova quem desenha a lista de cortes, a trilha e a barra
+// de decisao e a CASCA — a tela apenas a alimenta (BancadaChrome).
+const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function FinalReviewPage() {
   const { id: projetoId = '' } = useParams<{ id: string }>();
@@ -678,25 +684,55 @@ export function FinalReviewPage() {
     );
   }
 
+  const caminhoDoCorte = (item: (typeof cortes)[number]) =>
+    resolveCorteStagePath({
+      projetoId,
+      corte: item,
+      status: exportStatuses.find((status) => status.corte_id === item.id),
+    });
+
   return (
     <>
+      {CASCA_NOVA ? (
+        <BancadaChrome
+          projetoId={projetoId}
+          tituloLive={projeto.data?.titulo_live ?? 'Live'}
+          cortes={cortes}
+          corte={corte}
+          exportStatus={exportStatusQ.data?.cortes ?? []}
+          caminhoDoCorte={caminhoDoCorte}
+          sub="confira o render, a capa e o título antes de liberar o lote"
+          fire={corte.is_fire}
+          sujo={false}
+          salvando={atualizarCorte.isPending}
+          brutoPronto
+          brutoOcupado={false}
+          onSalvar={() => setMetadataOpen(true)}
+          onGerarBruto={() => setMetadataOpen(true)}
+          onToggleFire={() => undefined}
+          onAprovar={aprovarCorte}
+          onRejeitar={() => setMetadataOpen(true)}
+        />
+      ) : (
       <UnifiedSidebar
         projetoId={projetoId}
         cortes={cortes}
         corteAtivoId={corte.id}
         exportStatus={exportStatusQ.data?.cortes ?? []}
         activePhase="final"
-        getCortePath={(item) =>
-          resolveCorteStagePath({
-            projetoId,
-            corte: item,
-            status: exportStatuses.find((status) => status.corte_id === item.id),
-          })
-        }
+        getCortePath={caminhoDoCorte}
         onOpenSettings={() => setSettingsOpen(true)}
       />
+      )}
 
-      <div className="ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]">
+      <div
+        className={
+          CASCA_NOVA
+            ? 'flex h-full min-h-0 flex-col overflow-hidden'
+            : 'ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]'
+        }
+      >
+        {CASCA_NOVA ? null : (
         <CommonTopBar
           projeto={projeto.data}
           corte={corte}
@@ -737,6 +773,7 @@ export function FinalReviewPage() {
           }
           moreMenuItems={moreMenuItems}
         />
+        )}
 
         {conteudoFinal}
       </div>
