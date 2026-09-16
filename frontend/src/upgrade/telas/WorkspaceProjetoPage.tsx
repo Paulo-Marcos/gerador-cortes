@@ -411,6 +411,11 @@ export default function WorkspaceProjetoPage() {
           alignItems: 'center',
           gap: 10,
           padding: '11px 12px',
+          // O vidro (backdrop-filter) faz do card um contexto de empilhamento:
+          // sem subir a faixa, o menu Claude/Gemini de "gerar trechos" abria
+          // POR BAIXO da lista de cortes que vem depois.
+          position: 'relative',
+          zIndex: 5,
         }}
       >
         <span className="lbl">Etapas da live</span>
@@ -482,6 +487,8 @@ export default function WorkspaceProjetoPage() {
             desabilitado={cortes.length === 0}
             onGerar={dispararTrechosTodos}
             classeGatilho="h-[26px] w-[26px]"
+            // A fileira mora na borda direita: abrindo para a direita, o menu vazava da tela.
+            alinhamento="direita"
           />
           <Utilitario
             icone="send"
