@@ -411,6 +411,7 @@ export function CandidatoCard({
       {short.status === 'renderizado' && (
         <PainelPublicacao
           short={short}
+          corteId={corteId}
           onEscreverPost={fecho.abrirPost}
           onEscolherCapa={fecho.abrirCapa}
         />

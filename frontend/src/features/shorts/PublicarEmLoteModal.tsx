@@ -32,6 +32,7 @@ import {
   contarRepublicacoes,
   montarAlvos,
   plataformasJaPublicadas,
+  podeMarcarAMao,
   shortsPublicaveis,
 } from './selecaoDoLote';
 import {
@@ -562,14 +563,22 @@ function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId: string }) {
         <span className="min-w-0 flex-1 truncate text-[11.5px]" title={item.rotulo}>
           {item.rotulo}
         </span>
-        {item.estado === 'sua_vez' && (
+        {/* D-603: tambem no item que falhou. O caso comum e o robo quebrar no
+            meio e ele terminar no app da rede — e sem este botao o short ficava
+            para sempre como "nao publicado", pedindo para subir de novo. */}
+        {podeMarcarAMao(item.estado) && (
           <button
             type="button"
             className="flex-none text-[11px] font-semibold text-[var(--wb-accent)]"
             disabled={confirmar.isPending}
+            title={
+              item.estado === 'sua_vez'
+                ? 'marcar que voce publicou'
+                : 'ja publiquei este na mao, fora do app'
+            }
             onClick={() => confirmar.mutate({ alvoId: item.alvo_id, plataforma: item.plataforma })}
           >
-            publiquei
+            {item.estado === 'sua_vez' ? 'publiquei' : 'ja publiquei'}
           </button>
         )}
         {item.url && (

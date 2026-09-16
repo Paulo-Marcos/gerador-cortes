@@ -1379,11 +1379,23 @@ class ConfirmarPublicacaoRequest(BaseModel):
 
     alvo_id: str
     plataforma: str
+    # D-603: o tipo vem junto porque a marca pode ser o PRIMEIRO registro deste
+    # video — e ai ninguem mais sabe se o alvo e o short vertical ou o MP4 do
+    # corte. No caminho do lote o tipo ja estava gravado e o default basta.
+    alvo_tipo: str = "short"
+    # Opcional: o link do post, quando o operador tem ele a mao. Serve para a
+    # tela oferecer o "ver" do mesmo jeito que oferece no que subiu por API.
+    url: str = ""
 
 
 @router.post("/lote/confirmar")
 async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
-    """Marca que ESTE item subiu — o que a maquina nao tem como saber sozinha."""
+    """Marca que ESTE item subiu — o que a maquina nao tem como saber sozinha.
+
+    D-603: vale tanto para o item que esta esperando o clique quanto para o que
+    deu erro e o operador terminou na mao, no proprio app da rede. Nos dois
+    casos o fato e o mesmo ("esta no ar"), e quem sabe dele e ele.
+    """
     from app.domain.publicacao import Plataforma
     from app.services import publicacao_lote
 
@@ -1394,8 +1406,14 @@ async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
             status_code=404, detail=f"Plataforma {body.plataforma!r} desconhecida."
         ) from exc
 
-    if not await publicacao_lote.confirmar(body.alvo_id, plataforma):
-        raise HTTPException(status_code=404, detail="Nao ha publicacao pendente para marcar.")
+    if body.alvo_tipo not in (publicacao_lote.ALVO_SHORT, publicacao_lote.ALVO_CORTE):
+        raise HTTPException(
+            status_code=422, detail=f"Tipo de alvo desconhecido: {body.alvo_tipo!r}"
+        )
+
+    await publicacao_lote.confirmar(
+        body.alvo_id, plataforma, alvo_tipo=body.alvo_tipo, url=body.url
+    )
     return {"confirmado": True}
 
 

@@ -203,6 +203,7 @@ function CartaoDoPronto({
         <div className="border-t border-[var(--wb-border-soft)]">
           <PainelPublicacao
             short={short}
+            corteId={corteId}
             onEscreverPost={fecho.abrirPost}
             onEscolherCapa={fecho.abrirCapa}
           />

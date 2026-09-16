@@ -890,11 +890,17 @@ export const shortsApi = {
       method: 'POST',
     }),
 
-  /** O "publiquei" do destino manual, onde o upload acontece longe daqui. */
-  confirmarPublicacao: (alvoId: string, plataforma: string) =>
+  /**
+   * O "publiquei" do destino manual, onde o upload acontece longe daqui.
+   *
+   * D-603: serve tambem para declarar do zero — o item que deu erro e ele
+   * terminou na mao no proprio app da rede. O backend cria o registro quando
+   * nao existe, entao a tela nao precisa de um lote para poder marcar.
+   */
+  confirmarPublicacao: (alvoId: string, plataforma: string, url = '') =>
     request<{ confirmado: boolean }>('/shorts/lote/confirmar', {
       method: 'POST',
-      body: JSON.stringify({ alvo_id: alvoId, plataforma }),
+      body: JSON.stringify({ alvo_id: alvoId, plataforma, url }),
     }),
 
   publicacoesDoCorte: (corteId: string) =>

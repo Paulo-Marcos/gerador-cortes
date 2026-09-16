@@ -7,7 +7,8 @@
 //
 // Os avisos aparecem ANTES do botão. Descobrir que o vídeo passa do limite
 // depois de subir é o erro que esta tela existe para evitar.
-import { FileText, Image, Send, Upload } from 'lucide-react';
+import { useState } from 'react';
+import { Check, FileText, Image, Send, Upload } from 'lucide-react';
 import { useIsMutating } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import type { PacotePublicacao } from './shortsApi';
@@ -19,11 +20,15 @@ import {
   usePublicarShort,
 } from './useShortsDoCorte';
 import { comSegundos } from './capaDoShort';
+import { useConfirmarPublicacao, usePublicacoesDoCorte } from './useLotePublicacao';
+import { plataformasJaPublicadas } from './selecaoDoLote';
 import type { ShortSugerido } from './shortsApi';
 
 interface Props {
   /** D-565: o short inteiro, e nao so o id — o modal do post precisa dele. */
   short: ShortSugerido;
+  /** D-603: de quem é este short — a marca manual é registrada pelo corte. */
+  corteId: string;
   /**
    * D-585: quem ABRE o post e a capa agora e de fora.
    *
@@ -37,13 +42,18 @@ interface Props {
   onEscolherCapa: () => void;
 }
 
-export function PainelPublicacao({ short, onEscreverPost, onEscolherCapa }: Props) {
+export function PainelPublicacao({ short, corteId, onEscreverPost, onEscolherCapa }: Props) {
   const shortId = short.id;
   const previa = usePreviaPublicacao(shortId);
   const publicar = usePublicarShort();
   const post = usePostDoShort(shortId);
   const escrevendoPost = useIsMutating({ mutationKey: gerarPostKey(shortId) }) > 0;
   const capa = useCapaDoShort(shortId);
+  // D-603: a MESMA query da lista de cartões (mesma chave, mesmo cache): saber
+  // o que já subiu não custa uma requisição a mais por painel aberto.
+  const publicacoes = usePublicacoesDoCorte(corteId);
+  const jaFoi = plataformasJaPublicadas(publicacoes.data?.publicacoes ?? [], shortId);
+  const marcar = useConfirmarPublicacao(corteId);
 
   return (
     <div className="flex flex-col gap-2 p-3">
@@ -109,7 +119,10 @@ export function PainelPublicacao({ short, onEscreverPost, onEscolherCapa }: Prop
           key={pacote.plataforma}
           pacote={pacote}
           ocupado={publicar.isPending}
+          jaPublicado={jaFoi.has(pacote.plataforma)}
+          marcando={marcar.isPending}
           onPublicar={() => publicar.mutate({ shortId, plataforma: pacote.plataforma })}
+          onMarcar={() => marcar.mutate({ alvoId: shortId, plataforma: pacote.plataforma })}
         />
       ))}
       {publicar.isSuccess && (
@@ -137,11 +150,17 @@ export function PainelPublicacao({ short, onEscreverPost, onEscolherCapa }: Prop
 function Destino({
   pacote,
   ocupado,
+  jaPublicado,
+  marcando,
   onPublicar,
+  onMarcar,
 }: {
   pacote: PacotePublicacao;
   ocupado: boolean;
+  jaPublicado: boolean;
+  marcando: boolean;
   onPublicar: () => void;
+  onMarcar: () => void;
 }) {
   const porApi = pacote.modo === 'api';
 
@@ -149,6 +168,19 @@ function Destino({
     <article className="rounded-[8px] border border-[var(--wb-border)] p-2.5">
       <div className="flex items-center gap-2">
         <h4 className="flex-1 truncate text-[13px] font-bold">{pacote.rotulo}</h4>
+        {/* D-603: o "já está no ar" que só ele sabe.
+            Só nos destinos que NÃO são API, e não por capricho: onde a máquina
+            sobe sozinha, ela também sabe o resultado; onde o upload termina no
+            celular ou num Chrome que travou, a única fonte é ele. */}
+        {!porApi &&
+          (jaPublicado ? (
+            <span className="inline-flex flex-none items-center gap-1 text-[11px] font-semibold text-[var(--wb-ok-ink)]">
+              <Check size={12} aria-hidden />
+              no ar
+            </span>
+          ) : (
+            <MarcaManual ocupado={marcando} onMarcar={onMarcar} />
+          ))}
         <button
           type="button"
           onClick={onPublicar}
@@ -176,5 +208,53 @@ function Destino({
         {pacote.titulo.length > pacote.titulo_visivel.length && '…'}
       </p>
     </article>
+  );
+}
+
+/**
+ * D-603: "já publiquei" em dois cliques.
+ *
+ * Em dois porque a marca não tem desmarca: dali em diante o lote PULA este
+ * par vídeo×rede, e um clique perdido num botão discreto deixaria um short
+ * legítimo fora do ar sem ninguém notar — o inverso exato do problema que este
+ * botão vem resolver.
+ */
+function MarcaManual({ ocupado, onMarcar }: { ocupado: boolean; onMarcar: () => void }) {
+  const [perguntando, setPerguntando] = useState(false);
+
+  if (!perguntando) {
+    return (
+      <button
+        type="button"
+        onClick={() => setPerguntando(true)}
+        className="flex-none text-[11px] text-[var(--wb-text-mute)] underline decoration-dotted hover:text-[var(--wb-text)]"
+        title="marcar que este short já foi publicado à mão, fora do app"
+      >
+        já publiquei
+      </button>
+    );
+  }
+
+  return (
+    <span className="flex flex-none items-center gap-1.5 text-[11px]">
+      <button
+        type="button"
+        disabled={ocupado}
+        onClick={() => {
+          onMarcar();
+          setPerguntando(false);
+        }}
+        className="font-semibold text-[var(--wb-accent)] disabled:opacity-45"
+      >
+        confirmar
+      </button>
+      <button
+        type="button"
+        onClick={() => setPerguntando(false)}
+        className="text-[var(--wb-text-mute)]"
+      >
+        não
+      </button>
+    </span>
   );
 }

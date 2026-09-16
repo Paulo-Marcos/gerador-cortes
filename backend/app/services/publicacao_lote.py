@@ -545,11 +545,27 @@ async def _rotulos_dos_alvos(alvos: list[tuple[str, str]]) -> dict[str, str]:
     return rotulos
 
 
-async def confirmar(alvo_id: str, plataforma: Plataforma) -> bool:
+async def confirmar(
+    alvo_id: str,
+    plataforma: Plataforma,
+    *,
+    alvo_tipo: str = ALVO_SHORT,
+    url: str = "",
+) -> bool:
     """Marca à mão que ESTE item subiu — o "publiquei" do destino manual.
 
     Existe porque `SUA_VEZ` não é um estado que a máquina saiba encerrar sozinha
     no Instagram: o upload acontece no celular do operador, longe daqui.
+
+    D-603: e ela também NASCE aqui quando não há linha nenhuma. O caminho comum
+    da falha é o robô quebrar no meio (um seletor que mudou, a aba fechada) e o
+    operador terminar no app, na mão — e nesse caso o registro pendente pode nem
+    existir, porque o vídeo nunca entrou num lote. Sem isto, o "já publiquei"
+    dele não tinha onde ser guardado, e o short ficava eternamente na fila.
+
+    Idempotente de propósito: um segundo clique num item já publicado devolve
+    True sem gravar de novo. Uma linha duplicada com `publicado_em` inflaria a
+    cota do dia, que é contada exatamente por esse campo.
     """
     async with AsyncSessionLocal() as db:
         registro = (
@@ -559,18 +575,33 @@ async def confirmar(alvo_id: str, plataforma: Plataforma) -> bool:
                     .where(
                         PublicacaoShort.alvo_id == alvo_id,
                         PublicacaoShort.plataforma == plataforma.value,
-                        PublicacaoShort.publicado_em.is_(None),
                     )
-                    .order_by(PublicacaoShort.criado_em.desc())
+                    .order_by(
+                        PublicacaoShort.publicado_em.is_(None).desc(),
+                        PublicacaoShort.criado_em.desc(),
+                    )
                 )
             )
             .scalars()
             .first()
         )
+        if registro is not None and registro.publicado_em is not None:
+            if url and not registro.url:
+                registro.url = url
+                await db.commit()
+            return True
         if registro is None:
-            return False
+            registro = PublicacaoShort(
+                id=str(uuid.uuid4()),
+                alvo_tipo=alvo_tipo,
+                alvo_id=alvo_id,
+                plataforma=plataforma.value,
+            )
+            db.add(registro)
         registro.estado = EstadoItem.PUBLICADO.value
         registro.detalhe = CONFIRMADO_A_MAO
+        if url:
+            registro.url = url
         registro.publicado_em = datetime.utcnow()
         await db.commit()
 

@@ -4,7 +4,7 @@
 // de lista escondida num `useMemo` é regra que ninguém revisa — foi assim que a
 // lista do TikTok herdou uma condição do YouTube e os cortes começaram a sumir
 // dela. Fora do componente, a regra é legível e testável sem montar tela.
-import type { PublicacaoRegistrada, ShortSugerido } from './shortsApi';
+import type { EstadoItemLote, PublicacaoRegistrada, ShortSugerido } from './shortsApi';
 
 /** O prefixo que o backend usa para saber de qual arquivo montar o pacote. */
 export const ALVO_SHORT = 'short';
@@ -78,4 +78,26 @@ export function alternar(selecionados: string[], id: string): string[] {
   return selecionados.includes(id)
     ? selecionados.filter((outro) => outro !== id)
     : [...selecionados, id];
+}
+
+/**
+ * D-603: os estados em que "eu publiquei isso na mão" é uma frase possível.
+ *
+ * `erro` e `cancelado` entram porque são exatamente o caso que faltava: o robô
+ * quebrou no meio e o operador terminou no app da rede — o vídeo está no ar e o
+ * app não tem como saber. `sua_vez` já era o caso previsto.
+ *
+ * `aguardando` e `preparando` ficam de FORA, e não por pudor: a raia ainda vai
+ * tentar subir esses dois. Marcar antes não cancelaria o envio — produziria um
+ * vídeo duplicado no perfil, que é o erro mais caro que esta fila comete.
+ * `pulado` também fica fora: ele só existe porque já está publicado.
+ */
+const MARCAVEIS: ReadonlySet<EstadoItemLote> = new Set<EstadoItemLote>([
+  'sua_vez',
+  'erro',
+  'cancelado',
+]);
+
+export function podeMarcarAMao(estado: EstadoItemLote): boolean {
+  return MARCAVEIS.has(estado);
 }
