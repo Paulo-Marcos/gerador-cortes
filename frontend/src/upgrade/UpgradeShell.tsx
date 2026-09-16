@@ -16,6 +16,7 @@ import {
 } from './GlobalRail';
 import { Icon } from './Icon';
 import { PaletaDeComandos } from './PaletaDeComandos';
+import { acaoDaTecla } from './teclasDaCasca';
 import { ScreenHeader } from './ScreenHeader';
 import { TopBar } from './TopBar';
 import { UpgradeChromeProvider, useChrome, type Chrome, type ChromeBarra } from './UpgradeChrome';
@@ -110,56 +111,62 @@ function useJanelaLarga(): boolean {
   return larga;
 }
 
-/** Há um diálogo modal aberto? Nesse caso o teclado é dele, não da casca. */
+/**
+ * Há um diálogo, menu ou popover aberto? Nesse caso o teclado é dele, não da
+ * casca. `[role="dialog"]` e `[role="menu"]` entram além do `aria-modal`: os
+ * popovers da régua e os menus "⋯" não são modais, mas J/K trocando o corte
+ * por trás de uma decisão aberta é o mesmo erro.
+ */
 function overlayAberto(): boolean {
-  return document.querySelector('[aria-modal="true"]') !== null;
+  return document.querySelector('[aria-modal="true"], [role="dialog"], [role="menu"]') !== null;
+}
+
+/**
+ * O foco está num controle que já responde ao Enter sozinho? Botão, link, aba,
+ * item de menu. Sem esta trava o Enter virava AÇÃO DUPLA: com o foco em
+ * "Rejeitar", o navegador clicava em Rejeitar e a casca, em seguida, disparava
+ * "Aprovar corte" — duas decisões opostas num toque.
+ */
+function focoEmControle(alvo: HTMLElement | null): boolean {
+  return (
+    alvo?.closest(
+      'button, a[href], summary, [role="button"], [role="link"], [role="menuitem"], [role="option"], [role="tab"], [role="checkbox"], [role="switch"]',
+    ) != null
+  );
 }
 
 /** Atalhos da casca: ⌘B recolhe o trilho, ⌘K busca, J/K trocam de corte,
- *  Enter dispara a ação primária da barra. */
+ *  Enter dispara a ação primária da barra. A DECISÃO mora em `teclasDaCasca`
+ *  (pura e testada); aqui só se lê o DOM e se executa. */
 function useAtalhosDaCasca(alternarTrilho: () => void, abrirBusca: () => void, chrome: Chrome) {
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
       const alvo = e.target as HTMLElement | null;
-      // Digitar "j" num campo de título não pode trocar de corte.
-      const digitando =
-        alvo instanceof HTMLInputElement ||
-        alvo instanceof HTMLTextAreaElement ||
-        alvo instanceof HTMLSelectElement ||
-        alvo?.isContentEditable === true;
+      const primario = chrome.barra?.primario;
+      const acao = acaoDaTecla({
+        tecla: e.key,
+        meta: e.metaKey,
+        ctrl: e.ctrlKey,
+        alt: e.altKey,
+        digitando:
+          alvo instanceof HTMLInputElement ||
+          alvo instanceof HTMLTextAreaElement ||
+          alvo instanceof HTMLSelectElement ||
+          alvo?.isContentEditable === true,
+        focoEmControle: focoEmControle(alvo),
+        overlayAberto: overlayAberto(),
+        jaTratado: e.defaultPrevented,
+        primarioDisponivel: Boolean(primario?.onClick) && !primario?.desabilitado,
+      });
+      if (!acao) return;
 
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
-        e.preventDefault();
-        alternarTrilho();
-        return;
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        abrirBusca();
-        return;
-      }
-
-      // Com um modal aberto o teclado pertence ao modal. Sem esta trava,
-      // J/K trocavam o corte ATRÁS do diálogo e o Enter disparava duas
-      // ações ao mesmo tempo.
-      if (digitando || e.metaKey || e.ctrlKey || e.altKey || overlayAberto()) return;
-
-      if (e.key === 'j') {
-        chrome.seletor?.onProximo?.();
-        return;
-      }
-      if (e.key === 'k') {
-        chrome.seletor?.onAnterior?.();
-        return;
-      }
-      // O ↵ desenhado no botão primário passa a ser verdade. Botão
-      // desabilitado não responde — e a ActionBar esconde o ↵ nesse caso.
-      if (e.key === 'Enter') {
-        const primario = chrome.barra?.primario;
-        if (!primario || primario.desabilitado || !primario.onClick) return;
-        e.preventDefault();
-        primario.onClick();
-      }
+      if (acao === 'trilho') alternarTrilho();
+      if (acao === 'busca') abrirBusca();
+      if (acao === 'proximo') chrome.seletor?.onProximo?.();
+      if (acao === 'anterior') chrome.seletor?.onAnterior?.();
+      if (acao === 'primario') primario?.onClick?.();
+      // J/K nao chamam preventDefault: fora de campo elas nao tem acao nativa.
+      if (acao === 'trilho' || acao === 'busca' || acao === 'primario') e.preventDefault();
     };
     window.addEventListener('keydown', aoTeclar);
     return () => window.removeEventListener('keydown', aoTeclar);

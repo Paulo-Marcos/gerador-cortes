@@ -83,6 +83,9 @@ export function UpgradeModal({
     >
       <div
         className="card"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         style={{
           display: 'flex',
           flexDirection: 'column',
