@@ -122,3 +122,29 @@ export function contarPorFiltro(projetos: Projeto[]): Record<FilterKey, number> 
     FILTERS.map((item) => [item.key, projetos.filter(item.matches).length]),
   ) as Record<FilterKey, number>;
 }
+
+// D-610: o filtro e a ordem da Biblioteca sobrevivem a sair e voltar. Quem
+// está limpando disco entra em "Não limpos", abre uma live, volta — e antes
+// caía em "Todos", tendo de achar o filtro de novo a cada ida e volta.
+// A busca por texto NÃO é lembrada: um termo esquecido esconderia lives sem
+// nada na tela explicando por quê.
+
+export const PREFERENCIA_BIBLIOTECA_KEY = 'biblioteca-preferencia';
+
+export type PreferenciaDaBiblioteca = { filtro: FilterKey; ordem: SortKey };
+
+const PADRAO: PreferenciaDaBiblioteca = { filtro: 'todos', ordem: 'recentes' };
+
+/** Lê o que foi gravado, descartando o que não existe mais (filtro renomeado, JSON quebrado). */
+export function lerPreferenciaDaBiblioteca(raw: string | null): PreferenciaDaBiblioteca {
+  if (!raw) return PADRAO;
+  try {
+    const salvo = JSON.parse(raw) as Partial<PreferenciaDaBiblioteca>;
+    return {
+      filtro: FILTERS.some((f) => f.key === salvo.filtro) ? (salvo.filtro as FilterKey) : PADRAO.filtro,
+      ordem: SORTS.some((s) => s.key === salvo.ordem) ? (salvo.ordem as SortKey) : PADRAO.ordem,
+    };
+  } catch {
+    return PADRAO;
+  }
+}

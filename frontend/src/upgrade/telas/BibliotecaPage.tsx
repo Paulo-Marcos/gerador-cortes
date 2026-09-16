@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/toaster';
 import { NovoProjetoForm } from '@/features/projetos/NovoProjetoForm';
@@ -6,6 +6,8 @@ import {
   contarPorFiltro,
   filtrarProjetos,
   FILTERS,
+  lerPreferenciaDaBiblioteca,
+  PREFERENCIA_BIBLIOTECA_KEY,
   SORTS,
   type FilterKey,
   type SortKey,
@@ -67,6 +69,14 @@ function Vazio({ onCriar, onExplorar }: { onCriar: () => void; onExplorar: () =>
   );
 }
 
+function lerPreferenciaSalva() {
+  try {
+    return lerPreferenciaDaBiblioteca(window.localStorage.getItem(PREFERENCIA_BIBLIOTECA_KEY));
+  } catch {
+    return lerPreferenciaDaBiblioteca(null);
+  }
+}
+
 export default function BibliotecaPage() {
   const navigate = useNavigate();
   const { notify } = useToast();
@@ -74,9 +84,18 @@ export default function BibliotecaPage() {
   const reiniciar = useReiniciarFalhados();
 
   const [formAberto, setFormAberto] = useState(false);
-  const [filtro, setFiltro] = useState<FilterKey>('todos');
+  const [preferencia] = useState(lerPreferenciaSalva);
+  const [filtro, setFiltro] = useState<FilterKey>(preferencia.filtro);
   const [busca, setBusca] = useState('');
-  const [ordem, setOrdem] = useState<SortKey>('recentes');
+  const [ordem, setOrdem] = useState<SortKey>(preferencia.ordem);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PREFERENCIA_BIBLIOTECA_KEY, JSON.stringify({ filtro, ordem }));
+    } catch {
+      // sem localStorage a Biblioteca só não lembra — nada quebra
+    }
+  }, [filtro, ordem]);
 
   const projetos = useMemo(() => data ?? [], [data]);
   const visiveis = useMemo(
