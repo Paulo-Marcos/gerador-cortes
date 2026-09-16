@@ -1,5 +1,10 @@
 import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import {
+  WorkbenchQueueProvider,
+  useWorkbenchQueueOptional,
+  type QueueJob,
+} from '@/components/workbench/useWorkbenchQueue';
 import { ActionBar } from './ActionBar';
 import { ContextColumn } from './ContextColumn';
 import {
@@ -27,6 +32,23 @@ import { useUpgradeTheme } from './useUpgradeTheme';
 // ─────────────────────────────────────────────────────────────────
 
 const TRILHO_KEY = 'upgrade-trilho';
+
+/**
+ * O cartao da fila no pe do trilho. Mostra o job que esta ANDANDO; sem
+ * nenhum ativo, o cartao some — um anel parado em 0% ocuparia espaco para
+ * dizer "nada acontecendo", que e justamente o que o silencio ja diz.
+ */
+function filaDoTrilho(jobs: QueueJob[]): FilaDoTrilho | undefined {
+  const ativos = jobs.filter((j) => j.estado === 'rodando' || j.estado === 'aguardando');
+  if (ativos.length === 0) return undefined;
+  const rodando = ativos.find((j) => j.estado === 'rodando') ?? ativos[0];
+  return {
+    titulo: `Fila · ${ativos.length} job${ativos.length === 1 ? '' : 's'}`,
+    sub: `${rodando.rotuloTipo} ${Math.round(rodando.progresso)}%`,
+    progresso: rodando.progresso,
+    to: '/fila',
+  };
+}
 
 function useTrilho() {
   const [expandido, setExpandido] = useState(() => {
@@ -143,6 +165,7 @@ function Casca({ children, fila }: CascaProps) {
   const { theme, toggleTheme, glass } = useUpgradeTheme();
   const { expandido, alternar } = useTrilho();
   const chrome = useChrome();
+  const filaGlobal = useWorkbenchQueueOptional();
 
   const tela = telaDaRota(pathname);
   const projetoId = projetoDaRota(pathname);
@@ -176,7 +199,7 @@ function Casca({ children, fila }: CascaProps) {
         producao={nav.producao}
         inteligencia={nav.inteligencia}
         rodape={nav.rodape}
-        fila={fila}
+        fila={fila ?? filaDoTrilho(filaGlobal?.jobs ?? [])}
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
@@ -243,8 +266,13 @@ function Casca({ children, fila }: CascaProps) {
 
 export function UpgradeShell({ children, fila }: CascaProps) {
   return (
-    <UpgradeChromeProvider>
-      <Casca fila={fila}>{children}</Casca>
-    </UpgradeChromeProvider>
+    // A fila e o provider mais externo: o cartao do trilho e a tela de Fila
+    // precisam da MESMA lista, e um job disparado em qualquer tela tem de
+    // aparecer nos dois sem passar pelo chrome.
+    <WorkbenchQueueProvider>
+      <UpgradeChromeProvider>
+        <Casca fila={fila}>{children}</Casca>
+      </UpgradeChromeProvider>
+    </WorkbenchQueueProvider>
   );
 }

@@ -70,6 +70,9 @@ const UpgradeShellDemoPage = lazy(() => import('@/upgrade/UpgradeShellDemoPage')
 // diferentes dentro da mesma sessao.
 const BibliotecaPage = lazy(() => import('@/upgrade/telas/BibliotecaPage'));
 const WorkspaceProjetoPage = lazy(() => import('@/upgrade/telas/WorkspaceProjetoPage'));
+// D-599: telas que o design pede e o app ainda nao tinha.
+const FilaPage = lazy(() => import('@/upgrade/telas/FilaPage'));
+const Erro404Page = lazy(() => import('@/upgrade/telas/Erro404Page'));
 const CASCA_NOVA = isUpgradeShellEnabled();
 
 export const router = createBrowserRouter([
@@ -105,7 +108,11 @@ export const router = createBrowserRouter([
       { path: 'shorts/:corteId', element: <FireDetalhePage /> },
       { path: 'shorts/:corteId/workspace', element: <WorkspaceDoFirePage /> },
       { path: 'atalhos', element: <AtalhosPage /> },
-      { path: '*', element: <StubPage titulo="Pagina nao encontrada" /> },
+      ...(CASCA_NOVA ? [{ path: 'fila', element: <FilaPage /> }] : []),
+      {
+        path: '*',
+        element: CASCA_NOVA ? <Erro404Page /> : <StubPage titulo="Pagina nao encontrada" />,
+      },
     ],
   },
   {

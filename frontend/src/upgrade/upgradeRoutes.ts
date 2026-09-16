@@ -26,6 +26,7 @@ export type TelaId =
   | 'analises'
   | 'config'
   | 'atalhos'
+  | 'fila'
   | 'kit'
   | 'erro';
 
@@ -45,6 +46,7 @@ const PADROES: Array<[RegExp, TelaId]> = [
   [/^\/analises/, 'analises'],
   [/^\/canais/, 'config'],
   [/^\/atalhos/, 'atalhos'],
+  [/^\/fila/, 'fila'],
   [/^\/upgrade/, 'kit'],
 ];
 
@@ -87,6 +89,7 @@ export const CABECALHO: Record<TelaId, { icone: IconName; titulo: string }> = {
   analises: { icone: 'bar-chart', titulo: 'Análises' },
   config: { icone: 'settings', titulo: 'Configurações' },
   atalhos: { icone: 'keyboard', titulo: 'Atalhos' },
+  fila: { icone: 'loader', titulo: 'Fila de processamento' },
   kit: { icone: 'layout-template', titulo: 'Componentes' },
   erro: { icone: 'triangle-alert', titulo: 'Página não encontrada' },
 };
@@ -119,6 +122,7 @@ const TRILHA_BASE: Record<TelaId, string[]> = {
   analises: ['Inteligência', 'Análises'],
   config: ['Configurações'],
   atalhos: ['Atalhos'],
+  fila: ['Fila'],
   kit: ['Componentes'],
   erro: ['Página não encontrada'],
 };
