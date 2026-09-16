@@ -103,7 +103,10 @@ interface Props {
   /** AUDITORIA-v2 §7 (CP7): 'legacy' (default) preserva o cabecalho/menu
    *  atuais (EditorFase1). 'workbench' reduz o cabecalho e move
    *  velocidade/dividir/trecho/atualizar-onda para o AdvancedMenu. */
-  variant?: 'legacy' | 'workbench';
+  /** D-599: `ap` e o cabecalho do upgrade — sem o transporte e sem o tempo,
+   *  que passaram para a barra propria acima (ver TransporteBar). O corpo
+   *  (WaveSurfer, regioes, cursor) e o mesmo dos outros variants. */
+  variant?: 'legacy' | 'workbench' | 'ap';
 }
 
 const WB = {
@@ -272,7 +275,10 @@ interface WaveformProps {
   // onda mais densa/detalhada (barWidth/barGap menores) com a cor vinda do
   // token --wb-text-dim (lido ao vivo do DOM, funciona claro e escuro) — só
   // isto muda; peaks reais, drawRegions, cursor e zoom continuam intactos.
-  variant?: 'legacy' | 'workbench';
+  /** D-599: `ap` e o cabecalho do upgrade — sem o transporte e sem o tempo,
+   *  que passaram para a barra propria acima (ver TransporteBar). O corpo
+   *  (WaveSurfer, regioes, cursor) e o mesmo dos outros variants. */
+  variant?: 'legacy' | 'workbench' | 'ap';
 }
 
 function Waveform({
@@ -400,7 +406,7 @@ function Waveform({
     // menores/mais próximas) e a cor sai do token --wb-text-dim (lido ao
     // vivo — funciona em claro e escuro). Legacy mantém os valores
     // hardcoded de sempre, byte-a-byte.
-    const isWorkbenchWave = variant === 'workbench';
+    const isWorkbenchWave = variant === 'workbench' || variant === 'ap';
     const dimColor = root.getPropertyValue('--wb-text-dim').trim();
     const waveColor =
       isWorkbenchWave && dimColor ? withAlpha(dimColor, 0.85) : 'oklch(0.58 0.13 225 / 0.82)';
@@ -933,7 +939,10 @@ function AdvancedMenu({
   onRefreshAudio,
   refreshing,
 }: {
-  variant?: 'legacy' | 'workbench';
+  /** D-599: `ap` e o cabecalho do upgrade — sem o transporte e sem o tempo,
+   *  que passaram para a barra propria acima (ver TransporteBar). O corpo
+   *  (WaveSurfer, regioes, cursor) e o mesmo dos outros variants. */
+  variant?: 'legacy' | 'workbench' | 'ap';
   onZoomIn: () => void;
   onZoomOut: () => void;
   onToggleSmartPlay?: () => void;
@@ -1342,7 +1351,10 @@ export function TimelinePanel({
 
   const zoomLabel = `${zoomLevel.toFixed(1)}×`;
   const rateLabel = `${playbackRate.toFixed(2)}×`;
-  const isWorkbench = variant === 'workbench';
+  // O `ap` herda o cabecalho compacto do workbench; o que muda e o que SAI
+  // dele — transporte e relogio, que agora moram na barra de transporte.
+  const isAp = variant === 'ap';
+  const isWorkbench = variant === 'workbench' || isAp;
   // AUDITORIA-v2 §7 (CP7): "TIMELINE + tempo" do cabecalho compacto —
   // elapsed/total relativos ao INICIO DO CORTE (mesma convencao de
   // "NO CORTE" no BrutoContextStrip: currentTime - inicioSeg). Puramente
@@ -1364,23 +1376,33 @@ export function TimelinePanel({
                 dividir/trecho/atualizar-onda migraram pro AdvancedMenu — ver
                 abaixo — e o badge solto de trechos saiu (ja aparece em
                 Tempos/CP6). */}
-            <span className="flex-none font-code text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]">
-              Timeline
-            </span>
             <span
-              className="flex-none font-code text-[10px] font-semibold text-[var(--wb-text-mute)]"
-              style={{ fontVariantNumeric: 'tabular-nums' }}
+              className={
+                isAp
+                  ? 'lbl flex-none'
+                  : 'flex-none font-code text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]'
+              }
             >
-              {tempoLabel}
+              {isAp ? 'Linha do tempo' : 'Timeline'}
             </span>
+            {isAp ? null : (
+              <span
+                className="flex-none font-code text-[10px] font-semibold text-[var(--wb-text-mute)]"
+                style={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {tempoLabel}
+              </span>
+            )}
 
-            <TransportGroup
-              onSkipStart={() => handleSeek(inicioSeg)}
-              onSkipMinus={() => handleSkip(-5)}
-              onPlay={handlePlayPause}
-              onSkipPlus={() => handleSkip(5)}
-              onSkipEnd={() => handleSeek(fimSeg)}
-            />
+            {isAp ? null : (
+              <TransportGroup
+                onSkipStart={() => handleSeek(inicioSeg)}
+                onSkipMinus={() => handleSkip(-5)}
+                onPlay={handlePlayPause}
+                onSkipPlus={() => handleSkip(5)}
+                onSkipEnd={() => handleSeek(fimSeg)}
+              />
+            )}
 
             {/* Workbench 1c.dc.html:223-224 - pilulas com rotulo (nao icone
                 puro): fundo --wb-ok-soft/--wb-err-soft, texto --wb-ok-ink/--wb-err. */}
@@ -1434,7 +1456,9 @@ export function TimelinePanel({
             {/* D-402: a velocidade em vigor precisa ser legivel sem abrir o ⚙.
                 O CP7 mandou o CONTROLE pro AdvancedMenu; aqui volta so o
                 INDICADOR (pill nao-clicavel), como no header legacy. */}
-            <SpeedDisplay playbackRate={playbackRate} onAlternar={onAlternarVelocidade} />
+            {isAp ? null : (
+              <SpeedDisplay playbackRate={playbackRate} onAlternar={onAlternarVelocidade} />
+            )}
 
             <AdvancedMenu
               variant="workbench"

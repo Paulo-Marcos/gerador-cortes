@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { TransporteBar } from '@/upgrade/telas/TransporteBar';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import type { Corte, StatusBrutoResponse } from '@/types/models';
 import { PlayerPanel, type PlayerHandle } from './PlayerPanel';
@@ -167,8 +168,25 @@ export function EditorFase1({
             />
           </Panel>
           <PanelResizeHandle className="h-2 transition-colors hover:bg-[var(--wb-border-soft)]" />
+          {/* D-599: o protótipo separa ASSISTIR de EDITAR em dois cartões.
+              A barra fica fora do painel redimensionável de propósito: ela
+              tem altura fixa, e deixá-la encolher junto com a linha do tempo
+              esconderia o play — o controle que mais se usa. */}
+          {CASCA_NOVA ? (
+            <TransporteBar
+              playerRef={playerRef}
+              inicioSeg={corte.inicio_seg}
+              fimSeg={corte.fim_seg}
+              currentTime={currentTime}
+              playbackRate={playbackRate}
+              onChangeSpeed={onChangeSpeed}
+              trechos={(corte.desvios ?? []).length}
+              fontes={[{ texto: brutoPronto ? 'Bruto pronto' : 'Vídeo original', ativa: true }]}
+            />
+          ) : null}
           <Panel defaultSize={35} minSize={15} order={2}>
             <TimelinePanel
+              variant={CASCA_NOVA ? 'ap' : undefined}
               audioSrc={audioSrc}
               waveformPeaksSrc={waveformPeaksSrc}
               audioOffsetSec={audioOffsetSec}
