@@ -85,7 +85,10 @@ export type ChromeSeletor = {
 export type ChromeBarra = {
   secundario?: { texto: string; icone: IconName; onClick?: () => void };
   terciario?: { titulo: string; icone: IconName; onClick?: () => void };
-  primario: { texto: string; icone: IconName; onClick?: () => void };
+  /** `desabilitado` quando a decisão ainda não é possível (nada pronto para
+   *  publicar). O botão fica VISÍVEL e apagado, não some: a ausência dele
+   *  mudaria a barra de lugar e esconderia a resposta "ainda não dá". */
+  primario: { texto: string; icone: IconName; onClick?: () => void; desabilitado?: boolean };
   /** Lembretes de teclado à esquerda ("J K trocar de corte"). */
   teclas?: Array<{ teclas: string[]; texto: string }>;
   /** Controles de lote (destinos, agendamento) à esquerda do fiel. */

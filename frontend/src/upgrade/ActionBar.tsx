@@ -70,7 +70,15 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
         </button>
       ) : null}
 
-      <button type="button" className="btn btn-pri" onClick={barra.primario.onClick}>
+      <button
+        type="button"
+        className="btn btn-pri"
+        onClick={barra.primario.onClick}
+        disabled={barra.primario.desabilitado}
+        style={
+          barra.primario.desabilitado ? { opacity: 0.45, cursor: 'not-allowed' } : undefined
+        }
+      >
         <Icon name={barra.primario.icone} size={13} />
         {barra.primario.texto}
         <kbd style={{ background: 'rgb(255 255 255/.2)', borderColor: 'transparent', color: 'inherit' }}>

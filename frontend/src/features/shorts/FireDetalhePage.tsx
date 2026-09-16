@@ -13,7 +13,7 @@
 // de edição e os modais — e cada bloco levou consigo o que só ele usa.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { cn, formatarDuracao } from '@/lib/utils';
 import { useShortcuts } from '@/features/editor/shortcuts';
 import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
 import {
@@ -41,6 +41,8 @@ import { useEdicaoDoShort } from './useEdicaoDoShort';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
 import { estaFinalizado } from './filtrosDosFires';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import {
   useDescartarBruto,
   useGanchoPadrao,
@@ -55,6 +57,8 @@ import {
 // acertar a borda, e conferir o resultado exige 1x.
 const VELOCIDADE_NORMAL = 1;
 const VELOCIDADE_TRABALHO_INICIAL = 0.75;
+
+const CASCA_NOVA = isUpgradeShellEnabled();
 
 export default function FireDetalhePage() {
   const workbench = isWorkbenchEnabled();
@@ -283,15 +287,17 @@ export default function FireDetalhePage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
+        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
+        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)]',
         // No shell LEGADO a pagina fica ABAIXO de um cabecalho de 3.5rem, e
         // `h-screen` a fazia medir a viewport inteira — transbordando por
         // exatamente a altura desse cabecalho. Com o conteudo rolando dentro
         // (D-499), a ultima linha ficava inalcancavel. No workbench a pagina ja
         // recebe a altura do pai, e `h-full` continua certo.
-        workbench ? 'h-full' : 'h-[calc(100vh-3.5rem)]',
+        CASCA_NOVA || workbench ? 'h-full' : 'h-[calc(100vh-3.5rem)]',
       )}
     >
+      <FireChrome corteId={corteId} fire={fire} estado={edicao.estado} />
       <CabecalhoDoFire
         workbench={workbench}
         corteId={corteId}
@@ -314,7 +320,12 @@ export default function FireDetalhePage() {
         onAlternarFinalizado={onAlternarFinalizado}
       />
 
-      <main className="grid min-h-0 flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <main
+        className={cn(
+          'grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_400px]',
+          CASCA_NOVA ? '' : 'p-4',
+        )}
+      >
         {/* ── Material: o que existe para olhar ───────────────────────── */}
         <section className="flex min-h-0 flex-col gap-3">
           <PlayerDoBruto
@@ -435,4 +446,45 @@ export default function FireDetalhePage() {
       )}
     </div>
   );
+}
+
+// ── D-599: a curadoria do Fire conversa com a casca ──────────────────
+// Separado da pagina por dois motivos: a pagina ja tem 400 linhas de
+// orquestracao de player/regua/modais, e o chrome so precisa de TRES coisas
+// dela — o Fire, o corte e o estado da gravacao.
+function FireChrome({
+  corteId,
+  fire,
+  estado,
+}: {
+  corteId: string;
+  fire: { titulo: string; projeto_titulo: string; duracao_seg: number } | undefined;
+  estado: 'parado' | 'gravando' | 'gravado' | 'falhou' | 'em-dia';
+}) {
+  const navigate = useNavigate();
+  useDefinirChrome(
+    {
+      titulo: fire?.titulo || 'Curadoria do Fire',
+      sub: fire ? `${fire.projeto_titulo} · bruto de ${formatarDuracao(fire.duracao_seg)}` : undefined,
+      rotulos: fire ? [fire.projeto_titulo] : [],
+      denso: true,
+      acoes: [
+        {
+          icone: 'layout-grid',
+          texto: 'Prateleira',
+          onClick: () => navigate(`/shorts/${corteId}/workspace`),
+        },
+      ],
+      // Com auto-save o silencio e ambiguo (D-581). O chip da barra superior e
+      // a versao permanente do selo: "salvando…" enquanto grava, "salvo" depois.
+      estado:
+        estado === 'gravando'
+          ? { texto: 'salvando…', icone: 'loader', cor: 'var(--info)', bg: 'var(--info-soft)' }
+          : estado === 'falhou'
+            ? { texto: 'não salvou', icone: 'triangle-alert', cor: 'var(--warn)', bg: 'var(--warn-soft)' }
+            : { texto: 'salvo', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' },
+    },
+    [corteId, fire?.titulo, fire?.projeto_titulo, fire?.duracao_seg, estado],
+  );
+  return null;
 }

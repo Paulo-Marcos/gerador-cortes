@@ -20,6 +20,7 @@ import { rotuloDescarteBruto } from './descarteBruto';
 import { SeloDeGravacao } from './SeloDeGravacao';
 import type { FireComBruto } from './shortsApi';
 import type { EdicaoDoShort } from './useEdicaoDoShort';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 // D-479: o operador precisa saber a QUALIDADE do que está lendo. A auto-legenda
 // erra grafia, e erro de grafia num short vira o produto — o texto é o conteúdo.
@@ -78,6 +79,12 @@ export function SeloFinalizado() {
  * Tres clusters, cada um com uma pergunta: o que eu VEJO, o que acabei de
  * FAZER, e para onde eu VOU.
  */
+// D-599: na casca nova o titulo, o subtitulo e o "voltar para Shorts" sao da
+// CASCA (cabecalho de tela e trilha). O que sobra aqui e a barra de ferramentas
+// — os tres grupos de o-que-vejo / o-que-fiz / para-onde-vou — sem borda nem
+// fundo proprios, porque ja mora dentro do conteudo.
+const CASCA_NOVA = isUpgradeShellEnabled();
+
 export function CabecalhoDoFire({
   workbench,
   corteId,
@@ -101,12 +108,18 @@ export function CabecalhoDoFire({
 }: Props) {
   return (
     <header
-      className={cn(
-        'flex-none border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]',
-        workbench ? 'px-4 py-2.5' : 'px-7 py-4',
-      )}
+      className={
+        CASCA_NOVA
+          ? 'flex-none pb-3'
+          : cn(
+              'flex-none border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]',
+              workbench ? 'px-4 py-2.5' : 'px-7 py-4',
+            )
+      }
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2.5">
+        {CASCA_NOVA ? null : (
+        <>
         <Link
           to="/shorts"
           className="inline-flex items-center gap-1 rounded-[7px] px-1.5 py-1 text-[12px] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
@@ -125,11 +138,13 @@ export function CabecalhoDoFire({
             </p>
           )}
         </div>
+        </>
+        )}
         {finalizado && <SeloFinalizado />}
 
         <div className="flex-1" />
 
-        <SeloDeGravacao estado={edicao.estado} />
+        {CASCA_NOVA ? null : <SeloDeGravacao estado={edicao.estado} />}
 
         {/* ── o que eu vejo ─────────────────────────────────────────── */}
         <div className="flex items-center gap-0.5 rounded-[8px] bg-[var(--wb-bg-inset)] p-0.5">
@@ -208,15 +223,19 @@ export function CabecalhoDoFire({
         </div>
 
         {/* ── para onde eu vou ──────────────────────────────────────── */}
-        <Button variant="secondary" size="sm" asChild>
-          <Link
-            to={`/shorts/${corteId}/workspace`}
-            title="A prateleira dos aprovados: prévia lado a lado e publicação em massa"
-          >
-            <LayoutGrid />
-            Workspace
-          </Link>
-        </Button>
+        {/* Na casca nova a ida para a prateleira mora no cabecalho da tela;
+            repeti-la aqui daria dois botoes para o mesmo lugar lado a lado. */}
+        {CASCA_NOVA ? null : (
+          <Button variant="secondary" size="sm" asChild>
+            <Link
+              to={`/shorts/${corteId}/workspace`}
+              title="A prateleira dos aprovados: prévia lado a lado e publicação em massa"
+            >
+              <LayoutGrid />
+              Workspace
+            </Link>
+          </Button>
+        )}
 
         {fire && (
           <OverflowMenu

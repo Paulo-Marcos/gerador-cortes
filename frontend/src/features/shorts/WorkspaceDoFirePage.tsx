@@ -24,7 +24,7 @@
 // Escondê-lo faria o operador perguntar "cadê aquele que eu aprovei", e a
 // resposta ("falta renderizar") é exatamente o que esta tela deve dizer.
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Clapperboard,
@@ -54,6 +54,8 @@ import {
 import { usePublicacoesDoCorte } from './useLotePublicacao';
 import { useFechoDoShort } from './useFechoDoShort';
 import type { PublicacaoRegistrada } from './shortsApi';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 /** Como cada plataforma se chama na prateleira. */
 const NOME_DA_PLATAFORMA: Record<string, string> = {
@@ -212,6 +214,13 @@ function CartaoDoPronto({
   );
 }
 
+// D-599: a Prateleira do Fire dentro da casca. O cabecalho proprio sai (titulo,
+// subtitulo e "voltar" viram da casca) e o despacho vai para a BARRA DE ACOES
+// fixa — e o design faz isso por um motivo: numa grade de cartoes 9:16 que rola,
+// "Publicar em massa" no topo some justamente quando a pessoa chega ao ultimo
+// short e decide publicar.
+const CASCA_NOVA = isUpgradeShellEnabled();
+
 export default function WorkspaceDoFirePage() {
   const workbench = isWorkbenchEnabled();
   const { corteId = '' } = useParams();
@@ -241,14 +250,52 @@ export default function WorkspaceDoFirePage() {
   const publicaveis = useMemo(() => shortsPublicaveis(shorts), [shorts]);
   const registradas = useMemo(() => publicacoes.data?.publicacoes ?? [], [publicacoes.data]);
   const aguardando = naPrateleira.length - publicaveis.length;
+  const navigate = useNavigate();
+
+  useDefinirChrome(
+    {
+      titulo: fire?.titulo || 'Prateleira do Fire',
+      sub: [
+        `${publicaveis.length} pronto${publicaveis.length === 1 ? '' : 's'} para publicar`,
+        aguardando > 0 ? `${aguardando} aguardando render` : null,
+        fire ? `bruto de ${formatarDuracao(fire.duracao_seg)}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      rotulos: fire ? [fire.projeto_titulo] : [],
+      acoes: [
+        { icone: 'pencil', texto: 'Voltar à edição', onClick: () => navigate(`/shorts/${corteId}`) },
+      ],
+      barra: {
+        secundario: {
+          texto: 'Voltar à edição',
+          icone: 'pencil',
+          onClick: () => navigate(`/shorts/${corteId}`),
+        },
+        terciario: { titulo: 'Ver na fila', icone: 'loader', onClick: () => navigate('/fila') },
+        primario: {
+          texto:
+            publicaveis.length === 0
+              ? 'Nada pronto para publicar'
+              : `Publicar ${publicaveis.length} short${publicaveis.length === 1 ? '' : 's'}`,
+          icone: 'send',
+          onClick: () => setPublicandoEmLote(true),
+          desabilitado: publicaveis.length === 0,
+        },
+      },
+    },
+    [fire?.titulo, fire?.projeto_titulo, fire?.duracao_seg, publicaveis.length, aguardando, corteId],
+  );
 
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
-        workbench ? 'h-full' : 'h-[calc(100vh-3.5rem)]',
+        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
+        CASCA_NOVA ? '' : 'bg-[var(--wb-bg)]',
+        CASCA_NOVA ? '' : workbench ? 'h-full' : 'h-[calc(100vh-3.5rem)]',
       )}
     >
+      {CASCA_NOVA ? null : (
       <header
         className={cn(
           'flex-none border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]',
@@ -302,8 +349,9 @@ export default function WorkspaceDoFirePage() {
           </Button>
         </div>
       </header>
+      )}
 
-      <main className="flex-1 overflow-auto p-4">
+      <main className={CASCA_NOVA ? '' : 'flex-1 overflow-auto p-4'}>
         {isLoading && (
           <p className="py-16 text-center text-[13px] text-[var(--wb-text-mute)]">
             Carregando a prateleira…
@@ -336,7 +384,12 @@ export default function WorkspaceDoFirePage() {
         )}
 
         {naPrateleira.length > 0 && (
-          <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+          <div
+            className="grid gap-3"
+            style={{
+              gridTemplateColumns: `repeat(auto-fill,minmax(${CASCA_NOVA ? 210 : 220}px,1fr))`,
+            }}
+          >
             {naPrateleira.map((short) => (
               <CartaoDoPronto
                 key={short.id}
