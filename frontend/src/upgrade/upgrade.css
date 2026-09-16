@@ -439,3 +439,55 @@
   --radius-lg: var(--r3);
   --radius-xl: var(--r3);
 }
+
+/* ─── Cantos escritos à mão nas telas não migradas ─────────────────
+   A ponte acima resolve `var(--radius*)`, mas não alcança o que foi
+   escrito direto na classe — `rounded-lg`, `rounded-[9px]`, `rounded-xl`.
+   Dentro da casca isso produzia duas linguagens de forma na mesma
+   janela: cartões de 5 px ao lado de botões de 9 px.
+
+   O que fica de fora, de propósito:
+   - `rounded-full` — pílulas, bolinhas de estado e avatares, que são
+     redondos por significado e não por estilo;
+   - os direcionais (`rounded-r-none` e parentes), usados para colar
+     dois botões num par; sobrescrevê-los devolveria o canto que o par
+     existe para tirar.
+
+   Some com a última tela migrada, junto com a ponte. */
+
+.ap [class*='rounded-[']:not([class*='rounded-full']):not([class*='rounded-r-']):not(
+    [class*='rounded-l-']
+  ):not([class*='rounded-t-']):not([class*='rounded-b-']),
+.ap .rounded,
+.ap .rounded-sm,
+.ap .rounded-md,
+.ap .rounded-lg,
+.ap .rounded-xl,
+.ap .rounded-2xl {
+  border-radius: var(--r2);
+}
+
+/* Cantos direcionais com valor escrito à mão (`rounded-t-[11px]`): o lado
+   arredondado é intencional, o RAIO é que precisa acompanhar. `-none`
+   não tem colchete, então continua de fora — é ele que cola dois botões
+   num par. */
+
+.ap [class*='rounded-t-['] {
+  border-top-left-radius: var(--r2);
+  border-top-right-radius: var(--r2);
+}
+
+.ap [class*='rounded-b-['] {
+  border-bottom-left-radius: var(--r2);
+  border-bottom-right-radius: var(--r2);
+}
+
+.ap [class*='rounded-l-['] {
+  border-top-left-radius: var(--r2);
+  border-bottom-left-radius: var(--r2);
+}
+
+.ap [class*='rounded-r-['] {
+  border-top-right-radius: var(--r2);
+  border-bottom-right-radius: var(--r2);
+}
