@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  arrasteDoSegmento,
+  comBordaDoSegmento,
   comOffsets,
   comSegmentoMovido,
   comSegmentoNovo,
@@ -14,6 +16,7 @@ import {
   temColagem,
   type Segmento,
 } from '../segmentosDoShort';
+import { segmentoDaRegiao, shortDaRegiao } from '../ReguaDeOnda';
 import type { ShortSugerido } from '../shortsApi';
 
 // D-604: a tela e o backend precisam contar a MESMA história sobre a colagem —
@@ -179,5 +182,110 @@ describe('resumo', () => {
 
   it('colagem diz quantos e o tempo real', () => {
     expect(resumo(short({ segmentos: PEDIDO }))).toBe('2 segmentos · 45s');
+  });
+});
+
+// D-608: ajustar o tamanho de UM segmento depois de somar outro. A D-604 tinha
+// tirado isso — o operador somava um segmento e perdia o poder de aumentar ou
+// reduzir qualquer um deles.
+describe('comBordaDoSegmento', () => {
+  const colado = short({ segmentos: PEDIDO }); // 0-30 e 45-60, bruto de 120s
+
+  it('aumenta o fim de um segmento sem tocar no outro', () => {
+    expect(comBordaDoSegmento(colado, 0, 'fim', 38, 120)).toEqual([
+      { inicio_seg: 0, fim_seg: 38 },
+      { inicio_seg: 45, fim_seg: 60 },
+    ]);
+  });
+
+  it('reduz o inicio do segundo segmento', () => {
+    expect(comBordaDoSegmento(colado, 1, 'inicio', 50, 120)).toEqual([
+      { inicio_seg: 0, fim_seg: 30 },
+      { inicio_seg: 50, fim_seg: 60 },
+    ]);
+  });
+
+  it('a ordem de toque fica como estava', () => {
+    // Encompridar o segundo pedaço para antes do primeiro não pode trocá-los de
+    // lugar: a ordem é decisão do operador, não consequência de tamanho.
+    const resultado = comBordaDoSegmento(short({ segmentos: GANCHO_PRIMEIRO }), 1, 'fim', 40, 120);
+    expect(resultado.map((s) => s.inicio_seg)).toEqual([45, 0]);
+  });
+
+  it('a borda nao atravessa a outra — para a um segundo dela', () => {
+    // A mesma trava do trecho comum (`arrastar`): empilhadas, as duas alças não
+    // teriam mais como ser pegas separadamente.
+    expect(comBordaDoSegmento(colado, 0, 'fim', -10, 120)[0]).toEqual({
+      inicio_seg: 0,
+      fim_seg: 1,
+    });
+  });
+
+  it('o fim nao passa do bruto', () => {
+    expect(comBordaDoSegmento(colado, 1, 'fim', 999, 120)[1].fim_seg).toBe(120);
+  });
+
+  it('num short sem colagem ajusta a janela unica', () => {
+    expect(comBordaDoSegmento(short({ inicio_seg: 10, fim_seg: 40 }), 0, 'fim', 55, 120)).toEqual([
+      { inicio_seg: 10, fim_seg: 55 },
+    ]);
+  });
+});
+
+// D-608: a alça de cada segmento só funciona se a régua souber DE QUEM é a
+// região arrastada e QUAL segmento ela é. A D-604 tirou as alças supondo que isso
+// não dava para saber — e dava, porque o id carrega os dois.
+describe('id da regiao na regua', () => {
+  // Um uuid real: tem hífens, e é por isso que o separador é duplo.
+  const uuid = '3f2a9c1e-7b4d-4e8a-9c2f-1a2b3c4d5e6f';
+
+  it('devolve o short mesmo com os hifens do uuid', () => {
+    expect(shortDaRegiao(`${uuid}__2`)).toBe(uuid);
+  });
+
+  it('devolve o indice do segmento na ordem de toque', () => {
+    expect(segmentoDaRegiao(`${uuid}__0`)).toBe(0);
+    expect(segmentoDaRegiao(`${uuid}__2`)).toBe(2);
+  });
+
+  it('id sem sufixo e o primeiro segmento do proprio short', () => {
+    expect(shortDaRegiao(uuid)).toBe(uuid);
+    expect(segmentoDaRegiao(uuid)).toBe(0);
+  });
+});
+
+// D-608: a régua entrega o bloco como ficou, e não qual borda foi pega. Errar
+// essa leitura é o operador arrastar o fim e ver o início andar.
+describe('arrasteDoSegmento', () => {
+  const colado = short({ segmentos: PEDIDO }); // 0-30 e 45-60, bruto de 120s
+
+  it('arrastar o fim move so o fim, e o cursor vai ate ele', () => {
+    expect(arrasteDoSegmento(colado, 1, 45, 66, 120)).toEqual({
+      segmentos: [
+        { inicio_seg: 0, fim_seg: 30 },
+        { inicio_seg: 45, fim_seg: 66 },
+      ],
+      focarEm: 66,
+    });
+  });
+
+  it('arrastar o inicio move so o inicio, e o cursor vai ate ele', () => {
+    expect(arrasteDoSegmento(colado, 0, 4, 30, 120)).toEqual({
+      segmentos: [
+        { inicio_seg: 4, fim_seg: 30 },
+        { inicio_seg: 45, fim_seg: 60 },
+      ],
+      focarEm: 4,
+    });
+  });
+
+  it('o cursor vai ate a borda JA travada, e nao ate onde o mouse soltou', () => {
+    // Puxar o fim para antes do início para a um segundo dele — e é esse o
+    // instante que o operador precisa conferir no player.
+    expect(arrasteDoSegmento(colado, 0, 0, -5, 120)?.focarEm).toBe(1);
+  });
+
+  it('indice que nao existe nao grava nada', () => {
+    expect(arrasteDoSegmento(colado, 7, 0, 10, 120)).toBeNull();
   });
 });

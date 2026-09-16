@@ -33,7 +33,7 @@ import { PainelDaRegua } from './PainelDaRegua';
 import { PlayerDoBruto } from './PlayerDoBruto';
 import { LegendaPrevia } from './LegendaPrevia';
 import { lugarDaLegenda } from './previaLegenda';
-import { efetivos } from './segmentosDoShort';
+import { efetivos, type Segmento } from './segmentosDoShort';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { GanchoModal } from './GanchoModal';
 import { GanchoPrevia } from './GanchoPrevia';
@@ -182,6 +182,17 @@ export default function FireDetalhePage() {
       if (!focar) return;
       const alvo = focar === 'inicio' ? bordas.inicio : bordas.fim;
       if (alvo !== undefined) irPara(alvo);
+    },
+    [edicao, irPara],
+  );
+
+  // D-608: a borda de um SEGMENTO, arrastada na régua. Mesmo caminho de escrita
+  // da colagem inteira, e o cursor vai até a borda que mudou — é a mesma
+  // conferência que o `gravarBordas` oferece ao trecho de uma janela só.
+  const gravarSegmentos = useCallback(
+    (shortId: string, segmentos: Segmento[], focarEm: number) => {
+      edicao.gravar(shortId, { segmentos });
+      irPara(focarEm);
     },
     [edicao, irPara],
   );
@@ -388,6 +399,7 @@ export default function FireDetalhePage() {
             temBruto={fire?.tem_bruto}
             onSeek={irPara}
             onBordas={gravarBordas}
+            onSegmentos={gravarSegmentos}
             onSelecionar={setSelecionado}
           />
         </section>

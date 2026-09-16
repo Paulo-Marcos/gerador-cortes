@@ -13,6 +13,7 @@
 // arquivo e compara. Se um lado mudar sozinho, o teste cai em vez de a tela
 // mentir sobre o que o render vai fazer.
 
+import { arrastar, type Borda } from './linhaDoTempoShort';
 import type { ShortSugerido } from './shortsApi';
 
 /** Espelha `MAX_SEGMENTOS` — acima disso a colagem deixa de ser um short. */
@@ -174,4 +175,76 @@ export function comSegmentoMovido(
   if (destino < 0 || destino >= atuais.length) return atuais;
   [atuais[indice], atuais[destino]] = [atuais[destino], atuais[indice]];
   return atuais;
+}
+
+/**
+ * D-608: o que um arraste na régua fez com um segmento — a lista ajustada e para
+ * onde levar o cursor — ou `null` se o índice não existe.
+ *
+ * A régua só entrega o bloco como ficou (`inicio`/`fim` novos), e não QUAL borda
+ * foi pega. A resposta é a borda que saiu do lugar: se o início mudou, foi ele;
+ * senão, foi o fim. Errar aqui é o pior defeito possível desta tela — o operador
+ * arrasta o fim e vê o início andar —, e por isso a decisão mora numa função
+ * pura, testada, e não dentro do evento do wavesurfer.
+ */
+export function arrasteDoSegmento(
+  short: ShortSugerido,
+  indice: number,
+  inicioArrastado: number,
+  fimArrastado: number,
+  duracaoBrutoSeg: number,
+): { segmentos: Segmento[]; focarEm: number } | null {
+  const segmento = efetivos(short)[indice];
+  if (!segmento) return null;
+
+  const borda: Borda =
+    Math.abs(inicioArrastado - segmento.inicio_seg) > 0.01 ? 'inicio' : 'fim';
+  const segmentos = comBordaDoSegmento(
+    short,
+    indice,
+    borda,
+    borda === 'inicio' ? inicioArrastado : fimArrastado,
+    duracaoBrutoSeg,
+  );
+  const ajustado = segmentos[indice];
+  return {
+    segmentos,
+    focarEm: borda === 'inicio' ? ajustado.inicio_seg : ajustado.fim_seg,
+  };
+}
+
+/**
+ * D-608: a lista com UMA borda de UM segmento movida para `segundos`.
+ *
+ * É o que devolve ao operador o que a D-604 tinha tirado: aumentar e reduzir um
+ * segmento depois de somar outro. Serve às duas portas — a alça da régua e o
+ * "início aqui / fim aqui" da lista —, para as duas obedecerem à mesma regra.
+ *
+ * A regra é a do trecho comum (`arrastar`): a borda não sai do bruto e não
+ * atravessa a outra, parando a um segundo dela. Uma trava própria aqui deixaria
+ * o segmento aceitar um tamanho que o trecho de uma janela só recusa.
+ *
+ * Só aquele segmento muda, e a ORDEM de toque fica como estava — encompridar o
+ * segundo pedaço não pode fazê-lo trocar de lugar com o primeiro.
+ */
+export function comBordaDoSegmento(
+  short: ShortSugerido,
+  indice: number,
+  borda: Borda,
+  segundos: number,
+  duracaoBrutoSeg: number,
+): Segmento[] {
+  return efetivos(short).map((segmento, i) => {
+    if (i !== indice) return segmento;
+    const bordas = arrastar(
+      { inicio: segmento.inicio_seg, fim: segmento.fim_seg },
+      borda,
+      segundos,
+      duracaoBrutoSeg,
+    );
+    return {
+      inicio_seg: Math.round(bordas.inicio * 100) / 100,
+      fim_seg: Math.round(bordas.fim * 100) / 100,
+    };
+  });
 }

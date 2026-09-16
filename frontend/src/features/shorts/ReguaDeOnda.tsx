@@ -3,7 +3,14 @@ import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import { Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { comOffsets, duracaoLiquida, efetivos, temColagem } from './segmentosDoShort';
+import {
+  arrasteDoSegmento,
+  comOffsets,
+  duracaoLiquida,
+  efetivos,
+  temColagem,
+  type Segmento,
+} from './segmentosDoShort';
 import { brutoUrl, type ShortSugerido } from './shortsApi';
 import { arrastar, mmss, type Borda, type Bordas } from './linhaDoTempoShort';
 import { BORDA_DO_REJEITADO, COR_DO_REJEITADO, bordaDoShort, corDoShort } from './coresDosShorts';
@@ -99,6 +106,11 @@ interface Props {
   tempoAtual: number;
   onSeek: (segundos: number) => void;
   onBordas: (shortId: string, bordas: Partial<Bordas>, focar?: Borda) => void;
+  /**
+   * D-608: o arraste da borda de um SEGMENTO de um short colado. Recebe a lista
+   * inteira já ajustada e o instante para onde levar o cursor.
+   */
+  onSegmentos: (shortId: string, segmentos: Segmento[], focarEm: number) => void;
   /** Clicar num bloco põe aquele trecho em foco, como clicar no card. */
   onSelecionar: (shortId: string) => void;
 }
@@ -122,7 +134,7 @@ export function shortDaRegiao(idRegiao: string): string {
 }
 
 /** Qual segmento do short é esta região, na ordem de toque (0 = o primeiro). */
-function segmentoDaRegiao(idRegiao: string): number {
+export function segmentoDaRegiao(idRegiao: string): number {
   const partes = idRegiao.split(SEPARADOR);
   return partes.length > 1 ? Number(partes[1]) : 0;
 }
@@ -157,11 +169,12 @@ function desenhar(plugin: Plugin, shorts: ShortSugerido[], emFoco: ShortSugerido
         // Só o trecho EM FOCO tem alça. Todas arrastáveis convidariam a mexer no
         // trecho errado — e aqui um pixel vale meio segundo.
         drag: false,
-        // D-604: num short COLADO a alça sai. Arrastar a borda de um segmento é
-        // editar a colagem, e o `region-updated` só sabe dizer "mexeu no início
-        // ou no fim" — com N segmentos ele não tem como saber em QUAL. Quem tem
-        // colagem a edita na lista do card, onde cada segmento tem a sua linha.
-        resize: short.id === emFoco?.id && !rejeitado && !colado,
+        // D-608: TODOS os segmentos do trecho em foco têm alça. A D-604 as tirou
+        // de short colado supondo que o arraste não saberia qual segmento foi
+        // pego — mas o id da região já carrega o índice (`s1__2`). O preço
+        // daquela suposição foi o operador não conseguir mais aumentar nem
+        // reduzir um segmento depois de somar outro.
+        resize: short.id === emFoco?.id && !rejeitado,
         content: colado ? `${indice + 1}.${ordem}` : `${indice + 1}`,
       });
     });
@@ -209,6 +222,7 @@ export function ReguaDeOnda({
   tempoAtual,
   onSeek,
   onBordas,
+  onSegmentos,
   onSelecionar,
 }: Props) {
   const caixa = useRef<HTMLDivElement>(null);
@@ -226,8 +240,28 @@ export function ReguaDeOnda({
   // Os handlers mudam a cada render e o wavesurfer só recebe os seus uma vez.
   // Guardá-los numa ref é o que permite criar a onda UMA vez — recriá-la a cada
   // mudança de props recarregaria o áudio e perderia o scroll do operador.
-  const atual = useRef({ shorts, emFoco, onSeek, onBordas, onSelecionar, duracaoSeg, picos, zoom });
-  atual.current = { shorts, emFoco, onSeek, onBordas, onSelecionar, duracaoSeg, picos, zoom };
+  const atual = useRef({
+    shorts,
+    emFoco,
+    onSeek,
+    onBordas,
+    onSegmentos,
+    onSelecionar,
+    duracaoSeg,
+    picos,
+    zoom,
+  });
+  atual.current = {
+    shorts,
+    emFoco,
+    onSeek,
+    onBordas,
+    onSegmentos,
+    onSelecionar,
+    duracaoSeg,
+    picos,
+    zoom,
+  };
 
   // O gatilho é "já HÁ picos", e não "quais picos": o array chega uma vez e não
   // muda, e depender do conteúdo dele reintroduziria a recriação que a D-548
@@ -314,10 +348,22 @@ export function ReguaDeOnda({
     plugin.on('region-updated', (regiao) => {
       const alvo = atual.current.emFoco;
       if (!alvo || shortDaRegiao(regiao.id) !== alvo.id) return;
-      // D-604: short colado não tem alça (ver `desenhar`), então chegar aqui com
-      // colagem seria um arraste que a régua não deveria ter oferecido — aplicá-lo
-      // mexeria no envelope e deixaria ele e os segmentos discordando.
-      if ((alvo.segmentos?.length ?? 0) > 1) return;
+
+      // D-608: num short colado, a borda que mudou é a de UM segmento — o do
+      // índice que a região carrega. Mexer no envelope aqui seria recusado pelo
+      // backend, e com razão: num short colado quem decide as bordas externas são
+      // os segmentos (o menor início e o maior fim), não o arraste.
+      if (temColagem(alvo)) {
+        const arraste = arrasteDoSegmento(
+          alvo,
+          segmentoDaRegiao(regiao.id),
+          regiao.start,
+          regiao.end,
+          atual.current.duracaoSeg,
+        );
+        if (arraste) atual.current.onSegmentos(alvo.id, arraste.segmentos, arraste.focarEm);
+        return;
+      }
 
       const mexeuNoInicio = Math.abs(regiao.start - alvo.inicio_seg) > 0.01;
       const borda: Borda = mexeuNoInicio ? 'inicio' : 'fim';

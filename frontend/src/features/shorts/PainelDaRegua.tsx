@@ -1,3 +1,4 @@
+import type { Segmento } from './segmentosDoShort';
 import type { ShortSugerido } from './shortsApi';
 import type { Borda } from './linhaDoTempoShort';
 import { LinhaDoTempo } from './LinhaDoTempo';
@@ -15,6 +16,8 @@ interface Props {
   temBruto: boolean | undefined;
   onSeek: (segundos: number) => void;
   onBordas: (shortId: string, bordas: { inicio?: number; fim?: number }, focar?: Borda) => void;
+  /** D-608: a borda de um segmento de short colado, arrastada na régua. */
+  onSegmentos: (shortId: string, segmentos: Segmento[], focarEm: number) => void;
   onSelecionar: (shortId: string) => void;
 }
 
@@ -44,6 +47,7 @@ export function PainelDaRegua({
   temBruto,
   onSeek,
   onBordas,
+  onSegmentos,
   onSelecionar,
 }: Props) {
   // D-541: a onda do bruto por tras da regua. Falha em silencio — sem bruto
@@ -91,6 +95,7 @@ export function PainelDaRegua({
           tempoAtual={tempoAtual}
           onSeek={onSeek}
           onBordas={onBordas}
+          onSegmentos={onSegmentos}
           onSelecionar={onSelecionar}
         />
       ) : (

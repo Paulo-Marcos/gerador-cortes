@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { janelaNova, mmss } from './linhaDoTempoShort';
 import {
+  comBordaDoSegmento,
   comSegmentoMovido,
   comSegmentoNovo,
   duracaoDe,
@@ -111,6 +112,36 @@ export function ListaDeSegmentos({
                 {Math.round(duracaoDe(segmento))}s
               </span>
             </button>
+            {/* D-608: o ajuste fino DESTE segmento, pelo instante do player — o
+                mesmo "início aqui / fim aqui" que o trecho comum tem. A alça da
+                régua resolve o grosso; isto é para acertar o quadro, que é onde
+                um pixel de régua vale meio segundo. */}
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={ocupado}
+              onClick={() =>
+                onGravar(
+                  comBordaDoSegmento(short, indice, 'inicio', tempoAtualSeg, duracaoBrutoSeg),
+                )
+              }
+              title={`Começar o segmento ${indice + 1} em ${mmss(tempoAtualSeg)}`}
+              aria-label={`Começar o segmento ${indice + 1} onde o player está`}
+            >
+              [
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={ocupado}
+              onClick={() =>
+                onGravar(comBordaDoSegmento(short, indice, 'fim', tempoAtualSeg, duracaoBrutoSeg))
+              }
+              title={`Terminar o segmento ${indice + 1} em ${mmss(tempoAtualSeg)}`}
+              aria-label={`Terminar o segmento ${indice + 1} onde o player está`}
+            >
+              ]
+            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -147,7 +178,7 @@ export function ListaDeSegmentos({
 
       <p className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
         {colado
-          ? 'O short toca os segmentos nesta ordem, um atrás do outro. As setas mudam a ordem — dá para abrir com o que vem depois na live.'
+          ? 'O short toca os segmentos nesta ordem, um atrás do outro. Arraste as bordas na régua, ou use [ e ] para começar/terminar um segmento onde o player está. As setas mudam a ordem.'
           : 'Marque um segundo segmento para montar o short com trechos separados do bruto. O que fica entre eles não entra.'}
       </p>
     </div>
