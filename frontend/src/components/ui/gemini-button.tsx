@@ -1,79 +1,25 @@
-import * as React from 'react';
-import { Loader2, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
+// Identidade visual do Gemini: a cor da marca e o ícone. O botão de gerar mora
+// em `acao-de-ia.tsx`, que oferece os dois provedores na mesma ação.
 
 export const GEMINI_BRAND = '#4285F4';
 
+/**
+ * A estrela de quatro pontas do Gemini. Antes era o `Sparkles` do lucide, que
+ * é o símbolo genérico de "IA" do app inteiro — ao lado do ícone do Claude, não
+ * dizia QUAL provedor o botão chamava.
+ */
 export function GeminiIcon({ size = 14, className }: { size?: number; className?: string }) {
-  // Sparkles works well as a generic AI/Gemini icon for now
-  return <Sparkles size={size} className={className} />;
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="currentColor"
+      height={size}
+      viewBox="0 0 24 24"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M12 0C12.4 6.4 17.6 11.6 24 12C17.6 12.4 12.4 17.6 12 24C11.6 17.6 6.4 12.4 0 12C6.4 11.6 11.6 6.4 12 0Z" />
+    </svg>
+  );
 }
-
-type GeminiAiButtonSize = 'sm' | 'md';
-
-export interface GeminiAiButtonProps extends Omit<
-  React.ButtonHTMLAttributes<HTMLButtonElement>,
-  'children'
-> {
-  pending?: boolean;
-  size?: GeminiAiButtonSize;
-  label?: React.ReactNode;
-  pendingLabel?: React.ReactNode;
-  iconSlot?: React.ReactNode;
-}
-
-const SIZE_CLASSES: Record<GeminiAiButtonSize, string> = {
-  sm: 'h-8 px-3 text-xs gap-1.5',
-  md: 'h-9 px-4 text-sm gap-2',
-};
-
-const ICON_SIZE: Record<GeminiAiButtonSize, number> = {
-  sm: 13,
-  md: 15,
-};
-
-export const GeminiAiButton = React.forwardRef<HTMLButtonElement, GeminiAiButtonProps>(
-  function GeminiAiButton(
-    {
-      className,
-      pending = false,
-      size = 'sm',
-      label = 'Gemini',
-      pendingLabel,
-      iconSlot,
-      disabled,
-      style,
-      ...props
-    },
-    ref,
-  ) {
-    const icon =
-      iconSlot ??
-      (pending ? (
-        <Loader2 className="animate-spin" size={ICON_SIZE[size]} />
-      ) : (
-        <GeminiIcon size={ICON_SIZE[size]} />
-      ));
-    return (
-      <button
-        ref={ref}
-        type="button"
-        disabled={disabled || pending}
-        className={cn(
-          'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] font-semibold text-white transition-colors',
-          'shadow-[shadow:var(--wb-shadow-btn)] hover:brightness-110 active:brightness-100',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--wb-focus,#4285F4)]',
-          'disabled:pointer-events-none disabled:opacity-60',
-          '[&_svg]:shrink-0',
-          SIZE_CLASSES[size],
-          className,
-        )}
-        style={{ backgroundColor: GEMINI_BRAND, ...style }}
-        {...props}
-      >
-        {icon}
-        <span>{pending && pendingLabel ? pendingLabel : label}</span>
-      </button>
-    );
-  },
-);

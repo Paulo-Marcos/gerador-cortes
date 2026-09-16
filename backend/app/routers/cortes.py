@@ -15,6 +15,7 @@ from app.domain.corte_mapper import (
 )
 from app.domain.youtube_layout import aplicar_layout_card_por_contexto, normalizar_layout_youtube
 from app.models import Corte, Projeto, StatusCorte
+from app.provider_ia import ProviderIA
 from app.routers.cortes_helpers import (
     _corte_to_dict,
     _hms_to_seg,
@@ -412,10 +413,13 @@ async def analisar_desvios_corte(
 
 
 @router.post("/projeto/{projeto_id}/analisar-desvios-todos")
-async def analisar_desvios_todos(projeto_id: str, db: AsyncSession = Depends(get_db)):
+async def analisar_desvios_todos(
+    projeto_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
+):
     """Dispara análise de desvios via IA para todos os cortes do projeto (em background)."""
     fire_and_forget(
-        CorteService.analisar_desvios_todos_impl(projeto_id), name=f"desvios-todos-{projeto_id[:8]}"
+        CorteService.analisar_desvios_todos_impl(projeto_id, provider),
+        name=f"desvios-todos-{projeto_id[:8]}",
     )
     return {"message": f"Análise de desvios iniciada para o projeto {projeto_id}"}
 

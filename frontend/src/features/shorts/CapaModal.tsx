@@ -1,16 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Camera,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Loader2,
-  Sparkles,
-  Upload,
-} from 'lucide-react';
+import { Camera, Check, ChevronLeft, ChevronRight, Copy, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo } from '@/lib/providerIa';
 import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
@@ -402,25 +393,12 @@ function ArteDaCapa({
       <section className="space-y-2">
         <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">1. Gerar o prompt</p>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={gerarPrompt.isPending}
-            onClick={() => gerarPrompt.mutate('claude')}
-          >
-            {promptEmVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {promptEmVoo === 'claude'
-              ? 'escrevendo…'
-              : texto
-                ? 'Refazer (Claude)'
-                : 'Gerar com o Claude'}
-          </Button>
-          <GeminiAiButton
-            pending={promptEmVoo === 'gemini'}
-            disabled={promptEmVoo === 'claude'}
-            onClick={() => gerarPrompt.mutate('gemini')}
-            pendingLabel="escrevendo…"
-            title="Escrever o prompt da capa pelo Gemini"
+          <AcaoDeIa
+            rotulo={texto ? 'Refazer prompt' : 'Gerar prompt'}
+            descricao={texto ? 'Refazer o prompt da capa' : 'Gerar o prompt da capa'}
+            rotuloEmVoo="escrevendo…"
+            emVoo={promptEmVoo}
+            onGerar={(provider) => gerarPrompt.mutate(provider)}
           />
           {!promptEmVoo && texto && (
             <SeloDeProvider provider={capaGeradaPor} modelo={ultimaCapa.data?.model} />

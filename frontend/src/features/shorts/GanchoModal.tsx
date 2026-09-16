@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react';
-import { Eraser, Loader2, Minus, Plus, Sparkles } from 'lucide-react';
+import { Eraser, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ import { GanchoPrevia } from './GanchoPrevia';
 import { LegendaPrevia } from './LegendaPrevia';
 import { lugarDaLegenda } from './previaLegenda';
 import { PalcoPrevia } from './PalcoPrevia';
-import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { useSugerirGanchos } from './useShortsDoCorte';
@@ -308,25 +308,15 @@ export function GanchoModal({
               mais editorial da tela tomada pela maquina. */}
           <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={ocupado || gerar.isPending}
-                onClick={() => gerar.mutate({ shortId: short.id, provider: 'claude' })}
-              >
-                {emVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                {emVoo === 'claude'
-                  ? 'escrevendo…'
-                  : variacoes.length > 0
-                    ? 'Gerar outras (Claude)'
-                    : `Gerar ${MAX_VARIACOES} pelo Claude`}
-              </Button>
-              <GeminiAiButton
-                pending={emVoo === 'gemini'}
-                disabled={ocupado || emVoo === 'claude'}
-                onClick={() => gerar.mutate({ shortId: short.id, provider: 'gemini' })}
-                pendingLabel="escrevendo…"
-                title="Gerar as variações pelo Gemini"
+              <AcaoDeIa
+                rotulo={
+                  variacoes.length > 0 ? 'Gerar outras' : `Gerar ${MAX_VARIACOES} variações`
+                }
+                descricao="Gerar variações do gancho"
+                rotuloEmVoo="escrevendo…"
+                emVoo={emVoo}
+                desabilitado={ocupado}
+                onGerar={(provider) => gerar.mutate({ shortId: short.id, provider })}
               />
               {!gerar.isPending && variacoes.length > 0 && (
                 <SeloDeProvider provider={geradoPor} modelo={ultima.data?.model} />

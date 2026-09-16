@@ -12,8 +12,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ClaudeAiButton } from '@/components/ui/claude-button';
-import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
@@ -263,28 +262,14 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             chegar na lista de cenas. Nada sumiu — Retratos, Manual, Studio e
             Padrões moram no ⋯, com os mesmos disabled/tooltip/loading. */}
         <div className="mb-2 flex items-stretch gap-1.5">
-          <Tooltip label="Gerar cenas automaticamente via Claude" side="bottom">
-            <ClaudeAiButton
-              size="md"
-              pending={gerarClaude.isPending && providerAtivo === 'claude'}
-              disabled={gerarClaude.isPending && providerAtivo !== 'claude'}
-              onClick={() => handleGerarCenas('claude')}
-              className="flex-1 text-[11px] h-[34px]"
-              label="Claude"
-              pendingLabel="Gerando..."
-            />
-          </Tooltip>
-          <Tooltip label="Gerar cenas automaticamente via Gemini" side="bottom">
-            <GeminiAiButton
-              size="md"
-              pending={gerarClaude.isPending && providerAtivo === 'gemini'}
-              disabled={gerarClaude.isPending && providerAtivo !== 'gemini'}
-              onClick={() => handleGerarCenas('gemini')}
-              className="flex-1 text-[11px] h-[34px]"
-              label="Gemini"
-              pendingLabel="Gerando..."
-            />
-          </Tooltip>
+          <AcaoDeIa
+            rotulo="Gerar cenas"
+            tamanho="md"
+            destaque
+            emVoo={gerarClaude.isPending ? (providerAtivo ?? 'claude') : null}
+            onGerar={handleGerarCenas}
+            className="h-[34px] flex-1"
+          />
           {!gerarClaude.isPending && cenasOrdenadas.length > 0 && (
             <SeloDeProvider
               provider={cenasGeradasPor}

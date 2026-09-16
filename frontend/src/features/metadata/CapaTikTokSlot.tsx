@@ -1,19 +1,10 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Check,
-  Clipboard,
-  Copy,
-  Film,
-  ImagePlus,
-  Loader2,
-  RefreshCw,
-  Sparkles,
-} from 'lucide-react';
+import { Check, Clipboard, Copy, Film, ImagePlus, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
-import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
@@ -186,26 +177,27 @@ export function CapaTikTokSlot({
 
         <div className="grid min-w-0 flex-1 content-start gap-1.5">
           {/* Passo 1: o prompt. */}
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={ocupado}
-            onClick={() => escreverPrompt.mutate('claude')}
-            title="Escreve o prompt da arte 16:9, no estilo da thumbnail do YouTube."
-          >
-            {promptEmVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {promptArte ? 'Refazer (Claude)' : 'Gerar com o Claude'}
-          </Button>
-
-          <GeminiAiButton
-            pending={promptEmVoo === 'gemini'}
-            disabled={ocupado && promptEmVoo !== 'gemini'}
-            onClick={() => escreverPrompt.mutate('gemini')}
-            className="w-full"
-            label={promptArte ? 'Refazer (Gemini)' : 'Gerar com o Gemini'}
-            title="Escrever o prompt da arte pelo Gemini"
-          />
+          {/* A coluna é estreita demais para rótulo e ícones na mesma linha: a
+              legenda sobe e os dois provedores dividem a largura. */}
+          <div className="grid gap-1">
+            <span
+              aria-live="polite"
+              className="text-[10.5px] font-semibold text-[var(--wb-text-mute)]"
+            >
+              {promptEmVoo ? 'escrevendo…' : promptArte ? 'Refazer prompt' : 'Gerar prompt'}
+            </span>
+            <AcaoDeIa
+              rotulo={promptArte ? 'Refazer prompt' : 'Gerar prompt'}
+              descricao={
+                promptArte ? 'Refazer o prompt da arte da capa' : 'Gerar o prompt da arte da capa'
+              }
+              emVoo={promptEmVoo}
+              desabilitado={ocupado}
+              onGerar={(provider) => escreverPrompt.mutate(provider)}
+              apenasProvedores
+              className="w-full"
+            />
+          </div>
           {!promptEmVoo && promptArte && (
             <SeloDeProvider provider={arteGeradaPor} modelo={ultimaArte.data?.model} />
           )}

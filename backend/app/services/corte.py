@@ -472,7 +472,7 @@ class CorteService:
         return corte
 
     @staticmethod
-    async def analisar_desvios_todos_impl(projeto_id: str):
+    async def analisar_desvios_todos_impl(projeto_id: str, provider: str = "claude"):
         import asyncio
 
         from app.database import AsyncSessionLocal
@@ -487,7 +487,7 @@ class CorteService:
 
         for cid in corte_ids:
             try:
-                await ClaudeIaService.gerar_trechos_via_claude(cid)
+                await ClaudeIaService.gerar_trechos_via_claude(cid, provider)
                 await asyncio.sleep(1)
             except Exception as e:
                 operational_error("AnalisarDesvios", f"Erro no corte {cid}: {e}")

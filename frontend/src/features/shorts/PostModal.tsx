@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useIsMutating } from '@tanstack/react-query';
-import { Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
@@ -21,7 +20,7 @@ import {
   useGerarPost,
   usePostDoShort,
 } from './useShortsDoCorte';
-import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo } from '@/lib/providerIa';
 import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
@@ -93,25 +92,13 @@ export function PostModal({ open, onClose, short }: Props) {
     <Modal open={open} onClose={onClose} title="Escrever o post deste short" size="2xl">
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={ocupado}
-            onClick={() => gerar.mutate('claude')}
-          >
-            {emVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {emVoo === 'claude'
-              ? 'escrevendo…'
-              : post.data?.gerado
-                ? 'Escrever de novo (Claude)'
-                : 'Escrever com o Claude'}
-          </Button>
-          <GeminiAiButton
-            pending={emVoo === 'gemini'}
-            disabled={ocupado && emVoo !== 'gemini'}
-            onClick={() => gerar.mutate('gemini')}
-            pendingLabel="escrevendo…"
-            title="Escrever o post pelo Gemini"
+          <AcaoDeIa
+            rotulo={post.data?.gerado ? 'Escrever de novo' : 'Escrever o post'}
+            descricao="Escrever o post do short"
+            rotuloEmVoo="escrevendo…"
+            emVoo={emVoo}
+            desabilitado={ocupado}
+            onGerar={(provider) => gerar.mutate(provider)}
           />
           {!escrevendo && post.data?.gerado && (
             <SeloDeProvider provider={geradoPor} modelo={ultima.data?.model} />

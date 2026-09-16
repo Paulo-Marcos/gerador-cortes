@@ -98,6 +98,12 @@ O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `
 - **Service**: `PadroesThumbnailService.analisar` → `_ler_padroes`
 - **UI**: `ThumbnailPadroesPage.tsx`
 
+### 2.14 Trechos de todos os cortes
+- **Descrição**: roda a geração de trechos a remover em cada corte do projeto, em segundo plano, só acrescentando aos já marcados.
+- **Rota**: `POST /api/cortes/projeto/{projeto_id}/analisar-desvios-todos?provider=`
+- **Service**: `CorteService.analisar_desvios_todos_impl` → `gerar_trechos_via_claude` por corte
+- **UI**: `ProjetoDetalhePage.tsx` (barra de utilitários, `<MenuDeIa />`)
+
 ### Fora da escolha
 O **sentimento do ranking de lives** (`services/ranking_lives.py`) roda em lote, no fundo, sem tela onde escolher — segue no Claude.
 
@@ -120,5 +126,9 @@ A telemetria grava `short_id` desde a D-608: sem ele, dois trechos do mesmo cort
 1. Crie a rota em `backend/app/routers/claude_ia.py` com o query param `provider: ProviderIA = "claude"`.
 2. No `ClaudeIaService`, chame `_gerar_json_provider` ou `_gerar_text_provider` e **repasse `provider` por todos os métodos intermediários**. Métodos estáticos não enxergam variáveis do método que os chamou (rode `ruff check`: o F821 pega o esquecimento).
 3. Adicione a chamada em `frontend/src/lib/api.ts`.
-4. Crie a mutation passando o `provider` como `variables`. Assim a tela sabe qual botão está gerando.
-5. Use `<ClaudeAiButton />` e `<GeminiAiButton />` (`frontend/src/components/ui/`). Só o botão do provider em voo fica `pending`; o outro fica `disabled`.
+4. Crie a mutation passando o `provider` como `variables`, e derive o provedor em voo com `providerEmVoo` (`frontend/src/lib/providerIa.ts`).
+5. Na tela, use `<AcaoDeIa />` (`frontend/src/components/ui/acao-de-ia.tsx`): a ação é dita uma vez ("Regerar metadados") e o provedor é escolhido por ícone, Claude ou Gemini. Nunca repita o verbo em dois botões.
+   - `rotulo` é o texto visível; `descricao` é a ação completa, lida por leitor de tela e no tooltip ("Regerar metadados com o Gemini") — use quando o rótulo visível for curto.
+   - Enquanto gera, os dois provedores travam: só o que está em voo gira.
+   - Coluna estreita: `apenasProvedores` e a legenda acima (veja `CapaTikTokSlot.tsx`), em vez de deixar o texto virar reticências.
+   - Barra só de ícones: `<MenuDeIa />`, que abre as duas opções a partir do ícone da ação.

@@ -35,6 +35,8 @@ import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import { cn, formatarDataLive, formatarDuracaoHMS, thumbnailUrl } from '@/lib/utils';
 import { resolveThumbUrl } from '@/lib/api';
 import type { Corte, DestinoPublicacao, StatusExportCorte } from '@/types/models';
+import { MenuDeIa } from '@/components/ui/acao-de-ia';
+import type { ProviderIA } from '@/lib/providerIa';
 import { AnaliseIaModal } from './AnaliseIaModal';
 import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
 import { PublicarMassaModal } from './PublicarMassaModal';
@@ -190,17 +192,18 @@ export function ProjetoDetalhePage() {
     });
   }
 
-  function dispararAnalisarDesviosTodos() {
+  function dispararAnalisarDesviosTodos(provider: ProviderIA) {
+    const nome = provider === 'gemini' ? 'Gemini' : 'Claude';
     if (
       !confirm(
-        'Gerar trechos a remover (IA) para TODOS os cortes deste projeto?\n\n' +
+        `Gerar trechos a remover com o ${nome} para TODOS os cortes deste projeto?\n\n` +
           'A operação roda em segundo plano, corte a corte (pode levar minutos) — ' +
           'os desvios encontrados vão aparecendo aos poucos. Os trechos já marcados ' +
           'NÃO são removidos: esta ação só ACRESCENTA.',
       )
     )
       return;
-    analisarDesviosTodos.disparar();
+    analisarDesviosTodos.disparar(provider);
   }
 
   function publicarCorteIndividual(corteId: string) {
@@ -568,24 +571,13 @@ export function ProjetoDetalhePage() {
                 <Search size={16} strokeWidth={1.75} aria-hidden />
               </button>
             </Tooltip>
-            <Tooltip
-              label="Gerar trechos a remover (IA) para todos os cortes. Roda em segundo plano, corte a corte, e só acrescenta aos já marcados."
-              side="bottom"
-            >
-              <button
-                type="button"
-                className={cn(UTILITARIO_CLASS, 'text-[var(--wb-warn)]')}
-                aria-label="Gerar trechos (todos os cortes)"
-                onClick={dispararAnalisarDesviosTodos}
-                disabled={cortes.length === 0 || analisarDesviosTodos.disparado}
-              >
-                {analisarDesviosTodos.disparado ? (
-                  <Loader2 size={16} strokeWidth={1.75} className="animate-spin" aria-hidden />
-                ) : (
-                  <Scissors size={16} strokeWidth={1.75} aria-hidden />
-                )}
-              </button>
-            </Tooltip>
+            <MenuDeIa
+              rotulo="Gerar trechos de todos os cortes"
+              icone={Scissors}
+              ocupado={analisarDesviosTodos.disparado}
+              desabilitado={cortes.length === 0}
+              onGerar={dispararAnalisarDesviosTodos}
+            />
           </div>
         </div>
 

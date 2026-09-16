@@ -3,9 +3,8 @@
 // têm em comum (por eixo) e a proposta de ajuste para a skill do Capista, para o
 // Paulo validar antes da edição manual da SKILL.md.
 import { useMutation } from '@tanstack/react-query';
-import { Loader2, Wand2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { Loader2 } from 'lucide-react';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { useToast } from '@/components/ui/toaster';
 import { api, type PadroesThumbnailResponse } from '@/lib/api';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
@@ -52,22 +51,13 @@ export function ThumbnailPadroesPage() {
           o que as capas melhor avaliadas têm em comum — valide antes de aplicar
         </span>
         <div className="flex-1" />
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => analise.mutate('claude')}
-          disabled={analise.isPending}
-        >
-          {emVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Wand2 aria-hidden />}
-          Analisar com o Claude
-        </Button>
-        <GeminiAiButton
-          size="md"
-          pending={emVoo === 'gemini'}
-          disabled={emVoo === 'claude'}
-          onClick={() => analise.mutate('gemini')}
-          label="Analisar com o Gemini"
-          pendingLabel="analisando…"
+        <AcaoDeIa
+          rotulo="Analisar padrões"
+          rotuloEmVoo="analisando…"
+          tamanho="md"
+          destaque
+          emVoo={emVoo}
+          onGerar={(provider) => analise.mutate(provider)}
         />
       </header>
 
