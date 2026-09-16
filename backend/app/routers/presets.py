@@ -6,7 +6,7 @@ Tipos suportados:
     legados (bloco compartilhada direto) sao aceitos na escrita e re-embrulhados.
   - posicionamento_full: payload e `{full: {crop, slot}, fundo, placa}` (F-060).
   - palco_short: payload e `{arranjo, janela_cheia, recortes, ajustes, fundo,
-    legenda_cor, legenda_fonte}` — o
+    legenda_cor, legenda_fonte, legenda_x, legenda_y, legenda_largura}` — o
     palco VERTICAL, com catalogo proprio. Separado dos de cima porque os nomes
     deles sao cenas do OBS ("Comp. 2 OBS") e o vocabulario do short e outro.
   - gancho_short (D-594): payload e `{cor, realce, fonte, tamanho, duracao}` — a
@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Any
 
 from app.database import get_db
-from app.domain import gancho_short
+from app.domain import gancho_short, legenda_short
 from app.domain.youtube_layout import (
     DEFAULT_CROP_FACECAM,
     DEFAULT_CROP_TELA,
@@ -119,6 +119,15 @@ def _normalizar_payload(tipo: str, payload: Any) -> dict[str, Any]:
             # escolhida olhando para ele — a legenda e a camada que vai por cima.
             "legenda_cor": str(payload.get("legenda_cor") or ""),
             "legenda_fonte": str(payload.get("legenda_fonte") or ""),
+            # D-605: e ONDE a legenda senta. Entra aqui pelo mesmo argumento da
+            # cor: o lugar foi escolhido olhando para ESTE arranjo, e um preset
+            # que descreve o palco mas nao diz onde a legenda cabe nele devolve o
+            # problema que originou a demanda — a legenda em cima da pessoa.
+            #
+            # Parcial de proposito (`lugar_do_preset`): zero significa "este
+            # preset nao decide", e todo palco salvo antes desta demanda volta
+            # com zero e continua desenhando a legenda onde sempre desenhou.
+            **legenda_short.lugar_do_preset(payload),
         }
 
     if tipo == "gancho_short":

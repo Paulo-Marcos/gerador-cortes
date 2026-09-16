@@ -64,7 +64,7 @@ export function useFechoDoShort(short: ShortSugerido): FechoDoShort {
             queryKey: postDoShortKey(short.id),
             queryFn: () => shortsApi.obterPost(short.id),
           }),
-        gerarPost,
+        () => gerarPost('claude'),
       );
     },
     [qc, short.id, gerarPost],

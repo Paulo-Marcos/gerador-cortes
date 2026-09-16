@@ -22,6 +22,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain import segmentos_short
 from app.domain.publicacao import (
     LIMITES,
     MetadadosBase,
@@ -178,7 +179,17 @@ async def montar_contexto(short_id: str) -> ContextoPublicacao:
         return ContextoPublicacao(
             short_id=short.id,
             arquivo=arquivo,
-            duracao_seg=round(float(short.fim_seg) - float(short.inicio_seg), 2),
+            # D-604: a LIQUIDA. E ela que vai para o cartao da plataforma e para
+            # o gate de duracao do Shorts/Reels; o span mentiria em qualquer
+            # short colado, e para cima — o pior lado num limite de 60s.
+            duracao_seg=round(
+                segmentos_short.duracao_liquida(
+                    segmentos_short.de_json(short.segmentos),
+                    inicio_seg=float(short.inicio_seg),
+                    fim_seg=float(short.fim_seg),
+                ),
+                2,
+            ),
             # Todo short que este pipeline produz e vertical (D-463/D-466); o
             # horizontal entra por outro caminho, com o MP4 do corte longo.
             vertical=True,

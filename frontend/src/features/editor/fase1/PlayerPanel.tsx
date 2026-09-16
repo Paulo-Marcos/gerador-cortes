@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { hmsParaSeg, segParaMmSs } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useVelocidadeNoVideo } from '@/hooks/useVelocidadePlayerPadrao';
-import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
+import { useLipSyncPreview, type EstadoLipSync } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
 import { legendaEm } from './legendaDoTrecho';
 import type { Desvio } from '@/types/models';
@@ -90,6 +90,14 @@ interface Props {
   /** Offset atual (ms). Quando `onAudioOffsetChange` é dado, mostra o controle. */
   audioOffsetMs?: number;
   onAudioOffsetChange?: (ms: number) => void;
+  /** D-601: preview ao vivo CONTROLADO de fora. No Workbench o interruptor
+   *  mora na faixa de sincronia, que o EditorPage monta como irmã do vídeo —
+   *  o estado precisa morar lá em cima para os dois enxergarem o mesmo valor.
+   *  Quando `undefined`, o painel mantém o estado próprio do variant legado. */
+  previewSync?: boolean;
+  /** D-601: avisa o dono do interruptor em que pé está o preview — quem desenha
+   *  o botão vive fora daqui e não tem como saber que o decode ainda roda. */
+  onPreviewEstado?: (estado: EstadoLipSync) => void;
   /** AUDITORIA-v2 §4 (CP4) — 'legacy' (default) mantém o header do editor
    *  antigo; 'overlay' é o vídeo largo do Workbench com chips sobrepostos.
    *  D-599: 'ap' é o palco do upgrade de layout — o vídeo vira um retângulo
@@ -119,6 +127,8 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     audioPreviewStartSec = 0,
     audioOffsetMs = 0,
     onAudioOffsetChange,
+    previewSync: previewSyncControlado,
+    onPreviewEstado,
     variant = 'legacy',
     proporcao = '16/9',
     selo,
@@ -139,13 +149,20 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   const onTimeUpdateRef = useRef(onTimeUpdate);
   onTimeUpdateRef.current = onTimeUpdate;
 
-  const [previewSync, setPreviewSync] = useState(false);
+  const [previewSyncInterno, setPreviewSyncInterno] = useState(false);
+  const previewSync = previewSyncControlado ?? previewSyncInterno;
   const podePreview = !!audioPreviewSrc;
-  useLipSyncPreview(videoRef, audioRef, {
+  const estadoPreview = useLipSyncPreview(videoRef, audioRef, {
     enabled: previewSync && podePreview,
     proxyStartSec: audioPreviewStartSec,
     offsetMs: audioOffsetMs,
   });
+
+  const onPreviewEstadoRef = useRef(onPreviewEstado);
+  onPreviewEstadoRef.current = onPreviewEstado;
+  useEffect(() => {
+    onPreviewEstadoRef.current?.(estadoPreview);
+  }, [estadoPreview]);
 
   // D-409: ultimo segundo ja persistido, para nao escrever no localStorage a
   // cada `timeupdate` (o evento dispara ~4x/s).
@@ -367,7 +384,8 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
             offsetMs={audioOffsetMs}
             onChange={onAudioOffsetChange}
             previewEnabled={previewSync}
-            onTogglePreview={() => setPreviewSync((v) => !v)}
+            onTogglePreview={() => setPreviewSyncInterno((v) => !v)}
+            previewEstado={estadoPreview}
             canPreview={podePreview}
           />
         ) : null}
@@ -480,7 +498,7 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
           offsetMs={audioOffsetMs}
           onChange={onAudioOffsetChange}
           previewEnabled={previewSync}
-          onTogglePreview={() => setPreviewSync((v) => !v)}
+          onTogglePreview={() => setPreviewSyncInterno((v) => !v)}
           canPreview={podePreview}
         />
       )}

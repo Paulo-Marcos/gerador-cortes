@@ -1,4 +1,5 @@
-import { Headphones, RotateCcw, X } from 'lucide-react';
+import { Headphones, Loader2, RotateCcw, TriangleAlert, X } from 'lucide-react';
+import type { EstadoLipSync } from '@/hooks/useLipSyncPreview';
 import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -11,8 +12,12 @@ import { cn } from '@/lib/utils';
 // `variant="workbench"` (AUDITORIA-v2 §5, CP5) — faixa horizontal compacta
 // hospedada como irmã do vídeo no shell novo (oculta por padrão, toggle 🎧
 // na toolbar); mantém os 4 botões/slider/reset e ganha um botão de fechar.
-// O toggle de preview ao vivo (fone) não existe no protótipo desta faixa —
-// permanece disponível apenas em `variant="legacy"` (inalterado).
+//
+// D-601: o protótipo desta faixa não previa o toggle de preview ao vivo, e a
+// tradução fiel deixou o operador ajustando ms às cegas — com VITE_WORKBENCH=1
+// o legado não é mais alcançável, então NÃO havia como ouvir o offset antes de
+// um render inteiro. O ícone de fone que já abria a faixa vira o próprio
+// interruptor do preview, em vez de um enfeite ao lado do rótulo.
 // ─────────────────────────────────────────────────────────────
 
 export const MIN_MS = -2000;
@@ -27,6 +32,10 @@ interface Props {
   onTogglePreview?: () => void;
   /** Há proxy de áudio carregado para o preview ao vivo. */
   canPreview?: boolean;
+  /** D-601: em que pé está o preview. Decodificar o áudio do corte leva ~7s, e
+   *  um botão aceso que ainda não toca nada é indistinguível de um botão
+   *  quebrado — foi assim que a sincronia pareceu morta por meses. */
+  previewEstado?: EstadoLipSync;
   disabled?: boolean;
   /** AUDITORIA-v2 §5 (CP5): 'legacy' (default) preserva o layout/lógica
    *  atuais (dentro do PlayerPanel). 'workbench' é a faixa compacta nova. */
@@ -41,6 +50,7 @@ export function AudioSyncControl({
   previewEnabled = false,
   onTogglePreview,
   canPreview = true,
+  previewEstado = 'desligado',
   disabled,
   variant = 'legacy',
   onClose,
@@ -49,12 +59,43 @@ export function AudioSyncControl({
   const nudge = (delta: number) => onChange(clamp(offsetMs + delta));
   const rotulo = `${offsetMs > 0 ? '+' : ''}${offsetMs} ms`;
 
+  const carregando = previewEnabled && previewEstado === 'carregando';
+  const falhou = previewEnabled && previewEstado === 'erro';
+  const IconePreview = carregando ? Loader2 : falhou ? TriangleAlert : Headphones;
+  const dicaDoPreview = !canPreview
+    ? 'Áudio do corte ainda não disponível para preview'
+    : carregando
+      ? 'Preparando o áudio do corte (alguns segundos)…'
+      : falhou
+        ? 'Não foi possível carregar o áudio do corte'
+        : previewEnabled
+          ? 'Preview ligado: ouvindo o áudio deslocado (vídeo mudo)'
+          : 'Ouvir a sincronia ao vivo (muta o vídeo)';
+
   if (variant === 'workbench') {
     return (
       <div className="flex flex-none flex-wrap items-center gap-2 rounded-[10px] border border-[var(--wb-accent)] bg-[var(--wb-bg-panel)] px-2.5 py-[7px]">
-        <Headphones size={13} className="text-[var(--wb-text-dim)]" aria-hidden />
+        <Tooltip label={dicaDoPreview} side="top">
+          <button
+            type="button"
+            onClick={onTogglePreview}
+            disabled={!canPreview || !onTogglePreview}
+            aria-pressed={previewEnabled}
+            aria-label="Preview de sincronia de áudio"
+            className={cn(
+              'flex h-6 w-6 flex-none items-center justify-center rounded-md border transition-colors disabled:pointer-events-none disabled:opacity-45',
+              falhou
+                ? 'border-[var(--wb-danger,#e5484d)] bg-[var(--wb-bg-inset)] text-[var(--wb-danger,#e5484d)]'
+                : previewEnabled
+                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-bg-panel)]'
+                  : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
+            )}
+          >
+            <IconePreview size={13} className={cn(carregando && 'animate-spin')} aria-hidden />
+          </button>
+        </Tooltip>
         <span className="font-code text-[8.5px] font-extrabold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-          Sincronia do áudio
+          {carregando ? 'Preparando o áudio…' : falhou ? 'Áudio indisponível' : 'Sincronia do áudio'}
         </span>
 
         <div className="flex items-baseline gap-[3px] rounded-[7px] bg-[var(--wb-bg-inset)] px-2.5 py-0.5">
@@ -145,16 +186,7 @@ export function AudioSyncControl({
 
   return (
     <div className="flex items-center gap-1.5 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-1.5">
-      <Tooltip
-        label={
-          !canPreview
-            ? 'Áudio do corte ainda não disponível para preview'
-            : previewEnabled
-              ? 'Preview ligado: ouvindo o áudio deslocado (vídeo mudo)'
-              : 'Ouvir a sincronia ao vivo (muta o vídeo)'
-        }
-        side="top"
-      >
+      <Tooltip label={dicaDoPreview} side="top">
         <IconButton
           size="sm"
           variant={previewEnabled ? 'accent' : 'outline'}
@@ -163,7 +195,7 @@ export function AudioSyncControl({
           aria-pressed={previewEnabled}
           aria-label="Preview de sincronia de áudio"
         >
-          <Headphones />
+          <IconePreview className={cn(carregando && 'animate-spin')} />
         </IconButton>
       </Tooltip>
 

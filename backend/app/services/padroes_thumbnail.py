@@ -21,7 +21,8 @@ from app.domain.padroes_thumbnail import (
     compilar_padroes,
     selecionar_melhores,
 )
-from app.infrastructure import claude_cli_client
+from app.infrastructure import antigravity_cli_client, claude_cli_client
+from app.provider_ia import ProviderIA
 from app.services.avaliacao_thumbnail import AvaliacaoThumbnailService
 
 logger = logging.getLogger(__name__)
@@ -83,9 +84,31 @@ def _resposta_insuficiente(total: int, melhores: list[dict]) -> dict:
     }
 
 
+async def _ler_padroes(prompt: str, provider: ProviderIA) -> dict:
+    """A leitura semântica dos padrões, pelo provider escolhido.
+
+    Esta etapa não tem skill editorial no banco — o prompt nasce aqui —, então o
+    modelo do Gemini vem da faixa equivalente ao modelo Claude dela.
+    """
+    contexto = claude_cli_client.LlmCallContext(etapa="padroes-thumbnail")
+    if provider == "gemini":
+        from app.editorial_skills import modelo_gemini_equivalente
+
+        return await antigravity_cli_client.generate_json(
+            prompt,
+            model=modelo_gemini_equivalente(settings.claude_model_metadados),
+            contexto=contexto,
+        )
+    return await claude_cli_client.generate_json(
+        prompt, model=settings.claude_model_metadados, contexto=contexto
+    )
+
+
 class PadroesThumbnailService:
     @staticmethod
-    async def analisar(*, limite_historico: int = _LIMITE_HISTORICO) -> dict:
+    async def analisar(
+        *, limite_historico: int = _LIMITE_HISTORICO, provider: ProviderIA = "claude"
+    ) -> dict:
         """Analisa os padrões dos melhores prompts e propõe ajuste na skill.
 
         Lê o histórico recente, seleciona os melhores, compila a frequência dos
@@ -103,13 +126,9 @@ class PadroesThumbnailService:
         prompt = _montar_prompt(padroes, melhores)
 
         try:
-            analise = await claude_cli_client.generate_json(
-                prompt,
-                model=settings.claude_model_metadados,
-                contexto=claude_cli_client.LlmCallContext(etapa="padroes-thumbnail"),
-            )
+            analise = await _ler_padroes(prompt, provider)
         except (ValueError, json.JSONDecodeError):
-            logger.exception("Falha ao analisar padrões de thumbnail via Claude")
+            logger.exception("Falha ao analisar padrões de thumbnail via IA")
             raise
 
         return {

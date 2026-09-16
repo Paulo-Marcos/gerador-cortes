@@ -160,6 +160,16 @@ class TestGerarCortes:
         assert chamadas_gemini[0]["model"].startswith("gemini-")
         assert fake_claude.chamadas == 0
 
+    def test_desvio_novo_leva_o_provider_que_o_propos(self, monkeypatch):
+        """O selo da tela sai daqui: `origem` diz QUAL IA propôs o trecho."""
+        from app.domain.segment_calculator import normalizar_desvio
+
+        desvio = normalizar_desvio(
+            {"inicio_hms": "00:00:01", "fim_hms": "00:00:02", "origem": "gemini"}
+        )
+
+        assert desvio["origem"] == "gemini"
+
     def test_caminho_direto_inclui_descartados_da_skill(self, monkeypatch):
         """I-034: o array `descartados` da skill chega ao payload via direto."""
         retorno = {
@@ -384,7 +394,7 @@ class TestAnaliseAditiva:
 
         repasse: dict = {}
 
-        async def fake_importar(projeto_id, cortes_data, *, descartados=None):
+        async def fake_importar(projeto_id, cortes_data, *, descartados=None, origem="claude"):
             repasse["projeto_id"] = projeto_id
             repasse["cortes"] = cortes_data
             repasse["descartados"] = descartados
@@ -440,7 +450,7 @@ class TestAnaliseAditiva:
 
         repasse: dict = {}
 
-        async def fake_importar(projeto_id, cortes_data, *, descartados=None):
+        async def fake_importar(projeto_id, cortes_data, *, descartados=None, origem="claude"):
             repasse["cortes"] = cortes_data
 
         monkeypatch.setattr(

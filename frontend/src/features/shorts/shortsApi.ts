@@ -4,6 +4,8 @@
 // função de shorts existe em `api.ts`, então nada fica órfão lá.
 
 import type { GanchoShortPreset } from '@/types/presets';
+import type { Segmento } from './segmentosDoShort';
+import type { ProviderIA } from '@/lib/providerIa';
 
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
@@ -134,9 +136,30 @@ export interface ShortSugerido {
   gancho_cor: string;
   /** D-581: veu | caixa | contorno | sombra | nenhum. Vazio cai no veu. */
   gancho_realce: string;
+  /**
+   * D-600: onde a caixa do gancho senta, em % do quadro. 0 = do padrão do corte.
+   *
+   * Opcionais porque um backend ainda não reiniciado não manda os campos, e a
+   * tela tem de desenhar o gancho no lugar de sempre em vez de quebrar.
+   */
+  gancho_x?: number;
+  gancho_y?: number;
+  gancho_largura?: number;
   inicio_seg: number;
   fim_seg: number;
+  /**
+   * D-604: as fatias do bruto que este short toca, na ORDEM EM QUE TOCAM.
+   *
+   * Lista vazia (ou ausente, num backend ainda não reiniciado) = a janela única
+   * `[inicio_seg, fim_seg]`, que é o caso normal. Com colagem, `inicio_seg`/
+   * `fim_seg` passam a ser o ENVELOPE — é por eles que a régua sabe onde
+   * desenhar o short, e NÃO é deles que sai a duração.
+   */
+  segmentos?: Segmento[];
+  /** A duração do VÍDEO: a soma dos segmentos. Com buraco, ≠ `envelope_seg`. */
   duracao_seg: number;
+  /** D-604: o span do envelope — de onde a onde no bruto o short pega. */
+  envelope_seg?: number;
   score: number;
   justificativa: string;
   status: StatusShort;
@@ -170,6 +193,16 @@ export interface ShortSugerido {
   legenda_cor: string;
   /** D-563: família da fonte da legenda. Vazio = a do canal. */
   legenda_fonte: string;
+  /**
+   * D-605: onde a legenda senta neste trecho, em % do quadro. 0 = do palco
+   * padrão do corte. `x` é o centro; `y` é a BASE, contada do topo.
+   *
+   * Opcionais porque um backend ainda não reiniciado não manda os campos, e a
+   * tela tem de desenhar a legenda no lugar de sempre em vez de quebrar.
+   */
+  legenda_x?: number;
+  legenda_y?: number;
+  legenda_largura?: number;
   /** D-552: de qual preset de palco estes valores vieram. */
   palco_short_preset: string;
   /** Cenas desenhadas sobre o short, na timeline DELE (começa no zero). */
@@ -183,6 +216,8 @@ export interface AtualizarShortBody {
   status?: StatusShort;
   inicio_seg?: number;
   fim_seg?: number;
+  /** D-604: a colagem. `[]` desfaz e devolve o short à janela única. */
+  segmentos?: Segmento[];
   foco_x?: number;
   arranjo_palco?: string;
   janela_cheia?: string;
@@ -194,6 +229,10 @@ export interface AtualizarShortBody {
   fundo_editorial?: string;
   legenda_cor?: string;
   legenda_fonte?: string;
+  /** D-605: o lugar da legenda neste trecho. 0 devolve ao palco do corte. */
+  legenda_x?: number;
+  legenda_y?: number;
+  legenda_largura?: number;
   palco_short_preset?: string;
   /** D-565: o titulo-gancho da abertura. "" apaga. */
   gancho_tela?: string;
@@ -201,6 +240,10 @@ export interface AtualizarShortBody {
   /** D-581: a aparencia do gancho. "" na cor volta ao branco. */
   gancho_cor?: string;
   gancho_realce?: string;
+  /** D-600: o lugar do gancho neste trecho. 0 devolve ao padrão do corte. */
+  gancho_x?: number;
+  gancho_y?: number;
+  gancho_largura?: number;
 }
 
 /** D-565 (onda 3): o texto que acompanha o short no feed. */
@@ -315,6 +358,19 @@ export interface PlanoDesenhavel {
   gancho_ate_seg?: number;
   gancho_fonte?: string;
   gancho_tamanho?: number;
+  /** D-600: o lugar, já com a herança resolvida. 0 = o ponto fixo de sempre. */
+  gancho_x?: number;
+  gancho_y?: number;
+  gancho_largura?: number;
+  /**
+   * D-605: o lugar da LEGENDA, já com a herança do palco do corte resolvida.
+   *
+   * Vem do plano pelo mesmo motivo do gancho: lido do short, ignoraria o padrão
+   * do corte e a prévia desenharia a legenda num ponto que o arquivo não usa.
+   */
+  legenda_x?: number;
+  legenda_y?: number;
+  legenda_largura?: number;
 }
 
 /** O que o detector de rosto viu num trecho (D-477). */
@@ -638,10 +694,11 @@ export const shortsApi = {
     }),
 
   /** D-497: a IA lê a transcrição do trecho e propõe os cartões — já gravados. */
-  sugerirCenas: (shortId: string) =>
-    request<{ short: ShortSugerido; descartes: string[] }>(`/shorts/${shortId}/cenas/sugerir`, {
-      method: 'POST',
-    }),
+  sugerirCenas: (shortId: string, provider: ProviderIA = 'claude') =>
+    request<{ short: ShortSugerido; descartes: string[] }>(
+      `/shorts/${shortId}/cenas/sugerir?provider=${provider}`,
+      { method: 'POST' },
+    ),
 
   /**
    * D-565: a IA propoe variacoes do gancho da abertura — e NAO grava.
@@ -651,8 +708,8 @@ export const shortsApi = {
    * PATCH normal. O gancho e a promessa do short, e escolher por ele seria a
    * decisao mais editorial da tela tomada pela maquina.
    */
-  sugerirGanchos: (shortId: string) =>
-    request<{ variacoes: string[] }>(`/shorts/${shortId}/ganchos`, {
+  sugerirGanchos: (shortId: string, provider: ProviderIA = 'claude') =>
+    request<{ variacoes: string[] }>(`/shorts/${shortId}/ganchos?provider=${provider}`, {
       method: 'POST',
     }),
 
@@ -660,8 +717,10 @@ export const shortsApi = {
   obterPost: (shortId: string) => request<PostDoShortApi>(`/shorts/${shortId}/post`),
 
   /** A IA escreve titulo, descricao e hashtags para o feed — e GRAVA. */
-  gerarPost: (shortId: string) =>
-    request<PostDoShortApi>(`/shorts/${shortId}/post/gerar`, { method: 'POST' }),
+  gerarPost: (shortId: string, provider: ProviderIA = 'claude') =>
+    request<PostDoShortApi>(`/shorts/${shortId}/post/gerar?provider=${provider}`, {
+      method: 'POST',
+    }),
 
   /** A ultima palavra sobre o texto e do operador. "" apaga o campo. */
   atualizarPost: (shortId: string, body: AtualizarPostBody) =>
@@ -685,8 +744,10 @@ export const shortsApi = {
     request<{ prompt: string }>(`/shorts/${shortId}/capa/prompt`),
 
   /** D-581: pede o prompt da arte ao capista. Leva minutos — e uma chamada de IA. */
-  gerarPromptDaCapa: (shortId: string) =>
-    request<{ prompt: string }>(`/shorts/${shortId}/capa/prompt`, { method: 'POST' }),
+  gerarPromptDaCapa: (shortId: string, provider: ProviderIA = 'claude') =>
+    request<{ prompt: string }>(`/shorts/${shortId}/capa/prompt?provider=${provider}`, {
+      method: 'POST',
+    }),
 
   /** D-581: sobe a imagem desenhada como a capa deste short. */
   subirArteDaCapa: (shortId: string, arquivo: File) => {
@@ -811,10 +872,11 @@ export const shortsApi = {
     ),
 
   // D-524: o app escreve o prompt; quem desenha e o operador, no agente capista.
-  gerarPromptCapaTiktok: (corteId: string) =>
-    request<{ prompt: string }>(`/shorts/corte/${corteId}/capa-tiktok/prompt`, {
-      method: 'POST',
-    }),
+  gerarPromptCapaTiktok: (corteId: string, provider: ProviderIA = 'claude') =>
+    request<{ prompt: string }>(
+      `/shorts/corte/${corteId}/capa-tiktok/prompt?provider=${provider}`,
+      { method: 'POST' },
+    ),
 
   subirArteCapaTiktok: (corteId: string, arquivo: File) => {
     const formData = new FormData();
@@ -866,18 +928,25 @@ export const shortsApi = {
       method: 'POST',
     }),
 
-  /** O "publiquei" do destino manual, onde o upload acontece longe daqui. */
-  confirmarPublicacao: (alvoId: string, plataforma: string) =>
+  /**
+   * O "publiquei" do destino manual, onde o upload acontece longe daqui.
+   *
+   * D-603: serve tambem para declarar do zero — o item que deu erro e ele
+   * terminou na mao no proprio app da rede. O backend cria o registro quando
+   * nao existe, entao a tela nao precisa de um lote para poder marcar.
+   */
+  confirmarPublicacao: (alvoId: string, plataforma: string, url = '') =>
     request<{ confirmado: boolean }>('/shorts/lote/confirmar', {
       method: 'POST',
-      body: JSON.stringify({ alvo_id: alvoId, plataforma }),
+      body: JSON.stringify({ alvo_id: alvoId, plataforma, url }),
     }),
 
   publicacoesDoCorte: (corteId: string) =>
     request<{ publicacoes: PublicacaoRegistrada[] }>(`/shorts/corte/${corteId}/publicacoes`),
 
-  sugerirAgora: (corteId: string) =>
-    request<{ shorts: ShortSugerido[]; descartes: string[] }>(`/shorts/corte/${corteId}/sugerir`, {
-      method: 'POST',
-    }),
+  sugerirAgora: (corteId: string, provider: ProviderIA = 'claude') =>
+    request<{ shorts: ShortSugerido[]; descartes: string[] }>(
+      `/shorts/corte/${corteId}/sugerir?provider=${provider}`,
+      { method: 'POST' },
+    ),
 };

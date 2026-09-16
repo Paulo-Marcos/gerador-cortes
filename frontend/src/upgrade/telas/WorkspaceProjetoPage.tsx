@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { Scissors } from 'lucide-react';
+import { MenuDeIa } from '@/components/ui/acao-de-ia';
 import { useToast } from '@/components/ui/toaster';
 import { AdicionarCorteModal } from '@/features/editor/AdicionarCorteModal';
 import { AnaliseIaModal } from '@/features/projeto-detalhe/AnaliseIaModal';
@@ -26,6 +28,7 @@ import {
   useUploadYouTube,
 } from '@/hooks/useProjetoDetalhe';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
+import type { ProviderIA } from '@/lib/providerIa';
 import { formatarDuracao } from '@/lib/utils';
 import type { Corte, DestinoPublicacao, StatusExportCorte } from '@/types/models';
 import { Icon, type IconName } from '../Icon';
@@ -67,7 +70,15 @@ function Estatistica({
         <Icon name={icone} size={12} />
         {rotulo}
       </span>
-      <div style={{ marginTop: 5, fontSize: 24, fontWeight: 700, letterSpacing: '-.02em', lineHeight: 1 }}>
+      <div
+        style={{
+          marginTop: 5,
+          fontSize: 24,
+          fontWeight: 700,
+          letterSpacing: '-.02em',
+          lineHeight: 1,
+        }}
+      >
         {valor}
       </div>
       <div style={{ marginTop: 2, fontSize: 11, color: 'var(--mute)' }}>{sub}</div>
@@ -96,7 +107,14 @@ function Utilitario({
       aria-label={titulo}
       onClick={onClick}
       disabled={disabled}
-      style={{ height: 26, width: 26, border: 0, background: 'none', boxShadow: 'none', color: cor }}
+      style={{
+        height: 26,
+        width: 26,
+        border: 0,
+        background: 'none',
+        boxShadow: 'none',
+        color: cor,
+      }}
     >
       <Icon name={icone} size={13} />
     </button>
@@ -262,17 +280,18 @@ export default function WorkspaceProjetoPage() {
     });
   }
 
-  function dispararTrechosTodos() {
+  function dispararTrechosTodos(provider: ProviderIA) {
+    const nome = provider === 'gemini' ? 'Gemini' : 'Claude';
     if (
       !confirm(
-        'Gerar trechos a remover (IA) para TODOS os cortes deste projeto?\n\n' +
+        `Gerar trechos a remover com o ${nome} para TODOS os cortes deste projeto?\n\n` +
           'A operação roda em segundo plano, corte a corte (pode levar minutos) — ' +
           'os desvios encontrados vão aparecendo aos poucos. Os trechos já marcados ' +
           'NÃO são removidos: esta ação só ACRESCENTA.',
       )
     )
       return;
-    analisarDesviosTodos.disparar();
+    analisarDesviosTodos.disparar(provider);
   }
 
   const dados = projeto.data;
@@ -289,8 +308,7 @@ export default function WorkspaceProjetoPage() {
               {
                 icone: 'external-link' as const,
                 texto: 'Ver no YouTube',
-                onClick: () =>
-                  window.open(dados.youtube_url, '_blank', 'noopener,noreferrer'),
+                onClick: () => window.open(dados.youtube_url, '_blank', 'noopener,noreferrer'),
               },
             ]
           : []),
@@ -300,9 +318,19 @@ export default function WorkspaceProjetoPage() {
       // fazia o estado terminal parecer pendencia.
       estado:
         prontidao.total === 0
-          ? { texto: 'nada a publicar', icone: 'circle-check', cor: 'var(--mute)', bg: 'var(--inset)' }
+          ? {
+              texto: 'nada a publicar',
+              icone: 'circle-check',
+              cor: 'var(--mute)',
+              bg: 'var(--inset)',
+            }
           : prontidao.liberado
-            ? { texto: 'lote pronto', icone: 'circle-check', cor: 'var(--ok)', bg: 'var(--ok-soft)' }
+            ? {
+                texto: 'lote pronto',
+                icone: 'circle-check',
+                cor: 'var(--ok)',
+                bg: 'var(--ok-soft)',
+              }
             : {
                 texto: prontidao.resumo,
                 icone: 'triangle-alert',
@@ -314,7 +342,12 @@ export default function WorkspaceProjetoPage() {
   );
 
   const etapas: Array<{ icone: IconName; texto: string; valor: string; feita: boolean }> = [
-    { icone: 'download', texto: 'Baixado', valor: dados?.arquivos_limpos ? 'limpo' : 'ok', feita: true },
+    {
+      icone: 'download',
+      texto: 'Baixado',
+      valor: dados?.arquivos_limpos ? 'limpo' : 'ok',
+      feita: true,
+    },
     { icone: 'brain', texto: 'Analisado', valor: `${cortes.length}`, feita: cortes.length > 0 },
     { icone: 'scissors', texto: 'Cortes', valor: `${aprovados}`, feita: aprovados > 0 },
     { icone: 'clapperboard', texto: 'Pós', valor: `${renderizados}`, feita: renderizados > 0 },
@@ -330,7 +363,11 @@ export default function WorkspaceProjetoPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div
-        style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}
+        style={{
+          display: 'grid',
+          gap: 10,
+          gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))',
+        }}
       >
         <Estatistica
           icone="scissors"
@@ -364,7 +401,13 @@ export default function WorkspaceProjetoPage() {
 
       <div
         className="card"
-        style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '11px 12px' }}
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 10,
+          padding: '11px 12px',
+        }}
       >
         <span className="lbl">Etapas da live</span>
         {etapas.map((e, i) => (
@@ -379,7 +422,9 @@ export default function WorkspaceProjetoPage() {
             >
               <Icon name={e.icone} size={12} />
               {e.texto}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.8 }}>{e.valor}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 10, opacity: 0.8 }}>
+                {e.valor}
+              </span>
             </span>
             {i < etapas.length - 1 ? (
               <span style={{ width: 14, height: 1, background: 'var(--line)' }} aria-hidden />
@@ -424,12 +469,15 @@ export default function WorkspaceProjetoPage() {
             onClick={() => setAuditoriaAberta(true)}
             disabled={cortes.length === 0}
           />
-          <Utilitario
-            icone="scissors"
-            titulo="Gerar trechos a remover (IA) para todos os cortes. Roda em segundo plano e só ACRESCENTA."
-            cor="var(--warn)"
-            onClick={dispararTrechosTodos}
-            disabled={cortes.length === 0 || analisarDesviosTodos.disparado}
+          {/* Mesmo ícone da fileira, mas abre a escolha do provedor: aqui não
+              cabe um grupo com texto sem quebrar o ritmo dos utilitários. */}
+          <MenuDeIa
+            rotulo="Gerar trechos de todos os cortes"
+            icone={Scissors}
+            ocupado={analisarDesviosTodos.disparado}
+            desabilitado={cortes.length === 0}
+            onGerar={dispararTrechosTodos}
+            classeGatilho="h-[26px] w-[26px]"
           />
           <Utilitario
             icone="send"
@@ -475,7 +523,15 @@ export default function WorkspaceProjetoPage() {
           <b style={{ fontSize: 12.5 }}>
             {progresso.status === 'baixando' ? 'Baixando vídeo' : 'Transcrevendo'}
           </b>
-          <span style={{ flex: 1, minWidth: 80, height: 4, borderRadius: 2, background: 'var(--inset)' }}>
+          <span
+            style={{
+              flex: 1,
+              minWidth: 80,
+              height: 4,
+              borderRadius: 2,
+              background: 'var(--inset)',
+            }}
+          >
             <span
               style={{
                 display: 'block',
@@ -504,7 +560,14 @@ export default function WorkspaceProjetoPage() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="buscar corte"
-            style={{ minWidth: 0, flex: 1, border: 0, outline: 'none', background: 'transparent', fontSize: 12 }}
+            style={{
+              minWidth: 0,
+              flex: 1,
+              border: 0,
+              outline: 'none',
+              background: 'transparent',
+              fontSize: 12,
+            }}
           />
         </label>
       </div>
@@ -532,7 +595,13 @@ export default function WorkspaceProjetoPage() {
         {linhas.length === 0 ? (
           <div
             className="card"
-            style={{ display: 'grid', placeItems: 'center', gap: 7, padding: 22, textAlign: 'center' }}
+            style={{
+              display: 'grid',
+              placeItems: 'center',
+              gap: 7,
+              padding: 22,
+              textAlign: 'center',
+            }}
           >
             <Icon name="inbox" size={22} style={{ color: 'var(--dim)' }} />
             <span style={{ fontSize: 12.5, fontWeight: 700 }}>
@@ -593,13 +662,22 @@ export default function WorkspaceProjetoPage() {
         onPrimary={confirmarUrlManual}
       >
         <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--mute)' }}>URL do YouTube</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--mute)' }}>
+            URL do YouTube
+          </span>
           <span className="fld">
             <input
               value={urlManual}
               onChange={(e) => setUrlManual(e.target.value)}
               placeholder="https://youtube.com/watch?v=…"
-              style={{ minWidth: 0, flex: 1, border: 0, outline: 'none', background: 'transparent', fontSize: 12 }}
+              style={{
+                minWidth: 0,
+                flex: 1,
+                border: 0,
+                outline: 'none',
+                background: 'transparent',
+                fontSize: 12,
+              }}
             />
           </span>
         </label>

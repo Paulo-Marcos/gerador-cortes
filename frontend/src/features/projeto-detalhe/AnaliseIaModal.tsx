@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Brain, CheckCircle2, Clock, Info, Loader2 } from 'lucide-react';
+import { Brain, CheckCircle2, Clock, Info, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ClaudeAiButton, ClaudeIcon } from '@/components/ui/claude-button';
-import { GeminiAiButton, GeminiIcon } from '@/components/ui/gemini-button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import type { ProviderIA } from '@/lib/providerIa';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
-import { CLAUDE_BRAND } from '@/components/ui/claude-button';
 import { parseManualJson } from '@/lib/manualPrompt';
 import {
   PromptManualPanel,
@@ -27,7 +26,7 @@ interface Props {
 }
 
 type Modo = 'reanalisar' | 'intervalo';
-type Origem = 'auto' | 'manual' | 'claude' | 'gemini';
+type Origem = 'ia' | 'manual';
 
 /**
  * D-418 — o modal é remontado a cada live (`key`), porque a página de detalhe
@@ -47,7 +46,7 @@ function AnaliseIaModalDaLive({
   totalCortesExistentes,
 }: Props) {
   const [modo, setModo] = useState<Modo>('reanalisar');
-  const [origem, setOrigem] = useState<Origem>('claude');
+  const [origem, setOrigem] = useState<Origem>('ia');
   const [inicioHms, setInicioHms] = useState('00:00:00');
   const [fimHms, setFimHms] = useState('00:10:00');
   const [blocosPrompt, setBlocosPrompt] = useState(1);
@@ -107,7 +106,7 @@ function AnaliseIaModalDaLive({
     }
   };
 
-  const onSubmitIA = (provider: 'claude' | 'gemini') => {
+  const onSubmitIA = (provider: ProviderIA) => {
     analisarClaude.mutate({ usarDiarizacao, provider }, { onSuccess: fechar });
   };
 
@@ -256,38 +255,21 @@ function AnaliseIaModalDaLive({
 
         {/* Origem (Claude em destaque + Manual ao lado em menor destaque) */}
         <div className="flex items-center gap-1 self-start rounded-full bg-bg-800 p-0.5 text-xs">
+          {/* A escolha do provedor foi para o botão de gerar: aqui só se
+              decide COMO analisar — pela IA ou colando o JSON. */}
           <button
             type="button"
             onClick={() => {
               setJsonErr(null);
-              setOrigem('claude');
+              setOrigem('ia');
             }}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold transition-colors',
-              origem !== 'claude' && 'text-text-300 hover:text-text-100',
+              origem === 'ia' ? 'bg-bg-700 text-text-100' : 'text-text-300 hover:text-text-100',
             )}
-            style={
-              origem === 'claude' ? { backgroundColor: CLAUDE_BRAND, color: '#fff' } : undefined
-            }
           >
-            <ClaudeIcon size={13} />
-            Claude
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setJsonErr(null);
-              setOrigem('gemini');
-            }}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-semibold transition-colors',
-              origem !== 'gemini' && 'text-text-300 hover:text-text-100',
-            )}
-            style={
-              origem === 'gemini' ? { backgroundColor: '#4285F4', color: '#fff' } : undefined
-            }
-          >
-            Gemini
+            <Sparkles size={13} aria-hidden />
+            IA
           </button>
           <button
             type="button"
@@ -303,11 +285,11 @@ function AnaliseIaModalDaLive({
           </button>
         </div>
 
-        {(origem === 'claude' || origem === 'gemini') && (
+        {origem === 'ia' && (
           <>
             <div className="rounded-[var(--radius-sm)] border border-accent-500/40 bg-accent-500/10 p-3 text-xs text-text-200">
               <p className="flex items-center gap-1.5 font-semibold text-text-100">
-                {origem === 'claude' ? <ClaudeIcon size={14} className="text-accent-300" /> : <GeminiIcon size={14} className="text-accent-300" />} Analise completa por IA
+                <Sparkles size={14} className="text-accent-300" aria-hidden /> Analise completa por IA
               </p>
               <p className="mt-1 text-text-300">
                 Usa a skill <code>cortador-expert</code> para gerar os cortes e os trechos a remover
@@ -320,7 +302,7 @@ function AnaliseIaModalDaLive({
             </div>
             <DiarizacaoPanel
               projetoId={projetoId}
-              enabled={open && (origem === 'claude' || origem === 'gemini')}
+              enabled={open && origem === 'ia'}
               usarDiarizacao={usarDiarizacao}
               onToggleUsar={setUsarDiarizacao}
             />
@@ -362,24 +344,17 @@ function AnaliseIaModalDaLive({
             Importar análise{totalPartes > 1 ? ` (${partesColadas}/${totalPartes})` : ''}
           </Button>
         )}
-        {origem === 'claude' && (
-          <ClaudeAiButton
-            size="md"
-            pending={isPending}
-            onClick={() => onSubmitIA('claude')}
-            label="Gerar por Claude"
-            pendingLabel="Gerando..."
-            title="Rodar analise completa via Claude"
-          />
-        )}
-        {origem === 'gemini' && (
-          <GeminiAiButton
-            size="md"
-            pending={isPending}
-            onClick={() => onSubmitIA('gemini')}
-            label="Gerar por Gemini"
-            pendingLabel="Gerando..."
-            title="Rodar analise completa via Gemini"
+        {origem === 'ia' && (
+          <AcaoDeIa
+            rotulo="Analisar a live"
+            rotuloEmVoo="analisando…"
+            tamanho="md"
+            destaque
+            emVoo={
+              analiseEmAndamento ? (analisarClaude.variables?.provider ?? 'claude') : null
+            }
+            desabilitado={importarAnalise.isPending}
+            onGerar={onSubmitIA}
           />
         )}
       </div>

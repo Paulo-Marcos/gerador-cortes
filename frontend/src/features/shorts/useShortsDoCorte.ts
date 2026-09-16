@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type AtualizarPostBody, type CapaDoShortApi, type GerarCapaBody, shortsApi, type AtualizarShortBody, type CenaShort } from './shortsApi';
 import { FIRES_KEY } from './useFires';
+import type { ProviderIA } from '@/lib/providerIa';
 
 export const shortsDoCorteKey = (corteId: string) => ['shorts', 'corte', corteId] as const;
 
@@ -391,7 +392,8 @@ export function useCriarShortManual(corteId: string) {
 export function useSugerirCenas(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (shortId: string) => shortsApi.sugerirCenas(shortId),
+    mutationFn: ({ shortId, provider }: { shortId: string; provider: ProviderIA }) =>
+      shortsApi.sugerirCenas(shortId, provider),
     onSuccess: () => qc.invalidateQueries({ queryKey: shortsDoCorteKey(corteId) }),
   });
 }
@@ -405,7 +407,8 @@ export function useSugerirCenas(corteId: string) {
  */
 export function useSugerirGanchos() {
   return useMutation({
-    mutationFn: (shortId: string) => shortsApi.sugerirGanchos(shortId),
+    mutationFn: ({ shortId, provider }: { shortId: string; provider: ProviderIA }) =>
+      shortsApi.sugerirGanchos(shortId, provider),
   });
 }
 
@@ -426,7 +429,7 @@ export function useGerarPost(shortId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationKey: gerarPostKey(shortId),
-    mutationFn: () => shortsApi.gerarPost(shortId),
+    mutationFn: (provider: ProviderIA = 'claude') => shortsApi.gerarPost(shortId, provider),
     onSuccess: (post) => qc.setQueryData(postDoShortKey(shortId), post),
   });
 }
@@ -491,7 +494,8 @@ export function usePromptDaCapa(shortId: string, habilitado = true) {
 export function useGerarPromptDaCapa(shortId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => shortsApi.gerarPromptDaCapa(shortId),
+    mutationFn: (provider: ProviderIA = 'claude') =>
+      shortsApi.gerarPromptDaCapa(shortId, provider),
     onSuccess: (dados) => qc.setQueryData(promptDaCapaKey(shortId), dados),
   });
 }

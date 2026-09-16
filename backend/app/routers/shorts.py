@@ -66,6 +66,7 @@ import logging
 from pathlib import Path
 
 from app.database import AsyncSessionLocal
+from app.provider_ia import ProviderIA
 from app.services import shorts as shorts_store
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -302,12 +303,12 @@ async def transcricao_do_bruto(corte_id: str):
 
 
 @router.post("/corte/{corte_id}/sugerir")
-async def sugerir_agora(corte_id: str):
+async def sugerir_agora(corte_id: str, provider: ProviderIA = "claude"):
     """Propõe os shorts do bruto atual, de forma síncrona (o caller espera)."""
     from app.services.claude_ia import ClaudeIaService
 
     try:
-        return await ClaudeIaService.sugerir_shorts_via_claude(corte_id)
+        return await ClaudeIaService.sugerir_shorts_via_claude(corte_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -316,6 +317,22 @@ async def sugerir_agora(corte_id: str):
 
 class PalcoPadraoRequest(BaseModel):
     preset_id: str | None = None
+
+
+class SegmentoRequest(BaseModel):
+    """Uma fatia do bruto que entra no short (D-604).
+
+    Tempo de BRUTO — o clip ja sem os desvios —, que e o espaco em que o short
+    sempre viveu (invariante do modelo desde a D-452).
+
+    Sem validacao de faixa aqui de proposito: quem recusa e o dominio
+    (`segmentos_short.validar`), que conhece o limite do bruto e devolve a frase
+    que explica o problema. Validar nos dois lugares daria duas mensagens
+    diferentes para o mesmo erro.
+    """
+
+    inicio_seg: float
+    fim_seg: float
 
 
 class AtualizarShortRequest(BaseModel):
@@ -334,8 +351,15 @@ class AtualizarShortRequest(BaseModel):
     fundo_palco: str | None = None
     # D-552: a TEXTURA do palco (id de fundo), e qual preset a trouxe.
     fundo_editorial: str | None = None
+    # D-604: as fatias do bruto que o short toca, na ORDEM EM QUE TOCAM.
+    # `[]` desfaz a colagem e devolve o short a janela unica.
+    segmentos: list[SegmentoRequest] | None = None
     legenda_cor: str | None = None
     legenda_fonte: str | None = None
+    # D-605: onde a legenda senta, em % do quadro. 0 = do palco padrao do corte.
+    legenda_x: float | None = None
+    legenda_y: float | None = None
+    legenda_largura: float | None = None
     palco_short_preset: str | None = None
     # D-565: o titulo-gancho da abertura e quanto tempo ele fica em tela.
     gancho_tela: str | None = None
@@ -343,6 +367,10 @@ class AtualizarShortRequest(BaseModel):
     # D-581: a aparencia do gancho — hex da cor e o realce que o separa do fundo.
     gancho_cor: str | None = None
     gancho_realce: str | None = None
+    # D-600: onde a caixa do gancho senta, em % do quadro. 0 = do padrao do corte.
+    gancho_x: float | None = None
+    gancho_y: float | None = None
+    gancho_largura: float | None = None
 
 
 @router.patch("/{short_id}")
@@ -362,8 +390,14 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 recortes_palco=body.recortes_palco,
                 fundo_palco=body.fundo_palco,
                 fundo_editorial=body.fundo_editorial,
+                segmentos=(
+                    None if body.segmentos is None else [s.model_dump() for s in body.segmentos]
+                ),
                 legenda_cor=body.legenda_cor,
                 legenda_fonte=body.legenda_fonte,
+                legenda_x=body.legenda_x,
+                legenda_y=body.legenda_y,
+                legenda_largura=body.legenda_largura,
                 palco_short_preset=body.palco_short_preset,
                 palco_preset=body.palco_preset,
                 moldura=body.moldura,
@@ -371,6 +405,9 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 gancho_ate_seg=body.gancho_ate_seg,
                 gancho_cor=body.gancho_cor,
                 gancho_realce=body.gancho_realce,
+                gancho_x=body.gancho_x,
+                gancho_y=body.gancho_y,
+                gancho_largura=body.gancho_largura,
             )
         }
     except LookupError as exc:
@@ -419,7 +456,7 @@ async def enquadrar(short_id: str):
 
 
 @router.post("/{short_id}/cenas/sugerir")
-async def sugerir_cenas(short_id: str):
+async def sugerir_cenas(short_id: str, provider: ProviderIA = "claude"):
     """A IA propõe os cartões deste trecho e já os grava (D-497).
 
     Síncrono de propósito: o operador está olhando para o painel de cenas quando
@@ -430,7 +467,7 @@ async def sugerir_cenas(short_id: str):
     from app.services.claude_ia import ClaudeIaService
 
     try:
-        return await ClaudeIaService.sugerir_cenas_do_short_via_claude(short_id)
+        return await ClaudeIaService.sugerir_cenas_do_short_via_claude(short_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -438,7 +475,7 @@ async def sugerir_cenas(short_id: str):
 
 
 @router.post("/{short_id}/ganchos")
-async def sugerir_ganchos(short_id: str):
+async def sugerir_ganchos(short_id: str, provider: ProviderIA = "claude"):
     """A IA propoe variacoes do gancho da abertura — e NAO grava (D-565).
 
     Diferente do `cenas/sugerir`, que persiste o resultado. Aqui o retorno e uma
@@ -455,7 +492,7 @@ async def sugerir_ganchos(short_id: str):
     from app.services.claude_ia import ClaudeIaService
 
     try:
-        variacoes = await ClaudeIaService.sugerir_ganchos_via_claude(short_id)
+        variacoes = await ClaudeIaService.sugerir_ganchos_via_claude(short_id, provider)
         # D-573: GRAVA AS PROPOSTAS, e continua sem escolher.
         #
         # A chamada real leva minutos (231s no log do canal). Enquanto o
@@ -491,7 +528,7 @@ async def obter_post(short_id: str):
 
 
 @router.post("/{short_id}/post/gerar")
-async def gerar_post(short_id: str):
+async def gerar_post(short_id: str, provider: ProviderIA = "claude"):
     """A IA escreve titulo, descricao e hashtags para o feed — e GRAVA.
 
     Diferente do `/ganchos`, que so propoe. O gancho vira PIXEL no video e a
@@ -502,7 +539,7 @@ async def gerar_post(short_id: str):
     from app.services.claude_ia import ClaudeIaService
 
     try:
-        return await ClaudeIaService.gerar_post_do_short_via_claude(short_id)
+        return await ClaudeIaService.gerar_post_do_short_via_claude(short_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -654,7 +691,7 @@ async def obter_prompt_da_capa(short_id: str):
 
 
 @router.post("/{short_id}/capa/prompt")
-async def gerar_prompt_da_capa(short_id: str):
+async def gerar_prompt_da_capa(short_id: str, provider: ProviderIA = "claude"):
     """Escreve o prompt de imagem da capa deste short (D-581).
 
     O app nao desenha: ele entrega o prompt, o operador gera a imagem no agente
@@ -665,7 +702,7 @@ async def gerar_prompt_da_capa(short_id: str):
     from app.services import capa_short
 
     try:
-        return {"prompt": await capa_short.gerar_prompt(short_id)}
+        return {"prompt": await capa_short.gerar_prompt(short_id, provider)}
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except capa_short.CapaShortError as exc:
@@ -952,7 +989,9 @@ class CapaTikTokRequest(BaseModel):
 
 
 @router.post("/corte/{corte_id}/capa-tiktok")
-async def gerar_capa_tiktok(corte_id: str, body: CapaTikTokRequest):
+async def gerar_capa_tiktok(
+    corte_id: str, body: CapaTikTokRequest, provider: ProviderIA = "claude"
+):
     """Monta a capa VERTICAL do corte para o TikTok (D-519).
 
     Mora neste router, e nao no de metadados, porque a capa pertence ao destino:
@@ -969,7 +1008,7 @@ async def gerar_capa_tiktok(corte_id: str, body: CapaTikTokRequest):
     etiqueta = body.etiqueta.strip()
     if not etiqueta and body.sugerir_etiqueta and not await capa_tiktok.tem_texto_de_capa(corte_id):
         try:
-            etiqueta = await ClaudeIaService.sugerir_etiqueta_capa_via_claude(corte_id)
+            etiqueta = await ClaudeIaService.sugerir_etiqueta_capa_via_claude(corte_id, provider)
         except Exception:
             # A etiqueta e desejavel, nao obrigatoria: uma capa com a arte e o
             # selo continua valendo, e ficar sem capa por causa de tres palavras
@@ -991,7 +1030,7 @@ async def gerar_capa_tiktok(corte_id: str, body: CapaTikTokRequest):
 
 
 @router.post("/corte/{corte_id}/capa-tiktok/prompt")
-async def gerar_prompt_da_capa_tiktok(corte_id: str):
+async def gerar_prompt_da_capa_tiktok(corte_id: str, provider: ProviderIA = "claude"):
     """Escreve o prompt da ARTE da capa e o guarda no metadado (D-524).
 
     O app para aqui de proposito: quem desenha e o operador, no agente capista
@@ -1001,7 +1040,7 @@ async def gerar_prompt_da_capa_tiktok(corte_id: str):
     from app.services import capa_tiktok
 
     try:
-        prompt = await capa_tiktok.gerar_prompt_da_arte(corte_id)
+        prompt = await capa_tiktok.gerar_prompt_da_arte(corte_id, provider)
     except capa_tiktok.CapaTikTokError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -1369,11 +1408,23 @@ class ConfirmarPublicacaoRequest(BaseModel):
 
     alvo_id: str
     plataforma: str
+    # D-603: o tipo vem junto porque a marca pode ser o PRIMEIRO registro deste
+    # video — e ai ninguem mais sabe se o alvo e o short vertical ou o MP4 do
+    # corte. No caminho do lote o tipo ja estava gravado e o default basta.
+    alvo_tipo: str = "short"
+    # Opcional: o link do post, quando o operador tem ele a mao. Serve para a
+    # tela oferecer o "ver" do mesmo jeito que oferece no que subiu por API.
+    url: str = ""
 
 
 @router.post("/lote/confirmar")
 async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
-    """Marca que ESTE item subiu — o que a maquina nao tem como saber sozinha."""
+    """Marca que ESTE item subiu — o que a maquina nao tem como saber sozinha.
+
+    D-603: vale tanto para o item que esta esperando o clique quanto para o que
+    deu erro e o operador terminou na mao, no proprio app da rede. Nos dois
+    casos o fato e o mesmo ("esta no ar"), e quem sabe dele e ele.
+    """
     from app.domain.publicacao import Plataforma
     from app.services import publicacao_lote
 
@@ -1384,8 +1435,14 @@ async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
             status_code=404, detail=f"Plataforma {body.plataforma!r} desconhecida."
         ) from exc
 
-    if not await publicacao_lote.confirmar(body.alvo_id, plataforma):
-        raise HTTPException(status_code=404, detail="Nao ha publicacao pendente para marcar.")
+    if body.alvo_tipo not in (publicacao_lote.ALVO_SHORT, publicacao_lote.ALVO_CORTE):
+        raise HTTPException(
+            status_code=422, detail=f"Tipo de alvo desconhecido: {body.alvo_tipo!r}"
+        )
+
+    await publicacao_lote.confirmar(
+        body.alvo_id, plataforma, alvo_tipo=body.alvo_tipo, url=body.url
+    )
     return {"confirmado": True}
 
 

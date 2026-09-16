@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, RotateCw, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type {
   ApontamentoBruto,
@@ -12,6 +12,9 @@ import {
   useHistoricoAvaliacaoBruto,
   useReavaliarBruto,
 } from './useAvaliacaoBruto';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { providerDoModelo, providerEmVoo } from '@/lib/providerIa';
 
 // D-447: o parecer automático sobre a ESTRUTURA do bruto — nota, veredito e os
 // pontos que não fecham. Irmão do D-419 (voto humano sobre a PROPOSTA): este lê
@@ -111,6 +114,7 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
   const query = useAvaliacaoBruto(corteId);
   const historico = useHistoricoAvaliacaoBruto(corteId, historicoAberto);
   const reavaliar = useReavaliarBruto(corteId);
+  const emVoo = providerEmVoo(reavaliar);
 
   const avaliacao = query.data ?? null;
 
@@ -120,20 +124,18 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
         <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--wb-text-dim)]">
           Avaliação do bruto
         </span>
-        <button
-          type="button"
-          onClick={() => reavaliar.mutate()}
-          disabled={reavaliar.isPending}
-          title="Reavaliar o bruto atual sem regerar o vídeo"
-          className="ml-auto flex items-center gap-1 rounded-md border border-[var(--wb-border)] px-1.5 py-0.5 text-[10.5px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-50"
-        >
-          {reavaliar.isPending ? (
-            <Loader2 size={11} className="animate-spin" aria-hidden />
-          ) : (
-            <RotateCw size={11} aria-hidden />
-          )}
-          reavaliar
-        </button>
+        <SeloDeProvider
+          provider={providerDoModelo(avaliacao?.modelo)}
+          modelo={avaliacao?.modelo}
+        />
+        <AcaoDeIa
+          rotulo="Reavaliar"
+          descricao="Reavaliar o bruto sem regerar o vídeo"
+          rotuloEmVoo="avaliando…"
+          emVoo={emVoo}
+          onGerar={(provider) => reavaliar.mutate(provider)}
+          className="ml-auto h-6"
+        />
       </div>
 
       {query.isLoading && (

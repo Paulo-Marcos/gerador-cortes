@@ -12,8 +12,9 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ClaudeAiButton } from '@/components/ui/claude-button';
-import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -116,6 +117,8 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       : 'Buscar retratos das fichas biograficas';
 
   const [providerAtivo, setProviderAtivo] = useState<'claude' | 'gemini' | null>(null);
+  const ultimaCenas = useUltimaGeracao('cenas-expert', { corteId });
+  const cenasGeradasPor = providerAtivo ?? ultimaCenas.data?.provider ?? null;
 
   // F-047: para a geracao, se o corte ja tem cenas e elas nao estao na mesma
   // tela, o clique passa pela confirmacao; sem nenhuma, dispara direto.
@@ -259,28 +262,21 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             chegar na lista de cenas. Nada sumiu — Retratos, Manual, Studio e
             Padrões moram no ⋯, com os mesmos disabled/tooltip/loading. */}
         <div className="mb-2 flex items-stretch gap-1.5">
-          <Tooltip label="Gerar cenas automaticamente via Claude" side="bottom">
-            <ClaudeAiButton
-              size="md"
-              pending={gerarClaude.isPending && providerAtivo === 'claude'}
-              disabled={gerarClaude.isPending && providerAtivo !== 'claude'}
-              onClick={() => handleGerarCenas('claude')}
-              className="flex-1 text-[11px] h-[34px]"
-              label="Claude"
-              pendingLabel="Gerando..."
+          <AcaoDeIa
+            rotulo="Gerar cenas"
+            tamanho="md"
+            destaque
+            emVoo={gerarClaude.isPending ? (providerAtivo ?? 'claude') : null}
+            onGerar={handleGerarCenas}
+            className="h-[34px] flex-1"
+          />
+          {!gerarClaude.isPending && cenasOrdenadas.length > 0 && (
+            <SeloDeProvider
+              provider={cenasGeradasPor}
+              modelo={ultimaCenas.data?.model}
+              className="self-center"
             />
-          </Tooltip>
-          <Tooltip label="Gerar cenas automaticamente via Gemini" side="bottom">
-            <GeminiAiButton
-              size="md"
-              pending={gerarClaude.isPending && providerAtivo === 'gemini'}
-              disabled={gerarClaude.isPending && providerAtivo !== 'gemini'}
-              onClick={() => handleGerarCenas('gemini')}
-              className="flex-1 text-[11px] h-[34px]"
-              label="Gemini"
-              pendingLabel="Gerando..."
-            />
-          </Tooltip>
+          )}
           <OverflowMenu
             label="Outras ações das cenas"
             items={[

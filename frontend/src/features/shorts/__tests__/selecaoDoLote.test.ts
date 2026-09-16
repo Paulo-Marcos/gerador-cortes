@@ -6,6 +6,7 @@ import {
   contarRepublicacoes,
   montarAlvos,
   plataformasJaPublicadas,
+  podeMarcarAMao,
   shortsPublicaveis,
 } from '../selecaoDoLote';
 
@@ -109,5 +110,23 @@ describe('alternar', () => {
     expect(comB).toEqual(['a', 'b']);
     expect(alternar(comB, 'a')).toEqual(['b']);
     expect(inicial).toEqual(['a']);
+  });
+});
+
+describe('podeMarcarAMao', () => {
+  it('deixa marcar o que esperava o clique e o que falhou — ele terminou na mão', () => {
+    expect(podeMarcarAMao('sua_vez')).toBe(true);
+    expect(podeMarcarAMao('erro')).toBe(true);
+    expect(podeMarcarAMao('cancelado')).toBe(true);
+  });
+
+  it('não deixa marcar o que a raia ainda vai subir: viraria vídeo duplicado', () => {
+    expect(podeMarcarAMao('aguardando')).toBe(false);
+    expect(podeMarcarAMao('preparando')).toBe(false);
+  });
+
+  it('não oferece marca no que já está publicado', () => {
+    expect(podeMarcarAMao('publicado')).toBe(false);
+    expect(podeMarcarAMao('pulado')).toBe(false);
   });
 });

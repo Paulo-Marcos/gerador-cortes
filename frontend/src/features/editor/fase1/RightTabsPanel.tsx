@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import { Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ClaudeAiButton } from '@/components/ui/claude-button';
-import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import type { ProviderIA } from '@/lib/providerIa';
 import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
@@ -433,24 +433,17 @@ function TrechosList({
           próprias linhas de trecho) e o ＋ em acento suave, 30×30. */}
       <div className="flex flex-shrink-0 items-center gap-1.5 px-3 pb-2 pt-2">
         <div className="inline-flex gap-0.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
-          <Tooltip label="Gerar trechos a remover via Claude" side="bottom">
-            <ClaudeAiButton
-              size="sm"
-              pending={pending.claude?.isPending && pending.claude?.provider === 'claude'}
-              disabled={pending.claude?.isPending && pending.claude?.provider !== 'claude'}
-              onClick={() => onGerarTrechosIA('claude')}
-              className="h-[26px] gap-1.5 rounded-[6px] px-3 text-[10.5px]"
-            />
-          </Tooltip>
-          <Tooltip label="Gerar trechos a remover via Gemini" side="bottom">
-            <GeminiAiButton
-              size="sm"
-              pending={pending.claude?.isPending && pending.claude?.provider === 'gemini'}
-              disabled={pending.claude?.isPending && pending.claude?.provider !== 'gemini'}
-              onClick={() => onGerarTrechosIA('gemini')}
-              className="h-[26px] gap-1.5 rounded-[6px] px-3 text-[10.5px] ml-1"
-            />
-          </Tooltip>
+          <AcaoDeIa
+            rotulo="Gerar"
+            descricao="Gerar trechos a remover"
+            emVoo={
+              pending.claude?.isPending
+                ? ((pending.claude.provider as ProviderIA | undefined) ?? 'claude')
+                : null
+            }
+            onGerar={onGerarTrechosIA}
+            className="h-[26px] border-0 bg-transparent"
+          />
           <Tooltip label="Importar trechos manualmente (cola JSON da IA)" side="bottom">
             <button
               type="button"

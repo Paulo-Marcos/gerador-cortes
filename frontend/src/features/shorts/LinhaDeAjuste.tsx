@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useLayoutPresets } from '@/features/editor/fase2/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { temPalcoProprio } from './aplicarPalco';
+import { temColagem } from './segmentosDoShort';
 import type { ShortSugerido } from './shortsApi';
 
 // D-542: dois assuntos no painel do candidato, e não seis.
@@ -82,14 +83,20 @@ export function LinhaDeAjuste({
       role="group"
       aria-label="Ajustes do candidato"
     >
-      <Grupo rotulo="bordas" dica="Usa o instante em que o player está agora">
-        <Button variant="outline" size="sm" disabled={ocupado} onClick={() => onBorda('inicio_seg')}>
-          início aqui
-        </Button>
-        <Button variant="outline" size="sm" disabled={ocupado} onClick={() => onBorda('fim_seg')}>
-          fim aqui
-        </Button>
-      </Grupo>
+      {/* D-608: num short colado as bordas são as de CADA segmento, e moram na
+          lista de segmentos logo abaixo. Estes dois botões moveriam o envelope,
+          que o backend recusa com razão — deixá-los aqui seria oferecer um
+          gesto que sempre responde erro. */}
+      {!temColagem(short) && (
+        <Grupo rotulo="bordas" dica="Usa o instante em que o player está agora">
+          <Button variant="outline" size="sm" disabled={ocupado} onClick={() => onBorda('inicio_seg')}>
+            início aqui
+          </Button>
+          <Button variant="outline" size="sm" disabled={ocupado} onClick={() => onBorda('fim_seg')}>
+            fim aqui
+          </Button>
+        </Grupo>
+      )}
 
       {/* D-498: o preset DESTE short. Numa live longa a cena do OBS muda ao
           longo do tempo, então o trecho pode precisar de regiões diferentes das

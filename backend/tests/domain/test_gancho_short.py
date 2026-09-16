@@ -45,7 +45,16 @@ class TestPresetDoGancho:
             "fonte": "",
             "tamanho": 0.0,
             "duracao": 0.0,
+            # D-600: o lugar tambem e parcial — 0 e "este preset nao decide onde".
+            "x": 0.0,
+            "y": 0.0,
+            "largura": 0.0,
         }
+
+    def test_o_lugar_entra_no_preset_e_fica_na_faixa(self):
+        """D-600: o preset pode carregar o lugar, e valor fora do quadro e cortado."""
+        preset = normalizar_preset({"x": 30, "y": 60, "largura": 500})
+        assert (preset["x"], preset["y"], preset["largura"]) == (30.0, 60.0, 100.0)
 
     def test_valores_tortos_viram_nao_decidido_ou_faixa(self):
         preset = normalizar_preset({"realce": "neon", "tamanho": 0.1, "duracao": 99})
@@ -71,7 +80,25 @@ class TestAparenciaResolvida:
             "ate_seg": 3.0,
             "fonte": "Anton",
             "tamanho": 1.2,
+            # D-600: nenhum dos dois decidiu o lugar — o render cai no de sempre.
+            "x": 0.0,
+            "y": 0.0,
+            "largura": 0.0,
         }
+
+    def test_o_lugar_do_trecho_vence_o_do_padrao(self):
+        """D-600: o LUGAR existe nos dois lados, ao contrario da fonte e do corpo.
+
+        Fonte e corpo sao identidade do canal e por isso so moram no preset; o
+        lugar depende do que esta no quadro, e o quadro muda a cada trecho.
+        """
+        resolvida = aparencia_resolvida(
+            {"y": 62.0, "largura": 0.0},
+            {"x": 30.0, "y": 18.0, "largura": 50.0},
+        )
+        assert resolvida["y"] == 62.0
+        assert resolvida["x"] == 30.0
+        assert resolvida["largura"] == 50.0
 
     def test_o_que_o_trecho_decidiu_vence(self):
         resolvida = aparencia_resolvida(
@@ -155,7 +182,18 @@ class TestPayload:
             "realce": "veu",
             "fonte": "",
             "tamanho": 1.0,
+            # D-600: o lugar sai SEMPRE preenchido, e os defaults sao os numeros
+            # que estavam cravados no renderer ate esta demanda.
+            "x": 50.0,
+            "y": 18.0,
+            "largura": 86.0,
         }
+
+    def test_o_lugar_escolhido_chega_ao_renderer(self):
+        """D-600: quem resolveu a heranca foi quem chamou; aqui so se normaliza."""
+        payload = para_payload("oi", 2.5, duracao_short_seg=30.0, x=20, y=70, largura=40)
+        assert payload is not None
+        assert (payload["x"], payload["y"], payload["largura"]) == (20.0, 70.0, 40.0)
 
     def test_fonte_e_tamanho_chegam_normalizados(self):
         """D-594: o tamanho e escala, travada na faixa em que a frase se le."""

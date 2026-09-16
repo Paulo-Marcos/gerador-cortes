@@ -3,6 +3,14 @@ import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import { Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  arrasteDoSegmento,
+  comOffsets,
+  duracaoLiquida,
+  efetivos,
+  temColagem,
+  type Segmento,
+} from './segmentosDoShort';
 import { brutoUrl, type ShortSugerido } from './shortsApi';
 import { arrastar, mmss, type Borda, type Bordas } from './linhaDoTempoShort';
 import { BORDA_DO_REJEITADO, COR_DO_REJEITADO, bordaDoShort, corDoShort } from './coresDosShorts';
@@ -98,34 +106,84 @@ interface Props {
   tempoAtual: number;
   onSeek: (segundos: number) => void;
   onBordas: (shortId: string, bordas: Partial<Bordas>, focar?: Borda) => void;
+  /**
+   * D-608: o arraste da borda de um SEGMENTO de um short colado. Recebe a lista
+   * inteira já ajustada e o instante para onde levar o cursor.
+   */
+  onSegmentos: (shortId: string, segmentos: Segmento[], focarEm: number) => void;
   /** Clicar num bloco põe aquele trecho em foco, como clicar no card. */
   onSelecionar: (shortId: string) => void;
 }
 
 type Plugin = ReturnType<typeof RegionsPlugin.create>;
 
-/** Põe um bloco por trecho sobre a onda, cada um com a sua cor. */
+// D-604: um short pode ser vários segmentos do bruto, então o id da região
+// deixou de ser o id do short. `s1__2` é o terceiro segmento do short `s1`.
+//
+// O separador é duplo de propósito: um uuid tem hífens, e um `split('-')` faria
+// o id do short virar lixo no primeiro clique.
+const SEPARADOR = '__';
+
+function idDaRegiao(shortId: string, indice: number): string {
+  return `${shortId}${SEPARADOR}${indice}`;
+}
+
+/** De qual short é esta região. Id sem sufixo (legado) devolve ele mesmo. */
+export function shortDaRegiao(idRegiao: string): string {
+  return idRegiao.split(SEPARADOR)[0];
+}
+
+/** Qual segmento do short é esta região, na ordem de toque (0 = o primeiro). */
+export function segmentoDaRegiao(idRegiao: string): number {
+  const partes = idRegiao.split(SEPARADOR);
+  return partes.length > 1 ? Number(partes[1]) : 0;
+}
+
+/**
+ * Põe um bloco por SEGMENTO sobre a onda, cada short com a sua cor.
+ *
+ * D-604: antes era um bloco por short. Um short colado precisa mostrar os N
+ * segmentos onde eles realmente estão — desenhar o envelope pintaria de cor
+ * sólida o buraco que o operador tirou fora, e ele veria na régua um trecho
+ * contínuo que o arquivo não tem.
+ *
+ * Os segmentos de um mesmo short dividem a COR (é ela que agrupa) e o rótulo diz
+ * `1.2` — short 1, segundo segmento na ordem de toque. Com ordem livre esse
+ * número pode crescer da direita para a esquerda, e isso é informação: é como se
+ * vê, na régua, que o short abre com o que vem depois na live.
+ */
 function desenhar(plugin: Plugin, shorts: ShortSugerido[], emFoco: ShortSugerido | null): void {
   plugin.clearRegions();
 
   shorts.forEach((short, indice) => {
     const rejeitado = short.status === 'rejeitado';
-    plugin.addRegion({
-      id: short.id,
-      start: short.inicio_seg,
-      end: short.fim_seg,
-      color: rejeitado ? COR_DO_REJEITADO : corDoShort(indice),
-      // Só o trecho EM FOCO tem alça. Todas arrastáveis convidariam a mexer no
-      // trecho errado — e aqui um pixel vale meio segundo.
-      drag: false,
-      resize: short.id === emFoco?.id && !rejeitado,
-      content: `${indice + 1}`,
+    const pedacos = comOffsets(short);
+    const colado = pedacos.length > 1;
+
+    pedacos.forEach(({ segmento, ordem }, posicao) => {
+      plugin.addRegion({
+        id: idDaRegiao(short.id, posicao),
+        start: segmento.inicio_seg,
+        end: segmento.fim_seg,
+        color: rejeitado ? COR_DO_REJEITADO : corDoShort(indice),
+        // Só o trecho EM FOCO tem alça. Todas arrastáveis convidariam a mexer no
+        // trecho errado — e aqui um pixel vale meio segundo.
+        drag: false,
+        // D-608: TODOS os segmentos do trecho em foco têm alça. A D-604 as tirou
+        // de short colado supondo que o arraste não saberia qual segmento foi
+        // pego — mas o id da região já carrega o índice (`s1__2`). O preço
+        // daquela suposição foi o operador não conseguir mais aumentar nem
+        // reduzir um segmento depois de somar outro.
+        resize: short.id === emFoco?.id && !rejeitado,
+        content: colado ? `${indice + 1}.${ordem}` : `${indice + 1}`,
+      });
     });
   });
 
   // A borda marca onde o bloco acaba; o contorno diz qual está em foco.
   for (const regiao of plugin.getRegions()) {
-    const indice = shorts.findIndex((s) => s.id === regiao.id);
+    const shortId = shortDaRegiao(regiao.id);
+    const indice = shorts.findIndex((s) => s.id === shortId);
     const elemento = (regiao as unknown as { element?: HTMLElement }).element;
     if (!elemento || indice < 0) continue;
     const rejeitado = shorts[indice].status === 'rejeitado';
@@ -133,7 +191,12 @@ function desenhar(plugin: Plugin, shorts: ShortSugerido[], emFoco: ShortSugerido
       rejeitado ? BORDA_DO_REJEITADO : bordaDoShort(indice)
     }`;
     elemento.style.borderRight = elemento.style.borderLeft;
-    elemento.style.outline = regiao.id === emFoco?.id ? '2px solid var(--wb-accent)' : 'none';
+    elemento.style.outline = shortId === emFoco?.id ? '2px solid var(--wb-accent)' : 'none';
+    // D-604: o segmento que NÃO é o primeiro da ordem ganha um tracejado no
+    // topo. É a pista, na própria régua, de que aquele bloco é continuação de
+    // outro — sem ela, dois blocos da mesma cor pareceriam dois shorts parecidos.
+    elemento.style.borderTop =
+      segmentoDaRegiao(regiao.id) > 0 ? `2px dashed ${bordaDoShort(indice)}` : 'none';
   }
 }
 
@@ -159,6 +222,7 @@ export function ReguaDeOnda({
   tempoAtual,
   onSeek,
   onBordas,
+  onSegmentos,
   onSelecionar,
 }: Props) {
   const caixa = useRef<HTMLDivElement>(null);
@@ -176,8 +240,28 @@ export function ReguaDeOnda({
   // Os handlers mudam a cada render e o wavesurfer só recebe os seus uma vez.
   // Guardá-los numa ref é o que permite criar a onda UMA vez — recriá-la a cada
   // mudança de props recarregaria o áudio e perderia o scroll do operador.
-  const atual = useRef({ shorts, emFoco, onSeek, onBordas, onSelecionar, duracaoSeg, picos, zoom });
-  atual.current = { shorts, emFoco, onSeek, onBordas, onSelecionar, duracaoSeg, picos, zoom };
+  const atual = useRef({
+    shorts,
+    emFoco,
+    onSeek,
+    onBordas,
+    onSegmentos,
+    onSelecionar,
+    duracaoSeg,
+    picos,
+    zoom,
+  });
+  atual.current = {
+    shorts,
+    emFoco,
+    onSeek,
+    onBordas,
+    onSegmentos,
+    onSelecionar,
+    duracaoSeg,
+    picos,
+    zoom,
+  };
 
   // O gatilho é "já HÁ picos", e não "quais picos": o array chega uma vez e não
   // muda, e depender do conteúdo dele reintroduziria a recriação que a D-548
@@ -255,14 +339,31 @@ export function ReguaDeOnda({
     // passaria a ter DUAS contas, a do wavesurfer e a minha, e elas divergiriam
     // no primeiro ajuste de escala — a mesma armadilha da D-558 e da D-568.
     plugin.on('region-clicked', (regiao) => {
-      atual.current.onSelecionar(regiao.id);
+      // D-604: o id da região carrega o segmento; quem entra em foco é o SHORT.
+      atual.current.onSelecionar(shortDaRegiao(regiao.id));
     });
 
     // Só ao SOLTAR, e não a cada pixel: sessenta escritas por segundo entupiriam
     // a fila e ainda deixariam a última chegar fora de ordem.
     plugin.on('region-updated', (regiao) => {
       const alvo = atual.current.emFoco;
-      if (!alvo || regiao.id !== alvo.id) return;
+      if (!alvo || shortDaRegiao(regiao.id) !== alvo.id) return;
+
+      // D-608: num short colado, a borda que mudou é a de UM segmento — o do
+      // índice que a região carrega. Mexer no envelope aqui seria recusado pelo
+      // backend, e com razão: num short colado quem decide as bordas externas são
+      // os segmentos (o menor início e o maior fim), não o arraste.
+      if (temColagem(alvo)) {
+        const arraste = arrasteDoSegmento(
+          alvo,
+          segmentoDaRegiao(regiao.id),
+          regiao.start,
+          regiao.end,
+          atual.current.duracaoSeg,
+        );
+        if (arraste) atual.current.onSegmentos(alvo.id, arraste.segmentos, arraste.focarEm);
+        return;
+      }
 
       const mexeuNoInicio = Math.abs(regiao.start - alvo.inicio_seg) > 0.01;
       const borda: Borda = mexeuNoInicio ? 'inicio' : 'fim';
@@ -414,7 +515,16 @@ export function ReguaDeOnda({
         {emFoco && (
           <span>
             {mmss(emFoco.inicio_seg)} → {mmss(emFoco.fim_seg)} ·{' '}
-            {Math.round(emFoco.fim_seg - emFoco.inicio_seg)}s
+            {/* D-604: a duração LÍQUIDA, e não o span. Num short colado a
+                subtração mentiria para cima, e é justamente na régua que o
+                operador vê os buracos — dizer 60s ao lado de dois blocos
+                separados seria a tela se contradizendo. */}
+            {Math.round(duracaoLiquida(emFoco))}s
+            {temColagem(emFoco) && (
+              <span className="ml-1 text-[var(--wb-accent-strong)]">
+                ({efetivos(emFoco).length} segmentos)
+              </span>
+            )}
           </span>
         )}
         <div className="flex-1" />

@@ -1,3 +1,4 @@
+import type { ProviderIA } from '@/lib/providerIa';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, progressoWsUrl } from '@/lib/api';
@@ -116,7 +117,7 @@ export function useAnalisarDesviosTodos(projetoId: string) {
   }, []);
 
   const mutation = useMutation({
-    mutationFn: () => api.analisarDesviosTodos(projetoId),
+    mutationFn: (provider: ProviderIA) => api.analisarDesviosTodos(projetoId, provider),
     onSuccess: () => {
       notify(
         'Geração de trechos iniciada para todos os cortes: roda em segundo plano, corte a corte, e os desvios vão aparecendo aos poucos. Só ACRESCENTA aos trechos já marcados — nada é removido.',
@@ -130,9 +131,9 @@ export function useAnalisarDesviosTodos(projetoId: string) {
     },
   });
 
-  function disparar() {
+  function disparar(provider: ProviderIA) {
     setDisparado(true);
-    mutation.mutate(undefined, {
+    mutation.mutate(provider, {
       onSettled: () => {
         cooldownRef.current = window.setTimeout(() => setDisparado(false), COOLDOWN_DESVIOS_TODOS_MS);
       },

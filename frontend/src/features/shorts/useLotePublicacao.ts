@@ -64,12 +64,24 @@ export function useCancelarLote() {
   });
 }
 
-/** O "publiquei" do destino manual — o backend não tem como ver o celular dele. */
+/**
+ * O "publiquei" do destino manual — o backend não tem como ver o celular dele.
+ *
+ * D-603: vale também para o item que falhou e foi terminado à mão no app da
+ * rede. É uma DECLARAÇÃO do operador, e por isso ela pode nascer sem lote.
+ */
 export function useConfirmarPublicacao(corteId: string) {
   const cliente = useQueryClient();
   return useMutation({
-    mutationFn: ({ alvoId, plataforma }: { alvoId: string; plataforma: string }) =>
-      shortsApi.confirmarPublicacao(alvoId, plataforma),
+    mutationFn: ({
+      alvoId,
+      plataforma,
+      url,
+    }: {
+      alvoId: string;
+      plataforma: string;
+      url?: string;
+    }) => shortsApi.confirmarPublicacao(alvoId, plataforma, url ?? ''),
     onSuccess: () => {
       cliente.invalidateQueries({ queryKey: LOTE_KEY });
       cliente.invalidateQueries({ queryKey: publicacoesKey(corteId) });

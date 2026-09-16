@@ -32,9 +32,12 @@ import { ColunaDeDecisoes } from './ColunaDeDecisoes';
 import { PainelDaRegua } from './PainelDaRegua';
 import { PlayerDoBruto } from './PlayerDoBruto';
 import { LegendaPrevia } from './LegendaPrevia';
+import { lugarDaLegenda } from './previaLegenda';
+import { efetivos, type Segmento } from './segmentosDoShort';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { GanchoModal } from './GanchoModal';
 import { GanchoPrevia } from './GanchoPrevia';
+import { lugarEfetivo } from './ganchoDoShort';
 import { PresetDoGanchoModal } from './PresetDoGanchoModal';
 import { PresetDoPalcoModal } from './PresetDoPalcoModal';
 import { useEdicaoDoShort } from './useEdicaoDoShort';
@@ -150,14 +153,23 @@ export default function FireDetalhePage() {
   // sem isso o vídeo seguia pelo assunto seguinte — o operador só percebia que
   // passou do fim quando o tema mudava, que é tarde para julgar se o corte
   // fecha bem.
-  const { tocarAte, irPara, aoBuscar } = useParadaNoFim(video);
+  const { tocarColagem, irPara, aoBuscar } = useParadaNoFim(video);
 
   const tocarTrecho = useCallback(
     (short: ShortSugerido) => {
       setSelecionado(short.id);
-      tocarAte(short.inicio_seg, short.fim_seg);
+      // D-604: assistir a um short COLADO toca os segmentos na ordem dele,
+      // pulando o que ficou fora — é o único jeito de julgar a colagem antes de
+      // gastar um render. Sem colagem, `efetivos` devolve a janela única e o
+      // gesto é exatamente o de antes.
+      tocarColagem(
+        efetivos(short).map((segmento) => ({
+          inicio: segmento.inicio_seg,
+          fim: segmento.fim_seg,
+        })),
+      );
     },
-    [tocarAte],
+    [tocarColagem],
   );
 
   // Timeline e painel fino gravam pelo MESMO caminho: duas rotas de escrita para
@@ -174,6 +186,17 @@ export default function FireDetalhePage() {
       if (!focar) return;
       const alvo = focar === 'inicio' ? bordas.inicio : bordas.fim;
       if (alvo !== undefined) irPara(alvo);
+    },
+    [edicao, irPara],
+  );
+
+  // D-608: a borda de um SEGMENTO, arrastada na régua. Mesmo caminho de escrita
+  // da colagem inteira, e o cursor vai até a borda que mudou — é a mesma
+  // conferência que o `gravarBordas` oferece ao trecho de uma janela só.
+  const gravarSegmentos = useCallback(
+    (shortId: string, segmentos: Segmento[], focarEm: number) => {
+      edicao.gravar(shortId, { segmentos });
+      irPara(focarEm);
     },
     [edicao, irPara],
   );
@@ -270,6 +293,17 @@ export default function FireDetalhePage() {
         // que o épico do palco inteiro existe para evitar.
         cor={planoNaTela?.gancho_cor ?? emQuadro.gancho_cor}
         realce={planoNaTela?.gancho_realce ?? emQuadro.gancho_realce}
+        // D-600: o LUGAR vem pelo mesmo caminho e pelo mesmo motivo — é o plano
+        // que resolveu a herança, e ler direto do short mostraria o gancho no
+        // ponto fixo enquanto o arquivo o desenha onde o preset mandou.
+        lugar={lugarEfetivo(
+          {
+            x: planoNaTela?.gancho_x,
+            y: planoNaTela?.gancho_y,
+            largura: planoNaTela?.gancho_largura,
+          },
+          { x: emQuadro.gancho_x, y: emQuadro.gancho_y, largura: emQuadro.gancho_largura },
+        )}
       />
       {legendaAtiva && transcricao.data && (
         <LegendaPrevia
@@ -279,6 +313,21 @@ export default function FireDetalhePage() {
           tempoAtualSeg={tempoAtual}
           cor={emQuadro.legenda_cor}
           fonte={emQuadro.legenda_fonte}
+          // D-604: a colagem, para a legenda não ler a fala do buraco e o tempo
+          // do player ser traduzido pelo mapa dos segmentos.
+          segmentos={emQuadro.segmentos}
+          // D-605: o LUGAR pela mesma via da cor do gancho — o plano é quem
+          // resolveu a herança do palco do corte, e o short é só o fallback de
+          // enquanto ele não chegou. Lido do short, o player desenharia a
+          // legenda no rodapé fixo enquanto o arquivo a põe onde o palco manda.
+          lugar={lugarDaLegenda(
+            {
+              x: planoNaTela?.legenda_x,
+              y: planoNaTela?.legenda_y,
+              largura: planoNaTela?.legenda_largura,
+            },
+            emQuadro,
+          )}
         />
       )}
     </>
@@ -361,6 +410,7 @@ export default function FireDetalhePage() {
             temBruto={fire?.tem_bruto}
             onSeek={irPara}
             onBordas={gravarBordas}
+            onSegmentos={gravarSegmentos}
             onSelecionar={setSelecionado}
           />
         </section>
@@ -379,6 +429,7 @@ export default function FireDetalhePage() {
           onSelecionar={setSelecionado}
           onTocar={tocarTrecho}
           onBorda={moverBorda}
+          onIr={irPara}
           onDefinirPalco={abrirPalcoDe}
           onEscreverGancho={abrirGanchoDe}
           onEditarPalcoPadrao={(id) => setPresetDePalco({ id })}
@@ -409,12 +460,15 @@ export default function FireDetalhePage() {
           palavras={transcricao.data?.palavras ?? []}
           ocupado={edicao.ocupado}
           padrao={ganchoPadrao.data?.gancho_padrao ? ganchoPadrao.data.payload : null}
-          onGravar={(texto, ateSeg, cor, realce) => {
+          onGravar={({ texto, ateSeg, cor, realce, x, y, largura }) => {
             edicao.gravar(emQuadro.id, {
               gancho_tela: texto,
               gancho_ate_seg: ateSeg,
               gancho_cor: cor,
               gancho_realce: realce,
+              gancho_x: x,
+              gancho_y: y,
+              gancho_largura: largura,
             });
             setEscrevendoGancho(false);
           }}

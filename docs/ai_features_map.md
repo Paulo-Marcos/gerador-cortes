@@ -55,12 +55,80 @@ O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `
 - **Hook**: mutation local em `MetadataCard.tsx` (`generatePromptThumbnailClaude`)
 - **UI**: `MetadataCard.tsx`
 
+### 2.6 Avaliar o bruto
+- **Descrição**: lê o bruto com as emendas marcadas e devolve nota, veredito e apontamentos. Roda sozinha ao fim de cada geração de bruto (sempre pelo Claude) e sob demanda no painel.
+- **Rota**: `POST /api/avaliacao-bruto/corte/{corte_id}?provider=`
+- **Service**: `ClaudeIaService.avaliar_bruto_via_claude`
+- **UI**: `AvaliacaoBrutoPanel.tsx` (editor)
+
+### 2.7 Propor shorts
+- **Descrição**: lê a transcrição do bruto de um Fire e propõe os trechos verticais.
+- **Rota**: `POST /api/shorts/corte/{corte_id}/sugerir?provider=`
+- **Service**: `ClaudeIaService.sugerir_shorts_via_claude`
+- **UI**: sem botão hoje — dispara no fim do bruto (Claude). O `sugerirAgora` do `shortsApi` não tem tela.
+
+### 2.8 Cenas do short
+- **Rota**: `POST /api/shorts/{short_id}/cenas/sugerir?provider=`
+- **Service**: `ClaudeIaService.sugerir_cenas_do_short_via_claude`
+- **UI**: `CenasDoShort.tsx` — componente sem tela que o renderize hoje.
+
+### 2.9 Gancho da abertura do short
+- **Rota**: `POST /api/shorts/{short_id}/ganchos?provider=`
+- **Service**: `ClaudeIaService.sugerir_ganchos_via_claude`
+- **UI**: `GanchoModal.tsx`
+
+### 2.10 Post do short (título, descrição, hashtags)
+- **Rota**: `POST /api/shorts/{short_id}/post/gerar?provider=`
+- **Service**: `ClaudeIaService.gerar_post_do_short_via_claude`
+- **UI**: `PostModal.tsx`. O Finalizar escreve sozinho, pelo Claude — ali não há botão.
+
+### 2.11 Prompt da capa do short
+- **Rota**: `POST /api/shorts/{short_id}/capa/prompt?provider=`
+- **Service**: `ClaudeIaService.prompt_da_capa_do_short_via_claude`
+- **UI**: `CapaModal.tsx`
+
+### 2.12 Etiqueta e arte da capa do TikTok
+- **Rotas**: `POST /api/shorts/corte/{corte_id}/capa-tiktok?provider=` (etiqueta) e `POST /api/shorts/corte/{corte_id}/capa-tiktok/prompt?provider=` (arte)
+- **Services**: `ClaudeIaService.sugerir_etiqueta_capa_via_claude` e `prompt_da_arte_da_capa_via_claude`
+- **UI**: `CapaTikTokSlot.tsx`
+
+### 2.13 Padrões de thumbnail
+- **Descrição**: lê as capas melhor avaliadas e propõe ajuste na skill do capista. Não tem skill editorial no banco: o modelo Gemini sai da faixa equivalente ao Claude desta etapa.
+- **Rota**: `POST /api/avaliacoes-thumbnail/padroes?provider=`
+- **Service**: `PadroesThumbnailService.analisar` → `_ler_padroes`
+- **UI**: `ThumbnailPadroesPage.tsx`
+
+### 2.14 Trechos de todos os cortes
+- **Descrição**: roda a geração de trechos a remover em cada corte do projeto, em segundo plano, só acrescentando aos já marcados.
+- **Rota**: `POST /api/cortes/projeto/{projeto_id}/analisar-desvios-todos?provider=`
+- **Service**: `CorteService.analisar_desvios_todos_impl` → `gerar_trechos_via_claude` por corte
+- **UI**: `ProjetoDetalhePage.tsx` (barra de utilitários, `<MenuDeIa />`)
+
+### Fora da escolha
+O **sentimento do ranking de lives** (`services/ranking_lives.py`) roda em lote, no fundo, sem tela onde escolher — segue no Claude.
+
 ---
 
-## 3. Como adicionar uma nova chamada de IA
+## 3. Marcador de quem gerou
+
+Cada resultado mostra o selo `<SeloDeProvider />` com quem o produziu. A origem vem de três lugares, em ordem de confiança:
+
+1. **Gravada na própria entidade**: `Corte.origem_analise` (o provider da análise) e o campo `origem` de cada desvio.
+2. **Modelo gravado no registro**: a avaliação do bruto guarda o modelo que atendeu; `provider_do_modelo` traduz (`gemini-*` → Gemini).
+3. **Telemetria** (`GET /api/claude/telemetria/ultima-geracao?etapa=&corte_id=&short_id=`): para metadados, cenas, post, gancho e capas, que não guardam a origem. É best-effort — sem registro, a tela fica **sem selo**, nunca com um selo chutado.
+
+A telemetria grava `short_id` desde a D-608: sem ele, dois trechos do mesmo corte mostrariam o selo um do outro.
+
+---
+
+## 4. Como adicionar uma nova chamada de IA
 
 1. Crie a rota em `backend/app/routers/claude_ia.py` com o query param `provider: ProviderIA = "claude"`.
 2. No `ClaudeIaService`, chame `_gerar_json_provider` ou `_gerar_text_provider` e **repasse `provider` por todos os métodos intermediários**. Métodos estáticos não enxergam variáveis do método que os chamou (rode `ruff check`: o F821 pega o esquecimento).
 3. Adicione a chamada em `frontend/src/lib/api.ts`.
-4. Crie a mutation passando o `provider` como `variables`. Assim a tela sabe qual botão está gerando.
-5. Use `<ClaudeAiButton />` e `<GeminiAiButton />` (`frontend/src/components/ui/`). Só o botão do provider em voo fica `pending`; o outro fica `disabled`.
+4. Crie a mutation passando o `provider` como `variables`, e derive o provedor em voo com `providerEmVoo` (`frontend/src/lib/providerIa.ts`).
+5. Na tela, use `<AcaoDeIa />` (`frontend/src/components/ui/acao-de-ia.tsx`): a ação é dita uma vez ("Regerar metadados") e o provedor é escolhido por ícone, Claude ou Gemini. Nunca repita o verbo em dois botões.
+   - `rotulo` é o texto visível; `descricao` é a ação completa, lida por leitor de tela e no tooltip ("Regerar metadados com o Gemini") — use quando o rótulo visível for curto.
+   - Enquanto gera, os dois provedores travam: só o que está em voo gira.
+   - Coluna estreita: `apenasProvedores` e a legenda acima (veja `CapaTikTokSlot.tsx`), em vez de deixar o texto virar reticências.
+   - Barra só de ícones: `<MenuDeIa />`, que abre as duas opções a partir do ícone da ação.

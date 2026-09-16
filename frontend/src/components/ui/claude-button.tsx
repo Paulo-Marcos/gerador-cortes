@@ -1,10 +1,8 @@
-import * as React from 'react';
-import { Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+// Identidade visual do Claude: a cor da marca e o ícone. O botão de gerar mora
+// em `acao-de-ia.tsx`, que oferece os dois provedores na mesma ação.
 
 // Cor oficial da Claude (brand burnt orange / coral).
 export const CLAUDE_BRAND = '#D97757';
-export const CLAUDE_BRAND_HOVER = '#C2664A';
 
 export function ClaudeIcon({ size = 14, className }: { size?: number; className?: string }) {
   return (
@@ -21,80 +19,3 @@ export function ClaudeIcon({ size = 14, className }: { size?: number; className?
     </svg>
   );
 }
-
-type ClaudeAiButtonSize = 'sm' | 'md';
-
-export interface ClaudeAiButtonProps extends Omit<
-  React.ButtonHTMLAttributes<HTMLButtonElement>,
-  'children'
-> {
-  pending?: boolean;
-  size?: ClaudeAiButtonSize;
-  /** Texto customizado. Padrão: "AI". */
-  label?: React.ReactNode;
-  /** Quando definido, renderiza este label durante pending (ex.: "Gerando..."). */
-  pendingLabel?: React.ReactNode;
-  /** Ícone alternativo (ex.: Loader controlado fora). Se ausente, usa ClaudeIcon. */
-  iconSlot?: React.ReactNode;
-}
-
-const SIZE_CLASSES: Record<ClaudeAiButtonSize, string> = {
-  sm: 'h-8 px-3 text-xs gap-1.5',
-  md: 'h-9 px-4 text-sm gap-2',
-};
-
-const ICON_SIZE: Record<ClaudeAiButtonSize, number> = {
-  sm: 13,
-  md: 15,
-};
-
-/**
- * Botão padrão de geração por IA via Claude.
- * Em destaque (fundo na cor oficial Claude) + ícone Claude + label "AI".
- * Use ao lado de um botão "Manual" em menor destaque (variant outline).
- */
-export const ClaudeAiButton = React.forwardRef<HTMLButtonElement, ClaudeAiButtonProps>(
-  function ClaudeAiButton(
-    {
-      className,
-      pending = false,
-      size = 'sm',
-      label = 'AI',
-      pendingLabel,
-      iconSlot,
-      disabled,
-      style,
-      ...props
-    },
-    ref,
-  ) {
-    const icon =
-      iconSlot ??
-      (pending ? (
-        <Loader2 className="animate-spin" size={ICON_SIZE[size]} />
-      ) : (
-        <ClaudeIcon size={ICON_SIZE[size]} />
-      ));
-    return (
-      <button
-        ref={ref}
-        type="button"
-        disabled={disabled || pending}
-        className={cn(
-          'inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] font-semibold text-white transition-colors',
-          'shadow-[shadow:var(--wb-shadow-btn)] hover:brightness-110 active:brightness-100',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--wb-focus,#D97757)]',
-          'disabled:pointer-events-none disabled:opacity-60',
-          '[&_svg]:shrink-0',
-          SIZE_CLASSES[size],
-          className,
-        )}
-        style={{ backgroundColor: CLAUDE_BRAND, ...style }}
-        {...props}
-      >
-        {icon}
-        <span>{pending && pendingLabel ? pendingLabel : label}</span>
-      </button>
-    );
-  },
-);

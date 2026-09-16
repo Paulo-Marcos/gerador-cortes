@@ -40,6 +40,7 @@ from app.domain import capa_tiktok as layout_capa
 from app.domain.youtube_layout import FUNDO_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
+from app.provider_ia import ProviderIA
 from app.services.channels import identidade_do_canal_ativo
 from sqlalchemy import select
 
@@ -277,7 +278,7 @@ def _arte_existente(thumb_dir: Path, corte_id: str) -> Path | None:
     return None
 
 
-async def gerar_prompt_da_arte(corte_id: str) -> str:
+async def gerar_prompt_da_arte(corte_id: str, provider: ProviderIA = "claude") -> str:
     """Escreve o prompt da arte e o guarda no metadado (D-524).
 
     O app para aqui: quem desenha é o operador, no agente capista dele. Guardar
@@ -300,7 +301,9 @@ async def gerar_prompt_da_arte(corte_id: str) -> str:
     etiqueta = layout_capa.normalizar_etiqueta(contexto["texto_capa"])
 
     try:
-        prompt = await ClaudeIaService.prompt_da_arte_da_capa_via_claude(corte_id, etiqueta)
+        prompt = await ClaudeIaService.prompt_da_arte_da_capa_via_claude(
+            corte_id, etiqueta, provider
+        )
     except Exception as exc:
         raise CapaTikTokError(f"Nao consegui escrever o prompt da arte: {exc}") from exc
 

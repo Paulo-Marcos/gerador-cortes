@@ -6,6 +6,7 @@ está sob lock). Cada rota apenas delega para `AvaliacaoThumbnailService`.
 
 import logging
 
+from app.provider_ia import ProviderIA
 from app.services.avaliacao_thumbnail import AvaliacaoThumbnailService
 from app.services.padroes_thumbnail import PadroesThumbnailService
 from fastapi import APIRouter, HTTPException
@@ -73,14 +74,14 @@ async def listar_avaliacoes_recentes(limite: int = 100):
 
 
 @router.post("/padroes")
-async def analisar_padroes():
+async def analisar_padroes(provider: ProviderIA = "claude"):
     """Analisa os melhores prompts avaliados e propõe ajuste na skill (D-070).
 
     Operação custosa (chama o agente Claude). Devolve os padrões compilados +
     a leitura semântica do agente, ou `status=dados_insuficientes`.
     """
     try:
-        return await PadroesThumbnailService.analisar()
+        return await PadroesThumbnailService.analisar(provider=provider)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Erro ao analisar padrões de thumbnail")
         raise HTTPException(status_code=500, detail=str(exc)) from exc

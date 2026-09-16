@@ -37,6 +37,12 @@ export interface GanchoShortPreset {
   tamanho: number;
   /** Segundos em tela. 0 = 2,5s. */
   duracao: number;
+  /** D-600: centro horizontal da caixa, em % da largura. 0 = não decide. */
+  x: number;
+  /** D-600: topo da caixa, em % da altura. 0 = não decide. */
+  y: number;
+  /** D-600: largura da caixa, em % da largura do quadro. 0 = não decide. */
+  largura: number;
 }
 
 /** O que um preset de palco de short guarda (D-509). */

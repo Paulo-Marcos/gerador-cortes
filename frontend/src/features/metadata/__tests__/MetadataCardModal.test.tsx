@@ -100,6 +100,25 @@ describe('MetadataCard — corpo do modal', () => {
     expect(render(metadado())).toContain('Ampliar a capa');
   });
 
+  // D-609: regerar os metadados e o prompt da capa oferecem os dois provedores
+  // na MESMA acao — antes o modal so chamava o Claude, sem escolha.
+  it('regera os metadados com o Claude ou com o Gemini', () => {
+    const markup = render(metadado());
+    expect(markup).toContain('aria-label="Regerar metadados com o Claude"');
+    expect(markup).toContain('aria-label="Regerar metadados com o Gemini"');
+  });
+
+  it('regera o prompt da capa com o Claude ou com o Gemini', () => {
+    const markup = render(metadado());
+    expect(markup).toContain('aria-label="Regerar prompt da capa com o Claude"');
+    expect(markup).toContain('aria-label="Regerar prompt da capa com o Gemini"');
+  });
+
+  it('sem prompt ainda, a acao diz gerar e nao regerar', () => {
+    const markup = render(metadado({ prompt_thumbnail: '' }));
+    expect(markup).toContain('aria-label="Gerar prompt da capa com o Gemini"');
+  });
+
   it('mostra as sugestoes de titulo e de capa como chips', () => {
     const markup = render(metadado());
     expect(markup).toContain('Primeira opcao');

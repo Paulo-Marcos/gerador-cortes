@@ -1,7 +1,7 @@
 ﻿# dev.ps1 - Inicia o ambiente local em um unico terminal.
-# WHY ReadLineAsync: event handlers .NET (OutputDataReceived) executam ScriptBlocks
-# em ThreadPool threads, o que crasha o host PowerShell (exit code 2).
-# ReadLineAsync le output de forma assincrona SEM threads extras.
+# WHY BombaDeSaida: event handlers .NET (OutputDataReceived) executam ScriptBlocks
+# em ThreadPool threads, o que crasha o host PowerShell (exit code 2). A leitura
+# dos pipes roda em threads C# puras, e o console e escrito so no laco principal.
 #
 # D-432: -Silent e o modo usado pelo atalho da area de trabalho (iniciar-app.vbs),
 # que roda este script com a janela escondida. Nesse modo NAO pode haver
@@ -207,7 +207,7 @@ function Confirm-RemotionReady {
     }
 }
 
-# Cria processo SEM event handlers — usa ReadLineAsync no loop principal
+# Cria processo SEM event handlers — a saida e lida pela BombaDeSaida
 function Start-DevProcess {
     param(
         [string]$Name,
@@ -241,14 +241,17 @@ function Start-DevProcess {
         throw "Nao foi possivel iniciar $Name."
     }
 
-    # Inicia leituras assincronas (Tasks .NET, sem threads PowerShell)
+    # D-607: a leitura dos pipes sai do laco do PowerShell (ver BombaDeSaida).
+    $bomba = [CutCut.BombaDeSaida]::new($script:CapacidadeDaFila)
+    $bomba.Ler($process.StandardOutput)
+    $bomba.Ler($process.StandardError)
+
     return @{
-        Name       = $Name
-        Label      = $Label
-        Color      = $Color
-        Process    = $process
-        StdOutTask = $process.StandardOutput.ReadLineAsync()
-        StdErrTask = $process.StandardError.ReadLineAsync()
+        Name    = $Name
+        Label   = $Label
+        Color   = $Color
+        Process = $process
+        Bomba   = $bomba
     }
 }
 
@@ -283,21 +286,65 @@ function Write-ServiceLine {
     }
 }
 
-# Le output de todos os servicos via polling de Tasks assincronas.
+# Le output de todos os servicos a partir das filas das bombas.
 #
-# Drena em LACO, nao uma linha por ciclo. A versao anterior lia UMA
-# linha de stdout e UMA de stderr por servico e dormia 100ms — vazao medida de
-# 8,7 linhas/s. Numa rajada de log (geracao de IA), o pipe de 4KB do Windows
-# enchia, `print` no backend BLOQUEAVA, e como `operational_info` roda dentro
-# do event loop do asyncio o servidor inteiro congelava: deletar um trecho no
-# editor so respondia quando a IA terminava, ~40s depois. Medido: 400 linhas
-# levavam 46s para drenar e o processo escritor seguia bloqueado; drenando em
-# laco, 1,56s (256 linhas/s) e o escritor termina em 0,6s.
+# D-607: ler o pipe e escrever no console no MESMO laco amarrava a vazao dos
+# servicos a velocidade do terminal. O Windows Terminal desenha devagar - medido
+# 100 a 300 linhas/s com a janela visivel, e menos ainda fora de foco. Quando o
+# console atrasava, o laco atrasava, o pipe de 4KB enchia e o `print` do backend
+# BLOQUEAVA dentro do event loop: "buscar fires" ficava carregando ate alguem
+# trazer a janela para frente. Agora cada pipe e esvaziado por uma thread .NET
+# que so enfileira; o console fica atrasado, mas nenhum servico espera por ele.
 #
 # O teto por ciclo evita starvation: com um servico tagarela, o laco cede a vez
 # para os demais e para a checagem de processo morto em vez de girar sem fim.
 # Devolve $true se leu alguma linha — o chamador so dorme quando nao houve nada.
 $script:MaxLinhasPorCiclo = 500
+# Linhas guardadas por servico enquanto o console nao da conta. Cheia, a bomba
+# DESCARTA e conta: perder log e barato, congelar o servidor nao e.
+$script:CapacidadeDaFila = 20000
+
+# Thread em C# e nao em ScriptBlock: ScriptBlock rodando em thread do .NET
+# derruba o host do PowerShell (exit code 2).
+Add-Type -TypeDefinition @'
+using System.Collections.Concurrent;
+using System.IO;
+using System.Threading;
+
+namespace CutCut {
+    public sealed class BombaDeSaida {
+        private readonly BlockingCollection<string> _fila;
+        private long _descartadas;
+
+        public BombaDeSaida(int capacidade) {
+            _fila = new BlockingCollection<string>(capacidade);
+        }
+
+        public void Ler(TextReader leitor) {
+            var thread = new Thread(() => {
+                try {
+                    string linha;
+                    while ((linha = leitor.ReadLine()) != null) {
+                        if (!_fila.TryAdd(linha)) Interlocked.Increment(ref _descartadas);
+                    }
+                } catch (IOException) {
+                    // Pipe fechado com o processo morrendo: nada mais a ler.
+                }
+            });
+            thread.IsBackground = true;
+            thread.Start();
+        }
+
+        public bool TentarPegar(out string linha) {
+            return _fila.TryTake(out linha);
+        }
+
+        public long TomarDescartadas() {
+            return Interlocked.Exchange(ref _descartadas, 0);
+        }
+    }
+}
+'@
 
 function Read-AllServiceOutput {
     param([array]$Services)
@@ -305,23 +352,15 @@ function Read-AllServiceOutput {
     $leuAlgo = $false
 
     foreach ($svc in $Services) {
-        # Stdout
-        $n = 0
-        while ($null -ne $svc.StdOutTask -and $svc.StdOutTask.IsCompleted -and $n -lt $script:MaxLinhasPorCiclo) {
-            $line = $svc.StdOutTask.Result
-            if ($null -eq $line) { $svc.StdOutTask = $null; break }
-            Write-ServiceLine -Label $svc.Label -Color $svc.Color -Line $line
-            $svc.StdOutTask = $svc.Process.StandardOutput.ReadLineAsync()
-            $n++; $leuAlgo = $true
+        $perdidas = $svc.Bomba.TomarDescartadas()
+        if ($perdidas -gt 0) {
+            Write-ServiceLine -Label $svc.Label -Color $svc.Color -Line "[LOG] $perdidas linha(s) descartada(s): console nao acompanhou."
         }
 
-        # Stderr
         $n = 0
-        while ($null -ne $svc.StdErrTask -and $svc.StdErrTask.IsCompleted -and $n -lt $script:MaxLinhasPorCiclo) {
-            $line = $svc.StdErrTask.Result
-            if ($null -eq $line) { $svc.StdErrTask = $null; break }
+        $line = $null
+        while ($n -lt $script:MaxLinhasPorCiclo -and $svc.Bomba.TentarPegar([ref]$line)) {
             Write-ServiceLine -Label $svc.Label -Color $svc.Color -Line $line
-            $svc.StdErrTask = $svc.Process.StandardError.ReadLineAsync()
             $n++; $leuAlgo = $true
         }
     }

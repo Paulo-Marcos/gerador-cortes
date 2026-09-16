@@ -1,3 +1,5 @@
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import type { ProviderIA } from '@/lib/providerIa';
 import { Icon, type IconName } from './Icon';
 
 // ─────────────────────────────────────────────────────────────────
@@ -16,6 +18,9 @@ export type ScreenAction = {
   texto: string;
   forte?: boolean;
   onClick?: () => void;
+  /** Ação de IA: o verbo é dito uma vez e o provedor vira a escolha final,
+   *  por ícone (D-609). Com isto, `icone` e `onClick` são ignorados. */
+  ia?: { emVoo: ProviderIA | null; onGerar: (provider: ProviderIA) => void };
 };
 
 type ScreenHeaderProps = {
@@ -68,17 +73,31 @@ export function ScreenHeader({ icone, titulo, sub, acoes = [] }: ScreenHeaderPro
         ) : null}
       </span>
       <div style={{ flex: 1 }} />
-      {acoes.map((a) => (
-        <button
-          key={a.texto}
-          type="button"
-          className={a.forte ? 'btn btn-pri' : 'btn'}
-          onClick={a.onClick}
-        >
-          <Icon name={a.icone} size={13} />
-          {a.texto}
-        </button>
-      ))}
+      {acoes.map((a) =>
+        a.ia ? (
+          <AcaoDeIa
+            key={a.texto}
+            rotulo={a.texto}
+            tamanho="sm"
+            // A altura do `.btn` do design (30 px): lado a lado, os dois têm de
+            // parecer a mesma família de botão.
+            className="h-[30px]"
+            destaque={a.forte}
+            emVoo={a.ia.emVoo}
+            onGerar={a.ia.onGerar}
+          />
+        ) : (
+          <button
+            key={a.texto}
+            type="button"
+            className={a.forte ? 'btn btn-pri' : 'btn'}
+            onClick={a.onClick}
+          >
+            <Icon name={a.icone} size={13} />
+            {a.texto}
+          </button>
+        ),
+      )}
     </div>
   );
 }

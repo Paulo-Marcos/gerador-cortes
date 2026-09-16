@@ -12,6 +12,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
+from app.domain import segmentos_short
 from app.domain.corte_mapper import (
     cenas_fora_do_corte,
     extrair_cenas_remotion,
@@ -205,6 +206,18 @@ async def _adotar_filhos_do_corte(
         short.corte_id = primeiro.id
         short.inicio_seg = round(float(short.inicio_seg or 0.0) + offset_seg, 3)
         short.fim_seg = round(float(short.fim_seg or 0.0) + offset_seg, 3)
+        # D-604: a colagem anda junto. Sem isto, fundir dois cortes deslocaria o
+        # envelope e deixaria os segmentos no lugar antigo — o short renderizaria
+        # pedacos de outro assunto, e o envelope diria que esta tudo certo.
+        short.segmentos = segmentos_short.para_json(
+            [
+                segmentos_short.Segmento(
+                    round(segmento.inicio_seg + offset_seg, 3),
+                    round(segmento.fim_seg + offset_seg, 3),
+                )
+                for segmento in segmentos_short.de_json(short.segmentos)
+            ]
+        )
         short.cenas_remotion = json.dumps(
             deslocar_tempos(_lista_json(short.cenas_remotion), offset_seg, CAMPOS_TEMPO_CENA),
             ensure_ascii=False,
@@ -459,7 +472,7 @@ class CorteService:
         return corte
 
     @staticmethod
-    async def analisar_desvios_todos_impl(projeto_id: str):
+    async def analisar_desvios_todos_impl(projeto_id: str, provider: str = "claude"):
         import asyncio
 
         from app.database import AsyncSessionLocal
@@ -474,7 +487,7 @@ class CorteService:
 
         for cid in corte_ids:
             try:
-                await ClaudeIaService.gerar_trechos_via_claude(cid)
+                await ClaudeIaService.gerar_trechos_via_claude(cid, provider)
                 await asyncio.sleep(1)
             except Exception as e:
                 operational_error("AnalisarDesvios", f"Erro no corte {cid}: {e}")

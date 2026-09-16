@@ -25,10 +25,10 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain import gancho_short
+from app.domain import gancho_short, legenda_short, segmentos_short
 from app.domain.arranjo_short import de_chave as arranjo_de_chave
 from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
-from app.domain.cenas_short_ia import recortar_transcricao
+from app.domain.cenas_short_ia import recortar_transcricao_varios
 from app.domain.formato_video import foco_de_regiao
 from app.domain.moldura_short import Moldura
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
@@ -220,7 +220,14 @@ async def definir_cenas(short_id: str, cenas: list[dict]) -> dict:
         if not short:
             raise LookupError(f"Short {short_id!r} nao encontrado")
 
-        duracao = round(float(short.fim_seg) - float(short.inicio_seg), 2)
+        # D-604: a duracao LIQUIDA, e nao o span. Uma cena aos 50s num short de
+        # 0-30 + 45-60 e valida contra o envelope (60s) e invalida contra o video
+        # (45s) — e o Remotion receberia uma cena depois do fim da composicao.
+        duracao = segmentos_short.duracao_liquida(
+            segmentos_short.de_json(short.segmentos),
+            inicio_seg=float(short.inicio_seg),
+            fim_seg=float(short.fim_seg),
+        )
         validadas = normalizar_lista_de_cenas(cenas, duracao)
 
         short.cenas_remotion = json.dumps(
@@ -270,7 +277,7 @@ async def montar_contexto_de_cenas(short_id: str) -> ContextoCenasDoShort:
         transcricao = _json_lista(corte.transcricao_final)
         inicio = float(short.inicio_seg)
         fim = float(short.fim_seg)
-        janela = recortar_transcricao(transcricao, inicio, fim)
+        janela = _fala_do_short(short, transcricao)
         if not janela:
             raise ValueError(
                 "Este trecho não tem fala transcrita — sem ela não há o que apoiar com cenas."
@@ -339,7 +346,7 @@ async def montar_contexto_do_gancho(short_id: str) -> ContextoGanchoDoShort:
 
         inicio = float(short.inicio_seg)
         fim = float(short.fim_seg)
-        janela = recortar_transcricao(_json_lista(corte.transcricao_final), inicio, fim)
+        janela = _fala_do_short(short, _json_lista(corte.transcricao_final))
         if not janela:
             raise ValueError(
                 "Este trecho nao tem fala transcrita — sem ela o gancho seria inventado."
@@ -414,6 +421,7 @@ async def atualizar_short(
     status: str | None = None,
     inicio_seg: float | None = None,
     fim_seg: float | None = None,
+    segmentos: list[dict] | None = None,
     foco_x: float | None = None,
     arranjo_palco: str | None = None,
     janela_cheia: str | None = None,
@@ -426,10 +434,16 @@ async def atualizar_short(
     palco_short_preset: str | None = None,
     legenda_cor: str | None = None,
     legenda_fonte: str | None = None,
+    legenda_x: float | None = None,
+    legenda_y: float | None = None,
+    legenda_largura: float | None = None,
     gancho_tela: str | None = None,
     gancho_ate_seg: float | None = None,
     gancho_cor: str | None = None,
     gancho_realce: str | None = None,
+    gancho_x: float | None = None,
+    gancho_y: float | None = None,
+    gancho_largura: float | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -458,6 +472,55 @@ async def atualizar_short(
             _validar_bordas(novo_inicio, novo_fim, corte)
             short.inicio_seg = round(novo_inicio, 2)
             short.fim_seg = round(novo_fim, 2)
+            # D-604: arrastar a borda de um short COLADO nao faz sentido — a
+            # borda dele e a soma dos segmentos, e mexer no envelope deixaria os
+            # dois discordando em silencio. Quem tem segmentos muda os segmentos.
+            if segmentos is None and segmentos_short.de_json(short.segmentos):
+                raise ValueError(
+                    "Este short e montado por segmentos: mova os segmentos na regua "
+                    "em vez das bordas."
+                )
+
+        if segmentos is not None:
+            # D-604: a colagem do short. Lista vazia DESFAZ a colagem e devolve o
+            # short a janela unica — e como o operador volta atras sem precisar de
+            # um botao proprio.
+            if not segmentos:
+                short.segmentos = "[]"
+            else:
+                corte = await db.get(Corte, short.corte_id)
+                limite = float(corte.duracao_clip_seg or 0.0) if corte else 0.0
+                fatias = segmentos_short.de_json(segmentos)
+                # VALIDA antes de cortar, e nao depois — e a diferenca entre um
+                # 422 que explica e um 200 que mente.
+                #
+                # `normalizar(limite_seg=...)` ENCOLHE o que passa do fim do bruto,
+                # e isso e certo na LEITURA (bruto regerado mais curto nao pode
+                # custar a tela). Na ESCRITA seria silencio: um segmento marcado
+                # aos 500s de um bruto de 120s encolheria para nada, a lista viria
+                # vazia, e o operador receberia sucesso com o segmento
+                # desaparecido. Aqui ele ouve o numero e o motivo.
+                segmentos_short.validar(fatias, limite_seg=limite or fatias[-1].fim_seg)
+                # O ENVELOPE acompanha, e nao e redundancia: e por `inicio_seg`/
+                # `fim_seg` que a regua sabe onde desenhar o short e que a
+                # deteccao de rosto escolhe a janela. Deixa-los para tras poria a
+                # tela desenhando o short num lugar que ele nao ocupa mais.
+                envelope_inicio, envelope_fim = segmentos_short.envelope(
+                    fatias, inicio_seg=short.inicio_seg, fim_seg=short.fim_seg
+                )
+                short.inicio_seg = round(envelope_inicio, 2)
+                short.fim_seg = round(envelope_fim, 2)
+                # UM segmento so NAO e colagem: e a janela unica com aquelas
+                # bordas. Colapsar aqui e o que mantem as duas formas de dizer a
+                # mesma coisa como UMA so no banco — com `[{...}]` gravado, a trava
+                # de borda acima recusaria arrastar um short que a tela mostra
+                # como trecho comum, e a regua ofereceria alcas que dao 422.
+                #
+                # E e o que faz "tirar o penultimo" funcionar: a tela manda o
+                # segmento que sobrou, e as bordas viram as dele. Mandar `[]`
+                # deixaria o envelope antigo — com o buraco que o operador tinha
+                # tirado de volta DENTRO do short.
+                short.segmentos = "[]" if len(fatias) == 1 else segmentos_short.para_json(fatias)
 
         if foco_x is not None:
             if not 0.0 <= foco_x <= 1.0:
@@ -490,6 +553,23 @@ async def atualizar_short(
             short.gancho_realce = (
                 gancho_short.normalizar_realce(gancho_realce) if gancho_realce.strip() else ""
             )
+
+        if gancho_x is not None or gancho_y is not None or gancho_largura is not None:
+            # D-600: os tres andam juntos porque sao UM gesto — o operador
+            # arrasta a caixa e solta. Mandar so `y` num PATCH e legitimo, mas o
+            # caso comum e o trio, e separa-los em tres `if` sugeriria que ha
+            # tres decisoes onde ha uma.
+            #
+            # 0 continua sendo "nao decidi", como na duracao e no realce: e assim
+            # que o botao "voltar ao lugar do padrao" devolve o trecho a heranca.
+            if gancho_x is not None:
+                short.gancho_x = gancho_short.normalizar_x(gancho_x) if gancho_x > 0 else 0.0
+            if gancho_y is not None:
+                short.gancho_y = gancho_short.normalizar_y(gancho_y) if gancho_y > 0 else 0.0
+            if gancho_largura is not None:
+                short.gancho_largura = (
+                    gancho_short.normalizar_largura(gancho_largura) if gancho_largura > 0 else 0.0
+                )
 
         if moldura is not None:
             if moldura not in {m.value for m in Moldura}:
@@ -546,6 +626,25 @@ async def atualizar_short(
             # A familia da fonte. "" volta a do canal. Idem: degrada na leitura.
             short.legenda_fonte = legenda_fonte
 
+        if legenda_x is not None or legenda_y is not None or legenda_largura is not None:
+            # D-605: os tres andam juntos porque sao UM gesto — o operador
+            # arrasta a legenda na previa e solta. Mandar so `y` num PATCH e
+            # legitimo (e o caso comum: "sobe essa legenda"), mas separa-los em
+            # tres blocos sugeriria que ha tres decisoes onde ha uma.
+            #
+            # 0 continua sendo "nao decidi": e assim que "voltar ao lugar do
+            # palco" devolve o trecho a heranca, sem coluna extra de intencao.
+            if legenda_x is not None:
+                short.legenda_x = legenda_short.normalizar_x(legenda_x) if legenda_x > 0 else 0.0
+            if legenda_y is not None:
+                short.legenda_y = legenda_short.normalizar_y(legenda_y) if legenda_y > 0 else 0.0
+            if legenda_largura is not None:
+                short.legenda_largura = (
+                    legenda_short.normalizar_largura(legenda_largura)
+                    if legenda_largura > 0
+                    else 0.0
+                )
+
         # D-552: a marca do preset e escrita PRIMEIRO e apagada por qualquer
         # mudanca posterior no mesmo PATCH.
         #
@@ -564,6 +663,13 @@ async def atualizar_short(
                 fundo_editorial,
                 legenda_cor,
                 legenda_fonte,
+                # D-605: mexer no lugar da legenda tambem desfaz a marca. O
+                # preset descreve o palco INTEIRO, legenda incluida; manter a
+                # marca faria a tela dizer "preset X" sobre um palco que nao e
+                # mais o X, e aplica-lo noutro trecho sairia diferente.
+                legenda_x,
+                legenda_y,
+                legenda_largura,
             )
         ):
             short.palco_short_preset = ""
@@ -590,6 +696,33 @@ async def atualizar_short(
 
         await db.commit()
         return _serializar(short)
+
+
+def _fala_do_short(short: Short, transcricao: list[dict]) -> list[dict]:
+    """A fala que o short REALMENTE contem, na ordem em que ela toca (D-604).
+
+    Um lugar so, usado pelas cenas, pelo gancho, pelo post e pela etiqueta da
+    capa. Sem isto cada consumidor recortaria `[inicio, fim]` por conta propria e
+    levaria a fala do BURACO — o material que o operador tirou fora. O sintoma
+    nao seria erro: seria o modelo prometendo um assunto que o video nao contem.
+    """
+    fatias = segmentos_short.de_json(short.segmentos)
+    janelas = [
+        (segmento.inicio_seg, segmento.fim_seg, offset)
+        for segmento, offset in segmentos_short.com_offsets(
+            fatias, inicio_seg=float(short.inicio_seg), fim_seg=float(short.fim_seg)
+        )
+    ]
+    return recortar_transcricao_varios(transcricao, janelas)
+
+
+def _duracao_do_short(short: Short) -> float:
+    """Quanto tempo de VIDEO o short tem. Com colagem, a soma; sem, o span."""
+    return segmentos_short.duracao_liquida(
+        segmentos_short.de_json(short.segmentos),
+        inicio_seg=float(short.inicio_seg),
+        fim_seg=float(short.fim_seg),
+    )
 
 
 def _validar_bordas(inicio: float, fim: float, corte: Corte | None) -> None:
@@ -1049,9 +1182,21 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "gancho_ate_seg": short.gancho_ate_seg,
         "gancho_cor": short.gancho_cor or "",
         "gancho_realce": short.gancho_realce or "",
+        # D-600: onde a caixa senta neste trecho. 0 = do padrao do corte.
+        "gancho_x": short.gancho_x or 0.0,
+        "gancho_y": short.gancho_y or 0.0,
+        "gancho_largura": short.gancho_largura or 0.0,
         "inicio_seg": short.inicio_seg,
         "fim_seg": short.fim_seg,
-        "duracao_seg": round(short.fim_seg - short.inicio_seg, 2),
+        # D-604: as fatias do bruto que este short toca, na ordem de toque. Lista
+        # vazia = a janela unica acima, que e o caso normal.
+        "segmentos": [s.para_dict() for s in segmentos_short.de_json(short.segmentos)],
+        # A duracao e a LIQUIDA — o que a tela quer dizer quando pergunta "quanto
+        # dura este short". Com buraco no meio, `fim - inicio` mentiria.
+        "duracao_seg": round(_duracao_do_short(short), 2),
+        # E o span, para quem precisa de "de onde a onde no bruto" — a regua
+        # desenha o envelope e os segmentos dentro dele.
+        "envelope_seg": round(float(short.fim_seg) - float(short.inicio_seg), 2),
         "score": short.score,
         "justificativa": short.justificativa,
         "status": short.status,
@@ -1069,6 +1214,10 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "fundo_editorial": short.fundo_editorial,
         "legenda_cor": short.legenda_cor,
         "legenda_fonte": short.legenda_fonte,
+        # D-605: onde a legenda senta neste trecho. 0 = do palco padrao do corte.
+        "legenda_x": short.legenda_x or 0.0,
+        "legenda_y": short.legenda_y or 0.0,
+        "legenda_largura": short.legenda_largura or 0.0,
         "palco_short_preset": short.palco_short_preset,
         "origem": short.origem,
         "cenas": _json_lista(short.cenas_remotion),

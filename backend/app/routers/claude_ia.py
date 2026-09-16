@@ -9,6 +9,7 @@ import logging
 
 from app.database import get_db
 from app.models import Corte, Projeto
+from app.provider_ia import provider_do_modelo
 from app.services import llm_calls_store
 from app.services.claude_ia import ClaudeIaService, ProviderIA
 from fastapi import APIRouter, Depends, HTTPException
@@ -182,6 +183,7 @@ class LlmCallResponse(BaseModel):
     model: str | None = None
     projeto_id: str | None = None
     corte_id: str | None = None
+    short_id: str | None = None
     prompt: str | None = None
     resposta: str | None = None
     tokens_in: int | None = None
@@ -197,10 +199,44 @@ class ListaLlmCallsResponse(BaseModel):
     chamadas: list[LlmCallResponse]
 
 
+class UltimaGeracaoResponse(BaseModel):
+    """Quem fez a última geração de uma etapa, para o selo na tela."""
+
+    provider: str | None = None
+    model: str | None = None
+    ts: str | None = None
+
+
+@router.get("/telemetria/ultima-geracao", response_model=UltimaGeracaoResponse)
+async def ultima_geracao(
+    etapa: str,
+    corte_id: str | None = None,
+    short_id: str | None = None,
+):
+    """A última chamada bem-sucedida desta etapa — de onde sai o selo Claude/Gemini.
+
+    Sai da telemetria, e não de uma coluna por entidade: o nome do modelo já é
+    gravado a cada chamada. Best-effort por natureza — telemetria é acessória e
+    pode faltar; sem registro, a tela simplesmente não mostra selo.
+    """
+    registros = llm_calls_store.listar_llm_calls(
+        etapa=etapa, corte_id=corte_id, short_id=short_id, limite=20
+    )
+    ultima = next((r for r in registros if r["sucesso"]), None)
+    if ultima is None:
+        return UltimaGeracaoResponse()
+    return UltimaGeracaoResponse(
+        provider=provider_do_modelo(ultima["model"]),
+        model=ultima["model"],
+        ts=ultima["ts"],
+    )
+
+
 @router.get("/telemetria/llm-calls", response_model=ListaLlmCallsResponse)
 async def listar_llm_calls(
     projeto_id: str | None = None,
     corte_id: str | None = None,
+    short_id: str | None = None,
     etapa: str | None = None,
     limite: int = 100,
 ):
@@ -210,6 +246,7 @@ async def listar_llm_calls(
     registros = llm_calls_store.listar_llm_calls(
         projeto_id=projeto_id,
         corte_id=corte_id,
+        short_id=short_id,
         etapa=etapa,
         limite=max(1, min(limite, 500)),
     )

@@ -27,7 +27,12 @@ from pathlib import Path
 from app.channel_assets_sync import cor_do_tema
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain import gancho_short, moldura_short
+from app.domain import gancho_short, moldura_short, segmentos_short
+
+# Alias: o servico `legendas_short` (as palavras) ja e importado abaixo, e dois
+# nomes com um `s` de diferenca no mesmo arquivo e erro de leitura esperando.
+from app.domain import legenda_short as lugar_da_legenda
+from app.domain.ffmpeg_basic import build_concat_cmd
 from app.domain.ffmpeg_short import (
     build_composicao_short_cmd,
     build_palco_vertical_cmd,
@@ -158,7 +163,13 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
     """
     contexto = await _montar_contexto(short_id)
     legenda = await legendas_short.montar_do_short(
-        contexto.corte_id, contexto.inicio_seg, contexto.fim_seg
+        contexto.corte_id,
+        contexto.inicio_seg,
+        contexto.fim_seg,
+        # D-604: com a colagem, senao a legenda leria a fala do BURACO — o
+        # material que o operador tirou fora — e o texto seguiria por cima de um
+        # video que pulou.
+        contexto.segmentos,
     )
 
     estagio = "final" if com_filtro else "previa"
@@ -169,14 +180,7 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
     final = saida_dir / nome
 
     ShortsProgress.marcar(short_id, "recorte", "rodando")
-    await _despachar(
-        f"{short_id}_{estagio}_recorte",
-        _comando_do_quadro(contexto, base, com_filtro=com_filtro),
-        cwd=saida_dir,
-        category=WorkerJobCategory.GRADE,
-        timeout=_TIMEOUT_RECORTE_SEG,
-    )
-
+    await _recortar_o_quadro(contexto, base, estagio=estagio, com_filtro=com_filtro)
     ShortsProgress.marcar(short_id, "recorte", "concluido")
 
     props_file = saida_dir / f"camada_{estagio}.props.json"
@@ -190,6 +194,11 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
                 # resolvido pelo renderer — o backend nao conhece a paleta dele.
                 "legendaCor": contexto.legenda_cor,
                 "legendaFonte": contexto.legenda_fonte,
+                # D-605: onde a legenda senta, JA com a heranca resolvida. O
+                # renderer nao conhece a cascata — recebe onde desenhar, e os
+                # defaults sao os numeros que estavam cravados nele, entao um
+                # short gravado antes desta demanda sai igual.
+                "legendaLugar": contexto.legenda_lugar,
                 "duracaoSeg": contexto.duracao_seg,
             },
             ensure_ascii=False,
@@ -262,6 +271,9 @@ class _ContextoRender:
     legenda_cor: str
     # D-563: familia da fonte da legenda, ou "" para a do canal.
     legenda_fonte: str
+    # D-605: `{x, y, largura}` em % do quadro — x e o centro, y e a BASE. Sempre
+    # preenchido: a heranca e resolvida em `palco_shorts`, e nunca aqui.
+    legenda_lugar: dict
     # D-481: a resolucao MEDIDA do bruto. Nao tem default de proposito — foi um
     # default (HORIZONTAL) que fez o crop 9:16 ser calculado sobre 1920x1080 num
     # bruto 720p e estourar o quadro.
@@ -277,9 +289,34 @@ class _ContextoRender:
     # o que desenhar — sem regiao, moldura desligada, ou o gerador falhou.
     palco_png: object
 
+    # D-604: as fatias do bruto que este short toca, na ordem de toque. Lista
+    # vazia = a janela unica `[inicio_seg, fim_seg]`, que e o caso normal.
+    segmentos: list[segmentos_short.Segmento]
+
     @property
     def duracao_seg(self) -> float:
-        return round(self.fim_seg - self.inicio_seg, 2)
+        """Quanto tempo de VIDEO o short tem — a SOMA do que toca.
+
+        D-604: era `fim - inicio`, e com buraco no meio essa subtracao mente. Ela
+        alimenta a composicao do Remotion (`duracaoSeg`) e o clamp do gancho: um
+        span de 60s num short de 45s pediria ao Remotion uma composicao maior que
+        o video, e a camada sairia dessincronizada do fim em diante.
+
+        A D-362 congelou renders por exatamente esta troca, no corte.
+        """
+        return round(
+            segmentos_short.duracao_liquida(
+                self.segmentos, inicio_seg=self.inicio_seg, fim_seg=self.fim_seg
+            ),
+            2,
+        )
+
+    @property
+    def cortes_do_bruto(self) -> list[tuple[float, float]]:
+        """Os pares `(inicio, fim)` a recortar, na ordem em que entram no short."""
+        return segmentos_short.para_ffmpeg(
+            self.segmentos, inicio_seg=self.inicio_seg, fim_seg=self.fim_seg
+        )
 
 
 async def _montar_contexto(short_id: str) -> _ContextoRender:
@@ -310,6 +347,7 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
     async with AsyncSessionLocal() as db:
         short = await db.get(Short, short_id)
         corte = await db.get(Corte, short.corte_id)
+        segmentos = _segmentos_que_cabem_no_bruto(short, corte)
 
         return _ContextoRender(
             short_id=short.id,
@@ -322,11 +360,24 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             foco_x=foco_efetivo(short, corte),
             filtro=filtro,
             cenas=[] if not CENAS_LIGADAS else _json_lista(short.cenas_remotion),
+            # D-604: a colagem cortada no fim do bruto de HOJE. A escrita ja
+            # recusou segmento fora do bruto; este corte cobre o bruto REGERADO
+            # mais curto depois — sem ele, o `-ss` de um pedaco apontaria para
+            # depois do fim do arquivo, a colagem sairia mais curta que a
+            # `duracaoSeg` da camada e a legenda dessincronizaria sem erro.
+            segmentos=segmentos,
             # D-570: do PLANO, e nao do short. E la que a heranca do palco do
             # corte foi resolvida; ler do short de novo a ignoraria, e o arquivo
             # sairia com um realce que a previa nao mostrou.
             legenda_cor=palco.get("legenda_cor", ""),
             legenda_fonte=palco.get("legenda_fonte", ""),
+            # D-605: do PLANO tambem, pelo mesmo motivo do paragrafo acima — e la
+            # que a heranca do palco padrao do corte foi resolvida.
+            legenda_lugar=lugar_da_legenda.para_payload(
+                palco.get("legenda_x", 0.0),
+                palco.get("legenda_y", 0.0),
+                palco.get("legenda_largura", 0.0),
+            ),
             gancho=gancho_short.para_payload(
                 short.gancho_tela,
                 # D-594: a duracao tambem herda do gancho padrao do corte.
@@ -342,6 +393,10 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
                 realce=palco.get("gancho_realce", ""),
                 fonte=palco.get("gancho_fonte", ""),
                 tamanho=palco.get("gancho_tamanho", 0.0),
+                # D-600: e onde ele senta no quadro.
+                x=palco.get("gancho_x", 0.0),
+                y=palco.get("gancho_y", 0.0),
+                largura=palco.get("gancho_largura", 0.0),
             ),
             origem=origem,
             plano=palco["plano"],
@@ -489,8 +544,135 @@ def faixas_do_canal(moldura: str) -> list:
     return faixas(moldura, cor_do_tema("verdeMoldura", COR_PADRAO))
 
 
-def _comando_do_quadro(contexto: _ContextoRender, saida: Path, *, com_filtro: bool) -> list[str]:
+async def _recortar_o_quadro(
+    contexto: _ContextoRender, saida: Path, *, estagio: str, com_filtro: bool
+) -> None:
+    """O video do short, montado a partir de um ou de N pedacos do bruto (D-604).
+
+    UM segmento e o caminho de sempre: um comando, nenhum arquivo intermediario,
+    saida byte a byte igual a de antes desta demanda. Esse caso e a esmagadora
+    maioria dos shorts, e nao podia pagar nada pela existencia do outro.
+
+    N segmentos rodam o MESMO comando de quadro uma vez por pedaco e colam os
+    resultados com o concat demuxer (`-c copy`, sem re-encodar). Duas alternativas
+    foram descartadas:
+
+    - **Trims dentro do filter_complex do palco.** O grafo do palco ja tem base,
+      um crop/scale por regiao e um overlay por instancia; multiplicar isso por N
+      segmentos e o caminho que a D-065 ja mediu estourando a RAM no horizontal.
+    - **Recortar o bruto primeiro e montar o palco depois.** Dobraria os encodes
+      (um para colar, outro para o palco) sem ganhar nada.
+
+    O total de frames e o mesmo de um recorte unico, entao o custo de compute nao
+    muda — o que se paga sao N processos em vez de um, e o mux final por copia.
+
+    A ORDEM e a da lista, nao a do relogio: e assim que abrir com o gancho que
+    vem depois na live funciona sem caso especial.
+    """
+    cortes = contexto.cortes_do_bruto
+
+    if len(cortes) == 1:
+        inicio, fim = cortes[0]
+        await _despachar(
+            f"{contexto.short_id}_{estagio}_recorte",
+            _comando_do_quadro(
+                contexto,
+                saida,
+                inicio_seg=inicio,
+                duracao_seg=round(fim - inicio, 3),
+                com_filtro=com_filtro,
+            ),
+            cwd=saida.parent,
+            category=WorkerJobCategory.GRADE,
+            timeout=_TIMEOUT_RECORTE_SEG,
+        )
+        return
+
+    logger.info(
+        "[RenderShort] short=%s colando %d segmentos: %s",
+        contexto.short_id[:8],
+        len(cortes),
+        " + ".join(f"{i:.1f}-{f:.1f}s" for i, f in cortes),
+    )
+
+    pedacos: list[Path] = []
+    for indice, (inicio, fim) in enumerate(cortes):
+        pedaco = saida.parent / f"{saida.stem}_seg{indice}.mp4"
+        await _despachar(
+            f"{contexto.short_id}_{estagio}_recorte_{indice}",
+            _comando_do_quadro(
+                contexto,
+                pedaco,
+                inicio_seg=inicio,
+                duracao_seg=round(fim - inicio, 3),
+                com_filtro=com_filtro,
+            ),
+            cwd=saida.parent,
+            category=WorkerJobCategory.GRADE,
+            # O timeout e por PEDACO, e nao para a colagem toda: cada um dura uma
+            # fracao do short, e um teto compartilhado faria o ultimo segmento
+            # herdar o tempo que os outros gastaram.
+            timeout=_TIMEOUT_RECORTE_SEG,
+        )
+        pedacos.append(pedaco)
+
+    lista = saida.parent / f"{saida.stem}_concat.txt"
+    # Caminho absoluto e `-safe 0` no comando: os pedacos moram no diretorio do
+    # short, e caminho relativo num ffconcat e resolvido contra o ARQUIVO DE
+    # LISTA, nao contra o cwd — uma pegadinha que so aparece quando alguem muda
+    # o cwd do worker.
+    linhas = [f"file '{p.as_posix()}'" for p in pedacos]
+    lista.write_text("\n".join(linhas), encoding="utf-8")
+
+    await _despachar(
+        f"{contexto.short_id}_{estagio}_colagem",
+        build_concat_cmd(lista, saida),
+        cwd=saida.parent,
+        category=WorkerJobCategory.GRADE,
+        timeout=_TIMEOUT_RECORTE_SEG,
+    )
+
+    # Os pedacos nao sobrevivem a colagem: um short de 12 segmentos deixaria 12
+    # MP4s por estagio no diretorio do projeto, e o operador nao tem como saber
+    # que sao descartaveis. A lista fica — ela e diagnostico barato de por que a
+    # colagem saiu na ordem que saiu.
+    for pedaco in pedacos:
+        pedaco.unlink(missing_ok=True)
+
+
+def _segmentos_que_cabem_no_bruto(short: Short, corte: Corte) -> list[segmentos_short.Segmento]:
+    """A colagem do short cortada no fim do bruto de HOJE (D-604).
+
+    Levanta quando a colagem existia e NADA dela cabe mais no arquivo. Devolver a
+    lista vazia ali seria o pior silencio possivel: vazio significa "a janela
+    unica", e a janela unica de um short colado e o envelope — com o buraco
+    DENTRO. O render sairia com exatamente o material que o operador tirou fora.
+    """
+    gravados = segmentos_short.de_json(short.segmentos)
+    limite = float(corte.duracao_clip_seg or 0.0) or None
+    cabem = segmentos_short.normalizar(short.segmentos, limite_seg=limite)
+    if gravados and not cabem:
+        raise ValueError(
+            "O bruto foi regerado mais curto e nenhum segmento deste short cabe mais "
+            "nele — marque os segmentos de novo na regua."
+        )
+    return cabem
+
+
+def _comando_do_quadro(
+    contexto: _ContextoRender,
+    saida: Path,
+    *,
+    inicio_seg: float,
+    duracao_seg: float,
+    com_filtro: bool,
+) -> list[str]:
     """O palco quando ha regiao; o recorte 9:16 do quadro cru quando nao ha.
+
+    D-604: a janela vem por PARAMETRO, e nao mais do contexto. Um short pode ser
+    varios pedacos do bruto, e cada um chama isto com a sua janela — o palco, o
+    filtro e o foco sao os mesmos em todos, porque o palco e do short e nao do
+    segmento.
 
     Degradar e melhor que falhar: um corte sem preset aplicado continua virando
     short, do jeito que virava antes. Mas o log diz que foi degradacao — sem
@@ -507,8 +689,8 @@ def _comando_do_quadro(contexto: _ContextoRender, saida: Path, *, com_filtro: bo
         return build_recorte_vertical_cmd(
             contexto.bruto,
             saida,
-            inicio_seg=contexto.inicio_seg,
-            duracao_seg=contexto.duracao_seg,
+            inicio_seg=inicio_seg,
+            duracao_seg=duracao_seg,
             foco_x=contexto.foco_x,
             filtro=filtro,
             origem=contexto.origem,
@@ -524,8 +706,8 @@ def _comando_do_quadro(contexto: _ContextoRender, saida: Path, *, com_filtro: bo
     return build_palco_vertical_cmd(
         contexto.bruto,
         saida,
-        inicio_seg=contexto.inicio_seg,
-        duracao_seg=contexto.duracao_seg,
+        inicio_seg=inicio_seg,
+        duracao_seg=duracao_seg,
         plano=contexto.plano,
         moldura=contexto.moldura,
         fundo_cor=contexto.fundo,

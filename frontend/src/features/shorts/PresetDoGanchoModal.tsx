@@ -23,9 +23,15 @@ import {
   TAMANHO_MIN,
   TAMANHO_PASSO,
   tamanhoEfetivo,
+  LARGURA_MAX,
+  LARGURA_MIN,
+  LARGURA_PASSO,
+  lugarEfetivo,
+  type LugarDoGancho,
 } from './ganchoDoShort';
 import { GanchoPrevia } from './GanchoPrevia';
 import { FONTES_DA_LEGENDA, LegendaPrevia } from './LegendaPrevia';
+import { lugarDaLegenda } from './previaLegenda';
 import { PalcoPrevia } from './PalcoPrevia';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
 import { useDefinirGanchoPadrao, useInvalidarPadroes } from './useShortsDoCorte';
@@ -106,6 +112,11 @@ function EditorDoPresetDeGancho({
   const [fonte, setFonte] = useState(inicial.fonte ?? '');
   const [tamanho, setTamanho] = useState(() => tamanhoEfetivo(inicial.tamanho));
   const [duracao, setDuracao] = useState(() => duracaoEfetiva(inicial.duracao));
+  // D-600: o preset guarda o lugar PADRÃO do corte. O estado nasce resolvido
+  // (o preset antigo não tem os campos e cai no ponto fixo de sempre) porque
+  // aqui, ao contrário do modal do trecho, não há herança acima para preservar
+  // — este É o padrão, e o que ele mostra é o que ele vai gravar.
+  const [lugar, setLugar] = useState<LugarDoGancho>(() => lugarEfetivo(inicial, null));
   // Quem abre o editor pelo menu de padrões quer, quase sempre, o resultado
   // valendo para o corte. Desmarcar é a exceção.
   const [virarPadrao, setVirarPadrao] = useState(true);
@@ -120,7 +131,7 @@ function EditorDoPresetDeGancho({
   const erro = (salvar.error ?? regravar.error ?? definirPadrao.error ?? apagar.error)?.message;
 
   const onSalvar = async () => {
-    const payload: GanchoShortPreset = { cor, realce, fonte, tamanho, duracao };
+    const payload: GanchoShortPreset = { cor, realce, fonte, tamanho, duracao, ...lugar };
     try {
       const salvo = preset
         ? await regravar.mutateAsync({ id: preset.id, body: { nome: nome.trim(), payload } })
@@ -161,6 +172,8 @@ function EditorDoPresetDeGancho({
         realce={realce}
         fonte={fonte}
         tamanho={tamanho}
+        lugar={lugar}
+        onMover={setLugar}
       />
       {amostra && palavras.length > 0 && (
         <LegendaPrevia
@@ -170,6 +183,13 @@ function EditorDoPresetDeGancho({
           tempoAtualSeg={tempoDaPrevia}
           cor={amostra.legenda_cor}
           fonte={amostra.legenda_fonte}
+          segmentos={amostra.segmentos}
+          // D-605: no lugar dela, para o gancho ser posicionado sabendo onde a
+          // legenda está de verdade neste trecho.
+          lugar={lugarDaLegenda(
+            { x: plano?.legenda_x, y: plano?.legenda_y, largura: plano?.legenda_largura },
+            amostra,
+          )}
         />
       )}
     </>
@@ -288,6 +308,36 @@ function EditorDoPresetDeGancho({
               />
             </Campo>
           </div>
+
+          {/* D-600: o lugar que todos os trechos do corte herdam. O gesto é
+              arrastar na prévia ao lado; aqui fica a largura, que não tem alça,
+              e o par de números, que é o que dá para repetir noutro preset. */}
+          <Campo titulo="Onde ele fica">
+            <div className="space-y-1.5">
+              <Passo
+                rotulo={`${Math.round(lugar.largura)}% de largura`}
+                menos={() =>
+                  setLugar((v) => ({
+                    ...v,
+                    largura: Math.max(LARGURA_MIN, v.largura - LARGURA_PASSO),
+                  }))
+                }
+                mais={() =>
+                  setLugar((v) => ({
+                    ...v,
+                    largura: Math.min(LARGURA_MAX, v.largura + LARGURA_PASSO),
+                  }))
+                }
+                noMinimo={lugar.largura <= LARGURA_MIN}
+                noMaximo={lugar.largura >= LARGURA_MAX}
+                nome="a largura da caixa"
+              />
+              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+                Arraste o gancho na prévia ao lado — está em {Math.round(lugar.x)}% /{' '}
+                {Math.round(lugar.y)}% do quadro. Cada trecho ainda pode mover o seu.
+              </p>
+            </div>
+          </Campo>
 
           <Campo titulo="Guardar o preset">
             <div className="flex flex-wrap items-center gap-1.5">

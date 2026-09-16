@@ -108,15 +108,16 @@ def _campos_v2_da_proposta(corte_data: dict) -> dict:
 
 
 def _com_origem_de_analise(desvio: dict, origem: str) -> dict:
-    """D-302: desvio proposto pela análise interna herda `origem='claude'` — é
-    o que o torna revisável pela 2ª passada (trechos-expert) e o conta como
-    IA na telemetria. Import manual (`origem='manual'`) fica sem rótulo (o
-    editor assume a proveniência ⇒ protegido de revisão), e um desvio que já
-    traga `origem` própria é respeitado.
+    """D-302: desvio proposto pela análise interna herda o nome do PROVIDER que
+    o propôs ("claude"/"gemini") — é o que o torna revisável pela 2ª passada
+    (trechos-expert), o conta como IA na telemetria e deixa a tela dizer quem
+    gerou. Import manual (`origem='manual'`) fica sem rótulo (o editor assume a
+    proveniência ⇒ protegido de revisão), e um desvio que já traga `origem`
+    própria é respeitado.
     """
-    if desvio.get("origem") or origem != "claude":
+    if desvio.get("origem") or origem == "manual":
         return desvio
-    return {**desvio, "origem": "claude"}
+    return {**desvio, "origem": origem}
 
 
 PROMPT_ANALISE_TRANSCRICAO = """\

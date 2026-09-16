@@ -346,6 +346,53 @@ async def test_confirmar_a_mao_fecha_o_item_do_destino_manual(ambiente):
 
 
 @pytest.mark.asyncio
+async def test_confirmar_a_mao_fecha_o_item_que_deu_erro(ambiente):
+    """D-603: o robô quebrou no meio e ele terminou no app — isso é publicado."""
+    _, raias = ambiente
+    destinos.registrar(_DestinoQueFalha(Plataforma.TIKTOK))
+
+    lote = await lote_svc.criar(
+        alvos=[(lote_svc.ALVO_SHORT, "s1")], plataformas=[Plataforma.TIKTOK]
+    )
+    await _rodar(raias)
+    assert lote.itens[0].estado is EstadoItem.ERRO
+
+    assert await lote_svc.confirmar("s1", Plataforma.TIKTOK) is True
+    assert lote.itens[0].estado is EstadoItem.PUBLICADO
+
+    assert await lote_svc._ja_publicados(["s1"]) == {"s1": {Plataforma.TIKTOK.value}}
+
+
+@pytest.mark.asyncio
+async def test_confirmar_a_mao_nasce_sem_lote_nenhum(ambiente):
+    """D-603: publicou direto no celular, sem nunca ter passado por um lote."""
+    assert (
+        await lote_svc.confirmar(
+            "s1", Plataforma.INSTAGRAM_REELS, url="https://instagram.com/reel/x"
+        )
+        is True
+    )
+
+    async with lote_svc.AsyncSessionLocal() as db:
+        registro = (await db.execute(select(PublicacaoShort))).scalars().one()
+    assert registro.alvo_tipo == lote_svc.ALVO_SHORT
+    assert registro.estado == EstadoItem.PUBLICADO.value
+    assert registro.publicado_em is not None
+    assert registro.url == "https://instagram.com/reel/x"
+
+
+@pytest.mark.asyncio
+async def test_confirmar_duas_vezes_nao_conta_duas_publicacoes(ambiente):
+    """A cota do dia é contada por `publicado_em`: duplicar inflaria a conta."""
+    await lote_svc.confirmar("s1", Plataforma.INSTAGRAM_REELS)
+    await lote_svc.confirmar("s1", Plataforma.INSTAGRAM_REELS)
+
+    async with lote_svc.AsyncSessionLocal() as db:
+        linhas = (await db.execute(select(PublicacaoShort))).scalars().all()
+    assert len(linhas) == 1
+
+
+@pytest.mark.asyncio
 async def test_um_lote_de_cada_vez(ambiente):
     """Um operador, um Chrome, uma conta: dois lotes disputariam a mesma aba."""
     _, raias = ambiente

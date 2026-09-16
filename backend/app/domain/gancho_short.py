@@ -75,6 +75,40 @@ TAMANHO_PADRAO = 1.0
 TAMANHO_MIN = 0.7
 TAMANHO_MAX = 1.6
 
+# D-600: ONDE o gancho senta no quadro, e que largura ele ocupa.
+#
+# Ate aqui o lugar era lei do codigo: topo da safe zone, centralizado, com 7% de
+# margem de cada lado. Isso funcionou enquanto o palco era um so; com arranjos
+# diferentes, o ponto fixo cai em cima da cara de alguem num short e sobra
+# deserto no seguinte. Quem ve o trecho e o operador, e a decisao de onde a
+# promessa cabe e dele.
+#
+# Guardamos PORCENTAGEM do quadro, e nao pixel, pela mesma razao do `tamanho`: o
+# gancho e desenhado num quadro de 1080x1920 no render e numa janela de 220px na
+# previa, e so uma proporcao significa a mesma coisa nos dois.
+#
+# `x` e o CENTRO da caixa e `y` e o TOPO dela. Centro no horizontal porque o
+# texto e centralizado e cresce para os dois lados — ancorar pela esquerda faria
+# a frase escorregar ao trocar de palavra. Topo no vertical porque o texto cresce
+# para BAIXO ao virar tres linhas, e ancorar pelo meio moveria a primeira linha
+# a cada palavra digitada.
+POSICAO_X_PADRAO = 50.0
+POSICAO_Y_PADRAO = 18.0  # a SAFE_ZONE do renderer, que era o valor fixo de antes
+LARGURA_PADRAO = 86.0  # 100 - 7 - 7, as margens que o codigo tinha embutidas
+
+# A caixa pode ir quase ate a borda, mas nao PARA FORA dela: um gancho com metade
+# das letras cortadas nao e uma escolha editorial, e um render perdido.
+POSICAO_X_MIN = 10.0
+POSICAO_X_MAX = 90.0
+POSICAO_Y_MIN = 0.0
+POSICAO_Y_MAX = 88.0
+
+# Abaixo de 25% a frase de sete palavras vira uma coluna de uma palavra por
+# linha. Acima de 100% ela sairia do quadro.
+LARGURA_MIN = 25.0
+LARGURA_MAX = 100.0
+
+
 # D-594: a familia da fonte e guardada pelo NOME, como a da legenda (D-563) —
 # quem desenha e a previa e o Remotion, e o nome ja e o valor nos dois. O teto
 # so barra lixo; quem sabe se a familia existe e o renderer, que degrada para a
@@ -212,6 +246,62 @@ def normalizar_tamanho(valor: object) -> float:
     return round(min(max(tamanho, TAMANHO_MIN), TAMANHO_MAX), 2)
 
 
+def _na_faixa(valor: object, padrao: float, minimo: float, maximo: float) -> float:
+    """Um numero de layout encaixado na faixa util. Ausente, zero ou torto = padrao.
+
+    Zero cai no padrao de proposito: ele e o "nao decidi" desta demanda inteira,
+    igual ao que `tamanho` e `duracao` ja faziam. O topo absoluto do quadro (y=0)
+    fica de fora do vocabulario por isso — e como o de fora da safe zone, nao e
+    lugar de gancho nenhum.
+    """
+    try:
+        numero = float(valor)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return padrao
+    if numero <= 0:
+        return padrao
+    return round(min(max(numero, minimo), maximo), 2)
+
+
+def normalizar_x(valor: object) -> float:
+    """O centro horizontal da caixa, em % da largura. Ausente = centralizado.
+
+    >>> normalizar_x(30)
+    30.0
+    >>> normalizar_x(120)
+    90.0
+    >>> normalizar_x(None)
+    50.0
+    """
+    return _na_faixa(valor, POSICAO_X_PADRAO, POSICAO_X_MIN, POSICAO_X_MAX)
+
+
+def normalizar_y(valor: object) -> float:
+    """O topo da caixa, em % da altura. Ausente = o alto da safe zone de sempre.
+
+    >>> normalizar_y(60)
+    60.0
+    >>> normalizar_y(99)
+    88.0
+    >>> normalizar_y(None)
+    18.0
+    """
+    return _na_faixa(valor, POSICAO_Y_PADRAO, POSICAO_Y_MIN, POSICAO_Y_MAX)
+
+
+def normalizar_largura(valor: object) -> float:
+    """A largura da caixa, em % da largura do quadro. Ausente = os 86% de sempre.
+
+    >>> normalizar_largura(50)
+    50.0
+    >>> normalizar_largura(5)
+    25.0
+    >>> normalizar_largura(None)
+    86.0
+    """
+    return _na_faixa(valor, LARGURA_PADRAO, LARGURA_MIN, LARGURA_MAX)
+
+
 def normalizar_fonte(valor: object) -> str:
     """O nome da familia, sem espaco nas pontas. "" = a fonte do canal.
 
@@ -230,10 +320,12 @@ def normalizar_preset(payload: dict) -> dict:
     Materializar os defaults aqui congelaria o sistema do dia em que o preset
     foi salvo, a mesma armadilha que a cascata de layout ja registrou.
 
-    >>> normalizar_preset({'cor': 'FACC15', 'realce': 'caixa', 'tamanho': 1.2})
-    {'cor': '#facc15', 'realce': 'caixa', 'fonte': '', 'tamanho': 1.2, 'duracao': 0.0}
-    >>> normalizar_preset({})
-    {'cor': '', 'realce': '', 'fonte': '', 'tamanho': 0.0, 'duracao': 0.0}
+    >>> normalizar_preset({'cor': 'FACC15', 'realce': 'caixa', 'tamanho': 1.2})['cor']
+    '#facc15'
+    >>> normalizar_preset({'y': 60, 'largura': 50})['y']
+    60.0
+    >>> normalizar_preset({})['largura']
+    0.0
     """
     realce = str(payload.get("realce") or "").strip().lower()
     return {
@@ -242,6 +334,13 @@ def normalizar_preset(payload: dict) -> dict:
         "fonte": normalizar_fonte(payload.get("fonte")),
         "tamanho": normalizar_tamanho(payload["tamanho"]) if payload.get("tamanho") else 0.0,
         "duracao": normalizar_duracao(payload["duracao"]) if payload.get("duracao") else 0.0,
+        # D-600: o lugar tambem e parcial. Um preset salvo antes desta demanda
+        # volta com 0 aqui, e 0 significa "este preset nao decide onde" — o
+        # gancho continua saindo no ponto fixo de sempre, que e exatamente o
+        # comportamento que ele tinha quando foi salvo.
+        "x": normalizar_x(payload["x"]) if payload.get("x") else 0.0,
+        "y": normalizar_y(payload["y"]) if payload.get("y") else 0.0,
+        "largura": normalizar_largura(payload["largura"]) if payload.get("largura") else 0.0,
     }
 
 
@@ -259,10 +358,20 @@ def aparencia_resolvida(proprio: dict, padrao: dict | None) -> dict:
 
     O TEXTO fica de fora, e tem de ficar: cada short promete uma coisa.
 
-    >>> aparencia_resolvida({'cor': '', 'realce': 'caixa', 'ate_seg': 0}, {'cor': '#facc15', 'realce': 'sombra', 'duracao': 3.0})
-    {'cor': '#facc15', 'realce': 'caixa', 'ate_seg': 3.0, 'fonte': '', 'tamanho': 0.0}
-    >>> aparencia_resolvida({'cor': '#ff5a72'}, None)
-    {'cor': '#ff5a72', 'realce': '', 'ate_seg': 0.0, 'fonte': '', 'tamanho': 0.0}
+    D-600: `x`, `y` e `largura` sao a excecao a regra do paragrafo acima — eles
+    existem nos DOIS lados. O corpo e a fonte sao identidade do canal e por isso
+    moram so no preset; o LUGAR depende do que esta no quadro, e o quadro muda a
+    cada trecho. Um palco com a pessoa a esquerda e outro com ela no centro
+    pedem ganchos em pontos diferentes do MESMO corte.
+
+    >>> aparencia_resolvida({'cor': '', 'realce': 'caixa', 'ate_seg': 0}, {'cor': '#facc15', 'realce': 'sombra', 'duracao': 3.0})['realce']
+    'caixa'
+    >>> aparencia_resolvida({'y': 0}, {'y': 60.0})['y']
+    60.0
+    >>> aparencia_resolvida({'y': 30.0}, {'y': 60.0})['y']
+    30.0
+    >>> aparencia_resolvida({'cor': '#ff5a72'}, None)['x']
+    0.0
     """
     base = padrao or {}
     return {
@@ -271,6 +380,9 @@ def aparencia_resolvida(proprio: dict, padrao: dict | None) -> dict:
         "ate_seg": float(proprio.get("ate_seg") or base.get("duracao") or 0.0),
         "fonte": base.get("fonte") or "",
         "tamanho": float(base.get("tamanho") or 0.0),
+        "x": float(proprio.get("x") or base.get("x") or 0.0),
+        "y": float(proprio.get("y") or base.get("y") or 0.0),
+        "largura": float(proprio.get("largura") or base.get("largura") or 0.0),
     }
 
 
@@ -283,6 +395,9 @@ def para_payload(
     realce: object = "",
     fonte: object = "",
     tamanho: object = 0.0,
+    x: object = 0.0,
+    y: object = 0.0,
+    largura: object = 0.0,
 ) -> dict | None:
     """O gancho como o renderer o consome, ou `None` quando nao ha gancho.
 
@@ -294,8 +409,12 @@ def para_payload(
     gancho de 2,5s pediria ao Remotion uma sequencia maior que a composicao — e
     o sintoma seria um erro de render, nao um gancho comprido.
 
-    >>> para_payload('ninguem te conta isso', 2.5, duracao_short_seg=30.0)
-    {'texto': 'ninguem te conta isso', 'ateSeg': 2.5, 'cor': '', 'realce': 'veu', 'fonte': '', 'tamanho': 1.0}
+    >>> para_payload('ninguem te conta isso', 2.5, duracao_short_seg=30.0)['ateSeg']
+    2.5
+    >>> para_payload('oi', 2.5, duracao_short_seg=30.0, y=60)['y']
+    60.0
+    >>> para_payload('oi', 2.5, duracao_short_seg=30.0)['y']
+    18.0
     >>> para_payload('  ', 2.5, duracao_short_seg=30.0) is None
     True
     >>> para_payload('oi', 5.0, duracao_short_seg=3.0)['ateSeg']
@@ -320,6 +439,13 @@ def para_payload(
         "realce": normalizar_realce(realce),
         "fonte": normalizar_fonte(fonte),
         "tamanho": normalizar_tamanho(tamanho),
+        # D-600: o lugar chega aqui ja resolvido, e sai SEMPRE preenchido. O
+        # renderer nao deve conhecer a regra de heranca — ele recebe onde
+        # desenhar, e os defaults sao os numeros que estavam cravados nele ate
+        # esta demanda, entao um short antigo sai pixel a pixel como saia.
+        "x": normalizar_x(x),
+        "y": normalizar_y(y),
+        "largura": normalizar_largura(largura),
     }
 
 

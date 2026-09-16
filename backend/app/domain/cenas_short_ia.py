@@ -111,6 +111,43 @@ def recortar_transcricao(segmentos: list[dict], inicio_seg: float, fim_seg: floa
     return recortados
 
 
+def recortar_transcricao_varios(
+    segmentos: list[dict], janelas: list[tuple[float, float, float]]
+) -> list[dict]:
+    """A fala de VARIAS janelas, cada uma no lugar que ocupa no short (D-604).
+
+    Existe porque um short passou a poder ser uma colagem de pedacos
+    descontinuos, e todo consumidor de IA daqui — as cenas, o gancho, o post, a
+    etiqueta da capa — recebia a janela inteira `[inicio, fim]`.
+
+    Com buraco no meio, aquela janela inclui a fala que o operador TIROU FORA. O
+    defeito nao seria um erro: seria o modelo prometendo no gancho um assunto que
+    o video nao contem, e ninguem ligando uma coisa a outra.
+
+    Cada janela e `(inicio, fim, offset)` — onde ela pega no bruto e em que
+    instante do SHORT ela entra. A ordem e a das janelas (o short pode abrir com
+    o pedaco que vem depois na live); a saida sai ordenada pelo tempo do short.
+
+    Exemplo — a fala dos 12s abre, e a dos 2s vem depois:
+        >>> fala = [
+        ...     {"start": 2.0, "fim": 4.0, "texto": "primeira"},
+        ...     {"start": 12.0, "fim": 14.0, "texto": "segunda"},
+        ... ]
+        >>> recortar_transcricao_varios(fala, [(10.0, 20.0, 0.0), (0.0, 5.0, 10.0)])
+        [{'start': 2.0, 'fim': 14.0, 'texto': 'segunda'}, {'start': 12.0, 'fim': 4.0, 'texto': 'primeira'}]
+
+    Uma janela so devolve o mesmo que `recortar_transcricao`:
+        >>> recortar_transcricao_varios(fala, [(0.0, 5.0, 0.0)])
+        [{'start': 2.0, 'fim': 4.0, 'texto': 'primeira'}]
+    """
+    recortados: list[dict] = []
+    for inicio, fim, offset in janelas:
+        for copia in recortar_transcricao(segmentos, inicio, fim):
+            copia["start"] = round(copia["start"] + offset, 2)
+            recortados.append(copia)
+    return sorted(recortados, key=lambda c: c["start"])
+
+
 def normalizar_sugestoes(resposta: object, *, duracao_short: float) -> ResultadoCenas:
     """Valida o JSON do modelo e devolve as cenas utilizáveis, em ordem de tempo.
 

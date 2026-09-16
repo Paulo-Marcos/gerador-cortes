@@ -21,8 +21,10 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ClaudeAiButton } from '@/components/ui/claude-button';
-import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { IconButton } from '@/components/ui/icon-button';
 import { Modal } from '@/components/ui/modal';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
@@ -189,6 +191,9 @@ export function MetadataCard({
   // para só o botão dele girar e o outro não abrir uma segunda geração.
   const metadadosEmVoo = providerEmVoo(generateMetadataClaude);
   const promptCapaEmVoo = providerEmVoo(generatePromptThumbnailClaude);
+  const ultimaMeta = useUltimaGeracao('metadados-expert', { corteId: cut.id });
+  const metaGeradaPor =
+    generateMetadataClaude.variables ?? ultimaMeta.data?.provider ?? null;
 
   const generateThumbnail = useMutation({
     mutationFn: () => api.gerarThumbnail(cut.id),
@@ -465,19 +470,12 @@ export function MetadataCard({
               Comece pela geracao automatica ou abra o fluxo manual com IA.
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <ClaudeAiButton
-                size="md"
-                pending={metadadosEmVoo === 'claude'}
-                disabled={metadadosEmVoo === 'gemini'}
-                onClick={() => generateMetadataClaude.mutate('claude')}
-                title="Gerar metadados via Claude"
-              />
-              <GeminiAiButton
-                size="md"
-                pending={metadadosEmVoo === 'gemini'}
-                disabled={metadadosEmVoo === 'claude'}
-                onClick={() => generateMetadataClaude.mutate('gemini')}
-                title="Gerar metadados via Gemini"
+              <AcaoDeIa
+                rotulo="Gerar metadados"
+                tamanho="md"
+                destaque
+                emVoo={metadadosEmVoo}
+                onGerar={(provider) => generateMetadataClaude.mutate(provider)}
               />
               <Button
                 type="button"
@@ -524,14 +522,13 @@ export function MetadataCard({
                 ))}
               </ModalSuggestionRow>
               <ModalActionRow>
-                <ModalActionButton
-                  accent
-                  icon={Sparkles}
-                  pending={metadadosEmVoo !== null}
-                  onClick={() => generateMetadataClaude.mutate('claude')}
-                >
-                  Regerar por IA
-                </ModalActionButton>
+                <AcaoDeIa
+                  rotulo="Regerar metadados"
+                  destaque
+                  emVoo={metadadosEmVoo}
+                  onGerar={(provider) => generateMetadataClaude.mutate(provider)}
+                  className="h-8"
+                />
                 <ModalActionButton icon={Wand2} onClick={() => setManualKind('metadata')}>
                   Manual
                 </ModalActionButton>
@@ -567,14 +564,13 @@ export function MetadataCard({
                 ))}
               </ModalSuggestionRow>
               <ModalActionRow>
-                <ModalActionButton
-                  accent
-                  icon={Sparkles}
-                  pending={generatePromptThumbnailClaude.isPending}
-                  onClick={() => generatePromptThumbnailClaude.mutate('claude')}
-                >
-                  {promptReady ? 'Regerar' : 'Gerar'} prompt da capa
-                </ModalActionButton>
+                <AcaoDeIa
+                  rotulo={promptReady ? 'Regerar prompt da capa' : 'Gerar prompt da capa'}
+                  destaque
+                  emVoo={promptCapaEmVoo}
+                  onGerar={(provider) => generatePromptThumbnailClaude.mutate(provider)}
+                  className="h-8"
+                />
                 <ModalActionButton
                   icon={Palette}
                   onClick={() => setManualKind('thumbnail-agent-livre')}
@@ -857,11 +853,12 @@ export function MetadataCard({
                 coloridas (que ainda usavam oklch solto, fora dos tokens). O
                 lado AI mantém o laranja oficial da Claude — falso positivo
                 declarado no hand-off, é cor de marca. */}
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap items-end gap-2 pt-1">
               <SegmentedAiManual
                 label="Regerar metadados"
                 emVoo={metadadosEmVoo}
-                aiTitle="Regerar metadados"
+                aiTitle="Regerar"
+                aiDescricao="Regerar metadados"
                 onAi={(provider) => generateMetadataClaude.mutate(provider)}
                 manualIcon={Wand2}
                 onManual={() => setManualKind('metadata')}
@@ -869,11 +866,19 @@ export function MetadataCard({
               <SegmentedAiManual
                 label="Prompt thumbnail"
                 emVoo={promptCapaEmVoo}
-                aiTitle={promptReady ? 'Regerar prompt' : 'Gerar prompt'}
+                aiTitle={promptReady ? 'Regerar' : 'Gerar'}
+                aiDescricao={promptReady ? 'Regerar o prompt da capa' : 'Gerar o prompt da capa'}
                 onAi={(provider) => generatePromptThumbnailClaude.mutate(provider)}
                 manualIcon={Palette}
                 onManual={() => setManualKind('thumbnail-agent-livre')}
               />
+              {!metadadosEmVoo && generated && (
+                <SeloDeProvider
+                  provider={metaGeradaPor}
+                  modelo={ultimaMeta.data?.model}
+                  className="mb-1"
+                />
+              )}
             </div>
 
             {/* F-058: influência manual do editor no prompt da thumbnail. */}
@@ -1124,15 +1129,12 @@ function ModalActionRow({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Ação secundária da linha (o "Manual"). A geração por IA mora no AcaoDeIa.
 function ModalActionButton({
-  accent,
-  pending,
   icon: Icon,
   onClick,
   children,
 }: {
-  accent?: boolean;
-  pending?: boolean;
   icon: LucideIcon;
   onClick: () => void;
   children: React.ReactNode;
@@ -1141,19 +1143,9 @@ function ModalActionButton({
     <button
       type="button"
       onClick={onClick}
-      disabled={pending}
-      className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-[7px] border px-3 text-[12.5px] font-semibold transition-colors disabled:opacity-60',
-        accent
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)] hover:bg-[var(--wb-accent)] hover:text-white'
-          : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
-      )}
+      className="inline-flex h-8 items-center gap-1.5 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-[12.5px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
     >
-      {pending ? (
-        <Loader2 size={14} className="animate-spin" aria-hidden />
-      ) : (
-        <Icon size={14} aria-hidden />
-      )}
+      <Icon size={14} aria-hidden />
       {children}
     </button>
   );
@@ -1249,15 +1241,6 @@ function SuggestionButton({
   );
 }
 
-type ProviderIA = 'claude' | 'gemini';
-
-function providerEmVoo(mutation: {
-  isPending: boolean;
-  variables: ProviderIA | undefined;
-}): ProviderIA | null {
-  return mutation.isPending ? (mutation.variables ?? 'claude') : null;
-}
-
 /**
  * Par AI | Manual em segmented compacto (DE-PARA-v3 §5). Substitui as
  * caixas `ActionGroup` coloridas: mesma função, um terço do peso visual.
@@ -1266,6 +1249,7 @@ function SegmentedAiManual({
   label,
   emVoo,
   aiTitle,
+  aiDescricao,
   onAi,
   manualIcon: ManualIcon,
   onManual,
@@ -1274,7 +1258,9 @@ function SegmentedAiManual({
   /** Qual provider está gerando agora: só ele gira, o outro fica desabilitado. */
   emVoo: ProviderIA | null;
   aiTitle: string;
-  onAi: (provider: 'claude' | 'gemini') => void;
+  /** A ação completa, para leitor de tela e tooltip. */
+  aiDescricao: string;
+  onAi: (provider: ProviderIA) => void;
   manualIcon: LucideIcon;
   onManual: () => void;
 }) {
@@ -1284,23 +1270,12 @@ function SegmentedAiManual({
         {label}
       </span>
       <div className="inline-flex gap-0.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
-        <ClaudeAiButton
-          size="sm"
-          pending={emVoo === 'claude'}
-          disabled={emVoo === 'gemini'}
-          onClick={() => onAi('claude')}
-          className="h-[24px] gap-1 px-2.5 text-[10px]"
-          label="Claude"
-          title={`[Claude] ${aiTitle}`}
-        />
-        <GeminiAiButton
-          size="sm"
-          pending={emVoo === 'gemini'}
-          disabled={emVoo === 'claude'}
-          onClick={() => onAi('gemini')}
-          className="h-[24px] gap-1 px-2.5 text-[10px]"
-          label="Gemini"
-          title={`[Gemini] ${aiTitle}`}
+        <AcaoDeIa
+          rotulo={aiTitle}
+          descricao={aiDescricao}
+          emVoo={emVoo}
+          onGerar={onAi}
+          className="h-[26px] border-0 bg-transparent"
         />
         <button
           type="button"

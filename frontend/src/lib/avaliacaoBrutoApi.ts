@@ -4,6 +4,8 @@
 // de `avaliacaoCorteApi` — que é o irmão HUMANO por corte (D-419).
 // Endpoints em routers/avaliacao_bruto.py.
 
+import type { ProviderIA } from '@/lib/providerIa';
+
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
@@ -79,8 +81,9 @@ export const avaliacaoBrutoApi = {
     ),
 
   /** Reavalia o bruto atual sem regerar o vídeo (o normal é rodar sozinha). */
-  reavaliar: (corteId: string) =>
-    request<{ avaliacao: AvaliacaoBruto }>(`/avaliacao-bruto/corte/${corteId}`, {
-      method: 'POST',
-    }).then((r) => r.avaliacao),
+  reavaliar: (corteId: string, provider: ProviderIA = 'claude') =>
+    request<{ avaliacao: AvaliacaoBruto }>(
+      `/avaliacao-bruto/corte/${corteId}?provider=${provider}`,
+      { method: 'POST' },
+    ).then((r) => r.avaliacao),
 };

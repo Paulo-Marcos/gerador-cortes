@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { avaliacaoBrutoApi, type AvaliacaoBruto } from '@/lib/avaliacaoBrutoApi';
+import type { ProviderIA } from '@/lib/providerIa';
 
 // D-447: estado da avaliação automática da ESTRUTURA do bruto. Hook próprio
 // (não `hooks/useEditor.ts`, sob lock) — a avaliação observa o bruto, não
@@ -30,7 +31,8 @@ export function useHistoricoAvaliacaoBruto(corteId: string | undefined, habilita
 export function useReavaliarBruto(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => avaliacaoBrutoApi.reavaliar(corteId),
+    mutationFn: (provider: ProviderIA = 'claude') =>
+      avaliacaoBrutoApi.reavaliar(corteId, provider),
     onSuccess: (avaliacao: AvaliacaoBruto) => {
       qc.setQueryData(avaliacaoBrutoKey(corteId), avaliacao);
       qc.invalidateQueries({ queryKey: avaliacaoBrutoHistoricoKey(corteId) });

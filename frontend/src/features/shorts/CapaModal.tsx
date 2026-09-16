@@ -1,15 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Camera,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Loader2,
-  Sparkles,
-  Upload,
-} from 'lucide-react';
+import { Camera, Check, ChevronLeft, ChevronRight, Copy, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { providerEmVoo } from '@/lib/providerIa';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { Modal } from '@/components/ui/modal';
 import { capaImagemUrl, shortVideoUrl, type ShortSugerido } from './shortsApi';
 import {
@@ -366,6 +361,9 @@ function ArteDaCapa({
 }) {
   const prompt = usePromptDaCapa(short.id);
   const gerarPrompt = useGerarPromptDaCapa(short.id);
+  const promptEmVoo = providerEmVoo(gerarPrompt);
+  const ultimaCapa = useUltimaGeracao('capa-short-imagem-expert', { shortId: short.id });
+  const capaGeradaPor = gerarPrompt.variables ?? ultimaCapa.data?.provider ?? null;
   const seletor = useRef<HTMLInputElement>(null);
   const [copiado, setCopiado] = useState(false);
 
@@ -395,15 +393,16 @@ function ArteDaCapa({
       <section className="space-y-2">
         <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">1. Gerar o prompt</p>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={gerarPrompt.isPending}
-            onClick={() => gerarPrompt.mutate()}
-          >
-            {gerarPrompt.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {gerarPrompt.isPending ? 'escrevendo…' : texto ? 'Refazer prompt' : 'Gerar prompt'}
-          </Button>
+          <AcaoDeIa
+            rotulo={texto ? 'Refazer prompt' : 'Gerar prompt'}
+            descricao={texto ? 'Refazer o prompt da capa' : 'Gerar o prompt da capa'}
+            rotuloEmVoo="escrevendo…"
+            emVoo={promptEmVoo}
+            onGerar={(provider) => gerarPrompt.mutate(provider)}
+          />
+          {!promptEmVoo && texto && (
+            <SeloDeProvider provider={capaGeradaPor} modelo={ultimaCapa.data?.model} />
+          )}
           {texto && (
             <Button variant="ghost" size="sm" onClick={copiar}>
               {copiado ? <Check /> : <Copy />}

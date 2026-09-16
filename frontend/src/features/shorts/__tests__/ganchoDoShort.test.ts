@@ -25,7 +25,62 @@ import {
   tomDoGancho,
   resumoDaAparenciaPadrao,
   temAparenciaPropria,
+  LARGURA_MAX,
+  LARGURA_MIN,
+  LARGURA_PADRAO,
+  lugarArrastado,
+  lugarEfetivo,
+  POSICAO_X_MAX,
+  POSICAO_X_MIN,
+  POSICAO_X_PADRAO,
+  POSICAO_Y_MAX,
+  POSICAO_Y_PADRAO,
 } from '../ganchoDoShort';
+
+// D-600: a cascata do LUGAR — o trecho decide, senão o padrão do corte, senão o
+// ponto fixo que o renderer usava antes desta demanda.
+describe('lugarEfetivo', () => {
+  it('sem nada decidido, é o lugar de sempre', () => {
+    expect(lugarEfetivo(null, null)).toEqual({
+      x: POSICAO_X_PADRAO,
+      y: POSICAO_Y_PADRAO,
+      largura: LARGURA_PADRAO,
+    });
+  });
+
+  it('o do trecho vence o do padrão, campo a campo', () => {
+    const lugar = lugarEfetivo({ y: 62 }, { x: 30, y: 18, largura: 50 });
+    expect(lugar).toEqual({ x: 30, y: 62, largura: 50 });
+  });
+
+  it('zero é herança, e não o topo do quadro', () => {
+    expect(lugarEfetivo({ x: 0, y: 0, largura: 0 }, { y: 70 }).y).toBe(70);
+  });
+});
+
+describe('lugarArrastado', () => {
+  const partida = { x: 50, y: 40, largura: 86 };
+
+  it('soma o deslocamento em pontos percentuais do quadro', () => {
+    expect(lugarArrastado(partida, 10, -15)).toEqual({ x: 60, y: 25, largura: 86 });
+  });
+
+  it('não deixa a caixa sair do quadro', () => {
+    expect(lugarArrastado(partida, 999, 999)).toEqual({
+      x: POSICAO_X_MAX,
+      y: POSICAO_Y_MAX,
+      largura: 86,
+    });
+    expect(lugarArrastado(partida, -999, 0).x).toBe(POSICAO_X_MIN);
+  });
+
+  it('arrastar até o topo não vira o padrão no meio do gesto', () => {
+    // Zero é herança em todo o resto da tela, mas aqui seria a caixa pulando de
+    // volta para os 18% na mão do operador.
+    expect(lugarArrastado(partida, 0, -999).y).toBeGreaterThan(0);
+    expect(lugarArrastado(partida, 0, -999).y).toBeLessThan(1);
+  });
+});
 
 describe('temAparenciaPropria', () => {
   it('tudo vazio é herança do corte — as opções ficam escondidas', () => {
@@ -95,6 +150,17 @@ describe('acordo com o domínio do backend', () => {
     ['TAMANHO_PADRAO', TAMANHO_PADRAO],
     ['TAMANHO_MIN', TAMANHO_MIN],
     ['TAMANHO_MAX', TAMANHO_MAX],
+    // D-600: o lugar do gancho é a terceira cópia que precisa concordar — a
+    // prévia é onde o operador ARRASTA, e ela só vale como prova se os limites
+    // do arraste forem os mesmos que o backend aceita.
+    ['POSICAO_X_PADRAO', POSICAO_X_PADRAO],
+    ['POSICAO_Y_PADRAO', POSICAO_Y_PADRAO],
+    ['LARGURA_PADRAO', LARGURA_PADRAO],
+    ['POSICAO_X_MIN', POSICAO_X_MIN],
+    ['POSICAO_X_MAX', POSICAO_X_MAX],
+    ['POSICAO_Y_MAX', POSICAO_Y_MAX],
+    ['LARGURA_MIN', LARGURA_MIN],
+    ['LARGURA_MAX', LARGURA_MAX],
   ])('%s é o mesmo dos dois lados', (nome, naTela) => {
     expect(numeroDoDominio(nome)).toBe(naTela);
   });

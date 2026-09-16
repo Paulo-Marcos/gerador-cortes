@@ -406,6 +406,30 @@ class Short(Base):
     titulo_sugerido: Mapped[str] = mapped_column(String(500), default="")
     inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
     fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    # D-604: as FATIAS do bruto que este short toca, na ORDEM EM QUE TOCAM, em
+    # JSON: `[{"inicio_seg": 0, "fim_seg": 30}, {"inicio_seg": 45, "fim_seg": 60}]`.
+    #
+    # `[]` e o caso normal e significa "a janela unica acima" — ausencia como
+    # heranca, a mesma regra do resto do layout. Short gravado antes desta
+    # demanda tem `[]` e se comporta exatamente como antes.
+    #
+    # Coluna JSON, e nao tabela, pela razao que `desvios` (logo abaixo) e
+    # `arranjo` do corte ja provaram: e uma lista de janelas de tempo que so faz
+    # sentido junto do dono, nunca e consultada por si, e cabe inteira numa
+    # leitura do short — uma tabela cobraria um JOIN por candidato na tela que
+    # lista oito deles.
+    #
+    # Quando ha segmentos, `inicio_seg`/`fim_seg` passam a ser o ENVELOPE (o
+    # menor inicio e o maior fim). Nao sao redundancia: e por eles que a regua
+    # sabe onde desenhar o short no bruto e que a deteccao de rosto escolhe a
+    # janela. O que eles deixam de responder e "quanto tempo dura" —
+    # `fim - inicio` MENTE com buraco no meio, e a resposta passou a morar em
+    # `domain/segmentos_short.duracao_liquida`.
+    #
+    # A ORDEM da lista e livre (decisao do operador): ele pode abrir com o
+    # gancho mais forte mesmo que ele venha depois na live. Nada ordena esta
+    # lista, e ordenar seria desfazer a decisao dele em silencio.
+    segmentos: Mapped[str] = mapped_column(Text, default="[]")
     # E-030: o que a IA usa para o operador escolher entre bons candidatos.
     # `gancho` e a frase que precisa segurar os 3 primeiros segundos; `score`
     # ordena a lista; `justificativa` explica a nota (colunas novas sobre as
@@ -450,6 +474,19 @@ class Short(Base):
     # D-581: como o gancho se separa do fundo — veu, caixa, contorno, sombra ou
     # nenhum. Vazio cai no `REALCE_PADRAO` (veu), que e o de antes desta coluna.
     gancho_realce: Mapped[str] = mapped_column(String(20), default="")
+    # D-600: ONDE o gancho senta neste trecho, em % do quadro. 0 = "nao decidi",
+    # e ai vale o lugar do preset de gancho do corte — e, na falta dele, o ponto
+    # fixo que o renderer usava antes desta demanda (topo da safe zone,
+    # centralizado, 86% de largura).
+    #
+    # Por que o lugar e por trecho, se fonte e tamanho nao sao: o corpo e a
+    # fonte sao identidade do canal, iguais nos oito shorts de um corte; o LUGAR
+    # depende do que esta no quadro, e o quadro muda a cada trecho. Um palco com
+    # a pessoa a esquerda e outro com ela centralizada pedem ganchos em pontos
+    # diferentes do mesmo corte.
+    gancho_x: Mapped[float] = mapped_column(Float, default=0.0)
+    gancho_y: Mapped[float] = mapped_column(Float, default=0.0)
+    gancho_largura: Mapped[float] = mapped_column(Float, default=0.0)
     # D-573: as ultimas variacoes que a IA propos, em JSON.
     #
     # A D-565 decidiu NAO gravar o resultado do gerador, e a razao era boa:
@@ -562,6 +599,25 @@ class Short(Base):
     # o valor viaja, e nao uma chave que previa e renderer teriam de traduzir.
     # Vazio — ou uma familia que o renderer nao carrega — cai na fonte do canal.
     legenda_fonte: Mapped[str] = mapped_column(String(60), default="")
+    # D-605: ONDE a legenda senta neste trecho, em % do quadro. 0 = "nao decidi",
+    # e ai vale o lugar do palco padrao do corte — e, na falta dele, o ponto fixo
+    # que o renderer usava antes desta demanda (base no alto da safe zone,
+    # centralizada, 80% de largura).
+    #
+    # O relato que originou isto: "a depender do Palco, ela fica em cima da
+    # pessoa". Quem decide onde a pessoa aparece no vertical e o arranjo do
+    # palco, e por isso o lugar da legenda herda do palco — pela mesma cascata
+    # de `legenda_cor`/`legenda_fonte` logo acima, e nao por uma nova.
+    #
+    # `legenda_x` e o CENTRO da caixa; `legenda_y` e a BASE dela, contada do topo
+    # do quadro. Base e nao topo porque a legenda vira duas ou tres linhas
+    # varias vezes por short: ancorada pela base ela cresce para CIMA e a ultima
+    # linha nunca se move, que e o que o `bottom:` do renderer sempre fez. O
+    # gancho (`gancho_y`) ancora pelo topo pelo motivo simetrico — e um texto so,
+    # digitado ao vivo, e pela base a primeira linha escorregaria a cada palavra.
+    legenda_x: Mapped[float] = mapped_column(Float, default=0.0)
+    legenda_y: Mapped[float] = mapped_column(Float, default=0.0)
+    legenda_largura: Mapped[float] = mapped_column(Float, default=0.0)
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

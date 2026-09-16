@@ -20,6 +20,7 @@ from __future__ import annotations
 import logging
 
 from app.database import AsyncSessionLocal
+from app.domain import segmentos_short
 from app.domain.enquadramento_rosto import Enquadramento, decidir, instantes
 from app.infrastructure.detector_rosto import DeteccaoIndisponivel, detectar_nos_instantes
 from app.models import Corte, Short
@@ -56,6 +57,9 @@ async def enquadrar_pelo_rosto(short_id: str) -> dict:
         inicio, fim = float(short.inicio_seg), float(short.fim_seg)
         if fim <= inicio:
             raise ValueError("O short tem intervalo vazio ou invertido.")
+        # Lido DENTRO da sessao: o `short` nao sobrevive a ela, e ler o atributo
+        # depois do `async with` dispararia um lazy load numa sessao fechada.
+        segmentos_json = short.segmentos
 
         bruto = _bruto_em_disco(corte)
         if bruto is None:
@@ -63,7 +67,22 @@ async def enquadrar_pelo_rosto(short_id: str) -> dict:
                 "O bruto deste corte nao esta mais em disco — sem ele nao da para olhar o rosto."
             )
 
-    momentos = instantes(inicio, fim, QUADROS_AMOSTRADOS)
+    # D-604: os instantes saem do tempo do SHORT e sao traduzidos para o bruto.
+    #
+    # Amostrar ao longo de `[inicio, fim]` cairia DENTRO DO BURACO num short
+    # colado — quadros do material que o operador tirou fora, onde a pessoa pode
+    # estar noutro lugar do enquadramento ou nem aparecer. O foco sairia
+    # enviesado por um trecho que o arquivo nao contem.
+    #
+    # Sem colagem a conta e identica a de antes: `no_bruto(t)` vira
+    # `inicio + t`, e `instantes(0, fim - inicio, N)` mapeado da exatamente os
+    # mesmos numeros que `instantes(inicio, fim, N)` dava.
+    fatias = segmentos_short.de_json(segmentos_json)
+    duracao = segmentos_short.duracao_liquida(fatias, inicio_seg=inicio, fim_seg=fim)
+    momentos = [
+        segmentos_short.no_bruto(instante, fatias, inicio_seg=inicio, fim_seg=fim)
+        for instante in instantes(0.0, duracao, QUADROS_AMOSTRADOS)
+    ]
     quadros = await detectar_nos_instantes(bruto, momentos)
     veredito = decidir(quadros)
 

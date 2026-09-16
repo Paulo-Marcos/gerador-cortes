@@ -571,3 +571,144 @@ class TestSugestoesDeGancho:
         assert _json_textos("nao e json") == []
         assert _json_textos('{"variacoes": []}') == []
         assert _json_textos(None) == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# D-604: o contrato do PATCH da colagem, de ponta a ponta.
+#
+# O domínio já é testado à parte; o que se guarda aqui é o CONTRATO com a tela:
+# que a colagem vai e volta na ordem em que foi mandada, que a duração que a
+# tela lê é a líquida, que o envelope acompanha, e que o erro chega como 422 com
+# a frase que explica — e não como 500 sem texto.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestSegmentosDoShort:
+    @pytest.fixture()
+    def short_id(self, client) -> str:
+        criado = client.post(
+            "/api/shorts/corte/c1",
+            json={"inicio_seg": 10.0, "fim_seg": 40.0},
+        )
+        assert criado.status_code == 200, criado.text
+        return criado.json()["short"]["id"]
+
+    def test_short_novo_nasce_sem_colagem(self, client, short_id):
+        # A não-regressão do contrato: quem não usa segmentos vê a lista vazia e a
+        # duração igual ao span, como sempre.
+        short = client.get("/api/shorts/corte/c1").json()["shorts"][0]
+
+        assert short["segmentos"] == []
+        assert short["duracao_seg"] == 30.0
+        assert short["envelope_seg"] == 30.0
+
+    def test_grava_a_colagem_na_ordem_que_veio(self, client, short_id):
+        # A ordem é do operador: abrir com o pedaço dos 45s, que na live vem
+        # DEPOIS. Um `sorted()` em qualquer camada quebra este teste.
+        resposta = client.patch(
+            f"/api/shorts/{short_id}",
+            json={
+                "segmentos": [
+                    {"inicio_seg": 45.0, "fim_seg": 60.0},
+                    {"inicio_seg": 0.0, "fim_seg": 30.0},
+                ]
+            },
+        )
+
+        assert resposta.status_code == 200, resposta.text
+        short = resposta.json()["short"]
+        assert short["segmentos"] == [
+            {"inicio_seg": 45.0, "fim_seg": 60.0},
+            {"inicio_seg": 0.0, "fim_seg": 30.0},
+        ]
+
+    def test_a_duracao_e_a_liquida_e_o_envelope_acompanha(self, client, short_id):
+        resposta = client.patch(
+            f"/api/shorts/{short_id}",
+            json={
+                "segmentos": [
+                    {"inicio_seg": 0.0, "fim_seg": 30.0},
+                    {"inicio_seg": 45.0, "fim_seg": 60.0},
+                ]
+            },
+        )
+
+        short = resposta.json()["short"]
+        # 30 + 15 de vídeo, dentro de um envelope de 60 — os dois números são
+        # diferentes de propósito, e é o primeiro que a tela mostra.
+        assert short["duracao_seg"] == 45.0
+        assert short["envelope_seg"] == 60.0
+        assert (short["inicio_seg"], short["fim_seg"]) == (0.0, 60.0)
+
+    def test_lista_vazia_desfaz_a_colagem(self, client, short_id):
+        client.patch(
+            f"/api/shorts/{short_id}",
+            json={
+                "segmentos": [
+                    {"inicio_seg": 0.0, "fim_seg": 30.0},
+                    {"inicio_seg": 45.0, "fim_seg": 60.0},
+                ]
+            },
+        )
+
+        volta = client.patch(f"/api/shorts/{short_id}", json={"segmentos": []})
+
+        assert volta.status_code == 200
+        assert volta.json()["short"]["segmentos"] == []
+
+    def test_um_segmento_so_colapsa_na_janela_com_as_bordas_dele(self, client, short_id):
+        # O "tirar o penultimo" da tela: sobrou o 0-30 de uma colagem 0-30 +
+        # 45-60. Sem o colapso, o short ficaria gravado como colagem de um item
+        # (e a regua ofereceria alcas que dao 422); com `[]` no lugar, ficaria o
+        # envelope 0-60 — com o buraco de volta DENTRO.
+        client.patch(
+            f"/api/shorts/{short_id}",
+            json={
+                "segmentos": [
+                    {"inicio_seg": 0.0, "fim_seg": 30.0},
+                    {"inicio_seg": 45.0, "fim_seg": 60.0},
+                ]
+            },
+        )
+
+        sobrou = client.patch(
+            f"/api/shorts/{short_id}",
+            json={"segmentos": [{"inicio_seg": 0.0, "fim_seg": 30.0}]},
+        ).json()["short"]
+
+        assert sobrou["segmentos"] == []
+        assert (sobrou["inicio_seg"], sobrou["fim_seg"]) == (0.0, 30.0)
+        assert sobrou["duracao_seg"] == 30.0
+
+        # E a borda volta a ser arrastavel, porque ele deixou de ser colagem.
+        arrastado = client.patch(f"/api/shorts/{short_id}", json={"inicio_seg": 5.0})
+        assert arrastado.status_code == 200
+
+    def test_segmento_fora_do_bruto_volta_422_com_a_frase(self, client, short_id):
+        # O bruto do corte `c1` tem 120s. Um segmento aos 500s não é um erro de
+        # digitação a ser corrigido em silêncio: é um render perdido.
+        resposta = client.patch(
+            f"/api/shorts/{short_id}",
+            json={"segmentos": [{"inicio_seg": 500.0, "fim_seg": 600.0}]},
+        )
+
+        assert resposta.status_code == 422
+        assert "bruto" in resposta.json()["detail"]
+
+    def test_mexer_na_borda_de_um_short_colado_e_recusado(self, client, short_id):
+        client.patch(
+            f"/api/shorts/{short_id}",
+            json={
+                "segmentos": [
+                    {"inicio_seg": 0.0, "fim_seg": 30.0},
+                    {"inicio_seg": 45.0, "fim_seg": 60.0},
+                ]
+            },
+        )
+
+        # A borda de um short colado é a soma dos segmentos; aceitar o arraste
+        # deixaria o envelope e os segmentos discordando em silêncio.
+        resposta = client.patch(f"/api/shorts/{short_id}", json={"inicio_seg": 5.0})
+
+        assert resposta.status_code == 422
+        assert "segmentos" in resposta.json()["detail"]

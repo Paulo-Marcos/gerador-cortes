@@ -3,10 +3,11 @@
 // têm em comum (por eixo) e a proposta de ajuste para a skill do Capista, para o
 // Paulo validar antes da edição manual da SKILL.md.
 import { useMutation } from '@tanstack/react-query';
-import { Loader2, Wand2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { useToast } from '@/components/ui/toaster';
 import { api, type PadroesThumbnailResponse } from '@/lib/api';
+import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { eixosComOcorrencias, rotuloEixo } from './thumbnailPadroes';
 import { cn } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
@@ -24,14 +25,15 @@ const CASCA_NOVA = isUpgradeShellEnabled();
 export function ThumbnailPadroesPage() {
   const { notify } = useToast();
 
-  const analise = useMutation<PadroesThumbnailResponse>({
-    mutationFn: () => api.analisarPadroesThumbnail(),
+  const analise = useMutation<PadroesThumbnailResponse, Error, ProviderIA>({
+    mutationFn: (provider: ProviderIA) => api.analisarPadroesThumbnail(provider),
     onError: (error) =>
       notify(error instanceof Error ? error.message : 'Erro ao analisar padrões.', {
         tone: 'error',
       }),
   });
 
+  const emVoo = providerEmVoo(analise);
   const resultado = analise.data;
   const insuficiente = resultado?.status === 'dados_insuficientes';
   const eixos = eixosComOcorrencias(resultado?.padroes ?? null);
@@ -41,14 +43,14 @@ export function ThumbnailPadroesPage() {
       sub: 'o que as capas melhor avaliadas têm em comum — valide antes de aplicar',
       acoes: [
         {
-          icone: analise.isPending ? 'loader' : 'wand',
+          icone: 'wand',
           texto: 'Analisar padrões',
           forte: true,
-          onClick: () => analise.mutate(),
+          ia: { emVoo, onGerar: (provider) => analise.mutate(provider) },
         },
       ],
     },
-    [analise.isPending],
+    [emVoo],
   );
 
   return (
@@ -60,25 +62,24 @@ export function ThumbnailPadroesPage() {
       )}
     >
       {CASCA_NOVA ? null : (
-      <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
-        <span className="text-[16px]" aria-hidden>
-          ✨
-        </span>
-        <h1 className="text-[15px] font-extrabold">Padrões de thumbnail</h1>
-        <span className="hidden text-xs text-[var(--wb-text-mute)] lg:block">
-          o que as capas melhor avaliadas têm em comum — valide antes de aplicar
-        </span>
-        <div className="flex-1" />
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => analise.mutate()}
-          disabled={analise.isPending}
-        >
-          {analise.isPending ? <Loader2 className="animate-spin" /> : <Wand2 aria-hidden />}
-          Analisar padrões
-        </Button>
-      </header>
+        <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
+          <span className="text-[16px]" aria-hidden>
+            ✨
+          </span>
+          <h1 className="text-[15px] font-extrabold">Padrões de thumbnail</h1>
+          <span className="hidden text-xs text-[var(--wb-text-mute)] lg:block">
+            o que as capas melhor avaliadas têm em comum — valide antes de aplicar
+          </span>
+          <div className="flex-1" />
+          <AcaoDeIa
+            rotulo="Analisar padrões"
+            rotuloEmVoo="analisando…"
+            tamanho="md"
+            destaque
+            emVoo={emVoo}
+            onGerar={(provider) => analise.mutate(provider)}
+          />
+        </header>
       )}
 
       <main className="grid flex-1 content-start gap-5 overflow-auto p-6">

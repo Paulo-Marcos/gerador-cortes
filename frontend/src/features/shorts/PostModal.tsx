@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useIsMutating } from '@tanstack/react-query';
-import { Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
@@ -21,6 +20,10 @@ import {
   useGerarPost,
   usePostDoShort,
 } from './useShortsDoCorte';
+import { AcaoDeIa } from '@/components/ui/acao-de-ia';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { providerEmVoo } from '@/lib/providerIa';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import type { ShortSugerido } from './shortsApi';
 
 // D-565 (onda 3): o texto que acompanha o short no feed.
@@ -75,6 +78,11 @@ export function PostModal({ open, onClose, short }: Props) {
   // vazios com um botão que dispararia uma segunda escrita por cima.
   const escrevendoPorFora = useIsMutating({ mutationKey: gerarPostKey(short.id) }) > 0;
   const escrevendo = gerar.isPending || escrevendoPorFora;
+  // O Finalizar escreve por fora, e sempre pelo Claude: lá não há botão.
+  const emVoo = providerEmVoo(gerar) ?? (escrevendoPorFora ? 'claude' : null);
+  // Quem escreveu o texto que está na tela: esta geração, ou a última registrada.
+  const ultima = useUltimaGeracao('metadados-short-expert', { shortId: short.id }, open);
+  const geradoPor = gerar.variables ?? ultima.data?.provider ?? null;
 
   const tom = tomDoTitulo(titulo);
   const hashtags = hashtagsDoTexto(tags);
@@ -84,15 +92,17 @@ export function PostModal({ open, onClose, short }: Props) {
     <Modal open={open} onClose={onClose} title="Escrever o post deste short" size="2xl">
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={ocupado}
-            onClick={() => gerar.mutate()}
-          >
-            {escrevendo ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {escrevendo ? 'escrevendo…' : post.data?.gerado ? 'Escrever de novo' : 'Escrever com a IA'}
-          </Button>
+          <AcaoDeIa
+            rotulo={post.data?.gerado ? 'Escrever de novo' : 'Escrever o post'}
+            descricao="Escrever o post do short"
+            rotuloEmVoo="escrevendo…"
+            emVoo={emVoo}
+            desabilitado={ocupado}
+            onGerar={(provider) => gerar.mutate(provider)}
+          />
+          {!escrevendo && post.data?.gerado && (
+            <SeloDeProvider provider={geradoPor} modelo={ultima.data?.model} />
+          )}
           {escrevendo && (
             <span className="text-[11.5px] text-[var(--wb-text-mute)]">
               lendo a transcrição deste trecho…

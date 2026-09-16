@@ -49,6 +49,7 @@ import { TimelinePanel } from './fase1/TimelinePanel';
 import { RightTabsPanel } from './fase1/RightTabsPanel';
 import { TrechosManualModal } from './fase1/TrechosManualModal';
 import { BrutoContextStrip } from './fase1/BrutoContextStrip';
+import type { EstadoLipSync } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl, MAX_MS, MIN_MS, STEP_FINO } from './fase1/AudioSyncControl';
 import { BrutoStepsDropdown } from './BrutoStepsDropdown';
 import { PanelShell } from '@/components/workbench/PanelShell';
@@ -209,6 +210,17 @@ export function EditorPage() {
   // BrutoContextStrip/AudioSyncControl a partir destes mesmos booleans).
   const [temposAbertos, setTemposAbertos] = useState(false);
   const [sincroniaAberta, setSincroniaAberta] = useState(false);
+  // D-601: preview ao vivo do lip-sync. Mora aqui, e não no PlayerPanel, porque
+  // no Workbench o interruptor (🎧 da faixa) e o <video> que ele muta são irmãos
+  // — só um pai em comum enxerga os dois. O preview só vale com a faixa ABERTA
+  // (derivado abaixo): vídeo mudo com o interruptor fora de vista — fechado pelo
+  // X, pelo ícone da toolbar ou pelo atalho H — é a armadilha que criou o bug.
+  const [sincroniaPreview, setSincroniaPreview] = useState(false);
+  // "ativo" = o operador ligou o fone E a faixa está à vista.
+  const previewAtivo = sincroniaPreview && sincroniaAberta;
+  // Decodificar o áudio do corte leva ~7s; sem contar isso, o clique no fone
+  // parece não ter efeito — a mesma sensação que abriu a D-601.
+  const [estadoPreview, setEstadoPreview] = useState<EstadoLipSync>('desligado');
   // Painel "passos do bruto" (BrutoStepsDropdown), agora aberto pelo ícone
   // ⟳ da toolbar (controlado por fora — ver CP2).
   const [brutoDropdownOpen, setBrutoDropdownOpen] = useState(false);
@@ -1099,6 +1111,8 @@ export function EditorPage() {
               audioPreviewStartSec={waveformOffsetSec}
               audioOffsetMs={corteUI.audio_offset_ms ?? 0}
               onAudioOffsetChange={(ms) => patchDirty({ audio_offset_ms: ms })}
+              previewSync={previewAtivo}
+              onPreviewEstado={setEstadoPreview}
             />
           </PlayerCap>
 
@@ -1111,6 +1125,10 @@ export function EditorPage() {
               variant="workbench"
               offsetMs={corteUI.audio_offset_ms ?? 0}
               onChange={(ms) => patchDirty({ audio_offset_ms: ms })}
+              previewEnabled={previewAtivo}
+              onTogglePreview={() => setSincroniaPreview((v) => !v)}
+              canPreview={!!waveformAudio}
+              previewEstado={estadoPreview}
               onClose={() => setSincroniaAberta(false)}
             />
           )}

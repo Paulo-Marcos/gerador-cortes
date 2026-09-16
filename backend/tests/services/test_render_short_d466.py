@@ -251,6 +251,10 @@ class TestGanchoDaAbertura:
             "ateSeg": 2.5,
             "cor": "",
             "realce": "veu",
+            # D-600: e onde ele senta — o ponto fixo de antes, em numeros.
+            "x": 50.0,
+            "y": 18.0,
+            "largura": 86.0,
             # D-594: fonte do canal e o corpo de sempre quando nada decidiu.
             "fonte": "",
             "tamanho": 1.0,
@@ -694,3 +698,172 @@ async def test_o_log_e_lido_da_mesma_pasta_em_que_o_render_escreve(ambiente, job
 
     assert lido["existe"] is True
     assert lido["duracoes_ms"] == [4200]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# D-604: o short montado por VARIOS pedacos do bruto.
+#
+# O que precisa de guarda aqui nao e a aritmetica dos segmentos (isso e
+# `tests/domain/test_segmentos_short_d604.py`) — e a ORQUESTRACAO:
+#
+#   - o caminho de UM segmento nao pode pagar nada pela existencia do outro:
+#     mesmo id de job, mesmo comando, nenhum arquivo intermediario;
+#   - a colagem tem de sair na ordem da LISTA, e nao na do relogio;
+#   - a composicao do Remotion recebe a duracao LIQUIDA. Com o span, ela seria
+#     maior que o video e a camada sairia dessincronizada do fim em diante — o
+#     mesmo erro que a D-362 pagou no corte.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def _com_segmentos(factory, segmentos: list[dict]) -> None:
+    """Grava uma colagem no short do fixture."""
+    from app.domain import segmentos_short
+
+    async with factory() as db:
+        short = await db.get(Short, "s1")
+        fatias = segmentos_short.de_json(segmentos)
+        short.segmentos = segmentos_short.para_json(fatias)
+        inicio, fim = segmentos_short.envelope(
+            fatias, inicio_seg=short.inicio_seg, fim_seg=short.fim_seg
+        )
+        short.inicio_seg, short.fim_seg = inicio, fim
+        await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_um_segmento_nao_ganha_passo_de_colagem(ambiente, jobs):
+    """A nao-regressao: short de janela unica sai pelo caminho de sempre."""
+    factory, _ = ambiente
+    await _com_segmentos(factory, [{"inicio_seg": 10.0, "fim_seg": 45.0}])
+
+    await render_short.renderizar_short("s1")
+
+    assert [j["id"] for j in jobs] == [
+        "s1_final_recorte",
+        "s1_final_camada",
+        "s1_final_composicao",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_dois_segmentos_recortam_um_pedaco_cada_e_colam(ambiente, jobs):
+    factory, _ = ambiente
+    await _com_segmentos(
+        factory, [{"inicio_seg": 10.0, "fim_seg": 40.0}, {"inicio_seg": 55.0, "fim_seg": 70.0}]
+    )
+
+    await render_short.renderizar_short("s1")
+
+    assert [j["id"] for j in jobs] == [
+        "s1_final_recorte_0",
+        "s1_final_recorte_1",
+        "s1_final_colagem",
+        "s1_final_camada",
+        "s1_final_composicao",
+    ]
+    primeiro, segundo = jobs[0]["cmd"], jobs[1]["cmd"]
+    assert primeiro[primeiro.index("-ss") + 1] == "10.0"
+    assert primeiro[primeiro.index("-t") + 1] == "30.0"
+    assert segundo[segundo.index("-ss") + 1] == "55.0"
+    assert segundo[segundo.index("-t") + 1] == "15.0"
+
+
+@pytest.mark.asyncio
+async def test_a_colagem_respeita_a_ordem_da_lista_e_nao_a_do_relogio(ambiente, jobs):
+    """O gancho que vem depois na live pode abrir o short."""
+    factory, raiz = ambiente
+    await _com_segmentos(
+        factory, [{"inicio_seg": 55.0, "fim_seg": 70.0}, {"inicio_seg": 10.0, "fim_seg": 40.0}]
+    )
+
+    await render_short.renderizar_short("s1")
+
+    # O primeiro recorte e o pedaco dos 55s, e nao o dos 10s.
+    primeiro = jobs[0]["cmd"]
+    assert primeiro[primeiro.index("-ss") + 1] == "55.0"
+
+    # E a lista do concat leva os pedacos nessa mesma ordem.
+    lista = raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "base_final_concat.txt"
+    linhas = lista.read_text(encoding="utf-8").splitlines()
+    assert [linha.split("base_final_")[1] for linha in linhas] == ["seg0.mp4'", "seg1.mp4'"]
+
+
+@pytest.mark.asyncio
+async def test_a_composicao_recebe_a_duracao_liquida_e_nao_o_span(ambiente, jobs):
+    factory, raiz = ambiente
+    # Envelope de 10 a 70 (60s), video de 30 + 15 = 45s.
+    await _com_segmentos(
+        factory, [{"inicio_seg": 10.0, "fim_seg": 40.0}, {"inicio_seg": 55.0, "fim_seg": 70.0}]
+    )
+
+    await render_short.renderizar_short("s1")
+
+    props = json.loads(
+        (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada_final.props.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert props["duracaoSeg"] == 45.0
+
+
+@pytest.mark.asyncio
+async def test_os_pedacos_nao_sobram_em_disco(ambiente, jobs):
+    """Um short de 12 segmentos deixaria 12 MP4s por estagio no projeto."""
+    factory, raiz = ambiente
+    await _com_segmentos(
+        factory, [{"inicio_seg": 10.0, "fim_seg": 40.0}, {"inicio_seg": 55.0, "fim_seg": 70.0}]
+    )
+
+    await render_short.renderizar_short("s1")
+
+    pasta = raiz / "p1" / "cortes" / "c1" / "shorts" / "s1"
+    assert list(pasta.glob("base_final_seg*.mp4")) == []
+    # A lista fica: e diagnostico barato de por que a colagem saiu nessa ordem.
+    assert (pasta / "base_final_concat.txt").is_file()
+
+
+@pytest.mark.asyncio
+async def test_bruto_mais_curto_encolhe_a_colagem_sem_mentir_a_duracao(ambiente, jobs):
+    """O bruto foi regerado mais curto DEPOIS de os segmentos serem gravados."""
+    factory, raiz = ambiente
+    await _com_segmentos(
+        factory, [{"inicio_seg": 10.0, "fim_seg": 40.0}, {"inicio_seg": 55.0, "fim_seg": 70.0}]
+    )
+    async with factory() as db:
+        corte = await db.get(Corte, "c1")
+        corte.duracao_clip_seg = 60.0  # o segundo segmento agora passa do fim
+        await db.commit()
+
+    await render_short.renderizar_short("s1")
+
+    segundo = jobs[1]["cmd"]
+    # O segundo pedaco encolhe para caber: 55 a 60, e nao 55 a 70.
+    assert segundo[segundo.index("-t") + 1] == "5.0"
+    props = json.loads(
+        (raiz / "p1" / "cortes" / "c1" / "shorts" / "s1" / "camada_final.props.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    # E a camada conta a MESMA duracao que a colagem tem — sem isto a legenda
+    # dessincronizaria do fim em diante.
+    assert props["duracaoSeg"] == 35.0
+
+
+@pytest.mark.asyncio
+async def test_colagem_que_nao_cabe_mais_no_bruto_recusa_em_vez_de_renderizar_o_buraco(
+    ambiente, jobs
+):
+    """Vazio significaria "janela unica" — o envelope, com o buraco DENTRO."""
+    factory, _ = ambiente
+    await _com_segmentos(
+        factory, [{"inicio_seg": 300.0, "fim_seg": 330.0}, {"inicio_seg": 400.0, "fim_seg": 420.0}]
+    )
+    async with factory() as db:
+        corte = await db.get(Corte, "c1")
+        corte.duracao_clip_seg = 120.0
+        await db.commit()
+
+    with pytest.raises(ValueError, match="regerado mais curto"):
+        await render_short.renderizar_short("s1")
+
+    assert jobs == [], "nenhum passo de render pode ter saido"

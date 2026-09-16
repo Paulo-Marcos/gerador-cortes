@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ShortSugerido, VereditoDoRosto } from './shortsApi';
 import { janelaNova, mmss } from './linhaDoTempoShort';
+import { comSegmentoNovo, efetivos, MAX_SEGMENTOS, resumo } from './segmentosDoShort';
 import { mudancaDoPalco, SEGUIR_O_PALCO_PADRAO } from './aplicarPalco';
 import { CandidatoCard } from './CandidatoCard';
 import { GanchoPadraoDoCorte } from './GanchoPadraoDoCorte';
@@ -42,6 +43,8 @@ interface Props {
   onSelecionar: (shortId: string) => void;
   onTocar: (short: ShortSugerido) => void;
   onBorda: (short: ShortSugerido, campo: 'inicio_seg' | 'fim_seg') => void;
+  /** D-604: leva o player a um instante do bruto — clicar num pedaço vai até ele. */
+  onIr: (segundos: number) => void;
   onDefinirPalco: (shortId: string) => void;
   onEscreverGancho: (shortId: string) => void;
   /** D-594: abrir o editor de preset de palco/gancho. `null` = novo. */
@@ -73,6 +76,7 @@ export function ColunaDeDecisoes({
   onSelecionar,
   onTocar,
   onBorda,
+  onIr,
   onDefinirPalco,
   onEscreverGancho,
   onEditarPalcoPadrao,
@@ -122,7 +126,7 @@ export function ColunaDeDecisoes({
           onEditar={onEditarPalcoPadrao}
         />
         <GanchoPadraoDoCorte corteId={corteId} onEditar={onEditarGanchoPadrao} />
-        <div className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] pt-2">
+        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--wb-border-soft)] pt-2">
           <Button
             variant="outline"
             size="sm"
@@ -132,6 +136,46 @@ export function ColunaDeDecisoes({
             <Plus />
             Novo trecho em {mmss(tempoAtual)}
           </Button>
+
+          {/* D-604: o gesto que a demanda pediu — marcar onde o player está e
+              dizer A QUAL short aquilo pertence.
+              Fica AQUI, e não no card, porque a pergunta é "de quem é este
+              pedaço?": no card ele já estaria respondido pelo card em que o
+              operador clicou, e ele teria de abrir o trecho certo antes de
+              marcar. Aqui o fluxo é o dele — para o player, marca, escolhe. */}
+          {shorts.length > 0 && (
+            <label className="flex items-center gap-1.5 text-[11px] text-[var(--wb-text-mute)]">
+              somar este instante a
+              <select
+                aria-label="Somar este instante como segmento de qual trecho"
+                value=""
+                disabled={edicao.ocupado || duracaoRegua <= 0}
+                onChange={(e) => {
+                  const alvo = shorts.find((s) => s.id === e.target.value);
+                  if (!alvo) return;
+                  const janela = janelaNova(tempoAtual, duracaoRegua);
+                  edicao.gravar(alvo.id, {
+                    segmentos: comSegmentoNovo(alvo, janela.inicio, janela.fim),
+                  });
+                  // O trecho que recebeu o pedaço entra em foco e abre os
+                  // ajustes: é lá que a lista de segmentos vive, e quem acabou de
+                  // somar um vai querer conferir a ordem.
+                  onSelecionar(alvo.id);
+                  setAjusteAberto(alvo.id);
+                }}
+                className="h-7 max-w-[190px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:opacity-50"
+              >
+                <option value="">escolher o trecho…</option>
+                {shorts.map((candidato, indice) => (
+                  <option key={candidato.id} value={candidato.id}>
+                    {indice + 1}. {resumo(candidato)}
+                    {efetivos(candidato).length >= MAX_SEGMENTOS ? ' (cheio)' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           {criarManual.isError && (
             <span className="text-[11px] text-[var(--wb-warn-ink)]">
               {(criarManual.error as Error)?.message ?? 'não consegui criar'}
@@ -194,6 +238,13 @@ export function ColunaDeDecisoes({
           onEscreverGancho={() => onEscreverGancho(short.id)}
           onPrevia={() => previa.mutate(short.id)}
           onRenderizar={() => renderizar.mutate(short.id)}
+          // D-604: a colagem passa pelo MESMO caminho de escrita dos outros
+          // campos. Um PATCH proprio para os segmentos teria de repetir o
+          // otimismo, o rollback e o "ocupado" que `edicao` ja resolve.
+          onSegmentos={(segmentos) => edicao.gravar(short.id, { segmentos })}
+          tempoAtualSeg={tempoAtual}
+          duracaoBrutoSeg={duracaoRegua}
+          onIr={onIr}
         />
       ))}
 
