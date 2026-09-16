@@ -28,6 +28,7 @@ import { useCorte } from '@/hooks/useEditor';
 import { useDiarizarCorte, useFalantes } from '@/hooks/useDiarizacao';
 import type { FalantesMap } from '@/lib/api';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 // ─────────────────────────────────────────────────────────────
 // RightTabsPanel — replica `design_reference/src/v2_bruto.jsx:405-624`.
@@ -103,6 +104,12 @@ function mmssDecimo(hms: string): string {
   return ponto === -1 ? semHora : semHora.slice(0, ponto + 2);
 }
 
+// D-599: na casca nova o painel e o `.card` de vidro do handoff e as abas seguem
+// a gramatica dele — 30 px, 12.5/600, a ativa em ACENTO com sublinhado. A cor na
+// aba ativa nao e enfeite: numa coluna com quatro abas e um editor de capa em
+// cima, e ela que responde "em qual lista estou" sem ler o rotulo.
+const CASCA_NOVA = isUpgradeShellEnabled();
+
 export function RightTabsPanel({
   corteId,
   hintsThumbnail,
@@ -138,7 +145,13 @@ export function RightTabsPanel({
   const onRefresh = onAtualizarTranscricao;
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]">
+    <section
+      className={
+        CASCA_NOVA
+          ? 'card flex h-full flex-col overflow-hidden'
+          : 'flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]'
+      }
+    >
       {/* F-058: influência manual do editor no prompt da thumbnail. */}
       <div className="flex-shrink-0 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
         <ThumbnailHintsEditor corteId={corteId} initialValue={hintsThumbnail} />
@@ -146,8 +159,16 @@ export function RightTabsPanel({
       {/* Tabs planas com sublinhado (DE-PARA-v3 §3): sem caixa e sem sombra,
           alinhadas ao TabStrip fino do shell. O fundo `inset` saiu junto —
           a faixa agora só tem a divisória inferior. */}
-      <header className="flex flex-shrink-0 items-center gap-2.5 border-b border-[var(--wb-border-soft)] px-3 pt-2">
-        <GripVertical size={13} className="mb-2 text-[var(--wb-text-dim)]" aria-hidden />
+      <header
+        className={
+          CASCA_NOVA
+            ? 'flex flex-shrink-0 items-center gap-0.5 border-b border-[var(--line2)] px-[11px] pt-[9px]'
+            : 'flex flex-shrink-0 items-center gap-2.5 border-b border-[var(--wb-border-soft)] px-3 pt-2'
+        }
+      >
+        {CASCA_NOVA ? null : (
+          <GripVertical size={13} className="mb-2 text-[var(--wb-text-dim)]" aria-hidden />
+        )}
         <TabButton
           id="trechos"
           active={tab === 'trechos'}
@@ -273,6 +294,49 @@ function TabButton({
   count?: number;
   countTone?: 'err';
 }) {
+  if (CASCA_NOVA) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-current={active ? 'page' : undefined}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          height: 30,
+          padding: '0 9px',
+          border: 0,
+          borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+          marginBottom: -1,
+          background: 'none',
+          color: active ? 'var(--accent)' : 'var(--mute)',
+          fontSize: 12.5,
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+          cursor: 'pointer',
+        }}
+      >
+        {label}
+        {count !== undefined ? (
+          <span
+            className="chip"
+            style={{
+              height: 18,
+              padding: '0 6px',
+              fontFamily: 'var(--mono)',
+              fontSize: 10,
+              background: countTone === 'err' ? 'var(--err-soft)' : 'var(--inset)',
+              color: countTone === 'err' ? 'var(--err)' : 'var(--mute)',
+            }}
+          >
+            {count}
+          </span>
+        ) : null}
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"

@@ -144,7 +144,7 @@ export function EditorFase1({
       {/* No design a coluna direita e uma faixa fixa de 320px; aqui ela
           continua redimensionavel (decisao anterior do Paulo) com o default
           aproximado dessa largura. */}
-      <Panel defaultSize={CASCA_NOVA ? 74 : 62} minSize={40} order={1}>
+      <Panel defaultSize={CASCA_NOVA ? 68 : 62} minSize={40} order={1}>
         <PanelGroup
           direction="vertical"
           autoSaveId={`${CASCA_NOVA ? PANEL_PERSIST_AP : PANEL_PERSIST}-left-v`}
@@ -228,7 +228,11 @@ export function EditorFase1({
       <PanelResizeHandle className="w-2 transition-colors hover:bg-[var(--wb-border-soft)]" />
 
       {/* Direita: RightTabsPanel vertical inteiro */}
-      <Panel defaultSize={CASCA_NOVA ? 26 : 38} minSize={22} order={2}>
+      {/* 32% e nao 26%: a casca ja gasta 462px com trilho + contexto, e 26% do
+          que sobra numa tela de 1366px dava ~230px — a lista de trechos
+          quebrava palavra por letra. 32% fica perto dos 320px do design nas
+          larguras comuns (1366 a 1920). */}
+      <Panel defaultSize={CASCA_NOVA ? 32 : 38} minSize={CASCA_NOVA ? 26 : 22} order={2}>
         <RightTabsPanel
           corteId={corte.id}
           hintsThumbnail={corte.hints_thumbnail}
