@@ -53,6 +53,43 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
 
       <div style={{ flex: 1, minWidth: 8 }} />
 
+      {barra.alternancias?.map((a) => (
+        <span key={a.texto} style={{ display: 'inline-flex', gap: 2 }}>
+          <button
+            type="button"
+            className="btn"
+            data-decisao
+            aria-pressed={a.ativo}
+            title={a.titulo}
+            disabled={a.ocupado}
+            onClick={a.onClick}
+            style={
+              a.ativo
+                ? { borderColor: a.cor, background: a.corSuave, color: a.cor }
+                : { color: 'var(--mute)' }
+            }
+          >
+            <Icon name={a.icone} size={13} />
+            {a.texto}
+          </button>
+          {a.ativo && a.editar ? (
+            <button
+              type="button"
+              className="btn btn-icon btn-ghost"
+              data-decisao
+              title={a.editar.titulo}
+              aria-label={a.editar.titulo}
+              onClick={a.editar.onClick}
+            >
+              <Icon name="pencil" size={12} />
+            </button>
+          ) : null}
+        </span>
+      ))}
+      {barra.alternancias?.length ? (
+        <span style={{ width: 1, height: 20, background: 'var(--line)' }} aria-hidden />
+      ) : null}
+
       {barra.secundario ? (
         <button
           type="button"

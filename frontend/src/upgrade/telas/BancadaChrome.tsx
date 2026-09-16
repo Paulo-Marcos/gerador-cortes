@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ReadingModal } from '@/features/editor/CommonTopBar';
+import type { ReadingPatch } from '@/lib/readingMetadata';
 import { useProjeto } from '@/hooks/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { thumbnailUrl } from '@/lib/utils';
@@ -62,6 +65,17 @@ export type BancadaChromeProps = {
   onSalvar: () => void;
   onGerarBruto: () => void;
   onToggleFire: () => void;
+  fireOcupado?: boolean;
+  /** D-610: Leitura como qualificador da barra. Sem isto o botão não aparece
+   *  (Pós e Revisão não o usam). */
+  leitura?: {
+    ativo: boolean;
+    autor: string;
+    parte: number;
+    ocupado?: boolean;
+    onAlternar: () => void;
+    onAtualizar: (patch: ReadingPatch) => void;
+  };
   onAprovar: () => void;
   onRejeitar: () => void;
   onNovoTrecho?: () => void;
@@ -85,11 +99,14 @@ export function BancadaChrome({
   onSalvar,
   onGerarBruto,
   onToggleFire,
+  fireOcupado,
+  leitura,
   onAprovar,
   onRejeitar,
   onNovoTrecho,
 }: BancadaChromeProps) {
   const navigate = useNavigate();
+  const [editandoLeitura, setEditandoLeitura] = useState(false);
 
   const indice = cortes.findIndex((c) => c.id === corte.id);
   const irPara = (delta: -1 | 1) => {
@@ -128,14 +145,14 @@ export function BancadaChrome({
       titulo: `Corte #${corte.numero} — ${corte.titulo_proposto}`,
       sub,
       rotulos: [tituloLive, `#${corte.numero}`],
+      // D-610: Fire e Salvar desceram para a barra de ações. No topo sobra a
+      // ação que não é veredito do corte, e sim trabalho pesado sobre ele.
       acoes: [
-        { icone: 'flame', texto: fire ? 'Fire' : 'Marcar fire', onClick: onToggleFire },
         {
           icone: brutoOcupado ? 'loader' : 'scissors',
           texto: brutoPronto ? 'Regerar bruto' : 'Gerar bruto',
           onClick: onGerarBruto,
         },
-        { icone: 'check', texto: 'Salvar', forte: sujo, onClick: onSalvar },
       ],
       // O chip de estado da barra superior é o que responde "perdi alguma
       // coisa?" sem exigir olhar para o botão Salvar.
@@ -165,8 +182,49 @@ export function BancadaChrome({
       },
       barra: {
         teclas: [{ teclas: ['Space'], texto: 'tocar' }],
+        alternancias: [
+          {
+            texto: 'Fire',
+            icone: 'flame',
+            ativo: fire,
+            cor: 'var(--accent2)',
+            corSuave: 'var(--accent-soft)',
+            titulo: fire ? 'Tirar do Fire (F)' : 'Marcar como Fire (F)',
+            ocupado: fireOcupado,
+            onClick: onToggleFire,
+          },
+          ...(leitura
+            ? [
+                {
+                  texto: 'Leitura',
+                  icone: 'book-open' as const,
+                  ativo: leitura.ativo,
+                  cor: 'var(--info)',
+                  corSuave: 'var(--info-soft)',
+                  titulo: leitura.ativo
+                    ? 'Tirar a leitura (L)'
+                    : 'Marcar como leitura (L) — pede autor e parte',
+                  ocupado: leitura.ocupado,
+                  // Ligar pede autor e parte: é o prefixo do título no YouTube
+                  // ("Leitura - autor - PT.2 |"). Desligar é um clique só.
+                  onClick: () => {
+                    if (!leitura.ativo) setEditandoLeitura(true);
+                    leitura.onAlternar();
+                  },
+                  editar: {
+                    titulo: `Editar autor e parte (${leitura.autor || 'sem autor'} · PT.${leitura.parte || 1})`,
+                    onClick: () => setEditandoLeitura(true),
+                  },
+                },
+              ]
+            : []),
+        ],
         secundario: { texto: 'Rejeitar', icone: 'x', onClick: onRejeitar },
-        terciario: { titulo: 'Salvar (Ctrl+S)', icone: 'check', onClick: onSalvar },
+        terciario: {
+          titulo: sujo ? 'Salvar (Ctrl+S) — há mudanças' : 'Salvar (Ctrl+S)',
+          icone: salvando ? 'loader' : 'check',
+          onClick: onSalvar,
+        },
         primario: {
           texto: corte.status === 'aprovado' ? 'Aprovado' : 'Aprovar corte',
           icone: 'check',
@@ -187,8 +245,24 @@ export function BancadaChrome({
       brutoPronto,
       brutoOcupado,
       capaDaLive,
+      fireOcupado,
+      leitura?.ativo,
+      leitura?.ocupado,
     ],
   );
 
-  return null;
+  // O diálogo abre ao LIGAR a leitura e pelo lápis ao lado dela.
+  return leitura ? (
+    <ReadingModal
+      open={editandoLeitura}
+      author={leitura.autor}
+      part={leitura.parte}
+      disabled={leitura.ocupado}
+      onClose={() => setEditandoLeitura(false)}
+      onSave={(patch) => {
+        leitura.onAtualizar(patch);
+        setEditandoLeitura(false);
+      }}
+    />
+  ) : null;
 }

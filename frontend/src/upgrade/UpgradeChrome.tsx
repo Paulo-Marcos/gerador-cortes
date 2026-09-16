@@ -96,6 +96,24 @@ export type ChromeBarra = {
   teclas?: Array<{ teclas: string[]; texto: string }>;
   /** Controles de lote (destinos, agendamento) à esquerda do fiel. */
   extra?: ReactNode;
+  /** D-610: qualificadores do item (Fire, Leitura). Ligam e desligam — não
+   *  decidem —, mas moram AO LADO das decisões porque são dadas no mesmo
+   *  momento: quem aprova um corte é quem sabe se ele é Fire. */
+  alternancias?: ChromeAlternancia[];
+};
+
+export type ChromeAlternancia = {
+  texto: string;
+  icone: IconName;
+  ativo: boolean;
+  /** Cor de identidade quando ligada (fire = acento, leitura = info). */
+  cor: string;
+  corSuave: string;
+  titulo?: string;
+  ocupado?: boolean;
+  onClick?: () => void;
+  /** Ajuste do qualificador ligado (autor/parte da leitura): lápis ao lado. */
+  editar?: { titulo: string; onClick: () => void };
 };
 
 export type ChromeEstado = {

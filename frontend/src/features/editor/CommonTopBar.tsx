@@ -412,7 +412,7 @@ export function StatusToggleRow({
 // em D-069 (perdido na migracao F-024 RealEditorHeader → CommonTopBar).
 // ─────────────────────────────────────────────────────────────
 
-function ReadingModal({
+export function ReadingModal({
   open,
   author,
   part,

@@ -1242,6 +1242,20 @@ export function EditorPage() {
           onSalvar={salvarMudancas}
           onGerarBruto={handleGerarBrutoPrincipal}
           onToggleFire={() => toggleFire.mutate()}
+          fireOcupado={toggleFire.isPending}
+          leitura={{
+            ativo: Boolean(corteUI.is_leitura),
+            autor: corteUI.autor_leitura ?? '',
+            parte: corteUI.parte_leitura ?? 1,
+            ocupado: toggleLeitura.isPending,
+            onAlternar: () => toggleLeitura.mutate(corteUI),
+            // Mesmo caminho do legado: o backend reaplica o prefixo
+            // "Leitura - autor - PT.n |" no título e o metadado é invalidado.
+            onAtualizar: (patch) =>
+              atualizarCorte.mutate(patch, {
+                onSuccess: () => qc.invalidateQueries({ queryKey: ['metadado', corteId] }),
+              }),
+          }}
           onAprovar={toggleAprovado}
           onRejeitar={toggleRejeitado}
         />
