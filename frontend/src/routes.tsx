@@ -61,6 +61,8 @@ const AtalhosPage = lazy(() =>
 // D-599 Etapa 0: vitrine da fundacao visual do upgrade de layout. Rota de
 // nivel superior (fora do <App/>) de proposito — ver UpgradeKitPage.
 const UpgradeKitPage = lazy(() => import('@/upgrade/UpgradeKitPage'));
+// D-599 Etapa 1: a casca com os dados de demonstracao da LIVE 267.
+const UpgradeShellDemoPage = lazy(() => import('@/upgrade/UpgradeShellDemoPage'));
 
 export const router = createBrowserRouter([
   {
@@ -100,6 +102,14 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={null}>
         <UpgradeKitPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/upgrade/shell',
+    element: (
+      <Suspense fallback={null}>
+        <UpgradeShellDemoPage />
       </Suspense>
     ),
   },

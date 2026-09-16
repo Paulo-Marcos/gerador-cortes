@@ -4,6 +4,8 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { IconButton } from '@/components/ui/icon-button';
 import { WorkbenchShell } from '@/components/workbench/WorkbenchShell';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
+import { UpgradeShell } from '@/upgrade/UpgradeShell';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { Sidebar } from './Sidebar';
 import { SettingsModal } from './SettingsModal';
 
@@ -22,6 +24,11 @@ function getRouteLabel(pathname: string) {
 }
 
 export function AppShell() {
+  // Tres cascas, uma decisao. A ordem importa: a mais nova ganha, e cada
+  // uma abaixo dela continua sendo o rollback da de cima — desligar a
+  // flag devolve a anterior inteira, sem meio-termo.
+  // D-599: VITE_UPGRADE_SHELL (ou localStorage `upgrade-shell`).
+  if (isUpgradeShellEnabled()) return <UpgradeShell />;
   // Flag VITE_WORKBENCH (PLANO-DE-ETAPAS regra 6): shell novo e antigo
   // coexistem até a Etapa 8; rollback é desligar a flag.
   if (isWorkbenchEnabled()) return <WorkbenchShell />;
