@@ -1,0 +1,303 @@
+/* ═══════════════════════════════════════════════════════════════════
+   D-599 · Camada visual do "Upgrade de layout" (handoff em
+   frontend/Upgrade do layout do projeto/.../Upgrade - Aplicação.dc.html).
+
+   Tudo aqui vive dentro de `.ap`. Esse escopo NÃO é estilo — é a
+   garantia de não-regressão: os tokens --wb-* e as telas atuais
+   continuam intactos enquanto a casca nova estiver desligada, e as
+   duas linguagens podem coexistir no mesmo bundle sem disputar `:root`.
+
+   Dois eixos de tema, como no protótipo:
+     data-theme = light | dark
+     data-glass = 1 (vidro translúcido) | 0 (superfície sólida)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ap {
+  --sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+
+  --bg: oklch(0.975 0.004 240);
+  --panel: rgb(255 255 255 / 0.62);
+  --solid: #fff;
+  --inset: rgb(255 255 255 / 0.5);
+  --line: rgb(20 25 40 / 0.1);
+  --line2: rgb(20 25 40 / 0.055);
+
+  --ink: oklch(0.2 0.015 250);
+  --mute: oklch(0.45 0.02 250);
+  --dim: oklch(0.62 0.02 250);
+
+  --accent: oklch(0.52 0.165 28);
+  --accent2: oklch(0.44 0.18 28);
+  --accent-soft: oklch(0.52 0.165 28 / 0.12);
+  --on-accent: #fff;
+
+  --ok: oklch(0.52 0.13 145);
+  --ok-soft: oklch(0.52 0.13 145 / 0.14);
+  --warn: oklch(0.52 0.14 70);
+  --warn-soft: oklch(0.55 0.14 70 / 0.16);
+  --info: oklch(0.5 0.13 245);
+  --info-soft: oklch(0.5 0.13 245 / 0.14);
+  --err: oklch(0.52 0.18 25);
+  --err-soft: oklch(0.55 0.18 25 / 0.14);
+
+  --glass: blur(22px) saturate(1.6);
+  --hi: 0 1px 0 rgb(255 255 255 / 0.6) inset;
+  --shadow:
+    0 1px 0 rgb(255 255 255 / 0.6) inset,
+    0 8px 28px rgb(20 25 40 / 0.09);
+
+  --r1: 3px;
+  --r2: 4px;
+  --r3: 5px;
+
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(900px 520px at 10% -12%, oklch(0.88 0.08 28 / 0.7), transparent 62%),
+    radial-gradient(820px 560px at 96% 106%, oklch(0.88 0.07 245 / 0.75), transparent 60%),
+    radial-gradient(600px 420px at 58% 48%, oklch(0.93 0.05 80 / 0.45), transparent 65%),
+    linear-gradient(oklch(0.965 0.006 240), oklch(0.945 0.01 250));
+}
+
+.ap[data-theme='dark'] {
+  --bg: oklch(0.17 0.012 255);
+  --panel: rgb(255 255 255 / 0.06);
+  --solid: oklch(0.21 0.012 255);
+  --inset: rgb(255 255 255 / 0.09);
+  --line: rgb(255 255 255 / 0.14);
+  --line2: rgb(255 255 255 / 0.07);
+
+  --ink: oklch(0.95 0.008 250);
+  --mute: oklch(0.74 0.015 250);
+  --dim: oklch(0.56 0.015 250);
+
+  --accent: oklch(0.72 0.155 32);
+  --accent2: oklch(0.82 0.15 32);
+  --accent-soft: oklch(0.72 0.155 32 / 0.16);
+  --on-accent: oklch(0.14 0.01 60);
+
+  --ok: oklch(0.8 0.14 145);
+  --ok-soft: oklch(0.78 0.14 145 / 0.16);
+  --warn: oklch(0.84 0.15 75);
+  --warn-soft: oklch(0.82 0.15 75 / 0.16);
+  --info: oklch(0.76 0.13 245);
+  --info-soft: oklch(0.74 0.13 245 / 0.16);
+  --err: oklch(0.74 0.16 25);
+  --err-soft: oklch(0.72 0.16 25 / 0.16);
+
+  --hi: 0 1px 0 rgb(255 255 255 / 0.08) inset;
+  --shadow:
+    0 1px 0 rgb(255 255 255 / 0.08) inset,
+    0 10px 30px rgb(0 0 0 / 0.45);
+
+  color-scheme: dark;
+  background-image:
+    radial-gradient(900px 520px at 10% -12%, oklch(0.38 0.12 28 / 0.7), transparent 62%),
+    radial-gradient(820px 560px at 96% 106%, oklch(0.36 0.1 260 / 0.7), transparent 60%),
+    radial-gradient(600px 420px at 58% 48%, oklch(0.3 0.06 200 / 0.45), transparent 65%),
+    linear-gradient(oklch(0.17 0.012 255), oklch(0.14 0.014 260));
+}
+
+/* Vidro desligado: as superfícies viram sólidas e o fundo perde os
+   gradientes. É o mesmo layout — muda só o material. */
+.ap[data-glass='0'] {
+  --panel: var(--solid);
+  --inset: oklch(0.955 0.005 240);
+  --glass: none;
+
+  background-image: none;
+  background-color: var(--bg);
+}
+
+.ap[data-glass='0'][data-theme='dark'] {
+  --inset: oklch(0.25 0.012 255);
+}
+
+/* ─── Primitivos ──────────────────────────────────────────────────
+   Sete peças. Todo o resto do protótipo é composição destas. */
+
+.ap a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.ap a:hover {
+  color: var(--accent);
+}
+
+.ap button,
+.ap input,
+.ap select,
+.ap textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.ap kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  background: var(--inset);
+  color: var(--mute);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* `gl` = superfície de vidro sem borda nem raio: usada nas faixas
+   estruturais da casca (trilho, barra superior, barra de ações). */
+.ap .gl {
+  background: var(--panel);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  box-shadow: var(--hi);
+}
+
+.ap .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--panel);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  box-shadow: var(--hi);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ap .btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ap .btn-pri {
+  border-color: transparent;
+  background: var(--accent);
+  background-image: linear-gradient(rgb(255 255 255 / 0.18), transparent);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.3) inset,
+    0 6px 18px oklch(0.52 0.165 28 / 0.3);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.ap .btn-pri:hover {
+  border-color: transparent;
+  color: var(--on-accent);
+  filter: brightness(1.06);
+}
+
+.ap .btn-icon {
+  width: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
+.ap .card {
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  background: var(--panel);
+  backdrop-filter: var(--glass);
+  -webkit-backdrop-filter: var(--glass);
+  box-shadow: var(--shadow);
+}
+
+.ap .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--r1);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* `lbl` = rótulo de seção: mono, caixa alta, bem espaçado. */
+.ap .lbl {
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ap .fld {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: var(--inset);
+  font-size: 12px;
+}
+
+.ap .row:hover {
+  background: var(--accent-soft);
+}
+
+/* ─── Layouts de duas colunas ─────────────────────────────────────
+   `two` rola com a página; `two-b` (bancada) prende a altura para o
+   painel lateral rolar sozinho. Abaixo de 1240px ambos viram uma
+   coluna e a coluna de contexto some. */
+.ap .two {
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) 320px;
+  gap: 14px;
+  align-items: start;
+}
+
+.ap .two-b {
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) 320px;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+}
+
+.ap .two > *,
+.ap .two-b > * {
+  min-width: 0;
+}
+
+@media (max-width: 1240px) {
+  .ap .two,
+  .ap .two-b {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .ap .two-b > aside {
+    max-height: none;
+  }
+
+  .ap .ctx {
+    display: none !important;
+  }
+}
+
+.ap ::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.ap ::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9px;
+  background: var(--line);
+  background-clip: padding-box;
+}

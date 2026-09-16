@@ -1,0 +1,174 @@
+import {
+  ArrowLeft,
+  ArrowRight,
+  BarChart3,
+  Bell,
+  Brain,
+  Captions,
+  Check,
+  CheckCheck,
+  ChevronDown,
+  ChevronFirst,
+  ChevronLast,
+  ChevronLeft,
+  ChevronRight,
+  CircleCheck,
+  CircleDashed,
+  Clapperboard,
+  Clock,
+  Command,
+  Download,
+  ExternalLink,
+  Eye,
+  FileText,
+  Flame,
+  Folder,
+  Gauge,
+  HardDrive,
+  Home,
+  Image,
+  Inbox,
+  Keyboard,
+  LayoutGrid,
+  LayoutTemplate,
+  ListFilter,
+  Loader,
+  Maximize,
+  Moon,
+  MoreHorizontal,
+  MoveHorizontal,
+  PanelLeft,
+  PanelRight,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  Radio,
+  Redo2,
+  Rocket,
+  RotateCcw,
+  Rows2,
+  ScanFace,
+  Scissors,
+  Search,
+  Send,
+  Settings,
+  SkipBack,
+  SlidersHorizontal,
+  Sparkles,
+  Sun,
+  Tags,
+  Trash,
+  TriangleAlert,
+  Trophy,
+  Type,
+  Undo2,
+  Volume2,
+  Wand,
+  X,
+  ZoomIn,
+  ZoomOut,
+  type LucideIcon,
+} from 'lucide-react';
+
+// ─────────────────────────────────────────────────────────────────
+// D-599 · Ponte entre o handoff e o lucide-react.
+//
+// O protótipo escreve `<l-icon name="chevron-right">` — kebab-case,
+// o mesmo vocabulário do icons.js que ele carrega. Manter esse nome
+// vivo no código deixa a tradução do design 1:1: dá para conferir
+// tela e arquivo lado a lado sem traduzir nome de ícone na cabeça.
+//
+// O mapa é explícito de propósito: um `import * as Lucide` resolveria
+// em uma linha, mas arrastaria a biblioteca inteira para o bundle.
+// ─────────────────────────────────────────────────────────────────
+
+const ICONS = {
+  'arrow-left': ArrowLeft,
+  'arrow-right': ArrowRight,
+  'bar-chart': BarChart3,
+  bell: Bell,
+  brain: Brain,
+  captions: Captions,
+  check: Check,
+  'check-check': CheckCheck,
+  'chevron-down': ChevronDown,
+  'chevron-first': ChevronFirst,
+  'chevron-last': ChevronLast,
+  'chevron-left': ChevronLeft,
+  'chevron-right': ChevronRight,
+  'circle-check': CircleCheck,
+  'circle-dashed': CircleDashed,
+  clapperboard: Clapperboard,
+  clock: Clock,
+  command: Command,
+  download: Download,
+  'external-link': ExternalLink,
+  eye: Eye,
+  'file-text': FileText,
+  flame: Flame,
+  folder: Folder,
+  gauge: Gauge,
+  'hard-drive': HardDrive,
+  home: Home,
+  image: Image,
+  inbox: Inbox,
+  keyboard: Keyboard,
+  'layout-grid': LayoutGrid,
+  'layout-template': LayoutTemplate,
+  'list-filter': ListFilter,
+  loader: Loader,
+  maximize: Maximize,
+  moon: Moon,
+  'more-horizontal': MoreHorizontal,
+  'move-horizontal': MoveHorizontal,
+  'panel-left': PanelLeft,
+  'panel-right': PanelRight,
+  pause: Pause,
+  pencil: Pencil,
+  play: Play,
+  plus: Plus,
+  radio: Radio,
+  'redo-2': Redo2,
+  rocket: Rocket,
+  'rotate-ccw': RotateCcw,
+  rows: Rows2,
+  'scan-face': ScanFace,
+  scissors: Scissors,
+  search: Search,
+  send: Send,
+  settings: Settings,
+  'skip-back': SkipBack,
+  'sliders-horizontal': SlidersHorizontal,
+  sparkles: Sparkles,
+  sun: Sun,
+  tags: Tags,
+  trash: Trash,
+  'triangle-alert': TriangleAlert,
+  trophy: Trophy,
+  type: Type,
+  'undo-2': Undo2,
+  'volume-2': Volume2,
+  wand: Wand,
+  x: X,
+  'zoom-in': ZoomIn,
+  'zoom-out': ZoomOut,
+} satisfies Record<string, LucideIcon>;
+
+export type IconName = keyof typeof ICONS;
+
+type IconProps = {
+  name: IconName;
+  size?: number;
+  /** Espessura do traço. O protótipo sobe para 2.4/3 em selos e checks. */
+  stroke?: number;
+  className?: string;
+  style?: React.CSSProperties;
+};
+
+export function Icon({ name, size = 14, stroke = 2, className, style }: IconProps) {
+  const Glyph = ICONS[name];
+  return (
+    <Glyph size={size} strokeWidth={stroke} className={className} style={style} aria-hidden />
+  );
+}

@@ -1,3 +1,8 @@
+/* D-599: camada visual do upgrade de layout. Fica escopada em `.ap`
+   (ver upgrade/upgrade.css) e nao redefine nenhum token --wb-*: as
+   telas atuais continuam exatamente como estao. */
+@import './upgrade/upgrade.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

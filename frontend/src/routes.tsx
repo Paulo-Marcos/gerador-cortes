@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from '@/App';
 import { ProjetosPage } from '@/features/projetos/ProjetosPage';
@@ -58,6 +58,9 @@ const WorkspaceDoFirePage = lazy(() =>
 const AtalhosPage = lazy(() =>
   import('@/features/atalhos/AtalhosPage').then((m) => ({ default: m.AtalhosPage })),
 );
+// D-599 Etapa 0: vitrine da fundacao visual do upgrade de layout. Rota de
+// nivel superior (fora do <App/>) de proposito — ver UpgradeKitPage.
+const UpgradeKitPage = lazy(() => import('@/upgrade/UpgradeKitPage'));
 
 export const router = createBrowserRouter([
   {
@@ -91,5 +94,13 @@ export const router = createBrowserRouter([
       { path: 'atalhos', element: <AtalhosPage /> },
       { path: '*', element: <StubPage titulo="Pagina nao encontrada" /> },
     ],
+  },
+  {
+    path: '/upgrade/kit',
+    element: (
+      <Suspense fallback={null}>
+        <UpgradeKitPage />
+      </Suspense>
+    ),
   },
 ]);

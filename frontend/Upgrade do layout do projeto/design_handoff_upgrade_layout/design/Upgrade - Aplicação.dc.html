@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="./icons.js"></script>
+  <style>
+    body{margin:0;background:#0f1115;font-family:'Geist',ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    .ap{--sans:'Geist',ui-sans-serif,system-ui,sans-serif;--mono:'Geist Mono',ui-monospace,monospace;
+      --bg:oklch(0.975 0.004 240);--panel:rgb(255 255 255/.62);--solid:#fff;--inset:rgb(255 255 255/.5);--line:rgb(20 25 40/.1);--line2:rgb(20 25 40/.055);
+      --ink:oklch(0.2 0.015 250);--mute:oklch(0.45 0.02 250);--dim:oklch(0.62 0.02 250);
+      --accent:oklch(0.52 0.165 28);--accent2:oklch(0.44 0.18 28);--accent-soft:oklch(0.52 0.165 28/.12);--on-accent:#fff;
+      --ok:oklch(0.52 0.13 145);--ok-soft:oklch(0.52 0.13 145/.14);--warn:oklch(0.52 0.14 70);--warn-soft:oklch(0.55 0.14 70/.16);--info:oklch(0.5 0.13 245);--info-soft:oklch(0.5 0.13 245/.14);--err:oklch(0.52 0.18 25);--err-soft:oklch(0.55 0.18 25/.14);
+      --glass:blur(22px) saturate(1.6);--hi:0 1px 0 rgb(255 255 255/.6) inset;--shadow:0 1px 0 rgb(255 255 255/.6) inset,0 8px 28px rgb(20 25 40/.09);
+      --r1:3px;--r2:4px;--r3:5px;
+      background-image:radial-gradient(900px 520px at 10% -12%,oklch(0.88 0.08 28/.7),transparent 62%),radial-gradient(820px 560px at 96% 106%,oklch(0.88 0.07 245/.75),transparent 60%),radial-gradient(600px 420px at 58% 48%,oklch(0.93 0.05 80/.45),transparent 65%),linear-gradient(oklch(0.965 0.006 240),oklch(0.945 0.01 250))}
+    .ap[data-theme="dark"]{--bg:oklch(0.17 0.012 255);--panel:rgb(255 255 255/.06);--solid:oklch(0.21 0.012 255);--inset:rgb(255 255 255/.09);--line:rgb(255 255 255/.14);--line2:rgb(255 255 255/.07);
+      --ink:oklch(0.95 0.008 250);--mute:oklch(0.74 0.015 250);--dim:oklch(0.56 0.015 250);
+      --accent:oklch(0.72 0.155 32);--accent2:oklch(0.82 0.15 32);--accent-soft:oklch(0.72 0.155 32/.16);--on-accent:oklch(0.14 0.01 60);
+      --ok:oklch(0.8 0.14 145);--ok-soft:oklch(0.78 0.14 145/.16);--warn:oklch(0.84 0.15 75);--warn-soft:oklch(0.82 0.15 75/.16);--info:oklch(0.76 0.13 245);--info-soft:oklch(0.74 0.13 245/.16);--err:oklch(0.74 0.16 25);--err-soft:oklch(0.72 0.16 25/.16);
+      --hi:0 1px 0 rgb(255 255 255/.08) inset;--shadow:0 1px 0 rgb(255 255 255/.08) inset,0 10px 30px rgb(0 0 0/.45);
+      background-image:radial-gradient(900px 520px at 10% -12%,oklch(0.38 0.12 28/.7),transparent 62%),radial-gradient(820px 560px at 96% 106%,oklch(0.36 0.1 260/.7),transparent 60%),radial-gradient(600px 420px at 58% 48%,oklch(0.3 0.06 200/.45),transparent 65%),linear-gradient(oklch(0.17 0.012 255),oklch(0.14 0.014 260))}
+    .ap[data-glass="0"]{--panel:var(--solid);--inset:oklch(0.955 0.005 240);--glass:none;background-image:none;background-color:var(--bg)}
+    .ap[data-glass="0"][data-theme="dark"]{--inset:oklch(0.25 0.012 255)}
+    .ap a{color:var(--ink);text-decoration:none}.ap a:hover{color:var(--accent)}
+    .ap button,.ap input,.ap select,.ap textarea{font:inherit;color:inherit}
+    .ap kbd{font-family:var(--mono);font-size:10px;font-weight:600;padding:1px 5px;border-radius:var(--r1);border:1px solid var(--line);background:var(--inset);color:var(--mute);line-height:1.4}
+    .ap .gl{background:var(--panel);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);box-shadow:var(--hi)}
+    .ap .btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:var(--r2);border:1px solid var(--line);background:var(--panel);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);box-shadow:var(--hi);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+    .ap .btn:hover{border-color:var(--accent);color:var(--accent)}
+    .ap .btn-pri{border-color:transparent;background:var(--accent);background-image:linear-gradient(rgb(255 255 255/.18),transparent);color:var(--on-accent);font-weight:700;box-shadow:0 1px 0 rgb(255 255 255/.3) inset,0 6px 18px oklch(0.52 0.165 28/.3)}
+    .ap .btn-pri:hover{color:var(--on-accent);filter:brightness(1.06)}
+    .ap .btn-icon{width:30px;padding:0;justify-content:center}
+    .ap .card{border:1px solid var(--line);border-radius:var(--r3);background:var(--panel);backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);box-shadow:var(--shadow)}
+    .ap .chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:var(--r1);font-size:11px;font-weight:700;white-space:nowrap}
+    .ap .lbl{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+    .ap .fld{display:flex;align-items:center;gap:6px;height:30px;padding:0 9px;border-radius:var(--r2);border:1px solid var(--line);background:var(--inset);font-size:12px}
+    .ap .row:hover{background:var(--accent-soft)}
+    .ap .two{display:grid;grid-template-columns:minmax(360px,1fr) 320px;gap:14px;align-items:start}
+    .ap .two-b{display:grid;grid-template-columns:minmax(360px,1fr) 320px;gap:14px;height:100%;min-height:0}
+    .ap .two>*,.ap .two-b>*{min-width:0}
+    @media (max-width:1240px){
+      .ap .two,.ap .two-b{grid-template-columns:minmax(0,1fr);height:auto}
+      .ap .two-b>aside{max-height:none}
+      .ap .ctx{display:none !important}
+    }
+    .ap ::-webkit-scrollbar{width:9px;height:9px}.ap ::-webkit-scrollbar-thumb{background:var(--line);border:2px solid transparent;border-radius:9px;background-clip:padding-box}
+  </style>
+</helmet>
+
+<div class="ap" data-theme="{{ tema }}" data-glass="{{ vidro }}" style="display:grid;grid-template-columns:{{ larguraTrilho }} 1fr;height:100dvh;min-height:0;overflow:hidden;color:var(--ink);font-size:13px;font-family:var(--sans)">
+
+  <!-- ░░ TRILHO GLOBAL ░░ -->
+  <aside class="gl" style="display:flex;flex-direction:column;gap:2px;padding:10px 8px;border-right:1px solid var(--line);overflow:hidden">
+    <div style="display:flex;align-items:center;gap:8px;padding:0 3px 10px">
+      <span style="display:grid;place-items:center;width:26px;height:26px;flex:none;border-radius:var(--r2);background:var(--accent);color:var(--on-accent)"><l-icon name="scissors" size="13" stroke="2.4"></l-icon></span>
+      <span style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;display:{{ mostrarTexto }}">CortadorLive</span>
+      <button onClick="{{ alternarTrilho }}" class="btn btn-icon" style="margin-left:auto;height:24px;width:24px;border:0;background:none;box-shadow:none;color:var(--dim)"><l-icon name="panel-left" size="14"></l-icon></button>
+    </div>
+    <span class="lbl" style="padding:2px 4px 4px;display:{{ mostrarTexto }}">Produção</span>
+    <sc-for list="{{ navProd }}" as="i" hint-placeholder-count="5">
+      <button onClick="{{ i.ir }}" title="{{ i.t }}" style="display:flex;align-items:center;gap:9px;height:32px;padding:0 7px;border:0;border-radius:var(--r2);background:{{ i.bg }};color:{{ i.cor }};font-size:12.5px;font-weight:600;cursor:pointer;text-align:left;box-shadow:{{ i.hi }}">
+        <l-icon name="{{ i.n }}" size="15"></l-icon><span style="white-space:nowrap;overflow:hidden;display:{{ mostrarTexto }}">{{ i.t }}</span>
+        <span style="margin-left:auto;font-family:var(--mono);font-size:10px;padding:0 5px;border-radius:var(--r1);background:{{ i.badgeBg }};color:{{ i.badgeCor }};display:{{ i.badgeDisplay }}">{{ i.badge }}</span>
+      </button>
+    </sc-for>
+    <span class="lbl" style="padding:12px 4px 4px;display:{{ mostrarTexto }}">Inteligência</span>
+    <sc-for list="{{ navIntel }}" as="i" hint-placeholder-count="4">
+      <button onClick="{{ i.ir }}" title="{{ i.t }}" style="display:flex;align-items:center;gap:9px;height:32px;padding:0 7px;border:0;border-radius:var(--r2);background:{{ i.bg }};color:{{ i.cor }};font-size:12.5px;font-weight:600;cursor:pointer;text-align:left;box-shadow:{{ i.hi }}">
+        <l-icon name="{{ i.n }}" size="15"></l-icon><span style="white-space:nowrap;overflow:hidden;display:{{ mostrarTexto }}">{{ i.t }}</span>
+      </button>
+    </sc-for>
+    <div style="flex:1"></div>
+    <button onClick="{{ irFila }}" class="card" style="display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:6px;cursor:pointer;text-align:left">
+      <span style="width:16px;height:16px;flex:none;border-radius:99px;background:conic-gradient(var(--accent) 62%,var(--inset) 0)"></span>
+      <span style="min-width:0;display:{{ mostrarTexto }}"><span style="display:block;font-size:11.5px;font-weight:600;white-space:nowrap">Fila · 1 job</span><span style="display:block;font-size:10.5px;color:var(--mute);white-space:nowrap">render 62% · 4 min</span></span>
+    </button>
+    <sc-for list="{{ navFim }}" as="i" hint-placeholder-count="2">
+      <button onClick="{{ i.ir }}" title="{{ i.t }}" style="display:flex;align-items:center;gap:9px;height:32px;padding:0 7px;border:0;border-radius:var(--r2);background:{{ i.bg }};color:{{ i.cor }};font-size:12.5px;font-weight:600;cursor:pointer;text-align:left">
+        <l-icon name="{{ i.n }}" size="15"></l-icon><span style="white-space:nowrap;overflow:hidden;display:{{ mostrarTexto }}">{{ i.t }}</span>
+      </button>
+    </sc-for>
+  </aside>
+
+  <div style="display:flex;flex-direction:column;min-width:0;min-height:0">
+    <!-- ░░ BARRA SUPERIOR ░░ -->
+    <header class="gl" style="display:flex;align-items:center;gap:8px;flex:none;height:44px;padding:0 12px;border-bottom:1px solid var(--line)">
+      <nav style="display:flex;align-items:center;gap:6px;min-width:0;font-size:12.5px;color:var(--mute)">
+        <sc-for list="{{ trilha }}" as="b" hint-placeholder-count="2">
+          <span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-weight:{{ b.peso }};color:{{ b.cor }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px">{{ b.t }}</span><l-icon name="chevron-right" size="12" style="color:var(--dim);display:{{ b.sep }}"></l-icon></span>
+        </sc-for>
+      </nav>
+      <div style="flex:1"></div>
+      <sc-if value="{{ temSeletor }}" hint-placeholder-val="{{ true }}">
+      <div style="position:relative;display:flex;align-items:center;gap:3px;flex:none">
+        <button onClick="{{ cortePrev }}" class="btn btn-icon" title="Corte anterior · K"><l-icon name="chevron-left" size="14"></l-icon></button>
+        <button onClick="{{ alternarSeletor }}" class="btn" style="border-color:{{ seletorBorda }};min-width:190px">
+          <l-icon name="scissors" size="12" style="color:var(--accent)"></l-icon>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--mute)">#{{ corte.num }}</span>
+          <span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;text-align:left">{{ corte.titulo }}</span>
+          <l-icon name="chevron-down" size="12" style="color:var(--dim)"></l-icon>
+        </button>
+        <button onClick="{{ corteNext }}" class="btn btn-icon" title="Próximo corte · J"><l-icon name="chevron-right" size="14"></l-icon></button>
+        <sc-if value="{{ seletorAberto }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="position:absolute;top:38px;right:0;z-index:20;width:360px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 44px rgb(0 0 0/.28)">
+            <div style="display:flex;align-items:center;gap:6px;padding:9px 11px;border-bottom:1px solid var(--line2)">
+              <span class="lbl">Cortes da LIVE 267</span><span style="flex:1"></span>
+              <span style="font-family:var(--mono);font-size:10.5px;color:var(--mute)">14 · 8 prontos</span>
+            </div>
+            <div class="fld" style="margin:9px 11px 0;color:var(--dim)"><l-icon name="search" size="12"></l-icon>filtrar por título, número ou tempo</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;padding:9px 11px">
+              <sc-for list="{{ filtrosSeletor }}" as="f" hint-placeholder-count="4"><span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border:1px solid {{ f.borda }};border-radius:var(--r1);background:{{ f.bg }};color:{{ f.cor }};font-size:11px;font-weight:600;cursor:pointer">{{ f.t }}<span style="font-family:var(--mono);font-size:10px;opacity:.7">{{ f.n }}</span></span></sc-for>
+            </div>
+            <div style="max-height:300px;overflow:auto;padding:0 7px 7px">
+              <sc-for list="{{ cortesSeletor }}" as="c" hint-placeholder-count="6">
+                <button onClick="{{ c.ir }}" class="row" style="display:flex;align-items:center;gap:9px;width:100%;padding:7px;border:1px solid {{ c.borda }};border-radius:var(--r2);background:{{ c.bg }};cursor:pointer;text-align:left;margin-bottom:2px">
+                  <span style="position:relative;width:52px;height:30px;flex:none;border-radius:var(--r1);overflow:hidden;background:linear-gradient(135deg,oklch(0.55 0.05 250),oklch(0.28 0.04 250))"><span style="position:absolute;bottom:1px;right:2px;font-family:var(--mono);font-size:8.5px;color:#fff">{{ c.dur }}</span></span>
+                  <span style="min-width:0;flex:1">
+                    <span style="display:flex;align-items:center;gap:6px"><span style="font-family:var(--mono);font-size:10.5px;color:var(--dim)">#{{ c.num }}</span><span style="min-width:0;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.titulo }}</span><span style="color:var(--accent);display:{{ c.fireDisplay }}"><l-icon name="flame" size="11"></l-icon></span></span>
+                    <span style="display:flex;align-items:center;gap:7px;margin-top:2px"><span class="chip" style="height:18px;background:{{ c.statusBg }};color:{{ c.statusCor }}">{{ c.status }}</span><span style="font-family:var(--mono);font-size:10px;color:var(--dim)">{{ c.inicio }} → {{ c.fim }}</span></span>
+                  </span>
+                  <l-icon name="chevron-right" size="13" style="color:var(--dim)"></l-icon>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;padding:9px 11px;border-top:1px solid var(--line2)">
+              <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--mute)"><kbd>J</kbd><kbd>K</kbd>trocar de corte</span>
+              <div style="flex:1"></div>
+              <button onClick="{{ irProjeto }}" class="btn" style="height:26px"><l-icon name="layout-grid" size="12"></l-icon>Ver todos</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      </sc-if>
+      <div class="fld" style="width:240px;color:var(--dim);background:var(--panel);backdrop-filter:var(--glass)"><l-icon name="command" size="12"></l-icon>Buscar live, corte, ação…<span style="flex:1"></span><kbd>⌘K</kbd></div>
+      <span class="chip" style="background:var(--ok-soft);color:var(--ok)"><l-icon name="circle-check" size="12"></l-icon>salvo</span>
+      <button class="btn btn-icon"><l-icon name="bell" size="14"></l-icon></button>
+      <button onClick="{{ alternarTema }}" class="btn btn-icon"><l-icon name="{{ iconeTema }}" size="14"></l-icon></button>
+    </header>
+
+    <div style="display:flex;min-height:0;flex:1">
+      <!-- ░░ CONTEXTO (segunda coluna) ░░ -->
+      <sc-if value="{{ temContexto }}" hint-placeholder-val="{{ true }}">
+      <aside class="gl ctx" style="display:flex;flex:none;width:250px;flex-direction:column;border-right:1px solid var(--line);min-height:0">
+        <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-bottom:1px solid var(--line2)">
+          <div style="display:flex;align-items:flex-start;gap:9px">
+            <span style="width:44px;height:26px;flex:none;border-radius:var(--r1);background:linear-gradient(135deg,oklch(0.62 0.06 250),oklch(0.34 0.05 250))"></span>
+            <span style="min-width:0"><span style="display:block;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ctx.titulo }}</span><span style="display:block;font-size:11px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ctx.sub }}</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:3px">
+            <sc-for list="{{ etapasProjeto }}" as="e" hint-placeholder-count="6">
+              <button onClick="{{ e.ir }}" title="{{ e.t }}" style="display:grid;place-items:center;width:100%;height:24px;border:1px solid {{ e.borda }};border-radius:var(--r1);background:{{ e.bg }};color:{{ e.cor }};cursor:pointer"><l-icon name="{{ e.n }}" size="12"></l-icon></button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;padding:9px 12px;border-bottom:1px solid var(--line2)">
+          <span class="lbl">{{ ctx.listaTitulo }}</span><span style="flex:1"></span>
+          <span style="font-family:var(--mono);font-size:10.5px;color:var(--mute)">{{ ctx.listaResumo }}</span>
+        </div>
+        <div style="flex:1;overflow:auto;padding:6px">
+          <sc-for list="{{ ctx.itens }}" as="c" hint-placeholder-count="8">
+            <button onClick="{{ c.ir }}" class="row" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px;border:1px solid {{ c.borda }};border-radius:var(--r2);background:{{ c.bg }};cursor:pointer;text-align:left;margin-bottom:2px">
+              <span style="position:relative;width:38px;height:22px;flex:none;border-radius:var(--r1);background:linear-gradient(135deg,oklch(0.55 0.05 250),oklch(0.3 0.04 250))"><span style="position:absolute;inset:auto 1px 1px auto;font-family:var(--mono);font-size:8px;color:#fff">{{ c.dur }}</span></span>
+              <span style="min-width:0;flex:1"><span style="display:block;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.titulo }}</span><span style="display:block;font-family:var(--mono);font-size:10px;color:var(--mute)">#{{ c.num }} · {{ c.inicio }}</span></span>
+              <span style="width:7px;height:7px;flex:none;border-radius:99px;background:{{ c.dot }}"></span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:6px;padding:10px 12px;border-top:1px solid var(--line2)">
+          <button class="btn" style="flex:1;justify-content:center"><l-icon name="plus" size="12"></l-icon>{{ ctx.acao }}</button>
+        </div>
+      </aside>
+      </sc-if>
+
+      <main style="display:flex;flex-direction:column;min-width:0;flex:1;min-height:0">
+        <!-- ░░ CABEÇALHO DA TELA ░░ -->
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:none;padding:14px 18px 10px">
+          <l-icon name="{{ cab.icone }}" size="17" style="color:var(--accent)"></l-icon>
+          <span style="min-width:0"><h1 style="margin:0;font-size:16px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cab.titulo }}</h1><p style="margin:1px 0 0;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cab.sub }}</p></span>
+          <div style="flex:1"></div>
+          <sc-for list="{{ cab.acoes }}" as="a" hint-placeholder-count="2">
+            <button onClick="{{ a.ir }}" class="btn {{ a.cls }}"><l-icon name="{{ a.n }}" size="13"></l-icon>{{ a.t }}</button>
+          </sc-for>
+        </div>
+
+        <div style="flex:1;overflow:auto;padding:4px 18px 18px;min-height:0">
+
+          <!-- ═══ BIBLIOTECA ═══ -->
+          <sc-if value="{{ ehBiblioteca }}" hint-placeholder-val="{{ true }}">
+          <div data-screen-label="Biblioteca" style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
+              <div class="fld" style="width:260px;color:var(--dim)"><l-icon name="search" size="12"></l-icon>buscar por título da live</div>
+              <sc-for list="{{ filtrosBib }}" as="f" hint-placeholder-count="6"><button style="display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border:1px solid {{ f.borda }};border-radius:var(--r2);background:{{ f.bg }};color:{{ f.cor }};font-size:12px;font-weight:600;cursor:pointer">{{ f.t }}<span style="font-family:var(--mono);font-size:10.5px;opacity:.7">{{ f.n }}</span></button></sc-for>
+              <div style="flex:1"></div>
+              <div class="fld"><l-icon name="list-filter" size="12" style="color:var(--mute)"></l-icon>Mais recentes<l-icon name="chevron-down" size="12" style="color:var(--dim)"></l-icon></div>
+            </div>
+            <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+              <sc-for list="{{ projetos }}" as="p" hint-placeholder-count="6">
+                <article class="card" style="overflow:hidden;display:flex;flex-direction:column">
+                  <div style="position:relative;aspect-ratio:16/9;background:linear-gradient(135deg,oklch(0.6 0.06 250),oklch(0.3 0.05 255))">
+                    <span class="chip gl" style="position:absolute;top:8px;left:8px;color:{{ p.estadoCor }}"><span style="width:6px;height:6px;border-radius:99px;background:currentColor"></span>{{ p.estado }}</span>
+                    <span style="position:absolute;bottom:8px;right:8px;font-family:var(--mono);font-size:10.5px;color:#fff;background:rgb(0 0 0/.55);padding:2px 6px;border-radius:var(--r1)">{{ p.dur }}</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px;padding:11px">
+                    <span style="min-width:0"><span style="display:block;font-size:13.5px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.titulo }}</span><span style="display:block;margin-top:2px;font-size:11.5px;color:var(--mute)">LIVE {{ p.num }} · {{ p.data }} · {{ p.mb }}</span></span>
+                    <div style="display:flex;gap:3px">
+                      <sc-for list="{{ p.pipeline }}" as="s" hint-placeholder-count="6"><span title="{{ s.t }}" style="display:grid;place-items:center;flex:1;height:22px;border-radius:var(--r1);background:{{ s.bg }};color:{{ s.cor }}"><l-icon name="{{ s.n }}" size="12"></l-icon></span></sc-for>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;color:var(--mute)">
+                      <span>{{ p.cortes }} cortes</span><span style="color:var(--ok)">{{ p.publicados }} publicados</span><span style="color:var(--accent)">{{ p.fires }} fire</span>
+                      <span style="flex:1"></span><l-icon name="arrow-right" size="13"></l-icon>
+                    </div>
+                  </div>
+                </article>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ═══ WORKSPACE DO PROJETO ═══ -->
+          <sc-if value="{{ ehProjeto }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Workspace do projeto" style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+              <sc-for list="{{ statsProjeto }}" as="s" hint-placeholder-count="4">
+                <div class="card" style="padding:11px 12px"><span class="lbl" style="display:flex;align-items:center;gap:5px;color:{{ s.cor }}"><l-icon name="{{ s.n }}" size="12"></l-icon>{{ s.t }}</span><div style="margin-top:5px;font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1">{{ s.v }}</div><div style="margin-top:2px;font-size:11px;color:var(--mute)">{{ s.sub }}</div></div>
+              </sc-for>
+            </div>
+            <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 12px">
+              <span class="lbl">Etapas da live</span>
+              <sc-for list="{{ etapasLonga }}" as="e" hint-placeholder-count="6">
+                <span style="display:flex;align-items:center;gap:8px"><span class="chip" style="background:{{ e.bg }};color:{{ e.cor }};height:26px"><l-icon name="{{ e.n }}" size="12"></l-icon>{{ e.t }}<span style="font-family:var(--mono);font-size:10px;opacity:.8">{{ e.v }}</span></span><span style="width:14px;height:1px;background:var(--line);display:{{ e.sep }}"></span></span>
+              </sc-for>
+              <div style="flex:1"></div>
+              <button class="btn"><l-icon name="brain" size="13"></l-icon>Reanalisar</button>
+              <button class="btn btn-pri"><l-icon name="send" size="13"></l-icon>Publicar 8 cortes</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px"><span class="lbl">Cortes da live</span><span style="font-size:11.5px;color:var(--mute)">14 cortes · 8 prontos · 3 fire</span><div style="flex:1"></div><div class="fld" style="color:var(--dim);width:200px"><l-icon name="search" size="12"></l-icon>buscar corte</div></div>
+            <div style="display:grid;gap:8px">
+              <sc-for list="{{ cortesLista }}" as="c" hint-placeholder-count="6">
+                <article class="card row" style="display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;padding:9px 11px">
+                  <span style="position:relative;width:96px;aspect-ratio:16/9;border-radius:var(--r2);overflow:hidden;background:linear-gradient(135deg,oklch(0.55 0.05 250),oklch(0.28 0.04 250))"><span style="position:absolute;bottom:3px;right:4px;font-family:var(--mono);font-size:9.5px;color:#fff">{{ c.dur }}</span></span>
+                  <span style="min-width:0">
+                    <span style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11px;color:var(--dim)">#{{ c.num }}</span><span style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.titulo }}</span><span style="color:var(--accent);display:{{ c.fireDisplay }}"><l-icon name="flame" size="13"></l-icon></span></span>
+                    <span style="display:flex;align-items:center;gap:8px;margin-top:5px">
+                      <span class="chip" style="background:{{ c.statusBg }};color:{{ c.statusCor }}"><span style="width:6px;height:6px;border-radius:99px;background:currentColor"></span>{{ c.status }}</span>
+                      <sc-for list="{{ c.flags }}" as="f" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:{{ f.cor }}"><l-icon name="{{ f.n }}" size="11"></l-icon>{{ f.t }}</span></sc-for>
+                      <span style="font-family:var(--mono);font-size:10.5px;color:var(--dim)">{{ c.inicio }} → {{ c.fim }}</span>
+                    </span>
+                  </span>
+                  <span style="display:flex;gap:5px">
+                    <button class="btn btn-icon" title="Editar corte"><l-icon name="scissors" size="13"></l-icon></button>
+                    <button class="btn btn-icon" title="Pós-produção"><l-icon name="clapperboard" size="13"></l-icon></button>
+                    <button class="btn btn-icon" title="Metadados"><l-icon name="tags" size="13"></l-icon></button>
+                    <button class="btn {{ c.cls }}"><l-icon name="{{ c.priIcone }}" size="13"></l-icon>{{ c.pri }}</button>
+                  </span>
+                </article>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ═══ EDITOR DE CORTES / PÓS-PRODUÇÃO / FIRE (bancada) ═══ -->
+          <sc-if value="{{ ehBancada }}" hint-placeholder-val="{{ false }}">
+          <div class="two-b" data-screen-label="Bancada">
+            <section style="display:flex;flex-direction:column;gap:10px;min-height:0">
+              <div style="flex:1;display:grid;place-items:center;min-height:220px;min-width:0">
+                <div style="position:relative;height:100%;max-width:100%;aspect-ratio:{{ banc.proporcao }};border-radius:var(--r3);overflow:hidden;background:#000;box-shadow:var(--shadow);container-type:inline-size">
+                  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 45% 40%,#3a3f4a,#14171d 70%)"></div>
+                  <sc-if value="{{ banc.mascara }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;inset:0 auto 0 0;width:35.8%;background:rgb(0 0 0/.62)"></div><div style="position:absolute;inset:0 0 0 auto;width:35.8%;background:rgb(0 0 0/.62)"></div>
+                    <div style="position:absolute;inset:0 auto 0 35.8%;width:28.4%;outline:1.5px solid var(--accent);outline-offset:-1px"></div>
+                  </sc-if>
+                  <sc-if value="{{ banc.legenda }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;left:10%;right:10%;bottom:16%;text-align:center;font-weight:800;font-size:4.2cqw;line-height:1.15;color:#fff;text-shadow:0 2px 0 #000">o Banco Central <span style="color:#ffd21f">olhou</span> pro retrovisor</div>
+                  </sc-if>
+                  <span class="chip" style="position:absolute;top:8px;left:8px;background:rgb(0 0 0/.55);color:#fff;font-family:var(--mono)">{{ banc.selo }}</span>
+                </div>
+              </div>
+              <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:5px 9px;min-height:40px">
+                <button class="btn btn-icon" style="border-color:transparent;background:var(--ink);color:var(--bg)"><l-icon name="play" size="13"></l-icon></button>
+                <button class="btn btn-icon" style="border:0;background:none;box-shadow:none;color:var(--mute)"><l-icon name="chevron-first" size="14"></l-icon></button>
+                <button class="btn btn-icon" style="border:0;background:none;box-shadow:none;color:var(--mute)"><l-icon name="chevron-last" size="14"></l-icon></button>
+                <span style="font-family:var(--mono);font-size:12px;font-weight:600">{{ banc.tempo }}<span style="color:var(--dim)"> / {{ banc.total }}</span></span>
+                <span class="chip" style="background:var(--accent-soft);color:var(--accent2);font-family:var(--mono)">{{ banc.trecho }}</span>
+                <div style="flex:1"></div>
+                <sc-for list="{{ banc.fontes }}" as="f" hint-placeholder-count="3"><button style="height:26px;padding:0 9px;border:1px solid {{ f.borda }};border-radius:var(--r2);background:{{ f.bg }};color:{{ f.cor }};font-size:11.5px;font-weight:600;cursor:pointer">{{ f.t }}</button></sc-for>
+                <span class="fld" style="font-family:var(--mono);height:26px"><l-icon name="gauge" size="12"></l-icon>{{ banc.velocidade }}</span>
+                <button class="btn btn-icon" style="border:0;background:none;box-shadow:none;color:var(--mute)"><l-icon name="volume-2" size="14"></l-icon></button>
+              </div>
+              <div class="card" style="display:flex;flex-direction:column;gap:8px;flex:none;padding:10px 11px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span class="lbl">Linha do tempo</span>
+                  <span style="display:flex;gap:9px;font-size:11px;color:var(--mute)"><sc-for list="{{ legenda }}" as="l" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:{{ l.cor }}"></span>{{ l.t }}</span></sc-for></span>
+                  <div style="flex:1"></div>
+                  <button class="btn" style="height:26px"><l-icon name="plus" size="11"></l-icon>Trecho<kbd>N</kbd></button>
+                  <button class="btn btn-icon" style="height:26px;width:26px"><l-icon name="zoom-out" size="12"></l-icon></button>
+                  <button class="btn btn-icon" style="height:26px;width:26px"><l-icon name="zoom-in" size="12"></l-icon></button>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--dim)"><span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>{{ banc.total }}</span></div>
+                <div style="position:relative;height:60px;border-radius:var(--r2);background:var(--inset);overflow:hidden">{{ onda }}
+                  <sc-for list="{{ clipes }}" as="c" hint-placeholder-count="4"><div style="position:absolute;top:0;bottom:0;left:{{ c.left }};width:{{ c.w }};border-radius:var(--r1);background:{{ c.bg }};border:1px solid {{ c.borda }}"></div></sc-for>
+                  <div style="position:absolute;top:-2px;bottom:-2px;left:22.7%;width:2px;background:var(--ink)"></div>
+                </div>
+                <div style="position:relative;height:34px">
+                  <sc-for list="{{ clipes }}" as="c" hint-placeholder-count="4">
+                    <div style="position:absolute;top:0;height:34px;left:{{ c.left }};width:{{ c.w }};min-width:110px;display:flex;align-items:center;gap:6px;padding:0 7px;border-radius:var(--r2);background:{{ c.bg }};border:1px solid {{ c.borda }};overflow:hidden">
+                      <span style="font-family:var(--mono);font-size:10px;font-weight:700;color:{{ c.cor }}">{{ c.nota }}</span>
+                      <span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.titulo }}</span>
+                      <span style="margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--mute)">{{ c.dur }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </section>
+            <aside class="card" style="display:flex;flex-direction:column;min-height:0;overflow:hidden">
+              <div style="display:flex;gap:2px;padding:9px 11px 0;border-bottom:1px solid var(--line2)">
+                <sc-for list="{{ banc.abas }}" as="a" hint-placeholder-count="4"><button style="height:30px;padding:0 9px;border:0;background:none;font-size:12.5px;font-weight:600;color:{{ a.cor }};border-bottom:2px solid {{ a.linha }};margin-bottom:-1px;cursor:pointer">{{ a.t }}</button></sc-for>
+              </div>
+              <div style="flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:flex-start;gap:9px">
+                  <span style="display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:var(--r2);background:var(--ok-soft);color:var(--ok);font-family:var(--mono);font-size:14px;font-weight:700">{{ banc.nota }}</span>
+                  <span style="min-width:0"><span style="display:block;font-size:13.5px;font-weight:700;line-height:1.3">{{ banc.tituloTrecho }}</span><span style="display:block;margin-top:2px;font-size:11.5px;color:var(--mute)">{{ banc.subTrecho }}</span></span>
+                </div>
+                <sc-for list="{{ banc.campos }}" as="f" hint-placeholder-count="4">
+                  <label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;font-weight:600;color:var(--mute)">{{ f.t }}</span><span class="fld" style="min-height:30px;height:auto;padding:6px 9px;line-height:1.4;background:var(--inset)">{{ f.v }}<span style="flex:1"></span><span style="font-family:var(--mono);font-size:10px;color:var(--dim)">{{ f.hint }}</span></span></label>
+                </sc-for>
+                <div style="padding:9px 11px;border-radius:var(--r2);background:var(--inset);font-size:12px;line-height:1.55;color:var(--mute)"><b style="color:var(--ink)">{{ banc.notaTitulo }}</b><br>{{ banc.notaTexto }}</div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <span class="lbl">{{ banc.listaTitulo }}</span>
+                  <sc-for list="{{ banc.lista }}" as="t" hint-placeholder-count="4">
+                    <div class="row" style="display:flex;align-items:center;gap:8px;height:34px;padding:0 8px;border:1px solid {{ t.borda }};border-radius:var(--r2);background:{{ t.bg }}">
+                      <span style="width:7px;height:7px;flex:none;border-radius:99px;background:{{ t.dot }}"></span>
+                      <span style="font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--mute);width:24px">{{ t.nota }}</span>
+                      <span style="flex:1;min-width:0;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:{{ t.risco }}">{{ t.titulo }}</span>
+                      <span style="font-family:var(--mono);font-size:10px;color:var(--dim)">{{ t.dur }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </aside>
+          </div>
+          </sc-if>
+
+          <!-- ═══ METADADOS ═══ -->
+          <sc-if value="{{ ehMetadados }}" hint-placeholder-val="{{ false }}">
+          <div class="two" data-screen-label="Metadados">
+            <section style="display:flex;flex-direction:column;gap:10px">
+              <div class="card" style="display:flex;flex-direction:column;gap:12px;padding:14px">
+                <sc-for list="{{ campos }}" as="f" hint-placeholder-count="4">
+                  <label style="display:flex;flex-direction:column;gap:5px"><span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--mute)">{{ f.t }}<span style="flex:1"></span><span style="font-family:var(--mono);font-size:10px;color:var(--dim)">{{ f.hint }}</span></span><span class="fld" style="min-height:{{ f.altura }};height:auto;align-items:flex-start;padding:8px 10px;line-height:1.5;font-size:12.5px">{{ f.v }}</span></label>
+                </sc-for>
+                <div style="display:flex;flex-wrap:wrap;gap:5px">
+                  <sc-for list="{{ tags }}" as="t" hint-placeholder-count="6"><span class="chip" style="background:var(--inset);color:var(--mute)">{{ t }}</span></sc-for>
+                  <button class="btn" style="height:22px;font-size:11px"><l-icon name="plus" size="11"></l-icon>tag</button>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--line2);padding-top:11px"><button class="btn"><l-icon name="sparkles" size="13"></l-icon>Gerar com IA</button><button class="btn"><l-icon name="image" size="13"></l-icon>Gerar capa</button><button class="btn"><l-icon name="file-text" size="13"></l-icon>Copiar da última</button></div>
+              </div>
+              <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:11px 12px"><l-icon name="rocket" size="14" style="color:var(--accent)"></l-icon><b style="font-size:12.5px">Pronto p/ YouTube</b><span style="font-family:var(--mono);font-size:12px;color:var(--mute)">3 de 8 cortes</span><div style="flex:1;min-width:80px;height:4px;border-radius:2px;background:var(--inset)"><div style="width:37.5%;height:100%;border-radius:2px;background:var(--accent)"></div></div></div>
+            </section>
+            <aside style="display:flex;flex-direction:column;gap:10px">
+              <div class="card" style="display:flex;flex-direction:column;gap:8px;padding:12px">
+                <span class="lbl">Capa · 1280×720</span>
+                <div style="position:relative;aspect-ratio:16/9;border-radius:var(--r2);overflow:hidden;background:radial-gradient(ellipse at 40% 40%,#4a3f2a,#17141d 70%);container-type:inline-size">
+                  <span style="position:absolute;left:7%;right:7%;top:24%;text-align:center;font-weight:800;font-size:12cqw;line-height:1.05;color:#ffd21f;text-transform:uppercase;text-shadow:0 2px 0 #000">O erro do BC</span>
+                </div>
+                <div style="display:flex;gap:6px"><button class="btn" style="flex:1;justify-content:center"><l-icon name="rotate-ccw" size="12"></l-icon>Refazer</button><button class="btn" style="flex:1;justify-content:center"><l-icon name="download" size="12"></l-icon>Baixar</button></div>
+              </div>
+              <div class="card" style="display:flex;flex-direction:column;gap:7px;padding:12px">
+                <span class="lbl">Checklist do corte</span>
+                <sc-for list="{{ checklist }}" as="c" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:7px;font-size:12px;color:{{ c.cor }}"><l-icon name="{{ c.n }}" size="13"></l-icon>{{ c.t }}</span></sc-for>
+              </div>
+            </aside>
+          </div>
+          </sc-if>
+
+          <!-- ═══ SHORTS (fila de Fires) ═══ -->
+          <sc-if value="{{ ehShorts }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Shorts" style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
+              <sc-for list="{{ filtrosShorts }}" as="f" hint-placeholder-count="5"><button style="display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border:1px solid {{ f.borda }};border-radius:var(--r2);background:{{ f.bg }};color:{{ f.cor }};font-size:12px;font-weight:600;cursor:pointer">{{ f.t }}<span style="font-family:var(--mono);font-size:10.5px;opacity:.7">{{ f.n }}</span></button></sc-for>
+              <div style="flex:1"></div>
+              <div class="fld" style="width:240px;color:var(--dim)"><l-icon name="search" size="12"></l-icon>buscar por título, live ou tema</div>
+            </div>
+            <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(310px,1fr))">
+              <sc-for list="{{ fires }}" as="f" hint-placeholder-count="6">
+                <article class="card" style="display:flex;flex-direction:column;overflow:hidden">
+                  <div style="height:3px;background:var(--inset)"><div style="height:100%;width:{{ f.progresso }};background:{{ f.barra }}"></div></div>
+                  <div style="display:flex;flex-direction:column;gap:9px;padding:12px">
+                    <div style="display:flex;align-items:flex-start;gap:8px">
+                      <l-icon name="flame" size="15" style="color:var(--accent)"></l-icon>
+                      <span style="min-width:0;flex:1"><span style="display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.titulo }}</span><span style="display:block;margin-top:2px;font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.live }} · {{ f.tema }}</span></span>
+                      <span class="chip" style="background:{{ f.seloBg }};color:{{ f.seloCor }};display:{{ f.seloDisplay }}">{{ f.selo }}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:11px;font-family:var(--mono);font-size:11px;color:var(--mute)">
+                      <span style="display:inline-flex;align-items:center;gap:4px"><l-icon name="clock" size="11"></l-icon>{{ f.dur }}</span>
+                      <span style="display:inline-flex;align-items:center;gap:4px;color:{{ f.brutoCor }}"><l-icon name="hard-drive" size="11"></l-icon>{{ f.bruto }}</span>
+                    </div>
+                    <div style="display:flex;gap:10px;font-family:var(--mono);font-size:11.5px;font-weight:600">
+                      <sc-for list="{{ f.chips }}" as="c" hint-placeholder-count="2"><span style="color:{{ c.cor }}">{{ c.t }}</span></sc-for>
+                    </div>
+                    <div style="display:flex;gap:5px;border-top:1px solid var(--line2);padding-top:9px">
+                      <button onClick="{{ irFire }}" class="btn" style="flex:1;justify-content:center"><l-icon name="pencil" size="12"></l-icon>Curar</button>
+                      <button onClick="{{ irPrateleira }}" class="btn" style="flex:1;justify-content:center"><l-icon name="layout-grid" size="12"></l-icon>Prateleira</button>
+                      <button class="btn btn-icon"><l-icon name="more-horizontal" size="13"></l-icon></button>
+                    </div>
+                  </div>
+                </article>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ═══ BUSCAR LIVES ═══ -->
+          <sc-if value="{{ ehLives }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Buscar lives" style="display:flex;flex-direction:column;gap:12px">
+            <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:11px 12px">
+              <span class="fld"><l-icon name="radio" size="12" style="color:var(--mute)"></l-icon>@canal-do-paulo</span>
+              <span class="fld"><l-icon name="clock" size="12" style="color:var(--mute)"></l-icon>desde 01/05/2026</span>
+              <span class="fld"><l-icon name="list-filter" size="12" style="color:var(--mute)"></l-icon>25 resultados</span>
+              <div style="flex:1"></div>
+              <span style="font-size:11.5px;color:var(--mute)">3 selecionadas · 1,2 GB estimado</span>
+              <button class="btn"><l-icon name="search" size="13"></l-icon>Buscar</button>
+              <button class="btn btn-pri"><l-icon name="download" size="13"></l-icon>Baixar 3 lives</button>
+            </div>
+            <div style="display:grid;gap:8px">
+              <sc-for list="{{ livesBusca }}" as="l" hint-placeholder-count="6">
+                <article class="card row" style="display:grid;grid-template-columns:22px 130px 1fr auto;gap:12px;align-items:center;padding:9px 11px">
+                  <span style="display:grid;place-items:center;width:18px;height:18px;border-radius:var(--r1);border:1.5px solid {{ l.cb }};background:{{ l.cbBg }};color:var(--on-accent)"><l-icon name="check" size="11" stroke="3" style="display:{{ l.chk }}"></l-icon></span>
+                  <span style="position:relative;width:130px;aspect-ratio:16/9;border-radius:var(--r2);overflow:hidden;background:linear-gradient(135deg,oklch(0.58 0.06 {{ l.hue }}),oklch(0.3 0.05 {{ l.hue }}))"><span style="position:absolute;bottom:3px;right:4px;font-family:var(--mono);font-size:9.5px;color:#fff">{{ l.dur }}</span></span>
+                  <span style="min-width:0"><span style="display:block;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.titulo }}</span><span style="display:flex;align-items:center;gap:10px;margin-top:4px;font-size:11.5px;color:var(--mute)"><span style="display:inline-flex;align-items:center;gap:4px"><l-icon name="clock" size="11"></l-icon>{{ l.data }}</span><span style="display:inline-flex;align-items:center;gap:4px"><l-icon name="eye" size="11"></l-icon>{{ l.views }}</span><span class="chip" style="background:{{ l.estadoBg }};color:{{ l.estadoCor }}">{{ l.estado }}</span></span></span>
+                  <span style="display:flex;gap:5px"><button class="btn btn-icon"><l-icon name="external-link" size="13"></l-icon></button><button class="btn {{ l.cls }}"><l-icon name="{{ l.icone }}" size="13"></l-icon>{{ l.acao }}</button></span>
+                </article>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ═══ RANKING ═══ -->
+          <sc-if value="{{ ehRanking }}" hint-placeholder-val="{{ false }}">
+          <div class="two" data-screen-label="Ranking de lives">
+            <div style="display:grid;gap:8px">
+              <sc-for list="{{ ranking }}" as="r" hint-placeholder-count="6">
+                <article class="card row" style="display:grid;grid-template-columns:44px 120px 1fr auto;gap:12px;align-items:center;padding:9px 11px">
+                  <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:var(--r2);background:{{ r.posBg }};color:{{ r.posCor }};font-family:var(--mono);font-size:14px;font-weight:700">{{ r.pos }}</span>
+                  <span style="position:relative;width:120px;aspect-ratio:16/9;border-radius:var(--r2);overflow:hidden;background:linear-gradient(135deg,oklch(0.58 0.06 {{ r.hue }}),oklch(0.3 0.05 {{ r.hue }}))"></span>
+                  <span style="min-width:0"><span style="display:block;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.titulo }}</span><span style="display:flex;align-items:center;gap:12px;margin-top:5px;font-family:var(--mono);font-size:11px;color:var(--mute)"><span style="display:inline-flex;align-items:center;gap:4px"><l-icon name="eye" size="11"></l-icon>{{ r.views }}</span><span style="display:inline-flex;align-items:center;gap:4px"><l-icon name="sparkles" size="11"></l-icon>{{ r.likes }}</span><span style="display:inline-flex;align-items:center;gap:4px"><l-icon name="inbox" size="11"></l-icon>{{ r.coment }}</span><span style="display:inline-flex;align-items:center;gap:4px;color:{{ r.vphCor }}"><l-icon name="bar-chart" size="11"></l-icon>{{ r.vph }} v/h</span></span></span>
+                  <span style="display:flex;align-items:center;gap:8px"><span style="text-align:right"><span style="display:block;font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)">{{ r.score }}</span><span class="lbl">score</span></span><button class="btn {{ r.cls }}"><l-icon name="{{ r.icone }}" size="13"></l-icon>{{ r.acao }}</button></span>
+                </article>
+              </sc-for>
+            </div>
+            <aside class="card" style="display:flex;flex-direction:column;gap:9px;padding:12px">
+              <span class="lbl">Como o score é formado</span>
+              <sc-for list="{{ pesos }}" as="p" hint-placeholder-count="6">
+                <span style="display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:center;gap:8px;font-size:12px"><span>{{ p.t }}</span><span style="flex:1"></span><span style="font-family:var(--mono);font-size:11px;color:var(--mute)">{{ p.v }}</span></span><span style="height:4px;border-radius:2px;background:var(--inset)"><span style="display:block;height:100%;width:{{ p.v }};border-radius:2px;background:var(--accent)"></span></span></span>
+              </sc-for>
+              <button class="btn" style="justify-content:center;margin-top:3px"><l-icon name="sliders-horizontal" size="12"></l-icon>Ajustar pesos</button>
+            </aside>
+          </div>
+          </sc-if>
+
+          <!-- ═══ ANÁLISES ═══ -->
+          <sc-if value="{{ ehAnalises }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Análises" style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+              <sc-for list="{{ statsAnalise }}" as="s" hint-placeholder-count="4">
+                <div class="card" style="padding:11px 12px"><span class="lbl" style="display:flex;align-items:center;gap:5px"><l-icon name="{{ s.n }}" size="12"></l-icon>{{ s.t }}</span><div style="margin-top:6px;font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1">{{ s.v }}</div><div style="margin-top:3px;display:flex;align-items:center;gap:5px;font-size:11px;color:{{ s.deltaCor }}"><l-icon name="{{ s.deltaIcone }}" size="11"></l-icon>{{ s.delta }}</div></div>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:2px;border-bottom:1px solid var(--line)">
+              <sc-for list="{{ abasAnalise }}" as="a" hint-placeholder-count="3"><button style="height:32px;padding:0 11px;border:0;background:none;font-size:12.5px;font-weight:600;color:{{ a.cor }};border-bottom:2px solid {{ a.linha }};margin-bottom:-1px;cursor:pointer">{{ a.t }}</button></sc-for>
+            </div>
+            <div class="card" style="overflow:hidden">
+              <div style="display:grid;grid-template-columns:1fr 90px 90px 110px 90px;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line2)">
+                <sc-for list="{{ colunas }}" as="c" hint-placeholder-count="5"><span class="lbl" style="text-align:{{ c.al }}">{{ c.t }}</span></sc-for>
+              </div>
+              <sc-for list="{{ linhas }}" as="l" hint-placeholder-count="6">
+                <div class="row" style="display:grid;grid-template-columns:1fr 90px 90px 110px 90px;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line2);align-items:center">
+                  <span style="min-width:0;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.titulo }}</span>
+                  <span style="text-align:right;font-family:var(--mono);font-size:12px">{{ l.views }}</span>
+                  <span style="text-align:right;font-family:var(--mono);font-size:12px">{{ l.ret }}</span>
+                  <span style="text-align:right;font-family:var(--mono);font-size:12px;color:{{ l.desvioCor }}">{{ l.desvio }}</span>
+                  <span style="text-align:right"><span class="chip" style="background:{{ l.chipBg }};color:{{ l.chipCor }}">{{ l.estado }}</span></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ═══ PADRÕES DE THUMBNAIL ═══ -->
+          <sc-if value="{{ ehThumbs }}" hint-placeholder-val="{{ false }}">
+          <div class="two" data-screen-label="Padrões de thumbnail">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ eixos }}" as="e" hint-placeholder-count="4">
+                <div class="card" style="display:flex;flex-direction:column;gap:8px;padding:13px">
+                  <span style="display:flex;align-items:center;gap:8px"><b style="font-size:13px">{{ e.t }}</b><span class="chip" style="background:{{ e.forcaBg }};color:{{ e.forcaCor }}">força {{ e.forca }}</span><span style="flex:1"></span><span style="font-family:var(--mono);font-size:11px;color:var(--mute)">{{ e.n }} capas</span></span>
+                  <p style="margin:0;font-size:12.5px;line-height:1.55;color:var(--mute)">{{ e.texto }}</p>
+                  <div style="display:flex;flex-wrap:wrap;gap:5px"><sc-for list="{{ e.exemplos }}" as="x" hint-placeholder-count="3"><span class="chip" style="background:var(--inset);color:var(--mute)">{{ x }}</span></sc-for></div>
+                </div>
+              </sc-for>
+            </div>
+            <aside style="display:flex;flex-direction:column;gap:10px">
+              <div class="card" style="display:flex;flex-direction:column;gap:9px;padding:13px">
+                <span class="lbl">Proposta para a skill do Capista</span>
+                <p style="margin:0;font-size:12.5px;line-height:1.6;color:var(--mute)">Fixar o gancho em duas linhas, no topo, amarelo sobre fundo escurecido; rosto sempre à direita e um número grande quando o tema for dado econômico.</p>
+                <div style="display:flex;gap:6px"><button class="btn" style="flex:1;justify-content:center"><l-icon name="x" size="12"></l-icon>Descartar</button><button class="btn btn-pri" style="flex:1;justify-content:center"><l-icon name="check" size="12"></l-icon>Aplicar</button></div>
+              </div>
+              <div class="card" style="display:flex;flex-direction:column;gap:8px;padding:13px">
+                <span class="lbl">Melhores capas</span>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                  <sc-for list="{{ capas }}" as="c" hint-placeholder-count="4"><span style="position:relative;aspect-ratio:16/9;border-radius:var(--r2);overflow:hidden;background:radial-gradient(ellipse at 40% 40%,{{ c.a }},{{ c.b }} 70%)"><span style="position:absolute;top:3px;right:4px;font-family:var(--mono);font-size:9.5px;color:#fff">{{ c.nota }}</span></span></sc-for>
+                </div>
+              </div>
+            </aside>
+          </div>
+          </sc-if>
+
+          <!-- ═══ CONFIGURAÇÕES ═══ -->
+          <sc-if value="{{ ehConfig }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Configurações" style="display:flex;flex-direction:column;gap:12px;max-width:1080px">
+            <div style="display:flex;gap:2px;border-bottom:1px solid var(--line)">
+              <sc-for list="{{ abasConfig }}" as="a" hint-placeholder-count="2"><button style="height:32px;padding:0 11px;border:0;background:none;font-size:12.5px;font-weight:600;color:{{ a.cor }};border-bottom:2px solid {{ a.linha }};margin-bottom:-1px;cursor:pointer">{{ a.t }}</button></sc-for>
+            </div>
+            <div class="card" style="display:flex;align-items:center;gap:12px;padding:13px">
+              <span style="display:grid;place-items:center;width:40px;height:40px;border-radius:var(--r2);background:var(--accent-soft);color:var(--accent2);font-weight:700">PB</span>
+              <span style="min-width:0"><span style="display:block;font-size:13.5px;font-weight:700">Paulo Bonfim · @canal-do-paulo</span><span style="display:block;margin-top:2px;font-size:11.5px;color:var(--mute)">YouTube conectado · token válido até 12/10 · 3 canais no perfil</span></span>
+              <div style="flex:1"></div><button class="btn"><l-icon name="rotate-ccw" size="13"></l-icon>Reconectar</button><button class="btn"><l-icon name="plus" size="13"></l-icon>Novo canal</button>
+            </div>
+            <span class="lbl">Áreas editoriais</span>
+            <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))">
+              <sc-for list="{{ portais }}" as="p" hint-placeholder-count="4">
+                <button class="card row" style="display:flex;flex-direction:column;gap:6px;padding:13px;text-align:left;cursor:pointer">
+                  <span style="display:flex;align-items:center;gap:8px;width:100%"><l-icon name="{{ p.n }}" size="15" style="color:var(--accent)"></l-icon><b style="font-size:12.5px">{{ p.t }}</b><span style="flex:1"></span><l-icon name="arrow-right" size="13" style="color:var(--dim)"></l-icon></span>
+                  <span style="font-size:11.5px;line-height:1.5;color:var(--mute)">{{ p.d }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <span class="lbl">Aparência</span>
+            <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:13px">
+              <span style="font-size:12.5px;font-weight:600">Tema</span>
+              <div style="display:flex;gap:2px;padding:2px;border-radius:var(--r2);background:var(--inset)">
+                <sc-for list="{{ opcoesTema }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.ir }}" style="display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border:0;border-radius:var(--r1);background:{{ o.bg }};color:{{ o.cor }};box-shadow:{{ o.hi }};font-size:11.5px;font-weight:600;cursor:pointer"><l-icon name="{{ o.n }}" size="12"></l-icon>{{ o.t }}</button></sc-for>
+              </div>
+              <span style="width:1px;height:22px;background:var(--line)"></span>
+              <span style="font-size:12.5px;font-weight:600">Acento</span>
+              <div style="display:flex;gap:5px"><sc-for list="{{ paletas }}" as="c" hint-placeholder-count="5"><span style="width:22px;height:22px;border-radius:var(--r1);background:{{ c.cor }};box-shadow:{{ c.anel }}"></span></sc-for></div>
+              <span style="width:1px;height:22px;background:var(--line)"></span>
+              <span style="font-size:12.5px;font-weight:600">Superfície</span>
+              <span style="font-size:11.5px;color:var(--mute)">vidro translúcido · cantos retos de 3–5 px</span>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ═══ PRATELEIRA DO FIRE (publicação em lote) ═══ -->
+          <sc-if value="{{ ehPrateleira }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Prateleira do Fire" style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">
+              <sc-for list="{{ prateleira }}" as="p" hint-placeholder-count="3">
+                <article class="card" style="display:flex;flex-direction:column;overflow:hidden">
+                  <div style="position:relative;aspect-ratio:9/16;background:#000;container-type:inline-size">
+                    <sc-if value="{{ p.pronto }}" hint-placeholder-val="{{ true }}">
+                      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,#3a3f4a,#14171d 70%)"></div>
+                      <div style="position:absolute;left:9%;right:9%;top:20%;text-align:center;font-weight:800;font-size:9.5cqw;line-height:1.05;color:#ffd21f;text-transform:uppercase;text-shadow:0 2px 0 #000">{{ p.gancho }}</div>
+                      <div style="position:absolute;left:10px;right:10px;bottom:10px;display:flex;align-items:center;gap:7px;color:#fff"><l-icon name="play" size="12"></l-icon><div style="flex:1;height:3px;border-radius:2px;background:rgb(255 255 255/.3)"></div><span style="font-family:var(--mono);font-size:10px">{{ p.dur }}</span></div>
+                    </sc-if>
+                    <sc-if value="{{ p.pendente }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;inset:0;display:grid;place-items:center;padding:14px;text-align:center;background:var(--inset)">
+                        <span><l-icon name="clapperboard" size="22" style="color:var(--mute)"></l-icon><span style="display:block;margin-top:8px;font-size:12px;font-weight:600;color:var(--mute)">{{ p.aviso }}</span></span>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:7px;padding:10px">
+                    <span style="font-size:12.5px;font-weight:700;line-height:1.35">{{ p.titulo }}</span>
+                    <span style="display:flex;align-items:center;gap:7px"><span class="chip" style="background:{{ p.chipBg }};color:{{ p.chipCor }}">{{ p.status }}</span><span style="font-family:var(--mono);font-size:10.5px;color:var(--mute)">{{ p.inicio }}</span></span>
+                    <button class="btn {{ p.cls }}" style="justify-content:center"><l-icon name="{{ p.icone }}" size="12"></l-icon>{{ p.acao }}</button>
+                  </div>
+                </article>
+              </sc-for>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ═══ REVISÃO FINAL ═══ -->
+          <sc-if value="{{ ehRevisao }}" hint-placeholder-val="{{ false }}">
+          <div class="two" data-screen-label="Revisão final">
+            <div style="display:grid;gap:10px">
+              <sc-for list="{{ revisao }}" as="r" hint-placeholder-count="4">
+                <article class="card row" style="display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:10px 11px">
+                  <span style="position:relative;width:150px;aspect-ratio:16/9;border-radius:var(--r2);overflow:hidden;background:radial-gradient(ellipse at 45% 40%,#3a3f4a,#14171d 70%)"><span style="position:absolute;bottom:4px;right:5px;font-family:var(--mono);font-size:9.5px;color:#fff">{{ r.dur }}</span><span style="position:absolute;top:4px;left:5px;display:grid;place-items:center;width:20px;height:20px;border-radius:99px;background:rgb(0 0 0/.55);color:#fff"><l-icon name="play" size="10"></l-icon></span></span>
+                  <span style="min-width:0">
+                    <span style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--mono);font-size:11px;color:var(--dim)">#{{ r.num }}</span><span style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.titulo }}</span></span>
+                    <span style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px">
+                      <sc-for list="{{ r.checks }}" as="c" hint-placeholder-count="4"><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:{{ c.cor }}"><l-icon name="{{ c.n }}" size="11"></l-icon>{{ c.t }}</span></sc-for>
+                    </span>
+                  </span>
+                  <span style="display:flex;gap:5px">
+                    <button class="btn btn-icon" title="Reprovar"><l-icon name="x" size="13"></l-icon></button>
+                    <button class="btn {{ r.cls }}"><l-icon name="{{ r.icone }}" size="13"></l-icon>{{ r.acao }}</button>
+                  </span>
+                </article>
+              </sc-for>
+            </div>
+            <aside class="card" style="display:flex;flex-direction:column;gap:9px;padding:12px">
+              <span class="lbl">Bloqueios do lote</span>
+              <sc-for list="{{ bloqueios }}" as="b" hint-placeholder-count="3">
+                <span style="display:flex;align-items:flex-start;gap:7px;font-size:12px;line-height:1.5;color:{{ b.cor }}"><l-icon name="{{ b.n }}" size="13"></l-icon>{{ b.t }}</span>
+              </sc-for>
+            </aside>
+          </div>
+          </sc-if>
+
+          <!-- ═══ FILA GLOBAL ═══ -->
+          <sc-if value="{{ ehFilaTela }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Fila" style="display:flex;flex-direction:column;gap:10px;max-width:960px">
+            <sc-for list="{{ jobs }}" as="j" hint-placeholder-count="4">
+              <article class="card" style="display:flex;flex-direction:column;gap:8px;padding:11px 12px">
+                <span style="display:flex;flex-wrap:wrap;align-items:center;gap:9px">
+                  <span style="display:grid;place-items:center;width:26px;height:26px;border-radius:var(--r2);background:{{ j.iconeBg }};color:{{ j.iconeCor }}"><l-icon name="{{ j.n }}" size="13"></l-icon></span>
+                  <span style="min-width:0"><span style="display:block;font-size:12.5px;font-weight:700">{{ j.titulo }}</span><span style="display:block;font-size:11px;color:var(--mute)">{{ j.sub }}</span></span>
+                  <span style="flex:1;min-width:8px"></span>
+                  <span class="chip" style="background:{{ j.chipBg }};color:{{ j.chipCor }}">{{ j.estado }}</span>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--mute)">{{ j.tempo }}</span>
+                  <button class="btn btn-icon" title="Cancelar"><l-icon name="x" size="13"></l-icon></button>
+                </span>
+                <span style="display:flex;align-items:center;gap:9px">
+                  <span style="flex:1;height:4px;border-radius:2px;background:var(--inset)"><span style="display:block;height:100%;width:{{ j.pct }};border-radius:2px;background:{{ j.barra }}"></span></span>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--mute);width:38px;text-align:right">{{ j.pct }}</span>
+                </span>
+                <span style="font-family:var(--mono);font-size:10.5px;color:var(--dim)">{{ j.log }}</span>
+              </article>
+            </sc-for>
+          </div>
+          </sc-if>
+
+          <!-- ═══ COMPONENTES (kit) ═══ -->
+          <sc-if value="{{ ehKit }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Componentes" style="display:flex;flex-direction:column;gap:16px;max-width:1080px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span class="lbl">Botões · 30 px · cantos de 4 px</span>
+              <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center">
+                <button class="btn btn-pri"><l-icon name="check" size="13"></l-icon>Primário<kbd style="background:rgb(255 255 255/.2);border-color:transparent;color:inherit">↵</kbd></button>
+                <button class="btn"><l-icon name="eye" size="13"></l-icon>Secundário</button>
+                <button class="btn" style="border-color:transparent;background:none;box-shadow:none;color:var(--mute)"><l-icon name="x" size="13"></l-icon>Fantasma</button>
+                <button class="btn" style="color:var(--err);border-color:var(--err-soft)"><l-icon name="trash" size="13"></l-icon>Perigo</button>
+                <button class="btn btn-icon"><l-icon name="more-horizontal" size="14"></l-icon></button>
+                <span style="display:flex;gap:2px;padding:2px;border-radius:var(--r2);background:var(--inset)"><button class="btn" style="height:26px;border:0;box-shadow:var(--shadow)">Palco</button><button class="btn" style="height:26px;border:0;background:none;box-shadow:none;color:var(--mute)">Legenda</button></span>
+                <button class="btn" disabled style="opacity:.45"><l-icon name="loader" size="13"></l-icon>Processando…</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span class="lbl">Estados, notas e campos</span>
+              <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center">
+                <sc-for list="{{ chipsKit }}" as="c" hint-placeholder-count="5"><span class="chip" style="background:{{ c.bg }};color:{{ c.cor }}"><span style="width:6px;height:6px;border-radius:99px;background:currentColor"></span>{{ c.t }}</span></sc-for>
+                <span style="width:1px;height:20px;background:var(--line)"></span>
+                <sc-for list="{{ notasKit }}" as="n" hint-placeholder-count="4"><span style="display:grid;place-items:center;width:30px;height:30px;border-radius:var(--r2);background:{{ n.bg }};color:{{ n.cor }};font-family:var(--mono);font-size:12.5px;font-weight:700">{{ n.v }}</span></sc-for>
+                <span class="fld" style="width:180px;color:var(--dim)"><l-icon name="search" size="12"></l-icon>buscar…</span>
+                <span class="fld" style="font-family:var(--mono)">04:12.40</span>
+                <span class="fld"><l-icon name="layout-template" size="12" style="color:var(--mute)"></l-icon>Câmera + tela<l-icon name="chevron-down" size="12" style="color:var(--dim)"></l-icon></span>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mute)"><kbd>J</kbd><kbd>K</kbd>navegar</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span class="lbl">Avisos, vazio e carregamento</span>
+              <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+                <sc-for list="{{ avisos }}" as="a" hint-placeholder-count="3">
+                  <div class="card" style="display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border-color:{{ a.borda }}">
+                    <l-icon name="{{ a.n }}" size="14" style="color:{{ a.cor }}"></l-icon>
+                    <span style="min-width:0;flex:1"><span style="display:block;font-size:12.5px;font-weight:700">{{ a.t }}</span><span style="display:block;margin-top:2px;font-size:11.5px;line-height:1.5;color:var(--mute)">{{ a.d }}</span></span>
+                    <button class="btn" style="height:24px;font-size:11px">{{ a.acao }}</button>
+                  </div>
+                </sc-for>
+                <div class="card" style="display:grid;place-items:center;gap:7px;padding:22px;text-align:center">
+                  <l-icon name="inbox" size="22" style="color:var(--dim)"></l-icon>
+                  <span style="font-size:12.5px;font-weight:700">Nenhuma live ainda</span>
+                  <span style="font-size:11.5px;color:var(--mute);max-width:220px;line-height:1.5">Busque no canal ou cole uma URL para o app baixar e analisar a primeira live.</span>
+                  <button class="btn btn-pri" style="margin-top:3px"><l-icon name="radio" size="12"></l-icon>Buscar lives</button>
+                </div>
+                <div class="card" style="display:flex;flex-direction:column;gap:8px;padding:12px">
+                  <span style="height:11px;width:60%;border-radius:var(--r1);background:var(--inset)"></span>
+                  <span style="height:74px;border-radius:var(--r2);background:var(--inset)"></span>
+                  <span style="height:9px;width:85%;border-radius:var(--r1);background:var(--inset)"></span>
+                  <span style="height:9px;width:45%;border-radius:var(--r1);background:var(--inset)"></span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span class="lbl">Modais · abra para ver o padrão</span>
+              <div style="display:flex;flex-wrap:wrap;gap:7px">
+                <sc-for list="{{ botoesModal }}" as="m" hint-placeholder-count="5"><button onClick="{{ m.ir }}" class="btn"><l-icon name="{{ m.n }}" size="13"></l-icon>{{ m.t }}</button></sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span class="lbl">Tipografia · Geist / Geist Mono</span>
+              <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:16px">
+                <span style="font-size:16px;font-weight:700;letter-spacing:-.01em">Título 16/700</span><span style="font-size:13.5px;font-weight:700">Card 13.5/700</span><span style="font-size:12.5px;font-weight:600">Rótulo 12.5/600</span><span style="font-size:12px;color:var(--mute)">Corpo 12/400</span><span style="font-family:var(--mono);font-size:12px">04:12 → 04:58</span><span class="lbl">Seção 9.5</span>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ═══ 404 ═══ -->
+          <sc-if value="{{ eh404 }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Página não encontrada" style="display:grid;place-items:center;min-height:320px">
+            <div class="card" style="display:grid;place-items:center;gap:9px;padding:32px;text-align:center;max-width:420px">
+              <span style="font-family:var(--mono);font-size:28px;font-weight:700;color:var(--accent)">404</span>
+              <span style="font-size:14px;font-weight:700">Esta página não existe mais</span>
+              <span style="font-size:12px;line-height:1.55;color:var(--mute)">A rota <span style="font-family:var(--mono)">/projetos/267/export</span> foi aposentada — a pós-produção assumiu o lugar dela.</span>
+              <span style="display:flex;gap:6px;margin-top:4px"><button onClick="{{ irBiblioteca }}" class="btn"><l-icon name="home" size="12"></l-icon>Biblioteca</button><button onClick="{{ irPos }}" class="btn btn-pri"><l-icon name="clapperboard" size="12"></l-icon>Ir para a pós-produção</button></span>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ═══ ATALHOS ═══ -->
+          <sc-if value="{{ ehAtalhos }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="Atalhos" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));align-items:start;max-width:1080px">
+            <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="4">
+              <div class="card" style="display:flex;flex-direction:column;gap:7px;padding:13px">
+                <span class="lbl" style="display:flex;align-items:center;gap:6px"><l-icon name="{{ g.n }}" size="12"></l-icon>{{ g.t }}</span>
+                <sc-for list="{{ g.itens }}" as="a" hint-placeholder-count="4">
+                  <span style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line2)"><span style="font-size:12px">{{ a.t }}</span><span style="flex:1"></span><kbd>{{ a.k }}</kbd></span>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+          </sc-if>
+
+        </div>
+
+        <!-- ░░ BARRA DE AÇÕES FIXA (nunca exige rolagem) ░░ -->
+        <sc-if value="{{ temBarra }}" hint-placeholder-val="{{ false }}">
+        <div class="gl" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:none;padding:10px 18px;border-top:1px solid var(--line)">
+          <sc-if value="{{ barra.temLote }}" hint-placeholder-val="{{ false }}">
+            <sc-for list="{{ redes }}" as="r" hint-placeholder-count="3">
+              <label style="display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid {{ r.borda }};border-radius:var(--r2);background:{{ r.bg }};font-size:12px;font-weight:600"><span style="display:grid;place-items:center;width:16px;height:16px;border-radius:var(--r1);border:1.5px solid {{ r.cb }};background:{{ r.cbBg }};color:var(--on-accent)"><l-icon name="check" size="10" stroke="3" style="display:{{ r.chk }}"></l-icon></span>{{ r.t }}</label>
+            </sc-for>
+            <span class="fld"><l-icon name="clock" size="12" style="color:var(--mute)"></l-icon>Ter, 16 set · 18:00<l-icon name="chevron-down" size="12" style="color:var(--dim)"></l-icon></span>
+          </sc-if>
+          <sc-if value="{{ barra.temTeclas }}" hint-placeholder-val="{{ true }}">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mute)"><kbd>J</kbd><kbd>K</kbd>trocar de corte</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mute)"><kbd>Space</kbd>tocar</span>
+          </sc-if>
+          <div style="flex:1;min-width:8px"></div>
+          <button class="btn" style="color:var(--mute)"><l-icon name="{{ barra.secIcone }}" size="13"></l-icon>{{ barra.sec }}</button>
+          <button class="btn btn-icon" title="{{ barra.terc }}"><l-icon name="{{ barra.tercIcone }}" size="13"></l-icon></button>
+          <button onClick="{{ barra.ir }}" class="btn btn-pri"><l-icon name="{{ barra.priIcone }}" size="13"></l-icon>{{ barra.pri }}<kbd style="background:rgb(255 255 255/.2);border-color:transparent;color:inherit">↵</kbd></button>
+        </div>
+        </sc-if>
+      </main>
+    </div>
+  </div>
+
+  <!-- ░░ MODAL ░░ -->
+  <sc-if value="{{ modalAberto }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:24px;background:rgb(10 12 18/.5);backdrop-filter:blur(3px)">
+    <div class="card" style="display:flex;flex-direction:column;width:100%;max-width:{{ modal.largura }};max-height:calc(100dvh - 48px);overflow:hidden;box-shadow:0 24px 64px rgb(0 0 0/.35)">
+      <header style="display:flex;align-items:flex-start;gap:9px;padding:14px 15px;border-bottom:1px solid var(--line2)">
+        <span style="display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:var(--r2);background:{{ modal.iconeBg }};color:{{ modal.iconeCor }}"><l-icon name="{{ modal.icone }}" size="14"></l-icon></span>
+        <span style="min-width:0;flex:1"><span style="display:block;font-size:14px;font-weight:700;line-height:1.3">{{ modal.titulo }}</span><span style="display:block;margin-top:2px;font-size:11.5px;line-height:1.5;color:var(--mute)">{{ modal.sub }}</span></span>
+        <button onClick="{{ fecharModal }}" class="btn btn-icon" style="border:0;background:none;box-shadow:none;color:var(--mute)"><l-icon name="x" size="14"></l-icon></button>
+      </header>
+      <div style="flex:1;min-height:0;overflow:auto;padding:14px 15px;display:flex;flex-direction:column;gap:12px">
+        <sc-if value="{{ modal.temTexto }}" hint-placeholder-val="{{ false }}">
+          <p style="margin:0;font-size:12.5px;line-height:1.6;color:var(--mute)">{{ modal.texto }}</p>
+        </sc-if>
+        <sc-if value="{{ modal.temCampos }}" hint-placeholder-val="{{ false }}">
+          <sc-for list="{{ modal.campos }}" as="f" hint-placeholder-count="3">
+            <label style="display:flex;flex-direction:column;gap:5px"><span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--mute)">{{ f.t }}<span style="flex:1"></span><span style="font-family:var(--mono);font-size:10px;color:var(--dim)">{{ f.hint }}</span></span><span class="fld" style="height:auto;min-height:{{ f.altura }};align-items:flex-start;padding:8px 10px;line-height:1.5;font-size:12.5px;color:{{ f.cor }}">{{ f.v }}</span></label>
+          </sc-for>
+        </sc-if>
+        <sc-if value="{{ modal.temItens }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <sc-for list="{{ modal.itens }}" as="i" hint-placeholder-count="4">
+              <span class="row" style="display:flex;align-items:center;gap:9px;padding:7px 8px;border:1px solid {{ i.borda }};border-radius:var(--r2)">
+                <span style="display:grid;place-items:center;width:16px;height:16px;flex:none;border-radius:var(--r1);border:1.5px solid {{ i.cb }};background:{{ i.cbBg }};color:var(--on-accent)"><l-icon name="check" size="10" stroke="3" style="display:{{ i.chk }}"></l-icon></span>
+                <span style="font-family:var(--mono);font-size:10.5px;color:var(--dim)">{{ i.num }}</span>
+                <span style="min-width:0;flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.titulo }}</span>
+                <span class="chip" style="background:{{ i.chipBg }};color:{{ i.chipCor }}">{{ i.estado }}</span>
+              </span>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ modal.temEtapas }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <sc-for list="{{ modal.etapas }}" as="e" hint-placeholder-count="4">
+              <span style="display:flex;align-items:center;gap:9px">
+                <span style="display:grid;place-items:center;width:22px;height:22px;flex:none;border-radius:99px;background:{{ e.bg }};color:{{ e.cor }}"><l-icon name="{{ e.n }}" size="11"></l-icon></span>
+                <span style="min-width:0;flex:1;font-size:12.5px;font-weight:600">{{ e.t }}</span>
+                <span style="flex:1;height:4px;border-radius:2px;background:var(--inset)"><span style="display:block;height:100%;width:{{ e.pct }};border-radius:2px;background:{{ e.barra }}"></span></span>
+                <span style="font-family:var(--mono);font-size:10.5px;color:var(--mute);width:46px;text-align:right">{{ e.hint }}</span>
+              </span>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ modal.temNota }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <span style="display:flex;gap:5px">
+              <sc-for list="{{ modal.nota }}" as="n" hint-placeholder-count="5">
+                <span style="display:grid;place-items:center;flex:1;height:44px;border:1px solid {{ n.borda }};border-radius:var(--r2);background:{{ n.bg }};color:{{ n.cor }};font-family:var(--mono);font-size:15px;font-weight:700;cursor:pointer">{{ n.v }}</span>
+              </sc-for>
+            </span>
+            <span style="font-size:11.5px;color:var(--mute)">{{ modal.notaAjuda }}</span>
+          </div>
+        </sc-if>
+      </div>
+      <footer style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:12px 15px;border-top:1px solid var(--line2)">
+        <span style="font-size:11.5px;color:var(--mute)">{{ modal.rodape }}</span>
+        <div style="flex:1;min-width:8px"></div>
+        <button onClick="{{ fecharModal }}" class="btn">{{ modal.sec }}</button>
+        <button onClick="{{ fecharModal }}" class="btn {{ modal.cls }}"><l-icon name="{{ modal.priIcone }}" size="13"></l-icon>{{ modal.pri }}</button>
+      </footer>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ░░ TOAST ░░ -->
+  <sc-if value="{{ toastVisivel }}" hint-placeholder-val="{{ true }}">
+  <div class="card" style="position:fixed;right:18px;bottom:74px;z-index:40;display:flex;align-items:center;gap:9px;padding:10px 12px;max-width:340px;pointer-events:none;box-shadow:0 18px 44px rgb(0 0 0/.3)">
+    <l-icon name="circle-check" size="14" style="color:var(--ok)"></l-icon>
+    <span style="min-width:0;flex:1;font-size:12px;line-height:1.45"><b>Short finalizado</b><span style="color:var(--mute)"> · 46s · 1080×1920 pronto para publicar</span></span>
+    <button onClick="{{ fecharToast }}" class="btn btn-icon" style="border:0;background:none;box-shadow:none;color:var(--mute);width:22px;height:22px;pointer-events:auto"><l-icon name="x" size="12"></l-icon></button>
+  </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;tema&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;light&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;tsType&quot;:&quot;'light'|'dark'&quot;,&quot;section&quot;:&quot;Aparência&quot;},&quot;vidro&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Aparência&quot;,&quot;description&quot;:&quot;Superfícies translúcidas com blur&quot;},&quot;trilho&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;expandido&quot;,&quot;options&quot;:[&quot;expandido&quot;,&quot;icones&quot;],&quot;tsType&quot;:&quot;'expandido'|'icones'&quot;,&quot;section&quot;:&quot;Shell&quot;,&quot;description&quot;:&quot;Trilho de navegação inicial&quot;}}">
+class Component extends DCLogic {
+  state = { tela: 'biblioteca', tema: null, trilho: null, seletor: false, corte: 7, modal: null, toast: true };
+
+  abrir(modal) { return () => this.setState({ modal, seletor: false }); }
+
+  passo(delta, nums) {
+    return () => {
+      const i = nums.indexOf(this.state.corte);
+      const prox = nums[(i + delta + nums.length) % nums.length];
+      this.setState({ corte: prox });
+    };
+  }
+
+  ir(tela) { return () => this.setState({ tela }); }
+
+  renderVals() {
+    const P = this.props, S = this.state;
+    const tela = S.tela;
+    const tema = S.tema ?? P.tema ?? 'light';
+    const expandido = S.trilho ?? (P.trilho ?? 'expandido') === 'expandido';
+    const A = 'var(--accent)', I = 'var(--info)', OK = 'var(--ok)', W = 'var(--warn)', M = 'var(--mute)', D = 'var(--dim)';
+
+    const em = (...t) => t.includes(tela);
+    const cortesBase = [
+      { num: 7, titulo: 'O erro do BC em 40 segundos', dur: '0:46', inicio: '04:12', fim: '04:58', status: 'pronto', fire: true },
+      { num: 8, titulo: 'Selic e o seu aluguel', dur: '0:45', inicio: '09:30', fim: '10:15', status: 'aprovado', fire: true },
+      { num: 9, titulo: 'Quem lucra com juros altos', dur: '0:38', inicio: '13:02', fim: '13:40', status: 'proposto' },
+      { num: 10, titulo: 'A dívida pública em 3 minutos', dur: '2:58', inicio: '21:10', fim: '24:08', status: 'publicado' },
+      { num: 11, titulo: 'Resposta ao inscrito sobre FIIs', dur: '1:12', inicio: '31:44', fim: '32:56', status: 'aprovado', fire: true },
+      { num: 12, titulo: 'Aparte sobre o jogo de ontem', dur: '0:22', inicio: '38:02', fim: '38:24', status: 'rejeitado' },
+    ];
+    const corteBase = cortesBase.find(c => c.num === S.corte) || cortesBase[0];
+    const item = (n, t, alvo, badge) => ({ n, t, ir: this.ir(alvo), badge: badge || '', badgeDisplay: badge ? 'inline' : 'none',
+      badgeBg: tela === alvo ? A : 'var(--inset)', badgeCor: tela === alvo ? 'var(--on-accent)' : M,
+      bg: tela === alvo ? 'var(--accent-soft)' : 'transparent', cor: tela === alvo ? A : M, hi: tela === alvo ? 'var(--hi)' : 'none' });
+
+    const navProd = [item('home', 'Biblioteca', 'biblioteca'), item('layout-grid', 'Live 267', 'projeto'), item('scissors', 'Cortes', 'cortes', '14'), item('clapperboard', 'Pós-produção', 'pos'), item('tags', 'Metadados', 'metadados'), item('check-check', 'Revisão final', 'revisao'), item('flame', 'Shorts', 'shorts', '5'), item('layout-grid', 'Prateleira', 'prateleira')];
+    const navIntel = [item('radio', 'Buscar lives', 'lives'), item('trophy', 'Ranking', 'ranking'), item('sparkles', 'Padrões de capa', 'thumbs'), item('bar-chart', 'Análises', 'analises')];
+    const navFim = [item('layout-template', 'Componentes', 'kit'), item('keyboard', 'Atalhos', 'atalhos'), item('settings', 'Configurações', 'config')];
+
+    const CAB = {
+      biblioteca: ['home', 'Biblioteca de lives', '6 projetos · 2 em análise · 1 com disco cheio', [['plus', 'Nova live', 'btn-pri'], ['rotate-ccw', 'Sincronizar', '']]],
+      projeto: ['layout-grid', 'LIVE 267 — Respondendo inscritos sobre juros', '2h14 de live · 14 cortes · 3 fire · 412 MB no disco', [['folder', 'Abrir pasta', ''], ['brain', 'Auditoria da IA', '']]],
+      cortes: ['scissors', 'Corte #' + S.corte + ' — ' + corteBase.titulo, 'bruto 18:32 · trecho 46s · 4 candidatos da IA', [['flame', 'Marcar fire', ''], ['sparkles', 'Gerar trechos', '']]],
+      pos: ['clapperboard', 'Pós-produção — Corte #' + S.corte, 'cenas prontas · grade aplicada · render final pendente', [['play', 'Abrir studio', ''], ['rocket', 'Renderizar final', 'btn-pri']]],
+      metadados: ['tags', 'Metadados & capas — Corte #' + S.corte, '3 de 8 cortes prontos para o YouTube', [['sparkles', 'Gerar tudo com IA', '']]],
+      shorts: ['flame', 'Shorts', 'cortes fire com bruto guardado — a nata, pronta para virar vertical', [['rotate-ccw', 'Revarrer fires', '']]],
+      lives: ['radio', 'Buscar lives do canal', 'o que já está no app aparece marcado — evite baixar duas vezes', []],
+      ranking: ['trophy', 'Ranking de lives', 'audiência, engajamento e momento — quem merece virar corte primeiro', [['sliders-horizontal', 'Pesos', '']]],
+      thumbs: ['sparkles', 'Padrões de capa', 'o que as capas melhor avaliadas têm em comum — valide antes de aplicar', [['wand', 'Analisar padrões', 'btn-pri']]],
+      analises: ['bar-chart', 'Análises', 'proposta × final, desempenho no YouTube e custo de IA', [['download', 'Exportar CSV', '']]],
+      config: ['settings', 'Configurações', 'canal ativo, áreas editoriais e aparência da aplicação', []],
+      atalhos: ['keyboard', 'Atalhos', 'tudo que a bancada faz sem o mouse', []],
+      prateleira: ['layout-grid', 'Prateleira — Banco Central errou a mão', '1 short pronto · 2 aguardando render', [['send', 'Publicar em massa', 'btn-pri']]],
+      revisao: ['check-check', 'Revisão final — LIVE 267', 'confira o render, a capa e o título antes de liberar o lote', [['play', 'Rever todos', '']]],
+      fila: ['loader', 'Fila de processamento', '1 job rodando · 2 na espera · 1 concluído hoje', [['x', 'Cancelar tudo', '']]],
+      kit: ['layout-template', 'Componentes', 'as peças que montam todas as telas — vidro, cantos retos, Geist', []],
+      erro: ['triangle-alert', 'Página não encontrada', 'a rota pedida não existe mais', []],
+    };
+    const c = CAB[tela] || CAB.biblioteca;
+    const ACAO_MODAL = { 'Nova live': 'novaLive', 'Publicar em massa': 'publicar', 'Renderizar final': 'render', 'Marcar fire': 'nota', 'Auditoria da IA': 'auditoria', 'Analisar padrões': 'padroes', 'Cancelar tudo': 'confirmar', 'Sincronizar': 'auditoria', 'Gerar tudo com IA': 'padroes', 'Revarrer fires': 'confirmar' };
+    const cab = { icone: c[0], titulo: c[1], sub: c[2], acoes: c[3].map(([n, t, cls]) => ({ n: n === 'folder' ? 'hard-drive' : n, t, cls,
+      ir: ACAO_MODAL[t] ? this.abrir(ACAO_MODAL[t]) : () => {} })) };
+
+    const TRILHA = {
+      biblioteca: [['Biblioteca']], projeto: [['Biblioteca'], ['LIVE 267']],
+      cortes: [['Biblioteca'], ['LIVE 267'], ['Cortes'], ['#' + S.corte]],
+      pos: [['Biblioteca'], ['LIVE 267'], ['Pós-produção'], ['#' + S.corte]],
+      metadados: [['Biblioteca'], ['LIVE 267'], ['Metadados'], ['#' + S.corte]],
+      shorts: [['Shorts']], lives: [['Inteligência'], ['Buscar lives']], ranking: [['Inteligência'], ['Ranking']],
+      thumbs: [['Inteligência'], ['Padrões de capa']], analises: [['Inteligência'], ['Análises']],
+      config: [['Configurações']], atalhos: [['Atalhos']],
+      revisao: [['Biblioteca'], ['LIVE 267'], ['Revisão final']],
+      prateleira: [['Shorts'], ['Banco Central errou a mão'], ['Prateleira']],
+      fila: [['Fila']], kit: [['Componentes']], erro: [['Página não encontrada']],
+    };
+    const tr = TRILHA[tela] || TRILHA.biblioteca;
+    const trilha = tr.map(([t], i) => ({ t, sep: i < tr.length - 1 ? 'inline-flex' : 'none', peso: i === tr.length - 1 ? 700 : 500, cor: i === tr.length - 1 ? 'var(--ink)' : M }));
+
+    const etapa = (n, t, st, alvo) => ({ n, t, ir: this.ir(alvo), bg: st === 'ok' ? 'var(--ok-soft)' : st === 'agora' ? A : 'var(--inset)', cor: st === 'agora' ? 'var(--on-accent)' : st === 'ok' ? OK : D, borda: st === 'agora' ? 'transparent' : 'var(--line)' });
+    const etapaAtual = { cortes: 'scissors', pos: 'clapperboard', metadados: 'tags' }[tela];
+    const etapasProjeto = [['download', 'Baixado', 'ok', 'projeto'], ['brain', 'Analisado', 'ok', 'projeto'], ['scissors', 'Cortes', 'ok', 'cortes'], ['clapperboard', 'Pós', 'ok', 'pos'], ['tags', 'Metadados', 'todo', 'metadados'], ['rocket', 'Publicado', 'todo', 'projeto']]
+      .map(([n, t, st, alvo]) => etapa(n, t, n === etapaAtual ? 'agora' : st, alvo));
+
+    const TOM = { pronto: [OK, 'var(--ok-soft)'], aprovado: [A, 'var(--accent-soft)'], proposto: [I, 'var(--info-soft)'], publicado: [OK, 'var(--ok-soft)'], rejeitado: [M, 'var(--inset)'] };
+    const ACAO = { pronto: ['Publicar', 'send', 'btn-pri'], aprovado: ['Finalizar', 'clapperboard', 'btn-pri'], proposto: ['Aprovar', 'check', ''], publicado: ['No ar', 'external-link', ''], rejeitado: ['Voltar', 'undo-2', ''] };
+    const cortesLista = cortesBase.map(c => ({ ...c, statusCor: TOM[c.status][0], statusBg: TOM[c.status][1],
+      pri: ACAO[c.status][0], priIcone: ACAO[c.status][1], cls: ACAO[c.status][2], fireDisplay: c.fire ? 'inline-flex' : 'none',
+      flags: [{ n: 'captions', t: 'legenda', cor: c.status === 'proposto' ? D : OK }, { n: 'image', t: 'capa', cor: c.fire ? OK : D }, { n: 'file-text', t: 'título', cor: c.status === 'pronto' ? OK : D }] }));
+
+    const ctxListas = {
+      cortes: ['Cortes da live', '14 cortes · 8 prontos', 'Novo corte'],
+      pos: ['Cenas do corte', '6 cenas · grade ok', 'Nova cena'],
+      metadados: ['Cortes aprovados', '8 cortes · 3 prontos', 'Gerar faltantes'],
+    }[tela] || ['Cortes', '', 'Novo'];
+    const nums = cortesBase.map(c => c.num);
+    const corteAtual = cortesLista.find(c => c.num === S.corte) || cortesLista[0];
+    const cortesSeletor = cortesLista.map(c => ({ ...c, ir: () => this.setState({ corte: c.num, seletor: false, tela: em('projeto', 'biblioteca', 'shorts') ? 'cortes' : tela }),
+      bg: c.num === S.corte ? 'var(--accent-soft)' : 'transparent', borda: c.num === S.corte ? A : 'transparent' }));
+    const filtrosSeletor = [['Todos', 14, true], ['Fire', 3], ['Prontos', 8], ['A decidir', 3]]
+      .map(([t, n, on]) => ({ t, n, borda: on ? A : 'var(--line)', bg: on ? 'var(--accent-soft)' : 'var(--panel)', cor: on ? 'var(--accent2)' : M }));
+
+    const ctx = { titulo: 'LIVE 267 — Juros', sub: 'Respondendo inscritos · 2h14', listaTitulo: ctxListas[0], listaResumo: ctxListas[1], acao: ctxListas[2],
+      itens: cortesBase.map(c => ({ ...c, ir: () => this.setState({ corte: c.num }), dot: TOM[c.status][0], bg: c.num === S.corte ? 'var(--accent-soft)' : 'transparent', borda: c.num === S.corte ? A : 'transparent' })) };
+
+    // Bancada (cortes / pós / fire)
+    const nota = (v, cor, bg) => ({ v, cor, bg });
+    const BANC = {
+      cortes: { proporcao: '16/9', mascara: false, legenda: false, selo: 'BRUTO · 1080p', tempo: '04:12', total: '18:32', trecho: 'trecho 46s', velocidade: '0.75×',
+        fontes: [['Bruto', true], ['Transcrição', false], ['Desvios', false]], abas: ['Trecho', 'Transcrição', 'Desvios', 'Bruto'],
+        nota: '8.7', tituloTrecho: 'O erro do BC em 40 segundos', subTrecho: 'corte #7 · aprovado · 4 candidatos',
+        campos: [['Título do corte', 'O erro do BC em 40 segundos', '30/80'], ['Início', '04:12.40', 'J/K'], ['Fim', '04:58.10', '[ ]'], ['Falante', 'Paulo (câmera 1)', '']],
+        notaTitulo: 'Por que a IA sugeriu', notaTexto: 'Afirmação forte nos 3 primeiros segundos, fechada com exemplo concreto que o público repete nos comentários.',
+        listaTitulo: 'Trechos do bruto', rejeitar: 'Rejeitar', pri: 'Aprovar corte', priIcone: 'check' },
+      pos: { proporcao: '16/9', mascara: false, legenda: true, selo: 'FINAL · grade aplicada', tempo: '00:21', total: '00:46', trecho: '6 cenas', velocidade: '1.0×',
+        fontes: [['Bruto', false], ['Grade', false], ['Final', true]], abas: ['Cenas', 'Grade', 'Legenda', 'Render'],
+        nota: '4/6', tituloTrecho: 'Cena 4 — gancho de abertura', subTrecho: 'texto na tela · 2.4s · fonte Geist 800',
+        campos: [['Texto da cena', 'Eles subiram juros na hora errada', '34/60'], ['Entrada', 'slide de baixo · 0.3s', ''], ['Duração', '2.40s', ''], ['Trilha', 'bed-econ-02.wav · -18 dB', '']],
+        notaTitulo: 'Render final', notaTexto: 'Faltam a cena 5 (sem texto) e a revisão da grade no minuto 0:32 — o lote de publicação só libera depois disso.',
+        listaTitulo: 'Cenas', rejeitar: 'Refazer cena', pri: 'Renderizar final', priIcone: 'rocket' },
+    };
+    const b = BANC[tela] || BANC.cortes;
+    const listaBanc = [
+      { nota: '8.7', titulo: 'O erro do BC em 40 segundos', dur: '46s', status: 'pronto' },
+      { nota: '7.9', titulo: 'Selic e o seu aluguel', dur: '45s', status: 'aprovado' },
+      { nota: '6.4', titulo: 'Quem lucra com juros altos', dur: '38s', status: 'proposto' },
+      { nota: '5.1', titulo: 'Aparte sobre o jogo de ontem', dur: '22s', status: 'rejeitado' },
+    ].map((t, i) => ({ ...t, dot: TOM[t.status][0], bg: i === 0 ? 'var(--accent-soft)' : 'transparent', borda: i === 0 ? A : 'var(--line2)', risco: t.status === 'rejeitado' ? 'line-through' : 'none' }));
+    const banc = { ...b, fontes: b.fontes.map(([t, on]) => ({ t, bg: on ? 'var(--accent-soft)' : 'var(--inset)', cor: on ? 'var(--accent2)' : M, borda: on ? A : 'var(--line)' })),
+      abas: b.abas.map((t, i) => ({ t, cor: i === 0 ? 'var(--ink)' : M, linha: i === 0 ? A : 'transparent' })),
+      campos: b.campos.map(([t, v, hint]) => ({ t, v, hint })), lista: listaBanc };
+
+    const clipes = [
+      { nota: '8.7', titulo: 'O erro do BC', dur: '46s', left: '22.7%', w: '14%', st: 'pronto' },
+      { nota: '7.9', titulo: 'Selic e aluguel', dur: '45s', left: '51.3%', w: '13%', st: 'aprovado' },
+      { nota: '6.4', titulo: 'Quem lucra', dur: '38s', left: '70.3%', w: '12%', st: 'proposto' },
+      { nota: '5.1', titulo: 'Aparte', dur: '22s', left: '11.7%', w: '8%', st: 'rejeitado' },
+    ].map(c => ({ ...c, cor: TOM[c.st][0], borda: TOM[c.st][0], bg: `color-mix(in oklch,${TOM[c.st][0]} ${c.st === 'rejeitado' ? 12 : 22}%,transparent)` }));
+    const legenda = [{ t: 'proposto', cor: I }, { t: 'aprovado', cor: A }, { t: 'pronto', cor: OK }];
+
+    const pipe = (ativos) => [['download', 'Baixado'], ['brain', 'Analisado'], ['scissors', 'Cortes'], ['clapperboard', 'Pós'], ['tags', 'Metadados'], ['rocket', 'Publicado']]
+      .map(([n, t], i) => ({ n, t, bg: i < ativos ? 'var(--ok-soft)' : i === ativos ? A : 'var(--inset)', cor: i === ativos ? 'var(--on-accent)' : i < ativos ? OK : D }));
+    const projetos = [
+      { num: 267, titulo: 'Respondendo inscritos sobre juros', data: '12 set', dur: '2h14', mb: '412 MB', cortes: 14, publicados: 6, fires: 3, estado: 'editando', estadoCor: A, pipeline: pipe(4) },
+      { num: 265, titulo: 'Debate: reforma tributária', data: '08 set', dur: '1h48', mb: '288 MB', cortes: 9, publicados: 0, fires: 1, estado: 'em análise', estadoCor: I, pipeline: pipe(2) },
+      { num: 262, titulo: 'Análise do PIB do trimestre', data: '02 set', dur: '1h12', mb: '210 MB', cortes: 11, publicados: 11, fires: 2, estado: 'publicada', estadoCor: OK, pipeline: pipe(6) },
+      { num: 259, titulo: 'Perguntas da semana', data: '26 ago', dur: '2h40', mb: '505 MB', cortes: 16, publicados: 12, fires: 4, estado: 'disco cheio', estadoCor: W, pipeline: pipe(5) },
+      { num: 256, titulo: 'Bolsa, dólar e o que vem depois', data: '19 ago', dur: '1h32', mb: '196 MB', cortes: 8, publicados: 8, fires: 1, estado: 'publicada', estadoCor: OK, pipeline: pipe(6) },
+      { num: 254, titulo: 'Live de estreia do canal', data: '12 ago', dur: '0:58', mb: 'limpo', cortes: 5, publicados: 5, fires: 0, estado: 'arquivada', estadoCor: M, pipeline: pipe(6) },
+    ];
+    const filtrosBib = [['Todos', 6, true], ['Não publicados', 2], ['Em análise', 1], ['Editando', 2], ['Publicados', 3], ['Não limpos', 1]]
+      .map(([t, n, on]) => ({ t, n, borda: on ? A : 'var(--line)', bg: on ? 'var(--accent-soft)' : 'var(--panel)', cor: on ? 'var(--accent2)' : M }));
+
+    const statsProjeto = [['scissors', 'Cortes', '14', '8 prontos · 3 fire', A], ['clapperboard', 'Renders', '6/8', '2 na fila', I], ['rocket', 'No ar', '6', '+2 agendados', OK], ['hard-drive', 'Disco', '412 MB', 'bruto guardado', W]]
+      .map(([n, t, v, sub, cor]) => ({ n, t, v, sub, cor }));
+    const etapasLonga = [['download', 'Baixado', '✓', 'ok'], ['brain', 'Analisado', '14', 'ok'], ['scissors', 'Cortes', '8/14', 'ok'], ['clapperboard', 'Pós', '6/8', 'agora'], ['tags', 'Metadados', '3/8', 'todo'], ['rocket', 'Publicado', '6', 'todo']]
+      .map(([n, t, v, st], i) => ({ n, t, v, sep: i < 5 ? 'inline-block' : 'none', bg: st === 'agora' ? A : st === 'ok' ? 'var(--ok-soft)' : 'var(--inset)', cor: st === 'agora' ? 'var(--on-accent)' : st === 'ok' ? OK : M }));
+
+    const firesBase = [
+      { titulo: 'Por que o Banco Central errou a mão', live: 'LIVE 267', tema: 'juros', dur: '18:32', mb: 412, sug: 2, apr: 3, ren: 1 },
+      { titulo: 'O que ninguém te conta sobre a reforma', live: 'LIVE 265', tema: 'tributos', dur: '12:04', mb: 288, sug: 5, apr: 0, ren: 0 },
+      { titulo: 'PIB veio abaixo — e agora?', live: 'LIVE 262', tema: 'PIB', dur: '09:48', mb: 210, sug: 0, apr: 1, ren: 3 },
+      { titulo: 'Inflação de alimentos explicada', live: 'LIVE 262', tema: 'inflação', dur: '15:20', semBruto: true, sug: 3, apr: 0, ren: 0 },
+      { titulo: 'Resposta ao inscrito: vale a pena FIIs?', live: 'LIVE 267', tema: 'investimentos', dur: '07:55', mb: 160, sug: 2, apr: 0, ren: 0 },
+      { titulo: 'A dívida pública em 3 minutos', live: 'LIVE 259', tema: 'dívida', dur: '22:40', mb: 505, finalizado: true, sug: 0, apr: 0, ren: 4 },
+    ];
+    const chipF = (n, um, mu, cor) => n > 0 ? [{ t: `${n} ${n === 1 ? um : mu}`, cor }] : [];
+    const fires = firesBase.map(f => {
+      const total = f.sug + f.apr + f.ren, dec = total - f.sug;
+      return { ...f, progresso: total ? Math.round(dec / total * 100) + '%' : '0%', barra: total && f.ren === total ? OK : A,
+        bruto: f.semBruto ? 'sem bruto' : f.mb + ' MB', brutoCor: f.semBruto ? W : 'inherit',
+        selo: f.finalizado ? 'finalizado' : (f.apr + f.ren) > 0 ? 'em curadoria' : 'novo',
+        seloBg: f.finalizado ? 'var(--ok-soft)' : (f.apr + f.ren) > 0 ? 'var(--accent-soft)' : 'var(--inset)',
+        seloCor: f.finalizado ? OK : (f.apr + f.ren) > 0 ? 'var(--accent2)' : M, seloDisplay: 'inline-flex',
+        chips: [...chipF(f.sug, 'sugerido', 'sugeridos', M), ...chipF(f.apr, 'aprovado', 'aprovados', A), ...chipF(f.ren, 'pronto', 'prontos', OK)] };
+    });
+    const filtrosShorts = [['Todos', 6, true], ['Em curadoria', 2], ['Não comecei', 2], ['Tem pronto', 2], ['Sem bruto', 1]]
+      .map(([t, n, on]) => ({ t, n, borda: on ? A : 'var(--line)', bg: on ? 'var(--accent-soft)' : 'var(--panel)', cor: on ? 'var(--accent2)' : M }));
+
+    const campos = [['Título no YouTube', 'O erro do Banco Central em 40 segundos', '48/100', '30px'], ['Descrição', 'Cada 0,25 ponto na Selic mexe no seu aluguel — e a conta chega antes do que você imagina. Trecho da live de 12/09.', '186/5000', '78px'], ['Prompt da capa', 'rosto à direita, gancho amarelo em duas linhas no topo, gráfico de juros ao fundo desfocado', '', '56px']]
+      .map(([t, v, hint, altura]) => ({ t, v, hint, altura }));
+    const tags = ['juros', 'selic', 'banco central', 'economia', 'inflação', 'aluguel'];
+    const checklist = [['circle-check', 'título e descrição', OK], ['circle-check', 'capa gerada', OK], ['circle-check', 'render final', OK], ['circle-dashed', 'agendamento', D]].map(([n, t, cor]) => ({ n, t, cor }));
+
+    const livesBusca = [
+      { titulo: 'Respondendo inscritos sobre juros', data: '12 set 2026', views: '48,2 k', dur: '2h14', baixado: true, hue: 28 },
+      { titulo: 'Debate: reforma tributária', data: '08 set 2026', views: '31,7 k', dur: '1h48', baixado: true, hue: 245 },
+      { titulo: 'O que esperar da próxima Selic', data: '05 set 2026', views: '26,4 k', dur: '1h22', hue: 80, sel: true },
+      { titulo: 'Análise do PIB do trimestre', data: '02 set 2026', views: '22,1 k', dur: '1h12', baixado: true, hue: 145 },
+      { titulo: 'Bolsa em setembro: o que mudou', data: '29 ago 2026', views: '18,9 k', dur: '1h04', hue: 300, sel: true },
+      { titulo: 'Perguntas da semana', data: '26 ago 2026', views: '17,3 k', dur: '2h40', hue: 200, sel: true },
+    ].map(l => ({ ...l, cb: l.baixado ? 'var(--line)' : A, cbBg: l.sel ? A : 'transparent', chk: l.sel ? 'inline-flex' : 'none',
+      estado: l.baixado ? 'já no app' : 'nova', estadoBg: l.baixado ? 'var(--ok-soft)' : 'var(--info-soft)', estadoCor: l.baixado ? OK : I,
+      acao: l.baixado ? 'Abrir' : 'Baixar', icone: l.baixado ? 'arrow-right' : 'download', cls: l.baixado ? '' : 'btn-pri' }));
+
+    const ranking = [
+      { pos: 1, titulo: 'Respondendo inscritos sobre juros', views: '48,2 k', likes: '3,1 k', coment: '412', vph: '182', score: '92', hue: 28, noApp: true },
+      { pos: 2, titulo: 'O que esperar da próxima Selic', views: '26,4 k', likes: '2,4 k', coment: '388', vph: '164', score: '88', hue: 80 },
+      { pos: 3, titulo: 'Debate: reforma tributária', views: '31,7 k', likes: '1,9 k', coment: '265', vph: '96', score: '81', hue: 245, noApp: true },
+      { pos: 4, titulo: 'Bolsa em setembro: o que mudou', views: '18,9 k', likes: '1,5 k', coment: '204', vph: '88', score: '74', hue: 300 },
+      { pos: 5, titulo: 'Análise do PIB do trimestre', views: '22,1 k', likes: '1,1 k', coment: '142', vph: '61', score: '69', hue: 145, noApp: true },
+      { pos: 6, titulo: 'Perguntas da semana', views: '17,3 k', likes: '904', coment: '119', vph: '44', score: '58', hue: 200 },
+    ].map(r => ({ ...r, posBg: r.pos <= 3 ? 'var(--accent-soft)' : 'var(--inset)', posCor: r.pos <= 3 ? 'var(--accent2)' : M,
+      vphCor: r.pos <= 2 ? OK : M, acao: r.noApp ? 'Abrir' : 'Baixar', icone: r.noApp ? 'arrow-right' : 'download', cls: r.noApp ? '' : 'btn-pri' }));
+    const pesos = [['Audiência', '30%'], ['Likes (taxa)', '20%'], ['Comentários (taxa)', '15%'], ['Tom do público', '15%'], ['Recência', '10%'], ['Momento (v/h)', '10%']].map(([t, v]) => ({ t, v }));
+
+    const statsAnalise = [['film', 'Publicados 30d', '18', '+4 vs. mês anterior', OK], ['gauge', 'Retenção média', '62,4%', '+3,1 pp', OK], ['tags', 'Casados c/ corte', '42/47', '5 sem vínculo', W], ['brain', 'Custo LLM (100)', '$ 7,41', '-12% por corte', OK]]
+      .map(([n, t, v, delta, cor]) => ({ n: n === 'film' ? 'clapperboard' : n, t, v, delta, deltaCor: cor, deltaIcone: cor === OK ? 'arrow-right' : 'triangle-alert' }));
+    const abasAnalise = ['Proposta × Final', 'Desempenho YouTube', 'Chamadas de IA'].map((t, i) => ({ t, cor: i === 0 ? 'var(--ink)' : M, linha: i === 0 ? A : 'transparent' }));
+    const colunas = [['Corte', 'left'], ['Views', 'right'], ['Retenção', 'right'], ['Desvio proposto', 'right'], ['Estado', 'right']].map(([t, al]) => ({ t, al }));
+    const linhas = [
+      ['O erro do BC em 40 segundos', '38,4 k', '71,2%', '+2,4 s', OK, 'no ar', OK],
+      ['Selic e o seu aluguel', '21,7 k', '66,8%', '-1,1 s', OK, 'no ar', OK],
+      ['Quem lucra com juros altos', '12,2 k', '58,3%', '+7,8 s', W, 'no ar', OK],
+      ['A dívida pública em 3 minutos', '9,8 k', '49,1%', '+14,2 s', 'var(--err)', 'revisar', W],
+      ['Resposta ao inscrito sobre FIIs', '—', '—', '+0,4 s', OK, 'agendado', I],
+      ['Inflação de alimentos explicada', '—', '—', '—', M, 'rascunho', M],
+    ].map(([titulo, views, ret, desvio, desvioCor, estado, cor]) => ({ titulo, views, ret, desvio, desvioCor,
+      estado, chipCor: cor, chipBg: cor === OK ? 'var(--ok-soft)' : cor === W ? 'var(--warn-soft)' : cor === I ? 'var(--info-soft)' : 'var(--inset)' }));
+
+    const eixos = [
+      { t: 'Gancho em duas linhas', forca: 'alta', n: 9, texto: 'As capas mais bem avaliadas quebram o gancho em duas linhas curtas, no terço superior, em amarelo sobre fundo escurecido.', exemplos: ['ELES SUBIRAM / NA HORA ERRADA', 'A CONTA CHEGOU / E VOCÊ PAGA'] },
+      { t: 'Rosto à direita, olhando o texto', forca: 'alta', n: 8, texto: 'Rosto ocupa cerca de um terço à direita, com o olhar apontando para o texto — as capas com rosto centralizado ficaram abaixo da média.', exemplos: ['recorte até o ombro', 'olhar para a esquerda'] },
+      { t: 'Um número grande quando o tema é dado', forca: 'média', n: 5, texto: 'Em temas de juros, PIB e inflação, um número isolado em corpo alto aparece em cinco das melhores capas.', exemplos: ['15%', 'R$ 1,2 tri', '0,25 p.p.'] },
+      { t: 'Fundo com gráfico desfocado', forca: 'baixa', n: 3, texto: 'Presente, mas sem correlação clara com nota — manter como recurso opcional, nunca como regra.', exemplos: ['candles desfocados', 'linha de juros'] },
+    ].map(e => ({ ...e, forcaBg: e.forca === 'alta' ? 'var(--ok-soft)' : e.forca === 'média' ? 'var(--warn-soft)' : 'var(--inset)', forcaCor: e.forca === 'alta' ? OK : e.forca === 'média' ? W : M }));
+    const capas = [['#4a3f2a', '#17141d', '9.2'], ['#2a3f4a', '#14171d', '8.8'], ['#4a2a35', '#1d1417', '8.5'], ['#2a4a35', '#141d17', '8.1']].map(([a, bb, nota]) => ({ a, b: bb, nota }));
+
+    const abasConfig = ['Canal ativo', 'Aplicação'].map((t, i) => ({ t, cor: i === 0 ? 'var(--ink)' : M, linha: i === 0 ? A : 'transparent' }));
+    const portais = [['brain', 'Skills editoriais', 'Como a IA lê a live, escolhe trechos e escreve ganchos.'], ['layout-template', 'Scaffolds de corte', 'Palcos, molduras e presets de enquadramento 9:16.'], ['file-text', 'Prompts utilitários', 'Títulos, descrições, tags e prompts de capa.'], ['sliders-horizontal', 'Pesos do ranking', 'O peso de audiência, engajamento e recência no score.']].map(([n, t, d]) => ({ n, t, d }));
+    const opcoesTema = [['sun', 'Claro', 'light'], ['moon', 'Escuro', 'dark']].map(([n, t, v]) => ({ n, t, ir: () => this.setState({ tema: v }),
+      bg: tema === v ? 'var(--solid)' : 'transparent', cor: tema === v ? 'var(--ink)' : M, hi: tema === v ? 'var(--shadow)' : 'none' }));
+    const paletas = [['oklch(0.52 0.165 28)', true], ['oklch(0.5 0.13 245)', false], ['oklch(0.52 0.13 145)', false], ['oklch(0.5 0.14 295)', false], ['oklch(0.55 0.14 70)', false]]
+      .map(([cor, on]) => ({ cor, anel: on ? '0 0 0 2px var(--solid),0 0 0 4px ' + cor : 'none' }));
+
+    const grupos = [
+      { n: 'play', t: 'Player', itens: [['Tocar / pausar', 'Space'], ['Voltar 3s / avançar 3s', '← →'], ['Velocidade -/+', '⌃J ⌃K'], ['Ir ao início do corte', '⇧←']] },
+      { n: 'scissors', t: 'Cortes', itens: [['Novo trecho no cursor', 'N'], ['Ajustar início / fim', '[ ]'], ['Aprovar corte', 'A'], ['Rejeitar corte', 'R'], ['Dividir no cursor', 'D']] },
+      { n: 'flame', t: 'Shorts', itens: [['Próximo candidato', 'J'], ['Candidato anterior', 'K'], ['Finalizar short', '↵'], ['Marcar fire', 'F']] },
+      { n: 'command', t: 'Navegação', itens: [['Busca de comandos', '⌘K'], ['Alternar trilho', '⌘B'], ['Ir para Shorts', 'G S'], ['Ir para Biblioteca', 'G B'], ['Atalhos', '?']] },
+    ].map(g => ({ ...g, itens: g.itens.map(([t, k]) => ({ t, k })) }));
+
+    // ── Modais ──────────────────────────────────────────────
+    const campo = (t, v, hint, altura, cor) => ({ t, v, hint: hint || '', altura: altura || '30px', cor: cor || 'var(--ink)' });
+    const notaEscala = (sel) => [1, 2, 3, 4, 5].map(v => ({ v, borda: v === sel ? A : 'var(--line)', bg: v === sel ? 'var(--accent-soft)' : 'var(--inset)', cor: v === sel ? 'var(--accent2)' : M }));
+    const itensPublicar = cortesLista.slice(0, 5).map((c, i) => ({ num: '#' + c.num, titulo: c.titulo, estado: c.status, chipBg: c.statusBg, chipCor: c.statusCor,
+      cb: i < 3 ? A : 'var(--line)', cbBg: i < 3 ? A : 'transparent', chk: i < 3 ? 'inline-flex' : 'none', borda: i < 3 ? A : 'var(--line2)' }));
+    const etapasRender = [['download', 'Recorte do bruto', '100%', OK, 'ok'], ['image', 'Grade de cor', '100%', OK, 'ok'], ['captions', 'Legenda e overlays', '62%', A, 'agora'], ['rocket', 'Encode final 1080×1920', '0%', 'var(--inset)', 'todo']]
+      .map(([n, t, pct, barra, st]) => ({ n, t, pct, barra, hint: st === 'ok' ? 'feito' : st === 'agora' ? '4 min' : 'na espera',
+        bg: st === 'ok' ? 'var(--ok-soft)' : st === 'agora' ? A : 'var(--inset)', cor: st === 'agora' ? 'var(--on-accent)' : st === 'ok' ? OK : D }));
+    const MODAIS = {
+      novaLive: { icone: 'plus', titulo: 'Nova live', sub: 'cole a URL do YouTube — o app baixa, transcreve e propõe os cortes', largura: '520px',
+        campos: [campo('URL da live', 'https://youtube.com/watch?v=aX7kQ2…', 'colada'), campo('Título de trabalho', 'LIVE 268 — Perguntas sobre dólar'), campo('Canal', '@canal-do-paulo')],
+        rodape: 'download estimado: 1,4 GB', sec: 'Cancelar', pri: 'Baixar e analisar', priIcone: 'download', cls: 'btn-pri' },
+      publicar: { icone: 'send', titulo: 'Publicar em massa', sub: '3 de 5 cortes selecionados · agendamento em intervalos de 2 h', largura: '560px',
+        itens: itensPublicar, campos: [campo('Primeira publicação', 'Ter, 16 set · 18:00'), campo('Destinos', 'YouTube Shorts · TikTok')],
+        rodape: 'o lote só libera com render, título e capa prontos', sec: 'Cancelar', pri: 'Agendar 3 cortes', priIcone: 'clock', cls: 'btn-pri' },
+      render: { icone: 'rocket', titulo: 'Renderizar final', sub: 'corte #' + S.corte + ' · 1080×1920 · legenda queimada', largura: '520px',
+        etapas: etapasRender, texto: 'Recomeçar da legenda reaproveita a grade já pronta e economiza cerca de 6 minutos.',
+        rodape: 'tempo estimado: 7 min', sec: 'Fechar', pri: 'Recomeçar da legenda', priIcone: 'rotate-ccw', cls: 'btn-pri' },
+      nota: { icone: 'flame', titulo: 'Nota do corte', sub: 'quanto este corte merece virar short — a nota alimenta o ranking da IA', largura: '440px',
+        nota: notaEscala(4), notaAjuda: '4 — bom gancho, fecha sozinho, exemplo concreto no meio.',
+        campos: [campo('Observação', 'segurar o corte até a live de quinta para casar com o tema', '', '54px')],
+        rodape: 'marcada como fire automaticamente a partir de 4', sec: 'Cancelar', pri: 'Salvar nota', priIcone: 'check', cls: 'btn-pri' },
+      auditoria: { icone: 'brain', titulo: 'Auditoria da análise', sub: 'o que a IA leu, o que propôs e quanto custou', largura: '560px',
+        campos: [campo('Modelo', 'claude-sonnet · 2 chamadas'), campo('Custo', 'US$ 0,18'), campo('Trechos propostos', '14 · 8 aprovados por você'), campo('Desvio médio da borda', '+2,4 s ao entrar · -1,1 s ao sair')],
+        texto: 'Os cortes aprovados ficaram em média 2,4 s à frente do que a IA propôs na entrada — o prompt já foi ajustado para antecipar o gancho.',
+        rodape: 'última análise há 2 dias', sec: 'Fechar', pri: 'Reanalisar live', priIcone: 'rotate-ccw', cls: '' },
+      padroes: { icone: 'wand', titulo: 'Gerar com IA', sub: 'o que será escrito para este corte', largura: '500px',
+        itens: [{ num: '1', titulo: 'Título do YouTube', estado: 'incluir', chipBg: 'var(--accent-soft)', chipCor: 'var(--accent2)', cb: A, cbBg: A, chk: 'inline-flex', borda: A },
+          { num: '2', titulo: 'Descrição com marcações de tempo', estado: 'incluir', chipBg: 'var(--accent-soft)', chipCor: 'var(--accent2)', cb: A, cbBg: A, chk: 'inline-flex', borda: A },
+          { num: '3', titulo: 'Tags do vídeo', estado: 'incluir', chipBg: 'var(--accent-soft)', chipCor: 'var(--accent2)', cb: A, cbBg: A, chk: 'inline-flex', borda: A },
+          { num: '4', titulo: 'Prompt da capa', estado: 'manter o meu', chipBg: 'var(--inset)', chipCor: M, cb: 'var(--line)', cbBg: 'transparent', chk: 'none', borda: 'var(--line2)' }],
+        rodape: 'custo estimado: US$ 0,04', sec: 'Cancelar', pri: 'Gerar 3 itens', priIcone: 'sparkles', cls: 'btn-pri' },
+      confirmar: { icone: 'triangle-alert', titulo: 'Regerar o bruto deste corte?', sub: 'esta ação descarta o que já foi renderizado', largura: '440px',
+        texto: 'O arquivo final, a grade de cor e as legendas queimadas serão apagados. Os trechos aprovados e o texto dos ganchos permanecem.',
+        rodape: 'não dá para desfazer', sec: 'Cancelar', pri: 'Regerar bruto', priIcone: 'rotate-ccw', cls: 'btn-pri',
+        iconeBg: 'var(--err-soft)', iconeCor: 'var(--err)' },
+    };
+    const mBase = MODAIS[S.modal];
+    const modal = mBase ? { ...mBase, largura: mBase.largura || '520px',
+      iconeBg: mBase.iconeBg || 'var(--accent-soft)', iconeCor: mBase.iconeCor || 'var(--accent2)',
+      temTexto: !!mBase.texto, temCampos: !!mBase.campos, temItens: !!mBase.itens, temEtapas: !!mBase.etapas, temNota: !!mBase.nota } : {};
+    const botoesModal = [['plus', 'Nova live', 'novaLive'], ['send', 'Publicar em massa', 'publicar'], ['rocket', 'Render', 'render'], ['flame', 'Nota do corte', 'nota'], ['brain', 'Auditoria', 'auditoria'], ['sparkles', 'Gerar com IA', 'padroes'], ['triangle-alert', 'Confirmação', 'confirmar']]
+      .map(([n, t, k]) => ({ n, t, ir: this.abrir(k) }));
+
+    // ── Prateleira, revisão, fila, kit ──────────────────────
+    const redes = [['YouTube Shorts', true], ['TikTok', false], ['Instagram Reels', false]]
+      .map(([t, on]) => ({ t, borda: on ? A : 'var(--line)', bg: on ? 'var(--accent-soft)' : 'var(--panel)', cb: on ? A : 'var(--line)', cbBg: on ? A : 'transparent', chk: on ? 'inline-flex' : 'none' }));
+    const prateleira = [
+      { pronto: true, pendente: false, titulo: 'O erro do BC em 40 segundos', gancho: 'Eles subiram juros na hora errada', inicio: '04:12', dur: '0:46', status: 'pronto', chipBg: 'var(--ok-soft)', chipCor: OK, acao: 'Publicar este', icone: 'send', cls: 'btn-pri' },
+      { pronto: false, pendente: true, aviso: 'aprovado, falta o arquivo', titulo: 'Selic e o seu aluguel', inicio: '09:30', status: 'aprovado', chipBg: 'var(--accent-soft)', chipCor: 'var(--accent2)', acao: 'Finalizar', icone: 'clapperboard', cls: '' },
+      { pronto: false, pendente: true, aviso: 'na fila de render · 62%', titulo: 'Quem lucra com juros altos', inicio: '13:02', status: 'renderizando', chipBg: 'var(--info-soft)', chipCor: I, acao: 'Ver na fila', icone: 'loader', cls: '' },
+    ];
+    const revisao = cortesLista.slice(0, 4).map((r, i) => ({ num: r.num, titulo: r.titulo, dur: r.dur,
+      checks: [{ n: i < 3 ? 'circle-check' : 'circle-dashed', t: 'render', cor: i < 3 ? OK : D }, { n: i < 2 ? 'circle-check' : 'circle-dashed', t: 'capa', cor: i < 2 ? OK : D },
+        { n: i < 3 ? 'circle-check' : 'circle-dashed', t: 'título', cor: i < 3 ? OK : D }, { n: i < 1 ? 'circle-check' : 'circle-dashed', t: 'legenda', cor: i < 1 ? OK : W }],
+      acao: i < 2 ? 'Liberar' : 'Corrigir', icone: i < 2 ? 'check' : 'pencil', cls: i < 2 ? 'btn-pri' : '' }));
+    const bloqueios = [['triangle-alert', 'Corte #9 sem capa gerada — o lote não libera sem ela.', W], ['triangle-alert', 'Corte #10 com legenda fora de sincronia no minuto 0:32.', 'var(--err)'], ['circle-check', 'Títulos e descrições de 6 cortes revisados.', OK]]
+      .map(([n, t, cor]) => ({ n, t, cor }));
+    const jobs = [
+      { n: 'rocket', titulo: 'Render final · corte #7', sub: 'LIVE 267 · 1080×1920', estado: 'rodando', pct: '62%', tempo: '4 min', log: 'encode: frame 1842/2976 · 28 fps · GPU 71%', barra: A, chipBg: 'var(--accent-soft)', chipCor: 'var(--accent2)', iconeBg: 'var(--accent-soft)', iconeCor: 'var(--accent2)' },
+      { n: 'brain', titulo: 'Análise da IA · LIVE 265', sub: 'transcrição pronta · propondo trechos', estado: 'na espera', pct: '0%', tempo: '—', log: 'aguardando slot · 1 job à frente', barra: 'var(--inset)', chipBg: 'var(--inset)', chipCor: M, iconeBg: 'var(--inset)', iconeCor: M },
+      { n: 'download', titulo: 'Download · LIVE 268', sub: 'youtube.com/watch?v=aX7kQ2', estado: 'na espera', pct: '0%', tempo: '—', log: 'aguardando slot · 2 jobs à frente', barra: 'var(--inset)', chipBg: 'var(--inset)', chipCor: M, iconeBg: 'var(--inset)', iconeCor: M },
+      { n: 'circle-check', titulo: 'Render final · corte #10', sub: 'concluído há 12 min', estado: 'concluído', pct: '100%', tempo: '6 min', log: 'arquivo salvo em /renders/267/corte-10-final.mp4', barra: OK, chipBg: 'var(--ok-soft)', chipCor: OK, iconeBg: 'var(--ok-soft)', iconeCor: OK },
+    ];
+    const chipsKit = [['proposto', 'var(--info-soft)', I], ['aprovado', 'var(--accent-soft)', 'var(--accent2)'], ['pronto', 'var(--ok-soft)', OK], ['rejeitado', 'var(--inset)', M], ['sem bruto', 'var(--warn-soft)', W], ['falhou', 'var(--err-soft)', 'var(--err)']]
+      .map(([t, bg, cor]) => ({ t, bg, cor }));
+    const notasKit = [['8.7', 'var(--ok-soft)', OK], ['7.9', 'var(--info-soft)', I], ['6.4', 'var(--accent-soft)', 'var(--accent2)'], ['5.1', 'var(--inset)', M]].map(([v, bg, cor]) => ({ v, bg, cor }));
+    const avisos = [['circle-check', 'Bruto guardado', 'O recorte de 18:32 está no disco — a curadoria pode começar.', 'Abrir', OK, 'var(--ok-soft)'],
+      ['triangle-alert', 'Disco quase cheio', '4 lives antigas ocupam 1,8 GB e já foram publicadas.', 'Limpar', W, 'var(--warn-soft)'],
+      ['x', 'Falha no encode', 'O render do corte #12 parou no frame 940 — log disponível.', 'Ver log', 'var(--err)', 'var(--err-soft)']]
+      .map(([n, t, d, acao, cor, borda]) => ({ n, t, d, acao, cor, borda }));
+
+    if (!this._onda) {
+      let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+      const bars = Array.from({ length: 240 }, (_, i) => React.createElement('span', { key: i, style: { flex: 1, height: (14 + rnd() * 70 * (0.6 + 0.4 * Math.sin(i / 9))) + '%', background: 'var(--dim)', opacity: 0.4, borderRadius: 1 } }));
+      this._onda = React.createElement('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', gap: 1, padding: '0 3px' } }, bars);
+    }
+
+    return {
+      tema, vidro: (P.vidro ?? true) ? '1' : '0',
+      larguraTrilho: expandido ? '212px' : '54px', mostrarTexto: expandido ? 'inline' : 'none',
+      alternarTrilho: () => this.setState({ trilho: !expandido }),
+      alternarTema: () => this.setState({ tema: tema === 'dark' ? 'light' : 'dark' }),
+      iconeTema: tema === 'dark' ? 'sun' : 'moon',
+      navProd, navIntel, navFim, irFila: this.ir('fila'), irFire: this.ir('cortes'),
+      temBarra: em('cortes', 'pos', 'metadados', 'prateleira', 'revisao'),
+      barra: tela === 'pos' ? { sec: 'Refazer cena', secIcone: 'rotate-ccw', terc: 'Prévia', tercIcone: 'eye', pri: 'Renderizar final', priIcone: 'rocket', ir: this.abrir('render'), temTeclas: true }
+        : tela === 'metadados' ? { sec: 'Descartar', secIcone: 'x', terc: 'Prévia no YouTube', tercIcone: 'eye', pri: 'Salvar e publicar', priIcone: 'send', ir: this.abrir('publicar'), temTeclas: true }
+        : tela === 'prateleira' ? { sec: 'Refazer prévias', secIcone: 'rotate-ccw', terc: 'Ver na fila', tercIcone: 'loader', pri: 'Publicar 1 short', priIcone: 'send', ir: this.abrir('publicar'), temLote: true }
+        : tela === 'revisao' ? { sec: 'Reprovar lote', secIcone: 'x', terc: 'Rever todos', tercIcone: 'play', pri: 'Abrir publicação em massa', priIcone: 'send', ir: this.abrir('publicar'), temLote: true }
+        : { sec: 'Rejeitar', secIcone: 'x', terc: 'Prévia', tercIcone: 'eye', pri: 'Aprovar corte', priIcone: 'check', ir: this.abrir('nota'), temTeclas: true },
+      cab, trilha, etapasProjeto, ctx, temContexto: em('cortes', 'pos', 'metadados'),
+      temSeletor: em('projeto', 'cortes', 'pos', 'metadados', 'shorts'), seletorAberto: S.seletor,
+      seletorBorda: S.seletor ? A : 'var(--line)',
+      alternarSeletor: () => this.setState({ seletor: !S.seletor }),
+      cortePrev: this.passo(-1, nums), corteNext: this.passo(1, nums),
+      corte: corteAtual, cortesSeletor, filtrosSeletor, irProjeto: this.ir('projeto'),
+      ehBiblioteca: em('biblioteca'), ehProjeto: em('projeto'), ehBancada: em('cortes', 'pos'), ehMetadados: em('metadados'),
+      ehShorts: em('shorts'), ehLives: em('lives'), ehRanking: em('ranking'), ehAnalises: em('analises'),
+      ehThumbs: em('thumbs'), ehConfig: em('config'), ehAtalhos: em('atalhos'),
+      ehPrateleira: em('prateleira'), ehRevisao: em('revisao'), ehFilaTela: em('fila'), ehKit: em('kit'), eh404: em('erro'),
+      irPrateleira: this.ir('prateleira'), irBiblioteca: this.ir('biblioteca'), irPos: this.ir('pos'),
+      modalAberto: !!mBase, modal, fecharModal: () => this.setState({ modal: null }),
+      abrirPublicar: this.abrir('publicar'), botoesModal,
+      toastVisivel: S.toast && !S.modal && em('prateleira', 'kit'), fecharToast: () => this.setState({ toast: false }),
+      redes, prateleira, revisao, bloqueios, jobs, chipsKit, notasKit, avisos,
+      projetos, filtrosBib, statsProjeto, etapasLonga, cortesLista,
+      banc, clipes, legenda, onda: this._onda,
+      campos, tags, checklist, fires, filtrosShorts, livesBusca, ranking, pesos,
+      statsAnalise, abasAnalise, colunas, linhas, eixos, capas, abasConfig, portais, opcoesTema, paletas, grupos,
+    };
+  }
+}
+</script>
+</body>
+</html>
