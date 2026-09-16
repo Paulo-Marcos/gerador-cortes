@@ -40,7 +40,10 @@ Se ele não prender, o resto do short não existe — por melhor que seja.
 7. **Não repita entre shorts.** Aqui é o inverso da capa do TikTok: lá repetir o
    assunto dá coerência à prateleira, mas no feed os shorts aparecem em sequência
    e dois ganchos iguais parecem robô.
-8. **Português do canal.** Sem estrangeirismo que o canal não use no vídeo.
+8. **Frase com maiúscula no início.** Primeira letra maiúscula e nomes próprios
+   e siglas como se escrevem (Selic, PIX, Banco Central). Tudo em minúsculo
+   parece digitado às pressas; tudo em maiúsculo grita.
+9. **Português do canal.** Sem estrangeirismo que o canal não use no vídeo.
 
 ## Como encontrar o gancho
 
@@ -63,9 +66,9 @@ sem explicação, sem markdown, sem linha de introdução.
 Exemplo de saída válida:
 
 ```
-o juro composto trabalha contra você
-ninguém te conta isso sobre dívida
-o erro que todo mundo comete
-você paga por isso todo mês
-o dinheiro sai antes de você ver
+O juro composto trabalha contra você
+Ninguém te conta isso sobre dívida
+O erro que todo mundo comete
+Você paga por isso todo mês
+O dinheiro sai antes de você ver
 ```

@@ -247,7 +247,8 @@ class TestGanchoDaAbertura:
         # branco com o veu de topo —, entao um short curado antes dela sai
         # exatamente como saia.
         assert props["gancho"] == {
-            "texto": "o juro composto trabalha contra voce",
+            # Gancho antigo gravado em minusculo sai do render com a inicial maiuscula.
+            "texto": "O juro composto trabalha contra voce",
             "ateSeg": 2.5,
             "cor": "",
             "realce": "veu",
@@ -283,7 +284,7 @@ class TestGanchoDaAbertura:
             )
         )
         assert props["cenas"] == []
-        assert props["gancho"]["texto"] == "quatro palavras aqui agora"
+        assert props["gancho"]["texto"] == "Quatro palavras aqui agora"
 
     @pytest.mark.asyncio
     async def test_gancho_nao_passa_da_duracao_do_trecho(self, ambiente, jobs):

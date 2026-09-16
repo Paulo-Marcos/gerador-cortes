@@ -162,12 +162,18 @@ def normalizar_gancho(texto: str) -> str:
     (D-533): apagar a ultima palavra de um texto que o operador escreveu e pior
     que qualquer corpo pequeno, e e silencioso.
 
-    A caixa NAO e forcada. A etiqueta da capa vai em maiuscula porque e um
+    A caixa alta NAO e forcada. A etiqueta da capa vai em maiuscula porque e um
     rotulo de prateleira; o gancho e uma frase que alguem le, e caixa alta em
     sete palavras cansa mais do que destaca.
 
+    Mas a frase comeca com MAIUSCULA. O exemplo da skill vinha todo em
+    minusculo, a IA imitava, e o short abria com um texto que parecia digitado
+    as pressas. So a primeira letra muda: o resto (siglas, nomes) fica como veio.
+
     >>> normalizar_gancho('  ninguem   te   conta   isso  ')
-    'ninguem te conta isso'
+    'Ninguem te conta isso'
+    >>> normalizar_gancho('o PIX mudou')
+    'O PIX mudou'
     >>> normalizar_gancho('')
     ''
     """
@@ -178,7 +184,8 @@ def normalizar_gancho(texto: str) -> str:
     while len(palavras) > 1 and len(" ".join(palavras)) > MAX_CARACTERES:
         palavras.pop()
 
-    return " ".join(palavras)
+    frase = " ".join(palavras)
+    return frase[0].upper() + frase[1:]
 
 
 def contar_palavras(texto: str) -> int:
@@ -479,9 +486,9 @@ def ganchos_da_resposta(bruto: str, ja_usados: list[str] | None = None) -> list[
     nada e o operador escreve o dele, que e melhor que oferecer lixo.
 
     >>> ganchos_da_resposta('o juro trabalha contra voce\nninguem te conta isso')
-    ['o juro trabalha contra voce', 'ninguem te conta isso']
+    ['O juro trabalha contra voce', 'Ninguem te conta isso']
     >>> ganchos_da_resposta('1. "primeira aqui"\n2. - segunda aqui')
-    ['primeira aqui', 'segunda aqui']
+    ['Primeira aqui', 'Segunda aqui']
     >>> ganchos_da_resposta('boa frase nova aqui', ja_usados=['BOA FRASE NOVA AQUI'])
     []
     >>> ganchos_da_resposta('   ')
@@ -509,7 +516,7 @@ def _sem_enfeite(linha: str) -> str:
     """Uma linha da resposta sem numeracao, marcador, aspas ou cerca.
 
     >>> _sem_enfeite('  3) "o erro que todo mundo comete" ')
-    'o erro que todo mundo comete'
+    'O erro que todo mundo comete'
     >>> _sem_enfeite('```')
     ''
     """

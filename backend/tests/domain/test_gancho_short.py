@@ -122,15 +122,19 @@ class TestAparenciaResolvida:
 
 class TestNormalizarGancho:
     def test_colapsa_espaco_sem_mexer_nas_palavras(self):
-        assert normalizar_gancho("  ninguem   te   conta   isso ") == "ninguem te conta isso"
+        assert normalizar_gancho("  ninguem   te   conta   isso ") == "Ninguem te conta isso"
 
     def test_preserva_a_caixa_que_o_operador_escreveu(self):
         """Diferente da etiqueta da capa, que e rotulo: o gancho e frase lida."""
         assert normalizar_gancho("Ninguem te conta ISSO") == "Ninguem te conta ISSO"
 
     def test_nao_apaga_palavra_de_um_gancho_normal(self):
-        texto = "o erro que todo mundo comete"
+        texto = "O erro que todo mundo comete"
         assert normalizar_gancho(texto) == texto
+
+    def test_primeira_letra_sobe_para_maiuscula(self):
+        """Tudo em minusculo parece digitado as pressas no short."""
+        assert normalizar_gancho("o PIX mudou tudo") == "O PIX mudou tudo"
 
     def test_corta_so_no_absurdo(self):
         gigante = " ".join(["palavra"] * 40)
@@ -173,7 +177,7 @@ class TestNormalizarDuracao:
 class TestPayload:
     def test_gancho_escrito_vira_payload(self):
         assert para_payload("ninguem te conta isso", 2.5, duracao_short_seg=30.0) == {
-            "texto": "ninguem te conta isso",
+            "texto": "Ninguem te conta isso",
             "ateSeg": 2.5,
             # D-581: a aparencia viaja JUNTO do texto, e os defaults sao os de
             # antes desta demanda — branco com o veu de topo. Um short curado
@@ -242,8 +246,8 @@ class TestGanchosDaResposta:
 
     def test_uma_por_linha_e_o_caso_feliz(self):
         assert ganchos_da_resposta("o juro trabalha contra voce\nninguem te conta isso") == [
-            "o juro trabalha contra voce",
-            "ninguem te conta isso",
+            "O juro trabalha contra voce",
+            "Ninguem te conta isso",
         ]
 
     @pytest.mark.parametrize(
@@ -258,14 +262,14 @@ class TestGanchosDaResposta:
         ],
     )
     def test_tira_o_enfeite_que_o_modelo_poe(self, linha):
-        assert ganchos_da_resposta(linha) == ["o erro que todo mundo comete"]
+        assert ganchos_da_resposta(linha) == ["O erro que todo mundo comete"]
 
     def test_cerca_de_markdown_nao_vira_variacao(self):
-        assert ganchos_da_resposta("```\numa opcao aqui\n```") == ["uma opcao aqui"]
+        assert ganchos_da_resposta("```\numa opcao aqui\n```") == ["Uma opcao aqui"]
 
     def test_repetida_entra_uma_vez_so(self):
         """Duas linhas iguais na tela parecem defeito, nao escolha."""
-        assert ganchos_da_resposta("mesma frase aqui\nMESMA FRASE AQUI") == ["mesma frase aqui"]
+        assert ganchos_da_resposta("mesma frase aqui\nMESMA FRASE AQUI") == ["Mesma frase aqui"]
 
     def test_para_no_teto_de_variacoes(self):
         muitas = "\n".join(f"variacao numero {i} aqui" for i in range(20))
@@ -290,7 +294,7 @@ class TestRessalvaEHistorico:
 
     def test_ressalva_no_fim_nao_vai_para_a_tela(self):
         assert ganchos_da_resposta("seu financiamento custa o dobro (mais forte)") == [
-            "seu financiamento custa o dobro"
+            "Seu financiamento custa o dobro"
         ]
 
     def test_a_linha_que_so_tem_ressalva_e_descartada(self):
@@ -299,13 +303,13 @@ class TestRessalvaEHistorico:
     def test_parenteses_no_meio_nao_e_ressalva(self):
         """So o SUFIXO e meta — cortar no meio mutilaria a frase."""
         assert ganchos_da_resposta("o (falso) consenso sobre juros") == [
-            "o (falso) consenso sobre juros"
+            "O (falso) consenso sobre juros"
         ]
 
     def test_gancho_ja_usado_nao_volta_como_novidade(self):
         bruto = "o juro trabalha contra voce\numa frase realmente nova aqui"
         assert ganchos_da_resposta(bruto, ja_usados=["o juro trabalha contra voce"]) == [
-            "uma frase realmente nova aqui"
+            "Uma frase realmente nova aqui"
         ]
 
     def test_o_ja_usado_e_comparado_sem_ligar_para_caixa(self):
@@ -322,5 +326,5 @@ class TestRessalvaEHistorico:
 
     def test_historico_vazio_nao_atrapalha(self):
         assert ganchos_da_resposta("uma frase qualquer aqui", ja_usados=[]) == [
-            "uma frase qualquer aqui"
+            "Uma frase qualquer aqui"
         ]
