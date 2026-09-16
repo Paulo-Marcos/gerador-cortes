@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import type { Corte, StatusBrutoResponse } from '@/types/models';
 import { PlayerPanel, type PlayerHandle } from './PlayerPanel';
 import { TimelinePanel } from './TimelinePanel';
@@ -21,6 +22,11 @@ import { RightTabsPanel } from './RightTabsPanel';
 // ─────────────────────────────────────────────────────────────
 
 const PANEL_PERSIST = 'editor-fase1-panels-v2';
+// D-599: a casca nova tem outra geometria (o palco manda no enquadramento e a
+// coluna direita e mais estreita). Chave de persistencia propria para que o
+// layout que o Paulo ajustou numa casca nao seja imposto a outra.
+const PANEL_PERSIST_AP = 'editor-fase1-panels-ap';
+const CASCA_NOVA = isUpgradeShellEnabled();
 
 interface Props {
   videoSrc: string;
@@ -129,16 +135,24 @@ export function EditorFase1({
   return (
     <PanelGroup
       direction="horizontal"
-      autoSaveId={`${PANEL_PERSIST}-h`}
-      className="h-full p-3"
-      style={{ gap: 12 }}
+      autoSaveId={`${CASCA_NOVA ? PANEL_PERSIST_AP : PANEL_PERSIST}-h`}
+      className={CASCA_NOVA ? 'h-full py-2' : 'h-full p-3'}
+      style={{ gap: CASCA_NOVA ? 14 : 12 }}
     >
       {/* Esquerda: Player (cresce) + Timeline (compact rente aos timecodes) */}
-      <Panel defaultSize={62} minSize={40} order={1}>
-        <PanelGroup direction="vertical" autoSaveId={`${PANEL_PERSIST}-left-v`}>
+      {/* No design a coluna direita e uma faixa fixa de 320px; aqui ela
+          continua redimensionavel (decisao anterior do Paulo) com o default
+          aproximado dessa largura. */}
+      <Panel defaultSize={CASCA_NOVA ? 74 : 62} minSize={40} order={1}>
+        <PanelGroup
+          direction="vertical"
+          autoSaveId={`${CASCA_NOVA ? PANEL_PERSIST_AP : PANEL_PERSIST}-left-v`}
+        >
           <Panel defaultSize={65} minSize={30} order={1}>
             <PlayerPanel
               ref={playerRef}
+              variant={CASCA_NOVA ? 'ap' : 'legacy'}
+              selo={brutoPronto ? 'BRUTO · pronto' : 'VÍDEO ORIGINAL'}
               src={videoSrc}
               inicioSeg={corte.inicio_seg}
               fimSeg={corte.fim_seg}
@@ -196,7 +210,7 @@ export function EditorFase1({
       <PanelResizeHandle className="w-2 transition-colors hover:bg-[var(--wb-border-soft)]" />
 
       {/* Direita: RightTabsPanel vertical inteiro */}
-      <Panel defaultSize={38} minSize={22} order={2}>
+      <Panel defaultSize={CASCA_NOVA ? 26 : 38} minSize={22} order={2}>
         <RightTabsPanel
           corteId={corte.id}
           hintsThumbnail={corte.hints_thumbnail}

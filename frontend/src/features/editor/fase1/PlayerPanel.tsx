@@ -91,8 +91,16 @@ interface Props {
   audioOffsetMs?: number;
   onAudioOffsetChange?: (ms: number) => void;
   /** AUDITORIA-v2 §4 (CP4) — 'legacy' (default) mantém o header do editor
-   *  antigo; 'overlay' é o vídeo largo do Workbench com chips sobrepostos. */
-  variant?: 'legacy' | 'overlay';
+   *  antigo; 'overlay' é o vídeo largo do Workbench com chips sobrepostos.
+   *  D-599: 'ap' é o palco do upgrade de layout — o vídeo vira um retângulo
+   *  preto centralizado, com proporção fixa, cantos de 5 px e um selo em
+   *  mono no canto. Sem moldura de painel em volta: no design o palco É o
+   *  painel, e a imagem manda no enquadramento. */
+  variant?: 'legacy' | 'overlay' | 'ap';
+  /** Proporção do palco no variant 'ap' ('16/9' no bruto, '9/16' no short). */
+  proporcao?: string;
+  /** Selo do canto superior esquerdo: "BRUTO · 1080p", "FINAL · grade". */
+  selo?: string;
   /** D-409: identidade do corte para lembrar onde a reprodução parou. Sem
    *  ela o player continua sempre começando no início do corte. */
   posicaoKey?: string;
@@ -112,6 +120,8 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     audioOffsetMs = 0,
     onAudioOffsetChange,
     variant = 'legacy',
+    proporcao = '16/9',
+    selo,
     posicaoKey,
   },
   ref,
@@ -206,6 +216,164 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
 
   const duracao = Math.max(0, fimSeg - inicioSeg);
   const rateLabel = `${playbackRate.toFixed(2)}×`;
+
+  // ── D-599: o palco ────────────────────────────────────────────
+  // O design tira a moldura e centraliza um retângulo de proporção
+  // fixa. `container-type: inline-size` é o detalhe que faz a peça
+  // funcionar: a legenda passa a medir em `cqw`, então ela cresce e
+  // encolhe JUNTO com o palco. Legenda em px num palco elástico é
+  // legenda que mente sobre como o texto vai sair no vídeo final.
+  if (variant === 'ap') {
+    return (
+      <section
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          height: '100%',
+          minHeight: 0,
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            display: 'grid',
+            placeItems: 'center',
+            minHeight: 220,
+            minWidth: 0,
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              height: '100%',
+              maxWidth: '100%',
+              aspectRatio: proporcao,
+              borderRadius: 'var(--r3)',
+              overflow: 'hidden',
+              background: '#000',
+              boxShadow: 'var(--shadow)',
+              containerType: 'inline-size',
+            }}
+          >
+            <video
+              ref={videoRef}
+              src={src}
+              controls
+              preload="metadata"
+              crossOrigin="anonymous"
+              style={{ width: '100%', height: '100%', display: 'block' }}
+            />
+
+            {selo ? (
+              <span
+                className="chip"
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  left: 8,
+                  background: 'rgb(0 0 0/.55)',
+                  color: '#fff',
+                  fontFamily: 'var(--mono)',
+                  pointerEvents: 'none',
+                }}
+              >
+                {selo}
+              </span>
+            ) : null}
+
+            {smartPlay ? (
+              <span
+                className="chip"
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  background: 'rgb(0 0 0/.55)',
+                  color: '#fff',
+                  fontFamily: 'var(--mono)',
+                  pointerEvents: 'none',
+                }}
+              >
+                <Scissors size={11} aria-hidden />
+                sem cortes
+              </span>
+            ) : null}
+
+            {/* D-511 preservado: o que está sendo dito no trecho marcado para
+                SAIR. Ver o que se perde no instante em que se perde é o que
+                permite discordar do corte. */}
+            {legenda ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '10%',
+                  right: '10%',
+                  bottom: '16%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                  pointerEvents: 'none',
+                }}
+              >
+                <span
+                  className="chip"
+                  style={{
+                    background: 'rgb(0 0 0/.75)',
+                    color: '#ff9b9b',
+                    fontFamily: 'var(--mono)',
+                    fontSize: 10,
+                    textTransform: 'uppercase',
+                    letterSpacing: '.08em',
+                  }}
+                >
+                  sai do bruto{legenda.rotulo ? ` · ${legenda.rotulo}` : ''}
+                </span>
+                <p
+                  style={{
+                    margin: 0,
+                    textAlign: 'center',
+                    fontWeight: 800,
+                    fontSize: '4.2cqw',
+                    lineHeight: 1.15,
+                    color: '#fff',
+                    // `paint-order: stroke` desenha o contorno ATRÁS das hastes:
+                    // sem ele o traço come as letras finas.
+                    paintOrder: 'stroke fill',
+                    WebkitTextStroke: '0.35cqw rgba(0,0,0,0.85)',
+                    textShadow: '0 2px 0 #000',
+                  }}
+                >
+                  {legenda.texto}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {podePreview ? (
+          <audio
+            ref={audioRef}
+            src={audioPreviewSrc}
+            preload="auto"
+            crossOrigin="anonymous"
+            className="hidden"
+          />
+        ) : null}
+
+        {onAudioOffsetChange ? (
+          <AudioSyncControl
+            offsetMs={audioOffsetMs}
+            onChange={onAudioOffsetChange}
+            previewEnabled={previewSync}
+            onTogglePreview={() => setPreviewSync((v) => !v)}
+            canPreview={podePreview}
+          />
+        ) : null}
+      </section>
+    );
+  }
 
   return (
     <section
