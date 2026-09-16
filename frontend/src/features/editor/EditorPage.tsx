@@ -67,6 +67,8 @@ import { shortcutFromRegistry } from './shortcutsRegistry';
 import { useEditHistory } from './useEditHistory';
 import { calcularDuracaoLiquida, hmsParaSeg, segParaHms, segParaMmSs } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
+import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { UnifiedSidebar } from './UnifiedSidebar';
 import { CommonTopBar, StatusToggleRow, type MoreMenuItem } from './CommonTopBar';
 import { SettingsModal } from '@/components/layout/SettingsModal';
@@ -81,6 +83,12 @@ import {
   postProductionPath,
   resolveCorteStagePath,
 } from '@/features/post-production/postProductionNavigation';
+
+// D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
+// barra de decisao e a CASCA — o editor apenas a alimenta (BancadaChrome).
+// Lido uma vez, no modulo, pela mesma razao do router: casca e tela nunca
+// podem ficar em versoes diferentes dentro da mesma sessao.
+const CASCA_NOVA = isUpgradeShellEnabled();
 
 const APROVADO_STATUS_SET = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
 
@@ -1193,6 +1201,33 @@ export function EditorPage() {
 
   return (
     <>
+      {CASCA_NOVA ? (
+        <BancadaChrome
+          projetoId={projetoId}
+          tituloLive={projeto.data?.titulo_live ?? 'Live'}
+          cortes={cortes}
+          corte={corteUI}
+          exportStatus={exportStatusQ.data?.cortes ?? []}
+          caminhoDoCorte={(item) =>
+            resolveCorteStagePath({
+              projetoId,
+              corte: item,
+              status: exportStatuses.find((status) => status.corte_id === item.id),
+            })
+          }
+          sub={`bruto ${segParaMmSs(durSeg)} · líquido ${segParaMmSs(liquidoSeg)} · ${(corteUI.desvios ?? []).length} trechos`}
+          fire={corteUI.is_fire}
+          sujo={isDirty}
+          salvando={atualizarCorte.isPending}
+          brutoPronto={brutoPronto}
+          brutoOcupado={brutoBusy}
+          onSalvar={salvarMudancas}
+          onGerarBruto={handleGerarBrutoPrincipal}
+          onToggleFire={() => toggleFire.mutate()}
+          onAprovar={toggleAprovado}
+          onRejeitar={toggleRejeitado}
+        />
+      ) : (
       <UnifiedSidebar
         projetoId={projetoId}
         cortes={cortes}
@@ -1209,8 +1244,16 @@ export function EditorPage() {
         onOpenSettings={() => setSettingsOpen(true)}
         getCurrentTime={() => playerRef.current?.getCurrentTime() ?? currentTime}
       />
+      )}
 
-      <div className="ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)]">
+      <div
+        className={
+          CASCA_NOVA
+            ? 'flex h-full min-h-0 flex-col overflow-hidden'
+            : 'ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)]'
+        }
+      >
+        {CASCA_NOVA ? null : (
         <CommonTopBar
           projeto={projeto.data}
           corte={corteUI}
@@ -1280,6 +1323,7 @@ export function EditorPage() {
           }
           moreMenuItems={moreMenuItems}
         />
+        )}
 
         <BrutoContextStrip
           previous={previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null}

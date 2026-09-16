@@ -207,7 +207,14 @@ function Casca({ children, fila }: CascaProps) {
               acoes={chrome.acoes}
             />
 
-            <div style={{ flex: 1, overflow: 'auto', padding: '4px 18px 18px', minHeight: 0 }}>
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                overflow: chrome.denso ? 'hidden' : 'auto',
+                padding: chrome.denso ? '0 12px 12px' : '4px 18px 18px',
+              }}
+            >
               <Suspense
                 fallback={
                   <div

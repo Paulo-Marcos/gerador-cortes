@@ -301,3 +301,74 @@
   background: var(--line);
   background-clip: padding-box;
 }
+
+/* ─── Ponte para as telas ainda não migradas ──────────────────────
+   Toda tela que ainda fala `--wb-*` e cai DENTRO da casca nova passa a
+   ler os tokens de `.ap`. É uma ponte, não uma fusão: as telas fora da
+   casca continuam com os valores originais em `:root`, então desligar
+   a flag devolve tudo exatamente como estava.
+
+   Vale muito na Bancada. Ali moram 22 mil linhas de player, wavesurfer
+   e pipeline de render, e reescrever a cor à mão em cada uma seria
+   caro e arriscado sem mudar uma vírgula do comportamento. A cascata
+   faz isso de graça: sobra para as etapas seguintes o que a cascata
+   NÃO resolve — estrutura, densidade e raio de canto.
+
+   Some quando a última tela migrar. */
+
+.ap {
+  --wb-bg: var(--bg);
+  /* `--solid` e nao `--panel`: os paineis antigos nao tem backdrop-filter,
+     e vidro sem desfoque atras vira so contraste perdido. */
+  --wb-bg-panel: var(--solid);
+  --wb-bg-card: var(--solid);
+  --wb-bg-card-elev: var(--inset);
+  --wb-bg-inset: var(--inset);
+  --wb-bg-strip: var(--inset);
+  --wb-border: var(--line);
+  --wb-border-soft: var(--line2);
+  --wb-text: var(--ink);
+  --wb-text-mute: var(--mute);
+  --wb-text-dim: var(--dim);
+  --wb-accent: var(--accent);
+  --wb-accent-strong: var(--accent2);
+  --wb-accent-soft: var(--accent-soft);
+  --wb-accent-fg: var(--on-accent);
+  --wb-ink: var(--ink);
+  --wb-ink-fg: var(--bg);
+  --wb-pill-bg: var(--solid);
+  --wb-focus: var(--accent-soft);
+  --wb-shadow: var(--shadow);
+
+  --wb-ok: var(--ok);
+  --wb-ok-soft: var(--ok-soft);
+  --wb-ok-ink: var(--ok);
+  --wb-warn: var(--warn);
+  --wb-warn-soft: var(--warn-soft);
+  --wb-warn-ink: var(--warn);
+  --wb-err: var(--err);
+  --wb-err-soft: var(--err-soft);
+  --wb-err-ink: var(--err);
+  --wb-info: var(--info);
+  --wb-info-soft: var(--info-soft);
+  --wb-violet: var(--info);
+  --wb-violet-soft: var(--info-soft);
+  --wb-fire: var(--accent);
+  --wb-fire-soft: var(--accent-soft);
+  --wb-leitura: var(--info);
+  --wb-leitura-soft: var(--info-soft);
+
+  /* `--info` nao entra: ele JA e um token de `.ap`, e reapontar para si
+     mesmo criaria um ciclo que invalida a variavel inteira. */
+  --success: var(--ok);
+  --warning: var(--warn);
+  --error: var(--err);
+
+  /* Cantos: o design inteiro vive entre 3 e 5 px. Deixar 10–16 px nas
+     telas não migradas criaria duas linguagens de forma na mesma janela. */
+  --radius-xs: var(--r1);
+  --radius-sm: var(--r2);
+  --radius: var(--r3);
+  --radius-lg: var(--r3);
+  --radius-xl: var(--r3);
+}

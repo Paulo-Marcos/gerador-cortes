@@ -106,6 +106,9 @@ export type Chrome = {
   /** Subtítulo do cabeçalho — sempre com número, nunca decorativo. */
   sub?: string;
   acoes?: ScreenAction[];
+  /** Bancada: o miolo ocupa a altura toda e rola por dentro, não por fora.
+      Um player com barra de rolagem da página é um player que some. */
+  denso?: boolean;
   /** Migalhas do meio: "LIVE 267", "#7". */
   rotulos?: string[];
   /** Chip de estado na barra superior ("salvo", "salvando…", "erro"). */
