@@ -1,5 +1,44 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
+
+// D-599: na casca nova o botão de ícone é o `.btn.btn-icon` do handoff —
+// 30 px quadrados, canto de 4 px. As variantes de COR continuam valendo:
+// elas carregam significado (ok = aprovar, err = rejeitar, fire, leitura),
+// e trocar significado por estética seria perder informação.
+const CASCA_NOVA = isUpgradeShellEnabled();
+
+const AP_SIZES: Record<NonNullable<IconButtonProps['size']>, string> = {
+  sm: 'btn btn-icon btn-sm',
+  md: 'btn btn-icon',
+  lg: 'btn btn-icon',
+  toolbar: 'btn btn-icon',
+  'toolbar-sm': 'btn btn-icon btn-sm',
+};
+
+const AP_VARIANTS: Record<NonNullable<IconButtonProps['variant']>, string> = {
+  ghost: 'btn-ghost',
+  outline: '',
+  solid: 'btn-pri',
+  accent: 'btn-pri',
+  ok: 'btn-ok',
+  err: 'btn-danger',
+  'err-outline': 'btn-danger',
+  'fire-soft': 'btn-soft',
+  'leitura-soft': 'btn-soft',
+  inset: 'btn-soft',
+  'toggle-active': '',
+};
+
+const AP_INLINE: Partial<Record<NonNullable<IconButtonProps['variant']>, React.CSSProperties>> = {
+  'fire-soft': { background: 'var(--accent-soft)', color: 'var(--accent)' },
+  'leitura-soft': { background: 'var(--info-soft)', color: 'var(--info)' },
+  'toggle-active': {
+    borderColor: 'var(--accent)',
+    background: 'var(--accent-soft)',
+    color: 'var(--accent)',
+  },
+};
 
 export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?:
@@ -54,21 +93,31 @@ const variantClasses: Record<NonNullable<IconButtonProps['variant']>, string> = 
 };
 
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
-  ({ className, variant = 'ghost', size = 'md', type = 'button', ...props }, ref) => (
-    <button
-      ref={ref}
-      type={type}
-      className={cn(
-        'inline-flex shrink-0 items-center justify-center transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-        'disabled:pointer-events-none disabled:opacity-45',
-        sizeClasses[size],
-        variantClasses[variant],
-        className,
-      )}
-      {...props}
-    />
-  ),
+  ({ className, variant = 'ghost', size = 'md', type = 'button', style, ...props }, ref) =>
+    CASCA_NOVA ? (
+      <button
+        ref={ref}
+        type={type}
+        className={cn(AP_SIZES[size], AP_VARIANTS[variant], className)}
+        style={{ ...AP_INLINE[variant], ...style }}
+        {...props}
+      />
+    ) : (
+      <button
+        ref={ref}
+        type={type}
+        className={cn(
+          'inline-flex shrink-0 items-center justify-center transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
+          'disabled:pointer-events-none disabled:opacity-45',
+          sizeClasses[size],
+          variantClasses[variant],
+          className,
+        )}
+        style={style}
+        {...props}
+      />
+    ),
 );
 
 IconButton.displayName = 'IconButton';

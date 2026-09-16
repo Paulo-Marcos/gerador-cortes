@@ -302,6 +302,73 @@
   background-clip: padding-box;
 }
 
+/* ─── Variações de botão do kit ───────────────────────────────────
+   O protótipo mostra cinco pesos na fileira "Botões": primário, secundário,
+   fantasma, perigo e o par de 26 px do segmented. Nomeá-los aqui é o que
+   permite aos componentes compartilhados (`ui/button`, `ui/icon-button`)
+   falar a MESMA língua em vez de reinventar a cor a cada chamada. */
+
+.ap .btn-sm {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11.5px;
+}
+
+.ap .btn-ghost {
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+  color: var(--mute);
+}
+
+.ap .btn-ghost:hover {
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.ap .btn-danger {
+  border-color: var(--err-soft);
+  color: var(--err);
+}
+
+.ap .btn-danger:hover {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+.ap .btn-soft {
+  border-color: transparent;
+  background: var(--inset);
+  box-shadow: none;
+  color: var(--mute);
+}
+
+.ap .btn-soft:hover {
+  border-color: transparent;
+  color: var(--ink);
+}
+
+/* Veredito: aprovar usa o verde cheio; rejeitar fica em `btn-danger`, como
+   no protótipo — vermelho cheio ao lado do verde cheio vira semáforo. */
+.ap .btn-ok {
+  border-color: transparent;
+  background: var(--ok);
+  background-image: linear-gradient(rgb(255 255 255 / 0.18), transparent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.ap .btn-ok:hover {
+  border-color: transparent;
+  color: var(--on-accent);
+  filter: brightness(1.06);
+}
+
+.ap .btn-icon.btn-sm {
+  width: 26px;
+  padding: 0;
+}
+
 /* ─── Ponte para as telas ainda não migradas ──────────────────────
    Toda tela que ainda fala `--wb-*` e cai DENTRO da casca nova passa a
    ler os tokens de `.ap`. É uma ponte, não uma fusão: as telas fora da

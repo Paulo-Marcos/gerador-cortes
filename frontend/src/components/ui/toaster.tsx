@@ -1,7 +1,21 @@
 import { Bell, Check, Info, TriangleAlert, X, type LucideIcon } from 'lucide-react';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { IconButton } from './icon-button';
+
+// D-599: na casca nova o aviso vira o toast do handoff — cartão de vidro no
+// canto, ícone colorido pelo tom, título em negrito e o resto em `--mute`.
+// Ele sobe para 74 px do rodapé porque a barra de ações fixa mora ali: um
+// aviso que tapa o botão primário atrapalha exatamente quem avisou.
+const CASCA_NOVA = isUpgradeShellEnabled();
+
+const AP_TOM: Record<ToastTone, string> = {
+  success: 'var(--ok)',
+  info: 'var(--info)',
+  warning: 'var(--warn)',
+  error: 'var(--err)',
+};
 
 export type ToastTone = 'success' | 'info' | 'warning' | 'error';
 
@@ -101,11 +115,40 @@ function ToastViewport({
     <div
       aria-live="polite"
       aria-relevant="additions removals"
-      className="pointer-events-none fixed bottom-5 right-5 z-[80] grid w-[min(360px,calc(100vw-40px))] gap-2"
+      className={cn(
+        'pointer-events-none fixed right-5 z-[80] grid w-[min(360px,calc(100vw-40px))] gap-2',
+        CASCA_NOVA ? 'bottom-[74px]' : 'bottom-5',
+      )}
     >
       {toasts.map((toast) => {
         const tone = TONE_META[toast.tone];
         const Icon = tone.Icon;
+
+        if (CASCA_NOVA) {
+          return (
+            <div
+              key={toast.id}
+              className="card pointer-events-none flex items-center gap-[9px] p-[10px_12px] animate-in fade-in slide-in-from-bottom-1"
+              style={{ padding: '10px 12px', boxShadow: '0 18px 44px rgb(0 0 0/.3)' }}
+            >
+              <Icon size={14} aria-hidden style={{ color: AP_TOM[toast.tone], flex: 'none' }} />
+              <span className="min-w-0 flex-1 text-[12px] leading-[1.45]">
+                {toast.title ? <b>{toast.title} </b> : null}
+                <span style={{ color: 'var(--mute)' }}>{toast.message}</span>
+              </span>
+              <button
+                type="button"
+                aria-label="Fechar aviso"
+                title="Fechar aviso"
+                onClick={() => onDismiss(toast.id)}
+                className="btn btn-icon btn-ghost pointer-events-auto"
+                style={{ width: 22, height: 22 }}
+              >
+                <X size={12} aria-hidden />
+              </button>
+            </div>
+          );
+        }
 
         return (
           <div
