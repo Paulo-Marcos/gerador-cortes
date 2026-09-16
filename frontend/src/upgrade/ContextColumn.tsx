@@ -155,6 +155,8 @@ export function LinhaDeLista({ item }: { item: ItemDeLista }) {
     <button
       type="button"
       className="row"
+      // Linha de lista só NAVEGA: com o foco nela, o Enter ainda é da casca.
+      data-navegacao
       onClick={item.onClick}
       aria-current={item.ativo ? 'true' : undefined}
       style={{

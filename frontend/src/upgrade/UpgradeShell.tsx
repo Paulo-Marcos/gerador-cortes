@@ -129,7 +129,14 @@ function overlayAberto(): boolean {
  * (aprovar/rejeitar dentro do conteúdo) e o Enter não duplicará nada.
  */
 function focoEmDecisao(alvo: HTMLElement | null): boolean {
-  return alvo?.closest('[data-decisao]') != null;
+  if (!alvo) return false;
+  if (alvo.closest('[data-decisao]')) return true;
+  // Um botão COMUM focado também é acionado pelo navegador no Enter: foco em
+  // "Fire" ou "Gerar bruto" + Enter faria a ação dele E aprovaria o corte.
+  // Só as linhas de lista (`data-navegacao`) — o caso que a rodada 2 quis
+  // destravar — deixam o Enter com a casca.
+  const controle = alvo.closest('button, a[href], [role="button"]');
+  return controle != null && controle.closest('[data-navegacao]') == null;
 }
 
 /** Atalhos da casca: ⌘B recolhe o trilho, ⌘K busca, J/K trocam de item,
