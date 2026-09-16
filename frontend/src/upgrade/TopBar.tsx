@@ -235,6 +235,14 @@ function SeletorDeCorte({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            // Superfície SÓLIDA, não o vidro do `.card`. O painel mora dentro
+            // do <header>, que já tem backdrop-filter, e o Chrome não desfoca o
+            // fundo de um elemento aninhado em outro com backdrop-filter: o vidro
+            // virava só transparência, com o conteúdo da tela legível através da
+            // lista de cortes.
+            background: 'var(--solid)',
+            backdropFilter: 'none',
+            WebkitBackdropFilter: 'none',
             boxShadow: '0 18px 44px rgb(0 0 0/.28)',
           }}
         >
@@ -398,6 +406,13 @@ export function TopBar({
         height: 44,
         padding: '0 12px',
         borderBottom: '1px solid var(--line)',
+        // O backdrop-filter do `.gl` cria um contexto de empilhamento: o
+        // z-index do painel do seletor fica preso AQUI dentro. Sem subir o
+        // cabeçalho inteiro de camada, os cartões de vidro do miolo — que vêm
+        // depois no DOM e criam seus próprios contextos — eram pintados por
+        // cima da lista de cortes aberta.
+        position: 'relative',
+        zIndex: 30,
       }}
     >
       <Trilha itens={trilha} />

@@ -102,10 +102,19 @@ function useJanelaLarga(): boolean {
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     const mq = window.matchMedia(LARGURA_CONTEXTO);
-    const aoMudar = (e: MediaQueryListEvent) => setLarga(e.matches);
-    mq.addEventListener('change', aoMudar);
-    setLarga(mq.matches);
-    return () => mq.removeEventListener('change', aoMudar);
+    // Relê a consulta em vez de confiar no valor do evento: o `change` do
+    // matchMedia é o caminho normal, e o `resize` é o reforço — medido em
+    // 16/09/2026, redimensionar por emulação de viewport não disparava o
+    // `change`, e a coluna ficava montada (escondida só pelo CSS) com o
+    // seletor sem painel: a lista de cortes sumia dos dois lugares.
+    const reler = () => setLarga(mq.matches);
+    mq.addEventListener('change', reler);
+    window.addEventListener('resize', reler);
+    reler();
+    return () => {
+      mq.removeEventListener('change', reler);
+      window.removeEventListener('resize', reler);
+    };
   }, []);
 
   return larga;
