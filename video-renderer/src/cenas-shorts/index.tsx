@@ -11,6 +11,7 @@ import {
   ehTipoCenaShort,
   type CenaShort,
   type GanchoShort,
+  type LugarDaLegenda,
   type TipoCenaShort,
 } from "./schema";
 
@@ -47,6 +48,8 @@ export interface CamadaShortProps {
   legendaCor?: string;
   /** D-563: familia da fonte da legenda. "" = a do canal. */
   legendaFonte?: string;
+  /** D-605: onde a legenda senta, ja com a heranca resolvida pelo backend. */
+  legendaLugar?: LugarDaLegenda;
 }
 
 /**
@@ -62,6 +65,7 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
   gancho = null,
   legendaCor = "",
   legendaFonte = "",
+  legendaLugar,
 }) => {
   const { fps } = useVideoConfig();
 
@@ -97,7 +101,12 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
         );
       })}
 
-      <LegendaShort captions={captions} cor={legendaCor} fonte={legendaFonte} />
+      <LegendaShort
+        captions={captions}
+        cor={legendaCor}
+        fonte={legendaFonte}
+        lugar={legendaLugar}
+      />
     </>
   );
 };

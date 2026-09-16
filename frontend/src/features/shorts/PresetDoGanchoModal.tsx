@@ -31,6 +31,7 @@ import {
 } from './ganchoDoShort';
 import { GanchoPrevia } from './GanchoPrevia';
 import { FONTES_DA_LEGENDA, LegendaPrevia } from './LegendaPrevia';
+import { lugarDaLegenda } from './previaLegenda';
 import { PalcoPrevia } from './PalcoPrevia';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
 import { useDefinirGanchoPadrao, useInvalidarPadroes } from './useShortsDoCorte';
@@ -182,6 +183,12 @@ function EditorDoPresetDeGancho({
           tempoAtualSeg={tempoDaPrevia}
           cor={amostra.legenda_cor}
           fonte={amostra.legenda_fonte}
+          // D-605: no lugar dela, para o gancho ser posicionado sabendo onde a
+          // legenda está de verdade neste trecho.
+          lugar={lugarDaLegenda(
+            { x: plano?.legenda_x, y: plano?.legenda_y, largura: plano?.legenda_largura },
+            amostra,
+          )}
         />
       )}
     </>

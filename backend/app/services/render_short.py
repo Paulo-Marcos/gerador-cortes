@@ -28,6 +28,10 @@ from app.channel_assets_sync import cor_do_tema
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain import gancho_short, moldura_short
+
+# Alias: o servico `legendas_short` (as palavras) ja e importado abaixo, e dois
+# nomes com um `s` de diferenca no mesmo arquivo e erro de leitura esperando.
+from app.domain import legenda_short as lugar_da_legenda
 from app.domain.ffmpeg_short import (
     build_composicao_short_cmd,
     build_palco_vertical_cmd,
@@ -190,6 +194,11 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
                 # resolvido pelo renderer — o backend nao conhece a paleta dele.
                 "legendaCor": contexto.legenda_cor,
                 "legendaFonte": contexto.legenda_fonte,
+                # D-605: onde a legenda senta, JA com a heranca resolvida. O
+                # renderer nao conhece a cascata — recebe onde desenhar, e os
+                # defaults sao os numeros que estavam cravados nele, entao um
+                # short gravado antes desta demanda sai igual.
+                "legendaLugar": contexto.legenda_lugar,
                 "duracaoSeg": contexto.duracao_seg,
             },
             ensure_ascii=False,
@@ -262,6 +271,9 @@ class _ContextoRender:
     legenda_cor: str
     # D-563: familia da fonte da legenda, ou "" para a do canal.
     legenda_fonte: str
+    # D-605: `{x, y, largura}` em % do quadro — x e o centro, y e a BASE. Sempre
+    # preenchido: a heranca e resolvida em `palco_shorts`, e nunca aqui.
+    legenda_lugar: dict
     # D-481: a resolucao MEDIDA do bruto. Nao tem default de proposito — foi um
     # default (HORIZONTAL) que fez o crop 9:16 ser calculado sobre 1920x1080 num
     # bruto 720p e estourar o quadro.
@@ -327,6 +339,13 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             # sairia com um realce que a previa nao mostrou.
             legenda_cor=palco.get("legenda_cor", ""),
             legenda_fonte=palco.get("legenda_fonte", ""),
+            # D-605: do PLANO tambem, pelo mesmo motivo do paragrafo acima — e la
+            # que a heranca do palco padrao do corte foi resolvida.
+            legenda_lugar=lugar_da_legenda.para_payload(
+                palco.get("legenda_x", 0.0),
+                palco.get("legenda_y", 0.0),
+                palco.get("legenda_largura", 0.0),
+            ),
             gancho=gancho_short.para_payload(
                 short.gancho_tela,
                 # D-594: a duracao tambem herda do gancho padrao do corte.

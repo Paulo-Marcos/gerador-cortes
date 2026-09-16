@@ -180,6 +180,16 @@ export interface ShortSugerido {
   legenda_cor: string;
   /** D-563: família da fonte da legenda. Vazio = a do canal. */
   legenda_fonte: string;
+  /**
+   * D-605: onde a legenda senta neste trecho, em % do quadro. 0 = do palco
+   * padrão do corte. `x` é o centro; `y` é a BASE, contada do topo.
+   *
+   * Opcionais porque um backend ainda não reiniciado não manda os campos, e a
+   * tela tem de desenhar a legenda no lugar de sempre em vez de quebrar.
+   */
+  legenda_x?: number;
+  legenda_y?: number;
+  legenda_largura?: number;
   /** D-552: de qual preset de palco estes valores vieram. */
   palco_short_preset: string;
   /** Cenas desenhadas sobre o short, na timeline DELE (começa no zero). */
@@ -204,6 +214,10 @@ export interface AtualizarShortBody {
   fundo_editorial?: string;
   legenda_cor?: string;
   legenda_fonte?: string;
+  /** D-605: o lugar da legenda neste trecho. 0 devolve ao palco do corte. */
+  legenda_x?: number;
+  legenda_y?: number;
+  legenda_largura?: number;
   palco_short_preset?: string;
   /** D-565: o titulo-gancho da abertura. "" apaga. */
   gancho_tela?: string;
@@ -333,6 +347,15 @@ export interface PlanoDesenhavel {
   gancho_x?: number;
   gancho_y?: number;
   gancho_largura?: number;
+  /**
+   * D-605: o lugar da LEGENDA, já com a herança do palco do corte resolvida.
+   *
+   * Vem do plano pelo mesmo motivo do gancho: lido do short, ignoraria o padrão
+   * do corte e a prévia desenharia a legenda num ponto que o arquivo não usa.
+   */
+  legenda_x?: number;
+  legenda_y?: number;
+  legenda_largura?: number;
 }
 
 /** O que o detector de rosto viu num trecho (D-477). */

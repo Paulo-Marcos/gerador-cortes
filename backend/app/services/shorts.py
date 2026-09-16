@@ -25,7 +25,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain import gancho_short
+from app.domain import gancho_short, legenda_short
 from app.domain.arranjo_short import de_chave as arranjo_de_chave
 from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
 from app.domain.cenas_short_ia import recortar_transcricao
@@ -426,6 +426,9 @@ async def atualizar_short(
     palco_short_preset: str | None = None,
     legenda_cor: str | None = None,
     legenda_fonte: str | None = None,
+    legenda_x: float | None = None,
+    legenda_y: float | None = None,
+    legenda_largura: float | None = None,
     gancho_tela: str | None = None,
     gancho_ate_seg: float | None = None,
     gancho_cor: str | None = None,
@@ -566,6 +569,25 @@ async def atualizar_short(
             # A familia da fonte. "" volta a do canal. Idem: degrada na leitura.
             short.legenda_fonte = legenda_fonte
 
+        if legenda_x is not None or legenda_y is not None or legenda_largura is not None:
+            # D-605: os tres andam juntos porque sao UM gesto — o operador
+            # arrasta a legenda na previa e solta. Mandar so `y` num PATCH e
+            # legitimo (e o caso comum: "sobe essa legenda"), mas separa-los em
+            # tres blocos sugeriria que ha tres decisoes onde ha uma.
+            #
+            # 0 continua sendo "nao decidi": e assim que "voltar ao lugar do
+            # palco" devolve o trecho a heranca, sem coluna extra de intencao.
+            if legenda_x is not None:
+                short.legenda_x = legenda_short.normalizar_x(legenda_x) if legenda_x > 0 else 0.0
+            if legenda_y is not None:
+                short.legenda_y = legenda_short.normalizar_y(legenda_y) if legenda_y > 0 else 0.0
+            if legenda_largura is not None:
+                short.legenda_largura = (
+                    legenda_short.normalizar_largura(legenda_largura)
+                    if legenda_largura > 0
+                    else 0.0
+                )
+
         # D-552: a marca do preset e escrita PRIMEIRO e apagada por qualquer
         # mudanca posterior no mesmo PATCH.
         #
@@ -584,6 +606,13 @@ async def atualizar_short(
                 fundo_editorial,
                 legenda_cor,
                 legenda_fonte,
+                # D-605: mexer no lugar da legenda tambem desfaz a marca. O
+                # preset descreve o palco INTEIRO, legenda incluida; manter a
+                # marca faria a tela dizer "preset X" sobre um palco que nao e
+                # mais o X, e aplica-lo noutro trecho sairia diferente.
+                legenda_x,
+                legenda_y,
+                legenda_largura,
             )
         ):
             short.palco_short_preset = ""
@@ -1093,6 +1122,10 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "fundo_editorial": short.fundo_editorial,
         "legenda_cor": short.legenda_cor,
         "legenda_fonte": short.legenda_fonte,
+        # D-605: onde a legenda senta neste trecho. 0 = do palco padrao do corte.
+        "legenda_x": short.legenda_x or 0.0,
+        "legenda_y": short.legenda_y or 0.0,
+        "legenda_largura": short.legenda_largura or 0.0,
         "palco_short_preset": short.palco_short_preset,
         "origem": short.origem,
         "cenas": _json_lista(short.cenas_remotion),

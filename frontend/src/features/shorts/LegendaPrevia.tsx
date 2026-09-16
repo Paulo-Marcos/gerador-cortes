@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import { paginaEm, paginasDoTrecho, SAFE_ZONE } from './previaLegenda';
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { lugarArrastado, lugarEfetivo, paginaEm, paginasDoTrecho } from './previaLegenda';
+import type { LugarDaLegenda } from './previaLegenda';
 import type { PalavraTranscrita } from './shortsApi';
 
 // D-479: a legenda desenhada por cima do player, como sairá no arquivo.
@@ -15,15 +16,10 @@ import type { PalavraTranscrita } from './shortsApi';
 // prévia serve para julgar legibilidade e quebra de linha, e as duas dependem
 // disso. A QUEBRA em si não é imitada — vem da mesma função do render.
 
-// D-568: a faixa que a legenda ocupa, com margem dos dois lados.
-//
-// 80% deixa 10% de cada lado. Era 84%, e com o tamanho certo (que a prévia
-// escondia) a linha encostava nas bordas. A margem não é estética: no 9:16 o
-// texto colado na borda é o primeiro a ser cortado pela moldura de qualquer
-// player, e a legenda é o conteúdo — 85% assiste no mudo.
-//
-// Espelha `LARGURA` do `LegendaShort.tsx` do renderer.
-const LARGURA_DA_LEGENDA = '80%';
+// D-605: a LARGURA saiu daqui e virou `LARGURA_PADRAO` em `previaLegenda.ts`,
+// ao lado do resto do lugar. A razão da D-568 continua valendo e mora lá: 80%
+// deixa 10% de cada lado, porque no 9:16 o texto colado na borda é o primeiro a
+// ser cortado pela moldura de qualquer player — e a legenda é o conteúdo.
 
 // D-563: as cores oferecidas para a palavra corrente.
 //
@@ -83,6 +79,31 @@ interface Props {
   cor?: string;
   /** D-563: família da fonte. Vazio = a do canal. */
   fonte?: string;
+  /** D-605: onde a caixa senta, já com a herança resolvida por quem chama. */
+  lugar?: LugarDaLegenda;
+  /**
+   * D-605: quando existe, a legenda vira arrastável.
+   *
+   * A prévia sempre foi só um espelho, e transformá-la em controle é a mesma
+   * decisão que a `GanchoPrevia` tomou na D-600: a pergunta "esta legenda está em
+   * cima da cara de alguém?" só se responde OLHANDO o quadro, e um campo numérico
+   * ao lado obrigaria o operador a traduzir o que vê em dois números e de volta.
+   *
+   * Continua opcional: sem `onMover`, esta é a mesma prévia passiva de antes — é
+   * ela que desenha no card e no player, onde arrastar sem querer seria uma
+   * edição silenciosa.
+   */
+  onMover?: (lugar: LugarDaLegenda) => void;
+  /**
+   * D-605: o lugar FINAL, uma vez por gesto — é este que vai ao banco.
+   *
+   * Separado do `onMover` de propósito, e pela mesma razão que o `EditorDePalco`
+   * separa `onArrastando` de `onGravar`: um PATCH por `pointermove` seriam
+   * dezenas de requisições num arraste de dois segundos, e a última a responder
+   * nem sempre é a última a ser enviada — o short acabaria gravado numa posição
+   * pela qual o ponteiro só passou.
+   */
+  onSoltar?: (lugar: LugarDaLegenda) => void;
 }
 
 export function LegendaPrevia({
@@ -92,7 +113,12 @@ export function LegendaPrevia({
   tempoAtualSeg,
   cor = '',
   fonte = '',
+  lugar,
+  onMover,
+  onSoltar,
 }: Props) {
+  const quadro = useRef<HTMLDivElement>(null);
+  const [arrastando, setArrastando] = useState(false);
   const paginas = useMemo(
     () => paginasDoTrecho(palavras, inicioSeg, fimSeg),
     [palavras, inicioSeg, fimSeg],
@@ -102,53 +128,117 @@ export function LegendaPrevia({
   // ao zero do short. Sem esta subtração a legenda apareceria minutos adiante
   // — o mesmo erro que a `transcricao_final` já resolveu no corte.
   const pagina = paginaEm(paginas, tempoAtualSeg - inicioSeg);
-  if (!pagina) return null;
+  const onde = lugar ?? lugarEfetivo(null, null);
+
+  // O arraste converte pixels do ponteiro em % do QUADRO, e é por isso que ele
+  // funciona igual numa janela de 220px e numa de 600px: o que se grava é a
+  // proporção, que é a mesma coisa que o render de 1080x1920 vai ler.
+  const iniciarArraste = (evento: ReactPointerEvent<HTMLDivElement>) => {
+    const caixa = quadro.current?.getBoundingClientRect();
+    if (!onMover || !caixa || caixa.width <= 0 || caixa.height <= 0) return;
+    evento.preventDefault();
+    evento.currentTarget.setPointerCapture(evento.pointerId);
+    setArrastando(true);
+
+    const partida = { x: evento.clientX, y: evento.clientY };
+    const inicial = onde;
+    let ultimo = inicial;
+
+    const mover = (e: PointerEvent) => {
+      ultimo = lugarArrastado(
+        inicial,
+        ((e.clientX - partida.x) / caixa.width) * 100,
+        ((e.clientY - partida.y) / caixa.height) * 100,
+      );
+      onMover(ultimo);
+    };
+    const soltar = () => {
+      setArrastando(false);
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', soltar);
+      onSoltar?.(ultimo);
+    };
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', soltar);
+  };
+
+  // Sem página não há legenda — MENOS quando se está posicionando: some com ela
+  // no primeiro silêncio da fala e o operador perde a caixa da mão no meio do
+  // gesto. Em modo arraste sobra o contorno, que é o que ele está mirando.
+  if (!pagina && !onMover) return null;
 
   return (
-    <div
-      className="pointer-events-none absolute inset-x-0 text-center"
-      style={{ bottom: `${SAFE_ZONE * 100}%` }}
-      aria-hidden
-    >
-      <p
-        // D-568: `7.47cqw` é o tamanho do ARQUIVO, convertido.
-        //
-        // O render usa `height * 0.042` — 81px num quadro de 1920 de altura, que
-        // são 7,47% dos 1080 de largura. A prévia usava 2,6cqw e um teto de
-        // 26px: mostrava a legenda a 4,6% do quadro, quase três vezes menor que
-        // a que ia sair. O operador aprovava um texto que cabia e recebia outro
-        // que não cabia — "fica muito grande, às vezes até some".
-        //
-        // A `GanchoPrevia` já fazia essa conta certa (8.89cqw = 0,05 × 16/9); a
-        // legenda é que ficou para trás desde a D-479.
-        className="mx-auto font-display text-[clamp(9px,7.47cqw,96px)] font-extrabold leading-[1.18] tracking-[-0.01em]"
+    <div ref={quadro} className="pointer-events-none absolute inset-0" aria-hidden>
+      <div
+        onPointerDown={onMover ? iniciarArraste : undefined}
+        className={
+          onMover
+            ? // A borda tracejada só aparece onde o arraste existe: ela é a única
+              // pista de que a caixa se move, e num card passivo seria um convite
+              // a um gesto que não acontece.
+              'pointer-events-auto absolute select-none rounded-[6px] text-center outline-dashed outline-1 outline-offset-4 ' +
+              (arrastando
+                ? 'cursor-grabbing outline-[var(--wb-accent)]'
+                : 'cursor-grab outline-white/30 hover:outline-[var(--wb-accent)]')
+            : 'absolute text-center'
+        }
         style={{
-          width: LARGURA_DA_LEGENDA,
-          // Palavra longa QUEBRA em vez de furar a caixa. Sem isto ela passava
-          // por fora do quadro e sumia recortada — o "some" do relato.
-          overflowWrap: 'break-word',
-          // Vazio cai na `font-display` da classe, que e a do canal.
-          fontFamily: fonte || undefined,
-          textShadow:
-            '0 2px 0 rgba(0,0,0,0.85), 0 -2px 0 rgba(0,0,0,0.85), 2px 0 0 rgba(0,0,0,0.85), -2px 0 0 rgba(0,0,0,0.85), 0 6px 18px rgba(0,0,0,0.55)',
+          // D-605: `x` é o centro e `y` é a BASE — daí o `bottom` sair de
+          // `100 - y`, que é a mesma conta do `LegendaShort.tsx` do renderer.
+          left: `${onde.x}%`,
+          bottom: `${100 - onde.y}%`,
+          width: `${onde.largura}%`,
+          transform: 'translateX(-50%)',
+          touchAction: onMover ? 'none' : undefined,
+          // Num silêncio a caixa fica vazia; sem altura mínima ela não teria onde
+          // ser agarrada.
+          minHeight: pagina ? undefined : '8%',
         }}
       >
-        {pagina.tokens.map((token, indice) => {
-          const noShort = tempoAtualSeg - inicioSeg;
-          const corrente = noShort >= token.deSeg && noShort < token.ateSeg;
-          return (
-            <span
-              key={`${token.deSeg}-${indice}`}
-              style={{
-                whiteSpace: 'pre',
-                color: corrente ? cor || 'var(--wb-accent)' : '#ffffff',
-              }}
-            >
-              {token.texto}
-            </span>
-          );
-        })}
-      </p>
+        <p
+          // D-568: `7.47cqw` é o tamanho do ARQUIVO, convertido.
+          //
+          // O render usa `height * 0.042` — 81px num quadro de 1920 de altura,
+          // que são 7,47% dos 1080 de largura. A prévia usava 2,6cqw e um teto
+          // de 26px: mostrava a legenda a 4,6% do quadro, quase três vezes menor
+          // que a que ia sair. O operador aprovava um texto que cabia e recebia
+          // outro que não cabia — "fica muito grande, às vezes até some".
+          //
+          // A `GanchoPrevia` já fazia essa conta certa (8.89cqw = 0,05 × 16/9);
+          // a legenda é que ficou para trás desde a D-479.
+          className="font-display text-[clamp(9px,7.47cqw,96px)] font-extrabold leading-[1.18] tracking-[-0.01em]"
+          style={{
+            // D-605: a largura passou a ser da CAIXA (a div de fora) — é ela que
+            // se arrasta e se mede.
+            width: '100%',
+            // Palavra longa QUEBRA em vez de furar a caixa. Sem isto ela passava
+            // por fora do quadro e sumia recortada — o "some" do relato.
+            overflowWrap: 'break-word',
+            // Vazio cai na `font-display` da classe, que e a do canal.
+            fontFamily: fonte || undefined,
+            textShadow:
+              '0 2px 0 rgba(0,0,0,0.85), 0 -2px 0 rgba(0,0,0,0.85), 2px 0 0 rgba(0,0,0,0.85), -2px 0 0 rgba(0,0,0,0.85), 0 6px 18px rgba(0,0,0,0.55)',
+          }}
+        >
+          {/* `pagina` pode ser nula em modo arraste: no silêncio da fala fica só
+              a caixa, que é o que o operador está posicionando. */}
+          {pagina?.tokens.map((token, indice) => {
+            const noShort = tempoAtualSeg - inicioSeg;
+            const corrente = noShort >= token.deSeg && noShort < token.ateSeg;
+            return (
+              <span
+                key={`${token.deSeg}-${indice}`}
+                style={{
+                  whiteSpace: 'pre',
+                  color: corrente ? cor || 'var(--wb-accent)' : '#ffffff',
+                }}
+              >
+                {token.texto}
+              </span>
+            );
+          })}
+        </p>
+      </div>
     </div>
   );
 }

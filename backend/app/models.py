@@ -575,6 +575,25 @@ class Short(Base):
     # o valor viaja, e nao uma chave que previa e renderer teriam de traduzir.
     # Vazio — ou uma familia que o renderer nao carrega — cai na fonte do canal.
     legenda_fonte: Mapped[str] = mapped_column(String(60), default="")
+    # D-605: ONDE a legenda senta neste trecho, em % do quadro. 0 = "nao decidi",
+    # e ai vale o lugar do palco padrao do corte — e, na falta dele, o ponto fixo
+    # que o renderer usava antes desta demanda (base no alto da safe zone,
+    # centralizada, 80% de largura).
+    #
+    # O relato que originou isto: "a depender do Palco, ela fica em cima da
+    # pessoa". Quem decide onde a pessoa aparece no vertical e o arranjo do
+    # palco, e por isso o lugar da legenda herda do palco — pela mesma cascata
+    # de `legenda_cor`/`legenda_fonte` logo acima, e nao por uma nova.
+    #
+    # `legenda_x` e o CENTRO da caixa; `legenda_y` e a BASE dela, contada do topo
+    # do quadro. Base e nao topo porque a legenda vira duas ou tres linhas
+    # varias vezes por short: ancorada pela base ela cresce para CIMA e a ultima
+    # linha nunca se move, que e o que o `bottom:` do renderer sempre fez. O
+    # gancho (`gancho_y`) ancora pelo topo pelo motivo simetrico — e um texto so,
+    # digitado ao vivo, e pela base a primeira linha escorregaria a cada palavra.
+    legenda_x: Mapped[float] = mapped_column(Float, default=0.0)
+    legenda_y: Mapped[float] = mapped_column(Float, default=0.0)
+    legenda_largura: Mapped[float] = mapped_column(Float, default=0.0)
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

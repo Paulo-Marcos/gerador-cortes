@@ -9,6 +9,14 @@ import { PresetsDoPalco } from './PresetsDoPalco';
 import { PalcoDoCorte } from './PalcoDoCorte';
 import { CamposDoPalco, EditorDePalco } from './EditorDePalco';
 import { CORES_DA_LEGENDA, FONTES_DA_LEGENDA, LegendaPrevia } from './LegendaPrevia';
+import {
+  LARGURA_MAX,
+  LARGURA_MIN,
+  LARGURA_PASSO,
+  lugarEfetivo,
+  temLugarProprio,
+  type LugarDaLegenda,
+} from './previaLegenda';
 import { useTranscricaoDoCorte } from './useShortsDoCorte';
 import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { ocupacaoDoPalco, recorteInicial, redimensionarPalco } from './arrastarSlot';
@@ -155,6 +163,22 @@ export function DefinirPalcoModal({
   // o fundo depois de mover um bloco não mudava nada na prévia.
   const descartarSimulacao = simulacao.descartar;
   useEffect(() => descartarSimulacao(), [plano, descartarSimulacao]);
+
+  // D-605: onde a legenda senta, com a cascata já resolvida.
+  //
+  // O PRÓPRIO do short vence; na falta dele vale o que o plano devolveu (o palco
+  // padrão do corte, resolvido no backend); na falta dos dois, o lugar de sempre.
+  // A prévia lê daqui, e não do short cru — lida do short, ela ignoraria o padrão
+  // do corte e desenharia a legenda num ponto que o arquivo não usa.
+  const lugarGravado = lugarEfetivo(
+    { x: short.legenda_x, y: short.legenda_y, largura: short.legenda_largura },
+    { x: plano?.legenda_x, y: plano?.legenda_y, largura: plano?.legenda_largura },
+  );
+  // O arraste vive aqui até soltar — a prévia redesenha a cada movimento sem
+  // gastar um PATCH por pixel, do mesmo jeito que a simulação do palco faz.
+  const [arrastandoLegenda, setArrastandoLegenda] = useState<LugarDaLegenda | null>(null);
+  const lugarDaLegenda = arrastandoLegenda ?? lugarGravado;
+  const legendaNoLugarDela = temLugarProprio(short);
 
   /** Ajuste é PARCIAL: mandar só o bloco na mão apagaria a posição dos outros. */
   const gravarAjuste = (ajustes: Record<string, Retangulo>) =>
@@ -531,6 +555,75 @@ export function DefinirPalcoModal({
             <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
               A fonte da legenda queimada. Passe o mouse para o nome de cada uma.
             </p>
+
+            {/* D-605: ONDE ela senta.
+                O relato: "a depender do Palco, ela fica em cima da pessoa". Quem
+                decide onde a pessoa aparece no vertical é o arranjo — então o
+                lugar da legenda pertence a esta seção, e não a uma tela nova.
+                O gesto é ARRASTAR na prévia ao lado, e não digitar dois números:
+                a pergunta "está em cima de alguém?" só se responde olhando. */}
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-[var(--wb-border-soft)] pt-2.5">
+              <span className="font-code text-[10px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+                largura
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={ocupado || lugarDaLegenda.largura <= LARGURA_MIN}
+                onClick={() =>
+                  onAplicar({
+                    legenda_largura: Math.max(
+                      LARGURA_MIN,
+                      lugarDaLegenda.largura - LARGURA_PASSO,
+                    ),
+                  })
+                }
+                aria-label="Estreitar a legenda"
+              >
+                <Minimize2 size={12} aria-hidden />
+              </Button>
+              <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-mute)]">
+                {Math.round(lugarDaLegenda.largura)}%
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={ocupado || lugarDaLegenda.largura >= LARGURA_MAX}
+                onClick={() =>
+                  onAplicar({
+                    legenda_largura: Math.min(
+                      LARGURA_MAX,
+                      lugarDaLegenda.largura + LARGURA_PASSO,
+                    ),
+                  })
+                }
+                aria-label="Alargar a legenda"
+              >
+                <Maximize2 size={12} aria-hidden />
+              </Button>
+              {/* Só aparece quando há o que desfazer: um botão "voltar ao
+                  padrão" sempre visível sobre um trecho que já segue o padrão é
+                  um controle que não faz nada. */}
+              {legendaNoLugarDela && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={ocupado}
+                  onClick={() =>
+                    onAplicar({ legenda_x: 0, legenda_y: 0, legenda_largura: 0 })
+                  }
+                >
+                  voltar ao lugar do palco
+                </Button>
+              )}
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--wb-text-mute)]">
+              {movendo
+                ? 'Solte "mover o palco" para arrastar a legenda: os dois usam o mesmo gesto na prévia.'
+                : legendaNoLugarDela
+                  ? 'Arraste a legenda na prévia para mudar de lugar. Este trecho já tem lugar próprio.'
+                  : 'Arraste a legenda na prévia para tirá-la de cima de quem está no quadro. Sem arrastar, ela segue o palco do corte.'}
+            </p>
           </Secao>
 
           {rascunho ? (
@@ -585,6 +678,24 @@ export function DefinirPalcoModal({
                     tempoAtualSeg={tempoAtualSeg}
                     cor={short.legenda_cor}
                     fonte={short.legenda_fonte}
+                    lugar={lugarDaLegenda}
+                    // D-605: um gesto por vez. O editor de palco e a legenda
+                    // arrastam no MESMO quadro, e com os dois ativos a caixa da
+                    // legenda roubaria o ponteiro de quem está movendo um bloco
+                    // — sem nada na tela explicando por que o bloco não anda.
+                    onMover={movendo ? undefined : setArrastandoLegenda}
+                    // O gesto grava os TRÊS campos, inclusive a largura: uma
+                    // caixa que anda sem levar o próprio tamanho voltaria a
+                    // herdá-lo na primeira troca de palco, e o operador veria a
+                    // legenda que ele posicionou mudar de forma sozinha.
+                    onSoltar={(lugar) => {
+                      setArrastandoLegenda(null);
+                      onAplicar({
+                        legenda_x: lugar.x,
+                        legenda_y: lugar.y,
+                        legenda_largura: lugar.largura,
+                      });
+                    }}
                   />
                 )}
                 <EditorDePalco

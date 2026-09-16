@@ -104,6 +104,13 @@ def _campos_de_palco(short: Short, rascunho: dict | None) -> dict:
         "fundo_editorial": short.fundo_editorial,
         "legenda_cor": short.legenda_cor,
         "legenda_fonte": short.legenda_fonte,
+        # D-605: o LUGAR da legenda entra junto da cor e da fonte — mesma
+        # cascata, mesmo dono. O editor de preset monta sobre um trecho sem
+        # gravar nele, e sem estes tres o arraste na previa nao sobreviveria ao
+        # rascunho.
+        "legenda_x": short.legenda_x,
+        "legenda_y": short.legenda_y,
+        "legenda_largura": short.legenda_largura,
         "palco_preset": short.palco_preset,
         "moldura": short.moldura,
     }
@@ -142,6 +149,13 @@ def _aparencia(moldura: str, fundo: str, textura: str, herdado: dict, gancho: di
         # Um lugar so resolve a heranca; dois a resolveriam diferente.
         "legenda_cor": herdado.get("legenda_cor", ""),
         "legenda_fonte": herdado.get("legenda_fonte", ""),
+        # D-605: e onde ela senta, ja com a heranca resolvida. Pelo mesmo motivo
+        # do gancho na D-600: lido do short la no `render_short`, o lugar
+        # ignoraria o palco padrao do corte e a previa desenharia a legenda num
+        # ponto que o arquivo nao usa.
+        "legenda_x": herdado.get("legenda_x", 0.0),
+        "legenda_y": herdado.get("legenda_y", 0.0),
+        "legenda_largura": herdado.get("legenda_largura", 0.0),
         # D-585: a aparencia do gancho, pela mesma razao e pelo mesmo caminho.
         # D-594: e ela vem do GANCHO PADRAO do corte, nao mais do palco.
         "gancho_cor": gancho["cor"],
@@ -213,6 +227,11 @@ CAMPOS_HERDADOS = (
     "fundo",
     "legenda_cor",
     "legenda_fonte",
+    # D-605: o lugar da legenda. Sao os primeiros campos NUMERICOS desta lista —
+    # ver a nota sobre o zero em `com_palco_do_corte`.
+    "legenda_x",
+    "legenda_y",
+    "legenda_largura",
 )
 
 
@@ -242,8 +261,11 @@ def com_palco_do_corte(proprio: dict, padrao: dict | None) -> dict:
     for campo in CAMPOS_HERDADOS:
         if campo not in proprio and campo not in padrao:
             continue
-        # `{}` e `""` sao "nao decidi". `0` nao aparece nestes campos, entao a
-        # falsidade generica nao esconde nenhum valor legitimo aqui.
+        # `{}`, `""` e `0` sao todos "nao decidi", e a falsidade generica e
+        # exatamente o que se quer aqui. D-605: o zero entrou com o lugar da
+        # legenda, e nao esconde valor legitimo nenhum — o minimo de cada um
+        # daqueles campos (`legenda_short.POSICAO_*_MIN`) e maior que zero, de
+        # proposito, para que "no topo absoluto" nunca signifique "herda".
         if not proprio.get(campo):
             herdado = padrao.get(campo)
             if herdado:
@@ -386,6 +408,12 @@ def _tem_palco_proprio(short: Short) -> bool:
         or short.fundo_editorial
         or short.legenda_cor
         or short.legenda_fonte
+        # D-605: o lugar conta como palco proprio. Sem isto, um trecho com a
+        # legenda subida para fugir da cara de alguem apareceria como "segue o
+        # padrao", e o aviso de customizados mentiria sobre quantos fogem dele.
+        or (short.legenda_x or 0) > 0
+        or (short.legenda_y or 0) > 0
+        or (short.legenda_largura or 0) > 0
         or short.palco_preset
         or _json_dict(short.ajustes_palco)
         or _json_dict(short.recortes_palco)
@@ -436,6 +464,9 @@ async def seguir_palco_padrao_em_todos(corte_id: str) -> dict:
             short.fundo_editorial = ""
             short.legenda_cor = ""
             short.legenda_fonte = ""
+            short.legenda_x = 0.0
+            short.legenda_y = 0.0
+            short.legenda_largura = 0.0
             short.palco_preset = ""
             short.palco_short_preset = ""
         await db.commit()
@@ -583,6 +614,9 @@ async def resolver_para_render(
                 "fundo": campos["fundo_editorial"],
                 "legenda_cor": campos["legenda_cor"],
                 "legenda_fonte": campos["legenda_fonte"],
+                "legenda_x": campos["legenda_x"],
+                "legenda_y": campos["legenda_y"],
+                "legenda_largura": campos["legenda_largura"],
             },
             padrao,
         )
@@ -716,6 +750,12 @@ async def plano_desenhavel(
         # um realce que o arquivo nao teria.
         "legenda_cor": resolvido.get("legenda_cor", ""),
         "legenda_fonte": resolvido.get("legenda_fonte", ""),
+        # D-605: e ONDE ela senta, ja herdado do palco padrao do corte. Mesmo
+        # motivo do gancho: lido do short, o lugar ignoraria o padrao e a previa
+        # desenharia a legenda num ponto que o arquivo nao usa.
+        "legenda_x": resolvido.get("legenda_x", 0.0),
+        "legenda_y": resolvido.get("legenda_y", 0.0),
+        "legenda_largura": resolvido.get("legenda_largura", 0.0),
         # D-585: a previa desenha o gancho com a aparencia JA HERDADA. Lida do
         # short, ela ignoraria o padrao do corte e a previa mostraria uma cor
         # que o arquivo nao teria.

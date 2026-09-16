@@ -337,6 +337,10 @@ class AtualizarShortRequest(BaseModel):
     fundo_editorial: str | None = None
     legenda_cor: str | None = None
     legenda_fonte: str | None = None
+    # D-605: onde a legenda senta, em % do quadro. 0 = do palco padrao do corte.
+    legenda_x: float | None = None
+    legenda_y: float | None = None
+    legenda_largura: float | None = None
     palco_short_preset: str | None = None
     # D-565: o titulo-gancho da abertura e quanto tempo ele fica em tela.
     gancho_tela: str | None = None
@@ -369,6 +373,9 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 fundo_editorial=body.fundo_editorial,
                 legenda_cor=body.legenda_cor,
                 legenda_fonte=body.legenda_fonte,
+                legenda_x=body.legenda_x,
+                legenda_y=body.legenda_y,
+                legenda_largura=body.legenda_largura,
                 palco_short_preset=body.palco_short_preset,
                 palco_preset=body.palco_preset,
                 moldura=body.moldura,

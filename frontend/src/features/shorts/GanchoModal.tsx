@@ -28,6 +28,7 @@ import {
 import type { GanchoShortPreset } from '@/types/presets';
 import { GanchoPrevia } from './GanchoPrevia';
 import { LegendaPrevia } from './LegendaPrevia';
+import { lugarDaLegenda } from './previaLegenda';
 import { PalcoPrevia } from './PalcoPrevia';
 import { GeminiAiButton } from '@/components/ui/gemini-button';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
@@ -255,6 +256,13 @@ export function GanchoModal({
           tempoAtualSeg={tempoDaPrevia}
           cor={short.legenda_cor}
           fonte={short.legenda_fonte}
+          // D-605: a legenda aparece aqui para o operador julgar a COEXISTÊNCIA
+          // com o gancho — e para isso ela tem de estar no lugar em que o
+          // arquivo a desenha, herança do palco incluída.
+          lugar={lugarDaLegenda(
+            { x: plano?.legenda_x, y: plano?.legenda_y, largura: plano?.legenda_largura },
+            short,
+          )}
         />
       )}
     </>

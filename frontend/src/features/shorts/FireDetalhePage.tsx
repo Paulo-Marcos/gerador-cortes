@@ -32,6 +32,7 @@ import { ColunaDeDecisoes } from './ColunaDeDecisoes';
 import { PainelDaRegua } from './PainelDaRegua';
 import { PlayerDoBruto } from './PlayerDoBruto';
 import { LegendaPrevia } from './LegendaPrevia';
+import { lugarDaLegenda } from './previaLegenda';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { GanchoModal } from './GanchoModal';
 import { GanchoPrevia } from './GanchoPrevia';
@@ -287,6 +288,18 @@ export default function FireDetalhePage() {
           tempoAtualSeg={tempoAtual}
           cor={emQuadro.legenda_cor}
           fonte={emQuadro.legenda_fonte}
+          // D-605: o LUGAR pela mesma via da cor do gancho — o plano é quem
+          // resolveu a herança do palco do corte, e o short é só o fallback de
+          // enquanto ele não chegou. Lido do short, o player desenharia a
+          // legenda no rodapé fixo enquanto o arquivo a põe onde o palco manda.
+          lugar={lugarDaLegenda(
+            {
+              x: planoNaTela?.legenda_x,
+              y: planoNaTela?.legenda_y,
+              largura: planoNaTela?.legenda_largura,
+            },
+            emQuadro,
+          )}
         />
       )}
     </>

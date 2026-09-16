@@ -45,6 +45,16 @@ export const ganchoShortSchema = z.object({
   tamanho: z.number().default(1),
 });
 
+// D-605: onde a legenda senta. Os tres campos tem default para que um props.json
+// gravado antes desta demanda continue valido — e os defaults sao os numeros que
+// estavam cravados no `LegendaShort`, entao o short antigo sai igual.
+export const lugarDaLegendaSchema = z.object({
+  x: z.number().default(50),
+  /** A BASE da caixa, em % da altura contada do topo. 82 = a safe zone. */
+  y: z.number().default(82),
+  largura: z.number().default(80),
+});
+
 export const camadaShortSchema = z.object({
   cenas: z.array(cenaShortSchema),
   /** D-565: o gancho da abertura. `null` = este short nao tem, que e o comum. */
@@ -54,6 +64,8 @@ export const camadaShortSchema = z.object({
   legendaCor: z.string().default(""),
   /** D-563: familia da fonte da legenda. "" = a do canal. */
   legendaFonte: z.string().default(""),
+  /** D-605: onde a legenda senta, ja com a heranca resolvida pelo backend. */
+  legendaLugar: lugarDaLegendaSchema.default({ x: 50, y: 82, largura: 80 }),
   /** Duração do short em segundos — define o tamanho da composição. */
   duracaoSeg: z.number(),
 });
@@ -66,6 +78,7 @@ export const CamadaShortComposition: React.FC<CamadaShortSchema> = ({
   gancho,
   legendaCor,
   legendaFonte,
+  legendaLugar,
 }) => (
   // Fundo transparente: o alpha é o produto desta composição.
   <AbsoluteFill style={{ backgroundColor: "transparent" }}>
@@ -75,6 +88,7 @@ export const CamadaShortComposition: React.FC<CamadaShortSchema> = ({
       gancho={gancho ?? null}
       legendaCor={legendaCor}
       legendaFonte={legendaFonte}
+      legendaLugar={legendaLugar}
     />
   </AbsoluteFill>
 );

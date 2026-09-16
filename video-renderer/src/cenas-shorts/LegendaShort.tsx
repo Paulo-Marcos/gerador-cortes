@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { createTikTokStyleCaptions, type Caption } from "@remotion/captions";
 import { COLORS_V2, FONTS_V2 } from "../theme-v2";
+import type { LugarDaLegenda } from "./schema";
 import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
 import { loadFont as loadBebasNeue } from "@remotion/google-fonts/BebasNeue";
 import { loadFont as loadMontserrat } from "@remotion/google-fonts/Montserrat";
@@ -51,12 +52,30 @@ const AGRUPAMENTO_MS = 1200;
  *
  * Era 84%. No 9:16 o texto colado na borda é o primeiro a ser cortado pela
  * moldura de qualquer player, e a legenda é o conteúdo — 85% assiste no mudo.
- * Espelha `LARGURA_DA_LEGENDA` da `LegendaPrevia.tsx`.
+ *
+ * D-605: virou NÚMERO (era `"80%"`) e agora é só o DEFAULT — quem manda a
+ * largura do dia é o payload, e uma string com `%` não entraria na mesma conta
+ * dos outros dois eixos.
+ *
+ * Espelha `LARGURA_PADRAO` de `frontend/src/features/shorts/previaLegenda.ts`,
+ * que é onde a constante da prévia passou a morar (era `LARGURA_DA_LEGENDA` na
+ * `LegendaPrevia.tsx`). O `previaLegenda.test.ts` LÊ este arquivo e compara os
+ * dois números — mudar um sozinho derruba o teste.
  */
-const LARGURA = "80%";
+const LARGURA = 80;
 
 /** Fração da altura ocupada pela UI dos apps, em cima e embaixo. */
 const SAFE_ZONE = 0.18;
+
+/**
+ * D-605: o lugar de sempre, para quando ninguém decidiu outro.
+ *
+ * São os três números que estavam cravados neste arquivo — `y` é a BASE em % da
+ * altura, e 82 é exatamente o `bottom: height * 0.18` de antes. Ficam aqui como
+ * default do componente para que um short gravado antes daquela demanda saia
+ * pixel a pixel como saía, mesmo se o payload não trouxer o lugar.
+ */
+const LUGAR_PADRAO: LugarDaLegenda = { x: 50, y: 100 - SAFE_ZONE * 100, largura: LARGURA };
 
 export interface LegendaShortProps {
   /** Tokens vindos do backend (`services/legendas_short.py`). */
@@ -74,6 +93,15 @@ export interface LegendaShortProps {
   cor?: string;
   /** D-563: nome da família da fonte. Vazio (ou não carregada) = a do canal. */
   fonte?: string;
+  /**
+   * D-605: onde a caixa senta, já com a herança resolvida por quem chama.
+   *
+   * O relato que originou isto: "a depender do Palco, ela fica em cima da
+   * pessoa". Quem decide onde a pessoa aparece no vertical é o arranjo do palco,
+   * e um ponto fixo acerta num arranjo e erra no seguinte — dentro do mesmo
+   * corte.
+   */
+  lugar?: LugarDaLegenda;
 }
 
 export const LegendaShort: React.FC<LegendaShortProps> = ({
@@ -81,6 +109,7 @@ export const LegendaShort: React.FC<LegendaShortProps> = ({
   deslocamentoRodape = 0,
   cor = "",
   fonte = "",
+  lugar = LUGAR_PADRAO,
 }) => {
   const frame = useCurrentFrame();
   const { fps, height } = useVideoConfig();
@@ -109,10 +138,13 @@ export const LegendaShort: React.FC<LegendaShortProps> = ({
     <div
       style={{
         position: "absolute",
-        left: "50%",
+        // D-605: `x` é o CENTRO da caixa, e `y` é a BASE dela contada do topo —
+        // daí o `100 - y` virar o `bottom` que este componente sempre usou. No
+        // lugar padrão a conta devolve `height * 0.18`, o valor de antes.
+        left: `${lugar.x}%`,
         transform: "translateX(-50%)",
-        bottom: height * SAFE_ZONE + deslocamentoRodape,
-        width: LARGURA,
+        bottom: height * ((100 - lugar.y) / 100) + deslocamentoRodape,
+        width: `${lugar.largura}%`,
         textAlign: "center",
         fontFamily: FONTES_CARREGADAS[fonte] ?? FONTS_V2.display,
         fontSize: Math.round(height * 0.042),

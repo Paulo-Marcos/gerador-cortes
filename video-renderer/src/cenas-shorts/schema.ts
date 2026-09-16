@@ -62,3 +62,25 @@ export interface GanchoShort {
   /** D-600: largura da caixa, em % da largura do quadro. 86 = a de sempre. */
   largura?: number;
 }
+
+// D-605: ONDE a legenda senta no quadro.
+//
+// Tipo proprio, e nao campos soltos em `CamadaShortProps`: os tres viajam
+// sempre juntos (sao UM lugar) e ja chegam RESOLVIDOS — o backend sobe a
+// cascata trecho > palco padrao do corte > default, e aqui so se desenha.
+export interface LugarDaLegenda {
+  /** Centro horizontal da caixa, em % da largura. 50 = centralizada. */
+  x: number;
+  /**
+   * A BASE da caixa, em % da altura contada do TOPO. 82 = o alto da safe zone,
+   * que era o lugar fixo de sempre.
+   *
+   * Base, e nao topo: a legenda vira duas ou tres linhas varias vezes por short,
+   * e ancorada pela base ela cresce para CIMA — a ultima linha nunca se move. O
+   * gancho ancora pelo topo pelo motivo simetrico (texto unico, digitado ao
+   * vivo, cresce para baixo).
+   */
+  y: number;
+  /** Largura da caixa, em % da largura do quadro. 80 = a de sempre. */
+  largura: number;
+}
