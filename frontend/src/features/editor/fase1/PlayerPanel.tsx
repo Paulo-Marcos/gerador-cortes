@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Scissors } from 'lucide-react';
+import { Scissors, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { hmsParaSeg, segParaMmSs } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
@@ -150,6 +150,9 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   onTimeUpdateRef.current = onTimeUpdate;
 
   const [previewSyncInterno, setPreviewSyncInterno] = useState(false);
+  // D-610 (casca nova): a sincronia se ajusta uma vez por vídeo, não por
+  // corte. Fica recolhida num botão e só vira faixa quando pedida.
+  const [sincroniaAberta, setSincroniaAberta] = useState(false);
   const previewSync = previewSyncControlado ?? previewSyncInterno;
   const podePreview = !!audioPreviewSrc;
   const estadoPreview = useLipSyncPreview(videoRef, audioRef, {
@@ -380,14 +383,37 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
         ) : null}
 
         {onAudioOffsetChange ? (
-          <AudioSyncControl
-            offsetMs={audioOffsetMs}
-            onChange={onAudioOffsetChange}
-            previewEnabled={previewSync}
-            onTogglePreview={() => setPreviewSyncInterno((v) => !v)}
-            previewEstado={estadoPreview}
-            canPreview={podePreview}
-          />
+          sincroniaAberta ? (
+            <AudioSyncControl
+              variant="workbench"
+              offsetMs={audioOffsetMs}
+              onChange={onAudioOffsetChange}
+              previewEnabled={previewSync}
+              onTogglePreview={() => setPreviewSyncInterno((v) => !v)}
+              previewEstado={estadoPreview}
+              canPreview={podePreview}
+              // Fechar desliga o fone junto: vídeo mudo com o interruptor fora
+              // de vista foi exatamente a armadilha da D-601.
+              onClose={() => {
+                setSincroniaAberta(false);
+                setPreviewSyncInterno(false);
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => setSincroniaAberta(true)}
+              title="Ajustar a sincronia entre áudio e vídeo"
+              style={{ alignSelf: 'flex-start', color: 'var(--mute)' }}
+            >
+              <Volume2 size={12} aria-hidden />
+              Sincronia do áudio
+              <span style={{ fontFamily: 'var(--mono)', color: audioOffsetMs ? 'var(--accent)' : 'var(--dim)' }}>
+                {audioOffsetMs > 0 ? `+${audioOffsetMs}` : audioOffsetMs} ms
+              </span>
+            </button>
+          )
         ) : null}
       </section>
     );
