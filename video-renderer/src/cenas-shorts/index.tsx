@@ -79,6 +79,9 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
             realce={gancho.realce ?? "veu"}
             fonte={gancho.fonte ?? ""}
             tamanho={gancho.tamanho ?? 1}
+            x={gancho.x}
+            y={gancho.y}
+            largura={gancho.largura}
           />
         </Sequence>
       ) : null}

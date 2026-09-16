@@ -343,6 +343,10 @@ class AtualizarShortRequest(BaseModel):
     # D-581: a aparencia do gancho — hex da cor e o realce que o separa do fundo.
     gancho_cor: str | None = None
     gancho_realce: str | None = None
+    # D-600: onde a caixa do gancho senta, em % do quadro. 0 = do padrao do corte.
+    gancho_x: float | None = None
+    gancho_y: float | None = None
+    gancho_largura: float | None = None
 
 
 @router.patch("/{short_id}")
@@ -371,6 +375,9 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 gancho_ate_seg=body.gancho_ate_seg,
                 gancho_cor=body.gancho_cor,
                 gancho_realce=body.gancho_realce,
+                gancho_x=body.gancho_x,
+                gancho_y=body.gancho_y,
+                gancho_largura=body.gancho_largura,
             )
         }
     except LookupError as exc:

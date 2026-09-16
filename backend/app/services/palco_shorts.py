@@ -149,6 +149,10 @@ def _aparencia(moldura: str, fundo: str, textura: str, herdado: dict, gancho: di
         "gancho_ate_seg": gancho["ate_seg"],
         "gancho_fonte": gancho["fonte"],
         "gancho_tamanho": gancho["tamanho"],
+        # D-600: onde a caixa do gancho senta, ja com a heranca resolvida.
+        "gancho_x": gancho["x"],
+        "gancho_y": gancho["y"],
+        "gancho_largura": gancho["largura"],
     }
 
 
@@ -463,7 +467,17 @@ async def escolher_gancho_padrao(corte_id: str, preset_id: str) -> dict:
 
 def _tem_aparencia_propria(short: Short) -> bool:
     """O trecho decidiu alguma parte da aparencia do gancho por conta propria."""
-    return bool(short.gancho_cor or short.gancho_realce or (short.gancho_ate_seg or 0) > 0)
+    return bool(
+        short.gancho_cor
+        or short.gancho_realce
+        or (short.gancho_ate_seg or 0) > 0
+        # D-600: o lugar conta como aparencia propria. Sem isto, um trecho com o
+        # gancho arrastado para o rodape apareceria como "segue o padrao" e o
+        # aviso de customizados mentiria sobre quantos fogem dele.
+        or (short.gancho_x or 0) > 0
+        or (short.gancho_y or 0) > 0
+        or (short.gancho_largura or 0) > 0
+    )
 
 
 async def descrever_gancho_padrao(corte_id: str) -> dict:
@@ -498,7 +512,7 @@ async def descrever_gancho_padrao(corte_id: str) -> dict:
 async def seguir_gancho_padrao_em_todos(corte_id: str) -> dict:
     """Limpa a aparencia propria do gancho em todos os trechos do corte (D-594).
 
-    So a APARENCIA: cor, realce e duracao. O texto de cada trecho fica — cada
+    So a APARENCIA: cor, realce, duracao e o LUGAR (D-600). O texto de cada trecho fica — cada
     short promete uma coisa, e apagar oito ganchos escritos para "seguir o
     padrao" seria destruir o trabalho mais editorial da tela.
     """
@@ -514,6 +528,9 @@ async def seguir_gancho_padrao_em_todos(corte_id: str) -> dict:
             short.gancho_cor = ""
             short.gancho_realce = ""
             short.gancho_ate_seg = 0.0
+            short.gancho_x = 0.0
+            short.gancho_y = 0.0
+            short.gancho_largura = 0.0
         await db.commit()
 
     return {"corte_id": corte_id, "liberados": liberados}
@@ -574,6 +591,9 @@ async def resolver_para_render(
                 "cor": short.gancho_cor,
                 "realce": short.gancho_realce,
                 "ate_seg": short.gancho_ate_seg,
+                "x": short.gancho_x,
+                "y": short.gancho_y,
+                "largura": short.gancho_largura,
             },
             _payload_do_preset(presets, corte.gancho_padrao, TIPO_GANCHO),
         )
@@ -705,6 +725,12 @@ async def plano_desenhavel(
         "gancho_ate_seg": resolvido.get("gancho_ate_seg", 0.0),
         "gancho_fonte": resolvido.get("gancho_fonte", ""),
         "gancho_tamanho": resolvido.get("gancho_tamanho", 0.0),
+        # D-600: e ONDE ele senta. Mesmo motivo: lido do short, o lugar
+        # ignoraria o preset de gancho do corte, e a previa desenharia a caixa
+        # num ponto que o arquivo nao usa.
+        "gancho_x": resolvido.get("gancho_x", 0.0),
+        "gancho_y": resolvido.get("gancho_y", 0.0),
+        "gancho_largura": resolvido.get("gancho_largura", 0.0),
         # A regiao vai JUNTO do desenho: sem ela a tela teria de casar esta
         # lista com `slots` pela posicao, e um acoplamento implicito desses
         # quebra em silencio no dia em que a ordem mudar.

@@ -53,6 +53,98 @@ export const TAMANHO_MAX = 1.6;
 /** Passo do ajuste de tamanho: 10% por clique, visível na prévia. */
 export const TAMANHO_PASSO = 0.1;
 
+// D-600: onde a caixa do gancho senta, e que largura ela ocupa.
+//
+// Até aqui o lugar era lei do código — topo da safe zone, centralizado, 7% de
+// margem de cada lado. Com arranjos de palco diferentes, esse ponto fixo cai em
+// cima da cara de alguém num short e sobra deserto no seguinte.
+//
+// `x` é o CENTRO da caixa e `y` é o TOPO dela: o texto é centralizado e cresce
+// para os lados, mas cresce para BAIXO ao virar três linhas. Ancorar de outro
+// jeito faria a frase escorregar a cada palavra digitada — e o operador está
+// justamente olhando a prévia enquanto digita.
+
+/** Espelha `POSICAO_X_PADRAO` em `backend/app/domain/gancho_short.py`. */
+export const POSICAO_X_PADRAO = 50.0;
+
+/** Espelha `POSICAO_Y_PADRAO` — a SAFE_ZONE, que era o valor fixo de antes. */
+export const POSICAO_Y_PADRAO = 18.0;
+
+/** Espelha `LARGURA_PADRAO` — os 86% que o código tinha embutidos. */
+export const LARGURA_PADRAO = 86.0;
+
+/** Espelha `POSICAO_X_MIN` em `backend/app/domain/gancho_short.py`. */
+export const POSICAO_X_MIN = 10.0;
+
+/** Espelha `POSICAO_X_MAX` em `backend/app/domain/gancho_short.py`. */
+export const POSICAO_X_MAX = 90.0;
+
+/** Espelha `POSICAO_Y_MIN` em `backend/app/domain/gancho_short.py`. */
+export const POSICAO_Y_MIN = 0.0;
+
+/** Espelha `POSICAO_Y_MAX` em `backend/app/domain/gancho_short.py`. */
+export const POSICAO_Y_MAX = 88.0;
+
+/** Espelha `LARGURA_MIN` em `backend/app/domain/gancho_short.py`. */
+export const LARGURA_MIN = 25.0;
+
+/** Espelha `LARGURA_MAX` em `backend/app/domain/gancho_short.py`. */
+export const LARGURA_MAX = 100.0;
+
+/** Passo da largura por clique, em pontos percentuais. */
+export const LARGURA_PASSO = 4;
+
+/** Onde a caixa do gancho fica, em % do quadro. 0 em qualquer campo = herda. */
+export interface LugarDoGancho {
+  x: number;
+  y: number;
+  largura: number;
+}
+
+function naFaixa(valor: unknown, padrao: number, minimo: number, maximo: number): number {
+  if (typeof valor !== 'number' || !Number.isFinite(valor) || valor <= 0) return padrao;
+  return Math.round(Math.min(Math.max(valor, minimo), maximo) * 100) / 100;
+}
+
+/**
+ * O lugar que vai para a tela: o do trecho, o do padrão do corte, ou o de sempre.
+ *
+ * Resolve a cascata inteira num lugar só — é a mesma regra que
+ * `aparencia_resolvida` + `para_payload` aplicam no backend, e ter as duas
+ * pontas concordando é o que faz a prévia valer como prova.
+ */
+export function lugarEfetivo(
+  proprio: { x?: number | null; y?: number | null; largura?: number | null } | null | undefined,
+  padrao: { x?: number | null; y?: number | null; largura?: number | null } | null | undefined,
+): LugarDoGancho {
+  return {
+    x: naFaixa(proprio?.x || padrao?.x, POSICAO_X_PADRAO, POSICAO_X_MIN, POSICAO_X_MAX),
+    y: naFaixa(proprio?.y || padrao?.y, POSICAO_Y_PADRAO, POSICAO_Y_MIN, POSICAO_Y_MAX),
+    largura: naFaixa(proprio?.largura || padrao?.largura, LARGURA_PADRAO, LARGURA_MIN, LARGURA_MAX),
+  };
+}
+
+function grudado(valor: number, minimo: number, maximo: number): number {
+  return Math.round(Math.min(Math.max(valor, minimo), maximo) * 100) / 100;
+}
+
+/**
+ * O lugar do gancho depois de um arraste, já encaixado na faixa útil.
+ *
+ * Corta pelo MÍNIMO, e não pelo `naFaixa` da cascata. A diferença importa: para
+ * a cascata, zero (ou negativo) é "não decidi" e vira o padrão; num arraste
+ * isso seria a caixa pulando de volta para o meio do quadro na mão do operador,
+ * justamente quando ele a puxa para a borda. Aqui o gesto sempre manda — o que
+ * ele não pode é jogar o texto para fora do quadro.
+ */
+export function lugarArrastado(lugar: LugarDoGancho, dxPct: number, dyPct: number): LugarDoGancho {
+  return {
+    ...lugar,
+    x: grudado(lugar.x + dxPct, POSICAO_X_MIN, POSICAO_X_MAX),
+    y: grudado(lugar.y + dyPct, POSICAO_Y_MIN + 0.5, POSICAO_Y_MAX),
+  };
+}
+
 /** A escala efetiva do corpo. Espelha `normalizar_tamanho`. */
 export function tamanhoEfetivo(tamanho: number | null | undefined): number {
   if (typeof tamanho !== 'number' || !Number.isFinite(tamanho) || tamanho <= 0) {
@@ -252,8 +344,21 @@ export function temAparenciaPropria(short: {
   gancho_cor?: string | null;
   gancho_realce?: string | null;
   gancho_ate_seg?: number | null;
+  gancho_x?: number | null;
+  gancho_y?: number | null;
+  gancho_largura?: number | null;
 }): boolean {
-  return Boolean(short.gancho_cor || short.gancho_realce || (short.gancho_ate_seg ?? 0) > 0);
+  return Boolean(
+    short.gancho_cor ||
+      short.gancho_realce ||
+      (short.gancho_ate_seg ?? 0) > 0 ||
+      // D-600: o lugar conta. Um trecho com o gancho arrastado para o rodapé não
+      // "segue o padrão", e mostrá-lo como se seguisse esconderia a única
+      // personalização que o operador fez.
+      (short.gancho_x ?? 0) > 0 ||
+      (short.gancho_y ?? 0) > 0 ||
+      (short.gancho_largura ?? 0) > 0,
+  );
 }
 
 /** "amarelo · Caixa · 2.5s" — o que o trecho herda quando não personaliza. */

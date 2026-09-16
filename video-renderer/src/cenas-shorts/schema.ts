@@ -55,4 +55,10 @@ export interface GanchoShort {
   fonte?: string;
   /** D-594: escala do corpo. 1 = o de sempre. */
   tamanho?: number;
+  /** D-600: centro horizontal da caixa, em % da largura. 50 = centralizado. */
+  x?: number;
+  /** D-600: topo da caixa, em % da altura. 18 = o alto da safe zone de sempre. */
+  y?: number;
+  /** D-600: largura da caixa, em % da largura do quadro. 86 = a de sempre. */
+  largura?: number;
 }

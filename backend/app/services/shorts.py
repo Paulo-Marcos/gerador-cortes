@@ -430,6 +430,9 @@ async def atualizar_short(
     gancho_ate_seg: float | None = None,
     gancho_cor: str | None = None,
     gancho_realce: str | None = None,
+    gancho_x: float | None = None,
+    gancho_y: float | None = None,
+    gancho_largura: float | None = None,
 ) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
@@ -490,6 +493,23 @@ async def atualizar_short(
             short.gancho_realce = (
                 gancho_short.normalizar_realce(gancho_realce) if gancho_realce.strip() else ""
             )
+
+        if gancho_x is not None or gancho_y is not None or gancho_largura is not None:
+            # D-600: os tres andam juntos porque sao UM gesto — o operador
+            # arrasta a caixa e solta. Mandar so `y` num PATCH e legitimo, mas o
+            # caso comum e o trio, e separa-los em tres `if` sugeriria que ha
+            # tres decisoes onde ha uma.
+            #
+            # 0 continua sendo "nao decidi", como na duracao e no realce: e assim
+            # que o botao "voltar ao lugar do padrao" devolve o trecho a heranca.
+            if gancho_x is not None:
+                short.gancho_x = gancho_short.normalizar_x(gancho_x) if gancho_x > 0 else 0.0
+            if gancho_y is not None:
+                short.gancho_y = gancho_short.normalizar_y(gancho_y) if gancho_y > 0 else 0.0
+            if gancho_largura is not None:
+                short.gancho_largura = (
+                    gancho_short.normalizar_largura(gancho_largura) if gancho_largura > 0 else 0.0
+                )
 
         if moldura is not None:
             if moldura not in {m.value for m in Moldura}:
@@ -1049,6 +1069,10 @@ def _serializar(short: Short, corte: Corte | None = None) -> dict:
         "gancho_ate_seg": short.gancho_ate_seg,
         "gancho_cor": short.gancho_cor or "",
         "gancho_realce": short.gancho_realce or "",
+        # D-600: onde a caixa senta neste trecho. 0 = do padrao do corte.
+        "gancho_x": short.gancho_x or 0.0,
+        "gancho_y": short.gancho_y or 0.0,
+        "gancho_largura": short.gancho_largura or 0.0,
         "inicio_seg": short.inicio_seg,
         "fim_seg": short.fim_seg,
         "duracao_seg": round(short.fim_seg - short.inicio_seg, 2),

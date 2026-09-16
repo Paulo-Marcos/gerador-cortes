@@ -37,6 +37,15 @@ import { FONTES_CARREGADAS } from "./LegendaShort";
 // contorno da legenda. Quem escolhe é o operador, porque quem olha o trecho é
 // ele — o que o código garante é que a prévia mostre a mesma coisa.
 
+// D-600: o lugar de sempre, agora com nome. Estes três números estavam
+// escritos direto no `style` — `top: height * SAFE_ZONE`, `left: 7%`,
+// `right: 7%` — e continuam sendo o default exato, para um props.json gravado
+// antes desta demanda sair pixel a pixel como saía. Espelham
+// `POSICAO_X_PADRAO`, `POSICAO_Y_PADRAO` e `LARGURA_PADRAO` do domínio.
+const X_PADRAO = 50;
+const Y_PADRAO = SAFE_ZONE * 100;
+const LARGURA_PADRAO = 86;
+
 /** Frames de entrada e de saída. Curto: o gancho tem 2,5s de vida inteira. */
 const FRAMES_ENTRADA = 7;
 const FRAMES_SAIDA = 9;
@@ -56,6 +65,12 @@ export interface GanchoAberturaProps {
   fonte?: string;
   /** D-594: escala do corpo sobre 5% da altura. O backend já trava a faixa. */
   tamanho?: number;
+  /** D-600: centro horizontal da caixa, em % da largura. */
+  x?: number;
+  /** D-600: topo da caixa, em % da altura. */
+  y?: number;
+  /** D-600: largura da caixa, em % da largura do quadro. */
+  largura?: number;
 }
 
 export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
@@ -65,6 +80,12 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
   realce = "veu",
   fonte = "",
   tamanho = 1,
+  // D-600: os defaults sao os numeros que estavam cravados neste componente ate
+  // esta demanda. Um props.json gravado antes dela nao traz os campos, e sai
+  // pixel a pixel como saia — o mesmo contrato de degradacao do `realce`.
+  x = X_PADRAO,
+  y = Y_PADRAO,
+  largura = LARGURA_PADRAO,
 }) => {
   const frame = useCurrentFrame();
   const { fps, height } = useVideoConfig();
@@ -101,7 +122,15 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
         <div
           style={{
             position: "absolute",
-            top: 0,
+            // D-600: o veu VIAJA com o gancho. Ele nunca foi "escurecer o topo"
+            // — e escurecer o fundo de onde a frase esta; o topo era so onde a
+            // frase sempre estava. Com o gancho no rodape, um veu preso em cima
+            // escureceria o lugar errado e deixaria a frase sobre video cru.
+            //
+            // Os 18 pontos de folga acima dao a faixa o mesmo desenho de sempre
+            // quando o gancho esta no lugar de sempre: com y = 18, isto e
+            // exatamente `top: 0; height: 46%`, o valor que estava aqui.
+            top: `${Math.max(0, y - Y_PADRAO)}%`,
             left: 0,
             right: 0,
             height: "46%",
@@ -114,12 +143,16 @@ export const GanchoAbertura: React.FC<GanchoAberturaProps> = ({
       <div
         style={{
           position: "absolute",
-          top: height * SAFE_ZONE,
-          left: "7%",
-          right: "7%",
+          // D-600: o lugar deixou de ser lei do codigo. `x` e o CENTRO da caixa
+          // (o texto e centralizado e cresce para os dois lados) e `y` e o TOPO
+          // dela (o texto cresce para baixo ao virar tres linhas) — ancorar de
+          // outro jeito faria a frase escorregar a cada palavra digitada.
+          top: `${y}%`,
+          left: `${x}%`,
+          width: `${largura}%`,
           opacity,
           textAlign: "center",
-          transform: `translateY(${subida}px)`,
+          transform: `translate(-50%, ${subida}px)`,
         }}
       >
         <p

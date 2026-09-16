@@ -342,6 +342,10 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
                 realce=palco.get("gancho_realce", ""),
                 fonte=palco.get("gancho_fonte", ""),
                 tamanho=palco.get("gancho_tamanho", 0.0),
+                # D-600: e onde ele senta no quadro.
+                x=palco.get("gancho_x", 0.0),
+                y=palco.get("gancho_y", 0.0),
+                largura=palco.get("gancho_largura", 0.0),
             ),
             origem=origem,
             plano=palco["plano"],

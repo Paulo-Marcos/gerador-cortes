@@ -251,6 +251,10 @@ class TestGanchoDaAbertura:
             "ateSeg": 2.5,
             "cor": "",
             "realce": "veu",
+            # D-600: e onde ele senta — o ponto fixo de antes, em numeros.
+            "x": 50.0,
+            "y": 18.0,
+            "largura": 86.0,
             # D-594: fonte do canal e o corpo de sempre quando nada decidiu.
             "fonte": "",
             "tamanho": 1.0,

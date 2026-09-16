@@ -14,10 +14,15 @@ import {
   duracaoEfetiva,
   PALAVRAS_MAX,
   PALAVRAS_MIN,
+  LARGURA_MAX,
+  LARGURA_MIN,
+  LARGURA_PASSO,
+  lugarEfetivo,
   recadoDoTom,
   resumoDaAparenciaPadrao,
   temAparenciaPropria,
   tomDoGancho,
+  type LugarDoGancho,
   type TomDoGancho,
 } from './ganchoDoShort';
 import type { GanchoShortPreset } from '@/types/presets';
@@ -71,8 +76,19 @@ interface Props {
    * fonte e o tamanho, que só o padrão decide.
    */
   padrao: Partial<GanchoShortPreset> | null;
-  /** `ateSeg` 0 e `realce`/`cor` vazios = seguir o padrão do corte. */
-  onGravar: (texto: string, ateSeg: number, cor: string, realce: string) => void;
+  /** Zero e vazio em qualquer campo = seguir o padrão do corte. */
+  onGravar: (edicao: EdicaoDoGancho) => void;
+}
+
+/** O que este modal grava num trecho. D-600 trocou os posicionais por isto. */
+export interface EdicaoDoGancho {
+  texto: string;
+  ateSeg: number;
+  cor: string;
+  realce: string;
+  x: number;
+  y: number;
+  largura: number;
 }
 
 export function GanchoModal({
@@ -106,6 +122,13 @@ export function GanchoModal({
   const [cor, setCor] = useState(short.gancho_cor ?? '');
   // D-594: mesma regra da duração — vazio é "do padrão", e não o véu.
   const [realce, setRealce] = useState(short.gancho_realce ?? '');
+  // D-600: o lugar. Mesma regra de todo o resto desta tela — 0 é "não decidi",
+  // e é assim que "voltar ao lugar do padrão" devolve o trecho à herança.
+  const [lugarProprio, setLugarProprio] = useState<Partial<LugarDoGancho>>({
+    x: short.gancho_x ?? 0,
+    y: short.gancho_y ?? 0,
+    largura: short.gancho_largura ?? 0,
+  });
   // Em quase todo short a aparência é a do padrão do corte, então as opções
   // nascem escondidas. Só abrem sozinhas quando o trecho JÁ tem algo próprio —
   // escondê-lo ali faria uma personalização gravada passar despercebida.
@@ -120,13 +143,28 @@ export function GanchoModal({
     setAteSeg(short.gancho_ate_seg ?? 0);
     setCor(short.gancho_cor ?? '');
     setRealce(short.gancho_realce ?? '');
+    setLugarProprio({
+      x: short.gancho_x ?? 0,
+      y: short.gancho_y ?? 0,
+      largura: short.gancho_largura ?? 0,
+    });
     setPersonalizado(temAparenciaPropria(short));
     gerar.reset();
     // `gerar` fora das dependencias de proposito: a mutation muda de identidade
     // a cada resultado, e inclui-la faria este efeito rodar de novo logo apos
     // as variacoes chegarem — apagando-as no instante em que aparecem.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, short.id, short.gancho_tela, short.gancho_ate_seg, short.gancho_cor, short.gancho_realce]);
+  }, [
+    open,
+    short.id,
+    short.gancho_tela,
+    short.gancho_ate_seg,
+    short.gancho_cor,
+    short.gancho_realce,
+    short.gancho_x,
+    short.gancho_y,
+    short.gancho_largura,
+  ]);
 
   const gerar = useSugerirGanchos();
   // D-573: as da geração de agora, ou as que ficaram gravadas deste short.
@@ -146,6 +184,27 @@ export function GanchoModal({
   const tempoDaPrevia = short.inicio_seg + INSTANTE_DA_PREVIA_SEG;
   // O que vai sair: o que o trecho decidiu, ou o do padrão do corte.
   const duracaoNaTela = duracaoEfetiva(ateSeg || padrao?.duracao);
+  // O lugar que a prévia desenha: o do trecho, o do padrão do corte, ou o fixo
+  // de sempre — a mesma cascata que o backend resolve antes do render.
+  const lugarNaTela = lugarEfetivo(lugarProprio, padrao);
+  const noLugarDoPadrao =
+    !lugarProprio.x && !lugarProprio.y && !lugarProprio.largura;
+
+  // Arrastar na prévia JÁ é decidir: o gesto grava os três campos de uma vez,
+  // inclusive a largura, porque uma caixa que anda sem levar o próprio tamanho
+  // voltaria a herdá-lo do padrão na primeira troca de preset — e o operador
+  // veria o gancho que ele posicionou mudar de forma sozinho.
+  const mover = (novo: LugarDoGancho) => {
+    setLugarProprio(novo);
+    if (!personalizado) setPersonalizado(true);
+  };
+
+  /** O que vai ao banco: 0 em tudo quando o trecho ainda segue o padrão. */
+  const lugarGravado = {
+    x: lugarProprio.x ?? 0,
+    y: lugarProprio.y ?? 0,
+    largura: lugarProprio.largura ?? 0,
+  };
 
   // Desligar devolve o trecho ao padrão de verdade: esconder os campos com
   // valores próprios ainda dentro gravaria uma personalização invisível.
@@ -154,6 +213,7 @@ export function GanchoModal({
       setCor('');
       setRealce('');
       setAteSeg(0);
+      setLugarProprio({ x: 0, y: 0, largura: 0 });
     }
     setPersonalizado(!personalizado);
   };
@@ -173,6 +233,12 @@ export function GanchoModal({
         realce={realce || padrao?.realce || 'veu'}
         fonte={padrao?.fonte}
         tamanho={padrao?.tamanho}
+        lugar={lugarNaTela}
+        // D-600: é aqui que a prévia deixa de ser só espelho. A pergunta "onde
+        // este gancho cabe" só se responde olhando o quadro — pedir dois
+        // números num campo ao lado seria obrigar o operador a traduzir o que
+        // está vendo e de volta.
+        onMover={mover}
       />
       {palavras.length > 0 && (
         <LegendaPrevia
@@ -334,7 +400,7 @@ export function GanchoModal({
                 </span>
                 <span className="block truncate text-[11px] text-[var(--wb-text-mute)]">
                   {personalizado
-                    ? 'cor, destaque e tempo só deste short'
+                    ? 'cor, destaque, tempo e lugar só deste short'
                     : `segue o padrão do corte — ${resumoDaAparenciaPadrao(padrao)}`}
                 </span>
               </span>
@@ -426,6 +492,69 @@ export function GanchoModal({
             </div>
           </section>
 
+          {/* D-600: o LUGAR. O gesto principal é o arraste na prévia ao lado —
+              esta seção existe para a largura, que não tem alça, e para o
+              caminho de volta à herança, que um arraste não sabe expressar. */}
+          <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
+            <div>
+              <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">Onde ele fica</p>
+              <p className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
+                Arraste o gancho na prévia ao lado. A largura da caixa é o que decide onde a
+                frase quebra de linha.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Caixa mais estreita"
+                disabled={ocupado || lugarNaTela.largura <= LARGURA_MIN}
+                onClick={() =>
+                  mover({
+                    ...lugarNaTela,
+                    largura: Math.max(LARGURA_MIN, lugarNaTela.largura - LARGURA_PASSO),
+                  })
+                }
+              >
+                <Minus />
+              </Button>
+              <span className="font-code text-[13px] tabular-nums text-[var(--wb-text)]">
+                {Math.round(lugarNaTela.largura)}% de largura
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Caixa mais larga"
+                disabled={ocupado || lugarNaTela.largura >= LARGURA_MAX}
+                onClick={() =>
+                  mover({
+                    ...lugarNaTela,
+                    largura: Math.min(LARGURA_MAX, lugarNaTela.largura + LARGURA_PASSO),
+                  })
+                }
+              >
+                <Plus />
+              </Button>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-mute)]">
+                {Math.round(lugarNaTela.x)}% / {Math.round(lugarNaTela.y)}% do quadro
+              </span>
+              {noLugarDoPadrao ? (
+                <span className="text-[11px] text-[var(--wb-text-mute)]">do padrão</span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={ocupado}
+                  onClick={() => setLugarProprio({ x: 0, y: 0, largura: 0 })}
+                  className="text-[11.5px] text-[var(--wb-accent)] underline-offset-2 hover:underline disabled:opacity-45"
+                >
+                  usar o lugar do padrão
+                </button>
+              )}
+            </div>
+          </section>
+
           <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">
             <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">
               Quanto tempo em tela
@@ -474,7 +603,11 @@ export function GanchoModal({
           )}
 
           <div className="flex flex-wrap items-center gap-2 border-t border-[var(--wb-border-soft)] pt-3">
-            <Button size="sm" disabled={ocupado} onClick={() => onGravar(texto, ateSeg, cor, realce)}>
+            <Button
+              size="sm"
+              disabled={ocupado}
+              onClick={() => onGravar({ texto, ateSeg, cor, realce, ...lugarGravado })}
+            >
               Gravar o gancho
             </Button>
             {short.gancho_tela && (
@@ -482,7 +615,7 @@ export function GanchoModal({
                 variant="outline"
                 size="sm"
                 disabled={ocupado}
-                onClick={() => onGravar('', ateSeg, cor, realce)}
+                onClick={() => onGravar({ texto: '', ateSeg, cor, realce, ...lugarGravado })}
               >
                 <Eraser />
                 Tirar o gancho

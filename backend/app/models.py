@@ -450,6 +450,19 @@ class Short(Base):
     # D-581: como o gancho se separa do fundo — veu, caixa, contorno, sombra ou
     # nenhum. Vazio cai no `REALCE_PADRAO` (veu), que e o de antes desta coluna.
     gancho_realce: Mapped[str] = mapped_column(String(20), default="")
+    # D-600: ONDE o gancho senta neste trecho, em % do quadro. 0 = "nao decidi",
+    # e ai vale o lugar do preset de gancho do corte — e, na falta dele, o ponto
+    # fixo que o renderer usava antes desta demanda (topo da safe zone,
+    # centralizado, 86% de largura).
+    #
+    # Por que o lugar e por trecho, se fonte e tamanho nao sao: o corpo e a
+    # fonte sao identidade do canal, iguais nos oito shorts de um corte; o LUGAR
+    # depende do que esta no quadro, e o quadro muda a cada trecho. Um palco com
+    # a pessoa a esquerda e outro com ela centralizada pedem ganchos em pontos
+    # diferentes do mesmo corte.
+    gancho_x: Mapped[float] = mapped_column(Float, default=0.0)
+    gancho_y: Mapped[float] = mapped_column(Float, default=0.0)
+    gancho_largura: Mapped[float] = mapped_column(Float, default=0.0)
     # D-573: as ultimas variacoes que a IA propos, em JSON.
     #
     # A D-565 decidiu NAO gravar o resultado do gerador, e a razao era boa:

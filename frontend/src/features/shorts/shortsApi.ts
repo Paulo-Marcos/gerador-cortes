@@ -134,6 +134,15 @@ export interface ShortSugerido {
   gancho_cor: string;
   /** D-581: veu | caixa | contorno | sombra | nenhum. Vazio cai no veu. */
   gancho_realce: string;
+  /**
+   * D-600: onde a caixa do gancho senta, em % do quadro. 0 = do padrão do corte.
+   *
+   * Opcionais porque um backend ainda não reiniciado não manda os campos, e a
+   * tela tem de desenhar o gancho no lugar de sempre em vez de quebrar.
+   */
+  gancho_x?: number;
+  gancho_y?: number;
+  gancho_largura?: number;
   inicio_seg: number;
   fim_seg: number;
   duracao_seg: number;
@@ -201,6 +210,10 @@ export interface AtualizarShortBody {
   /** D-581: a aparencia do gancho. "" na cor volta ao branco. */
   gancho_cor?: string;
   gancho_realce?: string;
+  /** D-600: o lugar do gancho neste trecho. 0 devolve ao padrão do corte. */
+  gancho_x?: number;
+  gancho_y?: number;
+  gancho_largura?: number;
 }
 
 /** D-565 (onda 3): o texto que acompanha o short no feed. */
@@ -315,6 +328,10 @@ export interface PlanoDesenhavel {
   gancho_ate_seg?: number;
   gancho_fonte?: string;
   gancho_tamanho?: number;
+  /** D-600: o lugar, já com a herança resolvida. 0 = o ponto fixo de sempre. */
+  gancho_x?: number;
+  gancho_y?: number;
+  gancho_largura?: number;
 }
 
 /** O que o detector de rosto viu num trecho (D-477). */

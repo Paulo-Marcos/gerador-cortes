@@ -35,6 +35,7 @@ import { LegendaPrevia } from './LegendaPrevia';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { GanchoModal } from './GanchoModal';
 import { GanchoPrevia } from './GanchoPrevia';
+import { lugarEfetivo } from './ganchoDoShort';
 import { PresetDoGanchoModal } from './PresetDoGanchoModal';
 import { PresetDoPalcoModal } from './PresetDoPalcoModal';
 import { useEdicaoDoShort } from './useEdicaoDoShort';
@@ -266,6 +267,17 @@ export default function FireDetalhePage() {
         // que o épico do palco inteiro existe para evitar.
         cor={planoNaTela?.gancho_cor ?? emQuadro.gancho_cor}
         realce={planoNaTela?.gancho_realce ?? emQuadro.gancho_realce}
+        // D-600: o LUGAR vem pelo mesmo caminho e pelo mesmo motivo — é o plano
+        // que resolveu a herança, e ler direto do short mostraria o gancho no
+        // ponto fixo enquanto o arquivo o desenha onde o preset mandou.
+        lugar={lugarEfetivo(
+          {
+            x: planoNaTela?.gancho_x,
+            y: planoNaTela?.gancho_y,
+            largura: planoNaTela?.gancho_largura,
+          },
+          { x: emQuadro.gancho_x, y: emQuadro.gancho_y, largura: emQuadro.gancho_largura },
+        )}
       />
       {legendaAtiva && transcricao.data && (
         <LegendaPrevia
@@ -398,12 +410,15 @@ export default function FireDetalhePage() {
           palavras={transcricao.data?.palavras ?? []}
           ocupado={edicao.ocupado}
           padrao={ganchoPadrao.data?.gancho_padrao ? ganchoPadrao.data.payload : null}
-          onGravar={(texto, ateSeg, cor, realce) => {
+          onGravar={({ texto, ateSeg, cor, realce, x, y, largura }) => {
             edicao.gravar(emQuadro.id, {
               gancho_tela: texto,
               gancho_ate_seg: ateSeg,
               gancho_cor: cor,
               gancho_realce: realce,
+              gancho_x: x,
+              gancho_y: y,
+              gancho_largura: largura,
             });
             setEscrevendoGancho(false);
           }}
