@@ -69,6 +69,7 @@ const UpgradeShellDemoPage = lazy(() => import('@/upgrade/UpgradeShellDemoPage')
 // para escolher a casca. Assim tela e casca nunca ficam em versoes
 // diferentes dentro da mesma sessao.
 const BibliotecaPage = lazy(() => import('@/upgrade/telas/BibliotecaPage'));
+const WorkspaceProjetoPage = lazy(() => import('@/upgrade/telas/WorkspaceProjetoPage'));
 const CASCA_NOVA = isUpgradeShellEnabled();
 
 export const router = createBrowserRouter([
@@ -78,7 +79,10 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/projetos" replace /> },
       { path: 'projetos', element: CASCA_NOVA ? <BibliotecaPage /> : <ProjetosPage /> },
-      { path: 'projetos/:id', element: <ProjetoDetalhePage /> },
+      {
+        path: 'projetos/:id',
+        element: CASCA_NOVA ? <WorkspaceProjetoPage /> : <ProjetoDetalhePage />,
+      },
       { path: 'projetos/:id/cortes', element: <EditorPage /> },
       { path: 'projetos/:id/cortes/:corteId', element: <EditorPage /> },
       { path: 'projetos/:id/metadados', element: <MetadataPage /> },

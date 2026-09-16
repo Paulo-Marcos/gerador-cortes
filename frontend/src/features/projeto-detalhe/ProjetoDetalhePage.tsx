@@ -40,6 +40,8 @@ import { AuditoriaAnaliseModal } from './AuditoriaAnaliseModal';
 import { PublicarMassaModal } from './PublicarMassaModal';
 import { PublicarTiktokModal } from './PublicarTiktokModal';
 import { cortesParaTiktok, cortesParaYoutube, destinosPublicados } from './listasDePublicacao';
+import { mesclarCortesComExport } from './cortesDoWorkspace';
+import { avaliarProntidaoPublicacao } from './prontidaoPublicacao';
 import { StatusPipStrip } from './StatusPills';
 import { VotoQualidadeLive } from './VotoQualidadeLive';
 
@@ -48,93 +50,6 @@ import { VotoQualidadeLive } from './VotoQualidadeLive';
 // por ferramenta: tudo cinza deixava a fileira morta.
 const UTILITARIO_CLASS =
   'flex h-[30px] w-8 items-center justify-center rounded-[6px] transition-colors hover:bg-[var(--wb-bg-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-40';
-
-interface ProntidaoPublicacao {
-  /** Cortes que ainda vão ao ar (fora rejeitados e já publicados). */
-  total: number;
-  prontos: number;
-  /** Libera o lote: há candidatos e nenhum deles está pendente. */
-  liberado: boolean;
-  /** Rótulo curto ao lado do botão. */
-  resumo: string;
-  /** Explicação do estado (tooltip do botão). */
-  detalhe: string;
-}
-
-const MAX_PENDENTES_LISTADOS = 6;
-
-const cortesPalavra = (quantidade: number) => (quantidade === 1 ? 'corte' : 'cortes');
-
-/** O que falta num corte para ele bater `pronto_publicar` no backend. */
-function faltasDoCorte(corte: StatusExportCorte): string[] {
-  const faltas: string[] = [];
-  if (!corte.video_pronto) faltas.push('render final');
-  if (!corte.titulo_youtube) faltas.push('título');
-  if (!corte.thumbnail_pronta) faltas.push('thumbnail');
-  // O backend pode reprovar por algo que a tira de flags não expõe; sem o
-  // fallback o tooltip sairia com "#3 ()".
-  return faltas.length > 0 ? faltas : ['pendência no backend'];
-}
-
-/** Rótulo curto do chip ao lado do botão. */
-function resumoDoLote(total: number, prontos: number, liberado: boolean): string {
-  if (total === 0) return 'nada a publicar';
-  if (liberado) return `tudo pronto · ${total} ${cortesPalavra(total)}`;
-  return `${prontos}/${total} prontos`;
-}
-
-/** Texto do tooltip: por que o lote está (ou não) liberado. */
-function detalheDoLote(total: number, pendentes: StatusExportCorte[]): string {
-  if (total === 0) {
-    return 'Nenhum corte aguardando publicação — todos já foram publicados ou rejeitados.';
-  }
-  if (pendentes.length === 0) {
-    return `Tudo pronto — abrir o agendamento de ${total} ${cortesPalavra(total)}.`;
-  }
-
-  const listados = pendentes
-    .slice(0, MAX_PENDENTES_LISTADOS)
-    .map((c) => `#${c.numero} (${faltasDoCorte(c).join(', ')})`)
-    .join(' · ');
-  const excedente = pendentes.length - MAX_PENDENTES_LISTADOS;
-
-  return (
-    `Publicação em massa só libera com todos prontos. Faltam ${pendentes.length} de ${total}: ` +
-    listados +
-    (excedente > 0 ? ` · e mais ${excedente}` : '')
-  );
-}
-
-/**
- * D-439: o lote só abre quando NÃO sobra pendência — antes o botão habilitava
- * com um único corte pronto, e não dava para ler na tela se a live inteira
- * estava fechada ou se faltava metade.
- *
- * "Candidato" é o corte que ainda vai ao ar: rejeitado é decisão editorial de
- * não publicar e publicado já foi — nenhum dos dois segura o lote. Corte ainda
- * em `proposto` conta como pendência: enquanto não for avaliado, a live não
- * está pronta.
- */
-function avaliarProntidaoPublicacao(
-  cortes: StatusExportCorte[],
-  statusPorCorte: Map<string, Corte>,
-): ProntidaoPublicacao {
-  const candidatos = cortes.filter(
-    (c) => !c.youtube_url_publicado && statusPorCorte.get(c.corte_id)?.status !== 'rejeitado',
-  );
-  const pendentes = candidatos.filter((c) => !c.pronto_publicar);
-  const total = candidatos.length;
-  const prontos = total - pendentes.length;
-  const liberado = total > 0 && pendentes.length === 0;
-
-  return {
-    total,
-    prontos,
-    liberado,
-    resumo: resumoDoLote(total, prontos, liberado),
-    detalhe: detalheDoLote(total, pendentes),
-  };
-}
 
 export function ProjetoDetalhePage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -288,30 +203,10 @@ export function ProjetoDetalhePage() {
     setLiberarCorte(null);
   }
 
-  // Mescla: todos os cortes (incluindo 'proposto') enriquecidos com dados de export quando disponíveis
-  const cortes = useMemo((): StatusExportCorte[] => {
-    const all = cortesQuery.data ?? [];
-    const statusMap = new Map((exportStatus.data?.cortes ?? []).map((c) => [c.corte_id, c]));
-    return all.map((c) => {
-      const s = statusMap.get(c.id);
-      if (s) return s;
-      const videoPronto = !!(c.is_pos_producao === 1);
-      return {
-        corte_id: c.id,
-        numero: c.numero,
-        titulo: c.titulo_proposto,
-        raw_pronto: !!c.arquivo_clip_path,
-        grade_pronta: videoPronto,
-        overlays_prontos: videoPronto,
-        video_pronto: videoPronto,
-        thumbnail_pronta: false,
-        metadados_completos: false,
-        pronto_publicar: false,
-        youtube_url_publicado: c.youtube_url_publicado || undefined,
-        youtube_scheduled_at: c.youtube_scheduled_at || undefined,
-      };
-    });
-  }, [cortesQuery.data, exportStatus.data]);
+  const cortes = useMemo(
+    () => mesclarCortesComExport(cortesQuery.data ?? [], exportStatus.data?.cortes ?? []),
+    [cortesQuery.data, exportStatus.data],
+  );
 
   // D-516: cada destino tem a SUA lista. Elas moram em `listasDePublicacao`,
   // fora do componente, porque foi compartilhando uma delas que o TikTok herdou
