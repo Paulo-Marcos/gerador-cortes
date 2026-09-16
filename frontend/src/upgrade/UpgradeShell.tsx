@@ -18,7 +18,7 @@ import { Icon } from './Icon';
 import { PaletaDeComandos } from './PaletaDeComandos';
 import { ScreenHeader } from './ScreenHeader';
 import { TopBar } from './TopBar';
-import { UpgradeChromeProvider, useChrome, type Chrome } from './UpgradeChrome';
+import { UpgradeChromeProvider, useChrome, type Chrome, type ChromeBarra } from './UpgradeChrome';
 import { CABECALHO, projetoDaRota, telaDaRota, trilhaDaTela } from './upgradeRoutes';
 import { useUpgradeTheme } from './useUpgradeTheme';
 
@@ -30,9 +30,25 @@ import { useUpgradeTheme } from './useUpgradeTheme';
 // conteúdo, com a barra de ações ancorada embaixo. Só o miolo rola.
 // É essa fixidez que faz a casca desaparecer da atenção: quem usa
 // para de procurar as coisas e passa a saber onde elas estão.
+//
+// RODADA 1 · três decisões que estavam espalhadas voltaram para cá,
+// onde valem para as 17 telas de uma vez:
+//
+//   1. A coluna de contexto aparece por MEDIDA DE JANELA, não por
+//      `display:none` no CSS. Com ela na tela o seletor encolhe (a
+//      mesma lista duas vezes era ruído); sem ela, o seletor recebe a
+//      identidade da live e a esteira que a coluna levava embora.
+//   2. Enter dispara o botão primário da barra — o ↵ que ele já
+//      exibia finalmente é verdade.
+//   3. O lembrete "J K trocar de corte" é emitido pela casca sempre
+//      que existir seletor. Antes só a Bancada o declarava, e em
+//      Metadados as teclas funcionavam em silêncio.
 // ─────────────────────────────────────────────────────────────────
 
 const TRILHO_KEY = 'upgrade-trilho';
+
+/** Largura a partir da qual cabem trilho + contexto + miolo. */
+const LARGURA_CONTEXTO = '(min-width: 1241px)';
 
 /**
  * O cartao da fila no pe do trilho. Mostra o job que esta ANDANDO; sem
@@ -75,7 +91,32 @@ function useTrilho() {
   return { expandido, alternar };
 }
 
-/** Atalhos da casca: ⌘B recolhe o trilho, J/K trocam de corte. */
+/** `true` enquanto a janela couber a coluna de contexto. */
+function useJanelaLarga(): boolean {
+  const [larga, setLarga] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return true;
+    return window.matchMedia(LARGURA_CONTEXTO).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia(LARGURA_CONTEXTO);
+    const aoMudar = (e: MediaQueryListEvent) => setLarga(e.matches);
+    mq.addEventListener('change', aoMudar);
+    setLarga(mq.matches);
+    return () => mq.removeEventListener('change', aoMudar);
+  }, []);
+
+  return larga;
+}
+
+/** Há um diálogo modal aberto? Nesse caso o teclado é dele, não da casca. */
+function overlayAberto(): boolean {
+  return document.querySelector('[aria-modal="true"]') !== null;
+}
+
+/** Atalhos da casca: ⌘B recolhe o trilho, ⌘K busca, J/K trocam de corte,
+ *  Enter dispara a ação primária da barra. */
 function useAtalhosDaCasca(alternarTrilho: () => void, abrirBusca: () => void, chrome: Chrome) {
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -84,6 +125,7 @@ function useAtalhosDaCasca(alternarTrilho: () => void, abrirBusca: () => void, c
       const digitando =
         alvo instanceof HTMLInputElement ||
         alvo instanceof HTMLTextAreaElement ||
+        alvo instanceof HTMLSelectElement ||
         alvo?.isContentEditable === true;
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
@@ -96,13 +138,32 @@ function useAtalhosDaCasca(alternarTrilho: () => void, abrirBusca: () => void, c
         abrirBusca();
         return;
       }
-      if (digitando || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === 'j') chrome.seletor?.onProximo?.();
-      if (e.key === 'k') chrome.seletor?.onAnterior?.();
+
+      // Com um modal aberto o teclado pertence ao modal. Sem esta trava,
+      // J/K trocavam o corte ATRÁS do diálogo e o Enter disparava duas
+      // ações ao mesmo tempo.
+      if (digitando || e.metaKey || e.ctrlKey || e.altKey || overlayAberto()) return;
+
+      if (e.key === 'j') {
+        chrome.seletor?.onProximo?.();
+        return;
+      }
+      if (e.key === 'k') {
+        chrome.seletor?.onAnterior?.();
+        return;
+      }
+      // O ↵ desenhado no botão primário passa a ser verdade. Botão
+      // desabilitado não responde — e a ActionBar esconde o ↵ nesse caso.
+      if (e.key === 'Enter') {
+        const primario = chrome.barra?.primario;
+        if (!primario || primario.desabilitado || !primario.onClick) return;
+        e.preventDefault();
+        primario.onClick();
+      }
     };
     window.addEventListener('keydown', aoTeclar);
     return () => window.removeEventListener('keydown', aoTeclar);
-  }, [alternarTrilho, abrirBusca, chrome.seletor]);
+  }, [alternarTrilho, abrirBusca, chrome.seletor, chrome.barra]);
 }
 
 function montarNavegacao(projetoId: string | null): {
@@ -111,47 +172,86 @@ function montarNavegacao(projetoId: string | null): {
   rodape: ItemTrilho[];
 } {
   const producao: ItemTrilho[] = [
-    { icone: 'home', texto: 'Biblioteca', to: '/projetos', tela: 'biblioteca' },
+    { icone: 'home', texto: 'Biblioteca', to: '/projetos', telas: ['biblioteca'] },
   ];
 
   // O bloco da live só existe quando há uma live aberta. No protótipo
   // ele é fixo porque a live é uma só; aqui, mostrar "Cortes" sem
   // projeto seria oferecer uma porta que não abre.
+  //
+  // RODADA 2 vai tirar estas cinco entradas do trilho e levar a esteira
+  // para o contexto da live — é ela que faz o trilho mudar de tamanho
+  // conforme a rota. Até lá, ao menos as telas-filhas acendem certo.
   if (projetoId) {
     producao.push(
-      { icone: 'layout-grid', texto: 'Esta live', to: `/projetos/${projetoId}`, tela: 'projeto' },
-      { icone: 'scissors', texto: 'Cortes', to: `/projetos/${projetoId}/cortes`, tela: 'cortes' },
+      {
+        icone: 'layout-grid',
+        texto: 'Esta live',
+        to: `/projetos/${projetoId}`,
+        telas: ['projeto'],
+      },
+      {
+        icone: 'scissors',
+        texto: 'Cortes',
+        to: `/projetos/${projetoId}/cortes`,
+        telas: ['cortes'],
+      },
       {
         icone: 'clapperboard',
         texto: 'Pós-produção',
         to: `/projetos/${projetoId}/post-production`,
-        tela: 'pos',
+        telas: ['pos'],
       },
-      { icone: 'tags', texto: 'Metadados', to: `/projetos/${projetoId}/metadados`, tela: 'metadados' },
+      {
+        icone: 'tags',
+        texto: 'Metadados',
+        to: `/projetos/${projetoId}/metadados`,
+        telas: ['metadados'],
+      },
       {
         icone: 'check-check',
         texto: 'Revisão final',
         to: `/projetos/${projetoId}/final-review`,
-        tela: 'revisao',
+        telas: ['revisao'],
       },
     );
   }
 
-  producao.push({ icone: 'flame', texto: 'Shorts', to: '/shorts', tela: 'shorts' });
+  // Curar um Fire e despachar a prateleira são lugares DENTRO de Shorts,
+  // não destinos próprios do menu: entram como telas do mesmo item.
+  producao.push({
+    icone: 'flame',
+    texto: 'Shorts',
+    to: '/shorts',
+    telas: ['shorts', 'fire', 'prateleira'],
+  });
 
   return {
     producao,
     inteligencia: [
-      { icone: 'radio', texto: 'Buscar lives', to: '/buscar-lives', tela: 'lives' },
-      { icone: 'trophy', texto: 'Ranking', to: '/ranking-lives', tela: 'ranking' },
-      { icone: 'sparkles', texto: 'Padrões de capa', to: '/padroes-thumbnail', tela: 'thumbs' },
-      { icone: 'bar-chart', texto: 'Análises', to: '/analises', tela: 'analises' },
+      { icone: 'radio', texto: 'Buscar lives', to: '/buscar-lives', telas: ['lives'] },
+      { icone: 'trophy', texto: 'Ranking', to: '/ranking-lives', telas: ['ranking'] },
+      { icone: 'sparkles', texto: 'Padrões de capa', to: '/padroes-thumbnail', telas: ['thumbs'] },
+      { icone: 'bar-chart', texto: 'Análises', to: '/analises', telas: ['analises'] },
     ],
+    // `/upgrade/kit` saiu daqui: é rota de nível superior, FORA da casca —
+    // clicar nela descartava trilho e barra superior, sem volta. Continua
+    // alcançável pela URL e pelo ⌘K, que é onde andaime de dev deve morar.
     rodape: [
-      { icone: 'layout-template', texto: 'Componentes', to: '/upgrade/kit', tela: 'kit' },
-      { icone: 'keyboard', texto: 'Atalhos', to: '/atalhos', tela: 'atalhos' },
-      { icone: 'settings', texto: 'Configurações', to: '/canais', tela: 'config' },
+      { icone: 'keyboard', texto: 'Atalhos', to: '/atalhos', telas: ['atalhos'] },
+      { icone: 'settings', texto: 'Configurações', to: '/canais', telas: ['config'] },
     ],
+  };
+}
+
+/** Injeta o lembrete de J/K quando existe seletor e a tela não declarou o seu. */
+function barraComTeclas(barra: ChromeBarra, temSeletor: boolean): ChromeBarra {
+  if (!temSeletor) return barra;
+  const jaTem = barra.teclas?.some((t) => t.teclas.includes('J'));
+  if (jaTem) return barra;
+  return {
+    ...barra,
+    teclas: [{ teclas: ['J', 'K'], texto: 'trocar de corte' }, ...(barra.teclas ?? [])],
   };
 }
 
@@ -172,6 +272,7 @@ function Casca({ children, fila }: CascaProps) {
   const { expandido, alternar } = useTrilho();
   const chrome = useChrome();
   const filaGlobal = useWorkbenchQueueOptional();
+  const janelaLarga = useJanelaLarga();
 
   const tela = telaDaRota(pathname);
   const projetoId = projetoDaRota(pathname);
@@ -188,6 +289,14 @@ function Casca({ children, fila }: CascaProps) {
   // pelo simples ato de fornecer os dados. Duplicar essa decisão numa
   // tabela por rota só criaria duas fontes da verdade que um dia
   // discordariam — e a rota nunca sabe se a lista veio vazia.
+  //
+  // O que a CASCA decide é onde o contexto cabe: na coluna (janela larga)
+  // ou dentro do painel do seletor (janela estreita). Nunca nos dois.
+  const contextoNaColuna = Boolean(chrome.contexto) && janelaLarga;
+  const trilha = useMemo(
+    () => trilhaDaTela(tela, chrome.rotulos, projetoId),
+    [tela, chrome.rotulos, projetoId],
+  );
 
   return (
     <div
@@ -214,8 +323,10 @@ function Casca({ children, fila }: CascaProps) {
 
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
         <TopBar
-          trilha={trilhaDaTela(tela, chrome.rotulos)}
+          trilha={trilha}
           seletor={chrome.seletor}
+          seletorCompacto={contextoNaColuna}
+          contextoNoPainel={contextoNaColuna ? undefined : chrome.contexto}
           estado={chrome.estado}
           tema={theme}
           onAlternarTema={toggleTheme}
@@ -226,7 +337,9 @@ function Casca({ children, fila }: CascaProps) {
         <PaletaDeComandos aberta={buscaAberta} onFechar={() => setBuscaAberta(false)} />
 
         <div style={{ display: 'flex', minHeight: 0, flex: 1 }}>
-          {chrome.contexto ? <ContextColumn contexto={chrome.contexto} /> : null}
+          {contextoNaColuna && chrome.contexto ? (
+            <ContextColumn contexto={chrome.contexto} />
+          ) : null}
 
           <main
             style={{
@@ -270,7 +383,9 @@ function Casca({ children, fila }: CascaProps) {
               </Suspense>
             </div>
 
-            {chrome.barra ? <ActionBar barra={chrome.barra} /> : null}
+            {chrome.barra ? (
+              <ActionBar barra={barraComTeclas(chrome.barra, Boolean(chrome.seletor))} />
+            ) : null}
           </main>
         </div>
       </div>

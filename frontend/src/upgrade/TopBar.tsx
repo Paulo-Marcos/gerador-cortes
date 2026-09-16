@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { EtapasEmLinha, IdentidadeDaLive, LinhaDeContexto } from './ContextColumn';
 import { Icon } from './Icon';
-import type { ChromeSeletor } from './UpgradeChrome';
+import type { ChromeContexto, ChromeSeletor } from './UpgradeChrome';
+import type { Migalha } from './upgradeRoutes';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A barra superior.
@@ -10,11 +13,30 @@ import type { ChromeSeletor } from './UpgradeChrome';
 // estado salvo). O seletor no centro-direita é a peça que muda o
 // ritmo do trabalho: trocar de corte deixa de ser "voltar à lista e
 // escolher" e vira J/K sem tirar os olhos do player.
+//
+// RODADA 1 · duas correções de organização:
+//
+// 1. A trilha voltou a ser navegação. Era um `<span>` por migalha, o
+//    que prometia "como cheguei aqui" e não deixava voltar: de um
+//    corte não havia caminho para a live a não ser pelo trilho.
+//
+// 2. O seletor tem dois tamanhos, e a casca escolhe. Com a coluna de
+//    contexto visível ele encolhe para `‹ #7 ›` — a MESMA lista em dois
+//    lugares ao mesmo tempo era a "sidebar dupla" que o handoff tinha
+//    recusado, reintroduzida como painel. Sem a coluna (janela abaixo
+//    de 1240 px) ele assume o painel inteiro e recebe, no topo, a
+//    identidade da live e a esteira que a coluna levava embora.
 // ─────────────────────────────────────────────────────────────────
 
 type TopBarProps = {
-  trilha: string[];
+  trilha: Migalha[];
   seletor?: ChromeSeletor;
+  /** `true` quando a coluna de contexto está na tela: o seletor vira
+   *  só navegação, sem painel. */
+  seletorCompacto?: boolean;
+  /** O contexto quando ele NÃO está na coluna — vai para o topo do
+   *  painel do seletor, que passa a ser o único lugar que o tem. */
+  contextoNoPainel?: ChromeContexto;
   estado?: { texto: string; icone: 'circle-check' | 'loader' | 'triangle-alert'; cor: string; bg: string };
   tema: 'light' | 'dark';
   onAlternarTema: () => void;
@@ -26,9 +48,10 @@ type TopBarProps = {
   avisosAtivos?: number;
 };
 
-function Trilha({ itens }: { itens: string[] }) {
+function Trilha({ itens }: { itens: Migalha[] }) {
   return (
     <nav
+      aria-label="Trilha"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -38,22 +61,38 @@ function Trilha({ itens }: { itens: string[] }) {
         color: 'var(--mute)',
       }}
     >
-      {itens.map((t, i) => {
+      {itens.map((m, i) => {
         const ultimo = i === itens.length - 1;
+        const rotulo = (
+          <span
+            style={{
+              fontWeight: ultimo ? 700 : 500,
+              color: ultimo ? 'var(--ink)' : 'var(--mute)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: 340,
+            }}
+          >
+            {m.texto}
+          </span>
+        );
         return (
-          <span key={`${t}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-            <span
-              style={{
-                fontWeight: ultimo ? 700 : 500,
-                color: ultimo ? 'var(--ink)' : 'var(--mute)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: 340,
-              }}
-            >
-              {t}
-            </span>
+          <span
+            key={`${m.texto}-${i}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}
+          >
+            {m.to && !ultimo ? (
+              <Link
+                to={m.to}
+                title={`Voltar para ${m.texto}`}
+                style={{ minWidth: 0, color: 'var(--mute)' }}
+              >
+                {rotulo}
+              </Link>
+            ) : (
+              rotulo
+            )}
             {ultimo ? null : (
               <Icon name="chevron-right" size={12} style={{ color: 'var(--dim)' }} />
             )}
@@ -64,7 +103,15 @@ function Trilha({ itens }: { itens: string[] }) {
   );
 }
 
-function SeletorDeCorte({ seletor }: { seletor: ChromeSeletor }) {
+function SeletorDeCorte({
+  seletor,
+  compacto,
+  contexto,
+}: {
+  seletor: ChromeSeletor;
+  compacto: boolean;
+  contexto?: ChromeContexto;
+}) {
   const [aberto, setAberto] = useState(false);
   const caixa = useRef<HTMLDivElement>(null);
 
@@ -87,6 +134,11 @@ function SeletorDeCorte({ seletor }: { seletor: ChromeSeletor }) {
     };
   }, [aberto]);
 
+  // Compacto nunca abre painel: a lista já está na coluna, à esquerda.
+  useEffect(() => {
+    if (compacto) setAberto(false);
+  }, [compacto]);
+
   return (
     <div
       ref={caixa}
@@ -101,29 +153,66 @@ function SeletorDeCorte({ seletor }: { seletor: ChromeSeletor }) {
       >
         <Icon name="chevron-left" size={14} />
       </button>
-      <button
-        type="button"
-        className="btn"
-        onClick={() => setAberto((v) => !v)}
-        style={{ borderColor: aberto ? 'var(--accent)' : 'var(--line)', minWidth: 190 }}
-      >
-        <Icon name="scissors" size={12} style={{ color: 'var(--accent)' }} />
-        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
-          #{seletor.num}
-        </span>
+
+      {compacto ? (
         <span
+          title={`#${seletor.num} · ${seletor.titulo}`}
           style={{
-            minWidth: 0,
-            flex: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            textAlign: 'left',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            height: 30,
+            padding: '0 10px',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--r2)',
+            background: 'var(--inset)',
+            maxWidth: 240,
           }}
         >
-          {seletor.titulo}
+          <Icon name="scissors" size={12} style={{ color: 'var(--accent)' }} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
+            #{seletor.num}
+          </span>
+          <span
+            style={{
+              minWidth: 0,
+              fontSize: 12,
+              fontWeight: 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {seletor.titulo}
+          </span>
         </span>
-        <Icon name="chevron-down" size={12} style={{ color: 'var(--dim)' }} />
-      </button>
+      ) : (
+        <button
+          type="button"
+          className="btn"
+          onClick={() => setAberto((v) => !v)}
+          aria-expanded={aberto}
+          style={{ borderColor: aberto ? 'var(--accent)' : 'var(--line)', minWidth: 190 }}
+        >
+          <Icon name="scissors" size={12} style={{ color: 'var(--accent)' }} />
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--mute)' }}>
+            #{seletor.num}
+          </span>
+          <span
+            style={{
+              minWidth: 0,
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              textAlign: 'left',
+            }}
+          >
+            {seletor.titulo}
+          </span>
+          <Icon name="chevron-down" size={12} style={{ color: 'var(--dim)' }} />
+        </button>
+      )}
+
       <button
         type="button"
         className="btn btn-icon"
@@ -134,7 +223,7 @@ function SeletorDeCorte({ seletor }: { seletor: ChromeSeletor }) {
         <Icon name="chevron-right" size={14} />
       </button>
 
-      {aberto ? (
+      {aberto && !compacto ? (
         <div
           className="card"
           style={{
@@ -149,6 +238,28 @@ function SeletorDeCorte({ seletor }: { seletor: ChromeSeletor }) {
             boxShadow: '0 18px 44px rgb(0 0 0/.28)',
           }}
         >
+          {/* O que a coluna de contexto mostraria se houvesse largura para
+              ela. Aqui não é repetição: é o único lugar onde a identidade
+              da live e a esteira existem nesta largura de janela. */}
+          {contexto ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                padding: 11,
+                borderBottom: '1px solid var(--line2)',
+              }}
+            >
+              <IdentidadeDaLive
+                titulo={contexto.titulo}
+                sub={contexto.sub}
+                thumb={contexto.thumb}
+              />
+              {contexto.etapas?.length ? <EtapasEmLinha etapas={contexto.etapas} /> : null}
+            </div>
+          ) : null}
+
           <div
             style={{
               display: 'flex',
@@ -174,6 +285,7 @@ function SeletorDeCorte({ seletor }: { seletor: ChromeSeletor }) {
                   key={f.texto}
                   type="button"
                   onClick={f.onClick}
+                  aria-pressed={f.ativo}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -196,94 +308,26 @@ function SeletorDeCorte({ seletor }: { seletor: ChromeSeletor }) {
             </div>
           ) : null}
 
+          {/* A lista do painel é a MESMA linha da coluna de contexto — um
+              componente, dois lugares que nunca aparecem juntos. */}
           <div style={{ maxHeight: 300, overflow: 'auto', padding: '0 7px 7px' }}>
             {seletor.itens.map((c) => (
-              <button
+              <LinhaDeContexto
                 key={c.id}
-                type="button"
-                className="row"
-                onClick={() => {
-                  c.onClick?.();
-                  setAberto(false);
+                item={{
+                  id: c.id,
+                  titulo: c.titulo,
+                  legenda: c.inicio ? `#${c.num} · ${c.inicio} → ${c.fim ?? ''}` : `#${c.num}`,
+                  dur: c.dur,
+                  thumb: c.thumb,
+                  dot: c.statusCor,
+                  ativo: c.ativo,
+                  onClick: () => {
+                    c.onClick?.();
+                    setAberto(false);
+                  },
                 }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 9,
-                  width: '100%',
-                  padding: 7,
-                  border: `1px solid ${c.ativo ? 'var(--accent)' : 'transparent'}`,
-                  borderRadius: 'var(--r2)',
-                  background: c.ativo ? 'var(--accent-soft)' : 'transparent',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  marginBottom: 2,
-                }}
-              >
-                <span
-                  style={{
-                    position: 'relative',
-                    width: 52,
-                    height: 30,
-                    flex: 'none',
-                    borderRadius: 'var(--r1)',
-                    overflow: 'hidden',
-                    background:
-                      'linear-gradient(135deg,oklch(0.55 0.05 250),oklch(0.28 0.04 250))',
-                  }}
-                >
-                  <span
-                    style={{
-                      position: 'absolute',
-                      bottom: 1,
-                      right: 2,
-                      fontFamily: 'var(--mono)',
-                      fontSize: 8.5,
-                      color: '#fff',
-                    }}
-                  >
-                    {c.dur}
-                  </span>
-                </span>
-                <span style={{ minWidth: 0, flex: 1 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--dim)' }}>
-                      #{c.num}
-                    </span>
-                    <span
-                      style={{
-                        minWidth: 0,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {c.titulo}
-                    </span>
-                    {c.fire ? (
-                      <span style={{ color: 'var(--accent)' }}>
-                        <Icon name="flame" size={11} />
-                      </span>
-                    ) : null}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 2 }}>
-                    <span
-                      className="chip"
-                      style={{ height: 18, background: c.statusBg, color: c.statusCor }}
-                    >
-                      {c.status}
-                    </span>
-                    {c.inicio ? (
-                      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--dim)' }}>
-                        {c.inicio} → {c.fim}
-                      </span>
-                    ) : null}
-                  </span>
-                </span>
-                <Icon name="chevron-right" size={13} style={{ color: 'var(--dim)' }} />
-              </button>
+              />
             ))}
           </div>
 
@@ -334,6 +378,8 @@ function SeletorDeCorte({ seletor }: { seletor: ChromeSeletor }) {
 export function TopBar({
   trilha,
   seletor,
+  seletorCompacto = false,
+  contextoNoPainel,
   estado,
   tema,
   onAlternarTema,
@@ -357,7 +403,13 @@ export function TopBar({
       <Trilha itens={trilha} />
       <div style={{ flex: 1 }} />
 
-      {seletor ? <SeletorDeCorte seletor={seletor} /> : null}
+      {seletor ? (
+        <SeletorDeCorte
+          seletor={seletor}
+          compacto={seletorCompacto}
+          contexto={contextoNoPainel}
+        />
+      ) : null}
 
       <button
         type="button"
@@ -373,7 +425,7 @@ export function TopBar({
         }}
       >
         <Icon name="command" size={12} />
-        Buscar live, corte, ação…
+        Buscar live, tela ou ação…
         <span style={{ flex: 1 }} />
         <kbd>⌘K</kbd>
       </button>

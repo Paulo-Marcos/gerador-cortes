@@ -12,6 +12,12 @@ import type { TelaId } from './upgradeRoutes';
 //
 // Recolhido ele vira 54 px de ícone puro — e por isso todo botão
 // carrega `title`: no estado estreito, o title É o rótulo.
+//
+// RODADA 1 · cada item guarda AS TELAS que ele representa, não uma.
+// Antes, curar um Fire (`fire`), despachar a prateleira
+// (`prateleira`), a Fila, o kit e o 404 não acendiam nada: o trilho
+// inteiro ficava apagado justamente nas telas mais profundas do app,
+// onde "onde estou" é a pergunta mais cara.
 // ─────────────────────────────────────────────────────────────────
 
 export const TRILHO_LARGO = '212px';
@@ -29,7 +35,11 @@ export type ItemTrilho = {
   icone: IconName;
   texto: string;
   to: string;
-  tela: TelaId;
+  /** Todas as telas em que este item é o lugar onde a pessoa está —
+   *  a primeira é a canônica. Telas-filhas entram aqui, e não em itens
+   *  próprios: "Curar o Fire #7" não é um destino do menu, é um lugar
+   *  DENTRO de Shorts. */
+  telas: TelaId[];
   badge?: string;
 };
 
@@ -56,6 +66,7 @@ function ItemBotao({
     <NavLink
       to={item.to}
       title={item.texto}
+      aria-current={ativo ? 'page' : undefined}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -107,6 +118,7 @@ export function GlobalRail({
 }: GlobalRailProps) {
   const navigate = useNavigate();
   const mostrarTexto = expandido;
+  const aceso = (item: ItemTrilho) => item.telas.includes(telaAtual);
 
   return (
     <aside
@@ -163,7 +175,7 @@ export function GlobalRail({
           type="button"
           onClick={onAlternar}
           className="btn btn-icon"
-          title={expandido ? 'Recolher o trilho' : 'Expandir o trilho'}
+          title={expandido ? 'Recolher o trilho · ⌘B' : 'Expandir o trilho · ⌘B'}
           style={{
             marginLeft: expandido ? 'auto' : undefined,
             height: 24,
@@ -185,7 +197,7 @@ export function GlobalRail({
         </span>
       ) : null}
       {producao.map((i) => (
-        <ItemBotao key={i.to} item={i} ativo={i.tela === telaAtual} mostrarTexto={mostrarTexto} />
+        <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
       ))}
 
       {mostrarTexto ? (
@@ -194,7 +206,7 @@ export function GlobalRail({
         </span>
       ) : null}
       {inteligencia.map((i) => (
-        <ItemBotao key={i.to} item={i} ativo={i.tela === telaAtual} mostrarTexto={mostrarTexto} />
+        <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
       ))}
 
       <div style={{ flex: 1 }} />
@@ -253,8 +265,13 @@ export function GlobalRail({
         </button>
       ) : null}
 
+      {mostrarTexto ? (
+        <span className="lbl" style={{ padding: '10px 4px 4px' }}>
+          Ferramentas
+        </span>
+      ) : null}
       {rodape.map((i) => (
-        <ItemBotao key={i.to} item={i} ativo={i.tela === telaAtual} mostrarTexto={mostrarTexto} />
+        <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
       ))}
     </aside>
   );

@@ -10,6 +10,11 @@ import type { ChromeBarra } from './UpgradeChrome';
 // pessoa esteja na página. A ordem também é fixa: lembretes de tecla
 // à esquerda, depois o fiel, depois secundário → terciário → primário.
 // Quem aprende a ordem uma vez a encontra em todas as telas.
+//
+// RODADA 1 · o ↵ só aparece quando ele FUNCIONA. A casca passou a
+// ligar Enter ao botão primário (ver `useAtalhosDaCasca`); com o botão
+// desabilitado, a tecla não faz nada e a legenda sai. Atalho anunciado
+// e não cumprido ensina a desconfiar de todos os outros.
 // ─────────────────────────────────────────────────────────────────
 
 export function ActionBar({ barra }: { barra: ChromeBarra }) {
@@ -64,6 +69,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
           type="button"
           className="btn btn-icon"
           title={barra.terciario.titulo}
+          aria-label={barra.terciario.titulo}
           onClick={barra.terciario.onClick}
         >
           <Icon name={barra.terciario.icone} size={13} />
@@ -81,9 +87,17 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
       >
         <Icon name={barra.primario.icone} size={13} />
         {barra.primario.texto}
-        <kbd style={{ background: 'rgb(255 255 255/.2)', borderColor: 'transparent', color: 'inherit' }}>
-          ↵
-        </kbd>
+        {barra.primario.desabilitado ? null : (
+          <kbd
+            style={{
+              background: 'rgb(255 255 255/.2)',
+              borderColor: 'transparent',
+              color: 'inherit',
+            }}
+          >
+            ↵
+          </kbd>
+        )}
       </button>
     </div>
   );

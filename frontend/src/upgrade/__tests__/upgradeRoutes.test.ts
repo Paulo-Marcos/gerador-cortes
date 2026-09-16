@@ -45,9 +45,16 @@ describe('projetoDaRota e corteDaRota', () => {
   });
 });
 
+// A trilha devolve MIGALHAS ({texto, to}) desde a Rodada 1: breadcrumb que
+// nao leva a lugar nenhum e decoracao. Os testes abaixo cobrem as tres
+// regras que sustentam isso — ordem dos slots, destino de cada migalha e a
+// ultima sempre sem link.
 describe('trilhaDaTela', () => {
+  const textos = (tela: Parameters<typeof trilhaDaTela>[0], rotulos?: Array<string>, id?: string) =>
+    trilhaDaTela(tela, rotulos, id).map((m) => m.texto);
+
   it('encaixa os rotulos nos slots, na ordem do design', () => {
-    expect(trilhaDaTela('cortes', ['LIVE 267', '#7'])).toEqual([
+    expect(textos('cortes', ['LIVE 267', '#7'], '267')).toEqual([
       'Biblioteca',
       'LIVE 267',
       'Cortes',
@@ -56,11 +63,43 @@ describe('trilhaDaTela', () => {
   });
 
   it('descarta o slot sem rotulo em vez de deixar buraco', () => {
-    expect(trilhaDaTela('cortes', ['LIVE 267'])).toEqual(['Biblioteca', 'LIVE 267', 'Cortes']);
-    expect(trilhaDaTela('cortes')).toEqual(['Biblioteca', 'Cortes']);
+    expect(textos('cortes', ['LIVE 267'], '267')).toEqual(['Biblioteca', 'LIVE 267', 'Cortes']);
+    expect(textos('cortes')).toEqual(['Biblioteca', 'Cortes']);
   });
 
   it('ignora rotulos sobrando', () => {
-    expect(trilhaDaTela('shorts', ['LIVE 267', '#7'])).toEqual(['Shorts']);
+    expect(textos('shorts', ['LIVE 267', '#7'])).toEqual(['Shorts']);
+  });
+
+  it('da destino as migalhas fixas e ao nome da live', () => {
+    const trilha = trilhaDaTela('cortes', ['LIVE 267', '#7'], '267');
+    expect(trilha[0]).toEqual({ texto: 'Biblioteca', to: '/projetos' });
+    // O primeiro slot das telas de dentro de uma live e sempre a live.
+    expect(trilha[1]).toEqual({ texto: 'LIVE 267', to: '/projetos/267' });
+    expect(trilha[2]).toEqual({ texto: 'Cortes', to: '/projetos/267/cortes' });
+  });
+
+  it('nunca linka a ultima migalha — e onde a pessoa ja esta', () => {
+    const trilha = trilhaDaTela('cortes', ['LIVE 267', '#7'], '267');
+    expect(trilha[trilha.length - 1]).toEqual({ texto: '#7' });
+    // Mesmo quando a ultima e uma migalha fixa que TEM rota conhecida.
+    const naBiblioteca = trilhaDaTela('biblioteca');
+    expect(naBiblioteca).toEqual([{ texto: 'Biblioteca' }]);
+  });
+
+  it('omite o destino quando nao existe projeto na rota', () => {
+    const trilha = trilhaDaTela('cortes', ['LIVE 267', '#7']);
+    expect(trilha[1].to).toBeUndefined();
+    expect(trilha[2].to).toBeUndefined();
+  });
+
+  it('aceita destino explicito da tela, sobrepondo o padrao', () => {
+    const trilha = trilhaDaTela('cortes', [{ texto: 'LIVE 267', to: '/projetos/267?aba=cortes' }, '#7'], '267');
+    expect(trilha[1].to).toBe('/projetos/267?aba=cortes');
+  });
+
+  it('nao linka "Inteligencia" — e nome de grupo do trilho, nao de tela', () => {
+    const trilha = trilhaDaTela('ranking');
+    expect(trilha[0]).toEqual({ texto: 'Inteligência' });
   });
 });

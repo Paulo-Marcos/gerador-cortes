@@ -244,7 +244,9 @@ export function ChannelsPage() {
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
-        isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+        // Dentro da casca a tela mora num miolo que ja rola; 100vh ali
+        // empurrava o fim da pagina para baixo da barra de acoes.
+        CASCA_NOVA || isWorkbenchEnabled() ? 'h-full' : 'h-screen',
       )}
     >
       <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Check, Image, Loader2, RefreshCw, Rocket, Sparkles, Tag } from 'lucide-react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCortesProjeto } from '@/hooks/useEditor';
-import { useExportStatus } from '@/hooks/useProjetoDetalhe';
+import { useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
 import { cn } from '@/lib/utils';
 import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
@@ -31,6 +31,8 @@ export function MetadataPage() {
   const refs = useRef<Record<string, HTMLElement | null>>({});
   const cortesQuery = useCortesProjeto(projetoId);
   const exportQuery = useExportStatus(projetoId);
+  const projetoQuery = useProjeto(projetoId);
+  const navigate = useNavigate();
   const workbench = isWorkbenchEnabled();
 
   const cuts = useMemo(
@@ -105,7 +107,12 @@ export function MetadataPage() {
         ? `Metadados & capas — Corte #${corteAtivo.numero}`
         : 'Metadados & capas',
       sub: `${stats.ready} de ${stats.total} cortes prontos · ${stats.prompts} prompts de capa · ${stats.thumbs} capas`,
-      rotulos: corteAtivo ? [`#${corteAtivo.numero}`] : [],
+      // O primeiro slot da trilha de Metadados e a LIVE, o segundo o corte. So o
+      // numero caia no lugar da live e a trilha lia "Biblioteca > #7 > Metadados".
+      rotulos: [
+        projetoQuery.data?.titulo_live ?? 'Live',
+        ...(corteAtivo ? [`#${corteAtivo.numero}`] : []),
+      ],
       contexto:
         cuts.length > 0
           ? {
@@ -147,7 +154,7 @@ export function MetadataPage() {
             }),
             onAnterior: () => irParaCorte(-1),
             onProximo: () => irParaCorte(1),
-            onVerTodos: () => undefined,
+            onVerTodos: () => navigate(`/projetos/${projetoId}`),
           }
         : undefined,
       barra:
@@ -188,7 +195,7 @@ export function MetadataPage() {
             }
           : undefined,
     },
-    [cuts, activeId, stats, metaById, statusMap, cortesProntos.length],
+    [cuts, activeId, stats, metaById, statusMap, cortesProntos.length, projetoQuery.data?.titulo_live],
   );
 
   if (!projetoId) {

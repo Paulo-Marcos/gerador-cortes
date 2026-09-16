@@ -8,6 +8,12 @@ import type { IconName } from './Icon';
 // tradução, e ele fica sozinho de propósito: a casca inteira depende
 // de saber "onde estou", e concentrar essa resposta num lugar só
 // evita que cada peça da casca invente a própria regex.
+//
+// RODADA 1 · a trilha passou a devolver DESTINOS, não texto. Uma
+// migalha que diz "como cheguei aqui" e não deixa voltar é decoração;
+// breadcrumb é navegação. O destino de cada migalha fixa mora aqui
+// (ROTA_FIXA) e o das migalhas de dados também (SLOT_ROTA) — assim
+// nenhuma tela precisou aprender a montar a própria trilha.
 // ─────────────────────────────────────────────────────────────────
 
 export type TelaId =
@@ -29,6 +35,9 @@ export type TelaId =
   | 'fila'
   | 'kit'
   | 'erro';
+
+/** Uma migalha da trilha. Sem `to` ela é texto — é o caso da última. */
+export type Migalha = { texto: string; to?: string };
 
 const PADROES: Array<[RegExp, TelaId]> = [
   [/^\/projetos\/[^/]+\/cortes/, 'cortes'],
@@ -95,8 +104,9 @@ export const CABECALHO: Record<TelaId, { icone: IconName; titulo: string }> = {
 };
 
 // ── Trilha (breadcrumb) ──────────────────────────────────────────
-// A última migalha é sempre a tela atual, em peso 700. As anteriores
-// situam: a trilha responde "como cheguei aqui", não "o que é isto".
+// A última migalha é sempre a tela atual, em peso 700 e SEM destino:
+// clicar em "onde estou" não é lugar nenhum. As anteriores situam e
+// levam de volta.
 //
 // O token `{}` marca onde entra um rótulo vindo da tela — o nome da
 // live, o número do corte. A posição importa: "Biblioteca › LIVE 267 ›
@@ -128,16 +138,68 @@ const TRILHA_BASE: Record<TelaId, string[]> = {
 };
 
 /**
+ * Destino das migalhas de texto fixo. "Inteligência" fica de fora de
+ * propósito: é o nome de um GRUPO do trilho, não de uma tela — dar a
+ * ela um link seria prometer uma página que não existe.
+ */
+const ROTA_FIXA: Record<string, (projetoId: string | null) => string | undefined> = {
+  Biblioteca: () => '/projetos',
+  Shorts: () => '/shorts',
+  Cortes: (id) => (id ? `/projetos/${id}/cortes` : undefined),
+  'Pós-produção': (id) => (id ? `/projetos/${id}/post-production` : undefined),
+  Metadados: (id) => (id ? `/projetos/${id}/metadados` : undefined),
+  'Revisão final': (id) => (id ? `/projetos/${id}/final-review` : undefined),
+  Fila: () => '/fila',
+  Configurações: () => '/canais',
+};
+
+/**
+ * Destino PADRÃO de cada slot, por tela e por posição. É o que torna
+ * "LIVE 267" clicável sem que nenhuma tela mude uma linha: o primeiro
+ * slot das telas de dentro de uma live é sempre a própria live.
+ *
+ * Uma tela pode sobrescrever passando `{ texto, to }` em vez de string.
+ */
+const SLOT_ROTA: Partial<Record<TelaId, Array<(projetoId: string | null) => string | undefined>>> = {
+  cortes: [(id) => (id ? `/projetos/${id}` : undefined)],
+  pos: [(id) => (id ? `/projetos/${id}` : undefined)],
+  metadados: [(id) => (id ? `/projetos/${id}` : undefined)],
+  revisao: [(id) => (id ? `/projetos/${id}` : undefined)],
+};
+
+/**
  * Monta a trilha preenchendo os slots `{}` com `rotulos`, na ordem.
  * Slots sobrando somem; rótulos sobrando são ignorados.
+ *
+ * `rotulos` aceita string (o caso comum — o destino vem de SLOT_ROTA)
+ * ou `{ texto, to }` quando a tela quer mandar no destino.
  */
-export function trilhaDaTela(tela: TelaId, rotulos: string[] = []): string[] {
+export function trilhaDaTela(
+  tela: TelaId,
+  rotulos: Array<string | Migalha> = [],
+  projetoId: string | null = null,
+): Migalha[] {
   const base = TRILHA_BASE[tela] ?? TRILHA_BASE.biblioteca;
+  const destinosDeSlot = SLOT_ROTA[tela] ?? [];
   let proximo = 0;
-  return base.flatMap((parte) => {
-    if (parte !== SLOT) return [parte];
-    const rotulo = rotulos[proximo];
+
+  const migalhas = base.flatMap<Migalha>((parte) => {
+    if (parte !== SLOT) {
+      return [{ texto: parte, to: ROTA_FIXA[parte]?.(projetoId) }];
+    }
+    const posicao = proximo;
+    const rotulo = rotulos[posicao];
     proximo += 1;
-    return rotulo ? [rotulo] : [];
+    if (!rotulo) return [];
+    if (typeof rotulo === 'string') {
+      return [{ texto: rotulo, to: destinosDeSlot[posicao]?.(projetoId) }];
+    }
+    return [{ texto: rotulo.texto, to: rotulo.to ?? destinosDeSlot[posicao]?.(projetoId) }];
   });
+
+  // A última migalha é o lugar onde a pessoa já está. Link para cá só
+  // gastaria um clique para não sair do lugar.
+  if (migalhas.length > 0) migalhas[migalhas.length - 1] = { texto: migalhas[migalhas.length - 1].texto };
+
+  return migalhas;
 }

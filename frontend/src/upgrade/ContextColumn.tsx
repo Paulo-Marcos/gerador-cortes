@@ -9,8 +9,13 @@ import type { ChromeContexto, EtapaProjeto } from './UpgradeChrome';
 // está fazendo. Nas telas de lista a fila JÁ é o conteúdo, e repetir
 // a lista ao lado da lista seria ruído caro.
 //
-// Abaixo de 1240 px ela some (regra `.ctx` no upgrade.css): numa
-// janela estreita, 250 px de contexto custam mais do que valem.
+// RODADA 1 · quem decide se ela aparece é a CASCA, por medida de
+// janela (`UpgradeShell`), e não mais a regra `.ctx{display:none}` do
+// CSS. A diferença importa: com `display:none` a identidade da live e
+// a esteira clicável simplesmente evaporavam abaixo de 1240 px, sem
+// substituto. Agora a casca sabe que a coluna não está lá e manda as
+// duas peças para o painel do seletor — as duas moram aqui e são
+// exportadas para isso.
 // ─────────────────────────────────────────────────────────────────
 
 const ESTADO_ETAPA = {
@@ -18,6 +23,199 @@ const ESTADO_ETAPA = {
   agora: { bg: 'var(--accent)', cor: 'var(--on-accent)', borda: 'transparent' },
   todo: { bg: 'var(--inset)', cor: 'var(--dim)', borda: 'var(--line)' },
 } satisfies Record<EtapaProjeto['estado'], { bg: string; cor: string; borda: string }>;
+
+/** Miniatura + nome da live. Reaproveitada no painel do seletor. */
+export function IdentidadeDaLive({
+  titulo,
+  sub,
+  thumb,
+}: {
+  titulo: string;
+  sub?: string;
+  thumb?: string;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
+      <span
+        style={{
+          width: 44,
+          height: 26,
+          flex: 'none',
+          borderRadius: 'var(--r1)',
+          overflow: 'hidden',
+          // Sem thumb real ainda: cinza de ausência, não gradiente de
+          // protótipo. Azul-bonito em 14 linhas iguais não identifica nada.
+          background: 'var(--inset)',
+        }}
+        aria-hidden
+      >
+        {thumb ? (
+          <img
+            src={thumb}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : null}
+      </span>
+      <span style={{ minWidth: 0 }}>
+        <span
+          style={{
+            display: 'block',
+            fontSize: 12.5,
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {titulo}
+        </span>
+        {sub ? (
+          <span
+            style={{
+              display: 'block',
+              fontSize: 11,
+              color: 'var(--mute)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {sub}
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+/** A esteira da live em uma linha de botões de 24 px. */
+export function EtapasEmLinha({ etapas }: { etapas: EtapaProjeto[] }) {
+  if (etapas.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      {etapas.map((e) => {
+        const tom = ESTADO_ETAPA[e.estado];
+        return (
+          <button
+            key={e.titulo}
+            type="button"
+            onClick={e.onClick}
+            title={e.titulo}
+            aria-label={e.titulo}
+            aria-current={e.estado === 'agora' ? 'step' : undefined}
+            style={{
+              display: 'grid',
+              placeItems: 'center',
+              width: '100%',
+              height: 24,
+              border: `1px solid ${tom.borda}`,
+              borderRadius: 'var(--r1)',
+              background: tom.bg,
+              color: tom.cor,
+              cursor: e.onClick ? 'pointer' : 'default',
+            }}
+          >
+            <Icon name={e.icone} size={12} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Uma linha da lista de cortes. Compartilhada com o painel do seletor. */
+export function LinhaDeContexto({
+  item,
+}: {
+  item: ChromeContexto['itens'][number];
+}) {
+  return (
+    <button
+      type="button"
+      className="row"
+      onClick={item.onClick}
+      aria-current={item.ativo ? 'true' : undefined}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        width: '100%',
+        padding: 7,
+        border: `1px solid ${item.ativo ? 'var(--accent)' : 'transparent'}`,
+        borderRadius: 'var(--r2)',
+        background: item.ativo ? 'var(--accent-soft)' : 'transparent',
+        cursor: 'pointer',
+        textAlign: 'left',
+        marginBottom: 2,
+      }}
+    >
+      <span
+        style={{
+          position: 'relative',
+          width: 38,
+          height: 22,
+          flex: 'none',
+          borderRadius: 'var(--r1)',
+          overflow: 'hidden',
+          background: 'var(--inset)',
+        }}
+      >
+        {item.thumb ? (
+          <img
+            src={item.thumb}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : null}
+        {item.dur ? (
+          <span
+            style={{
+              position: 'absolute',
+              inset: 'auto 1px 1px auto',
+              padding: '0 2px',
+              borderRadius: 2,
+              background: 'rgb(0 0 0/.55)',
+              fontFamily: 'var(--mono)',
+              fontSize: 8,
+              color: '#fff',
+            }}
+          >
+            {item.dur}
+          </span>
+        ) : null}
+      </span>
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <span
+          style={{
+            display: 'block',
+            fontSize: 11.5,
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {item.titulo}
+        </span>
+        <span
+          style={{
+            display: 'block',
+            fontFamily: 'var(--mono)',
+            fontSize: 10,
+            color: 'var(--mute)',
+          }}
+        >
+          {item.legenda}
+        </span>
+      </span>
+      <span
+        style={{ width: 7, height: 7, flex: 'none', borderRadius: 99, background: item.dot }}
+        aria-hidden
+      />
+    </button>
+  );
+}
 
 export function ContextColumn({ contexto }: { contexto: ChromeContexto }) {
   return (
@@ -41,75 +239,8 @@ export function ContextColumn({ contexto }: { contexto: ChromeContexto }) {
           borderBottom: '1px solid var(--line2)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
-          <span
-            style={{
-              width: 44,
-              height: 26,
-              flex: 'none',
-              borderRadius: 'var(--r1)',
-              background: 'linear-gradient(135deg,oklch(0.62 0.06 250),oklch(0.34 0.05 250))',
-            }}
-            aria-hidden
-          />
-          <span style={{ minWidth: 0 }}>
-            <span
-              style={{
-                display: 'block',
-                fontSize: 12.5,
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {contexto.titulo}
-            </span>
-            {contexto.sub ? (
-              <span
-                style={{
-                  display: 'block',
-                  fontSize: 11,
-                  color: 'var(--mute)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {contexto.sub}
-              </span>
-            ) : null}
-          </span>
-        </div>
-
-        {contexto.etapas?.length ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {contexto.etapas.map((e) => {
-              const tom = ESTADO_ETAPA[e.estado];
-              return (
-                <button
-                  key={e.titulo}
-                  type="button"
-                  onClick={e.onClick}
-                  title={e.titulo}
-                  style={{
-                    display: 'grid',
-                    placeItems: 'center',
-                    width: '100%',
-                    height: 24,
-                    border: `1px solid ${tom.borda}`,
-                    borderRadius: 'var(--r1)',
-                    background: tom.bg,
-                    color: tom.cor,
-                    cursor: e.onClick ? 'pointer' : 'default',
-                  }}
-                >
-                  <Icon name={e.icone} size={12} />
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
+        <IdentidadeDaLive titulo={contexto.titulo} sub={contexto.sub} thumb={contexto.thumb} />
+        {contexto.etapas?.length ? <EtapasEmLinha etapas={contexto.etapas} /> : null}
       </div>
 
       <div
@@ -132,78 +263,7 @@ export function ContextColumn({ contexto }: { contexto: ChromeContexto }) {
 
       <div style={{ flex: 1, overflow: 'auto', padding: 6 }}>
         {contexto.itens.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className="row"
-            onClick={c.onClick}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              width: '100%',
-              padding: 7,
-              border: `1px solid ${c.ativo ? 'var(--accent)' : 'transparent'}`,
-              borderRadius: 'var(--r2)',
-              background: c.ativo ? 'var(--accent-soft)' : 'transparent',
-              cursor: 'pointer',
-              textAlign: 'left',
-              marginBottom: 2,
-            }}
-          >
-            <span
-              style={{
-                position: 'relative',
-                width: 38,
-                height: 22,
-                flex: 'none',
-                borderRadius: 'var(--r1)',
-                background: 'linear-gradient(135deg,oklch(0.55 0.05 250),oklch(0.3 0.04 250))',
-              }}
-            >
-              {c.dur ? (
-                <span
-                  style={{
-                    position: 'absolute',
-                    inset: 'auto 1px 1px auto',
-                    fontFamily: 'var(--mono)',
-                    fontSize: 8,
-                    color: '#fff',
-                  }}
-                >
-                  {c.dur}
-                </span>
-              ) : null}
-            </span>
-            <span style={{ minWidth: 0, flex: 1 }}>
-              <span
-                style={{
-                  display: 'block',
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {c.titulo}
-              </span>
-              <span
-                style={{
-                  display: 'block',
-                  fontFamily: 'var(--mono)',
-                  fontSize: 10,
-                  color: 'var(--mute)',
-                }}
-              >
-                {c.legenda}
-              </span>
-            </span>
-            <span
-              style={{ width: 7, height: 7, flex: 'none', borderRadius: 99, background: c.dot }}
-              aria-hidden
-            />
-          </button>
+          <LinhaDeContexto key={c.id} item={c} />
         ))}
       </div>
 

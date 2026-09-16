@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { IconName } from './Icon';
 import type { ScreenAction } from './ScreenHeader';
+import type { Migalha } from './upgradeRoutes';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · Como a tela conversa com a casca.
@@ -24,6 +25,11 @@ import type { ScreenAction } from './ScreenHeader';
 // contexto, o seletor e a barra de ações aparecem exatamente quando a
 // tela os fornece. Sem dados, a casca ainda desenha — apenas mais
 // quieta.
+//
+// RODADA 1 · duas frouxidões fechadas no contrato:
+//   · `rotulos` aceita `{ texto, to }` — a trilha virou navegação;
+//   · `thumb` existe em contexto e seletor, para as listas pararem de
+//     desenhar o gradiente azul do protótipo em 14 linhas iguais.
 // ─────────────────────────────────────────────────────────────────
 
 export type ContextoItem = {
@@ -31,6 +37,8 @@ export type ContextoItem = {
   titulo: string;
   legenda: string;
   dur?: string;
+  /** URL da miniatura real (`thumbnailUrl` / `resolveThumbUrl`). */
+  thumb?: string;
   /** Cor da bolinha de estado à direita. */
   dot: string;
   ativo?: boolean;
@@ -47,6 +55,8 @@ export type EtapaProjeto = {
 export type ChromeContexto = {
   titulo: string;
   sub?: string;
+  /** Miniatura da live. */
+  thumb?: string;
   etapas?: EtapaProjeto[];
   listaTitulo: string;
   listaResumo?: string;
@@ -59,6 +69,7 @@ export type SeletorItem = {
   num: string;
   titulo: string;
   dur?: string;
+  thumb?: string;
   inicio?: string;
   fim?: string;
   status: string;
@@ -89,7 +100,8 @@ export type ChromeBarra = {
    *  publicar). O botão fica VISÍVEL e apagado, não some: a ausência dele
    *  mudaria a barra de lugar e esconderia a resposta "ainda não dá". */
   primario: { texto: string; icone: IconName; onClick?: () => void; desabilitado?: boolean };
-  /** Lembretes de teclado à esquerda ("J K trocar de corte"). */
+  /** Lembretes de teclado à esquerda. A casca já injeta o de J/K quando há
+   *  seletor — declarar aqui é para o que a TELA acrescenta (Space, etc.). */
   teclas?: Array<{ teclas: string[]; texto: string }>;
   /** Controles de lote (destinos, agendamento) à esquerda do fiel. */
   extra?: ReactNode;
@@ -112,8 +124,9 @@ export type Chrome = {
   /** Bancada: o miolo ocupa a altura toda e rola por dentro, não por fora.
       Um player com barra de rolagem da página é um player que some. */
   denso?: boolean;
-  /** Migalhas do meio: "LIVE 267", "#7". */
-  rotulos?: string[];
+  /** Migalhas do meio: "LIVE 267", "#7". String usa o destino padrão da
+      rota; `{ texto, to }` quando a tela quer mandar no destino. */
+  rotulos?: Array<string | Migalha>;
   /** Chip de estado na barra superior ("salvo", "salvando…", "erro"). */
   estado?: ChromeEstado;
   contexto?: ChromeContexto;
