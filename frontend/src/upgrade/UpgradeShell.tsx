@@ -6,7 +6,7 @@ import {
   type QueueJob,
 } from '@/components/workbench/useWorkbenchQueue';
 import { ActionBar } from './ActionBar';
-import { ContextColumn } from './ContextColumn';
+import { ColunaRecolhida, ContextColumn } from './ContextColumn';
 import { FitaDaLive } from './FitaDaLive';
 import { GlobalRail, TRILHO_ESTREITO, TRILHO_LARGO, type FilaDoTrilho } from './GlobalRail';
 import { Icon } from './Icon';
@@ -83,6 +83,30 @@ function filaDoTrilho(jobs: QueueJob[], naFila: boolean): FilaDoTrilho | undefin
     progresso: rodando.progresso,
     to: '/fila',
   };
+}
+
+const COLUNA_KEY = 'upgrade-coluna-recolhida';
+
+/** Um liga/desliga lembrado entre visitas (localStorage, com tolerância). */
+function usePreferenciaLigada(chave: string): [boolean, () => void] {
+  const [ligada, setLigada] = useState(() => {
+    try {
+      return window.localStorage.getItem(chave) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const alternar = useCallback(() => {
+    setLigada((atual) => {
+      try {
+        window.localStorage.setItem(chave, atual ? '0' : '1');
+      } catch {
+        // sem localStorage a escolha vale só nesta visita
+      }
+      return !atual;
+    });
+  }, [chave]);
+  return [ligada, alternar];
 }
 
 function useTrilho() {
@@ -223,7 +247,10 @@ function Casca({ children, fila }: CascaProps) {
   // de fornecer os dados. O que a CASCA decide é ONDE a lista cabe: na
   // coluna (janela larga) ou dentro do painel do seletor. Nunca nos dois.
   const { lista, atual } = useMemo(() => listaDoChrome(chrome), [chrome]);
-  const listaNaColuna = Boolean(lista) && janelaLarga;
+  const [colunaRecolhida, alternarColuna] = usePreferenciaLigada(COLUNA_KEY);
+  // Recolhida é escolha dele, e vale só onde a coluna caberia: na janela
+  // estreita a lista já mora no painel do seletor de qualquer jeito.
+  const listaNaColuna = Boolean(lista) && janelaLarga && !colunaRecolhida;
 
   const trilha = useMemo(
     () => trilhaDaTela(tela, chrome.rotulos, projetoId),
@@ -274,7 +301,12 @@ function Casca({ children, fila }: CascaProps) {
         <FitaDaLive passos={passos} etapas={etapasDoChrome(chrome)} />
 
         <div style={{ display: 'flex', minHeight: 0, flex: 1 }}>
-          {listaNaColuna && lista ? <ContextColumn lista={lista} /> : null}
+          {listaNaColuna && lista ? (
+            <ContextColumn lista={lista} onRecolher={alternarColuna} />
+          ) : null}
+          {lista && janelaLarga && colunaRecolhida ? (
+            <ColunaRecolhida titulo={lista.titulo} onAbrir={alternarColuna} />
+          ) : null}
 
           <main
             style={{

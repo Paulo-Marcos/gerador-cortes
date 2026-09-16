@@ -11,7 +11,7 @@ import {
   Trash2,
   WandSparkles,
 } from 'lucide-react';
-import { Users } from 'lucide-react';
+import { PanelRightClose, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import type { ProviderIA } from '@/lib/providerIa';
@@ -82,6 +82,8 @@ interface RightTabsPanelProps {
    *  (EditorFase1). 'workbench' move "Regerar transcrição" pro rodapé
    *  retrátil "MAIS AÇÕES". */
   variant?: 'legacy' | 'workbench';
+  /** D-610 (casca nova): recolhe a coluna inteira — nem sempre se precisa dela. */
+  onRecolher?: () => void;
 }
 
 // D-447: a aba "Avaliação" mora aqui, e não numa tela nova, porque a
@@ -126,6 +128,7 @@ export function RightTabsPanel({
   onAtualizarTranscricao,
   transcricaoAtualizando,
   variant = 'legacy',
+  onRecolher,
 }: RightTabsPanelProps) {
   const [tab, setTab] = useState<TabId>('trechos');
   const [maisAcoesOpen, setMaisAcoesOpen] = useState(false);
@@ -162,13 +165,28 @@ export function RightTabsPanel({
       <header
         className={
           CASCA_NOVA
-            ? 'flex flex-shrink-0 items-center gap-0.5 border-b border-[var(--line2)] px-[11px] pt-[9px]'
+            ? 'flex flex-shrink-0 items-center gap-0.5 overflow-x-auto border-b border-[var(--line2)] px-[11px] pt-[9px]'
             : 'flex flex-shrink-0 items-center gap-2.5 border-b border-[var(--wb-border-soft)] px-3 pt-2'
         }
       >
         {CASCA_NOVA ? null : (
           <GripVertical size={13} className="mb-2 text-[var(--wb-text-dim)]" aria-hidden />
         )}
+        {/* Primeiro da faixa: com quatro abas numa coluna estreita, no fim ele
+            ficava fora de vista. */}
+        {onRecolher ? (
+          <Tooltip label="Recolher a coluna" side="bottom">
+            <IconButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onRecolher}
+              aria-label="Recolher a coluna de trechos"
+            >
+              <PanelRightClose />
+            </IconButton>
+          </Tooltip>
+        ) : null}
         <TabButton
           id="trechos"
           active={tab === 'trechos'}

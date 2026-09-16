@@ -103,8 +103,8 @@ interface Props {
   /** AUDITORIA-v2 §7 (CP7): 'legacy' (default) preserva o cabecalho/menu
    *  atuais (EditorFase1). 'workbench' reduz o cabecalho e move
    *  velocidade/dividir/trecho/atualizar-onda para o AdvancedMenu. */
-  /** D-599: `ap` e o cabecalho do upgrade — sem o transporte e sem o tempo,
-   *  que passaram para a barra propria acima (ver TransporteBar). O corpo
+  /** D-599: `ap` e o cabecalho do upgrade (rotulo e estilo da casca nova). Desde
+   *  a D-610 carrega o transporte e a velocidade, como o workbench. O corpo
    *  (WaveSurfer, regioes, cursor) e o mesmo dos outros variants. */
   variant?: 'legacy' | 'workbench' | 'ap';
 }
@@ -275,8 +275,8 @@ interface WaveformProps {
   // onda mais densa/detalhada (barWidth/barGap menores) com a cor vinda do
   // token --wb-text-dim (lido ao vivo do DOM, funciona claro e escuro) — só
   // isto muda; peaks reais, drawRegions, cursor e zoom continuam intactos.
-  /** D-599: `ap` e o cabecalho do upgrade — sem o transporte e sem o tempo,
-   *  que passaram para a barra propria acima (ver TransporteBar). O corpo
+  /** D-599: `ap` e o cabecalho do upgrade (rotulo e estilo da casca nova). Desde
+   *  a D-610 carrega o transporte e a velocidade, como o workbench. O corpo
    *  (WaveSurfer, regioes, cursor) e o mesmo dos outros variants. */
   variant?: 'legacy' | 'workbench' | 'ap';
 }
@@ -771,12 +771,15 @@ function TransportGroup({
   onPlay,
   onSkipPlus,
   onSkipEnd,
+  compacto = false,
 }: {
   onSkipStart: () => void;
   onSkipMinus: () => void;
   onPlay: () => void;
   onSkipPlus: () => void;
   onSkipEnd: () => void;
+  /** D-610: só início, play e fim — o ±5s já mora nas setas do teclado. */
+  compacto?: boolean;
 }) {
   // v2_bruto.jsx:216-222 — bloco bg-inset, gap 2, padding 2
   const btn =
@@ -788,26 +791,33 @@ function TransportGroup({
           <ChevronsLeft size={14} />
         </button>
       </Tooltip>
-      <Tooltip label="-5s" side="bottom">
-        <button type="button" onClick={onSkipMinus} aria-label="-5s" className={btn}>
-          <ChevronLeft size={14} />
-        </button>
-      </Tooltip>
+      {compacto ? null : (
+        <Tooltip label="-5s" side="bottom">
+          <button type="button" onClick={onSkipMinus} aria-label="-5s" className={btn}>
+            <ChevronLeft size={14} />
+          </button>
+        </Tooltip>
+      )}
       <Tooltip label="Play/Pause" side="bottom">
         <button
           type="button"
           onClick={onPlay}
           aria-label="Play/Pause"
           className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] bg-[var(--wb-ink)] text-[var(--wb-ink-fg)] hover:opacity-90 transition-opacity"
+          // Inline porque, dentro da casca nova, a cor de botão da `.ap` vence a
+          // classe e o ícone sumia no fundo escuro.
+          style={{ color: 'var(--wb-ink-fg)' }}
         >
           <Play size={13} />
         </button>
       </Tooltip>
-      <Tooltip label="+5s" side="bottom">
-        <button type="button" onClick={onSkipPlus} aria-label="+5s" className={btn}>
-          <ChevronRight size={14} />
-        </button>
-      </Tooltip>
+      {compacto ? null : (
+        <Tooltip label="+5s" side="bottom">
+          <button type="button" onClick={onSkipPlus} aria-label="+5s" className={btn}>
+            <ChevronRight size={14} />
+          </button>
+        </Tooltip>
+      )}
       <Tooltip label="Fim do corte" side="bottom">
         <button type="button" onClick={onSkipEnd} aria-label="Fim" className={btn}>
           <ChevronsRight size={14} />
@@ -939,8 +949,8 @@ function AdvancedMenu({
   onRefreshAudio,
   refreshing,
 }: {
-  /** D-599: `ap` e o cabecalho do upgrade — sem o transporte e sem o tempo,
-   *  que passaram para a barra propria acima (ver TransporteBar). O corpo
+  /** D-599: `ap` e o cabecalho do upgrade (rotulo e estilo da casca nova). Desde
+   *  a D-610 carrega o transporte e a velocidade, como o workbench. O corpo
    *  (WaveSurfer, regioes, cursor) e o mesmo dos outros variants. */
   variant?: 'legacy' | 'workbench' | 'ap';
   onZoomIn: () => void;
@@ -1368,7 +1378,13 @@ export function TimelinePanel({
       style={{ overflow: 'visible' }}
     >
       {/* Header — v2_bruto.jsx:209-329 (Panel + toolbar) */}
-      <header className="flex flex-shrink-0 items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
+      <header
+        className={cn(
+          'flex flex-shrink-0 items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2',
+          // Em coluna estreita quebra em duas linhas em vez de esconder o ⚙.
+          isAp && 'flex-wrap',
+        )}
+      >
         {isWorkbench ? (
           <>
             {/* AUDITORIA-v2 §7 (CP7): cabecalho reduzido a TIMELINE+tempo,
@@ -1376,33 +1392,31 @@ export function TimelinePanel({
                 dividir/trecho/atualizar-onda migraram pro AdvancedMenu — ver
                 abaixo — e o badge solto de trechos saiu (ja aparece em
                 Tempos/CP6). */}
-            <span
-              className={
-                isAp
-                  ? 'lbl flex-none'
-                  : 'flex-none font-code text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]'
-              }
-            >
-              {isAp ? 'Linha do tempo' : 'Timeline'}
-            </span>
+            {/* Na casca nova o rótulo cede o lugar ao transporte: o cartão já
+                se explica pela onda. */}
             {isAp ? null : (
-              <span
-                className="flex-none font-code text-[10px] font-semibold text-[var(--wb-text-mute)]"
-                style={{ fontVariantNumeric: 'tabular-nums' }}
-              >
-                {tempoLabel}
+              <span className="flex-none font-code text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]">
+                Timeline
               </span>
             )}
+            {/* D-610: na casca nova o transporte voltou para cá. A barra própria
+                acima gastava uma linha inteira do player para cinco controles
+                que cabem folgados neste cabeçalho. */}
+            <span
+              className="flex-none font-code text-[10px] font-semibold text-[var(--wb-text-mute)]"
+              style={{ fontVariantNumeric: 'tabular-nums' }}
+            >
+              {tempoLabel}
+            </span>
 
-            {isAp ? null : (
-              <TransportGroup
-                onSkipStart={() => handleSeek(inicioSeg)}
-                onSkipMinus={() => handleSkip(-5)}
-                onPlay={handlePlayPause}
-                onSkipPlus={() => handleSkip(5)}
-                onSkipEnd={() => handleSeek(fimSeg)}
-              />
-            )}
+            <TransportGroup
+              onSkipStart={() => handleSeek(inicioSeg)}
+              onSkipMinus={() => handleSkip(-5)}
+              onPlay={handlePlayPause}
+              onSkipPlus={() => handleSkip(5)}
+              onSkipEnd={() => handleSeek(fimSeg)}
+              compacto={isAp}
+            />
 
             {/* Workbench 1c.dc.html:223-224 - pilulas com rotulo (nao icone
                 puro): fundo --wb-ok-soft/--wb-err-soft, texto --wb-ok-ink/--wb-err. */}
@@ -1456,9 +1470,7 @@ export function TimelinePanel({
             {/* D-402: a velocidade em vigor precisa ser legivel sem abrir o ⚙.
                 O CP7 mandou o CONTROLE pro AdvancedMenu; aqui volta so o
                 INDICADOR (pill nao-clicavel), como no header legacy. */}
-            {isAp ? null : (
-              <SpeedDisplay playbackRate={playbackRate} onAlternar={onAlternarVelocidade} />
-            )}
+            <SpeedDisplay playbackRate={playbackRate} onAlternar={onAlternarVelocidade} />
 
             <AdvancedMenu
               variant="workbench"

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Icon } from './Icon';
 import type { ChromeLista, ItemDeLista } from './UpgradeChrome';
 
@@ -90,10 +91,13 @@ export function CabecalhoDeLista({
   titulo,
   resumo,
   padding = '9px 12px',
+  depois,
 }: {
   titulo: string;
   resumo?: string;
   padding?: string;
+  /** Controle à direita do resumo (o "recolher" da coluna). */
+  depois?: ReactNode;
 }) {
   return (
     <div
@@ -112,6 +116,7 @@ export function CabecalhoDeLista({
           {resumo}
         </span>
       ) : null}
+      {depois}
     </div>
   );
 }
@@ -248,7 +253,42 @@ export function LinhaDeLista({ item }: { item: ItemDeLista }) {
   );
 }
 
-export function ContextColumn({ lista }: { lista: ChromeLista }) {
+/** D-610: a coluna recolhida vira uma tira de 36 px. A lista continua a um
+ *  clique no seletor da barra superior; a tira só devolve a coluna. */
+export function ColunaRecolhida({ titulo, onAbrir }: { titulo: string; onAbrir: () => void }) {
+  return (
+    <aside
+      className="gl"
+      style={{
+        display: 'flex',
+        flex: 'none',
+        width: 36,
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: 8,
+        borderRight: '1px solid var(--line)',
+      }}
+    >
+      <button
+        type="button"
+        className="btn btn-icon btn-ghost"
+        onClick={onAbrir}
+        title={`Mostrar ${titulo.toLowerCase()}`}
+        aria-label={`Mostrar ${titulo.toLowerCase()}`}
+      >
+        <Icon name="panel-left" size={14} />
+      </button>
+    </aside>
+  );
+}
+
+export function ContextColumn({
+  lista,
+  onRecolher,
+}: {
+  lista: ChromeLista;
+  onRecolher?: () => void;
+}) {
   return (
     <aside
       className="gl ctx"
@@ -271,7 +311,24 @@ export function ContextColumn({ lista }: { lista: ChromeLista }) {
         </div>
       ) : null}
 
-      <CabecalhoDeLista titulo={lista.titulo} resumo={lista.resumo} />
+      <CabecalhoDeLista
+        titulo={lista.titulo}
+        resumo={lista.resumo}
+        depois={
+          onRecolher ? (
+            <button
+              type="button"
+              className="btn btn-icon btn-ghost"
+              onClick={onRecolher}
+              title={`Recolher ${lista.titulo.toLowerCase()}`}
+              aria-label={`Recolher ${lista.titulo.toLowerCase()}`}
+              style={{ width: 22, height: 22, marginRight: -4 }}
+            >
+              <Icon name="panel-left" size={12} />
+            </button>
+          ) : null
+        }
+      />
 
       {lista.filtros?.length ? <FiltrosDaLista filtros={lista.filtros} /> : null}
 
