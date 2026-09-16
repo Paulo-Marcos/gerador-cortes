@@ -207,13 +207,50 @@ export function captionsDoTrecho(
   });
 }
 
+/**
+ * D-604: os captions de uma COLAGEM — N janelas, cada uma no seu lugar.
+ *
+ * Um short pode ser feito de pedaços descontínuos do bruto, e a janela
+ * `[inicio, fim]` cobre o vão entre eles. Sem recortar por segmento, a prévia
+ * mostraria a fala do BURACO — o material que o operador tirou fora — por cima de
+ * um vídeo que pulou. Espelha `transcricao_fiel.recortar_varios` do backend.
+ *
+ * A ordem é a das janelas (o short pode abrir com o pedaço que vem depois na
+ * live); a saída sai ordenada pelo tempo do short, que é o único que a legenda
+ * conhece — fora de ordem, o agrupamento em páginas montaria frases embaralhadas.
+ */
+export function captionsDaColagem(
+  palavras: PalavraTranscrita[],
+  janelas: { inicio: number; fim: number; offset: number }[],
+): Caption[] {
+  const todos = janelas.flatMap(({ inicio, fim, offset }) =>
+    captionsDoTrecho(palavras, inicio, fim).map((caption) => ({
+      ...caption,
+      startMs: caption.startMs + Math.round(offset * 1000),
+      endMs: caption.endMs + Math.round(offset * 1000),
+      // `timestampMs` é nulável no tipo do pacote, e `captionsDoTrecho` sempre o
+      // preenche — mas somar num `null` daria `NaN` em silêncio se isso mudar.
+      timestampMs:
+        caption.timestampMs === null ? null : caption.timestampMs + Math.round(offset * 1000),
+    })),
+  );
+  return todos.sort((a, b) => a.startMs - b.startMs);
+}
+
 /** As páginas da legenda, na mesma quebra que o render vai produzir. */
 export function paginasDoTrecho(
   palavras: PalavraTranscrita[],
   inicioSeg: number,
   fimSeg: number,
+  /**
+   * D-604: as janelas da colagem, quando há. Ausente = a janela única, que é o
+   * caso normal e se comporta exatamente como antes.
+   */
+  janelas?: { inicio: number; fim: number; offset: number }[],
 ): PaginaLegenda[] {
-  const captions = captionsDoTrecho(palavras, inicioSeg, fimSeg);
+  const captions = janelas?.length
+    ? captionsDaColagem(palavras, janelas)
+    : captionsDoTrecho(palavras, inicioSeg, fimSeg);
   if (captions.length === 0) return [];
 
   const { pages } = createTikTokStyleCaptions({

@@ -678,6 +678,7 @@ export function DefinirPalcoModal({
                     tempoAtualSeg={tempoAtualSeg}
                     cor={short.legenda_cor}
                     fonte={short.legenda_fonte}
+                    segmentos={short.segmentos}
                     lugar={lugarDaLegenda}
                     // D-605: um gesto por vez. O editor de palco e a legenda
                     // arrastam no MESMO quadro, e com os dois ativos a caixa da

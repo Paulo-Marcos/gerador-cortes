@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import { APARENCIA, notaVisivel, planoDeAcoes, tomDaNota, type AcaoId } from './estadoDoCandidato';
 import type { PalcoShortPreset } from '@/types/presets';
 import { LinhaDeAjuste } from './LinhaDeAjuste';
+import { ListaDeSegmentos } from './ListaDeSegmentos';
+import { efetivos, temColagem, type Segmento } from './segmentosDoShort';
 import { PainelPublicacao } from './PainelPublicacao';
 import { ProgressoRenderPanel } from './ProgressoRenderPanel';
 import { shortVideoUrl, type ShortSugerido, type StatusShort } from './shortsApi';
@@ -65,6 +67,14 @@ interface Props {
   onEscreverGancho: () => void;
   onPrevia: () => void;
   onRenderizar: () => void;
+  /** D-604: grava a colagem deste short. `[]` desfaz e volta à janela única. */
+  onSegmentos: (segmentos: Segmento[]) => void;
+  /** Onde o player está, na timeline do bruto — de onde nasce o pedaço novo. */
+  tempoAtualSeg: number;
+  /** A duração do bruto, para o pedaço novo não passar do fim. */
+  duracaoBrutoSeg: number;
+  /** Leva o player até um instante do bruto. */
+  onIr: (segundos: number) => void;
 }
 
 function mmss(segundos: number): string {
@@ -92,6 +102,10 @@ export function CandidatoCard({
   onEscreverGancho,
   onPrevia,
   onRenderizar,
+  onSegmentos,
+  tempoAtualSeg,
+  duracaoBrutoSeg,
+  onIr,
 }: Props) {
   // Os padrões do corte, lidos do cache que o menu de padrões já carregou: o
   // card mostra o que o trecho HERDA, e não só o que ele gravou.
@@ -289,7 +303,18 @@ export function CandidatoCard({
         <span className="font-semibold text-[var(--wb-text-dim)]">
           {mmss(short.inicio_seg)} → {mmss(short.fim_seg)}
         </span>
+        {/* D-604: a duração é a LÍQUIDA, que o backend já manda somada. Num short
+            colado ela é MENOR que o span ao lado, e é isso que o operador precisa
+            ver — o limite do Shorts é sobre o vídeo, não sobre o envelope. */}
         <span>{Math.round(short.duracao_seg)}s</span>
+        {temColagem(short) && (
+          <span
+            className="rounded-[5px] bg-[var(--wb-accent-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--wb-accent-strong)]"
+            title="Este short é montado por segmentos separados do bruto. O que fica entre eles não entra."
+          >
+            {efetivos(short).length} segmentos
+          </span>
+        )}
         {/* D-558: o "50%" do enquadramento saiu daqui junto com o controle.
             Ele mostrava onde a janela 9:16 se centra no quadro cru — número que
             só age quando o trecho NÃO tem palco, e que num trecho com palco
@@ -328,6 +353,23 @@ export function CandidatoCard({
           nomeDoPadrao={palcoPadrao.data?.nome ?? ''}
           onDefinirPalco={onDefinirPalco}
         />
+      )}
+
+      {/* D-604: os pedaços ficam DENTRO do ajuste, e não no corpo do card.
+          São a decisão mais fina do trecho — mexer nela é refino, do mesmo nível
+          das bordas —, e oito cards mostrando listas de pedaços reconstruiriam a
+          parede de controles que a D-492 desmontou. */}
+      {aberto && (
+        <div className="border-t border-[var(--wb-border-soft)] px-3 py-2">
+          <ListaDeSegmentos
+            short={short}
+            tempoAtualSeg={tempoAtualSeg}
+            duracaoBrutoSeg={duracaoBrutoSeg}
+            ocupado={ocupado}
+            onGravar={onSegmentos}
+            onIr={onIr}
+          />
+        </div>
       )}
 
       {/* ── Produção: uma ação em destaque ─────────────────────────── */}

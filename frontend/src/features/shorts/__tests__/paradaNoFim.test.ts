@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alcancouOFim, desarmaNoSeek, FOLGA_SEG } from '../paradaNoFim';
+import { alcancouOFim, desarmaNoSeek, FOLGA_SEG, proximaJanela } from '../paradaNoFim';
 import { mmss } from '../linhaDoTempoShort';
 
 // D-539: o player para no fim do trecho.
@@ -59,5 +59,32 @@ describe('mmss compartilhado', () => {
 
   it('nao devolve tempo negativo', () => {
     expect(mmss(-5)).toBe('00:00');
+  });
+});
+
+// D-604: num short COLADO, o fim de uma janela é a DEIXA para a próxima — não o
+// fim do short. Pausar no primeiro buraco faria o operador achar que o trecho
+// acabou aos 30s, quando ele tem 45s de vídeo.
+describe('proximaJanela', () => {
+  const colagem = [
+    { inicio: 0, fim: 30 },
+    { inicio: 45, fim: 60 },
+  ];
+
+  it('entrega a janela seguinte na ordem de toque', () => {
+    expect(proximaJanela(colagem, 0)).toEqual({ inicio: 45, fim: 60 });
+  });
+
+  it('na ultima nao ha para onde pular — ali o fim e fim', () => {
+    // Mantém o comportamento da D-539: o fim precisa chegar como fim.
+    expect(proximaJanela(colagem, 1)).toBeNull();
+  });
+
+  it('janela unica nunca tem proxima', () => {
+    expect(proximaJanela([{ inicio: 0, fim: 30 }], 0)).toBeNull();
+  });
+
+  it('indice fora da lista nao explode', () => {
+    expect(proximaJanela(colagem, 99)).toBeNull();
   });
 });

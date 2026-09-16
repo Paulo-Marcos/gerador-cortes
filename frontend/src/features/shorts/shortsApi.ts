@@ -4,6 +4,7 @@
 // função de shorts existe em `api.ts`, então nada fica órfão lá.
 
 import type { GanchoShortPreset } from '@/types/presets';
+import type { Segmento } from './segmentosDoShort';
 import type { ProviderIA } from '@/lib/providerIa';
 
 const API_BASE =
@@ -146,7 +147,19 @@ export interface ShortSugerido {
   gancho_largura?: number;
   inicio_seg: number;
   fim_seg: number;
+  /**
+   * D-604: as fatias do bruto que este short toca, na ORDEM EM QUE TOCAM.
+   *
+   * Lista vazia (ou ausente, num backend ainda não reiniciado) = a janela única
+   * `[inicio_seg, fim_seg]`, que é o caso normal. Com colagem, `inicio_seg`/
+   * `fim_seg` passam a ser o ENVELOPE — é por eles que a régua sabe onde
+   * desenhar o short, e NÃO é deles que sai a duração.
+   */
+  segmentos?: Segmento[];
+  /** A duração do VÍDEO: a soma dos segmentos. Com buraco, ≠ `envelope_seg`. */
   duracao_seg: number;
+  /** D-604: o span do envelope — de onde a onde no bruto o short pega. */
+  envelope_seg?: number;
   score: number;
   justificativa: string;
   status: StatusShort;
@@ -203,6 +216,8 @@ export interface AtualizarShortBody {
   status?: StatusShort;
   inicio_seg?: number;
   fim_seg?: number;
+  /** D-604: a colagem. `[]` desfaz e devolve o short à janela única. */
+  segmentos?: Segmento[];
   foco_x?: number;
   arranjo_palco?: string;
   janela_cheia?: string;

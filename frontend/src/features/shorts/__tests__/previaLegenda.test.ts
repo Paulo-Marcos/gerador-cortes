@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   AGRUPAMENTO_MS,
+  captionsDaColagem,
   captionsDoTrecho,
   LARGURA_MAX,
   LARGURA_MIN,
@@ -277,5 +278,64 @@ describe('paginaEm', () => {
     // Legenda que fica na tela depois que a fala acabou e a previa mentindo
     // sobre o arquivo.
     expect(paginaEm(paginas, 8)).toBeNull();
+  });
+});
+
+// D-604: a legenda de um short COLADO. O defeito que isto previne não dá erro:
+// a prévia leria a fala do BURACO — o material que o operador tirou fora — por
+// cima de um vídeo que pulou, e ele aprovaria um texto que o arquivo não tem.
+describe('captionsDaColagem', () => {
+  const fala: PalavraTranscrita[] = [
+    { texto: 'zero', inicio_seg: 2, fim_seg: 2.5 },
+    { texto: 'buraco', inicio_seg: 35, fim_seg: 35.5 },
+    { texto: 'cinquenta', inicio_seg: 52, fim_seg: 52.5 },
+  ];
+  // 0-30 e depois 45-60: o vão de 30 a 45 fica fora.
+  const janelas = [
+    { inicio: 0, fim: 30, offset: 0 },
+    { inicio: 45, fim: 60, offset: 30 },
+  ];
+
+  it('a fala do buraco nao entra', () => {
+    const textos = captionsDaColagem(fala, janelas).map((c) => c.text.trim());
+    expect(textos).toEqual(['zero', 'cinquenta']);
+  });
+
+  it('o segundo pedaco e deslocado pelo offset, e nao rebaseado no zero', () => {
+    // Sem o offset, "cinquenta" (52s no bruto) cairia aos 7s do short, por cima
+    // da fala do primeiro pedaço.
+    const cinquenta = captionsDaColagem(fala, janelas).find((c) => c.text.includes('cinquenta'));
+    expect(cinquenta?.startMs).toBe(37_000);
+  });
+
+  it('uma janela so devolve o mesmo que o recorte simples', () => {
+    expect(captionsDaColagem(fala, [{ inicio: 0, fim: 30, offset: 0 }])).toEqual(
+      captionsDoTrecho(fala, 0, 30),
+    );
+  });
+
+  it('a ordem livre poe a fala de cada pedaco no lugar certo', () => {
+    const ganchoPrimeiro = [
+      { inicio: 45, fim: 60, offset: 0 },
+      { inicio: 0, fim: 30, offset: 15 },
+    ];
+    const textos = captionsDaColagem(fala, ganchoPrimeiro).map((c) => c.text.trim());
+    expect(textos).toEqual(['cinquenta', 'zero']);
+  });
+
+  it('sai ordenado pelo tempo do short', () => {
+    // Fora de ordem, o agrupamento em páginas do renderer montaria frases
+    // embaralhadas — e a prévia deixaria de valer como prova.
+    const tempos = captionsDaColagem(fala, [
+      { inicio: 45, fim: 60, offset: 0 },
+      { inicio: 0, fim: 30, offset: 15 },
+    ]).map((c) => c.startMs);
+    expect(tempos).toEqual([...tempos].sort((a, b) => a - b));
+  });
+
+  it('paginasDoTrecho com janelas nao pagina a fala do buraco', () => {
+    const paginas = paginasDoTrecho(fala, 0, 60, janelas);
+    const textos = paginas.flatMap((p) => p.tokens.map((t) => t.texto.trim()));
+    expect(textos).not.toContain('buraco');
   });
 });

@@ -256,6 +256,7 @@ export function GanchoModal({
           tempoAtualSeg={tempoDaPrevia}
           cor={short.legenda_cor}
           fonte={short.legenda_fonte}
+          segmentos={short.segmentos}
           // D-605: a legenda aparece aqui para o operador julgar a COEXISTÊNCIA
           // com o gancho — e para isso ela tem de estar no lugar em que o
           // arquivo a desenha, herança do palco incluída.

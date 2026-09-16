@@ -183,6 +183,7 @@ function EditorDoPresetDeGancho({
           tempoAtualSeg={tempoDaPrevia}
           cor={amostra.legenda_cor}
           fonte={amostra.legenda_fonte}
+          segmentos={amostra.segmentos}
           // D-605: no lugar dela, para o gancho ser posicionado sabendo onde a
           // legenda está de verdade neste trecho.
           lugar={lugarDaLegenda(

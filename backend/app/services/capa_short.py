@@ -36,8 +36,9 @@ from pathlib import Path
 
 from app.channel_paths import para_relativo_ao_projeto, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain import segmentos_short
 from app.domain.capa_short import encaixar_instante, instante_padrao
-from app.domain.cenas_short_ia import recortar_transcricao
+from app.domain.cenas_short_ia import recortar_transcricao_varios
 from app.domain.time_convert import seg_to_mmss
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
@@ -152,7 +153,20 @@ async def gerar(short_id: str, instante_seg: float | None = None) -> dict:
 
 
 def _duracao(short: Short) -> float:
-    return round(float(short.fim_seg) - float(short.inicio_seg), 2)
+    """A duracao do VIDEO do short — a soma dos segmentos, nao o span (D-604).
+
+    O instante da capa vive no tempo do SHORT (o frame sai do MP4 dele), entao
+    encaixa-lo contra o envelope deixaria a tela oferecer um instante que o
+    arquivo nao tem: num short de 0-30 + 45-60, o segundo 50 nao existe.
+    """
+    return round(
+        segmentos_short.duracao_liquida(
+            segmentos_short.de_json(short.segmentos),
+            inicio_seg=float(short.inicio_seg),
+            fim_seg=float(short.fim_seg),
+        ),
+        2,
+    )
 
 
 async def _extrair_frame(video: Path, destino: Path, instante: float) -> None:
@@ -238,10 +252,18 @@ async def montar_contexto_da_capa(short_id: str) -> ContextoDaCapa:
         if not corte:
             raise LookupError(f"Corte {short.corte_id!r} nao encontrado")
 
-        janela = recortar_transcricao(
+        # D-604: a fala que o short REALMENTE contem. Pela janela inteira, a
+        # etiqueta da capa sairia falando do trecho que o operador tirou fora.
+        janela = recortar_transcricao_varios(
             _transcricao_do_corte(corte.transcricao_final),
-            float(short.inicio_seg),
-            float(short.fim_seg),
+            [
+                (segmento.inicio_seg, segmento.fim_seg, offset)
+                for segmento, offset in segmentos_short.com_offsets(
+                    segmentos_short.de_json(short.segmentos),
+                    inicio_seg=float(short.inicio_seg),
+                    fim_seg=float(short.fim_seg),
+                )
+            ],
         )
         meta_corte = await db.scalar(
             select(MetadadoCorte).where(MetadadoCorte.corte_id == corte.id)

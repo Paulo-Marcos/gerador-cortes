@@ -33,6 +33,7 @@ import { PainelDaRegua } from './PainelDaRegua';
 import { PlayerDoBruto } from './PlayerDoBruto';
 import { LegendaPrevia } from './LegendaPrevia';
 import { lugarDaLegenda } from './previaLegenda';
+import { efetivos } from './segmentosDoShort';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { GanchoModal } from './GanchoModal';
 import { GanchoPrevia } from './GanchoPrevia';
@@ -148,14 +149,23 @@ export default function FireDetalhePage() {
   // sem isso o vídeo seguia pelo assunto seguinte — o operador só percebia que
   // passou do fim quando o tema mudava, que é tarde para julgar se o corte
   // fecha bem.
-  const { tocarAte, irPara, aoBuscar } = useParadaNoFim(video);
+  const { tocarColagem, irPara, aoBuscar } = useParadaNoFim(video);
 
   const tocarTrecho = useCallback(
     (short: ShortSugerido) => {
       setSelecionado(short.id);
-      tocarAte(short.inicio_seg, short.fim_seg);
+      // D-604: assistir a um short COLADO toca os segmentos na ordem dele,
+      // pulando o que ficou fora — é o único jeito de julgar a colagem antes de
+      // gastar um render. Sem colagem, `efetivos` devolve a janela única e o
+      // gesto é exatamente o de antes.
+      tocarColagem(
+        efetivos(short).map((segmento) => ({
+          inicio: segmento.inicio_seg,
+          fim: segmento.fim_seg,
+        })),
+      );
     },
-    [tocarAte],
+    [tocarColagem],
   );
 
   // Timeline e painel fino gravam pelo MESMO caminho: duas rotas de escrita para
@@ -288,6 +298,9 @@ export default function FireDetalhePage() {
           tempoAtualSeg={tempoAtual}
           cor={emQuadro.legenda_cor}
           fonte={emQuadro.legenda_fonte}
+          // D-604: a colagem, para a legenda não ler a fala do buraco e o tempo
+          // do player ser traduzido pelo mapa dos segmentos.
+          segmentos={emQuadro.segmentos}
           // D-605: o LUGAR pela mesma via da cor do gancho — o plano é quem
           // resolveu a herança do palco do corte, e o short é só o fallback de
           // enquanto ele não chegou. Lido do short, o player desenharia a
@@ -393,6 +406,7 @@ export default function FireDetalhePage() {
           onSelecionar={setSelecionado}
           onTocar={tocarTrecho}
           onBorda={moverBorda}
+          onIr={irPara}
           onDefinirPalco={abrirPalcoDe}
           onEscreverGancho={abrirGanchoDe}
           onEditarPalcoPadrao={(id) => setPresetDePalco({ id })}

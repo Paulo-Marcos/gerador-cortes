@@ -45,3 +45,27 @@ export function alcancouOFim(fimSeg: number | null, agoraSeg: number): boolean {
 export function desarmaNoSeek(seekNosso: boolean): boolean {
   return !seekNosso;
 }
+
+/** Uma janela do bruto que o player vai tocar. */
+export interface Janela {
+  inicio: number;
+  fim: number;
+}
+
+/**
+ * D-604: a próxima janela da colagem, ou `null` quando esta era a última.
+ *
+ * O que transforma "parar no fim" em "pular o buraco": um short colado tem N
+ * janelas, e ao alcançar o fim de uma o certo é ir para o início da seguinte —
+ * não pausar. Pausar no primeiro buraco faria o operador achar que o short
+ * acabou aos 30s, quando ele tem 45s de vídeo.
+ *
+ * `null` na última mantém o comportamento da D-539: ali o fim é fim.
+ *
+ * @example
+ * proximaJanela([{inicio: 0, fim: 30}, {inicio: 45, fim: 60}], 0)  // {inicio: 45, fim: 60}
+ * proximaJanela([{inicio: 0, fim: 30}], 0)                          // null
+ */
+export function proximaJanela(janelas: Janela[], indice: number): Janela | null {
+  return janelas[indice + 1] ?? null;
+}

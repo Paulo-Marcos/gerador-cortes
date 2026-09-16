@@ -21,7 +21,8 @@ import uuid
 from dataclasses import dataclass
 
 from app.database import AsyncSessionLocal
-from app.domain.cenas_short_ia import recortar_transcricao
+from app.domain import segmentos_short
+from app.domain.cenas_short_ia import recortar_transcricao_varios
 from app.domain.metadados_short import PostDoShort, hashtags_gravadas, normalizar_hashtags
 from app.domain.publicacao import LIMITES, Plataforma
 from app.models import Corte, MetadadoShort, Short
@@ -74,7 +75,19 @@ async def montar_contexto(short_id: str) -> ContextoDoPost:
 
         inicio = float(short.inicio_seg)
         fim = float(short.fim_seg)
-        janela = recortar_transcricao(_json_lista(corte.transcricao_final), inicio, fim)
+        # D-604: a fala que o short REALMENTE contem — pela janela inteira, o
+        # post falaria do trecho que o operador tirou fora.
+        janela = recortar_transcricao_varios(
+            _json_lista(corte.transcricao_final),
+            [
+                (segmento.inicio_seg, segmento.fim_seg, offset)
+                for segmento, offset in segmentos_short.com_offsets(
+                    segmentos_short.de_json(short.segmentos),
+                    inicio_seg=inicio,
+                    fim_seg=fim,
+                )
+            ],
+        )
         if not janela:
             raise ValueError(
                 "Este trecho nao tem fala transcrita — sem ela o post falaria do corte, "

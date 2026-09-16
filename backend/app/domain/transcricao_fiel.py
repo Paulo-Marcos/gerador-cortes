@@ -144,3 +144,44 @@ def recortar(palavras: list[Palavra], inicio_seg: float, fim_seg: float) -> list
         for p in palavras
         if p.inicio_seg >= inicio_seg and p.inicio_seg < fim_seg
     ]
+
+
+def recortar_varios(
+    palavras: list[Palavra], janelas: list[tuple[float, float, float]]
+) -> list[Palavra]:
+    """As palavras de VARIAS janelas, cada uma rebaseada no seu lugar (D-604).
+
+    Um short pode ser uma colagem de pedacos descontinuos do bruto. Cada janela e
+    `(inicio, fim, offset)`: onde ela comeca e acaba no bruto, e em que instante
+    do SHORT ela entra. O offset e o que faz a fala do segundo pedaco aparecer
+    depois do primeiro em vez de por cima dele.
+
+    Recebe tuplas cruas, e nao `Segmento`, de proposito: cortar transcricao nao
+    precisa saber o que e um segmento de short, e o acoplamento inverso faria
+    este modulo — que o corte inteiro usa — depender do vocabulario dos shorts.
+
+    A ORDEM e a das janelas, e nao a do relogio: o short pode abrir com o pedaco
+    que vem depois na live. O resultado sai ordenado pelo tempo do SHORT, que e o
+    unico que a legenda conhece.
+
+    Exemplo — a fala dos 50s abre o short, e a dos 5s vem depois:
+        >>> palavras = [Palavra("cinco", 5.0, 5.4), Palavra("cinquenta", 50.0, 50.6)]
+        >>> janelas = [(45.0, 60.0, 0.0), (0.0, 30.0, 15.0)]
+        >>> [(p.texto, p.inicio_seg) for p in recortar_varios(palavras, janelas)]
+        [('cinquenta', 5.0), ('cinco', 20.0)]
+
+    Uma janela so devolve exatamente o que `recortar` devolveria:
+        >>> [(p.texto, p.inicio_seg) for p in recortar_varios(palavras, [(0.0, 30.0, 0.0)])]
+        [('cinco', 5.0)]
+    """
+    recortadas: list[Palavra] = []
+    for inicio, fim, offset in janelas:
+        for palavra in recortar(palavras, inicio, fim):
+            recortadas.append(
+                Palavra(
+                    texto=palavra.texto,
+                    inicio_seg=round(palavra.inicio_seg + offset, 3),
+                    fim_seg=round(palavra.fim_seg + offset, 3),
+                )
+            )
+    return sorted(recortadas, key=lambda p: p.inicio_seg)

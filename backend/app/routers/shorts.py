@@ -319,6 +319,22 @@ class PalcoPadraoRequest(BaseModel):
     preset_id: str | None = None
 
 
+class SegmentoRequest(BaseModel):
+    """Uma fatia do bruto que entra no short (D-604).
+
+    Tempo de BRUTO — o clip ja sem os desvios —, que e o espaco em que o short
+    sempre viveu (invariante do modelo desde a D-452).
+
+    Sem validacao de faixa aqui de proposito: quem recusa e o dominio
+    (`segmentos_short.validar`), que conhece o limite do bruto e devolve a frase
+    que explica o problema. Validar nos dois lugares daria duas mensagens
+    diferentes para o mesmo erro.
+    """
+
+    inicio_seg: float
+    fim_seg: float
+
+
 class AtualizarShortRequest(BaseModel):
     """A decisão da curadoria. Todo campo é opcional — só o que veio é aplicado."""
 
@@ -335,6 +351,9 @@ class AtualizarShortRequest(BaseModel):
     fundo_palco: str | None = None
     # D-552: a TEXTURA do palco (id de fundo), e qual preset a trouxe.
     fundo_editorial: str | None = None
+    # D-604: as fatias do bruto que o short toca, na ORDEM EM QUE TOCAM.
+    # `[]` desfaz a colagem e devolve o short a janela unica.
+    segmentos: list[SegmentoRequest] | None = None
     legenda_cor: str | None = None
     legenda_fonte: str | None = None
     # D-605: onde a legenda senta, em % do quadro. 0 = do palco padrao do corte.
@@ -371,6 +390,9 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
                 recortes_palco=body.recortes_palco,
                 fundo_palco=body.fundo_palco,
                 fundo_editorial=body.fundo_editorial,
+                segmentos=(
+                    None if body.segmentos is None else [s.model_dump() for s in body.segmentos]
+                ),
                 legenda_cor=body.legenda_cor,
                 legenda_fonte=body.legenda_fonte,
                 legenda_x=body.legenda_x,

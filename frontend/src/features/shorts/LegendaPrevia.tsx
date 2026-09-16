@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { lugarArrastado, lugarEfetivo, paginaEm, paginasDoTrecho } from './previaLegenda';
+import { comOffsets, noShort, type Segmento } from './segmentosDoShort';
 import type { LugarDaLegenda } from './previaLegenda';
 import type { PalavraTranscrita } from './shortsApi';
 
@@ -79,6 +80,14 @@ interface Props {
   cor?: string;
   /** D-563: família da fonte. Vazio = a do canal. */
   fonte?: string;
+  /**
+   * D-604: a colagem do short, quando há. Ausente/vazia = a janela única.
+   *
+   * Com colagem, duas coisas mudam: as palavras são recortadas por SEGMENTO (sem
+   * isto a prévia leria a fala do buraco) e o tempo do player é traduzido pelo
+   * mapa dos segmentos em vez de uma subtração.
+   */
+  segmentos?: Segmento[];
   /** D-605: onde a caixa senta, já com a herança resolvida por quem chama. */
   lugar?: LugarDaLegenda;
   /**
@@ -113,21 +122,47 @@ export function LegendaPrevia({
   tempoAtualSeg,
   cor = '',
   fonte = '',
+  segmentos,
   lugar,
   onMover,
   onSoltar,
 }: Props) {
   const quadro = useRef<HTMLDivElement>(null);
   const [arrastando, setArrastando] = useState(false);
+  // D-604: a colagem, se houver, virada em janelas com offset. `useMemo` porque
+  // ela entra na dependência das páginas — recriar o array a cada render faria a
+  // legenda ser reagrupada em toda passada do player.
+  const janelas = useMemo(
+    () =>
+      comOffsets({ segmentos, inicio_seg: inicioSeg, fim_seg: fimSeg }).map(
+        ({ segmento, offsetSeg }) => ({
+          inicio: segmento.inicio_seg,
+          fim: segmento.fim_seg,
+          offset: offsetSeg,
+        }),
+      ),
+    [segmentos, inicioSeg, fimSeg],
+  );
+
   const paginas = useMemo(
-    () => paginasDoTrecho(palavras, inicioSeg, fimSeg),
-    [palavras, inicioSeg, fimSeg],
+    () => paginasDoTrecho(palavras, inicioSeg, fimSeg, janelas),
+    [palavras, inicioSeg, fimSeg, janelas],
   );
 
   // O tempo do player corre na timeline do BRUTO; as páginas nascem rebaseadas
-  // ao zero do short. Sem esta subtração a legenda apareceria minutos adiante
+  // ao zero do short. Sem esta tradução a legenda apareceria minutos adiante
   // — o mesmo erro que a `transcricao_final` já resolveu no corte.
-  const pagina = paginaEm(paginas, tempoAtualSeg - inicioSeg);
+  //
+  // D-604: e a tradução deixou de ser uma subtração. Num short colado, o instante
+  // do bruto que o player mostra pode cair no SEGUNDO pedaço, e `- inicioSeg`
+  // apontaria para o lugar errado da legenda. `null` = o player está no buraco,
+  // material que o short não tem — e aí não há legenda a mostrar.
+  const noTempoDoShort = noShort(tempoAtualSeg, {
+    segmentos,
+    inicio_seg: inicioSeg,
+    fim_seg: fimSeg,
+  });
+  const pagina = noTempoDoShort === null ? null : paginaEm(paginas, noTempoDoShort);
   const onde = lugar ?? lugarEfetivo(null, null);
 
   // O arraste converte pixels do ponteiro em % do QUADRO, e é por isso que ele

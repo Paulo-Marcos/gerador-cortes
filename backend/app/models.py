@@ -406,6 +406,30 @@ class Short(Base):
     titulo_sugerido: Mapped[str] = mapped_column(String(500), default="")
     inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)
     fim_seg: Mapped[float] = mapped_column(Float, default=0.0)
+    # D-604: as FATIAS do bruto que este short toca, na ORDEM EM QUE TOCAM, em
+    # JSON: `[{"inicio_seg": 0, "fim_seg": 30}, {"inicio_seg": 45, "fim_seg": 60}]`.
+    #
+    # `[]` e o caso normal e significa "a janela unica acima" — ausencia como
+    # heranca, a mesma regra do resto do layout. Short gravado antes desta
+    # demanda tem `[]` e se comporta exatamente como antes.
+    #
+    # Coluna JSON, e nao tabela, pela razao que `desvios` (logo abaixo) e
+    # `arranjo` do corte ja provaram: e uma lista de janelas de tempo que so faz
+    # sentido junto do dono, nunca e consultada por si, e cabe inteira numa
+    # leitura do short — uma tabela cobraria um JOIN por candidato na tela que
+    # lista oito deles.
+    #
+    # Quando ha segmentos, `inicio_seg`/`fim_seg` passam a ser o ENVELOPE (o
+    # menor inicio e o maior fim). Nao sao redundancia: e por eles que a regua
+    # sabe onde desenhar o short no bruto e que a deteccao de rosto escolhe a
+    # janela. O que eles deixam de responder e "quanto tempo dura" —
+    # `fim - inicio` MENTE com buraco no meio, e a resposta passou a morar em
+    # `domain/segmentos_short.duracao_liquida`.
+    #
+    # A ORDEM da lista e livre (decisao do operador): ele pode abrir com o
+    # gancho mais forte mesmo que ele venha depois na live. Nada ordena esta
+    # lista, e ordenar seria desfazer a decisao dele em silencio.
+    segmentos: Mapped[str] = mapped_column(Text, default="[]")
     # E-030: o que a IA usa para o operador escolher entre bons candidatos.
     # `gancho` e a frase que precisa segurar os 3 primeiros segundos; `score`
     # ordena a lista; `justificativa` explica a nota (colunas novas sobre as
