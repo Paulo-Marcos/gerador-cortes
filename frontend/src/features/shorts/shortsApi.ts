@@ -465,6 +465,8 @@ export interface PacotePublicacao {
   titulo_visivel: string;
   descricao: string;
   hashtags: string[];
+  /** D-611: título + descrição na caixa única de TikTok/Instagram — o que os robôs colam. */
+  legenda: string;
   avisos: string[];
 }
 
@@ -538,6 +540,36 @@ export interface OpcoesDoLote {
   agendarPara: string;
   /** D-590: sobe de novo o que já foi publicado, em vez de pular. */
   republicar: boolean;
+}
+
+/**
+ * O mínimo que post e capa precisam saber de um short: quem é e como se chama.
+ *
+ * D-611: os modais serviam só a `ShortSugerido`, e a central de prontos traz um
+ * resumo diferente do mesmo short. Pedir só o que usam deixa os dois caminhos
+ * abrirem os mesmos modais.
+ */
+export type ShortIdentificado = Pick<ShortSugerido, 'id' | 'titulo'>;
+
+/** D-611: um short pronto que ainda falta em alguma rede — de qualquer corte. */
+export interface ShortPronto {
+  id: string;
+  corte_id: string;
+  numero: number;
+  titulo: string;
+  status: StatusShort;
+  arquivo_short_path: string;
+  inicio_seg: number;
+  duracao_seg: number;
+  corte_numero: number;
+  corte_titulo: string;
+  projeto_id: string;
+  projeto_titulo: string;
+  publicadas: string[];
+  pendentes: string[];
+  post: { gerado: boolean; titulo: string; hashtags: number };
+  capa: { tem_capa: boolean; instante_seg: number };
+  atualizado_em: string;
 }
 
 /** Uma publicação já registrada — o que a tela de seleção usa para nascer sabendo. */
@@ -940,6 +972,9 @@ export const shortsApi = {
       method: 'POST',
       body: JSON.stringify({ alvo_id: alvoId, plataforma, url }),
     }),
+
+  /** D-611: a central — todo short pronto que ainda falta em alguma rede. */
+  listarProntos: () => request<{ shorts: ShortPronto[] }>('/shorts/prontos'),
 
   publicacoesDoCorte: (corteId: string) =>
     request<{ publicacoes: PublicacaoRegistrada[] }>(`/shorts/corte/${corteId}/publicacoes`),

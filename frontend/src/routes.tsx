@@ -56,6 +56,12 @@ const FireDetalhePage = lazy(() =>
 const WorkspaceDoFirePage = lazy(() =>
   import('./features/shorts/WorkspaceDoFirePage').then((m) => ({ default: m.default })),
 );
+// D-611: a central de prontos — todo short que falta em alguma rede, de
+// qualquer corte. Rota propria e fora de /shorts/:corteId: ela nao pertence a
+// corte nenhum, e e isso que ela resolve.
+const ShortsProntosPage = lazy(() =>
+  import('./features/shorts/ShortsProntosPage').then((m) => ({ default: m.default })),
+);
 const AtalhosPage = lazy(() =>
   import('@/features/atalhos/AtalhosPage').then((m) => ({ default: m.AtalhosPage })),
 );
@@ -105,6 +111,7 @@ export const router = createBrowserRouter([
       { path: 'canais', element: <ChannelsPage /> },
       { path: 'analises', element: <AnalisesPage /> },
       { path: 'shorts', element: <ShortsPage /> },
+      { path: 'prontos', element: <ShortsProntosPage /> },
       { path: 'shorts/:corteId', element: <FireDetalhePage /> },
       { path: 'shorts/:corteId/workspace', element: <WorkspaceDoFirePage /> },
       { path: 'atalhos', element: <AtalhosPage /> },

@@ -11,6 +11,7 @@
 // perguntar ao backend de dois em dois segundos sobre um lote que acabou.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { shortsApi, type OpcoesDoLote } from './shortsApi';
+import { PRONTOS_KEY } from './useShortsProntos';
 
 export const LOTE_KEY = ['shorts', 'lote'] as const;
 
@@ -70,7 +71,7 @@ export function useCancelarLote() {
  * D-603: vale também para o item que falhou e foi terminado à mão no app da
  * rede. É uma DECLARAÇÃO do operador, e por isso ela pode nascer sem lote.
  */
-export function useConfirmarPublicacao(corteId: string) {
+export function useConfirmarPublicacao(corteId?: string) {
   const cliente = useQueryClient();
   return useMutation({
     mutationFn: ({
@@ -84,7 +85,12 @@ export function useConfirmarPublicacao(corteId: string) {
     }) => shortsApi.confirmarPublicacao(alvoId, plataforma, url ?? ''),
     onSuccess: () => {
       cliente.invalidateQueries({ queryKey: LOTE_KEY });
-      cliente.invalidateQueries({ queryKey: publicacoesKey(corteId) });
+      // D-611: sem corte (a central mistura vários), refresca o histórico de
+      // todos — e a central sempre, porque um "publiquei" pode tirar o short dela.
+      cliente.invalidateQueries({
+        queryKey: corteId ? publicacoesKey(corteId) : ['shorts', 'publicacoes'],
+      });
+      cliente.invalidateQueries({ queryKey: PRONTOS_KEY });
     },
   });
 }

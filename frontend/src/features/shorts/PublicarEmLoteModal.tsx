@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import { motivoDoErro } from './shortsApi';
-import type { EstadoItemLote, ItemDoLote, RaiaDoLote, ShortSugerido } from './shortsApi';
+import type { EstadoItemLote, ItemDoLote, PublicacaoRegistrada, RaiaDoLote } from './shortsApi';
 import {
   alternar,
   contarEnvios,
@@ -34,6 +34,7 @@ import {
   plataformasJaPublicadas,
   podeMarcarAMao,
   shortsPublicaveis,
+  type ShortDoLote,
 } from './selecaoDoLote';
 import {
   useCancelarLote,
@@ -74,8 +75,14 @@ function useAgora(ligado: boolean): [Date, () => void] {
 interface Props {
   open: boolean;
   onClose: () => void;
-  corteId: string;
-  shorts: ShortSugerido[];
+  /** O corte da prateleira. Sem ele (D-611, central de prontos), o histórico vem em `publicacoes`. */
+  corteId?: string;
+  shorts: ShortDoLote[];
+  /** D-611: o que já subiu, quando a tela já sabe — dispensa a consulta por corte. */
+  publicacoes?: PublicacaoRegistrada[];
+  /** D-611: a seleção com que o modal abre (use `key` para reabrir limpo). */
+  selecaoInicial?: string[];
+  plataformasIniciais?: string[];
 }
 
 // As três que recebem um short VERTICAL. O TikTok horizontal existe no backend
@@ -87,9 +94,19 @@ const PLATAFORMAS = [
   { id: 'instagram_reels', rotulo: 'Instagram Reels', nota: 'pacote pronto; sobe do celular' },
 ] as const;
 
-export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
-  const [selecionados, setSelecionados] = useState<string[]>([]);
-  const [plataformas, setPlataformas] = useState<string[]>(['youtube_shorts']);
+export function PublicarEmLoteModal({
+  open,
+  onClose,
+  corteId,
+  shorts,
+  publicacoes: publicacoesConhecidas,
+  selecaoInicial,
+  plataformasIniciais,
+}: Props) {
+  const [selecionados, setSelecionados] = useState<string[]>(selecaoInicial ?? []);
+  const [plataformas, setPlataformas] = useState<string[]>(
+    plataformasIniciais ?? ['youtube_shorts'],
+  );
   // D-564 onda 2: como o TikTok sobe. Os dois nascem desligados — o caminho
   // seguro é o padrão, e ligar é uma decisão consciente por lote.
   const [tiktokAssistido, setTiktokAssistido] = useState(false);
@@ -103,13 +120,16 @@ export function PublicarEmLoteModal({ open, onClose, corteId, shorts }: Props) {
   // novo o que já está no ar cria um segundo vídeo, e isso tem de ser pedido.
   const [republicar, setRepublicar] = useState(false);
 
-  const publicacoes = usePublicacoesDoCorte(corteId, open);
+  const publicacoes = usePublicacoesDoCorte(corteId ?? '', open && !publicacoesConhecidas);
   const loteAtual = useLoteAtual();
   const criar = useCriarLote();
   const cancelar = useCancelarLote();
 
   const candidatos = useMemo(() => shortsPublicaveis(shorts), [shorts]);
-  const registradas = useMemo(() => publicacoes.data?.publicacoes ?? [], [publicacoes.data]);
+  const registradas = useMemo(
+    () => publicacoesConhecidas ?? publicacoes.data?.publicacoes ?? [],
+    [publicacoesConhecidas, publicacoes.data],
+  );
   const repetidos = contarRepublicacoes(selecionados, plataformas, registradas);
   // Um interruptor ligado que sumiu da tela (a seleção deixou de ter repetido)
   // não pode continuar valendo às escondidas.
@@ -472,7 +492,7 @@ function LinhaDoShort({
   jaPublicado,
   onClick,
 }: {
-  short: ShortSugerido;
+  short: ShortDoLote;
   marcado: boolean;
   jaPublicado: Set<string>;
   onClick: () => void;
@@ -503,6 +523,9 @@ function LinhaDoShort({
         </span>
         <span className="min-w-0 flex-1 truncate text-[12.5px]">
           {short.titulo || `Trecho ${short.numero}`}
+          {short.origem && (
+            <span className="ml-1.5 text-[11px] text-[var(--wb-text-mute)]">· {short.origem}</span>
+          )}
         </span>
         <span className="flex-none font-code text-[11px] text-[var(--wb-text-mute)]">
           {Math.round(short.duracao_seg)}s
@@ -522,7 +545,7 @@ function LinhaDoShort({
   );
 }
 
-function PainelDoLote({ raias, corteId }: { raias: RaiaDoLote[]; corteId: string }) {
+function PainelDoLote({ raias, corteId }: { raias: RaiaDoLote[]; corteId?: string }) {
   return (
     <div className="grid gap-2 md:grid-cols-3">
       {raias.map((raia) => (
@@ -553,7 +576,7 @@ function PainelDoLote({ raias, corteId }: { raias: RaiaDoLote[]; corteId: string
   );
 }
 
-function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId: string }) {
+function ItemDaRaia({ item, corteId }: { item: ItemDoLote; corteId?: string }) {
   const confirmar = useConfirmarPublicacao(corteId);
 
   return (

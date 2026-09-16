@@ -6,6 +6,16 @@
 // dela. Fora do componente, a regra é legível e testável sem montar tela.
 import type { EstadoItemLote, PublicacaoRegistrada, ShortSugerido } from './shortsApi';
 
+/**
+ * O que o lote precisa de um short. D-611: a central de prontos traz shorts de
+ * vários cortes num resumo próprio; `origem` diz de qual corte cada um veio,
+ * porque numa lista misturada "Trecho 2" sozinho não identifica nada.
+ */
+export type ShortDoLote = Pick<
+  ShortSugerido,
+  'id' | 'numero' | 'titulo' | 'duracao_seg' | 'status' | 'arquivo_short_path'
+> & { origem?: string };
+
 /** O prefixo que o backend usa para saber de qual arquivo montar o pacote. */
 export const ALVO_SHORT = 'short';
 
@@ -16,7 +26,9 @@ export const ALVO_SHORT = 'short';
  * quando a limpeza levou o arquivo por fora do app, e oferecer esse short no
  * lote só produziria um erro lá na frente, depois de o operador ter escolhido.
  */
-export function shortsPublicaveis(shorts: ShortSugerido[]): ShortSugerido[] {
+export function shortsPublicaveis<T extends Pick<ShortSugerido, 'status' | 'arquivo_short_path'>>(
+  shorts: T[],
+): T[] {
   return shorts.filter((s) => s.status === 'renderizado' && Boolean(s.arquivo_short_path));
 }
 

@@ -27,6 +27,7 @@ export type TelaId =
   | 'shorts'
   | 'fire'
   | 'prateleira'
+  | 'prontos'
   | 'lives'
   | 'ranking'
   | 'thumbs'
@@ -157,6 +158,17 @@ export const TELAS: Record<TelaId, Def> = {
     dentroDe: 'shorts',
     trilha: ['Shorts', SLOT, 'Prateleira'],
   },
+  // D-611: item próprio, e não filha de Shorts — ela não pertence a um Fire.
+  prontos: {
+    icone: 'send',
+    titulo: 'Prontos para publicar',
+    menu: 'Prontos',
+    rota: () => '/prontos',
+    padroes: [/^\/prontos/],
+    grupo: 'producao',
+    paleta: true,
+    trilha: ['Prontos para publicar'],
+  },
   lives: {
     icone: 'radio',
     titulo: 'Buscar lives do canal',
@@ -255,6 +267,7 @@ const ORDEM: TelaId[] = [
   'prateleira',
   'fire',
   'shorts',
+  'prontos',
   'lives',
   'ranking',
   'thumbs',

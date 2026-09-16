@@ -116,7 +116,7 @@ describe('menuDoTrilho', () => {
   const menu = menuDoTrilho();
 
   it('e FIXO: nao depende da rota nem de haver live aberta', () => {
-    expect(menu.producao.map((i) => i.id)).toEqual(['biblioteca', 'shorts']);
+    expect(menu.producao.map((i) => i.id)).toEqual(['biblioteca', 'shorts', 'prontos']);
     expect(menu.inteligencia.map((i) => i.id)).toEqual([
       'lives',
       'ranking',

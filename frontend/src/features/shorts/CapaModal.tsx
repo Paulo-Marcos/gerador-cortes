@@ -6,7 +6,7 @@ import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo } from '@/lib/providerIa';
 import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { Modal } from '@/components/ui/modal';
-import { capaImagemUrl, shortVideoUrl, type ShortSugerido } from './shortsApi';
+import { capaImagemUrl, shortVideoUrl, type ShortIdentificado } from './shortsApi';
 import {
   comSegundos,
   FRACAO_CORTADA,
@@ -71,7 +71,7 @@ const ABAS: { id: Origem; rotulo: string; nota: string }[] = [
 interface Props {
   open: boolean;
   onClose: () => void;
-  short: ShortSugerido;
+  short: ShortIdentificado;
 }
 
 export function CapaModal({ open, onClose, short }: Props) {
@@ -356,7 +356,7 @@ function ArteDaCapa({
   short,
   subir,
 }: {
-  short: ShortSugerido;
+  short: ShortIdentificado;
   subir: ReturnType<typeof useSubirArteDaCapa>;
 }) {
   const prompt = usePromptDaCapa(short.id);

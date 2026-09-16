@@ -2,6 +2,7 @@
 
 Endpoints:
   GET  /fires                     — os cortes Fire cujo bruto ainda esta em disco
+  GET  /prontos                   — shorts renderizados que faltam em alguma rede (D-611)
   GET  /corte/{corte_id}          — os shorts do corte, do melhor palpite ao pior
   POST /corte/{corte_id}          — cria um short a mao, que a regeracao nao apaga
   POST /corte/{corte_id}/indicar  — poe o corte na fabrica sem depender do Fire
@@ -85,6 +86,14 @@ URL_UPLOAD_TIKTOK = "https://www.tiktok.com/tiktokstudio/upload?from=upload"
 async def listar_fires():
     """A porta da tela de Shorts: os Fires que ainda tem de onde recortar."""
     return {"fires": await shorts_store.listar_fires_com_bruto()}
+
+
+@router.get("/prontos")
+async def listar_prontos():
+    """D-611: a central — todo short pronto que ainda falta em alguma rede."""
+    from app.services import shorts_prontos
+
+    return {"shorts": await shorts_prontos.listar_prontos()}
 
 
 @router.get("/corte/{corte_id}")
@@ -906,7 +915,7 @@ async def simular_palco(short_id: str, body: SimularPalcoRequest):
 @router.get("/{short_id}/publicacao")
 async def previa_publicacao(short_id: str):
     """O que cada plataforma receberia, com os avisos — sem publicar nada."""
-    from app.domain.publicacao import LIMITES
+    from app.domain.publicacao import LIMITES, legenda_unica
     from app.services import (
         destinos_shorts,  # noqa: F401 — registra os destinos
         publicacao_destinos,
@@ -931,6 +940,9 @@ async def previa_publicacao(short_id: str):
                 "titulo_visivel": pacote.metadados.titulo_visivel,
                 "descricao": pacote.metadados.descricao,
                 "hashtags": pacote.metadados.hashtags,
+                # D-611: a caixa unica de TikTok/Instagram, montada pela MESMA
+                # funcao que os robos usam — o kit copia exatamente o que eles colam.
+                "legenda": legenda_unica(pacote.metadados.titulo, pacote.metadados.descricao),
                 "avisos": pacote.avisos,
             }
         )

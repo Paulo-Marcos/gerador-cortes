@@ -23,7 +23,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CapaModal } from './CapaModal';
 import { PostModal } from './PostModal';
 import { escreverPostSeFaltar } from './postDoShort';
-import { shortsApi, type ShortSugerido } from './shortsApi';
+import { shortsApi, type ShortIdentificado } from './shortsApi';
 import { postDoShortKey, useGerarPost } from './useShortsDoCorte';
 
 /** Em que ponto do fecho o short está. */
@@ -46,7 +46,7 @@ export interface FechoDoShort {
   modais: React.ReactNode;
 }
 
-export function useFechoDoShort(short: ShortSugerido): FechoDoShort {
+export function useFechoDoShort(short: ShortIdentificado): FechoDoShort {
   const [etapa, setEtapa] = useState<EtapaDoFecho>('nenhuma');
   const qc = useQueryClient();
   const { mutate: gerarPost } = useGerarPost(short.id);

@@ -10,6 +10,7 @@ import {
   Radio,
   Rocket,
   Scissors,
+  Send,
   Settings,
   SlidersHorizontal,
   Sparkles,
@@ -61,6 +62,13 @@ const globalItems: NavItem[] = [
     label: 'Shorts',
     Icon: Clapperboard,
     isActive: (pathname) => pathname.startsWith('/shorts'),
+  },
+  // D-611: a central de prontos — o que falta subir, de todos os cortes.
+  {
+    to: '/prontos',
+    label: 'Prontos para publicar',
+    Icon: Send,
+    isActive: (pathname) => pathname.startsWith('/prontos'),
   },
   // E-022: Área de Análises (telemetria proposta×final + desempenho YouTube).
   {
