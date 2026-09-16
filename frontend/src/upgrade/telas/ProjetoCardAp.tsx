@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
+import { limpezaDoProjeto, type LimpezaDoProjeto } from '@/features/projetos/limpezaDoProjeto';
 import { construirEtapas } from '@/features/projetos/PipelineProgress';
 import { estadoDoProjeto, type EstadoProjetoKey } from '@/features/projetos/statusMaps';
 import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/hooks/useProjetos';
@@ -59,6 +60,12 @@ const TOM_ETAPA = {
   'em-curso': { bg: 'var(--accent)', cor: 'var(--on-accent)' },
   pendente: { bg: 'var(--inset)', cor: 'var(--dim)' },
 };
+
+const TOM_LIMPEZA = {
+  pronto: { bg: 'var(--ok-soft)', cor: 'var(--ok)', icone: 'sparkles' },
+  guardando: { bg: 'var(--accent-soft)', cor: 'var(--accent2)', icone: 'flame' },
+  limpo: { bg: 'var(--inset)', cor: 'var(--mute)', icone: 'check' },
+} satisfies Record<LimpezaDoProjeto['chave'], { bg: string; cor: string; icone: IconName }>;
 
 const HUES = [22, 280, 160, 340, 240, 60, 200, 100];
 
@@ -126,10 +133,11 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
     );
   };
 
+  // "limpo" e "N fire" saíram daqui: o selo de limpeza diz as duas coisas.
+  const limpeza = limpezaDoProjeto(projeto);
   const meta = [
     projeto.canal_origem?.replace('@', '') || 'canal',
     projeto.data_live ? formatarDataLive(projeto.data_live) : null,
-    limpo ? 'limpo' : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -140,6 +148,11 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
         className="card"
         style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
+        {/* D-610: a miniatura ganha moldura. Colada na borda do card, a arte
+            da live (que já vem cheia de texto e cor) se misturava com os selos
+            e com o próprio card; o respiro e o filete separam "a live" de
+            "o card que fala dela". */}
+        <div style={{ padding: '8px 8px 0' }}>
         <button
           type="button"
           onClick={abrir}
@@ -149,7 +162,10 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
             display: 'block',
             width: '100%',
             padding: 0,
-            border: 0,
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--r2)',
+            overflow: 'hidden',
+            boxShadow: 'var(--hi)',
             aspectRatio: '16/9',
             background: `linear-gradient(135deg,oklch(0.6 0.06 ${hue}),oklch(0.3 0.05 ${hue}))`,
             cursor: 'pointer',
@@ -228,6 +244,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
             </span>
           ) : null}
         </button>
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 11 }}>
           <span style={{ minWidth: 0 }}>
@@ -258,18 +275,34 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
             >
               {projeto.titulo_live || 'Sem título'}
             </button>
-            <span
-              style={{
-                display: 'block',
-                marginTop: 2,
-                fontSize: 11.5,
-                color: 'var(--mute)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {meta}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+              <span
+                style={{
+                  minWidth: 0,
+                  flex: 1,
+                  fontSize: 11.5,
+                  color: 'var(--mute)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {meta}
+              </span>
+              {limpeza ? (
+                <span
+                  className="chip"
+                  title={limpeza.dica}
+                  style={{
+                    flex: 'none',
+                    background: TOM_LIMPEZA[limpeza.chave].bg,
+                    color: TOM_LIMPEZA[limpeza.chave].cor,
+                  }}
+                >
+                  <Icon name={TOM_LIMPEZA[limpeza.chave].icone} size={10} />
+                  {limpeza.texto}
+                </span>
+              ) : null}
             </span>
           </span>
 
@@ -308,15 +341,6 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
           >
             <span>{projeto.total_cortes} cortes</span>
             <span style={{ color: 'var(--ok)' }}>{projeto.total_publicados} publicados</span>
-            {projeto.fires_pendentes > 0 ? (
-              <span
-                style={{ color: 'var(--accent)' }}
-                title={`${projeto.fires_pendentes} Fire(s) ainda precisam de shorts`}
-              >
-                {projeto.fires_pendentes} fire
-              </span>
-            ) : null}
-
             <span style={{ flex: 1 }} />
 
             {/* O design fecha o card com uma seta. Aqui a seta virou a
