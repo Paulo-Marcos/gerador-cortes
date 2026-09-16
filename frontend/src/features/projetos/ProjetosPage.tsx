@@ -13,93 +13,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
 import { temFalhados, useProjetos, useReiniciarFalhados } from '@/hooks/useProjetos';
-import type { Projeto } from '@/types/models';
+import {
+  contarPorFiltro,
+  filtrarProjetos,
+  FILTERS,
+  SORTS,
+  type FilterKey,
+  type SortKey,
+} from './bibliotecaFiltros';
 import { EmptyState } from './EmptyState';
 import { NovoProjetoForm } from './NovoProjetoForm';
 import { ProjetoCard } from './ProjetoCard';
 import { ProjetoCardSkeleton } from './ProjetoCardSkeleton';
-
-type FilterKey = 'todos' | 'nao_publicados' | 'analise' | 'edicao' | 'publicados' | 'nao_limpos';
-
-const FILTERS: Array<{ key: FilterKey; label: string; matches: (projeto: Projeto) => boolean }> = [
-  { key: 'todos', label: 'Todos', matches: () => true },
-  {
-    // F-059: backlog de trabalho — nenhum corte ainda foi para a nuvem/YouTube
-    // (total_publicados conta cortes com youtube_video_id preenchido).
-    key: 'nao_publicados',
-    label: 'Nao publicados',
-    matches: (projeto) => projeto.total_publicados === 0,
-  },
-  {
-    key: 'analise',
-    label: 'Em analise',
-    matches: (projeto) => ['pronto', 'analisando'].includes(projeto.status),
-  },
-  {
-    key: 'edicao',
-    label: 'Editando',
-    matches: (projeto) =>
-      projeto.status === 'analisado' &&
-      projeto.total_cortes > 0 &&
-      projeto.total_publicados < projeto.total_cortes,
-  },
-  {
-    key: 'publicados',
-    label: 'Publicados',
-    matches: (projeto) =>
-      projeto.total_cortes > 0 && projeto.total_publicados === projeto.total_cortes,
-  },
-  {
-    // D-399: fila de manutenção de disco — projetos cuja mídia pesada ainda
-    // ocupa espaço. Isola quem pode ser limpo sem caçar card a card.
-    key: 'nao_limpos',
-    label: 'Nao limpos',
-    matches: (projeto) => !projeto.arquivos_limpos,
-  },
-];
-
-function dataPublicacaoMs(dataLive: string): number {
-  const value = dataLive.trim();
-  const compactMatch = value.match(/^(\d{4})(\d{2})(\d{2})(?:(\d{2})(\d{2})(\d{2}))?$/);
-
-  if (compactMatch) {
-    const [, year, month, day, hour = '00', minute = '00', second = '00'] = compactMatch;
-    return Date.UTC(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour),
-      Number(minute),
-      Number(second),
-    );
-  }
-
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
-
-function sortProjetosPorPublicacao(a: Projeto, b: Projeto) {
-  const dataDiff = dataPublicacaoMs(b.data_live || '') - dataPublicacaoMs(a.data_live || '');
-  if (dataDiff !== 0) return dataDiff;
-
-  return (b.criado_em || '').localeCompare(a.criado_em || '');
-}
-
-type SortKey = 'recentes' | 'antigos' | 'titulo';
-
-// DE-PARA-v2 §1: ordenação da grid, ausente na implementação. "Mais
-// recentes" é o sort_key default (o mesmo já aplicado incondicionalmente
-// antes desta mudança) — os demais são o mínimo útil pra tornar o seletor
-// funcional sem inventar critério que a PROD não descreveu.
-const SORTS: Array<{ key: SortKey; label: string; compare: (a: Projeto, b: Projeto) => number }> = [
-  { key: 'recentes', label: 'Mais recentes', compare: sortProjetosPorPublicacao },
-  { key: 'antigos', label: 'Mais antigos', compare: (a, b) => -sortProjetosPorPublicacao(a, b) },
-  {
-    key: 'titulo',
-    label: 'Título (A-Z)',
-    compare: (a, b) => a.titulo_live.localeCompare(b.titulo_live, 'pt-BR'),
-  },
-];
 
 export function ProjetosPage() {
   const navigate = useNavigate();
@@ -114,28 +39,12 @@ export function ProjetosPage() {
   const allProjects = useMemo(() => projetos ?? [], [projetos]);
   const falhadosVisivel = useMemo(() => temFalhados(allProjects), [allProjects]);
 
-  const filteredProjects = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const activeFilter = FILTERS.find((item) => item.key === filter) ?? FILTERS[0];
-    const compare = SORTS.find((item) => item.key === sortKey)?.compare ?? sortProjetosPorPublicacao;
-
-    return allProjects
-      .filter(activeFilter.matches)
-      .filter((projeto) => {
-        if (!normalizedQuery) return true;
-        return projeto.titulo_live.toLowerCase().includes(normalizedQuery);
-      })
-      .slice()
-      .sort(compare);
-  }, [filter, query, sortKey, allProjects]);
-
-  const counts = useMemo(
-    () =>
-      Object.fromEntries(
-        FILTERS.map((item) => [item.key, allProjects.filter(item.matches).length]),
-      ) as Record<FilterKey, number>,
-    [allProjects],
+  const filteredProjects = useMemo(
+    () => filtrarProjetos(allProjects, { filtro: filter, busca: query, ordem: sortKey }),
+    [filter, query, sortKey, allProjects],
   );
+
+  const counts = useMemo(() => contarPorFiltro(allProjects), [allProjects]);
 
   const onExplorar = () => navigate('/buscar-lives');
   const onCreate = () => setFormOpen(true);

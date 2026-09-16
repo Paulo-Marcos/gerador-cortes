@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from '@/App';
 import { ProjetosPage } from '@/features/projetos/ProjetosPage';
 import { StubPage } from '@/pages/StubPage';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 const EditorPage = lazy(() =>
   import('@/features/editor/EditorPage').then((m) => ({ default: m.EditorPage })),
@@ -63,6 +64,12 @@ const AtalhosPage = lazy(() =>
 const UpgradeKitPage = lazy(() => import('@/upgrade/UpgradeKitPage'));
 // D-599 Etapa 1: a casca com os dados de demonstracao da LIVE 267.
 const UpgradeShellDemoPage = lazy(() => import('@/upgrade/UpgradeShellDemoPage'));
+// D-599 Etapa 2: a Biblioteca na linguagem nova. A troca e feita aqui, uma
+// vez, na montagem do router — a mesma leitura de flag que o AppShell faz
+// para escolher a casca. Assim tela e casca nunca ficam em versoes
+// diferentes dentro da mesma sessao.
+const BibliotecaPage = lazy(() => import('@/upgrade/telas/BibliotecaPage'));
+const CASCA_NOVA = isUpgradeShellEnabled();
 
 export const router = createBrowserRouter([
   {
@@ -70,7 +77,7 @@ export const router = createBrowserRouter([
     element: <App />,
     children: [
       { index: true, element: <Navigate to="/projetos" replace /> },
-      { path: 'projetos', element: <ProjetosPage /> },
+      { path: 'projetos', element: CASCA_NOVA ? <BibliotecaPage /> : <ProjetosPage /> },
       { path: 'projetos/:id', element: <ProjetoDetalhePage /> },
       { path: 'projetos/:id/cortes', element: <EditorPage /> },
       { path: 'projetos/:id/cortes/:corteId', element: <EditorPage /> },
