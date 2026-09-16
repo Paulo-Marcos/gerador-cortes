@@ -40,6 +40,9 @@
   --accent2: oklch(0.44 0.18 28);
   --accent-soft: oklch(0.52 0.165 28 / 0.12);
   --on-accent: #fff;
+  /* Matiz e croma do brilho de fundo: seguem a paleta escolhida. */
+  --matiz-fundo: 28;
+  --croma-fundo: 0.08;
 
   --ok: oklch(0.52 0.13 145);
   --ok-soft: oklch(0.52 0.13 145 / 0.14);
@@ -65,7 +68,7 @@
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(900px 520px at 10% -12%, oklch(0.88 0.08 28 / 0.7), transparent 62%),
+    radial-gradient(900px 520px at 10% -12%, oklch(0.88 var(--croma-fundo) var(--matiz-fundo) / 0.7), transparent 62%),
     radial-gradient(820px 560px at 96% 106%, oklch(0.88 0.07 245 / 0.75), transparent 60%),
     radial-gradient(600px 420px at 58% 48%, oklch(0.93 0.05 80 / 0.45), transparent 65%),
     linear-gradient(oklch(0.965 0.006 240), oklch(0.945 0.01 250));
@@ -104,7 +107,7 @@
 
   color-scheme: dark;
   background-image:
-    radial-gradient(900px 520px at 10% -12%, oklch(0.38 0.12 28 / 0.7), transparent 62%),
+    radial-gradient(900px 520px at 10% -12%, oklch(0.38 calc(var(--croma-fundo) * 1.5) var(--matiz-fundo) / 0.7), transparent 62%),
     radial-gradient(820px 560px at 96% 106%, oklch(0.36 0.1 260 / 0.7), transparent 60%),
     radial-gradient(600px 420px at 58% 48%, oklch(0.3 0.06 200 / 0.45), transparent 65%),
     linear-gradient(oklch(0.17 0.012 255), oklch(0.14 0.014 260));
@@ -123,6 +126,67 @@
 
 .ap[data-glass='0'][data-theme='dark'] {
   --inset: oklch(0.25 0.012 255);
+}
+
+/* ─── Paletas ─────────────────────────────────────────────────────
+   D-610 · as mesmas cinco da versão anterior (usePalette, D-174/F-024):
+   a escolha mora em `wb-palette-<id>` no <html> e no mesmo localStorage,
+   então quem já tinha escolhido Floresta volta a vê-la sem refazer nada.
+   Terracota é o padrão e não tem classe. Muda o acento e o brilho do
+   fundo; estados (ok/warn/err/info) ficam fixos — verde continua sendo
+   "deu certo" em qualquer paleta. */
+
+html.wb-palette-indigo .ap {
+  --accent: oklch(0.5 0.14 275);
+  --accent2: oklch(0.42 0.16 275);
+  --accent-soft: oklch(0.5 0.14 275 / 0.12);
+  --matiz-fundo: 275;
+}
+html.wb-palette-indigo .ap[data-theme='dark'] {
+  --accent: oklch(0.72 0.13 275);
+  --accent2: oklch(0.8 0.12 275);
+  --accent-soft: oklch(0.72 0.13 275 / 0.16);
+  --on-accent: oklch(0.14 0.01 275);
+}
+
+html.wb-palette-forest .ap {
+  --accent: oklch(0.5 0.12 155);
+  --accent2: oklch(0.42 0.13 155);
+  --accent-soft: oklch(0.5 0.12 155 / 0.12);
+  --matiz-fundo: 155;
+}
+html.wb-palette-forest .ap[data-theme='dark'] {
+  --accent: oklch(0.74 0.13 155);
+  --accent2: oklch(0.82 0.13 155);
+  --accent-soft: oklch(0.74 0.13 155 / 0.16);
+  --on-accent: oklch(0.14 0.01 155);
+}
+
+html.wb-palette-plum .ap {
+  --accent: oklch(0.5 0.13 320);
+  --accent2: oklch(0.42 0.15 320);
+  --accent-soft: oklch(0.5 0.13 320 / 0.12);
+  --matiz-fundo: 320;
+}
+html.wb-palette-plum .ap[data-theme='dark'] {
+  --accent: oklch(0.74 0.12 320);
+  --accent2: oklch(0.82 0.11 320);
+  --accent-soft: oklch(0.74 0.12 320 / 0.16);
+  --on-accent: oklch(0.14 0.01 320);
+}
+
+html.wb-palette-ink .ap {
+  --accent: oklch(0.32 0.02 70);
+  --accent2: oklch(0.22 0.02 70);
+  --accent-soft: oklch(0.32 0.02 70 / 0.1);
+  --matiz-fundo: 70;
+  --croma-fundo: 0.02;
+}
+html.wb-palette-ink .ap[data-theme='dark'] {
+  --accent: oklch(0.88 0.005 75);
+  --accent2: oklch(0.95 0.005 75);
+  --accent-soft: oklch(0.88 0.005 75 / 0.14);
+  --on-accent: oklch(0.16 0.01 70);
 }
 
 /* ─── Primitivos ──────────────────────────────────────────────────
@@ -234,7 +298,7 @@
   background-image: linear-gradient(rgb(255 255 255 / 0.18), transparent);
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.3) inset,
-    0 6px 18px oklch(0.52 0.165 28 / 0.3);
+    0 6px 18px color-mix(in oklch, var(--accent) 30%, transparent);
   color: var(--on-accent);
   font-weight: 700;
 }
