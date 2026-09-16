@@ -21,6 +21,7 @@ import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
 import { PromptsUtilitariosSection } from './PromptsUtilitariosSection';
 import { RankingPesosSection } from './RankingPesosSection';
+import { AparenciaDaCasca } from '@/upgrade/AparenciaDaCasca';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import {
@@ -292,7 +293,10 @@ export function ChannelsPage() {
       <main className="grid flex-1 content-start gap-4 overflow-auto p-4">
         {aba === 'aplicacao' && (
           <>
-            <AparenciaSection />
+            {/* D-599: com a casca nova a aparencia que vale e a DELA (tema e
+                superficie). A secao antiga controla o tema das cascas
+                anteriores e seria um controle que nao muda nada na tela. */}
+            {CASCA_NOVA ? <AparenciaDaCasca /> : <AparenciaSection />}
             <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
               <h2 className="text-lg font-semibold text-[var(--wb-text)]">Configurações globais</h2>
               <p className="text-sm text-[var(--wb-text-mute)]">
