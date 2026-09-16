@@ -48,6 +48,7 @@ import type {
   LayoutPreset,
   LayoutPresetTipo,
 } from '@/types/presets';
+import type { ProviderIA } from '@/lib/providerIa';
 
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
@@ -335,8 +336,8 @@ export const api = {
     request<AvaliacaoThumbnailHistorico>(`/avaliacoes-thumbnail/corte/${corteId}`),
 
   // D-070: dispara a análise de padrões dos melhores prompts avaliados.
-  analisarPadroesThumbnail: () =>
-    request<PadroesThumbnailResponse>(`/avaliacoes-thumbnail/padroes`, {
+  analisarPadroesThumbnail: (provider: ProviderIA = 'claude') =>
+    request<PadroesThumbnailResponse>(`/avaliacoes-thumbnail/padroes?provider=${provider}`, {
       method: 'POST',
       body: '{}',
     }),

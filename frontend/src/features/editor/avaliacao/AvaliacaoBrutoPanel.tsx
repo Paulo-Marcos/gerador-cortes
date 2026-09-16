@@ -12,6 +12,9 @@ import {
   useHistoricoAvaliacaoBruto,
   useReavaliarBruto,
 } from './useAvaliacaoBruto';
+import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { providerDoModelo, providerEmVoo } from '@/lib/providerIa';
 
 // D-447: o parecer automático sobre a ESTRUTURA do bruto — nota, veredito e os
 // pontos que não fecham. Irmão do D-419 (voto humano sobre a PROPOSTA): este lê
@@ -111,6 +114,7 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
   const query = useAvaliacaoBruto(corteId);
   const historico = useHistoricoAvaliacaoBruto(corteId, historicoAberto);
   const reavaliar = useReavaliarBruto(corteId);
+  const emVoo = providerEmVoo(reavaliar);
 
   const avaliacao = query.data ?? null;
 
@@ -120,20 +124,34 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
         <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--wb-text-dim)]">
           Avaliação do bruto
         </span>
-        <button
-          type="button"
-          onClick={() => reavaliar.mutate()}
-          disabled={reavaliar.isPending}
-          title="Reavaliar o bruto atual sem regerar o vídeo"
-          className="ml-auto flex items-center gap-1 rounded-md border border-[var(--wb-border)] px-1.5 py-0.5 text-[10.5px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-50"
-        >
-          {reavaliar.isPending ? (
-            <Loader2 size={11} className="animate-spin" aria-hidden />
-          ) : (
-            <RotateCw size={11} aria-hidden />
-          )}
-          reavaliar
-        </button>
+        <SeloDeProvider
+          provider={providerDoModelo(avaliacao?.modelo)}
+          modelo={avaliacao?.modelo}
+        />
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => reavaliar.mutate('claude')}
+            disabled={reavaliar.isPending}
+            title="Reavaliar o bruto pelo Claude, sem regerar o vídeo"
+            className="flex items-center gap-1 rounded-md border border-[var(--wb-border)] px-1.5 py-0.5 text-[10.5px] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)] disabled:opacity-50"
+          >
+            {emVoo === 'claude' ? (
+              <Loader2 size={11} className="animate-spin" aria-hidden />
+            ) : (
+              <RotateCw size={11} aria-hidden />
+            )}
+            claude
+          </button>
+          <GeminiAiButton
+            pending={emVoo === 'gemini'}
+            disabled={emVoo === 'claude'}
+            onClick={() => reavaliar.mutate('gemini')}
+            className="h-[19px] gap-1 rounded-md px-1.5 text-[10.5px] font-normal"
+            label="gemini"
+            title="Reavaliar o bruto pelo Gemini, sem regerar o vídeo"
+          />
+        </div>
       </div>
 
       {query.isLoading && (

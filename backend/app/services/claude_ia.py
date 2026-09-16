@@ -22,7 +22,6 @@ import json
 import logging
 import time
 from datetime import datetime
-from typing import Literal
 
 from app import editorial_scaffolds, editorial_skills
 from app.channel_paths import projetos_dir
@@ -45,6 +44,7 @@ from app.domain.variacao_prompt import bloco_variacao_de
 from app.editorial_identity import identidade_do_mascote
 from app.infrastructure import antigravity_cli_client, claude_cli_client, fila_ia
 from app.models import Corte, Projeto, StatusProjeto
+from app.provider_ia import ProviderIA
 from app.services.analise import AnaliseService, _to_seg
 from app.services.tasks import fire_and_forget
 from sqlalchemy import select as sa_select
@@ -131,6 +131,7 @@ def _args_claude(
     *,
     projeto_id: str | None = None,
     corte_id: str | None = None,
+    short_id: str | None = None,
 ) -> dict:
     """kwargs comuns do `claude_cli_client` a partir da skill resolvida (E-021).
 
@@ -147,12 +148,14 @@ def _args_claude(
         "timeout": skill.timeout,
         "thinking_tokens": skill.thinking_tokens,
         "contexto": claude_cli_client.LlmCallContext(
-            etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id
+            etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
         ),
     }
 
 
-ProviderIA = Literal["claude", "gemini"]
+def _modelo_usado(skill: editorial_skills.SkillResolvida, provider: ProviderIA) -> str:
+    """O modelo que ATENDEU a chamada — é dele que a tela deriva o selo."""
+    return skill.modelo_gemini if provider == "gemini" else skill.modelo
 
 
 def _args_antigravity(
@@ -161,6 +164,7 @@ def _args_antigravity(
     *,
     projeto_id: str | None = None,
     corte_id: str | None = None,
+    short_id: str | None = None,
 ) -> dict:
     """kwargs do `antigravity_cli_client`: a MESMA skill, com o modelo Gemini dela.
 
@@ -172,7 +176,7 @@ def _args_antigravity(
         "expertise": skill.corpo,
         "timeout": skill.timeout,
         "contexto": claude_cli_client.LlmCallContext(
-            etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id
+            etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
         ),
     }
 
@@ -185,12 +189,17 @@ async def _gerar_json_provider(
     *,
     projeto_id: str | None = None,
     corte_id: str | None = None,
+    short_id: str | None = None,
 ) -> dict:
     """Roteia a geração de JSON para o Claude CLI ou para o Antigravity CLI."""
     if provider == "gemini":
-        args = _args_antigravity(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
+        args = _args_antigravity(
+            skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
+        )
         return await antigravity_cli_client.generate_json(prompt, **args)
-    args = _args_claude(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
+    args = _args_claude(
+        skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
+    )
     return await claude_cli_client.generate_json(prompt, **args)
 
 
@@ -202,12 +211,17 @@ async def _gerar_text_provider(
     *,
     projeto_id: str | None = None,
     corte_id: str | None = None,
+    short_id: str | None = None,
 ) -> str:
     """Roteia a geração de texto livre para o Claude CLI ou para o Antigravity CLI."""
     if provider == "gemini":
-        args = _args_antigravity(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
+        args = _args_antigravity(
+            skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
+        )
         return await antigravity_cli_client.generate_text(prompt, **args)
-    args = _args_claude(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id)
+    args = _args_claude(
+        skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
+    )
     return await claude_cli_client.generate_text(prompt, **args)
 
 
@@ -345,6 +359,7 @@ class ClaudeIaService:
                 projeto_id,
                 cortes_novos,
                 descartados=descartados_mesclados,
+                origem=provider,
             )
 
             if encadear_transcricao:
@@ -712,7 +727,7 @@ class ClaudeIaService:
         resultado = await ClaudeIaService._gerar_desvios(
             transcricao_bruta, meta, desvios_existentes, mapa_falantes, provider
         )
-        # WHY: origem='claude' permite o frontend exibir o badge correto
+        # WHY: a `origem` (o provider que propôs) permite o frontend exibir o badge
         # (Bug-2 do I-020). D-332: aditivo puro — sem revisão dos existentes.
         # D-339: encaixa cada desvio NOVO na borda real de palavra (snap
         # determinístico) ANTES do merge. Só os desvios do Claude passam por aqui;
@@ -732,7 +747,7 @@ class ClaudeIaService:
         normalizados_novos = [
             snap_desvio_a_palavras(
                 ClaudeIaService._ancorar_desvio(
-                    classificar_desvio(normalizar_desvio({**d, "origem": "claude"})),
+                    classificar_desvio(normalizar_desvio({**d, "origem": provider})),
                     palavras_corte,
                 ),
                 palavras_corte,
@@ -1200,7 +1215,7 @@ class ClaudeIaService:
         return {"resumo": novo_resumo, "status": "sucesso"}
 
     @staticmethod
-    async def avaliar_bruto_via_claude(corte_id: str) -> dict:
+    async def avaliar_bruto_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
         """Avalia a ESTRUTURA do bruto recém-gerado e registra o parecer (D-447).
 
         Roda depois da geração do bruto, sobre a transcrição que sobrou com as
@@ -1231,24 +1246,23 @@ class ClaudeIaService:
             texto_avaliado=contexto.texto_avaliado,
         )
         _log_skill_usada(_SKILL_AVALIACAO, skill, scaffold)
-        resultado = await claude_cli_client.generate_json(
+        resultado = await _gerar_json_provider(
+            provider,
             prompt,
-            **_args_claude(
-                skill,
-                _SKILL_AVALIACAO,
-                projeto_id=contexto.projeto_id,
-                corte_id=corte_id,
-            ),
+            skill,
+            _SKILL_AVALIACAO,
+            projeto_id=contexto.projeto_id,
+            corte_id=corte_id,
         )
         return await avaliacao_store.registrar_avaliacao(
             contexto,
             normalizar_avaliacao(resultado),
-            modelo=skill.modelo,
+            modelo=_modelo_usado(skill, provider),
             skill_sha=_sha1_curto(skill.corpo),
         )
 
     @staticmethod
-    async def sugerir_shorts_via_claude(corte_id: str) -> dict:
+    async def sugerir_shorts_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
         """Propõe os trechos verticais do bruto recém-gerado e os persiste (D-454).
 
         Roda sobre `Corte.transcricao_final` — a transcrição já sem os desvios e
@@ -1281,14 +1295,13 @@ class ClaudeIaService:
             texto_transcricao=contexto.texto_transcricao,
         )
         _log_skill_usada(_SKILL_SHORTS, skill, scaffold)
-        resposta = await claude_cli_client.generate_json(
+        resposta = await _gerar_json_provider(
+            provider,
             prompt,
-            **_args_claude(
-                skill,
-                _SKILL_SHORTS,
-                projeto_id=contexto.projeto_id,
-                corte_id=corte_id,
-            ),
+            skill,
+            _SKILL_SHORTS,
+            projeto_id=contexto.projeto_id,
+            corte_id=corte_id,
         )
         resultado = normalizar_sugestoes(
             resposta, duracao_bruto_seg=contexto.duracao_seg, faixa=faixa
@@ -1297,7 +1310,9 @@ class ClaudeIaService:
         return {"shorts": shorts, "descartes": resultado.descartes}
 
     @staticmethod
-    async def sugerir_cenas_do_short_via_claude(short_id: str) -> dict:
+    async def sugerir_cenas_do_short_via_claude(
+        short_id: str, provider: ProviderIA = "claude"
+    ) -> dict:
         """Propõe os cartões que entram por cima de UM trecho vertical (D-497).
 
         No horizontal a IA propõe as cenas desde sempre; aqui o painel da D-494
@@ -1332,14 +1347,14 @@ class ClaudeIaService:
             texto_transcricao=contexto.texto_transcricao,
         )
         _log_skill_usada(_SKILL_CENAS_SHORT, skill, scaffold)
-        resposta = await claude_cli_client.generate_json(
+        resposta = await _gerar_json_provider(
+            provider,
             prompt,
-            **_args_claude(
-                skill,
-                _SKILL_CENAS_SHORT,
-                projeto_id=contexto.projeto_id,
-                corte_id=contexto.corte_id,
-            ),
+            skill,
+            _SKILL_CENAS_SHORT,
+            projeto_id=contexto.projeto_id,
+            corte_id=contexto.corte_id,
+            short_id=short_id,
         )
         resultado = normalizar_cenas(resposta, duracao_short=contexto.duracao_seg)
         short = await shorts_store.definir_cenas(
@@ -1354,7 +1369,9 @@ class ClaudeIaService:
         return {"short": short, "descartes": resultado.descartes}
 
     @staticmethod
-    async def sugerir_ganchos_via_claude(short_id: str) -> list[str]:
+    async def sugerir_ganchos_via_claude(
+        short_id: str, provider: ProviderIA = "claude"
+    ) -> list[str]:
         """As variacoes do texto que abre o short (D-565).
 
         Skill separada da capa do TikTok, e nao um parametro dela, porque as duas
@@ -1390,14 +1407,14 @@ class ClaudeIaService:
             quantidade=MAX_VARIACOES,
         )
         _log_skill_usada(_SKILL_GANCHO_SHORT, skill, scaffold)
-        bruto = await claude_cli_client.generate_text(
+        bruto = await _gerar_text_provider(
+            provider,
             prompt,
-            **_args_claude(
-                skill,
-                _SKILL_GANCHO_SHORT,
-                projeto_id=contexto.projeto_id,
-                corte_id=contexto.corte_id,
-            ),
+            skill,
+            _SKILL_GANCHO_SHORT,
+            projeto_id=contexto.projeto_id,
+            corte_id=contexto.corte_id,
+            short_id=short_id,
         )
         # O historico vai ao prompt E ao parser: um pede, o outro garante.
         variacoes = ganchos_da_resposta(bruto, ja_usados=contexto.ganchos_gastos)
@@ -1409,7 +1426,9 @@ class ClaudeIaService:
         return variacoes
 
     @staticmethod
-    async def gerar_post_do_short_via_claude(short_id: str) -> dict:
+    async def gerar_post_do_short_via_claude(
+        short_id: str, provider: ProviderIA = "claude"
+    ) -> dict:
         """O titulo, a descricao e as hashtags que acompanham o short no feed.
 
         Skill separada dos `metadados-expert` do corte, e nao um parametro deles,
@@ -1447,14 +1466,14 @@ class ClaudeIaService:
             titulo_max=contexto.titulo_max,
         )
         _log_skill_usada(_SKILL_METADADOS_SHORT, skill, scaffold)
-        bruto = await claude_cli_client.generate_text(
+        bruto = await _gerar_text_provider(
+            provider,
             prompt,
-            **_args_claude(
-                skill,
-                _SKILL_METADADOS_SHORT,
-                projeto_id=contexto.projeto_id,
-                corte_id=contexto.corte_id,
-            ),
+            skill,
+            _SKILL_METADADOS_SHORT,
+            projeto_id=contexto.projeto_id,
+            corte_id=contexto.corte_id,
+            short_id=short_id,
         )
         post = post_da_resposta(bruto)
         logger.info(
@@ -1468,7 +1487,9 @@ class ClaudeIaService:
     # ── Fase 4: prompt de thumbnail via Claude (skill capista) ────────────────
 
     @staticmethod
-    async def sugerir_etiqueta_capa_via_claude(corte_id: str) -> str:
+    async def sugerir_etiqueta_capa_via_claude(
+        corte_id: str, provider: ProviderIA = "claude"
+    ) -> str:
         """As 2-3 palavras que vão no alto da capa vertical do TikTok (D-520).
 
         Skill separada da do YouTube, e não um parâmetro dela, porque as duas
@@ -1499,19 +1520,20 @@ class ClaudeIaService:
             etiquetas_recentes=contexto.etiquetas_recentes or "(nenhuma ainda)",
         )
         _log_skill_usada(_SKILL_CAPA_TIKTOK, skill, scaffold)
-        bruto = await claude_cli_client.generate_text(
+        bruto = await _gerar_text_provider(
+            provider,
             prompt,
-            **_args_claude(
-                skill,
-                _SKILL_CAPA_TIKTOK,
-                projeto_id=contexto.projeto_id,
-                corte_id=corte_id,
-            ),
+            skill,
+            _SKILL_CAPA_TIKTOK,
+            projeto_id=contexto.projeto_id,
+            corte_id=corte_id,
         )
         return etiqueta_da_resposta(bruto)
 
     @staticmethod
-    async def prompt_da_capa_do_short_via_claude(short_id: str) -> str:
+    async def prompt_da_capa_do_short_via_claude(
+        short_id: str, provider: ProviderIA = "claude"
+    ) -> str:
         """O prompt de imagem da capa de um short vertical (D-581).
 
         Skill separada da capa do TikTok por uma diferenca concreta, e nao por
@@ -1555,14 +1577,14 @@ class ClaudeIaService:
             texto_capa=capa_store.texto_da_capa(contexto),
         )
         _log_skill_usada(_SKILL_CAPA_SHORT, skill, scaffold)
-        bruto = await claude_cli_client.generate_text(
+        bruto = await _gerar_text_provider(
+            provider,
             prompt,
-            **_args_claude(
-                skill,
-                _SKILL_CAPA_SHORT,
-                projeto_id=contexto.projeto_id,
-                corte_id=contexto.corte_id,
-            ),
+            skill,
+            _SKILL_CAPA_SHORT,
+            projeto_id=contexto.projeto_id,
+            corte_id=contexto.corte_id,
+            short_id=short_id,
         )
         # D-584: o parser do SHORT, e nao o da capa do TikTok.
         #
@@ -1587,7 +1609,9 @@ class ClaudeIaService:
         return prompt_valido
 
     @staticmethod
-    async def prompt_da_arte_da_capa_via_claude(corte_id: str, texto_capa: str) -> str:
+    async def prompt_da_arte_da_capa_via_claude(
+        corte_id: str, texto_capa: str, provider: ProviderIA = "claude"
+    ) -> str:
         """O prompt de imagem da faixa central da capa do TikTok (D-523, D-524).
 
         A primeira versão da capa usava um frame do próprio vídeo. Ficou ruim por
@@ -1622,14 +1646,13 @@ class ClaudeIaService:
             prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
         )
         _log_skill_usada(_SKILL_CAPA_TIKTOK_IMAGEM, skill, scaffold)
-        bruto = await claude_cli_client.generate_text(
+        bruto = await _gerar_text_provider(
+            provider,
             prompt,
-            **_args_claude(
-                skill,
-                _SKILL_CAPA_TIKTOK_IMAGEM,
-                projeto_id=contexto.projeto_id,
-                corte_id=corte_id,
-            ),
+            skill,
+            _SKILL_CAPA_TIKTOK_IMAGEM,
+            projeto_id=contexto.projeto_id,
+            corte_id=corte_id,
         )
         return prompt_da_arte(bruto)
 

@@ -245,7 +245,7 @@ async def test_analisar_transcricao_repassa_descartados_via_claude(monkeypatch):
 
     repasse: dict = {}
 
-    async def fake_importar(projeto_id, cortes_data, *, descartados=None):
+    async def fake_importar(projeto_id, cortes_data, *, descartados=None, origem="claude"):
         repasse["projeto_id"] = projeto_id
         repasse["cortes_data"] = cortes_data
         repasse["descartados"] = descartados

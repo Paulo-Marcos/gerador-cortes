@@ -10,6 +10,10 @@ import {
   Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { providerEmVoo } from '@/lib/providerIa';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { Modal } from '@/components/ui/modal';
 import { capaImagemUrl, shortVideoUrl, type ShortSugerido } from './shortsApi';
 import {
@@ -366,6 +370,9 @@ function ArteDaCapa({
 }) {
   const prompt = usePromptDaCapa(short.id);
   const gerarPrompt = useGerarPromptDaCapa(short.id);
+  const promptEmVoo = providerEmVoo(gerarPrompt);
+  const ultimaCapa = useUltimaGeracao('capa-short-imagem-expert', { shortId: short.id });
+  const capaGeradaPor = gerarPrompt.variables ?? ultimaCapa.data?.provider ?? null;
   const seletor = useRef<HTMLInputElement>(null);
   const [copiado, setCopiado] = useState(false);
 
@@ -399,11 +406,25 @@ function ArteDaCapa({
             variant="outline"
             size="sm"
             disabled={gerarPrompt.isPending}
-            onClick={() => gerarPrompt.mutate()}
+            onClick={() => gerarPrompt.mutate('claude')}
           >
-            {gerarPrompt.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {gerarPrompt.isPending ? 'escrevendo…' : texto ? 'Refazer prompt' : 'Gerar prompt'}
+            {promptEmVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Sparkles />}
+            {promptEmVoo === 'claude'
+              ? 'escrevendo…'
+              : texto
+                ? 'Refazer (Claude)'
+                : 'Gerar com o Claude'}
           </Button>
+          <GeminiAiButton
+            pending={promptEmVoo === 'gemini'}
+            disabled={promptEmVoo === 'claude'}
+            onClick={() => gerarPrompt.mutate('gemini')}
+            pendingLabel="escrevendo…"
+            title="Escrever o prompt da capa pelo Gemini"
+          />
+          {!promptEmVoo && texto && (
+            <SeloDeProvider provider={capaGeradaPor} modelo={ultimaCapa.data?.model} />
+          )}
           {texto && (
             <Button variant="ghost" size="sm" onClick={copiar}>
               {copiado ? <Check /> : <Copy />}

@@ -5,8 +5,10 @@
 import { useMutation } from '@tanstack/react-query';
 import { Loader2, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { GeminiAiButton } from '@/components/ui/gemini-button';
 import { useToast } from '@/components/ui/toaster';
 import { api, type PadroesThumbnailResponse } from '@/lib/api';
+import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { eixosComOcorrencias, rotuloEixo } from './thumbnailPadroes';
 import { cn } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
@@ -20,14 +22,15 @@ const FORCA_TONS: Record<string, string> = {
 export function ThumbnailPadroesPage() {
   const { notify } = useToast();
 
-  const analise = useMutation<PadroesThumbnailResponse>({
-    mutationFn: () => api.analisarPadroesThumbnail(),
+  const analise = useMutation<PadroesThumbnailResponse, Error, ProviderIA>({
+    mutationFn: (provider: ProviderIA) => api.analisarPadroesThumbnail(provider),
     onError: (error) =>
       notify(error instanceof Error ? error.message : 'Erro ao analisar padrões.', {
         tone: 'error',
       }),
   });
 
+  const emVoo = providerEmVoo(analise);
   const resultado = analise.data;
   const insuficiente = resultado?.status === 'dados_insuficientes';
   const eixos = eixosComOcorrencias(resultado?.padroes ?? null);
@@ -52,12 +55,20 @@ export function ThumbnailPadroesPage() {
         <Button
           type="button"
           size="sm"
-          onClick={() => analise.mutate()}
+          onClick={() => analise.mutate('claude')}
           disabled={analise.isPending}
         >
-          {analise.isPending ? <Loader2 className="animate-spin" /> : <Wand2 aria-hidden />}
-          Analisar padrões
+          {emVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Wand2 aria-hidden />}
+          Analisar com o Claude
         </Button>
+        <GeminiAiButton
+          size="md"
+          pending={emVoo === 'gemini'}
+          disabled={emVoo === 'claude'}
+          onClick={() => analise.mutate('gemini')}
+          label="Analisar com o Gemini"
+          pendingLabel="analisando…"
+        />
       </header>
 
       <main className="grid flex-1 content-start gap-5 overflow-auto p-6">

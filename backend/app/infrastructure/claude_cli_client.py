@@ -46,6 +46,9 @@ class LlmCallContext:
     etapa: str | None = None
     projeto_id: str | None = None
     corte_id: str | None = None
+    # Nas etapas de short, o corte não basta: dois trechos do mesmo corte
+    # geram separado, e o selo de quem gerou precisa saber de qual.
+    short_id: str | None = None
     # Trabalho de fundo (varredura de ranking, jobs em lote) cede a vez para o
     # interativo na fila do CLI. Ver `_GateClaudeCli`.
     background: bool = False
@@ -486,6 +489,7 @@ def _registrar_telemetria(
             model=model,
             projeto_id=contexto.projeto_id if contexto else None,
             corte_id=contexto.corte_id if contexto else None,
+            short_id=contexto.short_id if contexto else None,
             prompt=prompt,
             resposta=resposta,
             tokens_in=tokens_in,

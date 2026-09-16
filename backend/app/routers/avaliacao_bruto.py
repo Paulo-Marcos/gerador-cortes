@@ -17,6 +17,7 @@ relação com isto), no mesmo padrão de `avaliacao_cortes`.
 from __future__ import annotations
 
 from app.domain.avaliacao_bruto import tipos_disponiveis
+from app.provider_ia import ProviderIA
 from app.services import avaliacao_bruto as avaliacao_store
 from fastapi import APIRouter, HTTPException
 
@@ -44,12 +45,12 @@ async def listar_do_projeto(projeto_id: str):
 
 
 @router.post("/corte/{corte_id}")
-async def avaliar_agora(corte_id: str):
+async def avaliar_agora(corte_id: str, provider: ProviderIA = "claude"):
     """Reavalia o bruto atual do corte, de forma síncrona (o caller espera)."""
     from app.services.claude_ia import ClaudeIaService
 
     try:
-        return {"avaliacao": await ClaudeIaService.avaliar_bruto_via_claude(corte_id)}
+        return {"avaliacao": await ClaudeIaService.avaliar_bruto_via_claude(corte_id, provider)}
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

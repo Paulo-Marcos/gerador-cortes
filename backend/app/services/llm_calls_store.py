@@ -37,6 +37,7 @@ _COLUNAS = (
     "model",
     "projeto_id",
     "corte_id",
+    "short_id",
     "prompt",
     "resposta",
     "tokens_in",
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS llm_calls (
     model TEXT,
     projeto_id TEXT,
     corte_id TEXT,
+    short_id TEXT,
     prompt TEXT,
     resposta TEXT,
     tokens_in INTEGER,
@@ -90,8 +92,20 @@ def _connect(db_path: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=30000")
     conn.execute(_DDL)
+    _garantir_short_id(conn)
     conn.commit()
     return conn
+
+
+def _garantir_short_id(conn: sqlite3.Connection) -> None:
+    """Acrescenta `short_id` a um banco criado antes desta coluna existir.
+
+    O `CREATE TABLE IF NOT EXISTS` não altera tabela que já existe, e sem
+    esta coluna o selo de quem gerou não distingue dois shorts do mesmo corte.
+    """
+    colunas = {linha["name"] for linha in conn.execute("PRAGMA table_info(llm_calls)")}
+    if colunas and "short_id" not in colunas:
+        conn.execute("ALTER TABLE llm_calls ADD COLUMN short_id TEXT")
 
 
 def inicializar(db_path: Path | None = None) -> None:
@@ -106,6 +120,7 @@ def gravar_llm_call(
     model: str | None = None,
     projeto_id: str | None = None,
     corte_id: str | None = None,
+    short_id: str | None = None,
     prompt: str | None = None,
     resposta: str | None = None,
     tokens_in: int | None = None,
@@ -129,6 +144,7 @@ def gravar_llm_call(
         "model": model,
         "projeto_id": projeto_id,
         "corte_id": corte_id,
+        "short_id": short_id,
         "prompt": prompt,
         "resposta": resposta,
         "tokens_in": tokens_in,
@@ -158,6 +174,7 @@ def listar_llm_calls(
     db_path: Path | None = None,
     projeto_id: str | None = None,
     corte_id: str | None = None,
+    short_id: str | None = None,
     etapa: str | None = None,
     limite: int = 100,
 ) -> list[dict]:
@@ -168,7 +185,12 @@ def listar_llm_calls(
     """
     filtros: list[str] = []
     valores: list = []
-    for coluna, valor in (("projeto_id", projeto_id), ("corte_id", corte_id), ("etapa", etapa)):
+    for coluna, valor in (
+        ("projeto_id", projeto_id),
+        ("corte_id", corte_id),
+        ("short_id", short_id),
+        ("etapa", etapa),
+    ):
         if valor is not None:
             filtros.append(f"{coluna} = ?")
             valores.append(valor)

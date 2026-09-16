@@ -21,6 +21,10 @@ import {
   useGerarPost,
   usePostDoShort,
 } from './useShortsDoCorte';
+import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { providerEmVoo } from '@/lib/providerIa';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import type { ShortSugerido } from './shortsApi';
 
 // D-565 (onda 3): o texto que acompanha o short no feed.
@@ -75,6 +79,11 @@ export function PostModal({ open, onClose, short }: Props) {
   // vazios com um botão que dispararia uma segunda escrita por cima.
   const escrevendoPorFora = useIsMutating({ mutationKey: gerarPostKey(short.id) }) > 0;
   const escrevendo = gerar.isPending || escrevendoPorFora;
+  // O Finalizar escreve por fora, e sempre pelo Claude: lá não há botão.
+  const emVoo = providerEmVoo(gerar) ?? (escrevendoPorFora ? 'claude' : null);
+  // Quem escreveu o texto que está na tela: esta geração, ou a última registrada.
+  const ultima = useUltimaGeracao('metadados-short-expert', { shortId: short.id }, open);
+  const geradoPor = gerar.variables ?? ultima.data?.provider ?? null;
 
   const tom = tomDoTitulo(titulo);
   const hashtags = hashtagsDoTexto(tags);
@@ -88,11 +97,25 @@ export function PostModal({ open, onClose, short }: Props) {
             variant="outline"
             size="sm"
             disabled={ocupado}
-            onClick={() => gerar.mutate()}
+            onClick={() => gerar.mutate('claude')}
           >
-            {escrevendo ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {escrevendo ? 'escrevendo…' : post.data?.gerado ? 'Escrever de novo' : 'Escrever com a IA'}
+            {emVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Sparkles />}
+            {emVoo === 'claude'
+              ? 'escrevendo…'
+              : post.data?.gerado
+                ? 'Escrever de novo (Claude)'
+                : 'Escrever com o Claude'}
           </Button>
+          <GeminiAiButton
+            pending={emVoo === 'gemini'}
+            disabled={ocupado && emVoo !== 'gemini'}
+            onClick={() => gerar.mutate('gemini')}
+            pendingLabel="escrevendo…"
+            title="Escrever o post pelo Gemini"
+          />
+          {!escrevendo && post.data?.gerado && (
+            <SeloDeProvider provider={geradoPor} modelo={ultima.data?.model} />
+          )}
           {escrevendo && (
             <span className="text-[11.5px] text-[var(--wb-text-mute)]">
               lendo a transcrição deste trecho…

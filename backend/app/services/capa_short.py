@@ -41,6 +41,7 @@ from app.domain.cenas_short_ia import recortar_transcricao
 from app.domain.time_convert import seg_to_mmss
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
+from app.provider_ia import ProviderIA
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -306,7 +307,7 @@ async def obter_prompt(short_id: str) -> str:
         return (meta.prompt_capa if meta else "") or ""
 
 
-async def gerar_prompt(short_id: str) -> str:
+async def gerar_prompt(short_id: str, provider: ProviderIA = "claude") -> str:
     """Escreve o prompt da arte da capa e o guarda no metadado.
 
     GRAVA, e não só devolve, pelo mesmo motivo da D-524: é isso que torna o
@@ -320,7 +321,7 @@ async def gerar_prompt(short_id: str) -> str:
     from app.services.claude_ia import ClaudeIaService
 
     try:
-        prompt = await ClaudeIaService.prompt_da_capa_do_short_via_claude(short_id)
+        prompt = await ClaudeIaService.prompt_da_capa_do_short_via_claude(short_id, provider)
     except LookupError:
         raise
     except Exception as exc:  # noqa: BLE001 — a mensagem vai inteira para a tela

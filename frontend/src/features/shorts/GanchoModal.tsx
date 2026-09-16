@@ -29,6 +29,9 @@ import type { GanchoShortPreset } from '@/types/presets';
 import { GanchoPrevia } from './GanchoPrevia';
 import { LegendaPrevia } from './LegendaPrevia';
 import { PalcoPrevia } from './PalcoPrevia';
+import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { useSugerirGanchos } from './useShortsDoCorte';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
 
@@ -167,6 +170,10 @@ export function GanchoModal({
   ]);
 
   const gerar = useSugerirGanchos();
+  // Só gira o provider que está gerando; o outro sai do caminho.
+  const emVoo = gerar.isPending ? (gerar.variables?.provider ?? 'claude') : null;
+  const ultima = useUltimaGeracao('gancho-short-expert', { shortId: short.id }, open);
+  const geradoPor = gerar.variables?.provider ?? ultima.data?.provider ?? null;
   // D-573: as da geração de agora, ou as que ficaram gravadas deste short.
   //
   // A mutation continua mandando enquanto está fresca — é ela que traz o
@@ -296,15 +303,25 @@ export function GanchoModal({
                 variant="outline"
                 size="sm"
                 disabled={ocupado || gerar.isPending}
-                onClick={() => gerar.mutate(short.id)}
+                onClick={() => gerar.mutate({ shortId: short.id, provider: 'claude' })}
               >
-                {gerar.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                {gerar.isPending
+                {emVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                {emVoo === 'claude'
                   ? 'escrevendo…'
                   : variacoes.length > 0
-                    ? 'Gerar outras'
-                    : `Gerar ${MAX_VARIACOES} variações`}
+                    ? 'Gerar outras (Claude)'
+                    : `Gerar ${MAX_VARIACOES} pelo Claude`}
               </Button>
+              <GeminiAiButton
+                pending={emVoo === 'gemini'}
+                disabled={ocupado || emVoo === 'claude'}
+                onClick={() => gerar.mutate({ shortId: short.id, provider: 'gemini' })}
+                pendingLabel="escrevendo…"
+                title="Gerar as variações pelo Gemini"
+              />
+              {!gerar.isPending && variacoes.length > 0 && (
+                <SeloDeProvider provider={geradoPor} modelo={ultima.data?.model} />
+              )}
               {gerar.isPending && (
                 // O tempo real medido no canal foi de quase quatro minutos. Sem
                 // dizer isso, o spinner vira a mesma escuridão do render antes

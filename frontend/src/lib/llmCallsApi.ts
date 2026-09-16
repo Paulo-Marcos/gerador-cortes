@@ -1,3 +1,5 @@
+import type { ProviderIA } from '@/lib/providerIa';
+
 // D-353: cliente HTTP da telemetria de chamadas de IA. Módulo próprio (NUNCA
 // `lib/api.ts`, que está sob lock), no mesmo padrão de fetch/erro de
 // `rankingPesosApi`. Endpoint sob o router do provider Claude (/api/claude).
@@ -30,6 +32,8 @@ export interface LlmCall {
   model: string | null;
   projeto_id: string | null;
   corte_id: string | null;
+  /** D-608: nas etapas de short, de qual trecho veio a chamada. */
+  short_id: string | null;
   prompt: string | null;
   resposta: string | null;
   tokens_in: number | null;
@@ -50,8 +54,16 @@ export interface ListaLlmCallsResponse {
 export interface ListarLlmCallsParams {
   projetoId?: string;
   corteId?: string;
+  shortId?: string;
   etapa?: string;
   limite?: number;
+}
+
+/** Quem fez a última geração de uma etapa — a fonte do selo Claude/Gemini. */
+export interface UltimaGeracaoResponse {
+  provider: ProviderIA | null;
+  model: string | null;
+  ts: string | null;
 }
 
 // ─── Endpoints ─────────────────────────────────────────────────────────────
@@ -60,6 +72,7 @@ function montarQuery(params: ListarLlmCallsParams): string {
   const qs = new URLSearchParams();
   if (params.projetoId) qs.set('projeto_id', params.projetoId);
   if (params.corteId) qs.set('corte_id', params.corteId);
+  if (params.shortId) qs.set('short_id', params.shortId);
   if (params.etapa) qs.set('etapa', params.etapa);
   if (params.limite != null) qs.set('limite', String(params.limite));
   const s = qs.toString();
@@ -69,4 +82,9 @@ function montarQuery(params: ListarLlmCallsParams): string {
 export const llmCallsApi = {
   listar: (params: ListarLlmCallsParams = {}) =>
     request<ListaLlmCallsResponse>(`/claude/telemetria/llm-calls${montarQuery(params)}`),
+
+  ultimaGeracao: (etapa: string, alvo: { corteId?: string; shortId?: string } = {}) =>
+    request<UltimaGeracaoResponse>(
+      `/claude/telemetria/ultima-geracao${montarQuery({ ...alvo, etapa })}`,
+    ),
 };

@@ -23,6 +23,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { ClaudeAiButton } from '@/components/ui/claude-button';
 import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { IconButton } from '@/components/ui/icon-button';
 import { Modal } from '@/components/ui/modal';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
@@ -189,6 +191,9 @@ export function MetadataCard({
   // para só o botão dele girar e o outro não abrir uma segunda geração.
   const metadadosEmVoo = providerEmVoo(generateMetadataClaude);
   const promptCapaEmVoo = providerEmVoo(generatePromptThumbnailClaude);
+  const ultimaMeta = useUltimaGeracao('metadados-expert', { corteId: cut.id });
+  const metaGeradaPor =
+    generateMetadataClaude.variables ?? ultimaMeta.data?.provider ?? null;
 
   const generateThumbnail = useMutation({
     mutationFn: () => api.gerarThumbnail(cut.id),
@@ -857,7 +862,7 @@ export function MetadataCard({
                 coloridas (que ainda usavam oklch solto, fora dos tokens). O
                 lado AI mantém o laranja oficial da Claude — falso positivo
                 declarado no hand-off, é cor de marca. */}
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap items-end gap-2 pt-1">
               <SegmentedAiManual
                 label="Regerar metadados"
                 emVoo={metadadosEmVoo}
@@ -874,6 +879,13 @@ export function MetadataCard({
                 manualIcon={Palette}
                 onManual={() => setManualKind('thumbnail-agent-livre')}
               />
+              {!metadadosEmVoo && generated && (
+                <SeloDeProvider
+                  provider={metaGeradaPor}
+                  modelo={ultimaMeta.data?.model}
+                  className="mb-1"
+                />
+              )}
             </div>
 
             {/* F-058: influência manual do editor no prompt da thumbnail. */}

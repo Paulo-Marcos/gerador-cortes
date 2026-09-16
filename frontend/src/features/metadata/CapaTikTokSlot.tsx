@@ -13,6 +13,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
+import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { lerImagemColada, SemImagemColada } from '@/features/shorts/imagemDaAreaDeTransferencia';
 
 // D-521: a capa VERTICAL, ao lado da thumbnail do YouTube.
@@ -96,10 +100,15 @@ export function CapaTikTokSlot({
   };
 
   const escreverPrompt = useMutation({
-    mutationFn: () => shortsApi.gerarPromptCapaTiktok(corteId),
+    mutationFn: (provider: ProviderIA = 'claude') =>
+      shortsApi.gerarPromptCapaTiktok(corteId, provider),
     onSuccess: aoTerminar,
     onError: (e: Error) => setErro(e.message),
   });
+
+  const promptEmVoo = providerEmVoo(escreverPrompt);
+  const ultimaArte = useUltimaGeracao('capa-tiktok-imagem-expert', { corteId });
+  const arteGeradaPor = escreverPrompt.variables ?? ultimaArte.data?.provider ?? null;
 
   const subirArte = useMutation({
     mutationFn: (arquivo: File) => shortsApi.subirArteCapaTiktok(corteId, arquivo),
@@ -182,12 +191,24 @@ export function CapaTikTokSlot({
             size="sm"
             variant="outline"
             disabled={ocupado}
-            onClick={() => escreverPrompt.mutate()}
+            onClick={() => escreverPrompt.mutate('claude')}
             title="Escreve o prompt da arte 16:9, no estilo da thumbnail do YouTube."
           >
-            {escreverPrompt.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {promptArte ? 'Refazer prompt' : 'Gerar prompt'}
+            {promptEmVoo === 'claude' ? <Loader2 className="animate-spin" /> : <Sparkles />}
+            {promptArte ? 'Refazer (Claude)' : 'Gerar com o Claude'}
           </Button>
+
+          <GeminiAiButton
+            pending={promptEmVoo === 'gemini'}
+            disabled={ocupado && promptEmVoo !== 'gemini'}
+            onClick={() => escreverPrompt.mutate('gemini')}
+            className="w-full"
+            label={promptArte ? 'Refazer (Gemini)' : 'Gerar com o Gemini'}
+            title="Escrever o prompt da arte pelo Gemini"
+          />
+          {!promptEmVoo && promptArte && (
+            <SeloDeProvider provider={arteGeradaPor} modelo={ultimaArte.data?.model} />
+          )}
 
           {promptArte && (
             <Button

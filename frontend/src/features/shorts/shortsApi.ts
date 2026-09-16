@@ -4,6 +4,7 @@
 // função de shorts existe em `api.ts`, então nada fica órfão lá.
 
 import type { GanchoShortPreset } from '@/types/presets';
+import type { ProviderIA } from '@/lib/providerIa';
 
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
@@ -655,10 +656,11 @@ export const shortsApi = {
     }),
 
   /** D-497: a IA lê a transcrição do trecho e propõe os cartões — já gravados. */
-  sugerirCenas: (shortId: string) =>
-    request<{ short: ShortSugerido; descartes: string[] }>(`/shorts/${shortId}/cenas/sugerir`, {
-      method: 'POST',
-    }),
+  sugerirCenas: (shortId: string, provider: ProviderIA = 'claude') =>
+    request<{ short: ShortSugerido; descartes: string[] }>(
+      `/shorts/${shortId}/cenas/sugerir?provider=${provider}`,
+      { method: 'POST' },
+    ),
 
   /**
    * D-565: a IA propoe variacoes do gancho da abertura — e NAO grava.
@@ -668,8 +670,8 @@ export const shortsApi = {
    * PATCH normal. O gancho e a promessa do short, e escolher por ele seria a
    * decisao mais editorial da tela tomada pela maquina.
    */
-  sugerirGanchos: (shortId: string) =>
-    request<{ variacoes: string[] }>(`/shorts/${shortId}/ganchos`, {
+  sugerirGanchos: (shortId: string, provider: ProviderIA = 'claude') =>
+    request<{ variacoes: string[] }>(`/shorts/${shortId}/ganchos?provider=${provider}`, {
       method: 'POST',
     }),
 
@@ -677,8 +679,10 @@ export const shortsApi = {
   obterPost: (shortId: string) => request<PostDoShortApi>(`/shorts/${shortId}/post`),
 
   /** A IA escreve titulo, descricao e hashtags para o feed — e GRAVA. */
-  gerarPost: (shortId: string) =>
-    request<PostDoShortApi>(`/shorts/${shortId}/post/gerar`, { method: 'POST' }),
+  gerarPost: (shortId: string, provider: ProviderIA = 'claude') =>
+    request<PostDoShortApi>(`/shorts/${shortId}/post/gerar?provider=${provider}`, {
+      method: 'POST',
+    }),
 
   /** A ultima palavra sobre o texto e do operador. "" apaga o campo. */
   atualizarPost: (shortId: string, body: AtualizarPostBody) =>
@@ -702,8 +706,10 @@ export const shortsApi = {
     request<{ prompt: string }>(`/shorts/${shortId}/capa/prompt`),
 
   /** D-581: pede o prompt da arte ao capista. Leva minutos — e uma chamada de IA. */
-  gerarPromptDaCapa: (shortId: string) =>
-    request<{ prompt: string }>(`/shorts/${shortId}/capa/prompt`, { method: 'POST' }),
+  gerarPromptDaCapa: (shortId: string, provider: ProviderIA = 'claude') =>
+    request<{ prompt: string }>(`/shorts/${shortId}/capa/prompt?provider=${provider}`, {
+      method: 'POST',
+    }),
 
   /** D-581: sobe a imagem desenhada como a capa deste short. */
   subirArteDaCapa: (shortId: string, arquivo: File) => {
@@ -828,10 +834,11 @@ export const shortsApi = {
     ),
 
   // D-524: o app escreve o prompt; quem desenha e o operador, no agente capista.
-  gerarPromptCapaTiktok: (corteId: string) =>
-    request<{ prompt: string }>(`/shorts/corte/${corteId}/capa-tiktok/prompt`, {
-      method: 'POST',
-    }),
+  gerarPromptCapaTiktok: (corteId: string, provider: ProviderIA = 'claude') =>
+    request<{ prompt: string }>(
+      `/shorts/corte/${corteId}/capa-tiktok/prompt?provider=${provider}`,
+      { method: 'POST' },
+    ),
 
   subirArteCapaTiktok: (corteId: string, arquivo: File) => {
     const formData = new FormData();
@@ -893,8 +900,9 @@ export const shortsApi = {
   publicacoesDoCorte: (corteId: string) =>
     request<{ publicacoes: PublicacaoRegistrada[] }>(`/shorts/corte/${corteId}/publicacoes`),
 
-  sugerirAgora: (corteId: string) =>
-    request<{ shorts: ShortSugerido[]; descartes: string[] }>(`/shorts/corte/${corteId}/sugerir`, {
-      method: 'POST',
-    }),
+  sugerirAgora: (corteId: string, provider: ProviderIA = 'claude') =>
+    request<{ shorts: ShortSugerido[]; descartes: string[] }>(
+      `/shorts/corte/${corteId}/sugerir?provider=${provider}`,
+      { method: 'POST' },
+    ),
 };

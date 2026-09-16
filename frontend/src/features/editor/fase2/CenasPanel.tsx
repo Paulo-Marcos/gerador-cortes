@@ -14,6 +14,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { ClaudeAiButton } from '@/components/ui/claude-button';
 import { GeminiAiButton } from '@/components/ui/gemini-button';
+import { SeloDeProvider } from '@/components/ui/selo-provider';
+import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -116,6 +118,8 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       : 'Buscar retratos das fichas biograficas';
 
   const [providerAtivo, setProviderAtivo] = useState<'claude' | 'gemini' | null>(null);
+  const ultimaCenas = useUltimaGeracao('cenas-expert', { corteId });
+  const cenasGeradasPor = providerAtivo ?? ultimaCenas.data?.provider ?? null;
 
   // F-047: para a geracao, se o corte ja tem cenas e elas nao estao na mesma
   // tela, o clique passa pela confirmacao; sem nenhuma, dispara direto.
@@ -281,6 +285,13 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
               pendingLabel="Gerando..."
             />
           </Tooltip>
+          {!gerarClaude.isPending && cenasOrdenadas.length > 0 && (
+            <SeloDeProvider
+              provider={cenasGeradasPor}
+              modelo={ultimaCenas.data?.model}
+              className="self-center"
+            />
+          )}
           <OverflowMenu
             label="Outras ações das cenas"
             items={[
