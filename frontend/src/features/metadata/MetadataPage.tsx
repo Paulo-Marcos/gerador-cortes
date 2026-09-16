@@ -9,6 +9,8 @@ import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { PublicarMassaModal } from '@/features/projeto-detalhe/PublicarMassaModal';
 import { MetadataCard } from './MetadataCard';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
   if (status?.metadados_completos || meta?.titulo_youtube) return 'ready';
@@ -16,7 +18,11 @@ function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
   return 'empty';
 }
 
+const CASCA_NOVA = isUpgradeShellEnabled();
+
 export function MetadataPage() {
+  useDefinirChrome({ sub: 'títulos, descrições, capas e publicação no YouTube' }, []);
+
   const { id: projetoId } = useParams();
   const [searchParams] = useSearchParams();
   // D-427: a aba de trabalho amarrada a um corte chega aqui com `?corte=`
@@ -105,7 +111,7 @@ export function MetadataPage() {
       )}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {workbench ? (
+        {CASCA_NOVA ? null : workbench ? (
           <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
             <h1 className="text-[15px] font-extrabold">Metadados & Thumbnails</h1>
             <span className="text-xs text-[var(--wb-text-mute)]">

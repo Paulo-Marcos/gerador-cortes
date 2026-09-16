@@ -20,6 +20,8 @@ import {
   type ShortcutId,
   type ShortcutScreen,
 } from '@/features/editor/shortcutsRegistry';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 const TELAS: Array<{ id: ShortcutScreen | 'todas'; rotulo: string }> = [
   { id: 'todas', rotulo: 'Todas' },
@@ -66,6 +68,8 @@ function overrideDoEvento(event: KeyboardEvent): KeyOverride | null {
   else if (event.shiftKey && event.key.length > 1) mod = 'shift';
   return { key: event.key, mod };
 }
+
+const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function AtalhosPage() {
   const [busca, setBusca] = useState('');
@@ -137,21 +141,31 @@ export function AtalhosPage() {
 
   const totalCustom = Object.keys(overlay).length;
 
+  useDefinirChrome(
+    { sub: 'tudo que a bancada faz sem o mouse — clique em ✎ e pressione a nova combinação' },
+    [],
+  );
+
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col gap-3 overflow-hidden bg-[var(--wb-bg)] p-4 text-[var(--wb-text)]',
-        workbench ? 'h-full' : 'min-h-screen',
+        'flex min-h-0 flex-col gap-3 overflow-hidden text-[var(--wb-text)]',
+        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)] p-4',
+        CASCA_NOVA || workbench ? 'h-full' : 'min-h-screen',
       )}
     >
       <header className="flex flex-none flex-wrap items-center gap-2">
-        <span className="text-[16px]" aria-hidden>
-          ⌨
-        </span>
-        <h1 className="text-[15px] font-extrabold">Atalhos</h1>
-        <span className="text-xs text-[var(--wb-text-mute)]">
-          clique em ✎ e pressione a nova combinação (Esc cancela)
-        </span>
+        {CASCA_NOVA ? null : (
+          <>
+            <span className="text-[16px]" aria-hidden>
+              ⌨
+            </span>
+            <h1 className="text-[15px] font-extrabold">Atalhos</h1>
+            <span className="text-xs text-[var(--wb-text-mute)]">
+              clique em ✎ e pressione a nova combinação (Esc cancela)
+            </span>
+          </>
+        )}
         <div className="flex-1" />
         <div className="flex gap-1.5">
           {TELAS.map(({ id, rotulo }) => (

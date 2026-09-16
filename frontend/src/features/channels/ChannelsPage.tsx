@@ -21,6 +21,8 @@ import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
 import { PromptsUtilitariosSection } from './PromptsUtilitariosSection';
 import { RankingPesosSection } from './RankingPesosSection';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import {
   useCanais,
   useConectarYoutube,
@@ -154,7 +156,11 @@ const SECOES_CANAL: Record<Exclude<SecaoCanal, null>, { titulo: string }> = {
   pesos: { titulo: 'Pesos do ranking' },
 };
 
+const CASCA_NOVA = isUpgradeShellEnabled();
+
 export function ChannelsPage() {
+  useDefinirChrome({ sub: 'canal ativo, áreas editoriais e aparência da aplicação' }, []);
+
   const { notify } = useToast();
   const canaisQuery = useCanais();
   const criar = useCriarCanal();
@@ -241,10 +247,14 @@ export function ChannelsPage() {
       )}
     >
       <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
-        <span className="text-[16px]" aria-hidden>
-          ⚙
-        </span>
-        <h1 className="text-[15px] font-extrabold">Configurações</h1>
+        {CASCA_NOVA ? null : (
+          <>
+            <span className="text-[16px]" aria-hidden>
+              ⚙
+            </span>
+            <h1 className="text-[15px] font-extrabold">Configurações</h1>
+          </>
+        )}
         <div className="ml-3 flex gap-1.5">
           {(
             [

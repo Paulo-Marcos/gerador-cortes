@@ -10,6 +10,8 @@ import { YoutubeDesempenhoTab } from './YoutubeDesempenhoTab';
 import { LlmCallsTab } from './LlmCallsTab';
 import { useYoutubeStatsStatus } from './useAnalises';
 import { useLlmCalls } from './useLlmCalls';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 type AbaId = 'proposta-final' | 'youtube' | 'llm-calls';
 
@@ -113,15 +115,23 @@ function StatCard({
   );
 }
 
+const CASCA_NOVA = isUpgradeShellEnabled();
+
 export function AnalisesPage() {
   const [aba, setAba] = useState<AbaId>('proposta-final');
   const workbench = isWorkbenchEnabled();
 
+  // D-599: o titulo e o subtitulo passam para a casca; a faixa de STATS e
+  // as abas continuam aqui, que e onde o design as coloca — logo abaixo do
+  // cabecalho, dentro do conteudo.
+  useDefinirChrome({ sub: 'proposta × final, desempenho no YouTube e custo de IA' }, []);
+
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
-        workbench ? 'h-full' : 'h-screen',
+        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
+        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)]',
+        CASCA_NOVA || workbench ? 'h-full' : 'h-screen',
       )}
     >
       <header
@@ -130,7 +140,9 @@ export function AnalisesPage() {
           workbench ? 'px-4 pt-3' : 'px-7 pt-5',
         )}
       >
-        {workbench ? (
+        {CASCA_NOVA ? (
+          <StatCards />
+        ) : workbench ? (
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <BarChart3 size={18} className="text-[var(--wb-accent)]" aria-hidden />

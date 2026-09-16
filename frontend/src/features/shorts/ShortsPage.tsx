@@ -41,6 +41,8 @@ import type { ContagemShorts, FireComBruto } from './shortsApi';
 import { FIRES_KEY, useFires } from './useFires';
 import { useMarcarFinalizado } from './useShortsDoCorte';
 import { SeloFinalizado } from './CabecalhoDoFire';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import {
   contarPorFiltro,
   estaFinalizado,
@@ -374,7 +376,14 @@ function VazioDoFiltro({ onLimpar }: { onLimpar: () => void }) {
   );
 }
 
+const CASCA_NOVA = isUpgradeShellEnabled();
+
 export default function ShortsPage() {
+  useDefinirChrome(
+    { sub: 'cortes fire com bruto guardado — a nata, pronta para virar vertical' },
+    [],
+  );
+
   const workbench = isWorkbenchEnabled();
   const { data, isLoading, isError, error } = useFires();
   const [filtro, setFiltro] = useState<FiltroDeFire>('todos');
@@ -408,11 +417,15 @@ export default function ShortsPage() {
         )}
       >
         <div className="flex items-center gap-2">
-          <Clapperboard size={18} className="text-[var(--wb-accent)]" aria-hidden />
-          <h1 className="text-[15px] font-extrabold">Shorts</h1>
-          <span className="text-xs text-[var(--wb-text-mute)]">
-            cortes Fire com bruto guardado — a nata, pronta para virar vertical
-          </span>
+          {CASCA_NOVA ? null : (
+            <>
+              <Clapperboard size={18} className="text-[var(--wb-accent)]" aria-hidden />
+              <h1 className="text-[15px] font-extrabold">Shorts</h1>
+              <span className="text-xs text-[var(--wb-text-mute)]">
+                cortes Fire com bruto guardado — a nata, pronta para virar vertical
+              </span>
+            </>
+          )}
 
           <div className="flex-1" />
 

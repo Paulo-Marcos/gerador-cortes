@@ -10,12 +10,16 @@ import { api, type PadroesThumbnailResponse } from '@/lib/api';
 import { eixosComOcorrencias, rotuloEixo } from './thumbnailPadroes';
 import { cn } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 const FORCA_TONS: Record<string, string> = {
   alta: 'text-[var(--wb-ok)]',
   media: 'text-[var(--wb-warn)]',
   baixa: 'text-[var(--wb-text-dim)]',
 };
+
+const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function ThumbnailPadroesPage() {
   const { notify } = useToast();
@@ -32,14 +36,30 @@ export function ThumbnailPadroesPage() {
   const insuficiente = resultado?.status === 'dados_insuficientes';
   const eixos = eixosComOcorrencias(resultado?.padroes ?? null);
 
+  useDefinirChrome(
+    {
+      sub: 'o que as capas melhor avaliadas têm em comum — valide antes de aplicar',
+      acoes: [
+        {
+          icone: analise.isPending ? 'loader' : 'wand',
+          texto: 'Analisar padrões',
+          forte: true,
+          onClick: () => analise.mutate(),
+        },
+      ],
+    },
+    [analise.isPending],
+  );
+
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
-        isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
+        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)]',
+        CASCA_NOVA || isWorkbenchEnabled() ? 'h-full' : 'h-screen',
       )}
     >
-      {/* Header compacto do design Workbench 1c (§Padrões de thumbnail). */}
+      {CASCA_NOVA ? null : (
       <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
         <span className="text-[16px]" aria-hidden>
           ✨
@@ -59,6 +79,7 @@ export function ThumbnailPadroesPage() {
           Analisar padrões
         </Button>
       </header>
+      )}
 
       <main className="grid flex-1 content-start gap-5 overflow-auto p-6">
         {!resultado && !analise.isPending && (

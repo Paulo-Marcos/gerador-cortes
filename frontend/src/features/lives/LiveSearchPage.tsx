@@ -18,6 +18,8 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import type { YoutubeLive, YoutubeLivesResponse } from '@/types/models';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 const DEFAULT_AFTER_DATE = '2026-05-01';
 
@@ -52,6 +54,8 @@ function formatDuration(iso: string) {
 function hueFromId(id: string) {
   return id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 360;
 }
+
+const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function LiveSearchPage() {
   const { notify } = useToast();
@@ -138,14 +142,22 @@ export function LiveSearchPage() {
     enqueueMutation.mutate(ids);
   };
 
+  // D-599: na casca nova o cabecalho da tela e da CASCA. Manter o proprio
+  // deixaria dois titulos identicos empilhados na mesma janela.
+  useDefinirChrome(
+    { sub: 'o que já está no app aparece marcado — evite baixar duas vezes' },
+    [],
+  );
+
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
-        isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
+        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)]',
+        CASCA_NOVA || isWorkbenchEnabled() ? 'h-full' : 'h-screen',
       )}
     >
-      {/* Header compacto do design Workbench 1c (§Buscar lives). */}
+      {CASCA_NOVA ? null : (
       <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
         <span className="text-[16px]" aria-hidden>
           📡
@@ -155,6 +167,7 @@ export function LiveSearchPage() {
           encontre lives recentes, selecione as não baixadas e inicie o pipeline
         </span>
       </header>
+      )}
 
       <main className="grid flex-1 content-start gap-4 overflow-auto p-5">
         <section className="grid items-end gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-4 shadow-[shadow:var(--wb-shadow)] lg:grid-cols-[minmax(220px,1fr)_minmax(180px,260px)_170px]">

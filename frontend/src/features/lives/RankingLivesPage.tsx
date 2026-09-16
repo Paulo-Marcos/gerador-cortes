@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Calendar,
@@ -26,6 +26,8 @@ import { cn } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import type { RankingLive, RankingLivesResponse } from '@/types/models';
 import { RankingEmbasamentoPanel, type EmbasamentoItem } from './RankingEmbasamentoPanel';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 /**
  * O payload do ranking passou a trazer `embasamento` on-the-fly (D-356). Como
@@ -89,7 +91,10 @@ const COMPONENTE_LABEL: Record<string, string> = {
   vph: 'Momento (v/h)',
 };
 
+const CASCA_NOVA = isUpgradeShellEnabled();
+
 export function RankingLivesPage() {
+  const navigate = useNavigate();
   const { notify } = useToast();
   const queryClient = useQueryClient();
 
@@ -156,14 +161,34 @@ export function RankingLivesPage() {
   const atualizadoEm = rankingQuery.data?.atualizado_em ?? '';
   const janelaMeses = rankingQuery.data?.janela_meses;
 
+  useDefinirChrome(
+    {
+      sub: `top ${lives.length} · audiência · engajamento · tom dos comentários · recência`,
+      acoes: [
+        {
+          icone: 'sliders-horizontal',
+          texto: 'Pesos do ranking',
+          onClick: () => navigate('/canais'),
+        },
+        {
+          icone: refreshMutation.isPending ? 'loader' : 'rotate-ccw',
+          texto: 'Atualizar ranking',
+          onClick: () => refreshMutation.mutate(),
+        },
+      ],
+    },
+    [lives.length, refreshMutation.isPending],
+  );
+
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
-        isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+        'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
+        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)]',
+        CASCA_NOVA || isWorkbenchEnabled() ? 'h-full' : 'h-screen',
       )}
     >
-      {/* Header compacto do design Workbench 1c (§Ranking). */}
+      {CASCA_NOVA ? null : (
       <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
         <span className="text-[16px]" aria-hidden>
           🏆
@@ -198,6 +223,7 @@ export function RankingLivesPage() {
           Atualizar ranking
         </Button>
       </header>
+      )}
 
       <main className="grid flex-1 content-start gap-4 overflow-auto p-5">
         <section className="flex flex-wrap items-center gap-3 text-xs text-[var(--wb-text-mute)]">
