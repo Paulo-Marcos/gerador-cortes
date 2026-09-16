@@ -94,6 +94,9 @@ SEGUNDOS_PARA_PROCESSAR = 600.0
 # O cartao do Reels nasce depois do upload comecar; esta espera e o que da tempo
 # de ele aparecer. Curta: nao achar e o caso normal.
 SEGUNDOS_PARA_AVISO = 6.0
+# O menu da conta profissional abre na hora (MEDIDO); curta porque conta
+# pessoal nao tem menu e paga esta espera inteira.
+SEGUNDOS_PARA_MENU_DE_CRIAR = 3.0
 # D-589: quanto cada etapa espera o campo da capa aparecer. Curta porque so uma
 # etapa tem o campo, e o `existe` da legenda que vem antes ja deu tempo de a
 # etapa renderizar. O preview, MEDIDO, troca em ~0,06s; os 10s sao folga.
@@ -142,6 +145,13 @@ SELETORES: dict[str, str] = {
         'div[role="button"]:has(svg[aria-label="New post"]), '
         'a:has(svg[aria-label="Nova publicação"]), '
         'div[role="button"]:has(svg[aria-label="Nova publicação"])'
+    ),
+    # MEDIDO em 16/09/2026, depois de a conta virar profissional (criador): o
+    # "Novo post" abre um menu Postar / Video ao vivo / Anuncio. A ancora e o
+    # `a[role=link]` que envolve o icone — o elemento clicavel, pelo mesmo
+    # motivo do `botao_criar`. "Post" e rede do ingles, NAO medida.
+    "opcao_postar": (
+        'a[role="link"]:has(svg[aria-label="Postar"]), a[role="link"]:has(svg[aria-label="Post"])'
     ),
     "dialogo": 'div[role="dialog"]',
     # A porta de entrada. MEDIDO em 10/09/2026: deslogado, o Instagram serve o
@@ -271,6 +281,7 @@ def executar_roteiro(
     feitos.append(Passo.SESSAO)
 
     _passo(pagina.clicar, Passo.COMPOSITOR, "botao_criar", segundos=SEGUNDOS_PARA_ELEMENTO)
+    _escolher_postar_no_menu(pagina)
     # `visivel=False`: o `<input type=file>` do compositor é escondido por CSS —
     # o botão "Selecionar do computador" é a fachada dele.
     if not pagina.existe("campo_do_arquivo", segundos=SEGUNDOS_PARA_ELEMENTO, visivel=False):
@@ -349,6 +360,18 @@ def executar_roteiro(
         "avisos": avisos,
         "publicado": publicado,
     }
+
+
+def _escolher_postar_no_menu(pagina: Pagina) -> None:
+    """Escolhe "Postar" quando o "Novo post" abre um menu, e não o compositor.
+
+    MEDIDO em 16/09/2026: em conta PROFISSIONAL o "Novo post" vira "Criar" e
+    abre Postar / Vídeo ao vivo / Anúncio. Conta pessoal vai direto ao
+    compositor, então o menu é condicional — não achá-lo é o caso de lá.
+    """
+    if pagina.existe("opcao_postar", segundos=SEGUNDOS_PARA_MENU_DE_CRIAR):
+        _passo(pagina.clicar, Passo.COMPOSITOR, "opcao_postar", segundos=SEGUNDOS_PARA_ELEMENTO)
+        logger.info("[InstagramReels] menu de criar da conta profissional: Postar")
 
 
 def _dispensar_aviso(pagina: Pagina) -> None:

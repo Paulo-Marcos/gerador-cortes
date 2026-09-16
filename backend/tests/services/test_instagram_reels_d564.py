@@ -204,6 +204,35 @@ class TestCaminhoFeliz:
         assert envio < avanco
 
 
+class TestMenuDeCriar:
+    def test_conta_profissional_escolhe_postar_antes_do_arquivo(self, video):
+        """MEDIDO em 16/09/2026: em conta profissional "Novo post" abre um menu."""
+        pagina = PaginaFalsa()
+
+        instagram_reels.executar_roteiro(pagina, video=video, legenda="oi")
+
+        criar = pagina.cliques.index("clicar:botao_criar")
+        postar = pagina.cliques.index("clicar:opcao_postar")
+        envio = pagina.cliques.index("enviar:campo_do_arquivo")
+        assert criar < postar < envio
+
+    def test_conta_pessoal_vai_direto_ao_compositor(self, video):
+        pagina = PaginaFalsa(ausentes=("opcao_postar",))
+
+        relatorio = instagram_reels.executar_roteiro(pagina, video=video, legenda="oi")
+
+        assert "clicar:opcao_postar" not in pagina.cliques
+        assert "compositor" in relatorio["passos"]
+
+    def test_postar_que_nao_clica_aponta_o_compositor(self, video):
+        pagina = PaginaFalsa(falhar=("opcao_postar",))
+
+        with pytest.raises(RoteiroInterrompido) as erro:
+            instagram_reels.executar_roteiro(pagina, video=video, legenda="oi")
+
+        assert erro.value.passo is Passo.COMPOSITOR
+
+
 class TestEtapasDoCompositor:
     def test_clica_avancar_quantas_vezes_precisar(self, video):
         """Três etapas hoje, uma amanhã: o roteiro espera pela LEGENDA."""
