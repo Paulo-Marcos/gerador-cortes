@@ -21,8 +21,6 @@ function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
 const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function MetadataPage() {
-  useDefinirChrome({ sub: 'títulos, descrições, capas e publicação no YouTube' }, []);
-
   const { id: projetoId } = useParams();
   const [searchParams] = useSearchParams();
   // D-427: a aba de trabalho amarrada a um corte chega aqui com `?corte=`
@@ -87,6 +85,112 @@ export function MetadataPage() {
     [exportQuery.data],
   );
 
+  // D-599: na casca nova a lista de cortes vira a COLUNA DE CONTEXTO, a troca
+  // de corte vira o seletor com J/K, e o rodape "PRONTO P/ YOUTUBE" + publicar
+  // vira a barra de acoes fixa. O trilho de metricas da direita sai: os mesmos
+  // tres numeros ja estao no subtitulo e na barra, e repeti-los numa terceira
+  // coluna so estreitava o formulario, que e onde o trabalho acontece.
+  const indiceAtivo = cuts.findIndex((c) => c.id === activeId);
+  const irParaCorte = (delta: -1 | 1) => {
+    if (cuts.length === 0) return;
+    const alvo = cuts[(Math.max(0, indiceAtivo) + delta + cuts.length) % cuts.length];
+    selectCut(alvo.id);
+  };
+  const corteAtivo = cuts[indiceAtivo] ?? cuts[0];
+  const DOT = { ready: 'var(--ok)', partial: 'var(--warn)', empty: 'var(--dim)' } as const;
+
+  useDefinirChrome(
+    {
+      titulo: corteAtivo
+        ? `Metadados & capas — Corte #${corteAtivo.numero}`
+        : 'Metadados & capas',
+      sub: `${stats.ready} de ${stats.total} cortes prontos · ${stats.prompts} prompts de capa · ${stats.thumbs} capas`,
+      rotulos: corteAtivo ? [`#${corteAtivo.numero}`] : [],
+      contexto:
+        cuts.length > 0
+          ? {
+              titulo: 'Cortes aprovados',
+              sub: `${stats.total} cortes`,
+              listaTitulo: 'Metadados',
+              listaResumo: `${stats.ready} prontos`,
+              itens: cuts.map((c) => ({
+                id: c.id,
+                titulo: c.titulo_proposto,
+                legenda: `#${c.numero} · ${c.inicio_hms}`,
+                dot: DOT[metadadoStatus(metaById[c.id], statusMap.get(c.id))],
+                ativo: c.id === activeId,
+                onClick: () => selectCut(c.id),
+              })),
+            }
+          : undefined,
+      seletor: corteAtivo
+        ? {
+            num: String(corteAtivo.numero),
+            titulo: corteAtivo.titulo_proposto,
+            listaTitulo: 'Cortes aprovados',
+            listaResumo: `${stats.ready} de ${stats.total} prontos`,
+            itens: cuts.map((c) => {
+              const st = metadadoStatus(metaById[c.id], statusMap.get(c.id));
+              return {
+                id: c.id,
+                num: String(c.numero),
+                titulo: c.titulo_proposto,
+                inicio: c.inicio_hms,
+                fim: c.fim_hms,
+                status: st === 'ready' ? 'pronto' : st === 'partial' ? 'parcial' : 'vazio',
+                statusBg:
+                  st === 'ready' ? 'var(--ok-soft)' : st === 'partial' ? 'var(--warn-soft)' : 'var(--inset)',
+                statusCor: DOT[st],
+                ativo: c.id === activeId,
+                onClick: () => selectCut(c.id),
+              };
+            }),
+            onAnterior: () => irParaCorte(-1),
+            onProximo: () => irParaCorte(1),
+            onVerTodos: () => undefined,
+          }
+        : undefined,
+      barra:
+        cuts.length > 0
+          ? {
+              teclas: [{ teclas: ['J', 'K'], texto: 'trocar de corte' }],
+              extra: (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                  <span className="lbl">Pronto p/ YouTube</span>
+                  <b style={{ fontSize: 12.5 }}>
+                    {stats.ready} de {stats.total}
+                  </b>
+                  <span
+                    style={{ width: 140, height: 4, borderRadius: 2, background: 'var(--inset)' }}
+                    aria-hidden
+                  >
+                    <span
+                      style={{
+                        display: 'block',
+                        height: '100%',
+                        borderRadius: 2,
+                        background: 'var(--accent)',
+                        width: `${stats.total > 0 ? Math.round((stats.ready / stats.total) * 100) : 0}%`,
+                      }}
+                    />
+                  </span>
+                </span>
+              ),
+              primario: {
+                texto:
+                  cortesProntos.length === 0
+                    ? 'Nada pronto para publicar'
+                    : `Publicar ${cortesProntos.length} ${cortesProntos.length === 1 ? 'corte' : 'cortes'}`,
+                icone: 'send',
+                onClick: () => setPublicarOpen(true),
+                desabilitado: cortesProntos.length === 0,
+              },
+            }
+          : undefined,
+    },
+    [cuts, activeId, stats, metaById, statusMap, cortesProntos.length],
+  );
+
   if (!projetoId) {
     return <div className="p-6 text-sm text-error">Projeto nao encontrado.</div>;
   }
@@ -94,12 +198,13 @@ export function MetadataPage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
-        workbench ? 'h-full' : 'h-screen',
+        'flex min-h-0 text-[var(--wb-text)]',
+        CASCA_NOVA ? '' : 'overflow-hidden bg-[var(--wb-bg)]',
+        CASCA_NOVA ? '' : workbench ? 'h-full' : 'h-screen',
       )}
     >
       {/* Workbench: lista esquerda de cortes aprovados com status por item. */}
-      {workbench && cuts.length > 0 && (
+      {!CASCA_NOVA && workbench && cuts.length > 0 && (
         <MetadataCutBar
           cuts={cuts}
           activeId={activeId}
@@ -110,7 +215,9 @@ export function MetadataPage() {
         />
       )}
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main
+        className={cn('flex min-w-0 flex-1 flex-col', CASCA_NOVA ? '' : 'overflow-hidden')}
+      >
         {CASCA_NOVA ? null : workbench ? (
           <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
             <h1 className="text-[15px] font-extrabold">Metadados & Thumbnails</h1>
@@ -138,7 +245,7 @@ export function MetadataPage() {
           </header>
         )}
 
-        {!workbench && cuts.length > 0 && (
+        {!CASCA_NOVA && !workbench && cuts.length > 0 && (
           <MetadataCutBar
             cuts={cuts}
             activeId={activeId}
@@ -148,7 +255,7 @@ export function MetadataPage() {
           />
         )}
 
-        <div className="flex-1 overflow-auto bg-[var(--wb-bg)] p-4">
+        <div className={CASCA_NOVA ? '' : 'flex-1 overflow-auto bg-[var(--wb-bg)] p-4'}>
           {cortesQuery.isLoading ? (
             <div className="grid min-h-[300px] place-items-center">
               <Loader2 className="animate-spin text-[var(--wb-text-dim)]" />
@@ -208,7 +315,7 @@ export function MetadataPage() {
         </div>
 
         {/* Rodapé Workbench: PRONTO P/ YOUTUBE X de Y + publicar em massa. */}
-        {workbench && cuts.length > 0 && (
+        {!CASCA_NOVA && workbench && cuts.length > 0 && (
           <footer className="flex flex-none items-center gap-3 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
             <span className="whitespace-nowrap font-code text-[9px] font-extrabold tracking-[0.14em] text-[var(--wb-text-dim)]">
               PRONTO P/ YOUTUBE
@@ -235,7 +342,7 @@ export function MetadataPage() {
           </footer>
         )}
       </main>
-      <MetadataRightRail stats={stats} />
+      {CASCA_NOVA ? null : <MetadataRightRail stats={stats} />}
 
       <PublicarMassaModal
         open={publicarOpen}

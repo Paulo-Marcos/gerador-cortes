@@ -491,3 +491,17 @@
   border-top-right-radius: var(--r2);
   border-bottom-right-radius: var(--r2);
 }
+
+/* ─── Tipografia das telas não migradas ────────────────────────────
+   O design inteiro é Geist e Geist Mono — não há serifa em lugar nenhum
+   do handoff. As telas antigas usam `--font-serif` (Newsreader) em
+   títulos editoriais e `--font-mono` (JetBrains Mono) em números. Dentro
+   da casca as três variáveis passam a apontar para as duas famílias do
+   design: uma manchete serifada ao lado de um cabeçalho em Geist lia
+   como duas marcas diferentes na mesma janela. */
+
+.ap {
+  --font-sans: var(--sans);
+  --font-serif: var(--sans);
+  --font-mono: var(--mono);
+}
