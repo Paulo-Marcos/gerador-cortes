@@ -68,6 +68,13 @@ class LimitesPlataforma:
     procurar um campo que não existe — foi o que aconteceu, e a dúvida chegou
     como pergunta.
     """
+    link_na_legenda: bool = True
+    """Se o CTA "Corte completo: <url>" entra no texto.
+
+    No Instagram o link na legenda não é clicável e ainda puxa o alcance para
+    baixo: a plataforma não empurra post que tenta levar gente para fora dela.
+    Lá o link não converte e custa distribuição — então não vai.
+    """
 
 
 LIMITES: dict[Plataforma, LimitesPlataforma] = {
@@ -102,8 +109,11 @@ LIMITES: dict[Plataforma, LimitesPlataforma] = {
         duracao_min_seg=3.0,
         duracao_max_seg=180.0,
         vertical=True,
-        hashtags_max=10,
+        # Desde dez/2025 o Instagram limita a 5 hashtags e deixa de recomendar
+        # o post que passa disso.
+        hashtags_max=5,
         caixa_unica=True,
+        link_na_legenda=False,
     ),
     # 4000 e nao 2200: o contador da propria caixa de legenda diz "16/4000"
     # (medido na pagina em 06/09/2026). O numero antigo veio de material de
@@ -179,7 +189,7 @@ def adaptar(base: MetadadosBase, plataforma: Plataforma) -> MetadadosPublicacao:
     """
     limites = LIMITES[plataforma]
     partes = [base.descricao.strip()]
-    if base.url_video_longo:
+    if base.url_video_longo and limites.link_na_legenda:
         partes.append(f"Corte completo: {base.url_video_longo}")
 
     hashtags = _normalizar_hashtags(base.hashtags, limites.hashtags_max)

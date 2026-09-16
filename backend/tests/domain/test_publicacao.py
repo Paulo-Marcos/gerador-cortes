@@ -64,7 +64,14 @@ def test_cada_plataforma_tem_seu_teto_de_hashtags():
     base = MetadadosBase(titulo="t", hashtags=[f"t{i}" for i in range(20)])
 
     assert len(adaptar(base, Plataforma.YOUTUBE_SHORTS).hashtags) == 3
-    assert len(adaptar(base, Plataforma.INSTAGRAM_REELS).hashtags) == 10
+    assert len(adaptar(base, Plataforma.INSTAGRAM_REELS).hashtags) == 5
+
+
+def test_reels_nao_leva_link_do_youtube_na_legenda():
+    """No Instagram o link nao e clicavel e derruba o alcance do Reels."""
+    base = MetadadosBase(titulo="t", url_video_longo="https://youtu.be/abc")
+
+    assert "youtu.be" not in adaptar(base, Plataforma.INSTAGRAM_REELS).descricao
 
 
 def test_reels_recusa_video_curto_demais():
