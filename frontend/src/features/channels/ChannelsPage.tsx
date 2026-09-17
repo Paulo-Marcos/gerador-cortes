@@ -19,6 +19,7 @@ import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { ChannelThemeSection } from './ChannelThemeSection';
 import { EditorialScaffoldsSection } from './EditorialScaffoldsSection';
 import { EditorialSkillsSection } from './EditorialSkillsSection';
+import { PreRequisitosSection } from './PreRequisitosSection';
 import { PromptsUtilitariosSection } from './PromptsUtilitariosSection';
 import { RankingPesosSection } from './RankingPesosSection';
 import { AparenciaDaCasca } from '@/upgrade/AparenciaDaCasca';
@@ -308,6 +309,7 @@ export function ChannelsPage() {
                 superficie). A secao antiga controla o tema das cascas
                 anteriores e seria um controle que nao muda nada na tela. */}
             {CASCA_NOVA ? <AparenciaDaCasca /> : <AparenciaSection />}
+            <PreRequisitosSection />
             <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
               <h2 className="text-lg font-semibold text-[var(--wb-text)]">Configurações globais</h2>
               <p className="text-sm text-[var(--wb-text-mute)]">
