@@ -22,10 +22,10 @@ from pathlib import Path
 
 import httpx
 from app import channel_paths
+from app.config import settings
 
 _TAMANHO_DEFAULT = 600
 _USER_AGENT = "CortadorLive/1.0 (https://github.com/paulo-marcos/gerador-cortes)"
-_BACKEND_PUBLIC_URL = "http://localhost:8000"
 
 
 def url_para_remotion(url: str | None) -> str | None:
@@ -39,7 +39,7 @@ def url_para_remotion(url: str | None) -> str | None:
     if url.startswith(("http://", "https://", "data:", "file:")):
         return url
     if url.startswith("/"):
-        return f"{_BACKEND_PUBLIC_URL}{url}"
+        return f"{settings.backend_public_url}{url}"
     return url
 
 

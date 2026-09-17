@@ -1036,7 +1036,9 @@ async def obter_remotion_studio_url(corte_id: str, db: AsyncSession = Depends(ge
         )
 
     clip_filename = clip_path.name
-    video_url = f"http://localhost:8000/videos/{corte.projeto_id}/cortes/{corte_id}/{clip_filename}"
+    video_url = (
+        f"{settings.backend_public_url}/videos/{corte.projeto_id}/cortes/{corte_id}/{clip_filename}"
+    )
 
     cenas_salvas = json.loads(corte.cenas_remotion or "[]")
     if isinstance(cenas_salvas, dict):

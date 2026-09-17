@@ -109,3 +109,13 @@ def test_url_para_remotion_preserva_url_absoluta() -> None:
 def test_url_para_remotion_preserva_vazio_e_none() -> None:
     assert retrato_wikipedia.url_para_remotion("") == ""
     assert retrato_wikipedia.url_para_remotion(None) is None
+
+
+def test_url_para_remotion_segue_a_origem_configurada(monkeypatch) -> None:
+    """D-624: um backend fora da porta padrão (ex.: DEV em 8001) não pode
+    apontar o Remotion para a mídia da produção."""
+    monkeypatch.setattr(retrato_wikipedia.settings, "backend_public_url", "http://localhost:8001")
+    assert (
+        retrato_wikipedia.url_para_remotion("/api/retratos/karl_marx")
+        == "http://localhost:8001/api/retratos/karl_marx"
+    )

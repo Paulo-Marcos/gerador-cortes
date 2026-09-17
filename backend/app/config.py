@@ -198,6 +198,11 @@ class Settings(BaseSettings):
     # derrubava a conexao (`ERR_CONNECTION_RESET at localhost:3000/index.html`).
     # Deve casar com `$RemotionPort` do dev.ps1.
     remotion_studio_port: int = 3200
+    # D-624: origem pela qual o Remotion e o player alcançam o backend (URLs de
+    # vídeo e de retrato montadas no servidor). Default = porta padrão; um backend
+    # em outra porta (ex.: DEV em 8001) recebe BACKEND_PUBLIC_URL do dev.ps1 —
+    # antes, fixo em 8000, o DEV carregava mídia da produção.
+    backend_public_url: str = "http://localhost:8000"
 
     class Config:
         env_file = ".env"
