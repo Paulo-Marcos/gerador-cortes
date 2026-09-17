@@ -5,8 +5,8 @@ import { segParaMmSs } from '../timeUtils';
 import type { DecisaoSegmentoDetectado, SegmentoDetectado } from '@/types/models';
 
 // F-054: popover ancorado num ponto da timeline, mostrando as 3 opções neutras
-// (Rejeitar / FULL / Compartilhada) lado a lado. Sem pré-seleção — paulo
-// pediu UI previsível, sem "mágica". Esc ou click fora fecha sem decidir.
+// (Rejeitar / FULL / Compartilhada) lado a lado. Sem pré-seleção — decisão
+// de produto: UI previsível, sem "mágica". Esc ou click fora fecha sem decidir.
 
 interface Props {
   segmento: SegmentoDetectado;

@@ -182,7 +182,7 @@ class TestDonoDaPorta:
     def test_o_windows_escreve_o_mesmo_caminho_de_varios_jeitos(self):
         """O Chrome recusa dois processos sobre um perfil so, entao confundir as
         duas grafias do mesmo caminho quebraria o lote no meio."""
-        assert mesma_pasta("C:\\PRD\\x", "C:/prd/x/") is True
+        assert mesma_pasta("C:\\App\\x", "C:/app/x/") is True
         assert mesma_pasta("C:/a/b", "C:/a/c") is False
 
     def test_nao_saber_de_quem_e_nunca_vira_um_sim(self):

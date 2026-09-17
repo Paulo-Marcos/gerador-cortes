@@ -13,7 +13,7 @@ describe('resolveThumbUrl', () => {
   });
 
   it('normaliza path absoluto antigo (backend/projetos) para URL relativa', () => {
-    const thumbPath = 'C:\\Users\\paulo\\OneDrive\\DEV\\gerador-cortes\\backend\\projetos\\proj-123\\thumbnails\\thumb_x.png';
+    const thumbPath = 'C:\\app\\gerador-cortes\\backend\\projetos\\proj-123\\thumbnails\\thumb_x.png';
 
     const url = resolveThumbUrl(projetoId, thumbPath);
 
@@ -24,7 +24,7 @@ describe('resolveThumbUrl', () => {
 
   it('normaliza path absoluto novo (instance/channels) para URL relativa', () => {
     const thumbPath =
-      'C:\\Users\\paulo\\OneDrive\\DEV\\gerador-cortes\\instance\\channels\\default\\projetos\\proj-123\\thumbnails\\thumb_x.png';
+      'C:\\app\\gerador-cortes\\instance\\channels\\default\\projetos\\proj-123\\thumbnails\\thumb_x.png';
 
     const url = resolveThumbUrl(projetoId, thumbPath);
 

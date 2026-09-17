@@ -110,18 +110,18 @@ describe('destinosPublicados', () => {
 
   it('lista o YouTube com a URL que o operador confere antes de soltar', () => {
     const marcados = destinosPublicados(
-      corte({ youtube_url_publicado: 'https://youtu.be/ZcvZLOResPc' }),
+      corte({ youtube_url_publicado: 'https://youtu.be/abc12345678' }),
     );
 
     expect(marcados).toHaveLength(1);
     expect(marcados[0].destino).toBe('youtube');
-    expect(marcados[0].detalhe).toContain('ZcvZLOResPc');
+    expect(marcados[0].detalhe).toContain('abc12345678');
   });
 
   it('pega o corte preso so pelo video_id, sem URL', () => {
     // E o `youtube_video_id` que o upload consulta para se declarar
     // idempotente: sem esta linha, o corte preso nao apareceria para ser solto.
-    const marcados = destinosPublicados(corte({ youtube_video_id: 'ZcvZLOResPc' }));
+    const marcados = destinosPublicados(corte({ youtube_video_id: 'abc12345678' }));
 
     expect(marcados.map((d) => d.destino)).toEqual(['youtube']);
   });
@@ -129,7 +129,7 @@ describe('destinosPublicados', () => {
   it('enxerga os dois destinos de forma independente', () => {
     const marcados = destinosPublicados(
       corte({
-        youtube_url_publicado: 'https://youtu.be/ZcvZLOResPc',
+        youtube_url_publicado: 'https://youtu.be/abc12345678',
         tiktok_publicado_em: '2026-09-04T10:00:00',
       }),
     );

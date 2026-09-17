@@ -1,7 +1,7 @@
 // D-070: tela global de "Padrões dos melhores prompts de thumbnail". Dispara o
 // agente que lê as avaliações melhor pontuadas (D-066), mostra o que os melhores
 // têm em comum (por eixo) e a proposta de ajuste para a skill do Capista, para o
-// Paulo validar antes da edição manual da SKILL.md.
+// o operador validar antes da edição manual da SKILL.md.
 import { useMutation } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';

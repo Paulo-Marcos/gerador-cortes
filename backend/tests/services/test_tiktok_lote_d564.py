@@ -217,21 +217,21 @@ class TestPortaPorPerfil:
     """
 
     def test_perfis_diferentes_nunca_dividem_a_porta(self):
-        prod = r"C:\PRD\gerador-cortes\instance\channels\default\browser\tiktok"
+        prod = r"C:\App\gerador-cortes\instance\channels\default\browser\tiktok"
         dev = r"C:\DEV\gerador-cortes\instance\channels\seucanal\browser\tiktok"
 
         assert porta_de_depuracao(prod) != porta_de_depuracao(dev)
 
     def test_a_porta_do_mesmo_perfil_e_sempre_a_mesma(self):
         """Senão o item seguinte do lote não reencontraria a janela aberta."""
-        perfil = r"C:\PRD\gerador-cortes\instance\channels\default\browser\tiktok"
+        perfil = r"C:\App\gerador-cortes\instance\channels\default\browser\tiktok"
 
         assert porta_de_depuracao(perfil) == porta_de_depuracao(perfil)
 
     def test_maiusculas_do_windows_nao_criam_um_segundo_chrome(self):
-        r"""`C:\PRD` e `c:\prd` são a mesma pasta — e o Chrome recusa dois
+        r"""`C:\App` e `c:\app` são a mesma pasta — e o Chrome recusa dois
         processos sobre o mesmo perfil."""
-        assert porta_de_depuracao("C:/PRD/x") == porta_de_depuracao("c:/prd/x")
+        assert porta_de_depuracao("C:/App/x") == porta_de_depuracao("c:/app/x")
 
     def test_a_porta_fica_numa_faixa_que_nao_pisa_no_app(self):
         portas = {porta_de_depuracao(f"C:/perfil/{i}") for i in range(300)}

@@ -278,12 +278,12 @@ def porta_de_depuracao(perfil: str) -> int:
     Estável porque precisa reencontrar o Chrome já aberto entre um item do lote
     e o seguinte; exclusiva porque dois checkouts NÃO podem se encontrar.
 
-    O caminho entra em minúsculas: no Windows `C:/PRD` e `c:/prd` são a mesma
+    O caminho entra em minúsculas: no Windows `C:/App` e `c:/app` são a mesma
     pasta, e derivar portas diferentes para elas faria o mesmo perfil abrir dois
     Chromes — que é justamente o que o Chrome não permite.
 
-    >>> porta_de_depuracao("C:/PRD/instance/channels/default/browser/tiktok") == porta_de_depuracao(
-    ...     "c:/prd/instance/channels/default/browser/tiktok"
+    >>> porta_de_depuracao("C:/App/instance/channels/default/browser/tiktok") == porta_de_depuracao(
+    ...     "c:/app/instance/channels/default/browser/tiktok"
     ... )
     True
     >>> porta_de_depuracao("C:/DEV/a") == porta_de_depuracao("C:/DEV/b")

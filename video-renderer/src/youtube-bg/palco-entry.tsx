@@ -160,7 +160,7 @@ const ShadowCaster: FC<{ x: number; y: number; w: number; h: number; clip: strin
 
 const DEFAULT_PROPS: PalcoProps = {
   fundo: DEFAULT_YOUTUBE_BACKGROUND,
-  placa: { nome: "Pedro Ivo", papel: "pedroivosa@gmail.com" },
+  placa: { nome: "Convidado", papel: "papel do convidado" },
   telas: 2,
   crop_tela: { x: 365, y: 180, w: 1325, h: 720 },
   crop_facecam: { x: 24, y: 410, w: 340, h: 260 },

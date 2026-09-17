@@ -94,7 +94,7 @@ function Test-CortadorProcess {
     # do projeto ($BASE) no CommandLine/ExecutablePath.
     # Tokens genericos (uvicorn/app.main, native_worker.js, vite, remotion, a
     # porta) foram removidos de proposito: eles NAO distinguem este DEV do PROD
-    # (C:\PRD\gerador-cortes) nem de apps de terceiros que usam node/vite/porta
+    # (outro checkout, ex.: producao) nem de apps de terceiros que usam node/vite/porta
     # 3000 (ex.: BolsoFundo), e o sweep antigo matava esses processos alheios.
     # D-436: backend e worker deixaram de ser "pathless" - agora sao lancados
     # com o caminho absoluto na linha de comando (--app-dir e o .js completo),

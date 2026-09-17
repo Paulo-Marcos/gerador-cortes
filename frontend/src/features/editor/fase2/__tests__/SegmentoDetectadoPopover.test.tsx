@@ -57,7 +57,7 @@ describe('SegmentoDetectadoPopover', () => {
   it('nao pre-seleciona nenhuma opcao (botoes neutros lado a lado)', () => {
     const html = renderPopover();
 
-    // Nenhum dos botoes deve ter aria-pressed=true (decisao Paulo: sem magica).
+    // Nenhum dos botoes deve ter aria-pressed=true (decisao de produto: sem magica).
     expect(html).not.toContain('aria-pressed="true"');
   });
 });

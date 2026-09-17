@@ -20,7 +20,7 @@ function Stop-ProcessTree {
 function Test-CortadorProcess {
     # D-370: so encerra processos deste checkout (casados pelo caminho absoluto
     # $BASE). Tokens genericos (uvicorn/app.main, native_worker.js, vite,
-    # remotion, porta) NAO distinguem este DEV do PROD (C:\PRD\gerador-cortes)
+    # remotion, porta) NAO distinguem este DEV de outra instalacao na mesma maquina (ex.: producao)
     # nem de apps de terceiros que usam node/vite/porta (ex.: BolsoFundo).
     param([string]$CommandLine, [string]$ExecutablePath)
 

@@ -1,7 +1,7 @@
 ﻿# Portas alternativas do dev.ps1 — copie para `dev.ports.local.ps1` (untracked)
 # no checkout de DESENVOLVIMENTO.
 #
-# Por que: DEV e PROD (C:\PRD\gerador-cortes) rodam na mesma maquina. O PROD usa
+# Por que: DEV e PROD (checkouts separados) rodam na mesma maquina. O PROD usa
 # este arquivo? Nao — ele roda o dev.ps1 do repositorio, que ja vem com as
 # portas de producao (8000 / 4300 / 3000 / 3001). Quem existe aqui e o DEV, que
 # sobe em portas alternativas e para de disputar porta com o PROD ligado.

@@ -37,7 +37,7 @@ class TestExtrairLegenda:
     @pytest.mark.asyncio
     async def test_sem_json3_nem_vtt_levanta_erro_de_dominio(self, yt_dlp_sem_legenda):
         with pytest.raises(TranscricaoIndisponivelError) as exc:
-            await IngestaoService._extrair_legenda("proj-1", "https://youtu.be/mMXbmUhI68Y")
+            await IngestaoService._extrair_legenda("proj-1", "https://youtu.be/abc12345678")
 
         mensagem = str(exc.value)
         assert "legendas automáticas" in mensagem
@@ -48,7 +48,7 @@ class TestExtrairLegenda:
         """A regressão original: retornar um segmento de aviso como se fosse
         transcrição — não-vazio, logo indistinguível de material bom."""
         with pytest.raises(TranscricaoIndisponivelError):
-            await IngestaoService._extrair_legenda("proj-1", "https://youtu.be/mMXbmUhI68Y")
+            await IngestaoService._extrair_legenda("proj-1", "https://youtu.be/abc12345678")
 
 
 class TestProcessarProjeto:
@@ -76,7 +76,7 @@ class TestProcessarProjeto:
         monkeypatch.setattr(IngestaoService, "_salvar_transcricao", _salvar)
         monkeypatch.setattr(IngestaoService, "_atualizar_status", _status)
 
-        await IngestaoService.processar_projeto("proj-1", "https://youtu.be/mMXbmUhI68Y")
+        await IngestaoService.processar_projeto("proj-1", "https://youtu.be/abc12345678")
 
         assert salvos == [("proj-1", [], "C:/canal/projetos/proj-1/video.mkv")]
 

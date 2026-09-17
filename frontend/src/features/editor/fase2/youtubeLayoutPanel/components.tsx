@@ -471,7 +471,7 @@ function ModoRow({
 // posicionamento (PosicionamentoModal).
 
 // PadraoLayoutGroup REMOVIDO: substituido por PadraoLayoutCard + PadraoScopeRow
-// (decisao Paulo: hierarquia compacta com 4 acoes Projeto/Global, modal de
+// (decisao de produto: hierarquia compacta com 4 acoes Projeto/Global, modal de
 // confirmacao). Veja a definicao mais acima neste arquivo.
 
 // ─── RegionItem ────────────────────────────────────────────────

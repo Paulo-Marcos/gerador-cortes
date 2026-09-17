@@ -40,7 +40,7 @@ import { tintarFundo, type SinalFlags } from './UnifiedSidebar';
 //   - "÷ dividir corte em dois" já mora no menu ⚙ da Timeline (CP7).
 //   - "↕ reordenar cortes" já é prático como setas ↑↓ inline na lista.
 //   - "⧉ duplicar corte" está fora de escopo desta rodada (não existe
-//     hook/endpoint — decisão de Paulo).
+//     hook/endpoint — decisão de produto).
 //   - "🗑 excluir corte" duplicaria 1:1 o botão "R · Rejeitar" do
 //     veredito: `toggleRejeitado` já chama `useDeletarCorte` (delete
 //     permanente com confirm), como confirma o title="Excluir (R)" em

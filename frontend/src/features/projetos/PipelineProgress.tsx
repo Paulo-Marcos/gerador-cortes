@@ -15,8 +15,8 @@ import { estaProntoPraYoutube } from '@/hooks/useProjetos';
 // Pipeline do projeto em 6 etapas.
 //
 // Duas apresentações, de propósito:
-//   • `compact` (rail de projetos) → ÍCONES por etapa. Preferência explícita
-//     do Paulo (validação D-394 item 10) — no rail o ícone diz QUAL etapa é
+//   • `compact` (rail de projetos) → ÍCONES por etapa. Decisão de produto
+//     (validação D-394 item 10) — no rail o ícone diz QUAL etapa é
 //     sem depender de tooltip. NÃO trocar por pontos.
 //   • padrão (card da Biblioteca) → 6 pips coloridos, conforme o protótipo v3.
 //
@@ -147,8 +147,8 @@ export function PipelineProgress({
   const etapas = construirEtapas(projeto);
   const rotulo = rotuloDeEstado(projeto);
 
-  // Rail: ícones. O ícone identifica a etapa sem tooltip — preferência do
-  // Paulo, mantida de propósito fora do protótipo v3.
+  // Rail: ícones. O ícone identifica a etapa sem tooltip — decisão de produto,
+  // mantida de propósito fora do protótipo v3.
   if (compact) {
     return (
       <div
