@@ -6,7 +6,6 @@ import json
 import uuid
 from datetime import datetime
 
-from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.ancora_match import achatar_palavras, ancorar_intervalo
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
@@ -120,141 +119,6 @@ def _com_origem_de_analise(desvio: dict, origem: str) -> dict:
     return {**desvio, "origem": origem}
 
 
-PROMPT_ANALISE_TRANSCRICAO = """\
-Voce e um editor de video especializado em conteudo analitico e intelectual para YouTube.
-Sua tarefa e analisar a transcricao de uma live e identificar cortes tematicamente coerentes.
-{guia_section}
-=== ETAPA 0: FILTRO EDITORIAL (OBRIGATORIO ANTES DE QUALQUER CORTE) ===
-
-Antes de criar qualquer corte, voce deve classificar os trechos da transcricao.
-
-Classifique cada bloco de conteudo como:
-
-1. RECOMENDADO
-2. NAO_RECOMENDADO
-
-CRITERIOS:
-
-✅ RECOMENDADO:
-- Analises politicas, sociologicas ou filosoficas profundas
-- Explicacoes estruturadas de conceitos
-- Argumentacoes com tese + desenvolvimento + conclusao
-- Criticas a ideias, sistemas ou figuras publicas (foco intelectual, nao pessoal)
-
-🚫 NAO_RECOMENDADO:
-- Desabafos pessoais, emocionais ou de saude
-- Discussao com chat ao vivo (bate-boca, respostas irritadas)
-- Tretas com influenciadores/youtubers
-- Historias constrangedoras, escatologicas ou fora do tom intelectual
-- Trechos sem densidade analitica
-
-REGRAS IMPORTANTES:
-- Se um trecho inteiro for NAO_RECOMENDADO, ele NAO deve virar corte
-- Ele pode existir apenas como DESVIO dentro de um corte valido (se for curto)
-- Se um tema for totalmente NAO_RECOMENDADO, liste no campo "descartados"
-
-ANTES DE CONTINUAR:
-- Identifique mentalmente quais blocos sao aproveitaveis
-- Ignore completamente blocos NAO_RECOMENDADOS na criacao dos cortes
-=== REGRAS CRITICAS (siga exatamente) ===
-
-1. IGNORAR INTRO E ENCERRAMENTO COM MUSICA:
-   - Lives geralmente iniciam com musica/vinheta de abertura nos primeiros minutos.
-   - Lives geralmente terminam com musica de encerramento nos ultimos minutos.
-   - Identifique essas partes por: ausencia de fala, texto como [Musica], [Music], simbolos musicais (♪ ♫), segmentos sem conteudo textual, ou fala muito curta intercalada com silencios.
-   - O PRIMEIRO corte deve comecar somente quando a fala substantiva e continua iniciar.
-   - O ULTIMO corte deve terminar ANTES da musica final.
-   - Nunca inclua segmentos de musica dentro de nenhum corte.
-
-2. DESVIO vs TEMA SEPARADO (regra mais importante):
-   - Um DESVIO e uma digressao BREVE (menos de 8 minutos) que interrompe o tema principal temporariamente.
-   - Se um trecho que parece um desvio dura MAIS DE 8 MINUTOS, ele NAO e um desvio — e um TEMA SEPARADO.
-   - Nesse caso, DIVIDA em dois cortes independentes: um antes e um novo corte para esse tema.
-   - NUNCA crie um corte onde o total dos desvios supere 30% da duracao do corte.
-   - Se o corte ficaria gigante (mais de 40 min) com desvio enorme, prefira dividir em 2 ou 3 cortes menores.
-   - Desvios NAO_RECOMENDADOS (chat, treta, etc) devem SEMPRE ser removidos ou marcados
-   - Desvios RECOMENDADOS (ex: exemplo filosofico paralelo) podem permanecer se agregarem valor
-   - Se um desvio quebra o ritmo intelectual, ele deve ser marcado obrigatoriamente
-
-3. COERENCIA TEMATICA:
-   - Cada corte deve ter UMA tese ou argumento central claro e fechado.
-   - O corte comeca com a apresentacao da tese/problema e termina com conclusao ou fechamento.
-   - Nunca quebre um raciocinio no meio — sempre complete o pensamento antes de encerrar.
-   - Temas distintos = cortes distintos, mesmo que o apresentador nao faça pausa explicita.
-
-4. DURACAO:
-   - Minimo absoluto: 8 minutos.
-   - Maximo absoluto: 35 minutos.
-   - Ideal para YouTube: 12 a 22 minutos (formato video-essay).
-   - Prefira varios cortes medios a um corte gigante com muitos desvios.
-
-5. TITULO E METADADOS:
-   - Titulo estilo ensaio analitico (ex: "Por que o fimdomundismo paralisa a acao politica").
-   - Sem clickbait, sem letras maiusculas exageradas, menos de 70 caracteres.
-   - Resumo: 2-3 frases descrevendo o arco de raciocinio, NAO o roteiro.
-   - Tema central: conceito filosofico/politico/historico central do corte.
-
-6. TIMESTAMPS:
-   - Use os timestamps exatos da transcricao para inicio_hms e fim_hms.
-   - Calcule inicio_seg e fim_seg em segundos totais (HH*3600 + MM*60 + SS).
-   - Desvios tambem precisam de inicio_hms, fim_hms e motivo claro.
-
-7. ARCO NARRATIVO (OBRIGATORIO):
-   - Cada corte deve seguir obrigatoriamente:
-     1. Introducao da tese
-     2. Desenvolvimento (argumentos, exemplos, referencias)
-     3. Conclusao ou fechamento logico
-   - NUNCA gere cortes baseados apenas em frases soltas ou momentos isolados
-   - Priorize blocos longos e coesos (5 a 20 minutos)
-   - Se o raciocinio continuar, NAO corte no meio
-
-REGRAS DE SEGURANCA:
-- NAO invente timestamps
-- NAO invente cortes que nao existem na transcricao
-- TODOS os cortes devem corresponder a trechos reais
-- Se nao houver conteudo suficiente, retorne poucos cortes (ou nenhum)
-
-FORMATO DE RESPOSTA - retorne APENAS o JSON abaixo, sem markdown, sem explicacoes, sem texto antes ou depois:
-{{
-  "cortes": [
-    {{
-      "titulo_proposto": "titulo estilo ensaio analitico",
-      "resumo": "2-3 frases sobre o arco de raciocinio",
-      "tema_central": "conceito central",
-      "inicio_hms": "HH:MM:SS",
-      "fim_hms": "HH:MM:SS",
-      "inicio_seg": 0,
-      "fim_seg": 0,
-      "desvios": [
-        {{ "inicio_hms": "HH:MM:SS", "fim_hms": "HH:MM:SS", "motivo": "descricao breve do desvio" }}
-      ]
-    }}
-  ]
-}}
-
-Titulo da Live: {titulo_live}
-Duracao Total: {duracao_h}h{duracao_m}m
-URL: {youtube_url}
-
-=== TRANSCRICAO (com timestamps) ===
-{transcricao_texto}
-=== FIM DA TRANSCRICAO ===
-
-- Removi completamente abertura e encerramento com musica?
-- Ignorei completamente temas NAO_RECOMENDADOS?
-- Algum corte tem apenas conteudo fraco ou irrelevante?
-- Todos os cortes possuem tese + desenvolvimento + conclusao?
-- Existe algum desvio maior que 8 min que nao foi separado?
-- Todos os cortes estao entre 8 e 35 minutos?
-- Marquei corretamente os desvios?
-- Listei os trechos descartados?
-- todo desvio foi registrado?
-
-Se qualquer resposta for NAO, corrija antes de gerar o JSON.
-
-Agora gere a lista de cortes em JSON puro:"""
-
-
 class AnaliseService:
     @staticmethod
     async def montar_prompt(projeto_id: str) -> dict:
@@ -265,12 +129,7 @@ class AnaliseService:
                 raise ValueError("Projeto não encontrado ou sem transcrição")
 
         transcricao = json.loads(projeto.transcricao_raw)
-        guia = AnaliseService._ler_guia()
-        guia_section = f"=== GUIA EDITORIAL ===\n{guia}\n=== FIM DO GUIA ===\n\n" if guia else ""
-
-        duracao_total = projeto.duracao_segundos or 0
-        duracao_h = duracao_total // 3600
-        duracao_m = (duracao_total % 3600) // 60
+        meta = AnaliseService._meta_do_prompt(projeto, projeto.duracao_segundos or 0)
 
         from app.domain.chunker import fatiar_transcricao
         from app.domain.transcricao_utils import (
@@ -310,16 +169,13 @@ class AnaliseService:
 
             transcricao_texto = "\n".join(linhas)
 
-            # Adiciona o cabeçalho indicando a parte
-            cabecalho_parte = f"*** ATENÇÃO: Esta é a PARTE {i + 1} de {len(chunks)} da transcrição. Avalie e retorne os cortes apenas deste trecho. ***\n\n"
-
-            prompt_chunk = cabecalho_parte + PROMPT_ANALISE_TRANSCRICAO.format(
-                guia_section=guia_section,
-                titulo_live=projeto.titulo_live or "",
-                duracao_h=duracao_h,
-                duracao_m=duracao_m,
-                youtube_url=projeto.youtube_url or "",
-                transcricao_texto=transcricao_texto,
+            prompt_chunk = AnaliseService._prompt_manual(
+                transcricao_texto,
+                meta,
+                cabecalho=(
+                    f"ATENÇÃO: Esta é a PARTE {i + 1} de {len(chunks)} da transcrição. "
+                    "Avalie e retorne os cortes apenas deste trecho."
+                ),
             )
 
             prompts.append(
@@ -419,11 +275,7 @@ class AnaliseService:
                 min_last_chunk_seg=1200.0,
             )
 
-        duracao_h = int((fim_seg - inicio_seg) // 3600)
-        duracao_m = int(((fim_seg - inicio_seg) % 3600) // 60)
-
-        guia = AnaliseService._ler_guia()
-        guia_section = f"=== GUIA EDITORIAL ===\n{guia}\n=== FIM DO GUIA ===\n\n" if guia else ""
+        meta = AnaliseService._meta_do_prompt(projeto, fim_seg - inicio_seg)
 
         prompts = []
         for i, chunk in enumerate(chunks):
@@ -446,20 +298,13 @@ class AnaliseService:
             )
 
             cabecalho = (
-                f"*** ATENÇÃO: Esta é a PARTE {i + 1} de {len(chunks)} "
+                f"ATENÇÃO: Esta é a PARTE {i + 1} de {len(chunks)} "
                 f"do INTERVALO SELECIONADO do vídeo. "
                 f"Intervalo desta parte: {seg_to_hms_short(parte_inicio)} ate {seg_to_hms_short(parte_fim)}. "
-                f"Gere os cortes apenas para esta parte. ***\n\n"
+                f"Gere os cortes apenas para esta parte."
             )
 
-            prompt_chunk = cabecalho + PROMPT_ANALISE_TRANSCRICAO.format(
-                guia_section=guia_section,
-                titulo_live=projeto.titulo_live or "",
-                duracao_h=duracao_h,
-                duracao_m=duracao_m,
-                youtube_url=projeto.youtube_url or "",
-                transcricao_texto=texto_chunk,
-            )
+            prompt_chunk = AnaliseService._prompt_manual(texto_chunk, meta, cabecalho=cabecalho)
 
             prompts.append(
                 {
@@ -791,11 +636,21 @@ class AnaliseService:
         return {"novos_cortes": len(cortes_data), "primeiro_numero": proximo_numero}
 
     @staticmethod
-    def _ler_guia() -> str:
-        """Lê o GUIA_CRIAÇÃO_CORTES.md (guia editorial dos cortes)."""
-        # WHY: usa settings.guia_cortes_path em vez de paths Docker hardcoded
-        try:
-            with open(settings.guia_cortes_path, encoding="utf-8") as f:
-                return f.read()
-        except FileNotFoundError:
-            return ""  # Fallback: sem guia no disco; a expertise da skill basta
+    def _meta_do_prompt(projeto: Projeto, duracao_seg: float) -> dict:
+        return {
+            "titulo_live": projeto.titulo_live or "",
+            "youtube_url": projeto.youtube_url or "",
+            "duracao_segundos": int(duracao_seg),
+        }
+
+    @staticmethod
+    def _prompt_manual(texto_transcricao: str, meta: dict, *, cabecalho: str) -> str:
+        """D-631: o modo manual usa a MESMA receita da análise automática (skill
+        `cortador-expert` + scaffold `cortes` do canal). Antes era um prompt fixo
+        no código, com a persona de um canal e divergente do que o canal editou."""
+        # Import local: claude_ia importa este módulo no topo (evita ciclo).
+        from app.services.claude_ia import ClaudeIaService
+
+        return ClaudeIaService.montar_prompt_manual_cortes(
+            texto_transcricao, meta, cabecalho=cabecalho
+        )

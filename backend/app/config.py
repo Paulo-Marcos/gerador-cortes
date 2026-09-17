@@ -14,7 +14,6 @@ class Settings(BaseSettings):
     projetos_dir: str = str(_channel_projetos_dir())
     assets_dir: str = os.path.join(_BACKEND_ROOT, "assets")
     video_renderer_dir: str = os.path.join(_PROJECT_ROOT, "video-renderer")
-    guia_cortes_path: str = os.path.join(_BACKEND_ROOT, "assets", "GUIA_CRIACAO_CORTES.md")
 
     gemini_api_key: str = ""
     # D-376: sem timeout, uma chamada Gemini lenta/travada (medido: 71s num

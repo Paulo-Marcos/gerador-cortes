@@ -552,6 +552,26 @@ class ClaudeIaService:
     # ── montagem do prompt e da transcrição ───────────────────────────────────
 
     @staticmethod
+    def montar_prompt_manual_cortes(
+        texto_transcricao: str, meta: dict, *, cabecalho: str = ""
+    ) -> str:
+        """Prompt para colar numa IA externa (modo manual, D-631).
+
+        Mesma receita da geração automática: a expertise da skill `cortador-expert`
+        do canal (que no CLI entra como system prompt) vem antes do scaffold `cortes`,
+        num texto só — o JSON devolvido segue o formato que `importar_resultado` lê.
+        """
+        skill = editorial_skills.resolver_skill(_SKILL_CORTES)
+        prompt = ClaudeIaService._montar_prompt(
+            texto_transcricao,
+            meta,
+            cabecalho=cabecalho,
+            variacao=bloco_variacao_de(skill.lentes),
+        )
+        expertise = (skill.corpo or "").strip()
+        return f"{expertise}\n\n{prompt}" if expertise else prompt
+
+    @staticmethod
     def _montar_prompt(
         texto_transcricao: str,
         meta: dict,
