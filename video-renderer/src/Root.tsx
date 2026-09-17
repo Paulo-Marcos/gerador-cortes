@@ -20,13 +20,31 @@ import { overlaySchema, overlayTimelineSchema } from "./overlay-schema";
 import { youtubeSchema, reacaoSchema } from "./schema";
 import { getVideoMetadata } from "@remotion/media-utils";
 
+// Origem do backend que o Studio consulta. O Remotion expõe ao navegador as
+// variáveis REMOTION_*; o dev.ps1 envia a porta do backend (D-625) — antes, fixo
+// em 8000, o Studio do DEV lia as props da produção.
+const BACKEND_URL = process.env.REMOTION_BACKEND_URL || "http://localhost:8000";
+
+// Defaults da V2 num lugar só: o valor do servidor só preenche o que ainda está
+// no default — o que foi escolhido no painel de props do Studio vence.
+const DEFAULTS_V2 = {
+  sombraNivelPadrao: "nenhuma" as const,
+  layoutCardPadrao: "vertical" as const,
+  fontPreset: "atual" as const,
+};
+
+function preferirExplicito<T>(valor: T, padrao: T, doServidor: unknown): T {
+  if (valor !== padrao) return valor;
+  return (doServidor as T) || valor;
+}
+
 // Busca as props ativas do backend UMA VEZ na inicialização
 let cachedProps: Record<string, unknown> | null = null;
 
 async function fetchActiveProps(): Promise<Record<string, unknown>> {
   if (cachedProps) return cachedProps;
   try {
-    const res = await fetch("http://localhost:8000/api/cortes/remotion/active-props");
+    const res = await fetch(`${BACKEND_URL}/api/cortes/remotion/active-props`);
     if (res.ok) {
       cachedProps = await res.json();
       return cachedProps!;
@@ -90,14 +108,21 @@ export const RemotionRoot: React.FC = () => {
             props.cenas.length > 0
               ? props.cenas
               : ((serverProps.cenas as typeof props.cenas) || []);
-          const sombraNivelPadrao =
-            (serverProps.sombraNivelPadrao as typeof props.sombraNivelPadrao) ||
-            props.sombraNivelPadrao;
-          const layoutCardPadrao =
-            (serverProps.layoutCardPadrao as typeof props.layoutCardPadrao) ||
-            props.layoutCardPadrao;
-          const fontPreset =
-            (serverProps.fontPreset as typeof props.fontPreset) || props.fontPreset;
+          const sombraNivelPadrao = preferirExplicito(
+            props.sombraNivelPadrao,
+            DEFAULTS_V2.sombraNivelPadrao,
+            serverProps.sombraNivelPadrao,
+          );
+          const layoutCardPadrao = preferirExplicito(
+            props.layoutCardPadrao,
+            DEFAULTS_V2.layoutCardPadrao,
+            serverProps.layoutCardPadrao,
+          );
+          const fontPreset = preferirExplicito(
+            props.fontPreset,
+            DEFAULTS_V2.fontPreset,
+            serverProps.fontPreset,
+          );
 
           try {
             const metadata = await getVideoMetadata(videoUrl);
@@ -125,9 +150,7 @@ export const RemotionRoot: React.FC = () => {
           letterbox: true,
           filtroCss: "",
           cenas: [],
-          sombraNivelPadrao: "nenhuma" as const,
-          layoutCardPadrao: "vertical" as const,
-          fontPreset: "atual" as const,
+          ...DEFAULTS_V2,
         }}
         width={1920}
         height={1080}

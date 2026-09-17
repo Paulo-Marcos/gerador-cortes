@@ -428,6 +428,7 @@ $services = @(
         WorkingDirectory = Join-Path $BASE "video-renderer"
         EnvVars = @{
             LANG = "en_US.UTF-8"
+            REMOTION_BACKEND_URL = "http://localhost:$BackendPort"
         }
     },
     @{
