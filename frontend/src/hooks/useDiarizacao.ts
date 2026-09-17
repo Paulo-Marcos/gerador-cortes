@@ -8,17 +8,16 @@ import { api, type DiarizarResponse, type FalantesMap } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
 import { corteKey, cortesProjetoKey } from './useEditor';
 import { exportStatusKey } from './useProjetoDetalhe';
+import { API_BASE } from '@/lib/apiBase';
 
 export const falantesKey = (id: string) => ['projeto', id, 'falantes'] as const;
 
-const DIARIZACAO_API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 /** Diariza SÓ a janela de um corte (D-360). Fetch inline para não tocar o
  * `api.ts` sob lock. Reprojeta a transcrição do corte no backend, então basta
  * invalidar o corte para a etiqueta de falante aparecer no editor. */
 async function diarizarCorteRequest(corteId: string): Promise<DiarizarResponse> {
-  const res = await fetch(`${DIARIZACAO_API_BASE}/diarizacao/corte/${corteId}/diarizar`, {
+  const res = await fetch(`${API_BASE}/diarizacao/corte/${corteId}/diarizar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: '{}',

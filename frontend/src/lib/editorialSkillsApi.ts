@@ -1,9 +1,8 @@
+import { API_BASE } from '@/lib/apiBase';
 // E-021: cliente HTTP da gestão de skills editoriais por canal. Módulo próprio
 // (não `lib/api.ts`, que está sob lock) no mesmo padrão de fetch/erro de
 // `channelsApi`: checa `res.ok`, propaga status + corpo no erro, desserializa JSON.
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

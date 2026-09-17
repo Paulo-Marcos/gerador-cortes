@@ -84,6 +84,7 @@ import {
   postProductionPath,
   resolveCorteStagePath,
 } from '@/features/post-production/postProductionNavigation';
+import { ORIGEM_API } from '@/lib/apiBase';
 
 // D-599: com a casca nova, quem desenha a lista de cortes, a trilha e a
 // barra de decisao e a CASCA — o editor apenas a alimenta (BancadaChrome).
@@ -114,9 +115,6 @@ function findNextCorte(cortes: Corte[], corte: Corte): Corte | null {
   );
 }
 
-const VIDEOS_BASE = (
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api'
-).replace(/\/api$/, '');
 
 const SPEED_MIN = 0.25;
 const SPEED_MAX = 4;
@@ -224,7 +222,7 @@ export function EditorPage() {
   // Painel "passos do bruto" (BrutoStepsDropdown), agora aberto pelo ícone
   // ⟳ da toolbar (controlado por fora — ver CP2).
   const [brutoDropdownOpen, setBrutoDropdownOpen] = useState(false);
-  // Trecho comeca DESTRAVADO por default (decisao Paulo): usuario pode
+  // Trecho comeca DESTRAVADO por default (decisao de produto): usuario pode
   // gerenciar tamanho dos trechos na waveform sem precisar destravar manualmente.
   // Trocar de corte reseta para destravado (caso o usuario tenha travado e mudado).
   const [trechoLocked, setTrechoLocked] = useState(false);
@@ -742,7 +740,7 @@ export function EditorPage() {
     );
   }
 
-  const videoOriginal = `${VIDEOS_BASE}/videos/${projetoId}/video.mkv`;
+  const videoOriginal = `${ORIGEM_API}/videos/${projetoId}/video.mkv`;
   const persistedInicioSeg = corte?.inicio_seg ?? corteUI.inicio_seg;
   const persistedFimSeg = corte?.fim_seg ?? corteUI.fim_seg;
   const waveformWindow = (() => {

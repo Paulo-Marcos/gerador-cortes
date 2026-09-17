@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { API_BASE } from '@/lib/apiBase';
 
 // D-491: o aviso que teria poupado quatro caçadas a bugs que não existiam.
 //
@@ -12,8 +13,6 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 // vai procurar o aviso noutro lugar. Flutua sobre o topo para não precisar
 // mexer no layout de nenhum shell — o do workbench está travado.
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 interface Estado {
   commit_rodando: string;

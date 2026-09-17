@@ -1,11 +1,10 @@
 import type { ProviderIA } from '@/lib/providerIa';
+import { API_BASE } from '@/lib/apiBase';
 
 // D-353: cliente HTTP da telemetria de chamadas de IA. Módulo próprio (NUNCA
 // `lib/api.ts`, que está sob lock), no mesmo padrão de fetch/erro de
 // `rankingPesosApi`. Endpoint sob o router do provider Claude (/api/claude).
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

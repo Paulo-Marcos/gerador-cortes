@@ -1,3 +1,4 @@
+import { API_BASE } from '@/lib/apiBase';
 // D-285: API dedicada da identidade do mascote (nome citado nos prompts de
 // thumbnail/metadados), editável na página/modal de Configurações.
 //
@@ -7,8 +8,6 @@
 // Consome o MESMO endpoint `/settings` (GET/PUT) que a D-191 criou; aqui só
 // isolamos o campo `mascote_nome` do payload.
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 interface SettingsComMascote {
   mascote_nome?: string;

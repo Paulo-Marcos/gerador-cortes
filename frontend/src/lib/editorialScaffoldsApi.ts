@@ -1,9 +1,8 @@
+import { API_BASE } from '@/lib/apiBase';
 // D-297: cliente HTTP da gestão de prompts-scaffold (contrato de saída) por canal.
 // Módulo próprio (não `lib/api.ts`, que está sob lock), no mesmo padrão de
 // fetch/erro de `editorialSkillsApi`. Endpoints irmãos sob /editorial-skills.
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

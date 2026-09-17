@@ -15,6 +15,7 @@ import type {
   PipelineStatusResponse,
   StatusBrutoResponse,
 } from '@/types/models';
+import { API_BASE } from '@/lib/apiBase';
 
 export type RenderStartFrom = 'auto' | 'grade' | 'overlays' | 'overlays_continuar' | 'render_final';
 
@@ -22,8 +23,6 @@ export const corteKey = (id: string) => ['corte', id] as const;
 export const cortesProjetoKey = (id: string) => ['cortes', 'projeto', id] as const;
 export const statusBrutoKey = (id: string) => ['corte', id, 'status-bruto'] as const;
 export const pipelineStatusKey = (id: string) => ['corte', id, 'pipeline-status'] as const;
-const EDITOR_API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 interface RetratosCenasStats {
   total_fichas: number;
@@ -44,7 +43,7 @@ export interface PreencherRetratosCenasResponse {
 }
 
 async function preencherRetratosCenas(corteId: string): Promise<PreencherRetratosCenasResponse> {
-  const res = await fetch(`${EDITOR_API_BASE}/cortes/${corteId}/cenas-remotion/retratos`, {
+  const res = await fetch(`${API_BASE}/cortes/${corteId}/cenas-remotion/retratos`, {
     method: 'POST',
   });
   if (!res.ok) {
@@ -63,7 +62,7 @@ export interface RetratoBancoResponse {
 }
 
 export async function salvarRetratoDeUrl(nome: string, url: string): Promise<RetratoBancoResponse> {
-  const res = await fetch(`${EDITOR_API_BASE}/retratos/salvar-url`, {
+  const res = await fetch(`${API_BASE}/retratos/salvar-url`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nome, url }),

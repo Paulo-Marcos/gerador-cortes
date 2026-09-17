@@ -1,9 +1,8 @@
+import { API_BASE } from '@/lib/apiBase';
 // D-372: cliente HTTP do voto manual (1-5) de qualidade da live. Módulo próprio
 // (não `lib/api.ts`, que está sob lock), no mesmo padrão de fetch/erro de
 // `rankingPesosApi`. Endpoint irmão em routers/ranking_lives.py.
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

@@ -6,9 +6,8 @@
 import type { GanchoShortPreset } from '@/types/presets';
 import type { Segmento } from './segmentosDoShort';
 import type { ProviderIA } from '@/lib/providerIa';
+import { API_BASE } from '@/lib/apiBase';
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 /**
  * Os cabeçalhos de uma requisição — e a regra que a D-529 corrigiu.

@@ -49,9 +49,8 @@ import type {
   LayoutPresetTipo,
 } from '@/types/presets';
 import type { ProviderIA } from '@/lib/providerIa';
+import { API_BASE, VIDEOS_BASE, wsUrl } from '@/lib/apiBase';
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormData = init?.body instanceof FormData;
@@ -831,9 +830,7 @@ export const api = {
     request<YoutubeStatsSyncResult>('/projetos/youtube-stats/sync', { method: 'POST' }),
 };
 
-export const VIDEOS_BASE = (
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api'
-).replace(/\/api$/, '/videos');
+export { VIDEOS_BASE };
 
 const CAMINHO_ABSOLUTO_RE = /^[a-zA-Z]:\//;
 
@@ -921,7 +918,7 @@ export async function fetchWaveformPeaks(url: string): Promise<WaveformPeaksResp
 }
 
 export function progressoWsUrl(projetoId: string): string {
-  return `${API_BASE.replace(/^http(s?):/, 'ws$1:')}/projetos/${projetoId}/ws`;
+  return wsUrl(`/projetos/${projetoId}/ws`);
 }
 
 // ─── E-022: tipos da Área de Análises ────────────────────────────────────────

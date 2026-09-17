@@ -1,10 +1,9 @@
+import { API_BASE } from '@/lib/apiBase';
 // D-154: cliente HTTP do gerenciador de canais (épico Multi-canal — Opção X).
 // Módulo próprio (e não `lib/api.ts`, que está sob lock) para as chamadas da
 // API de canais criada em D-153. Segue o mesmo padrão de fetch/erro do projeto:
 // checa `res.ok`, propaga status + corpo no erro e desserializa JSON.
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000/api';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
