@@ -11,7 +11,7 @@
 config_version: 1
 
 # Nome pelo qual o mascote é citado nos prompts (usado verbatim no texto).
-# Ex.: "Sapo". Deixe "mascote" para uma identidade genérica.
+# Ex.: "Coruja". Deixe "mascote" para uma identidade genérica.
 #
 # Atalho: definir `CANAL_MASCOTE_NOME` no `.env` do backend semeia este `nome` no
 # primeiro boot (só se ainda estiver vazio — nunca sobrescreve). Ver `.env.example`.

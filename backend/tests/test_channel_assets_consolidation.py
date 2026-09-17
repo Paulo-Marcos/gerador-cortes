@@ -100,7 +100,8 @@ def test_sync_materializa_mascote_e_theme_nos_dirs_servidos(tmp_path: Path) -> N
     assert (frontend / "sapo_serio.png").read_bytes() == b"PNG-serio"
     assert (renderer / "sapo_animado.png").read_bytes() == b"PNG-animado"
     assert theme.read_text(encoding="utf-8") == '{"palette":{}}'
-    assert len(materializados) == 5  # 2 PNGs x 2 destinos + 1 theme
+    # 2 PNGs x 2 destinos + cópias canônicas `<pose>.png` (D-636) + 1 theme
+    assert len(materializados) == 9
 
 
 def test_sync_e_idempotente(tmp_path: Path) -> None:
@@ -118,8 +119,9 @@ def test_sync_e_idempotente(tmp_path: Path) -> None:
     assert segunda == []  # nada divergiu → nenhuma cópia na 2ª passagem
 
 
-def test_sync_e_noop_no_layout_legado() -> None:
+def test_sync_e_noop_no_layout_legado(monkeypatch) -> None:
     # Sem raiz de assets do canal (None) → não materializa nada.
+    monkeypatch.setattr(channel_assets_sync.channel_paths, "assets_root", lambda: None)
     assert channel_assets_sync.sincronizar_assets_servidos(None) == []
 
 

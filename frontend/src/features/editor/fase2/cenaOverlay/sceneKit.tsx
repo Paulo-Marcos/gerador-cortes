@@ -28,14 +28,14 @@ const TAMANHO_PX: Record<string, number> = {
   extraGrande: 600,
 };
 
-// Nomes de arquivo do mascote do canal (dados servidos por canal): o naming
-// genérico é da pasta/URL (/mascote/); os arquivos mantêm o nome fornecido.
+// D-636: pose servida pelo nome canônico `<pose>.png` em /mascote/ (PNGs legados
+// `sapo_<pose>.png` do canal ganham essa cópia na materialização).
 const MASCOTE_FILE: Record<string, string> = {
-  pensativo: 'sapo_pensativo.png',
-  serio: 'sapo_serio.png',
-  animado: 'sapo_animado.png',
-  investigador: 'sapo_investigador.png',
-  apresentador: 'sapo_apresentador.png',
+  pensativo: 'pensativo.png',
+  serio: 'serio.png',
+  animado: 'animado.png',
+  investigador: 'investigador.png',
+  apresentador: 'apresentador.png',
 };
 
 // ---------------------------------------------------------------------------

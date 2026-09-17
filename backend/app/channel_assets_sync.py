@@ -27,6 +27,7 @@ de move — os dois pontos em que os assets do canal ativo podem ter mudado de l
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -40,6 +41,29 @@ _RENDERER_THEME = _REPO_ROOT / "video-renderer" / "theme.config.json"
 # Nomes aceitos para a subpasta de PNGs do mascote nos assets do canal: o genérico
 # `mascote/` (E-011) tem precedência; `sapo/` é fallback legado.
 _SUBDIRS_MASCOTE = ("mascote", "sapo")
+
+# D-636: o render procura cada pose pelo nome canônico `<pose>.png`. Canais antigos
+# forneceram os PNGs com o prefixo do primeiro mascote (`sapo_<pose>.png`); eles
+# ganham uma cópia canônica no diretório servido, sem renomear nada na origem.
+_PREFIXO_LEGADO_POSE = re.compile(r"^sapo_([a-z]+)\.png$")
+
+
+def nome_canonico_da_pose(nome_arquivo: str) -> str | None:
+    """`sapo_pensativo.png` -> `pensativo.png`; None se não for pose legada."""
+    achado = _PREFIXO_LEGADO_POSE.match(nome_arquivo)
+    return f"{achado.group(1)}.png" if achado else None
+
+
+def _garantir_nomes_canonicos(servido: Path) -> list[Path]:
+    """Cria `<pose>.png` para cada `sapo_<pose>.png` do diretório servido."""
+    if not servido.is_dir():
+        return []
+    criados: list[Path] = []
+    for arquivo in sorted(servido.iterdir()):
+        canonico = nome_canonico_da_pose(arquivo.name)
+        if canonico and _espelhar_arquivo(arquivo, servido / canonico):
+            criados.append(servido / canonico)
+    return criados
 
 
 def _origem_mascote(canal_assets_root: Path) -> Path | None:
@@ -86,21 +110,20 @@ def garantir_mascote_materializado(
     Returns:
         Lista dos arquivos efetivamente (re)materializados nesta execução.
     """
-    if canal_assets_root is None:
-        canal_assets_root = channel_paths.assets_root()
-    if canal_assets_root is None:
-        return []  # legado: os PNGs versionados nos dirs servidos já são a fonte
-
-    mascote_src = _origem_mascote(canal_assets_root)
-    if mascote_src is None:
-        return []  # canal ainda sem mascote consolidado → mantém o fallback atual
-
     frontend_mascote = frontend_mascote or _FRONTEND_MASCOTE
     renderer_mascote = renderer_mascote or _RENDERER_MASCOTE
+    if canal_assets_root is None:
+        canal_assets_root = channel_paths.assets_root()
 
     materializados: list[Path] = []
-    materializados += _espelhar_dir(mascote_src, frontend_mascote)
-    materializados += _espelhar_dir(mascote_src, renderer_mascote)
+    # Layout legado (sem assets do canal) ou canal sem mascote: nada a copiar, os
+    # PNGs já servidos são a fonte — mas eles ainda precisam dos nomes canônicos.
+    mascote_src = _origem_mascote(canal_assets_root) if canal_assets_root else None
+    if mascote_src is not None:
+        materializados += _espelhar_dir(mascote_src, frontend_mascote)
+        materializados += _espelhar_dir(mascote_src, renderer_mascote)
+    materializados += _garantir_nomes_canonicos(frontend_mascote)
+    materializados += _garantir_nomes_canonicos(renderer_mascote)
     return materializados
 
 

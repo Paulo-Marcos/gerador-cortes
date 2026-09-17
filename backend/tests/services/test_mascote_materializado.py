@@ -42,7 +42,8 @@ def test_materializa_mascote_nos_dois_public_mascote(tmp_path: Path) -> None:
     assert (frontend / "sapo_animado.png").read_bytes() == b"PNG-animado"
     assert (renderer / "sapo_serio.png").read_bytes() == b"PNG-serio"
     assert (renderer / "sapo_animado.png").read_bytes() == b"PNG-animado"
-    assert len(materializados) == 4  # 2 PNGs x 2 destinos
+    # 2 PNGs x 2 destinos, cada um + a cópia canônica `<pose>.png` (D-636)
+    assert len(materializados) == 8
 
 
 def test_aceita_origem_legada_sapo(tmp_path: Path) -> None:
@@ -58,7 +59,7 @@ def test_aceita_origem_legada_sapo(tmp_path: Path) -> None:
 
     assert (frontend / "sapo_serio.png").read_bytes() == b"PNG"
     assert (renderer / "sapo_serio.png").read_bytes() == b"PNG"
-    assert len(materializados) == 2  # 1 PNG x 2 destinos
+    assert len(materializados) == 4  # 1 PNG x 2 destinos, + cópia canônica (D-636)
 
 
 def test_prefere_mascote_sobre_sapo(tmp_path: Path) -> None:
@@ -89,9 +90,17 @@ def test_materializacao_e_idempotente(tmp_path: Path) -> None:
     assert segunda == []  # nada divergiu → nenhuma cópia na 2ª passagem
 
 
-def test_sem_assets_do_canal_e_noop() -> None:
-    # Layout legado (assets_root None) → não materializa nada, preserva o fallback.
-    assert garantir_mascote_materializado(None) == []
+def test_sem_assets_do_canal_e_noop(tmp_path: Path, monkeypatch) -> None:
+    # Layout legado (assets_root None) → não copia nada do canal, preserva o fallback.
+    from app import channel_assets_sync
+
+    monkeypatch.setattr(channel_assets_sync.channel_paths, "assets_root", lambda: None)
+    frontend = tmp_path / "frontend" / "mascote"
+    renderer = tmp_path / "renderer" / "mascote"
+    assert (
+        garantir_mascote_materializado(None, frontend_mascote=frontend, renderer_mascote=renderer)
+        == []
+    )
 
 
 def test_canal_sem_pasta_mascote_e_noop(tmp_path: Path) -> None:
@@ -107,3 +116,60 @@ def test_canal_sem_pasta_mascote_e_noop(tmp_path: Path) -> None:
     assert materializados == []
     assert not frontend.exists()  # NÃO cria/apaga nada quando não há mascote
     assert not renderer.exists()
+
+
+# ─── D-636: nome canônico por pose ──────────────────────────────────────────
+
+
+def test_pngs_legados_ganham_nome_canonico_no_servido(tmp_path: Path) -> None:
+    canal_assets = tmp_path / "canal" / "assets"
+    (canal_assets / "sapo").mkdir(parents=True)
+    (canal_assets / "sapo" / "sapo_pensativo.png").write_bytes(b"PNG-pensativo")
+    (canal_assets / "sapo" / "sapo_serio.png").write_bytes(b"PNG-serio")
+    frontend = tmp_path / "frontend" / "mascote"
+    renderer = tmp_path / "renderer" / "mascote"
+
+    garantir_mascote_materializado(
+        canal_assets, frontend_mascote=frontend, renderer_mascote=renderer
+    )
+
+    for servido in (frontend, renderer):
+        assert (servido / "pensativo.png").read_bytes() == b"PNG-pensativo"
+        assert (servido / "serio.png").read_bytes() == b"PNG-serio"
+        assert (servido / "sapo_pensativo.png").exists()  # origem legada preservada
+
+
+def test_canal_com_nomes_canonicos_e_copiado_como_esta(tmp_path: Path) -> None:
+    canal_assets = tmp_path / "canal" / "assets"
+    (canal_assets / "mascote").mkdir(parents=True)
+    (canal_assets / "mascote" / "pensativo.png").write_bytes(b"coruja")
+    frontend = tmp_path / "frontend" / "mascote"
+    renderer = tmp_path / "renderer" / "mascote"
+
+    garantir_mascote_materializado(
+        canal_assets, frontend_mascote=frontend, renderer_mascote=renderer
+    )
+
+    assert (renderer / "pensativo.png").read_bytes() == b"coruja"
+    assert sorted(p.name for p in renderer.iterdir()) == ["pensativo.png"]
+
+
+def test_layout_legado_normaliza_o_cache_ja_servido(tmp_path: Path, monkeypatch) -> None:
+    from app import channel_assets_sync
+
+    monkeypatch.setattr(channel_assets_sync.channel_paths, "assets_root", lambda: None)
+    frontend = tmp_path / "frontend" / "mascote"
+    renderer = tmp_path / "renderer" / "mascote"
+    renderer.mkdir(parents=True)
+    (renderer / "sapo_animado.png").write_bytes(b"animado")
+
+    criados = garantir_mascote_materializado(
+        None, frontend_mascote=frontend, renderer_mascote=renderer
+    )
+
+    assert criados == [renderer / "animado.png"]
+    assert not frontend.exists()
+    assert (
+        garantir_mascote_materializado(None, frontend_mascote=frontend, renderer_mascote=renderer)
+        == []
+    )  # idempotente

@@ -37,33 +37,33 @@ interface Props {
 }
 
 // Mapeamento mood → arquivo PNG em public/mascote/ (E-011).
-// Os nomes de arquivo do mascote do canal são dados servidos por canal — o naming
-// genérico é da PASTA/URL; os arquivos mantêm o nome que o canal fornece.
+// D-636: cada pose é servida pelo nome canônico `<pose>.png`. PNGs do canal com o
+// prefixo legado (`sapo_<pose>.png`) ganham essa cópia na materialização.
 // Os 5 primeiros já existem; os 12 restantes só renderizam quando o PNG
 // correspondente for adicionado à pasta (catálogo completo em pose-catalog.ts).
 const MOOD_TO_FILE: Record<string, string> = {
   // existentes
-  pensativo: "sapo_pensativo.png",
-  serio: "sapo_serio.png",
-  animado: "sapo_animado.png",
-  investigador: "sapo_investigador.png",
-  apresentador: "sapo_apresentador.png",
+  pensativo: "pensativo.png",
+  serio: "serio.png",
+  animado: "animado.png",
+  investigador: "investigador.png",
+  apresentador: "apresentador.png",
   // apresentando
-  apontando: "sapo_apontando.png",
-  professor: "sapo_professor.png",
-  narrador: "sapo_narrador.png",
+  apontando: "apontando.png",
+  professor: "professor.png",
+  narrador: "narrador.png",
   // reagindo
-  surpreso: "sapo_surpreso.png",
-  cetico: "sapo_cetico.png",
-  duvida: "sapo_duvida.png",
+  surpreso: "surpreso.png",
+  cetico: "cetico.png",
+  duvida: "duvida.png",
   // editorial
-  lendo: "sapo_lendo.png",
-  filosofando: "sapo_filosofando.png",
-  balanca: "sapo_balanca.png",
+  lendo: "lendo.png",
+  filosofando: "filosofando.png",
+  balanca: "balanca.png",
   // energia
-  concordando: "sapo_concordando.png",
-  enfatico: "sapo_enfatico.png",
-  convidativo: "sapo_convidativo.png",
+  concordando: "concordando.png",
+  enfatico: "enfatico.png",
+  convidativo: "convidativo.png",
 };
 
 const TAMANHO_PX: Record<Tamanho, number> = {
