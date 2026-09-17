@@ -1,5 +1,5 @@
 import React from "react";
-import { COLORS_V2 as C } from "../../theme-v2";
+import { COLORS_V2 as C, comAlfa } from "../../theme-v2";
 
 interface Props {
   /** Intensidade global do HUD (0..1). Default 1 — usar 0.4–0.6 para
@@ -57,8 +57,8 @@ export const AmbientHud: React.FC<Props> = ({
             inset: 0,
             opacity: opG,
             backgroundImage: `
-              linear-gradient(rgba(155,207,227,0.30) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(155,207,227,0.30) 1px, transparent 1px)
+              linear-gradient(${comAlfa(C.azulAcento, 0.30)} 1px, transparent 1px),
+              linear-gradient(90deg, ${comAlfa(C.azulAcento, 0.30)} 1px, transparent 1px)
             `,
             backgroundSize: "160px 160px",
           }}
@@ -78,7 +78,7 @@ export const AmbientHud: React.FC<Props> = ({
             opacity: opR,
           }}
         >
-          <g stroke="rgba(155,207,227,0.9)" fill="none" strokeWidth="1.6">
+          <g stroke={comAlfa(C.azulAcento, 0.9)} fill="none" strokeWidth="1.6">
             <circle cx="0" cy="0" r="240" />
             <circle cx="0" cy="0" r="310" />
             <circle cx="0" cy="0" r="380" />
@@ -101,7 +101,7 @@ export const AmbientHud: React.FC<Props> = ({
             opacity: opS,
           }}
         >
-          <g stroke="rgba(155,207,227,0.92)" fill="none" strokeWidth="1.4">
+          <g stroke={comAlfa(C.azulAcento, 0.92)} fill="none" strokeWidth="1.4">
             <circle cx="520" cy="0" r="240" />
             <circle cx="520" cy="0" r="310" />
             <circle cx="520" cy="0" r="380" />
@@ -123,7 +123,7 @@ export const AmbientHud: React.FC<Props> = ({
             opacity: opD,
           }}
         >
-          <g fill="rgba(155,207,227,0.92)">
+          <g fill={comAlfa(C.azulAcento, 0.92)}>
             {Array.from({ length: 5 }).map((_, row) =>
               Array.from({ length: 12 }).map((__, col) => (
                 <circle

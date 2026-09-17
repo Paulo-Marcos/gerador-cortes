@@ -605,7 +605,7 @@ class TestInvarianteIndicesGranularizacao:
 
         assert "prompts" in result
         assert "formato_esperado" in result
-        assert result["formato_esperado"]["formato"] == "vlog_analitico"
+        assert result["formato_esperado"]["formato"] == "cortes"
         assert isinstance(result["formato_esperado"]["cenas"], list)
 
     @pytest.mark.asyncio

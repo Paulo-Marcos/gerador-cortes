@@ -1,5 +1,6 @@
 ﻿import type React from "react";
 import { Mascote } from "../../Mascote";
+import { COLORS_V2 as C, comAlfa } from "../../theme-v2";
 
 type MascotMood = React.ComponentProps<typeof Mascote>["mood"];
 type MascotTamanho = React.ComponentProps<typeof Mascote>["tamanho"];
@@ -41,9 +42,9 @@ export const MascotSpotlight: React.FC<Props> = ({
           position: "absolute",
           inset: -Math.round(size * 0.14),
           background: `radial-gradient(circle at 50% 50%,
-          rgba(155, 207, 227, 0.38) 0%,
-          rgba(155, 207, 227, 0.22) 28%,
-          rgba(155, 207, 227, 0.10) 50%,
+          ${comAlfa(C.azulAcento, 0.38)} 0%,
+          ${comAlfa(C.azulAcento, 0.22)} 28%,
+          ${comAlfa(C.azulAcento, 0.10)} 50%,
           transparent 72%)`,
           filter: "blur(2px)",
         }}
@@ -54,7 +55,7 @@ export const MascotSpotlight: React.FC<Props> = ({
           width: "100%",
           height: "100%",
           filter:
-            "drop-shadow(0 0 10px rgba(155,207,227,0.45)) drop-shadow(0 4px 10px rgba(0,0,0,0.5))",
+            `drop-shadow(0 0 10px ${comAlfa(C.azulAcento, 0.45)}) drop-shadow(0 4px 10px rgba(0,0,0,0.5))`,
         }}
       >
         <Mascote mood={mood} tamanho={tamanho} />

@@ -1,5 +1,5 @@
 import React from "react";
-import { COLORS_V2 as C, buildChromePaths } from "../../theme-v2";
+import { COLORS_V2 as C, buildChromePaths, comAlfa } from "../../theme-v2";
 
 export type ChromeHud =
   | "grid"
@@ -124,8 +124,8 @@ export const Chrome: React.FC<Props> = ({
                 position: "absolute",
                 inset: 0,
                 backgroundImage: `
-                  linear-gradient(rgba(155,207,227,${gridOpacity}) 0.8px, transparent 1px),
-                  linear-gradient(90deg, rgba(155,207,227,${gridOpacity}) 0.8px, transparent 1px)
+                  linear-gradient(${comAlfa(C.azulAcento, gridOpacity)} 0.8px, transparent 1px),
+                  linear-gradient(90deg, ${comAlfa(C.azulAcento, gridOpacity)} 0.8px, transparent 1px)
                 `,
                 backgroundSize: "80px 80px",
               }}
@@ -156,7 +156,7 @@ export const Chrome: React.FC<Props> = ({
               }}
               viewBox={`0 0 ${Math.min(320, w * 0.4)} ${Math.min(260, h * 0.9)}`}
             >
-              <g stroke={`rgba(155,207,227,${gridOpacity})`} fill="none" strokeWidth="1.4">
+              <g stroke={comAlfa(C.azulAcento, gridOpacity)} fill="none" strokeWidth="1.4">
                 <circle cx="0" cy="0" r="60" />
                 <circle cx="0" cy="0" r="90" />
                 <circle cx="0" cy="0" r="120" />
@@ -178,7 +178,7 @@ export const Chrome: React.FC<Props> = ({
               preserveAspectRatio="xMaxYMin meet"
             >
               {hasHud("semicircles-tr") && (
-                <g stroke={`rgba(155,207,227,${gridOpacity})`} fill="none" strokeWidth="1.4">
+                <g stroke={comAlfa(C.azulAcento, gridOpacity)} fill="none" strokeWidth="1.4">
                   <circle cx={Math.min(560, w * 0.4)} cy="0" r="60" />
                   <circle cx={Math.min(560, w * 0.4)} cy="0" r="90" />
                   <circle cx={Math.min(560, w * 0.4)} cy="0" r="120" />
@@ -186,7 +186,7 @@ export const Chrome: React.FC<Props> = ({
                 </g>
               )}
               {hasHud("dots-tr") && (
-                <g fill="rgba(155,207,227,0.4)">
+                <g fill={comAlfa(C.azulAcento, 0.4)}>
                   {Array.from({ length: 3 }).map((_, row) =>
                     Array.from({ length: 6 }).map((__, col) => (
                       <circle

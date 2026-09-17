@@ -167,6 +167,21 @@ export const FONTS_V2 = {
 const palette = themeConfig.palette as Partial<Record<string, string>>;
 const cor = (chave: string, fallback: string): string => palette[chave] ?? fallback;
 
+/** A mesma cor do tema com outra opacidade (D-633). Os brilhos, grades e
+ *  molduras das cenas usavam o RGB do tema padrão escrito à mão, então trocar o
+ *  tema do canal não chegava neles. Aceita `#rrggbb` e `rgb()/rgba()`. */
+export function comAlfa(cor: string, alfa: number): string {
+  const valor = cor.trim();
+  const hex = /^#([0-9a-f]{6})$/i.exec(valor);
+  if (hex) {
+    const n = parseInt(hex[1], 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alfa})`;
+  }
+  const rgb = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(valor);
+  if (rgb) return `rgba(${rgb[1]},${rgb[2]},${rgb[3]},${alfa})`;
+  return valor;
+}
+
 export const COLORS_V2 = {
   // Verdes — assinatura da moldura
   verdeMoldura: cor("verdeMoldura", "#6aaa84"),
@@ -205,8 +220,8 @@ export const SHADOWS_V2 = {
     "0 12px 28px rgba(0,0,0,0.65), 0 36px 90px rgba(0,0,0,0.55)",
   textoSobreVideo:
     "0 3px 8px rgba(0,0,0,0.75), 0 1px 0 rgba(0,0,0,0.5)",
-  glowMoldura: "0 0 30px rgba(106,170,132,0.4)",
-  glowAcento: "0 0 30px rgba(155,207,227,0.5)",
+  glowMoldura: `0 0 30px ${comAlfa(COLORS_V2.verdeMoldura, 0.4)}`,
+  glowAcento: `0 0 30px ${comAlfa(COLORS_V2.azulAcento, 0.5)}`,
   // filter helper p/ Img / svg / div
   mascote: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))",
 };

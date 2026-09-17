@@ -1,6 +1,6 @@
 import { AbsoluteFill, Img, useVideoConfig } from "remotion";
 import { CenaRemotion } from "../schema";
-import { COLORS_V2 as C, FONTS_V2 as F, SHADOWS_V2 as SH } from "../theme-v2";
+import { COLORS_V2 as C, FONTS_V2 as F, SHADOWS_V2 as SH, comAlfa } from "../theme-v2";
 import { useGlobalFrame } from "../frame-context";
 import { Chrome, MonoLabel, RegionHud, useCardLayout, useFades, useSombra } from "./_shared";
 
@@ -230,7 +230,7 @@ function looksLikeReference(texto: string) {
 const PortraitSlot: React.FC<{ cena: CenaRemotion; style?: React.CSSProperties }> = ({ cena, style }) => (
   <div
     style={{
-      border: "4px solid rgba(155,207,227,0.5)",
+      border: `4px solid ${comAlfa(C.azulAcento, 0.5)}`,
       background: "rgba(8,18,12,0.85)",
       display: "flex",
       alignItems: "center",
@@ -239,7 +239,7 @@ const PortraitSlot: React.FC<{ cena: CenaRemotion; style?: React.CSSProperties }
       overflow: "hidden",
       backgroundImage: cena.retrato_url
         ? undefined
-        : "repeating-linear-gradient(45deg, transparent 0 14px, rgba(155,207,227,0.06) 14px 16px)",
+        : `repeating-linear-gradient(45deg, transparent 0 14px, ${comAlfa(C.azulAcento, 0.06)} 14px 16px)`,
       ...style,
     }}
   >
@@ -259,7 +259,7 @@ const PortraitSlot: React.FC<{ cena: CenaRemotion; style?: React.CSSProperties }
           fontFamily: F.mono,
           fontSize: 14,
           letterSpacing: 3,
-          color: "rgba(155,207,227,0.6)",
+          color: comAlfa(C.azulAcento, 0.6),
           textAlign: "center",
         }}
       >

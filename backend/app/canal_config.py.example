@@ -463,7 +463,7 @@ Cada cena inclui: `tipo`, `startLeg`, `duracao_s`, campos do tipo, `mascotMood`,
 FORMATO FINAL:
 
 {{
-  "formato": "vlog_analitico",
+  "formato": "cortes",
   "cobertura": {{
     "primeiraLegendaAnalisada": 0,
     "ultimaLegendaAnalisada": 0,

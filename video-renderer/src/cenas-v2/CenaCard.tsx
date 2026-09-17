@@ -1,6 +1,6 @@
 ﻿import { AbsoluteFill, useVideoConfig } from "remotion";
 import { CenaRemotion } from "../schema";
-import { COLORS_V2 as C, FONTS_V2 as F } from "../theme-v2";
+import { COLORS_V2 as C, FONTS_V2 as F, comAlfa } from "../theme-v2";
 import { Mascote } from "../Mascote";
 import { useGlobalFrame } from "../frame-context";
 import { Chrome, RegionHud, RichTitle, useCardLayout, useFades, useSombra, AutoFitText } from "./_shared";
@@ -84,7 +84,7 @@ export const CenaCard: React.FC<Props> = ({ cena }) => {
                 style={{
                   position: "absolute",
                   inset: -24,
-                  background: `radial-gradient(circle at 50% 50%, rgba(155,207,227,0.38) 0%, rgba(155,207,227,0.22) 28%, rgba(155,207,227,0.10) 50%, transparent 72%)`,
+                  background: `radial-gradient(circle at 50% 50%, ${comAlfa(C.azulAcento, 0.38)} 0%, ${comAlfa(C.azulAcento, 0.22)} 28%, ${comAlfa(C.azulAcento, 0.10)} 50%, transparent 72%)`,
                   filter: "blur(2px)",
                 }}
               />
@@ -94,7 +94,7 @@ export const CenaCard: React.FC<Props> = ({ cena }) => {
                   width: "100%",
                   height: "100%",
                   filter:
-                    "drop-shadow(0 0 10px rgba(155,207,227,0.45)) drop-shadow(0 4px 10px rgba(0,0,0,0.5))",
+                    `drop-shadow(0 0 10px ${comAlfa(C.azulAcento, 0.45)}) drop-shadow(0 4px 10px rgba(0,0,0,0.5))`,
                 }}
               >
                 <Mascote mood={cena.mascotMood || "investigador"} tamanho="medio" />
@@ -182,9 +182,9 @@ export const CenaCard: React.FC<Props> = ({ cena }) => {
                   position: "absolute",
                   inset: -30,
                   background: `radial-gradient(circle at 50% 50%,
-                    rgba(155, 207, 227, 0.38) 0%,
-                    rgba(155, 207, 227, 0.22) 28%,
-                    rgba(155, 207, 227, 0.10) 50%,
+                    ${comAlfa(C.azulAcento, 0.38)} 0%,
+                    ${comAlfa(C.azulAcento, 0.22)} 28%,
+                    ${comAlfa(C.azulAcento, 0.10)} 50%,
                     transparent 72%)`,
                   filter: "blur(2px)",
                 }}
@@ -195,7 +195,7 @@ export const CenaCard: React.FC<Props> = ({ cena }) => {
                   width: "100%",
                   height: "100%",
                   filter:
-                    "drop-shadow(0 0 10px rgba(155,207,227,0.45)) drop-shadow(0 4px 10px rgba(0,0,0,0.5))",
+                    `drop-shadow(0 0 10px ${comAlfa(C.azulAcento, 0.45)}) drop-shadow(0 4px 10px rgba(0,0,0,0.5))`,
                 }}
               >
                 <Mascote mood={cena.mascotMood || "investigador"} tamanho="pequeno" />

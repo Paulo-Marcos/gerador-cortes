@@ -210,7 +210,7 @@ class CenasRemotionService:
             "prompt": prompt_agregado,
             "prompts": prompts,
             "formato_esperado": {
-                "formato": "vlog_analitico",
+                "formato": "cortes",
                 "cenas": [
                     {
                         "tipo": "pergunta_transicao",
@@ -301,17 +301,7 @@ class CenasRemotionService:
         retratos = await CenasRemotionService._preencher_retratos_cenas(cenas_convertidas)
 
         resultado = {
-            "formato": "vlog_analitico",
-            "paleta": {
-                "verdeSapo": "#3FA66A",
-                "verdeProfundo": "#1F5132",
-                "azulLagoa": "#4FA8C9",
-                "azulClaro": "#6FBED9",
-                "azulProfundo": "#2C6B8A",
-                "azulNoite": "#173E55",
-                "ouroOlho": "#FFD93D",
-                "brancoNeve": "#F5F5F5",
-            },
+            "formato": "cortes",
             "cenas": cenas_convertidas,
             "retratos": retratos,
         }
@@ -429,17 +419,7 @@ class CenasRemotionService:
             )
 
             resultado = {
-                "formato": "vlog_analitico",
-                "paleta": {
-                    "verdeSapo": "#3FA66A",
-                    "verdeProfundo": "#1F5132",
-                    "azulLagoa": "#4FA8C9",
-                    "azulClaro": "#6FBED9",
-                    "azulProfundo": "#2C6B8A",
-                    "azulNoite": "#173E55",
-                    "ouroOlho": "#FFD93D",
-                    "brancoNeve": "#F5F5F5",
-                },
+                "formato": "cortes",
                 "cenas": cenas_convertidas,
                 "retratos": retratos,
             }

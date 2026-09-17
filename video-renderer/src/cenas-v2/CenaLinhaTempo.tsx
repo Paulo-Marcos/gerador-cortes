@@ -1,6 +1,6 @@
 ﻿import { AbsoluteFill, interpolate, spring, useVideoConfig } from "remotion";
 import { CenaRemotion } from "../schema";
-import { COLORS_V2 as C, FONTS_V2 as F, SHADOWS_V2 as SH } from "../theme-v2";
+import { COLORS_V2 as C, FONTS_V2 as F, SHADOWS_V2 as SH, comAlfa } from "../theme-v2";
 import { Mascote } from "../Mascote";
 import { useGlobalFrame } from "../frame-context";
 import { AmbientHud, AutoFitText, Chrome, MonoLabel, RichTitle, MascotSpotlight, useCardLayout, useFades, useSombra } from "./_shared";
@@ -89,7 +89,7 @@ export const CenaLinhaTempo: React.FC<Props> = ({ cena }) => {
                     ${C.azulAcento} 50%,
                     ${C.verdeMoldura} 92%,
                     transparent 100%)`,
-                  boxShadow: "0 0 20px rgba(106,170,132,0.4)",
+                  boxShadow: `0 0 20px ${comAlfa(C.verdeMoldura, 0.4)}`,
                   transform: `scaleY(${trackProgress})`,
                   transformOrigin: "top center",
                 }}
@@ -194,7 +194,7 @@ export const CenaLinhaTempo: React.FC<Props> = ({ cena }) => {
               ${C.azulAcento} 50%,
               ${C.verdeMoldura} 92%,
               transparent 100%)`,
-            boxShadow: "0 0 20px rgba(106,170,132,0.4)",
+            boxShadow: `0 0 20px ${comAlfa(C.verdeMoldura, 0.4)}`,
             transform: `scaleX(${trackProgress})`,
             transformOrigin: "left center",
           }}
