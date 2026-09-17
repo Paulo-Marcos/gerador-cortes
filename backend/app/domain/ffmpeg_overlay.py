@@ -10,6 +10,7 @@ from app.domain.ffmpeg_common import (
     _ffmpeg_filter_thread_args,
     _resolve_filter_arg,
 )
+from app.domain.video_encoder import VideoEncoder, argumentos_async_depth, argumentos_codec
 
 
 def build_overlay_filter_string(
@@ -63,6 +64,7 @@ def build_compose_and_encode_cmd(
     buf_size: str = "16M",
     fps: int = 30,
     normalize_audio: bool = True,
+    encoder: VideoEncoder = VideoEncoder.QSV,
 ) -> list[str]:
     """Composição de overlays + encode final em UMA única passada FFmpeg.
 
@@ -98,7 +100,7 @@ def build_compose_and_encode_cmd(
         cmd += _build_overlay_input_args(ov_path)
 
     encode_args = _build_youtube_encode_args(
-        bitrate=bitrate, max_bitrate=max_bitrate, buf_size=buf_size, fps=fps
+        bitrate=bitrate, max_bitrate=max_bitrate, buf_size=buf_size, fps=fps, encoder=encoder
     )
     audio_args = _build_audio_args(normalize=normalize_audio)
 
@@ -154,14 +156,16 @@ def _build_overlay_input_args(overlay_path: Path) -> list[str]:
 
 
 def _build_youtube_encode_args(
-    *, bitrate: str, max_bitrate: str, buf_size: str, fps: int
+    *,
+    bitrate: str,
+    max_bitrate: str,
+    buf_size: str,
+    fps: int,
+    encoder: VideoEncoder = VideoEncoder.QSV,
 ) -> list[str]:
     """Flags de encode H.264/QSV otimizadas para YouTube. Reusado por compose+encode e final-only."""
     return [
-        "-c:v",
-        "h264_qsv",
-        "-preset",
-        "fast",
+        *argumentos_codec(encoder, preset="fast"),
         "-b:v",
         bitrate,
         "-maxrate",
@@ -174,8 +178,7 @@ def _build_youtube_encode_args(
         "0",
         # -async_depth 1: menos surfaces QSV em voo = menor pico de RAM/GPU,
         # somando ao teto de threads de decode/filtro no compose final (D-065).
-        "-async_depth",
-        "1",
+        *argumentos_async_depth(encoder),
         "-fps_mode",
         "cfr",
         "-r",

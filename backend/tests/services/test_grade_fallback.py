@@ -127,3 +127,59 @@ async def test_grade_segmentado_escreve_lista_roda_passos_e_limpa(tmp_path, monk
 
     assert jobs == ["clip_graded_seg000", "clip_graded_seg001", "clip_graded_concat"]
     assert not seg0.exists() and not seg1.exists() and not lista.exists()
+
+
+@pytest.mark.asyncio
+async def test_grade_sem_intel_vai_direto_para_software_em_libx264(tmp_path, monkeypatch):
+    """D-622: sem Quick Sync nao ha decode QSV a tentar — um passo so, em libx264."""
+    from app.domain.video_encoder import VideoEncoder
+
+    monkeypatch.setattr(pr, "projetos_dir", lambda: tmp_path)
+
+    async def _sem_palco(*a, **k):
+        return PalcoPngsResultado()
+
+    async def _sem_intel():
+        return VideoEncoder.LIBX264
+
+    monkeypatch.setattr(pr, "ensure_palco_pngs_para_layout", _sem_palco)
+    monkeypatch.setattr(pr, "encoder_da_maquina_async", _sem_intel)
+
+    cmds: list[list[str]] = []
+
+    async def fake_worker(fila_dir, job_id, cmd, cwd, timeout=600, **kwargs):
+        cmds.append(cmd)
+
+    monkeypatch.setattr(pr, "_executar_via_worker", fake_worker)
+
+    await pr._executar_grade(tmp_path / "in.mkv", tmp_path / "out.mp4", "cinematic_iii")
+
+    assert len(cmds) == 1
+    assert "-hwaccel" not in cmds[0]
+    assert cmds[0][cmds[0].index("-c:v") + 1] == "libx264"
+    assert "h264_qsv" not in cmds[0] and "-async_depth" not in cmds[0]
+
+
+@pytest.mark.asyncio
+async def test_render_final_sem_intel_codifica_em_libx264(tmp_path, monkeypatch):
+    from app.domain.video_encoder import VideoEncoder
+
+    monkeypatch.setattr(pr, "projetos_dir", lambda: tmp_path)
+
+    async def _sem_intel():
+        return VideoEncoder.LIBX264
+
+    monkeypatch.setattr(pr, "encoder_da_maquina_async", _sem_intel)
+
+    cmds: list[list[str]] = []
+
+    async def fake_worker(fila_dir, job_id, cmd, cwd, timeout=600, **kwargs):
+        cmds.append(cmd)
+
+    monkeypatch.setattr(pr, "_executar_via_worker", fake_worker)
+
+    await pr._executar_render_final(tmp_path / "graded.mp4", [], tmp_path, tmp_path / "final.mp4")
+
+    assert cmds, "render final nao chegou ao worker"
+    assert cmds[0][cmds[0].index("-c:v") + 1] == "libx264"
+    assert "-async_depth" not in cmds[0]

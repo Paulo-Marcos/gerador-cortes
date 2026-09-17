@@ -28,7 +28,9 @@ from app.domain.overlay_metadata import OverlayEntry, build_overlay_entries
 from app.domain.remotion_bundle import compute_src_fingerprint
 from app.domain.render_etapas import eh_render_parcial, fase_dentro_do_alcance
 from app.domain.time_convert import epoch_to_hora_local, seg_to_duracao_humana
+from app.domain.video_encoder import VideoEncoder
 from app.domain.youtube_layout import aplicar_layout_card_por_contexto
+from app.infrastructure.encoder_detector import encoder_da_maquina_async
 from app.infrastructure.worker_queue import (
     RemotionWorkerQueue,
     WorkerJob,
@@ -1022,6 +1024,7 @@ async def _executar_grade(
     fila_dir = projetos_dir() / "fila_remotion"
     fila_dir.mkdir(parents=True, exist_ok=True)
     job_base = output_path.stem
+    encoder = await encoder_da_maquina_async()
 
     async def _rodar_grade(hwaccel_decode: bool) -> None:
         # O plano é único (1 comando enable-based) OU segmentado (N segmentos por
@@ -1037,6 +1040,7 @@ async def _executar_grade(
             projeto_padrao=projeto_padrao,
             global_padrao=global_padrao,
             hwaccel_decode=hwaccel_decode,
+            encoder=encoder,
         )
         if ffmpeg_log_path is not None:
             for step in plan.steps:
@@ -1049,6 +1053,7 @@ async def _executar_grade(
                         "filtro_vf": filtro_vf or "<none>",
                         "global_quality": global_quality,
                         "hwaccel_decode": hwaccel_decode,
+                        "encoder": encoder.value,
                         "segmentado": plan.segmentado,
                         "input": str(input_path),
                         "output": str(output_path),
@@ -1081,6 +1086,10 @@ async def _executar_grade(
     # Fase 3: decode na GPU (QSV) + hwdownload — ~44% mais rapido que software.
     # Se a fonte nao for decodavel pela QSV (codec exotico), o job falha e
     # caimos para o decode em software (sempre funciona) sem derrubar o render.
+    # D-622: sem Intel (libx264) nao ha decode QSV a tentar — direto em software.
+    if encoder is not VideoEncoder.QSV:
+        await _rodar_grade(hwaccel_decode=False)
+        return
     try:
         await _rodar_grade(hwaccel_decode=True)
     except (WorkerJobFailed, WorkerJobTimeout) as erro:
@@ -1457,11 +1466,13 @@ async def _executar_render_final(
         overlay_chunks, overlays_dir
     )
 
+    encoder = await encoder_da_maquina_async()
     cmd = build_compose_and_encode_cmd(
         clip_graded,
         overlay_paths,
         overlay_timings,
         output_path,
+        encoder=encoder,
     )
 
     if ffmpeg_log_path is not None:
@@ -1472,6 +1483,7 @@ async def _executar_render_final(
             cmd=cmd,
             extra={
                 "overlays_count": len(overlay_paths),
+                "encoder": encoder.value,
                 "input": str(clip_graded),
                 "output": str(output_path),
             },

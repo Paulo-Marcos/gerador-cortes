@@ -13,6 +13,11 @@ from pathlib import Path
 
 from app.domain.ffmpeg_common import _CANVAS_NORMALIZE, _ffmpeg_filter_thread_args
 from app.domain.palco_derivados import PalcoDerivados
+from app.domain.video_encoder import (
+    VideoEncoder,
+    argumentos_async_depth,
+    argumentos_codec_qualidade,
+)
 
 # ---------------------------------------------------------------------------
 # Pipeline Otimizado — Composição por Camadas (QSV + Remotion Overlays)
@@ -79,6 +84,7 @@ def _build_grade_plan_segmentado(
     filtro_vf: str | None,
     global_quality: int,
     normalize_audio: bool,
+    encoder: VideoEncoder = VideoEncoder.QSV,
 ) -> GradePlan:
     """Monta o plano segmentado: 1 comando por segmento (vídeo-only `.ts`) +
     1 comando final (concat demuxer + áudio contínuo + mux)."""
@@ -113,6 +119,7 @@ def _build_grade_plan_segmentado(
                     fg_png=fg_png,
                     global_quality=global_quality,
                     derivado=derivado,
+                    encoder=encoder,
                 ),
                 f"seg{k:03d}",
             )
@@ -151,6 +158,7 @@ def _build_grade_segment_cmd(
     fg_png: Path | None,
     global_quality: int,
     derivado: PalcoDerivados | None = None,
+    encoder: VideoEncoder = VideoEncoder.QSV,
 ) -> list[str]:
     """Comando FFmpeg de UM segmento da grade.
 
@@ -209,12 +217,7 @@ def _build_grade_segment_cmd(
         # (quebraria a sincronia fina de áudio). `-shortest` ancora a saída na
         # janela do vídeo (sempre o input mais curto) → contagem de frames exata.
         "-shortest",
-        "-c:v",
-        "h264_qsv",
-        "-preset",
-        "veryfast",
-        "-global_quality",
-        str(global_quality),
+        *argumentos_codec_qualidade(encoder, preset="veryfast", global_quality=global_quality),
         # GOP fixo + sem B-frames: cada segmento começa com keyframe (IDR) e é
         # auto-contido → concat demuxer com `-c copy` costura sem recodificar.
         "-g",
@@ -223,8 +226,7 @@ def _build_grade_segment_cmd(
         "30",
         "-bf",
         "0",
-        "-async_depth",
-        "1",
+        *argumentos_async_depth(encoder),
         "-fps_mode",
         "cfr",
         "-pix_fmt",

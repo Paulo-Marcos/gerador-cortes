@@ -67,6 +67,12 @@ from app.domain.ffmpeg_overlay import (
     build_overlay_filter_string,
 )
 from app.domain.palco_derivados import PalcoDerivados, ensure_derivados_palco
+from app.domain.video_encoder import (
+    VideoEncoder,
+    argumentos_async_depth,
+    argumentos_codec_qualidade,
+    permite_decode_qsv,
+)
 from app.domain.youtube_layout import (
     config_compartilhada_para_full,
     normalizar_layout_youtube,
@@ -265,6 +271,7 @@ def build_cinematic_grade_cmd(
     projeto_padrao: dict | str | None = None,
     global_padrao: dict | str | None = None,
     hwaccel_decode: bool = True,
+    encoder: VideoEncoder = VideoEncoder.QSV,
 ) -> list[str]:
     """Aplica grade cinematográfico + loudnorm via Intel QSV (encode).
 
@@ -310,10 +317,12 @@ def build_cinematic_grade_cmd(
     #   sistema antes dos filtros software. ~44% mais rapido que decode em
     #   software puro (medido), mesmo resultado visual. `hwaccel_decode=False`
     #   volta ao decode software (fallback p/ fontes que a QSV nao decodifica).
-    usa_qsv_decode_filtros = bool(hwaccel_decode and (filtro_vf or shared_regions))
+    # D-622: sem Intel (encoder libx264) não existe decode QSV — decode software.
+    decode_qsv = permite_decode_qsv(encoder)
+    usa_qsv_decode_filtros = bool(decode_qsv and hwaccel_decode and (filtro_vf or shared_regions))
     if usa_qsv_decode_filtros:
         cmd += ["-hwaccel", "qsv", "-hwaccel_output_format", "qsv"]
-    elif not filtro_vf and not shared_regions:
+    elif decode_qsv and not filtro_vf and not shared_regions:
         cmd += ["-hwaccel", "qsv"]
 
     cmd += ["-i", str(input_path)]
@@ -385,12 +394,7 @@ def build_cinematic_grade_cmd(
     cmd += [
         "-af",
         af,
-        "-c:v",
-        "h264_qsv",
-        "-preset",
-        "veryfast",
-        "-global_quality",
-        str(global_quality),
+        *argumentos_codec_qualidade(encoder, preset="veryfast", global_quality=global_quality),
         "-g",
         "60",
         "-bf",
@@ -399,8 +403,7 @@ def build_cinematic_grade_cmd(
         # mantém várias surfaces enfileiradas (mais RAM/GPU); 1 reduz o pico de
         # memória — relevante em cortes multi-região onde o filtergraph já
         # consome muito (erro `h264_qsv Cannot allocate memory`, D-065).
-        "-async_depth",
-        "1",
+        *argumentos_async_depth(encoder),
         "-fps_mode",
         "cfr",
         "-pix_fmt",
@@ -430,6 +433,7 @@ def build_grade_plan(
     projeto_padrao: dict | str | None = None,
     global_padrao: dict | str | None = None,
     hwaccel_decode: bool = True,
+    encoder: VideoEncoder = VideoEncoder.QSV,
 ) -> GradePlan:
     """Decide entre grade em comando único (enable-based) e grade SEGMENTADA por
     subprocesso (memory-safe + mais rápida em multi-região).
@@ -451,6 +455,7 @@ def build_grade_plan(
                 filtro_vf=filtro_vf,
                 global_quality=global_quality,
                 normalize_audio=normalize_audio,
+                encoder=encoder,
             )
 
     cmd = build_cinematic_grade_cmd(
@@ -464,6 +469,7 @@ def build_grade_plan(
         projeto_padrao=projeto_padrao,
         global_padrao=global_padrao,
         hwaccel_decode=hwaccel_decode,
+        encoder=encoder,
     )
     return GradePlan(
         steps=[GradeStep(cmd, "grade")],
