@@ -330,7 +330,9 @@ class YouTubeService:
                 return {"status": "erro", "mensagem": "Projeto não encontrado"}
             if corte.youtube_video_id:
                 url = corte.youtube_url_publicado or f"https://youtu.be/{corte.youtube_video_id}"
-                retention = MediaRetentionService.aplicar_apos_upload(corte)
+                retention = await asyncio.to_thread(
+                    MediaRetentionService.aplicar_apos_upload, corte
+                )
                 await db.commit()
                 return {
                     "status": "ok",
@@ -423,7 +425,8 @@ class YouTubeService:
 
         operational_info("YouTube", f"Título que será enviado: {titulo!r}")
         operational_info("YouTube", "Logando como API do Google...")
-        creds, err_msg = YouTubeService._get_credentials()
+        # D-645: renovar o token é uma chamada de REDE ao Google — fora do loop.
+        creds, err_msg = await asyncio.to_thread(YouTubeService._get_credentials)
         if not creds:
             return {"status": "erro", "mensagem": err_msg}
 
@@ -586,7 +589,9 @@ class YouTubeService:
                         corte.youtube_url_publicado = result["url"]
                         if scheduled_at:
                             corte.youtube_scheduled_at = scheduled_at
-                        retention = MediaRetentionService.aplicar_apos_upload(corte)
+                        retention = await asyncio.to_thread(
+                            MediaRetentionService.aplicar_apos_upload, corte
+                        )
                         result["retencao_arquivos"] = retention.to_dict()
                         await db.commit()
 

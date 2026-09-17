@@ -156,7 +156,9 @@ class RemotionRenderService:
         if meta and meta.thumbnail_path:
             thumb_source = resolver_do_projeto(meta.thumbnail_path, corte.projeto_id)
             if thumb_source.exists():
-                shutil.copy2(str(thumb_source), str(upload_ready_dir / "thumbnail.jpg"))
+                await asyncio.to_thread(
+                    shutil.copy2, str(thumb_source), str(upload_ready_dir / "thumbnail.jpg")
+                )
                 logger.info("[RemotionRender] Thumbnail copiada com sucesso.")
 
         corte.status = StatusCorte.PROCESSADO

@@ -62,7 +62,8 @@ class _ExportProcessamentoMixin:
             # Sem intro/outro: copia clip diretamente
             import shutil
 
-            shutil.copy2(str(clip_path), str(output_path))
+            # D-645: o clipe inteiro — copiar no loop segura todas as telas.
+            await asyncio.to_thread(shutil.copy2, str(clip_path), str(output_path))
             return
 
         # Com intro/outro: precisa re-encodar tudo compatível
@@ -143,7 +144,7 @@ class _ExportProcessamentoMixin:
         # Limpa temporários
         import shutil as _shutil
 
-        _shutil.rmtree(str(temp_dir), ignore_errors=True)
+        await asyncio.to_thread(_shutil.rmtree, str(temp_dir), ignore_errors=True)
 
         if returncode != 0:
             raise RuntimeError("ffmpeg_concat falhou")
@@ -214,7 +215,8 @@ class _ExportProcessamentoMixin:
 
             for pasta in versoes_dir.iterdir():
                 if pasta.is_dir() and pasta.name not in filtros_validos:
-                    _shutil.rmtree(str(pasta), ignore_errors=True)
+                    # D-645: cada pasta guarda uma versão renderizada inteira.
+                    await asyncio.to_thread(_shutil.rmtree, str(pasta), ignore_errors=True)
                     operational_info("MultiVersion", f"Pasta obsoleta removida: {pasta.name}")
 
         async def _gerar_versao(filtro: str, sem: asyncio.Semaphore):
@@ -246,7 +248,7 @@ class _ExportProcessamentoMixin:
                         await ExportService._adicionar_intro_outro(normalizado, final)
                         import shutil
 
-                        shutil.copy2(str(final), str(destino))
+                        await asyncio.to_thread(shutil.copy2, str(final), str(destino))
                         operational_info("MultiVersion", f"Versão '{filtro}' concluída: {destino}")
                     except Exception as e:
                         operational_error("MultiVersion", f"Erro na versão '{filtro}': {e}")

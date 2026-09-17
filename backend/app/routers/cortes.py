@@ -207,7 +207,8 @@ async def deletar_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
 
     corte_dir = projetos_dir() / projeto_id / "cortes" / corte_id
     if corte_dir.exists():
-        shutil.rmtree(corte_dir, ignore_errors=True)
+        # D-645: bruto, grade e overlays somam GB — apagar no loop trava o app.
+        await asyncio.to_thread(shutil.rmtree, corte_dir, ignore_errors=True)
 
     return {"message": "Corte deletado com sucesso", "corte_id": corte_id}
 
@@ -1119,7 +1120,8 @@ async def sincronizar_pos_producao(corte_id: str, db: AsyncSession = Depends(get
     # Caso 2: tem clip_filtered mas não tem cenas Remotion -> promove e finaliza
     if not cenas and clip_filtered.exists():
         upload_ready_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(str(clip_filtered), str(upload_ready_video))
+        # D-645: cópia do vídeo final inteiro — fora do event loop.
+        await asyncio.to_thread(shutil.copy2, str(clip_filtered), str(upload_ready_video))
         await RemotionRenderService.finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
         await _limpar_pasta_corte_pos_sync(corte_dir)
         return {"status": "ok", "mensagem": "Promovido e sincronizado com sucesso."}

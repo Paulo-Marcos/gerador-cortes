@@ -16,6 +16,7 @@ linhas úteis.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import shutil
@@ -71,7 +72,8 @@ class DestinoYouTubeShorts(Destino):
     async def publicar(self, pacote: PacotePublicacao) -> dict:
         from app.services.youtube import YouTubeService
 
-        creds, erro = YouTubeService._get_credentials()
+        # D-645: `_get_credentials` renova o token pela rede — fora do loop.
+        creds, erro = await asyncio.to_thread(YouTubeService._get_credentials)
         if not creds:
             raise RuntimeError(erro or "Sem credenciais do YouTube.")
 
@@ -199,7 +201,7 @@ class DestinoManual(Destino):
         destino_dir = pacote.arquivo.parent / "publicar" / self.plataforma.value
         destino_dir.mkdir(parents=True, exist_ok=True)
 
-        capa = copiar_capa(pacote, destino_dir)
+        capa = await asyncio.to_thread(copiar_capa, pacote, destino_dir)
 
         texto = destino_dir / NOME_PACOTE
         texto.write_text(montar_texto_do_pacote(pacote, capa), encoding="utf-8")

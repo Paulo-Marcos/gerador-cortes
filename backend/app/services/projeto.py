@@ -1,3 +1,4 @@
+import asyncio
 import shutil
 from pathlib import Path
 
@@ -20,7 +21,9 @@ class ProjetoService:
 
         projeto_dir = projetos_dir() / projeto_id
         if projeto_dir.exists():
-            shutil.rmtree(projeto_dir, ignore_errors=True)
+            # D-645: a pasta de um projeto tem dezenas de GB. Apagar no event loop
+            # congela TODAS as telas até o disco terminar.
+            await asyncio.to_thread(shutil.rmtree, projeto_dir, ignore_errors=True)
 
         return True
 
@@ -42,8 +45,12 @@ class ProjetoService:
 
         result = await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))
         cortes = list(result.scalars().all())
-        report = MediaRetentionService.limpar_projeto(
-            projeto, cortes, preservar_brutos_fire=not limpar_brutos_fire
+        # D-645: varre a árvore do projeto (rglob) e apaga mídia — fora do loop.
+        report = await asyncio.to_thread(
+            MediaRetentionService.limpar_projeto,
+            projeto,
+            cortes,
+            preservar_brutos_fire=not limpar_brutos_fire,
         )
 
         projeto.arquivos_limpos = not report.pulados and not report.erros

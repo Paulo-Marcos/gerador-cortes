@@ -2,6 +2,7 @@
 Serviço de Cortes — integrações pós-análise via IA e utilitários
 """
 
+import asyncio
 import json
 import logging
 import shutil
@@ -724,8 +725,9 @@ class CorteService:
 
             await CorteService.renumerar_por_tempo(db, projeto_id)
 
-        _apagar_pasta_do_corte(projeto_id, absorvido_id)
-        _apagar_artefatos_de_video(projeto_id, sobrevivente_id)
+        # D-645: as duas apagam pastas de vídeo — rodam fora do event loop.
+        await asyncio.to_thread(_apagar_pasta_do_corte, projeto_id, absorvido_id)
+        await asyncio.to_thread(_apagar_artefatos_de_video, projeto_id, sobrevivente_id)
 
         await CorteService.sincronizar_transcricao_corte(sobrevivente_id)
         return sobrevivente_id

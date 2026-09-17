@@ -143,6 +143,14 @@ def _corte_to_dict(corte: Corte) -> dict:
     return d
 
 
+def _apagar_do_disco(entry: Path) -> None:
+    """Apaga arquivo ou pasta. Síncrono de propósito: roda em thread (D-645)."""
+    if entry.is_dir():
+        shutil.rmtree(entry)
+    else:
+        entry.unlink()
+
+
 async def _limpar_pasta_corte_pos_sync(corte_dir: Path):
     """Após sincronização bem-sucedida, mantém apenas clip_filtered.mp4 e upload_ready/.
     Arquivos de vídeo grandes (clip_raw.*) podem estar com lock no Windows porque o
@@ -154,10 +162,7 @@ async def _limpar_pasta_corte_pos_sync(corte_dir: Path):
         if entry.name in manter:
             continue
         try:
-            if entry.is_dir():
-                shutil.rmtree(entry)
-            else:
-                entry.unlink()
+            await asyncio.to_thread(_apagar_do_disco, entry)
         except PermissionError:
             pendentes.append(entry)
         except Exception as e:
@@ -171,10 +176,7 @@ async def _limpar_pasta_corte_pos_sync(corte_dir: Path):
         ainda_travados: list[Path] = []
         for entry in pendentes:
             try:
-                if entry.is_dir():
-                    shutil.rmtree(entry)
-                else:
-                    entry.unlink()
+                await asyncio.to_thread(_apagar_do_disco, entry)
             except PermissionError:
                 ainda_travados.append(entry)
             except FileNotFoundError:
