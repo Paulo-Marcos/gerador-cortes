@@ -37,6 +37,22 @@ git clone https://github.com/seu-usuario/gerador-cortes.git
 cd gerador-cortes
 ```
 
+### O caminho curto: `bin/bootstrap`
+
+```powershell
+powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1   # Windows (-Dev inclui as deps de teste)
+```
+
+```bash
+bin/bootstrap.sh          # Linux / macOS (--dev inclui as deps de teste)
+```
+
+O script faz de uma vez tudo o que esta seção descreve: confere Python, Node, ffmpeg e yt-dlp,
+cria `backend/.venv`, instala as dependências do backend, roda `npm ci` no frontend e no
+renderer e cria o `backend/.env` a partir do exemplo — **sem nunca sobrescrever** um `.env`
+existente. Rodar de novo é seguro. Os passos manuais abaixo ficam como referência (e para
+quando algo falha no meio).
+
 ### Backend (Python)
 
 ```bash

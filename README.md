@@ -12,6 +12,23 @@
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) instalado no PATH
 - [Claude Code CLI](https://claude.ai/code) instalado no PATH (provedor de IA para análise de cortes e metadados — usa sua assinatura do Claude)
 
+### Instalação em um comando
+
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1
+```
+
+```bash
+# Linux / macOS
+bin/bootstrap.sh
+```
+
+O script confere os pré-requisitos, cria o ambiente Python do backend, instala as dependências
+do frontend e do renderer e cria o `backend/.env` a partir do exemplo (sem sobrescrever um que
+já exista). Pode ser rodado de novo a qualquer momento. Os passos manuais abaixo continuam
+valendo para quem preferir fazer à mão.
+
 ### 1. Configurar variáveis de ambiente
 
 ```bash
