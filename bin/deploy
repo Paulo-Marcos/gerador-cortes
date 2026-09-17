@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bin/deploy — standardized, idempotent deploy for gerador-cortes (CortadorLive).
+# bin/deploy — standardized, idempotent deploy for gerador-cortes (CutCut).
 # The deploy steps live here so they are executable documentation: an agent (or a
 # new contributor) can run `bin/deploy` without memorizing a single command.
 #

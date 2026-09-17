@@ -149,7 +149,7 @@ export function GlobalRail({
               overflow: 'hidden',
             }}
           >
-            CortadorLive
+            CutCut
           </span>
         ) : null}
         <button

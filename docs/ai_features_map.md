@@ -1,6 +1,6 @@
 # Mapeamento de Funcionalidades de IA (Claude e Gemini)
 
-Este documento descreve quais áreas do **CortadorLive** fazem requisições de IA, para facilitar a manutenção e o entendimento de como as chamadas a LLMs são roteadas.
+Este documento descreve quais áreas do **CutCut** fazem requisições de IA, para facilitar a manutenção e o entendimento de como as chamadas a LLMs são roteadas.
 
 As funcionalidades abaixo aceitam **Claude** (via Claude CLI, assinatura do Claude) ou **Gemini** (via Antigravity CLI, assinatura do Google) como provedor, escolhido na interface. Nenhum dos dois usa chave de API: cada um roda o CLI oficial já logado na máquina. Isso reduz a chance de ficar parado por limite de uso de um deles.
 

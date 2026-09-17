@@ -1,6 +1,6 @@
 # instance.example
 
-Estrutura de exemplo para configurar sua instância do CortadorLive.
+Estrutura de exemplo para configurar sua instância do CutCut.
 
 ## Como usar
 

@@ -1,4 +1,4 @@
-# Contribuindo com o CortadorLive
+# Contribuindo com o CutCut
 
 Projeto pessoal. Estas notas mantêm o repo legível e sem regressões.
 

@@ -1,4 +1,4 @@
-# Setup — CortadorLive
+# Setup — CutCut
 
 Guia para quem clona o repositório e quer rodar o projeto localmente.
 
@@ -278,7 +278,7 @@ node native_worker.js
 
 ## Configuração do Canal
 
-Esta seção consolida todos os pontos de configuração que definem a identidade do canal na sua instância do CortadorLive.
+Esta seção consolida todos os pontos de configuração que definem a identidade do canal na sua instância do CutCut.
 
 ---
 

@@ -25,7 +25,7 @@ from app import channel_paths
 from app.config import settings
 
 _TAMANHO_DEFAULT = 600
-_USER_AGENT = "CortadorLive/1.0 (https://github.com/paulo-marcos/gerador-cortes)"
+_USER_AGENT = "CutCut/1.0 (https://github.com/paulo-marcos/gerador-cortes)"
 
 
 def url_para_remotion(url: str | None) -> str | None:

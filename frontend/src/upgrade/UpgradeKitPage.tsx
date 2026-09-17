@@ -51,7 +51,7 @@ export default function UpgradeKitPage() {
             color: 'var(--mute)',
           }}
         >
-          <span>CortadorLive</span>
+          <span>CutCut</span>
           <Icon name="chevron-right" size={12} style={{ color: 'var(--dim)' }} />
           <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Componentes</span>
         </nav>

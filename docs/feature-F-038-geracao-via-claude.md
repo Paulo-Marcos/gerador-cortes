@@ -2,7 +2,7 @@
 
 > Provider **alternativo** (não substitui n8n/Gemini) que usa o **Claude CLI local**
 > (`claude -p`) para gerar, com expertise versionada em skills, cada etapa de
-> prompt da pipeline do CortadorLive.
+> prompt da pipeline do CutCut.
 
 ## 1. Visão geral
 

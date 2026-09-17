@@ -1,6 +1,6 @@
 # frontend
 
-v2.0 do frontend do CortadorLive em **Vite + React + TypeScript + Tailwind + shadcn/ui**.
+v2.0 do frontend do CutCut em **Vite + React + TypeScript + Tailwind + shadcn/ui**.
 Angular legado foi removido.
 
 ## Setup

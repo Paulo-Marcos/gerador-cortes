@@ -233,7 +233,7 @@ def _projetos_legado() -> Path:
 # Credenciais OAuth do YouTube (D-168)
 # --------------------------------------------------------------------------- #
 # POR QUÊ: no modelo OAuth há DOIS artefatos com escopos distintos:
-#   • `client_secrets.json` = a identidade do APP (CortadorLive) perante o Google.
+#   • `client_secrets.json` = a identidade do APP (CutCut) perante o Google.
 #     É emitido pelo Google Cloud e é UM SÓ do app — logo, compartilhado. Vive na
 #     raiz do backend (local histórico), com override opcional por canal caso
 #     algum canal use um app OAuth próprio.

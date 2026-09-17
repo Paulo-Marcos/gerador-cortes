@@ -1,4 +1,4 @@
-# Troubleshooting — CortadorLive
+# Troubleshooting — CutCut
 
 Problemas conhecidos de operação/instalação e onde investigar, consolidados a partir do
 [SETUP.md](SETUP.md) e do [render-pipeline.md](ai-index/render-pipeline.md).

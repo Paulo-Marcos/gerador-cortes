@@ -5,7 +5,7 @@ e qual extensão de arquivo o resto do pipeline deve esperar.
 
 VP9 + alpha (yuva420p) é o padrão por economizar ~5–10× de espaço em
 disco e largura de banda de leitura comparado ao ProRes 4444 sem perda
-visível em conteúdo de texto/SVG (overlays típicos do CortadorLive).
+visível em conteúdo de texto/SVG (overlays típicos do CutCut).
 
 ProRes 4444 permanece disponível para casos onde a qualidade de alpha
 4:4:4 importa (gradientes finos, sombras translúcidas) — alternar via

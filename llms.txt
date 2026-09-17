@@ -1,4 +1,4 @@
-# CortadorLive
+# CutCut
 
 > Pipeline full-stack que transforma livestreams do YouTube em cortes analíticos
 > prontos para publicação: download → transcrição → IA propõe cortes → revisão →

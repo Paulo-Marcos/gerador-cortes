@@ -1,8 +1,8 @@
-# CortadorLive ✂️
+# CutCut ✂️
 
 [![CI](https://github.com/Paulo-Marcos/gerador-cortes/actions/workflows/ci.yml/badge.svg)](https://github.com/Paulo-Marcos/gerador-cortes/actions/workflows/ci.yml)
 
-> CortadorLive é o pipeline que leva uma live do YouTube até o corte pronto para publicar — baixa, transcreve, propõe cortes com IA e entrega metadados e thumbnails, para você só revisar e exportar.
+> CutCut é o pipeline que leva uma live do YouTube até o corte pronto para publicar — baixa, transcreve, propõe cortes com IA e entrega metadados e thumbnails, para você só revisar e exportar.
 
 ## Início Rápido
 
@@ -56,7 +56,7 @@ Para subir tudo (React + backend + Remotion + worker) num único terminal:
 ## Estrutura do Projeto
 
 ```
-cortador-live/
+gerador-cortes/
 ├── docker-compose.yml          # backend
 ├── backend/
 │   ├── Dockerfile
@@ -156,4 +156,4 @@ npm run build     # gera dist/ com os assets otimizados
 
 ---
 
-**Produção**: CortadorLive v1.0
+**Produção**: CutCut v1.0
