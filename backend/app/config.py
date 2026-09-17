@@ -203,6 +203,10 @@ class Settings(BaseSettings):
     # em outra porta (ex.: DEV em 8001) recebe BACKEND_PUBLIC_URL do dev.ps1 —
     # antes, fixo em 8000, o DEV carregava mídia da produção.
     backend_public_url: str = "http://localhost:8000"
+    # D-626: porta local que captura o retorno do login OAuth do YouTube. 8080 é
+    # a histórica (clientes "Desktop app" aceitam qualquer porta de loopback);
+    # troque se outro programa a ocupar.
+    youtube_oauth_port: int = 8080
 
     class Config:
         env_file = ".env"

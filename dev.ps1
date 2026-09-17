@@ -146,6 +146,31 @@ function Clear-DevEnvironment {
         ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } catch {} }
 }
 
+function Get-PortasOcupadasAlheias {
+    # D-626: depois da limpeza, porta do projeto ainda em LISTEN e de processo
+    # alheio. Antes o script so avisava em cinza e seguia; o backend/vite caia
+    # adiante com um erro que nao apontava a causa. Espera ate ~5s porque um
+    # processo nosso recem-encerrado pode demorar a soltar o socket.
+    for ($tentativa = 0; $tentativa -lt 10; $tentativa++) {
+        $ocupadas = @(foreach ($port in $projectPorts) {
+            Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
+                Select-Object -First 1 | ForEach-Object {
+                    $dono = Get-CimInstance Win32_Process -Filter "ProcessId=$($_.OwningProcess)" -ErrorAction SilentlyContinue
+                    # Processo nosso ainda morrendo nao e "alheio": so espera.
+                    if ($dono -and (Test-CortadorProcess -CommandLine $dono.CommandLine -ExecutablePath $dono.ExecutablePath)) { return }
+                    [pscustomobject]@{
+                        Porta = $port
+                        Nome  = if ($dono) { $dono.Name } else { "desconhecido" }
+                        Pid   = $_.OwningProcess
+                    }
+                }
+        })
+        if ($ocupadas.Count -eq 0) { return @() }
+        Start-Sleep -Milliseconds 500
+    }
+    return $ocupadas
+}
+
 function Get-ConfiguredLogLevel {
     # D-155: app_settings.json vive na pasta do canal ativo
     # (instance/channels/<ativo>/projetos). Resolve via ponteiro active-channel,
@@ -375,6 +400,19 @@ Write-Host " - iniciando..." -ForegroundColor DarkGray
 Write-Host ""
 
 Clear-DevEnvironment
+$portasOcupadas = Get-PortasOcupadasAlheias
+if ($portasOcupadas.Count -gt 0) {
+    Write-Host ""
+    Write-Host "  === PORTA OCUPADA ===" -ForegroundColor Red
+    foreach ($p in $portasOcupadas) {
+        Write-Host "  Porta $($p.Porta) em uso por $($p.Nome) (PID $($p.Pid)), que nao e deste checkout." -ForegroundColor Red
+    }
+    Write-Host "  Feche esse programa ou escolha outras portas em dev.ports.local.ps1" -ForegroundColor Yellow
+    Write-Host "  (copie de dev.ports.local.ps1.example)." -ForegroundColor Yellow
+    Write-Host ""
+    Wait-Enter
+    exit 1
+}
 
 Confirm-RemotionReady
 

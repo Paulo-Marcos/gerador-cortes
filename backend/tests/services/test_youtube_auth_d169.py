@@ -9,6 +9,8 @@ Cobre os caminhos testáveis sem abrir navegador:
 
 from app.services import youtube_auth
 
+_porta_real = youtube_auth._porta_em_uso
+
 
 def _apontar_credenciais(monkeypatch, tmp_path, *, com_client_secrets: bool):
     token = tmp_path / "youtube" / "token.json"
@@ -18,6 +20,8 @@ def _apontar_credenciais(monkeypatch, tmp_path, *, com_client_secrets: bool):
         client.write_text("{}", encoding="utf-8")
     monkeypatch.setattr(youtube_auth, "youtube_token_path", lambda: token)
     monkeypatch.setattr(youtube_auth, "youtube_client_secrets_path", lambda: client)
+    # hermético: a porta real do OAuth pode estar ocupada na máquina de quem roda
+    monkeypatch.setattr(youtube_auth, "_porta_em_uso", lambda porta: False)
     # estado global limpo entre testes
     youtube_auth._estado.em_andamento = False
     youtube_auth._estado.erro = None
@@ -70,3 +74,32 @@ def test_conectar_single_flight(tmp_path, monkeypatch):
 
     resultado = youtube_auth.iniciar_conexao()
     assert resultado["status"] == "em_andamento"
+
+
+def test_conectar_com_porta_ocupada_explica_como_resolver(tmp_path, monkeypatch):
+    """D-626: porta do OAuth presa por outro programa vira mensagem acionável."""
+    import socket
+
+    _apontar_credenciais(monkeypatch, tmp_path, com_client_secrets=True)
+    monkeypatch.setattr(youtube_auth, "_porta_em_uso", _porta_real)  # teste real, sem stub
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ocupante:
+        ocupante.bind(("localhost", 0))
+        ocupante.listen()
+        porta = ocupante.getsockname()[1]
+        monkeypatch.setattr(youtube_auth.settings, "youtube_oauth_port", porta)
+
+        resultado = youtube_auth.iniciar_conexao()
+
+    assert resultado["status"] == "erro"
+    assert str(porta) in resultado["mensagem"]
+    assert "YOUTUBE_OAUTH_PORT" in resultado["mensagem"]
+    assert youtube_auth._estado.em_andamento is False
+
+
+def test_porta_livre_nao_e_reportada_em_uso():
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("localhost", 0))
+        porta = s.getsockname()[1]
+    assert _porta_real(porta) is False

@@ -14,6 +14,7 @@ if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
 
 from app.channel_paths import youtube_client_secrets_path, youtube_token_path  # noqa: E402
+from app.config import settings  # noqa: E402
 
 # Escopos: upload + gerenciamento de playlists + leitura de estatísticas.
 # O escopo de analytics (D-305) permite ao backend ler views/retenção lifetime
@@ -46,9 +47,9 @@ def main():
     print("Caso não seja, clique no link que aparecerá abaixo.")
 
     try:
-        # Pede login na porta 8080 localmente no host
+        # Porta local do retorno do login (YOUTUBE_OAUTH_PORT, padrão 8080)
         flow = InstalledAppFlow.from_client_secrets_file(str(client_secrets_path), SCOPES)
-        creds = flow.run_local_server(port=8080)
+        creds = flow.run_local_server(port=settings.youtube_oauth_port)
 
         # Salva o token ao lado do client_secrets (mesmo diretório que o serviço lê)
         token_path.parent.mkdir(parents=True, exist_ok=True)

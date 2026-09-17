@@ -13,11 +13,13 @@ daemon e o estado (`em_andamento`/`erro`) fica em memória para a UI pollar via
 
 from __future__ import annotations
 
+import socket
 import threading
 from dataclasses import dataclass
 from pathlib import Path
 
 from app.channel_paths import youtube_client_secrets_path, youtube_token_path
+from app.config import settings
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -29,8 +31,16 @@ SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
 ]
 
-# Porta local onde o fluxo OAuth captura o redirect (mesma do auth_youtube.py).
-_OAUTH_PORT = 8080
+
+def _porta_em_uso(porta: int) -> bool:
+    """O `run_local_server` sobe um servidor nessa porta; se outro programa a
+    ocupa, o login falha com um OSError genérico. Testar antes dá uma mensagem útil."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("localhost", porta))
+        except OSError:
+            return True
+    return False
 
 
 @dataclass
@@ -101,7 +111,7 @@ def _executar_fluxo(client_secrets_path: str, token_path_str: str) -> None:
     """Roda o fluxo OAuth bloqueante e grava o token — alvo da thread daemon."""
     try:
         flow = InstalledAppFlow.from_client_secrets_file(client_secrets_path, SCOPES)
-        creds = flow.run_local_server(port=_OAUTH_PORT)
+        creds = flow.run_local_server(port=settings.youtube_oauth_port)
         token_path = Path(token_path_str)
         token_path.parent.mkdir(parents=True, exist_ok=True)
         token_path.write_text(creds.to_json(), encoding="utf-8")
@@ -128,6 +138,16 @@ def iniciar_conexao() -> dict:
             "mensagem": (
                 "client_secrets.json não encontrado. Baixe as credenciais OAuth "
                 "(Desktop app) do Google Cloud e salve na raiz do backend."
+            ),
+        }
+
+    porta = settings.youtube_oauth_port
+    if _porta_em_uso(porta):
+        return {
+            "status": "erro",
+            "mensagem": (
+                f"A porta {porta} do login do YouTube está em uso por outro programa. "
+                "Feche-o ou defina YOUTUBE_OAUTH_PORT com outra porta no .env do backend."
             ),
         }
 
