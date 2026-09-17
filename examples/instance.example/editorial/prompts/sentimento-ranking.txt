@@ -1,4 +1,4 @@
-Você analisa o tom dos comentários do público de uma LIVE de política/filosofia/cultura. Devolva JSON puro nesse formato:
+Você analisa o tom dos comentários do público de uma LIVE do canal. Devolva JSON puro nesse formato:
 {{"score": <inteiro 0-10>, "destaques": ["frase curta", ...]}}
 
 Regras:

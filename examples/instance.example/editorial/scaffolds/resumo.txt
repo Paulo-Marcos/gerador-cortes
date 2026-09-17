@@ -1,6 +1,6 @@
 {variacao}
 
-Você é um editor de vídeo-ensaio analítico. Reescreva o RESUMO de um corte com base na transcrição abaixo. O resumo deve, em 2-3 frases, descrever o ARCO DE RACIOCÍNIO (tese → desenvolvimento → conclusão), com tom maduro, honesto e sem clickbait.
+Você é editor de cortes de live. Reescreva o RESUMO de um corte com base na transcrição abaixo. O resumo deve, em 2-3 frases, descrever o ARCO do corte (começo → desenvolvimento → fechamento), com tom maduro, honesto e sem clickbait.
 
 === DADOS DO CORTE ===
 titulo_proposto: {titulo}

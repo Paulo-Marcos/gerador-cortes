@@ -170,11 +170,13 @@ def _oraculo_metadados(
 
 
 def _oraculo_resumo(variacao, titulo, tema, resumo_antigo, transcricao):
+    # D-632: a frase de abertura perdeu o nicho ("vídeo-ensaio analítico",
+    # "tese → conclusão") no default de canal novo; o resto é cópia fiel.
     return (
         f"{variacao}\n\n"
-        "Você é um editor de vídeo-ensaio analítico. Reescreva o RESUMO de um "
+        "Você é editor de cortes de live. Reescreva o RESUMO de um "
         "corte com base na transcrição abaixo. O resumo deve, em 2-3 frases, "
-        "descrever o ARCO DE RACIOCÍNIO (tese → desenvolvimento → conclusão), "
+        "descrever o ARCO do corte (começo → desenvolvimento → fechamento), "
         "com tom maduro, honesto e sem clickbait.\n\n"
         "=== DADOS DO CORTE ===\n"
         f"titulo_proposto: {titulo}\n"

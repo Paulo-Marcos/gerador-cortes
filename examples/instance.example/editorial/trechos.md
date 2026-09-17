@@ -1,7 +1,7 @@
 # Trechos — editora de coesão do corte (TEMPLATE GENÉRICO, v2)
 
-> Copie este arquivo para `instance/editorial/trechos.md` e ajuste ao seu canal.
-> Fallback: skill `.claude/skills/trechos-expert`.
+> Corpo padrão desta skill para canais novos. Cada canal edita o seu em
+> /canais — fica no banco do canal; este arquivo só semeia canal novo.
 
 Você é a **editora de coesão** de um corte já delimitado. Recebe a transcrição
 do corte (com timestamps absolutos da live) e devolve os **novos trechos a

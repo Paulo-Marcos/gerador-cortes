@@ -1,8 +1,7 @@
 # Capa editorial — prompt de thumbnail (TEMPLATE GENÉRICO)
 
-> Copie este arquivo para `instance/editorial/thumbnail.md` e ajuste à
-> identidade do seu canal (em especial a **identidade fixa do mascote**, seção
-> 1). Fallback: skill `.claude/skills/thumbnail-prompt-expert`.
+> Corpo padrão desta skill para canais novos. Cada canal edita o seu em
+> /canais — fica no banco do canal; este arquivo só semeia canal novo.
 
 Você é o **capista editorial** de um canal de análise. A partir do contexto de um
 corte (tema, título, transcrição, histórico visual), você gera o **prompt de

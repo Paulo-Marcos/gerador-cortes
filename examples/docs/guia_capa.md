@@ -14,9 +14,9 @@ templates repetitivos.
 
 A thumbnail deve vender uma ideia clara do corte, nao apenas decorar o video. Ela precisa comunicar, em poucos segundos:
 
-- qual e o conflito intelectual, politico ou filosofico do trecho;
+- qual e o conflito, a pergunta ou o momento central do trecho;
 - quem ou o que esta em jogo;
-- qual e a reacao analitica do `{{MASCOTE}}`;
+- qual e a reacao do `{{MASCOTE}}`;
 - por que o tema merece atencao.
 
 O tom do canal e maduro, investigativo e anti-clickbait. A imagem pode ser expressiva, mas nao deve parecer sensacionalista.
@@ -33,7 +33,7 @@ Caracteristicas centrais:
 - contraste forte entre texto e fundo;
 - cenario especifico ao tema;
 - iluminacao com profundidade, nao luz plana;
-- atmosfera intelectual, politica ou historica conforme o corte.
+- atmosfera coerente com o tema do corte.
 
 ## 3. O mascote do canal
 
@@ -91,7 +91,7 @@ Boas praticas:
 - use figuras publicas quando elas forem centrais ao argumento;
 - descreva idade, cabelo, barba, roupa, postura e contexto;
 - use roupas e ambiente coerentes com o papel da pessoa;
-- para filosofos ou figuras historicas, use elementos do periodo sem transformar tudo em biblioteca antiga;
+- para figuras historicas, use elementos do periodo sem virar cenario de museu;
 - para mencoes secundarias, use retratos desfocados, bustos, sombras ou documentos, sem roubar o foco.
 
 Evite:
@@ -103,42 +103,32 @@ Evite:
 
 ## 6. Cenarios por tipo de corte
 
-O cenario deve nascer do conteudo. Evite fundo branco, estudio generico e "biblioteca antiga" como resposta automatica para filosofia. Adapte as listas abaixo aos temas que o seu canal cobre.
+O cenario deve nascer do conteudo. Evite fundo branco, estudio generico e o mesmo cenario como resposta automatica para todo tema. As listas abaixo sao exemplos de nichos diferentes: troque pelas do seu canal.
 
-Politica institucional:
+Tecnologia:
 
-- sala de tribunal ou corte superior;
-- plenaria de um parlamento;
-- gabinete de negociacao;
-- sala de imprensa;
-- corredor de poder;
-- mesa com documentos, microfones, votos, pastas e simbolos institucionais.
+- bancada com placas, cabos e telas acesas;
+- sala de servidores ou data center;
+- tela com codigo ou grafico em destaque;
+- produto em primeiro plano com luz de estudio dramatica.
 
-Geopolitica:
+Esporte:
 
-- mapa estrategico iluminado por tela;
-- sala de situacao;
-- fronteira, porto, embaixada, bunker ou mesa diplomatica;
-- jornais, radios, satelites, rotas, bandeiras discretas.
+- campo, quadra ou pista vistos do angulo do lance;
+- vestiario, banco de reservas ou tunel de acesso;
+- placar, cronometro ou tabela como elemento central.
 
-Filosofia:
+Games:
 
-- mesa de leitura moderna a noite;
-- sala de aula simples;
-- cafe com dois copos;
-- banco de parque com caderno;
-- tabuleiro de xadrez ou Go;
-- espaco mental minimalista com um objeto simbolico;
-- laboratorio conceitual;
-- corredor, escadaria ou sala vazia com luz dura.
+- setup com monitor iluminando o rosto;
+- cena estilizada do jogo discutido, sem copiar arte oficial;
+- controle, teclado ou mapa do jogo como objeto simbolico.
 
-Leituras:
+Educacao e explicacoes:
 
-- mesa com livro aberto, marcacoes e luminaria;
-- ambiente de estudo simples;
-- retrato ou silhueta do autor ao fundo;
-- objeto central que sintetize o argumento;
-- clima de leitura ativa, nao de veneracao estatica.
+- quadro ou lousa com um diagrama simples;
+- mesa de estudo com o objeto central do tema;
+- espaco minimalista com um unico elemento que sintetize a ideia.
 
 ## 7. Composicao
 
@@ -250,7 +240,7 @@ Evite:
 - excesso de personagens;
 - cenarios genericos;
 - textos pequenos ilegiveis ao fundo;
-- repeticao de biblioteca antiga em todo tema filosofico.
+- repeticao do mesmo cenario em todo tema.
 
 ## 11. Checklist antes de finalizar
 

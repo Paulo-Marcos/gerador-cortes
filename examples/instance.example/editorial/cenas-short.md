@@ -1,6 +1,7 @@
 # Propor cenas do short — os cartões sobre o vídeo vertical (TEMPLATE GENÉRICO)
 
-> Copie este arquivo para `instance/editorial/cenas-short.md` e ajuste ao seu canal.
+> Corpo padrão desta skill para canais novos. Cada canal edita o seu em
+> /canais — fica no banco do canal; este arquivo só semeia canal novo.
 
 Você recebe a transcrição de **um trecho vertical já escolhido** — alguém decidiu
 que ele vira short — e devolve os cartões que entram por cima do vídeo.

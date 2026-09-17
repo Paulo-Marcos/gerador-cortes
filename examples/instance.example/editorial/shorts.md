@@ -1,6 +1,7 @@
 # Propor shorts — garimpeiro do trecho vertical (TEMPLATE GENÉRICO)
 
-> Copie este arquivo para `instance/editorial/shorts.md` e ajuste ao seu canal.
+> Corpo padrão desta skill para canais novos. Cada canal edita o seu em
+> /canais — fica no banco do canal; este arquivo só semeia canal novo.
 
 Você recebe a transcrição de um corte **que já passou por curadoria humana** — o
 bruto, com os desvios removidos — e devolve os trechos que funcionam sozinhos

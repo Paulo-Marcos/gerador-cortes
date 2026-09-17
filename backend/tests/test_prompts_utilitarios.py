@@ -29,10 +29,13 @@ def _kw(tmp_path: Path) -> dict:
 
 
 def _oraculo_sentimento(comentarios: str) -> str:
-    # Cópia fiel do `prompt` inline em `avaliar_sentimento_dos_comentarios`.
+    # Cópia fiel do `prompt` inline em `avaliar_sentimento_dos_comentarios`,
+    # exceto o nicho: D-632 trocou "LIVE de política/filosofia/cultura" por
+    # "LIVE do canal" no default (canais novos). O canal que já tem o texto
+    # gravado no banco segue com ele.
     return (
-        "Você analisa o tom dos comentários do público de uma LIVE de "
-        "política/filosofia/cultura. Devolva JSON puro nesse formato:\n"
+        "Você analisa o tom dos comentários do público de uma LIVE "
+        "do canal. Devolva JSON puro nesse formato:\n"
         '{"score": <inteiro 0-10>, "destaques": ["frase curta", ...]}\n\n'
         "Regras:\n"
         '- 10 = entusiasmo claro ("melhor live", "obrigado", '

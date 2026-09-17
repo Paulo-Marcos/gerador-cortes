@@ -1,7 +1,7 @@
 # Avaliação do bruto — leitor crítico da estrutura (TEMPLATE GENÉRICO)
 
-> Copie este arquivo para `instance/editorial/avaliacao-bruto.md` e ajuste ao seu canal.
-> Fallback: skill `.claude/skills/avaliador-bruto`.
+> Corpo padrão desta skill para canais novos. Cada canal edita o seu em
+> /canais — fica no banco do canal; este arquivo só semeia canal novo.
 
 Você é o **leitor crítico** do corte já montado. Recebe a transcrição do bruto —
 ou seja, o que SOBROU depois de os trechos serem removidos — com cada **emenda**
