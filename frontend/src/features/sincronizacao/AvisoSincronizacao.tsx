@@ -20,6 +20,9 @@ interface Estado {
   backend_velho: boolean;
   colunas_pendentes: string[];
   dependencias_faltando: string[];
+  canal_em_uso: string;
+  canal_escolhido: string;
+  troca_de_canal_pendente: boolean;
   em_dia: boolean;
 }
 
@@ -50,6 +53,13 @@ export function AvisoSincronizacao() {
     >
       <AlertTriangle size={13} className="flex-none" aria-hidden />
       <span className="font-bold">Fora de sincronia.</span>
+      {data.troca_de_canal_pendente && (
+        <span>
+          canal <code className="font-code">{data.canal_escolhido}</code> escolhido, mas o app ainda
+          usa <code className="font-code">{data.canal_em_uso}</code> — feche e abra o app antes de
+          processar qualquer coisa
+        </span>
+      )}
       {data.backend_velho && (
         <span className="inline-flex items-center gap-1">
           <RefreshCw size={11} aria-hidden />

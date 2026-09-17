@@ -210,8 +210,9 @@ export function ChannelsPage() {
       onSuccess: (res) => {
         if (res.requer_restart) {
           notify(
-            `Canal “${canal.nome || canal.id}” selecionado. Reinicie o backend para aplicar a troca.`,
-            { tone: 'warning', title: 'Requer restart' },
+            `Canal “${canal.nome || canal.id}” escolhido. Feche e abra o app para a troca valer. ` +
+              'Até lá, não processe nada: o banco ainda é o do canal anterior.',
+            { tone: 'warning', title: 'Feche e abra o app' },
           );
         } else {
           notify(`Canal “${canal.nome || canal.id}” ativado.`, { tone: 'success' });

@@ -119,6 +119,55 @@ class TestDependencias:
         assert servico.dependencias_faltando() == []
 
 
+@pytest.fixture(autouse=True)
+def mesmo_canal(monkeypatch):
+    """Por padrão, o canal do boot é o escolhido: só a D-629 mexe nisso."""
+    monkeypatch.setattr(servico, "canal_do_processo", lambda: "meu-canal")
+    monkeypatch.setattr(servico, "canal_no_disco", lambda: "meu-canal")
+
+
+class TestTrocaDeCanal:
+    """D-629: selecionar canal só grava o ponteiro; o banco aberto segue o antigo."""
+
+    @pytest.fixture(autouse=True)
+    def sem_outros_alarmes(self, monkeypatch):
+        monkeypatch.setattr(servico, "commit_do_processo", lambda: "abc1234")
+        monkeypatch.setattr(servico, "_commit_do_disco", lambda: "abc1234")
+        monkeypatch.setattr(servico, "dependencias_faltando", list)
+
+    @pytest.mark.asyncio
+    async def test_canal_escolhido_diferente_do_carregado_pede_restart(self, conexao, monkeypatch):
+        monkeypatch.setattr(servico, "canal_no_disco", lambda: "outro-canal")
+
+        estado = await servico.estado(conexao)
+
+        assert estado["troca_de_canal_pendente"] is True
+        assert estado["canal_em_uso"] == "meu-canal"
+        assert estado["canal_escolhido"] == "outro-canal"
+        assert estado["em_dia"] is False
+
+    @pytest.mark.asyncio
+    async def test_voltar_ao_canal_carregado_desfaz_o_aviso(self, conexao):
+        assert (await servico.estado(conexao))["troca_de_canal_pendente"] is False
+
+    @pytest.mark.asyncio
+    async def test_sem_ponteiro_nao_vira_alarme(self, conexao, monkeypatch):
+        monkeypatch.setattr(servico, "canal_do_processo", lambda: "")
+        monkeypatch.setattr(servico, "canal_no_disco", lambda: "")
+
+        estado = await servico.estado(conexao)
+
+        assert estado["troca_de_canal_pendente"] is False
+        assert estado["em_dia"] is True
+
+    def test_canal_do_boot_nao_segue_o_ponteiro(self, monkeypatch):
+        monkeypatch.undo()
+        antes = servico.canal_do_processo()
+        monkeypatch.setattr(servico, "canal_no_disco", lambda: antes + "-trocado")
+
+        assert servico.canal_do_processo() == antes
+
+
 class TestEstado:
     @pytest.mark.asyncio
     async def test_tudo_igual_da_em_dia(self, conexao, monkeypatch):

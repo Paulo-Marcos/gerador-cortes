@@ -38,7 +38,11 @@ export function useSelecionarCanal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => channelsApi.selecionar(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: CANAIS_KEY }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CANAIS_KEY });
+      // D-629: o aviso "reinicie para trocar de canal" aparece na hora, não no próximo poll.
+      void qc.invalidateQueries({ queryKey: ['sincronizacao'] });
+    },
   });
 }
 

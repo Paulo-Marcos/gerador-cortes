@@ -24,6 +24,7 @@ import subprocess
 from functools import lru_cache
 from pathlib import Path
 
+from app import channel_paths
 from app.migrations.reconciliacao import colunas_faltantes
 from app.models import Base
 from sqlalchemy import text
@@ -44,6 +45,23 @@ def commit_do_processo() -> str:
     justamente essa diferença que revela um backend velho no ar.
     """
     return _commit_do_disco()
+
+
+def canal_no_disco() -> str:
+    """O canal gravado no ponteiro `instance/active-channel` AGORA."""
+    return channel_paths._ler_canal_ativo(channel_paths.instance_root())
+
+
+# D-629: capturado no IMPORT, e não na primeira chamada como o commit. O
+# `main.py` importa o router no boot; se o valor congelasse no primeiro poll, uma
+# troca feita antes dele passaria como "em dia". Selecionar outro canal só grava
+# o ponteiro: o banco aberto no boot continua o do canal antigo até reiniciar.
+_CANAL_DO_BOOT = canal_no_disco()
+
+
+def canal_do_processo() -> str:
+    """O canal que este processo carregou (o do banco aberto)."""
+    return _CANAL_DO_BOOT
 
 
 def _commit_do_disco() -> str:
@@ -117,11 +135,17 @@ async def estado(conn: AsyncConnection) -> dict:
     disco = _commit_do_disco()
     pendentes = await colunas_pendentes(conn)
     faltando = dependencias_faltando()
+    canal_em_uso = canal_do_processo()
+    canal_escolhido = canal_no_disco()
 
     # Commit vazio (git indisponível, checkout exportado) não vira alarme: não
     # saber não é o mesmo que estar errado, e um aviso falso ensina a ignorar
     # o aviso verdadeiro.
     backend_velho = bool(rodando) and bool(disco) and rodando != disco
+    # Mesma regra: ponteiro ausente (layout legado) não é troca pendente.
+    troca_de_canal_pendente = (
+        bool(canal_em_uso) and bool(canal_escolhido) and canal_em_uso != canal_escolhido
+    )
 
     return {
         "commit_rodando": rodando,
@@ -129,5 +153,11 @@ async def estado(conn: AsyncConnection) -> dict:
         "backend_velho": backend_velho,
         "colunas_pendentes": pendentes,
         "dependencias_faltando": faltando,
-        "em_dia": not backend_velho and not pendentes and not faltando,
+        "canal_em_uso": canal_em_uso,
+        "canal_escolhido": canal_escolhido,
+        "troca_de_canal_pendente": troca_de_canal_pendente,
+        "em_dia": not backend_velho
+        and not pendentes
+        and not faltando
+        and not troca_de_canal_pendente,
     }
