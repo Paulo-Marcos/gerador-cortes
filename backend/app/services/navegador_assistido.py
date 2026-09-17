@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Protocol
 
 from app.channel_paths import active_channel_root
+from app.config import settings
 from app.domain.tiktok_studio import (
     PORTA_MINIMA_DE_DEPURACAO,
     PORTAS_DE_DEPURACAO,
@@ -289,7 +290,16 @@ def perfil_do_canal(plataforma: str) -> Path:
     return active_channel_root() / "browser" / plataforma
 
 
+_COMO_RESOLVER_CHROME = (
+    "Instale o Google Chrome ou defina CHROME_PATH no .env do backend com o caminho do executável."
+)
+
+
 def _chrome_no_disco() -> Path | None:
+    if settings.chrome_path:
+        # Caminho explícito manda: não cair num Chrome diferente do escolhido.
+        configurado = Path(settings.chrome_path)
+        return configurado if configurado.is_file() else None
     candidatos = [
         Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
         Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
@@ -416,7 +426,11 @@ def garantir_chrome(perfil: Path, url: str) -> bool:
 
     chrome = _chrome_no_disco()
     if chrome is None:
-        raise NavegadorIndisponivel("nao encontrei o Chrome instalado nesta maquina")
+        if settings.chrome_path:
+            raise NavegadorIndisponivel(
+                f"CHROME_PATH aponta para um arquivo que não existe: {settings.chrome_path}"
+            )
+        raise NavegadorIndisponivel(f"Chrome não encontrado nesta máquina. {_COMO_RESOLVER_CHROME}")
 
     perfil.mkdir(parents=True, exist_ok=True)
     subprocess.Popen(  # noqa: S603 — caminho conhecido, argumentos nossos

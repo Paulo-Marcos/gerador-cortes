@@ -206,6 +206,9 @@ class Settings(BaseSettings):
     # a histórica (clientes "Desktop app" aceitam qualquer porta de loopback);
     # troque se outro programa a ocupar.
     youtube_oauth_port: int = 8080
+    # D-634: executável do Chrome do upload assistido (TikTok/Instagram,
+    # EXPERIMENTAL). Vazio = procura nos caminhos padrão do Windows e no PATH.
+    chrome_path: str = ""
 
     class Config:
         env_file = ".env"

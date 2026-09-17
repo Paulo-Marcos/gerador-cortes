@@ -282,3 +282,42 @@ def test_nao_apaga_enquanto_outra_aba_de_upload_espera_o_operador():
 
     assert not apagar_copias_do_upload(contexto, "https://www.tiktok.com", "tiktokstudio/upload")
     assert not contexto.sessao.enviados
+
+
+class TestChromeDoUploadAssistido:
+    """D-634: onde procurar o Chrome e o que dizer quando ele não existe."""
+
+    def test_chrome_path_configurado_e_usado(self, monkeypatch, tmp_path):
+        from app.services import navegador_assistido
+
+        exe = tmp_path / "chrome.exe"
+        exe.write_text("x")
+        monkeypatch.setattr(navegador_assistido.settings, "chrome_path", str(exe))
+
+        assert navegador_assistido._chrome_no_disco() == exe
+
+    def test_chrome_path_inexistente_explica_a_configuracao(self, monkeypatch, tmp_path):
+        from app.services import navegador_assistido
+
+        monkeypatch.setattr(navegador_assistido.settings, "chrome_path", str(tmp_path / "nao.exe"))
+        monkeypatch.setattr(navegador_assistido, "porta_do_chrome", lambda perfil: 9999)
+        monkeypatch.setattr(navegador_assistido, "_porta_responde", lambda porta: False)
+
+        with pytest.raises(NavegadorIndisponivel) as erro:
+            navegador_assistido.garantir_chrome(tmp_path / "tiktok", "https://exemplo")
+
+        assert "CHROME_PATH" in str(erro.value)
+
+    def test_sem_chrome_diz_como_resolver(self, monkeypatch, tmp_path):
+        from app.services import navegador_assistido
+
+        monkeypatch.setattr(navegador_assistido.settings, "chrome_path", "")
+        monkeypatch.setattr(navegador_assistido, "_chrome_no_disco", lambda: None)
+        monkeypatch.setattr(navegador_assistido, "porta_do_chrome", lambda perfil: 9999)
+        monkeypatch.setattr(navegador_assistido, "_porta_responde", lambda porta: False)
+
+        with pytest.raises(NavegadorIndisponivel) as erro:
+            navegador_assistido.garantir_chrome(tmp_path / "tiktok", "https://exemplo")
+
+        assert "Instale o Google Chrome" in str(erro.value)
+        assert "CHROME_PATH" in str(erro.value)
