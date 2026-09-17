@@ -98,6 +98,8 @@ export interface YoutubeAuthStatus {
   canal_titulo: string;
   /** O `client_secrets.json` (crachá do app) existe — pré-requisito do login. */
   cliente_configurado: boolean;
+  /** Caminho exato onde salvar o `client_secrets.json` (D-628). */
+  client_secrets_destino: string;
   /** Um login está em andamento (a UI deve continuar pollando). */
   fluxo_em_andamento: boolean;
   /** Mensagem do último erro de login, se houver. */

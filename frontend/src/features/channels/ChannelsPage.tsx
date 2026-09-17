@@ -392,6 +392,7 @@ export function ChannelsPage() {
                     youtubeBusy={conectarYoutube.isPending || desconectarYoutube.isPending}
                     onConectarYoutube={aoConectarYoutube}
                     onDesconectarYoutube={aoDesconectarYoutube}
+                    onChecarYoutube={() => void youtubeStatus.refetch()}
                   />
                 ))}
               </ul>

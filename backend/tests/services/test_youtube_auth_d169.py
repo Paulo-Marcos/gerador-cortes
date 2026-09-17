@@ -37,6 +37,7 @@ def test_status_sem_token_desconectado(tmp_path, monkeypatch):
     assert st["canal_titulo"] == ""
     assert st["cliente_configurado"] is True
     assert st["fluxo_em_andamento"] is False
+    assert st["client_secrets_destino"].endswith("client_secrets.json")
 
 
 def test_status_conectado_com_titulo(tmp_path, monkeypatch):
@@ -66,6 +67,7 @@ def test_conectar_sem_client_secrets_falha(tmp_path, monkeypatch):
     resultado = youtube_auth.iniciar_conexao()
     assert resultado["status"] == "erro"
     assert youtube_auth._estado.em_andamento is False
+    assert str(tmp_path) in resultado["mensagem"], "diz onde salvar o arquivo"
 
 
 def test_conectar_single_flight(tmp_path, monkeypatch):

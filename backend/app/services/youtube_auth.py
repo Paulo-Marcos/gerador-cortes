@@ -98,10 +98,14 @@ def status() -> dict:
     """
     creds = _carregar_credenciais_validas()
     conectado = creds is not None
+    client_secrets = youtube_client_secrets_path()
     return {
         "conectado": conectado,
         "canal_titulo": _titulo_canal_autenticado(creds) if creds else "",
-        "cliente_configurado": youtube_client_secrets_path().exists(),
+        "cliente_configurado": client_secrets.exists(),
+        # D-628: o tutorial mostra ONDE salvar o arquivo, e não "na raiz do backend"
+        # — quem instalou o app não sabe qual é a raiz, e o canal pode ter a sua.
+        "client_secrets_destino": str(client_secrets),
         "fluxo_em_andamento": _estado.em_andamento,
         "erro": _estado.erro,
     }
@@ -137,7 +141,8 @@ def iniciar_conexao() -> dict:
             "status": "erro",
             "mensagem": (
                 "client_secrets.json não encontrado. Baixe as credenciais OAuth "
-                "(Desktop app) do Google Cloud e salve na raiz do backend."
+                f"(App para computador) do Google Cloud e salve em {client_secrets_path}. "
+                "O passo a passo está em Canais, no cartão do canal ativo."
             ),
         }
 

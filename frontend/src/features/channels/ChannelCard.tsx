@@ -5,6 +5,7 @@
 import { CheckCircle2, Loader2, Pencil, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Canal, YoutubeAuthStatus } from '@/lib/channelsApi';
+import { ConectarYoutubeTutorial } from './ConectarYoutubeTutorial';
 
 interface ChannelCardProps {
   canal: Canal;
@@ -16,6 +17,7 @@ interface ChannelCardProps {
   youtubeBusy?: boolean;
   onConectarYoutube?: () => void;
   onDesconectarYoutube?: () => void;
+  onChecarYoutube?: () => void;
 }
 
 export function ChannelCard({
@@ -27,6 +29,7 @@ export function ChannelCard({
   youtubeBusy = false,
   onConectarYoutube,
   onDesconectarYoutube,
+  onChecarYoutube = () => {},
 }: ChannelCardProps) {
   return (
     <li
@@ -138,7 +141,7 @@ export function ChannelCard({
                 title={
                   youtube.cliente_configurado
                     ? undefined
-                    : 'Falta o client_secrets.json na raiz do backend (crachá do app)'
+                    : 'Falta o client_secrets.json: veja "Como conectar o YouTube" abaixo'
                 }
               >
                 {(youtubeBusy || youtube.fluxo_em_andamento) && (
@@ -151,10 +154,12 @@ export function ChannelCard({
         </div>
       )}
 
-      {canal.ativo && youtube && !youtube.cliente_configurado && (
-        <p className="text-xs text-[var(--wb-text-dim)]">
-          Falta o <code>client_secrets.json</code> (crachá do app OAuth) na raiz do backend.
-        </p>
+      {canal.ativo && youtube && !youtube.conectado && (
+        <ConectarYoutubeTutorial
+          destino={youtube.client_secrets_destino}
+          abertoDeInicio={!youtube.cliente_configurado}
+          onChecarDeNovo={onChecarYoutube}
+        />
       )}
 
       {canal.ativo && youtube?.erro && !youtube.fluxo_em_andamento && (

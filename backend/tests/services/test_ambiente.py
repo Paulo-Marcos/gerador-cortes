@@ -59,7 +59,7 @@ def test_opcionais_faltando_sao_aviso_e_explicam_o_que_se_perde():
     for id_ in ("encoder", "claude_cli", "agy_cli", "chrome", "gemini_key", "youtube_client"):
         assert itens[id_].estado == "aviso", id_
     assert "modo manual" in itens["claude_cli"].como_resolver
-    assert "C:" in itens["youtube_client"].como_resolver
+    assert "Canais" in itens["youtube_client"].como_resolver
 
 
 def test_chave_gemini_nunca_expoe_o_valor(monkeypatch):

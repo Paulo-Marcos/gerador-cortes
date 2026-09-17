@@ -196,8 +196,8 @@ def checar(sondas: Sondas) -> list[Checagem]:
             "Credencial do YouTube",
             client_secrets if sondas.existe(client_secrets) else None,
             "client_secrets.json encontrado",
-            f"Sem ela, não dá para publicar no YouTube. Coloque o client_secrets.json em "
-            f"{client_secrets.parent}.",
+            "Sem ela, não dá para publicar no YouTube. O passo a passo está em Canais, "
+            "no cartão do canal ativo (Como conectar o YouTube).",
         ),
         _opcional(
             "gemini_key",
