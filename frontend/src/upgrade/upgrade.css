@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
-   D-599 · Camada visual do "Upgrade de layout" (handoff em
-   frontend/Upgrade do layout do projeto/.../Upgrade - Aplicação.dc.html).
+   D-599 · Camada visual do "Upgrade de layout" (handoff de design
+   "Upgrade - Aplicação", usado só como referência e fora do repo).
 
    Tudo aqui vive dentro de `.ap`. Esse escopo NÃO é estilo — é a
    garantia de não-regressão: os tokens --wb-* e as telas atuais

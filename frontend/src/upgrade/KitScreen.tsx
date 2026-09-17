@@ -189,7 +189,7 @@ const ETAPAS_RENDER: ModalStep[] = [
 const CAMPOS_NOVA_LIVE: ModalField[] = [
   { label: 'URL da live', value: 'https://youtube.com/watch?v=aX7kQ2…', hint: 'colada' },
   { label: 'Título de trabalho', value: 'LIVE 268 — Perguntas sobre dólar' },
-  { label: 'Canal', value: '@canal-do-paulo' },
+  { label: 'Canal', value: '@seucanal' },
 ];
 
 const CAMPOS_AUDITORIA: ModalField[] = [
