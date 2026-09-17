@@ -33,7 +33,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import channel_paths, editorial_corpos_legados
+from app import channel_paths
 from app.channel_paths import editorial_dir
 from app.config import settings
 from app.domain import variacao_prompt
@@ -840,47 +840,6 @@ def _migrar_linha_d301(cat: SkillCatalogo, db: Path, cid: str, linha: dict) -> N
     )
 
 
-# --------------------------------------------------------------------------- #
-# Migração pontual D-311: o redesign v2 CONCRETO de cortador/trechos (D-302) foi
-# aplicado só como DADO DE RUNTIME (via `definir_skill`/UI), que não viaja no
-# deploy git. Como `claude_ia` usa o corpo do BANCO por canal como `expertise`,
-# o canal de produção ficou nos corpos concretos pré-v2. Esta migração de código
-# troca o corpo concreto ANTIGO pelo v2 concreto — só quando o corpo gravado bate
-# EXATAMENTE com um default concreto superado conhecido (ver
-# `editorial_corpos_legados`). Corpo genérico (install de terceiro) e customização
-# real não batem e são preservados; o v2 não pertence ao conjunto → idempotente.
-# --------------------------------------------------------------------------- #
-
-
-def _migrar_corpo_v2_concreto(
-    cat: SkillCatalogo, db: Path, cid: str, linha: dict, editorial_root: Path | None
-) -> None:
-    """Substitui o corpo por `CORPOS_V2[cat.key]` quando o corpo JÁ gravado é um
-    default concreto superado conhecido; espelha o novo corpo no `.md`.
-
-    No-op para skills fora de {cortador, trechos} (sem entrada em
-    `CORPOS_SUPERADOS`), para corpos genéricos/customizados (não estão no conjunto)
-    e — por consequência — na segunda passada (o v2 não é um superado).
-    """
-    superados = editorial_corpos_legados.CORPOS_SUPERADOS.get(cat.key)
-    if not superados:
-        return
-    if (linha.get("corpo") or "").strip() not in superados:
-        return
-    novo_corpo = editorial_corpos_legados.CORPOS_V2[cat.key]
-    settings_store.gravar_skill(
-        db,
-        cid,
-        cat.key,
-        {
-            "corpo": novo_corpo,
-            "params_json": linha.get("params_json") or "{}",
-            "lentes_json": linha.get("lentes_json") or "[]",
-        },
-    )
-    _espelhar_corpo_no_md(cat, novo_corpo, editorial_root)
-
-
 def migrar_skills_do_canal_ativo(
     *,
     db_path: Path | None = None,
@@ -913,8 +872,6 @@ def migrar_skills_do_canal_ativo(
         # gravar sobre o estado JÁ migrado, não sobre a linha stale.
         linha = settings_store.ler_skill(db, cid, cat.key) or linha
         _migrar_linha_d301(cat, db, cid, linha)
-        linha = settings_store.ler_skill(db, cid, cat.key) or linha
-        _migrar_corpo_v2_concreto(cat, db, cid, linha, editorial_root)
 
     # D-330: no MESMO ponto de boot, alinha o scaffold concreto V1 (conservador)
     # ao default v2 magro. Import tardio evita o ciclo (editorial_scaffolds importa

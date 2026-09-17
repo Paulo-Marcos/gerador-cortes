@@ -1,6 +1,6 @@
 """D-330: scaffold de trechos V1 CONSERVADOR superado, para a migração de boot.
 
-Análogo do `editorial_corpos_legados` (D-311), mas para SCAFFOLDS (D-297): o
+Mesmo padrão dos corpos legados do D-311 (removidos na D-637), mas para SCAFFOLDS (D-297): o
 scaffold é o invólucro que embrulha a transcrição e FIXA o formato de saída. O
 scaffold de trechos por canal vive no banco (`resolver_scaffold("trechos")`) — é
 DADO DE RUNTIME e não viaja no deploy git. Como `claude_ia` monta o prompt como

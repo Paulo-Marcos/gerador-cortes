@@ -636,7 +636,7 @@ def migrar_scaffolds_do_canal_ativo(
 ) -> int:
     """Troca, no boot, o scaffold concreto V1 superado pelo DEFAULT versionado atual.
 
-    Espelha `editorial_skills._migrar_corpo_v2_concreto` (D-311), mas para o
+    Mesmo padrão da migração de corpos D-311 (removida na D-637), mas para o
     SCAFFOLD por canal: `claude_ia` monta o prompt como `expertise + scaffold`, e o
     scaffold concreto pré-D-330 (conservador, 2 tipos) DOMINAVA o corpo v2. Aqui o
     scaffold gravado é substituído pelo novo default magro — SÓ quando bate EXATO
