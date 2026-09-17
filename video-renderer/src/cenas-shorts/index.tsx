@@ -75,7 +75,7 @@ export const CamadaShort: React.FC<CamadaShortProps> = ({
           timeline, e a abertura. Ele e a legenda coexistem: ele no terco
           superior, ela no rodape, cada um na sua safe zone. */}
       {gancho?.texto ? (
-        <Sequence from={0} durationInFrames={Math.max(1, Math.round(gancho.ateSeg * fps))}>
+        <Sequence durationInFrames={Math.max(1, Math.round(gancho.ateSeg * fps))}>
           <GanchoAbertura
             texto={gancho.texto}
             ateSeg={gancho.ateSeg}

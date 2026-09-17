@@ -404,7 +404,6 @@ export function ReguaDeOnda({
     // órfão: o plugin listava as cinco, nenhuma tinha pai, nada aparecia.
     //
     // Um refino de milissegundo na duração não justifica recarregar a onda.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [corteId, temPicos]);
 
   // ── zoom, sem recarregar nada ──────────────────────────────────────────
