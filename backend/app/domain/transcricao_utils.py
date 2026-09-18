@@ -24,14 +24,6 @@ def dividir_segmentos_longos(
     Isso aumenta a granularidade para a IA escolher pontos de corte/cena.
     """
 
-    def _to_seg(val) -> float:
-        if isinstance(val, (int, float)):
-            return float(val)
-        try:
-            return float(val)
-        except (ValueError, TypeError):
-            return hms_to_seg(str(val))
-
     nova_trans = []
 
     for item in transcricao:
@@ -39,8 +31,8 @@ def dividir_segmentos_longos(
         if not texto:
             continue
 
-        start = _to_seg(item.get("start", item.get("inicio", 0)))
-        end = _to_seg(item.get("end", item.get("fim", start + 1)))
+        start = _segundos(item.get("start", item.get("inicio", 0)))
+        end = _segundos(item.get("end", item.get("fim", start + 1)))
         duracao = end - start
 
         palavras = texto.split()
@@ -245,19 +237,11 @@ def limpar_e_ordenar_transcricao(transcricao: list[dict]) -> list[dict]:
     if not transcricao:
         return []
 
-    def _to_seg(val) -> float:
-        if isinstance(val, (int, float)):
-            return float(val)
-        try:
-            return float(val)
-        except (ValueError, TypeError):
-            return hms_to_seg(str(val))
-
     # 1. Normaliza e Ordena
     normalizada = []
     for item in transcricao:
-        inicio = _to_seg(item.get("start", item.get("inicio", 0)))
-        fim = _to_seg(item.get("end", item.get("fim", inicio + 0.1)))
+        inicio = _segundos(item.get("start", item.get("inicio", 0)))
+        fim = _segundos(item.get("end", item.get("fim", inicio + 0.1)))
         texto = item.get("texto", item.get("text", "")).strip()
         if texto:
             seg = {"start": inicio, "end": max(inicio + 0.05, fim), "texto": texto}

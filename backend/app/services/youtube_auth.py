@@ -13,6 +13,7 @@ daemon e o estado (`em_andamento`/`erro`) fica em memória para a UI pollar via
 
 from __future__ import annotations
 
+import logging
 import socket
 import threading
 from dataclasses import dataclass
@@ -26,6 +27,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 # Mesmos escopos do upload (services/youtube.py) — upload + gestão de playlists.
+logger = logging.getLogger(__name__)
+
 SCOPES = [
     "https://www.googleapis.com/auth/youtube",
     "https://www.googleapis.com/auth/youtube.upload",
@@ -120,8 +123,10 @@ def _titulo_canal_autenticado(creds: Credentials) -> str:
         items = resp.get("items", [])
         if items:
             return items[0].get("snippet", {}).get("title", "")
-    except Exception:
-        pass
+    except Exception as erro:  # noqa: BLE001 — o selo é acessório; o log não é
+        # D-654: sem isto, um token expirado ou uma cota estourada apareciam
+        # apenas como "o nome do canal sumiu da tela", sem pista nenhuma.
+        logger.warning("[YouTubeAuth] não consegui ler o nome do canal: %s", erro)
     return ""
 
 

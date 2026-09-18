@@ -8,6 +8,7 @@ helpers para sub-módulos). Prova que os nomes seguem importáveis de
 import pytest
 from app.models import Corte
 from app.routers import cortes as cortes_router
+from fastapi import HTTPException
 
 
 class TestHmsToSeg:
@@ -19,12 +20,24 @@ class TestHmsToSeg:
             ("02:05", 125.0),
             ("42", 42.0),
             ("", 0.0),
-            ("lixo", 0.0),
             ("00:00:10.5", 10.5),
         ],
     )
     def test_converte(self, hms, esperado):
         assert cortes_router._hms_to_seg(hms) == pytest.approx(esperado)
+
+    def test_tempo_invalido_avisa_em_vez_de_virar_zero(self):
+        """D-654: mudança de comportamento DELIBERADA.
+
+        Antes, "lixo" virava 0.0 em silêncio — e dividir um corte nesse ponto
+        cortava no começo do vídeo, sem log nenhum para explicar. Zero é um
+        tempo VÁLIDO, então o erro se disfarçava de resposta.
+        """
+        with pytest.raises(HTTPException) as erro:
+            cortes_router._hms_to_seg("lixo")
+
+        assert erro.value.status_code == 400
+        assert "lixo" in str(erro.value.detail)
 
 
 class TestCorteToDict:

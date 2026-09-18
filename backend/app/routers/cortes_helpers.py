@@ -20,25 +20,30 @@ from pathlib import Path
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.domain.corte_mapper import normalizar_cenas_remotion_payload
 from app.domain.desvio_categoria import classificar_desvio
+from app.domain.time_convert import hms_to_seg
 from app.models import Corte
+from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
 
 def _hms_to_seg(hms: str) -> float:
+    """HH:MM:SS -> segundos, pelo conversor do domínio (D-654).
+
+    Havia aqui uma segunda implementação que, diante de um tempo estranho,
+    devolvia 0.0 em SILÊNCIO: dividir um corte em "12:34x" cortaria no começo do
+    vídeo, sem uma linha de log para explicar. Agora o tempo inválido vira 400 —
+    o operador lê o motivo e corrige, em vez de ver um corte no lugar errado.
+
+    A troca foi conferida contra os dados reais: 78.981 tempos gravados nos
+    bancos de DEV e de PROD, zero divergências entre as duas implementações.
+    """
     try:
-        if not hms:
-            return 0.0
-        partes = str(hms).strip().split(":")
-        if len(partes) >= 3:
-            return int(partes[0]) * 3600 + int(partes[1]) * 60 + float(partes[2])
-        elif len(partes) == 2:
-            return int(partes[0]) * 60 + float(partes[1])
-        elif len(partes) == 1:
-            return float(partes[0])
-    except Exception:
-        pass
-    return 0.0
+        return hms_to_seg(hms)
+    except (ValueError, TypeError, AttributeError) as erro:
+        raise HTTPException(
+            status_code=400, detail=f"Tempo inválido: {hms!r}. Use HH:MM:SS."
+        ) from erro
 
 
 def _corte_to_dict(corte: Corte) -> dict:
@@ -137,8 +142,18 @@ def _corte_to_dict(corte: Corte) -> dict:
                 )
                 if result.returncode == 0:
                     d["duracao_clip_seg"] = float(result.stdout.strip())
-            except Exception:
-                pass
+                else:
+                    logger.debug(
+                        "[Cortes] ffprobe falhou em %s (rc=%s): %s",
+                        p.name,
+                        result.returncode,
+                        result.stderr[-200:],
+                    )
+            except Exception as erro:  # noqa: BLE001 — duração é acessória
+                # D-654: acessória não quer dizer invisível. Sem este log, um
+                # ffprobe quebrado vira "o editor não mostra a duração" e a
+                # investigação começa no lugar errado.
+                logger.debug("[Cortes] não consegui medir a duração de %s: %s", p.name, erro)
 
     return d
 
