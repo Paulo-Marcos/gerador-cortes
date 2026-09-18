@@ -2,54 +2,81 @@
 
 import asyncio
 import logging
+import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.infrastructure import processos_em_voo
+from app.infrastructure.worker_queue import dono_dos_jobs
+
 logger = logging.getLogger(__name__)
 
 
-_SYNC_TIMEOUT_SECONDS = 3600  # 1h — proteção contra hang indefinido
+# D-647: teto quando o chamador não pede nada. Era o valor CRAVADO para toda
+# chamada em Windows — o `timeout` pedido se perdia no caminho em thread, então
+# 1h é o que a produção sempre praticou. Mantido como default até que cada
+# chamada tenha seu valor medido.
+_SYNC_TIMEOUT_SECONDS = 3600
 
 
-def _run_ffmpeg_sync(cmd: list[str], label: str = "ffmpeg") -> tuple[int, str, str]:
-    """Executa FFmpeg de forma síncrona (fallback para Windows)."""
-    import subprocess
+def _run_ffmpeg_sync(
+    cmd: list[str], label: str = "ffmpeg", timeout: float = _SYNC_TIMEOUT_SECONDS
+) -> tuple[int, str, str]:
+    """Executa FFmpeg de forma síncrona (caminho usado no Windows).
 
+    D-647: `Popen` em vez de `subprocess.run` para ter o processo NA MÃO. Com
+    ele registrado por dono, cancelar de fato mata o ffmpeg; antes a thread
+    ficava presa esperando um processo que ninguém conseguia alcançar.
+    """
     cmd_preview = " ".join(cmd[:8]) + (" ..." if len(cmd) > 8 else "")
     logger.info("[FfmpegRunner] [%s] Iniciando (thread): %s", label, cmd_preview)
     t0 = time.time()
+    dono = dono_dos_jobs()
     try:
-        result = subprocess.run(
+        processo = subprocess.Popen(  # noqa: S603 — comando montado por nós
             cmd,
             stdin=subprocess.DEVNULL,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
             errors="replace",
-            timeout=_SYNC_TIMEOUT_SECONDS,
         )
-        elapsed = time.time() - t0
-        if result.returncode == 0:
-            logger.info("[FfmpegRunner] [%s] Concluido em %.1fs (rc=0)", label, elapsed)
-        else:
-            logger.error(
-                "[FfmpegRunner] [%s] Falhou em %.1fs (rc=%d): %s",
-                label,
-                elapsed,
-                result.returncode,
-                result.stderr[-500:],
-            )
-        return result.returncode, result.stdout, result.stderr
-    except subprocess.TimeoutExpired as e:
+    except Exception as e:
+        logger.error("[FfmpegRunner] [%s] Excecao ao iniciar: %s", label, e)
+        return -1, "", f"Erro ao executar subprocesso sync: {e}"
+
+    processos_em_voo.registrar(dono, processo)
+    try:
+        stdout, stderr = processo.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
         elapsed = time.time() - t0
         logger.error("[FfmpegRunner] [%s] Timeout apos %.1fs — processo encerrado.", label, elapsed)
-        if e.proc:
-            e.proc.kill()
+        processos_em_voo.matar_arvore(processo)
+        processo.communicate()
         return -1, "", f"Timeout apos {elapsed:.0f}s"
     except Exception as e:
         logger.error("[FfmpegRunner] [%s] Excecao: %s", label, e)
+        processos_em_voo.matar_arvore(processo)
         return -1, "", f"Erro ao executar subprocesso sync: {e}"
+    finally:
+        processos_em_voo.esquecer(dono, processo)
+
+    elapsed = time.time() - t0
+    returncode = processo.returncode
+    if returncode == 0:
+        logger.info("[FfmpegRunner] [%s] Concluido em %.1fs (rc=0)", label, elapsed)
+    else:
+        # Cancelado conta como falha para quem chamou — o texto diz o motivo.
+        logger.error(
+            "[FfmpegRunner] [%s] Falhou em %.1fs (rc=%d): %s",
+            label,
+            elapsed,
+            returncode,
+            (stderr or "")[-500:],
+        )
+    return returncode, stdout or "", stderr or ""
 
 
 _STDERR_TAIL_LEN = 500
@@ -68,8 +95,9 @@ async def _run_ffmpeg_in_thread(
     *,
     label: str,
     capture_output: bool,
+    timeout: float = _SYNC_TIMEOUT_SECONDS,
 ) -> FfmpegResult:
-    returncode, stdout, stderr = await asyncio.to_thread(_run_ffmpeg_sync, cmd, label)
+    returncode, stdout, stderr = await asyncio.to_thread(_run_ffmpeg_sync, cmd, label, timeout)
     return FfmpegResult(
         returncode=returncode,
         stderr_tail=stderr[-_STDERR_TAIL_LEN:],
@@ -115,7 +143,7 @@ async def run_ffmpeg(
     cmd: list[str],
     *,
     label: str = "ffmpeg",
-    timeout: int = 14400,
+    timeout: int = _SYNC_TIMEOUT_SECONDS,
     log_interval: float = 30.0,
     capture_output: bool = False,
 ) -> FfmpegResult:
@@ -127,7 +155,9 @@ async def run_ffmpeg(
         0
     """
     if sys.platform == "win32":
-        return await _run_ffmpeg_in_thread(cmd, label=label, capture_output=capture_output)
+        return await _run_ffmpeg_in_thread(
+            cmd, label=label, capture_output=capture_output, timeout=timeout
+        )
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -173,10 +203,13 @@ async def run_ffmpeg_simple(
     *,
     label: str = "ffmpeg",
     capture_output: bool = False,
+    timeout: float = _SYNC_TIMEOUT_SECONDS,
 ) -> FfmpegResult:
     """Executa FFmpeg e levanta RuntimeError se falhar. Para operações rápidas."""
     if sys.platform == "win32":
-        result = await _run_ffmpeg_in_thread(cmd, label=label, capture_output=capture_output)
+        result = await _run_ffmpeg_in_thread(
+            cmd, label=label, capture_output=capture_output, timeout=timeout
+        )
         if result.returncode != 0:
             raise RuntimeError(f"{label} falhou (thread): {result.stderr_tail}")
         return result

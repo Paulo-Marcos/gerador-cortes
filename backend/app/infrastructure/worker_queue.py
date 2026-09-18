@@ -118,6 +118,16 @@ def definir_dono_dos_jobs(owner: str) -> None:
     _DONO_ATUAL.set(owner)
 
 
+def dono_dos_jobs() -> str:
+    """Dono do trabalho em curso neste contexto async ("" quando não há).
+
+    D-647: o ffmpeg que o backend dispara DENTRO de si (normalização, proxy,
+    capas) é agrupado pelo mesmo dono dos jobs do worker, para que cancelar
+    derrube os dois com um id só.
+    """
+    return _DONO_ATUAL.get()
+
+
 def cancelar_owner(owner: str) -> int:
     """Pede o cancelamento de todo job em voo de `owner`; devolve quantos.
 

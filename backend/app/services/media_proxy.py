@@ -409,7 +409,9 @@ class MediaProxyService:
         """Extrai o proxy FLAC para um tmp único e o promove atomicamente."""
         tmp_proxy_path = f"{proxy_path}.{time.time_ns()}.tmp.flac"
         cmd = MediaProxyService._build_proxy_cmd(video_path, start_sec, duration, tmp_proxy_path)
-        result = await run_ffmpeg(cmd, label="ffmpeg_audio_proxy", timeout=600)
+        # D-647: declarava 10min e recebia 1h. Mantido o que a produção pratica;
+        # apertar para 10min é mudança de comportamento e quer medição própria.
+        result = await run_ffmpeg(cmd, label="ffmpeg_audio_proxy", timeout=3600)
         if result.returncode != 0 or not os.path.exists(tmp_proxy_path):
             raise RuntimeError(f"FFmpeg falhou ao gerar proxy de áudio: {result.stderr_tail}")
         os.replace(tmp_proxy_path, proxy_path)

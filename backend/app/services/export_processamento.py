@@ -36,7 +36,10 @@ class _ExportProcessamentoMixin:
             cmd = ["ffmpeg", "-y", "-nostdin", "-t", str(preview_segundos)] + cmd[3:]
 
         operational_info("ExportService", f"Normalizando vídeo/áudio: {output_path.name}...")
-        result = await run_ffmpeg(cmd, label="ffmpeg_normalizar", timeout=28800)
+        # D-647: declarava 8h e recebia 1h (o timeout se perdia no caminho em
+        # thread). 1h é o que a produção sempre praticou — o número agora diz a
+        # verdade. Aumentar exige medir uma normalização longa de verdade.
+        result = await run_ffmpeg(cmd, label="ffmpeg_normalizar", timeout=3600)
 
         if result.returncode != 0:
             raise RuntimeError(f"Falha na normalização de áudio: {result.stderr_tail}")

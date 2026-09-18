@@ -23,6 +23,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
+from app.infrastructure import processos_em_voo
 from app.infrastructure.worker_queue import cancelar_owner
 
 logger = logging.getLogger(__name__)
@@ -88,11 +89,16 @@ class TrabalhoEmVoo:
             raise JobNaoEstaEmVoo(f"Job '{job_id}' não está em execução")
 
         avisados = cancelar_owner(registro.owner) if registro.owner else 0
+        # D-647: o worker mata o que ele mesmo lançou; o ffmpeg que o backend
+        # disparou dentro de si só morre aqui — `to_thread` não é cancelável.
+        mortos = processos_em_voo.matar_owner(registro.owner)
         registro.task.cancel()
         logger.info(
-            "[Cancelamento] Job '%s' cancelado (%d job(s) do worker avisados).",
+            "[Cancelamento] Job '%s' cancelado (%d job(s) do worker avisados, "
+            "%d processo(s) locais encerrados).",
             job_id,
             avisados,
+            mortos,
         )
         return avisados
 
@@ -131,4 +137,12 @@ def _cancelar_item_da_pos(corte_id: str) -> dict:
         raise JobNaoEstaEmVoo(f"Corte '{corte_id}' não está na fila de pós-produção")
 
     avisados = cancelar_owner(corte_id)
-    return {"job_id": f"pos:{corte_id}", "cancelado": True, "jobs_worker_avisados": avisados}
+    # A pós roda o ffmpeg DENTRO do backend (normalização, concat): sem isto,
+    # cancelar um item da fila deixava o encode vivo até o fim (D-647).
+    mortos = processos_em_voo.matar_owner(corte_id)
+    return {
+        "job_id": f"pos:{corte_id}",
+        "cancelado": True,
+        "jobs_worker_avisados": avisados,
+        "processos_encerrados": mortos,
+    }
