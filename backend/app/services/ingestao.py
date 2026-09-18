@@ -19,8 +19,46 @@ from app.domain.vtt_parser import parse_vtt
 from app.models import Projeto, StatusProjeto
 from app.services.app_logging import operational_debug, operational_error, operational_info
 
-# Registro de filas de progresso por projeto
-_progress_queues: dict[str, asyncio.Queue] = {}
+
+class _CanalDeProgresso:
+    """Um publicador, N ouvintes (D-656).
+
+    Antes havia UMA fila por projeto, e quem lia consumia o item: com duas abas
+    abertas no mesmo download, cada atualização chegava só numa delas — a outra
+    via a barra andar aos pulos ou parar. Fila é entrega única por natureza; o
+    que esta tela quer é transmissão.
+
+    Quem chega no meio recebe o último estado na hora, em vez de esperar a
+    próxima atualização para saber que existe um download rolando.
+    """
+
+    def __init__(self) -> None:
+        self._ouvintes: list[asyncio.Queue] = []
+        self._ultimo: dict | None = None
+
+    def inscrever(self) -> asyncio.Queue:
+        fila: asyncio.Queue = asyncio.Queue()
+        if self._ultimo is not None:
+            fila.put_nowait(self._ultimo)
+        self._ouvintes.append(fila)
+        return fila
+
+    def cancelar_inscricao(self, fila: asyncio.Queue) -> None:
+        if fila in self._ouvintes:
+            self._ouvintes.remove(fila)
+
+    def put_nowait(self, update: dict) -> None:
+        self._ultimo = update
+        for fila in list(self._ouvintes):
+            fila.put_nowait(update)
+
+    async def put(self, update: dict) -> None:
+        """Mesma assinatura da `asyncio.Queue` — quem publica não muda."""
+        self.put_nowait(update)
+
+
+# Registro de canais de progresso por projeto
+_progress_queues: dict[str, _CanalDeProgresso] = {}
 
 
 def _data_publicacao_yt_dlp(info: dict) -> str:
@@ -97,7 +135,7 @@ class IngestaoService:
     async def processar_projeto(projeto_id: str, youtube_url: str):
         """Pipeline completo: download + transcrição."""
         operational_info("INGESTAO", f">>> INICIANDO processar_projeto para {projeto_id}")
-        queue = asyncio.Queue()
+        queue = _CanalDeProgresso()
         _progress_queues[projeto_id] = queue
 
         try:
@@ -154,7 +192,7 @@ class IngestaoService:
         novo, e a limpeza precisa voltar a ser oferecida — senão o operador
         rebaixa e não tem como liberar depois.
         """
-        queue: asyncio.Queue = asyncio.Queue()
+        queue = _CanalDeProgresso()
         _progress_queues[projeto_id] = queue
         try:
             async with AsyncSessionLocal() as db:
@@ -194,7 +232,7 @@ class IngestaoService:
             _progress_queues.pop(projeto_id, None)
 
     @staticmethod
-    async def _baixar_video(projeto_id: str, url: str, queue: asyncio.Queue) -> str:
+    async def _baixar_video(projeto_id: str, url: str, queue: _CanalDeProgresso) -> str:
         """Executa yt-dlp para baixar o vídeo."""
         projeto_dir = projetos_dir() / projeto_id
         projeto_dir.mkdir(parents=True, exist_ok=True)
@@ -496,14 +534,21 @@ class IngestaoService:
 
     @staticmethod
     async def stream_progresso(projeto_id: str) -> AsyncGenerator[dict]:
-        """Gerador assíncrono de updates de progresso via WebSocket."""
-        queue = _progress_queues.get(projeto_id)
-        if not queue:
+        """Gerador assíncrono de updates de progresso via WebSocket.
+
+        D-656: cada aba tem a SUA fila; sair não deixa fila órfã recebendo.
+        """
+        canal = _progress_queues.get(projeto_id)
+        if not canal:
             yield {"status": "sem_progresso", "mensagem": "Nenhum download em andamento"}
             return
 
-        while True:
-            update = await queue.get()
-            yield update
-            if update.get("status") in ("pronto", "erro"):
-                break
+        fila = canal.inscrever()
+        try:
+            while True:
+                update = await fila.get()
+                yield update
+                if update.get("status") in ("pronto", "erro"):
+                    break
+        finally:
+            canal.cancelar_inscricao(fila)

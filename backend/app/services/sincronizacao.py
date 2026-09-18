@@ -18,6 +18,7 @@ dessincronizado, para que a próxima hora seja gasta no lugar certo.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import subprocess
@@ -132,7 +133,10 @@ async def estado(conn: AsyncConnection) -> dict:
     poder discordar de outra.
     """
     rodando = commit_do_processo()
-    disco = _commit_do_disco()
+    # D-656: MEDIDO em 43 ms. Rodava no event loop a cada poll do aviso (1 min),
+    # e 43 ms de congelamento periódico é exatamente o tipo de travada que
+    # ninguém associa à causa.
+    disco = await asyncio.to_thread(_commit_do_disco)
     pendentes = await colunas_pendentes(conn)
     faltando = dependencias_faltando()
     canal_em_uso = canal_do_processo()

@@ -301,20 +301,41 @@ def _backfill_versao_inicial(conn: sqlite3.Connection) -> None:
     )
 
 
-def _connect(db_path: Path) -> sqlite3.Connection:
-    """Abre o banco de settings garantindo o schema (idempotente) e WAL.
+# D-656: bancos cujo schema este processo já garantiu. O DDL rodava em TODA
+# abertura (2,18 ms medidos, contra 0,3 ms sem ele) — e settings é lido o tempo
+# todo. Fazer uma vez por processo mantém a garantia que importa: banco novo
+# (primeiro boot, split PROD/DEV) nasce com as tabelas.
+_schema_garantido: set[str] = set()
 
-    Cria o arquivo/diretório se preciso; roda o DDL `IF NOT EXISTS` a cada abertura
-    para que um banco novo (primeiro boot, split PROD/DEV) já nasça com as tabelas.
-    """
+
+def _garantir_schema(conn: sqlite3.Connection, chave: str) -> None:
+    """DDL + colunas novas: uma vez por banco, neste processo."""
+    for ddl in _DDL:
+        conn.execute(ddl)
+    _migrar_colunas(conn)
+    conn.commit()
+    _schema_garantido.add(chave)
+
+
+def esquecer_schema_garantido() -> None:
+    """Zera a marca de schema garantido (uso em teste)."""
+    _schema_garantido.clear()
+
+
+def _connect(db_path: Path) -> sqlite3.Connection:
+    """Abre o banco de settings garantindo o schema (idempotente) e WAL."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=30000")
-    for ddl in _DDL:
-        conn.execute(ddl)
-    _migrar_colunas(conn)
+    chave = str(db_path.resolve())
+    if chave not in _schema_garantido:
+        _garantir_schema(conn, chave)
+    # O backfill continua em TODA abertura: custa 0,056 ms (medido) e é a
+    # garantia que o teste do D-312 registra — linha legada que apareça depois
+    # do boot também ganha a versão 1. Pular isso foi uma regressão minha, e o
+    # teste pegou.
     _backfill_versao_inicial(conn)
     conn.commit()
     return conn

@@ -68,6 +68,12 @@ def settings_db_path() -> Path:
     return _instance_root() / "settings.db"
 
 
+# D-656: tentei um cache aqui (o ponteiro é lido dezenas de vezes por request:
+# 0,18 ms contra 0,008 ms de um `stat`) com invalidação por data+tamanho. NÃO
+# FUNCIONA: no Windows, duas escritas seguidas do ponteiro saem com o MESMO
+# mtime_ns e o MESMO tamanho ("canal-a" e "canal-b" têm 7 bytes) — medido em
+# 18/09/2026. O cache devolveria o canal ANTIGO, e este ponteiro decide em qual
+# banco o app escreve. 0,15 ms não paga esse risco: lê-se sempre.
 def _ler_canal_ativo(instance_root: Path) -> str:
     """Id do canal ativo gravado no ponteiro, ou string vazia se ausente."""
     try:
