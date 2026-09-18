@@ -22,6 +22,11 @@ class _ProcessoFake:
     async def wait(self):
         return 0
 
+    async def communicate(self):
+        # D-653: a ingestão passou a DRENAR a saída (com o cano aberto e ninguém
+        # lendo, o processo real trava quando o buffer enche).
+        return b"", b""
+
 
 @pytest.fixture
 def yt_dlp_sem_legenda(monkeypatch, tmp_path):

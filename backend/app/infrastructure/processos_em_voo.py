@@ -91,6 +91,12 @@ def matar_owner(owner: str) -> int:
     return len(alvos)
 
 
+def donos_em_voo() -> list[str]:
+    """Quem tem processo vivo agora (D-653: o encerramento varre todos)."""
+    with _lock:
+        return list(_EM_VOO)
+
+
 def limpar() -> None:
     """Zera o registro (uso em teste)."""
     with _lock:

@@ -39,7 +39,7 @@ from app.routers import (
     settings as app_settings,
 )
 from app.services import channels as channels_service
-from app.services import settings_store
+from app.services import encerramento, settings_store
 from app.services.app_logging import install_log_controls
 from app.services.app_settings import AppSettingsService
 from app.services.remotion_render import RemotionRenderService
@@ -80,6 +80,12 @@ async def lifespan(app: FastAPI):
         print(f"[Main] Erro na sincronização inicial: {e}")
 
     yield
+
+    # D-653: até aqui não havia NADA depois do yield — fechar o app deixava
+    # tarefas de fundo no meio do caminho, ffmpeg comendo CPU e o banco com
+    # conexões abertas. A lógica vive em `services/encerramento` para este
+    # arquivo (travado) mudar o mínimo.
+    await encerramento.encerrar_com_calma()
 
 
 app = FastAPI(

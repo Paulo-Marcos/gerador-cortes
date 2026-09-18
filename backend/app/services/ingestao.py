@@ -38,6 +38,60 @@ def _data_publicacao_yt_dlp(info: dict) -> str:
     return upload_date[:8] if len(upload_date) >= 8 else ""
 
 
+_PROGRESSO_YTDLP = re.compile(r"\[download\]\s+([\d.]+)%")
+
+# Gravar no banco a cada linha do yt-dlp era uma transação por DÉCIMO de por
+# cento — centenas de escritas num download, competindo com o resto do app pelo
+# SQLite. A tela continua recebendo TODAS as linhas (isso é de graça, vai pelo
+# WebSocket); o banco só guarda o que serve para retomar depois de um restart.
+_PASSO_MINIMO_PARA_GRAVAR = 1.0
+
+
+def _progresso_da_linha(texto: str) -> float | None:
+    """A porcentagem numa linha do yt-dlp, ou None quando a linha é outra coisa."""
+    achado = _PROGRESSO_YTDLP.search(texto)
+    return float(achado.group(1)) if achado else None
+
+
+class _ProgressoGravado:
+    """Decide se vale gravar: só a cada 1% ou no 100%."""
+
+    def __init__(self) -> None:
+        self._ultimo = -1.0
+
+    def vale_gravar(self, progresso: float) -> bool:
+        if progresso < 100 and progresso - self._ultimo < _PASSO_MINIMO_PARA_GRAVAR:
+            return False
+        self._ultimo = progresso
+        return True
+
+
+def _rodar_ytdlp_lendo_saida(cmd: list[str], ao_progresso) -> int:
+    """Roda o yt-dlp numa thread LENDO a saída linha a linha (D-653).
+
+    Ler é obrigatório em dois sentidos: dá progresso para a tela e esvazia o
+    cano — sem isso o processo trava quando o buffer enche.
+    """
+    import subprocess
+
+    processo = subprocess.Popen(  # noqa: S603 — comando montado por nós
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+        bufsize=1,
+    )
+    with processo.stdout:
+        for linha in processo.stdout:
+            texto = linha.strip()
+            operational_debug("yt-dlp", texto)
+            progresso = _progresso_da_linha(texto)
+            if progresso is not None:
+                ao_progresso(progresso)
+    return processo.wait()
+
+
 class IngestaoService:
     @staticmethod
     async def processar_projeto(projeto_id: str, youtube_url: str):
@@ -167,34 +221,37 @@ class IngestaoService:
                 stderr=asyncio.subprocess.STDOUT,
             )
             # Lê progresso linha a linha
+            ultimo_gravado = _ProgressoGravado()
             async for line in process.stdout:
                 text = line.decode("utf-8", errors="ignore").strip()
                 operational_debug("yt-dlp", text)
-                match = re.search(r"\[download\]\s+([\d.]+)%", text)
-                if match:
-                    progress = float(match.group(1))
-                    await queue.put({"status": "baixando", "progresso": progress})
-                    await IngestaoService._salvar_progresso(projeto_id, progress)
+                progresso = _progresso_da_linha(text)
+                if progresso is None:
+                    continue
+                await queue.put({"status": "baixando", "progresso": progresso})
+                if ultimo_gravado.vale_gravar(progresso):
+                    await IngestaoService._salvar_progresso(projeto_id, progresso)
             await process.wait()
             returncode = process.returncode
         except NotImplementedError:
-            # Fallback para Windows
-            import subprocess
-
+            # Fallback quando o event loop não sabe abrir subprocesso (Selector).
+            # D-653: aqui o download ficava MUDO — `subprocess.run` só volta no
+            # fim, então a barra de progresso ficava parada em 0% por horas e a
+            # tela parecia travada. Agora lê linha a linha, como o caminho async.
             operational_info("INGESTAO", "Aviso: Usando fallback via Thread para yt-dlp.")
+            loop = asyncio.get_running_loop()
+            ultimo_gravado = _ProgressoGravado()
 
-            def run_ytdlp():
-                return subprocess.run(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    errors="replace",
+            def ao_progresso(progresso: float) -> None:
+                loop.call_soon_threadsafe(
+                    queue.put_nowait, {"status": "baixando", "progresso": progresso}
                 )
+                if ultimo_gravado.vale_gravar(progresso):
+                    asyncio.run_coroutine_threadsafe(
+                        IngestaoService._salvar_progresso(projeto_id, progresso), loop
+                    )
 
-            result = await asyncio.to_thread(run_ytdlp)
-            operational_debug("yt-dlp", f"Output (sync):\n{result.stdout[-1000:]}")
-            returncode = result.returncode
+            returncode = await asyncio.to_thread(_rodar_ytdlp_lendo_saida, cmd, ao_progresso)
 
         if returncode != 0:
             raise RuntimeError(f"yt-dlp falhou com código {returncode}")
@@ -253,7 +310,10 @@ class IngestaoService:
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.STDOUT,
                 )
-                await process.wait()
+                # D-653: `communicate` e não `wait`. Com o cano aberto e ninguém
+                # lendo, o buffer do sistema enche e o yt-dlp PARA de escrever —
+                # fica pendurado para sempre, sem erro nenhum para mostrar.
+                await process.communicate()
             except NotImplementedError:
                 import subprocess
 
@@ -378,7 +438,7 @@ class IngestaoService:
             processo = await asyncio.create_subprocess_exec(
                 *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
             )
-            await processo.wait()
+            await processo.communicate()  # D-653: sem ler o cano, o processo trava
         except NotImplementedError:
             import subprocess
 
