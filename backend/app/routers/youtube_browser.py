@@ -3,6 +3,7 @@ Router: YouTube Channel Browser
 Busca as lives mais recentes de um canal e permite enfileirar downloads em lote.
 """
 
+import asyncio
 import logging
 from datetime import UTC, datetime
 
@@ -246,8 +247,13 @@ async def listar_lives_canal(
 
 @router.get("/auth/status")
 async def youtube_auth_status():
-    """Estado da conexão do YouTube (login OAuth) para o canal ativo."""
-    return youtube_auth.status()
+    """Estado da conexão do YouTube (login OAuth) para o canal ativo.
+
+    D-646: lê o token do disco e pode falar com o Google — nada disso pode
+    rodar no event loop, ainda mais num endpoint que a tela consulta de 2 em 2
+    segundos enquanto o login acontece.
+    """
+    return await asyncio.to_thread(youtube_auth.status)
 
 
 @router.post("/auth/conectar")
@@ -262,7 +268,7 @@ async def youtube_auth_conectar():
 @router.post("/auth/desconectar")
 async def youtube_auth_desconectar():
     """Remove o token do canal ativo (desconecta a conta do YouTube)."""
-    resultado = youtube_auth.desconectar()
+    resultado = await asyncio.to_thread(youtube_auth.desconectar)
     if resultado.get("status") == "erro":
         raise HTTPException(status_code=500, detail=resultado.get("mensagem"))
     return resultado

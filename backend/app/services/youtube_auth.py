@@ -77,6 +77,41 @@ def _carregar_credenciais_validas() -> Credentials | None:
     return None
 
 
+# D-646: o título do canal é a ÚNICA parte do status que custa uma chamada de
+# rede, e é a que menos muda — o nome do canal não muda entre dois polls de 2s.
+# A chave é o token: enquanto ele for o mesmo arquivo com a mesma data, a conta
+# é a mesma. Renovar o token reescreve o arquivo e invalida o cache sozinho.
+_TituloEmCache = tuple[str, float, str]
+_titulo_em_cache: _TituloEmCache | None = None
+
+
+def _assinatura_do_token() -> tuple[str, float]:
+    token_path = youtube_token_path()
+    try:
+        return (str(token_path), token_path.stat().st_mtime)
+    except OSError:
+        return (str(token_path), 0.0)
+
+
+def _titulo_do_canal(creds: Credentials) -> str:
+    """Título do canal, reaproveitando o da última consulta ao mesmo token."""
+    global _titulo_em_cache
+    caminho, mtime = _assinatura_do_token()
+    if _titulo_em_cache and _titulo_em_cache[:2] == (caminho, mtime):
+        return _titulo_em_cache[2]
+
+    titulo = _titulo_canal_autenticado(creds)
+    # Falha de rede não vira cache: senão um título vazio ficaria grudado.
+    if titulo:
+        _titulo_em_cache = (caminho, mtime, titulo)
+    return titulo
+
+
+def _esquecer_titulo_em_cache() -> None:
+    global _titulo_em_cache
+    _titulo_em_cache = None
+
+
 def _titulo_canal_autenticado(creds: Credentials) -> str:
     """Título do canal do YouTube autenticado (best-effort; vazio em qualquer falha)."""
     try:
@@ -101,7 +136,7 @@ def status() -> dict:
     client_secrets = youtube_client_secrets_path()
     return {
         "conectado": conectado,
-        "canal_titulo": _titulo_canal_autenticado(creds) if creds else "",
+        "canal_titulo": _titulo_do_canal(creds) if creds else "",
         "cliente_configurado": client_secrets.exists(),
         # D-628: o tutorial mostra ONDE salvar o arquivo, e não "na raiz do backend"
         # — quem instalou o app não sabe qual é a raiz, e o canal pode ter a sua.
@@ -180,6 +215,8 @@ def desconectar() -> dict:
             token_path.unlink()
         except OSError as exc:
             return {"status": "erro", "mensagem": f"Não foi possível remover o token: {exc}"}
+    # Conta trocada: o título da anterior não pode sobreviver ao logout (D-646).
+    _esquecer_titulo_em_cache()
     with _lock:
         _estado.erro = None
     return {"status": "ok", "mensagem": "YouTube desconectado."}
