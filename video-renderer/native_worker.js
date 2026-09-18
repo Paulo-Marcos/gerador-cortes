@@ -148,6 +148,8 @@ const activeJobs = new Map();
 // módulo apontaria para o job errado.
 const jobContext = new AsyncLocalStorage();
 const cancelados = new Set();
+// D-639: jobs cujo desfecho já foi escrito (um job, uma resposta).
+const respondidos = new Set();
 const filhosPorJob = new Map();
 
 function ackPath(id) {
@@ -174,6 +176,30 @@ function escreverJsonAtomico(destino, payload) {
   const temporario = `${destino}.tmp`;
   fs.writeFileSync(temporario, JSON.stringify(payload));
   fs.renameSync(temporario, destino);
+}
+
+/**
+ * Escreve o desfecho do job — UMA vez, e só uma.
+ *
+ * D-639: cancelar um job matava o filho, o `executarJob` via "saiu com código
+ * 1" e escrevia `erro`; logo depois o `processJob` escrevia `cancelado` por
+ * cima. Quem lesse primeiro (o backend lê no evento de criação) via FALHA num
+ * job que o operador tinha mandado parar — e "falhou" manda investigar bug;
+ * "cancelado" manda seguir a vida.
+ *
+ * Cancelamento tem precedência sobre o código de saída porque o kill É a causa
+ * daquele código.
+ */
+function responderJob(id, resPath, payload) {
+  if (respondidos.has(id)) {
+    console.debug(
+      `[${clockNow()}] desfecho de ${id} já escrito; ignorando "${payload.status}".`,
+    );
+    return false;
+  }
+  respondidos.add(id);
+  escreverJsonAtomico(resPath, payload);
+  return true;
 }
 
 function removerSeExistir(filePath) {
@@ -358,13 +384,17 @@ async function processJob(jobData, jobFile) {
 
   try {
     await jobContext.run({ id }, () => executarJob(jobData, jobFile));
+    // Rede de segurança: se o `executarJob` saiu sem responder (erro antes do
+    // desfecho), o cancelamento ainda precisa chegar ao backend. O porteiro
+    // garante que isto NÃO sobrescreve um desfecho já escrito (D-639).
     if (cancelados.has(id)) {
-      escreverJsonAtomico(resPath, {
-          status: "cancelado",
-          erro: "Cancelado pelo operador",
-        });
+      responderJob(id, resPath, {
+        status: "cancelado",
+        erro: "Cancelado pelo operador",
+      });
     }
   } finally {
+    respondidos.delete(id);
     cancelados.delete(id);
     filhosPorJob.delete(id);
     removerSeExistir(ackPath(id));
@@ -468,25 +498,37 @@ async function executarJob(jobData, jobFile) {
     );
 
     const duracaoJob = formatDuration(Date.now() - jobStartedAt);
-    if (code === 0) {
+    if (cancelados.has(id)) {
+      // O código de saída aqui é consequência do kill: reportá-lo como falha
+      // faria o operador caçar um bug que ele mesmo interrompeu (D-639).
+      console.log(
+        `[${clockNow()}] 🛑 [Cancelado] Tarefa ${id} interrompida após ${duracaoJob}.`,
+      );
+      registrarDesfecho("cancelado");
+      responderJob(id, resPath, {
+        status: "cancelado",
+        erro: "Cancelado pelo operador",
+        duration_ms: Date.now() - jobStartedAt,
+      });
+    } else if (code === 0) {
       console.log(
         `[${clockNow()}] ✅ [Sucesso] Tarefa ${id} concluída em ${duracaoJob}.`,
       );
       registrarDesfecho("sucesso");
-      escreverJsonAtomico(resPath, {
-          status: "sucesso",
-          duration_ms: Date.now() - jobStartedAt,
-        });
+      responderJob(id, resPath, {
+        status: "sucesso",
+        duration_ms: Date.now() - jobStartedAt,
+      });
     } else {
       console.error(
         `[${clockNow()}] ❌ [Erro] Falha na tarefa ${id} após ${duracaoJob}. Código: ${code}`,
       );
       registrarDesfecho("erro");
-      escreverJsonAtomico(resPath, {
-          status: "erro",
-          erro: `Exit code: ${code}`,
-          duration_ms: Date.now() - jobStartedAt,
-        });
+      responderJob(id, resPath, {
+        status: "erro",
+        erro: `Exit code: ${code}`,
+        duration_ms: Date.now() - jobStartedAt,
+      });
     }
 
     if (fs.existsSync(reqPath)) fs.unlinkSync(reqPath);
@@ -496,11 +538,11 @@ async function executarJob(jobData, jobFile) {
       err,
     );
     registrarDesfecho("fatal");
-    escreverJsonAtomico(resPath, {
-        status: "erro",
-        erro: err.message,
-        duration_ms: Date.now() - jobStartedAt,
-      });
+    responderJob(id, resPath, {
+      status: "erro",
+      erro: err.message,
+      duration_ms: Date.now() - jobStartedAt,
+    });
     if (fs.existsSync(reqPath)) fs.unlinkSync(reqPath);
   }
 }
@@ -685,10 +727,10 @@ function tratarCancelamentos(files) {
     if (fs.existsSync(reqPath)) {
       removerSeExistir(reqPath);
       removidos.add(jobFile);
-      escreverJsonAtomico(path.join(filaDir, `res_${id}.json`), {
-          status: "cancelado",
-          erro: "Cancelado pelo operador antes de iniciar",
-        });
+      responderJob(id, path.join(filaDir, `res_${id}.json`), {
+        status: "cancelado",
+        erro: "Cancelado pelo operador antes de iniciar",
+      });
       console.log(`[${clockNow()}] 🛑 [Cancelamento] ${id}: removido da fila.`);
     }
     removerSeExistir(path.join(filaDir, nome));
@@ -749,7 +791,7 @@ async function checkFilaParallel() {
         console.error(`❌ Erro ao ler a tarefa ${jobFile}:`, err);
         const id = jobFile.replace("req_", "").replace(".json", "");
         const resPath = path.join(filaDir, `res_${id}.json`);
-        escreverJsonAtomico(resPath, { status: "erro", erro: err.message });
+        responderJob(id, resPath, { status: "erro", erro: err.message });
         if (fs.existsSync(jobPath)) fs.unlinkSync(jobPath);
       }
     }
