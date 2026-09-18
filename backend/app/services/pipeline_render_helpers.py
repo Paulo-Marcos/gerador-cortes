@@ -6,9 +6,11 @@ de comandos, retry (via `asyncio.sleep`) e varredura de `public/` do renderer.
 """
 
 import asyncio
+import hashlib
 from pathlib import Path
 
 from app.domain.overlay_codec import OverlayCodecProfile
+from app.domain.remotion_bundle import _walk_source_files, compute_src_fingerprint
 from app.domain.retry_policy import RetryPolicy
 from app.services.app_logging import operational_info
 
@@ -114,3 +116,75 @@ def _assets_servidos_do_bundle(renderer_dir: Path) -> list[Path]:
     if theme_config.is_file():
         assets.append(theme_config)
     return assets
+
+
+# ─── Impressão digital do bundle (D-648) ─────────────────────────────────────
+#
+# Calcular o fingerprint relê 165 MB (src + public + theme) e custa 2,8s com o
+# disco frio — a cada render, dentro do event loop, com o app congelado no meio.
+#
+# O truque é separar "mudou?" de "qual é o hash?". Descobrir se algo mudou custa
+# 6ms (nome, tamanho e data de cada arquivo); o hash do CONTEÚDO só é refeito
+# quando essa assinatura muda. O valor devolvido é idêntico ao de antes — é o
+# mesmo cálculo, só não repetido à toa.
+
+_fingerprint_em_cache: tuple[str, str] | None = None
+
+
+def _extras_do_fingerprint(renderer_dir: Path) -> list[Path]:
+    """Arquivos fora de `src/` que entram no fingerprint (ver D-190)."""
+    return [
+        renderer_dir / "package.json",
+        # remotion.config.ts controla o bundle (defines/DefinePlugin, ex.: o gate
+        # do mascote em D-197). Fica na raiz, fora de src/, entao precisa entrar
+        # no fingerprint senao editá-lo nao invalida o cache.
+        renderer_dir / "remotion.config.ts",
+        *_assets_servidos_do_bundle(renderer_dir),
+    ]
+
+
+def _assinatura_do_disco(renderer_dir: Path) -> str:
+    """Retrato barato da árvore: caminho, tamanho e data de cada arquivo.
+
+    Não abre arquivo nenhum. `st_mtime_ns` é nanossegundos: duas edições no
+    mesmo segundo não se escondem atrás da granularidade do relógio.
+    """
+    hasher = hashlib.sha256()
+    for relativo, caminho in _walk_source_files(renderer_dir / "src"):
+        st = caminho.stat()
+        hasher.update(f"src:{relativo}|{st.st_size}|{st.st_mtime_ns}\0".encode())
+    for extra in sorted(_extras_do_fingerprint(renderer_dir)):
+        if not extra.is_file():
+            continue
+        st = extra.stat()
+        hasher.update(f"extra:{extra.name}|{st.st_size}|{st.st_mtime_ns}\0".encode())
+    return hasher.hexdigest()
+
+
+def fingerprint_do_bundle(renderer_dir: Path) -> str:
+    """Fingerprint do bundle, reaproveitado enquanto o disco não muda.
+
+    Síncrono de propósito: lê disco, então quem chama de uma corrotina usa
+    `fingerprint_do_bundle_async`.
+    """
+    global _fingerprint_em_cache
+    assinatura = _assinatura_do_disco(renderer_dir)
+    if _fingerprint_em_cache and _fingerprint_em_cache[0] == assinatura:
+        return _fingerprint_em_cache[1]
+
+    fingerprint = compute_src_fingerprint(
+        renderer_dir / "src", extra_files=_extras_do_fingerprint(renderer_dir)
+    )
+    _fingerprint_em_cache = (assinatura, fingerprint)
+    return fingerprint
+
+
+async def fingerprint_do_bundle_async(renderer_dir: Path) -> str:
+    """Versão para o event loop: a leitura de disco roda em thread (D-645)."""
+    return await asyncio.to_thread(fingerprint_do_bundle, renderer_dir)
+
+
+def esquecer_fingerprint_em_cache() -> None:
+    """Zera o cache (uso em teste)."""
+    global _fingerprint_em_cache
+    _fingerprint_em_cache = None

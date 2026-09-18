@@ -25,7 +25,6 @@ from app.domain.ffmpeg_commands import (
 )
 from app.domain.overlay_codec import OverlayCodecProfile, overlay_codec_profile
 from app.domain.overlay_metadata import OverlayEntry, build_overlay_entries
-from app.domain.remotion_bundle import compute_src_fingerprint
 from app.domain.render_etapas import eh_render_parcial, fase_dentro_do_alcance
 from app.domain.time_convert import epoch_to_hora_local, seg_to_duracao_humana
 from app.domain.video_encoder import VideoEncoder
@@ -81,6 +80,7 @@ from app.services.pipeline_render_helpers import (
     _build_overlay_render_cmd,
     _render_retry_policy,
     _retry_async,
+    fingerprint_do_bundle_async,
 )
 from app.services.remotion_bundle_cache import RemotionBundleCache
 from app.services.render_ffmpeg_log import append_ffmpeg_command
@@ -1310,17 +1310,10 @@ async def _preparar_bundle_overlay(output_dir: Path) -> Path:
         return bundle_dir
 
     cache = RemotionBundleCache(renderer_dir / ".bundle-cache")
-    fingerprint = compute_src_fingerprint(
-        renderer_dir / "src",
-        extra_files=[
-            renderer_dir / "package.json",
-            # remotion.config.ts controla o bundle (defines/DefinePlugin, ex.: o
-            # gate do mascote em D-197). Fica na raiz, fora de src/, entao precisa
-            # entrar no fingerprint senao editá-lo nao invalida o cache.
-            renderer_dir / "remotion.config.ts",
-            *_assets_servidos_do_bundle(renderer_dir),
-        ],
-    )
+    # D-648: mesmo fingerprint de sempre (src + package.json + remotion.config.ts
+    # + assets servidos), agora fora do event loop e sem reler 165 MB quando nada
+    # mudou no disco. A lista de fontes vive em `_extras_do_fingerprint`.
+    fingerprint = await fingerprint_do_bundle_async(renderer_dir)
 
     if cache.lookup(fingerprint) is not None:
         operational_info(
