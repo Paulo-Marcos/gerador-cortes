@@ -158,6 +158,24 @@ function cancelPath(id) {
   return path.join(filaDir, `cancel_${id}.json`);
 }
 
+/**
+ * Grava JSON de forma ATÔMICA: escreve num `.tmp` e renomeia.
+ *
+ * D-638: o backend reage ao evento de CRIAÇÃO do arquivo (watchfiles) e lê na
+ * hora. Com `writeFileSync` direto, ele podia abrir o `res_` no meio da escrita
+ * e receber JSON pela metade — que vira um `WorkerJobFailed` mentiroso ("falha
+ * ao ler resposta") num job que na verdade DEU CERTO. O rename é atômico no
+ * NTFS: o arquivo aparece inteiro ou não aparece.
+ *
+ * É a mesma receita que o lado Python já usa (`worker_queue.escrever_json_atomico`),
+ * agora dos dois lados da fila.
+ */
+function escreverJsonAtomico(destino, payload) {
+  const temporario = `${destino}.tmp`;
+  fs.writeFileSync(temporario, JSON.stringify(payload));
+  fs.renameSync(temporario, destino);
+}
+
 function removerSeExistir(filePath) {
   try {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -333,10 +351,7 @@ async function processJob(jobData, jobFile) {
   const resPath = path.join(filaDir, `res_${id}.json`);
 
   try {
-    fs.writeFileSync(
-      ackPath(id),
-      JSON.stringify({ id, started_at: Date.now() }),
-    );
+    escreverJsonAtomico(ackPath(id), { id, started_at: Date.now() });
   } catch (e) {
     console.warn(`⚠️ Falha ao anunciar início de ${id}: ${e.message}`);
   }
@@ -344,13 +359,10 @@ async function processJob(jobData, jobFile) {
   try {
     await jobContext.run({ id }, () => executarJob(jobData, jobFile));
     if (cancelados.has(id)) {
-      fs.writeFileSync(
-        resPath,
-        JSON.stringify({
+      escreverJsonAtomico(resPath, {
           status: "cancelado",
           erro: "Cancelado pelo operador",
-        }),
-      );
+        });
     }
   } finally {
     cancelados.delete(id);
@@ -461,26 +473,20 @@ async function executarJob(jobData, jobFile) {
         `[${clockNow()}] ✅ [Sucesso] Tarefa ${id} concluída em ${duracaoJob}.`,
       );
       registrarDesfecho("sucesso");
-      fs.writeFileSync(
-        resPath,
-        JSON.stringify({
+      escreverJsonAtomico(resPath, {
           status: "sucesso",
           duration_ms: Date.now() - jobStartedAt,
-        }),
-      );
+        });
     } else {
       console.error(
         `[${clockNow()}] ❌ [Erro] Falha na tarefa ${id} após ${duracaoJob}. Código: ${code}`,
       );
       registrarDesfecho("erro");
-      fs.writeFileSync(
-        resPath,
-        JSON.stringify({
+      escreverJsonAtomico(resPath, {
           status: "erro",
           erro: `Exit code: ${code}`,
           duration_ms: Date.now() - jobStartedAt,
-        }),
-      );
+        });
     }
 
     if (fs.existsSync(reqPath)) fs.unlinkSync(reqPath);
@@ -490,14 +496,11 @@ async function executarJob(jobData, jobFile) {
       err,
     );
     registrarDesfecho("fatal");
-    fs.writeFileSync(
-      resPath,
-      JSON.stringify({
+    escreverJsonAtomico(resPath, {
         status: "erro",
         erro: err.message,
         duration_ms: Date.now() - jobStartedAt,
-      }),
-    );
+      });
     if (fs.existsSync(reqPath)) fs.unlinkSync(reqPath);
   }
 }
@@ -682,13 +685,10 @@ function tratarCancelamentos(files) {
     if (fs.existsSync(reqPath)) {
       removerSeExistir(reqPath);
       removidos.add(jobFile);
-      fs.writeFileSync(
-        path.join(filaDir, `res_${id}.json`),
-        JSON.stringify({
+      escreverJsonAtomico(path.join(filaDir, `res_${id}.json`), {
           status: "cancelado",
           erro: "Cancelado pelo operador antes de iniciar",
-        }),
-      );
+        });
       console.log(`[${clockNow()}] 🛑 [Cancelamento] ${id}: removido da fila.`);
     }
     removerSeExistir(path.join(filaDir, nome));
@@ -749,10 +749,7 @@ async function checkFilaParallel() {
         console.error(`❌ Erro ao ler a tarefa ${jobFile}:`, err);
         const id = jobFile.replace("req_", "").replace(".json", "");
         const resPath = path.join(filaDir, `res_${id}.json`);
-        fs.writeFileSync(
-          resPath,
-          JSON.stringify({ status: "erro", erro: err.message }),
-        );
+        escreverJsonAtomico(resPath, { status: "erro", erro: err.message });
         if (fs.existsSync(jobPath)) fs.unlinkSync(jobPath);
       }
     }
