@@ -69,6 +69,7 @@ from pathlib import Path
 from app.database import AsyncSessionLocal
 from app.provider_ia import ProviderIA
 from app.services import shorts as shorts_store
+from app.services.tasks import fire_and_forget
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
@@ -1259,9 +1260,24 @@ async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", agendamento=N
     # devolver: a aba esta pronta. Prender o HTTP ate ele decidir publicar
     # seguraria uma conexao por meia hora para nao entregar nada de novo.
     if corte_id:
-        asyncio.create_task(_marcar_quando_publicar(corte_id))
+        _vigiar_publicacao_no_tiktok(corte_id)
 
     return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}
+
+
+def _vigiar_publicacao_no_tiktok(corte_id: str) -> asyncio.Task:
+    """Fica de olho na aba do TikTok até o operador publicar (D-649).
+
+    `asyncio.create_task` solto era um bug esperando a hora: o loop guarda a
+    task por referência FRACA, e uma vigília de até 30 min sem dono pode ser
+    recolhida pelo coletor de lixo no meio do caminho. Ela morreria calada, e o
+    corte nunca se marcaria como publicado. `fire_and_forget` segura a
+    referência e loga qualquer exceção.
+
+    O nome não casa com nenhum prefixo da fila global de propósito: esperar o
+    operador clicar em "Publicar" não é trabalho pesado para anunciar na tela.
+    """
+    return fire_and_forget(_marcar_quando_publicar(corte_id), name=f"tiktok-vigilia-{corte_id[:8]}")
 
 
 async def _marcar_quando_publicar(corte_id: str) -> None:
