@@ -14,6 +14,7 @@ monkeypatch em globais deste módulo (`AsyncSessionLocal`, `build_bruto_pipeline
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
@@ -39,6 +40,8 @@ from app.services.export_bruto import _ExportBrutoMixin
 from app.services.export_bulk_queue import _ExportBulkQueueMixin
 from app.services.export_processamento import _ExportProcessamentoMixin
 from app.services.tasks import fire_and_forget
+
+logger = logging.getLogger(__name__)
 
 
 class ExportService(
@@ -141,17 +144,17 @@ class ExportService(
                     old.unlink()
                 except OSError as e:
                     if settings.bruto_verbose_log or is_debug_enabled():
-                        print(
+                        logger.info(
                             f"[ExportService] Arquivo bruto antigo lockado: {old.name} ({e})",
-                            flush=True,
                         )
 
             try:
                 desvios_raw = json.loads(corte.desvios or "[]")
             except json.JSONDecodeError:
-                print(
-                    f"[ExportService] desvios do corte {corte_id} corrompidos "
-                    f"(JSON inválido); assumindo lista vazia."
+                logger.warning(
+                    "[ExportService] desvios do corte %s corrompidos "
+                    "(JSON inválido); assumindo lista vazia.",
+                    corte_id,
                 )
                 desvios_raw = []
             desvios = [normalizar_desvio(d) for d in desvios_raw]
@@ -201,7 +204,7 @@ class ExportService(
                     )
                 debug_log += "================================================================================"
                 log_path.write_text(debug_log, encoding="utf-8")
-                print(debug_log, flush=True)
+                logger.info(debug_log)
 
             # Despacho para o Native Worker (fila JSON evita NotImplementedError do
             # asyncio.create_subprocess_exec em Windows + SelectorEventLoop).
@@ -249,7 +252,7 @@ class ExportService(
                     f"arquivos auxiliares ({len(pipeline.files)}):\n{files_summary}\n"
                     f"cmd dispatched: {cmd_summary}\n"
                 )
-                print(detail, flush=True)
+                logger.info(detail)
                 with open(log_path, "a", encoding="utf-8") as f:
                     f.write(detail)
 
@@ -261,9 +264,7 @@ class ExportService(
             }
 
             if settings.bruto_verbose_log or is_debug_enabled():
-                print(
-                    f"[ExportService] Enfileirando geração de bruto para {corte_id}...", flush=True
-                )
+                logger.info(f"[ExportService] Enfileirando geração de bruto para {corte_id}...")
             # Escrita ATOMICA (.tmp + rename): o worker reage ao evento de
             # CRIACAO do arquivo, entao um `open(...,'w')` — que trunca para 0
             # bytes antes de gravar — fazia o `JSON.parse` estourar com
@@ -333,9 +334,8 @@ class ExportService(
             if duracao_real is not None:
                 corte.duracao_clip_seg = float(duracao_real)
                 if settings.bruto_verbose_log or is_debug_enabled():
-                    print(
+                    logger.info(
                         f"[ExportService] duracao_clip_seg salvo: {duracao_real:.3f}s",
-                        flush=True,
                     )
             # Se estava aprovado, avança para processado
             if corte.status == "aprovado":
@@ -417,5 +417,5 @@ class ExportService(
                     )
 
             if settings.bruto_verbose_log or is_debug_enabled():
-                print(f"[ExportService] ✅ Bruto gerado: {out_path.name}", flush=True)
+                logger.info(f"[ExportService] ✅ Bruto gerado: {out_path.name}")
             return {"status": "pronto", "clip_path": str(out_path)}

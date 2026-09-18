@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 import re
 import sys
@@ -47,6 +48,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -70,14 +73,14 @@ async def lifespan(app: FastAPI):
         AppSettingsService.get()  # semeia app_settings do canal ativo a partir do arquivo
         editorial_skills_service.migrar_skills_do_canal_ativo()  # E-021: semeia as 5 skills
     except Exception as e:  # noqa: BLE001 — boot resiliente a I/O de config
-        print(f"[Settings] Falha ao migrar configs para o banco: {e}")
+        logger.warning("[Settings] Falha ao migrar configs para o banco: %s", e)
 
     await init_db()
 
     try:
         await RemotionRenderService.sincronizar_tarefas_concluidas()
     except Exception as e:
-        print(f"[Main] Erro na sincronização inicial: {e}")
+        logger.warning("[Main] Erro na sincronização inicial: %s", e)
 
     yield
 

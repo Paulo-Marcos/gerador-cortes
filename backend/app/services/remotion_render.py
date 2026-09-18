@@ -1,12 +1,8 @@
+# D-655: aqui havia um `set_event_loop_policy` no IMPORT deste módulo, com o
+# erro engolido. Política de event loop é decisão do processo, não de um serviço:
+# no import, o efeito dependia de QUEM importou primeiro, e a falha era muda.
+# O `main.py` já faz isso no lugar certo, antes de qualquer loop nascer.
 import asyncio
-import sys
-
-if sys.platform == "win32":
-    try:
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    except Exception:
-        pass
-
 import json
 import logging
 import os

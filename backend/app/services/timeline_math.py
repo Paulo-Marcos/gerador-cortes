@@ -73,7 +73,6 @@ class TimelineMath:
 
             # Se o tempo original da palavra está ANTES do primeiro segmento mantido, ela deve sumir
             if t_start < (min_start - epsilon):
-                # print(f"[TimelineMath] Skip palavra '{item.get('texto')}' (start {t_start} < min {min_start})")
                 continue
 
             novo_inicio = TimelineMath.mapear_tempo_linear(t_start, segmentos_mantidos)

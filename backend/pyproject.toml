@@ -6,7 +6,11 @@ extend-exclude = ["projetos", "assets"]
 
 [tool.ruff.lint]
 # pycodestyle (E/W), pyflakes (F), isort (I), pyupgrade (UP), flake8-bugbear (B)
-select = ["E", "F", "W", "I", "UP", "B"]
+# T20 (flake8-print): D-655. `print` num módulo servidor escreve direto no cano
+# do terminal — e um cano que ninguém lê CONGELA o backend (foi o que aconteceu
+# aqui: o app só destravava ao focar a janela). Log passa pela infraestrutura
+# de logging, que trata isso. Os scripts de terminal ficam de fora, abaixo.
+select = ["E", "F", "W", "I", "UP", "B", "T20"]
 ignore = [
   # Comprimento de linha fica a cargo do formatter (ruff format).
   "E501",
@@ -30,7 +34,12 @@ extend-immutable-calls = [
 
 [tool.ruff.lint.per-file-ignores]
 # Testes ajustam sys.path antes de importar (E402) e usam pytest.raises(Exception) (B017).
-"tests/**" = ["B017", "E402"]
+"tests/**" = ["B017", "E402", "T20"]
+# Scripts de linha de comando: imprimir É a interface deles (D-655).
+"dev-utils/**" = ["T20"]
+"app/consolidar_dados_canal.py" = ["T20"]
+"app/consolidar_assets_canal.py" = ["T20"]
+"app/channel_layout_migration.py" = ["T20"]
 
 [tool.ruff.format]
 quote-style = "double"
