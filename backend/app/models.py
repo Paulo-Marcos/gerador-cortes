@@ -64,7 +64,8 @@ class Projeto(Base):
     __tablename__ = "projetos"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    youtube_url: Mapped[str] = mapped_column(String(500))
+    # D-650: buscado por URL ao evitar baixar a mesma live duas vezes.
+    youtube_url: Mapped[str] = mapped_column(String(500), index=True)
     titulo_live: Mapped[str] = mapped_column(String(500), default="")
     canal_origem: Mapped[str] = mapped_column(
         String(200), default=lambda: channels.identidade_do_canal_ativo().handle
@@ -134,7 +135,8 @@ class Corte(Base):
     __tablename__ = "cortes"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    projeto_id: Mapped[str] = mapped_column(String(36), ForeignKey("projetos.id"))
+    # D-650: "os cortes deste projeto" é a consulta mais quente do app.
+    projeto_id: Mapped[str] = mapped_column(String(36), ForeignKey("projetos.id"), index=True)
     numero: Mapped[int] = mapped_column(Integer)
     # D-448: posição na lista quando o editor a fixou NA MÃO (1-based). NULL — o
     # caso normal — significa "siga o tempo": `numero` é derivado de `inicio_seg`
@@ -401,7 +403,8 @@ class Short(Base):
     __tablename__ = "shorts"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    corte_id: Mapped[str] = mapped_column(String(36), ForeignKey("cortes.id"))
+    # D-650: "os shorts deste corte", em toda abertura da fábrica.
+    corte_id: Mapped[str] = mapped_column(String(36), ForeignKey("cortes.id"), index=True)
     numero: Mapped[int] = mapped_column(Integer)
     titulo_sugerido: Mapped[str] = mapped_column(String(500), default="")
     inicio_seg: Mapped[float] = mapped_column(Float, default=0.0)

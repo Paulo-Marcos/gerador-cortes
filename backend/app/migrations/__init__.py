@@ -34,6 +34,7 @@ from app.migrations import (
     migration_003_paths_video_short,
     migration_004_campos_v2_cortes,
     migration_005_trechos_geracoes,
+    migration_006_indices_filtros_quentes,
     reconciliacao,
 )
 from sqlalchemy import text
@@ -76,6 +77,11 @@ MIGRATIONS: tuple[Migration, ...] = (
         version=5,
         description="D-334 — trechos_geracoes/trechos_geracoes_log em cortes",
         upgrade=migration_005_trechos_geracoes.upgrade,
+    ),
+    Migration(
+        version=6,
+        description="D-650 — índices em cortes.projeto_id, shorts.corte_id e projetos.youtube_url",
+        upgrade=migration_006_indices_filtros_quentes.upgrade,
     ),
 )
 

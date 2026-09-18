@@ -70,6 +70,19 @@ CREATE TABLE IF NOT EXISTS llm_calls (
 )
 """
 
+# D-650: toda leitura desta tabela filtra por corte/short/etapa e ordena por `ts`
+# DESC. Sem índice, o SQLite varria as 3 mil chamadas — e cada linha carrega o
+# prompt inteiro (o banco de PROD tem 84 MB). Medido lá: a busca da última
+# geração de um corte caiu de 7,06 ms para 0,10 ms; por etapa, de 69 ms para 10.
+# Índices compostos (coluna + ts) para que o ORDER BY venha de graça, sem a
+# "TEMP B-TREE FOR ORDER BY" que aparecia no plano.
+_DDL_INDICES = (
+    "CREATE INDEX IF NOT EXISTS ix_llm_calls_corte_ts ON llm_calls (corte_id, ts DESC)",
+    "CREATE INDEX IF NOT EXISTS ix_llm_calls_short_ts ON llm_calls (short_id, ts DESC)",
+    "CREATE INDEX IF NOT EXISTS ix_llm_calls_etapa_ts ON llm_calls (etapa, ts DESC)",
+    "CREATE INDEX IF NOT EXISTS ix_llm_calls_projeto_ts ON llm_calls (projeto_id, ts DESC)",
+)
+
 
 def _default_db_path() -> Path:
     """Banco de telemetria de IA (`instance/llm_calls.db`).
@@ -93,6 +106,8 @@ def _connect(db_path: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA busy_timeout=30000")
     conn.execute(_DDL)
     _garantir_short_id(conn)
+    for ddl_indice in _DDL_INDICES:
+        conn.execute(ddl_indice)
     conn.commit()
     return conn
 
