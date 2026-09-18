@@ -219,10 +219,9 @@ async def ultima_geracao(
     gravado a cada chamada. Best-effort por natureza — telemetria é acessória e
     pode faltar; sem registro, a tela simplesmente não mostra selo.
     """
-    registros = llm_calls_store.listar_llm_calls(
-        etapa=etapa, corte_id=corte_id, short_id=short_id, limite=20
+    ultima = llm_calls_store.ultima_geracao_bem_sucedida(
+        etapa=etapa, corte_id=corte_id, short_id=short_id
     )
-    ultima = next((r for r in registros if r["sucesso"]), None)
     if ultima is None:
         return UltimaGeracaoResponse()
     return UltimaGeracaoResponse(

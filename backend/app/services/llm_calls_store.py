@@ -184,6 +184,48 @@ def gravar_llm_call(
     return registro["id"]
 
 
+def ultima_geracao_bem_sucedida(
+    *,
+    db_path: Path | None = None,
+    etapa: str,
+    corte_id: str | None = None,
+    short_id: str | None = None,
+    janela: int = 20,
+) -> dict | None:
+    """Modelo e data da última chamada OK desta etapa, ou None.
+
+    D-651: o selo da tela precisa de dois campos, e `listar_llm_calls` trazia a
+    linha inteira — com prompt e resposta, que passam de 100 KB cada. Ler 20
+    linhas dessas para mostrar uma data era o que custava 7 ms por selo.
+
+    A `janela` preserva o comportamento anterior: olha as 20 mais recentes e
+    devolve a primeira bem-sucedida. Sem ela, um selo antigo poderia reaparecer
+    depois de 20 falhas seguidas — mudança de comportamento, não otimização.
+    """
+    filtros = ["etapa = ?"]
+    valores: list = [etapa]
+    for coluna, valor in (("corte_id", corte_id), ("short_id", short_id)):
+        if valor is not None:
+            filtros.append(f"{coluna} = ?")
+            valores.append(valor)
+    valores.append(max(0, int(janela)))
+
+    conn = _connect(db_path if db_path is not None else _default_db_path())
+    try:
+        linhas = conn.execute(
+            f"SELECT model, ts, sucesso FROM llm_calls WHERE {' AND '.join(filtros)} "
+            "ORDER BY ts DESC LIMIT ?",
+            tuple(valores),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    for linha in linhas:
+        if linha["sucesso"]:
+            return {"model": linha["model"], "ts": linha["ts"]}
+    return None
+
+
 def listar_llm_calls(
     *,
     db_path: Path | None = None,

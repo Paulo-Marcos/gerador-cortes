@@ -11,6 +11,8 @@ uso como lentidão.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from app.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain import segmentos_short
@@ -23,9 +25,18 @@ from sqlalchemy import select
 async def listar_prontos() -> list[dict]:
     """Os shorts renderizados que ainda faltam em alguma rede, do mais novo ao mais antigo."""
     async with AsyncSessionLocal() as db:
+        # D-651: `select(Short, Corte, Projeto)` trazia as ENTIDADES inteiras —
+        # e `Projeto` carrega a transcrição da live (centenas de KB por linha),
+        # `Corte` a transcrição do corte. Desta tela só saem quatro campos deles.
         linhas = (
             await db.execute(
-                select(Short, Corte, Projeto)
+                select(
+                    Short,
+                    Corte.numero,
+                    Corte.titulo_proposto,
+                    Corte.projeto_id,
+                    Projeto.titulo_live,
+                )
                 .join(Corte, Corte.id == Short.corte_id)
                 .join(Projeto, Projeto.id == Corte.projeto_id)
                 .where(Short.status == StatusShort.RENDERIZADO)
@@ -37,7 +48,7 @@ async def listar_prontos() -> list[dict]:
         if not linhas:
             return []
 
-        ids = [short.id for short, _, _ in linhas]
+        ids = [linha.Short.id for linha in linhas]
         publicadas = await _publicadas_por_short(db, ids)
         metadados = {
             meta.short_id: meta
@@ -47,18 +58,33 @@ async def listar_prontos() -> list[dict]:
         }
 
     prontos = []
-    for short, corte, projeto in linhas:
+    for linha in linhas:
+        short = linha.Short
+        origem = _Origem(
+            corte_numero=linha.numero,
+            corte_titulo=linha.titulo_proposto,
+            projeto_id=linha.projeto_id,
+            projeto_titulo=linha.titulo_live,
+        )
         ja_foi = publicadas.get(short.id, set())
         pendentes = plataformas_pendentes(ja_foi)
-        arquivo = resolver_do_projeto(short.arquivo_short_path, corte.projeto_id)
+        arquivo = resolver_do_projeto(short.arquivo_short_path, origem.projeto_id)
         # Sem rede pendente o trabalho acabou; sem MP4 em disco (a limpeza pode
         # ter levado o arquivo por fora) não há o que subir.
         if not pendentes or not arquivo.is_file():
             continue
-        prontos.append(
-            _descrever(short, corte, projeto, metadados.get(short.id), ja_foi, pendentes)
-        )
+        prontos.append(_descrever(short, origem, metadados.get(short.id), ja_foi, pendentes))
     return prontos
+
+
+@dataclass(frozen=True)
+class _Origem:
+    """De onde o short veio — só o que o cartão mostra (D-651)."""
+
+    corte_numero: int
+    corte_titulo: str
+    projeto_id: str
+    projeto_titulo: str
 
 
 async def _publicadas_por_short(db, ids: list[str]) -> dict[str, set[str]]:
@@ -79,8 +105,7 @@ async def _publicadas_por_short(db, ids: list[str]) -> dict[str, set[str]]:
 
 def _descrever(
     short: Short,
-    corte: Corte,
-    projeto: Projeto,
+    origem: _Origem,
     meta: MetadadoShort | None,
     publicadas: set[str],
     pendentes: list[str],
@@ -103,10 +128,10 @@ def _descrever(
             ),
             2,
         ),
-        "corte_numero": corte.numero,
-        "corte_titulo": corte.titulo_proposto,
-        "projeto_id": projeto.id,
-        "projeto_titulo": projeto.titulo_live,
+        "corte_numero": origem.corte_numero,
+        "corte_titulo": origem.corte_titulo,
+        "projeto_id": origem.projeto_id,
+        "projeto_titulo": origem.projeto_titulo,
         "publicadas": sorted(publicadas),
         "pendentes": pendentes,
         # Post e capa viajam resumidos: é o que o cartão precisa para dizer

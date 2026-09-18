@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -59,6 +60,24 @@ def _overlays_existem(overlays_dir: Path) -> bool:
     return False
 
 
+def _artefatos_de_cada_corte(cortes) -> dict[str, tuple[bool, bool, bool]]:
+    """Por corte: (vídeo final, grade, overlays) existem no disco? (D-651).
+
+    Síncrono de propósito — o chamador roda tudo de uma vez numa thread.
+    """
+    resultado: dict[str, tuple[bool, bool, bool]] = {}
+    base = projetos_dir()
+    for corte in cortes:
+        corte_dir = base / corte.projeto_id / "cortes" / corte.id
+        final_pronto = (corte_dir / "upload_ready" / "video.mp4").exists()
+        # Quando final existe, todas as fases anteriores foram percorridas — mesmo
+        # que o retention tenha limpado um intermediário, vale marcar como pronto.
+        grade_pronta = final_pronto or (corte_dir / "graded" / "clip_graded.mp4").exists()
+        overlays_prontos = final_pronto or _overlays_existem(corte_dir / "overlays")
+        resultado[corte.id] = (final_pronto, grade_pronta, overlays_prontos)
+    return resultado
+
+
 @router.get("/projeto/{projeto_id}/status")
 async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
@@ -77,23 +96,24 @@ async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
     )
     cortes = result.scalars().all()
 
+    # D-651: era uma consulta de metadados POR CORTE (N+1) — num projeto com 30
+    # cortes aprovados, 30 idas ao banco para montar uma tela só. Uma consulta
+    # com `IN` traz todos de uma vez.
+    metadados = {}
+    if cortes:
+        linhas = await db.execute(
+            select(MetadadoCorte).where(MetadadoCorte.corte_id.in_([c.id for c in cortes]))
+        )
+        metadados = {meta.corte_id: meta for meta in linhas.scalars()}
+
+    # D-651/D-645: a varredura de disco (um `exists` e um `glob` por corte) sai do
+    # event loop. São dezenas de idas ao disco numa rota que a tela repete.
+    artefatos = await asyncio.to_thread(_artefatos_de_cada_corte, cortes)
+
     items = []
     for corte in cortes:
-        meta_result = await db.execute(
-            select(MetadadoCorte).where(MetadadoCorte.corte_id == corte.id)
-        )
-        meta = meta_result.scalar_one_or_none()
-
-        corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte.id
-        final_video_path = corte_dir / "upload_ready" / "video.mp4"
-        graded_path = corte_dir / "graded" / "clip_graded.mp4"
-        overlays_dir = corte_dir / "overlays"
-
-        final_pronto = final_video_path.exists()
-        # Quando final existe, todas as fases anteriores foram percorridas — mesmo
-        # que o retention tenha limpado um intermediário, vale marcar como pronto.
-        grade_pronta = final_pronto or graded_path.exists()
-        overlays_prontos = final_pronto or _overlays_existem(overlays_dir)
+        meta = metadados.get(corte.id)
+        final_pronto, grade_pronta, overlays_prontos = artefatos[corte.id]
 
         items.append(
             {
