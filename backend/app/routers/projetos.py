@@ -411,16 +411,14 @@ async def atualizar_transcricao_projeto(
     from app.services.corte import CorteService
 
     # Carrega cortes se necessário
-    res_cortes = await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))
-    cortes = res_cortes.scalars().all()
-
-    for corte in cortes:
-        await CorteService.sincronizar_transcricao_corte(corte.id, db=db)
+    # D-652: em lote — a transcrição da live é lida e parseada UMA vez para
+    # todos os cortes, em vez de uma vez por corte.
+    total_sincronizados = await CorteService.sincronizar_transcricao_do_projeto(projeto_id, db)
 
     await db.commit()
     return {
         "message": "Transcrição do projeto atualizada com sucesso",
-        "total_cortes_sincronizados": len(cortes),
+        "total_cortes_sincronizados": total_sincronizados,
     }
 
 
@@ -727,6 +725,7 @@ async def atualizar_sincronia_legenda(
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
 
     projeto.legenda_offset_ms = int(body.offset_segundos * 1000)
+    total_sincronizados = 0
 
     # Atualiza a transcrição raw no banco
     try:
@@ -747,14 +746,10 @@ async def atualizar_sincronia_legenda(
         projeto.transcricao_raw = json.dumps(nova_transcricao, ensure_ascii=False)
 
         # 3. Sincronizar os cortes existentes para aplicar o novo offset neles também
-        from app.models import Corte
         from app.services.corte import CorteService
-        from sqlalchemy import select
 
-        result = await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))
-        cortes = result.scalars().all()
-        for corte in cortes:
-            await CorteService.sincronizar_transcricao_corte(corte.id, db=db)
+        # D-652: em lote (uma leitura da transcrição para todos os cortes).
+        total_sincronizados = await CorteService.sincronizar_transcricao_do_projeto(projeto_id, db)
 
         await db.commit()
 
@@ -765,7 +760,7 @@ async def atualizar_sincronia_legenda(
     return {
         "message": "Sincronia atualizada e transcrição reprocessada para todo o projeto",
         "offset_ms": projeto.legenda_offset_ms,
-        "cortes_sincronizados": len(cortes) if "cortes" in locals() else 0,
+        "cortes_sincronizados": total_sincronizados,
     }
 
 
@@ -929,15 +924,12 @@ async def refazer_transcricao(projeto_id: str, db: AsyncSession = Depends(get_db
             projeto.erro_msg = ""
         await db.commit()
 
-        # 3. Sincronizar os cortes existentes
-        result = await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))
-        cortes = result.scalars().all()
-        for corte in cortes:
-            await CorteService.sincronizar_transcricao_corte(corte.id, db=db)
+        # 3. Sincronizar os cortes existentes — em lote (D-652).
+        total_sincronizados = await CorteService.sincronizar_transcricao_do_projeto(projeto_id, db)
 
         return {
             "message": "Transcrição atualizada com sucesso.",
-            "total_cortes_sincronizados": len(cortes),
+            "total_cortes_sincronizados": total_sincronizados,
         }
     except TranscricaoIndisponivelError as e:
         # Não é falha do servidor: o YouTube ainda não tem a legenda. O motivo é

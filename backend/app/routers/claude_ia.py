@@ -21,6 +21,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+async def _soltar_a_transacao(db: AsyncSession) -> None:
+    """Encerra a transação de leitura ANTES de chamar a IA (D-652).
+
+    Um `db.get` abre transação no SQLite e ela só fecha no fim da requisição —
+    que aqui dura MINUTOS, o tempo de a IA pensar. Enquanto isso, a transação
+    aberta atrapalha quem precisa escrever (o clássico "database is locked").
+
+    O `rollback` não desfaz nada: estas rotas só leram para validar, e quem
+    grava é o serviço, na sessão dele.
+    """
+    await db.rollback()
+
+
 @router.post("/projeto/{projeto_id}/analisar")
 async def analisar_via_claude(
     projeto_id: str,
@@ -49,6 +62,7 @@ async def analisar_via_claude(
                 "para baixar as legendas do YouTube e então rode a análise."
             ),
         )
+    await _soltar_a_transacao(db)
     try:
         resultado = await ClaudeIaService.analisar_via_claude(
             projeto_id, usar_diarizacao=usar_diarizacao, provider=provider
@@ -79,6 +93,7 @@ async def gerar_trechos_via_claude(
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
+    await _soltar_a_transacao(db)
     try:
         resultado = await ClaudeIaService.gerar_trechos_via_claude(corte_id, provider=provider)
         return {
@@ -102,6 +117,7 @@ async def gerar_cenas_via_claude(
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
+    await _soltar_a_transacao(db)
     try:
         resultado = await ClaudeIaService.gerar_cenas_via_claude(corte_id, provider=provider)
         return {
@@ -125,6 +141,7 @@ async def gerar_metadados_via_claude(
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
+    await _soltar_a_transacao(db)
     try:
         resultado = await ClaudeIaService.gerar_metadados_via_claude(corte_id, provider=provider)
         return {
@@ -148,6 +165,7 @@ async def gerar_prompt_thumbnail_via_claude(
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
+    await _soltar_a_transacao(db)
     try:
         resultado = await ClaudeIaService.gerar_prompt_thumbnail_via_claude(
             corte_id, provider=provider

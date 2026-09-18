@@ -1194,7 +1194,30 @@ class CorteService:
             await CorteService._exec_sincronia(corte_id, db)
 
     @staticmethod
-    async def _exec_sincronia(corte_id: str, db: AsyncSession):
+    async def sincronizar_transcricao_do_projeto(projeto_id: str, db: AsyncSession) -> int:
+        """Ressincroniza TODOS os cortes do projeto lendo a transcrição uma vez (D-652).
+
+        Antes era corte a corte, e cada passada recarregava o projeto e fazia o
+        `json.loads` da transcrição INTEIRA da live. Numa live longa com 30
+        cortes, era a mesma transcrição gigante lida e parseada 30 vezes — o
+        trabalho crescia com o quadrado do tamanho do projeto.
+
+        Devolve quantos cortes foram sincronizados.
+        """
+        projeto = await db.get(Projeto, projeto_id)
+        if not projeto or not projeto.transcricao_raw:
+            return 0
+
+        trans_raw = json.loads(projeto.transcricao_raw or "[]")
+        cortes = (
+            (await db.execute(select(Corte).where(Corte.projeto_id == projeto_id))).scalars().all()
+        )
+        for corte in cortes:
+            await CorteService._exec_sincronia(corte.id, db, trans_raw=trans_raw)
+        return len(cortes)
+
+    @staticmethod
+    async def _exec_sincronia(corte_id: str, db: AsyncSession, *, trans_raw: list | None = None):
         from app.services.timeline_math import TimelineMath
 
         try:
@@ -1209,9 +1232,11 @@ class CorteService:
             # Recarrega do banco para garantir que desvios recém-salvos apareçam (SQLite)
             await db.refresh(corte)
 
-            projeto = await db.get(Projeto, corte.projeto_id)
-            if not projeto or not projeto.transcricao_raw:
-                return
+            if trans_raw is None:
+                projeto = await db.get(Projeto, corte.projeto_id)
+                if not projeto or not projeto.transcricao_raw:
+                    return
+                trans_raw = json.loads(projeto.transcricao_raw or "[]")
 
             from app.domain.segment_calculator import normalizar_desvio
 
@@ -1227,8 +1252,6 @@ class CorteService:
                     "CorteService",
                     f"    - [{d.get('inicio_seg')} -> {d.get('fim_seg')}] {d.get('motivo')}",
                 )
-
-            trans_raw = json.loads(projeto.transcricao_raw or "[]")
 
             # ── 1. Transcrição Bruta (trecho completo + buffer de 60s) ──
             def _to_seg(val) -> float:
@@ -1333,7 +1356,10 @@ class CorteService:
             corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
             corte.transcricao_final_texto = texto_final
 
-            # Retry loop para evitar "database is locked" em picos de escrita
+            # Retry para "database is locked" em picos de escrita. D-652: sem o
+            # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
+            # seguintes morrem em PendingRollbackError — o retry era inócuo e
+            # mascarava o erro real.
             for attempt in range(5):
                 try:
                     await db.commit()
@@ -1342,6 +1368,7 @@ class CorteService:
                     if "locked" in str(e).lower() and attempt < 4:
                         import asyncio
 
+                        await db.rollback()
                         await asyncio.sleep(0.5 * (attempt + 1))
                         continue
                     raise e
