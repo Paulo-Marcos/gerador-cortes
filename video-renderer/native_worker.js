@@ -31,6 +31,15 @@ function resolveProjetosDir() {
     : path.join(backendDir, "projetos");
 }
 
+const canalDoBoot = (() => {
+  try {
+    return fs
+      .readFileSync(path.join(repoRoot, "instance", "active-channel"), "utf-8")
+      .trim();
+  } catch (_) {
+    return "";
+  }
+})();
 const projetosDir = resolveProjetosDir();
 const filaDir = path.join(projetosDir, "fila_remotion");
 const settingsPath = path.join(projetosDir, "app_settings.json");
@@ -802,6 +811,94 @@ async function checkFilaParallel() {
     console.error("Erro ao ler a fila:", err);
   }
 }
+
+
+// ─── Saída limpa, entrada limpa e troca de canal (D-640) ────────────────────
+
+/**
+ * Encerra o worker sem deixar rastro: mata os filhos (ffmpeg, Chromium) e
+ * apaga os `ack_` dos jobs em voo.
+ *
+ * Sem isto, fechar o app deixava processos órfãos comendo CPU — o mesmo que
+ * aconteceu aqui com um worker de produção esquecido no Gerenciador de Tarefas.
+ * E o `ack_` abandonado é pior que inútil: o relógio do backend só começa a
+ * contar quando ele aparece, então um `ack_` velho faz o próximo job herdar um
+ * cronômetro que já correu.
+ */
+let encerrando = false;
+function encerrarComCalma(motivo) {
+  if (encerrando) return;
+  encerrando = true;
+  console.log(`[${clockNow()}] 🔻 Encerrando o worker (${motivo}).`);
+  for (const id of [...filhosPorJob.keys()]) {
+    const mortos = matarFilhos(id);
+    if (mortos) console.log(`   ${mortos} processo(s) do job ${id} encerrados.`);
+    removerSeExistir(ackPath(id));
+  }
+}
+
+for (const sinal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"]) {
+  process.on(sinal, () => {
+    encerrarComCalma(sinal);
+    process.exit(0);
+  });
+}
+process.on("exit", () => encerrarComCalma("saída do processo"));
+
+/**
+ * No boot NÃO existe job em execução — todo `ack_` no disco é resto de um
+ * worker que morreu no meio. Deixá-los faz o backend achar que um job já está
+ * rodando e esperar por uma resposta que nunca vem.
+ */
+function limparAcksOrfaos() {
+  let removidos = 0;
+  try {
+    for (const nome of fs.readdirSync(filaDir)) {
+      if (nome.startsWith("ack_") && nome.endsWith(".json")) {
+        removerSeExistir(path.join(filaDir, nome));
+        removidos += 1;
+      }
+    }
+  } catch (e) {
+    console.warn(`⚠️ Não consegui limpar os ack_ antigos: ${e.message}`);
+  }
+  if (removidos) {
+    console.log(
+      `[${clockNow()}] 🧹 ${removidos} ack_ órfão(s) de uma execução anterior removido(s).`,
+    );
+  }
+}
+
+/**
+ * O canal ativo é resolvido UMA vez, na subida (o `filaDir` nasce dele). Se o
+ * operador troca de canal com o app no ar, este worker continua olhando a fila
+ * do canal antigo — e os jobs do canal novo ficam parados sem explicação.
+ *
+ * Trocar a pasta em pleno voo seria pior (job em andamento escreve a resposta
+ * onde ninguém lê): a decisão do projeto é que a troca vale no PRÓXIMO restart
+ * (D-629). O que faltava era DIZER isso — em vez de deixar a fila muda.
+ */
+let canalAvisado = false;
+function vigiarTrocaDeCanal() {
+  if (canalAvisado) return;
+  let canalAgora = "";
+  try {
+    canalAgora = fs
+      .readFileSync(path.join(repoRoot, "instance", "active-channel"), "utf-8")
+      .trim();
+  } catch (_) {
+    return; // sem ponteiro: nada a comparar
+  }
+  if (!canalDoBoot || canalAgora === canalDoBoot) return;
+  canalAvisado = true;
+  console.warn(
+    `[${clockNow()}] ⚠️ Canal ativo mudou de "${canalDoBoot}" para "${canalAgora}". ` +
+      `Este worker continua na fila do canal anterior — feche e abra o app para a troca valer.`,
+  );
+}
+setInterval(vigiarTrocaDeCanal, 5000);
+
+limparAcksOrfaos();
 
 // Pickup quase instantaneo via fs.watch + poll de seguranca (eventos de FS
 // podem ser perdidos em alguns sistemas/SMB). Antes era so um poll de 2s, que
