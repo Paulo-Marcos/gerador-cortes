@@ -311,6 +311,31 @@ function buildNodeOptions() {
   return ["--max-old-space-size=8192", ...existing].join(" ");
 }
 
+// D-641: eram números soltos no meio do código. Agora têm nome, motivo e
+// validação — um env inválido virava NaN e ia parar na linha de comando do
+// Remotion, que não reclama e roda com o default dele.
+const LINHAS_DE_ERRO_NA_RESPOSTA = 40;
+
+function inteiroDoAmbiente(nome, padrao, minimo) {
+  const bruto = process.env[nome];
+  if (bruto === undefined || bruto === "") return padrao;
+  // A string INTEIRA precisa ser um número: `parseInt("3.9.9")` devolve 3 sem
+  // reclamar, e aceitar isso seria trocar um erro de digitação por uma
+  // configuração silenciosamente diferente da pedida (D-641).
+  const valor = /^\d+$/.test(bruto.trim()) ? Number.parseInt(bruto, 10) : Number.NaN;
+  if (!Number.isFinite(valor) || valor < minimo) {
+    console.warn(
+      `⚠️ ${nome}="${bruto}" inválido; usando ${padrao}. (mínimo ${minimo})`,
+    );
+    return padrao;
+  }
+  return valor;
+}
+
+// Quantos frames o Remotion renderiza em paralelo. 12 é o valor que esta
+// máquina praticava desde sempre; subir satura a iGPU e derruba o render.
+const CONCORRENCIA_REMOTION = inteiroDoAmbiente("REMOTION_CONCURRENCY", 12, 1);
+
 function isOverlayJob(jobData) {
   // Categoria explícita vinda do backend (preferida); fallback heurístico
   // mantém compatibilidade com versões antigas que não enviam `category`.
@@ -455,10 +480,6 @@ async function executarJob(jobData, jobFile) {
       return arg;
     });
 
-    const isFFmpeg =
-      translatedCmd[0] &&
-      (translatedCmd[0].toLowerCase().includes("ffmpeg") ||
-        translatedCmd[0].toLowerCase().includes("ffprobe"));
     const isRemotion =
       translatedCmd[0] &&
       translatedCmd[0].toLowerCase().includes("npx") &&
@@ -472,7 +493,7 @@ async function executarJob(jobData, jobFile) {
     // Para ffmpeg/ffprobe, shell: false é MUITO mais seguro para evitar que espaços em filtros quebrem o comando.
     const useShell = isRemotion;
 
-    console.log(`🔍 [Debug] isFFmpeg: ${isFFmpeg}, isRemotion: ${isRemotion}`);
+    console.log(`🔍 [Debug] isRemotion: ${isRemotion}`);
     console.log(
       `🔍 [Debug] Comando[0-3]: ${translatedCmd.slice(0, 4).join(" ")}`,
     );
@@ -495,11 +516,16 @@ async function executarJob(jobData, jobFile) {
     // Se for Remotion mas caiu aqui (ex: vídeo curto ou muitas cenas), adiciona concorrência
     let finalCmd = [...translatedCmd];
     if (isRemotion && !finalCmd.includes("--concurrency")) {
-      finalCmd.splice(finalCmd.length - 1, 0, "--concurrency", "12");
+      finalCmd.splice(
+        finalCmd.length - 1,
+        0,
+        "--concurrency",
+        String(CONCORRENCIA_REMOTION),
+      );
     }
 
     console.log(`⚛️ [Exec] ${finalCmd.join(" ")} (shell: ${useShell})`);
-    const code = await runCommand(
+    const { code, stderrTail } = await runCommand(
       finalCmd[0],
       finalCmd.slice(1),
       finalCwd,
@@ -535,7 +561,9 @@ async function executarJob(jobData, jobFile) {
       registrarDesfecho("erro");
       responderJob(id, resPath, {
         status: "erro",
-        erro: `Exit code: ${code}`,
+        erro: stderrTail
+          ? `Exit code: ${code}\n${stderrTail}`
+          : `Exit code: ${code} (sem saída de erro do processo)`,
         duration_ms: Date.now() - jobStartedAt,
       });
     }
@@ -559,8 +587,17 @@ async function executarJob(jobData, jobFile) {
 /**
  * Helper para rodar comandos e logar a saída
  */
+/**
+ * D-641: resolve `{ code, stderrTail }` em vez de só o código.
+ *
+ * O `res_` levava apenas "Exit code: 1" e o motivo real (a linha do ffmpeg ou
+ * do Remotion dizendo O QUE quebrou) ficava no console do worker. Quem via o
+ * erro na tela não via a causa; quem via a causa era quem tinha o terminal
+ * aberto na hora. As últimas linhas do stderr viajam junto com a resposta.
+ */
 function runCommand(command, args, cwd, shell) {
   return new Promise((resolve) => {
+    const ultimasLinhasDeErro = [];
     // shell=false para FFmpeg: evita que cmd.exe mangle single-quotes
     // nos filtros (ex: curves=r='0/0.05 ...'). shell=true apenas para npx.
     let useShell = typeof shell === "boolean" ? shell : true;
@@ -661,6 +698,16 @@ function runCommand(command, args, cwd, shell) {
     child.stderr.on("data", (data) => {
       lastActivityAt = Date.now();
       const text = data.toString();
+      // Guarda as últimas linhas para a resposta (D-641). O ffmpeg é tagarela:
+      // o que interessa está sempre no FIM, não no começo.
+      for (const linha of text.split(/\r?\n/)) {
+        const limpa = linha.trim();
+        if (!limpa) continue;
+        ultimasLinhasDeErro.push(limpa);
+        if (ultimasLinhasDeErro.length > LINHAS_DE_ERRO_NA_RESPOSTA) {
+          ultimasLinhasDeErro.shift();
+        }
+      }
       if (
         currentLogLevel === "debug" ||
         /erro|error|fatal|failed|falha/i.test(text)
@@ -672,12 +719,12 @@ function runCommand(command, args, cwd, shell) {
     child.on("error", (err) => {
       clearInterval(heartbeat);
       console.error("Spawn error:", err);
-      resolve(-1);
+      resolve({ code: -1, stderrTail: err.message });
     });
 
     child.on("close", (code) => {
       clearInterval(heartbeat);
-      resolve(code);
+      resolve({ code, stderrTail: ultimasLinhasDeErro.join("\n") });
     });
   });
 }
