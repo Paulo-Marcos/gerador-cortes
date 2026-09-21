@@ -27,10 +27,41 @@ export type EstadoLipSync = 'desligado' | 'carregando' | 'pronto' | 'erro';
  * D-230: entrada expira por TTL e uma promise que rejeita é evictada — sem isso,
  * uma falha de fetch/decode ficava grudada e o mesmo src nunca mais re-tentava.
  */
-const BUFFER_TTL_MS = 5 * 60 * 1000;
+export const BUFFER_TTL_MS = 5 * 60 * 1000;
 let bufferCache: { src: string; promise: Promise<AudioBuffer>; ts: number } | null = null;
 
-function carregarBuffer(ctx: AudioContext, src: string): Promise<AudioBuffer> {
+// D-659: o TTL acima só era conferido na PRÓXIMA chamada. Quem saía do editor e
+// não voltava deixava o PCM preso para sempre. Medido (21/09/2026): o proxy é
+// mono, mas decodifica na taxa do contexto em float32 — ~10 MB por minuto; um
+// corte de 36 min ficou com 385 MB. Agora cada editor montado segura o cache, e o
+// último a sair agenda o descarte: voltar ao mesmo corte dentro do prazo
+// continua instantâneo, e ninguém voltando, a memória volta.
+let editoresMontados = 0;
+let descarteAgendado: ReturnType<typeof setTimeout> | null = null;
+
+export function segurarBufferDoLipSync(): void {
+  editoresMontados += 1;
+  if (descarteAgendado) {
+    clearTimeout(descarteAgendado);
+    descarteAgendado = null;
+  }
+}
+
+export function soltarBufferDoLipSync(): void {
+  editoresMontados = Math.max(0, editoresMontados - 1);
+  if (editoresMontados > 0 || descarteAgendado) return;
+  descarteAgendado = setTimeout(() => {
+    descarteAgendado = null;
+    if (editoresMontados === 0) bufferCache = null;
+  }, BUFFER_TTL_MS);
+}
+
+/** Qual áudio está decodificado em memória agora (para teste e diagnóstico). */
+export function srcDoBufferEmCache(): string | null {
+  return bufferCache?.src ?? null;
+}
+
+export function carregarBuffer(ctx: AudioContext, src: string): Promise<AudioBuffer> {
   const agora = Date.now();
   if (bufferCache?.src === src && agora - bufferCache.ts < BUFFER_TTL_MS) {
     return bufferCache.promise;
@@ -75,6 +106,19 @@ export function useLipSyncPreview(
   // e sem isso o botão piscaria "carregando" a cada 10ms ajustados — mentindo
   // sobre uma espera que não existe mais (o buffer está em cache).
   const decodificadoRef = useRef<string | null>(null);
+
+  // D-659: o AudioContext vivia até o fim da aba — cada editor aberto com o
+  // preview deixava uma thread de áudio acordada. Fecha na saída, junto com a
+  // parte deste editor na retenção do buffer.
+  useEffect(() => {
+    segurarBufferDoLipSync();
+    return () => {
+      soltarBufferDoLipSync();
+      const ctx = ctxRef.current;
+      ctxRef.current = null;
+      if (ctx && ctx.state !== 'closed') void ctx.close();
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;

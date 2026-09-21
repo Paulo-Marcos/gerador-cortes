@@ -382,7 +382,11 @@ function Waveform({
         marca = criarMarcaProximoCorte(proximoNumero);
         wrapper.appendChild(marca);
       }
-      marca.style.left = `${posicao * 100}%`;
+      // D-659: este laço roda 60x/s mesmo com tudo parado. Reescrever o
+      // mesmo `left` a cada frame invalida estilo à toa; compara com o que já
+      // está no elemento (ler estilo inline não força layout).
+      const left = `${posicao * 100}%`;
+      if (marca.style.left !== left) marca.style.left = left;
     };
     frame = requestAnimationFrame(tick);
     return () => {
@@ -559,7 +563,11 @@ function Waveform({
       const videoTime = player ? player.getCurrentTime() : latestRef.current.currentTime;
       const wsTime = videoTime - latestRef.current.audioOffsetSec;
       const progress = Math.max(0, Math.min(1, wsTime / duration));
-      cursor.style.left = `${progress * 100}%`;
+      // D-659: só escreve quando a posição muda. Compara com o DOM, e não com
+      // o último valor escrito aqui: o wavesurfer também move o cursor (clique
+      // na onda), e uma cópia local ficaria velha — o cursor grudaria.
+      const left = `${progress * 100}%`;
+      if (cursor.style.left !== left) cursor.style.left = left;
 
       const prev = lastVideoTimeRef.current;
       lastVideoTimeRef.current = videoTime;
