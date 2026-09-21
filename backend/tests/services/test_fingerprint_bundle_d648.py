@@ -95,6 +95,27 @@ def test_arquivo_novo_no_public_invalida(renderer):
     assert helpers.fingerprint_do_bundle(renderer) != antes
 
 
+def test_subir_o_remotion_no_lockfile_invalida(renderer):
+    """D-643: `npm install` que troca a versão resolvida não mexe no package.json.
+
+    Com `^4.0.502` declarado, o que muda é só o `package-lock.json` — e o bundle
+    velho continuaria rodando com o CLI e o renderer novos.
+    """
+    (renderer / "package-lock.json").write_text('{"remotion": "4.0.502"}', encoding="utf-8")
+    antes = helpers.fingerprint_do_bundle(renderer)
+
+    (renderer / "package-lock.json").write_text('{"remotion": "4.0.503"}', encoding="utf-8")
+
+    assert helpers.fingerprint_do_bundle(renderer) != antes
+
+
+def test_instalacao_sem_lockfile_continua_funcionando(renderer):
+    """Quem instalar sem lockfile não pode ficar sem fingerprint."""
+    assert not (renderer / "package-lock.json").exists()
+
+    assert len(helpers.fingerprint_do_bundle(renderer)) == 64
+
+
 @pytest.mark.asyncio
 async def test_versao_async_nao_le_disco_no_event_loop(renderer, monkeypatch):
     def na_thread(*args, **kwargs):

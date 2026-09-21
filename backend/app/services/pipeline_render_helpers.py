@@ -135,6 +135,11 @@ def _extras_do_fingerprint(renderer_dir: Path) -> list[Path]:
     """Arquivos fora de `src/` que entram no fingerprint (ver D-190)."""
     return [
         renderer_dir / "package.json",
+        # D-643: a versão que RODA está no lockfile, não no package.json. Um
+        # `npm install` que resolve outro Remotion só muda este arquivo — sem
+        # ele aqui, o bundle antigo seguia rodando com o CLI e o renderer novos.
+        # Instalação sem lockfile continua valendo: arquivo ausente é pulado.
+        renderer_dir / "package-lock.json",
         # remotion.config.ts controla o bundle (defines/DefinePlugin, ex.: o gate
         # do mascote em D-197). Fica na raiz, fora de src/, entao precisa entrar
         # no fingerprint senao editá-lo nao invalida o cache.
