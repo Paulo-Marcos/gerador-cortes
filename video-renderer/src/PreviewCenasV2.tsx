@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Sequence, useVideoConfig } from "remotion";
 import { z } from "zod";
-import { COLORS_V2 as C, FONTS_V2 as F } from "./theme-v2";
+import { COLORS_V2 as C, FONTS_V2 as F, useFontesDoPreset } from "./theme-v2";
 import { FrameOffsetContext } from "./frame-context";
 import { renderCenaV2 } from "./cenas-v2";
 import type { CenaRemotion } from "./schema";
@@ -259,6 +259,9 @@ const Badge: React.FC<{ rotulo: string; total: number; idx: number }> = ({
 export const PreviewCenasV2: React.FC<PreviewCenasV2Props> = ({ segundosPorCena }) => {
   const { fps } = useVideoConfig();
   const durFrames = Math.max(1, Math.round(segundosPorCena * fps));
+  // D-642: esta previa do Studio nao passa por `FontPresetProvider`, entao usa
+  // os literais do `FONTS_V2` — que sao os do preset "atual". Pede por conta.
+  useFontesDoPreset("atual");
 
   return (
     <AbsoluteFill

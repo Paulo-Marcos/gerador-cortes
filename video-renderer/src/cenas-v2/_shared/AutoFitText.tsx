@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef } from "react";
+import { useFontesProntas } from "./font-preset-context";
 
 interface AutoFitTextProps {
   children: React.ReactNode;
@@ -34,6 +35,10 @@ export const AutoFitText: React.FC<AutoFitTextProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  // D-642: a primeira medida acontece com a fonte de FALLBACK — o
+  // `delayRender` das Google Fonts adia a foto, nao a montagem. Quando a letra
+  // definitiva entra no DOM, este booleano vira e a medida refaz com ela.
+  const fontesProntas = useFontesProntas();
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -56,7 +61,7 @@ export const AutoFitText: React.FC<AutoFitTextProps> = ({
       container.style.setProperty("--font-scale", scale.toString());
       iterations++;
     }
-  }, [children, maxHeight, maxWidth, minScale, step]);
+  }, [children, maxHeight, maxWidth, minScale, step, fontesProntas]);
 
   return (
     <div

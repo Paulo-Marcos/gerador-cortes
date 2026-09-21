@@ -1,5 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
-import { FONT_PRESETS_V2, type FontPresetV2 } from "../../theme-v2";
+import { createContext, useContext, type CSSProperties, type ReactNode } from "react";
+import { FONT_PRESETS_V2, useFontesDoPreset, type FontPresetV2 } from "../../theme-v2";
 
 export type FontPreset = FontPresetV2;
 
@@ -12,6 +12,18 @@ export const normalizarFontPreset = (value: unknown): FontPreset => {
   return DEFAULT_FONT_PRESET;
 };
 
+/**
+ * D-642: "a fonte definitiva ja esta no DOM?".
+ *
+ * Quem mede texto (`AutoFitText`) precisa saber disso, porque a primeira
+ * medida acontece com a fonte de fallback e teria de valer para sempre. O
+ * default e `true` de proposito: fora de um provider — um teste, um trecho
+ * isolado no Studio — ninguem fica esperando um aviso que nao vem.
+ */
+const FontesProntasContext = createContext(true);
+
+export const useFontesProntas = (): boolean => useContext(FontesProntasContext);
+
 export const FontPresetProvider = ({
   preset,
   children,
@@ -19,7 +31,11 @@ export const FontPresetProvider = ({
   preset?: FontPreset | string;
   children: ReactNode;
 }) => {
-  const fonts = FONT_PRESETS_V2[normalizarFontPreset(preset)];
+  const escolhido = normalizarFontPreset(preset);
+  const fonts = FONT_PRESETS_V2[escolhido];
+  // Dispara o download DESTE preset (e so dele) e segura a foto ate chegar.
+  const prontas = useFontesDoPreset(escolhido);
+
   const style = {
     position: "absolute",
     inset: 0,
@@ -29,5 +45,9 @@ export const FontPresetProvider = ({
     "--font-mono-v2": fonts.mono,
   } as CSSProperties;
 
-  return <div style={style}>{children}</div>;
+  return (
+    <FontesProntasContext.Provider value={prontas}>
+      <div style={style}>{children}</div>
+    </FontesProntasContext.Provider>
+  );
 };

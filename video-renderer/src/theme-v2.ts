@@ -6,158 +6,345 @@
  * apenas as cenas redesenhadas em `cenas-v2/` consomem este módulo.
  */
 
+import { useCallback, useEffect, useRef, useState } from "react";
+import { continueRender, delayRender } from "remotion";
+
 import themeConfig from "../theme.config.json";
 
 // F-036: 5 presets tipograficos com stacks 100% distintos
 // (display + serif + mono diferentes em cada preset) para que a troca
 // de fonte se reflita em titulos, citacoes e tags ao mesmo tempo.
-import { loadFont as loadSpaceGrotesk } from "@remotion/google-fonts/SpaceGrotesk";
-import { loadFont as loadSourceSerif4 } from "@remotion/google-fonts/SourceSerif4";
-import { loadFont as loadIBMPlexMono } from "@remotion/google-fonts/IBMPlexMono";
-import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
-import { loadFont as loadLora } from "@remotion/google-fonts/Lora";
-import { loadFont as loadIBMPlexSans } from "@remotion/google-fonts/IBMPlexSans";
-import { loadFont as loadIBMPlexSerif } from "@remotion/google-fonts/IBMPlexSerif";
-import { loadFont as loadDMSerifText } from "@remotion/google-fonts/DMSerifText";
-import { loadFont as loadDMSans } from "@remotion/google-fonts/DMSans";
-import { loadFont as loadRoboto } from "@remotion/google-fonts/Roboto";
-import { loadFont as loadRobotoSerif } from "@remotion/google-fonts/RobotoSerif";
-import { loadFont as loadRobotoMono } from "@remotion/google-fonts/RobotoMono";
-import { loadFont as loadJetBrainsMono } from "@remotion/google-fonts/JetBrainsMono";
-import { loadFont as loadSpaceMono } from "@remotion/google-fonts/SpaceMono";
-
-// --- Preset "atual" (default historico) ---
-const display = loadSpaceGrotesk("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-const serif = loadSourceSerif4("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-const serifItalic = loadSourceSerif4("italic", {
-  weights: ["400", "500", "600"],
-  subsets: ["latin", "latin-ext"],
-});
-const mono = loadIBMPlexMono("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-
-// --- Preset "moderna": Inter + Lora + JetBrains Mono ---
-const inter = loadInter("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-const lora = loadLora("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-const loraItalic = loadLora("italic", {
-  weights: ["400", "500", "600"],
-  subsets: ["latin", "latin-ext"],
-});
-const jetbrainsMono = loadJetBrainsMono("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-
-// --- Preset "cientifica": familia IBM Plex coerente ---
-const ibmPlexSans = loadIBMPlexSans("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-const ibmPlexSerif = loadIBMPlexSerif("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-const ibmPlexSerifItalic = loadIBMPlexSerif("italic", {
-  weights: ["400", "500", "600"],
-  subsets: ["latin", "latin-ext"],
-});
-
-// --- Preset "minimalista": DM Sans + DM Serif Text + Space Mono ---
-const dmSans = loadDMSans("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-const dmSerifText = loadDMSerifText("normal", {
-  weights: ["400"],
-  subsets: ["latin", "latin-ext"],
-});
-const dmSerifTextItalic = loadDMSerifText("italic", {
-  weights: ["400"],
-  subsets: ["latin", "latin-ext"],
-});
-const spaceMono = loadSpaceMono("normal", {
-  weights: ["400", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-
-// --- Preset "tecnica": familia Roboto coerente ---
-const roboto = loadRoboto("normal", {
-  weights: ["400", "500", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-const robotoSerif = loadRobotoSerif("normal", {
-  weights: ["400", "500", "600", "700"],
-  subsets: ["latin", "latin-ext"],
-});
-const robotoSerifItalic = loadRobotoSerif("italic", {
-  weights: ["400", "500", "600"],
-  subsets: ["latin", "latin-ext"],
-});
-const robotoMono = loadRobotoMono("normal", {
-  weights: ["400", "500", "700"],
-  subsets: ["latin", "latin-ext"],
-});
+//
+// D-642: as 14 chamadas de `loadFont()` ficavam aqui no topo do modulo e
+// rodavam SEMPRE, em todo render. Cada peso x subset x estilo abre um download
+// na gstatic e prende o render com um `delayRender` proprio: eram ~124
+// downloads por processo para usar os ~30 do preset escolhido, e cada um deles
+// uma chance a mais de estourar o timeout. O `import` continua aqui — o nome da
+// familia e uma constante e nao custa rede; quem dispara o download e
+// `carregarFontesDoPreset`, com o preset que a cena pediu.
+import {
+  fontFamily as familiaSpaceGrotesk,
+  loadFont as loadSpaceGrotesk,
+} from "@remotion/google-fonts/SpaceGrotesk";
+import {
+  fontFamily as familiaSourceSerif4,
+  loadFont as loadSourceSerif4,
+} from "@remotion/google-fonts/SourceSerif4";
+import {
+  fontFamily as familiaIBMPlexMono,
+  loadFont as loadIBMPlexMono,
+} from "@remotion/google-fonts/IBMPlexMono";
+import {
+  fontFamily as familiaInter,
+  loadFont as loadInter,
+} from "@remotion/google-fonts/Inter";
+import {
+  fontFamily as familiaLora,
+  loadFont as loadLora,
+} from "@remotion/google-fonts/Lora";
+import {
+  fontFamily as familiaIBMPlexSans,
+  loadFont as loadIBMPlexSans,
+} from "@remotion/google-fonts/IBMPlexSans";
+import {
+  fontFamily as familiaIBMPlexSerif,
+  loadFont as loadIBMPlexSerif,
+} from "@remotion/google-fonts/IBMPlexSerif";
+import {
+  fontFamily as familiaDMSerifText,
+  loadFont as loadDMSerifText,
+} from "@remotion/google-fonts/DMSerifText";
+import {
+  fontFamily as familiaDMSans,
+  loadFont as loadDMSans,
+} from "@remotion/google-fonts/DMSans";
+import {
+  fontFamily as familiaRoboto,
+  loadFont as loadRoboto,
+} from "@remotion/google-fonts/Roboto";
+import {
+  fontFamily as familiaRobotoSerif,
+  loadFont as loadRobotoSerif,
+} from "@remotion/google-fonts/RobotoSerif";
+import {
+  fontFamily as familiaRobotoMono,
+  loadFont as loadRobotoMono,
+} from "@remotion/google-fonts/RobotoMono";
+import {
+  fontFamily as familiaJetBrainsMono,
+  loadFont as loadJetBrainsMono,
+} from "@remotion/google-fonts/JetBrainsMono";
+import {
+  fontFamily as familiaSpaceMono,
+  loadFont as loadSpaceMono,
+} from "@remotion/google-fonts/SpaceMono";
 
 const fontVar = (name: string, fallback: string) => `var(${name}, ${fallback})`;
+
+/** As quatro vozes de um preset: titulo, texto, citacao e etiqueta. */
+export interface FamiliasDoPreset {
+  display: string;
+  serif: string;
+  serifItalic: string;
+  mono: string;
+}
+
+interface ReceitaDePreset {
+  familias: FamiliasDoPreset;
+  /** Dispara os downloads deste preset; uma promessa por variacao pedida. */
+  baixar: () => Promise<unknown>[];
+}
+
+// Os pesos e subsets de cada chamada sao os MESMOS de antes da D-642, escritos
+// literais de novo porque o tipo do pacote so aceita os pesos que aquela
+// familia realmente tem. Mudar um numero aqui muda o desenho do texto.
+const RECEITAS = {
+  // --- Preset "atual" (default historico) ---
+  atual: {
+    familias: {
+      display: familiaSpaceGrotesk,
+      serif: familiaSourceSerif4,
+      serifItalic: familiaSourceSerif4,
+      mono: familiaIBMPlexMono,
+    },
+    baixar: () => [
+      loadSpaceGrotesk("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadSourceSerif4("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadSourceSerif4("italic", {
+        weights: ["400", "500", "600"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadIBMPlexMono("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+    ],
+  },
+
+  // --- Preset "moderna": Inter + Lora + JetBrains Mono ---
+  moderna: {
+    familias: {
+      display: familiaInter,
+      serif: familiaLora,
+      serifItalic: familiaLora,
+      mono: familiaJetBrainsMono,
+    },
+    baixar: () => [
+      loadInter("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadLora("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadLora("italic", {
+        weights: ["400", "500", "600"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadJetBrainsMono("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+    ],
+  },
+
+  // --- Preset "cientifica": familia IBM Plex coerente ---
+  cientifica: {
+    familias: {
+      display: familiaIBMPlexSans,
+      serif: familiaIBMPlexSerif,
+      serifItalic: familiaIBMPlexSerif,
+      mono: familiaIBMPlexMono,
+    },
+    baixar: () => [
+      loadIBMPlexSans("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadIBMPlexSerif("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadIBMPlexSerif("italic", {
+        weights: ["400", "500", "600"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadIBMPlexMono("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+    ],
+  },
+
+  // --- Preset "minimalista": DM Sans + DM Serif Text + Space Mono ---
+  minimalista: {
+    familias: {
+      display: familiaDMSans,
+      serif: familiaDMSerifText,
+      serifItalic: familiaDMSerifText,
+      mono: familiaSpaceMono,
+    },
+    baixar: () => [
+      loadDMSans("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadDMSerifText("normal", {
+        weights: ["400"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadDMSerifText("italic", {
+        weights: ["400"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadSpaceMono("normal", {
+        weights: ["400", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+    ],
+  },
+
+  // --- Preset "tecnica": familia Roboto coerente ---
+  tecnica: {
+    familias: {
+      display: familiaRoboto,
+      serif: familiaRobotoSerif,
+      serifItalic: familiaRobotoSerif,
+      mono: familiaRobotoMono,
+    },
+    baixar: () => [
+      loadRoboto("normal", {
+        weights: ["400", "500", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadRobotoSerif("normal", {
+        weights: ["400", "500", "600", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadRobotoSerif("italic", {
+        weights: ["400", "500", "600"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+      loadRobotoMono("normal", {
+        weights: ["400", "500", "700"],
+        subsets: ["latin", "latin-ext"],
+      }).waitUntilDone(),
+    ],
+  },
+} satisfies Record<string, ReceitaDePreset>;
+
+export type FontPresetV2 = keyof typeof RECEITAS;
 
 // Cada preset varia display + serif + serifItalic + mono para que a troca
 // se refleta em titulos, citacoes/legendas e tags ao mesmo tempo. Antes da
 // F-036 o mono era sempre IBM Plex Mono — por isso os labels pequenos
 // pareciam "nao mudar".
-export const FONT_PRESETS_V2 = {
-  atual: {
-    display: display.fontFamily,
-    serif: serif.fontFamily,
-    serifItalic: serifItalic.fontFamily,
-    mono: mono.fontFamily,
-  },
-  moderna: {
-    display: inter.fontFamily,
-    serif: lora.fontFamily,
-    serifItalic: loraItalic.fontFamily,
-    mono: jetbrainsMono.fontFamily,
-  },
-  cientifica: {
-    display: ibmPlexSans.fontFamily,
-    serif: ibmPlexSerif.fontFamily,
-    serifItalic: ibmPlexSerifItalic.fontFamily,
-    mono: mono.fontFamily,
-  },
-  minimalista: {
-    display: dmSans.fontFamily,
-    serif: dmSerifText.fontFamily,
-    serifItalic: dmSerifTextItalic.fontFamily,
-    mono: spaceMono.fontFamily,
-  },
-  tecnica: {
-    display: roboto.fontFamily,
-    serif: robotoSerif.fontFamily,
-    serifItalic: robotoSerifItalic.fontFamily,
-    mono: robotoMono.fontFamily,
-  },
-} as const;
+export const FONT_PRESETS_V2: Record<FontPresetV2, FamiliasDoPreset> = {
+  atual: RECEITAS.atual.familias,
+  moderna: RECEITAS.moderna.familias,
+  cientifica: RECEITAS.cientifica.familias,
+  minimalista: RECEITAS.minimalista.familias,
+  tecnica: RECEITAS.tecnica.familias,
+};
 
-export type FontPresetV2 = keyof typeof FONT_PRESETS_V2;
+const emVoo = new Map<FontPresetV2, Promise<void>>();
+
+/**
+ * Baixa as familias de UM preset — uma vez so por processo de render.
+ *
+ * O proprio `@remotion/google-fonts` ja guarda cada variacao ja pedida, entao
+ * repetir a chamada e barato; o mapa aqui existe para que duas cenas irmas
+ * compartilhem a MESMA promessa e, com ela, o mesmo instante de "pronto".
+ */
+export function carregarFontesDoPreset(preset: FontPresetV2): Promise<void> {
+  const jaPedido = emVoo.get(preset);
+  if (jaPedido) return jaPedido;
+
+  const promessa = Promise.all(RECEITAS[preset].baixar()).then(() => undefined);
+  emVoo.set(preset, promessa);
+  return promessa;
+}
+
+const fontesDoNavegadorProntas = (): Promise<unknown> =>
+  typeof document !== "undefined" && document.fonts
+    ? document.fonts.ready
+    : Promise.resolve();
+
+/**
+ * Segura a foto do Remotion ate a fonte chegar — e avisa quem mede texto.
+ *
+ * D-642: o `delayRender` que o `loadFont` ja cria adia a CAPTURA, nao a
+ * MONTAGEM. O React monta na hora, o `useLayoutEffect` do `AutoFitText` mede o
+ * texto com a fonte de fallback, escolhe um `--font-scale` por essa medida — e
+ * ninguem remede quando a letra definitiva chega. Dai o texto "pular" entre um
+ * pedaco e outro. Por isso o booleano devolvido aqui entra nas dependencias de
+ * quem mede: quando vira `true`, a medida refaz com a letra certa, e so depois
+ * disso a foto e liberada.
+ */
+export function useEsperarFontes(
+  rotulo: string,
+  carregar: () => Promise<void>,
+): boolean {
+  const [handle] = useState(() =>
+    delayRender(rotulo, { timeoutInMilliseconds: 60000 }),
+  );
+  const [prontas, setProntas] = useState(false);
+  const soltou = useRef(false);
+
+  const soltar = useCallback(() => {
+    if (soltou.current) return;
+    soltou.current = true;
+    continueRender(handle);
+  }, [handle]);
+
+  useEffect(() => {
+    let vivo = true;
+    carregar()
+      .then(fontesDoNavegadorProntas)
+      // O `loadFont` ja tenta de novo sozinho. Se ainda assim falhar, e melhor
+      // desenhar com a fonte de fallback do que pendurar o render ate o timeout.
+      .catch(() => undefined)
+      .then(() => {
+        if (vivo) setProntas(true);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [carregar]);
+
+  // Solta DEPOIS do re-layout: o `useLayoutEffect` de quem mede roda no commit,
+  // antes deste `useEffect`. Entao a foto ja sai com a medida refeita.
+  useEffect(() => {
+    if (prontas) soltar();
+  }, [prontas, soltar]);
+
+  // Desmontou antes de a fonte chegar: soltar, senao o render fica pendurado.
+  useEffect(() => soltar, [soltar]);
+
+  return prontas;
+}
+
+/** Espera as fontes do preset que esta cena pediu. */
+export function useFontesDoPreset(preset: FontPresetV2): boolean {
+  const carregar = useCallback(() => carregarFontesDoPreset(preset), [preset]);
+  return useEsperarFontes(`Fontes do preset "${preset}"`, carregar);
+}
 
 export const FONTS_V2 = {
-  display: fontVar("--font-display-v2", display.fontFamily),
-  serif: fontVar("--font-serif-v2", serif.fontFamily),
-  serifItalic: fontVar("--font-serif-italic-v2", serifItalic.fontFamily),
-  mono: fontVar("--font-mono-v2", mono.fontFamily),
+  display: fontVar("--font-display-v2", RECEITAS.atual.familias.display),
+  serif: fontVar("--font-serif-v2", RECEITAS.atual.familias.serif),
+  serifItalic: fontVar(
+    "--font-serif-italic-v2",
+    RECEITAS.atual.familias.serifItalic,
+  ),
+  mono: fontVar("--font-mono-v2", RECEITAS.atual.familias.mono),
 };
 
 // D-174: o TEMA do canal é o conjunto COMPLETO de cores. Cada chave vem do

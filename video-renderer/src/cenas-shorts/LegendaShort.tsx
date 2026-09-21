@@ -3,11 +3,27 @@ import { useCurrentFrame, useVideoConfig } from "remotion";
 import { createTikTokStyleCaptions, type Caption } from "@remotion/captions";
 import { COLORS_V2, FONTS_V2 } from "../theme-v2";
 import type { LugarDaLegenda } from "./schema";
-import { loadFont as loadAnton } from "@remotion/google-fonts/Anton";
-import { loadFont as loadBebasNeue } from "@remotion/google-fonts/BebasNeue";
-import { loadFont as loadMontserrat } from "@remotion/google-fonts/Montserrat";
-import { loadFont as loadOswald } from "@remotion/google-fonts/Oswald";
-import { loadFont as loadPoppins } from "@remotion/google-fonts/Poppins";
+import { useEsperarFontes } from "../theme-v2";
+import {
+  fontFamily as familiaAnton,
+  loadFont as loadAnton,
+} from "@remotion/google-fonts/Anton";
+import {
+  fontFamily as familiaBebasNeue,
+  loadFont as loadBebasNeue,
+} from "@remotion/google-fonts/BebasNeue";
+import {
+  fontFamily as familiaMontserrat,
+  loadFont as loadMontserrat,
+} from "@remotion/google-fonts/Montserrat";
+import {
+  fontFamily as familiaOswald,
+  loadFont as loadOswald,
+} from "@remotion/google-fonts/Oswald";
+import {
+  fontFamily as familiaPoppins,
+  loadFont as loadPoppins,
+} from "@remotion/google-fonts/Poppins";
 
 // D-462: a legenda queimada do short.
 //
@@ -38,11 +54,51 @@ import { loadFont as loadPoppins } from "@remotion/google-fonts/Poppins";
 //
 // D-594: exportada porque o gancho da abertura escolhe do MESMO catálogo — uma
 // segunda lista de `loadFont` carregaria as fontes duas vezes e divergiria.
+//
+// D-642: o nome continua vindo do pacote, mas a chamada de `loadFont` saiu do
+// topo do modulo. O `Root.tsx` importa a composicao do short, entao estas cinco
+// familias — sem pesos nem subsets declarados, ou seja, TUDO que cada uma tem —
+// baixavam junto com qualquer render, inclusive o horizontal, que nunca usa
+// nenhuma delas. Agora quem paga e quem renderiza short, via `useFontesDaLegenda`.
 export const FONTES_CARREGADAS: Record<string, string> = Object.fromEntries(
-  [loadAnton(), loadBebasNeue(), loadMontserrat(), loadOswald(), loadPoppins()].map(
-    (f) => [f.fontFamily, f.fontFamily],
-  ),
+  [
+    familiaAnton,
+    familiaBebasNeue,
+    familiaMontserrat,
+    familiaOswald,
+    familiaPoppins,
+  ].map((f) => [f, f]),
 );
+
+let downloadDasFontes: Promise<void> | undefined;
+
+/**
+ * Baixa o catalogo inteiro da legenda — uma vez por processo.
+ *
+ * Sao as cinco de uma vez, e nao so a escolhida, porque o gancho pode pedir
+ * outra familia que a legenda (D-594): sao duas escolhas independentes dentro
+ * do mesmo render, e adivinhar qual par vem no payload custaria mais do que
+ * baixar cinco fontes que ja estao no cache do Chrome.
+ */
+function carregarFontesDaLegenda(): Promise<void> {
+  if (!downloadDasFontes) {
+    downloadDasFontes = Promise.all(
+      [
+        loadAnton(),
+        loadBebasNeue(),
+        loadMontserrat(),
+        loadOswald(),
+        loadPoppins(),
+      ].map((f) => f.waitUntilDone()),
+    ).then(() => undefined);
+  }
+  return downloadDasFontes;
+}
+
+/** Segura a foto do short ate o catalogo da legenda estar no DOM. */
+export function useFontesDaLegenda(): boolean {
+  return useEsperarFontes("Fontes da legenda do short", carregarFontesDaLegenda);
+}
 
 /** Agrupamento em página. 200-500ms = palavra a palavra; 1200ms+ = frase. */
 const AGRUPAMENTO_MS = 1200;

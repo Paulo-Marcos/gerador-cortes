@@ -2,7 +2,9 @@ import React from "react";
 import { AbsoluteFill } from "remotion";
 import { z } from "zod";
 import { CamadaShort } from "./index";
+import { useFontesDaLegenda } from "./LegendaShort";
 import { TIPOS_CENA_SHORT } from "./schema";
+import { useFontesDoPreset } from "../theme-v2";
 
 // D-466: a composição que o render do short desenha.
 //
@@ -79,16 +81,24 @@ export const CamadaShortComposition: React.FC<CamadaShortSchema> = ({
   legendaCor,
   legendaFonte,
   legendaLugar,
-}) => (
-  // Fundo transparente: o alpha é o produto desta composição.
-  <AbsoluteFill style={{ backgroundColor: "transparent" }}>
-    <CamadaShort
-      cenas={cenas as CamadaShortSchema["cenas"] as never}
-      captions={captions as never}
-      gancho={gancho ?? null}
-      legendaCor={legendaCor}
-      legendaFonte={legendaFonte}
-      legendaLugar={legendaLugar}
-    />
-  </AbsoluteFill>
-);
+}) => {
+  // D-642: o short é quem pede estas fontes, e só ele. As cenas usam as
+  // variáveis do preset "atual" (não há `FontPresetProvider` aqui, então valem
+  // os literais do `FONTS_V2`) e a legenda/gancho usam o catálogo próprio.
+  useFontesDoPreset("atual");
+  useFontesDaLegenda();
+
+  return (
+    // Fundo transparente: o alpha é o produto desta composição.
+    <AbsoluteFill style={{ backgroundColor: "transparent" }}>
+      <CamadaShort
+        cenas={cenas as CamadaShortSchema["cenas"] as never}
+        captions={captions as never}
+        gancho={gancho ?? null}
+        legendaCor={legendaCor}
+        legendaFonte={legendaFonte}
+        legendaLugar={legendaLugar}
+      />
+    </AbsoluteFill>
+  );
+};
