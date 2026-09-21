@@ -60,6 +60,11 @@ jobs:
       - name: Ruff format check
         run: ruff format --check .
 
+      # D-662: fronteiras das camadas (contratos em pyproject.toml). A dívida
+      # atual está listada lá; um import novo na direção errada para aqui.
+      - name: Contratos de camada (import-linter)
+        run: lint-imports --no-cache
+
       - name: pip-audit (bloqueia em CVE critico; high/moderate ficam informativos)
         run: |
           pip install pip-audit

@@ -43,3 +43,83 @@ extend-immutable-calls = [
 
 [tool.ruff.format]
 quote-style = "double"
+
+# D-662: as fronteiras das camadas, verificadas por máquina.
+#
+# A regra "domain puro, setas para dentro" vivia só no AGENTS.md — e as
+# violações entraram sem alarme. Aqui ela vira catraca: a dívida que já existe
+# entra em `ignore_imports`, com nome e a demanda que vai quitá-la; qualquer
+# import NOVO na direção errada quebra o `lint-imports` (CI e pytest).
+#
+# Apertar é apagar uma linha de `ignore_imports` quando a demanda dela fechar.
+# Afrouxar (acrescentar uma) é decisão de arquitetura, não atalho de PR.
+#
+# Windows: com a saída descartada (`> NUL`, `> /dev/null`) o relatório do `rich`
+# cai no caminho de console em cp1252 e o comando sai com 1 mesmo com os
+# contratos KEPT. Rode com `PYTHONUTF8=1` ou grave a saída em arquivo.
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+id = "dominio-puro"
+name = "domain nao conhece framework, banco, HTTP nem as outras camadas"
+type = "forbidden"
+source_modules = ["app.domain"]
+forbidden_modules = [
+    "fastapi",
+    "starlette",
+    "sqlalchemy",
+    "httpx",
+    "requests",
+    "app.routers",
+    "app.services",
+    "app.infrastructure",
+    "app.models",
+    "app.database",
+]
+
+[[tool.importlinter.contracts]]
+id = "camadas"
+name = "routers -> services -> infrastructure -> domain"
+type = "layers"
+layers = [
+    "app.routers",
+    "app.services",
+    "app.infrastructure",
+    "app.domain",
+]
+ignore_imports = [
+    # Dívida de 21/09/2026 — infrastructure alcançando services. Quitar na v0.4
+    # (E-051, inverter setas): o que estes clientes usam desce para uma porta.
+    "app.infrastructure.youtube_analytics -> app.services.app_logging",
+    "app.infrastructure.fila_ia -> app.services.tarefas_ativas",
+    "app.infrastructure.claude_cli_client -> app.services.llm_calls_store",
+]
+
+[[tool.importlinter.contracts]]
+id = "routers-sem-infra"
+name = "routers nao falam direto com infrastructure"
+type = "forbidden"
+source_modules = ["app.routers"]
+forbidden_modules = ["app.infrastructure"]
+allow_indirect_imports = true
+ignore_imports = [
+    # Dívida de 21/09/2026 — o router chama o cliente sem passar por service.
+    # Quitar na v0.4 (E-051).
+    "app.routers.editorial_skills -> app.infrastructure.antigravity_cli_client",
+    "app.routers.ranking_lives -> app.infrastructure.youtube_data_api",
+]
+
+[[tool.importlinter.contracts]]
+id = "models-sem-services"
+name = "models nao importa services nem routers"
+type = "forbidden"
+source_modules = ["app.models"]
+forbidden_modules = ["app.services", "app.routers"]
+allow_indirect_imports = true
+ignore_imports = [
+    # Dívida de 21/09/2026 — default de coluna lendo o canal ativo (toca
+    # settings.db e disco a cada INSERT). Quitar na D-666.
+    "app.models -> app.services.channels",
+]
