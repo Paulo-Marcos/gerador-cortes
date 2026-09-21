@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Film, Loader2, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { api, versaoVideoUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import type { AppSettings, FiltroExport } from '@/types/models';
+import type { AppSettings, FiltroExport, VersaoExport } from '@/types/models';
 
 // ─────────────────────────────────────────────────────────────
 // FiltroTestePanel — aba "Filtros" da Pós-Produção.
@@ -45,11 +45,50 @@ interface Props {
   brutoPronto: boolean;
 }
 
+// D-658: a lista de versões era consultada a cada 6 s enquanto esta aba
+// estivesse aberta, com ou sem prévia pedida. Agora só entre o pedido e a
+// chegada.
+//
+// "Chegada" não é "apareceu na lista": o ffmpeg escreve direto no
+// `preview.mp4`, que existe desde o primeiro segundo do encode e vai crescendo
+// (o backend não informa "gerando"). A prévia está pronta quando a lista já não
+// é a do pedido E não mudou entre duas consultas — o tamanho parou.
+//
+// Prazo medido no DEV (21/09/2026) com a mesma `_normalizar_audio`: cada
+// prévia de 15 s leva 11-34 s e as 5 juntas 38 s, com a máquina livre. Cinco
+// minutos cobrem material real e um render disputando a CPU.
+export const PRAZO_DA_ESPERA_MS = 5 * 60_000;
+const POLL_DA_ESPERA_MS = 6_000;
+
+export interface EsperaDeVersoes {
+  filtros: string[];
+  /** A lista no instante do pedido: regerar um filtro que já existe não o faz "aparecer". */
+  assinatura: string;
+  ate: number;
+}
+
+export const assinaturaDasVersoes = (versoes: VersaoExport[]): string => JSON.stringify(versoes);
+
+export function esperaTerminou(
+  espera: EsperaDeVersoes,
+  versoes: VersaoExport[],
+  assinaturaAnterior: string | null,
+  agora: number,
+): boolean {
+  if (agora >= espera.ate) return true;
+  const todasPresentes = espera.filtros.every((id) => versoes.some((v) => v.filtro === id));
+  const assinatura = assinaturaDasVersoes(versoes);
+  return (
+    todasPresentes && assinatura !== espera.assinatura && assinatura === assinaturaAnterior
+  );
+}
+
 export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
   const queryClient = useQueryClient();
   const { notify } = useToast();
   const [previewSeconds, setPreviewSeconds] = useState(15);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [espera, setEspera] = useState<EsperaDeVersoes | null>(null);
 
   const filtrosQuery = useQuery({
     queryKey: ['export-filtros'],
@@ -59,7 +98,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
     queryKey: ['export-versoes', corteId],
     queryFn: () => api.listarVersoes(corteId),
     enabled: brutoPronto && Boolean(corteId),
-    refetchInterval: 6_000,
+    refetchInterval: espera ? POLL_DA_ESPERA_MS : false,
   });
   // I-023: usado apenas como sugestão inicial de seleção na aba (UX), NÃO como
   // input do render. O render final lê o global direto do backend em runtime.
@@ -87,7 +126,39 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
 
   const filtroSelecionado = selectedFilter ?? globalPadraoId;
 
-  const invalidateVersoes = () => {
+  const versoesAtuais = versionsQuery.data?.versoes;
+  // `dataUpdatedAt` entra porque o react-query preserva a referência dos dados
+  // quando a resposta vem igual — e "veio igual" é justamente o sinal de pronto.
+  const versoesAtualizadasEm = versionsQuery.dataUpdatedAt;
+  const assinaturaAnteriorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!espera) {
+      assinaturaAnteriorRef.current = null;
+      return;
+    }
+    const atuais = versoesAtuais ?? [];
+    const terminou = esperaTerminou(
+      espera,
+      atuais,
+      assinaturaAnteriorRef.current,
+      Date.now(),
+    );
+    assinaturaAnteriorRef.current = assinaturaDasVersoes(atuais);
+    if (terminou) {
+      setEspera(null);
+      return;
+    }
+    // Sem resposta nova, quem encerra a espera é o relógio.
+    const timer = window.setTimeout(() => setEspera(null), espera.ate - Date.now());
+    return () => window.clearTimeout(timer);
+  }, [espera, versoesAtuais, versoesAtualizadasEm]);
+
+  const aguardarVersoes = (ids: string[]) => {
+    setEspera({
+      filtros: ids,
+      assinatura: assinaturaDasVersoes(versoesAtuais ?? []),
+      ate: Date.now() + PRAZO_DA_ESPERA_MS,
+    });
     void queryClient.invalidateQueries({ queryKey: ['export-versoes', corteId] });
   };
 
@@ -97,7 +168,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
       notify(`Preview "${filtroSelecionado}" (${previewSeconds}s) enfileirada.`, {
         tone: 'success',
       });
-      window.setTimeout(invalidateVersoes, 8_000);
+      aguardarVersoes([filtroSelecionado]);
     },
     onError: (error) =>
       notify(error instanceof Error ? error.message : 'Erro ao gerar preview.', { tone: 'error' }),
@@ -109,7 +180,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
       notify(`Previews de todos os filtros (${previewSeconds}s) enfileiradas.`, {
         tone: 'success',
       });
-      window.setTimeout(invalidateVersoes, 8_000);
+      aguardarVersoes(filtros.map((filtro) => filtro.id));
     },
     onError: (error) =>
       notify(error instanceof Error ? error.message : 'Erro ao gerar previews.', { tone: 'error' }),

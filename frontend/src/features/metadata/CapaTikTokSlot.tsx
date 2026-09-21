@@ -9,6 +9,7 @@ import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { lerImagemColada, SemImagemColada } from '@/features/shorts/imagemDaAreaDeTransferencia';
+import { exportStatusKey } from '@/hooks/useProjetoDetalhe';
 
 // D-521: a capa VERTICAL, ao lado da thumbnail do YouTube.
 //
@@ -87,7 +88,10 @@ export function CapaTikTokSlot({
     setErro('');
     setVersao((n) => n + 1);
     onAtualizou();
-    void queryClient.invalidateQueries({ queryKey: ['export-status'] });
+    // D-658: a chave real é ['projeto', id, 'export-status'] — `['export-status']`
+    // não é prefixo dela, e a invalidação não atingia nada (o polling de 8 s
+    // escondia o defeito).
+    void queryClient.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
   };
 
   const escreverPrompt = useMutation({
