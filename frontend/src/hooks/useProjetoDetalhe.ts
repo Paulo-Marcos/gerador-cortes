@@ -211,6 +211,30 @@ export function useLiberarPublicacao() {
   });
 }
 
+// D-661: o socket de progresso não religava. Se o backend reiniciasse no meio
+// de um download (atualizar a PROD, por exemplo), a tela congelava no último
+// percentual até um F5. Mas "caiu" precisa ser distinguido de "acabou": o
+// backend FECHA de propósito depois de `pronto`/`erro`, e responde
+// `sem_progresso` e fecha na hora quando não há nada rodando — o caso comum.
+// Religar nesses casos seria bater na porta a cada 30 s para sempre.
+const STATUS_QUE_ENCERRAM: ReadonlySet<ProgressoUpdate['status']> = new Set([
+  'pronto',
+  'erro',
+  'sem_progresso',
+]);
+
+export const ESPERA_MAXIMA_PARA_RELIGAR_MS = 30_000;
+
+/** Espera antes da tentativa `n` (0, 1, 2…): 1 s, 2 s, 4 s… até 30 s. */
+export function esperaParaReligar(tentativa: number): number {
+  return Math.min(ESPERA_MAXIMA_PARA_RELIGAR_MS, 1000 * 2 ** tentativa);
+}
+
+/** Religa só se a conexão fechou SEM o servidor ter dito que acabou. */
+export function deveReligar(ultimoStatus: ProgressoUpdate['status'] | null): boolean {
+  return ultimoStatus === null || !STATUS_QUE_ENCERRAM.has(ultimoStatus);
+}
+
 /**
  * Conecta ao WebSocket de progresso (`/api/projetos/{id}/ws`) enquanto o componente
  * estiver montado. Retorna o ultimo update recebido. Invalida as queries de projeto
@@ -228,26 +252,53 @@ export function useProjetoProgressoWS(projetoId: string | undefined): ProgressoU
     // disparar onmessage depois. `ativo` garante uma única conexão efetiva e
     // ignora eventos da conexão já descartada (sem setState pós-cleanup).
     let ativo = true;
-    const ws = new WebSocket(progressoWsUrl(projetoId));
+    let ws: WebSocket | null = null;
+    let tentativa = 0;
+    let religar: ReturnType<typeof setTimeout> | null = null;
 
-    ws.onmessage = (event) => {
-      if (!ativo) return;
-      try {
-        const msg = JSON.parse(event.data) as ProgressoUpdate;
-        setUpdate(msg);
-        if (msg.status !== lastStatus) {
-          lastStatus = msg.status;
-          void qc.invalidateQueries({ queryKey: projetoKey(projetoId) });
-          void qc.invalidateQueries({ queryKey: ['projetos'] });
+    const conectar = () => {
+      const socket = new WebSocket(progressoWsUrl(projetoId));
+      ws = socket;
+      // Status recebido NESTA conexão: decide se o fechamento foi fim ou queda.
+      let statusDaConexao: ProgressoUpdate['status'] | null = null;
+
+      socket.onopen = () => {
+        if (!ativo || tentativa === 0) return;
+        // Religou: o que mudou enquanto a linha esteve caída não chegou por aqui.
+        tentativa = 0;
+        void qc.invalidateQueries({ queryKey: projetoKey(projetoId) });
+        void qc.invalidateQueries({ queryKey: ['projetos'] });
+      };
+
+      socket.onmessage = (event) => {
+        if (!ativo) return;
+        try {
+          const msg = JSON.parse(event.data) as ProgressoUpdate;
+          statusDaConexao = msg.status;
+          setUpdate(msg);
+          if (msg.status !== lastStatus) {
+            lastStatus = msg.status;
+            void qc.invalidateQueries({ queryKey: projetoKey(projetoId) });
+            void qc.invalidateQueries({ queryKey: ['projetos'] });
+          }
+        } catch {
+          /* mensagem mal formada — ignora */
         }
-      } catch {
-        /* mensagem mal formada — ignora */
-      }
+      };
+
+      socket.onclose = () => {
+        if (!ativo || ws !== socket || !deveReligar(statusDaConexao)) return;
+        religar = setTimeout(conectar, esperaParaReligar(tentativa));
+        tentativa += 1;
+      };
     };
+
+    conectar();
 
     return () => {
       ativo = false;
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      if (religar) clearTimeout(religar);
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         ws.close();
       }
     };
