@@ -55,6 +55,28 @@ async function fetchActiveProps(): Promise<Record<string, unknown>> {
   return {};
 }
 
+// D-644: duração quando NÃO há vídeo para medir — o Studio aberto sem corte.
+const DURACAO_SEM_VIDEO = 300;
+
+/**
+ * Duração do vídeo em segundos, ou `null` quando não há URL.
+ *
+ * Antes, qualquer falha virava 300 frames (10 s) com um `console.error` que
+ * ninguém lia: a composição abria com a duração errada e parecia certa. URL
+ * vazia ainda é "nada a medir"; URL que não abre agora é erro com o endereço.
+ */
+async function duracaoDoVideo(url: string): Promise<number | null> {
+  if (!url) return null;
+  try {
+    const metadata = await getVideoMetadata(url);
+    return metadata.durationInSeconds;
+  } catch (err) {
+    throw new Error(
+      `Não consegui ler a duração do vídeo ${url}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
 export const RemotionRoot: React.FC = () => {
   return (
     <>
@@ -64,21 +86,13 @@ export const RemotionRoot: React.FC = () => {
         component={CenaReacao}
         schema={reacaoSchema}
         calculateMetadata={async ({ props }) => {
-          try {
-            const metadata = await getVideoMetadata(props.videoUrlFacecam);
-            return {
-              durationInFrames: Math.ceil(metadata.durationInSeconds * 30),
-              fps: 30,
-              props,
-            };
-          } catch (err) {
-            console.error("Erro ao ler metadata do vídeo. Usando fallback.", err);
-            return {
-              durationInFrames: 300,
-              fps: 30,
-              props,
-            };
-          }
+          const segundos = await duracaoDoVideo(props.videoUrlFacecam);
+          return {
+            durationInFrames:
+              segundos === null ? DURACAO_SEM_VIDEO : Math.ceil(segundos * 30),
+            fps: 30,
+            props,
+          };
         }}
         defaultProps={{
           videoUrlFacecam: "",
@@ -124,26 +138,18 @@ export const RemotionRoot: React.FC = () => {
             serverProps.fontPreset,
           );
 
-          try {
-            const metadata = await getVideoMetadata(videoUrl);
-            const maxFrame = Math.max(1, Math.floor(metadata.durationInSeconds * 30) - 2);
-            const start = props.renderStartFrame ?? 0;
-            const end = Math.min(props.renderEndFrame ?? maxFrame, maxFrame);
-            const duration = Math.max(1, end - start);
-
-            return {
-              durationInFrames: duration,
-              fps: 30,
-              props: { ...props, videoUrl, cenas, sombraNivelPadrao, layoutCardPadrao, fontPreset },
-            };
-          } catch (err) {
-            console.error("Erro ao ler metadata do vídeo (V2). Usando fallback.", err);
-            return {
-              durationInFrames: 300,
-              fps: 30,
-              props: { ...props, videoUrl, cenas, sombraNivelPadrao, layoutCardPadrao, fontPreset },
-            };
+          const propsFinais = { ...props, videoUrl, cenas, sombraNivelPadrao, layoutCardPadrao, fontPreset };
+          const segundos = await duracaoDoVideo(videoUrl);
+          if (segundos === null) {
+            return { durationInFrames: DURACAO_SEM_VIDEO, fps: 30, props: propsFinais };
           }
+
+          const maxFrame = Math.max(1, Math.floor(segundos * 30) - 2);
+          const start = props.renderStartFrame ?? 0;
+          const end = Math.min(props.renderEndFrame ?? maxFrame, maxFrame);
+          const duration = Math.max(1, end - start);
+
+          return { durationInFrames: duration, fps: 30, props: propsFinais };
         }}
         defaultProps={{
           videoUrl: "",
@@ -165,9 +171,13 @@ export const RemotionRoot: React.FC = () => {
             durationInFrames: props.durationFrames,
             fps: 30,
             props,
-            defaultCodec: "vp8" as const,
+            // D-644: iguais aos do OverlayTimelineV2. O backend sempre passa
+            // `--codec=prores` (overlay_codec.py) e a CLI vence estes valores;
+            // eles só valem no botão de render do Studio, que saía em VP8.
+            defaultCodec: "prores" as const,
             defaultVideoImageFormat: "png" as const,
-            defaultPixelFormat: "yuva420p" as const,
+            defaultPixelFormat: "yuva444p10le" as const,
+            defaultProResProfile: "4444" as const,
           };
         }}
         defaultProps={{

@@ -336,6 +336,29 @@ function inteiroDoAmbiente(nome, padrao, minimo) {
 // máquina praticava desde sempre; subir satura a iGPU e derruba o render.
 const CONCORRENCIA_REMOTION = inteiroDoAmbiente("REMOTION_CONCURRENCY", 12, 1);
 
+// D-644: o `worker_debug.log` crescia para sempre (o da raiz do renderer passou
+// de 2 MB). Ao chegar no teto ele vira `.1` e recomeça — uma geração só, que é
+// o suficiente para investigar o último incidente. O teto fica MUITO acima do
+// log de um short (poucos KB por passo), que a tela lê inteiro (D-568): lá a
+// rotação nunca acontece e nenhuma duração some.
+const TETO_DO_LOG_DO_JOB = inteiroDoAmbiente(
+  "WORKER_LOG_MAX_BYTES",
+  5 * 1024 * 1024,
+  1,
+);
+
+function anotarNoLogDoJob(dir, texto) {
+  const destino = path.join(dir, "worker_debug.log");
+  try {
+    if (fs.statSync(destino).size >= TETO_DO_LOG_DO_JOB) {
+      fs.renameSync(destino, `${destino}.1`);
+    }
+  } catch (e) {}
+  try {
+    fs.appendFileSync(destino, texto);
+  } catch (e) {}
+}
+
 function isOverlayJob(jobData) {
   // Categoria explícita vinda do backend (preferida); fallback heurístico
   // mantém compatibilidade com versões antigas que não enviam `category`.
@@ -447,12 +470,10 @@ async function executarJob(jobData, jobFile) {
   let debugCwd = null;
   const registrarDesfecho = (status) => {
     if (!debugCwd) return;
-    try {
-      fs.appendFileSync(
-        path.join(debugCwd, "worker_debug.log"),
-        `[${new Date().toISOString()}] Fim: ${id} status=${status} duration_ms=${Date.now() - jobStartedAt}\n`,
-      );
-    } catch (e) {}
+    anotarNoLogDoJob(
+      debugCwd,
+      `[${new Date().toISOString()}] Fim: ${id} status=${status} duration_ms=${Date.now() - jobStartedAt}\n`,
+    );
   };
 
   try {
@@ -500,13 +521,10 @@ async function executarJob(jobData, jobFile) {
 
     // Log para arquivo no diretório de trabalho
     debugCwd = finalCwd;
-    try {
-      const logPath = path.join(finalCwd, "worker_debug.log");
-      fs.appendFileSync(
-        logPath,
-        `\n[${new Date().toISOString()}] Job: ${id}\nCMD: ${translatedCmd.join(" ")}\nCWD: ${finalCwd}\n`,
-      );
-    } catch (e) {}
+    anotarNoLogDoJob(
+      finalCwd,
+      `\n[${new Date().toISOString()}] Job: ${id}\nCMD: ${translatedCmd.join(" ")}\nCWD: ${finalCwd}\n`,
+    );
 
     // 2. FFmpeg: o backend já cuida de deletar o output antes de enfileirar.
     // NÃO pular execução com base em tamanho — arquivo residual pode estar

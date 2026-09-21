@@ -47,8 +47,10 @@ def _rodar_job(projetos: Path, cmd: list[str], *, espera: float = 8.0) -> dict:
     )
     try:
         time.sleep(2)
+        # D-644: `cwd` no tmp do teste — na raiz do renderer, cada rodada deixava
+        # suas linhas no `worker_debug.log` de lá (foram 2 MB).
         (fila / "req_teste.json").write_text(
-            json.dumps({"id": "teste", "cwd": str(RENDERER), "cmd": cmd}), encoding="utf-8"
+            json.dumps({"id": "teste", "cwd": str(projetos), "cmd": cmd}), encoding="utf-8"
         )
         limite = time.time() + espera
         resposta = fila / "res_teste.json"

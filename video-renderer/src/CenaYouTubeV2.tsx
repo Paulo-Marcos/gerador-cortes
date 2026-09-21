@@ -35,7 +35,7 @@ export const CenaYouTubeV2: React.FC<YouTubeProps> = ({
       <AbsoluteFill>
         <OffthreadVideo
           src={videoUrl}
-          startFrom={startOffset}
+          trimBefore={startOffset}
           style={{
             width: "100%",
             height: "100%",
