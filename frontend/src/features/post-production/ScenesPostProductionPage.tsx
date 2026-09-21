@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import type { CenaRemotion, Corte } from '@/types/models';
 import type { PlayerHandle } from '@/features/editor/fase1/PlayerPanel';
 import { EditorFase2 } from '@/features/editor/fase2/EditorFase2';
+import { criarRelogioDoPlayer } from '@/features/editor/fase2/relogioDoPlayer';
 import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
 import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
@@ -87,7 +88,9 @@ export function ScenesPostProductionPage() {
   const statusBruto = useStatusBruto(corteId);
 
   const [cenas, setCenas] = useState<CenaRemotion[]>([]);
-  const [currentTime, setCurrentTime] = useState(0);
+  // D-657: o tempo do player mora num relógio, não no estado da página. Aqui
+  // ele só era repassado — e cada um dos 30 frames/s re-renderizava a tela toda.
+  const [relogio] = useState(() => criarRelogioDoPlayer());
   // D-450: velocidade padrao vinda de Ajustes (app_settings).
   const velocidadePadrao = useVelocidadePlayerPadrao();
   const [playbackRate, setPlaybackRate] = useState(velocidadePadrao);
@@ -154,8 +157,8 @@ export function ScenesPostProductionPage() {
 
   useEffect(() => {
     setCenas(payload.cenas);
-    setCurrentTime(0);
-  }, [payload.cenas, corteId]);
+    relogio.marcar(0);
+  }, [payload.cenas, corteId, relogio]);
 
   useEffect(() => {
     setRenderFinalLocal(
@@ -601,8 +604,7 @@ export function ScenesPostProductionPage() {
               formato={payload.formato}
               paleta={payload.paleta}
               playerRef={playerRef}
-              currentTime={currentTime}
-              onTimeUpdate={setCurrentTime}
+              relogio={relogio}
               onSeek={(seg) => playerRef.current?.seekTo(seg)}
               onCenasChange={setCenas}
               onAbrirStudio={abrirStudio}
@@ -712,8 +714,7 @@ export function ScenesPostProductionPage() {
             formato={payload.formato}
             paleta={payload.paleta}
             playerRef={playerRef}
-            currentTime={currentTime}
-            onTimeUpdate={setCurrentTime}
+            relogio={relogio}
             onSeek={(seg) => playerRef.current?.seekTo(seg)}
             onCenasChange={setCenas}
             onAbrirStudio={abrirStudio}

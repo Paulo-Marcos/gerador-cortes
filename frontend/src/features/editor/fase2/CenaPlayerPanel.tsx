@@ -1,12 +1,4 @@
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { ExternalLink, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Player, type PlayerRef } from '@remotion/player';
 import type { ComponentType } from 'react';
@@ -18,6 +10,7 @@ import { segParaMmSs } from '../timeUtils';
 import { CenasRemotionPreview, type SombraNivelPadrao } from './CenasRemotionPreview';
 import { buildCenaVisualRevision, type LayoutCardPadrao } from './cardPreviewContracts';
 import { resolveYoutubeModeAt, type YoutubeLayout } from './youtubeLayout';
+import { useTempoDoPlayer, type RelogioDoPlayer } from './relogioDoPlayer';
 
 const FPS = 30;
 
@@ -29,7 +22,8 @@ interface Props {
   cenas: CenaRemotion[];
   durationSeg: number;
   offsetSeg?: number;
-  onTimeUpdate: (t: number) => void;
+  /** D-657: onde o frame corrente é publicado, 30 vezes por segundo. */
+  relogio: RelogioDoPlayer;
   modoLabel: string;
   onAbrirStudio: () => void;
   abrindoStudio: boolean;
@@ -50,7 +44,7 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
     cenas,
     durationSeg,
     offsetSeg = 0,
-    onTimeUpdate,
+    relogio,
     modoLabel,
     onAbrirStudio,
     abrindoStudio,
@@ -66,7 +60,6 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
 ) {
   const playerRef = useRef<PlayerRef>(null);
   const lastFrameRef = useRef(0);
-  const [currentTime, setCurrentTime] = useState(0);
 
   const durationInFrames = useMemo(() => {
     const fromCorte = Math.ceil(Math.max(0, durationSeg) * FPS);
@@ -162,32 +155,15 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
     const onFrame = (event: { detail: { frame: number } }) => {
       const frame = clampFrame(event.detail.frame, durationInFrames);
       lastFrameRef.current = frame;
-      const t = frame / FPS;
-      setCurrentTime(t);
-      onTimeUpdate(t);
+      // D-657: publica no relógio em vez de subir por estado — antes, cada
+      // frame re-renderizava este painel (e o Player junto) e a página inteira.
+      relogio.marcar(frame / FPS);
     };
     p.addEventListener('frameupdate', onFrame);
     return () => {
       p.removeEventListener('frameupdate', onFrame);
     };
-  }, [durationInFrames, onTimeUpdate, playerKey]);
-
-  const { cenaAtiva, proximaCena } = useMemo(() => {
-    const t = currentTime + offsetSeg;
-    const ordenadas = [...cenas].sort((a, b) => a.inicio - b.inicio);
-    const ativa = ordenadas.find((cena) => t >= cena.inicio && t <= cena.fim) ?? null;
-    const proxima = ativa ? null : (ordenadas.find((cena) => cena.inicio > t) ?? null);
-    return { cenaAtiva: ativa, proximaCena: proxima };
-  }, [cenas, currentTime, offsetSeg]);
-
-  const cenaAtivaLabel = cenaAtiva ? metaCena(cenaAtiva.tipo).label : null;
-  const proximaLabel = proximaCena ? metaCena(proximaCena.tipo).label : null;
-  const segundosParaProxima = proximaCena
-    ? Math.max(0, proximaCena.inicio - (currentTime + offsetSeg))
-    : null;
-  const layoutAtivo = layoutYoutube
-    ? resolveYoutubeModeAt(layoutYoutube, currentTime + offsetSeg)
-    : 'full';
+  }, [durationInFrames, relogio, playerKey]);
 
   const handleAbrirStudio = useCallback(() => onAbrirStudio(), [onAbrirStudio]);
 
@@ -201,31 +177,12 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
           Remotion
         </span>
         <div className="flex-1" />
-        <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-dim)]">
-          t={segParaMmSs(currentTime, true)}
-        </span>
-        <span className="font-code text-[10.5px] uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
-          ·
-        </span>
-        {cenaAtiva ? (
-          <span className="rounded-full bg-emerald-400 px-2 py-0.5 font-code text-[10.5px] font-bold text-emerald-950">
-            cena: {cenaAtivaLabel}
-          </span>
-        ) : proximaCena ? (
-          <span
-            className="rounded-full border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 py-0.5 font-code text-[10.5px] text-[var(--wb-text-mute)]"
-            title={`Próxima: ${proximaLabel} em ${segParaMmSs(proximaCena.inicio, true)}`}
-          >
-            próx: {proximaLabel} em {segundosParaProxima!.toFixed(1)}s
-          </span>
-        ) : (
-          <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 font-code text-[10.5px] text-amber-300">
-            sem cenas {cenas.length === 0 ? '(0 carregadas)' : ''}
-          </span>
-        )}
-        <span className="rounded-full border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 py-0.5 font-code text-[10.5px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
-          {layoutAtivo === 'compartilhada' ? 'compartilhada' : 'full'}
-        </span>
+        <CabecalhoDoTempo
+          relogio={relogio}
+          cenas={cenas}
+          offsetSeg={offsetSeg}
+          layoutYoutube={layoutYoutube}
+        />
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
@@ -298,3 +255,68 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
     </section>
   );
 });
+
+/**
+ * D-657: o cabeçalho do preview é o único trecho deste painel que muda a cada
+ * frame (timecode, cena ativa, contagem até a próxima). Isolado, ele assina o
+ * relógio sozinho — e o `<Player>` ao lado deixa de re-renderizar 30x/s.
+ */
+function CabecalhoDoTempo({
+  relogio,
+  cenas,
+  offsetSeg,
+  layoutYoutube,
+}: {
+  relogio: RelogioDoPlayer;
+  cenas: CenaRemotion[];
+  offsetSeg: number;
+  layoutYoutube?: YoutubeLayout;
+}) {
+  const currentTime = useTempoDoPlayer(relogio);
+  const { cenaAtiva, proximaCena } = useMemo(() => {
+    const t = currentTime + offsetSeg;
+    const ordenadas = [...cenas].sort((a, b) => a.inicio - b.inicio);
+    const ativa = ordenadas.find((cena) => t >= cena.inicio && t <= cena.fim) ?? null;
+    const proxima = ativa ? null : (ordenadas.find((cena) => cena.inicio > t) ?? null);
+    return { cenaAtiva: ativa, proximaCena: proxima };
+  }, [cenas, currentTime, offsetSeg]);
+
+  const cenaAtivaLabel = cenaAtiva ? metaCena(cenaAtiva.tipo).label : null;
+  const proximaLabel = proximaCena ? metaCena(proximaCena.tipo).label : null;
+  const segundosParaProxima = proximaCena
+    ? Math.max(0, proximaCena.inicio - (currentTime + offsetSeg))
+    : null;
+  const layoutAtivo = layoutYoutube
+    ? resolveYoutubeModeAt(layoutYoutube, currentTime + offsetSeg)
+    : 'full';
+
+  return (
+    <>
+      <span className="font-code text-[11px] tabular-nums text-[var(--wb-text-dim)]">
+        t={segParaMmSs(currentTime, true)}
+      </span>
+      <span className="font-code text-[10.5px] uppercase tracking-[0.06em] text-[var(--wb-text-dim)]">
+        ·
+      </span>
+      {cenaAtiva ? (
+        <span className="rounded-full bg-emerald-400 px-2 py-0.5 font-code text-[10.5px] font-bold text-emerald-950">
+          cena: {cenaAtivaLabel}
+        </span>
+      ) : proximaCena ? (
+        <span
+          className="rounded-full border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 py-0.5 font-code text-[10.5px] text-[var(--wb-text-mute)]"
+          title={`Próxima: ${proximaLabel} em ${segParaMmSs(proximaCena.inicio, true)}`}
+        >
+          próx: {proximaLabel} em {segundosParaProxima!.toFixed(1)}s
+        </span>
+      ) : (
+        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 font-code text-[10.5px] text-amber-300">
+          sem cenas {cenas.length === 0 ? '(0 carregadas)' : ''}
+        </span>
+      )}
+      <span className="rounded-full border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2 py-0.5 font-code text-[10.5px] uppercase tracking-[0.06em] text-[var(--wb-text-mute)]">
+        {layoutAtivo === 'compartilhada' ? 'compartilhada' : 'full'}
+      </span>
+    </>
+  );
+}

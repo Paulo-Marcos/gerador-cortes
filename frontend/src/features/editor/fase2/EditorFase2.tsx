@@ -22,6 +22,7 @@ import { calcularDuracaoLiquida } from '../timeUtils';
 import { useAtualizarCorte, corteKey } from '@/hooks/useEditor';
 import { useToast } from '@/components/ui/toaster';
 import { CenaPlayerPanel } from './CenaPlayerPanel';
+import { ComTempoDoPlayer, useTempoDoPlayer, type RelogioDoPlayer } from './relogioDoPlayer';
 import { CenasPanel, type CenasPanelHandle } from './CenasPanel';
 import { SceneTimeline } from './SceneTimeline';
 import { AlertaCenasForaDoCorte } from './AlertaCenasForaDoCorte';
@@ -64,12 +65,12 @@ interface Props {
   formato?: string;
   paleta?: Record<string, string>;
   playerRef: RefObject<PlayerHandle>;
-  onTimeUpdate: (t: number) => void;
+  /** D-657: o tempo do player. Ler com `agora()` num gesto; assinar para desenhar. */
+  relogio: RelogioDoPlayer;
   onSeek: (seg: number) => void;
   onCenasChange: (cenas: CenaRemotion[]) => void;
   onAbrirStudio: () => void;
   abrindoStudio: boolean;
-  currentTime: number;
   playbackRate?: number;
   /** Shell Workbench (AUDITORIA §2b): painéis CENAS/LAYOUT retráteis. */
   workbench?: boolean;
@@ -85,12 +86,11 @@ export function EditorFase2({
   paleta,
   corte,
   playerRef,
-  onTimeUpdate,
+  relogio,
   onSeek,
   onCenasChange,
   onAbrirStudio,
   abrindoStudio,
-  currentTime,
   playbackRate,
   workbench = false,
 }: Props) {
@@ -180,12 +180,12 @@ export function EditorFase2({
     },
   });
 
-  const cenaAtivaIdx = useMemo(() => {
-    const ordenadas = [...cenas].sort((a, b) => a.inicio - b.inicio);
-    return ordenadas.findIndex(
-      (c) => currentTime + offsetSeg >= c.inicio && currentTime + offsetSeg <= c.fim,
-    );
-  }, [cenas, currentTime]);
+  const cenasOrdenadas = useMemo(() => [...cenas].sort((a, b) => a.inicio - b.inicio), [cenas]);
+  // D-657: o seletor devolve o ÍNDICE — o editor só re-renderiza quando a
+  // cena sob o playhead troca, não a cada um dos 30 frames por segundo.
+  const cenaAtivaIdx = useTempoDoPlayer(relogio, (t) =>
+    cenasOrdenadas.findIndex((c) => t + offsetSeg >= c.inicio && t + offsetSeg <= c.fim),
+  );
   // IMPORTANTE: prioriza a duração REAL do arquivo (medida via ffprobe pelo
   // backend após cada geração).  Sem isso, usamos a estimativa LÍQUIDA
   // (`fim - inicio` − soma dos desvios), que pode diferir do arquivo real
@@ -227,7 +227,7 @@ export function EditorFase2({
 
   const handleAddRegion = useCallback(
     (modo: YoutubeLayoutMode) => {
-      const inicio = Math.max(0, Math.min(timelineDuration, currentTime + offsetSeg));
+      const inicio = Math.max(0, Math.min(timelineDuration, relogio.agora() + offsetSeg));
       const fim = Math.max(inicio + 1, Math.min(timelineDuration, inicio + 30));
       const novoLayout = normalizeYoutubeLayout({
         ...layoutYoutube,
@@ -254,7 +254,7 @@ export function EditorFase2({
     [
       atualizarCorte,
       corte.id,
-      currentTime,
+      relogio,
       layoutYoutube,
       notify,
       offsetSeg,
@@ -370,7 +370,7 @@ export function EditorFase2({
       const region = layoutYoutube.regioes[selectedRegionIdx];
       if (!region) return;
       const safeDuration = Math.max(0.1, timelineDuration);
-      const tempo = Math.max(0, Math.min(safeDuration, round1(currentTime + offsetSeg)));
+      const tempo = Math.max(0, Math.min(safeDuration, round1(relogio.agora() + offsetSeg)));
       let next: YoutubeLayoutRegion;
       if (edge === 'inicio') {
         const maxInicio = Math.max(0, region.fim - 0.1);
@@ -382,7 +382,7 @@ export function EditorFase2({
       handleResizeRegion(selectedRegionIdx, next);
     },
     [
-      currentTime,
+      relogio,
       handleResizeRegion,
       layoutYoutube.regioes,
       offsetSeg,
@@ -401,7 +401,7 @@ export function EditorFase2({
       setSelectedCenaIdx(null);
       return;
     }
-    const t = currentTime + offsetSeg;
+    const t = relogio.agora() + offsetSeg;
     const regionAtPlayhead = layoutYoutube.regioes.findIndex((r) => t >= r.inicio && t <= r.fim);
     if (regionAtPlayhead >= 0) {
       handleSelecionarRegiao(regionAtPlayhead);
@@ -414,7 +414,7 @@ export function EditorFase2({
     }
   }, [
     cenas,
-    currentTime,
+    relogio,
     handleSelecionarCena,
     handleSelecionarRegiao,
     layoutYoutube.regioes,
@@ -566,7 +566,7 @@ export function EditorFase2({
               durationSeg={timelineDuration}
               offsetSeg={offsetSeg}
               modoLabel={modoLabel}
-              onTimeUpdate={onTimeUpdate}
+              relogio={relogio}
               onAbrirStudio={onAbrirStudio}
               abrindoStudio={abrindoStudio}
               sombraNivelPadrao={projeto?.sombra_nivel_padrao ?? 'nenhuma'}
@@ -579,41 +579,45 @@ export function EditorFase2({
             />
           </div>
           <div ref={timelineWrapperRef} className="relative flex-none">
-            <SceneTimeline
-              cenas={cenas}
-              currentTime={currentTime + offsetSeg}
-              duration={timelineDuration}
-              layoutYoutube={layoutYoutube}
-              activeIdx={cenaAtivaIdx}
-              selectedCenaIdx={selectedCenaIdx}
-              selectedRegionIdx={selectedRegionIdx}
-              onSeek={onSeek}
-              onSelectCena={(idx) => handleSelecionarCena(idx)}
-              onSelectRegion={(idx) => handleSelecionarRegiao(idx)}
-              onAddRegion={handleAddRegion}
-              onRegionResize={handleResizeRegion}
-              onAjustarInicioPinada={() => handleAjustarRegiaoSelecionada('inicio')}
-              onAjustarFimPinada={() => handleAjustarRegiaoSelecionada('fim')}
-              waveformCorteId={corte.id}
-              waveformSourceStartSec={corte.inicio_seg}
-              waveformSourceEndSec={corte.fim_seg}
-              waveformDesvios={corte.desvios}
-              segmentosDetectados={segmentosDetectados}
-              onReprocessarSegmentosDetectados={
-                corte.arquivo_clip_path ? reprocessarSegmentos : undefined
-              }
-              detectandoSegmentos={detectandoSegmentos}
-              onSelectSegmentoDetectado={(indice, anchorClientX) => {
-                const wrapper = timelineWrapperRef.current;
-                if (!wrapper) return;
-                const rect = wrapper.getBoundingClientRect();
-                setPopoverSegmento({
-                  indice,
-                  anchorLeft: anchorClientX - rect.left,
-                  anchorTop: 28,
-                });
-              }}
-            />
+            <ComTempoDoPlayer relogio={relogio}>
+              {(t) => (
+                <SceneTimeline
+                  cenas={cenas}
+                  currentTime={t + offsetSeg}
+                  duration={timelineDuration}
+                  layoutYoutube={layoutYoutube}
+                  activeIdx={cenaAtivaIdx}
+                  selectedCenaIdx={selectedCenaIdx}
+                  selectedRegionIdx={selectedRegionIdx}
+                  onSeek={onSeek}
+                  onSelectCena={(idx) => handleSelecionarCena(idx)}
+                  onSelectRegion={(idx) => handleSelecionarRegiao(idx)}
+                  onAddRegion={handleAddRegion}
+                  onRegionResize={handleResizeRegion}
+                  onAjustarInicioPinada={() => handleAjustarRegiaoSelecionada('inicio')}
+                  onAjustarFimPinada={() => handleAjustarRegiaoSelecionada('fim')}
+                  waveformCorteId={corte.id}
+                  waveformSourceStartSec={corte.inicio_seg}
+                  waveformSourceEndSec={corte.fim_seg}
+                  waveformDesvios={corte.desvios}
+                  segmentosDetectados={segmentosDetectados}
+                  onReprocessarSegmentosDetectados={
+                    corte.arquivo_clip_path ? reprocessarSegmentos : undefined
+                  }
+                  detectandoSegmentos={detectandoSegmentos}
+                  onSelectSegmentoDetectado={(indice, anchorClientX) => {
+                    const wrapper = timelineWrapperRef.current;
+                    if (!wrapper) return;
+                    const rect = wrapper.getBoundingClientRect();
+                    setPopoverSegmento({
+                      indice,
+                      anchorLeft: anchorClientX - rect.left,
+                      anchorTop: 28,
+                    });
+                  }}
+                />
+              )}
+            </ComTempoDoPlayer>
             {popoverSegmento && segmentosDetectados[popoverSegmento.indice] && (
               <SegmentoDetectadoPopover
                 segmento={segmentosDetectados[popoverSegmento.indice]}
@@ -661,15 +665,19 @@ export function EditorFase2({
                 </div>
               </div>
             ) : (
-              <YoutubeLayoutPanel
-                ref={layoutPanelRef}
-                corteId={corte.id}
-                projetoId={corte.projeto_id}
-                layout={layoutYoutube}
-                currentTime={currentTime + offsetSeg}
-                duration={timelineDuration}
-                onSeek={onSeek}
-              />
+              <ComTempoDoPlayer relogio={relogio}>
+                {(t) => (
+                  <YoutubeLayoutPanel
+                    ref={layoutPanelRef}
+                    corteId={corte.id}
+                    projetoId={corte.projeto_id}
+                    layout={layoutYoutube}
+                    currentTime={t + offsetSeg}
+                    duration={timelineDuration}
+                    onSeek={onSeek}
+                  />
+                )}
+              </ComTempoDoPlayer>
             )}
           </div>
         </PanelShell>
@@ -690,7 +698,7 @@ export function EditorFase2({
               durationSeg={timelineDuration}
               offsetSeg={offsetSeg}
               modoLabel={modoLabel}
-              onTimeUpdate={onTimeUpdate}
+              relogio={relogio}
               onAbrirStudio={onAbrirStudio}
               abrindoStudio={abrindoStudio}
               sombraNivelPadrao={projeto?.sombra_nivel_padrao ?? 'nenhuma'}
@@ -703,43 +711,47 @@ export function EditorFase2({
             />
           </div>
           <div ref={timelineWrapperRef} className="relative">
-            <SceneTimeline
-              cenas={cenas}
-              currentTime={currentTime + offsetSeg}
-              duration={timelineDuration}
-              layoutYoutube={layoutYoutube}
-              activeIdx={cenaAtivaIdx}
-              selectedCenaIdx={selectedCenaIdx}
-              selectedRegionIdx={selectedRegionIdx}
-              onSeek={onSeek}
-              onSelectCena={(idx) => handleSelecionarCena(idx)}
-              onSelectRegion={(idx) => handleSelecionarRegiao(idx)}
-              onAddRegion={handleAddRegion}
-              onRegionResize={handleResizeRegion}
-              onAjustarInicioPinada={() => handleAjustarRegiaoSelecionada('inicio')}
-              onAjustarFimPinada={() => handleAjustarRegiaoSelecionada('fim')}
-              waveformCorteId={corte.id}
-              waveformSourceStartSec={corte.inicio_seg}
-              waveformSourceEndSec={corte.fim_seg}
-              waveformDesvios={corte.desvios}
-              segmentosDetectados={segmentosDetectados}
-              onReprocessarSegmentosDetectados={
-                corte.arquivo_clip_path ? reprocessarSegmentos : undefined
-              }
-              detectandoSegmentos={detectandoSegmentos}
-              onSelectSegmentoDetectado={(indice, anchorClientX) => {
-                // Converte coord global do click para coord local do wrapper.
-                const wrapper = timelineWrapperRef.current;
-                if (!wrapper) return;
-                const rect = wrapper.getBoundingClientRect();
-                setPopoverSegmento({
-                  indice,
-                  anchorLeft: anchorClientX - rect.left,
-                  // Sobe um pouco acima da trilha do Layout YT pra nao tampar.
-                  anchorTop: 28,
-                });
-              }}
-            />
+            <ComTempoDoPlayer relogio={relogio}>
+              {(t) => (
+                <SceneTimeline
+                  cenas={cenas}
+                  currentTime={t + offsetSeg}
+                  duration={timelineDuration}
+                  layoutYoutube={layoutYoutube}
+                  activeIdx={cenaAtivaIdx}
+                  selectedCenaIdx={selectedCenaIdx}
+                  selectedRegionIdx={selectedRegionIdx}
+                  onSeek={onSeek}
+                  onSelectCena={(idx) => handleSelecionarCena(idx)}
+                  onSelectRegion={(idx) => handleSelecionarRegiao(idx)}
+                  onAddRegion={handleAddRegion}
+                  onRegionResize={handleResizeRegion}
+                  onAjustarInicioPinada={() => handleAjustarRegiaoSelecionada('inicio')}
+                  onAjustarFimPinada={() => handleAjustarRegiaoSelecionada('fim')}
+                  waveformCorteId={corte.id}
+                  waveformSourceStartSec={corte.inicio_seg}
+                  waveformSourceEndSec={corte.fim_seg}
+                  waveformDesvios={corte.desvios}
+                  segmentosDetectados={segmentosDetectados}
+                  onReprocessarSegmentosDetectados={
+                    corte.arquivo_clip_path ? reprocessarSegmentos : undefined
+                  }
+                  detectandoSegmentos={detectandoSegmentos}
+                  onSelectSegmentoDetectado={(indice, anchorClientX) => {
+                    // Converte coord global do click para coord local do wrapper.
+                    const wrapper = timelineWrapperRef.current;
+                    if (!wrapper) return;
+                    const rect = wrapper.getBoundingClientRect();
+                    setPopoverSegmento({
+                      indice,
+                      anchorLeft: anchorClientX - rect.left,
+                      // Sobe um pouco acima da trilha do Layout YT pra nao tampar.
+                      anchorTop: 28,
+                    });
+                  }}
+                />
+              )}
+            </ComTempoDoPlayer>
             {popoverSegmento && segmentosDetectados[popoverSegmento.indice] && (
               <SegmentoDetectadoPopover
                 segmento={segmentosDetectados[popoverSegmento.indice]}
@@ -811,15 +823,19 @@ export function EditorFase2({
                 </div>
               </div>
             ) : abaDireita === 'layout' ? (
-              <YoutubeLayoutPanel
-                ref={layoutPanelRef}
-                corteId={corte.id}
-                projetoId={corte.projeto_id}
-                layout={layoutYoutube}
-                currentTime={currentTime + offsetSeg}
-                duration={timelineDuration}
-                onSeek={onSeek}
-              />
+              <ComTempoDoPlayer relogio={relogio}>
+                {(t) => (
+                  <YoutubeLayoutPanel
+                    ref={layoutPanelRef}
+                    corteId={corte.id}
+                    projetoId={corte.projeto_id}
+                    layout={layoutYoutube}
+                    currentTime={t + offsetSeg}
+                    duration={timelineDuration}
+                    onSeek={onSeek}
+                  />
+                )}
+              </ComTempoDoPlayer>
             ) : (
               <div className="flex h-full min-h-0 flex-col bg-[var(--wb-bg-card)]">
                 <FontePresetPanel
