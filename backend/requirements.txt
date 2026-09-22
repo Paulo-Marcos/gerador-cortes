@@ -1,10 +1,10 @@
-fastapi==0.115.0
-uvicorn[standard]==0.50.0
-sqlalchemy[asyncio]==2.0.36
-aiosqlite==0.20.0
-pydantic==2.9.2
-pydantic-settings==2.14.2
-httpx==0.27.2
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+sqlalchemy[asyncio]==2.0.54
+aiosqlite==0.22.1
+pydantic==2.13.5
+pydantic-settings==2.15.0
+httpx==0.28.1
 python-multipart==0.0.32
 yt-dlp>=2026.8.19
 aiofiles==24.1.0
@@ -22,11 +22,11 @@ websockets==13.1
 PyYAML==6.0.3
 watchfiles==1.2.0
 google-genai>=0.5.0
-google-api-python-client==2.118.0
-google-auth-oauthlib==1.2.0
-google-auth-httplib2==0.2.0
+google-api-python-client==2.200.0
+google-auth-oauthlib==1.4.1
+google-auth-httplib2==0.4.2
 Pillow==12.3.0
-scenedetect[opencv]==0.7
+scenedetect[opencv]==0.7.1
 
 # O opencv vem como dependencia do scenedetect, mas a VERSAO e nossa (D-583).
 # O 5.0 aposentou os Haar cascades: sumiram tanto `cv2.CascadeClassifier` quanto
@@ -53,7 +53,7 @@ opencv-python==4.14.0.94
 # Chrome JA INSTALADO do operador por CDP, entao nao ha `playwright install`
 # nem 130 MB de Chromium baixado. Sem ele o app degrada para a macro (D-503),
 # que monta o pacote e abre a aba.
-playwright==1.62.0
+playwright==1.63.0
 
 # Quem e o dono da janela (D-537/D-564). O robo deriva a porta de depuracao do
 # CAMINHO do perfil e, antes de reaproveitar uma porta ocupada, pergunta de quem
