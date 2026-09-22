@@ -82,6 +82,8 @@ export type BancadaChromeProps = {
   onAprovar: () => void;
   /** Sem ele a barra não mostra Rejeitar. */
   onRejeitar?: () => void;
+  /** D-746: excluir o corte de vez (a tela confirma antes). Fica no topo. */
+  onExcluir?: () => void;
   onNovoTrecho?: () => void;
   /** D-746: a tela troca peças da barra padrão (bruto). A Pós usa para dizer
    *  a verdade: primário "Renderizar final", veredito à parte, sem Salvar.
@@ -111,6 +113,7 @@ export function BancadaChrome({
   leitura,
   onAprovar,
   onRejeitar,
+  onExcluir,
   onNovoTrecho,
   barra,
 }: BancadaChromeProps) {
@@ -172,6 +175,9 @@ export function BancadaChrome({
           texto: brutoPronto ? 'Regerar bruto' : 'Gerar bruto',
           onClick: onGerarBruto,
         },
+        // D-746: excluir é trabalho sobre o corte, não veredito — mora aqui,
+        // longe do Aprovar, e a tela pede confirmação antes.
+        ...(onExcluir ? [{ icone: 'trash' as const, texto: 'Excluir corte', onClick: onExcluir }] : []),
       ],
       // O chip de estado da barra superior é o que responde "perdi alguma
       // coisa?" sem exigir olhar para o botão Salvar.

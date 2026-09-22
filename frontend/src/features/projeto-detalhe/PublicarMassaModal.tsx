@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/modal';
+import { useQueryClient } from '@tanstack/react-query';
+import { exportStatusKey } from '@/hooks/useProjetoDetalhe';
 import { api } from '@/lib/api';
 import type { BulkYoutubeRequest, StatusExportCorte } from '@/types/models';
 
@@ -41,6 +43,10 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
   const [inicio, setInicio] = useState(nowPlusOneHourLocal());
   const [resultados, setResultados] = useState<ResultadoPorCorte[]>([]);
   const [enviando, setEnviando] = useState(false);
+  const qc = useQueryClient();
+  // D-746: depois de enfileirar, o lote NÃO pode ser enviado de novo — um
+  // segundo clique duplicava os vídeos no canal. O rodapé vira só "Fechar".
+  const loteEnviado = resultados.some((r) => r.status === 'enfileirado');
 
   // Resetar quando abrir
   useEffect(() => {
@@ -90,6 +96,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
       setResultados((prev) =>
         prev.map((r) => ({ ...r, status: 'enfileirado', mensagem: res.message })),
       );
+      void qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
     } catch (err) {
       setResultados((prev) =>
         prev.map((r) => ({ ...r, status: 'erro', mensagem: (err as Error).message })),
@@ -193,10 +200,15 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
       )}
 
       <div className="mt-5 flex items-center justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onClose} disabled={enviando}>
+        <Button
+          type="button"
+          variant={loteEnviado ? 'default' : 'ghost'}
+          onClick={onClose}
+          disabled={enviando}
+        >
           {enviando ? 'Aguarde...' : 'Fechar'}
         </Button>
-        {totalProntos > 0 && (
+        {totalProntos > 0 && !loteEnviado && (
           <Button type="button" onClick={onPublicar} disabled={enviando || agenda.length === 0}>
             {enviando ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
             Publicar {agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'}

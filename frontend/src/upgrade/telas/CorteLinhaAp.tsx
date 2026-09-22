@@ -102,7 +102,8 @@ export function CorteLinhaAp({
       acao: () => atualizar.mutate({ status: 'proposto' }),
     },
     pronto: {
-      texto: 'Publicar',
+      // D-746: o verbo do resultado; o clique abre a conferência, não envia.
+      texto: 'Enviar ao YouTube',
       icone: 'send' as IconName,
       forte: true,
       acao: onEnviarYoutube,

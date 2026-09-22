@@ -630,13 +630,32 @@ export function EditorPage() {
 
   const deletarCorte = useDeletarCorte(corteId, projetoId);
 
-  function toggleRejeitado() {
+  // D-746: R devolve (reversível); excluir é ação à parte e pede confirmação.
+  // Antes o R, "alternar rejeitado", apagava o corte e os arquivos dele de vez
+  // atrás de um confirm do navegador — um Enter e a decisão estava perdida.
+  function devolverAProposto() {
     if (!corteUI) return;
-    if (
-      window.confirm(
-        'Tem certeza que deseja excluir permanentemente este corte e todos os seus arquivos?',
-      )
-    ) {
+    if (!['aprovado', 'processado'].includes(corteUI.status)) return;
+    atualizarCorte.mutate({ status: 'proposto' });
+  }
+
+  function excluirCorte() {
+    if (!corteUI) return;
+    confirmacao.executarOuPedir(
+      {
+        titulo: 'Excluir o corte de vez',
+        detalhe: `Corte #${corteUI.numero} · ${corteUI.titulo_proposto}`,
+        descricao:
+          'O corte e todos os arquivos dele (bruto, render, capa) saem do disco. Não há como desfazer. Para só tirar a aprovação, use Devolver (R).',
+        confirmLabel: 'Excluir de vez',
+        tone: 'danger',
+      },
+      excluirConfirmado,
+    );
+  }
+
+  function excluirConfirmado() {
+    {
       deletarCorte.mutate(undefined, {
         onSuccess: () => {
           if (cortes.length > 1) {
@@ -679,7 +698,7 @@ export function EditorPage() {
       shortcutFromRegistry('bruto.inAqui', setInicioAtual),
       shortcutFromRegistry('bruto.outAqui', setFimAtual),
       shortcutFromRegistry('bruto.aprovar', toggleAprovado),
-      shortcutFromRegistry('bruto.rejeitar', toggleRejeitado),
+      shortcutFromRegistry('bruto.rejeitar', devolverAProposto),
       shortcutFromRegistry('bruto.fire', () => toggleFire.mutate()),
       shortcutFromRegistry('bruto.leitura', () => corte && toggleLeitura.mutate(corte)),
       shortcutFromRegistry('bruto.travarTrecho', () => setTrechoLocked((v) => !v)),
@@ -899,7 +918,7 @@ export function EditorPage() {
             <StatusToggleRow
               corte={corteUI}
               onAprovar={toggleAprovado}
-              onRejeitar={toggleRejeitado}
+              onRejeitar={excluirCorte}
               onToggleFire={() => toggleFire.mutate()}
               onToggleLeitura={() => toggleLeitura.mutate(corteUI)}
               onUpdateLeitura={(patch) =>
@@ -1255,7 +1274,7 @@ export function EditorPage() {
               }),
           }}
           onAprovar={toggleAprovado}
-          onRejeitar={toggleRejeitado}
+          onExcluir={excluirCorte}
         />
       ) : (
       <UnifiedSidebar
@@ -1292,7 +1311,7 @@ export function EditorPage() {
             <StatusToggleRow
               corte={corteUI}
               onAprovar={toggleAprovado}
-              onRejeitar={toggleRejeitado}
+              onRejeitar={excluirCorte}
               onToggleFire={() => toggleFire.mutate()}
               onToggleLeitura={() => toggleLeitura.mutate(corteUI)}
               onUpdateLeitura={(patch) =>

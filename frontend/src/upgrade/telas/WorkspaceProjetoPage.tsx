@@ -30,9 +30,12 @@ import {
 } from '@/hooks/useProjetoDetalhe';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import type { ProviderIA } from '@/lib/providerIa';
+import { resolveThumbUrl } from '@/lib/api';
 import { formatarDuracao } from '@/lib/utils';
 import type { Corte, DestinoPublicacao, StatusExportCorte } from '@/types/models';
+import { useCanais } from '@/features/channels/useChannels';
 import { Icon, type IconName } from '../Icon';
+import { MolduraDeVideo } from '../MolduraDeVideo';
 import { ModalFields, ModalText, UpgradeModal } from '../UpgradeModal';
 import { useDefinirChrome } from '../UpgradeChrome';
 import { CorteLinhaAp } from './CorteLinhaAp';
@@ -147,6 +150,14 @@ export default function WorkspaceProjetoPage() {
   const [novoCorteAberto, setNovoCorteAberto] = useState(false);
   const [enviandoId, setEnviandoId] = useState<string | null>(null);
   const [informarUrlDe, setInformarUrlDe] = useState<StatusExportCorte | null>(null);
+  // D-746: publicar é público e irreversível — o clique na linha abre a
+  // conferência (canal, título, capa, agendar), e só ela envia.
+  const [publicarDe, setPublicarDe] = useState<StatusExportCorte | null>(null);
+  const [agendarEm, setAgendarEm] = useState('');
+  const [capaQuebrou, setCapaQuebrou] = useState(false);
+  const canais = useCanais();
+  const canalAtivo = canais.data?.canais.find((c) => c.ativo);
+  const capaParaPublicar = publicarDe ? (resolveThumbUrl(id, publicarDe.thumbnail_path) ?? undefined) : undefined;
   const [urlManual, setUrlManual] = useState('');
   const [liberarDe, setLiberarDe] = useState<StatusExportCorte | null>(null);
   const [busca, setBusca] = useState('');
@@ -211,10 +222,10 @@ export default function WorkspaceProjetoPage() {
     if (novaOrdem) reordenar.mutate(novaOrdem);
   }
 
-  function enviarYoutube(corteId: string) {
+  function enviarYoutube(corteId: string, scheduledAt: string | null = null) {
     setEnviandoId(corteId);
     uploadYoutube.mutate(
-      { corteId, body: { scheduled_at: null } },
+      { corteId, body: { scheduled_at: scheduledAt } },
       {
         onSuccess: (data) => {
           notify(data.mensagem || 'Upload enviado para o YouTube.', { tone: 'success' });
@@ -594,7 +605,11 @@ export default function WorkspaceProjetoPage() {
             podeDescer={i < linhas.length - 1}
             reordenando={reordenar.isPending}
             onMover={(delta) => mover(status.corte_id, delta)}
-            onEnviarYoutube={() => enviarYoutube(status.corte_id)}
+            onEnviarYoutube={() => {
+              setAgendarEm('');
+              setCapaQuebrou(false);
+              setPublicarDe(status);
+            }}
             onInformarUrl={() => {
               setInformarUrlDe(status);
               setUrlManual(status.youtube_url_publicado ?? '');
@@ -659,6 +674,66 @@ export default function WorkspaceProjetoPage() {
         projetoId={id}
         onCreated={atualizarTudo}
       />
+
+      <UpgradeModal
+        open={publicarDe !== null}
+        onClose={() => setPublicarDe(null)}
+        icon="send"
+        title={`Enviar o corte #${publicarDe?.numero ?? ''} ao YouTube`}
+        width="600px"
+        subtitle={
+          canalAtivo
+            ? `canal de destino: ${canalAtivo.nome} (${canalAtivo.handle})`
+            : 'canal de destino: o canal ativo'
+        }
+        footerNote="público e sem desfazer pelo app"
+        primaryLabel={agendarEm ? 'Agendar no YouTube' : 'Enviar ao YouTube agora'}
+        primaryIcon={agendarEm ? 'clock' : 'send'}
+        onPrimary={() => {
+          if (!publicarDe) return;
+          enviarYoutube(publicarDe.corte_id, agendarEm ? new Date(agendarEm).toISOString() : null);
+          setPublicarDe(null);
+        }}
+      >
+        {publicarDe ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '150px minmax(0,1fr)', gap: 12 }}>
+            <MolduraDeVideo mat={4} proporcao="16/9">
+              {capaParaPublicar && !capaQuebrou ? (
+                <img
+                  src={capaParaPublicar}
+                  onError={() => setCapaQuebrou(true)}
+                  alt=""
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span
+                  style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: 11, color: 'var(--dim)' }}
+                >
+                  sem capa
+                </span>
+              )}
+            </MolduraDeVideo>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.35 }}>
+                {publicarDe.titulo_youtube || publicarDe.titulo}
+              </span>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--mute)' }}>
+                  Agendar (opcional — vazio envia agora)
+                </span>
+                <span className="fld">
+                  <input
+                    type="datetime-local"
+                    value={agendarEm}
+                    onChange={(e) => setAgendarEm(e.target.value)}
+                    style={{ flex: 1, minWidth: 0, border: 0, outline: 'none', background: 'transparent', fontSize: 12 }}
+                  />
+                </span>
+              </label>
+            </div>
+          </div>
+        ) : null}
+      </UpgradeModal>
 
       <UpgradeModal
         open={informarUrlDe !== null}

@@ -455,7 +455,8 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     id: 'bruto.rejeitar',
     screen: 'bruto',
     key: 'r',
-    description: 'Alternar rejeitado (excluir corte)',
+    // D-746: não apaga mais — excluir de vez é ação à parte, com confirmação.
+    description: 'Devolver a proposto (não apaga nada)',
     group: 'edicao',
   },
   {
