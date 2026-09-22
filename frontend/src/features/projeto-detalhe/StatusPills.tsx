@@ -20,6 +20,9 @@ interface PillSpec {
   hint: string;
 }
 
+// D-746: a ordem é a do fluxo — Thumb e Meta são pré-requisitos do YouTube.
+// Com o YouTube antes delas, um corte renderizado e sem capa apontava
+// "YouTube" como próxima etapa, uma instrução errada.
 export function buildStatusPills(corte: StatusExportCorte): PillSpec[] {
   return [
     {
@@ -62,17 +65,6 @@ export function buildStatusPills(corte: StatusExportCorte): PillSpec[] {
       hint: 'Render final completo (upload_ready/video.mp4)',
     },
     {
-      emoji: '📺',
-      label: 'YouTube',
-      Icon: Youtube,
-      done: Boolean(corte.youtube_url_publicado),
-      hint: corte.youtube_url_publicado
-        ? 'Publicado no YouTube'
-        : corte.youtube_scheduled_at
-          ? 'Agendado no YouTube'
-          : 'Ainda nao publicado',
-    },
-    {
       emoji: '🖼️',
       label: 'Thumb',
       Icon: Image,
@@ -85,6 +77,17 @@ export function buildStatusPills(corte: StatusExportCorte): PillSpec[] {
       Icon: Tags,
       done: corte.metadados_completos,
       hint: 'Metadados (titulo, descricao, tags) completos',
+    },
+    {
+      emoji: '📺',
+      label: 'YouTube',
+      Icon: Youtube,
+      done: Boolean(corte.youtube_url_publicado),
+      hint: corte.youtube_url_publicado
+        ? 'Publicado no YouTube'
+        : corte.youtube_scheduled_at
+          ? 'Agendado no YouTube'
+          : 'Ainda nao publicado',
     },
   ];
 }

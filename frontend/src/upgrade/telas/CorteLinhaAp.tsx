@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { buildStatusPills } from '@/features/projeto-detalhe/StatusPills';
 import { useAprovar, useAtualizarCorte } from '@/hooks/useEditor';
 import { useAbrirPasta } from '@/hooks/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { formatarDuracaoHMS } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { Icon, type IconName } from '../Icon';
+import { MolduraDeVideo } from '../MolduraDeVideo';
+import { SeloDeEstado, TOM_DO_CORTE } from '../SeloDeEstado';
+import { dicaDoPip, montarTira, textoDaProxima, type EstadoDoPip, type Tira } from '../tiraDoCorte';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A linha do corte no Workspace.
@@ -21,15 +24,98 @@ import { Icon, type IconName } from '../Icon';
 
 type EstadoLinha = 'proposto' | 'aprovado' | 'pronto' | 'publicado' | 'rejeitado';
 
-const TOM: Record<EstadoLinha, { cor: string; bg: string }> = {
-  proposto: { cor: 'var(--info)', bg: 'var(--info-soft)' },
-  aprovado: { cor: 'var(--accent2)', bg: 'var(--accent-soft)' },
-  pronto: { cor: 'var(--ok)', bg: 'var(--ok-soft)' },
-  publicado: { cor: 'var(--ok)', bg: 'var(--ok-soft)' },
-  rejeitado: { cor: 'var(--mute)', bg: 'var(--inset)' },
+const GRADIENTES = [250, 22, 160, 300, 60, 200];
+
+// D-746: quatro estados, quatro formas — o âmbar com filete cheio é o
+// "parou aqui"; o fantasma é o que ainda vem.
+const TOM_DO_PIP: Record<EstadoDoPip, { bg: string; cor: string; filete: string; opacidade: number }> = {
+  feito: { bg: 'var(--ok-soft)', cor: 'var(--ok)', filete: 'none', opacidade: 1 },
+  agora: { bg: 'var(--warn-soft)', cor: 'var(--warn)', filete: 'inset 0 0 0 1px var(--warn)', opacidade: 1 },
+  rejeitado: { bg: 'var(--err-soft)', cor: 'var(--err)', filete: 'none', opacidade: 1 },
+  falta: { bg: 'transparent', cor: 'var(--dim)', filete: 'inset 0 0 0 1px var(--line2)', opacidade: 0.72 },
 };
 
-const GRADIENTES = [250, 22, 160, 300, 60, 200];
+/**
+ * A tira do corte na roupa da casca nova, agrupada em CENAS · RENDER ·
+ * PUBLICAÇÃO — três perguntas respondíveis ("já gerou cenas?", "já
+ * renderizou?") em vez de uma fileira de oito. A regra mora em
+ * `montarTira`; aqui só a roupa, para a Pós e o modal usarem a mesma.
+ */
+export function TiraDoCorteAp({ tira, compacta = false }: { tira: Tira; compacta?: boolean }) {
+  return (
+    <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 9 }}>
+      {tira.grupos.map((g) => (
+        <span
+          key={g.nome}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '2px 6px 2px 5px',
+            border: '1px solid var(--line2)',
+            borderRadius: 'var(--r1)',
+            background: 'var(--inset)',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--mono)',
+              fontSize: 8.5,
+              fontWeight: 700,
+              letterSpacing: '.08em',
+              color: 'var(--dim)',
+            }}
+          >
+            {g.nome}
+          </span>
+          {g.pips.map((p) => {
+            const tom = TOM_DO_PIP[p.estado];
+            return (
+              <span
+                key={p.sigla}
+                title={dicaDoPip(p)}
+                aria-label={dicaDoPip(p)}
+                data-estado={p.estado}
+                style={{
+                  display: 'grid',
+                  placeItems: 'center',
+                  minWidth: 22,
+                  height: 15,
+                  padding: '0 3px',
+                  borderRadius: 2,
+                  fontFamily: 'var(--mono)',
+                  fontSize: 8.5,
+                  fontWeight: 700,
+                  letterSpacing: '.02em',
+                  background: tom.bg,
+                  color: tom.cor,
+                  boxShadow: tom.filete,
+                  opacity: tom.opacidade,
+                }}
+              >
+                {p.sigla}
+              </span>
+            );
+          })}
+        </span>
+      ))}
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--mute)' }}>
+        {tira.contagem}
+      </span>
+      {compacta ? null : (
+        <span
+          style={{
+            fontSize: 11,
+            whiteSpace: 'nowrap',
+            color: tira.proxima ? 'var(--warn)' : 'var(--dim)',
+          }}
+        >
+          {textoDaProxima(tira)}
+        </span>
+      )}
+    </span>
+  );
+}
 
 /**
  * O estado que a linha mostra. Não é o enum do banco: `StatusCorte` não
@@ -77,10 +163,10 @@ export function CorteLinhaAp({
   const atualizar = useAtualizarCorte(status.corte_id, projetoId);
 
   const estado = estadoDaLinha(corte, status);
-  const tom = TOM[estado];
   const capa = resolveThumbUrl(projetoId, status.thumbnail_path);
+  const [capaErro, setCapaErro] = useState(false);
   const hue = GRADIENTES[status.numero % GRADIENTES.length];
-  const pills = buildStatusPills(status);
+  const tira = montarTira(status, corte?.status);
   const durSeg = corte?.duracao_clip_seg || (corte ? corte.fim_seg - corte.inicio_seg : 0);
 
   const irEditor = () => navigate(`/projetos/${projetoId}/cortes/${status.corte_id}`);
@@ -127,7 +213,7 @@ export function CorteLinhaAp({
       className="card row"
       style={{
         display: 'grid',
-        gridTemplateColumns: '18px 96px 1fr auto',
+        gridTemplateColumns: '18px 96px minmax(0, 1fr) auto',
         gap: 12,
         alignItems: 'center',
         padding: '9px 11px',
@@ -158,28 +244,36 @@ export function CorteLinhaAp({
         </button>
       </span>
 
-      <button
-        type="button"
+      <MolduraDeVideo
+        mat={4}
+        proporcao="16/9"
         onClick={irEditor}
-        aria-label={`Abrir o corte ${status.numero} no editor`}
-        style={{
-          position: 'relative',
-          width: 96,
-          aspectRatio: '16/9',
-          padding: 0,
-          border: 0,
-          borderRadius: 'var(--r2)',
-          overflow: 'hidden',
-          background: `linear-gradient(135deg,oklch(0.55 0.05 ${hue}),oklch(0.28 0.04 ${hue}))`,
-          cursor: 'pointer',
-        }}
+        rotulo={`Abrir o corte ${status.numero} no editor`}
       >
-        {capa ? (
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: `linear-gradient(135deg,oklch(0.55 0.05 ${hue}),oklch(0.28 0.04 ${hue}))`,
+          }}
+        />
+        {capa && !capaErro ? (
           <img
             src={capa}
             alt=""
             loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            // A limpeza de mídia apaga a capa do disco: sem isto o card
+            // mostrava o ícone de imagem quebrada sobre o gradiente.
+            onError={() => setCapaErro(true)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
           />
         ) : null}
         {durSeg > 0 ? (
@@ -188,6 +282,7 @@ export function CorteLinhaAp({
               position: 'absolute',
               bottom: 3,
               right: 4,
+              zIndex: 1,
               fontFamily: 'var(--mono)',
               fontSize: 9.5,
               color: '#fff',
@@ -197,7 +292,7 @@ export function CorteLinhaAp({
             {formatarDuracaoHMS(durSeg)}
           </span>
         ) : null}
-      </button>
+      </MolduraDeVideo>
 
       <span style={{ minWidth: 0 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -230,6 +325,7 @@ export function CorteLinhaAp({
               <Icon name="flame" size={13} />
             </span>
           ) : null}
+          <SeloDeEstado tom={TOM_DO_CORTE[estado]}>{estado}</SeloDeEstado>
         </span>
 
         <span
@@ -238,37 +334,10 @@ export function CorteLinhaAp({
             flexWrap: 'wrap',
             alignItems: 'center',
             gap: 8,
-            marginTop: 5,
+            marginTop: 6,
           }}
         >
-          <span className="chip" style={{ background: tom.bg, color: tom.cor }}>
-            <span
-              style={{ width: 6, height: 6, borderRadius: 99, background: 'currentColor' }}
-              aria-hidden
-            />
-            {estado}
-          </span>
-
-          {/* Os oito estágios ocupam o lugar que o protótipo dá às três
-              flags: mesma altura, mesmo peso, mesma cor por estado. O
-              design escolheu três porque o mock tinha três; a live real
-              tem oito, e esconder cinco não simplificaria a decisão —
-              só adiaria a pergunta "onde foi que este parou?". */}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            {pills.map((p) => (
-              <span
-                key={p.label}
-                title={`${p.label} — ${p.hint}`}
-                style={{
-                  display: 'inline-flex',
-                  color: p.done ? 'var(--ok)' : 'var(--dim)',
-                  opacity: p.done ? 1 : 0.6,
-                }}
-              >
-                <p.Icon size={11} strokeWidth={2.2} aria-hidden />
-              </span>
-            ))}
-          </span>
+          <TiraDoCorteAp tira={tira} />
 
           {corte ? (
             <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: 'var(--dim)' }}>

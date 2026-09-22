@@ -31,9 +31,10 @@ function render(corte: StatusExportCorte) {
 }
 
 describe('buildStatusPills (F-018)', () => {
-  it('ordena as pills como Bruto -> Cenas -> Graded -> Overlays -> Final -> YouTube -> Thumb -> Meta', () => {
+  it('ordena as pills como Bruto -> Cenas -> Graded -> Overlays -> Final -> Thumb -> Meta -> YouTube', () => {
     // Cenas validadas vem antes do render final. Render final tem 3 fases
-    // visiveis (graded, overlays, composicao final). YouTube fecha o ciclo.
+    // visiveis (graded, overlays, composicao final). Thumb e Meta sao
+    // pre-requisitos da publicacao (D-746), e o YouTube fecha o ciclo.
     const pills = buildStatusPills(makeStatus());
 
     expect(pills.map((p) => p.label)).toEqual([
@@ -42,9 +43,9 @@ describe('buildStatusPills (F-018)', () => {
       'Graded',
       'Overlays',
       'Final',
-      'YouTube',
       'Thumb',
       'Meta',
+      'YouTube',
     ]);
   });
 

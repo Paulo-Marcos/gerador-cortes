@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
-import { limpezaDoProjeto, type LimpezaDoProjeto } from '@/features/projetos/limpezaDoProjeto';
+import { limpezaDoProjeto } from '@/features/projetos/limpezaDoProjeto';
 import { construirEtapas } from '@/features/projetos/PipelineProgress';
-import { estadoDoProjeto, type EstadoProjetoKey } from '@/features/projetos/statusMaps';
+import { estadoDoProjeto } from '@/features/projetos/statusMaps';
 import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/hooks/useProjetos';
 import { formatarDataLive, formatarDuracao, thumbnailUrl } from '@/lib/utils';
 import type { Projeto } from '@/types/models';
 import { Icon, type IconName } from '../Icon';
+import { MolduraDeVideo } from '../MolduraDeVideo';
+import { SeloDeEstado, TOM_DA_LIMPEZA, TOM_DO_PROJETO } from '../SeloDeEstado';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O card da Biblioteca na linguagem nova.
@@ -31,19 +33,6 @@ import { Icon, type IconName } from '../Icon';
 // reabrir uma decisão já tomada (D-457/D-527).
 // ─────────────────────────────────────────────────────────────────
 
-const ESTADO_TOM: Record<EstadoProjetoKey, string> = {
-  erro: 'var(--err)',
-  aguardando: 'var(--dim)',
-  baixando: 'var(--warn)',
-  transcrevendo: 'var(--warn)',
-  analise: 'var(--info)',
-  analisado: 'var(--info)',
-  editando: 'var(--accent2)',
-  'pronto-publicar': 'var(--accent)',
-  publicando: 'var(--warn)',
-  publicado: 'var(--ok)',
-};
-
 // A fita do design usa os ícones da etapa, não o componente do lucide —
 // o mapa fecha a ponte pelo rótulo, que é o mesmo nos dois lados.
 const ICONE_ETAPA: Record<string, IconName> = {
@@ -55,17 +44,13 @@ const ICONE_ETAPA: Record<string, IconName> = {
   Publicado: 'rocket',
 };
 
+// D-746: a etapa em curso é ESTADO, não ação — âmbar com filete, nunca a
+// tinta do acento, que é dos botões.
 const TOM_ETAPA = {
-  feito: { bg: 'var(--ok-soft)', cor: 'var(--ok)' },
-  'em-curso': { bg: 'var(--accent)', cor: 'var(--on-accent)' },
-  pendente: { bg: 'var(--inset)', cor: 'var(--dim)' },
+  feito: { bg: 'var(--ok-soft)', cor: 'var(--ok)', filete: 'none' },
+  'em-curso': { bg: 'var(--warn-soft)', cor: 'var(--warn)', filete: 'inset 0 0 0 1px var(--warn)' },
+  pendente: { bg: 'var(--inset)', cor: 'var(--dim)', filete: 'none' },
 };
-
-const TOM_LIMPEZA = {
-  pronto: { bg: 'var(--ok-soft)', cor: 'var(--ok)', icone: 'sparkles' },
-  guardando: { bg: 'var(--accent-soft)', cor: 'var(--accent2)', icone: 'flame' },
-  limpo: { bg: 'var(--inset)', cor: 'var(--mute)', icone: 'check' },
-} satisfies Record<LimpezaDoProjeto['chave'], { bg: string; cor: string; icone: IconName }>;
 
 const HUES = [22, 280, 160, 340, 240, 60, 200, 100];
 
@@ -148,49 +133,46 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
         className="card"
         style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
-        {/* D-610: a miniatura ganha moldura. Colada na borda do card, a arte
-            da live (que já vem cheia de texto e cor) se misturava com os selos
-            e com o próprio card; o respiro e o filete separam "a live" de
-            "o card que fala dela". */}
-        <div style={{ padding: '8px 8px 0' }}>
-        <button
-          type="button"
+        {/* D-746: moldura em três camadas (passe-partout, bisel, vinheta) —
+            a R2 era só respiro + filete, e a arte da live parecia colada. */}
+        <MolduraDeVideo
+          mat={8}
+          proporcao="16/9"
           onClick={abrir}
-          aria-label={`Abrir projeto ${projeto.titulo_live} — ${estado.label}`}
-          style={{
-            position: 'relative',
-            display: 'block',
-            width: '100%',
-            padding: 0,
-            border: '1px solid var(--line)',
-            borderRadius: 'var(--r2)',
-            overflow: 'hidden',
-            boxShadow: 'var(--hi)',
-            aspectRatio: '16/9',
-            background: `linear-gradient(135deg,oklch(0.6 0.06 ${hue}),oklch(0.3 0.05 ${hue}))`,
-            cursor: 'pointer',
-          }}
+          rotulo={`Abrir projeto ${projeto.titulo_live} — ${estado.label}`}
         >
+          {/* O gradiente mora DENTRO da moldura: live sem miniatura continua
+              emoldurada, só troca a arte. */}
+          <span
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: `linear-gradient(135deg,oklch(0.6 0.06 ${hue}),oklch(0.3 0.05 ${hue}))`,
+            }}
+          />
           {thumb && !thumbErro ? (
             <img
               src={thumb}
               alt=""
               loading="lazy"
               onError={() => setThumbErro(true)}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
             />
           ) : null}
 
-          <span
-            className="chip gl"
-            style={{ position: 'absolute', top: 8, left: 8, color: ESTADO_TOM[estado.key] }}
-          >
-            <span
-              style={{ width: 6, height: 6, borderRadius: 99, background: 'currentColor' }}
-              aria-hidden
-            />
-            {estado.label}
-            {baixando ? ` ${Math.round(projeto.progresso_download)}%` : ''}
+          <span style={{ position: 'absolute', top: 8, left: 8 }}>
+            <SeloDeEstado tom={TOM_DO_PROJETO[estado.key]} sobreArte>
+              {estado.label}
+              {baixando ? ` ${Math.round(projeto.progresso_download)}%` : ''}
+            </SeloDeEstado>
           </span>
 
           {nota > 0 ? (
@@ -213,7 +195,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
                 fontFamily: 'var(--mono)',
                 fontSize: 11,
                 color: '#fff',
-                background: 'rgb(0 0 0/.55)',
+                background: 'rgb(10 14 24 / 0.68)',
                 padding: '2px 6px',
                 borderRadius: 'var(--r1)',
               }}
@@ -243,8 +225,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
               />
             </span>
           ) : null}
-        </button>
-        </div>
+        </MolduraDeVideo>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 11 }}>
           <span style={{ minWidth: 0 }}>
@@ -290,18 +271,9 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
                 {meta}
               </span>
               {limpeza ? (
-                <span
-                  className="chip"
-                  title={limpeza.dica}
-                  style={{
-                    flex: 'none',
-                    background: TOM_LIMPEZA[limpeza.chave].bg,
-                    color: TOM_LIMPEZA[limpeza.chave].cor,
-                  }}
-                >
-                  <Icon name={TOM_LIMPEZA[limpeza.chave].icone} size={10} />
+                <SeloDeEstado tom={TOM_DA_LIMPEZA[limpeza.chave]} dica={limpeza.dica}>
                   {limpeza.texto}
-                </span>
+                </SeloDeEstado>
               ) : null}
             </span>
           </span>
@@ -321,6 +293,8 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
                     borderRadius: 'var(--r1)',
                     background: tom.bg,
                     color: tom.cor,
+                    boxShadow: tom.filete,
+                    opacity: e.estado === 'pendente' ? 0.7 : 1,
                   }}
                 >
                   <Icon name={ICONE_ETAPA[e.label] ?? 'circle-dashed'} size={12} />
