@@ -2,175 +2,115 @@
 
 [![CI](https://github.com/Paulo-Marcos/gerador-cortes/actions/workflows/ci.yml/badge.svg)](https://github.com/Paulo-Marcos/gerador-cortes/actions/workflows/ci.yml)
 
-> CutCut é o pipeline que leva uma live do YouTube até o corte pronto para publicar — baixa, transcreve, propõe cortes com IA e entrega metadados e thumbnails, para você só revisar e exportar.
+> CutCut leva uma live do YouTube até o corte publicado: baixa, transcreve, propõe os
+> cortes com IA, e entrega o vídeo renderizado com cenas, capa e texto de publicação —
+> para você revisar, ajustar e publicar no YouTube, no TikTok e no Instagram, com
+> shorts verticais tirados dos mesmos cortes.
 
-## Início Rápido
+## Para quem é
 
-### Pré-requisitos
+Para quem mantém um canal de **cortes de lives** e quer tirar da mão o trabalho repetitivo
+(achar os trechos, limpar silêncios, montar capa e descrição, renderizar, publicar) sem
+abrir mão da decisão editorial. O app roda **na sua máquina**, com os seus canais, e usa
+a **sua** assinatura de IA — não é um serviço na nuvem.
 
-- [Node.js 20+](https://nodejs.org/) (para o frontend e Remotion)
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) instalado no PATH
-- [Claude Code CLI](https://claude.ai/code) instalado no PATH (provedor de IA para análise de cortes e metadados — usa sua assinatura do Claude)
+## O que ele faz
 
-### Instalação em um comando
+- **Vários canais numa instalação**, cada um com identidade, tema, mascote, conta do
+  YouTube e voz editorial próprios.
+- **Encontra lives** para cortar: busca e ranking por visualizações por hora e recência.
+- **Baixa e transcreve** a live (legenda do YouTube ou transcrição local).
+- **A IA propõe os cortes**, com título, gancho e contextualização; você aprova, ajusta as
+  bordas, tira silêncios e trechos, reordena e divide ou junta cortes.
+- **Pós-produção**: cenas animadas (Remotion), layout com tela cheia ou compartilhada e
+  filtro de cor, com prévia ao vivo.
+- **Metadados e capa**: título, descrição, capítulos, tags e prompt de thumbnail gerados
+  por IA, com molduras por canal.
+- **Render** acelerado pela iGPU Intel (QSV) quando disponível, com reserva em CPU.
+- **Publica** no YouTube (API oficial) e, de forma **assistida e experimental**, no TikTok
+  e no Instagram ([ADR-0009](docs/adr/0009-publicacao-assistida-experimental.md)).
+- **Shorts verticais** a partir dos cortes: segmentos, palco 9:16, gancho de abertura,
+  legenda queimada e capa.
+- **Limpeza do disco com regra**: o vídeo final só é apagado depois de publicado em
+  todos os destinos, e o corte marcado como Fire com shorts pendentes fica guardado
+  ([regras RN-15 e RN-16](docs/dominio/regras-de-negocio.md)).
+
+## Plataforma
+
+**Windows é a única plataforma suportada** ([ADR-0008](docs/adr/0008-plataforma-windows.md)).
+Linux, macOS e Docker não são suportados.
+
+## Pré-requisitos
+
+**Obrigatórios**
+
+- [Python 3.11+](https://www.python.org/) (marque "Add to PATH")
+- [Node.js 20+](https://nodejs.org/)
+- [ffmpeg e ffprobe](https://ffmpeg.org/) no PATH
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) no PATH
+
+**Opcionais** (cada um libera uma parte do app)
+
+| Ferramenta | Para quê |
+|---|---|
+| [Claude Code CLI](https://claude.ai/code) | IA pela sua assinatura do Claude |
+| Antigravity CLI (`agy`) | IA pela sua assinatura do Google |
+| Credencial do Google Cloud (`client_secrets.json`) | publicar no YouTube |
+| Chave da API do Gemini | cenas, desvios e imagens de capa |
+| Google Chrome | publicação assistida no TikTok e no Instagram |
+
+Sem nenhum CLI de IA o app funciona no **modo manual**: ele monta o prompt, você cola a
+resposta de qualquer IA ([ADR-0004](docs/adr/0004-provedores-de-ia-v2.md)).
+
+A tela de **Canais** mostra o que está faltando na sua máquina, item por item.
+
+## Instalação
 
 ```powershell
-# Windows
+git clone https://github.com/Paulo-Marcos/gerador-cortes.git
+cd gerador-cortes
 powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1
 ```
 
-```bash
-# Linux / macOS
-bin/bootstrap.sh
-```
+O bootstrap confere os pré-requisitos, cria o ambiente Python do backend, instala as
+dependências do frontend e do renderer e cria o `backend/.env` a partir do exemplo.
+Pode rodar de novo quando quiser: nunca sobrescreve um `.env` existente.
 
-O script confere os pré-requisitos, cria o ambiente Python do backend, instala as dependências
-do frontend e do renderer e cria o `backend/.env` a partir do exemplo (sem sobrescrever um que
-já exista). Pode ser rodado de novo a qualquer momento. Os passos manuais abaixo continuam
-valendo para quem preferir fazer à mão.
-
-### 1. Configurar variáveis de ambiente
-
-```bash
-cp backend/.env.example backend/.env
-# Edite backend/.env e preencha:
-# - GEMINI_API_KEY=<sua chave do Google AI Studio>  (thumbnails e cenas)
-```
-
-A geração de IA (análise de cortes, metadados, desvios, resumo) roda pelo **Claude CLI**
-(provedor local, usa a assinatura do Claude — veja `backend/app/services/claude_ia.py` e
-`backend/app/infrastructure/claude_cli_client.py`). Ele é controlado pelas settings
-`CLAUDE_CLI_*` em `backend/app/config.py` (ex.: `CLAUDE_CLI_ENABLED`, `CLAUDE_CLI_PATH`,
-`CLAUDE_CLI_TIMEOUT`) e já vem habilitado por padrão.
-
-### 2. Subir o backend
-
-```bash
-cd backend
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-- **Backend API**: http://localhost:8000
-- **Docs da API**: http://localhost:8000/docs
-
-### 3. Subir o frontend (React)
-
-```bash
-cd frontend
-cp .env.example .env.local    # opcional, default ja aponta para localhost:8000/api
-npm install
-npm run dev                   # → http://localhost:4300
-```
-
-Para subir tudo (React + backend + Remotion + worker) num único terminal:
+Para subir tudo (backend, frontend, Remotion Studio e o worker de render):
 
 ```powershell
 .\dev.ps1
 ```
 
----
+Abra **http://localhost:4300**. O passo a passo completo, com a credencial do YouTube e
+os CLIs de IA, está em [docs/SETUP.md](docs/SETUP.md). Problemas conhecidos:
+[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
-## Estrutura do Projeto
+## Primeiros passos
 
-```
-gerador-cortes/
-├── docker-compose.yml          # backend
-├── backend/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── app/
-│       ├── main.py             # FastAPI app
-│       ├── models.py           # SQLAlchemy: Projeto, Corte, MetadadoCorte
-│       ├── database.py         # SQLite async
-│       ├── config.py           # Settings via pydantic-settings
-│       ├── routers/
-│       │   ├── projetos.py     # CRUD projetos + WebSocket progresso
-│       │   ├── cortes.py       # CRUD cortes + aprovação
-│       │   ├── metadados.py    # Geração e edição de metadados YouTube
-│       │   └── export.py       # CSV LosslessCut + dashboard de publicação
-│       └── services/
-│           ├── ingestao.py     # yt-dlp download + parsing VTT
-│           ├── analise.py      # via Claude: análise de transcrição → cortes
-│           ├── metadados.py    # via Claude: título/desc/tags/prompt thumbnail
-│           ├── thumbnail.py    # Gemini Imagen API
-│           └── export.py       # ffmpeg: normalização áudio + concat intro/outro
-├── frontend/
-│   └── src/
-│       ├── pages/
-│       │   ├── projetos/           # Lista e criação de projetos
-│       │   ├── projeto-detalhe/    # Pipeline visual de 5 fases
-│       │   ├── cortes-editor/      # Player + revisão de cortes
-│       │   ├── metadados/          # Geração e edição de metadados
-│       │   └── export/             # Dashboard de publicação
-│       ├── services/               # Cliente HTTP central
-│       └── types/models.ts         # Tipos TypeScript
-└── video-renderer/                 # Projeto Remotion + worker de render
-```
+1. Em **Canais**, crie o seu canal (nome, @handle, crédito) e confira os pré-requisitos.
+2. Em **Buscar lives** ou **Ranking**, escolha uma live, ou cole a URL dela.
+3. O app baixa e transcreve. Depois, peça à IA que proponha os cortes.
+4. No **editor de cortes**, aprove, ajuste as bordas e tire os trechos que não servem.
+5. Na **pós-produção**, confira as cenas e o layout; gere os **metadados** e a capa.
+6. Na **revisão final**, renderize; em **Exportar**, publique. Os melhores cortes viram
+   **shorts**.
 
-## Pipeline de Uso
+Atualizar: `git pull`, depois de rodar `python bin/check_update_safety.py`, que confere
+que nada dos seus dados será tocado
+([ADR-0010](docs/adr/0010-distribuicao-e-atualizacao.md)).
 
-```
-1. Acesse http://localhost:4300
-2. Crie um Projeto → cole a URL da live do YouTube
-3. O sistema baixa o vídeo e extrai as legendas automaticamente
-4. Clique "Iniciar Análise IA" → o Claude analisa a transcrição e propõe os cortes
-5. Revise cada corte no Editor (player + aprovação/rejeição)
-6. Exporte CSV → abra no LosslessCut para ajuste fino
-7. Gere Metadados + Thumbnails com IA para cada corte aprovado
-8. Importe os clipes do LosslessCut e processe com ffmpeg
-9. Pasta upload_ready/ tem tudo pronto para o YouTube Studio
-```
+## Documentação
 
-## Variáveis de Ambiente (backend/.env)
+| Para | Leia |
+|---|---|
+| Instalar e configurar | [docs/SETUP.md](docs/SETUP.md) |
+| Entender o domínio | [mapa de contextos](docs/dominio/mapa-de-contextos.md), [glossário](docs/dominio/glossario.md), [regras de negócio](docs/dominio/regras-de-negocio.md) |
+| Entender as decisões | [ADRs](docs/adr/README.md) |
+| Contribuir | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Trabalhar com um agente de IA | [AGENTS.md](AGENTS.md) |
+| O que mudou em cada versão | [CHANGELOG.md](CHANGELOG.md) |
 
-| Variável | Descrição |
-|----------|-----------|
-| `CLAUDE_CLI_ENABLED` | Habilita o Claude CLI como provedor de IA (default: ligado) |
-| `CLAUDE_CLI_PATH` | Caminho do binário `claude` (default: resolvido pelo PATH) |
-| `CLAUDE_CLI_TIMEOUT` | Timeout das chamadas ao Claude CLI |
-| `GEMINI_API_KEY` | Chave da API Gemini (Google AI Studio — thumbnails e cenas) |
-| `PROJETOS_DIR` | Diretório onde os vídeos são salvos |
-| `ASSETS_DIR` | Diretório dos assets (intro, outro) |
+## Licença
 
-## Intro/Outro
-
-Coloque seus arquivos de intro e outro no diretório `backend/assets/intro/`:
-- `intro.mp4` — intro concatenado no início de cada corte
-- `outro.mp4` — (opcional) outro concatenado no final
-
----
-
-## Deploy / Produção
-
-> Para o guia completo de setup, veja [docs/SETUP.md](docs/SETUP.md). Problemas conhecidos de
-> instalação e do render pipeline estão em [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
-
-### Backend
-
-```bash
-# 1. Variáveis de ambiente de produção
-cp backend/.env.production.example backend/.env
-# Edite backend/.env com os valores reais: chaves de API, diretórios
-
-# 2. Configuração do canal
-cp backend/app/canal_config.py.example backend/app/canal_config.py
-# Edite com os prompts e dados do seu canal
-
-# 3. Iniciar o servidor
-cd backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
-```
-
-### Frontend
-
-```bash
-cd frontend
-# Ajuste frontend/.env.production se o backend não estiver em localhost:8000
-npm run build     # gera dist/ com os assets otimizados
-# Sirva dist/ com qualquer servidor HTTP estático (nginx, caddy, serve…)
-```
-
----
-
-**Produção**: CutCut v1.0
+[GPL-3.0](LICENSE).
