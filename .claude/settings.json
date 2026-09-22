@@ -2,6 +2,17 @@
   "skillOverrides": {
     "angular": "off",
     "angular-best-practices": "off",
-    "angular-ui-patterns": "off"
+    "angular-ui-patterns": "off",
+    "tdd-react": "off",
+    "tdd-dotnet": "off",
+    "csharp-craft": "off",
+    "ef-core-data-architect": "off",
+    "ddd-implementation": "name-only",
+    "clean-code": "name-only",
+    "uncle-bob-craft": "name-only",
+    "senior-frontend": "name-only",
+    "ui-skills": "name-only",
+    "caveman-commit": "user-invocable-only",
+    "caveman-review": "user-invocable-only"
   }
 }
