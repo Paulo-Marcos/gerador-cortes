@@ -230,6 +230,13 @@ export const api = {
   exportStatus: (projetoId: string) =>
     request<ExportStatusResponse>(`/export/projeto/${projetoId}/status`),
 
+  /** D-746: a pasta da LIVE (a do corte é `abrirPastaCorte`). */
+  abrirPastaProjeto: (projetoId: string) =>
+    request<{ status: string; dir_path: string }>(`/projetos/${projetoId}/abrir-pasta`, {
+      method: 'POST',
+      body: '{}',
+    }),
+
   abrirPastaCorte: (corteId: string) =>
     request<{ status: string; dir_path: string }>(`/cortes/${corteId}/abrir-pasta`, {
       method: 'POST',

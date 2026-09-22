@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/toaster';
 import { useCriarProjeto } from '@/hooks/useProjetos';
 
 interface Props {
@@ -15,6 +17,8 @@ export function NovoProjetoForm({ open, onClose }: Props) {
   const [url, setUrl] = useState('');
   const [canal, setCanal] = useState('');
   const criar = useCriarProjeto();
+  const navigate = useNavigate();
+  const { notify } = useToast();
 
   if (!open) return null;
 
@@ -24,11 +28,20 @@ export function NovoProjetoForm({ open, onClose }: Props) {
     criar.mutate(
       { youtube_url: url.trim(), canal_origem: canal.trim() || undefined },
       {
-        onSuccess: () => {
+        // D-746: o formulário só fechava — a live nova sumia no meio da
+        // biblioteca e o operador não sabia se tinha dado certo. Agora abre a
+        // tela dela, onde o download e a transcrição aparecem.
+        onSuccess: (projeto) => {
           setUrl('');
           setCanal('');
           onClose();
+          notify('Live adicionada — o download começou.', { tone: 'success' });
+          navigate(`/projetos/${projeto.id}`);
         },
+        onError: (erro) =>
+          notify(erro instanceof Error ? erro.message : 'Não consegui adicionar a live.', {
+            tone: 'error',
+          }),
       },
     );
   };

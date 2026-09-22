@@ -189,6 +189,14 @@ export function ScenesPostProductionPage() {
     window.localStorage.removeItem(`render-final:${corteId}`);
     setRenderFinalLocal(false);
     void exportStatusQ.refetch();
+    // D-746: a falha só limpava o estado — o operador ficava esperando um
+    // render que já tinha morrido.
+    if (failed) {
+      notifyToast(`O render final falhou: ${status.error || 'o backend não disse por quê'}.`, {
+        tone: 'error',
+      });
+      return;
+    }
 
     // Render concluído: jogar o usuário direto na tela final, mesmo com
     // ?fase=2 preservado, porque aqui o vídeo passou a estar pronto.
@@ -202,6 +210,7 @@ export function ScenesPostProductionPage() {
     corteId,
     exportStatusQ,
     navigate,
+    notifyToast,
     pipelineStatus.data,
     projetoId,
     renderFinal.isPending,
@@ -326,8 +335,12 @@ export function ScenesPostProductionPage() {
           window.location.href = data.studio_url;
         }
       },
-      onError: () => {
+      onError: (erro) => {
         popup?.close();
+        notifyToast(
+          `Não consegui abrir o Studio: ${erro instanceof Error ? erro.message : 'erro desconhecido'}.`,
+          { tone: 'error' },
+        );
       },
     });
   }
@@ -364,9 +377,13 @@ export function ScenesPostProductionPage() {
         void pipelineStatus.refetch();
         void exportStatusQ.refetch();
       },
-      onError: () => {
+      onError: (erro) => {
         window.localStorage.removeItem(`render-final:${corteId}`);
         setRenderFinalLocal(false);
+        notifyToast(
+          `Não consegui iniciar o render: ${erro instanceof Error ? erro.message : 'erro desconhecido'}.`,
+          { tone: 'error' },
+        );
       },
     });
   }

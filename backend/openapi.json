@@ -9561,6 +9561,47 @@
         ]
       }
     },
+    "/api/projetos/{projeto_id}/abrir-pasta": {
+      "post": {
+        "description": "Abre a pasta da live no explorador do sistema (D-746).\n\nO botão \"Abrir a pasta do projeto\" chamava a rota do CORTE com o id do\nprojeto — falhava sempre, e sem aviso. A abertura em si é a mesma dos\ncortes e dos shorts (`abrir_no_sistema`, com timeout).",
+        "operationId": "abrir_pasta_do_projeto_api_projetos__projeto_id__abrir_pasta_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "projeto_id",
+            "required": true,
+            "schema": {
+              "title": "Projeto Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abrir Pasta Do Projeto",
+        "tags": [
+          "Projetos"
+        ]
+      }
+    },
     "/api/projetos/{projeto_id}/analisar-intervalo": {
       "post": {
         "description": "Gera novos cortes para um intervalo de tempo específico da transcrição\ne os adiciona ao projeto sem remover os cortes existentes.",

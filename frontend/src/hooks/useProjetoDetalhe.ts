@@ -52,6 +52,13 @@ export function useAbrirPasta() {
   });
 }
 
+/** D-746: abre a pasta da live — o botão da live usava a rota do corte. */
+export function useAbrirPastaProjeto() {
+  return useMutation({
+    mutationFn: (projetoId: string) => api.abrirPastaProjeto(projetoId),
+  });
+}
+
 export function useRefazerTranscricao(projetoId: string) {
   const qc = useQueryClient();
   return useMutation({

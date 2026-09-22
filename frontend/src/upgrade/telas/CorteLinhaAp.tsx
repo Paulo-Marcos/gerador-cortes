@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAprovar, useAtualizarCorte } from '@/hooks/useEditor';
+import { useToast } from '@/components/ui/toaster';
 import { useAbrirPasta } from '@/hooks/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { formatarDuracaoHMS } from '@/lib/utils';
@@ -72,6 +73,13 @@ export function CorteLinhaAp({
   const abrirPasta = useAbrirPasta();
   const aprovar = useAprovar(status.corte_id, projetoId);
   const atualizar = useAtualizarCorte(status.corte_id, projetoId);
+  const { notify } = useToast();
+  // D-746: aprovar/voltar que falhava não dizia nada — o operador achava que
+  // tinha dado certo.
+  const avisarFalha = (acao: string) => (erro: unknown) =>
+    notify(`Não consegui ${acao} o corte #${status.numero}: ${erro instanceof Error ? erro.message : 'erro'}.`, {
+      tone: 'error',
+    });
 
   const estado = estadoDaLinha(corte, status);
   const capa = resolveThumbUrl(projetoId, status.thumbnail_path);
@@ -99,7 +107,7 @@ export function CorteLinhaAp({
       texto: 'Voltar',
       icone: 'undo-2' as IconName,
       forte: false,
-      acao: () => atualizar.mutate({ status: 'proposto' }),
+      acao: () => atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('voltar') }),
     },
     pronto: {
       // D-746: o verbo do resultado; o clique abre a conferência, não envia.
@@ -118,7 +126,7 @@ export function CorteLinhaAp({
       texto: 'Aprovar',
       icone: 'check' as IconName,
       forte: false,
-      acao: () => aprovar.mutate(),
+      acao: () => aprovar.mutate(undefined, { onError: avisarFalha('aprovar') }),
     },
   }[estado];
 

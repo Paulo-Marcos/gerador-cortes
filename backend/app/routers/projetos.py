@@ -8,7 +8,7 @@ from app.database import get_db
 from app.domain.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, MetadadoCorte, Projeto, StatusCorte, StatusProjeto
 from app.routers.errors import erro_interno
-from app.services import channels
+from app.services import abrir_no_sistema, channels
 from app.services.analise import AnaliseService
 from app.services.app_logging import operational_error, operational_info
 from app.services.app_settings import AppSettingsService
@@ -421,6 +421,24 @@ async def atualizar_transcricao_projeto(
         "message": "Transcrição do projeto atualizada com sucesso",
         "total_cortes_sincronizados": total_sincronizados,
     }
+
+
+@router.post("/{projeto_id}/abrir-pasta")
+async def abrir_pasta_do_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)):
+    """Abre a pasta da live no explorador do sistema (D-746).
+
+    O botão "Abrir a pasta do projeto" chamava a rota do CORTE com o id do
+    projeto — falhava sempre, e sem aviso. A abertura em si é a mesma dos
+    cortes e dos shorts (`abrir_no_sistema`, com timeout).
+    """
+    projeto = await db.get(Projeto, projeto_id)
+    if not projeto:
+        raise HTTPException(status_code=404, detail="Projeto não encontrado")
+    try:
+        caminho = abrir_no_sistema.abrir_pasta(projetos_dir() / projeto_id)
+    except abrir_no_sistema.NaoConsegueAbrir as exc:
+        raise HTTPException(status_code=500, detail=f"Não consegui abrir a pasta: {exc}") from exc
+    return {"status": "ok", "dir_path": caminho}
 
 
 @router.get("/{projeto_id}", response_model=ProjetoResponse)

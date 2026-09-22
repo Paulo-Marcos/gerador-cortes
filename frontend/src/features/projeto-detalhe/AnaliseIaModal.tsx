@@ -90,8 +90,10 @@ function AnaliseIaModalDaLive({
     setJsonErr(null);
   };
 
+  // D-746: fechar não apaga o JSON colado — um clique fora do modal jogava
+  // fora a resposta inteira da IA. O JSON só sai quando é importado.
   const fechar = () => {
-    reset();
+    setJsonErr(null);
     onClose();
   };
 

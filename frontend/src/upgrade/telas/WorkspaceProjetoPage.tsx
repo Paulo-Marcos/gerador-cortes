@@ -18,7 +18,7 @@ import { mesclarCortesComExport } from '@/features/projeto-detalhe/cortesDoWorks
 import { avaliarProntidaoPublicacao } from '@/features/projeto-detalhe/prontidaoPublicacao';
 import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/hooks/useEditor';
 import {
-  useAbrirPasta,
+  useAbrirPastaProjeto,
   useAnalisarDesviosTodos,
   useExportStatus,
   useLiberarPublicacao,
@@ -28,6 +28,7 @@ import {
   useRefazerTranscricao,
   useUploadYouTube,
 } from '@/hooks/useProjetoDetalhe';
+import { useAnaliseClaudeEmAndamento } from '@/hooks/useDiarizacao';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import type { ProviderIA } from '@/lib/providerIa';
 import { resolveThumbUrl } from '@/lib/api';
@@ -133,8 +134,9 @@ export default function WorkspaceProjetoPage() {
   const cortesQuery = useCortesProjeto(id);
   const exportStatus = useExportStatus(id);
   const progresso = useProjetoProgressoWS(id);
+  const analiseEmVoo = useAnaliseClaudeEmAndamento(id);
 
-  const abrirPasta = useAbrirPasta();
+  const abrirPasta = useAbrirPastaProjeto();
   const refazerTranscricao = useRefazerTranscricao(id);
   const analisarDesviosTodos = useAnalisarDesviosTodos(id);
   const confirmacao = useConfirmacao();
@@ -310,6 +312,9 @@ export default function WorkspaceProjetoPage() {
   }
 
   const dados = projeto.data;
+  // Pela mutação desta aba OU pelo status do projeto: a análise disparada em
+  // outra aba (ou antes de um F5) também tem de aparecer.
+  const analisando = analiseEmVoo || dados?.status === 'analisando';
   const duracao = dados?.duracao_segundos ? formatarDuracao(dados.duracao_segundos) : '—';
 
   useDefinirChrome(
@@ -472,7 +477,14 @@ export default function WorkspaceProjetoPage() {
             icone="hard-drive"
             titulo="Abrir a pasta do projeto"
             cor="var(--mute)"
-            onClick={() => abrirPasta.mutate(id)}
+            onClick={() =>
+              abrirPasta.mutate(id, {
+                onError: (erro) =>
+                  notify(erro instanceof Error ? erro.message : 'Não consegui abrir a pasta.', {
+                    tone: 'error',
+                  }),
+              })
+            }
             disabled={abrirPasta.isPending}
           />
           <Utilitario
@@ -531,6 +543,23 @@ export default function WorkspaceProjetoPage() {
           </button>
         </span>
       </div>
+
+      {/* D-746: a análise da live só aparecia dentro do modal — fechado, não
+          havia sinal de que a IA estava trabalhando. */}
+      {analisando ? (
+        <div
+          className="card"
+          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px' }}
+        >
+          <Icon name="brain" size={14} style={{ color: 'var(--info)' }} />
+          <b style={{ fontSize: 12.5 }}>Analisando a live com a IA</b>
+          <span style={{ fontSize: 12, color: 'var(--mute)' }}>
+            os cortes propostos aparecem aqui quando terminar — pode seguir usando o app
+          </span>
+          <span style={{ flex: 1 }} />
+          <Icon name="loader" size={14} style={{ color: 'var(--info)' }} />
+        </div>
+      ) : null}
 
       {progresso && (progresso.status === 'baixando' || progresso.status === 'transcrevendo') ? (
         <div
