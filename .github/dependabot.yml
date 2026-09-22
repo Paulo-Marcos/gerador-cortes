@@ -5,20 +5,35 @@ version: 2
 # eram PRs soltos: 20 ficaram abertos desde julho, bateram no limite de PRs por
 # ecossistema e o Dependabot parou de propor atualização nova — inclusive as de
 # segurança.
+#
+# commit-message: o hook e o lock-check conferem o padrão do AGENTS.md (D-684).
+# Sem o prefixo, o Dependabot escreve `build(deps): ...` e todo PR dele nasce
+# reprovado.
 
 updates:
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "🧹 chore"
+      include: "scope"
     groups:
       correcoes-backend:
         update-types: ["minor", "patch"]
+    ignore:
+      # O 5.0 removeu os Haar cascades que o detector de rosto usa (D-583,
+      # comentário no requirements.txt). Subir é demanda, não atualização.
+      - dependency-name: "opencv-python"
+        versions: [">=5"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "🧹 chore"
+      include: "scope"
     groups:
       correcoes-frontend:
         update-types: ["minor", "patch"]
@@ -27,6 +42,9 @@ updates:
     directory: "/video-renderer"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "🧹 chore"
+      include: "scope"
     groups:
       correcoes-renderer:
         update-types: ["minor", "patch"]
@@ -35,6 +53,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: "👷 ci"
+      include: "scope"
     groups:
       actions:
         update-types: ["major", "minor", "patch"]
