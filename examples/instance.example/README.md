@@ -1,33 +1,22 @@
 # instance.example
 
-Estrutura de exemplo para configurar sua instância do CutCut.
+Molde de um canal do CutCut. **Não copie esta pasta à mão.**
 
-## Como usar
-
-Copie esta pasta para a raiz do repositório como `instance/`:
-
-```bash
-cp -r examples/instance.example/ instance/
-```
-
-Em seguida edite `instance/channel.yaml` com os dados do seu canal.
+No primeiro boot, o app cria `instance/channels/<canal>/` a partir daqui e marca o
+canal como ativo; um canal novo criado em **Configurações → Novo canal** nasce do
+mesmo molde. Os textos em `editorial/` são o ponto de partida das skills
+editoriais: depois do primeiro boot elas vivem no banco, por canal, e se editam na
+tela (ver `docs/adr/0011-skills-editoriais-por-canal.md`).
 
 ## Estrutura
 
 ```
-instance/
-├── channel.yaml      # Identidade do canal (handle, nome, crédito, paleta de cores)
-├── editorial/        # Guias editoriais, prompts e templates específicos do canal
-├── mascot/           # Imagens do mascote/avatar do canal
-└── projetos/         # Projetos de corte (pode apontar PROJETOS_DIR para este diretório)
+instance/channels/<canal>/
+├── channel.yaml      # Reserva da identidade; a fonte é o banco (Configurações)
+├── editorial/        # Moldes das skills, prompts e scaffolds do canal
+├── mascot/           # Imagens do mascote do canal
+└── projetos/         # Projetos de corte e o banco do canal (projetos.db)
 ```
 
-## Configuração do backend
-
-Em `backend/.env`, aponte `PROJETOS_DIR` para a pasta de projetos da instância:
-
-```env
-PROJETOS_DIR=../instance/projetos
-```
-
-> A pasta `instance/` não deve ser versionada. Adicione `instance/` ao `.gitignore` do repositório.
+A pasta `instance/` não é versionada: um `git pull` não toca nos dados do canal.
+Instalação completa em `docs/SETUP.md`.
