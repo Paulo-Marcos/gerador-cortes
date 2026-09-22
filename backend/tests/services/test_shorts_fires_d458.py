@@ -201,9 +201,13 @@ async def test_metadado_nascido_da_indicacao_leva_o_credito_do_canal(ambiente, m
 @pytest.mark.asyncio
 async def test_metadado_nascido_do_fire_leva_o_credito_do_canal(ambiente, monkeypatch):
     from app.services import metadados as metadados_module
+    from app.services import thumbnail as thumbnail_module
 
     factory, _ = ambiente
     monkeypatch.setattr(metadados_module, "AsyncSessionLocal", factory)
+    # O toggle re-emoldura a capa, e o ThumbnailService abre a sessão DELE.
+    # Sem isto o teste lia o banco real da máquina (e no CI, sem banco, caía).
+    monkeypatch.setattr(thumbnail_module, "AsyncSessionLocal", factory)
     _canal_fixo(monkeypatch, "@canal-do-teste")
     await _semear(factory, corte_id="c1", fire=False, clip_path="", com_metadado=False)
 
