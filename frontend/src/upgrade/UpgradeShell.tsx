@@ -8,6 +8,7 @@ import {
 import { ActionBar } from './ActionBar';
 import { ColunaRecolhida, ContextColumn } from './ContextColumn';
 import { FitaDaLive } from './FitaDaLive';
+import { useCanais } from '@/features/channels/useChannels';
 import { GavetaDaFila } from './GavetaDaFila';
 import { GlobalRail, TRILHO_ESTREITO, TRILHO_LARGO, type FilaDoTrilho } from './GlobalRail';
 import {
@@ -307,6 +308,8 @@ function Casca({ children, fila }: CascaProps) {
 
   useAtalhosDaCasca(alternar, abrirBusca, abrirFila, chrome);
   const jobsRodando = (filaGlobal?.jobs ?? []).filter((j) => j.estado === 'rodando').length;
+  const canais = useCanais();
+  const canalAtivo = canais.data?.canais.find((c) => c.ativo);
   const jobComErro = (filaGlobal?.jobs ?? []).some(
     (j) => j.estado === 'erro' || j.estado === 'perdido',
   );
@@ -386,6 +389,7 @@ function Casca({ children, fila }: CascaProps) {
           onAbrirAvisos={abrirFila}
           avisosAtivos={jobsRodando}
           avisoDeErro={jobComErro}
+          canal={canalAtivo ? { nome: canalAtivo.nome, handle: canalAtivo.handle } : undefined}
           historico={{
             podeVoltar: historico.podeVoltar,
             podeAvancar: historico.podeAvancar,

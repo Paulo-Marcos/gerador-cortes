@@ -14,7 +14,6 @@ import {
   Palette,
   RefreshCw,
   Sparkles,
-  Upload,
   VolumeX,
   type LucideIcon,
 } from 'lucide-react';
@@ -25,6 +24,7 @@ import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDe
 import {
   type RenderStartFrom,
   useAtualizarCorte,
+  useToggleFire,
   useCorte,
   useCortesProjeto,
   usePipelineStatus,
@@ -92,6 +92,8 @@ export function FinalReviewPage() {
   const abrirPasta = useAbrirPasta();
   const renderFinal = useRenderizarRemotion(corteId);
   const atualizarCorte = useAtualizarCorte(corteId, projetoId);
+  // D-746: o Fire da Revisão era um botão que não fazia nada.
+  const alternarFire = useToggleFire(corteId, projetoId);
   const [renderFinalLocal, setRenderFinalLocal] = useState(
     () => Boolean(corteId) && window.localStorage.getItem(`render-final:${corteId}`) === 'running',
   );
@@ -563,7 +565,8 @@ export function FinalReviewPage() {
               ) : (
                 <CheckCircle2 size={13} aria-hidden />
               )}
-              {aprovado ? 'Aprovado' : 'Aprovar e publicar'}
+              {/* D-746: aprovar não publica — o rótulo prometia o que não fazia. */}
+              {aprovado ? 'Aprovado' : 'Aprovar'}
             </button>
             <Button
               type="button"
@@ -707,11 +710,31 @@ export function FinalReviewPage() {
           salvando={atualizarCorte.isPending}
           brutoPronto
           brutoOcupado={false}
-          onSalvar={() => setMetadataOpen(true)}
-          onGerarBruto={() => setMetadataOpen(true)}
-          onToggleFire={() => undefined}
+          // D-746: um verbo por botão. Salvar, Rejeitar e "Regerar bruto"
+          // abriam os metadados; o Fire não fazia nada; o veredito agora é
+          // reversível e o primário diz para onde leva.
+          onToggleFire={() => alternarFire.mutate()}
+          fireOcupado={alternarFire.isPending}
           onAprovar={aprovarCorte}
-          onRejeitar={() => setMetadataOpen(true)}
+          barra={{
+            veredito: {
+              aprovado,
+              ocupado: atualizarCorte.isPending,
+              onAlternar: () =>
+                aprovado ? atualizarCorte.mutate({ status: 'proposto' }) : aprovarCorte(),
+            },
+            terciario: {
+              titulo: 'Metadados do corte — editar aqui',
+              icone: 'tags',
+              onClick: () => setMetadataOpen(true),
+            },
+            primario: {
+              texto: 'Ir para publicar',
+              icone: 'send',
+              // Publicar é na live, com a conferência de canal, título e capa.
+              onClick: () => navigate(`/projetos/${projetoId}`),
+            },
+          }}
         />
       ) : (
       <UnifiedSidebar
@@ -765,7 +788,7 @@ export function FinalReviewPage() {
                 ) : aprovado ? (
                   <CheckCircle2 />
                 ) : (
-                  <Upload />
+                  <Check />
                 )}
                 {aprovado ? 'Aprovado' : 'Aprovar'}
               </Button>

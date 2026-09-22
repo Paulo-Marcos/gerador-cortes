@@ -8,6 +8,7 @@ import { resolveThumbUrl } from '@/lib/api';
 import { thumbnailUrl } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { montarTira } from '../tiraDoCorte';
+import type { IconName } from '../Icon';
 import { useDefinirChrome, type ChromeBarra, type ItemDeLista } from '../UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
@@ -66,7 +67,8 @@ export type BancadaChromeProps = {
   thumbDoCorte?: (corte: Corte) => string | undefined;
   /** Sem ele a barra não mostra Salvar (a Pós não tem o que salvar). */
   onSalvar?: () => void;
-  onGerarBruto: () => void;
+  /** Sem ele o topo não oferece "Gerar/Regerar bruto" (a Revisão não gera). */
+  onGerarBruto?: () => void;
   onToggleFire: () => void;
   fireOcupado?: boolean;
   /** D-610: Leitura como qualificador da barra. Sem isto o botão não aparece
@@ -170,11 +172,15 @@ export function BancadaChrome({
       // D-610: Fire e Salvar desceram para a barra de ações. No topo sobra a
       // ação que não é veredito do corte, e sim trabalho pesado sobre ele.
       acoes: [
-        {
-          icone: brutoOcupado ? 'loader' : 'scissors',
-          texto: brutoPronto ? 'Regerar bruto' : 'Gerar bruto',
-          onClick: onGerarBruto,
-        },
+        ...(onGerarBruto
+          ? [
+              {
+                icone: (brutoOcupado ? 'loader' : 'scissors') as IconName,
+                texto: brutoPronto ? 'Regerar bruto' : 'Gerar bruto',
+                onClick: onGerarBruto,
+              },
+            ]
+          : []),
         // D-746: excluir é trabalho sobre o corte, não veredito — mora aqui,
         // longe do Aprovar, e a tela pede confirmação antes.
         ...(onExcluir ? [{ icone: 'trash' as const, texto: 'Excluir corte', onClick: onExcluir }] : []),

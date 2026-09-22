@@ -70,6 +70,9 @@ type TopBarProps = {
   /** D-746: algum job falhou ou se perdeu — o ponto fica vermelho, para a
    *  gaveta fechada não esconder a falha. */
   avisoDeErro?: boolean;
+  /** D-746: o canal ativo — é para ele que tudo é publicado (o token do
+   *  YouTube é por canal). Invisível, dava para publicar no canal errado. */
+  canal?: { nome: string; handle: string };
   /** D-746: ← → da casca. Sem isto, os botões não aparecem. */
   historico?: {
     podeVoltar: boolean;
@@ -420,6 +423,7 @@ export function TopBar({
   avisosAtivos = 0,
   avisoDeErro = false,
   historico,
+  canal,
 }: TopBarProps) {
   const cabeBusca = useJanelaMin(BUSCA_LARGA_MIN_PX);
   // Com o cabeçalho fundido, as ações da tela também disputam a linha: a
@@ -535,6 +539,20 @@ export function TopBar({
           <Icon name="search" size={14} />
         </button>
       )}
+
+      {canal ? (
+        <Link
+          to="/canais"
+          className="chip"
+          title={`Canal ativo: ${canal.nome} (${canal.handle}) — é para ele que os cortes são publicados. Trocar em Canais.`}
+          style={{ flex: 'none', maxWidth: 180, color: 'var(--ink)', textDecoration: 'none' }}
+        >
+          <Icon name="radio" size={12} style={{ flex: 'none', color: 'var(--mute)' }} />
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {buscaLarga ? canal.nome : canal.handle}
+          </span>
+        </Link>
+      ) : null}
 
       {estado ? (
         <span

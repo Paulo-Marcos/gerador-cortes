@@ -37,6 +37,7 @@ import { destinosDaPaleta, projetoDaRota } from './upgradeRoutes';
 
 const ACOES: ItemDaPaleta[] = [
   { id: 'a-liv', icone: 'plus', rotulo: 'Nova live', contexto: 'buscar e importar', escopo: 'acoes', to: '/buscar-lives' },
+  { id: 'a-canal', icone: 'radio', rotulo: 'Trocar de canal', contexto: 'o canal ativo recebe as publicações', escopo: 'acoes', to: '/canais' },
 ];
 
 const MAX_RESULTADOS = 12;

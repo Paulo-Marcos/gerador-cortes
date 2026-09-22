@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
 import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
@@ -288,6 +288,49 @@ export function EditorPage() {
   })();
 
   const atualizarCorte = useAtualizarCorte(corteId, projetoId);
+
+  // D-746: trocar de corte (J/K, lista, link) com ajuste não salvo perdia o
+  // ajuste em silêncio. Agora a saída espera o salvamento; se ele falhar, a
+  // tela fica e diz por quê.
+  const saida = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname,
+  );
+  useEffect(() => {
+    if (saida.state !== 'blocked') return;
+    const pendentes = editHistory.getPresent();
+    if (Object.keys(pendentes).length === 0) {
+      saida.proceed();
+      return;
+    }
+    atualizarCorte.mutate(
+      { ...pendentes },
+      {
+        onSuccess: () => {
+          editHistory.reset({});
+          notifyToast('Ajustes do corte salvos antes de sair.', { tone: 'success' });
+          saida.proceed();
+        },
+        onError: (erro) => {
+          notifyToast(
+            `Não consegui salvar os ajustes (${erro instanceof Error ? erro.message : 'erro'}). Fiquei no corte — tente Ctrl+S.`,
+            { tone: 'error' },
+          );
+          saida.reset();
+        },
+      },
+    );
+    // Só a mudança de estado do bloqueio dispara o salvamento.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saida.state]);
+
+  // Fechar a aba não passa pelo roteador: o navegador pergunta.
+  useEffect(() => {
+    if (!isDirty) return;
+    const aoSair = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', aoSair);
+    return () => window.removeEventListener('beforeunload', aoSair);
+  }, [isDirty]);
   const toggleFire = useToggleFire(corteId, projetoId);
   const toggleLeitura = useToggleLeitura(corteId, projetoId);
   const gerarBruto = useGerarBruto(corteId, projetoId);
