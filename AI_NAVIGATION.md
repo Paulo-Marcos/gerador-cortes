@@ -21,10 +21,11 @@ Atualize quando criar fluxos, endpoints, pastas ou decisoes importantes.
 ## Mapa Rapido
 
 - Backend principal: `backend/app/`
-- Frontend Angular: `frontend/src/app/`
+- Frontend React (Vite): `frontend/src/` (páginas em `frontend/src/features/`)
 - Remotion renderer e Native Worker: `video-renderer/`
-- Fila do Native Worker: `backend/projetos/fila_remotion/`
-- Artefatos por corte: `backend/projetos/{projeto_id}/cortes/{corte_id}/`
+- Dados do canal ativo: `instance/channels/<canal>/projetos/` (resolvido por `channel_paths.projetos_dir()`)
+- Fila do Native Worker: `<projetos>/fila_remotion/`
+- Artefatos por corte: `<projetos>/{projeto_id}/cortes/{corte_id}/`
 
 ## Regras de Manutencao
 
