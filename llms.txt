@@ -1,38 +1,37 @@
 # CutCut
 
-> Pipeline full-stack que transforma livestreams do YouTube em cortes analíticos
-> prontos para publicação: download → transcrição → IA propõe cortes → revisão →
-> metadados/thumbnails → export para YouTube. Backend FastAPI (async, SQLite/WAL),
-> frontend React 18 + Vite, renderer Remotion + Native Worker (fila em filesystem),
-> IA via Claude CLI / Gemini.
+> Pipeline full-stack que transforma lives do YouTube em cortes prontos para
+> publicar: download → transcrição → a IA propõe cortes → revisão → metadados e
+> capa → render → publicação (YouTube, TikTok, Instagram) e shorts verticais.
+> Backend FastAPI (assíncrono, SQLite/WAL, um banco por canal), frontend React +
+> Vite, renderer Remotion com worker Node (fila em arquivos). IA pela assinatura
+> do operador: Claude CLI e Antigravity CLI (`agy`), mais modo manual.
 
 ## Comece por aqui
-- [README.md](README.md): instalação, pré-requisitos e pipeline de uso
-- [CLAUDE.md](CLAUDE.md): guia canônico de arquitetura, comandos e regras (fonte de verdade)
-- [AI_NAVIGATION.md](AI_NAVIGATION.md): índice de navegação para IA + docs/ai-index
-- [CONTRIBUTING.md](CONTRIBUTING.md): como rodar, padrão de commit e locks
-
-## Arquitetura
-- Backend em camadas: routers → services → infrastructure/domain (backend/app/)
-- Modelos SQLAlchemy: backend/app/models.py · tipos espelhados em frontend/src/types/models.ts
-- Renderer Remotion + protocolo de fila: backend/app/infrastructure/worker_queue.py
-
-## Backend (FastAPI)
-- Routers HTTP: backend/app/routers/
-- Serviços (orquestração IA/API): backend/app/services/
-- Clientes externos (Claude CLI, Gemini, FFmpeg): backend/app/infrastructure/
-- Funções puras de domínio: backend/app/domain/
-- Configuração (pydantic-settings): backend/app/config.py
-
-## Frontend (React 18 + Vite)
-- Páginas lazy por feature: frontend/src/features/ · rotas em frontend/src/routes.tsx
-
-## Video Renderer (Remotion)
-- Projeto Remotion separado + Native Worker: video-renderer/
-
-## Fluxo de trabalho (Guia Fluxo)
-- Estado de demandas: .guia/ · locks de arquivos: .guia/locks/registry.yaml
-- Padrão de commit (Conventional Commits + gitmoji): seção em CLAUDE.md
+- [AGENTS.md](AGENTS.md): fonte única de arquitetura, comandos, convenções e regras (o CLAUDE.md só o importa)
+- [README.md](README.md): o que é e como instalar
+- [docs/SETUP.md](docs/SETUP.md): instalação passo a passo
+- [CONTRIBUTING.md](CONTRIBUTING.md): portão de qualidade, padrão de commit e travas
+- [AI_NAVIGATION.md](AI_NAVIGATION.md): índice de navegação + docs/ai-index
 
 ## Domínio
-Entidades: Projeto, Corte (com desvios), Metadado. Fases: Ingestão, Análise, Export.
+- [docs/dominio/mapa-de-contextos.md](docs/dominio/mapa-de-contextos.md): os 11 contextos e quem depende de quem
+- [docs/dominio/glossario.md](docs/dominio/glossario.md): termos que se confundem (trecho, bloco, segmento, os três ganchos, palco)
+- [docs/dominio/regras-de-negocio.md](docs/dominio/regras-de-negocio.md): catálogo RN-01..RN-25, cada regra apontando para a função que a aplica
+- Entidades: Projeto, Corte, Metadado, Short. Ciclos de vida em backend/app/domain/ciclo_projeto.py e ciclo_corte.py
+
+## Backend (FastAPI)
+- Camadas verificadas pelo import-linter (backend/pyproject.toml): routers → services → domain (puro) / infrastructure
+- Routers: backend/app/routers/ · serviços: backend/app/services/ · regras puras: backend/app/domain/
+- Clientes externos (Claude CLI, Antigravity CLI, API do Gemini, ffmpeg, fila do worker): backend/app/infrastructure/
+- Modelos: backend/app/models.py · contrato HTTP versionado: backend/openapi.json
+
+## Frontend (React + Vite)
+- Páginas por feature: frontend/src/features/ · rotas em frontend/src/routes.tsx
+- Tipos espelhados do backend: frontend/src/types/models.ts
+
+## Renderer (Remotion)
+- Projeto separado + worker: video-renderer/ · protocolo da fila: backend/app/infrastructure/worker_queue.py
+
+## Fluxo de trabalho (Guia Fluxo)
+- Demandas em .guia/ · travas de funcionalidade: .guia/locks/registry.yaml

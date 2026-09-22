@@ -1,230 +1,209 @@
 # AGENTS.md
 
-**Fonte única de guidance para agentes de IA neste repositório** — Claude, Codex, Cursor, Cline, Copilot, etc. Este arquivo atende a **todos** os agentes; **toda adição ou alteração de instrução operacional é feita AQUI**, não em `CLAUDE.md` (que apenas aponta para este arquivo, para evitar duplicação).
+**Fonte única de instruções para agentes de IA neste repositório** — Claude, Codex, Cursor, Cline, Copilot e afins. Toda instrução operacional nova ou alterada entra **aqui**. O `CLAUDE.md` só importa este arquivo (`@AGENTS.md`): o Claude Code lê o `AGENTS.md` sozinho a partir da v2.1.277, e o import cobre as sessões em que a leitura direta não acontece, sem nunca duplicar o conteúdo.
 
-## Project Overview
+> Regra de ouro para quem edita este arquivo: **confira no código antes de escrever.** Este documento já afirmou que a fila de render era SQLite e que o n8n era o caminho padrão da IA — nenhum dos dois era verdade.
 
-**CortadorLive** is a full-stack pipeline that transforms YouTube livestreams into AI-analyzed clips ready for publication. The workflow: download livestream → transcribe → AI proposes cuts → review & approve → generate metadata/thumbnails → export for YouTube.
+## O projeto
 
-## Development Commands
+**CutCut / CortadorLive** transforma lives do YouTube em cortes prontos para publicar: baixa a live → transcreve → a IA propõe cortes → o operador revisa e aprova → gera metadados e capa → renderiza → publica (YouTube, TikTok e Instagram) e gera shorts verticais. Roda localmente, com um banco e uma pasta por **canal**.
 
-### Start All Services (Local Development)
+Documentação de domínio: [`docs/dominio/`](docs/dominio/) — [mapa de contextos](docs/dominio/mapa-de-contextos.md), [glossário](docs/dominio/glossario.md) e [catálogo de regras RN-01..RN-25](docs/dominio/regras-de-negocio.md). Ao tocar numa regra catalogada, cite a RN na docstring.
+
+## Como rodar
+
 ```powershell
-# Windows PowerShell — starts backend, frontend, Remotion, and native worker
+# Windows PowerShell — sobe backend, frontend, Remotion Studio e o worker de render
 .\dev.ps1
-# or full startup script
-.\iniciar_tudo.ps1
 ```
 
-Services started:
-- Backend (FastAPI) → http://localhost:8000 (docs at `/docs`)
-- Frontend (React) → http://localhost:4300
-- Remotion Studio → http://localhost:3200
-- Native Worker (render job processor) → background Node.js process
+| Serviço | Porta padrão |
+|---|---|
+| Backend (FastAPI; documentação em `/docs`) | 8000 |
+| Frontend (React + Vite) | 4300 |
+| Remotion Studio | 3200 (fora da faixa 3000-3100 que o renderer usa para servir o bundle) |
+| Worker de render (`video-renderer/native_worker.js`) | processo em segundo plano |
 
-### Backend (standalone)
+Rodar cada parte isolada:
+
 ```bash
-cd backend
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+cd backend && python -m uvicorn app.main:app --reload --port 8000
+cd frontend && npm install && npm run dev
+cd video-renderer && npm install && npm run dev
 ```
 
-### Frontend (standalone)
-```bash
-cd frontend
-npm install
-npm run dev      # Vite dev server → http://localhost:4300
-npm run build    # Production build → dist/
-```
+A instalação completa está em [`docs/SETUP.md`](docs/SETUP.md).
 
-### Video Renderer (standalone)
-```bash
-cd video-renderer
-npm install
-npm run dev      # Remotion Studio at http://localhost:3200
-```
+## Arquitetura
 
-## Architecture
-
-### Layered Backend (FastAPI)
+### Backend (FastAPI, Python 3.11+)
 
 ```
-HTTP Routers (app/routers/)         ← FastAPI route handlers
-    ↓
-Services (app/services/)            ← Business logic, AI/API orchestration
-    ↓
-Infrastructure (app/infrastructure/) ← External clients: n8n, Gemini, FFmpeg
-Domain (app/domain/)                ← Pure utility functions (parsers, converters)
-    ↓
-SQLite via SQLAlchemy async          ← WAL mode for concurrency
+routers/ (HTTP)  →  services/ (orquestração)  →  domain/ (regras puras)
+                                              ↘  infrastructure/ (clientes externos)
+SQLite via SQLAlchemy assíncrono (WAL), um banco por canal
 ```
 
-- All I/O is **async-first** (yt-dlp downloads, ffmpeg transcoding, Gemini API, n8n webhooks)
-- Long-running operations (download, transcription, export) run as fire-and-forget `asyncio` tasks
-- **WebSocket** endpoints stream real-time progress updates to the frontend
-- AI-heavy work runs through **three paths**: (1) **n8n webhooks** (default for transcript analysis & metadata generation), (2) the **Claude CLI** (`infrastructure/claude_cli_client.py` + `services/claude_ia.py`) — an alternative provider using the local Claude subscription and the versioned expertise in `.claude/skills/`, and (3) the **Gemini API** (`infrastructure/gemini_client.py`) for scene generation, thumbnails and `desvios`
+- **`domain/` é puro** e é onde moram as **regras de negócio** (não "utilitários"): sem FastAPI, sem SQLAlchemy, sem HTTP, sem cliente externo, sem importar `models`.
+- **Routers** só convertem HTTP ↔ serviço. **Services** orquestram. **Infrastructure** fala com o mundo (CLIs de IA, APIs do Google, ffmpeg, a fila do worker).
+- As fronteiras são **verificadas por máquina**: 4 contratos do import-linter em `backend/pyproject.toml` (`[tool.importlinter]`), rodados pelo CI e por um teste do pytest. A dívida conhecida está listada em `ignore_imports`, cada item com a demanda que vai quitá-la; import novo na direção errada quebra o build.
+- I/O é assíncrono. Operações longas (download, transcrição, render) rodam como tarefas em segundo plano; o progresso chega ao frontend por WebSocket.
 
-### Frontend (React 18, Standalone)
+### Inteligência artificial
 
-Lazy-loaded pages under `frontend/src/features/` (router in `frontend/src/routes.tsx`). State is handled via React hooks and context. All state is derived from backend API responses. Real-time progress via WebSocket connections in the detail page.
+Dois provedores, ambos pela **assinatura** do operador (sem chave de API): `claude` (Claude CLI, `infrastructure/claude_cli_client.py`) e `gemini` (Antigravity CLI, `agy -p`, `infrastructure/antigravity_cli_client.py`). O tipo `ProviderIA` está em `app/provider_ia.py`. Há também o **modo manual** (o prompt é copiado e a resposta colada, `domain/manual_prompt.py`) e o cliente da **API do Gemini** (`infrastructure/gemini_client.py`), usado por cenas, desvios e thumbnails.
 
-Key routes:
-| Route | Component | Purpose |
-|-------|-----------|---------|
-| `/projetos` | ProjetosPage | Project list + creation |
-| `/projetos/:id` | ProjetoDetalhePage | Pipeline dashboard |
-| `/projetos/:id/cortes` (`/:corteId`) | EditorPage | Cut editor |
-| `/projetos/:id/metadados` | MetadataPage | Title, description, thumbnail |
-| `/projetos/:id/post-production` | ScenesPostProductionPage | Scene/post-production editing |
-| `/projetos/:id/final-review` | FinalReviewPage | Final review before export |
-| `/projetos/:id/export` | PostProductionPage | Exporta clipes e publica no YouTube |
-| `/buscar-lives` | LiveSearchPage | Search/download livestreams |
-| `/ranking-lives` | RankingLivesPage | Source-live ranking queue |
+As skills editoriais (análise, metadados, capa etc.) são **por canal, no banco**, editáveis pela tela de Canais — não em `.claude/skills/`.
 
-### Video Renderer (Remotion + Node.js)
+**O n8n saiu do código** (D-344). A pasta `n8n-workflows/` é legado e não é usada.
 
-`video-renderer/` is a separate Remotion project (React-based video composition). Render jobs are queued in SQLite and processed by `native_worker.js` (long-running Node.js process). The backend's `remotion_render.py` and `cenas_remotion.py` services orchestrate job creation and scene JSON payloads.
+### Frontend (React + Vite)
 
-### Data Model
+Páginas em `frontend/src/features/` (rotas em `frontend/src/routes.tsx`). O estado vem das respostas da API (TanStack Query). Fronteiras entre pastas verificadas pelo ESLint (`frontend/.eslintrc.cjs`): `components/` não importa `features/`; `hooks/` não importa `components/`; `lib/` e `types/` não sobem para camada nenhuma. A dívida conhecida está em `excludedFiles`.
 
-Core entities and their status flows:
+### Renderer (Remotion + Node)
 
-```
-Projeto (StatusProjeto)
-  pendente → baixando → transcrevendo → pronto → analisando → analisado (| erro)
-  └── Corte[] (StatusCorte)
-        proposto → aprovado → editado → processado  (| rejeitado)
-        └── MetadadoCorte (1:1)
-```
+`video-renderer/` é um projeto Remotion separado. **A fila de render é de arquivos, não de banco:** o backend grava `req_<id>.json` na pasta da fila e espera o `res_<id>.json` que o `native_worker.js` escreve (protocolo em `backend/app/infrastructure/worker_queue.py`). O worker grava as respostas de forma atômica e responde uma vez por job.
 
-All SQLAlchemy models are in `backend/app/models.py`. All TypeScript interfaces mirror these in `frontend/src/types/models.ts`.
+- **Overlay do Remotion é ProRes 4444, obrigatório.** VP9/.webm foi testado e não funciona neste pipeline. Não proponha trocar.
+- **Filtergraph com fonte infinita** (`color=`, `-loop 1`) precisa de limite (`trim=end`, `-shortest` ou equivalente). Teste de grade confere duração e contagem de frames.
 
-## Configuration
+### Contrato HTTP
 
-Backend reads from `backend/.env` (pydantic-settings via `app/config.py`). Key variables:
+`backend/openapi.json` é a especificação versionada da API. O teste `tests/test_contrato_openapi_d664.py` compara com a gerada e falha dizendo quais rotas mudaram. Mudança intencional: `ATUALIZAR_OPENAPI=1 pytest tests/test_contrato_openapi_d664.py`.
+
+### Modelo de dados e ciclos de vida
+
+Modelos em `backend/app/models.py`; tipos espelhados em `frontend/src/types/models.ts`.
 
 ```
-N8N_WEBHOOK_ANALISE=<webhook_id>       # n8n workflow for transcript analysis
-N8N_WEBHOOK_METADADOS=<webhook_id>     # n8n workflow for metadata generation
-GEMINI_API_KEY=<key>                   # Google Gemini (thumbnails, scene gen)
-YOUTUBE_API_KEY=<key>                  # YouTube Data API v3 (search)
-PROJETOS_DIR=projetos/                 # Where project files are stored
-ASSETS_DIR=assets/                     # Intro/outro videos, guides
+Projeto: pendente → baixando → transcrevendo → pronto → analisando → analisado   (| erro)
+Corte:   proposto ⇄ aprovado → processado   (rejeitado é legado; "Rejeitar" exclui o corte)
 ```
 
-The channel's identity (handle/nome/crédito) and the source channel for lives (`youtube_channel_id`) are **not** set here — they are configured per channel in that channel's `channel.yaml` (via the Canais UI), read through `channels.identidade_do_canal_ativo()`.
+As transições têm dono no domínio: `domain/ciclo_projeto.py` e `domain/ciclo_corte.py` (RN-01, RN-04). O PATCH do corte recusa com 400 uma transição fora da tabela. Os caminhos em segundo plano mudam status por `services/ciclo_de_vida.py`, que registra aviso — em vez de exceção — para o que a tabela não prevê. Mudar um enum de status exige migração.
 
-## Key Domain Concepts
+## Configuração
 
-- **Projeto**: A YouTube livestream download + processing session. Each project maps to a directory under `backend/projetos/<id>/`.
-- **Corte**: A proposed or approved video segment, defined by `inicio_hms`/`fim_hms` timestamps. Cuts can have `desvios` (detected anomalies/highlights).
-- **Ingestão**: The pipeline phase that downloads the video via yt-dlp and parses the VTT subtitle file into the database.
-- **Análise**: The phase where the transcript is sent to n8n → AI → returns proposed cuts.
-- **Export**: Normalizes/concatenates clips via ffmpeg and publishes to YouTube (individual or bulk upload).
+- **Segredos** ficam no `backend/.env` (lido por `app/config.py`, pydantic-settings).
+- **Configuração e customização** ficam **no banco, por canal, editáveis na tela** — não em arquivo. Identidade do canal (handle, nome, crédito, canal-fonte das lives) vive no `channel.yaml` de cada canal, lido por `channels.identidade_do_canal_ativo()`.
+- `instance/` tem layout vigiado: um arquivo solto na raiz dele trava o boot. Artefato global novo ali precisa entrar na lista de reservados.
+- **Cascata de layout é PARCIAL** (RN-10): chave ausente é o mecanismo de herança (global → projeto → corte). Normalize na **leitura**; nunca materialize os padrões ao gravar.
 
-## Coding Rules
+## Regras de produto
 
-This project enforces skill-based guidelines (see `.claude/rules/`):
+- **Ação "gerar com IA" dispara sozinha no gesto do fluxo**, sem modal de confirmação, e nunca sobrescreve texto que já foi gerado (a capa é a exceção).
+- Vocabulário do domínio (`Projeto`, `Corte`, `Metadado`, `Short`, `Ingestão`, `Análise`) é o mesmo em código, banco e tela — não invente sinônimo. Termos que se confundem estão no [glossário](docs/dominio/glossario.md).
 
-- **Backend**: Apply `@clean-code`, `@domain-driven-design`, and `@uncle-bob-craft` principles.
-- **Frontend**: Apply `@react-best-practices`, `@senior-frontend`, and `@ui-skills` principles.
-- **Remotion**: Same as frontend plus `@remotion-best-practices`.
+## Skills por pasta
+
+As regras em `.claude/rules/` carregam, por caminho:
+
+| Pasta | Skills carregadas |
+|---|---|
+| `backend/**` | `clean-code`, `domain-driven-design`, `uncle-bob-craft` |
+| `frontend/**` | `react-best-practices`, `senior-frontend`, `ui-skills` |
+| `video-renderer/**` | as do frontend + `remotion-best-practices` |
+
+Recomendadas para **revisão** (não são carregadas automaticamente): `clean-architecture-guardian` (estrutura) e `clean-code-review` (legibilidade). **Não use** skills de Angular — o frontend é React; elas estão desligadas em `.claude/settings.json`.
 
 ---
 
-## Protocolo de Alteração (Lock de Funcionalidades)
+## Protocolo de alteração (travas de funcionalidade)
 
-> **Esta seção vale para qualquer agente de IA — Claude, Cursor, Codex, Cline, Copilot, etc.**
+> Vale para qualquer agente.
 
 ### Antes de editar QUALQUER arquivo
 
-1. Verifique se ele aparece em [`.guia/locks/registry.yaml`](.guia/locks/registry.yaml).
-2. Se aparecer, **o arquivo está TRAVADO**: você pode lê-lo, mas **não pode editar, deletar, renomear, mover, nem criar substituto em outro caminho**.
-3. Antes de pedir desbloqueio, explique: `id` da trava, descrição/funcionalidade protegida, por que a mudança toca nela, impacto esperado, risco de regressão e alternativa sem mexer no arquivo travado.
-4. Para destravar, **peça autorização explícita ao desenvolvedor**. Não decida sozinho. Não tente burlar (renomear arquivo, refazer noutro lugar, dividir em vários).
-5. Se o arquivo NÃO aparece no registry, edite normalmente — respeitando os princípios abaixo.
+1. Veja se ele aparece em [`.guia/locks/registry.yaml`](.guia/locks/registry.yaml) (`python bin/check-lock.py check <arquivo>`).
+2. Se aparecer, **o arquivo está travado**: pode ler, mas não pode editar, apagar, renomear, mover nem recriar em outro caminho.
+3. Antes de pedir desbloqueio, explique: o `id` da trava, o que ela protege, por que a mudança toca nela, o impacto esperado, o risco de regressão e a alternativa sem mexer no arquivo.
+4. **Peça autorização explícita ao desenvolvedor.** Não decida sozinho e não contorne (renomear, refazer noutro lugar, dividir em vários).
+5. Criar arquivo novo também é trava (`adicoes-exigem-autorizacao`).
+
+As travas protegem **funcionalidades homologadas**, não contextos de arquitetura: um arquivo pode estar em várias, um contexto inteiro pode não ter nenhuma.
 
 ### Como o desbloqueio funciona
 
-Quando o desenvolvedor autorizar, ele incluirá no commit a marca:
+O commit leva **uma marca por trava que casa** com os arquivos alterados:
 
 ```
 [unlock:<feature-id>] motivo: <razão curta>
 ```
 
-O hook `.githooks/commit-msg` e o workflow `.github/workflows/lock-check.yml` validam isso. Sem a marca, o commit é rejeitado (local e/ou no PR).
-
-### Comandos úteis
+O hook `.githooks/commit-msg` e o workflow `.github/workflows/lock-check.yml` validam. Instale o hook uma vez por clone e confirme que ficou ativo — uma IDE pode revertê-lo em silêncio (D-261):
 
 ```powershell
-# Listar travas ativas
-python bin/check-lock.py list
-
-# Checar se um conjunto de arquivos está travado
-python bin/check-lock.py check backend/app/services/ingestao.py
-
-# Instalar o hook git (uma vez por clone)
 git config core.hooksPath .githooks
+git config --get core.hooksPath   # deve responder .githooks
 ```
 
 ---
 
-## Protocolo de execução concorrente (worktree)
+## Padrão de commit (Conventional Commits + gitmoji)
 
-> **Vale para qualquer agente — Claude, Codex, Cursor, etc.** Lições da retrospectiva
-> da Vistoria 2 (épicos E-001..E-005). O `guia:finish` faz `git add -A`: numa árvore
-> compartilhada ele varre edits soltos de OUTRA sessão e os funde no commit errado.
+Mensagem em português, no imperativo, com o emoji **antes** do tipo (D-091):
 
-- **Um worktree isolado por chip concorrente** (ou serialize os chips). Chips paralelos
-  que compartilham a mesma árvore de trabalho contaminam os commits uns dos outros —
-  isole cada frente em seu worktree/branch ou rode uma de cada vez.
-- **Commit atômico por arquivo:** `git add -- <arquivo>` e `git commit -- <arquivo>`.
-  Sob concorrência, **nunca** `git add -A` nem `git commit` sem pathspec — eles capturam
-  o trabalho em andamento das outras sessões.
-- **Janela mínima do bypass do `lock-ignore.txt`:** editar o arquivo travado → commitar
-  na hora com a marca `[unlock:<id>]` → restaurar o `lock-ignore.txt` no mesmo passo.
-  Não deixe o bypass ativo durante pausas longas (AskUserQuestion, testes, análise) —
-  um `git add -A` de um `finish` concorrente commitaria o travado sem a marca.
-- **Stories que reescrevem histórico** (remoção de segredo via `git filter-repo` e afins)
-  rodam **serializadas, sozinhas**, com o motor Guia Fluxo e o backend **pausados** —
-  o rewrite muda todos os SHAs e não tolera outra sessão gravando na árvore ao mesmo tempo.
+```
+<emoji> <tipo>(<D-NNN>): <descrição imperativa, minúscula, sem ponto final>
+
+[corpo: o PORQUÊ, não o "o quê"]
+
+[unlock:<feature-id>] motivo: <razão>   ← só quando tocar arquivo travado
+Co-Authored-By: <nome> <email>           ← em commit assistido por IA
+```
+
+| Tipo | Emoji | Quando |
+|---|---|---|
+| `feat` | ✨ | capacidade nova |
+| `fix` | 🐛 | correção de defeito ou regressão |
+| `refactor` | ♻️ | reestrutura sem mudar comportamento |
+| `chore` | 🧹 | manutenção, dependências, configuração |
+| `docs` | 📝 | documentação |
+| `style` | 🎨 | formatação, sem lógica |
+| `test` | ✅ | testes |
+| `perf` | ⚡ | desempenho |
+| `ci` | 👷 | pipeline de CI |
+| `merge` | 🔀 | merge de branch ou worktree |
+
+Escopo `(D-NNN)` sempre que houver tarefa (`(E-NNN)` para épico). **Um commit por funcionalidade**: stage misturado se divide antes de commitar.
 
 ---
 
-## Princípios de Engenharia (aplicar com pragmatismo)
+## Execução concorrente (worktree e árvore compartilhada)
 
-Esta é uma aplicação pessoal. Aplique o que faz sentido para o tamanho do projeto; **não invente abstrações para o futuro**. Quando em dúvida sobre escopo, prefira o caminho mais direto.
+- **Um worktree por frente concorrente**, ou rode uma de cada vez. Frentes na mesma árvore contaminam os commits umas das outras.
+- **Commit com pathspec**: `git commit <arquivos> -F msg`. Nunca `git add -A` nem `git commit` sem caminho numa árvore compartilhada. Confira `git diff --cached --name-only` antes. **Exceção que o pathspec não protege:** se o mesmo arquivo tem hunks de outra sessão, o pathspec os leva junto.
+- **Nunca `git stash`** para medir linha de base numa árvore compartilhada — o `stash@{0}` muda de dono. Use `git worktree add` ou `git diff HEAD -- <arquivo>`.
+- Depois de resolver conflito de rebase, rode `git diff main -- <arquivo> | grep "^-"` antes do `--continue`: "manter os dois lados" já comeu corpo de função.
+- **Worktree de frontend precisa de `frontend/.env.local` com `VITE_API_URL`** antes de subir o Vite. Sem ele, a URL da API cai no padrão e o frontend fala com o backend de **outra** instância.
+- **Guia Fluxo:** passe sempre o id explícito (`finish D-NNN`, `ready D-NNN`) — o `current-task.json` é compartilhado e deriva entre sessões. O `finish` padrão gera mensagem no formato antigo; com arquivo travado, use `--no-commit` e faça o commit à mão com as marcas.
+- Tarefa que **reescreve histórico** (`git filter-repo` e afins) roda sozinha, com o backend e as outras sessões parados.
 
-### Testes
-- Código novo em `domain/` ou `services/` nasce com pelo menos um teste de caminho feliz.
-- Se uma alteração quebra teste existente, a tarefa **não** está pronta — investigue a causa antes de continuar.
+---
 
-### Clean Code (Uncle Bob)
-- Nomes intencionais: verbos para funções, substantivos para entidades de domínio.
-- Funções pequenas, com uma responsabilidade clara.
-- Comente o "porquê" não-óbvio; nunca o "o quê" (o nome já diz).
-- Sem código morto, sem TODO genérico, sem `console.log` / `print` esquecidos.
+## Portão de qualidade (o mesmo do CI)
 
-### Clean Architecture
-Camadas e dependências do backend:
+Antes de declarar pronto, rode exatamente o que o CI roda:
 
+```bash
+# backend
+ruff check . && ruff format --check . && lint-imports && pytest
+# frontend
+npm run lint && npx tsc --noEmit && npx vitest run && npm run build
 ```
-routers/ (HTTP)  →  services/ (orquestração)  →  domain/ (puro)
-                                              ↘  infrastructure/ (n8n, Gemini, FFmpeg)
-```
 
-- `domain/` é **puro**: sem FastAPI, sem SQLAlchemy, sem HTTP, sem cliente externo.
-- Routers só convertem HTTP ↔ serviço; nada de lógica de negócio.
-- Frontend: componente "burro" (UI/JSX) separado de hook/serviço (lógica + I/O).
+- **Não rode `npm run format`** (prettier `--write`): o CI não usa prettier e o comando reescreve o repositório inteiro.
+- **Nunca declare verde pelo código de saída de um pipe** (`cmd | tail; echo $?` mostra o código do `tail`). Grave a saída num arquivo e leia.
+- No Windows, `lint-imports > NUL` sai com 1 mesmo com todos os contratos KEPT (a impressão do `rich` em cp1252). Rode com `PYTHONUTF8=1` ou grave a saída em arquivo.
+- **Confira o encoding depois de uma edição feita por agente**: tsc, eslint e vitest não pegam mojibake. O teste `tests/test_sem_mojibake_d668.py` pega.
 
-### DDD pragmático
-- Cada feature travada em `registry.yaml` corresponde aproximadamente a um bounded context.
-- Vocabulário do domínio (`Projeto`, `Corte`, `Metadado`, `Ingestão`, `Análise`) é **consistente** em código, banco e UI — não invente sinônimos.
-- Status enums (`StatusProjeto`, `StatusCorte`) são parte do contrato; mudanças exigem migração de banco.
+## Princípios de engenharia (com pragmatismo)
 
-### Não-regressão
-- Não "limpe" código adjacente ao que você precisa mudar. Refactor de brinde = PR separado.
-- Antes de declarar uma tarefa pronta: rode os testes que tocam a área alterada.
-- Em mudanças de UI: teste no navegador, não confie só no type-check.
+É uma aplicação pequena, de um mantenedor. Aplique o que faz sentido para o tamanho dela; **não invente abstração para o futuro**.
 
-### Em caso de dúvida
-**Pergunte antes de editar.** O custo de uma pergunta é baixo; o custo de uma regressão silenciosa em algo já estável é alto.
+- **Testes:** código novo em `domain/` ou `services/` nasce com pelo menos um teste do caminho feliz. Teste que quebra = tarefa não pronta.
+- **Clean Code:** nomes que dizem a intenção (verbo para função, substantivo para entidade); funções pequenas; comentário explica o **porquê**, nunca o "o quê"; sem código morto, TODO genérico ou `print`/`console.log` esquecido.
+- **Não-regressão:** não "limpe" código vizinho ao que precisa mudar (refactor de brinde é outra tarefa). Em mudança de tela, teste no navegador.
+- **Processos:** nunca mate processo **pelo nome** (`taskkill /IM ffmpeg.exe` derruba o de outras instâncias) — só pelo PID. Todo subprocesso tem `timeout`.
+- **Em caso de dúvida, pergunte antes de editar.** Uma pergunta custa pouco; uma regressão silenciosa em algo estável custa caro.
