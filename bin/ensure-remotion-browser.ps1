@@ -113,6 +113,14 @@ for ($tentativa = 1; $tentativa -le 2 -and -not $extraido; $tentativa++) {
     $zipPath = Get-ZipPath
     if (-not $zipPath) {
         Invoke-BrowserDownload
+        # D-671: nas versoes atuais o Remotion baixa, extrai E apaga o zip. Sem
+        # esta checagem o script procurava um zip que nao existe mais e abortava
+        # o dev.ps1 com o browser ja funcionando (visto num clone limpo). O zip
+        # so importa quando o extract-zip do Node 24 falha e deixa o exe quebrado.
+        if (Test-BrowserExe) {
+            $extraido = $true
+            break
+        }
         $zipPath = Get-ZipPath
     }
     if (-not $zipPath) {

@@ -1,270 +1,209 @@
 # Setup — CutCut
 
-Guia para quem clona o repositório e quer rodar o projeto localmente.
+Guia para instalar o CutCut numa máquina **Windows** (a única plataforma suportada —
+[ADR-0008](adr/0008-plataforma-windows.md)) e deixá-lo pronto para o primeiro canal.
+
+> Este passo a passo foi seguido num clone limpo em 22/09/2026 (D-671). O que ele
+> encontrou de errado está corrigido aqui.
 
 ---
 
-## Pré-requisitos
+## 1. Pré-requisitos
 
-Instale antes de continuar:
+**Obrigatórios**
 
-| Ferramenta | Versão mínima | Link |
-|-----------|--------------|------|
-| Python | 3.11+ | https://python.org |
+| Ferramenta | Versão | Onde |
+|---|---|---|
+| Python | 3.11+ (marque "Add to PATH") | https://python.org |
 | Node.js | 20+ | https://nodejs.org |
-| ffmpeg | qualquer recente | https://ffmpeg.org/download.html |
-| yt-dlp | qualquer recente | https://github.com/yt-dlp/yt-dlp |
-| Claude Code CLI | qualquer recente | https://claude.ai/code |
+| ffmpeg e ffprobe | recente, no PATH | https://ffmpeg.org/download.html |
+| yt-dlp | recente, no PATH | https://github.com/yt-dlp/yt-dlp |
+| git | qualquer | https://git-scm.com |
 
-Verifique que `ffmpeg`, `yt-dlp` e `claude` estão no PATH:
+**Opcionais** — cada um libera uma parte do app
 
-```bash
-ffmpeg -version
-yt-dlp --version
-claude --version
-```
+| Ferramenta | Libera |
+|---|---|
+| [Claude Code CLI](https://claude.ai/code) (`claude`) | IA pela sua assinatura do Claude |
+| Antigravity CLI (`agy`) | IA pela sua assinatura do Google |
+| Google Chrome | publicação assistida no TikTok e no Instagram (experimental) |
+| iGPU Intel com Quick Sync | render acelerado; sem ela o vídeo sai pela CPU (`libx264`) |
 
-O **Claude CLI** é o provedor de IA do projeto: ele faz a análise de transcrição (proposta de
-cortes), os metadados, os desvios e o resumo, usando a sua assinatura do Claude. A implementação
-está em `backend/app/services/claude_ia.py` e `backend/app/infrastructure/claude_cli_client.py`.
+Sem nenhum CLI de IA o app funciona no **modo manual**: ele monta o prompt e você cola a
+resposta de qualquer IA ([ADR-0004](adr/0004-provedores-de-ia-v2.md)).
 
----
-
-## 1. Clonar e instalar dependências
-
-```bash
-git clone https://github.com/seu-usuario/gerador-cortes.git
-cd gerador-cortes
-```
-
-### O caminho curto: `bin/bootstrap`
+Confira no terminal:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1   # Windows (-Dev inclui as deps de teste)
+python --version
+node --version
+ffmpeg -version
+yt-dlp --version
 ```
 
-```bash
-bin/bootstrap.sh          # Linux / macOS (--dev inclui as deps de teste)
+---
+
+## 2. Instalar
+
+```powershell
+git clone https://github.com/Paulo-Marcos/gerador-cortes.git
+cd gerador-cortes
+powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1
 ```
 
-O script faz de uma vez tudo o que esta seção descreve: confere Python, Node, ffmpeg e yt-dlp,
-cria `backend/.venv`, instala as dependências do backend, roda `npm ci` no frontend e no
-renderer e cria o `backend/.env` a partir do exemplo — **sem nunca sobrescrever** um `.env`
-existente. Rodar de novo é seguro. Os passos manuais abaixo ficam como referência (e para
-quando algo falha no meio).
+O bootstrap confere os pré-requisitos, cria `backend\.venv`, instala as dependências do
+backend, roda `npm ci` no frontend e no renderer e cria o `backend\.env` a partir do
+exemplo — **sem nunca sobrescrever** um `.env` que já exista. Rodar de novo é seguro.
+Use `-Dev` para instalar também as dependências de teste.
 
-### Backend (Python)
+<details>
+<summary>O que o bootstrap faz, passo a passo (para quando algo falha no meio)</summary>
 
-```bash
+```powershell
 cd backend
 python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# Linux / macOS
-source .venv/bin/activate
-
-pip install -r requirements.txt
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+copy .env.example .env      # só se ainda não existir
+cd ..\frontend
+npm ci
+cd ..\video-renderer
+npm ci
 ```
 
-> **O `dev.ps1` encontra esse venv sozinho.** Se `backend/.venv` existir, o
-> backend sobe com o Python dele; se não existir, cai no `python` do PATH — um
-> clone novo funciona antes de qualquer setup.
->
-> Criar o venv **importa**: sem ele, todos os checkouts da máquina (DEV e PRD)
-> dividem a mesma instalação, e atualizar uma dependência "só para testar" mexe
-> em produção no mesmo ato. Para rodar os testes use o Python do venv
-> (`.venv\Scripts\python.exe -m pytest`), não o global — senão o gate valida um
-> ambiente que não é o que a aplicação usa.
+O `dev.ps1` encontra o `backend\.venv` sozinho. Criar o venv importa: sem ele, todo clone
+da máquina divide a mesma instalação de Python, e atualizar uma dependência num deles
+mexe em todos.
 
-### Frontend (React)
-
-```bash
-cd frontend
-npm install
-```
-
-### Remotion + Worker (Node.js)
-
-```bash
-cd video-renderer
-npm install
-```
-
-> **Chrome Headless Shell do Remotion (obrigatório após `npm ci`/`npm install`).**
-> No Node 24 o `extract-zip` do Remotion pode falhar em silêncio e deixar renders sem gerar
-> arquivo. Veja o problema e o fix em
-> [Troubleshooting → Chrome Headless Shell do Remotion](TROUBLESHOOTING.md#chrome-headless-shell-do-remotion-não-extrai-node-24).
+</details>
 
 ---
 
-## 2. Configurar variáveis de ambiente do backend
-
-```bash
-# A partir da raiz do projeto
-cp backend/.env.example backend/.env
-```
-
-Abra `backend/.env` e preencha as chaves necessárias:
-
-```dotenv
-# Claude CLI — provedor de IA (análise, metadados, desvios, resumo)
-# Já vem habilitado por padrão; ajuste só se o binário não estiver no PATH.
-CLAUDE_CLI_ENABLED=true
-# CLAUDE_CLI_PATH=claude
-# CLAUDE_CLI_TIMEOUT=600
-
-# Gemini — necessário para geração de thumbnails e cenas
-GEMINI_API_KEY=sua-chave-do-google-ai-studio
-
-# Diretórios (os defaults já funcionam para desenvolvimento local)
-PROJETOS_DIR=./projetos
-ASSETS_DIR=./assets
-
-# Diarização de falantes (opcional) — veja a seção abaixo
-HUGGINGFACE_TOKEN=
-```
-
-### Diarização de falantes — canal vs. reagidos (opcional)
-
-Em vídeos de reação, a IA às vezes atribui ao dono do canal uma fala que é de
-outra pessoa (um trecho reagido, um convidado). A **diarização** rotula quem
-fala em cada segmento da transcrição (`[CANAL]` vs. `[OUTRO]`), para a análise
-gerar cortes sem misturar falas de pessoas diferentes.
-
-É **opcional** e você a dispara **na hora da análise** (botão/toggle na tela do
-projeto): assim vê o vídeo antes e decide se vale a pena. Sem configurar, tudo
-segue funcionando — a transcrição apenas não recebe o rótulo de falante.
-
-Para habilitar:
-
-```bash
-# 1. Instale a dependência pesada (torch + pyannote) no ambiente do backend
-cd backend
-pip install pyannote.audio
-
-# 2. Crie um token GRATUITO em huggingface.co/settings/tokens
-#    - Prefira um token CLÁSSICO com role "Read" (enxerga repos gated por padrão).
-#    - Se usar token "fine-grained", HABILITE a permissão
-#      "Read access to contents of all public gated repos you can access"
-#      — sem esse checkbox o download falha com 403 mesmo com os termos aceitos.
-#    e ACEITE os termos dos DOIS modelos gated (o 3.1 depende do segmentation):
-#    huggingface.co/pyannote/speaker-diarization-3.1
-#    huggingface.co/pyannote/segmentation-3.0
-#    Depois preencha no backend/.env:
-#    HUGGINGFACE_TOKEN=hf_xxx
-```
-
-> **Erro "cannot find the requested files ... check your connection"?** Apesar do
-> texto, quase nunca é conexão: é um **403** porque o token não tem acesso a repos
-> gated (checkbox do fine-grained acima) ou os termos de um dos modelos não foram
-> aceitos. A causa específica sai no log do backend (`[Diarizacao] Causa provável: ...`).
-
-> **Aviso de symlink no Windows** (`cache-system uses symlinks ... your machine does
-> not support them`): é benigno — o cache funciona em modo cópia (gasta um pouco mais
-> de disco). Para silenciar, ative o Developer Mode do Windows ou defina
-> `HF_HUB_DISABLE_SYMLINKS_WARNING=1`.
-
-> Sem GPU a diarização roda na CPU (mais lenta). Após diarizar, você pode
-> **rebatizar** os falantes na UI ("esse é o Pedro", "esse é o João") — os
-> nomes ficam salvos por projeto e entram no prompt da análise.
-
-> A identidade do canal (handle/nome/crédito) e o canal-fonte das lives **não** são configurados
-> aqui — ficam em `instance/channel.yaml` (veja a seção
-> [Configuração do Canal](#configuração-do-canal) mais abaixo).
-
-> Para uso em produção, copie `backend/.env.production.example` em vez do `.env.example` e ajuste as variáveis de host/URL conforme seu ambiente.
-
----
-
-## 3. Criar a pasta `instance/` (identidade do canal)
-
-`instance/` guarda os dados exclusivos da sua instalação: configuração do canal (`channel.yaml`),
-prompts editoriais, mascote e banco de dados local. Ela é **ignorada pelo git** — um `git pull`
-nunca vai sobrescrever nem conflitar com esses arquivos.
-
-Use o template versionado como ponto de partida:
-
-```bash
-# Na raiz do projeto
-cp -r examples/instance.example/ instance/
-```
-
-Edite `instance/channel.yaml` com as informações do seu canal — handle, nome, crédito, paleta e
-canal-fonte das lives (veja a seção [Configuração do Canal](#configuração-do-canal) mais abaixo
-para o detalhe de cada campo) — e popule as subpastas conforme necessário.
-
----
-
-## 4. Configurar o conteúdo do seu canal
-
-`canal_config.py` contém os prompts editoriais do canal: geração de metadados, thumbnails e direção de cenas. O arquivo é ignorado pelo git para que cada instância use sua própria identidade.
-
-```bash
-cp backend/app/canal_config.py.example backend/app/canal_config.py
-```
-
-Abra `backend/app/canal_config.py` e substitua:
-
-- `CREDITOS_TEMPLATE` — texto de créditos ao criador original que aparece na descrição do vídeo
-- `PROMPT_GERAR_METADADOS` — prompt de redação editorial para título, texto de capa, sinopse e hashtags
-- `PROMPT_GERAR_THUMBNAIL` — prompt de geração de thumbnails
-- `PROMPT_DIRECAO` — direção visual das cenas do vídeo (personagem mascote, paleta, tipos de card)
-
-O arquivo `canal_config.py.example` contém um exemplo completo de um canal de análise política e filosófica. Use-o como referência e adapte para o nicho, tom e mascote do seu canal.
-
----
-
-## 5. Configurar o frontend (opcional)
-
-O frontend funciona sem configuração adicional em desenvolvimento local. Se quiser personalizar:
-
-```bash
-cp frontend/.env.example frontend/.env.local
-```
-
-Edite `frontend/.env.local`:
-
-```dotenv
-VITE_API_URL=http://localhost:8000/api   # aponte para o backend
-```
-
-> Identidade do canal (handle/nome) não é configurada aqui — vem de `instance/channel.yaml` via
-> a API do backend.
-
----
-
-## 6. (Opcional) Configurar skills do Claude CLI
-
-A geração de IA roda pelo Claude CLI. As skills em `examples/skills/` são exemplos de prompts editoriais estruturados que refinam essa geração.
-
-Para usar:
-
-1. Instale o Claude Code CLI: https://claude.ai/code
-2. Copie ou crie suas próprias skills em `.claude/skills/`
-3. Adapte os prompts ao nicho do seu canal
-
-> As skills de exemplo são de um canal de análise política e filosófica brasileiro. Trate-as como referência de estrutura, não como conteúdo pronto para o seu canal.
-
----
-
-## 7. Iniciar os serviços
-
-### Windows — tudo de uma vez (recomendado)
+## 3. Subir o app
 
 ```powershell
 .\dev.ps1
 ```
 
-O script inicia os quatro serviços em um único terminal com saída multiplexada e encerra tudo com `Ctrl+C`.
+Sobe os quatro serviços num terminal só e encerra tudo com `Ctrl+C`:
 
-### Individualmente
+| Serviço | Endereço |
+|---|---|
+| Frontend | http://localhost:4300 |
+| Backend (documentação da API em `/docs`) | http://localhost:8000 |
+| Remotion Studio | http://localhost:3200 |
+| Worker de render | processo em segundo plano |
 
-```bash
+Na primeira vez o `dev.ps1` baixa o Chrome Headless Shell que o Remotion usa (~110 MB).
+
+**Não copie nada para `instance/`.** No primeiro boot o app cria a pasta sozinho, com um
+canal pronto (`instance/channels/<canal>/`) e o ponteiro de canal ativo. O antigo passo
+"`cp -r examples/instance.example/ instance/`" é desnecessário — e, rodado depois do
+primeiro boot, espalha arquivos soltos num `instance/` que já foi migrado.
+
+Portas ocupadas por outra instância do app? Copie `dev.ports.local.ps1.example` para
+`dev.ports.local.ps1` e troque os números; o frontend acompanha a porta do backend.
+
+---
+
+## 4. Configurar o canal
+
+Abra **http://localhost:4300** e vá em **Configurações**.
+
+- **Aba Aplicação → Pré-requisitos:** o que a máquina tem e o que falta, item por item,
+  dizendo o que cada opcional libera.
+- **Aba Canal ativo:** edite a identidade do canal (nome, @handle, crédito), escolha o
+  tema e abra as **Skills editoriais** — os prompts de cada etapa (análise, títulos,
+  cenas, metadados, capa), com histórico e "restaurar o padrão". Crie mais canais em
+  **Novo canal**.
+
+Tudo isso fica no banco, por canal, e vale sem reiniciar
+([ADR-0011](adr/0011-skills-editoriais-por-canal.md),
+[ADR-0012](adr/0012-onde-vive-cada-configuracao.md)). Trocar de canal ativo, esse sim,
+pede reiniciar o app.
+
+> **Avançado:** alguns textos (crédito da descrição, prompts de thumbnail e a direção
+> visual padrão das cenas) ainda vêm de um `canal_config.py`. Sem nenhum, o app usa o
+> exemplo versionado. Para personalizar, crie `instance/channels/<canal>/canal_config.py`
+> a partir de `backend/app/canal_config.py.example`.
+
+---
+
+## 5. Conectar o YouTube
+
+Em **Configurações → Canal ativo**, abra **"Como conectar o YouTube"**. O tutorial do app
+guia a criação do cliente OAuth no Google Cloud (uns 10 minutos, de graça), mostra o
+caminho **exato** onde salvar o `client_secrets.json` e explica os erros comuns
+(403, login expirando em 7 dias, cota diária).
+
+- O `client_secrets.json` é o "crachá" do app no Google: **um por instalação**,
+  compartilhado entre os canais.
+- O login (`token.json`) é **por canal**: cada canal publica na própria conta.
+
+---
+
+## 6. Chaves no `backend\.env`
+
+O `.env` guarda só **segredos**; o resto é configurado pela tela.
+
+| Chave | Para quê | Obrigatória? |
+|---|---|---|
+| `YOUTUBE_API_KEY` | busca e ranking de lives (YouTube Data API) | para a busca |
+| `GEMINI_API_KEY` | cenas, desvios e imagens de capa pela API do Gemini | não |
+| `HUGGINGFACE_TOKEN` | diarização de falantes (ver abaixo) | não |
+
+### Diarização de falantes (opcional)
+
+Em vídeos de reação, a IA às vezes atribui ao dono do canal uma fala de outra pessoa.
+A **diarização** rotula quem fala em cada trecho (`[CANAL]` × `[OUTRO]`), e você a liga
+na hora da análise, no projeto. Sem configurar, tudo funciona — a transcrição só não
+recebe o rótulo.
+
+```powershell
+# 1. Instale a dependência pesada (torch + pyannote) no venv do backend
+cd backend
+.venv\Scripts\python.exe -m pip install pyannote.audio
+```
+
+2. Crie um token **gratuito** em huggingface.co/settings/tokens — de preferência um token
+   clássico com role "Read". Se usar um "fine-grained", marque *"Read access to contents
+   of all public gated repos you can access"*.
+3. Aceite os termos dos **dois** modelos: `pyannote/speaker-diarization-3.1` e
+   `pyannote/segmentation-3.0`.
+4. Preencha `HUGGINGFACE_TOKEN=hf_...` no `backend\.env`.
+
+> Erro "cannot find the requested files … check your connection"? Quase nunca é
+> conexão: é um **403** (token sem acesso a repositórios gated, ou termos não aceitos).
+> A causa sai no log do backend (`[Diarizacao] Causa provável: …`). Sem GPU, a
+> diarização roda na CPU, mais devagar.
+
+---
+
+## 7. Atualizar sem perder dados
+
+Os dados de cada canal vivem em `instance/`, que o git ignora: um `git pull` não os toca.
+Antes de atualizar, rode o guarda-corpo, que confere isso:
+
+```powershell
+python bin\check_update_safety.py      # faz também o preview do que o pull traz
+git pull
+```
+
+Saída `0` = seguro. Qualquer outra = algum dado seria versionado ou tocado: **não
+atualize** até corrigir. Por garantia, faça backup antes da pasta
+`instance\channels\<canal>\` e do `instance\settings.db` — juntos eles são o canal
+inteiro ([ADR-0005](adr/0005-persistencia-multicanal.md)).
+
+Se você mudou `.claude/settings.json` localmente e o `git pull` reclamar de conflito,
+guarde a sua versão, atualize e reaplique.
+
+---
+
+## 8. Rodar cada serviço separado
+
+```powershell
 # Backend
 cd backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000 --reload
 
 # Frontend
 cd frontend
@@ -274,218 +213,13 @@ npm run dev
 cd video-renderer
 npm run dev
 
-# Worker de render (necessário para exportar vídeos)
+# Worker de render (necessário para renderizar)
 cd video-renderer
 node native_worker.js
 ```
 
----
-
-## Serviços disponíveis
-
-| Serviço | URL |
-|---------|-----|
-| Backend API | http://localhost:8000 |
-| Documentação da API | http://localhost:8000/docs |
-| Frontend | http://localhost:4300 |
-| Remotion Studio | http://localhost:3200 |
-
----
-
-## Configuração do Canal
-
-Esta seção consolida todos os pontos de configuração que definem a identidade do canal na sua instância do CutCut.
-
----
-
-### Identidade do canal — `instance/channel.yaml`
-
-O `channel.yaml` do canal ativo é a **única fonte de identidade**: handle, nome, crédito e paleta.
-Não existe mais configuração de identidade em variáveis de ambiente — nem no backend
-(`backend/.env`), nem no frontend (`frontend/.env.local`). Veja
-[`examples/instance.example/channel.yaml`](../examples/instance.example/channel.yaml) como
-referência de campos:
-
-```yaml
-handle: "@meupodcast"
-nome: "Meu Podcast de História"
-credito: "@meupodcast"
-
-# Canal-FONTE das lives: o canal do YouTube de onde o ranking baixa as
-# livestreams. Aceita @handle, id UCxxxx ou username.
-youtube_channel_id: ""
-
-paleta:
-  primaria: "#1a1a2e"
-  secundaria: "#16213e"
-  acento: "#0f3460"
-```
-
-| Campo | Onde aparece |
-|-------|-------------|
-| `handle` | Prompts de metadados e thumbnails |
-| `nome` | Interface e logs internos |
-| `credito` | Texto de crédito ao criador original nas descrições dos vídeos |
-| `youtube_channel_id` | Canal-fonte que o ranking de lives varre |
-| `paleta` | Cores usadas nas cenas e overlays gerados |
-
-Edite `instance/channel.yaml` diretamente (veja a seção [Pasta `instance/` — dados locais do
-canal](#pasta-instance--dados-locais-do-canal) para criar o arquivo) ou use a UI de Canais no
-frontend, que lê e grava por `identidade_do_canal_ativo()`.
-
----
-
-### Prompts editoriais — `canal_config.py`
-
-`canal_config.py` é onde mora a identidade editorial do canal: persona do redator, estilo de título, direção visual das cenas e geração de thumbnails. O arquivo é gitignored por design — cada instância mantém o seu próprio, sem depender do repositório central.
-
-Para configurar:
-
-```bash
-cp backend/app/canal_config.py.example backend/app/canal_config.py
-```
-
-Edite as quatro constantes do arquivo:
-
-| Constante | O que controla |
-|-----------|---------------|
-| `CREDITOS_TEMPLATE` | Texto de créditos ao criador original inserido em cada descrição |
-| `PROMPT_GERAR_METADADOS` | Persona e regras do redator editorial (título, sinopse, hashtags) |
-| `PROMPT_GERAR_THUMBNAIL` | Prompt de geração de thumbnail: personagem, paleta, estilo visual |
-| `PROMPT_DIRECAO` | Direção visual das cenas: mascote, tipos de card, tipografia |
-
-O `canal_config.py.example` contém um exemplo completo e funcional — use-o como ponto de partida e refine ao longo do tempo.
-
----
-
-### Skills do Claude CLI (opcional)
-
-Com o Claude CLI como provedor de IA (`CLAUDE_CLI_ENABLED=true`, default), a pasta `examples/skills/` contém exemplos de skills editoriais estruturadas do canal de referência — mostrando o nível de detalhe esperado.
-
-Para adaptar ao seu canal:
-
-1. Crie suas versões em `.claude/skills/`
-2. Ajuste os prompts ao nicho, tom e vocabulário do seu canal
-
-> Esta etapa é avançada e opcional. O projeto funciona sem skills customizadas; os prompts em `canal_config.py` já cobrem os principais fluxos de geração.
-
----
-
-## Produção
-
-Para deploy em servidor, use `backend/.env.production.example` como base e ajuste:
-
-- `PROJETOS_DIR` e `ASSETS_DIR` — caminhos absolutos no servidor
-- Confirme que o binário `claude` está disponível no PATH do processo do backend (o Claude CLI roda nativo, não no Docker)
-- Configure um proxy reverso (nginx, Caddy) para expor backend e frontend
-
-O frontend em produção é um build estático:
-
-```bash
-cd frontend
-npm run build
-# serve o diretório dist/ com qualquer servidor de arquivos estáticos
-```
-
----
-
-## Atualizar sem perder dados
-
-Antes de publicar na DEV e **antes de todo `git pull` na PROD**, rode o guard-rail — ele confirma que a atualização não versiona nem sobrescreve dado de produção (`instance/`, `projetos.db`, mídias):
-
-```bash
-# Na PROD, antes do pull (faz preview do delta origin/main):
-python bin/check_update_safety.py
-
-# Na DEV, sem rede / antes de publicar:
-python bin/check_update_safety.py --no-fetch
-```
-
-Exit `0` = seguro. Exit `!= 0` = algum dado de produção seria versionado/tocado — **não atualize** até corrigir. Aceita `--remote <nome>` e `--branch <nome>` (default `origin main`). Faça backup de `instance/channels/<canal>/projetos.db` antes do pull.
-
----
-
-## Atualizar um clone de produção sem conflito
-
-`.guia/` (histórico de demandas do Guia Fluxo) e `.claude/settings.json` (configurações do Claude CLI) são **versionados no repositório de desenvolvimento** — é assim que preservamos o histórico de tarefas e as regras do projeto. Num clone de produção esses caminhos mudam localmente (tarefas encerradas, ajustes de configuração), e o `git pull` começa a reclamar de conflitos.
-
-A solução é ignorá-los **apenas no clone de produção**, sem tocar no `.gitignore` do repositório nem remover os arquivos do histórico git.
-
-### Passo 1 — Adicionar ao exclude local do clone
-
-`.git/info/exclude` funciona como um `.gitignore` privado do clone — não é versionado e não afeta outros clones:
-
-```bash
-# Execute dentro do clone de produção
-echo ".guia/" >> .git/info/exclude
-echo ".claude/settings.json" >> .git/info/exclude
-```
-
-> Copie o conteúdo pronto de `examples/prod-git-exclude.txt` se preferir.
-
-### Passo 2 — Marcar com `skip-worktree` (se já houver alterações locais rastreadas)
-
-Se o git já estiver mostrando esses caminhos como modificados no clone de produção, marque-os com `skip-worktree` para que ele os ignore durante pulls e merges:
-
-```bash
-# Arquivo único
-git update-index --skip-worktree .claude/settings.json
-
-# Diretório inteiro
-git ls-files .guia/ | xargs git update-index --skip-worktree
-```
-
-### Verificar que os arquivos continuam versionados no dev
-
-Execute no **clone de desenvolvimento** para confirmar que nada foi de-versionado:
-
-```bash
-git ls-files .guia | head
-git ls-files .claude/settings.json
-# Ambos devem listar arquivos — se retornarem vazio, algo deu errado
-```
-
-### Desfazer o `skip-worktree` (quando precisar receber uma atualização do upstream)
-
-```bash
-git update-index --no-skip-worktree .claude/settings.json
-git ls-files .guia/ | xargs git update-index --no-skip-worktree
-# Depois: git pull (resolva conflitos normalmente) e remarca com skip-worktree se quiser
-```
-
----
-
-## Pasta `instance/` — dados locais do canal
-
-`instance/` guarda os dados exclusivos da sua instalação: configuração do canal (`channel.yaml`), prompts editoriais, mascote e banco de dados local. Ela é **ignorada pelo git** — um `git pull` nunca vai sobrescrever nem conflitar com esses arquivos.
-
-> A criação inicial da pasta (`cp -r examples/instance.example/ instance/`) fica no
-> [passo 3](#3-criar-a-pasta-instance-identidade-do-canal) do guia, logo após configurar as
-> variáveis de ambiente do backend.
-
-### Por que não vai conflitar num `git pull`
-
-O `.gitignore` exclui toda a árvore `instance/`. Mesmo que o repositório upstream mude estrutura ou adicione novos arquivos ao template (`examples/instance.example/`), a sua `instance/` local fica intocada:
-
-```bash
-# Verificar que instance/ não está rastreada
-git ls-files instance/
-# Deve retornar vazio — se retornar arquivos, algo deu errado
-
-# Verificar que o template continua versionado (não deve ser ignorado)
-git ls-files examples/instance.example/
-# Deve listar os arquivos do template
-```
-
-### Receber uma atualização do upstream (fluxo completo)
-
-```bash
-# 1. Atualiza o código (instance/ fica intacta — ignorada pelo git)
-git pull
-
-# 2. Se o template tiver novidades, aplique manualmente o que for relevante
-diff examples/instance.example/channel.yaml instance/channel.yaml
-
-# 3. Confira que seus dados locais estão ok
-ls instance/
-```
+**Um processo de backend só**: nada de `--workers 2`. O app tem um escritor único por
+banco e tarefas em segundo plano no próprio processo
+([ADR-0005](adr/0005-persistencia-multicanal.md)).
+
+Problemas conhecidos: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

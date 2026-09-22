@@ -62,7 +62,8 @@ Linux, macOS e Docker não são suportados.
 Sem nenhum CLI de IA o app funciona no **modo manual**: ele monta o prompt, você cola a
 resposta de qualquer IA ([ADR-0004](docs/adr/0004-provedores-de-ia-v2.md)).
 
-A tela de **Canais** mostra o que está faltando na sua máquina, item por item.
+Em **Configurações → Aplicação → Pré-requisitos** o app mostra o que falta na sua máquina,
+item por item.
 
 ## Instalação
 
@@ -88,7 +89,8 @@ os CLIs de IA, está em [docs/SETUP.md](docs/SETUP.md). Problemas conhecidos:
 
 ## Primeiros passos
 
-1. Em **Canais**, crie o seu canal (nome, @handle, crédito) e confira os pré-requisitos.
+1. Em **Configurações**, ajuste o canal que o app já criou (nome, @handle, crédito) e
+   confira os pré-requisitos. Lá também está o guia para conectar o YouTube.
 2. Em **Buscar lives** ou **Ranking**, escolha uma live, ou cole a URL dela.
 3. O app baixa e transcreve. Depois, peça à IA que proponha os cortes.
 4. No **editor de cortes**, aprove, ajuste as bordas e tire os trechos que não servem.
