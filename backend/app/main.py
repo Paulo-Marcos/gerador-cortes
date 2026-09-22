@@ -39,6 +39,7 @@ from app.routers import (
 from app.routers import (
     settings as app_settings,
 )
+from app.seguranca_local import ORIGEM_LOCAL_REGEX, GuardaDeOrigemLocal
 from app.services import channels as channels_service
 from app.services import encerramento, settings_store
 from app.services.app_logging import install_log_controls
@@ -100,14 +101,18 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*"
-    ],  # Qualquer porta: o renderer sobe seu servidor em 3000-3100 (porta variavel)
+    # D-745: só origens desta máquina, em qualquer porta (o renderer sobe o seu
+    # servidor numa porta sorteada entre 3000 e 3100). Antes era "*", e qualquer
+    # site aberto no navegador lia a API local.
+    allow_origin_regex=ORIGEM_LOCAL_REGEX,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*", "Range"],
     expose_headers=["Content-Range", "Accept-Ranges", "Content-Length"],
 )
+# Registrada depois do CORS = roda antes dele. Fecha o que o CORS não fecha:
+# POST simples, WebSocket e DNS rebinding (ver app/seguranca_local.py).
+app.add_middleware(GuardaDeOrigemLocal)
 
 app.include_router(projetos.router, prefix="/api/projetos", tags=["Projetos"])
 app.include_router(cortes.router, prefix="/api/cortes", tags=["Cortes"])

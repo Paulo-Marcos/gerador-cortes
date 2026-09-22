@@ -436,7 +436,7 @@ $services = @(
         # D-436: `--app-dir <caminho>` em vez de contar so com o cwd — mesma
         # razao do worker: sem o checkout na linha de comando, um backend orfao
         # nao e reconhecido pela limpeza e fica segurando a porta.
-        Arguments = "/d /s /c `"`"$PythonExe`" -m uvicorn app.main:app --app-dir `"$(Join-Path $BASE 'backend')`" --host 0.0.0.0 --port $BackendPort --reload`""
+        Arguments = "/d /s /c `"`"$PythonExe`" -m uvicorn app.main:app --app-dir `"$(Join-Path $BASE 'backend')`" --host 127.0.0.1 --port $BackendPort --reload`""
         WorkingDirectory = Join-Path $BASE "backend"
         EnvVars = @{
             PYTHONUNBUFFERED = "1"
