@@ -61,3 +61,6 @@ jobs:
 
       - name: Run lock check
         run: python bin/check-lock.py ci --files .changed-files --messages .commit-messages
+
+      - name: Run commit message check
+        run: python bin/check_commit_msg.py range "${{ steps.range.outputs.base }}" "${{ steps.range.outputs.head }}"

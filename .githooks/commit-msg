@@ -1,5 +1,6 @@
 #!/bin/sh
-# Git hook commit-msg - valida travas em .guia/locks/registry.yaml.
+# Git hook commit-msg - confere o padrao de commit (AGENTS.md) e as travas
+# de .guia/locks/registry.yaml.
 # Instale uma vez por clone:
 #     git config core.hooksPath .githooks
 
@@ -19,4 +20,5 @@ if [ -z "$PY" ]; then
     exit 2
 fi
 
+"$PY" "$ROOT/bin/check_commit_msg.py" hook "$1" || exit 1
 exec "$PY" "$ROOT/bin/check-lock.py" hook "$1"
