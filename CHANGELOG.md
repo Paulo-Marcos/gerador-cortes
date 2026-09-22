@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > Architectural deep-dives that predate this file are preserved as historical
-> narrative in [`docs/CHANGELOG.md`](docs/CHANGELOG.md). New changes are tracked
+> narrative in [`docs/interno/historico-arquitetura-2026-05.md`](docs/interno/historico-arquitetura-2026-05.md). New changes are tracked
 > here in the standardized Keep a Changelog format.
 
 ## [Unreleased]
@@ -111,7 +111,7 @@ First public release.
 - Exponential backoff for Claude CLI `529 Overloaded` responses (D-072).
 - Cut generation uses the signed-in Claude session instead of the API key (D-071).
 - Overlay chunks now use chunk-relative timing, fixing delayed/blank `.webm`
-  chunks (see `docs/CHANGELOG.md` §8).
+  chunks (see `docs/interno/historico-arquitetura-2026-05.md` §8).
 - Single-flight audio proxy with hybrid seek (I-039).
 
 [Unreleased]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.1.0...HEAD

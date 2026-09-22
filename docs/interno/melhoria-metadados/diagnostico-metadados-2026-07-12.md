@@ -36,7 +36,7 @@ YouTube (2024–2026) e propõe ajustes de estrutura, conteúdo e produto. A for
   número, resumo, **transcrição final = fonte de verdade**, histórico de títulos recentes)
   e devolve **um JSON**.
 - `MetadadosService.importar_resultado_meta()` persiste
-  ([metadados.py:308](../../backend/app/services/metadados.py)).
+  ([metadados.py:308](../../../backend/app/services/metadados.py)).
 
 ### 2.2 O que a skill produz hoje (contrato de saída)
 ```json
@@ -57,8 +57,8 @@ YouTube (2024–2026) e propõe ajustes de estrutura, conteúdo e produto. A for
 
 ### 2.3 Como é persistido
 - `descricao_youtube = sinopse + "\n\n" + creditos + "\n\n" + hashtags`
-  ([metadados.py:324](../../backend/app/services/metadados.py)).
-- **`tags_youtube` = a MESMA lista de hashtags** ([metadados.py:354](../../backend/app/services/metadados.py)).
+  ([metadados.py:324](../../../backend/app/services/metadados.py)).
+- **`tags_youtube` = a MESMA lista de hashtags** ([metadados.py:354](../../../backend/app/services/metadados.py)).
   Ou seja: **não existe conceito de "tags" separado de "hashtags"** hoje. Um único array
   serve para os dois campos.
 - `titulo_youtube` = `opcoes_titulo[0]`; `texto_capa` = `opcoes_texto_capa[0]` (+ emojis

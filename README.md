@@ -112,6 +112,7 @@ que nada dos seus dados será tocado
 | Contribuir | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Trabalhar com um agente de IA | [AGENTS.md](AGENTS.md) |
 | O que mudou em cada versão | [CHANGELOG.md](CHANGELOG.md) |
+| Todo o resto (e o caderno de trabalho) | [docs/README.md](docs/README.md) |
 
 ## Licença
 

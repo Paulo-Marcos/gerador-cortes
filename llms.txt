@@ -13,6 +13,7 @@
 - [docs/SETUP.md](docs/SETUP.md): instalação passo a passo
 - [CONTRIBUTING.md](CONTRIBUTING.md): portão de qualidade, padrão de commit e travas
 - [AI_NAVIGATION.md](AI_NAVIGATION.md): índice de navegação + docs/ai-index
+- [docs/README.md](docs/README.md): o que é documentação em vigor e o que é o caderno de trabalho (docs/interno/, retrato de cada data — não descreve o código de hoje)
 
 ## Domínio
 - [docs/dominio/mapa-de-contextos.md](docs/dominio/mapa-de-contextos.md): os 11 contextos e quem depende de quem

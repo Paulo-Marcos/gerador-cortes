@@ -21,7 +21,7 @@ import re
 import unicodedata
 
 # Faixas de duração (minutos) — espelham as bordas do plano V2 de cortes
-# (docs/melhoria-cortes/plano-v2-cortes.md: mínimo 5/8, máximo 18/30). Intervalos
+# (docs/interno/melhoria-cortes/plano-v2-cortes.md: mínimo 5/8, máximo 18/30). Intervalos
 # semiabertos [lo, hi) para não contar um vídeo em duas faixas.
 BUCKETS_DURACAO: list[tuple[str, float, float]] = [
     ("<5", 0.0, 5.0),

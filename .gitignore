@@ -130,7 +130,7 @@ deploy.env
 
 # Diagnóstico interno de migração — preservado localmente, fora do repo público
 # (nomeia o canal/mascote real; D-210). Diagnósticos futuros podem ser versionados.
-docs/diagnostico/migracao-generica-2026-06-28.md
+docs/interno/diagnostico/migracao-generica-2026-06-28.md
 
 # Benchmarks e artefatos de debug pessoal
 backend/_bench_grade/

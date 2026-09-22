@@ -198,7 +198,7 @@ caminho segmentado com 1 região de 2 telas + PNG de palco, geometria `DEFAULT_*
 `youtube_layout.py`) num segmento de **120 s @1080p** do `clip_raw_base.mp4` (1920×1080, VP9,
 30 fps). Decode SW + `-filter_complex` + encode `h264_qsv veryfast gq=27`, idêntico ao segmento
 de produção. Só troquei o `format=` do composite entre B e C. Script:
-[`backend/_bench/bench_palco.py`](../../backend/_bench/bench_palco.py) (pasta gitignored).
+[`backend/_bench/bench_palco.py`](../../../backend/_bench/bench_palco.py) (pasta gitignored).
 Hardware: notebook Intel iGPU (QSV), ffmpeg 8.1.
 
 ### Wall-clock das componentes (run quente, máquina fria)
@@ -294,7 +294,7 @@ direto (função pura; 1 região de 2 telas + PNG de palco, geometria `DEFAULT_*
 **incrementalmente**: cada *rung* adiciona uma sub-etapa; o **delta** sobre o anterior = custo
 daquela sub-etapa. Janela de **120 s @1080p** do `clip_raw_base.mp4`, decode SW, `-filter_complex`,
 `-f null` (mede só decode+filtro, sem encode) exceto o último rung. Script:
-[`backend/_bench/bench_dissect.py`](../../backend/_bench/bench_dissect.py) (pasta gitignored).
+[`backend/_bench/bench_dissect.py`](../../../backend/_bench/bench_dissect.py) (pasta gitignored).
 Para neutralizar o *throttling* documentado na D-320: **cooldown de 60 s ANTES de cada rung**
 (cada um medido com a máquina fria), 2 rounds, reporta o **mínimo**. Validação cruzada com a
 D-320: L2 (cor) = 36 s ≈ A da D-320 (30,6 s); L6 (full+encode) = 85 s ≈ B (74,9 s) — metodologia
@@ -435,7 +435,7 @@ Bench fiel construído a partir dos **builders de domínio reais**
 Janela de **120 s @1080p** do `clip_raw_base.mp4`, layout 100%-shared 2-telas (full-cover, D-338) +
 PNG de palco, **6 overlays ProRes 4444 reais** de PROD. QSV decode da fonte, gq=30 na grade, 8M no
 final — idêntico à produção. Anti-throttling (D-320): cooldown 60 s antes de cada medição, 3 rounds,
-**mínimo**. Scripts: [`backend/_bench/bench_fusao.py`](../../backend/_bench/bench_fusao.py),
+**mínimo**. Scripts: [`backend/_bench/bench_fusao.py`](../../../backend/_bench/bench_fusao.py),
 `identidade_fusao.py`, `mem_fusao.py` (pasta gitignored). SEGURO: timeout+PID; nunca taskkill global.
 
 ### 1. Telemetria de PROD (175 cortes) — a grade domina e OCULTA os overlays
