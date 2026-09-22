@@ -34,6 +34,7 @@ from app.domain.moldura_short import Moldura
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
+from app.services import channels
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -773,7 +774,12 @@ async def indicar_para_shorts(corte_id: str, indicado: bool = True) -> dict:
 
         metadado = corte.metadado
         if metadado is None:
-            metadado = MetadadoCorte(id=str(uuid.uuid4()), corte_id=corte_id)
+            # D-666: o mesmo crédito que o default do model gravava.
+            metadado = MetadadoCorte(
+                id=str(uuid.uuid4()),
+                corte_id=corte_id,
+                canal_credito=channels.identidade_do_canal_ativo().credito,
+            )
             db.add(metadado)
 
         metadado.candidato_shorts = bool(indicado)

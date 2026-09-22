@@ -118,8 +118,3 @@ type = "forbidden"
 source_modules = ["app.models"]
 forbidden_modules = ["app.services", "app.routers"]
 allow_indirect_imports = true
-ignore_imports = [
-    # Dívida de 21/09/2026 — default de coluna lendo o canal ativo (toca
-    # settings.db e disco a cada INSERT). Quitar na D-666.
-    "app.models -> app.services.channels",
-]

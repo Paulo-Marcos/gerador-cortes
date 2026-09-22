@@ -26,14 +26,15 @@ def test_os_contratos_de_camada_valem_hoje(monkeypatch):
 
 
 def test_a_catraca_pega_a_divida_quando_a_excecao_sai(monkeypatch, tmp_path):
-    """Sem a exceção registrada, o import de `models` para `services` aparece.
+    """Sem a exceção registrada, o router chamando o cliente direto aparece.
 
     Prova que o contrato enxerga o código real — um contrato que passa sempre
-    não guarda nada. Quando a D-666 quitar essa dívida, este teste falha e
+    não guarda nada. Quando a E-051 quitar essa dívida, este teste falha e
     manda apagar a exceção (o import-linter recusa exceção que não casa mais).
+    O exemplo anterior era `models -> services.channels`, quitado na D-666.
     """
     monkeypatch.chdir(BACKEND)
-    excecao = '    "app.models -> app.services.channels",\n'
+    excecao = '    "app.routers.ranking_lives -> app.infrastructure.youtube_data_api",\n'
     texto = PYPROJECT.read_text(encoding="utf-8").replace("\r\n", "\n")
     assert excecao in texto, "a exceção mudou de forma; atualize este teste"
     sem_excecao = tmp_path / "pyproject.toml"

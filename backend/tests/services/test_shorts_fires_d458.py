@@ -166,6 +166,52 @@ async def test_indicar_corte_sem_metadado_nao_exige_etapa_anterior(ambiente):
     assert estado["elegivel"] is True
 
 
+def _canal_fixo(monkeypatch, credito: str) -> None:
+    from types import SimpleNamespace
+
+    from app.services import channels
+
+    monkeypatch.setattr(
+        channels, "identidade_do_canal_ativo", lambda: SimpleNamespace(credito=credito)
+    )
+
+
+async def _credito_do_metadado(factory, corte_id: str) -> str:
+    from sqlalchemy import select
+
+    async with factory() as db:
+        meta = (
+            await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id))
+        ).scalar_one()
+        return meta.canal_credito
+
+
+@pytest.mark.asyncio
+async def test_metadado_nascido_da_indicacao_leva_o_credito_do_canal(ambiente, monkeypatch):
+    """D-666: era o default do models.py que preenchia — agora é quem cria."""
+    factory, _ = ambiente
+    _canal_fixo(monkeypatch, "@canal-do-teste")
+    await _semear(factory, corte_id="c1", fire=False, clip_path="", com_metadado=False)
+
+    await servico.indicar_para_shorts("c1", True)
+
+    assert await _credito_do_metadado(factory, "c1") == "@canal-do-teste"
+
+
+@pytest.mark.asyncio
+async def test_metadado_nascido_do_fire_leva_o_credito_do_canal(ambiente, monkeypatch):
+    from app.services import metadados as metadados_module
+
+    factory, _ = ambiente
+    monkeypatch.setattr(metadados_module, "AsyncSessionLocal", factory)
+    _canal_fixo(monkeypatch, "@canal-do-teste")
+    await _semear(factory, corte_id="c1", fire=False, clip_path="", com_metadado=False)
+
+    await metadados_module.MetadadosService.toggle_fire("c1")
+
+    assert await _credito_do_metadado(factory, "c1") == "@canal-do-teste"
+
+
 @pytest.mark.asyncio
 async def test_contagem_de_shorts_vem_por_status(ambiente):
     factory, raiz = ambiente

@@ -22,6 +22,7 @@ from app.domain.reading_metadata import (
 )
 from app.editorial_identity import identidade_do_mascote
 from app.models import Corte, MetadadoCorte, Projeto
+from app.services import channels
 from app.services.app_logging import operational_error
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import select
@@ -149,6 +150,8 @@ class MetadadosService:
                     titulo_youtube=corte.titulo_proposto,
                     descricao_youtube="",
                     is_fire=False,
+                    # D-666: o mesmo crédito que o default do model gravava.
+                    canal_credito=channels.identidade_do_canal_ativo().credito,
                 )
                 db.add(meta)
 

@@ -5,7 +5,6 @@ Modelos SQLAlchemy para o CortadorLive
 import enum
 from datetime import datetime
 
-from app.services import channels
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -67,9 +66,10 @@ class Projeto(Base):
     # D-650: buscado por URL ao evitar baixar a mesma live duas vezes.
     youtube_url: Mapped[str] = mapped_column(String(500), index=True)
     titulo_live: Mapped[str] = mapped_column(String(500), default="")
-    canal_origem: Mapped[str] = mapped_column(
-        String(200), default=lambda: channels.identidade_do_canal_ativo().handle
-    )
+    # D-666: era um default que lia o canal ativo (settings.db + disco) a cada
+    # INSERT, de dentro do models.py. As três rotas que criam projeto já passam
+    # o valor; o default nunca era usado em produção.
+    canal_origem: Mapped[str] = mapped_column(String(200), default="")
     duracao_segundos: Mapped[int] = mapped_column(Integer, default=0)
     data_live: Mapped[str] = mapped_column(String(20), default="")
     arquivo_video_path: Mapped[str] = mapped_column(String(1000), default="")
@@ -715,9 +715,9 @@ class MetadadoCorte(Base):
     opcoes_texto_capa: Mapped[str] = mapped_column(Text, default="[]")
     texto_capa: Mapped[str] = mapped_column(String(100), default="")
     link_live_com_timestamp: Mapped[str] = mapped_column(String(500), default="")
-    canal_credito: Mapped[str] = mapped_column(
-        String(200), default=lambda: channels.identidade_do_canal_ativo().credito
-    )
+    # D-666: quem cria o metadado preenche (ver toggle_fire e
+    # indicar_para_shorts) — o model não consulta mais o canal ativo.
+    canal_credito: Mapped[str] = mapped_column(String(200), default="")
     prompt_thumbnail: Mapped[str] = mapped_column(Text, default="")
     thumbnail_path: Mapped[str] = mapped_column(String(1000), default="")
     # D-519: a capa VERTICAL, do TikTok. Coluna propria e nao reuso da de cima
