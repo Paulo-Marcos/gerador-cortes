@@ -170,3 +170,75 @@ jobs:
 
       - name: Build (remotion bundle)
         run: npm run build
+
+  windows:
+    # D-688: o app só é suportado no Windows (ADR-0008), e o resto do CI roda em
+    # Linux. Este job exercita o que só o Windows tem: o bootstrap.ps1, o primeiro
+    # boot num checkout limpo e o pytest sobre caminhos, encoding e subprocessos
+    # do Windows. Versões da produção (3.13 / Node 24).
+    name: Windows (bootstrap + boot limpo + pytest)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # O runner não traz ffmpeg; o app e parte dos testes precisam dele.
+      - name: Install ffmpeg
+        run: choco install ffmpeg -y --no-progress
+
+      - name: Bootstrap (o mesmo script que o usuário roda)
+        run: powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1 -Dev
+
+      - name: Boot limpo (health, canal criado, escuta só em 127.0.0.1)
+        run: |
+          $ErrorActionPreference = "Stop"
+          if (Test-Path instance) { throw "o checkout nao esta limpo: instance\ ja existe" }
+
+          $args_ = @("-m", "uvicorn", "--app-dir", "backend", "--host", "127.0.0.1", "--port", "8000", "app.main:app")
+          $backend = Start-Process -FilePath backend\.venv\Scripts\python.exe -ArgumentList $args_ -PassThru -NoNewWindow `
+              -RedirectStandardOutput boot.out.log -RedirectStandardError boot.err.log
+          try {
+              $ok = $false
+              for ($i = 0; $i -lt 90; $i++) {
+                  try {
+                      $r = Invoke-WebRequest "http://localhost:8000/api/health" -UseBasicParsing -TimeoutSec 5
+                      if ($r.StatusCode -eq 200) { $ok = $true; break }
+                  } catch { Start-Sleep -Seconds 2 }
+              }
+              if (-not $ok) { throw "o backend nao respondeu /api/health em 3 minutos" }
+              Write-Host "ok: /api/health respondeu 200"
+
+              $canais = @(Get-ChildItem instance\channels -Directory -ErrorAction SilentlyContinue)
+              if ($canais.Count -lt 1) { throw "o primeiro boot nao criou nenhum canal em instance\channels" }
+              if (-not (Test-Path instance\settings.db)) { throw "o primeiro boot nao criou instance\settings.db" }
+              Write-Host "ok: primeiro boot criou o canal '$($canais[0].Name)' e o settings.db"
+
+              $escuta = @(Get-NetTCPConnection -LocalPort 8000 -State Listen | Select-Object -ExpandProperty LocalAddress -Unique)
+              if ($escuta.Count -ne 1 -or $escuta[0] -ne "127.0.0.1") { throw "o backend escuta em '$($escuta -join ', ')', esperado so 127.0.0.1" }
+              Write-Host "ok: escuta so em 127.0.0.1"
+          }
+          catch {
+              Write-Host "---- boot.err.log ----"; Get-Content boot.err.log -ErrorAction SilentlyContinue | Select-Object -Last 60
+              throw
+          }
+          finally {
+              # Só pelo PID que este passo iniciou; o uvicorn sem --reload não tem filhos.
+              Stop-Process -Id $backend.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Run pytest
+        working-directory: backend
+        run: .venv\Scripts\python.exe -m pytest
