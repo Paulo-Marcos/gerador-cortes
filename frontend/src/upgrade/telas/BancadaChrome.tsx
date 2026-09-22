@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReadingModal } from '@/features/editor/CommonTopBar';
+import { MetadataModal } from '@/features/metadata/MetadataModal';
 import type { ReadingPatch } from '@/lib/readingMetadata';
 import { useProjeto } from '@/hooks/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { thumbnailUrl } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
+import { montarTira } from '../tiraDoCorte';
 import { useDefinirChrome, type ChromeBarra, type ItemDeLista } from '../UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
@@ -114,6 +116,8 @@ export function BancadaChrome({
 }: BancadaChromeProps) {
   const navigate = useNavigate();
   const [editandoLeitura, setEditandoLeitura] = useState(false);
+  const [metaDoCorte, setMetaDoCorte] = useState<Corte | null>(null);
+  const statusDe = (c: Corte) => exportStatus.find((s) => s.corte_id === c.id);
 
   const indice = cortes.findIndex((c) => c.id === corte.id);
   const irPara = (delta: -1 | 1) => {
@@ -144,6 +148,14 @@ export function BancadaChrome({
     dot: tom(c.status).cor,
     ativo: c.id === corte.id,
     onClick: () => navigate(caminhoDoCorte(c)),
+    // D-746: a lista volta a dizer onde cada corte parou (a casca antiga
+    // dizia) e abre o metadado de qualquer um sem trocar de tela.
+    tira: statusDe(c) ? montarTira(statusDe(c)!, c.status) : undefined,
+    acao: {
+      icone: 'tags' as const,
+      titulo: `Metadados do corte #${c.numero} — editar aqui, sem sair da tela`,
+      onClick: () => setMetaDoCorte(c),
+    },
   }));
 
   useDefinirChrome(
@@ -267,17 +279,29 @@ export function BancadaChrome({
   );
 
   // O diálogo abre ao LIGAR a leitura e pelo lápis ao lado dela.
-  return leitura ? (
-    <ReadingModal
-      open={editandoLeitura}
-      author={leitura.autor}
-      part={leitura.parte}
-      disabled={leitura.ocupado}
-      onClose={() => setEditandoLeitura(false)}
-      onSave={(patch) => {
-        leitura.onAtualizar(patch);
-        setEditandoLeitura(false);
-      }}
-    />
-  ) : null;
+  return (
+    <>
+      {leitura ? (
+        <ReadingModal
+          open={editandoLeitura}
+          author={leitura.autor}
+          part={leitura.parte}
+          disabled={leitura.ocupado}
+          onClose={() => setEditandoLeitura(false)}
+          onSave={(patch) => {
+            leitura.onAtualizar(patch);
+            setEditandoLeitura(false);
+          }}
+        />
+      ) : null}
+      {metaDoCorte ? (
+        <MetadataModal
+          open
+          projetoId={projetoId}
+          corte={metaDoCorte}
+          onClose={() => setMetaDoCorte(null)}
+        />
+      ) : null}
+    </>
+  );
 }

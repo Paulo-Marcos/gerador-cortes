@@ -10,6 +10,7 @@ import {
 import type { IconName } from './Icon';
 import type { ScreenAction } from './ScreenHeader';
 import type { Migalha } from './upgradeRoutes';
+import type { Tira } from './tiraDoCorte';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · Como a tela conversa com a casca.
@@ -55,6 +56,12 @@ export type ItemDeLista = {
   dot: string;
   ativo?: boolean;
   onClick?: () => void;
+  /** D-746: onde o corte parou (cenas, render, publicação), em versão mini.
+   *  A casca antiga mostrava isso na lista; a nova tinha perdido. */
+  tira?: Tira;
+  /** D-746: uma ação da linha que NÃO navega (ex.: abrir os metadados num
+   *  modal). Fica ao lado da linha, nunca dentro do botão de navegar. */
+  acao?: { icone: IconName; titulo: string; onClick: () => void };
 };
 
 export type ChromeLista = {

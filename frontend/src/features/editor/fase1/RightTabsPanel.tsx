@@ -508,7 +508,7 @@ function TrechosList({
               ref={(el) => {
                 itemRefs.current[sortPos] = el;
               }}
-              className="relative"
+              className="group/trecho relative"
             >
               <button
                 type="button"
@@ -565,16 +565,20 @@ function TrechosList({
                 </div>
               </button>
               <Tooltip label="Remover" side="left">
+                {/* D-746: a lixeira é a ação MENOS frequente da linha e era o
+                    elemento mais pesado dela. Pequena e apagada; acende quando
+                    a linha é apontada ou o teclado chega nela, e só fica
+                    vermelha no hover do próprio botão. */}
                 <IconButton
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-2 top-2"
+                  className="absolute right-1.5 top-1.5 h-6 w-6 text-[var(--wb-text-dim)] opacity-40 transition-opacity hover:text-[var(--wb-err-ink)] focus-visible:opacity-100 group-hover/trecho:opacity-100"
                   onClick={() => onRemoverDesvio(i)}
                   disabled={pending.removendo}
                   aria-label="Remover trecho"
                 >
-                  <Trash2 />
+                  <Trash2 size={12} />
                 </IconButton>
               </Tooltip>
             </div>

@@ -15,6 +15,52 @@ const TOM_DO_PIP: Record<EstadoDoPip, { bg: string; cor: string; filete: string;
  * renderizou?") em vez de uma fileira de oito. A regra mora em
  * `montarTira`; aqui só a roupa, para a Pós e o modal usarem a mesma.
  */
+/**
+ * D-746: a tira para a lista lateral (~200 px). Sem nome de grupo e sem
+ * texto — só as siglas, com um respiro entre CENAS · RENDER · PUBLICAÇÃO.
+ * A pergunta ali é "qual destes já tem render?", respondida varrendo a cor.
+ */
+export function TiraMini({ tira }: { tira: Tira }) {
+  return (
+    <span
+      aria-label={`${tira.contagem} etapas${tira.proxima ? ` · próximo: ${tira.proxima.nome}` : ''}`}
+      style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}
+    >
+      {tira.grupos.map((g) => (
+        <span key={g.nome} style={{ display: 'inline-flex', gap: 1.5 }}>
+          {g.pips.map((p) => {
+            const tom = TOM_DO_PIP[p.estado];
+            return (
+              <span
+                key={p.sigla}
+                title={dicaDoPip(p)}
+                data-estado={p.estado}
+                style={{
+                  display: 'grid',
+                  placeItems: 'center',
+                  minWidth: 17,
+                  height: 12,
+                  padding: '0 2px',
+                  borderRadius: 2,
+                  fontFamily: 'var(--mono)',
+                  fontSize: 7.5,
+                  fontWeight: 700,
+                  background: tom.bg,
+                  color: tom.cor,
+                  boxShadow: tom.filete,
+                  opacity: tom.opacidade,
+                }}
+              >
+                {p.sigla}
+              </span>
+            );
+          })}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function TiraDoCorteAp({ tira, compacta = false }: { tira: Tira; compacta?: boolean }) {
   return (
     <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 9 }}>

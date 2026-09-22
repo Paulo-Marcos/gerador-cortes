@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
+import { TiraMini } from './telas/TiraDoCorteAp';
 import type { ChromeLista, ItemDeLista } from './UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
@@ -154,102 +155,140 @@ export function FiltrosDaLista({ filtros }: { filtros: NonNullable<ChromeLista['
   );
 }
 
-/** Uma linha da lista. Compartilhada com o painel do seletor. */
+/** A miniatura da linha. Sem arquivo (a limpeza apagou a capa), some: o
+ *  ícone de imagem quebrada não identifica nada. */
+function MiniaturaDaLinha({ thumb, dur }: { thumb: string; dur?: string }) {
+  const [quebrou, setQuebrou] = useState(false);
+  if (quebrou) return null;
+  return (
+    <span
+      style={{
+        position: 'relative',
+        width: 38,
+        height: 22,
+        flex: 'none',
+        borderRadius: 'var(--r1)',
+        overflow: 'hidden',
+        background: 'var(--inset)',
+      }}
+    >
+      <img
+        src={thumb}
+        alt=""
+        loading="lazy"
+        onError={() => setQuebrou(true)}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
+      {dur ? (
+        <span
+          style={{
+            position: 'absolute',
+            inset: 'auto 1px 1px auto',
+            padding: '0 2px',
+            borderRadius: 2,
+            background: 'rgb(0 0 0/.55)',
+            fontFamily: 'var(--mono)',
+            fontSize: 9,
+            color: '#fff',
+          }}
+        >
+          {dur}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** Uma linha da lista. Compartilhada com o painel do seletor.
+ *
+ *  D-746: o botão de navegar e a ação da linha são IRMÃOS — botão dentro de
+ *  botão não existe em HTML, e o clique no { } abriria o corte junto. */
 export function LinhaDeLista({ item }: { item: ItemDeLista }) {
   return (
-    <button
-      type="button"
+    <div
       className="row"
-      // Linha de lista só NAVEGA: com o foco nela, o Enter ainda é da casca.
-      data-navegacao
-      onClick={item.onClick}
-      aria-current={item.ativo ? 'true' : undefined}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
-        width: '100%',
-        padding: 7,
+        gap: 2,
+        marginBottom: 2,
         border: `1px solid ${item.ativo ? 'var(--accent)' : 'transparent'}`,
         borderRadius: 'var(--r2)',
         background: item.ativo ? 'var(--accent-soft)' : 'transparent',
-        cursor: 'pointer',
-        textAlign: 'left',
-        marginBottom: 2,
       }}
     >
-      {item.thumb ? (
-        <span
-          style={{
-            position: 'relative',
-            width: 38,
-            height: 22,
-            flex: 'none',
-            borderRadius: 'var(--r1)',
-            overflow: 'hidden',
-            background: 'var(--inset)',
-          }}
-        >
-          <img
-            src={item.thumb}
-            alt=""
-            loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
-          {item.dur ? (
-            <span
-              style={{
-                position: 'absolute',
-                inset: 'auto 1px 1px auto',
-                padding: '0 2px',
-                borderRadius: 2,
-                background: 'rgb(0 0 0/.55)',
-                fontFamily: 'var(--mono)',
-                fontSize: 9,
-                color: '#fff',
-              }}
-            >
-              {item.dur}
-            </span>
-          ) : null}
-        </span>
-      ) : null}
-      <span style={{ minWidth: 0, flex: 1 }}>
-        <span
-          style={{
-            display: 'block',
-            fontSize: 11.5,
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {item.titulo}
-        </span>
-        {item.legenda || item.dur ? (
+      <button
+        type="button"
+        // Linha de lista só NAVEGA: com o foco nela, o Enter ainda é da casca.
+        data-navegacao
+        onClick={item.onClick}
+        aria-current={item.ativo ? 'true' : undefined}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          flex: 1,
+          minWidth: 0,
+          padding: 7,
+          border: 0,
+          background: 'transparent',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        {item.thumb ? <MiniaturaDaLinha thumb={item.thumb} dur={item.dur} /> : null}
+        <span style={{ minWidth: 0, flex: 1 }}>
           <span
             style={{
               display: 'block',
-              fontFamily: 'var(--mono)',
-              fontSize: 11,
-              color: 'var(--mute)',
+              fontSize: 11.5,
+              fontWeight: 600,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
           >
-            {/* Sem miniatura, a duração perde o selo do canto e vem para a
-                legenda: ela é informação, não enfeite da imagem. */}
-            {[item.legenda, item.thumb ? null : item.dur].filter(Boolean).join(' · ')}
+            {item.titulo}
           </span>
-        ) : null}
-      </span>
-      <span
-        style={{ width: 7, height: 7, flex: 'none', borderRadius: 99, background: item.dot }}
-        aria-hidden
-      />
-    </button>
+          {item.legenda || item.dur ? (
+            <span
+              style={{
+                display: 'block',
+                fontFamily: 'var(--mono)',
+                fontSize: 11,
+                color: 'var(--mute)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {/* Sem miniatura, a duração perde o selo do canto e vem para a
+                  legenda: ela é informação, não enfeite da imagem. */}
+              {[item.legenda, item.thumb ? null : item.dur].filter(Boolean).join(' · ')}
+            </span>
+          ) : null}
+          {item.tira ? <TiraMini tira={item.tira} /> : null}
+        </span>
+        {item.tira ? null : (
+          <span
+            style={{ width: 7, height: 7, flex: 'none', borderRadius: 99, background: item.dot }}
+            aria-hidden
+          />
+        )}
+      </button>
+      {item.acao ? (
+        <button
+          type="button"
+          className="btn btn-icon"
+          title={item.acao.titulo}
+          aria-label={item.acao.titulo}
+          onClick={item.acao.onClick}
+          style={{ width: 24, height: 24, marginRight: 4, flex: 'none', color: 'var(--accent)' }}
+        >
+          <Icon name={item.acao.icone} size={12} />
+        </button>
+      ) : null}
+    </div>
   );
 }
 

@@ -289,7 +289,7 @@ export function CorteLinhaAp({
             background: 'var(--accent-soft)',
           }}
         >
-          <Icon name="braces" size={13} />
+          <Icon name="tags" size={13} />
         </button>
         <button
           type="button"

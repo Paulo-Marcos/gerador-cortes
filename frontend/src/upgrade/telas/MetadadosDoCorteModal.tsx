@@ -138,7 +138,7 @@ export function MetadadosDoCorteModal({
             borderBottom: '1px solid var(--line2)',
           }}
         >
-          <Icon name="braces" size={15} style={{ color: 'var(--accent)', flex: 'none' }} />
+          <Icon name="tags" size={15} style={{ color: 'var(--accent)', flex: 'none' }} />
           <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
             <strong style={{ fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               #{status.numero} · {status.titulo}

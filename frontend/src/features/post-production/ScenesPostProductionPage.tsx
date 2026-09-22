@@ -773,7 +773,7 @@ export function ScenesPostProductionPage() {
               title="Metadados do corte — abre aqui, sem sair da Pós"
               style={{ borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--accent-soft)' }}
             >
-              <Icon name="braces" size={12} />
+              <Icon name="tags" size={12} />
               Metadados
             </button>
           </div>
