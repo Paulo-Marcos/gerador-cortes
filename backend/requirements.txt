@@ -36,7 +36,7 @@ scenedetect[opencv]==0.7
 # 503 que a tela sabe tratar. Enquanto o detector for Haar, o teto e a 4.x.
 # Para subir para o 5: trocar por `cv2.FaceDetectorYN` (rede neural, exige
 # baixar pesos) e reaferir o enquadramento — e demanda, nao upgrade de pin.
-opencv-python==4.14.0.94
+opencv-python==5.0.0.93
 
 # Diarização de falantes (D-286) — OPCIONAL e pesado (torch + pyannote).
 # Instale só se for usar o rótulo canal/reagidos: `pip install pyannote.audio`.
