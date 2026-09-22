@@ -1,5 +1,5 @@
 [tool.ruff]
-target-version = "py313"
+target-version = "py311"  # D-687: o mínimo suportado, para o ruff não sugerir sintaxe que o 3.11 não roda
 line-length = 100
 src = ["app", "tests"]
 extend-exclude = ["projetos", "assets"]
