@@ -97,15 +97,15 @@ As transições têm dono no domínio: `domain/ciclo_projeto.py` e `domain/ciclo
 
 ## Skills por pasta
 
-As regras em `.claude/rules/` carregam, por caminho:
+As rules em `.claude/rules/` (Claude Code) e `.agents/rules/` (Antigravity) entram pelo caminho do arquivo tocado. Cada uma traz o essencial do escopo escrito nela — vale mesmo sem skill instalada — e as skills preferidas, quando disponíveis:
 
-| Pasta | Skills carregadas |
-|---|---|
-| `backend/**` | `clean-code`, `domain-driven-design`, `uncle-bob-craft` |
-| `frontend/**` | `react-best-practices`, `senior-frontend`, `ui-skills` |
-| `video-renderer/**` | as do frontend + `remotion-best-practices` |
+| Pasta | Principal | Também |
+|---|---|---|
+| `backend/**` | `clean-architecture-guardian` (camadas), `clean-code-review` (legibilidade) | `domain-driven-design`, só o estratégico |
+| `frontend/**` | `react-frontend-engineer` (React + Vite SPA) | `ux-usability` (telas), `react-best-practices` (desempenho) |
+| `video-renderer/**` | `remotion-best-practices` | `react-best-practices` |
 
-Recomendadas para **revisão** (não são carregadas automaticamente): `clean-architecture-guardian` (estrutura) e `clean-code-review` (legibilidade). **Não use** skills de Angular — o frontend é React; elas estão desligadas em `.claude/settings.json`.
+**Não se aplicam:** skills de Angular (o frontend é React), a parte de Next.js da `senior-frontend`, e as de outros projetos (`tdd-react`, `tdd-dotnet`, `ddd-implementation`, `csharp-craft`, `ef-core-data-architect`).
 
 ---
 
