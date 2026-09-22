@@ -3,13 +3,16 @@
 Cada perfil define como o Remotion deve renderizar os chunks transparentes
 e qual extensão de arquivo o resto do pipeline deve esperar.
 
-VP9 + alpha (yuva420p) é o padrão por economizar ~5–10× de espaço em
-disco e largura de banda de leitura comparado ao ProRes 4444 sem perda
-visível em conteúdo de texto/SVG (overlays típicos do CutCut).
+**ProRes 4444 é o padrão e o único perfil suportado** (`AppSettings.render.
+overlay_codec`). O overlay é um artefato INTERMEDIÁRIO, consumido pelo FFmpeg
+na composição final e descartado depois: o encode no Remotion é rápido e o
+FFmpeg lê o alpha do .mov de forma robusta com um `-i` simples. O tamanho maior
+em disco não importa.
 
-ProRes 4444 permanece disponível para casos onde a qualidade de alpha
-4:4:4 importa (gradientes finos, sombras translúcidas) — alternar via
-`AppSettings.render.overlay_codec`.
+VP9 + alpha (.webm) continua no enum, mas não usar: nos testes deste pipeline
+os overlays em .webm não funcionaram — o alpha exige o decoder `libvpx-vp9`
+explícito para sobreviver, e o encode é muito mais lento. (D-678: este
+docstring dizia o contrário, que VP9 era o padrão.)
 
 Esta camada é pura: não conhece Remotion CLI, AppSettings, nem subprocess.
 Apenas descreve as flags certas e a extensão de saída por perfil.
