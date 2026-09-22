@@ -292,7 +292,7 @@ export function FinalReviewPage() {
     });
   }
 
-  const aprovado = ['aprovado', 'editado', 'processado'].includes(corte.status);
+  const aprovado = ['aprovado', 'processado'].includes(corte.status);
   const renderFinalRunning = Boolean(
     renderFinalLocal || renderFinal.isPending || pipelineStatus.data?.running,
   );

@@ -707,7 +707,7 @@ function tintDoCorte(status: Corte['status'] | undefined, isFire?: boolean, isLe
   if (status === 'rejeitado') {
     return 'bg-[var(--wb-err-soft)] border-l-[3px] border-l-[var(--wb-err)]';
   }
-  if (status === 'aprovado' || status === 'editado' || status === 'processado') {
+  if (status === 'aprovado' || status === 'processado') {
     if (isFire) return 'bg-[var(--wb-fire-soft)] border-l-[3px] border-l-[var(--wb-fire)]';
     if (isLeitura) return 'bg-[var(--wb-leitura-soft)] border-l-[3px] border-l-[var(--wb-leitura)]';
     return 'bg-[var(--wb-ok-soft)] border-l-[3px] border-l-[var(--wb-ok)]';
@@ -762,7 +762,7 @@ function CorteLinhaCompacta({
   const navigate = useNavigate();
   const abrirPasta = useAbrirPasta();
   const aprovado = corteFull
-    ? ['aprovado', 'editado', 'processado'].includes(corteFull.status)
+    ? ['aprovado', 'processado'].includes(corteFull.status)
     : status.pronto_publicar;
   const rejeitado = corteFull?.status === 'rejeitado';
   const publicado = Boolean(status.youtube_url_publicado);

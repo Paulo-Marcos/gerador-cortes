@@ -31,7 +31,7 @@ export function isCorteVideoPronto(
 ): boolean {
   // is_pos_producao do próprio corte é canônico: o backend só seta = 1 quando
   // upload_ready/video.mp4 existe (e ainda atualiza heuristicamente em getCorte
-  // pra cortes legados). O exportStatus só lista APROVADO/EDITADO/PROCESSADO,
+  // pra cortes legados). O exportStatus só lista APROVADO/PROCESSADO,
   // então sozinho falha pra cortes em outros status que mesmo assim foram
   // renderizados/publicados.
   return Boolean(status?.video_pronto || corte.is_pos_producao === 1);

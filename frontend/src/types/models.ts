@@ -10,7 +10,7 @@ export type StatusProjeto =
   | 'analisado'
   | 'erro';
 
-export type StatusCorte = 'proposto' | 'aprovado' | 'rejeitado' | 'editado' | 'processado';
+export type StatusCorte = 'proposto' | 'aprovado' | 'rejeitado' | 'processado';
 
 // I-034: audit trail da última análise IA do projeto.
 export interface AuditoriaCorteItem {

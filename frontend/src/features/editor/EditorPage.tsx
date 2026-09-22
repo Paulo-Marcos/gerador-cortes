@@ -92,7 +92,7 @@ import { ORIGEM_API } from '@/lib/apiBase';
 // podem ficar em versoes diferentes dentro da mesma sessao.
 const CASCA_NOVA = isUpgradeShellEnabled();
 
-const APROVADO_STATUS_SET = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
+const APROVADO_STATUS_SET = new Set<Corte['status']>(['aprovado', 'processado']);
 
 function findPreviousApprovedCorte(cortes: Corte[], corte: Corte): Corte | null {
   return (
@@ -270,7 +270,7 @@ export function EditorPage() {
   const exportStatusAtual = exportStatusQ.data?.cortes.find(
     (status) => status.corte_id === corteUI?.id,
   );
-  // exportStatus só lista APROVADO/EDITADO/PROCESSADO. is_pos_producao do
+  // exportStatus só lista APROVADO/PROCESSADO. is_pos_producao do
   // próprio corte cobre cortes em outros status que já tem video.mp4 no disco.
   const videoPronto = Boolean(exportStatusAtual?.video_pronto || corteUI?.is_pos_producao === 1);
   const brutoPronto = Boolean(
@@ -623,7 +623,7 @@ export function EditorPage() {
 
   function toggleAprovado() {
     if (!corteUI) return;
-    const aprovado = ['aprovado', 'editado', 'processado'].includes(corteUI.status);
+    const aprovado = ['aprovado', 'processado'].includes(corteUI.status);
     const status: Corte['status'] = aprovado ? 'proposto' : 'aprovado';
     atualizarCorte.mutate({ status });
   }

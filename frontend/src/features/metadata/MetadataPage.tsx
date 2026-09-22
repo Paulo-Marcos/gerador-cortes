@@ -41,7 +41,7 @@ export function MetadataPage() {
       (cortesQuery.data ?? [])
         .filter(
           (cut) =>
-            cut.status === 'aprovado' || cut.status === 'processado' || cut.status === 'editado',
+            cut.status === 'aprovado' || cut.status === 'processado',
         )
         .sort((a, b) => a.numero - b.numero),
     [cortesQuery.data],

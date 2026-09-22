@@ -12,6 +12,7 @@ from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.models import Corte, MetadadoCorte, StatusCorte
 from app.services.cancelamento_jobs import TrabalhoEmVoo
+from app.services.ciclo_de_vida import marcar_corte
 from app.services.pipeline_render import renderizar_pipeline_otimizado
 from app.services.render_progress import RenderProgressStore
 from sqlalchemy import select
@@ -157,7 +158,7 @@ class RemotionRenderService:
                 )
                 logger.info("[RemotionRender] Thumbnail copiada com sucesso.")
 
-        corte.status = StatusCorte.PROCESSADO
+        marcar_corte(corte, StatusCorte.PROCESSADO, origem="render final")
         corte.is_pos_producao = 1
         await db.commit()
         logger.info(

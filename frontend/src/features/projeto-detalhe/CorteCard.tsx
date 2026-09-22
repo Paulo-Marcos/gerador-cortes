@@ -48,7 +48,7 @@ function tintDoCorte(status: StatusCorte | undefined, isFire?: boolean, isLeitur
   if (status === 'rejeitado') {
     return 'bg-[var(--wb-err-soft)] border-l-[3px] border-l-[var(--wb-err)]';
   }
-  if (status === 'aprovado' || status === 'editado' || status === 'processado') {
+  if (status === 'aprovado' || status === 'processado') {
     if (isFire) return 'bg-[var(--wb-fire-soft)] border-l-[3px] border-l-[var(--wb-fire)]';
     if (isLeitura) return 'bg-[var(--wb-leitura-soft)] border-l-[3px] border-l-[var(--wb-leitura)]';
     return 'bg-[var(--wb-ok-soft)] border-l-[3px] border-l-[var(--wb-ok)]';

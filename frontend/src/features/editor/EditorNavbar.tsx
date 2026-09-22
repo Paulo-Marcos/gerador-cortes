@@ -76,7 +76,7 @@ export function EditorNavbar({
   onToggleModoVideo,
   pendingFlags,
 }: Props) {
-  const aprovado = ['aprovado', 'editado', 'processado'].includes(corte.status);
+  const aprovado = ['aprovado', 'processado'].includes(corte.status);
   const rejeitado = corte.status === 'rejeitado';
 
   return (

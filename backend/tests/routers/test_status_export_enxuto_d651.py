@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 CASOS = (
     # (id, status, tem video final, tem grade, MB de overlay, tem metadados)
     ("c1", StatusCorte.PROCESSADO, True, True, 2.0, True),
-    ("c2", StatusCorte.EDITADO, False, True, 0.5, True),
+    ("c2", StatusCorte.APROVADO, False, True, 0.5, True),
     ("c3", StatusCorte.APROVADO, False, False, 0.0, False),
 )
 

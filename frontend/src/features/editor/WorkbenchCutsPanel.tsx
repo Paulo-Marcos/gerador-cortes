@@ -51,7 +51,7 @@ import { tintarFundo, type SinalFlags } from './UnifiedSidebar';
 // estável (sempre no mesmo lugar, mesmo com a lista rolada/colapsada).
 // ─────────────────────────────────────────────────────────────
 
-const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
+const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'processado']);
 
 // ─────────────────────────────────────────────────────────────
 // D-397 · Semáforo do card: DECISÃO (cor) + ESTÁGIO (ícones)

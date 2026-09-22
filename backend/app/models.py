@@ -28,7 +28,7 @@ class StatusCorte(str, enum.Enum):
     PROPOSTO = "proposto"
     APROVADO = "aprovado"
     REJEITADO = "rejeitado"
-    EDITADO = "editado"
+    # D-665: EDITADO saiu — existia no enum, mas nada o atribuía (0 cortes na PROD).
     PROCESSADO = "processado"
 
 

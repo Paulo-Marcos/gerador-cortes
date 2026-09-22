@@ -50,7 +50,7 @@ interface UnifiedSidebarProps {
   getCurrentTime?: () => number;
 }
 
-const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
+const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'processado']);
 
 // Exportados para o WorkbenchCutsPanel (Etapa 3a) reusar os MESMOS
 // tints do card de corte — fonte única, sem duplicar a regra.

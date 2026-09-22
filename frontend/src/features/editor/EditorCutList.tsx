@@ -13,7 +13,7 @@ interface Props {
   getCortePath?: (corte: Corte) => string;
 }
 
-const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
+const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'processado']);
 
 interface SinalFlags {
   aprovado: boolean;

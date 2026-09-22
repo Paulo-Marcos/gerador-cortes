@@ -87,7 +87,6 @@ async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
             Corte.status.in_(
                 [
                     StatusCorte.APROVADO,
-                    StatusCorte.EDITADO,
                     StatusCorte.PROCESSADO,
                 ]
             )

@@ -288,7 +288,7 @@ export function StatusToggleRow({
   pendingFlags,
   iconOnly,
 }: StatusToggleRowProps) {
-  const aprovado = ['aprovado', 'editado', 'processado'].includes(corte.status);
+  const aprovado = ['aprovado', 'processado'].includes(corte.status);
   const rejeitado = corte.status === 'rejeitado';
 
   const [readingOpen, setReadingOpen] = useState(false);

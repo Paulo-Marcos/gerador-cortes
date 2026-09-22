@@ -46,6 +46,7 @@ from app.infrastructure import antigravity_cli_client, claude_cli_client, fila_i
 from app.models import Corte, Projeto, StatusProjeto
 from app.provider_ia import ProviderIA
 from app.services.analise import AnaliseService, _to_seg
+from app.services.ciclo_de_vida import mudar_projeto
 from app.services.tasks import fire_and_forget
 from sqlalchemy import select as sa_select
 
@@ -322,7 +323,7 @@ class ClaudeIaService:
                 else None,
             }
             status_anterior = projeto.status
-            projeto.status = StatusProjeto.ANALISANDO
+            mudar_projeto(projeto, StatusProjeto.ANALISANDO, origem="claude-ia")
             await db.commit()
 
         try:
@@ -1787,5 +1788,5 @@ class ClaudeIaService:
         async with AsyncSessionLocal() as db:
             projeto = await db.get(Projeto, projeto_id)
             if projeto:
-                projeto.status = status
+                mudar_projeto(projeto, status, origem="claude-ia: restaurar anterior")
                 await db.commit()

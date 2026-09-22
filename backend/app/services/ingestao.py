@@ -18,6 +18,7 @@ from app.domain.transcricao_utils import TranscricaoIndisponivelError
 from app.domain.vtt_parser import parse_vtt
 from app.models import Projeto, StatusProjeto
 from app.services.app_logging import operational_debug, operational_error, operational_info
+from app.services.ciclo_de_vida import mudar_projeto
 
 
 class _CanalDeProgresso:
@@ -520,7 +521,7 @@ class IngestaoService:
         async with AsyncSessionLocal() as db:
             projeto = await db.get(Projeto, projeto_id)
             if projeto:
-                projeto.status = status
+                mudar_projeto(projeto, status, origem="ingestao")
                 projeto.erro_msg = erro
                 await db.commit()
 

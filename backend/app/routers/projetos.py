@@ -12,6 +12,7 @@ from app.services import channels
 from app.services.analise import AnaliseService
 from app.services.app_logging import operational_error, operational_info
 from app.services.app_settings import AppSettingsService
+from app.services.ciclo_de_vida import mudar_projeto
 from app.services.ingestao import IngestaoService
 from app.services.pipeline_render import FONTE_PRESETS_VALIDOS
 from app.services.projeto import ProjetoService
@@ -135,7 +136,7 @@ async def reiniciar_download(projeto_id: str, db: AsyncSession = Depends(get_db)
             detail=f"Projeto está em status '{projeto.status}' — só é possível reiniciar quando em erro, baixando ou pendente",
         )
 
-    projeto.status = StatusProjeto.PENDENTE
+    mudar_projeto(projeto, StatusProjeto.PENDENTE, origem="reiniciar-download")
     projeto.erro_msg = ""
     projeto.arquivo_video_path = ""
     projeto.transcricao_raw = None
@@ -206,7 +207,7 @@ async def reiniciar_downloads_falhados(db: AsyncSession = Depends(get_db)):
 
     ids = []
     for projeto in projetos:
-        projeto.status = StatusProjeto.PENDENTE
+        mudar_projeto(projeto, StatusProjeto.PENDENTE, origem="reiniciar-download")
         projeto.erro_msg = ""
         projeto.arquivo_video_path = ""
         projeto.transcricao_raw = ""
@@ -799,7 +800,7 @@ async def reanalisar_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)
     cortes_removidos = result.rowcount
 
     # Volta status para 'pronto' para que a análise possa ser disparada
-    projeto.status = StatusProjeto.PRONTO
+    mudar_projeto(projeto, StatusProjeto.PRONTO, origem="reanalisar/refazer-transcricao")
     await db.commit()
 
     logger.info(
@@ -920,7 +921,7 @@ async def refazer_transcricao(projeto_id: str, db: AsyncSession = Depends(get_db
         # legenda. Conseguir a transcrição agora é justamente o que faltava —
         # sem esta virada o projeto ficaria preso no erro para sempre.
         if projeto.status == StatusProjeto.ERRO:
-            projeto.status = StatusProjeto.PRONTO
+            mudar_projeto(projeto, StatusProjeto.PRONTO, origem="reanalisar/refazer-transcricao")
             projeto.erro_msg = ""
         await db.commit()
 

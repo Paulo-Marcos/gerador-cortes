@@ -10,6 +10,7 @@ from pathlib import Path
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
 from app.database import get_db
+from app.domain import ciclo_corte
 from app.domain.corte_mapper import (
     extrair_cenas_remotion,
 )
@@ -189,6 +190,13 @@ async def aprovar_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
     corte = await db.get(Corte, corte_id)
     if not corte:
         raise HTTPException(status_code=404, detail="Corte não encontrado")
+    # D-665: mesma regra do PATCH — aprovar é um pedido do operador.
+    try:
+        ciclo_corte.validar_pedido_do_operador(
+            getattr(corte.status, "value", corte.status), StatusCorte.APROVADO.value
+        )
+    except ciclo_corte.TransicaoDeCorteInvalida as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     corte.status = StatusCorte.APROVADO
     await db.commit()
     return {"message": "Corte aprovado", "corte_id": corte_id}

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
-from app.domain import segmentos_short
+from app.domain import ciclo_corte, segmentos_short
 from app.domain.corte_mapper import (
     cenas_fora_do_corte,
     extrair_cenas_remotion,
@@ -330,6 +330,14 @@ class CorteService:
         corte = result.scalar_one_or_none()
         if not corte:
             raise ValueError("Corte não encontrado")
+        # D-665: antes de tocar em qualquer campo — um status recusado não pode
+        # deixar a atualização pela metade. `TransicaoDeCorteInvalida` é um
+        # ValueError, e o router já a devolve como 400 com o motivo.
+        if dados.status is not None:
+            # `.value`: em memória o status pode ser o enum, e `str()` de um enum
+            # misto devolve 'StatusCorte.APROVADO' no Python 3.13, não 'aprovado'.
+            atual = getattr(corte.status, "value", corte.status)
+            ciclo_corte.validar_pedido_do_operador(atual, dados.status)
 
         if dados.titulo_proposto is not None:
             corte.titulo_proposto = dados.titulo_proposto

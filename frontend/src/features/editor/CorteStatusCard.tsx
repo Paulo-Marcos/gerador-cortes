@@ -129,7 +129,7 @@ interface Props {
   onOpenMetadata?: () => void;
 }
 
-const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'editado', 'processado']);
+const APROVADO_STATUS = new Set<Corte['status']>(['aprovado', 'processado']);
 
 export function CorteStatusCard({
   numero,

@@ -80,7 +80,7 @@ describe('WorkbenchCutsPanel — rodapé "Ferramentas do corte" (AUDITORIA-v2 §
   });
 
   it('mantém a faixa colapsada "CORTES · aprovados/total" do PanelShell (já existente)', () => {
-    const html = render([corte(1), corte(2, 'aprovado'), corte(3, 'editado')]);
+    const html = render([corte(1), corte(2, 'aprovado'), corte(3, 'processado')]);
 
     expect(html).toContain('CORTES · 2/3');
   });

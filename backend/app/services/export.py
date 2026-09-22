@@ -28,7 +28,7 @@ from app.domain.segment_calculator import (
     normalizar_desvio,
 )
 from app.infrastructure.worker_queue import escrever_json_atomico
-from app.models import Corte, Projeto
+from app.models import Corte, Projeto, StatusCorte
 from app.services.app_logging import (
     current_log_level,
     is_debug_enabled,
@@ -36,6 +36,7 @@ from app.services.app_logging import (
     operational_error,
 )
 from app.services.bruto_progress import BrutoProgress
+from app.services.ciclo_de_vida import marcar_corte
 from app.services.export_bruto import _ExportBrutoMixin
 from app.services.export_bulk_queue import _ExportBulkQueueMixin
 from app.services.export_processamento import _ExportProcessamentoMixin
@@ -339,7 +340,7 @@ class ExportService(
                     )
             # Se estava aprovado, avança para processado
             if corte.status == "aprovado":
-                corte.status = "processado"
+                marcar_corte(corte, StatusCorte.PROCESSADO, origem="export")
             await db.commit()
             BrutoProgress.marcar(corte_id, "render", "concluido")
 

@@ -13,6 +13,7 @@ from app.domain.segment_calculator import normalizar_desvio as _normalizar_desvi
 from app.domain.time_convert import hms_to_seg, seg_to_hms
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
 from app.services.app_logging import operational_info
+from app.services.ciclo_de_vida import mudar_projeto
 from sqlalchemy import select as sa_select
 
 # D-355: janela (em segundos) para ancorar a borda de CORTE na palavra citada.
@@ -482,7 +483,7 @@ class AnaliseService:
 
             projeto = await db.get(Projeto, projeto_id)
             if projeto:
-                projeto.status = StatusProjeto.ANALISADO
+                mudar_projeto(projeto, StatusProjeto.ANALISADO, origem="analise")
                 projeto.ultima_analise_em = datetime.utcnow()
                 # descartados: sobrescreve com o valor recebido (None preserva o
                 # anterior; lista vazia zera). Callers que querem MESCLAR com a
@@ -517,7 +518,7 @@ class AnaliseService:
             async with AsyncSessionLocal() as db:
                 projeto = await db.get(Projeto, projeto_id)
                 if projeto:
-                    projeto.status = StatusProjeto.ERRO
+                    mudar_projeto(projeto, StatusProjeto.ERRO, origem="analise")
                     projeto.erro_msg = str(e)
                     await db.commit()
 
