@@ -1,0 +1,20 @@
+name: Ideia
+description: Uma melhoria ou funcionalidade nova
+labels: [ideia]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qual problema você quer resolver
+      description: O que hoje é difícil, lento ou impossível — antes da solução que você imaginou.
+    validations:
+      required: true
+  - type: textarea
+    id: solucao
+    attributes:
+      label: Como você imagina a solução
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto
+      description: Seu canal, seu volume de lives, o que mais ajudar a entender.

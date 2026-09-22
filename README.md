@@ -109,7 +109,8 @@ que nada dos seus dados será tocado
 | Instalar e configurar | [docs/SETUP.md](docs/SETUP.md) |
 | Entender o domínio | [mapa de contextos](docs/dominio/mapa-de-contextos.md), [glossário](docs/dominio/glossario.md), [regras de negócio](docs/dominio/regras-de-negocio.md) |
 | Entender as decisões | [ADRs](docs/adr/README.md) |
-| Contribuir | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Contribuir (por issue) | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Reportar uma vulnerabilidade | [SECURITY.md](SECURITY.md) |
 | Trabalhar com um agente de IA | [AGENTS.md](AGENTS.md) |
 | O que mudou em cada versão | [CHANGELOG.md](CHANGELOG.md) |
 | Todo o resto (e o caderno de trabalho) | [docs/README.md](docs/README.md) |

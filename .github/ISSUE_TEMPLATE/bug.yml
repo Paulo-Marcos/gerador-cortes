@@ -1,0 +1,40 @@
+name: Bug
+description: Algo não funciona como deveria
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por reportar. **Não cole segredos** (nada do `backend/.env`, do `client_secrets.json` ou do `token.json`).
+        Vulnerabilidade de segurança não vai aqui: veja o SECURITY.md.
+  - type: textarea
+    id: passos
+    attributes:
+      label: O que você fez
+      description: Os passos, na ordem, para chegar ao problema.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que esperava e o que aconteceu
+    validations:
+      required: true
+  - type: input
+    id: versao
+    attributes:
+      label: Versão
+      description: A tag (ex. v0.3.0) ou o commit (`git log -1 --oneline`), e a versão do Windows.
+    validations:
+      required: true
+  - type: textarea
+    id: prerequisitos
+    attributes:
+      label: Pré-requisitos
+      description: O que a tela Configurações → Aplicação → Pré-requisitos mostra (um print serve).
+  - type: textarea
+    id: log
+    attributes:
+      label: Log do backend
+      description: O trecho perto do erro. Revise antes de colar.
+      render: text

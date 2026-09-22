@@ -11,7 +11,8 @@
 - [AGENTS.md](AGENTS.md): fonte única de arquitetura, comandos, convenções e regras (o CLAUDE.md só o importa)
 - [README.md](README.md): o que é e como instalar
 - [docs/SETUP.md](docs/SETUP.md): instalação passo a passo
-- [CONTRIBUTING.md](CONTRIBUTING.md): portão de qualidade, padrão de commit e travas
+- [CONTRIBUTING.md](CONTRIBUTING.md): contribuição por issue (PR só a convite), portão de qualidade, padrão de commit e travas
+- [SECURITY.md](SECURITY.md): reporte privado de vulnerabilidade e o que o app assume (local, sem login)
 - [AI_NAVIGATION.md](AI_NAVIGATION.md): índice de navegação + docs/ai-index
 - [docs/README.md](docs/README.md): o que é documentação em vigor e o que é o caderno de trabalho (docs/interno/, retrato de cada data — não descreve o código de hoje)
 
