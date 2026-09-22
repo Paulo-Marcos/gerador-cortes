@@ -27,7 +27,9 @@ a release suporta.
 - O CI em Linux continua valendo para o que não depende de plataforma (testes,
   lint, contratos). Ele **não** exercita os scripts de subida, o QSV nem o Chrome;
   um job em `windows-latest` é a forma de cobrir isso, se fizer falta.
-- O `docker-compose.yml` não é caminho de instalação suportado.
+- O `docker-compose.yml`, o `Dockerfile` e o `bin/deploy` **saíram do repositório**
+  (D-674): descreviam o layout de dados anterior ao multicanal e não subiam o worker
+  nem o frontend. Voltam, reescritos, se o gatilho de revisão abaixo disparar.
 
 ## Alternativas consideradas
 

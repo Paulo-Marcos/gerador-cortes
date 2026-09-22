@@ -1,9 +1,0 @@
-projetos/
-__pycache__/
-*.db
-.env
-tmp/
-assets/
-.git/
-venv/
-.venv/

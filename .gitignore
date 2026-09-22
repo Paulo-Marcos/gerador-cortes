@@ -125,7 +125,7 @@ backend/assets/retratos/
 backend/assets/youtube_bg/
 backend/assets/youtube_palco_cache/
 
-# Deploy — segredos de deploy reais (use deploy.env.example como modelo)
+# Deploy — segredos de um deploy antigo (o bin/deploy saiu no D-674); nunca versionar
 deploy.env
 
 # Diagnóstico interno de migração — preservado localmente, fora do repo público
