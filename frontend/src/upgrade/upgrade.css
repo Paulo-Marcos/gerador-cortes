@@ -142,7 +142,7 @@ html.wb-palette-indigo .ap {
   --accent-soft: oklch(0.5 0.14 275 / 0.12);
   --matiz-fundo: 275;
 }
-html.wb-palette-indigo .ap[data-theme='dark'] {
+html.wb-palette-indigo .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   --accent: oklch(0.72 0.13 275);
   --accent2: oklch(0.8 0.12 275);
   --accent-soft: oklch(0.72 0.13 275 / 0.16);
@@ -155,7 +155,7 @@ html.wb-palette-forest .ap {
   --accent-soft: oklch(0.5 0.12 155 / 0.12);
   --matiz-fundo: 155;
 }
-html.wb-palette-forest .ap[data-theme='dark'] {
+html.wb-palette-forest .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   --accent: oklch(0.74 0.13 155);
   --accent2: oklch(0.82 0.13 155);
   --accent-soft: oklch(0.74 0.13 155 / 0.16);
@@ -168,7 +168,7 @@ html.wb-palette-plum .ap {
   --accent-soft: oklch(0.5 0.13 320 / 0.12);
   --matiz-fundo: 320;
 }
-html.wb-palette-plum .ap[data-theme='dark'] {
+html.wb-palette-plum .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   --accent: oklch(0.74 0.12 320);
   --accent2: oklch(0.82 0.11 320);
   --accent-soft: oklch(0.74 0.12 320 / 0.16);
@@ -182,7 +182,7 @@ html.wb-palette-ink .ap {
   --matiz-fundo: 70;
   --croma-fundo: 0.02;
 }
-html.wb-palette-ink .ap[data-theme='dark'] {
+html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   --accent: oklch(0.88 0.005 75);
   --accent2: oklch(0.95 0.005 75);
   --accent-soft: oklch(0.88 0.005 75 / 0.14);

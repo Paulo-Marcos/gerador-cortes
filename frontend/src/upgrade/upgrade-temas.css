@@ -1,0 +1,227 @@
+/* ═══════════════════════════════════════════════════════════════════
+   D-746 · RODADA 3 · a rampa de temas + os tokens da moldura.
+
+   Importado logo depois de upgrade.css (index.css). Tudo aqui vive
+   dentro de `.ap`, como o resto do arquivo.
+
+   TRÊS BLOCOS, nesta ordem:
+     1. os dois tokens que a moldura de vídeo precisa e que NÃO existem
+        no upgrade.css atual (--mat, --moldura), nos temas que já existem;
+     2. os três degraus novos da rampa (papel, névoa, ardósia);
+     3. a calibragem do acento das paletas em Ardósia.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── 1 · tokens da moldura ──────────────────────────────────────
+   --mat     = passe-partout: a superfície ATRÁS da miniatura, sempre
+               mais escura que o card. É a camada que faltava na R2.
+   --moldura = filete externo do bisel.
+   Ficam aqui e não inline porque cada degrau da rampa precisa do seu:
+   um passe-partout claro em Ardósia viraria um halo em volta do vídeo. */
+
+.ap {
+  --mat: oklch(0.932 0.006 240);
+  --moldura: rgb(20 25 40 / 0.2);
+}
+
+.ap[data-theme='dark'] {
+  --mat: rgb(0 0 0 / 0.42);
+  --moldura: rgb(0 0 0 / 0.7);
+}
+
+/* ─── 2 · os três degraus novos ──────────────────────────────────
+   O eixo é LUMINÂNCIA, e só. Estados (ok/warn/info/err) mantêm matiz e
+   croma do desenho original em todos os degraus, para que trocar de tema
+   não mude o significado de nenhuma cor.
+
+   PAPEL e NÉVOA não declaram --accent de propósito: são degraus CLAROS,
+   então herdam o acento do `.ap` base e continuam obedecendo as 5
+   paletas sem uma linha a mais. Só ARDÓSIA precisa do seu (fundo escuro
+   pede acento claro) — e é por isso que o bloco 3 existe. */
+
+/* PAPEL · 0.945 L — branco quente, matiz 78. Mesma luminância de
+   trabalho do claro, menos azul: o degrau para quem edita horas
+   seguidas. Não é sépia: croma 0.014 é o limite em que ainda lê branco. */
+.ap[data-theme='papel'] {
+  --bg: oklch(0.945 0.014 78);
+  --solid: oklch(0.985 0.008 82);
+  --panel: oklch(0.99 0.008 82 / 0.72);
+  --inset: oklch(0.925 0.017 78);
+  --mat: oklch(0.9 0.02 76);
+  --moldura: rgb(64 46 24 / 0.26);
+  --line: rgb(70 52 28 / 0.15);
+  --line2: rgb(70 52 28 / 0.08);
+  --ink: oklch(0.265 0.022 60);
+  --mute: oklch(0.46 0.024 62);
+  --dim: oklch(0.6 0.022 64);
+  --matiz-fundo: 62;
+  --hi: 0 1px 0 rgb(255 255 255 / 0.55) inset;
+  --shadow:
+    0 1px 0 rgb(255 255 255 / 0.5) inset,
+    0 8px 26px rgb(70 52 28 / 0.12);
+  color-scheme: light;
+  background-image:
+    radial-gradient(880px 500px at 10% -12%, oklch(0.9 0.05 62 / 0.6), transparent 62%),
+    radial-gradient(800px 540px at 96% 106%, oklch(0.9 0.035 120 / 0.45), transparent 60%),
+    linear-gradient(oklch(0.95 0.013 78), oklch(0.93 0.017 76));
+}
+
+/* NÉVOA · 0.870 L — cinza-neutro. O primeiro degrau que apaga o brilho
+   do painel sem inverter o contraste do texto: é o tema para sala com
+   janela, onde o claro estoura e o escuro vira espelho. --ink desce a
+   0.225 para manter 4.5:1 contra o painel mais escuro. */
+.ap[data-theme='nevoa'] {
+  --bg: oklch(0.87 0.007 250);
+  --solid: oklch(0.945 0.005 250);
+  --panel: oklch(0.955 0.005 250 / 0.7);
+  --inset: oklch(0.845 0.009 250);
+  --mat: oklch(0.8 0.011 250);
+  --moldura: rgb(16 20 32 / 0.3);
+  --line: rgb(20 25 40 / 0.17);
+  --line2: rgb(20 25 40 / 0.09);
+  --ink: oklch(0.225 0.014 250);
+  --mute: oklch(0.42 0.018 250);
+  --dim: oklch(0.55 0.018 250);
+  --hi: 0 1px 0 rgb(255 255 255 / 0.4) inset;
+  --shadow:
+    0 1px 0 rgb(255 255 255 / 0.34) inset,
+    0 8px 26px rgb(16 20 32 / 0.16);
+  color-scheme: light;
+  background-image:
+    radial-gradient(880px 500px at 10% -12%, oklch(0.82 0.05 var(--matiz-fundo) / 0.5), transparent 62%),
+    radial-gradient(800px 540px at 96% 106%, oklch(0.82 0.045 248 / 0.5), transparent 60%),
+    linear-gradient(oklch(0.88 0.007 250), oklch(0.855 0.009 254));
+}
+
+/* ARDÓSIA · 0.345 L — escuro sem o poço preto. Painéis legíveis,
+   miniatura de vídeo ainda com contraste (no 0.17 L a arte escura da
+   live desaparece no fundo). É provavelmente o padrão de fato.
+
+   ARMADILHA, leia antes de ajustar: este degrau NÃO pode herdar os
+   valores de status do escuro. O escuro compõe os chips -soft sobre
+   0.17 L; em 0.345 L a mesma alpha de .16 clareia o chip o bastante para
+   engolir a cor do próprio texto. Duas correções combinadas: alpha dos
+   -soft em .09 e as matizes de status em 0.90-0.93 L.
+
+   E --solid é MAIS ESCURO que --bg, de propósito: a gaveta da fila é a
+   única superfície montada sobre --solid e empilha --panel por cima em
+   cada linha; com --solid mais claro, todo chip ali compunha sobre
+   ~0.42 L em vez dos ~0.36 L calibrados, e os selos falhavam SÓ dentro
+   da gaveta. A elevação dela vem da borda e da sombra, não da
+   luminância.  */
+.ap[data-theme='ardosia'] {
+  --bg: oklch(0.345 0.016 256);
+  --solid: oklch(0.322 0.016 256);
+  --panel: rgb(255 255 255 / 0.075);
+  --inset: rgb(255 255 255 / 0.1);
+  --mat: rgb(6 9 16 / 0.34);
+  --moldura: rgb(4 7 14 / 0.6);
+  --line: rgb(255 255 255 / 0.17);
+  --line2: rgb(255 255 255 / 0.09);
+  --ink: oklch(0.96 0.006 250);
+  --mute: oklch(0.9 0.009 250);
+  --dim: oklch(0.88 0.01 250);
+
+  --accent: oklch(0.78 0.145 32);
+  --accent2: oklch(0.88 0.12 32);
+  --accent-soft: oklch(0.75 0.15 32 / 0.14);
+  --on-accent: oklch(0.2 0.014 40);
+
+  --ok: oklch(0.9 0.13 150);
+  --ok-soft: oklch(0.8 0.14 150 / 0.09);
+  --warn: oklch(0.93 0.14 82);
+  --warn-soft: oklch(0.84 0.15 78 / 0.09);
+  --info: oklch(0.88 0.11 246);
+  --info-soft: oklch(0.77 0.12 246 / 0.09);
+  /* Vermelho carrega a menor luminância relativa das cinco matizes na
+     mesma L — precisa de mais lift que as outras. */
+  --err: oklch(0.93 0.1 26);
+  --err-soft: oklch(0.74 0.16 26 / 0.09);
+
+  --hi: 0 1px 0 rgb(255 255 255 / 0.09) inset;
+  --shadow:
+    0 1px 0 rgb(255 255 255 / 0.08) inset,
+    0 10px 30px rgb(0 0 0 / 0.36);
+  color-scheme: dark;
+  background-image:
+    radial-gradient(900px 520px at 10% -12%, oklch(0.5 0.09 var(--matiz-fundo) / 0.42), transparent 62%),
+    radial-gradient(820px 560px at 96% 106%, oklch(0.46 0.08 252 / 0.42), transparent 60%),
+    linear-gradient(oklch(0.35 0.016 256), oklch(0.315 0.018 260));
+}
+
+.ap[data-glass='0'][data-theme='ardosia'] {
+  --inset: oklch(0.4 0.016 256);
+}
+
+/* ─── 3 · calibragem das paletas em Ardósia ─────────────────────
+   O remendo de especificidade já foi feito na fonte: as 4 regras de
+   paleta do upgrade.css cobrem `:is([data-theme='dark'], [data-theme='ardosia'])`,
+   então Ardósia nunca cai no acento CLARO (0.5 L sobre fundo 0.345 L).
+   O que fica aqui é só a calibragem: o fundo de Ardósia é mais claro que
+   o do escuro, e o acento sobe ~0.04 L para manter o contraste. Mesma
+   especificidade (0,3,1) e declarado depois — vence o bloco do escuro. */
+
+html.wb-palette-indigo .ap[data-theme='ardosia'] {
+  --accent: oklch(0.76 0.13 275);
+  --accent2: oklch(0.86 0.11 275);
+  --accent-soft: oklch(0.76 0.13 275 / 0.14);
+  --on-accent: oklch(0.2 0.01 275);
+}
+
+html.wb-palette-forest .ap[data-theme='ardosia'] {
+  --accent: oklch(0.78 0.13 155);
+  --accent2: oklch(0.87 0.12 155);
+  --accent-soft: oklch(0.78 0.13 155 / 0.14);
+  --on-accent: oklch(0.2 0.01 155);
+}
+
+html.wb-palette-plum .ap[data-theme='ardosia'] {
+  --accent: oklch(0.78 0.12 320);
+  --accent2: oklch(0.87 0.1 320);
+  --accent-soft: oklch(0.78 0.12 320 / 0.14);
+  --on-accent: oklch(0.2 0.01 320);
+}
+
+html.wb-palette-ink .ap[data-theme='ardosia'] {
+  --accent: oklch(0.9 0.005 75);
+  --accent2: oklch(0.96 0.005 75);
+  --accent-soft: oklch(0.9 0.005 75 / 0.14);
+  --on-accent: oklch(0.22 0.01 70);
+}
+
+/* ─── gaveta e véu ───────────────────────────────────────────────
+   180ms é o limite em que o movimento ainda informa a direção sem
+   cobrar espera. Quem pediu menos movimento não recebe nenhum. */
+
+.ap .gaveta-veu,
+.gaveta-veu {
+  animation: gaveta-veu 0.16s ease;
+}
+
+.ap .gaveta-painel,
+.gaveta-painel {
+  animation: gaveta-entra 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes gaveta-veu {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes gaveta-entra {
+  from {
+    transform: translateX(14px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gaveta-veu,
+  .gaveta-painel {
+    animation: none;
+  }
+}
+
+/* A gaveta sai por `createPortal` em `document.body`, FORA de `.ap` —
+   então ela não herda os tokens. Quem monta o portal precisa levar a
+   classe `ap` + `data-theme` + `data-glass` consigo. */

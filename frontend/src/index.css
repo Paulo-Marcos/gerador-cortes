@@ -2,6 +2,8 @@
    (ver upgrade/upgrade.css) e nao redefine nenhum token --wb-*: as
    telas atuais continuam exatamente como estao. */
 @import './upgrade/upgrade.css';
+/* D-746: rampa de temas e tokens da moldura — depois do upgrade.css. */
+@import './upgrade/upgrade-temas.css';
 
 @tailwind base;
 @tailwind components;

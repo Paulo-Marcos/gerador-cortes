@@ -1,6 +1,6 @@
 import { PALETTES, usePalette } from '@/hooks/usePalette';
 import { Icon, type IconName } from './Icon';
-import { useUpgradeTheme } from './useUpgradeTheme';
+import { NOME_DO_TEMA, RAMPA, temaEscuro, useUpgradeTheme } from './useUpgradeTheme';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O cartão "Aparência" das Configurações.
@@ -71,10 +71,11 @@ export function AparenciaDaCasca() {
         <Segmentado
           valor={theme}
           onEscolher={setTheme}
-          opcoes={[
-            { id: 'light', texto: 'Claro', icone: 'sun' },
-            { id: 'dark', texto: 'Escuro', icone: 'moon' },
-          ]}
+          opcoes={RAMPA.map((t) => ({
+            id: t,
+            texto: NOME_DO_TEMA[t],
+            icone: temaEscuro(t) ? 'moon' : 'sun',
+          }))}
         />
 
         <span style={{ width: 1, height: 22, background: 'var(--line)' }} aria-hidden />

@@ -14,7 +14,7 @@ import { useUpgradeTheme } from './useUpgradeTheme';
 // ─────────────────────────────────────────────────────────────────
 
 export default function UpgradeKitPage() {
-  const { theme, toggleTheme, glass, toggleGlass } = useUpgradeTheme();
+  const { theme, toggleTheme, escuro, glass, toggleGlass } = useUpgradeTheme();
 
   return (
     <div
@@ -66,7 +66,7 @@ export default function UpgradeKitPage() {
           {glass ? 'Vidro' : 'Sólido'}
         </button>
         <button type="button" className="btn btn-icon" onClick={toggleTheme} title="Tema">
-          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={14} />
+          <Icon name={escuro ? 'sun' : 'moon'} size={14} />
         </button>
       </header>
 

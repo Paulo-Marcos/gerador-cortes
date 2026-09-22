@@ -11,6 +11,14 @@ import { BUSCA_LARGA_MIN_PX, useJanelaMin } from './medidas';
 import { AcoesDaTela, type ScreenAction } from './ScreenHeader';
 import type { ChromeAtual, ChromeEstado, ChromeLista } from './UpgradeChrome';
 import type { Migalha } from './upgradeRoutes';
+import {
+  AMOSTRA,
+  LUMINANCIA,
+  NOME_DO_TEMA,
+  RAMPA,
+  temaEscuro,
+  type UpgradeTheme,
+} from './useUpgradeTheme';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A barra superior.
@@ -49,8 +57,10 @@ type TopBarProps = {
   estado?: ChromeEstado;
   /** Cabeçalho de tela fundido (telas densas). */
   cabecalho?: { sub?: string; acoes?: ScreenAction[] };
-  tema: 'light' | 'dark';
+  tema: UpgradeTheme;
   onAlternarTema: () => void;
+  /** Escolhe um degrau da rampa. Sem ele, a rampa não aparece. */
+  onEscolherTema?: (t: UpgradeTheme) => void;
   onAbrirBusca?: () => void;
   /** O sino leva à Fila: os avisos deste app SÃO os jobs — render, análise,
    *  upload. Uma caixa de notificações à parte duplicaria a mesma lista. */
@@ -77,6 +87,9 @@ function Trilha({ itens }: { itens: Migalha[] }) {
         const rotulo = (
           <span
             style={{
+              // block: num <Link> inline, maxWidth e overflow não valiam e
+              // a migalha longa vazava por cima da vizinha.
+              display: 'block',
               fontWeight: ultimo ? 700 : 500,
               color: ultimo ? 'var(--ink)' : 'var(--mute)',
               whiteSpace: 'nowrap',
@@ -97,7 +110,7 @@ function Trilha({ itens }: { itens: Migalha[] }) {
               <Link
                 to={m.to}
                 title={`Voltar para ${m.texto}`}
-                style={{ minWidth: 0, color: 'var(--mute)' }}
+                style={{ display: 'flex', minWidth: 0, color: 'var(--mute)' }}
               >
                 {rotulo}
               </Link>
@@ -328,6 +341,56 @@ function Seletor({
   );
 }
 
+/** D-746: os cinco degraus, do claro ao escuro. A ordem é a informação —
+ *  por isso amostras de cor, não nomes: o operador vê onde está na rampa. */
+function RampaDeTemas({
+  tema,
+  onEscolher,
+}: {
+  tema: UpgradeTheme;
+  onEscolher: (t: UpgradeTheme) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Tema"
+      style={{
+        display: 'flex',
+        gap: 2,
+        padding: 3,
+        flex: 'none',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--r2)',
+        background: 'var(--inset)',
+      }}
+    >
+      {RAMPA.map((t) => {
+        const ativo = t === tema;
+        return (
+          <button
+            key={t}
+            type="button"
+            aria-pressed={ativo}
+            aria-label={NOME_DO_TEMA[t]}
+            title={`${NOME_DO_TEMA[t]} · ${LUMINANCIA[t]}`}
+            onClick={() => onEscolher(t)}
+            style={{
+              width: 16,
+              height: 20,
+              padding: 0,
+              borderRadius: 2,
+              cursor: 'pointer',
+              background: AMOSTRA[t],
+              border: `1px solid ${ativo ? 'var(--accent)' : 'var(--line)'}`,
+              boxShadow: ativo ? '0 0 0 1px var(--accent)' : 'none',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function TopBar({
   trilha,
   atual,
@@ -337,6 +400,7 @@ export function TopBar({
   cabecalho,
   tema,
   onAlternarTema,
+  onEscolherTema,
   onAbrirBusca,
   onAbrirAvisos,
   avisosAtivos = 0,
@@ -462,15 +526,16 @@ export function TopBar({
           />
         ) : null}
       </button>
+      {onEscolherTema ? <RampaDeTemas tema={tema} onEscolher={onEscolherTema} /> : null}
       <button
         type="button"
         className="btn btn-icon"
         onClick={onAlternarTema}
-        title={tema === 'dark' ? 'Tema claro' : 'Tema escuro'}
-        aria-label={tema === 'dark' ? 'Tema claro' : 'Tema escuro'}
+        title={temaEscuro(tema) ? 'Tema claro' : 'Tema escuro'}
+        aria-label={temaEscuro(tema) ? 'Tema claro' : 'Tema escuro'}
         style={{ flex: 'none' }}
       >
-        <Icon name={tema === 'dark' ? 'sun' : 'moon'} size={14} />
+        <Icon name={temaEscuro(tema) ? 'sun' : 'moon'} size={14} />
       </button>
     </header>
   );
