@@ -67,6 +67,18 @@ type TopBarProps = {
   onAbrirAvisos?: () => void;
   /** Quantos jobs estão rodando agora — o ponto no sino. */
   avisosAtivos?: number;
+  /** D-746: algum job falhou ou se perdeu — o ponto fica vermelho, para a
+   *  gaveta fechada não esconder a falha. */
+  avisoDeErro?: boolean;
+  /** D-746: ← → da casca. Sem isto, os botões não aparecem. */
+  historico?: {
+    podeVoltar: boolean;
+    podeAvancar: boolean;
+    anterior?: string;
+    proximo?: string;
+    onVoltar: () => void;
+    onAvancar: () => void;
+  };
 };
 
 function Trilha({ itens }: { itens: Migalha[] }) {
@@ -104,7 +116,9 @@ function Trilha({ itens }: { itens: Migalha[] }) {
         return (
           <span
             key={`${m.texto}-${i}`}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}
+            // A última migalha é onde a pessoa está: não encolhe. Espremida,
+            // "#1" virava "#." — e a trilha perdia justamente o dado atual.
+            style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexShrink: ultimo ? 0 : 1 }}
           >
             {m.to && !ultimo ? (
               <Link
@@ -404,6 +418,8 @@ export function TopBar({
   onAbrirBusca,
   onAbrirAvisos,
   avisosAtivos = 0,
+  avisoDeErro = false,
+  historico,
 }: TopBarProps) {
   const cabeBusca = useJanelaMin(BUSCA_LARGA_MIN_PX);
   // Com o cabeçalho fundido, as ações da tela também disputam a linha: a
@@ -431,6 +447,35 @@ export function TopBar({
         zIndex: 30,
       }}
     >
+      {historico ? (
+        <span style={{ display: 'flex', gap: 3, flex: 'none' }}>
+          <button
+            type="button"
+            className="btn btn-icon"
+            style={{ width: 26, height: 26 }}
+            disabled={!historico.podeVoltar}
+            onClick={historico.onVoltar}
+            aria-label="Voltar"
+            aria-keyshortcuts="Meta+BracketLeft"
+            title={historico.anterior ? `Voltar para ${historico.anterior} (⌘[)` : 'Nada para trás'}
+          >
+            <Icon name="arrow-left" size={13} />
+          </button>
+          <button
+            type="button"
+            className="btn btn-icon"
+            style={{ width: 26, height: 26 }}
+            disabled={!historico.podeAvancar}
+            onClick={historico.onAvancar}
+            aria-label="Avançar"
+            aria-keyshortcuts="Meta+BracketRight"
+            title={historico.proximo ? `Avançar para ${historico.proximo} (⌘])` : 'Nada à frente'}
+          >
+            <Icon name="arrow-right" size={13} />
+          </button>
+        </span>
+      ) : null}
+
       <Trilha itens={trilha} />
 
       {/* O subtítulo da tela densa: mesma linha, tom de instrumento. */}
@@ -505,13 +550,19 @@ export function TopBar({
       <button
         type="button"
         className="btn btn-icon"
-        title={avisosAtivos > 0 ? `${avisosAtivos} job(s) rodando — abrir a fila` : 'Abrir a fila'}
+        title={
+          avisoDeErro
+            ? 'Um job falhou — abrir a fila (⌘J)'
+            : avisosAtivos > 0
+              ? `${avisosAtivos} job(s) rodando — abrir a fila (⌘J)`
+              : 'Abrir a fila (⌘J)'
+        }
         aria-label="Abrir a fila"
         onClick={onAbrirAvisos}
         style={{ position: 'relative', flex: 'none' }}
       >
         <Icon name="bell" size={14} />
-        {avisosAtivos > 0 ? (
+        {avisosAtivos > 0 || avisoDeErro ? (
           <span
             aria-hidden
             style={{
@@ -521,7 +572,8 @@ export function TopBar({
               width: 7,
               height: 7,
               borderRadius: 99,
-              background: 'var(--accent)',
+              // Estado, não ação: info rodando, erro quando algo falhou.
+              background: avisoDeErro ? 'var(--err)' : 'var(--info)',
             }}
           />
         ) : null}

@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O que uma tecla significa para a casca.
 //
-// A casca responde a ⌘B, ⌘K, J, K e Enter. As três últimas são teclas
+// A casca responde a ⌘B, ⌘K, ⌘J, J, K e Enter. As três últimas são teclas
 // comuns — as mesmas que a pessoa usa para digitar e para apertar
 // botões —, então a pergunta difícil não é "o que J faz", e sim "quando
 // J é da casca e quando é de outra pessoa".
@@ -22,7 +22,7 @@
 //      justamente os que o Enter duplicaria.
 // ─────────────────────────────────────────────────────────────────
 
-export type AcaoDaCasca = 'trilho' | 'busca' | 'proximo' | 'anterior' | 'primario';
+export type AcaoDaCasca = 'trilho' | 'busca' | 'fila' | 'proximo' | 'anterior' | 'primario';
 
 export type Contexto = {
   tecla: string;
@@ -54,6 +54,9 @@ export function acaoDaTecla(c: Contexto): AcaoDaCasca | null {
   // ⌘B e ⌘K valem até digitando: o modificador já diz que não é texto.
   if (comando && tecla === 'b') return 'trilho';
   if (comando && tecla === 'k') return 'busca';
+  // D-746: ⌘J abre a gaveta da fila. Fechar é da própria gaveta — aberta,
+  // ela é um diálogo, e com diálogo na tela nada daqui responde.
+  if (comando && tecla === 'j') return 'fila';
 
   // Daqui para baixo são teclas sem modificador. Elas pertencem a quem
   // estiver escrevendo — nunca à casca.

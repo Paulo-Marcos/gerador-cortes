@@ -73,4 +73,10 @@ describe('acaoDaTecla', () => {
     expect(acaoDaTecla(com({ tecla: 'x' }))).toBeNull();
     expect(acaoDaTecla(com({ tecla: 'j', alt: true }))).toBeNull();
   });
+
+  it('⌘J abre a fila, mesmo digitando, e não com diálogo aberto (D-746)', () => {
+    expect(acaoDaTecla(com({ tecla: 'j', meta: true }))).toBe('fila');
+    expect(acaoDaTecla(com({ tecla: 'J', ctrl: true, digitando: true }))).toBe('fila');
+    expect(acaoDaTecla(com({ tecla: 'j', meta: true, overlayAberto: true }))).toBeNull();
+  });
 });

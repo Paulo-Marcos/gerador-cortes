@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import type { Lugar } from './historicoDaCasca';
 import { Icon } from './Icon';
 import type { DestinoDeMenu, Grupo, TelaId } from './upgradeRoutes';
 
@@ -35,6 +36,9 @@ export type FilaDoTrilho = {
   /** 0–100; vira a fatia preenchida do anel cônico. */
   progresso: number;
   to: string;
+  /** D-746: consultar a fila não é navegar — com isto o cartão abre a
+   *  gaveta em vez de levar à rota. */
+  onAbrir?: () => void;
 };
 
 type GlobalRailProps = {
@@ -47,6 +51,9 @@ type GlobalRailProps = {
    *  daquela tela e precisa parecer aceso, não parecer um link para onde
    *  a pessoa já está. */
   filaAtiva?: boolean;
+  /** D-746: "Onde eu estava" — os lugares recentes, sem o atual. A posição
+   *  na lista é o atalho (⌘1…⌘4). */
+  lugares?: Lugar[];
 };
 
 function ItemBotao({
@@ -95,6 +102,7 @@ export function GlobalRail({
   menu,
   fila,
   filaAtiva = false,
+  lugares = [],
 }: GlobalRailProps) {
   const navigate = useNavigate();
   const mostrarTexto = expandido;
@@ -207,9 +215,13 @@ export function GlobalRail({
       {fila ? (
         <button
           type="button"
-          onClick={() => navigate(fila.to)}
+          onClick={() => (fila.onAbrir ? fila.onAbrir() : navigate(fila.to))}
           className="card"
-          title={`${fila.titulo} · ${fila.sub}`}
+          title={
+            fila.onAbrir
+              ? `${fila.titulo} · ${fila.sub} — abrir a fila numa gaveta lateral, você não sai da tela (⌘J)`
+              : `${fila.titulo} · ${fila.sub}`
+          }
           aria-current={filaAtiva ? 'page' : undefined}
           style={{
             display: 'flex',
@@ -270,6 +282,57 @@ export function GlobalRail({
       {menu.ferramentas.map((i) => (
         <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
       ))}
+
+      {/* D-746: o trabalho real é lateral (short → outro short → uma live
+          → volta), e a trilha só sabia subir na hierarquia. Só com o trilho
+          largo: recolhido, quatro ícones sem nome não diriam aonde levam. */}
+      {mostrarTexto && lugares.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 'none' }}>
+          <span
+            className="lbl"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 4px 4px', fontSize: 9.5 }}
+          >
+            <Icon name="history" size={11} />
+            Onde eu estava
+          </span>
+          {lugares.slice(0, 4).map((l, i) => (
+            <button
+              key={l.to}
+              type="button"
+              onClick={() => navigate(l.to)}
+              title={`${l.rotulo} · ${l.tipo} (⌘${i + 1})`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 7,
+                height: 26,
+                padding: '0 6px',
+                border: 0,
+                borderRadius: 'var(--r2)',
+                background: 'transparent',
+                color: 'var(--mute)',
+                fontSize: 11.5,
+                textAlign: 'left',
+                cursor: 'pointer',
+              }}
+            >
+              <Icon name={l.icone} size={12} style={{ flex: 'none' }} />
+              <span
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {l.rotulo}
+              </span>
+              <kbd style={{ flex: 'none' }}>⌘{i + 1}</kbd>
+            </button>
+          ))}
+        </div>
+      ) : null}
     </aside>
   );
 }

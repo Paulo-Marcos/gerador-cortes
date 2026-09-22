@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import {
   WorkbenchQueueProvider,
   useWorkbenchQueueOptional,
@@ -8,7 +8,14 @@ import {
 import { ActionBar } from './ActionBar';
 import { ColunaRecolhida, ContextColumn } from './ContextColumn';
 import { FitaDaLive } from './FitaDaLive';
+import { GavetaDaFila } from './GavetaDaFila';
 import { GlobalRail, TRILHO_ESTREITO, TRILHO_LARGO, type FilaDoTrilho } from './GlobalRail';
+import {
+  useAtalhosDeHistorico,
+  useHistoricoDaCasca,
+  visitar,
+  visitarPeloNavegador,
+} from './historicoDaCasca';
 import { Icon } from './Icon';
 import { CONTEXTO_MIN_PX, useJanelaMin } from './medidas';
 import { PaletaDeComandos } from './PaletaDeComandos';
@@ -26,6 +33,7 @@ import {
 import {
   CABECALHO,
   esteiraDaLive,
+  type TelaId,
   menuDoTrilho,
   projetoDaRota,
   telaDaRota,
@@ -69,7 +77,11 @@ const TRILHO_KEY = 'upgrade-trilho';
  * Excecao: estando NA tela da Fila, o cartao fica em estado quieto, para a
  * rota ter representacao no trilho.
  */
-function filaDoTrilho(jobs: QueueJob[], naFila: boolean): FilaDoTrilho | undefined {
+function filaDoTrilho(
+  jobs: QueueJob[],
+  naFila: boolean,
+  onAbrir?: () => void,
+): FilaDoTrilho | undefined {
   const ativos = jobs.filter((j) => j.estado === 'rodando' || j.estado === 'aguardando');
   if (ativos.length === 0) {
     return naFila
@@ -82,8 +94,40 @@ function filaDoTrilho(jobs: QueueJob[], naFila: boolean): FilaDoTrilho | undefin
     sub: `${rodando.rotuloTipo} ${Math.round(rodando.progresso)}%`,
     progresso: rodando.progresso,
     to: '/fila',
+    onAbrir,
   };
 }
+
+/**
+ * D-746: o nome de um lugar no histórico. A última migalha de um corte é só
+ * "#2", e o título que o editor declara é o da live — sozinhos, os dois
+ * fazem "Onde eu estava" listar live e corte com o mesmo nome.
+ */
+function rotuloParaHistorico(
+  titulo: string | undefined,
+  trilha: { texto: string }[],
+  padrao: string,
+): string {
+  const ultima = trilha[trilha.length - 1]?.texto;
+  if (ultima?.startsWith('#')) {
+    if (titulo?.includes(ultima)) return titulo;
+    const live = trilha.length > 2 ? trilha[1].texto : undefined;
+    return live ? `Corte ${ultima} · ${live}` : `Corte ${ultima}`;
+  }
+  return titulo ?? ultima ?? padrao;
+}
+
+/** D-746: o que o histórico chama cada tela. "Onde eu estava" e o ⌘K
+ *  mostram isto ao lado do rótulo, para "O erro que toda igreja comete"
+ *  dizer se é a live, o corte ou o short. */
+const TIPO_DA_TELA: Partial<Record<TelaId, string>> = {
+  projeto: 'live',
+  cortes: 'corte',
+  pos: 'pós',
+  metadados: 'metadados',
+  revisao: 'revisão',
+  fire: 'short',
+};
 
 const COLUNA_KEY = 'upgrade-coluna-recolhida';
 
@@ -166,7 +210,12 @@ function focoEmDecisao(alvo: HTMLElement | null): boolean {
 /** Atalhos da casca: ⌘B recolhe o trilho, ⌘K busca, J/K trocam de item,
  *  Enter dispara a ação primária da barra. A DECISÃO mora em `teclasDaCasca`
  *  (pura e testada); aqui só se lê o DOM e se executa. */
-function useAtalhosDaCasca(alternarTrilho: () => void, abrirBusca: () => void, chrome: Chrome) {
+function useAtalhosDaCasca(
+  alternarTrilho: () => void,
+  abrirBusca: () => void,
+  abrirFila: () => void,
+  chrome: Chrome,
+) {
   const atual = chrome.atual ?? listaDoChrome(chrome).atual;
 
   useEffect(() => {
@@ -192,15 +241,18 @@ function useAtalhosDaCasca(alternarTrilho: () => void, abrirBusca: () => void, c
 
       if (acao === 'trilho') alternarTrilho();
       if (acao === 'busca') abrirBusca();
+      if (acao === 'fila') abrirFila();
       if (acao === 'proximo') atual?.onProximo?.();
       if (acao === 'anterior') atual?.onAnterior?.();
       if (acao === 'primario') primario?.onClick?.();
       // J/K nao chamam preventDefault: fora de campo elas nao tem acao nativa.
-      if (acao === 'trilho' || acao === 'busca' || acao === 'primario') e.preventDefault();
+      // ⌘J precisa do preventDefault: no Chrome ele abre os downloads.
+      if (acao === 'trilho' || acao === 'busca' || acao === 'fila' || acao === 'primario')
+        e.preventDefault();
     };
     window.addEventListener('keydown', aoTeclar);
     return () => window.removeEventListener('keydown', aoTeclar);
-  }, [alternarTrilho, abrirBusca, atual, chrome.barra]);
+  }, [alternarTrilho, abrirBusca, abrirFila, atual, chrome.barra]);
 }
 
 /** Injeta o lembrete de J/K quando existe seletor e a tela não declarou o seu. */
@@ -240,8 +292,23 @@ function Casca({ children, fila }: CascaProps) {
   const navigate = useNavigate();
   const [buscaAberta, setBuscaAberta] = useState(false);
   const abrirBusca = useCallback(() => setBuscaAberta(true), []);
-  useAtalhosDaCasca(alternar, abrirBusca, chrome);
+
+  // D-746: a fila é consulta, não destino — gaveta sobre a tela atual.
+  const [filaAberta, setFilaAberta] = useState(false);
+  const abrirFila = useCallback(() => setFilaAberta(true), []);
+  const fecharFila = useCallback(() => setFilaAberta(false), []);
+  const filaEmTelaCheia = useCallback(() => {
+    setFilaAberta(false);
+    navigate('/fila');
+  }, [navigate]);
+  // Trocou de tela (⌘[, "Onde eu estava", link): a gaveta não viaja junto.
+  useEffect(() => setFilaAberta(false), [pathname]);
+
+  useAtalhosDaCasca(alternar, abrirBusca, abrirFila, chrome);
   const jobsRodando = (filaGlobal?.jobs ?? []).filter((j) => j.estado === 'rodando').length;
+  const jobComErro = (filaGlobal?.jobs ?? []).some(
+    (j) => j.estado === 'erro' || j.estado === 'perdido',
+  );
 
   // Quem decide se a lista e o seletor aparecem é a TELA, pelo simples ato
   // de fornecer os dados. O que a CASCA decide é ONDE a lista cabe: na
@@ -258,6 +325,26 @@ function Casca({ children, fila }: CascaProps) {
   );
   const passos = useMemo(() => esteiraDaLive(tela, projetoId), [tela, projetoId]);
   const denso = Boolean(chrome.denso);
+
+  // D-746: cada tela visitada entra na pilha (← →) e em "Onde eu estava".
+  // O rótulo chega depois do fetch; `visitar` atualiza sem empilhar.
+  const rotuloDoLugar = rotuloParaHistorico(chrome.titulo, trilha, cab.titulo);
+  const tipoDeNavegacao = useNavigationType();
+  useEffect(() => {
+    const lugar = { to: pathname, rotulo: rotuloDoLugar, icone: cab.icone, tipo: TIPO_DA_TELA[tela] ?? 'tela' };
+    if (tipoDeNavegacao === 'POP') visitarPeloNavegador(lugar);
+    else visitar(lugar);
+    // O tipo de navegação só importa na chegada; mudar o rótulo depois não
+    // é uma nova navegação.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, rotuloDoLugar, cab.icone, tela]);
+  const historico = useHistoricoDaCasca();
+  const irPara = useCallback((to: string) => navigate(to), [navigate]);
+  const lugaresAnteriores = useMemo(
+    () => historico.lugares.filter((l) => l.to !== pathname).slice(0, 4),
+    [historico.lugares, pathname],
+  );
+  useAtalhosDeHistorico(irPara, lugaresAnteriores);
 
   return (
     <div
@@ -277,8 +364,9 @@ function Casca({ children, fila }: CascaProps) {
         onAlternar={alternar}
         telaAtual={tela}
         menu={menu}
-        fila={fila ?? filaDoTrilho(filaGlobal?.jobs ?? [], tela === 'fila')}
+        fila={fila ?? filaDoTrilho(filaGlobal?.jobs ?? [], tela === 'fila', abrirFila)}
         filaAtiva={tela === 'fila'}
+        lugares={lugaresAnteriores}
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
@@ -294,10 +382,32 @@ function Casca({ children, fila }: CascaProps) {
           onAlternarTema={toggleTheme}
           onEscolherTema={setTheme}
           onAbrirBusca={abrirBusca}
-          onAbrirAvisos={() => navigate('/fila')}
+          onAbrirAvisos={abrirFila}
           avisosAtivos={jobsRodando}
+          avisoDeErro={jobComErro}
+          historico={{
+            podeVoltar: historico.podeVoltar,
+            podeAvancar: historico.podeAvancar,
+            anterior: historico.anterior?.rotulo,
+            proximo: historico.proximo?.rotulo,
+            onVoltar: () => {
+              const l = historico.voltar();
+              if (l) navigate(l.to);
+            },
+            onAvancar: () => {
+              const l = historico.avancar();
+              if (l) navigate(l.to);
+            },
+          }}
         />
         <PaletaDeComandos aberta={buscaAberta} onFechar={() => setBuscaAberta(false)} />
+        {filaGlobal ? (
+          <GavetaDaFila
+            aberta={filaAberta}
+            aoFechar={fecharFila}
+            aoAbrirTelaCheia={filaEmTelaCheia}
+          />
+        ) : null}
 
         <FitaDaLive passos={passos} etapas={etapasDoChrome(chrome)} />
 

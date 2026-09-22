@@ -1,84 +1,156 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useFires } from '@/features/shorts/useFires';
+import { useCortesProjeto } from '@/hooks/useEditor';
 import { useProjetos } from '@/hooks/useProjetos';
-import { Icon, type IconName } from './Icon';
-import { destinosDaPaleta } from './upgradeRoutes';
+import {
+  ESCOPOS,
+  estadoVazio,
+  filtrar,
+  gravarBusca,
+  lerBuscas,
+  lerPrefixo,
+  type EscopoDaPaleta,
+  type GrupoDaPaleta,
+  type ItemDaPaleta,
+} from './fontesDaPaleta';
+import { useHistoricoDaCasca } from './historicoDaCasca';
+import { Icon } from './Icon';
+import { destinosDaPaleta, projetoDaRota } from './upgradeRoutes';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A busca do ⌘K.
 //
-// Três tipos de destino na mesma lista, porque a pergunta de quem abre o
-// ⌘K é sempre "onde está X" — e X pode ser uma tela, uma live ou uma
-// ação. Separar em abas obrigaria a saber o tipo antes de lembrar o nome.
+// Enter vai no primeiro; setas escolhem; Esc fecha. A paleta é um atalho,
+// e atalho com configuração vira mais uma tela.
 //
-// Enter vai no primeiro; setas escolhem; Esc fecha. Nada além disso: a
-// paleta é um atalho, e atalho com configuração vira mais uma tela.
+// RODADA 2 · o Esc PARA AQUI (sem isso fechava também o diálogo de trás),
+// e as telas vêm da tabela única (`destinosDaPaleta`).
 //
-// RODADA 2 · duas correções:
-//
-//   1. O Esc PARA AQUI. A paleta não interrompia a propagação, então o
-//      Esc fechava também o diálogo que estivesse atrás — o operador
-//      perdia o formulário que estava preenchendo. (A outra metade do
-//      conserto está em `teclasDaCasca`: com diálogo aberto, ⌘K não
-//      abre a paleta.)
-//   2. As telas vêm da tabela única (`destinosDaPaleta`), não de uma
-//      lista escrita à mão que já discordava do trilho.
+// RODADA 3 (D-746) · a paleta passa a achar o trabalho inteiro: lives,
+// shorts, os cortes da live aberta, telas e ações — cada item com o seu
+// contexto, porque o mesmo título é live, corte E short. Escopo em chip,
+// Tab gira, prefixos @ # > para quem já sabe. Caixa vazia mostra as
+// últimas buscas e os últimos lugares. A regra (filtro, prefixo,
+// histórico de buscas) mora em `fontesDaPaleta`.
 // ─────────────────────────────────────────────────────────────────
 
-type Destino = { id: string; icone: IconName; texto: string; dica: string; ir: string };
-
-const ACOES: Destino[] = [
-  { id: 'a-liv', icone: 'plus', texto: 'Nova live', dica: 'ação', ir: '/buscar-lives' },
+const ACOES: ItemDaPaleta[] = [
+  { id: 'a-liv', icone: 'plus', rotulo: 'Nova live', contexto: 'buscar e importar', escopo: 'acoes', to: '/buscar-lives' },
 ];
 
 const MAX_RESULTADOS = 12;
 
-function normalizar(texto: string) {
-  return texto
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
+const DICA_DO_ESCOPO: Record<ItemDaPaleta['escopo'], string> = {
+  lives: 'live',
+  shorts: 'short',
+  cortes: 'corte',
+  telas: 'tela',
+  acoes: 'ação',
+};
+
+function useItensDaPaleta(): ItemDaPaleta[] {
+  const { pathname } = useLocation();
+  const projetoId = projetoDaRota(pathname) ?? undefined;
+  const { data: projetos } = useProjetos();
+  const { data: fires } = useFires();
+  const { data: cortes } = useCortesProjeto(projetoId);
+
+  return useMemo(() => {
+    const telas: ItemDaPaleta[] = destinosDaPaleta().map((d) => ({
+      id: d.id,
+      rotulo: d.texto,
+      icone: d.icone,
+      escopo: 'telas',
+      to: d.ir,
+    }));
+    const lives: ItemDaPaleta[] = (projetos ?? []).map((p) => ({
+      id: `p-${p.id}`,
+      rotulo: p.titulo_live || 'Live sem título',
+      contexto: `live · ${p.total_cortes} cortes`,
+      icone: 'layout-grid',
+      escopo: 'lives',
+      to: `/projetos/${p.id}`,
+    }));
+    const shorts: ItemDaPaleta[] = (fires?.fires ?? []).map((f) => ({
+      id: `s-${f.corte_id}`,
+      rotulo: f.titulo,
+      contexto: `short · corte #${String(f.numero).padStart(2, '0')} · ${f.projeto_titulo}`,
+      icone: 'flame',
+      escopo: 'shorts',
+      to: `/shorts/${f.corte_id}`,
+    }));
+    const tituloDaLive = projetos?.find((p) => p.id === projetoId)?.titulo_live ?? 'esta live';
+    const dosCortes: ItemDaPaleta[] = (cortes ?? []).map((c) => ({
+      id: `c-${c.id}`,
+      rotulo: `Corte #${String(c.numero).padStart(2, '0')} — ${c.titulo_proposto}`,
+      contexto: `corte · ${tituloDaLive} · ${c.status}`,
+      icone: 'scissors',
+      escopo: 'cortes',
+      to: `/projetos/${projetoId}/cortes/${c.id}`,
+    }));
+    return [...telas, ...ACOES, ...dosCortes, ...shorts, ...lives];
+  }, [projetos, fires, cortes, projetoId]);
 }
 
 export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFechar: () => void }) {
   const navigate = useNavigate();
-  const { data: projetos } = useProjetos();
+  const itens = useItensDaPaleta();
+  const { lugares } = useHistoricoDaCasca();
   const [termo, setTermo] = useState('');
+  const [escopoEscolhido, setEscopoEscolhido] = useState<EscopoDaPaleta>('tudo');
   const [indice, setIndice] = useState(0);
+  const [buscas, setBuscas] = useState<string[]>([]);
   const campo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!aberta) return;
     setTermo('');
+    setEscopoEscolhido('tudo');
     setIndice(0);
+    setBuscas(lerBuscas());
     requestAnimationFrame(() => campo.current?.focus());
   }, [aberta]);
 
-  const telas = useMemo(() => destinosDaPaleta(), []);
+  // O prefixo digitado manda sobre o chip: "@sermão" é short mesmo com
+  // "Tudo" selecionado.
+  const { escopo, termo: termoLimpo } = lerPrefixo(termo, escopoEscolhido);
+  const vazio = termoLimpo.trim() === '';
 
-  const resultados = useMemo(() => {
-    const lives: Destino[] = (projetos ?? []).map((p) => ({
-      id: `p-${p.id}`,
-      icone: 'layout-grid',
-      texto: p.titulo_live || 'Live sem título',
-      dica: 'live',
-      ir: `/projetos/${p.id}`,
-    }));
-    const q = normalizar(termo.trim());
-    const todos = [...telas, ...ACOES, ...lives];
-    const filtrados = q ? todos.filter((d) => normalizar(d.texto).includes(q)) : [...telas, ...ACOES];
-    return filtrados.slice(0, MAX_RESULTADOS);
-  }, [projetos, telas, termo]);
+  const grupos = useMemo((): GrupoDaPaleta[] => {
+    if (vazio) return estadoVazio(buscas, lugares);
+    return [{ titulo: '', icone: 'search', itens: filtrar(itens, termoLimpo, escopo).slice(0, MAX_RESULTADOS) }];
+  }, [vazio, buscas, lugares, itens, termoLimpo, escopo]);
+  const lista = grupos.flatMap((g) => g.itens);
 
-  useEffect(() => setIndice(0), [termo]);
+  useEffect(() => setIndice(0), [termo, escopoEscolhido]);
 
   if (!aberta) return null;
 
-  const ir = (d: Destino | undefined) => {
-    if (!d) return;
-    navigate(d.ir);
+  const girarEscopo = (passo: 1 | -1) => {
+    const i = ESCOPOS.findIndex((e) => e.id === escopo);
+    const proximo = ESCOPOS[(i + passo + ESCOPOS.length) % ESCOPOS.length];
+    setEscopoEscolhido(proximo.id);
+    // Com prefixo digitado, girar o chip tiraria o escopo do prefixo do lugar.
+    if (termo !== termoLimpo) setTermo(termoLimpo);
+  };
+
+  const escolher = (item: ItemDaPaleta | undefined) => {
+    if (!item) return;
+    // Item de "Últimas buscas" não leva a lugar: devolve o termo à caixa.
+    if (item.id.startsWith('busca-')) {
+      setTermo(item.rotulo);
+      campo.current?.focus();
+      return;
+    }
+    gravarBusca(termoLimpo);
+    if (item.aoEscolher) item.aoEscolher();
+    else if (item.to) navigate(item.to);
     onFechar();
   };
+
+  const nomeDoEscopo = ESCOPOS.find((e) => e.id === escopo)?.rotulo ?? 'Tudo';
+  let posicao = -1;
 
   return (
     <div
@@ -99,11 +171,11 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Buscar live, tela ou ação"
+        aria-label="Buscar live, short, corte, tela ou ação"
         className="card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 'min(560px, calc(100vw - 32px))',
+          width: 'min(600px, calc(100vw - 32px))',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -134,9 +206,14 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
                 onFechar();
                 return;
               }
+              if (e.key === 'Tab') {
+                e.preventDefault();
+                girarEscopo(e.shiftKey ? -1 : 1);
+                return;
+              }
               if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                setIndice((i) => Math.min(i + 1, resultados.length - 1));
+                setIndice((i) => Math.min(i + 1, lista.length - 1));
               }
               if (e.key === 'ArrowUp') {
                 e.preventDefault();
@@ -145,11 +222,11 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
               if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
-                ir(resultados[indice]);
+                escolher(lista[indice]);
               }
             }}
-            placeholder="Buscar live, tela ou ação…"
-            aria-label="Buscar live, tela ou ação"
+            placeholder="Buscar live, short, corte ou tela…  (@ shorts · # cortes · > ações)"
+            aria-label="Buscar live, short, corte, tela ou ação"
             style={{
               flex: 1,
               minWidth: 0,
@@ -164,56 +241,166 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
           <kbd>Esc</kbd>
         </label>
 
+        <div
+          role="tablist"
+          aria-label="Onde procurar"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 5,
+            padding: '7px 11px',
+            borderBottom: '1px solid var(--line2)',
+          }}
+        >
+          {ESCOPOS.map((e) => {
+            const ativo = e.id === escopo;
+            return (
+              <button
+                key={e.id}
+                type="button"
+                role="tab"
+                aria-selected={ativo}
+                tabIndex={-1}
+                onClick={() => {
+                  setEscopoEscolhido(e.id);
+                  if (termo !== termoLimpo) setTermo(termoLimpo);
+                  campo.current?.focus();
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  height: 22,
+                  padding: '0 8px',
+                  border: `1px solid ${ativo ? 'var(--accent)' : 'var(--line)'}`,
+                  borderRadius: 99,
+                  background: ativo ? 'var(--accent-soft)' : 'transparent',
+                  color: ativo ? 'var(--accent2)' : 'var(--mute)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}
+              >
+                {e.prefixo ? (
+                  <span style={{ fontFamily: 'var(--mono)', opacity: 0.7 }}>{e.prefixo}</span>
+                ) : null}
+                {e.rotulo}
+              </button>
+            );
+          })}
+          <span style={{ flex: 1 }} />
+          <span style={{ fontSize: 10.5, color: 'var(--dim)' }}>
+            <kbd>Tab</kbd> troca
+          </span>
+        </div>
+
         <div style={{ maxHeight: 380, overflow: 'auto', padding: 6 }}>
-          {resultados.length === 0 ? (
-            <p style={{ margin: 0, padding: '18px 10px', textAlign: 'center', color: 'var(--mute)' }}>
-              Nada com esse nome.
-            </p>
-          ) : (
-            resultados.map((d, i) => {
-              const ativo = i === indice;
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onMouseEnter={() => setIndice(i)}
-                  onClick={() => ir(d)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    width: '100%',
-                    padding: '8px 9px',
-                    border: `1px solid ${ativo ? 'var(--accent)' : 'transparent'}`,
-                    borderRadius: 'var(--r2)',
-                    background: ativo ? 'var(--accent-soft)' : 'transparent',
-                    color: 'var(--ink)',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Icon
-                    name={d.icone}
-                    size={14}
-                    style={{ color: ativo ? 'var(--accent)' : 'var(--mute)', flex: 'none' }}
-                  />
-                  <span
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      fontSize: 12.5,
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+          {lista.length === 0 ? (
+            <div style={{ padding: '18px 10px', textAlign: 'center', color: 'var(--mute)', fontSize: 12.5 }}>
+              {vazio ? (
+                'Digite para procurar. As últimas buscas e os lugares recentes aparecem aqui.'
+              ) : escopo === 'tudo' ? (
+                'Nada com esse nome.'
+              ) : (
+                <>
+                  Nada em <strong>{nomeDoEscopo}</strong> com esse nome.{' '}
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ height: 24, marginLeft: 6, fontSize: 11.5 }}
+                    onClick={() => {
+                      setEscopoEscolhido('tudo');
+                      setTermo(termoLimpo);
+                      campo.current?.focus();
                     }}
                   >
-                    {d.texto}
+                    Procurar em tudo
+                  </button>
+                  {escopo === 'cortes' ? (
+                    <span style={{ display: 'block', marginTop: 8, fontSize: 11, color: 'var(--dim)' }}>
+                      Cortes vêm da live aberta — abra uma live para procurar nos cortes dela.
+                    </span>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ) : (
+            grupos.map((g) => (
+              <div key={g.titulo || 'resultados'}>
+                {g.titulo ? (
+                  <span
+                    className="lbl"
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 9px 4px' }}
+                  >
+                    <Icon name={g.icone} size={11} />
+                    {g.titulo}
                   </span>
-                  <span className="lbl">{d.dica}</span>
-                </button>
-              );
-            })
+                ) : null}
+                {g.itens.map((d) => {
+                  posicao += 1;
+                  const i = posicao;
+                  const ativo = i === indice;
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onMouseEnter={() => setIndice(i)}
+                      onClick={() => escolher(d)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        width: '100%',
+                        padding: '7px 9px',
+                        border: `1px solid ${ativo ? 'var(--accent)' : 'transparent'}`,
+                        borderRadius: 'var(--r2)',
+                        background: ativo ? 'var(--accent-soft)' : 'transparent',
+                        color: 'var(--ink)',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Icon
+                        name={d.icone}
+                        size={14}
+                        style={{ color: ativo ? 'var(--accent)' : 'var(--mute)', flex: 'none' }}
+                      />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span
+                          style={{
+                            display: 'block',
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {d.rotulo}
+                        </span>
+                        {d.contexto ? (
+                          <span
+                            style={{
+                              display: 'block',
+                              fontSize: 11,
+                              color: 'var(--mute)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {d.contexto}
+                          </span>
+                        ) : null}
+                      </span>
+                      {g.titulo ? null : <span className="lbl">{DICA_DO_ESCOPO[d.escopo]}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ))
           )}
         </div>
 
@@ -236,6 +423,10 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
             <kbd>↵</kbd>
             ir
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <kbd>Tab</kbd>
+            escopo
           </span>
         </div>
       </div>
