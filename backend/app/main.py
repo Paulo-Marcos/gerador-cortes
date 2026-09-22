@@ -13,7 +13,7 @@ from app import channel_paths
 from app import editorial_skills as editorial_skills_service
 from app.channel_layout_migration import garantir_layout_de_canais
 from app.channel_paths import projetos_dir
-from app.config import settings
+from app.config import VERSAO_DO_APP, settings
 from app.database import init_db
 from app.routers import (
     avaliacao_bruto,
@@ -95,7 +95,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="CortadorLive API",
     description="Pipeline de transformação de Lives em cortes analíticos para YouTube",
-    version="1.0.0",
+    version=VERSAO_DO_APP,
     lifespan=lifespan,
 )
 

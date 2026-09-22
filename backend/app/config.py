@@ -7,6 +7,22 @@ _BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 _PROJECT_ROOT = os.path.abspath(os.path.join(_BACKEND_ROOT, ".."))
 
 
+def _versao_do_app() -> str:
+    """Versão do app: a fonte única é o `VERSION` da raiz (D-686).
+
+    Os package.json do frontend e do renderer são cópias, conferidas por
+    `tests/test_versao_unica_d686.py`.
+    """
+    try:
+        with open(os.path.join(_PROJECT_ROOT, "VERSION"), encoding="utf-8") as arquivo:
+            return arquivo.read().strip()
+    except OSError:
+        return "0.0.0"
+
+
+VERSAO_DO_APP = _versao_do_app()
+
+
 class Settings(BaseSettings):
     # D-155: dados operacionais vivem na pasta do canal ativo
     # (`instance/channels/<ativo>/projetos`). Fallback ao legado `backend/projetos`

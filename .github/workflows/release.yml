@@ -18,6 +18,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check tag matches VERSION
+        run: |
+          # D-686: a tag e o arquivo VERSION tem de dizer a mesma coisa; sem isto,
+          # uma tag errada publicava uma release com outro numero dentro do app.
+          TAG="${GITHUB_REF_NAME#v}"
+          ARQUIVO="$(tr -d '[:space:]' < VERSION)"
+          if [ "$TAG" != "$ARQUIVO" ]; then
+            echo "::error::A tag v$TAG nao bate com o VERSION ($ARQUIVO)"
+            exit 1
+          fi
+
       - name: Extract changelog notes
         id: changelog
         run: |

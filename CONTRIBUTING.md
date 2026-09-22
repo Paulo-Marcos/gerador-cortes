@@ -46,3 +46,8 @@ As regras de trabalho vivem no [AGENTS.md](AGENTS.md). O essencial:
   - video-renderer: `npm run lint`.
 - **Não rode `npm run format`**: o CI não usa prettier e o comando reescreve o
   repositório inteiro.
+- **Subir a versão:** mude o `VERSION` da raiz e repita o número nos `package.json`
+  (e nos locks) do frontend e do renderer; regere o contrato com
+  `ATUALIZAR_OPENAPI=1 pytest tests/test_contrato_openapi_d664.py`. O teste
+  `test_versao_unica_d686.py` aponta o que ficou para trás, e o release recusa uma
+  tag que não bata com o `VERSION`.
