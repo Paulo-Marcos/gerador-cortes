@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReadingModal } from '@/features/editor/CommonTopBar';
-import { MetadataModal } from '@/features/metadata/MetadataModal';
 import type { ReadingPatch } from '@/lib/readingMetadata';
 import { useProjeto } from '@/hooks/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { thumbnailUrl } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
+import { COR_DO_SELO, TOM_DO_CORTE } from '../SeloDeEstado';
 import { montarTira } from '../tiraDoCorte';
+import { MetadadosDoCorteModal, statusMinimo } from './MetadadosDoCorteModal';
 import type { IconName } from '../Icon';
 import { useDefinirChrome, type ChromeBarra, type ItemDeLista } from '../UpgradeChrome';
 
@@ -32,18 +33,6 @@ import { useDefinirChrome, type ChromeBarra, type ItemDeLista } from '../Upgrade
 // `atual`, então declarar aqui era escrevê-lo duas vezes (e mantinha
 // morto o caminho da injeção).
 // ─────────────────────────────────────────────────────────────────
-
-const TOM: Record<string, { cor: string; bg: string }> = {
-  proposto: { cor: 'var(--info)', bg: 'var(--info-soft)' },
-  aprovado: { cor: 'var(--accent2)', bg: 'var(--accent-soft)' },
-  editado: { cor: 'var(--accent2)', bg: 'var(--accent-soft)' },
-  processado: { cor: 'var(--ok)', bg: 'var(--ok-soft)' },
-  rejeitado: { cor: 'var(--mute)', bg: 'var(--inset)' },
-};
-
-function tom(status: string) {
-  return TOM[status] ?? TOM.proposto;
-}
 
 export type BancadaChromeProps = {
   projetoId: string;
@@ -150,7 +139,9 @@ export function BancadaChrome({
     titulo: c.titulo_proposto,
     legenda: `#${c.numero} · ${c.inicio_hms} → ${c.fim_hms}`,
     thumb: capaDoCorte(c),
-    dot: tom(c.status).cor,
+    // R4: o ponto de estado vem do vocabulário do selo — a cópia local aqui
+    // ainda pintava "aprovado" com a tinta dos botões (--accent2).
+    dot: COR_DO_SELO[TOM_DO_CORTE[c.status] ?? 'inerte'].cor,
     ativo: c.id === corte.id,
     onClick: () => navigate(caminhoDoCorte(c)),
     // D-746: a lista volta a dizer onde cada corte parou (a casca antiga
@@ -306,12 +297,15 @@ export function BancadaChrome({
           }}
         />
       ) : null}
+      {/* R4: o ícone de etiqueta abre O MESMO modal em Cortes, na Pós e aqui.
+          Antes eram dois desenhos com a mesma promessa — e só um dizia que é
+          consulta. Editar continua a um clique, pelo rodapé do modal. */}
       {metaDoCorte ? (
-        <MetadataModal
-          open
+        <MetadadosDoCorteModal
           projetoId={projetoId}
-          corte={metaDoCorte}
-          onClose={() => setMetaDoCorte(null)}
+          status={statusDe(metaDoCorte) ?? statusMinimo(metaDoCorte)}
+          statusCorte={metaDoCorte.status}
+          aoFechar={() => setMetaDoCorte(null)}
         />
       ) : null}
     </>

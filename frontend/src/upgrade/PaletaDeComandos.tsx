@@ -96,6 +96,7 @@ function useItensDaPaleta(): ItemDaPaleta[] {
 
 export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFechar: () => void }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const itens = useItensDaPaleta();
   const { lugares } = useHistoricoDaCasca();
   const [termo, setTermo] = useState('');
@@ -125,6 +126,14 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
   const lista = grupos.flatMap((g) => g.itens);
 
   useEffect(() => setIndice(0), [termo, escopoEscolhido]);
+
+  // R4: trocou de rota por baixo dela (⌘[, ⌘1…⌘4): a paleta não viaja junto,
+  // como a gaveta da fila já não viajava.
+  useEffect(() => {
+    if (aberta) onFechar();
+    // Só a troca de rota fecha; reagir a `aberta` fecharia na própria abertura.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   if (!aberta) return null;
 

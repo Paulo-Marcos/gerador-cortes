@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import {
   REDES_DO_SHORT,
@@ -295,7 +296,10 @@ function CartaoDaCentral({
         marcado ? 'border-[var(--wb-accent)]' : 'border-[var(--wb-border)]',
       )}
     >
-      <div className="relative bg-black" style={{ aspectRatio: '9 / 16' }}>
+      {/* R4: a moldura de vídeo também no retrato. `mat` maior que o do 16:9
+          porque no vertical a moldura aparece nas laterais, que é onde a
+          vertical tem mais borda por área. */}
+      <MolduraDeVideo proporcao="9/16" mat={9}>
         <video
           src={shortVideoUrl(pronto.id, 'final')}
           controls
@@ -317,7 +321,7 @@ function CartaoDaCentral({
           />
           lote
         </label>
-      </div>
+      </MolduraDeVideo>
 
       <div className="flex flex-col gap-2 p-2.5">
         <div>

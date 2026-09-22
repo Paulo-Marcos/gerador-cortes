@@ -108,20 +108,29 @@ const CLASSE_BADGE: Record<PipState, string> = {
  * Rótulo-resumo à direita da tira (protótipo v3): diz em uma expressão o
  * que os 8 pips mostram em detalhe.
  */
-function resumoDoCorte(corte: StatusExportCorte, feitos: number, rejeitado: boolean) {
+function resumoDoCorte(
+  corte: StatusExportCorte,
+  feitos: number,
+  rejeitado: boolean,
+  // R4: o total vem da lista, não de um 8 fixo — acrescentar uma etapa fazia
+  // a tira contar 9 pips e o resumo continuar dizendo "/8".
+  total: number,
+) {
   if (rejeitado) return { texto: 'rejeitado', cor: 'var(--wb-err-ink)' };
-  if (feitos === 8) return { texto: '8/8 ▶', cor: 'var(--wb-ok-ink)' };
+  if (feitos === total) return { texto: `${total}/${total} ▶`, cor: 'var(--wb-ok-ink)' };
   if (!corte.video_pronto) return { texto: 'sem render', cor: 'var(--wb-warn-ink)' };
-  return { texto: `${feitos}/8`, cor: 'var(--wb-text-mute)' };
+  return { texto: `${feitos}/${total}`, cor: 'var(--wb-text-mute)' };
 }
 
 /**
- * Tira compacta de 8 pips do pipeline do corte (DE-PARA-v3 §2):
- * Bruto -> Cenas -> Graded -> Overlays -> Final -> YouTube -> Thumb -> Meta.
+ * Tira compacta dos pips do pipeline do corte (DE-PARA-v3 §2):
+ * Bruto -> Cenas -> Graded -> Overlays -> Final -> Thumb -> Meta -> YouTube.
  *
  * Ordem cronologica do pipeline: cenas validadas, depois o render final em
- * tres fases (graded, overlays, composicao final), depois publicacao no
- * YouTube. Thumb e Meta sao requisitos paralelos para a publicacao.
+ * tres fases (graded, overlays, composicao final), e a publicacao por ultimo.
+ * D-746: Thumb e Meta vem ANTES do YouTube porque sao pre-requisitos dele —
+ * na ordem antiga, um corte renderizado e sem capa marcava "YouTube" como
+ * proxima etapa, que e instrucao errada. Nao reordene de volta.
  *
  * Substitui os 8 pills com emoji+rótulo: no card estreito eles quebravam em
  * várias linhas e dominavam o card. Aqui a cor carrega o estado, o `title`
@@ -187,8 +196,9 @@ export function StatusPills({
   corte: StatusExportCorte;
   statusCorte?: string;
 }) {
-  const feitos = buildStatusPills(corte).filter((p) => p.done).length;
-  const resumo = resumoDoCorte(corte, feitos, statusCorte === 'rejeitado');
+  const pills = buildStatusPills(corte);
+  const feitos = pills.filter((p) => p.done).length;
+  const resumo = resumoDoCorte(corte, feitos, statusCorte === 'rejeitado', pills.length);
 
   return (
     <div className="flex items-center gap-2">

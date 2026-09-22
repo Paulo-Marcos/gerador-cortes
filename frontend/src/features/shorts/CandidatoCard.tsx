@@ -318,6 +318,31 @@ export function CandidatoCard({
         </div>
       </header>
 
+      {/* R4: as etapas do short, no vocabulário da tira do corte. Ficam com o
+          que o CARTÃO sabe sem consulta nova: gancho, prévia, render e capa —
+          o bruto é do corte, e o post exigiria uma chamada por cartão. */}
+      <div className="flex flex-wrap items-center gap-1 px-3 pb-1.5">
+        {[
+          { sigla: 'GANCHO', feito: Boolean(short.gancho_tela) },
+          { sigla: 'PRÉVIA', feito: Boolean(short.arquivo_previa_path) },
+          { sigla: 'RENDER', feito: short.status === 'renderizado' && Boolean(short.arquivo_short_path) },
+          { sigla: 'CAPA', feito: Boolean(capa.data?.tem_capa) },
+        ].map((etapa) => (
+          <span
+            key={etapa.sigla}
+            title={`${etapa.sigla.toLowerCase()} — ${etapa.feito ? 'feito' : 'pendente'}`}
+            className={cn(
+              'grid h-[14px] place-items-center rounded-[2px] px-1.5 font-code text-[9px] font-bold',
+              etapa.feito
+                ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]'
+                : 'border border-[var(--wb-border-soft)] text-[var(--wb-text-mute)]',
+            )}
+          >
+            {etapa.sigla}
+          </span>
+        ))}
+      </div>
+
       {/* ── Números que decidem, numa linha só ─────────────────────── */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-2 font-code text-[11.5px] tabular-nums text-[var(--wb-text-mute)]">
         <span className="font-semibold text-[var(--wb-text-dim)]">
@@ -456,7 +481,9 @@ export function CandidatoCard({
 
       {/* D-746: botão apagado sem dizer por quê obriga o operador a clicar
           para descobrir. O motivo fica escrito, não só no title. */}
-      {ocupado && emFoco && !renderizando && (
+      {/* R4: o motivo é sobre o CARTÃO, não sobre a seleção — com `emFoco`,
+          sete de oito cartões ficavam apagados sem explicação. */}
+      {ocupado && !renderizando && (
         <p className="flex items-center gap-1.5 border-t border-[var(--wb-border-soft)] px-3 py-1.5 text-[11px] text-[var(--wb-warn-ink)]">
           <Ban size={11} className="flex-none" aria-hidden />
           Aguarde: uma gravação, prévia ou render deste corte ainda está em andamento.

@@ -44,14 +44,18 @@
   --matiz-fundo: 28;
   --croma-fundo: 0.08;
 
-  --ok: oklch(0.52 0.13 145);
-  --ok-soft: oklch(0.52 0.13 145 / 0.14);
-  --warn: oklch(0.52 0.14 70);
-  --warn-soft: oklch(0.55 0.14 70 / 0.16);
-  --info: oklch(0.5 0.13 245);
-  --info-soft: oklch(0.5 0.13 245 / 0.14);
-  --err: oklch(0.52 0.18 25);
-  --err-soft: oklch(0.55 0.18 25 / 0.14);
+  /* R4: medido compondo o alpha em sRGB — ok e aviso reprovavam (4,21 e
+     4,45 no claro). O texto desce 0.05 L e o -soft passa a usar A MESMA
+     cor do texto: com dois valores diferentes (0.55 contra 0.52) o par
+     dependia de dois números, e quem mexesse num desmontava o outro. */
+  --ok: oklch(0.47 0.13 145);
+  --ok-soft: oklch(0.47 0.13 145 / 0.16);
+  --warn: oklch(0.47 0.135 70);
+  --warn-soft: oklch(0.47 0.135 70 / 0.16);
+  --info: oklch(0.46 0.13 245);
+  --info-soft: oklch(0.46 0.13 245 / 0.16);
+  --err: oklch(0.48 0.18 25);
+  --err-soft: oklch(0.48 0.18 25 / 0.16);
 
   --glass: blur(22px) saturate(1.6);
   --hi: 0 1px 0 rgb(255 255 255 / 0.6) inset;
@@ -427,6 +431,11 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
    permite aos componentes compartilhados (`ui/button`, `ui/icon-button`)
    falar a MESMA língua em vez de reinventar a cor a cada chamada. */
 
+/* PISOS DA CASCA (R4). Não desça nenhum dos três num `style` inline: foi
+   assim que os 9,5 px voltaram em "Onde eu estava" depois da rodada 2.
+     · tipografia estrutural em mono: 10,5 px  (.lbl, kbd)
+     · tipografia de dado mínimo (pip da tira): 9 px
+     · alvo clicável: 26 px  (.btn-sm) */
 .ap .btn-sm {
   height: 26px;
   padding: 0 9px;

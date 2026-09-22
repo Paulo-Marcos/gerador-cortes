@@ -30,6 +30,7 @@ import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
 import { Icon } from '@/upgrade/Icon';
 import { montarTira } from '@/upgrade/tiraDoCorte';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
+import { MetadadosDoCorteModal, statusMinimo } from '@/upgrade/telas/MetadadosDoCorteModal';
 import { TiraDoCorteAp } from '@/upgrade/telas/TiraDoCorteAp';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
@@ -42,7 +43,6 @@ import { useWorkbenchQueueOptional } from '@/components/workbench/useWorkbenchQu
 import { rotuloCurtoProjeto } from '@/components/workbench/workbenchRoutes';
 import { AvaliacaoCorteModal } from '@/features/editor/avaliacao/AvaliacaoCorteModal';
 import { useAvaliacaoCorte } from '@/features/editor/avaliacao/useAvaliacaoCorte';
-import { MetadataModal } from '@/features/metadata/MetadataModal';
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from './RenderStepsModal';
 import type { FaseRender } from './renderEtapas';
@@ -522,12 +522,15 @@ export function ScenesPostProductionPage() {
         onClose={() => setRenderStartModalOpen(false)}
         onConfirm={startRenderFinal}
       />
-      <MetadataModal
-        open={metadataOpen}
-        projetoId={projetoId}
-        corte={corte}
-        onClose={() => setMetadataOpen(false)}
-      />
+      {/* R4: um modal de metadados só na casca — o mesmo de Cortes. */}
+      {metadataOpen ? (
+        <MetadadosDoCorteModal
+          projetoId={projetoId}
+          status={exportEntry ?? statusMinimo(corte)}
+          statusCorte={corte.status}
+          aoFechar={() => setMetadataOpen(false)}
+        />
+      ) : null}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <AvaliacaoCorteModal
         open={avaliacaoOpen}

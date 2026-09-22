@@ -158,10 +158,17 @@ export function useHistoricoDaCasca() {
 /** Atalhos de histórico: ⌘[ ⌘] andam na pilha, ⌘1…⌘4 levam aos lugares
  *  que o trilho mostra em "Onde eu estava" (a mesma lista, na mesma ordem).
  *  Separado do teclado da casca porque vale em qualquer tela. */
-export function useAtalhosDeHistorico(navegar: (to: string) => void, atalhos: Lugar[] = []) {
+export function useAtalhosDeHistorico(
+  navegar: (to: string) => void,
+  atalhos: Lugar[] = [],
+  /** R4: a casca já sabe se há overlay aberto — com um, nenhuma tecla é
+   *  nossa. Este hook escutava o window direto e navegava por baixo do ⌘K. */
+  bloqueado?: () => boolean,
+) {
   const { voltar, avancar } = useHistoricoDaCasca();
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
+      if (bloqueado?.()) return;
       if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
       let destino: Lugar | undefined;
       if (e.key === '[') destino = voltar();
@@ -174,5 +181,5 @@ export function useAtalhosDeHistorico(navegar: (to: string) => void, atalhos: Lu
     };
     window.addEventListener('keydown', aoTeclar);
     return () => window.removeEventListener('keydown', aoTeclar);
-  }, [voltar, avancar, navegar, atalhos]);
+  }, [voltar, avancar, navegar, atalhos, bloqueado]);
 }

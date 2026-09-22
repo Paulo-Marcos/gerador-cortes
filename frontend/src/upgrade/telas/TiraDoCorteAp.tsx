@@ -6,7 +6,10 @@ const TOM_DO_PIP: Record<EstadoDoPip, { bg: string; cor: string; filete: string;
   feito: { bg: 'var(--ok-soft)', cor: 'var(--ok)', filete: 'none', opacidade: 1 },
   agora: { bg: 'var(--warn-soft)', cor: 'var(--warn)', filete: 'inset 0 0 0 1px var(--warn)', opacidade: 1 },
   rejeitado: { bg: 'var(--err-soft)', cor: 'var(--err)', filete: 'none', opacidade: 1 },
-  falta: { bg: 'transparent', cor: 'var(--dim)', filete: 'inset 0 0 0 1px var(--line2)', opacidade: 0.72 },
+  // R4: o pip fantasma media 2,10 no escuro com `opacity: .72` — e ele é A
+  // RESPOSTA à queixa "não dá para saber o status". Mantemos o campo
+  // `opacidade` no tipo: ele registra que a decisão foi tomada.
+  falta: { bg: 'transparent', cor: 'var(--mute)', filete: 'inset 0 0 0 1px var(--line2)', opacidade: 1 },
 };
 
 /**
@@ -38,12 +41,14 @@ export function TiraMini({ tira }: { tira: Tira }) {
                 style={{
                   display: 'grid',
                   placeItems: 'center',
-                  minWidth: 17,
-                  height: 12,
+                  // R4: 9 px é o piso do dado mínimo da casca; 7,5 px era
+                  // escolha local, abaixo de qualquer limiar de leitura.
+                  minWidth: 19,
+                  height: 14,
                   padding: '0 2px',
                   borderRadius: 2,
                   fontFamily: 'var(--mono)',
-                  fontSize: 7.5,
+                  fontSize: 9,
                   fontWeight: 700,
                   background: tom.bg,
                   color: tom.cor,
@@ -80,7 +85,7 @@ export function TiraDoCorteAp({ tira, compacta = false }: { tira: Tira; compacta
           <span
             style={{
               fontFamily: 'var(--mono)',
-              fontSize: 8.5,
+              fontSize: 9,
               fontWeight: 700,
               letterSpacing: '.08em',
               color: 'var(--dim)',
@@ -104,7 +109,7 @@ export function TiraDoCorteAp({ tira, compacta = false }: { tira: Tira; compacta
                   padding: '0 3px',
                   borderRadius: 2,
                   fontFamily: 'var(--mono)',
-                  fontSize: 8.5,
+                  fontSize: 9,
                   fontWeight: 700,
                   letterSpacing: '.02em',
                   background: tom.bg,

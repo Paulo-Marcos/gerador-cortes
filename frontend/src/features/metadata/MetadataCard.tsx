@@ -463,11 +463,6 @@ export function MetadataCard({
                     },
                   },
                   {
-                    icon: Clipboard,
-                    label: 'Copiar prompt thumbnail',
-                    onClick: () => void copy(meta?.prompt_thumbnail ?? '', 'Prompt copiado.'),
-                  },
-                  {
                     icon: UploadCloud,
                     label: 'Subir thumbnail',
                     accept: 'image/*',
@@ -1381,7 +1376,7 @@ function SegmentedAiManual({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="font-code text-[8.5px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
+      <span className="font-code text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
         {label}
       </span>
       <div className="inline-flex gap-0.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">

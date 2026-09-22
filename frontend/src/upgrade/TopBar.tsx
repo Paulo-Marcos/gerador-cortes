@@ -104,7 +104,10 @@ function Trilha({ itens }: { itens: Migalha[] }) {
             style={{
               // block: num <Link> inline, maxWidth e overflow não valiam e
               // a migalha longa vazava por cima da vizinha.
-              display: 'block',
+              display: 'flex',
+              alignItems: 'center',
+              // R4: piso de alvo clicável — a migalha media 19 px.
+              minHeight: 24,
               fontWeight: ultimo ? 700 : 500,
               color: ultimo ? 'var(--ink)' : 'var(--mute)',
               whiteSpace: 'nowrap',
@@ -393,7 +396,8 @@ function RampaDeTemas({
             onClick={() => onEscolher(t)}
             style={{
               width: 16,
-              height: 20,
+              // R4: piso de alvo clicável — a rampa era 16×20.
+              height: 24,
               padding: 0,
               borderRadius: 2,
               cursor: 'pointer',
@@ -545,7 +549,7 @@ export function TopBar({
           to="/canais"
           className="chip"
           title={`Canal ativo: ${canal.nome} (${canal.handle}) — é para ele que os cortes são publicados. Trocar em Canais.`}
-          style={{ flex: 'none', maxWidth: 180, color: 'var(--ink)', textDecoration: 'none' }}
+          style={{ flex: 'none', height: 24, maxWidth: 180, color: 'var(--ink)', textDecoration: 'none' }}
         >
           <Icon name="radio" size={12} style={{ flex: 'none', color: 'var(--mute)' }} />
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

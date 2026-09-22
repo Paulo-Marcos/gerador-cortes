@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { metadataKey } from '@/features/metadata/MetadataCard';
 import { api, resolveThumbUrl } from '@/lib/api';
 import { copyTextToClipboard } from '@/lib/clipboard';
-import type { StatusExportCorte } from '@/types/models';
+import type { Corte, StatusExportCorte } from '@/types/models';
 import { Icon } from '../Icon';
 import { MolduraDeVideo } from '../MolduraDeVideo';
 import { montarTira } from '../tiraDoCorte';
@@ -42,6 +42,25 @@ function Campo({ rotulo, valor, alto = false }: { rotulo: string; valor: string;
       </div>
     </div>
   );
+}
+
+/** R4: corte ainda sem linha no status de export — a tira sai toda pendente
+ *  em vez de o modal não abrir. */
+export function statusMinimo(corte: Corte): StatusExportCorte {
+  return {
+    corte_id: corte.id,
+    numero: corte.numero,
+    titulo: corte.titulo_proposto,
+    raw_pronto: false,
+    grade_pronta: false,
+    overlays_prontos: false,
+    cenas_geradas: false,
+    cenas_validadas: false,
+    video_pronto: false,
+    thumbnail_pronta: false,
+    metadados_completos: false,
+    pronto_publicar: false,
+  };
 }
 
 export function MetadadosDoCorteModal({

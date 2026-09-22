@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Icon } from './Icon';
 import type { EtapaProjeto } from './UpgradeChrome';
 import type { PassoDaLive } from './upgradeRoutes';
+import { TOM_DA_ETAPA } from './SeloDeEstado';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 Rodada 2 · A fita da live.
@@ -29,10 +30,13 @@ type FitaProps = {
   etapas?: EtapaProjeto[];
 };
 
+// R4: a QUARTA cópia da tabela de etapas — e a única que ainda pintava a
+// fase atual com a tinta dos botões. Vem do vocabulário do selo; aqui só
+// mora a borda, que é desenho desta fita.
 const TOM = {
-  feito: { bg: 'var(--ok-soft)', cor: 'var(--ok)', borda: 'transparent' },
-  agora: { bg: 'var(--accent)', cor: 'var(--on-accent)', borda: 'transparent' },
-  todo: { bg: 'transparent', cor: 'var(--mute)', borda: 'var(--line)' },
+  feito: { ...TOM_DA_ETAPA.feito, borda: 'transparent' },
+  agora: { ...TOM_DA_ETAPA['em-curso'], borda: 'var(--warn)' },
+  todo: { bg: 'transparent', cor: TOM_DA_ETAPA.pendente.cor, borda: 'var(--line)' },
 };
 
 export function FitaDaLive({ passos, etapas }: FitaProps) {
@@ -83,7 +87,7 @@ export function FitaDaLive({ passos, etapas }: FitaProps) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
-                  height: 22,
+                  height: 24,
                   padding: '0 8px',
                   border: `1px solid ${tom.borda}`,
                   borderRadius: 'var(--r1)',
@@ -103,7 +107,7 @@ export function FitaDaLive({ passos, etapas }: FitaProps) {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 5,
-                  height: 22,
+                  height: 24,
                   padding: '0 8px',
                   border: `1px solid ${tom.borda}`,
                   borderRadius: 'var(--r1)',

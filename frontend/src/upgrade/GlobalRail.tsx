@@ -35,7 +35,8 @@ export type FilaDoTrilho = {
   sub: string;
   /** 0–100; vira a fatia preenchida do anel cônico. */
   progresso: number;
-  to: string;
+  /** R4: só as vitrines usam a rota; na casca o cartão abre a gaveta. */
+  to?: string;
   /** D-746: consultar a fila não é navegar — com isto o cartão abre a
    *  gaveta em vez de levar à rota. */
   onAbrir?: () => void;
@@ -210,12 +211,64 @@ export function GlobalRail({
         {menu.inteligencia.map((i) => (
           <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
         ))}
+
+        {/* D-746: o trabalho real é lateral (short → outro short → uma live
+            → volta), e a trilha só sabia subir na hierarquia. Só com o trilho
+            largo: recolhido, quatro ícones sem nome não diriam aonde levam. */}
+        {mostrarTexto && lugares.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 'none' }}>
+            <span
+              className="lbl"
+              // R4: sem `fontSize` — o piso de 10,5 px do `.lbl` manda.
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 4px 4px' }}
+            >
+              <Icon name="history" size={11} />
+              Onde eu estava
+            </span>
+            {lugares.slice(0, 4).map((l, i) => (
+              <button
+                key={l.to}
+                type="button"
+                onClick={() => navigate(l.to)}
+                title={`${l.rotulo} · ${l.tipo} (⌘${i + 1})`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  height: 26,
+                  padding: '0 6px',
+                  border: 0,
+                  borderRadius: 'var(--r2)',
+                  background: 'transparent',
+                  color: 'var(--mute)',
+                  fontSize: 11.5,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                }}
+              >
+                <Icon name={l.icone} size={12} style={{ flex: 'none' }} />
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {l.rotulo}
+                </span>
+                <kbd style={{ flex: 'none' }}>⌘{i + 1}</kbd>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {fila ? (
         <button
           type="button"
-          onClick={() => (fila.onAbrir ? fila.onAbrir() : navigate(fila.to))}
+          onClick={() => (fila.onAbrir ? fila.onAbrir() : fila.to && navigate(fila.to))}
           className="card"
           title={
             fila.onAbrir
@@ -243,7 +296,8 @@ export function GlobalRail({
               height: 16,
               flex: 'none',
               borderRadius: 99,
-              background: `conic-gradient(var(--accent) ${fila.progresso}%,var(--inset) 0)`,
+              // R4: progresso é estado, não ação — a gaveta já fala em --info.
+              background: `conic-gradient(var(--info) ${fila.progresso}%,var(--inset) 0)`,
             }}
             aria-hidden
           />
@@ -283,56 +337,6 @@ export function GlobalRail({
         <ItemBotao key={i.to} item={i} ativo={aceso(i)} mostrarTexto={mostrarTexto} />
       ))}
 
-      {/* D-746: o trabalho real é lateral (short → outro short → uma live
-          → volta), e a trilha só sabia subir na hierarquia. Só com o trilho
-          largo: recolhido, quatro ícones sem nome não diriam aonde levam. */}
-      {mostrarTexto && lugares.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 'none' }}>
-          <span
-            className="lbl"
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 4px 4px', fontSize: 9.5 }}
-          >
-            <Icon name="history" size={11} />
-            Onde eu estava
-          </span>
-          {lugares.slice(0, 4).map((l, i) => (
-            <button
-              key={l.to}
-              type="button"
-              onClick={() => navigate(l.to)}
-              title={`${l.rotulo} · ${l.tipo} (⌘${i + 1})`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 7,
-                height: 26,
-                padding: '0 6px',
-                border: 0,
-                borderRadius: 'var(--r2)',
-                background: 'transparent',
-                color: 'var(--mute)',
-                fontSize: 11.5,
-                textAlign: 'left',
-                cursor: 'pointer',
-              }}
-            >
-              <Icon name={l.icone} size={12} style={{ flex: 'none' }} />
-              <span
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {l.rotulo}
-              </span>
-              <kbd style={{ flex: 'none' }}>⌘{i + 1}</kbd>
-            </button>
-          ))}
-        </div>
-      ) : null}
     </aside>
   );
 }

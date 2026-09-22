@@ -34,12 +34,18 @@ import type { EstadoProjetoKey } from '@/features/projetos/statusMaps';
 
 export type TomDoSelo = 'ok' | 'aviso' | 'info' | 'erro' | 'inerte';
 
-const COR: Record<TomDoSelo, { cor: string; bg: string }> = {
+/** R4: a ÚNICA tabela de cor de estado do app. Exportada porque o `dot` da
+ *  lista de cortes tinha a sua própria cópia — e nela "aprovado" ainda saía
+ *  na tinta dos botões. */
+export const COR_DO_SELO: Record<TomDoSelo, { cor: string; bg: string }> = {
   ok: { cor: 'var(--ok)', bg: 'var(--ok-soft)' }, // fechado, nada a fazer
   aviso: { cor: 'var(--warn)', bg: 'var(--warn-soft)' }, // convida a um ato
   info: { cor: 'var(--info)', bg: 'var(--info-soft)' }, // em curso
   erro: { cor: 'var(--err)', bg: 'var(--err-soft)' }, // travou
-  inerte: { cor: 'var(--dim)', bg: 'transparent' }, // verdade fria, sem convite
+  // R4: `--mute`, não `--dim`, e sem opacidade — o selo inerte media
+  // 2,82-3,07 fora de Ardósia. A hierarquia continua de pé porque quem a
+  // carrega é o FUNDO (transparente contra chip colorido), não a tinta.
+  inerte: { cor: 'var(--mute)', bg: 'transparent' }, // verdade fria, sem convite
 };
 
 export function SeloDeEstado({
@@ -58,7 +64,7 @@ export function SeloDeEstado({
    *  A arte da live vem cheia de cor alta e engoliria um fundo -soft. */
   sobreArte?: boolean;
 }) {
-  const { cor: corDoTom, bg: bgDoTom } = COR[tom];
+  const { cor: corDoTom, bg: bgDoTom } = COR_DO_SELO[tom];
   const cor = sobreArte ? '#fff' : corDoTom;
   const bg = sobreArte ? 'rgb(10 14 24 / 0.62)' : bgDoTom;
   return (
@@ -84,7 +90,6 @@ export function SeloDeEstado({
         // rótulo de duas palavras quebra em duas linhas e a segunda é
         // cortada. Foi um defeito real da rodada 3.
         whiteSpace: 'nowrap',
-        opacity: tom === 'inerte' && !sobreArte ? 0.85 : 1,
         backdropFilter: sobreArte ? 'blur(8px)' : undefined,
       }}
     >
@@ -132,12 +137,27 @@ export const TOM_DO_PROJETO = {
 } as const satisfies Record<EstadoProjetoKey, TomDoSelo>;
 
 /**
+ * R4: a etapa da live (Baixado, Analisado, Cortes…), nas duas telas que a
+ * desenham — o card da Biblioteca e a faixa do Workspace. O Workspace só
+ * tinha dois estados e perdia o âmbar do "é aqui que está".
+ */
+export const TOM_DA_ETAPA = {
+  feito: { bg: 'var(--ok-soft)', cor: 'var(--ok)', filete: 'none' },
+  'em-curso': { bg: 'var(--warn-soft)', cor: 'var(--warn)', filete: 'inset 0 0 0 1px var(--warn)' },
+  pendente: { bg: 'var(--inset)', cor: 'var(--mute)', filete: 'none' },
+} as const;
+
+/**
  * Tom do estado do CORTE, para substituir o `TOM` do CorteLinhaAp.
  * `aprovado` era o que vazava: acento2 sobre accent-soft.
  */
 export const TOM_DO_CORTE = {
   proposto: 'aviso',
   aprovado: 'info',
+  // R4: status do banco que a lista lateral também usa. `processado` é o
+  // corte que já rodou o pipeline; `editado` é legado e lê como em curso.
+  processado: 'ok',
+  editado: 'info',
   pronto: 'ok',
   publicado: 'ok',
   rejeitado: 'inerte',

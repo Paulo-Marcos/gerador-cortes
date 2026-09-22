@@ -55,6 +55,7 @@ import { usePublicacoesDoCorte } from './useLotePublicacao';
 import { useFechoDoShort } from './useFechoDoShort';
 import type { PublicacaoRegistrada } from './shortsApi';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 /** Como cada plataforma se chama na prateleira. */
@@ -103,7 +104,8 @@ function CartaoDoPronto({
         aberto ? 'border-[var(--wb-accent)]' : 'border-[var(--wb-border)]',
       )}
     >
-      <div className="relative bg-black" style={{ aspectRatio: '9 / 16' }}>
+      {/* R4: moldura no retrato — `mat` 9 px, ver ShortsProntosPage. */}
+      <MolduraDeVideo proporcao="9/16" mat={9}>
         {pronto ? (
           <video
             src={shortVideoUrl(short.id, 'final')}
@@ -142,7 +144,7 @@ function CartaoDoPronto({
             </div>
           </div>
         )}
-      </div>
+      </MolduraDeVideo>
 
       <div className="flex flex-col gap-1.5 p-2.5">
         <h3 className="line-clamp-2 text-[12.5px] font-bold leading-snug" title={short.titulo}>
@@ -263,7 +265,8 @@ export default function WorkspaceDoFirePage() {
       ]
         .filter(Boolean)
         .join(' · '),
-      rotulos: fire ? [fire.projeto_titulo] : [],
+      // R4: idem à tela de curadoria — a live de origem é clicável.
+      rotulos: fire ? [{ texto: fire.projeto_titulo, to: `/projetos/${fire.projeto_id}` }] : [],
       acoes: [
         { icone: 'pencil', texto: 'Voltar à edição', onClick: () => navigate(`/shorts/${corteId}`) },
       ],

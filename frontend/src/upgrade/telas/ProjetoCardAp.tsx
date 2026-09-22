@@ -9,7 +9,7 @@ import { formatarDataLive, formatarDuracao, thumbnailUrl } from '@/lib/utils';
 import type { Projeto } from '@/types/models';
 import { Icon, type IconName } from '../Icon';
 import { MolduraDeVideo } from '../MolduraDeVideo';
-import { SeloDeEstado, TOM_DA_LIMPEZA, TOM_DO_PROJETO } from '../SeloDeEstado';
+import { SeloDeEstado, TOM_DA_ETAPA, TOM_DA_LIMPEZA, TOM_DO_PROJETO } from '../SeloDeEstado';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O card da Biblioteca na linguagem nova.
@@ -42,14 +42,6 @@ const ICONE_ETAPA: Record<string, IconName> = {
   Pós: 'clapperboard',
   Metadados: 'tags',
   Publicado: 'rocket',
-};
-
-// D-746: a etapa em curso é ESTADO, não ação — âmbar com filete, nunca a
-// tinta do acento, que é dos botões.
-const TOM_ETAPA = {
-  feito: { bg: 'var(--ok-soft)', cor: 'var(--ok)', filete: 'none' },
-  'em-curso': { bg: 'var(--warn-soft)', cor: 'var(--warn)', filete: 'inset 0 0 0 1px var(--warn)' },
-  pendente: { bg: 'var(--inset)', cor: 'var(--dim)', filete: 'none' },
 };
 
 const HUES = [22, 280, 160, 340, 240, 60, 200, 100];
@@ -244,6 +236,9 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
                 padding: 0,
                 border: 0,
                 background: 'none',
+                // R4: o título é o caminho mais usado para abrir a live e
+                // tinha 18 px de altura clicável.
+                minHeight: 24,
                 fontSize: 13.5,
                 fontWeight: 700,
                 lineHeight: 1.3,
@@ -280,7 +275,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
 
           <div style={{ display: 'flex', gap: 3 }}>
             {etapas.map((e) => {
-              const tom = TOM_ETAPA[e.estado];
+              const tom = TOM_DA_ETAPA[e.estado];
               return (
                 <span
                   key={e.label}

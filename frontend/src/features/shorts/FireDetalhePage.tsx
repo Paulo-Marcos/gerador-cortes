@@ -512,7 +512,7 @@ function FireChrome({
   estado,
 }: {
   corteId: string;
-  fire: { titulo: string; projeto_titulo: string; duracao_seg: number } | undefined;
+  fire: { titulo: string; projeto_titulo: string; projeto_id: string; duracao_seg: number } | undefined;
   estado: 'parado' | 'gravando' | 'gravado' | 'falhou' | 'em-dia';
 }) {
   const navigate = useNavigate();
@@ -520,7 +520,10 @@ function FireChrome({
     {
       titulo: fire?.titulo || 'Curadoria do Fire',
       sub: fire ? `${fire.projeto_titulo} · bruto de ${formatarDuracao(fire.duracao_seg)}` : undefined,
-      rotulos: fire ? [fire.projeto_titulo] : [],
+      // R4: a migalha do meio é a LIVE de origem — e agora leva até ela. Do
+      // short não se voltava para a live pela trilha, que é o percurso da
+      // queixa "não tenho como voltar para onde estava".
+      rotulos: fire ? [{ texto: fire.projeto_titulo, to: `/projetos/${fire.projeto_id}` }] : [],
       denso: true,
       acoes: [
         {

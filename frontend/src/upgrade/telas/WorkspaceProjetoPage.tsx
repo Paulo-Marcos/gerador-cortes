@@ -467,7 +467,8 @@ export default function WorkspaceProjetoPage() {
           rotulo="Cortes"
           valor={String(cortes.length)}
           sub={`${aprovados} aprovados · ${fires} fire`}
-          cor="var(--accent)"
+          // R4: estatística é dado, não ação — o acento fica com os botões.
+          cor="var(--ink)"
         />
         <Estatistica
           icone="clapperboard"

@@ -361,7 +361,7 @@ export function ContextColumn({
               onClick={onRecolher}
               title={`Recolher ${lista.titulo.toLowerCase()}`}
               aria-label={`Recolher ${lista.titulo.toLowerCase()}`}
-              style={{ width: 22, height: 22, marginRight: -4 }}
+              style={{ width: 24, height: 24, marginRight: -4 }}
             >
               <Icon name="panel-left" size={12} />
             </button>

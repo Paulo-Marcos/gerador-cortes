@@ -139,6 +139,10 @@ export function CorteLinhaAp({
   // apaga), J/K andam entre as linhas. Digitando num campo, nada disso vale.
   const aoTeclar = (e: KeyboardEvent<HTMLElement>) => {
     const alvo = e.target as HTMLElement;
+    // R4: o modal de metadados é filho JSX desta linha — mesmo saindo por
+    // portal, o keydown sobe pela árvore do React até aqui. Sem esta guarda,
+    // `A` aprovava o corte de trás com o modal aberto.
+    if (metaAberto || alvo.closest('[role="dialog"]')) return;
     if (e.metaKey || e.ctrlKey || e.altKey || alvo.closest('input, textarea, select')) return;
     const tecla = e.key.toLowerCase();
     if (tecla === 'a' && corte?.status === 'proposto') {
@@ -167,8 +171,8 @@ export function CorteLinhaAp({
       style={{
         display: 'grid',
         gridTemplateColumns: onAlternarSelecao
-          ? '16px 18px 96px minmax(0, 1fr) auto'
-          : '18px 96px minmax(0, 1fr) auto',
+          ? '16px 24px 96px minmax(0, 1fr) auto'
+          : '24px 96px minmax(0, 1fr) auto',
         gap: 12,
         alignItems: 'center',
         padding: '9px 11px',
@@ -270,6 +274,8 @@ export function CorteLinhaAp({
             title={status.titulo}
             style={{
               minWidth: 0,
+              // R4: o título abre o corte e media 20 px de altura clicável.
+              minHeight: 24,
               padding: 0,
               border: 0,
               background: 'none',
@@ -395,11 +401,13 @@ export function CorteLinhaAp({
   );
 }
 
+// R4: reordenar é o menor alvo da casca e o gesto que erra mais caro — ele
+// muda a LISTA, não o corte. Sobe para o piso de alvo clicável.
 const botaoOrdem = {
   display: 'grid',
   placeItems: 'center',
-  width: 18,
-  height: 16,
+  width: 24,
+  height: 24,
   padding: 0,
   border: '1px solid var(--line)',
   borderRadius: 'var(--r1)',

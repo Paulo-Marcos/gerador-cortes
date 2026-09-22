@@ -94,7 +94,6 @@ function filaDoTrilho(
     titulo: `Fila · ${ativos.length} job${ativos.length === 1 ? '' : 's'}`,
     sub: `${rodando.rotuloTipo} ${Math.round(rodando.progresso)}%`,
     progresso: rodando.progresso,
-    to: '/fila',
     onAbrir,
   };
 }
@@ -348,7 +347,9 @@ function Casca({ children, fila }: CascaProps) {
     () => historico.lugares.filter((l) => l.to !== pathname).slice(0, 4),
     [historico.lugares, pathname],
   );
-  useAtalhosDeHistorico(irPara, lugaresAnteriores);
+  // Uma regra, dois consumidores: `overlayAberto` é a mesma que o teclado
+  // da casca usa.
+  useAtalhosDeHistorico(irPara, lugaresAnteriores, overlayAberto);
 
   return (
     <div

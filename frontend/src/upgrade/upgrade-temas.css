@@ -90,6 +90,20 @@
     radial-gradient(880px 500px at 10% -12%, oklch(0.82 0.05 var(--matiz-fundo) / 0.5), transparent 62%),
     radial-gradient(800px 540px at 96% 106%, oklch(0.82 0.045 248 / 0.5), transparent 60%),
     linear-gradient(oklch(0.88 0.007 250), oklch(0.855 0.009 254));
+
+  /* R4: Névoa compõe os chips sobre 0.870 L, não sobre 0.975 — o texto de
+     status precisa descer junto com a superfície, senão os CINCO tons
+     reprovam (3,07-4,05). Alpha menor mantém o chip perto do painel, e por
+     isso o texto pode ir mais fundo sem virar mancha. É a mesma armadilha
+     de Ardósia, um degrau acima. Medido: 5,21 · 5,61 · 5,56 · 5,52. */
+  --ok: oklch(0.43 0.13 145);
+  --ok-soft: oklch(0.43 0.13 145 / 0.12);
+  --warn: oklch(0.43 0.135 70);
+  --warn-soft: oklch(0.43 0.135 70 / 0.12);
+  --info: oklch(0.42 0.13 245);
+  --info-soft: oklch(0.42 0.13 245 / 0.12);
+  --err: oklch(0.44 0.18 25);
+  --err-soft: oklch(0.44 0.18 25 / 0.12);
 }
 
 /* ARDÓSIA · 0.345 L — escuro sem o poço preto. Painéis legíveis,
