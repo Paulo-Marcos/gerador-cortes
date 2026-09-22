@@ -86,7 +86,7 @@ As transições têm dono no domínio: `domain/ciclo_projeto.py` e `domain/ciclo
 ## Configuração
 
 - **Segredos** ficam no `backend/.env` (lido por `app/config.py`, pydantic-settings).
-- **Configuração e customização** ficam **no banco, por canal, editáveis na tela** — não em arquivo. Identidade do canal (handle, nome, crédito, canal-fonte das lives) vive no `channel.yaml` de cada canal, lido por `channels.identidade_do_canal_ativo()`.
+- **Configuração e customização** ficam **no banco, por canal, editáveis na tela** — não em arquivo. A identidade do canal (handle, nome, crédito, canal-fonte das lives), os ajustes e as skills editoriais vivem no `settings.db`, por canal (D-191); o `channel.yaml` só é lido como reserva para canal ainda não migrado. Acesso por `channels.identidade_do_canal_ativo()`. Mapa completo em [ADR-0012](docs/adr/0012-onde-vive-cada-configuracao.md).
 - `instance/` tem layout vigiado: um arquivo solto na raiz dele trava o boot. Artefato global novo ali precisa entrar na lista de reservados.
 - **Cascata de layout é PARCIAL** (RN-10): chave ausente é o mecanismo de herança (global → projeto → corte). Normalize na **leitura**; nunca materialize os padrões ao gravar.
 

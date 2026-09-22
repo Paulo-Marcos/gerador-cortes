@@ -346,7 +346,7 @@ class CorteSnapshot(Base):
     contextualizacao: Mapped[str] = mapped_column(Text, default="")
     score_json: Mapped[str] = mapped_column(Text, default="{}")
     # Proveniência da análise que propôs o corte: "claude" (pipeline interno)
-    # ou "manual" (paste de JSON de IA externa/n8n). Novos providers registram
+    # ou "manual" (paste de JSON de uma IA externa). Novos providers registram
     # o próprio rótulo aqui.
     origem_analise: Mapped[str] = mapped_column(String(30), default="claude")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

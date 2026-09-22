@@ -248,7 +248,10 @@ def listar_canais(instance_root: Path | None = None) -> list[Canal]:
 
 
 def identidade_do_canal_ativo() -> Canal:
-    """Identidade do canal ATIVO lida do `channel.yaml` dele (fonte única).
+    """Identidade do canal ATIVO: do `settings.db` (fonte da verdade, D-191).
+
+    O `channel.yaml` só é lido como reserva, para um canal que ainda não tem
+    linha no banco (ver `_montar_canal` e ADR-0012).
 
     Resolve a raiz do canal ativo via `channel_paths.active_channel_root()` e
     devolve `handle`, `nome`, `credito` e `youtube_channel_id`. Fallback seguro:

@@ -1,6 +1,6 @@
 # ADR-0003: SQLite WAL single-writer
 
-- **Status:** Aceito (retroativo)
+- **Status:** Substituído por [ADR-0005](0005-persistencia-multicanal.md) (2026-09-22) — hoje são três bancos, um por canal
 - **Data:** 2026-06-24
 - **Decisores:** Paulo Marcos
 - **Relacionado:** ADR-0002 (IPC backend↔worker)

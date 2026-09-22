@@ -1,4 +1,4 @@
-"""Rotas do provider Claude (geração alternativa ao n8n/Gemini).
+"""Rotas das gerações por IA (Claude CLI e Antigravity; ver ADR-0004).
 
 Mantidas num router próprio para não tocar nos routers de domínio existentes
 (projetos/cortes/metadados), que estão sob lock. Cada rota apenas delega para

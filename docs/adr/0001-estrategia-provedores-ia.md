@@ -1,6 +1,6 @@
 # ADR-0001: Estratégia de provedores de IA (n8n / Claude CLI / Gemini)
 
-- **Status:** Aceito (retroativo)
+- **Status:** Substituído por [ADR-0004](0004-provedores-de-ia-v2.md) (2026-09-22) — o n8n saiu do código (D-344)
 - **Data:** 2026-06-24
 - **Decisores:** Paulo Marcos
 - **Relacionado:** ADR-0002 (IPC backend↔worker)

@@ -1,4 +1,4 @@
-"""Serviço de geração via Claude (provider alternativo ao n8n/Gemini).
+"""Serviço das gerações editoriais por IA (Claude CLI e Antigravity; ver ADR-0004).
 
 WHY: dá ao operador um caminho de geração que usa a assinatura local do Claude e a
 expertise editorial do canal, SEM substituir os providers atuais. Reaproveita as

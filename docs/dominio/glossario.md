@@ -15,7 +15,7 @@
 | **Metadado** | O texto e a capa de publicação de um corte (título, descrição, tags, thumbnail). Um por corte. | `models.MetadadoCorte` |
 | **Short** | Um vídeo vertical tirado de um corte. Seus tempos estão no espaço do **bruto**, não da live (RN-08). | `models.Short` |
 | **Bruto** | O clip do corte já cortado da live, sem filtro nem cenas (`clip_raw_*.mkv`). É a base do render final e dos shorts. | `services/export_bruto.py`; `Corte.arquivo_clip_path` |
-| **Canal** | A identidade que publica: handle, nome, crédito, tema, mascote e skills editoriais. Um banco e uma pasta por canal. | `instance/channels/<id>/channel.yaml`; `services/channels.py` (`identidade_do_canal_ativo`) |
+| **Canal** | A identidade que publica: handle, nome, crédito, tema, mascote e skills editoriais. Uma pasta por canal (banco de dados e mídias) e as suas linhas no `settings.db` (identidade, skills e ajustes). | `instance/channels/<id>/`; `settings.db`; `services/channels.py` (`identidade_do_canal_ativo`); ver ADR-0012 |
 
 ## Os termos que se confundem
 
