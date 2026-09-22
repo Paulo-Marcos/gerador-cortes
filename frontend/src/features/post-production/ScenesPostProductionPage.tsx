@@ -5,6 +5,7 @@ import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDe
 import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
 import {
   type RenderStartFrom,
+  useAtualizarCorte,
   useCorte,
   useCortesProjeto,
   useGerarBruto,
@@ -12,6 +13,7 @@ import {
   useRenderizarRemotion,
   useStatusBruto,
   useStudioUrl,
+  useToggleFire,
 } from '@/hooks/useEditor';
 import { finalVideoUrl, gradedVideoUrl, rawVideoBustedUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
@@ -25,7 +27,10 @@ import { EditorFase2 } from '@/features/editor/fase2/EditorFase2';
 import { criarRelogioDoPlayer } from '@/features/editor/fase2/relogioDoPlayer';
 import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
 import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
+import { Icon } from '@/upgrade/Icon';
+import { montarTira } from '@/upgrade/tiraDoCorte';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
+import { TiraDoCorteAp } from '@/upgrade/telas/TiraDoCorteAp';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
 import { CommonTopBar, type MoreMenuItem } from '@/features/editor/CommonTopBar';
@@ -148,6 +153,10 @@ export function ScenesPostProductionPage() {
   const workbenchQueue = useWorkbenchQueueOptional();
   const renderFinal = useRenderizarRemotion(corteId);
   const gerarBruto = useGerarBruto(corteId, projetoId);
+  // D-746: veredito e Fire de verdade na Pós. Antes "Aprovar corte" disparava
+  // o render final e o Fire era um botão que não fazia nada.
+  const atualizarCorte = useAtualizarCorte(corteId, projetoId);
+  const alternarFire = useToggleFire(corteId, projetoId);
   const confirmacao = useConfirmacao();
   const pipelineStatus = usePipelineStatus(corteId, renderFinalLocal);
   const abrirPasta = useAbrirPasta();
@@ -402,6 +411,12 @@ export function ScenesPostProductionPage() {
   const brutoAusente = pipelineStatus.data?.fases?.raw === false;
   const gerandoBruto = gerarBruto.isPending || brutoEmGeracao;
 
+  const aprovadoNaPos = ['aprovado', 'processado'].includes(corte.status);
+
+  function alternarAprovado() {
+    atualizarCorte.mutate({ status: aprovadoNaPos ? 'proposto' : 'aprovado' });
+  }
+
   function regerarBruto() {
     confirmacao.executarOuPedir(
       {
@@ -636,17 +651,47 @@ export function ScenesPostProductionPage() {
           corte={corte}
           exportStatus={exportStatusQ.data?.cortes ?? []}
           caminhoDoCorte={caminhoDoCorte}
-          sub={`${cenas.length} cenas · ${payload.formato} · render ${renderFinalRunning ? `${renderFinalProgress}%` : 'pendente'}`}
+          sub={[
+            `${cenas.length} cenas`,
+            payload.formato,
+            renderFinalRunning ? `render ${renderFinalProgress}%` : videoPronto ? 'render pronto' : 'render pendente',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
           fire={corte.is_fire}
           sujo={false}
           salvando={false}
-          brutoPronto
-          brutoOcupado={renderFinalRunning}
-          onSalvar={() => setMetadataOpen(true)}
-          onGerarBruto={renderizarFinal}
-          onToggleFire={() => undefined}
-          onAprovar={renderizarFinal}
-          onRejeitar={() => setMetadataOpen(true)}
+          brutoPronto={!brutoAusente}
+          brutoOcupado={gerandoBruto}
+          // O botão do topo diz "Regerar bruto": ele regera o BRUTO. Estava
+          // ligado ao render final — um verbo, outra ação.
+          onGerarBruto={regerarBruto}
+          onToggleFire={() => alternarFire.mutate()}
+          fireOcupado={alternarFire.isPending}
+          onAprovar={alternarAprovado}
+          barra={{
+            // D-746: um verbo por botão. O primário renderiza, e só ele; o
+            // veredito é um par separado e reversível; Enter não dispara GPU.
+            veredito: {
+              aprovado: aprovadoNaPos,
+              ocupado: atualizarCorte.isPending,
+              onAlternar: alternarAprovado,
+            },
+            primario: {
+              texto: renderFinalRunning
+                ? `Renderizando ${renderFinalProgress}%`
+                : videoPronto
+                  ? 'Renderizar de novo'
+                  : 'Renderizar final',
+              icone: renderFinalRunning ? 'loader' : 'clapperboard',
+              onClick: renderizarFinal,
+              desabilitado: renderFinalRunning || brutoAusente,
+              motivo: brutoAusente
+                ? 'Sem o vídeo bruto (a limpeza apagou): regere o bruto antes de renderizar.'
+                : undefined,
+              semEnter: true,
+            },
+          }}
         />
       ) : (
       <UnifiedSidebar
@@ -704,6 +749,35 @@ export function ScenesPostProductionPage() {
           moreMenuItems={moreMenuItems}
         />
         )}
+
+        {CASCA_NOVA && exportEntry ? (
+          // D-746: a mesma tira da lista de Cortes — o operador não precisa
+          // voltar à lista para saber se o corte tem capa e metadados. O
+          // painel de fases do render continua: ele diz o que ESTA execução
+          // roda; a tira diz o estado do corte.
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 10,
+              padding: '0 2px 8px',
+            }}
+          >
+            <TiraDoCorteAp tira={montarTira(exportEntry, corte.status)} />
+            <span style={{ flex: 1 }} />
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setMetadataOpen(true)}
+              title="Metadados do corte — abre aqui, sem sair da Pós"
+              style={{ borderColor: 'var(--accent)', color: 'var(--accent)', background: 'var(--accent-soft)' }}
+            >
+              <Icon name="braces" size={12} />
+              Metadados
+            </button>
+          </div>
+        ) : null}
 
         <div className={CASCA_NOVA ? 'min-h-0 flex-1' : 'min-h-0 flex-1 p-4'}>
           <EditorFase2

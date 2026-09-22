@@ -1,4 +1,5 @@
 import {
+  Ban,
   Check,
   Clapperboard,
   Eye,
@@ -13,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { StatusChip } from '@/components/ui/status-chip';
 import { cn } from '@/lib/utils';
+import { SeloDeEstado, type TomDoSelo } from '@/upgrade/SeloDeEstado';
+import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { APARENCIA, notaVisivel, planoDeAcoes, tomDaNota, type AcaoId } from './estadoDoCandidato';
 import type { PalcoShortPreset } from '@/types/presets';
 import { LinhaDeAjuste } from './LinhaDeAjuste';
@@ -77,6 +80,18 @@ interface Props {
   onIr: (segundos: number) => void;
 }
 
+// Lida uma vez: casca e tela nunca podem ficar em versões diferentes.
+const CASCA_NOVA = isUpgradeShellEnabled();
+
+/** D-746: o estado do short no contrato do selo — "aprovado" saía na cor do
+ *  acento, a mesma dos botões. */
+const TOM_DO_SHORT: Record<string, TomDoSelo> = {
+  sugerido: 'aviso',
+  aprovado: 'info',
+  rejeitado: 'inerte',
+  renderizado: 'ok',
+};
+
 function mmss(segundos: number): string {
   const total = Math.max(0, Math.round(segundos));
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
@@ -133,19 +148,20 @@ export function CandidatoCard({
     aprovar: { rotulo: 'Aprovar', icone: <Check />, ao: () => onStatus('aprovado') },
     rejeitar: { rotulo: 'Rejeitar', icone: <X />, ao: () => onStatus('rejeitado') },
     voltar: { rotulo: 'Voltar para sugerido', icone: <Undo2 />, ao: () => onStatus('sugerido') },
-    previa: { rotulo: 'Gerar prévia', icone: <Eye />, ao: onPrevia },
-    refazerPrevia: { rotulo: 'Refazer prévia', icone: <Eye />, ao: onPrevia },
+    // D-746: o verbo do RESULTADO — "gerar" não diz o que sai do clique.
+    previa: { rotulo: 'Renderizar prévia', icone: <Eye />, ao: onPrevia },
+    refazerPrevia: { rotulo: 'Renderizar prévia de novo', icone: <Eye />, ao: onPrevia },
     // D-585: finalizar dispara o render E a IA escreve o post, sem modal. O
     // texto não depende do arquivo, então esses minutos de render são
     // justamente o tempo em que ele se escreve — revisar fica no painel.
     finalizar: {
-      rotulo: 'Finalizar',
+      rotulo: 'Renderizar short',
       icone: <Clapperboard />,
       ao: () => fecho.finalizar(onRenderizar),
     },
     // Refazer NÃO mexe no post: o texto já existe, e o que se está refazendo é
     // o arquivo.
-    refazerFinal: { rotulo: 'Refazer o final', icone: <Clapperboard />, ao: onRenderizar },
+    refazerFinal: { rotulo: 'Renderizar short de novo', icone: <Clapperboard />, ao: onRenderizar },
   };
 
   // D-495: rejeitado COLAPSA. Ele ja foi decidido — manter o card inteiro
@@ -286,7 +302,11 @@ export function CandidatoCard({
         </div>
 
         <div className="flex flex-none flex-col items-end gap-1">
-          <StatusChip label={aparencia.rotulo} tone={aparencia.tom} />
+          {CASCA_NOVA ? (
+            <SeloDeEstado tom={TOM_DO_SHORT[short.status] ?? 'inerte'}>{aparencia.rotulo}</SeloDeEstado>
+          ) : (
+            <StatusChip label={aparencia.rotulo} tone={aparencia.tom} />
+          )}
           {short.origem === 'manual' && (
             <span
               className="font-code text-[9.5px] uppercase tracking-wide text-[var(--wb-text-mute)]"
@@ -392,7 +412,8 @@ export function CandidatoCard({
         {plano.secundarias.map((id) => (
           <Button
             key={id}
-            variant="secondary"
+            // D-746: secundária em peso fantasma — o primário é o único cheio.
+            variant="ghost"
             size="sm"
             disabled={ocupado}
             onClick={(e) => {
@@ -432,6 +453,15 @@ export function CandidatoCard({
           />
         )}
       </footer>
+
+      {/* D-746: botão apagado sem dizer por quê obriga o operador a clicar
+          para descobrir. O motivo fica escrito, não só no title. */}
+      {ocupado && emFoco && !renderizando && (
+        <p className="flex items-center gap-1.5 border-t border-[var(--wb-border-soft)] px-3 py-1.5 text-[11px] text-[var(--wb-warn-ink)]">
+          <Ban size={11} className="flex-none" aria-hidden />
+          Aguarde: uma gravação, prévia ou render deste corte ainda está em andamento.
+        </p>
+      )}
 
       {progresso && <ProgressoRenderPanel progresso={progresso} shortId={short.id} />}
 

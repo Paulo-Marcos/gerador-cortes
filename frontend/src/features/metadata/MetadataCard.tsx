@@ -28,6 +28,7 @@ import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
 import { IconButton } from '@/components/ui/icon-button';
 import { Modal } from '@/components/ui/modal';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
+import { copyTextToClipboard } from '@/lib/clipboard';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
 import { api, resolveThumbUrl } from '@/lib/api';
@@ -291,6 +292,22 @@ export function MetadataCard({
     }
     await navigator.clipboard.writeText(text);
     notify(message, { tone: 'success' });
+  };
+
+  // D-746: o clique dá retorno visível — ícone e texto mudam por ~1,4 s.
+  const [promptCopiado, setPromptCopiado] = useState(false);
+  // `copyTextToClipboard` tem o plano B do textarea: com a janela sem foco
+  // o `navigator.clipboard` recusa, e o clique falhava sem dizer nada.
+  const copiarPromptDaCapa = async () => {
+    const copiou = await copyTextToClipboard(meta?.prompt_thumbnail ?? '');
+    if (!copiou) {
+      notify('Não consegui copiar o prompt — tente de novo com a janela em foco.', {
+        tone: 'warning',
+      });
+      return;
+    }
+    setPromptCopiado(true);
+    window.setTimeout(() => setPromptCopiado(false), 1400);
   };
 
   const save = (patch: MetadadoPatch) => {
@@ -778,7 +795,9 @@ export function MetadataCard({
       )}
 
       {expanded && generated && !modal && (
-        <section className="grid gap-3 bg-[color-mix(in_oklch,var(--wb-bg-card)_72%,var(--wb-bg-panel))] p-3.5 lg:grid-cols-[minmax(0,1fr)_190px]">
+        <section className="grid gap-3 bg-[color-mix(in_oklch,var(--wb-bg-card)_72%,var(--wb-bg-panel))] p-3.5 lg:grid-cols-[minmax(0,1fr)_232px]">
+          {/* D-746: 232px, como no modal. Em 190px a capa do TikTok não cabia e
+              a coluna inteira vazava para fora do card. */}
           <div className="grid gap-3">
             <FieldHeader
               icon={<Youtube size={13} />}
@@ -915,7 +934,7 @@ export function MetadataCard({
             )}
           </div>
 
-          <aside className="grid content-start gap-2.5">
+          <aside className="grid min-w-0 content-start gap-2.5">
             <button
               type="button"
               title={thumbnailUrl ? 'Ampliar a capa' : 'Sem thumbnail'}
@@ -941,6 +960,29 @@ export function MetadataCard({
               textoCapa={coverText}
               onAtualizou={invalidate}
             />
+            {/* D-746: copiar o prompt é o passo que se repete dez vezes por
+                live (cola no agente capista, a imagem volta por Ctrl+V). Ele
+                tinha ido parar no ⋯ do cabeçalho junto com o raro. Frequência
+                de uso, não quantidade de botões, decide o que fica à vista. */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void copiarPromptDaCapa()}
+              disabled={!promptReady}
+              aria-describedby={promptReady ? undefined : `motivo-prompt-${cut.id}`}
+              title="Copiar o prompt para colar no agente capista"
+            >
+              {promptCopiado ? <Check /> : <Clipboard />}
+              {promptCopiado ? 'Copiado' : 'Copiar prompt da capa'}
+            </Button>
+            {!promptReady && (
+              <p
+                id={`motivo-prompt-${cut.id}`}
+                className="-mt-1 text-[11px] leading-snug text-[var(--wb-warn-ink)]"
+              >
+                Gere o prompt da capa primeiro — ainda não há o que copiar.
+              </p>
+            )}
             {/* DE-PARA-v3 §5: "Trocar thumbnail" é o primário (sólido em
                 acento); "Gerar" fica em outline; e as ações raras (copiar
                 pasta, comprimir, remover) saem da pilha de botões para um ⋯. */}

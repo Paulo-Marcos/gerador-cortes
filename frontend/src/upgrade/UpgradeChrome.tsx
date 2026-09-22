@@ -90,7 +90,21 @@ export type ChromeBarra = {
   /** `desabilitado` quando a decisão ainda não é possível (nada pronto para
    *  publicar). O botão fica VISÍVEL e apagado, não some: a ausência dele
    *  mudaria a barra de lugar e esconderia a resposta "ainda não dá". */
-  primario: { texto: string; icone: IconName; onClick?: () => void; desabilitado?: boolean };
+  primario: {
+    texto: string;
+    icone: IconName;
+    onClick?: () => void;
+    desabilitado?: boolean;
+    /** D-746: POR QUE está desabilitado, escrito ao lado. Botão apagado sem
+     *  motivo obriga o operador a clicar para descobrir. */
+    motivo?: string;
+    /** D-746: ação cara e sem desfazer (render final): só no clique. O Enter
+     *  solto não dispara ~20 min de GPU. */
+    semEnter?: boolean;
+  };
+  /** D-746: o veredito editorial, separado da ação cara e com peso menor.
+   *  Reversível: aprovado ⇄ proposto. */
+  veredito?: { aprovado: boolean; ocupado?: boolean; onAlternar: () => void };
   /** Lembretes de teclado à esquerda. A casca injeta o de J/K quando há
    *  `atual` — declare aqui só o que a TELA acrescenta (Space, etc.). */
   teclas?: Array<{ teclas: string[]; texto: string }>;

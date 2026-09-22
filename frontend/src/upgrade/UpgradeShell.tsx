@@ -235,7 +235,8 @@ function useAtalhosDaCasca(
         focoEmDecisao: focoEmDecisao(alvo),
         overlayAberto: overlayAberto(),
         jaTratado: e.defaultPrevented,
-        primarioDisponivel: Boolean(primario?.onClick) && !primario?.desabilitado,
+        primarioDisponivel:
+          Boolean(primario?.onClick) && !primario?.desabilitado && !primario?.semEnter,
       });
       if (!acao) return;
 

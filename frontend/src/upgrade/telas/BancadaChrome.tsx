@@ -6,7 +6,7 @@ import { useProjeto } from '@/hooks/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { thumbnailUrl } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { useDefinirChrome, type ItemDeLista } from '../UpgradeChrome';
+import { useDefinirChrome, type ChromeBarra, type ItemDeLista } from '../UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 Etapa 4 · a Bancada conversa com a casca.
@@ -62,7 +62,8 @@ export type BancadaChromeProps = {
   thumbLive?: string;
   /** Miniatura por corte, quando existir. */
   thumbDoCorte?: (corte: Corte) => string | undefined;
-  onSalvar: () => void;
+  /** Sem ele a barra não mostra Salvar (a Pós não tem o que salvar). */
+  onSalvar?: () => void;
   onGerarBruto: () => void;
   onToggleFire: () => void;
   fireOcupado?: boolean;
@@ -77,8 +78,13 @@ export type BancadaChromeProps = {
     onAtualizar: (patch: ReadingPatch) => void;
   };
   onAprovar: () => void;
-  onRejeitar: () => void;
+  /** Sem ele a barra não mostra Rejeitar. */
+  onRejeitar?: () => void;
   onNovoTrecho?: () => void;
+  /** D-746: a tela troca peças da barra padrão (bruto). A Pós usa para dizer
+   *  a verdade: primário "Renderizar final", veredito à parte, sem Salvar.
+   *  Chave presente com `undefined` REMOVE a peça. */
+  barra?: Partial<ChromeBarra>;
 };
 
 export function BancadaChrome({
@@ -104,6 +110,7 @@ export function BancadaChrome({
   onAprovar,
   onRejeitar,
   onNovoTrecho,
+  barra,
 }: BancadaChromeProps) {
   const navigate = useNavigate();
   const [editandoLeitura, setEditandoLeitura] = useState(false);
@@ -219,17 +226,20 @@ export function BancadaChrome({
               ]
             : []),
         ],
-        secundario: { texto: 'Rejeitar', icone: 'x', onClick: onRejeitar },
-        terciario: {
-          titulo: sujo ? 'Salvar (Ctrl+S) — há mudanças' : 'Salvar (Ctrl+S)',
-          icone: salvando ? 'loader' : 'check',
-          onClick: onSalvar,
-        },
+        secundario: onRejeitar ? { texto: 'Rejeitar', icone: 'x', onClick: onRejeitar } : undefined,
+        terciario: onSalvar
+          ? {
+              titulo: sujo ? 'Salvar (Ctrl+S) — há mudanças' : 'Salvar (Ctrl+S)',
+              icone: salvando ? 'loader' : 'check',
+              onClick: onSalvar,
+            }
+          : undefined,
         primario: {
           texto: corte.status === 'aprovado' ? 'Aprovado' : 'Aprovar corte',
           icone: 'check',
           onClick: onAprovar,
         },
+        ...barra,
       },
     },
     [
@@ -248,6 +258,11 @@ export function BancadaChrome({
       fireOcupado,
       leitura?.ativo,
       leitura?.ocupado,
+      barra?.primario?.texto,
+      barra?.primario?.desabilitado,
+      barra?.primario?.motivo,
+      barra?.veredito?.aprovado,
+      barra?.veredito?.ocupado,
     ],
   );
 

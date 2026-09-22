@@ -18,6 +18,62 @@ import type { ChromeBarra } from './UpgradeChrome';
 // controle que TAMBÉM decide, que é o caso em que ele duplicaria a ação.
 // ─────────────────────────────────────────────────────────────────
 
+/**
+ * D-746: o veredito editorial, à esquerda e com peso menor que o primário.
+ * Antes, na Pós, "Aprovar corte" disparava o render final — um veredito
+ * acionando ~20 min de GPU. Aqui ele só alterna aprovado ⇄ proposto.
+ */
+function Veredito({ aprovado, ocupado, onAlternar }: NonNullable<ChromeBarra['veredito']>) {
+  return aprovado ? (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          height: 28,
+          padding: '0 9px',
+          border: '1px solid var(--ok)',
+          borderRadius: 'var(--r2)',
+          background: 'var(--ok-soft)',
+          color: 'var(--ok)',
+          fontSize: 12,
+          fontWeight: 700,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <Icon name="check" size={13} />
+        Aprovado
+      </span>
+      <button
+        type="button"
+        className="btn"
+        data-decisao
+        disabled={ocupado}
+        onClick={onAlternar}
+        title="Devolver o corte para proposto — não apaga nada"
+        style={{ color: 'var(--mute)', borderColor: 'transparent', background: 'none' }}
+      >
+        <Icon name="undo-2" size={13} />
+        Devolver
+      </button>
+    </span>
+  ) : (
+    <button
+      type="button"
+      className="btn"
+      data-decisao
+      disabled={ocupado}
+      onClick={onAlternar}
+      title="Aprovar o corte — não renderiza nada"
+      style={{ borderColor: 'var(--ok)', color: 'var(--ok)' }}
+    >
+      <Icon name="check" size={13} />
+      Aprovar corte
+    </button>
+  );
+}
+
 export function ActionBar({ barra }: { barra: ChromeBarra }) {
   return (
     <div
@@ -51,6 +107,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
         </span>
       ))}
 
+      {barra.veredito ? <Veredito {...barra.veredito} /> : null}
       <div style={{ flex: 1, minWidth: 8 }} />
 
       {barra.alternancias?.map((a) => (
@@ -116,17 +173,38 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
         </button>
       ) : null}
 
+      {barra.primario.desabilitado && barra.primario.motivo ? (
+        <span
+          id="motivo-do-primario"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            maxWidth: 320,
+            fontSize: 11.5,
+            color: 'var(--warn)',
+          }}
+        >
+          <Icon name="ban" size={12} style={{ flex: 'none' }} />
+          {barra.primario.motivo}
+        </span>
+      ) : null}
       <button
         type="button"
         className="btn btn-pri"
         data-decisao
-        aria-keyshortcuts={barra.primario.desabilitado ? undefined : 'Enter'}
+        aria-keyshortcuts={
+          barra.primario.desabilitado || barra.primario.semEnter ? undefined : 'Enter'
+        }
+        aria-describedby={
+          barra.primario.desabilitado && barra.primario.motivo ? 'motivo-do-primario' : undefined
+        }
         onClick={barra.primario.onClick}
         disabled={barra.primario.desabilitado}
       >
         <Icon name={barra.primario.icone} size={13} />
         {barra.primario.texto}
-        {barra.primario.desabilitado ? null : (
+        {barra.primario.desabilitado || barra.primario.semEnter ? null : (
           <kbd
             style={{
               background: 'rgb(255 255 255/.2)',

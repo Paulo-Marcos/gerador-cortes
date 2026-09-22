@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Ban, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ShortSugerido, VereditoDoRosto } from './shortsApi';
 import { janelaNova, mmss } from './linhaDoTempoShort';
@@ -174,6 +174,14 @@ export function ColunaDeDecisoes({
                 ))}
               </select>
             </label>
+          )}
+
+          {/* D-746: o motivo do "Novo trecho" apagado, escrito. */}
+          {duracaoRegua <= 0 && (
+            <span className="flex items-center gap-1 text-[11px] text-[var(--wb-warn-ink)]">
+              <Ban size={11} aria-hidden />
+              Sem bruto na régua: gere o bruto antes de marcar um trecho.
+            </span>
           )}
 
           {criarManual.isError && (
