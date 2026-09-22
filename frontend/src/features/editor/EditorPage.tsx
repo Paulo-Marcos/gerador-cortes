@@ -848,13 +848,9 @@ export function EditorPage() {
     setIntervaloAberto(false);
   }
 
+  // D-746: saiu o "Atualizar pos-producao", que estava sempre desabilitado —
+  // item de menu que nunca funciona ensina a desconfiar do menu inteiro.
   const moreMenuItems: MoreMenuItem[] = [
-    {
-      icon: RefreshCw,
-      label: 'Atualizar pos-producao',
-      disabled: true,
-      onClick: () => undefined,
-    },
     {
       icon: FolderOpen,
       label: 'Abrir pasta',

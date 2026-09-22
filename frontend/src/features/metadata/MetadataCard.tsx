@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BookOpen,
@@ -116,6 +116,22 @@ export function MetadataCard({
   // a mentir sobre o que existe em disco — foi o que aconteceu ao aplicar a
   // moldura e nada parecer mudar (D-556).
   const [versaoDaCapa, setVersaoDaCapa] = useState(0);
+  // D-746: a capa era relida UMA vez, 15 s depois — se demorasse mais, o
+  // operador via a antiga e achava que não tinha gerado. Agora confere a cada
+  // 5 s por até 90 s, com o aviso "gerando capa…" enquanto isso.
+  const [conferindoCapa, setConferindoCapa] = useState(false);
+  useEffect(() => {
+    if (!conferindoCapa) return;
+    const tique = window.setInterval(() => {
+      void queryClient.invalidateQueries({ queryKey: metadataKey(cut.id) });
+      setVersaoDaCapa((atual) => atual + 1);
+    }, 5_000);
+    const fim = window.setTimeout(() => setConferindoCapa(false), 90_000);
+    return () => {
+      window.clearInterval(tique);
+      window.clearTimeout(fim);
+    };
+  }, [conferindoCapa, cut.id, queryClient]);
   const thumbnailUrl = useMemo(() => {
     const arquivo = resolveThumbUrl(projetoId, meta?.thumbnail_path);
     if (!arquivo || versaoDaCapa === 0) return arquivo;
@@ -164,11 +180,29 @@ export function MetadataCard({
   const withCoverEmojis = (value: string) =>
     applyCoverEmojis(value, Boolean(meta?.is_fire), Boolean(cut.is_leitura));
 
+  // D-746: regerar reescrevia título, capa, descrição e tags sem volta — um
+  // título ajustado à mão se perdia. A versão anterior fica guardada até o
+  // operador desfazer ou dispensar.
+  const versaoAntesDaIa = useRef<MetadadoPatch | null>(null);
+  const [desfazerIa, setDesfazerIa] = useState<MetadadoPatch | null>(null);
+
   // F-038 - geracao automatica por IA: invalida na hora.
   const generateMetadataClaude = useMutation({
     mutationFn: (provider: 'claude' | 'gemini' = 'claude') => api.gerarMetadadosClaude(cut.id, provider),
+    onMutate: () => {
+      versaoAntesDaIa.current =
+        meta && (meta.titulo_youtube || meta.descricao_youtube)
+          ? {
+              titulo_youtube: meta.titulo_youtube,
+              texto_capa: meta.texto_capa,
+              descricao_youtube: meta.descricao_youtube,
+              tags_youtube: meta.tags_youtube,
+            }
+          : null;
+    },
     onSuccess: () => {
       notify('Metadados gerados por IA.', { tone: 'success' });
+      setDesfazerIa(versaoAntesDaIa.current);
       invalidate();
     },
     onError: (error) =>
@@ -200,7 +234,7 @@ export function MetadataCard({
     mutationFn: () => api.gerarThumbnail(cut.id),
     onSuccess: () => {
       notify('Geracao de thumbnail iniciada.', { tone: 'success' });
-      window.setTimeout(invalidate, 15_000);
+      setConferindoCapa(true);
     },
     onError: (error) =>
       notify(error instanceof Error ? error.message : 'Erro ao gerar thumbnail.', {
@@ -273,17 +307,10 @@ export function MetadataCard({
     removeThumbnail.mutate();
   };
 
-  const titleSuggestions = meta?.opcoes_titulo?.length
-    ? meta.opcoes_titulo
-    : [
-        title || cut.titulo_proposto,
-        'A ideia central que muda a leitura',
-        'O argumento que organiza todo o debate',
-      ];
-
-  const thumbSuggestions = meta?.opcoes_texto_capa?.length
-    ? meta.opcoes_texto_capa
-    : [coverText || 'Thumbnail', 'JUSTICA EM SI', 'O MITO', 'VIRTUDE REAL'];
+  // D-746: sem sugestão da IA, nenhuma sugestão. As de antes eram frases
+  // fixas no código ("O MITO", "VIRTUDE REAL") que pareciam vir da IA.
+  const titleSuggestions = meta?.opcoes_titulo ?? [];
+  const thumbSuggestions = meta?.opcoes_texto_capa ?? [];
 
   const copy = async (text: string, message: string) => {
     if (!text) {
@@ -310,8 +337,15 @@ export function MetadataCard({
     window.setTimeout(() => setPromptCopiado(false), 1400);
   };
 
+  // D-746: sair de um campo sem mexer nele salvava e mostrava "Metadados
+  // salvos" do mesmo jeito. Só vai ao servidor o que difere do gravado.
   const save = (patch: MetadadoPatch) => {
     if (!generated) return;
+    const gravado = meta as Record<string, unknown> | undefined;
+    const mudou = Object.entries(patch).some(
+      ([campo, valor]) => JSON.stringify(gravado?.[campo] ?? null) !== JSON.stringify(valor ?? null),
+    );
+    if (!mudou) return;
     saveMutation.mutate(patch);
   };
 
@@ -508,6 +542,28 @@ export function MetadataCard({
         </section>
       )}
 
+      {expanded && generated && desfazerIa && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-4 py-2 text-[12px] text-[var(--wb-text-dim)]">
+          <span className="flex-1">
+            A IA reescreveu título, texto da capa, descrição e tags.
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              saveMutation.mutate(desfazerIa);
+              setDesfazerIa(null);
+            }}
+          >
+            Desfazer
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setDesfazerIa(null)}>
+            Manter
+          </Button>
+        </div>
+      )}
+
       {expanded && generated && modal && (
         <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_232px]">
           <div className="flex min-w-0 flex-col gap-4">
@@ -524,6 +580,7 @@ export function MetadataCard({
                 className="h-11 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[15px] font-semibold outline-none focus:border-[var(--wb-accent)]"
               />
               <ModalSuggestionRow>
+                {titleSuggestions.length === 0 && <SemSugestoes />}
                 {titleSuggestions.map((suggestion) => (
                   <ModalChip
                     key={`${cut.id}-title-${suggestion}`}
@@ -566,6 +623,7 @@ export function MetadataCard({
                 className="h-11 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[15px] font-extrabold outline-none focus:border-[var(--wb-accent)]"
               />
               <ModalSuggestionRow>
+                {thumbSuggestions.length === 0 && <SemSugestoes />}
                 {thumbSuggestions.map((suggestion) => (
                   <ModalChip
                     key={`${cut.id}-thumb-${suggestion}`}
@@ -678,9 +736,14 @@ export function MetadataCard({
               onClick={() => generateThumbnail.mutate()}
               disabled={!promptReady || generateThumbnail.isPending}
             >
-              {generateThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Sparkles />}
-              Gerar thumbnail
+              {generateThumbnail.isPending || conferindoCapa ? <Loader2 className="animate-spin" /> : <Sparkles />}
+              {conferindoCapa ? 'Gerando capa…' : 'Gerar thumbnail'}
             </Button>
+            {!promptReady && (
+              <p className="-mt-1 text-[11px] leading-snug text-[var(--wb-warn-ink)]">
+                Gere o prompt da capa primeiro — sem ele não há o que gerar.
+              </p>
+            )}
             <label
               className={cn(
                 MODAL_ASIDE_BUTTON,
@@ -807,6 +870,7 @@ export function MetadataCard({
             />
             {showTitleSuggestions && (
               <div className="flex flex-wrap gap-1.5">
+                {titleSuggestions.length === 0 && <SemSugestoes />}
                 {titleSuggestions.map((suggestion) => (
                   <SuggestionButton
                     key={`${cut.id}-title-${suggestion}`}
@@ -845,6 +909,7 @@ export function MetadataCard({
             />
             {showThumbSuggestions && (
               <div className="flex flex-wrap gap-1.5">
+                {thumbSuggestions.length === 0 && <SemSugestoes />}
                 {thumbSuggestions.map((suggestion) => (
                   <SuggestionButton
                     key={`${cut.id}-thumb-${suggestion}`}
@@ -1006,8 +1071,8 @@ export function MetadataCard({
               onClick={() => generateThumbnail.mutate()}
               disabled={!promptReady || generateThumbnail.isPending}
             >
-              {generateThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Image />}
-              Gerar thumbnail
+              {generateThumbnail.isPending || conferindoCapa ? <Loader2 className="animate-spin" /> : <Image />}
+              {conferindoCapa ? 'Gerando capa…' : 'Gerar thumbnail'}
             </Button>
             <div className="flex items-center gap-2">
               <p className="flex-1 font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
@@ -1255,6 +1320,14 @@ function FieldHeader({
         <ChevronDown size={12} className={expanded ? 'rotate-180' : ''} aria-hidden />
       </button>
     </div>
+  );
+}
+
+function SemSugestoes() {
+  return (
+    <span className="text-[11.5px] text-[var(--wb-text-mute)]">
+      A IA ainda não sugeriu — gere os metadados para ver opções.
+    </span>
   );
 }
 

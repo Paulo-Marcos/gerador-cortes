@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAprovar, useAtualizarCorte } from '@/hooks/useEditor';
 import { useToast } from '@/components/ui/toaster';
@@ -54,6 +54,9 @@ type CorteLinhaApProps = {
   onInformarUrl: () => void;
   onLiberarPublicacao: () => void;
   enviando: boolean;
+  /** D-746: seleção em lote (Aprovar N / Devolver N na tela da live). */
+  selecionado?: boolean;
+  onAlternarSelecao?: () => void;
 };
 
 export function CorteLinhaAp({
@@ -68,6 +71,8 @@ export function CorteLinhaAp({
   onInformarUrl,
   onLiberarPublicacao,
   enviando,
+  selecionado = false,
+  onAlternarSelecao,
 }: CorteLinhaApProps) {
   const navigate = useNavigate();
   const abrirPasta = useAbrirPasta();
@@ -130,18 +135,56 @@ export function CorteLinhaAp({
     },
   }[estado];
 
+  // D-746: triagem pelo teclado na linha focada. A aprova, R devolve (nunca
+  // apaga), J/K andam entre as linhas. Digitando num campo, nada disso vale.
+  const aoTeclar = (e: KeyboardEvent<HTMLElement>) => {
+    const alvo = e.target as HTMLElement;
+    if (e.metaKey || e.ctrlKey || e.altKey || alvo.closest('input, textarea, select')) return;
+    const tecla = e.key.toLowerCase();
+    if (tecla === 'a' && corte?.status === 'proposto') {
+      e.preventDefault();
+      aprovar.mutate(undefined, { onError: avisarFalha('aprovar') });
+    } else if (tecla === 'r' && corte && ['aprovado', 'processado'].includes(corte.status)) {
+      e.preventDefault();
+      atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('devolver') });
+    } else if (tecla === 'j' || tecla === 'k') {
+      e.preventDefault();
+      e.stopPropagation();
+      const linha = e.currentTarget;
+      const vizinha = (tecla === 'j' ? linha.nextElementSibling : linha.previousElementSibling) as
+        | HTMLElement
+        | null;
+      vizinha?.focus();
+    }
+  };
+
   return (
     <article
       className="card row"
+      tabIndex={0}
+      onKeyDown={aoTeclar}
+      aria-label={`Corte #${status.numero} — ${status.titulo}`}
       style={{
         display: 'grid',
-        gridTemplateColumns: '18px 96px minmax(0, 1fr) auto',
+        gridTemplateColumns: onAlternarSelecao
+          ? '16px 18px 96px minmax(0, 1fr) auto'
+          : '18px 96px minmax(0, 1fr) auto',
         gap: 12,
         alignItems: 'center',
         padding: '9px 11px',
         opacity: estado === 'rejeitado' ? 0.72 : 1,
+        borderColor: selecionado ? 'var(--accent)' : undefined,
       }}
     >
+      {onAlternarSelecao ? (
+        <input
+          type="checkbox"
+          checked={selecionado}
+          onChange={onAlternarSelecao}
+          aria-label={`Selecionar o corte #${status.numero}`}
+          style={{ width: 15, height: 15, margin: 0, accentColor: 'var(--accent)', cursor: 'pointer' }}
+        />
+      ) : null}
       {/* Reordenar fica antes da miniatura: é a única ação que muda a
           LISTA e não o corte, e misturá-la com as outras à direita
           confundia os dois tipos de gesto. */}

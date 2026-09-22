@@ -31,7 +31,7 @@ import {
 import { useAnaliseClaudeEmAndamento } from '@/hooks/useDiarizacao';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import type { ProviderIA } from '@/lib/providerIa';
-import { resolveThumbUrl } from '@/lib/api';
+import { api, resolveThumbUrl } from '@/lib/api';
 import { formatarDuracao } from '@/lib/utils';
 import type { Corte, DestinoPublicacao, StatusExportCorte } from '@/types/models';
 import { useCanais } from '@/features/channels/useChannels';
@@ -162,6 +162,9 @@ export default function WorkspaceProjetoPage() {
   const capaParaPublicar = publicarDe ? (resolveThumbUrl(id, publicarDe.thumbnail_path) ?? undefined) : undefined;
   const [urlManual, setUrlManual] = useState('');
   const [liberarDe, setLiberarDe] = useState<StatusExportCorte | null>(null);
+  // D-746: com mais de um destino publicado, "Liberar" soltava sempre o
+  // primeiro. Agora o operador escolhe qual.
+  const [destinoALiberar, setDestinoALiberar] = useState<DestinoPublicacao | null>(null);
   const [busca, setBusca] = useState('');
 
   const cortes = useMemo(() => cortesQuery.data ?? [], [cortesQuery.data]);
@@ -209,6 +212,54 @@ export default function WorkspaceProjetoPage() {
     (s) => s.youtube_scheduled_at && !s.youtube_url_publicado,
   ).length;
 
+  // D-746: numa live de 14 cortes a triagem era dezenas de cliques. Seleção
+  // em lote + A/R na linha focada. "Devolver" nunca apaga: tira a aprovação.
+  const [selecionados, setSelecionados] = useState<Set<string>>(() => new Set());
+  const [emLote, setEmLote] = useState(false);
+  const alternarSelecao = (corteId: string) =>
+    setSelecionados((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(corteId)) proximo.delete(corteId);
+      else proximo.add(corteId);
+      return proximo;
+    });
+
+  async function aplicarEmLote(acao: 'aprovar' | 'devolver') {
+    const alvos = cortes.filter((c) => selecionados.has(c.id));
+    const elegiveis = alvos.filter((c) =>
+      acao === 'aprovar' ? c.status === 'proposto' : ['aprovado', 'processado'].includes(c.status),
+    );
+    if (elegiveis.length === 0) {
+      notify(
+        acao === 'aprovar'
+          ? 'Nenhum dos selecionados está proposto — nada a aprovar.'
+          : 'Nenhum dos selecionados está aprovado — nada a devolver.',
+        { tone: 'info' },
+      );
+      return;
+    }
+    setEmLote(true);
+    const resultados = await Promise.allSettled(
+      elegiveis.map((c) =>
+        acao === 'aprovar'
+          ? api.aprovarCorte(c.id)
+          : api.atualizarCorte(c.id, { status: 'proposto' }),
+      ),
+    );
+    setEmLote(false);
+    const falhas = resultados.filter((r) => r.status === 'rejected').length;
+    const feitos = elegiveis.length - falhas;
+    const verbo = acao === 'aprovar' ? 'aprovado' : 'devolvido';
+    notify(
+      falhas
+        ? `${feitos} ${verbo}(s), ${falhas} falharam — confira os que ficaram marcados.`
+        : `${feitos} corte(s) ${verbo}(s).`,
+      { tone: falhas ? 'warning' : 'success' },
+    );
+    if (!falhas) setSelecionados(new Set());
+    atualizarTudo();
+  }
+
   function atualizarTudo() {
     void projeto.refetch();
     void exportStatus.refetch();
@@ -245,7 +296,15 @@ export default function WorkspaceProjetoPage() {
   function confirmarUrlManual() {
     if (!informarUrlDe) return;
     const url = urlManual.trim();
-    if (!url) return;
+    // D-746: URL vazia ou de outro site fazia o botão não fazer nada.
+    if (!url) {
+      notify('Cole a URL do vídeo no YouTube.', { tone: 'warning' });
+      return;
+    }
+    if (!/^https?:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//i.test(url)) {
+      notify('Isso não parece uma URL do YouTube (youtube.com ou youtu.be).', { tone: 'warning' });
+      return;
+    }
     marcarPublicado.mutate(
       { corteId: informarUrlDe.corte_id, body: { youtube_url: url } },
       {
@@ -281,7 +340,21 @@ export default function WorkspaceProjetoPage() {
     );
   }
 
+  // D-746: re-sincroniza TODOS os cortes — pede confirmação, como o "Gerar
+  // trechos" já pedia.
   function dispararRefazerTranscricao() {
+    confirmacao.executarOuPedir(
+      {
+        titulo: 'Refazer a transcrição',
+        detalhe: dados?.titulo_live,
+        descricao: `As legendas são baixadas de novo e os ${cortes.length} cortes são re-sincronizados com elas.`,
+        confirmLabel: 'Refazer transcrição',
+      },
+      refazerTranscricaoConfirmado,
+    );
+  }
+
+  function refazerTranscricaoConfirmado() {
     refazerTranscricao.mutate(undefined, {
       onSuccess: (data) =>
         notify(
@@ -605,6 +678,10 @@ export default function WorkspaceProjetoPage() {
           {cortes.length} cortes · {prontidao.prontos} prontos · {fires} fire
         </span>
         <div style={{ flex: 1 }} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--dim)' }}>
+          <kbd>A</kbd> aprova · <kbd>R</kbd> devolve · <kbd>J</kbd>
+          <kbd>K</kbd> anda
+        </span>
         <label className="fld" style={{ width: 200 }}>
           <Icon name="search" size={12} style={{ color: 'var(--dim)' }} />
           <input
@@ -622,6 +699,58 @@ export default function WorkspaceProjetoPage() {
           />
         </label>
       </div>
+
+      {selecionados.size > 0 ? (
+        <div
+          className="card"
+          role="toolbar"
+          aria-label="Ações em lote"
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 11px',
+            background: 'var(--solid)',
+          }}
+        >
+          <b style={{ fontSize: 12.5 }}>
+            {selecionados.size} selecionado{selecionados.size === 1 ? '' : 's'}
+          </b>
+          <span style={{ flex: 1 }} />
+          <button
+            type="button"
+            className="btn"
+            disabled={emLote}
+            onClick={() => void aplicarEmLote('devolver')}
+            title="Tira a aprovação dos selecionados — não apaga nada"
+          >
+            <Icon name="undo-2" size={13} />
+            Devolver
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={emLote}
+            onClick={() => void aplicarEmLote('aprovar')}
+            style={{ borderColor: 'var(--ok)', color: 'var(--ok)' }}
+          >
+            <Icon name={emLote ? 'loader' : 'check'} size={13} />
+            Aprovar
+          </button>
+          <button
+            type="button"
+            className="btn btn-icon"
+            onClick={() => setSelecionados(new Set())}
+            title="Limpar a seleção"
+            aria-label="Limpar a seleção"
+          >
+            <Icon name="x" size={13} />
+          </button>
+        </div>
+      ) : null}
 
       <div style={{ display: 'grid', gap: 8 }}>
         {linhas.map(({ status, corte }, i) => (
@@ -643,8 +772,13 @@ export default function WorkspaceProjetoPage() {
               setInformarUrlDe(status);
               setUrlManual(status.youtube_url_publicado ?? '');
             }}
-            onLiberarPublicacao={() => setLiberarDe(status)}
+            onLiberarPublicacao={() => {
+              setDestinoALiberar(null);
+              setLiberarDe(status);
+            }}
             enviando={enviandoId === status.corte_id}
+            selecionado={selecionados.has(status.corte_id)}
+            onAlternarSelecao={() => alternarSelecao(status.corte_id)}
           />
         ))}
         {linhas.length === 0 ? (
@@ -810,19 +944,46 @@ export default function WorkspaceProjetoPage() {
         primaryIcon="rotate-ccw"
         onPrimary={() => {
           const destinos = liberarDe ? destinosPublicados(liberarDe) : [];
-          if (destinos.length > 0) confirmarLiberar(destinos[0].destino);
+          const escolhido = destinoALiberar ?? destinos[0]?.destino;
+          if (escolhido) confirmarLiberar(escolhido);
         }}
       >
         <ModalText>
           Isto não apaga nada lá fora: é o app aceitando ser informado de que o vídeo saiu do ar.
           Depois disso o botão de enviar reaparece sozinho.
         </ModalText>
-        <ModalFields
-          fields={(liberarDe ? destinosPublicados(liberarDe) : []).map((d) => ({
-            label: d.rotulo,
-            value: d.detalhe,
-          }))}
-        />
+        {(() => {
+          const destinos = liberarDe ? destinosPublicados(liberarDe) : [];
+          if (destinos.length <= 1) {
+            return (
+              <ModalFields fields={destinos.map((d) => ({ label: d.rotulo, value: d.detalhe }))} />
+            );
+          }
+          const atual = destinoALiberar ?? destinos[0].destino;
+          return (
+            <div role="radiogroup" aria-label="Qual destino liberar" style={{ display: 'grid', gap: 6 }}>
+              {destinos.map((d) => (
+                <label
+                  key={d.destino}
+                  className="row"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', cursor: 'pointer' }}
+                >
+                  <input
+                    type="radio"
+                    name="destino-a-liberar"
+                    checked={atual === d.destino}
+                    onChange={() => setDestinoALiberar(d.destino)}
+                    style={{ accentColor: 'var(--accent)' }}
+                  />
+                  <span style={{ fontSize: 12.5, fontWeight: 600 }}>{d.rotulo}</span>
+                  <span style={{ fontSize: 11.5, color: 'var(--mute)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {d.detalhe}
+                  </span>
+                </label>
+              ))}
+            </div>
+          );
+        })()}
       </UpgradeModal>
 
       <ConfirmDialog
