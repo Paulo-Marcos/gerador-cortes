@@ -1,8 +1,5 @@
 {
   "skillOverrides": {
-    "angular": "off",
-    "angular-best-practices": "off",
-    "angular-ui-patterns": "off",
     "tdd-react": "off",
     "tdd-dotnet": "off",
     "csharp-craft": "off",
