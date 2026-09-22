@@ -1,22 +1,40 @@
 version: 2
 
+# D-689: correções e versões menores chegam num PR só por ecossistema; versão
+# maior continua vindo uma a uma, porque cada uma pede avaliação própria. Antes
+# eram PRs soltos: 20 ficaram abertos desde julho, bateram no limite de PRs por
+# ecossistema e o Dependabot parou de propor atualização nova — inclusive as de
+# segurança.
+
 updates:
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
       interval: "weekly"
+    groups:
+      correcoes-backend:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    groups:
+      correcoes-frontend:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
     directory: "/video-renderer"
     schedule:
       interval: "weekly"
+    groups:
+      correcoes-renderer:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        update-types: ["major", "minor", "patch"]
