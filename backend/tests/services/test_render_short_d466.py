@@ -95,6 +95,27 @@ async def ambiente(monkeypatch, tmp_path):
     await engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def palco_sem_remotion(monkeypatch, tmp_path):
+    """Nenhum teste deste arquivo sobe o `remotion still` do palco (D-751).
+
+    O PNG do palco sai de Node com Chromium, e a docstring do módulo já diz que
+    Remotion de verdade não roda aqui. Mas só a classe da moldura trocava o
+    gerador por dublê; os outros testes subiam dois Chromium cada, e isso era
+    60% do tempo da bateria inteira. O dublê devolve um PNG, como uma máquina
+    com Node devolveria. A classe da moldura continua instalando o dela por cima.
+    """
+    from app.services import palco_short_png
+
+    png = tmp_path / "palco-duble.png"
+    png.write_bytes(b"fake-png")
+
+    async def _fake(fundo, janelas):
+        return png
+
+    monkeypatch.setattr(palco_short_png, "obter", _fake)
+
+
 @pytest.fixture
 def jobs(monkeypatch):
     """Captura os despachos em vez de rodar ffmpeg/Remotion de verdade."""
