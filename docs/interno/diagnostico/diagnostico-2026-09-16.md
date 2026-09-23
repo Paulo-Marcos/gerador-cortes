@@ -573,7 +573,7 @@ Nenhum arquivo foi editado e nada rodou além de leitura, `ruff check` e um scri
 | Maiores arquivos | TimelinePanel 1630 · EditorPage 1433 · MetadataCard 1421 · scenes.tsx 1217 · YoutubeLayoutPanel 1053 · api.ts 1049 |
 | Maiores listas de props | EditorFase1 49 · TimelinePanel 38 · EditorNavbar 32 (morto) · BancadaChrome 28 · SceneTimeline 26 |
 | Leituras de flag de casca | `const CASCA_NOVA` em 26 módulos · `isUpgradeShellEnabled()` 30× · `isWorkbenchEnabled()` 17× · `variant 'legacy'\|'workbench'\|'ap'` 29× |
-| Mojibake (`Ã§ Ã£ â€ U+FFFD`) em .ts/.tsx/.js | 0 arquivos (todos UTF-8 válido) |
+| Mojibake (padrões por ponto de código; o literal faria este documento acusar a si mesmo no `test_sem_mojibake_d668`) em .ts/.tsx/.js | 0 arquivos (todos UTF-8 válido) |
 | `any` · `console.log/debug` frontend · TODO/FIXME | 0 · 0 · 0 |
 | `eslint-disable` | 11 (9 são `react-hooks/exhaustive-deps`) |
 | `@ts-ignore` | 2 (renderer, justificados em comentário) |
@@ -613,7 +613,7 @@ Nenhum arquivo foi editado e nada rodou além de leitura, `ruff check` e um scri
 | 27 | 🟡 | 13 diretórios vazios não versionados em `upgrade/telas/` (analises, atalhos, channels, editor…) — resíduo de andaime que confunde navegação. | frontend/src/upgrade/telas/* | Fowler: Speculative Generality | Remover as pastas vazias (fora do git, só local). |
 | 28 | 💡 | Duas páginas 404: `pages/StubPage` (legado) e `upgrade/telas/Erro404Page` escolhidas por `CASCA_NOVA` em routes.tsx. | frontend/src/routes.tsx:121 | Fowler: Duplicated Code | Some quando a casca legada for aposentada (depende do item 2). |
 | 29 | 🌟 | Higiene de tipos e logs exemplar: 0 `any`, 0 `console.log` no frontend, 0 TODO; comentários explicam o porquê (flags, rota `/export`, gate do mascote) — Cap. 4 bem aplicado. | frontend/src/routes.tsx:103; frontend/src/upgrade/upgradeFlag.ts:1 | Clean Code Cap. 4 (Explanation of Intent) | Manter o padrão. |
-| 30 | 🌟 | Mojibake resolvido: todos os .ts/.tsx/.js decodificam como UTF-8 sem nenhuma sequência `Ã§/Ã£/â€/U+FFFD`. | frontend/src/**, video-renderer/src/**, video-renderer/native_worker.js | Clean Code Cap. 17 (G1 hygiene) | Considerar teste de guarda (regex no CI), já que o gate atual não pegou o incidente anterior. |
+| 30 | 🌟 | Mojibake resolvido: todos os .ts/.tsx/.js decodificam como UTF-8 sem nenhuma sequência `U+00C3 U+00A7 / U+00C3 U+00A3 / U+00E2 U+20AC / U+FFFD`. | frontend/src/**, video-renderer/src/**, video-renderer/native_worker.js | Clean Code Cap. 17 (G1 hygiene) | Considerar teste de guarda (regex no CI), já que o gate atual não pegou o incidente anterior. |
 
 ---
 
