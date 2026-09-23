@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from app.domain.time_convert import epoch_to_hora_local, seg_to_duracao_humana
-from app.services.app_settings import AppSettingsService, LogLevel
+from app.services.app_settings import AppSettingsService
 
 _ORIGINAL_PRINT: Callable[..., None] = builtins.print
 _ERROR_MARKERS = (
@@ -55,16 +55,41 @@ _INFO_MARKERS = (
 )
 
 
-def current_log_level() -> LogLevel:
-    return AppSettingsService.get().log_level
+# Os níveis como texto. O `LogLevel` das configurações é `StrEnum` e compara
+# igual ao texto, então este módulo decide sem importar as configurações — que
+# moram numa camada acima (ADR-0015 §3). Sempre `==` ou tupla: assim a decisão
+# não depende de como o Enum calcula hash.
+NIVEL_DESLIGADO = "disabled"
+NIVEL_INFORMATIVO = "info"
+NIVEL_DEPURACAO = "debug"
+
+
+def _nivel_padrao() -> str:
+    return NIVEL_DESLIGADO
+
+
+_fonte_do_nivel: Callable[[], str] = _nivel_padrao
+
+
+def definir_fonte_do_nivel(fonte: Callable[[], str]) -> None:
+    """Registra quem sabe o nível configurado — hoje, as configurações da app.
+
+    Sem registro vale o desligado, o mesmo padrão das configurações.
+    """
+    global _fonte_do_nivel
+    _fonte_do_nivel = fonte
+
+
+def current_log_level() -> str:
+    return _fonte_do_nivel()
 
 
 def is_debug_enabled() -> bool:
-    return current_log_level() == LogLevel.DEBUG
+    return current_log_level() == NIVEL_DEPURACAO
 
 
 def is_info_enabled() -> bool:
-    return current_log_level() in {LogLevel.INFO, LogLevel.DEBUG}
+    return current_log_level() in (NIVEL_INFORMATIVO, NIVEL_DEPURACAO)
 
 
 def operational_info(scope: str, message: str, *, started_at: float | None = None) -> None:
@@ -178,9 +203,9 @@ class AppLogLevelFilter(logging.Filter):
         level = current_log_level()
         if record.levelno >= logging.WARNING:
             return True
-        if level == LogLevel.DEBUG:
+        if level == NIVEL_DEPURACAO:
             return True
-        if level == LogLevel.INFO:
+        if level == NIVEL_INFORMATIVO:
             return record.levelno >= logging.INFO
         return False
 
@@ -202,9 +227,9 @@ class AccessLogFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         level = current_log_level()
-        if level == LogLevel.DEBUG:
+        if level == NIVEL_DEPURACAO:
             return True
-        if level != LogLevel.INFO:
+        if level != NIVEL_INFORMATIVO:
             return False
         metodo, status = _metodo_e_status_http(record)
         return metodo not in _METODOS_DE_CONSULTA or status >= _STATUS_DE_FALHA
@@ -270,7 +295,7 @@ def install_log_controls() -> None:
         text = " ".join(str(arg) for arg in args).lower()
         level = current_log_level()
 
-        if level == LogLevel.DEBUG:
+        if level == NIVEL_DEPURACAO:
             _ORIGINAL_PRINT(*args, **kwargs)
             return
 
@@ -279,7 +304,7 @@ def install_log_controls() -> None:
             return
 
         if (
-            level == LogLevel.INFO
+            level == NIVEL_INFORMATIVO
             and any(marker in text for marker in _INFO_MARKERS)
             and not any(marker in text for marker in _DEBUG_MARKERS)
         ):
@@ -287,3 +312,7 @@ def install_log_controls() -> None:
 
     controlled_print._app_log_controlled = True  # type: ignore[attr-defined]
     builtins.print = controlled_print
+
+
+# Enquanto este módulo mora em `services/`, ele mesmo diz de onde vem o nível.
+definir_fonte_do_nivel(lambda: AppSettingsService.get().log_level)
