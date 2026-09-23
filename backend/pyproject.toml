@@ -77,6 +77,8 @@ forbidden_modules = [
     "app.infrastructure",
     "app.models",
     "app.database",
+    # Logging e estado de processo são efeito colateral (ADR-0015 §2).
+    "app.core",
 ]
 
 [[tool.importlinter.contracts]]
@@ -91,9 +93,8 @@ layers = [
 ]
 ignore_imports = [
     # Dívida de 21/09/2026 — infrastructure alcançando services. Quitar na v0.4
-    # (E-051, inverter setas): o que estes clientes usam desce para uma porta.
+    # (E-051): o módulo importado muda para o endereço certo (ADR-0015 §4).
     "app.infrastructure.youtube_analytics -> app.services.app_logging",
-    "app.infrastructure.fila_ia -> app.services.tarefas_ativas",
     "app.infrastructure.claude_cli_client -> app.services.llm_calls_store",
 ]
 
@@ -118,3 +119,16 @@ type = "forbidden"
 source_modules = ["app.models"]
 forbidden_modules = ["app.services", "app.routers"]
 allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+id = "core-na-base"
+name = "core so importa domain e bibliotecas (ADR-0015)"
+type = "forbidden"
+source_modules = ["app.core"]
+forbidden_modules = [
+    "app.routers",
+    "app.services",
+    "app.infrastructure",
+    "app.models",
+    "app.database",
+]

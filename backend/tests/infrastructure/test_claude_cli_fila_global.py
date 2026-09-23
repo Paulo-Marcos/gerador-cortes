@@ -7,8 +7,8 @@ não o Claude.
 """
 
 import pytest
+from app.core.tarefas_ativas import TarefasAtivas
 from app.infrastructure import claude_cli_client
-from app.services.tarefas_ativas import TarefasAtivas
 
 CONTEXTO = claude_cli_client.LlmCallContext(etapa="cortador-expert", projeto_id="p1", corte_id=None)
 CHAVE = "ia:cortador-expert:p1"

@@ -1,11 +1,11 @@
 import pytest
 import pytest_asyncio
+from app.core.tarefas_ativas import TarefasAtivas
 from app.models import Base, Corte, Projeto
 from app.services.bruto_progress import BrutoProgress
 from app.services.export import ExportService
 from app.services.jobs_globais import RETENCAO_TERMINAL_SEG, JobsGlobais
 from app.services.render_progress import RenderProgressStore
-from app.services.tarefas_ativas import TarefasAtivas
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 

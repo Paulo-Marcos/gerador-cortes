@@ -24,10 +24,10 @@ import time
 from dataclasses import dataclass
 from typing import Literal
 
+from app.core.tarefas_ativas import TIPO_DESCONHECIDO, TIPOS, TarefasAtivas
 from app.models import Corte, Projeto
 from app.services.bruto_progress import BrutoProgress
 from app.services.render_progress import RenderProgressStore
-from app.services.tarefas_ativas import TIPO_DESCONHECIDO, TIPOS, TarefasAtivas
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

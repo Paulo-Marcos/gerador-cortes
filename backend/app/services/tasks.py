@@ -74,8 +74,8 @@ def _registrar_cancelavel(name: str | None, task: asyncio.Task[Any]) -> None:
     fila e portanto não tem botão de cancelar.
     """
     try:
+        from app.core.tarefas_ativas import classificar_background
         from app.services.cancelamento_jobs import TrabalhoEmVoo
-        from app.services.tarefas_ativas import classificar_background
 
         if classificar_background(name) is None:
             return
@@ -94,7 +94,7 @@ def _anunciar_na_fila(name: str | None) -> None:
     acontece na leitura, contra o banco.
     """
     try:
-        from app.services.tarefas_ativas import TarefasAtivas, classificar_background
+        from app.core.tarefas_ativas import TarefasAtivas, classificar_background
 
         classificacao = classificar_background(name)
         if classificacao is None:
@@ -114,7 +114,7 @@ def _anunciar_na_fila(name: str | None) -> None:
 def _encerrar_na_fila(task: asyncio.Task[Any]) -> None:
     """Marca o desfecho da task na fila global. No-op se ela não foi anunciada."""
     try:
-        from app.services.tarefas_ativas import TarefasAtivas
+        from app.core.tarefas_ativas import TarefasAtivas
 
         if task.cancelled():
             TarefasAtivas.cancelar(_chave(task.get_name()))
