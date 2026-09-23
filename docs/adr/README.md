@@ -33,4 +33,4 @@ para daqui em diante (status `Aceito`), e dizem o que ainda falta fazer para cum
 | [0012](0012-onde-vive-cada-configuracao.md) | Onde vive cada configuração | Aceito |
 | [0013](0013-heranca-de-configuracao-visual.md) | Herança de configuração visual (cascata parcial) | Aceito (retroativo) |
 | [0014](0014-concorrencia-do-render.md) | Controle de concorrência do render | Aceito (retroativo) |
-| [0015](0015-estrutura-por-contexto.md) | Estrutura do backend por contexto × camada | Aceito |
+| [0015](0015-camadas-globais-e-dominio-por-agregado.md) | Camadas globais e domínio por agregado | Aceito |
