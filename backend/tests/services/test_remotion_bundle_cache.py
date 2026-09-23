@@ -282,6 +282,34 @@ class TestSingleFlight:
         assert len({str(p) for p in resultados}) == 1
         assert (resultados[0] / "index.html").read_text(encoding="utf-8") == "bundle"
 
+    def test_instancias_diferentes_na_mesma_raiz_dividem_o_lock(self, tmp_path: Path):
+        """O lock é de módulo porque cada render cria a SUA instância do cache.
+
+        Um lock por instância não serializaria nada, e o teste acima — que
+        reusa uma instância — passaria mesmo assim. É esta regressão que aqui
+        se reprova (D-749).
+        """
+        raiz = tmp_path / "cache"
+        chamadas: list[Path] = []
+
+        async def builder_lento(target_dir: Path) -> None:
+            chamadas.append(target_dir)
+            await asyncio.sleep(0.01)
+            (target_dir / "index.html").write_text("bundle", encoding="utf-8")
+
+        async def cenario() -> list[Path]:
+            return await asyncio.gather(
+                *(
+                    RemotionBundleCache(raiz).get_or_create(_fingerprint(64), builder_lento)
+                    for _ in range(3)
+                )
+            )
+
+        resultados = asyncio.run(cenario())
+
+        assert len(chamadas) == 1
+        assert len({str(p) for p in resultados}) == 1
+
     def test_fingerprints_distintos_nao_se_serializam(self, tmp_path: Path):
         async def cenario() -> list[Path]:
             cache = RemotionBundleCache(tmp_path / "cache")
