@@ -480,7 +480,7 @@ def _registrar_telemetria(
     `etapa` cai na `skill` quando o contexto não a informou.
     """
     try:
-        from app.services import llm_calls_store
+        from app.infrastructure import llm_calls_store
 
         tokens_in, tokens_out = _tokens_do_envelope(envelope) if envelope else (None, None)
         etapa = (contexto.etapa if contexto else None) or skill

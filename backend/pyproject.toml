@@ -95,7 +95,6 @@ ignore_imports = [
     # Dívida de 21/09/2026 — infrastructure alcançando services. Quitar na v0.4
     # (E-051): o módulo importado muda para o endereço certo (ADR-0015 §4).
     "app.infrastructure.youtube_analytics -> app.services.app_logging",
-    "app.infrastructure.claude_cli_client -> app.services.llm_calls_store",
 ]
 
 [[tool.importlinter.contracts]]

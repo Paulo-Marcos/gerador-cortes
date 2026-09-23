@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
+from app.infrastructure import llm_calls_store
 from app.models import (
     Base,
     Corte,
@@ -22,7 +23,7 @@ from app.models import (
     Short,
     StatusShort,
 )
-from app.services import llm_calls_store, shorts_prontos
+from app.services import shorts_prontos
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 TRANSCRICAO_GORDA = "x" * 200_000

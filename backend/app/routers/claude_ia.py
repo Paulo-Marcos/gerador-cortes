@@ -10,7 +10,7 @@ import logging
 from app.database import get_db
 from app.models import Corte, Projeto
 from app.provider_ia import provider_do_modelo
-from app.services import llm_calls_store
+from app.services import telemetria_ia
 from app.services.claude_ia import ClaudeIaService, ProviderIA
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -237,7 +237,7 @@ async def ultima_geracao(
     gravado a cada chamada. Best-effort por natureza — telemetria é acessória e
     pode faltar; sem registro, a tela simplesmente não mostra selo.
     """
-    ultima = llm_calls_store.ultima_geracao_bem_sucedida(
+    ultima = telemetria_ia.ultima_geracao_bem_sucedida(
         etapa=etapa, corte_id=corte_id, short_id=short_id
     )
     if ultima is None:
@@ -260,7 +260,7 @@ async def listar_llm_calls(
     """Lista as chamadas de IA registradas (mais recentes primeiro), com filtros
     opcionais por projeto/corte/etapa. Alimenta a aba "Chamadas de IA" em Análises.
     """
-    registros = llm_calls_store.listar_llm_calls(
+    registros = telemetria_ia.listar_llm_calls(
         projeto_id=projeto_id,
         corte_id=corte_id,
         short_id=short_id,

@@ -11,9 +11,9 @@ import sqlite3
 
 import pytest
 import pytest_asyncio
+from app.infrastructure import llm_calls_store
 from app.migrations import aplicar_migrations
 from app.models import Base, Projeto
-from app.services import llm_calls_store
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 

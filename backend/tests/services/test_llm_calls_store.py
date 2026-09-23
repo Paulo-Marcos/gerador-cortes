@@ -9,7 +9,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.services import llm_calls_store
+import pytest
+from app import channel_paths
+from app.infrastructure import llm_calls_store
+from app.routers import claude_ia as rota_claude_ia
 
 
 def test_gravar_e_listar_round_trip(tmp_path: Path):
@@ -104,3 +107,39 @@ def test_tabela_criada_de_forma_idempotente(tmp_path: Path):
     llm_calls_store.gravar_llm_call(db_path=db, etapa="x")
     llm_calls_store.inicializar(db)
     assert len(llm_calls_store.listar_llm_calls(db_path=db)) == 1
+
+
+# ─── Leitura pela API (D-694): rota → service → store, no caminho padrão ───
+
+
+@pytest.fixture
+def telemetria_no_tmp(tmp_path: Path, monkeypatch) -> Path:
+    """Desvia o banco padrão (`instance/llm_calls.db`) para uma pasta temporária.
+
+    A rota não passa `db_path`: o teste precisa do mesmo caminho que ela usa em
+    produção, senão não prova o encadeamento que o D-694 mudou.
+    """
+    monkeypatch.setattr(channel_paths, "instance_root", lambda: tmp_path)
+    return tmp_path / "llm_calls.db"
+
+
+@pytest.mark.asyncio
+async def test_rota_da_ultima_geracao_le_a_telemetria(telemetria_no_tmp: Path):
+    llm_calls_store.gravar_llm_call(etapa="cortes", corte_id="c1", model="gemini-2.5-pro")
+
+    resposta = await rota_claude_ia.ultima_geracao(etapa="cortes", corte_id="c1")
+
+    assert telemetria_no_tmp.exists()
+    assert resposta.model == "gemini-2.5-pro"
+    assert resposta.provider == "gemini"
+    assert resposta.ts
+
+
+@pytest.mark.asyncio
+async def test_rota_da_lista_de_chamadas_filtra_pela_telemetria(telemetria_no_tmp: Path):
+    llm_calls_store.gravar_llm_call(etapa="cortes", projeto_id="A", model="claude-opus-5")
+    llm_calls_store.gravar_llm_call(etapa="metadados", projeto_id="B", model="claude-opus-5")
+
+    resposta = await rota_claude_ia.listar_llm_calls(projeto_id="A")
+
+    assert [chamada.etapa for chamada in resposta.chamadas] == ["cortes"]

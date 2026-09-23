@@ -29,7 +29,7 @@ def _fake_run_ok(envelope: dict):
 
 def _capturar_store(monkeypatch) -> list[dict]:
     """Substitui `llm_calls_store.gravar_llm_call` por um capturador de kwargs."""
-    from app.services import llm_calls_store
+    from app.infrastructure import llm_calls_store
 
     capturados: list[dict] = []
 
@@ -120,7 +120,7 @@ class TestErroRegistra:
 class TestNaoFatal:
     def test_falha_na_telemetria_nao_quebra_a_geracao(self, monkeypatch):
         monkeypatch.setattr(cli, "_run", _fake_run_ok({"result": "resultado bom"}))
-        from app.services import llm_calls_store
+        from app.infrastructure import llm_calls_store
 
         def gravar_explode(**_kwargs):
             raise RuntimeError("banco travado")
@@ -136,7 +136,7 @@ class TestNaoFatal:
             raise ClaudeCliError("erro real", transient=False)
 
         monkeypatch.setattr(cli, "_run", _run_erro)
-        from app.services import llm_calls_store
+        from app.infrastructure import llm_calls_store
 
         def gravar_explode(**_kwargs):
             raise RuntimeError("banco travado")
