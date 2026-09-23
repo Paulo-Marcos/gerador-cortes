@@ -46,7 +46,7 @@ SQLite via SQLAlchemy assíncrono (WAL), um banco por canal
 
 - **`domain/` é puro** e é onde moram as **regras de negócio** (não "utilitários"): sem FastAPI, sem SQLAlchemy, sem HTTP, sem cliente externo, sem importar `models`.
 - **Routers** só convertem HTTP ↔ serviço. **Services** orquestram. **Infrastructure** fala com o mundo (CLIs de IA, APIs do Google, ffmpeg, a fila do worker).
-- As fronteiras são **verificadas por máquina**: 4 contratos do import-linter em `backend/pyproject.toml` (`[tool.importlinter]`), rodados pelo CI e por um teste do pytest. A dívida conhecida está listada em `ignore_imports`, cada item com a demanda que vai quitá-la; import novo na direção errada quebra o build.
+- As fronteiras são **verificadas por máquina**: os contratos do import-linter em `backend/pyproject.toml` (`[tool.importlinter]`), rodados pelo CI e por um teste do pytest. A dívida conhecida está listada em `ignore_imports`, cada item com a demanda que vai quitá-la; import novo na direção errada quebra o build.
 - I/O é assíncrono. Operações longas (download, transcrição, render) rodam como tarefas em segundo plano; o progresso chega ao frontend por WebSocket.
 
 ### Inteligência artificial
