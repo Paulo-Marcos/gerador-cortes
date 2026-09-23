@@ -13,10 +13,10 @@ import logging
 import uuid
 
 from app.database import AsyncSessionLocal
-from app.infrastructure.youtube_data_api import YoutubeDataApiError
 from app.models import LiveCandidata, Projeto, StatusLiveCandidata, StatusProjeto
 from app.services.ingestao import IngestaoService
 from app.services.ranking_lives import (
+    RankingIndisponivel,
     definir_voto_qualidade,
     gerar_ranking,
     marcar_promovida,
@@ -41,7 +41,7 @@ async def listar_ranking(forcar_refresh: bool = False):
     """Top candidatas pendentes. Quando `forcar_refresh=true`, ignora o cache de 24h."""
     try:
         return await gerar_ranking(forcar_refresh=forcar_refresh)
-    except YoutubeDataApiError as exc:
+    except RankingIndisponivel as exc:
         status = 503 if exc.quota_excedida else 502
         raise HTTPException(status_code=status, detail=str(exc)) from exc
 
@@ -51,7 +51,7 @@ async def refresh_ranking():
     """Atalho explícito para o botão 'Atualizar ranking' do frontend."""
     try:
         return await gerar_ranking(forcar_refresh=True)
-    except YoutubeDataApiError as exc:
+    except RankingIndisponivel as exc:
         status = 503 if exc.quota_excedida else 502
         raise HTTPException(status_code=status, detail=str(exc)) from exc
 

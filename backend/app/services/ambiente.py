@@ -215,3 +215,13 @@ def checar(sondas: Sondas) -> list[Checagem]:
             "Instale o Chrome ou defina CHROME_PATH.",
         ),
     ]
+
+
+def listar_modelos_gemini() -> list[tuple[str, str]]:
+    """Os modelos que o `agy` desta máquina oferece, como (id, nome).
+
+    Mora aqui pelo mesmo motivo dos pré-requisitos: a resposta depende do que
+    está instalado e logado nesta máquina, não do canal. Lista vazia quando o
+    CLI falta.
+    """
+    return antigravity_cli_client.listar_modelos()

@@ -184,7 +184,32 @@ async def avaliar_sentimento_dos_comentarios(
 # ─── Geração do ranking ───────────────────────────────────────────────────────
 
 
+class RankingIndisponivel(RuntimeError):
+    """O YouTube não entregou o que o ranking precisa.
+
+    Existe para que a API decida o status HTTP sem conhecer o cliente da
+    infraestrutura (contrato `routers-sem-infra`). `quota_excedida` separa "espere
+    a cota voltar" de "o YouTube falhou".
+    """
+
+    def __init__(self, message: str, *, quota_excedida: bool = False):
+        super().__init__(message)
+        self.quota_excedida = quota_excedida
+
+
 async def gerar_ranking(*, forcar_refresh: bool = False) -> dict:
+    """Entrada da API para o ranking; o trabalho está em `_gerar_ranking`.
+
+    Traduz a falha do YouTube em `RankingIndisponivel`, com a mesma mensagem e o
+    mesmo sinal de cota.
+    """
+    try:
+        return await _gerar_ranking(forcar_refresh=forcar_refresh)
+    except YoutubeDataApiError as exc:
+        raise RankingIndisponivel(str(exc), quota_excedida=exc.quota_excedida) from exc
+
+
+async def _gerar_ranking(*, forcar_refresh: bool = False) -> dict:
     """Gera ou atualiza o ranking e devolve os top-N candidatos PENDENTES.
 
     Quando o cache (`live_candidatas.fetched_at`) ainda está válido e não

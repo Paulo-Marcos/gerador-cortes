@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
+from app.infrastructure.youtube_data_api import YoutubeDataApiError
 from app.models import Base, Projeto, StatusProjeto
 from app.routers import ranking_lives as router_mod
 from app.services import ranking_lives as service_mod
@@ -91,3 +92,20 @@ def test_projeto_inexistente_da_404(client: TestClient):
         ).status_code
         == 404
     )
+
+
+# ─── Falha do YouTube no ranking (D-694): o status HTTP não muda ───
+
+
+@pytest.mark.parametrize(("quota_excedida", "status"), [(True, 503), (False, 502)])
+def test_falha_do_youtube_vira_503_na_cota_e_502_no_resto(
+    client: TestClient, monkeypatch, quota_excedida: bool, status: int
+):
+    async def youtube_falha(**_):
+        raise YoutubeDataApiError("YouTube indisponível", quota_excedida=quota_excedida)
+
+    monkeypatch.setattr(service_mod, "_gerar_ranking", youtube_falha)
+
+    for resposta in (client.get("/api/ranking-lives"), client.post("/api/ranking-lives/refresh")):
+        assert resposta.status_code == status
+        assert resposta.json()["detail"] == "YouTube indisponível"

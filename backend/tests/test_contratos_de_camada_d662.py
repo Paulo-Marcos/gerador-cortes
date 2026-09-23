@@ -25,19 +25,26 @@ def test_os_contratos_de_camada_valem_hoje(monkeypatch):
     assert _rodar(PYPROJECT) == 0, "um import novo cruzou uma fronteira (ver saída acima)"
 
 
-def test_a_catraca_pega_a_divida_quando_a_excecao_sai(monkeypatch, tmp_path):
-    """Sem a exceção registrada, o router chamando o cliente direto aparece.
+def test_o_linter_enxerga_o_codigo_real(monkeypatch, tmp_path):
+    """Um contrato proibindo uma seta que existe tem de reprovar.
 
-    Prova que o contrato enxerga o código real — um contrato que passa sempre
-    não guarda nada. Quando a E-051 quitar essa dívida, este teste falha e
-    manda apagar a exceção (o import-linter recusa exceção que não casa mais).
-    O exemplo anterior era `models -> services.channels`, quitado na D-666.
+    Prova que o import-linter lê o código real — um contrato que passa sempre
+    não guarda nada. A sonda proíbe `routers -> services`, a seta que todo
+    router usa. Antes a prova tirava uma exceção do `ignore_imports` e esperava
+    a dívida aparecer, mas cada dívida quitada a derrubava (`models ->
+    services.channels` na D-666, os routers da E-051); a sonda não depende de
+    dívida nenhuma e continua valendo com o `ignore_imports` vazio.
     """
     monkeypatch.chdir(BACKEND)
-    excecao = '    "app.routers.ranking_lives -> app.infrastructure.youtube_data_api",\n'
-    texto = PYPROJECT.read_text(encoding="utf-8").replace("\r\n", "\n")
-    assert excecao in texto, "a exceção mudou de forma; atualize este teste"
-    sem_excecao = tmp_path / "pyproject.toml"
-    sem_excecao.write_text(texto.replace(excecao, ""), encoding="utf-8")
+    sonda = (
+        "\n[[tool.importlinter.contracts]]\n"
+        'id = "sonda-routers-sem-services"\n'
+        'name = "sonda: routers nao importam services"\n'
+        'type = "forbidden"\n'
+        'source_modules = ["app.routers"]\n'
+        'forbidden_modules = ["app.services"]\n'
+    )
+    com_sonda = tmp_path / "pyproject.toml"
+    com_sonda.write_text(PYPROJECT.read_text(encoding="utf-8") + sonda, encoding="utf-8")
 
-    assert _rodar(sem_excecao) != 0
+    assert _rodar(com_sonda) != 0

@@ -104,12 +104,6 @@ type = "forbidden"
 source_modules = ["app.routers"]
 forbidden_modules = ["app.infrastructure"]
 allow_indirect_imports = true
-ignore_imports = [
-    # Dívida de 21/09/2026 — o router chama o cliente sem passar por service.
-    # Quitar na v0.4 (E-051).
-    "app.routers.editorial_skills -> app.infrastructure.antigravity_cli_client",
-    "app.routers.ranking_lives -> app.infrastructure.youtube_data_api",
-]
 
 [[tool.importlinter.contracts]]
 id = "models-sem-services"
