@@ -19,12 +19,8 @@ import unicodedata
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-
-class Plataforma(StrEnum):
-    YOUTUBE_SHORTS = "youtube_shorts"
-    INSTAGRAM_REELS = "instagram_reels"
-    TIKTOK = "tiktok"
-    TIKTOK_HORIZONTAL = "tiktok_horizontal"
+# Plataforma mora no compartilhado (D-759); continua importável daqui.
+from app.domain.compartilhado.plataforma import Plataforma
 
 
 class ModoPublicacao(StrEnum):

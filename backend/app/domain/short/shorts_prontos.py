@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from app.domain.publicacao import Plataforma
+from app.domain.compartilhado.plataforma import Plataforma
 
 # As três redes que recebem o MP4 VERTICAL. O TikTok horizontal é do corte
 # 16:9 (D-470) e não do short — contá-lo deixaria todo short eternamente
