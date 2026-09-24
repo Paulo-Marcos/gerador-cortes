@@ -9,6 +9,7 @@ import shutil
 import traceback
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from app.channel_paths import projetos_dir
@@ -20,7 +21,7 @@ from app.domain.corte_mapper import (
     normalizar_cenas_remotion_payload,
     tem_colapso_de_tempos_das_cenas,
 )
-from app.domain.desvio_categoria import SILENCIO
+from app.domain.desvio_categoria import SILENCIO, classificar_desvio
 from app.domain.ffmpeg_basic import (
     build_silence_detect_proxy_cmd,
     build_silence_detect_video_cmd,
@@ -41,10 +42,17 @@ from app.domain.reading_metadata import (
     remover_prefixo_leitura_titulo,
 )
 from app.domain.segment_calculator import dividir_desvios_no_ponto, normalizar_desvio
-from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg
+from app.domain.snap_desvios import snap_desvio_a_palavras
+from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
 from app.domain.youtube_layout import normalizar_layout_youtube
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
+from app.provider_ia import ProviderIA
 from app.services.app_logging import operational_debug, operational_error
+from app.services.claude_ia import (
+    ClaudeIaService,
+    _carregar_transcricao_raw,
+    _mapa_falantes_para_meta,
+)
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -486,7 +494,6 @@ class CorteService:
 
         from app.database import AsyncSessionLocal
         from app.models import Corte
-        from app.services.claude_ia import ClaudeIaService
         from sqlalchemy import select
 
         async with AsyncSessionLocal() as db:
@@ -496,10 +503,130 @@ class CorteService:
 
         for cid in corte_ids:
             try:
-                await ClaudeIaService.gerar_trechos_via_claude(cid, provider)
+                await CorteService.gerar_trechos_via_claude(cid, provider)
                 await asyncio.sleep(1)
             except Exception as e:
                 operational_error("AnalisarDesvios", f"Erro no corte {cid}: {e}")
+
+    @staticmethod
+    async def gerar_trechos_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
+        """Regenera os trechos a remover (desvios) de um corte via Claude e
+        ressincroniza a transcrição final. Usa a skill `trechos-expert`.
+
+        D-332 (aditivo puro): "gerar trechos" é CUMULATIVO como a análise
+        (D-298) — soma os desvios novos, pula os que praticamente coincidem com
+        um já marcado, e NUNCA remove nem ajusta o que já existe (manual OU
+        claude). A revisão automática da D-302 foi REVOGADA: uma regeração não
+        pode mais apagar o trabalho de marcação anterior.
+        Em projeto diarizado, os chunks saem com o rótulo de falante
+        ([CANAL]/[OUTRO]) para a regra "pausa por troca de falante não é
+        enrolação" funcionar.
+        """
+        async with AsyncSessionLocal() as db:
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise ValueError("Corte não encontrado")
+            if not corte.transcricao_corte:
+                raise ValueError("Corte sem transcrição bruta. Rode 'refazer transcrição' antes.")
+            transcricao_bruta = json.loads(corte.transcricao_corte)
+            meta = {
+                "corte_id": corte_id,  # D-353: contexto p/ telemetria da geração
+                "projeto_id": corte.projeto_id,
+                "titulo": corte.titulo_proposto or "",
+                "tema_central": corte.tema_central or "",
+                "inicio_hms": corte.inicio_hms or "",
+                "fim_hms": corte.fim_hms or "",
+            }
+            desvios_existentes = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
+            corte_inicio_seg = to_seg_estrito(corte.inicio_seg or 0)
+            corte_fim_seg = to_seg_estrito(corte.fim_seg or 0)
+            # D-286/D-302: a transcricao_corte não guarda `speaker` — o rótulo
+            # vive na transcricao_raw do projeto; reanotamos antes do prompt.
+            # D-339: a transcricao_raw também é a ÚNICA fonte do timing por palavra
+            # (a transcricao_corte descarta `palavras`), então carregamos sempre —
+            # não só quando há diarização.
+            projeto = await db.get(Projeto, corte.projeto_id)
+            mapa_falantes = (
+                _mapa_falantes_para_meta(projeto.falantes_map) if projeto is not None else None
+            )
+            transcricao_raw_projeto = (
+                _carregar_transcricao_raw(projeto.transcricao_raw, corte.projeto_id)
+                if projeto is not None and projeto.transcricao_raw
+                else []
+            )
+
+        if mapa_falantes and isinstance(transcricao_raw_projeto, list):
+            transcricao_bruta = ClaudeIaService._anotar_falantes_do_projeto(
+                transcricao_bruta, transcricao_raw_projeto
+            )
+
+        resultado = await ClaudeIaService._gerar_desvios(
+            transcricao_bruta, meta, desvios_existentes, mapa_falantes, provider
+        )
+        # WHY: a `origem` (o provider que propôs) permite o frontend exibir o badge
+        # (Bug-2 do I-020). D-332: aditivo puro — sem revisão dos existentes.
+        # D-339: encaixa cada desvio NOVO na borda real de palavra (snap
+        # determinístico) ANTES do merge. Só os desvios do Claude passam por aqui;
+        # os já existentes (manual/técnico/claude anterior) ficam intocados. Sem
+        # timing por palavra (corte antigo) `palavras_corte` sai vazia e o snap é
+        # no-op — back-compat total.
+        palavras_corte = ClaudeIaService._palavras_do_corte(
+            transcricao_raw_projeto, corte_inicio_seg, corte_fim_seg
+        )
+        # D-355: quando o desvio traz a citação (inicio_texto/fim_texto), ancora a
+        # borda na palavra real (busca janelada ~5s) ANTES do snap — o snap então
+        # só faz o ajuste fino. Sem citação, ancoragem é no-op e o snap age sozinho.
+        # D-422: `classificar_desvio` reconcilia a `categoria` devolvida pela skill
+        # com o vocabulário canônico (e garante o aviso no motivo dos imprecisos)
+        # antes de qualquer ajuste de borda — a UI badgeia o MOTIVO da remoção, não
+        # a origem.
+        normalizados_novos = [
+            snap_desvio_a_palavras(
+                ClaudeIaService._ancorar_desvio(
+                    classificar_desvio(normalizar_desvio({**d, "origem": provider})),
+                    palavras_corte,
+                ),
+                palavras_corte,
+            )
+            for d in resultado.get("desvios", [])
+        ]
+        mesclados, adicionados = ClaudeIaService._mesclar_desvios(
+            desvios_existentes, normalizados_novos
+        )
+
+        async with AsyncSessionLocal() as db:
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise ValueError("Corte não encontrado")
+            corte.desvios = json.dumps(mesclados, ensure_ascii=False)
+            # D-334: conta esta invocação da skill trechos-expert — cobre tanto
+            # o botão por-corte quanto o lote (analisar_desvios_todos_impl
+            # chama esta mesma função por corte).
+            corte.trechos_geracoes = (corte.trechos_geracoes or 0) + 1
+            log = json.loads(corte.trechos_geracoes_log or "[]")
+            log.append(
+                {
+                    "em": datetime.utcnow().isoformat(),
+                    "adicionados": adicionados,
+                    "total_apos": len(mesclados),
+                }
+            )
+            corte.trechos_geracoes_log = json.dumps(log, ensure_ascii=False)
+            await db.commit()
+
+        # Ressincroniza a transcrição final aplicando o conjunto de desvios.
+        await CorteService.sincronizar_transcricao_corte(corte_id)
+
+        logger.info(
+            "[ClaudeIA] Trechos via Claude p/ corte %s: +%d novos (total %d)",
+            corte_id[:8],
+            adicionados,
+            len(mesclados),
+        )
+        return {
+            "total_desvios": len(mesclados),
+            "novos": adicionados,
+        }
 
     @staticmethod
     async def dividir_corte(corte_id: str, ponto_seg: float) -> tuple[str, str]:

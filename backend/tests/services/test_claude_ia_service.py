@@ -678,7 +678,7 @@ class TestGerarTrechosAditivoPuro:
             desvios_existentes=[manual, claude_ant],
             desvios_novos=[],
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             # A skill devolve um desvio NOVO, um DUPLICADO do manual (deve pular)
@@ -703,7 +703,7 @@ class TestGerarTrechosAditivoPuro:
 
         monkeypatch.setattr(CorteService, "sincronizar_transcricao_corte", staticmethod(fake_sync))
 
-        resultado = asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        resultado = asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         gravados = json.loads(corte.desvios)
         motivos = [d["motivo"] for d in gravados]
@@ -731,7 +731,7 @@ class TestGerarTrechosAditivoPuro:
             desvios_existentes=[manual, claude_ant],
             desvios_novos=[],
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             return {"desvios": []}  # skill sem nada novo, sem chave revisoes
@@ -744,7 +744,7 @@ class TestGerarTrechosAditivoPuro:
             CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
         )
 
-        resultado = asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        resultado = asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         gravados = json.loads(corte.desvios)
         assert [d["motivo"] for d in gravados] == ["manual do editor", "chat"]
@@ -764,7 +764,7 @@ class TestGerarTrechosAditivoPuro:
             desvios_existentes=[manual],
             desvios_novos=[],
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             return {"desvios": [{"inicio_hms": "00:20:00", "fim_hms": "00:20:15", "motivo": "x"}]}
@@ -777,8 +777,8 @@ class TestGerarTrechosAditivoPuro:
             CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
         )
 
-        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
-        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
+        asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         assert corte.trechos_geracoes == 2
         log = json.loads(corte.trechos_geracoes_log)
@@ -853,7 +853,7 @@ class TestSnapDesviosNoFluxo:
             desvios_existentes=[manual],
             transcricao_raw=transcricao_raw,
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             # Início/fim caídos no meio das palavras: 100.2 → 100.0; 101.5 → 101.2.
@@ -871,7 +871,7 @@ class TestSnapDesviosNoFluxo:
             CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
         )
 
-        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         gravados = json.loads(corte.desvios)
         por_motivo = {d["motivo"]: d for d in gravados}
@@ -892,7 +892,7 @@ class TestSnapDesviosNoFluxo:
             desvios_existentes=[],
             transcricao_raw=transcricao_raw,
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             return {
@@ -909,7 +909,7 @@ class TestSnapDesviosNoFluxo:
             CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
         )
 
-        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         gravados = json.loads(corte.desvios)
         novo = next(d for d in gravados if d["motivo"] == "novo")
