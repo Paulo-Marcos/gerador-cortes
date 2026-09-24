@@ -5,7 +5,7 @@ Cobre:
     latência/tokens best-effort/sucesso) a partir do envelope + contexto.
   - Erro (`ClaudeCliError`) registra sucesso=False + erro_tipo e RE-LEVANTA.
   - NÃO-FATAL: se a gravação da telemetria explodir, a geração ainda retorna.
-  - Plumbing editorial: `_args_claude` injeta o contexto (etapa/projeto/corte).
+  - Plumbing editorial: `GeradorClaudeCli.argumentos` injeta o contexto (etapa/projeto/corte).
 
 O `_run` real é substituído por um fake (nenhum subprocess/claude é invocado), e o
 store é substituído por um capturador — nenhum banco é tocado.
@@ -150,6 +150,7 @@ class TestNaoFatal:
 
 class TestPlumbingEditorial:
     def test_args_claude_injeta_contexto(self):
+        from app.infrastructure.gerador_ia import GeradorClaudeCli
         from app.services import claude_ia
 
         skill = claude_ia.editorial_skills.SkillResolvida(
@@ -160,8 +161,8 @@ class TestPlumbingEditorial:
             timeout=120.0,
             lentes=[],
         )
-        args = claude_ia._args_claude(
-            skill, "trechos-expert", projeto_id="proj-x", corte_id="corte-y"
+        args = GeradorClaudeCli().argumentos(
+            claude_ia._pedido(skill, "trechos-expert", projeto_id="proj-x", corte_id="corte-y")
         )
         ctx = args["contexto"]
         assert isinstance(ctx, LlmCallContext)

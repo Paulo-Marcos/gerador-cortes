@@ -30,6 +30,7 @@ from app.database import AsyncSessionLocal
 from app.domain import chat_heat
 from app.domain.ancora_match import ancorar_intervalo
 from app.domain.chunker import fatiar_transcricao
+from app.domain.compartilhado.gerador_ia import PedidoIA
 from app.domain.desvio_categoria import classificar_desvio
 from app.domain.diarizacao_align import alinhar_falantes, prefixo_falante
 from app.domain.segment_calculator import normalizar_desvio
@@ -42,7 +43,8 @@ from app.domain.transcricao_utils import (
 )
 from app.domain.variacao_prompt import bloco_variacao_de
 from app.editorial_identity import identidade_do_mascote
-from app.infrastructure import antigravity_cli_client, claude_cli_client, fila_ia
+from app.infrastructure import claude_cli_client, fila_ia
+from app.infrastructure.gerador_ia import gerador_para
 from app.models import Corte, Projeto, StatusProjeto
 from app.provider_ia import ProviderIA
 from app.services.analise import AnaliseService, _to_seg
@@ -126,60 +128,39 @@ _SKILL_CAPA_SHORT = "capa-short-imagem-expert"
 _LIMITE_MOTIVO_NA_TELA = 400
 
 
-def _args_claude(
+def _pedido(
     skill: editorial_skills.SkillResolvida,
     skill_key: str,
     *,
     projeto_id: str | None = None,
     corte_id: str | None = None,
     short_id: str | None = None,
-) -> dict:
-    """kwargs comuns do `claude_cli_client` a partir da skill resolvida (E-021).
+) -> PedidoIA:
+    """O pedido à IA a partir da skill resolvida (E-021), para qualquer provider.
 
     `expertise` (corpo do banco) é a fonte da verdade; `skill` fica como FALLBACK
-    nativo (`/<skill>`) caso o corpo venha vazio — preservando a semântica anterior.
+    nativo (`/<skill>`) do Claude caso o corpo venha vazio.
 
-    D-353: injeta o `contexto` (etapa=skill_key + projeto/corte) para a telemetria
-    de chamadas de IA. `None` é aceitável — grava o que houver.
+    D-353: a etapa (skill_key) e o projeto/corte/short vão para a telemetria das
+    chamadas de IA. `None` é aceitável — grava o que houver.
     """
-    return {
-        "model": skill.modelo,
-        "skill": skill_key,
-        "expertise": skill.corpo,
-        "timeout": skill.timeout,
-        "thinking_tokens": skill.thinking_tokens,
-        "contexto": claude_cli_client.LlmCallContext(
-            etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
-        ),
-    }
+    return PedidoIA(
+        etapa=skill_key,
+        modelo=skill.modelo,
+        modelo_gemini=skill.modelo_gemini,
+        skill=skill_key,
+        expertise=skill.corpo,
+        timeout=skill.timeout,
+        thinking_tokens=skill.thinking_tokens,
+        projeto_id=projeto_id,
+        corte_id=corte_id,
+        short_id=short_id,
+    )
 
 
 def _modelo_usado(skill: editorial_skills.SkillResolvida, provider: ProviderIA) -> str:
     """O modelo que ATENDEU a chamada — é dele que a tela deriva o selo."""
-    return skill.modelo_gemini if provider == "gemini" else skill.modelo
-
-
-def _args_antigravity(
-    skill: editorial_skills.SkillResolvida,
-    skill_key: str,
-    *,
-    projeto_id: str | None = None,
-    corte_id: str | None = None,
-    short_id: str | None = None,
-) -> dict:
-    """kwargs do `antigravity_cli_client`: a MESMA skill, com o modelo Gemini dela.
-
-    O provider "gemini" roda pelo `agy -p` (assinatura do Antigravity), não pela
-    API: corpo, timeout e contexto de telemetria são os mesmos do Claude.
-    """
-    return {
-        "model": skill.modelo_gemini,
-        "expertise": skill.corpo,
-        "timeout": skill.timeout,
-        "contexto": claude_cli_client.LlmCallContext(
-            etapa=skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
-        ),
-    }
+    return gerador_para(provider).modelo(_pedido(skill, skill.key))
 
 
 async def _gerar_json_provider(
@@ -192,16 +173,8 @@ async def _gerar_json_provider(
     corte_id: str | None = None,
     short_id: str | None = None,
 ) -> dict:
-    """Roteia a geração de JSON para o Claude CLI ou para o Antigravity CLI."""
-    if provider == "gemini":
-        args = _args_antigravity(
-            skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
-        )
-        return await antigravity_cli_client.generate_json(prompt, **args)
-    args = _args_claude(
-        skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
-    )
-    return await claude_cli_client.generate_json(prompt, **args)
+    pedido = _pedido(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id)
+    return await gerador_para(provider).gerar_json(prompt, pedido)
 
 
 async def _gerar_text_provider(
@@ -214,16 +187,8 @@ async def _gerar_text_provider(
     corte_id: str | None = None,
     short_id: str | None = None,
 ) -> str:
-    """Roteia a geração de texto livre para o Claude CLI ou para o Antigravity CLI."""
-    if provider == "gemini":
-        args = _args_antigravity(
-            skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
-        )
-        return await antigravity_cli_client.generate_text(prompt, **args)
-    args = _args_claude(
-        skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id
-    )
-    return await claude_cli_client.generate_text(prompt, **args)
+    pedido = _pedido(skill, skill_key, projeto_id=projeto_id, corte_id=corte_id, short_id=short_id)
+    return await gerador_para(provider).gerar_texto(prompt, pedido)
 
 
 def _mapa_falantes_para_meta(raw: str) -> dict | None:

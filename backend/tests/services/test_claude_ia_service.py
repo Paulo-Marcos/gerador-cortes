@@ -11,6 +11,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from app.infrastructure import antigravity_cli_client
 from app.services import claude_ia
 from app.services.claude_ia import ClaudeIaService
 
@@ -142,7 +143,7 @@ class TestGerarCortes:
             return {"cortes": [{"titulo_proposto": "G", "inicio_seg": 5}]}
 
         fake_claude = _FakeGenerate({"cortes": []})
-        monkeypatch.setattr(claude_ia.antigravity_cli_client, "generate_json", fake_gemini)
+        monkeypatch.setattr(antigravity_cli_client, "generate_json", fake_gemini)
         monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake_claude)
         monkeypatch.setattr(
             ClaudeIaService,

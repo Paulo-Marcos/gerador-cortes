@@ -16,12 +16,13 @@ import logging
 
 from app import prompts_utilitarios
 from app.config import settings
+from app.domain.compartilhado.gerador_ia import PedidoIA
 from app.domain.padroes_thumbnail import (
     MIN_MELHORES_PARA_ANALISE,
     compilar_padroes,
     selecionar_melhores,
 )
-from app.infrastructure import antigravity_cli_client, claude_cli_client
+from app.infrastructure.gerador_ia import gerador_para
 from app.provider_ia import ProviderIA
 from app.services.avaliacao_thumbnail import AvaliacaoThumbnailService
 
@@ -90,18 +91,14 @@ async def _ler_padroes(prompt: str, provider: ProviderIA) -> dict:
     Esta etapa não tem skill editorial no banco — o prompt nasce aqui —, então o
     modelo do Gemini vem da faixa equivalente ao modelo Claude dela.
     """
-    contexto = claude_cli_client.LlmCallContext(etapa="padroes-thumbnail")
-    if provider == "gemini":
-        from app.editorial_skills import modelo_gemini_equivalente
+    from app.editorial_skills import modelo_gemini_equivalente
 
-        return await antigravity_cli_client.generate_json(
-            prompt,
-            model=modelo_gemini_equivalente(settings.claude_model_metadados),
-            contexto=contexto,
-        )
-    return await claude_cli_client.generate_json(
-        prompt, model=settings.claude_model_metadados, contexto=contexto
+    pedido = PedidoIA(
+        etapa="padroes-thumbnail",
+        modelo=settings.claude_model_metadados,
+        modelo_gemini=modelo_gemini_equivalente(settings.claude_model_metadados),
     )
+    return await gerador_para(provider).gerar_json(prompt, pedido)
 
 
 class PadroesThumbnailService:

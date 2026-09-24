@@ -2,6 +2,7 @@
 
 import pytest
 from app import prompts_utilitarios
+from app.infrastructure import claude_cli_client
 from app.services import padroes_thumbnail as padroes_module
 from app.services.padroes_thumbnail import PadroesThumbnailService
 
@@ -59,7 +60,7 @@ async def test_analisar_caminho_feliz_chama_agente_e_devolve_padroes(monkeypatch
             "proposta_ajuste_skill": "Priorizar cenários institucionais concretos.",
         }
 
-    monkeypatch.setattr(padroes_module.claude_cli_client, "generate_json", _fake_generate_json)
+    monkeypatch.setattr(claude_cli_client, "generate_json", _fake_generate_json)
 
     resultado = await PadroesThumbnailService.analisar()
 
@@ -83,7 +84,7 @@ async def test_analisar_com_poucos_melhores_nao_chama_agente(monkeypatch):
     def _explode(*args, **kwargs):  # pragma: no cover - não deve ser chamado
         raise AssertionError("não deveria chamar o agente com amostra pequena")
 
-    monkeypatch.setattr(padroes_module.claude_cli_client, "generate_json", _explode)
+    monkeypatch.setattr(claude_cli_client, "generate_json", _explode)
 
     resultado = await PadroesThumbnailService.analisar()
 
