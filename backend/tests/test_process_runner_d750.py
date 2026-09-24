@@ -5,6 +5,7 @@ entra quando o event loop é o Selector do uvicorn no Windows (D-369). As cópia
 que o runner substitui tinham os dois, e é neles que um defeito se esconderia.
 """
 
+import asyncio
 import os
 import sys
 import time
@@ -13,6 +14,7 @@ from pathlib import Path
 import psutil
 import pytest
 from app.core import process_runner
+from app.infrastructure import ffmpeg_runner
 from app.services import capa_tiktok, palco_short_png, youtube_palco
 
 PY = sys.executable
@@ -151,3 +153,54 @@ async def test_capa_do_tiktok_travada_chega_ao_operador_como_erro_da_capa(
         await capa_tiktok._rasterizar(tmp_path / "capa.png", {})
 
     assert gerador_travado == [300]
+
+
+# ─── As sondas do ffprobe e o prazo (4a) ───
+
+
+@pytest.mark.integration  # sobe um processo de verdade no lugar do ffprobe (D-751)
+@pytest.mark.asyncio
+async def test_sonda_pendurada_devolve_none_e_encerra_o_processo(monkeypatch, tmp_path):
+    original = asyncio.create_subprocess_exec
+    criados = []
+
+    async def _ffprobe_pendurado(*args, **kwargs):
+        proc = await original(
+            PY,
+            "-c",
+            "import time; time.sleep(60)",
+            stdout=kwargs["stdout"],
+            stderr=kwargs["stderr"],
+        )
+        criados.append(proc)
+        return proc
+
+    monkeypatch.setattr(ffmpeg_runner, "_TIMEOUT_DA_SONDA_SEG", 1)
+    monkeypatch.setattr(ffmpeg_runner.asyncio, "create_subprocess_exec", _ffprobe_pendurado)
+    inicio = time.monotonic()
+
+    assert await ffmpeg_runner.probe_duracao(tmp_path / "video.mkv") is None
+
+    assert time.monotonic() - inicio < 30, "o prazo da sonda não foi respeitado"
+    assert not psutil.pid_exists(criados[0].pid), "o ffprobe pendurado continuou vivo"
+
+
+@pytest.mark.asyncio
+async def test_o_fallback_das_sondas_pede_o_mesmo_prazo(monkeypatch, tmp_path):
+    pedidos = []
+
+    async def _selector_sem_subprocesso(*args, **kwargs):
+        raise NotImplementedError
+
+    def _sync(cmd, label="ffmpeg", timeout=3600):
+        pedidos.append(timeout)
+        return 0, "", ""
+
+    monkeypatch.setattr(ffmpeg_runner.asyncio, "create_subprocess_exec", _selector_sem_subprocesso)
+    monkeypatch.setattr(ffmpeg_runner, "_run_ffmpeg_sync", _sync)
+
+    await ffmpeg_runner.probe_duracao(tmp_path / "v.mkv")
+    await ffmpeg_runner.probe_resolucao(tmp_path / "v.mkv")
+    await ffmpeg_runner.probe_codecs(tmp_path / "v.mkv")
+
+    assert pedidos == [30, 30, 30, 30]  # codecs sonda vídeo e áudio: duas chamadas

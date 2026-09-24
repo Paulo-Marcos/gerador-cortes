@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 # 1h é o que a produção sempre praticou. Mantido como default até que cada
 # chamada tenha seu valor medido.
 _SYNC_TIMEOUT_SECONDS = 3600
+# D-750: medido em 90 sondas sobre 15 arquivos reais da PROD, de 21 MB a 1,1 GB,
+# com o disco frio e quente — pior caso 0,19 s. 30 s só existe para um ffprobe
+# pendurado (arquivo ainda sendo escrito, corrompido) não prender quem o chamou.
+_TIMEOUT_DA_SONDA_SEG = 30
 
 
 def _run_ffmpeg_sync(
@@ -243,6 +247,21 @@ async def run_ffmpeg_simple(
     )
 
 
+async def _esperar_sonda(proc: asyncio.subprocess.Process) -> bytes:
+    """O stdout de um ffprobe, com prazo (D-750).
+
+    Estourou: mata o processo pelo PID e levanta `TimeoutError`, que cai no
+    tratamento de erro que cada sonda já tem. O ffprobe não sobe filhos.
+    """
+    try:
+        out, _ = await asyncio.wait_for(proc.communicate(), _TIMEOUT_DA_SONDA_SEG)
+    except TimeoutError:
+        proc.kill()
+        await proc.wait()
+        raise
+    return out
+
+
 async def probe_codecs(path: Path) -> tuple[str, str]:
     """Retorna (codec_video, codec_audio) de um arquivo de mídia.
 
@@ -283,10 +302,12 @@ async def probe_codecs(path: Path) -> tuple[str, str]:
                     "default=noprint_wrappers=1:nokey=1",
                     str(path),
                 ],
+                "ffprobe-codecs",
+                _TIMEOUT_DA_SONDA_SEG,
             )
             return out.strip().lower() or "unknown"
 
-        out, _ = await proc.communicate()
+        out = await _esperar_sonda(proc)
         return out.decode().strip().lower() or "unknown"
 
     v_codec, a_codec = await asyncio.gather(
@@ -336,13 +357,15 @@ async def probe_resolucao(path: Path) -> tuple[int, int] | None:
             stderr=asyncio.subprocess.PIPE,
         )
     except NotImplementedError:
-        _, out, _ = await asyncio.to_thread(_run_ffmpeg_sync, cmd, "ffprobe-resolucao")
+        _, out, _ = await asyncio.to_thread(
+            _run_ffmpeg_sync, cmd, "ffprobe-resolucao", _TIMEOUT_DA_SONDA_SEG
+        )
         return _parse_resolucao(out)
     except Exception:
         return None
 
     try:
-        out, _ = await proc.communicate()
+        out = await _esperar_sonda(proc)
     except Exception:
         return None
     return _parse_resolucao(out.decode())
@@ -380,13 +403,15 @@ async def probe_duracao(path: Path) -> float | None:
             stderr=asyncio.subprocess.PIPE,
         )
     except NotImplementedError:
-        _, out, _ = await asyncio.to_thread(_run_ffmpeg_sync, cmd, "ffprobe-duracao")
+        _, out, _ = await asyncio.to_thread(
+            _run_ffmpeg_sync, cmd, "ffprobe-duracao", _TIMEOUT_DA_SONDA_SEG
+        )
         return _parse_duracao(out)
     except Exception:
         return None
 
     try:
-        out, _ = await proc.communicate()
+        out = await _esperar_sonda(proc)
     except Exception:
         return None
     return _parse_duracao(out.decode())
