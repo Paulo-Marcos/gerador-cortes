@@ -22,7 +22,10 @@ import pytest
 
 RENDERER = Path(__file__).resolve().parents[3] / "video-renderer"
 WORKER = RENDERER / "native_worker.js"
-pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node não está no PATH")
+pytestmark = [
+    pytest.mark.skipif(shutil.which("node") is None, reason="node não está no PATH"),
+    pytest.mark.integration,  # sobe o worker Node de verdade (D-751)
+]
 
 CAUSA = 'Error: Could not find font "Inter" in the bundle'
 JOB_QUE_FALHA = (

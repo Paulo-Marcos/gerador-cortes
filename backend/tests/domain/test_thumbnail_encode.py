@@ -20,6 +20,8 @@ from app.domain.thumbnail_encode import (
 )
 from PIL import Image, ImageDraw
 
+pytestmark = pytest.mark.integration  # codifica imagem de verdade com PIL (D-751)
+
 
 def _capa_com_texto(largura: int = 1672, altura: int = 941) -> Image.Image:
     """Reproduz o caso difícil da capa real.

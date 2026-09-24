@@ -28,6 +28,8 @@ from app.domain.enquadramento_rosto import decidir
 from app.infrastructure import detector_rosto
 from app.infrastructure.detector_rosto import DeteccaoIndisponivel, detectar_nos_instantes
 
+pytestmark = pytest.mark.integration  # OpenCV e ffmpeg de verdade (D-751)
+
 LARGURA, ALTURA = 960, 540
 
 

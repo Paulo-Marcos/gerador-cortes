@@ -86,6 +86,7 @@ class TestLeituraDaSaida:
         assert codigo == 2
 
 
+@pytest.mark.integration  # enche o pipe de um processo real (D-751)
 def test_o_cano_cheio_realmente_trava_sem_leitura():
     """A prova do problema, para o teste acima não virar fé.
 
