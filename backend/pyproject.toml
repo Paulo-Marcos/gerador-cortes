@@ -120,3 +120,17 @@ forbidden_modules = [
     "app.models",
     "app.database",
 ]
+
+[[tool.importlinter.contracts]]
+id = "clientes-externos-na-infraestrutura"
+name = "so a infraestrutura fala com clientes externos (D-696)"
+type = "forbidden"
+source_modules = ["app.routers", "app.services", "app.domain"]
+forbidden_modules = ["httpx", "sqlite3", "google", "googleapiclient", "google_auth_oauthlib"]
+# Direto só: chamar a infraestrutura, que fala com o cliente, é o caminho certo.
+allow_indirect_imports = true
+ignore_imports = [
+    # D-756: o envio de vídeo do corte ainda fala com o Google direto (youtube.py, travado).
+    "app.services.youtube -> google",
+    "app.services.youtube -> googleapiclient",
+]
