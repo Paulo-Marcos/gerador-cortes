@@ -196,7 +196,21 @@ npm run lint && npx tsc --noEmit && npx vitest run && npm run build
 - **Não rode `npm run format`** (prettier `--write`): o CI não usa prettier e o comando reescreve o repositório inteiro.
 - **Nunca declare verde pelo código de saída de um pipe** (`cmd | tail; echo $?` mostra o código do `tail`). Grave a saída num arquivo e leia.
 - No Windows, `lint-imports > NUL` sai com 1 mesmo com todos os contratos KEPT (a impressão do `rich` em cp1252). Rode com `PYTHONUTF8=1` ou grave a saída em arquivo.
-- **Confira o encoding depois de uma edição feita por agente**: tsc, eslint e vitest não pegam mojibake. O teste `tests/test_sem_mojibake_d668.py` pega.
+- **Confira o encoding depois de uma edição feita por agente**: tsc, eslint e vitest não pegam mojibake. O teste `tests/test_sem_mojibake_d668.py` pega — e, por ser pesado, fica fora do ciclo rápido: rode-o explicitamente (`pytest tests/test_sem_mojibake_d668.py`).
+
+### Níveis de teste do backend (D-751)
+
+O portão acima é o **suíte completo**: obrigatório antes de declarar pronto e o que o CI roda sempre. No dia a dia há níveis mais rápidos. Tempos medidos em 23/09/2026 nesta máquina (variam com a carga):
+
+| Momento | Comando (em `backend/`) | Custo medido |
+|---|---|---|
+| Enquanto edita | `pytest --testmon` | 2 s sem mudança; 13 s mudando `hms_to_seg` (132 testes) |
+| Antes de cada commit | `pytest -m "not integration"` | ~4 min (3.474 testes) |
+| Ao fechar uma demanda e antes do push | `pytest` | ~5 min (3.516 testes) |
+
+- **`integration` marca o teste pesado pelo recurso que ele usa**, não pelo nome: processo externo real (ffmpeg, worker Node, OpenCV), varredura do repositório ou codificação de imagem. Teste novo com esse perfil nasce marcado.
+- **O testmon só enxerga código Python executado.** Mudou `pyproject.toml` (contratos), `openapi.json`, script Node ou JSON de fixture: rode o suíte completo.
+- A primeira `pytest --testmon` constrói a base local (`.testmondata`, fora do git) rodando tudo, em cerca de 7 min. `--testmon` não funciona com `-p no:cacheprovider`: o plugin lê opções do cache do pytest.
 
 ## Princípios de engenharia (com pragmatismo)
 
