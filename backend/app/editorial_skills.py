@@ -37,7 +37,7 @@ from app import channel_paths
 from app.channel_paths import editorial_dir
 from app.config import settings
 from app.domain import variacao_prompt
-from app.services import settings_store
+from app.infrastructure import settings_store
 
 # app -> backend -> raiz do repo (mesma ancoragem de channel_paths/channels).
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent

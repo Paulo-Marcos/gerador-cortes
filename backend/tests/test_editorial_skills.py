@@ -15,7 +15,7 @@ from pathlib import Path
 
 from app import editorial_skills
 from app.config import settings
-from app.services import settings_store
+from app.infrastructure import settings_store
 
 _CANAL = "canal-teste"
 _SKILL = "cortador-expert"

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 from app import channel_config_loader, editorial_scaffolds, editorial_scaffolds_legados
-from app.services import settings_store
+from app.infrastructure import settings_store
 
 _CANAL = "canal-teste"
 

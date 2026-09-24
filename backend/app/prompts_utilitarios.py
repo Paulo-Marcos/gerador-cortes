@@ -41,7 +41,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app import channel_paths, editorial_scaffolds
-from app.services import settings_store
+from app.infrastructure import settings_store
 
 # app -> backend -> raiz do repo (mesma ancoragem de editorial_scaffolds).
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent

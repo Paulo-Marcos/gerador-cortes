@@ -108,7 +108,7 @@ def test_padroes_default_identico_ao_oraculo():
 
 
 def test_seed_le_default_versionado_e_grava_no_banco(tmp_path: Path):
-    from app.services import settings_store
+    from app.infrastructure import settings_store
 
     kw = _kw(tmp_path)
     prompt = prompts_utilitarios.resolver_prompt("sentimento-ranking", **kw)

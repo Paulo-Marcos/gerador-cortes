@@ -16,7 +16,8 @@ import threading
 
 import pytest
 from app import channel_paths
-from app.services import settings_store, sincronizacao
+from app.infrastructure import settings_store
+from app.services import sincronizacao
 from app.services.ingestao import _CanalDeProgresso
 
 

@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 from app.domain import theme_library
 from app.domain.theme_library import PALETA_CHAVES
-from app.services import channel_theme, settings_store
+from app.infrastructure import settings_store
+from app.services import channel_theme
 
 
 @pytest.fixture

@@ -160,7 +160,7 @@ def test_identidade_do_canal_ativo_devolve_os_quatro_campos(instancia, monkeypat
 
 def test_identidade_prefere_banco_ao_yaml(instancia, monkeypatch):
     """D-191: com linha no banco, ela é a fonte da verdade (YAML vira só espelho)."""
-    from app.services import settings_store
+    from app.infrastructure import settings_store
 
     instance_root, _ = instancia
     canal_root = instance_root / "channels" / "default"
@@ -177,7 +177,7 @@ def test_identidade_prefere_banco_ao_yaml(instancia, monkeypatch):
 
 def test_editar_identidade_grava_no_banco(instancia):
     """Editar deve espelhar no YAML E gravar no banco (fonte da verdade)."""
-    from app.services import settings_store
+    from app.infrastructure import settings_store
 
     instance_root, _ = instancia
     svc.editar_identidade("default", {"nome": "Editado"}, instance_root=instance_root)

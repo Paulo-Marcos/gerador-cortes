@@ -40,7 +40,7 @@ def _valores(**overrides: float) -> dict:
 
 
 def test_seed_le_defaults_de_settings(tmp_path: Path):
-    from app.services import settings_store
+    from app.infrastructure import settings_store
 
     kw = _kw(tmp_path)
     pesos = ranking_settings.resolver_pesos(**kw)
@@ -156,7 +156,7 @@ def test_migracao_adiciona_vph_sem_perder_pesos(tmp_path: Path):
     na primeira abertura, preservando os valores ajustados (D-356)."""
     import sqlite3
 
-    from app.services import settings_store
+    from app.infrastructure import settings_store
 
     db = tmp_path / "settings.db"
     # Simula o schema LEGADO da ranking_pesos: sem a coluna `vph`.

@@ -32,7 +32,7 @@ from pathlib import Path
 import yaml
 from app import channel_paths
 from app.channel_paths import editorial_dir
-from app.services import settings_store
+from app.infrastructure import settings_store
 
 _MASCOTE_YAML = "mascote.yaml"
 

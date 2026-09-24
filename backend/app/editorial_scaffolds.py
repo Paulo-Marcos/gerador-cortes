@@ -45,7 +45,7 @@ from pathlib import Path
 from string import Formatter
 
 from app import channel_paths, editorial_scaffolds_legados, editorial_skills
-from app.services import settings_store
+from app.infrastructure import settings_store
 
 # app -> backend -> raiz do repo (mesma ancoragem de editorial_skills).
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent

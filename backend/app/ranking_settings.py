@@ -27,7 +27,7 @@ from pathlib import Path
 from app import channel_paths
 from app.config import settings
 from app.domain.ranking_lives import PesosRanking
-from app.services import settings_store
+from app.infrastructure import settings_store
 
 # As 5 chaves que são PESOS (entram no reescalonamento 0-100). `meia_vida_dias` é um
 # PARÂMETRO do decay de recência, não um peso — validado à parte (deve ser > 0).

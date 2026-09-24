@@ -31,7 +31,7 @@ from pathlib import Path
 from app import channel_paths
 from app.domain import theme_library
 from app.domain.theme_library import Tema
-from app.services import settings_store
+from app.infrastructure import settings_store
 
 # Destino servido que `theme-v2.ts` importa em build (mesmo alvo de
 # `channel_assets_sync._RENDERER_THEME`).

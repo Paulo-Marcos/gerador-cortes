@@ -12,7 +12,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from app.services import settings_store
+from app.infrastructure import settings_store
 from app.services.app_settings import AppSettingsService, LogLevel, RenderSettings
 
 
@@ -357,3 +357,14 @@ def test_update_log_level_preserva_youtube_layout(tmp_path: Path):
     AppSettingsService.update_log_level(LogLevel.DEBUG)
 
     assert AppSettingsService.get().youtube_layout_padrao_global == '{"modo_padrao":"full"}'
+
+
+def test_o_caminho_antigo_e_o_mesmo_modulo_da_infraestrutura():
+    """D-696: o atalho em services/ é apelido, não cópia — o cache de schema é
+    estado de módulo e partiria em dois."""
+    import importlib
+
+    antigo = importlib.import_module("app.services.settings_store")
+    novo = importlib.import_module("app.infrastructure.settings_store")
+
+    assert antigo is novo

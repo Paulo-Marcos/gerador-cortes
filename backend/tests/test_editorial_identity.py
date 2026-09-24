@@ -26,7 +26,7 @@ from app.editorial_identity import (
     definir_nome_do_mascote,
     identidade_do_mascote,
 )
-from app.services import settings_store
+from app.infrastructure import settings_store
 
 _CANAL = "canal-teste"
 
