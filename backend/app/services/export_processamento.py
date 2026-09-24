@@ -179,8 +179,9 @@ class _ExportProcessamentoMixin:
 """
         (upload_dir / "metadados.txt").write_text(conteudo, encoding="utf-8")
 
-    @staticmethod
+    @classmethod
     async def processar_multiversion(
+        cls,
         corte_id: str,
         filtros: list[str] | None = None,
         preview: bool = False,
@@ -191,8 +192,6 @@ class _ExportProcessamentoMixin:
         - preview=False: versão completa em versoes/{filtro}/video.mp4
         - preview=True: clip de N segundos sem intro/outro em versoes/{filtro}/preview.mp4
         """
-        from app.services.export import ExportService
-
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte or not corte.arquivo_clip_path:
@@ -232,7 +231,7 @@ class _ExportProcessamentoMixin:
                     # Preview rápido de N segundos sem intro/outro
                     destino = versao_dir / "preview.mp4"
                     try:
-                        await ExportService._normalizar_audio(
+                        await cls._normalizar_audio(
                             clip_path, destino, filtro=filtro, preview_segundos=preview_segundos
                         )
                         operational_info(
@@ -247,8 +246,8 @@ class _ExportProcessamentoMixin:
                     final = versao_dir / "clip_final.mp4"
                     destino = versao_dir / "video.mp4"
                     try:
-                        await ExportService._normalizar_audio(clip_path, normalizado, filtro=filtro)
-                        await ExportService._adicionar_intro_outro(normalizado, final)
+                        await cls._normalizar_audio(clip_path, normalizado, filtro=filtro)
+                        await cls._adicionar_intro_outro(normalizado, final)
                         import shutil
 
                         await asyncio.to_thread(shutil.copy2, str(final), str(destino))

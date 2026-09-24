@@ -15,9 +15,8 @@ import pytest
 grimp = pytest.importorskip("grimp")
 
 _CICLOS_CONHECIDOS = {
-    # D-755: o mixin do processamento que importa o export que ele compõe, e a
-    # fábrica de shorts, que pede o bruto ao export enquanto o export pede os shorts.
-    frozenset({"app.services.export", "app.services.export_processamento", "app.services.shorts"}),
+    # D-755: a fábrica de shorts pede o bruto ao export, e o export pede os shorts.
+    frozenset({"app.services.export", "app.services.shorts"}),
     # D-696: render; os dois arquivos estão travados.
     frozenset({"app.services.pipeline_render", "app.services.remotion_render"}),
 }
