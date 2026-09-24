@@ -113,7 +113,7 @@ class DestinoYouTubeShorts(Destino):
 
         import asyncio
 
-        from app.domain.thumbnail_encode import preparar_para_youtube
+        from app.infrastructure.imagem.thumbnail_encode import preparar_para_youtube
 
         # A mesma preparação do corte: sem ela, capa acima de 2 MB é recusada, e
         # reencodar com o subsampling padrão do PIL borrava a cor (D-343).

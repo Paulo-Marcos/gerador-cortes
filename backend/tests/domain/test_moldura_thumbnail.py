@@ -13,12 +13,14 @@ import pytest
 from app.domain.moldura_thumbnail import (
     ARQUIVO_LEGADO,
     ARQUIVO_PADRAO,
+    arquivos_da_moldura,
+    nomes_das_molduras,
+)
+from app.infrastructure.imagem.moldura import (
     LIMIAR_DE_APARO,
     aparar_margem,
-    arquivos_da_moldura,
     emoldurar,
     espessura_da_faixa,
-    nomes_das_molduras,
 )
 from PIL import Image
 

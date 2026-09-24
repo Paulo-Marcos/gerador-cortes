@@ -15,14 +15,11 @@ from app.channel_paths import (
 )
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain.moldura_thumbnail import (
-    arquivos_da_moldura,
-    emoldurar,
-    nomes_das_molduras,
-)
-from app.domain.thumbnail_encode import LIMITE_YOUTUBE_BYTES, preparar_para_youtube
+from app.domain.moldura_thumbnail import arquivos_da_moldura, nomes_das_molduras
 from app.domain.variacao_prompt import strip_variation_tags
 from app.infrastructure import gemini_client
+from app.infrastructure.imagem.moldura import emoldurar
+from app.infrastructure.imagem.thumbnail_encode import LIMITE_YOUTUBE_BYTES, preparar_para_youtube
 from app.models import Corte, MetadadoCorte
 from app.services.app_logging import operational_error, operational_info
 from sqlalchemy import select

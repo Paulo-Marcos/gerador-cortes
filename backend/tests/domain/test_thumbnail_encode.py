@@ -13,7 +13,7 @@ import math
 import random
 
 import pytest
-from app.domain.thumbnail_encode import (
+from app.infrastructure.imagem.thumbnail_encode import (
     LIMITE_YOUTUBE_BYTES,
     detectar_mimetype,
     preparar_para_youtube,
