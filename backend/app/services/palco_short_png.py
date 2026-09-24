@@ -37,6 +37,9 @@ logger = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-short-palco.mjs"
+# D-750: ~3x o pior caso medido (101 s, na primeira execução, a frio; o normal é
+# 11-38 s). Só existe para um Chromium travado não prender o render para sempre.
+_TIMEOUT_DO_GERADOR_SEG = 300
 
 # Quantos bytes do fim da saída do gerador entram no log quando ele falha.
 _SAIDA_TAIL = 1200
@@ -133,10 +136,16 @@ async def _gerar(chave: str, destino: Path, props: dict) -> Path | None:
 async def _rodar_node(destino: Path, props_path: str) -> tuple[int, str]:
     """Roda o gerador pelo runner único de processo externo (D-750).
 
-    O runner guarda o fallback síncrono do event loop Selector do Windows (D-369):
-    sem ele, a geração falharia calada.
+    O runner guarda o fallback síncrono do event loop Selector do Windows (D-369).
+    Timeout vira código -1: cai no mesmo caminho de falha de um gerador que
+    quebrou, em vez de levantar e derrubar quem chamou.
     """
-    resultado = await process_runner.rodar(
-        ["node", str(_GEN_SCRIPT), str(destino), props_path], cwd=_REPO_ROOT, timeout=None
-    )
+    try:
+        resultado = await process_runner.rodar(
+            ["node", str(_GEN_SCRIPT), str(destino), props_path],
+            cwd=_REPO_ROOT,
+            timeout=_TIMEOUT_DO_GERADOR_SEG,
+        )
+    except process_runner.ProcessoEstourouOTempo as exc:
+        return -1, str(exc)
     return resultado.returncode, resultado.saida

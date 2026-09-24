@@ -40,6 +40,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 # `channel_paths.palco_cache_dir()` para seguir o canal ATIVO (D-156) — mesma
 # pasta que `_resolve_shared_fg_png` no ffmpeg_commands consome.
 _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-youtube-palco.mjs"
+# D-750: ~3x o pior caso medido (101 s, na primeira execução, a frio; o normal é
+# 11-38 s). Só existe para um Chromium travado não prender o render para sempre.
+_TIMEOUT_DO_GERADOR_SEG = 300
 
 
 def _cache_dir() -> Path:
@@ -359,13 +362,16 @@ async def _ensure_png_para_props(
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 json.dump(props, handle)
-            resultado = await process_runner.rodar(
-                ["node", str(_GEN_SCRIPT), str(destino), props_path],
-                cwd=_REPO_ROOT,
-                timeout=None,
-            )
-            returncode = resultado.returncode
-            saida = resultado.saida
+            try:
+                resultado = await process_runner.rodar(
+                    ["node", str(_GEN_SCRIPT), str(destino), props_path],
+                    cwd=_REPO_ROOT,
+                    timeout=_TIMEOUT_DO_GERADOR_SEG,
+                )
+                returncode, saida = resultado.returncode, resultado.saida
+            except process_runner.ProcessoEstourouOTempo as exc:
+                # Timeout cai no caminho de falha visível de sempre (D-750).
+                returncode, saida = -1, str(exc)
 
             if returncode != 0:
                 logger.warning(

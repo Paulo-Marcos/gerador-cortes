@@ -13,8 +13,7 @@ from pathlib import Path
 import psutil
 import pytest
 from app.core import process_runner
-
-pytestmark = pytest.mark.integration  # sobe processos de verdade (D-751)
+from app.services import capa_tiktok, palco_short_png, youtube_palco
 
 PY = sys.executable
 
@@ -32,6 +31,7 @@ def modo(request, monkeypatch):
     return request.param
 
 
+@pytest.mark.integration  # sobe processos de verdade (D-751)
 @pytest.mark.asyncio
 async def test_devolve_o_codigo_e_a_saida_com_o_stderr_junto(modo, tmp_path):
     programa = "import sys; print('na saida'); print('no erro', file=sys.stderr); sys.exit(3)"
@@ -43,6 +43,7 @@ async def test_devolve_o_codigo_e_a_saida_com_o_stderr_junto(modo, tmp_path):
     assert "no erro" in resultado.saida
 
 
+@pytest.mark.integration  # sobe processos de verdade (D-751)
 @pytest.mark.asyncio
 async def test_roda_no_diretorio_pedido(modo, tmp_path):
     programa = "import os; print(os.getcwd())"
@@ -52,6 +53,7 @@ async def test_roda_no_diretorio_pedido(modo, tmp_path):
     assert Path(resultado.saida.strip()).samefile(tmp_path)
 
 
+@pytest.mark.integration  # sobe processos de verdade (D-751)
 @pytest.mark.asyncio
 async def test_sem_timeout_espera_o_processo_terminar(modo, tmp_path):
     programa = "import time; time.sleep(0.5); print('terminou')"
@@ -70,6 +72,7 @@ _PAI_COM_FILHO = (
 )
 
 
+@pytest.mark.integration  # sobe processos de verdade (D-751)
 @pytest.mark.asyncio
 async def test_estourar_o_tempo_mata_o_processo_e_os_filhos(modo, tmp_path):
     # O `node` dos geradores sobe um Chromium como filho: matar só o pai deixaria
@@ -87,3 +90,64 @@ async def test_estourar_o_tempo_mata_o_processo_e_os_filhos(modo, tmp_path):
     assert not psutil.pid_exists(pai), "o processo que estourou o tempo continuou vivo"
     assert not psutil.pid_exists(filho), "o filho ficou órfão, rodando"
     assert pai != os.getpid()
+
+
+# ─── Os geradores e o timeout: travar vira a falha de sempre, não exceção nova ───
+
+
+@pytest.fixture
+def gerador_travado(monkeypatch):
+    """O runner estoura o tempo, e anota o timeout que cada gerador pediu."""
+    pedidos: list[float | None] = []
+
+    async def _estoura(argumentos, *, cwd, timeout):
+        pedidos.append(timeout)
+        raise process_runner.ProcessoEstourouOTempo(f"node passou de {timeout}s")
+
+    monkeypatch.setattr(process_runner, "rodar", _estoura)
+    return pedidos
+
+
+@pytest.mark.asyncio
+async def test_palco_do_short_travado_deixa_o_render_seguir_sem_moldura(
+    gerador_travado, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(palco_short_png, "_cache_dir", lambda: tmp_path)
+
+    palco = await palco_short_png._gerar(
+        "chave", tmp_path / "palco.png", {"fundo": "hud-forte", "janelas": []}
+    )
+
+    assert palco is None
+    assert gerador_travado == [300]
+
+
+@pytest.mark.asyncio
+async def test_palco_do_youtube_travado_vira_falha_visivel(gerador_travado, monkeypatch, tmp_path):
+    monkeypatch.setattr(youtube_palco, "_cache_dir", lambda: tmp_path)
+    props = {
+        "fundo": "f",
+        "placa": {},
+        "telas": 2,
+        "crop_tela": {},
+        "crop_facecam": {},
+        "slot_tela": {},
+        "slot_facecam": {},
+    }
+
+    falha = await youtube_palco._ensure_png_para_props(props, destino=tmp_path / "chave.png")
+
+    assert isinstance(falha, youtube_palco.PalcoPngFalha)
+    assert falha.returncode == -1
+    assert "passou de 300" in falha.saida
+    assert gerador_travado == [300]
+
+
+@pytest.mark.asyncio
+async def test_capa_do_tiktok_travada_chega_ao_operador_como_erro_da_capa(
+    gerador_travado, tmp_path
+):
+    with pytest.raises(capa_tiktok.CapaTikTokError):
+        await capa_tiktok._rasterizar(tmp_path / "capa.png", {})
+
+    assert gerador_travado == [300]
