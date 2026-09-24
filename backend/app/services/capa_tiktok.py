@@ -34,18 +34,24 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from app import editorial_scaffolds, editorial_skills
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.core import process_runner
 from app.database import AsyncSessionLocal
 from app.domain import capa_tiktok as layout_capa
+from app.domain.capa_tiktok import etiqueta_da_resposta, prompt_da_arte
 from app.domain.youtube_layout import FUNDO_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
 from app.provider_ia import ProviderIA
 from app.services.channels import identidade_do_canal_ativo
+from app.services.claude_ia import _gerar_text_provider, _log_skill_usada
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
+
+_SKILL_CAPA_TIKTOK = "capa-tiktok-expert"
+_SKILL_CAPA_TIKTOK_IMAGEM = "capa-tiktok-imagem-expert"
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-capa-tiktok.mjs"
@@ -208,6 +214,45 @@ async def montar_contexto_da_etiqueta(corte_id: str) -> ContextoDaEtiqueta:
         )
 
 
+async def sugerir_etiqueta(corte_id: str, provider: ProviderIA = "claude") -> str:
+    """As 2-3 palavras que vão no alto da capa vertical do TikTok (D-520).
+
+    Skill separada da do YouTube, e não um parâmetro dela, porque as duas
+    escrevem coisas de gêneros diferentes: lá a manchete INTEIRA de um cartaz
+    que disputa o clique numa lista; aqui o nome do assunto numa prateleira
+    onde nove capas são vistas juntas.
+
+    A diferença mais contra-intuitiva está no histórico. Toda a esteira manda
+    o passado para EVITAR repetição; aqui ele vai para permiti-la — três
+    cortes sobre a Selic devem dizer SELIC, e é essa repetição que faz a
+    grade parecer um canal.
+
+    Levanta `LookupError` (corte inexistente). Devolve a etiqueta já
+    normalizada; string vazia quando o modelo não produziu nada aproveitável,
+    e nesse caso a capa sai sem texto em vez de não sair.
+    """
+    contexto = await montar_contexto_da_etiqueta(corte_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK)
+    scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok")
+    prompt = scaffold.format(
+        titulo_proposto=contexto.titulo,
+        tema_central=contexto.tema_central,
+        resumo=contexto.resumo,
+        etiquetas_recentes=contexto.etiquetas_recentes or "(nenhuma ainda)",
+    )
+    _log_skill_usada(_SKILL_CAPA_TIKTOK, skill, scaffold)
+    bruto = await _gerar_text_provider(
+        provider,
+        prompt,
+        skill,
+        _SKILL_CAPA_TIKTOK,
+        projeto_id=contexto.projeto_id,
+        corte_id=corte_id,
+    )
+    return etiqueta_da_resposta(bruto)
+
+
 def _ajuste_do_layout() -> dict:
     """Onde o operador pôs cada componente, das configurações globais (D-532).
 
@@ -282,6 +327,49 @@ def _arte_existente(thumb_dir: Path, corte_id: str) -> Path | None:
     return None
 
 
+async def _escrever_prompt_da_arte(corte_id: str, texto_capa: str, provider: ProviderIA) -> str:
+    """O prompt de imagem da faixa central da capa do TikTok (D-523, D-524).
+
+    A primeira versão da capa usava um frame do próprio vídeo. Ficou ruim por
+    um motivo estrutural: o vídeo é deitado e cheio de texto na tela — um
+    documento, um slide —, e nada disso sobrevive à miniatura da grade do
+    perfil. Aqui a faixa passa a receber uma cena feita para ser vista
+    pequena.
+
+    A imagem nasce SEM texto de propósito: a etiqueta e o selo são desenhados
+    por cima, com a tipografia do canal. Gerador de imagem não escreve
+    tipografia confiável, e duas camadas de texto brigariam.
+
+    O estilo é herdado, não redescrito: o prompt que o Capista já escreveu
+    para a thumbnail do YouTube vai junto como referência. Manter a
+    identidade do mascote em dois corpos de skill é garantir que um dia os
+    dois discordem — e aí o mesmo canal teria dois personagens.
+
+    Levanta `LookupError` (corte inexistente).
+    """
+    contexto = await montar_contexto_da_etiqueta(corte_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK_IMAGEM)
+    scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok-imagem")
+    prompt = scaffold.format(
+        titulo_proposto=contexto.titulo,
+        tema_central=contexto.tema_central,
+        texto_capa=texto_capa or "(sem etiqueta)",
+        resumo=contexto.resumo,
+        prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
+    )
+    _log_skill_usada(_SKILL_CAPA_TIKTOK_IMAGEM, skill, scaffold)
+    bruto = await _gerar_text_provider(
+        provider,
+        prompt,
+        skill,
+        _SKILL_CAPA_TIKTOK_IMAGEM,
+        projeto_id=contexto.projeto_id,
+        corte_id=corte_id,
+    )
+    return prompt_da_arte(bruto)
+
+
 async def gerar_prompt_da_arte(corte_id: str, provider: ProviderIA = "claude") -> str:
     """Escreve o prompt da arte e o guarda no metadado (D-524).
 
@@ -289,8 +377,6 @@ async def gerar_prompt_da_arte(corte_id: str, provider: ProviderIA = "claude") -
     o prompt — em vez de só devolvê-lo — é o que torna o fluxo retomável: ele
     fecha a tela, gera a imagem com calma e volta para subir a arte.
     """
-    from app.services.claude_ia import ClaudeIaService
-
     contexto = await _contexto(corte_id, exigir_video=False)
     if not contexto["prompt_thumbnail"]:
         # A arte HERDA o estilo do prompt do YouTube: mascote, paleta, luz. Sem
@@ -305,9 +391,7 @@ async def gerar_prompt_da_arte(corte_id: str, provider: ProviderIA = "claude") -
     etiqueta = layout_capa.normalizar_etiqueta(contexto["texto_capa"])
 
     try:
-        prompt = await ClaudeIaService.prompt_da_arte_da_capa_via_claude(
-            corte_id, etiqueta, provider
-        )
+        prompt = await _escrever_prompt_da_arte(corte_id, etiqueta, provider)
     except Exception as exc:
         raise CapaTikTokError(f"Nao consegui escrever o prompt da arte: {exc}") from exc
 

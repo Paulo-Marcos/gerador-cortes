@@ -116,8 +116,6 @@ _SKILL_SHORTS = "shorts-expert"
 _SKILL_CENAS_SHORT = "cenas-short-expert"
 _SKILL_GANCHO_SHORT = "gancho-short-expert"
 _SKILL_METADADOS_SHORT = "metadados-short-expert"
-_SKILL_CAPA_TIKTOK = "capa-tiktok-expert"
-_SKILL_CAPA_TIKTOK_IMAGEM = "capa-tiktok-imagem-expert"
 
 
 def _pedido(
@@ -1282,98 +1280,6 @@ class ClaudeIaService:
         return await post_store.gravar(short_id, post)
 
     # ── Fase 4: prompt de thumbnail via Claude (skill capista) ────────────────
-
-    @staticmethod
-    async def sugerir_etiqueta_capa_via_claude(
-        corte_id: str, provider: ProviderIA = "claude"
-    ) -> str:
-        """As 2-3 palavras que vão no alto da capa vertical do TikTok (D-520).
-
-        Skill separada da do YouTube, e não um parâmetro dela, porque as duas
-        escrevem coisas de gêneros diferentes: lá a manchete INTEIRA de um cartaz
-        que disputa o clique numa lista; aqui o nome do assunto numa prateleira
-        onde nove capas são vistas juntas.
-
-        A diferença mais contra-intuitiva está no histórico. Toda a esteira manda
-        o passado para EVITAR repetição; aqui ele vai para permiti-la — três
-        cortes sobre a Selic devem dizer SELIC, e é essa repetição que faz a
-        grade parecer um canal.
-
-        Levanta `LookupError` (corte inexistente). Devolve a etiqueta já
-        normalizada; string vazia quando o modelo não produziu nada aproveitável,
-        e nesse caso a capa sai sem texto em vez de não sair.
-        """
-        from app.domain.capa_tiktok import etiqueta_da_resposta
-        from app.services import capa_tiktok as capa_store
-
-        contexto = await capa_store.montar_contexto_da_etiqueta(corte_id)
-
-        skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK)
-        scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok")
-        prompt = scaffold.format(
-            titulo_proposto=contexto.titulo,
-            tema_central=contexto.tema_central,
-            resumo=contexto.resumo,
-            etiquetas_recentes=contexto.etiquetas_recentes or "(nenhuma ainda)",
-        )
-        _log_skill_usada(_SKILL_CAPA_TIKTOK, skill, scaffold)
-        bruto = await _gerar_text_provider(
-            provider,
-            prompt,
-            skill,
-            _SKILL_CAPA_TIKTOK,
-            projeto_id=contexto.projeto_id,
-            corte_id=corte_id,
-        )
-        return etiqueta_da_resposta(bruto)
-
-    @staticmethod
-    async def prompt_da_arte_da_capa_via_claude(
-        corte_id: str, texto_capa: str, provider: ProviderIA = "claude"
-    ) -> str:
-        """O prompt de imagem da faixa central da capa do TikTok (D-523, D-524).
-
-        A primeira versão da capa usava um frame do próprio vídeo. Ficou ruim por
-        um motivo estrutural: o vídeo é deitado e cheio de texto na tela — um
-        documento, um slide —, e nada disso sobrevive à miniatura da grade do
-        perfil. Aqui a faixa passa a receber uma cena feita para ser vista
-        pequena.
-
-        A imagem nasce SEM texto de propósito: a etiqueta e o selo são desenhados
-        por cima, com a tipografia do canal. Gerador de imagem não escreve
-        tipografia confiável, e duas camadas de texto brigariam.
-
-        O estilo é herdado, não redescrito: o prompt que o Capista já escreveu
-        para a thumbnail do YouTube vai junto como referência. Manter a
-        identidade do mascote em dois corpos de skill é garantir que um dia os
-        dois discordem — e aí o mesmo canal teria dois personagens.
-
-        Levanta `LookupError` (corte inexistente).
-        """
-        from app.domain.capa_tiktok import prompt_da_arte
-        from app.services import capa_tiktok as capa_store
-
-        contexto = await capa_store.montar_contexto_da_etiqueta(corte_id)
-
-        skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK_IMAGEM)
-        scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok-imagem")
-        prompt = scaffold.format(
-            titulo_proposto=contexto.titulo,
-            tema_central=contexto.tema_central,
-            texto_capa=texto_capa or "(sem etiqueta)",
-            resumo=contexto.resumo,
-            prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
-        )
-        _log_skill_usada(_SKILL_CAPA_TIKTOK_IMAGEM, skill, scaffold)
-        bruto = await _gerar_text_provider(
-            provider,
-            prompt,
-            skill,
-            _SKILL_CAPA_TIKTOK_IMAGEM,
-            projeto_id=contexto.projeto_id,
-            corte_id=corte_id,
-        )
-        return prompt_da_arte(bruto)
 
     @staticmethod
     async def gerar_prompt_thumbnail_via_claude(

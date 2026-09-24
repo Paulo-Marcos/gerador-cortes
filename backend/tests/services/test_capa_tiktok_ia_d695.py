@@ -18,12 +18,11 @@ from app import editorial_scaffolds, editorial_skills
 from app.infrastructure import antigravity_cli_client, claude_cli_client
 from app.models import Base, Corte, MetadadoCorte, Projeto
 from app.services import capa_tiktok
-from app.services.claude_ia import ClaudeIaService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-sugerir_etiqueta = ClaudeIaService.sugerir_etiqueta_capa_via_claude
+sugerir_etiqueta = capa_tiktok.sugerir_etiqueta
 
 _PROMPT_DA_ARTE = (
     "Editorial illustration of the frog mascot holding a falling coin, hard light, "

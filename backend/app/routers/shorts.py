@@ -1013,7 +1013,6 @@ async def gerar_capa_tiktok(
     16:9 do YouTube, que e outra imagem para outro trabalho.
     """
     from app.services import capa_tiktok
-    from app.services.claude_ia import ClaudeIaService
 
     # O texto da capa ja curado tem prioridade sobre a skill: quem escolheu
     # aquela palavra para a thumbnail do YouTube ja decidiu como o corte se
@@ -1021,7 +1020,7 @@ async def gerar_capa_tiktok(
     etiqueta = body.etiqueta.strip()
     if not etiqueta and body.sugerir_etiqueta and not await capa_tiktok.tem_texto_de_capa(corte_id):
         try:
-            etiqueta = await ClaudeIaService.sugerir_etiqueta_capa_via_claude(corte_id, provider)
+            etiqueta = await capa_tiktok.sugerir_etiqueta(corte_id, provider)
         except Exception:
             # A etiqueta e desejavel, nao obrigatoria: uma capa com a arte e o
             # selo continua valendo, e ficar sem capa por causa de tres palavras
