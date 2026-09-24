@@ -14,16 +14,17 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
-from app.domain import ciclo_corte, segmentos_short
-from app.domain.ancora_match import ancorar_desvio
-from app.domain.corte_mapper import (
+from app.domain import segmentos_short
+from app.domain.corte import ciclo_corte
+from app.domain.corte.ancora_match import ancorar_desvio
+from app.domain.corte.corte_mapper import (
     cenas_fora_do_corte,
     extrair_cenas_remotion,
     normalizar_cenas_remotion_payload,
     tem_colapso_de_tempos_das_cenas,
 )
-from app.domain.desvio_categoria import SILENCIO, classificar_desvio
-from app.domain.juncao_cortes import (
+from app.domain.corte.desvio_categoria import SILENCIO, classificar_desvio
+from app.domain.corte.juncao_cortes import (
     CAMPOS_TEMPO_CENA,
     CAMPOS_TEMPO_REGIAO,
     CAMPOS_TEMPO_SEGMENTO,
@@ -32,21 +33,21 @@ from app.domain.juncao_cortes import (
     emendar_texto,
     juntar_desvios,
 )
-from app.domain.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
-from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
-from app.domain.reading_metadata import (
+from app.domain.corte.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
+from app.domain.corte.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
     remover_prefixo_leitura_titulo,
 )
-from app.domain.segment_calculator import (
+from app.domain.corte.segment_calculator import (
     dividir_desvios_no_ponto,
     normalizar_desvio,
     somar_desvios_novos,
 )
-from app.domain.snap_desvios import palavras_do_corte, snap_desvio_a_palavras
+from app.domain.corte.snap_desvios import palavras_do_corte, snap_desvio_a_palavras
+from app.domain.corte.youtube_layout import normalizar_layout_youtube
+from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
 from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
-from app.domain.youtube_layout import normalizar_layout_youtube
 from app.infrastructure.render.ffmpeg_basic import (
     build_silence_detect_proxy_cmd,
     build_silence_detect_video_cmd,
@@ -369,8 +370,8 @@ class CorteService:
         # confiar nele cegamente mandaria o ffmpeg cortar fora do intervalo.
         # `reconciliar` estica as fatias até o novo intervalo mantendo a ORDEM.
         if dados.inicio_seg is not None or dados.fim_seg is not None:
-            from app.domain.arranjo_blocos import parse as parse_arranjo
-            from app.domain.arranjo_blocos import reconciliar, serializar
+            from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+            from app.domain.corte.arranjo_blocos import reconciliar, serializar
 
             arranjo = parse_arranjo(corte.arranjo_blocos)
             if arranjo:
@@ -674,8 +675,8 @@ class CorteService:
             # intervalo parte o arranjo. Cada metade fica com os blocos que lhe
             # cabem, esticados para ladrilhar a própria borda nova e NA ORDEM que
             # o editor tinha escolhido. Corte sem arranjo continua sem arranjo.
-            from app.domain.arranjo_blocos import parse as parse_arranjo
-            from app.domain.arranjo_blocos import reconciliar, serializar
+            from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+            from app.domain.corte.arranjo_blocos import reconciliar, serializar
 
             arranjo = parse_arranjo(corte.arranjo_blocos)
             arranjo_esq = serializar(reconciliar(arranjo, inicio, ponto))
@@ -826,8 +827,8 @@ class CorteService:
             # mesmo tipo de estrago que a junção existe para evitar nos trechos e
             # nas cenas: trabalho editorial jogado fora por uma operação de
             # fronteira. Dois cortes sem arranjo continuam sem arranjo.
-            from app.domain.arranjo_blocos import concatenar, serializar
-            from app.domain.arranjo_blocos import parse as parse_arranjo
+            from app.domain.corte.arranjo_blocos import concatenar, serializar
+            from app.domain.corte.arranjo_blocos import parse as parse_arranjo
 
             arranjo_mesclado = concatenar(
                 parse_arranjo(primeiro.arranjo_blocos),
@@ -1374,7 +1375,7 @@ class CorteService:
                     return
                 trans_raw = json.loads(projeto.transcricao_raw or "[]")
 
-            from app.domain.segment_calculator import normalizar_desvio
+            from app.domain.corte.segment_calculator import normalizar_desvio
 
             desvios = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
 
@@ -1455,8 +1456,8 @@ class CorteService:
             # do mesmo jeito que o vídeo — senão a legenda descreve um bruto que
             # não existe mais, e as cenas (que leem daqui) apontam para o lugar
             # errado. Sem arranjo, é o mesmo `calcular_segmentos` de sempre.
-            from app.domain.arranjo_blocos import parse as parse_arranjo
-            from app.domain.arranjo_blocos import reconciliar, segmentos_na_ordem
+            from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+            from app.domain.corte.arranjo_blocos import reconciliar, segmentos_na_ordem
 
             arranjo = reconciliar(parse_arranjo(corte.arranjo_blocos), c_inicio, c_fim)
             segmentos_mantidos = segmentos_na_ordem(arranjo, c_inicio, c_fim, desvios)

@@ -15,7 +15,7 @@ import types
 
 import app.services.pipeline_render as pr
 import pytest
-from app.domain.youtube_layout import regioes_full_posicionadas, resolver_layout_em_cascata
+from app.domain.corte.youtube_layout import regioes_full_posicionadas, resolver_layout_em_cascata
 from app.services.app_settings import AppSettingsService
 
 # Espelha o preset "OBS FULL" salvo como padrao global: crop do bruto + encaixe

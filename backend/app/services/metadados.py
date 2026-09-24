@@ -17,11 +17,11 @@ from app.channel_config_loader import (
 )
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
-from app.domain.reading_metadata import (
+from app.domain.corte.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
 )
+from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.variacao_prompt import bloco_variacao_de
 from app.editorial_identity import identidade_do_mascote
 from app.models import Corte, MetadadoCorte, Projeto

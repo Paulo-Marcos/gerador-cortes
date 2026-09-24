@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 
-from app.domain.avaliacao_thumbnail import CRITERIOS, veredito_e_positivo
+from app.domain.corte.avaliacao_thumbnail import CRITERIOS, veredito_e_positivo
 
 # Eixos visuais que o Capista declara na linha [VARIATION_TAGS] (SKILL.md §13).
 # A ordem é a da própria skill, para a apresentação sair na sequência esperada.

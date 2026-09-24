@@ -679,7 +679,7 @@ class TestBuildCinematicGradeCmd:
     def test_cmd_com_overrides_distintos_dedupe_inputs(self, monkeypatch):
         # F-048: duas regioes — uma com override, outra sem — geram inputs
         # PNG distintos no FFmpeg.
-        from app.domain.youtube_layout import palco_cache_key_para_config
+        from app.domain.corte.youtube_layout import palco_cache_key_para_config
 
         chamadas: list[dict] = []
 

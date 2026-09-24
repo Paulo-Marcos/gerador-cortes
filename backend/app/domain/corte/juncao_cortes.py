@@ -19,7 +19,7 @@ editor e deixa o vídeo rodando vazio depois do fim real.
 Módulo puro: só dicts, listas e números — sem SQLAlchemy, sem HTTP.
 """
 
-from app.domain.segment_calculator import calcular_segmentos, normalizar_desvio
+from app.domain.corte.segment_calculator import calcular_segmentos, normalizar_desvio
 from app.domain.time_convert import seg_to_hms
 
 # Campos de tempo (em segundos do bruto) de cada tipo de marcação deslocável.

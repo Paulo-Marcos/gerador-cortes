@@ -1,4 +1,4 @@
-"""Testes de `app.domain.ancora_match` (D-355 — âncora verbatim de borda).
+"""Testes de `app.domain.corte.ancora_match` (D-355 — âncora verbatim de borda).
 
 Função pura: dada a CITAÇÃO do texto onde a borda cai e o timestamp aproximado
 do LLM, ancora a borda no tempo real daquela palavra na transcrição word-level,
@@ -8,7 +8,7 @@ palavras ou sem bom match → None; nunca inverte a borda).
 
 from __future__ import annotations
 
-from app.domain.ancora_match import ancorar_borda, ancorar_intervalo
+from app.domain.corte.ancora_match import ancorar_borda, ancorar_intervalo
 
 # Palavras word-level (tempos absolutos em segundos), já ordenadas. A frase
 # "subiu no telhado" aparece DUAS vezes: perto de t=101 e de novo lá em t=500.

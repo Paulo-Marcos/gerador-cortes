@@ -1,4 +1,4 @@
-"""Testes de `app.domain.moldura_thumbnail` — a moldura colada na capa.
+"""Testes de `app.domain.corte.moldura_thumbnail` — a moldura colada na capa.
 
 Função pura de imagem: entra a capa e o PNG da moldura, sai a capa emoldurada.
 Os casos abaixo cobrem o que quebrou de verdade durante a construção, não o
@@ -10,7 +10,7 @@ from __future__ import annotations
 import io
 
 import pytest
-from app.domain.moldura_thumbnail import (
+from app.domain.corte.moldura_thumbnail import (
     ARQUIVO_LEGADO,
     ARQUIVO_PADRAO,
     arquivos_da_moldura,

@@ -1,5 +1,5 @@
 import pytest
-from app.domain.segment_calculator import (
+from app.domain.corte.segment_calculator import (
     calcular_segmentos,
     dividir_desvios_no_ponto,
     eh_desvio_tecnico,

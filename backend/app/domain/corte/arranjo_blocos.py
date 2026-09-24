@@ -41,7 +41,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from app.domain.segment_calculator import calcular_segmentos
+from app.domain.corte.segment_calculator import calcular_segmentos
 
 # Bloco mais curto que isso é lixo de arredondamento, não decisão editorial —
 # o mesmo limiar que `calcular_segmentos` usa para micro-fatias.

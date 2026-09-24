@@ -16,7 +16,7 @@ relação com isto), no mesmo padrão de `avaliacao_cortes`.
 
 from __future__ import annotations
 
-from app.domain.avaliacao_bruto import tipos_disponiveis
+from app.domain.corte.avaliacao_bruto import tipos_disponiveis
 from app.provider_ia import ProviderIA
 from app.services import avaliacao_bruto as avaliacao_store
 from fastapi import APIRouter, HTTPException

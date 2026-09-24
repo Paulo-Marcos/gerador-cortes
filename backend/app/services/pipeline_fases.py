@@ -9,7 +9,7 @@ import logging
 import shutil
 from pathlib import Path
 
-from app.domain.render_etapas import fase_dentro_do_alcance
+from app.domain.corte.render_etapas import fase_dentro_do_alcance
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 """Testes do domínio puro `render_etapas` (alcance de fases do render parcial)."""
 
-from app.domain.render_etapas import (
+from app.domain.corte.render_etapas import (
     eh_render_parcial,
     fase_dentro_do_alcance,
     normalizar_fase,

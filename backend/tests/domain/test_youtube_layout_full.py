@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from app.domain.youtube_layout import (
+from app.domain.corte.youtube_layout import (
     DEFAULT_FULL_CROP,
     DEFAULT_FULL_SLOT,
     config_compartilhada_para_full,

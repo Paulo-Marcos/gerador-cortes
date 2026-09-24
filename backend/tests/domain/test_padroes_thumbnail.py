@@ -1,6 +1,6 @@
 """Testes do domínio puro `padroes_thumbnail` (D-070)."""
 
-from app.domain.padroes_thumbnail import (
+from app.domain.corte.padroes_thumbnail import (
     EIXOS,
     compilar_padroes,
     parsear_variation_tags,

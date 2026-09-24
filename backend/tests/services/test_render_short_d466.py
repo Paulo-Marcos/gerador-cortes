@@ -648,7 +648,7 @@ def test_textura_invalida_no_palco_cai_na_padrao_do_canal():
     Se so a previa normalizasse, um preset antigo daria tela certa e MP4 com um
     fundo inexistente — a divergencia silenciosa que a D-549 ja custou uma vez.
     """
-    from app.domain.youtube_layout import FUNDO_PADRAO
+    from app.domain.corte.youtube_layout import FUNDO_PADRAO
     from app.services.render_short import _textura
 
     assert _textura({"fundo_editorial": "verdeProfundo"}) == FUNDO_PADRAO

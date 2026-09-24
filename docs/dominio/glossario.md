@@ -11,7 +11,7 @@
 | Termo | O que é | Onde mora |
 |---|---|---|
 | **Projeto** | Uma live baixada e processada. Tem uma pasta própria em `projetos/<id>/`. | `models.Projeto`; ciclo em `domain/projeto/ciclo_projeto.py` (RN-01) |
-| **Corte** | Um trecho proposto ou aprovado da live, definido por `inicio_seg`/`fim_seg` em tempo de **live**. | `models.Corte`; ciclo em `domain/ciclo_corte.py` (RN-04) |
+| **Corte** | Um trecho proposto ou aprovado da live, definido por `inicio_seg`/`fim_seg` em tempo de **live**. | `models.Corte`; ciclo em `domain/corte/ciclo_corte.py` (RN-04) |
 | **Metadado** | O texto e a capa de publicação de um corte (título, descrição, tags, thumbnail). Um por corte. | `models.MetadadoCorte` |
 | **Short** | Um vídeo vertical tirado de um corte. Seus tempos estão no espaço do **bruto**, não da live (RN-08). | `models.Short` |
 | **Bruto** | O clip do corte já cortado da live, sem filtro nem cenas (`clip_raw_*.mkv`). É a base do render final e dos shorts. | `services/export_bruto.py`; `Corte.arquivo_clip_path` |
@@ -25,11 +25,11 @@ São cinco ideias diferentes que o código e a tela às vezes chamam pelo mesmo 
 
 | Termo | O que é | Onde mora | Não confundir com |
 |---|---|---|---|
-| **Desvio** | Um intervalo que **sai** do corte (silêncio, erro, trecho sem graça). A **tela chama de "trecho"**. | `Corte.desvios`; `domain/segment_calculator.py` | bloco (desvio decide o que sai; bloco decide a ordem do que fica) |
-| **Bloco** | Um pedaço do corte na **ordem de exibição**: a lista de blocos é a EDL do corte. Lista vazia = ordem cronológica. | `Corte.arranjo_blocos`; `domain/arranjo_blocos.py` | desvio (os dois se compõem: cada bloco é subtraído dos seus desvios) |
+| **Desvio** | Um intervalo que **sai** do corte (silêncio, erro, trecho sem graça). A **tela chama de "trecho"**. | `Corte.desvios`; `domain/corte/segment_calculator.py` | bloco (desvio decide o que sai; bloco decide a ordem do que fica) |
+| **Bloco** | Um pedaço do corte na **ordem de exibição**: a lista de blocos é a EDL do corte. Lista vazia = ordem cronológica. | `Corte.arranjo_blocos`; `domain/corte/arranjo_blocos.py` | desvio (os dois se compõem: cada bloco é subtraído dos seus desvios) |
 | **Segmento (do short)** | Um pedaço do **bruto** que entra no short, na ordem que o operador escolheu. Lista vazia = janela única. | `Short.segmentos`; `domain/segmentos_short.py` (RN-09) | segmento detectado |
 | **Segmento detectado** | Um corte de cena achado automaticamente (PySceneDetect) no bruto do corte. Só uma sugestão. | `Corte.segmentos_detectados` | segmento do short |
-| **Região (de layout)** | Um intervalo de **tempo** do corte com um modo de exibição: `full` ou `compartilhada`. | `layout_youtube.regioes`; `domain/youtube_layout.py` | região do quadro |
+| **Região (de layout)** | Um intervalo de **tempo** do corte com um modo de exibição: `full` ou `compartilhada`. | `layout_youtube.regioes`; `domain/corte/youtube_layout.py` | região do quadro |
 | **Região (do quadro)** | Uma **área** do vídeo de origem com nome (a facecam, a tela compartilhada), recortada e recolocada num slot. | presets de palco; `domain/palco_short.py` (`Recorte.regiao`) | região de layout |
 
 ### Os três ganchos

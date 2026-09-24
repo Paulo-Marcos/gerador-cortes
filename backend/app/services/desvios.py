@@ -1,7 +1,7 @@
 import json
 
 from app.database import AsyncSessionLocal
-from app.domain.desvio_categoria import OUTRO, motivo_com_aviso, normalizar_categoria
+from app.domain.corte.desvio_categoria import OUTRO, motivo_com_aviso, normalizar_categoria
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.time_convert import hms_to_seg
 from app.models import Corte

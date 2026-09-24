@@ -23,7 +23,7 @@ from typing import Any
 
 from app import channel_paths
 from app.core import process_runner
-from app.domain.youtube_layout import (
+from app.domain.corte.youtube_layout import (
     config_compartilhada_para_full,
     normalizar_layout_youtube,
     palco_cache_key,

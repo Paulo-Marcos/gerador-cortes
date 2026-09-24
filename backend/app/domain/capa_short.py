@@ -2,7 +2,7 @@
 
 ## Por que NAO e a capa do TikTok
 
-A capa vertical do corte (`domain/capa_tiktok.py`) existe para resolver um
+A capa vertical do corte (`domain/corte/capa_tiktok.py`) existe para resolver um
 problema do video DEITADO, e o codigo dela diz isso em tres lugares: o frame do
 proprio video "saiu ruim por um motivo estrutural — o video e deitado e costuma
 ter texto na tela"; a imagem 16:9 "virava uma faixa fina num retangulo vazio"; e

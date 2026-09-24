@@ -16,7 +16,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from app.domain.ancora_match import ancorar_desvio
+from app.domain.corte.ancora_match import ancorar_desvio
 from app.models import Corte
 from app.services.analise import AnaliseService
 
@@ -134,7 +134,7 @@ async def test_corte_sem_palavras_e_no_op(monkeypatch):
 
 
 def _palavras_flat():
-    from app.domain.ancora_match import achatar_palavras
+    from app.domain.corte.ancora_match import achatar_palavras
 
     return achatar_palavras(_TRANSCRICAO)
 

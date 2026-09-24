@@ -4,9 +4,9 @@ O teste que mais importa aqui é o primeiro: **corte sem arranjo tem que sair
 exatamente como saía antes desta demanda.** Todo o resto é ganho; esse é o piso.
 """
 
-from app.domain import arranjo_blocos as arranjo
-from app.domain.arranjo_blocos import Bloco
-from app.domain.segment_calculator import calcular_segmentos
+from app.domain.corte import arranjo_blocos as arranjo
+from app.domain.corte.arranjo_blocos import Bloco
+from app.domain.corte.segment_calculator import calcular_segmentos
 
 SILENCIO = [{"inicio_seg": 100.0, "fim_seg": 150.0}]
 

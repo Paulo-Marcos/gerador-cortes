@@ -17,7 +17,7 @@ A imagem nasce sem texto de propósito — a etiqueta e o selo são desenhados p
 cima, com a tipografia do canal. O frame do vídeo continua disponível como
 escape hatch.
 
-A geometria vem pronta de `app/domain/capa_tiktok.py`. Este módulo é a
+A geometria vem pronta de `app/domain/corte/capa_tiktok.py`. Este módulo é a
 plumbing: arquivos, subprocessos e o caminho gravado no metadado.
 
 Falhar aqui não derruba nada a montante: quem chama recebe `None` e a tela diz
@@ -38,9 +38,9 @@ from app import editorial_scaffolds, editorial_skills
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.core import process_runner
 from app.database import AsyncSessionLocal
-from app.domain import capa_tiktok as layout_capa
-from app.domain.capa_tiktok import etiqueta_da_resposta, prompt_da_arte
-from app.domain.youtube_layout import FUNDO_PADRAO
+from app.domain.corte import capa_tiktok as layout_capa
+from app.domain.corte.capa_tiktok import etiqueta_da_resposta, prompt_da_arte
+from app.domain.corte.youtube_layout import FUNDO_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
 from app.provider_ia import ProviderIA

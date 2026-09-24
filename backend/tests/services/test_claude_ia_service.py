@@ -11,9 +11,9 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from app.domain.corte.segment_calculator import somar_desvios_novos
 from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartados
 from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto
-from app.domain.segment_calculator import somar_desvios_novos
 from app.infrastructure import antigravity_cli_client
 from app.services import analise, claude_ia, metadados
 from app.services.analise import AnaliseService
@@ -168,7 +168,7 @@ class TestGerarCortes:
 
     def test_desvio_novo_leva_o_provider_que_o_propos(self, monkeypatch):
         """O selo da tela sai daqui: `origem` diz QUAL IA propôs o trecho."""
-        from app.domain.segment_calculator import normalizar_desvio
+        from app.domain.corte.segment_calculator import normalizar_desvio
 
         desvio = normalizar_desvio(
             {"inicio_hms": "00:00:01", "fim_hms": "00:00:02", "origem": "gemini"}
@@ -629,7 +629,7 @@ class TestTrechos:
 
 
 def _desvio(inicio_hms: str, fim_hms: str, motivo: str, origem: str | None = None) -> dict:
-    from app.domain.segment_calculator import normalizar_desvio
+    from app.domain.corte.segment_calculator import normalizar_desvio
 
     bruto = {"inicio_hms": inicio_hms, "fim_hms": fim_hms, "motivo": motivo}
     if origem:

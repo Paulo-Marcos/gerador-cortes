@@ -17,7 +17,7 @@ import logging
 from app import prompts_utilitarios
 from app.config import settings
 from app.domain.compartilhado.gerador_ia import PedidoIA
-from app.domain.padroes_thumbnail import (
+from app.domain.corte.padroes_thumbnail import (
     MIN_MELHORES_PARA_ANALISE,
     compilar_padroes,
     selecionar_melhores,

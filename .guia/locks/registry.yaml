@@ -238,7 +238,7 @@ locks:
     e testes de paridade preview/render
   locked_at: 2026-06-09
   files:
-  - backend/app/domain/youtube_layout.py
+  - backend/app/domain/corte/youtube_layout.py
   - backend/tests/domain/test_youtube_card_zone.py
   - frontend/src/features/editor/fase2/youtubeLayout.ts
   - frontend/src/features/editor/fase2/__tests__/sharedCardZone.test.ts
@@ -281,5 +281,5 @@ locks:
   files:
   - frontend/src/lib/readingMetadata.ts
   - frontend/src/lib/__tests__/readingMetadata.test.ts
-  - backend/app/domain/reading_metadata.py
+  - backend/app/domain/corte/reading_metadata.py
   - backend/tests/domain/test_reading_metadata.py

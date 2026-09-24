@@ -164,7 +164,7 @@ def moldura_thumbnail_path(arquivo: str) -> Path | None:
     publicar a capa crua, não falhar.
 
     Resolve UM nome de propósito. Qual moldura o corte merece, e para qual cair
-    quando ela falta, é regra editorial e mora em `domain.moldura_thumbnail`.
+    quando ela falta, é regra editorial e mora em `domain.corte.moldura_thumbnail`.
     """
     for base in (_channel_assets_root(), _BACKEND_ROOT / "assets"):
         if base is None:

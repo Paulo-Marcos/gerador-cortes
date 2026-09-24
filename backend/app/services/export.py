@@ -20,9 +20,9 @@ from pathlib import Path
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain.arranjo_blocos import parse as parse_arranjo
-from app.domain.arranjo_blocos import reconciliar, segmentos_na_ordem
-from app.domain.segment_calculator import (
+from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+from app.domain.corte.arranjo_blocos import reconciliar, segmentos_na_ordem
+from app.domain.corte.segment_calculator import (
     mesclar_desvios_sobrepostos,
     normalizar_desvio,
 )

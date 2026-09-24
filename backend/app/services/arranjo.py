@@ -1,7 +1,7 @@
 """Operações de ordem dos blocos de um corte (D-576).
 
 O que este serviço faz é só isto: carregar o arranjo do corte, aplicar uma
-operação PURA de `domain/arranjo_blocos.py`, reconciliar com as bordas atuais,
+operação PURA de `domain/corte/arranjo_blocos.py`, reconciliar com as bordas atuais,
 validar e gravar. Toda a regra vive no domínio; aqui mora a transação e a
 decisão de quando a transcrição precisa ser refeita.
 
@@ -16,8 +16,8 @@ from __future__ import annotations
 import json
 
 from app.database import AsyncSessionLocal
-from app.domain import arranjo_blocos as dominio
-from app.domain.segment_calculator import mesclar_desvios_sobrepostos, normalizar_desvio
+from app.domain.corte import arranjo_blocos as dominio
+from app.domain.corte.segment_calculator import mesclar_desvios_sobrepostos, normalizar_desvio
 from app.models import Corte
 from app.services.app_logging import operational_error
 

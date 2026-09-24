@@ -10,11 +10,14 @@ from pathlib import Path
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
 from app.database import get_db
-from app.domain import ciclo_corte
-from app.domain.corte_mapper import (
+from app.domain.corte import ciclo_corte
+from app.domain.corte.corte_mapper import (
     extrair_cenas_remotion,
 )
-from app.domain.youtube_layout import aplicar_layout_card_por_contexto, normalizar_layout_youtube
+from app.domain.corte.youtube_layout import (
+    aplicar_layout_card_por_contexto,
+    normalizar_layout_youtube,
+)
 from app.models import Corte, Projeto, StatusCorte
 from app.provider_ia import ProviderIA
 from app.routers.cortes_helpers import (

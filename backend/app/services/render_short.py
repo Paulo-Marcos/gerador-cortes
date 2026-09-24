@@ -32,11 +32,11 @@ from app.domain import gancho_short, moldura_short, segmentos_short
 # Alias: o servico `legendas_short` (as palavras) ja e importado abaixo, e dois
 # nomes com um `s` de diferenca no mesmo arquivo e erro de leitura esperando.
 from app.domain import legenda_short as lugar_da_legenda
+from app.domain.corte.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
+from app.domain.corte.youtube_layout import _normalizar_fundo as textura_valida
 from app.domain.formato_video import VERTICAL, Resolucao
 from app.domain.fundo_short import para_ffmpeg
 from app.domain.moldura_short import COR_PADRAO, faixas
-from app.domain.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
-from app.domain.youtube_layout import _normalizar_fundo as textura_valida
 from app.infrastructure.ffmpeg_runner import probe_resolucao
 from app.infrastructure.render.ffmpeg_basic import build_concat_cmd
 from app.infrastructure.render.ffmpeg_short import (

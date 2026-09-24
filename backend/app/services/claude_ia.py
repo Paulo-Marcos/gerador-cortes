@@ -710,7 +710,7 @@ class ClaudeIaService:
         no fluxo automático trata a falha como não-fatal: a avaliação é
         observação sobre o bruto, não parte da entrega dele.
         """
-        from app.domain.avaliacao_bruto import normalizar_avaliacao, tipos_disponiveis
+        from app.domain.corte.avaliacao_bruto import normalizar_avaliacao, tipos_disponiveis
         from app.services import avaliacao_bruto as avaliacao_store
 
         contexto = await avaliacao_store.montar_contexto(corte_id)

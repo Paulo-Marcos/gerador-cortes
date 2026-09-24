@@ -97,7 +97,7 @@ def obter_layout_da_capa_tiktok():
     pixel de diferenca entre o que o operador arrasta e o que o Remotion
     desenha, sem erro nenhum aparecendo.
     """
-    from app.domain import capa_tiktok as layout_capa
+    from app.domain.corte import capa_tiktok as layout_capa
     from app.services.capa_tiktok import _ajuste_do_layout
 
     return {

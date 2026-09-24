@@ -17,7 +17,7 @@ from datetime import datetime
 
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.database import AsyncSessionLocal
-from app.domain.avaliacao_thumbnail import (
+from app.domain.corte.avaliacao_thumbnail import (
     CRITERIOS,
     agregar_avaliacoes,
     normalizar_nota,

@@ -143,7 +143,7 @@ class Corte(Base):
     # a cada operação que cria ou move corte. Antes o `numero` era carimbado na
     # criação, então corte nascido depois (do desvio, da 2ª passada da análise)
     # ia para o fim mesmo começando no meio da live. Ordem canônica em
-    # `domain/ordem_cortes.py`.
+    # `domain/corte/ordem_cortes.py`.
     posicao_fixada: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     titulo_proposto: Mapped[str] = mapped_column(String(500), default="")
     resumo: Mapped[str] = mapped_column(Text, default="")
@@ -249,7 +249,7 @@ class Corte(Base):
     segmentos_detectados: Mapped[str] = mapped_column(Text, default="[]")
     # D-576: a ORDEM em que o material deste corte toca. Lista JSON de blocos
     # `{inicio_seg, fim_seg}` em tempo de LIVE, na ordem de exibição — a EDL do
-    # corte. Regra e vocabulário em `domain/arranjo_blocos.py`.
+    # corte. Regra e vocabulário em `domain/corte/arranjo_blocos.py`.
     #
     # NÃO confundir com `desvios`, que a UI chama de "trechos": desvio decide o
     # que SAI, arranjo decide em que ORDEM entra o que ficou. São decisões
@@ -283,7 +283,7 @@ class Corte(Base):
     # live (`Projeto.voto_qualidade_live`, D-372) chega tarde demais para isso:
     # quando a live inteira termina, metade dos cortes já saiu da memória.
     # `voto` 1-5 (NULL = ainda não avaliado); `motivos` é lista JSON de slugs do
-    # vocabulário em `domain/avaliacao_corte.py`. Entra na telemetria (D-303).
+    # vocabulário em `domain/corte/avaliacao_corte.py`. Entra na telemetria (D-303).
     voto_qualidade: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     voto_qualidade_motivos: Mapped[str] = mapped_column(Text, default="[]")
     voto_qualidade_comentario: Mapped[str] = mapped_column(Text, default="")
@@ -799,7 +799,7 @@ class AvaliacaoBruto(Base):
 
     `projeto_id` é replicado (e não só derivado via corte) para que o
     levantamento por live não precise de join, e sobreviva ao corte deletado.
-    Vocabulário e validação em `domain/avaliacao_bruto.py`.
+    Vocabulário e validação em `domain/corte/avaliacao_bruto.py`.
     """
 
     __tablename__ = "avaliacoes_bruto"

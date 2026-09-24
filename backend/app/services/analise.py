@@ -8,12 +8,12 @@ import uuid
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
-from app.domain.ancora_match import achatar_palavras, ancorar_intervalo
+from app.domain.corte.ancora_match import achatar_palavras, ancorar_intervalo
+from app.domain.corte.segment_calculator import normalizar_desvio as _normalizar_desvio
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartados
 from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta
 from app.domain.projeto.transcricao_utils import motivo_transcricao_inutilizavel
-from app.domain.segment_calculator import normalizar_desvio as _normalizar_desvio
 from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
 from app.provider_ia import ProviderIA

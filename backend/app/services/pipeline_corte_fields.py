@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 
 from app.channel_paths import resolver_do_projeto
-from app.domain.segment_calculator import calcular_segmentos, normalizar_desvio
+from app.domain.corte.segment_calculator import calcular_segmentos, normalizar_desvio
 from app.models import Corte
 
 logger = logging.getLogger(__name__)

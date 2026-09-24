@@ -2,7 +2,7 @@
 
 Divisão de trabalho: aqui mora tudo que toca banco (montar o contexto a partir do
 corte, gravar o parecer, ler o histórico); o vocabulário e a validação vivem no
-domínio puro (`app.domain.avaliacao_bruto`); a chamada ao Claude vive em
+domínio puro (`app.domain.corte.avaliacao_bruto`); a chamada ao Claude vive em
 `claude_ia`, junto com as demais etapas editoriais — mesmo arranjo de
 `metadados` e `avaliacao_thumbnail`.
 
@@ -19,16 +19,16 @@ import uuid
 from dataclasses import dataclass
 
 from app.database import AsyncSessionLocal
-from app.domain.arranjo_blocos import parse as parse_arranjo
-from app.domain.arranjo_blocos import reconciliar, segmentos_na_ordem
-from app.domain.avaliacao_bruto import (
+from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+from app.domain.corte.arranjo_blocos import reconciliar, segmentos_na_ordem
+from app.domain.corte.avaliacao_bruto import (
     AvaliacaoNormalizada,
     Emenda,
     calcular_emendas,
     montar_texto_avaliado,
     rotulo_do_tipo,
 )
-from app.domain.segment_calculator import normalizar_desvio
+from app.domain.corte.segment_calculator import normalizar_desvio
 from app.domain.time_convert import seg_to_hms_short
 from app.models import AvaliacaoBruto, Corte
 from sqlalchemy import select

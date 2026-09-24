@@ -1,14 +1,14 @@
 """D-303: levantamento da telemetria editorial (proposta da IA × corte final).
 
 Lê cortes + snapshots do banco, delega o diff ao domain puro
-(`app.domain.telemetria_cortes`) e devolve payloads prontos para os endpoints
+(`app.domain.corte.telemetria_cortes`) e devolve payloads prontos para os endpoints
 de projeto e cross-projeto (JSON/CSV).
 """
 
 import json
 
-from app.domain.avaliacao_corte import motivos_persistidos
-from app.domain.telemetria_cortes import (
+from app.domain.corte.avaliacao_corte import motivos_persistidos
+from app.domain.corte.telemetria_cortes import (
     SITUACAO_COM_SNAPSHOT,
     diff_proposta_vs_final,
     telemetria_csv,

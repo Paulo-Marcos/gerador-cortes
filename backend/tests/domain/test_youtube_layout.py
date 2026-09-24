@@ -1,6 +1,6 @@
 import json
 
-from app.domain.youtube_layout import (
+from app.domain.corte.youtube_layout import (
     FUNDO_PADRAO,
     MODO_COMPARTILHADA,
     MODO_FULL,

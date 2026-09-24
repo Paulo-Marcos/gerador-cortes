@@ -12,7 +12,7 @@ Tipos suportados:
   - gancho_short (D-594): payload e `{cor, realce, fonte, tamanho, duracao}` — a
     aparencia do titulo-gancho da abertura, escolhida uma vez por corte.
 
-Os payloads sao normalizados via app.domain.youtube_layout antes de persistir,
+Os payloads sao normalizados via app.domain.corte.youtube_layout antes de persistir,
 garantindo que o que sai pelo GET ja vem no shape consumido pelo painel.
 """
 
@@ -25,7 +25,7 @@ from typing import Any
 
 from app.database import get_db
 from app.domain import gancho_short, legenda_short
-from app.domain.youtube_layout import (
+from app.domain.corte.youtube_layout import (
     DEFAULT_CROP_FACECAM,
     DEFAULT_CROP_TELA,
     DEFAULT_FULL_CROP,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from app.domain.avaliacao_corte import (
+from app.domain.corte.avaliacao_corte import (
     LIMITE_COMENTARIO,
     MOTIVOS_AVALIACAO,
     SLUGS_MOTIVOS,

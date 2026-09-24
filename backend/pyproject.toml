@@ -141,6 +141,6 @@ name = "um agregado do dominio nao importa outro (ADR-0015 §2)"
 type = "layers"
 # Cada pasta de agregado entra aqui no mesmo commit em que nasce (D-759).
 layers = [
-    "app.domain.projeto",
+    "app.domain.projeto | app.domain.corte",
     "app.domain.compartilhado",
 ]

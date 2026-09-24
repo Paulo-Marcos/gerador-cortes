@@ -5,7 +5,7 @@ tempo da live (absoluto) e cenas/regiões em tempo do bruto (relativo) — porqu
 confundi-los é o defeito que estica a timeline do editor.
 """
 
-from app.domain.juncao_cortes import (
+from app.domain.corte.juncao_cortes import (
     CAMPOS_TEMPO_CENA,
     MOTIVO_VAO,
     deslocar_tempos,

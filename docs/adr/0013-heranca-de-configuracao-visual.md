@@ -27,7 +27,7 @@ e foi fonte recorrente de defeitos (D-594, palco padrão).
 
 ## Consequências
 
-- Onde mora: `domain/youtube_layout.py` (`resolver_layout_em_cascata`,
+- Onde mora: `domain/corte/youtube_layout.py` (`resolver_layout_em_cascata`,
   `normalizar_layout_youtube`), `services/palco_shorts.py` (`com_palco_do_corte`) e,
   no frontend, `resolveLayoutChain` em `features/editor/fase2/youtubeLayout.ts`.
 - A cascata existe duas vezes (backend e frontend), e as duas precisam concordar.

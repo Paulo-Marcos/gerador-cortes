@@ -15,7 +15,7 @@ O segundo alvo é a etiqueta. A skill do YouTube manda a manchete INTEIRA; se
 esse texto vazar para cá, a capa vira um parágrafo ilegível em miniatura.
 """
 
-from app.domain.capa_tiktok import (
+from app.domain.corte.capa_tiktok import (
     ALTURA,
     ALTURA_SEGURA,
     BASE_SEGURA,

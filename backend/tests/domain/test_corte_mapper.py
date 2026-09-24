@@ -1,4 +1,4 @@
-from app.domain.corte_mapper import (
+from app.domain.corte.corte_mapper import (
     cenas_fora_do_corte,
     coalescer_chaves_mascote,
     extrair_cenas_remotion,
