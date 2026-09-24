@@ -6,11 +6,11 @@ As funcionalidades abaixo aceitam **Claude** (via Claude CLI, assinatura do Clau
 
 ## 1. Visão Geral da Arquitetura de IA
 
-As requisições são orquestradas no backend pelo serviço `backend/app/services/claude_ia.py`. Apesar do nome, ele roteia entre os provedores.
+Cada caso de uso de IA mora no service do agregado dono dele (a análise, o corte, os metadados, os shorts, as capas): ele monta o contexto, pede à IA e grava o resultado (D-695). A IA é uma **ferramenta** que eles chamam: `backend/app/services/claude_ia.py`, que apesar do nome serve os dois provedores e não importa nenhum service — a catraca de ciclos (`tests/test_ciclos_de_import_d695.py`) reprova se voltar a importar.
 
-Os wrappers `_gerar_json_provider` e `_gerar_text_provider` recebem `provider: ProviderIA` (`"claude" | "gemini"`) e chamam:
-- **Claude**: `backend/app/infrastructure/claude_cli_client.py`. A skill vai como expertise do CLI (`_args_claude`).
-- **Gemini**: `backend/app/infrastructure/antigravity_cli_client.py`, que roda `agy -p` com o prompt pela entrada padrão (`stream-json`). A skill vai como expertise, e o modelo é o `modelo_gemini` da skill, editável em Canais → Skills. O padrão deriva do modelo Claude: Haiku → `AGY_MODEL_RAPIDO` (`gemini-3.8-flash-medium`); Opus/Sonnet → `AGY_MODEL_QUALIDADE` (`gemini-3.1-pro-high`).
+A interface da ferramenta é `gerar_json` e `gerar_texto` (mais `registrar_skill_usada`, que loga qual skill rodou). As duas recebem `provider: ProviderIA` (`"claude" | "gemini"`), montam um `PedidoIA` e o entregam à porta `GeradorIA` (`backend/app/domain/compartilhado/gerador_ia.py`). A escolha do provider fica num lugar só, `gerador_para` (`backend/app/infrastructure/gerador_ia.py`), que devolve um dos adaptadores:
+- **Claude** (`GeradorClaudeCli`): `backend/app/infrastructure/claude_cli_client.py`. A skill vai como expertise do CLI.
+- **Gemini** (`GeradorAntigravityCli`): `backend/app/infrastructure/antigravity_cli_client.py`, que roda `agy -p` com o prompt pela entrada padrão (`stream-json`). A skill vai como expertise, e o modelo é o `modelo_gemini` da skill, editável em Canais → Skills. O padrão deriva do modelo Claude: Haiku → `AGY_MODEL_RAPIDO` (`gemini-3.8-flash-medium`); Opus/Sonnet → `AGY_MODEL_QUALIDADE` (`gemini-3.1-pro-high`).
 
 **Pré-requisito do Gemini:** instalar o Antigravity CLI e rodar `agy` uma vez no terminal para logar com a conta Google. Cada chamada consome ~37 mil tokens fixos da cota (prompt de sistema do agente) além do prompt. A geração de **imagem** da capa continua no `gemini_client.py` (API), porque o `agy` não devolve imagem.
 
@@ -23,14 +23,14 @@ O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `
 ### 2.1 Análise da live (cortes)
 - **Descrição**: analisa a transcrição da live inteira e propõe os cortes (início/fim, título, tema), encadeando o refazer-transcrição.
 - **Rota**: `POST /api/claude/projeto/{projeto_id}/analisar?usar_diarizacao=&provider=`
-- **Service**: `ClaudeIaService.analisar_via_claude` → `_gerar_cortes` / `_gerar_cortes_em_lote`
+- **Service**: `AnaliseService.analisar_via_claude` → `ClaudeIaService.gerar_cortes` / `_gerar_cortes_em_lote`
 - **Hook**: `useAnalisarComDiarizacao` (`frontend/src/hooks/useDiarizacao.ts`)
 - **UI**: `AnaliseIaModal.tsx`
 
 ### 2.2 Trechos a remover (desvios)
 - **Descrição**: aponta, dentro de um corte, os trechos que fogem da tese central e devem sair.
 - **Rota**: `POST /api/claude/corte/{corte_id}/gerar-trechos?provider=`
-- **Service**: `ClaudeIaService.gerar_trechos_via_claude` → `_gerar_desvios`
+- **Service**: `CorteService.gerar_trechos_via_claude` → `ClaudeIaService.gerar_desvios`
 - **Hook**: `useGerarTrechosClaude` (`frontend/src/hooks/useEditor.ts`)
 - **UI**: `RightTabsPanel.tsx` (Fase 1 do Editor)
 
@@ -44,14 +44,14 @@ O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `
 ### 2.4 Metadados (título e descrição)
 - **Descrição**: produz título, descrição e tags para publicação no YouTube.
 - **Rota**: `POST /api/claude/corte/{corte_id}/gerar-metadados?provider=`
-- **Service**: `ClaudeIaService.gerar_metadados_via_claude`
+- **Service**: `MetadadosService.gerar_metadados_via_claude`
 - **Hook**: `useGerarMetadadosClaude` (`frontend/src/hooks/useEditor.ts`), usado no fluxo do editor; a tela de metadados tem a própria mutation dentro de `MetadataCard.tsx`
 - **UI**: `MetadataCard.tsx`
 
 ### 2.5 Prompt da thumbnail
 - **Descrição**: escreve o prompt de imagem da capa a partir do conteúdo do corte.
 - **Rota**: `POST /api/claude/corte/{corte_id}/gerar-prompt-thumbnail?provider=`
-- **Service**: `ClaudeIaService.gerar_prompt_thumbnail_via_claude`
+- **Service**: `MetadadosService.gerar_prompt_thumbnail_via_claude`, que ao gravar encadeia a arte da capa do TikTok (D-525)
 - **Hook**: mutation local em `MetadataCard.tsx` (`generatePromptThumbnailClaude`)
 - **UI**: `MetadataCard.tsx`
 
@@ -64,32 +64,32 @@ O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `
 ### 2.7 Propor shorts
 - **Descrição**: lê a transcrição do bruto de um Fire e propõe os trechos verticais.
 - **Rota**: `POST /api/shorts/corte/{corte_id}/sugerir?provider=`
-- **Service**: `ClaudeIaService.sugerir_shorts_via_claude`
+- **Service**: `shorts.sugerir_shorts` (`services/shorts.py`)
 - **UI**: sem botão hoje — dispara no fim do bruto (Claude). O `sugerirAgora` do `shortsApi` não tem tela.
 
 ### 2.8 Cenas do short
 - **Rota**: `POST /api/shorts/{short_id}/cenas/sugerir?provider=`
-- **Service**: `ClaudeIaService.sugerir_cenas_do_short_via_claude`
+- **Service**: `shorts.sugerir_cenas`
 - **UI**: `CenasDoShort.tsx` — componente sem tela que o renderize hoje.
 
 ### 2.9 Gancho da abertura do short
 - **Rota**: `POST /api/shorts/{short_id}/ganchos?provider=`
-- **Service**: `ClaudeIaService.sugerir_ganchos_via_claude`
+- **Service**: `shorts.sugerir_ganchos`
 - **UI**: `GanchoModal.tsx`
 
 ### 2.10 Post do short (título, descrição, hashtags)
 - **Rota**: `POST /api/shorts/{short_id}/post/gerar?provider=`
-- **Service**: `ClaudeIaService.gerar_post_do_short_via_claude`
+- **Service**: `metadados_short.gerar_post`
 - **UI**: `PostModal.tsx`. O Finalizar escreve sozinho, pelo Claude — ali não há botão.
 
 ### 2.11 Prompt da capa do short
 - **Rota**: `POST /api/shorts/{short_id}/capa/prompt?provider=`
-- **Service**: `ClaudeIaService.prompt_da_capa_do_short_via_claude`
+- **Service**: `capa_short.gerar_prompt` → `_escrever_prompt_da_capa`
 - **UI**: `CapaModal.tsx`
 
 ### 2.12 Etiqueta e arte da capa do TikTok
 - **Rotas**: `POST /api/shorts/corte/{corte_id}/capa-tiktok?provider=` (etiqueta) e `POST /api/shorts/corte/{corte_id}/capa-tiktok/prompt?provider=` (arte)
-- **Services**: `ClaudeIaService.sugerir_etiqueta_capa_via_claude` e `prompt_da_arte_da_capa_via_claude`
+- **Services**: `capa_tiktok.sugerir_etiqueta` e `capa_tiktok.gerar_prompt_da_arte` → `_escrever_prompt_da_arte`
 - **UI**: `CapaTikTokSlot.tsx`
 
 ### 2.13 Padrões de thumbnail
@@ -101,7 +101,7 @@ O router (`backend/app/routers/claude_ia.py`, montado em `/api/claude`) valida `
 ### 2.14 Trechos de todos os cortes
 - **Descrição**: roda a geração de trechos a remover em cada corte do projeto, em segundo plano, só acrescentando aos já marcados.
 - **Rota**: `POST /api/cortes/projeto/{projeto_id}/analisar-desvios-todos?provider=`
-- **Service**: `CorteService.analisar_desvios_todos_impl` → `gerar_trechos_via_claude` por corte
+- **Service**: `CorteService.analisar_desvios_todos_impl` → `CorteService.gerar_trechos_via_claude` por corte
 - **UI**: `ProjetoDetalhePage.tsx` (barra de utilitários, `<MenuDeIa />`)
 
 ### Fora da escolha
@@ -124,7 +124,7 @@ A telemetria grava `short_id` desde a D-608: sem ele, dois trechos do mesmo cort
 ## 4. Como adicionar uma nova chamada de IA
 
 1. Crie a rota em `backend/app/routers/claude_ia.py` com o query param `provider: ProviderIA = "claude"`.
-2. No `ClaudeIaService`, chame `_gerar_json_provider` ou `_gerar_text_provider` e **repasse `provider` por todos os métodos intermediários**. Métodos estáticos não enxergam variáveis do método que os chamou (rode `ruff check`: o F821 pega o esquecimento).
+2. No service do agregado dono do caso de uso (e não no `claude_ia`), monte o prompt e chame `gerar_json` ou `gerar_texto` do `claude_ia`, **repassando `provider` por todos os métodos intermediários**. O `claude_ia` é a ferramenta: ele não importa service nenhum. Métodos estáticos não enxergam variáveis do método que os chamou (rode `ruff check`: o F821 pega o esquecimento).
 3. Adicione a chamada em `frontend/src/lib/api.ts`.
 4. Crie a mutation passando o `provider` como `variables`, e derive o provedor em voo com `providerEmVoo` (`frontend/src/lib/providerIa.ts`).
 5. Na tela, use `<AcaoDeIa />` (`frontend/src/components/ui/acao-de-ia.tsx`): a ação é dita uma vez ("Regerar metadados") e o provedor é escolhido por ícone, Claude ou Gemini. Nunca repita o verbo em dois botões.
