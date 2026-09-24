@@ -644,7 +644,8 @@ def migrar_scaffolds_do_canal_ativo(
     no novo default não bate e é preservado; idempotente.
 
     Best-effort — pensada para rodar no MESMO ponto de boot que
-    `editorial_skills.migrar_skills_do_canal_ativo`. Retorna quantos scaffolds
+    `editorial_skills.migrar_skills_do_canal_ativo`, logo depois dela (quem chama
+    as duas é o boot, no `main.py`). Retorna quantos scaffolds
     foram migrados. `editorial_root`/kwargs isolam testes do `instance/` real.
 
     D-349: ANTES de qualquer coisa, move os scaffolds da coluna legada

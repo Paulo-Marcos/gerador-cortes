@@ -9,7 +9,7 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 from contextlib import asynccontextmanager
 
-from app import channel_paths
+from app import channel_paths, editorial_scaffolds
 from app import editorial_skills as editorial_skills_service
 from app.channel_layout_migration import garantir_layout_de_canais
 from app.channel_paths import projetos_dir
@@ -73,6 +73,9 @@ async def lifespan(app: FastAPI):
         channels_service.migrar_identidades_para_banco()
         AppSettingsService.get()  # semeia app_settings do canal ativo a partir do arquivo
         editorial_skills_service.migrar_skills_do_canal_ativo()  # E-021: semeia as 5 skills
+        # D-330: no mesmo ponto do boot, alinha o scaffold V1 ao default v2. Chamada
+        # daqui, e não de dentro das skills, para as duas não se importarem (D-697).
+        editorial_scaffolds.migrar_scaffolds_do_canal_ativo()
     except Exception as e:  # noqa: BLE001 — boot resiliente a I/O de config
         logger.warning("[Settings] Falha ao migrar configs para o banco: %s", e)
 

@@ -27,8 +27,6 @@ _CICLOS_CONHECIDOS = {
             "app.services.tasks",
         }
     ),
-    # D-697: a migração do boot passa a chamar as duas; exige o main.py (travado).
-    frozenset({"app.editorial_scaffolds", "app.editorial_skills"}),
     # D-696: render; os dois arquivos estão travados.
     frozenset({"app.services.pipeline_render", "app.services.remotion_render"}),
 }
