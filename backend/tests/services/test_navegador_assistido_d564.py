@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import pytest
 from app.domain.tiktok_studio import (
+    PORTA_MINIMA_DE_DEPURACAO,
+    PORTAS_DE_DEPURACAO,
     mesma_pasta,
     perfil_na_linha_de_comando,
     porta_de_depuracao,
@@ -26,6 +28,11 @@ from app.services.navegador_assistido import (
     perfil_do_canal,
     porta_do_chrome,
 )
+
+
+def _seguinte(porta: int) -> int:
+    """A porta depois de `porta`, dando a volta na faixa de depuração."""
+    return PORTA_MINIMA_DE_DEPURACAO + (porta - PORTA_MINIMA_DE_DEPURACAO + 1) % PORTAS_DE_DEPURACAO
 
 
 class TecladoFalso:
@@ -144,7 +151,19 @@ class TestIsolamentoPorPerfil:
         )
         monkeypatch.setattr(navegador_assistido, "perfil_na_porta", lambda porta: "C:/outro/perfil")
 
-        assert porta_do_chrome(perfil) == preferida + 1
+        assert porta_do_chrome(perfil) == _seguinte(preferida)
+
+    def test_na_ultima_porta_da_faixa_a_seguinte_da_a_volta(self, monkeypatch, tmp_path):
+        """D-754: a preferida vem de um hash e às vezes é a última da faixa; a
+        seguinte, então, é a primeira — e não uma porta fora da faixa."""
+        from app.services import navegador_assistido
+
+        ultima = PORTA_MINIMA_DE_DEPURACAO + PORTAS_DE_DEPURACAO - 1
+        monkeypatch.setattr(navegador_assistido, "porta_de_depuracao", lambda _perfil: ultima)
+        monkeypatch.setattr(navegador_assistido, "_porta_responde", lambda porta: porta == ultima)
+        monkeypatch.setattr(navegador_assistido, "perfil_na_porta", lambda porta: "C:/outro/perfil")
+
+        assert porta_do_chrome(tmp_path / "instagram") == PORTA_MINIMA_DE_DEPURACAO
 
     def test_a_nossa_propria_janela_e_reaproveitada(self, monkeypatch, tmp_path):
         """Publicar cinco cortes seguidos usa a MESMA janela, e nao empilha cinco."""
