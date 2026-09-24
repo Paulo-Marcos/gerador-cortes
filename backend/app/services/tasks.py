@@ -75,12 +75,12 @@ def _registrar_cancelavel(name: str | None, task: asyncio.Task[Any]) -> None:
     """
     try:
         from app.core.tarefas_ativas import classificar_background
-        from app.services.cancelamento_jobs import TrabalhoEmVoo
+        from app.core.trabalhos_em_voo import RegistroDeTrabalhos
 
         if classificar_background(name) is None:
             return
         chave = _chave(name)
-        TrabalhoEmVoo.registrar(chave, task, owner=chave)
+        RegistroDeTrabalhos.registrar(chave, task, owner=chave)
     except Exception as exc:  # noqa: BLE001 — registro é best-effort, nunca fatal
         logger.warning("Falha ao registrar '%s' como cancelável: %s", name, exc)
 
