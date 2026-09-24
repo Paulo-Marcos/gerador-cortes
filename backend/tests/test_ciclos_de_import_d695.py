@@ -19,13 +19,11 @@ _CICLOS_CONHECIDOS = {
     frozenset(
         {
             "app.services.cancelamento_jobs",
-            "app.services.capa_tiktok",
             "app.services.claude_ia",
             "app.services.corte",
             "app.services.export",
             "app.services.export_bulk_queue",
             "app.services.export_processamento",
-            "app.services.metadados",
             "app.services.shorts",
             "app.services.tasks",
         }

@@ -13,6 +13,7 @@ from app.provider_ia import provider_do_modelo
 from app.services import telemetria_ia
 from app.services.analise import AnaliseService
 from app.services.claude_ia import ClaudeIaService, ProviderIA
+from app.services.metadados import MetadadosService
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -144,7 +145,7 @@ async def gerar_metadados_via_claude(
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     await _soltar_a_transacao(db)
     try:
-        resultado = await ClaudeIaService.gerar_metadados_via_claude(corte_id, provider=provider)
+        resultado = await MetadadosService.gerar_metadados_via_claude(corte_id, provider=provider)
         return {
             "message": "Metadados gerados via IA",
             "corte_id": corte_id,
@@ -168,7 +169,7 @@ async def gerar_prompt_thumbnail_via_claude(
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     await _soltar_a_transacao(db)
     try:
-        resultado = await ClaudeIaService.gerar_prompt_thumbnail_via_claude(
+        resultado = await MetadadosService.gerar_prompt_thumbnail_via_claude(
             corte_id, provider=provider
         )
         return {

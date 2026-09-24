@@ -11,12 +11,11 @@ import asyncio
 import pytest
 from app import editorial_scaffolds, editorial_skills
 from app.infrastructure import claude_cli_client
-from app.services import capa_tiktok, claude_ia
-from app.services.claude_ia import ClaudeIaService
+from app.services import capa_tiktok, metadados
 from app.services.metadados import MetadadosService
 
-modulo_do_caso_de_uso = claude_ia
-gerar_prompt_da_thumbnail = ClaudeIaService.gerar_prompt_thumbnail_via_claude
+modulo_do_caso_de_uso = metadados
+gerar_prompt_da_thumbnail = MetadadosService.gerar_prompt_thumbnail_via_claude
 
 
 @pytest.fixture

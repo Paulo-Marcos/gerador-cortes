@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from app import editorial_identity
 from app.services import metadados
-from app.services.claude_ia import ClaudeIaService
+from app.services.metadados import MetadadosService
 
 # Literais EXATOS anteriores à genericização (confirmados no diff de D-221/D-222).
 _THUMB_SAPO = "possível; Sapo sozinho é fallback, não default."
@@ -42,7 +42,7 @@ def _ctx_minimo() -> dict:
 
 
 def test_prompt_thumbnail_com_sapo_reproduz_texto_anterior():
-    prompt = ClaudeIaService._montar_prompt_thumbnail(
+    prompt = MetadadosService._montar_prompt_thumbnail(
         _ctx_minimo(), marca_emojis="", bloco_hints="", mascote="Sapo"
     )
 
@@ -50,7 +50,7 @@ def test_prompt_thumbnail_com_sapo_reproduz_texto_anterior():
 
 
 def test_prompt_thumbnail_neutro_quando_fallback():
-    prompt = ClaudeIaService._montar_prompt_thumbnail(
+    prompt = MetadadosService._montar_prompt_thumbnail(
         _ctx_minimo(), marca_emojis="", bloco_hints="", mascote="mascote"
     )
 

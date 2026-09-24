@@ -12,9 +12,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from app.infrastructure import antigravity_cli_client
-from app.services import analise, claude_ia
+from app.services import analise, claude_ia, metadados
 from app.services.analise import AnaliseService
 from app.services.claude_ia import ClaudeIaService
+from app.services.metadados import MetadadosService
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -1015,7 +1016,6 @@ class TestCenasMetadados:
         títulos, e a skill `metadados-expert` deve ser ativada pelo parâmetro
         skill — não injetada no corpo do prompt.
         """
-        from app.services.metadados import MetadadosService
 
         async def fake_ctx(_corte_id):
             return {
@@ -1046,7 +1046,7 @@ class TestCenasMetadados:
         )
         monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake_gen)
 
-        resultado = asyncio.run(ClaudeIaService.gerar_metadados_via_claude("c1"))
+        resultado = asyncio.run(MetadadosService.gerar_metadados_via_claude("c1"))
 
         assert resultado == {"ok": True}
         assert capturado["resultado"]["sinopse"] == "uma sinopse"
@@ -1066,7 +1066,6 @@ class TestCenasMetadados:
 
 class TestPromptThumbnail:
     def test_usa_skill_contexto_e_salva_texto_sem_fences(self, monkeypatch):
-        from app.services.metadados import MetadadosService
 
         async def fake_ctx(_corte_id):
             return {
@@ -1095,7 +1094,7 @@ class TestPromptThumbnail:
         )
         monkeypatch.setattr(claude_ia.claude_cli_client, "generate_text", fake_gen_text)
 
-        resultado = asyncio.run(ClaudeIaService.gerar_prompt_thumbnail_via_claude("c1"))
+        resultado = asyncio.run(MetadadosService.gerar_prompt_thumbnail_via_claude("c1"))
 
         assert resultado == {"ok": True}
         # cercas de markdown removidas do que foi salvo
@@ -1116,7 +1115,6 @@ class TestPromptThumbnail:
         assert capturado["thinking"] and capturado["thinking"] > 0
 
     def test_texto_vazio_levanta(self, monkeypatch):
-        from app.services.metadados import MetadadosService
 
         async def fake_ctx(_corte_id):
             return {
@@ -1135,13 +1133,12 @@ class TestPromptThumbnail:
         monkeypatch.setattr(claude_ia.claude_cli_client, "generate_text", fake_gen_text)
 
         with pytest.raises(ValueError):
-            asyncio.run(ClaudeIaService.gerar_prompt_thumbnail_via_claude("c1"))
+            asyncio.run(MetadadosService.gerar_prompt_thumbnail_via_claude("c1"))
 
     def _rodar_prompt_thumbnail(self, monkeypatch, nome_mascote: str, *, is_fire: bool) -> str:
         """Roda a geração de prompt de thumbnail com um mascote dado e devolve o
         prompt enviado ao Claude (fakes isolam banco/CLI). Helper de D-221."""
         from app.editorial_identity import Mascote
-        from app.services.metadados import MetadadosService
 
         async def fake_ctx(_corte_id):
             return {
@@ -1169,9 +1166,9 @@ class TestPromptThumbnail:
             MetadadosService, "importar_prompt_thumbnail", staticmethod(fake_importar)
         )
         monkeypatch.setattr(claude_ia.claude_cli_client, "generate_text", fake_gen_text)
-        monkeypatch.setattr(claude_ia, "identidade_do_mascote", lambda: Mascote(nome=nome_mascote))
+        monkeypatch.setattr(metadados, "identidade_do_mascote", lambda: Mascote(nome=nome_mascote))
 
-        asyncio.run(ClaudeIaService.gerar_prompt_thumbnail_via_claude("c1"))
+        asyncio.run(MetadadosService.gerar_prompt_thumbnail_via_claude("c1"))
         return capturado["enviado"]
 
     def test_nome_do_mascote_vem_do_instance_editorial(self, monkeypatch):

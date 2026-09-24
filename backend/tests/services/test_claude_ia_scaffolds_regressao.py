@@ -16,6 +16,7 @@ from __future__ import annotations
 import pytest
 from app import editorial_scaffolds
 from app.services.claude_ia import ClaudeIaService
+from app.services.metadados import MetadadosService
 
 
 @pytest.fixture(autouse=True)
@@ -226,7 +227,7 @@ def test_thumbnail_identico_ao_oraculo():
     marca_emojis = "EMOJIS EDITORIAIS: nenhum."
     bloco_hints = ""
     mascote = "Mascote"
-    novo = ClaudeIaService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
+    novo = MetadadosService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
     _igual(novo, _oraculo_thumbnail(ctx, marca_emojis, bloco_hints, mascote))
 
 
