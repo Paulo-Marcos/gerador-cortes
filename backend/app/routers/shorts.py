@@ -546,10 +546,10 @@ async def gerar_post(short_id: str, provider: ProviderIA = "claude"):
     o operador le e edita antes de subir — e que ate esta demanda era montado
     automaticamente, sem ninguem revisar.
     """
-    from app.services.claude_ia import ClaudeIaService
+    from app.services import metadados_short
 
     try:
-        return await ClaudeIaService.gerar_post_do_short_via_claude(short_id, provider)
+        return await metadados_short.gerar_post(short_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

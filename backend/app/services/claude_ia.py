@@ -115,7 +115,6 @@ _SKILL_AVALIACAO = "avaliador-bruto"
 _SKILL_SHORTS = "shorts-expert"
 _SKILL_CENAS_SHORT = "cenas-short-expert"
 _SKILL_GANCHO_SHORT = "gancho-short-expert"
-_SKILL_METADADOS_SHORT = "metadados-short-expert"
 
 
 def _pedido(
@@ -1219,65 +1218,6 @@ class ClaudeIaService:
             len(variacoes),
         )
         return variacoes
-
-    @staticmethod
-    async def gerar_post_do_short_via_claude(
-        short_id: str, provider: ProviderIA = "claude"
-    ) -> dict:
-        """O titulo, a descricao e as hashtags que acompanham o short no feed.
-
-        Skill separada dos `metadados-expert` do corte, e nao um parametro deles,
-        porque os leitores sao outros. La o titulo e um cartaz disputando o
-        clique numa lista de resultados, com 55-60 caracteres de manchete; aqui
-        ele e lido por quem JA parou, com ~40 caracteres visiveis, e vira a
-        primeira linha da legenda no TikTok e no Instagram — que nem campo de
-        titulo tem.
-
-        GRAVA no `MetadadoShort`, diferente do gerador de ganchos. A diferenca e
-        de risco: o gancho e uma frase que vai virar PIXEL no video, e escolher
-        por ele seria tirar a decisao mais editorial da tela de quem tem o
-        contexto; o post e texto de publicacao, que ele le e edita antes de subir
-        — e que ate aqui era montado automaticamente sem ninguem revisar.
-
-        Resposta inaproveitavel nao apaga o que existe: `gravar` recusa post sem
-        titulo. Levanta `LookupError` (short inexistente) e `ValueError` (trecho
-        sem fala).
-        """
-        from app.domain.metadados_short import post_da_resposta
-        from app.services import metadados_short as post_store
-
-        contexto = await post_store.montar_contexto(short_id)
-
-        skill = editorial_skills.resolver_skill(_SKILL_METADADOS_SHORT)
-        scaffold = editorial_scaffolds.resolver_scaffold("metadados-short")
-        prompt = scaffold.format(
-            titulo_proposto=contexto.titulo,
-            tema_central=contexto.tema_central,
-            duracao_seg=contexto.duracao_seg,
-            texto_transcricao=contexto.texto_transcricao,
-            gancho_na_tela=contexto.gancho_na_tela,
-            titulos_recentes=contexto.titulos_recentes,
-            titulo_visivel=contexto.titulo_visivel,
-            titulo_max=contexto.titulo_max,
-        )
-        _log_skill_usada(_SKILL_METADADOS_SHORT, skill, scaffold)
-        bruto = await _gerar_text_provider(
-            provider,
-            prompt,
-            skill,
-            _SKILL_METADADOS_SHORT,
-            projeto_id=contexto.projeto_id,
-            corte_id=contexto.corte_id,
-            short_id=short_id,
-        )
-        post = post_da_resposta(bruto)
-        logger.info(
-            "[Shorts] post IA short=%s titulo=%dch hashtags=%d",
-            short_id[:8],
-            len(post.titulo),
-            len(post.hashtags),
-        )
-        return await post_store.gravar(short_id, post)
 
     # ── Fase 4: prompt de thumbnail via Claude (skill capista) ────────────────
 

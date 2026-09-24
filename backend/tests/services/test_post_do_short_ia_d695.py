@@ -14,12 +14,11 @@ from app import editorial_scaffolds, editorial_skills
 from app.infrastructure import antigravity_cli_client, claude_cli_client
 from app.models import Base, Corte, MetadadoShort, Projeto, Short
 from app.services import metadados_short
-from app.services.claude_ia import ClaudeIaService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-gerar_post = ClaudeIaService.gerar_post_do_short_via_claude
+gerar_post = metadados_short.gerar_post
 
 _POST = json.dumps(
     {

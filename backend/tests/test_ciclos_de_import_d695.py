@@ -26,7 +26,6 @@ _CICLOS_CONHECIDOS = {
             "app.services.export_bulk_queue",
             "app.services.export_processamento",
             "app.services.metadados",
-            "app.services.metadados_short",
             "app.services.shorts",
             "app.services.tasks",
         }
