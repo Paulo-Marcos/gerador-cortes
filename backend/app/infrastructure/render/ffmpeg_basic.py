@@ -4,7 +4,7 @@ detecção de silêncio, normalização e remux. Funções puras (retornam list[
 
 from pathlib import Path
 
-from app.domain.ffmpeg_common import _resolve_filter_arg
+from app.infrastructure.render.ffmpeg_common import _resolve_filter_arg
 
 
 def build_lossless_cut_cmd(

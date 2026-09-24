@@ -15,7 +15,7 @@ import subprocess
 from collections.abc import Callable
 from functools import lru_cache
 
-from app.domain.video_encoder import VideoEncoder
+from app.infrastructure.render.video_encoder import VideoEncoder
 
 logger = logging.getLogger(__name__)
 

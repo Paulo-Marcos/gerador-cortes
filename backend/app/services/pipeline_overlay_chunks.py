@@ -8,7 +8,7 @@ Extraído de `pipeline_render` (E-006). Funções puras — só operam sobre as
 import logging
 from pathlib import Path
 
-from app.domain.overlay_metadata import OverlayEntry
+from app.infrastructure.render.overlay_metadata import OverlayEntry
 
 logger = logging.getLogger(__name__)
 

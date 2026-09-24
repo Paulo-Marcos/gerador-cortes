@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from threading import Lock
 
-from app.domain.pipeline_event import PipelineEvent
+from app.infrastructure.render.pipeline_event import PipelineEvent
 
 logger = logging.getLogger(__name__)
 

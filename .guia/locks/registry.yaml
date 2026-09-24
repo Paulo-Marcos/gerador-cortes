@@ -229,7 +229,7 @@ locks:
   description: 'B-010: Avaliar melhorias de performance na estrutura do graded'
   locked_at: 2026-05-31
   files:
-  - backend/app/domain/cinema_filters.py
+  - backend/app/infrastructure/render/cinema_filters.py
   - backend/app/services/pipeline_render.py
   - backend/app/services/remotion_render.py
   - backend/app/routers/cortes.py

@@ -1,5 +1,5 @@
 import pytest
-from app.domain.overlay_metadata import OverlayEntry, build_overlay_entries
+from app.infrastructure.render.overlay_metadata import OverlayEntry, build_overlay_entries
 
 
 def _entry(start=0.0, end=5.0, tipo="cena", id="001"):

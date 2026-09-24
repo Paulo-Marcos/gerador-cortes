@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-from app.domain.ffmpeg_commands import build_cinematic_grade_cmd
 from app.domain.youtube_layout import (
     DEFAULT_FULL_CROP,
     DEFAULT_FULL_SLOT,
@@ -12,6 +11,7 @@ from app.domain.youtube_layout import (
     normalizar_layout_youtube,
     regioes_full_posicionadas,
 )
+from app.infrastructure.render.ffmpeg_commands import build_cinematic_grade_cmd
 
 CROP_PESSOA = {"x": 200, "y": 100, "w": 960, "h": 540}
 SLOT_CENTRO = {"x": 480, "y": 270, "w": 960, "h": 540}

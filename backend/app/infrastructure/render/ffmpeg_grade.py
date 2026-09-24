@@ -11,9 +11,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from app.domain.ffmpeg_common import _CANVAS_NORMALIZE, _ffmpeg_filter_thread_args
-from app.domain.palco_derivados import PalcoDerivados
-from app.domain.video_encoder import (
+from app.infrastructure.render.ffmpeg_common import _CANVAS_NORMALIZE, _ffmpeg_filter_thread_args
+from app.infrastructure.render.palco_derivados import PalcoDerivados
+from app.infrastructure.render.video_encoder import (
     VideoEncoder,
     argumentos_async_depth,
     argumentos_codec_qualidade,

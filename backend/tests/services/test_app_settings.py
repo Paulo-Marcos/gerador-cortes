@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
-from app.domain.overlay_codec import OverlayCodec
+from app.infrastructure.render.overlay_codec import OverlayCodec
 from app.services.app_settings import (
     AppSettings,
     AppSettingsService,

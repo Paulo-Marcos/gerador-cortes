@@ -1,6 +1,11 @@
 from app import editorial_identity
-from app.domain.overlay_codec import OverlayCodec
-from app.services.app_settings import AppSettings, AppSettingsService, LogLevel, RenderSettings
+from app.services.app_settings import (
+    AppSettings,
+    AppSettingsService,
+    LogLevel,
+    OverlayCodec,
+    RenderSettings,
+)
 from fastapi import APIRouter
 from pydantic import BaseModel
 

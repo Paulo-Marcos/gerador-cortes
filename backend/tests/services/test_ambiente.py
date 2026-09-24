@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from app.domain.video_encoder import VideoEncoder
+from app.infrastructure.render.video_encoder import VideoEncoder
 from app.services import ambiente
 
 

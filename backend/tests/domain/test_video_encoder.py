@@ -1,4 +1,4 @@
-from app.domain.video_encoder import (
+from app.infrastructure.render.video_encoder import (
     VideoEncoder,
     argumentos_async_depth,
     argumentos_codec,
@@ -61,7 +61,7 @@ class TestBuildersComLibx264:
     def test_grade_sem_hwaccel_e_com_crf(self):
         from pathlib import Path
 
-        from app.domain.ffmpeg_commands import build_cinematic_grade_cmd
+        from app.infrastructure.render.ffmpeg_commands import build_cinematic_grade_cmd
 
         cmd = build_cinematic_grade_cmd(
             Path("raw.mkv"), Path("graded.mp4"), encoder=VideoEncoder.LIBX264, global_quality=30
@@ -74,7 +74,7 @@ class TestBuildersComLibx264:
     def test_segmento_da_grade_mantem_gop_para_o_concat(self):
         from pathlib import Path
 
-        from app.domain.ffmpeg_grade import _build_grade_segment_cmd
+        from app.infrastructure.render.ffmpeg_grade import _build_grade_segment_cmd
 
         cmd = _build_grade_segment_cmd(
             Path("raw.mkv"),
@@ -94,7 +94,7 @@ class TestBuildersComLibx264:
     def test_compose_final_mantem_bitrate_do_youtube(self):
         from pathlib import Path
 
-        from app.domain.ffmpeg_overlay import build_compose_and_encode_cmd
+        from app.infrastructure.render.ffmpeg_overlay import build_compose_and_encode_cmd
 
         cmd = build_compose_and_encode_cmd(
             Path("graded.mp4"), [], [], Path("final.mp4"), encoder=VideoEncoder.LIBX264

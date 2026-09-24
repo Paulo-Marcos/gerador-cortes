@@ -63,7 +63,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 |---|---|---|---|
 | RN-22 | Capa vertical 9:16 (1080×1920) com as três faixas dentro da faixa segura 3:4 (1344 px de altura). | `domain/capa_tiktok.py` (`ALTURA_SEGURA`, `TOPO_SEGURO`) | — |
 | RN-23 | Thumbnail codificada em 4:4:4 (`subsampling=0`), **sem** reduzir para 1280×720 — reduzir antes piora a nota. | `domain/thumbnail_encode.py` (`_codificar`, `preparar_para_youtube`) | — |
-| RN-24 | Detecção de silêncio com parâmetros fixos: 0,6 s no proxy, 0,3 s no vídeo. Decisão de 04/09/2026: **não mexer**. | `domain/ffmpeg_basic.py` (`_SILENCIO_DUR_PROXY`, `_SILENCIO_DUR_VIDEO`) | — |
+| RN-24 | Detecção de silêncio com parâmetros fixos: 0,6 s no proxy, 0,3 s no vídeo. Decisão de 04/09/2026: **não mexer**. | `infrastructure/render/ffmpeg_basic.py` (`_SILENCIO_DUR_PROXY`, `_SILENCIO_DUR_VIDEO`) | — |
 | RN-25 | O filtro de render é **global** (Ajustes), não por projeto nem por corte. | `services/app_settings.py` (`filtro_global_padrao`) | I-023 |
 
 ## Divergências encontradas na conferência

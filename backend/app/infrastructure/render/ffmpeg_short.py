@@ -22,7 +22,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.domain.cinema_filters import get_filtro_vf
 from app.domain.formato_video import (
     HORIZONTAL,  # noqa: F401 — usado nos doctests; deixou de ser default na D-481
     VERTICAL,
@@ -33,6 +32,7 @@ from app.domain.fundo_short import FUNDO_PADRAO as FUNDO_DE_ULTIMO_RECURSO
 from app.domain.fundo_short import para_ffmpeg as fundo_ffmpeg
 from app.domain.moldura_short import Faixa
 from app.domain.palco_short import PlanoPalco, Recorte
+from app.infrastructure.render.cinema_filters import get_filtro_vf
 
 # ProRes 4444 é o único codec com alpha que o overlay do Remotion entrega de
 # forma confiável neste projeto — VP9/.webm foi testado e não funciona.

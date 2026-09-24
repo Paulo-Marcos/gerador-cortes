@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from app.domain.remotion_bundle import compute_src_fingerprint
+from app.infrastructure.render.remotion_bundle import compute_src_fingerprint
 
 # ─────────────────────────────────────────────────────────────
 # Helpers

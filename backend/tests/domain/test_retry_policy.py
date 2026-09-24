@@ -1,7 +1,7 @@
 """Testes da política de retry (domain puro)."""
 
 import pytest
-from app.domain.retry_policy import RetryPolicy
+from app.infrastructure.render.retry_policy import RetryPolicy
 
 # ─────────────────────────────────────────────────────────────
 # Construção e validação

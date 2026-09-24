@@ -17,8 +17,8 @@ from pathlib import Path
 
 import pytest
 from app.domain.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_modelo
-from app.domain.ffmpeg_short import FUNDO_PADRAO, build_palco_vertical_cmd
 from app.domain.palco_short import montar_plano
+from app.infrastructure.render.ffmpeg_short import FUNDO_PADRAO, build_palco_vertical_cmd
 
 FACECAM = {"x": 24, "y": 410, "w": 340, "h": 260}
 TELA = {"x": 365, "y": 180, "w": 1325, "h": 720}

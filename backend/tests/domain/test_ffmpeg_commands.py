@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from app.domain.ffmpeg_commands import (
+from app.infrastructure.render.ffmpeg_commands import (
     build_audio_offset_cmd,
     build_cinematic_grade_cmd,
     build_cinematic_grade_layout_filter,
@@ -556,11 +556,11 @@ class TestBuildCinematicGradeCmd:
         # Isola do cache em disco: sem palco, usa o fundo-embaixo.
         # F-048: o resolver usado pelo cmd é o _para_config (por região).
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             lambda compartilhada, fundo, placa: None,
         )
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_bg_png",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_bg_png",
             lambda layout: Path("fake") / "hud-forte.png",
         )
         cmd = build_cinematic_grade_cmd(
@@ -577,11 +577,11 @@ class TestBuildCinematicGradeCmd:
         # Sem palco e sem fundo-PNG → fallback procedural drawbox.
         # F-048: o resolver usado pelo cmd é o _para_config (por região).
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             lambda compartilhada, fundo, placa: None,
         )
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_bg_png",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_bg_png",
             lambda layout: None,
         )
         cmd = build_cinematic_grade_cmd(
@@ -689,7 +689,7 @@ class TestBuildCinematicGradeCmd:
             return Path("fake") / f"{key}.png"
 
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             fake_resolver,
         )
 
@@ -736,11 +736,11 @@ class TestBuildCinematicGradeCmd:
     def test_cmd_com_fg_png_adiciona_loop_e_ignora_bg(self, monkeypatch):
         # F-048: o cmd resolve UM PNG por regiao via _resolve_shared_fg_png_para_config.
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             lambda compartilhada, fundo, placa: Path("fake") / "palco.png",
         )
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_bg_png",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_bg_png",
             lambda layout: Path("fake") / "hud-forte.png",
         )
         cmd = build_cinematic_grade_cmd(
@@ -890,7 +890,7 @@ class TestFfmpegThreadCaps:
         # PNG do palco é imagem estática: 1 thread basta e evita o pool de
         # frame buffers multi-thread que estourava (`png thread_get_buffer`).
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             lambda compartilhada, fundo, placa: Path("fake") / "palco.png",
         )
         cmd = build_cinematic_grade_cmd(

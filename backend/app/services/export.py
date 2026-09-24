@@ -22,11 +22,11 @@ from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.arranjo_blocos import parse as parse_arranjo
 from app.domain.arranjo_blocos import reconciliar, segmentos_na_ordem
-from app.domain.bruto_pipeline import build_bruto_pipeline
 from app.domain.segment_calculator import (
     mesclar_desvios_sobrepostos,
     normalizar_desvio,
 )
+from app.infrastructure.render.bruto_pipeline import build_bruto_pipeline
 from app.infrastructure.worker_queue import escrever_json_atomico
 from app.models import Corte, Projeto, StatusCorte
 from app.services.app_logging import (
@@ -71,7 +71,7 @@ class ExportService(
         """Gera o vídeo bruto do corte delegando o FFmpeg ao Native Worker.
 
         Pipeline único: per-segment com PCM/h264 + concat demuxer estilo
-        LosslessCut.  Detalhes em ``app.domain.bruto_pipeline``.
+        LosslessCut.  Detalhes em ``app.infrastructure.render.bruto_pipeline``.
 
         Output: ``clip_raw_<timestamp_ms>.mkv`` na pasta do corte.  Nome
         único evita conflito de lock com o player do navegador.
@@ -222,7 +222,7 @@ class ExportService(
                 res_file.unlink()
 
             # Pipeline única: per-segment com PTS contíguo + concat estilo
-            # LosslessCut.  Detalhes em app.domain.bruto_pipeline.
+            # LosslessCut.  Detalhes em app.infrastructure.render.bruto_pipeline.
             import tempfile as _temp
 
             # Diretório temporário único DENTRO da pasta do corte (não no tempdir

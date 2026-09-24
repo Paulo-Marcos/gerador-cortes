@@ -12,9 +12,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import app.domain.ffmpeg_commands as fc
+import app.infrastructure.render.ffmpeg_commands as fc
 import pytest
-from app.domain.ffmpeg_commands import (
+from app.infrastructure.render.ffmpeg_commands import (
     _build_grade_plan_segmentado,
     _construir_segmentos_grade,
     _GradeLayout,
@@ -453,7 +453,7 @@ def test_qsv_decode_grade_visualmente_igual_ao_software(tmp_path):
     """Fase 3: o decode passa de software para QSV+hwdownload. Renderiza a MESMA
     grade pelos dois caminhos e confirma que o frame e visualmente igual (dentro
     do ruido do encoder lossy). Prova que acelerar o decode nao muda a imagem."""
-    from app.domain.ffmpeg_commands import build_cinematic_grade_cmd
+    from app.infrastructure.render.ffmpeg_commands import build_cinematic_grade_cmd
 
     src = tmp_path / "in.mp4"
     _run(

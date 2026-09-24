@@ -18,18 +18,18 @@ from app.channel_assets_sync import garantir_mascote_materializado
 from app.channel_paths import projetos_dir
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain.cinema_filters import get_filtro_vf
-from app.domain.ffmpeg_commands import (
+from app.domain.render_etapas import eh_render_parcial, fase_dentro_do_alcance
+from app.domain.time_convert import epoch_to_hora_local, seg_to_duracao_humana
+from app.domain.youtube_layout import aplicar_layout_card_por_contexto
+from app.infrastructure.encoder_detector import encoder_da_maquina_async
+from app.infrastructure.render.cinema_filters import get_filtro_vf
+from app.infrastructure.render.ffmpeg_commands import (
     build_compose_and_encode_cmd,
     build_grade_plan,
 )
-from app.domain.overlay_codec import OverlayCodecProfile, overlay_codec_profile
-from app.domain.overlay_metadata import OverlayEntry, build_overlay_entries
-from app.domain.render_etapas import eh_render_parcial, fase_dentro_do_alcance
-from app.domain.time_convert import epoch_to_hora_local, seg_to_duracao_humana
-from app.domain.video_encoder import VideoEncoder
-from app.domain.youtube_layout import aplicar_layout_card_por_contexto
-from app.infrastructure.encoder_detector import encoder_da_maquina_async
+from app.infrastructure.render.overlay_codec import OverlayCodecProfile, overlay_codec_profile
+from app.infrastructure.render.overlay_metadata import OverlayEntry, build_overlay_entries
+from app.infrastructure.render.video_encoder import VideoEncoder
 from app.infrastructure.worker_queue import (
     RemotionWorkerQueue,
     WorkerJob,
@@ -996,7 +996,7 @@ async def _executar_grade(
 
     O filtro escolhido pelo usuário (curves, colorbalance, vignette, eq,
     drawbox) é aplicado integralmente — fonte única de verdade em
-    `app.domain.cinema_filters.get_filtro_vf`.
+    `app.infrastructure.render.cinema_filters.get_filtro_vf`.
 
     `global_quality` controla a compressão QSV (maior = mais comprimido).
     Default 30 — o `clip_graded.mp4` é intermediário/descartável após o

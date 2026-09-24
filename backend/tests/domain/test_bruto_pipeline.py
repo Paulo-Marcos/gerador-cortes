@@ -11,7 +11,7 @@ em produção — qualquer divergência reabre regressões já conhecidas.
 from pathlib import Path
 
 import pytest
-from app.domain.bruto_pipeline import BrutoPipeline, build_bruto_pipeline
+from app.infrastructure.render.bruto_pipeline import BrutoPipeline, build_bruto_pipeline
 
 VIDEO = Path("/data/video.mkv")
 OUT = Path("/work/clip_raw.mkv")

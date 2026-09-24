@@ -8,9 +8,9 @@ kill-switch e falha de derivação caem no graph legado.
 
 from pathlib import Path
 
-import app.domain.ffmpeg_commands as fc
-from app.domain.ffmpeg_commands import build_grade_precomposto_filter
-from app.domain.palco_derivados import PalcoDerivados, ensure_derivados_palco
+import app.infrastructure.render.ffmpeg_commands as fc
+from app.infrastructure.render.ffmpeg_commands import build_grade_precomposto_filter
+from app.infrastructure.render.palco_derivados import PalcoDerivados, ensure_derivados_palco
 from PIL import Image
 
 REGIAO = {
@@ -170,7 +170,7 @@ class TestRoteamentoGrade:
         assert "[chrome0]" not in filtro
 
     def test_segmento_com_derivado_usa_graph_precomposto(self, tmp_path):
-        from app.domain.ffmpeg_commands import _build_grade_segment_cmd
+        from app.infrastructure.render.ffmpeg_commands import _build_grade_segment_cmd
 
         d = PalcoDerivados(tmp_path / "bg.png", tmp_path / "ch.png", 120, 220)
         cmd = _build_grade_segment_cmd(

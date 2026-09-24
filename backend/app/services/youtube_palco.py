@@ -6,7 +6,7 @@ camada de FRENTE no FFmpeg do render final. O backend é dono da chave de cache
 (`palco_cache_key`) e do caminho de saída; o gerador Node só recebe o caminho —
 evita divergência de hash entre Python e JS.
 
-O resolver puro em `app.domain.ffmpeg_commands._resolve_shared_fg_png` só procura
+O resolver puro em `app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png` só procura
 o arquivo; quem GERA é este service (efeito colateral fora do domínio puro).
 """
 

@@ -13,9 +13,9 @@ from pathlib import Path
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain.cinema_filters import FILTROS_CINEMA, get_filtro_vf
-from app.domain.ffmpeg_commands import build_normalize_cmd
 from app.infrastructure.ffmpeg_runner import run_ffmpeg
+from app.infrastructure.render.cinema_filters import FILTROS_CINEMA, get_filtro_vf
+from app.infrastructure.render.ffmpeg_commands import build_normalize_cmd
 from app.models import Corte
 from app.services.app_logging import operational_error, operational_info
 

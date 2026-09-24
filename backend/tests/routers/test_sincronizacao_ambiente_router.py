@@ -1,6 +1,6 @@
 """GET /api/sincronizacao/ambiente (D-627)."""
 
-from app.domain.video_encoder import VideoEncoder
+from app.infrastructure.render.video_encoder import VideoEncoder
 from app.routers import sincronizacao
 from app.services import ambiente
 from fastapi import FastAPI

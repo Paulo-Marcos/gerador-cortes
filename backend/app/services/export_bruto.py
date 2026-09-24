@@ -8,8 +8,8 @@ duração e resolução do caminho do vídeo original.
 from pathlib import Path
 
 from app.channel_paths import projetos_dir
-from app.domain.ffmpeg_commands import build_audio_offset_cmd
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
+from app.infrastructure.render.ffmpeg_commands import build_audio_offset_cmd
 
 
 class _ExportBrutoMixin:

@@ -7,17 +7,26 @@ responsabilidade (E-006) em `ffmpeg_common`, `ffmpeg_basic`, `ffmpeg_grade` e
 `ffmpeg_overlay`, mas todos os nomes públicos continuam importáveis daqui —
 nenhum chamador precisa mudar. A orquestração da grade e a resolução dos PNGs
 do palco permanecem AQUI porque os testes fazem monkeypatch em
-`app.domain.ffmpeg_commands._resolve_shared_*`; manter os resolvers e seus
+`app.infrastructure.render.ffmpeg_commands._resolve_shared_*`; manter os resolvers e seus
 chamadores no mesmo módulo garante que o patch atinja o call-site.
 """
 
 from pathlib import Path
 
 from app import channel_paths
+from app.domain.youtube_layout import (
+    config_compartilhada_para_full,
+    normalizar_layout_youtube,
+    palco_cache_key,
+    palco_cache_key_para_config,
+    regioes_compartilhadas,
+    regioes_full_posicionadas,
+    resolver_layout_em_cascata,
+)
 
 # Re-exports das camadas fatiadas (fachada). Ordem: helpers -> básicos ->
 # grade (puro) -> overlays. Mantém a superfície pública idêntica.
-from app.domain.ffmpeg_basic import (
+from app.infrastructure.render.ffmpeg_basic import (
     build_audio_offset_cmd,
     build_concat_cmd,
     build_filter_complex_cmd,
@@ -28,7 +37,7 @@ from app.domain.ffmpeg_basic import (
     build_silence_detect_proxy_cmd,
     build_silence_detect_video_cmd,
 )
-from app.domain.ffmpeg_common import (
+from app.infrastructure.render.ffmpeg_common import (
     _CANVAS_NORMALIZE,
     _FILTER_SCRIPT_SIZE_THRESHOLD,
     _ffmpeg_decode_thread_args,
@@ -38,7 +47,7 @@ from app.domain.ffmpeg_common import (
     _int_env,
     _resolve_filter_arg,
 )
-from app.domain.ffmpeg_grade import (
+from app.infrastructure.render.ffmpeg_grade import (
     GradePlan,
     GradeStep,
     _append_fg_chains,
@@ -58,7 +67,7 @@ from app.domain.ffmpeg_grade import (
     build_cinematic_grade_layout_filter,
     build_grade_precomposto_filter,
 )
-from app.domain.ffmpeg_overlay import (
+from app.infrastructure.render.ffmpeg_overlay import (
     _LOUDNORM_YOUTUBE,
     _build_audio_args,
     _build_overlay_input_args,
@@ -66,21 +75,12 @@ from app.domain.ffmpeg_overlay import (
     build_compose_and_encode_cmd,
     build_overlay_filter_string,
 )
-from app.domain.palco_derivados import PalcoDerivados, ensure_derivados_palco
-from app.domain.video_encoder import (
+from app.infrastructure.render.palco_derivados import PalcoDerivados, ensure_derivados_palco
+from app.infrastructure.render.video_encoder import (
     VideoEncoder,
     argumentos_async_depth,
     argumentos_codec_qualidade,
     permite_decode_qsv,
-)
-from app.domain.youtube_layout import (
-    config_compartilhada_para_full,
-    normalizar_layout_youtube,
-    palco_cache_key,
-    palco_cache_key_para_config,
-    regioes_compartilhadas,
-    regioes_full_posicionadas,
-    resolver_layout_em_cascata,
 )
 
 # Superfície pública da fachada (também marca os re-exports como intencionais
@@ -151,7 +151,7 @@ _PALCO_CACHE_DIRNAME = "_palco_cache"
 # Grade cinematográfica — orquestração + resolução dos PNGs do palco.
 #
 # Fica na fachada de propósito: os testes fazem monkeypatch em
-# `app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config` /
+# `app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config` /
 # `_resolve_shared_bg_png`; `_resolver_grade_layout` chama esses resolvers por
 # nome, resolvido no namespace deste módulo — então o patch precisa incidir aqui.
 # ---------------------------------------------------------------------------

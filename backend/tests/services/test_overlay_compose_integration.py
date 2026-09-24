@@ -23,7 +23,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from app.domain.ffmpeg_commands import build_compose_and_encode_cmd
+from app.infrastructure.render.ffmpeg_commands import build_compose_and_encode_cmd
 
 pytestmark = pytest.mark.integration
 

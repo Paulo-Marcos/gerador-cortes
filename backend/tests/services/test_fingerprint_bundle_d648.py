@@ -12,7 +12,7 @@ dos overlays some do vídeo (a regressão do D-190).
 import threading
 
 import pytest
-from app.domain.remotion_bundle import compute_src_fingerprint
+from app.infrastructure.render.remotion_bundle import compute_src_fingerprint
 from app.services import pipeline_render_helpers as helpers
 
 

@@ -24,10 +24,6 @@ from app.domain.corte_mapper import (
 )
 from app.domain.desvio_categoria import SILENCIO, classificar_desvio
 from app.domain.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
-from app.domain.ffmpeg_basic import (
-    build_silence_detect_proxy_cmd,
-    build_silence_detect_video_cmd,
-)
 from app.domain.juncao_cortes import (
     CAMPOS_TEMPO_CENA,
     CAMPOS_TEMPO_REGIAO,
@@ -51,6 +47,10 @@ from app.domain.segment_calculator import (
 from app.domain.snap_desvios import palavras_do_corte, snap_desvio_a_palavras
 from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
 from app.domain.youtube_layout import normalizar_layout_youtube
+from app.infrastructure.render.ffmpeg_basic import (
+    build_silence_detect_proxy_cmd,
+    build_silence_detect_video_cmd,
+)
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
 from app.provider_ia import ProviderIA
 from app.services.app_logging import operational_debug, operational_error

@@ -11,8 +11,8 @@ from threading import Lock
 
 from app import channel_paths
 from app.channel_paths import projetos_dir
-from app.domain.cinema_filters import FILTROS_CINEMA
-from app.domain.overlay_codec import OverlayCodec
+from app.infrastructure.render.cinema_filters import FILTROS_CINEMA
+from app.infrastructure.render.overlay_codec import OverlayCodec
 from app.services import settings_store
 
 DEFAULT_FILTRO_GLOBAL_PADRAO = "bypass_dourado_aberto"

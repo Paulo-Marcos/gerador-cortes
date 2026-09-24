@@ -15,10 +15,10 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from app.domain.overlay_codec import OverlayCodec, overlay_codec_profile
-from app.domain.overlay_metadata import OverlayEntry
-from app.domain.remotion_bundle import compute_src_fingerprint
-from app.domain.retry_policy import RetryPolicy
+from app.infrastructure.render.overlay_codec import OverlayCodec, overlay_codec_profile
+from app.infrastructure.render.overlay_metadata import OverlayEntry
+from app.infrastructure.render.remotion_bundle import compute_src_fingerprint
+from app.infrastructure.render.retry_policy import RetryPolicy
 from app.services.pipeline_render import (
     _agrupar_overlay_chunks,
     _aguardar_cooldown,
@@ -513,7 +513,7 @@ class TestFiltroAplicadoNaGradeRespeitaUsuario:
 
     @pytest.mark.parametrize("filtro", ["cinematic_iii"])
     def test_pipeline_usa_filtro_completo_do_domain(self, filtro):
-        from app.domain.cinema_filters import get_filtro_vf
+        from app.infrastructure.render.cinema_filters import get_filtro_vf
 
         resultado = get_filtro_vf(filtro)
         assert "curves" in resultado, (
@@ -525,7 +525,7 @@ class TestFiltroAplicadoNaGradeRespeitaUsuario:
         assert "vignette" in resultado
 
     def test_nenhum_retorna_none_para_pular_vf(self):
-        from app.domain.cinema_filters import get_filtro_vf
+        from app.infrastructure.render.cinema_filters import get_filtro_vf
 
         assert get_filtro_vf("nenhum") is None
 

@@ -19,9 +19,9 @@ from typing import Literal
 
 from app.channel_paths import youtube_client_secrets_path
 from app.config import settings
-from app.domain.video_encoder import VideoEncoder
 from app.infrastructure import antigravity_cli_client, claude_cli_client
 from app.infrastructure.encoder_detector import encoder_da_maquina
+from app.infrastructure.render.video_encoder import VideoEncoder
 from app.services import navegador_assistido
 
 _RAIZ = Path(__file__).resolve().parents[3]

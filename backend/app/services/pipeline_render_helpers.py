@@ -9,9 +9,9 @@ import asyncio
 import hashlib
 from pathlib import Path
 
-from app.domain.overlay_codec import OverlayCodecProfile
-from app.domain.remotion_bundle import _walk_source_files, compute_src_fingerprint
-from app.domain.retry_policy import RetryPolicy
+from app.infrastructure.render.overlay_codec import OverlayCodecProfile
+from app.infrastructure.render.remotion_bundle import _walk_source_files, compute_src_fingerprint
+from app.infrastructure.render.retry_policy import RetryPolicy
 from app.services.app_logging import operational_info
 
 

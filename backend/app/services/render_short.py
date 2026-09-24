@@ -32,19 +32,19 @@ from app.domain import gancho_short, moldura_short, segmentos_short
 # Alias: o servico `legendas_short` (as palavras) ja e importado abaixo, e dois
 # nomes com um `s` de diferenca no mesmo arquivo e erro de leitura esperando.
 from app.domain import legenda_short as lugar_da_legenda
-from app.domain.ffmpeg_basic import build_concat_cmd
-from app.domain.ffmpeg_short import (
+from app.domain.formato_video import VERTICAL, Resolucao
+from app.domain.fundo_short import para_ffmpeg
+from app.domain.moldura_short import COR_PADRAO, faixas
+from app.domain.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
+from app.domain.youtube_layout import _normalizar_fundo as textura_valida
+from app.infrastructure.ffmpeg_runner import probe_resolucao
+from app.infrastructure.render.ffmpeg_basic import build_concat_cmd
+from app.infrastructure.render.ffmpeg_short import (
     build_composicao_short_cmd,
     build_palco_vertical_cmd,
     build_recorte_vertical_cmd,
 )
-from app.domain.formato_video import VERTICAL, Resolucao
-from app.domain.fundo_short import para_ffmpeg
-from app.domain.moldura_short import COR_PADRAO, faixas
-from app.domain.overlay_codec import OverlayCodec, overlay_codec_profile
-from app.domain.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
-from app.domain.youtube_layout import _normalizar_fundo as textura_valida
-from app.infrastructure.ffmpeg_runner import probe_resolucao
+from app.infrastructure.render.overlay_codec import OverlayCodec, overlay_codec_profile
 from app.infrastructure.worker_queue import RemotionWorkerQueue, WorkerJob, WorkerJobCategory
 from app.models import Corte, Short, StatusShort
 from app.services import legendas_short, palco_shorts
