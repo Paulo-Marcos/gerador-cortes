@@ -15,6 +15,7 @@ import pytest
 import pytest_asyncio
 from app.models import Base, Projeto
 from app.routers import youtube_browser
+from app.services import lives_do_canal
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -52,7 +53,7 @@ def canal(monkeypatch):
         coro.close()
         ingestoes.append(name)
 
-    monkeypatch.setattr(youtube_browser, "fire_and_forget", registrar, raising=False)
+    monkeypatch.setattr(lives_do_canal, "fire_and_forget", registrar)
     return identidade, ingestoes
 
 
