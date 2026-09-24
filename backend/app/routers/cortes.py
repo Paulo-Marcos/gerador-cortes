@@ -56,6 +56,7 @@ from app.services.deteccao_segmentos import (
     materializar_regiao_em_layout,
 )
 from app.services.export import ExportService
+from app.services.finalizacao_do_corte import finalizar_corte_com_sucesso
 from app.services.media_proxy import MediaProxyService
 from app.services.remotion_render import RemotionRenderService
 from app.services.render_progress import RenderProgressStore
@@ -1101,7 +1102,6 @@ async def sincronizar_pos_producao(corte_id: str, db: AsyncSession = Depends(get
     o pipeline do Remotion produziria. Após sucesso, limpa a pasta do corte
     mantendo apenas clip_filtered.mp4 e upload_ready/.
     """
-    from app.services.remotion_render import RemotionRenderService
 
     corte = await db.get(Corte, corte_id)
     if not corte:
@@ -1121,7 +1121,7 @@ async def sincronizar_pos_producao(corte_id: str, db: AsyncSession = Depends(get
 
     # Caso 1: já existe upload_ready/video.mp4 — apenas finaliza (gera metadados + thumb se faltar)
     if upload_ready_video.exists():
-        await RemotionRenderService.finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
+        await finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
         await _limpar_pasta_corte_pos_sync(corte_dir)
         return {"status": "ok", "mensagem": "Sincronizado via upload_ready existente."}
 
@@ -1130,7 +1130,7 @@ async def sincronizar_pos_producao(corte_id: str, db: AsyncSession = Depends(get
         upload_ready_dir.mkdir(parents=True, exist_ok=True)
         # D-645: cópia do vídeo final inteiro — fora do event loop.
         await asyncio.to_thread(shutil.copy2, str(clip_filtered), str(upload_ready_video))
-        await RemotionRenderService.finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
+        await finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
         await _limpar_pasta_corte_pos_sync(corte_dir)
         return {"status": "ok", "mensagem": "Promovido e sincronizado com sucesso."}
 

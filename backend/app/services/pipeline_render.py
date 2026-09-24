@@ -1496,9 +1496,9 @@ async def _executar_render_final(
 
 async def _finalizar_corte(db, corte: Corte, upload_dir: Path) -> None:
     """Atualiza status do corte, gera metadados e copia thumbnail."""
-    from app.services.remotion_render import RemotionRenderService
+    from app.services.finalizacao_do_corte import finalizar_corte_com_sucesso
 
-    await RemotionRenderService.finalizar_corte_com_sucesso(db, corte, upload_dir)
+    await finalizar_corte_com_sucesso(db, corte, upload_dir)
 
 
 async def _publicar_video_final(video_temporario: Path, video_final: Path) -> None:

@@ -6,16 +6,14 @@ import asyncio
 import json
 import logging
 import os
-import shutil
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
-from app.models import Corte, MetadadoCorte, StatusCorte
+from app.models import Corte
 from app.services.cancelamento_jobs import TrabalhoEmVoo
-from app.services.ciclo_de_vida import marcar_corte
+from app.services.finalizacao_do_corte import finalizar_corte_com_sucesso
 from app.services.pipeline_render import renderizar_pipeline_otimizado
 from app.services.render_progress import RenderProgressStore
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -141,32 +139,6 @@ class RemotionRenderService:
         return task
 
     @staticmethod
-    async def finalizar_corte_com_sucesso(db, corte, upload_ready_dir):
-        # inline import to avoid circular dependency (export imports remotion_render indirectly)
-        from app.services.export import ExportService
-
-        logger.info("[RemotionRender] Finalizando: Gerando metadados e copiando thumbnail...")
-        await ExportService._gerar_metadados_txt(corte.id, upload_ready_dir)
-
-        result = await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == corte.id))
-        meta = result.scalar_one_or_none()
-        if meta and meta.thumbnail_path:
-            thumb_source = resolver_do_projeto(meta.thumbnail_path, corte.projeto_id)
-            if thumb_source.exists():
-                await asyncio.to_thread(
-                    shutil.copy2, str(thumb_source), str(upload_ready_dir / "thumbnail.jpg")
-                )
-                logger.info("[RemotionRender] Thumbnail copiada com sucesso.")
-
-        marcar_corte(corte, StatusCorte.PROCESSADO, origem="render final")
-        corte.is_pos_producao = 1
-        await db.commit()
-        logger.info(
-            "[RemotionRender] Corte %s marcado como PROCESSADO e Pós-Produção Finalizada.",
-            corte.id,
-        )
-
-    @staticmethod
     async def sincronizar_tarefas_concluidas():
         """Varre a fila buscando `res_*.json` órfãos do worker e finaliza cortes prontos."""
         fila_dir = projetos_dir() / "fila_remotion"
@@ -199,9 +171,7 @@ class RemotionRenderService:
                             corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte_id
                             upload_ready_dir = corte_dir / "upload_ready"
                             if (upload_ready_dir / "video.mp4").exists():
-                                await RemotionRenderService.finalizar_corte_com_sucesso(
-                                    db, corte, upload_ready_dir
-                                )
+                                await finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
 
                     res_file.unlink()
                     logger.info("[Sync] Arquivo %s processado e removido.", file_name)

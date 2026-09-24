@@ -14,11 +14,11 @@ import pytest_asyncio
 from app import channel_paths
 from app.models import Base, Corte, MetadadoCorte, Projeto, StatusCorte
 from app.services.export import ExportService
-from app.services.remotion_render import RemotionRenderService
+from app.services.finalizacao_do_corte import finalizar_corte_com_sucesso
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-finalizar = RemotionRenderService.finalizar_corte_com_sucesso
+finalizar = finalizar_corte_com_sucesso
 
 
 @pytest_asyncio.fixture

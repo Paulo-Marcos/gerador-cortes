@@ -14,10 +14,9 @@ import pytest
 
 grimp = pytest.importorskip("grimp")
 
-_CICLOS_CONHECIDOS = {
-    # D-696: render; os dois arquivos estão travados.
-    frozenset({"app.services.pipeline_render", "app.services.remotion_render"}),
-}
+# D-758 desfez o último (24/09): o app não tem ciclo de import. Qualquer ciclo
+# novo reprova — a lista não volta a crescer.
+_CICLOS_CONHECIDOS: set[frozenset[str]] = set()
 
 
 def _ciclos(pacote: str) -> set[frozenset[str]]:
