@@ -38,7 +38,7 @@ from app.domain.time_convert import seg_to_hms_short, seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
 from app.provider_ia import ProviderIA
 from app.services import channels
-from app.services.claude_ia import _gerar_json_provider, _gerar_text_provider, _log_skill_usada
+from app.services.claude_ia import gerar_json, gerar_texto, registrar_skill_usada
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -884,8 +884,8 @@ async def sugerir_shorts(corte_id: str, provider: ProviderIA = "claude") -> dict
         faixa_duracao=faixa.duracao_humana,
         texto_transcricao=contexto.texto_transcricao,
     )
-    _log_skill_usada(_SKILL_SHORTS, skill, scaffold)
-    resposta = await _gerar_json_provider(
+    registrar_skill_usada(_SKILL_SHORTS, skill, scaffold)
+    resposta = await gerar_json(
         provider,
         prompt,
         skill,
@@ -931,8 +931,8 @@ async def sugerir_cenas(short_id: str, provider: ProviderIA = "claude") -> dict:
         tipos_disponiveis=", ".join(t.value for t in TipoCenaShort),
         texto_transcricao=contexto.texto_transcricao,
     )
-    _log_skill_usada(_SKILL_CENAS_SHORT, skill, scaffold)
-    resposta = await _gerar_json_provider(
+    registrar_skill_usada(_SKILL_CENAS_SHORT, skill, scaffold)
+    resposta = await gerar_json(
         provider,
         prompt,
         skill,
@@ -986,8 +986,8 @@ async def sugerir_ganchos(short_id: str, provider: ProviderIA = "claude") -> lis
         ganchos_recentes=contexto.ganchos_recentes,
         quantidade=MAX_VARIACOES,
     )
-    _log_skill_usada(_SKILL_GANCHO_SHORT, skill, scaffold)
-    bruto = await _gerar_text_provider(
+    registrar_skill_usada(_SKILL_GANCHO_SHORT, skill, scaffold)
+    bruto = await gerar_texto(
         provider,
         prompt,
         skill,

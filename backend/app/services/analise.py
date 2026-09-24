@@ -567,7 +567,7 @@ class AnaliseService:
             "duracao_segundos": projeto.duracao_segundos or 0,
             "falantes_map": _mapa_falantes_para_meta(projeto.falantes_map),
         }
-        resultado = await ClaudeIaService._gerar_cortes(transcricao_intervalo, meta)
+        resultado = await ClaudeIaService.gerar_cortes(transcricao_intervalo, meta)
 
         cortes_data = resultado.get("cortes", [])
         if not cortes_data:
@@ -712,7 +712,7 @@ class AnaliseService:
         try:
             # Gera PRIMEIRO; só persiste depois de ter o resultado. Assim uma
             # falha (ou reload que mate a task) NUNCA deixa o projeto sem cortes.
-            payload = await ClaudeIaService._gerar_cortes(transcricao, meta, provider)
+            payload = await ClaudeIaService.gerar_cortes(transcricao, meta, provider)
             cortes_data = payload.get("cortes", [])
             descartados = payload.get("descartados", [])
             if not cortes_data:

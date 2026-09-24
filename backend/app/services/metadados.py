@@ -29,11 +29,11 @@ from app.provider_ia import ProviderIA
 from app.services import channels
 from app.services.app_logging import operational_error
 from app.services.claude_ia import (
-    _SKILL_METADADOS,
-    _gerar_json_provider,
-    _gerar_text_provider,
-    _log_skill_usada,
-    _strip_code_fences,
+    SKILL_METADADOS,
+    gerar_json,
+    gerar_texto,
+    registrar_skill_usada,
+    sem_cercas_de_codigo,
 )
 from app.services.tasks import fire_and_forget
 from app.services.thumbnail import ThumbnailService
@@ -396,7 +396,7 @@ class MetadadosService:
         checklist) vive inteira em `.claude/skills/metadados-expert/SKILL.md`.
         O service só fornece o input do corte — espelho do fluxo da thumbnail.
         """
-        skill = editorial_skills.resolver_skill(_SKILL_METADADOS)
+        skill = editorial_skills.resolver_skill(SKILL_METADADOS)
         ctx = await MetadadosService.montar_contexto_meta(corte_id)
         # D-349: o scaffold (invólucro "INPUT DO CORTE" + contrato de saída) vem do
         # banco por canal, como as demais etapas. O corpo/expertise (regras de
@@ -411,10 +411,8 @@ class MetadadosService:
             transcricao_marcada=ctx["transcricao_marcada"],
             historico_titulos=ctx["historico_titulos"],
         )
-        _log_skill_usada(_SKILL_METADADOS, skill, scaffold_meta)
-        resultado = await _gerar_json_provider(
-            provider, prompt, skill, _SKILL_METADADOS, corte_id=corte_id
-        )
+        registrar_skill_usada(SKILL_METADADOS, skill, scaffold_meta)
+        resultado = await gerar_json(provider, prompt, skill, SKILL_METADADOS, corte_id=corte_id)
         await MetadadosService.importar_resultado_meta(corte_id, resultado)
         logger.info("[ClaudeIA] Metadados gerados via Claude p/ corte %s", corte_id[:8])
         return {"ok": True}
@@ -459,13 +457,11 @@ class MetadadosService:
         )
         prompt = MetadadosService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
         skill = editorial_skills.resolver_skill(_SKILL_THUMBNAIL)
-        _log_skill_usada(
+        registrar_skill_usada(
             _SKILL_THUMBNAIL, skill, editorial_scaffolds.resolver_scaffold("thumbnail")
         )
-        texto = await _gerar_text_provider(
-            provider, prompt, skill, _SKILL_THUMBNAIL, corte_id=corte_id
-        )
-        prompt_thumbnail = _strip_code_fences(texto)
+        texto = await gerar_texto(provider, prompt, skill, _SKILL_THUMBNAIL, corte_id=corte_id)
+        prompt_thumbnail = sem_cercas_de_codigo(texto)
         if not prompt_thumbnail:
             raise ValueError("Claude não retornou o prompt de thumbnail.")
 

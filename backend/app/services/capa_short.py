@@ -44,7 +44,7 @@ from app.domain.time_convert import seg_to_mmss
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
 from app.provider_ia import ProviderIA
-from app.services.claude_ia import _gerar_text_provider, _log_skill_usada
+from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -374,8 +374,8 @@ async def _escrever_prompt_da_capa(short_id: str, provider: ProviderIA) -> str:
         prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
         texto_capa=texto_da_capa(contexto),
     )
-    _log_skill_usada(_SKILL_CAPA_SHORT, skill, scaffold)
-    bruto = await _gerar_text_provider(
+    registrar_skill_usada(_SKILL_CAPA_SHORT, skill, scaffold)
+    bruto = await gerar_texto(
         provider,
         prompt,
         skill,

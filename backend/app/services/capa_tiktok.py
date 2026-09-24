@@ -45,7 +45,7 @@ from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
 from app.provider_ia import ProviderIA
 from app.services.channels import identidade_do_canal_ativo
-from app.services.claude_ia import _gerar_text_provider, _log_skill_usada
+from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -241,8 +241,8 @@ async def sugerir_etiqueta(corte_id: str, provider: ProviderIA = "claude") -> st
         resumo=contexto.resumo,
         etiquetas_recentes=contexto.etiquetas_recentes or "(nenhuma ainda)",
     )
-    _log_skill_usada(_SKILL_CAPA_TIKTOK, skill, scaffold)
-    bruto = await _gerar_text_provider(
+    registrar_skill_usada(_SKILL_CAPA_TIKTOK, skill, scaffold)
+    bruto = await gerar_texto(
         provider,
         prompt,
         skill,
@@ -358,8 +358,8 @@ async def _escrever_prompt_da_arte(corte_id: str, texto_capa: str, provider: Pro
         resumo=contexto.resumo,
         prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
     )
-    _log_skill_usada(_SKILL_CAPA_TIKTOK_IMAGEM, skill, scaffold)
-    bruto = await _gerar_text_provider(
+    registrar_skill_usada(_SKILL_CAPA_TIKTOK_IMAGEM, skill, scaffold)
+    bruto = await gerar_texto(
         provider,
         prompt,
         skill,

@@ -33,7 +33,7 @@ from app.domain.metadados_short import (
 from app.domain.publicacao import LIMITES, Plataforma
 from app.models import Corte, MetadadoShort, Short
 from app.provider_ia import ProviderIA
-from app.services.claude_ia import _gerar_text_provider, _log_skill_usada
+from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -191,8 +191,8 @@ async def gerar_post(short_id: str, provider: ProviderIA = "claude") -> dict:
         titulo_visivel=contexto.titulo_visivel,
         titulo_max=contexto.titulo_max,
     )
-    _log_skill_usada(_SKILL_METADADOS_SHORT, skill, scaffold)
-    bruto = await _gerar_text_provider(
+    registrar_skill_usada(_SKILL_METADADOS_SHORT, skill, scaffold)
+    bruto = await gerar_texto(
         provider,
         prompt,
         skill,

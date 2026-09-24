@@ -51,7 +51,7 @@ def _sha1_curto(texto: str) -> str:
     return hashlib.sha1((texto or "").encode("utf-8")).hexdigest()[:8]
 
 
-def _log_skill_usada(
+def registrar_skill_usada(
     skill_key: str,
     skill: editorial_skills.SkillResolvida,
     scaffold_texto: str | None = None,
@@ -104,7 +104,7 @@ def _carregar_transcricao_raw(raw: str, projeto_id: str) -> list | dict:
 _SKILL_CORTES = "cortador-expert"
 _SKILL_TRECHOS = "trechos-expert"
 _SKILL_CENAS = "cenas-expert"
-_SKILL_METADADOS = "metadados-expert"
+SKILL_METADADOS = "metadados-expert"
 _SKILL_AVALIACAO = "avaliador-bruto"
 
 
@@ -143,7 +143,7 @@ def _modelo_usado(skill: editorial_skills.SkillResolvida, provider: ProviderIA) 
     return gerador_para(provider).modelo(_pedido(skill, skill.key))
 
 
-async def _gerar_json_provider(
+async def gerar_json(
     provider: ProviderIA,
     prompt: str,
     skill: editorial_skills.SkillResolvida,
@@ -157,7 +157,7 @@ async def _gerar_json_provider(
     return await gerador_para(provider).gerar_json(prompt, pedido)
 
 
-async def _gerar_text_provider(
+async def gerar_texto(
     provider: ProviderIA,
     prompt: str,
     skill: editorial_skills.SkillResolvida,
@@ -196,7 +196,7 @@ def _janela_do_chunk(chunk: list) -> tuple[float, float]:
     return (float(inicio), float(max(fim, inicio)))
 
 
-def _strip_code_fences(texto: str) -> str:
+def sem_cercas_de_codigo(texto: str) -> str:
     """Remove cercas ``` de markdown que o modelo às vezes coloca em volta do texto."""
     t = (texto or "").strip()
     if not t.startswith("```"):
@@ -243,7 +243,7 @@ class ClaudeIaService:
     # ── geração dos cortes (decide direto vs lote pelo tamanho) ───────────────
 
     @staticmethod
-    async def _gerar_cortes(transcricao: list, meta: dict, provider: ProviderIA = "claude") -> dict:
+    async def gerar_cortes(transcricao: list, meta: dict, provider: ProviderIA = "claude") -> dict:
         """Gera cortes via Claude. Manda a transcrição inteira de uma vez
         (melhor coerência temática); cai para lote só se exceder o orçamento
         de contexto — decisão baseada em settings.claude_analise_max_chars_direto.
@@ -266,8 +266,10 @@ class ClaudeIaService:
                 dica_chat=chat_heat.formatar_dica(picos_chat),
                 variacao=bloco_variacao_de(skill.lentes),
             )
-            _log_skill_usada(_SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
-            resultado = await _gerar_json_provider(
+            registrar_skill_usada(
+                _SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes")
+            )
+            resultado = await gerar_json(
                 provider, prompt, skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id")
             )
             return {
@@ -308,7 +310,7 @@ class ClaudeIaService:
         # como o fluxo de cenas — nunca uma nova por chunk (titulação
         # inconsistente entre partes da mesma análise).
         variacao = bloco_variacao_de(skill.lentes)
-        _log_skill_usada(_SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
+        registrar_skill_usada(_SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
         cortes: list = []
         vistos: set[int] = set()
         descartados: list = []
@@ -327,7 +329,7 @@ class ClaudeIaService:
                 dica_chat=dica,
                 variacao=variacao,
             )
-            resultado = await _gerar_json_provider(
+            resultado = await gerar_json(
                 provider, prompt, skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id")
             )
             for corte in resultado.get("cortes", []):
@@ -563,7 +565,7 @@ class ClaudeIaService:
         return palavras
 
     @staticmethod
-    async def _gerar_desvios(
+    async def gerar_desvios(
         transcricao_bruta: list,
         meta: dict,
         existentes: list,
@@ -590,7 +592,9 @@ class ClaudeIaService:
 
         cabecalho_meta = ClaudeIaService._cabecalho_meta_corte(meta, existentes)
         skill = editorial_skills.resolver_skill(_SKILL_TRECHOS)
-        _log_skill_usada(_SKILL_TRECHOS, skill, editorial_scaffolds.resolver_scaffold("trechos"))
+        registrar_skill_usada(
+            _SKILL_TRECHOS, skill, editorial_scaffolds.resolver_scaffold("trechos")
+        )
 
         novos: list = []
         for indice, chunk in enumerate(chunks):
@@ -599,7 +603,7 @@ class ClaudeIaService:
                 texto_chunk, cabecalho_meta, indice + 1, len(chunks)
             )
             t = time.perf_counter()
-            resultado = await _gerar_json_provider(
+            resultado = await gerar_json(
                 provider,
                 prompt,
                 skill,
@@ -729,16 +733,14 @@ class ClaudeIaService:
             raise ValueError("Sem prompt de cenas (transcrição final vazia?).")
 
         skill = editorial_skills.resolver_skill(_SKILL_CENAS)
-        _log_skill_usada(_SKILL_CENAS, skill)
+        registrar_skill_usada(_SKILL_CENAS, skill)
         # Uma lente por geração (consistente entre as partes), do banco por canal.
         variacao = bloco_variacao_de(skill.lentes)
         cenas: list = []
         for indice, parte in enumerate(prompts):
             prompt = f"{variacao}\n\n{parte['texto']}"
             t = time.perf_counter()
-            resultado = await _gerar_json_provider(
-                provider, prompt, skill, _SKILL_CENAS, corte_id=corte_id
-            )
+            resultado = await gerar_json(provider, prompt, skill, _SKILL_CENAS, corte_id=corte_id)
             novas = resultado.get("cenas", [])
             cenas.extend(novas)
             logger.info(
@@ -813,7 +815,7 @@ class ClaudeIaService:
         # Resumo é bespoke (sem corpo de skill), mas reusa modelo + lentes de
         # metadados por canal (E-021) — mantém a etapa alinhada à config do canal.
         # D-297: o scaffold (contrato de saída) vem do banco por canal.
-        skill = editorial_skills.resolver_skill(_SKILL_METADADOS)
+        skill = editorial_skills.resolver_skill(SKILL_METADADOS)
         scaffold_resumo = editorial_scaffolds.resolver_scaffold("resumo")
         prompt = scaffold_resumo.format(
             variacao=bloco_variacao_de(skill.lentes),
@@ -822,7 +824,7 @@ class ClaudeIaService:
             resumo_antigo=resumo_antigo,
             transcricao=transcricao_filtrada,
         )
-        _log_skill_usada(_SKILL_METADADOS, skill, scaffold_resumo)
+        registrar_skill_usada(SKILL_METADADOS, skill, scaffold_resumo)
         resultado = await claude_cli_client.generate_json(
             prompt,
             model=skill.modelo,
@@ -875,8 +877,8 @@ class ClaudeIaService:
             ),
             texto_avaliado=contexto.texto_avaliado,
         )
-        _log_skill_usada(_SKILL_AVALIACAO, skill, scaffold)
-        resultado = await _gerar_json_provider(
+        registrar_skill_usada(_SKILL_AVALIACAO, skill, scaffold)
+        resultado = await gerar_json(
             provider,
             prompt,
             skill,

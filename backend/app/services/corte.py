@@ -560,7 +560,7 @@ class CorteService:
                 transcricao_bruta, transcricao_raw_projeto
             )
 
-        resultado = await ClaudeIaService._gerar_desvios(
+        resultado = await ClaudeIaService.gerar_desvios(
             transcricao_bruta, meta, desvios_existentes, mapa_falantes, provider
         )
         # WHY: a `origem` (o provider que propôs) permite o frontend exibir o badge
