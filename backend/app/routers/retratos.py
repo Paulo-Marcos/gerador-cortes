@@ -11,7 +11,6 @@ Fluxo:
 
 from __future__ import annotations
 
-import httpx
 from app import channel_paths
 from app.services import retrato_wikipedia
 from fastapi import APIRouter, Body, File, Form, HTTPException, Response, UploadFile
@@ -83,12 +82,12 @@ async def salvar_url(payload: SalvarUrlRequest = Body(...)) -> dict[str, object]
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except httpx.HTTPStatusError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Origem respondeu {exc.response.status_code} ao baixar imagem.",
-        ) from exc
-    except httpx.HTTPError as exc:
+    except retrato_wikipedia.DownloadFalhou as exc:
+        if exc.status is not None:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Origem respondeu {exc.status} ao baixar imagem.",
+            ) from exc
         raise HTTPException(
             status_code=502,
             detail=f"Falha ao baixar imagem: {exc}",
