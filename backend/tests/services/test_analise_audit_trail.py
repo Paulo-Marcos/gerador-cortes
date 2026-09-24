@@ -257,8 +257,7 @@ async def test_analisar_transcricao_repassa_descartados_via_claude(monkeypatch):
     projeto.youtube_url = "http://x"
     projeto.titulo_live = "L"
     projeto.duracao_segundos = 60
-    # O caminho Claude abre a própria sessão (módulo distinto de analise).
-    monkeypatch.setattr("app.services.claude_ia.AsyncSessionLocal", factory)
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
 
     claude_payload = {
         "cortes": [{"titulo_proposto": "A", "inicio_hms": "00:00:00", "fim_hms": "00:01:00"}],
@@ -274,7 +273,7 @@ async def test_analisar_transcricao_repassa_descartados_via_claude(monkeypatch):
     async def fake_refazer(_projeto_id):
         return None
 
-    monkeypatch.setattr(ClaudeIaService, "_refazer_transcricao", staticmethod(fake_refazer))
+    monkeypatch.setattr(AnaliseService, "_refazer_transcricao", staticmethod(fake_refazer))
 
     await AnaliseService.analisar_transcricao("p-claude")
 

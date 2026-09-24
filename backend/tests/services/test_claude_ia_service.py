@@ -12,7 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from app.infrastructure import antigravity_cli_client
-from app.services import claude_ia
+from app.services import analise, claude_ia
+from app.services.analise import AnaliseService
 from app.services.claude_ia import ClaudeIaService
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -294,7 +295,7 @@ class TestModoAditivoHelpers:
         # Existe corte em 100s (bucket 3). O corte novo em 110s cai no mesmo
         # bucket → pulado; o de 700s (bucket 23) é inédito → entra.
         buckets_existentes = {ClaudeIaService._bucket_30s(100)}
-        novos, pulados = ClaudeIaService._filtrar_cortes_em_buckets(
+        novos, pulados = AnaliseService._filtrar_cortes_em_buckets(
             [
                 {"titulo_proposto": "dup", "inicio_seg": 110},
                 {"titulo_proposto": "novo", "inicio_seg": 700},
@@ -305,7 +306,7 @@ class TestModoAditivoHelpers:
         assert [c["titulo_proposto"] for c in novos] == ["novo"]
 
     def test_filtrar_sem_existentes_mantem_tudo(self):
-        novos, pulados = ClaudeIaService._filtrar_cortes_em_buckets(
+        novos, pulados = AnaliseService._filtrar_cortes_em_buckets(
             [{"titulo_proposto": "a", "inicio_seg": 10}], set()
         )
         assert pulados == 0
@@ -365,7 +366,7 @@ class TestAnaliseAditiva:
             inicios_existentes=[100.0],  # corte existente no bucket 3
             descartados_existentes=[{"tema": "velho", "motivo": "auditoria anterior"}],
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr(analise, "AsyncSessionLocal", factory)
 
         async def fake_gerar_cortes(_transcricao, _meta, provider="claude"):
             return {
@@ -400,12 +401,10 @@ class TestAnaliseAditiva:
             repasse["cortes"] = cortes_data
             repasse["descartados"] = descartados
 
-        monkeypatch.setattr(
-            claude_ia.AnaliseService, "importar_resultado", staticmethod(fake_importar)
-        )
+        monkeypatch.setattr(AnaliseService, "importar_resultado", staticmethod(fake_importar))
 
         resultado = asyncio.run(
-            ClaudeIaService.analisar_via_claude("p1", encadear_transcricao=False)
+            AnaliseService.analisar_via_claude("p1", encadear_transcricao=False)
         )
 
         # Nenhum DELETE emitido → os cortes existentes são preservados.
@@ -426,7 +425,7 @@ class TestAnaliseAditiva:
 
     def test_projeto_sem_cortes_importa_tudo_sem_pular(self, monkeypatch):
         factory, executados = self._montar_factory(inicios_existentes=[], descartados_existentes=[])
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr(analise, "AsyncSessionLocal", factory)
 
         async def fake_gerar_cortes(_transcricao, _meta, provider="claude"):
             return {
@@ -454,12 +453,10 @@ class TestAnaliseAditiva:
         async def fake_importar(projeto_id, cortes_data, *, descartados=None, origem="claude"):
             repasse["cortes"] = cortes_data
 
-        monkeypatch.setattr(
-            claude_ia.AnaliseService, "importar_resultado", staticmethod(fake_importar)
-        )
+        monkeypatch.setattr(AnaliseService, "importar_resultado", staticmethod(fake_importar))
 
         resultado = asyncio.run(
-            ClaudeIaService.analisar_via_claude("p1", encadear_transcricao=False)
+            AnaliseService.analisar_via_claude("p1", encadear_transcricao=False)
         )
 
         assert len(repasse["cortes"]) == 2

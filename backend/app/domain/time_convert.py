@@ -79,6 +79,21 @@ def to_seg(val) -> float:
         return hms_to_seg(s)
 
 
+def to_seg_estrito(val) -> float:
+    """Converte valor para float (segundos), suportando HH:MM:SS.
+
+    Difere de `to_seg`: None, texto em branco, lista e dicionário dão ValueError
+    em vez de 0 s. Veio da análise (D-695) sem mudar de regra; unificar as duas
+    é do E-054.
+    """
+    if isinstance(val, (int, float)):
+        return float(val)
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return hms_to_seg(str(val))
+
+
 def hms_to_srt(hms: str) -> str:
     """Normaliza HH:MM:SS para HH:MM:SS.000 (formato LosslessCut).
 

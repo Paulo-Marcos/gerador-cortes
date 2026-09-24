@@ -4,7 +4,7 @@ Quando o modelo descarta a live inteira ele escreve o motivo em `descartados`;
 esse texto era jogado fora e o operador recebia só "Claude não retornou cortes".
 """
 
-from app.services.claude_ia import ClaudeIaService
+from app.services.analise import AnaliseService
 
 
 class TestMotivoDeZeroCortes:
@@ -16,7 +16,7 @@ class TestMotivoDeZeroCortes:
             }
         ]
 
-        mensagem = ClaudeIaService._motivo_de_zero_cortes(descartados)
+        mensagem = AnaliseService._motivo_de_zero_cortes(descartados)
 
         assert "TRANSCRIÇÃO INDISPONÍVEL" in mensagem
         assert "não tem fala" in mensagem
@@ -24,10 +24,10 @@ class TestMotivoDeZeroCortes:
     def test_ignora_descartes_sem_motivo_e_pega_o_primeiro_que_tem(self):
         descartados = [{"tema": "A"}, {"tema": "B", "motivo": "fora da régua editorial"}]
 
-        assert "fora da régua editorial" in ClaudeIaService._motivo_de_zero_cortes(descartados)
+        assert "fora da régua editorial" in AnaliseService._motivo_de_zero_cortes(descartados)
 
     def test_sem_descartados_ainda_orienta_o_operador(self):
-        mensagem = ClaudeIaService._motivo_de_zero_cortes([])
+        mensagem = AnaliseService._motivo_de_zero_cortes([])
 
         assert "não registrou o motivo" in mensagem
         assert "transcrição" in mensagem
@@ -35,7 +35,7 @@ class TestMotivoDeZeroCortes:
     def test_motivo_longo_e_truncado_para_caber_na_tela(self):
         descartados = [{"tema": "X", "motivo": "palavra " * 200}]
 
-        mensagem = ClaudeIaService._motivo_de_zero_cortes(descartados)
+        mensagem = AnaliseService._motivo_de_zero_cortes(descartados)
 
         assert len(mensagem) < 500
         assert mensagem.endswith("…")

@@ -3,6 +3,7 @@ Serviço de Análise — gera cortes via Claude e os salva no projeto
 """
 
 import json
+import logging
 import uuid
 from datetime import datetime
 
@@ -10,16 +11,28 @@ from app.database import AsyncSessionLocal
 from app.domain.ancora_match import achatar_palavras, ancorar_intervalo
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.segment_calculator import normalizar_desvio as _normalizar_desvio
-from app.domain.time_convert import hms_to_seg, seg_to_hms
+from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
+from app.domain.transcricao_utils import motivo_transcricao_inutilizavel
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
+from app.provider_ia import ProviderIA
 from app.services.app_logging import operational_info
 from app.services.ciclo_de_vida import mudar_projeto
+from app.services.claude_ia import (
+    ClaudeIaService,
+    _carregar_transcricao_raw,
+    _mapa_falantes_para_meta,
+)
 from sqlalchemy import select as sa_select
 
 # D-355: janela (em segundos) para ancorar a borda de CORTE na palavra citada.
 # Ampla porque o timestamp do LLM é "de memória" e erra por dezenas de segundos;
 # a busca janelada ainda evita casar frase repetida em outro ponto da live.
 _JANELA_ANCORA_CORTE_SEG = 60.0
+
+# A mensagem cabe num toast; o texto integral do descarte fica na auditoria.
+_LIMITE_MOTIVO_NA_TELA = 400
+
+logger = logging.getLogger(__name__)
 
 
 def _bordas_ancoradas_do_corte(
@@ -48,16 +61,6 @@ def _bordas_ancoradas_do_corte(
         palavras,
         janela_seg=_JANELA_ANCORA_CORTE_SEG,
     )
-
-
-def _to_seg(val) -> float:
-    """Converte valor para float (segundos), suportando HH:MM:SS."""
-    if isinstance(val, (int, float)):
-        return float(val)
-    try:
-        return float(val)
-    except (ValueError, TypeError):
-        return hms_to_seg(str(val))
 
 
 def _snapshot_da_proposta(corte: Corte, origem: str) -> CorteSnapshot:
@@ -162,7 +165,7 @@ class AnaliseService:
 
             for seg in chunk:
                 inicio = seg.get("inicio", seg.get("start", 0))
-                inicio_hms = seg_to_hms_short(_to_seg(inicio))
+                inicio_hms = seg_to_hms_short(to_seg_estrito(inicio))
                 texto = seg.get("texto", seg.get("text", "")).strip()
                 if texto:
                     idx_global = seg.get("global_index", 0)
@@ -232,8 +235,8 @@ class AnaliseService:
 
         transcricao_intervalo = []
         for seg in transcricao_completa:
-            seg_inicio = _to_seg(seg.get("inicio", seg.get("start", 0)))
-            seg_fim = _to_seg(seg.get("fim", seg.get("end", 0)))
+            seg_inicio = to_seg_estrito(seg.get("inicio", seg.get("start", 0)))
+            seg_fim = to_seg_estrito(seg.get("fim", seg.get("end", 0)))
             if seg_fim >= inicio_seg and seg_inicio <= fim_seg:
                 transcricao_intervalo.append(seg)
 
@@ -283,7 +286,7 @@ class AnaliseService:
             linhas = []
             for seg in chunk:
                 inicio = seg.get("inicio", seg.get("start", 0))
-                inicio_hms = seg_to_hms_short(_to_seg(inicio))
+                inicio_hms = seg_to_hms_short(to_seg_estrito(inicio))
                 texto = seg.get("texto", seg.get("text", "")).strip()
                 if texto:
                     idx_global = seg.get("global_index", 0)
@@ -350,8 +353,8 @@ class AnaliseService:
             chunk = [
                 seg
                 for seg in transcricao
-                if _to_seg(seg.get("fim", seg.get("end", 0))) >= bloco_inicio
-                and _to_seg(seg.get("inicio", seg.get("start", 0))) <= bloco_fim
+                if to_seg_estrito(seg.get("fim", seg.get("end", 0))) >= bloco_inicio
+                and to_seg_estrito(seg.get("inicio", seg.get("start", 0))) <= bloco_fim
             ]
             chunks.append(chunk)
 
@@ -372,9 +375,9 @@ class AnaliseService:
             return parte_inicio, parte_fim
 
         parte_inicio = min(
-            _to_seg(seg.get("inicio", seg.get("start", inicio_seg))) for seg in chunk
+            to_seg_estrito(seg.get("inicio", seg.get("start", inicio_seg))) for seg in chunk
         )
-        parte_fim = max(_to_seg(seg.get("fim", seg.get("end", fim_seg))) for seg in chunk)
+        parte_fim = max(to_seg_estrito(seg.get("fim", seg.get("end", fim_seg))) for seg in chunk)
         return max(inicio_seg, parte_inicio), min(fim_seg, parte_fim)
 
     @staticmethod
@@ -509,11 +512,8 @@ class AnaliseService:
         gera os cortes, substitui os existentes e encadeia o refazer-transcrição.
         Mantém a semântica de background task: em falha marca o projeto como ERRO.
         """
-        # Import local: claude_ia importa este módulo no topo (evita ciclo).
-        from app.services.claude_ia import ClaudeIaService
-
         try:
-            await ClaudeIaService.analisar_via_claude(projeto_id)
+            await AnaliseService.analisar_via_claude(projeto_id)
         except Exception as e:
             async with AsyncSessionLocal() as db:
                 projeto = await db.get(Projeto, projeto_id)
@@ -558,9 +558,6 @@ class AnaliseService:
             f"{len(transcricao_intervalo)} segmentos no intervalo {inicio_seg}s-{fim_seg}s",
         )
 
-        # Import local: claude_ia importa este módulo no topo (evita ciclo).
-        from app.services.claude_ia import ClaudeIaService, _mapa_falantes_para_meta
-
         # D-299: mesma injeção de rótulo [CANAL]/[OUTRO] que a análise completa
         # (D-286) já faz — aqui sempre que o projeto estiver diarizado, sem
         # toggle (a análise de intervalo não expõe `usar_diarizacao`).
@@ -589,16 +586,16 @@ class AnaliseService:
 
                 # Computa inicio_seg/fim_seg a partir de HMS se não fornecidos
                 inicio_seg = corte_data.get("inicio_seg")
-                if inicio_seg is None or _to_seg(inicio_seg or 0.0) == 0.0:
+                if inicio_seg is None or to_seg_estrito(inicio_seg or 0.0) == 0.0:
                     inicio_seg = hms_to_seg(corte_data.get("inicio_hms", "00:00:00"))
                 else:
-                    inicio_seg = _to_seg(inicio_seg)
+                    inicio_seg = to_seg_estrito(inicio_seg)
 
                 fim_seg = corte_data.get("fim_seg")
-                if fim_seg is None or _to_seg(fim_seg or 0.0) == 0.0:
+                if fim_seg is None or to_seg_estrito(fim_seg or 0.0) == 0.0:
                     fim_seg = hms_to_seg(corte_data.get("fim_hms", "00:00:00"))
                 else:
-                    fim_seg = _to_seg(fim_seg)
+                    fim_seg = to_seg_estrito(fim_seg)
 
                 # D-355: ancora as bordas na palavra citada, se houver citação.
                 inicio_ancorado, fim_ancorado = _bordas_ancoradas_do_corte(
@@ -649,9 +646,199 @@ class AnaliseService:
         """D-631: o modo manual usa a MESMA receita da análise automática (skill
         `cortador-expert` + scaffold `cortes` do canal). Antes era um prompt fixo
         no código, com a persona de um canal e divergente do que o canal editou."""
-        # Import local: claude_ia importa este módulo no topo (evita ciclo).
-        from app.services.claude_ia import ClaudeIaService
-
         return ClaudeIaService.montar_prompt_manual_cortes(
             texto_transcricao, meta, cabecalho=cabecalho
         )
+
+    @staticmethod
+    async def analisar_via_claude(
+        projeto_id: str,
+        *,
+        encadear_transcricao: bool = True,
+        usar_diarizacao: bool = True,
+        provider: ProviderIA = "claude",
+    ) -> dict:
+        """Analisa a transcrição via Claude e ADICIONA os cortes gerados aos que
+        já existem no projeto, encadeando (opcional) o refazer-transcrição.
+
+        D-298 — modo aditivo: a análise nunca apaga cortes; deletar é ação
+        manual do editor. Os cortes novos seguem a numeração a partir do maior
+        número já usado, e um corte novo cujo início cai no mesmo bucket de 30s
+        de um corte JÁ EXISTENTE é pulado — evita inundar a live com
+        quase-duplicatas quando o projeto é reanalisado. Os `descartados` são
+        MESCLADOS com a auditoria anterior (dedup por `tema`), não sobrescritos.
+        A skill `cortador-expert` carrega toda a expertise editorial.
+
+        D-286: quando `usar_diarizacao` e o projeto já foi diarizado, injeta o
+        rótulo de falante ([CANAL]/[OUTRO]) na transcrição enviada à IA. Sem
+        diarização (ou com o toggle desligado) o prompt sai idêntico ao de antes.
+        """
+        async with AsyncSessionLocal() as db:
+            projeto = await db.get(Projeto, projeto_id)
+            if not projeto:
+                raise ValueError("Projeto não encontrado")
+            if not projeto.transcricao_raw:
+                raise ValueError(
+                    "Este projeto não tem transcrição gravada. Use 'Refazer transcrição' "
+                    "para baixar as legendas do YouTube e então rode a análise."
+                )
+
+            transcricao = _carregar_transcricao_raw(projeto.transcricao_raw, projeto_id)
+            # D-445: recusar ANTES da chamada paga. Sem esta guarda, uma
+            # transcrição que existe mas não tem fala (placeholder de legenda
+            # indisponível, dado truncado) só era rejeitada pelo próprio modelo
+            # — ~20s e ~US$0,10 de Opus para devolver "não retornou cortes",
+            # que não diz ao operador o que fazer.
+            motivo = motivo_transcricao_inutilizavel(
+                transcricao if isinstance(transcricao, list) else [],
+                duracao_video_seg=projeto.duracao_segundos or 0,
+            )
+            if motivo:
+                raise ValueError(motivo)
+
+            meta = {
+                "projeto_id": projeto_id,  # D-353: contexto p/ telemetria da geração
+                "titulo_live": projeto.titulo_live or "",
+                "youtube_url": projeto.youtube_url or "",
+                "duracao_segundos": projeto.duracao_segundos or 0,
+                "falantes_map": _mapa_falantes_para_meta(projeto.falantes_map)
+                if usar_diarizacao
+                else None,
+            }
+            status_anterior = projeto.status
+            mudar_projeto(projeto, StatusProjeto.ANALISANDO, origem="claude-ia")
+            await db.commit()
+
+        try:
+            # Gera PRIMEIRO; só persiste depois de ter o resultado. Assim uma
+            # falha (ou reload que mate a task) NUNCA deixa o projeto sem cortes.
+            payload = await ClaudeIaService._gerar_cortes(transcricao, meta, provider)
+            cortes_data = payload.get("cortes", [])
+            descartados = payload.get("descartados", [])
+            if not cortes_data:
+                raise ValueError(AnaliseService._motivo_de_zero_cortes(descartados))
+
+            # Modo aditivo (D-298): lê os cortes e a auditoria que já existem
+            # para pular quase-duplicatas e mesclar os descartados — sem apagar.
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    sa_select(Corte.inicio_seg).where(Corte.projeto_id == projeto_id)
+                )
+                buckets_existentes = {ClaudeIaService._bucket_30s(row[0]) for row in result.all()}
+                projeto = await db.get(Projeto, projeto_id)
+                descartados_anteriores = (
+                    json.loads(projeto.descartados_analise or "[]") if projeto else []
+                )
+
+            cortes_novos, pulados = AnaliseService._filtrar_cortes_em_buckets(
+                cortes_data, buckets_existentes
+            )
+            descartados_mesclados = ClaudeIaService._mesclar_descartados(
+                descartados_anteriores, descartados
+            )
+
+            # importar_resultado numera a partir do maior número já usado, então
+            # os cortes existentes ficam preservados e os novos seguem a sequência.
+            await AnaliseService.importar_resultado(
+                projeto_id,
+                cortes_novos,
+                descartados=descartados_mesclados,
+                origem=provider,
+            )
+
+            if encadear_transcricao:
+                await AnaliseService._refazer_transcricao(projeto_id)
+
+            logger.info(
+                "[ClaudeIA] Projeto %s analisado via Claude (aditivo): +%d cortes, "
+                "%d pulados (bucket já existente), %d descartados",
+                projeto_id[:8],
+                len(cortes_novos),
+                pulados,
+                len(descartados_mesclados),
+            )
+            return {
+                "total_cortes": len(cortes_novos),
+                "pulados_existentes": pulados,
+                "total_descartados": len(descartados_mesclados),
+            }
+
+        except Exception:  # noqa: BLE001 — restaura status e propaga (endpoint mostra o erro)
+            await AnaliseService._restaurar_status(projeto_id, status_anterior)
+            raise
+
+    @staticmethod
+    def _motivo_de_zero_cortes(descartados: list) -> str:
+        """Monta a mensagem de erro de uma análise que não propôs nada.
+
+        Quando o modelo descarta tudo, ele escreve o porquê em `descartados` —
+        e esse texto era jogado fora junto com a resposta, sobrando um "não
+        retornou cortes" mudo na tela (D-445). Aqui a explicação dele vira a
+        mensagem, que é a única que sabe se o problema foi o material ou a
+        régua editorial.
+        """
+        motivo = next(
+            (str(d.get("motivo", "")).strip() for d in descartados or [] if d.get("motivo")),
+            "",
+        )
+        if not motivo:
+            return (
+                "A IA não propôs nenhum corte para esta live e não registrou o motivo. "
+                "Confira se a transcrição tem fala de verdade antes de tentar de novo."
+            )
+        if len(motivo) > _LIMITE_MOTIVO_NA_TELA:
+            motivo = motivo[:_LIMITE_MOTIVO_NA_TELA].rstrip() + "…"
+        return f"A IA não propôs nenhum corte. Motivo que ela registrou: {motivo}"
+
+    @staticmethod
+    def _filtrar_cortes_em_buckets(cortes: list, buckets_existentes: set[int]) -> tuple[list, int]:
+        """Descarta os cortes cujo início cai no bucket de 30s de um corte JÁ
+        EXISTENTE do projeto (evita inundar a live com quase-duplicatas numa
+        reanálise). Retorna (cortes_a_importar, quantidade_pulada)."""
+        novos: list = []
+        pulados = 0
+        for corte in cortes:
+            if ClaudeIaService._bucket_30s(corte.get("inicio_seg")) in buckets_existentes:
+                pulados += 1
+                continue
+            novos.append(corte)
+        return novos, pulados
+
+    @staticmethod
+    async def _refazer_transcricao(projeto_id: str) -> None:
+        """Replica o fluxo do botão 'Refazer transcrição': reextrai a legenda e
+        sincroniza a transcrição final de cada corte (aplicando os desvios).
+        """
+        from app.services.corte import CorteService
+        from app.services.ingestao import IngestaoService
+
+        async with AsyncSessionLocal() as db:
+            projeto = await db.get(Projeto, projeto_id)
+            if not projeto or not projeto.youtube_url or not projeto.arquivo_video_path:
+                logger.info("[ClaudeIA] Sem vídeo para refazer transcrição; pulei a etapa.")
+                return
+            transcricao = await IngestaoService._extrair_legenda(
+                projeto_id,
+                projeto.youtube_url,
+                legenda_offset_ms=projeto.legenda_offset_ms,
+            )
+            projeto.transcricao_raw = json.dumps(transcricao, ensure_ascii=False)
+            await db.commit()
+
+            result = await db.execute(sa_select(Corte.id).where(Corte.projeto_id == projeto_id))
+            corte_ids = [row[0] for row in result.all()]
+
+        # Cada sincronização abre a própria sessão (db=None) — isola commits.
+        for corte_id in corte_ids:
+            await CorteService.sincronizar_transcricao_corte(corte_id)
+        logger.info("[ClaudeIA] Refazer transcrição: %d cortes sincronizados", len(corte_ids))
+
+    @staticmethod
+    async def _restaurar_status(projeto_id: str, status) -> None:
+        """Restaura o status anterior do projeto (usado quando a análise falha,
+        para não deixar o projeto preso em ANALISANDO nem perder os cortes)."""
+        async with AsyncSessionLocal() as db:
+            projeto = await db.get(Projeto, projeto_id)
+            if projeto:
+                mudar_projeto(projeto, status, origem="claude-ia: restaurar anterior")
+                await db.commit()

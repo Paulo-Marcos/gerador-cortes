@@ -18,7 +18,6 @@ _CICLOS_CONHECIDOS = {
     # D-695: o claude_ia chama os services dos agregados e é chamado por eles.
     frozenset(
         {
-            "app.services.analise",
             "app.services.cancelamento_jobs",
             "app.services.capa_short",
             "app.services.capa_tiktok",

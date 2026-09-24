@@ -11,6 +11,7 @@ from app.database import get_db
 from app.models import Corte, Projeto
 from app.provider_ia import provider_do_modelo
 from app.services import telemetria_ia
+from app.services.analise import AnaliseService
 from app.services.claude_ia import ClaudeIaService, ProviderIA
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -64,7 +65,7 @@ async def analisar_via_claude(
         )
     await _soltar_a_transacao(db)
     try:
-        resultado = await ClaudeIaService.analisar_via_claude(
+        resultado = await AnaliseService.analisar_via_claude(
             projeto_id, usar_diarizacao=usar_diarizacao, provider=provider
         )
         return {
