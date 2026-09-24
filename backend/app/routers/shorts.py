@@ -68,6 +68,7 @@ from pathlib import Path
 
 from app.database import AsyncSessionLocal
 from app.provider_ia import ProviderIA
+from app.services import fabrica_de_shorts
 from app.services import shorts as shorts_store
 from app.services.tasks import fire_and_forget
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -193,7 +194,7 @@ async def gerar_manualmente(corte_id: str):
     na pós-produção — refaz só o vídeo (D-160).
     """
     try:
-        return await shorts_store.gerar_shorts_do_corte(corte_id)
+        return await fabrica_de_shorts.gerar_shorts_do_corte(corte_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
