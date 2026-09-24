@@ -23,7 +23,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from app import editorial_scaffolds, editorial_skills
 from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain import gancho_short, legenda_short, segmentos_short
 from app.domain.arranjo_short import de_chave as arranjo_de_chave
@@ -32,13 +34,19 @@ from app.domain.cenas_short_ia import recortar_transcricao_varios
 from app.domain.formato_video import foco_de_regiao
 from app.domain.moldura_short import Moldura
 from app.domain.shorts import ResultadoSugestoes, SugestaoShort
-from app.domain.time_convert import seg_to_mmss
+from app.domain.time_convert import seg_to_hms_short, seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
+from app.provider_ia import ProviderIA
 from app.services import channels
+from app.services.claude_ia import _gerar_json_provider, _gerar_text_provider, _log_skill_usada
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
+
+_SKILL_SHORTS = "shorts-expert"
+_SKILL_CENAS_SHORT = "cenas-short-expert"
+_SKILL_GANCHO_SHORT = "gancho-short-expert"
 
 ORIGEM_IA = "ia"
 ORIGEM_MANUAL = "manual"
@@ -845,6 +853,159 @@ async def elegibilidade(corte_id: str) -> dict:
         }
 
 
+async def sugerir_shorts(corte_id: str, provider: ProviderIA = "claude") -> dict:
+    """Propõe os trechos verticais do bruto recém-gerado e os persiste (D-454).
+
+    Roda sobre `Corte.transcricao_final` — a transcrição já sem os desvios e
+    com os tempos **rebaseados na timeline do bruto**. É desse arquivo que o
+    short será recortado, então é nesse relógio que os candidatos nascem.
+
+    Levanta `LookupError` (corte inexistente) ou `ValueError` (sem transcrição
+    final). Quem chama no fluxo automático trata a falha como não-fatal: a
+    sugestão de shorts é derivada do bruto, não parte da entrega dele.
+    """
+    from app.domain.shorts import FaixaShort, normalizar_sugestoes
+
+    contexto = await montar_contexto(corte_id)
+    faixa = FaixaShort(
+        duracao_min_seg=settings.shorts_duracao_min_seg,
+        duracao_max_seg=settings.shorts_duracao_max_seg,
+        quantidade_min=settings.shorts_quantidade_min,
+        quantidade_max=settings.shorts_quantidade_max,
+    )
+
+    skill = editorial_skills.resolver_skill(_SKILL_SHORTS)
+    scaffold = editorial_scaffolds.resolver_scaffold("shorts")
+    prompt = scaffold.format(
+        titulo=contexto.titulo,
+        tema_central=contexto.tema_central,
+        duracao_humana=seg_to_hms_short(contexto.duracao_seg),
+        quantidade_alvo=faixa.quantidade_humana,
+        faixa_duracao=faixa.duracao_humana,
+        texto_transcricao=contexto.texto_transcricao,
+    )
+    _log_skill_usada(_SKILL_SHORTS, skill, scaffold)
+    resposta = await _gerar_json_provider(
+        provider,
+        prompt,
+        skill,
+        _SKILL_SHORTS,
+        projeto_id=contexto.projeto_id,
+        corte_id=corte_id,
+    )
+    resultado = normalizar_sugestoes(resposta, duracao_bruto_seg=contexto.duracao_seg, faixa=faixa)
+    shorts = await registrar_sugestoes(contexto, resultado)
+    return {"shorts": shorts, "descartes": resultado.descartes}
+
+
+async def sugerir_cenas(short_id: str, provider: ProviderIA = "claude") -> dict:
+    """Propõe os cartões que entram por cima de UM trecho vertical (D-497).
+
+    No horizontal a IA propõe as cenas desde sempre; aqui o painel da D-494
+    só sabia criar à mão. A skill é OUTRA (`cenas-short-expert`) porque o
+    repertório é outro: lá são fichas e ênfases num vídeo de dez minutos,
+    aqui são quatro cartões disputando trinta segundos de tela vertical, com
+    a legenda queimada embaixo.
+
+    As cenas voltam GRAVADAS, substituindo as que existiam. Propor sem
+    gravar deixaria o operador com uma lista que ele teria de reescrever à
+    mão para usar; e o que existia antes é ou vazio (o caso comum) ou um
+    palpite anterior da própria IA. Um short com cenas escritas à mão só
+    chega aqui se o operador pedir de novo — e aí ele pediu.
+
+    Levanta `LookupError` (short inexistente) ou `ValueError` (trecho sem
+    transcrição). Devolve o short atualizado e os descartes, que são o que
+    explica por que a IA falou em cinco cenas e a tela mostra três.
+    """
+    from app.domain.cenas_short import TipoCenaShort
+    from app.domain.cenas_short_ia import normalizar_sugestoes as normalizar_cenas
+
+    contexto = await montar_contexto_de_cenas(short_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_CENAS_SHORT)
+    scaffold = editorial_scaffolds.resolver_scaffold("cenas-short")
+    prompt = scaffold.format(
+        titulo=contexto.titulo,
+        gancho=contexto.gancho,
+        duracao_humana=f"{contexto.duracao_seg:.0f} segundos",
+        tipos_disponiveis=", ".join(t.value for t in TipoCenaShort),
+        texto_transcricao=contexto.texto_transcricao,
+    )
+    _log_skill_usada(_SKILL_CENAS_SHORT, skill, scaffold)
+    resposta = await _gerar_json_provider(
+        provider,
+        prompt,
+        skill,
+        _SKILL_CENAS_SHORT,
+        projeto_id=contexto.projeto_id,
+        corte_id=contexto.corte_id,
+        short_id=short_id,
+    )
+    resultado = normalizar_cenas(resposta, duracao_short=contexto.duracao_seg)
+    short = await definir_cenas(short_id, [cena.para_json() for cena in resultado.cenas])
+    logger.info(
+        "[Shorts] cenas IA short=%s aceitas=%d descartadas=%d",
+        short_id[:8],
+        len(resultado.cenas),
+        len(resultado.descartes),
+    )
+    return {"short": short, "descartes": resultado.descartes}
+
+
+async def sugerir_ganchos(short_id: str, provider: ProviderIA = "claude") -> list[str]:
+    """As variacoes do texto que abre o short (D-565).
+
+    Skill separada da capa do TikTok, e nao um parametro dela, porque as duas
+    escrevem coisas de generos opostos. La sao 2-3 palavras que NOMEIAM o
+    assunto numa prateleira onde nove capas sao vistas juntas, e repetir da
+    coerencia. Aqui e uma frase de 4-7 palavras que ABRE uma pergunta em quem
+    esta com o dedo em movimento — e repetir, no feed, parece robo.
+
+    A base e a transcricao do TRECHO, nao o resumo do corte: o gancho promete,
+    e a promessa tem de estar no que este short mostra.
+
+    NAO grava nada. As variacoes vao para a tela e o operador escolhe uma,
+    escreve a dele, ou ignora todas — a decisao editorial continua sendo
+    humana, e gravar por conta propria tiraria dele a chance de comparar.
+
+    Levanta `LookupError` (short inexistente) e `ValueError` (trecho sem
+    fala). Lista vazia quando o modelo nao produziu nada aproveitavel.
+    """
+    from app.domain.gancho_short import MAX_VARIACOES, ganchos_da_resposta
+
+    contexto = await montar_contexto_do_gancho(short_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_GANCHO_SHORT)
+    scaffold = editorial_scaffolds.resolver_scaffold("gancho-short")
+    prompt = scaffold.format(
+        titulo_proposto=contexto.titulo,
+        tema_central=contexto.tema_central,
+        duracao_seg=contexto.duracao_seg,
+        texto_transcricao=contexto.texto_transcricao,
+        gancho_da_curadoria=contexto.gancho_da_curadoria,
+        ganchos_recentes=contexto.ganchos_recentes,
+        quantidade=MAX_VARIACOES,
+    )
+    _log_skill_usada(_SKILL_GANCHO_SHORT, skill, scaffold)
+    bruto = await _gerar_text_provider(
+        provider,
+        prompt,
+        skill,
+        _SKILL_GANCHO_SHORT,
+        projeto_id=contexto.projeto_id,
+        corte_id=contexto.corte_id,
+        short_id=short_id,
+    )
+    # O historico vai ao prompt E ao parser: um pede, o outro garante.
+    variacoes = ganchos_da_resposta(bruto, ja_usados=contexto.ganchos_gastos)
+    logger.info(
+        "[Shorts] ganchos IA short=%s variacoes=%d",
+        short_id[:8],
+        len(variacoes),
+    )
+    return variacoes
+
+
 async def gerar_shorts_do_corte(corte_id: str) -> dict:
     """Caminho MANUAL da fabrica: regera o bruto se preciso e propoe os shorts.
 
@@ -862,8 +1023,6 @@ async def gerar_shorts_do_corte(corte_id: str) -> dict:
     Levanta `LookupError` (corte inexistente) e `ValueError` (corte sem Fire, ou
     bruto que nao pode ser regerado).
     """
-    from app.services.claude_ia import ClaudeIaService
-
     estado = await elegibilidade(corte_id)
     if not estado["elegivel"]:
         raise ValueError(
@@ -879,7 +1038,7 @@ async def gerar_shorts_do_corte(corte_id: str) -> dict:
         await _regerar_bruto_preservando_pos_producao(corte_id)
         regerou = True
 
-    resultado = await ClaudeIaService.sugerir_shorts_via_claude(corte_id)
+    resultado = await sugerir_shorts(corte_id)
     logger.info(
         "[Shorts] geracao manual corte=%s bruto_regerado=%s candidatos=%d",
         corte_id[:8],

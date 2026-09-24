@@ -14,12 +14,11 @@ from app import editorial_scaffolds, editorial_skills
 from app.infrastructure import antigravity_cli_client, claude_cli_client
 from app.models import Base, Corte, Projeto, Short
 from app.services import shorts as shorts_store
-from app.services.claude_ia import ClaudeIaService
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-sugerir_cenas = ClaudeIaService.sugerir_cenas_do_short_via_claude
-sugerir_ganchos = ClaudeIaService.sugerir_ganchos_via_claude
+sugerir_cenas = shorts_store.sugerir_cenas
+sugerir_ganchos = shorts_store.sugerir_ganchos
 
 
 @pytest_asyncio.fixture

@@ -90,11 +90,10 @@ def espioes(monkeypatch):
         chamadas["sugestao"].append(corte_id)
         return {"shorts": [{"id": "s1"}], "descartes": []}
 
-    from app.services.claude_ia import ClaudeIaService
     from app.services.export import ExportService
 
     monkeypatch.setattr(ExportService, "gerar_bruto_via_worker", staticmethod(_fake_bruto))
-    monkeypatch.setattr(ClaudeIaService, "sugerir_shorts_via_claude", staticmethod(_fake_sugestao))
+    monkeypatch.setattr(servico, "sugerir_shorts", _fake_sugestao)
     return chamadas
 
 

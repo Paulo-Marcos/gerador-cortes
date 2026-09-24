@@ -315,10 +315,10 @@ async def transcricao_do_bruto(corte_id: str):
 @router.post("/corte/{corte_id}/sugerir")
 async def sugerir_agora(corte_id: str, provider: ProviderIA = "claude"):
     """Propõe os shorts do bruto atual, de forma síncrona (o caller espera)."""
-    from app.services.claude_ia import ClaudeIaService
+    from app.services import shorts as shorts_store
 
     try:
-        return await ClaudeIaService.sugerir_shorts_via_claude(corte_id, provider)
+        return await shorts_store.sugerir_shorts(corte_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -474,10 +474,10 @@ async def sugerir_cenas(short_id: str, provider: ProviderIA = "claude"):
     chegou. A chamada leva alguns segundos — menos que a de propor os shorts,
     porque a transcrição é a de um trecho, não a do bruto inteiro.
     """
-    from app.services.claude_ia import ClaudeIaService
+    from app.services import shorts as shorts_store
 
     try:
-        return await ClaudeIaService.sugerir_cenas_do_short_via_claude(short_id, provider)
+        return await shorts_store.sugerir_cenas(short_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -499,10 +499,9 @@ async def sugerir_ganchos(short_id: str, provider: ProviderIA = "claude"):
     para saber se chegou.
     """
     from app.services import shorts as shorts_store
-    from app.services.claude_ia import ClaudeIaService
 
     try:
-        variacoes = await ClaudeIaService.sugerir_ganchos_via_claude(short_id, provider)
+        variacoes = await shorts_store.sugerir_ganchos(short_id, provider)
         # D-573: GRAVA AS PROPOSTAS, e continua sem escolher.
         #
         # A chamada real leva minutos (231s no log do canal). Enquanto o

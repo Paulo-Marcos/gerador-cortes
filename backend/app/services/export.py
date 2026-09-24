@@ -407,9 +407,9 @@ class ExportService(
             if e_fire and settings.claude_auto_shorts_no_bruto:
                 BrutoProgress.marcar(corte_id, "shorts", "rodando")
                 try:
-                    from app.services.claude_ia import ClaudeIaService
+                    from app.services import shorts as shorts_store
 
-                    await ClaudeIaService.sugerir_shorts_via_claude(corte_id)
+                    await shorts_store.sugerir_shorts(corte_id)
                     BrutoProgress.marcar(corte_id, "shorts", "concluido")
                 except Exception as exc:
                     BrutoProgress.marcar(corte_id, "shorts", "erro")

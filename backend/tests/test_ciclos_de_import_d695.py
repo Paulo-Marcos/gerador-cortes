@@ -15,12 +15,11 @@ import pytest
 grimp = pytest.importorskip("grimp")
 
 _CICLOS_CONHECIDOS = {
-    # D-695: o claude_ia chama os services dos agregados e é chamado por eles.
+    # D-755: o laço interno do export com a fila de tarefas, e a fábrica de
+    # shorts, que pede o bruto ao export enquanto o export pede os shorts a ela.
     frozenset(
         {
             "app.services.cancelamento_jobs",
-            "app.services.claude_ia",
-            "app.services.corte",
             "app.services.export",
             "app.services.export_bulk_queue",
             "app.services.export_processamento",
