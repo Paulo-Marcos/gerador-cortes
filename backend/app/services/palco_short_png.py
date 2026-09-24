@@ -23,7 +23,6 @@ semanas a este projeto (D-384).
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import logging
@@ -32,6 +31,7 @@ import tempfile
 from pathlib import Path
 
 from app import channel_paths
+from app.core import process_runner
 
 logger = logging.getLogger(__name__)
 
@@ -131,35 +131,12 @@ async def _gerar(chave: str, destino: Path, props: dict) -> Path | None:
 
 
 async def _rodar_node(destino: Path, props_path: str) -> tuple[int, str]:
-    """Roda o gerador, com o caminho síncrono como rede.
+    """Roda o gerador pelo runner único de processo externo (D-750).
 
-    `create_subprocess_exec` levanta `NotImplementedError` sob o event loop
-    Selector do uvicorn no Windows (D-369). Sem o fallback em thread, a geração
-    falharia calada e o short sairia sem moldura sem ninguém saber por quê.
+    O runner guarda o fallback síncrono do event loop Selector do Windows (D-369):
+    sem ele, a geração falharia calada.
     """
-    argumentos = ["node", str(_GEN_SCRIPT), str(destino), props_path]
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *argumentos,
-            cwd=str(_REPO_ROOT),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        saida, _ = await proc.communicate()
-        return proc.returncode or 0, saida.decode(errors="replace")
-    except NotImplementedError:
-        import subprocess  # noqa: PLC0415 — só o fallback precisa dele
-
-        def _sincrono():
-            return subprocess.run(
-                argumentos,
-                cwd=str(_REPO_ROOT),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                errors="replace",
-                check=False,
-            )
-
-        resultado = await asyncio.to_thread(_sincrono)
-        return resultado.returncode, resultado.stdout
+    resultado = await process_runner.rodar(
+        ["node", str(_GEN_SCRIPT), str(destino), props_path], cwd=_REPO_ROOT, timeout=None
+    )
+    return resultado.returncode, resultado.saida

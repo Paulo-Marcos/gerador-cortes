@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from app import channel_paths
+from app.core import process_runner
 from app.domain.youtube_layout import (
     config_compartilhada_para_full,
     normalizar_layout_youtube,
@@ -358,36 +359,13 @@ async def _ensure_png_para_props(
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 json.dump(props, handle)
-            try:
-                proc = await asyncio.create_subprocess_exec(
-                    "node",
-                    str(_GEN_SCRIPT),
-                    str(destino),
-                    props_path,
-                    cwd=str(_REPO_ROOT),
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.STDOUT,
-                )
-                saida_bytes, _ = await proc.communicate()
-                returncode = proc.returncode
-                saida = saida_bytes.decode(errors="replace")
-            except NotImplementedError:
-                # Fallback para Windows caso o SelectorEventLoop esteja ativo
-                import subprocess
-
-                def run_node():
-                    return subprocess.run(
-                        ["node", str(_GEN_SCRIPT), str(destino), props_path],
-                        cwd=str(_REPO_ROOT),
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        text=True,
-                        errors="replace",
-                    )
-
-                result = await asyncio.to_thread(run_node)
-                returncode = result.returncode
-                saida = result.stdout
+            resultado = await process_runner.rodar(
+                ["node", str(_GEN_SCRIPT), str(destino), props_path],
+                cwd=_REPO_ROOT,
+                timeout=None,
+            )
+            returncode = resultado.returncode
+            saida = resultado.saida
 
             if returncode != 0:
                 logger.warning(

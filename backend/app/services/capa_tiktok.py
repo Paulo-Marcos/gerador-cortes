@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
+from app.core import process_runner
 from app.database import AsyncSessionLocal
 from app.domain import capa_tiktok as layout_capa
 from app.domain.youtube_layout import FUNDO_PADRAO
@@ -419,40 +420,15 @@ async def _rasterizar(destino: Path, props: dict) -> None:
 
 
 async def _rodar_node(destino: Path, props_path: str) -> tuple[int, str]:
-    """Roda o gerador, com o caminho síncrono como rede (D-369).
+    """Roda o gerador pelo runner único de processo externo (D-750).
 
-    `create_subprocess_exec` levanta `NotImplementedError` sob o event loop
-    Selector do uvicorn no Windows. Sem o fallback em thread, a geração falharia
-    calada.
+    O runner guarda o fallback síncrono do event loop Selector do Windows (D-369):
+    sem ele, a geração falharia calada.
     """
-    import asyncio  # noqa: PLC0415 — usado só aqui e no fallback
-
-    argumentos = ["node", str(_GEN_SCRIPT), str(destino), props_path]
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *argumentos,
-            cwd=str(_REPO_ROOT),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        saida, _ = await proc.communicate()
-        return proc.returncode or 0, saida.decode(errors="replace")
-    except NotImplementedError:
-        import subprocess  # noqa: PLC0415 — só o fallback precisa dele
-
-        def _sincrono():
-            return subprocess.run(
-                argumentos,
-                cwd=str(_REPO_ROOT),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                errors="replace",
-                check=False,
-            )
-
-        resultado = await asyncio.to_thread(_sincrono)
-        return resultado.returncode, resultado.stdout
+    resultado = await process_runner.rodar(
+        ["node", str(_GEN_SCRIPT), str(destino), props_path], cwd=_REPO_ROOT, timeout=None
+    )
+    return resultado.returncode, resultado.saida
 
 
 async def _gravar_caminho(
