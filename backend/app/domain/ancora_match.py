@@ -24,6 +24,7 @@ from __future__ import annotations
 from difflib import SequenceMatcher
 
 from app.domain.snap_desvios import achatar_palavras  # reexport util p/ o caller
+from app.domain.time_convert import seg_to_hms, to_seg_estrito
 
 __all__ = ["achatar_palavras", "ancorar_borda", "ancorar_intervalo"]
 
@@ -152,3 +153,44 @@ def ancorar_intervalo(
     if fim_final <= ini_final:
         return inicio_seg, fim_seg
     return ini_final, fim_final
+
+
+# D-355: janela curta para ancorar a borda de DESVIO — o timestamp do desvio
+# já é fino (nível de segmento ≤6 palavras), então basta ±5s; o snap (0.8s)
+# completa o ajuste de borda de palavra depois.
+_JANELA_ANCORA_DESVIO_SEG = 5.0
+
+
+def ancorar_desvio(desvio: dict, palavras: list[dict]) -> dict:
+    """D-355: ancora as bordas do desvio no tempo real da palavra citada
+    (`inicio_texto`/`fim_texto`), dentro de ±5s do timestamp proposto.
+
+    Sem citação, sem palavras (VTT legado) ou sem match → devolve o desvio
+    inalterado (o `snap` a seguir faz o ajuste fino sozinho, como hoje).
+    Nunca inverte a borda (garantido por `ancorar_intervalo`). Preserva os
+    demais campos via `dict(desvio)`.
+    """
+    inicio_texto = (desvio.get("inicio_texto") or "").strip()
+    fim_texto = (desvio.get("fim_texto") or "").strip()
+    if not palavras or (not inicio_texto and not fim_texto):
+        return desvio
+    ini = to_seg_estrito(desvio.get("inicio_seg") or 0)
+    fim = to_seg_estrito(desvio.get("fim_seg") or 0)
+    novo_ini, novo_fim = ancorar_intervalo(
+        inicio_texto,
+        fim_texto,
+        ini,
+        fim,
+        palavras,
+        janela_seg=_JANELA_ANCORA_DESVIO_SEG,
+    )
+    if novo_ini == ini and novo_fim == fim:
+        return desvio
+    ajustado = dict(desvio)
+    ini_r = round(novo_ini, 3)
+    fim_r = round(novo_fim, 3)
+    ajustado["inicio_seg"] = ini_r
+    ajustado["fim_seg"] = fim_r
+    ajustado["inicio_hms"] = seg_to_hms(ini_r)
+    ajustado["fim_hms"] = seg_to_hms(fim_r)
+    return ajustado

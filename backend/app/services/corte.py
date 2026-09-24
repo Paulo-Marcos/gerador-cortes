@@ -15,6 +15,7 @@ from pathlib import Path
 from app.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain import ciclo_corte, segmentos_short
+from app.domain.ancora_match import ancorar_desvio
 from app.domain.corte_mapper import (
     cenas_fora_do_corte,
     extrair_cenas_remotion,
@@ -22,6 +23,7 @@ from app.domain.corte_mapper import (
     tem_colapso_de_tempos_das_cenas,
 )
 from app.domain.desvio_categoria import SILENCIO, classificar_desvio
+from app.domain.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
 from app.domain.ffmpeg_basic import (
     build_silence_detect_proxy_cmd,
     build_silence_detect_video_cmd,
@@ -41,8 +43,12 @@ from app.domain.reading_metadata import (
     aplicar_prefixo_leitura_titulo,
     remover_prefixo_leitura_titulo,
 )
-from app.domain.segment_calculator import dividir_desvios_no_ponto, normalizar_desvio
-from app.domain.snap_desvios import snap_desvio_a_palavras
+from app.domain.segment_calculator import (
+    dividir_desvios_no_ponto,
+    normalizar_desvio,
+    somar_desvios_novos,
+)
+from app.domain.snap_desvios import palavras_do_corte, snap_desvio_a_palavras
 from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
 from app.domain.youtube_layout import normalizar_layout_youtube
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
@@ -51,7 +57,6 @@ from app.services.app_logging import operational_debug, operational_error
 from app.services.claude_ia import (
     ClaudeIaService,
     _carregar_transcricao_raw,
-    _mapa_falantes_para_meta,
 )
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import func, select
@@ -547,7 +552,7 @@ class CorteService:
             # não só quando há diarização.
             projeto = await db.get(Projeto, corte.projeto_id)
             mapa_falantes = (
-                _mapa_falantes_para_meta(projeto.falantes_map) if projeto is not None else None
+                mapa_falantes_para_meta(projeto.falantes_map) if projeto is not None else None
             )
             transcricao_raw_projeto = (
                 _carregar_transcricao_raw(projeto.transcricao_raw, corte.projeto_id)
@@ -556,7 +561,7 @@ class CorteService:
             )
 
         if mapa_falantes and isinstance(transcricao_raw_projeto, list):
-            transcricao_bruta = ClaudeIaService._anotar_falantes_do_projeto(
+            transcricao_bruta = anotar_falantes_do_projeto(
                 transcricao_bruta, transcricao_raw_projeto
             )
 
@@ -570,9 +575,7 @@ class CorteService:
         # os já existentes (manual/técnico/claude anterior) ficam intocados. Sem
         # timing por palavra (corte antigo) `palavras_corte` sai vazia e o snap é
         # no-op — back-compat total.
-        palavras_corte = ClaudeIaService._palavras_do_corte(
-            transcricao_raw_projeto, corte_inicio_seg, corte_fim_seg
-        )
+        palavras_corte = palavras_do_corte(transcricao_raw_projeto, corte_inicio_seg, corte_fim_seg)
         # D-355: quando o desvio traz a citação (inicio_texto/fim_texto), ancora a
         # borda na palavra real (busca janelada ~5s) ANTES do snap — o snap então
         # só faz o ajuste fino. Sem citação, ancoragem é no-op e o snap age sozinho.
@@ -582,7 +585,7 @@ class CorteService:
         # a origem.
         normalizados_novos = [
             snap_desvio_a_palavras(
-                ClaudeIaService._ancorar_desvio(
+                ancorar_desvio(
                     classificar_desvio(normalizar_desvio({**d, "origem": provider})),
                     palavras_corte,
                 ),
@@ -590,9 +593,7 @@ class CorteService:
             )
             for d in resultado.get("desvios", [])
         ]
-        mesclados, adicionados = ClaudeIaService._mesclar_desvios(
-            desvios_existentes, normalizados_novos
-        )
+        mesclados, adicionados = somar_desvios_novos(desvios_existentes, normalizados_novos)
 
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)

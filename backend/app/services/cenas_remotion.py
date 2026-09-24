@@ -22,8 +22,8 @@ def _carregar_mapa_falantes(raw: object) -> dict | None:
 
     Retorna `None` (sem rótulo) quando o projeto não foi diarizado ou o JSON é
     inválido — nesse caso o prompt de cenas sai idêntico ao comportamento
-    pré-diarização (back-compat total). Espelha `_mapa_falantes_para_meta` do
-    fluxo de análise/trechos, sem acoplar cenas ao módulo `claude_ia`.
+    pré-diarização (back-compat total). Espelha `diarizacao_align.mapa_falantes_para_meta`
+    do fluxo de análise/trechos (D-696: a unificação das duas é do E-054).
     """
     if not raw or not isinstance(raw, str):
         return None

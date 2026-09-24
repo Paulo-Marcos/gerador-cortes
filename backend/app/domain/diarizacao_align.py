@@ -8,7 +8,9 @@ o prefixo textual injetado no prompt da IA.
 Nada aqui toca banco, HTTP ou pyannote — é tudo função pura e testável.
 """
 
-from app.domain.time_convert import to_seg
+import json
+
+from app.domain.time_convert import to_seg, to_seg_estrito
 
 # Chaves possíveis para início/fim de um segmento (a transcrição usa HMS em
 # `inicio`/`fim`, mas partes do pipeline usam float em `start`/`end`).
@@ -157,3 +159,39 @@ def prefixo_falante(speaker: str | None, mapa: dict[str, dict] | None) -> str:
     base = "CANAL" if entrada.get("is_canal") else "OUTRO"
     nome = (entrada.get("nome") or "").strip()
     return f"[{base}: {nome}] " if nome else f"[{base}] "
+
+
+def anotar_falantes_do_projeto(transcricao_bruta: list, transcricao_raw: list) -> list:
+    """D-302: reanota o `speaker` nos segmentos do corte a partir da
+    transcrição diarizada do projeto.
+
+    A sincronização do corte (`transcricao_corte`) guarda só
+    start/end/texto — o rótulo de falante vive na `transcricao_raw`. Os
+    segmentos diarizados do projeto funcionam como turnos para
+    `alinhar_falantes` (mesmo casamento por sobreposição da ingestão).
+    """
+    turnos = []
+    for seg in transcricao_raw:
+        if not isinstance(seg, dict) or not seg.get("speaker"):
+            continue
+        inicio = to_seg_estrito(seg.get("inicio", seg.get("start", 0)))
+        fim = to_seg_estrito(seg.get("fim", seg.get("end", inicio)))
+        turnos.append({"start": inicio, "end": fim, "speaker": seg["speaker"]})
+    if not turnos:
+        return transcricao_bruta
+    return alinhar_falantes(transcricao_bruta, turnos)
+
+
+def mapa_falantes_para_meta(raw: str) -> dict | None:
+    """Parse tolerante do `falantes_map` para injetar na meta da análise (D-286).
+
+    Retorna `None` (sem rótulo) quando o projeto não foi diarizado ou o JSON é
+    inválido — o formatador então gera o prompt idêntico ao comportamento antigo.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    try:
+        mapa = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return mapa if isinstance(mapa, dict) and mapa else None

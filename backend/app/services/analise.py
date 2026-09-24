@@ -8,7 +8,9 @@ import uuid
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
+from app.domain.analise_aditiva import bucket_de_30s, mesclar_descartados
 from app.domain.ancora_match import achatar_palavras, ancorar_intervalo
+from app.domain.diarizacao_align import mapa_falantes_para_meta
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.segment_calculator import normalizar_desvio as _normalizar_desvio
 from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
@@ -20,7 +22,6 @@ from app.services.ciclo_de_vida import mudar_projeto
 from app.services.claude_ia import (
     ClaudeIaService,
     _carregar_transcricao_raw,
-    _mapa_falantes_para_meta,
 )
 from sqlalchemy import select as sa_select
 
@@ -565,7 +566,7 @@ class AnaliseService:
             "titulo_live": projeto.titulo_live or "",
             "youtube_url": projeto.youtube_url or "",
             "duracao_segundos": projeto.duracao_segundos or 0,
-            "falantes_map": _mapa_falantes_para_meta(projeto.falantes_map),
+            "falantes_map": mapa_falantes_para_meta(projeto.falantes_map),
         }
         resultado = await ClaudeIaService.gerar_cortes(transcricao_intervalo, meta)
 
@@ -701,7 +702,7 @@ class AnaliseService:
                 "titulo_live": projeto.titulo_live or "",
                 "youtube_url": projeto.youtube_url or "",
                 "duracao_segundos": projeto.duracao_segundos or 0,
-                "falantes_map": _mapa_falantes_para_meta(projeto.falantes_map)
+                "falantes_map": mapa_falantes_para_meta(projeto.falantes_map)
                 if usar_diarizacao
                 else None,
             }
@@ -724,7 +725,7 @@ class AnaliseService:
                 result = await db.execute(
                     sa_select(Corte.inicio_seg).where(Corte.projeto_id == projeto_id)
                 )
-                buckets_existentes = {ClaudeIaService._bucket_30s(row[0]) for row in result.all()}
+                buckets_existentes = {bucket_de_30s(row[0]) for row in result.all()}
                 projeto = await db.get(Projeto, projeto_id)
                 descartados_anteriores = (
                     json.loads(projeto.descartados_analise or "[]") if projeto else []
@@ -733,9 +734,7 @@ class AnaliseService:
             cortes_novos, pulados = AnaliseService._filtrar_cortes_em_buckets(
                 cortes_data, buckets_existentes
             )
-            descartados_mesclados = ClaudeIaService._mesclar_descartados(
-                descartados_anteriores, descartados
-            )
+            descartados_mesclados = mesclar_descartados(descartados_anteriores, descartados)
 
             # importar_resultado numera a partir do maior número já usado, então
             # os cortes existentes ficam preservados e os novos seguem a sequência.
@@ -798,7 +797,7 @@ class AnaliseService:
         novos: list = []
         pulados = 0
         for corte in cortes:
-            if ClaudeIaService._bucket_30s(corte.get("inicio_seg")) in buckets_existentes:
+            if bucket_de_30s(corte.get("inicio_seg")) in buckets_existentes:
                 pulados += 1
                 continue
             novos.append(corte)

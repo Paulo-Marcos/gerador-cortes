@@ -143,3 +143,20 @@ def snap_desvio_a_palavras(desvio: dict, palavras: list[dict], *, janela_seg: fl
     ajustado["inicio_hms"] = seg_to_hms(ini_r)
     ajustado["fim_hms"] = seg_to_hms(fim_r)
     return ajustado
+
+
+def palavras_do_corte(transcricao_raw: list, inicio_seg: float, fim_seg: float) -> list[dict]:
+    """Lista achatada e ordenada das palavras (D-337) na janela do corte, com
+    2s de folga nas bordas. Fonte: a `transcricao_raw` do projeto — a única que
+    carrega o timing por palavra (a `transcricao_corte` o descarta). Sai vazia
+    quando a transcrição não tem `palavras` (dados legados), tornando o snap
+    um no-op (back-compat)."""
+    if not isinstance(transcricao_raw, list):
+        return []
+    margem = 2.0
+    palavras = achatar_palavras(transcricao_raw)
+    if inicio_seg or fim_seg:
+        palavras = [
+            p for p in palavras if inicio_seg - margem <= p["inicio_seg"] <= fim_seg + margem
+        ]
+    return palavras

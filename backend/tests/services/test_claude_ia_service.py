@@ -11,6 +11,9 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from app.domain.analise_aditiva import bucket_de_30s, mesclar_descartados
+from app.domain.diarizacao_align import anotar_falantes_do_projeto
+from app.domain.segment_calculator import somar_desvios_novos
 from app.infrastructure import antigravity_cli_client
 from app.services import analise, claude_ia, metadados
 from app.services.analise import AnaliseService
@@ -285,17 +288,17 @@ class TestModoAditivoHelpers:
 
     def test_bucket_30s_agrupa_por_janela_de_30s(self):
         # 0–29s → bucket 0; 30–59s → bucket 1; 100s → bucket 3.
-        assert ClaudeIaService._bucket_30s(0) == 0
-        assert ClaudeIaService._bucket_30s(29) == 0
-        assert ClaudeIaService._bucket_30s(30) == 1
-        assert ClaudeIaService._bucket_30s(100) == 3
+        assert bucket_de_30s(0) == 0
+        assert bucket_de_30s(29) == 0
+        assert bucket_de_30s(30) == 1
+        assert bucket_de_30s(100) == 3
         # tolera None/ausência (mesma convenção do modo lote): vira bucket 0.
-        assert ClaudeIaService._bucket_30s(None) == 0
+        assert bucket_de_30s(None) == 0
 
     def test_filtrar_pula_corte_no_bucket_de_um_existente(self):
         # Existe corte em 100s (bucket 3). O corte novo em 110s cai no mesmo
         # bucket → pulado; o de 700s (bucket 23) é inédito → entra.
-        buckets_existentes = {ClaudeIaService._bucket_30s(100)}
+        buckets_existentes = {bucket_de_30s(100)}
         novos, pulados = AnaliseService._filtrar_cortes_em_buckets(
             [
                 {"titulo_proposto": "dup", "inicio_seg": 110},
@@ -320,13 +323,13 @@ class TestModoAditivoHelpers:
             {"tema": "  ", "motivo": "sem tema"},  # tema vazio → ignora
             {"tema": "novo tema", "motivo": "off-topic"},  # inédito → entra
         ]
-        mesclados = ClaudeIaService._mesclar_descartados(existentes, novos)
+        mesclados = mesclar_descartados(existentes, novos)
         temas = [d["tema"].strip().lower() for d in mesclados]
         assert temas == ["velho", "novo tema"]
 
     def test_mesclar_descartados_tolera_novos_none(self):
         existentes = [{"tema": "x", "motivo": "y"}]
-        assert ClaudeIaService._mesclar_descartados(existentes, None) == existentes
+        assert mesclar_descartados(existentes, None) == existentes
 
 
 class TestAnaliseAditiva:
@@ -613,7 +616,7 @@ class TestTrechos:
             },  # ~igual a A → pula
             {"inicio_seg": 500.0, "fim_seg": 520.0, "motivo": "claude novo"},  # novo → entra
         ]
-        mesclados, adicionados = ClaudeIaService._mesclar_desvios(existentes, novos)
+        mesclados, adicionados = somar_desvios_novos(existentes, novos)
 
         assert adicionados == 1, "só o genuinamente novo deve entrar"
         assert len(mesclados) == 3
@@ -947,16 +950,13 @@ class TestTrechosComFalantes:
             {"inicio": "00:00:00", "fim": "00:00:04", "texto": "x", "speaker": "SPEAKER_01"},
             {"inicio": "00:00:04", "fim": "00:00:12", "texto": "fala", "speaker": "SPEAKER_00"},
         ]
-        anotada = ClaudeIaService._anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw)
+        anotada = anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw)
         assert anotada[0]["speaker"] == "SPEAKER_00"
 
     def test_anotar_falantes_sem_diarizacao_devolve_intacto(self):
         transcricao_bruta = [{"start": 5.0, "end": 8.0, "texto": "fala"}]
         transcricao_raw = [{"inicio": "00:00:00", "fim": "00:00:04", "texto": "x"}]  # sem speaker
-        assert (
-            ClaudeIaService._anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw)
-            is transcricao_bruta
-        )
+        assert anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw) is transcricao_bruta
 
     def test_cabecalho_so_lista_ja_marcados_sem_revisao(self):
         """D-332: os já marcados são apenas LISTADOS (não repita; APENAS NOVOS);

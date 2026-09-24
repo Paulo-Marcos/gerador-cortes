@@ -1,6 +1,6 @@
 """Calculadora de segmentos — lógica pura para remoção de desvios de uma timeline."""
 
-from app.domain.time_convert import hms_to_seg, seg_to_hms
+from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
 
 # Motivos que indicam desvios editoriais vindos da IA (n8n ou importação manual).
 # Estes NÃO devem ser removidos no "gerar bruto" — apenas no pipeline completo.
@@ -270,3 +270,30 @@ def dividir_desvios_no_ponto(
     esquerda.sort(key=lambda x: _desvio_seg(x, "inicio_seg", "inicio_hms"))
     direita.sort(key=lambda x: _desvio_seg(x, "inicio_seg", "inicio_hms"))
     return esquerda, direita
+
+
+def somar_desvios_novos(existentes: list, novos: list) -> tuple[list, int]:
+    """Acrescenta `novos` aos `existentes` SEM remover nenhum existente.
+
+    Pula um novo desvio que praticamente coincide com um já marcado
+    (mesma janela arredondada de 2s), evitando duplicatas exatas.
+    Retorna (lista_mesclada, quantidade_adicionada).
+    """
+
+    def _chave(d: dict) -> tuple[int, int]:
+        return (
+            round(to_seg_estrito(d.get("inicio_seg") or 0) / 2),
+            round(to_seg_estrito(d.get("fim_seg") or 0) / 2),
+        )
+
+    vistos = {_chave(d) for d in existentes}
+    mesclados = list(existentes)
+    adicionados = 0
+    for d in novos:
+        chave = _chave(d)
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        mesclados.append(d)
+        adicionados += 1
+    return mesclados, adicionados

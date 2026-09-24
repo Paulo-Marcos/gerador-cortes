@@ -27,12 +27,11 @@ from app.channel_paths import projetos_dir
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain import chat_heat
-from app.domain.ancora_match import ancorar_intervalo
+from app.domain.analise_aditiva import bucket_de_30s, mesclar_descartados
 from app.domain.chunker import fatiar_transcricao
 from app.domain.compartilhado.gerador_ia import PedidoIA
-from app.domain.diarizacao_align import alinhar_falantes, prefixo_falante
-from app.domain.snap_desvios import achatar_palavras
-from app.domain.time_convert import hms_to_seg, seg_to_hms, seg_to_hms_short, to_seg_estrito
+from app.domain.diarizacao_align import prefixo_falante
+from app.domain.time_convert import hms_to_seg, seg_to_hms_short, to_seg_estrito
 from app.domain.transcricao_utils import (
     dividir_segmentos_longos,
     limpar_e_ordenar_transcricao,
@@ -171,21 +170,6 @@ async def gerar_texto(
     return await gerador_para(provider).gerar_texto(prompt, pedido)
 
 
-def _mapa_falantes_para_meta(raw: str) -> dict | None:
-    """Parse tolerante do `falantes_map` para injetar na meta da análise (D-286).
-
-    Retorna `None` (sem rótulo) quando o projeto não foi diarizado ou o JSON é
-    inválido — o formatador então gera o prompt idêntico ao comportamento antigo.
-    """
-    if not raw or not isinstance(raw, str):
-        return None
-    try:
-        mapa = json.loads(raw)
-    except json.JSONDecodeError:
-        return None
-    return mapa if isinstance(mapa, dict) and mapa else None
-
-
 def _janela_do_chunk(chunk: list) -> tuple[float, float]:
     """Intervalo (início, fim) em segundos coberto por uma parte da transcrição."""
     if not chunk:
@@ -213,32 +197,6 @@ class ClaudeIaService:
     """Orquestra gerações via Claude, reusando os serviços de domínio."""
 
     # ── modo aditivo: dedup por bucket de 30s + merge de descartados (D-298) ──
-
-    @staticmethod
-    def _bucket_30s(inicio_seg) -> int:
-        """Bucket de 30s do início — mesma granularidade que o modo lote usa
-        para tratar cortes que começam quase no mesmo ponto como duplicados."""
-        return int(to_seg_estrito(inicio_seg or 0) // 30)
-
-    @staticmethod
-    def _mesclar_descartados(existentes: list, novos: list) -> list:
-        """Acrescenta `novos` aos `existentes` deduplicando por `tema`
-        (case-insensitive); preserva todos os existentes e ignora entradas de
-        tema vazio (ruído sem chave de dedup). Mesma regra que o modo lote usa
-        entre as janelas da mesma geração."""
-        mesclados = list(existentes)
-        temas_vistos = {
-            (d.get("tema") or "").strip().lower()
-            for d in existentes
-            if (d.get("tema") or "").strip()
-        }
-        for desc in novos or []:
-            tema_norm = (desc.get("tema") or "").strip().lower()
-            if not tema_norm or tema_norm in temas_vistos:
-                continue
-            temas_vistos.add(tema_norm)
-            mesclados.append(desc)
-        return mesclados
 
     # ── geração dos cortes (decide direto vs lote pelo tamanho) ───────────────
 
@@ -333,14 +291,12 @@ class ClaudeIaService:
                 provider, prompt, skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id")
             )
             for corte in resultado.get("cortes", []):
-                chave = ClaudeIaService._bucket_30s(corte.get("inicio_seg"))
+                chave = bucket_de_30s(corte.get("inicio_seg"))
                 if chave in vistos:
                     continue
                 vistos.add(chave)
                 cortes.append(corte)
-            descartados = ClaudeIaService._mesclar_descartados(
-                descartados, resultado.get("descartados")
-            )
+            descartados = mesclar_descartados(descartados, resultado.get("descartados"))
         return {"cortes": cortes, "descartados": descartados}
 
     # ── montagem do prompt e da transcrição ───────────────────────────────────
@@ -458,111 +414,6 @@ class ClaudeIaService:
     # ── encadeamento do "refazer transcrição" ─────────────────────────────────
 
     # ── Fase 2b: regerar trechos a remover (desvios) de UM corte ──────────────
-
-    @staticmethod
-    def _mesclar_desvios(existentes: list, novos: list) -> tuple[list, int]:
-        """Acrescenta `novos` aos `existentes` SEM remover nenhum existente.
-
-        Pula um novo desvio que praticamente coincide com um já marcado
-        (mesma janela arredondada de 2s), evitando duplicatas exatas.
-        Retorna (lista_mesclada, quantidade_adicionada).
-        """
-
-        def _chave(d: dict) -> tuple[int, int]:
-            return (
-                round(to_seg_estrito(d.get("inicio_seg") or 0) / 2),
-                round(to_seg_estrito(d.get("fim_seg") or 0) / 2),
-            )
-
-        vistos = {_chave(d) for d in existentes}
-        mesclados = list(existentes)
-        adicionados = 0
-        for d in novos:
-            chave = _chave(d)
-            if chave in vistos:
-                continue
-            vistos.add(chave)
-            mesclados.append(d)
-            adicionados += 1
-        return mesclados, adicionados
-
-    @staticmethod
-    def _anotar_falantes_do_projeto(transcricao_bruta: list, transcricao_raw: list) -> list:
-        """D-302: reanota o `speaker` nos segmentos do corte a partir da
-        transcrição diarizada do projeto.
-
-        A sincronização do corte (`transcricao_corte`) guarda só
-        start/end/texto — o rótulo de falante vive na `transcricao_raw`. Os
-        segmentos diarizados do projeto funcionam como turnos para
-        `alinhar_falantes` (mesmo casamento por sobreposição da ingestão).
-        """
-        turnos = []
-        for seg in transcricao_raw:
-            if not isinstance(seg, dict) or not seg.get("speaker"):
-                continue
-            inicio = to_seg_estrito(seg.get("inicio", seg.get("start", 0)))
-            fim = to_seg_estrito(seg.get("fim", seg.get("end", inicio)))
-            turnos.append({"start": inicio, "end": fim, "speaker": seg["speaker"]})
-        if not turnos:
-            return transcricao_bruta
-        return alinhar_falantes(transcricao_bruta, turnos)
-
-    # D-355: janela curta para ancorar a borda de DESVIO — o timestamp do desvio
-    # já é fino (nível de segmento ≤6 palavras), então basta ±5s; o snap (0.8s)
-    # completa o ajuste de borda de palavra depois.
-    _JANELA_ANCORA_DESVIO_SEG = 5.0
-
-    @staticmethod
-    def _ancorar_desvio(desvio: dict, palavras: list[dict]) -> dict:
-        """D-355: ancora as bordas do desvio no tempo real da palavra citada
-        (`inicio_texto`/`fim_texto`), dentro de ±5s do timestamp proposto.
-
-        Sem citação, sem palavras (VTT legado) ou sem match → devolve o desvio
-        inalterado (o `snap` a seguir faz o ajuste fino sozinho, como hoje).
-        Nunca inverte a borda (garantido por `ancorar_intervalo`). Preserva os
-        demais campos via `dict(desvio)`.
-        """
-        inicio_texto = (desvio.get("inicio_texto") or "").strip()
-        fim_texto = (desvio.get("fim_texto") or "").strip()
-        if not palavras or (not inicio_texto and not fim_texto):
-            return desvio
-        ini = to_seg_estrito(desvio.get("inicio_seg") or 0)
-        fim = to_seg_estrito(desvio.get("fim_seg") or 0)
-        novo_ini, novo_fim = ancorar_intervalo(
-            inicio_texto,
-            fim_texto,
-            ini,
-            fim,
-            palavras,
-            janela_seg=ClaudeIaService._JANELA_ANCORA_DESVIO_SEG,
-        )
-        if novo_ini == ini and novo_fim == fim:
-            return desvio
-        ajustado = dict(desvio)
-        ini_r = round(novo_ini, 3)
-        fim_r = round(novo_fim, 3)
-        ajustado["inicio_seg"] = ini_r
-        ajustado["fim_seg"] = fim_r
-        ajustado["inicio_hms"] = seg_to_hms(ini_r)
-        ajustado["fim_hms"] = seg_to_hms(fim_r)
-        return ajustado
-
-    @staticmethod
-    def _palavras_do_corte(transcricao_raw: list, inicio_seg: float, fim_seg: float) -> list[dict]:
-        """Lista achatada e ordenada das palavras (D-337) na janela do corte, com
-        2s de folga nas bordas. Fonte: a `transcricao_raw` do projeto — a única que
-        carrega o timing por palavra (a `transcricao_corte` o descarta). Sai vazia
-        quando a transcrição não tem `palavras` (dados legados), tornando o snap
-        um no-op (back-compat)."""
-        if not isinstance(transcricao_raw, list):
-            return []
-        margem = 2.0
-        palavras = achatar_palavras(transcricao_raw)
-        if inicio_seg or fim_seg:
-            palavras = [
-                p for p in palavras if inicio_seg - margem <= p["inicio_seg"] <= fim_seg + margem
-            ]
-        return palavras
 
     @staticmethod
     async def gerar_desvios(
