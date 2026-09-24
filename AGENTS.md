@@ -81,7 +81,7 @@ Projeto: pendente → baixando → transcrevendo → pronto → analisando → a
 Corte:   proposto ⇄ aprovado → processado   (rejeitado é legado; "Rejeitar" exclui o corte)
 ```
 
-As transições têm dono no domínio: `domain/ciclo_projeto.py` e `domain/ciclo_corte.py` (RN-01, RN-04). O PATCH do corte recusa com 400 uma transição fora da tabela. Os caminhos em segundo plano mudam status por `services/ciclo_de_vida.py`, que registra aviso — em vez de exceção — para o que a tabela não prevê. Mudar um enum de status exige migração.
+As transições têm dono no domínio: `domain/projeto/ciclo_projeto.py` e `domain/ciclo_corte.py` (RN-01, RN-04). O PATCH do corte recusa com 400 uma transição fora da tabela. Os caminhos em segundo plano mudam status por `services/ciclo_de_vida.py`, que registra aviso — em vez de exceção — para o que a tabela não prevê. Mudar um enum de status exige migração.
 
 ## Configuração
 

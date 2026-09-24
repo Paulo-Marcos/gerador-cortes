@@ -1,6 +1,6 @@
 """Mudanças de status feitas pelo próprio sistema, passando pelo domínio (D-665).
 
-As regras vivem em `domain/ciclo_corte.py` e `domain/ciclo_projeto.py`. Aqui
+As regras vivem em `domain/ciclo_corte.py` e `domain/projeto/ciclo_projeto.py`. Aqui
 fica a política de quem aplica: nos caminhos em segundo plano (ingestão,
 análise, render, export) uma transição fora da tabela vira AVISO no log, não
 exceção. Derrubar um download de uma hora porque a tabela não previu um salto
@@ -13,7 +13,8 @@ recusados com 400, porque quem pediu está olhando e pode corrigir.
 
 import logging
 
-from app.domain import ciclo_corte, ciclo_projeto
+from app.domain import ciclo_corte
+from app.domain.projeto import ciclo_projeto
 
 logger = logging.getLogger(__name__)
 

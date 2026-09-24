@@ -23,7 +23,6 @@ from app.domain.corte_mapper import (
     tem_colapso_de_tempos_das_cenas,
 )
 from app.domain.desvio_categoria import SILENCIO, classificar_desvio
-from app.domain.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
 from app.domain.juncao_cortes import (
     CAMPOS_TEMPO_CENA,
     CAMPOS_TEMPO_REGIAO,
@@ -34,6 +33,7 @@ from app.domain.juncao_cortes import (
     juntar_desvios,
 )
 from app.domain.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
+from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
 from app.domain.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
@@ -1438,7 +1438,7 @@ class CorteService:
                 except Exception:
                     continue
 
-            from app.domain.transcricao_utils import limpar_e_ordenar_transcricao
+            from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
 
             trans_bruta = limpar_e_ordenar_transcricao(trans_bruta)
 

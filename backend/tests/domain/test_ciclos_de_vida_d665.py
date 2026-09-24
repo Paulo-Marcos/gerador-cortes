@@ -1,8 +1,9 @@
 """Ciclos de vida de Corte e Projeto no domínio (D-665)."""
 
 import pytest
-from app.domain import ciclo_corte, ciclo_projeto
+from app.domain import ciclo_corte
 from app.domain.ciclo_corte import TransicaoDeCorteInvalida
+from app.domain.projeto import ciclo_projeto
 from app.models import StatusCorte, StatusProjeto
 
 

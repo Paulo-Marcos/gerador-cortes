@@ -11,8 +11,8 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from app.domain.analise_aditiva import bucket_de_30s, mesclar_descartados
-from app.domain.diarizacao_align import anotar_falantes_do_projeto
+from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartados
+from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto
 from app.domain.segment_calculator import somar_desvios_novos
 from app.infrastructure import antigravity_cli_client
 from app.services import analise, claude_ia, metadados

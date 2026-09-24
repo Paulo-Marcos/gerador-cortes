@@ -13,9 +13,9 @@ from pathlib import Path
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain.json3_parser import parse_json3
-from app.domain.transcricao_utils import TranscricaoIndisponivelError
-from app.domain.vtt_parser import parse_vtt
+from app.domain.projeto.json3_parser import parse_json3
+from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
+from app.domain.projeto.vtt_parser import parse_vtt
 from app.models import Projeto, StatusProjeto
 from app.services.app_logging import operational_debug, operational_error, operational_info
 from app.services.ciclo_de_vida import mudar_projeto
@@ -370,8 +370,8 @@ class IngestaoService:
 
         if not json3_files:
             if vtt_files:
+                from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
                 from app.domain.time_convert import hms_to_seg
-                from app.domain.transcricao_utils import limpar_e_ordenar_transcricao
 
                 operational_info("INGESTAO", "JSON3 não disponível. Usando VTT como fallback.")
                 offset_seg = legenda_offset_ms / 1000.0
@@ -428,7 +428,7 @@ class IngestaoService:
             except Exception as e:
                 operational_error("INGESTAO", f"Erro ao calcular offset VTT: {e}")
 
-        from app.domain.transcricao_utils import limpar_e_ordenar_transcricao
+        from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
 
         # Soma o offset matemático (PTS da live) com o offset manual do projeto
         offset_total = offset_ms + legenda_offset_ms

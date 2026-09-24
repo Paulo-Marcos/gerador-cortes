@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from app.domain.json3_parser import ms_to_hms, parse_json3
+from app.domain.projeto.json3_parser import ms_to_hms, parse_json3
 
 
 class TestMsToHms:

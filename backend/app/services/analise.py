@@ -8,13 +8,13 @@ import uuid
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
-from app.domain.analise_aditiva import bucket_de_30s, mesclar_descartados
 from app.domain.ancora_match import achatar_palavras, ancorar_intervalo
-from app.domain.diarizacao_align import mapa_falantes_para_meta
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartados
+from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta
+from app.domain.projeto.transcricao_utils import motivo_transcricao_inutilizavel
 from app.domain.segment_calculator import normalizar_desvio as _normalizar_desvio
 from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
-from app.domain.transcricao_utils import motivo_transcricao_inutilizavel
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
 from app.provider_ia import ProviderIA
 from app.services.app_logging import operational_info
@@ -136,8 +136,8 @@ class AnaliseService:
         transcricao = json.loads(projeto.transcricao_raw)
         meta = AnaliseService._meta_do_prompt(projeto, projeto.duracao_segundos or 0)
 
-        from app.domain.chunker import fatiar_transcricao
-        from app.domain.transcricao_utils import (
+        from app.domain.projeto.chunker import fatiar_transcricao
+        from app.domain.projeto.transcricao_utils import (
             dividir_segmentos_longos,
             limpar_e_ordenar_transcricao,
         )
@@ -246,12 +246,12 @@ class AnaliseService:
                 f"Nenhuma transcrição encontrada no intervalo {inicio_seg}s – {fim_seg}s"
             )
 
-        from app.domain.chunker import fatiar_transcricao
-        from app.domain.time_convert import seg_to_hms_short
-        from app.domain.transcricao_utils import (
+        from app.domain.projeto.chunker import fatiar_transcricao
+        from app.domain.projeto.transcricao_utils import (
             dividir_segmentos_longos,
             limpar_e_ordenar_transcricao,
         )
+        from app.domain.time_convert import seg_to_hms_short
 
         # Limpa e ordena para corrigir problemas de legados ou extrações out-of-order
         transcricao_limpa = limpar_e_ordenar_transcricao(transcricao_intervalo)

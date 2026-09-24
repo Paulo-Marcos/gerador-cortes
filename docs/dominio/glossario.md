@@ -10,7 +10,7 @@
 
 | Termo | O que é | Onde mora |
 |---|---|---|
-| **Projeto** | Uma live baixada e processada. Tem uma pasta própria em `projetos/<id>/`. | `models.Projeto`; ciclo em `domain/ciclo_projeto.py` (RN-01) |
+| **Projeto** | Uma live baixada e processada. Tem uma pasta própria em `projetos/<id>/`. | `models.Projeto`; ciclo em `domain/projeto/ciclo_projeto.py` (RN-01) |
 | **Corte** | Um trecho proposto ou aprovado da live, definido por `inicio_seg`/`fim_seg` em tempo de **live**. | `models.Corte`; ciclo em `domain/ciclo_corte.py` (RN-04) |
 | **Metadado** | O texto e a capa de publicação de um corte (título, descrição, tags, thumbnail). Um por corte. | `models.MetadadoCorte` |
 | **Short** | Um vídeo vertical tirado de um corte. Seus tempos estão no espaço do **bruto**, não da live (RN-08). | `models.Short` |

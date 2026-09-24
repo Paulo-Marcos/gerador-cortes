@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import get_db
-from app.domain.transcricao_utils import TranscricaoIndisponivelError
+from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, MetadadoCorte, Projeto, StatusCorte, StatusProjeto
 from app.routers.errors import erro_interno
 from app.services import abrir_no_sistema, channels

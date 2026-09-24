@@ -16,7 +16,7 @@ import logging
 
 from app.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain.diarizacao_align import (
+from app.domain.projeto.diarizacao_align import (
     alinhar_falantes,
     montar_mapa_falantes,
     rotular_janela,

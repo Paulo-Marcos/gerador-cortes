@@ -6,7 +6,7 @@ guarda `if not transcricao_raw` deixava passar e só o modelo — depois de uma
 chamada paga — percebia que não havia material.
 """
 
-from app.domain.transcricao_utils import (
+from app.domain.projeto.transcricao_utils import (
     AVISO_LEGENDA_INDISPONIVEL,
     motivo_transcricao_inutilizavel,
 )

@@ -100,7 +100,7 @@ class DesviosService:
                     "Sincronize a transcrição antes de usar este recurso."
                 )
 
-            from app.domain.transcricao_utils import (
+            from app.domain.projeto.transcricao_utils import (
                 dividir_segmentos_longos,
                 limpar_e_ordenar_transcricao,
             )
@@ -112,7 +112,7 @@ class DesviosService:
             for idx, seg in enumerate(transcricao_granular):
                 seg["global_index"] = idx
 
-            from app.domain.chunker import fatiar_transcricao
+            from app.domain.projeto.chunker import fatiar_transcricao
 
             chunks = fatiar_transcricao(
                 transcricao_granular,
@@ -210,7 +210,7 @@ class DesviosService:
             if not transcricao:
                 raise ValueError("Transcrição vazia. Sincronize antes.")
 
-            from app.domain.transcricao_utils import (
+            from app.domain.projeto.transcricao_utils import (
                 dividir_segmentos_longos,
                 limpar_e_ordenar_transcricao,
             )
@@ -220,7 +220,7 @@ class DesviosService:
                 transcricao_limpa, max_duracao=4.0, max_palavras=6
             )
 
-            from app.domain.chunker import fatiar_transcricao
+            from app.domain.projeto.chunker import fatiar_transcricao
 
             chunks = fatiar_transcricao(
                 transcricao_granular,

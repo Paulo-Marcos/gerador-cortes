@@ -6,8 +6,8 @@ import time
 from app import editorial_scaffolds
 from app.database import AsyncSessionLocal
 from app.domain.corte_mapper import cenas_fora_do_corte, coalescer_chaves_mascote
-from app.domain.diarizacao_align import prefixo_falante
 from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.projeto.diarizacao_align import prefixo_falante
 from app.domain.time_convert import hms_to_seg
 from app.infrastructure import gemini_client
 from app.models import Corte, Projeto
@@ -134,7 +134,7 @@ class CenasRemotionService:
                 f"Primeiro segmento: {transcricao_final[0].get('start', 0)}s",
             )
 
-            from app.domain.chunker import fatiar_transcricao
+            from app.domain.projeto.chunker import fatiar_transcricao
 
             # 1. Primeiro garante a granularidade (evita blocos de texto gigantes)
             # 1. Granulariza a transcrição inteira primeiro e atribui índices globais
@@ -328,7 +328,7 @@ class CenasRemotionService:
             CenasRemotionService._exigir_transcricao_dentro_do_corte(
                 transcricao_granular, (corte.fim_seg or 0) - (corte.inicio_seg or 0)
             )
-            from app.domain.chunker import fatiar_transcricao
+            from app.domain.projeto.chunker import fatiar_transcricao
 
             chunks = fatiar_transcricao(
                 transcricao_granular,
@@ -559,7 +559,7 @@ class CenasRemotionService:
     @staticmethod
     def _get_granular(transcricao: list) -> list:
         """Centraliza a lógica de granularização para garantir que os índices sempre batam."""
-        from app.domain.transcricao_utils import (
+        from app.domain.projeto.transcricao_utils import (
             dividir_segmentos_longos,
             limpar_e_ordenar_transcricao,
         )
