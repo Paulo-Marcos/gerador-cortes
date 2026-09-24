@@ -22,15 +22,15 @@ from dataclasses import dataclass
 
 from app import editorial_scaffolds, editorial_skills
 from app.database import AsyncSessionLocal
-from app.domain import segmentos_short
-from app.domain.cenas_short_ia import recortar_transcricao_varios
-from app.domain.metadados_short import (
+from app.domain.publicacao import LIMITES, Plataforma
+from app.domain.short import segmentos_short
+from app.domain.short.cenas_short_ia import recortar_transcricao_varios
+from app.domain.short.metadados_short import (
     PostDoShort,
     hashtags_gravadas,
     normalizar_hashtags,
     post_da_resposta,
 )
-from app.domain.publicacao import LIMITES, Plataforma
 from app.models import Corte, MetadadoShort, Short
 from app.provider_ia import ProviderIA
 from app.services.claude_ia import gerar_texto, registrar_skill_usada

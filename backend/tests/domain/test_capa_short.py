@@ -12,7 +12,8 @@ esta opaco; sem gancho, onde o apresentador ja esta posto.
 """
 
 import pytest
-from app.domain.capa_short import (
+from app.domain.corte.capa_tiktok import ALTURA, ALTURA_SEGURA, TOPO_SEGURO
+from app.domain.short.capa_short import (
     FRACAO_SEGURA,
     FRACAO_TOPO_CORTADO,
     GuiaDaVitrine,
@@ -21,7 +22,6 @@ from app.domain.capa_short import (
     instante_padrao,
     prompt_da_capa,
 )
-from app.domain.corte.capa_tiktok import ALTURA, ALTURA_SEGURA, TOPO_SEGURO
 
 
 class TestAcordoComAGeometriaDaCapaDoCorte:

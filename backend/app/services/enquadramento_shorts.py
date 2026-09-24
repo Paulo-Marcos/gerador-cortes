@@ -20,8 +20,8 @@ from __future__ import annotations
 import logging
 
 from app.database import AsyncSessionLocal
-from app.domain import segmentos_short
-from app.domain.enquadramento_rosto import Enquadramento, decidir, instantes
+from app.domain.short import segmentos_short
+from app.domain.short.enquadramento_rosto import Enquadramento, decidir, instantes
 from app.infrastructure.detector_rosto import DeteccaoIndisponivel, detectar_nos_instantes
 from app.models import Corte, Short
 

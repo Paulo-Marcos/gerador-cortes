@@ -32,8 +32,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.domain.cenas_short import CenaInvalida, CenaShort, TipoCenaShort, normalizar
-from app.domain.cenas_validator import verificar_sobreposicao
+from app.domain.short.cenas_short import CenaInvalida, CenaShort, TipoCenaShort, normalizar
+from app.domain.short.cenas_validator import verificar_sobreposicao
 
 # Um HOOK que começa no meio do short não é um hook — é um cartão qualquer. O
 # tipo promete "o que segura os 3 primeiros segundos"; esta é a folga para o

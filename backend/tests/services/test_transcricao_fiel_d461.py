@@ -10,7 +10,7 @@ import json
 
 import pytest
 import pytest_asyncio
-from app.domain.transcricao_fiel import Palavra, normalizar_palavras, recortar
+from app.domain.short.transcricao_fiel import Palavra, normalizar_palavras, recortar
 from app.models import Base, Corte, Projeto
 from app.services import transcricao_fiel as servico
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine

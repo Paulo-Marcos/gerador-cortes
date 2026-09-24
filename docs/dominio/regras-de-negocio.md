@@ -26,9 +26,9 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN | Regra | Onde mora | Origem |
 |---|---|---|---|
 | RN-06 | O `numero` do corte deriva de `inicio_seg`, exceto quando a posição foi fixada à mão. | `domain/corte/ordem_cortes.py` (`ordenar_por_tempo`, `pins_para_ordem`) | D-448 |
-| RN-07 | **Duração líquida** = intervalo − desvios (corte e bloco) ou soma dos segmentos (short). `fim − inicio` mente quando há buracos. | `domain/corte/juncao_cortes.py` (`duracao_liquida`); `domain/corte/arranjo_blocos.py` (`duracao_liquida`); `domain/segmentos_short.py` (`duracao_liquida`); `services/pipeline_corte_fields.py` (`_duracao_layout_corte`) | D-575 |
+| RN-07 | **Duração líquida** = intervalo − desvios (corte e bloco) ou soma dos segmentos (short). `fim − inicio` mente quando há buracos. | `domain/corte/juncao_cortes.py` (`duracao_liquida`); `domain/corte/arranjo_blocos.py` (`duracao_liquida`); `domain/short/segmentos_short.py` (`duracao_liquida`); `services/pipeline_corte_fields.py` (`_duracao_layout_corte`) | D-575 |
 | RN-08 | Os tempos do **Short** estão no espaço do **BRUTO** (o clip do corte), não da live. | `models.py` (invariante documentada em `Short`) | — |
-| RN-09 | Segmentos do short: lista vazia = janela única; a ordem é decisão do operador e **nunca** é reordenada; com segmentos, `inicio_seg`/`fim_seg` viram o envelope. | `domain/segmentos_short.py` (`normalizar`, `efetivos`) | D-604 |
+| RN-09 | Segmentos do short: lista vazia = janela única; a ordem é decisão do operador e **nunca** é reordenada; com segmentos, `inicio_seg`/`fim_seg` viram o envelope. | `domain/short/segmentos_short.py` (`normalizar`, `efetivos`) | D-604 |
 
 ## C. Layout, palco e gancho
 
@@ -36,8 +36,8 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 |---|---|---|---|
 | RN-10 | **Cascata de layout PARCIAL**: chave ausente herda do nível de cima (global → projeto → corte). Os padrões só se materializam na **leitura**, nunca ao gravar — materializar mata a herança. | `domain/corte/youtube_layout.py` (`resolver_layout_em_cascata`, `normalizar_layout_youtube`); no front, `resolveLayoutChain` em `features/editor/fase2/youtubeLayout.ts` | F-048 |
 | RN-11 | O **palco padrão do corte** é herança viva para os shorts; corte sem região herda região a região. | `services/palco_shorts.py` (`com_palco_do_corte`) | D-570 |
-| RN-12 | **Gancho**: a aparência (cor, realce, fonte, tamanho, duração) herda do preset de gancho do corte (`''`/`0` = padrão); o **texto nunca herda**. | `domain/gancho_short.py` (`normalizar_*`); `services/palco_shorts.py` (`_aparencia`) | D-594, D-600 |
-| RN-13 | Gancho normalizado: de 4 a 7 palavras, no máximo 90 caracteres, começa com maiúscula; duração entre 1,5 e 5 s (padrão 2,5 s). | `domain/gancho_short.py` (`normalizar_gancho`, `esta_na_faixa`, `normalizar_duracao`) | D-565 |
+| RN-12 | **Gancho**: a aparência (cor, realce, fonte, tamanho, duração) herda do preset de gancho do corte (`''`/`0` = padrão); o **texto nunca herda**. | `domain/short/gancho_short.py` (`normalizar_*`); `services/palco_shorts.py` (`_aparencia`) | D-594, D-600 |
+| RN-13 | Gancho normalizado: de 4 a 7 palavras, no máximo 90 caracteres, começa com maiúscula; duração entre 1,5 e 5 s (padrão 2,5 s). | `domain/short/gancho_short.py` (`normalizar_gancho`, `esta_na_faixa`, `normalizar_duracao`) | D-565 |
 
 ## D. Fire, shorts e retenção
 
@@ -54,7 +54,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 |---|---|---|---|
 | RN-18 | Ritmo de publicação: cadência por plataforma (cabe hoje / espera até o próximo). No YouTube o teto vem da quota (10.000/dia, 1.600 por upload). | `domain/ritmo_publicacao.py` (`cadencia_de`, `cabe_hoje`, `espera_do_proximo`) | — |
 | RN-19 | Agendamento válido por plataforma, no futuro (margem mínima de 5 min) e dentro do horizonte de cada uma. | `domain/agendamento.py` (`validar`) | — |
-| RN-20 | **Teto de hashtags por plataforma**: 3 no YouTube Shorts, 5 no Reels, 5 no TikTok. A legenda do Reels não leva link. O que se **grava** tem teto 10; o corte por plataforma é feito na publicação. | `domain/publicacao.py` (`adaptar`, `hashtags_max`, `link_na_legenda`); `domain/metadados_short.py` (`MAX_HASHTAGS`) | — |
+| RN-20 | **Teto de hashtags por plataforma**: 3 no YouTube Shorts, 5 no Reels, 5 no TikTok. A legenda do Reels não leva link. O que se **grava** tem teto 10; o corte por plataforma é feito na publicação. | `domain/publicacao.py` (`adaptar`, `hashtags_max`, `link_na_legenda`); `domain/short/metadados_short.py` (`MAX_HASHTAGS`) | — |
 | RN-21 | Ranking de lives = VPH + recência, normalizados min-max no lote. | `domain/ranking_lives.py` (`calcular_vph`, `calcular_recencia`, `normalizar_minmax`) | — |
 
 ## F. Imagem, áudio e render
@@ -73,6 +73,6 @@ O que o rascunho de 16/09 dizia e o código não diz mais — ou o contrário:
 - **RN-01, RN-04, RN-05**: o rascunho descrevia transições espalhadas e o status
   `editado`. Desde a D-665 as transições têm dono no `domain/`, e `editado` foi
   removido (nada o atribuía; 0 cortes na PROD).
-- **RN-20**: o docstring de `domain/metadados_short.py` diz "10 no Reels", mas
+- **RN-20**: o docstring de `domain/short/metadados_short.py` diz "10 no Reels", mas
   quem aplica o teto é `domain/publicacao.py`, com **5** para o Reels. A regra
   deste catálogo é a do código que aplica; o comentário está desatualizado.

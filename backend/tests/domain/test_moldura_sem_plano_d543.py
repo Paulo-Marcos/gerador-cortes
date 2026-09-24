@@ -9,13 +9,13 @@ A degradacao ali e do CONTEUDO (uma janela cheia em vez de duas), e nao da
 IDENTIDADE. Sao coisas diferentes e estavam amarradas.
 """
 
-from app.domain.moldura_short import (
+from app.domain.short.moldura_short import (
     FRACAO_FAIXA,
     Moldura,
     faixas,
     janela_entre_as_faixas,
 )
-from app.domain.palco_short import CANVAS
+from app.domain.short.palco_short import CANVAS
 
 
 class TestJanelaEntreAsFaixas:

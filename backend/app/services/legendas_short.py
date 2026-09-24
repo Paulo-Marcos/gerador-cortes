@@ -15,8 +15,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from app.domain import segmentos_short
-from app.domain.transcricao_fiel import Palavra, recortar_varios
+from app.domain.short import segmentos_short
+from app.domain.short.transcricao_fiel import Palavra, recortar_varios
 from app.services import transcricao_fiel
 
 logger = logging.getLogger(__name__)

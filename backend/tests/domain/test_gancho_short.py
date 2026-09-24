@@ -13,7 +13,7 @@ gancho e o resto. Tres coisas quebram em silencio se ninguem vigiar:
 """
 
 import pytest
-from app.domain.gancho_short import (
+from app.domain.short.gancho_short import (
     DURACAO_MAX_SEG,
     DURACAO_MIN_SEG,
     DURACAO_PADRAO_SEG,

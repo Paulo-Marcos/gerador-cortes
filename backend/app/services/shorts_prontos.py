@@ -15,9 +15,9 @@ from dataclasses import dataclass
 
 from app.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain import segmentos_short
-from app.domain.metadados_short import hashtags_gravadas
-from app.domain.shorts_prontos import plataformas_pendentes
+from app.domain.short import segmentos_short
+from app.domain.short.metadados_short import hashtags_gravadas
+from app.domain.short.shorts_prontos import plataformas_pendentes
 from app.models import Corte, MetadadoShort, Projeto, PublicacaoShort, Short, StatusShort
 from sqlalchemy import select
 

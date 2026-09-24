@@ -9,7 +9,7 @@ from datetime import datetime
 
 import pytest
 import pytest_asyncio
-from app.domain.shorts_prontos import plataformas_pendentes
+from app.domain.short.shorts_prontos import plataformas_pendentes
 from app.models import (
     Base,
     Corte,

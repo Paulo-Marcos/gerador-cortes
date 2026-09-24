@@ -739,7 +739,7 @@ async def test_o_log_e_lido_da_mesma_pasta_em_que_o_render_escreve(ambiente, job
 
 async def _com_segmentos(factory, segmentos: list[dict]) -> None:
     """Grava uma colagem no short do fixture."""
-    from app.domain import segmentos_short
+    from app.domain.short import segmentos_short
 
     async with factory() as db:
         short = await db.get(Short, "s1")

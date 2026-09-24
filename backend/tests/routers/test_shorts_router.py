@@ -352,7 +352,7 @@ class TestEnquadrarPeloRosto:
 
     @pytest.fixture()
     def detector(self, monkeypatch):
-        from app.domain.enquadramento_rosto import RostoDetectado
+        from app.domain.short.enquadramento_rosto import RostoDetectado
         from app.services import enquadramento_shorts
 
         def responder(quadros):

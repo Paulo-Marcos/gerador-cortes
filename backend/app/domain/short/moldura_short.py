@@ -25,7 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from app.domain.palco_short import CANVAS
+from app.domain.short.palco_short import CANVAS
 
 # Espelha SAFE_ZONE do renderer: a fração que pertence à UI dos apps.
 _SAFE_ZONE = 0.18

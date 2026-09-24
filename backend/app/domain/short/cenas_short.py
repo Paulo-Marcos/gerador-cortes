@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from app.domain.cenas_validator import verificar_sobreposicao
+from app.domain.short.cenas_validator import verificar_sobreposicao
 
 
 class TipoCenaShort(str, Enum):

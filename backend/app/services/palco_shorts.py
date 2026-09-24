@@ -27,21 +27,21 @@ import logging
 
 from app.channel_assets_sync import cor_do_tema, paleta_do_tema
 from app.database import AsyncSessionLocal
-from app.domain import gancho_short
-from app.domain.arranjo_short import catalogo as catalogo_de_arranjos
-from app.domain.arranjo_short import de_chave as arranjo_de_chave
-from app.domain.arranjo_short import fonte_efetiva, montar_modelo
-from app.domain.arranjo_short import sugerir as arranjo_sugerido
 
 # A textura do palco vertical: a MESMA que o render usa para rasterizar o PNG
 # (`render_short._palco_em_png`). Duas fontes para este id fariam a previa e o
 # arquivo divergirem sem nada quebrar.
 from app.domain.corte.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL
 from app.domain.corte.youtube_layout import _normalizar_fundo as textura_valida
-from app.domain.fundo_short import fundos_disponiveis
-from app.domain.fundo_short import resolver as resolver_fundo
-from app.domain.moldura_short import COR_PADRAO, faixas
-from app.domain.palco_short import CANVAS, montar_plano, regioes_do_layout
+from app.domain.short import gancho_short
+from app.domain.short.arranjo_short import catalogo as catalogo_de_arranjos
+from app.domain.short.arranjo_short import de_chave as arranjo_de_chave
+from app.domain.short.arranjo_short import fonte_efetiva, montar_modelo
+from app.domain.short.arranjo_short import sugerir as arranjo_sugerido
+from app.domain.short.fundo_short import fundos_disponiveis
+from app.domain.short.fundo_short import resolver as resolver_fundo
+from app.domain.short.moldura_short import COR_PADRAO, faixas
+from app.domain.short.palco_short import CANVAS, montar_plano, regioes_do_layout
 from app.models import Corte, LayoutPreset, Short
 from sqlalchemy import select
 

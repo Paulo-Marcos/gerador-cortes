@@ -16,8 +16,8 @@ espremido entre tarjas, ou uma tela compartilhada com as bordas cortadas.
 """
 
 import pytest
-from app.domain.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_modelo
-from app.domain.palco_short import (
+from app.domain.short.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_modelo
+from app.domain.short.palco_short import (
     CANVAS,
     Ajuste,
     Recorte,
@@ -310,14 +310,14 @@ class TestAjustesDoOperador:
     """
 
     def test_sem_ajuste_o_modelo_manda(self):
-        from app.domain.palco_short import aplicar_ajustes
+        from app.domain.short.palco_short import aplicar_ajustes
 
         assert aplicar_ajustes(MODELOS["pessoa_cheia"], None) is MODELOS["pessoa_cheia"]
         assert aplicar_ajustes(MODELOS["pessoa_cheia"], {}) is MODELOS["pessoa_cheia"]
 
     def test_ajuste_de_um_slot_nao_mexe_no_outro(self):
         """A heranca parcial, escrita como caso."""
-        from app.domain.palco_short import aplicar_ajustes
+        from app.domain.short.palco_short import aplicar_ajustes
 
         base = MODELOS["tela_cima_pessoa_baixo"]
         ajustado = aplicar_ajustes(base, {"tela": {"x": 100, "y": 200, "w": 800, "h": 450}})
@@ -331,7 +331,7 @@ class TestAjustesDoOperador:
         Deixar o operador inverter isso movendo um bloco seria dar-lhe uma
         alavanca cujo efeito ele nao ve na hora.
         """
-        from app.domain.palco_short import aplicar_ajustes
+        from app.domain.short.palco_short import aplicar_ajustes
 
         base = MODELOS["tela_cima_pessoa_baixo"]
         ajustado = aplicar_ajustes(base, {"tela": {"x": 0, "y": 0, "w": 500, "h": 300}})
@@ -339,7 +339,7 @@ class TestAjustesDoOperador:
         assert ajustado.slots["tela"].ajuste == base.slots["tela"].ajuste
 
     def test_slot_ajustado_nao_sai_do_quadro(self):
-        from app.domain.palco_short import aplicar_ajustes
+        from app.domain.short.palco_short import aplicar_ajustes
 
         ajustado = aplicar_ajustes(
             MODELOS["pessoa_cheia"], {"pessoa": {"x": -50, "y": 9999, "w": 99999, "h": 10}}
@@ -353,7 +353,7 @@ class TestAjustesDoOperador:
 
     def test_ajuste_invalido_cai_no_modelo_em_vez_de_virar_bloco_fantasma(self):
         """Largura zero de um arraste malfeito nao pode gerar um bloco invisivel."""
-        from app.domain.palco_short import aplicar_ajustes
+        from app.domain.short.palco_short import aplicar_ajustes
 
         base = MODELOS["pessoa_cheia"]
         for lixo in [{"x": 0, "y": 0, "w": 0, "h": 0}, {"x": 0}, "nao e dict", None]:
@@ -363,7 +363,7 @@ class TestAjustesDoOperador:
 
     def test_ajuste_de_regiao_que_o_modelo_nao_tem_e_ignorado(self):
         """Sobrou de quando o operador usava outro arranjo — nao deve criar slot."""
-        from app.domain.palco_short import aplicar_ajustes
+        from app.domain.short.palco_short import aplicar_ajustes
 
         ajustado = aplicar_ajustes(
             MODELOS["pessoa_cheia"], {"tela": {"x": 0, "y": 0, "w": 500, "h": 300}}
@@ -373,7 +373,7 @@ class TestAjustesDoOperador:
 
     def test_coordenada_fracionaria_vira_inteira(self):
         """Slot fracionario viraria crop fracionario, e o ffmpeg arredonda sozinho."""
-        from app.domain.palco_short import aplicar_ajustes
+        from app.domain.short.palco_short import aplicar_ajustes
 
         ajustado = aplicar_ajustes(
             MODELOS["pessoa_cheia"], {"pessoa": {"x": 10.6, "y": 20.4, "w": 500.5, "h": 300.5}}

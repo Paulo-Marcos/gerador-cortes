@@ -13,7 +13,7 @@ operador vivo. O teste que mais importa neste arquivo e
 
 import pytest
 import pytest_asyncio
-from app.domain.shorts import ResultadoSugestoes, SugestaoShort
+from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
 from app.models import Base, Corte, Projeto, Short, StatusShort
 from app.services import shorts as servico
 from sqlalchemy import select

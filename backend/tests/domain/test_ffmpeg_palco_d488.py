@@ -16,8 +16,8 @@ O que eles protegem:
 from pathlib import Path
 
 import pytest
-from app.domain.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_modelo
-from app.domain.palco_short import montar_plano
+from app.domain.short.arranjo_short import Arranjo, Disposicao, ModoPalco, montar_modelo
+from app.domain.short.palco_short import montar_plano
 from app.infrastructure.render.ffmpeg_short import FUNDO_PADRAO, build_palco_vertical_cmd
 
 FACECAM = {"x": 24, "y": 410, "w": 340, "h": 260}
@@ -207,7 +207,7 @@ class TestMoldura:
     """D-501: a assinatura do canal em volta do short."""
 
     def _com_moldura(self, **kw):
-        from app.domain.moldura_short import Moldura, faixas
+        from app.domain.short.moldura_short import Moldura, faixas
 
         return montar(
             "pessoa_cheia",
@@ -247,7 +247,7 @@ class TestMoldura:
         e sobraria uma nesga escura na borda — descoberto porque um teste
         tropecou no `drawbox` que o proprio filtro emitia.
         """
-        from app.domain.moldura_short import cobre_o_letterbox_do_filtro
+        from app.domain.short.moldura_short import cobre_o_letterbox_do_filtro
 
         assert cobre_o_letterbox_do_filtro()
 

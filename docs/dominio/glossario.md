@@ -27,10 +27,10 @@ São cinco ideias diferentes que o código e a tela às vezes chamam pelo mesmo 
 |---|---|---|---|
 | **Desvio** | Um intervalo que **sai** do corte (silêncio, erro, trecho sem graça). A **tela chama de "trecho"**. | `Corte.desvios`; `domain/corte/segment_calculator.py` | bloco (desvio decide o que sai; bloco decide a ordem do que fica) |
 | **Bloco** | Um pedaço do corte na **ordem de exibição**: a lista de blocos é a EDL do corte. Lista vazia = ordem cronológica. | `Corte.arranjo_blocos`; `domain/corte/arranjo_blocos.py` | desvio (os dois se compõem: cada bloco é subtraído dos seus desvios) |
-| **Segmento (do short)** | Um pedaço do **bruto** que entra no short, na ordem que o operador escolheu. Lista vazia = janela única. | `Short.segmentos`; `domain/segmentos_short.py` (RN-09) | segmento detectado |
+| **Segmento (do short)** | Um pedaço do **bruto** que entra no short, na ordem que o operador escolheu. Lista vazia = janela única. | `Short.segmentos`; `domain/short/segmentos_short.py` (RN-09) | segmento detectado |
 | **Segmento detectado** | Um corte de cena achado automaticamente (PySceneDetect) no bruto do corte. Só uma sugestão. | `Corte.segmentos_detectados` | segmento do short |
 | **Região (de layout)** | Um intervalo de **tempo** do corte com um modo de exibição: `full` ou `compartilhada`. | `layout_youtube.regioes`; `domain/corte/youtube_layout.py` | região do quadro |
-| **Região (do quadro)** | Uma **área** do vídeo de origem com nome (a facecam, a tela compartilhada), recortada e recolocada num slot. | presets de palco; `domain/palco_short.py` (`Recorte.regiao`) | região de layout |
+| **Região (do quadro)** | Uma **área** do vídeo de origem com nome (a facecam, a tela compartilhada), recortada e recolocada num slot. | presets de palco; `domain/short/palco_short.py` (`Recorte.regiao`) | região de layout |
 
 ### Os três ganchos
 
@@ -38,7 +38,7 @@ São cinco ideias diferentes que o código e a tela às vezes chamam pelo mesmo 
 |---|---|---|
 | **`frase_gancho`** (do corte) | O ponto de entrada mais forte do argumento, proposto pela análise: a borda editorial de início do corte. | `Corte.frase_gancho_hms`, `frase_gancho_texto` |
 | **`gancho`** (do short) | A frase de curadoria da IA ("qual é a graça deste trecho"). Também vira a **descrição do post** publicado. | `Short.gancho` |
-| **`gancho_tela`** (do short) | O cartão de 4 a 7 palavras na **abertura** do short, que segura o dedo no feed. A aparência herda do preset; o texto nunca (RN-12, RN-13). | `Short.gancho_tela`; `domain/gancho_short.py` |
+| **`gancho_tela`** (do short) | O cartão de 4 a 7 palavras na **abertura** do short, que segura o dedo no feed. A aparência herda do preset; o texto nunca (RN-12, RN-13). | `Short.gancho_tela`; `domain/short/gancho_short.py` |
 
 O `gancho` alimenta o gerador do `gancho_tela`, mas não são a mesma frase. E o
 `gancho_tela` **não é uma cena**: cena é texto em qualquer momento, N vezes; o
@@ -48,9 +48,9 @@ gancho é um só, ancorado no zero.
 
 | Termo | O que é | Onde mora |
 |---|---|---|
-| **Palco** | A composição do quadro final: um fundo próprio com as regiões do vídeo coladas em slots. Troca "cópia de pixel da live" por "recomposição". | `domain/palco_short.py`; `Corte.palco_padrao` |
-| **Recorte** | Uma região do quadro com destino definido: **de onde sai** (o crop, vindo do preset do canal) e **para onde vai** (o slot, vindo do modelo). | `domain/palco_short.py` (`Recorte`) |
-| **Slot** | O lugar no quadro final onde um recorte é colado. Muda entre 16:9 e 9:16; o crop não. | `domain/palco_short.py` (`Slot`) |
+| **Palco** | A composição do quadro final: um fundo próprio com as regiões do vídeo coladas em slots. Troca "cópia de pixel da live" por "recomposição". | `domain/short/palco_short.py`; `Corte.palco_padrao` |
+| **Recorte** | Uma região do quadro com destino definido: **de onde sai** (o crop, vindo do preset do canal) e **para onde vai** (o slot, vindo do modelo). | `domain/short/palco_short.py` (`Recorte`) |
+| **Slot** | O lugar no quadro final onde um recorte é colado. Muda entre 16:9 e 9:16; o crop não. | `domain/short/palco_short.py` (`Slot`) |
 | **Palco padrão** | O palco do corte, herdado **ao vivo** pelos shorts dele (RN-11). | `Corte.palco_padrao`; `services/palco_shorts.py` |
 
 ### Fire e candidato a shorts

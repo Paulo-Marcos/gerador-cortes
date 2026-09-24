@@ -1,7 +1,7 @@
 """Serviço de Shorts — monta o material do prompt e persiste os candidatos (D-454).
 
 Divisão de trabalho no mesmo arranjo da avaliação do bruto (D-447): aqui mora o
-que toca banco; as regras de validação vivem no domínio puro (`app.domain.shorts`)
+que toca banco; as regras de validação vivem no domínio puro (`app.domain.short.shorts`)
 e a chamada ao Claude vive em `claude_ia`, junto com as demais etapas editoriais.
 
 O INSUMO é `Corte.transcricao_final` — a transcrição já com os desvios removidos
@@ -27,13 +27,13 @@ from app import editorial_scaffolds, editorial_skills
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain import gancho_short, legenda_short, segmentos_short
-from app.domain.arranjo_short import de_chave as arranjo_de_chave
-from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
-from app.domain.cenas_short_ia import recortar_transcricao_varios
-from app.domain.formato_video import foco_de_regiao
-from app.domain.moldura_short import Moldura
-from app.domain.shorts import ResultadoSugestoes, SugestaoShort
+from app.domain.short import gancho_short, legenda_short, segmentos_short
+from app.domain.short.arranjo_short import de_chave as arranjo_de_chave
+from app.domain.short.cenas_short import normalizar_lista as normalizar_lista_de_cenas
+from app.domain.short.cenas_short_ia import recortar_transcricao_varios
+from app.domain.short.formato_video import foco_de_regiao
+from app.domain.short.moldura_short import Moldura
+from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
 from app.domain.time_convert import seg_to_hms_short, seg_to_mmss
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
 from app.provider_ia import ProviderIA
@@ -864,7 +864,7 @@ async def sugerir_shorts(corte_id: str, provider: ProviderIA = "claude") -> dict
     final). Quem chama no fluxo automático trata a falha como não-fatal: a
     sugestão de shorts é derivada do bruto, não parte da entrega dele.
     """
-    from app.domain.shorts import FaixaShort, normalizar_sugestoes
+    from app.domain.short.shorts import FaixaShort, normalizar_sugestoes
 
     contexto = await montar_contexto(corte_id)
     faixa = FaixaShort(
@@ -917,8 +917,8 @@ async def sugerir_cenas(short_id: str, provider: ProviderIA = "claude") -> dict:
     transcrição). Devolve o short atualizado e os descartes, que são o que
     explica por que a IA falou em cinco cenas e a tela mostra três.
     """
-    from app.domain.cenas_short import TipoCenaShort
-    from app.domain.cenas_short_ia import normalizar_sugestoes as normalizar_cenas
+    from app.domain.short.cenas_short import TipoCenaShort
+    from app.domain.short.cenas_short_ia import normalizar_sugestoes as normalizar_cenas
 
     contexto = await montar_contexto_de_cenas(short_id)
 
@@ -971,7 +971,7 @@ async def sugerir_ganchos(short_id: str, provider: ProviderIA = "claude") -> lis
     Levanta `LookupError` (short inexistente) e `ValueError` (trecho sem
     fala). Lista vazia quando o modelo nao produziu nada aproveitavel.
     """
-    from app.domain.gancho_short import MAX_VARIACOES, ganchos_da_resposta
+    from app.domain.short.gancho_short import MAX_VARIACOES, ganchos_da_resposta
 
     contexto = await montar_contexto_do_gancho(short_id)
 

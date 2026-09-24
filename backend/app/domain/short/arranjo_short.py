@@ -50,7 +50,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from app.domain.palco_short import CANVAS, Ajuste, ModeloPalco, Slot
+from app.domain.short.palco_short import CANVAS, Ajuste, ModeloPalco, Slot
 
 # Fora da safe zone (18%) e fechando no meio do quadro: 352 = logo abaixo dela,
 # 608 = 1080 em 16:9, e 352+608 = 960, o meio exato de 1920. São as mesmas

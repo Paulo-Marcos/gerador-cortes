@@ -9,7 +9,7 @@ erradas — a legenda renderiza, só sai torta:
 """
 
 import pytest
-from app.domain.transcricao_fiel import Palavra
+from app.domain.short.transcricao_fiel import Palavra
 from app.services import legendas_short
 from app.services.transcricao_fiel import TranscricaoFiel
 

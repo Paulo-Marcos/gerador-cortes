@@ -22,7 +22,6 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain import segmentos_short
 from app.domain.publicacao import (
     LIMITES,
     MetadadosBase,
@@ -32,6 +31,7 @@ from app.domain.publicacao import (
     adaptar,
     validar,
 )
+from app.domain.short import segmentos_short
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
 
 logger = logging.getLogger(__name__)
@@ -256,7 +256,7 @@ def _hashtags_do_post(meta: MetadadoShort | None) -> list[str]:
     A desserializacao vem do dominio: a tela le o mesmo campo para edita-las, e
     duas leituras com tratamento de erro proprio ja tinham comecado a divergir.
     """
-    from app.domain.metadados_short import hashtags_gravadas
+    from app.domain.short.metadados_short import hashtags_gravadas
 
     return hashtags_gravadas(meta.tags_youtube) if meta else []
 

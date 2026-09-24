@@ -10,7 +10,7 @@ frente vira uma hashtag que ninguem busca, e o `#` guardado aqui produziria
 """
 
 import pytest
-from app.domain.metadados_short import (
+from app.domain.short.metadados_short import (
     MAX_HASHTAGS,
     MAX_TITULO,
     PostDoShort,

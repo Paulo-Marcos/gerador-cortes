@@ -12,8 +12,8 @@ levariam a fala que o operador tirou fora:
 Nenhum dos dois quebra nada. Por isso eles precisam de teste.
 """
 
-from app.domain.cenas_short_ia import recortar_transcricao_varios
-from app.domain.transcricao_fiel import Palavra, recortar, recortar_varios
+from app.domain.short.cenas_short_ia import recortar_transcricao_varios
+from app.domain.short.transcricao_fiel import Palavra, recortar, recortar_varios
 
 # Uma fala por bloco de dez segundos, para dar para apontar o que entrou.
 FALA = [

@@ -22,16 +22,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.domain.formato_video import (
+from app.domain.short.formato_video import (
     HORIZONTAL,  # noqa: F401 — usado nos doctests; deixou de ser default na D-481
     VERTICAL,
     Resolucao,
     filtro_reenquadrar,
 )
-from app.domain.fundo_short import FUNDO_PADRAO as FUNDO_DE_ULTIMO_RECURSO
-from app.domain.fundo_short import para_ffmpeg as fundo_ffmpeg
-from app.domain.moldura_short import Faixa
-from app.domain.palco_short import PlanoPalco, Recorte
+from app.domain.short.fundo_short import FUNDO_PADRAO as FUNDO_DE_ULTIMO_RECURSO
+from app.domain.short.fundo_short import para_ffmpeg as fundo_ffmpeg
+from app.domain.short.moldura_short import Faixa
+from app.domain.short.palco_short import PlanoPalco, Recorte
 from app.infrastructure.render.cinema_filters import get_filtro_vf
 
 # ProRes 4444 é o único codec com alpha que o overlay do Remotion entrega de
@@ -148,8 +148,8 @@ def build_palco_vertical_cmd(
     porque o overlay é um passo depois, noutro comando.
 
     Exemplo (pessoa cheia, sem grade):
-        >>> from app.domain.arranjo_short import Arranjo, montar_modelo
-        >>> from app.domain.palco_short import montar_plano
+        >>> from app.domain.short.arranjo_short import Arranjo, montar_modelo
+        >>> from app.domain.short.palco_short import montar_plano
         >>> regioes = {"pessoa": {"x": 24, "y": 410, "w": 340, "h": 260}}
         >>> plano = montar_plano(montar_modelo(Arranjo(), regioes), regioes)
         >>> cmd = build_palco_vertical_cmd(

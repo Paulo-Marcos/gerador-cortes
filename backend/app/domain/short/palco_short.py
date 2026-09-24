@@ -30,7 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from app.domain.formato_video import VERTICAL
+from app.domain.short.formato_video import VERTICAL
 
 CANVAS = VERTICAL
 """1080x1920 — o quadro do short. Todo slot deste arquivo vive dentro dele."""
@@ -173,7 +173,7 @@ class Recorte:
         só, no domínio; a tela apenas aplica os números.
 
         Exemplo (pessoa cheia, facecam 340x260):
-            >>> from app.domain.arranjo_short import Arranjo, montar_modelo
+            >>> from app.domain.short.arranjo_short import Arranjo, montar_modelo
             >>> facecam = {"x": 24, "y": 410, "w": 340, "h": 260}
             >>> regioes = {"pessoa": facecam}
             >>> plano = montar_plano(montar_modelo(Arranjo(), regioes), regioes)

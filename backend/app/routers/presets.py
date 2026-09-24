@@ -24,7 +24,6 @@ from datetime import datetime
 from typing import Any
 
 from app.database import get_db
-from app.domain import gancho_short, legenda_short
 from app.domain.corte.youtube_layout import (
     DEFAULT_CROP_FACECAM,
     DEFAULT_CROP_TELA,
@@ -39,6 +38,7 @@ from app.domain.corte.youtube_layout import (
     _normalizar_retangulo,
     normalizar_layout_youtube,
 )
+from app.domain.short import gancho_short, legenda_short
 from app.models import LayoutPreset
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field

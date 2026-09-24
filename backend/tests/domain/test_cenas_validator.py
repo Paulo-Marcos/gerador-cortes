@@ -1,4 +1,4 @@
-from app.domain.cenas_validator import (
+from app.domain.short.cenas_validator import (
     calcular_max_simultaneas,
     identificar_cenas_sobrepostas,
     verificar_sobreposicao,
