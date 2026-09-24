@@ -227,12 +227,21 @@ async def run_ffmpeg_simple(
         )
     except NotImplementedError:
         logger.warning("[FfmpegRunner] Usando fallback via Thread em run_ffmpeg_simple.")
-        result = await _run_ffmpeg_in_thread(cmd, label=label, capture_output=capture_output)
+        result = await _run_ffmpeg_in_thread(
+            cmd, label=label, capture_output=capture_output, timeout=timeout
+        )
         if result.returncode != 0:
             raise RuntimeError(f"{label} falhou (thread): {result.stderr_tail}") from None
         return result
 
-    stdout_data, stderr_data = await proc.communicate()
+    try:
+        stdout_data, stderr_data = await asyncio.wait_for(proc.communicate(), timeout)
+    except TimeoutError:
+        # D-750: fora do Windows este caminho ignorava o `timeout` que o
+        # caminho em thread sempre respeitou. Mesma falha, mesmo formato.
+        proc.kill()
+        await proc.wait()
+        raise RuntimeError(f"{label} falhou: timeout apos {timeout:.0f}s") from None
     stdout_txt = stdout_data.decode(errors="replace")
     stderr_txt = stderr_data.decode(errors="replace")
 

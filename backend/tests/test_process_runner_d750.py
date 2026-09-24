@@ -204,3 +204,35 @@ async def test_o_fallback_das_sondas_pede_o_mesmo_prazo(monkeypatch, tmp_path):
     await ffmpeg_runner.probe_codecs(tmp_path / "v.mkv")
 
     assert pedidos == [30, 30, 30, 30]  # codecs sonda vídeo e áudio: duas chamadas
+
+
+# ─── O run_ffmpeg_simple e o prazo que ele já anunciava ───
+
+
+@pytest.fixture(params=["asyncio", "fallback-selector"])
+def caminho_simples(request, monkeypatch):
+    # No Windows a função vai direto para a thread; forçar outra plataforma
+    # exercita os dois caminhos que ignoravam o `timeout`.
+    monkeypatch.setattr(ffmpeg_runner.sys, "platform", "linux")
+    if request.param == "fallback-selector":
+
+        async def _selector_sem_subprocesso(*args, **kwargs):
+            raise NotImplementedError
+
+        monkeypatch.setattr(
+            ffmpeg_runner.asyncio, "create_subprocess_exec", _selector_sem_subprocesso
+        )
+    return request.param
+
+
+@pytest.mark.integration  # sobe um processo de verdade no lugar do ffmpeg (D-751)
+@pytest.mark.asyncio
+async def test_ffmpeg_simples_pendurado_estoura_o_prazo_pedido(caminho_simples):
+    inicio = time.monotonic()
+
+    with pytest.raises(RuntimeError, match="(?i)timeout"):
+        await ffmpeg_runner.run_ffmpeg_simple(
+            [PY, "-c", "import time; time.sleep(60)"], label="pendurado", timeout=1
+        )
+
+    assert time.monotonic() - inicio < 30, "o prazo pedido não foi respeitado"
