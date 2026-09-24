@@ -19,7 +19,6 @@ _CICLOS_CONHECIDOS = {
     frozenset(
         {
             "app.services.cancelamento_jobs",
-            "app.services.capa_short",
             "app.services.capa_tiktok",
             "app.services.claude_ia",
             "app.services.corte",
