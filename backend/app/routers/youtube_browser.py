@@ -38,14 +38,7 @@ async def listar_lives_canal(
     Se after_date estiver vazio, usa a data da live mais recente já cadastrada no banco.
     Retorna lista de {video_id, titulo, data_publicacao, thumbnail_url, duracao_iso}.
     """
-    try:
-        return await lives_do_canal.listar_lives(db, after_date=after_date, max_results=max_results)
-    except lives_do_canal.ConfiguracaoAusente as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    except lives_do_canal.CanalNaoEncontrado as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except lives_do_canal.FalhaNaApi as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return await lives_do_canal.listar_lives(db, after_date=after_date, max_results=max_results)
 
 
 # ─── Autenticação OAuth por canal (D-169) ─────────────────────────────────────

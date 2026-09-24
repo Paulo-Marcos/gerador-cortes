@@ -8,15 +8,17 @@ transporte do próprio httpx), a chave da API, o canal ativo e a ingestão.
 
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import httpx
 import pytest
 import pytest_asyncio
+from app.domain.compartilhado.erros import ErroDeDominio
 from app.models import Base, Projeto
 from app.routers import youtube_browser
+from app.routers.errors import responder_erro_de_dominio
 from app.services import lives_do_canal
-from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -74,6 +76,12 @@ def api(monkeypatch):
 
     monkeypatch.setattr(httpx, "AsyncClient", cliente)
     return pedidos, respostas
+
+
+async def _http_de(erro: ErroDeDominio) -> tuple[int, str]:
+    """O que o tratador global responde para o erro (D-697)."""
+    resposta = await responder_erro_de_dominio(None, erro)
+    return resposta.status_code, json.loads(resposta.body)["detail"]
 
 
 def _video(video_id: str, publicado: str) -> dict:
@@ -175,10 +183,10 @@ async def test_falhas_da_api_viram_o_http_de_sempre(
     _responder_padrao(respostas)
     respostas[etapa] = lambda _: resposta
 
-    with pytest.raises(HTTPException) as erro:
+    with pytest.raises(ErroDeDominio) as erro:
         await youtube_browser.listar_lives_canal(after_date="20260901", db=db)
 
-    assert (erro.value.status_code, erro.value.detail) == (status, detalhe)
+    assert await _http_de(erro.value) == (status, detalhe)
 
 
 @pytest.mark.asyncio
@@ -188,10 +196,10 @@ async def test_sem_chave_da_api_recusa_sem_ir_a_rede(db, canal, api, monkeypatch
     pedidos, _ = api
     monkeypatch.setattr(app.config.settings, "youtube_api_key", "")
 
-    with pytest.raises(HTTPException) as erro:
+    with pytest.raises(ErroDeDominio) as erro:
         await youtube_browser.listar_lives_canal(after_date="", db=db)
 
-    assert erro.value.status_code == 500
+    assert (await _http_de(erro.value))[0] == 500
     assert pedidos == []
 
 

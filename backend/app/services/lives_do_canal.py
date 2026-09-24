@@ -3,7 +3,8 @@
 O caso de uso morava no router `youtube_browser`, que falava com a YouTube Data
 API por httpx. As chamadas estão em `infrastructure/youtube_data_api`; aqui fica
 a regra — de onde vem a data de corte, o que conta como "já baixado", que
-projeto nasce. As falhas saem com significado, e o router escolhe o HTTP.
+projeto nasce. As falhas saem como erros de domínio, e o tratador global
+escolhe o HTTP (D-697).
 """
 
 from __future__ import annotations
@@ -12,6 +13,11 @@ import uuid
 from datetime import UTC, datetime
 
 from app.config import settings
+from app.domain.compartilhado.erros import (
+    ConfiguracaoAusente,
+    NaoEncontrado,
+    ServicoExternoFalhou,
+)
 from app.infrastructure import youtube_data_api
 from app.models import Projeto, StatusProjeto
 from app.services import channels
@@ -19,18 +25,6 @@ from app.services.ingestao import IngestaoService
 from app.services.tasks import fire_and_forget
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-
-class ConfiguracaoAusente(RuntimeError):
-    """Falta a chave da API ou o canal do YouTube no canal ativo."""
-
-
-class CanalNaoEncontrado(RuntimeError):
-    """A API não conhece o @handle configurado."""
-
-
-class FalhaNaApi(RuntimeError):
-    """A API respondeu com erro; a mensagem traz a etapa e o texto dela."""
 
 
 async def listar_lives(db: AsyncSession, *, after_date: str, max_results: int) -> dict:
@@ -63,11 +57,11 @@ async def listar_lives(db: AsyncSession, *, after_date: str, max_results: int) -
         try:
             resolvido = await youtube_data_api.canal_do_handle(channel_id, api_key)
         except youtube_data_api.RespostaNaoOk as exc:
-            raise FalhaNaApi(
+            raise ServicoExternoFalhou(
                 f"Não foi possível resolver o handle '{channel_id}': {exc.texto}"
             ) from exc
         if resolvido is None:
-            raise CanalNaoEncontrado(f"Canal '{channel_id}' não encontrado na YouTube API")
+            raise NaoEncontrado(f"Canal '{channel_id}' não encontrado na YouTube API")
         channel_id = resolvido
 
     try:
@@ -75,14 +69,14 @@ async def listar_lives(db: AsyncSession, *, after_date: str, max_results: int) -
             channel_id, api_key=api_key, max_results=max_results, published_after=published_after
         )
     except youtube_data_api.RespostaNaoOk as exc:
-        raise FalhaNaApi(f"Erro na YouTube API (search): {exc.texto}") from exc
+        raise ServicoExternoFalhou(f"Erro na YouTube API (search): {exc.texto}") from exc
     if not video_ids:
         return {"lives": [], "after_date": after_date}
 
     try:
         detalhes = await youtube_data_api.detalhes_dos_videos(video_ids, api_key)
     except youtube_data_api.RespostaNaoOk as exc:
-        raise FalhaNaApi(f"Erro na YouTube API (videos): {exc.texto}") from exc
+        raise ServicoExternoFalhou(f"Erro na YouTube API (videos): {exc.texto}") from exc
 
     # Verifica quais video_ids já existem no banco para marcar como "já baixado"
     urls_existentes_res = await db.execute(select(Projeto.youtube_url))

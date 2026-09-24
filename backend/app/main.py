@@ -39,6 +39,7 @@ from app.routers import (
 from app.routers import (
     settings as app_settings,
 )
+from app.routers.errors import registrar_tratadores
 from app.seguranca_local import ORIGEM_LOCAL_REGEX, GuardaDeOrigemLocal
 from app.services import channels as channels_service
 from app.services import encerramento, settings_store
@@ -101,6 +102,9 @@ app = FastAPI(
     version=VERSAO_DO_APP,
     lifespan=lifespan,
 )
+
+# D-697: erro de domínio vira HTTP pelo significado, e não por decisão de cada router.
+registrar_tratadores(app)
 
 app.add_middleware(
     CORSMiddleware,
