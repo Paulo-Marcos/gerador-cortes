@@ -1,5 +1,5 @@
 import pytest
-from app.domain.youtube_urls import extract_youtube_video_id
+from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 
 
 @pytest.mark.parametrize(

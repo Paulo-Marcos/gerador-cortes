@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from app import editorial_scaffolds, editorial_skills
 from app.database import AsyncSessionLocal
-from app.domain.publicacao import LIMITES, Plataforma
+from app.domain.publicacao.publicacao import LIMITES, Plataforma
 from app.domain.short import segmentos_short
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.domain.short.metadados_short import (

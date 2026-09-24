@@ -1,7 +1,7 @@
 """Liberar um corte para ser publicado de novo (D-566).
 
 O serviço é fino de propósito: quem sabe ONDE cada destino guarda a marca é o
-domínio (`domain/liberacao_publicacao.py`); aqui só abrimos o banco, apagamos
+domínio (`domain/publicacao/liberacao_publicacao.py`); aqui só abrimos o banco, apagamos
 o que ele apontou e contamos o que aconteceu.
 
 Duas decisões que valem o comentário:
@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from app.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
-from app.domain.liberacao_publicacao import (
+from app.domain.publicacao.liberacao_publicacao import (
     MarcaDePublicacao,
     destinos_conhecidos,
     marca_do_destino,

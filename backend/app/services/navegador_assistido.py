@@ -34,7 +34,7 @@ from typing import Protocol
 
 from app.channel_paths import active_channel_root
 from app.config import settings
-from app.domain.tiktok_studio import (
+from app.domain.publicacao.tiktok_studio import (
     PORTA_MINIMA_DE_DEPURACAO,
     PORTAS_DE_DEPURACAO,
     mesma_pasta,
@@ -466,7 +466,7 @@ def aba_marcada(contexto, marca: str, url_padrao: str = ""):
     Sem marca, cai no critério antigo — a primeira aba cuja URL contém
     `url_padrao`. É o que o botão avulso do TikTok (D-537) ainda usa.
     """
-    from app.domain.tiktok_studio import e_a_aba_marcada
+    from app.domain.publicacao.tiktok_studio import e_a_aba_marcada
 
     if not marca:
         return next((p for p in contexto.pages if url_padrao and url_padrao in p.url), None)

@@ -916,7 +916,7 @@ async def simular_palco(short_id: str, body: SimularPalcoRequest):
 @router.get("/{short_id}/publicacao")
 async def previa_publicacao(short_id: str):
     """O que cada plataforma receberia, com os avisos — sem publicar nada."""
-    from app.domain.publicacao import LIMITES, legenda_unica
+    from app.domain.publicacao.publicacao import LIMITES, legenda_unica
     from app.services import (
         destinos_shorts,  # noqa: F401 — registra os destinos
         publicacao_destinos,
@@ -953,7 +953,7 @@ async def previa_publicacao(short_id: str):
 @router.post("/{short_id}/publicar/{plataforma}")
 async def publicar(short_id: str, plataforma: str):
     """Publica pela API ou monta o pacote manual, conforme o destino."""
-    from app.domain.publicacao import Plataforma
+    from app.domain.publicacao.publicacao import Plataforma
     from app.services import (
         destinos_shorts,  # noqa: F401 — registra os destinos
         publicacao_destinos,
@@ -1208,12 +1208,12 @@ def _ler_agendamento(texto: str | None, plataforma: str):
     tem, nao e defeito nosso — e uma escolha que o operador refaz em dois
     segundos, desde que alguem lhe diga qual e o problema.
     """
-    from app.domain.agendamento import Agendamento, AgendamentoInvalido
+    from app.domain.publicacao.agendamento import Agendamento, AgendamentoInvalido
 
     try:
         agendamento = Agendamento.de_texto(texto)
         if agendamento:
-            from app.domain.agendamento import validar
+            from app.domain.publicacao.agendamento import validar
 
             validar(agendamento, plataforma)
     except AgendamentoInvalido as exc:
@@ -1228,8 +1228,8 @@ async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", agendamento=N
     short vertical — que chegam por caminhos diferentes — compartilham este
     trecho sem que nenhum dos dois precise saber do outro.
     """
-    from app.domain.publicacao import legenda_unica
-    from app.domain.tiktok_studio import RoteiroInterrompido
+    from app.domain.publicacao.publicacao import legenda_unica
+    from app.domain.publicacao.tiktok_studio import RoteiroInterrompido
     from app.services import tiktok_studio
 
     legenda = legenda_unica(pacote.get("titulo", ""), pacote.get("descricao", ""))
@@ -1307,7 +1307,7 @@ async def publicar_corte_no_tiktok(corte_id: str):
     shorts trouxe. O video e o mesmo que foi para o YouTube: nao ha render novo,
     so metadados adaptados e uma pasta pronta.
     """
-    from app.domain.publicacao import Plataforma
+    from app.domain.publicacao.publicacao import Plataforma
     from app.services import (
         destinos_shorts,  # noqa: F401 — registra os destinos
         publicacao_destinos,
@@ -1351,7 +1351,7 @@ class LoteRequest(BaseModel):
 @router.post("/lote")
 async def criar_lote(body: LoteRequest):
     """Dispara o lote: uma raia por plataforma, cada uma no seu passo (D-564)."""
-    from app.domain.publicacao import Plataforma
+    from app.domain.publicacao.publicacao import Plataforma
     from app.services import publicacao_lote
 
     try:
@@ -1452,7 +1452,7 @@ async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
     deu erro e o operador terminou na mao, no proprio app da rede. Nos dois
     casos o fato e o mesmo ("esta no ar"), e quem sabe dele e ele.
     """
-    from app.domain.publicacao import Plataforma
+    from app.domain.publicacao.publicacao import Plataforma
     from app.services import publicacao_lote
 
     try:

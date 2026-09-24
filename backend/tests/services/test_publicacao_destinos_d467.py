@@ -10,7 +10,7 @@ import json
 
 import pytest
 import pytest_asyncio
-from app.domain.publicacao import ModoPublicacao, Plataforma
+from app.domain.publicacao.publicacao import ModoPublicacao, Plataforma
 from app.models import Base, Corte, MetadadoCorte, Projeto, Short
 from app.services import publicacao_destinos as destinos
 from app.services.publicacao_destinos import ContextoPublicacao, Destino

@@ -2,7 +2,7 @@
 
 ## O que este módulo é, em uma frase
 
-O braço que executa o roteiro de `domain/tiktok_studio.py`: abre o Chrome do
+O braço que executa o roteiro de `domain/publicacao/tiktok_studio.py`: abre o Chrome do
 operador, sobe o MP4, escreve a legenda, troca a capa — e para com a aba pronta
 e o botão *Publicar* aceso, sem tocar nele.
 
@@ -54,8 +54,8 @@ import threading
 import time
 from pathlib import Path
 
-from app.domain.agendamento import Agendamento
-from app.domain.tiktok_studio import (
+from app.domain.publicacao.agendamento import Agendamento
+from app.domain.publicacao.tiktok_studio import (
     PORTA_MINIMA_DE_DEPURACAO,
     Passo,
     RoteiroInterrompido,
@@ -258,7 +258,7 @@ def executar_roteiro(
     _passo(pagina.abrir, Passo.ABRIR, URL_DO_UPLOAD, segundos=SEGUNDOS_PARA_ABRIR)
     feitos.append(Passo.ABRIR)
 
-    from app.domain.tiktok_studio import pede_login
+    from app.domain.publicacao.tiktok_studio import pede_login
 
     if pede_login(pagina.url_atual()):
         raise RoteiroInterrompido(Passo.SESSAO)
@@ -486,7 +486,7 @@ def _publicar_agora(pagina: Pagina) -> None:
     esta. A prova e a NAVEGACAO: ao publicar, ele leva a aba para a lista de
     publicacoes (a mesma assimetria que a `publicou` do dominio explora).
     """
-    from app.domain.tiktok_studio import publicou
+    from app.domain.publicacao.tiktok_studio import publicou
 
     _passo(pagina.clicar, Passo.PUBLICAR, "botao_publicar", segundos=SEGUNDOS_PARA_ELEMENTO)
 
@@ -760,7 +760,7 @@ def _vigiar_publicacao(
     "não sei", não "não publicou". A tela mantém o botão "publiquei" justamente
     para esse caso.
     """
-    from app.domain.tiktok_studio import publicou
+    from app.domain.publicacao.tiktok_studio import publicou
 
     try:
         from playwright.sync_api import sync_playwright

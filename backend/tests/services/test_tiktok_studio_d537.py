@@ -14,7 +14,7 @@ falhar dizendo QUAL passo quebrou, em vez de morrer com um timeout anonimo.
 from pathlib import Path
 
 import pytest
-from app.domain.tiktok_studio import (
+from app.domain.publicacao.tiktok_studio import (
     ORIENTACOES,
     PASSOS,
     ROTULOS,
@@ -363,7 +363,7 @@ class TestAcompanhamentoDoEnvio:
     """O percentual do envio no log, lido do cartao de status."""
 
     def test_le_percentual_tamanho_e_tempo_do_cartao_medido(self):
-        from app.domain.tiktok_studio import leitura_do_envio
+        from app.domain.publicacao.tiktok_studio import leitura_do_envio
 
         leitura = leitura_do_envio(CARTAO_A_14)
 
@@ -373,7 +373,7 @@ class TestAcompanhamentoDoEnvio:
     def test_o_cartao_concluido_nao_tem_percentual_mas_casa_com_enviado(self):
         import re
 
-        from app.domain.tiktok_studio import leitura_do_envio
+        from app.domain.publicacao.tiktok_studio import leitura_do_envio
 
         assert leitura_do_envio(CARTAO_ENVIADO) is None
         assert re.search(tiktok_studio.ENVIO_CONCLUIDO, CARTAO_ENVIADO, re.IGNORECASE)
@@ -723,7 +723,7 @@ class TestAgendamento:
     def _amanha(self, hora="14:05"):
         from datetime import datetime, timedelta
 
-        from app.domain.agendamento import Agendamento
+        from app.domain.publicacao.agendamento import Agendamento
 
         dia = datetime.now().astimezone() + timedelta(days=1)
         return Agendamento.de_texto(f"{dia.strftime('%Y-%m-%d')}T{hora}")
@@ -771,7 +771,7 @@ class TestAgendamento:
         """
         from datetime import datetime
 
-        from app.domain.agendamento import Agendamento
+        from app.domain.publicacao.agendamento import Agendamento
 
         hoje = datetime.now().astimezone()
         ano, mes = (hoje.year + 1, 1) if hoje.month == 12 else (hoje.year, hoje.month + 1)

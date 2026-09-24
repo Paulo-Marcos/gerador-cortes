@@ -11,7 +11,7 @@ a origem do arquivo e o `vertical`.
 
 import pytest
 import pytest_asyncio
-from app.domain.publicacao import Plataforma
+from app.domain.publicacao.publicacao import Plataforma
 from app.models import Base, Corte, Projeto
 from app.services import publicacao_destinos as destinos
 from app.services.destinos_shorts import DestinoManual

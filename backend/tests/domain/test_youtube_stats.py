@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.domain.youtube_stats import (
+from app.domain.publicacao.youtube_stats import (
     bucket_duracao,
     bucket_titulo_len,
     csv_duracao_retencao,

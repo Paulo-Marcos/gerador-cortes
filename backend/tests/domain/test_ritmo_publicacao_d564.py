@@ -7,8 +7,8 @@ rígida. Aqui a diferença entre elas é dado, não código espalhado.
 
 from datetime import datetime, timedelta
 
-from app.domain.publicacao import Plataforma
-from app.domain.ritmo_publicacao import (
+from app.domain.publicacao.publicacao import Plataforma
+from app.domain.publicacao.ritmo_publicacao import (
     UPLOADS_YOUTUBE_POR_DIA,
     Cadencia,
     EstadoItem,

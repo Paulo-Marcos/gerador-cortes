@@ -23,9 +23,9 @@ import shutil
 import threading
 from pathlib import Path
 
-from app.domain.agendamento import Agendamento
-from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
-from app.domain.ritmo_publicacao import UPLOADS_YOUTUBE_POR_DIA
+from app.domain.publicacao.agendamento import Agendamento
+from app.domain.publicacao.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
+from app.domain.publicacao.ritmo_publicacao import UPLOADS_YOUTUBE_POR_DIA
 from app.infrastructure import youtube_api
 from app.services.publicacao_destinos import (
     Destino,
@@ -399,7 +399,7 @@ class DestinoTikTokAssistido(DestinoManual):
     async def publicar(self, pacote: PacotePublicacao) -> dict:
         from uuid import uuid4
 
-        from app.domain.tiktok_studio import marca_da_aba
+        from app.domain.publicacao.tiktok_studio import marca_da_aba
         from app.services import tiktok_studio
 
         pronto = await super().publicar(pacote)
@@ -482,7 +482,7 @@ class DestinoInstagramReelsAssistido(DestinoManual):
     async def publicar(self, pacote: PacotePublicacao) -> dict:
         from uuid import uuid4
 
-        from app.domain.tiktok_studio import marca_da_aba
+        from app.domain.publicacao.tiktok_studio import marca_da_aba
         from app.services import instagram_reels
 
         pronto = await super().publicar(pacote)

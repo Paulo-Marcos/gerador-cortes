@@ -7,7 +7,7 @@ aqui existe porque, sem ela, a plataforma nao daria erro: daria outra coisa.
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from app.domain.agendamento import Agendamento, AgendamentoInvalido, validar
+from app.domain.publicacao.agendamento import Agendamento, AgendamentoInvalido, validar
 
 
 def _daqui(horas: float) -> datetime:

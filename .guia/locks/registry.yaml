@@ -90,7 +90,7 @@ locks:
   description: Publicacao manual e upload individual no Estudio
   locked_at: '2026-05-25'
   files:
-  - backend/app/domain/youtube_urls.py
+  - backend/app/domain/publicacao/youtube_urls.py
   - backend/app/services/youtube.py
   - backend/app/routers/export.py
   - backend/tests/domain/test_youtube_urls.py

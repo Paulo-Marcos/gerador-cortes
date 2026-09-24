@@ -16,7 +16,7 @@ Liberar é sobre a MEMÓRIA do app, não sobre a plataforma: nada aqui apaga ví
 no YouTube nem mexe em arquivo. Quem apaga lá fora é o operador, na mão — e é
 justamente por isso que o app precisa aceitar ser informado de que apagou.
 
-Parente próximo: `domain/retencao_publicacao.py` responde "este arquivo já
+Parente próximo: `domain/publicacao/retencao_publicacao.py` responde "este arquivo já
 cumpriu o papel em todos os destinos?". Os dois falam dos mesmos destinos por
 ângulos opostos — um pergunta se pode esquecer, o outro desfaz a lembrança.
 """

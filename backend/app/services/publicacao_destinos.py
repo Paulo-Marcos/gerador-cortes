@@ -22,7 +22,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain.publicacao import (
+from app.domain.publicacao.publicacao import (
     LIMITES,
     MetadadosBase,
     MetadadosPublicacao,

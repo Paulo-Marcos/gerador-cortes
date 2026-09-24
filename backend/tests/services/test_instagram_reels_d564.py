@@ -13,7 +13,7 @@ importante — que fechar o compositor sozinho NÃO conta como publicação.
 from pathlib import Path
 
 import pytest
-from app.domain.instagram_reels import (
+from app.domain.publicacao.instagram_reels import (
     ORIENTACOES,
     PASSOS,
     ROTULOS,

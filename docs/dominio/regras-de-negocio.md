@@ -45,16 +45,16 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 |---|---|---|---|
 | RN-14 | **Fire** (julgamento sobre o corte) é independente de `candidato_shorts` (aposta sobre um trecho). | `models.py` (`MetadadoCorte.is_fire`, `candidato_shorts`) | D-502 |
 | RN-15 | **Limpar**: remove a mídia do que subiu e de corte sem Fire; o texto fica. Fire com shorts pendentes guarda bruto, shorts e mp4. | `services/media_retention.py` (`limpar_projeto`, `_brutos_de_fire`, `_midia_de_fire_pendente`) | D-598 |
-| RN-16 | O MP4 horizontal só pode ser apagado quando **todos** os destinos publicaram. Lista vazia **não** libera (corte sem destino conhecido ainda não foi a lugar nenhum). | `domain/retencao_publicacao.py` (`pode_apagar_o_mp4`) | D-512 |
+| RN-16 | O MP4 horizontal só pode ser apagado quando **todos** os destinos publicaram. Lista vazia **não** libera (corte sem destino conhecido ainda não foi a lugar nenhum). | `domain/publicacao/retencao_publicacao.py` (`pode_apagar_o_mp4`) | D-512 |
 | RN-17 | "Shorts finalizados" é **declaração do operador**, não dedução a partir das publicações. | `models.py` (`shorts_finalizados_em`) | D-593 |
 
 ## E. Publicação e descoberta
 
 | RN | Regra | Onde mora | Origem |
 |---|---|---|---|
-| RN-18 | Ritmo de publicação: cadência por plataforma (cabe hoje / espera até o próximo). No YouTube o teto vem da quota (10.000/dia, 1.600 por upload). | `domain/ritmo_publicacao.py` (`cadencia_de`, `cabe_hoje`, `espera_do_proximo`) | — |
-| RN-19 | Agendamento válido por plataforma, no futuro (margem mínima de 5 min) e dentro do horizonte de cada uma. | `domain/agendamento.py` (`validar`) | — |
-| RN-20 | **Teto de hashtags por plataforma**: 3 no YouTube Shorts, 5 no Reels, 5 no TikTok. A legenda do Reels não leva link. O que se **grava** tem teto 10; o corte por plataforma é feito na publicação. | `domain/publicacao.py` (`adaptar`, `hashtags_max`, `link_na_legenda`); `domain/short/metadados_short.py` (`MAX_HASHTAGS`) | — |
+| RN-18 | Ritmo de publicação: cadência por plataforma (cabe hoje / espera até o próximo). No YouTube o teto vem da quota (10.000/dia, 1.600 por upload). | `domain/publicacao/ritmo_publicacao.py` (`cadencia_de`, `cabe_hoje`, `espera_do_proximo`) | — |
+| RN-19 | Agendamento válido por plataforma, no futuro (margem mínima de 5 min) e dentro do horizonte de cada uma. | `domain/publicacao/agendamento.py` (`validar`) | — |
+| RN-20 | **Teto de hashtags por plataforma**: 3 no YouTube Shorts, 5 no Reels, 5 no TikTok. A legenda do Reels não leva link. O que se **grava** tem teto 10; o corte por plataforma é feito na publicação. | `domain/publicacao/publicacao.py` (`adaptar`, `hashtags_max`, `link_na_legenda`); `domain/short/metadados_short.py` (`MAX_HASHTAGS`) | — |
 | RN-21 | Ranking de lives = VPH + recência, normalizados min-max no lote. | `domain/ranking_lives.py` (`calcular_vph`, `calcular_recencia`, `normalizar_minmax`) | — |
 
 ## F. Imagem, áudio e render
@@ -74,5 +74,5 @@ O que o rascunho de 16/09 dizia e o código não diz mais — ou o contrário:
   `editado`. Desde a D-665 as transições têm dono no `domain/`, e `editado` foi
   removido (nada o atribuía; 0 cortes na PROD).
 - **RN-20**: o docstring de `domain/short/metadados_short.py` diz "10 no Reels", mas
-  quem aplica o teto é `domain/publicacao.py`, com **5** para o Reels. A regra
+  quem aplica o teto é `domain/publicacao/publicacao.py`, com **5** para o Reels. A regra
   deste catálogo é a do código que aplica; o comentário está desatualizado.

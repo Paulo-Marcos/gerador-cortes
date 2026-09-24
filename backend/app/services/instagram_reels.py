@@ -62,7 +62,7 @@ import threading
 import time
 from pathlib import Path
 
-from app.domain.instagram_reels import (
+from app.domain.publicacao.instagram_reels import (
     Passo,
     RoteiroInterrompido,
     descricao_do_progresso,

@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
-from app.domain.retencao_publicacao import DestinoDoCorte, pode_apagar_o_mp4
+from app.domain.publicacao.retencao_publicacao import DestinoDoCorte, pode_apagar_o_mp4
 from app.models import Corte, Projeto
 
 logger = logging.getLogger(__name__)

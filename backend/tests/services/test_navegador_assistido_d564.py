@@ -14,7 +14,7 @@ Estes testes são o que impede alguém de "simplificar" isso de volta.
 from __future__ import annotations
 
 import pytest
-from app.domain.tiktok_studio import (
+from app.domain.publicacao.tiktok_studio import (
     PORTA_MINIMA_DE_DEPURACAO,
     PORTAS_DE_DEPURACAO,
     mesma_pasta,

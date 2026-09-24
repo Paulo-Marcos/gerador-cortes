@@ -12,7 +12,7 @@ Duas coisas mudam no roteiro da D-537, e as duas por causa do LOTE:
 from pathlib import Path
 
 import pytest
-from app.domain.tiktok_studio import (
+from app.domain.publicacao.tiktok_studio import (
     Passo,
     RoteiroInterrompido,
     e_a_aba_marcada,

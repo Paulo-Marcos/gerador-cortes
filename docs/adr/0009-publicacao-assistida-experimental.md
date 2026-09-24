@@ -32,7 +32,7 @@ Limites que valem sempre:
   de interface da plataforma. **A tela ainda não avisa** — um selo "experimental"
   nos botões de publicação assistida é trabalho pendente, não parte desta decisão.
 - A porta de depuração do Chrome é derivada do caminho do perfil
-  (`domain/tiktok_studio.py`, `porta_de_depuracao`): duas instalações na mesma
+  (`domain/publicacao/tiktok_studio.py`, `porta_de_depuracao`): duas instalações na mesma
   máquina não pilotam o navegador uma da outra.
 
 ## Alternativas consideradas

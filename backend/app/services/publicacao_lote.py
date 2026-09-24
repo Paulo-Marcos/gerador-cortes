@@ -16,7 +16,7 @@ o vídeo errado como publicado, e é a marca que libera a limpeza do MP4 (D-512)
 ## O que este serviço NÃO decide
 
 O ritmo. Quantos cabem hoje, quanto esperar entre um e outro e se há um humano
-no fim — isso mora em `domain/ritmo_publicacao.py`, puro e testável sem rede.
+no fim — isso mora em `domain/publicacao/ritmo_publicacao.py`, puro e testável sem rede.
 Aqui é só o braço que executa e guarda o resultado.
 
 ## Um lote de cada vez
@@ -36,9 +36,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
-from app.domain.agendamento import Agendamento
-from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma
-from app.domain.ritmo_publicacao import (
+from app.domain.publicacao.agendamento import Agendamento
+from app.domain.publicacao.publicacao import LIMITES, ModoPublicacao, Plataforma
+from app.domain.publicacao.ritmo_publicacao import (
     Cadencia,
     EstadoItem,
     cadencia_de,

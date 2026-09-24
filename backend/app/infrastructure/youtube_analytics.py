@@ -25,7 +25,7 @@ from datetime import UTC, datetime
 
 from app.channel_paths import youtube_client_secrets_path, youtube_token_path
 from app.core.logging import operational_error, operational_info
-from app.domain.youtube_stats import parsear_duracao_iso8601
+from app.domain.publicacao.youtube_stats import parsear_duracao_iso8601
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build

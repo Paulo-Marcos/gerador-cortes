@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
-from app.domain.publicacao import LIMITES, Plataforma
+from app.domain.publicacao.publicacao import LIMITES, Plataforma
 
 # `videos.insert` custa 1.600 de um teto diário de 10.000 unidades — a conta
 # mora aqui, e não no destino, porque quem precisa dela é a fila: o destino só

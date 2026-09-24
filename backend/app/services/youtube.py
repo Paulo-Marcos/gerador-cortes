@@ -10,7 +10,7 @@ from app.channel_paths import (
     youtube_token_path,
 )
 from app.database import AsyncSessionLocal
-from app.domain.youtube_urls import extract_youtube_video_id
+from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 from app.infrastructure.imagem.thumbnail_encode import preparar_para_youtube
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services.app_logging import operational_debug, operational_error, operational_info

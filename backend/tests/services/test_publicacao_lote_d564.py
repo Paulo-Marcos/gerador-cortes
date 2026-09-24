@@ -17,9 +17,9 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
-from app.domain.publicacao import ModoPublicacao, Plataforma
-from app.domain.ritmo_publicacao import EstadoItem
-from app.domain.tiktok_studio import Passo, RoteiroInterrompido
+from app.domain.publicacao.publicacao import ModoPublicacao, Plataforma
+from app.domain.publicacao.ritmo_publicacao import EstadoItem
+from app.domain.publicacao.tiktok_studio import Passo, RoteiroInterrompido
 from app.models import Base, Corte, MetadadoCorte, Projeto, PublicacaoShort, Short
 from app.services import publicacao_destinos as destinos
 from app.services import publicacao_lote as lote_svc
