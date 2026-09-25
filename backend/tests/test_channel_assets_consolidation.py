@@ -1,6 +1,6 @@
-"""D-156: resolução, serving e consolidação dos ASSETS VISUAIS por canal ativo.
+"""D-156: resolução e serving dos ASSETS VISUAIS por canal ativo.
 
-Três frentes:
+Duas frentes (o move offline saiu no D-698, junto com o comando que o rodava):
 
   - RESOLUÇÃO (`channel_paths`): mascote, fundos, retratos, paleta e palco derivam
     da raiz do canal ATIVO quando `<canal>/assets/` existe; senão caem no legado
@@ -8,22 +8,13 @@ Três frentes:
   - SERVING (`channel_assets_sync`): materializa os assets do canal nos diretórios
     servidos (Vite/Remotion) de forma idempotente, mantendo o código consumidor
     intacto.
-  - MOVE OFFLINE (`consolidar_assets_do_canal`): traz os assets legados para
-    `<canal>/assets/` via rename same-volume — lossless, idempotente, defensivo,
-    e funde os dois diretórios de mascote sem perda.
 """
 
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 
 import pytest
-from app import channel_layout_migration as mod
-from app.channel_layout_migration import (
-    LayoutMigrationError,
-    consolidar_assets_do_canal,
-)
 from app.core import channel_paths
 from app.infrastructure import channel_assets_sync
 
@@ -124,136 +115,3 @@ def test_sync_e_noop_no_layout_legado(monkeypatch) -> None:
     # Sem raiz de assets do canal (None) → não materializa nada.
     monkeypatch.setattr(channel_assets_sync.channel_paths, "assets_root", lambda: None)
     assert channel_assets_sync.sincronizar_assets_servidos(None) == []
-
-
-# --------------------------------------------------------------------------- #
-# MOVE OFFLINE (consolidar_assets_do_canal)
-# --------------------------------------------------------------------------- #
-
-
-def _criar_instance_plano(instance: Path, handle: str = "@meucanal") -> None:
-    instance.mkdir(parents=True, exist_ok=True)
-    (instance / "channel.yaml").write_text(
-        f'handle: "{handle}"\nnome: "Meu Canal"\n', encoding="utf-8"
-    )
-    (instance / "editorial").mkdir()
-    (instance / "editorial" / "cortes.md").write_text("# cortes\n", encoding="utf-8")
-
-
-def _criar_repo_assets(repo: Path) -> None:
-    """Layout dos assets espalhados no repo (subpasta canônica `mascote/`)."""
-    vr_mascote = repo / "video-renderer" / "public" / "mascote"
-    vr_mascote.mkdir(parents=True)
-    for nome in ("sapo_serio.png", "sapo_animado.png", "sapo_pensativo.png"):
-        (vr_mascote / nome).write_bytes(f"vr-{nome}".encode())
-
-    fe_mascote = repo / "frontend" / "public" / "mascote"
-    fe_mascote.mkdir(parents=True)
-    # Subset idêntico ao superset (mesmo nome + mesmo conteúdo → redundante).
-    (fe_mascote / "sapo_serio.png").write_bytes(b"vr-sapo_serio.png")
-
-    bg = repo / "backend" / "assets" / "youtube_bg"
-    bg.mkdir(parents=True)
-    (bg / "estudio.png").write_bytes(b"fundo-estudio")
-
-    retr = repo / "backend" / "assets" / "retratos"
-    retr.mkdir(parents=True)
-    (retr / "karl_marx.jpg").write_bytes(b"retrato")
-
-    (repo / "video-renderer" / "theme.config.json").write_text(
-        '{"palette":{"verde":"#0f0"}}', encoding="utf-8"
-    )
-
-
-def test_consolida_assets_sem_perda(tmp_path: Path) -> None:
-    instance = tmp_path / "instance"
-    repo = tmp_path / "repo"
-    _criar_instance_plano(instance)
-    _criar_repo_assets(repo)
-
-    resultado = consolidar_assets_do_canal(instance_root=instance, repo_root=repo)
-    canal = instance / "channels" / "meucanal"
-    assert resultado.canal_root == canal
-
-    assets = canal / "assets"
-    assert (assets / "mascote" / "sapo_serio.png").read_bytes() == b"vr-sapo_serio.png"
-    assert (assets / "mascote" / "sapo_animado.png").is_file()
-    assert (assets / "mascote" / "sapo_pensativo.png").is_file()
-    assert (assets / "youtube_bg" / "estudio.png").read_bytes() == b"fundo-estudio"
-    assert (assets / "retratos" / "karl_marx.jpg").read_bytes() == b"retrato"
-    assert (assets / "theme.config.json").read_text(
-        encoding="utf-8"
-    ) == '{"palette":{"verde":"#0f0"}}'
-
-    # Origens esvaziadas.
-    assert not (repo / "video-renderer" / "public" / "mascote").exists()
-    assert not (repo / "frontend" / "public" / "mascote").exists()
-    assert not (repo / "backend" / "assets" / "youtube_bg").exists()
-    assert not (repo / "video-renderer" / "theme.config.json").exists()
-
-
-def test_consolidacao_assets_e_idempotente(tmp_path: Path) -> None:
-    instance = tmp_path / "instance"
-    repo = tmp_path / "repo"
-    _criar_instance_plano(instance)
-    _criar_repo_assets(repo)
-
-    consolidar_assets_do_canal(instance_root=instance, repo_root=repo)
-    canal = instance / "channels" / "meucanal"
-    estado1 = _checksums(canal / "assets")
-
-    resultado2 = consolidar_assets_do_canal(instance_root=instance, repo_root=repo)
-    estado2 = _checksums(canal / "assets")
-
-    assert resultado2.acao == "noop"
-    assert estado2 == estado1
-
-
-def test_funde_mascote_subset_divergente_aborta(tmp_path: Path) -> None:
-    """Mesmo nome com conteúdo diferente entre os dois mascotes → aborta (ambíguo)."""
-    instance = tmp_path / "instance"
-    repo = tmp_path / "repo"
-    _criar_instance_plano(instance)
-    _criar_repo_assets(repo)
-    # Sobrescreve o subset com conteúdo DIVERGENTE do superset.
-    (repo / "frontend" / "public" / "mascote" / "sapo_serio.png").write_bytes(b"DIVERGENTE")
-
-    with pytest.raises(LayoutMigrationError, match="difere"):
-        consolidar_assets_do_canal(instance_root=instance, repo_root=repo)
-
-
-def test_aborta_quando_volumes_diferentes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    instance = tmp_path / "instance"
-    repo = tmp_path / "repo"
-    _criar_instance_plano(instance)
-    _criar_repo_assets(repo)
-
-    def fake_id_volume(caminho: Path) -> int:
-        return 1 if str(repo) in str(caminho) else 2
-
-    monkeypatch.setattr(mod, "_id_volume", fake_id_volume)
-
-    with pytest.raises(LayoutMigrationError, match="volumes diferentes"):
-        consolidar_assets_do_canal(instance_root=instance, repo_root=repo)
-
-    # Nada movido: origem intacta.
-    assert (repo / "backend" / "assets" / "youtube_bg" / "estudio.png").is_file()
-
-
-def test_sem_repo_root_explicito_recusa(tmp_path: Path) -> None:
-    instance = tmp_path / "instance"
-    _criar_instance_plano(instance)
-
-    with pytest.raises(ValueError, match="repo_root"):
-        consolidar_assets_do_canal(instance_root=instance)
-
-    assert not (instance / "channels" / "meucanal" / "assets").exists()
-
-
-def _checksums(raiz: Path) -> dict[str, str]:
-    saida: dict[str, str] = {}
-    for arquivo in sorted(raiz.rglob("*")):
-        if arquivo.is_file():
-            rel = arquivo.relative_to(raiz).as_posix()
-            saida[rel] = hashlib.sha256(arquivo.read_bytes()).hexdigest()
-    return saida

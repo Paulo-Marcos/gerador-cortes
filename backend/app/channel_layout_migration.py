@@ -67,10 +67,6 @@ def _eh_reservado(nome: str) -> bool:
 
 _ID_FALLBACK = "default"
 
-# Arquivos sem valor de dado (placeholders versionados): um destino que só os
-# contém é tratado como vazio na consolidação — pode ser substituído sem perda.
-_PLACEHOLDERS = frozenset({".gitkeep"})
-
 
 class LayoutMigrationError(RuntimeError):
     """Layout em estado que não pode ser migrado com segurança (conflito/ambiguidade).
@@ -98,10 +94,11 @@ def garantir_layout_de_canais(
     """Garante o layout multi-canal em `instance_root`, migrando se preciso.
 
     Embrulha o `instance/` plano em `channels/<canal>/` + ponteiro de canal ativo.
-    NÃO move os dados operacionais pesados (`backend/projetos/`, ~70GB): isso fica
-    a cargo de `consolidar_dados_do_canal`, rodado OFFLINE (ver docstring lá),
-    porque no boot do stack de dev os render workers travam `backend/projetos` e
-    um rename de 70GB falharia. Esta função roda no boot e é leve/idempotente.
+    NÃO move os dados operacionais pesados (`backend/projetos/`, ~70GB): esse move
+    foi OFFLINE e de uma vez só (D-155), porque no boot os render workers travam
+    `backend/projetos` e um rename de 70GB falharia; o comando saiu no D-698,
+    depois de a PROD e o DEV já estarem consolidados. Esta função roda no boot e é
+    leve/idempotente.
 
     Args:
         instance_root: raiz da instância. Default: `<repo>/instance`.
@@ -263,156 +260,6 @@ def _materializar_assets_servidos() -> None:
         print(f"[Multi-canal] Falha ao materializar tema do canal ativo: {e}")
 
 
-def consolidar_dados_do_canal(
-    instance_root: Path | None = None,
-    exemplo_dir: Path | None = None,
-    backend_root: Path | None = None,
-) -> ResultadoMigracao:
-    """Garante o layout e MOVE os dados operacionais legados para o canal ativo.
-
-    Move `backend/projetos/` (banco `projetos.db` + mídias) e
-    `backend/app/canal_config.py` para `instance/channels/<ativo>/`, via rename
-    same-volume (atômico, sem copiar ~70GB). Idempotente; defensivo (aborta antes
-    de arriscar perda); aborta se origem/destino estão em volumes diferentes.
-
-    RODE OFFLINE — com TODOS os serviços parados (backend, native_worker, Remotion):
-    os render workers observam uma fila DENTRO de `backend/projetos`, travando a
-    pasta, e o rename falharia com "Acesso negado" (WinError 5). Faça BACKUP de
-    `instance/` e `backend/projetos/` antes.
-
-    `backend_root` é obrigatório quando `instance_root` é informado (testes), para
-    nunca mover os dados REAIS para dentro de uma instância de teste.
-
-    Returns:
-        ResultadoMigracao do layout; após ela, os dados vivem sob `canal_root`.
-    """
-    if instance_root is not None and backend_root is None:
-        raise ValueError(
-            "consolidar_dados_do_canal: informe backend_root explícito quando passar "
-            "instance_root — proteção contra mover os dados reais para uma fixture."
-        )
-    resultado = garantir_layout_de_canais(instance_root, exemplo_dir)
-    backend_root = Path(backend_root) if backend_root else _BACKEND_ROOT
-    _consolidar_dados_operacionais(resultado.canal_root, backend_root)
-    return resultado
-
-
-def consolidar_assets_do_canal(
-    instance_root: Path | None = None,
-    exemplo_dir: Path | None = None,
-    repo_root: Path | None = None,
-) -> ResultadoMigracao:
-    """Garante o layout e MOVE os ASSETS VISUAIS legados para `<canal>/assets/` (D-156).
-
-    Move para `instance/channels/<ativo>/assets/`:
-      - `video-renderer/public/mascote/`  -> `assets/mascote`   (superset de 51 poses)
-      - `frontend/public/mascote/`        -> reconciliado em `assets/mascote` (subset)
-      - `backend/assets/youtube_bg/`   -> `assets/youtube_bg`
-      - `backend/assets/retratos/`     -> `assets/retratos`
-      - `video-renderer/theme.config.json` -> `assets/theme.config.json`
-
-    E o CATALOGO de poses do mascote (D-179), para a raiz do canal (nao em assets/):
-      - `backend/app/data/mascote_poses.json` -> `mascot/poses.json`
-    que e o override que `mascot_catalog._resolver_caminho` le como `mascot_dir()/poses.json`.
-
-    Os nomes legados (`public/sapo/`, `sapo_poses.json`) continuam aceitos como
-    origem (E-011) para não regredir instalações anteriores à genericização.
-
-    Cada move é um RENAME same-volume (atômico, sem copiar): idempotente (origem
-    ausente = no-op), defensivo (aborta antes de sobrescrever dados reais), e
-    aborta se origem/destino estão em volumes diferentes. NÃO move os caches
-    regeneráveis do palco (`projetos/_palco_cache`) — esses já seguem o canal pela
-    consolidação de dados (D-155).
-
-    RODE OFFLINE — com os serviços parados — e com BACKUP de `instance/` e dos
-    diretórios de origem. `repo_root` é obrigatório quando `instance_root` é
-    informado (testes), para nunca mover os assets REAIS para uma fixture.
-
-    Após mover, materialize de volta nos diretórios servidos com
-    `channel_assets_sync.sincronizar_assets_servidos()`.
-    """
-    if instance_root is not None and repo_root is None:
-        raise ValueError(
-            "consolidar_assets_do_canal: informe repo_root explícito quando passar "
-            "instance_root — proteção contra mover os assets reais para uma fixture."
-        )
-    resultado = garantir_layout_de_canais(instance_root, exemplo_dir)
-    repo_root = Path(repo_root) if repo_root else _REPO_ROOT
-    _consolidar_assets_visuais(resultado.canal_root, repo_root)
-    return resultado
-
-
-def _consolidar_assets_visuais(canal_root: Path, repo_root: Path) -> None:
-    """Traz mascote, fundos, retratos e paleta legados para `<canal>/assets/`."""
-    assets_dst = canal_root / "assets"
-    _mover_para_canal(repo_root / "backend" / "assets" / "youtube_bg", assets_dst / "youtube_bg")
-    _mover_para_canal(repo_root / "backend" / "assets" / "retratos", assets_dst / "retratos")
-    _mover_para_canal(
-        repo_root / "video-renderer" / "theme.config.json", assets_dst / "theme.config.json"
-    )
-    _consolidar_mascote(
-        video_mascote=_dir_mascote_versionado(repo_root / "video-renderer" / "public"),
-        frontend_mascote=_dir_mascote_versionado(repo_root / "frontend" / "public"),
-        destino=assets_dst / "mascote",
-    )
-    # Catalogo de poses (D-179): vira o override da instancia que o backend le em
-    # `mascot_dir()/poses.json`. Mesmo move same-volume, idempotente e defensivo.
-    _mover_para_canal(
-        _catalogo_versionado(repo_root / "backend" / "app" / "data"),
-        canal_root / "mascot" / "poses.json",
-    )
-
-
-def _dir_mascote_versionado(public_dir: Path) -> Path:
-    """`<public>/mascote` (canônico) ou `<public>/sapo` (legado) — o que existir.
-
-    Devolve o canônico quando nenhum existir (o move é no-op sobre origem ausente).
-    """
-    for nome in ("mascote", "sapo"):
-        candidato = public_dir / nome
-        if candidato.exists():
-            return candidato
-    return public_dir / "mascote"
-
-
-def _catalogo_versionado(data_dir: Path) -> Path:
-    """`mascote_poses.json` (canônico) ou `sapo_poses.json` (legado) — o que existir."""
-    novo = data_dir / "mascote_poses.json"
-    return novo if novo.exists() else data_dir / "sapo_poses.json"
-
-
-def _consolidar_mascote(video_mascote: Path, frontend_mascote: Path, destino: Path) -> None:
-    """Funde os dois diretórios de mascote num único `assets/mascote`, sem perda.
-
-    O `video-renderer/public/mascote` (51 poses) é o SUPERSET — vira `assets/mascote`.
-    O `frontend/public/mascote` (34 poses) é subconjunto: cada arquivo idêntico já no
-    destino é redundante (será re-materializado pelo sync) e é descartado; um
-    arquivo ausente no destino é TRAZIDO; um com mesmo nome mas conteúdo divergente
-    ABORTA (ambiguidade — não escolhemos qual versão perder).
-    """
-    _mover_para_canal(video_mascote, destino)
-    if not frontend_mascote.exists():
-        return
-    if not destino.exists():
-        # Não havia superset (só o subset existia) — promove o subset a canônico.
-        _mover_para_canal(frontend_mascote, destino)
-        return
-    _exigir_mesmo_volume(frontend_mascote, destino)
-    for arquivo in frontend_mascote.iterdir():
-        if not arquivo.is_file():
-            continue
-        alvo = destino / arquivo.name
-        if alvo.exists():
-            if alvo.stat().st_size != arquivo.stat().st_size:
-                raise LayoutMigrationError(
-                    f"Conflito ao fundir mascote: '{arquivo.name}' difere entre "
-                    f"{frontend_mascote} e {destino}. Resolva manualmente para não perder dados."
-                )
-            continue  # redundante: idêntico ao superset
-        os.rename(arquivo, alvo)  # único no subset — traz para o canônico
-    shutil.rmtree(frontend_mascote)
-
-
 # --------------------------------------------------------------------------- #
 # Passos internos
 # --------------------------------------------------------------------------- #
@@ -493,93 +340,6 @@ def _resolver_ou_curar_ponteiro(canais_dir: Path, ponteiro: Path) -> str:
         f"'{_DIR_CANAIS}/' existe mas o canal ativo é indefinido "
         f"(ponteiro={atual!r}, canais={canais}). Defina manualmente o ativo."
     )
-
-
-# --------------------------------------------------------------------------- #
-# Consolidação dos dados operacionais (D-155)
-# --------------------------------------------------------------------------- #
-
-
-def _consolidar_dados_operacionais(canal_root: Path, backend_root: Path) -> None:
-    """Traz `backend/projetos/` e `backend/app/canal_config.py` para o canal ativo.
-
-    O banco (`projetos.db`), as mídias (~70GB) e o `canal_config.py` deixam de
-    viver fora da instância e passam a pertencer ao canal — fechando o isolamento
-    multi-canal. MOVE same-volume (rename atômico, sem copiar); idempotente (se já
-    consolidado, no-op); defensivo (aborta antes de arriscar perda).
-    """
-    _mover_para_canal(backend_root / "projetos", canal_root / "projetos")
-    _mover_para_canal(backend_root / "app" / "canal_config.py", canal_root / "canal_config.py")
-
-
-def _mover_para_canal(origem: Path, destino: Path) -> None:
-    """Move `origem` para `destino` no MESMO volume, sem sobrescrever dados.
-
-    - Origem ausente → no-op (idempotente: já consolidado ou nunca existiu).
-    - Destino com dados reais → aborta (nunca sobrescreve).
-    - Destino só com placeholders (`.gitkeep`) → trata como vazio: descarta-os e
-      move a origem inteira por cima.
-    - Volumes diferentes → aborta (mover ~70GB entre volumes não é atômico).
-    """
-    if not origem.exists():
-        return
-
-    sobras = _sobras_reais(destino)
-    if sobras:
-        raise LayoutMigrationError(
-            f"Consolidação abortada: destino '{destino}' já contém dados "
-            f"({sorted(p.name for p in sobras)}) e a origem '{origem}' também existe. "
-            "Resolva manualmente para não arriscar perda de dados."
-        )
-
-    _exigir_mesmo_volume(origem, destino)
-
-    if destino.exists():
-        # Só placeholders aqui (sobras == []): seguro descartar antes de mover.
-        _remover_placeholder(destino)
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    os.rename(origem, destino)
-
-
-def _sobras_reais(destino: Path) -> list[Path]:
-    """Itens com VALOR de dado no destino (ignora placeholders); [] se ausente/vazio."""
-    if not destino.exists():
-        return []
-    if destino.is_dir():
-        return [p for p in destino.iterdir() if p.name not in _PLACEHOLDERS]
-    return [destino]  # destino é um arquivo já existente → conflito real
-
-
-def _remover_placeholder(destino: Path) -> None:
-    """Remove um destino que só contém placeholders (ou é placeholder)."""
-    if destino.is_dir():
-        shutil.rmtree(destino)
-    else:
-        destino.unlink()
-
-
-def _exigir_mesmo_volume(origem: Path, destino: Path) -> None:
-    """Aborta se origem e destino não estão no mesmo volume (rename não seria atômico)."""
-    if _id_volume(origem) != _id_volume(destino):
-        raise LayoutMigrationError(
-            f"Consolidação abortada: origem '{origem}' e destino '{destino}' estão em "
-            "volumes diferentes. Mover os dados operacionais (banco + mídias) entre "
-            "volumes não é atômico nem seguro — faça a cópia manualmente e remova a "
-            "origem depois de conferir."
-        )
-
-
-def _id_volume(caminho: Path) -> int:
-    """Id do volume (st_dev) do ancestral existente mais próximo de `caminho`."""
-    return _ancestral_existente(caminho).stat().st_dev
-
-
-def _ancestral_existente(caminho: Path) -> Path:
-    """Primeiro caminho existente subindo a árvore (o destino pode ainda não existir)."""
-    for candidato in (caminho, *caminho.parents):
-        if candidato.exists():
-            return candidato
-    return caminho
 
 
 # --------------------------------------------------------------------------- #

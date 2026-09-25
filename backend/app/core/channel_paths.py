@@ -284,9 +284,9 @@ def projetos_dir() -> Path:
     DESDE D-155 os dados podem viver em `instance/channels/<ativo>/projetos`. A
     virada é guiada pela PRESENÇA do banco já consolidado (não só pela existência
     da pasta do canal): enquanto `…/<ativo>/projetos/projetos.db` não existir,
-    apontamos para o local legado. Assim, um boot ANTES da consolidação offline
-    (`consolidar_dados_do_canal`) ainda lê os dados de onde eles realmente estão —
-    sem criar um banco vazio paralelo — e, DEPOIS dela, segue o canal automaticamente.
+    apontamos para o local legado. Assim, uma instalação com os dados ainda no
+    `backend/` lê de onde eles realmente estão — sem criar um banco vazio
+    paralelo — e, quando o banco existe no canal, segue o canal automaticamente.
     """
     canal_root = active_channel_root()
     if canal_root != _instance_root():
