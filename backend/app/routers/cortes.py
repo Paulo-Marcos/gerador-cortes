@@ -11,7 +11,6 @@ from app.config import settings
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import get_db
 from app.domain.compartilhado.provider_ia import ProviderIA
-from app.domain.corte import ciclo_corte
 from app.domain.corte.corte_mapper import (
     extrair_cenas_remotion,
 )
@@ -19,7 +18,7 @@ from app.domain.corte.youtube_layout import (
     aplicar_layout_card_por_contexto,
     normalizar_layout_youtube,
 )
-from app.models import Corte, Projeto, StatusCorte
+from app.models import Corte, Projeto
 from app.routers.cortes_helpers import (
     _corte_to_dict,
     _hms_to_seg,
@@ -190,38 +189,14 @@ async def atualizar_corte(
 
 
 @router.post("/{corte_id}/aprovar")
-async def aprovar_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-    # D-665: mesma regra do PATCH — aprovar é um pedido do operador.
-    try:
-        ciclo_corte.validar_pedido_do_operador(
-            getattr(corte.status, "value", corte.status), StatusCorte.APROVADO.value
-        )
-    except ciclo_corte.TransicaoDeCorteInvalida as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    corte.status = StatusCorte.APROVADO
-    await db.commit()
+async def aprovar_corte(corte_id: str):
+    await CorteService.aprovar(corte_id)
     return {"message": "Corte aprovado", "corte_id": corte_id}
 
 
 @router.delete("/{corte_id}")
-async def deletar_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    projeto_id = corte.projeto_id
-
-    await db.delete(corte)
-    await db.commit()
-
-    corte_dir = projetos_dir() / projeto_id / "cortes" / corte_id
-    if corte_dir.exists():
-        # D-645: bruto, grade e overlays somam GB — apagar no loop trava o app.
-        await asyncio.to_thread(shutil.rmtree, corte_dir, ignore_errors=True)
-
+async def deletar_corte(corte_id: str):
+    await CorteService.remover(corte_id)
     return {"message": "Corte deletado com sucesso", "corte_id": corte_id}
 
 

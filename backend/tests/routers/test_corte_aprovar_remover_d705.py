@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 # Onde a remoção lê a pasta dos projetos.
-_PROJETOS_DIR_LIDO_EM = ["app.routers.cortes"]
+_PROJETOS_DIR_LIDO_EM = ["app.services.corte"]
 
 
 @pytest_asyncio.fixture

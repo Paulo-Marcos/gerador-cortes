@@ -14,6 +14,7 @@ from pathlib import Path
 
 from app.core.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
 from app.domain.corte import ciclo_corte
@@ -323,6 +324,36 @@ class AtualizarCorteDTO:
 
 
 class CorteService:
+    @staticmethod
+    async def aprovar(corte_id: str) -> None:
+        """Aprova o corte — um pedido do operador, que segue o ciclo do corte (RN-04, D-665)."""
+        async with AsyncSessionLocal() as db, db.begin():
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise NaoEncontrado("Corte não encontrado")
+            ciclo_corte.validar_pedido_do_operador(
+                getattr(corte.status, "value", corte.status), StatusCorte.APROVADO.value
+            )
+            corte.status = StatusCorte.APROVADO
+
+    @staticmethod
+    async def remover(corte_id: str) -> None:
+        """Apaga o corte e a pasta dele no disco (D-705).
+
+        A pasta sai depois da transação (ADR-0016): bruto, grade e overlays somam
+        GB, e apagar no event loop trava o app (D-645) — vai para uma thread.
+        """
+        async with AsyncSessionLocal() as db, db.begin():
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise NaoEncontrado("Corte não encontrado")
+            projeto_id = corte.projeto_id
+            await db.delete(corte)
+
+        corte_dir = projetos_dir() / projeto_id / "cortes" / corte_id
+        if corte_dir.exists():
+            await asyncio.to_thread(shutil.rmtree, corte_dir, ignore_errors=True)
+
     @staticmethod
     async def atualizar(db: AsyncSession, corte_id: str, dados: AtualizarCorteDTO) -> Corte:
         """Aplica uma atualização parcial a um corte (handler PATCH /cortes/{id}).

@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from app.routers import cortes, cortes_helpers
+from app.services import corte as corte_service
 from app.services import projeto as projeto_service
 
 
@@ -70,11 +71,17 @@ async def test_limpeza_de_midia_varre_o_disco_fora_do_loop(tmp_path, monkeypatch
 async def test_deletar_corte_apaga_a_pasta_fora_do_loop(tmp_path, monkeypatch, db):
     chamadas: list[str] = []
     (tmp_path / "p1" / "cortes" / "c1").mkdir(parents=True)
-    monkeypatch.setattr(cortes, "projetos_dir", lambda: tmp_path)
-    monkeypatch.setattr(cortes.shutil, "rmtree", _espiao(chamadas, "rmtree"))
+    monkeypatch.setattr(corte_service, "projetos_dir", lambda: tmp_path)
+    monkeypatch.setattr(corte_service.shutil, "rmtree", _espiao(chamadas, "rmtree"))
     db.get = AsyncMock(return_value=MagicMock(projeto_id="p1"))
+    db.begin = MagicMock()
+    monkeypatch.setattr(
+        corte_service,
+        "AsyncSessionLocal",
+        lambda: MagicMock(__aenter__=AsyncMock(return_value=db), __aexit__=AsyncMock()),
+    )
 
-    await cortes.deletar_corte("c1", db)
+    await cortes.deletar_corte("c1")
     assert chamadas == ["rmtree"]
 
 

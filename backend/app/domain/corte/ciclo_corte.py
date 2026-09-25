@@ -9,6 +9,8 @@ Os valores espelham `StatusCorte` (models.py). O domain não importa models; um
 teste garante que as duas listas não se desencontrem.
 """
 
+from app.domain.compartilhado.erros import PedidoInvalido
+
 PROPOSTO = "proposto"
 APROVADO = "aprovado"
 REJEITADO = "rejeitado"
@@ -41,8 +43,12 @@ _PELO_SISTEMA: dict[str, frozenset[str]] = {
 }
 
 
-class TransicaoDeCorteInvalida(ValueError):
-    """O status pedido não existe ou não é alcançável a partir do atual."""
+class TransicaoDeCorteInvalida(PedidoInvalido, ValueError):
+    """O status pedido não existe ou não é alcançável a partir do atual.
+
+    É `PedidoInvalido` (o tratador global responde 400) e continua `ValueError`,
+    para quem já a tratava assim (D-705).
+    """
 
 
 def validar_pedido_do_operador(atual: str, novo: str) -> None:
