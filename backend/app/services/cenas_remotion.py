@@ -777,121 +777,13 @@ class CenasRemotionService:
 
     @staticmethod
     def _converter_startleg(cenas_ia: list, transcricao: list) -> list:
-        cenas_convertidas = []
-        for cena in cenas_ia:
-            start_leg = cena.get("startLeg", 0)
-            duracao_s = cena.get("duracao_s", 5)
-            inicio_seg = CenasRemotionService._resolver_startleg(int(start_leg), transcricao)
-
-            cena_convertida = {
-                "tipo": cena.get("tipo", "barra_inferior"),
-                "inicio": round(inicio_seg, 2),
-                "fim": round(inicio_seg + duracao_s, 2),
-            }
-            campos_simples = [
-                "texto",
-                "subtexto",
-                "icone",
-                "numero",
-                "cor",
-                "contexto",
-                "nome_curto",
-                "rotuloA",
-                "rotuloB",
-                "autor",
-                "obra",
-                "ano",
-                "fonte",
-                "textura",
-                "ancoraLegendas",
-                "motivo",
-                "retrato_url",
-                "layout_card",
-                "modelo_cena",
-                "sombra_nivel",
-            ]
-            for campo in campos_simples:
-                if cena.get(campo) is not None:
-                    cena_convertida[campo] = cena[campo]
-
-            # Mascote (D-186): a IA/canais legados podem emitir sapoMood/sapoPosicao/
-            # sapoTamanho; a escrita passa a usar as chaves novas mascot*. O coalescer
-            # traduz o nome legado para o novo antes de salvar.
-            cena_mascote = coalescer_chaves_mascote(cena)
-            for campo in ("mascotMood", "mascotPosicao", "mascotTamanho"):
-                if cena_mascote.get(campo) is not None:
-                    cena_convertida[campo] = cena_mascote[campo]
-
-            if cena_convertida.get("layout_card") is None:
-                cena_convertida["layout_card"] = "auto"
-            if cena_convertida.get("sombra_nivel") is None:
-                cena_convertida["sombra_nivel"] = "auto"
-            # I-031: tela_cheia sempre vira card no salvamento; demais cenas
-            # caem em card como default quando IA omite/auto.
-            if cena_convertida.get("tipo") == "tela_cheia":
-                cena_convertida["modelo_cena"] = "card"
-            elif cena_convertida.get("modelo_cena") in (None, "", "auto"):
-                cena_convertida["modelo_cena"] = "card"
-
-            # Normalizar campos que a IA pode gerar com nomes errados
-            tipo = cena_convertida["tipo"]
-            if tipo == "destaque_numerico":
-                # IA pode usar o campo "valor"/"data"/"stat" em vez de "numero".
-                # D-429: o valor é preservado como veio. A coerção antiga para
-                # float assumia formato pt-BR e destruía o token — "45.7" virava
-                # 457 e "15/09/1850" caía no except. Quem lê o valor é o render,
-                # que decompõe prefixo/núcleo/sufixo (numeroFit.analisarNumeroDestaque).
-                for alias in ("valor", "data", "stat"):
-                    if alias in cena and "numero" not in cena_convertida:
-                        valor_alias = cena[alias]
-                        cena_convertida["numero"] = (
-                            valor_alias
-                            if isinstance(valor_alias, (int, float))
-                            else str(valor_alias).strip()
-                        )
-                        break
-            elif tipo == "fonte_referencia":
-                # IA pode usar "referencia" ou "source" em vez de "fonte"
-                if "fonte" not in cena_convertida:
-                    for alias in ("referencia", "source", "ref"):
-                        if alias in cena:
-                            cena_convertida["fonte"] = str(cena[alias])
-                            break
-            elif tipo == "chamada_final":
-                # IA pode usar "titulo"/"cta"/"botao" em vez de "texto"/"subtexto"
-                if "texto" not in cena_convertida:
-                    for alias in ("titulo", "headline"):
-                        if alias in cena:
-                            cena_convertida["texto"] = str(cena[alias])
-                            break
-                if "subtexto" not in cena_convertida:
-                    for alias in ("cta", "botao", "button", "call_to_action"):
-                        if alias in cena:
-                            cena_convertida["subtexto"] = str(cena[alias])
-                            break
-            elif tipo == "marco_historico":
-                # IA pode usar "evento"/"descricao" em vez de "texto"/"contexto"
-                if "texto" not in cena_convertida:
-                    for alias in ("evento", "nome", "title"):
-                        if alias in cena:
-                            cena_convertida["texto"] = str(cena[alias])
-                            break
-                if "subtexto" not in cena_convertida:
-                    for alias in ("periodo", "data", "periodo_historico"):
-                        if alias in cena:
-                            cena_convertida["subtexto"] = str(cena[alias])
-                            break
-            elif tipo == "ficha_biografica" and "nome_curto" not in cena_convertida:
-                for alias in ("nome_exibicao", "nomeExibicao", "nome_conhecido", "nomeConhecido"):
-                    if alias in cena and cena[alias]:
-                        cena_convertida["nome_curto"] = str(cena[alias])
-                        break
-
-            for campo in ["marcos", "itens"]:
-                valor = cena.get(campo)
-                if isinstance(valor, list) and valor:
-                    cena_convertida[campo] = valor
-            cenas_convertidas.append(cena_convertida)
+        cenas_convertidas = [
+            _converter_cena(
+                cena,
+                CenasRemotionService._resolver_startleg(int(cena.get("startLeg", 0)), transcricao),
+            )
+            for cena in cenas_ia
+        ]
 
         # Ordenar sempre por tempo de início crescente
         cenas_convertidas.sort(key=lambda x: x.get("inicio", 0))
@@ -904,3 +796,147 @@ async def _corte_com_metadado(db, corte_id: str) -> Corte | None:
         select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
     )
     return resultado.scalar_one_or_none()
+
+
+def _converter_cena(cena: dict, inicio_seg: float) -> dict:
+    """Uma cena da IA como ela é gravada (D-716: saiu do laço de `_converter_startleg`)."""
+    duracao_s = cena.get("duracao_s", 5)
+    cena_convertida = {
+        "tipo": cena.get("tipo", "barra_inferior"),
+        "inicio": round(inicio_seg, 2),
+        "fim": round(inicio_seg + duracao_s, 2),
+    }
+    _copiar_campos_simples(cena, cena_convertida)
+    _copiar_mascote(cena, cena_convertida)
+    _aplicar_padroes_de_layout(cena_convertida)
+    # Normalizar campos que a IA pode gerar com nomes errados
+    _ALTERNATIVOS_POR_TIPO.get(cena_convertida["tipo"], _sem_alternativos)(cena, cena_convertida)
+    _copiar_listas(cena, cena_convertida)
+    return cena_convertida
+
+
+def _copiar_campos_simples(cena: dict, cena_convertida: dict) -> None:
+    campos_simples = [
+        "texto",
+        "subtexto",
+        "icone",
+        "numero",
+        "cor",
+        "contexto",
+        "nome_curto",
+        "rotuloA",
+        "rotuloB",
+        "autor",
+        "obra",
+        "ano",
+        "fonte",
+        "textura",
+        "ancoraLegendas",
+        "motivo",
+        "retrato_url",
+        "layout_card",
+        "modelo_cena",
+        "sombra_nivel",
+    ]
+    for campo in campos_simples:
+        if cena.get(campo) is not None:
+            cena_convertida[campo] = cena[campo]
+
+
+def _copiar_mascote(cena: dict, cena_convertida: dict) -> None:
+    # Mascote (D-186): a IA/canais legados podem emitir sapoMood/sapoPosicao/
+    # sapoTamanho; a escrita passa a usar as chaves novas mascot*. O coalescer
+    # traduz o nome legado para o novo antes de salvar.
+    cena_mascote = coalescer_chaves_mascote(cena)
+    for campo in ("mascotMood", "mascotPosicao", "mascotTamanho"):
+        if cena_mascote.get(campo) is not None:
+            cena_convertida[campo] = cena_mascote[campo]
+
+
+def _aplicar_padroes_de_layout(cena_convertida: dict) -> None:
+    if cena_convertida.get("layout_card") is None:
+        cena_convertida["layout_card"] = "auto"
+    if cena_convertida.get("sombra_nivel") is None:
+        cena_convertida["sombra_nivel"] = "auto"
+    # I-031: tela_cheia sempre vira card no salvamento; demais cenas
+    # caem em card como default quando IA omite/auto.
+    if cena_convertida.get("tipo") == "tela_cheia":
+        cena_convertida["modelo_cena"] = "card"
+    elif cena_convertida.get("modelo_cena") in (None, "", "auto"):
+        cena_convertida["modelo_cena"] = "card"
+
+
+def _copiar_listas(cena: dict, cena_convertida: dict) -> None:
+    for campo in ["marcos", "itens"]:
+        valor = cena.get(campo)
+        if isinstance(valor, list) and valor:
+            cena_convertida[campo] = valor
+
+
+def _preencher_com_alternativo(
+    cena: dict, cena_convertida: dict, campo: str, alternativos: tuple[str, ...]
+) -> None:
+    """O primeiro nome alternativo presente preenche o campo que não veio."""
+    if campo in cena_convertida:
+        return
+    for alias in alternativos:
+        if alias in cena:
+            cena_convertida[campo] = str(cena[alias])
+            return
+
+
+def _alternativos_do_destaque(cena: dict, cena_convertida: dict) -> None:
+    # IA pode usar o campo "valor"/"data"/"stat" em vez de "numero".
+    # D-429: o valor é preservado como veio. A coerção antiga para
+    # float assumia formato pt-BR e destruía o token — "45.7" virava
+    # 457 e "15/09/1850" caía no except. Quem lê o valor é o render,
+    # que decompõe prefixo/núcleo/sufixo (numeroFit.analisarNumeroDestaque).
+    for alias in ("valor", "data", "stat"):
+        if alias in cena and "numero" not in cena_convertida:
+            valor_alias = cena[alias]
+            cena_convertida["numero"] = (
+                valor_alias if isinstance(valor_alias, (int, float)) else str(valor_alias).strip()
+            )
+            break
+
+
+def _alternativos_da_fonte(cena: dict, cena_convertida: dict) -> None:
+    # IA pode usar "referencia" ou "source" em vez de "fonte"
+    _preencher_com_alternativo(cena, cena_convertida, "fonte", ("referencia", "source", "ref"))
+
+
+def _alternativos_da_chamada_final(cena: dict, cena_convertida: dict) -> None:
+    # IA pode usar "titulo"/"cta"/"botao" em vez de "texto"/"subtexto"
+    _preencher_com_alternativo(cena, cena_convertida, "texto", ("titulo", "headline"))
+    _preencher_com_alternativo(
+        cena, cena_convertida, "subtexto", ("cta", "botao", "button", "call_to_action")
+    )
+
+
+def _alternativos_do_marco(cena: dict, cena_convertida: dict) -> None:
+    # IA pode usar "evento"/"descricao" em vez de "texto"/"contexto"
+    _preencher_com_alternativo(cena, cena_convertida, "texto", ("evento", "nome", "title"))
+    _preencher_com_alternativo(
+        cena, cena_convertida, "subtexto", ("periodo", "data", "periodo_historico")
+    )
+
+
+def _alternativos_da_ficha(cena: dict, cena_convertida: dict) -> None:
+    if "nome_curto" not in cena_convertida:
+        for alias in ("nome_exibicao", "nomeExibicao", "nome_conhecido", "nomeConhecido"):
+            if alias in cena and cena[alias]:
+                cena_convertida["nome_curto"] = str(cena[alias])
+                break
+
+
+def _sem_alternativos(cena: dict, cena_convertida: dict) -> None:
+    return None
+
+
+_ALTERNATIVOS_POR_TIPO = {
+    "destaque_numerico": _alternativos_do_destaque,
+    "fonte_referencia": _alternativos_da_fonte,
+    "chamada_final": _alternativos_da_chamada_final,
+    "marco_historico": _alternativos_do_marco,
+    "ficha_biografica": _alternativos_da_ficha,
+}
