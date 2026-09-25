@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+from http import HTTPStatus
 from pathlib import Path
 
 from app.core.channel_paths import (
@@ -73,7 +74,7 @@ def _call_youtube_with_propagation_retry(
         except HttpError as err:
             last_err = err
             status = getattr(err.resp, "status", None) if getattr(err, "resp", None) else None
-            if status == 404 and attempt < max_attempts:
+            if status == HTTPStatus.NOT_FOUND and attempt < max_attempts:
                 operational_info(
                     "YouTube",
                     f"{label}: 404 (vídeo ainda propagando). "

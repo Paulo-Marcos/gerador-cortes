@@ -11,6 +11,9 @@ from pathlib import Path
 from app.infrastructure import processos_em_voo
 from app.infrastructure.worker_queue import dono_dos_jobs
 
+# Quantas partes do comando o log mostra antes de abreviar.
+_PARTES_NO_RESUMO_DO_COMANDO = 8
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +37,9 @@ def _run_ffmpeg_sync(
     ele registrado por dono, cancelar de fato mata o ffmpeg; antes a thread
     ficava presa esperando um processo que ninguém conseguia alcançar.
     """
-    cmd_preview = " ".join(cmd[:8]) + (" ..." if len(cmd) > 8 else "")
+    cmd_preview = " ".join(cmd[:_PARTES_NO_RESUMO_DO_COMANDO]) + (
+        " ..." if len(cmd) > _PARTES_NO_RESUMO_DO_COMANDO else ""
+    )
     logger.info("[FfmpegRunner] [%s] Iniciando (thread): %s", label, cmd_preview)
     t0 = time.time()
     dono = dono_dos_jobs()

@@ -39,6 +39,9 @@ from app.services.tasks import fire_and_forget
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import select
 
+# O YouTube só mostra capítulos a partir de três marcas.
+_MINIMO_DE_CAPITULOS = 3
+
 logger = logging.getLogger(__name__)
 
 _SKILL_THUMBNAIL = "thumbnail-prompt-expert"
@@ -108,7 +111,7 @@ def formatar_bloco_capitulos(chapters: list | None) -> str:
     crescentes — então, diante de lista vazia, curta ou malformada, devolvemos
     ``""`` (nenhum bloco) em vez de um bloco quebrado que só polui a descrição.
     """
-    if not chapters or len(chapters) < 3:
+    if not chapters or len(chapters) < _MINIMO_DE_CAPITULOS:
         return ""
     linhas: list[str] = []
     for cap in chapters:

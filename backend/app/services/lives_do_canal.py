@@ -24,6 +24,10 @@ from app.services.ingestao import IngestaoService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Datas do yt-dlp: AAAAMMDDHHMMSS (com hora) ou AAAAMMDD.
+_DIGITOS_DE_DATA_E_HORA = 14
+_DIGITOS_DE_DATA = 8
+
 
 async def listar_lives(db: AsyncSession, *, after_date: str, max_results: int) -> dict:
     """As lives publicadas no canal ativo depois de `after_date` (YYYYMMDD).
@@ -176,7 +180,7 @@ def _published_after_from_data_live(data_live: str) -> str:
         return ""
 
     try:
-        if len(value) >= 14 and value[:14].isdigit():
+        if len(value) >= _DIGITOS_DE_DATA_E_HORA and value[:_DIGITOS_DE_DATA_E_HORA].isdigit():
             dt = datetime(
                 int(value[:4]),
                 int(value[4:6]),
@@ -186,7 +190,7 @@ def _published_after_from_data_live(data_live: str) -> str:
                 int(value[12:14]),
                 tzinfo=UTC,
             )
-        elif len(value) >= 8 and value[:8].isdigit():
+        elif len(value) >= _DIGITOS_DE_DATA and value[:_DIGITOS_DE_DATA].isdigit():
             dt = datetime(int(value[:4]), int(value[4:6]), int(value[6:8]), tzinfo=UTC)
         else:
             return ""

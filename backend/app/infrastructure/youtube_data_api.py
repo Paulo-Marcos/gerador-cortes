@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from http import HTTPStatus
 
 import httpx
 from app.config import settings
@@ -81,7 +82,7 @@ def _parsear_iso_utc(iso: str) -> datetime:
 
 def _raise_se_quota(resp: httpx.Response, contexto: str) -> None:
     """Levanta com `quota_excedida=True` quando o YouTube responde 403/quotaExceeded."""
-    if resp.status_code == 200:
+    if resp.status_code == HTTPStatus.OK:
         return
     is_quota = False
     try:
@@ -258,7 +259,7 @@ async def buscar_top_comentarios(
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         resp = await client.get(f"{BASE_URL}/commentThreads", params=params)
 
-    if resp.status_code == 403:
+    if resp.status_code == HTTPStatus.FORBIDDEN:
         try:
             payload = resp.json()
         except Exception:  # noqa: BLE001
@@ -309,7 +310,7 @@ async def canal_do_handle(handle: str, api_key: str) -> str | None:
             f"{BASE_URL}/channels",
             params={"part": "id", "forHandle": handle, "key": api_key},
         )
-    if r.status_code != 200:
+    if r.status_code != HTTPStatus.OK:
         raise RespostaNaoOk(r.text)
     items = r.json().get("items", [])
     return items[0]["id"] if items else None
@@ -332,7 +333,7 @@ async def buscar_lives_encerradas(
         params["publishedAfter"] = published_after
     async with httpx.AsyncClient(timeout=_TIMEOUT_DAS_LISTAS_S) as client:
         r = await client.get(f"{BASE_URL}/search", params=params)
-    if r.status_code != 200:
+    if r.status_code != HTTPStatus.OK:
         raise RespostaNaoOk(r.text)
     return [item["id"]["videoId"] for item in r.json().get("items", [])]
 
@@ -344,7 +345,7 @@ async def detalhes_dos_videos(video_ids: list[str], api_key: str) -> list[dict]:
             f"{BASE_URL}/videos",
             params={"part": "id,snippet,contentDetails", "id": ",".join(video_ids), "key": api_key},
         )
-    if r.status_code != 200:
+    if r.status_code != HTTPStatus.OK:
         raise RespostaNaoOk(r.text)
     return r.json().get("items", [])
 
@@ -362,7 +363,7 @@ async def datas_de_publicacao(video_ids: list[str], api_key: str) -> dict[str, s
                 f"{BASE_URL}/videos",
                 params={"part": "id,snippet", "id": ",".join(chunk), "key": api_key},
             )
-            if resp.status_code != 200:
+            if resp.status_code != HTTPStatus.OK:
                 logger.warning("Nao foi possivel buscar publishedAt dos videos: %s", resp.text)
                 continue
             for item in resp.json().get("items", []):

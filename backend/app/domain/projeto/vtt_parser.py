@@ -10,6 +10,9 @@ Exemplo:
 
 import re
 
+# A linha de tempo do VTT é "início --> fim".
+_LADOS_DA_LINHA_DE_TEMPO = 2
+
 
 def parse_vtt(vtt_content: str) -> list[dict]:
     """Converte conteúdo VTT bruto em lista de segmentos com timestamps.
@@ -31,7 +34,7 @@ def parse_vtt(vtt_content: str) -> list[dict]:
             continue
 
         partes = time_line.split("-->")
-        if len(partes) != 2:
+        if len(partes) != _LADOS_DA_LINHA_DE_TEMPO:
             continue
 
         inicio = partes[0].strip().split(" ")[0]

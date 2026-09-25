@@ -66,6 +66,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+# Tentativas de gravar a sincronia quando o SQLite responde "database is locked".
+_TENTATIVAS_DE_GRAVACAO = 5
+# Silêncio mais curto que isso é respiração, não pausa que valha virar desvio.
+_PAUSA_MINIMA_SEG = 0.6
+# Dois desvios que começam a menos disso um do outro são o mesmo desvio.
+_DISTANCIA_DE_DUPLICATA_SEG = 0.5
+
 logger = logging.getLogger(__name__)
 
 # Margem mínima (s) que cada metade precisa ter para a divisão ser válida —
@@ -607,7 +614,7 @@ async def _gravar_sincronia(
     # mascarava o erro real. D-716: o `rollback` também descarta o que
     # foi atribuído ao corte, então cada tentativa atribui de novo —
     # antes a segunda gravava nada e a sincronia se perdia em silêncio.
-    for attempt in range(5):
+    for attempt in range(_TENTATIVAS_DE_GRAVACAO):
         corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
         corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
         corte.transcricao_final_texto = texto_final
@@ -615,7 +622,7 @@ async def _gravar_sincronia(
             await db.commit()
             break
         except Exception as e:
-            if "locked" in str(e).lower() and attempt < 4:
+            if "locked" in str(e).lower() and attempt < _TENTATIVAS_DE_GRAVACAO - 1:
                 await db.rollback()
                 await asyncio.sleep(0.5 * (attempt + 1))
                 continue
@@ -1474,7 +1481,7 @@ class CorteService:
                 e_abs = min(round(e_abs, 3), float(corte.fim_seg))
 
                 # Descarta blocos menores que 0.6s após ajuste (apenas pausas mais longas)
-                if e_abs - s_abs < 0.6:
+                if e_abs - s_abs < _PAUSA_MINIMA_SEG:
                     continue
 
                 # seg_to_hms preserva milissegundos (HH:MM:SS.mmm) para evitar
@@ -1506,7 +1513,10 @@ class CorteService:
             # HMS, que tinha precisão de apenas 1 segundo e gerava duplicatas falsas.
             def _ja_existe(nd: dict, existentes: list) -> bool:
                 nd_inicio = float(nd.get("inicio_seg", 0))
-                return any(abs(float(d.get("inicio_seg", 0)) - nd_inicio) < 0.5 for d in existentes)
+                return any(
+                    abs(float(d.get("inicio_seg", 0)) - nd_inicio) < _DISTANCIA_DE_DUPLICATA_SEG
+                    for d in existentes
+                )
 
             for nd in novos_desvios:
                 if not _ja_existe(nd, desvios_atuais):

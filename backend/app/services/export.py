@@ -42,6 +42,11 @@ from app.services.export_bulk_queue import _ExportBulkQueueMixin
 from app.services.export_processamento import _ExportProcessamentoMixin
 from app.services.tasks import fire_and_forget
 
+# O worker que falha às vezes deixa um arquivo quase vazio no lugar do bruto.
+_TAMANHO_MINIMO_DO_BRUTO_BYTES = 1024
+# Diferença aceitável entre a soma dos segmentos e a duração medida do bruto.
+_TOLERANCIA_DE_DURACAO_SEG = 5.0
+
 logger = logging.getLogger(__name__)
 
 # Quanto esperar a resposta do worker pelo bruto, e de quanto em quanto olhar.
@@ -305,7 +310,7 @@ async def _renderizar_no_worker(
     if erro:
         return erro
     # Garantia 1: arquivo de saída foi criado com tamanho mínimo.
-    if not out_path.exists() or out_path.stat().st_size < 1024:
+    if not out_path.exists() or out_path.stat().st_size < _TAMANHO_MINIMO_DO_BRUTO_BYTES:
         return {"status": "erro", "mensagem": "Arquivo bruto não foi gerado pelo worker."}
     return None
 
@@ -422,7 +427,10 @@ async def _erro_na_resposta_do_worker(res_file: Path) -> dict | None:
 
 
 def _recusar_duracao_divergente(duracao_esperada: float, duracao_real: float | None) -> dict | None:
-    if duracao_real is not None and abs(duracao_real - duracao_esperada) > 5.0:
+    if (
+        duracao_real is not None
+        and abs(duracao_real - duracao_esperada) > _TOLERANCIA_DE_DURACAO_SEG
+    ):
         # Sempre logamos divergência (mesmo com verbose off) — é erro grave.
         operational_error(
             "ExportService",

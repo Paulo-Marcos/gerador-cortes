@@ -2,6 +2,9 @@
 
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
 
+# Fatia mais curta que isso é instável: causa drift na transcrição e erro no FFmpeg.
+_FATIA_MINIMA_SEG = 0.1
+
 # Motivos que indicam desvios editoriais vindos da IA (n8n ou importação manual).
 # Estes NÃO devem ser removidos no "gerar bruto" — apenas no pipeline completo.
 _PREFIXOS_EDITORIAIS = ("[REPETICAO]", "[DESVIO]")
@@ -199,13 +202,13 @@ def calcular_segmentos(
 
         if d_ini > cursor:
             # Threshold de 0.1s para evitar micro-fatias instáveis
-            if d_ini - cursor > 0.1:
+            if d_ini - cursor > _FATIA_MINIMA_SEG:
                 segmentos.append({"start": round(cursor, 3), "end": round(d_ini, 3)})
 
         cursor = d_fim
 
     # Segmento final (depois do último desvio)
-    if cursor < fim and (fim - cursor) > 0.1:
+    if cursor < fim and (fim - cursor) > _FATIA_MINIMA_SEG:
         segmentos.append({"start": round(cursor, 3), "end": round(fim, 3)})
 
     if segmentos:

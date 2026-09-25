@@ -90,6 +90,9 @@ from app.services.youtube_palco import (
     ensure_palco_pngs_para_layout,
 )
 
+# Tentativas de trocar o vídeo final enquanto um player ainda o segura (Windows).
+_TENTATIVAS_DE_TROCA = 10
+
 # Tetos de cada job no worker. Não são estimativas: são o ponto em que um job
 # preso é dado como perdido. A grade de uma live longa é o mais lento de todos.
 _TIMEOUT_DA_GRADE_S = 14_400
@@ -1512,12 +1515,12 @@ async def _finalizar_corte(db, corte: Corte, upload_dir: Path) -> None:
 
 async def _publicar_video_final(video_temporario: Path, video_final: Path) -> None:
     """Troca o video final com retry para handles breves do Windows."""
-    for tentativa in range(1, 11):
+    for tentativa in range(1, _TENTATIVAS_DE_TROCA + 1):
         try:
             os.replace(video_temporario, video_final)
             return
         except PermissionError as e:
-            if tentativa == 10:
+            if tentativa == _TENTATIVAS_DE_TROCA:
                 raise PermissionError(
                     f"Nao foi possivel substituir {video_final}; feche players, previews ou uploads que estejam usando o arquivo."
                 ) from e

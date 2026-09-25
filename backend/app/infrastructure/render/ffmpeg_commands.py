@@ -83,6 +83,9 @@ from app.infrastructure.render.video_encoder import (
     permite_decode_qsv,
 )
 
+# Com um segmento só não há o que fatiar: a grade inteira sai de uma vez.
+_SEGMENTOS_MINIMOS_PARA_FATIAR = 2
+
 # Superfície pública da fachada (também marca os re-exports como intencionais
 # para o linter). Inclui nomes internos que testes/serviços importam daqui.
 __all__ = [
@@ -446,7 +449,11 @@ def build_grade_plan(
     if _grade_trim_segmentation_enabled():
         layout = _resolver_grade_layout(layout_youtube, duracao_seg, projeto_padrao, global_padrao)
         segmentos = _construir_segmentos_grade(layout.shared_regions, duracao_seg)
-        if layout.has_any_fg and segmentos is not None and len(segmentos) >= 2:
+        if (
+            layout.has_any_fg
+            and segmentos is not None
+            and len(segmentos) >= _SEGMENTOS_MINIMOS_PARA_FATIAR
+        ):
             return _build_grade_plan_segmentado(
                 input_path,
                 output_path,

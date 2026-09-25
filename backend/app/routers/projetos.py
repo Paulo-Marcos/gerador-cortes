@@ -26,6 +26,8 @@ from sqlalchemy import select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+_MAXIMO_DE_BLOCOS = 20
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -697,8 +699,8 @@ async def exportar_prompt_analise_intervalo(
         fim_seg = hms_to_seg(fim_hms)
         if fim_seg <= inicio_seg:
             raise ValueError("fim_hms deve ser maior que inicio_hms")
-        if blocos is not None and (blocos < 1 or blocos > 20):
-            raise ValueError("blocos deve estar entre 1 e 20")
+        if blocos is not None and (blocos < 1 or blocos > _MAXIMO_DE_BLOCOS):
+            raise ValueError(f"blocos deve estar entre 1 e {_MAXIMO_DE_BLOCOS}")
         return await AnaliseService.montar_prompt_intervalo(projeto_id, inicio_seg, fim_seg, blocos)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

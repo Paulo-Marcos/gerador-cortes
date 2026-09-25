@@ -27,6 +27,10 @@ from app.services.tasks import fire_and_forget
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# O yt-dlp devolve a data como AAAAMMDD.
+_DIGITOS_DA_DATA = 8
+_PROGRESSO_COMPLETO = 100
+
 
 class _CanalDeProgresso:
     """Um publicador, N ouvintes (D-656).
@@ -81,7 +85,7 @@ def _data_publicacao_yt_dlp(info: dict) -> str:
         pass
 
     upload_date = str(info.get("upload_date", ""))
-    return upload_date[:8] if len(upload_date) >= 8 else ""
+    return upload_date[:_DIGITOS_DA_DATA] if len(upload_date) >= _DIGITOS_DA_DATA else ""
 
 
 _PROGRESSO_YTDLP = re.compile(r"\[download\]\s+([\d.]+)%")
@@ -106,7 +110,7 @@ class _ProgressoGravado:
         self._ultimo = -1.0
 
     def vale_gravar(self, progresso: float) -> bool:
-        if progresso < 100 and progresso - self._ultimo < _PASSO_MINIMO_PARA_GRAVAR:
+        if progresso < _PROGRESSO_COMPLETO and progresso - self._ultimo < _PASSO_MINIMO_PARA_GRAVAR:
             return False
         self._ultimo = progresso
         return True

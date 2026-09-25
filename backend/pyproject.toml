@@ -10,7 +10,9 @@ extend-exclude = ["projetos", "assets"]
 # do terminal — e um cano que ninguém lê CONGELA o backend (foi o que aconteceu
 # aqui: o app só destravava ao focar a janela). Log passa pela infraestrutura
 # de logging, que trata isso. Os scripts de terminal ficam de fora, abaixo.
-select = ["E", "F", "W", "I", "UP", "B", "T20"]
+# PLR2004 (número mágico em comparação): D-717. Limiar com nome diz o que mede e
+# por que tem aquele valor; nos testes o número no assert É o esperado, e fica.
+select = ["E", "F", "W", "I", "UP", "B", "T20", "PLR2004"]
 ignore = [
   # Comprimento de linha fica a cargo do formatter (ruff format).
   "E501",
@@ -34,9 +36,9 @@ extend-immutable-calls = [
 
 [tool.ruff.lint.per-file-ignores]
 # Testes ajustam sys.path antes de importar (E402) e usam pytest.raises(Exception) (B017).
-"tests/**" = ["B017", "E402", "T20"]
+"tests/**" = ["B017", "E402", "T20", "PLR2004"]
 # Scripts de linha de comando: imprimir É a interface deles (D-655).
-"dev-utils/**" = ["T20"]
+"dev-utils/**" = ["T20", "PLR2004"]
 "app/services/canal/channel_layout_migration.py" = ["T20"]
 
 [tool.ruff.format]

@@ -1,6 +1,9 @@
 from app.core.logging import operational_debug
 from app.domain.compartilhado.time_convert import hms_to_seg
 
+# Só as primeiras palavras vão ao log, para não inundar o console.
+_PALAVRAS_NO_LOG = 5
+
 
 class TimelineMath:
     @staticmethod
@@ -79,7 +82,7 @@ class TimelineMath:
             novo_fim = TimelineMath.mapear_tempo_linear(t_end, segmentos_mantidos)
 
             # Log apenas para as primeiras 5 palavras para não inundar o console
-            if len(nova_transcricao) < 5:
+            if len(nova_transcricao) < _PALAVRAS_NO_LOG:
                 novo_inicio_fmt = round(novo_inicio, 3) if novo_inicio is not None else "None"
                 operational_debug(
                     "TimelineMath",

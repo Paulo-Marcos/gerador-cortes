@@ -27,6 +27,9 @@ import json
 import math
 from dataclasses import dataclass
 
+# Calor é relativo: com uma janela só não há com o que comparar.
+_MINIMO_DE_JANELAS = 2
+
 # Janela de 3 min: em 1 min a série vira ruído (densidade baixa demais) e em
 # 5 min o momento fica largo demais para orientar uma fronteira de corte.
 JANELA_PADRAO_SEG = 180.0
@@ -130,7 +133,7 @@ def picos_significativos(
         return []
 
     n_janelas = max(1, int(math.ceil(duracao_seg / janela_seg)))
-    if n_janelas < 2:
+    if n_janelas < _MINIMO_DE_JANELAS:
         return []
 
     validos = [t for t in instantes if INICIO_MINIMO_SEG <= t <= duracao_seg]

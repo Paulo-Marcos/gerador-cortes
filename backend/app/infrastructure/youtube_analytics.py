@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from http import HTTPStatus
 
 from app.core.channel_paths import youtube_client_secrets_path, youtube_token_path
 from app.core.logging import operational_error, operational_info
@@ -238,7 +239,7 @@ def _traduzir_http_error(exc: HttpError, *, contexto: str) -> YoutubeAnalyticsEr
 
 def _e_api_desabilitada(exc: HttpError) -> bool:
     status = getattr(getattr(exc, "resp", None), "status", None)
-    if status != 403:
+    if status != HTTPStatus.FORBIDDEN:
         return False
     return "accessNotConfigured" in _texto_do_erro(exc)
 

@@ -43,6 +43,9 @@ from dataclasses import dataclass
 
 from app.domain.corte.segment_calculator import calcular_segmentos
 
+# Coberto e esperado vêm arredondados a 0,1 s: um passo de diferença é arredondamento.
+_TOLERANCIA_DE_COBERTURA_SEG = 0.1
+
 # Bloco mais curto que isso é lixo de arredondamento, não decisão editorial —
 # o mesmo limiar que `calcular_segmentos` usa para micro-fatias.
 DURACAO_MINIMA_SEG = 0.1
@@ -163,7 +166,7 @@ def validar(blocos: list[Bloco], inicio_seg: float, fim_seg: float) -> list[str]
 
     coberto = round(sum(b.duracao_seg for b in blocos), 1)
     esperado = round(fim - inicio, 1)
-    if abs(coberto - esperado) > 0.1 and not erros:
+    if abs(coberto - esperado) > _TOLERANCIA_DE_COBERTURA_SEG and not erros:
         erros.append(f"o arranjo cobre {coberto}s dos {esperado}s do corte")
 
     return erros

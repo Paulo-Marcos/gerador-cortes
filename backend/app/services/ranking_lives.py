@@ -44,6 +44,9 @@ from app.services.ingestao import IngestaoService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+_VOTO_MINIMO = 1
+_VOTO_MAXIMO = 5
+
 logger = logging.getLogger(__name__)
 
 
@@ -480,7 +483,7 @@ async def obter_voto_qualidade(projeto_id: str) -> dict:
 
 async def definir_voto_qualidade(projeto_id: str, voto: int) -> dict:
     """Grava o voto (1-5). Validação de faixa aqui — é regra do domínio, não da HTTP."""
-    if voto < 1 or voto > 5:
+    if voto < _VOTO_MINIMO or voto > _VOTO_MAXIMO:
         raise ValueError("Voto deve estar entre 1 e 5")
     async with AsyncSessionLocal() as db:
         projeto = await db.get(Projeto, projeto_id)

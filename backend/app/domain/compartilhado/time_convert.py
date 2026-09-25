@@ -2,6 +2,10 @@
 
 from datetime import datetime, timedelta
 
+# HH:MM:SS e MM:SS, separados por dois-pontos.
+_PARTES_DE_HORA_MIN_SEG = 3
+_PARTES_DE_MIN_SEG = 2
+
 
 def hms_to_seg(hms: str) -> float:
     """Converte HH:MM:SS(.mmm) ou MM:SS para segundos float.
@@ -13,9 +17,9 @@ def hms_to_seg(hms: str) -> float:
     if not hms:
         return 0.0
     partes = hms.strip().split(":")
-    if len(partes) == 3:
+    if len(partes) == _PARTES_DE_HORA_MIN_SEG:
         return float(partes[0]) * 3600 + float(partes[1]) * 60 + float(partes[2])
-    if len(partes) == 2:
+    if len(partes) == _PARTES_DE_MIN_SEG:
         return float(partes[0]) * 60 + float(partes[1])
     return float(hms)
 

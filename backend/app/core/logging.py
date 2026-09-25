@@ -13,6 +13,9 @@ from typing import Any
 
 from app.domain.compartilhado.time_convert import epoch_to_hora_local, seg_to_duracao_humana
 
+# O uvicorn passa (cliente, metodo, caminho, versao, status) no registro de acesso.
+_CAMPOS_DO_LOG_DE_ACESSO = 5
+
 _ORIGINAL_PRINT: Callable[..., None] = builtins.print
 _ERROR_MARKERS = (
     "erro",
@@ -237,7 +240,11 @@ class AccessLogFilter(logging.Filter):
 def _metodo_e_status_http(record: logging.LogRecord) -> tuple[str, int]:
     """O uvicorn passa (cliente, metodo, caminho, versao, status) em `args`."""
     args = record.args
-    if isinstance(args, tuple) and len(args) == 5 and isinstance(args[4], int):
+    if (
+        isinstance(args, tuple)
+        and len(args) == _CAMPOS_DO_LOG_DE_ACESSO
+        and isinstance(args[4], int)
+    ):
         return str(args[1]).upper(), args[4]
     return "GET", 0
 

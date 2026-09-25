@@ -1,6 +1,9 @@
 import re
 from urllib.parse import parse_qs, urlparse
 
+# /live/<id>, /shorts/<id>: o prefixo e o id.
+_PARTES_DO_CAMINHO_COM_ID = 2
+
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _YOUTUBE_PATH_PREFIXES = {"embed", "live", "shorts", "v"}
 
@@ -24,7 +27,7 @@ def extract_youtube_video_id(value: str) -> str:
             return _validate_video_id(query_video_id, raw_value)
 
         path_parts = [part for part in parsed.path.split("/") if part]
-        if len(path_parts) >= 2 and path_parts[0] in _YOUTUBE_PATH_PREFIXES:
+        if len(path_parts) >= _PARTES_DO_CAMINHO_COM_ID and path_parts[0] in _YOUTUBE_PATH_PREFIXES:
             return _validate_video_id(path_parts[1], raw_value)
 
     raise ValueError(f"URL do YouTube invalida para extrair video_id: {raw_value!r}.")

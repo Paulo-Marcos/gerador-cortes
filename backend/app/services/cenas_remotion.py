@@ -25,6 +25,10 @@ from app.services.claude_ia import gerar_json, registrar_skill_usada
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+# Faixas de duração do corte para os pisos de cenas.
+_CORTE_CURTO_SEG = 60
+_CORTE_MEDIO_SEG = 180
+
 logger = logging.getLogger(__name__)
 
 # A skill que escreve as cenas do corte — a geração pela IA mora aqui (D-704).
@@ -76,9 +80,9 @@ def _calcular_limites(duracao_seg: int) -> dict:
     max_cenas = int(round(duracao_min * cenas_por_min))
 
     # Pisos por faixa (evita corte muito curto sem identidade)
-    if duracao_seg < 60:
+    if duracao_seg < _CORTE_CURTO_SEG:
         max_cenas = max(max_cenas, 2)
-    elif duracao_seg < 180:
+    elif duracao_seg < _CORTE_MEDIO_SEG:
         max_cenas = max(max_cenas, 4)
     else:
         max_cenas = max(max_cenas, 6)
@@ -90,7 +94,7 @@ def _calcular_limites(duracao_seg: int) -> dict:
         "max_cenas": max_cenas,
         "max_identidade": max(2, max_cenas // 3),
         "max_fullscreen": max(1, max_cenas // 8),
-        "min_primeiros_15s": 1 if duracao_seg < 60 else 2,
+        "min_primeiros_15s": 1 if duracao_seg < _CORTE_CURTO_SEG else 2,
     }
 
 

@@ -5,6 +5,9 @@ só dicts, listas e números. Movidos de ``routers/cortes.py`` (D-077) para que
 o router fique restrito à tradução HTTP ↔ serviço.
 """
 
+# Com menos cenas que isso, "a maioria no mesmo tempo" não distingue colapso de acaso.
+_MINIMO_DE_CENAS_PARA_COLAPSO = 3
+
 
 def primeiro_numero_valido(*valores: object, fallback: float = 0.0) -> float:
     """Retorna o primeiro valor convertível em float não-NaN; senão, o fallback."""
@@ -126,7 +129,7 @@ def extrair_cenas_remotion(payload: list | dict) -> list:
 
 def tem_colapso_de_tempos_das_cenas(cenas: list) -> bool:
     """Detecta colapso: a maioria das cenas compartilha o mesmo par (início, fim)."""
-    if len(cenas) < 3:
+    if len(cenas) < _MINIMO_DE_CENAS_PARA_COLAPSO:
         return False
     grupos: dict[tuple[float, float], int] = {}
     for cena in cenas:

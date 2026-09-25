@@ -22,6 +22,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# Vão até isso é arredondamento entre segmentos, não material que falta.
+_VAO_NULO_SEG = 0.05
+
 NOTA_MINIMA = 1
 NOTA_MAXIMA = 5
 
@@ -141,7 +144,7 @@ def _vao_apenas_mudou_de_lugar(segmentos: list[dict], inicio: float, fim: float)
     Vão nulo ou negativo já é, por si, um salto de ordem — o bloco seguinte veio
     de antes na live.
     """
-    if fim - inicio <= 0.05:
+    if fim - inicio <= _VAO_NULO_SEG:
         return True
     return any(
         float(s.get("start", 0.0)) < fim - 0.05 and float(s.get("end", 0.0)) > inicio + 0.05

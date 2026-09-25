@@ -25,6 +25,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+# #abc é a forma curta de #aabbcc.
+_DIGITOS_DO_HEX_CURTO = 3
+
 # `#rrggbb` ou `#rgb`. É o que o `color=` do ffmpeg aceita depois da conversão,
 # e é o que "opaco" quer dizer numa paleta que também tem rgba().
 _HEX = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
@@ -118,6 +121,6 @@ def para_ffmpeg(cor: str) -> str:
     if not _HEX.match(bruto):
         return para_ffmpeg(FUNDO_PADRAO)
     digitos = bruto[1:]
-    if len(digitos) == 3:
+    if len(digitos) == _DIGITOS_DO_HEX_CURTO:
         digitos = "".join(d * 2 for d in digitos)
     return f"0x{digitos.lower()}"

@@ -30,6 +30,9 @@ from app.models import Corte, MetadadoCorte
 from app.services.render.pipeline_corte_fields import _duracao_layout_corte
 from sqlalchemy import select
 
+# Mais de um minuto além do fim é tempo absoluto da live, não erro de borda.
+_EXCEDENTE_DE_TEMPO_ABSOLUTO_SEG = 60
+
 # Extensões de thumbnail aceitas em upload_ready/ (mesma ordem do upload real).
 _THUMB_NAMES = ("thumbnail.jpg", "thumbnail.png", "thumbnail.webp")
 
@@ -179,7 +182,7 @@ def _checar_cenas_no_intervalo(cenas_raw: str | list | None, duracao_esperada: f
     excedente = exemplo["inicio"] - duracao_esperada
     causa = (
         " Provável tempo absoluto da live no roteiro visual."
-        if excedente > 60
+        if excedente > _EXCEDENTE_DE_TEMPO_ABSOLUTO_SEG
         else " A cena começa depois do fim do corte e não apareceria no vídeo."
     )
     return Checagem(
