@@ -163,6 +163,14 @@ importa `domain` e bibliotecas; qualquer camada o importa, **exceto `domain`** �
 logging e estado de processo são efeito colateral. Contratos `core-na-base` e
 `dominio-puro` (em vigor desde a A2).
 
+Estado de processo com **um dono só** fica no dono (D-700, medido em 25/09/2026):
+as filas de progresso, o lote de publicação, os caches e os conjuntos "em voo"
+são usados pelo próprio módulo ou por services e routers, que já podem importá-lo.
+Levá-los ao `core` faria o `core` conhecer tipos da aplicação, que o
+`core-na-base` proíbe. Vão para o `core` os registros que várias camadas usam
+(tarefas ativas, trabalhos em voo) e os **mecanismos** repetidos: `PorLoop`, que dá
+a semáforos e locks do asyncio uma instância por event loop.
+
 ### 4. Porta (`typing.Protocol`) só com motivo
 
 Porta entra quando há **mais de uma implementação real** (o caso de `GeradorIA`:
