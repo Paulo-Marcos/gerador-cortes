@@ -416,7 +416,7 @@ def _default_scaffold(cat: ScaffoldCatalogo) -> str:
     """Texto default do scaffold: arquivo versionado, ou PROMPT_DIRECAO p/ cenas."""
     if cat.key == _KEY_CENAS:
         # Import tardio: evita custo de resolver o canal_config no import do módulo.
-        from app import channel_config_loader
+        from app.infrastructure import channel_config_loader
 
         return channel_config_loader.PROMPT_DIRECAO.strip()
     caminho = _EXEMPLO_SCAFFOLDS / (cat.arquivo or "")

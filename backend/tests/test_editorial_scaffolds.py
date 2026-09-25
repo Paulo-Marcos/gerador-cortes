@@ -14,8 +14,8 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from app import channel_config_loader, editorial_scaffolds, editorial_scaffolds_legados
-from app.infrastructure import settings_store
+from app import editorial_scaffolds, editorial_scaffolds_legados
+from app.infrastructure import channel_config_loader, settings_store
 
 _CANAL = "canal-teste"
 

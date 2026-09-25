@@ -25,7 +25,6 @@ from __future__ import annotations
 import json
 import logging
 
-from app.channel_assets_sync import cor_do_tema, paleta_do_tema
 from app.database import AsyncSessionLocal
 
 # A textura do palco vertical: a MESMA que o render usa para rasterizar o PNG
@@ -42,6 +41,7 @@ from app.domain.short.fundo_short import fundos_disponiveis
 from app.domain.short.fundo_short import resolver as resolver_fundo
 from app.domain.short.moldura_short import COR_PADRAO, faixas
 from app.domain.short.palco_short import CANVAS, montar_plano, regioes_do_layout
+from app.infrastructure.channel_assets_sync import cor_do_tema, paleta_do_tema
 from app.models import Corte, LayoutPreset, Short
 from sqlalchemy import select
 

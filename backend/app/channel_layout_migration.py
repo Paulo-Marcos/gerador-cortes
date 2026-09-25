@@ -246,7 +246,7 @@ def _materializar_assets_servidos() -> None:
     Best-effort: uma falha de cópia não pode derrubar o boot do backend.
     """
     try:
-        from app.channel_assets_sync import sincronizar_assets_servidos
+        from app.infrastructure.channel_assets_sync import sincronizar_assets_servidos
 
         sincronizar_assets_servidos()
     except Exception as e:  # noqa: BLE001 — boot resiliente a I/O de asset

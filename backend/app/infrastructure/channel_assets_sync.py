@@ -33,7 +33,7 @@ from pathlib import Path
 
 from app.core import channel_paths
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+_REPO_ROOT = Path(__file__).resolve().parents[3]  # infrastructure → app → backend → repo
 _FRONTEND_MASCOTE = _REPO_ROOT / "frontend" / "public" / "mascote"
 _RENDERER_MASCOTE = _REPO_ROOT / "video-renderer" / "public" / "mascote"
 _RENDERER_THEME = _REPO_ROOT / "video-renderer" / "theme.config.json"

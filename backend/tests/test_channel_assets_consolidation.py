@@ -19,13 +19,13 @@ import hashlib
 from pathlib import Path
 
 import pytest
-from app import channel_assets_sync
 from app import channel_layout_migration as mod
 from app.channel_layout_migration import (
     LayoutMigrationError,
     consolidar_assets_do_canal,
 )
 from app.core import channel_paths
+from app.infrastructure import channel_assets_sync
 
 # --------------------------------------------------------------------------- #
 # RESOLUÇÃO por canal (channel_paths)

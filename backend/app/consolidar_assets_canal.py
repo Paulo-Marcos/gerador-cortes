@@ -38,12 +38,12 @@ import argparse
 import sys
 from pathlib import Path
 
-from app.channel_assets_sync import sincronizar_assets_servidos
 from app.channel_layout_migration import (
     LayoutMigrationError,
     consolidar_assets_do_canal,
     garantir_layout_de_canais,
 )
+from app.infrastructure.channel_assets_sync import sincronizar_assets_servidos
 
 _APP_DIR = Path(__file__).resolve().parent
 _BACKEND_ROOT = _APP_DIR.parent

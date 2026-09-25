@@ -8,13 +8,6 @@ import uuid
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from app import editorial_scaffolds, editorial_skills
-from app.channel_config_loader import (
-    CREDITOS_TEMPLATE,
-    PROMPT_GERAR_METADADOS,
-    PROMPT_GERAR_THUMBNAIL,
-    PROMPT_GERAR_THUMBNAIL_AGENTE,
-    PROMPT_GERAR_THUMBNAIL_AGENTE_LIVRE,
-)
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
@@ -25,6 +18,13 @@ from app.domain.corte.reading_metadata import (
     aplicar_prefixo_leitura_titulo,
 )
 from app.editorial_identity import identidade_do_mascote
+from app.infrastructure.channel_config_loader import (
+    CREDITOS_TEMPLATE,
+    PROMPT_GERAR_METADADOS,
+    PROMPT_GERAR_THUMBNAIL,
+    PROMPT_GERAR_THUMBNAIL_AGENTE,
+    PROMPT_GERAR_THUMBNAIL_AGENTE_LIVRE,
+)
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services import channels
 from app.services.app_logging import operational_error

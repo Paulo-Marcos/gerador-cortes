@@ -41,7 +41,7 @@ SIMBOLOS_REQUERIDOS = (
     "PROMPT_DIRECAO",
 )
 
-_APP_DIR = Path(__file__).resolve().parent
+_APP_DIR = Path(__file__).resolve().parents[1]  # o canal_config.py.example mora em app/
 _REPO_ROOT = _APP_DIR.parent.parent
 
 # Fontes baseadas em arquivo (caminho absoluto do `canal_config.py`), na ordem
