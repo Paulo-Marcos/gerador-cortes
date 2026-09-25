@@ -64,7 +64,7 @@ def test_iniciar_render_resolve_filtro_global_quando_nao_especificado():
         # D-440: o pipeline agora roda dentro de _rodar_com_gate; executar a
         # corrotina (asyncio.run) é o que faz o fake_pipeline ser chamado.
         def _wrap(coro):
-            rr._render_gate = None
+            rr._render_gate.limpar()
             asyncio.run(coro)
             task = MagicMock()
             task.add_done_callback = MagicMock()
@@ -105,7 +105,7 @@ def test_iniciar_render_respeita_filtro_explicito_de_teste():
         # D-440: o pipeline agora roda dentro de _rodar_com_gate; executar a
         # corrotina (asyncio.run) é o que faz o fake_pipeline ser chamado.
         def _wrap(coro):
-            rr._render_gate = None
+            rr._render_gate.limpar()
             asyncio.run(coro)
             task = MagicMock()
             task.add_done_callback = MagicMock()

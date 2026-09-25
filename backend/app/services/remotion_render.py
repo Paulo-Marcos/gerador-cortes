@@ -8,6 +8,7 @@ import logging
 import os
 
 from app.core.channel_paths import projetos_dir
+from app.core.por_loop import PorLoop
 from app.database import AsyncSessionLocal
 from app.models import Corte
 from app.services.cancelamento_jobs import TrabalhoEmVoo
@@ -17,23 +18,25 @@ from app.services.render_progress import RenderProgressStore
 
 logger = logging.getLogger(__name__)
 
+
 # D-440: gate global do pipeline. Sem ele, N cliques de render disparam N
 # pipelines concorrentes disputando o worker serial — em PRD a razão
-# render/clip foi de 1,16x (serial) para 4,68x (concorrente). O semáforo é
-# lazy porque precisa nascer dentro do event loop do uvicorn.
+# render/clip foi de 1,16x (serial) para 4,68x (concorrente). O semáforo
+# nasce dentro do event loop, um por loop (D-700) — no uvicorn, um só.
 # D-441: pool de 2 slots com back-pressure de RAM — o segundo render só
 # entra com RENDER_MIN_RAM_LIVRE_MB de folga (a grade já flerta com OOM,
 # D-322). Contador `_renders_ativos` diz se alguém já está rodando.
-_render_gate: asyncio.Semaphore | None = None
+def _novo_render_gate() -> asyncio.Semaphore:
+    limite = max(1, int(os.getenv("RENDER_PIPELINE_CONCURRENCY", "2")))
+    return asyncio.Semaphore(limite)
+
+
+_render_gate: PorLoop[asyncio.Semaphore] = PorLoop(_novo_render_gate)
 _renders_ativos: int = 0
 
 
 def _obter_render_gate() -> asyncio.Semaphore:
-    global _render_gate
-    if _render_gate is None:
-        limite = max(1, int(os.getenv("RENDER_PIPELINE_CONCURRENCY", "2")))
-        _render_gate = asyncio.Semaphore(limite)
-    return _render_gate
+    return _render_gate.obter()
 
 
 def _ram_minima_para_segundo_slot_mb() -> float:

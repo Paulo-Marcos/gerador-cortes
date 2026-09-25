@@ -29,6 +29,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
 from app.config import settings
+from app.core.por_loop import PorLoop
 from app.infrastructure import fila_ia
 
 logger = logging.getLogger(__name__)
@@ -111,18 +112,14 @@ class _GateClaudeCli:
                 self._condicao.notify_all()
 
 
-# Gate por event-loop: lazy e por-loop para não vazar entre loops diferentes
-# (ex.: vários asyncio.run em testes).
-_gates: dict[int, _GateClaudeCli] = {}
+# Um gate por event loop (D-700): a condição do asyncio se prende ao loop.
+_gates: PorLoop[_GateClaudeCli] = PorLoop(
+    lambda: _GateClaudeCli(settings.claude_cli_max_concurrent)
+)
 
 
 def _get_gate() -> _GateClaudeCli:
-    loop = asyncio.get_running_loop()
-    gate = _gates.get(id(loop))
-    if gate is None:
-        gate = _GateClaudeCli(settings.claude_cli_max_concurrent)
-        _gates[id(loop)] = gate
-    return gate
+    return _gates.obter()
 
 
 def _resolver_binario() -> str:

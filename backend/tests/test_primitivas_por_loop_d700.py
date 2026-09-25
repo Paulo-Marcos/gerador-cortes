@@ -63,9 +63,9 @@ def limites(monkeypatch):
     monkeypatch.setattr(settings, "claude_cli_max_concurrent", 2)
     monkeypatch.setattr(settings, "agy_cli_max_concurrent", 2)
     monkeypatch.setenv("RENDER_PIPELINE_CONCURRENCY", "2")
-    rr._render_gate = None
+    rr._render_gate.limpar()
     yield
-    rr._render_gate = None
+    rr._render_gate.limpar()
 
 
 @pytest.mark.parametrize("obter", [gate_do_claude, semaforo_do_agy, gate_do_render, lock_do_bundle])
@@ -84,10 +84,10 @@ def test_o_limite_vale_sob_disputa(obter, limite, limites):
     assert asyncio.run(_maximo_simultaneo(obter, tarefas=5)) == limite
 
 
-# O gate do render e o lock do bundle ainda não: presos ao primeiro loop que os
-# disputou, quebram no seguinte com "bound to a different event loop" (medido em
-# 25/09/2026). Em produção há um loop só; nos testes, o do render é zerado à mão.
-@pytest.mark.parametrize("obter", [gate_do_claude, semaforo_do_agy])
+# Antes do PorLoop, o gate do render e o lock do bundle ficavam presos ao primeiro
+# loop que os disputou e quebravam no seguinte ("bound to a different event loop",
+# medido em 25/09/2026); o do render era zerado à mão nos testes.
+@pytest.mark.parametrize("obter", [gate_do_claude, semaforo_do_agy, gate_do_render, lock_do_bundle])
 def test_segue_funcionando_em_loops_seguidos(obter, limites):
     for _ in range(3):
         assert asyncio.run(_maximo_simultaneo(obter, tarefas=5)) >= 1

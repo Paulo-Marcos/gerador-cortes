@@ -35,6 +35,7 @@ import time
 from pathlib import Path
 
 from app.config import settings
+from app.core.por_loop import PorLoop
 from app.infrastructure import claude_cli_client, fila_ia
 from app.infrastructure.claude_cli_client import LlmCallContext
 
@@ -196,16 +197,14 @@ def _run_sync(prompt: str, *, model: str, timeout: float) -> dict:
     return resultado
 
 
-# Semáforo por event loop, pelo mesmo motivo do gate do Claude: vários `asyncio.run`
-# nos testes criam loops diferentes, e um semáforo preso a outro loop quebra.
-_semaforos: dict[int, asyncio.Semaphore] = {}
+# Um semáforo por event loop, como o gate do Claude (D-700).
+_semaforos: PorLoop[asyncio.Semaphore] = PorLoop(
+    lambda: asyncio.Semaphore(max(1, settings.agy_cli_max_concurrent))
+)
 
 
 def _semaforo() -> asyncio.Semaphore:
-    loop_id = id(asyncio.get_running_loop())
-    if loop_id not in _semaforos:
-        _semaforos[loop_id] = asyncio.Semaphore(max(1, settings.agy_cli_max_concurrent))
-    return _semaforos[loop_id]
+    return _semaforos.obter()
 
 
 async def _run(prompt: str, *, model: str, timeout: float) -> dict:

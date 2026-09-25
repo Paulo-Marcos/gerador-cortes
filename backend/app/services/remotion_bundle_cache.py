@@ -32,6 +32,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.core.por_loop import PorLoop
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,15 +44,17 @@ _COMMIT_FILE = "committed.txt"
 # render instancia um `RemotionBundleCache` novo apontando para a mesma pasta —
 # um lock por instância não serializaria nada. O dicionário cresce com o número
 # de fingerprints distintos vistos no processo (unidades), então não é podado.
-_construcoes: dict[tuple[str, str], asyncio.Lock] = {}
+# Um dicionário por event loop, porque o lock se prende ao loop (D-700).
+_construcoes: PorLoop[dict[tuple[str, str], asyncio.Lock]] = PorLoop(dict)
 
 
 def _lock_da_construcao(root: Path, fingerprint: str) -> asyncio.Lock:
     chave = (str(root), fingerprint)
-    lock = _construcoes.get(chave)
+    locks = _construcoes.obter()
+    lock = locks.get(chave)
     if lock is None:
         lock = asyncio.Lock()
-        _construcoes[chave] = lock
+        locks[chave] = lock
     return lock
 
 

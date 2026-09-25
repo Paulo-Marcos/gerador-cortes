@@ -16,10 +16,10 @@ from app.services import remotion_render as rr
 
 @pytest.fixture(autouse=True)
 def _reset_gate(monkeypatch):
-    monkeypatch.setattr(rr, "_render_gate", None)
+    rr._render_gate.limpar()
     monkeypatch.setattr(rr, "_renders_ativos", 0)
     yield
-    rr._render_gate = None
+    rr._render_gate.limpar()
     rr._renders_ativos = 0
 
 
