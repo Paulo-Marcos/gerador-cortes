@@ -15,11 +15,11 @@ from __future__ import annotations
 
 import json
 
+from app.core.logging import operational_error
 from app.database import AsyncSessionLocal
 from app.domain.corte import arranjo_blocos as dominio
 from app.domain.corte.segment_calculator import mesclar_desvios_sobrepostos, normalizar_desvio
 from app.models import Corte
-from app.services.app_logging import operational_error
 
 
 class ArranjoInvalidoError(ValueError):

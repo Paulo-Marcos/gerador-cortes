@@ -12,7 +12,9 @@ from contextlib import asynccontextmanager
 from app.config import VERSAO_DO_APP, settings
 from app.core import channel_paths
 from app.core.channel_paths import projetos_dir
+from app.core.logging import install_log_controls
 from app.database import init_db
+from app.infrastructure import settings_store
 from app.routers import (
     avaliacao_bruto,
     avaliacao_cortes,
@@ -40,8 +42,7 @@ from app.routers import (
 from app.routers.errors import registrar_tratadores
 from app.routers.seguranca_local import ORIGEM_LOCAL_REGEX, GuardaDeOrigemLocal
 from app.services import channels as channels_service
-from app.services import encerramento, settings_store
-from app.services.app_logging import install_log_controls
+from app.services import encerramento
 from app.services.app_settings import AppSettingsService
 from app.services.canal import editorial_scaffolds
 from app.services.canal import editorial_skills as editorial_skills_service

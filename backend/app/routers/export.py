@@ -7,10 +7,10 @@ from app.core.channel_paths import (
     projetos_dir,
     resolver_do_projeto,
 )
+from app.core.logging import operational_info
 from app.database import get_db
 from app.models import Corte, MetadadoCorte, StatusCorte
 from app.routers.errors import erro_interno
-from app.services.app_logging import operational_info
 
 # Via o service de configurações: o router não fala com a infraestrutura (D-696).
 from app.services.app_settings import FILTROS_CINEMA

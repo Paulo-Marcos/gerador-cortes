@@ -8,7 +8,7 @@ fila de upload com controle de cota. Todos os métodos resolvem irmãos via
 
 import asyncio
 
-from app.services.app_logging import operational_info
+from app.core.logging import operational_info
 from app.services.tasks import fire_and_forget
 
 # D-364: o render final em lote roda SEQUENCIAL (1 corte por vez). Cada corte

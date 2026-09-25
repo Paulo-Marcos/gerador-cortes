@@ -19,6 +19,12 @@ from pathlib import Path
 
 from app.config import settings
 from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
+from app.core.logging import (
+    current_log_level,
+    is_debug_enabled,
+    operational_debug,
+    operational_error,
+)
 from app.database import AsyncSessionLocal
 from app.domain.corte.arranjo_blocos import parse as parse_arranjo
 from app.domain.corte.arranjo_blocos import reconciliar, segmentos_na_ordem
@@ -29,12 +35,6 @@ from app.domain.corte.segment_calculator import (
 from app.infrastructure.render.bruto_pipeline import build_bruto_pipeline
 from app.infrastructure.worker_queue import escrever_json_atomico
 from app.models import Corte, Projeto, StatusCorte
-from app.services.app_logging import (
-    current_log_level,
-    is_debug_enabled,
-    operational_debug,
-    operational_error,
-)
 from app.services.bruto_progress import BrutoProgress
 from app.services.ciclo_de_vida import marcar_corte
 from app.services.export_bruto import _ExportBrutoMixin

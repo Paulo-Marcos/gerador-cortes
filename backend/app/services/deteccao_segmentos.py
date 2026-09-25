@@ -26,11 +26,11 @@ from pathlib import Path
 from typing import Any
 
 from app.core.channel_paths import resolver_do_projeto
+from app.core.logging import operational_error
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.domain.corte.youtube_layout import normalizar_layout_youtube
 from app.models import Corte
-from app.services.app_logging import operational_error
 from app.services.tasks import fire_and_forget
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload

@@ -1,11 +1,11 @@
 import json
 
+from app.core.logging import operational_error
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.desvio_categoria import OUTRO, motivo_com_aviso, normalizar_categoria
 from app.models import Corte
-from app.services.app_logging import operational_error
 
 PROMPT_ANALISAR_DESVIOS = """Você é um editor de vídeo especialista. Receberá a transcrição de um trecho de vídeo e deverá identificar as partes que podem ser removidas sem comprometer o entendimento da mensagem. Classifique cada trecho em UMA destas categorias:
 

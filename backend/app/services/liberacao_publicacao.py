@@ -18,6 +18,7 @@ Duas decisões que valem o comentário:
 from __future__ import annotations
 
 from app.core.channel_paths import projetos_dir
+from app.core.logging import operational_info
 from app.database import AsyncSessionLocal
 from app.domain.publicacao.liberacao_publicacao import (
     MarcaDePublicacao,
@@ -25,7 +26,6 @@ from app.domain.publicacao.liberacao_publicacao import (
     marca_do_destino,
 )
 from app.models import Corte
-from app.services.app_logging import operational_info
 
 
 async def liberar_publicacao(corte_id: str, destino: str) -> dict:

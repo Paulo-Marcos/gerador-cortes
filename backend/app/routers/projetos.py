@@ -3,13 +3,13 @@ import logging
 from datetime import datetime
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.logging import operational_error, operational_info
 from app.database import get_db
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, Projeto, StatusProjeto
 from app.routers.errors import erro_interno
 from app.services import abrir_no_sistema, listagem_de_projetos
 from app.services.analise import AnaliseService
-from app.services.app_logging import operational_error, operational_info
 from app.services.app_settings import AppSettingsService
 from app.services.ciclo_de_vida import mudar_projeto
 from app.services.ingestao import IngestaoService

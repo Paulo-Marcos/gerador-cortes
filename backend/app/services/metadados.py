@@ -8,6 +8,7 @@ import uuid
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from app.config import settings
+from app.core.logging import operational_error
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
@@ -25,7 +26,6 @@ from app.infrastructure.channel_config_loader import (
 )
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services import channels
-from app.services.app_logging import operational_error
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.canal.editorial_identity import identidade_do_mascote
 from app.services.claude_ia import (

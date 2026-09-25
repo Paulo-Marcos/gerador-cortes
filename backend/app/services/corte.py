@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from app.core.channel_paths import projetos_dir
+from app.core.logging import operational_debug, operational_error
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.compartilhado.provider_ia import ProviderIA
@@ -56,7 +57,6 @@ from app.infrastructure.render.ffmpeg_basic import (
 )
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
 from app.services import abrir_no_sistema
-from app.services.app_logging import operational_debug, operational_error
 from app.services.claude_ia import (
     ClaudeIaService,
     _carregar_transcricao_raw,

@@ -22,12 +22,12 @@ import asyncio
 import uuid
 from datetime import datetime
 
+from app.core.logging import operational_error, operational_info
 from app.database import AsyncSessionLocal
 from app.domain.publicacao import youtube_stats as dom
 from app.infrastructure import youtube_analytics
 from app.infrastructure.youtube_analytics import YoutubeAnalyticsError
 from app.models import Corte, MetadadoCorte, YoutubeVideoStat
-from app.services.app_logging import operational_error, operational_info
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

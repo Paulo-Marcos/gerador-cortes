@@ -4,6 +4,7 @@ import logging
 import time
 from datetime import datetime
 
+from app.core.logging import operational_debug, operational_error, operational_info
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
@@ -19,7 +20,6 @@ from app.domain.projeto.diarizacao_align import prefixo_falante
 from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
 from app.services import retrato_wikipedia
-from app.services.app_logging import operational_debug, operational_error, operational_info
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, registrar_skill_usada
 from sqlalchemy import select

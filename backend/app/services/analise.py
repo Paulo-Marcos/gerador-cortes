@@ -7,6 +7,7 @@ import logging
 import uuid
 from datetime import datetime
 
+from app.core.logging import operational_info
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
@@ -19,7 +20,6 @@ from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartado
 from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta
 from app.domain.projeto.transcricao_utils import motivo_transcricao_inutilizavel
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
-from app.services.app_logging import operational_info
 from app.services.canal import editorial_skills
 from app.services.ciclo_de_vida import mudar_projeto
 from app.services.claude_ia import (

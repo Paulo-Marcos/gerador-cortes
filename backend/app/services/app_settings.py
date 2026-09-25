@@ -10,10 +10,11 @@ from pathlib import Path
 from threading import Lock
 
 from app.core import channel_paths
+from app.core import logging as logging_operacional
 from app.core.channel_paths import projetos_dir
+from app.infrastructure import settings_store
 from app.infrastructure.render.cinema_filters import FILTROS_CINEMA
 from app.infrastructure.render.overlay_codec import OverlayCodec
-from app.services import settings_store
 
 DEFAULT_FILTRO_GLOBAL_PADRAO = "bypass_dourado_aberto"
 
@@ -481,3 +482,8 @@ def _coerce_grade_quality(raw: object, default: int) -> int:
     except (TypeError, ValueError):
         return default
     return value if 1 <= value <= 51 else default
+
+
+# O core não pode importar services: quem sabe o nível de log configurado se
+# apresenta a ele ao ser importado. Morava no atalho services/app_logging (D-709).
+logging_operacional.definir_fonte_do_nivel(lambda: AppSettingsService.get().log_level)

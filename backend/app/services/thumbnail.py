@@ -14,6 +14,7 @@ from app.core.channel_paths import (
     projetos_dir,
     resolver_do_projeto,
 )
+from app.core.logging import operational_error, operational_info
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import strip_variation_tags
 from app.domain.corte.moldura_thumbnail import arquivos_da_moldura, nomes_das_molduras
@@ -21,7 +22,6 @@ from app.infrastructure import gemini_client
 from app.infrastructure.imagem.moldura import emoldurar
 from app.infrastructure.imagem.thumbnail_encode import LIMITE_YOUTUBE_BYTES, preparar_para_youtube
 from app.models import Corte, MetadadoCorte
-from app.services.app_logging import operational_error, operational_info
 from sqlalchemy import select
 
 

@@ -14,6 +14,7 @@ from pathlib import Path
 
 from app.config import settings
 from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
+from app.core.logging import operational_debug, operational_error, operational_info
 from app.database import AsyncSessionLocal
 from app.domain.projeto.json3_parser import parse_json3
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
@@ -21,7 +22,6 @@ from app.domain.projeto.vtt_parser import parse_vtt
 from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 from app.models import Projeto, StatusProjeto
 from app.services import channels
-from app.services.app_logging import operational_debug, operational_error, operational_info
 from app.services.ciclo_de_vida import mudar_projeto
 from app.services.tasks import fire_and_forget
 from sqlalchemy import select

@@ -12,12 +12,12 @@ from pathlib import Path
 
 from app.config import settings
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.logging import operational_error, operational_info
 from app.database import AsyncSessionLocal
 from app.infrastructure.ffmpeg_runner import run_ffmpeg
 from app.infrastructure.render.cinema_filters import FILTROS_CINEMA, get_filtro_vf
 from app.infrastructure.render.ffmpeg_commands import build_normalize_cmd
 from app.models import Corte
-from app.services.app_logging import operational_error, operational_info
 
 
 class _ExportProcessamentoMixin:

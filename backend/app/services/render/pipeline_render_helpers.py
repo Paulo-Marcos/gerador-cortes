@@ -9,10 +9,10 @@ import asyncio
 import hashlib
 from pathlib import Path
 
+from app.core.logging import operational_info
 from app.infrastructure.render.overlay_codec import OverlayCodecProfile
 from app.infrastructure.render.remotion_bundle import _walk_source_files, compute_src_fingerprint
 from app.infrastructure.render.retry_policy import RetryPolicy
-from app.services.app_logging import operational_info
 
 
 def _render_retry_policy(render_cfg) -> RetryPolicy:

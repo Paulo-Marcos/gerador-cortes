@@ -16,7 +16,7 @@ import shlex
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app.services.app_logging import operational_error
+from app.core.logging import operational_error
 
 
 def append_ffmpeg_command(

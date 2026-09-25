@@ -9,11 +9,11 @@ from app.core.channel_paths import (
     youtube_client_secrets_path,
     youtube_token_path,
 )
+from app.core.logging import operational_debug, operational_error, operational_info
 from app.database import AsyncSessionLocal
 from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 from app.infrastructure.imagem.thumbnail_encode import preparar_para_youtube
 from app.models import Corte, MetadadoCorte, Projeto
-from app.services.app_logging import operational_debug, operational_error, operational_info
 from app.services.media_retention import MediaRetentionService
 from app.services.validacao_publicacao import ValidacaoPublicacaoService
 from google.auth.transport.requests import Request
