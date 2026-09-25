@@ -158,3 +158,58 @@ async def test_erro_que_nao_e_trava_do_banco_sobe_sem_nova_tentativa(fabrica):
             await sincronizar("c1", db)
 
     assert tentativas == 1
+
+
+# ─── A trava do banco ("database is locked") ─────────────────────────────────
+
+
+def _commit_que_trava(db, vezes: int) -> dict:
+    """Troca o commit da sessão por um que falha `vezes` vezes com a trava do SQLite."""
+    original = db.commit
+    contagem = {"tentativas": 0}
+
+    async def commit():
+        contagem["tentativas"] += 1
+        if contagem["tentativas"] <= vezes:
+            raise RuntimeError("database is locked")
+        await original()
+
+    db.commit = commit
+    return contagem
+
+
+@pytest.fixture
+def sem_espera(monkeypatch):
+    async def _nada(_segundos):
+        return None
+
+    monkeypatch.setattr("asyncio.sleep", _nada)
+
+
+@pytest.mark.asyncio
+async def test_a_nova_tentativa_depois_da_trava_grava_a_sincronia(fabrica, sem_espera):
+    # Antes, o rollback da nova tentativa descartava a transcrição já montada e
+    # o commit seguinte gravava nada — medido em 25/09/2026: a final ficava "[]".
+    await _semear(fabrica)
+
+    async with fabrica() as db:
+        contagem = _commit_que_trava(db, vezes=1)
+        await sincronizar("c1", db)
+
+    async with fabrica() as db:
+        corte = await db.get(Corte, "c1")
+    assert contagem["tentativas"] == 2
+    assert corte.transcricao_final_texto.startswith("fala 100 fala 101")
+    assert _textos(corte.transcricao_corte)[0] == "fala 40"
+
+
+@pytest.mark.asyncio
+async def test_a_trava_que_nao_passa_desiste_na_quinta_tentativa(fabrica, sem_espera):
+    await _semear(fabrica)
+
+    async with fabrica() as db:
+        contagem = _commit_que_trava(db, vezes=5)
+        with pytest.raises(RuntimeError, match="locked"):
+            await sincronizar("c1", db)
+
+    assert contagem["tentativas"] == 5

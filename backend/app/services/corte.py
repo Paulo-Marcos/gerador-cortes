@@ -1572,15 +1572,16 @@ class CorteService:
                     f"Primeiro timestamp: {nova_trans[0].get('start')}s",
                 )
 
-            corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
-            corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
-            corte.transcricao_final_texto = texto_final
-
             # Retry para "database is locked" em picos de escrita. D-652: sem o
             # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
             # seguintes morrem em PendingRollbackError — o retry era inócuo e
-            # mascarava o erro real.
+            # mascarava o erro real. D-716: o `rollback` também descarta o que
+            # foi atribuído ao corte, então cada tentativa atribui de novo —
+            # antes a segunda gravava nada e a sincronia se perdia em silêncio.
             for attempt in range(5):
+                corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
+                corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
+                corte.transcricao_final_texto = texto_final
                 try:
                     await db.commit()
                     break
