@@ -44,6 +44,11 @@ from app.services.tasks import fire_and_forget
 
 logger = logging.getLogger(__name__)
 
+# Quanto esperar a resposta do worker pelo bruto, e de quanto em quanto olhar.
+# A mensagem de timeout ("10 minutos") depende deste número.
+_ESPERA_PELO_WORKER_S = 600
+_INTERVALO_DE_CONSULTA_S = 2
+
 
 class ExportService(
     _ExportBulkQueueMixin,
@@ -388,13 +393,12 @@ def _registrar_pipeline(pipeline, out_path: Path, log_path: Path) -> None:
 async def _erro_na_resposta_do_worker(res_file: Path) -> dict | None:
     """O erro da resposta do worker, ou None quando ele respondeu sucesso."""
     # Aguarda o Native Worker processar (polling com timeout de 10min)
-    timeout = 600
     elapsed = 0
-    while elapsed < timeout:
+    while elapsed < _ESPERA_PELO_WORKER_S:
         if res_file.exists():
             break
-        await asyncio.sleep(2)
-        elapsed += 2
+        await asyncio.sleep(_INTERVALO_DE_CONSULTA_S)
+        elapsed += _INTERVALO_DE_CONSULTA_S
 
     if not res_file.exists():
         return {

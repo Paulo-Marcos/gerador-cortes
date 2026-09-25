@@ -15,6 +15,8 @@ from app.models import Corte, Projeto
 from app.services.app_settings import AppSettingsService
 from sqlalchemy.ext.asyncio import AsyncSession
 
+_TIMEOUT_DO_PROXY_DE_AUDIO_S = 3600
+
 
 class _KeyedLocks:
     """Fornece um ``asyncio.Lock`` por chave para garantir *single-flight*.
@@ -411,7 +413,9 @@ class MediaProxyService:
         cmd = MediaProxyService._build_proxy_cmd(video_path, start_sec, duration, tmp_proxy_path)
         # D-647: declarava 10min e recebia 1h. Mantido o que a produção pratica;
         # apertar para 10min é mudança de comportamento e quer medição própria.
-        result = await run_ffmpeg(cmd, label="ffmpeg_audio_proxy", timeout=3600)
+        result = await run_ffmpeg(
+            cmd, label="ffmpeg_audio_proxy", timeout=_TIMEOUT_DO_PROXY_DE_AUDIO_S
+        )
         if result.returncode != 0 or not os.path.exists(tmp_proxy_path):
             raise RuntimeError(f"FFmpeg falhou ao gerar proxy de áudio: {result.stderr_tail}")
         os.replace(tmp_proxy_path, proxy_path)

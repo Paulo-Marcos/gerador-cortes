@@ -21,6 +21,9 @@ from pathlib import Path
 
 import psutil
 
+# Quanto esperar os processos mortos saírem da tabela antes de seguir.
+_ESPERA_DEPOIS_DE_MATAR_S = 5
+
 
 @dataclass(frozen=True)
 class Resultado:
@@ -92,7 +95,7 @@ def _matar_arvore(pid: int) -> None:
             processo.kill()
         except psutil.NoSuchProcess:
             pass
-    psutil.wait_procs(processos, timeout=5)
+    psutil.wait_procs(processos, timeout=_ESPERA_DEPOIS_DE_MATAR_S)
 
 
 def _mensagem(argumentos: list[str], timeout: float | None) -> str:

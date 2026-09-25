@@ -3,6 +3,9 @@ from app.migrations import migrar_schema
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+# Quanto uma escrita espera outra terminar antes de "database is locked".
+_ESPERA_PELO_BANCO_MS = 30_000
+
 # Derivado da raiz do canal ativo (channel_paths) — costura unica do epico
 # Multi-canal. Hoje resolve para a mesma string de sempre (PROJETOS_DIR/projetos.db).
 DATABASE_URL = database_url()
@@ -22,7 +25,9 @@ engine = create_async_engine(
 def _set_sqlite_pragmas(dbapi_conn, connection_record):
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")  # WAL: leituras concorrentes durante escritas
-    cursor.execute("PRAGMA busy_timeout=30000")  # 30s de espera antes de "database is locked"
+    cursor.execute(
+        f"PRAGMA busy_timeout={_ESPERA_PELO_BANCO_MS}"
+    )  # 30s de espera antes de "database is locked"
     cursor.execute("PRAGMA synchronous=NORMAL")  # mais rápido, ainda seguro com WAL
     cursor.close()
 

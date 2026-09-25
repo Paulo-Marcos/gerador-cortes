@@ -15,6 +15,10 @@ from datetime import UTC, datetime
 import httpx
 from app.config import settings
 
+# Achar o canal de um @handle é uma consulta só; as listas podem vir paginadas.
+_TIMEOUT_DO_HANDLE_S = 15.0
+_TIMEOUT_DAS_LISTAS_S = 30.0
+
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.googleapis.com/youtube/v3"
@@ -300,7 +304,7 @@ class RespostaNaoOk(RuntimeError):
 
 async def canal_do_handle(handle: str, api_key: str) -> str | None:
     """O channel_id (UC…) de um @handle, ou `None` se a API não o conhece."""
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT_DO_HANDLE_S) as client:
         r = await client.get(
             f"{BASE_URL}/channels",
             params={"part": "id", "forHandle": handle, "key": api_key},
@@ -326,7 +330,7 @@ async def buscar_lives_encerradas(
     }
     if published_after:
         params["publishedAfter"] = published_after
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT_DAS_LISTAS_S) as client:
         r = await client.get(f"{BASE_URL}/search", params=params)
     if r.status_code != 200:
         raise RespostaNaoOk(r.text)
@@ -335,7 +339,7 @@ async def buscar_lives_encerradas(
 
 async def detalhes_dos_videos(video_ids: list[str], api_key: str) -> list[dict]:
     """snippet e contentDetails de cada vídeo, na ordem que a API devolver."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT_DAS_LISTAS_S) as client:
         r = await client.get(
             f"{BASE_URL}/videos",
             params={"part": "id,snippet,contentDetails", "id": ",".join(video_ids), "key": api_key},
@@ -351,7 +355,7 @@ async def datas_de_publicacao(video_ids: list[str], api_key: str) -> dict[str, s
     Um lote que falha só fica sem data — quem chama segue com o resto.
     """
     datas: dict[str, str] = {}
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=_TIMEOUT_DAS_LISTAS_S) as client:
         for i in range(0, len(video_ids), 50):
             chunk = video_ids[i : i + 50]
             resp = await client.get(

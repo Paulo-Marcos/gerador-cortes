@@ -39,6 +39,11 @@ from app.core.por_loop import PorLoop
 from app.infrastructure import claude_cli_client, fila_ia
 from app.infrastructure.claude_cli_client import LlmCallContext
 
+# Depois de matar a árvore, quanto esperar o pipe do processo morto fechar.
+_ESPERA_PARA_DRENAR_S = 15
+# Listar os modelos é uma consulta curta ao CLI.
+_TIMEOUT_DA_LISTA_DE_MODELOS_S = 60
+
 logger = logging.getLogger(__name__)
 
 
@@ -160,7 +165,7 @@ def _run_sync(prompt: str, *, model: str, timeout: float) -> dict:
     except subprocess.TimeoutExpired as exc:
         claude_cli_client._matar_arvore(proc)
         try:
-            proc.communicate(timeout=15)
+            proc.communicate(timeout=_ESPERA_PARA_DRENAR_S)
         except Exception:  # noqa: BLE001 — só drena o pipe do processo morto
             pass
         raise AntigravityCliError(f"Antigravity CLI excedeu o timeout de {timeout}s.") from exc
@@ -332,7 +337,7 @@ def listar_modelos() -> list[tuple[str, str]]:
         proc = subprocess.run(
             [_resolver_binario(), "models"],
             capture_output=True,
-            timeout=60,
+            timeout=_TIMEOUT_DA_LISTA_DE_MODELOS_S,
             env=_subprocess_env(),
             cwd=_cwd(),
             check=False,

@@ -19,6 +19,8 @@ from app.infrastructure.render.cinema_filters import FILTROS_CINEMA, get_filtro_
 from app.infrastructure.render.ffmpeg_commands import build_normalize_cmd
 from app.models import Corte
 
+_TIMEOUT_DA_NORMALIZACAO_S = 3600
+
 
 class _ExportProcessamentoMixin:
     @staticmethod
@@ -39,7 +41,9 @@ class _ExportProcessamentoMixin:
         # D-647: declarava 8h e recebia 1h (o timeout se perdia no caminho em
         # thread). 1h é o que a produção sempre praticou — o número agora diz a
         # verdade. Aumentar exige medir uma normalização longa de verdade.
-        result = await run_ffmpeg(cmd, label="ffmpeg_normalizar", timeout=3600)
+        result = await run_ffmpeg(
+            cmd, label="ffmpeg_normalizar", timeout=_TIMEOUT_DA_NORMALIZACAO_S
+        )
 
         if result.returncode != 0:
             raise RuntimeError(f"Falha na normalização de áudio: {result.stderr_tail}")

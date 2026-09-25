@@ -43,6 +43,10 @@ from app.domain.publicacao.tiktok_studio import (
     porta_de_depuracao,
 )
 
+# O Playwright conta em milissegundos; o urllib, em segundos.
+_ESPERA_PELO_CAMPO_MS = 5000
+_ESPERA_PELA_PORTA_CDP_S = 1.5
+
 logger = logging.getLogger(__name__)
 
 
@@ -217,7 +221,9 @@ class PaginaDoPlaywright:
         propriedade e o unico jeito de CONFERIR que o clique pegou.
         """
         try:
-            return self._page.locator(self._css(alvo)).first.input_value(timeout=5000)
+            return self._page.locator(self._css(alvo)).first.input_value(
+                timeout=_ESPERA_PELO_CAMPO_MS
+            )
         except Exception:  # noqa: BLE001 — campo sumiu ou nao e input
             return ""
 
@@ -332,7 +338,7 @@ def _porta_responde(porta: int) -> bool:
 
     try:
         with urllib.request.urlopen(  # noqa: S310 — localhost, porta nossa
-            f"http://127.0.0.1:{porta}/json/version", timeout=1.5
+            f"http://127.0.0.1:{porta}/json/version", timeout=_ESPERA_PELA_PORTA_CDP_S
         ) as resposta:
             return "webSocketDebuggerUrl" in _json.loads(resposta.read())
     except (urllib.error.URLError, OSError, ValueError, TimeoutError):

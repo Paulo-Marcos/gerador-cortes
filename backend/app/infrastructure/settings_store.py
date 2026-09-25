@@ -31,6 +31,9 @@ import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
 
+# Quanto uma escrita espera outra terminar antes de "database is locked".
+_ESPERA_PELO_BANCO_MS = 30_000
+
 # Chaves do bloco de app settings (espelham AppSettings/RenderSettings em
 # `services/app_settings.py`). Mantidas planas na tabela (render_* achatado)
 # para uma linha por canal simples de ler/gravar.
@@ -328,7 +331,7 @@ def _connect(db_path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=30000")
+    conn.execute(f"PRAGMA busy_timeout={_ESPERA_PELO_BANCO_MS}")
     chave = str(db_path.resolve())
     if chave not in _schema_garantido:
         _garantir_schema(conn, chave)

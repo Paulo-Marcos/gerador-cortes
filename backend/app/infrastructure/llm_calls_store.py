@@ -29,6 +29,9 @@ from pathlib import Path
 
 from app.core import channel_paths
 
+# Quanto uma escrita espera outra terminar antes de "database is locked".
+_ESPERA_PELO_BANCO_MS = 30_000
+
 # Ordem canônica das colunas (também a ordem de leitura em `listar_llm_calls`).
 _COLUNAS = (
     "id",
@@ -103,7 +106,7 @@ def _connect(db_path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=30000")
+    conn.execute(f"PRAGMA busy_timeout={_ESPERA_PELO_BANCO_MS}")
     conn.execute(_DDL)
     _garantir_short_id(conn)
     for ddl_indice in _DDL_INDICES:

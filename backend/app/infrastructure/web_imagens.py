@@ -12,6 +12,8 @@ from dataclasses import dataclass
 
 import httpx
 
+_TIMEOUT_DA_API_S = 15.0
+
 
 class DownloadFalhou(RuntimeError):
     """O pedido não chegou ao fim. `status` é o código HTTP da origem, ou `None`
@@ -60,7 +62,7 @@ class SessaoWeb:
             "inprop": "url",
             "redirects": "1",
         }
-        response = await self._pedir(api, params=params, timeout=15.0)
+        response = await self._pedir(api, params=params, timeout=_TIMEOUT_DA_API_S)
         data = response.json()
 
         pages = data.get("query", {}).get("pages", {})

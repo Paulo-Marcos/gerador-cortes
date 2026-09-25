@@ -21,6 +21,9 @@ from app.domain.corte.desvio_categoria import classificar_desvio
 from app.models import Corte
 from fastapi import HTTPException
 
+# O ffprobe da duração só lê o cabeçalho do arquivo.
+_TIMEOUT_DO_FFPROBE_S = 10
+
 logger = logging.getLogger(__name__)
 
 
@@ -135,7 +138,7 @@ def _corte_to_dict(corte: Corte) -> dict:
                     ],
                     capture_output=True,
                     text=True,
-                    timeout=10,
+                    timeout=_TIMEOUT_DO_FFPROBE_S,
                 )
                 if result.returncode == 0:
                     d["duracao_clip_seg"] = float(result.stdout.strip())

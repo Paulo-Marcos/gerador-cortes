@@ -24,6 +24,8 @@ from app.config import settings
 from app.core import channel_paths
 from app.infrastructure.web_imagens import DownloadFalhou, SessaoWeb
 
+_TIMEOUT_DO_DOWNLOAD_S = 30.0
+
 _TAMANHO_DEFAULT = 600
 _USER_AGENT = "CutCut/1.0 (https://github.com/paulo-marcos/gerador-cortes)"
 
@@ -144,7 +146,7 @@ async def buscar_wikipedia(
                 if obsoleto.exists():
                     obsoleto.unlink()
 
-        download = await web.baixar(url_imagem, timeout=30.0)
+        download = await web.baixar(url_imagem, timeout=_TIMEOUT_DO_DOWNLOAD_S)
         destino.write_bytes(download.conteudo)
 
     return RetratoEncontrado(
@@ -213,7 +215,7 @@ async def salvar_de_url(nome: str, url: str) -> RetratoEncontrado:
 
     slug = _slugify(nome_normalizado)
     async with SessaoWeb(_USER_AGENT) as web:
-        download = await web.baixar(url_normalizada, timeout=30.0)
+        download = await web.baixar(url_normalizada, timeout=_TIMEOUT_DO_DOWNLOAD_S)
         conteudo = download.conteudo
         content_type = download.content_type.split(";")[0].strip().lower()
 

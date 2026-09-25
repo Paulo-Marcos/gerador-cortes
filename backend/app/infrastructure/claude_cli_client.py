@@ -32,6 +32,9 @@ from app.config import settings
 from app.core.por_loop import PorLoop
 from app.infrastructure import fila_ia
 
+# Depois de matar a árvore, quanto esperar o pipe do processo morto fechar.
+_ESPERA_PARA_DRENAR_S = 15
+
 logger = logging.getLogger(__name__)
 
 
@@ -291,7 +294,7 @@ def _run_sync(
         # Mata a árvore (cmd→claude→node) — senão o timeout não retorna de fato.
         _matar_arvore(proc)
         try:
-            proc.communicate(timeout=15)  # reap; agora o pipe fecha
+            proc.communicate(timeout=_ESPERA_PARA_DRENAR_S)  # reap; agora o pipe fecha
         except Exception:  # noqa: BLE001
             pass
         raise ClaudeCliError(

@@ -90,6 +90,15 @@ from app.services.youtube_palco import (
     ensure_palco_pngs_para_layout,
 )
 
+# Tetos de cada job no worker. Não são estimativas: são o ponto em que um job
+# preso é dado como perdido. A grade de uma live longa é o mais lento de todos.
+_TIMEOUT_DA_GRADE_S = 14_400
+_TIMEOUT_DO_OVERLAY_S = 1800
+_TIMEOUT_DO_BUNDLE_S = 1800
+_TIMEOUT_DO_RENDER_FINAL_S = 7200
+# O ffprobe da validação só lê o cabeçalho do arquivo.
+_TIMEOUT_DO_FFPROBE_S = 10
+
 logger = logging.getLogger(__name__)
 
 # Nomes re-exportados dos sub-módulos fatiados (E-006). Explicitados aqui para o
@@ -1071,7 +1080,7 @@ async def _executar_grade(
                     f"{job_base}_{step.job_suffix}",
                     step.cmd,
                     output_path.parent,
-                    timeout=14400,
+                    timeout=_TIMEOUT_DA_GRADE_S,
                     category=WorkerJobCategory.GRADE,
                 )
         finally:
@@ -1170,7 +1179,7 @@ async def _executar_render_overlay_uma_vez(
             job_id,
             cmd,
             renderer_dir,
-            timeout=1800,
+            timeout=_TIMEOUT_DO_OVERLAY_S,
             category=WorkerJobCategory.OVERLAY,
         )
     except Exception:
@@ -1266,7 +1275,7 @@ async def _executar_render_overlay_chunk_uma_vez(
             job_id,
             cmd,
             renderer_dir,
-            timeout=1800,
+            timeout=_TIMEOUT_DO_OVERLAY_S,
             category=WorkerJobCategory.OVERLAY,
         )
     except Exception:
@@ -1348,7 +1357,7 @@ async def _executar_bundle_remotion(target_dir: Path, renderer_dir: Path, *, lab
         job_id,
         cmd,
         renderer_dir,
-        timeout=1800,
+        timeout=_TIMEOUT_DO_BUNDLE_S,
         category=WorkerJobCategory.BUNDLE,
     )
     if not (target_dir / "index.html").exists():
@@ -1489,7 +1498,7 @@ async def _executar_render_final(
         job_id,
         cmd,
         output_path.parent,
-        timeout=7200,
+        timeout=_TIMEOUT_DO_RENDER_FINAL_S,
         category=WorkerJobCategory.RENDER_FINAL,
     )
 
@@ -1583,7 +1592,7 @@ def _validar_video_completo_sync(path: Path) -> bool:
             ],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=_TIMEOUT_DO_FFPROBE_S,
         )
         if res.returncode == 0:
             return True
