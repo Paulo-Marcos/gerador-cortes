@@ -274,8 +274,7 @@ async def generate_text(
             contexto=contexto,
             envelope=None,
             latencia_ms=(time.perf_counter() - inicio) * 1000.0,
-            sucesso=False,
-            erro_tipo=type(exc).__name__,
+            erro=exc,
         )
         fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
         raise
@@ -292,8 +291,7 @@ async def generate_text(
         contexto=contexto,
         envelope=_envelope_telemetria(resultado),
         latencia_ms=(time.perf_counter() - inicio) * 1000.0,
-        sucesso=True,
-        erro_tipo=None,
+        erro=None,
     )
     fila_ia.anunciar_fim(chave_fila, sucesso=True)
     return texto

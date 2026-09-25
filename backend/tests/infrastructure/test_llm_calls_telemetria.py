@@ -14,6 +14,7 @@ store é substituído por um capturador — nenhum banco é tocado.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 
 import pytest
 from app.infrastructure import claude_cli_client as cli
@@ -28,13 +29,13 @@ def _fake_run_ok(envelope: dict):
 
 
 def _capturar_store(monkeypatch) -> list[dict]:
-    """Substitui `llm_calls_store.gravar_llm_call` por um capturador de kwargs."""
+    """Substitui `llm_calls_store.gravar_llm_call` por um capturador dos campos gravados."""
     from app.infrastructure import llm_calls_store
 
     capturados: list[dict] = []
 
-    def fake_gravar(**kwargs):
-        capturados.append(kwargs)
+    def fake_gravar(registro, **_kwargs):
+        capturados.append(dataclasses.asdict(registro))
         return "fake-id"
 
     monkeypatch.setattr(llm_calls_store, "gravar_llm_call", fake_gravar)
@@ -122,7 +123,7 @@ class TestNaoFatal:
         monkeypatch.setattr(cli, "_run", _fake_run_ok({"result": "resultado bom"}))
         from app.infrastructure import llm_calls_store
 
-        def gravar_explode(**_kwargs):
+        def gravar_explode(*_args, **_kwargs):
             raise RuntimeError("banco travado")
 
         monkeypatch.setattr(llm_calls_store, "gravar_llm_call", gravar_explode)
@@ -138,7 +139,7 @@ class TestNaoFatal:
         monkeypatch.setattr(cli, "_run", _run_erro)
         from app.infrastructure import llm_calls_store
 
-        def gravar_explode(**_kwargs):
+        def gravar_explode(*_args, **_kwargs):
             raise RuntimeError("banco travado")
 
         monkeypatch.setattr(llm_calls_store, "gravar_llm_call", gravar_explode)

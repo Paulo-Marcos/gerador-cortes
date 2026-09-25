@@ -117,7 +117,9 @@ async def test_a_transcricao_da_live_nao_vem_junto(banco_com_um_short):
 
 
 def _gravar(db, **kwargs):
-    llm_calls_store.gravar_llm_call(db_path=db, etapa="cortes", corte_id="c1", **kwargs)
+    llm_calls_store.gravar_llm_call(
+        llm_calls_store.LlmCallRecord(etapa="cortes", corte_id="c1", **kwargs), db_path=db
+    )
 
 
 def test_selo_traz_o_modelo_da_ultima_chamada_bem_sucedida(tmp_path):

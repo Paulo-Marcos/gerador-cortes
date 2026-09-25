@@ -104,7 +104,9 @@ def test_telemetria_de_ia_nasce_indexada(tmp_path):
 def test_consulta_da_telemetria_usa_o_indice(tmp_path):
     """O ganho medido vem daqui: sem isto, o plano volta a ser varredura."""
     caminho = tmp_path / "llm_calls.db"
-    llm_calls_store.gravar_llm_call(db_path=caminho, etapa="cortes", corte_id="c1", prompt="oi")
+    llm_calls_store.gravar_llm_call(
+        llm_calls_store.LlmCallRecord(etapa="cortes", corte_id="c1", prompt="oi"), db_path=caminho
+    )
 
     conn = sqlite3.connect(caminho)
     plano = " ".join(

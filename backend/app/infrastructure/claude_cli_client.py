@@ -470,14 +470,14 @@ def _registrar_telemetria(
     contexto: LlmCallContext | None,
     envelope: dict | None,
     latencia_ms: float,
-    sucesso: bool,
-    erro_tipo: str | None,
+    erro: BaseException | None,
 ) -> None:
     """Grava a telemetria da chamada — NÃO-FATAL (D-353).
 
     Qualquer exceção aqui (banco travado, disco cheio, etc.) é engolida com um
     `logger.warning`: telemetria NUNCA pode quebrar uma geração de produção. A
-    `etapa` cai na `skill` quando o contexto não a informou.
+    `etapa` cai na `skill` quando o contexto não a informou. `erro` é a exceção
+    da chamada, ou None quando ela deu certo — o sucesso e o tipo saem dele.
     """
     try:
         from app.infrastructure import llm_calls_store
@@ -485,20 +485,22 @@ def _registrar_telemetria(
         tokens_in, tokens_out = _tokens_do_envelope(envelope) if envelope else (None, None)
         etapa = (contexto.etapa if contexto else None) or skill
         llm_calls_store.gravar_llm_call(
-            etapa=etapa,
-            model=model,
-            projeto_id=contexto.projeto_id if contexto else None,
-            corte_id=contexto.corte_id if contexto else None,
-            short_id=contexto.short_id if contexto else None,
-            prompt=prompt,
-            resposta=resposta,
-            tokens_in=tokens_in,
-            tokens_out=tokens_out,
-            custo_usd=(envelope.get("total_cost_usd") if envelope else None),
-            duracao_ms_servidor=(envelope.get("duration_ms") if envelope else None),
-            latencia_ms_wall=latencia_ms,
-            sucesso=sucesso,
-            erro_tipo=erro_tipo,
+            llm_calls_store.LlmCallRecord(
+                etapa=etapa,
+                model=model,
+                projeto_id=contexto.projeto_id if contexto else None,
+                corte_id=contexto.corte_id if contexto else None,
+                short_id=contexto.short_id if contexto else None,
+                prompt=prompt,
+                resposta=resposta,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                custo_usd=(envelope.get("total_cost_usd") if envelope else None),
+                duracao_ms_servidor=(envelope.get("duration_ms") if envelope else None),
+                latencia_ms_wall=latencia_ms,
+                sucesso=erro is None,
+                erro_tipo=type(erro).__name__ if erro is not None else None,
+            )
         )
     except Exception as exc:  # noqa: BLE001 — telemetria é best-effort, nunca fatal
         logger.warning("[ClaudeCLI] falha ao gravar telemetria da chamada: %s", exc)
@@ -584,8 +586,7 @@ async def generate_text(
             contexto=contexto,
             envelope=None,
             latencia_ms=(time.perf_counter() - inicio) * 1000.0,
-            sucesso=False,
-            erro_tipo=type(exc).__name__,
+            erro=exc,
         )
         fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
         raise
@@ -603,8 +604,7 @@ async def generate_text(
         contexto=contexto,
         envelope=envelope,
         latencia_ms=(time.perf_counter() - inicio) * 1000.0,
-        sucesso=True,
-        erro_tipo=None,
+        erro=None,
     )
     fila_ia.anunciar_fim(chave_fila, sucesso=True)
     return resultado

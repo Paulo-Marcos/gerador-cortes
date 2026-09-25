@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -131,50 +132,45 @@ def inicializar(db_path: Path | None = None) -> None:
     _connect(db_path if db_path is not None else _default_db_path()).close()
 
 
-def gravar_llm_call(
-    *,
-    db_path: Path | None = None,
-    etapa: str | None = None,
-    model: str | None = None,
-    projeto_id: str | None = None,
-    corte_id: str | None = None,
-    short_id: str | None = None,
-    prompt: str | None = None,
-    resposta: str | None = None,
-    tokens_in: int | None = None,
-    tokens_out: int | None = None,
-    custo_usd: float | None = None,
-    duracao_ms_servidor: float | None = None,
-    latencia_ms_wall: float | None = None,
-    sucesso: bool = True,
-    erro_tipo: str | None = None,
-) -> str:
+@dataclass(frozen=True)
+class LlmCallRecord:
+    """Uma chamada de IA como a telemetria a guarda.
+
+    D-717: eram 14 argumentos soltos de `gravar_llm_call`, sempre juntos. O `id`
+    e o `ts` não entram aqui: quem os carimba é o store, na gravação.
+    """
+
+    etapa: str | None = None
+    model: str | None = None
+    projeto_id: str | None = None
+    corte_id: str | None = None
+    short_id: str | None = None
+    prompt: str | None = None
+    resposta: str | None = None
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    custo_usd: float | None = None
+    duracao_ms_servidor: float | None = None
+    latencia_ms_wall: float | None = None
+    sucesso: bool = True
+    erro_tipo: str | None = None
+
+
+def gravar_llm_call(registro: LlmCallRecord, *, db_path: Path | None = None) -> str:
     """Registra (INSERT) uma chamada de IA e devolve o `id` gerado.
 
     `id` é um uuid4 e `ts` é o instante atual (ISO-8601 UTC) — ambos carimbados
     aqui para o store ser a fonte única desses valores. A tabela é criada na hora
     se ainda não existir (`_connect`).
     """
-    registro = {
+    linha = {
+        **asdict(registro),
         "id": str(uuid.uuid4()),
         "ts": datetime.now(UTC).isoformat(),
-        "etapa": etapa,
-        "model": model,
-        "projeto_id": projeto_id,
-        "corte_id": corte_id,
-        "short_id": short_id,
-        "prompt": prompt,
-        "resposta": resposta,
-        "tokens_in": tokens_in,
-        "tokens_out": tokens_out,
-        "custo_usd": custo_usd,
-        "duracao_ms_servidor": duracao_ms_servidor,
-        "latencia_ms_wall": latencia_ms_wall,
-        "sucesso": 1 if sucesso else 0,
-        "erro_tipo": erro_tipo,
+        "sucesso": 1 if registro.sucesso else 0,
     }
     placeholders = ", ".join("?" for _ in _COLUNAS)
-    parametros = tuple(registro[c] for c in _COLUNAS)
+    parametros = tuple(linha[c] for c in _COLUNAS)
     conn = _connect(db_path if db_path is not None else _default_db_path())
     try:
         conn.execute(
@@ -184,7 +180,7 @@ def gravar_llm_call(
         conn.commit()
     finally:
         conn.close()
-    return registro["id"]
+    return linha["id"]
 
 
 def ultima_geracao_bem_sucedida(
