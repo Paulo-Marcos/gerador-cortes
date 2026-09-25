@@ -18,7 +18,7 @@ from app.domain.compartilhado.erros import ErroDeDominio
 from app.models import Base, Projeto
 from app.routers import youtube_browser
 from app.routers.errors import responder_erro_de_dominio
-from app.services import lives_do_canal
+from app.services import ingestao
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -27,7 +27,7 @@ _API = "www.googleapis.com"
 
 
 @pytest_asyncio.fixture
-async def db():
+async def db(monkeypatch):
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -36,6 +36,7 @@ async def db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     fabrica = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    monkeypatch.setattr(ingestao, "AsyncSessionLocal", fabrica)
     async with fabrica() as sessao:
         yield sessao
     await engine.dispose()
@@ -55,7 +56,7 @@ def canal(monkeypatch):
         coro.close()
         ingestoes.append(name)
 
-    monkeypatch.setattr(lives_do_canal, "fire_and_forget", registrar)
+    monkeypatch.setattr(ingestao, "fire_and_forget", registrar)
     return identidade, ingestoes
 
 
@@ -214,7 +215,7 @@ async def test_enfileirar_cria_projetos_com_a_data_da_live_e_pula_os_que_existem
     await db.commit()
 
     resultado = await youtube_browser.enfileirar_downloads(
-        youtube_browser.EnfileirarRequest(video_ids=["a1", "b2"], canal_origem="@canal"), db=db
+        youtube_browser.EnfileirarRequest(video_ids=["a1", "b2"], canal_origem="@canal")
     )
 
     assert [c["video_id"] for c in resultado["criados"]] == ["a1"]
@@ -230,7 +231,7 @@ async def test_enfileirar_segue_sem_data_quando_a_api_falha(db, canal, api):
     respostas["videos"] = lambda _: httpx.Response(500, text="caiu")
 
     resultado = await youtube_browser.enfileirar_downloads(
-        youtube_browser.EnfileirarRequest(video_ids=["a1"]), db=db
+        youtube_browser.EnfileirarRequest(video_ids=["a1"])
     )
 
     assert len(resultado["criados"]) == 1

@@ -1,6 +1,5 @@
 import json
 import logging
-import uuid
 from datetime import UTC, datetime
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
@@ -8,7 +7,7 @@ from app.database import get_db
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, MetadadoCorte, Projeto, StatusCorte, StatusProjeto
 from app.routers.errors import erro_interno
-from app.services import abrir_no_sistema, channels
+from app.services import abrir_no_sistema
 from app.services.analise import AnaliseService
 from app.services.app_logging import operational_error, operational_info
 from app.services.app_settings import AppSettingsService
@@ -98,30 +97,12 @@ class AtualizarRenderConfigRequest(BaseModel):
 
 
 @router.post("", response_model=ProjetoResponse, status_code=201)
-async def criar_projeto(body: CriarProjetoRequest, db: AsyncSession = Depends(get_db)):
-    """Cria um novo projeto e inicia o download em background."""
-    # I-023: filtro_padrao por projeto removido. O render lê
-    # AppSettings.filtro_global_padrao direto em runtime.
-    # D-191: projeto NOVO herda a placa/layout YT do PADRÃO GLOBAL do canal (banco)
-    # em vez do default de código; "{}" (sem padrão global) mantém o default do modelo.
-    projeto = Projeto(
-        id=str(uuid.uuid4()),
-        youtube_url=body.youtube_url,
-        canal_origem=body.canal_origem or channels.identidade_do_canal_ativo().handle,
-        status=StatusProjeto.PENDENTE,
-        layout_youtube_padrao=AppSettingsService.get().youtube_layout_padrao_global,
+async def criar_projeto(body: CriarProjetoRequest):
+    """Cria o projeto da live e inicia o download — ou devolve o da mesma live (D-703)."""
+    iniciado = await IngestaoService.iniciar(
+        body.youtube_url, canal_origem=body.canal_origem or None
     )
-    db.add(projeto)
-    await db.commit()
-    await db.refresh(projeto)
-
-    # Dispara download em background (não bloqueia a resposta)
-    fire_and_forget(
-        IngestaoService.processar_projeto(projeto.id, body.youtube_url),
-        name=f"ingestao-{projeto.id[:8]}",
-    )
-
-    return projeto
+    return iniciado.projeto
 
 
 @router.post("/{projeto_id}/reiniciar-download")

@@ -6,7 +6,9 @@ import asyncio
 import json
 import re
 import traceback
+import uuid
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,9 +18,14 @@ from app.database import AsyncSessionLocal
 from app.domain.projeto.json3_parser import parse_json3
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.domain.projeto.vtt_parser import parse_vtt
+from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 from app.models import Projeto, StatusProjeto
+from app.services import channels
 from app.services.app_logging import operational_debug, operational_error, operational_info
 from app.services.ciclo_de_vida import mudar_projeto
+from app.services.tasks import fire_and_forget
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class _CanalDeProgresso:
@@ -131,7 +138,79 @@ def _rodar_ytdlp_lendo_saida(cmd: list[str], ao_progresso) -> int:
     return processo.wait()
 
 
+@dataclass(frozen=True)
+class ProjetoIniciado:
+    projeto: Projeto
+    ja_existia: bool
+
+
+async def _projeto_da_mesma_live(db: AsyncSession, youtube_url: str) -> Projeto | None:
+    """O projeto que já existe para esta live — a mesma live é o mesmo vídeo.
+
+    `youtu.be/ID`, `watch?v=ID&t=30` e `watch?v=ID` são a mesma live. URL de onde
+    não se extrai o id cai na comparação exata do texto, como era antes.
+    """
+    alvo = _id_do_video(youtube_url)
+    if alvo is None:
+        return (
+            await db.execute(select(Projeto).where(Projeto.youtube_url == youtube_url).limit(1))
+        ).scalar_one_or_none()
+    urls = await db.execute(select(Projeto.id, Projeto.youtube_url))
+    for projeto_id, url in urls.all():
+        if _id_do_video(url) == alvo:
+            return await db.get(Projeto, projeto_id)
+    return None
+
+
+def _id_do_video(youtube_url: str) -> str | None:
+    try:
+        return extract_youtube_video_id(youtube_url)
+    except ValueError:
+        return None
+
+
 class IngestaoService:
+    @staticmethod
+    async def iniciar(
+        youtube_url: str,
+        *,
+        canal_origem: str | None = None,
+        titulo_live: str = "",
+        data_live: str = "",
+        pontuacao_ranking: float = 0.0,
+    ) -> ProjetoIniciado:
+        """Cria o Projeto de uma live e dispara a ingestão — ou devolve o que já existe.
+
+        É a regra única de nascimento de Projeto (D-703): a URL colada, o ranking e o
+        navegador de lives passam por aqui. O projeto nasce sem cópia do layout
+        global — a cascata herda na leitura (RN-10). `canal_origem` ausente vale o
+        canal ativo. A ingestão só parte depois do commit, com o projeto gravado.
+        """
+        async with AsyncSessionLocal() as db, db.begin():
+            existente = await _projeto_da_mesma_live(db, youtube_url)
+            if existente is not None:
+                return ProjetoIniciado(existente, ja_existia=True)
+            projeto = Projeto(
+                id=str(uuid.uuid4()),
+                youtube_url=youtube_url,
+                canal_origem=(
+                    canal_origem
+                    if canal_origem is not None
+                    else channels.identidade_do_canal_ativo().handle
+                ),
+                titulo_live=titulo_live,
+                data_live=data_live,
+                status=StatusProjeto.PENDENTE,
+                pontuacao_ranking=pontuacao_ranking,
+            )
+            db.add(projeto)
+
+        fire_and_forget(
+            IngestaoService.processar_projeto(projeto.id, youtube_url),
+            name=f"ingestao-{projeto.id[:8]}",
+        )
+        return ProjetoIniciado(projeto, ja_existia=False)
+
     @staticmethod
     async def processar_projeto(projeto_id: str, youtube_url: str):
         """Pipeline completo: download + transcrição."""

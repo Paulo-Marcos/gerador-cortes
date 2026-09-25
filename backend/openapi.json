@@ -9255,7 +9255,7 @@
         ]
       },
       "post": {
-        "description": "Cria um novo projeto e inicia o download em background.",
+        "description": "Cria o projeto da live e inicia o download — ou devolve o da mesma live (D-703).",
         "operationId": "criar_projeto_api_projetos_post",
         "requestBody": {
           "content": {
@@ -10472,7 +10472,7 @@
     },
     "/api/ranking-lives/{video_id}/enfileirar": {
       "post": {
-        "description": "Cria Projeto reaproveitando IngestaoService, copiando a pontuação.",
+        "description": "Cria o Projeto da candidata e dispara a ingestão, copiando a pontuação.",
         "operationId": "enfileirar_api_ranking_lives__video_id__enfileirar_post",
         "parameters": [
           {

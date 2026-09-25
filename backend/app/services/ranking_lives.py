@@ -20,6 +20,7 @@ from datetime import UTC, datetime, timedelta
 
 from app.config import settings
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.live_candidata.ranking_lives import (
     PesosRanking,
     SinaisLive,
@@ -39,6 +40,7 @@ from app.infrastructure.youtube_data_api import (
 from app.models import LiveCandidata, Projeto, StatusLiveCandidata
 from app.services import channels
 from app.services.canal import prompts_utilitarios, ranking_settings
+from app.services.ingestao import IngestaoService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -402,6 +404,45 @@ async def rejeitar_candidata(video_id: str) -> dict:
         candidata.status = StatusLiveCandidata.REJEITADA
         await db.commit()
         return {"video_id": video_id, "status": candidata.status}
+
+
+async def enfileirar_candidata(video_id: str) -> dict:
+    """Promove a candidata a Projeto e dispara a ingestão (F-052, D-703).
+
+    O Projeto nasce pela regra única da ingestão, que deduplica pela live. Criar e
+    promover são transações separadas de propósito: se algo cair entre as duas, o
+    próximo enfileirar acha o projeto pela deduplicação e completa a promoção.
+    """
+    async with AsyncSessionLocal() as db:
+        candidata = await _carregar_por_video_id(db, video_id)
+    if candidata is None:
+        raise NaoEncontrado(f"Candidata {video_id!r} não encontrada")
+    if candidata.status == StatusLiveCandidata.PROMOVIDA and candidata.projeto_id:
+        return {"projeto_id": candidata.projeto_id, "video_id": video_id, "ja_existia": True}
+
+    iniciado = await IngestaoService.iniciar(
+        f"https://www.youtube.com/watch?v={video_id}",
+        canal_origem=candidata.canal_origem or "",
+        titulo_live=candidata.titulo or "",
+        data_live=_data_live_compactada(candidata),
+        pontuacao_ranking=candidata.pontuacao_total,
+    )
+    await marcar_promovida(video_id, iniciado.projeto.id)
+    if iniciado.ja_existia:
+        return {"projeto_id": iniciado.projeto.id, "video_id": video_id, "ja_existia": True}
+    return {
+        "projeto_id": iniciado.projeto.id,
+        "video_id": video_id,
+        "pontuacao_ranking": iniciado.projeto.pontuacao_ranking,
+        "ja_existia": False,
+    }
+
+
+def _data_live_compactada(candidata: LiveCandidata) -> str:
+    """Espelha o formato YYYYMMDDHHMMSS usado pelos demais fluxos de Projeto."""
+    if not candidata.data_publicacao:
+        return ""
+    return candidata.data_publicacao.strftime("%Y%m%d%H%M%S")
 
 
 async def marcar_promovida(video_id: str, projeto_id: str) -> None:

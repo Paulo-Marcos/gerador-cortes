@@ -27,6 +27,7 @@ from app.models import (
 )
 from app.routers import projetos as rota_projetos
 from app.routers import ranking_lives as rota_ranking
+from app.routers.errors import registrar_tratadores
 from app.services.analise import AnaliseService
 from app.services.ingestao import IngestaoService
 from fastapi import FastAPI
@@ -36,7 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 # Onde cada caso de uso abre a sessão e lê a pasta dos projetos.
-_SESSAO_ABERTA_EM = ["app.routers.ranking_lives", "app.services.ranking_lives"]
+_SESSAO_ABERTA_EM = ["app.services.ranking_lives", "app.services.ingestao"]
 _PROJETOS_DIR_LIDO_EM = ["app.routers.projetos"]
 
 
@@ -95,6 +96,7 @@ def cliente(fabrica, fundo, monkeypatch, tmp_path):
     app.include_router(rota_projetos.router, prefix="/api/projetos")
     app.include_router(rota_ranking.router, prefix="/api/ranking-lives")
     app.dependency_overrides[get_db] = sessao
+    registrar_tratadores(app)
     return TestClient(app)
 
 
@@ -123,6 +125,38 @@ async def test_criar_a_mao_cria_pendente_no_canal_ativo_e_dispara_a_ingestao(
     assert (corpo["status"], corpo["canal_origem"]) == ("pendente", "@canal-ativo")
     assert fundo == [("ingestao", (corpo["id"], "https://youtu.be/abc"))]
     assert [p.id for p in await _todos(fabrica, Projeto)] == [corpo["id"]]
+
+
+@pytest.mark.asyncio
+async def test_criar_a_mao_a_mesma_live_em_outro_formato_devolve_o_projeto_dela(
+    cliente, fabrica, fundo
+):
+    """Decisão A do D-703: a mesma live é o mesmo vídeo, qualquer que seja a URL."""
+    await _gravar(
+        fabrica, Projeto(id="p-velho", youtube_url="https://www.youtube.com/watch?v=abcdefghijk")
+    )
+
+    resposta = cliente.post(
+        "/api/projetos", json={"youtube_url": "https://youtu.be/abcdefghijk?t=30"}
+    )
+
+    assert resposta.json()["id"] == "p-velho"
+    assert [p.id for p in await _todos(fabrica, Projeto)] == ["p-velho"]
+    assert fundo == []
+
+
+@pytest.mark.asyncio
+async def test_criar_a_mao_nao_copia_o_layout_global_para_o_projeto(cliente, fabrica, monkeypatch):
+    """Decisão B do D-703: a cascata herda na leitura (RN-10), nunca ao gravar."""
+    monkeypatch.setattr(
+        "app.services.app_settings.AppSettingsService.get",
+        lambda: SimpleNamespace(youtube_layout_padrao_global='{"modo_padrao":"palco"}'),
+    )
+
+    cliente.post("/api/projetos", json={"youtube_url": "https://youtu.be/abcdefghijk"})
+
+    (projeto,) = await _todos(fabrica, Projeto)
+    assert projeto.layout_youtube_padrao == "{}"
 
 
 # ─── Enfileirar do ranking ───────────────────────────────────────────────────

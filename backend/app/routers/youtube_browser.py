@@ -74,9 +74,9 @@ async def youtube_auth_desconectar():
 
 
 @router.post("/enfileirar")
-async def enfileirar_downloads(body: EnfileirarRequest, db: AsyncSession = Depends(get_db)):
+async def enfileirar_downloads(body: EnfileirarRequest):
     """
     Cria um Projeto para cada video_id informado e dispara o pipeline completo
     (download -> transcrição -> análise -> desvios -> cortes brutos).
     """
-    return await lives_do_canal.enfileirar(db, body.video_ids, body.canal_origem)
+    return await lives_do_canal.enfileirar(body.video_ids, body.canal_origem)

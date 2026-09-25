@@ -9,7 +9,6 @@ escolhe o HTTP (D-697).
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime
 
 from app.config import settings
@@ -19,10 +18,9 @@ from app.domain.compartilhado.erros import (
     ServicoExternoFalhou,
 )
 from app.infrastructure import youtube_data_api
-from app.models import Projeto, StatusProjeto
+from app.models import Projeto
 from app.services import channels
 from app.services.ingestao import IngestaoService
-from app.services.tasks import fire_and_forget
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -114,38 +112,28 @@ async def listar_lives(db: AsyncSession, *, after_date: str, max_results: int) -
     return {"lives": lives, "after_date": after_date, "channel_id": channel_id}
 
 
-async def enfileirar(db: AsyncSession, video_ids: list[str], canal_origem: str) -> dict:
+async def enfileirar(video_ids: list[str], canal_origem: str) -> dict:
     """Cria um Projeto para cada vídeo novo e dispara o pipeline completo
-    (download → transcrição → análise → desvios → cortes brutos)."""
+    (download → transcrição → análise → desvios → cortes brutos).
+
+    O Projeto nasce pela regra única da ingestão (D-703), que pula a live que
+    já tem projeto.
+    """
     criados = []
     ignorados = []
     datas_publicacao = await _datas_de_publicacao(video_ids)
 
     for vid_id in video_ids:
         yt_url = f"https://www.youtube.com/watch?v={vid_id}"
-
-        # Evita duplicatas
-        existing = await db.execute(select(Projeto).where(Projeto.youtube_url == yt_url).limit(1))
-        if existing.scalar_one_or_none():
+        iniciado = await IngestaoService.iniciar(
+            yt_url, canal_origem=canal_origem, data_live=datas_publicacao.get(vid_id, "")
+        )
+        if iniciado.ja_existia:
             ignorados.append(vid_id)
             continue
-
-        projeto = Projeto(
-            id=str(uuid.uuid4()),
-            youtube_url=yt_url,
-            canal_origem=canal_origem,
-            data_live=datas_publicacao.get(vid_id, ""),
-            status=StatusProjeto.PENDENTE,
+        criados.append(
+            {"projeto_id": iniciado.projeto.id, "video_id": vid_id, "youtube_url": yt_url}
         )
-        db.add(projeto)
-        await db.commit()
-        await db.refresh(projeto)
-
-        fire_and_forget(
-            IngestaoService.processar_projeto(projeto.id, yt_url),
-            name=f"ingestao-{projeto.id[:8]}",
-        )
-        criados.append({"projeto_id": projeto.id, "video_id": vid_id, "youtube_url": yt_url})
 
     return {
         "message": f"{len(criados)} projeto(s) criado(s), {len(ignorados)} ignorado(s) (já existem).",
