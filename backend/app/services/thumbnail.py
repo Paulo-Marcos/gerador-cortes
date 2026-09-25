@@ -384,5 +384,5 @@ class ThumbnailService:
 
             operational_info("Thumbnail", f"Thumbnail gerada: {thumb_path}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — falha na capa só é registrada; o corte segue
             operational_error("Thumbnail", f"Erro ao gerar thumbnail para corte {corte_id}: {e}")

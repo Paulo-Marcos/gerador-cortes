@@ -667,7 +667,7 @@ class CenasRemotionService:
                 nome=nome,
                 forcar_redownload=forcar,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — retrato é opcional: a cena segue sem ele
             logger.warning("Falha ao buscar retrato para '%s': %s", nome, exc)
             return None, True
 

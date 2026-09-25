@@ -71,7 +71,7 @@ class TimelineMath:
                 except ValueError:
                     t_end = hms_to_seg(str(val_end))
 
-            except Exception:
+            except (AttributeError, TypeError, ValueError):
                 continue
 
             # Se o tempo original da palavra está ANTES do primeiro segmento mantido, ela deve sumir

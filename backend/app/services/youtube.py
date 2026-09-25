@@ -37,7 +37,7 @@ def _is_quota_error(err: HttpError) -> bool:
         return False
     try:
         details = json.loads(err.content.decode("utf-8"))
-    except Exception:
+    except (AttributeError, ValueError):
         return False
     for item in (details.get("error", {}) or {}).get("errors", []) or []:
         if item.get("reason") in QUOTA_REASONS:
@@ -142,7 +142,7 @@ class YouTubeService:
         if token_path.exists():
             try:
                 creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — token ilegível vira nova autorização
                 operational_error("YouTube", f"Erro ao ler token.json: {e}")
 
         if not creds or not creds.valid:
@@ -152,7 +152,7 @@ class YouTubeService:
                     with open(token_path, "w") as token:
                         token.write(creds.to_json())
                     return creds, None
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — renovação que falha vira nova autorização
                     operational_error(
                         "YouTube",
                         f"Erro ao atualizar token: {e}. Excluindo e solicitando novo login.",
@@ -548,7 +548,7 @@ class YouTubeService:
                             media_body=MediaFileUpload(_actual, mimetype=_mimetype),
                         ).execute()
                         operational_info("YouTube", "Thumbnail enviada!")
-                    except Exception as _te:
+                    except Exception as _te:  # noqa: BLE001 — capa opcional: o vídeo já subiu
                         operational_error("YouTube", f"AVISO: falha ao enviar thumbnail: {_te}")
                     finally:
                         if _actual != str(_thumb_found) and Path(_actual).exists():
@@ -606,6 +606,6 @@ class YouTubeService:
             if is_quota:
                 result["cota_excedida"] = True
             return result
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — upload que falha vira resposta de erro
             operational_error("YouTube", f"Erro fatal durante upload: {e}")
             return {"status": "erro", "mensagem": str(e)}

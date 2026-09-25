@@ -203,7 +203,7 @@ async def _salvaguarda_de_silencios(db, corte: Corte, corte_id: str) -> None:
         await CorteService.detectar_silencios_tecnico(corte_id, limpar_anteriores=True)
         await db.refresh(corte)
         BrutoProgress.marcar(corte_id, "silencios", "concluido")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — etapa não-fatal: não derruba o bruto
         operational_error(
             "ExportService", f"Salvaguarda de silencios falhou para {corte_id}: {exc}"
         )
@@ -415,7 +415,7 @@ async def _erro_na_resposta_do_worker(res_file: Path) -> dict | None:
         with open(res_file, encoding="utf-8") as f:
             resultado = json.load(f)
         res_file.unlink()
-    except Exception:
+    except (OSError, ValueError):
         return {"status": "erro", "mensagem": "Falha ao ler resposta do Native Worker."}
 
     if resultado.get("status") != "sucesso":
@@ -524,7 +524,7 @@ def _disparar_deteccao_de_segmentos(corte_id: str, out_path: Path) -> None:
             executar_deteccao_segmentos(corte_id, out_path),
             name=f"deteccao-seg-{corte_id[:8]}",
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — etapa não-fatal: não derruba o bruto
         operational_error(
             "ExportService",
             f"Auto-trigger de detecção de segmentos falhou para {corte_id}: {exc}",
@@ -538,7 +538,7 @@ async def _gerar_cenas(corte_id: str) -> None:
 
         await CenasRemotionService.gerar_cenas_via_claude(corte_id)
         BrutoProgress.marcar(corte_id, "cenas", "concluido")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — etapa não-fatal: não derruba o bruto
         BrutoProgress.marcar(corte_id, "cenas", "erro")
         operational_error("ExportService", f"Cenas via Claude falharam para {corte_id}: {exc}")
 
@@ -550,6 +550,6 @@ async def _sugerir_shorts(corte_id: str) -> None:
 
         await shorts_store.sugerir_shorts(corte_id)
         BrutoProgress.marcar(corte_id, "shorts", "concluido")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — etapa não-fatal: não derruba o bruto
         BrutoProgress.marcar(corte_id, "shorts", "erro")
         operational_error("ExportService", f"Sugestão de shorts falhou para {corte_id}: {exc}")

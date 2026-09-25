@@ -798,7 +798,7 @@ async def _cancelar_tasks_pendentes(ctx: _RenderCtx) -> None:
         ctx.bundle_task.cancel()
         try:
             await ctx.bundle_task
-        except (asyncio.CancelledError, Exception):
+        except (asyncio.CancelledError, Exception):  # noqa: BLE001 — limpeza: não pode mascarar o erro que parou o render
             pass
     # Cancela a grade se ficou pendente (ex.: Fase 2 falhou antes do
     # await da grade). O job FFmpeg no worker segue até o fim, mas a
@@ -808,7 +808,7 @@ async def _cancelar_tasks_pendentes(ctx: _RenderCtx) -> None:
     if ctx.grade_task is not None:
         try:
             await ctx.grade_task
-        except (asyncio.CancelledError, Exception):
+        except (asyncio.CancelledError, Exception):  # noqa: BLE001 — limpeza: não pode mascarar o erro que parou o render
             pass
 
 
@@ -1150,7 +1150,7 @@ async def _executar_render_overlay_uma_vez(
     if output_path.exists():
         try:
             output_path.unlink()
-        except Exception:
+        except OSError:
             raise RuntimeError(
                 f"Overlay anterior está aberto ou bloqueado: {output_path.name}"
             ) from None
@@ -1189,14 +1189,14 @@ async def _executar_render_overlay_uma_vez(
         if output_path.exists():
             try:
                 output_path.unlink()
-            except Exception:
+            except OSError:
                 pass
         raise
     finally:
         try:
             if props_file.exists():
                 props_file.unlink()
-        except Exception:
+        except OSError:
             pass
 
 
@@ -1243,7 +1243,7 @@ async def _executar_render_overlay_chunk_uma_vez(
     if output_path.exists():
         try:
             output_path.unlink()
-        except Exception:
+        except OSError:
             raise RuntimeError(
                 f"Overlay anterior esta aberto ou bloqueado: {output_path.name}"
             ) from None
@@ -1285,14 +1285,14 @@ async def _executar_render_overlay_chunk_uma_vez(
         if output_path.exists():
             try:
                 output_path.unlink()
-            except Exception:
+            except OSError:
                 pass
         raise
     finally:
         try:
             if props_file.exists():
                 props_file.unlink()
-        except Exception:
+        except OSError:
             pass
 
 
@@ -1623,7 +1623,7 @@ def _validar_video_completo_sync(path: Path) -> bool:
             f"AVISO: ffprobe falhou ou nao encontrado ({type(e).__name__}). Aceitando por tamanho.",
         )
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — validação: exceção inesperada conta como arquivo inválido
         operational_error(
             "Pipeline", f"EXCEÇÃO na validação de {path.name}: {type(e).__name__} - {e}"
         )

@@ -86,7 +86,7 @@ async def lifespan(app: FastAPI):
 
     try:
         await RemotionRenderService.sincronizar_tarefas_concluidas()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — a sincronização do boot não impede o app de subir
         logger.warning("[Main] Erro na sincronização inicial: %s", e)
 
     yield

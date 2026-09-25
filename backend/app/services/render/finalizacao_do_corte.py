@@ -111,7 +111,7 @@ async def _limpar_pasta_corte_pos_sync(corte_dir: Path):
             await asyncio.to_thread(_apagar_do_disco, entry)
         except PermissionError:
             pendentes.append(entry)
-        except Exception as e:
+        except OSError as e:
             logger.warning("[SincronizarPos] Falha ao remover %s: %s", entry, e)
 
     # Retry para arquivos travados (típico: clip_raw.mkv sendo servido via stream)
@@ -127,7 +127,7 @@ async def _limpar_pasta_corte_pos_sync(corte_dir: Path):
                 ainda_travados.append(entry)
             except FileNotFoundError:
                 pass  # Sumiu entre tentativas, ok
-            except Exception as e:
+            except OSError as e:
                 logger.warning("[SincronizarPos] Falha ao remover %s: %s", entry, e)
         pendentes = ainda_travados
 

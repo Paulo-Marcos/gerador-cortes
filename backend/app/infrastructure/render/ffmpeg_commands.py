@@ -501,7 +501,7 @@ def _resolve_shared_bg_png(layout_youtube: dict | None) -> Path | None:
         return None
     try:
         fundo = normalizar_layout_youtube(layout_youtube)["fundo"]
-    except Exception:
+    except Exception:  # noqa: BLE001 — layout malformado fica sem fundo
         return None
     caminho = channel_paths.youtube_bg_dir() / f"{fundo}.png"
     return caminho if caminho.exists() else None
@@ -517,7 +517,7 @@ def _resolve_shared_fg_png(layout_youtube: dict | None) -> Path | None:
         return None
     try:
         key = palco_cache_key(layout_youtube)
-    except Exception:
+    except Exception:  # noqa: BLE001 — layout malformado fica sem palco em cache
         return None
     caminho = channel_paths.palco_cache_dir() / f"{key}.png"
     return caminho if caminho.exists() else None
@@ -536,7 +536,7 @@ def _resolve_shared_fg_png_para_config(
     """
     try:
         key = palco_cache_key_para_config(compartilhada, fundo=fundo, placa=placa)
-    except Exception:
+    except Exception:  # noqa: BLE001 — layout malformado fica sem palco em cache
         return None
     caminho = channel_paths.palco_cache_dir() / f"{key}.png"
     return caminho if caminho.exists() else None

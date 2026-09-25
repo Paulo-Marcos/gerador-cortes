@@ -76,7 +76,7 @@ def _extrair_cenas(corte: Corte) -> list[dict]:
     if isinstance(raw, str):
         try:
             data = json.loads(raw)
-        except Exception as e:
+        except ValueError as e:
             logger.error(f"Erro ao parsear JSON de cenas: {e}")
             return []
     else:

@@ -248,7 +248,7 @@ class IngestaoService:
             # Pipeline para aqui: análise/desvios/brutos são disparados manualmente
             # pelo usuário via UI. Nada roda automaticamente após o download.
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — tarefa de fundo: a falha vai para o status do projeto
             operational_error(
                 "INGESTAO",
                 f"Erro na ingestão do projeto {projeto_id}: "
@@ -299,7 +299,7 @@ class IngestaoService:
             await queue.put({"status": "pronto", "progresso": 100})
             operational_info("INGESTAO", f"Video da live {projeto_id[:8]} de volta ao disco")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — tarefa de fundo: a falha vai para o status do projeto
             operational_error(
                 "INGESTAO",
                 f"Erro ao rebaixar o video do projeto {projeto_id}: {type(e).__name__}: {e}",
@@ -508,7 +508,7 @@ class IngestaoService:
                         f"PTS Offset calculado: {offset_ms}ms "
                         f"(VTT {vtt_start_ms} - JSON3 {json3_start_ms})",
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — offset é opcional: sem ele, o VTT fica sem ajuste
                 operational_error("INGESTAO", f"Erro ao calcular offset VTT: {e}")
 
         from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao

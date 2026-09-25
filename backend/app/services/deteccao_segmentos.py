@@ -229,7 +229,7 @@ async def executar_deteccao_segmentos(corte_id: str, video_path: Path) -> None:
                 return
             corte.segmentos_detectados = json.dumps(segmentos, ensure_ascii=False)
             await session.commit()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — tarefa de fundo: a falha só é registrada
         operational_error(
             "DeteccaoSegmentos", f"Detecção de segmentos falhou para {corte_id}: {exc}"
         )

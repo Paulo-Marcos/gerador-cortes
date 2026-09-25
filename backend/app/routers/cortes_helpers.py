@@ -20,6 +20,7 @@ from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload
 from app.domain.corte.desvio_categoria import classificar_desvio
 from app.models import Corte
 from fastapi import HTTPException
+from sqlalchemy.exc import SQLAlchemyError
 
 # O ffprobe da duração só lê o cabeçalho do arquivo.
 _TIMEOUT_DO_FFPROBE_S = 10
@@ -63,7 +64,7 @@ def _corte_to_dict(corte: Corte) -> dict:
     # pela iteração de colunas acima (default "" nos cortes legados).
     try:
         d["score"] = json.loads(getattr(corte, "score_json", None) or "{}")
-    except Exception:
+    except (ValueError, TypeError):
         d["score"] = {}
     d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
     d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
@@ -84,24 +85,24 @@ def _corte_to_dict(corte: Corte) -> dict:
     # ausente em cortes legados — sempre devolve [].
     try:
         d["segmentos_detectados"] = json.loads(getattr(corte, "segmentos_detectados", None) or "[]")
-    except Exception:
+    except (ValueError, TypeError):
         d["segmentos_detectados"] = []
     # D-576: ordem de exibição dos blocos. Lista vazia = ordem cronológica, que
     # é o caso da esmagadora maioria dos cortes — e o que os legados devolvem.
     try:
         d["arranjo_blocos"] = json.loads(getattr(corte, "arranjo_blocos", None) or "[]")
-    except Exception:
+    except (ValueError, TypeError):
         d["arranjo_blocos"] = []
     # D-334: log de invocações da skill trechos-expert (telemetria D-303).
     try:
         d["trechos_geracoes_log"] = json.loads(getattr(corte, "trechos_geracoes_log", None) or "[]")
-    except Exception:
+    except (ValueError, TypeError):
         d["trechos_geracoes_log"] = []
 
     # Prevenção contra erro de Lazy Loading (greenlet_spawn)
     try:
         d["is_fire"] = corte.metadado.is_fire if corte.metadado else False
-    except Exception:
+    except SQLAlchemyError:
         d["is_fire"] = False
 
     d["is_pos_producao"] = getattr(corte, "is_pos_producao", 0)

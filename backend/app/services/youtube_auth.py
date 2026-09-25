@@ -63,7 +63,7 @@ def _carregar_credenciais_validas() -> Credenciais | None:
         return None
     try:
         creds = youtube_api.credenciais_do_arquivo(token_path, SCOPES)
-    except Exception:
+    except Exception:  # noqa: BLE001 — token ilegível é o mesmo que não ter credencial
         return None
 
     if creds.valid:
@@ -73,7 +73,7 @@ def _carregar_credenciais_validas() -> Credenciais | None:
             youtube_api.renovar(creds)
             token_path.write_text(creds.to_json(), encoding="utf-8")
             return creds
-        except Exception:
+        except Exception:  # noqa: BLE001 — renovação que falha é o mesmo que não ter credencial
             return None
     return None
 

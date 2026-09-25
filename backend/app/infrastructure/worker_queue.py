@@ -366,7 +366,7 @@ async def _esperar_algum(alvos: list[Path], *, timeout: int) -> Path | None:
         return await _watch_until_present(awatch, alvos, timeout=timeout)
     except TimeoutError:
         return _primeiro_existente(alvos)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — watcher que falha cai no polling
         logger.warning(
             "[WorkerQueue] Watcher falhou para %s, caindo para polling: %s",
             alvos[0].name,

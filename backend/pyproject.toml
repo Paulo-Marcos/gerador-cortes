@@ -12,7 +12,9 @@ extend-exclude = ["projetos", "assets"]
 # de logging, que trata isso. Os scripts de terminal ficam de fora, abaixo.
 # PLR2004 (número mágico em comparação): D-717. Limiar com nome diz o que mede e
 # por que tem aquele valor; nos testes o número no assert É o esperado, e fica.
-select = ["E", "F", "W", "I", "UP", "B", "T20", "PLR2004"]
+# BLE001 (except Exception): D-717. Falha conhecida pega o tipo exato; barreira de
+# propósito (etapa não-fatal, tarefa de fundo, item de lote) leva `noqa` com o motivo.
+select = ["E", "F", "W", "I", "UP", "B", "T20", "PLR2004", "BLE001"]
 ignore = [
   # Comprimento de linha fica a cargo do formatter (ruff format).
   "E501",
@@ -36,9 +38,9 @@ extend-immutable-calls = [
 
 [tool.ruff.lint.per-file-ignores]
 # Testes ajustam sys.path antes de importar (E402) e usam pytest.raises(Exception) (B017).
-"tests/**" = ["B017", "E402", "T20", "PLR2004"]
+"tests/**" = ["B017", "E402", "T20", "PLR2004", "BLE001"]
 # Scripts de linha de comando: imprimir É a interface deles (D-655).
-"dev-utils/**" = ["T20", "PLR2004"]
+"dev-utils/**" = ["T20", "PLR2004", "BLE001"]
 "app/services/canal/channel_layout_migration.py" = ["T20"]
 
 [tool.ruff.format]

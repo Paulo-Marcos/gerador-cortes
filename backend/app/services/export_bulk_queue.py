@@ -119,7 +119,7 @@ class _ExportBulkQueueMixin:
             operational_info("ExportService", f"Enviando: {corte_id} | Agendado: {scheduled_at}")
             try:
                 resultado = await YouTubeService.upload_video(corte_id, scheduled_at=scheduled_at)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — lote: um upload que falha não para os outros
                 resultado = {"status": "erro", "mensagem": str(exc)}
 
             if resultado.get("cota_excedida"):

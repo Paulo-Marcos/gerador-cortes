@@ -94,7 +94,7 @@ def ensure_derivados_palco(palco_png: Path, region: dict) -> PalcoDerivados | No
             encoding="utf-8",
         )
         return PalcoDerivados(bg_pre, chrome, *offset)
-    except Exception:
+    except Exception:  # noqa: BLE001 — derivado é otimização: sem ele, vale o palco inteiro
         return None
 
 

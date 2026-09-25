@@ -260,7 +260,7 @@ class DesviosService:
                     )
                     trechos = resultado.get("trechos", [])
                     todos_trechos.extend(trechos)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — lote: uma parte que falha não para as outras
                     operational_error("Desvios", f"Erro ao analisar parte {i + 1} com Gemini: {e}")
                     erros.append(str(e))
 

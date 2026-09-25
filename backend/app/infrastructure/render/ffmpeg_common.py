@@ -108,7 +108,7 @@ def _resolve_filter_arg(filter_str: str, output_dir: Path) -> list[str]:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(filter_str)
-    except Exception:
+    except OSError:
         fallback = Path(tempfile.gettempdir()) / f"filter_script_{os.getpid()}.txt"
         fallback.write_text(filter_str, encoding="utf-8")
         path = str(fallback)

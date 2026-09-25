@@ -46,7 +46,7 @@ async def _retry_async(
             return
         except nao_retentar:
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — a política de retry decide o que tentar de novo
             ultimo_erro = e
             if not policy.should_retry(attempt):
                 break

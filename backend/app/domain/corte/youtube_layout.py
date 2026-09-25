@@ -175,7 +175,7 @@ def _ler_json(valor: Any) -> Any:
     if isinstance(valor, str) and valor.strip():
         try:
             return json.loads(valor)
-        except Exception:
+        except ValueError:
             return None
     return valor
 

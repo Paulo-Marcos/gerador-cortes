@@ -52,7 +52,7 @@ def _run_ffmpeg_sync(
             text=True,
             errors="replace",
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — falha ao iniciar vira código de saída, como a de execução
         logger.error("[FfmpegRunner] [%s] Excecao ao iniciar: %s", label, e)
         return -1, "", f"Erro ao executar subprocesso sync: {e}"
 
@@ -65,7 +65,7 @@ def _run_ffmpeg_sync(
         processos_em_voo.matar_arvore(processo)
         processo.communicate()
         return -1, "", f"Timeout apos {elapsed:.0f}s"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — qualquer falha mata a árvore e vira código de saída
         logger.error("[FfmpegRunner] [%s] Excecao: %s", label, e)
         processos_em_voo.matar_arvore(processo)
         return -1, "", f"Erro ao executar subprocesso sync: {e}"
@@ -142,7 +142,7 @@ async def _drain_stream(
                 if now - last_log_time >= log_interval or "error" in line.lower():
                     logger.info("[%s] %s", label, line)
                     last_log_time = now
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — ler o log não pode derrubar o ffmpeg
         logger.warning("[%s] Stream read error: %s", label, exc)
 
     return "".join(full_output) if capture else tail
@@ -375,12 +375,12 @@ async def probe_resolucao(path: Path) -> tuple[int, int] | None:
             _run_ffmpeg_sync, cmd, "ffprobe-resolucao", _TIMEOUT_DA_SONDA_SEG
         )
         return _parse_resolucao(out)
-    except Exception:
+    except Exception:  # noqa: BLE001 — sonda opcional: falha vira 'sem medida'
         return None
 
     try:
         out = await _esperar_sonda(proc)
-    except Exception:
+    except Exception:  # noqa: BLE001 — sonda opcional: falha vira 'sem medida'
         return None
     return _parse_resolucao(out.decode())
 
@@ -421,11 +421,11 @@ async def probe_duracao(path: Path) -> float | None:
             _run_ffmpeg_sync, cmd, "ffprobe-duracao", _TIMEOUT_DA_SONDA_SEG
         )
         return _parse_duracao(out)
-    except Exception:
+    except Exception:  # noqa: BLE001 — sonda opcional: falha vira 'sem medida'
         return None
 
     try:
         out = await _esperar_sonda(proc)
-    except Exception:
+    except Exception:  # noqa: BLE001 — sonda opcional: falha vira 'sem medida'
         return None
     return _parse_duracao(out.decode())

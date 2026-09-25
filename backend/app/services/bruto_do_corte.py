@@ -71,7 +71,7 @@ async def iniciar_geracao(
             # mostrava o job rodando eternamente depois de cancelado (D-426).
             ExportService.set_tarefa_corte_status(corte_id, "cancelado")
             raise
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — tarefa de fundo: a falha vai para o status do corte
             ExportService.set_tarefa_corte_status(corte_id, f"erro: {exc}")
 
     task = fire_and_forget(_run(), name=f"gerar-bruto-{corte_id[:8]}")

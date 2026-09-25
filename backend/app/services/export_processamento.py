@@ -144,7 +144,7 @@ class _ExportProcessamentoMixin:
         try:
             await run_ffmpeg_simple(cmd, label="ffmpeg_concat")
             returncode = 0
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — falha do ffmpeg vira código de saída
             operational_error("ffmpeg_concat", f"Falha na concatenação: {e}")
             returncode = -1
 
@@ -242,7 +242,7 @@ class _ExportProcessamentoMixin:
                             "MultiVersion",
                             f"Preview '{filtro}' concluído ({preview_segundos}s): {destino}",
                         )
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — lote: uma versão que falha não para as outras
                         operational_error("MultiVersion", f"Erro no preview '{filtro}': {e}")
                 else:
                     # Versão completa com intro/outro
@@ -256,7 +256,7 @@ class _ExportProcessamentoMixin:
 
                         await asyncio.to_thread(shutil.copy2, str(final), str(destino))
                         operational_info("MultiVersion", f"Versão '{filtro}' concluída: {destino}")
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — lote: uma versão que falha não para as outras
                         operational_error("MultiVersion", f"Erro na versão '{filtro}': {e}")
 
                 # Salva metadados da versão (usado em ambos os modos)

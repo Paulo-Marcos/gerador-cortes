@@ -543,7 +543,7 @@ def _transcricao_bruta(trans_raw: list, c_inicio: float, c_fim: float) -> list[d
             t_start = _segundos_da_sincronia(item.get("start", item.get("inicio", 0)))
             if inicio_seg_buffer <= t_start <= fim_seg_buffer:
                 trans_bruta.append(_fala_bruta(item, t_start))
-        except Exception:
+        except (AttributeError, TypeError, ValueError):
             continue
     return limpar_e_ordenar_transcricao(trans_bruta)
 
@@ -731,7 +731,7 @@ class CorteService:
             try:
                 await CorteService.gerar_trechos_via_claude(cid, provider)
                 await asyncio.sleep(1)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — lote: um corte que falha não para os outros
                 operational_error("AnalisarDesvios", f"Erro no corte {cid}: {e}")
 
     @staticmethod
@@ -1155,7 +1155,7 @@ class CorteService:
 
         try:
             await CorteService.sincronizar_transcricao_corte(novo_corte.id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — a sincronia não desfaz o corte criado
             logger.warning("[criar_manual] Falha ao sincronizar transcricao: %s", e)
 
         result = await db.execute(
@@ -1445,7 +1445,7 @@ class CorteService:
                 res = await run_ffmpeg_simple(cmd, label="detectar_silencios", capture_output=True)
                 output = res.stderr
                 returncode = res.returncode
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — falha do ffmpeg vira resposta de erro
                 operational_error("CorteService", f"Erro na detecção de silêncios: {e}")
                 return {"status": "erro", "erro": str(e)}
 
@@ -1529,7 +1529,7 @@ class CorteService:
         # Recalcula a transcrição
         try:
             await CorteService.sincronizar_transcricao_corte(corte_id, db=db)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — a sincronia não desfaz os desvios gravados
             operational_error(
                 "CorteService",
                 f"Erro ao sincronizar transcrição após silêncios: {e}\n{traceback.format_exc()}",

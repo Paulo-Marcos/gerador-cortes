@@ -548,7 +548,7 @@ class AnaliseService:
         """
         try:
             await AnaliseService.analisar_via_claude(projeto_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — tarefa de fundo: a falha vai para o status do projeto
             async with AsyncSessionLocal() as db:
                 projeto = await db.get(Projeto, projeto_id)
                 if projeto:

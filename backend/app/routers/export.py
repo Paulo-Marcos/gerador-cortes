@@ -41,7 +41,7 @@ def _contar_cenas_remotion(payload: str | None) -> int:
             return len(data)
         if isinstance(data, dict):
             return len(data.get("cenas", []))
-    except Exception:
+    except (ValueError, TypeError):
         pass
     return 0
 
@@ -215,7 +215,7 @@ async def listar_versoes(corte_id: str, db: AsyncSession = Depends(get_db)):
                     if meta.exists():
                         try:
                             info.update(json.loads(meta.read_text()))
-                        except Exception:
+                        except (OSError, ValueError, TypeError):
                             pass
                     info["tamanho_mb"] = round(arquivo.stat().st_size / 1_000_000, 1)
                     versoes.append(info)
