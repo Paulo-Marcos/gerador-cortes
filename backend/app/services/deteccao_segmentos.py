@@ -25,11 +25,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+from app.core.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.domain.corte.youtube_layout import normalizar_layout_youtube
 from app.models import Corte
 from app.services.app_logging import operational_error
+from app.services.tasks import fire_and_forget
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -277,3 +279,31 @@ async def _corte_com_metadado(db, corte_id: str) -> Corte | None:
         select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
     )
     return resultado.scalar_one_or_none()
+
+
+async def iniciar_deteccao(corte_id: str) -> dict:
+    """Dispara a detecção de segmentos sobre o bruto do corte (F-054, D-705).
+
+    Não espera: o resultado aparece no campo `segmentos_detectados` do corte
+    quando a detecção termina. Uma segunda chamada enquanto a primeira roda não
+    dispara outra.
+    """
+    async with AsyncSessionLocal() as db, db.begin():
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise NaoEncontrado("Corte não encontrado")
+
+    if deteccao_em_andamento(corte_id):
+        return {"status": "em_andamento", "corte_id": corte_id}
+    if not corte.arquivo_clip_path:
+        raise PedidoInvalido(
+            "Corte ainda não tem vídeo bruto — gere o bruto antes de detectar segmentos."
+        )
+    video_path = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
+    if not video_path.exists():
+        raise NaoEncontrado("Arquivo bruto não encontrado em disco.")
+
+    fire_and_forget(
+        executar_deteccao_segmentos(corte_id, video_path), name=f"deteccao-seg-{corte_id[:8]}"
+    )
+    return {"status": "iniciado", "corte_id": corte_id}

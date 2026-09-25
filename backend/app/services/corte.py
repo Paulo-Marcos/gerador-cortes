@@ -55,6 +55,7 @@ from app.infrastructure.render.ffmpeg_basic import (
     build_silence_detect_video_cmd,
 )
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
+from app.services import abrir_no_sistema
 from app.services.app_logging import operational_debug, operational_error
 from app.services.claude_ia import (
     ClaudeIaService,
@@ -335,6 +336,19 @@ class CorteService:
                 getattr(corte.status, "value", corte.status), StatusCorte.APROVADO.value
             )
             corte.status = StatusCorte.APROVADO
+
+    @staticmethod
+    async def abrir_pasta(corte_id: str) -> str:
+        """Abre a pasta do corte no explorador do sistema e devolve o caminho (D-705).
+
+        A abertura é a mesma dos projetos e dos shorts (`abrir_no_sistema`, com
+        timeout); levanta `NaoConsegueAbrir` quando o sistema recusa.
+        """
+        async with AsyncSessionLocal() as db, db.begin():
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise NaoEncontrado("Corte não encontrado")
+        return abrir_no_sistema.abrir_pasta(projetos_dir() / corte.projeto_id / "cortes" / corte_id)
 
     @staticmethod
     async def remover(corte_id: str) -> None:

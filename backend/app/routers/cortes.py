@@ -1,19 +1,13 @@
-import asyncio
-import json
 import logging
-import os
-import shutil
-import subprocess
 from pathlib import Path
 
-from app.core.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.channel_paths import projetos_dir
 from app.database import get_db
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.models import Corte
 from app.routers.cortes_helpers import (
     _corte_to_dict,
     _hms_to_seg,
-    _limpar_pasta_corte_pos_sync,
 )
 from app.routers.cortes_schemas import (
     AdicionarDesvioRequest,
@@ -37,18 +31,20 @@ from app.routers.cortes_schemas import (
     ValidarCenasRequest,
 )
 from app.routers.errors import erro_interno
+from app.services import (
+    abrir_no_sistema,
+    bruto_do_corte,
+    finalizacao_do_corte,
+    remotion_studio,
+    situacao_do_render,
+)
 from app.services import arranjo as arranjo_service
-from app.services import bruto_do_corte, remotion_studio, situacao_do_render
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.corte import AtualizarCorteDTO, CorteService
 from app.services.deteccao_segmentos import (
     decidir_segmento as decidir_segmento_detectado,
 )
-from app.services.deteccao_segmentos import (
-    deteccao_em_andamento,
-    executar_deteccao_segmentos,
-)
-from app.services.finalizacao_do_corte import finalizar_corte_com_sucesso
+from app.services.deteccao_segmentos import iniciar_deteccao
 from app.services.media_proxy import MediaProxyService
 from app.services.remotion_render import RemotionRenderService
 from app.services.render_progress import RenderProgressStore
@@ -488,35 +484,13 @@ async def gerar_bruto(corte_id: str, body: GerarBrutoRequest | None = None):
 
 
 @router.post("/{corte_id}/detectar-segmentos")
-async def detectar_segmentos(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def detectar_segmentos(corte_id: str):
     """F-054: dispara PySceneDetect sobre o bruto do corte (fire-and-forget).
 
     Retorna imediatamente; resultado fica disponível em
     `GET /cortes/{corte_id}` no campo `segmentos_detectados` quando termina.
     """
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    if deteccao_em_andamento(corte_id):
-        return {"status": "em_andamento", "corte_id": corte_id}
-
-    if not corte.arquivo_clip_path:
-        raise HTTPException(
-            status_code=400,
-            detail="Corte ainda não tem vídeo bruto — gere o bruto antes de detectar segmentos.",
-        )
-    video_path = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
-    if not video_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Arquivo bruto não encontrado em disco.",
-        )
-
-    fire_and_forget(
-        executar_deteccao_segmentos(corte_id, video_path), name=f"deteccao-seg-{corte_id[:8]}"
-    )
-    return {"status": "iniciado", "corte_id": corte_id}
+    return await iniciar_deteccao(corte_id)
 
 
 @router.patch("/{corte_id}/segmentos-detectados/{indice}", response_model=CorteResponse)
@@ -688,7 +662,7 @@ async def obter_remotion_studio_url(corte_id: str):
 
 
 @router.post("/{corte_id}/sincronizar-pos-producao")
-async def sincronizar_pos_producao(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def sincronizar_pos_producao(corte_id: str):
     """
     Promove clip_filtered.mp4 -> upload_ready/ quando o corte tem versão filtrada
     mas nenhuma cena Remotion foi criada. Também finaliza o pacote (metadados +
@@ -696,66 +670,14 @@ async def sincronizar_pos_producao(corte_id: str, db: AsyncSession = Depends(get
     o pipeline do Remotion produziria. Após sucesso, limpa a pasta do corte
     mantendo apenas clip_filtered.mp4 e upload_ready/.
     """
-
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    cenas_raw = corte.cenas_remotion or "[]"
-    cenas_data = json.loads(cenas_raw)
-    if isinstance(cenas_data, dict):
-        cenas = cenas_data.get("cenas", [])
-    else:
-        cenas = cenas_data
-
-    corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte.id
-    clip_filtered = corte_dir / "clip_filtered.mp4"
-    upload_ready_dir = corte_dir / "upload_ready"
-    upload_ready_video = upload_ready_dir / "video.mp4"
-
-    # Caso 1: já existe upload_ready/video.mp4 — apenas finaliza (gera metadados + thumb se faltar)
-    if upload_ready_video.exists():
-        await finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
-        await _limpar_pasta_corte_pos_sync(corte_dir)
-        return {"status": "ok", "mensagem": "Sincronizado via upload_ready existente."}
-
-    # Caso 2: tem clip_filtered mas não tem cenas Remotion -> promove e finaliza
-    if not cenas and clip_filtered.exists():
-        upload_ready_dir.mkdir(parents=True, exist_ok=True)
-        # D-645: cópia do vídeo final inteiro — fora do event loop.
-        await asyncio.to_thread(shutil.copy2, str(clip_filtered), str(upload_ready_video))
-        await finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
-        await _limpar_pasta_corte_pos_sync(corte_dir)
-        return {"status": "ok", "mensagem": "Promovido e sincronizado com sucesso."}
-
-    return {
-        "status": "nada_a_fazer",
-        "mensagem": "Requisitos para sincronização automática não atendidos.",
-    }
+    return await finalizacao_do_corte.sincronizar_pos_producao(corte_id)
 
 
 @router.post("/{corte_id}/abrir-pasta")
-async def abrir_pasta(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def abrir_pasta(corte_id: str):
     """Abre a pasta física do corte no explorador de arquivos do sistema (Windows/Mac/Linux)."""
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    dir_path = projetos_dir() / corte.projeto_id / "cortes" / corte_id
-    if not dir_path.exists():
-        dir_path.mkdir(parents=True, exist_ok=True)
-
-    abs_path = str(dir_path.absolute())
-
     try:
-        if os.name == "nt":  # Windows
-            os.startfile(abs_path)
-        elif os.uname().sysname == "Darwin":  # macOS
-            subprocess.run(["open", abs_path])
-        else:  # Linux
-            subprocess.run(["xdg-open", abs_path])
-
-        return {"status": "ok", "dir_path": abs_path}
-    except Exception as e:
-        logger.exception("[RouterCortes] Erro ao abrir pasta: %s", e)
-        raise HTTPException(status_code=500, detail=f"Erro ao abrir pasta: {str(e)}") from e
+        caminho = await CorteService.abrir_pasta(corte_id)
+    except abrir_no_sistema.NaoConsegueAbrir as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao abrir pasta: {e}") from e
+    return {"status": "ok", "dir_path": caminho}

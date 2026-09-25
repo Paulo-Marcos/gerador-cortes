@@ -14,8 +14,9 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from app.routers import cortes, cortes_helpers
+from app.routers import cortes
 from app.services import corte as corte_service
+from app.services import finalizacao_do_corte
 from app.services import projeto as projeto_service
 
 
@@ -105,9 +106,9 @@ async def test_limpeza_pos_sincronizacao_apaga_fora_do_loop(tmp_path, monkeypatc
         chamadas.append(entry.name)
         shutil.rmtree(entry) if entry.is_dir() else entry.unlink()
 
-    monkeypatch.setattr(cortes_helpers, "_apagar_do_disco", apagar)
+    monkeypatch.setattr(finalizacao_do_corte, "_apagar_do_disco", apagar)
 
-    await cortes_helpers._limpar_pasta_corte_pos_sync(tmp_path)
+    await finalizacao_do_corte._limpar_pasta_corte_pos_sync(tmp_path)
 
     assert sorted(chamadas) == ["clip_raw.mkv", "graded"]
     assert (tmp_path / "clip_filtered.mp4").exists(), "o clipe final não pode ser apagado"

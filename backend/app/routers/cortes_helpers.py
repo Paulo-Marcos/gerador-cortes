@@ -11,11 +11,8 @@ NOTA: os helpers do cluster `pipeline-status` (`_pipeline_paths`,
 porque seus testes fazem monkeypatch em `cortes.projetos_dir`/`_corte_ja_gerou_bruto`.
 """
 
-import asyncio
 import json
 import logging
-import shutil
-from pathlib import Path
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.domain.compartilhado.time_convert import hms_to_seg
@@ -156,52 +153,3 @@ def _corte_to_dict(corte: Corte) -> dict:
                 logger.debug("[Cortes] não consegui medir a duração de %s: %s", p.name, erro)
 
     return d
-
-
-def _apagar_do_disco(entry: Path) -> None:
-    """Apaga arquivo ou pasta. Síncrono de propósito: roda em thread (D-645)."""
-    if entry.is_dir():
-        shutil.rmtree(entry)
-    else:
-        entry.unlink()
-
-
-async def _limpar_pasta_corte_pos_sync(corte_dir: Path):
-    """Após sincronização bem-sucedida, mantém apenas clip_filtered.mp4 e upload_ready/.
-    Arquivos de vídeo grandes (clip_raw.*) podem estar com lock no Windows porque o
-    player do navegador segura a conexão de streaming; tenta novamente algumas vezes."""
-    manter = {"clip_filtered.mp4", "upload_ready"}
-    pendentes: list[Path] = []
-
-    for entry in corte_dir.iterdir():
-        if entry.name in manter:
-            continue
-        try:
-            await asyncio.to_thread(_apagar_do_disco, entry)
-        except PermissionError:
-            pendentes.append(entry)
-        except Exception as e:
-            logger.warning("[SincronizarPos] Falha ao remover %s: %s", entry, e)
-
-    # Retry para arquivos travados (típico: clip_raw.mkv sendo servido via stream)
-    for _ in range(1, 6):
-        if not pendentes:
-            break
-        await asyncio.sleep(1.5)
-        ainda_travados: list[Path] = []
-        for entry in pendentes:
-            try:
-                await asyncio.to_thread(_apagar_do_disco, entry)
-            except PermissionError:
-                ainda_travados.append(entry)
-            except FileNotFoundError:
-                pass  # Sumiu entre tentativas, ok
-            except Exception as e:
-                logger.warning("[SincronizarPos] Falha ao remover %s: %s", entry, e)
-        pendentes = ainda_travados
-
-    for entry in pendentes:
-        logger.warning(
-            "[SincronizarPos] Não foi possível remover %s (arquivo bloqueado por outro processo)",
-            entry.name,
-        )

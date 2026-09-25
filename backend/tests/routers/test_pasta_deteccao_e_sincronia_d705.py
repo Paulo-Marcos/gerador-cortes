@@ -30,9 +30,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 # Onde cada caso de uso lê a pasta dos projetos (o canal resolve o caminho gravado).
-_PROJETOS_DIR_LIDO_EM = ["app.routers.cortes", "app.core.channel_paths"]
+_PROJETOS_DIR_LIDO_EM = [
+    "app.services.corte",
+    "app.services.finalizacao_do_corte",
+    "app.core.channel_paths",
+]
 # Onde o disparo da detecção é agendado.
-_DETECCAO_AGENDADA_EM = "app.routers.cortes"
+_DETECCAO_AGENDADA_EM = "app.services.deteccao_segmentos"
 
 
 @pytest_asyncio.fixture
