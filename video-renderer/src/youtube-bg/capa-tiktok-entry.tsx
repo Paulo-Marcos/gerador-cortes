@@ -38,7 +38,7 @@ import {
  *
  * A repetição é o ponto: identidade de grade nasce de layout constante, não de
  * cada capa ser inventiva. O backend manda a geometria pronta
- * (`app/domain/capa_tiktok.py`) pelo mesmo motivo do palco: duas
+ * (`app/domain/corte/capa_tiktok.py`) pelo mesmo motivo do palco: duas
  * implementações da mesma conta divergem no primeiro arredondamento.
  *
  * ## Por que o frame vem em data URI

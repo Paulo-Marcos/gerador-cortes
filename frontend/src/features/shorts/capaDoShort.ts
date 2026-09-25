@@ -9,10 +9,10 @@
 // capa em 3:4**. Um quadro perfeito com o rosto no rodapé vira, na grade, um
 // quadro sem rosto — e o operador só descobre depois de publicado.
 //
-// Os números espelham `backend/app/domain/capa_short.py`, e o teste LÊ aquele
+// Os números espelham `backend/app/domain/short/capa_short.py`, e o teste LÊ aquele
 // arquivo para conferir.
 
-/** Espelha `FRACAO_SEGURA` em `backend/app/domain/capa_short.py`. */
+/** Espelha `FRACAO_SEGURA` em `backend/app/domain/short/capa_short.py`. */
 export const FRACAO_SEGURA = 1344 / 1920;
 
 /** A faixa perdida em cima (e, igual, embaixo), em fração da altura. */

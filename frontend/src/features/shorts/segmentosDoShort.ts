@@ -7,7 +7,7 @@
 // A ORDEM da lista é a ordem em que toca, e é livre: o operador pode abrir com o
 // gancho mais forte mesmo que ele venha depois na live. Nada aqui ordena a lista.
 //
-// Os números e as regras espelham `backend/app/domain/segmentos_short.py`, porque
+// Os números e as regras espelham `backend/app/domain/short/segmentos_short.py`, porque
 // os projetos não compartilham módulo — a mesma situação de `previaLegenda.ts` e
 // `ganchoDoShort.ts`, e a mesma defesa: `segmentosDoShort.test.ts` LÊ aquele
 // arquivo e compara. Se um lado mudar sozinho, o teste cai em vez de a tela

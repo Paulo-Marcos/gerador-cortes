@@ -25,7 +25,7 @@ import type { ShortSugerido } from '../shortsApi';
 // módulo e duas cópias da mesma regra sempre divergem (a lição da D-558).
 const DOMINIO_DO_BACKEND = resolve(
   __dirname,
-  '../../../../../backend/app/domain/segmentos_short.py',
+  '../../../../../backend/app/domain/short/segmentos_short.py',
 );
 
 function constanteDoBackend(nome: string): number {

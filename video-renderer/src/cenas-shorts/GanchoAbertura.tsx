@@ -50,7 +50,7 @@ const LARGURA_PADRAO = 86;
 const FRAMES_ENTRADA = 7;
 const FRAMES_SAIDA = 9;
 
-/** Espelha `REALCES` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `REALCES` em `backend/app/domain/short/gancho_short.py`. */
 export type RealceDoGancho = "veu" | "caixa" | "contorno" | "sombra" | "nenhum";
 
 export interface GanchoAberturaProps {
