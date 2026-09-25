@@ -37,8 +37,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 # Onde cada caso de uso abre a sessão e lê a pasta dos projetos.
-_SESSAO_ABERTA_EM = ["app.services.ranking_lives", "app.services.ingestao"]
-_PROJETOS_DIR_LIDO_EM = ["app.routers.projetos"]
+_SESSAO_ABERTA_EM = [
+    "app.services.ranking_lives",
+    "app.services.ingestao",
+    "app.services.listagem_de_projetos",
+]
+_PROJETOS_DIR_LIDO_EM = ["app.services.listagem_de_projetos"]
 
 
 @pytest_asyncio.fixture

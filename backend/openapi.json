@@ -9231,7 +9231,7 @@
     },
     "/api/projetos": {
       "get": {
-        "description": "Lista todos os projetos ordenados por data_live.\nUsa 2 queries SQL com GROUP BY para evitar o padrão N+1.",
+        "description": "Lista os projetos, do mais novo ao mais velho, com o estado de cada um.",
         "operationId": "listar_projetos_api_projetos_get",
         "responses": {
           "200": {

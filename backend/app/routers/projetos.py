@@ -1,13 +1,13 @@
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import get_db
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
-from app.models import Corte, MetadadoCorte, Projeto, StatusCorte, StatusProjeto
+from app.models import Corte, Projeto, StatusProjeto
 from app.routers.errors import erro_interno
-from app.services import abrir_no_sistema
+from app.services import abrir_no_sistema, listagem_de_projetos
 from app.services.analise import AnaliseService
 from app.services.app_logging import operational_error, operational_info
 from app.services.app_settings import AppSettingsService
@@ -22,11 +22,10 @@ from app.services.youtube_stats import YoutubeStatsService
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import and_, case, func, select
 from sqlalchemy import delete as sa_delete
+from sqlalchemy import select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import defer
 
 logger = logging.getLogger(__name__)
 
@@ -209,169 +208,10 @@ async def reiniciar_downloads_falhados(db: AsyncSession = Depends(get_db)):
     return {"message": f"{len(ids)} downloads reiniciados", "total": len(ids), "ids": ids}
 
 
-# D-431: `transcricao_raw` guarda a transcrição inteira da live (dezenas de MB
-# somados no acervo) e não faz parte de `ProjetoResponse` — sem o defer, cada poll
-# da lista lia e hidratava esse volume só para o Pydantic descartá-lo. As duas
-# constantes andam juntas de propósito: ler aqui uma coluna deferida dispararia
-# lazy load, que sob AsyncSession estoura em greenlet_spawn.
-_COLUNAS_DIFERIDAS_NA_LISTAGEM = ("transcricao_raw",)
-_DEFERS_DA_LISTAGEM = tuple(defer(getattr(Projeto, c)) for c in _COLUNAS_DIFERIDAS_NA_LISTAGEM)
-_COLUNAS_DA_LISTAGEM = [
-    c for c in Projeto.__table__.columns.keys() if c not in _COLUNAS_DIFERIDAS_NA_LISTAGEM
-]
-
-
 @router.get("", response_model=list[ProjetoResponse])
-async def listar_projetos(db: AsyncSession = Depends(get_db)):
-    """
-    Lista todos os projetos ordenados por data_live.
-    Usa 2 queries SQL com GROUP BY para evitar o padrão N+1.
-    """
-
-    result = await db.execute(
-        select(Projeto)
-        .options(*_DEFERS_DA_LISTAGEM)
-        .order_by(
-            Projeto.data_live.desc(),
-            Projeto.criado_em.desc(),
-        )
-    )
-    projetos = result.scalars().all()
-    if not projetos:
-        return []
-
-    corte_stats_res = await db.execute(
-        select(
-            Corte.projeto_id,
-            func.count(case((Corte.status != StatusCorte.REJEITADO, 1))).label("total"),
-            func.count(
-                case(
-                    (
-                        and_(
-                            Corte.status != StatusCorte.REJEITADO,
-                            Corte.youtube_video_id.is_not(None),
-                            Corte.youtube_video_id != "",
-                        ),
-                        1,
-                    )
-                )
-            ).label("publicados"),
-            func.count(case((Corte.status == StatusCorte.APROVADO, 1))).label("aprovados"),
-            func.count(
-                case(
-                    (
-                        and_(
-                            Corte.status == StatusCorte.APROVADO,
-                            Corte.arquivo_clip_path.is_not(None),
-                            Corte.arquivo_clip_path != "",
-                        ),
-                        1,
-                    )
-                )
-            ).label("com_raw"),
-        )
-        .where(Corte.projeto_id.in_([p.id for p in projetos]))
-        .group_by(Corte.projeto_id)
-    )
-    corte_stats = {row.projeto_id: row for row in corte_stats_res.all()}
-
-    meta_stats_res = await db.execute(
-        select(
-            Corte.projeto_id,
-            func.count(MetadadoCorte.id).label("com_meta"),
-        )
-        .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
-        .where(
-            Corte.projeto_id.in_([p.id for p in projetos]),
-            Corte.status == StatusCorte.APROVADO,
-            MetadadoCorte.titulo_youtube != "",
-            MetadadoCorte.titulo_youtube.is_not(None),
-        )
-        .group_by(Corte.projeto_id)
-    )
-    meta_stats = {row.projeto_id: row.com_meta for row in meta_stats_res.all()}
-
-    fires_pendentes_res = await db.execute(
-        select(Corte.projeto_id, func.count(Corte.id).label("total"))
-        .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
-        .where(
-            Corte.projeto_id.in_([p.id for p in projetos]),
-            MetadadoCorte.is_fire,
-            Corte.arquivo_clip_path.is_not(None),
-            Corte.arquivo_clip_path != "",
-            Corte.shorts_finalizados_em.is_(None),
-        )
-        .group_by(Corte.projeto_id)
-    )
-    fires_pendentes = {row.projeto_id: row.total for row in fires_pendentes_res.all()}
-
-    aprovados_res = await db.execute(
-        select(
-            Corte.projeto_id,
-            Corte.id,
-            Corte.youtube_video_id,
-            Corte.youtube_scheduled_at,
-        ).where(
-            Corte.projeto_id.in_([p.id for p in projetos]),
-            Corte.status == StatusCorte.APROVADO,
-        )
-    )
-    aprovados_rows = aprovados_res.all()
-
-    _projetos_dir = projetos_dir()
-    _agora = datetime.now(UTC)
-
-    video_pronto_count: dict[str, int] = {}
-    publicos_count: dict[str, int] = {}
-    proxima_pub: dict[str, str] = {}  # projeto_id -> ISO8601 mais próximo no futuro
-
-    for proj_id, corte_id, yt_id, scheduled_at in aprovados_rows:
-        video_pronto_count.setdefault(proj_id, 0)
-        publicos_count.setdefault(proj_id, 0)
-
-        if yt_id:
-            video_pronto_count[proj_id] += 1
-            # Determina se já é público
-            if not scheduled_at:
-                # Upload sem agendamento -> unlisted (quem tem link assiste) -> conta como acessível
-                publicos_count[proj_id] += 1
-            else:
-                try:
-                    pub_dt = datetime.fromisoformat(scheduled_at.replace("Z", "+00:00"))
-                    if pub_dt.tzinfo is None:
-                        pub_dt = pub_dt.replace(tzinfo=UTC)
-                    if _agora >= pub_dt:
-                        publicos_count[proj_id] += 1
-                    else:
-                        # Ainda no futuro -> candidato à próxima publicação
-                        atual = proxima_pub.get(proj_id)
-                        if not atual or scheduled_at < atual:
-                            proxima_pub[proj_id] = scheduled_at
-                except Exception:
-                    publicos_count[proj_id] += 1  # se não deu parse, considera acessível
-        else:
-            upload_ready = (
-                _projetos_dir / proj_id / "cortes" / corte_id / "upload_ready" / "video.mp4"
-            )
-            if upload_ready.exists():
-                video_pronto_count[proj_id] += 1
-
-    resp = []
-    for p in projetos:
-        stats = corte_stats.get(p.id)
-        d = {c: getattr(p, c) for c in _COLUNAS_DA_LISTAGEM}
-        d["total_cortes"] = stats.total if stats else 0
-        d["total_publicados"] = stats.publicados if stats else 0
-        d["total_aprovados"] = stats.aprovados if stats else 0
-        d["total_com_raw"] = stats.com_raw if stats else 0
-        d["total_com_meta"] = meta_stats.get(p.id, 0)
-        d["total_video_pronto"] = video_pronto_count.get(p.id, 0)
-        d["total_publicos"] = publicos_count.get(p.id, 0)
-        d["proxima_publicacao"] = proxima_pub.get(p.id, "")
-        d["fires_pendentes"] = fires_pendentes.get(p.id, 0)
-        resp.append(d)
-
-    return resp
+async def listar_projetos():
+    """Lista os projetos, do mais novo ao mais velho, com o estado de cada um."""
+    return await listagem_de_projetos.listar_projetos()
 
 
 @router.patch("/{projeto_id}/transcricao")

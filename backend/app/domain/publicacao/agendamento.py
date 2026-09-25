@@ -177,3 +177,22 @@ def validar(agendamento: Agendamento, plataforma: str, *, agora: datetime | None
             f"o TikTok so agenda de {PASSO_DO_MINUTO_TIKTOK} em {PASSO_DO_MINUTO_TIKTOK} "
             f"minutos, e {agendamento.legivel()} cai fora da grade"
         )
+
+
+def ja_esta_no_ar(agendado_para: str, agora: datetime) -> bool:
+    """Se um vídeo já enviado ao YouTube pode ser visto agora (D-703).
+
+    Sem agendamento, ele sobe não listado — quem tem o link assiste —, então conta
+    como no ar. Com agendamento, a partir da hora marcada; sem fuso, a hora é UTC,
+    como o YouTube a devolve. Agendamento ilegível conta como no ar: é melhor
+    mostrar acessível do que esconder um vídeo que talvez já esteja público.
+    """
+    if not agendado_para:
+        return True
+    try:
+        quando = datetime.fromisoformat(agendado_para.replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if quando.tzinfo is None:
+        quando = quando.replace(tzinfo=UTC)
+    return agora >= quando
