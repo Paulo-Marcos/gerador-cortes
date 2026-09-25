@@ -22,7 +22,7 @@ from app.domain.publicacao.tiktok_studio import Passo, RoteiroInterrompido
 from app.models import Base, Corte, MetadadoShort, Projeto, Short, StatusCorte
 from app.routers import shorts as rota_shorts
 from app.routers.errors import registrar_tratadores
-from app.services import tiktok_studio
+from app.services import publicacao_no_tiktok, tiktok_studio
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -30,7 +30,7 @@ from sqlalchemy.pool import StaticPool
 
 assistir_no_tiktok = rota_shorts._assistir_no_tiktok
 # Onde a vigília da aba é disparada.
-_VIGILIA_EM = (rota_shorts, "_vigiar_publicacao_no_tiktok")
+_VIGILIA_EM = (publicacao_no_tiktok, "vigiar_publicacao")
 
 
 @pytest_asyncio.fixture

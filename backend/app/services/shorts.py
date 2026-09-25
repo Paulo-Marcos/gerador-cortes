@@ -26,6 +26,7 @@ from pathlib import Path
 from app.config import settings
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import seg_to_hms_short, seg_to_mmss
 from app.domain.short import gancho_short, legenda_short, segmentos_short
@@ -35,7 +36,7 @@ from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.domain.short.formato_video import foco_de_regiao
 from app.domain.short.moldura_short import Moldura
 from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
-from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
+from app.models import Corte, MetadadoCorte, MetadadoShort, Projeto, Short, StatusShort
 from app.services import channels
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, gerar_texto, registrar_skill_usada
@@ -1004,6 +1005,51 @@ async def sugerir_ganchos(short_id: str, provider: ProviderIA = "claude") -> lis
         len(variacoes),
     )
     return variacoes
+
+
+async def localizar_arquivo(short_id: str, estagio: str) -> tuple[str, str, Path]:
+    """O MP4 do short — a prévia ou o final — como (projeto, caminho relativo, arquivo).
+
+    D-483: uma prévia que não se pode ver não serve para nada; a rota que a
+    serve nasce junto com ela. D-706: a busca saiu do router.
+    """
+    if estagio not in {"previa", "final"}:
+        raise NaoEncontrado(f"Estagio {estagio!r} desconhecido.")
+    async with AsyncSessionLocal() as db, db.begin():
+        short, corte = await _short_e_corte(db, short_id)
+        relativo = short.arquivo_short_path if estagio == "final" else short.arquivo_previa_path
+        projeto_id = corte.projeto_id
+    if not relativo:
+        raise NaoEncontrado(f"Este short ainda nao tem {estagio}.")
+    caminho = resolver_do_projeto(relativo, projeto_id)
+    if not caminho.is_file():
+        raise NaoEncontrado("O arquivo foi registrado mas nao esta mais em disco.")
+    return projeto_id, relativo, caminho
+
+
+async def localizar_capa(short_id: str) -> Path:
+    """O arquivo da capa do short (D-706: a busca saiu do router)."""
+    async with AsyncSessionLocal() as db, db.begin():
+        _short, corte = await _short_e_corte(db, short_id)
+        meta = await db.scalar(select(MetadadoShort).where(MetadadoShort.short_id == short_id))
+        relativo = meta.capa_path if meta else ""
+        projeto_id = corte.projeto_id
+    if not relativo:
+        raise NaoEncontrado("Este short ainda nao tem capa.")
+    caminho = resolver_do_projeto(relativo, projeto_id)
+    if not caminho.is_file():
+        raise NaoEncontrado("A capa foi registrada mas nao esta mais em disco.")
+    return caminho
+
+
+async def _short_e_corte(db: AsyncSession, short_id: str) -> tuple[Short, Corte]:
+    short = await db.get(Short, short_id)
+    if not short:
+        raise NaoEncontrado("Short nao encontrado")
+    corte = await db.get(Corte, short.corte_id)
+    if not corte:
+        raise NaoEncontrado("Corte do short nao encontrado")
+    return short, corte
 
 
 async def exigir_video_da_live(corte_id: str) -> None:

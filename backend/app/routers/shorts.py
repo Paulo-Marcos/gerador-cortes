@@ -62,15 +62,12 @@ relação com isto), no mesmo padrão de `avaliacao_bruto`.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from pathlib import Path
 
-from app.database import AsyncSessionLocal
 from app.domain.compartilhado.provider_ia import ProviderIA
-from app.services import fabrica_de_shorts
+from app.services import fabrica_de_shorts, publicacao_no_tiktok
 from app.services import shorts as shorts_store
-from app.services.tasks import fire_and_forget
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
@@ -611,32 +608,9 @@ async def obter_video(short_id: str, estagio: str = "final"):
     disco e só a publicação o lia. Uma prévia que não se pode ver não serve para
     nada, então a rota nasce junto com ela.
     """
-    from app.core.channel_paths import resolver_do_projeto
-    from app.models import Corte, Short
     from fastapi.responses import RedirectResponse
 
-    if estagio not in {"previa", "final"}:
-        raise HTTPException(status_code=404, detail=f"Estagio {estagio!r} desconhecido.")
-
-    async with AsyncSessionLocal() as db:
-        short = await db.get(Short, short_id)
-        if not short:
-            raise HTTPException(status_code=404, detail="Short nao encontrado")
-        corte = await db.get(Corte, short.corte_id)
-        if not corte:
-            raise HTTPException(status_code=404, detail="Corte do short nao encontrado")
-        relativo = short.arquivo_short_path if estagio == "final" else short.arquivo_previa_path
-        projeto_id = corte.projeto_id
-
-    if not relativo:
-        raise HTTPException(status_code=404, detail=f"Este short ainda nao tem {estagio}.")
-
-    caminho = resolver_do_projeto(relativo, projeto_id)
-    if not caminho.is_file():
-        raise HTTPException(
-            status_code=404, detail="O arquivo foi registrado mas nao esta mais em disco."
-        )
-
+    projeto_id, relativo, caminho = await shorts_store.localizar_arquivo(short_id, estagio)
     try:
         mtime = int(caminho.stat().st_mtime)
     except OSError:
@@ -746,30 +720,9 @@ async def obter_capa_imagem(short_id: str):
     Cache-buster pelo mtime: sem ele o navegador serve a capa antiga depois de o
     operador escolher outro instante, e a tela mentiria sobre o que foi gravado.
     """
-    from app.core.channel_paths import resolver_do_projeto
-    from app.models import Corte, MetadadoShort, Short
     from fastapi.responses import FileResponse
-    from sqlalchemy import select
 
-    async with AsyncSessionLocal() as db:
-        short = await db.get(Short, short_id)
-        if not short:
-            raise HTTPException(status_code=404, detail="Short nao encontrado")
-        corte = await db.get(Corte, short.corte_id)
-        if not corte:
-            raise HTTPException(status_code=404, detail="Corte do short nao encontrado")
-        meta = await db.scalar(select(MetadadoShort).where(MetadadoShort.short_id == short_id))
-        relativo = meta.capa_path if meta else ""
-        projeto_id = corte.projeto_id
-
-    if not relativo:
-        raise HTTPException(status_code=404, detail="Este short ainda nao tem capa.")
-
-    caminho = resolver_do_projeto(relativo, projeto_id)
-    if not caminho.is_file():
-        raise HTTPException(
-            status_code=404, detail="A capa foi registrada mas nao esta mais em disco."
-        )
+    caminho = await shorts_store.localizar_capa(short_id)
     return FileResponse(caminho, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
@@ -1112,18 +1065,8 @@ async def confirmar_tiktok_horizontal(corte_id: str):
     do upload do YouTube, e o TikTok — que sobe o MESMO MP4 — ficava sem
     material, sem volta a não ser render novo.
     """
-    from datetime import datetime
-
-    from app.database import AsyncSessionLocal
-    from app.models import Corte
-
-    async with AsyncSessionLocal() as db:
-        corte = await db.get(Corte, corte_id)
-        if not corte:
-            raise HTTPException(status_code=404, detail=f"Corte {corte_id!r} nao encontrado")
-        corte.tiktok_publicado_em = datetime.utcnow()
-        await db.commit()
-        return {"tiktok_publicado_em": corte.tiktok_publicado_em.isoformat()}
+    publicado_em = await publicacao_no_tiktok.marcar_corte_publicado(corte_id)
+    return {"tiktok_publicado_em": publicado_em.isoformat()}
 
 
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal/staging")
@@ -1222,25 +1165,12 @@ def _ler_agendamento(texto: str | None, plataforma: str):
 
 
 async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", agendamento=None) -> dict:
-    """Monta a legenda do pacote e entrega o roteiro ao navegador.
-
-    Recebe o pacote JÁ montado em vez de montá-lo: assim o corte horizontal e o
-    short vertical — que chegam por caminhos diferentes — compartilham este
-    trecho sem que nenhum dos dois precise saber do outro.
-    """
-    from app.domain.publicacao.publicacao import legenda_unica
+    """A publicação assistida no TikTok, com a parada do roteiro traduzida em 422."""
     from app.domain.publicacao.tiktok_studio import RoteiroInterrompido
-    from app.services import tiktok_studio
-
-    legenda = legenda_unica(pacote.get("titulo", ""), pacote.get("descricao", ""))
-    capa = pacote.get("capa") or ""
 
     try:
-        relatorio = await tiktok_studio.subir_assistido(
-            video=Path(pacote["video"]),
-            legenda=legenda,
-            capa=Path(capa) if capa else None,
-            agendamento=agendamento,
+        return await publicacao_no_tiktok.publicar_assistido(
+            pacote, corte_id=corte_id, agendamento=agendamento
         )
     except RoteiroInterrompido as exc:
         # 422 e nao 500: nao e defeito nosso, e uma condicao que o operador
@@ -1250,53 +1180,6 @@ async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", agendamento=N
             status_code=422,
             detail={"mensagem": str(exc), "passo": exc.passo.value},
         ) from exc
-
-    # D-546: a partir daqui o app FICA DE OLHO na aba. Quando o operador
-    # publicar, o corte se marca sozinho — ele nao precisa voltar aqui para
-    # clicar em "publiquei".
-    #
-    # Fire-and-forget porque a espera e de minutos e a requisicao ja tem o que
-    # devolver: a aba esta pronta. Prender o HTTP ate ele decidir publicar
-    # seguraria uma conexao por meia hora para nao entregar nada de novo.
-    if corte_id:
-        _vigiar_publicacao_no_tiktok(corte_id)
-
-    return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}
-
-
-def _vigiar_publicacao_no_tiktok(corte_id: str) -> asyncio.Task:
-    """Fica de olho na aba do TikTok até o operador publicar (D-649).
-
-    `asyncio.create_task` solto era um bug esperando a hora: o loop guarda a
-    task por referência FRACA, e uma vigília de até 30 min sem dono pode ser
-    recolhida pelo coletor de lixo no meio do caminho. Ela morreria calada, e o
-    corte nunca se marcaria como publicado. `fire_and_forget` segura a
-    referência e loga qualquer exceção.
-
-    O nome não casa com nenhum prefixo da fila global de propósito: esperar o
-    operador clicar em "Publicar" não é trabalho pesado para anunciar na tela.
-    """
-    return fire_and_forget(_marcar_quando_publicar(corte_id), name=f"tiktok-vigilia-{corte_id[:8]}")
-
-
-async def _marcar_quando_publicar(corte_id: str) -> None:
-    """Espera a publicacao e so entao marca o corte. Nunca marca no escuro.
-
-    `aguardar_publicacao` devolve `False` tanto para "nao publicou" quanto para
-    "nao consegui saber", e as duas dao no mesmo aqui: nao marcar. A marca
-    LIBERA a limpeza automatica do `upload_ready/video.mp4` (D-512), entao um
-    falso positivo apaga o arquivo e a volta e render novo. Errar para menos
-    custa um clique no "publiquei".
-    """
-    from app.services import tiktok_studio
-
-    try:
-        if not await tiktok_studio.aguardar_publicacao():
-            return
-        await confirmar_tiktok_horizontal(corte_id)
-        logger.info("[TikTokStudio] corte %s marcado como publicado", corte_id[:8])
-    except Exception as exc:  # noqa: BLE001 — tarefa de fundo nao derruba nada
-        logger.warning("[TikTokStudio] nao consegui marcar %s: %s", corte_id[:8], exc)
 
 
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal")
