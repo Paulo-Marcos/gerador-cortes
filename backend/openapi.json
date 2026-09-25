@@ -6481,6 +6481,7 @@
     },
     "/api/cortes/{corte_id}/pipeline-status": {
       "get": {
+        "description": "Até onde o render do corte já chegou — as fases com artefato e o progresso.",
         "operationId": "obter_pipeline_status_api_cortes__corte_id__pipeline_status_get",
         "parameters": [
           {
