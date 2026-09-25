@@ -425,36 +425,44 @@ _STATUS_DA_CURADORIA = frozenset(
 )
 
 
-async def atualizar_short(
-    short_id: str,
-    *,
-    status: str | None = None,
-    inicio_seg: float | None = None,
-    fim_seg: float | None = None,
-    segmentos: list[dict] | None = None,
-    foco_x: float | None = None,
-    arranjo_palco: str | None = None,
-    janela_cheia: str | None = None,
-    ajustes_palco: dict | None = None,
-    palco_preset: str | None = None,
-    moldura: str | None = None,
-    recortes_palco: dict | None = None,
-    fundo_palco: str | None = None,
-    fundo_editorial: str | None = None,
-    palco_short_preset: str | None = None,
-    legenda_cor: str | None = None,
-    legenda_fonte: str | None = None,
-    legenda_x: float | None = None,
-    legenda_y: float | None = None,
-    legenda_largura: float | None = None,
-    gancho_tela: str | None = None,
-    gancho_ate_seg: float | None = None,
-    gancho_cor: str | None = None,
-    gancho_realce: str | None = None,
-    gancho_x: float | None = None,
-    gancho_y: float | None = None,
-    gancho_largura: float | None = None,
-) -> dict:
+@dataclass(frozen=True)
+class AtualizarShortDTO:
+    """A decisão do operador sobre um short (PATCH /shorts/{id}).
+
+    Espelha o request HTTP mantendo o serviço livre de pydantic, como o
+    `AtualizarCorteDTO`. Todo campo é opcional: `None` significa "não mexer".
+    D-717: eram 26 argumentos soltos de `atualizar_short`.
+    """
+
+    status: str | None = None
+    inicio_seg: float | None = None
+    fim_seg: float | None = None
+    segmentos: list[dict] | None = None
+    foco_x: float | None = None
+    arranjo_palco: str | None = None
+    janela_cheia: str | None = None
+    ajustes_palco: dict | None = None
+    palco_preset: str | None = None
+    moldura: str | None = None
+    recortes_palco: dict | None = None
+    fundo_palco: str | None = None
+    fundo_editorial: str | None = None
+    palco_short_preset: str | None = None
+    legenda_cor: str | None = None
+    legenda_fonte: str | None = None
+    legenda_x: float | None = None
+    legenda_y: float | None = None
+    legenda_largura: float | None = None
+    gancho_tela: str | None = None
+    gancho_ate_seg: float | None = None
+    gancho_cor: str | None = None
+    gancho_realce: str | None = None
+    gancho_x: float | None = None
+    gancho_y: float | None = None
+    gancho_largura: float | None = None
+
+
+async def atualizar_short(short_id: str, dados: AtualizarShortDTO) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
     As bordas sao validadas contra o BRUTO, nao contra a faixa de duracao da
@@ -470,57 +478,60 @@ async def atualizar_short(
         if not short:
             raise LookupError(f"Short {short_id!r} nao encontrado")
 
-        _aplicar_status(short, status)
-        await _aplicar_bordas(db, short, inicio_seg, fim_seg, segmentos)
-        await _aplicar_segmentos(db, short, segmentos)
-        _aplicar_foco(short, foco_x)
+        _aplicar_status(short, dados.status)
+        await _aplicar_bordas(db, short, dados.inicio_seg, dados.fim_seg, dados.segmentos)
+        await _aplicar_segmentos(db, short, dados.segmentos)
+        _aplicar_foco(short, dados.foco_x)
         _aplicar_gancho(
             short,
-            gancho_tela=gancho_tela,
-            gancho_ate_seg=gancho_ate_seg,
-            gancho_cor=gancho_cor,
-            gancho_realce=gancho_realce,
-            gancho_x=gancho_x,
-            gancho_y=gancho_y,
-            gancho_largura=gancho_largura,
+            gancho_tela=dados.gancho_tela,
+            gancho_ate_seg=dados.gancho_ate_seg,
+            gancho_cor=dados.gancho_cor,
+            gancho_realce=dados.gancho_realce,
+            gancho_x=dados.gancho_x,
+            gancho_y=dados.gancho_y,
+            gancho_largura=dados.gancho_largura,
         )
-        _aplicar_moldura(short, moldura)
+        _aplicar_moldura(short, dados.moldura)
         _aplicar_palco(
             short,
-            palco_preset=palco_preset,
-            ajustes_palco=ajustes_palco,
-            recortes_palco=recortes_palco,
-            fundo_editorial=fundo_editorial,
+            palco_preset=dados.palco_preset,
+            ajustes_palco=dados.ajustes_palco,
+            recortes_palco=dados.recortes_palco,
+            fundo_editorial=dados.fundo_editorial,
         )
         _aplicar_legenda(
             short,
-            legenda_cor=legenda_cor,
-            legenda_fonte=legenda_fonte,
-            legenda_x=legenda_x,
-            legenda_y=legenda_y,
-            legenda_largura=legenda_largura,
+            legenda_cor=dados.legenda_cor,
+            legenda_fonte=dados.legenda_fonte,
+            legenda_x=dados.legenda_x,
+            legenda_y=dados.legenda_y,
+            legenda_largura=dados.legenda_largura,
         )
         _aplicar_marca_do_preset(
             short,
-            palco_short_preset,
+            dados.palco_short_preset,
             campos_do_palco=(
-                arranjo_palco,
-                janela_cheia,
-                recortes_palco,
-                fundo_editorial,
-                legenda_cor,
-                legenda_fonte,
+                dados.arranjo_palco,
+                dados.janela_cheia,
+                dados.recortes_palco,
+                dados.fundo_editorial,
+                dados.legenda_cor,
+                dados.legenda_fonte,
                 # D-605: mexer no lugar da legenda tambem desfaz a marca. O
                 # preset descreve o palco INTEIRO, legenda incluida; manter a
                 # marca faria a tela dizer "preset X" sobre um palco que nao e
                 # mais o X, e aplica-lo noutro trecho sairia diferente.
-                legenda_x,
-                legenda_y,
-                legenda_largura,
+                dados.legenda_x,
+                dados.legenda_y,
+                dados.legenda_largura,
             ),
         )
         _aplicar_arranjo(
-            short, fundo_palco=fundo_palco, arranjo_palco=arranjo_palco, janela_cheia=janela_cheia
+            short,
+            fundo_palco=dados.fundo_palco,
+            arranjo_palco=dados.arranjo_palco,
+            janela_cheia=dados.janela_cheia,
         )
 
         await db.commit()

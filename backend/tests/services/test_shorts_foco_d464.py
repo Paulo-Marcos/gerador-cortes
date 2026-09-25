@@ -99,7 +99,7 @@ async def test_a_lista_leva_o_foco_efetivo_para_a_tela(factory):
 
 @pytest.mark.asyncio
 async def test_ajustar_o_foco_grava_e_passa_a_vencer(factory):
-    await servico.atualizar_short("s1", foco_x=0.42)
+    await servico.atualizar_short("s1", servico.AtualizarShortDTO(foco_x=0.42))
 
     (item,) = await servico.listar_shorts("c1")
     assert item["foco_x"] == 0.42
@@ -110,4 +110,4 @@ async def test_ajustar_o_foco_grava_e_passa_a_vencer(factory):
 async def test_foco_fora_da_faixa_e_recusado(factory):
     for invalido in (-0.1, 1.5):
         with pytest.raises(ValueError, match="foco horizontal"):
-            await servico.atualizar_short("s1", foco_x=invalido)
+            await servico.atualizar_short("s1", servico.AtualizarShortDTO(foco_x=invalido))

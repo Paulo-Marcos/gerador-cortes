@@ -18,7 +18,9 @@ from app.services import shorts as servico
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-atualizar = servico.atualizar_short
+
+def atualizar(short_id: str, **campos):
+    return servico.atualizar_short(short_id, servico.AtualizarShortDTO(**campos))
 
 
 @pytest_asyncio.fixture

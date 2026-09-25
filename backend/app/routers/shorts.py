@@ -387,35 +387,7 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
     try:
         return {
             "short": await shorts_store.atualizar_short(
-                short_id,
-                status=body.status,
-                inicio_seg=body.inicio_seg,
-                fim_seg=body.fim_seg,
-                foco_x=body.foco_x,
-                arranjo_palco=body.arranjo_palco,
-                janela_cheia=body.janela_cheia,
-                ajustes_palco=body.ajustes_palco,
-                recortes_palco=body.recortes_palco,
-                fundo_palco=body.fundo_palco,
-                fundo_editorial=body.fundo_editorial,
-                segmentos=(
-                    None if body.segmentos is None else [s.model_dump() for s in body.segmentos]
-                ),
-                legenda_cor=body.legenda_cor,
-                legenda_fonte=body.legenda_fonte,
-                legenda_x=body.legenda_x,
-                legenda_y=body.legenda_y,
-                legenda_largura=body.legenda_largura,
-                palco_short_preset=body.palco_short_preset,
-                palco_preset=body.palco_preset,
-                moldura=body.moldura,
-                gancho_tela=body.gancho_tela,
-                gancho_ate_seg=body.gancho_ate_seg,
-                gancho_cor=body.gancho_cor,
-                gancho_realce=body.gancho_realce,
-                gancho_x=body.gancho_x,
-                gancho_y=body.gancho_y,
-                gancho_largura=body.gancho_largura,
+                short_id, shorts_store.AtualizarShortDTO(**body.model_dump())
             )
         }
     except LookupError as exc:

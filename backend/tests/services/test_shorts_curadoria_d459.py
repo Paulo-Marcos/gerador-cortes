@@ -63,7 +63,9 @@ async def factory(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_aprovar_muda_o_status(factory):
-    short = await servico.atualizar_short("s1", status=StatusShort.APROVADO.value)
+    short = await servico.atualizar_short(
+        "s1", servico.AtualizarShortDTO(status=StatusShort.APROVADO.value)
+    )
 
     assert short["status"] == "aprovado"
 
@@ -71,7 +73,9 @@ async def test_aprovar_muda_o_status(factory):
 @pytest.mark.asyncio
 async def test_rejeitar_nao_apaga_o_candidato(factory):
     """Rejeitado fica no historico — o operador pode mudar de ideia."""
-    await servico.atualizar_short("s1", status=StatusShort.REJEITADO.value)
+    await servico.atualizar_short(
+        "s1", servico.AtualizarShortDTO(status=StatusShort.REJEITADO.value)
+    )
 
     assert [s["id"] for s in await servico.listar_shorts("c1")] == ["s1"]
 
@@ -79,18 +83,22 @@ async def test_rejeitar_nao_apaga_o_candidato(factory):
 @pytest.mark.asyncio
 async def test_curadoria_nao_carimba_renderizado(factory):
     with pytest.raises(ValueError, match="curadoria"):
-        await servico.atualizar_short("s1", status=StatusShort.RENDERIZADO.value)
+        await servico.atualizar_short(
+            "s1", servico.AtualizarShortDTO(status=StatusShort.RENDERIZADO.value)
+        )
 
 
 @pytest.mark.asyncio
 async def test_status_inventado_e_recusado(factory):
     with pytest.raises(ValueError):
-        await servico.atualizar_short("s1", status="genial")
+        await servico.atualizar_short("s1", servico.AtualizarShortDTO(status="genial"))
 
 
 @pytest.mark.asyncio
 async def test_ajustar_bordas_dentro_do_bruto(factory):
-    short = await servico.atualizar_short("s1", inicio_seg=25.5, fim_seg=95.25)
+    short = await servico.atualizar_short(
+        "s1", servico.AtualizarShortDTO(inicio_seg=25.5, fim_seg=95.25)
+    )
 
     assert (short["inicio_seg"], short["fim_seg"]) == (25.5, 95.25)
     assert short["duracao_seg"] == 69.75
@@ -98,7 +106,7 @@ async def test_ajustar_bordas_dentro_do_bruto(factory):
 
 @pytest.mark.asyncio
 async def test_mover_so_uma_borda_preserva_a_outra(factory):
-    short = await servico.atualizar_short("s1", inicio_seg=10.0)
+    short = await servico.atualizar_short("s1", servico.AtualizarShortDTO(inicio_seg=10.0))
 
     assert (short["inicio_seg"], short["fim_seg"]) == (10.0, 70.0)
 
@@ -106,7 +114,9 @@ async def test_mover_so_uma_borda_preserva_a_outra(factory):
 @pytest.mark.asyncio
 async def test_operador_pode_sair_da_faixa_de_duracao_da_skill(factory):
     """8 segundos esta fora do minimo da IA — e a decisao e do humano."""
-    short = await servico.atualizar_short("s1", inicio_seg=30.0, fim_seg=38.0)
+    short = await servico.atualizar_short(
+        "s1", servico.AtualizarShortDTO(inicio_seg=30.0, fim_seg=38.0)
+    )
 
     assert short["duracao_seg"] == 8.0
 
@@ -114,16 +124,18 @@ async def test_operador_pode_sair_da_faixa_de_duracao_da_skill(factory):
 @pytest.mark.asyncio
 async def test_borda_alem_do_bruto_e_recusada(factory):
     with pytest.raises(ValueError, match="duracao do bruto"):
-        await servico.atualizar_short("s1", fim_seg=400.0)
+        await servico.atualizar_short("s1", servico.AtualizarShortDTO(fim_seg=400.0))
 
 
 @pytest.mark.asyncio
 async def test_intervalo_invertido_e_recusado(factory):
     with pytest.raises(ValueError, match="depois do inicio"):
-        await servico.atualizar_short("s1", inicio_seg=80.0, fim_seg=40.0)
+        await servico.atualizar_short(
+            "s1", servico.AtualizarShortDTO(inicio_seg=80.0, fim_seg=40.0)
+        )
 
 
 @pytest.mark.asyncio
 async def test_short_inexistente_levanta_lookup(factory):
     with pytest.raises(LookupError):
-        await servico.atualizar_short("nao-existe", status="aprovado")
+        await servico.atualizar_short("nao-existe", servico.AtualizarShortDTO(status="aprovado"))
