@@ -74,11 +74,16 @@ async def test_deletar_corte_apaga_a_pasta_fora_do_loop(tmp_path, monkeypatch, d
     monkeypatch.setattr(corte_service, "projetos_dir", lambda: tmp_path)
     monkeypatch.setattr(corte_service.shutil, "rmtree", _espiao(chamadas, "rmtree"))
     db.get = AsyncMock(return_value=MagicMock(projeto_id="p1"))
-    db.begin = MagicMock()
+    # __aexit__ que devolve algo verdadeiro engoliria a exceção do bloco.
+    db.begin = MagicMock(
+        return_value=MagicMock(__aenter__=AsyncMock(), __aexit__=AsyncMock(return_value=False))
+    )
     monkeypatch.setattr(
         corte_service,
         "AsyncSessionLocal",
-        lambda: MagicMock(__aenter__=AsyncMock(return_value=db), __aexit__=AsyncMock()),
+        lambda: MagicMock(
+            __aenter__=AsyncMock(return_value=db), __aexit__=AsyncMock(return_value=False)
+        ),
     )
 
     await cortes.deletar_corte("c1")

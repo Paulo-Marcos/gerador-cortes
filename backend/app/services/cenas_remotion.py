@@ -2,13 +2,19 @@ import asyncio
 import json
 import logging
 import time
+from datetime import datetime
 
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg
-from app.domain.corte.corte_mapper import cenas_fora_do_corte, coalescer_chaves_mascote
+from app.domain.corte.corte_mapper import (
+    cenas_fora_do_corte,
+    coalescer_chaves_mascote,
+    extrair_cenas_remotion,
+)
 from app.domain.projeto.diarizacao_align import prefixo_falante
 from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
@@ -16,6 +22,8 @@ from app.services import retrato_wikipedia
 from app.services.app_logging import operational_debug, operational_error, operational_info
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, registrar_skill_usada
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +125,30 @@ def _stats_retratos() -> dict:
 
 
 class CenasRemotionService:
+    @staticmethod
+    async def validar(corte_id: str, validado: bool) -> Corte:
+        """Marca — ou desmarca — as cenas do corte como conferidas pelo editor (D-705).
+
+        Validar exige ao menos uma cena salva no roteiro visual; desfazer, não.
+        """
+        async with AsyncSessionLocal() as db:
+            async with db.begin():
+                corte = await _corte_com_metadado(db, corte_id)
+                if not corte:
+                    raise NaoEncontrado("Corte nao encontrado")
+                if validado:
+                    if not extrair_cenas_remotion(json.loads(corte.cenas_remotion or "[]")):
+                        raise PedidoInvalido(
+                            "Nao ha cenas para validar. Gere ou importe cenas antes."
+                        )
+                    corte.cenas_validadas = 1
+                    corte.cenas_validadas_em = datetime.utcnow()
+                else:
+                    corte.cenas_validadas = 0
+                    corte.cenas_validadas_em = None
+            # Relido depois do commit: colunas com onupdate voltariam expiradas.
+            return await _corte_com_metadado(db, corte_id)
+
     @staticmethod
     async def gerar_cenas_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
         """Gera as cenas Remotion de um corte via Claude (skill cenas-expert).
@@ -865,3 +897,10 @@ class CenasRemotionService:
         cenas_convertidas.sort(key=lambda x: x.get("inicio", 0))
 
         return cenas_convertidas
+
+
+async def _corte_com_metadado(db, corte_id: str) -> Corte | None:
+    resultado = await db.execute(
+        select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
+    )
+    return resultado.scalar_one_or_none()

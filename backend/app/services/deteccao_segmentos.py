@@ -26,8 +26,12 @@ from pathlib import Path
 from typing import Any
 
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
+from app.domain.corte.youtube_layout import normalizar_layout_youtube
 from app.models import Corte
 from app.services.app_logging import operational_error
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 # Limiar do ContentDetector — quanto MENOR, mais sensível (detecta mais cortes).
 # 27 é o default do PySceneDetect e produz resultados estáveis em entrevistas /
@@ -229,3 +233,47 @@ async def executar_deteccao_segmentos(corte_id: str, video_path: Path) -> None:
         )
     finally:
         _deteccoes_em_andamento.discard(corte_id)
+
+
+async def decidir_segmento(corte_id: str, indice: int, decisao: str) -> Corte:
+    """Aplica a decisão do editor a um segmento sugerido e devolve o corte (F-054, D-705).
+
+    Aceitar (full/compartilhada) também põe uma região correspondente em
+    `layout_youtube.regioes`; rejeitar só muda o status do segmento.
+    """
+    if decisao not in VALORES_ACEITOS_DECISAO:
+        raise PedidoInvalido(f"Decisão inválida. Use uma de {sorted(VALORES_ACEITOS_DECISAO)}.")
+
+    async with AsyncSessionLocal() as db:
+        async with db.begin():
+            corte = await _corte_com_metadado(db, corte_id)
+            if not corte:
+                raise NaoEncontrado("Corte não encontrado")
+            segmentos = json.loads(corte.segmentos_detectados or "[]")
+            if not isinstance(segmentos, list) or not segmentos:
+                raise PedidoInvalido(
+                    "Corte não tem segmentos detectados — rode a detecção primeiro."
+                )
+            try:
+                novos, segmento = aplicar_decisao_segmento(segmentos, indice, decisao)
+            except IndexError as exc:
+                raise NaoEncontrado(str(exc)) from exc
+            except ValueError as exc:
+                raise PedidoInvalido(str(exc)) from exc
+
+            corte.segmentos_detectados = json.dumps(novos, ensure_ascii=False)
+            if decisao in {"full", "compartilhada"}:
+                layout_atual = json.loads(corte.layout_youtube or "{}") or {}
+                layout_novo = materializar_regiao_em_layout(layout_atual, segmento, decisao)
+                corte.layout_youtube = json.dumps(
+                    normalizar_layout_youtube(layout_novo), ensure_ascii=False
+                )
+        # Relido depois do commit: colunas com onupdate voltariam expiradas.
+        return await _corte_com_metadado(db, corte_id)
+
+
+async def _corte_com_metadado(db, corte_id: str) -> Corte | None:
+    resultado = await db.execute(
+        select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
+    )
+    return resultado.scalar_one_or_none()

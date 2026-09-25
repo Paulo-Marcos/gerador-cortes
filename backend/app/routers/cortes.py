@@ -4,18 +4,11 @@ import logging
 import os
 import shutil
 import subprocess
-from datetime import datetime
 from pathlib import Path
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import get_db
 from app.domain.compartilhado.provider_ia import ProviderIA
-from app.domain.corte.corte_mapper import (
-    extrair_cenas_remotion,
-)
-from app.domain.corte.youtube_layout import (
-    normalizar_layout_youtube,
-)
 from app.models import Corte
 from app.routers.cortes_helpers import (
     _corte_to_dict,
@@ -50,11 +43,11 @@ from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.corte import AtualizarCorteDTO, CorteService
 from app.services.deteccao_segmentos import (
-    VALORES_ACEITOS_DECISAO,
-    aplicar_decisao_segmento,
+    decidir_segmento as decidir_segmento_detectado,
+)
+from app.services.deteccao_segmentos import (
     deteccao_em_andamento,
     executar_deteccao_segmentos,
-    materializar_regiao_em_layout,
 )
 from app.services.export import ExportService
 from app.services.finalizacao_do_corte import finalizar_corte_com_sucesso
@@ -673,55 +666,13 @@ async def detectar_segmentos(corte_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.patch("/{corte_id}/segmentos-detectados/{indice}", response_model=CorteResponse)
-async def decidir_segmento(
-    corte_id: str,
-    indice: int,
-    body: DecisaoSegmentoRequest,
-    db: AsyncSession = Depends(get_db),
-):
+async def decidir_segmento(corte_id: str, indice: int, body: DecisaoSegmentoRequest):
     """F-054: aplica decisão (rejeitar/full/compartilhada) a um segmento sugerido.
 
     Aceitar (full/compartilhada) também materializa uma região correspondente
     em `layout_youtube.regioes`. Rejeitar só atualiza o status do segmento.
     """
-    if body.decisao not in VALORES_ACEITOS_DECISAO:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Decisão inválida. Use uma de {sorted(VALORES_ACEITOS_DECISAO)}.",
-        )
-
-    result = await db.execute(
-        select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
-    )
-    corte = result.scalar_one_or_none()
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    segmentos = json.loads(corte.segmentos_detectados or "[]")
-    if not isinstance(segmentos, list) or not segmentos:
-        raise HTTPException(
-            status_code=400,
-            detail="Corte não tem segmentos detectados — rode a detecção primeiro.",
-        )
-
-    try:
-        novos_segmentos, segmento = aplicar_decisao_segmento(segmentos, indice, body.decisao)
-    except IndexError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    corte.segmentos_detectados = json.dumps(novos_segmentos, ensure_ascii=False)
-
-    if body.decisao in {"full", "compartilhada"}:
-        layout_atual = json.loads(corte.layout_youtube or "{}") or {}
-        layout_novo = materializar_regiao_em_layout(layout_atual, segmento, body.decisao)
-        layout_normalizado = normalizar_layout_youtube(layout_novo)
-        corte.layout_youtube = json.dumps(layout_normalizado, ensure_ascii=False)
-
-    await db.commit()
-    await db.refresh(corte)
-    return _corte_to_dict(corte)
+    return _corte_to_dict(await decidir_segmento_detectado(corte_id, indice, body.decisao))
 
 
 @router.get("/{corte_id}/bruto-progress")
@@ -781,41 +732,14 @@ async def preencher_retratos_cenas_remotion(corte_id: str, forcar: bool = False)
 
 
 @router.post("/{corte_id}/cenas-remotion/validar", response_model=CorteResponse)
-async def validar_cenas_remotion(
-    corte_id: str,
-    body: ValidarCenasRequest | None = None,
-    db: AsyncSession = Depends(get_db),
-):
+async def validar_cenas_remotion(corte_id: str, body: ValidarCenasRequest | None = None):
     """Marca/desmarca as cenas Remotion do corte como validadas pelo editor.
 
     Sem corpo, valida (validado=True). Com `{"validado": false}`, desfaz a marca.
     Exige pelo menos uma cena salva no roteiro visual para poder validar.
     """
-    result = await db.execute(
-        select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
-    )
-    corte = result.scalar_one_or_none()
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte nao encontrado")
-
     validado = True if body is None else bool(body.validado)
-
-    if validado:
-        cenas = extrair_cenas_remotion(json.loads(corte.cenas_remotion or "[]"))
-        if not cenas:
-            raise HTTPException(
-                status_code=400,
-                detail="Nao ha cenas para validar. Gere ou importe cenas antes.",
-            )
-        corte.cenas_validadas = 1
-        corte.cenas_validadas_em = datetime.utcnow()
-    else:
-        corte.cenas_validadas = 0
-        corte.cenas_validadas_em = None
-
-    await db.commit()
-    await db.refresh(corte)
-    return _corte_to_dict(corte)
+    return _corte_to_dict(await CenasRemotionService.validar(corte_id, validado))
 
 
 @router.get("/{corte_id}/desvios/prompt")
