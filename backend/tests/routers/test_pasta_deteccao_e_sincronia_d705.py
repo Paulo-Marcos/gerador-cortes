@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 
 import pytest
@@ -94,9 +95,16 @@ def _pasta(tmp_path):
 # ─── Abrir a pasta ───────────────────────────────────────────────────────────
 
 
+def _explorador(monkeypatch, abrir) -> None:
+    """O explorador do sistema, trocado nos dois caminhos: o Windows abre por
+    `os.startfile`; Linux e Mac, por `subprocess.run` (o CI roda em Linux)."""
+    monkeypatch.setattr(os, "startfile", abrir, raising=False)
+    monkeypatch.setattr(subprocess, "run", lambda argumentos, **_kw: abrir(argumentos[-1]))
+
+
 def test_abrir_pasta_cria_e_abre_a_pasta_do_corte(cliente, monkeypatch, tmp_path):
     abertas: list[str] = []
-    monkeypatch.setattr(os, "startfile", abertas.append, raising=False)
+    _explorador(monkeypatch, abertas.append)
 
     corpo = cliente.post("/api/cortes/c1/abrir-pasta").json()
 
@@ -110,7 +118,7 @@ def test_abrir_pasta_que_o_sistema_recusa_da_500(cliente, monkeypatch):
     def recusa(_caminho):
         raise OSError("sem explorador")
 
-    monkeypatch.setattr(os, "startfile", recusa, raising=False)
+    _explorador(monkeypatch, recusa)
 
     resposta = cliente.post("/api/cortes/c1/abrir-pasta")
 
