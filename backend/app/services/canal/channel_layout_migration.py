@@ -30,8 +30,8 @@ from pathlib import Path
 
 import yaml
 
-_APP_DIR = Path(__file__).resolve().parent
-# parent = app, parent.parent = backend, parent.parent.parent = raiz do repo.
+_APP_DIR = Path(__file__).resolve().parents[2]
+# parents[2] = app (este arquivo mora em app/services/canal/); app → backend → repo.
 _BACKEND_ROOT = _APP_DIR.parent
 _REPO_ROOT = _BACKEND_ROOT.parent
 

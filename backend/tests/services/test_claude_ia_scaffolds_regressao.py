@@ -14,7 +14,7 @@ intencional e é inerte para o modelo (o cliente Claude ignora whitespace de bor
 from __future__ import annotations
 
 import pytest
-from app import editorial_scaffolds
+from app.services.canal import editorial_scaffolds
 from app.services.claude_ia import ClaudeIaService
 from app.services.metadados import MetadadosService
 

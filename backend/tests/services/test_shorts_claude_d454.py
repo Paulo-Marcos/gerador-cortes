@@ -15,10 +15,10 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
-from app import editorial_scaffolds, editorial_skills
 from app.models import Base, Corte, Projeto
 from app.services import claude_ia
 from app.services import shorts as shorts_store
+from app.services.canal import editorial_scaffolds, editorial_skills
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 

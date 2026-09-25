@@ -20,13 +20,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.editorial_identity import (
+from app.infrastructure import settings_store
+from app.services.canal.editorial_identity import (
     MASCOTE_NEUTRO,
     Mascote,
     definir_nome_do_mascote,
     identidade_do_mascote,
 )
-from app.infrastructure import settings_store
 
 _CANAL = "canal-teste"
 

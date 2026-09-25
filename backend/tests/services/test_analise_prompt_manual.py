@@ -11,9 +11,9 @@ import re
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from app import editorial_scaffolds, editorial_skills
 from app.domain.compartilhado.manual_prompt import JSON_CODE_BLOCK_INSTRUCTION
 from app.services.analise import AnaliseService
+from app.services.canal import editorial_scaffolds, editorial_skills
 
 EXPERTISE_DO_CANAL = "EXPERTISE DO CANAL: cortes de 15 a 30 minutos."
 

@@ -14,8 +14,8 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from app import editorial_scaffolds, editorial_scaffolds_legados
 from app.infrastructure import channel_config_loader, settings_store
+from app.services.canal import editorial_scaffolds, editorial_scaffolds_legados
 
 _CANAL = "canal-teste"
 
@@ -96,7 +96,7 @@ def test_editar_resumo_nao_toca_corpo_da_skill_metadados(tmp_path: Path):
     # 'resumo' guarda seu scaffold na linha de metadados-expert; isso não pode
     # sobrescrever o corpo (expertise) da skill de metadados.
     kw = _kw(tmp_path)
-    from app import editorial_skills
+    from app.services.canal import editorial_skills
 
     antes = editorial_skills.resolver_skill("metadados-expert", **kw).corpo
     novo = (

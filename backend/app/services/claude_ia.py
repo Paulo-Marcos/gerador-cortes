@@ -22,7 +22,6 @@ import json
 import logging
 import time
 
-from app import editorial_scaffolds, editorial_skills
 from app.config import settings
 from app.core.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
@@ -41,6 +40,7 @@ from app.domain.projeto.transcricao_utils import (
 from app.infrastructure import claude_cli_client, fila_ia
 from app.infrastructure.gerador_ia import gerador_para
 from app.models import Corte, Projeto
+from app.services.canal import editorial_scaffolds, editorial_skills
 
 logger = logging.getLogger(__name__)
 

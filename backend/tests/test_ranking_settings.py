@@ -12,8 +12,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app import ranking_settings
 from app.config import settings
+from app.services.canal import ranking_settings
 
 _CANAL = "canal-teste"
 

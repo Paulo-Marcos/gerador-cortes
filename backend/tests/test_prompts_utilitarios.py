@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app import prompts_utilitarios
+from app.services.canal import prompts_utilitarios
 
 _CANAL = "canal-teste"
 

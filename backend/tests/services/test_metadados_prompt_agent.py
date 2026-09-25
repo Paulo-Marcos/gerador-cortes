@@ -39,7 +39,7 @@ except (ImportError, AttributeError):
     sys.modules["app.canal_config"] = _stub
 
 from app.domain.compartilhado.manual_prompt import JSON_CODE_BLOCK_INSTRUCTION  # noqa: E402
-from app.editorial_identity import Mascote  # noqa: E402
+from app.services.canal.editorial_identity import Mascote  # noqa: E402
 from app.services.metadados import (  # noqa: E402
     PROMPT_GERAR_THUMBNAIL_AGENTE,
     PROMPT_GERAR_THUMBNAIL_AGENTE_LIVRE,

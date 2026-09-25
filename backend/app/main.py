@@ -9,9 +9,6 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 from contextlib import asynccontextmanager
 
-from app import editorial_scaffolds
-from app import editorial_skills as editorial_skills_service
-from app.channel_layout_migration import garantir_layout_de_canais
 from app.config import VERSAO_DO_APP, settings
 from app.core import channel_paths
 from app.core.channel_paths import projetos_dir
@@ -46,6 +43,9 @@ from app.services import channels as channels_service
 from app.services import encerramento, settings_store
 from app.services.app_logging import install_log_controls
 from app.services.app_settings import AppSettingsService
+from app.services.canal import editorial_scaffolds
+from app.services.canal import editorial_skills as editorial_skills_service
+from app.services.canal.channel_layout_migration import garantir_layout_de_canais
 from app.services.remotion_render import RemotionRenderService
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware

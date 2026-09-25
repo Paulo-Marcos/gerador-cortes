@@ -40,7 +40,7 @@ from app.domain.canal import variacao_prompt
 from app.infrastructure import settings_store
 
 # app -> backend -> raiz do repo (mesma ancoragem de channel_paths/channels).
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+_REPO_ROOT = Path(__file__).resolve().parents[4]  # canal → services → app → backend → repo
 _EXEMPLO_EDITORIAL = _REPO_ROOT / "examples" / "instance.example" / "editorial"
 
 

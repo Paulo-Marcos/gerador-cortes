@@ -143,7 +143,7 @@ def test_editar_inexistente_falha(instancia):
 # Accessor de identidade do canal ativo (D-173) + seed no boot
 # --------------------------------------------------------------------------- #
 
-from app import channel_layout_migration as migr  # noqa: E402
+from app.services.canal import channel_layout_migration as migr
 
 
 def test_identidade_do_canal_ativo_devolve_os_quatro_campos(instancia, monkeypatch):

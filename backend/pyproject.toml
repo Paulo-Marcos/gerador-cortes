@@ -37,7 +37,7 @@ extend-immutable-calls = [
 "tests/**" = ["B017", "E402", "T20"]
 # Scripts de linha de comando: imprimir É a interface deles (D-655).
 "dev-utils/**" = ["T20"]
-"app/channel_layout_migration.py" = ["T20"]
+"app/services/canal/channel_layout_migration.py" = ["T20"]
 
 [tool.ruff.format]
 quote-style = "double"

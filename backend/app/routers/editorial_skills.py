@@ -14,8 +14,13 @@ from __future__ import annotations
 
 import asyncio
 
-from app import editorial_scaffolds, editorial_skills, prompts_utilitarios, ranking_settings
 from app.services import ambiente
+from app.services.canal import (
+    editorial_scaffolds,
+    editorial_skills,
+    prompts_utilitarios,
+    ranking_settings,
+)
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 

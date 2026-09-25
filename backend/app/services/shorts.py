@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from app import editorial_scaffolds, editorial_skills
 from app.config import settings
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
@@ -38,6 +37,7 @@ from app.domain.short.moldura_short import Moldura
 from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
 from app.services import channels
+from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, gerar_texto, registrar_skill_usada
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession

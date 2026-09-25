@@ -9,9 +9,9 @@ As duas referências que o movimento do D-695 troca ficam no topo.
 import asyncio
 
 import pytest
-from app import editorial_scaffolds, editorial_skills
 from app.infrastructure import claude_cli_client
 from app.services import capa_tiktok, metadados
+from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.metadados import MetadadosService
 
 modulo_do_caso_de_uso = metadados

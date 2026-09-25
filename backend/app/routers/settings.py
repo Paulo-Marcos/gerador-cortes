@@ -1,4 +1,3 @@
-from app import editorial_identity
 from app.services.app_settings import (
     AppSettings,
     AppSettingsService,
@@ -6,6 +5,7 @@ from app.services.app_settings import (
     OverlayCodec,
     RenderSettings,
 )
+from app.services.canal import editorial_identity
 from fastapi import APIRouter
 from pydantic import BaseModel
 

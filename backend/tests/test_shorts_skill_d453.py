@@ -17,8 +17,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app import editorial_scaffolds, editorial_skills
 from app.config import settings
+from app.services.canal import editorial_scaffolds, editorial_skills
 
 _CANAL = "canal-teste"
 _SKILL = "shorts-expert"

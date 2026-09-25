@@ -3,7 +3,6 @@ import json
 import logging
 import time
 
-from app import editorial_scaffolds
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.compartilhado.time_convert import hms_to_seg
@@ -13,6 +12,7 @@ from app.infrastructure import gemini_client
 from app.models import Corte, Projeto
 from app.services import retrato_wikipedia
 from app.services.app_logging import operational_debug, operational_error, operational_info
+from app.services.canal import editorial_scaffolds
 
 logger = logging.getLogger(__name__)
 

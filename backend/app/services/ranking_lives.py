@@ -18,7 +18,6 @@ import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app import prompts_utilitarios, ranking_settings
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.live_candidata.ranking_lives import (
@@ -39,6 +38,7 @@ from app.infrastructure.youtube_data_api import (
 )
 from app.models import LiveCandidata, Projeto, StatusLiveCandidata
 from app.services import channels
+from app.services.canal import prompts_utilitarios, ranking_settings
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

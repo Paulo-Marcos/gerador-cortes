@@ -34,7 +34,6 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import editorial_scaffolds, editorial_skills
 from app.core.channel_paths import para_relativo_ao_projeto, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.provider_ia import ProviderIA
@@ -44,6 +43,7 @@ from app.domain.short.capa_short import encaixar_instante, instante_padrao, prom
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
+from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
 

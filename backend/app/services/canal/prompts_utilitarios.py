@@ -40,12 +40,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import editorial_scaffolds
 from app.core import channel_paths
 from app.infrastructure import settings_store
+from app.services.canal import editorial_scaffolds
 
 # app -> backend -> raiz do repo (mesma ancoragem de editorial_scaffolds).
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+_REPO_ROOT = Path(__file__).resolve().parents[4]  # canal → services → app → backend → repo
 _EXEMPLO_PROMPTS = _REPO_ROOT / "examples" / "instance.example" / "editorial" / "prompts"
 
 

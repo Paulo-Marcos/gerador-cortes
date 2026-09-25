@@ -7,7 +7,6 @@ import logging
 import uuid
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from app import editorial_scaffolds, editorial_skills
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
@@ -17,7 +16,6 @@ from app.domain.corte.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
 )
-from app.editorial_identity import identidade_do_mascote
 from app.infrastructure.channel_config_loader import (
     CREDITOS_TEMPLATE,
     PROMPT_GERAR_METADADOS,
@@ -28,6 +26,8 @@ from app.infrastructure.channel_config_loader import (
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services import channels
 from app.services.app_logging import operational_error
+from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.canal.editorial_identity import identidade_do_mascote
 from app.services.claude_ia import (
     SKILL_METADADOS,
     gerar_json,

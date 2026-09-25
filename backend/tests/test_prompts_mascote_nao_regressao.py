@@ -18,8 +18,8 @@ API, NÃO referência ao personagem — e por isso permanecem "mascote" mesmo em
 
 from __future__ import annotations
 
-from app import editorial_identity
 from app.services import metadados
+from app.services.canal import editorial_identity
 from app.services.metadados import MetadadosService
 
 # Literais EXATOS anteriores à genericização (confirmados no diff de D-221/D-222).

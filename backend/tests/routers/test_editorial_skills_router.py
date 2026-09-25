@@ -10,9 +10,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app import editorial_skills
 from app.infrastructure import antigravity_cli_client
 from app.routers import editorial_skills as router_mod
+from app.services.canal import editorial_skills
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 

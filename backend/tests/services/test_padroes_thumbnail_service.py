@@ -1,9 +1,9 @@
 """D-070: serviço de análise de padrões dos melhores prompts de thumbnail."""
 
 import pytest
-from app import prompts_utilitarios
 from app.infrastructure import claude_cli_client
 from app.services import padroes_thumbnail as padroes_module
+from app.services.canal import prompts_utilitarios
 from app.services.padroes_thumbnail import PadroesThumbnailService
 
 

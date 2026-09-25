@@ -34,7 +34,6 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import editorial_scaffolds, editorial_skills
 from app.core import process_runner
 from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.database import AsyncSessionLocal
@@ -44,6 +43,7 @@ from app.domain.corte.capa_tiktok import etiqueta_da_resposta, prompt_da_arte
 from app.domain.corte.youtube_layout import FUNDO_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
+from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.channels import identidade_do_canal_ativo
 from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
