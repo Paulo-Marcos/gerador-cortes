@@ -470,203 +470,40 @@ async def atualizar_short(
         if not short:
             raise LookupError(f"Short {short_id!r} nao encontrado")
 
-        if status is not None:
-            if status not in _STATUS_DA_CURADORIA:
-                raise ValueError(f"Status {status!r} nao e uma decisao de curadoria.")
-            short.status = status
-
-        if inicio_seg is not None or fim_seg is not None:
-            corte = await db.get(Corte, short.corte_id)
-            novo_inicio = short.inicio_seg if inicio_seg is None else float(inicio_seg)
-            novo_fim = short.fim_seg if fim_seg is None else float(fim_seg)
-            _validar_bordas(novo_inicio, novo_fim, corte)
-            short.inicio_seg = round(novo_inicio, 2)
-            short.fim_seg = round(novo_fim, 2)
-            # D-604: arrastar a borda de um short COLADO nao faz sentido — a
-            # borda dele e a soma dos segmentos, e mexer no envelope deixaria os
-            # dois discordando em silencio. Quem tem segmentos muda os segmentos.
-            if segmentos is None and segmentos_short.de_json(short.segmentos):
-                raise ValueError(
-                    "Este short e montado por segmentos: mova os segmentos na regua "
-                    "em vez das bordas."
-                )
-
-        if segmentos is not None:
-            # D-604: a colagem do short. Lista vazia DESFAZ a colagem e devolve o
-            # short a janela unica — e como o operador volta atras sem precisar de
-            # um botao proprio.
-            if not segmentos:
-                short.segmentos = "[]"
-            else:
-                corte = await db.get(Corte, short.corte_id)
-                limite = float(corte.duracao_clip_seg or 0.0) if corte else 0.0
-                fatias = segmentos_short.de_json(segmentos)
-                # VALIDA antes de cortar, e nao depois — e a diferenca entre um
-                # 422 que explica e um 200 que mente.
-                #
-                # `normalizar(limite_seg=...)` ENCOLHE o que passa do fim do bruto,
-                # e isso e certo na LEITURA (bruto regerado mais curto nao pode
-                # custar a tela). Na ESCRITA seria silencio: um segmento marcado
-                # aos 500s de um bruto de 120s encolheria para nada, a lista viria
-                # vazia, e o operador receberia sucesso com o segmento
-                # desaparecido. Aqui ele ouve o numero e o motivo.
-                segmentos_short.validar(fatias, limite_seg=limite or fatias[-1].fim_seg)
-                # O ENVELOPE acompanha, e nao e redundancia: e por `inicio_seg`/
-                # `fim_seg` que a regua sabe onde desenhar o short e que a
-                # deteccao de rosto escolhe a janela. Deixa-los para tras poria a
-                # tela desenhando o short num lugar que ele nao ocupa mais.
-                envelope_inicio, envelope_fim = segmentos_short.envelope(
-                    fatias, inicio_seg=short.inicio_seg, fim_seg=short.fim_seg
-                )
-                short.inicio_seg = round(envelope_inicio, 2)
-                short.fim_seg = round(envelope_fim, 2)
-                # UM segmento so NAO e colagem: e a janela unica com aquelas
-                # bordas. Colapsar aqui e o que mantem as duas formas de dizer a
-                # mesma coisa como UMA so no banco — com `[{...}]` gravado, a trava
-                # de borda acima recusaria arrastar um short que a tela mostra
-                # como trecho comum, e a regua ofereceria alcas que dao 422.
-                #
-                # E e o que faz "tirar o penultimo" funcionar: a tela manda o
-                # segmento que sobrou, e as bordas viram as dele. Mandar `[]`
-                # deixaria o envelope antigo — com o buraco que o operador tinha
-                # tirado de volta DENTRO do short.
-                short.segmentos = "[]" if len(fatias) == 1 else segmentos_short.para_json(fatias)
-
-        if foco_x is not None:
-            if not 0.0 <= foco_x <= 1.0:
-                raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
-            short.foco_x = round(float(foco_x), 3)
-
-        if gancho_tela is not None:
-            # "" apaga o gancho, e e assim que o operador o remove. Normalizar
-            # aqui e nao so no render: o que a tela mostra de volta tem de ser o
-            # que vai para o arquivo, senao a previa mente sobre o espaco.
-            short.gancho_tela = gancho_short.normalizar_gancho(gancho_tela)
-
-        if gancho_ate_seg is not None:
-            # D-594: 0 e "nao decidi" — o trecho segue a duracao do gancho
-            # padrao do corte. Normalizar o zero para 2,5s aqui carimbaria o
-            # default no short e o preset nunca mais o alcancaria.
-            short.gancho_ate_seg = (
-                gancho_short.normalizar_duracao(gancho_ate_seg) if gancho_ate_seg > 0 else 0.0
-            )
-
-        if gancho_cor is not None:
-            # D-581: "" volta ao branco. Normaliza aqui pelo mesmo motivo do
-            # texto: o que a tela recebe de volta tem de ser o que vai para o
-            # arquivo, senao a previa pinta uma cor que o render nao usa.
-            short.gancho_cor = gancho_short.normalizar_cor(gancho_cor)
-
-        if gancho_realce is not None:
-            # D-594: "" fica "" pelo mesmo motivo da duracao — vazio herda do
-            # padrao do corte; o veu so entra na leitura, quando nada decidiu.
-            short.gancho_realce = (
-                gancho_short.normalizar_realce(gancho_realce) if gancho_realce.strip() else ""
-            )
-
-        if gancho_x is not None or gancho_y is not None or gancho_largura is not None:
-            # D-600: os tres andam juntos porque sao UM gesto — o operador
-            # arrasta a caixa e solta. Mandar so `y` num PATCH e legitimo, mas o
-            # caso comum e o trio, e separa-los em tres `if` sugeriria que ha
-            # tres decisoes onde ha uma.
-            #
-            # 0 continua sendo "nao decidi", como na duracao e no realce: e assim
-            # que o botao "voltar ao lugar do padrao" devolve o trecho a heranca.
-            if gancho_x is not None:
-                short.gancho_x = gancho_short.normalizar_x(gancho_x) if gancho_x > 0 else 0.0
-            if gancho_y is not None:
-                short.gancho_y = gancho_short.normalizar_y(gancho_y) if gancho_y > 0 else 0.0
-            if gancho_largura is not None:
-                short.gancho_largura = (
-                    gancho_short.normalizar_largura(gancho_largura) if gancho_largura > 0 else 0.0
-                )
-
-        if moldura is not None:
-            if moldura not in {m.value for m in Moldura}:
-                raise ValueError(f"Moldura {moldura!r} nao existe.")
-            short.moldura = moldura
-
-        if palco_preset is not None:
-            # "" volta a herdar do corte. Nao validamos a existencia do preset
-            # aqui: quem resolve a cascata ja ignora id que nao acha, e recusar
-            # aqui exigiria uma consulta so para dizer o que a tela ja sabe.
-            short.palco_preset = palco_preset
-
-        if ajustes_palco is not None:
-            # Dicionario VAZIO e valido: e como o operador desfaz os ajustes e
-            # volta ao modelo. Guardar so o que veio mantem a heranca parcial —
-            # materializar os slots do modelo aqui congelaria o arranjo.
-            short.ajustes_palco = json.dumps(
-                {
-                    nome: {c: float(ret[c]) for c in "xywh"}
-                    for nome, ret in ajustes_palco.items()
-                    if isinstance(ret, dict) and all(c in ret for c in "xywh")
-                },
-                ensure_ascii=False,
-            )
-
-        if recortes_palco is not None:
-            # D-499: o recorte sobre o quadro-FONTE, em pixels do bruto. Mesma
-            # regra do `ajustes_palco`: vazio desfaz e volta ao preset, e o que
-            # nao vier continua herdando — materializar as regioes do preset
-            # aqui congelaria a heranca, e trocar de preset depois nao mudaria
-            # mais nada.
-            short.recortes_palco = json.dumps(
-                {
-                    nome: {c: float(ret[c]) for c in "xywh"}
-                    for nome, ret in recortes_palco.items()
-                    if isinstance(ret, dict) and all(c in ret for c in "xywh")
-                },
-                ensure_ascii=False,
-            )
-
-        if fundo_editorial is not None:
-            # O id da textura. "" volta ao default do canal. Nao validamos
-            # contra o catalogo pelo mesmo motivo do `fundo_palco`: o catalogo
-            # muda com o tema, e um short antigo apontando para uma textura que
-            # saiu deve cair no default em vez de virar erro de gravacao.
-            short.fundo_editorial = fundo_editorial
-
-        if legenda_cor is not None:
-            # D-563: o hex da palavra corrente. "" volta ao acento do canal.
-            # Mesma regra dos outros: nao validamos aqui, degrada na leitura.
-            short.legenda_cor = legenda_cor
-
-        if legenda_fonte is not None:
-            # A familia da fonte. "" volta a do canal. Idem: degrada na leitura.
-            short.legenda_fonte = legenda_fonte
-
-        if legenda_x is not None or legenda_y is not None or legenda_largura is not None:
-            # D-605: os tres andam juntos porque sao UM gesto — o operador
-            # arrasta a legenda na previa e solta. Mandar so `y` num PATCH e
-            # legitimo (e o caso comum: "sobe essa legenda"), mas separa-los em
-            # tres blocos sugeriria que ha tres decisoes onde ha uma.
-            #
-            # 0 continua sendo "nao decidi": e assim que "voltar ao lugar do
-            # palco" devolve o trecho a heranca, sem coluna extra de intencao.
-            if legenda_x is not None:
-                short.legenda_x = legenda_short.normalizar_x(legenda_x) if legenda_x > 0 else 0.0
-            if legenda_y is not None:
-                short.legenda_y = legenda_short.normalizar_y(legenda_y) if legenda_y > 0 else 0.0
-            if legenda_largura is not None:
-                short.legenda_largura = (
-                    legenda_short.normalizar_largura(legenda_largura)
-                    if legenda_largura > 0
-                    else 0.0
-                )
-
-        # D-552: a marca do preset e escrita PRIMEIRO e apagada por qualquer
-        # mudanca posterior no mesmo PATCH.
-        #
-        # Aplicar um preset manda tudo junto — a marca e os valores dela. Mexer
-        # no arranjo depois manda so o arranjo, e ai a marca precisa cair: um
-        # rotulo que sobrevive a edicao do que ele descreve passa a mentir, e
-        # mentir sobre a origem e pior que nao dizer nada.
-        if palco_short_preset is not None:
-            short.palco_short_preset = palco_short_preset
-        elif any(
-            campo is not None
-            for campo in (
+        _aplicar_status(short, status)
+        await _aplicar_bordas(db, short, inicio_seg, fim_seg, segmentos)
+        await _aplicar_segmentos(db, short, segmentos)
+        _aplicar_foco(short, foco_x)
+        _aplicar_gancho(
+            short,
+            gancho_tela=gancho_tela,
+            gancho_ate_seg=gancho_ate_seg,
+            gancho_cor=gancho_cor,
+            gancho_realce=gancho_realce,
+            gancho_x=gancho_x,
+            gancho_y=gancho_y,
+            gancho_largura=gancho_largura,
+        )
+        _aplicar_moldura(short, moldura)
+        _aplicar_palco(
+            short,
+            palco_preset=palco_preset,
+            ajustes_palco=ajustes_palco,
+            recortes_palco=recortes_palco,
+            fundo_editorial=fundo_editorial,
+        )
+        _aplicar_legenda(
+            short,
+            legenda_cor=legenda_cor,
+            legenda_fonte=legenda_fonte,
+            legenda_x=legenda_x,
+            legenda_y=legenda_y,
+            legenda_largura=legenda_largura,
+        )
+        _aplicar_marca_do_preset(
+            short,
+            palco_short_preset,
+            campos_do_palco=(
                 arranjo_palco,
                 janela_cheia,
                 recortes_palco,
@@ -680,32 +517,287 @@ async def atualizar_short(
                 legenda_x,
                 legenda_y,
                 legenda_largura,
-            )
-        ):
-            short.palco_short_preset = ""
-
-        if fundo_palco is not None:
-            # A CHAVE da paleta, nao a cor. "" volta ao default do canal. Nao
-            # validamos contra a paleta: ela pode mudar, e um short antigo
-            # apontando para uma cor que saiu do tema deve cair no default
-            # (o resolvedor faz isso) em vez de virar erro de gravacao.
-            short.fundo_palco = fundo_palco
-
-        if arranjo_palco is not None:
-            # "" e valido: volta ao automatico, que deduz das regioes. Uma chave
-            # desconhecida NAO e — ela viraria um palco silenciosamente diferente
-            # do que a tela mostra (mesma regra que o modelo antigo tinha).
-            if arranjo_palco and arranjo_de_chave(arranjo_palco).chave != arranjo_palco:
-                raise ValueError(f"Arranjo {arranjo_palco!r} nao existe.")
-            short.arranjo_palco = arranjo_palco
-
-        if janela_cheia is not None:
-            # Sem validar contra as regioes: elas mudam com o preset, e o
-            # resolvedor ja cai numa regiao disponivel quando a escolhida sumiu.
-            short.janela_cheia = janela_cheia
+            ),
+        )
+        _aplicar_arranjo(
+            short, fundo_palco=fundo_palco, arranjo_palco=arranjo_palco, janela_cheia=janela_cheia
+        )
 
         await db.commit()
         return _serializar(short)
+
+
+def _aplicar_status(short: Short, status: str | None) -> None:
+    if status is not None:
+        if status not in _STATUS_DA_CURADORIA:
+            raise ValueError(f"Status {status!r} nao e uma decisao de curadoria.")
+        short.status = status
+
+
+async def _aplicar_bordas(
+    db: AsyncSession,
+    short: Short,
+    inicio_seg: float | None,
+    fim_seg: float | None,
+    segmentos: list[dict] | None,
+) -> None:
+    if inicio_seg is not None or fim_seg is not None:
+        corte = await db.get(Corte, short.corte_id)
+        novo_inicio = short.inicio_seg if inicio_seg is None else float(inicio_seg)
+        novo_fim = short.fim_seg if fim_seg is None else float(fim_seg)
+        _validar_bordas(novo_inicio, novo_fim, corte)
+        short.inicio_seg = round(novo_inicio, 2)
+        short.fim_seg = round(novo_fim, 2)
+        # D-604: arrastar a borda de um short COLADO nao faz sentido — a
+        # borda dele e a soma dos segmentos, e mexer no envelope deixaria os
+        # dois discordando em silencio. Quem tem segmentos muda os segmentos.
+        if segmentos is None and segmentos_short.de_json(short.segmentos):
+            raise ValueError(
+                "Este short e montado por segmentos: mova os segmentos na regua em vez das bordas."
+            )
+
+
+async def _aplicar_segmentos(db: AsyncSession, short: Short, segmentos: list[dict] | None) -> None:
+    if segmentos is not None:
+        # D-604: a colagem do short. Lista vazia DESFAZ a colagem e devolve o
+        # short a janela unica — e como o operador volta atras sem precisar de
+        # um botao proprio.
+        if not segmentos:
+            short.segmentos = "[]"
+        else:
+            corte = await db.get(Corte, short.corte_id)
+            limite = float(corte.duracao_clip_seg or 0.0) if corte else 0.0
+            fatias = segmentos_short.de_json(segmentos)
+            # VALIDA antes de cortar, e nao depois — e a diferenca entre um
+            # 422 que explica e um 200 que mente.
+            #
+            # `normalizar(limite_seg=...)` ENCOLHE o que passa do fim do bruto,
+            # e isso e certo na LEITURA (bruto regerado mais curto nao pode
+            # custar a tela). Na ESCRITA seria silencio: um segmento marcado
+            # aos 500s de um bruto de 120s encolheria para nada, a lista viria
+            # vazia, e o operador receberia sucesso com o segmento
+            # desaparecido. Aqui ele ouve o numero e o motivo.
+            segmentos_short.validar(fatias, limite_seg=limite or fatias[-1].fim_seg)
+            # O ENVELOPE acompanha, e nao e redundancia: e por `inicio_seg`/
+            # `fim_seg` que a regua sabe onde desenhar o short e que a
+            # deteccao de rosto escolhe a janela. Deixa-los para tras poria a
+            # tela desenhando o short num lugar que ele nao ocupa mais.
+            envelope_inicio, envelope_fim = segmentos_short.envelope(
+                fatias, inicio_seg=short.inicio_seg, fim_seg=short.fim_seg
+            )
+            short.inicio_seg = round(envelope_inicio, 2)
+            short.fim_seg = round(envelope_fim, 2)
+            # UM segmento so NAO e colagem: e a janela unica com aquelas
+            # bordas. Colapsar aqui e o que mantem as duas formas de dizer a
+            # mesma coisa como UMA so no banco — com `[{...}]` gravado, a trava
+            # de borda acima recusaria arrastar um short que a tela mostra
+            # como trecho comum, e a regua ofereceria alcas que dao 422.
+            #
+            # E e o que faz "tirar o penultimo" funcionar: a tela manda o
+            # segmento que sobrou, e as bordas viram as dele. Mandar `[]`
+            # deixaria o envelope antigo — com o buraco que o operador tinha
+            # tirado de volta DENTRO do short.
+            short.segmentos = "[]" if len(fatias) == 1 else segmentos_short.para_json(fatias)
+
+
+def _aplicar_foco(short: Short, foco_x: float | None) -> None:
+    if foco_x is not None:
+        if not 0.0 <= foco_x <= 1.0:
+            raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
+        short.foco_x = round(float(foco_x), 3)
+
+
+def _aplicar_gancho(
+    short: Short,
+    *,
+    gancho_tela: str | None,
+    gancho_ate_seg: float | None,
+    gancho_cor: str | None,
+    gancho_realce: str | None,
+    gancho_x: float | None,
+    gancho_y: float | None,
+    gancho_largura: float | None,
+) -> None:
+    if gancho_tela is not None:
+        # "" apaga o gancho, e e assim que o operador o remove. Normalizar
+        # aqui e nao so no render: o que a tela mostra de volta tem de ser o
+        # que vai para o arquivo, senao a previa mente sobre o espaco.
+        short.gancho_tela = gancho_short.normalizar_gancho(gancho_tela)
+
+    if gancho_ate_seg is not None:
+        # D-594: 0 e "nao decidi" — o trecho segue a duracao do gancho
+        # padrao do corte. Normalizar o zero para 2,5s aqui carimbaria o
+        # default no short e o preset nunca mais o alcancaria.
+        short.gancho_ate_seg = (
+            gancho_short.normalizar_duracao(gancho_ate_seg) if gancho_ate_seg > 0 else 0.0
+        )
+
+    if gancho_cor is not None:
+        # D-581: "" volta ao branco. Normaliza aqui pelo mesmo motivo do
+        # texto: o que a tela recebe de volta tem de ser o que vai para o
+        # arquivo, senao a previa pinta uma cor que o render nao usa.
+        short.gancho_cor = gancho_short.normalizar_cor(gancho_cor)
+
+    if gancho_realce is not None:
+        # D-594: "" fica "" pelo mesmo motivo da duracao — vazio herda do
+        # padrao do corte; o veu so entra na leitura, quando nada decidiu.
+        short.gancho_realce = (
+            gancho_short.normalizar_realce(gancho_realce) if gancho_realce.strip() else ""
+        )
+
+    if gancho_x is not None or gancho_y is not None or gancho_largura is not None:
+        # D-600: os tres andam juntos porque sao UM gesto — o operador
+        # arrasta a caixa e solta. Mandar so `y` num PATCH e legitimo, mas o
+        # caso comum e o trio, e separa-los em tres `if` sugeriria que ha
+        # tres decisoes onde ha uma.
+        #
+        # 0 continua sendo "nao decidi", como na duracao e no realce: e assim
+        # que o botao "voltar ao lugar do padrao" devolve o trecho a heranca.
+        if gancho_x is not None:
+            short.gancho_x = gancho_short.normalizar_x(gancho_x) if gancho_x > 0 else 0.0
+        if gancho_y is not None:
+            short.gancho_y = gancho_short.normalizar_y(gancho_y) if gancho_y > 0 else 0.0
+        if gancho_largura is not None:
+            short.gancho_largura = (
+                gancho_short.normalizar_largura(gancho_largura) if gancho_largura > 0 else 0.0
+            )
+
+
+def _aplicar_moldura(short: Short, moldura: str | None) -> None:
+    if moldura is not None:
+        if moldura not in {m.value for m in Moldura}:
+            raise ValueError(f"Moldura {moldura!r} nao existe.")
+        short.moldura = moldura
+
+
+def _aplicar_palco(
+    short: Short,
+    *,
+    palco_preset: str | None,
+    ajustes_palco: dict | None,
+    recortes_palco: dict | None,
+    fundo_editorial: str | None,
+) -> None:
+    if palco_preset is not None:
+        # "" volta a herdar do corte. Nao validamos a existencia do preset
+        # aqui: quem resolve a cascata ja ignora id que nao acha, e recusar
+        # aqui exigiria uma consulta so para dizer o que a tela ja sabe.
+        short.palco_preset = palco_preset
+
+    if ajustes_palco is not None:
+        # Dicionario VAZIO e valido: e como o operador desfaz os ajustes e
+        # volta ao modelo. Guardar so o que veio mantem a heranca parcial —
+        # materializar os slots do modelo aqui congelaria o arranjo.
+        short.ajustes_palco = json.dumps(
+            {
+                nome: {c: float(ret[c]) for c in "xywh"}
+                for nome, ret in ajustes_palco.items()
+                if isinstance(ret, dict) and all(c in ret for c in "xywh")
+            },
+            ensure_ascii=False,
+        )
+
+    if recortes_palco is not None:
+        # D-499: o recorte sobre o quadro-FONTE, em pixels do bruto. Mesma
+        # regra do `ajustes_palco`: vazio desfaz e volta ao preset, e o que
+        # nao vier continua herdando — materializar as regioes do preset
+        # aqui congelaria a heranca, e trocar de preset depois nao mudaria
+        # mais nada.
+        short.recortes_palco = json.dumps(
+            {
+                nome: {c: float(ret[c]) for c in "xywh"}
+                for nome, ret in recortes_palco.items()
+                if isinstance(ret, dict) and all(c in ret for c in "xywh")
+            },
+            ensure_ascii=False,
+        )
+
+    if fundo_editorial is not None:
+        # O id da textura. "" volta ao default do canal. Nao validamos
+        # contra o catalogo pelo mesmo motivo do `fundo_palco`: o catalogo
+        # muda com o tema, e um short antigo apontando para uma textura que
+        # saiu deve cair no default em vez de virar erro de gravacao.
+        short.fundo_editorial = fundo_editorial
+
+
+def _aplicar_legenda(
+    short: Short,
+    *,
+    legenda_cor: str | None,
+    legenda_fonte: str | None,
+    legenda_x: float | None,
+    legenda_y: float | None,
+    legenda_largura: float | None,
+) -> None:
+    if legenda_cor is not None:
+        # D-563: o hex da palavra corrente. "" volta ao acento do canal.
+        # Mesma regra dos outros: nao validamos aqui, degrada na leitura.
+        short.legenda_cor = legenda_cor
+
+    if legenda_fonte is not None:
+        # A familia da fonte. "" volta a do canal. Idem: degrada na leitura.
+        short.legenda_fonte = legenda_fonte
+
+    if legenda_x is not None or legenda_y is not None or legenda_largura is not None:
+        # D-605: os tres andam juntos porque sao UM gesto — o operador
+        # arrasta a legenda na previa e solta. Mandar so `y` num PATCH e
+        # legitimo (e o caso comum: "sobe essa legenda"), mas separa-los em
+        # tres blocos sugeriria que ha tres decisoes onde ha uma.
+        #
+        # 0 continua sendo "nao decidi": e assim que "voltar ao lugar do
+        # palco" devolve o trecho a heranca, sem coluna extra de intencao.
+        if legenda_x is not None:
+            short.legenda_x = legenda_short.normalizar_x(legenda_x) if legenda_x > 0 else 0.0
+        if legenda_y is not None:
+            short.legenda_y = legenda_short.normalizar_y(legenda_y) if legenda_y > 0 else 0.0
+        if legenda_largura is not None:
+            short.legenda_largura = (
+                legenda_short.normalizar_largura(legenda_largura) if legenda_largura > 0 else 0.0
+            )
+
+
+def _aplicar_marca_do_preset(
+    short: Short, palco_short_preset: str | None, campos_do_palco: tuple
+) -> None:
+    # D-552: a marca do preset e escrita PRIMEIRO e apagada por qualquer
+    # mudanca posterior no mesmo PATCH.
+    #
+    # Aplicar um preset manda tudo junto — a marca e os valores dela. Mexer
+    # no arranjo depois manda so o arranjo, e ai a marca precisa cair: um
+    # rotulo que sobrevive a edicao do que ele descreve passa a mentir, e
+    # mentir sobre a origem e pior que nao dizer nada.
+    if palco_short_preset is not None:
+        short.palco_short_preset = palco_short_preset
+    elif any(campo is not None for campo in campos_do_palco):
+        short.palco_short_preset = ""
+
+
+def _aplicar_arranjo(
+    short: Short,
+    *,
+    fundo_palco: str | None,
+    arranjo_palco: str | None,
+    janela_cheia: str | None,
+) -> None:
+    if fundo_palco is not None:
+        # A CHAVE da paleta, nao a cor. "" volta ao default do canal. Nao
+        # validamos contra a paleta: ela pode mudar, e um short antigo
+        # apontando para uma cor que saiu do tema deve cair no default
+        # (o resolvedor faz isso) em vez de virar erro de gravacao.
+        short.fundo_palco = fundo_palco
+
+    if arranjo_palco is not None:
+        # "" e valido: volta ao automatico, que deduz das regioes. Uma chave
+        # desconhecida NAO e — ela viraria um palco silenciosamente diferente
+        # do que a tela mostra (mesma regra que o modelo antigo tinha).
+        if arranjo_palco and arranjo_de_chave(arranjo_palco).chave != arranjo_palco:
+            raise ValueError(f"Arranjo {arranjo_palco!r} nao existe.")
+        short.arranjo_palco = arranjo_palco
+
+    if janela_cheia is not None:
+        # Sem validar contra as regioes: elas mudam com o preset, e o
+        # resolvedor ja cai numa regiao disponivel quando a escolhida sumiu.
+        short.janela_cheia = janela_cheia
 
 
 def _fala_do_short(short: Short, transcricao: list[dict]) -> list[dict]:
