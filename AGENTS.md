@@ -83,6 +83,8 @@ Corte:   proposto ⇄ aprovado → processado   (rejeitado é legado; "Rejeitar"
 
 As transições têm dono no domínio: `domain/projeto/ciclo_projeto.py` e `domain/corte/ciclo_corte.py` (RN-01, RN-04). O PATCH do corte recusa com 400 uma transição fora da tabela. Os caminhos em segundo plano mudam status por `services/ciclo_de_vida.py`, que registra aviso — em vez de exceção — para o que a tabela não prevê. Mudar um enum de status exige migração.
 
+O schema do `projetos.db` evolui por um caminho só, no boot (`app/migrations/migrar_schema`, D-701): **coluna nova se declara no modelo** — a reconciliação a acrescenta, com o default literal dele; transformação de dado, índice ou restrição vira migration versionada em `app/migrations/`. Não há lista de `ALTER` à mão.
+
 ## Configuração
 
 - **Segredos** ficam no `backend/.env` (lido por `app/config.py`, pydantic-settings).
