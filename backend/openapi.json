@@ -6322,7 +6322,7 @@
     },
     "/api/cortes/{corte_id}/gerar-bruto": {
       "post": {
-        "description": "Dispara geração assíncrona do vídeo bruto.\n\nRetorna imediatamente; o status pode ser consultado via\n`GET /export/corte/{corte_id}/cortar/status`. Após sucesso, o corte\né atualizado no banco com `arquivo_clip_path`, `duracao_clip_seg` e\n`transcricao_final` re-sincronizada.\n\nD-160 — na **1ª geração** (corte sem bruto) roda a cadeia completa\n(transcrição + cenas). Na **regeração** (bruto já existe) o default é\n**só o bruto**; refazer transcrição/cenas vira opt-in via `body`.",
+        "description": "Dispara geração assíncrona do vídeo bruto.\n\nRetorna imediatamente; o status pode ser consultado via\n`GET /export/corte/{corte_id}/cortar/status`. Na 1ª geração roda a cadeia\ncompleta (transcrição + cenas); na regeração, o `body` escolhe o que refazer\nalém do bruto (D-160).",
         "operationId": "gerar_bruto_api_cortes__corte_id__gerar_bruto_post",
         "parameters": [
           {
