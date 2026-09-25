@@ -1540,7 +1540,7 @@ async def _executar_via_worker(
         category=category,
         timeout_sec=timeout,
     )
-    await queue.submit_and_wait(job, log_level=current_log_level().value)
+    await queue.submit_and_wait(job, log_level=str(current_log_level()))
 
 
 async def _validar_video_completo(path: Path) -> bool:

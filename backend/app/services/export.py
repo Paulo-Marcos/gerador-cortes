@@ -261,7 +261,7 @@ class ExportService(
                 "id": job_id,
                 "cwd": str(out_dir.absolute()),
                 "cmd": [str(c) for c in pipeline.cmd],
-                "log_level": current_log_level().value,
+                "log_level": str(current_log_level()),
             }
 
             if settings.bruto_verbose_log or is_debug_enabled():
