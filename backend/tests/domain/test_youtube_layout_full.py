@@ -11,7 +11,7 @@ from app.domain.corte.youtube_layout import (
     normalizar_layout_youtube,
     regioes_full_posicionadas,
 )
-from app.infrastructure.render.ffmpeg_commands import build_cinematic_grade_cmd
+from app.infrastructure.render.ffmpeg_commands import GradeSpec, build_cinematic_grade_cmd
 
 CROP_PESSOA = {"x": 200, "y": 100, "w": 960, "h": 540}
 SLOT_CENTRO = {"x": 480, "y": 270, "w": 960, "h": 540}
@@ -147,7 +147,7 @@ class TestRenderFullPosicionado:
     def test_filtergraph_inclui_crop_do_full(self):
         layout = {"modo_padrao": "full", "full": {"crop": CROP_PESSOA, "slot": SLOT_CENTRO}}
         cmd = build_cinematic_grade_cmd(
-            Path("raw.mkv"), Path("out.mp4"), layout_youtube=layout, duracao_seg=60.0
+            Path("raw.mkv"), Path("out.mp4"), GradeSpec(layout_youtube=layout, duracao_seg=60.0)
         )
         filtro = " ".join(cmd)
         assert "crop=960:540:200:100" in filtro
@@ -156,7 +156,6 @@ class TestRenderFullPosicionado:
         cmd = build_cinematic_grade_cmd(
             Path("raw.mkv"),
             Path("out.mp4"),
-            layout_youtube={"modo_padrao": "full"},
-            duracao_seg=60.0,
+            GradeSpec(layout_youtube={"modo_padrao": "full"}, duracao_seg=60.0),
         )
         assert "crop=" not in " ".join(cmd)

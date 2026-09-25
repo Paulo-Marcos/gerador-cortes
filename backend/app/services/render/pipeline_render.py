@@ -30,6 +30,7 @@ from app.infrastructure.channel_assets_sync import garantir_mascote_materializad
 from app.infrastructure.encoder_detector import encoder_da_maquina_async
 from app.infrastructure.render.cinema_filters import get_filtro_vf
 from app.infrastructure.render.ffmpeg_commands import (
+    GradeSpec,
     build_compose_and_encode_cmd,
     build_grade_plan,
 )
@@ -990,7 +991,7 @@ def _reportar_falhas_palco(
     raise PalcoPngGeracaoError(faltantes, diagnostico)
 
 
-async def _executar_grade(
+async def _executar_grade(  # noqa: PLR0913 — fase do render: a cascata do layout e a observabilidade, todas por nome
     input_path: Path,
     output_path: Path,
     filtro: str,
@@ -1045,14 +1046,16 @@ async def _executar_grade(
         plan = build_grade_plan(
             input_path,
             output_path,
-            filtro_vf=filtro_vf,
-            layout_youtube=layout_youtube,
-            duracao_seg=duracao_seg,
-            global_quality=global_quality,
-            projeto_padrao=projeto_padrao,
-            global_padrao=global_padrao,
-            hwaccel_decode=hwaccel_decode,
-            encoder=encoder,
+            GradeSpec(
+                filtro_vf=filtro_vf,
+                layout_youtube=layout_youtube,
+                duracao_seg=duracao_seg,
+                global_quality=global_quality,
+                projeto_padrao=projeto_padrao,
+                global_padrao=global_padrao,
+                hwaccel_decode=hwaccel_decode,
+                encoder=encoder,
+            ),
         )
         if ffmpeg_log_path is not None:
             for step in plan.steps:

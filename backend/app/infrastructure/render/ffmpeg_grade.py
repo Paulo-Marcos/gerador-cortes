@@ -47,6 +47,29 @@ class _GradeLayout:
 
 
 @dataclass(frozen=True)
+class GradeSpec:
+    """O que a grade faz com o vídeo — o mesmo em todos os comandos da Fase 1.
+
+    D-717: eram nove argumentos passados um a um, sempre juntos, do plano ao
+    comando único e do plano segmentado a cada segmento. Os defaults são os de
+    antes; quem não diz nada recebe `GRADE_PADRAO`.
+    """
+
+    filtro_vf: str | None = None
+    global_quality: int = 27
+    normalize_audio: bool = False
+    layout_youtube: dict | None = None
+    duracao_seg: float | None = None
+    projeto_padrao: dict | str | None = None
+    global_padrao: dict | str | None = None
+    hwaccel_decode: bool = True
+    encoder: VideoEncoder = VideoEncoder.QSV
+
+
+GRADE_PADRAO = GradeSpec()
+
+
+@dataclass(frozen=True)
 class GradeStep:
     """Um comando FFmpeg do plano da grade. `job_suffix` torna o job_id único
     quando o plano tem vários passos (segmentos + concat)."""
@@ -80,11 +103,7 @@ def _build_grade_plan_segmentado(
     output_path: Path,
     layout: _GradeLayout,
     segmentos: list[tuple[float, float, int | None]],
-    *,
-    filtro_vf: str | None,
-    global_quality: int,
-    normalize_audio: bool,
-    encoder: VideoEncoder = VideoEncoder.QSV,
+    spec: GradeSpec,
 ) -> GradePlan:
     """Monta o plano segmentado: 1 comando por segmento (vídeo-only `.ts`) +
     1 comando final (concat demuxer + áudio contínuo + mux)."""
@@ -112,14 +131,12 @@ def _build_grade_plan_segmentado(
                 _build_grade_segment_cmd(
                     input_path,
                     seg_file,
+                    spec,
                     inicio=inicio,
                     dur=dur,
-                    filtro_vf=filtro_vf,
                     region_rel=region_rel,
                     fg_png=fg_png,
-                    global_quality=global_quality,
                     derivado=derivado,
-                    encoder=encoder,
                 ),
                 f"seg{k:03d}",
             )
@@ -131,7 +148,9 @@ def _build_grade_plan_segmentado(
     concat_list_content = "\n".join(list_lines) + "\n"
     temp_files.append(concat_list_path)
 
-    af = "loudnorm=I=-14:TP=-1.0:LRA=11" if normalize_audio else "aresample=async=1:first_pts=0"
+    af = (
+        "loudnorm=I=-14:TP=-1.0:LRA=11" if spec.normalize_audio else "aresample=async=1:first_pts=0"
+    )
     steps.append(
         GradeStep(
             _build_grade_concat_mux_cmd(concat_list_path, input_path, output_path, af=af),
@@ -150,15 +169,13 @@ def _build_grade_plan_segmentado(
 def _build_grade_segment_cmd(
     input_path: Path,
     seg_output: Path,
+    spec: GradeSpec,
     *,
     inicio: float,
     dur: float,
-    filtro_vf: str | None,
     region_rel: dict | None,
     fg_png: Path | None,
-    global_quality: int,
     derivado: PalcoDerivados | None = None,
-    encoder: VideoEncoder = VideoEncoder.QSV,
 ) -> list[str]:
     """Comando FFmpeg de UM segmento da grade.
 
@@ -184,7 +201,7 @@ def _build_grade_segment_cmd(
         for png in (derivado.bg_pre, derivado.chrome):
             cmd += ["-loop", "1", "-framerate", "30", "-threads", "1", "-i", str(png)]
         filt = build_grade_precomposto_filter(
-            filtro_vf,
+            spec.filtro_vf,
             region_rel,
             derivado,
             duracao_seg=dur,
@@ -193,7 +210,7 @@ def _build_grade_segment_cmd(
     elif tem_regiao and fg_png is not None:
         cmd += ["-loop", "1", "-framerate", "30", "-threads", "1", "-i", str(fg_png)]
         filt = build_cinematic_grade_layout_filter(
-            filtro_vf,
+            spec.filtro_vf,
             [region_rel],
             fg_inputs_per_region=["1:v"],
             duracao_seg=dur,
@@ -201,10 +218,10 @@ def _build_grade_segment_cmd(
         )
     elif tem_regiao:
         filt = build_cinematic_grade_layout_filter(
-            filtro_vf, [region_rel], duracao_seg=dur, hwaccel_decode=False
+            spec.filtro_vf, [region_rel], duracao_seg=dur, hwaccel_decode=False
         )
     else:
-        filt = build_cinematic_grade_layout_filter(filtro_vf, [], hwaccel_decode=False)
+        filt = build_cinematic_grade_layout_filter(spec.filtro_vf, [], hwaccel_decode=False)
     # Composite de 1 região por segmento → RAM levíssima; libera TODOS os núcleos
     # no filtro (o composite na CPU é o gargalo da grade). `default=0` = sem teto.
     cmd += [*_ffmpeg_filter_thread_args(default=0), "-filter_complex", filt, "-map", "[vout]"]
@@ -217,7 +234,9 @@ def _build_grade_segment_cmd(
         # (quebraria a sincronia fina de áudio). `-shortest` ancora a saída na
         # janela do vídeo (sempre o input mais curto) → contagem de frames exata.
         "-shortest",
-        *argumentos_codec_qualidade(encoder, preset="veryfast", global_quality=global_quality),
+        *argumentos_codec_qualidade(
+            spec.encoder, preset="veryfast", global_quality=spec.global_quality
+        ),
         # GOP fixo + sem B-frames: cada segmento começa com keyframe (IDR) e é
         # auto-contido → concat demuxer com `-c copy` costura sem recodificar.
         "-g",
@@ -226,7 +245,7 @@ def _build_grade_segment_cmd(
         "30",
         "-bf",
         "0",
-        *argumentos_async_depth(encoder),
+        *argumentos_async_depth(spec.encoder),
         "-fps_mode",
         "cfr",
         "-pix_fmt",

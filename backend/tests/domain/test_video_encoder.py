@@ -1,3 +1,4 @@
+from app.infrastructure.render.ffmpeg_commands import GradeSpec
 from app.infrastructure.render.video_encoder import (
     VideoEncoder,
     argumentos_async_depth,
@@ -64,7 +65,9 @@ class TestBuildersComLibx264:
         from app.infrastructure.render.ffmpeg_commands import build_cinematic_grade_cmd
 
         cmd = build_cinematic_grade_cmd(
-            Path("raw.mkv"), Path("graded.mp4"), encoder=VideoEncoder.LIBX264, global_quality=30
+            Path("raw.mkv"),
+            Path("graded.mp4"),
+            GradeSpec(encoder=VideoEncoder.LIBX264, global_quality=30),
         )
         assert "-hwaccel" not in cmd
         assert cmd[cmd.index("-c:v") + 1] == "libx264"
@@ -79,13 +82,11 @@ class TestBuildersComLibx264:
         cmd = _build_grade_segment_cmd(
             Path("raw.mkv"),
             Path("seg.ts"),
+            GradeSpec(filtro_vf=None, global_quality=30, encoder=VideoEncoder.LIBX264),
             inicio=0.0,
             dur=10.0,
-            filtro_vf=None,
             region_rel=None,
             fg_png=None,
-            global_quality=30,
-            encoder=VideoEncoder.LIBX264,
         )
         assert cmd[cmd.index("-c:v") + 1] == "libx264"
         assert cmd[cmd.index("-g") + 1] == "30" and cmd[cmd.index("-bf") + 1] == "0"

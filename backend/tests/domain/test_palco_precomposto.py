@@ -9,7 +9,7 @@ kill-switch e falha de derivação caem no graph legado.
 from pathlib import Path
 
 import app.infrastructure.render.ffmpeg_commands as fc
-from app.infrastructure.render.ffmpeg_commands import build_grade_precomposto_filter
+from app.infrastructure.render.ffmpeg_commands import GradeSpec, build_grade_precomposto_filter
 from app.infrastructure.render.palco_derivados import PalcoDerivados, ensure_derivados_palco
 from PIL import Image
 
@@ -115,9 +115,9 @@ class TestRoteamentoGrade:
         return fc.build_cinematic_grade_cmd(
             Path("in.mp4"),
             Path("out.mp4"),
-            layout_youtube={"modo": "compartilhada"},
-            duracao_seg=30.0,
-            hwaccel_decode=False,
+            fc.GradeSpec(
+                layout_youtube={"modo": "compartilhada"}, duracao_seg=30.0, hwaccel_decode=False
+            ),
         )
 
     def _layout_full_cover(self, monkeypatch):
@@ -176,12 +176,11 @@ class TestRoteamentoGrade:
         cmd = _build_grade_segment_cmd(
             Path("in.mp4"),
             Path("seg.ts"),
+            GradeSpec(filtro_vf=None, global_quality=27),
             inicio=10.0,
             dur=15.0,
-            filtro_vf=None,
             region_rel={**REGIAO, "inicio": 0.0, "fim": 15.0},
             fg_png=tmp_path / "palco.png",
-            global_quality=27,
             derivado=d,
         )
         joined = " ".join(cmd)

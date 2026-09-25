@@ -15,6 +15,7 @@ from pathlib import Path
 import app.infrastructure.render.ffmpeg_commands as fc
 import pytest
 from app.infrastructure.render.ffmpeg_commands import (
+    GradeSpec,
     _build_grade_plan_segmentado,
     _construir_segmentos_grade,
     _GradeLayout,
@@ -172,9 +173,7 @@ class TestGradePlanEstrutura:
         plan = build_grade_plan(
             Path("in.mkv"),
             Path("out/clip_graded.mp4"),
-            filtro_vf="vignette",
-            layout_youtube=layout,
-            duracao_seg=20,
+            GradeSpec(filtro_vf="vignette", layout_youtube=layout, duracao_seg=20),
         )
         assert plan.segmentado
         assert [s.job_suffix for s in plan.steps] == ["seg000", "seg001", "concat"]
@@ -194,9 +193,7 @@ class TestGradePlanEstrutura:
         plan = build_grade_plan(
             Path("in.mkv"),
             Path("out/clip_graded.mp4"),
-            filtro_vf="vignette",
-            layout_youtube=layout,
-            duracao_seg=20,
+            GradeSpec(filtro_vf="vignette", layout_youtube=layout, duracao_seg=20),
         )
         assert not plan.segmentado
         assert len(plan.steps) == 1
@@ -219,9 +216,7 @@ class TestGradePlanEstrutura:
         plan = build_grade_plan(
             Path("in.mkv"),
             Path("out/clip_graded.mp4"),
-            filtro_vf="vignette",
-            layout_youtube=layout,
-            duracao_seg=20,
+            GradeSpec(filtro_vf="vignette", layout_youtube=layout, duracao_seg=20),
         )
         assert not plan.segmentado
 
@@ -234,9 +229,7 @@ class TestGradePlanEstrutura:
             Path("out/clip_graded.mp4"),
             lay,
             segs,
-            filtro_vf="vignette",
-            global_quality=30,
-            normalize_audio=False,
+            GradeSpec(filtro_vf="vignette", global_quality=30, normalize_audio=False),
         )
         assert [s.job_suffix for s in plan.steps] == ["seg000", "seg001", "seg002", "concat"]
         # gap (seg0) nao tem input de palco; a regiao (seg1) tem.
@@ -255,9 +248,7 @@ class TestGradeSegmentCmd:
             Path("out/clip_graded.mp4"),
             lay,
             segs,
-            filtro_vf="vignette",
-            global_quality=30,
-            normalize_audio=False,
+            GradeSpec(filtro_vf="vignette", global_quality=30, normalize_audio=False),
         )
         return plan.steps[0].cmd
 
@@ -303,9 +294,7 @@ class TestGradeSegmentCmd:
             Path("out/clip_graded.mp4"),
             lay,
             segs,
-            filtro_vf="vignette",
-            global_quality=30,
-            normalize_audio=False,
+            GradeSpec(filtro_vf="vignette", global_quality=30, normalize_audio=False),
         )
         final = plan.steps[-1].cmd
         assert "-f" in final and final[final.index("-f") + 1] == "concat"
@@ -478,8 +467,12 @@ def test_qsv_decode_grade_visualmente_igual_ao_software(tmp_path):
     out_qsv = tmp_path / "qsv.mp4"
     out_sw = tmp_path / "sw.mp4"
 
-    cmd_qsv = build_cinematic_grade_cmd(src, out_qsv, filtro_vf=grade, hwaccel_decode=True)
-    cmd_sw = build_cinematic_grade_cmd(src, out_sw, filtro_vf=grade, hwaccel_decode=False)
+    cmd_qsv = build_cinematic_grade_cmd(
+        src, out_qsv, GradeSpec(filtro_vf=grade, hwaccel_decode=True)
+    )
+    cmd_sw = build_cinematic_grade_cmd(
+        src, out_sw, GradeSpec(filtro_vf=grade, hwaccel_decode=False)
+    )
     assert "-hwaccel" in cmd_qsv and "-hwaccel" not in cmd_sw
 
     _run(cmd_qsv, timeout=120)
@@ -653,9 +646,7 @@ def test_plano_segmentado_paridade_de_frames_e_regiao_por_janela(tmp_path):
         out,
         lay,
         segs,
-        filtro_vf="eq=contrast=1.1",
-        global_quality=30,
-        normalize_audio=False,
+        GradeSpec(filtro_vf="eq=contrast=1.1", global_quality=30, normalize_audio=False),
     )
     assert plan.segmentado
     lista_path, conteudo = plan.concat_list

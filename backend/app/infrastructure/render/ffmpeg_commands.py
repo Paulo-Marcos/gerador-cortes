@@ -48,7 +48,9 @@ from app.infrastructure.render.ffmpeg_common import (
     _resolve_filter_arg,
 )
 from app.infrastructure.render.ffmpeg_grade import (
+    GRADE_PADRAO,
     GradePlan,
+    GradeSpec,
     GradeStep,
     _append_fg_chains,
     _build_grade_concat_mux_cmd,
@@ -77,7 +79,6 @@ from app.infrastructure.render.ffmpeg_overlay import (
 )
 from app.infrastructure.render.palco_derivados import PalcoDerivados, ensure_derivados_palco
 from app.infrastructure.render.video_encoder import (
-    VideoEncoder,
     argumentos_async_depth,
     argumentos_codec_qualidade,
     permite_decode_qsv,
@@ -103,7 +104,9 @@ __all__ = [
     "build_cinematic_grade_cmd",
     "build_grade_plan",
     "build_cinematic_grade_layout_filter",
+    "GRADE_PADRAO",
     "GradePlan",
+    "GradeSpec",
     "GradeStep",
     "_GradeLayout",
     "_resolver_grade_layout",
@@ -263,18 +266,7 @@ def _resolver_grade_layout(
 
 
 def build_cinematic_grade_cmd(
-    input_path: Path,
-    output_path: Path,
-    *,
-    filtro_vf: str | None = None,
-    global_quality: int = 27,
-    normalize_audio: bool = False,
-    layout_youtube: dict | None = None,
-    duracao_seg: float | None = None,
-    projeto_padrao: dict | str | None = None,
-    global_padrao: dict | str | None = None,
-    hwaccel_decode: bool = True,
-    encoder: VideoEncoder = VideoEncoder.QSV,
+    input_path: Path, output_path: Path, spec: GradeSpec = GRADE_PADRAO
 ) -> list[str]:
     """Aplica grade cinematográfico + loudnorm via Intel QSV (encode).
 
@@ -302,9 +294,13 @@ def build_cinematic_grade_cmd(
         >>> "h264_qsv" in cmd
         True
     """
-    af = "loudnorm=I=-14:TP=-1.0:LRA=11" if normalize_audio else "aresample=async=1:first_pts=0"
+    af = (
+        "loudnorm=I=-14:TP=-1.0:LRA=11" if spec.normalize_audio else "aresample=async=1:first_pts=0"
+    )
 
-    layout = _resolver_grade_layout(layout_youtube, duracao_seg, projeto_padrao, global_padrao)
+    layout = _resolver_grade_layout(
+        spec.layout_youtube, spec.duracao_seg, spec.projeto_padrao, spec.global_padrao
+    )
     shared_regions = layout.shared_regions
     has_any_fg = layout.has_any_fg
     bg_png = layout.bg_png
@@ -321,11 +317,13 @@ def build_cinematic_grade_cmd(
     #   software puro (medido), mesmo resultado visual. `hwaccel_decode=False`
     #   volta ao decode software (fallback p/ fontes que a QSV nao decodifica).
     # D-622: sem Intel (encoder libx264) não existe decode QSV — decode software.
-    decode_qsv = permite_decode_qsv(encoder)
-    usa_qsv_decode_filtros = bool(decode_qsv and hwaccel_decode and (filtro_vf or shared_regions))
+    decode_qsv = permite_decode_qsv(spec.encoder)
+    usa_qsv_decode_filtros = bool(
+        decode_qsv and spec.hwaccel_decode and (spec.filtro_vf or shared_regions)
+    )
     if usa_qsv_decode_filtros:
         cmd += ["-hwaccel", "qsv", "-hwaccel_output_format", "qsv"]
-    elif decode_qsv and not filtro_vf and not shared_regions:
+    elif decode_qsv and not spec.filtro_vf and not shared_regions:
         cmd += ["-hwaccel", "qsv"]
 
     cmd += ["-i", str(input_path)]
@@ -340,7 +338,7 @@ def build_cinematic_grade_cmd(
     # cadeia yuv420p) + chrome recortado, ~26% mais rápido (bench D-415).
     derivado_full = (
         layout.derivado_da_regiao(0)
-        if _regiao_unica_cobre_corte(shared_regions, duracao_seg)
+        if _regiao_unica_cobre_corte(shared_regions, spec.duracao_seg)
         else None
     )
 
@@ -356,10 +354,10 @@ def build_cinematic_grade_cmd(
     if shared_regions:
         if derivado_full is not None:
             filter_str = build_grade_precomposto_filter(
-                filtro_vf,
+                spec.filtro_vf,
                 shared_regions[0],
                 derivado_full,
-                duracao_seg=float(duracao_seg),  # type: ignore[arg-type]  # != None pelo guard
+                duracao_seg=float(spec.duracao_seg),  # type: ignore[arg-type]  # != None pelo guard
                 hwaccel_decode=usa_qsv_decode_filtros,
             )
         elif has_any_fg:
@@ -367,18 +365,18 @@ def build_cinematic_grade_cmd(
                 f"{1 + idx}:v" if idx is not None else None for idx in png_input_index
             ]
             filter_str = build_cinematic_grade_layout_filter(
-                filtro_vf,
+                spec.filtro_vf,
                 shared_regions,
                 fg_inputs_per_region=fg_inputs_per_region,
-                duracao_seg=duracao_seg,
+                duracao_seg=spec.duracao_seg,
                 hwaccel_decode=usa_qsv_decode_filtros,
             )
         else:
             filter_str = build_cinematic_grade_layout_filter(
-                filtro_vf,
+                spec.filtro_vf,
                 shared_regions,
                 bg_input="1:v" if bg_png is not None else None,
-                duracao_seg=duracao_seg,
+                duracao_seg=spec.duracao_seg,
                 hwaccel_decode=usa_qsv_decode_filtros,
             )
         filter_arg = _resolve_filter_arg(filter_str, output_path.parent)
@@ -390,14 +388,16 @@ def build_cinematic_grade_cmd(
             "-map",
             "0:a?",
         ]
-    elif filtro_vf:
+    elif spec.filtro_vf:
         hw = "hwdownload,format=nv12," if usa_qsv_decode_filtros else ""
-        cmd += ["-vf", f"{hw}{_CANVAS_NORMALIZE},{filtro_vf}"]
+        cmd += ["-vf", f"{hw}{_CANVAS_NORMALIZE},{spec.filtro_vf}"]
 
     cmd += [
         "-af",
         af,
-        *argumentos_codec_qualidade(encoder, preset="veryfast", global_quality=global_quality),
+        *argumentos_codec_qualidade(
+            spec.encoder, preset="veryfast", global_quality=spec.global_quality
+        ),
         "-g",
         "60",
         "-bf",
@@ -406,7 +406,7 @@ def build_cinematic_grade_cmd(
         # mantém várias surfaces enfileiradas (mais RAM/GPU); 1 reduz o pico de
         # memória — relevante em cortes multi-região onde o filtergraph já
         # consome muito (erro `h264_qsv Cannot allocate memory`, D-065).
-        *argumentos_async_depth(encoder),
+        *argumentos_async_depth(spec.encoder),
         "-fps_mode",
         "cfr",
         "-pix_fmt",
@@ -425,18 +425,7 @@ def build_cinematic_grade_cmd(
 
 
 def build_grade_plan(
-    input_path: Path,
-    output_path: Path,
-    *,
-    filtro_vf: str | None = None,
-    global_quality: int = 27,
-    normalize_audio: bool = False,
-    layout_youtube: dict | None = None,
-    duracao_seg: float | None = None,
-    projeto_padrao: dict | str | None = None,
-    global_padrao: dict | str | None = None,
-    hwaccel_decode: bool = True,
-    encoder: VideoEncoder = VideoEncoder.QSV,
+    input_path: Path, output_path: Path, spec: GradeSpec = GRADE_PADRAO
 ) -> GradePlan:
     """Decide entre grade em comando único (enable-based) e grade SEGMENTADA por
     subprocesso (memory-safe + mais rápida em multi-região).
@@ -447,37 +436,18 @@ def build_grade_plan(
     no comando único, que continua sendo a fonte de verdade do filtergraph.
     """
     if _grade_trim_segmentation_enabled():
-        layout = _resolver_grade_layout(layout_youtube, duracao_seg, projeto_padrao, global_padrao)
-        segmentos = _construir_segmentos_grade(layout.shared_regions, duracao_seg)
+        layout = _resolver_grade_layout(
+            spec.layout_youtube, spec.duracao_seg, spec.projeto_padrao, spec.global_padrao
+        )
+        segmentos = _construir_segmentos_grade(layout.shared_regions, spec.duracao_seg)
         if (
             layout.has_any_fg
             and segmentos is not None
             and len(segmentos) >= _SEGMENTOS_MINIMOS_PARA_FATIAR
         ):
-            return _build_grade_plan_segmentado(
-                input_path,
-                output_path,
-                layout,
-                segmentos,
-                filtro_vf=filtro_vf,
-                global_quality=global_quality,
-                normalize_audio=normalize_audio,
-                encoder=encoder,
-            )
+            return _build_grade_plan_segmentado(input_path, output_path, layout, segmentos, spec)
 
-    cmd = build_cinematic_grade_cmd(
-        input_path,
-        output_path,
-        filtro_vf=filtro_vf,
-        global_quality=global_quality,
-        normalize_audio=normalize_audio,
-        layout_youtube=layout_youtube,
-        duracao_seg=duracao_seg,
-        projeto_padrao=projeto_padrao,
-        global_padrao=global_padrao,
-        hwaccel_decode=hwaccel_decode,
-        encoder=encoder,
-    )
+    cmd = build_cinematic_grade_cmd(input_path, output_path, spec)
     return GradePlan(
         steps=[GradeStep(cmd, "grade")],
         concat_list=None,
