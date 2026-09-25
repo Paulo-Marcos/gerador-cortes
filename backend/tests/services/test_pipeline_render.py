@@ -19,7 +19,7 @@ from app.infrastructure.render.overlay_codec import OverlayCodec, overlay_codec_
 from app.infrastructure.render.overlay_metadata import OverlayEntry
 from app.infrastructure.render.remotion_bundle import compute_src_fingerprint
 from app.infrastructure.render.retry_policy import RetryPolicy
-from app.services.pipeline_render import (
+from app.services.render.pipeline_render import (
     _agrupar_overlay_chunks,
     _aguardar_cooldown,
     _arquivo_minimo,
@@ -641,7 +641,7 @@ class TestAguardarCooldown:
         from unittest.mock import AsyncMock, patch
 
         with patch(
-            "app.services.pipeline_render.asyncio.sleep", new_callable=AsyncMock
+            "app.services.render.pipeline_render.asyncio.sleep", new_callable=AsyncMock
         ) as fake_sleep:
             asyncio.run(_aguardar_cooldown(3, ha_mais_chunks=True))
             fake_sleep.assert_awaited_once_with(3)
@@ -1254,7 +1254,7 @@ class TestRetryAsync:
                 raise RuntimeError("transient")
 
         policy = RetryPolicy(max_attempts=3, base_delay_sec=2.0)
-        with patch("app.services.pipeline_render.asyncio.sleep", new_callable=AsyncMock):
+        with patch("app.services.render.pipeline_render.asyncio.sleep", new_callable=AsyncMock):
             asyncio.run(_retry_async(operacao=op, policy=policy, rotulo="teste"))
         assert chamadas["n"] == 2
 
@@ -1268,7 +1268,7 @@ class TestRetryAsync:
             raise RuntimeError(f"falha-{chamadas['n']}")
 
         policy = RetryPolicy(max_attempts=3, base_delay_sec=2.0)
-        with patch("app.services.pipeline_render.asyncio.sleep", new_callable=AsyncMock):
+        with patch("app.services.render.pipeline_render.asyncio.sleep", new_callable=AsyncMock):
             with pytest.raises(RuntimeError, match="falha-3"):
                 asyncio.run(_retry_async(operacao=op, policy=policy, rotulo="teste"))
         assert chamadas["n"] == 3
@@ -1293,7 +1293,7 @@ class TestRetryAsync:
 
         policy = RetryPolicy(max_attempts=3, base_delay_sec=2.0)
         with patch(
-            "app.services.pipeline_render.asyncio.sleep", new_callable=AsyncMock
+            "app.services.render.pipeline_render.asyncio.sleep", new_callable=AsyncMock
         ) as fake_sleep:
             with pytest.raises(RuntimeError):
                 asyncio.run(_retry_async(operacao=op, policy=policy, rotulo="teste"))
@@ -1310,7 +1310,7 @@ class TestRetryAsync:
 
         policy = RetryPolicy(max_attempts=3, base_delay_sec=0.0)
         with patch(
-            "app.services.pipeline_render.asyncio.sleep", new_callable=AsyncMock
+            "app.services.render.pipeline_render.asyncio.sleep", new_callable=AsyncMock
         ) as fake_sleep:
             with pytest.raises(RuntimeError):
                 asyncio.run(_retry_async(operacao=op, policy=policy, rotulo="teste"))
@@ -1327,11 +1327,11 @@ class TestBatchIsoladoSobFalha:
     batch retorna a lista dos que falharam após esgotar as retries."""
 
     def test_dois_chunks_um_falha_outro_segue(self, tmp_path, monkeypatch):
-        from app.services import pipeline_render as pr
         from app.services.app_settings import (
             AppSettingsService,
             RenderSettings,
         )
+        from app.services.render import pipeline_render as pr
 
         # Setup do renderer fake (para o bundle)
         renderer_dir = tmp_path / "video-renderer"
@@ -1399,11 +1399,11 @@ class TestBatchIsoladoSobFalha:
             AppSettingsService.set_settings_path_for_tests(None)
 
     def test_todos_sucesso_retorna_lista_vazia(self, tmp_path, monkeypatch):
-        from app.services import pipeline_render as pr
         from app.services.app_settings import (
             AppSettingsService,
             RenderSettings,
         )
+        from app.services.render import pipeline_render as pr
 
         renderer_dir = tmp_path / "video-renderer"
         (renderer_dir / "src").mkdir(parents=True)
@@ -1453,11 +1453,11 @@ class TestBatchIsoladoSobFalha:
         """Quando o orquestrador passa `bundle_dir` pronto (caso da paralelização
         com a Fase 1), `_executar_batch_overlay_chunks_parallel` NÃO deve chamar
         `_preparar_bundle_overlay` de novo — esse é o caminho rápido."""
-        from app.services import pipeline_render as pr
         from app.services.app_settings import (
             AppSettingsService,
             RenderSettings,
         )
+        from app.services.render import pipeline_render as pr
 
         renderer_dir = tmp_path / "video-renderer"
         (renderer_dir / "src").mkdir(parents=True)
@@ -1519,11 +1519,11 @@ class TestBatchIsoladoSobFalha:
     def test_bundle_dir_none_dispara_preparar(self, tmp_path, monkeypatch):
         """Compatibilidade reversa: quando `bundle_dir=None`, prepara
         internamente como antes (uso fora do orquestrador principal)."""
-        from app.services import pipeline_render as pr
         from app.services.app_settings import (
             AppSettingsService,
             RenderSettings,
         )
+        from app.services.render import pipeline_render as pr
 
         renderer_dir = tmp_path / "video-renderer"
         (renderer_dir / "src").mkdir(parents=True)
@@ -1573,11 +1573,11 @@ class TestBatchIsoladoSobFalha:
 
     def test_retry_recupera_apos_falha_transiente(self, tmp_path, monkeypatch):
         """Com max_attempts=2, chunk que falha na 1ª e sucede na 2ª acaba ok."""
-        from app.services import pipeline_render as pr
         from app.services.app_settings import (
             AppSettingsService,
             RenderSettings,
         )
+        from app.services.render import pipeline_render as pr
 
         renderer_dir = tmp_path / "video-renderer"
         (renderer_dir / "src").mkdir(parents=True)
@@ -1674,11 +1674,11 @@ class TestPrepararBundleOverlay:
         return AsyncMock(side_effect=side_effect)
 
     def test_segunda_chamada_reaproveita_bundle(self, tmp_path: Path, monkeypatch):
-        from app.services import pipeline_render as pr
         from app.services.app_settings import (
             AppSettingsService,
             RenderSettings,
         )
+        from app.services.render import pipeline_render as pr
 
         renderer_dir = self._preparar_renderer(tmp_path)
         monkeypatch.setattr(pr.settings, "video_renderer_dir", str(renderer_dir))
@@ -1705,11 +1705,11 @@ class TestPrepararBundleOverlay:
             AppSettingsService.set_settings_path_for_tests(None)
 
     def test_mudanca_em_src_invalida_cache(self, tmp_path: Path, monkeypatch):
-        from app.services import pipeline_render as pr
         from app.services.app_settings import (
             AppSettingsService,
             RenderSettings,
         )
+        from app.services.render import pipeline_render as pr
 
         renderer_dir = self._preparar_renderer(tmp_path)
         monkeypatch.setattr(pr.settings, "video_renderer_dir", str(renderer_dir))
@@ -1737,11 +1737,11 @@ class TestPrepararBundleOverlay:
             AppSettingsService.set_settings_path_for_tests(None)
 
     def test_cache_desligado_sempre_rebundle_dentro_do_output(self, tmp_path: Path, monkeypatch):
-        from app.services import pipeline_render as pr
         from app.services.app_settings import (
             AppSettingsService,
             RenderSettings,
         )
+        from app.services.render import pipeline_render as pr
 
         renderer_dir = self._preparar_renderer(tmp_path)
         monkeypatch.setattr(pr.settings, "video_renderer_dir", str(renderer_dir))
@@ -1811,7 +1811,7 @@ class TestPrepararOverlayChunksCascadeLayout:
         return [entry.cena_dict for chunk in chunks for entry in chunk["entries"]]
 
     def test_corte_intocado_herda_compartilhada_do_projeto(self):
-        from app.services.pipeline_render import _preparar_overlay_chunks
+        from app.services.render.pipeline_render import _preparar_overlay_chunks
 
         chunks = asyncio.run(
             _preparar_overlay_chunks(
@@ -1834,7 +1834,7 @@ class TestPrepararOverlayChunksCascadeLayout:
             assert zone["w"] < 1920 and zone["h"] < 1080
 
     def test_sem_padrao_do_projeto_preserva_modo_full(self):
-        from app.services.pipeline_render import _preparar_overlay_chunks
+        from app.services.render.pipeline_render import _preparar_overlay_chunks
 
         chunks = asyncio.run(_preparar_overlay_chunks(self._corte_intocado(), "vertical"))
 

@@ -17,10 +17,10 @@ O render final usa composicao por camadas — esta e a unica pipeline suportada:
 
 ## Arquivos-Chave
 
-- Backend orchestration: `backend/app/services/pipeline_render.py`
+- Backend orchestration: `backend/app/services/render/pipeline_render.py`
 - FFmpeg builders: `backend/app/infrastructure/render/ffmpeg_commands.py`
 - Endpoint do pipeline: `backend/app/routers/cortes.py`
-- Service de entrada do render: `backend/app/services/remotion_render.py`
+- Service de entrada do render: `backend/app/services/render/remotion_render.py`
 - Frontend Angular (legado): `frontend/src/app/pages/timeline-editor/timeline-editor.component.ts`
 - Frontend (React): `frontend/src/features/final-review/FinalReviewPage.tsx`, `frontend/src/features/post-production/ScenesPostProductionPage.tsx`
 - Remotion overlay isolado: `video-renderer/src/OverlayScene.tsx`

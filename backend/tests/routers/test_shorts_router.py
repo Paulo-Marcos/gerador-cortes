@@ -343,7 +343,7 @@ class TestEnquadrarPeloRosto:
         bruto = tmp_path / "bruto.mkv"
         bruto.write_bytes(b"x" * 512)
         monkeypatch.setattr(enquadramento_shorts, "AsyncSessionLocal", session_factory)
-        monkeypatch.setattr("app.services.render_short._bruto_em_disco", lambda corte: bruto)
+        monkeypatch.setattr("app.services.render.render_short._bruto_em_disco", lambda corte: bruto)
 
         async with session_factory() as db:
             db.add(Short(id="s-foco", corte_id="c1", numero=1, inicio_seg=5.0, fim_seg=35.0))
@@ -415,7 +415,7 @@ class TestEnquadrarPeloRosto:
 
     def test_sem_bruto_em_disco_e_422(self, client, short, detector, monkeypatch):
         detector([0.8])
-        monkeypatch.setattr("app.services.render_short._bruto_em_disco", lambda corte: None)
+        monkeypatch.setattr("app.services.render.render_short._bruto_em_disco", lambda corte: None)
 
         resposta = client.post("/api/shorts/s-foco/enquadrar")
 

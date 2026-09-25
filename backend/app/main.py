@@ -46,7 +46,7 @@ from app.services.app_settings import AppSettingsService
 from app.services.canal import editorial_scaffolds
 from app.services.canal import editorial_skills as editorial_skills_service
 from app.services.canal.channel_layout_migration import garantir_layout_de_canais
-from app.services.remotion_render import RemotionRenderService
+from app.services.render.remotion_render import RemotionRenderService
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse

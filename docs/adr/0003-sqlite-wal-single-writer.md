@@ -80,5 +80,5 @@ Enquanto nenhuma dessas condições existir, **SQLite/WAL permanece a escolha co
 - `backend/app/database.py:1-26` (engine, `connect_args`, PRAGMAs WAL)
 - `backend/app/models.py` (modelos SQLAlchemy)
 - `backend/app/services/media_proxy.py:17-58` (single-flight por `corte_id`)
-- `backend/app/services/pipeline_event_log.py:21-32` (lock por log)
+- `backend/app/services/render/pipeline_event_log.py:21-32` (lock por log)
 - `CLAUDE.md` ("SQLite via SQLAlchemy async ← WAL mode for concurrency")

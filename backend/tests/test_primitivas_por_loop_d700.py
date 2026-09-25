@@ -16,8 +16,8 @@ import pytest
 from app.config import settings
 from app.infrastructure import antigravity_cli_client as agy
 from app.infrastructure import claude_cli_client as claude
-from app.services import remotion_bundle_cache as bundle
-from app.services import remotion_render as rr
+from app.services.render import remotion_bundle_cache as bundle
+from app.services.render import remotion_render as rr
 
 _BUNDLE = Path("raiz-do-cache")
 

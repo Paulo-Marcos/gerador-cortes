@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import types
 
-import app.services.pipeline_render as pr
+import app.services.render.pipeline_render as pr
 import pytest
 from app.domain.corte.youtube_layout import regioes_full_posicionadas, resolver_layout_em_cascata
 from app.services.app_settings import AppSettingsService

@@ -47,7 +47,7 @@ from app.services.app_logging import (
     operational_info,
 )
 from app.services.app_settings import AppSettingsService, RenderSettings
-from app.services.pipeline_corte_fields import (
+from app.services.render.pipeline_corte_fields import (
     _campo_corte,
     _duracao_layout_corte,
     _extrair_cenas,
@@ -56,8 +56,8 @@ from app.services.pipeline_corte_fields import (
     _layout_youtube_cru_do_corte,
     _numero_corte,
 )
-from app.services.pipeline_event_log import PipelineEventLog
-from app.services.pipeline_fases import (
+from app.services.render.pipeline_event_log import PipelineEventLog
+from app.services.render.pipeline_fases import (
     _arquivo_minimo,
     _deve_limpar_artefatos,
     _deve_pular_fase,
@@ -66,7 +66,7 @@ from app.services.pipeline_fases import (
     _remover_arquivo_temporario,
     _video_final_temporario,
 )
-from app.services.pipeline_overlay_chunks import (
+from app.services.render.pipeline_overlay_chunks import (
     _agrupar_overlay_chunks,
     _construir_cenas_chunk_relativas,
     _criar_overlay_chunk,
@@ -74,16 +74,16 @@ from app.services.pipeline_overlay_chunks import (
     _mensagem_falha_total_overlays,
     _resolver_overlays_para_composicao,
 )
-from app.services.pipeline_render_config import FONTE_PRESETS_VALIDOS, ProjetoRenderConfig
-from app.services.pipeline_render_helpers import (
+from app.services.render.pipeline_render_config import FONTE_PRESETS_VALIDOS, ProjetoRenderConfig
+from app.services.render.pipeline_render_helpers import (
     _assets_servidos_do_bundle,
     _build_overlay_render_cmd,
     _render_retry_policy,
     _retry_async,
     fingerprint_do_bundle_async,
 )
-from app.services.remotion_bundle_cache import RemotionBundleCache
-from app.services.render_ffmpeg_log import append_ffmpeg_command
+from app.services.render.remotion_bundle_cache import RemotionBundleCache
+from app.services.render.render_ffmpeg_log import append_ffmpeg_command
 from app.services.youtube_palco import (
     PalcoPngGeracaoError,
     PalcoPngsResultado,
@@ -1496,7 +1496,7 @@ async def _executar_render_final(
 
 async def _finalizar_corte(db, corte: Corte, upload_dir: Path) -> None:
     """Atualiza status do corte, gera metadados e copia thumbnail."""
-    from app.services.finalizacao_do_corte import finalizar_corte_com_sucesso
+    from app.services.render.finalizacao_do_corte import finalizar_corte_com_sucesso
 
     await finalizar_corte_com_sucesso(db, corte, upload_dir)
 

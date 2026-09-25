@@ -13,8 +13,8 @@ from app.services.app_logging import operational_error, operational_info
 from app.services.app_settings import AppSettingsService
 from app.services.ciclo_de_vida import mudar_projeto
 from app.services.ingestao import IngestaoService
-from app.services.pipeline_render import FONTE_PRESETS_VALIDOS
 from app.services.projeto import ProjetoService
+from app.services.render.pipeline_render import FONTE_PRESETS_VALIDOS
 from app.services.tasks import fire_and_forget
 from app.services.telemetria_cortes import TelemetriaCortesService
 from app.services.youtube_palco import ensure_palco_png

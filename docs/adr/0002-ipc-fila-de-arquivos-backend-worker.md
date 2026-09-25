@@ -86,6 +86,6 @@ HTTP/gRPC passa a se justificar.
 ## Referências
 
 - `backend/app/infrastructure/worker_queue.py` (escrita atômica, espera, categorias)
-- `backend/app/services/pipeline_render.py:1518-1543` (`_executar_via_worker`)
-- `backend/app/services/remotion_render.py` (varredura de respostas órfãs)
+- `backend/app/services/render/pipeline_render.py:1518-1543` (`_executar_via_worker`)
+- `backend/app/services/render/remotion_render.py` (varredura de respostas órfãs)
 - `video-renderer/native_worker.js` (observação da fila, `processJob`, paralelismo)

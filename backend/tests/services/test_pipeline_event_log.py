@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from threading import Thread
 
-from app.services.pipeline_event_log import PipelineEventLog
+from app.services.render.pipeline_event_log import PipelineEventLog
 
 # ─────────────────────────────────────────────────────────────
 # Escrita básica

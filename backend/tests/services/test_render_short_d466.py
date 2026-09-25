@@ -14,7 +14,7 @@ import json
 import pytest
 import pytest_asyncio
 from app.models import Base, Corte, Projeto, Short, StatusShort
-from app.services import render_short
+from app.services.render import render_short
 from app.services.transcricao_fiel import TranscricaoFiel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -576,7 +576,7 @@ class TestMolduraChegaAoRender:
         letterbox preto. Foi essa confusao que quase fez a D-501 adotar uma
         faixa de 7% dentro da tarja de 8% do filtro.
         """
-        from app.services.render_short import faixas_do_canal
+        from app.services.render.render_short import faixas_do_canal
 
         cor = faixas_do_canal("palco")[0].cor
         return self._filtro(job).count(f"color={cor}")
@@ -649,7 +649,7 @@ def test_textura_invalida_no_palco_cai_na_padrao_do_canal():
     fundo inexistente — a divergencia silenciosa que a D-549 ja custou uma vez.
     """
     from app.domain.corte.youtube_layout import FUNDO_PADRAO
-    from app.services.render_short import _textura
+    from app.services.render.render_short import _textura
 
     assert _textura({"fundo_editorial": "verdeProfundo"}) == FUNDO_PADRAO
     assert _textura({"fundo_editorial": ""}) == FUNDO_PADRAO

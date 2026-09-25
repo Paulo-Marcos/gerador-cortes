@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from app.services import remotion_render as rr
+from app.services.render import remotion_render as rr
 
 
 @pytest.fixture(autouse=True)

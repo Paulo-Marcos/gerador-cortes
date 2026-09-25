@@ -31,13 +31,7 @@ from app.routers.cortes_schemas import (
     ValidarCenasRequest,
 )
 from app.routers.errors import erro_interno
-from app.services import (
-    abrir_no_sistema,
-    bruto_do_corte,
-    finalizacao_do_corte,
-    remotion_studio,
-    situacao_do_render,
-)
+from app.services import abrir_no_sistema, bruto_do_corte, remotion_studio
 from app.services import arranjo as arranjo_service
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.corte import AtualizarCorteDTO, CorteService
@@ -46,8 +40,9 @@ from app.services.deteccao_segmentos import (
 )
 from app.services.deteccao_segmentos import iniciar_deteccao
 from app.services.media_proxy import MediaProxyService
-from app.services.remotion_render import RemotionRenderService
-from app.services.render_progress import RenderProgressStore
+from app.services.render import finalizacao_do_corte, situacao_do_render
+from app.services.render.remotion_render import RemotionRenderService
+from app.services.render.render_progress import RenderProgressStore
 from app.services.tasks import fire_and_forget
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse

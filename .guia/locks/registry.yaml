@@ -81,7 +81,7 @@ locks:
     vs do zero'
   locked_at: '2026-05-24'
   files:
-  - backend/app/services/pipeline_render.py
+  - backend/app/services/render/pipeline_render.py
   - backend/app/routers/cortes.py
   - backend/tests/services/test_pipeline_render.py
   - frontend/src/features/post-production/RenderStartModal.tsx
@@ -195,7 +195,7 @@ locks:
   - CLAUDE.md
   - backend/app/main.py
   - backend/app/services/export.py
-  - backend/app/services/pipeline_render.py
+  - backend/app/services/render/pipeline_render.py
   - backend/app/services/projeto.py
   - bin/check-lock.py
   - frontend/src/features/editor/EditorCutList.tsx
@@ -230,8 +230,8 @@ locks:
   locked_at: 2026-05-31
   files:
   - backend/app/infrastructure/render/cinema_filters.py
-  - backend/app/services/pipeline_render.py
-  - backend/app/services/remotion_render.py
+  - backend/app/services/render/pipeline_render.py
+  - backend/app/services/render/remotion_render.py
   - backend/app/routers/cortes.py
 - id: i-035-zona-card-compartilhada
   description: Geometria dinamica da zona do card no layout compartilhado (2 telas)

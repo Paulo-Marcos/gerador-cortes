@@ -13,7 +13,7 @@ import re
 import types
 from pathlib import Path
 
-import app.services.pipeline_render as pr
+import app.services.render.pipeline_render as pr
 import pytest
 from app.services.app_settings import AppSettingsService, LogLevel
 

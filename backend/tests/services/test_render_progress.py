@@ -1,4 +1,4 @@
-from app.services.render_progress import RenderProgressStore
+from app.services.render.render_progress import RenderProgressStore
 
 
 def test_render_progress_lifecycle():

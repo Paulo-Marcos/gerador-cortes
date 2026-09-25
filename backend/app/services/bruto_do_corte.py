@@ -95,7 +95,7 @@ def _corte_ja_gerou_bruto(corte: Corte) -> bool:
     por IA, SOBRESCREVENDO o pós já editado. Por isso as cenas geradas também
     contam como prova de que o corte já rodou.
     """
-    from app.services.pipeline_render import _find_clip_raw
+    from app.services.render.pipeline_render import _find_clip_raw
 
     corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte.id
     if _find_clip_raw(corte_dir) is not None:

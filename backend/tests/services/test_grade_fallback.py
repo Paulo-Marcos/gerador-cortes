@@ -4,7 +4,7 @@ fonte nao for decodavel pela GPU — um render nunca pode quebrar por causa diss
 
 from pathlib import Path
 
-import app.services.pipeline_render as pr
+import app.services.render.pipeline_render as pr
 import pytest
 from app.infrastructure.worker_queue import WorkerJobFailed, WorkerJobTimeout
 from app.services.youtube_palco import PalcoPngsResultado

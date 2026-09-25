@@ -49,7 +49,7 @@ from app.infrastructure.worker_queue import RemotionWorkerQueue, WorkerJob, Work
 from app.models import Corte, Short, StatusShort
 from app.services import legendas_short, palco_shorts
 from app.services.app_settings import AppSettingsService
-from app.services.pipeline_render_helpers import _build_overlay_render_cmd
+from app.services.render.pipeline_render_helpers import _build_overlay_render_cmd
 from app.services.shorts import foco_efetivo
 from app.services.shorts_progress import ShortsProgress
 from app.services.tasks import fire_and_forget

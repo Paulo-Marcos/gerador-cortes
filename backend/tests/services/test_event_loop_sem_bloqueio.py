@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from app.routers import cortes
 from app.services import corte as corte_service
-from app.services import finalizacao_do_corte
 from app.services import projeto as projeto_service
+from app.services.render import finalizacao_do_corte
 
 
 def _espiao(registro: list[str], nome: str):

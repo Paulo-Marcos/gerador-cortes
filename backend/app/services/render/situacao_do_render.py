@@ -14,7 +14,7 @@ from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.models import Corte
-from app.services.render_progress import RenderProgressStore
+from app.services.render.render_progress import RenderProgressStore
 
 
 async def situacao_do_pipeline(corte_id: str) -> dict:

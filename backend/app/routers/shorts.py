@@ -572,7 +572,7 @@ async def atualizar_post(short_id: str, body: AtualizarPostRequest):
 @router.post("/{short_id}/renderizar")
 async def renderizar(short_id: str):
     """Produz o MP4 vertical do short (recorte 9:16 + legenda + cenas)."""
-    from app.services import render_short
+    from app.services.render import render_short
 
     try:
         return render_short.disparar(short_id, final=True)
@@ -588,7 +588,7 @@ async def renderizar_previa(short_id: str):
     finalizar reprocessa do zero, porque o filtro tem de rodar junto com o
     recorte e antes do overlay.
     """
-    from app.services import render_short
+    from app.services.render import render_short
 
     try:
         return render_short.disparar(short_id, final=False)
@@ -817,7 +817,7 @@ async def log_do_render(short_id: str):
     quanto a anterior demorou. E o mesmo acompanhamento que o horizontal tem, e
     que o short nao tinha: "fico no escuro".
     """
-    from app.services import render_short
+    from app.services.render import render_short
 
     try:
         return await render_short.log_do_render(short_id)

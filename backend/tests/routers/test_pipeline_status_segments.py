@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from app.routers import cortes as cortes_router
-from app.services import situacao_do_render
+from app.services.render import situacao_do_render
 
 
 def _corte_mock(corte_id="corte-1", projeto_id="projeto-1"):

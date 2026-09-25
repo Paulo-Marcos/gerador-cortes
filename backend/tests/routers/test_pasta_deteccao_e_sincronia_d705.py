@@ -33,7 +33,7 @@ from sqlalchemy.pool import StaticPool
 # Onde cada caso de uso lê a pasta dos projetos (o canal resolve o caminho gravado).
 _PROJETOS_DIR_LIDO_EM = [
     "app.services.corte",
-    "app.services.finalizacao_do_corte",
+    "app.services.render.finalizacao_do_corte",
     "app.core.channel_paths",
 ]
 # Onde o disparo da detecção é agendado.

@@ -13,7 +13,7 @@ import threading
 
 import pytest
 from app.infrastructure.render.remotion_bundle import compute_src_fingerprint
-from app.services import pipeline_render_helpers as helpers
+from app.services.render import pipeline_render_helpers as helpers
 
 
 @pytest.fixture(autouse=True)

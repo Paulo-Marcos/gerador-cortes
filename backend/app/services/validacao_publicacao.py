@@ -27,7 +27,7 @@ from app.database import AsyncSessionLocal
 from app.domain.corte.corte_mapper import cenas_fora_do_corte, extrair_cenas_remotion
 from app.infrastructure.ffmpeg_runner import probe_duracao
 from app.models import Corte, MetadadoCorte
-from app.services.pipeline_corte_fields import _duracao_layout_corte
+from app.services.render.pipeline_corte_fields import _duracao_layout_corte
 from sqlalchemy import select
 
 # Extensões de thumbnail aceitas em upload_ready/ (mesma ordem do upload real).

@@ -12,9 +12,9 @@ from app.core.por_loop import PorLoop
 from app.database import AsyncSessionLocal
 from app.models import Corte
 from app.services.cancelamento_jobs import TrabalhoEmVoo
-from app.services.finalizacao_do_corte import finalizar_corte_com_sucesso
-from app.services.pipeline_render import renderizar_pipeline_otimizado
-from app.services.render_progress import RenderProgressStore
+from app.services.render.finalizacao_do_corte import finalizar_corte_com_sucesso
+from app.services.render.pipeline_render import renderizar_pipeline_otimizado
+from app.services.render.render_progress import RenderProgressStore
 
 logger = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ tempo-de-clip foi de 1,16x (um de cada vez) para 4,68x (vários ao mesmo tempo).
 
 ## Decisão
 
-O render passa por um **portão global** (`services/remotion_render.py`):
+O render passa por um **portão global** (`services/render/remotion_render.py`):
 
 - **D-440:** um semáforo único para o pipeline inteiro. Ele nasce "preguiçoso", dentro
   do event loop do servidor.

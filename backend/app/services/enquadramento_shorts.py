@@ -43,7 +43,7 @@ async def enquadrar_pelo_rosto(short_id: str) -> dict:
     disco, ou janela inválida). `DeteccaoIndisponivel` sobe como está — é falha
     de ambiente, não do trecho, e merece uma mensagem diferente na tela.
     """
-    from app.services.render_short import _bruto_em_disco
+    from app.services.render.render_short import _bruto_em_disco
     from app.services.shorts import _serializar
 
     async with AsyncSessionLocal() as db:

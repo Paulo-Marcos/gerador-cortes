@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 import pytest
-from app.services.remotion_bundle_cache import RemotionBundleCache
+from app.services.render.remotion_bundle_cache import RemotionBundleCache
 
 # ─────────────────────────────────────────────────────────────
 # Helpers — builders fake

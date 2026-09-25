@@ -31,7 +31,7 @@ def test_projeto_model_nao_tem_mais_filtro_padrao():
 def test_iniciar_render_resolve_filtro_global_quando_nao_especificado():
     """`filtro=None` (default) tem que cair no global de AppSettings, NUNCA
     em um literal como 'cinematic_iii'."""
-    from app.services import remotion_render as rr
+    from app.services.render import remotion_render as rr
 
     captured = {}
 
@@ -83,7 +83,7 @@ def test_iniciar_render_resolve_filtro_global_quando_nao_especificado():
 def test_iniciar_render_respeita_filtro_explicito_de_teste():
     """Quando o caller passa filtro explícito (ex.: aba de testes), o pipeline
     recebe ESSE filtro — não o global. (Sanity check do contrato.)"""
-    from app.services import remotion_render as rr
+    from app.services.render import remotion_render as rr
 
     captured = {}
 

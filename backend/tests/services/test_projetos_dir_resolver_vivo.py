@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from app.config import settings
 from app.core import channel_paths
-from app.services import pipeline_render
+from app.services.render import pipeline_render
 
 
 def _fazer_canal(tmp_path, nome: str):
