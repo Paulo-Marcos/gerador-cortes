@@ -4,17 +4,23 @@ import logging
 import time
 
 from app.database import AsyncSessionLocal
+from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.corte_mapper import cenas_fora_do_corte, coalescer_chaves_mascote
 from app.domain.projeto.diarizacao_align import prefixo_falante
-from app.infrastructure import gemini_client
+from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
 from app.services import retrato_wikipedia
 from app.services.app_logging import operational_debug, operational_error, operational_info
-from app.services.canal import editorial_scaffolds
+from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.claude_ia import gerar_json, registrar_skill_usada
 
 logger = logging.getLogger(__name__)
+
+# A skill que escreve as cenas do corte — a geração pela IA mora aqui (D-704).
+_SKILL_CENAS = "cenas-expert"
 
 
 def _carregar_mapa_falantes(raw: object) -> dict | None:
@@ -111,6 +117,83 @@ def _stats_retratos() -> dict:
 
 
 class CenasRemotionService:
+    @staticmethod
+    async def gerar_cenas_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
+        """Gera as cenas Remotion de um corte via Claude (skill cenas-expert).
+
+        Reaproveita o prompt detalhado (que carrega o schema) e o importador de
+        cenas já existentes. Se o corte for longo, o prompt vem particionado —
+        geramos por parte e concatenamos as cenas antes de importar.
+        """
+        # D-435: a fila só via as cenas quando o Claude CLI anunciava CADA
+        # chamada, então montar o prompt, importar retratos e qualquer falha
+        # antes da 1ª chamada aconteciam sem item nenhum na fila — e a geração
+        # automática disparada pelo bruto parecia não existir. Anunciamos a fase
+        # inteira sob a MESMA chave que as chamadas internas usam, de modo que
+        # elas apenas atualizam este item em vez de criar outro.
+        # BaseException, e não Exception: um CancelledError (reload do backend,
+        # task morta) deixaria o item preso na fila como "em andamento".
+        chave_fila = fila_ia.anunciar_inicio(_SKILL_CENAS, corte_id=corte_id)
+        try:
+            resultado = await CenasRemotionService._gerar_cenas(corte_id, provider)
+        except BaseException as exc:
+            fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
+            raise
+        fila_ia.anunciar_fim(chave_fila, sucesso=True)
+        return resultado
+
+    @staticmethod
+    async def _gerar_cenas(corte_id: str, provider: ProviderIA = "claude") -> dict:
+        """Corpo da geração de cenas — ver `gerar_cenas_via_claude`."""
+        logger.info("[ClaudeIA/cenas] iniciando corte %s", corte_id[:8])
+        t_mp = time.perf_counter()
+        info = await CenasRemotionService.montar_prompt(corte_id)
+        prompts = info.get("prompts") or []
+        logger.info(
+            "[ClaudeIA/cenas] montar_prompt: %d chunk(s) em %.1fs",
+            len(prompts),
+            time.perf_counter() - t_mp,
+        )
+        if not prompts:
+            raise ValueError("Sem prompt de cenas (transcrição final vazia?).")
+
+        skill = editorial_skills.resolver_skill(_SKILL_CENAS)
+        registrar_skill_usada(_SKILL_CENAS, skill)
+        # Uma lente por geração (consistente entre as partes), do banco por canal.
+        variacao = bloco_variacao_de(skill.lentes)
+        cenas: list = []
+        for indice, parte in enumerate(prompts):
+            prompt = f"{variacao}\n\n{parte['texto']}"
+            t = time.perf_counter()
+            resultado = await gerar_json(provider, prompt, skill, _SKILL_CENAS, corte_id=corte_id)
+            novas = resultado.get("cenas", [])
+            cenas.extend(novas)
+            logger.info(
+                "[ClaudeIA/cenas] corte %s chunk %d/%d: %d cenas (Claude) em %.1fs",
+                corte_id[:8],
+                indice + 1,
+                len(prompts),
+                len(novas),
+                time.perf_counter() - t,
+            )
+
+        if not cenas:
+            raise ValueError("Claude não retornou cenas.")
+
+        t_imp = time.perf_counter()
+        await CenasRemotionService.importar_cenas(corte_id, {"cenas": cenas})
+        logger.info(
+            "[ClaudeIA/cenas] corte %s: importar_cenas (retratos + save) em %.1fs",
+            corte_id[:8],
+            time.perf_counter() - t_imp,
+        )
+        logger.info(
+            "[ClaudeIA] Cenas geradas via Claude p/ corte %s: %d cenas",
+            corte_id[:8],
+            len(cenas),
+        )
+        return {"total_cenas": len(cenas)}
+
     @staticmethod
     async def montar_prompt(corte_id: str, transcricao_override: list = None) -> dict:
         """Retorna o prompt completo para geração de cenas sem chamar a IA."""

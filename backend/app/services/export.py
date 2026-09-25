@@ -388,9 +388,9 @@ class ExportService(
             if gerar_cenas:
                 BrutoProgress.marcar(corte_id, "cenas", "rodando")
                 try:
-                    from app.services.claude_ia import ClaudeIaService
+                    from app.services.cenas_remotion import CenasRemotionService
 
-                    await ClaudeIaService.gerar_cenas_via_claude(corte_id)
+                    await CenasRemotionService.gerar_cenas_via_claude(corte_id)
                     BrutoProgress.marcar(corte_id, "cenas", "concluido")
                 except Exception as exc:
                     BrutoProgress.marcar(corte_id, "cenas", "erro")

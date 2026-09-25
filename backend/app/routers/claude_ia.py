@@ -12,7 +12,8 @@ from app.domain.compartilhado.provider_ia import provider_do_modelo
 from app.models import Corte, Projeto
 from app.services import telemetria_ia
 from app.services.analise import AnaliseService
-from app.services.claude_ia import ClaudeIaService, ProviderIA
+from app.services.cenas_remotion import CenasRemotionService
+from app.services.claude_ia import ProviderIA
 from app.services.corte import CorteService
 from app.services.metadados import MetadadosService
 from fastapi import APIRouter, Depends, HTTPException
@@ -122,7 +123,7 @@ async def gerar_cenas_via_claude(
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     await _soltar_a_transacao(db)
     try:
-        resultado = await ClaudeIaService.gerar_cenas_via_claude(corte_id, provider=provider)
+        resultado = await CenasRemotionService.gerar_cenas_via_claude(corte_id, provider=provider)
         return {
             "message": "Cenas geradas via IA",
             "corte_id": corte_id,

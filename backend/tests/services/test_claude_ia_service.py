@@ -1005,7 +1005,7 @@ class TestCenasMetadados:
         monkeypatch.setattr(CenasRemotionService, "importar_cenas", staticmethod(fake_importar))
         monkeypatch.setattr(claude_cli_client, "generate_json", fake_gen)
 
-        resultado = asyncio.run(ClaudeIaService.gerar_cenas_via_claude("c1"))
+        resultado = asyncio.run(CenasRemotionService.gerar_cenas_via_claude("c1"))
 
         assert resultado == {"total_cenas": 2}, "deve concatenar as cenas das 2 partes"
         assert len(capturado["payload"]["cenas"]) == 2
