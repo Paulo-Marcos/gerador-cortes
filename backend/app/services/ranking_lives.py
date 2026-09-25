@@ -21,7 +21,7 @@ from datetime import UTC, datetime, timedelta
 from app import prompts_utilitarios, ranking_settings
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain.ranking_lives import (
+from app.domain.live_candidata.ranking_lives import (
     PesosRanking,
     SinaisLive,
     pontuar_lote,

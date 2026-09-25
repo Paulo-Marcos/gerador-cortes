@@ -55,7 +55,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN-18 | Ritmo de publicação: cadência por plataforma (cabe hoje / espera até o próximo). No YouTube o teto vem da quota (10.000/dia, 1.600 por upload). | `domain/publicacao/ritmo_publicacao.py` (`cadencia_de`, `cabe_hoje`, `espera_do_proximo`) | — |
 | RN-19 | Agendamento válido por plataforma, no futuro (margem mínima de 5 min) e dentro do horizonte de cada uma. | `domain/publicacao/agendamento.py` (`validar`) | — |
 | RN-20 | **Teto de hashtags por plataforma**: 3 no YouTube Shorts, 5 no Reels, 5 no TikTok. A legenda do Reels não leva link. O que se **grava** tem teto 10; o corte por plataforma é feito na publicação. | `domain/publicacao/publicacao.py` (`adaptar`, `hashtags_max`, `link_na_legenda`); `domain/short/metadados_short.py` (`MAX_HASHTAGS`) | — |
-| RN-21 | Ranking de lives = VPH + recência, normalizados min-max no lote. | `domain/ranking_lives.py` (`calcular_vph`, `calcular_recencia`, `normalizar_minmax`) | — |
+| RN-21 | Ranking de lives = VPH + recência, normalizados min-max no lote. | `domain/live_candidata/ranking_lives.py` (`calcular_vph`, `calcular_recencia`, `normalizar_minmax`) | — |
 
 ## F. Imagem, áudio e render
 

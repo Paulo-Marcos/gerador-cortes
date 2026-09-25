@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from app.domain.ranking_lives import (
+from app.domain.live_candidata.ranking_lives import (
     PISO_IDADE_HORAS_VPH,
     PesosRanking,
     SinaisLive,

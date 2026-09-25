@@ -26,7 +26,7 @@ from pathlib import Path
 
 from app import channel_paths
 from app.config import settings
-from app.domain.ranking_lives import PesosRanking
+from app.domain.live_candidata.ranking_lives import PesosRanking
 from app.infrastructure import settings_store
 
 # As 5 chaves que são PESOS (entram no reescalonamento 0-100). `meia_vida_dias` é um
