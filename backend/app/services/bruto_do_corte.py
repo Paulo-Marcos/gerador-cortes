@@ -11,8 +11,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from pathlib import Path
 
-from app.core.channel_paths import projetos_dir
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.models import Corte
@@ -138,3 +139,43 @@ async def _avaliar_bruto_gerado(corte_id: str) -> None:
         await avaliar_bruto_via_claude(corte_id)
     except Exception as exc:  # noqa: BLE001 — nunca fatal para a geração do bruto
         logger.warning("[avaliacao-bruto] falhou no corte %s: %s", corte_id[:8], exc)
+
+
+# Nomes fixos, na ordem de preferência, depois dos `clip_raw_*` com carimbo.
+_BRUTOS_FIXOS = (
+    "clip_raw.mkv",
+    "clip_raw.mp4",
+    "clip_raw_base.mkv",
+    "clip_raw_base.mp4",
+    "clip_raw_backup_com_silencios.mkv",
+    "clip_raw_backup_com_silencios.mp4",
+)
+
+
+async def localizar(corte_id: str) -> tuple[str, Path]:
+    """O arquivo do bruto do corte e o projeto dele (D-705).
+
+    Primeiro o caminho gravado no corte (o último que o worker gerou); sem ele,
+    o `clip_raw_*` mais recente — nomes únicos por estratégia, como
+    `clip_raw_A_<ts>.mkv` —; por fim os nomes fixos.
+    """
+    async with AsyncSessionLocal() as db, db.begin():
+        corte = await db.get(Corte, corte_id)
+        if not corte:
+            raise NaoEncontrado("Corte não encontrado")
+
+    if corte.arquivo_clip_path:
+        gravado = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
+        if gravado.exists():
+            return corte.projeto_id, gravado
+
+    corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte_id
+    com_carimbo = sorted(
+        list(corte_dir.glob("clip_raw_*.mkv")) + list(corte_dir.glob("clip_raw_*.mp4")),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    for candidato in [*com_carimbo, *(corte_dir / nome for nome in _BRUTOS_FIXOS)]:
+        if candidato.exists():
+            return corte.projeto_id, candidato
+    raise NaoEncontrado("Vídeo bruto não encontrado")

@@ -14,7 +14,7 @@ import ast
 from pathlib import Path
 
 # Medido em 25/09/2026; o E-053 (D-703 a D-707) leva a zero.
-_DIVIDA = {"Depends(get_db)": 83, "commit()": 9, "AsyncSessionLocal()": 3}
+_DIVIDA = {"Depends(get_db)": 82, "commit()": 9, "AsyncSessionLocal()": 3}
 
 _ROUTERS = Path(__file__).resolve().parents[1] / "app" / "routers"
 

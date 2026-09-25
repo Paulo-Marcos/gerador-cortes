@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 # Onde a regra lê a pasta dos projetos (o canal resolve o caminho gravado).
-_PROJETOS_DIR_LIDO_EM = ["app.routers.cortes", "app.core.channel_paths"]
+_PROJETOS_DIR_LIDO_EM = ["app.services.bruto_do_corte", "app.core.channel_paths"]
 
 
 @pytest_asyncio.fixture
