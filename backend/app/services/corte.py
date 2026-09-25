@@ -492,6 +492,136 @@ async def _depois_de_gravar(db: AsyncSession, corte: Corte, dados: AtualizarCort
         await ThumbnailService.reaplicar_moldura(corte.id)
 
 
+# ─── Os passos da sincronia (D-716: saíram de `CorteService._exec_sincronia`) ──
+
+
+async def _transcricao_da_live(db: AsyncSession, projeto_id: str) -> list | None:
+    projeto = await db.get(Projeto, projeto_id)
+    if not projeto or not projeto.transcricao_raw:
+        return None
+    return json.loads(projeto.transcricao_raw or "[]")
+
+
+def _registrar_desvios(corte: Corte, corte_id: str, desvios: list[dict]) -> None:
+    operational_debug("CorteService", f"Sincronizando '{corte.titulo_proposto}' ({corte_id})")
+    operational_debug("CorteService", f"  Range: {corte.inicio_seg} -> {corte.fim_seg}")
+    operational_debug("CorteService", f"  Desvios no banco ({len(desvios)}):")
+    for d in desvios:
+        operational_debug(
+            "CorteService",
+            f"    - [{d.get('inicio_seg')} -> {d.get('fim_seg')}] {d.get('motivo')}",
+        )
+
+
+def _segundos_da_sincronia(val) -> float:
+    """Tempo em segundos; sem o `0.0` para vazio do `to_seg`: aqui `None` descarta a fala."""
+    if isinstance(val, (int, float)):
+        return float(val)
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return hms_to_seg(str(val))
+
+
+def _transcricao_bruta(trans_raw: list, c_inicio: float, c_fim: float) -> list[dict]:
+    # ── 1. Transcrição Bruta (trecho completo + buffer de 60s) ──
+    from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
+
+    inicio_seg_buffer = max(0, c_inicio - 60)
+    fim_seg_buffer = c_fim + 60
+
+    trans_bruta = []
+    for item in trans_raw:
+        try:
+            t_start = _segundos_da_sincronia(item.get("start", item.get("inicio", 0)))
+            if inicio_seg_buffer <= t_start <= fim_seg_buffer:
+                trans_bruta.append(_fala_bruta(item, t_start))
+        except Exception:
+            continue
+    return limpar_e_ordenar_transcricao(trans_bruta)
+
+
+def _fala_bruta(item: dict, t_start: float) -> dict:
+    t_end = _segundos_da_sincronia(item.get("end", item.get("fim", t_start + 1)))
+
+    seg_bruto = {
+        "start": t_start,
+        "end": t_end,
+        "texto": item.get("texto", ""),
+    }
+    # D-309: preserva o rótulo de falante da diarização
+    # (speaker) fim-a-fim. `limpar_e_ordenar_transcricao` e
+    # `TimelineMath.recalcular_transcricao` já o propagam, então
+    # a transcrição final passa a carregar o falante por
+    # segmento — dispensando a reprojeção de timeline que a
+    # geração de cenas (D-307) precisava fazer.
+    if item.get("speaker"):
+        seg_bruto["speaker"] = item["speaker"]
+    # O timing por palavra (D-337) vem do json3 e sobrevive à
+    # limpeza, que já o preserva — mas morria AQUI, porque
+    # este dicionário era montado à mão sem ele. Sem essa
+    # linha o corte perde a granularidade que a live tem, e
+    # qualquer recurso por palavra (âncora de citação,
+    # detecção de hesitação) fica sem base no nível do corte.
+    # Os tempos são absolutos, como `start`/`end` aqui.
+    if item.get("palavras"):
+        seg_bruto["palavras"] = item["palavras"]
+    return seg_bruto
+
+
+def _segmentos_na_ordem_do_corte(
+    corte: Corte, c_inicio: float, c_fim: float, desvios: list[dict]
+) -> list[dict]:
+    # ── 2. Calcular Segmentos Mantidos (Lógica unificada com ExportService) ──
+    # D-576: na ORDEM DE EXIBIÇÃO, não na cronológica. Se o corte tem
+    # arranjo de blocos, a transcrição final precisa nascer embaralhada
+    # do mesmo jeito que o vídeo — senão a legenda descreve um bruto que
+    # não existe mais, e as cenas (que leem daqui) apontam para o lugar
+    # errado. Sem arranjo, é o mesmo `calcular_segmentos` de sempre.
+    from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+    from app.domain.corte.arranjo_blocos import reconciliar, segmentos_na_ordem
+
+    arranjo = reconciliar(parse_arranjo(corte.arranjo_blocos), c_inicio, c_fim)
+    segmentos_mantidos = segmentos_na_ordem(arranjo, c_inicio, c_fim, desvios)
+    operational_debug("CorteService", f"  Segmentos mantidos ({len(segmentos_mantidos)}):")
+    for sm in segmentos_mantidos:
+        operational_debug(
+            "CorteService",
+            f"    - [{sm['start']} -> {sm['end']}] dur={round(sm['end'] - sm['start'], 2)}s",
+        )
+
+    # Log de debug para auditoria de drift
+    dur_est = sum(s["end"] - s["start"] for s in segmentos_mantidos)
+    operational_debug(
+        "CorteService", f"Sincronia: {len(segmentos_mantidos)} segs, dur={dur_est:.2f}s"
+    )
+    return segmentos_mantidos
+
+
+async def _gravar_sincronia(
+    db: AsyncSession, corte: Corte, trans_bruta: list, nova_trans: list, texto_final: str
+) -> None:
+    # Retry para "database is locked" em picos de escrita. D-652: sem o
+    # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
+    # seguintes morrem em PendingRollbackError — o retry era inócuo e
+    # mascarava o erro real. D-716: o `rollback` também descarta o que
+    # foi atribuído ao corte, então cada tentativa atribui de novo —
+    # antes a segunda gravava nada e a sincronia se perdia em silêncio.
+    for attempt in range(5):
+        corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
+        corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
+        corte.transcricao_final_texto = texto_final
+        try:
+            await db.commit()
+            break
+        except Exception as e:
+            if "locked" in str(e).lower() and attempt < 4:
+                await db.rollback()
+                await asyncio.sleep(0.5 * (attempt + 1))
+                continue
+            raise e
+
+
 class CorteService:
     @staticmethod
     async def aprovar(corte_id: str) -> None:
@@ -1438,6 +1568,7 @@ class CorteService:
 
     @staticmethod
     async def _exec_sincronia(corte_id: str, db: AsyncSession, *, trans_raw: list | None = None):
+        from app.domain.corte.segment_calculator import normalizar_desvio
         from app.services.timeline_math import TimelineMath
 
         try:
@@ -1453,110 +1584,17 @@ class CorteService:
             await db.refresh(corte)
 
             if trans_raw is None:
-                projeto = await db.get(Projeto, corte.projeto_id)
-                if not projeto or not projeto.transcricao_raw:
+                trans_raw = await _transcricao_da_live(db, corte.projeto_id)
+                if trans_raw is None:
                     return
-                trans_raw = json.loads(projeto.transcricao_raw or "[]")
-
-            from app.domain.corte.segment_calculator import normalizar_desvio
 
             desvios = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
+            _registrar_desvios(corte, corte_id, desvios)
 
-            operational_debug(
-                "CorteService", f"Sincronizando '{corte.titulo_proposto}' ({corte_id})"
-            )
-            operational_debug("CorteService", f"  Range: {corte.inicio_seg} -> {corte.fim_seg}")
-            operational_debug("CorteService", f"  Desvios no banco ({len(desvios)}):")
-            for d in desvios:
-                operational_debug(
-                    "CorteService",
-                    f"    - [{d.get('inicio_seg')} -> {d.get('fim_seg')}] {d.get('motivo')}",
-                )
-
-            # ── 1. Transcrição Bruta (trecho completo + buffer de 60s) ──
-            def _to_seg(val) -> float:
-                if isinstance(val, (int, float)):
-                    return float(val)
-                try:
-                    return float(val)
-                except (ValueError, TypeError):
-                    return hms_to_seg(str(val))
-
-            c_inicio = _to_seg(corte.inicio_seg or 0.0)
-            c_fim = _to_seg(corte.fim_seg or 0.0)
-
-            inicio_seg_buffer = max(0, c_inicio - 60)
-            fim_seg_buffer = c_fim + 60
-
-            trans_bruta = []
-            for item in trans_raw:
-                try:
-                    t_start = _to_seg(item.get("start", item.get("inicio", 0)))
-
-                    if inicio_seg_buffer <= t_start <= fim_seg_buffer:
-                        t_end = _to_seg(item.get("end", item.get("fim", t_start + 1)))
-
-                        seg_bruto = {
-                            "start": t_start,
-                            "end": t_end,
-                            "texto": item.get("texto", ""),
-                        }
-                        # D-309: preserva o rótulo de falante da diarização
-                        # (speaker) fim-a-fim. `limpar_e_ordenar_transcricao` e
-                        # `TimelineMath.recalcular_transcricao` já o propagam, então
-                        # a transcrição final passa a carregar o falante por
-                        # segmento — dispensando a reprojeção de timeline que a
-                        # geração de cenas (D-307) precisava fazer.
-                        if item.get("speaker"):
-                            seg_bruto["speaker"] = item["speaker"]
-                        # O timing por palavra (D-337) vem do json3 e sobrevive à
-                        # limpeza, que já o preserva — mas morria AQUI, porque
-                        # este dicionário era montado à mão sem ele. Sem essa
-                        # linha o corte perde a granularidade que a live tem, e
-                        # qualquer recurso por palavra (âncora de citação,
-                        # detecção de hesitação) fica sem base no nível do corte.
-                        # Os tempos são absolutos, como `start`/`end` aqui.
-                        if item.get("palavras"):
-                            seg_bruto["palavras"] = item["palavras"]
-                        trans_bruta.append(seg_bruto)
-                except Exception:
-                    continue
-
-            from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
-
-            trans_bruta = limpar_e_ordenar_transcricao(trans_bruta)
-
-            # ── 2. Transcrição Final (editada, sem desvios, tempos re-mapeados) ──
-            def _d_val(d: dict, k_seg: str, k_hms: str) -> float:
-                val_seg = d.get(k_seg)
-                if val_seg is not None:
-                    return _to_seg(val_seg)
-                return hms_to_seg(d.get(k_hms, ""))
-
-            # ── 2. Calcular Segmentos Mantidos (Lógica unificada com ExportService) ──
-            # D-576: na ORDEM DE EXIBIÇÃO, não na cronológica. Se o corte tem
-            # arranjo de blocos, a transcrição final precisa nascer embaralhada
-            # do mesmo jeito que o vídeo — senão a legenda descreve um bruto que
-            # não existe mais, e as cenas (que leem daqui) apontam para o lugar
-            # errado. Sem arranjo, é o mesmo `calcular_segmentos` de sempre.
-            from app.domain.corte.arranjo_blocos import parse as parse_arranjo
-            from app.domain.corte.arranjo_blocos import reconciliar, segmentos_na_ordem
-
-            arranjo = reconciliar(parse_arranjo(corte.arranjo_blocos), c_inicio, c_fim)
-            segmentos_mantidos = segmentos_na_ordem(arranjo, c_inicio, c_fim, desvios)
-            operational_debug("CorteService", f"  Segmentos mantidos ({len(segmentos_mantidos)}):")
-            for sm in segmentos_mantidos:
-                operational_debug(
-                    "CorteService",
-                    f"    - [{sm['start']} -> {sm['end']}] dur={round(sm['end'] - sm['start'], 2)}s",
-                )
-
-            # Log de debug para auditoria de drift
-            dur_est = sum(s["end"] - s["start"] for s in segmentos_mantidos)
-            operational_debug(
-                "CorteService", f"Sincronia: {len(segmentos_mantidos)} segs, dur={dur_est:.2f}s"
-            )
-
+            c_inicio = _segundos_da_sincronia(corte.inicio_seg or 0.0)
+            c_fim = _segundos_da_sincronia(corte.fim_seg or 0.0)
+            trans_bruta = _transcricao_bruta(trans_raw, c_inicio, c_fim)
+            segmentos_mantidos = _segmentos_na_ordem_do_corte(corte, c_inicio, c_fim, desvios)
             nova_trans = TimelineMath.recalcular_transcricao(trans_bruta, segmentos_mantidos)
 
             # ── 3. Texto puro limpo para IA ──
@@ -1572,27 +1610,7 @@ class CorteService:
                     f"Primeiro timestamp: {nova_trans[0].get('start')}s",
                 )
 
-            # Retry para "database is locked" em picos de escrita. D-652: sem o
-            # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
-            # seguintes morrem em PendingRollbackError — o retry era inócuo e
-            # mascarava o erro real. D-716: o `rollback` também descarta o que
-            # foi atribuído ao corte, então cada tentativa atribui de novo —
-            # antes a segunda gravava nada e a sincronia se perdia em silêncio.
-            for attempt in range(5):
-                corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
-                corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
-                corte.transcricao_final_texto = texto_final
-                try:
-                    await db.commit()
-                    break
-                except Exception as e:
-                    if "locked" in str(e).lower() and attempt < 4:
-                        import asyncio
-
-                        await db.rollback()
-                        await asyncio.sleep(0.5 * (attempt + 1))
-                        continue
-                    raise e
+            await _gravar_sincronia(db, corte, trans_bruta, nova_trans, texto_final)
         except Exception as e:
             operational_error(
                 "CorteService",
