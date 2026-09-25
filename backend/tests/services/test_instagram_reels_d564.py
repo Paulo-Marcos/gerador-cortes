@@ -551,15 +551,31 @@ class TestContrato:
         assert instagram_reels.perfil_do_chrome().name == "instagram"
 
     def test_os_dois_robos_nunca_dividem_a_porta(self, monkeypatch, tmp_path):
-        """Duas sessões, dois Chromes, duas portas — senão um mata o outro."""
+        """Duas sessões, dois Chromes, duas portas — senão um mata o outro.
+
+        D-761: a porta preferida é um hash em cem portas, e os dois perfis
+        colidem em ~1% dos caminhos. Com o `tmp_path` sorteando o caminho, este
+        teste herdava a colisão do número do diretório do pytest (pytest-1330
+        caía em 9239 para os dois). Hashes diferentes não são promessa do
+        produto; o desvio é. Por isso a colisão aqui é forçada, e não sorteada.
+        """
         from app.services import navegador_assistido, tiktok_studio
         from app.services.navegador_assistido import porta_do_chrome
 
+        porta_disputada = 9239
         monkeypatch.setattr(navegador_assistido, "active_channel_root", lambda: tmp_path / "canal")
-
-        assert porta_do_chrome(instagram_reels.perfil_do_chrome()) != porta_do_chrome(
-            tiktok_studio.perfil_do_chrome()
+        monkeypatch.setattr(
+            navegador_assistido, "porta_de_depuracao", lambda _perfil: porta_disputada
         )
+        tiktok = tiktok_studio.perfil_do_chrome()
+        # O Chrome do TikTok já está no ar na porta que os dois disputam.
+        monkeypatch.setattr(
+            navegador_assistido, "_porta_responde", lambda porta: porta == porta_disputada
+        )
+        monkeypatch.setattr(navegador_assistido, "perfil_na_porta", lambda porta: str(tiktok))
+
+        assert porta_do_chrome(tiktok) == porta_disputada
+        assert porta_do_chrome(instagram_reels.perfil_do_chrome()) == porta_disputada + 1
 
     def test_o_roteiro_nao_conhece_a_senha_de_ninguem(self):
         """Guarda de intencao: se um dia alguem 'resolver' o login, isto quebra.

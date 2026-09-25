@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Assisted upload no longer drives the other platform's Chrome.** When the
+  TikTok and Instagram profiles hash to the same debugging port, a batch opening
+  both at once could hand one robot the other's window. Chrome launches are now
+  serialized, and a profile whose window had moved to the next port finds it
+  again instead of trying to open a second Chrome over it (D-761).
+
 ## [0.3.0] - 2026-09-22
 
 564 commits since 0.2.0. The headline is **vertical shorts end to end** and a

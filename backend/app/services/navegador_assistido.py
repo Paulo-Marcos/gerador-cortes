@@ -28,6 +28,7 @@ import logging
 import re
 import shutil
 import subprocess
+import threading
 import time
 from pathlib import Path
 from typing import Protocol
@@ -396,15 +397,27 @@ def porta_do_chrome(perfil: Path) -> int:
     A preferida vem do caminho (deterministica, para reencontrar a janela entre
     um item do lote e o seguinte). Quando ela ja esta ocupada por OUTRO perfil,
     a gente anda — porque insistir ali significaria dirigir a janela alheia.
+
+    D-761: a janela deste perfil e procurada em TODAS as portas antes de aceitar
+    uma livre. Quem andou para a seguinte (a preferida era de outro) continua
+    la depois que o outro fecha; parar na primeira livre mandaria abrir um
+    segundo Chrome sobre um perfil ja aberto — que o Chrome recusa.
+
+    A procura vai pelo dono do socket (psutil, milissegundos), e nao pelo
+    DevTools: no Windows cada porta fechada leva ~1,5 s para dizer que esta
+    fechada, e sondar as oito a cada chamada custaria doze segundos.
     """
     preferida = porta_de_depuracao(str(perfil))
-    for salto in range(PORTAS_A_TENTAR):
-        porta = PORTA_MINIMA_DE_DEPURACAO + (
-            (preferida - PORTA_MINIMA_DE_DEPURACAO + salto) % PORTAS_DE_DEPURACAO
-        )
-        if not _porta_responde(porta):
+    portas = [
+        PORTA_MINIMA_DE_DEPURACAO
+        + ((preferida - PORTA_MINIMA_DE_DEPURACAO + salto) % PORTAS_DE_DEPURACAO)
+        for salto in range(PORTAS_A_TENTAR)
+    ]
+    for porta in portas:
+        if mesma_pasta(perfil_na_porta(porta), str(perfil)) and _porta_responde(porta):
             return porta
-        if mesma_pasta(perfil_na_porta(porta), str(perfil)):
+    for porta in portas:
+        if not _porta_responde(porta):
             return porta
         logger.info("[Navegador] porta %s e de outro perfil; tentando a seguinte", porta)
     raise NavegadorIndisponivel(
@@ -413,13 +426,26 @@ def porta_do_chrome(perfil: Path) -> int:
     )
 
 
+_ABRINDO_CHROME = threading.Lock()
+
+
 def garantir_chrome(perfil: Path, url: str) -> bool:
     """Deixa um Chrome de depuração no ar PARA ESTE PERFIL, e diz se abriu um.
 
     Reaproveita o que já estiver escutando na porta DELE: publicar cinco cortes
     seguidos deve usar a mesma janela, e não empilhar cinco. O que ele nunca
     mais faz é reaproveitar a janela de OUTRO perfil — ver a nota da porta.
+
+    D-761: um Chrome abre por vez. As raias do lote (TikTok, Instagram) rodam em
+    paralelo, e o desvio de porta só enxerga um Chrome que JÁ responde: sem a
+    fila, dois perfis cuja preferida colide escolhem a mesma porta livre, os
+    dois lançam, um perde a porta — e o robô dele dirige a janela do outro.
     """
+    with _ABRINDO_CHROME:
+        return _garantir_chrome(perfil, url)
+
+
+def _garantir_chrome(perfil: Path, url: str) -> bool:
     porta = porta_do_chrome(perfil)
     if _porta_responde(porta):
         return False
