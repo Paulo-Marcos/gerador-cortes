@@ -18,11 +18,11 @@ from app.services import avaliacao_bruto
 from app.services.canal.editorial_skills import SkillResolvida
 from app.services.claude_ia import ClaudeIaService
 
-avaliar_bruto = ClaudeIaService.avaliar_bruto_via_claude
+avaliar_bruto = avaliacao_bruto.avaliar_bruto_via_claude
 prompt_manual_de_cortes = ClaudeIaService.montar_prompt_manual_cortes
 receita_de_cortes = ClaudeIaService._montar_prompt
 # Onde cada caso de uso lê a skill, o scaffold, a IA e as lentes.
-_AVALIADOR = "app.services.claude_ia"
+_AVALIADOR = "app.services.avaliacao_bruto"
 _PROMPT_MANUAL = "app.services.claude_ia"
 
 _SCAFFOLD_CORTES = (

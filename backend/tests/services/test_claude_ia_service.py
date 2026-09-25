@@ -579,7 +579,7 @@ class TestTrechos:
         assert "etapa=trechos-expert" in linha
         # o sha da linha bate com o sha1 do corpo da skill trechos-expert resolvida
         skill = claude_ia.editorial_skills.resolver_skill(claude_ia._SKILL_TRECHOS)
-        assert f"sha={claude_ia._sha1_curto(skill.corpo)}" in linha
+        assert f"sha={claude_ia.sha1_curto(skill.corpo)}" in linha
         # a etapa de trechos monta scaffold → o scaffold_sha também sai na linha
         assert "scaffold_sha=" in linha
 

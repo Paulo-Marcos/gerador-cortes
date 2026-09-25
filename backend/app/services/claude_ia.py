@@ -42,7 +42,7 @@ from app.services.canal import editorial_scaffolds, editorial_skills
 logger = logging.getLogger(__name__)
 
 
-def _sha1_curto(texto: str) -> str:
+def sha1_curto(texto: str) -> str:
     """SHA1 (8 primeiros hex) de um texto — impressão digital estável e curta."""
     return hashlib.sha1((texto or "").encode("utf-8")).hexdigest()[:8]
 
@@ -64,7 +64,7 @@ def registrar_skill_usada(
     corpo_strip = corpo.strip()
     primeira_linha = corpo_strip.splitlines()[0] if corpo_strip else ""
     scaffold_frag = (
-        f" scaffold_sha={_sha1_curto(scaffold_texto)}" if scaffold_texto is not None else ""
+        f" scaffold_sha={sha1_curto(scaffold_texto)}" if scaffold_texto is not None else ""
     )
     logger.info(
         '[ClaudeIA/skill] etapa=%s modelo=%s thinking=%s corpo=%dch sha=%s "%s"%s',
@@ -72,7 +72,7 @@ def registrar_skill_usada(
         skill.modelo,
         skill.thinking_tokens,
         len(corpo),
-        _sha1_curto(corpo),
+        sha1_curto(corpo),
         primeira_linha,
         scaffold_frag,
     )
@@ -100,7 +100,6 @@ def _carregar_transcricao_raw(raw: str, projeto_id: str) -> list | dict:
 _SKILL_CORTES = "cortador-expert"
 _SKILL_TRECHOS = "trechos-expert"
 SKILL_METADADOS = "metadados-expert"
-_SKILL_AVALIACAO = "avaliador-bruto"
 
 
 def _pedido(
@@ -133,7 +132,7 @@ def _pedido(
     )
 
 
-def _modelo_usado(skill: editorial_skills.SkillResolvida, provider: ProviderIA) -> str:
+def modelo_usado(skill: editorial_skills.SkillResolvida, provider: ProviderIA) -> str:
     """O modelo que ATENDEU a chamada — é dele que a tela deriva o selo."""
     return gerador_para(provider).modelo(_pedido(skill, skill.key))
 
@@ -536,52 +535,5 @@ class ClaudeIaService:
         )
 
     # ── Fase 3: cenas e metadados via Claude (incremental ou em paralelo) ─────
-
-    @staticmethod
-    async def avaliar_bruto_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
-        """Avalia a ESTRUTURA do bruto recém-gerado e registra o parecer (D-447).
-
-        Roda depois da geração do bruto, sobre a transcrição que sobrou com as
-        emendas marcadas — o único material em que os defeitos de costura são
-        visíveis. Persiste uma linha na série de avaliações do corte.
-
-        Levanta `LookupError` (corte inexistente) ou `ValueError` (sem
-        transcrição final, ou retorno do modelo sem nota utilizável). Quem chama
-        no fluxo automático trata a falha como não-fatal: a avaliação é
-        observação sobre o bruto, não parte da entrega dele.
-        """
-        from app.domain.corte.avaliacao_bruto import normalizar_avaliacao, tipos_disponiveis
-        from app.services import avaliacao_bruto as avaliacao_store
-
-        contexto = await avaliacao_store.montar_contexto(corte_id)
-
-        skill = editorial_skills.resolver_skill(_SKILL_AVALIACAO)
-        scaffold = editorial_scaffolds.resolver_scaffold("avaliacao-bruto")
-        prompt = scaffold.format(
-            titulo=contexto.titulo,
-            tema_central=contexto.tema_central,
-            duracao_humana=seg_to_hms_short(contexto.duracao_seg),
-            total_emendas=contexto.total_emendas,
-            removido_humano=seg_to_hms_short(contexto.removido_seg),
-            tipos_apontamento="\n".join(
-                f"- {tipo['slug']}: {tipo['rotulo']}" for tipo in tipos_disponiveis()
-            ),
-            texto_avaliado=contexto.texto_avaliado,
-        )
-        registrar_skill_usada(_SKILL_AVALIACAO, skill, scaffold)
-        resultado = await gerar_json(
-            provider,
-            prompt,
-            skill,
-            _SKILL_AVALIACAO,
-            projeto_id=contexto.projeto_id,
-            corte_id=corte_id,
-        )
-        return await avaliacao_store.registrar_avaliacao(
-            contexto,
-            normalizar_avaliacao(resultado),
-            modelo=_modelo_usado(skill, provider),
-            skill_sha=_sha1_curto(skill.corpo),
-        )
 
     # ── Fase 4: prompt de thumbnail via Claude (skill capista) ────────────────

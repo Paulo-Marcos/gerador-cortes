@@ -596,10 +596,10 @@ async def _avaliar_bruto_gerado(corte_id: str) -> None:
     uma geração bem-sucedida em falha na tela do editor. Por isso o status já
     está carimbado e a exceção morre no log.
     """
-    from app.services.claude_ia import ClaudeIaService
+    from app.services.avaliacao_bruto import avaliar_bruto_via_claude
 
     try:
-        await ClaudeIaService.avaliar_bruto_via_claude(corte_id)
+        await avaliar_bruto_via_claude(corte_id)
     except Exception as exc:  # noqa: BLE001 — nunca fatal para a geração do bruto
         logger.warning("[avaliacao-bruto] falhou no corte %s: %s", corte_id[:8], exc)
 
