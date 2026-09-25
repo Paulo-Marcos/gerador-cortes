@@ -6,7 +6,7 @@ navegador do usuário mexia na API local, que não tem login.
 """
 
 import pytest
-from app.seguranca_local import (
+from app.routers.seguranca_local import (
     ORIGEM_LOCAL_REGEX,
     GuardaDeOrigemLocal,
     host_e_local,

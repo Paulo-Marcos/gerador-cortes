@@ -40,7 +40,7 @@ from app.routers import (
     settings as app_settings,
 )
 from app.routers.errors import registrar_tratadores
-from app.seguranca_local import ORIGEM_LOCAL_REGEX, GuardaDeOrigemLocal
+from app.routers.seguranca_local import ORIGEM_LOCAL_REGEX, GuardaDeOrigemLocal
 from app.services import channels as channels_service
 from app.services import encerramento, settings_store
 from app.services.app_logging import install_log_controls
@@ -118,7 +118,7 @@ app.add_middleware(
     expose_headers=["Content-Range", "Accept-Ranges", "Content-Length"],
 )
 # Registrada depois do CORS = roda antes dele. Fecha o que o CORS não fecha:
-# POST simples, WebSocket e DNS rebinding (ver app/seguranca_local.py).
+# POST simples, WebSocket e DNS rebinding (ver app/routers/seguranca_local.py).
 app.add_middleware(GuardaDeOrigemLocal)
 
 app.include_router(projetos.router, prefix="/api/projetos", tags=["Projetos"])
