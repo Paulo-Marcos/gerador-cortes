@@ -25,3 +25,7 @@ class ServicoExternoFalhou(ErroDeDominio):
 
 class ConfiguracaoAusente(ErroDeDominio):
     """Falta uma configuração da instalação — chave, canal, arquivo de credencial."""
+
+
+class PedidoInvalido(ErroDeDominio):
+    """O pedido não cabe no estado atual — ex.: reanalisar um projeto sem transcrição."""

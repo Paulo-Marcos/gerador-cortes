@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
@@ -23,6 +24,8 @@ from app.services.claude_ia import (
     ClaudeIaService,
     _carregar_transcricao_raw,
 )
+from app.services.tasks import fire_and_forget
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import select as sa_select
 
 # D-355: janela (em segundos) para ancorar a borda de CORTE na palavra citada.
@@ -125,6 +128,33 @@ def _com_origem_de_analise(desvio: dict, origem: str) -> dict:
 
 
 class AnaliseService:
+    @staticmethod
+    async def reanalisar(projeto_id: str) -> int:
+        """Apaga os cortes do projeto e refaz a análise do zero; devolve quantos saíram.
+
+        Útil quando o guia editorial mudou e se quer outra safra de cortes. O projeto
+        volta a `pronto` antes de a análise partir (D-703).
+        """
+        async with AsyncSessionLocal() as db, db.begin():
+            projeto = await db.get(Projeto, projeto_id)
+            if not projeto:
+                raise NaoEncontrado("Projeto não encontrado")
+            if not projeto.transcricao_raw:
+                raise PedidoInvalido("Projeto ainda sem transcrição")
+            removidos = (
+                await db.execute(sa_delete(Corte).where(Corte.projeto_id == projeto_id))
+            ).rowcount
+            mudar_projeto(projeto, StatusProjeto.PRONTO, origem="reanalisar/refazer-transcricao")
+
+        logger.info(
+            f"[Reanálise] Projeto {projeto_id[:8]}: {removidos} cortes removidos. "
+            f"Disparando nova análise..."
+        )
+        fire_and_forget(
+            AnaliseService.analisar_transcricao(projeto_id), name=f"reanalise-{projeto_id[:8]}"
+        )
+        return removidos
+
     @staticmethod
     async def montar_prompt(projeto_id: str) -> dict:
         """Retorna uma lista de prompts divididos em chunks para análise manual."""

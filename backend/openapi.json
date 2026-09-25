@@ -9920,7 +9920,7 @@
     },
     "/api/projetos/{projeto_id}/reanalisar": {
       "post": {
-        "description": "Apaga todos os cortes existentes e reinicia a análise da transcrição do zero.\nÚtil quando se quer gerar novos cortes com o guia atualizado.",
+        "description": "Apaga todos os cortes existentes e reinicia a análise da transcrição do zero.\n\nÚtil quando se quer gerar novos cortes com o guia atualizado.",
         "operationId": "reanalisar_projeto_api_projetos__projeto_id__reanalisar_post",
         "parameters": [
           {

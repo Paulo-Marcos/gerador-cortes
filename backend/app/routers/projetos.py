@@ -22,7 +22,6 @@ from app.services.youtube_stats import YoutubeStatsService
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -624,34 +623,12 @@ async def importar_analise(
 
 
 @router.post("/{projeto_id}/reanalisar")
-async def reanalisar_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    """
-    Apaga todos os cortes existentes e reinicia a análise da transcrição do zero.
+async def reanalisar_projeto(projeto_id: str):
+    """Apaga todos os cortes existentes e reinicia a análise da transcrição do zero.
+
     Útil quando se quer gerar novos cortes com o guia atualizado.
     """
-    projeto = await db.get(Projeto, projeto_id)
-    if not projeto:
-        raise HTTPException(status_code=404, detail="Projeto não encontrado")
-    if not projeto.transcricao_raw:
-        raise HTTPException(status_code=400, detail="Projeto ainda sem transcrição")
-
-    result = await db.execute(sa_delete(Corte).where(Corte.projeto_id == projeto_id))
-    cortes_removidos = result.rowcount
-
-    # Volta status para 'pronto' para que a análise possa ser disparada
-    mudar_projeto(projeto, StatusProjeto.PRONTO, origem="reanalisar/refazer-transcricao")
-    await db.commit()
-
-    logger.info(
-        f"[Reanálise] Projeto {projeto_id[:8]}: {cortes_removidos} cortes removidos. "
-        f"Disparando nova análise..."
-    )
-
-    fire_and_forget(
-        AnaliseService.analisar_transcricao(projeto_id),
-        name=f"reanalise-{projeto_id[:8]}",
-    )
-
+    cortes_removidos = await AnaliseService.reanalisar(projeto_id)
     return {
         "message": "Reanálise iniciada",
         "projeto_id": projeto_id,

@@ -9,11 +9,13 @@ movimento troca ficam no topo.
 
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
 import pytest_asyncio
+from app import database
 from app.database import get_db
 from app.models import (
     Base,
@@ -36,12 +38,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-# Onde cada caso de uso abre a sessão e lê a pasta dos projetos.
-_SESSAO_ABERTA_EM = [
-    "app.services.ranking_lives",
-    "app.services.ingestao",
-    "app.services.listagem_de_projetos",
-]
+# Onde o caso de uso lê a pasta dos projetos.
 _PROJETOS_DIR_LIDO_EM = ["app.services.listagem_de_projetos"]
 
 
@@ -55,8 +52,12 @@ async def fabrica(monkeypatch):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     f = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    for modulo in _SESSAO_ABERTA_EM:
-        monkeypatch.setattr(f"{modulo}.AsyncSessionLocal", f)
+    # Todo módulo que abre sessão passa a abrir no banco em memória — um caso de
+    # uso que mude de endereço não escapa para o banco de verdade.
+    original = database.AsyncSessionLocal
+    for modulo in list(sys.modules.values()):
+        if getattr(modulo, "AsyncSessionLocal", None) is original:
+            monkeypatch.setattr(modulo, "AsyncSessionLocal", f)
     yield f
     await engine.dispose()
 

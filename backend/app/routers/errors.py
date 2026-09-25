@@ -19,6 +19,7 @@ from app.domain.compartilhado.erros import (
     ConfiguracaoAusente,
     ErroDeDominio,
     NaoEncontrado,
+    PedidoInvalido,
     ServicoExternoFalhou,
 )
 from fastapi import FastAPI, HTTPException, Request
@@ -45,6 +46,7 @@ def erro_interno(exc: Exception, contexto: str = "") -> HTTPException:
 # o corpo da resposta, e trocá-lo aqui mudaria o que o operador lê.
 
 _STATUS_POR_SIGNIFICADO: dict[type[ErroDeDominio], int] = {
+    PedidoInvalido: 400,
     NaoEncontrado: 404,
     ServicoExternoFalhou: 502,
     ConfiguracaoAusente: 500,
