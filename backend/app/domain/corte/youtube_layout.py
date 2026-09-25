@@ -138,34 +138,13 @@ def normalizar_layout_youtube(payload: Any, fallback_layout: Any = None) -> dict
     """Normaliza payload vindo do frontend/API sem depender de banco ou FastAPI."""
     layout = layout_youtube_default()
 
-    if isinstance(fallback_layout, str) and fallback_layout.strip():
-        try:
-            fallback_layout = json.loads(fallback_layout)
-        except Exception:
-            fallback_layout = None
-
+    fallback_layout = _ler_json(fallback_layout)
     # I-025: parse simetrico — em resolver_layout_em_cascata, global_padrao e
     # projeto_padrao chegam como string (Text no banco) e cairiam direto no
     # `not isinstance(payload, dict)` abaixo, descartando o cascade.
-    if isinstance(payload, str) and payload.strip():
-        try:
-            payload = json.loads(payload)
-        except Exception:
-            payload = None
+    payload = _ler_json(payload)
 
-    fallback_modo: str | None = None
-    if isinstance(fallback_layout, dict):
-        fallback_modo = _normalizar_modo(fallback_layout.get("modo_padrao"))
-        if "fundo" in fallback_layout:
-            layout["fundo"] = fallback_layout["fundo"]
-        if "placa" in fallback_layout:
-            layout["placa"] = fallback_layout["placa"]
-        if "compartilhada" in fallback_layout and isinstance(
-            fallback_layout["compartilhada"], dict
-        ):
-            layout["compartilhada"].update(fallback_layout["compartilhada"])
-        if "full" in fallback_layout and isinstance(fallback_layout["full"], dict):
-            layout["full"].update(fallback_layout["full"])
+    fallback_modo = _herdar_do_fallback(layout, fallback_layout)
 
     if not isinstance(payload, dict):
         # Sem corte (payload ausente): herda o modo do padrao do projeto, se houver.
@@ -173,6 +152,50 @@ def normalizar_layout_youtube(payload: Any, fallback_layout: Any = None) -> dict
             layout["modo_padrao"] = fallback_modo
         return layout
 
+    _aplicar_modo(layout, payload, fallback_modo)
+    if "fundo" in payload:
+        layout["fundo"] = _normalizar_fundo(payload.get("fundo"), layout["fundo"])
+    if "placa" in payload:
+        layout["placa"] = _normalizar_placa(payload.get("placa"), layout["placa"])
+    _aplicar_compartilhada(layout["compartilhada"], payload.get("compartilhada"))
+
+    # F-060: posicionamento do modo FULL (crop do bruto + encaixe no canvas).
+    layout["full"] = _normalizar_full_config(payload.get("full"), layout["full"])
+
+    _aplicar_padroes_de_segmento(layout, payload)
+    layout["regioes"] = _regioes_validas_em_ordem(payload.get("regioes"))
+    return layout
+
+
+# ─── Os passos da normalização (D-716: saíram de `normalizar_layout_youtube`) ──
+
+
+def _ler_json(valor: Any) -> Any:
+    """Texto JSON vira o objeto; texto que não se lê vira ausência; o resto passa."""
+    if isinstance(valor, str) and valor.strip():
+        try:
+            return json.loads(valor)
+        except Exception:
+            return None
+    return valor
+
+
+def _herdar_do_fallback(layout: dict[str, Any], fallback_layout: Any) -> str | None:
+    """Copia do padrão herdado o que ele define e devolve o modo dele."""
+    if not isinstance(fallback_layout, dict):
+        return None
+    if "fundo" in fallback_layout:
+        layout["fundo"] = fallback_layout["fundo"]
+    if "placa" in fallback_layout:
+        layout["placa"] = fallback_layout["placa"]
+    if "compartilhada" in fallback_layout and isinstance(fallback_layout["compartilhada"], dict):
+        layout["compartilhada"].update(fallback_layout["compartilhada"])
+    if "full" in fallback_layout and isinstance(fallback_layout["full"], dict):
+        layout["full"].update(fallback_layout["full"])
+    return _normalizar_modo(fallback_layout.get("modo_padrao"))
+
+
+def _aplicar_modo(layout: dict[str, Any], payload: dict, fallback_modo: str | None) -> None:
     modo_payload = _normalizar_modo(payload.get("modo_padrao"))
     # Um corte "intocado" carrega so a sentinela {"modo_padrao":"full","regioes":[]}.
     # Nesse caso ele deve JA INICIALIZAR com o modo do padrao do projeto (F-020);
@@ -194,14 +217,9 @@ def normalizar_layout_youtube(payload: Any, fallback_layout: Any = None) -> dict
     elif modo_payload:
         layout["modo_padrao"] = modo_payload
 
-    if "fundo" in payload:
-        layout["fundo"] = _normalizar_fundo(payload.get("fundo"), layout["fundo"])
-    if "placa" in payload:
-        layout["placa"] = _normalizar_placa(payload.get("placa"), layout["placa"])
 
-    compartilhada = payload.get("compartilhada")
+def _aplicar_compartilhada(config: dict[str, Any], compartilhada: Any) -> None:
     if isinstance(compartilhada, dict):
-        config = layout["compartilhada"]
         config["telas"] = _normalizar_quantidade_telas(
             compartilhada.get("telas"),
             config.get("telas", TELAS_COMPARTILHADAS_PADRAO),
@@ -211,7 +229,6 @@ def normalizar_layout_youtube(payload: Any, fallback_layout: Any = None) -> dict
                 compartilhada.get(chave),
                 config[chave],
             )
-    config = layout["compartilhada"]
     config["telas"] = _normalizar_quantidade_telas(config.get("telas"))
     config["slot_facecam"] = _normalizar_slot_proporcional(
         config["slot_facecam"],
@@ -226,9 +243,8 @@ def normalizar_layout_youtube(payload: Any, fallback_layout: Any = None) -> dict
         LEGACY_SLOT_TELA,
     )
 
-    # F-060: posicionamento do modo FULL (crop do bruto + encaixe no canvas).
-    layout["full"] = _normalizar_full_config(payload.get("full"), layout["full"])
 
+def _aplicar_padroes_de_segmento(layout: dict[str, Any], payload: dict) -> None:
     # I-029 v2 / F-060: padroes de SEGMENTO sao por-corte (nao cascateiam) e
     # opcionais — so entram no resultado quando presentes no payload. Sem isso
     # o save em routers/cortes.py (que normaliza antes de gravar) os descartava.
@@ -245,14 +261,14 @@ def normalizar_layout_youtube(payload: Any, fallback_layout: Any = None) -> dict
     if isinstance(segmento_full, dict) and segmento_full:
         layout["full_segmento"] = _normalizar_full_config(segmento_full, layout["full"])
 
+
+def _regioes_validas_em_ordem(regioes_payload: Any) -> list[dict[str, Any]]:
     regioes = []
-    for regiao in payload.get("regioes") or []:
+    for regiao in regioes_payload or []:
         normalizada = _normalizar_regiao(regiao)
         if normalizada is not None:
             regioes.append(normalizada)
-
-    layout["regioes"] = sorted(regioes, key=lambda item: (item["inicio"], item["fim"]))
-    return layout
+    return sorted(regioes, key=lambda item: (item["inicio"], item["fim"]))
 
 
 def aplicar_layout_card_por_contexto(
