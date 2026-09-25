@@ -12,9 +12,9 @@ import json
 
 import pytest
 import pytest_asyncio
+from app.infrastructure import claude_cli_client
 from app.models import Base, Corte, Projeto
 from app.routers import shorts as router_mod
-from app.services import claude_ia
 from app.services import shorts as service_mod
 from app.services.canal import editorial_scaffolds, editorial_skills
 from fastapi import FastAPI
@@ -117,7 +117,7 @@ def test_sugerir_agora_persiste_e_devolve_os_candidatos(client, monkeypatch):
             ]
         }
 
-    monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", _fake_generate_json)
+    monkeypatch.setattr(claude_cli_client, "generate_json", _fake_generate_json)
 
     resposta = client.post("/api/shorts/corte/c1/sugerir")
 
@@ -253,7 +253,7 @@ class TestSugerirCenas:
                 capturado["prompt"] = prompt
                 return resposta
 
-            monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", _fake)
+            monkeypatch.setattr(claude_cli_client, "generate_json", _fake)
             return capturado
 
         return responder

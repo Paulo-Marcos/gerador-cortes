@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
+from app.infrastructure import claude_cli_client
 from app.models import Base, Corte, Projeto
-from app.services import claude_ia
 from app.services import shorts as shorts_store
 from app.services.canal import editorial_scaffolds, editorial_skills
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -100,7 +100,7 @@ async def test_prompt_leva_a_transcricao_do_bruto_e_a_faixa(ambiente, monkeypatc
         capturado["kwargs"] = kwargs
         return {"shorts": []}
 
-    monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", _fake_generate_json)
+    monkeypatch.setattr(claude_cli_client, "generate_json", _fake_generate_json)
 
     await shorts_store.sugerir_shorts("c1")
 
@@ -136,7 +136,7 @@ async def test_candidatos_validos_sao_persistidos_e_os_invalidos_reportados(ambi
             ]
         }
 
-    monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", _fake_generate_json)
+    monkeypatch.setattr(claude_cli_client, "generate_json", _fake_generate_json)
 
     resultado = await shorts_store.sugerir_shorts("c1")
 

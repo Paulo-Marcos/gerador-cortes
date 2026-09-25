@@ -24,11 +24,10 @@ import time
 
 from app.config import settings
 from app.core.channel_paths import projetos_dir
-from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.gerador_ia import PedidoIA
 from app.domain.compartilhado.provider_ia import ProviderIA
-from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms_short, to_seg_estrito
+from app.domain.compartilhado.time_convert import seg_to_hms_short, to_seg_estrito
 from app.domain.projeto import chat_heat
 from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartados
 from app.domain.projeto.chunker import fatiar_transcricao
@@ -37,9 +36,8 @@ from app.domain.projeto.transcricao_utils import (
     dividir_segmentos_longos,
     limpar_e_ordenar_transcricao,
 )
-from app.infrastructure import claude_cli_client, fila_ia
+from app.infrastructure import fila_ia
 from app.infrastructure.gerador_ia import gerador_para
-from app.models import Corte, Projeto
 from app.services.canal import editorial_scaffolds, editorial_skills
 
 logger = logging.getLogger(__name__)
@@ -619,83 +617,6 @@ class ClaudeIaService:
             len(cenas),
         )
         return {"total_cenas": len(cenas)}
-
-    @staticmethod
-    async def gerar_resumo_via_claude(corte_id: str) -> dict:
-        """Regenera o resumo (arco de raciocínio) de UM corte via Claude.
-
-        Reaproveita a sub-transcrição do período do corte (mesma janela que o
-        fluxo anterior usava) e pede ao Claude um resumo maduro, sem clickbait.
-        Persiste em `corte.resumo` e devolve `{resumo, status}` (contrato que o
-        router de cortes consome).
-        """
-        async with AsyncSessionLocal() as db:
-            corte = await db.get(Corte, corte_id)
-            if not corte:
-                raise ValueError("Corte não encontrado.")
-            projeto = await db.get(Projeto, corte.projeto_id)
-            if not projeto or not projeto.transcricao_raw:
-                raise ValueError("Projeto não possui transcrição base para análise.")
-            transcricao_dados = _carregar_transcricao_raw(projeto.transcricao_raw, corte.projeto_id)
-            projeto_id = corte.projeto_id
-            inicio_seg = float(corte.inicio_seg)
-            fim_seg = float(corte.fim_seg)
-            titulo = corte.titulo_proposto or ""
-            tema = corte.tema_central or ""
-            resumo_antigo = corte.resumo or ""
-            inicio_hms = corte.inicio_hms
-            fim_hms = corte.fim_hms
-
-        # Filtra as falas do período (margem de 5s nas bordas).
-        textos: list[str] = []
-        for t in transcricao_dados:
-            try:
-                segundos = hms_to_seg(t.get("inicio", "00:00:00.000"))
-            except Exception:  # noqa: BLE001 — segmento malformado, ignora
-                continue
-            if inicio_seg - 5 <= segundos <= fim_seg + 5:
-                textos.append(t.get("texto", ""))
-
-        transcricao_filtrada = " ".join(textos)
-        if not transcricao_filtrada:
-            raise ValueError(
-                f"O período do corte ({inicio_hms} a {fim_hms}) caiu em silêncio "
-                "absoluto na transcrição original."
-            )
-
-        # Resumo é bespoke (sem corpo de skill), mas reusa modelo + lentes de
-        # metadados por canal (E-021) — mantém a etapa alinhada à config do canal.
-        # D-297: o scaffold (contrato de saída) vem do banco por canal.
-        skill = editorial_skills.resolver_skill(SKILL_METADADOS)
-        scaffold_resumo = editorial_scaffolds.resolver_scaffold("resumo")
-        prompt = scaffold_resumo.format(
-            variacao=bloco_variacao_de(skill.lentes),
-            titulo=titulo,
-            tema=tema,
-            resumo_antigo=resumo_antigo,
-            transcricao=transcricao_filtrada,
-        )
-        registrar_skill_usada(SKILL_METADADOS, skill, scaffold_resumo)
-        resultado = await claude_cli_client.generate_json(
-            prompt,
-            model=skill.modelo,
-            contexto=claude_cli_client.LlmCallContext(
-                etapa="resumo", projeto_id=projeto_id, corte_id=corte_id
-            ),
-        )
-        novo_resumo = resultado.get("resumo")
-        if not novo_resumo:
-            raise ValueError("Claude não retornou a key 'resumo'.")
-
-        async with AsyncSessionLocal() as db:
-            corte = await db.get(Corte, corte_id)
-            if not corte:
-                raise ValueError("Corte não encontrado.")
-            corte.resumo = novo_resumo
-            await db.commit()
-
-        logger.info("[ClaudeIA] Resumo regerado via Claude p/ corte %s", corte_id[:8])
-        return {"resumo": novo_resumo, "status": "sucesso"}
 
     @staticmethod
     async def avaliar_bruto_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
