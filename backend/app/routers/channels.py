@@ -11,7 +11,7 @@ serviço e mapeia os erros de domínio para os status corretos.
 
 from __future__ import annotations
 
-from app.domain import theme_library
+from app.domain.canal import theme_library
 from app.services import channel_theme as theme_service
 from app.services import channels as channels_service
 from app.services.channels import (

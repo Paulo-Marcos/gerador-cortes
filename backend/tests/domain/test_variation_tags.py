@@ -6,7 +6,7 @@ fielmente nos 5 eixos, (2) é removida antes do prompt ir pro gerador de imagem
 vira bloco proibido injetável, (4) o repertório é formatado como bullets.
 """
 
-from app.domain.variacao_prompt import (
+from app.domain.canal.variacao_prompt import (
     coletar_eixos_proibidos,
     contar_eixos_modais,
     formatar_eixos_proibidos,

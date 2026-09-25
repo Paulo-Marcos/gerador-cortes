@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 
 import pytest
-from app.domain import theme_library
-from app.domain.theme_library import PALETA_CHAVES
+from app.domain.canal import theme_library
+from app.domain.canal.theme_library import PALETA_CHAVES
 from app.infrastructure import settings_store
 from app.services import channel_theme
 

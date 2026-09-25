@@ -66,7 +66,7 @@ _IDENTIDADE_COLUNAS = (
 _MASCOTE_COLUNAS = ("nome",)
 
 # Tema de render selecionado por canal (D-174): id do tema da biblioteca versionada
-# (`domain/theme_library.py`) que resolve paleta completa + preset tipográfico.
+# (`domain/canal/theme_library.py`) que resolve paleta completa + preset tipográfico.
 _TEMA_COLUNAS = ("tema_id",)
 
 # Skills editoriais por canal (E-021): corpo do prompt + params (modelo/thinking/

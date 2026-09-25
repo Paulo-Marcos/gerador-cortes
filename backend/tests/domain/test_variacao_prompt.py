@@ -1,8 +1,8 @@
-"""Testes para `app.domain.variacao_prompt` (meta-prompt dinâmico)."""
+"""Testes para `app.domain.canal.variacao_prompt` (meta-prompt dinâmico)."""
 
 from __future__ import annotations
 
-from app.domain.variacao_prompt import _LENTES, bloco_variacao, dica_variacao
+from app.domain.canal.variacao_prompt import _LENTES, bloco_variacao, dica_variacao
 
 
 class TestDicaVariacao:
