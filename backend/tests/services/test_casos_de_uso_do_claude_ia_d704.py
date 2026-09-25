@@ -15,15 +15,16 @@ import hashlib
 import pytest
 from app.domain.corte.avaliacao_bruto import normalizar_avaliacao
 from app.services import avaliacao_bruto
+from app.services.analise import AnaliseService
 from app.services.canal.editorial_skills import SkillResolvida
 from app.services.claude_ia import ClaudeIaService
 
 avaliar_bruto = avaliacao_bruto.avaliar_bruto_via_claude
-prompt_manual_de_cortes = ClaudeIaService.montar_prompt_manual_cortes
-receita_de_cortes = ClaudeIaService._montar_prompt
+prompt_manual_de_cortes = AnaliseService._prompt_manual
+receita_de_cortes = ClaudeIaService.montar_prompt_de_cortes
 # Onde cada caso de uso lê a skill, o scaffold, a IA e as lentes.
 _AVALIADOR = "app.services.avaliacao_bruto"
-_PROMPT_MANUAL = "app.services.claude_ia"
+_PROMPT_MANUAL = "app.services.analise"
 
 _SCAFFOLD_CORTES = (
     "{variacao}|{cabecalho_section}|{titulo_live}|{duracao_humana}|{youtube_url}|"

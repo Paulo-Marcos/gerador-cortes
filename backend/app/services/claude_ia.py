@@ -97,7 +97,7 @@ def _carregar_transcricao_raw(raw: str, projeto_id: str) -> list | dict:
 # Identificadores das skills editoriais. Funcionam como CHAVE do serviço
 # `editorial_skills`, que resolve por canal (E-021) o CORPO, as LENTES e os PARAMS
 # (modelo/thinking/timeout) — antes espalhados entre `.md`, `_LENTES` e `config`.
-_SKILL_CORTES = "cortador-expert"
+SKILL_CORTES = "cortador-expert"
 _SKILL_TRECHOS = "trechos-expert"
 SKILL_METADADOS = "metadados-expert"
 
@@ -204,7 +204,7 @@ class ClaudeIaService:
         I-034: retorna `{cortes, descartados}` para que o caller possa persistir
         o audit trail editorial completo da skill cortador-expert.
         """
-        skill = editorial_skills.resolver_skill(_SKILL_CORTES)
+        skill = editorial_skills.resolver_skill(SKILL_CORTES)
         mapa_falantes = meta.get("falantes_map") or None
         segmentos = ClaudeIaService._granularizar(transcricao)
         texto_completo = ClaudeIaService._formatar_segmentos(segmentos, mapa_falantes)
@@ -213,17 +213,17 @@ class ClaudeIaService:
 
         if len(texto_completo) <= settings.claude_analise_max_chars_direto:
             logger.info("[ClaudeIA] Análise DIRETA (%d chars)", len(texto_completo))
-            prompt = ClaudeIaService._montar_prompt(
+            prompt = ClaudeIaService.montar_prompt_de_cortes(
                 texto_completo,
                 meta,
                 dica_chat=chat_heat.formatar_dica(picos_chat),
                 variacao=bloco_variacao_de(skill.lentes),
             )
             registrar_skill_usada(
-                _SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes")
+                SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes")
             )
             resultado = await gerar_json(
-                provider, prompt, skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id")
+                provider, prompt, skill, SKILL_CORTES, projeto_id=meta.get("projeto_id")
             )
             return {
                 "cortes": resultado.get("cortes", []),
@@ -263,7 +263,7 @@ class ClaudeIaService:
         # como o fluxo de cenas — nunca uma nova por chunk (titulação
         # inconsistente entre partes da mesma análise).
         variacao = bloco_variacao_de(skill.lentes)
-        registrar_skill_usada(_SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
+        registrar_skill_usada(SKILL_CORTES, skill, editorial_scaffolds.resolver_scaffold("cortes"))
         cortes: list = []
         vistos: set[int] = set()
         descartados: list = []
@@ -275,7 +275,7 @@ class ClaudeIaService:
             dica = chat_heat.formatar_dica(
                 chat_heat.picos_no_intervalo(picos_chat or [], *_janela_do_chunk(chunk))
             )
-            prompt = ClaudeIaService._montar_prompt(
+            prompt = ClaudeIaService.montar_prompt_de_cortes(
                 texto,
                 meta,
                 cabecalho=f"PARTE {indice + 1} de {len(chunks)} da transcrição.",
@@ -283,7 +283,7 @@ class ClaudeIaService:
                 variacao=variacao,
             )
             resultado = await gerar_json(
-                provider, prompt, skill, _SKILL_CORTES, projeto_id=meta.get("projeto_id")
+                provider, prompt, skill, SKILL_CORTES, projeto_id=meta.get("projeto_id")
             )
             for corte in resultado.get("cortes", []):
                 chave = bucket_de_30s(corte.get("inicio_seg"))
@@ -297,27 +297,7 @@ class ClaudeIaService:
     # ── montagem do prompt e da transcrição ───────────────────────────────────
 
     @staticmethod
-    def montar_prompt_manual_cortes(
-        texto_transcricao: str, meta: dict, *, cabecalho: str = ""
-    ) -> str:
-        """Prompt para colar numa IA externa (modo manual, D-631).
-
-        Mesma receita da geração automática: a expertise da skill `cortador-expert`
-        do canal (que no CLI entra como system prompt) vem antes do scaffold `cortes`,
-        num texto só — o JSON devolvido segue o formato que `importar_resultado` lê.
-        """
-        skill = editorial_skills.resolver_skill(_SKILL_CORTES)
-        prompt = ClaudeIaService._montar_prompt(
-            texto_transcricao,
-            meta,
-            cabecalho=cabecalho,
-            variacao=bloco_variacao_de(skill.lentes),
-        )
-        expertise = (skill.corpo or "").strip()
-        return f"{expertise}\n\n{prompt}" if expertise else prompt
-
-    @staticmethod
-    def _montar_prompt(
+    def montar_prompt_de_cortes(
         texto_transcricao: str,
         meta: dict,
         *,

@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
+from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.compartilhado.provider_ia import ProviderIA
@@ -19,8 +20,10 @@ from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta
 from app.domain.projeto.transcricao_utils import motivo_transcricao_inutilizavel
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
 from app.services.app_logging import operational_info
+from app.services.canal import editorial_skills
 from app.services.ciclo_de_vida import mudar_projeto
 from app.services.claude_ia import (
+    SKILL_CORTES,
     ClaudeIaService,
     _carregar_transcricao_raw,
 )
@@ -677,9 +680,14 @@ class AnaliseService:
         """D-631: o modo manual usa a MESMA receita da análise automática (skill
         `cortador-expert` + scaffold `cortes` do canal). Antes era um prompt fixo
         no código, com a persona de um canal e divergente do que o canal editou."""
-        return ClaudeIaService.montar_prompt_manual_cortes(
-            texto_transcricao, meta, cabecalho=cabecalho
+        skill = editorial_skills.resolver_skill(SKILL_CORTES)
+        prompt = ClaudeIaService.montar_prompt_de_cortes(
+            texto_transcricao, meta, cabecalho=cabecalho, variacao=bloco_variacao_de(skill.lentes)
         )
+        # A expertise da skill, que no CLI entra como system prompt, vem antes do
+        # scaffold num texto só — o JSON devolvido segue o que `importar_resultado` lê.
+        expertise = (skill.corpo or "").strip()
+        return f"{expertise}\n\n{prompt}" if expertise else prompt
 
     @staticmethod
     async def analisar_via_claude(

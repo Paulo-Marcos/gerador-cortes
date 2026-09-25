@@ -105,7 +105,7 @@ class TestCarregarTranscricaoRaw:
 
 class TestMontarPrompt:
     def test_monta_contexto_sem_corpo_da_skill(self):
-        prompt = ClaudeIaService._montar_prompt(
+        prompt = ClaudeIaService.montar_prompt_de_cortes(
             "[0] (00:00) fala",
             {"titulo_live": "Minha Live", "youtube_url": "http://x", "duracao_segundos": 3700},
         )

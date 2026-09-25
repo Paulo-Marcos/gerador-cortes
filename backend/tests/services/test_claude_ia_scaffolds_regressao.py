@@ -202,7 +202,7 @@ _TRANSCRICAO = "[0] (00:00) olá\n[1] (00:04) mundo"
 @pytest.mark.parametrize("cabecalho", ["", "PARTE 2 de 3 da transcrição."])
 @pytest.mark.parametrize("variacao", ["", "LENTE: foque no contraste."])
 def test_cortes_identico_ao_oraculo(cabecalho, variacao):
-    novo = ClaudeIaService._montar_prompt(
+    novo = ClaudeIaService.montar_prompt_de_cortes(
         _TRANSCRICAO, _META, cabecalho=cabecalho, variacao=variacao
     )
     _igual(novo, _oraculo_cortes(_TRANSCRICAO, _META, cabecalho=cabecalho, variacao=variacao))
