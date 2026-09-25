@@ -27,8 +27,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 # Onde o caso de uso lê a pasta dos projetos e guarda as props ativas.
-_PROJETOS_DIR_LIDO_EM = ["app.routers.cortes"]
-_PROPS_ATIVAS_EM = ("app.routers.cortes", "_remotion_active_props")
+_PROJETOS_DIR_LIDO_EM = ["app.services.remotion_studio"]
+_PROPS_ATIVAS_EM = ("app.services.remotion_studio", "_props_ativas")
 
 _CENAS = [{"tipo": "ficha", "inicio": 1.0, "fim": 3.0}]
 _LAYOUT_DO_PROJETO = json.dumps({"modo_padrao": "compartilhada", "regioes": []})

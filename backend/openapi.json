@@ -5122,7 +5122,7 @@
     },
     "/api/cortes/remotion/active-props": {
       "get": {
-        "description": "Retorna as props ativas para o Remotion Studio buscar automaticamente.",
+        "description": "Retorna as props ativas para o Remotion Studio buscar automaticamente.\n\nVazio antes do primeiro pedido — e não 404, para não poluir o log do Uvicorn,\nque o Studio consulta em laço.",
         "operationId": "obter_remotion_active_props_api_cortes_remotion_active_props_get",
         "responses": {
           "200": {

@@ -7,7 +7,6 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from app.config import settings
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import get_db
 from app.domain.compartilhado.provider_ia import ProviderIA
@@ -15,10 +14,9 @@ from app.domain.corte.corte_mapper import (
     extrair_cenas_remotion,
 )
 from app.domain.corte.youtube_layout import (
-    aplicar_layout_card_por_contexto,
     normalizar_layout_youtube,
 )
-from app.models import Corte, Projeto
+from app.models import Corte
 from app.routers.cortes_helpers import (
     _corte_to_dict,
     _hms_to_seg,
@@ -47,6 +45,7 @@ from app.routers.cortes_schemas import (
 )
 from app.routers.errors import erro_interno
 from app.services import arranjo as arranjo_service
+from app.services import remotion_studio
 from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.corte import AtualizarCorteDTO, CorteService
@@ -77,19 +76,17 @@ router = APIRouter()
 # Schemas e helpers puros vivem em cortes_schemas / cortes_helpers (E-006).
 
 
-# ─── Variável global para props ativas do Remotion ──────────────────────────
-_remotion_active_props: dict = {}
-
-
 # ─── Endpoints (rotas fixas ANTES das rotas com {corte_id}) ─────────────────
 
 
 @router.get("/remotion/active-props")
 async def obter_remotion_active_props():
-    """Retorna as props ativas para o Remotion Studio buscar automaticamente."""
-    if not _remotion_active_props:
-        return {}  # Retorna vazio ao invés de 404 para não poluir os logs do Uvicorn durante o render
-    return _remotion_active_props
+    """Retorna as props ativas para o Remotion Studio buscar automaticamente.
+
+    Vazio antes do primeiro pedido — e não 404, para não poluir o log do Uvicorn,
+    que o Studio consulta em laço.
+    """
+    return remotion_studio.props_ativas()
 
 
 @router.get("/{corte_id}", response_model=CorteResponse)
@@ -1003,72 +1000,9 @@ async def renderizar_pipeline(corte_id: str, body: RenderPipelineRequest | None 
 
 
 @router.get("/{corte_id}/remotion-studio-url")
-async def obter_remotion_studio_url(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def obter_remotion_studio_url(corte_id: str):
     """Gera a URL do Remotion Studio e salva as props ativas para o Studio buscar."""
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte_id
-    clip_path = None
-    for candidate in ["clip_raw.mkv", "clip_raw.mp4"]:
-        p = corte_dir / candidate
-        if p.exists():
-            clip_path = p
-            break
-
-    if not clip_path:
-        raise HTTPException(
-            status_code=404,
-            detail="Vídeo exportado não encontrado. Execute 'Exportar NLE' primeiro.",
-        )
-
-    clip_filename = clip_path.name
-    video_url = (
-        f"{settings.backend_public_url}/videos/{corte.projeto_id}/cortes/{corte_id}/{clip_filename}"
-    )
-
-    cenas_salvas = json.loads(corte.cenas_remotion or "[]")
-    if isinstance(cenas_salvas, dict):
-        cenas_array = cenas_salvas.get("cenas", [])
-    else:
-        cenas_array = cenas_salvas
-
-    # Roteia o Studio para a composição correta conforme a versão do renderer
-    # escolhida no projeto. V2 inclui sombraNivelPadrao no payload.
-    projeto = await db.get(Projeto, corte.projeto_id)
-
-    layout_youtube = normalizar_layout_youtube(
-        json.loads(getattr(corte, "layout_youtube", "") or "{}"),
-        fallback_layout=getattr(projeto, "layout_youtube_padrao", None),
-    )
-    # V1 desativada — todos os projetos usam V2 (nova identidade editorial).
-    sombra_padrao = getattr(projeto, "sombra_nivel_padrao", "nenhuma") or "nenhuma"
-    layout_card_padrao = getattr(projeto, "layout_card_padrao", "vertical") or "vertical"
-    composition_id = "CenaYouTubeV2"
-
-    props = {
-        "videoUrl": video_url,
-        "letterbox": False,
-        "filtroCss": "none",
-        "cenas": aplicar_layout_card_por_contexto(cenas_array, layout_youtube),
-        "layoutYoutube": layout_youtube,
-        "sombraNivelPadrao": sombra_padrao,
-        "layoutCardPadrao": layout_card_padrao,
-    }
-
-    global _remotion_active_props
-    _remotion_active_props = props
-
-    # Porta vem da config: o Studio precisa ficar fora da faixa 3000-3100 que
-    # o renderer usa para servir o bundle. Ver `remotion_studio_port`.
-    studio_url = f"http://localhost:{settings.remotion_studio_port}/{composition_id}"
-
-    return {
-        "studio_url": studio_url,
-        "video_url": video_url,
-        "props": props,
-    }
+    return await remotion_studio.abrir_no_studio(corte_id)
 
 
 @router.post("/{corte_id}/sincronizar-pos-producao")
