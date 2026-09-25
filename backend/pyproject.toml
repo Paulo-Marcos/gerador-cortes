@@ -14,7 +14,10 @@ extend-exclude = ["projetos", "assets"]
 # por que tem aquele valor; nos testes o número no assert É o esperado, e fica.
 # BLE001 (except Exception): D-717. Falha conhecida pega o tipo exato; barreira de
 # propósito (etapa não-fatal, tarefa de fundo, item de lote) leva `noqa` com o motivo.
-select = ["E", "F", "W", "I", "UP", "B", "T20", "PLR2004", "BLE001"]
+# PLR0913 (argumentos demais, teto 8): D-717. Valores que andam juntos viram um
+# objeto (GradeSpec, LlmCallRecord, AtualizarShortDTO); o que passa disso por
+# natureza — construtor de comando FFmpeg — leva `noqa` com o motivo.
+select = ["E", "F", "W", "I", "UP", "B", "T20", "PLR2004", "BLE001", "PLR0913"]
 ignore = [
   # Comprimento de linha fica a cargo do formatter (ruff format).
   "E501",
@@ -22,6 +25,9 @@ ignore = [
   # trocar por StrEnum muda o str() dos membros e quebraria serializacao/contrato de DB.
   "UP042",
 ]
+
+[tool.ruff.lint.pylint]
+max-args = 8
 
 [tool.ruff.lint.flake8-bugbear]
 # Padrao FastAPI: `def rota(x = Depends(...))` / `Query(...)` etc. nao e mutable-default (B008).
@@ -38,9 +44,9 @@ extend-immutable-calls = [
 
 [tool.ruff.lint.per-file-ignores]
 # Testes ajustam sys.path antes de importar (E402) e usam pytest.raises(Exception) (B017).
-"tests/**" = ["B017", "E402", "T20", "PLR2004", "BLE001"]
+"tests/**" = ["B017", "E402", "T20", "PLR2004", "BLE001", "PLR0913"]
 # Scripts de linha de comando: imprimir É a interface deles (D-655).
-"dev-utils/**" = ["T20", "PLR2004", "BLE001"]
+"dev-utils/**" = ["T20", "PLR2004", "BLE001", "PLR0913"]
 "app/services/canal/channel_layout_migration.py" = ["T20"]
 
 [tool.ruff.format]

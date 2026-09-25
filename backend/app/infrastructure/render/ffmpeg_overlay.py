@@ -57,7 +57,7 @@ def build_overlay_filter_string(
 _LOUDNORM_YOUTUBE = "loudnorm=I=-14:TP=-1.0:LRA=11"
 
 
-def build_compose_and_encode_cmd(
+def build_compose_and_encode_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg: cada argumento é uma dimensão do comando, todos por nome
     video_path: Path,
     overlay_paths: list[Path],
     overlay_timings: list[dict],

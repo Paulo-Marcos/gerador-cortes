@@ -49,7 +49,7 @@ CODEC_OVERLAY = "prores_ks"
 FUNDO_PADRAO = fundo_ffmpeg(FUNDO_DE_ULTIMO_RECURSO)
 
 
-def build_recorte_vertical_cmd(
+def build_recorte_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg: cada argumento é uma dimensão do comando, todos por nome
     entrada: Path,
     saida: Path,
     *,
@@ -122,7 +122,7 @@ def build_recorte_vertical_cmd(
     ]
 
 
-def build_palco_vertical_cmd(
+def build_palco_vertical_cmd(  # noqa: PLR0913 — construtor de comando FFmpeg: cada argumento é uma dimensão do comando, todos por nome
     entrada: Path,
     saida: Path,
     *,

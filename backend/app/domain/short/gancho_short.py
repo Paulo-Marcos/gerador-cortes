@@ -393,7 +393,7 @@ def aparencia_resolvida(proprio: dict, padrao: dict | None) -> dict:
     }
 
 
-def para_payload(
+def para_payload(  # noqa: PLR0913 — cada argumento é um campo do gancho, todos por nome
     texto: str,
     ate_seg: object,
     *,
