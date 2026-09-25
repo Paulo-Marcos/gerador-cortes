@@ -10,8 +10,8 @@ from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.config import settings
+from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain.projeto.json3_parser import parse_json3
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError

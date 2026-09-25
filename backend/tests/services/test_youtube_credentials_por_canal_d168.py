@@ -6,8 +6,8 @@ Cobre os resolvers `youtube_client_secrets_path` / `youtube_token_path`:
 - (c) modelo recomendado: `client_secrets` compartilhado (raiz) + token SEMPRE por canal.
 """
 
-from app import channel_paths
-from app.channel_paths import youtube_client_secrets_path, youtube_token_path
+from app.core import channel_paths
+from app.core.channel_paths import youtube_client_secrets_path, youtube_token_path
 
 
 def _fixar_layout(monkeypatch, *, instance_root, canal_root, backend_root):

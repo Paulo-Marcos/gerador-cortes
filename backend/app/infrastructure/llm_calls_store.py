@@ -27,7 +27,7 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app import channel_paths
+from app.core import channel_paths
 
 # Ordem canônica das colunas (também a ordem de leitura em `listar_llm_calls`).
 _COLUNAS = (

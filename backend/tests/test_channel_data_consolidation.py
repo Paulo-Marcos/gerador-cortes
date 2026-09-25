@@ -207,7 +207,7 @@ def test_sem_backend_root_explicito_recusa(tmp_path):
 
 
 def test_database_url_e_projetos_dir_apontam_para_o_canal(tmp_path, monkeypatch):
-    from app import channel_paths
+    from app.core import channel_paths
 
     instance = tmp_path / "instance"
     backend = tmp_path / "backend"
@@ -227,7 +227,7 @@ def test_database_url_e_projetos_dir_apontam_para_o_canal(tmp_path, monkeypatch)
 def test_projetos_dir_usa_legado_ate_o_banco_existir_no_canal(tmp_path, monkeypatch):
     """ANTES da consolidação (canal sem projetos.db), aponta para o legado — nunca
     abre um banco vazio paralelo enquanto os dados reais estão no `backend/`."""
-    from app import channel_paths
+    from app.core import channel_paths
 
     instance = tmp_path / "instance"
     canal = instance / "channels" / "meucanal"

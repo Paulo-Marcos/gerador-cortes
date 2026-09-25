@@ -13,7 +13,7 @@ import asyncio
 import logging
 import shutil
 
-from app.channel_paths import resolver_do_projeto
+from app.core.channel_paths import resolver_do_projeto
 from app.models import MetadadoCorte, StatusCorte
 from app.services.ciclo_de_vida import marcar_corte
 from app.services.export import ExportService

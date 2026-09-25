@@ -74,7 +74,7 @@ async def ambiente(monkeypatch, tmp_path):
     Os destinos reais falam com YouTube e Playwright; o que se testa aqui é a
     FILA, e ela não precisa de nenhum dos dois para provar que respeita o ritmo.
     """
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)
 

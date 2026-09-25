@@ -11,7 +11,7 @@ Fluxo:
 
 from __future__ import annotations
 
-from app import channel_paths
+from app.core import channel_paths
 from app.services import retrato_wikipedia
 from fastapi import APIRouter, Body, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse

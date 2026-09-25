@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.channel_paths import resolver_do_projeto
+from app.core.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.short import segmentos_short
 from app.domain.short.metadados_short import hashtags_gravadas

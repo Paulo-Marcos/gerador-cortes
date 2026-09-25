@@ -32,8 +32,8 @@ import time
 from pathlib import Path
 from typing import Protocol
 
-from app.channel_paths import active_channel_root
 from app.config import settings
+from app.core.channel_paths import active_channel_root
 from app.domain.publicacao.tiktok_studio import (
     PORTA_MINIMA_DE_DEPURACAO,
     PORTAS_DE_DEPURACAO,

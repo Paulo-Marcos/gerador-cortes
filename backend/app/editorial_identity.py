@@ -30,8 +30,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-from app import channel_paths
-from app.channel_paths import editorial_dir
+from app.core import channel_paths
+from app.core.channel_paths import editorial_dir
 from app.infrastructure import settings_store
 
 _MASCOTE_YAML = "mascote.yaml"

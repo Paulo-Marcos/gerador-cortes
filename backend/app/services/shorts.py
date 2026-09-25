@@ -24,8 +24,8 @@ from datetime import datetime
 from pathlib import Path
 
 from app import editorial_scaffolds, editorial_skills
-from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import seg_to_hms_short, seg_to_mmss

@@ -15,8 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.channel_assets_sync import garantir_mascote_materializado
-from app.channel_paths import projetos_dir
 from app.config import settings
+from app.core.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.time_convert import epoch_to_hora_local, seg_to_duracao_humana
 from app.domain.corte.render_etapas import eh_render_parcial, fase_dentro_do_alcance

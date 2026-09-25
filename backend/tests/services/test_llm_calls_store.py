@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app import channel_paths
+from app.core import channel_paths
 from app.infrastructure import llm_calls_store
 from app.routers import claude_ia as rota_claude_ia
 

@@ -3,7 +3,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from app.channel_paths import (
+from app.core.channel_paths import (
     projetos_dir,
     resolver_do_projeto,
 )

@@ -29,7 +29,7 @@ _SEGMENTOS = [
 
 @pytest_asyncio.fixture
 async def ambiente(monkeypatch, tmp_path):
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)
 

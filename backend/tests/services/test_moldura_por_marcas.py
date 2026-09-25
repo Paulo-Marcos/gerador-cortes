@@ -12,7 +12,7 @@ import os
 
 import pytest
 import pytest_asyncio
-from app import channel_paths
+from app.core import channel_paths
 from app.models import Base, Corte, MetadadoCorte, Projeto
 from app.services import thumbnail as thumbnail_module
 from app.services.thumbnail import ThumbnailService

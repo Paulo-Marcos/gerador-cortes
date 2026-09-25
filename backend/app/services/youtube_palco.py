@@ -21,8 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from app import channel_paths
-from app.core import process_runner
+from app.core import channel_paths, process_runner
 from app.domain.corte.youtube_layout import (
     config_compartilhada_para_full,
     normalizar_layout_youtube,

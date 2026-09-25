@@ -20,8 +20,8 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import channel_paths
 from app.config import settings
+from app.core import channel_paths
 from app.infrastructure.web_imagens import DownloadFalhou, SessaoWeb
 
 _TAMANHO_DEFAULT = 600

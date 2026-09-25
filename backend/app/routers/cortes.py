@@ -7,8 +7,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import get_db
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte import ciclo_corte

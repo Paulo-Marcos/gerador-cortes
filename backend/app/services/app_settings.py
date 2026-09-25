@@ -9,8 +9,8 @@ from enum import StrEnum
 from pathlib import Path
 from threading import Lock
 
-from app import channel_paths
-from app.channel_paths import projetos_dir
+from app.core import channel_paths
+from app.core.channel_paths import projetos_dir
 from app.infrastructure.render.cinema_filters import FILTROS_CINEMA
 from app.infrastructure.render.overlay_codec import OverlayCodec
 from app.services import settings_store

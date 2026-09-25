@@ -7,7 +7,7 @@ import json
 import logging
 import os
 
-from app.channel_paths import projetos_dir
+from app.core.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
 from app.models import Corte
 from app.services.cancelamento_jobs import TrabalhoEmVoo

@@ -23,8 +23,8 @@ import logging
 import time
 
 from app import editorial_scaffolds, editorial_skills
-from app.channel_paths import projetos_dir
 from app.config import settings
+from app.core.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.gerador_ia import PedidoIA

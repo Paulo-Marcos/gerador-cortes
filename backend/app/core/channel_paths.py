@@ -24,10 +24,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# Raiz do repositório, derivada do próprio arquivo (backend/app/channel_paths.py):
-# parent = app, parent.parent = backend, parent.parent.parent = raiz do repo.
+# Raiz do repositório, derivada do próprio arquivo (backend/app/core/channel_paths.py):
+# parents[0] = core, [1] = app, [2] = backend, [3] = raiz do repo.
 # Mesma convenção de ancoragem usada por channel_config_loader e mascot_catalog.
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 _BACKEND_ROOT = _REPO_ROOT / "backend"
 _VIDEO_RENDERER_ROOT = _REPO_ROOT / "video-renderer"
 

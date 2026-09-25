@@ -25,7 +25,7 @@ import subprocess
 from functools import lru_cache
 from pathlib import Path
 
-from app import channel_paths
+from app.core import channel_paths
 from app.migrations.reconciliacao import colunas_faltantes
 from app.models import Base
 from sqlalchemy import text

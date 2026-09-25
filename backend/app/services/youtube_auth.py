@@ -19,8 +19,8 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.channel_paths import youtube_client_secrets_path, youtube_token_path
 from app.config import settings
+from app.core.channel_paths import youtube_client_secrets_path, youtube_token_path
 from app.infrastructure import youtube_api
 from app.infrastructure.youtube_api import Credenciais
 

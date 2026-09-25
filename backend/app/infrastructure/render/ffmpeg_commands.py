@@ -13,7 +13,7 @@ chamadores no mesmo módulo garante que o patch atinja o call-site.
 
 from pathlib import Path
 
-from app import channel_paths
+from app.core import channel_paths
 from app.domain.corte.youtube_layout import (
     config_compartilhada_para_full,
     normalizar_layout_youtube,

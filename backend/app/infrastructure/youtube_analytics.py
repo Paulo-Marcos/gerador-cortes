@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from app.channel_paths import youtube_client_secrets_path, youtube_token_path
+from app.core.channel_paths import youtube_client_secrets_path, youtube_token_path
 from app.core.logging import operational_error, operational_info
 from app.domain.publicacao.youtube_stats import parsear_duracao_iso8601
 from google.auth.transport.requests import Request

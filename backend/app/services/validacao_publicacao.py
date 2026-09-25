@@ -22,7 +22,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.corte.corte_mapper import cenas_fora_do_corte, extrair_cenas_remotion
 from app.infrastructure.ffmpeg_runner import probe_duracao

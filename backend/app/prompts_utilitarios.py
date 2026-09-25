@@ -40,7 +40,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import channel_paths, editorial_scaffolds
+from app import editorial_scaffolds
+from app.core import channel_paths
 from app.infrastructure import settings_store
 
 # app -> backend -> raiz do repo (mesma ancoragem de editorial_scaffolds).

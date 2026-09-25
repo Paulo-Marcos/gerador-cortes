@@ -306,7 +306,7 @@ def test_ponteiro_do_bruto_preservado_nao_e_zerado_no_banco(monkeypatch, tmp_pat
     vigente, entao o dublê precisa valer tambem em `channel_paths` — senao a
     checagem de existencia procuraria na raiz real e zeraria o ponteiro.
     """
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)

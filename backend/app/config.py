@@ -1,6 +1,6 @@
 import os
 
-from app.channel_paths import projetos_dir as _channel_projetos_dir
+from app.core.channel_paths import projetos_dir as _channel_projetos_dir
 from pydantic_settings import BaseSettings
 
 _BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

@@ -26,7 +26,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from app.channel_paths import mascot_dir
+from app.core.channel_paths import mascot_dir
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 

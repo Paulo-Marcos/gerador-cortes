@@ -17,7 +17,7 @@ Duas decisões que valem o comentário:
 
 from __future__ import annotations
 
-from app.channel_paths import projetos_dir
+from app.core.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain.publicacao.liberacao_publicacao import (
     MarcaDePublicacao,

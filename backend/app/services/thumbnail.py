@@ -7,13 +7,13 @@ import os
 from pathlib import Path
 
 import aiofiles
-from app.channel_paths import (
+from app.config import settings
+from app.core.channel_paths import (
     moldura_thumbnail_path,
     para_relativo_ao_projeto,
     projetos_dir,
     resolver_do_projeto,
 )
-from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import strip_variation_tags
 from app.domain.corte.moldura_thumbnail import arquivos_da_moldura, nomes_das_molduras

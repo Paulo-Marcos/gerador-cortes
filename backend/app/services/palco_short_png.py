@@ -30,8 +30,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from app import channel_paths
-from app.core import process_runner
+from app.core import channel_paths, process_runner
 
 logger = logging.getLogger(__name__)
 

@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.channel_assets_sync import cor_do_tema
-from app.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
+from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.corte.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
 from app.domain.corte.youtube_layout import _normalizar_fundo as textura_valida

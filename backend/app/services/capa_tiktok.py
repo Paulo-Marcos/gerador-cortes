@@ -35,8 +35,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app import editorial_scaffolds, editorial_skills
-from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.core import process_runner
+from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte import capa_tiktok as layout_capa

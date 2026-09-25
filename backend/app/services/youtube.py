@@ -3,7 +3,7 @@ import json
 import time
 from pathlib import Path
 
-from app.channel_paths import (
+from app.core.channel_paths import (
     projetos_dir,
     resolver_do_projeto,
     youtube_client_secrets_path,

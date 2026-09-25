@@ -28,7 +28,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app import channel_paths
+from app.core import channel_paths
 from app.domain.canal import theme_library
 from app.domain.canal.theme_library import Tema
 from app.infrastructure import settings_store

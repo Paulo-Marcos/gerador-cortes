@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.publicacao.publicacao import (
     LIMITES,

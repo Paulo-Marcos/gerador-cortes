@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
-from app import channel_paths
+from app.core import channel_paths
 from app.models import Base, Corte, MetadadoCorte, Projeto, StatusCorte
 from app.services.export import ExportService
 from app.services.finalizacao_do_corte import finalizar_corte_com_sucesso

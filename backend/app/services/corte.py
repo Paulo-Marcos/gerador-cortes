@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from app.channel_paths import projetos_dir
+from app.core.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
@@ -1186,7 +1186,7 @@ class CorteService:
             corte = await db.get(Corte, corte_id)
             projeto = await db.get(Projeto, corte.projeto_id)
 
-            from app.channel_paths import resolver_do_projeto
+            from app.core.channel_paths import resolver_do_projeto
 
             # Re-ancora o caminho no canal ATIVO (D-172): tolera path stale no banco.
             video_path = str(resolver_do_projeto(projeto.arquivo_video_path, projeto.id))

@@ -44,7 +44,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from string import Formatter
 
-from app import channel_paths, editorial_scaffolds_legados, editorial_skills
+from app import editorial_scaffolds_legados, editorial_skills
+from app.core import channel_paths
 from app.infrastructure import settings_store
 
 # app -> backend -> raiz do repo (mesma ancoragem de editorial_skills).

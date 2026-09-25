@@ -611,7 +611,7 @@ async def obter_video(short_id: str, estagio: str = "final"):
     disco e só a publicação o lia. Uma prévia que não se pode ver não serve para
     nada, então a rota nasce junto com ela.
     """
-    from app.channel_paths import resolver_do_projeto
+    from app.core.channel_paths import resolver_do_projeto
     from app.models import Corte, Short
     from fastapi.responses import RedirectResponse
 
@@ -746,7 +746,7 @@ async def obter_capa_imagem(short_id: str):
     Cache-buster pelo mtime: sem ele o navegador serve a capa antiga depois de o
     operador escolher outro instante, e a tela mentiria sobre o que foi gravado.
     """
-    from app.channel_paths import resolver_do_projeto
+    from app.core.channel_paths import resolver_do_projeto
     from app.models import Corte, MetadadoShort, Short
     from fastapi.responses import FileResponse
     from sqlalchemy import select

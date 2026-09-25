@@ -16,11 +16,11 @@ import hashlib
 from pathlib import Path
 
 import pytest
-from app import channel_paths
 from app.channel_layout_migration import (
     LayoutMigrationError,
     garantir_layout_de_canais,
 )
+from app.core import channel_paths
 
 # --------------------------------------------------------------------------- #
 # Fixtures auxiliares

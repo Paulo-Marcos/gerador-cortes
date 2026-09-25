@@ -12,8 +12,8 @@ import os
 
 import pytest
 import pytest_asyncio
-from app import channel_paths
-from app.channel_paths import para_relativo_ao_projeto, resolver_do_projeto
+from app.core import channel_paths
+from app.core.channel_paths import para_relativo_ao_projeto, resolver_do_projeto
 from app.migrations import migration_002_paths_relativos
 from app.models import AvaliacaoThumbnail, Base, Corte, MetadadoCorte, Projeto
 from sqlalchemy import select

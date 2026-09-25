@@ -34,7 +34,7 @@ async def session_factory():
 @pytest.fixture
 def raiz(monkeypatch, tmp_path):
     """Raiz de dados dublê nos dois módulos que a resolvem."""
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(projeto_module, "projetos_dir", lambda: tmp_path)
     monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)

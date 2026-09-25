@@ -33,9 +33,9 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import channel_paths
-from app.channel_paths import editorial_dir
 from app.config import settings
+from app.core import channel_paths
+from app.core.channel_paths import editorial_dir
 from app.domain.canal import variacao_prompt
 from app.infrastructure import settings_store
 

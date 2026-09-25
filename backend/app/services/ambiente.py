@@ -17,8 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from app.channel_paths import youtube_client_secrets_path
 from app.config import settings
+from app.core.channel_paths import youtube_client_secrets_path
 from app.infrastructure import antigravity_cli_client, claude_cli_client
 from app.infrastructure.encoder_detector import encoder_da_maquina
 from app.infrastructure.render.video_encoder import VideoEncoder

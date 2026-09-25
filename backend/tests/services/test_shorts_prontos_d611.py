@@ -67,7 +67,7 @@ def _publicado(alvo_id: str, plataforma: str) -> PublicacaoShort:
 
 @pytest_asyncio.fixture
 async def banco(monkeypatch, tmp_path):
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)
     for corte_id, short_id in (

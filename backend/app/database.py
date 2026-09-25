@@ -1,4 +1,4 @@
-from app.channel_paths import database_url
+from app.core.channel_paths import database_url
 from app.migrations import aplicar_migrations
 from app.models import Base
 from sqlalchemy import event, text

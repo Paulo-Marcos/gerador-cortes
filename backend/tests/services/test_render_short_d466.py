@@ -22,7 +22,7 @@ from sqlalchemy.pool import StaticPool
 
 @pytest_asyncio.fixture
 async def ambiente(monkeypatch, tmp_path):
-    from app import channel_paths
+    from app.core import channel_paths
     from app.services import legendas_short, transcricao_fiel
 
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)

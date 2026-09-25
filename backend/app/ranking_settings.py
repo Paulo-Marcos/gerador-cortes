@@ -24,8 +24,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from app import channel_paths
 from app.config import settings
+from app.core import channel_paths
 from app.domain.live_candidata.ranking_lives import PesosRanking
 from app.infrastructure import settings_store
 

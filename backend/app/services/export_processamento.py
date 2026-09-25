@@ -10,8 +10,8 @@ import asyncio
 import json
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.infrastructure.ffmpeg_runner import run_ffmpeg
 from app.infrastructure.render.cinema_filters import FILTROS_CINEMA, get_filtro_vf

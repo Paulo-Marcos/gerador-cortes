@@ -31,7 +31,7 @@ import re
 import shutil
 from pathlib import Path
 
-from app import channel_paths
+from app.core import channel_paths
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _FRONTEND_MASCOTE = _REPO_ROOT / "frontend" / "public" / "mascote"

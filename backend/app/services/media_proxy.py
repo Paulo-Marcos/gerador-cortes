@@ -9,7 +9,7 @@ import time
 from array import array
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.infrastructure.ffmpeg_runner import run_ffmpeg
 from app.models import Corte, Projeto
 from app.services.app_settings import AppSettingsService

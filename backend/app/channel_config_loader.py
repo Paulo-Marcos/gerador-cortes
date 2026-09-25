@@ -29,7 +29,7 @@ from importlib.machinery import SourceFileLoader
 from pathlib import Path
 from types import ModuleType
 
-from app.channel_paths import active_channel_root, editorial_dir
+from app.core.channel_paths import active_channel_root, editorial_dir
 
 # Símbolos editoriais que toda fonte de configuração precisa fornecer.
 SIMBOLOS_REQUERIDOS = (

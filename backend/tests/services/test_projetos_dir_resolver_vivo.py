@@ -12,8 +12,8 @@ congelado em `settings` NÃO é mais a fonte do caminho.
 
 from __future__ import annotations
 
-from app import channel_paths
 from app.config import settings
+from app.core import channel_paths
 from app.services import pipeline_render
 
 

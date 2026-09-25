@@ -14,11 +14,11 @@ from app import (
     channel_assets_sync,
     channel_config_loader,
     channel_layout_migration,
-    channel_paths,
     editorial_scaffolds,
     editorial_skills,
     prompts_utilitarios,
 )
+from app.core import channel_paths
 
 _BACKEND = Path(__file__).resolve().parents[1]
 _APP = _BACKEND / "app"
