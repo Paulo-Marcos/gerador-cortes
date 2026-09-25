@@ -324,6 +324,174 @@ class AtualizarCorteDTO:
     audio_offset_ms: int | None = None
 
 
+# ─── Os passos do PATCH do corte (D-716: saíram de `CorteService.atualizar`) ──
+
+
+def _validar_pedido_de_status(corte: Corte, dados: AtualizarCorteDTO) -> None:
+    # D-665: antes de tocar em qualquer campo — um status recusado não pode
+    # deixar a atualização pela metade. `TransicaoDeCorteInvalida` é um
+    # ValueError, e o router já a devolve como 400 com o motivo.
+    if dados.status is not None:
+        # `.value`: em memória o status pode ser o enum, e `str()` de um enum
+        # misto devolve 'StatusCorte.APROVADO' no Python 3.13, não 'aprovado'.
+        atual = getattr(corte.status, "value", corte.status)
+        ciclo_corte.validar_pedido_do_operador(atual, dados.status)
+
+
+def _aplicar_titulo_e_bordas(corte: Corte, dados: AtualizarCorteDTO) -> None:
+    if dados.titulo_proposto is not None:
+        corte.titulo_proposto = dados.titulo_proposto
+    if dados.inicio_hms is not None:
+        corte.inicio_hms = dados.inicio_hms
+    if dados.fim_hms is not None:
+        corte.fim_hms = dados.fim_hms
+    if dados.inicio_seg is not None:
+        corte.inicio_seg = dados.inicio_seg
+    if dados.fim_seg is not None:
+        corte.fim_seg = dados.fim_seg
+    if dados.desvios is not None:
+        corte.desvios = json.dumps(dados.desvios)
+
+
+def _reencaixar_arranjo(corte: Corte) -> None:
+    # D-576: mexeu na borda, o arranjo de blocos acompanha. Descartá-lo seria
+    # perder o trabalho do editor por causa de um ajuste de meio segundo;
+    # confiar nele cegamente mandaria o ffmpeg cortar fora do intervalo.
+    # `reconciliar` estica as fatias até o novo intervalo mantendo a ORDEM.
+    from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+    from app.domain.corte.arranjo_blocos import reconciliar, serializar
+
+    arranjo = parse_arranjo(corte.arranjo_blocos)
+    if arranjo:
+        corte.arranjo_blocos = json.dumps(
+            serializar(
+                reconciliar(arranjo, float(corte.inicio_seg or 0.0), float(corte.fim_seg or 0.0))
+            ),
+            ensure_ascii=False,
+        )
+
+
+def _aplicar_status_e_leitura(corte: Corte, dados: AtualizarCorteDTO) -> None:
+    if dados.status is not None:
+        corte.status = dados.status
+    if dados.is_leitura is not None:
+        corte.is_leitura = dados.is_leitura
+    if dados.autor_leitura is not None:
+        corte.autor_leitura = dados.autor_leitura.strip()
+    if dados.parte_leitura is not None:
+        corte.parte_leitura = max(1, dados.parte_leitura)
+
+
+def _aplicar_transcricao_e_ajustes(corte: Corte, dados: AtualizarCorteDTO) -> None:
+    if dados.transcricao_corte is not None:
+        corte.transcricao_corte = json.dumps(dados.transcricao_corte, ensure_ascii=False)
+    if dados.hints_thumbnail is not None:
+        corte.hints_thumbnail = dados.hints_thumbnail.strip()
+    if dados.audio_offset_ms is not None:
+        # Lip-sync: limite generoso de ±10s evita valores absurdos vindos da UI.
+        corte.audio_offset_ms = max(-10_000, min(10_000, int(dados.audio_offset_ms)))
+
+
+def _recusar_cenas_que_nao_cabem(corte: Corte, cenas_recebidas: list) -> None:
+    if tem_colapso_de_tempos_das_cenas(cenas_recebidas):
+        raise ValueError("Salvamento bloqueado: os tempos das cenas seriam sobrescritos em massa.")
+    # Teto: o span BRUTO do corte, nunca a duracao liquida. O bruto e
+    # sempre >= a liquida, entao um trecho removido jamais gera falso
+    # positivo — so acusa cena inequivocamente fora (tempo absoluto da
+    # live vazando para o roteiro visual).
+    fora = cenas_fora_do_corte(cenas_recebidas, (corte.fim_seg or 0) - (corte.inicio_seg or 0))
+    if fora:
+        exemplo = fora[0]
+        raise ValueError(
+            f"Salvamento bloqueado: {len(fora)} cena(s) com tempo fora do corte "
+            f"(ex.: cena {exemplo['indice']} em {exemplo['inicio']:.1f}s-"
+            f"{exemplo['fim']:.1f}s). Tempo de cena e relativo ao corte, "
+            "nao a posicao na live."
+        )
+
+
+def _aplicar_cenas(corte: Corte, payload: list | dict) -> None:
+    _recusar_cenas_que_nao_cabem(corte, extrair_cenas_remotion(payload))
+    cenas_remotion = normalizar_cenas_remotion_payload(payload)
+    novo_payload = json.dumps(cenas_remotion, ensure_ascii=False)
+    # Se as cenas mudaram, invalida a marca manual de "cenas validadas" — o
+    # operador precisa revalidar conscientemente. Comparar pelo JSON serializado
+    # com NORMALIZACAO em ambos os lados, para evitar invalidar a marca apenas
+    # porque o banco tem dados antigos (ex.: tela_cheia sem modelo_cena, que
+    # passa a ganhar 'card' apos I-031).
+    existente_normalizado = normalizar_cenas_remotion_payload(
+        json.loads(corte.cenas_remotion or "[]")
+    )
+    existente_payload = json.dumps(existente_normalizado, ensure_ascii=False)
+    if existente_payload != novo_payload:
+        corte.cenas_validadas = 0
+        corte.cenas_validadas_em = None
+    corte.cenas_remotion = novo_payload
+
+
+def _aplicar_layout(corte: Corte, payload: dict) -> None:
+    layout_youtube = normalizar_layout_youtube(payload)
+    novo_layout = json.dumps(layout_youtube, ensure_ascii=False)
+    operational_debug("DB-DEBUG", ">>> INICIANDO ATUALIZAÇÃO DO LAYOUT DO CORTE <<<")
+    operational_debug("DB-DEBUG", f"Recebido do Frontend: {payload}")
+    operational_debug("DB-DEBUG", f"Normalizado e pronto para gravar: {novo_layout}")
+    if (getattr(corte, "layout_youtube", "") or "") != novo_layout:
+        corte.cenas_validadas = 0
+        corte.cenas_validadas_em = None
+    corte.layout_youtube = novo_layout
+
+
+def _mexeu_na_leitura(dados: AtualizarCorteDTO) -> bool:
+    return (
+        dados.is_leitura is not None
+        or dados.autor_leitura is not None
+        or dados.parte_leitura is not None
+    )
+
+
+def _refletir_leitura_no_metadado(corte: Corte) -> None:
+    corte.metadado.titulo_youtube = (
+        aplicar_prefixo_leitura_titulo(
+            corte.metadado.titulo_youtube, corte.autor_leitura, corte.parte_leitura
+        )
+        if corte.is_leitura
+        else remover_prefixo_leitura_titulo(corte.metadado.titulo_youtube)
+    )
+    corte.metadado.texto_capa = aplicar_emojis_texto_capa(
+        corte.metadado.texto_capa,
+        bool(corte.metadado.is_fire),
+        bool(corte.is_leitura),
+    )
+
+
+async def _depois_de_gravar(db: AsyncSession, corte: Corte, dados: AtualizarCorteDTO) -> None:
+    """O que o PATCH dispara depois do commit, cada um com a sua transação."""
+    if dados.layout_youtube is not None:
+        # Consulta explícita pós-commit para comprovar gravação no banco
+        res = await db.execute(select(Corte.layout_youtube).where(Corte.id == corte.id))
+        valor_salvo = res.scalar_one_or_none()
+        operational_debug(
+            "DB-DEBUG",
+            f"Verificação pós-commit (SELECT no banco para o corte): {valor_salvo}",
+        )
+        operational_debug("DB-DEBUG", ">>> LAYOUT DO CORTE ATUALIZADO COM SUCESSO <<<")
+
+    if dados.desvios is not None or dados.inicio_seg is not None or dados.fim_seg is not None:
+        await CorteService.sincronizar_transcricao_corte(corte.id)
+
+    # D-448: mexer no início move o corte na linha do tempo — a lista precisa
+    # acompanhar, senão a ordem volta a ser a de criação.
+    if dados.inicio_seg is not None or dados.inicio_hms is not None:
+        await CorteService.renumerar_por_tempo(db, corte.projeto_id)
+
+    # A moldura da capa lê as mesmas marcas que o 📖 do texto e o prefixo do
+    # título, aplicados logo acima. Marcar Leitura depois que a capa entrou é
+    # o caminho normal — o julgamento vem na revisão, a arte às vezes chega
+    # antes —, e sem isto a moldura ficaria congelada na marca antiga.
+    if dados.is_leitura is not None:
+        await ThumbnailService.reaplicar_moldura(corte.id)
+
+
 class CorteService:
     @staticmethod
     async def aprovar(corte_id: str) -> None:
@@ -389,152 +557,22 @@ class CorteService:
         corte = result.scalar_one_or_none()
         if not corte:
             raise ValueError("Corte não encontrado")
-        # D-665: antes de tocar em qualquer campo — um status recusado não pode
-        # deixar a atualização pela metade. `TransicaoDeCorteInvalida` é um
-        # ValueError, e o router já a devolve como 400 com o motivo.
-        if dados.status is not None:
-            # `.value`: em memória o status pode ser o enum, e `str()` de um enum
-            # misto devolve 'StatusCorte.APROVADO' no Python 3.13, não 'aprovado'.
-            atual = getattr(corte.status, "value", corte.status)
-            ciclo_corte.validar_pedido_do_operador(atual, dados.status)
+        _validar_pedido_de_status(corte, dados)
 
-        if dados.titulo_proposto is not None:
-            corte.titulo_proposto = dados.titulo_proposto
-        if dados.inicio_hms is not None:
-            corte.inicio_hms = dados.inicio_hms
-        if dados.fim_hms is not None:
-            corte.fim_hms = dados.fim_hms
-        if dados.inicio_seg is not None:
-            corte.inicio_seg = dados.inicio_seg
-        if dados.fim_seg is not None:
-            corte.fim_seg = dados.fim_seg
-        if dados.desvios is not None:
-            corte.desvios = json.dumps(dados.desvios)
-        # D-576: mexeu na borda, o arranjo de blocos acompanha. Descartá-lo seria
-        # perder o trabalho do editor por causa de um ajuste de meio segundo;
-        # confiar nele cegamente mandaria o ffmpeg cortar fora do intervalo.
-        # `reconciliar` estica as fatias até o novo intervalo mantendo a ORDEM.
+        _aplicar_titulo_e_bordas(corte, dados)
         if dados.inicio_seg is not None or dados.fim_seg is not None:
-            from app.domain.corte.arranjo_blocos import parse as parse_arranjo
-            from app.domain.corte.arranjo_blocos import reconciliar, serializar
-
-            arranjo = parse_arranjo(corte.arranjo_blocos)
-            if arranjo:
-                corte.arranjo_blocos = json.dumps(
-                    serializar(
-                        reconciliar(
-                            arranjo, float(corte.inicio_seg or 0.0), float(corte.fim_seg or 0.0)
-                        )
-                    ),
-                    ensure_ascii=False,
-                )
-        if dados.status is not None:
-            corte.status = dados.status
-        if dados.is_leitura is not None:
-            corte.is_leitura = dados.is_leitura
-        if dados.autor_leitura is not None:
-            corte.autor_leitura = dados.autor_leitura.strip()
-        if dados.parte_leitura is not None:
-            corte.parte_leitura = max(1, dados.parte_leitura)
-        if dados.transcricao_corte is not None:
-            corte.transcricao_corte = json.dumps(dados.transcricao_corte, ensure_ascii=False)
-        if dados.hints_thumbnail is not None:
-            corte.hints_thumbnail = dados.hints_thumbnail.strip()
-        if dados.audio_offset_ms is not None:
-            # Lip-sync: limite generoso de ±10s evita valores absurdos vindos da UI.
-            corte.audio_offset_ms = max(-10_000, min(10_000, int(dados.audio_offset_ms)))
+            _reencaixar_arranjo(corte)
+        _aplicar_status_e_leitura(corte, dados)
+        _aplicar_transcricao_e_ajustes(corte, dados)
         if dados.cenas_remotion is not None:
-            cenas_recebidas = extrair_cenas_remotion(dados.cenas_remotion)
-            if tem_colapso_de_tempos_das_cenas(cenas_recebidas):
-                raise ValueError(
-                    "Salvamento bloqueado: os tempos das cenas seriam sobrescritos em massa."
-                )
-            # Teto: o span BRUTO do corte, nunca a duracao liquida. O bruto e
-            # sempre >= a liquida, entao um trecho removido jamais gera falso
-            # positivo — so acusa cena inequivocamente fora (tempo absoluto da
-            # live vazando para o roteiro visual).
-            fora = cenas_fora_do_corte(
-                cenas_recebidas, (corte.fim_seg or 0) - (corte.inicio_seg or 0)
-            )
-            if fora:
-                exemplo = fora[0]
-                raise ValueError(
-                    f"Salvamento bloqueado: {len(fora)} cena(s) com tempo fora do corte "
-                    f"(ex.: cena {exemplo['indice']} em {exemplo['inicio']:.1f}s-"
-                    f"{exemplo['fim']:.1f}s). Tempo de cena e relativo ao corte, "
-                    "nao a posicao na live."
-                )
-            cenas_remotion = normalizar_cenas_remotion_payload(dados.cenas_remotion)
-            novo_payload = json.dumps(cenas_remotion, ensure_ascii=False)
-            # Se as cenas mudaram, invalida a marca manual de "cenas validadas" — o
-            # operador precisa revalidar conscientemente. Comparar pelo JSON serializado
-            # com NORMALIZACAO em ambos os lados, para evitar invalidar a marca apenas
-            # porque o banco tem dados antigos (ex.: tela_cheia sem modelo_cena, que
-            # passa a ganhar 'card' apos I-031).
-            existente_normalizado = normalizar_cenas_remotion_payload(
-                json.loads(corte.cenas_remotion or "[]")
-            )
-            existente_payload = json.dumps(existente_normalizado, ensure_ascii=False)
-            if existente_payload != novo_payload:
-                corte.cenas_validadas = 0
-                corte.cenas_validadas_em = None
-            corte.cenas_remotion = novo_payload
-
+            _aplicar_cenas(corte, dados.cenas_remotion)
         if dados.layout_youtube is not None:
-            layout_youtube = normalizar_layout_youtube(dados.layout_youtube)
-            novo_layout = json.dumps(layout_youtube, ensure_ascii=False)
-            operational_debug("DB-DEBUG", ">>> INICIANDO ATUALIZAÇÃO DO LAYOUT DO CORTE <<<")
-            operational_debug("DB-DEBUG", f"Recebido do Frontend: {dados.layout_youtube}")
-            operational_debug("DB-DEBUG", f"Normalizado e pronto para gravar: {novo_layout}")
-            if (getattr(corte, "layout_youtube", "") or "") != novo_layout:
-                corte.cenas_validadas = 0
-                corte.cenas_validadas_em = None
-            corte.layout_youtube = novo_layout
-
-        if corte.metadado and (
-            dados.is_leitura is not None
-            or dados.autor_leitura is not None
-            or dados.parte_leitura is not None
-        ):
-            corte.metadado.titulo_youtube = (
-                aplicar_prefixo_leitura_titulo(
-                    corte.metadado.titulo_youtube, corte.autor_leitura, corte.parte_leitura
-                )
-                if corte.is_leitura
-                else remover_prefixo_leitura_titulo(corte.metadado.titulo_youtube)
-            )
-            corte.metadado.texto_capa = aplicar_emojis_texto_capa(
-                corte.metadado.texto_capa,
-                bool(corte.metadado.is_fire),
-                bool(corte.is_leitura),
-            )
+            _aplicar_layout(corte, dados.layout_youtube)
+        if corte.metadado and _mexeu_na_leitura(dados):
+            _refletir_leitura_no_metadado(corte)
 
         await db.commit()
-
-        if dados.layout_youtube is not None:
-            # Consulta explícita pós-commit para comprovar gravação no banco
-            res = await db.execute(select(Corte.layout_youtube).where(Corte.id == corte.id))
-            valor_salvo = res.scalar_one_or_none()
-            operational_debug(
-                "DB-DEBUG",
-                f"Verificação pós-commit (SELECT no banco para o corte): {valor_salvo}",
-            )
-            operational_debug("DB-DEBUG", ">>> LAYOUT DO CORTE ATUALIZADO COM SUCESSO <<<")
-
-        if dados.desvios is not None or dados.inicio_seg is not None or dados.fim_seg is not None:
-            await CorteService.sincronizar_transcricao_corte(corte_id)
-
-        # D-448: mexer no início move o corte na linha do tempo — a lista precisa
-        # acompanhar, senão a ordem volta a ser a de criação.
-        if dados.inicio_seg is not None or dados.inicio_hms is not None:
-            await CorteService.renumerar_por_tempo(db, corte.projeto_id)
-
-        # A moldura da capa lê as mesmas marcas que o 📖 do texto e o prefixo do
-        # título, aplicados logo acima. Marcar Leitura depois que a capa entrou é
-        # o caminho normal — o julgamento vem na revisão, a arte às vezes chega
-        # antes —, e sem isto a moldura ficaria congelada na marca antiga.
-        if dados.is_leitura is not None:
-            await ThumbnailService.reaplicar_moldura(corte_id)
+        await _depois_de_gravar(db, corte, dados)
 
         await db.refresh(corte)
         return corte
