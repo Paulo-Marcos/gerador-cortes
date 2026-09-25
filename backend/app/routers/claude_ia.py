@@ -8,8 +8,8 @@ Mantidas num router próprio para não tocar nos routers de domínio existentes
 import logging
 
 from app.database import get_db
+from app.domain.compartilhado.provider_ia import provider_do_modelo
 from app.models import Corte, Projeto
-from app.provider_ia import provider_do_modelo
 from app.services import telemetria_ia
 from app.services.analise import AnaliseService
 from app.services.claude_ia import ClaudeIaService, ProviderIA

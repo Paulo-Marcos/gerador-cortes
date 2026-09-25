@@ -67,7 +67,7 @@ import logging
 from pathlib import Path
 
 from app.database import AsyncSessionLocal
-from app.provider_ia import ProviderIA
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.services import fabrica_de_shorts
 from app.services import shorts as shorts_store
 from app.services.tasks import fire_and_forget

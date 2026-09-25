@@ -27,6 +27,7 @@ from app import editorial_scaffolds, editorial_skills
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import seg_to_hms_short, seg_to_mmss
 from app.domain.short import gancho_short, legenda_short, segmentos_short
 from app.domain.short.arranjo_short import de_chave as arranjo_de_chave
@@ -36,7 +37,6 @@ from app.domain.short.formato_video import foco_de_regiao
 from app.domain.short.moldura_short import Moldura
 from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
-from app.provider_ia import ProviderIA
 from app.services import channels
 from app.services.claude_ia import gerar_json, gerar_texto, registrar_skill_usada
 from sqlalchemy import and_, case, func, or_, select

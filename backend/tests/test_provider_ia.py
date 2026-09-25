@@ -1,6 +1,6 @@
 """O provider deduzido do nome do modelo — a base do selo Claude/Gemini."""
 
-from app.provider_ia import provider_do_modelo
+from app.domain.compartilhado.provider_ia import provider_do_modelo
 
 
 def test_modelo_gemini_e_do_antigravity():

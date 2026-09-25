@@ -6,7 +6,7 @@ está sob lock). Cada rota apenas delega para `AvaliacaoThumbnailService`.
 
 import logging
 
-from app.provider_ia import ProviderIA
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.services.avaliacao_thumbnail import AvaliacaoThumbnailService
 from app.services.padroes_thumbnail import PadroesThumbnailService
 from fastapi import APIRouter, HTTPException

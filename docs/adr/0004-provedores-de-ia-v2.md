@@ -27,7 +27,7 @@ A IA atende por **provedor**, escolhido por geração:
 | `gemini` | Antigravity CLI (`agy -p`), assinatura do operador | `infrastructure/antigravity_cli_client.py` |
 | manual | o prompt é copiado e a resposta colada na tela | `domain/compartilhado/manual_prompt.py` |
 
-O tipo `ProviderIA` (`"claude" | "gemini"`) vive em `app/provider_ia.py`. A API do
+O tipo `ProviderIA` (`"claude" | "gemini"`) vive em `app/domain/compartilhado/provider_ia.py`. A API do
 Gemini (`infrastructure/gemini_client.py`) continua servindo cenas, desvios e
 thumbnails. **O modo manual é o mínimo funcional sem assinatura nenhuma**: todo
 fluxo de IA precisa ter esse caminho.

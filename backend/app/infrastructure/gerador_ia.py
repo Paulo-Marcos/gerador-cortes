@@ -6,8 +6,8 @@ do seu cliente — os mesmos que os chamadores montavam à mão.
 """
 
 from app.domain.compartilhado.gerador_ia import GeradorIA, PedidoIA
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.infrastructure import antigravity_cli_client, claude_cli_client
-from app.provider_ia import ProviderIA
 
 
 def _contexto(pedido: PedidoIA) -> claude_cli_client.LlmCallContext:

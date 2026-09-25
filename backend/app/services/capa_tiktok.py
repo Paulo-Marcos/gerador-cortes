@@ -38,12 +38,12 @@ from app import editorial_scaffolds, editorial_skills
 from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.core import process_runner
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte import capa_tiktok as layout_capa
 from app.domain.corte.capa_tiktok import etiqueta_da_resposta, prompt_da_arte
 from app.domain.corte.youtube_layout import FUNDO_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
-from app.provider_ia import ProviderIA
 from app.services.channels import identidade_do_canal_ativo
 from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select

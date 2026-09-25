@@ -22,6 +22,7 @@ from dataclasses import dataclass
 
 from app import editorial_scaffolds, editorial_skills
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.publicacao.publicacao import LIMITES, Plataforma
 from app.domain.short import segmentos_short
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
@@ -32,7 +33,6 @@ from app.domain.short.metadados_short import (
     post_da_resposta,
 )
 from app.models import Corte, MetadadoShort, Short
-from app.provider_ia import ProviderIA
 from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
 

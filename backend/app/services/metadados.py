@@ -19,13 +19,13 @@ from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
 )
 from app.editorial_identity import identidade_do_mascote
 from app.models import Corte, MetadadoCorte, Projeto
-from app.provider_ia import ProviderIA
 from app.services import channels
 from app.services.app_logging import operational_error
 from app.services.claude_ia import (

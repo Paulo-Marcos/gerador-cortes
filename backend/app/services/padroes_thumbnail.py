@@ -17,13 +17,13 @@ import logging
 from app import prompts_utilitarios
 from app.config import settings
 from app.domain.compartilhado.gerador_ia import PedidoIA
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte.padroes_thumbnail import (
     MIN_MELHORES_PARA_ANALISE,
     compilar_padroes,
     selecionar_melhores,
 )
 from app.infrastructure.gerador_ia import gerador_para
-from app.provider_ia import ProviderIA
 from app.services.avaliacao_thumbnail import AvaliacaoThumbnailService
 
 logger = logging.getLogger(__name__)

@@ -10,6 +10,7 @@ from pathlib import Path
 from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
 from app.database import get_db
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte import ciclo_corte
 from app.domain.corte.corte_mapper import (
     extrair_cenas_remotion,
@@ -19,7 +20,6 @@ from app.domain.corte.youtube_layout import (
     normalizar_layout_youtube,
 )
 from app.models import Corte, Projeto, StatusCorte
-from app.provider_ia import ProviderIA
 from app.routers.cortes_helpers import (
     _corte_to_dict,
     _hms_to_seg,

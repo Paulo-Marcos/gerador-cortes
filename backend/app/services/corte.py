@@ -14,6 +14,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
 from app.domain.corte import ciclo_corte
 from app.domain.corte.ancora_match import ancorar_desvio
@@ -53,7 +54,6 @@ from app.infrastructure.render.ffmpeg_basic import (
     build_silence_detect_video_cmd,
 )
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
-from app.provider_ia import ProviderIA
 from app.services.app_logging import operational_debug, operational_error
 from app.services.claude_ia import (
     ClaudeIaService,

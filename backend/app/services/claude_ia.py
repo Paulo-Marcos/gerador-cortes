@@ -28,6 +28,7 @@ from app.config import settings
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import bloco_variacao_de
 from app.domain.compartilhado.gerador_ia import PedidoIA
+from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms_short, to_seg_estrito
 from app.domain.projeto import chat_heat
 from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartados
@@ -40,7 +41,6 @@ from app.domain.projeto.transcricao_utils import (
 from app.infrastructure import claude_cli_client, fila_ia
 from app.infrastructure.gerador_ia import gerador_para
 from app.models import Corte, Projeto
-from app.provider_ia import ProviderIA
 
 logger = logging.getLogger(__name__)
 
