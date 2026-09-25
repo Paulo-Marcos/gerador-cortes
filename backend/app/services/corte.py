@@ -14,6 +14,7 @@ from pathlib import Path
 
 from app.channel_paths import projetos_dir
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
 from app.domain.corte import ciclo_corte
 from app.domain.corte.ancora_match import ancorar_desvio
 from app.domain.corte.corte_mapper import (
@@ -47,7 +48,6 @@ from app.domain.corte.snap_desvios import palavras_do_corte, snap_desvio_a_palav
 from app.domain.corte.youtube_layout import normalizar_layout_youtube
 from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
 from app.domain.short import segmentos_short
-from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
 from app.infrastructure.render.ffmpeg_basic import (
     build_silence_detect_proxy_cmd,
     build_silence_detect_video_cmd,

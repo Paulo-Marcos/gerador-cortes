@@ -370,8 +370,8 @@ class IngestaoService:
 
         if not json3_files:
             if vtt_files:
+                from app.domain.compartilhado.time_convert import hms_to_seg
                 from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
-                from app.domain.time_convert import hms_to_seg
 
                 operational_info("INGESTAO", "JSON3 não disponível. Usando VTT como fallback.")
                 offset_seg = legenda_offset_ms / 1000.0
@@ -398,7 +398,7 @@ class IngestaoService:
         # Se não vier VTT, o offset é zero
         offset_ms = 0
         if vtt_files:
-            from app.domain.time_convert import hms_to_seg
+            from app.domain.compartilhado.time_convert import hms_to_seg
 
             try:
                 vtt_segs = parse_vtt(vtt_files[0].read_text(encoding="utf-8"))

@@ -1,6 +1,6 @@
 """Calculadora de segmentos — lógica pura para remoção de desvios de uma timeline."""
 
-from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
+from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
 
 # Motivos que indicam desvios editoriais vindos da IA (n8n ou importação manual).
 # Estes NÃO devem ser removidos no "gerar bruto" — apenas no pipeline completo.

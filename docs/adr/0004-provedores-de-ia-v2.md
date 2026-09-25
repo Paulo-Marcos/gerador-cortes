@@ -25,7 +25,7 @@ A IA atende por **provedor**, escolhido por geração:
 |---|---|---|
 | `claude` | Claude CLI (`claude -p`), assinatura do operador | `infrastructure/claude_cli_client.py` |
 | `gemini` | Antigravity CLI (`agy -p`), assinatura do operador | `infrastructure/antigravity_cli_client.py` |
-| manual | o prompt é copiado e a resposta colada na tela | `domain/manual_prompt.py` |
+| manual | o prompt é copiado e a resposta colada na tela | `domain/compartilhado/manual_prompt.py` |
 
 O tipo `ProviderIA` (`"claude" | "gemini"`) vive em `app/provider_ia.py`. A API do
 Gemini (`infrastructure/gemini_client.py`) continua servindo cenas, desvios e

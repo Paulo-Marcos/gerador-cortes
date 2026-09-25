@@ -16,7 +16,7 @@ def fatiar_transcricao(
     if not transcricao:
         return []
 
-    from app.domain.time_convert import to_seg
+    from app.domain.compartilhado.time_convert import to_seg
 
     # Pega o primeiro e o último timestamp
     primeiro_seg = None

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.domain.time_convert import to_seg
+from app.domain.compartilhado.time_convert import to_seg
 
 # Folga para o `fim` que passa do fim do bruto por arredondamento do modelo.
 # Acima disso o candidato é descartado em vez de aparado: erro grande em tempo

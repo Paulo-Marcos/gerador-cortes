@@ -42,8 +42,8 @@ def build_overlay_entries(
     renderize igual (o schema do video-renderer só conhece as chaves novas).
     """
     entries: list[OverlayEntry] = []
+    from app.domain.compartilhado.time_convert import to_seg
     from app.domain.corte.corte_mapper import coalescer_chaves_mascote
-    from app.domain.time_convert import to_seg
 
     # Ordena por inicio para garantir sequência temporal no FFmpeg
     cenas_ordenadas = sorted(cenas, key=lambda c: to_seg(c.get("inicio", 0)))

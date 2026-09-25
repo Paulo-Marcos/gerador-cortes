@@ -37,10 +37,10 @@ from pathlib import Path
 from app import editorial_scaffolds, editorial_skills
 from app.channel_paths import para_relativo_ao_projeto, resolver_do_projeto
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.time_convert import seg_to_mmss
 from app.domain.short import segmentos_short
 from app.domain.short.capa_short import encaixar_instante, instante_padrao, prompt_da_capa
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
-from app.domain.time_convert import seg_to_mmss
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
 from app.provider_ia import ProviderIA

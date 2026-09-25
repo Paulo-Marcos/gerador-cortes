@@ -1,4 +1,4 @@
-from app.domain.time_convert import hms_to_seg
+from app.domain.compartilhado.time_convert import hms_to_seg
 from app.services.app_logging import operational_debug
 
 

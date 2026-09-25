@@ -8,13 +8,13 @@ import uuid
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
 from app.domain.corte.ancora_match import achatar_palavras, ancorar_intervalo
 from app.domain.corte.segment_calculator import normalizar_desvio as _normalizar_desvio
-from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartados
 from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta
 from app.domain.projeto.transcricao_utils import motivo_transcricao_inutilizavel
-from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg_estrito
 from app.models import Corte, CorteSnapshot, Projeto, StatusProjeto
 from app.provider_ia import ProviderIA
 from app.services.app_logging import operational_info
@@ -162,7 +162,7 @@ class AnaliseService:
         prompts = []
         for i, chunk in enumerate(chunks):
             linhas = []
-            from app.domain.time_convert import seg_to_hms_short
+            from app.domain.compartilhado.time_convert import seg_to_hms_short
 
             for seg in chunk:
                 inicio = seg.get("inicio", seg.get("start", 0))
@@ -246,12 +246,12 @@ class AnaliseService:
                 f"Nenhuma transcrição encontrada no intervalo {inicio_seg}s – {fim_seg}s"
             )
 
+        from app.domain.compartilhado.time_convert import seg_to_hms_short
         from app.domain.projeto.chunker import fatiar_transcricao
         from app.domain.projeto.transcricao_utils import (
             dividir_segmentos_longos,
             limpar_e_ordenar_transcricao,
         )
-        from app.domain.time_convert import seg_to_hms_short
 
         # Limpa e ordena para corrigir problemas de legados ou extrações out-of-order
         transcricao_limpa = limpar_e_ordenar_transcricao(transcricao_intervalo)
@@ -431,7 +431,7 @@ class AnaliseService:
             result = await db.execute(stmt)
             ultimo_numero = result.scalar() or 0
 
-            from app.domain.time_convert import to_seg
+            from app.domain.compartilhado.time_convert import to_seg
 
             # D-355: palavras word-level do projeto (fonte da âncora verbatim).
             # Carregadas UMA vez; vazias em projeto sem timing (VTT) → âncora no-op.

@@ -18,9 +18,9 @@ import shutil
 from pathlib import Path
 
 from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload
 from app.domain.corte.desvio_categoria import classificar_desvio
-from app.domain.time_convert import hms_to_seg
 from app.models import Corte
 from fastapi import HTTPException
 

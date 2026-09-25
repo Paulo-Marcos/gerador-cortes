@@ -18,9 +18,9 @@ from app.channel_assets_sync import garantir_mascote_materializado
 from app.channel_paths import projetos_dir
 from app.config import settings
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.time_convert import epoch_to_hora_local, seg_to_duracao_humana
 from app.domain.corte.render_etapas import eh_render_parcial, fase_dentro_do_alcance
 from app.domain.corte.youtube_layout import aplicar_layout_card_por_contexto
-from app.domain.time_convert import epoch_to_hora_local, seg_to_duracao_humana
 from app.infrastructure.encoder_detector import encoder_da_maquina_async
 from app.infrastructure.render.cinema_filters import get_filtro_vf
 from app.infrastructure.render.ffmpeg_commands import (

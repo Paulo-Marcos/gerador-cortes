@@ -10,7 +10,7 @@ Nada aqui toca banco, HTTP ou pyannote — é tudo função pura e testável.
 
 import json
 
-from app.domain.time_convert import to_seg, to_seg_estrito
+from app.domain.compartilhado.time_convert import to_seg, to_seg_estrito
 
 # Chaves possíveis para início/fim de um segmento (a transcrição usa HMS em
 # `inicio`/`fim`, mas partes do pipeline usam float em `start`/`end`).

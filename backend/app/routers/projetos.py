@@ -859,7 +859,7 @@ async def analisar_intervalo(
     if not projeto.transcricao_raw:
         raise HTTPException(status_code=400, detail="Projeto ainda sem transcrição")
 
-    from app.domain.time_convert import hms_to_seg
+    from app.domain.compartilhado.time_convert import hms_to_seg
 
     try:
         inicio_seg = hms_to_seg(body.inicio_hms)
@@ -892,7 +892,7 @@ async def exportar_prompt_analise_intervalo(
     """
     Retorna o prompt particionado para análise de um intervalo específico.
     """
-    from app.domain.time_convert import hms_to_seg
+    from app.domain.compartilhado.time_convert import hms_to_seg
 
     try:
         inicio_seg = hms_to_seg(inicio_hms)

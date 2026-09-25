@@ -12,7 +12,7 @@ Fase 2 da precisão dos trechos. Fica em `domain/` porque é lógica pura (sem I
 recebe o desvio e a lista achatada de palavras do corte e devolve um novo desvio.
 """
 
-from app.domain.time_convert import hms_to_seg, seg_to_hms
+from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms
 
 # Fim da ÚLTIMA palavra da lista quando não há próxima palavra para dar a borda:
 # uma folga curta a partir do seu início (a duração real do segmento não sobrevive

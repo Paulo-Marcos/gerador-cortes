@@ -9,7 +9,7 @@ fala com o banco.
 import csv
 import io
 
-from app.domain.time_convert import hms_to_seg
+from app.domain.compartilhado.time_convert import hms_to_seg
 
 # O editor pode ajustar finamente a borda de um desvio sem que isso signifique
 # "rejeitou o desvio da IA": dentro desta tolerância (por borda) o desvio

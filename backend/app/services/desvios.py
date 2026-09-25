@@ -1,9 +1,9 @@
 import json
 
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.desvio_categoria import OUTRO, motivo_com_aviso, normalizar_categoria
-from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
-from app.domain.time_convert import hms_to_seg
 from app.models import Corte
 from app.services.app_logging import operational_error
 
@@ -121,7 +121,7 @@ class DesviosService:
                 min_last_chunk_seg=1200.0,
             )
 
-            from app.domain.time_convert import seg_to_hms_short
+            from app.domain.compartilhado.time_convert import seg_to_hms_short
 
             prompts = []
             for i, chunk in enumerate(chunks):
@@ -229,7 +229,7 @@ class DesviosService:
                 min_last_chunk_seg=1200.0,
             )
 
-            from app.domain.time_convert import seg_to_hms_short
+            from app.domain.compartilhado.time_convert import seg_to_hms_short
 
             todos_trechos = []
             erros = []

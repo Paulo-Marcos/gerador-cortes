@@ -33,7 +33,7 @@ A abordagem atual (LosslessCut-style) é a **única** que entrega:
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.domain.time_convert import seg_to_hms
+from app.domain.compartilhado.time_convert import seg_to_hms
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Resultado da construção do pipeline

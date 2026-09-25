@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import pytest
-from app.domain.time_convert import (
+from app.domain.compartilhado.time_convert import (
     epoch_to_hora_local,
     hms_to_seg,
     hms_to_srt,

@@ -54,6 +54,7 @@ import threading
 import time
 from pathlib import Path
 
+from app.domain.compartilhado.time_convert import seg_to_duracao_humana
 from app.domain.publicacao.agendamento import Agendamento
 from app.domain.publicacao.tiktok_studio import (
     PORTA_MINIMA_DE_DEPURACAO,
@@ -63,7 +64,6 @@ from app.domain.publicacao.tiktok_studio import (
     leitura_do_envio,
     marco_do_envio,
 )
-from app.domain.time_convert import seg_to_duracao_humana
 from app.services.navegador_assistido import (
     NavegadorIndisponivel,
     Pagina,

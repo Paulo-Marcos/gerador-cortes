@@ -19,6 +19,7 @@ import uuid
 from dataclasses import dataclass
 
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.time_convert import seg_to_hms_short
 from app.domain.corte.arranjo_blocos import parse as parse_arranjo
 from app.domain.corte.arranjo_blocos import reconciliar, segmentos_na_ordem
 from app.domain.corte.avaliacao_bruto import (
@@ -29,7 +30,6 @@ from app.domain.corte.avaliacao_bruto import (
     rotulo_do_tipo,
 )
 from app.domain.corte.segment_calculator import normalizar_desvio
-from app.domain.time_convert import seg_to_hms_short
 from app.models import AvaliacaoBruto, Corte
 from sqlalchemy import select
 

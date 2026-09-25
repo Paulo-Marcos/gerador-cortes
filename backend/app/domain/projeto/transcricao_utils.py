@@ -1,4 +1,4 @@
-from app.domain.time_convert import hms_to_seg
+from app.domain.compartilhado.time_convert import hms_to_seg
 
 # Texto que a ingestão gravava no lugar da transcrição quando o yt-dlp não achava
 # legenda (D-444). Não é mais produzido, mas continua no banco dos projetos

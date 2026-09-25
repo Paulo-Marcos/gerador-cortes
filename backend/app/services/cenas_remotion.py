@@ -5,10 +5,10 @@ import time
 
 from app import editorial_scaffolds
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.compartilhado.time_convert import hms_to_seg
 from app.domain.corte.corte_mapper import cenas_fora_do_corte, coalescer_chaves_mascote
-from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
 from app.domain.projeto.diarizacao_align import prefixo_falante
-from app.domain.time_convert import hms_to_seg
 from app.infrastructure import gemini_client
 from app.models import Corte, Projeto
 from app.services import retrato_wikipedia
@@ -574,7 +574,7 @@ class CenasRemotionService:
     def _montar_legendas_numeradas(
         transcricao_chunk: list, mapa_falantes: dict | None = None
     ) -> str:
-        from app.domain.time_convert import seg_to_hms_short
+        from app.domain.compartilhado.time_convert import seg_to_hms_short
 
         # Usa os índices globais já atribuídos na lista original
         linhas = []

@@ -51,7 +51,7 @@ SQLite via SQLAlchemy assíncrono (WAL), um banco por canal
 
 ### Inteligência artificial
 
-Dois provedores, ambos pela **assinatura** do operador (sem chave de API): `claude` (Claude CLI, `infrastructure/claude_cli_client.py`) e `gemini` (Antigravity CLI, `agy -p`, `infrastructure/antigravity_cli_client.py`). O tipo `ProviderIA` está em `app/provider_ia.py`. Há também o **modo manual** (o prompt é copiado e a resposta colada, `domain/manual_prompt.py`) e o cliente da **API do Gemini** (`infrastructure/gemini_client.py`), usado por cenas, desvios e thumbnails.
+Dois provedores, ambos pela **assinatura** do operador (sem chave de API): `claude` (Claude CLI, `infrastructure/claude_cli_client.py`) e `gemini` (Antigravity CLI, `agy -p`, `infrastructure/antigravity_cli_client.py`). O tipo `ProviderIA` está em `app/provider_ia.py`. Há também o **modo manual** (o prompt é copiado e a resposta colada, `domain/compartilhado/manual_prompt.py`) e o cliente da **API do Gemini** (`infrastructure/gemini_client.py`), usado por cenas, desvios e thumbnails.
 
 As skills editoriais (análise, metadados, capa etc.) são **por canal, no banco**, editáveis pela tela de Canais — não em `.claude/skills/`.
 

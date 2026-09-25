@@ -6,7 +6,7 @@ repetir tema. As regras moravam no claude_ia, que as usa no modo em lote; a
 análise as usa entre gerações (D-696).
 """
 
-from app.domain.time_convert import to_seg_estrito
+from app.domain.compartilhado.time_convert import to_seg_estrito
 
 
 def bucket_de_30s(inicio_seg) -> int:

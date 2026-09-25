@@ -11,7 +11,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from app.domain.time_convert import epoch_to_hora_local, seg_to_duracao_humana
+from app.domain.compartilhado.time_convert import epoch_to_hora_local, seg_to_duracao_humana
 
 _ORIGINAL_PRINT: Callable[..., None] = builtins.print
 _ERROR_MARKERS = (

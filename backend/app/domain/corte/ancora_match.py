@@ -23,8 +23,8 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 
+from app.domain.compartilhado.time_convert import seg_to_hms, to_seg_estrito
 from app.domain.corte.snap_desvios import achatar_palavras  # reexport util p/ o caller
-from app.domain.time_convert import seg_to_hms, to_seg_estrito
 
 __all__ = ["achatar_palavras", "ancorar_borda", "ancorar_intervalo"]
 
