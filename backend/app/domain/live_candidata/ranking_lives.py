@@ -40,6 +40,48 @@ class PesosRanking:
     meia_vida_dias: float = 90.0
 
 
+# As chaves que são PESOS (entram no reescalonamento 0-100). `meia_vida_dias` é um
+# PARÂMETRO do decay de recência, não um peso — validado à parte (deve ser > 0).
+CHAVES_PESO: tuple[str, ...] = (
+    "views",
+    "likes_por_view",
+    "comentarios_por_view",
+    "sentimento",
+    "recencia",
+    "vph",
+)
+CHAVE_MEIA_VIDA = "meia_vida_dias"
+CHAVES_CRITERIO: tuple[str, ...] = (*CHAVES_PESO, CHAVE_MEIA_VIDA)
+
+
+def validar_pesos(valores: dict) -> None:
+    """Valida os pesos de um canal antes de gravar; levanta `ValueError` se inválidos.
+
+    Regras (D-351, trazidas para o domínio na D-762):
+      - todas as chaves presentes;
+      - todos os valores >= 0 (peso negativo não faz sentido);
+      - ao menos UM peso > 0 (senão o reescalonamento 0-100 zeraria — divisão por 0);
+      - `meia_vida_dias` > 0 (o decay exponencial exige meia-vida positiva).
+    """
+    faltando = [k for k in CHAVES_CRITERIO if k not in valores]
+    if faltando:
+        raise ValueError("Faltam critérios: " + ", ".join(sorted(faltando)) + ".")
+
+    for chave in CHAVES_CRITERIO:
+        try:
+            valor = float(valores[chave])
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"O valor de '{chave}' deve ser numérico.") from e
+        if valor < 0:
+            raise ValueError(f"O valor de '{chave}' não pode ser negativo.")
+
+    if all(float(valores[chave]) == 0 for chave in CHAVES_PESO):
+        raise ValueError("Ao menos um peso deve ser maior que 0 (senão o ranking zera).")
+
+    if float(valores[CHAVE_MEIA_VIDA]) <= 0:
+        raise ValueError("A meia-vida da recência (dias) deve ser maior que 0.")
+
+
 @dataclass(frozen=True)
 class SinaisLive:
     """Sinais brutos coletados de uma live. tz-aware obrigatório em `data_publicacao`."""

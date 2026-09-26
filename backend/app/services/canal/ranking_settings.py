@@ -7,8 +7,8 @@ Aqui eles passam a ser POR CANAL no banco, com o MESMO padrão do E-021:
 banco-fonte-da-verdade + default versionado (os `ranking_*` de `config.settings`) +
 seed idempotente no 1º acesso (preservando o comportamento atual do canal).
 
-O DOMÍNIO (`domain/ranking_lives.PesosRanking`) segue PURO — não lê settings nem
-banco. Este módulo é a camada config/loader que resolve o valor do canal e injeta
+O DOMÍNIO (`domain/live_candidata/ranking_lives`) segue PURO — não lê settings nem
+banco — e é dono das chaves e da validação dos pesos (D-762). Este módulo é a camada config/loader que resolve o valor do canal e injeta
 no dataclass, no mesmo lugar de `editorial_scaffolds`/`prompts_utilitarios`. A
 fachada de runtime (`resolver_pesos`) é consumida pelo serviço `ranking_lives`; a de
 gestão (`descrever_pesos`, `definir_pesos`, `resetar_pesos`) alimenta a UI de Canais.
@@ -26,21 +26,13 @@ from pathlib import Path
 
 from app.config import settings
 from app.core import channel_paths
-from app.domain.live_candidata.ranking_lives import PesosRanking
-from app.infrastructure import settings_store
-
-# As 5 chaves que são PESOS (entram no reescalonamento 0-100). `meia_vida_dias` é um
-# PARÂMETRO do decay de recência, não um peso — validado à parte (deve ser > 0).
-_CHAVES_PESO: tuple[str, ...] = (
-    "views",
-    "likes_por_view",
-    "comentarios_por_view",
-    "sentimento",
-    "recencia",
-    "vph",
+from app.domain.live_candidata.ranking_lives import (
+    CHAVE_MEIA_VIDA,
+    CHAVES_CRITERIO,
+    PesosRanking,
+    validar_pesos,
 )
-_CHAVE_MEIA_VIDA = "meia_vida_dias"
-_TODAS_CHAVES: tuple[str, ...] = (*_CHAVES_PESO, _CHAVE_MEIA_VIDA)
+from app.infrastructure import settings_store
 
 
 @dataclass(frozen=True)
@@ -118,7 +110,7 @@ _CRITERIOS: tuple[CriterioRanking, ...] = (
         eh_peso=True,
     ),
     CriterioRanking(
-        key=_CHAVE_MEIA_VIDA,
+        key=CHAVE_MEIA_VIDA,
         rotulo="Meia-vida da recência (dias)",
         descricao=(
             "Em quantos dias o peso de recência cai pela metade. Menor = favorece "
@@ -155,39 +147,6 @@ def _defaults() -> dict[str, float]:
 
 
 # --------------------------------------------------------------------------- #
-# Guardrail (validação antes de gravar)
-# --------------------------------------------------------------------------- #
-
-
-def validar_pesos(valores: dict) -> None:
-    """Valida os pesos/critérios; levanta `ValueError` se inválido.
-
-    Regras:
-      - todas as chaves presentes;
-      - todos os valores >= 0 (peso negativo não faz sentido);
-      - ao menos UM peso > 0 (senão o reescalonamento 0-100 zeraria — divisão por 0);
-      - `meia_vida_dias` > 0 (o decay exponencial exige meia-vida positiva).
-    """
-    faltando = [k for k in _TODAS_CHAVES if k not in valores]
-    if faltando:
-        raise ValueError("Faltam critérios: " + ", ".join(sorted(faltando)) + ".")
-
-    for chave in _TODAS_CHAVES:
-        try:
-            valor = float(valores[chave])
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"O valor de '{chave}' deve ser numérico.") from e
-        if valor < 0:
-            raise ValueError(f"O valor de '{chave}' não pode ser negativo.")
-
-    if all(float(valores[chave]) == 0 for chave in _CHAVES_PESO):
-        raise ValueError("Ao menos um peso deve ser maior que 0 (senão o ranking zera).")
-
-    if float(valores[_CHAVE_MEIA_VIDA]) <= 0:
-        raise ValueError("A meia-vida da recência (dias) deve ser maior que 0.")
-
-
-# --------------------------------------------------------------------------- #
 # Resolução por canal (banco → seed a partir do default de settings)
 # --------------------------------------------------------------------------- #
 
@@ -218,7 +177,7 @@ def resolver_pesos(
     if atual is None:
         atual = _defaults()
         settings_store.gravar_ranking_pesos(db, cid, atual)
-    return PesosRanking(**{k: float(atual[k]) for k in _TODAS_CHAVES})
+    return PesosRanking(**{k: float(atual[k]) for k in CHAVES_CRITERIO})
 
 
 # --------------------------------------------------------------------------- #
@@ -277,7 +236,7 @@ def definir_pesos(
     """
     validar_pesos(valores)
     db, cid = _resolver_db_e_canal(db_path, channel_id)
-    settings_store.gravar_ranking_pesos(db, cid, {k: float(valores[k]) for k in _TODAS_CHAVES})
+    settings_store.gravar_ranking_pesos(db, cid, {k: float(valores[k]) for k in CHAVES_CRITERIO})
     return descrever_pesos(db_path=db, channel_id=cid)
 
 
