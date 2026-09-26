@@ -29,7 +29,10 @@ import pytest
 
 RENDERER = Path(__file__).resolve().parents[3] / "video-renderer"
 WORKER = RENDERER / "native_worker.js"
-pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node não está no PATH")
+pytestmark = [
+    pytest.mark.skipif(shutil.which("node") is None, reason="node não está no PATH"),
+    pytest.mark.integration,  # sobe o worker Node de verdade (D-751)
+]
 
 
 def _fonte() -> str:
@@ -38,11 +41,10 @@ def _fonte() -> str:
 
 def _subir_worker(projetos: Path, saida: Path) -> subprocess.Popen:
     (projetos / "fila_remotion").mkdir(parents=True, exist_ok=True)
-    (projetos / "app_settings.json").write_text(json.dumps({"log_level": "info"}), encoding="utf-8")
     return subprocess.Popen(
         ["node", str(WORKER)],
         cwd=str(RENDERER),
-        env={**os.environ, "PROJETOS_DIR": str(projetos)},
+        env={**os.environ, "PROJETOS_DIR": str(projetos), "WORKER_LOG_LEVEL": "info"},
         stdout=saida.open("wb"),
         stderr=subprocess.STDOUT,
     )
@@ -84,12 +86,11 @@ def test_troca_de_canal_vira_aviso_no_log(tmp_path):
 
     projetos = tmp_path / "projetos"
     (projetos / "fila_remotion").mkdir(parents=True)
-    (projetos / "app_settings.json").write_text(json.dumps({"log_level": "info"}), encoding="utf-8")
     saida = tmp_path / "saida.txt"
     worker = subprocess.Popen(
         ["node", str(renderer_falso / "native_worker.js")],
         cwd=str(renderer_falso),
-        env={**os.environ, "PROJETOS_DIR": str(projetos)},
+        env={**os.environ, "PROJETOS_DIR": str(projetos), "WORKER_LOG_LEVEL": "info"},
         stdout=saida.open("wb"),
         stderr=subprocess.STDOUT,
     )

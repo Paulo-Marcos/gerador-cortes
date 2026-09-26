@@ -6,7 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { useToast } from '@/components/ui/toaster';
-import { api, type PadroesThumbnailResponse } from '@/lib/api';
+import { padroesThumbnailApi, type PadroesThumbnailResponse } from './api';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { eixosComOcorrencias, rotuloEixo } from './thumbnailPadroes';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ export function ThumbnailPadroesPage() {
   const { notify } = useToast();
 
   const analise = useMutation<PadroesThumbnailResponse, Error, ProviderIA>({
-    mutationFn: (provider: ProviderIA) => api.analisarPadroesThumbnail(provider),
+    mutationFn: (provider: ProviderIA) => padroesThumbnailApi.analisar(provider),
     onError: (error) =>
       notify(error instanceof Error ? error.message : 'Erro ao analisar padrões.', {
         tone: 'error',

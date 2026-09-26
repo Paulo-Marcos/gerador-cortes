@@ -138,7 +138,7 @@ async def test_rota_de_ia_solta_a_transacao_antes_de_chamar_o_modelo(monkeypatch
         db.eventos.append("chamou a IA")
         return {"ok": True}
 
-    monkeypatch.setattr(claude_ia.ClaudeIaService, "gerar_cenas_via_claude", gerar)
+    monkeypatch.setattr(claude_ia.CenasRemotionService, "gerar_cenas_via_claude", gerar)
 
     await claude_ia.gerar_cenas_via_claude("c1", db=db)
 

@@ -9,11 +9,15 @@ from enum import StrEnum
 from pathlib import Path
 from threading import Lock
 
-from app import channel_paths
-from app.channel_paths import projetos_dir
-from app.domain.cinema_filters import FILTROS_CINEMA
-from app.domain.overlay_codec import OverlayCodec
-from app.services import settings_store
+from app.core import channel_paths
+from app.core import logging as logging_operacional
+from app.core.channel_paths import projetos_dir
+from app.infrastructure import settings_store
+from app.infrastructure.render.cinema_filters import FILTROS_CINEMA
+from app.infrastructure.render.overlay_codec import OverlayCodec
+
+# Pior valor do `-global_quality` do QSV (1 = sem perda).
+_QUALIDADE_QSV_PIOR = 51
 
 DEFAULT_FILTRO_GLOBAL_PADRAO = "bypass_dourado_aberto"
 
@@ -154,12 +158,12 @@ class AppSettings:
 class AppSettingsService:
     """Lê e grava os ajustes de app do canal ativo (D-191).
 
-    FONTE DA VERDADE: o banco de settings (`settings_store`, `instance/settings.db`),
-    numa linha por canal. O arquivo `app_settings.json` continua sendo escrito como
-    ESPELHO de compatibilidade/backup e serve de FALLBACK+migração: quando o banco
-    ainda não tem a linha do canal (primeiro boot após o D-191, ou config trazida da
-    PROD em arquivo), o serviço lê o arquivo e SEMEIA o banco a partir dele. A
-    interface pública é a mesma de antes — os consumidores não mudam.
+    FONTE ÚNICA: o banco de settings (`settings_store`, `instance/settings.db`),
+    numa linha por canal (ADR-0012). O `app_settings.json` legado só é LIDO, uma
+    vez, para semear o banco quando o canal ainda não tem linha (config trazida de
+    uma instalação anterior ao D-191). Não é mais escrito (D-699): um espelho que
+    ninguém mais consulta só servia para envelhecer e ser lido por engano — o worker
+    de render e o `dev.ps1` o liam, e agora recebem o nível de log do banco.
     """
 
     _lock = Lock()
@@ -232,7 +236,7 @@ class AppSettingsService:
 
     @classmethod
     def _update(cls, **campos: object) -> AppSettings:
-        """Aplica `campos` sobre o estado atual e persiste (banco + espelho).
+        """Aplica `campos` sobre o estado atual e persiste no banco.
 
         Preserva TODOS os demais campos via `dataclasses.replace` — inclusive o
         `youtube_layout_padrao_global`, que o código legado esquecia de preservar
@@ -247,8 +251,8 @@ class AppSettingsService:
 
     @classmethod
     def set_settings_path_for_tests(cls, path: Path | None) -> None:
-        """Isola o armazenamento num diretório de teste: o espelho JSON vai para
-        `path` e o banco de settings para `settings.db` ao lado dele."""
+        """Isola o armazenamento num diretório de teste: o JSON legado é procurado
+        em `path` e o banco de settings fica em `settings.db` ao lado dele."""
         with cls._lock:
             cls._settings_path_override = path
             cls._db_path_override = (path.parent / "settings.db") if path is not None else None
@@ -281,7 +285,7 @@ class AppSettingsService:
         row = settings_store.ler_app_settings(db_path, channel_id)
         if row is not None:
             return _app_settings_from_row(row)
-        # Sem linha no banco → migra: lê o arquivo legado (fonte da PROD) e semeia.
+        # Sem linha no banco → migra: lê o arquivo legado, se houver, e semeia.
         from_file = cls._read_file()
         settings_store.gravar_app_settings(db_path, channel_id, _row_from_app_settings(from_file))
         return from_file
@@ -291,7 +295,6 @@ class AppSettingsService:
         settings_store.gravar_app_settings(
             cls._db_path(), cls._channel_id(), _row_from_app_settings(app_settings)
         )
-        cls._write_file(app_settings)  # espelho de compatibilidade/backup
 
     @classmethod
     def _read_file(cls) -> AppSettings:
@@ -325,15 +328,6 @@ class AppSettingsService:
                 CONTEXTO_DEPOIS_SEG_MAX,
             ),
             render=RenderSettings.from_dict(data.get("render")),
-        )
-
-    @classmethod
-    def _write_file(cls, app_settings: AppSettings) -> None:
-        path = cls.settings_path()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            json.dumps(app_settings.to_dict(), indent=2, ensure_ascii=False),
-            encoding="utf-8",
         )
 
 
@@ -480,4 +474,9 @@ def _coerce_grade_quality(raw: object, default: int) -> int:
         value = int(raw)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return default
-    return value if 1 <= value <= 51 else default
+    return value if 1 <= value <= _QUALIDADE_QSV_PIOR else default
+
+
+# O core não pode importar services: quem sabe o nível de log configurado se
+# apresenta a ele ao ser importado. Morava no atalho services/app_logging (D-709).
+logging_operacional.definir_fonte_do_nivel(lambda: AppSettingsService.get().log_level)

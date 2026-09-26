@@ -7,7 +7,7 @@ corte legado (`sem_snapshot`) e o CSV cross-projeto.
 
 from __future__ import annotations
 
-from app.domain.telemetria_cortes import (
+from app.domain.corte.telemetria_cortes import (
     COLUNAS_CSV_TELEMETRIA,
     SITUACAO_COM_SNAPSHOT,
     SITUACAO_SEM_PROPOSTA_IA,

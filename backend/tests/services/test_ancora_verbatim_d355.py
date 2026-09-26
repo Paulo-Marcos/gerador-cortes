@@ -16,9 +16,9 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from app.domain.corte.ancora_match import ancorar_desvio
 from app.models import Corte
 from app.services.analise import AnaliseService
-from app.services.claude_ia import ClaudeIaService
 
 # Transcrição word-level: a frase "o brasil vai crescer" começa em t=612.0.
 _TRANSCRICAO = [
@@ -134,7 +134,7 @@ async def test_corte_sem_palavras_e_no_op(monkeypatch):
 
 
 def _palavras_flat():
-    from app.domain.ancora_match import achatar_palavras
+    from app.domain.corte.ancora_match import achatar_palavras
 
     return achatar_palavras(_TRANSCRICAO)
 
@@ -152,7 +152,7 @@ class TestAncorarDesvio:
             "fim_texto": "proximo ano",
             "motivo": "tangente",
         }
-        ajustado = ClaudeIaService._ancorar_desvio(desvio, _palavras_flat())
+        ajustado = ancorar_desvio(desvio, _palavras_flat())
         assert ajustado["inicio_seg"] == 612.0  # início de "brasil"
         # fim de "ano" (última palavra) = 615.8 + folga 0.3
         assert ajustado["fim_seg"] == 616.1
@@ -161,7 +161,7 @@ class TestAncorarDesvio:
     def test_desvio_sem_citacao_devolve_intacto(self):
         """Sem citação, `_ancorar_desvio` é no-op — o snap age sozinho depois."""
         desvio = {"inicio_seg": 611.0, "fim_seg": 616.0, "motivo": "chat"}
-        assert ClaudeIaService._ancorar_desvio(desvio, _palavras_flat()) == desvio
+        assert ancorar_desvio(desvio, _palavras_flat()) == desvio
 
     def test_desvio_sem_palavras_devolve_intacto(self):
         desvio = {
@@ -170,4 +170,4 @@ class TestAncorarDesvio:
             "inicio_texto": "brasil vai",
             "motivo": "chat",
         }
-        assert ClaudeIaService._ancorar_desvio(desvio, []) == desvio
+        assert ancorar_desvio(desvio, []) == desvio

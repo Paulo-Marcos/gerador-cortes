@@ -28,6 +28,21 @@ Uma **fonte da verdade** por tipo de configuração:
 O `channel.yaml` **não** é mais a fonte da identidade: é lido só como reserva, para
 um canal que ainda não tem linha no banco (`services/channels.py`, `_montar_canal`).
 
+**Sem espelhos (D-699).** Até a D-699, cada gravação no `settings.db` era repetida
+num arquivo: `app_settings.json`, `channel.yaml` e `editorial/mascote.yaml`. Os três
+arquivos deixaram de ser escritos. Continuam sendo **lidos uma vez**, para semear o
+banco de um canal que ainda não tem linha (instalação anterior ao D-191), e mais nada.
+Um espelho que ninguém atualiza só envelhece, e havia quem o lesse:
+
+- o worker de render tirava do `app_settings.json` o nível de log da partida. Agora
+  cada job traz o seu (como já trazia), e o da partida chega por `WORKER_LOG_LEVEL`;
+- o `dev.ps1` mostrava o nível no banner lendo o mesmo arquivo. Agora pergunta ao
+  próprio serviço (`AppSettingsService`), que lê o banco, e entrega o valor ao worker.
+
+A edição da identidade também passou a partir do banco. Antes ela fundia a mudança no
+`channel.yaml` e copiava o resultado inteiro para o banco: um YAML atrasado desfazia,
+sem aviso, o que o banco já tinha.
+
 ## Consequências
 
 - Configuração nova que o operador edita entra no banco, com tela; não em arquivo.

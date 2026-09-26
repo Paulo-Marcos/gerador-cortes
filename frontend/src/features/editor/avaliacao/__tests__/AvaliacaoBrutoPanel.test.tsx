@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
-import type { AvaliacaoBruto } from '@/lib/avaliacaoBrutoApi';
+import type { AvaliacaoBruto } from '@/features/editor/avaliacao/api/avaliacaoBruto';
 import { AvaliacaoBrutoPanel } from '../AvaliacaoBrutoPanel';
 import { avaliacaoBrutoKey } from '../useAvaliacaoBruto';
 

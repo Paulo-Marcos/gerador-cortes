@@ -14,6 +14,7 @@ publicado seriam refeitos por causa de um clique em "gerar shorts".
 import pytest
 import pytest_asyncio
 from app.models import Base, Corte, MetadadoCorte, Projeto, Short, StatusShort
+from app.services import fabrica_de_shorts
 from app.services import shorts as servico
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -21,7 +22,7 @@ from sqlalchemy.pool import StaticPool
 
 @pytest_asyncio.fixture
 async def ambiente(monkeypatch, tmp_path):
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)
 
@@ -56,9 +57,10 @@ async def ambiente(monkeypatch, tmp_path):
                 fim_hms="00:10:00.000",
                 duracao_clip_seg=600.0,
                 arquivo_clip_path="cortes/c1/clip_raw_1.mkv",
+                is_fire=True,
             )
         )
-        db.add(MetadadoCorte(id="m1", corte_id="c1", is_fire=True))
+        db.add(MetadadoCorte(id="m1", corte_id="c1"))
         await db.commit()
 
     yield factory, tmp_path
@@ -90,11 +92,10 @@ def espioes(monkeypatch):
         chamadas["sugestao"].append(corte_id)
         return {"shorts": [{"id": "s1"}], "descartes": []}
 
-    from app.services.claude_ia import ClaudeIaService
     from app.services.export import ExportService
 
     monkeypatch.setattr(ExportService, "gerar_bruto_via_worker", staticmethod(_fake_bruto))
-    monkeypatch.setattr(ClaudeIaService, "sugerir_shorts_via_claude", staticmethod(_fake_sugestao))
+    monkeypatch.setattr(servico, "sugerir_shorts", _fake_sugestao)
     return chamadas
 
 
@@ -122,7 +123,7 @@ async def test_elegibilidade_de_corte_sem_fire(ambiente):
     factory, raiz = ambiente
     _criar_bruto(raiz)
     async with factory() as db:
-        (await db.get(MetadadoCorte, "m1")).is_fire = False
+        (await db.get(Corte, "c1")).is_fire = False
         await db.commit()
 
     assert (await servico.elegibilidade("c1"))["is_fire"] is False
@@ -134,7 +135,7 @@ async def test_com_bruto_em_disco_nao_regera_nada(ambiente, espioes):
     _, raiz = ambiente
     _criar_bruto(raiz)
 
-    resultado = await servico.gerar_shorts_do_corte("c1")
+    resultado = await fabrica_de_shorts.gerar_shorts_do_corte("c1")
 
     assert espioes["bruto"] == []
     assert espioes["sugestao"] == ["c1"]
@@ -143,7 +144,7 @@ async def test_com_bruto_em_disco_nao_regera_nada(ambiente, espioes):
 
 @pytest.mark.asyncio
 async def test_sem_bruto_regera_antes_de_sugerir(ambiente, espioes):
-    resultado = await servico.gerar_shorts_do_corte("c1")
+    resultado = await fabrica_de_shorts.gerar_shorts_do_corte("c1")
 
     assert len(espioes["bruto"]) == 1
     assert espioes["sugestao"] == ["c1"]
@@ -153,7 +154,7 @@ async def test_sem_bruto_regera_antes_de_sugerir(ambiente, espioes):
 @pytest.mark.asyncio
 async def test_regeracao_NAO_refaz_transcricao_nem_cenas(ambiente, espioes):
     """A regra que protege a pos-producao: refaz o video e nada mais (D-160)."""
-    await servico.gerar_shorts_do_corte("c1")
+    await fabrica_de_shorts.gerar_shorts_do_corte("c1")
 
     (chamada,) = espioes["bruto"]
     assert chamada["refazer_transcricao"] is False
@@ -165,11 +166,11 @@ async def test_corte_sem_fire_e_recusado_com_instrucao(ambiente, espioes):
     factory, raiz = ambiente
     _criar_bruto(raiz)
     async with factory() as db:
-        (await db.get(MetadadoCorte, "m1")).is_fire = False
+        (await db.get(Corte, "c1")).is_fire = False
         await db.commit()
 
     with pytest.raises(ValueError, match="Fire"):
-        await servico.gerar_shorts_do_corte("c1")
+        await fabrica_de_shorts.gerar_shorts_do_corte("c1")
 
     assert espioes["sugestao"] == []
 
@@ -186,7 +187,7 @@ async def test_falha_na_regeracao_nao_chama_a_ia(ambiente, monkeypatch, espioes)
     monkeypatch.setattr(ExportService, "gerar_bruto_via_worker", staticmethod(_falha))
 
     with pytest.raises(ValueError, match="video original sumiu"):
-        await servico.gerar_shorts_do_corte("c1")
+        await fabrica_de_shorts.gerar_shorts_do_corte("c1")
 
     assert espioes["sugestao"] == []
 
@@ -194,7 +195,7 @@ async def test_falha_na_regeracao_nao_chama_a_ia(ambiente, monkeypatch, espioes)
 @pytest.mark.asyncio
 async def test_corte_inexistente_levanta_lookup(ambiente, espioes):
     with pytest.raises(LookupError):
-        await servico.gerar_shorts_do_corte("nao-existe")
+        await fabrica_de_shorts.gerar_shorts_do_corte("nao-existe")
 
 
 @pytest.mark.asyncio
@@ -215,13 +216,15 @@ async def test_sem_a_live_em_disco_a_regeracao_nem_comeca(ambiente, monkeypatch)
         chamou_worker = True
         return {"status": "pronto"}
 
-    monkeypatch.setattr(servico, "_regerar_bruto_preservando_pos_producao", nao_deveria_chamar)
+    monkeypatch.setattr(
+        fabrica_de_shorts, "_regerar_bruto_preservando_pos_producao", nao_deveria_chamar
+    )
     async with factory() as db:
         corte = await db.get(Corte, "c1")
         corte.arquivo_clip_path = ""
         await db.commit()
 
     with pytest.raises(ValueError, match="Baixe a live de novo"):
-        await servico.gerar_shorts_do_corte("c1")
+        await fabrica_de_shorts.gerar_shorts_do_corte("c1")
 
     assert not chamou_worker

@@ -6,7 +6,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { FiltroExport, LogLevel, RenderSettings } from '@/types/models';
+import { filtrosApi, type FiltroExport } from '@/features/post-production/api/filtros';
+import type { LogLevel, RenderSettings } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toaster';
 import { obterMascoteNome, salvarMascoteNome } from './mascoteSettingsApi';
@@ -81,7 +82,7 @@ export function AppSettingsControls() {
   const settingsQuery = useQuery({ queryKey: ['app-settings'], queryFn: api.obterSettings });
   const filtersQuery = useQuery({
     queryKey: ['export-filtros'],
-    queryFn: () => api.listarFiltros(),
+    queryFn: () => filtrosApi.listarFiltros(),
   });
   // D-285: nome do mascote (identidade editorial no banco), query própria pois
   // vive fora do tipo AppSettings (models.ts sob lock).

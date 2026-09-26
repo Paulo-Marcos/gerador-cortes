@@ -4,7 +4,7 @@
 // "Reverter" nas versões que não são a vigente.
 import { AlertTriangle, History, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { SkillVersao } from '@/lib/editorialSkillsApi';
+import type { SkillVersao } from '@/features/channels/api/skillsEditoriais';
 
 interface Props {
   versoes: SkillVersao[];

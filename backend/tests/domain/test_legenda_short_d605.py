@@ -19,7 +19,7 @@ quebram em silencio:
 """
 
 import pytest
-from app.domain.legenda_short import (
+from app.domain.short.legenda_short import (
     LARGURA_MAX,
     LARGURA_MIN,
     LARGURA_PADRAO,

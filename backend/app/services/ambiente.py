@@ -17,11 +17,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from app.channel_paths import youtube_client_secrets_path
 from app.config import settings
-from app.domain.video_encoder import VideoEncoder
+from app.core.channel_paths import youtube_client_secrets_path
 from app.infrastructure import antigravity_cli_client, claude_cli_client
 from app.infrastructure.encoder_detector import encoder_da_maquina
+from app.infrastructure.render.video_encoder import VideoEncoder
 from app.services import navegador_assistido
 
 _RAIZ = Path(__file__).resolve().parents[3]
@@ -58,6 +58,9 @@ class Sondas:
     chrome: Callable[[], Path | None]
     client_secrets: Callable[[], Path]
     tem_chave_gemini: Callable[[], bool]
+    # D-720: o Claude pela chave de API, quando a instalação escolheu esse caminho.
+    claude_por_api: Callable[[], bool] = lambda: False
+    tem_chave_anthropic: Callable[[], bool] = lambda: False
 
 
 def _resolver_ou_none(
@@ -86,6 +89,8 @@ def sondas_da_maquina() -> Sondas:
         chrome=navegador_assistido._chrome_no_disco,
         client_secrets=youtube_client_secrets_path,
         tem_chave_gemini=lambda: bool(settings.gemini_api_key),
+        claude_por_api=lambda: settings.ia_claude_transporte == "api",
+        tem_chave_anthropic=lambda: bool(settings.ia_anthropic_api_key.strip()),
     )
 
 
@@ -141,6 +146,34 @@ def _opcional(
     )
 
 
+def _claude(sondas: Sondas) -> Checagem:
+    """O caminho do Claude que ESTA instalação usa: o CLI ou a chave de API (D-720).
+
+    Cobrar o binário de quem escolheu a API seria um aviso falso; e quem escolheu
+    a API sem pôr a chave precisa ler exatamente isso.
+    """
+    if sondas.claude_por_api():
+        tem_chave = sondas.tem_chave_anthropic()
+        return Checagem(
+            id="claude_api",
+            nome="Claude pela API (chave)",
+            obrigatorio=False,
+            ok=tem_chave,
+            detalhe="análise automática pela API" if tem_chave else "falta a chave",
+            como_resolver="Preencha IA_ANTHROPIC_API_KEY no backend/.env e reinicie. "
+            "Sem ela, a análise funciona no modo manual.",
+        )
+    return _opcional(
+        "claude_cli",
+        "Claude CLI",
+        sondas.claude_cli(),
+        "análise automática disponível",
+        "Sem ele, a análise funciona no modo manual: copie o prompt e cole a "
+        "resposta. Para automatizar, instale o Claude Code, defina CLAUDE_CLI_PATH "
+        "ou use uma chave de API (IA_CLAUDE_TRANSPORTE=api).",
+    )
+
+
 def checar(sondas: Sondas) -> list[Checagem]:
     """Todos os itens, obrigatórios primeiro. Síncrono: chame fora do event loop."""
     client_secrets = sondas.client_secrets()
@@ -175,14 +208,7 @@ def checar(sondas: Sondas) -> list[Checagem]:
         ),
         _deps_do_renderer(sondas),
         _encoder(sondas),
-        _opcional(
-            "claude_cli",
-            "Claude CLI",
-            sondas.claude_cli(),
-            "análise automática disponível",
-            "Sem ele, a análise funciona no modo manual: copie o prompt e cole a "
-            "resposta. Para automatizar, instale o Claude Code ou defina CLAUDE_CLI_PATH.",
-        ),
+        _claude(sondas),
         _opcional(
             "agy_cli",
             "Antigravity CLI (Gemini)",
@@ -215,3 +241,13 @@ def checar(sondas: Sondas) -> list[Checagem]:
             "Instale o Chrome ou defina CHROME_PATH.",
         ),
     ]
+
+
+def listar_modelos_gemini() -> list[tuple[str, str]]:
+    """Os modelos que o `agy` desta máquina oferece, como (id, nome).
+
+    Mora aqui pelo mesmo motivo dos pré-requisitos: a resposta depende do que
+    está instalado e logado nesta máquina, não do canal. Lista vazia quando o
+    CLI falta.
+    """
+    return antigravity_cli_client.listar_modelos()

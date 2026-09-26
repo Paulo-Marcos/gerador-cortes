@@ -257,8 +257,7 @@ async def test_analisar_transcricao_repassa_descartados_via_claude(monkeypatch):
     projeto.youtube_url = "http://x"
     projeto.titulo_live = "L"
     projeto.duracao_segundos = 60
-    # O caminho Claude abre a própria sessão (módulo distinto de analise).
-    monkeypatch.setattr("app.services.claude_ia.AsyncSessionLocal", factory)
+    monkeypatch.setattr("app.services.analise.AsyncSessionLocal", factory)
 
     claude_payload = {
         "cortes": [{"titulo_proposto": "A", "inicio_hms": "00:00:00", "fim_hms": "00:01:00"}],
@@ -268,13 +267,13 @@ async def test_analisar_transcricao_repassa_descartados_via_claude(monkeypatch):
     async def fake_gerar_cortes(_transcricao, _meta, provider="claude"):
         return claude_payload
 
-    monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
+    monkeypatch.setattr(ClaudeIaService, "gerar_cortes", staticmethod(fake_gerar_cortes))
 
     # Sem vídeo no fluxo de teste: neutraliza o encadeamento de refazer-transcrição.
     async def fake_refazer(_projeto_id):
         return None
 
-    monkeypatch.setattr(ClaudeIaService, "_refazer_transcricao", staticmethod(fake_refazer))
+    monkeypatch.setattr(AnaliseService, "_refazer_transcricao", staticmethod(fake_refazer))
 
     await AnaliseService.analisar_transcricao("p-claude")
 
@@ -295,7 +294,7 @@ def _transcricao_intervalo_json() -> str:
 
 @pytest.mark.asyncio
 async def test_analisar_intervalo_injeta_falantes_map_quando_diarizado(monkeypatch):
-    """D-299: projeto diarizado → `meta["falantes_map"]` chega no `_gerar_cortes`
+    """D-299: projeto diarizado → `meta["falantes_map"]` chega no `gerar_cortes`
     igual ao que `analisar_via_claude` (D-286) já injeta na análise completa.
     """
     from app.services.claude_ia import ClaudeIaService
@@ -330,7 +329,7 @@ async def test_analisar_intervalo_injeta_falantes_map_quando_diarizado(monkeypat
             ]
         }
 
-    monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
+    monkeypatch.setattr(ClaudeIaService, "gerar_cortes", staticmethod(fake_gerar_cortes))
 
     await AnaliseService.analisar_intervalo("p-intervalo-diarizado", 0, 600)
 
@@ -370,7 +369,7 @@ async def test_analisar_intervalo_sem_diarizacao_falantes_map_none(monkeypatch):
             ]
         }
 
-    monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
+    monkeypatch.setattr(ClaudeIaService, "gerar_cortes", staticmethod(fake_gerar_cortes))
 
     await AnaliseService.analisar_intervalo("p-intervalo-sem-diarizacao", 0, 600)
 
@@ -583,7 +582,7 @@ async def test_analisar_intervalo_tambem_congela_snapshot(monkeypatch):
             ]
         }
 
-    monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
+    monkeypatch.setattr(ClaudeIaService, "gerar_cortes", staticmethod(fake_gerar_cortes))
 
     await AnaliseService.analisar_intervalo("p-intervalo-snap", 0, 600)
 

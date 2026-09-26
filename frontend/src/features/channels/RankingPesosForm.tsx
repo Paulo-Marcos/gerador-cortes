@@ -11,7 +11,7 @@ import { Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { CriterioRanking, RankingPesosPayload } from '@/lib/rankingPesosApi';
+import type { CriterioRanking, RankingPesosPayload } from '@/features/channels/api/pesosRanking';
 
 interface Props {
   criterios: CriterioRanking[];

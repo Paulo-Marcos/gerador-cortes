@@ -12,7 +12,7 @@ título no celular, o pacote falhou no seu único trabalho.
 from pathlib import Path
 
 import pytest
-from app.domain.publicacao import (
+from app.domain.publicacao.publicacao import (
     MetadadosBase,
     ModoPublicacao,
     Plataforma,

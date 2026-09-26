@@ -8,8 +8,8 @@ nos bancos de DEV e de PROD, zero divergências entre as duas implementações.
 """
 
 import pytest
-from app.domain.time_convert import hms_to_seg
-from app.domain.transcricao_utils import _segundos
+from app.domain.compartilhado.time_convert import hms_to_seg
+from app.domain.projeto.transcricao_utils import _segundos
 
 
 class TestOConversorUnico:

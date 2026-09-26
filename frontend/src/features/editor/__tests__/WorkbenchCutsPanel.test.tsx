@@ -21,6 +21,7 @@ import {
   derivarFase,
   faixaDeSinais,
 } from '../WorkbenchCutsPanel';
+import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 function corte(numero: number, status: Corte['status'] = 'proposto'): Corte {
   return {
@@ -89,7 +90,7 @@ describe('WorkbenchCutsPanel — rodapé "Ferramentas do corte" (AUDITORIA-v2 §
 // ── D-397 · semáforo do card ─────────────────────────────────
 
 function statusExport(over: Partial<StatusExportCorte> = {}): StatusExportCorte {
-  return {
+  return statusExportPendente({
     corte_id: 'c1',
     numero: 1,
     titulo: 'Corte 1',
@@ -101,7 +102,7 @@ function statusExport(over: Partial<StatusExportCorte> = {}): StatusExportCorte 
     metadados_completos: false,
     pronto_publicar: false,
     ...over,
-  };
+  });
 }
 
 const SEM_SINAIS = { aprovado: false, rejeitado: false, fire: false, leitura: false };

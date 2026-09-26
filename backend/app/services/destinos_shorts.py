@@ -23,9 +23,10 @@ import shutil
 import threading
 from pathlib import Path
 
-from app.domain.agendamento import Agendamento
-from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
-from app.domain.ritmo_publicacao import UPLOADS_YOUTUBE_POR_DIA
+from app.domain.publicacao.agendamento import Agendamento
+from app.domain.publicacao.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
+from app.domain.publicacao.ritmo_publicacao import UPLOADS_YOUTUBE_POR_DIA
+from app.infrastructure import youtube_api
 from app.services.publicacao_destinos import (
     Destino,
     PacotePublicacao,
@@ -112,7 +113,7 @@ class DestinoYouTubeShorts(Destino):
 
         import asyncio
 
-        from app.domain.thumbnail_encode import preparar_para_youtube
+        from app.infrastructure.imagem.thumbnail_encode import preparar_para_youtube
 
         # A mesma preparação do corte: sem ela, capa acima de 2 MB é recusada, e
         # reencodar com o subsampling padrão do PIL borrava a cor (D-343).
@@ -126,22 +127,12 @@ class DestinoYouTubeShorts(Destino):
 
     @staticmethod
     def _subir_capa(creds, video_id: str, dados: bytes, mimetype: str) -> None:
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaInMemoryUpload
-
-        youtube = build("youtube", "v3", credentials=creds)
-        youtube.thumbnails().set(
-            videoId=video_id, media_body=MediaInMemoryUpload(dados, mimetype=mimetype)
-        ).execute()
+        youtube_api.definir_capa(creds, video_id, dados, mimetype)
 
     async def _enviar(self, creds, pacote: PacotePublicacao) -> str:
         import asyncio
 
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaFileUpload
-
         def _upload() -> str:
-            youtube = build("youtube", "v3", credentials=creds)
             corpo = {
                 "snippet": {
                     "title": pacote.metadados.titulo,
@@ -164,22 +155,14 @@ class DestinoYouTubeShorts(Destino):
                     **({"publishAt": self.agendamento.em_utc_iso()} if self.agendamento else {}),
                 },
             }
-            media = MediaFileUpload(
-                str(pacote.arquivo), chunksize=8 * 1024 * 1024, resumable=True, mimetype="video/mp4"
-            )
-            requisicao = youtube.videos().insert(
-                part="snippet,status", body=corpo, media_body=media
-            )
             megas = pacote.arquivo.stat().st_size / (1024 * 1024)
             logger.info("[Publicacao] enviando %s ao YouTube (%.1f MB)", pacote.arquivo.name, megas)
-            resposta = None
-            while resposta is None:
-                progresso, resposta = requisicao.next_chunk()
-                if progresso:
-                    logger.info(
-                        "[Publicacao] upload do short: %d%%", int(progresso.progress() * 100)
-                    )
-            return resposta["id"]
+            return youtube_api.enviar_video(
+                creds,
+                pacote.arquivo,
+                corpo,
+                lambda pct: logger.info("[Publicacao] upload do short: %d%%", pct),
+            )
 
         return await asyncio.to_thread(_upload)
 
@@ -416,7 +399,7 @@ class DestinoTikTokAssistido(DestinoManual):
     async def publicar(self, pacote: PacotePublicacao) -> dict:
         from uuid import uuid4
 
-        from app.domain.tiktok_studio import marca_da_aba
+        from app.domain.publicacao.tiktok_studio import marca_da_aba
         from app.services import tiktok_studio
 
         pronto = await super().publicar(pacote)
@@ -499,7 +482,7 @@ class DestinoInstagramReelsAssistido(DestinoManual):
     async def publicar(self, pacote: PacotePublicacao) -> dict:
         from uuid import uuid4
 
-        from app.domain.tiktok_studio import marca_da_aba
+        from app.domain.publicacao.tiktok_studio import marca_da_aba
         from app.services import instagram_reels
 
         pronto = await super().publicar(pacote)

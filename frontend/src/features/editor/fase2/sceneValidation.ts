@@ -75,7 +75,7 @@ export function calculateMaxSimultaneous(scenes: CenaRemotion[]): number {
 /**
  * Tolerancia para a cena estourar o fim do corte sem que isso seja defeito: a
  * ultima cena ganha duracao fixa e pode passar do ultimo segmento de fala.
- * Espelha `TOLERANCIA_FIM_CENA_SEG` do backend (`app/domain/corte_mapper.py`).
+ * Espelha `TOLERANCIA_FIM_CENA_SEG` do backend (`app/domain/corte/corte_mapper.py`).
  */
 export const TOLERANCIA_FIM_CENA_SEG = 15;
 

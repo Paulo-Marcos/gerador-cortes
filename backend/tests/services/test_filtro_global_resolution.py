@@ -31,7 +31,7 @@ def test_projeto_model_nao_tem_mais_filtro_padrao():
 def test_iniciar_render_resolve_filtro_global_quando_nao_especificado():
     """`filtro=None` (default) tem que cair no global de AppSettings, NUNCA
     em um literal como 'cinematic_iii'."""
-    from app.services import remotion_render as rr
+    from app.services.render import remotion_render as rr
 
     captured = {}
 
@@ -64,7 +64,7 @@ def test_iniciar_render_resolve_filtro_global_quando_nao_especificado():
         # D-440: o pipeline agora roda dentro de _rodar_com_gate; executar a
         # corrotina (asyncio.run) é o que faz o fake_pipeline ser chamado.
         def _wrap(coro):
-            rr._render_gate = None
+            rr._render_gate.limpar()
             asyncio.run(coro)
             task = MagicMock()
             task.add_done_callback = MagicMock()
@@ -83,7 +83,7 @@ def test_iniciar_render_resolve_filtro_global_quando_nao_especificado():
 def test_iniciar_render_respeita_filtro_explicito_de_teste():
     """Quando o caller passa filtro explícito (ex.: aba de testes), o pipeline
     recebe ESSE filtro — não o global. (Sanity check do contrato.)"""
-    from app.services import remotion_render as rr
+    from app.services.render import remotion_render as rr
 
     captured = {}
 
@@ -105,7 +105,7 @@ def test_iniciar_render_respeita_filtro_explicito_de_teste():
         # D-440: o pipeline agora roda dentro de _rodar_com_gate; executar a
         # corrotina (asyncio.run) é o que faz o fake_pipeline ser chamado.
         def _wrap(coro):
-            rr._render_gate = None
+            rr._render_gate.limpar()
             asyncio.run(coro)
             task = MagicMock()
             task.add_done_callback = MagicMock()

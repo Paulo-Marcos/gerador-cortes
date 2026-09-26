@@ -1,4 +1,5 @@
 import type { Corte, StatusExportCorte } from '@/types/models';
+import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 // ─────────────────────────────────────────────────────────────
 // A lista de cortes do Workspace.
@@ -22,7 +23,7 @@ export function mesclarCortesComExport(
     const s = statusMap.get(c.id);
     if (s) return s;
     const videoPronto = !!(c.is_pos_producao === 1);
-    return {
+    return statusExportPendente({
       corte_id: c.id,
       numero: c.numero,
       titulo: c.titulo_proposto,
@@ -30,11 +31,8 @@ export function mesclarCortesComExport(
       grade_pronta: videoPronto,
       overlays_prontos: videoPronto,
       video_pronto: videoPronto,
-      thumbnail_pronta: false,
-      metadados_completos: false,
-      pronto_publicar: false,
-      youtube_url_publicado: c.youtube_url_publicado || undefined,
-      youtube_scheduled_at: c.youtube_scheduled_at || undefined,
-    };
+      youtube_url_publicado: c.youtube_url_publicado ?? '',
+      youtube_scheduled_at: c.youtube_scheduled_at ?? '',
+    });
   });
 }

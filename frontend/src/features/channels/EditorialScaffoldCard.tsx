@@ -3,7 +3,7 @@
 // o botão de editar. Sem I/O — o container decide o que fazer no clique.
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { EditorialScaffold } from '@/lib/editorialScaffoldsApi';
+import type { EditorialScaffold } from '@/features/channels/api/scaffolds';
 
 interface Props {
   scaffold: EditorialScaffold;

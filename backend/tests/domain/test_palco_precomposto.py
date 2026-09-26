@@ -8,9 +8,9 @@ kill-switch e falha de derivação caem no graph legado.
 
 from pathlib import Path
 
-import app.domain.ffmpeg_commands as fc
-from app.domain.ffmpeg_commands import build_grade_precomposto_filter
-from app.domain.palco_derivados import PalcoDerivados, ensure_derivados_palco
+import app.infrastructure.render.ffmpeg_commands as fc
+from app.infrastructure.render.ffmpeg_commands import GradeSpec, build_grade_precomposto_filter
+from app.infrastructure.render.palco_derivados import PalcoDerivados, ensure_derivados_palco
 from PIL import Image
 
 REGIAO = {
@@ -115,9 +115,9 @@ class TestRoteamentoGrade:
         return fc.build_cinematic_grade_cmd(
             Path("in.mp4"),
             Path("out.mp4"),
-            layout_youtube={"modo": "compartilhada"},
-            duracao_seg=30.0,
-            hwaccel_decode=False,
+            fc.GradeSpec(
+                layout_youtube={"modo": "compartilhada"}, duracao_seg=30.0, hwaccel_decode=False
+            ),
         )
 
     def _layout_full_cover(self, monkeypatch):
@@ -170,18 +170,17 @@ class TestRoteamentoGrade:
         assert "[chrome0]" not in filtro
 
     def test_segmento_com_derivado_usa_graph_precomposto(self, tmp_path):
-        from app.domain.ffmpeg_commands import _build_grade_segment_cmd
+        from app.infrastructure.render.ffmpeg_commands import _build_grade_segment_cmd
 
         d = PalcoDerivados(tmp_path / "bg.png", tmp_path / "ch.png", 120, 220)
         cmd = _build_grade_segment_cmd(
             Path("in.mp4"),
             Path("seg.ts"),
+            GradeSpec(filtro_vf=None, global_quality=27),
             inicio=10.0,
             dur=15.0,
-            filtro_vf=None,
             region_rel={**REGIAO, "inicio": 0.0, "fim": 15.0},
             fg_png=tmp_path / "palco.png",
-            global_quality=27,
             derivado=d,
         )
         joined = " ".join(cmd)

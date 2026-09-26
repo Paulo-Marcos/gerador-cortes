@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { StatusExportCorte } from '@/types/models';
 import { montarTira, textoDaProxima } from '../tiraDoCorte';
+import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 function status(patch: Partial<StatusExportCorte> = {}): StatusExportCorte {
-  return {
+  return statusExportPendente({
     corte_id: 'corte-1',
     numero: 1,
     titulo: 'Corte',
@@ -17,7 +18,7 @@ function status(patch: Partial<StatusExportCorte> = {}): StatusExportCorte {
     metadados_completos: false,
     pronto_publicar: false,
     ...patch,
-  };
+  });
 }
 
 const estados = (t: ReturnType<typeof montarTira>) =>

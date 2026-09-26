@@ -1,4 +1,4 @@
-from app.domain.vtt_parser import parse_vtt
+from app.domain.projeto.vtt_parser import parse_vtt
 
 
 def _vtt(*blocks):

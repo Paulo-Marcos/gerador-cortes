@@ -13,8 +13,14 @@ Estes testes são o que impede alguém de "simplificar" isso de volta.
 
 from __future__ import annotations
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
+
 import pytest
-from app.domain.tiktok_studio import (
+from app.domain.publicacao.tiktok_studio import (
+    PORTA_MINIMA_DE_DEPURACAO,
+    PORTAS_DE_DEPURACAO,
     mesma_pasta,
     perfil_na_linha_de_comando,
     porta_de_depuracao,
@@ -26,6 +32,11 @@ from app.services.navegador_assistido import (
     perfil_do_canal,
     porta_do_chrome,
 )
+
+
+def _seguinte(porta: int) -> int:
+    """A porta depois de `porta`, dando a volta na faixa de depuração."""
+    return PORTA_MINIMA_DE_DEPURACAO + (porta - PORTA_MINIMA_DE_DEPURACAO + 1) % PORTAS_DE_DEPURACAO
 
 
 class TecladoFalso:
@@ -144,7 +155,19 @@ class TestIsolamentoPorPerfil:
         )
         monkeypatch.setattr(navegador_assistido, "perfil_na_porta", lambda porta: "C:/outro/perfil")
 
-        assert porta_do_chrome(perfil) == preferida + 1
+        assert porta_do_chrome(perfil) == _seguinte(preferida)
+
+    def test_na_ultima_porta_da_faixa_a_seguinte_da_a_volta(self, monkeypatch, tmp_path):
+        """D-754: a preferida vem de um hash e às vezes é a última da faixa; a
+        seguinte, então, é a primeira — e não uma porta fora da faixa."""
+        from app.services import navegador_assistido
+
+        ultima = PORTA_MINIMA_DE_DEPURACAO + PORTAS_DE_DEPURACAO - 1
+        monkeypatch.setattr(navegador_assistido, "porta_de_depuracao", lambda _perfil: ultima)
+        monkeypatch.setattr(navegador_assistido, "_porta_responde", lambda porta: porta == ultima)
+        monkeypatch.setattr(navegador_assistido, "perfil_na_porta", lambda porta: "C:/outro/perfil")
+
+        assert porta_do_chrome(tmp_path / "instagram") == PORTA_MINIMA_DE_DEPURACAO
 
     def test_a_nossa_propria_janela_e_reaproveitada(self, monkeypatch, tmp_path):
         """Publicar cinco cortes seguidos usa a MESMA janela, e nao empilha cinco."""
@@ -158,6 +181,24 @@ class TestIsolamentoPorPerfil:
 
         assert porta_do_chrome(perfil) == preferida
 
+    def test_a_nossa_janela_adiante_vale_mais_que_a_preferida_livre(self, monkeypatch, tmp_path):
+        """D-761: a janela andou para a seguinte porque a preferida era de outro;
+        o outro fechou. Voltar para a preferida livre mandaria abrir um segundo
+        Chrome sobre um perfil já aberto — "a aba abriu e nada subiu"."""
+        from app.services import navegador_assistido
+
+        perfil = tmp_path / "instagram"
+        adiante = _seguinte(porta_de_depuracao(str(perfil)))
+
+        monkeypatch.setattr(navegador_assistido, "_porta_responde", lambda porta: porta == adiante)
+        monkeypatch.setattr(
+            navegador_assistido,
+            "perfil_na_porta",
+            lambda porta: str(perfil) if porta == adiante else "",
+        )
+
+        assert porta_do_chrome(perfil) == adiante
+
     def test_todas_ocupadas_por_terceiros_falha_dizendo_o_que_fazer(self, monkeypatch, tmp_path):
         from app.services import navegador_assistido
 
@@ -168,6 +209,45 @@ class TestIsolamentoPorPerfil:
             porta_do_chrome(tmp_path / "tiktok")
 
         assert "feche um Chrome" in str(erro.value)
+
+
+class TestRaiasAbrindoChromeJuntas:
+    """D-761: as raias do lote (TikTok, Instagram) rodam em paralelo, e o desvio
+    de porta só enxerga um Chrome que já responde."""
+
+    def test_perfis_que_colidem_abrem_cada_um_na_sua_porta(self, monkeypatch, tmp_path):
+        from app.services import navegador_assistido
+
+        vivos: dict[int, str] = {}  # porta -> perfil do Chrome que ficou com ela
+
+        class ChromeFalso:
+            """Leva um instante para abrir a porta, como o de verdade; quem chega
+            a uma porta já tomada fica sem DevTools, e ela segue do primeiro."""
+
+            def __init__(self, argumentos, **_kwargs) -> None:
+                porta = next(
+                    int(a.split("=")[1])
+                    for a in argumentos
+                    if a.startswith("--remote-debugging-port=")
+                )
+                perfil = perfil_na_linha_de_comando(argumentos)
+                abrir = threading.Timer(0.2, lambda: vivos.setdefault(porta, perfil))
+                abrir.daemon = True
+                abrir.start()
+
+        monkeypatch.setattr(navegador_assistido, "porta_de_depuracao", lambda _perfil: 9239)
+        monkeypatch.setattr(navegador_assistido, "_chrome_no_disco", lambda: tmp_path / "chrome")
+        monkeypatch.setattr(navegador_assistido, "subprocess", SimpleNamespace(Popen=ChromeFalso))
+        monkeypatch.setattr(navegador_assistido, "_porta_responde", lambda porta: porta in vivos)
+        monkeypatch.setattr(
+            navegador_assistido, "perfil_na_porta", lambda porta: vivos.get(porta, "")
+        )
+
+        perfis = [tmp_path / "tiktok", tmp_path / "instagram"]
+        with ThreadPoolExecutor(max_workers=2) as raias:
+            list(raias.map(lambda p: navegador_assistido.garantir_chrome(p, "https://x"), perfis))
+
+        assert sorted(vivos.values()) == sorted(str(p) for p in perfis)
 
 
 class TestDonoDaPorta:

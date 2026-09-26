@@ -4,10 +4,15 @@ O que estes testes guardam nao e a aritmetica de datas — e a RECUSA. Cada regr
 aqui existe porque, sem ela, a plataforma nao daria erro: daria outra coisa.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
-from app.domain.agendamento import Agendamento, AgendamentoInvalido, validar
+from app.domain.publicacao.agendamento import (
+    Agendamento,
+    AgendamentoInvalido,
+    ja_esta_no_ar,
+    validar,
+)
 
 
 def _daqui(horas: float) -> datetime:
@@ -82,3 +87,29 @@ class TestRecusas:
         alvo = _daqui(24).replace(minute=0, second=0, microsecond=0)
 
         validar(Agendamento(alvo), "tiktok")
+
+
+class TestJaEstaNoAr:
+    """D-703: quando um vídeo já enviado ao YouTube pode ser visto."""
+
+    _AGORA = datetime(2026, 9, 25, 12, 0, tzinfo=UTC)
+
+    def test_sem_agendamento_sobe_nao_listado_e_conta_como_no_ar(self):
+        assert ja_esta_no_ar("", self._AGORA)
+
+    @pytest.mark.parametrize(
+        ("agendado_para", "no_ar"),
+        [
+            ("2026-09-25T11:59:00Z", True),
+            ("2026-09-25T12:00:00Z", True),
+            ("2026-09-25T12:01:00Z", False),
+            ("2026-09-25T12:01:00", False),  # sem fuso: UTC
+            ("2026-09-25T09:30:00-03:00", False),  # 09:30 em -03:00 = 12:30 UTC
+            ("2026-09-25T08:30:00-03:00", True),  # 08:30 em -03:00 = 11:30 UTC
+        ],
+    )
+    def test_com_agendamento_vale_a_hora_marcada(self, agendado_para, no_ar):
+        assert ja_esta_no_ar(agendado_para, self._AGORA) is no_ar
+
+    def test_agendamento_ilegivel_conta_como_no_ar(self):
+        assert ja_esta_no_ar("lixo", self._AGORA)

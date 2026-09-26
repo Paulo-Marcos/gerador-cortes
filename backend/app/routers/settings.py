@@ -1,6 +1,12 @@
-from app import editorial_identity
-from app.domain.overlay_codec import OverlayCodec
-from app.services.app_settings import AppSettings, AppSettingsService, LogLevel, RenderSettings
+from app.domain.canal.mascote import nome_definido
+from app.services.app_settings import (
+    AppSettings,
+    AppSettingsService,
+    LogLevel,
+    OverlayCodec,
+    RenderSettings,
+)
+from app.services.canal import editorial_identity
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -58,8 +64,7 @@ def _mascote_nome() -> str:
 
     Devolve "" no fallback neutro (nome não definido) para a UI exibir placeholder
     em vez do rótulo genérico "mascote"."""
-    identidade = editorial_identity.identidade_do_mascote()
-    return "" if identidade == editorial_identity.MASCOTE_NEUTRO else identidade.nome
+    return nome_definido(editorial_identity.identidade_do_mascote())
 
 
 def _to_response(app: AppSettings) -> AppSettingsResponse:
@@ -92,7 +97,7 @@ def obter_layout_da_capa_tiktok():
     pixel de diferenca entre o que o operador arrasta e o que o Remotion
     desenha, sem erro nenhum aparecendo.
     """
-    from app.domain import capa_tiktok as layout_capa
+    from app.domain.corte import capa_tiktok as layout_capa
     from app.services.capa_tiktok import _ajuste_do_layout
 
     return {

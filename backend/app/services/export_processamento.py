@@ -10,14 +10,16 @@ import asyncio
 import json
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
 from app.config import settings
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.logging import operational_error, operational_info
 from app.database import AsyncSessionLocal
-from app.domain.cinema_filters import FILTROS_CINEMA, get_filtro_vf
-from app.domain.ffmpeg_commands import build_normalize_cmd
 from app.infrastructure.ffmpeg_runner import run_ffmpeg
+from app.infrastructure.render.cinema_filters import FILTROS_CINEMA, get_filtro_vf
+from app.infrastructure.render.ffmpeg_commands import build_normalize_cmd
 from app.models import Corte
-from app.services.app_logging import operational_error, operational_info
+
+_TIMEOUT_DA_NORMALIZACAO_S = 3600
 
 
 class _ExportProcessamentoMixin:
@@ -39,7 +41,9 @@ class _ExportProcessamentoMixin:
         # D-647: declarava 8h e recebia 1h (o timeout se perdia no caminho em
         # thread). 1h é o que a produção sempre praticou — o número agora diz a
         # verdade. Aumentar exige medir uma normalização longa de verdade.
-        result = await run_ffmpeg(cmd, label="ffmpeg_normalizar", timeout=3600)
+        result = await run_ffmpeg(
+            cmd, label="ffmpeg_normalizar", timeout=_TIMEOUT_DA_NORMALIZACAO_S
+        )
 
         if result.returncode != 0:
             raise RuntimeError(f"Falha na normalização de áudio: {result.stderr_tail}")
@@ -140,7 +144,7 @@ class _ExportProcessamentoMixin:
         try:
             await run_ffmpeg_simple(cmd, label="ffmpeg_concat")
             returncode = 0
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — falha do ffmpeg vira código de saída
             operational_error("ffmpeg_concat", f"Falha na concatenação: {e}")
             returncode = -1
 
@@ -179,8 +183,9 @@ class _ExportProcessamentoMixin:
 """
         (upload_dir / "metadados.txt").write_text(conteudo, encoding="utf-8")
 
-    @staticmethod
+    @classmethod
     async def processar_multiversion(
+        cls,
         corte_id: str,
         filtros: list[str] | None = None,
         preview: bool = False,
@@ -191,8 +196,6 @@ class _ExportProcessamentoMixin:
         - preview=False: versão completa em versoes/{filtro}/video.mp4
         - preview=True: clip de N segundos sem intro/outro em versoes/{filtro}/preview.mp4
         """
-        from app.services.export import ExportService
-
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte or not corte.arquivo_clip_path:
@@ -232,14 +235,14 @@ class _ExportProcessamentoMixin:
                     # Preview rápido de N segundos sem intro/outro
                     destino = versao_dir / "preview.mp4"
                     try:
-                        await ExportService._normalizar_audio(
+                        await cls._normalizar_audio(
                             clip_path, destino, filtro=filtro, preview_segundos=preview_segundos
                         )
                         operational_info(
                             "MultiVersion",
                             f"Preview '{filtro}' concluído ({preview_segundos}s): {destino}",
                         )
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — lote: uma versão que falha não para as outras
                         operational_error("MultiVersion", f"Erro no preview '{filtro}': {e}")
                 else:
                     # Versão completa com intro/outro
@@ -247,13 +250,13 @@ class _ExportProcessamentoMixin:
                     final = versao_dir / "clip_final.mp4"
                     destino = versao_dir / "video.mp4"
                     try:
-                        await ExportService._normalizar_audio(clip_path, normalizado, filtro=filtro)
-                        await ExportService._adicionar_intro_outro(normalizado, final)
+                        await cls._normalizar_audio(clip_path, normalizado, filtro=filtro)
+                        await cls._adicionar_intro_outro(normalizado, final)
                         import shutil
 
                         await asyncio.to_thread(shutil.copy2, str(final), str(destino))
                         operational_info("MultiVersion", f"Versão '{filtro}' concluída: {destino}")
-                    except Exception as e:
+                    except Exception as e:  # noqa: BLE001 — lote: uma versão que falha não para as outras
                         operational_error("MultiVersion", f"Erro na versão '{filtro}': {e}")
 
                 # Salva metadados da versão (usado em ambos os modos)

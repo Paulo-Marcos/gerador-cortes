@@ -1,6 +1,6 @@
 """D-419: leitura e escrita da avaliação de qualidade de um corte.
 
-Delega vocabulário e validação ao domain puro (`app.domain.avaliacao_corte`) e
+Delega vocabulário e validação ao domain puro (`app.domain.corte.avaliacao_corte`) e
 guarda o resultado nas colunas `voto_qualidade*` de `Corte`. Uma linha por
 corte, sobrescrita a cada reavaliação: o interesse é a opinião ATUAL do editor
 sobre aquele corte, não o histórico de como ela mudou.
@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
-from app.domain.avaliacao_corte import (
+from app.domain.corte.avaliacao_corte import (
     MOTIVOS_AVALIACAO,
     motivos_persistidos,
     normalizar_comentario,

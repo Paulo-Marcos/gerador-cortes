@@ -9,7 +9,7 @@
 // (`CENAS_LIGADAS`) não tem nada a ver com este arquivo. Um letreiro na porta do
 // cinema não é alguém acendendo a luz no meio do filme.
 //
-// Os números abaixo são cópias de `backend/app/domain/gancho_short.py`, porque
+// Os números abaixo são cópias de `backend/app/domain/short/gancho_short.py`, porque
 // os projetos não compartilham módulo — a mesma situação de `previaLegenda.ts`,
 // e a mesma defesa: `ganchoDoShort.test.ts` LÊ aquele arquivo e compara. Se um
 // lado mudar sozinho, o teste cai em vez de a tela mentir sobre o que o render
@@ -17,37 +17,37 @@
 
 import type { CSSProperties } from 'react';
 
-/** Espelha `PALAVRAS_MIN` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `PALAVRAS_MIN` em `backend/app/domain/short/gancho_short.py`. */
 export const PALAVRAS_MIN = 4;
 
-/** Espelha `PALAVRAS_MAX` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `PALAVRAS_MAX` em `backend/app/domain/short/gancho_short.py`. */
 export const PALAVRAS_MAX = 7;
 
-/** Espelha `MAX_CARACTERES` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `MAX_CARACTERES` em `backend/app/domain/short/gancho_short.py`. */
 export const MAX_CARACTERES = 90;
 
-/** Espelha `DURACAO_PADRAO_SEG` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `DURACAO_PADRAO_SEG` em `backend/app/domain/short/gancho_short.py`. */
 export const DURACAO_PADRAO_SEG = 2.5;
 
-/** Espelha `DURACAO_MIN_SEG` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `DURACAO_MIN_SEG` em `backend/app/domain/short/gancho_short.py`. */
 export const DURACAO_MIN_SEG = 1.5;
 
-/** Espelha `DURACAO_MAX_SEG` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `DURACAO_MAX_SEG` em `backend/app/domain/short/gancho_short.py`. */
 export const DURACAO_MAX_SEG = 5.0;
 
-/** Espelha `MAX_VARIACOES` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `MAX_VARIACOES` em `backend/app/domain/short/gancho_short.py`. */
 export const MAX_VARIACOES = 6;
 
 /** Passo do ajuste de duração, em segundos. */
 export const DURACAO_PASSO_SEG = 0.5;
 
-/** D-594: espelha `TAMANHO_PADRAO` em `backend/app/domain/gancho_short.py`. */
+/** D-594: espelha `TAMANHO_PADRAO` em `backend/app/domain/short/gancho_short.py`. */
 export const TAMANHO_PADRAO = 1.0;
 
-/** D-594: espelha `TAMANHO_MIN` em `backend/app/domain/gancho_short.py`. */
+/** D-594: espelha `TAMANHO_MIN` em `backend/app/domain/short/gancho_short.py`. */
 export const TAMANHO_MIN = 0.7;
 
-/** D-594: espelha `TAMANHO_MAX` em `backend/app/domain/gancho_short.py`. */
+/** D-594: espelha `TAMANHO_MAX` em `backend/app/domain/short/gancho_short.py`. */
 export const TAMANHO_MAX = 1.6;
 
 /** Passo do ajuste de tamanho: 10% por clique, visível na prévia. */
@@ -64,7 +64,7 @@ export const TAMANHO_PASSO = 0.1;
 // jeito faria a frase escorregar a cada palavra digitada — e o operador está
 // justamente olhando a prévia enquanto digita.
 
-/** Espelha `POSICAO_X_PADRAO` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `POSICAO_X_PADRAO` em `backend/app/domain/short/gancho_short.py`. */
 export const POSICAO_X_PADRAO = 50.0;
 
 /** Espelha `POSICAO_Y_PADRAO` — a SAFE_ZONE, que era o valor fixo de antes. */
@@ -73,22 +73,22 @@ export const POSICAO_Y_PADRAO = 18.0;
 /** Espelha `LARGURA_PADRAO` — os 86% que o código tinha embutidos. */
 export const LARGURA_PADRAO = 86.0;
 
-/** Espelha `POSICAO_X_MIN` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `POSICAO_X_MIN` em `backend/app/domain/short/gancho_short.py`. */
 export const POSICAO_X_MIN = 10.0;
 
-/** Espelha `POSICAO_X_MAX` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `POSICAO_X_MAX` em `backend/app/domain/short/gancho_short.py`. */
 export const POSICAO_X_MAX = 90.0;
 
-/** Espelha `POSICAO_Y_MIN` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `POSICAO_Y_MIN` em `backend/app/domain/short/gancho_short.py`. */
 export const POSICAO_Y_MIN = 0.0;
 
-/** Espelha `POSICAO_Y_MAX` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `POSICAO_Y_MAX` em `backend/app/domain/short/gancho_short.py`. */
 export const POSICAO_Y_MAX = 88.0;
 
-/** Espelha `LARGURA_MIN` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `LARGURA_MIN` em `backend/app/domain/short/gancho_short.py`. */
 export const LARGURA_MIN = 25.0;
 
-/** Espelha `LARGURA_MAX` em `backend/app/domain/gancho_short.py`. */
+/** Espelha `LARGURA_MAX` em `backend/app/domain/short/gancho_short.py`. */
 export const LARGURA_MAX = 100.0;
 
 /** Passo da largura por clique, em pontos percentuais. */
@@ -160,7 +160,7 @@ export function tamanhoEfetivo(tamanho: number | null | undefined): number {
 // dois no ESPAÇO (ele no terço superior, ela no rodapé); o que faltava era
 // separá-los na APARÊNCIA.
 //
-// Espelha `REALCES` em `backend/app/domain/gancho_short.py`, e o CSS espelha
+// Espelha `REALCES` em `backend/app/domain/short/gancho_short.py`, e o CSS espelha
 // `estiloDoRealce` do `GanchoAbertura.tsx` do renderer. Três cópias parece
 // muito — é o preço de os projetos não compartilharem módulo, e o teto contra a
 // divergência é o `ganchoDoShort.test.ts`, que lê o arquivo do backend.

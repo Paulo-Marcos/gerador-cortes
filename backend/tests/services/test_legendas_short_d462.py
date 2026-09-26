@@ -9,20 +9,21 @@ erradas — a legenda renderiza, só sai torta:
 """
 
 import pytest
-from app.domain.transcricao_fiel import Palavra
+from app.domain.short.legenda_short import para_captions
+from app.domain.short.transcricao_fiel import Palavra
 from app.services import legendas_short
 from app.services.transcricao_fiel import TranscricaoFiel
 
 
 def test_tempos_saem_em_milissegundos():
-    captions = legendas_short.para_captions([Palavra("olá", 1.25, 1.8)])
+    captions = para_captions([Palavra("olá", 1.25, 1.8)])
 
     assert captions[0]["startMs"] == 1250
     assert captions[0]["endMs"] == 1800
 
 
 def test_so_a_primeira_palavra_vai_sem_espaco():
-    captions = legendas_short.para_captions(
+    captions = para_captions(
         [Palavra("ninguém", 0.0, 0.4), Palavra("te", 0.4, 0.6), Palavra("conta", 0.6, 1.0)]
     )
 
@@ -31,13 +32,13 @@ def test_so_a_primeira_palavra_vai_sem_espaco():
 
 def test_timestamp_fica_no_meio_da_palavra():
     """E o instante que o pacote usa para casar a palavra com o frame."""
-    captions = legendas_short.para_captions([Palavra("oi", 2.0, 2.4)])
+    captions = para_captions([Palavra("oi", 2.0, 2.4)])
 
     assert captions[0]["timestampMs"] == 2200
 
 
 def test_sem_palavras_devolve_lista_vazia():
-    assert legendas_short.para_captions([]) == []
+    assert para_captions([]) == []
 
 
 @pytest.mark.asyncio

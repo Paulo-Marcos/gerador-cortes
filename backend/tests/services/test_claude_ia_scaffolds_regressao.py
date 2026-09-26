@@ -14,8 +14,9 @@ intencional e é inerte para o modelo (o cliente Claude ignora whitespace de bor
 from __future__ import annotations
 
 import pytest
-from app import editorial_scaffolds
+from app.services.canal import editorial_scaffolds
 from app.services.claude_ia import ClaudeIaService
+from app.services.metadados import MetadadosService
 
 
 @pytest.fixture(autouse=True)
@@ -201,7 +202,7 @@ _TRANSCRICAO = "[0] (00:00) olá\n[1] (00:04) mundo"
 @pytest.mark.parametrize("cabecalho", ["", "PARTE 2 de 3 da transcrição."])
 @pytest.mark.parametrize("variacao", ["", "LENTE: foque no contraste."])
 def test_cortes_identico_ao_oraculo(cabecalho, variacao):
-    novo = ClaudeIaService._montar_prompt(
+    novo = ClaudeIaService.montar_prompt_de_cortes(
         _TRANSCRICAO, _META, cabecalho=cabecalho, variacao=variacao
     )
     _igual(novo, _oraculo_cortes(_TRANSCRICAO, _META, cabecalho=cabecalho, variacao=variacao))
@@ -226,7 +227,7 @@ def test_thumbnail_identico_ao_oraculo():
     marca_emojis = "EMOJIS EDITORIAIS: nenhum."
     bloco_hints = ""
     mascote = "Mascote"
-    novo = ClaudeIaService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
+    novo = MetadadosService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
     _igual(novo, _oraculo_thumbnail(ctx, marca_emojis, bloco_hints, mascote))
 
 

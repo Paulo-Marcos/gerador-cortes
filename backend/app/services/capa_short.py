@@ -34,18 +34,27 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.channel_paths import para_relativo_ao_projeto, resolver_do_projeto
+from app.core.channel_paths import para_relativo_ao_projeto, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain import segmentos_short
-from app.domain.capa_short import encaixar_instante, instante_padrao
-from app.domain.cenas_short_ia import recortar_transcricao_varios
-from app.domain.time_convert import seg_to_mmss
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.domain.compartilhado.time_convert import seg_to_mmss
+from app.domain.short import segmentos_short
+from app.domain.short.capa_short import (
+    encaixar_instante,
+    instante_padrao,
+    prompt_da_capa,
+    texto_da_capa,
+)
+from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
-from app.provider_ia import ProviderIA
+from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
+
+_SKILL_CAPA_SHORT = "capa-short-imagem-expert"
 
 NOME_DA_CAPA = "capa.jpg"
 
@@ -308,25 +317,83 @@ def _falas_em_texto(janela: list[dict]) -> str:
     return "\n".join(linhas)
 
 
-def texto_da_capa(contexto: ContextoDaCapa) -> str:
-    """A frase que vai DENTRO da arte.
-
-    O gancho da abertura é a primeira escolha, e não por economia: ele já é a
-    promessa deste trecho, já foi julgado pelo operador e já cabe em 4 a 7
-    palavras. Uma segunda frase para a capa criaria duas promessas para o mesmo
-    short — e a capa é justamente o que o espectador lê ANTES do gancho.
-
-    Sem gancho escrito, cai no título: mais longo e mais descritivo, mas melhor
-    que mandar o capista inventar a promessa sozinho.
-    """
-    return contexto.gancho_tela.strip() or contexto.titulo.strip() or "(sem texto)"
-
-
 async def obter_prompt(short_id: str) -> str:
     """O prompt já escrito para este short, ou "" quando ainda não há."""
     async with AsyncSessionLocal() as db:
         meta = await db.scalar(select(MetadadoShort).where(MetadadoShort.short_id == short_id))
         return (meta.prompt_capa if meta else "") or ""
+
+
+async def _escrever_prompt_da_capa(short_id: str, provider: ProviderIA) -> str:
+    """O prompt de imagem da capa de um short vertical (D-581).
+
+    Skill separada da capa do TikTok por uma diferenca concreta, e nao por
+    organizacao: la a imagem sai SEM texto, porque o sistema desenha a
+    etiqueta e o selo por cima com a tipografia do canal. Aqui nao ha
+    montagem nenhuma — a capa do short e a imagem inteira —, entao a frase
+    precisa nascer dentro da arte, com cor e contorno declarados.
+
+    A outra diferenca e o recorte. A capa do corte vive numa vitrine so; a
+    do short aparece em tres, e as duas grades de perfil (Instagram e TikTok)
+    mostram apenas o QUADRADO CENTRAL do quadro 9:16. E isso que a skill
+    precisa conciliar, e e por isso que ela pensa um pouco mais que a vizinha.
+
+    A cor explicita nao e capricho: a D-343 mediu que 90% dos prompts sem cor
+    declarada voltaram com texto branco — e branco sobre fundo claro e uma
+    capa que nao diz nada.
+
+    O estilo e herdado do prompt da thumbnail do YouTube quando ele existe,
+    pelo motivo da D-524: a identidade do canal em dois corpos de skill e a
+    garantia de que um dia os dois discordem.
+
+    NAO grava — quem grava e `gerar_prompt`, que e quem sabe onde o metadado
+    do short mora.
+
+    Levanta `LookupError` (short inexistente).
+    """
+    contexto = await montar_contexto_da_capa(short_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_CAPA_SHORT)
+    scaffold = editorial_scaffolds.resolver_scaffold("capa-short-imagem")
+    prompt = scaffold.format(
+        titulo=contexto.titulo or "(sem titulo)",
+        tema_central=contexto.tema_central or "(sem tema)",
+        gancho_tela=contexto.gancho_tela or "(este short nao tem gancho escrito)",
+        gancho=contexto.gancho_da_curadoria or "(sem nota da curadoria)",
+        duracao_humana=contexto.duracao_humana,
+        texto_transcricao=contexto.texto_transcricao or "(trecho sem fala transcrita)",
+        prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
+        texto_capa=texto_da_capa(contexto.gancho_tela, contexto.titulo),
+    )
+    registrar_skill_usada(_SKILL_CAPA_SHORT, skill, scaffold)
+    bruto = await gerar_texto(
+        provider,
+        prompt,
+        skill,
+        _SKILL_CAPA_SHORT,
+        projeto_id=contexto.projeto_id,
+        corte_id=contexto.corte_id,
+        short_id=short_id,
+    )
+    # D-584: o parser do SHORT, e nao o da capa do TikTok.
+    #
+    # Aquele exige o literal "no text" na resposta, porque a arte DELE nasce
+    # sem texto — o sistema desenha a etiqueta por cima. Aqui e o contrario:
+    # a frase nasce DENTRO da imagem, entao um prompt bom nunca contem essa
+    # marca. O reuso errado fazia toda geracao voltar 502 dizendo que a
+    # skill nao devolveu prompt valido, com um prompt perfeito na mao.
+    prompt_valido = prompt_da_capa(bruto)
+    if not prompt_valido:
+        # D-587: o llm_calls registra a chamada como sucesso, e a recusa
+        # acontece depois dele. Sem este aviso, o log diz "deu certo" sobre
+        # uma geracao que nunca chegou a tela.
+        logger.warning(
+            "[CapaShort] short=%s resposta recusada pelo validador (%d chars): %.160r",
+            short_id[:8],
+            len(bruto or ""),
+            bruto,
+        )
+    return prompt_valido
 
 
 async def gerar_prompt(short_id: str, provider: ProviderIA = "claude") -> str:
@@ -340,10 +407,8 @@ async def gerar_prompt(short_id: str, provider: ProviderIA = "claude") -> str:
     Levanta `LookupError` (short inexistente) e `CapaShortError` (a skill não
     devolveu prompt utilizável).
     """
-    from app.services.claude_ia import ClaudeIaService
-
     try:
-        prompt = await ClaudeIaService.prompt_da_capa_do_short_via_claude(short_id, provider)
+        prompt = await _escrever_prompt_da_capa(short_id, provider)
     except LookupError:
         raise
     except Exception as exc:  # noqa: BLE001 — a mensagem vai inteira para a tela

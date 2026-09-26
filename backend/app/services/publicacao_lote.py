@@ -16,7 +16,7 @@ o vídeo errado como publicado, e é a marca que libera a limpeza do MP4 (D-512)
 ## O que este serviço NÃO decide
 
 O ritmo. Quantos cabem hoje, quanto esperar entre um e outro e se há um humano
-no fim — isso mora em `domain/ritmo_publicacao.py`, puro e testável sem rede.
+no fim — isso mora em `domain/publicacao/ritmo_publicacao.py`, puro e testável sem rede.
 Aqui é só o braço que executa e guarda o resultado.
 
 ## Um lote de cada vez
@@ -36,9 +36,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from app.database import AsyncSessionLocal
-from app.domain.agendamento import Agendamento
-from app.domain.publicacao import LIMITES, ModoPublicacao, Plataforma
-from app.domain.ritmo_publicacao import (
+from app.domain.publicacao.agendamento import Agendamento
+from app.domain.publicacao.publicacao import LIMITES, ModoPublicacao, Plataforma
+from app.domain.publicacao.ritmo_publicacao import (
+    ESTADOS_FORA_DA_RAIA,
     Cadencia,
     EstadoItem,
     cadencia_de,
@@ -161,7 +162,7 @@ class Lote:
 
     @property
     def terminou(self) -> bool:
-        return all(i.estado in _PARADOS for i in self.itens)
+        return all(i.estado in ESTADOS_FORA_DA_RAIA for i in self.itens)
 
     def como_dict(self) -> dict:
         return {
@@ -183,20 +184,6 @@ class Lote:
                 for p in self.plataformas
             ],
         }
-
-
-# Estados em que a raia não volta a mexer no item. `SUA_VEZ` NÃO está aqui: o
-# item ainda pode virar `PUBLICADO` quando o operador confirmar (ou quando a
-# vigília do TikTok vir a publicação, na onda seguinte).
-_PARADOS: frozenset[EstadoItem] = frozenset(
-    {
-        EstadoItem.PUBLICADO,
-        EstadoItem.ERRO,
-        EstadoItem.PULADO,
-        EstadoItem.CANCELADO,
-        EstadoItem.SUA_VEZ,
-    }
-)
 
 
 _lote_atual: Lote | None = None

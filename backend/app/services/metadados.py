@@ -3,29 +3,48 @@ Serviço de Metadados — geração via Claude, monta descrição com créditos 
 """
 
 import json
+import logging
 import uuid
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from app.channel_config_loader import (
+from app.config import settings
+from app.core.logging import operational_error
+from app.database import AsyncSessionLocal
+from app.domain.canal.variacao_prompt import bloco_variacao_de
+from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.domain.corte.reading_metadata import (
+    aplicar_emojis_texto_capa,
+    aplicar_prefixo_leitura_titulo,
+)
+from app.infrastructure.channel_config_loader import (
     CREDITOS_TEMPLATE,
     PROMPT_GERAR_METADADOS,
     PROMPT_GERAR_THUMBNAIL,
     PROMPT_GERAR_THUMBNAIL_AGENTE,
     PROMPT_GERAR_THUMBNAIL_AGENTE_LIVRE,
 )
-from app.config import settings
-from app.database import AsyncSessionLocal
-from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
-from app.domain.reading_metadata import (
-    aplicar_emojis_texto_capa,
-    aplicar_prefixo_leitura_titulo,
-)
-from app.editorial_identity import identidade_do_mascote
 from app.models import Corte, MetadadoCorte, Projeto
 from app.services import channels
-from app.services.app_logging import operational_error
+from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.canal.editorial_identity import identidade_do_mascote
+from app.services.claude_ia import (
+    SKILL_METADADOS,
+    gerar_json,
+    gerar_texto,
+    registrar_skill_usada,
+    sem_cercas_de_codigo,
+)
+from app.services.tasks import fire_and_forget
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import select
+
+# O YouTube só mostra capítulos a partir de três marcas.
+_MINIMO_DE_CAPITULOS = 3
+
+logger = logging.getLogger(__name__)
+
+_SKILL_THUMBNAIL = "thumbnail-prompt-expert"
 
 # Gradê de cores da série (ciclo)
 CORES_SERIE = [
@@ -92,7 +111,7 @@ def formatar_bloco_capitulos(chapters: list | None) -> str:
     crescentes — então, diante de lista vazia, curta ou malformada, devolvemos
     ``""`` (nenhum bloco) em vez de um bloco quebrado que só polui a descrição.
     """
-    if not chapters or len(chapters) < 3:
+    if not chapters or len(chapters) < _MINIMO_DE_CAPITULOS:
         return ""
     linhas: list[str] = []
     for cap in chapters:
@@ -149,18 +168,18 @@ class MetadadosService:
                     corte_id=corte_id,
                     titulo_youtube=corte.titulo_proposto,
                     descricao_youtube="",
-                    is_fire=False,
                     # D-666: o mesmo crédito que o default do model gravava.
                     canal_credito=channels.identidade_do_canal_ativo().credito,
                 )
                 db.add(meta)
 
-            meta.is_fire = not meta.is_fire
+            # D-713: o Fire é do corte; o metadado só leva o 🔥 no título e na capa.
+            corte.is_fire = not corte.is_fire
 
             emoji = "🔥 "
             titulo = meta.titulo_youtube or ""
 
-            if meta.is_fire:
+            if corte.is_fire:
                 if not titulo.startswith(emoji):
                     meta.titulo_youtube = emoji + titulo
             else:
@@ -170,12 +189,12 @@ class MetadadosService:
             if corte:
                 meta.texto_capa = aplicar_emojis_texto_capa(
                     meta.texto_capa,
-                    bool(meta.is_fire),
+                    bool(corte.is_fire),
                     bool(corte.is_leitura),
                 )
 
             await db.commit()
-            resposta = {"is_fire": bool(meta.is_fire), "titulo_youtube": meta.titulo_youtube}
+            resposta = {"is_fire": bool(corte.is_fire), "titulo_youtube": meta.titulo_youtube}
 
         # A moldura da capa lê o mesmo par de marcas que os emojis logo acima. Se
         # o 🔥 entrou no texto, a moldura Fire entra em volta — senão a capa diria
@@ -259,7 +278,7 @@ class MetadadosService:
         bloco pronto pra concatenar no meta-prompt. Prompts sem tags (legacy)
         contribuem com 0 valores — não quebram o fluxo.
         """
-        from app.domain.variacao_prompt import (
+        from app.domain.canal.variacao_prompt import (
             coletar_eixos_proibidos,
             contar_eixos_modais,
             formatar_eixos_proibidos,
@@ -347,16 +366,13 @@ class MetadadosService:
     async def gerar_metadados(corte_id: str):
         """Gera metadados YouTube via Claude (skill metadados-expert) e salva.
 
-        Delega ao caminho Claude (`ClaudeIaService.gerar_metadados_via_claude`),
+        Delega ao caminho Claude (`gerar_metadados_via_claude`),
         que monta o contexto do corte e persiste via `importar_resultado_meta`
         (créditos, cores da série, prefixo de leitura, emojis). Mantém a
         semântica de background task: em falha apenas loga, sem derrubar a task.
         """
-        # Import local: claude_ia importa este módulo no topo (evita ciclo).
-        from app.services.claude_ia import ClaudeIaService
-
         try:
-            await ClaudeIaService.gerar_metadados_via_claude(corte_id)
+            await MetadadosService.gerar_metadados_via_claude(corte_id)
         except Exception as e:  # noqa: BLE001 — background task: loga e segue
             operational_error("Metadados", f"Erro ao gerar metadados para corte {corte_id}: {e}")
 
@@ -364,19 +380,142 @@ class MetadadosService:
     async def gerar_prompt_thumbnail(corte_id: str):
         """Gera o prompt visual da thumbnail via Claude (skill thumbnail-prompt-expert).
 
-        Delega ao caminho Claude (`ClaudeIaService.gerar_prompt_thumbnail_via_claude`),
+        Delega ao caminho Claude (`gerar_prompt_thumbnail_via_claude`),
         que reusa o builder/importador existentes. Mantém a semântica de
         background task: em falha apenas loga.
         """
-        # Import local: claude_ia importa este módulo no topo (evita ciclo).
-        from app.services.claude_ia import ClaudeIaService
-
         try:
-            await ClaudeIaService.gerar_prompt_thumbnail_via_claude(corte_id)
+            await MetadadosService.gerar_prompt_thumbnail_via_claude(corte_id)
         except Exception as e:  # noqa: BLE001 — background task: loga e segue
             operational_error(
                 "Metadados", f"Erro ao gerar prompt da thumbnail para {corte_id}: {e}"
             )
+
+    @staticmethod
+    async def gerar_metadados_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
+        """Gera metadados do corte via Claude usando contexto puro + skill.
+
+        WHY: a expertise editorial (regras de título, lista negra, famílias,
+        checklist) vive inteira em `.claude/skills/metadados-expert/SKILL.md`.
+        O service só fornece o input do corte — espelho do fluxo da thumbnail.
+        """
+        skill = editorial_skills.resolver_skill(SKILL_METADADOS)
+        ctx = await MetadadosService.montar_contexto_meta(corte_id)
+        # D-349: o scaffold (invólucro "INPUT DO CORTE" + contrato de saída) vem do
+        # banco por canal, como as demais etapas. O corpo/expertise (regras de
+        # título, checklist, seção OUTPUT) continua na skill metadados-expert.
+        scaffold_meta = editorial_scaffolds.resolver_scaffold("metadados")
+        prompt = scaffold_meta.format(
+            variacao=bloco_variacao_de(skill.lentes),
+            titulo_proposto=ctx["titulo_proposto"],
+            tema_central=ctx["tema"],
+            numero_corte=ctx["numero_corte"],
+            resumo_historico=ctx["resumo"],
+            transcricao_marcada=ctx["transcricao_marcada"],
+            historico_titulos=ctx["historico_titulos"],
+        )
+        registrar_skill_usada(SKILL_METADADOS, skill, scaffold_meta)
+        resultado = await gerar_json(provider, prompt, skill, SKILL_METADADOS, corte_id=corte_id)
+        await MetadadosService.importar_resultado_meta(corte_id, resultado)
+        logger.info("[ClaudeIA] Metadados gerados via Claude p/ corte %s", corte_id[:8])
+        return {"ok": True}
+
+    @staticmethod
+    async def gerar_prompt_thumbnail_via_claude(
+        corte_id: str, provider: ProviderIA = "claude"
+    ) -> dict:
+        """Gera o prompt de imagem da thumbnail via Claude (skill
+        thumbnail-prompt-expert), reusando o builder e o importador existentes.
+
+        Salva o campo `prompt_thumbnail` (string) que o gerador de imagem consome.
+        """
+        ctx = await MetadadosService.montar_contexto_thumbnail(corte_id)
+        # E-010: nome do mascote vem do instance/editorial (fallback neutro),
+        # não mais embutido no código — a saída do canal atual é preservada
+        # porque o instance/ fornece nome="Sapo".
+        mascote = identidade_do_mascote().nome
+        # F-058: direção manual do editor, anexada ao prompt como prioridade.
+        bloco_hints = formatar_bloco_hints_thumbnail(ctx.get("hints"))
+        # D-349: este bloco PERMANECE no código (não vira scaffold): é DADO
+        # COMPUTADO a partir das flags editoriais do corte (is_fire/is_leitura), não
+        # prosa editável. O scaffold de thumbnail o consome via `{marca_emojis}`.
+        emojis_obrigatorios = []
+        if ctx.get("is_fire"):
+            emojis_obrigatorios.append("🔥")
+        if ctx.get("is_leitura"):
+            emojis_obrigatorios.append("📖")
+        marca_emojis = (
+            f"EMOJIS EDITORIAIS OBRIGATÓRIOS NA ARTE: {' '.join(emojis_obrigatorios)} "
+            "— este corte foi classificado pelo editor com esta(s) marca(s). "
+            "Os emojis 🔥/📖 DEVEM aparecer NA ARTE da thumbnail, mas SEMPRE como "
+            "elemento TIPOGRÁFICO/GRÁFICO ao lado do texto do APOIO (mesmo "
+            "lockup), NUNCA como elemento da cena (NÃO desenhe chama subindo do "
+            f"ombro do {mascote}, NÃO ponha o livro como objeto na mesa). "
+            "Pode ser o próprio emoji Unicode renderizado, ou um ícone "
+            "estilizado simples (chama / livro) no mesmo peso/estilo da "
+            "tipografia do apoio, em tamanho ≥40% da altura da letra do APOIO. "
+            "🔥 = TOP do canal; 📖 = série de Leitura."
+            if emojis_obrigatorios
+            else "EMOJIS EDITORIAIS: nenhum (corte não é TOP nem Leitura — não invente emojis decorativos)."
+        )
+        prompt = MetadadosService._montar_prompt_thumbnail(ctx, marca_emojis, bloco_hints, mascote)
+        skill = editorial_skills.resolver_skill(_SKILL_THUMBNAIL)
+        registrar_skill_usada(
+            _SKILL_THUMBNAIL, skill, editorial_scaffolds.resolver_scaffold("thumbnail")
+        )
+        texto = await gerar_texto(provider, prompt, skill, _SKILL_THUMBNAIL, corte_id=corte_id)
+        prompt_thumbnail = sem_cercas_de_codigo(texto)
+        if not prompt_thumbnail:
+            raise ValueError("Claude não retornou o prompt de thumbnail.")
+
+        await MetadadosService.importar_prompt_thumbnail(corte_id, prompt_thumbnail)
+        logger.info("[ClaudeIA] Prompt de thumbnail gerado via Claude p/ corte %s", corte_id[:8])
+
+        # D-525: a capa do TikTok herda deste prompt — mascote, paleta, luz. Só
+        # agora ela TEM base, então é aqui que o encadeamento pertence: encostado
+        # na gravação, e não num botão que o operador pode clicar antes da hora.
+        #
+        # Em background porque é acessório: o prompt do YouTube é a entrega desta
+        # chamada, e fazer o operador esperar mais uma volta de modelo por causa
+        # de uma etiqueta de TikTok inverteria as prioridades. Falhar aqui só
+        # custa um clique no botão da capa depois.
+        fire_and_forget(
+            MetadadosService._encadear_prompt_da_capa_tiktok(corte_id),
+            name=f"capa-tiktok-prompt-{corte_id[:8]}",
+        )
+        return {"ok": True}
+
+    @staticmethod
+    async def _encadear_prompt_da_capa_tiktok(corte_id: str) -> None:
+        """Escreve o prompt da capa do TikTok logo depois do prompt do YouTube."""
+        from app.services import capa_tiktok
+
+        try:
+            await capa_tiktok.gerar_prompt_da_arte(corte_id)
+            logger.info("[ClaudeIA] Prompt da capa do TikTok encadeado p/ %s", corte_id[:8])
+        except Exception:
+            logger.exception(
+                "[ClaudeIA] nao consegui encadear o prompt da capa do TikTok de %s", corte_id[:8]
+            )
+
+    @staticmethod
+    def _montar_prompt_thumbnail(
+        ctx: dict, marca_emojis: str, bloco_hints: str, mascote: str
+    ) -> str:
+        # D-297: o scaffold (contexto do corte + regras não-negociáveis + formato de
+        # saída [VARIATION_TAGS]) vem do banco por canal. O método editorial completo
+        # continua na skill thumbnail-prompt-expert (corpo/expertise).
+        return editorial_scaffolds.resolver_scaffold("thumbnail").format(
+            tema=ctx["tema"],
+            titulo_youtube=ctx["titulo_youtube"],
+            texto_capa=ctx["texto_capa"],
+            resumo=ctx["resumo"],
+            marca_emojis=marca_emojis,
+            bloco_hints=bloco_hints,
+            transcricao=ctx["transcricao"],
+            historico_visual=ctx["historico_visual"],
+            mascote=mascote,
+        )
 
     @staticmethod
     async def montar_prompt_meta(corte_id: str) -> dict:
@@ -471,7 +610,7 @@ class MetadadosService:
             if opcoes_texto_capa:
                 tc = opcoes_texto_capa[0]
                 meta.texto_capa = aplicar_emojis_texto_capa(
-                    tc, bool(meta.is_fire), bool(corte.is_leitura)
+                    tc, bool(corte.is_fire), bool(corte.is_leitura)
                 )
 
             meta.link_live_com_timestamp = link_live
@@ -495,7 +634,7 @@ class MetadadosService:
         transcricao_final = await MetadadosService._obter_transcricao_final(corte_id)
         texto_capa = aplicar_emojis_texto_capa(
             meta.texto_capa if meta else "",
-            bool(meta.is_fire) if meta else False,
+            bool(corte.is_fire),
             bool(corte.is_leitura),
         )
 
@@ -555,7 +694,7 @@ class MetadadosService:
         transcricao_final = await MetadadosService._obter_transcricao_final(corte_id)
         texto_capa = aplicar_emojis_texto_capa(
             meta.texto_capa if meta else "",
-            bool(meta.is_fire) if meta else False,
+            bool(corte.is_fire),
             bool(corte.is_leitura),
         )
         historico = await MetadadosService._obter_historico_thumbnails(corte.projeto_id, corte_id)
@@ -599,7 +738,7 @@ class MetadadosService:
         transcricao_final = await MetadadosService._obter_transcricao_final(corte_id)
         texto_capa = aplicar_emojis_texto_capa(
             meta.texto_capa if meta else "",
-            bool(meta.is_fire) if meta else False,
+            bool(corte.is_fire),
             bool(corte.is_leitura),
         )
         historico = await MetadadosService._obter_historico_thumbnails(corte.projeto_id, corte_id)
@@ -619,7 +758,7 @@ class MetadadosService:
             # JÁ aparecem prefixados em `texto_capa`, mas precisam ser
             # explicitamente entregues na arte (o Claude vinha descartando-os
             # ao condensar o apoio para ≤3 palavras).
-            "is_fire": bool(meta.is_fire) if meta else False,
+            "is_fire": bool(corte.is_fire),
             "is_leitura": bool(corte.is_leitura),
         }
 

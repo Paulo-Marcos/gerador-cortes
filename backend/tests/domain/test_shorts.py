@@ -7,7 +7,7 @@ mesma fala — e não uma exceção que alguém veria.
 
 from __future__ import annotations
 
-from app.domain.shorts import FaixaShort, normalizar_sugestoes
+from app.domain.short.shorts import FaixaShort, normalizar_sugestoes
 
 _FAIXA = FaixaShort(duracao_min_seg=15.0, duracao_max_seg=90.0, quantidade_min=5, quantidade_max=8)
 

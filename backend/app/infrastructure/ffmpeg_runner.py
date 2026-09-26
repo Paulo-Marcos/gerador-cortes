@@ -11,6 +11,9 @@ from pathlib import Path
 from app.infrastructure import processos_em_voo
 from app.infrastructure.worker_queue import dono_dos_jobs
 
+# Quantas partes do comando o log mostra antes de abreviar.
+_PARTES_NO_RESUMO_DO_COMANDO = 8
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,6 +22,10 @@ logger = logging.getLogger(__name__)
 # 1h é o que a produção sempre praticou. Mantido como default até que cada
 # chamada tenha seu valor medido.
 _SYNC_TIMEOUT_SECONDS = 3600
+# D-750: medido em 90 sondas sobre 15 arquivos reais da PROD, de 21 MB a 1,1 GB,
+# com o disco frio e quente — pior caso 0,19 s. 30 s só existe para um ffprobe
+# pendurado (arquivo ainda sendo escrito, corrompido) não prender quem o chamou.
+_TIMEOUT_DA_SONDA_SEG = 30
 
 
 def _run_ffmpeg_sync(
@@ -30,7 +37,9 @@ def _run_ffmpeg_sync(
     ele registrado por dono, cancelar de fato mata o ffmpeg; antes a thread
     ficava presa esperando um processo que ninguém conseguia alcançar.
     """
-    cmd_preview = " ".join(cmd[:8]) + (" ..." if len(cmd) > 8 else "")
+    cmd_preview = " ".join(cmd[:_PARTES_NO_RESUMO_DO_COMANDO]) + (
+        " ..." if len(cmd) > _PARTES_NO_RESUMO_DO_COMANDO else ""
+    )
     logger.info("[FfmpegRunner] [%s] Iniciando (thread): %s", label, cmd_preview)
     t0 = time.time()
     dono = dono_dos_jobs()
@@ -43,7 +52,7 @@ def _run_ffmpeg_sync(
             text=True,
             errors="replace",
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — falha ao iniciar vira código de saída, como a de execução
         logger.error("[FfmpegRunner] [%s] Excecao ao iniciar: %s", label, e)
         return -1, "", f"Erro ao executar subprocesso sync: {e}"
 
@@ -56,7 +65,7 @@ def _run_ffmpeg_sync(
         processos_em_voo.matar_arvore(processo)
         processo.communicate()
         return -1, "", f"Timeout apos {elapsed:.0f}s"
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — qualquer falha mata a árvore e vira código de saída
         logger.error("[FfmpegRunner] [%s] Excecao: %s", label, e)
         processos_em_voo.matar_arvore(processo)
         return -1, "", f"Erro ao executar subprocesso sync: {e}"
@@ -133,7 +142,7 @@ async def _drain_stream(
                 if now - last_log_time >= log_interval or "error" in line.lower():
                     logger.info("[%s] %s", label, line)
                     last_log_time = now
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — ler o log não pode derrubar o ffmpeg
         logger.warning("[%s] Stream read error: %s", label, exc)
 
     return "".join(full_output) if capture else tail
@@ -223,12 +232,21 @@ async def run_ffmpeg_simple(
         )
     except NotImplementedError:
         logger.warning("[FfmpegRunner] Usando fallback via Thread em run_ffmpeg_simple.")
-        result = await _run_ffmpeg_in_thread(cmd, label=label, capture_output=capture_output)
+        result = await _run_ffmpeg_in_thread(
+            cmd, label=label, capture_output=capture_output, timeout=timeout
+        )
         if result.returncode != 0:
             raise RuntimeError(f"{label} falhou (thread): {result.stderr_tail}") from None
         return result
 
-    stdout_data, stderr_data = await proc.communicate()
+    try:
+        stdout_data, stderr_data = await asyncio.wait_for(proc.communicate(), timeout)
+    except TimeoutError:
+        # D-750: fora do Windows este caminho ignorava o `timeout` que o
+        # caminho em thread sempre respeitou. Mesma falha, mesmo formato.
+        proc.kill()
+        await proc.wait()
+        raise RuntimeError(f"{label} falhou: timeout apos {timeout:.0f}s") from None
     stdout_txt = stdout_data.decode(errors="replace")
     stderr_txt = stderr_data.decode(errors="replace")
 
@@ -241,6 +259,21 @@ async def run_ffmpeg_simple(
         stdout=stdout_txt if capture_output else "",
         stderr=stderr_txt if capture_output else "",
     )
+
+
+async def _esperar_sonda(proc: asyncio.subprocess.Process) -> bytes:
+    """O stdout de um ffprobe, com prazo (D-750).
+
+    Estourou: mata o processo pelo PID e levanta `TimeoutError`, que cai no
+    tratamento de erro que cada sonda já tem. O ffprobe não sobe filhos.
+    """
+    try:
+        out, _ = await asyncio.wait_for(proc.communicate(), _TIMEOUT_DA_SONDA_SEG)
+    except TimeoutError:
+        proc.kill()
+        await proc.wait()
+        raise
+    return out
 
 
 async def probe_codecs(path: Path) -> tuple[str, str]:
@@ -283,10 +316,12 @@ async def probe_codecs(path: Path) -> tuple[str, str]:
                     "default=noprint_wrappers=1:nokey=1",
                     str(path),
                 ],
+                "ffprobe-codecs",
+                _TIMEOUT_DA_SONDA_SEG,
             )
             return out.strip().lower() or "unknown"
 
-        out, _ = await proc.communicate()
+        out = await _esperar_sonda(proc)
         return out.decode().strip().lower() or "unknown"
 
     v_codec, a_codec = await asyncio.gather(
@@ -336,14 +371,16 @@ async def probe_resolucao(path: Path) -> tuple[int, int] | None:
             stderr=asyncio.subprocess.PIPE,
         )
     except NotImplementedError:
-        _, out, _ = await asyncio.to_thread(_run_ffmpeg_sync, cmd, "ffprobe-resolucao")
+        _, out, _ = await asyncio.to_thread(
+            _run_ffmpeg_sync, cmd, "ffprobe-resolucao", _TIMEOUT_DA_SONDA_SEG
+        )
         return _parse_resolucao(out)
-    except Exception:
+    except Exception:  # noqa: BLE001 — sonda opcional: falha vira 'sem medida'
         return None
 
     try:
-        out, _ = await proc.communicate()
-    except Exception:
+        out = await _esperar_sonda(proc)
+    except Exception:  # noqa: BLE001 — sonda opcional: falha vira 'sem medida'
         return None
     return _parse_resolucao(out.decode())
 
@@ -380,13 +417,15 @@ async def probe_duracao(path: Path) -> float | None:
             stderr=asyncio.subprocess.PIPE,
         )
     except NotImplementedError:
-        _, out, _ = await asyncio.to_thread(_run_ffmpeg_sync, cmd, "ffprobe-duracao")
+        _, out, _ = await asyncio.to_thread(
+            _run_ffmpeg_sync, cmd, "ffprobe-duracao", _TIMEOUT_DA_SONDA_SEG
+        )
         return _parse_duracao(out)
-    except Exception:
+    except Exception:  # noqa: BLE001 — sonda opcional: falha vira 'sem medida'
         return None
 
     try:
-        out, _ = await proc.communicate()
-    except Exception:
+        out = await _esperar_sonda(proc)
+    except Exception:  # noqa: BLE001 — sonda opcional: falha vira 'sem medida'
         return None
     return _parse_duracao(out.decode())

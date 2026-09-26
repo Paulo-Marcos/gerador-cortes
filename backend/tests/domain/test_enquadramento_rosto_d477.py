@@ -10,7 +10,7 @@ erros sao caros e silenciosos:
 """
 
 import pytest
-from app.domain.enquadramento_rosto import (
+from app.domain.short.enquadramento_rosto import (
     DISPERSAO_QUE_INCOMODA,
     RostoDetectado,
     decidir,

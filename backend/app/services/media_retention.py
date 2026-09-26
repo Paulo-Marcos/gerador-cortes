@@ -31,8 +31,12 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
-from app.domain.retencao_publicacao import DestinoDoCorte, pode_apagar_o_mp4
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
+from app.domain.publicacao.retencao_publicacao import (
+    DestinoDoCorte,
+    o_que_o_fire_guarda,
+    pode_apagar_o_mp4,
+)
 from app.models import Corte, Projeto
 
 logger = logging.getLogger(__name__)
@@ -232,17 +236,9 @@ class MediaRetentionService:
         return report
 
     @classmethod
-    def _brutos_de_fire(cls, cortes: list[Corte]) -> set[Path]:
-        """Os `clip_raw*` dos cortes marcados com Fire, resolvidos em disco."""
-        protegidos: set[Path] = set()
-        for corte in cortes:
-            metadado = getattr(corte, "metadado", None)
-            if not (metadado and metadado.is_fire):
-                continue
-            protegidos.update(
-                caminho for caminho in cls.corte_dir(corte).glob("clip_raw*") if caminho.is_file()
-            )
-        return protegidos
+    def _brutos_do_corte(cls, corte: Corte) -> set[Path]:
+        """Os `clip_raw*` do corte que existem em disco."""
+        return {caminho for caminho in cls.corte_dir(corte).glob("clip_raw*") if caminho.is_file()}
 
     @classmethod
     def _midia_de_fire_pendente(cls, cortes: list[Corte]) -> set[Path]:
@@ -258,13 +254,23 @@ class MediaRetentionService:
         """
         protegidos: set[Path] = set()
         for corte in cortes:
-            if corte.shorts_finalizados_em is not None or not cls._brutos_de_fire([corte]):
-                continue
+            e_fire = bool(corte.is_fire)
+            # So o Fire tem o que guardar: o disco so e varrido para ele.
+            brutos = cls._brutos_do_corte(corte) if e_fire else set()
+            # RN-15: a regra mora no dominio (D-710); aqui so o disco.
+            guarda = o_que_o_fire_guarda(
+                e_fire=e_fire,
+                tem_bruto=bool(brutos),
+                shorts_finalizados=corte.shorts_finalizados_em is not None,
+                destinos=destinos_do_corte(corte),
+            )
             corte_dir = cls.corte_dir(corte)
-            protegidos.update(cls._brutos_de_fire([corte]))
-            protegidos.update(cls._midia_pesada(corte_dir / "shorts"))
+            if guarda.bruto:
+                protegidos.update(brutos)
+            if guarda.shorts:
+                protegidos.update(cls._midia_pesada(corte_dir / "shorts"))
             mp4 = corte_dir / "upload_ready" / "video.mp4"
-            if mp4.is_file() and not pode_apagar_o_mp4(destinos_do_corte(corte)).liberado:
+            if guarda.mp4 and mp4.is_file():
                 protegidos.add(mp4)
         return protegidos
 

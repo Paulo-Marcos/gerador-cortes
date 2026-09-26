@@ -5,7 +5,7 @@ import {
   rankingPesosApi,
   type ListaRankingPesosResponse,
   type RankingPesosPayload,
-} from '@/lib/rankingPesosApi';
+} from '@/features/channels/api/pesosRanking';
 
 const RANKING_PESOS_KEY = ['ranking-pesos'] as const;
 

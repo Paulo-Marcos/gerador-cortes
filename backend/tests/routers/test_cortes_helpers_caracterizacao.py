@@ -23,7 +23,7 @@ class TestHmsToSeg:
             ("00:00:10.5", 10.5),
         ],
     )
-    def test_converte(self, hms, esperado):
+    def test_hms_valido_vira_segundos(self, hms, esperado):
         assert cortes_router._hms_to_seg(hms) == pytest.approx(esperado)
 
     def test_tempo_invalido_avisa_em_vez_de_virar_zero(self):

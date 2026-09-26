@@ -14,8 +14,10 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from app.routers import cortes, cortes_helpers
+from app.routers import cortes
+from app.services import corte as corte_service
 from app.services import projeto as projeto_service
+from app.services.render import finalizacao_do_corte
 
 
 def _espiao(registro: list[str], nome: str):
@@ -70,11 +72,22 @@ async def test_limpeza_de_midia_varre_o_disco_fora_do_loop(tmp_path, monkeypatch
 async def test_deletar_corte_apaga_a_pasta_fora_do_loop(tmp_path, monkeypatch, db):
     chamadas: list[str] = []
     (tmp_path / "p1" / "cortes" / "c1").mkdir(parents=True)
-    monkeypatch.setattr(cortes, "projetos_dir", lambda: tmp_path)
-    monkeypatch.setattr(cortes.shutil, "rmtree", _espiao(chamadas, "rmtree"))
+    monkeypatch.setattr(corte_service, "projetos_dir", lambda: tmp_path)
+    monkeypatch.setattr(corte_service.shutil, "rmtree", _espiao(chamadas, "rmtree"))
     db.get = AsyncMock(return_value=MagicMock(projeto_id="p1"))
+    # __aexit__ que devolve algo verdadeiro engoliria a exceção do bloco.
+    db.begin = MagicMock(
+        return_value=MagicMock(__aenter__=AsyncMock(), __aexit__=AsyncMock(return_value=False))
+    )
+    monkeypatch.setattr(
+        corte_service,
+        "AsyncSessionLocal",
+        lambda: MagicMock(
+            __aenter__=AsyncMock(return_value=db), __aexit__=AsyncMock(return_value=False)
+        ),
+    )
 
-    await cortes.deletar_corte("c1", db)
+    await cortes.deletar_corte("c1")
     assert chamadas == ["rmtree"]
 
 
@@ -93,9 +106,9 @@ async def test_limpeza_pos_sincronizacao_apaga_fora_do_loop(tmp_path, monkeypatc
         chamadas.append(entry.name)
         shutil.rmtree(entry) if entry.is_dir() else entry.unlink()
 
-    monkeypatch.setattr(cortes_helpers, "_apagar_do_disco", apagar)
+    monkeypatch.setattr(finalizacao_do_corte, "_apagar_do_disco", apagar)
 
-    await cortes_helpers._limpar_pasta_corte_pos_sync(tmp_path)
+    await finalizacao_do_corte._limpar_pasta_corte_pos_sync(tmp_path)
 
     assert sorted(chamadas) == ["clip_raw.mkv", "graded"]
     assert (tmp_path / "clip_filtered.mp4").exists(), "o clipe final não pode ser apagado"

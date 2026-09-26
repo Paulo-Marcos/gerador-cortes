@@ -15,11 +15,10 @@ from pathlib import Path
 
 import pytest
 import pytest_asyncio
-from app import editorial_scaffolds, editorial_skills
+from app.infrastructure import claude_cli_client
 from app.models import Base, Corte, Projeto
-from app.services import claude_ia
 from app.services import shorts as shorts_store
-from app.services.claude_ia import ClaudeIaService
+from app.services.canal import editorial_scaffolds, editorial_skills
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -101,9 +100,9 @@ async def test_prompt_leva_a_transcricao_do_bruto_e_a_faixa(ambiente, monkeypatc
         capturado["kwargs"] = kwargs
         return {"shorts": []}
 
-    monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", _fake_generate_json)
+    monkeypatch.setattr(claude_cli_client, "generate_json", _fake_generate_json)
 
-    await ClaudeIaService.sugerir_shorts_via_claude("c1")
+    await shorts_store.sugerir_shorts("c1")
 
     prompt = capturado["prompt"]
     assert "[00:00] ninguem te conta isso sobre juros" in prompt
@@ -137,9 +136,9 @@ async def test_candidatos_validos_sao_persistidos_e_os_invalidos_reportados(ambi
             ]
         }
 
-    monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", _fake_generate_json)
+    monkeypatch.setattr(claude_cli_client, "generate_json", _fake_generate_json)
 
-    resultado = await ClaudeIaService.sugerir_shorts_via_claude("c1")
+    resultado = await shorts_store.sugerir_shorts("c1")
 
     assert [s["titulo"] for s in resultado["shorts"]] == ["A conta que nao fecha"]
     assert resultado["shorts"][0]["duracao_seg"] == 50.0

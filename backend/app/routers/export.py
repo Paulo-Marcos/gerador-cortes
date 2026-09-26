@@ -3,15 +3,18 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from app.channel_paths import (
+from app.core.channel_paths import (
     projetos_dir,
     resolver_do_projeto,
 )
+from app.core.logging import operational_info
 from app.database import get_db
-from app.domain.cinema_filters import FILTROS_CINEMA
 from app.models import Corte, MetadadoCorte, StatusCorte
+from app.routers import export_schemas
 from app.routers.errors import erro_interno
-from app.services.app_logging import operational_info
+
+# Via o service de configurações: o router não fala com a infraestrutura (D-696).
+from app.services.app_settings import FILTROS_CINEMA
 from app.services.cancelamento_jobs import (
     CancelamentoNaoSuportado,
     JobNaoEstaEmVoo,
@@ -39,7 +42,7 @@ def _contar_cenas_remotion(payload: str | None) -> int:
             return len(data)
         if isinstance(data, dict):
             return len(data.get("cenas", []))
-    except Exception:
+    except (ValueError, TypeError):
         pass
     return 0
 
@@ -78,7 +81,7 @@ def _artefatos_de_cada_corte(cortes) -> dict[str, tuple[bool, bool, bool]]:
     return resultado
 
 
-@router.get("/projeto/{projeto_id}/status")
+@router.get("/projeto/{projeto_id}/status", response_model=export_schemas.StatusExportResponse)
 async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Corte)
@@ -150,7 +153,9 @@ async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
     return {"projeto_id": projeto_id, "cortes": items}
 
 
-@router.get("/corte/{corte_id}/cortar/status")
+@router.get(
+    "/corte/{corte_id}/cortar/status", response_model=export_schemas.StatusCorteBrutoResponse
+)
 async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
     status = ExportService.get_tarefa_corte_status(corte_id)
 
@@ -168,7 +173,7 @@ async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.get("/filtros")
+@router.get("/filtros", response_model=export_schemas.FiltrosResponse)
 async def listar_filtros():
     filtros = [
         {
@@ -182,7 +187,11 @@ async def listar_filtros():
     return {"filtros": filtros}
 
 
-@router.get("/corte/{corte_id}/versoes")
+@router.get(
+    "/corte/{corte_id}/versoes",
+    response_model=export_schemas.VersoesResponse,
+    response_model_exclude_unset=True,
+)
 async def listar_versoes(corte_id: str, db: AsyncSession = Depends(get_db)):
     corte = await db.get(Corte, corte_id)
     if not corte:
@@ -213,7 +222,7 @@ async def listar_versoes(corte_id: str, db: AsyncSession = Depends(get_db)):
                     if meta.exists():
                         try:
                             info.update(json.loads(meta.read_text()))
-                        except Exception:
+                        except (OSError, ValueError, TypeError):
                             pass
                     info["tamanho_mb"] = round(arquivo.stat().st_size / 1_000_000, 1)
                     versoes.append(info)
@@ -224,7 +233,9 @@ class ProcessarMultiversionRequest(BaseModel):
     filtros: list[str] | None = None
 
 
-@router.post("/corte/{corte_id}/processar-multiversion")
+@router.post(
+    "/corte/{corte_id}/processar-multiversion", response_model=export_schemas.MultiversionResponse
+)
 async def processar_multiversion(
     corte_id: str,
     body: ProcessarMultiversionRequest = None,
@@ -254,7 +265,11 @@ class YouTubeUploadRequest(BaseModel):
     scheduled_at: str | None = None
 
 
-@router.post("/corte/{corte_id}/youtube")
+@router.post(
+    "/corte/{corte_id}/youtube",
+    response_model=export_schemas.YouTubeUploadResponse,
+    response_model_exclude_unset=True,
+)
 async def upload_to_youtube(
     corte_id: str, body: YouTubeUploadRequest = None, db: AsyncSession = Depends(get_db)
 ):
@@ -279,7 +294,10 @@ class MarcarPublicadoRequest(BaseModel):
     youtube_url: str
 
 
-@router.post("/corte/{corte_id}/youtube/marcar-publicado")
+@router.post(
+    "/corte/{corte_id}/youtube/marcar-publicado",
+    response_model=export_schemas.MarcarPublicadoResponse,
+)
 async def marcar_corte_publicado(
     corte_id: str, body: MarcarPublicadoRequest, db: AsyncSession = Depends(get_db)
 ):
@@ -311,7 +329,10 @@ class LiberarPublicacaoRequest(BaseModel):
     destino: str = "youtube"
 
 
-@router.post("/corte/{corte_id}/publicacao/liberar")
+@router.post(
+    "/corte/{corte_id}/publicacao/liberar",
+    response_model=export_schemas.LiberarPublicacaoResponse,
+)
 async def liberar_publicacao_do_corte(corte_id: str, body: LiberarPublicacaoRequest):
     """Desfaz a marca de publicação de um destino (D-566).
 
@@ -416,7 +437,9 @@ class BulkYouTubeRequest(BaseModel):
     scheduled_dates: list[str | None] | None = None
 
 
-@router.post("/projeto/{projeto_id}/bulk-youtube")
+@router.post(
+    "/projeto/{projeto_id}/bulk-youtube", response_model=export_schemas.BulkYoutubeResponse
+)
 async def bulk_upload_youtube(
     projeto_id: str, body: BulkYouTubeRequest, db: AsyncSession = Depends(get_db)
 ):

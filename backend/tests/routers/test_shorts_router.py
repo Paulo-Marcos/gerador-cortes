@@ -12,11 +12,11 @@ import json
 
 import pytest
 import pytest_asyncio
-from app import editorial_scaffolds, editorial_skills
+from app.infrastructure import claude_cli_client
 from app.models import Base, Corte, Projeto
 from app.routers import shorts as router_mod
-from app.services import claude_ia
 from app.services import shorts as service_mod
+from app.services.canal import editorial_scaffolds, editorial_skills
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -117,7 +117,7 @@ def test_sugerir_agora_persiste_e_devolve_os_candidatos(client, monkeypatch):
             ]
         }
 
-    monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", _fake_generate_json)
+    monkeypatch.setattr(claude_cli_client, "generate_json", _fake_generate_json)
 
     resposta = client.post("/api/shorts/corte/c1/sugerir")
 
@@ -253,7 +253,7 @@ class TestSugerirCenas:
                 capturado["prompt"] = prompt
                 return resposta
 
-            monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", _fake)
+            monkeypatch.setattr(claude_cli_client, "generate_json", _fake)
             return capturado
 
         return responder
@@ -343,7 +343,7 @@ class TestEnquadrarPeloRosto:
         bruto = tmp_path / "bruto.mkv"
         bruto.write_bytes(b"x" * 512)
         monkeypatch.setattr(enquadramento_shorts, "AsyncSessionLocal", session_factory)
-        monkeypatch.setattr("app.services.render_short._bruto_em_disco", lambda corte: bruto)
+        monkeypatch.setattr("app.services.render.render_short._bruto_em_disco", lambda corte: bruto)
 
         async with session_factory() as db:
             db.add(Short(id="s-foco", corte_id="c1", numero=1, inicio_seg=5.0, fim_seg=35.0))
@@ -352,7 +352,7 @@ class TestEnquadrarPeloRosto:
 
     @pytest.fixture()
     def detector(self, monkeypatch):
-        from app.domain.enquadramento_rosto import RostoDetectado
+        from app.domain.short.enquadramento_rosto import RostoDetectado
         from app.services import enquadramento_shorts
 
         def responder(quadros):
@@ -415,7 +415,7 @@ class TestEnquadrarPeloRosto:
 
     def test_sem_bruto_em_disco_e_422(self, client, short, detector, monkeypatch):
         detector([0.8])
-        monkeypatch.setattr("app.services.render_short._bruto_em_disco", lambda corte: None)
+        monkeypatch.setattr("app.services.render.render_short._bruto_em_disco", lambda corte: None)
 
         resposta = client.post("/api/shorts/s-foco/enquadrar")
 

@@ -17,7 +17,7 @@ def ram_disponivel_mb() -> float | None:
         if sys.platform == "win32":
             return _ram_disponivel_windows_mb()
         return _ram_disponivel_linux_mb()
-    except Exception:
+    except Exception:  # noqa: BLE001 — medida opcional: sem leitura, sem limite por RAM
         return None
 
 

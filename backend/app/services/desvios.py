@@ -1,11 +1,11 @@
 import json
 
+from app.core.logging import operational_error
 from app.database import AsyncSessionLocal
-from app.domain.desvio_categoria import OUTRO, motivo_com_aviso, normalizar_categoria
-from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
-from app.domain.time_convert import hms_to_seg
+from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.compartilhado.time_convert import hms_to_seg
+from app.domain.corte.desvio_categoria import OUTRO, motivo_com_aviso, normalizar_categoria
 from app.models import Corte
-from app.services.app_logging import operational_error
 
 PROMPT_ANALISAR_DESVIOS = """Você é um editor de vídeo especialista. Receberá a transcrição de um trecho de vídeo e deverá identificar as partes que podem ser removidas sem comprometer o entendimento da mensagem. Classifique cada trecho em UMA destas categorias:
 
@@ -100,7 +100,7 @@ class DesviosService:
                     "Sincronize a transcrição antes de usar este recurso."
                 )
 
-            from app.domain.transcricao_utils import (
+            from app.domain.projeto.transcricao_utils import (
                 dividir_segmentos_longos,
                 limpar_e_ordenar_transcricao,
             )
@@ -112,7 +112,7 @@ class DesviosService:
             for idx, seg in enumerate(transcricao_granular):
                 seg["global_index"] = idx
 
-            from app.domain.chunker import fatiar_transcricao
+            from app.domain.projeto.chunker import fatiar_transcricao
 
             chunks = fatiar_transcricao(
                 transcricao_granular,
@@ -121,7 +121,7 @@ class DesviosService:
                 min_last_chunk_seg=1200.0,
             )
 
-            from app.domain.time_convert import seg_to_hms_short
+            from app.domain.compartilhado.time_convert import seg_to_hms_short
 
             prompts = []
             for i, chunk in enumerate(chunks):
@@ -210,7 +210,7 @@ class DesviosService:
             if not transcricao:
                 raise ValueError("Transcrição vazia. Sincronize antes.")
 
-            from app.domain.transcricao_utils import (
+            from app.domain.projeto.transcricao_utils import (
                 dividir_segmentos_longos,
                 limpar_e_ordenar_transcricao,
             )
@@ -220,7 +220,7 @@ class DesviosService:
                 transcricao_limpa, max_duracao=4.0, max_palavras=6
             )
 
-            from app.domain.chunker import fatiar_transcricao
+            from app.domain.projeto.chunker import fatiar_transcricao
 
             chunks = fatiar_transcricao(
                 transcricao_granular,
@@ -229,7 +229,7 @@ class DesviosService:
                 min_last_chunk_seg=1200.0,
             )
 
-            from app.domain.time_convert import seg_to_hms_short
+            from app.domain.compartilhado.time_convert import seg_to_hms_short
 
             todos_trechos = []
             erros = []
@@ -260,7 +260,7 @@ class DesviosService:
                     )
                     trechos = resultado.get("trechos", [])
                     todos_trechos.extend(trechos)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — lote: uma parte que falha não para as outras
                     operational_error("Desvios", f"Erro ao analisar parte {i + 1} com Gemini: {e}")
                     erros.append(str(e))
 

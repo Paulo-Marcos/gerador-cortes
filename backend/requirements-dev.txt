@@ -4,3 +4,5 @@ pytest-asyncio>=0.23
 ruff==0.16.4  # D-687: fixo; uma versão nova muda regras e formatação sem o código mudar
 pre-commit>=3.7
 import-linter>=2.15
+pytest-testmon>=2.2  # D-751: roda só os testes que a mudança afeta; não enxerga arquivo que não é Python
+pytest-xdist>=3.8  # D-751: o ciclo antes de cada commit com -n 6 (medido 2,5x mais rápido); suíte completo e CI seguem em série

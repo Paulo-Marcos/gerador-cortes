@@ -34,7 +34,7 @@ async def session_factory():
 @pytest.fixture
 def raiz(monkeypatch, tmp_path):
     """Raiz de dados dublê nos dois módulos que a resolvem."""
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(projeto_module, "projetos_dir", lambda: tmp_path)
     monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
@@ -56,9 +56,10 @@ async def _semear(factory, raiz, *, fire: bool, shorts_finalizados: bool = False
                 projeto_id="p1",
                 numero=1,
                 shorts_finalizados_em=datetime.now(UTC) if shorts_finalizados else None,
+                is_fire=fire,
             )
         )
-        db.add(MetadadoCorte(id="m1", corte_id="c1", is_fire=fire))
+        db.add(MetadadoCorte(id="m1", corte_id="c1"))
         await db.commit()
     return bruto
 

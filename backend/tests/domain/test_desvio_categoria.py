@@ -1,7 +1,7 @@
 """D-422: categoria editorial do trecho a remover."""
 
 import pytest
-from app.domain.desvio_categoria import (
+from app.domain.corte.desvio_categoria import (
     AVISO_IMPRECISAO,
     CATEGORIAS,
     classificar_desvio,

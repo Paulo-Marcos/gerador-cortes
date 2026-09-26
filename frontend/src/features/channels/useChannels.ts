@@ -11,7 +11,7 @@ import {
   type ListaTemasResponse,
   type TemaSelecionado,
   type YoutubeAuthStatus,
-} from '@/lib/channelsApi';
+} from '@/features/channels/api/canais';
 
 const CANAIS_KEY = ['canais'] as const;
 const YOUTUBE_AUTH_KEY = ['youtube-auth-status'] as const;

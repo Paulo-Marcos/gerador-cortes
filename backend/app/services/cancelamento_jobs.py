@@ -19,10 +19,9 @@ oferece retomada limpa — é preferível deixar terminar.
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from dataclasses import dataclass
 
+from app.core.trabalhos_em_voo import RegistroDeTrabalhos
 from app.infrastructure import processos_em_voo
 from app.infrastructure.worker_queue import cancelar_owner
 
@@ -40,41 +39,12 @@ class JobNaoEstaEmVoo(RuntimeError):
     """O job já terminou, nunca começou, ou não foi registrado como cancelável."""
 
 
-@dataclass(frozen=True)
-class _EmVoo:
-    task: asyncio.Task
-    # Dono dos jobs do native worker (normalmente o corte). Vazio quando o
-    # trabalho não enfileira nada no worker — aí só a task é cancelada.
-    owner: str
+class TrabalhoEmVoo(RegistroDeTrabalhos):
+    """O registro do que está em voo (no core), e como pará-lo.
 
-
-class TrabalhoEmVoo:
-    """Registro do que está rodando e pode ser interrompido."""
-
-    _registro: dict[str, _EmVoo] = {}
-
-    @classmethod
-    def registrar(cls, job_id: str, task: asyncio.Task, *, owner: str = "") -> None:
-        """Anuncia `task` como cancelável sob o id `job_id` da fila global.
-
-        A entrada sai sozinha quando a task termina — o registro só reflete o
-        que ainda está em voo, então `cancelar` nunca mira trabalho morto.
-        """
-        cls._registro[job_id] = _EmVoo(task=task, owner=owner)
-        task.add_done_callback(lambda _concluida: cls._registro.pop(job_id, None))
-
-    @classmethod
-    def em_voo(cls, job_id: str) -> bool:
-        return job_id in cls._registro
-
-    @classmethod
-    def ids(cls) -> list[str]:
-        return list(cls._registro)
-
-    @classmethod
-    def limpar(cls) -> None:
-        """Zera o registro (usado em teste)."""
-        cls._registro.clear()
+    O registro mora em `core/trabalhos_em_voo` para a fila de tarefas anotar
+    sem depender deste módulo (D-755); herdado, é o MESMO dicionário.
+    """
 
     @classmethod
     def cancelar(cls, job_id: str) -> int:

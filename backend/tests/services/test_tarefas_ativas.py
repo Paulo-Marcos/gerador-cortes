@@ -1,5 +1,5 @@
 import pytest
-from app.services.tarefas_ativas import (
+from app.core.tarefas_ativas import (
     RETENCAO_SEG,
     TIPO_DESCONHECIDO,
     TarefasAtivas,
@@ -107,7 +107,7 @@ class TestRegistro:
 
         agora_real = __import__("time").time()
         monkeypatch.setattr(
-            "app.services.tarefas_ativas.time.time", lambda: agora_real + RETENCAO_SEG + 1
+            "app.core.tarefas_ativas.time.time", lambda: agora_real + RETENCAO_SEG + 1
         )
 
         assert [t.chave for t in TarefasAtivas.listar()] == ["ia:ativa:c2"]

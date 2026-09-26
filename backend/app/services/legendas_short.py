@@ -15,8 +15,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from app.domain import segmentos_short
-from app.domain.transcricao_fiel import Palavra, recortar_varios
+from app.domain.short import segmentos_short
+from app.domain.short.legenda_short import para_captions
+from app.domain.short.transcricao_fiel import recortar_varios
 from app.services import transcricao_fiel
 
 logger = logging.getLogger(__name__)
@@ -32,37 +33,6 @@ class LegendaDoShort:
     @property
     def total(self) -> int:
         return len(self.captions)
-
-
-def para_captions(palavras: list[Palavra]) -> list[dict]:
-    """Converte `Palavra` no formato `Caption` do `@remotion/captions`.
-
-    Duas conversões que precisam estar certas ou a legenda sai torta:
-
-    - **milissegundos**, não segundos — é a unidade do pacote;
-    - **espaço à esquerda** em toda palavra menos a primeira. O Remotion
-      concatena os tokens crus para montar a frase da página; sem o espaço a
-      linha vira "ninguemtecontaisso".
-
-    Exemplo:
-        >>> para_captions([Palavra("olá", 0.0, 0.4), Palavra("mundo", 0.4, 0.9)])
-        [{'text': 'olá', 'startMs': 0, 'endMs': 400, 'timestampMs': 200, 'confidence': None}, \
-{'text': ' mundo', 'startMs': 400, 'endMs': 900, 'timestampMs': 650, 'confidence': None}]
-    """
-    captions: list[dict] = []
-    for indice, palavra in enumerate(palavras):
-        inicio_ms = int(round(palavra.inicio_seg * 1000))
-        fim_ms = int(round(palavra.fim_seg * 1000))
-        captions.append(
-            {
-                "text": palavra.texto if indice == 0 else f" {palavra.texto}",
-                "startMs": inicio_ms,
-                "endMs": fim_ms,
-                "timestampMs": (inicio_ms + fim_ms) // 2,
-                "confidence": None,
-            }
-        )
-    return captions
 
 
 async def montar_do_short(

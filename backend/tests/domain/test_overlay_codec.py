@@ -3,8 +3,8 @@
 from pathlib import Path
 
 import pytest
-from app.domain.ffmpeg_commands import _build_overlay_input_args
-from app.domain.overlay_codec import (
+from app.infrastructure.render.ffmpeg_commands import _build_overlay_input_args
+from app.infrastructure.render.overlay_codec import (
     OverlayCodec,
     OverlayCodecProfile,
     overlay_codec_profile,

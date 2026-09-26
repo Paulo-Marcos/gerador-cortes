@@ -1,7 +1,7 @@
 """Testes do domínio puro `avaliacao_thumbnail` (D-066)."""
 
 import pytest
-from app.domain.avaliacao_thumbnail import (
+from app.domain.corte.avaliacao_thumbnail import (
     agregar_avaliacoes,
     normalizar_nota,
     normalizar_veredito,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.services.render_ffmpeg_log import append_ffmpeg_command, format_cmd
+from app.services.render.render_ffmpeg_log import append_ffmpeg_command, format_cmd
 
 
 def test_format_cmd_quotes_paths_with_spaces():

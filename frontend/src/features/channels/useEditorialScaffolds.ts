@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   editorialScaffoldsApi,
   type ListaScaffoldsResponse,
-} from '@/lib/editorialScaffoldsApi';
+} from '@/features/channels/api/scaffolds';
 
 const SCAFFOLDS_KEY = ['editorial-scaffolds'] as const;
 

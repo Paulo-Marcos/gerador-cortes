@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { mesclarCortesComExport } from '../cortesDoWorkspace';
+import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 function corte(over: Partial<Corte> & Pick<Corte, 'id' | 'numero'>): Corte {
   return {
@@ -36,7 +37,7 @@ describe('mesclarCortesComExport', () => {
   });
 
   it('usa o dado de export quando ele existe', () => {
-    const exportado: StatusExportCorte = {
+    const exportado: StatusExportCorte = statusExportPendente({
       corte_id: 'a',
       numero: 1,
       titulo: 'Titulo do export',
@@ -47,7 +48,7 @@ describe('mesclarCortesComExport', () => {
       thumbnail_pronta: true,
       metadados_completos: true,
       pronto_publicar: true,
-    };
+    });
 
     const lista = mesclarCortesComExport([corte({ id: 'a', numero: 1 })], [exportado]);
 
@@ -67,7 +68,7 @@ describe('mesclarCortesComExport', () => {
     const lista = mesclarCortesComExport(
       [corte({ id: 'a', numero: 1 }), corte({ id: 'b', numero: 2 })],
       [
-        {
+        statusExportPendente({
           corte_id: 'b',
           numero: 2,
           titulo: 'b',
@@ -78,7 +79,7 @@ describe('mesclarCortesComExport', () => {
           thumbnail_pronta: false,
           metadados_completos: false,
           pronto_publicar: false,
-        },
+        }),
       ],
     );
 

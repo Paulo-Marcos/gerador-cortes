@@ -143,7 +143,7 @@ class Corte(Base):
     # a cada operação que cria ou move corte. Antes o `numero` era carimbado na
     # criação, então corte nascido depois (do desvio, da 2ª passada da análise)
     # ia para o fim mesmo começando no meio da live. Ordem canônica em
-    # `domain/ordem_cortes.py`.
+    # `domain/corte/ordem_cortes.py`.
     posicao_fixada: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     titulo_proposto: Mapped[str] = mapped_column(String(500), default="")
     resumo: Mapped[str] = mapped_column(Text, default="")
@@ -206,6 +206,20 @@ class Corte(Base):
     shorts_finalizados_em: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True, default=None
     )
+    # D-713: as duas marcas editoriais do corte moram NELE. Viviam no metadado
+    # (texto e capa de publicacao), mas governam a limpeza (RN-15) e a fabrica de
+    # shorts — sao julgamentos sobre o corte, nao sobre o texto dele. As colunas
+    # antigas de `metadados_cortes` ficam no banco, sem uso; a migration 007
+    # copiou os valores.
+    is_fire: Mapped[bool] = mapped_column(Integer, default=0)
+    # D-502: o corte foi indicado para a fabrica de shorts A MAO.
+    #
+    # Separado do Fire de proposito. Fire e um julgamento editorial sobre o CORTE
+    # ("isso e bom"); indicar para shorts e uma aposta sobre um TRECHO dele
+    # ("tem um pedaco que renderia"). Um corte mediano pode ter um momento
+    # otimo, e amarrar as duas marcas obrigaria a mentir sobre o corte inteiro
+    # para chegar no trecho.
+    candidato_shorts: Mapped[bool] = mapped_column(Integer, default=0)
     is_leitura: Mapped[int] = mapped_column(Integer, default=0)
     autor_leitura: Mapped[str] = mapped_column(String(200), default="")
     parte_leitura: Mapped[int] = mapped_column(Integer, default=1)
@@ -249,7 +263,7 @@ class Corte(Base):
     segmentos_detectados: Mapped[str] = mapped_column(Text, default="[]")
     # D-576: a ORDEM em que o material deste corte toca. Lista JSON de blocos
     # `{inicio_seg, fim_seg}` em tempo de LIVE, na ordem de exibição — a EDL do
-    # corte. Regra e vocabulário em `domain/arranjo_blocos.py`.
+    # corte. Regra e vocabulário em `domain/corte/arranjo_blocos.py`.
     #
     # NÃO confundir com `desvios`, que a UI chama de "trechos": desvio decide o
     # que SAI, arranjo decide em que ORDEM entra o que ficou. São decisões
@@ -283,7 +297,7 @@ class Corte(Base):
     # live (`Projeto.voto_qualidade_live`, D-372) chega tarde demais para isso:
     # quando a live inteira termina, metade dos cortes já saiu da memória.
     # `voto` 1-5 (NULL = ainda não avaliado); `motivos` é lista JSON de slugs do
-    # vocabulário em `domain/avaliacao_corte.py`. Entra na telemetria (D-303).
+    # vocabulário em `domain/corte/avaliacao_corte.py`. Entra na telemetria (D-303).
     voto_qualidade: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     voto_qualidade_motivos: Mapped[str] = mapped_column(Text, default="[]")
     voto_qualidade_comentario: Mapped[str] = mapped_column(Text, default="")
@@ -735,15 +749,7 @@ class MetadadoCorte(Base):
     # prompt, o operador gera no agente capista dele e sobe a imagem de volta —
     # o mesmo fluxo manual que a D-413 consolidou no horizontal.
     prompt_capa_tiktok: Mapped[str] = mapped_column(Text, default="")
-    is_fire: Mapped[bool] = mapped_column(Integer, default=0)
-    # D-502: o corte foi indicado para a fabrica de shorts A MAO.
-    #
-    # Separado do Fire de proposito. Fire e um julgamento editorial sobre o CORTE
-    # ("isso e bom"); indicar para shorts e uma aposta sobre um TRECHO dele
-    # ("tem um pedaco que renderia"). Um corte mediano pode ter um momento
-    # otimo, e amarrar as duas marcas obrigaria a mentir sobre o corte inteiro
-    # para chegar no trecho.
-    candidato_shorts: Mapped[bool] = mapped_column(Integer, default=0)
+    # D-713: `is_fire` e `candidato_shorts` foram para o Corte.
     numero_serie: Mapped[int] = mapped_column(Integer, default=1)
     cor_serie: Mapped[str] = mapped_column(String(100), default="")
     criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -799,7 +805,7 @@ class AvaliacaoBruto(Base):
 
     `projeto_id` é replicado (e não só derivado via corte) para que o
     levantamento por live não precise de join, e sobreviva ao corte deletado.
-    Vocabulário e validação em `domain/avaliacao_bruto.py`.
+    Vocabulário e validação em `domain/corte/avaliacao_bruto.py`.
     """
 
     __tablename__ = "avaliacoes_bruto"

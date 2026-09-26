@@ -36,7 +36,7 @@ export const SAFE_ZONE = 0.18;
 // o que o `bottom:` do renderer sempre fez. O gancho ancora pelo topo pelo
 // motivo simétrico (`ganchoDoShort.ts`).
 //
-// Espelham `backend/app/domain/legenda_short.py`, e o
+// Espelham `backend/app/domain/short/legenda_short.py`, e o
 // `previaLegenda.test.ts` LÊ aquele arquivo e compara — se um lado mudar
 // sozinho, o teste cai em vez de a prévia mentir sobre o que o render vai fazer.
 

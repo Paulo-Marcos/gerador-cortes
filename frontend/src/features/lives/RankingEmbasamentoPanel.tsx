@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Quote, X } from 'lucide-react';
+import type { EmbasamentoItem } from './api';
 
 /**
  * Painel de embasamento de uma live no ranking (D-356).
@@ -8,18 +9,7 @@ import { Quote, X } from 'lucide-react';
  * dono reconhece → o normalizado (posição no lote) → o peso → a contribuição em
  * pontos; a nota final é a soma das contribuições; e as frases que o Claude extraiu
  * justificando a positividade dos comentários.
- *
- * Os tipos vêm LOCALMENTE aqui (o payload traz `embasamento` on-the-fly; `api.ts`
- * está travado e não descreve o campo — D-356).
  */
-export interface EmbasamentoItem {
-  criterio: string;
-  rotulo: string;
-  valor_bruto: number;
-  valor_normalizado: number;
-  peso: number;
-  contribuicao: number;
-}
 
 interface PanelProps {
   titulo: string;

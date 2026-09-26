@@ -14,8 +14,13 @@ from __future__ import annotations
 
 import asyncio
 
-from app import editorial_scaffolds, editorial_skills, prompts_utilitarios, ranking_settings
-from app.infrastructure import antigravity_cli_client
+from app.services import ambiente
+from app.services.canal import (
+    editorial_scaffolds,
+    editorial_skills,
+    prompts_utilitarios,
+    ranking_settings,
+)
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -103,7 +108,7 @@ async def listar_modelos_gemini():
 
     Vazio quando o CLI não está instalado ou logado — o campo aceita texto livre.
     """
-    modelos = await asyncio.to_thread(antigravity_cli_client.listar_modelos)
+    modelos = await asyncio.to_thread(ambiente.listar_modelos_gemini)
     return ListaModelosGeminiResponse(
         modelos=[ModeloGeminiResponse(id=id_, nome=nome) for id_, nome in modelos]
     )

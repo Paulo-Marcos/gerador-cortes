@@ -10,7 +10,7 @@ import { AlertTriangle, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { PromptUtilitario } from '@/lib/promptsUtilitariosApi';
+import type { PromptUtilitario } from '@/features/channels/api/promptsUtilitarios';
 
 interface Props {
   prompt: PromptUtilitario;

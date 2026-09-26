@@ -12,10 +12,10 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta
 from app.services.cenas_remotion import (
     CenasRemotionService,
     _calcular_limites,
-    _carregar_mapa_falantes,
 )
 
 # ─────────────────────────────────────────────────────────────
@@ -724,12 +724,12 @@ class TestDiarizacaoNasCenas:
     # ── unidades puras ────────────────────────────────────────────────
 
     def test_carregar_mapa_falantes_tolerante(self):
-        assert _carregar_mapa_falantes(None) is None
-        assert _carregar_mapa_falantes("") is None
-        assert _carregar_mapa_falantes("{}") is None  # diarização vazia → sem rótulo
-        assert _carregar_mapa_falantes("{json quebrado") is None
-        assert _carregar_mapa_falantes(123) is None
-        assert _carregar_mapa_falantes(json.dumps(_FALANTES_MAP)) == _FALANTES_MAP
+        assert mapa_falantes_para_meta(None) is None
+        assert mapa_falantes_para_meta("") is None
+        assert mapa_falantes_para_meta("{}") is None  # diarização vazia → sem rótulo
+        assert mapa_falantes_para_meta("{json quebrado") is None
+        assert mapa_falantes_para_meta(123) is None
+        assert mapa_falantes_para_meta(json.dumps(_FALANTES_MAP)) == _FALANTES_MAP
 
     def test_legendas_sem_mapa_nao_prefixam(self):
         # Mesmo com `speaker` no segmento, sem mapa não há prefixo (back-compat).

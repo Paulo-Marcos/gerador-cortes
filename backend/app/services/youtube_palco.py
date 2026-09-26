@@ -6,7 +6,7 @@ camada de FRENTE no FFmpeg do render final. O backend é dono da chave de cache
 (`palco_cache_key`) e do caminho de saída; o gerador Node só recebe o caminho —
 evita divergência de hash entre Python e JS.
 
-O resolver puro em `app.domain.ffmpeg_commands._resolve_shared_fg_png` só procura
+O resolver puro em `app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png` só procura
 o arquivo; quem GERA é este service (efeito colateral fora do domínio puro).
 """
 
@@ -21,8 +21,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from app import channel_paths
-from app.domain.youtube_layout import (
+from app.core import channel_paths, process_runner
+from app.domain.corte.youtube_layout import (
     config_compartilhada_para_full,
     normalizar_layout_youtube,
     palco_cache_key,
@@ -39,6 +39,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 # `channel_paths.palco_cache_dir()` para seguir o canal ATIVO (D-156) — mesma
 # pasta que `_resolve_shared_fg_png` no ffmpeg_commands consome.
 _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-youtube-palco.mjs"
+# D-750: ~3x o pior caso medido (101 s, na primeira execução, a frio; o normal é
+# 11-38 s). Só existe para um Chromium travado não prender o render para sempre.
+_TIMEOUT_DO_GERADOR_SEG = 300
 
 
 def _cache_dir() -> Path:
@@ -359,35 +362,15 @@ async def _ensure_png_para_props(
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 json.dump(props, handle)
             try:
-                proc = await asyncio.create_subprocess_exec(
-                    "node",
-                    str(_GEN_SCRIPT),
-                    str(destino),
-                    props_path,
-                    cwd=str(_REPO_ROOT),
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.STDOUT,
+                resultado = await process_runner.rodar(
+                    ["node", str(_GEN_SCRIPT), str(destino), props_path],
+                    cwd=_REPO_ROOT,
+                    timeout=_TIMEOUT_DO_GERADOR_SEG,
                 )
-                saida_bytes, _ = await proc.communicate()
-                returncode = proc.returncode
-                saida = saida_bytes.decode(errors="replace")
-            except NotImplementedError:
-                # Fallback para Windows caso o SelectorEventLoop esteja ativo
-                import subprocess
-
-                def run_node():
-                    return subprocess.run(
-                        ["node", str(_GEN_SCRIPT), str(destino), props_path],
-                        cwd=str(_REPO_ROOT),
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        text=True,
-                        errors="replace",
-                    )
-
-                result = await asyncio.to_thread(run_node)
-                returncode = result.returncode
-                saida = result.stdout
+                returncode, saida = resultado.returncode, resultado.saida
+            except process_runner.ProcessoEstourouOTempo as exc:
+                # Timeout cai no caminho de falha visível de sempre (D-750).
+                returncode, saida = -1, str(exc)
 
             if returncode != 0:
                 logger.warning(

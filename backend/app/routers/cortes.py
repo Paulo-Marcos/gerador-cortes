@@ -1,26 +1,13 @@
-import asyncio
-import json
 import logging
-import os
-import shutil
-import subprocess
-from datetime import datetime
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
-from app.config import settings
+from app.core.channel_paths import projetos_dir
 from app.database import get_db
-from app.domain import ciclo_corte
-from app.domain.corte_mapper import (
-    extrair_cenas_remotion,
-)
-from app.domain.youtube_layout import aplicar_layout_card_por_contexto, normalizar_layout_youtube
-from app.models import Corte, Projeto, StatusCorte
-from app.provider_ia import ProviderIA
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.models import Corte
 from app.routers.cortes_helpers import (
     _corte_to_dict,
     _hms_to_seg,
-    _limpar_pasta_corte_pos_sync,
 )
 from app.routers.cortes_schemas import (
     AdicionarDesvioRequest,
@@ -44,21 +31,18 @@ from app.routers.cortes_schemas import (
     ValidarCenasRequest,
 )
 from app.routers.errors import erro_interno
+from app.services import abrir_no_sistema, bruto_do_corte, remotion_studio
 from app.services import arranjo as arranjo_service
-from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.cenas_remotion import CenasRemotionService
 from app.services.corte import AtualizarCorteDTO, CorteService
 from app.services.deteccao_segmentos import (
-    VALORES_ACEITOS_DECISAO,
-    aplicar_decisao_segmento,
-    deteccao_em_andamento,
-    executar_deteccao_segmentos,
-    materializar_regiao_em_layout,
+    decidir_segmento as decidir_segmento_detectado,
 )
-from app.services.export import ExportService
+from app.services.deteccao_segmentos import iniciar_deteccao
 from app.services.media_proxy import MediaProxyService
-from app.services.remotion_render import RemotionRenderService
-from app.services.render_progress import RenderProgressStore
+from app.services.render import finalizacao_do_corte, situacao_do_render
+from app.services.render.remotion_render import RemotionRenderService
+from app.services.render.render_progress import RenderProgressStore
 from app.services.tasks import fire_and_forget
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -74,19 +58,17 @@ router = APIRouter()
 # Schemas e helpers puros vivem em cortes_schemas / cortes_helpers (E-006).
 
 
-# ─── Variável global para props ativas do Remotion ──────────────────────────
-_remotion_active_props: dict = {}
-
-
 # ─── Endpoints (rotas fixas ANTES das rotas com {corte_id}) ─────────────────
 
 
 @router.get("/remotion/active-props")
 async def obter_remotion_active_props():
-    """Retorna as props ativas para o Remotion Studio buscar automaticamente."""
-    if not _remotion_active_props:
-        return {}  # Retorna vazio ao invés de 404 para não poluir os logs do Uvicorn durante o render
-    return _remotion_active_props
+    """Retorna as props ativas para o Remotion Studio buscar automaticamente.
+
+    Vazio antes do primeiro pedido — e não 404, para não poluir o log do Uvicorn,
+    que o Studio consulta em laço.
+    """
+    return remotion_studio.props_ativas()
 
 
 @router.get("/{corte_id}", response_model=CorteResponse)
@@ -186,38 +168,14 @@ async def atualizar_corte(
 
 
 @router.post("/{corte_id}/aprovar")
-async def aprovar_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-    # D-665: mesma regra do PATCH — aprovar é um pedido do operador.
-    try:
-        ciclo_corte.validar_pedido_do_operador(
-            getattr(corte.status, "value", corte.status), StatusCorte.APROVADO.value
-        )
-    except ciclo_corte.TransicaoDeCorteInvalida as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    corte.status = StatusCorte.APROVADO
-    await db.commit()
+async def aprovar_corte(corte_id: str):
+    await CorteService.aprovar(corte_id)
     return {"message": "Corte aprovado", "corte_id": corte_id}
 
 
 @router.delete("/{corte_id}")
-async def deletar_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    projeto_id = corte.projeto_id
-
-    await db.delete(corte)
-    await db.commit()
-
-    corte_dir = projetos_dir() / projeto_id / "cortes" / corte_id
-    if corte_dir.exists():
-        # D-645: bruto, grade e overlays somam GB — apagar no loop trava o app.
-        await asyncio.to_thread(shutil.rmtree, corte_dir, ignore_errors=True)
-
+async def deletar_corte(corte_id: str):
+    await CorteService.remover(corte_id)
     return {"message": "Corte deletado com sucesso", "corte_id": corte_id}
 
 
@@ -483,7 +441,7 @@ async def obter_caminho_pasta(corte_id: str, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/{corte_id}/video-bruto")
-async def obter_video_bruto(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def obter_video_bruto(corte_id: str):
     """Serve o arquivo de vídeo bruto (original do corte antes dos tratamentos).
 
     Acrescenta `?v=<mtime>` na URL de redirecionamento para fazer cache-busting
@@ -491,261 +449,53 @@ async def obter_video_bruto(corte_id: str, db: AsyncSession = Depends(get_db)):
     serve o conteúdo cacheado (duração e metadados antigos) mesmo com o
     `clip_raw.mkv` já atualizado no disco.
     """
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
     from fastapi.responses import RedirectResponse
 
-    corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte_id
-
-    def _redirect_with_cache_buster(file_path: Path) -> RedirectResponse:
-        relative_path = f"cortes/{corte_id}/{file_path.name}"
-        try:
-            mtime = int(file_path.stat().st_mtime)
-        except OSError:
-            mtime = 0
-        url = f"/videos/{corte.projeto_id}/{relative_path}?v={mtime}"
-        # Garante que o redirect em si não seja cacheado — apenas o destino é.
-        headers = {"Cache-Control": "no-store"}
-        return RedirectResponse(url=url, headers=headers)
-
-    # Prefer the file recorded in the DB (most recently generated by gerar_bruto_via_worker)
-    if corte.arquivo_clip_path:
-        p = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
-        if p.exists():
-            return _redirect_with_cache_buster(p)
-
-    # Fallback: procura no filesystem.  Inclui glob `clip_raw_*.mkv` para
-    # pegar nomes únicos gerados por estratégia (clip_raw_A_<ts>.mkv etc).
-    # Mais recente por mtime tem prioridade.
-    glob_matches = sorted(
-        list(corte_dir.glob("clip_raw_*.mkv")) + list(corte_dir.glob("clip_raw_*.mp4")),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
-    candidates = [
-        *glob_matches,
-        corte_dir / "clip_raw.mkv",
-        corte_dir / "clip_raw.mp4",
-        corte_dir / "clip_raw_base.mkv",
-        corte_dir / "clip_raw_base.mp4",
-        corte_dir / "clip_raw_backup_com_silencios.mkv",
-        corte_dir / "clip_raw_backup_com_silencios.mp4",
-    ]
-
-    for c in candidates:
-        if c.exists():
-            return _redirect_with_cache_buster(c)
-
-    raise HTTPException(status_code=404, detail="Vídeo bruto não encontrado")
-
-
-def _corte_ja_gerou_bruto(corte: Corte) -> bool:
-    """True se o corte já passou por uma geração de bruto (regeração vs 1ª vez, D-160).
-
-    Usa `_find_clip_raw` (mesma fonte de verdade do pipeline de render), robusto
-    a nomes com timestamp e à relocação da pasta — não confia num caminho stale
-    no banco.
-
-    D-430 — o bruto sobrevive ao render final, mas a limpeza do projeto ainda o
-    apaga. Um corte já trabalhado pode então estar sem arquivo em disco, e ler
-    isso como "1ª geração" faria o `gerar-bruto` re-rodar transcrição + cenas
-    por IA, SOBRESCREVENDO o pós já editado. Por isso as cenas geradas também
-    contam como prova de que o corte já rodou.
-    """
-    from app.services.pipeline_render import _find_clip_raw
-
-    corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte.id
-    if _find_clip_raw(corte_dir) is not None:
-        return True
-    return _corte_tem_cenas_geradas(corte)
-
-
-def _corte_tem_cenas_geradas(corte: Corte) -> bool:
-    """True quando já existem cenas geradas para este corte.
-
-    D-446 — `transcricao_final_texto` NÃO serve como prova: ela é gravada bem
-    antes do bruto por qualquer passo da fase 1 (gerar trechos, registrar
-    desvios, ajustar início/fim do corte no editor). Aceitá-la fazia o 1º
-    "Gerar bruto" ser lido como regeração, e a regeração pula as cenas por
-    design (D-160) — daí as cenas Remotion pararem de sair sozinhas.
-
-    A coluna nasce com default JSON (`"[]"`), então checar o campo cru daria
-    sempre verdadeiro — é o CONTEÚDO que precisa ser inspecionado.
-    """
+    projeto_id, bruto = await bruto_do_corte.localizar(corte_id)
     try:
-        cenas = json.loads(corte.cenas_remotion or "[]")
-    except json.JSONDecodeError:
-        return False
-
-    if isinstance(cenas, dict):
-        cenas = cenas.get("cenas", [])
-    return bool(cenas)
-
-
-async def _avaliar_bruto_gerado(corte_id: str) -> None:
-    """Avalia a estrutura do bruto recém-gerado (D-447), sem poder derrubá-lo.
-
-    Roda DEPOIS de o status virar "pronto": a avaliação é uma observação sobre o
-    bruto, não parte da entrega dele — um erro de IA aqui não pode transformar
-    uma geração bem-sucedida em falha na tela do editor. Por isso o status já
-    está carimbado e a exceção morre no log.
-    """
-    from app.services.claude_ia import ClaudeIaService
-
-    try:
-        await ClaudeIaService.avaliar_bruto_via_claude(corte_id)
-    except Exception as exc:  # noqa: BLE001 — nunca fatal para a geração do bruto
-        logger.warning("[avaliacao-bruto] falhou no corte %s: %s", corte_id[:8], exc)
+        mtime = int(bruto.stat().st_mtime)
+    except OSError:
+        mtime = 0
+    url = f"/videos/{projeto_id}/cortes/{corte_id}/{bruto.name}?v={mtime}"
+    # Garante que o redirect em si não seja cacheado — apenas o destino é.
+    return RedirectResponse(url=url, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/{corte_id}/gerar-bruto")
-async def gerar_bruto(
-    corte_id: str,
-    body: GerarBrutoRequest | None = None,
-    db: AsyncSession = Depends(get_db),
-):
+async def gerar_bruto(corte_id: str, body: GerarBrutoRequest | None = None):
     """Dispara geração assíncrona do vídeo bruto.
 
     Retorna imediatamente; o status pode ser consultado via
-    `GET /export/corte/{corte_id}/cortar/status`. Após sucesso, o corte
-    é atualizado no banco com `arquivo_clip_path`, `duracao_clip_seg` e
-    `transcricao_final` re-sincronizada.
-
-    D-160 — na **1ª geração** (corte sem bruto) roda a cadeia completa
-    (transcrição + cenas). Na **regeração** (bruto já existe) o default é
-    **só o bruto**; refazer transcrição/cenas vira opt-in via `body`.
+    `GET /export/corte/{corte_id}/cortar/status`. Na 1ª geração roda a cadeia
+    completa (transcrição + cenas); na regeração, o `body` escolhe o que refazer
+    além do bruto (D-160).
     """
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    if ExportService.get_tarefa_corte_status(corte_id) == "cortando":
-        return {"message": "Geração de bruto já em andamento", "corte_id": corte_id}
-
     opcoes = body or GerarBrutoRequest()
-    if _corte_ja_gerou_bruto(corte):
-        refazer_transcricao = opcoes.refazer_transcricao
-        refazer_cenas = opcoes.refazer_cenas
-    else:
-        # Primeira geração: cadeia completa (comportamento inalterado).
-        refazer_transcricao = True
-        refazer_cenas = True
-
-    ExportService.set_tarefa_corte_status(corte_id, "cortando")
-
-    async def _run():
-        try:
-            resultado = await ExportService.gerar_bruto_via_worker(
-                corte_id,
-                refazer_transcricao=refazer_transcricao,
-                refazer_cenas=refazer_cenas,
-            )
-            if resultado.get("status") == "pronto":
-                ExportService.set_tarefa_corte_status(corte_id, "pronto")
-                await _avaliar_bruto_gerado(corte_id)
-            else:
-                msg = resultado.get("mensagem", "erro desconhecido")
-                ExportService.set_tarefa_corte_status(corte_id, f"erro: {msg}")
-        except asyncio.CancelledError:
-            # Sem isto o status ficava em "cortando" para sempre e a fila
-            # mostrava o job rodando eternamente depois de cancelado (D-426).
-            ExportService.set_tarefa_corte_status(corte_id, "cancelado")
-            raise
-        except Exception as exc:
-            ExportService.set_tarefa_corte_status(corte_id, f"erro: {exc}")
-
-    task = fire_and_forget(_run(), name=f"gerar-bruto-{corte_id[:8]}")
-    # A fila global publica esta task como `bruto:<corte>` (vem do store do
-    # ExportService, não do nome da task), então o registro de cancelamento
-    # precisa desse id — senão o botão da fila não acha o que parar (D-426).
-    TrabalhoEmVoo.registrar(f"bruto:{corte_id}", task, owner=f"task:gerar-bruto-{corte_id[:8]}")
-    return {"message": "Geração de bruto iniciada", "corte_id": corte_id}
+    return await bruto_do_corte.iniciar_geracao(
+        corte_id,
+        refazer_transcricao=opcoes.refazer_transcricao,
+        refazer_cenas=opcoes.refazer_cenas,
+    )
 
 
 @router.post("/{corte_id}/detectar-segmentos")
-async def detectar_segmentos(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def detectar_segmentos(corte_id: str):
     """F-054: dispara PySceneDetect sobre o bruto do corte (fire-and-forget).
 
     Retorna imediatamente; resultado fica disponível em
     `GET /cortes/{corte_id}` no campo `segmentos_detectados` quando termina.
     """
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    if deteccao_em_andamento(corte_id):
-        return {"status": "em_andamento", "corte_id": corte_id}
-
-    if not corte.arquivo_clip_path:
-        raise HTTPException(
-            status_code=400,
-            detail="Corte ainda não tem vídeo bruto — gere o bruto antes de detectar segmentos.",
-        )
-    video_path = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
-    if not video_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Arquivo bruto não encontrado em disco.",
-        )
-
-    fire_and_forget(
-        executar_deteccao_segmentos(corte_id, video_path), name=f"deteccao-seg-{corte_id[:8]}"
-    )
-    return {"status": "iniciado", "corte_id": corte_id}
+    return await iniciar_deteccao(corte_id)
 
 
 @router.patch("/{corte_id}/segmentos-detectados/{indice}", response_model=CorteResponse)
-async def decidir_segmento(
-    corte_id: str,
-    indice: int,
-    body: DecisaoSegmentoRequest,
-    db: AsyncSession = Depends(get_db),
-):
+async def decidir_segmento(corte_id: str, indice: int, body: DecisaoSegmentoRequest):
     """F-054: aplica decisão (rejeitar/full/compartilhada) a um segmento sugerido.
 
     Aceitar (full/compartilhada) também materializa uma região correspondente
     em `layout_youtube.regioes`. Rejeitar só atualiza o status do segmento.
     """
-    if body.decisao not in VALORES_ACEITOS_DECISAO:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Decisão inválida. Use uma de {sorted(VALORES_ACEITOS_DECISAO)}.",
-        )
-
-    result = await db.execute(
-        select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
-    )
-    corte = result.scalar_one_or_none()
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    segmentos = json.loads(corte.segmentos_detectados or "[]")
-    if not isinstance(segmentos, list) or not segmentos:
-        raise HTTPException(
-            status_code=400,
-            detail="Corte não tem segmentos detectados — rode a detecção primeiro.",
-        )
-
-    try:
-        novos_segmentos, segmento = aplicar_decisao_segmento(segmentos, indice, body.decisao)
-    except IndexError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    corte.segmentos_detectados = json.dumps(novos_segmentos, ensure_ascii=False)
-
-    if body.decisao in {"full", "compartilhada"}:
-        layout_atual = json.loads(corte.layout_youtube or "{}") or {}
-        layout_novo = materializar_regiao_em_layout(layout_atual, segmento, body.decisao)
-        layout_normalizado = normalizar_layout_youtube(layout_novo)
-        corte.layout_youtube = json.dumps(layout_normalizado, ensure_ascii=False)
-
-    await db.commit()
-    await db.refresh(corte)
-    return _corte_to_dict(corte)
+    return _corte_to_dict(await decidir_segmento_detectado(corte_id, indice, body.decisao))
 
 
 @router.get("/{corte_id}/bruto-progress")
@@ -805,41 +555,14 @@ async def preencher_retratos_cenas_remotion(corte_id: str, forcar: bool = False)
 
 
 @router.post("/{corte_id}/cenas-remotion/validar", response_model=CorteResponse)
-async def validar_cenas_remotion(
-    corte_id: str,
-    body: ValidarCenasRequest | None = None,
-    db: AsyncSession = Depends(get_db),
-):
+async def validar_cenas_remotion(corte_id: str, body: ValidarCenasRequest | None = None):
     """Marca/desmarca as cenas Remotion do corte como validadas pelo editor.
 
     Sem corpo, valida (validado=True). Com `{"validado": false}`, desfaz a marca.
     Exige pelo menos uma cena salva no roteiro visual para poder validar.
     """
-    result = await db.execute(
-        select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
-    )
-    corte = result.scalar_one_or_none()
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte nao encontrado")
-
     validado = True if body is None else bool(body.validado)
-
-    if validado:
-        cenas = extrair_cenas_remotion(json.loads(corte.cenas_remotion or "[]"))
-        if not cenas:
-            raise HTTPException(
-                status_code=400,
-                detail="Nao ha cenas para validar. Gere ou importe cenas antes.",
-            )
-        corte.cenas_validadas = 1
-        corte.cenas_validadas_em = datetime.utcnow()
-    else:
-        corte.cenas_validadas = 0
-        corte.cenas_validadas_em = None
-
-    await db.commit()
-    await db.refresh(corte)
-    return _corte_to_dict(corte)
+    return _corte_to_dict(await CenasRemotionService.validar(corte_id, validado))
 
 
 @router.get("/{corte_id}/desvios/prompt")
@@ -881,106 +604,10 @@ async def analisar_desvios_ia(corte_id: str, db: AsyncSession = Depends(get_db))
         raise erro_interno(e) from e
 
 
-def _pipeline_paths(corte: Corte) -> dict[str, Path]:
-    corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte.id
-    graded_dir = corte_dir / "graded"
-    return {
-        "raw_mkv": corte_dir / "clip_raw.mkv",
-        "raw_mp4": corte_dir / "clip_raw.mp4",
-        "graded": graded_dir / "clip_graded.mp4",
-        "graded_dir": graded_dir,
-        "overlays_dir": corte_dir / "overlays",
-        "composed": corte_dir / "temp" / "clip_composed.mp4",
-        "final": corte_dir / "upload_ready" / "video.mp4",
-    }
-
-
-def _arquivo_aproveitavel(path: Path) -> bool:
-    return path.exists() and path.stat().st_size > 1024 * 1024
-
-
-# D-093: a otimizacao de trim-segmentation grava `clip_graded.seg*.ts` +
-# `clip_graded.concat.txt` durante a fase 1; o `.mp4` final so nasce no
-# concat. Sem reconhecer os segmentos, `pipeline-status` reporta grade
-# inexistente e o frontend dispara restart total a cada clique.
-_SEG_MIN_BYTES_APROVEITAVEL = 256 * 1024
-
-
-def _grade_aproveitavel(paths: dict[str, Path]) -> bool:
-    if _arquivo_aproveitavel(paths["graded"]):
-        return True
-    graded_dir = paths.get("graded_dir")
-    if graded_dir is None or not graded_dir.exists():
-        return False
-    concat = graded_dir / "clip_graded.concat.txt"
-    if not concat.exists():
-        return False
-    return any(
-        seg.stat().st_size > _SEG_MIN_BYTES_APROVEITAVEL
-        for seg in graded_dir.glob("clip_graded.seg*.ts")
-    )
-
-
-def _bruto_registrado_aproveitavel(corte: Corte) -> bool:
-    if not corte.arquivo_clip_path:
-        return False
-
-    return _arquivo_aproveitavel(resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id))
-
-
-def _overlay_aproveitavel(path: Path) -> bool:
-    # 256 KB casa com `_OVERLAY_MIN_BYTES_PRONTO` em pipeline_render. Render
-    # incompleto/corrompido geralmente tem <100 KB; chunks curtos válidos
-    # podem ficar bem abaixo dos 10 MB que usávamos antes — usar 10 MB aqui
-    # escondia da UI a opção "Continuar fase 2" quando havia overlays prontos.
-    return path.exists() and path.stat().st_size > 256 * 1024
-
-
 @router.get("/{corte_id}/pipeline-status")
-async def obter_pipeline_status(corte_id: str, db: AsyncSession = Depends(get_db)):
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    paths = _pipeline_paths(corte)
-    overlays = (
-        [
-            p
-            for pattern in ("chunk_*.webm", "chunk_*.mov", "ov_*.webm", "ov_*.mov")
-            for p in paths["overlays_dir"].glob(pattern)
-            if _overlay_aproveitavel(p)
-        ]
-        if paths["overlays_dir"].exists()
-        else []
-    )
-    fases = {
-        "raw": (
-            _arquivo_aproveitavel(paths["raw_mkv"])
-            or _arquivo_aproveitavel(paths["raw_mp4"])
-            or _bruto_registrado_aproveitavel(corte)
-        ),
-        "grade": _grade_aproveitavel(paths),
-        "overlays": len(overlays) > 0,
-        "compose": _arquivo_aproveitavel(paths["composed"]),
-        "render_final": _arquivo_aproveitavel(paths["final"]),
-        "encode": _arquivo_aproveitavel(paths["final"]),
-    }
-    progress = RenderProgressStore.get(corte_id).to_dict()
-    if progress["state"] == "idle" and fases["encode"]:
-        progress = {
-            "state": "done",
-            "progress": 100,
-            "stage": "Render final concluído",
-            "running": False,
-            "elapsed_seconds": 0.0,
-            "error": "",
-        }
-    return {
-        "fases": fases,
-        "overlays_count": len(overlays),
-        "tem_etapas_concluidas": any(fases[k] for k in ("grade", "overlays", "compose", "encode")),
-        **progress,
-    }
+async def obter_pipeline_status(corte_id: str):
+    """Até onde o render do corte já chegou — as fases com artefato e o progresso."""
+    return await situacao_do_render.situacao_do_pipeline(corte_id)
 
 
 @router.post("/{corte_id}/renderizar-pipeline")
@@ -1024,76 +651,13 @@ async def renderizar_pipeline(corte_id: str, body: RenderPipelineRequest | None 
 
 
 @router.get("/{corte_id}/remotion-studio-url")
-async def obter_remotion_studio_url(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def obter_remotion_studio_url(corte_id: str):
     """Gera a URL do Remotion Studio e salva as props ativas para o Studio buscar."""
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte_id
-    clip_path = None
-    for candidate in ["clip_raw.mkv", "clip_raw.mp4"]:
-        p = corte_dir / candidate
-        if p.exists():
-            clip_path = p
-            break
-
-    if not clip_path:
-        raise HTTPException(
-            status_code=404,
-            detail="Vídeo exportado não encontrado. Execute 'Exportar NLE' primeiro.",
-        )
-
-    clip_filename = clip_path.name
-    video_url = (
-        f"{settings.backend_public_url}/videos/{corte.projeto_id}/cortes/{corte_id}/{clip_filename}"
-    )
-
-    cenas_salvas = json.loads(corte.cenas_remotion or "[]")
-    if isinstance(cenas_salvas, dict):
-        cenas_array = cenas_salvas.get("cenas", [])
-    else:
-        cenas_array = cenas_salvas
-
-    # Roteia o Studio para a composição correta conforme a versão do renderer
-    # escolhida no projeto. V2 inclui sombraNivelPadrao no payload.
-    projeto = await db.get(Projeto, corte.projeto_id)
-
-    layout_youtube = normalizar_layout_youtube(
-        json.loads(getattr(corte, "layout_youtube", "") or "{}"),
-        fallback_layout=getattr(projeto, "layout_youtube_padrao", None),
-    )
-    # V1 desativada — todos os projetos usam V2 (nova identidade editorial).
-    sombra_padrao = getattr(projeto, "sombra_nivel_padrao", "nenhuma") or "nenhuma"
-    layout_card_padrao = getattr(projeto, "layout_card_padrao", "vertical") or "vertical"
-    composition_id = "CenaYouTubeV2"
-
-    props = {
-        "videoUrl": video_url,
-        "letterbox": False,
-        "filtroCss": "none",
-        "cenas": aplicar_layout_card_por_contexto(cenas_array, layout_youtube),
-        "layoutYoutube": layout_youtube,
-        "sombraNivelPadrao": sombra_padrao,
-        "layoutCardPadrao": layout_card_padrao,
-    }
-
-    global _remotion_active_props
-    _remotion_active_props = props
-
-    # Porta vem da config: o Studio precisa ficar fora da faixa 3000-3100 que
-    # o renderer usa para servir o bundle. Ver `remotion_studio_port`.
-    studio_url = f"http://localhost:{settings.remotion_studio_port}/{composition_id}"
-
-    return {
-        "studio_url": studio_url,
-        "video_url": video_url,
-        "props": props,
-    }
+    return await remotion_studio.abrir_no_studio(corte_id)
 
 
 @router.post("/{corte_id}/sincronizar-pos-producao")
-async def sincronizar_pos_producao(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def sincronizar_pos_producao(corte_id: str):
     """
     Promove clip_filtered.mp4 -> upload_ready/ quando o corte tem versão filtrada
     mas nenhuma cena Remotion foi criada. Também finaliza o pacote (metadados +
@@ -1101,67 +665,14 @@ async def sincronizar_pos_producao(corte_id: str, db: AsyncSession = Depends(get
     o pipeline do Remotion produziria. Após sucesso, limpa a pasta do corte
     mantendo apenas clip_filtered.mp4 e upload_ready/.
     """
-    from app.services.remotion_render import RemotionRenderService
-
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    cenas_raw = corte.cenas_remotion or "[]"
-    cenas_data = json.loads(cenas_raw)
-    if isinstance(cenas_data, dict):
-        cenas = cenas_data.get("cenas", [])
-    else:
-        cenas = cenas_data
-
-    corte_dir = projetos_dir() / corte.projeto_id / "cortes" / corte.id
-    clip_filtered = corte_dir / "clip_filtered.mp4"
-    upload_ready_dir = corte_dir / "upload_ready"
-    upload_ready_video = upload_ready_dir / "video.mp4"
-
-    # Caso 1: já existe upload_ready/video.mp4 — apenas finaliza (gera metadados + thumb se faltar)
-    if upload_ready_video.exists():
-        await RemotionRenderService.finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
-        await _limpar_pasta_corte_pos_sync(corte_dir)
-        return {"status": "ok", "mensagem": "Sincronizado via upload_ready existente."}
-
-    # Caso 2: tem clip_filtered mas não tem cenas Remotion -> promove e finaliza
-    if not cenas and clip_filtered.exists():
-        upload_ready_dir.mkdir(parents=True, exist_ok=True)
-        # D-645: cópia do vídeo final inteiro — fora do event loop.
-        await asyncio.to_thread(shutil.copy2, str(clip_filtered), str(upload_ready_video))
-        await RemotionRenderService.finalizar_corte_com_sucesso(db, corte, upload_ready_dir)
-        await _limpar_pasta_corte_pos_sync(corte_dir)
-        return {"status": "ok", "mensagem": "Promovido e sincronizado com sucesso."}
-
-    return {
-        "status": "nada_a_fazer",
-        "mensagem": "Requisitos para sincronização automática não atendidos.",
-    }
+    return await finalizacao_do_corte.sincronizar_pos_producao(corte_id)
 
 
 @router.post("/{corte_id}/abrir-pasta")
-async def abrir_pasta(corte_id: str, db: AsyncSession = Depends(get_db)):
+async def abrir_pasta(corte_id: str):
     """Abre a pasta física do corte no explorador de arquivos do sistema (Windows/Mac/Linux)."""
-    corte = await db.get(Corte, corte_id)
-    if not corte:
-        raise HTTPException(status_code=404, detail="Corte não encontrado")
-
-    dir_path = projetos_dir() / corte.projeto_id / "cortes" / corte_id
-    if not dir_path.exists():
-        dir_path.mkdir(parents=True, exist_ok=True)
-
-    abs_path = str(dir_path.absolute())
-
     try:
-        if os.name == "nt":  # Windows
-            os.startfile(abs_path)
-        elif os.uname().sysname == "Darwin":  # macOS
-            subprocess.run(["open", abs_path])
-        else:  # Linux
-            subprocess.run(["xdg-open", abs_path])
-
-        return {"status": "ok", "dir_path": abs_path}
-    except Exception as e:
-        logger.exception("[RouterCortes] Erro ao abrir pasta: %s", e)
-        raise HTTPException(status_code=500, detail=f"Erro ao abrir pasta: {str(e)}") from e
+        caminho = await CorteService.abrir_pasta(corte_id)
+    except abrir_no_sistema.NaoConsegueAbrir as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao abrir pasta: {e}") from e
+    return {"status": "ok", "dir_path": caminho}

@@ -2,8 +2,8 @@ import logging
 import re
 
 import pytest
-from app.services import app_logging
-from app.services.app_logging import AccessLogFilter, AppLogLevelFilter, operational_info
+from app.core import logging as app_logging
+from app.core.logging import AccessLogFilter, AppLogLevelFilter, operational_info
 from app.services.app_settings import AppSettingsService, LogLevel
 
 
@@ -192,7 +192,7 @@ def test_operational_info_nao_propaga_erro_de_encoding(tmp_path, monkeypatch):
     AppSettingsService.set_settings_path_for_tests(tmp_path / "app_settings.json")
     AppSettingsService.update_log_level(LogLevel.INFO)
 
-    import app.services.app_logging as al
+    import app.core.logging as al
 
     chamadas = []
 

@@ -11,9 +11,14 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from http import HTTPStatus
 
 import httpx
 from app.config import settings
+
+# Achar o canal de um @handle é uma consulta só; as listas podem vir paginadas.
+_TIMEOUT_DO_HANDLE_S = 15.0
+_TIMEOUT_DAS_LISTAS_S = 30.0
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +82,7 @@ def _parsear_iso_utc(iso: str) -> datetime:
 
 def _raise_se_quota(resp: httpx.Response, contexto: str) -> None:
     """Levanta com `quota_excedida=True` quando o YouTube responde 403/quotaExceeded."""
-    if resp.status_code == 200:
+    if resp.status_code == HTTPStatus.OK:
         return
     is_quota = False
     try:
@@ -254,7 +259,7 @@ async def buscar_top_comentarios(
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         resp = await client.get(f"{BASE_URL}/commentThreads", params=params)
 
-    if resp.status_code == 403:
+    if resp.status_code == HTTPStatus.FORBIDDEN:
         try:
             payload = resp.json()
         except Exception:  # noqa: BLE001
@@ -281,3 +286,86 @@ async def buscar_top_comentarios(
             )
         )
     return comentarios
+
+
+# ─── Lives do canal próprio, para o navegador de lives (D-696) ──────────────
+#
+# Vieram do router `youtube_browser`, que chamava a API direto. A resposta
+# fora de 200 sobe como `RespostaNaoOk` com o texto da API: é quem chama que
+# decide o que o operador vê.
+
+
+class RespostaNaoOk(RuntimeError):
+    """A API respondeu com status diferente de 200; `texto` é o corpo dela."""
+
+    def __init__(self, texto: str):
+        super().__init__(texto)
+        self.texto = texto
+
+
+async def canal_do_handle(handle: str, api_key: str) -> str | None:
+    """O channel_id (UC…) de um @handle, ou `None` se a API não o conhece."""
+    async with httpx.AsyncClient(timeout=_TIMEOUT_DO_HANDLE_S) as client:
+        r = await client.get(
+            f"{BASE_URL}/channels",
+            params={"part": "id", "forHandle": handle, "key": api_key},
+        )
+    if r.status_code != HTTPStatus.OK:
+        raise RespostaNaoOk(r.text)
+    items = r.json().get("items", [])
+    return items[0]["id"] if items else None
+
+
+async def buscar_lives_encerradas(
+    channel_id: str, *, api_key: str, max_results: int, published_after: str
+) -> list[str]:
+    """Os ids das lives já encerradas do canal, das mais novas para as mais antigas."""
+    params: dict = {
+        "part": "id,snippet",
+        "channelId": channel_id,
+        "type": "video",
+        "eventType": "completed",
+        "order": "date",
+        "maxResults": max_results,
+        "key": api_key,
+    }
+    if published_after:
+        params["publishedAfter"] = published_after
+    async with httpx.AsyncClient(timeout=_TIMEOUT_DAS_LISTAS_S) as client:
+        r = await client.get(f"{BASE_URL}/search", params=params)
+    if r.status_code != HTTPStatus.OK:
+        raise RespostaNaoOk(r.text)
+    return [item["id"]["videoId"] for item in r.json().get("items", [])]
+
+
+async def detalhes_dos_videos(video_ids: list[str], api_key: str) -> list[dict]:
+    """snippet e contentDetails de cada vídeo, na ordem que a API devolver."""
+    async with httpx.AsyncClient(timeout=_TIMEOUT_DAS_LISTAS_S) as client:
+        r = await client.get(
+            f"{BASE_URL}/videos",
+            params={"part": "id,snippet,contentDetails", "id": ",".join(video_ids), "key": api_key},
+        )
+    if r.status_code != HTTPStatus.OK:
+        raise RespostaNaoOk(r.text)
+    return r.json().get("items", [])
+
+
+async def datas_de_publicacao(video_ids: list[str], api_key: str) -> dict[str, str]:
+    """O publishedAt de cada vídeo, de 50 em 50 (o limite da API).
+
+    Um lote que falha só fica sem data — quem chama segue com o resto.
+    """
+    datas: dict[str, str] = {}
+    async with httpx.AsyncClient(timeout=_TIMEOUT_DAS_LISTAS_S) as client:
+        for i in range(0, len(video_ids), 50):
+            chunk = video_ids[i : i + 50]
+            resp = await client.get(
+                f"{BASE_URL}/videos",
+                params={"part": "id,snippet", "id": ",".join(chunk), "key": api_key},
+            )
+            if resp.status_code != HTTPStatus.OK:
+                logger.warning("Nao foi possivel buscar publishedAt dos videos: %s", resp.text)
+                continue
+            for item in resp.json().get("items", []):
+                datas[item["id"]] = item.get("snippet", {}).get("publishedAt", "")
+    return datas

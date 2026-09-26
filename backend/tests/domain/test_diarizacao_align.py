@@ -1,6 +1,6 @@
 """Testes do alinhamento puro de falantes (D-286)."""
 
-from app.domain.diarizacao_align import (
+from app.domain.projeto.diarizacao_align import (
     alinhar_falantes,
     heuristica_falante_canal,
     montar_mapa_falantes,

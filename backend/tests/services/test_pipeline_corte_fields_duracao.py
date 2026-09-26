@@ -8,7 +8,7 @@ rodarem além do conteúdo real e congelarem o último frame (D-362).
 
 import json
 
-from app.services.pipeline_corte_fields import _duracao_layout_corte
+from app.services.render.pipeline_corte_fields import _duracao_layout_corte
 
 
 def test_usa_duracao_clip_seg_quando_presente():

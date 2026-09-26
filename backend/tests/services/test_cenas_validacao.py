@@ -15,9 +15,11 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from app.domain.compartilhado.erros import ErroDeDominio
 from app.routers import cortes as cortes_router
 from app.routers.cortes import AtualizarCorteRequest, ValidarCenasRequest
-from fastapi import HTTPException
+from app.routers.errors import responder_erro_de_dominio
+from app.services import cenas_remotion
 
 
 def _corte_estavel(*, cenas_remotion="[]", cenas_validadas=0):
@@ -108,39 +110,67 @@ def _db_que_retorna(corte):
     db.execute = fake_execute
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
+    # __aexit__ que devolve algo verdadeiro engoliria a exceção do bloco.
+    db.begin = MagicMock(
+        return_value=MagicMock(__aenter__=AsyncMock(), __aexit__=AsyncMock(return_value=False))
+    )
     return db
 
 
+def _sessao_do_service(monkeypatch, db) -> None:
+    """A validação abre a própria sessão no service (D-705): ela devolve `db`."""
+    monkeypatch.setattr(
+        cenas_remotion,
+        "AsyncSessionLocal",
+        lambda: MagicMock(
+            __aenter__=AsyncMock(return_value=db), __aexit__=AsyncMock(return_value=False)
+        ),
+    )
+
+
+def _confirmou(db) -> bool:
+    """A transação do `db.begin()` terminou sem exceção — isto é, foi confirmada."""
+    saida = db.begin.return_value.__aexit__
+    return saida.await_count == 1 and saida.await_args.args[0] is None
+
+
+async def _http_de(erro) -> tuple[int, str]:
+    """O que o tratador global responde para o erro de domínio (D-697)."""
+    resposta = await responder_erro_de_dominio(None, erro)
+    return resposta.status_code, json.loads(resposta.body)["detail"]
+
+
 @pytest.mark.asyncio
-async def test_validar_sem_body_marca_validado_e_grava_timestamp():
+async def test_validar_sem_body_marca_validado_e_grava_timestamp(monkeypatch):
     corte = _corte_estavel(
         cenas_remotion=json.dumps([{"tipo": "tela_cheia", "inicio": 0, "fim": 5}]),
         cenas_validadas=0,
     )
     db = _db_que_retorna(corte)
+    _sessao_do_service(monkeypatch, db)
 
-    resposta = await cortes_router.validar_cenas_remotion("corte-1", body=None, db=db)
+    resposta = await cortes_router.validar_cenas_remotion("corte-1", body=None)
 
     assert corte.cenas_validadas == 1
     assert corte.cenas_validadas_em is not None
     assert resposta["cenas_validadas"] == 1
     assert resposta["cenas_validadas_em"] is not None
-    db.commit.assert_awaited_once()
+    assert _confirmou(db)
 
 
 @pytest.mark.asyncio
-async def test_validar_com_validado_false_desfaz_a_marca():
+async def test_validar_com_validado_false_desfaz_a_marca(monkeypatch):
     corte = _corte_estavel(
         cenas_remotion=json.dumps([{"tipo": "tela_cheia", "inicio": 0, "fim": 5}]),
         cenas_validadas=1,
     )
     corte.cenas_validadas_em = datetime(2026, 5, 23, 10, 0, 0)
     db = _db_que_retorna(corte)
+    _sessao_do_service(monkeypatch, db)
 
     resposta = await cortes_router.validar_cenas_remotion(
         "corte-1",
         body=ValidarCenasRequest(validado=False),
-        db=db,
     )
 
     assert corte.cenas_validadas == 0
@@ -150,36 +180,37 @@ async def test_validar_com_validado_false_desfaz_a_marca():
 
 
 @pytest.mark.asyncio
-async def test_validar_recusa_quando_nao_ha_cenas_salvas():
+async def test_validar_recusa_quando_nao_ha_cenas_salvas(monkeypatch):
     corte = _corte_estavel(cenas_remotion="[]", cenas_validadas=0)
     db = _db_que_retorna(corte)
+    _sessao_do_service(monkeypatch, db)
 
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(ErroDeDominio) as exc:
         await cortes_router.validar_cenas_remotion(
             "corte-1",
             body=ValidarCenasRequest(validado=True),
-            db=db,
         )
 
-    assert exc.value.status_code == 400
-    assert "Nao ha cenas" in exc.value.detail
-    db.commit.assert_not_called()
+    status, detalhe = await _http_de(exc.value)
+    assert status == 400
+    assert "Nao ha cenas" in detalhe
+    assert not _confirmou(db)
     # nao alterou a flag
     assert corte.cenas_validadas == 0
 
 
 @pytest.mark.asyncio
-async def test_validar_404_quando_corte_inexistente():
+async def test_validar_404_quando_corte_inexistente(monkeypatch):
     db = _db_que_retorna(None)
+    _sessao_do_service(monkeypatch, db)
 
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(ErroDeDominio) as exc:
         await cortes_router.validar_cenas_remotion(
             "nao-existe",
             body=ValidarCenasRequest(validado=True),
-            db=db,
         )
 
-    assert exc.value.status_code == 404
+    assert (await _http_de(exc.value))[0] == 404
 
 
 @pytest.mark.asyncio

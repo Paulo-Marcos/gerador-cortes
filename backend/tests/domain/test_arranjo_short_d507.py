@@ -7,7 +7,7 @@ na tela em vez de virar um palco torto no arquivo.
 """
 
 import pytest
-from app.domain.arranjo_short import (
+from app.domain.short.arranjo_short import (
     Arranjo,
     Disposicao,
     ModoPalco,
@@ -17,7 +17,7 @@ from app.domain.arranjo_short import (
     slots_de,
     sugerir,
 )
-from app.domain.palco_short import CANVAS
+from app.domain.short.palco_short import CANVAS
 
 SO_PESSOA = {"pessoa": {"x": 0, "y": 0, "w": 640, "h": 480}}
 AS_DUAS = {**SO_PESSOA, "tela": {"x": 700, "y": 100, "w": 1200, "h": 700}}

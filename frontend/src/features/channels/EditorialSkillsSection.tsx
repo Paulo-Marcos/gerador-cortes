@@ -7,7 +7,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
-import type { CampoReset, EditorialSkill, UpdateSkillPayload } from '@/lib/editorialSkillsApi';
+import type { CampoReset, EditorialSkill, UpdateSkillPayload } from '@/features/channels/api/skillsEditoriais';
 import { EditorialSkillCard } from './EditorialSkillCard';
 import { EditorialSkillForm } from './EditorialSkillForm';
 import { EditorialSkillHistory } from './EditorialSkillHistory';

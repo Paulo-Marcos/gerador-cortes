@@ -32,7 +32,7 @@ import { lugarDaLegenda } from './previaLegenda';
 import { PalcoPrevia } from './PalcoPrevia';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
-import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
+import { useUltimaGeracao } from '@/features/ia';
 import { useSugerirGanchos } from './useShortsDoCorte';
 import type { PalavraTranscrita, PlanoDesenhavel, ShortSugerido } from './shortsApi';
 

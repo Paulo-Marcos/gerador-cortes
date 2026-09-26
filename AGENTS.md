@@ -46,12 +46,12 @@ SQLite via SQLAlchemy assíncrono (WAL), um banco por canal
 
 - **`domain/` é puro** e é onde moram as **regras de negócio** (não "utilitários"): sem FastAPI, sem SQLAlchemy, sem HTTP, sem cliente externo, sem importar `models`.
 - **Routers** só convertem HTTP ↔ serviço. **Services** orquestram. **Infrastructure** fala com o mundo (CLIs de IA, APIs do Google, ffmpeg, a fila do worker).
-- As fronteiras são **verificadas por máquina**: 4 contratos do import-linter em `backend/pyproject.toml` (`[tool.importlinter]`), rodados pelo CI e por um teste do pytest. A dívida conhecida está listada em `ignore_imports`, cada item com a demanda que vai quitá-la; import novo na direção errada quebra o build.
+- As fronteiras são **verificadas por máquina**: os contratos do import-linter em `backend/pyproject.toml` (`[tool.importlinter]`), rodados pelo CI e por um teste do pytest. A dívida conhecida está listada em `ignore_imports`, cada item com a demanda que vai quitá-la; import novo na direção errada quebra o build.
 - I/O é assíncrono. Operações longas (download, transcrição, render) rodam como tarefas em segundo plano; o progresso chega ao frontend por WebSocket.
 
 ### Inteligência artificial
 
-Dois provedores, ambos pela **assinatura** do operador (sem chave de API): `claude` (Claude CLI, `infrastructure/claude_cli_client.py`) e `gemini` (Antigravity CLI, `agy -p`, `infrastructure/antigravity_cli_client.py`). O tipo `ProviderIA` está em `app/provider_ia.py`. Há também o **modo manual** (o prompt é copiado e a resposta colada, `domain/manual_prompt.py`) e o cliente da **API do Gemini** (`infrastructure/gemini_client.py`), usado por cenas, desvios e thumbnails.
+Dois provedores, ambos pela **assinatura** do operador (sem chave de API): `claude` (Claude CLI, `infrastructure/claude_cli_client.py`) e `gemini` (Antigravity CLI, `agy -p`, `infrastructure/antigravity_cli_client.py`). O tipo `ProviderIA` está em `app/domain/compartilhado/provider_ia.py`. Há também o **modo manual** (o prompt é copiado e a resposta colada, `domain/compartilhado/manual_prompt.py`) e o cliente da **API do Gemini** (`infrastructure/gemini_client.py`), usado por cenas, desvios e thumbnails.
 
 As skills editoriais (análise, metadados, capa etc.) são **por canal, no banco**, editáveis pela tela de Canais — não em `.claude/skills/`.
 
@@ -81,7 +81,9 @@ Projeto: pendente → baixando → transcrevendo → pronto → analisando → a
 Corte:   proposto ⇄ aprovado → processado   (rejeitado é legado; "Rejeitar" exclui o corte)
 ```
 
-As transições têm dono no domínio: `domain/ciclo_projeto.py` e `domain/ciclo_corte.py` (RN-01, RN-04). O PATCH do corte recusa com 400 uma transição fora da tabela. Os caminhos em segundo plano mudam status por `services/ciclo_de_vida.py`, que registra aviso — em vez de exceção — para o que a tabela não prevê. Mudar um enum de status exige migração.
+As transições têm dono no domínio: `domain/projeto/ciclo_projeto.py` e `domain/corte/ciclo_corte.py` (RN-01, RN-04). O PATCH do corte recusa com 400 uma transição fora da tabela. Os caminhos em segundo plano mudam status por `services/ciclo_de_vida.py`, que registra aviso — em vez de exceção — para o que a tabela não prevê. Mudar um enum de status exige migração.
+
+O schema do `projetos.db` evolui por um caminho só, no boot (`app/migrations/migrar_schema`, D-701): **coluna nova se declara no modelo** — a reconciliação a acrescenta, com o default literal dele; transformação de dado, índice ou restrição vira migration versionada em `app/migrations/`. Não há lista de `ALTER` à mão.
 
 ## Configuração
 
@@ -94,6 +96,7 @@ As transições têm dono no domínio: `domain/ciclo_projeto.py` e `domain/ciclo
 
 - **Ação "gerar com IA" dispara sozinha no gesto do fluxo**, sem modal de confirmação, e nunca sobrescreve texto que já foi gerado (a capa é a exceção).
 - Vocabulário do domínio (`Projeto`, `Corte`, `Metadado`, `Short`, `Ingestão`, `Análise`) é o mesmo em código, banco e tela — não invente sinônimo. Termos que se confundem estão no [glossário](docs/dominio/glossario.md).
+- Nome de função é **verbo em português**, como o resto do código (`gerar_`, `montar_`, `resolver_`). Termo técnico de uma ferramenta fica como a ferramenta o chama (`cmd`, `filter`, `hwaccel`, `cdp`). O que já existe em inglês (os `build_*_cmd` do FFmpeg) não se renomeia só por isso: a regra vale para o que nasce (D-718).
 
 ## Skills por pasta
 
@@ -196,7 +199,22 @@ npm run lint && npx tsc --noEmit && npx vitest run && npm run build
 - **Não rode `npm run format`** (prettier `--write`): o CI não usa prettier e o comando reescreve o repositório inteiro.
 - **Nunca declare verde pelo código de saída de um pipe** (`cmd | tail; echo $?` mostra o código do `tail`). Grave a saída num arquivo e leia.
 - No Windows, `lint-imports > NUL` sai com 1 mesmo com todos os contratos KEPT (a impressão do `rich` em cp1252). Rode com `PYTHONUTF8=1` ou grave a saída em arquivo.
-- **Confira o encoding depois de uma edição feita por agente**: tsc, eslint e vitest não pegam mojibake. O teste `tests/test_sem_mojibake_d668.py` pega.
+- **Confira o encoding depois de uma edição feita por agente**: tsc, eslint e vitest não pegam mojibake. O teste `tests/test_sem_mojibake_d668.py` pega — e, por ser pesado, fica fora do ciclo rápido: rode-o explicitamente (`pytest tests/test_sem_mojibake_d668.py`).
+
+### Níveis de teste do backend (D-751)
+
+O portão acima é o **suíte completo**: obrigatório antes de declarar pronto e o que o CI roda sempre. No dia a dia há níveis mais rápidos. Tempos medidos em 23-24/09/2026 nesta máquina (variam com a carga):
+
+| Momento | Comando (em `backend/`) | Custo medido |
+|---|---|---|
+| Enquanto edita | `pytest --testmon` | 2 s sem mudança; 13 s mudando `hms_to_seg` (132 testes) |
+| Antes de cada commit | `pytest -m "not integration" -n 6` | ~50 s (3.474 testes; ~2 min em série) |
+| Ao fechar uma demanda e antes do push | `pytest` (em série) | ~5 min (3.516 testes) |
+
+- **`integration` marca o teste pesado pelo recurso que ele usa**, não pelo nome: processo externo real (ffmpeg, worker Node, OpenCV), varredura do repositório ou codificação de imagem. Teste novo com esse perfil nasce marcado.
+- **O testmon só enxerga código Python executado.** Mudou `pyproject.toml` (contratos), `openapi.json`, script Node ou JSON de fixture: rode o suíte completo.
+- A primeira `pytest --testmon` constrói a base local (`.testmondata`, fora do git) rodando tudo, em cerca de 7 min. `--testmon` não funciona com `-p no:cacheprovider`: o plugin lê opções do cache do pytest.
+- **`-n 6` (pytest-xdist) só no ciclo antes do commit.** Com 6 processos, 4 rodadas seguidas passaram inteiras; com 4 ou 12 apareceram falhas. Dois testes conhecidos podem falhar por ambiente, não por defeito — se um deles falhar, rode de novo em série: `test_os_dois_robos_nunca_dividem_a_porta` (consulta portas e processos da máquina; D-737) e `test_o_app_continua_respondendo_enquanto_o_disco_apaga` (sensível à disputa de CPU; D-752). Falha em qualquer outro teste é real. O suíte completo e o CI seguem em série: os pesados não foram medidos em paralelo.
 
 ## Princípios de engenharia (com pragmatismo)
 

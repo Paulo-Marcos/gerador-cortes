@@ -11,8 +11,7 @@ import asyncio
 import gc
 
 import pytest
-from app.routers import shorts
-from app.services import tasks
+from app.services import publicacao_no_tiktok, tasks
 
 
 @pytest.mark.asyncio
@@ -23,9 +22,9 @@ async def test_a_vigilia_fica_com_dono_e_sobrevive_ao_coletor(monkeypatch):
         comecou.set()
         await asyncio.sleep(5)
 
-    monkeypatch.setattr(shorts, "_marcar_quando_publicar", vigilia_longa)
+    monkeypatch.setattr(publicacao_no_tiktok, "_marcar_quando_publicar", vigilia_longa)
 
-    tarefa = shorts._vigiar_publicacao_no_tiktok("corte-123456789")
+    tarefa = publicacao_no_tiktok.vigiar_publicacao("corte-123456789")
     await comecou.wait()
 
     assert tarefa in tasks._background_tasks, "sem dono, o coletor pode levar a vigília"
@@ -40,9 +39,9 @@ async def test_falha_na_vigilia_nao_derruba_nada_e_solta_a_referencia(monkeypatc
     async def vigilia_que_falha(_corte_id: str) -> None:
         raise RuntimeError("aba fechada no meio")
 
-    monkeypatch.setattr(shorts, "_marcar_quando_publicar", vigilia_que_falha)
+    monkeypatch.setattr(publicacao_no_tiktok, "_marcar_quando_publicar", vigilia_que_falha)
 
-    tarefa = shorts._vigiar_publicacao_no_tiktok("corte-123456789")
+    tarefa = publicacao_no_tiktok.vigiar_publicacao("corte-123456789")
     await asyncio.sleep(0)
     await asyncio.sleep(0)
 

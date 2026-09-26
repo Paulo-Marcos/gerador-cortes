@@ -23,7 +23,6 @@ semanas a este projeto (D-384).
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import logging
@@ -31,12 +30,15 @@ import os
 import tempfile
 from pathlib import Path
 
-from app import channel_paths
+from app.core import channel_paths, process_runner
 
 logger = logging.getLogger(__name__)
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-short-palco.mjs"
+# D-750: ~3x o pior caso medido (101 s, na primeira execução, a frio; o normal é
+# 11-38 s). Só existe para um Chromium travado não prender o render para sempre.
+_TIMEOUT_DO_GERADOR_SEG = 300
 
 # Quantos bytes do fim da saída do gerador entram no log quando ele falha.
 _SAIDA_TAIL = 1200
@@ -131,35 +133,18 @@ async def _gerar(chave: str, destino: Path, props: dict) -> Path | None:
 
 
 async def _rodar_node(destino: Path, props_path: str) -> tuple[int, str]:
-    """Roda o gerador, com o caminho síncrono como rede.
+    """Roda o gerador pelo runner único de processo externo (D-750).
 
-    `create_subprocess_exec` levanta `NotImplementedError` sob o event loop
-    Selector do uvicorn no Windows (D-369). Sem o fallback em thread, a geração
-    falharia calada e o short sairia sem moldura sem ninguém saber por quê.
+    O runner guarda o fallback síncrono do event loop Selector do Windows (D-369).
+    Timeout vira código -1: cai no mesmo caminho de falha de um gerador que
+    quebrou, em vez de levantar e derrubar quem chamou.
     """
-    argumentos = ["node", str(_GEN_SCRIPT), str(destino), props_path]
     try:
-        proc = await asyncio.create_subprocess_exec(
-            *argumentos,
-            cwd=str(_REPO_ROOT),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
+        resultado = await process_runner.rodar(
+            ["node", str(_GEN_SCRIPT), str(destino), props_path],
+            cwd=_REPO_ROOT,
+            timeout=_TIMEOUT_DO_GERADOR_SEG,
         )
-        saida, _ = await proc.communicate()
-        return proc.returncode or 0, saida.decode(errors="replace")
-    except NotImplementedError:
-        import subprocess  # noqa: PLC0415 — só o fallback precisa dele
-
-        def _sincrono():
-            return subprocess.run(
-                argumentos,
-                cwd=str(_REPO_ROOT),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                errors="replace",
-                check=False,
-            )
-
-        resultado = await asyncio.to_thread(_sincrono)
-        return resultado.returncode, resultado.stdout
+    except process_runner.ProcessoEstourouOTempo as exc:
+        return -1, str(exc)
+    return resultado.returncode, resultado.saida

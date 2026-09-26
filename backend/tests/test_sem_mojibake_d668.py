@@ -21,6 +21,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.integration  # varre o repositório inteiro via git (D-751)
+
 RAIZ = Path(__file__).resolve().parents[2]
 EXTENSOES = {
     ".py",

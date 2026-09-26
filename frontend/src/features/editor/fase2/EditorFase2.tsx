@@ -33,7 +33,9 @@ import { SegmentoDetectadoPopover } from './SegmentoDetectadoPopover';
 import { PanelShell } from '@/components/workbench/PanelShell';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
 import {
+  mesclarNoLayoutDoCorte,
   normalizeYoutubeLayout,
+  patchParaRestaurar,
   resolveLayoutChain,
   type YoutubeLayoutMode,
   type YoutubeLayoutRegion,
@@ -233,7 +235,9 @@ export function EditorFase2({
         ...layoutYoutube,
         regioes: [...layoutYoutube.regioes, { inicio: round1(inicio), fim: round1(fim), modo }],
       });
-      atualizarCorte.mutate({ layout_youtube: novoLayout } as Partial<Corte>, {
+      // D-741: só as regiões — mandar o layout resolvido gravaria os padrões no
+      // corte, e ele pararia de herdar do projeto e do global (RN-10).
+      atualizarCorte.mutate({ layout_youtube: { regioes: novoLayout.regioes } } as Partial<Corte>, {
         onSuccess: (updated) => {
           // Garante que YoutubeLayoutPanel receba o novo layout
           // (ele e renderizado condicionalmente — pode estar montado).
@@ -271,11 +275,19 @@ export function EditorFase2({
       });
       const previous = queryClient.getQueryData<Corte>(corteKey(corte.id));
 
+      // D-741: no cache fica o layout GRAVADO (mesclado), não o resolvido.
       queryClient.setQueryData<Corte>(corteKey(corte.id), (current) =>
-        current ? ({ ...current, layout_youtube: novoLayout } as Corte) : current,
+        current
+          ? ({
+              ...current,
+              layout_youtube: mesclarNoLayoutDoCorte(current.layout_youtube, {
+                regioes: novoLayout.regioes,
+              }),
+            } as Corte)
+          : current,
       );
 
-      atualizarCorte.mutate({ layout_youtube: novoLayout } as Partial<Corte>, {
+      atualizarCorte.mutate({ layout_youtube: { regioes: novoLayout.regioes } } as Partial<Corte>, {
         onSuccess: (updated) => {
           queryClient.setQueryData<Corte>(corteKey(corte.id), (current) =>
             current
@@ -469,10 +481,13 @@ export function EditorFase2({
     // reintroduzir regioes do snapshot, limpamos esse set antes de aplicar.
     layoutPanelRef.current?.clearDeletedRegions();
     isUndoingRef.current = true;
+    // D-741: o backend mescla; para voltar ao retrato, a chave que surgiu
+    // depois dele vai como null (volta a herdar).
+    const gravadoAgora = queryClient.getQueryData<Corte>(corteKey(corte.id))?.layout_youtube;
     queryClient.setQueryData<Corte>(corteKey(corte.id), (current) =>
       current ? ({ ...current, layout_youtube: parsed } as Corte) : current,
     );
-    atualizarCorte.mutate({ layout_youtube: parsed } as Partial<Corte>, {
+    atualizarCorte.mutate({ layout_youtube: patchParaRestaurar(gravadoAgora, parsed) } as Partial<Corte>, {
       onSuccess: (updated) => {
         queryClient.setQueryData<Corte>(corteKey(corte.id), (cur) =>
           cur ? ({ ...cur, layout_youtube: (updated as Corte).layout_youtube } as Corte) : cur,

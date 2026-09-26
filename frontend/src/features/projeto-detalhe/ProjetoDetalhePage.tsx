@@ -902,7 +902,7 @@ function CorteLinhaCompacta({
               ? 'font-bold text-[var(--wb-text)]'
               : 'font-semibold text-[var(--wb-text-mute)]',
           )}
-          title={status.titulo}
+          title={status.titulo ?? undefined}
         >
           {status.titulo || `Corte #${status.numero}`}
         </div>

@@ -14,16 +14,18 @@ no loop. Aditivo: não altera o fluxo de geração/avaliação existente.
 import json
 import logging
 
-from app import prompts_utilitarios
 from app.config import settings
-from app.domain.padroes_thumbnail import (
+from app.domain.compartilhado.gerador_ia import PedidoIA
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.domain.corte.padroes_thumbnail import (
     MIN_MELHORES_PARA_ANALISE,
     compilar_padroes,
+    normalizar_analise,
     selecionar_melhores,
 )
-from app.infrastructure import antigravity_cli_client, claude_cli_client
-from app.provider_ia import ProviderIA
+from app.infrastructure.gerador_ia import gerador_para
 from app.services.avaliacao_thumbnail import AvaliacaoThumbnailService
+from app.services.canal import prompts_utilitarios
 
 logger = logging.getLogger(__name__)
 
@@ -90,18 +92,14 @@ async def _ler_padroes(prompt: str, provider: ProviderIA) -> dict:
     Esta etapa não tem skill editorial no banco — o prompt nasce aqui —, então o
     modelo do Gemini vem da faixa equivalente ao modelo Claude dela.
     """
-    contexto = claude_cli_client.LlmCallContext(etapa="padroes-thumbnail")
-    if provider == "gemini":
-        from app.editorial_skills import modelo_gemini_equivalente
+    from app.services.canal.editorial_skills import modelo_gemini_equivalente
 
-        return await antigravity_cli_client.generate_json(
-            prompt,
-            model=modelo_gemini_equivalente(settings.claude_model_metadados),
-            contexto=contexto,
-        )
-    return await claude_cli_client.generate_json(
-        prompt, model=settings.claude_model_metadados, contexto=contexto
+    pedido = PedidoIA(
+        etapa="padroes-thumbnail",
+        modelo=settings.claude_model_metadados,
+        modelo_gemini=modelo_gemini_equivalente(settings.claude_model_metadados),
     )
+    return await gerador_para(provider).gerar_json(prompt, pedido)
 
 
 class PadroesThumbnailService:
@@ -126,7 +124,7 @@ class PadroesThumbnailService:
         prompt = _montar_prompt(padroes, melhores)
 
         try:
-            analise = await _ler_padroes(prompt, provider)
+            analise = normalizar_analise(await _ler_padroes(prompt, provider))
         except (ValueError, json.JSONDecodeError):
             logger.exception("Falha ao analisar padrões de thumbnail via IA")
             raise

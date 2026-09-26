@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
+from app.infrastructure import llm_calls_store
 from app.models import (
     Base,
     Corte,
@@ -22,7 +23,7 @@ from app.models import (
     Short,
     StatusShort,
 )
-from app.services import llm_calls_store, shorts_prontos
+from app.services import shorts_prontos
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 TRANSCRICAO_GORDA = "x" * 200_000
@@ -116,7 +117,9 @@ async def test_a_transcricao_da_live_nao_vem_junto(banco_com_um_short):
 
 
 def _gravar(db, **kwargs):
-    llm_calls_store.gravar_llm_call(db_path=db, etapa="cortes", corte_id="c1", **kwargs)
+    llm_calls_store.gravar_llm_call(
+        llm_calls_store.LlmCallRecord(etapa="cortes", corte_id="c1", **kwargs), db_path=db
+    )
 
 
 def test_selo_traz_o_modelo_da_ultima_chamada_bem_sucedida(tmp_path):

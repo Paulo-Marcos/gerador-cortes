@@ -1,5 +1,5 @@
 // Formatação de tempo para os logs do native_worker.
-// Espelha app/domain/time_convert.py (epoch_to_hora_local / seg_to_duracao_humana)
+// Espelha app/domain/compartilhado/time_convert.py (epoch_to_hora_local / seg_to_duracao_humana)
 // para que backend e worker mostrem o mesmo formato no terminal.
 // Funções puras — testáveis isoladamente (worker_time.test.cjs).
 

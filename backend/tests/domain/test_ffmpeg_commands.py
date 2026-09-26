@@ -1,7 +1,8 @@
 from pathlib import Path
 
 import pytest
-from app.domain.ffmpeg_commands import (
+from app.infrastructure.render.ffmpeg_commands import (
+    GradeSpec,
     build_audio_offset_cmd,
     build_cinematic_grade_cmd,
     build_cinematic_grade_layout_filter,
@@ -354,14 +355,16 @@ class TestBuildCinematicGradeCmd:
     def test_com_filtro_usa_qsv_decode_e_hwdownload(self):
         # Fase 3: com filtro, decodifica na GPU (QSV) e faz hwdownload antes dos
         # filtros software — ~44% mais rapido que decode em software puro.
-        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, filtro_vf="vignette")
+        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, GradeSpec(filtro_vf="vignette"))
         assert "-hwaccel" in cmd and "qsv" in cmd
         assert "-hwaccel_output_format" in cmd
         idx = cmd.index("-vf")
         assert cmd[idx + 1].startswith("hwdownload,format=nv12,")
 
     def test_filtro_com_hwaccel_decode_off_volta_ao_software(self):
-        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, filtro_vf="vignette", hwaccel_decode=False)
+        cmd = build_cinematic_grade_cmd(
+            VIDEO, OUTPUT, GradeSpec(filtro_vf="vignette", hwaccel_decode=False)
+        )
         assert "-hwaccel" not in cmd
         idx = cmd.index("-vf")
         assert not cmd[idx + 1].startswith("hwdownload")
@@ -370,11 +373,13 @@ class TestBuildCinematicGradeCmd:
         cmd = build_cinematic_grade_cmd(
             VIDEO,
             OUTPUT,
-            layout_youtube={
-                "modo_padrao": "full",
-                "regioes": [{"inicio": 10, "fim": 20, "modo": "compartilhada"}],
-            },
-            duracao_seg=60,
+            GradeSpec(
+                layout_youtube={
+                    "modo_padrao": "full",
+                    "regioes": [{"inicio": 10, "fim": 20, "modo": "compartilhada"}],
+                },
+                duracao_seg=60,
+            ),
         )
 
         assert "-filter_complex" in cmd or "-filter_complex_script" in cmd
@@ -386,8 +391,7 @@ class TestBuildCinematicGradeCmd:
         cmd = build_cinematic_grade_cmd(
             VIDEO,
             OUTPUT,
-            layout_youtube={"modo_padrao": "full", "regioes": []},
-            duracao_seg=60,
+            GradeSpec(layout_youtube={"modo_padrao": "full", "regioes": []}, duracao_seg=60),
         )
 
         assert "-filter_complex" not in cmd
@@ -397,8 +401,9 @@ class TestBuildCinematicGradeCmd:
         cmd = build_cinematic_grade_cmd(
             VIDEO,
             OUTPUT,
-            layout_youtube={"modo_padrao": "compartilhada", "regioes": []},
-            duracao_seg=60,
+            GradeSpec(
+                layout_youtube={"modo_padrao": "compartilhada", "regioes": []}, duracao_seg=60
+            ),
         )
 
         idx = cmd.index("-filter_complex")
@@ -424,7 +429,7 @@ class TestBuildCinematicGradeCmd:
             ],
         }
         cmd = build_cinematic_grade_cmd(
-            VIDEO, OUTPUT, filtro_vf="vignette", layout_youtube=layout, duracao_seg=20
+            VIDEO, OUTPUT, GradeSpec(filtro_vf="vignette", layout_youtube=layout, duracao_seg=20)
         )
         fc = " ".join(cmd)
         assert "concat=n=" not in fc  # nunca segmenta no comando unico
@@ -441,21 +446,21 @@ class TestBuildCinematicGradeCmd:
             ],
         }
         cmd = build_cinematic_grade_cmd(
-            VIDEO, OUTPUT, filtro_vf="vignette", layout_youtube=layout, duracao_seg=20
+            VIDEO, OUTPUT, GradeSpec(filtro_vf="vignette", layout_youtube=layout, duracao_seg=20)
         )
         fc = " ".join(cmd)
         assert "concat=n=" not in fc
 
     def test_com_filtro_vf_tem_vf(self):
-        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, filtro_vf="vignette")
+        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, GradeSpec(filtro_vf="vignette"))
         assert "-vf" in cmd
 
     def test_normalize_audio_usa_loudnorm(self):
-        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, normalize_audio=True)
+        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, GradeSpec(normalize_audio=True))
         assert any("loudnorm" in arg for arg in cmd)
 
     def test_sem_normalize_usa_aresample(self):
-        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, normalize_audio=False)
+        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, GradeSpec(normalize_audio=False))
         assert any("aresample" in arg for arg in cmd)
 
     def test_nao_tem_flag_r(self):
@@ -556,18 +561,19 @@ class TestBuildCinematicGradeCmd:
         # Isola do cache em disco: sem palco, usa o fundo-embaixo.
         # F-048: o resolver usado pelo cmd é o _para_config (por região).
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             lambda compartilhada, fundo, placa: None,
         )
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_bg_png",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_bg_png",
             lambda layout: Path("fake") / "hud-forte.png",
         )
         cmd = build_cinematic_grade_cmd(
             VIDEO,
             OUTPUT,
-            layout_youtube={"modo_padrao": "compartilhada", "regioes": []},
-            duracao_seg=30,
+            GradeSpec(
+                layout_youtube={"modo_padrao": "compartilhada", "regioes": []}, duracao_seg=30
+            ),
         )
 
         assert "-loop" in cmd
@@ -577,18 +583,19 @@ class TestBuildCinematicGradeCmd:
         # Sem palco e sem fundo-PNG → fallback procedural drawbox.
         # F-048: o resolver usado pelo cmd é o _para_config (por região).
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             lambda compartilhada, fundo, placa: None,
         )
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_bg_png",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_bg_png",
             lambda layout: None,
         )
         cmd = build_cinematic_grade_cmd(
             VIDEO,
             OUTPUT,
-            layout_youtube={"modo_padrao": "compartilhada", "regioes": []},
-            duracao_seg=30,
+            GradeSpec(
+                layout_youtube={"modo_padrao": "compartilhada", "regioes": []}, duracao_seg=30
+            ),
         )
 
         assert "-loop" not in cmd
@@ -679,7 +686,7 @@ class TestBuildCinematicGradeCmd:
     def test_cmd_com_overrides_distintos_dedupe_inputs(self, monkeypatch):
         # F-048: duas regioes — uma com override, outra sem — geram inputs
         # PNG distintos no FFmpeg.
-        from app.domain.youtube_layout import palco_cache_key_para_config
+        from app.domain.corte.youtube_layout import palco_cache_key_para_config
 
         chamadas: list[dict] = []
 
@@ -689,27 +696,29 @@ class TestBuildCinematicGradeCmd:
             return Path("fake") / f"{key}.png"
 
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             fake_resolver,
         )
 
         cmd = build_cinematic_grade_cmd(
             VIDEO,
             OUTPUT,
-            layout_youtube={
-                "modo_padrao": "full",
-                "compartilhada": {"telas": 2},
-                "regioes": [
-                    {"inicio": 0, "fim": 10, "modo": "compartilhada"},
-                    {
-                        "inicio": 20,
-                        "fim": 30,
-                        "modo": "compartilhada",
-                        "compartilhada": {"telas": 1},
-                    },
-                ],
-            },
-            duracao_seg=60,
+            GradeSpec(
+                layout_youtube={
+                    "modo_padrao": "full",
+                    "compartilhada": {"telas": 2},
+                    "regioes": [
+                        {"inicio": 0, "fim": 10, "modo": "compartilhada"},
+                        {
+                            "inicio": 20,
+                            "fim": 30,
+                            "modo": "compartilhada",
+                            "compartilhada": {"telas": 1},
+                        },
+                    ],
+                },
+                duracao_seg=60,
+            ),
         )
         joined = " ".join(cmd)
 
@@ -736,18 +745,19 @@ class TestBuildCinematicGradeCmd:
     def test_cmd_com_fg_png_adiciona_loop_e_ignora_bg(self, monkeypatch):
         # F-048: o cmd resolve UM PNG por regiao via _resolve_shared_fg_png_para_config.
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             lambda compartilhada, fundo, placa: Path("fake") / "palco.png",
         )
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_bg_png",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_bg_png",
             lambda layout: Path("fake") / "hud-forte.png",
         )
         cmd = build_cinematic_grade_cmd(
             VIDEO,
             OUTPUT,
-            layout_youtube={"modo_padrao": "compartilhada", "regioes": []},
-            duracao_seg=30,
+            GradeSpec(
+                layout_youtube={"modo_padrao": "compartilhada", "regioes": []}, duracao_seg=30
+            ),
         )
         joined = " ".join(cmd)
 
@@ -797,7 +807,7 @@ class TestNormalizacaoCanvas1080p:
         assert "vignette" in filter_str
 
     def test_cmd_com_filtro_vf_normaliza_no_vf(self):
-        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, filtro_vf="vignette")
+        cmd = build_cinematic_grade_cmd(VIDEO, OUTPUT, GradeSpec(filtro_vf="vignette"))
         idx = cmd.index("-vf")
         # Fase 3: o -vf pode comecar com o prefixo hwdownload (QSV decode), mas
         # a normalizacao de canvas + filtro continuam ao final.
@@ -867,11 +877,13 @@ class TestFfmpegThreadCaps:
         cmd = build_cinematic_grade_cmd(
             VIDEO,
             OUTPUT,
-            layout_youtube={
-                "modo_padrao": "full",
-                "regioes": [{"inicio": 10, "fim": 20, "modo": "compartilhada"}],
-            },
-            duracao_seg=60,
+            GradeSpec(
+                layout_youtube={
+                    "modo_padrao": "full",
+                    "regioes": [{"inicio": 10, "fim": 20, "modo": "compartilhada"}],
+                },
+                duracao_seg=60,
+            ),
         )
         assert "-filter_complex_threads" in cmd
 
@@ -890,14 +902,15 @@ class TestFfmpegThreadCaps:
         # PNG do palco é imagem estática: 1 thread basta e evita o pool de
         # frame buffers multi-thread que estourava (`png thread_get_buffer`).
         monkeypatch.setattr(
-            "app.domain.ffmpeg_commands._resolve_shared_fg_png_para_config",
+            "app.infrastructure.render.ffmpeg_commands._resolve_shared_fg_png_para_config",
             lambda compartilhada, fundo, placa: Path("fake") / "palco.png",
         )
         cmd = build_cinematic_grade_cmd(
             VIDEO,
             OUTPUT,
-            layout_youtube={"modo_padrao": "compartilhada", "regioes": []},
-            duracao_seg=30,
+            GradeSpec(
+                layout_youtube={"modo_padrao": "compartilhada", "regioes": []}, duracao_seg=30
+            ),
         )
         # Todo input -loop de PNG vem com -threads 1 antes do -i.
         loop_idx = cmd.index("-loop")

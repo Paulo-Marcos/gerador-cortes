@@ -1,7 +1,7 @@
 """Testes da política de retry (domain puro)."""
 
 import pytest
-from app.domain.retry_policy import RetryPolicy
+from app.infrastructure.render.retry_policy import RetryPolicy
 
 # ─────────────────────────────────────────────────────────────
 # Construção e validação
@@ -9,7 +9,7 @@ from app.domain.retry_policy import RetryPolicy
 
 
 class TestConstrucao:
-    def test_defaults(self):
+    def test_sem_argumentos_tenta_tres_vezes_com_dois_segundos_de_base(self):
         p = RetryPolicy()
         assert p.max_attempts == 3
         assert p.base_delay_sec == 2.0

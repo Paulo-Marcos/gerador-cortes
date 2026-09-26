@@ -19,12 +19,10 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.channel_paths import youtube_client_secrets_path, youtube_token_path
 from app.config import settings
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+from app.core.channel_paths import youtube_client_secrets_path, youtube_token_path
+from app.infrastructure import youtube_api
+from app.infrastructure.youtube_api import Credenciais
 
 # Mesmos escopos do upload (services/youtube.py) — upload + gestão de playlists.
 logger = logging.getLogger(__name__)
@@ -58,24 +56,24 @@ _estado = _EstadoFluxo()
 _lock = threading.Lock()
 
 
-def _carregar_credenciais_validas() -> Credentials | None:
+def _carregar_credenciais_validas() -> Credenciais | None:
     """Lê o `token.json` do canal ativo e o renova se expirado; None se ausente/ruim."""
     token_path = youtube_token_path()
     if not token_path.exists():
         return None
     try:
-        creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
-    except Exception:
+        creds = youtube_api.credenciais_do_arquivo(token_path, SCOPES)
+    except Exception:  # noqa: BLE001 — token ilegível é o mesmo que não ter credencial
         return None
 
     if creds.valid:
         return creds
     if creds.expired and creds.refresh_token:
         try:
-            creds.refresh(Request())
+            youtube_api.renovar(creds)
             token_path.write_text(creds.to_json(), encoding="utf-8")
             return creds
-        except Exception:
+        except Exception:  # noqa: BLE001 — renovação que falha é o mesmo que não ter credencial
             return None
     return None
 
@@ -96,7 +94,7 @@ def _assinatura_do_token() -> tuple[str, float]:
         return (str(token_path), 0.0)
 
 
-def _titulo_do_canal(creds: Credentials) -> str:
+def _titulo_do_canal(creds: Credenciais) -> str:
     """Título do canal, reaproveitando o da última consulta ao mesmo token."""
     global _titulo_em_cache
     caminho, mtime = _assinatura_do_token()
@@ -115,14 +113,10 @@ def _esquecer_titulo_em_cache() -> None:
     _titulo_em_cache = None
 
 
-def _titulo_canal_autenticado(creds: Credentials) -> str:
+def _titulo_canal_autenticado(creds: Credenciais) -> str:
     """Título do canal do YouTube autenticado (best-effort; vazio em qualquer falha)."""
     try:
-        youtube = build("youtube", "v3", credentials=creds)
-        resp = youtube.channels().list(part="snippet", mine=True, maxResults=1).execute()
-        items = resp.get("items", [])
-        if items:
-            return items[0].get("snippet", {}).get("title", "")
+        return youtube_api.titulo_do_canal(creds)
     except Exception as erro:  # noqa: BLE001 — o selo é acessório; o log não é
         # D-654: sem isto, um token expirado ou uma cota estourada apareciam
         # apenas como "o nome do canal sumiu da tela", sem pista nenhuma.
@@ -154,8 +148,9 @@ def status() -> dict:
 def _executar_fluxo(client_secrets_path: str, token_path_str: str) -> None:
     """Roda o fluxo OAuth bloqueante e grava o token — alvo da thread daemon."""
     try:
-        flow = InstalledAppFlow.from_client_secrets_file(client_secrets_path, SCOPES)
-        creds = flow.run_local_server(port=settings.youtube_oauth_port)
+        creds = youtube_api.autorizar_no_navegador(
+            client_secrets_path, SCOPES, settings.youtube_oauth_port
+        )
         token_path = Path(token_path_str)
         token_path.parent.mkdir(parents=True, exist_ok=True)
         token_path.write_text(creds.to_json(), encoding="utf-8")

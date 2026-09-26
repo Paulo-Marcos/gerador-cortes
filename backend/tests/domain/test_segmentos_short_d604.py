@@ -17,7 +17,7 @@ silencio, sem erro nenhum na tela:
 """
 
 import pytest
-from app.domain.segmentos_short import (
+from app.domain.short.segmentos_short import (
     DURACAO_MINIMA_SEG,
     MAX_SEGMENTOS,
     Segmento,

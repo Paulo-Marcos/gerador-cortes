@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.domain import theme_library
-from app.domain.theme_library import PALETA_CHAVES, TEMA_DEFAULT_ID
+from app.domain.canal import theme_library
+from app.domain.canal.theme_library import PALETA_CHAVES, TEMA_DEFAULT_ID
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _THEME_CONFIG = _REPO_ROOT / "video-renderer" / "theme.config.json"

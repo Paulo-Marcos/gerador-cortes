@@ -1,7 +1,7 @@
 """D-448: ordem canônica dos cortes — cronológica por padrão, pin como exceção."""
 
 import pytest
-from app.domain.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
+from app.domain.corte.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
 
 
 def _c(id_: str, inicio: float, pin: int | None = None) -> CorteOrdenavel:

@@ -20,7 +20,7 @@ import { PanelShell } from '@/components/workbench/PanelShell';
 import { RetractableFooter } from '@/components/workbench/RetractableFooter';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { moverCorte, useReordenarCortes } from '@/hooks/useEditor';
-import { estaFixado, type CorteComPin } from '@/lib/ordemCortesApi';
+import { estaFixado, type CorteComPin } from '@/features/editor/ordem/api';
 import { useFixarPosicao, useNormalizarOrdem } from './ordem/useOrdemCortes';
 import { MetadataModal } from '@/features/metadata/MetadataModal';
 import { AdicionarCorteModal } from './AdicionarCorteModal';

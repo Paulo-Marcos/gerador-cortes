@@ -2,36 +2,37 @@ import asyncio
 import json
 import logging
 import time
+from datetime import datetime
 
-from app import editorial_scaffolds
+from app.core.logging import operational_debug, operational_error, operational_info
 from app.database import AsyncSessionLocal
-from app.domain.corte_mapper import cenas_fora_do_corte, coalescer_chaves_mascote
-from app.domain.diarizacao_align import prefixo_falante
-from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
-from app.domain.time_convert import hms_to_seg
-from app.infrastructure import gemini_client
+from app.domain.canal.variacao_prompt import bloco_variacao_de
+from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
+from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.domain.compartilhado.time_convert import hms_to_seg
+from app.domain.corte.corte_mapper import (
+    cenas_fora_do_corte,
+    coalescer_chaves_mascote,
+    extrair_cenas_remotion,
+)
+from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta, prefixo_falante
+from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
 from app.services import retrato_wikipedia
-from app.services.app_logging import operational_debug, operational_error, operational_info
+from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.claude_ia import gerar_json, registrar_skill_usada
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
+# Faixas de duração do corte para os pisos de cenas.
+_CORTE_CURTO_SEG = 60
+_CORTE_MEDIO_SEG = 180
 
 logger = logging.getLogger(__name__)
 
-
-def _carregar_mapa_falantes(raw: object) -> dict | None:
-    """Parse tolerante do `projeto.falantes_map` (D-286/D-307).
-
-    Retorna `None` (sem rótulo) quando o projeto não foi diarizado ou o JSON é
-    inválido — nesse caso o prompt de cenas sai idêntico ao comportamento
-    pré-diarização (back-compat total). Espelha `_mapa_falantes_para_meta` do
-    fluxo de análise/trechos, sem acoplar cenas ao módulo `claude_ia`.
-    """
-    if not raw or not isinstance(raw, str):
-        return None
-    try:
-        mapa = json.loads(raw)
-    except json.JSONDecodeError:
-        return None
-    return mapa if isinstance(mapa, dict) and mapa else None
+# A skill que escreve as cenas do corte — a geração pela IA mora aqui (D-704).
+_SKILL_CENAS = "cenas-expert"
 
 
 PROMPT_CENAS_CHUNK_TAMANHO_SEG = 900.0
@@ -62,9 +63,9 @@ def _calcular_limites(duracao_seg: int) -> dict:
     max_cenas = int(round(duracao_min * cenas_por_min))
 
     # Pisos por faixa (evita corte muito curto sem identidade)
-    if duracao_seg < 60:
+    if duracao_seg < _CORTE_CURTO_SEG:
         max_cenas = max(max_cenas, 2)
-    elif duracao_seg < 180:
+    elif duracao_seg < _CORTE_MEDIO_SEG:
         max_cenas = max(max_cenas, 4)
     else:
         max_cenas = max(max_cenas, 6)
@@ -76,7 +77,7 @@ def _calcular_limites(duracao_seg: int) -> dict:
         "max_cenas": max_cenas,
         "max_identidade": max(2, max_cenas // 3),
         "max_fullscreen": max(1, max_cenas // 8),
-        "min_primeiros_15s": 1 if duracao_seg < 60 else 2,
+        "min_primeiros_15s": 1 if duracao_seg < _CORTE_CURTO_SEG else 2,
     }
 
 
@@ -112,6 +113,107 @@ def _stats_retratos() -> dict:
 
 class CenasRemotionService:
     @staticmethod
+    async def validar(corte_id: str, validado: bool) -> Corte:
+        """Marca — ou desmarca — as cenas do corte como conferidas pelo editor (D-705).
+
+        Validar exige ao menos uma cena salva no roteiro visual; desfazer, não.
+        """
+        async with AsyncSessionLocal() as db:
+            async with db.begin():
+                corte = await _corte_com_metadado(db, corte_id)
+                if not corte:
+                    raise NaoEncontrado("Corte nao encontrado")
+                if validado:
+                    if not extrair_cenas_remotion(json.loads(corte.cenas_remotion or "[]")):
+                        raise PedidoInvalido(
+                            "Nao ha cenas para validar. Gere ou importe cenas antes."
+                        )
+                    corte.cenas_validadas = 1
+                    corte.cenas_validadas_em = datetime.utcnow()
+                else:
+                    corte.cenas_validadas = 0
+                    corte.cenas_validadas_em = None
+            # Relido depois do commit: colunas com onupdate voltariam expiradas.
+            return await _corte_com_metadado(db, corte_id)
+
+    @staticmethod
+    async def gerar_cenas_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
+        """Gera as cenas Remotion de um corte via Claude (skill cenas-expert).
+
+        Reaproveita o prompt detalhado (que carrega o schema) e o importador de
+        cenas já existentes. Se o corte for longo, o prompt vem particionado —
+        geramos por parte e concatenamos as cenas antes de importar.
+        """
+        # D-435: a fila só via as cenas quando o Claude CLI anunciava CADA
+        # chamada, então montar o prompt, importar retratos e qualquer falha
+        # antes da 1ª chamada aconteciam sem item nenhum na fila — e a geração
+        # automática disparada pelo bruto parecia não existir. Anunciamos a fase
+        # inteira sob a MESMA chave que as chamadas internas usam, de modo que
+        # elas apenas atualizam este item em vez de criar outro.
+        # BaseException, e não Exception: um CancelledError (reload do backend,
+        # task morta) deixaria o item preso na fila como "em andamento".
+        chave_fila = fila_ia.anunciar_inicio(_SKILL_CENAS, corte_id=corte_id)
+        try:
+            resultado = await CenasRemotionService._gerar_cenas(corte_id, provider)
+        except BaseException as exc:
+            fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
+            raise
+        fila_ia.anunciar_fim(chave_fila, sucesso=True)
+        return resultado
+
+    @staticmethod
+    async def _gerar_cenas(corte_id: str, provider: ProviderIA = "claude") -> dict:
+        """Corpo da geração de cenas — ver `gerar_cenas_via_claude`."""
+        logger.info("[ClaudeIA/cenas] iniciando corte %s", corte_id[:8])
+        t_mp = time.perf_counter()
+        info = await CenasRemotionService.montar_prompt(corte_id)
+        prompts = info.get("prompts") or []
+        logger.info(
+            "[ClaudeIA/cenas] montar_prompt: %d chunk(s) em %.1fs",
+            len(prompts),
+            time.perf_counter() - t_mp,
+        )
+        if not prompts:
+            raise ValueError("Sem prompt de cenas (transcrição final vazia?).")
+
+        skill = editorial_skills.resolver_skill(_SKILL_CENAS)
+        registrar_skill_usada(_SKILL_CENAS, skill)
+        # Uma lente por geração (consistente entre as partes), do banco por canal.
+        variacao = bloco_variacao_de(skill.lentes)
+        cenas: list = []
+        for indice, parte in enumerate(prompts):
+            prompt = f"{variacao}\n\n{parte['texto']}"
+            t = time.perf_counter()
+            resultado = await gerar_json(provider, prompt, skill, _SKILL_CENAS, corte_id=corte_id)
+            novas = resultado.get("cenas", [])
+            cenas.extend(novas)
+            logger.info(
+                "[ClaudeIA/cenas] corte %s chunk %d/%d: %d cenas (Claude) em %.1fs",
+                corte_id[:8],
+                indice + 1,
+                len(prompts),
+                len(novas),
+                time.perf_counter() - t,
+            )
+
+        if not cenas:
+            raise ValueError("Claude não retornou cenas.")
+
+        t_imp = time.perf_counter()
+        await CenasRemotionService.importar_cenas(corte_id, {"cenas": cenas})
+        logger.info(
+            "[ClaudeIA/cenas] corte %s: importar_cenas (retratos + save) em %.1fs",
+            corte_id[:8],
+            time.perf_counter() - t_imp,
+        )
+        logger.info(
+            "[ClaudeIA] Cenas geradas via Claude p/ corte %s: %d cenas",
+            corte_id[:8],
+            len(cenas),
+        )
+        return {"total_cenas": len(cenas)}
+
+    @staticmethod
     async def montar_prompt(corte_id: str, transcricao_override: list = None) -> dict:
         """Retorna o prompt completo para geração de cenas sem chamar a IA."""
         async with AsyncSessionLocal() as db:
@@ -134,7 +236,7 @@ class CenasRemotionService:
                 f"Primeiro segmento: {transcricao_final[0].get('start', 0)}s",
             )
 
-            from app.domain.chunker import fatiar_transcricao
+            from app.domain.projeto.chunker import fatiar_transcricao
 
             # 1. Primeiro garante a granularidade (evita blocos de texto gigantes)
             # 1. Granulariza a transcrição inteira primeiro e atribui índices globais
@@ -328,7 +430,7 @@ class CenasRemotionService:
             CenasRemotionService._exigir_transcricao_dentro_do_corte(
                 transcricao_granular, (corte.fim_seg or 0) - (corte.inicio_seg or 0)
             )
-            from app.domain.chunker import fatiar_transcricao
+            from app.domain.projeto.chunker import fatiar_transcricao
 
             chunks = fatiar_transcricao(
                 transcricao_granular,
@@ -548,7 +650,7 @@ class CenasRemotionService:
                 nome=nome,
                 forcar_redownload=forcar,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — retrato é opcional: a cena segue sem ele
             logger.warning("Falha ao buscar retrato para '%s': %s", nome, exc)
             return None, True
 
@@ -559,7 +661,7 @@ class CenasRemotionService:
     @staticmethod
     def _get_granular(transcricao: list) -> list:
         """Centraliza a lógica de granularização para garantir que os índices sempre batam."""
-        from app.domain.transcricao_utils import (
+        from app.domain.projeto.transcricao_utils import (
             dividir_segmentos_longos,
             limpar_e_ordenar_transcricao,
         )
@@ -574,7 +676,7 @@ class CenasRemotionService:
     def _montar_legendas_numeradas(
         transcricao_chunk: list, mapa_falantes: dict | None = None
     ) -> str:
-        from app.domain.time_convert import seg_to_hms_short
+        from app.domain.compartilhado.time_convert import seg_to_hms_short
 
         # Usa os índices globais já atribuídos na lista original
         linhas = []
@@ -620,7 +722,7 @@ class CenasRemotionService:
             return transcricao_granular, None
 
         projeto = await db.get(Projeto, corte.projeto_id)
-        mapa = _carregar_mapa_falantes(getattr(projeto, "falantes_map", None))
+        mapa = mapa_falantes_para_meta(getattr(projeto, "falantes_map", None))
         if not mapa:
             return transcricao_granular, None
 
@@ -662,123 +764,166 @@ class CenasRemotionService:
 
     @staticmethod
     def _converter_startleg(cenas_ia: list, transcricao: list) -> list:
-        cenas_convertidas = []
-        for cena in cenas_ia:
-            start_leg = cena.get("startLeg", 0)
-            duracao_s = cena.get("duracao_s", 5)
-            inicio_seg = CenasRemotionService._resolver_startleg(int(start_leg), transcricao)
-
-            cena_convertida = {
-                "tipo": cena.get("tipo", "barra_inferior"),
-                "inicio": round(inicio_seg, 2),
-                "fim": round(inicio_seg + duracao_s, 2),
-            }
-            campos_simples = [
-                "texto",
-                "subtexto",
-                "icone",
-                "numero",
-                "cor",
-                "contexto",
-                "nome_curto",
-                "rotuloA",
-                "rotuloB",
-                "autor",
-                "obra",
-                "ano",
-                "fonte",
-                "textura",
-                "ancoraLegendas",
-                "motivo",
-                "retrato_url",
-                "layout_card",
-                "modelo_cena",
-                "sombra_nivel",
-            ]
-            for campo in campos_simples:
-                if cena.get(campo) is not None:
-                    cena_convertida[campo] = cena[campo]
-
-            # Mascote (D-186): a IA/canais legados podem emitir sapoMood/sapoPosicao/
-            # sapoTamanho; a escrita passa a usar as chaves novas mascot*. O coalescer
-            # traduz o nome legado para o novo antes de salvar.
-            cena_mascote = coalescer_chaves_mascote(cena)
-            for campo in ("mascotMood", "mascotPosicao", "mascotTamanho"):
-                if cena_mascote.get(campo) is not None:
-                    cena_convertida[campo] = cena_mascote[campo]
-
-            if cena_convertida.get("layout_card") is None:
-                cena_convertida["layout_card"] = "auto"
-            if cena_convertida.get("sombra_nivel") is None:
-                cena_convertida["sombra_nivel"] = "auto"
-            # I-031: tela_cheia sempre vira card no salvamento; demais cenas
-            # caem em card como default quando IA omite/auto.
-            if cena_convertida.get("tipo") == "tela_cheia":
-                cena_convertida["modelo_cena"] = "card"
-            elif cena_convertida.get("modelo_cena") in (None, "", "auto"):
-                cena_convertida["modelo_cena"] = "card"
-
-            # Normalizar campos que a IA pode gerar com nomes errados
-            tipo = cena_convertida["tipo"]
-            if tipo == "destaque_numerico":
-                # IA pode usar o campo "valor"/"data"/"stat" em vez de "numero".
-                # D-429: o valor é preservado como veio. A coerção antiga para
-                # float assumia formato pt-BR e destruía o token — "45.7" virava
-                # 457 e "15/09/1850" caía no except. Quem lê o valor é o render,
-                # que decompõe prefixo/núcleo/sufixo (numeroFit.analisarNumeroDestaque).
-                for alias in ("valor", "data", "stat"):
-                    if alias in cena and "numero" not in cena_convertida:
-                        valor_alias = cena[alias]
-                        cena_convertida["numero"] = (
-                            valor_alias
-                            if isinstance(valor_alias, (int, float))
-                            else str(valor_alias).strip()
-                        )
-                        break
-            elif tipo == "fonte_referencia":
-                # IA pode usar "referencia" ou "source" em vez de "fonte"
-                if "fonte" not in cena_convertida:
-                    for alias in ("referencia", "source", "ref"):
-                        if alias in cena:
-                            cena_convertida["fonte"] = str(cena[alias])
-                            break
-            elif tipo == "chamada_final":
-                # IA pode usar "titulo"/"cta"/"botao" em vez de "texto"/"subtexto"
-                if "texto" not in cena_convertida:
-                    for alias in ("titulo", "headline"):
-                        if alias in cena:
-                            cena_convertida["texto"] = str(cena[alias])
-                            break
-                if "subtexto" not in cena_convertida:
-                    for alias in ("cta", "botao", "button", "call_to_action"):
-                        if alias in cena:
-                            cena_convertida["subtexto"] = str(cena[alias])
-                            break
-            elif tipo == "marco_historico":
-                # IA pode usar "evento"/"descricao" em vez de "texto"/"contexto"
-                if "texto" not in cena_convertida:
-                    for alias in ("evento", "nome", "title"):
-                        if alias in cena:
-                            cena_convertida["texto"] = str(cena[alias])
-                            break
-                if "subtexto" not in cena_convertida:
-                    for alias in ("periodo", "data", "periodo_historico"):
-                        if alias in cena:
-                            cena_convertida["subtexto"] = str(cena[alias])
-                            break
-            elif tipo == "ficha_biografica" and "nome_curto" not in cena_convertida:
-                for alias in ("nome_exibicao", "nomeExibicao", "nome_conhecido", "nomeConhecido"):
-                    if alias in cena and cena[alias]:
-                        cena_convertida["nome_curto"] = str(cena[alias])
-                        break
-
-            for campo in ["marcos", "itens"]:
-                valor = cena.get(campo)
-                if isinstance(valor, list) and valor:
-                    cena_convertida[campo] = valor
-            cenas_convertidas.append(cena_convertida)
+        cenas_convertidas = [
+            _converter_cena(
+                cena,
+                CenasRemotionService._resolver_startleg(int(cena.get("startLeg", 0)), transcricao),
+            )
+            for cena in cenas_ia
+        ]
 
         # Ordenar sempre por tempo de início crescente
         cenas_convertidas.sort(key=lambda x: x.get("inicio", 0))
 
         return cenas_convertidas
+
+
+async def _corte_com_metadado(db, corte_id: str) -> Corte | None:
+    resultado = await db.execute(
+        select(Corte).options(selectinload(Corte.metadado)).where(Corte.id == corte_id)
+    )
+    return resultado.scalar_one_or_none()
+
+
+def _converter_cena(cena: dict, inicio_seg: float) -> dict:
+    """Uma cena da IA como ela é gravada (D-716: saiu do laço de `_converter_startleg`)."""
+    duracao_s = cena.get("duracao_s", 5)
+    cena_convertida = {
+        "tipo": cena.get("tipo", "barra_inferior"),
+        "inicio": round(inicio_seg, 2),
+        "fim": round(inicio_seg + duracao_s, 2),
+    }
+    _copiar_campos_simples(cena, cena_convertida)
+    _copiar_mascote(cena, cena_convertida)
+    _aplicar_padroes_de_layout(cena_convertida)
+    # Normalizar campos que a IA pode gerar com nomes errados
+    _ALTERNATIVOS_POR_TIPO.get(cena_convertida["tipo"], _sem_alternativos)(cena, cena_convertida)
+    _copiar_listas(cena, cena_convertida)
+    return cena_convertida
+
+
+def _copiar_campos_simples(cena: dict, cena_convertida: dict) -> None:
+    campos_simples = [
+        "texto",
+        "subtexto",
+        "icone",
+        "numero",
+        "cor",
+        "contexto",
+        "nome_curto",
+        "rotuloA",
+        "rotuloB",
+        "autor",
+        "obra",
+        "ano",
+        "fonte",
+        "textura",
+        "ancoraLegendas",
+        "motivo",
+        "retrato_url",
+        "layout_card",
+        "modelo_cena",
+        "sombra_nivel",
+    ]
+    for campo in campos_simples:
+        if cena.get(campo) is not None:
+            cena_convertida[campo] = cena[campo]
+
+
+def _copiar_mascote(cena: dict, cena_convertida: dict) -> None:
+    # Mascote (D-186): a IA/canais legados podem emitir sapoMood/sapoPosicao/
+    # sapoTamanho; a escrita passa a usar as chaves novas mascot*. O coalescer
+    # traduz o nome legado para o novo antes de salvar.
+    cena_mascote = coalescer_chaves_mascote(cena)
+    for campo in ("mascotMood", "mascotPosicao", "mascotTamanho"):
+        if cena_mascote.get(campo) is not None:
+            cena_convertida[campo] = cena_mascote[campo]
+
+
+def _aplicar_padroes_de_layout(cena_convertida: dict) -> None:
+    if cena_convertida.get("layout_card") is None:
+        cena_convertida["layout_card"] = "auto"
+    if cena_convertida.get("sombra_nivel") is None:
+        cena_convertida["sombra_nivel"] = "auto"
+    # I-031: tela_cheia sempre vira card no salvamento; demais cenas
+    # caem em card como default quando IA omite/auto.
+    if cena_convertida.get("tipo") == "tela_cheia":
+        cena_convertida["modelo_cena"] = "card"
+    elif cena_convertida.get("modelo_cena") in (None, "", "auto"):
+        cena_convertida["modelo_cena"] = "card"
+
+
+def _copiar_listas(cena: dict, cena_convertida: dict) -> None:
+    for campo in ["marcos", "itens"]:
+        valor = cena.get(campo)
+        if isinstance(valor, list) and valor:
+            cena_convertida[campo] = valor
+
+
+def _preencher_com_alternativo(
+    cena: dict, cena_convertida: dict, campo: str, alternativos: tuple[str, ...]
+) -> None:
+    """O primeiro nome alternativo presente preenche o campo que não veio."""
+    if campo in cena_convertida:
+        return
+    for alias in alternativos:
+        if alias in cena:
+            cena_convertida[campo] = str(cena[alias])
+            return
+
+
+def _alternativos_do_destaque(cena: dict, cena_convertida: dict) -> None:
+    # IA pode usar o campo "valor"/"data"/"stat" em vez de "numero".
+    # D-429: o valor é preservado como veio. A coerção antiga para
+    # float assumia formato pt-BR e destruía o token — "45.7" virava
+    # 457 e "15/09/1850" caía no except. Quem lê o valor é o render,
+    # que decompõe prefixo/núcleo/sufixo (numeroFit.analisarNumeroDestaque).
+    for alias in ("valor", "data", "stat"):
+        if alias in cena and "numero" not in cena_convertida:
+            valor_alias = cena[alias]
+            cena_convertida["numero"] = (
+                valor_alias if isinstance(valor_alias, (int, float)) else str(valor_alias).strip()
+            )
+            break
+
+
+def _alternativos_da_fonte(cena: dict, cena_convertida: dict) -> None:
+    # IA pode usar "referencia" ou "source" em vez de "fonte"
+    _preencher_com_alternativo(cena, cena_convertida, "fonte", ("referencia", "source", "ref"))
+
+
+def _alternativos_da_chamada_final(cena: dict, cena_convertida: dict) -> None:
+    # IA pode usar "titulo"/"cta"/"botao" em vez de "texto"/"subtexto"
+    _preencher_com_alternativo(cena, cena_convertida, "texto", ("titulo", "headline"))
+    _preencher_com_alternativo(
+        cena, cena_convertida, "subtexto", ("cta", "botao", "button", "call_to_action")
+    )
+
+
+def _alternativos_do_marco(cena: dict, cena_convertida: dict) -> None:
+    # IA pode usar "evento"/"descricao" em vez de "texto"/"contexto"
+    _preencher_com_alternativo(cena, cena_convertida, "texto", ("evento", "nome", "title"))
+    _preencher_com_alternativo(
+        cena, cena_convertida, "subtexto", ("periodo", "data", "periodo_historico")
+    )
+
+
+def _alternativos_da_ficha(cena: dict, cena_convertida: dict) -> None:
+    if "nome_curto" not in cena_convertida:
+        for alias in ("nome_exibicao", "nomeExibicao", "nome_conhecido", "nomeConhecido"):
+            if alias in cena and cena[alias]:
+                cena_convertida["nome_curto"] = str(cena[alias])
+                break
+
+
+def _sem_alternativos(cena: dict, cena_convertida: dict) -> None:
+    return None
+
+
+_ALTERNATIVOS_POR_TIPO = {
+    "destaque_numerico": _alternativos_do_destaque,
+    "fonte_referencia": _alternativos_da_fonte,
+    "chamada_final": _alternativos_da_chamada_final,
+    "marco_historico": _alternativos_do_marco,
+    "ficha_biografica": _alternativos_da_ficha,
+}

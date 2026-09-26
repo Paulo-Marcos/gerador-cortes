@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.domain.youtube_stats import (
+from app.domain.publicacao.youtube_stats import (
     bucket_duracao,
     bucket_titulo_len,
     csv_duracao_retencao,
@@ -58,7 +58,7 @@ class TestNormalizarTitulo:
     def test_colapsa_espacos(self):
         assert normalizar_titulo("  dois   espaços  ") == "dois espacos"
 
-    def test_vazio(self):
+    def test_titulo_vazio_ou_ausente_vira_texto_vazio(self):
         assert normalizar_titulo("") == ""
         assert normalizar_titulo(None) == ""  # type: ignore[arg-type]
 

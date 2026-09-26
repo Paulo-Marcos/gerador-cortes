@@ -1,5 +1,5 @@
 import pytest
-from app.domain.cinema_filters import FILTROS_CINEMA, get_filtro_vf
+from app.infrastructure.render.cinema_filters import FILTROS_CINEMA, get_filtro_vf
 
 
 class TestGetFiltroVf:

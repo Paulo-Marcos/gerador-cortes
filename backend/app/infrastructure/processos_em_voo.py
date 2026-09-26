@@ -22,6 +22,9 @@ import os
 import subprocess
 import threading
 
+# O taskkill da árvore inteira volta em milissegundos; 15 s é folga para máquina carregada.
+_TIMEOUT_DO_TASKKILL_S = 15
+
 logger = logging.getLogger(__name__)
 
 # owner → processos vivos. Protegido por lock: o registro acontece nas threads
@@ -70,7 +73,7 @@ def matar_arvore(processo: subprocess.Popen) -> None:
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 check=False,
-                timeout=15,
+                timeout=_TIMEOUT_DO_TASKKILL_S,
             )
         else:
             processo.kill()

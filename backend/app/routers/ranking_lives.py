@@ -10,53 +10,117 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-import uuid
+from typing import Literal
 
-from app.database import AsyncSessionLocal
-from app.infrastructure.youtube_data_api import YoutubeDataApiError
-from app.models import LiveCandidata, Projeto, StatusLiveCandidata, StatusProjeto
-from app.services.ingestao import IngestaoService
+from app.models import StatusLiveCandidata
+from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
 from app.services.ranking_lives import (
+    RankingIndisponivel,
     definir_voto_qualidade,
+    enfileirar_candidata,
     gerar_ranking,
-    marcar_promovida,
     obter_voto_qualidade,
     rejeitar_candidata,
 )
-from app.services.tasks import fire_and_forget
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+_STATUS_CANDIDATA = tuple(s.value for s in StatusLiveCandidata)
+
+
+class EmbasamentoCriterio(RespostaApi):
+    """Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela."""
+
+    criterio: str
+    rotulo: str
+    valor_bruto: float
+    valor_normalizado: float
+    peso: float
+    contribuicao: float
+
+
+class LiveCandidataResponse(RespostaApi):
+    id: str
+    video_id: str
+    titulo: str
+    canal_origem: str
+    youtube_url: str
+    thumbnail_url: str
+    duracao_iso: str
+    data_publicacao: str
+    views: int
+    likes: int
+    comentarios: int
+    sentimento_score: float
+    sentimento_destaques: list[str]
+    pontuacao_total: float
+    # Mapa plano criterio → contribuição (o que a tela antiga consumia).
+    componentes_pontuacao: dict[str, float]
+    embasamento: list[EmbasamentoCriterio]
+    status: Literal[_STATUS_CANDIDATA]
+    fetched_at: str
+
+
+class RankingLivesResponse(RespostaComCamposOpcionais):
+    """O TOP de candidatas. `janela_meses` só vem numa geração nova — a resposta
+    do cache de 24h não o traz, e a chave não vem."""
+
+    lives: list[LiveCandidataResponse]
+    atualizado_em: str
+    janela_meses: int | None = None
+
+
+class CandidataRejeitadaResponse(RespostaApi):
+    video_id: str
+    status: str
+
+
+class CandidataEnfileiradaResponse(RespostaComCamposOpcionais):
+    """`ja_existia` = a live já tinha projeto; aí não há pontuação a devolver."""
+
+    projeto_id: str
+    video_id: str
+    ja_existia: bool
+    pontuacao_ranking: float | None = None
+
+
+class VotoQualidadeResponse(RespostaApi):
+    """O voto de qualidade da live (D-372) ao lado da pontuação que o ranking deu."""
+
+    projeto_id: str
+    voto_qualidade_live: int | None
+    pontuacao_ranking: float
 
 
 class VotoQualidadeRequest(BaseModel):
     voto: int
 
 
-@router.get("")
+@router.get("", response_model=RankingLivesResponse, response_model_exclude_unset=True)
 async def listar_ranking(forcar_refresh: bool = False):
     """Top candidatas pendentes. Quando `forcar_refresh=true`, ignora o cache de 24h."""
     try:
         return await gerar_ranking(forcar_refresh=forcar_refresh)
-    except YoutubeDataApiError as exc:
+    except RankingIndisponivel as exc:
         status = 503 if exc.quota_excedida else 502
         raise HTTPException(status_code=status, detail=str(exc)) from exc
 
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=RankingLivesResponse, response_model_exclude_unset=True)
 async def refresh_ranking():
     """Atalho explícito para o botão 'Atualizar ranking' do frontend."""
     try:
         return await gerar_ranking(forcar_refresh=True)
-    except YoutubeDataApiError as exc:
+    except RankingIndisponivel as exc:
         status = 503 if exc.quota_excedida else 502
         raise HTTPException(status_code=status, detail=str(exc)) from exc
 
 
-@router.post("/{video_id}/rejeitar")
+@router.post("/{video_id}/rejeitar", response_model=CandidataRejeitadaResponse)
 async def rejeitar(video_id: str):
     try:
         return await rejeitar_candidata(video_id)
@@ -66,72 +130,14 @@ async def rejeitar(video_id: str):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/{video_id}/enfileirar")
+@router.post(
+    "/{video_id}/enfileirar",
+    response_model=CandidataEnfileiradaResponse,
+    response_model_exclude_unset=True,
+)
 async def enfileirar(video_id: str):
-    """Cria Projeto reaproveitando IngestaoService, copiando a pontuação."""
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(LiveCandidata).where(LiveCandidata.video_id == video_id).limit(1)
-        )
-        candidata = result.scalar_one_or_none()
-        if not candidata:
-            raise HTTPException(status_code=404, detail=f"Candidata {video_id!r} não encontrada")
-        if candidata.status == StatusLiveCandidata.PROMOVIDA and candidata.projeto_id:
-            return {
-                "projeto_id": candidata.projeto_id,
-                "video_id": video_id,
-                "ja_existia": True,
-            }
-
-        yt_url = f"https://www.youtube.com/watch?v={video_id}"
-        existente = await db.execute(select(Projeto).where(Projeto.youtube_url == yt_url).limit(1))
-        projeto_existente = existente.scalar_one_or_none()
-        if projeto_existente:
-            candidata.status = StatusLiveCandidata.PROMOVIDA
-            candidata.projeto_id = projeto_existente.id
-            await db.commit()
-            return {
-                "projeto_id": projeto_existente.id,
-                "video_id": video_id,
-                "ja_existia": True,
-            }
-
-        projeto = Projeto(
-            id=str(uuid.uuid4()),
-            youtube_url=yt_url,
-            titulo_live=candidata.titulo or "",
-            canal_origem=candidata.canal_origem or "",
-            data_live=_data_live_compactada(candidata),
-            status=StatusProjeto.PENDENTE,
-            pontuacao_ranking=candidata.pontuacao_total,
-        )
-        db.add(projeto)
-        await db.commit()
-        await db.refresh(projeto)
-
-        candidata.status = StatusLiveCandidata.PROMOVIDA
-        candidata.projeto_id = projeto.id
-        await db.commit()
-
-    fire_and_forget(
-        IngestaoService.processar_projeto(projeto.id, yt_url),
-        name=f"ingestao-{projeto.id[:8]}",
-    )
-    await marcar_promovida(video_id, projeto.id)
-
-    return {
-        "projeto_id": projeto.id,
-        "video_id": video_id,
-        "pontuacao_ranking": projeto.pontuacao_ranking,
-        "ja_existia": False,
-    }
-
-
-def _data_live_compactada(candidata: LiveCandidata) -> str:
-    """Espelha o formato YYYYMMDDHHMMSS usado pelos demais fluxos de Projeto."""
-    if not candidata.data_publicacao:
-        return ""
-    return candidata.data_publicacao.strftime("%Y%m%d%H%M%S")
+    """Cria o Projeto da candidata e dispara a ingestão, copiando a pontuação."""
+    return await enfileirar_candidata(video_id)
 
 
 # --------------------------------------------------------------------------- #
@@ -140,7 +146,7 @@ def _data_live_compactada(candidata: LiveCandidata) -> str:
 # --------------------------------------------------------------------------- #
 
 
-@router.get("/projetos/{projeto_id}/voto-qualidade")
+@router.get("/projetos/{projeto_id}/voto-qualidade", response_model=VotoQualidadeResponse)
 async def obter_voto(projeto_id: str):
     try:
         return await obter_voto_qualidade(projeto_id)
@@ -148,7 +154,7 @@ async def obter_voto(projeto_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.put("/projetos/{projeto_id}/voto-qualidade")
+@router.put("/projetos/{projeto_id}/voto-qualidade", response_model=VotoQualidadeResponse)
 async def salvar_voto(projeto_id: str, body: VotoQualidadeRequest):
     try:
         return await definir_voto_qualidade(projeto_id, body.voto)

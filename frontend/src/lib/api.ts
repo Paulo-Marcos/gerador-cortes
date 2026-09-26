@@ -5,20 +5,11 @@ import type {
   AppSettings,
   ArranjoBlocos,
   AuditoriaAnaliseResponse,
-  AvaliacaoThumbnail,
-  AvaliacaoThumbnailHistorico,
-  RegistrarAvaliacaoThumbnailBody,
-  BulkYoutubeRequest,
-  BulkYoutubeResponse,
   CenaRemotion,
   CenasRemotionPayload,
   Corte,
   CriarProjetoRequest,
-  EnfileirarCandidataResponse,
-  EnfileirarDownloadsResponse,
-  ExportStatusResponse,
   FilaGlobal,
-  FiltroExport,
   FontePreset,
   ImportarAnaliseRequest,
   LimparArquivosResponse,
@@ -32,15 +23,7 @@ import type {
   ReiniciarFalhadosResponse,
   RemotionStudioUrlResponse,
   StatusBrutoResponse,
-  VersaoExport,
   WaveformPeaksResponse,
-  RankingLivesResponse,
-  YoutubeLivesResponse,
-  LiberarPublicacaoRequest,
-  LiberarPublicacaoResponse,
-  YouTubeManualPublishRequest,
-  YouTubePublishResponse,
-  YouTubeUploadRequest,
 } from '@/types/models';
 import type {
   AtualizarLayoutPresetRequest,
@@ -69,68 +52,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-// D-070: análise de padrões dos melhores prompts de thumbnail. Tipos definidos
-// aqui (e não em models.ts) porque models.ts está sob lock e fora do escopo.
-export interface PadroaoEixoOcorrencia {
-  valor: string;
-  contagem: number;
-}
-
-export interface PadroesCompilados {
-  total_melhores: number;
-  com_tags: number;
-  eixos: Record<string, PadroaoEixoOcorrencia[]>;
-}
-
-export interface PadraoIdentificado {
-  eixo: string;
-  padrao: string;
-  evidencia: string;
-  forca: 'alta' | 'media' | 'baixa' | string;
-}
-
-export interface AnalisePadroesAgente {
-  resumo: string;
-  padroes: PadraoIdentificado[];
-  proposta_ajuste_skill: string;
-}
-
-export interface PadroesThumbnailResponse {
-  status: 'ok' | 'dados_insuficientes';
-  total_avaliacoes: number;
-  total_melhores: number;
-  com_tags?: number;
-  minimo?: number;
-  padroes: PadroesCompilados | null;
-  analise: AnalisePadroesAgente | null;
-}
-
 // D-160 — opt-ins da regeração do bruto. Só valem quando o corte já tem bruto
 // (regeração); na 1ª geração o backend força a cadeia completa.
 export interface GerarBrutoOpcoes {
   refazer_transcricao?: boolean;
   refazer_cenas?: boolean;
-}
-
-// D-286 — diarização de falantes (canal vs. reagidos). Tipos definidos aqui (e
-// não em models.ts) porque models.ts está sob lock e fora do escopo.
-export interface FalanteInfo {
-  nome: string;
-  is_canal: boolean;
-}
-
-/** Mapa {speaker_id -> info}, ex.: { "SPEAKER_00": { nome: "Pedro", is_canal: true } }. */
-export type FalantesMap = Record<string, FalanteInfo>;
-
-export interface DiarizarResponse {
-  ok: boolean;
-  falantes?: FalantesMap;
-  canal?: string | null;
-  motivo?: string;
-}
-
-export interface FalantesResponse {
-  falantes: FalantesMap;
 }
 
 export const api = {
@@ -226,10 +152,6 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  // ─── Export status (cortes com flags raw/video/thumb/meta) ─────────
-  exportStatus: (projetoId: string) =>
-    request<ExportStatusResponse>(`/export/projeto/${projetoId}/status`),
-
   /** D-746: a pasta da LIVE (a do corte é `abrirPastaCorte`). */
   abrirPastaProjeto: (projetoId: string) =>
     request<{ status: string; dir_path: string }>(`/projetos/${projetoId}/abrir-pasta`, {
@@ -290,22 +212,6 @@ export const api = {
       { method: 'POST', body: '{}' },
     ),
 
-  // D-286: diarização de falantes (canal vs. reagidos).
-  diarizarProjeto: (projetoId: string) =>
-    request<DiarizarResponse>(`/diarizacao/projeto/${projetoId}/diarizar`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  obterFalantes: (projetoId: string) =>
-    request<FalantesResponse>(`/diarizacao/projeto/${projetoId}/falantes`),
-
-  atualizarFalantes: (projetoId: string, falantes: FalantesMap) =>
-    request<FalantesResponse>(`/diarizacao/projeto/${projetoId}/falantes`, {
-      method: 'PUT',
-      body: JSON.stringify({ falantes }),
-    }),
-
   gerarTrechosClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
     request<{ message: string; corte_id: string; total_desvios: number; novos: number }>(
       `/claude/corte/${corteId}/gerar-trechos?provider=${provider}`,
@@ -330,71 +236,10 @@ export const api = {
       { method: 'POST', body: '{}' },
     ),
 
-
-  // D-066: histórico de avaliações do par prompt+imagem de thumbnail.
-  registrarAvaliacaoThumbnail: (corteId: string, body: RegistrarAvaliacaoThumbnailBody) =>
-    request<{ message: string; avaliacao: AvaliacaoThumbnail }>(
-      `/avaliacoes-thumbnail/corte/${corteId}`,
-      { method: 'POST', body: JSON.stringify(body) },
-    ),
-
-  listarAvaliacoesThumbnail: (corteId: string) =>
-    request<AvaliacaoThumbnailHistorico>(`/avaliacoes-thumbnail/corte/${corteId}`),
-
-  // D-070: dispara a análise de padrões dos melhores prompts avaliados.
-  analisarPadroesThumbnail: (provider: ProviderIA = 'claude') =>
-    request<PadroesThumbnailResponse>(`/avaliacoes-thumbnail/padroes?provider=${provider}`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
   analisarIntervalo: (projetoId: string, body: AnalisarIntervaloRequest) =>
     request<{ message: string; novos_cortes: number; primeiro_numero: number }>(
       `/projetos/${projetoId}/analisar-intervalo`,
       { method: 'POST', body: JSON.stringify(body) },
-    ),
-
-  // ─── Upload YouTube individual (usado em loop p/ massa com +15min) ─
-  uploadYouTube: (corteId: string, body: YouTubeUploadRequest) =>
-    request<YouTubePublishResponse>(`/export/corte/${corteId}/youtube`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  marcarPublicadoYouTube: (corteId: string, body: YouTubeManualPublishRequest) =>
-    request<YouTubePublishResponse>(`/export/corte/${corteId}/youtube/marcar-publicado`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  /**
-   * D-566: desfaz a marca de publicação de um destino.
-   *
-   * O espelho de `marcarPublicadoYouTube`: aquele conta que o vídeo está lá
-   * fora, este conta que não está mais. Sem ele, apagar o vídeo do YouTube
-   * para reprocessar deixava o corte preso — o botão de enviar some quando há
-   * URL publicada e o backend responde "já publicado; upload ignorado".
-   */
-  liberarPublicacao: (corteId: string, body: LiberarPublicacaoRequest) =>
-    request<LiberarPublicacaoResponse>(`/export/corte/${corteId}/publicacao/liberar`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  listarFiltros: () => request<{ filtros: FiltroExport[] }>('/export/filtros'),
-
-  listarVersoes: (corteId: string) =>
-    request<{ corte_id: string; versoes: VersaoExport[] }>(`/export/corte/${corteId}/versoes`),
-
-  processarMultiversion: (
-    corteId: string,
-    preview = true,
-    previewSegundos = 10,
-    filtros: string[] | null = null,
-  ) =>
-    request<{ message: string; filtros: string[] }>(
-      `/export/corte/${corteId}/processar-multiversion?preview=${preview}&preview_segundos=${previewSegundos}`,
-      { method: 'POST', body: JSON.stringify(filtros ? { filtros } : {}) },
     ),
 
   // I-023: filtro padrão de render vive só em Ajustes (PUT /settings).
@@ -410,12 +255,6 @@ export const api = {
       '/export/fila-global/cancelar',
       { method: 'POST', body: JSON.stringify({ job_id: jobId }) },
     ),
-
-  bulkYoutube: (projetoId: string, body: BulkYoutubeRequest) =>
-    request<BulkYoutubeResponse>(`/export/projeto/${projetoId}/bulk-youtube`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
 
   // ─── Cortes (editor) ───────────────────────────────────────────────
   listarCortes: (projetoId: string) => request<Corte[]>(`/cortes/projeto/${projetoId}`),
@@ -770,35 +609,6 @@ export const api = {
       formato_esperado?: unknown;
     }>(`/cortes/${corteId}/cenas-remotion/prompt`),
 
-  listarLivesCanal: (afterDate = '', maxResults = 25) => {
-    const params = new URLSearchParams({ max_results: String(maxResults) });
-    if (afterDate) params.set('after_date', afterDate);
-    return request<YoutubeLivesResponse>(`/youtube/lives?${params.toString()}`);
-  },
-
-  enfileirarDownloads: (videoIds: string[], canalOrigem = import.meta.env.VITE_CANAL_HANDLE ?? '@seucanal') =>
-    request<EnfileirarDownloadsResponse>('/youtube/enfileirar', {
-      method: 'POST',
-      body: JSON.stringify({ video_ids: videoIds, canal_origem: canalOrigem }),
-    }),
-
-  // ─── F-052: Ranking de lives candidatas ───────────────────────────
-  listarRankingLives: (forcarRefresh = false) =>
-    request<RankingLivesResponse>(`/ranking-lives${forcarRefresh ? '?forcar_refresh=true' : ''}`),
-
-  refreshRankingLives: () =>
-    request<RankingLivesResponse>('/ranking-lives/refresh', { method: 'POST' }),
-
-  rejeitarCandidata: (videoId: string) =>
-    request<{ video_id: string; status: string }>(`/ranking-lives/${videoId}/rejeitar`, {
-      method: 'POST',
-    }),
-
-  enfileirarCandidata: (videoId: string) =>
-    request<EnfileirarCandidataResponse>(`/ranking-lives/${videoId}/enfileirar`, {
-      method: 'POST',
-    }),
-
   // ─── Presets de layout YouTube (F-048) ─────────────────────────────
   listarLayoutPresets: (tipo?: LayoutPresetTipo) => {
     const query = tipo ? `?tipo=${encodeURIComponent(tipo)}` : '';
@@ -819,22 +629,6 @@ export const api = {
 
   deletarLayoutPreset: (id: string) => request<void>(`/presets/layout/${id}`, { method: 'DELETE' }),
 
-  // ─── E-022: Área de Análises (telemetria D-310 + desempenho YouTube D-313) ──
-  // Consomem endpoints de backend já existentes; tipos abaixo (final do arquivo).
-  obterTelemetriaCortes: (projetoId: string) =>
-    request<TelemetriaProjeto>(`/projetos/${projetoId}/telemetria-cortes`),
-  telemetriaCortesCsvUrl: () => `${API_BASE}/projetos/telemetria-cortes/export?formato=csv`,
-  obterYoutubeStatsStatus: () => request<YoutubeStatsStatus>('/projetos/youtube-stats/status'),
-  levantamentoDuracaoRetencao: () =>
-    request<{ faixas: LevantamentoDuracao[] }>(
-      '/projetos/youtube-stats/levantamento/duracao-retencao',
-    ),
-  levantamentoTituloDesempenho: () =>
-    request<{ grupos: LevantamentoTitulo[] }>(
-      '/projetos/youtube-stats/levantamento/titulo-desempenho',
-    ),
-  sincronizarYoutubeStats: () =>
-    request<YoutubeStatsSyncResult>('/projetos/youtube-stats/sync', { method: 'POST' }),
 };
 
 export { VIDEOS_BASE };
@@ -926,128 +720,4 @@ export async function fetchWaveformPeaks(url: string): Promise<WaveformPeaksResp
 
 export function progressoWsUrl(projetoId: string): string {
   return wsUrl(`/projetos/${projetoId}/ws`);
-}
-
-// ─── E-022: tipos da Área de Análises ────────────────────────────────────────
-// Definidos aqui (e não em models.ts) porque models.ts está sob lock e fora do
-// escopo — mesmo padrão do bloco D-070 acima. Espelham os payloads dos serviços
-// telemetria_cortes / youtube_stats do backend.
-
-/** Situação do corte na telemetria (domain/telemetria_cortes.py). */
-export type TelemetriaSituacao = 'com_snapshot' | 'sem_proposta_ia' | 'sem_snapshot';
-
-export interface TelemetriaTitulo {
-  proposto: string | null;
-  final: string;
-  mudou: boolean | null;
-}
-
-export interface TelemetriaBordas {
-  inicio_proposto_seg: number | null;
-  inicio_final_seg: number;
-  delta_inicio_seg: number | null;
-  fim_proposto_seg: number | null;
-  fim_final_seg: number;
-  delta_fim_seg: number | null;
-  duracao_proposta_seg: number | null;
-  duracao_final_seg: number;
-  delta_duracao_seg: number | null;
-}
-
-export interface TelemetriaDesvios {
-  propostos: number | null;
-  // O backend devolve as listas de desvios (não só a contagem); a UI usa `.length`.
-  mantidos: unknown[] | null;
-  removidos: unknown[] | null;
-  adicionados: unknown[] | null;
-  adicionados_por_origem: Record<string, number> | null;
-  finais: number;
-  finais_por_origem: Record<string, number>;
-}
-
-/** Ranking relativo {hook, flow, value, total} — opcional; só se o payload trouxer. */
-export interface TelemetriaScore {
-  hook?: number;
-  flow?: number;
-  value?: number;
-  total?: number;
-}
-
-export interface TelemetriaCorteDiff {
-  corte_id: string;
-  numero: number;
-  situacao: TelemetriaSituacao;
-  origem_analise: string | null;
-  status_final: string;
-  titulo: TelemetriaTitulo;
-  bordas: TelemetriaBordas;
-  desvios: TelemetriaDesvios;
-  score?: TelemetriaScore | null;
-}
-
-export interface TelemetriaProjeto {
-  projeto_id: string;
-  titulo_live: string;
-  total_cortes: number;
-  com_snapshot: number;
-  sem_snapshot: number;
-  cortes: TelemetriaCorteDiff[];
-}
-
-export interface YoutubeVideoStat {
-  video_id: string;
-  canal_id: string | null;
-  titulo: string | null;
-  duracao_seg: number | null;
-  publicado_em: string | null;
-  views: number | null;
-  estimated_minutes_watched: number | null;
-  average_view_duration_seg: number | null;
-  average_view_percentage: number | null;
-  subscribers_gained: number | null;
-  corte_id: string | null;
-  match_por_titulo: boolean;
-  sincronizado_em: string | null;
-}
-
-export interface YoutubeStatsStatus {
-  total: number;
-  com_corte: number;
-  casados_por_titulo: number;
-  sincronizado_em: string | null;
-  stale: boolean;
-  dias_desde_sync: number | null;
-  videos: YoutubeVideoStat[];
-}
-
-export interface LevantamentoDuracao {
-  faixa: string;
-  videos: number;
-  views_total: number;
-  views_media: number;
-  retencao_media_pct: number;
-  retencao_ponderada_pct: number;
-  avg_view_duration_media_seg: number;
-}
-
-export interface LevantamentoTitulo {
-  grupo: string;
-  faixa: string;
-  videos: number;
-  views_total: number;
-  views_media: number;
-  retencao_media_pct: number;
-  retencao_ponderada_pct: number;
-}
-
-/**
- * Resultado do POST de sync. `iniciado` = task disparada; `erro` +
- * `precisa_reautorizar` = faltou escopo OAuth (a UI mostra a instrução).
- */
-export interface YoutubeStatsSyncResult {
-  status: 'ok' | 'erro' | 'iniciado';
-  precisa_reautorizar?: boolean;
-  mensagem?: string;
-  total?: number;
-  sincronizado_em?: string;
 }

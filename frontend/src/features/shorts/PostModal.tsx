@@ -23,7 +23,7 @@ import {
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo } from '@/lib/providerIa';
-import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
+import { useUltimaGeracao } from '@/features/ia';
 import type { ShortIdentificado } from './shortsApi';
 
 // D-565 (onda 3): o texto que acompanha o short no feed.

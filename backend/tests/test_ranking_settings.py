@@ -12,8 +12,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app import ranking_settings
 from app.config import settings
+from app.services.canal import ranking_settings
 
 _CANAL = "canal-teste"
 
@@ -40,7 +40,7 @@ def _valores(**overrides: float) -> dict:
 
 
 def test_seed_le_defaults_de_settings(tmp_path: Path):
-    from app.services import settings_store
+    from app.infrastructure import settings_store
 
     kw = _kw(tmp_path)
     pesos = ranking_settings.resolver_pesos(**kw)
@@ -156,7 +156,7 @@ def test_migracao_adiciona_vph_sem_perder_pesos(tmp_path: Path):
     na primeira abertura, preservando os valores ajustados (D-356)."""
     import sqlite3
 
-    from app.services import settings_store
+    from app.infrastructure import settings_store
 
     db = tmp_path / "settings.db"
     # Simula o schema LEGADO da ranking_pesos: sem a coluna `vph`.
@@ -219,11 +219,12 @@ def test_request_do_router_cobre_todos_os_criterios():
     `validar_pesos` reclamava 'Faltam critérios: vph' → 422 ao salvar. Este teste
     trava a divergência: qualquer critério novo no domínio precisa entrar no request.
     """
+    from app.domain.live_candidata.ranking_lives import CHAVES_CRITERIO
     from app.routers.editorial_skills import UpdateRankingPesosRequest
 
     campos = set(UpdateRankingPesosRequest.model_fields)
-    assert campos == set(ranking_settings._TODAS_CHAVES), (
+    assert campos == set(CHAVES_CRITERIO), (
         "UpdateRankingPesosRequest desalinhado com os critérios do ranking: "
-        f"faltando={set(ranking_settings._TODAS_CHAVES) - campos}, "
-        f"sobrando={campos - set(ranking_settings._TODAS_CHAVES)}"
+        f"faltando={set(CHAVES_CRITERIO) - campos}, "
+        f"sobrando={campos - set(CHAVES_CRITERIO)}"
     )

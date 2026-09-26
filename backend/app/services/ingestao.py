@@ -6,19 +6,29 @@ import asyncio
 import json
 import re
 import traceback
+import uuid
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.config import settings
+from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
+from app.core.logging import operational_debug, operational_error, operational_info
 from app.database import AsyncSessionLocal
-from app.domain.json3_parser import parse_json3
-from app.domain.transcricao_utils import TranscricaoIndisponivelError
-from app.domain.vtt_parser import parse_vtt
+from app.domain.projeto.json3_parser import parse_json3
+from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
+from app.domain.projeto.vtt_parser import parse_vtt
+from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 from app.models import Projeto, StatusProjeto
-from app.services.app_logging import operational_debug, operational_error, operational_info
 from app.services.ciclo_de_vida import mudar_projeto
+from app.services.tasks import fire_and_forget
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# O yt-dlp devolve a data como AAAAMMDD.
+_DIGITOS_DA_DATA = 8
+_PROGRESSO_COMPLETO = 100
 
 
 class _CanalDeProgresso:
@@ -62,6 +72,19 @@ class _CanalDeProgresso:
 _progress_queues: dict[str, _CanalDeProgresso] = {}
 
 
+def _canal_da_live(info: dict) -> str:
+    """O canal de onde a live veio, como o yt-dlp o descreve (D-714).
+
+    Prefere o @handle, que é como o formulário e o ranking gravam o canal; sem
+    ele, o nome do canal. Era o handle do NOSSO canal — o que publica os cortes
+    —, e a live ficava creditada a quem a recortou.
+    """
+    handle = str(info.get("uploader_id") or "")
+    if handle.startswith("@"):
+        return handle
+    return str(info.get("channel") or info.get("uploader") or "")
+
+
 def _data_publicacao_yt_dlp(info: dict) -> str:
     timestamp = info.get("timestamp")
     if timestamp is None:
@@ -74,7 +97,7 @@ def _data_publicacao_yt_dlp(info: dict) -> str:
         pass
 
     upload_date = str(info.get("upload_date", ""))
-    return upload_date[:8] if len(upload_date) >= 8 else ""
+    return upload_date[:_DIGITOS_DA_DATA] if len(upload_date) >= _DIGITOS_DA_DATA else ""
 
 
 _PROGRESSO_YTDLP = re.compile(r"\[download\]\s+([\d.]+)%")
@@ -99,7 +122,7 @@ class _ProgressoGravado:
         self._ultimo = -1.0
 
     def vale_gravar(self, progresso: float) -> bool:
-        if progresso < 100 and progresso - self._ultimo < _PASSO_MINIMO_PARA_GRAVAR:
+        if progresso < _PROGRESSO_COMPLETO and progresso - self._ultimo < _PASSO_MINIMO_PARA_GRAVAR:
             return False
         self._ultimo = progresso
         return True
@@ -131,7 +154,77 @@ def _rodar_ytdlp_lendo_saida(cmd: list[str], ao_progresso) -> int:
     return processo.wait()
 
 
+@dataclass(frozen=True)
+class ProjetoIniciado:
+    projeto: Projeto
+    ja_existia: bool
+
+
+async def _projeto_da_mesma_live(db: AsyncSession, youtube_url: str) -> Projeto | None:
+    """O projeto que já existe para esta live — a mesma live é o mesmo vídeo.
+
+    `youtu.be/ID`, `watch?v=ID&t=30` e `watch?v=ID` são a mesma live. URL de onde
+    não se extrai o id cai na comparação exata do texto, como era antes.
+    """
+    alvo = _id_do_video(youtube_url)
+    if alvo is None:
+        return (
+            await db.execute(select(Projeto).where(Projeto.youtube_url == youtube_url).limit(1))
+        ).scalar_one_or_none()
+    urls = await db.execute(select(Projeto.id, Projeto.youtube_url))
+    for projeto_id, url in urls.all():
+        if _id_do_video(url) == alvo:
+            return await db.get(Projeto, projeto_id)
+    return None
+
+
+def _id_do_video(youtube_url: str) -> str | None:
+    try:
+        return extract_youtube_video_id(youtube_url)
+    except ValueError:
+        return None
+
+
 class IngestaoService:
+    @staticmethod
+    async def iniciar(
+        youtube_url: str,
+        *,
+        canal_origem: str | None = None,
+        titulo_live: str = "",
+        data_live: str = "",
+        pontuacao_ranking: float = 0.0,
+    ) -> ProjetoIniciado:
+        """Cria o Projeto de uma live e dispara a ingestão — ou devolve o que já existe.
+
+        É a regra única de nascimento de Projeto (D-703): a URL colada, o ranking e o
+        navegador de lives passam por aqui. O projeto nasce sem cópia do layout
+        global — a cascata herda na leitura (RN-10). `canal_origem` ausente vale o
+        canal ativo. A ingestão só parte depois do commit, com o projeto gravado.
+        """
+        async with AsyncSessionLocal() as db, db.begin():
+            existente = await _projeto_da_mesma_live(db, youtube_url)
+            if existente is not None:
+                return ProjetoIniciado(existente, ja_existia=True)
+            projeto = Projeto(
+                id=str(uuid.uuid4()),
+                youtube_url=youtube_url,
+                # D-714: o canal DA LIVE, e nao o nosso. Sem ele informado, fica
+                # vazio ate o download dizer de onde a live veio (_salvar_transcricao).
+                canal_origem=canal_origem or "",
+                titulo_live=titulo_live,
+                data_live=data_live,
+                status=StatusProjeto.PENDENTE,
+                pontuacao_ranking=pontuacao_ranking,
+            )
+            db.add(projeto)
+
+        fire_and_forget(
+            IngestaoService.processar_projeto(projeto.id, youtube_url),
+            name=f"ingestao-{projeto.id[:8]}",
+        )
+        return ProjetoIniciado(projeto, ja_existia=False)
+
     @staticmethod
     async def processar_projeto(projeto_id: str, youtube_url: str):
         """Pipeline completo: download + transcrição."""
@@ -165,7 +258,7 @@ class IngestaoService:
             # Pipeline para aqui: análise/desvios/brutos são disparados manualmente
             # pelo usuário via UI. Nada roda automaticamente após o download.
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — tarefa de fundo: a falha vai para o status do projeto
             operational_error(
                 "INGESTAO",
                 f"Erro na ingestão do projeto {projeto_id}: "
@@ -216,7 +309,7 @@ class IngestaoService:
             await queue.put({"status": "pronto", "progresso": 100})
             operational_info("INGESTAO", f"Video da live {projeto_id[:8]} de volta ao disco")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — tarefa de fundo: a falha vai para o status do projeto
             operational_error(
                 "INGESTAO",
                 f"Erro ao rebaixar o video do projeto {projeto_id}: {type(e).__name__}: {e}",
@@ -370,8 +463,8 @@ class IngestaoService:
 
         if not json3_files:
             if vtt_files:
-                from app.domain.time_convert import hms_to_seg
-                from app.domain.transcricao_utils import limpar_e_ordenar_transcricao
+                from app.domain.compartilhado.time_convert import hms_to_seg
+                from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
 
                 operational_info("INGESTAO", "JSON3 não disponível. Usando VTT como fallback.")
                 offset_seg = legenda_offset_ms / 1000.0
@@ -398,7 +491,7 @@ class IngestaoService:
         # Se não vier VTT, o offset é zero
         offset_ms = 0
         if vtt_files:
-            from app.domain.time_convert import hms_to_seg
+            from app.domain.compartilhado.time_convert import hms_to_seg
 
             try:
                 vtt_segs = parse_vtt(vtt_files[0].read_text(encoding="utf-8"))
@@ -425,10 +518,10 @@ class IngestaoService:
                         f"PTS Offset calculado: {offset_ms}ms "
                         f"(VTT {vtt_start_ms} - JSON3 {json3_start_ms})",
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — offset é opcional: sem ele, o VTT fica sem ajuste
                 operational_error("INGESTAO", f"Erro ao calcular offset VTT: {e}")
 
-        from app.domain.transcricao_utils import limpar_e_ordenar_transcricao
+        from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
 
         # Soma o offset matemático (PTS da live) com o offset manual do projeto
         offset_total = offset_ms + legenda_offset_ms
@@ -510,6 +603,8 @@ class IngestaoService:
                     info = json.loads(info_files[0].read_text(encoding="utf-8"))
                     projeto.titulo_live = info.get("title", "")
                     projeto.duracao_segundos = info.get("duration", 0)
+                    if not projeto.canal_origem:
+                        projeto.canal_origem = _canal_da_live(info)
                     data_publicacao = _data_publicacao_yt_dlp(info)
                     if data_publicacao and len(data_publicacao) >= len(projeto.data_live or ""):
                         projeto.data_live = data_publicacao

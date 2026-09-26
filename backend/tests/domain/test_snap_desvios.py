@@ -1,4 +1,4 @@
-"""Testes de `app.domain.snap_desvios` (D-339 — encaixe na borda de palavra).
+"""Testes de `app.domain.corte.snap_desvios` (D-339 — encaixe na borda de palavra).
 
 Função pura: recebe um desvio + a lista achatada de palavras (com tempo real por
 palavra, da D-337) e devolve o desvio com as bordas encaixadas na palavra mais
@@ -7,7 +7,7 @@ próxima, dentro de uma janela — sem nunca piorar o intervalo.
 
 from __future__ import annotations
 
-from app.domain.snap_desvios import achatar_palavras, snap_desvio_a_palavras
+from app.domain.corte.snap_desvios import achatar_palavras, snap_desvio_a_palavras
 
 # Palavras de referência (tempos absolutos em segundos), já ordenadas.
 _PALAVRAS = [

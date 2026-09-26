@@ -1,12 +1,9 @@
-"""D-179: mascote opcional — tolerancia a mascote desabilitado / catalogo ausente,
-e consolidacao do catalogo de poses para `<canal>/mascot/poses.json`.
+"""D-179: mascote opcional — tolerancia a mascote desabilitado / catalogo ausente.
 
 Cobre o criterio de NAO-QUEBRA da Onda C1:
   - `mascot_catalog` degrada para catalogo vazio (sem excecao) quando o mascote esta
     desabilitado OU quando nao ha `poses.json` (nem instance nem espelho versionado).
   - `/api/mascot/poses` responde 200 com lista vazia nesses casos (nao 500).
-  - `consolidar_assets_do_canal` passa a mover `sapo_poses.json` -> `mascot/poses.json`
-    (idempotente; no-op quando ausente).
 """
 
 from __future__ import annotations
@@ -15,7 +12,6 @@ import json
 from pathlib import Path
 
 import pytest
-from app.channel_layout_migration import consolidar_assets_do_canal
 from app.services import mascot_catalog
 from fastapi.testclient import TestClient
 
@@ -105,65 +101,3 @@ def _app_so_com_mascot(mascot_router):
     app = FastAPI()
     app.include_router(mascot_router.router, prefix="/api/mascot")
     return app
-
-
-# --------------------------------------------------------------------------- #
-# Consolidacao do catalogo de poses (D-179)
-# --------------------------------------------------------------------------- #
-
-
-def _criar_instance_plano(instance: Path) -> None:
-    instance.mkdir(parents=True, exist_ok=True)
-    (instance / "channel.yaml").write_text(
-        'handle: "@meucanal"\nnome: "Meu Canal"\n', encoding="utf-8"
-    )
-    (instance / "editorial").mkdir()
-    (instance / "editorial" / "cortes.md").write_text("# cortes\n", encoding="utf-8")
-
-
-def _criar_poses_no_repo(repo: Path) -> Path:
-    data = repo / "backend" / "app" / "data"
-    data.mkdir(parents=True)
-    origem = data / "sapo_poses.json"
-    origem.write_text('{"version": 1, "poses": [{"mood": "serio"}]}', encoding="utf-8")
-    return origem
-
-
-def test_consolida_move_poses_para_mascot_do_canal(tmp_path: Path) -> None:
-    instance = tmp_path / "instance"
-    repo = tmp_path / "repo"
-    _criar_instance_plano(instance)
-    origem = _criar_poses_no_repo(repo)
-
-    resultado = consolidar_assets_do_canal(instance_root=instance, repo_root=repo)
-    destino = resultado.canal_root / "mascot" / "poses.json"
-
-    assert destino.is_file()
-    assert '"serio"' in destino.read_text(encoding="utf-8")
-    assert not origem.exists()  # origem legada esvaziada
-
-
-def test_consolida_poses_e_idempotente(tmp_path: Path) -> None:
-    instance = tmp_path / "instance"
-    repo = tmp_path / "repo"
-    _criar_instance_plano(instance)
-    _criar_poses_no_repo(repo)
-
-    consolidar_assets_do_canal(instance_root=instance, repo_root=repo)
-    resultado2 = consolidar_assets_do_canal(instance_root=instance, repo_root=repo)
-
-    # Segunda passagem: origem ausente -> no-op, destino intacto.
-    assert resultado2.acao == "noop"
-    assert (resultado2.canal_root / "mascot" / "poses.json").is_file()
-
-
-def test_consolida_poses_noop_quando_origem_ausente(tmp_path: Path) -> None:
-    instance = tmp_path / "instance"
-    repo = tmp_path / "repo"
-    _criar_instance_plano(instance)
-    # repo sem backend/app/data/sapo_poses.json
-
-    resultado = consolidar_assets_do_canal(instance_root=instance, repo_root=repo)
-
-    # Sem origem, nada e criado no destino — puro no-op, sem excecao.
-    assert not (resultado.canal_root / "mascot" / "poses.json").exists()

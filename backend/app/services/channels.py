@@ -4,7 +4,8 @@ Registry de canais (épico Multi-canal — Opção X).
 Este serviço gerencia os canais que vivem em `instance/channels/<id>/`: listar
 quais existem (e qual é o ATIVO), criar um canal novo a partir do template
 versionado (`examples/instance.example/`), selecionar o ativo (grava o ponteiro
-`instance/active-channel`) e editar a identidade básica (`channel.yaml`).
+`instance/active-channel`) e editar a identidade básica (no `settings.db`, a fonte
+única — D-699; o `channel.yaml` só semeia um canal ainda não migrado).
 
 DECISÃO DE DESIGN — seleção exige restart:
     O banco (`database.py`) é aberto no startup a partir do canal ativo
@@ -22,15 +23,20 @@ produção resolvem a raiz real do repositório.
 from __future__ import annotations
 
 import logging
-import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-from app.channel_assets_sync import garantir_mascote_materializado
-from app.channel_paths import active_channel_root
-from app.services import settings_store
+from app.core.channel_paths import active_channel_root
+from app.domain.canal.identidade import (
+    Canal,
+    Paleta,
+    id_de_canal_valido,
+    mesclar_identidade,
+)
+from app.infrastructure import settings_store
+from app.infrastructure.channel_assets_sync import garantir_mascote_materializado
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +48,9 @@ _DIR_CANAIS = "channels"
 _PONTEIRO_ATIVO = "active-channel"
 _CHANNEL_YAML = "channel.yaml"
 
-# Id de canal = nome de pasta: começa com letra/dígito e usa só [a-z0-9-].
-_RE_ID_CANAL = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-
 
 class ChannelError(RuntimeError):
     """Erro de domínio do registry de canais (base)."""
-
-
-class IdCanalInvalido(ChannelError):
-    """O id informado não é um slug de canal válido."""
 
 
 class CanalNaoEncontrado(ChannelError):
@@ -62,25 +61,8 @@ class CanalJaExiste(ChannelError):
     """Já existe um canal com o id informado."""
 
 
-@dataclass(frozen=True)
-class Paleta:
-    primaria: str = ""
-    secundaria: str = ""
-    acento: str = ""
-
-
-@dataclass(frozen=True)
-class Canal:
-    """Visão de um canal para a API (identidade + se é o ativo)."""
-
-    id: str
-    handle: str
-    nome: str
-    credito: str
-    paleta: Paleta
-    ativo: bool
-    # Canal-FONTE das lives (handle/id/username do YouTube de onde o ranking baixa).
-    youtube_channel_id: str = ""
+# D-762: `Canal`, `Paleta` e as regras da identidade moram em domain/canal/identidade.
+# `IdCanalInvalido` também — é um PedidoInvalido, que a API devolve como 400.
 
 
 @dataclass(frozen=True)
@@ -147,7 +129,11 @@ def _instance_root_do_ativo() -> Path:
 
 def _flat_do_yaml(channel_yaml: Path) -> dict:
     """Lê o `channel.yaml` e achata nos campos de identidade do `settings_store`."""
-    dados = _ler_yaml(channel_yaml)
+    return _achatar(_ler_yaml(channel_yaml))
+
+
+def _achatar(dados: dict) -> dict:
+    """A identidade aninhada (`paleta: {...}`) nas colunas do `settings_store`."""
     paleta = dados.get("paleta")
     if not isinstance(paleta, dict):
         paleta = {}
@@ -162,15 +148,39 @@ def _flat_do_yaml(channel_yaml: Path) -> dict:
     }
 
 
-def _montar_canal(canal_id: str, channel_yaml: Path, ativo: bool, db_path: Path) -> Canal:
-    """Compõe o `Canal` a partir do banco (fonte da verdade), com fallback ao YAML.
+def _aninhar(flat: dict) -> dict:
+    """As colunas do `settings_store` na forma aninhada que o domínio funde."""
+    return {
+        **{campo: flat[campo] for campo in ("handle", "nome", "credito", "youtube_channel_id")},
+        "paleta": {
+            "primaria": flat["paleta_primaria"],
+            "secundaria": flat["paleta_secundaria"],
+            "acento": flat["paleta_acento"],
+        },
+    }
 
-    Fallback cobre canais ainda não migrados (sem linha no banco): a identidade é
-    lida do `channel.yaml`, preservando o comportamento pré-D-191.
+
+def _identidade_atual(db_path: Path, canal_id: str, channel_yaml: Path) -> dict:
+    """A identidade do canal no banco (fonte única, D-699), achatada.
+
+    O `channel.yaml` só entra como reserva, para um canal ainda não migrado (sem
+    linha no banco) — o comportamento pré-D-191.
     """
     flat = settings_store.ler_identidade(db_path, canal_id)
-    if flat is None:
-        flat = _flat_do_yaml(channel_yaml)
+    return flat if flat is not None else _flat_do_yaml(channel_yaml)
+
+
+def _gravar_identidade_mesclada(
+    db_path: Path, canal_id: str, atual: dict, mudancas: dict | None
+) -> None:
+    """Funde `mudancas` sobre a identidade `atual` e grava no banco — e só nele."""
+    novo = _achatar(mesclar_identidade(_aninhar(atual), mudancas or {}))
+    settings_store.gravar_identidade(db_path, canal_id, novo)
+
+
+def _montar_canal(canal_id: str, channel_yaml: Path, ativo: bool, db_path: Path) -> Canal:
+    """Compõe o `Canal` a partir do banco, com o YAML de reserva (`_identidade_atual`)."""
+    flat = _identidade_atual(db_path, canal_id, channel_yaml)
     return Canal(
         id=canal_id,
         handle=flat["handle"],
@@ -187,13 +197,7 @@ def _montar_canal(canal_id: str, channel_yaml: Path, ativo: bool, db_path: Path)
 
 
 def _exigir_id_valido(canal_id: str) -> str:
-    canal_id = (canal_id or "").strip()
-    if not _RE_ID_CANAL.match(canal_id):
-        raise IdCanalInvalido(
-            f"Id de canal inválido: {canal_id!r}. Use apenas letras minúsculas, "
-            "dígitos e hífen, começando por letra ou dígito (ex.: 'meu-canal')."
-        )
-    return canal_id
+    return id_de_canal_valido(canal_id)
 
 
 def _exigir_canal(instance_root: Path, canal_id: str) -> Path:
@@ -272,9 +276,10 @@ def criar_canal(
 ) -> Canal:
     """Cria um canal novo a partir do template versionado, sem ativá-lo.
 
-    Copia `examples/instance.example/` para `channels/<id>/` e, se `identidade`
-    for informada, aplica os campos no `channel.yaml`. NÃO mexe no ponteiro de
-    canal ativo: criar não troca o canal corrente (isso é `selecionar_canal`).
+    Copia `examples/instance.example/` para `channels/<id>/` e grava no banco a
+    identidade do template com os campos de `identidade` por cima. O `channel.yaml`
+    copiado fica como veio (D-699: o banco é a fonte única). NÃO mexe no ponteiro
+    de canal ativo: criar não troca o canal corrente (isso é `selecionar_canal`).
     """
     canal_id = _exigir_id_valido(canal_id)
     root = _instance_root(instance_root)
@@ -293,12 +298,10 @@ def criar_canal(
     if readme.is_file():
         readme.unlink()
 
-    if identidade:
-        _aplicar_identidade(destino / _CHANNEL_YAML, identidade)
-
-    # Semeia o banco (fonte da verdade) a partir do YAML já mesclado.
     db_path = _db_path(root)
-    settings_store.gravar_identidade(db_path, canal_id, _flat_do_yaml(destino / _CHANNEL_YAML))
+    _gravar_identidade_mesclada(
+        db_path, canal_id, _flat_do_yaml(destino / _CHANNEL_YAML), identidade
+    )
 
     ativo = _ler_canal_ativo(root)
     return _montar_canal(
@@ -335,47 +338,19 @@ def _materializar_mascote_do_ativo() -> None:
 
 
 def editar_identidade(canal_id: str, identidade: dict, instance_root: Path | None = None) -> Canal:
-    """Edita a identidade básica (`channel.yaml`) de um canal existente.
+    """Edita a identidade de um canal existente, no banco (fonte única, D-699).
 
     Só os campos presentes em `identidade` são alterados (merge raso; `paleta`
-    funde campo a campo). Devolve o canal já com os valores atualizados.
+    funde campo a campo), por cima do que o BANCO tem. Antes a fusão partia do
+    `channel.yaml` e o resultado inteiro ia para o banco: um YAML atrasado
+    desfazia, em silêncio, o que o banco já tinha. Devolve o canal atualizado.
     """
     root = _instance_root(instance_root)
     canal_root = _exigir_canal(root, canal_id)
     channel_yaml = canal_root / _CHANNEL_YAML
-    _aplicar_identidade(channel_yaml, identidade)  # merge + espelho no YAML
-    # Banco (fonte da verdade) = identidade completa já mesclada.
     db_path = _db_path(root)
-    settings_store.gravar_identidade(db_path, canal_id, _flat_do_yaml(channel_yaml))
+    _gravar_identidade_mesclada(
+        db_path, canal_id, _identidade_atual(db_path, canal_id, channel_yaml), identidade
+    )
     ativo = _ler_canal_ativo(root)
     return _montar_canal(canal_id, channel_yaml, ativo=(canal_id == ativo), db_path=db_path)
-
-
-# Campos de identidade aceitos no PATCH/criação (escalares de topo).
-_CAMPOS_IDENTIDADE = ("handle", "nome", "credito", "youtube_channel_id")
-_CAMPOS_PALETA = ("primaria", "secundaria", "acento")
-
-
-def _aplicar_identidade(channel_yaml: Path, identidade: dict) -> None:
-    """Funde `identidade` no `channel.yaml`, preservando o resto (ex.: config_version)."""
-    dados = _ler_yaml(channel_yaml)
-
-    for campo in _CAMPOS_IDENTIDADE:
-        if identidade.get(campo) is not None:
-            dados[campo] = str(identidade[campo])
-
-    paleta_in = identidade.get("paleta")
-    if isinstance(paleta_in, dict):
-        paleta = dados.get("paleta")
-        if not isinstance(paleta, dict):
-            paleta = {}
-        for campo in _CAMPOS_PALETA:
-            if paleta_in.get(campo) is not None:
-                paleta[campo] = str(paleta_in[campo])
-        dados["paleta"] = paleta
-
-    channel_yaml.parent.mkdir(parents=True, exist_ok=True)
-    channel_yaml.write_text(
-        yaml.safe_dump(dados, allow_unicode=True, sort_keys=False),
-        encoding="utf-8",
-    )

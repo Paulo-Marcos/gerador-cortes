@@ -9,46 +9,69 @@ import shutil
 import traceback
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
-from app.channel_paths import projetos_dir
+from app.core.channel_paths import projetos_dir
+from app.core.logging import operational_debug, operational_error
 from app.database import AsyncSessionLocal
-from app.domain import ciclo_corte, segmentos_short
-from app.domain.corte_mapper import (
+from app.domain.compartilhado.erros import NaoEncontrado
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.domain.compartilhado.time_convert import hms_to_seg, seg_to_hms, to_seg, to_seg_estrito
+from app.domain.corte import ciclo_corte
+from app.domain.corte.ancora_match import ancorar_desvio
+from app.domain.corte.corte_mapper import (
     cenas_fora_do_corte,
     extrair_cenas_remotion,
     normalizar_cenas_remotion_payload,
     tem_colapso_de_tempos_das_cenas,
 )
-from app.domain.desvio_categoria import SILENCIO
-from app.domain.ffmpeg_basic import (
-    build_silence_detect_proxy_cmd,
-    build_silence_detect_video_cmd,
-)
-from app.domain.juncao_cortes import (
+from app.domain.corte.desvio_categoria import SILENCIO, classificar_desvio
+from app.domain.corte.juncao_cortes import (
     CAMPOS_TEMPO_CENA,
     CAMPOS_TEMPO_REGIAO,
     CAMPOS_TEMPO_SEGMENTO,
     deslocar_tempos,
-    duracao_liquida,
     emendar_texto,
     juntar_desvios,
 )
-from app.domain.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
-from app.domain.reading_metadata import (
+from app.domain.corte.ordem_cortes import CorteOrdenavel, ordenar_por_tempo, pins_para_ordem
+from app.domain.corte.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
     remover_prefixo_leitura_titulo,
 )
-from app.domain.segment_calculator import dividir_desvios_no_ponto, normalizar_desvio
-from app.domain.time_convert import hms_to_seg, seg_to_hms, to_seg
-from app.domain.youtube_layout import normalizar_layout_youtube
+from app.domain.corte.segment_calculator import (
+    dividir_desvios_no_ponto,
+    duracao_liquida,
+    normalizar_desvio,
+    somar_desvios_novos,
+)
+from app.domain.corte.snap_desvios import palavras_do_corte, snap_desvio_a_palavras
+from app.domain.corte.youtube_layout import mesclar_no_layout_do_corte, normalizar_layout_youtube
+from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
+from app.domain.short import segmentos_short
+from app.infrastructure.render.ffmpeg_basic import (
+    build_silence_detect_proxy_cmd,
+    build_silence_detect_video_cmd,
+)
 from app.models import Corte, MetadadoCorte, Projeto, Short, StatusCorte
-from app.services.app_logging import operational_debug, operational_error
+from app.services import abrir_no_sistema
+from app.services.claude_ia import (
+    ClaudeIaService,
+    _carregar_transcricao_raw,
+)
 from app.services.thumbnail import ThumbnailService
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+# Tentativas de gravar a sincronia quando o SQLite responde "database is locked".
+_TENTATIVAS_DE_GRAVACAO = 5
+# Silêncio mais curto que isso é respiração, não pausa que valha virar desvio.
+_PAUSA_MINIMA_SEG = 0.6
+# Dois desvios que começam a menos disso um do outro são o mesmo desvio.
+_DISTANCIA_DE_DUPLICATA_SEG = 0.5
 
 logger = logging.getLogger(__name__)
 
@@ -150,11 +173,15 @@ def _juntar_marcacoes_de_bruto(primeiro: Corte, segundo: Corte, offset_seg: floa
     regioes_segundo = normalizar_layout_youtube(_dict_json(segundo.layout_youtube)).get(
         "regioes", []
     )
-    layout["regioes"] = [
+    regioes = [
         *layout.get("regioes", []),
         *deslocar_tempos(regioes_segundo, offset_seg, CAMPOS_TEMPO_REGIAO),
     ]
-    primeiro.layout_youtube = json.dumps(normalizar_layout_youtube(layout), ensure_ascii=False)
+    # D-741: só as regiões mudam; o resto do layout do primeiro fica como estava.
+    primeiro.layout_youtube = json.dumps(
+        mesclar_no_layout_do_corte(primeiro.layout_youtube, {"regioes": regioes}),
+        ensure_ascii=False,
+    )
 
     # Palco e preset de recortes: o do primeiro manda; herda o do segundo só
     # quando o primeiro nunca escolheu (chave vazia é herança, não decisão).
@@ -308,7 +335,350 @@ class AtualizarCorteDTO:
     audio_offset_ms: int | None = None
 
 
+# ─── Os passos do PATCH do corte (D-716: saíram de `CorteService.atualizar`) ──
+
+
+def _validar_pedido_de_status(corte: Corte, dados: AtualizarCorteDTO) -> None:
+    # D-665: antes de tocar em qualquer campo — um status recusado não pode
+    # deixar a atualização pela metade. `TransicaoDeCorteInvalida` é um
+    # ValueError, e o router já a devolve como 400 com o motivo.
+    if dados.status is not None:
+        # `.value`: em memória o status pode ser o enum, e `str()` de um enum
+        # misto devolve 'StatusCorte.APROVADO' no Python 3.13, não 'aprovado'.
+        atual = getattr(corte.status, "value", corte.status)
+        ciclo_corte.validar_pedido_do_operador(atual, dados.status)
+
+
+def _aplicar_titulo_e_bordas(corte: Corte, dados: AtualizarCorteDTO) -> None:
+    if dados.titulo_proposto is not None:
+        corte.titulo_proposto = dados.titulo_proposto
+    if dados.inicio_hms is not None:
+        corte.inicio_hms = dados.inicio_hms
+    if dados.fim_hms is not None:
+        corte.fim_hms = dados.fim_hms
+    if dados.inicio_seg is not None:
+        corte.inicio_seg = dados.inicio_seg
+    if dados.fim_seg is not None:
+        corte.fim_seg = dados.fim_seg
+    if dados.desvios is not None:
+        corte.desvios = json.dumps(dados.desvios)
+
+
+def _reencaixar_arranjo(corte: Corte) -> None:
+    # D-576: mexeu na borda, o arranjo de blocos acompanha. Descartá-lo seria
+    # perder o trabalho do editor por causa de um ajuste de meio segundo;
+    # confiar nele cegamente mandaria o ffmpeg cortar fora do intervalo.
+    # `reconciliar` estica as fatias até o novo intervalo mantendo a ORDEM.
+    from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+    from app.domain.corte.arranjo_blocos import reconciliar, serializar
+
+    arranjo = parse_arranjo(corte.arranjo_blocos)
+    if arranjo:
+        corte.arranjo_blocos = json.dumps(
+            serializar(
+                reconciliar(arranjo, float(corte.inicio_seg or 0.0), float(corte.fim_seg or 0.0))
+            ),
+            ensure_ascii=False,
+        )
+
+
+def _aplicar_status_e_leitura(corte: Corte, dados: AtualizarCorteDTO) -> None:
+    if dados.status is not None:
+        corte.status = dados.status
+    if dados.is_leitura is not None:
+        corte.is_leitura = dados.is_leitura
+    if dados.autor_leitura is not None:
+        corte.autor_leitura = dados.autor_leitura.strip()
+    if dados.parte_leitura is not None:
+        corte.parte_leitura = max(1, dados.parte_leitura)
+
+
+def _aplicar_transcricao_e_ajustes(corte: Corte, dados: AtualizarCorteDTO) -> None:
+    if dados.transcricao_corte is not None:
+        corte.transcricao_corte = json.dumps(dados.transcricao_corte, ensure_ascii=False)
+    if dados.hints_thumbnail is not None:
+        corte.hints_thumbnail = dados.hints_thumbnail.strip()
+    if dados.audio_offset_ms is not None:
+        # Lip-sync: limite generoso de ±10s evita valores absurdos vindos da UI.
+        corte.audio_offset_ms = max(-10_000, min(10_000, int(dados.audio_offset_ms)))
+
+
+def _recusar_cenas_que_nao_cabem(corte: Corte, cenas_recebidas: list) -> None:
+    if tem_colapso_de_tempos_das_cenas(cenas_recebidas):
+        raise ValueError("Salvamento bloqueado: os tempos das cenas seriam sobrescritos em massa.")
+    # Teto: o span BRUTO do corte, nunca a duracao liquida. O bruto e
+    # sempre >= a liquida, entao um trecho removido jamais gera falso
+    # positivo — so acusa cena inequivocamente fora (tempo absoluto da
+    # live vazando para o roteiro visual).
+    fora = cenas_fora_do_corte(cenas_recebidas, (corte.fim_seg or 0) - (corte.inicio_seg or 0))
+    if fora:
+        exemplo = fora[0]
+        raise ValueError(
+            f"Salvamento bloqueado: {len(fora)} cena(s) com tempo fora do corte "
+            f"(ex.: cena {exemplo['indice']} em {exemplo['inicio']:.1f}s-"
+            f"{exemplo['fim']:.1f}s). Tempo de cena e relativo ao corte, "
+            "nao a posicao na live."
+        )
+
+
+def _aplicar_cenas(corte: Corte, payload: list | dict) -> None:
+    _recusar_cenas_que_nao_cabem(corte, extrair_cenas_remotion(payload))
+    cenas_remotion = normalizar_cenas_remotion_payload(payload)
+    novo_payload = json.dumps(cenas_remotion, ensure_ascii=False)
+    # Se as cenas mudaram, invalida a marca manual de "cenas validadas" — o
+    # operador precisa revalidar conscientemente. Comparar pelo JSON serializado
+    # com NORMALIZACAO em ambos os lados, para evitar invalidar a marca apenas
+    # porque o banco tem dados antigos (ex.: tela_cheia sem modelo_cena, que
+    # passa a ganhar 'card' apos I-031).
+    existente_normalizado = normalizar_cenas_remotion_payload(
+        json.loads(corte.cenas_remotion or "[]")
+    )
+    existente_payload = json.dumps(existente_normalizado, ensure_ascii=False)
+    if existente_payload != novo_payload:
+        corte.cenas_validadas = 0
+        corte.cenas_validadas_em = None
+    corte.cenas_remotion = novo_payload
+
+
+def _aplicar_layout(corte: Corte, payload: dict) -> None:
+    # D-741: grava só as chaves que vieram, e não o layout inteiro normalizado —
+    # a chave ausente é o que mantém o corte herdando do padrão (RN-10).
+    layout_youtube = mesclar_no_layout_do_corte(corte.layout_youtube, payload)
+    novo_layout = json.dumps(layout_youtube, ensure_ascii=False)
+    operational_debug("DB-DEBUG", ">>> INICIANDO ATUALIZAÇÃO DO LAYOUT DO CORTE <<<")
+    operational_debug("DB-DEBUG", f"Recebido do Frontend: {payload}")
+    operational_debug("DB-DEBUG", f"Normalizado e pronto para gravar: {novo_layout}")
+    if (getattr(corte, "layout_youtube", "") or "") != novo_layout:
+        corte.cenas_validadas = 0
+        corte.cenas_validadas_em = None
+    corte.layout_youtube = novo_layout
+
+
+def _mexeu_na_leitura(dados: AtualizarCorteDTO) -> bool:
+    return (
+        dados.is_leitura is not None
+        or dados.autor_leitura is not None
+        or dados.parte_leitura is not None
+    )
+
+
+def _refletir_leitura_no_metadado(corte: Corte) -> None:
+    corte.metadado.titulo_youtube = (
+        aplicar_prefixo_leitura_titulo(
+            corte.metadado.titulo_youtube, corte.autor_leitura, corte.parte_leitura
+        )
+        if corte.is_leitura
+        else remover_prefixo_leitura_titulo(corte.metadado.titulo_youtube)
+    )
+    corte.metadado.texto_capa = aplicar_emojis_texto_capa(
+        corte.metadado.texto_capa,
+        bool(corte.is_fire),
+        bool(corte.is_leitura),
+    )
+
+
+async def _depois_de_gravar(db: AsyncSession, corte: Corte, dados: AtualizarCorteDTO) -> None:
+    """O que o PATCH dispara depois do commit, cada um com a sua transação."""
+    if dados.layout_youtube is not None:
+        # Consulta explícita pós-commit para comprovar gravação no banco
+        res = await db.execute(select(Corte.layout_youtube).where(Corte.id == corte.id))
+        valor_salvo = res.scalar_one_or_none()
+        operational_debug(
+            "DB-DEBUG",
+            f"Verificação pós-commit (SELECT no banco para o corte): {valor_salvo}",
+        )
+        operational_debug("DB-DEBUG", ">>> LAYOUT DO CORTE ATUALIZADO COM SUCESSO <<<")
+
+    if dados.desvios is not None or dados.inicio_seg is not None or dados.fim_seg is not None:
+        await CorteService.sincronizar_transcricao_corte(corte.id)
+
+    # D-448: mexer no início move o corte na linha do tempo — a lista precisa
+    # acompanhar, senão a ordem volta a ser a de criação.
+    if dados.inicio_seg is not None or dados.inicio_hms is not None:
+        await CorteService.renumerar_por_tempo(db, corte.projeto_id)
+
+    # A moldura da capa lê as mesmas marcas que o 📖 do texto e o prefixo do
+    # título, aplicados logo acima. Marcar Leitura depois que a capa entrou é
+    # o caminho normal — o julgamento vem na revisão, a arte às vezes chega
+    # antes —, e sem isto a moldura ficaria congelada na marca antiga.
+    if dados.is_leitura is not None:
+        await ThumbnailService.reaplicar_moldura(corte.id)
+
+
+# ─── Os passos da sincronia (D-716: saíram de `CorteService._exec_sincronia`) ──
+
+
+async def _transcricao_da_live(db: AsyncSession, projeto_id: str) -> list | None:
+    projeto = await db.get(Projeto, projeto_id)
+    if not projeto or not projeto.transcricao_raw:
+        return None
+    return json.loads(projeto.transcricao_raw or "[]")
+
+
+def _registrar_desvios(corte: Corte, corte_id: str, desvios: list[dict]) -> None:
+    operational_debug("CorteService", f"Sincronizando '{corte.titulo_proposto}' ({corte_id})")
+    operational_debug("CorteService", f"  Range: {corte.inicio_seg} -> {corte.fim_seg}")
+    operational_debug("CorteService", f"  Desvios no banco ({len(desvios)}):")
+    for d in desvios:
+        operational_debug(
+            "CorteService",
+            f"    - [{d.get('inicio_seg')} -> {d.get('fim_seg')}] {d.get('motivo')}",
+        )
+
+
+def _segundos_da_sincronia(val) -> float:
+    """Tempo em segundos; sem o `0.0` para vazio do `to_seg`: aqui `None` descarta a fala."""
+    if isinstance(val, (int, float)):
+        return float(val)
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return hms_to_seg(str(val))
+
+
+def _transcricao_bruta(trans_raw: list, c_inicio: float, c_fim: float) -> list[dict]:
+    # ── 1. Transcrição Bruta (trecho completo + buffer de 60s) ──
+    from app.domain.projeto.transcricao_utils import limpar_e_ordenar_transcricao
+
+    inicio_seg_buffer = max(0, c_inicio - 60)
+    fim_seg_buffer = c_fim + 60
+
+    trans_bruta = []
+    for item in trans_raw:
+        try:
+            t_start = _segundos_da_sincronia(item.get("start", item.get("inicio", 0)))
+            if inicio_seg_buffer <= t_start <= fim_seg_buffer:
+                trans_bruta.append(_fala_bruta(item, t_start))
+        except (AttributeError, TypeError, ValueError):
+            continue
+    return limpar_e_ordenar_transcricao(trans_bruta)
+
+
+def _fala_bruta(item: dict, t_start: float) -> dict:
+    t_end = _segundos_da_sincronia(item.get("end", item.get("fim", t_start + 1)))
+
+    seg_bruto = {
+        "start": t_start,
+        "end": t_end,
+        "texto": item.get("texto", ""),
+    }
+    # D-309: preserva o rótulo de falante da diarização
+    # (speaker) fim-a-fim. `limpar_e_ordenar_transcricao` e
+    # `TimelineMath.recalcular_transcricao` já o propagam, então
+    # a transcrição final passa a carregar o falante por
+    # segmento — dispensando a reprojeção de timeline que a
+    # geração de cenas (D-307) precisava fazer.
+    if item.get("speaker"):
+        seg_bruto["speaker"] = item["speaker"]
+    # O timing por palavra (D-337) vem do json3 e sobrevive à
+    # limpeza, que já o preserva — mas morria AQUI, porque
+    # este dicionário era montado à mão sem ele. Sem essa
+    # linha o corte perde a granularidade que a live tem, e
+    # qualquer recurso por palavra (âncora de citação,
+    # detecção de hesitação) fica sem base no nível do corte.
+    # Os tempos são absolutos, como `start`/`end` aqui.
+    if item.get("palavras"):
+        seg_bruto["palavras"] = item["palavras"]
+    return seg_bruto
+
+
+def _segmentos_na_ordem_do_corte(
+    corte: Corte, c_inicio: float, c_fim: float, desvios: list[dict]
+) -> list[dict]:
+    # ── 2. Calcular Segmentos Mantidos (Lógica unificada com ExportService) ──
+    # D-576: na ORDEM DE EXIBIÇÃO, não na cronológica. Se o corte tem
+    # arranjo de blocos, a transcrição final precisa nascer embaralhada
+    # do mesmo jeito que o vídeo — senão a legenda descreve um bruto que
+    # não existe mais, e as cenas (que leem daqui) apontam para o lugar
+    # errado. Sem arranjo, é o mesmo `calcular_segmentos` de sempre.
+    from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+    from app.domain.corte.arranjo_blocos import reconciliar, segmentos_na_ordem
+
+    arranjo = reconciliar(parse_arranjo(corte.arranjo_blocos), c_inicio, c_fim)
+    segmentos_mantidos = segmentos_na_ordem(arranjo, c_inicio, c_fim, desvios)
+    operational_debug("CorteService", f"  Segmentos mantidos ({len(segmentos_mantidos)}):")
+    for sm in segmentos_mantidos:
+        operational_debug(
+            "CorteService",
+            f"    - [{sm['start']} -> {sm['end']}] dur={round(sm['end'] - sm['start'], 2)}s",
+        )
+
+    # Log de debug para auditoria de drift
+    dur_est = sum(s["end"] - s["start"] for s in segmentos_mantidos)
+    operational_debug(
+        "CorteService", f"Sincronia: {len(segmentos_mantidos)} segs, dur={dur_est:.2f}s"
+    )
+    return segmentos_mantidos
+
+
+async def _gravar_sincronia(
+    db: AsyncSession, corte: Corte, trans_bruta: list, nova_trans: list, texto_final: str
+) -> None:
+    # Retry para "database is locked" em picos de escrita. D-652: sem o
+    # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
+    # seguintes morrem em PendingRollbackError — o retry era inócuo e
+    # mascarava o erro real. D-716: o `rollback` também descarta o que
+    # foi atribuído ao corte, então cada tentativa atribui de novo —
+    # antes a segunda gravava nada e a sincronia se perdia em silêncio.
+    for attempt in range(_TENTATIVAS_DE_GRAVACAO):
+        corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
+        corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
+        corte.transcricao_final_texto = texto_final
+        try:
+            await db.commit()
+            break
+        except Exception as e:
+            if "locked" in str(e).lower() and attempt < _TENTATIVAS_DE_GRAVACAO - 1:
+                await db.rollback()
+                await asyncio.sleep(0.5 * (attempt + 1))
+                continue
+            raise e
+
+
 class CorteService:
+    @staticmethod
+    async def aprovar(corte_id: str) -> None:
+        """Aprova o corte — um pedido do operador, que segue o ciclo do corte (RN-04, D-665)."""
+        async with AsyncSessionLocal() as db, db.begin():
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise NaoEncontrado("Corte não encontrado")
+            ciclo_corte.validar_pedido_do_operador(
+                getattr(corte.status, "value", corte.status), StatusCorte.APROVADO.value
+            )
+            corte.status = StatusCorte.APROVADO
+
+    @staticmethod
+    async def abrir_pasta(corte_id: str) -> str:
+        """Abre a pasta do corte no explorador do sistema e devolve o caminho (D-705).
+
+        A abertura é a mesma dos projetos e dos shorts (`abrir_no_sistema`, com
+        timeout); levanta `NaoConsegueAbrir` quando o sistema recusa.
+        """
+        async with AsyncSessionLocal() as db, db.begin():
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise NaoEncontrado("Corte não encontrado")
+        return abrir_no_sistema.abrir_pasta(projetos_dir() / corte.projeto_id / "cortes" / corte_id)
+
+    @staticmethod
+    async def remover(corte_id: str) -> None:
+        """Apaga o corte e a pasta dele no disco (D-705).
+
+        A pasta sai depois da transação (ADR-0016): bruto, grade e overlays somam
+        GB, e apagar no event loop trava o app (D-645) — vai para uma thread.
+        """
+        async with AsyncSessionLocal() as db, db.begin():
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise NaoEncontrado("Corte não encontrado")
+            projeto_id = corte.projeto_id
+            await db.delete(corte)
+
+        corte_dir = projetos_dir() / projeto_id / "cortes" / corte_id
+        if corte_dir.exists():
+            await asyncio.to_thread(shutil.rmtree, corte_dir, ignore_errors=True)
+
     @staticmethod
     async def atualizar(db: AsyncSession, corte_id: str, dados: AtualizarCorteDTO) -> Corte:
         """Aplica uma atualização parcial a um corte (handler PATCH /cortes/{id}).
@@ -330,152 +700,22 @@ class CorteService:
         corte = result.scalar_one_or_none()
         if not corte:
             raise ValueError("Corte não encontrado")
-        # D-665: antes de tocar em qualquer campo — um status recusado não pode
-        # deixar a atualização pela metade. `TransicaoDeCorteInvalida` é um
-        # ValueError, e o router já a devolve como 400 com o motivo.
-        if dados.status is not None:
-            # `.value`: em memória o status pode ser o enum, e `str()` de um enum
-            # misto devolve 'StatusCorte.APROVADO' no Python 3.13, não 'aprovado'.
-            atual = getattr(corte.status, "value", corte.status)
-            ciclo_corte.validar_pedido_do_operador(atual, dados.status)
+        _validar_pedido_de_status(corte, dados)
 
-        if dados.titulo_proposto is not None:
-            corte.titulo_proposto = dados.titulo_proposto
-        if dados.inicio_hms is not None:
-            corte.inicio_hms = dados.inicio_hms
-        if dados.fim_hms is not None:
-            corte.fim_hms = dados.fim_hms
-        if dados.inicio_seg is not None:
-            corte.inicio_seg = dados.inicio_seg
-        if dados.fim_seg is not None:
-            corte.fim_seg = dados.fim_seg
-        if dados.desvios is not None:
-            corte.desvios = json.dumps(dados.desvios)
-        # D-576: mexeu na borda, o arranjo de blocos acompanha. Descartá-lo seria
-        # perder o trabalho do editor por causa de um ajuste de meio segundo;
-        # confiar nele cegamente mandaria o ffmpeg cortar fora do intervalo.
-        # `reconciliar` estica as fatias até o novo intervalo mantendo a ORDEM.
+        _aplicar_titulo_e_bordas(corte, dados)
         if dados.inicio_seg is not None or dados.fim_seg is not None:
-            from app.domain.arranjo_blocos import parse as parse_arranjo
-            from app.domain.arranjo_blocos import reconciliar, serializar
-
-            arranjo = parse_arranjo(corte.arranjo_blocos)
-            if arranjo:
-                corte.arranjo_blocos = json.dumps(
-                    serializar(
-                        reconciliar(
-                            arranjo, float(corte.inicio_seg or 0.0), float(corte.fim_seg or 0.0)
-                        )
-                    ),
-                    ensure_ascii=False,
-                )
-        if dados.status is not None:
-            corte.status = dados.status
-        if dados.is_leitura is not None:
-            corte.is_leitura = dados.is_leitura
-        if dados.autor_leitura is not None:
-            corte.autor_leitura = dados.autor_leitura.strip()
-        if dados.parte_leitura is not None:
-            corte.parte_leitura = max(1, dados.parte_leitura)
-        if dados.transcricao_corte is not None:
-            corte.transcricao_corte = json.dumps(dados.transcricao_corte, ensure_ascii=False)
-        if dados.hints_thumbnail is not None:
-            corte.hints_thumbnail = dados.hints_thumbnail.strip()
-        if dados.audio_offset_ms is not None:
-            # Lip-sync: limite generoso de ±10s evita valores absurdos vindos da UI.
-            corte.audio_offset_ms = max(-10_000, min(10_000, int(dados.audio_offset_ms)))
+            _reencaixar_arranjo(corte)
+        _aplicar_status_e_leitura(corte, dados)
+        _aplicar_transcricao_e_ajustes(corte, dados)
         if dados.cenas_remotion is not None:
-            cenas_recebidas = extrair_cenas_remotion(dados.cenas_remotion)
-            if tem_colapso_de_tempos_das_cenas(cenas_recebidas):
-                raise ValueError(
-                    "Salvamento bloqueado: os tempos das cenas seriam sobrescritos em massa."
-                )
-            # Teto: o span BRUTO do corte, nunca a duracao liquida. O bruto e
-            # sempre >= a liquida, entao um trecho removido jamais gera falso
-            # positivo — so acusa cena inequivocamente fora (tempo absoluto da
-            # live vazando para o roteiro visual).
-            fora = cenas_fora_do_corte(
-                cenas_recebidas, (corte.fim_seg or 0) - (corte.inicio_seg or 0)
-            )
-            if fora:
-                exemplo = fora[0]
-                raise ValueError(
-                    f"Salvamento bloqueado: {len(fora)} cena(s) com tempo fora do corte "
-                    f"(ex.: cena {exemplo['indice']} em {exemplo['inicio']:.1f}s-"
-                    f"{exemplo['fim']:.1f}s). Tempo de cena e relativo ao corte, "
-                    "nao a posicao na live."
-                )
-            cenas_remotion = normalizar_cenas_remotion_payload(dados.cenas_remotion)
-            novo_payload = json.dumps(cenas_remotion, ensure_ascii=False)
-            # Se as cenas mudaram, invalida a marca manual de "cenas validadas" — o
-            # operador precisa revalidar conscientemente. Comparar pelo JSON serializado
-            # com NORMALIZACAO em ambos os lados, para evitar invalidar a marca apenas
-            # porque o banco tem dados antigos (ex.: tela_cheia sem modelo_cena, que
-            # passa a ganhar 'card' apos I-031).
-            existente_normalizado = normalizar_cenas_remotion_payload(
-                json.loads(corte.cenas_remotion or "[]")
-            )
-            existente_payload = json.dumps(existente_normalizado, ensure_ascii=False)
-            if existente_payload != novo_payload:
-                corte.cenas_validadas = 0
-                corte.cenas_validadas_em = None
-            corte.cenas_remotion = novo_payload
-
+            _aplicar_cenas(corte, dados.cenas_remotion)
         if dados.layout_youtube is not None:
-            layout_youtube = normalizar_layout_youtube(dados.layout_youtube)
-            novo_layout = json.dumps(layout_youtube, ensure_ascii=False)
-            operational_debug("DB-DEBUG", ">>> INICIANDO ATUALIZAÇÃO DO LAYOUT DO CORTE <<<")
-            operational_debug("DB-DEBUG", f"Recebido do Frontend: {dados.layout_youtube}")
-            operational_debug("DB-DEBUG", f"Normalizado e pronto para gravar: {novo_layout}")
-            if (getattr(corte, "layout_youtube", "") or "") != novo_layout:
-                corte.cenas_validadas = 0
-                corte.cenas_validadas_em = None
-            corte.layout_youtube = novo_layout
-
-        if corte.metadado and (
-            dados.is_leitura is not None
-            or dados.autor_leitura is not None
-            or dados.parte_leitura is not None
-        ):
-            corte.metadado.titulo_youtube = (
-                aplicar_prefixo_leitura_titulo(
-                    corte.metadado.titulo_youtube, corte.autor_leitura, corte.parte_leitura
-                )
-                if corte.is_leitura
-                else remover_prefixo_leitura_titulo(corte.metadado.titulo_youtube)
-            )
-            corte.metadado.texto_capa = aplicar_emojis_texto_capa(
-                corte.metadado.texto_capa,
-                bool(corte.metadado.is_fire),
-                bool(corte.is_leitura),
-            )
+            _aplicar_layout(corte, dados.layout_youtube)
+        if corte.metadado and _mexeu_na_leitura(dados):
+            _refletir_leitura_no_metadado(corte)
 
         await db.commit()
-
-        if dados.layout_youtube is not None:
-            # Consulta explícita pós-commit para comprovar gravação no banco
-            res = await db.execute(select(Corte.layout_youtube).where(Corte.id == corte.id))
-            valor_salvo = res.scalar_one_or_none()
-            operational_debug(
-                "DB-DEBUG",
-                f"Verificação pós-commit (SELECT no banco para o corte): {valor_salvo}",
-            )
-            operational_debug("DB-DEBUG", ">>> LAYOUT DO CORTE ATUALIZADO COM SUCESSO <<<")
-
-        if dados.desvios is not None or dados.inicio_seg is not None or dados.fim_seg is not None:
-            await CorteService.sincronizar_transcricao_corte(corte_id)
-
-        # D-448: mexer no início move o corte na linha do tempo — a lista precisa
-        # acompanhar, senão a ordem volta a ser a de criação.
-        if dados.inicio_seg is not None or dados.inicio_hms is not None:
-            await CorteService.renumerar_por_tempo(db, corte.projeto_id)
-
-        # A moldura da capa lê as mesmas marcas que o 📖 do texto e o prefixo do
-        # título, aplicados logo acima. Marcar Leitura depois que a capa entrou é
-        # o caminho normal — o julgamento vem na revisão, a arte às vezes chega
-        # antes —, e sem isto a moldura ficaria congelada na marca antiga.
-        if dados.is_leitura is not None:
-            await ThumbnailService.reaplicar_moldura(corte_id)
+        await _depois_de_gravar(db, corte, dados)
 
         await db.refresh(corte)
         return corte
@@ -486,7 +726,6 @@ class CorteService:
 
         from app.database import AsyncSessionLocal
         from app.models import Corte
-        from app.services.claude_ia import ClaudeIaService
         from sqlalchemy import select
 
         async with AsyncSessionLocal() as db:
@@ -496,10 +735,126 @@ class CorteService:
 
         for cid in corte_ids:
             try:
-                await ClaudeIaService.gerar_trechos_via_claude(cid, provider)
+                await CorteService.gerar_trechos_via_claude(cid, provider)
                 await asyncio.sleep(1)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — lote: um corte que falha não para os outros
                 operational_error("AnalisarDesvios", f"Erro no corte {cid}: {e}")
+
+    @staticmethod
+    async def gerar_trechos_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
+        """Regenera os trechos a remover (desvios) de um corte via Claude e
+        ressincroniza a transcrição final. Usa a skill `trechos-expert`.
+
+        D-332 (aditivo puro): "gerar trechos" é CUMULATIVO como a análise
+        (D-298) — soma os desvios novos, pula os que praticamente coincidem com
+        um já marcado, e NUNCA remove nem ajusta o que já existe (manual OU
+        claude). A revisão automática da D-302 foi REVOGADA: uma regeração não
+        pode mais apagar o trabalho de marcação anterior.
+        Em projeto diarizado, os chunks saem com o rótulo de falante
+        ([CANAL]/[OUTRO]) para a regra "pausa por troca de falante não é
+        enrolação" funcionar.
+        """
+        async with AsyncSessionLocal() as db:
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise ValueError("Corte não encontrado")
+            if not corte.transcricao_corte:
+                raise ValueError("Corte sem transcrição bruta. Rode 'refazer transcrição' antes.")
+            transcricao_bruta = json.loads(corte.transcricao_corte)
+            meta = {
+                "corte_id": corte_id,  # D-353: contexto p/ telemetria da geração
+                "projeto_id": corte.projeto_id,
+                "titulo": corte.titulo_proposto or "",
+                "tema_central": corte.tema_central or "",
+                "inicio_hms": corte.inicio_hms or "",
+                "fim_hms": corte.fim_hms or "",
+            }
+            desvios_existentes = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
+            corte_inicio_seg = to_seg_estrito(corte.inicio_seg or 0)
+            corte_fim_seg = to_seg_estrito(corte.fim_seg or 0)
+            # D-286/D-302: a transcricao_corte não guarda `speaker` — o rótulo
+            # vive na transcricao_raw do projeto; reanotamos antes do prompt.
+            # D-339: a transcricao_raw também é a ÚNICA fonte do timing por palavra
+            # (a transcricao_corte descarta `palavras`), então carregamos sempre —
+            # não só quando há diarização.
+            projeto = await db.get(Projeto, corte.projeto_id)
+            mapa_falantes = (
+                mapa_falantes_para_meta(projeto.falantes_map) if projeto is not None else None
+            )
+            transcricao_raw_projeto = (
+                _carregar_transcricao_raw(projeto.transcricao_raw, corte.projeto_id)
+                if projeto is not None and projeto.transcricao_raw
+                else []
+            )
+
+        if mapa_falantes and isinstance(transcricao_raw_projeto, list):
+            transcricao_bruta = anotar_falantes_do_projeto(
+                transcricao_bruta, transcricao_raw_projeto
+            )
+
+        resultado = await ClaudeIaService.gerar_desvios(
+            transcricao_bruta, meta, desvios_existentes, mapa_falantes, provider
+        )
+        # WHY: a `origem` (o provider que propôs) permite o frontend exibir o badge
+        # (Bug-2 do I-020). D-332: aditivo puro — sem revisão dos existentes.
+        # D-339: encaixa cada desvio NOVO na borda real de palavra (snap
+        # determinístico) ANTES do merge. Só os desvios do Claude passam por aqui;
+        # os já existentes (manual/técnico/claude anterior) ficam intocados. Sem
+        # timing por palavra (corte antigo) `palavras_corte` sai vazia e o snap é
+        # no-op — back-compat total.
+        palavras_corte = palavras_do_corte(transcricao_raw_projeto, corte_inicio_seg, corte_fim_seg)
+        # D-355: quando o desvio traz a citação (inicio_texto/fim_texto), ancora a
+        # borda na palavra real (busca janelada ~5s) ANTES do snap — o snap então
+        # só faz o ajuste fino. Sem citação, ancoragem é no-op e o snap age sozinho.
+        # D-422: `classificar_desvio` reconcilia a `categoria` devolvida pela skill
+        # com o vocabulário canônico (e garante o aviso no motivo dos imprecisos)
+        # antes de qualquer ajuste de borda — a UI badgeia o MOTIVO da remoção, não
+        # a origem.
+        normalizados_novos = [
+            snap_desvio_a_palavras(
+                ancorar_desvio(
+                    classificar_desvio(normalizar_desvio({**d, "origem": provider})),
+                    palavras_corte,
+                ),
+                palavras_corte,
+            )
+            for d in resultado.get("desvios", [])
+        ]
+        mesclados, adicionados = somar_desvios_novos(desvios_existentes, normalizados_novos)
+
+        async with AsyncSessionLocal() as db:
+            corte = await db.get(Corte, corte_id)
+            if not corte:
+                raise ValueError("Corte não encontrado")
+            corte.desvios = json.dumps(mesclados, ensure_ascii=False)
+            # D-334: conta esta invocação da skill trechos-expert — cobre tanto
+            # o botão por-corte quanto o lote (analisar_desvios_todos_impl
+            # chama esta mesma função por corte).
+            corte.trechos_geracoes = (corte.trechos_geracoes or 0) + 1
+            log = json.loads(corte.trechos_geracoes_log or "[]")
+            log.append(
+                {
+                    "em": datetime.utcnow().isoformat(),
+                    "adicionados": adicionados,
+                    "total_apos": len(mesclados),
+                }
+            )
+            corte.trechos_geracoes_log = json.dumps(log, ensure_ascii=False)
+            await db.commit()
+
+        # Ressincroniza a transcrição final aplicando o conjunto de desvios.
+        await CorteService.sincronizar_transcricao_corte(corte_id)
+
+        logger.info(
+            "[ClaudeIA] Trechos via Claude p/ corte %s: +%d novos (total %d)",
+            corte_id[:8],
+            adicionados,
+            len(mesclados),
+        )
+        return {
+            "total_desvios": len(mesclados),
+            "novos": adicionados,
+        }
 
     @staticmethod
     async def dividir_corte(corte_id: str, ponto_seg: float) -> tuple[str, str]:
@@ -546,8 +901,8 @@ class CorteService:
             # intervalo parte o arranjo. Cada metade fica com os blocos que lhe
             # cabem, esticados para ladrilhar a própria borda nova e NA ORDEM que
             # o editor tinha escolhido. Corte sem arranjo continua sem arranjo.
-            from app.domain.arranjo_blocos import parse as parse_arranjo
-            from app.domain.arranjo_blocos import reconciliar, serializar
+            from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+            from app.domain.corte.arranjo_blocos import reconciliar, serializar
 
             arranjo = parse_arranjo(corte.arranjo_blocos)
             arranjo_esq = serializar(reconciliar(arranjo, inicio, ponto))
@@ -698,8 +1053,8 @@ class CorteService:
             # mesmo tipo de estrago que a junção existe para evitar nos trechos e
             # nas cenas: trabalho editorial jogado fora por uma operação de
             # fronteira. Dois cortes sem arranjo continuam sem arranjo.
-            from app.domain.arranjo_blocos import concatenar, serializar
-            from app.domain.arranjo_blocos import parse as parse_arranjo
+            from app.domain.corte.arranjo_blocos import concatenar, serializar
+            from app.domain.corte.arranjo_blocos import parse as parse_arranjo
 
             arranjo_mesclado = concatenar(
                 parse_arranjo(primeiro.arranjo_blocos),
@@ -806,7 +1161,7 @@ class CorteService:
 
         try:
             await CorteService.sincronizar_transcricao_corte(novo_corte.id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — a sincronia não desfaz o corte criado
             logger.warning("[criar_manual] Falha ao sincronizar transcricao: %s", e)
 
         result = await db.execute(
@@ -1057,7 +1412,7 @@ class CorteService:
             corte = await db.get(Corte, corte_id)
             projeto = await db.get(Projeto, corte.projeto_id)
 
-            from app.channel_paths import resolver_do_projeto
+            from app.core.channel_paths import resolver_do_projeto
 
             # Re-ancora o caminho no canal ATIVO (D-172): tolera path stale no banco.
             video_path = str(resolver_do_projeto(projeto.arquivo_video_path, projeto.id))
@@ -1096,7 +1451,7 @@ class CorteService:
                 res = await run_ffmpeg_simple(cmd, label="detectar_silencios", capture_output=True)
                 output = res.stderr
                 returncode = res.returncode
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — falha do ffmpeg vira resposta de erro
                 operational_error("CorteService", f"Erro na detecção de silêncios: {e}")
                 return {"status": "erro", "erro": str(e)}
 
@@ -1132,7 +1487,7 @@ class CorteService:
                 e_abs = min(round(e_abs, 3), float(corte.fim_seg))
 
                 # Descarta blocos menores que 0.6s após ajuste (apenas pausas mais longas)
-                if e_abs - s_abs < 0.6:
+                if e_abs - s_abs < _PAUSA_MINIMA_SEG:
                     continue
 
                 # seg_to_hms preserva milissegundos (HH:MM:SS.mmm) para evitar
@@ -1164,7 +1519,10 @@ class CorteService:
             # HMS, que tinha precisão de apenas 1 segundo e gerava duplicatas falsas.
             def _ja_existe(nd: dict, existentes: list) -> bool:
                 nd_inicio = float(nd.get("inicio_seg", 0))
-                return any(abs(float(d.get("inicio_seg", 0)) - nd_inicio) < 0.5 for d in existentes)
+                return any(
+                    abs(float(d.get("inicio_seg", 0)) - nd_inicio) < _DISTANCIA_DE_DUPLICATA_SEG
+                    for d in existentes
+                )
 
             for nd in novos_desvios:
                 if not _ja_existe(nd, desvios_atuais):
@@ -1177,7 +1535,7 @@ class CorteService:
         # Recalcula a transcrição
         try:
             await CorteService.sincronizar_transcricao_corte(corte_id, db=db)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — a sincronia não desfaz os desvios gravados
             operational_error(
                 "CorteService",
                 f"Erro ao sincronizar transcrição após silêncios: {e}\n{traceback.format_exc()}",
@@ -1226,6 +1584,7 @@ class CorteService:
 
     @staticmethod
     async def _exec_sincronia(corte_id: str, db: AsyncSession, *, trans_raw: list | None = None):
+        from app.domain.corte.segment_calculator import normalizar_desvio
         from app.services.timeline_math import TimelineMath
 
         try:
@@ -1241,110 +1600,17 @@ class CorteService:
             await db.refresh(corte)
 
             if trans_raw is None:
-                projeto = await db.get(Projeto, corte.projeto_id)
-                if not projeto or not projeto.transcricao_raw:
+                trans_raw = await _transcricao_da_live(db, corte.projeto_id)
+                if trans_raw is None:
                     return
-                trans_raw = json.loads(projeto.transcricao_raw or "[]")
-
-            from app.domain.segment_calculator import normalizar_desvio
 
             desvios = [normalizar_desvio(d) for d in json.loads(corte.desvios or "[]")]
+            _registrar_desvios(corte, corte_id, desvios)
 
-            operational_debug(
-                "CorteService", f"Sincronizando '{corte.titulo_proposto}' ({corte_id})"
-            )
-            operational_debug("CorteService", f"  Range: {corte.inicio_seg} -> {corte.fim_seg}")
-            operational_debug("CorteService", f"  Desvios no banco ({len(desvios)}):")
-            for d in desvios:
-                operational_debug(
-                    "CorteService",
-                    f"    - [{d.get('inicio_seg')} -> {d.get('fim_seg')}] {d.get('motivo')}",
-                )
-
-            # ── 1. Transcrição Bruta (trecho completo + buffer de 60s) ──
-            def _to_seg(val) -> float:
-                if isinstance(val, (int, float)):
-                    return float(val)
-                try:
-                    return float(val)
-                except (ValueError, TypeError):
-                    return hms_to_seg(str(val))
-
-            c_inicio = _to_seg(corte.inicio_seg or 0.0)
-            c_fim = _to_seg(corte.fim_seg or 0.0)
-
-            inicio_seg_buffer = max(0, c_inicio - 60)
-            fim_seg_buffer = c_fim + 60
-
-            trans_bruta = []
-            for item in trans_raw:
-                try:
-                    t_start = _to_seg(item.get("start", item.get("inicio", 0)))
-
-                    if inicio_seg_buffer <= t_start <= fim_seg_buffer:
-                        t_end = _to_seg(item.get("end", item.get("fim", t_start + 1)))
-
-                        seg_bruto = {
-                            "start": t_start,
-                            "end": t_end,
-                            "texto": item.get("texto", ""),
-                        }
-                        # D-309: preserva o rótulo de falante da diarização
-                        # (speaker) fim-a-fim. `limpar_e_ordenar_transcricao` e
-                        # `TimelineMath.recalcular_transcricao` já o propagam, então
-                        # a transcrição final passa a carregar o falante por
-                        # segmento — dispensando a reprojeção de timeline que a
-                        # geração de cenas (D-307) precisava fazer.
-                        if item.get("speaker"):
-                            seg_bruto["speaker"] = item["speaker"]
-                        # O timing por palavra (D-337) vem do json3 e sobrevive à
-                        # limpeza, que já o preserva — mas morria AQUI, porque
-                        # este dicionário era montado à mão sem ele. Sem essa
-                        # linha o corte perde a granularidade que a live tem, e
-                        # qualquer recurso por palavra (âncora de citação,
-                        # detecção de hesitação) fica sem base no nível do corte.
-                        # Os tempos são absolutos, como `start`/`end` aqui.
-                        if item.get("palavras"):
-                            seg_bruto["palavras"] = item["palavras"]
-                        trans_bruta.append(seg_bruto)
-                except Exception:
-                    continue
-
-            from app.domain.transcricao_utils import limpar_e_ordenar_transcricao
-
-            trans_bruta = limpar_e_ordenar_transcricao(trans_bruta)
-
-            # ── 2. Transcrição Final (editada, sem desvios, tempos re-mapeados) ──
-            def _d_val(d: dict, k_seg: str, k_hms: str) -> float:
-                val_seg = d.get(k_seg)
-                if val_seg is not None:
-                    return _to_seg(val_seg)
-                return hms_to_seg(d.get(k_hms, ""))
-
-            # ── 2. Calcular Segmentos Mantidos (Lógica unificada com ExportService) ──
-            # D-576: na ORDEM DE EXIBIÇÃO, não na cronológica. Se o corte tem
-            # arranjo de blocos, a transcrição final precisa nascer embaralhada
-            # do mesmo jeito que o vídeo — senão a legenda descreve um bruto que
-            # não existe mais, e as cenas (que leem daqui) apontam para o lugar
-            # errado. Sem arranjo, é o mesmo `calcular_segmentos` de sempre.
-            from app.domain.arranjo_blocos import parse as parse_arranjo
-            from app.domain.arranjo_blocos import reconciliar, segmentos_na_ordem
-
-            arranjo = reconciliar(parse_arranjo(corte.arranjo_blocos), c_inicio, c_fim)
-            segmentos_mantidos = segmentos_na_ordem(arranjo, c_inicio, c_fim, desvios)
-            operational_debug("CorteService", f"  Segmentos mantidos ({len(segmentos_mantidos)}):")
-            for sm in segmentos_mantidos:
-                operational_debug(
-                    "CorteService",
-                    f"    - [{sm['start']} -> {sm['end']}] dur={round(sm['end'] - sm['start'], 2)}s",
-                )
-
-            # Log de debug para auditoria de drift
-            dur_est = sum(s["end"] - s["start"] for s in segmentos_mantidos)
-            operational_debug(
-                "CorteService", f"Sincronia: {len(segmentos_mantidos)} segs, dur={dur_est:.2f}s"
-            )
-
+            c_inicio = _segundos_da_sincronia(corte.inicio_seg or 0.0)
+            c_fim = _segundos_da_sincronia(corte.fim_seg or 0.0)
+            trans_bruta = _transcricao_bruta(trans_raw, c_inicio, c_fim)
+            segmentos_mantidos = _segmentos_na_ordem_do_corte(corte, c_inicio, c_fim, desvios)
             nova_trans = TimelineMath.recalcular_transcricao(trans_bruta, segmentos_mantidos)
 
             # ── 3. Texto puro limpo para IA ──
@@ -1360,26 +1626,7 @@ class CorteService:
                     f"Primeiro timestamp: {nova_trans[0].get('start')}s",
                 )
 
-            corte.transcricao_corte = json.dumps(trans_bruta, ensure_ascii=False)
-            corte.transcricao_final = json.dumps(nova_trans, ensure_ascii=False)
-            corte.transcricao_final_texto = texto_final
-
-            # Retry para "database is locked" em picos de escrita. D-652: sem o
-            # `rollback`, a sessão fica suja depois da falha e as 4 tentativas
-            # seguintes morrem em PendingRollbackError — o retry era inócuo e
-            # mascarava o erro real.
-            for attempt in range(5):
-                try:
-                    await db.commit()
-                    break
-                except Exception as e:
-                    if "locked" in str(e).lower() and attempt < 4:
-                        import asyncio
-
-                        await db.rollback()
-                        await asyncio.sleep(0.5 * (attempt + 1))
-                        continue
-                    raise e
+            await _gravar_sincronia(db, corte, trans_bruta, nova_trans, texto_final)
         except Exception as e:
             operational_error(
                 "CorteService",

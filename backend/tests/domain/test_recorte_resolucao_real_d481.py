@@ -17,8 +17,8 @@ import inspect
 from pathlib import Path
 
 import pytest
-from app.domain.ffmpeg_short import build_recorte_vertical_cmd
-from app.domain.formato_video import VERTICAL, Resolucao, calcular_recorte
+from app.domain.short.formato_video import VERTICAL, Resolucao, calcular_recorte
+from app.infrastructure.render.ffmpeg_short import build_recorte_vertical_cmd
 
 # Resolucoes que aparecem de verdade num acervo de lives.
 RESOLUCOES = [

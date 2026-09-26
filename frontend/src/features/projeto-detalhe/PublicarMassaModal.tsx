@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/modal';
 import { useQueryClient } from '@tanstack/react-query';
 import { exportStatusKey } from '@/hooks/useProjetoDetalhe';
-import { api } from '@/lib/api';
-import type { BulkYoutubeRequest, StatusExportCorte } from '@/types/models';
+import type { StatusExportCorte } from '@/types/models';
+import { publicacaoApi, type BulkYoutubeRequest } from '@/features/publicacao/api';
 
 interface Props {
   open: boolean;
@@ -92,7 +92,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
     };
 
     try {
-      const res = await api.bulkYoutube(projetoId, payload);
+      const res = await publicacaoApi.bulkYoutube(projetoId, payload);
       setResultados((prev) =>
         prev.map((r) => ({ ...r, status: 'enfileirado', mensagem: res.message })),
       );
@@ -172,7 +172,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
                       <span className="w-8 shrink-0 font-mono tabular-nums text-text-400">
                         #{a.numero}
                       </span>
-                      <span className="flex-1 truncate text-text-200" title={a.titulo}>
+                      <span className="flex-1 truncate text-text-200" title={a.titulo ?? undefined}>
                         {a.titulo}
                       </span>
                       <span className="shrink-0 font-mono tabular-nums text-accent-300">

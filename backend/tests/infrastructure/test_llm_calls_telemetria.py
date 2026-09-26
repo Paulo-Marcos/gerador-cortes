@@ -5,7 +5,7 @@ Cobre:
     latência/tokens best-effort/sucesso) a partir do envelope + contexto.
   - Erro (`ClaudeCliError`) registra sucesso=False + erro_tipo e RE-LEVANTA.
   - NÃO-FATAL: se a gravação da telemetria explodir, a geração ainda retorna.
-  - Plumbing editorial: `_args_claude` injeta o contexto (etapa/projeto/corte).
+  - Plumbing editorial: `GeradorClaudeCli.argumentos` injeta o contexto (etapa/projeto/corte).
 
 O `_run` real é substituído por um fake (nenhum subprocess/claude é invocado), e o
 store é substituído por um capturador — nenhum banco é tocado.
@@ -14,6 +14,7 @@ store é substituído por um capturador — nenhum banco é tocado.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 
 import pytest
 from app.infrastructure import claude_cli_client as cli
@@ -28,13 +29,13 @@ def _fake_run_ok(envelope: dict):
 
 
 def _capturar_store(monkeypatch) -> list[dict]:
-    """Substitui `llm_calls_store.gravar_llm_call` por um capturador de kwargs."""
-    from app.services import llm_calls_store
+    """Substitui `llm_calls_store.gravar_llm_call` por um capturador dos campos gravados."""
+    from app.infrastructure import llm_calls_store
 
     capturados: list[dict] = []
 
-    def fake_gravar(**kwargs):
-        capturados.append(kwargs)
+    def fake_gravar(registro, **_kwargs):
+        capturados.append(dataclasses.asdict(registro))
         return "fake-id"
 
     monkeypatch.setattr(llm_calls_store, "gravar_llm_call", fake_gravar)
@@ -120,9 +121,9 @@ class TestErroRegistra:
 class TestNaoFatal:
     def test_falha_na_telemetria_nao_quebra_a_geracao(self, monkeypatch):
         monkeypatch.setattr(cli, "_run", _fake_run_ok({"result": "resultado bom"}))
-        from app.services import llm_calls_store
+        from app.infrastructure import llm_calls_store
 
-        def gravar_explode(**_kwargs):
+        def gravar_explode(*_args, **_kwargs):
             raise RuntimeError("banco travado")
 
         monkeypatch.setattr(llm_calls_store, "gravar_llm_call", gravar_explode)
@@ -136,9 +137,9 @@ class TestNaoFatal:
             raise ClaudeCliError("erro real", transient=False)
 
         monkeypatch.setattr(cli, "_run", _run_erro)
-        from app.services import llm_calls_store
+        from app.infrastructure import llm_calls_store
 
-        def gravar_explode(**_kwargs):
+        def gravar_explode(*_args, **_kwargs):
             raise RuntimeError("banco travado")
 
         monkeypatch.setattr(llm_calls_store, "gravar_llm_call", gravar_explode)
@@ -150,6 +151,7 @@ class TestNaoFatal:
 
 class TestPlumbingEditorial:
     def test_args_claude_injeta_contexto(self):
+        from app.infrastructure.gerador_ia import GeradorClaudeCli
         from app.services import claude_ia
 
         skill = claude_ia.editorial_skills.SkillResolvida(
@@ -160,8 +162,8 @@ class TestPlumbingEditorial:
             timeout=120.0,
             lentes=[],
         )
-        args = claude_ia._args_claude(
-            skill, "trechos-expert", projeto_id="proj-x", corte_id="corte-y"
+        args = GeradorClaudeCli().argumentos(
+            claude_ia._pedido(skill, "trechos-expert", projeto_id="proj-x", corte_id="corte-y")
         )
         ctx = args["contexto"]
         assert isinstance(ctx, LlmCallContext)

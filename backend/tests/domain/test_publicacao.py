@@ -5,7 +5,7 @@ ali). Espalhado pelos destinos, ele vira descoberta na hora do erro — no uploa
 Concentrado aqui, vira teste.
 """
 
-from app.domain.publicacao import (
+from app.domain.publicacao.publicacao import (
     LIMITES,
     MetadadosBase,
     ModoPublicacao,

@@ -1,4 +1,4 @@
-from app.domain.manual_prompt import pedir_resposta_json_em_bloco_codigo
+from app.domain.compartilhado.manual_prompt import pedir_resposta_json_em_bloco_codigo
 
 
 def test_pedir_resposta_json_em_bloco_codigo_acrescenta_instrucao():

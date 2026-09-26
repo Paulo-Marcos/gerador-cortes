@@ -21,9 +21,9 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.channel_paths import resolver_do_projeto
+from app.core.channel_paths import resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain.transcricao_fiel import Palavra, normalizar_palavras, palavras_de_segmentos
+from app.domain.short.transcricao_fiel import Palavra, normalizar_palavras, palavras_de_segmentos
 from app.infrastructure import asr_local
 from app.models import Corte
 

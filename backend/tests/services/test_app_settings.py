@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
-from app.domain.overlay_codec import OverlayCodec
+from app.infrastructure.render.overlay_codec import OverlayCodec
 from app.services.app_settings import (
     AppSettings,
     AppSettingsService,
@@ -26,14 +26,14 @@ def test_default_log_level_is_disabled(tmp_path: Path):
     assert AppSettingsService.get().log_level == LogLevel.DISABLED
 
 
-def test_update_log_level_persists_to_json(tmp_path: Path):
+def test_update_log_level_persiste(tmp_path: Path):
     settings_path = tmp_path / "app_settings.json"
     AppSettingsService.set_settings_path_for_tests(settings_path)
 
     AppSettingsService.update_log_level(LogLevel.DEBUG)
 
-    data = json.loads(settings_path.read_text(encoding="utf-8"))
-    assert data["log_level"] == "debug"
+    AppSettingsService.set_settings_path_for_tests(settings_path)  # derruba o cache
+    assert AppSettingsService.get().log_level == LogLevel.DEBUG
 
 
 def test_invalid_json_falls_back_to_disabled(tmp_path: Path):
@@ -77,7 +77,7 @@ def test_default_render_settings_quando_arquivo_inexistente(tmp_path: Path):
     assert render.grade_global_quality == 30
 
 
-def test_update_render_persiste_no_json(tmp_path: Path):
+def test_update_render_persiste(tmp_path: Path):
     settings_path = tmp_path / "app_settings.json"
     AppSettingsService.set_settings_path_for_tests(settings_path)
 
@@ -92,8 +92,8 @@ def test_update_render_persiste_no_json(tmp_path: Path):
         )
     )
 
-    data = json.loads(settings_path.read_text(encoding="utf-8"))
-    assert data["render"] == {
+    AppSettingsService.set_settings_path_for_tests(settings_path)  # derruba o cache
+    assert AppSettingsService.get().render.to_dict() == {
         "cooldown_sec": 15,
         "overlay_concurrency": 2,
         "bundle_cache_enabled": False,
@@ -254,7 +254,6 @@ def test_update_velocidade_player_persiste_e_sobrevive_ao_reload(tmp_path: Path)
 
     AppSettingsService.update_velocidade_player_padrao(1.5)
 
-    assert json.loads(settings_path.read_text(encoding="utf-8"))["velocidade_player_padrao"] == 1.5
     # Reabre a partir do banco (cache derrubado) — o valor tem de voltar.
     AppSettingsService.set_settings_path_for_tests(settings_path)
     assert AppSettingsService.get().velocidade_player_padrao == 1.5
@@ -340,3 +339,32 @@ def test_contexto_corte_fora_de_faixa_e_coagido(
 
     assert ajustes.contexto_antes_seg == esperado_antes
     assert ajustes.contexto_depois_seg == esperado_depois
+
+
+# ─────────────────────────────────────────────────────────────
+# Fonte única (D-699)
+# ─────────────────────────────────────────────────────────────
+
+
+def test_o_json_legado_nao_e_mais_escrito(tmp_path: Path):
+    """O banco é a fonte única: um espelho que ninguém consulta só envelhece."""
+    settings_path = tmp_path / "app_settings.json"
+    AppSettingsService.set_settings_path_for_tests(settings_path)
+
+    AppSettingsService.update_log_level(LogLevel.INFO)
+
+    assert not settings_path.exists()
+
+
+def test_o_json_legado_semeia_o_banco_uma_vez_so(tmp_path: Path):
+    """Instalação anterior ao D-191: o arquivo vira a linha do banco, e daí em
+    diante é o banco que manda — mexer no arquivo não muda mais nada."""
+    settings_path = tmp_path / "app_settings.json"
+    settings_path.write_text(json.dumps({"velocidade_player_padrao": 1.5}), encoding="utf-8")
+    AppSettingsService.set_settings_path_for_tests(settings_path)
+    assert AppSettingsService.get().velocidade_player_padrao == 1.5
+
+    settings_path.write_text(json.dumps({"velocidade_player_padrao": 2.0}), encoding="utf-8")
+    AppSettingsService.set_settings_path_for_tests(settings_path)
+
+    assert AppSettingsService.get().velocidade_player_padrao == 1.5

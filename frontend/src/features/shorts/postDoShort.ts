@@ -7,19 +7,19 @@
 //   título     → quem já parou, abaixo do vídeo, ~40 caracteres visíveis
 //   descrição  → quem quer mais, e é onde o link do corte longo faz o funil
 //
-// Os números abaixo espelham `backend/app/domain/publicacao.py` (limites da
+// Os números abaixo espelham `backend/app/domain/publicacao/publicacao.py` (limites da
 // plataforma) e `domain/metadados_short.py` (tetos de gravação). Como os
 // projetos não compartilham módulo, `postDoShort.test.ts` LÊ os dois arquivos e
 // compara — se uma ponta mudar sozinha, o teste cai em vez de a tela prometer
 // um espaço que a plataforma não dá.
 
-/** Espelha `titulo_visivel` de YOUTUBE_SHORTS em `backend/app/domain/publicacao.py`. */
+/** Espelha `titulo_visivel` de YOUTUBE_SHORTS em `backend/app/domain/publicacao/publicacao.py`. */
 export const TITULO_VISIVEL = 40;
 
-/** Espelha `titulo_max` de YOUTUBE_SHORTS em `backend/app/domain/publicacao.py`. */
+/** Espelha `titulo_max` de YOUTUBE_SHORTS em `backend/app/domain/publicacao/publicacao.py`. */
 export const TITULO_MAX = 100;
 
-/** Espelha `MAX_HASHTAGS` em `backend/app/domain/metadados_short.py`. */
+/** Espelha `MAX_HASHTAGS` em `backend/app/domain/short/metadados_short.py`. */
 export const MAX_HASHTAGS = 10;
 
 /** Hashtags que cada plataforma mostra — o que passa disso é escrito à toa. */

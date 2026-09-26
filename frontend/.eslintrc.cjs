@@ -99,6 +99,31 @@ module.exports = {
       },
     },
     {
+      // shared/ é base, como lib/: o cliente da API e o contrato gerado (D-721)
+      // servem todas as features e não conhecem nenhuma.
+      files: ['src/shared/**'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: [
+                  '@/features/*',
+                  '**/features/*',
+                  '@/components/*',
+                  '**/components/*',
+                  '@/hooks/*',
+                  '**/hooks/*',
+                ],
+                message: 'shared/ não importa features/, components/ nem hooks/ (D-721).',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
       // types/ descreve dados; não depende de código de nenhuma camada.
       files: ['src/types/**'],
       excludedFiles: [

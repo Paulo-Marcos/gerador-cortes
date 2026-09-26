@@ -38,8 +38,8 @@ except (ImportError, AttributeError):
     )
     sys.modules["app.canal_config"] = _stub
 
-from app.domain.manual_prompt import JSON_CODE_BLOCK_INSTRUCTION  # noqa: E402
-from app.editorial_identity import Mascote  # noqa: E402
+from app.domain.canal.mascote import Mascote  # noqa: E402
+from app.domain.compartilhado.manual_prompt import JSON_CODE_BLOCK_INSTRUCTION  # noqa: E402
 from app.services.metadados import (  # noqa: E402
     PROMPT_GERAR_THUMBNAIL_AGENTE,
     PROMPT_GERAR_THUMBNAIL_AGENTE_LIVRE,
@@ -230,7 +230,7 @@ async def test_montar_prompt_thumbnail_externo_inclui_instrucao_json():
 
     meta = MagicMock()
     meta.texto_capa = "Texto Capa Teste"
-    meta.is_fire = True
+    corte.is_fire = True
 
     mock_db = AsyncMock()
     mock_db.get = AsyncMock(return_value=corte)

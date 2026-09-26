@@ -9,7 +9,7 @@ A regra e dinamica por layout YT:
 Qualquer mudanca na matematica deve quebrar aqui de forma visivel.
 """
 
-from app.domain.youtube_layout import (
+from app.domain.corte.youtube_layout import (
     DEFAULT_CROP_FACECAM,
     DEFAULT_CROP_TELA,
     DEFAULT_SLOT_FACECAM,

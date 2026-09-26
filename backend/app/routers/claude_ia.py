@@ -8,12 +8,16 @@ Mantidas num router próprio para não tocar nos routers de domínio existentes
 import logging
 
 from app.database import get_db
+from app.domain.compartilhado.provider_ia import provider_do_modelo
 from app.models import Corte, Projeto
-from app.provider_ia import provider_do_modelo
-from app.services import llm_calls_store
-from app.services.claude_ia import ClaudeIaService, ProviderIA
+from app.routers.resposta_api import RespostaApi
+from app.services import telemetria_ia
+from app.services.analise import AnaliseService
+from app.services.cenas_remotion import CenasRemotionService
+from app.services.claude_ia import ProviderIA
+from app.services.corte import CorteService
+from app.services.metadados import MetadadosService
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -64,7 +68,7 @@ async def analisar_via_claude(
         )
     await _soltar_a_transacao(db)
     try:
-        resultado = await ClaudeIaService.analisar_via_claude(
+        resultado = await AnaliseService.analisar_via_claude(
             projeto_id, usar_diarizacao=usar_diarizacao, provider=provider
         )
         return {
@@ -95,7 +99,7 @@ async def gerar_trechos_via_claude(
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     await _soltar_a_transacao(db)
     try:
-        resultado = await ClaudeIaService.gerar_trechos_via_claude(corte_id, provider=provider)
+        resultado = await CorteService.gerar_trechos_via_claude(corte_id, provider=provider)
         return {
             "message": "Trechos regerados via IA",
             "corte_id": corte_id,
@@ -119,7 +123,7 @@ async def gerar_cenas_via_claude(
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     await _soltar_a_transacao(db)
     try:
-        resultado = await ClaudeIaService.gerar_cenas_via_claude(corte_id, provider=provider)
+        resultado = await CenasRemotionService.gerar_cenas_via_claude(corte_id, provider=provider)
         return {
             "message": "Cenas geradas via IA",
             "corte_id": corte_id,
@@ -143,7 +147,7 @@ async def gerar_metadados_via_claude(
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     await _soltar_a_transacao(db)
     try:
-        resultado = await ClaudeIaService.gerar_metadados_via_claude(corte_id, provider=provider)
+        resultado = await MetadadosService.gerar_metadados_via_claude(corte_id, provider=provider)
         return {
             "message": "Metadados gerados via IA",
             "corte_id": corte_id,
@@ -167,7 +171,7 @@ async def gerar_prompt_thumbnail_via_claude(
         raise HTTPException(status_code=404, detail="Corte não encontrado")
     await _soltar_a_transacao(db)
     try:
-        resultado = await ClaudeIaService.gerar_prompt_thumbnail_via_claude(
+        resultado = await MetadadosService.gerar_prompt_thumbnail_via_claude(
             corte_id, provider=provider
         )
         return {
@@ -192,7 +196,7 @@ async def gerar_prompt_thumbnail_via_claude(
 # gravação acontece de forma não-fatal dentro do próprio client (claude_cli_client).
 
 
-class LlmCallResponse(BaseModel):
+class LlmCallResponse(RespostaApi):
     """Uma chamada de IA registrada, para a Área de Análises."""
 
     id: str
@@ -213,14 +217,14 @@ class LlmCallResponse(BaseModel):
     erro_tipo: str | None = None
 
 
-class ListaLlmCallsResponse(BaseModel):
+class ListaLlmCallsResponse(RespostaApi):
     chamadas: list[LlmCallResponse]
 
 
-class UltimaGeracaoResponse(BaseModel):
+class UltimaGeracaoResponse(RespostaApi):
     """Quem fez a última geração de uma etapa, para o selo na tela."""
 
-    provider: str | None = None
+    provider: ProviderIA | None = None
     model: str | None = None
     ts: str | None = None
 
@@ -237,7 +241,7 @@ async def ultima_geracao(
     gravado a cada chamada. Best-effort por natureza — telemetria é acessória e
     pode faltar; sem registro, a tela simplesmente não mostra selo.
     """
-    ultima = llm_calls_store.ultima_geracao_bem_sucedida(
+    ultima = telemetria_ia.ultima_geracao_bem_sucedida(
         etapa=etapa, corte_id=corte_id, short_id=short_id
     )
     if ultima is None:
@@ -260,7 +264,7 @@ async def listar_llm_calls(
     """Lista as chamadas de IA registradas (mais recentes primeiro), com filtros
     opcionais por projeto/corte/etapa. Alimenta a aba "Chamadas de IA" em Análises.
     """
-    registros = llm_calls_store.listar_llm_calls(
+    registros = telemetria_ia.listar_llm_calls(
         projeto_id=projeto_id,
         corte_id=corte_id,
         short_id=short_id,

@@ -11,8 +11,15 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from app.services import claude_ia
+from app.domain.corte.segment_calculator import somar_desvios_novos
+from app.domain.projeto.analise_aditiva import bucket_de_30s, mesclar_descartados
+from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto
+from app.infrastructure import antigravity_cli_client, claude_cli_client
+from app.models import Projeto
+from app.services import analise, claude_ia, metadados
+from app.services.analise import AnaliseService
 from app.services.claude_ia import ClaudeIaService
+from app.services.metadados import MetadadosService
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -98,7 +105,7 @@ class TestCarregarTranscricaoRaw:
 
 class TestMontarPrompt:
     def test_monta_contexto_sem_corpo_da_skill(self):
-        prompt = ClaudeIaService._montar_prompt(
+        prompt = ClaudeIaService.montar_prompt_de_cortes(
             "[0] (00:00) fala",
             {"titulo_live": "Minha Live", "youtube_url": "http://x", "duracao_segundos": 3700},
         )
@@ -109,20 +116,20 @@ class TestMontarPrompt:
         assert "[0] (00:00) fala" in prompt
 
 
-# ── _gerar_cortes: direto vs lote ───────────────────────────────────────────────
+# ── gerar_cortes: direto vs lote ───────────────────────────────────────────────
 
 
 class TestGerarCortes:
     def test_caminho_direto_uma_chamada(self, monkeypatch):
         fake = _FakeGenerate({"cortes": [{"titulo_proposto": "A", "inicio_seg": 10}]})
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake)
         monkeypatch.setattr(
             ClaudeIaService,
             "_granularizar",
             staticmethod(lambda t: [_seg(0, 0, "fala curta")]),
         )
 
-        payload = asyncio.run(ClaudeIaService._gerar_cortes([{"x": 1}], {"duracao_segundos": 100}))
+        payload = asyncio.run(ClaudeIaService.gerar_cortes([{"x": 1}], {"duracao_segundos": 100}))
 
         assert fake.chamadas == 1
         # I-034: payload agora é dict {cortes, descartados}.
@@ -132,7 +139,7 @@ class TestGerarCortes:
     def test_provider_gemini_chega_ao_gemini_e_nao_ao_claude(self, monkeypatch):
         """O `provider` precisa atravessar os métodos estáticos até o wrapper.
 
-        Regressão: `_gerar_cortes` usava `provider` sem recebê-lo e a análise
+        Regressão: `gerar_cortes` usava `provider` sem recebê-lo e a análise
         morria com NameError nos DOIS providers.
         """
         chamadas_gemini: list[dict] = []
@@ -142,8 +149,8 @@ class TestGerarCortes:
             return {"cortes": [{"titulo_proposto": "G", "inicio_seg": 5}]}
 
         fake_claude = _FakeGenerate({"cortes": []})
-        monkeypatch.setattr(claude_ia.antigravity_cli_client, "generate_json", fake_gemini)
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake_claude)
+        monkeypatch.setattr(antigravity_cli_client, "generate_json", fake_gemini)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake_claude)
         monkeypatch.setattr(
             ClaudeIaService,
             "_granularizar",
@@ -151,7 +158,7 @@ class TestGerarCortes:
         )
 
         payload = asyncio.run(
-            ClaudeIaService._gerar_cortes([{"x": 1}], {"duracao_segundos": 100}, "gemini")
+            ClaudeIaService.gerar_cortes([{"x": 1}], {"duracao_segundos": 100}, "gemini")
         )
 
         assert payload["cortes"] == [{"titulo_proposto": "G", "inicio_seg": 5}]
@@ -162,7 +169,7 @@ class TestGerarCortes:
 
     def test_desvio_novo_leva_o_provider_que_o_propos(self, monkeypatch):
         """O selo da tela sai daqui: `origem` diz QUAL IA propôs o trecho."""
-        from app.domain.segment_calculator import normalizar_desvio
+        from app.domain.corte.segment_calculator import normalizar_desvio
 
         desvio = normalizar_desvio(
             {"inicio_hms": "00:00:01", "fim_hms": "00:00:02", "origem": "gemini"}
@@ -177,14 +184,14 @@ class TestGerarCortes:
             "descartados": [{"tema": "treta com chat", "motivo": "off-topic"}],
         }
         fake = _FakeGenerate(retorno)
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake)
         monkeypatch.setattr(
             ClaudeIaService,
             "_granularizar",
             staticmethod(lambda t: [_seg(0, 0, "fala")]),
         )
 
-        payload = asyncio.run(ClaudeIaService._gerar_cortes([{"x": 1}], {"duracao_segundos": 100}))
+        payload = asyncio.run(ClaudeIaService.gerar_cortes([{"x": 1}], {"duracao_segundos": 100}))
 
         assert payload["descartados"] == [{"tema": "treta com chat", "motivo": "off-topic"}]
 
@@ -193,13 +200,13 @@ class TestGerarCortes:
         # a deduplicação por bucket de 30s deve manter apenas 1.
         monkeypatch.setattr(claude_ia.settings, "claude_analise_max_chars_direto", 1)
         fake = _FakeGenerate({"cortes": [{"titulo_proposto": "Dup", "inicio_seg": 600}]})
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake)
 
         # Segmentos cobrindo ~80 min → fatiar gera mais de uma janela.
         segs = [_seg(i, i * 600, f"fala {i}") for i in range(9)]
         monkeypatch.setattr(ClaudeIaService, "_granularizar", staticmethod(lambda t: segs))
 
-        payload = asyncio.run(ClaudeIaService._gerar_cortes([{"x": 1}], {"duracao_segundos": 5000}))
+        payload = asyncio.run(ClaudeIaService.gerar_cortes([{"x": 1}], {"duracao_segundos": 5000}))
 
         assert fake.chamadas >= 2, "deveria ter fatiado em múltiplas janelas"
         # I-034: payload é dict.
@@ -219,12 +226,12 @@ class TestGerarCortes:
             ],
         }
         fake = _FakeGenerate(retorno)
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake)
 
         segs = [_seg(i, i * 600, f"fala {i}") for i in range(9)]
         monkeypatch.setattr(ClaudeIaService, "_granularizar", staticmethod(lambda t: segs))
 
-        payload = asyncio.run(ClaudeIaService._gerar_cortes([{"x": 1}], {"duracao_segundos": 5000}))
+        payload = asyncio.run(ClaudeIaService.gerar_cortes([{"x": 1}], {"duracao_segundos": 5000}))
 
         # Cada janela devolve 2 entradas (mesmo tema): após dedup global,
         # restam apenas 1 entrada para `Chat` em todo o payload.
@@ -243,7 +250,7 @@ class TestGerarCortes:
             prompts_enviados.append(prompt)
             return {"cortes": []}
 
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake_gen)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake_gen)
 
         skill_customizada = claude_ia.editorial_skills.SkillResolvida(
             key="cortador-expert",
@@ -260,7 +267,7 @@ class TestGerarCortes:
         segs = [_seg(i, i * 600, f"fala {i}") for i in range(9)]
         monkeypatch.setattr(ClaudeIaService, "_granularizar", staticmethod(lambda t: segs))
 
-        asyncio.run(ClaudeIaService._gerar_cortes([{"x": 1}], {"duracao_segundos": 5000}))
+        asyncio.run(ClaudeIaService.gerar_cortes([{"x": 1}], {"duracao_segundos": 5000}))
 
         assert len(prompts_enviados) >= 2, "deveria ter fatiado em múltiplas janelas"
         lentes_usadas = {
@@ -282,18 +289,18 @@ class TestModoAditivoHelpers:
 
     def test_bucket_30s_agrupa_por_janela_de_30s(self):
         # 0–29s → bucket 0; 30–59s → bucket 1; 100s → bucket 3.
-        assert ClaudeIaService._bucket_30s(0) == 0
-        assert ClaudeIaService._bucket_30s(29) == 0
-        assert ClaudeIaService._bucket_30s(30) == 1
-        assert ClaudeIaService._bucket_30s(100) == 3
+        assert bucket_de_30s(0) == 0
+        assert bucket_de_30s(29) == 0
+        assert bucket_de_30s(30) == 1
+        assert bucket_de_30s(100) == 3
         # tolera None/ausência (mesma convenção do modo lote): vira bucket 0.
-        assert ClaudeIaService._bucket_30s(None) == 0
+        assert bucket_de_30s(None) == 0
 
     def test_filtrar_pula_corte_no_bucket_de_um_existente(self):
         # Existe corte em 100s (bucket 3). O corte novo em 110s cai no mesmo
         # bucket → pulado; o de 700s (bucket 23) é inédito → entra.
-        buckets_existentes = {ClaudeIaService._bucket_30s(100)}
-        novos, pulados = ClaudeIaService._filtrar_cortes_em_buckets(
+        buckets_existentes = {bucket_de_30s(100)}
+        novos, pulados = AnaliseService._filtrar_cortes_em_buckets(
             [
                 {"titulo_proposto": "dup", "inicio_seg": 110},
                 {"titulo_proposto": "novo", "inicio_seg": 700},
@@ -304,7 +311,7 @@ class TestModoAditivoHelpers:
         assert [c["titulo_proposto"] for c in novos] == ["novo"]
 
     def test_filtrar_sem_existentes_mantem_tudo(self):
-        novos, pulados = ClaudeIaService._filtrar_cortes_em_buckets(
+        novos, pulados = AnaliseService._filtrar_cortes_em_buckets(
             [{"titulo_proposto": "a", "inicio_seg": 10}], set()
         )
         assert pulados == 0
@@ -317,13 +324,13 @@ class TestModoAditivoHelpers:
             {"tema": "  ", "motivo": "sem tema"},  # tema vazio → ignora
             {"tema": "novo tema", "motivo": "off-topic"},  # inédito → entra
         ]
-        mesclados = ClaudeIaService._mesclar_descartados(existentes, novos)
+        mesclados = mesclar_descartados(existentes, novos)
         temas = [d["tema"].strip().lower() for d in mesclados]
         assert temas == ["velho", "novo tema"]
 
     def test_mesclar_descartados_tolera_novos_none(self):
         existentes = [{"tema": "x", "motivo": "y"}]
-        assert ClaudeIaService._mesclar_descartados(existentes, None) == existentes
+        assert mesclar_descartados(existentes, None) == existentes
 
 
 class TestAnaliseAditiva:
@@ -364,7 +371,7 @@ class TestAnaliseAditiva:
             inicios_existentes=[100.0],  # corte existente no bucket 3
             descartados_existentes=[{"tema": "velho", "motivo": "auditoria anterior"}],
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr(analise, "AsyncSessionLocal", factory)
 
         async def fake_gerar_cortes(_transcricao, _meta, provider="claude"):
             return {
@@ -390,7 +397,7 @@ class TestAnaliseAditiva:
                 ],
             }
 
-        monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
+        monkeypatch.setattr(ClaudeIaService, "gerar_cortes", staticmethod(fake_gerar_cortes))
 
         repasse: dict = {}
 
@@ -399,12 +406,10 @@ class TestAnaliseAditiva:
             repasse["cortes"] = cortes_data
             repasse["descartados"] = descartados
 
-        monkeypatch.setattr(
-            claude_ia.AnaliseService, "importar_resultado", staticmethod(fake_importar)
-        )
+        monkeypatch.setattr(AnaliseService, "importar_resultado", staticmethod(fake_importar))
 
         resultado = asyncio.run(
-            ClaudeIaService.analisar_via_claude("p1", encadear_transcricao=False)
+            AnaliseService.analisar_via_claude("p1", encadear_transcricao=False)
         )
 
         # Nenhum DELETE emitido → os cortes existentes são preservados.
@@ -425,7 +430,7 @@ class TestAnaliseAditiva:
 
     def test_projeto_sem_cortes_importa_tudo_sem_pular(self, monkeypatch):
         factory, executados = self._montar_factory(inicios_existentes=[], descartados_existentes=[])
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr(analise, "AsyncSessionLocal", factory)
 
         async def fake_gerar_cortes(_transcricao, _meta, provider="claude"):
             return {
@@ -446,19 +451,17 @@ class TestAnaliseAditiva:
                 "descartados": [],
             }
 
-        monkeypatch.setattr(ClaudeIaService, "_gerar_cortes", staticmethod(fake_gerar_cortes))
+        monkeypatch.setattr(ClaudeIaService, "gerar_cortes", staticmethod(fake_gerar_cortes))
 
         repasse: dict = {}
 
         async def fake_importar(projeto_id, cortes_data, *, descartados=None, origem="claude"):
             repasse["cortes"] = cortes_data
 
-        monkeypatch.setattr(
-            claude_ia.AnaliseService, "importar_resultado", staticmethod(fake_importar)
-        )
+        monkeypatch.setattr(AnaliseService, "importar_resultado", staticmethod(fake_importar))
 
         resultado = asyncio.run(
-            ClaudeIaService.analisar_via_claude("p1", encadear_transcricao=False)
+            AnaliseService.analisar_via_claude("p1", encadear_transcricao=False)
         )
 
         assert len(repasse["cortes"]) == 2
@@ -530,10 +533,10 @@ class TestTrechos:
                 "revisoes": [{"acao": "remover", "inicio_hms": "00:15:00", "fim_hms": "00:15:20"}],
             }
         )
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake)
 
         resultado = asyncio.run(
-            ClaudeIaService._gerar_desvios(
+            ClaudeIaService.gerar_desvios(
                 [{"start": 0, "end": 4, "texto": "x"}],
                 {
                     "titulo": "C",
@@ -559,11 +562,11 @@ class TestTrechos:
         import logging
 
         fake = _FakeGenerate({"desvios": [], "revisoes": []})
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake)
 
         with caplog.at_level(logging.INFO, logger="app.services.claude_ia"):
             asyncio.run(
-                ClaudeIaService._gerar_desvios(
+                ClaudeIaService.gerar_desvios(
                     [{"start": 0, "end": 4, "texto": "x"}],
                     {"titulo": "C", "tema_central": "t", "inicio_hms": "0", "fim_hms": "0"},
                     [],
@@ -576,7 +579,7 @@ class TestTrechos:
         assert "etapa=trechos-expert" in linha
         # o sha da linha bate com o sha1 do corpo da skill trechos-expert resolvida
         skill = claude_ia.editorial_skills.resolver_skill(claude_ia._SKILL_TRECHOS)
-        assert f"sha={claude_ia._sha1_curto(skill.corpo)}" in linha
+        assert f"sha={claude_ia.sha1_curto(skill.corpo)}" in linha
         # a etapa de trechos monta scaffold → o scaffold_sha também sai na linha
         assert "scaffold_sha=" in linha
 
@@ -586,10 +589,10 @@ class TestTrechos:
         fake = _FakeGenerate(
             {"desvios": [{"inicio_hms": "00:12:00", "fim_hms": "00:12:30", "motivo": "chat"}]}
         )
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake)
 
         resultado = asyncio.run(
-            ClaudeIaService._gerar_desvios(
+            ClaudeIaService.gerar_desvios(
                 [{"start": 0, "end": 4, "texto": "x"}],
                 {"titulo": "C", "tema_central": "t", "inicio_hms": "0", "fim_hms": "0"},
                 [],
@@ -614,7 +617,7 @@ class TestTrechos:
             },  # ~igual a A → pula
             {"inicio_seg": 500.0, "fim_seg": 520.0, "motivo": "claude novo"},  # novo → entra
         ]
-        mesclados, adicionados = ClaudeIaService._mesclar_desvios(existentes, novos)
+        mesclados, adicionados = somar_desvios_novos(existentes, novos)
 
         assert adicionados == 1, "só o genuinamente novo deve entrar"
         assert len(mesclados) == 3
@@ -627,7 +630,7 @@ class TestTrechos:
 
 
 def _desvio(inicio_hms: str, fim_hms: str, motivo: str, origem: str | None = None) -> dict:
-    from app.domain.segment_calculator import normalizar_desvio
+    from app.domain.corte.segment_calculator import normalizar_desvio
 
     bruto = {"inicio_hms": inicio_hms, "fim_hms": fim_hms, "motivo": motivo}
     if origem:
@@ -662,7 +665,7 @@ class TestGerarTrechosAditivoPuro:
         projeto.transcricao_raw = None
 
         async def fake_get(model, _id):
-            return projeto if model is claude_ia.Projeto else corte
+            return projeto if model is Projeto else corte
 
         session = AsyncMock()
         session.__aenter__ = AsyncMock(return_value=session)
@@ -679,7 +682,7 @@ class TestGerarTrechosAditivoPuro:
             desvios_existentes=[manual, claude_ant],
             desvios_novos=[],
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             # A skill devolve um desvio NOVO, um DUPLICADO do manual (deve pular)
@@ -693,7 +696,7 @@ class TestGerarTrechosAditivoPuro:
                 "revisoes": [{"acao": "remover", "inicio_hms": "00:10:00", "fim_hms": "00:10:20"}],
             }
 
-        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
+        monkeypatch.setattr(ClaudeIaService, "gerar_desvios", staticmethod(fake_gerar_desvios))
 
         sincronizados: list = []
 
@@ -704,7 +707,7 @@ class TestGerarTrechosAditivoPuro:
 
         monkeypatch.setattr(CorteService, "sincronizar_transcricao_corte", staticmethod(fake_sync))
 
-        resultado = asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        resultado = asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         gravados = json.loads(corte.desvios)
         motivos = [d["motivo"] for d in gravados]
@@ -732,12 +735,12 @@ class TestGerarTrechosAditivoPuro:
             desvios_existentes=[manual, claude_ant],
             desvios_novos=[],
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             return {"desvios": []}  # skill sem nada novo, sem chave revisoes
 
-        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
+        monkeypatch.setattr(ClaudeIaService, "gerar_desvios", staticmethod(fake_gerar_desvios))
 
         from app.services.corte import CorteService
 
@@ -745,7 +748,7 @@ class TestGerarTrechosAditivoPuro:
             CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
         )
 
-        resultado = asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        resultado = asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         gravados = json.loads(corte.desvios)
         assert [d["motivo"] for d in gravados] == ["manual do editor", "chat"]
@@ -765,12 +768,12 @@ class TestGerarTrechosAditivoPuro:
             desvios_existentes=[manual],
             desvios_novos=[],
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             return {"desvios": [{"inicio_hms": "00:20:00", "fim_hms": "00:20:15", "motivo": "x"}]}
 
-        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
+        monkeypatch.setattr(ClaudeIaService, "gerar_desvios", staticmethod(fake_gerar_desvios))
 
         from app.services.corte import CorteService
 
@@ -778,8 +781,8 @@ class TestGerarTrechosAditivoPuro:
             CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
         )
 
-        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
-        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
+        asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         assert corte.trechos_geracoes == 2
         log = json.loads(corte.trechos_geracoes_log)
@@ -816,7 +819,7 @@ class TestSnapDesviosNoFluxo:
         )
 
         async def fake_get(model, _id):
-            return projeto if model is claude_ia.Projeto else corte
+            return projeto if model is Projeto else corte
 
         session = AsyncMock()
         session.__aenter__ = AsyncMock(return_value=session)
@@ -854,7 +857,7 @@ class TestSnapDesviosNoFluxo:
             desvios_existentes=[manual],
             transcricao_raw=transcricao_raw,
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             # Início/fim caídos no meio das palavras: 100.2 → 100.0; 101.5 → 101.2.
@@ -864,7 +867,7 @@ class TestSnapDesviosNoFluxo:
                 ]
             }
 
-        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
+        monkeypatch.setattr(ClaudeIaService, "gerar_desvios", staticmethod(fake_gerar_desvios))
 
         from app.services.corte import CorteService
 
@@ -872,7 +875,7 @@ class TestSnapDesviosNoFluxo:
             CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
         )
 
-        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         gravados = json.loads(corte.desvios)
         por_motivo = {d["motivo"]: d for d in gravados}
@@ -893,7 +896,7 @@ class TestSnapDesviosNoFluxo:
             desvios_existentes=[],
             transcricao_raw=transcricao_raw,
         )
-        monkeypatch.setattr(claude_ia, "AsyncSessionLocal", factory)
+        monkeypatch.setattr("app.services.corte.AsyncSessionLocal", factory)
 
         async def fake_gerar_desvios(_transc, _meta, _existentes, _mapa=None, provider="claude"):
             return {
@@ -902,7 +905,7 @@ class TestSnapDesviosNoFluxo:
                 ]
             }
 
-        monkeypatch.setattr(ClaudeIaService, "_gerar_desvios", staticmethod(fake_gerar_desvios))
+        monkeypatch.setattr(ClaudeIaService, "gerar_desvios", staticmethod(fake_gerar_desvios))
 
         from app.services.corte import CorteService
 
@@ -910,7 +913,7 @@ class TestSnapDesviosNoFluxo:
             CorteService, "sincronizar_transcricao_corte", staticmethod(AsyncMock())
         )
 
-        asyncio.run(ClaudeIaService.gerar_trechos_via_claude("c1"))
+        asyncio.run(CorteService.gerar_trechos_via_claude("c1"))
 
         gravados = json.loads(corte.desvios)
         novo = next(d for d in gravados if d["motivo"] == "novo")
@@ -948,16 +951,13 @@ class TestTrechosComFalantes:
             {"inicio": "00:00:00", "fim": "00:00:04", "texto": "x", "speaker": "SPEAKER_01"},
             {"inicio": "00:00:04", "fim": "00:00:12", "texto": "fala", "speaker": "SPEAKER_00"},
         ]
-        anotada = ClaudeIaService._anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw)
+        anotada = anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw)
         assert anotada[0]["speaker"] == "SPEAKER_00"
 
     def test_anotar_falantes_sem_diarizacao_devolve_intacto(self):
         transcricao_bruta = [{"start": 5.0, "end": 8.0, "texto": "fala"}]
         transcricao_raw = [{"inicio": "00:00:00", "fim": "00:00:04", "texto": "x"}]  # sem speaker
-        assert (
-            ClaudeIaService._anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw)
-            is transcricao_bruta
-        )
+        assert anotar_falantes_do_projeto(transcricao_bruta, transcricao_raw) is transcricao_bruta
 
     def test_cabecalho_so_lista_ja_marcados_sem_revisao(self):
         """D-332: os já marcados são apenas LISTADOS (não repita; APENAS NOVOS);
@@ -1003,9 +1003,9 @@ class TestCenasMetadados:
 
         monkeypatch.setattr(CenasRemotionService, "montar_prompt", staticmethod(fake_montar))
         monkeypatch.setattr(CenasRemotionService, "importar_cenas", staticmethod(fake_importar))
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake_gen)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake_gen)
 
-        resultado = asyncio.run(ClaudeIaService.gerar_cenas_via_claude("c1"))
+        resultado = asyncio.run(CenasRemotionService.gerar_cenas_via_claude("c1"))
 
         assert resultado == {"total_cenas": 2}, "deve concatenar as cenas das 2 partes"
         assert len(capturado["payload"]["cenas"]) == 2
@@ -1017,7 +1017,6 @@ class TestCenasMetadados:
         títulos, e a skill `metadados-expert` deve ser ativada pelo parâmetro
         skill — não injetada no corpo do prompt.
         """
-        from app.services.metadados import MetadadosService
 
         async def fake_ctx(_corte_id):
             return {
@@ -1046,9 +1045,9 @@ class TestCenasMetadados:
         monkeypatch.setattr(
             MetadadosService, "importar_resultado_meta", staticmethod(fake_importar)
         )
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_json", fake_gen)
+        monkeypatch.setattr(claude_cli_client, "generate_json", fake_gen)
 
-        resultado = asyncio.run(ClaudeIaService.gerar_metadados_via_claude("c1"))
+        resultado = asyncio.run(MetadadosService.gerar_metadados_via_claude("c1"))
 
         assert resultado == {"ok": True}
         assert capturado["resultado"]["sinopse"] == "uma sinopse"
@@ -1068,7 +1067,6 @@ class TestCenasMetadados:
 
 class TestPromptThumbnail:
     def test_usa_skill_contexto_e_salva_texto_sem_fences(self, monkeypatch):
-        from app.services.metadados import MetadadosService
 
         async def fake_ctx(_corte_id):
             return {
@@ -1095,9 +1093,9 @@ class TestPromptThumbnail:
         monkeypatch.setattr(
             MetadadosService, "importar_prompt_thumbnail", staticmethod(fake_importar)
         )
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_text", fake_gen_text)
+        monkeypatch.setattr(claude_cli_client, "generate_text", fake_gen_text)
 
-        resultado = asyncio.run(ClaudeIaService.gerar_prompt_thumbnail_via_claude("c1"))
+        resultado = asyncio.run(MetadadosService.gerar_prompt_thumbnail_via_claude("c1"))
 
         assert resultado == {"ok": True}
         # cercas de markdown removidas do que foi salvo
@@ -1118,7 +1116,6 @@ class TestPromptThumbnail:
         assert capturado["thinking"] and capturado["thinking"] > 0
 
     def test_texto_vazio_levanta(self, monkeypatch):
-        from app.services.metadados import MetadadosService
 
         async def fake_ctx(_corte_id):
             return {
@@ -1134,16 +1131,15 @@ class TestPromptThumbnail:
             return "   "
 
         monkeypatch.setattr(MetadadosService, "montar_contexto_thumbnail", staticmethod(fake_ctx))
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_text", fake_gen_text)
+        monkeypatch.setattr(claude_cli_client, "generate_text", fake_gen_text)
 
         with pytest.raises(ValueError):
-            asyncio.run(ClaudeIaService.gerar_prompt_thumbnail_via_claude("c1"))
+            asyncio.run(MetadadosService.gerar_prompt_thumbnail_via_claude("c1"))
 
     def _rodar_prompt_thumbnail(self, monkeypatch, nome_mascote: str, *, is_fire: bool) -> str:
         """Roda a geração de prompt de thumbnail com um mascote dado e devolve o
         prompt enviado ao Claude (fakes isolam banco/CLI). Helper de D-221."""
-        from app.editorial_identity import Mascote
-        from app.services.metadados import MetadadosService
+        from app.domain.canal.mascote import Mascote
 
         async def fake_ctx(_corte_id):
             return {
@@ -1170,10 +1166,10 @@ class TestPromptThumbnail:
         monkeypatch.setattr(
             MetadadosService, "importar_prompt_thumbnail", staticmethod(fake_importar)
         )
-        monkeypatch.setattr(claude_ia.claude_cli_client, "generate_text", fake_gen_text)
-        monkeypatch.setattr(claude_ia, "identidade_do_mascote", lambda: Mascote(nome=nome_mascote))
+        monkeypatch.setattr(claude_cli_client, "generate_text", fake_gen_text)
+        monkeypatch.setattr(metadados, "identidade_do_mascote", lambda: Mascote(nome=nome_mascote))
 
-        asyncio.run(ClaudeIaService.gerar_prompt_thumbnail_via_claude("c1"))
+        asyncio.run(MetadadosService.gerar_prompt_thumbnail_via_claude("c1"))
         return capturado["enviado"]
 
     def test_nome_do_mascote_vem_do_instance_editorial(self, monkeypatch):

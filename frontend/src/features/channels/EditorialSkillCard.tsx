@@ -3,7 +3,7 @@
 // com o botão de editar. Sem I/O — o container decide o que fazer no clique.
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { EditorialSkill } from '@/lib/editorialSkillsApi';
+import type { EditorialSkill } from '@/features/channels/api/skillsEditoriais';
 
 interface Props {
   skill: EditorialSkill;

@@ -1,4 +1,4 @@
-from app.domain.chunker import fatiar_transcricao
+from app.domain.projeto.chunker import fatiar_transcricao
 
 
 def _seg(inicio, fim, texto="texto"):

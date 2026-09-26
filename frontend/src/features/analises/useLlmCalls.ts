@@ -1,7 +1,7 @@
 // D-353: hook de I/O (react-query) da aba "Chamadas de IA". Mantém a aba "burra" —
 // o componente só consome este hook, sem tocar em fetch direto.
 import { useQuery } from '@tanstack/react-query';
-import { llmCallsApi, type ListaLlmCallsResponse } from '@/lib/llmCallsApi';
+import { llmCallsApi, type ListaLlmCallsResponse } from '@/features/ia';
 
 const LLM_CALLS_KEY = ['analises', 'llm-calls'] as const;
 

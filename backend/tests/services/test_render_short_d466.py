@@ -14,7 +14,7 @@ import json
 import pytest
 import pytest_asyncio
 from app.models import Base, Corte, Projeto, Short, StatusShort
-from app.services import render_short
+from app.services.render import render_short
 from app.services.transcricao_fiel import TranscricaoFiel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -22,7 +22,7 @@ from sqlalchemy.pool import StaticPool
 
 @pytest_asyncio.fixture
 async def ambiente(monkeypatch, tmp_path):
-    from app import channel_paths
+    from app.core import channel_paths
     from app.services import legendas_short, transcricao_fiel
 
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)
@@ -93,6 +93,27 @@ async def ambiente(monkeypatch, tmp_path):
 
     yield factory, tmp_path
     await engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def palco_sem_remotion(monkeypatch, tmp_path):
+    """Nenhum teste deste arquivo sobe o `remotion still` do palco (D-751).
+
+    O PNG do palco sai de Node com Chromium, e a docstring do módulo já diz que
+    Remotion de verdade não roda aqui. Mas só a classe da moldura trocava o
+    gerador por dublê; os outros testes subiam dois Chromium cada, e isso era
+    60% do tempo da bateria inteira. O dublê devolve um PNG, como uma máquina
+    com Node devolveria. A classe da moldura continua instalando o dela por cima.
+    """
+    from app.services import palco_short_png
+
+    png = tmp_path / "palco-duble.png"
+    png.write_bytes(b"fake-png")
+
+    async def _fake(fundo, janelas):
+        return png
+
+    monkeypatch.setattr(palco_short_png, "obter", _fake)
 
 
 @pytest.fixture
@@ -555,7 +576,7 @@ class TestMolduraChegaAoRender:
         letterbox preto. Foi essa confusao que quase fez a D-501 adotar uma
         faixa de 7% dentro da tarja de 8% do filtro.
         """
-        from app.services.render_short import faixas_do_canal
+        from app.services.render.render_short import faixas_do_canal
 
         cor = faixas_do_canal("palco")[0].cor
         return self._filtro(job).count(f"color={cor}")
@@ -627,8 +648,8 @@ def test_textura_invalida_no_palco_cai_na_padrao_do_canal():
     Se so a previa normalizasse, um preset antigo daria tela certa e MP4 com um
     fundo inexistente — a divergencia silenciosa que a D-549 ja custou uma vez.
     """
-    from app.domain.youtube_layout import FUNDO_PADRAO
-    from app.services.render_short import _textura
+    from app.domain.corte.youtube_layout import FUNDO_PADRAO
+    from app.services.render.render_short import _textura
 
     assert _textura({"fundo_editorial": "verdeProfundo"}) == FUNDO_PADRAO
     assert _textura({"fundo_editorial": ""}) == FUNDO_PADRAO
@@ -718,7 +739,7 @@ async def test_o_log_e_lido_da_mesma_pasta_em_que_o_render_escreve(ambiente, job
 
 async def _com_segmentos(factory, segmentos: list[dict]) -> None:
     """Grava uma colagem no short do fixture."""
-    from app.domain import segmentos_short
+    from app.domain.short import segmentos_short
 
     async with factory() as db:
         short = await db.get(Short, "s1")

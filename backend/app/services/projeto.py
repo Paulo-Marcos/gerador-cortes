@@ -2,7 +2,7 @@ import asyncio
 import shutil
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.models import Corte, Projeto
 from app.services.media_retention import MediaRetentionService
 from sqlalchemy import select

@@ -9,7 +9,7 @@ com `continuar=False`, zerava os artefatos da run em andamento via
 
 import pytest
 from app.routers import cortes as cortes_router
-from app.services.render_progress import RenderProgressStore
+from app.services.render.render_progress import RenderProgressStore
 from fastapi import HTTPException
 
 

@@ -17,7 +17,7 @@ from sqlalchemy.pool import StaticPool
 
 @pytest_asyncio.fixture
 async def ambiente(monkeypatch, tmp_path):
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)
 
@@ -63,10 +63,11 @@ async def _semear(
                 tema_central="Economia",
                 duracao_clip_seg=180.0,
                 arquivo_clip_path=clip_path,
+                is_fire=fire,
             )
         )
         if com_metadado:
-            db.add(MetadadoCorte(id=f"m-{corte_id}", corte_id=corte_id, is_fire=fire))
+            db.add(MetadadoCorte(id=f"m-{corte_id}", corte_id=corte_id))
         await db.commit()
 
 
@@ -187,15 +188,25 @@ async def _credito_do_metadado(factory, corte_id: str) -> str:
 
 
 @pytest.mark.asyncio
-async def test_metadado_nascido_da_indicacao_leva_o_credito_do_canal(ambiente, monkeypatch):
-    """D-666: era o default do models.py que preenchia — agora é quem cria."""
+async def test_indicar_nao_cria_metadado_vazio(ambiente):
+    """D-713: mudança de comportamento DELIBERADA.
+
+    A indicação morava no metadado, e indicar um corte sem metadado criava um
+    vazio só para guardá-la (e o D-666 garantia o crédito do canal nele). A marca
+    passou para o corte: não há mais metadado a criar. O crédito do metadado que
+    nasce continua testado pelo caminho do Fire, logo abaixo.
+    """
+    from sqlalchemy import func, select
+
     factory, _ = ambiente
-    _canal_fixo(monkeypatch, "@canal-do-teste")
     await _semear(factory, corte_id="c1", fire=False, clip_path="", com_metadado=False)
 
     await servico.indicar_para_shorts("c1", True)
 
-    assert await _credito_do_metadado(factory, "c1") == "@canal-do-teste"
+    async with factory() as db:
+        metadados = await db.scalar(select(func.count()).select_from(MetadadoCorte))
+        assert (await db.get(Corte, "c1")).candidato_shorts
+    assert metadados == 0
 
 
 @pytest.mark.asyncio

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import pytest
-from app.domain.time_convert import (
+from app.domain.compartilhado.time_convert import (
     epoch_to_hora_local,
     hms_to_seg,
     hms_to_srt,
@@ -9,6 +9,7 @@ from app.domain.time_convert import (
     seg_to_hms,
     seg_to_hms_short,
     to_seg,
+    to_seg_estrito,
 )
 
 
@@ -195,3 +196,21 @@ class TestSegToDuracaoHumana:
 
     def test_trunca_sem_arredondar(self):
         assert seg_to_duracao_humana(119.999) == "1m 59s"
+
+
+class TestToSegEstrito:
+    """O conversor que veio da análise (D-695), com a regra dela intacta."""
+
+    @pytest.mark.parametrize(
+        ("valor", "esperado"),
+        [(12.5, 12.5), (" 12 ", 12.0), ("01:02:03.500", 3723.5), ("", 0.0)],
+    )
+    def test_converte_numero_texto_e_hms(self, valor, esperado):
+        assert to_seg_estrito(valor) == esperado
+
+    @pytest.mark.parametrize("vazio", [None, " ", [], {}])
+    def test_recusa_vazio_onde_o_to_seg_devolve_zero(self, vazio):
+        # A diferença é de propósito até o E-054 unificar as duas regras.
+        with pytest.raises(ValueError):
+            to_seg_estrito(vazio)
+        assert to_seg(vazio) == 0.0

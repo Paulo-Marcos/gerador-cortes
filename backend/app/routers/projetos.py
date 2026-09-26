@@ -1,21 +1,21 @@
 import json
 import logging
-import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
+from app.core.logging import operational_error, operational_info
 from app.database import get_db
-from app.domain.transcricao_utils import TranscricaoIndisponivelError
-from app.models import Corte, MetadadoCorte, Projeto, StatusCorte, StatusProjeto
+from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
+from app.models import Corte, Projeto, StatusProjeto
+from app.routers import analises_schemas
 from app.routers.errors import erro_interno
-from app.services import abrir_no_sistema, channels
+from app.services import abrir_no_sistema, listagem_de_projetos
 from app.services.analise import AnaliseService
-from app.services.app_logging import operational_error, operational_info
 from app.services.app_settings import AppSettingsService
 from app.services.ciclo_de_vida import mudar_projeto
 from app.services.ingestao import IngestaoService
-from app.services.pipeline_render import FONTE_PRESETS_VALIDOS
 from app.services.projeto import ProjetoService
+from app.services.render.pipeline_render import FONTE_PRESETS_VALIDOS
 from app.services.tasks import fire_and_forget
 from app.services.telemetria_cortes import TelemetriaCortesService
 from app.services.youtube_palco import ensure_palco_png
@@ -23,11 +23,11 @@ from app.services.youtube_stats import YoutubeStatsService
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from pydantic import BaseModel
-from sqlalchemy import and_, case, func, select
-from sqlalchemy import delete as sa_delete
+from sqlalchemy import select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import defer
+
+_MAXIMO_DE_BLOCOS = 20
 
 logger = logging.getLogger(__name__)
 
@@ -98,30 +98,12 @@ class AtualizarRenderConfigRequest(BaseModel):
 
 
 @router.post("", response_model=ProjetoResponse, status_code=201)
-async def criar_projeto(body: CriarProjetoRequest, db: AsyncSession = Depends(get_db)):
-    """Cria um novo projeto e inicia o download em background."""
-    # I-023: filtro_padrao por projeto removido. O render lê
-    # AppSettings.filtro_global_padrao direto em runtime.
-    # D-191: projeto NOVO herda a placa/layout YT do PADRÃO GLOBAL do canal (banco)
-    # em vez do default de código; "{}" (sem padrão global) mantém o default do modelo.
-    projeto = Projeto(
-        id=str(uuid.uuid4()),
-        youtube_url=body.youtube_url,
-        canal_origem=body.canal_origem or channels.identidade_do_canal_ativo().handle,
-        status=StatusProjeto.PENDENTE,
-        layout_youtube_padrao=AppSettingsService.get().youtube_layout_padrao_global,
+async def criar_projeto(body: CriarProjetoRequest):
+    """Cria o projeto da live e inicia o download — ou devolve o da mesma live (D-703)."""
+    iniciado = await IngestaoService.iniciar(
+        body.youtube_url, canal_origem=body.canal_origem or None
     )
-    db.add(projeto)
-    await db.commit()
-    await db.refresh(projeto)
-
-    # Dispara download em background (não bloqueia a resposta)
-    fire_and_forget(
-        IngestaoService.processar_projeto(projeto.id, body.youtube_url),
-        name=f"ingestao-{projeto.id[:8]}",
-    )
-
-    return projeto
+    return iniciado.projeto
 
 
 @router.post("/{projeto_id}/reiniciar-download")
@@ -228,169 +210,10 @@ async def reiniciar_downloads_falhados(db: AsyncSession = Depends(get_db)):
     return {"message": f"{len(ids)} downloads reiniciados", "total": len(ids), "ids": ids}
 
 
-# D-431: `transcricao_raw` guarda a transcrição inteira da live (dezenas de MB
-# somados no acervo) e não faz parte de `ProjetoResponse` — sem o defer, cada poll
-# da lista lia e hidratava esse volume só para o Pydantic descartá-lo. As duas
-# constantes andam juntas de propósito: ler aqui uma coluna deferida dispararia
-# lazy load, que sob AsyncSession estoura em greenlet_spawn.
-_COLUNAS_DIFERIDAS_NA_LISTAGEM = ("transcricao_raw",)
-_DEFERS_DA_LISTAGEM = tuple(defer(getattr(Projeto, c)) for c in _COLUNAS_DIFERIDAS_NA_LISTAGEM)
-_COLUNAS_DA_LISTAGEM = [
-    c for c in Projeto.__table__.columns.keys() if c not in _COLUNAS_DIFERIDAS_NA_LISTAGEM
-]
-
-
 @router.get("", response_model=list[ProjetoResponse])
-async def listar_projetos(db: AsyncSession = Depends(get_db)):
-    """
-    Lista todos os projetos ordenados por data_live.
-    Usa 2 queries SQL com GROUP BY para evitar o padrão N+1.
-    """
-
-    result = await db.execute(
-        select(Projeto)
-        .options(*_DEFERS_DA_LISTAGEM)
-        .order_by(
-            Projeto.data_live.desc(),
-            Projeto.criado_em.desc(),
-        )
-    )
-    projetos = result.scalars().all()
-    if not projetos:
-        return []
-
-    corte_stats_res = await db.execute(
-        select(
-            Corte.projeto_id,
-            func.count(case((Corte.status != StatusCorte.REJEITADO, 1))).label("total"),
-            func.count(
-                case(
-                    (
-                        and_(
-                            Corte.status != StatusCorte.REJEITADO,
-                            Corte.youtube_video_id.is_not(None),
-                            Corte.youtube_video_id != "",
-                        ),
-                        1,
-                    )
-                )
-            ).label("publicados"),
-            func.count(case((Corte.status == StatusCorte.APROVADO, 1))).label("aprovados"),
-            func.count(
-                case(
-                    (
-                        and_(
-                            Corte.status == StatusCorte.APROVADO,
-                            Corte.arquivo_clip_path.is_not(None),
-                            Corte.arquivo_clip_path != "",
-                        ),
-                        1,
-                    )
-                )
-            ).label("com_raw"),
-        )
-        .where(Corte.projeto_id.in_([p.id for p in projetos]))
-        .group_by(Corte.projeto_id)
-    )
-    corte_stats = {row.projeto_id: row for row in corte_stats_res.all()}
-
-    meta_stats_res = await db.execute(
-        select(
-            Corte.projeto_id,
-            func.count(MetadadoCorte.id).label("com_meta"),
-        )
-        .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
-        .where(
-            Corte.projeto_id.in_([p.id for p in projetos]),
-            Corte.status == StatusCorte.APROVADO,
-            MetadadoCorte.titulo_youtube != "",
-            MetadadoCorte.titulo_youtube.is_not(None),
-        )
-        .group_by(Corte.projeto_id)
-    )
-    meta_stats = {row.projeto_id: row.com_meta for row in meta_stats_res.all()}
-
-    fires_pendentes_res = await db.execute(
-        select(Corte.projeto_id, func.count(Corte.id).label("total"))
-        .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
-        .where(
-            Corte.projeto_id.in_([p.id for p in projetos]),
-            MetadadoCorte.is_fire,
-            Corte.arquivo_clip_path.is_not(None),
-            Corte.arquivo_clip_path != "",
-            Corte.shorts_finalizados_em.is_(None),
-        )
-        .group_by(Corte.projeto_id)
-    )
-    fires_pendentes = {row.projeto_id: row.total for row in fires_pendentes_res.all()}
-
-    aprovados_res = await db.execute(
-        select(
-            Corte.projeto_id,
-            Corte.id,
-            Corte.youtube_video_id,
-            Corte.youtube_scheduled_at,
-        ).where(
-            Corte.projeto_id.in_([p.id for p in projetos]),
-            Corte.status == StatusCorte.APROVADO,
-        )
-    )
-    aprovados_rows = aprovados_res.all()
-
-    _projetos_dir = projetos_dir()
-    _agora = datetime.now(UTC)
-
-    video_pronto_count: dict[str, int] = {}
-    publicos_count: dict[str, int] = {}
-    proxima_pub: dict[str, str] = {}  # projeto_id -> ISO8601 mais próximo no futuro
-
-    for proj_id, corte_id, yt_id, scheduled_at in aprovados_rows:
-        video_pronto_count.setdefault(proj_id, 0)
-        publicos_count.setdefault(proj_id, 0)
-
-        if yt_id:
-            video_pronto_count[proj_id] += 1
-            # Determina se já é público
-            if not scheduled_at:
-                # Upload sem agendamento -> unlisted (quem tem link assiste) -> conta como acessível
-                publicos_count[proj_id] += 1
-            else:
-                try:
-                    pub_dt = datetime.fromisoformat(scheduled_at.replace("Z", "+00:00"))
-                    if pub_dt.tzinfo is None:
-                        pub_dt = pub_dt.replace(tzinfo=UTC)
-                    if _agora >= pub_dt:
-                        publicos_count[proj_id] += 1
-                    else:
-                        # Ainda no futuro -> candidato à próxima publicação
-                        atual = proxima_pub.get(proj_id)
-                        if not atual or scheduled_at < atual:
-                            proxima_pub[proj_id] = scheduled_at
-                except Exception:
-                    publicos_count[proj_id] += 1  # se não deu parse, considera acessível
-        else:
-            upload_ready = (
-                _projetos_dir / proj_id / "cortes" / corte_id / "upload_ready" / "video.mp4"
-            )
-            if upload_ready.exists():
-                video_pronto_count[proj_id] += 1
-
-    resp = []
-    for p in projetos:
-        stats = corte_stats.get(p.id)
-        d = {c: getattr(p, c) for c in _COLUNAS_DA_LISTAGEM}
-        d["total_cortes"] = stats.total if stats else 0
-        d["total_publicados"] = stats.publicados if stats else 0
-        d["total_aprovados"] = stats.aprovados if stats else 0
-        d["total_com_raw"] = stats.com_raw if stats else 0
-        d["total_com_meta"] = meta_stats.get(p.id, 0)
-        d["total_video_pronto"] = video_pronto_count.get(p.id, 0)
-        d["total_publicos"] = publicos_count.get(p.id, 0)
-        d["proxima_publicacao"] = proxima_pub.get(p.id, "")
-        d["fires_pendentes"] = fires_pendentes.get(p.id, 0)
-        resp.append(d)
-
-    return resp
+async def listar_projetos():
+    """Lista os projetos, do mais novo ao mais velho, com o estado de cada um."""
+    return await listagem_de_projetos.listar_projetos()
 
 
 @router.patch("/{projeto_id}/transcricao")
@@ -526,7 +349,9 @@ async def exportar_telemetria_cortes(formato: str = "json", db: AsyncSession = D
     return {"total_cortes": len(linhas), "cortes": linhas}
 
 
-@router.get("/{projeto_id}/telemetria-cortes")
+@router.get(
+    "/{projeto_id}/telemetria-cortes", response_model=analises_schemas.TelemetriaProjetoResponse
+)
 async def obter_telemetria_cortes(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """D-303: diff proposta-da-IA × corte final para cada corte do projeto.
 
@@ -543,7 +368,11 @@ async def obter_telemetria_cortes(projeto_id: str, db: AsyncSession = Depends(ge
 # acima. Caminhos com ≥2 segmentos, para não colidir com GET /{projeto_id}.
 
 
-@router.post("/youtube-stats/sync")
+@router.post(
+    "/youtube-stats/sync",
+    response_model=analises_schemas.YoutubeStatsSyncResponse,
+    response_model_exclude_unset=True,
+)
 async def sincronizar_youtube_stats():
     """Dispara em background a sync das métricas do canal (upsert idempotente).
 
@@ -556,13 +385,16 @@ async def sincronizar_youtube_stats():
     return {"status": "iniciado", "mensagem": "Sync de estatísticas do YouTube em andamento."}
 
 
-@router.get("/youtube-stats/status")
+@router.get("/youtube-stats/status", response_model=analises_schemas.YoutubeStatsStatusResponse)
 async def status_youtube_stats(db: AsyncSession = Depends(get_db)):
     """Último sync (`sincronizado_em`), se está velho (`stale`) e a lista de vídeos."""
     return await YoutubeStatsService.status(db)
 
 
-@router.get("/youtube-stats/levantamento/duracao-retencao")
+@router.get(
+    "/youtube-stats/levantamento/duracao-retencao",
+    response_model=analises_schemas.LevantamentoDuracaoResponse,
+)
 async def levantamento_duracao_retencao(formato: str = "json", db: AsyncSession = Depends(get_db)):
     """Retenção e views médias por faixa de duração (calibra as faixas do V2)."""
     linhas = await YoutubeStatsService.levantamento_duracao_retencao(db)
@@ -575,7 +407,10 @@ async def levantamento_duracao_retencao(formato: str = "json", db: AsyncSession 
     return {"faixas": linhas}
 
 
-@router.get("/youtube-stats/levantamento/titulo-desempenho")
+@router.get(
+    "/youtube-stats/levantamento/titulo-desempenho",
+    response_model=analises_schemas.LevantamentoTituloResponse,
+)
 async def levantamento_titulo_desempenho(formato: str = "json", db: AsyncSession = Depends(get_db)):
     """Views/retenção por comprimento de título e por dois-pontos/pergunta/número."""
     linhas = await YoutubeStatsService.levantamento_titulo_desempenho(db)
@@ -803,34 +638,12 @@ async def importar_analise(
 
 
 @router.post("/{projeto_id}/reanalisar")
-async def reanalisar_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)):
-    """
-    Apaga todos os cortes existentes e reinicia a análise da transcrição do zero.
+async def reanalisar_projeto(projeto_id: str):
+    """Apaga todos os cortes existentes e reinicia a análise da transcrição do zero.
+
     Útil quando se quer gerar novos cortes com o guia atualizado.
     """
-    projeto = await db.get(Projeto, projeto_id)
-    if not projeto:
-        raise HTTPException(status_code=404, detail="Projeto não encontrado")
-    if not projeto.transcricao_raw:
-        raise HTTPException(status_code=400, detail="Projeto ainda sem transcrição")
-
-    result = await db.execute(sa_delete(Corte).where(Corte.projeto_id == projeto_id))
-    cortes_removidos = result.rowcount
-
-    # Volta status para 'pronto' para que a análise possa ser disparada
-    mudar_projeto(projeto, StatusProjeto.PRONTO, origem="reanalisar/refazer-transcricao")
-    await db.commit()
-
-    logger.info(
-        f"[Reanálise] Projeto {projeto_id[:8]}: {cortes_removidos} cortes removidos. "
-        f"Disparando nova análise..."
-    )
-
-    fire_and_forget(
-        AnaliseService.analisar_transcricao(projeto_id),
-        name=f"reanalise-{projeto_id[:8]}",
-    )
-
+    cortes_removidos = await AnaliseService.reanalisar(projeto_id)
     return {
         "message": "Reanálise iniciada",
         "projeto_id": projeto_id,
@@ -859,7 +672,7 @@ async def analisar_intervalo(
     if not projeto.transcricao_raw:
         raise HTTPException(status_code=400, detail="Projeto ainda sem transcrição")
 
-    from app.domain.time_convert import hms_to_seg
+    from app.domain.compartilhado.time_convert import hms_to_seg
 
     try:
         inicio_seg = hms_to_seg(body.inicio_hms)
@@ -892,15 +705,15 @@ async def exportar_prompt_analise_intervalo(
     """
     Retorna o prompt particionado para análise de um intervalo específico.
     """
-    from app.domain.time_convert import hms_to_seg
+    from app.domain.compartilhado.time_convert import hms_to_seg
 
     try:
         inicio_seg = hms_to_seg(inicio_hms)
         fim_seg = hms_to_seg(fim_hms)
         if fim_seg <= inicio_seg:
             raise ValueError("fim_hms deve ser maior que inicio_hms")
-        if blocos is not None and (blocos < 1 or blocos > 20):
-            raise ValueError("blocos deve estar entre 1 e 20")
+        if blocos is not None and (blocos < 1 or blocos > _MAXIMO_DE_BLOCOS):
+            raise ValueError(f"blocos deve estar entre 1 e {_MAXIMO_DE_BLOCOS}")
         return await AnaliseService.montar_prompt_intervalo(projeto_id, inicio_seg, fim_seg, blocos)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

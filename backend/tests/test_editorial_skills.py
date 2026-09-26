@@ -13,9 +13,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app import editorial_skills
 from app.config import settings
-from app.services import settings_store
+from app.infrastructure import settings_store
+from app.services.canal import editorial_skills
 
 _CANAL = "canal-teste"
 _SKILL = "cortador-expert"

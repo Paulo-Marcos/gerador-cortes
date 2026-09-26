@@ -10,7 +10,14 @@ extend-exclude = ["projetos", "assets"]
 # do terminal — e um cano que ninguém lê CONGELA o backend (foi o que aconteceu
 # aqui: o app só destravava ao focar a janela). Log passa pela infraestrutura
 # de logging, que trata isso. Os scripts de terminal ficam de fora, abaixo.
-select = ["E", "F", "W", "I", "UP", "B", "T20"]
+# PLR2004 (número mágico em comparação): D-717. Limiar com nome diz o que mede e
+# por que tem aquele valor; nos testes o número no assert É o esperado, e fica.
+# BLE001 (except Exception): D-717. Falha conhecida pega o tipo exato; barreira de
+# propósito (etapa não-fatal, tarefa de fundo, item de lote) leva `noqa` com o motivo.
+# PLR0913 (argumentos demais, teto 8): D-717. Valores que andam juntos viram um
+# objeto (GradeSpec, LlmCallRecord, AtualizarShortDTO); o que passa disso por
+# natureza — construtor de comando FFmpeg — leva `noqa` com o motivo.
+select = ["E", "F", "W", "I", "UP", "B", "T20", "PLR2004", "BLE001", "PLR0913"]
 ignore = [
   # Comprimento de linha fica a cargo do formatter (ruff format).
   "E501",
@@ -18,6 +25,9 @@ ignore = [
   # trocar por StrEnum muda o str() dos membros e quebraria serializacao/contrato de DB.
   "UP042",
 ]
+
+[tool.ruff.lint.pylint]
+max-args = 8
 
 [tool.ruff.lint.flake8-bugbear]
 # Padrao FastAPI: `def rota(x = Depends(...))` / `Query(...)` etc. nao e mutable-default (B008).
@@ -34,12 +44,10 @@ extend-immutable-calls = [
 
 [tool.ruff.lint.per-file-ignores]
 # Testes ajustam sys.path antes de importar (E402) e usam pytest.raises(Exception) (B017).
-"tests/**" = ["B017", "E402", "T20"]
+"tests/**" = ["B017", "E402", "T20", "PLR2004", "BLE001", "PLR0913"]
 # Scripts de linha de comando: imprimir É a interface deles (D-655).
-"dev-utils/**" = ["T20"]
-"app/consolidar_dados_canal.py" = ["T20"]
-"app/consolidar_assets_canal.py" = ["T20"]
-"app/channel_layout_migration.py" = ["T20"]
+"dev-utils/**" = ["T20", "PLR2004", "BLE001", "PLR0913"]
+"app/services/canal/channel_layout_migration.py" = ["T20"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -77,6 +85,8 @@ forbidden_modules = [
     "app.infrastructure",
     "app.models",
     "app.database",
+    # Logging e estado de processo são efeito colateral (ADR-0015 §2).
+    "app.core",
 ]
 
 [[tool.importlinter.contracts]]
@@ -89,13 +99,6 @@ layers = [
     "app.infrastructure",
     "app.domain",
 ]
-ignore_imports = [
-    # Dívida de 21/09/2026 — infrastructure alcançando services. Quitar na v0.4
-    # (E-051, inverter setas): o que estes clientes usam desce para uma porta.
-    "app.infrastructure.youtube_analytics -> app.services.app_logging",
-    "app.infrastructure.fila_ia -> app.services.tarefas_ativas",
-    "app.infrastructure.claude_cli_client -> app.services.llm_calls_store",
-]
 
 [[tool.importlinter.contracts]]
 id = "routers-sem-infra"
@@ -104,12 +107,6 @@ type = "forbidden"
 source_modules = ["app.routers"]
 forbidden_modules = ["app.infrastructure"]
 allow_indirect_imports = true
-ignore_imports = [
-    # Dívida de 21/09/2026 — o router chama o cliente sem passar por service.
-    # Quitar na v0.4 (E-051).
-    "app.routers.editorial_skills -> app.infrastructure.antigravity_cli_client",
-    "app.routers.ranking_lives -> app.infrastructure.youtube_data_api",
-]
 
 [[tool.importlinter.contracts]]
 id = "models-sem-services"
@@ -118,3 +115,40 @@ type = "forbidden"
 source_modules = ["app.models"]
 forbidden_modules = ["app.services", "app.routers"]
 allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+id = "core-na-base"
+name = "core so importa domain e bibliotecas (ADR-0015)"
+type = "forbidden"
+source_modules = ["app.core"]
+forbidden_modules = [
+    "app.routers",
+    "app.services",
+    "app.infrastructure",
+    "app.models",
+    "app.database",
+]
+
+[[tool.importlinter.contracts]]
+id = "clientes-externos-na-infraestrutura"
+name = "so a infraestrutura fala com clientes externos (D-696)"
+type = "forbidden"
+source_modules = ["app.routers", "app.services", "app.domain"]
+forbidden_modules = ["httpx", "sqlite3", "google", "googleapiclient", "google_auth_oauthlib"]
+# Direto só: chamar a infraestrutura, que fala com o cliente, é o caminho certo.
+allow_indirect_imports = true
+ignore_imports = [
+    # D-756: o envio de vídeo do corte ainda fala com o Google direto (youtube.py, travado).
+    "app.services.youtube -> google",
+    "app.services.youtube -> googleapiclient",
+]
+
+[[tool.importlinter.contracts]]
+id = "agregados-independentes"
+name = "um agregado do dominio nao importa outro (ADR-0015 §2)"
+type = "layers"
+# Cada pasta de agregado entra aqui no mesmo commit em que nasce (D-759).
+layers = [
+    "app.domain.projeto | app.domain.corte | app.domain.short | app.domain.publicacao | app.domain.canal | app.domain.live_candidata",
+    "app.domain.compartilhado",
+]

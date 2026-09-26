@@ -5,7 +5,7 @@ propriedade que sustenta isso — todo destino declara o próprio "vazio", e nom
 desconhecido não vira liberação silenciosa.
 """
 
-from app.domain.liberacao_publicacao import (
+from app.domain.publicacao.liberacao_publicacao import (
     DESTINOS,
     destinos_conhecidos,
     marca_do_destino,

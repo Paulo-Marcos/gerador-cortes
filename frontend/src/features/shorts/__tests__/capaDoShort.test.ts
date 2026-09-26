@@ -12,7 +12,7 @@ import {
   recadoDoInstante,
 } from '../capaDoShort';
 
-const DOMINIO = resolve(__dirname, '../../../../../backend/app/domain/capa_short.py');
+const DOMINIO = resolve(__dirname, '../../../../../backend/app/domain/short/capa_short.py');
 
 // A guia desenhada na tela É a promessa de onde a vitrine corta. Se ela
 // discordar do backend, a tela mente sobre o recorte — e o sintoma aparece só

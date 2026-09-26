@@ -7,24 +7,21 @@ import os
 from pathlib import Path
 
 import aiofiles
-from app.channel_paths import (
+from app.config import settings
+from app.core.channel_paths import (
     moldura_thumbnail_path,
     para_relativo_ao_projeto,
     projetos_dir,
     resolver_do_projeto,
 )
-from app.config import settings
+from app.core.logging import operational_error, operational_info
 from app.database import AsyncSessionLocal
-from app.domain.moldura_thumbnail import (
-    arquivos_da_moldura,
-    emoldurar,
-    nomes_das_molduras,
-)
-from app.domain.thumbnail_encode import LIMITE_YOUTUBE_BYTES, preparar_para_youtube
-from app.domain.variacao_prompt import strip_variation_tags
+from app.domain.canal.variacao_prompt import strip_variation_tags
+from app.domain.corte.moldura_thumbnail import arquivos_da_moldura, nomes_das_molduras
 from app.infrastructure import gemini_client
+from app.infrastructure.imagem.moldura import emoldurar
+from app.infrastructure.imagem.thumbnail_encode import LIMITE_YOUTUBE_BYTES, preparar_para_youtube
 from app.models import Corte, MetadadoCorte
-from app.services.app_logging import operational_error, operational_info
 from sqlalchemy import select
 
 
@@ -105,7 +102,7 @@ async def _capa_e_marcas(corte_id: str) -> tuple[str, bool, bool] | None:
 
         return (
             str(resolver_do_projeto(meta.thumbnail_path, corte.projeto_id)),
-            bool(meta.is_fire),
+            bool(corte.is_fire),
             bool(corte.is_leitura),
         )
 
@@ -136,9 +133,8 @@ class ThumbnailService:
             projeto_id = corte.projeto_id
             # Lidas AQUI, com a sessão viva: fora dela as instâncias estão
             # desligadas e qualquer atributo vira um SELECT que não acontece.
-            # As duas marcas moram em tabelas diferentes — Fire é julgamento do
-            # metadado, Leitura é natureza do corte.
-            is_fire = bool(meta.is_fire)
+            # As duas marcas moram no corte (D-713).
+            is_fire = bool(corte.is_fire)
             is_leitura = bool(corte.is_leitura)
 
         thumb_dir = os.path.join(str(projetos_dir()), projeto_id, "thumbnails")
@@ -369,7 +365,7 @@ class ThumbnailService:
             await _gravar_capa(
                 str(thumb_path),
                 imagem_bytes,
-                is_fire=bool(meta.is_fire),
+                is_fire=bool(corte.is_fire),
                 is_leitura=bool(corte.is_leitura),
             )
 
@@ -387,5 +383,5 @@ class ThumbnailService:
 
             operational_info("Thumbnail", f"Thumbnail gerada: {thumb_path}")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — falha na capa só é registrada; o corte segue
             operational_error("Thumbnail", f"Erro ao gerar thumbnail para corte {corte_id}: {e}")

@@ -2,7 +2,7 @@
 
 ## O que este módulo é, em uma frase
 
-O braço que executa o roteiro de `domain/tiktok_studio.py`: abre o Chrome do
+O braço que executa o roteiro de `domain/publicacao/tiktok_studio.py`: abre o Chrome do
 operador, sobe o MP4, escreve a legenda, troca a capa — e para com a aba pronta
 e o botão *Publicar* aceso, sem tocar nele.
 
@@ -54,8 +54,9 @@ import threading
 import time
 from pathlib import Path
 
-from app.domain.agendamento import Agendamento
-from app.domain.tiktok_studio import (
+from app.domain.compartilhado.time_convert import seg_to_duracao_humana
+from app.domain.publicacao.agendamento import Agendamento
+from app.domain.publicacao.tiktok_studio import (
     PORTA_MINIMA_DE_DEPURACAO,
     Passo,
     RoteiroInterrompido,
@@ -63,16 +64,16 @@ from app.domain.tiktok_studio import (
     leitura_do_envio,
     marco_do_envio,
 )
-from app.domain.time_convert import seg_to_duracao_humana
 from app.services.navegador_assistido import (
-    NavegadorIndisponivel,
+    ChromeNaoAbriu,
     Pagina,
     PaginaDoPlaywright,
+    PlaywrightAusente,
     aba_marcada,
     apagar_copias_do_upload,
-    garantir_chrome,
     perfil_do_canal,
-    porta_do_chrome,
+    sessao_no_chrome,
+    vigiar_aba,
 )
 
 logger = logging.getLogger(__name__)
@@ -258,7 +259,7 @@ def executar_roteiro(
     _passo(pagina.abrir, Passo.ABRIR, URL_DO_UPLOAD, segundos=SEGUNDOS_PARA_ABRIR)
     feitos.append(Passo.ABRIR)
 
-    from app.domain.tiktok_studio import pede_login
+    from app.domain.publicacao.tiktok_studio import pede_login
 
     if pede_login(pagina.url_atual()):
         raise RoteiroInterrompido(Passo.SESSAO)
@@ -486,7 +487,7 @@ def _publicar_agora(pagina: Pagina) -> None:
     esta. A prova e a NAVEGACAO: ao publicar, ele leva a aba para a lista de
     publicacoes (a mesma assimetria que a `publicou` do dominio explora).
     """
-    from app.domain.tiktok_studio import publicou
+    from app.domain.publicacao.tiktok_studio import publicou
 
     _passo(pagina.clicar, Passo.PUBLICAR, "botao_publicar", segundos=SEGUNDOS_PARA_ELEMENTO)
 
@@ -710,44 +711,28 @@ def _assistir(
     que o resto deste projeto já usa pelo mesmo motivo.
     """
     try:
-        from playwright.sync_api import sync_playwright
-    except ImportError as exc:
-        # Dependencia opcional: sem ela o app inteiro continua de pe e so este
-        # botao para. Dizer isso aqui e o que evita um ImportError cru na tela.
-        raise RoteiroInterrompido(
-            Passo.ABRIR,
-            "o Playwright nao esta instalado; rode `pip install playwright`",
-        ) from exc
-
-    perfil = perfil_do_chrome()
-    try:
-        abriu_agora = garantir_chrome(perfil, URL_DO_UPLOAD)
-    except NavegadorIndisponivel as exc:
+        with sessao_no_chrome(perfil_do_chrome(), abrir_em=URL_DO_UPLOAD) as (
+            navegador,
+            abriu_agora,
+        ):
+            contexto = navegador.contexts[0] if navegador.contexts else navegador.new_context()
+            # A vigilia so apaga a copia quando VE a publicacao; o "publiquei" clicado
+            # a mao escapa dela. Antes de subir o proximo, a sobra do anterior sai.
+            apagar_copias_do_upload(contexto, ORIGEM_DO_TIKTOK, TRECHO_DA_ABA_DE_UPLOAD)
+            page = contexto.new_page()
+            relatorio = executar_roteiro(
+                PaginaDoPlaywright(page, SELETORES),
+                video=video,
+                legenda=legenda,
+                capa=capa,
+                marca=marca,
+                publicar_sozinho=publicar_sozinho,
+                agendamento=agendamento,
+            )
+            return {**relatorio, "chrome_aberto_agora": abriu_agora}
+    except (PlaywrightAusente, ChromeNaoAbriu) as exc:
         # A camada do navegador nao sabe em que passo estamos; o roteiro sabe.
         raise RoteiroInterrompido(Passo.ABRIR, str(exc)) from exc
-
-    pw = sync_playwright().start()
-    try:
-        navegador = pw.chromium.connect_over_cdp(f"http://127.0.0.1:{porta_do_chrome(perfil)}")
-        contexto = navegador.contexts[0] if navegador.contexts else navegador.new_context()
-        # A vigilia so apaga a copia quando VE a publicacao; o "publiquei" clicado
-        # a mao escapa dela. Antes de subir o proximo, a sobra do anterior sai.
-        apagar_copias_do_upload(contexto, ORIGEM_DO_TIKTOK, TRECHO_DA_ABA_DE_UPLOAD)
-        page = contexto.new_page()
-        relatorio = executar_roteiro(
-            PaginaDoPlaywright(page, SELETORES),
-            video=video,
-            legenda=legenda,
-            capa=capa,
-            marca=marca,
-            publicar_sozinho=publicar_sozinho,
-            agendamento=agendamento,
-        )
-        return {**relatorio, "chrome_aberto_agora": abriu_agora}
-    finally:
-        # `stop` desconecta; não fecha o Chrome, que é um processo à parte.
-        # É exatamente por isso que a aba sobrevive para o operador revisar.
-        pw.stop()
 
 
 def _vigiar_publicacao(
@@ -760,51 +745,43 @@ def _vigiar_publicacao(
     "não sei", não "não publicou". A tela mantém o botão "publiquei" justamente
     para esse caso.
     """
-    from app.domain.tiktok_studio import publicou
+    from app.domain.publicacao.tiktok_studio import publicou
 
     try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        return False
-
-    pw = sync_playwright().start()
-    try:
-        navegador = pw.chromium.connect_over_cdp(
-            f"http://127.0.0.1:{porta_do_chrome(perfil_do_chrome())}"
-        )
-        contexto = navegador.contexts[0] if navegador.contexts else None
-        if contexto is None:
-            return False
-
-        # D-564: a aba que ESTE item marcou. O criterio antigo — "a que esta em
-        # /upload" — continua valendo quando nao ha marca (o botao avulso), mas
-        # num lote ele e loteria: duas abas de upload e ele escolhe qualquer uma.
-        alvo = aba_marcada(contexto, marca, "tiktokstudio/upload")
-        if alvo is None:
-            return False
-
-        limite = time.monotonic() + segundos
-        while time.monotonic() < limite:
-            if parar is not None and parar.is_set():
-                # D-591: o lote foi cancelado, ou o operador ja marcou "publiquei".
-                logger.info("[TikTokStudio] vigilia encerrada a pedido do lote")
+        with sessao_no_chrome(perfil_do_chrome()) as (navegador, _):
+            contexto = navegador.contexts[0] if navegador.contexts else None
+            if contexto is None:
                 return False
-            if alvo.is_closed():
-                logger.info("[TikTokStudio] a aba foi fechada; nao da para saber se publicou")
+
+            # D-564: a aba que ESTE item marcou. O criterio antigo — "a que esta em
+            # /upload" — continua valendo quando nao ha marca (o botao avulso), mas
+            # num lote ele e loteria: duas abas de upload e ele escolhe qualquer uma.
+            alvo = aba_marcada(contexto, marca, "tiktokstudio/upload")
+            if alvo is None:
                 return False
-            if publicou(alvo.url):
+
+            def conferir() -> bool | None:
+                if not publicou(alvo.url):
+                    return None
                 logger.info("[TikTokStudio] publicacao detectada em %s", alvo.url[:60])
                 if apagar_copias_do_upload(contexto, ORIGEM_DO_TIKTOK, TRECHO_DA_ABA_DE_UPLOAD):
                     logger.info("[TikTokStudio] copia do video apagada do perfil do robo")
                 return True
-            time.sleep(INTERVALO_DA_VIGILIA)
-        logger.info("[TikTokStudio] %ss sem publicar; encerrando a vigilia", int(segundos))
+
+            return vigiar_aba(
+                alvo,
+                segundos,
+                parar,
+                conferir,
+                rotulo="[TikTokStudio]",
+                verbo="publicar",
+                intervalo=INTERVALO_DA_VIGILIA,
+            )
+    except PlaywrightAusente:
         return False
     except Exception as exc:  # noqa: BLE001 — vigilia nunca derruba nada
         logger.info("[TikTokStudio] vigilia interrompida: %s", exc)
         return False
-    finally:
-        pw.stop()
 
 
 async def aguardar_publicacao(

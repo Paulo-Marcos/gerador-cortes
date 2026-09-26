@@ -29,7 +29,11 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
 from app.config import settings
+from app.core.por_loop import PorLoop
 from app.infrastructure import fila_ia
+
+# Depois de matar a árvore, quanto esperar o pipe do processo morto fechar.
+_ESPERA_PARA_DRENAR_S = 15
 
 logger = logging.getLogger(__name__)
 
@@ -111,18 +115,14 @@ class _GateClaudeCli:
                 self._condicao.notify_all()
 
 
-# Gate por event-loop: lazy e por-loop para não vazar entre loops diferentes
-# (ex.: vários asyncio.run em testes).
-_gates: dict[int, _GateClaudeCli] = {}
+# Um gate por event loop (D-700): a condição do asyncio se prende ao loop.
+_gates: PorLoop[_GateClaudeCli] = PorLoop(
+    lambda: _GateClaudeCli(settings.claude_cli_max_concurrent)
+)
 
 
 def _get_gate() -> _GateClaudeCli:
-    loop = asyncio.get_running_loop()
-    gate = _gates.get(id(loop))
-    if gate is None:
-        gate = _GateClaudeCli(settings.claude_cli_max_concurrent)
-        _gates[id(loop)] = gate
-    return gate
+    return _gates.obter()
 
 
 def _resolver_binario() -> str:
@@ -294,7 +294,7 @@ def _run_sync(
         # Mata a árvore (cmd→claude→node) — senão o timeout não retorna de fato.
         _matar_arvore(proc)
         try:
-            proc.communicate(timeout=15)  # reap; agora o pipe fecha
+            proc.communicate(timeout=_ESPERA_PARA_DRENAR_S)  # reap; agora o pipe fecha
         except Exception:  # noqa: BLE001
             pass
         raise ClaudeCliError(
@@ -470,35 +470,37 @@ def _registrar_telemetria(
     contexto: LlmCallContext | None,
     envelope: dict | None,
     latencia_ms: float,
-    sucesso: bool,
-    erro_tipo: str | None,
+    erro: BaseException | None,
 ) -> None:
     """Grava a telemetria da chamada — NÃO-FATAL (D-353).
 
     Qualquer exceção aqui (banco travado, disco cheio, etc.) é engolida com um
     `logger.warning`: telemetria NUNCA pode quebrar uma geração de produção. A
-    `etapa` cai na `skill` quando o contexto não a informou.
+    `etapa` cai na `skill` quando o contexto não a informou. `erro` é a exceção
+    da chamada, ou None quando ela deu certo — o sucesso e o tipo saem dele.
     """
     try:
-        from app.services import llm_calls_store
+        from app.infrastructure import llm_calls_store
 
         tokens_in, tokens_out = _tokens_do_envelope(envelope) if envelope else (None, None)
         etapa = (contexto.etapa if contexto else None) or skill
         llm_calls_store.gravar_llm_call(
-            etapa=etapa,
-            model=model,
-            projeto_id=contexto.projeto_id if contexto else None,
-            corte_id=contexto.corte_id if contexto else None,
-            short_id=contexto.short_id if contexto else None,
-            prompt=prompt,
-            resposta=resposta,
-            tokens_in=tokens_in,
-            tokens_out=tokens_out,
-            custo_usd=(envelope.get("total_cost_usd") if envelope else None),
-            duracao_ms_servidor=(envelope.get("duration_ms") if envelope else None),
-            latencia_ms_wall=latencia_ms,
-            sucesso=sucesso,
-            erro_tipo=erro_tipo,
+            llm_calls_store.LlmCallRecord(
+                etapa=etapa,
+                model=model,
+                projeto_id=contexto.projeto_id if contexto else None,
+                corte_id=contexto.corte_id if contexto else None,
+                short_id=contexto.short_id if contexto else None,
+                prompt=prompt,
+                resposta=resposta,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                custo_usd=(envelope.get("total_cost_usd") if envelope else None),
+                duracao_ms_servidor=(envelope.get("duration_ms") if envelope else None),
+                latencia_ms_wall=latencia_ms,
+                sucesso=erro is None,
+                erro_tipo=type(erro).__name__ if erro is not None else None,
+            )
         )
     except Exception as exc:  # noqa: BLE001 — telemetria é best-effort, nunca fatal
         logger.warning("[ClaudeCLI] falha ao gravar telemetria da chamada: %s", exc)
@@ -584,8 +586,7 @@ async def generate_text(
             contexto=contexto,
             envelope=None,
             latencia_ms=(time.perf_counter() - inicio) * 1000.0,
-            sucesso=False,
-            erro_tipo=type(exc).__name__,
+            erro=exc,
         )
         fila_ia.anunciar_fim(chave_fila, sucesso=False, erro=fila_ia.mensagem_de(exc))
         raise
@@ -603,8 +604,7 @@ async def generate_text(
         contexto=contexto,
         envelope=envelope,
         latencia_ms=(time.perf_counter() - inicio) * 1000.0,
-        sucesso=True,
-        erro_tipo=None,
+        erro=None,
     )
     fila_ia.anunciar_fim(chave_fila, sucesso=True)
     return resultado

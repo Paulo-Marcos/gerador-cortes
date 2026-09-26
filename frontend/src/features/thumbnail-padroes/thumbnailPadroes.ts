@@ -1,6 +1,6 @@
 // D-070: lógica pura da tela de padrões dos melhores prompts de thumbnail.
 // Mantida fora do componente para ficar testável (rótulos e ordenação dos eixos).
-import type { PadroaoEixoOcorrencia, PadroesCompilados } from '@/lib/api';
+import type { PadroaoEixoOcorrencia, PadroesCompilados } from './api';
 
 // Rótulos legíveis dos eixos das [VARIATION_TAGS] (espelham EIXOS no backend).
 export const ROTULOS_EIXO: Record<string, string> = {

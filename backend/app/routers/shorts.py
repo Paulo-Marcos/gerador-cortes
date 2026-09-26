@@ -62,14 +62,12 @@ relação com isto), no mesmo padrão de `avaliacao_bruto`.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from pathlib import Path
 
-from app.database import AsyncSessionLocal
-from app.provider_ia import ProviderIA
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.services import fabrica_de_shorts, publicacao_no_tiktok
 from app.services import shorts as shorts_store
-from app.services.tasks import fire_and_forget
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
@@ -193,7 +191,7 @@ async def gerar_manualmente(corte_id: str):
     na pós-produção — refaz só o vídeo (D-160).
     """
     try:
-        return await shorts_store.gerar_shorts_do_corte(corte_id)
+        return await fabrica_de_shorts.gerar_shorts_do_corte(corte_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -315,10 +313,10 @@ async def transcricao_do_bruto(corte_id: str):
 @router.post("/corte/{corte_id}/sugerir")
 async def sugerir_agora(corte_id: str, provider: ProviderIA = "claude"):
     """Propõe os shorts do bruto atual, de forma síncrona (o caller espera)."""
-    from app.services.claude_ia import ClaudeIaService
+    from app.services import shorts as shorts_store
 
     try:
-        return await ClaudeIaService.sugerir_shorts_via_claude(corte_id, provider)
+        return await shorts_store.sugerir_shorts(corte_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -389,35 +387,7 @@ async def atualizar(short_id: str, body: AtualizarShortRequest):
     try:
         return {
             "short": await shorts_store.atualizar_short(
-                short_id,
-                status=body.status,
-                inicio_seg=body.inicio_seg,
-                fim_seg=body.fim_seg,
-                foco_x=body.foco_x,
-                arranjo_palco=body.arranjo_palco,
-                janela_cheia=body.janela_cheia,
-                ajustes_palco=body.ajustes_palco,
-                recortes_palco=body.recortes_palco,
-                fundo_palco=body.fundo_palco,
-                fundo_editorial=body.fundo_editorial,
-                segmentos=(
-                    None if body.segmentos is None else [s.model_dump() for s in body.segmentos]
-                ),
-                legenda_cor=body.legenda_cor,
-                legenda_fonte=body.legenda_fonte,
-                legenda_x=body.legenda_x,
-                legenda_y=body.legenda_y,
-                legenda_largura=body.legenda_largura,
-                palco_short_preset=body.palco_short_preset,
-                palco_preset=body.palco_preset,
-                moldura=body.moldura,
-                gancho_tela=body.gancho_tela,
-                gancho_ate_seg=body.gancho_ate_seg,
-                gancho_cor=body.gancho_cor,
-                gancho_realce=body.gancho_realce,
-                gancho_x=body.gancho_x,
-                gancho_y=body.gancho_y,
-                gancho_largura=body.gancho_largura,
+                short_id, shorts_store.AtualizarShortDTO(**body.model_dump())
             )
         }
     except LookupError as exc:
@@ -474,10 +444,10 @@ async def sugerir_cenas(short_id: str, provider: ProviderIA = "claude"):
     chegou. A chamada leva alguns segundos — menos que a de propor os shorts,
     porque a transcrição é a de um trecho, não a do bruto inteiro.
     """
-    from app.services.claude_ia import ClaudeIaService
+    from app.services import shorts as shorts_store
 
     try:
-        return await ClaudeIaService.sugerir_cenas_do_short_via_claude(short_id, provider)
+        return await shorts_store.sugerir_cenas(short_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -499,10 +469,9 @@ async def sugerir_ganchos(short_id: str, provider: ProviderIA = "claude"):
     para saber se chegou.
     """
     from app.services import shorts as shorts_store
-    from app.services.claude_ia import ClaudeIaService
 
     try:
-        variacoes = await ClaudeIaService.sugerir_ganchos_via_claude(short_id, provider)
+        variacoes = await shorts_store.sugerir_ganchos(short_id, provider)
         # D-573: GRAVA AS PROPOSTAS, e continua sem escolher.
         #
         # A chamada real leva minutos (231s no log do canal). Enquanto o
@@ -546,10 +515,10 @@ async def gerar_post(short_id: str, provider: ProviderIA = "claude"):
     o operador le e edita antes de subir — e que ate esta demanda era montado
     automaticamente, sem ninguem revisar.
     """
-    from app.services.claude_ia import ClaudeIaService
+    from app.services import metadados_short
 
     try:
-        return await ClaudeIaService.gerar_post_do_short_via_claude(short_id, provider)
+        return await metadados_short.gerar_post(short_id, provider)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -575,7 +544,7 @@ async def atualizar_post(short_id: str, body: AtualizarPostRequest):
 @router.post("/{short_id}/renderizar")
 async def renderizar(short_id: str):
     """Produz o MP4 vertical do short (recorte 9:16 + legenda + cenas)."""
-    from app.services import render_short
+    from app.services.render import render_short
 
     try:
         return render_short.disparar(short_id, final=True)
@@ -591,7 +560,7 @@ async def renderizar_previa(short_id: str):
     finalizar reprocessa do zero, porque o filtro tem de rodar junto com o
     recorte e antes do overlay.
     """
-    from app.services import render_short
+    from app.services.render import render_short
 
     try:
         return render_short.disparar(short_id, final=False)
@@ -611,32 +580,9 @@ async def obter_video(short_id: str, estagio: str = "final"):
     disco e só a publicação o lia. Uma prévia que não se pode ver não serve para
     nada, então a rota nasce junto com ela.
     """
-    from app.channel_paths import resolver_do_projeto
-    from app.models import Corte, Short
     from fastapi.responses import RedirectResponse
 
-    if estagio not in {"previa", "final"}:
-        raise HTTPException(status_code=404, detail=f"Estagio {estagio!r} desconhecido.")
-
-    async with AsyncSessionLocal() as db:
-        short = await db.get(Short, short_id)
-        if not short:
-            raise HTTPException(status_code=404, detail="Short nao encontrado")
-        corte = await db.get(Corte, short.corte_id)
-        if not corte:
-            raise HTTPException(status_code=404, detail="Corte do short nao encontrado")
-        relativo = short.arquivo_short_path if estagio == "final" else short.arquivo_previa_path
-        projeto_id = corte.projeto_id
-
-    if not relativo:
-        raise HTTPException(status_code=404, detail=f"Este short ainda nao tem {estagio}.")
-
-    caminho = resolver_do_projeto(relativo, projeto_id)
-    if not caminho.is_file():
-        raise HTTPException(
-            status_code=404, detail="O arquivo foi registrado mas nao esta mais em disco."
-        )
-
+    projeto_id, relativo, caminho = await shorts_store.localizar_arquivo(short_id, estagio)
     try:
         mtime = int(caminho.stat().st_mtime)
     except OSError:
@@ -746,30 +692,9 @@ async def obter_capa_imagem(short_id: str):
     Cache-buster pelo mtime: sem ele o navegador serve a capa antiga depois de o
     operador escolher outro instante, e a tela mentiria sobre o que foi gravado.
     """
-    from app.channel_paths import resolver_do_projeto
-    from app.models import Corte, MetadadoShort, Short
     from fastapi.responses import FileResponse
-    from sqlalchemy import select
 
-    async with AsyncSessionLocal() as db:
-        short = await db.get(Short, short_id)
-        if not short:
-            raise HTTPException(status_code=404, detail="Short nao encontrado")
-        corte = await db.get(Corte, short.corte_id)
-        if not corte:
-            raise HTTPException(status_code=404, detail="Corte do short nao encontrado")
-        meta = await db.scalar(select(MetadadoShort).where(MetadadoShort.short_id == short_id))
-        relativo = meta.capa_path if meta else ""
-        projeto_id = corte.projeto_id
-
-    if not relativo:
-        raise HTTPException(status_code=404, detail="Este short ainda nao tem capa.")
-
-    caminho = resolver_do_projeto(relativo, projeto_id)
-    if not caminho.is_file():
-        raise HTTPException(
-            status_code=404, detail="A capa foi registrada mas nao esta mais em disco."
-        )
+    caminho = await shorts_store.localizar_capa(short_id)
     return FileResponse(caminho, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
@@ -864,7 +789,7 @@ async def log_do_render(short_id: str):
     quanto a anterior demorou. E o mesmo acompanhamento que o horizontal tem, e
     que o short nao tinha: "fico no escuro".
     """
-    from app.services import render_short
+    from app.services.render import render_short
 
     try:
         return await render_short.log_do_render(short_id)
@@ -916,7 +841,7 @@ async def simular_palco(short_id: str, body: SimularPalcoRequest):
 @router.get("/{short_id}/publicacao")
 async def previa_publicacao(short_id: str):
     """O que cada plataforma receberia, com os avisos — sem publicar nada."""
-    from app.domain.publicacao import LIMITES, legenda_unica
+    from app.domain.publicacao.publicacao import LIMITES, legenda_unica
     from app.services import (
         destinos_shorts,  # noqa: F401 — registra os destinos
         publicacao_destinos,
@@ -953,7 +878,7 @@ async def previa_publicacao(short_id: str):
 @router.post("/{short_id}/publicar/{plataforma}")
 async def publicar(short_id: str, plataforma: str):
     """Publica pela API ou monta o pacote manual, conforme o destino."""
-    from app.domain.publicacao import Plataforma
+    from app.domain.publicacao.publicacao import Plataforma
     from app.services import (
         destinos_shorts,  # noqa: F401 — registra os destinos
         publicacao_destinos,
@@ -1013,7 +938,6 @@ async def gerar_capa_tiktok(
     16:9 do YouTube, que e outra imagem para outro trabalho.
     """
     from app.services import capa_tiktok
-    from app.services.claude_ia import ClaudeIaService
 
     # O texto da capa ja curado tem prioridade sobre a skill: quem escolheu
     # aquela palavra para a thumbnail do YouTube ja decidiu como o corte se
@@ -1021,7 +945,7 @@ async def gerar_capa_tiktok(
     etiqueta = body.etiqueta.strip()
     if not etiqueta and body.sugerir_etiqueta and not await capa_tiktok.tem_texto_de_capa(corte_id):
         try:
-            etiqueta = await ClaudeIaService.sugerir_etiqueta_capa_via_claude(corte_id, provider)
+            etiqueta = await capa_tiktok.sugerir_etiqueta(corte_id, provider)
         except Exception:
             # A etiqueta e desejavel, nao obrigatoria: uma capa com a arte e o
             # selo continua valendo, e ficar sem capa por causa de tres palavras
@@ -1113,18 +1037,8 @@ async def confirmar_tiktok_horizontal(corte_id: str):
     do upload do YouTube, e o TikTok — que sobe o MESMO MP4 — ficava sem
     material, sem volta a não ser render novo.
     """
-    from datetime import datetime
-
-    from app.database import AsyncSessionLocal
-    from app.models import Corte
-
-    async with AsyncSessionLocal() as db:
-        corte = await db.get(Corte, corte_id)
-        if not corte:
-            raise HTTPException(status_code=404, detail=f"Corte {corte_id!r} nao encontrado")
-        corte.tiktok_publicado_em = datetime.utcnow()
-        await db.commit()
-        return {"tiktok_publicado_em": corte.tiktok_publicado_em.isoformat()}
+    publicado_em = await publicacao_no_tiktok.marcar_corte_publicado(corte_id)
+    return {"tiktok_publicado_em": publicado_em.isoformat()}
 
 
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal/staging")
@@ -1209,12 +1123,12 @@ def _ler_agendamento(texto: str | None, plataforma: str):
     tem, nao e defeito nosso — e uma escolha que o operador refaz em dois
     segundos, desde que alguem lhe diga qual e o problema.
     """
-    from app.domain.agendamento import Agendamento, AgendamentoInvalido
+    from app.domain.publicacao.agendamento import Agendamento, AgendamentoInvalido
 
     try:
         agendamento = Agendamento.de_texto(texto)
         if agendamento:
-            from app.domain.agendamento import validar
+            from app.domain.publicacao.agendamento import validar
 
             validar(agendamento, plataforma)
     except AgendamentoInvalido as exc:
@@ -1223,25 +1137,12 @@ def _ler_agendamento(texto: str | None, plataforma: str):
 
 
 async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", agendamento=None) -> dict:
-    """Monta a legenda do pacote e entrega o roteiro ao navegador.
-
-    Recebe o pacote JÁ montado em vez de montá-lo: assim o corte horizontal e o
-    short vertical — que chegam por caminhos diferentes — compartilham este
-    trecho sem que nenhum dos dois precise saber do outro.
-    """
-    from app.domain.publicacao import legenda_unica
-    from app.domain.tiktok_studio import RoteiroInterrompido
-    from app.services import tiktok_studio
-
-    legenda = legenda_unica(pacote.get("titulo", ""), pacote.get("descricao", ""))
-    capa = pacote.get("capa") or ""
+    """A publicação assistida no TikTok, com a parada do roteiro traduzida em 422."""
+    from app.domain.publicacao.tiktok_studio import RoteiroInterrompido
 
     try:
-        relatorio = await tiktok_studio.subir_assistido(
-            video=Path(pacote["video"]),
-            legenda=legenda,
-            capa=Path(capa) if capa else None,
-            agendamento=agendamento,
+        return await publicacao_no_tiktok.publicar_assistido(
+            pacote, corte_id=corte_id, agendamento=agendamento
         )
     except RoteiroInterrompido as exc:
         # 422 e nao 500: nao e defeito nosso, e uma condicao que o operador
@@ -1252,53 +1153,6 @@ async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", agendamento=N
             detail={"mensagem": str(exc), "passo": exc.passo.value},
         ) from exc
 
-    # D-546: a partir daqui o app FICA DE OLHO na aba. Quando o operador
-    # publicar, o corte se marca sozinho — ele nao precisa voltar aqui para
-    # clicar em "publiquei".
-    #
-    # Fire-and-forget porque a espera e de minutos e a requisicao ja tem o que
-    # devolver: a aba esta pronta. Prender o HTTP ate ele decidir publicar
-    # seguraria uma conexao por meia hora para nao entregar nada de novo.
-    if corte_id:
-        _vigiar_publicacao_no_tiktok(corte_id)
-
-    return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}
-
-
-def _vigiar_publicacao_no_tiktok(corte_id: str) -> asyncio.Task:
-    """Fica de olho na aba do TikTok até o operador publicar (D-649).
-
-    `asyncio.create_task` solto era um bug esperando a hora: o loop guarda a
-    task por referência FRACA, e uma vigília de até 30 min sem dono pode ser
-    recolhida pelo coletor de lixo no meio do caminho. Ela morreria calada, e o
-    corte nunca se marcaria como publicado. `fire_and_forget` segura a
-    referência e loga qualquer exceção.
-
-    O nome não casa com nenhum prefixo da fila global de propósito: esperar o
-    operador clicar em "Publicar" não é trabalho pesado para anunciar na tela.
-    """
-    return fire_and_forget(_marcar_quando_publicar(corte_id), name=f"tiktok-vigilia-{corte_id[:8]}")
-
-
-async def _marcar_quando_publicar(corte_id: str) -> None:
-    """Espera a publicacao e so entao marca o corte. Nunca marca no escuro.
-
-    `aguardar_publicacao` devolve `False` tanto para "nao publicou" quanto para
-    "nao consegui saber", e as duas dao no mesmo aqui: nao marcar. A marca
-    LIBERA a limpeza automatica do `upload_ready/video.mp4` (D-512), entao um
-    falso positivo apaga o arquivo e a volta e render novo. Errar para menos
-    custa um clique no "publiquei".
-    """
-    from app.services import tiktok_studio
-
-    try:
-        if not await tiktok_studio.aguardar_publicacao():
-            return
-        await confirmar_tiktok_horizontal(corte_id)
-        logger.info("[TikTokStudio] corte %s marcado como publicado", corte_id[:8])
-    except Exception as exc:  # noqa: BLE001 — tarefa de fundo nao derruba nada
-        logger.warning("[TikTokStudio] nao consegui marcar %s: %s", corte_id[:8], exc)
-
 
 @router.post("/corte/{corte_id}/publicar/tiktok-horizontal")
 async def publicar_corte_no_tiktok(corte_id: str):
@@ -1308,7 +1162,7 @@ async def publicar_corte_no_tiktok(corte_id: str):
     shorts trouxe. O video e o mesmo que foi para o YouTube: nao ha render novo,
     so metadados adaptados e uma pasta pronta.
     """
-    from app.domain.publicacao import Plataforma
+    from app.domain.publicacao.publicacao import Plataforma
     from app.services import (
         destinos_shorts,  # noqa: F401 — registra os destinos
         publicacao_destinos,
@@ -1352,7 +1206,7 @@ class LoteRequest(BaseModel):
 @router.post("/lote")
 async def criar_lote(body: LoteRequest):
     """Dispara o lote: uma raia por plataforma, cada uma no seu passo (D-564)."""
-    from app.domain.publicacao import Plataforma
+    from app.domain.publicacao.publicacao import Plataforma
     from app.services import publicacao_lote
 
     try:
@@ -1453,7 +1307,7 @@ async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
     deu erro e o operador terminou na mao, no proprio app da rede. Nos dois
     casos o fato e o mesmo ("esta no ar"), e quem sabe dele e ele.
     """
-    from app.domain.publicacao import Plataforma
+    from app.domain.publicacao.publicacao import Plataforma
     from app.services import publicacao_lote
 
     try:

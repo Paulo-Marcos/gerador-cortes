@@ -430,7 +430,7 @@ class TestFundoDoPalco:
 
     @pytest.mark.asyncio
     async def test_o_default_e_o_fundo_do_tema(self, ambiente):
-        from app.channel_assets_sync import paleta_do_tema
+        from app.infrastructure.channel_assets_sync import paleta_do_tema
 
         resolvido = await servico.resolver_para_render("s1")
 

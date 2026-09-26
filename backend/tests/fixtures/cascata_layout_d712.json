@@ -1,0 +1,4070 @@
+{
+ "descricao": "D-712: a cascata do layout horizontal (RN-10), a mesma no backend e na tela. Gerada por backend/tests/domain/test_cascata_layout_d712.py (ATUALIZAR_CASCATA=1); lida pelo vitest cascataLayoutAcordo.test.ts.",
+ "casos": [
+  {
+   "nome": "corte:ausente",
+   "corte": null,
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:ausente",
+   "corte": null,
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:ausente",
+   "corte": null,
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:texto-vazio",
+   "corte": "",
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:texto-vazio",
+   "corte": null,
+   "projeto": "",
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:texto-vazio",
+   "corte": null,
+   "projeto": null,
+   "global": "",
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:json-quebrado",
+   "corte": "{quebrado",
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:json-quebrado",
+   "corte": null,
+   "projeto": "{quebrado",
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:json-quebrado",
+   "corte": null,
+   "projeto": null,
+   "global": "{quebrado",
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:vazio",
+   "corte": {},
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:vazio",
+   "corte": null,
+   "projeto": {},
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:vazio",
+   "corte": null,
+   "projeto": null,
+   "global": {},
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:sentinela",
+   "corte": {
+    "modo_padrao": "full",
+    "regioes": []
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:sentinela",
+   "corte": null,
+   "projeto": {
+    "modo_padrao": "full",
+    "regioes": []
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:sentinela",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "modo_padrao": "full",
+    "regioes": []
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:so-modo-compartilhada",
+   "corte": {
+    "modo_padrao": "compartilhada"
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:so-modo-compartilhada",
+   "corte": null,
+   "projeto": {
+    "modo_padrao": "compartilhada"
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:so-modo-compartilhada",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "modo_padrao": "compartilhada"
+   },
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:so-fundo",
+   "corte": {
+    "fundo": "cosmograph"
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:so-fundo",
+   "corte": null,
+   "projeto": {
+    "fundo": "cosmograph"
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:so-fundo",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "fundo": "cosmograph"
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:fundo-invalido",
+   "corte": {
+    "fundo": "nao-existe"
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:fundo-invalido",
+   "corte": null,
+   "projeto": {
+    "fundo": "nao-existe"
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:fundo-invalido",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "fundo": "nao-existe"
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:placa",
+   "corte": {
+    "placa": {
+     "nome": "Fulano",
+     "papel": "Convidado"
+    }
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "Fulano",
+     "papel": "Convidado"
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:placa",
+   "corte": null,
+   "projeto": {
+    "placa": {
+     "nome": "Fulano",
+     "papel": "Convidado"
+    }
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "Fulano",
+     "papel": "Convidado"
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:placa",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "placa": {
+     "nome": "Fulano",
+     "papel": "Convidado"
+    }
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "Fulano",
+     "papel": "Convidado"
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:compartilhada-uma-tela",
+   "corte": {
+    "compartilhada": {
+     "telas": 1
+    }
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 1,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:compartilhada-uma-tela",
+   "corte": null,
+   "projeto": {
+    "compartilhada": {
+     "telas": 1
+    }
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 1,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:compartilhada-uma-tela",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "compartilhada": {
+     "telas": 1
+    }
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 1,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:compartilhada-recorte",
+   "corte": {
+    "compartilhada": {
+     "crop_facecam": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     }
+    }
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 227
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:compartilhada-recorte",
+   "corte": null,
+   "projeto": {
+    "compartilhada": {
+     "crop_facecam": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     }
+    }
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 227
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:compartilhada-recorte",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "compartilhada": {
+     "crop_facecam": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     }
+    }
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 227
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:compartilhada-slot",
+   "corte": {
+    "compartilhada": {
+     "slot_tela": {
+      "x": 400,
+      "y": 100,
+      "w": 1200,
+      "h": 700
+     }
+    }
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 400,
+      "y": 100,
+      "w": 1200,
+      "h": 652
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:compartilhada-slot",
+   "corte": null,
+   "projeto": {
+    "compartilhada": {
+     "slot_tela": {
+      "x": 400,
+      "y": 100,
+      "w": 1200,
+      "h": 700
+     }
+    }
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 400,
+      "y": 100,
+      "w": 1200,
+      "h": 652
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:compartilhada-slot",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "compartilhada": {
+     "slot_tela": {
+      "x": 400,
+      "y": 100,
+      "w": 1200,
+      "h": 700
+     }
+    }
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 400,
+      "y": 100,
+      "w": 1200,
+      "h": 652
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:full",
+   "corte": {
+    "full": {
+     "crop": {
+      "x": 100,
+      "y": 50,
+      "w": 1600,
+      "h": 900
+     }
+    }
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 100,
+      "y": 50,
+      "w": 1600,
+      "h": 900
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:full",
+   "corte": null,
+   "projeto": {
+    "full": {
+     "crop": {
+      "x": 100,
+      "y": 50,
+      "w": 1600,
+      "h": 900
+     }
+    }
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 100,
+      "y": 50,
+      "w": 1600,
+      "h": 900
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:full",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "full": {
+     "crop": {
+      "x": 100,
+      "y": 50,
+      "w": 1600,
+      "h": 900
+     }
+    }
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 100,
+      "y": 50,
+      "w": 1600,
+      "h": 900
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:regioes",
+   "corte": {
+    "regioes": [
+     {
+      "inicio": 30,
+      "fim": 60,
+      "modo": "full"
+     },
+     {
+      "inicio": 0,
+      "fim": 10,
+      "modo": "compartilhada"
+     }
+    ]
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [
+     {
+      "inicio": 0.0,
+      "fim": 10.0,
+      "modo": "compartilhada"
+     },
+     {
+      "inicio": 30.0,
+      "fim": 60.0,
+      "modo": "full"
+     }
+    ],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:regioes",
+   "corte": null,
+   "projeto": {
+    "regioes": [
+     {
+      "inicio": 30,
+      "fim": 60,
+      "modo": "full"
+     },
+     {
+      "inicio": 0,
+      "fim": 10,
+      "modo": "compartilhada"
+     }
+    ]
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:regioes",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "regioes": [
+     {
+      "inicio": 30,
+      "fim": 60,
+      "modo": "full"
+     },
+     {
+      "inicio": 0,
+      "fim": 10,
+      "modo": "compartilhada"
+     }
+    ]
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:regiao-invalida",
+   "corte": {
+    "regioes": [
+     {
+      "inicio": 5,
+      "fim": 2
+     },
+     "lixo"
+    ]
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:regiao-invalida",
+   "corte": null,
+   "projeto": {
+    "regioes": [
+     {
+      "inicio": 5,
+      "fim": 2
+     },
+     "lixo"
+    ]
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:regiao-invalida",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "regioes": [
+     {
+      "inicio": 5,
+      "fim": 2
+     },
+     "lixo"
+    ]
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:regiao-com-override",
+   "corte": {
+    "regioes": [
+     {
+      "inicio": 0,
+      "fim": 5,
+      "compartilhada": {
+       "telas": 1,
+       "crop_tela": {
+        "x": 10,
+        "y": 20,
+        "w": 300,
+        "h": 200
+       }
+      }
+     }
+    ]
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [
+     {
+      "inicio": 0.0,
+      "fim": 5.0,
+      "modo": "compartilhada",
+      "compartilhada": {
+       "telas": 1,
+       "crop_tela": {
+        "x": 10,
+        "y": 20,
+        "w": 300,
+        "h": 200
+       }
+      }
+     }
+    ],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:regiao-com-override",
+   "corte": null,
+   "projeto": {
+    "regioes": [
+     {
+      "inicio": 0,
+      "fim": 5,
+      "compartilhada": {
+       "telas": 1,
+       "crop_tela": {
+        "x": 10,
+        "y": 20,
+        "w": 300,
+        "h": 200
+       }
+      }
+     }
+    ]
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:regiao-com-override",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "regioes": [
+     {
+      "inicio": 0,
+      "fim": 5,
+      "compartilhada": {
+       "telas": 1,
+       "crop_tela": {
+        "x": 10,
+        "y": 20,
+        "w": 300,
+        "h": 200
+       }
+      }
+     }
+    ]
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:segmento-compartilhada",
+   "corte": {
+    "compartilhada_segmento": {
+     "telas": 1
+    }
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    },
+    "compartilhada_segmento": {
+     "telas": 1,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:segmento-compartilhada",
+   "corte": null,
+   "projeto": {
+    "compartilhada_segmento": {
+     "telas": 1
+    }
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:segmento-compartilhada",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "compartilhada_segmento": {
+     "telas": 1
+    }
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:segmento-full",
+   "corte": {
+    "full_segmento": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 960,
+      "h": 540
+     }
+    }
+   },
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    },
+    "full_segmento": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 960,
+      "h": 540
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:segmento-full",
+   "corte": null,
+   "projeto": {
+    "full_segmento": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 960,
+      "h": 540
+     }
+    }
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:segmento-full",
+   "corte": null,
+   "projeto": null,
+   "global": {
+    "full_segmento": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 960,
+      "h": 540
+     }
+    }
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte:completo-em-texto",
+   "corte": "{\"modo_padrao\": \"compartilhada\", \"fundo\": \"cosmograph\", \"regioes\": [{\"inicio\": 1, \"fim\": 2}]}",
+   "projeto": null,
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [
+     {
+      "inicio": 1.0,
+      "fim": 2.0,
+      "modo": "compartilhada"
+     }
+    ],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto:completo-em-texto",
+   "corte": null,
+   "projeto": "{\"modo_padrao\": \"compartilhada\", \"fundo\": \"cosmograph\", \"regioes\": [{\"inicio\": 1, \"fim\": 2}]}",
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "global:completo-em-texto",
+   "corte": null,
+   "projeto": null,
+   "global": "{\"modo_padrao\": \"compartilhada\", \"fundo\": \"cosmograph\", \"regioes\": [{\"inicio\": 1, \"fim\": 2}]}",
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte intocado herda o modo do projeto",
+   "corte": {
+    "modo_padrao": "full",
+    "regioes": []
+   },
+   "projeto": {
+    "modo_padrao": "compartilhada"
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte intocado herda o modo do global",
+   "corte": {
+    "modo_padrao": "full",
+    "regioes": []
+   },
+   "projeto": null,
+   "global": {
+    "modo_padrao": "compartilhada"
+   },
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto vence o global",
+   "corte": null,
+   "projeto": {
+    "fundo": "cosmograph"
+   },
+   "global": {
+    "fundo": "hud-forte"
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte com regiao sem modo herda o modo",
+   "corte": {
+    "regioes": [
+     {
+      "inicio": 30,
+      "fim": 60,
+      "modo": "full"
+     },
+     {
+      "inicio": 0,
+      "fim": 10,
+      "modo": "compartilhada"
+     }
+    ]
+   },
+   "projeto": {
+    "modo_padrao": "compartilhada"
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [
+     {
+      "inicio": 0.0,
+      "fim": 10.0,
+      "modo": "compartilhada"
+     },
+     {
+      "inicio": 30.0,
+      "fim": 60.0,
+      "modo": "full"
+     }
+    ],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "corte escolhe full explicito sem nada mais",
+   "corte": {
+    "modo_padrao": "full"
+   },
+   "projeto": {
+    "modo_padrao": "compartilhada"
+   },
+   "global": null,
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "hud-forte",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "recorte do corte sobre recorte do projeto",
+   "corte": {
+    "compartilhada": {
+     "crop_facecam": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     }
+    }
+   },
+   "projeto": {
+    "compartilhada": {
+     "telas": 1,
+     "crop_tela": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     }
+    }
+   },
+   "global": {
+    "fundo": "cosmograph"
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 1,
+     "crop_facecam": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     },
+     "crop_tela": {
+      "x": 10,
+      "y": 20,
+      "w": 300,
+      "h": 200
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 227
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1080,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "os tres em texto",
+   "corte": "{\"modo_padrao\": \"full\", \"regioes\": []}",
+   "projeto": "{\"modo_padrao\": \"compartilhada\"}",
+   "global": "{\"fundo\": \"cosmograph\"}",
+   "efetivo": {
+    "modo_padrao": "compartilhada",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  },
+  {
+   "nome": "projeto quebrado cai no global",
+   "corte": null,
+   "projeto": "{quebrado",
+   "global": {
+    "fundo": "cosmograph"
+   },
+   "efetivo": {
+    "modo_padrao": "full",
+    "fundo": "cosmograph",
+    "placa": {
+     "nome": "",
+     "papel": ""
+    },
+    "regioes": [],
+    "compartilhada": {
+     "telas": 2,
+     "crop_facecam": {
+      "x": 24,
+      "y": 410,
+      "w": 340,
+      "h": 260
+     },
+     "crop_tela": {
+      "x": 365,
+      "y": 180,
+      "w": 1325,
+      "h": 720
+     },
+     "slot_facecam": {
+      "x": 54,
+      "y": 405,
+      "w": 340,
+      "h": 260
+     },
+     "slot_tela": {
+      "x": 500,
+      "y": 150,
+      "w": 1325,
+      "h": 720
+     }
+    },
+    "full": {
+     "crop": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     },
+     "slot": {
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+     }
+    }
+   }
+  }
+ ]
+}

@@ -35,7 +35,7 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 
-from app.domain.enquadramento_rosto import RostoDetectado
+from app.domain.short.enquadramento_rosto import RostoDetectado
 
 logger = logging.getLogger(__name__)
 

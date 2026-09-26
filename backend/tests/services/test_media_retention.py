@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from app.models import Corte, MetadadoCorte, Projeto
+from app.models import Corte, Projeto
 from app.services import media_retention as media_retention_module
 from app.services.media_retention import MediaRetentionService
 
@@ -195,7 +195,7 @@ def test_limpeza_projeto_sem_pasta_no_disco_nao_quebra(monkeypatch, tmp_path):
 
 def _corte_fire(projeto_id: str, corte_id: str, raw_path: Path, *, fire: bool) -> Corte:
     corte = _corte(projeto_id, corte_id, raw_path)
-    corte.metadado = MetadadoCorte(id=f"m-{corte_id}", corte_id=corte_id, is_fire=fire)
+    corte.is_fire = fire
     return corte
 
 
@@ -306,7 +306,7 @@ def test_ponteiro_do_bruto_preservado_nao_e_zerado_no_banco(monkeypatch, tmp_pat
     vigente, entao o dublê precisa valer tambem em `channel_paths` — senao a
     checagem de existencia procuraria na raiz real e zeraria o ponteiro.
     """
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(media_retention_module, "projetos_dir", lambda: tmp_path)
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)

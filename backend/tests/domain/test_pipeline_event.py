@@ -4,7 +4,7 @@ import json
 from datetime import UTC
 
 import pytest
-from app.domain.pipeline_event import PipelineEvent
+from app.infrastructure.render.pipeline_event import PipelineEvent
 
 # ─────────────────────────────────────────────────────────────
 # to_dict — formato canônico

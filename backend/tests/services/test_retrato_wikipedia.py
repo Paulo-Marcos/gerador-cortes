@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from app.infrastructure import web_imagens
 from app.services import retrato_wikipedia
 
 
@@ -35,7 +36,7 @@ async def test_salvar_de_url_persiste_no_banco(banco_temp: Path) -> None:
     ctx.__aenter__ = AsyncMock(return_value=client)
     ctx.__aexit__ = AsyncMock(return_value=None)
 
-    with patch.object(retrato_wikipedia.httpx, "AsyncClient", return_value=ctx):
+    with patch.object(web_imagens.httpx, "AsyncClient", return_value=ctx):
         retrato = await retrato_wikipedia.salvar_de_url(
             nome="Karl Marx",
             url="https://exemplo.com/marx.png",
@@ -66,7 +67,7 @@ async def test_salvar_de_url_proxima_busca_pega_do_cache(banco_temp: Path) -> No
     ctx.__aenter__ = AsyncMock(return_value=client)
     ctx.__aexit__ = AsyncMock(return_value=None)
 
-    with patch.object(retrato_wikipedia.httpx, "AsyncClient", return_value=ctx):
+    with patch.object(web_imagens.httpx, "AsyncClient", return_value=ctx):
         await retrato_wikipedia.salvar_de_url(
             nome="Hannah Arendt",
             url="https://exemplo.com/arendt.jpg",

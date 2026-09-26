@@ -1,3 +1,4 @@
+import type { Schema } from '@/shared/api';
 // Espelha frontend/src/app/models/models.ts (Angular).
 // Mantenha ambos sincronizados durante a migração.
 
@@ -347,35 +348,9 @@ export interface RemotionStudioUrlResponse {
   props?: unknown;
 }
 
-export interface StatusExportCorte {
-  corte_id: string;
-  numero: number;
-  titulo: string;
-  raw_pronto: boolean;
-  grade_pronta: boolean;
-  overlays_prontos: boolean;
-  /** Existe pelo menos uma cena salva em `cenas_remotion`. */
-  cenas_geradas?: boolean;
-  /** Marca manual do editor de que as cenas estao revisadas. */
-  cenas_validadas?: boolean;
-  video_pronto: boolean;
-  /** D-516: quando o operador confirmou que subiu no TikTok. "" = ainda não. */
-  tiktok_publicado_em?: string;
-  thumbnail_pronta: boolean;
-  metadados_completos: boolean;
-  pronto_publicar: boolean;
-  titulo_youtube?: string;
-  descricao_youtube?: string;
-  thumbnail_path?: string;
-  youtube_video_id?: string;
-  youtube_url_publicado?: string;
-  youtube_scheduled_at?: string;
-}
-
-export interface ExportStatusResponse {
-  projeto_id: string;
-  cortes: StatusExportCorte[];
-}
+/** O status de exportação de um corte — o tipo do contrato (D-722). Mora aqui
+ *  como apelido porque 28 telas o importam deste arquivo. */
+export type StatusExportCorte = Schema<'StatusExportCorte'>;
 
 export interface MetadadoCorte {
   id: string | null;
@@ -422,64 +397,6 @@ export interface PromptManualResponse {
   formato_esperado?: unknown;
 }
 
-// D-066: histórico de avaliações do par prompt+imagem de thumbnail.
-export type VeredictoThumbnail = 'otimo' | 'bom' | 'regular' | 'ruim';
-
-export interface AvaliacaoThumbnail {
-  id: string;
-  corte_id: string;
-  prompt_snapshot: string;
-  thumbnail_path_snapshot: string;
-  titulo_youtube_snapshot: string;
-  texto_capa_snapshot: string;
-  veredito: VeredictoThumbnail;
-  nota_fidelidade: number | null;
-  nota_clareza: number | null;
-  nota_beleza: number | null;
-  nota_impacto: number | null;
-  nota_honestidade: number | null;
-  comentario: string;
-  criado_em: string | null;
-}
-
-export interface AvaliacaoThumbnailResumo {
-  total: number;
-  positivos: number;
-  por_veredito: Record<VeredictoThumbnail, number>;
-  medias_criterios: Record<string, number | null>;
-}
-
-export interface AvaliacaoThumbnailHistorico {
-  avaliacoes: AvaliacaoThumbnail[];
-  resumo: AvaliacaoThumbnailResumo;
-}
-
-export interface RegistrarAvaliacaoThumbnailBody {
-  veredito: VeredictoThumbnail;
-  nota_fidelidade: number | null;
-  nota_clareza: number | null;
-  nota_beleza: number | null;
-  nota_impacto: number | null;
-  nota_honestidade: number | null;
-  comentario: string;
-}
-
-export interface FiltroExport {
-  id: string;
-  nome: string;
-  descricao: string;
-  tem_filtro_visual: boolean;
-}
-
-export interface VersaoExport {
-  filtro: string;
-  nome: string;
-  descricao?: string;
-  e_preview: boolean;
-  completo_disponivel: boolean;
-  tamanho_mb?: number;
-}
-
 export interface FilaGlobal {
   pos_producao: {
     total: number;
@@ -498,79 +415,6 @@ export interface FilaGlobal {
   };
 }
 
-export interface BulkYoutubeRequest {
-  corte_ids: string[];
-  agendar: boolean;
-  videos_por_dia: number;
-  data_inicio?: string;
-  hora_publicacao: string;
-}
-
-export interface BulkYoutubeResponse {
-  message: string;
-  agenda: Array<{ corte_id: string; scheduled_at: string | null }>;
-}
-
-export interface YoutubeLive {
-  video_id: string;
-  titulo: string;
-  data_publicacao: string;
-  data_publicacao_yyyymmdd: string;
-  thumbnail_url: string;
-  duracao_iso: string;
-  youtube_url: string;
-  ja_baixado: boolean;
-}
-
-export interface YoutubeLivesResponse {
-  lives: YoutubeLive[];
-  after_date: string;
-  channel_id?: string;
-}
-
-export interface EnfileirarDownloadsResponse {
-  message: string;
-  criados: Array<{ projeto_id: string; video_id: string; youtube_url: string }>;
-  ignorados: string[];
-}
-
-// ─── F-052: Ranking de lives candidatas ────────────────────────────────────
-
-export type StatusLiveCandidata = 'pendente' | 'rejeitada' | 'promovida';
-
-export interface RankingLive {
-  id: string;
-  video_id: string;
-  titulo: string;
-  canal_origem: string;
-  youtube_url: string;
-  thumbnail_url: string;
-  duracao_iso: string;
-  data_publicacao: string;
-  views: number;
-  likes: number;
-  comentarios: number;
-  sentimento_score: number;
-  sentimento_destaques: string[];
-  pontuacao_total: number;
-  componentes_pontuacao: Record<string, number>;
-  status: StatusLiveCandidata;
-  fetched_at: string;
-}
-
-export interface RankingLivesResponse {
-  lives: RankingLive[];
-  atualizado_em: string;
-  janela_meses?: number;
-}
-
-export interface EnfileirarCandidataResponse {
-  projeto_id: string;
-  video_id: string;
-  pontuacao_ranking?: number;
-  ja_existia: boolean;
-}
-
 export interface AnalisePromptResponse {
   prompt?: string;
   prompts?: Array<{ parte: number; total_partes: number; texto: string }>;
@@ -586,49 +430,7 @@ export interface AnalisarIntervaloRequest {
   fim_hms: string;
 }
 
-export interface YouTubeUploadRequest {
-  scheduled_at: string | null;
-}
-
-export interface YouTubeManualPublishRequest {
-  youtube_url: string;
-}
-
-export interface YouTubePublishResponse {
-  status: string;
-  mensagem: string;
-  video_id?: string;
-  url?: string;
-  titulo?: string;
-  privacy_status?: string;
-  upload_status?: string;
-  scheduled_at?: string;
-}
-
-/**
- * D-566: destinos que sabem ser LIBERADOS (despublicados).
- *
- * O app não descobre sozinho que um vídeo saiu do ar — quem apaga lá fora é o
- * operador. Isto é o vocabulário para ele contar.
- */
 export type DestinoPublicacao = 'youtube' | 'tiktok';
-
-export interface LiberarPublicacaoRequest {
-  destino: DestinoPublicacao;
-}
-
-export interface LiberarPublicacaoResponse {
-  status: string;
-  corte_id: string;
-  destino: DestinoPublicacao;
-  rotulo: string;
-  /** `false` = não havia marca; clicar de novo não é engano, é no-op. */
-  liberado: boolean;
-  campos_limpos: string[];
-  /** Sem o MP4 final na pasta o botão de enviar não volta — precisa re-render. */
-  video_pronto: boolean;
-  mensagem: string;
-}
 
 export interface CriarProjetoRequest {
   youtube_url: string;

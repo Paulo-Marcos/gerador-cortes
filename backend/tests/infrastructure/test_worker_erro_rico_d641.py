@@ -22,7 +22,10 @@ import pytest
 
 RENDERER = Path(__file__).resolve().parents[3] / "video-renderer"
 WORKER = RENDERER / "native_worker.js"
-pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node não está no PATH")
+pytestmark = [
+    pytest.mark.skipif(shutil.which("node") is None, reason="node não está no PATH"),
+    pytest.mark.integration,  # sobe o worker Node de verdade (D-751)
+]
 
 CAUSA = 'Error: Could not find font "Inter" in the bundle'
 JOB_QUE_FALHA = (
@@ -37,11 +40,10 @@ def _rodar_job(projetos: Path, cmd: list[str], *, espera: float = 8.0) -> dict:
     """Enfileira um job direto na pasta e devolve o `res_` que o worker escreveu."""
     fila = projetos / "fila_remotion"
     fila.mkdir(parents=True, exist_ok=True)
-    (projetos / "app_settings.json").write_text(json.dumps({"log_level": "info"}), encoding="utf-8")
     worker = subprocess.Popen(
         ["node", str(WORKER)],
         cwd=str(RENDERER),
-        env={**os.environ, "PROJETOS_DIR": str(projetos)},
+        env={**os.environ, "PROJETOS_DIR": str(projetos), "WORKER_LOG_LEVEL": "info"},
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
     )

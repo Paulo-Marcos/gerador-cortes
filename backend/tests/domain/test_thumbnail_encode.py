@@ -13,12 +13,14 @@ import math
 import random
 
 import pytest
-from app.domain.thumbnail_encode import (
+from app.infrastructure.imagem.thumbnail_encode import (
     LIMITE_YOUTUBE_BYTES,
     detectar_mimetype,
     preparar_para_youtube,
 )
 from PIL import Image, ImageDraw
+
+pytestmark = pytest.mark.integration  # codifica imagem de verdade com PIL (D-751)
 
 
 def _capa_com_texto(largura: int = 1672, altura: int = 941) -> Image.Image:

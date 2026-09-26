@@ -33,7 +33,7 @@ def _fake_session_factory(corte_obj):
 
 def _corte(*, is_fire: bool, corte_id: str):
     corte = MagicMock(id=corte_id, projeto_id="proj-x")
-    corte.metadado = MagicMock(is_fire=is_fire)
+    corte.is_fire = is_fire
     return corte
 
 
@@ -88,7 +88,7 @@ async def test_corte_comum_nao_mostra_etapa_que_nunca_vai_rodar(monkeypatch):
 @pytest.mark.asyncio
 async def test_corte_sem_metadado_nao_quebra_a_geracao(monkeypatch):
     """Corte antigo pode não ter linha de metadado — ausência é 'não é Fire'."""
-    corte = MagicMock(id="c-sem-meta", projeto_id="proj-x")
+    corte = MagicMock(id="c-sem-meta", projeto_id="proj-x", is_fire=False)
     corte.metadado = None
     monkeypatch.setattr(export_module, "AsyncSessionLocal", _fake_session_factory(corte))
 

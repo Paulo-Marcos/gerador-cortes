@@ -4,7 +4,7 @@
 // gravado na pasta do canal ativo); estado e callbacks vêm por props.
 import { CheckCircle2, Loader2, Pencil, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Canal, YoutubeAuthStatus } from '@/lib/channelsApi';
+import type { Canal, YoutubeAuthStatus } from '@/features/channels/api/canais';
 import { ConectarYoutubeTutorial } from './ConectarYoutubeTutorial';
 
 interface ChannelCardProps {

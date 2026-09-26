@@ -4,7 +4,7 @@ import json
 
 import pytest
 import pytest_asyncio
-from app.domain.avaliacao_bruto import AvaliacaoNormalizada
+from app.domain.corte.avaliacao_bruto import AvaliacaoNormalizada
 from app.models import Base, Corte, Projeto
 from app.services import avaliacao_bruto as servico
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine

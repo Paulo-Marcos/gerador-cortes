@@ -34,7 +34,7 @@ const LEGENDA_DO_RENDERER = resolve(
 // testes são o teto contra a divergência: eles leem os outros dois arquivos.
 const LEGENDA_DO_BACKEND = resolve(
   __dirname,
-  '../../../../../backend/app/domain/legenda_short.py',
+  '../../../../../backend/app/domain/short/legenda_short.py',
 );
 
 function constanteDoBackend(nome: string): number {

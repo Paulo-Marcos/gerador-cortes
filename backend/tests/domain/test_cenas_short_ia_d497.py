@@ -11,7 +11,7 @@ Duas coisas sao testadas aqui, e nenhuma e "o modelo acertou":
 """
 
 import pytest
-from app.domain.cenas_short_ia import (
+from app.domain.short.cenas_short_ia import (
     FRACAO_DO_CTA,
     JANELA_DO_HOOK_SEG,
     normalizar_sugestoes,

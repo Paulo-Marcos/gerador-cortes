@@ -23,7 +23,7 @@ segunda passagem o valor já-relativo não muda, então nada é reescrito.
 
 from __future__ import annotations
 
-from app.channel_paths import para_relativo_ao_projeto
+from app.core.channel_paths import para_relativo_ao_projeto
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 

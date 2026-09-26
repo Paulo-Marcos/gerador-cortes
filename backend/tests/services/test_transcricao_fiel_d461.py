@@ -10,7 +10,7 @@ import json
 
 import pytest
 import pytest_asyncio
-from app.domain.transcricao_fiel import Palavra, normalizar_palavras, recortar
+from app.domain.short.transcricao_fiel import Palavra, normalizar_palavras, recortar
 from app.models import Base, Corte, Projeto
 from app.services import transcricao_fiel as servico
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -29,7 +29,7 @@ _SEGMENTOS = [
 
 @pytest_asyncio.fixture
 async def ambiente(monkeypatch, tmp_path):
-    from app import channel_paths
+    from app.core import channel_paths
 
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)
 

@@ -8,7 +8,7 @@ marcava o projeto como PRONTO. O operador só descobria ao rodar a análise.
 import asyncio
 
 import pytest
-from app.domain.transcricao_utils import TranscricaoIndisponivelError
+from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import StatusProjeto
 from app.services import ingestao as ingestao_module
 from app.services.ingestao import IngestaoService

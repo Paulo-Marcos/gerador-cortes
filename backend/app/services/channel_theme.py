@@ -1,6 +1,6 @@
 """Seleção e materialização do TEMA de render por canal (D-174).
 
-Costura a biblioteca versionada (`domain/theme_library.py`) ao armazenamento por
+Costura a biblioteca versionada (`domain/canal/theme_library.py`) ao armazenamento por
 canal (`settings_store`, `instance/settings.db`) e ao mecanismo de serving do
 Remotion (o `theme.config.json` que `theme-v2.ts` importa em build).
 
@@ -28,10 +28,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app import channel_paths
-from app.domain import theme_library
-from app.domain.theme_library import Tema
-from app.services import settings_store
+from app.core import channel_paths
+from app.domain.canal import theme_library
+from app.domain.canal.theme_library import Tema
+from app.infrastructure import settings_store
 
 # Destino servido que `theme-v2.ts` importa em build (mesmo alvo de
 # `channel_assets_sync._RENDERER_THEME`).

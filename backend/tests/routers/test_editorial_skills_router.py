@@ -10,8 +10,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app import editorial_skills
+from app.infrastructure import antigravity_cli_client
 from app.routers import editorial_skills as router_mod
+from app.services.canal import editorial_skills
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -171,3 +172,16 @@ def test_get_ranking_pesos_reset_funciona(client: TestClient):
     resp = client.get("/editorial-skills/ranking-pesos/reset")
     assert resp.status_code == 200
     assert "criterios" in resp.json()
+
+
+def test_modelos_gemini_chegam_pelo_service_de_ambiente(client: TestClient, monkeypatch):
+    # Troca o cliente na ponta: se a rota voltasse a falar com ele por outro
+    # caminho, ou deixasse de repassar a lista, este teste acusa (D-694).
+    monkeypatch.setattr(
+        antigravity_cli_client, "listar_modelos", lambda: [("gemini-2.5-pro", "Gemini 2.5 Pro")]
+    )
+
+    resposta = client.get("/editorial-skills/modelos-gemini")
+
+    assert resposta.status_code == 200
+    assert resposta.json() == {"modelos": [{"id": "gemini-2.5-pro", "nome": "Gemini 2.5 Pro"}]}

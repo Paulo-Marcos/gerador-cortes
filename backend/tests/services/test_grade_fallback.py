@@ -4,7 +4,7 @@ fonte nao for decodavel pela GPU — um render nunca pode quebrar por causa diss
 
 from pathlib import Path
 
-import app.services.pipeline_render as pr
+import app.services.render.pipeline_render as pr
 import pytest
 from app.infrastructure.worker_queue import WorkerJobFailed, WorkerJobTimeout
 from app.services.youtube_palco import PalcoPngsResultado
@@ -87,7 +87,7 @@ async def test_grade_segmentado_escreve_lista_roda_passos_e_limpa(tmp_path, monk
     """Orquestracao do plano segmentado no _executar_grade: escreve a lista do
     concat ANTES dos passos, executa cada passo na ordem (job_id unico) e remove
     os temporarios (.ts + .txt) ao fim."""
-    from app.domain.ffmpeg_commands import GradePlan, GradeStep
+    from app.infrastructure.render.ffmpeg_commands import GradePlan, GradeStep
 
     monkeypatch.setattr(pr, "projetos_dir", lambda: tmp_path)
 
@@ -132,7 +132,7 @@ async def test_grade_segmentado_escreve_lista_roda_passos_e_limpa(tmp_path, monk
 @pytest.mark.asyncio
 async def test_grade_sem_intel_vai_direto_para_software_em_libx264(tmp_path, monkeypatch):
     """D-622: sem Quick Sync nao ha decode QSV a tentar — um passo so, em libx264."""
-    from app.domain.video_encoder import VideoEncoder
+    from app.infrastructure.render.video_encoder import VideoEncoder
 
     monkeypatch.setattr(pr, "projetos_dir", lambda: tmp_path)
 
@@ -162,7 +162,7 @@ async def test_grade_sem_intel_vai_direto_para_software_em_libx264(tmp_path, mon
 
 @pytest.mark.asyncio
 async def test_render_final_sem_intel_codifica_em_libx264(tmp_path, monkeypatch):
-    from app.domain.video_encoder import VideoEncoder
+    from app.infrastructure.render.video_encoder import VideoEncoder
 
     monkeypatch.setattr(pr, "projetos_dir", lambda: tmp_path)
 

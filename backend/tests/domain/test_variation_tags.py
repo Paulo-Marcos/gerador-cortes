@@ -6,7 +6,7 @@ fielmente nos 5 eixos, (2) é removida antes do prompt ir pro gerador de imagem
 vira bloco proibido injetável, (4) o repertório é formatado como bullets.
 """
 
-from app.domain.variacao_prompt import (
+from app.domain.canal.variacao_prompt import (
     coletar_eixos_proibidos,
     contar_eixos_modais,
     formatar_eixos_proibidos,
@@ -137,7 +137,7 @@ class TestStripVariationTags:
         assert "[VARIATION_TAGS]" not in stripped
         assert stripped.startswith("Editorial 2D thumbnail")
 
-    def test_idempotente(self):
+    def test_prompt_sem_tags_sai_igual(self):
         prompt = "Editorial 2D thumbnail, sem tags"
         assert strip_variation_tags(prompt) == prompt
 

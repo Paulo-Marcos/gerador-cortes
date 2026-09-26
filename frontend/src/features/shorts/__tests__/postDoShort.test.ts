@@ -15,8 +15,8 @@ import {
   tomDoTitulo,
 } from '../postDoShort';
 
-const PUBLICACAO = resolve(__dirname, '../../../../../backend/app/domain/publicacao.py');
-const METADADOS = resolve(__dirname, '../../../../../backend/app/domain/metadados_short.py');
+const PUBLICACAO = resolve(__dirname, '../../../../../backend/app/domain/publicacao/publicacao.py');
+const METADADOS = resolve(__dirname, '../../../../../backend/app/domain/short/metadados_short.py');
 
 // A tela só pode prometer o espaço que a plataforma dá. Como os projetos não
 // compartilham módulo, os números são cópias — e é este bloco que impede que o

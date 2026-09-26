@@ -1,5 +1,10 @@
 """Evolução de schema do SQLite no boot: reconciliação declarativa + migrations.
 
+Caminho único (D-701): o boot chama :func:`migrar_schema`, que cria as tabelas
+novas, reconcilia as colunas e aplica as migrations versionadas, nessa ordem.
+Coluna nova se declara no modelo — a reconciliação a acrescenta, com o default
+literal dele. Transformação de dado, índice ou restrição vira migration versionada.
+
 O ``.db`` do usuário é gitignored: num ``git pull`` de uma versão nova, o banco
 precisa ser MIGRADO no boot, não recriado. Este módulo aplica migrations
 idempotentes em ordem crescente de versão e carimba ``PRAGMA user_version`` a
@@ -35,8 +40,10 @@ from app.migrations import (
     migration_004_campos_v2_cortes,
     migration_005_trechos_geracoes,
     migration_006_indices_filtros_quentes,
+    migration_007_fire_no_corte,
     reconciliacao,
 )
+from app.models import Base
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -83,6 +90,11 @@ MIGRATIONS: tuple[Migration, ...] = (
         description="D-650 — índices em cortes.projeto_id, shorts.corte_id e projetos.youtube_url",
         upgrade=migration_006_indices_filtros_quentes.upgrade,
     ),
+    Migration(
+        version=7,
+        description="D-713 — is_fire e candidato_shorts passam do metadado para o corte",
+        upgrade=migration_007_fire_no_corte.upgrade,
+    ),
 )
 
 
@@ -116,3 +128,14 @@ async def aplicar_migrations(conn: AsyncConnection) -> int:
         await _carimbar_versao_schema(conn, migration.version)
         versao_atual = migration.version
     return versao_atual
+
+
+async def migrar_schema(conn: AsyncConnection) -> int:
+    """O schema do boot, por um caminho só: tabelas novas, colunas, migrations.
+
+    O `create_all` só cria tabela ausente — completa, com todas as colunas; a
+    tabela que já existe fica com a reconciliação e as migrations. Devolve a
+    versão final do schema.
+    """
+    await conn.run_sync(Base.metadata.create_all)
+    return await aplicar_migrations(conn)

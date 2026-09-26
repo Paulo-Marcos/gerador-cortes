@@ -12,7 +12,8 @@ esta opaco; sem gancho, onde o apresentador ja esta posto.
 """
 
 import pytest
-from app.domain.capa_short import (
+from app.domain.corte.capa_tiktok import ALTURA, ALTURA_SEGURA, TOPO_SEGURO
+from app.domain.short.capa_short import (
     FRACAO_SEGURA,
     FRACAO_TOPO_CORTADO,
     GuiaDaVitrine,
@@ -20,8 +21,8 @@ from app.domain.capa_short import (
     guia_da_vitrine,
     instante_padrao,
     prompt_da_capa,
+    texto_da_capa,
 )
-from app.domain.capa_tiktok import ALTURA, ALTURA_SEGURA, TOPO_SEGURO
 
 
 class TestAcordoComAGeometriaDaCapaDoCorte:
@@ -126,3 +127,18 @@ class TestPromptDaCapa:
             "ou quer outro personagem na capa?"
         )
         assert prompt_da_capa(bruto) == ""
+
+
+def test_o_texto_da_capa_e_o_gancho_da_abertura():
+    """D-762: a capa não cria uma segunda promessa para o mesmo short."""
+    assert texto_da_capa("  Ninguém te conta isso ", "Um título mais longo") == (
+        "Ninguém te conta isso"
+    )
+
+
+def test_sem_gancho_o_texto_da_capa_e_o_titulo():
+    assert texto_da_capa("   ", " Um título ") == "Um título"
+
+
+def test_sem_gancho_nem_titulo_a_capa_diz_que_nao_tem_texto():
+    assert texto_da_capa("", None) == "(sem texto)"

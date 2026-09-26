@@ -7,8 +7,10 @@ rígida. Aqui a diferença entre elas é dado, não código espalhado.
 
 from datetime import datetime, timedelta
 
-from app.domain.publicacao import Plataforma
-from app.domain.ritmo_publicacao import (
+from app.domain.publicacao.publicacao import Plataforma
+from app.domain.publicacao.ritmo_publicacao import (
+    ESTADOS_FORA_DA_RAIA,
+    ESTADOS_TERMINAIS,
     UPLOADS_YOUTUBE_POR_DIA,
     Cadencia,
     EstadoItem,
@@ -104,3 +106,15 @@ def test_sua_vez_nao_e_estado_terminal_do_ponto_de_vista_do_lote():
         EstadoItem.PULADO,
         EstadoItem.CANCELADO,
     }
+
+
+def test_o_item_na_vez_do_operador_ainda_pode_mudar():
+    """D-762: terminal é o item que não muda mais; o da vez do operador muda."""
+    assert EstadoItem.SUA_VEZ not in ESTADOS_TERMINAIS
+
+
+def test_a_maquina_ja_largou_o_item_na_vez_do_operador():
+    """D-762: é o que deixa o lote terminar sem esperar um clique (D-591)."""
+    assert ESTADOS_FORA_DA_RAIA == ESTADOS_TERMINAIS | {EstadoItem.SUA_VEZ}
+    assert EstadoItem.AGUARDANDO not in ESTADOS_FORA_DA_RAIA
+    assert EstadoItem.PREPARANDO not in ESTADOS_FORA_DA_RAIA

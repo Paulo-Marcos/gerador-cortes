@@ -9,12 +9,12 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 from contextlib import asynccontextmanager
 
-from app import channel_paths
-from app import editorial_skills as editorial_skills_service
-from app.channel_layout_migration import garantir_layout_de_canais
-from app.channel_paths import projetos_dir
 from app.config import VERSAO_DO_APP, settings
+from app.core import channel_paths
+from app.core.channel_paths import projetos_dir
+from app.core.logging import install_log_controls
 from app.database import init_db
+from app.infrastructure import settings_store
 from app.routers import (
     avaliacao_bruto,
     avaliacao_cortes,
@@ -39,12 +39,15 @@ from app.routers import (
 from app.routers import (
     settings as app_settings,
 )
-from app.seguranca_local import ORIGEM_LOCAL_REGEX, GuardaDeOrigemLocal
+from app.routers.errors import registrar_tratadores
+from app.routers.seguranca_local import ORIGEM_LOCAL_REGEX, GuardaDeOrigemLocal
 from app.services import channels as channels_service
-from app.services import encerramento, settings_store
-from app.services.app_logging import install_log_controls
+from app.services import encerramento
 from app.services.app_settings import AppSettingsService
-from app.services.remotion_render import RemotionRenderService
+from app.services.canal import editorial_scaffolds
+from app.services.canal import editorial_skills as editorial_skills_service
+from app.services.canal.channel_layout_migration import garantir_layout_de_canais
+from app.services.render.remotion_render import RemotionRenderService
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -73,6 +76,9 @@ async def lifespan(app: FastAPI):
         channels_service.migrar_identidades_para_banco()
         AppSettingsService.get()  # semeia app_settings do canal ativo a partir do arquivo
         editorial_skills_service.migrar_skills_do_canal_ativo()  # E-021: semeia as 5 skills
+        # D-330: no mesmo ponto do boot, alinha o scaffold V1 ao default v2. Chamada
+        # daqui, e não de dentro das skills, para as duas não se importarem (D-697).
+        editorial_scaffolds.migrar_scaffolds_do_canal_ativo()
     except Exception as e:  # noqa: BLE001 — boot resiliente a I/O de config
         logger.warning("[Settings] Falha ao migrar configs para o banco: %s", e)
 
@@ -80,7 +86,7 @@ async def lifespan(app: FastAPI):
 
     try:
         await RemotionRenderService.sincronizar_tarefas_concluidas()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — a sincronização do boot não impede o app de subir
         logger.warning("[Main] Erro na sincronização inicial: %s", e)
 
     yield
@@ -99,6 +105,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# D-697: erro de domínio vira HTTP pelo significado, e não por decisão de cada router.
+registrar_tratadores(app)
+
 app.add_middleware(
     CORSMiddleware,
     # D-745: só origens desta máquina, em qualquer porta (o renderer sobe o seu
@@ -111,7 +120,7 @@ app.add_middleware(
     expose_headers=["Content-Range", "Accept-Ranges", "Content-Length"],
 )
 # Registrada depois do CORS = roda antes dele. Fecha o que o CORS não fecha:
-# POST simples, WebSocket e DNS rebinding (ver app/seguranca_local.py).
+# POST simples, WebSocket e DNS rebinding (ver app/routers/seguranca_local.py).
 app.add_middleware(GuardaDeOrigemLocal)
 
 app.include_router(projetos.router, prefix="/api/projetos", tags=["Projetos"])

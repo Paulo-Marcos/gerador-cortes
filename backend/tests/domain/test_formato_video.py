@@ -5,7 +5,7 @@ como um ffmpeg que morre no meio do render — nunca como exceção que alguém 
 no momento do erro.
 """
 
-from app.domain.formato_video import (
+from app.domain.short.formato_video import (
     HORIZONTAL,
     VERTICAL,
     Resolucao,

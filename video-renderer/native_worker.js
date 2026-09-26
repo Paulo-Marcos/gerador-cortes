@@ -42,7 +42,6 @@ const canalDoBoot = (() => {
 })();
 const projetosDir = resolveProjetosDir();
 const filaDir = path.join(projetosDir, "fila_remotion");
-const settingsPath = path.join(projetosDir, "app_settings.json");
 const originalConsole = {
   log: console.log.bind(console),
   info: console.info.bind(console),
@@ -52,14 +51,12 @@ const originalConsole = {
 };
 let currentLogLevel = readConfiguredLogLevel();
 
+// O nível vem do banco de settings do backend (D-699): cada job traz o dele, e o
+// da partida chega por ambiente, entregue por quem sobe o worker (dev.ps1). Antes
+// era lido do app_settings.json, um espelho que o backend deixou de escrever —
+// ler um arquivo que ninguém atualiza devolveria um nível velho.
 function readConfiguredLogLevel() {
-  try {
-    if (!fs.existsSync(settingsPath)) return "disabled";
-    const data = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-    return normalizeLogLevel(data.log_level);
-  } catch {
-    return "disabled";
-  }
+  return normalizeLogLevel(process.env.WORKER_LOG_LEVEL);
 }
 
 function normalizeLogLevel(level) {

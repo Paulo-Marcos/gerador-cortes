@@ -17,7 +17,7 @@ A imagem nasce sem texto de propósito — a etiqueta e o selo são desenhados p
 cima, com a tipografia do canal. O frame do vídeo continua disponível como
 escape hatch.
 
-A geometria vem pronta de `app/domain/capa_tiktok.py`. Este módulo é a
+A geometria vem pronta de `app/domain/corte/capa_tiktok.py`. Este módulo é a
 plumbing: arquivos, subprocessos e o caminho gravado no metadado.
 
 Falhar aqui não derruba nada a montante: quem chama recebe `None` e a tela diz
@@ -34,20 +34,30 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.channel_paths import para_relativo_ao_projeto, projetos_dir
+from app.core import process_runner
+from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.database import AsyncSessionLocal
-from app.domain import capa_tiktok as layout_capa
-from app.domain.youtube_layout import FUNDO_PADRAO
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.domain.corte import capa_tiktok as layout_capa
+from app.domain.corte.capa_tiktok import etiqueta_da_resposta, prompt_da_arte
+from app.domain.corte.youtube_layout import FUNDO_PADRAO
 from app.infrastructure.ffmpeg_runner import probe_duracao, run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte
-from app.provider_ia import ProviderIA
+from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.channels import identidade_do_canal_ativo
+from app.services.claude_ia import gerar_texto, registrar_skill_usada
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
+_SKILL_CAPA_TIKTOK = "capa-tiktok-expert"
+_SKILL_CAPA_TIKTOK_IMAGEM = "capa-tiktok-imagem-expert"
+
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _GEN_SCRIPT = _REPO_ROOT / "scripts" / "gen-capa-tiktok.mjs"
+# D-750: ~3x o pior caso medido (101 s, na primeira execução, a frio; o normal é
+# 11-38 s). Só existe para um Chromium travado não prender o render para sempre.
+_TIMEOUT_DO_GERADOR_SEG = 300
 
 # Quantos bytes do fim da saída do gerador entram no log quando ele falha.
 _SAIDA_TAIL = 1200
@@ -204,6 +214,45 @@ async def montar_contexto_da_etiqueta(corte_id: str) -> ContextoDaEtiqueta:
         )
 
 
+async def sugerir_etiqueta(corte_id: str, provider: ProviderIA = "claude") -> str:
+    """As 2-3 palavras que vão no alto da capa vertical do TikTok (D-520).
+
+    Skill separada da do YouTube, e não um parâmetro dela, porque as duas
+    escrevem coisas de gêneros diferentes: lá a manchete INTEIRA de um cartaz
+    que disputa o clique numa lista; aqui o nome do assunto numa prateleira
+    onde nove capas são vistas juntas.
+
+    A diferença mais contra-intuitiva está no histórico. Toda a esteira manda
+    o passado para EVITAR repetição; aqui ele vai para permiti-la — três
+    cortes sobre a Selic devem dizer SELIC, e é essa repetição que faz a
+    grade parecer um canal.
+
+    Levanta `LookupError` (corte inexistente). Devolve a etiqueta já
+    normalizada; string vazia quando o modelo não produziu nada aproveitável,
+    e nesse caso a capa sai sem texto em vez de não sair.
+    """
+    contexto = await montar_contexto_da_etiqueta(corte_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK)
+    scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok")
+    prompt = scaffold.format(
+        titulo_proposto=contexto.titulo,
+        tema_central=contexto.tema_central,
+        resumo=contexto.resumo,
+        etiquetas_recentes=contexto.etiquetas_recentes or "(nenhuma ainda)",
+    )
+    registrar_skill_usada(_SKILL_CAPA_TIKTOK, skill, scaffold)
+    bruto = await gerar_texto(
+        provider,
+        prompt,
+        skill,
+        _SKILL_CAPA_TIKTOK,
+        projeto_id=contexto.projeto_id,
+        corte_id=corte_id,
+    )
+    return etiqueta_da_resposta(bruto)
+
+
 def _ajuste_do_layout() -> dict:
     """Onde o operador pôs cada componente, das configurações globais (D-532).
 
@@ -278,6 +327,49 @@ def _arte_existente(thumb_dir: Path, corte_id: str) -> Path | None:
     return None
 
 
+async def _escrever_prompt_da_arte(corte_id: str, texto_capa: str, provider: ProviderIA) -> str:
+    """O prompt de imagem da faixa central da capa do TikTok (D-523, D-524).
+
+    A primeira versão da capa usava um frame do próprio vídeo. Ficou ruim por
+    um motivo estrutural: o vídeo é deitado e cheio de texto na tela — um
+    documento, um slide —, e nada disso sobrevive à miniatura da grade do
+    perfil. Aqui a faixa passa a receber uma cena feita para ser vista
+    pequena.
+
+    A imagem nasce SEM texto de propósito: a etiqueta e o selo são desenhados
+    por cima, com a tipografia do canal. Gerador de imagem não escreve
+    tipografia confiável, e duas camadas de texto brigariam.
+
+    O estilo é herdado, não redescrito: o prompt que o Capista já escreveu
+    para a thumbnail do YouTube vai junto como referência. Manter a
+    identidade do mascote em dois corpos de skill é garantir que um dia os
+    dois discordem — e aí o mesmo canal teria dois personagens.
+
+    Levanta `LookupError` (corte inexistente).
+    """
+    contexto = await montar_contexto_da_etiqueta(corte_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_CAPA_TIKTOK_IMAGEM)
+    scaffold = editorial_scaffolds.resolver_scaffold("capa-tiktok-imagem")
+    prompt = scaffold.format(
+        titulo_proposto=contexto.titulo,
+        tema_central=contexto.tema_central,
+        texto_capa=texto_capa or "(sem etiqueta)",
+        resumo=contexto.resumo,
+        prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
+    )
+    registrar_skill_usada(_SKILL_CAPA_TIKTOK_IMAGEM, skill, scaffold)
+    bruto = await gerar_texto(
+        provider,
+        prompt,
+        skill,
+        _SKILL_CAPA_TIKTOK_IMAGEM,
+        projeto_id=contexto.projeto_id,
+        corte_id=corte_id,
+    )
+    return prompt_da_arte(bruto)
+
+
 async def gerar_prompt_da_arte(corte_id: str, provider: ProviderIA = "claude") -> str:
     """Escreve o prompt da arte e o guarda no metadado (D-524).
 
@@ -285,8 +377,6 @@ async def gerar_prompt_da_arte(corte_id: str, provider: ProviderIA = "claude") -
     o prompt — em vez de só devolvê-lo — é o que torna o fluxo retomável: ele
     fecha a tela, gera a imagem com calma e volta para subir a arte.
     """
-    from app.services.claude_ia import ClaudeIaService
-
     contexto = await _contexto(corte_id, exigir_video=False)
     if not contexto["prompt_thumbnail"]:
         # A arte HERDA o estilo do prompt do YouTube: mascote, paleta, luz. Sem
@@ -301,9 +391,7 @@ async def gerar_prompt_da_arte(corte_id: str, provider: ProviderIA = "claude") -
     etiqueta = layout_capa.normalizar_etiqueta(contexto["texto_capa"])
 
     try:
-        prompt = await ClaudeIaService.prompt_da_arte_da_capa_via_claude(
-            corte_id, etiqueta, provider
-        )
+        prompt = await _escrever_prompt_da_arte(corte_id, etiqueta, provider)
     except Exception as exc:
         raise CapaTikTokError(f"Nao consegui escrever o prompt da arte: {exc}") from exc
 
@@ -419,40 +507,21 @@ async def _rasterizar(destino: Path, props: dict) -> None:
 
 
 async def _rodar_node(destino: Path, props_path: str) -> tuple[int, str]:
-    """Roda o gerador, com o caminho síncrono como rede (D-369).
+    """Roda o gerador pelo runner único de processo externo (D-750).
 
-    `create_subprocess_exec` levanta `NotImplementedError` sob o event loop
-    Selector do uvicorn no Windows. Sem o fallback em thread, a geração falharia
-    calada.
+    O runner guarda o fallback síncrono do event loop Selector do Windows (D-369).
+    Timeout vira código -1: cai no mesmo caminho de falha de um gerador que
+    quebrou, em vez de levantar e derrubar quem chamou.
     """
-    import asyncio  # noqa: PLC0415 — usado só aqui e no fallback
-
-    argumentos = ["node", str(_GEN_SCRIPT), str(destino), props_path]
     try:
-        proc = await asyncio.create_subprocess_exec(
-            *argumentos,
-            cwd=str(_REPO_ROOT),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
+        resultado = await process_runner.rodar(
+            ["node", str(_GEN_SCRIPT), str(destino), props_path],
+            cwd=_REPO_ROOT,
+            timeout=_TIMEOUT_DO_GERADOR_SEG,
         )
-        saida, _ = await proc.communicate()
-        return proc.returncode or 0, saida.decode(errors="replace")
-    except NotImplementedError:
-        import subprocess  # noqa: PLC0415 — só o fallback precisa dele
-
-        def _sincrono():
-            return subprocess.run(
-                argumentos,
-                cwd=str(_REPO_ROOT),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                errors="replace",
-                check=False,
-            )
-
-        resultado = await asyncio.to_thread(_sincrono)
-        return resultado.returncode, resultado.stdout
+    except process_runner.ProcessoEstourouOTempo as exc:
+        return -1, str(exc)
+    return resultado.returncode, resultado.saida
 
 
 async def _gravar_caminho(

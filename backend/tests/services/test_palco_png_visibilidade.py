@@ -9,7 +9,7 @@ Cobre as duas camadas:
 
 from pathlib import Path
 
-import app.services.pipeline_render as pr
+import app.services.render.pipeline_render as pr
 import app.services.youtube_palco as yp
 import pytest
 from app.services.youtube_palco import (

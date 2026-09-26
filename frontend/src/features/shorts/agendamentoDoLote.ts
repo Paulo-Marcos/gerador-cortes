@@ -69,7 +69,7 @@ export const PASSO_EM_SEGUNDOS = 300;
  * para baixo na grade de cinco minutos. Começar com um valor aceitável poupa o
  * operador de descobrir a regra pelo erro.
  */
-// Espelha `MARGEM_MINIMA` e `HORIZONTE_EM_DIAS` de `backend/app/domain/agendamento.py`.
+// Espelha `MARGEM_MINIMA` e `HORIZONTE_EM_DIAS` de `backend/app/domain/publicacao/agendamento.py`.
 // O backend continua sendo quem recusa; aqui a regra só é dita antes do clique.
 // Se os números divergirem, o pior caso é o 422 de antes — não um post fora de hora.
 const MARGEM_MINIMA_MS = 5 * 60 * 1000;

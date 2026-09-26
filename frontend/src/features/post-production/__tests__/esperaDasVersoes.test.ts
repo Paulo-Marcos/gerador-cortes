@@ -5,7 +5,7 @@ import {
   esperaTerminou,
   type EsperaDeVersoes,
 } from '../FiltroTestePanel';
-import type { VersaoExport } from '@/types/models';
+import type { VersaoExport } from '../api/filtros';
 
 // D-658: a aba de Filtros só consulta a lista entre o pedido da prévia e a
 // chegada. "Chegada" é o arquivo PARAR de crescer — o ffmpeg cria o
@@ -14,6 +14,7 @@ import type { VersaoExport } from '@/types/models';
 const versao = (filtro: string, tamanho_mb: number): VersaoExport => ({
   filtro,
   nome: filtro,
+  descricao: '',
   e_preview: true,
   completo_disponivel: false,
   tamanho_mb,

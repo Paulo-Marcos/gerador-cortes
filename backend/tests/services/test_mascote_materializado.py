@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.channel_assets_sync import garantir_mascote_materializado
+from app.infrastructure.channel_assets_sync import garantir_mascote_materializado
 
 
 def _criar_mascote(
@@ -92,7 +92,7 @@ def test_materializacao_e_idempotente(tmp_path: Path) -> None:
 
 def test_sem_assets_do_canal_e_noop(tmp_path: Path, monkeypatch) -> None:
     # Layout legado (assets_root None) → não copia nada do canal, preserva o fallback.
-    from app import channel_assets_sync
+    from app.infrastructure import channel_assets_sync
 
     monkeypatch.setattr(channel_assets_sync.channel_paths, "assets_root", lambda: None)
     frontend = tmp_path / "frontend" / "mascote"
@@ -155,7 +155,7 @@ def test_canal_com_nomes_canonicos_e_copiado_como_esta(tmp_path: Path) -> None:
 
 
 def test_layout_legado_normaliza_o_cache_ja_servido(tmp_path: Path, monkeypatch) -> None:
-    from app import channel_assets_sync
+    from app.infrastructure import channel_assets_sync
 
     monkeypatch.setattr(channel_assets_sync.channel_paths, "assets_root", lambda: None)
     frontend = tmp_path / "frontend" / "mascote"

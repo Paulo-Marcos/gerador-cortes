@@ -1,7 +1,7 @@
 """D-447: material e contrato da avaliação automática do bruto."""
 
 import pytest
-from app.domain.avaliacao_bruto import (
+from app.domain.corte.avaliacao_bruto import (
     Emenda,
     calcular_emendas,
     montar_texto_avaliado,

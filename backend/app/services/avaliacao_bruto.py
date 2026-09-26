@@ -2,7 +2,7 @@
 
 Divisão de trabalho: aqui mora tudo que toca banco (montar o contexto a partir do
 corte, gravar o parecer, ler o histórico); o vocabulário e a validação vivem no
-domínio puro (`app.domain.avaliacao_bruto`); a chamada ao Claude vive em
+domínio puro (`app.domain.corte.avaliacao_bruto`); a chamada ao Claude vive em
 `claude_ia`, junto com as demais etapas editoriais — mesmo arranjo de
 `metadados` e `avaliacao_thumbnail`.
 
@@ -19,21 +19,29 @@ import uuid
 from dataclasses import dataclass
 
 from app.database import AsyncSessionLocal
-from app.domain.arranjo_blocos import parse as parse_arranjo
-from app.domain.arranjo_blocos import reconciliar, segmentos_na_ordem
-from app.domain.avaliacao_bruto import (
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.domain.compartilhado.time_convert import seg_to_hms_short
+from app.domain.corte.arranjo_blocos import parse as parse_arranjo
+from app.domain.corte.arranjo_blocos import reconciliar, segmentos_na_ordem
+from app.domain.corte.avaliacao_bruto import (
     AvaliacaoNormalizada,
     Emenda,
     calcular_emendas,
     montar_texto_avaliado,
+    normalizar_avaliacao,
     rotulo_do_tipo,
+    tipos_disponiveis,
 )
-from app.domain.segment_calculator import normalizar_desvio
-from app.domain.time_convert import seg_to_hms_short
+from app.domain.corte.segment_calculator import normalizar_desvio
 from app.models import AvaliacaoBruto, Corte
+from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.claude_ia import gerar_json, modelo_usado, registrar_skill_usada, sha1_curto
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
+
+# A skill que avalia a estrutura do bruto — a avaliação pela IA mora aqui (D-704).
+_SKILL_AVALIACAO = "avaliador-bruto"
 
 
 @dataclass(frozen=True)
@@ -130,6 +138,50 @@ async def registrar_avaliacao(
         len(avaliacao.apontamentos),
     )
     return _serializar(registro)
+
+
+async def avaliar_bruto_via_claude(corte_id: str, provider: ProviderIA = "claude") -> dict:
+    """Avalia a ESTRUTURA do bruto recém-gerado e registra o parecer (D-447).
+
+    Roda depois da geração do bruto, sobre a transcrição que sobrou com as
+    emendas marcadas — o único material em que os defeitos de costura são
+    visíveis. Persiste uma linha na série de avaliações do corte.
+
+    Levanta `LookupError` (corte inexistente) ou `ValueError` (sem
+    transcrição final, ou retorno do modelo sem nota utilizável). Quem chama
+    no fluxo automático trata a falha como não-fatal: a avaliação é
+    observação sobre o bruto, não parte da entrega dele.
+    """
+    contexto = await montar_contexto(corte_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_AVALIACAO)
+    scaffold = editorial_scaffolds.resolver_scaffold("avaliacao-bruto")
+    prompt = scaffold.format(
+        titulo=contexto.titulo,
+        tema_central=contexto.tema_central,
+        duracao_humana=seg_to_hms_short(contexto.duracao_seg),
+        total_emendas=contexto.total_emendas,
+        removido_humano=seg_to_hms_short(contexto.removido_seg),
+        tipos_apontamento="\n".join(
+            f"- {tipo['slug']}: {tipo['rotulo']}" for tipo in tipos_disponiveis()
+        ),
+        texto_avaliado=contexto.texto_avaliado,
+    )
+    registrar_skill_usada(_SKILL_AVALIACAO, skill, scaffold)
+    resultado = await gerar_json(
+        provider,
+        prompt,
+        skill,
+        _SKILL_AVALIACAO,
+        projeto_id=contexto.projeto_id,
+        corte_id=corte_id,
+    )
+    return await registrar_avaliacao(
+        contexto,
+        normalizar_avaliacao(resultado),
+        modelo=modelo_usado(skill, provider),
+        skill_sha=sha1_curto(skill.corpo),
+    )
 
 
 async def ultima_avaliacao(corte_id: str) -> dict | None:

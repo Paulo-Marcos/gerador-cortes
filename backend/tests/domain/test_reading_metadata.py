@@ -1,4 +1,4 @@
-from app.domain.reading_metadata import (
+from app.domain.corte.reading_metadata import (
     aplicar_emojis_texto_capa,
     aplicar_prefixo_leitura_titulo,
     remover_prefixo_leitura_titulo,

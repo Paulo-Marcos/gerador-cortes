@@ -13,7 +13,7 @@ operador vivo. O teste que mais importa neste arquivo e
 
 import pytest
 import pytest_asyncio
-from app.domain.shorts import ResultadoSugestoes, SugestaoShort
+from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
 from app.models import Base, Corte, Projeto, Short, StatusShort
 from app.services import shorts as servico
 from sqlalchemy import select
@@ -187,7 +187,9 @@ class TestSobrevivenciaARegeracao:
         """A regra antiga nao regrediu: aprovado/rejeitado nunca foram apagados."""
         await servico.registrar_sugestoes(_contexto(), _sugestoes((10.0, 40.0)))
         aprovado = (await servico.listar_shorts("c1"))[0]
-        await servico.atualizar_short(aprovado["id"], status=StatusShort.APROVADO.value)
+        await servico.atualizar_short(
+            aprovado["id"], servico.AtualizarShortDTO(status=StatusShort.APROVADO.value)
+        )
 
         await servico.registrar_sugestoes(_contexto(), _sugestoes((200.0, 240.0)))
 

@@ -155,3 +155,6 @@ capturas/
 # (app-id do Edge, nome do app instalado).
 logs/
 app.local.ps1
+
+# D-751: base local do pytest-testmon (quais testes cada trecho de código exercita)
+.testmondata*

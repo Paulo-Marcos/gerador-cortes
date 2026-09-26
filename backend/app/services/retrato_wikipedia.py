@@ -20,9 +20,11 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
-import httpx
-from app import channel_paths
 from app.config import settings
+from app.core import channel_paths
+from app.infrastructure.web_imagens import DownloadFalhou, SessaoWeb
+
+_TIMEOUT_DO_DOWNLOAD_S = 30.0
 
 _TAMANHO_DEFAULT = 600
 _USER_AGENT = "CutCut/1.0 (https://github.com/paulo-marcos/gerador-cortes)"
@@ -88,40 +90,6 @@ def _url_publica_para(caminho: Path) -> str:
     return f"/api/retratos/{slug}"
 
 
-async def _consultar_pageimage(
-    nome: str,
-    idioma: str,
-    tamanho: int,
-    client: httpx.AsyncClient,
-) -> tuple[str, str] | None:
-    """
-    Devolve (url_imagem, url_pagina) da pagina Wikipedia mais relevante para
-    `nome` no idioma, ou None se nao houver pageimage.
-    """
-    api = f"https://{idioma}.wikipedia.org/w/api.php"
-    params = {
-        "action": "query",
-        "prop": "pageimages|info",
-        "titles": nome,
-        "format": "json",
-        "pithumbsize": str(tamanho),
-        "inprop": "url",
-        "redirects": "1",
-    }
-    response = await client.get(api, params=params, timeout=15.0)
-    response.raise_for_status()
-    data = response.json()
-
-    pages = data.get("query", {}).get("pages", {})
-    for page in pages.values():
-        if page.get("missing") is not None:
-            continue
-        thumb = page.get("thumbnail")
-        if thumb and thumb.get("source"):
-            return thumb["source"], page.get("fullurl", "")
-    return None
-
-
 def _extensao_da_url(url: str) -> str:
     base = url.split("?")[0].lower()
     for ext in (".jpg", ".jpeg", ".png", ".webp"):
@@ -152,14 +120,13 @@ async def buscar_wikipedia(
             fonte="cache",
         )
 
-    headers = {"User-Agent": _USER_AGENT}
-    async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
+    async with SessaoWeb(_USER_AGENT) as web:
         resultado = None
         fonte: str | None = None
         for idioma in ("pt", "en"):
             try:
-                achado = await _consultar_pageimage(nome, idioma, tamanho, client)
-            except httpx.HTTPError:
+                achado = await web.consultar_pageimage(nome, idioma, tamanho)
+            except DownloadFalhou:
                 achado = None
             if achado is not None:
                 resultado = achado
@@ -179,9 +146,8 @@ async def buscar_wikipedia(
                 if obsoleto.exists():
                     obsoleto.unlink()
 
-        download = await client.get(url_imagem, timeout=30.0)
-        download.raise_for_status()
-        destino.write_bytes(download.content)
+        download = await web.baixar(url_imagem, timeout=_TIMEOUT_DO_DOWNLOAD_S)
+        destino.write_bytes(download.conteudo)
 
     return RetratoEncontrado(
         nome=nome,
@@ -248,12 +214,10 @@ async def salvar_de_url(nome: str, url: str) -> RetratoEncontrado:
         raise ValueError("URL precisa ser absoluta (http/https)")
 
     slug = _slugify(nome_normalizado)
-    headers = {"User-Agent": _USER_AGENT}
-    async with httpx.AsyncClient(headers=headers, follow_redirects=True) as client:
-        response = await client.get(url_normalizada, timeout=30.0)
-        response.raise_for_status()
-        conteudo = response.content
-        content_type = (response.headers.get("content-type") or "").split(";")[0].strip().lower()
+    async with SessaoWeb(_USER_AGENT) as web:
+        download = await web.baixar(url_normalizada, timeout=_TIMEOUT_DO_DOWNLOAD_S)
+        conteudo = download.conteudo
+        content_type = download.content_type.split(";")[0].strip().lower()
 
     if not conteudo:
         raise ValueError("Resposta vazia ao baixar imagem")

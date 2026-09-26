@@ -20,8 +20,8 @@ from __future__ import annotations
 import logging
 
 from app.database import AsyncSessionLocal
-from app.domain import segmentos_short
-from app.domain.enquadramento_rosto import Enquadramento, decidir, instantes
+from app.domain.short import segmentos_short
+from app.domain.short.enquadramento_rosto import Enquadramento, decidir, instantes
 from app.infrastructure.detector_rosto import DeteccaoIndisponivel, detectar_nos_instantes
 from app.models import Corte, Short
 
@@ -43,7 +43,7 @@ async def enquadrar_pelo_rosto(short_id: str) -> dict:
     disco, ou janela inválida). `DeteccaoIndisponivel` sobe como está — é falha
     de ambiente, não do trecho, e merece uma mensagem diferente na tela.
     """
-    from app.services.render_short import _bruto_em_disco
+    from app.services.render.render_short import _bruto_em_disco
     from app.services.shorts import _serializar
 
     async with AsyncSessionLocal() as db:

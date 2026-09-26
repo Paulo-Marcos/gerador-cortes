@@ -11,6 +11,7 @@ relação com isto) para que a avaliação nasça isolada do CRUD do corte.
 
 from __future__ import annotations
 
+from app.routers.resposta_api import RespostaApi
 from app.services.avaliacao_corte import (
     definir_avaliacao,
     motivos_disponiveis,
@@ -22,18 +23,37 @@ from pydantic import BaseModel
 router = APIRouter()
 
 
+class MotivoAvaliacaoResponse(RespostaApi):
+    slug: str
+    rotulo: str
+
+
+class ListaMotivosResponse(RespostaApi):
+    motivos: list[MotivoAvaliacaoResponse]
+
+
+class AvaliacaoCorteResponse(RespostaApi):
+    """A avaliação do corte (D-419). `voto` None = ainda não avaliado."""
+
+    corte_id: str
+    voto: int | None
+    motivos: list[str]
+    comentario: str
+    avaliado_em: str | None
+
+
 class AvaliacaoCorteRequest(BaseModel):
     voto: int
     motivos: list[str] = []
     comentario: str = ""
 
 
-@router.get("/motivos")
+@router.get("/motivos", response_model=ListaMotivosResponse)
 async def listar_motivos():
     return {"motivos": motivos_disponiveis()}
 
 
-@router.get("/corte/{corte_id}")
+@router.get("/corte/{corte_id}", response_model=AvaliacaoCorteResponse)
 async def obter(corte_id: str):
     try:
         return await obter_avaliacao(corte_id)
@@ -41,7 +61,7 @@ async def obter(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.put("/corte/{corte_id}")
+@router.put("/corte/{corte_id}", response_model=AvaliacaoCorteResponse)
 async def salvar(corte_id: str, body: AvaliacaoCorteRequest):
     try:
         return await definir_avaliacao(corte_id, body.voto, body.motivos, body.comentario)

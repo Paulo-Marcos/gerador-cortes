@@ -2,7 +2,7 @@
 com os cortes locais.
 
 Orquestra a infra (`infrastructure/youtube_analytics.py`, chamadas OAuth
-bloqueantes rodadas em thread) e o domínio puro (`domain/youtube_stats.py`,
+bloqueantes rodadas em thread) e o domínio puro (`domain/publicacao/youtube_stats.py`,
 agregações). Responsabilidades:
 
 - **sync** (idempotente, upsert por `video_id`): lista uploads do canal + puxa
@@ -22,12 +22,12 @@ import asyncio
 import uuid
 from datetime import datetime
 
+from app.core.logging import operational_error, operational_info
 from app.database import AsyncSessionLocal
-from app.domain import youtube_stats as dom
+from app.domain.publicacao import youtube_stats as dom
 from app.infrastructure import youtube_analytics
 from app.infrastructure.youtube_analytics import YoutubeAnalyticsError
 from app.models import Corte, MetadadoCorte, YoutubeVideoStat
-from app.services.app_logging import operational_error, operational_info
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

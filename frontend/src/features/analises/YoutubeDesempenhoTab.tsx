@@ -5,7 +5,7 @@
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
-import type { LevantamentoDuracao, LevantamentoTitulo } from '@/lib/api';
+import type { LevantamentoDuracao, LevantamentoTitulo } from './api';
 import {
   useLevantamentoDuracao,
   useLevantamentoTitulo,

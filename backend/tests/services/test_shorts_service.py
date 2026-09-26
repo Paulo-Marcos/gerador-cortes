@@ -10,7 +10,7 @@ import json
 
 import pytest
 import pytest_asyncio
-from app.domain.shorts import ResultadoSugestoes, SugestaoShort
+from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
 from app.models import Base, Corte, Projeto, Short, StatusShort
 from app.services import shorts as servico
 from sqlalchemy import select
@@ -341,7 +341,7 @@ class TestPostDoShort:
 
     @pytest.mark.asyncio
     async def test_gravar_cria_o_registro_que_nunca_existiu(self, store, com_short):
-        from app.domain.metadados_short import PostDoShort
+        from app.domain.short.metadados_short import PostDoShort
 
         gravado = await store.gravar(
             "s1", PostDoShort(titulo="Um titulo", descricao="contexto", hashtags=["juros"])
@@ -354,7 +354,7 @@ class TestPostDoShort:
     @pytest.mark.asyncio
     async def test_post_vazio_nao_apaga_o_que_o_operador_escreveu(self, store, com_short):
         """A skill devolver lixo nao pode custar o texto escrito a mao."""
-        from app.domain.metadados_short import PostDoShort
+        from app.domain.short.metadados_short import PostDoShort
 
         await store.atualizar("s1", titulo="escrito a mao")
         depois = await store.gravar("s1", PostDoShort())

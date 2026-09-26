@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Mic, Save, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { FalantesMap } from '@/lib/api';
+import type { FalantesMap } from '@/features/diarizacao/api';
 import {
   useAtualizarFalantes,
   useDiarizarProjeto,

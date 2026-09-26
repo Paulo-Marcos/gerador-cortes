@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StatusExportCorte } from '@/types/models';
 import { StatusPills, buildStatusPills } from '../StatusPills';
+import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 function makeStatus(patch: Partial<StatusExportCorte> = {}): StatusExportCorte {
-  return {
+  return statusExportPendente({
     corte_id: 'corte-1',
     numero: 1,
     titulo: 'Corte',
@@ -19,7 +20,7 @@ function makeStatus(patch: Partial<StatusExportCorte> = {}): StatusExportCorte {
     metadados_completos: false,
     pronto_publicar: false,
     ...patch,
-  };
+  });
 }
 
 function render(corte: StatusExportCorte) {

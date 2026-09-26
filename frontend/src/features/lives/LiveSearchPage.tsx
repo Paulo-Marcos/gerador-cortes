@@ -14,10 +14,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
-import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
-import type { YoutubeLive, YoutubeLivesResponse } from '@/types/models';
+import { livesApi, type YoutubeLive, type YoutubeLivesResponse } from './api';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
@@ -71,7 +70,7 @@ export function LiveSearchPage() {
   const livesKey = ['youtube-lives', searchParams] as const;
   const livesQuery = useQuery({
     queryKey: livesKey,
-    queryFn: () => api.listarLivesCanal(searchParams.afterDate, searchParams.max),
+    queryFn: () => livesApi.listarLivesCanal(searchParams.afterDate, searchParams.max),
   });
 
   const lives = useMemo(() => livesQuery.data?.lives ?? [], [livesQuery.data]);
@@ -90,7 +89,7 @@ export function LiveSearchPage() {
   }, [livesQuery.data]);
 
   const enqueueMutation = useMutation({
-    mutationFn: (ids: string[]) => api.enfileirarDownloads(ids, channel),
+    mutationFn: (ids: string[]) => livesApi.enfileirarDownloads(ids, channel),
     onSuccess: (res) => {
       const createdIds = new Set(res.criados.map((item) => item.video_id));
       queryClient.setQueryData<YoutubeLivesResponse>(livesKey, (current) => {

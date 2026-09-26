@@ -172,29 +172,31 @@ function Get-PortasOcupadasAlheias {
 }
 
 function Get-ConfiguredLogLevel {
-    # D-155: app_settings.json vive na pasta do canal ativo
-    # (instance/channels/<ativo>/projetos). Resolve via ponteiro active-channel,
-    # com fallback ao legado backend/projetos.
-    $settingsPath = $null
-    $ponteiro = Join-Path $BASE "instance\active-channel"
-    if (Test-Path $ponteiro) {
-        $canal = (Get-Content -Path $ponteiro -Raw).Trim()
-        if ($canal) {
-            $canalSettings = Join-Path $BASE "instance\channels\$canal\projetos\app_settings.json"
-            if (Test-Path $canalSettings) { $settingsPath = $canalSettings }
-        }
-    }
-    if (-not $settingsPath) {
-        $settingsPath = Join-Path $BASE "backend\projetos\app_settings.json"
-    }
-    if (-not (Test-Path $settingsPath)) {
-        return "disabled"
-    }
-
+    # D-699: o nivel mora no settings.db, a fonte unica da configuracao. Quem sabe
+    # ler o banco e o proprio servico do backend; o app_settings.json que este
+    # script lia deixou de ser escrito e so envelheceria. Timeout porque todo
+    # subprocesso tem um; qualquer falha cai no "disabled" de sempre.
+    $codigo = "import sys; sys.path.insert(0, sys.argv[1]); " +
+        "from app.services.app_settings import AppSettingsService as A; " +
+        "print(A.get().log_level.value)"
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = $PythonExe
+    $psi.Arguments = "-c `"$codigo`" `"$(Join-Path $BASE 'backend')`""
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
     try {
-        $settings = Get-Content -Path $settingsPath -Raw | ConvertFrom-Json
-        if ($settings.log_level) {
-            return [string]$settings.log_level
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $saida = $proc.StandardOutput.ReadToEndAsync()
+        $null = $proc.StandardError.ReadToEndAsync()
+        if (-not $proc.WaitForExit(20000)) {
+            $proc.Kill()
+            return "disabled"
+        }
+        $nivel = ($saida.Result -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -Last 1)
+        if ($nivel -and @("disabled", "info", "debug") -contains $nivel.Trim()) {
+            return $nivel.Trim()
         }
     } catch {}
 
@@ -416,12 +418,15 @@ if ($portasOcupadas.Count -gt 0) {
 
 Confirm-RemotionReady
 
+# Lido uma vez: o banner mostra e o worker recebe o mesmo valor.
+$LogLevel = Get-ConfiguredLogLevel
+
 Write-Host ""
 Write-Host "  Backend        " -ForegroundColor DarkCyan -NoNewline; Write-Host "http://localhost:$BackendPort"
 Write-Host "  API Docs       " -ForegroundColor DarkCyan -NoNewline; Write-Host "http://localhost:$BackendPort/docs"
 Write-Host "  Frontend React " -ForegroundColor Green    -NoNewline; Write-Host "http://localhost:$FrontendPort"
 Write-Host "  Remotion       " -ForegroundColor Magenta  -NoNewline; Write-Host "http://localhost:$RemotionPort"
-Write-Host "  Log atual      " -ForegroundColor Yellow   -NoNewline; Write-Host (Get-ConfiguredLogLevel)
+Write-Host "  Log atual      " -ForegroundColor Yellow   -NoNewline; Write-Host $LogLevel
 Write-Host ""
 Write-Host "  Ctrl+C para encerrar tudo" -ForegroundColor DarkGray
 Write-Host "  -----------------------------------------------" -ForegroundColor DarkGray
@@ -482,6 +487,8 @@ $services = @(
         WorkingDirectory = Join-Path $BASE "video-renderer"
         EnvVars = @{
             LANG = "en_US.UTF-8"
+            # D-699: o nivel da partida; cada job traz o seu depois.
+            WORKER_LOG_LEVEL = $LogLevel
         }
     }
 )

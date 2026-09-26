@@ -49,6 +49,7 @@ import {
 } from '@/hooks/useVelocidadePlayerPadrao';
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from '@/features/post-production/RenderStepsModal';
+import { filtrosApi } from '@/features/post-production/api/filtros';
 import type { FaseRender } from '@/features/post-production/renderEtapas';
 import {
   isCorteVideoPronto,
@@ -109,7 +110,10 @@ export function FinalReviewPage() {
   // (AppSettings.filtro_global_padrao), entao o global reflete o que foi
   // aplicado. Ressalva: se o global mudar depois do render, mostra o novo.
   const settingsQ = useQuery({ queryKey: ['app-settings'], queryFn: api.obterSettings });
-  const filtrosQ = useQuery({ queryKey: ['export-filtros'], queryFn: () => api.listarFiltros() });
+  const filtrosQ = useQuery({
+    queryKey: ['export-filtros'],
+    queryFn: () => filtrosApi.listarFiltros(),
+  });
 
   const cortes = useMemo(() => cortesQuery.data ?? [], [cortesQuery.data]);
   const corte = corteQuery.data;

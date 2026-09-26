@@ -1,6 +1,6 @@
 // D-066: lógica pura da avaliação de thumbnail (rótulos, critérios e
 // construção do payload). Mantida fora do componente para ficar testável.
-import type { RegistrarAvaliacaoThumbnailBody, VeredictoThumbnail } from '@/types/models';
+import type { RegistrarAvaliacaoThumbnailBody, VeredictoThumbnail } from './api/avaliacaoThumbnail';
 
 export const VEREDITOS: ReadonlyArray<{ value: VeredictoThumbnail; label: string }> = [
   { value: 'otimo', label: 'Ótimo' },
@@ -29,7 +29,8 @@ export type CriterioKey = (typeof CRITERIOS)[number]['key'];
 
 export type NotasState = Partial<Record<CriterioKey, number | null>>;
 
-export function rotuloVeredito(veredito: VeredictoThumbnail): string {
+/** O rótulo do veredito; um valor fora do vocabulário (registro antigo) sai como veio. */
+export function rotuloVeredito(veredito: string): string {
   return VEREDITOS.find((item) => item.value === veredito)?.label ?? veredito;
 }
 

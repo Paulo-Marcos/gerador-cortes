@@ -1,5 +1,8 @@
 import pytest
-from app.domain.transcricao_utils import dividir_segmentos_longos, limpar_e_ordenar_transcricao
+from app.domain.projeto.transcricao_utils import (
+    dividir_segmentos_longos,
+    limpar_e_ordenar_transcricao,
+)
 
 
 def _seg(start, end, texto="texto"):

@@ -25,9 +25,10 @@ A IA atende por **provedor**, escolhido por geração:
 |---|---|---|
 | `claude` | Claude CLI (`claude -p`), assinatura do operador | `infrastructure/claude_cli_client.py` |
 | `gemini` | Antigravity CLI (`agy -p`), assinatura do operador | `infrastructure/antigravity_cli_client.py` |
-| manual | o prompt é copiado e a resposta colada na tela | `domain/manual_prompt.py` |
+| `claude`, pela chave | API da Anthropic, com a chave do operador (BYOK, D-720) | `infrastructure/anthropic_api_client.py` |
+| manual | o prompt é copiado e a resposta colada na tela | `domain/compartilhado/manual_prompt.py` |
 
-O tipo `ProviderIA` (`"claude" | "gemini"`) vive em `app/provider_ia.py`. A API do
+O tipo `ProviderIA` (`"claude" | "gemini"`) vive em `app/domain/compartilhado/provider_ia.py`. A API do
 Gemini (`infrastructure/gemini_client.py`) continua servindo cenas, desvios e
 thumbnails. **O modo manual é o mínimo funcional sem assinatura nenhuma**: todo
 fluxo de IA precisa ter esse caminho.
@@ -37,8 +38,14 @@ fluxo de IA precisa ter esse caminho.
 ## Consequências
 
 - Quem não tem assinatura usa o modo manual: funciona, mas é mais trabalhoso.
-- O provedor por **chave de API** (BYOK) está planejado para a v0.4 (E-056). Ele
-  entra como mais um provedor, sem mudar o contrato das gerações.
+- **Chave de API (BYOK, D-720).** Entrou como um segundo *transporte* do provedor
+  `claude`, e não como um terceiro provedor: a skill, o modelo (`opus`/`sonnet`/
+  `haiku`, traduzidos para os ids da API), o selo na tela e os botões continuam os
+  mesmos. A escolha é da instalação, no `backend/.env`: `IA_CLAUDE_TRANSPORTE=api` e
+  `IA_ANTHROPIC_API_KEY`. Só a escolha explícita liga a API — a presença de um
+  `ANTHROPIC_API_KEY` no ambiente não liga nada, porque outra ferramenta pode tê-lo
+  exportado (a máquina de produção tem um, sem créditos). O padrão segue sendo a
+  assinatura. O Gemini continua só pelo `agy`.
 - Documentos e docstrings não descrevem mais o Claude como "alternativo ao n8n".
 
 ## Alternativas consideradas

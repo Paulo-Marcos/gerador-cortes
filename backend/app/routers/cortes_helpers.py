@@ -11,18 +11,18 @@ NOTA: os helpers do cluster `pipeline-status` (`_pipeline_paths`,
 porque seus testes fazem monkeypatch em `cortes.projetos_dir`/`_corte_ja_gerou_bruto`.
 """
 
-import asyncio
 import json
 import logging
-import shutil
-from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
-from app.domain.corte_mapper import normalizar_cenas_remotion_payload
-from app.domain.desvio_categoria import classificar_desvio
-from app.domain.time_convert import hms_to_seg
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
+from app.domain.compartilhado.time_convert import hms_to_seg
+from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload
+from app.domain.corte.desvio_categoria import classificar_desvio
 from app.models import Corte
 from fastapi import HTTPException
+
+# O ffprobe da duração só lê o cabeçalho do arquivo.
+_TIMEOUT_DO_FFPROBE_S = 10
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +63,10 @@ def _corte_to_dict(corte: Corte) -> dict:
     # pela iteração de colunas acima (default "" nos cortes legados).
     try:
         d["score"] = json.loads(getattr(corte, "score_json", None) or "{}")
-    except Exception:
+    except (ValueError, TypeError):
         d["score"] = {}
+    # D-713: o Fire é coluna do corte agora; a API sempre o entregou booleano.
+    d["is_fire"] = bool(getattr(corte, "is_fire", False))
     d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
     d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
     d["transcricao_final_texto"] = corte.transcricao_final_texto or ""
@@ -84,25 +86,19 @@ def _corte_to_dict(corte: Corte) -> dict:
     # ausente em cortes legados — sempre devolve [].
     try:
         d["segmentos_detectados"] = json.loads(getattr(corte, "segmentos_detectados", None) or "[]")
-    except Exception:
+    except (ValueError, TypeError):
         d["segmentos_detectados"] = []
     # D-576: ordem de exibição dos blocos. Lista vazia = ordem cronológica, que
     # é o caso da esmagadora maioria dos cortes — e o que os legados devolvem.
     try:
         d["arranjo_blocos"] = json.loads(getattr(corte, "arranjo_blocos", None) or "[]")
-    except Exception:
+    except (ValueError, TypeError):
         d["arranjo_blocos"] = []
     # D-334: log de invocações da skill trechos-expert (telemetria D-303).
     try:
         d["trechos_geracoes_log"] = json.loads(getattr(corte, "trechos_geracoes_log", None) or "[]")
-    except Exception:
+    except (ValueError, TypeError):
         d["trechos_geracoes_log"] = []
-
-    # Prevenção contra erro de Lazy Loading (greenlet_spawn)
-    try:
-        d["is_fire"] = corte.metadado.is_fire if corte.metadado else False
-    except Exception:
-        d["is_fire"] = False
 
     d["is_pos_producao"] = getattr(corte, "is_pos_producao", 0)
 
@@ -138,7 +134,7 @@ def _corte_to_dict(corte: Corte) -> dict:
                     ],
                     capture_output=True,
                     text=True,
-                    timeout=10,
+                    timeout=_TIMEOUT_DO_FFPROBE_S,
                 )
                 if result.returncode == 0:
                     d["duracao_clip_seg"] = float(result.stdout.strip())
@@ -156,52 +152,3 @@ def _corte_to_dict(corte: Corte) -> dict:
                 logger.debug("[Cortes] não consegui medir a duração de %s: %s", p.name, erro)
 
     return d
-
-
-def _apagar_do_disco(entry: Path) -> None:
-    """Apaga arquivo ou pasta. Síncrono de propósito: roda em thread (D-645)."""
-    if entry.is_dir():
-        shutil.rmtree(entry)
-    else:
-        entry.unlink()
-
-
-async def _limpar_pasta_corte_pos_sync(corte_dir: Path):
-    """Após sincronização bem-sucedida, mantém apenas clip_filtered.mp4 e upload_ready/.
-    Arquivos de vídeo grandes (clip_raw.*) podem estar com lock no Windows porque o
-    player do navegador segura a conexão de streaming; tenta novamente algumas vezes."""
-    manter = {"clip_filtered.mp4", "upload_ready"}
-    pendentes: list[Path] = []
-
-    for entry in corte_dir.iterdir():
-        if entry.name in manter:
-            continue
-        try:
-            await asyncio.to_thread(_apagar_do_disco, entry)
-        except PermissionError:
-            pendentes.append(entry)
-        except Exception as e:
-            logger.warning("[SincronizarPos] Falha ao remover %s: %s", entry, e)
-
-    # Retry para arquivos travados (típico: clip_raw.mkv sendo servido via stream)
-    for _ in range(1, 6):
-        if not pendentes:
-            break
-        await asyncio.sleep(1.5)
-        ainda_travados: list[Path] = []
-        for entry in pendentes:
-            try:
-                await asyncio.to_thread(_apagar_do_disco, entry)
-            except PermissionError:
-                ainda_travados.append(entry)
-            except FileNotFoundError:
-                pass  # Sumiu entre tentativas, ok
-            except Exception as e:
-                logger.warning("[SincronizarPos] Falha ao remover %s: %s", entry, e)
-        pendentes = ainda_travados
-
-    for entry in pendentes:
-        logger.warning(
-            "[SincronizarPos] Não foi possível remover %s (arquivo bloqueado por outro processo)",
-            entry.name,
-        )

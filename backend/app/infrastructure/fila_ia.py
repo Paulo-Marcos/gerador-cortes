@@ -2,9 +2,9 @@
 
 Os dois providers (Claude CLI e Gemini) precisam da mesma coisa: avisar que uma
 consulta começou e como ela terminou. Este módulo concentra esse anúncio para
-que a lógica não viva duplicada em cada client — e, de quebra, é o ÚNICO ponto
-de `infrastructure/` que conhece `services/`, mantendo essa dependência
-invertida contida e visível (mesmo padrão do `llm_calls_store`, D-353).
+que a lógica não viva duplicada em cada client. O registro que ele alimenta mora
+em `app.core` (ADR-0015), por isso a infraestrutura chega a ele sem subir para
+`services/`.
 
 Invariante: nada aqui pode derrubar uma geração. Toda falha vira `warning`.
 """
@@ -30,7 +30,7 @@ def anunciar_inicio(
     """Publica a consulta como em andamento e devolve a chave para encerrá-la."""
     chave_job = chave(etapa, projeto_id=projeto_id, corte_id=corte_id)
     try:
-        from app.services.tarefas_ativas import TarefasAtivas, classificar_ia
+        from app.core.tarefas_ativas import TarefasAtivas, classificar_ia
 
         tipo, etapa_label = classificar_ia(etapa)
         TarefasAtivas.iniciar(
@@ -48,7 +48,7 @@ def anunciar_inicio(
 def anunciar_fim(chave_job: str, *, sucesso: bool, erro: str = "") -> None:
     """Marca o desfecho. No-op se a consulta não chegou a ser anunciada."""
     try:
-        from app.services.tarefas_ativas import TarefasAtivas
+        from app.core.tarefas_ativas import TarefasAtivas
 
         TarefasAtivas.encerrar(chave_job, sucesso=sucesso, erro=erro)
     except Exception as exc:  # noqa: BLE001 — fila é best-effort, nunca fatal

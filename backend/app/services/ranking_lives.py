@@ -18,10 +18,10 @@ import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from app import prompts_utilitarios, ranking_settings
 from app.config import settings
 from app.database import AsyncSessionLocal
-from app.domain.ranking_lives import (
+from app.domain.compartilhado.erros import NaoEncontrado
+from app.domain.live_candidata.ranking_lives import (
     PesosRanking,
     SinaisLive,
     pontuar_lote,
@@ -39,8 +39,13 @@ from app.infrastructure.youtube_data_api import (
 )
 from app.models import LiveCandidata, Projeto, StatusLiveCandidata
 from app.services import channels
+from app.services.canal import prompts_utilitarios, ranking_settings
+from app.services.ingestao import IngestaoService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+_VOTO_MINIMO = 1
+_VOTO_MAXIMO = 5
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +189,32 @@ async def avaliar_sentimento_dos_comentarios(
 # ─── Geração do ranking ───────────────────────────────────────────────────────
 
 
+class RankingIndisponivel(RuntimeError):
+    """O YouTube não entregou o que o ranking precisa.
+
+    Existe para que a API decida o status HTTP sem conhecer o cliente da
+    infraestrutura (contrato `routers-sem-infra`). `quota_excedida` separa "espere
+    a cota voltar" de "o YouTube falhou".
+    """
+
+    def __init__(self, message: str, *, quota_excedida: bool = False):
+        super().__init__(message)
+        self.quota_excedida = quota_excedida
+
+
 async def gerar_ranking(*, forcar_refresh: bool = False) -> dict:
+    """Entrada da API para o ranking; o trabalho está em `_gerar_ranking`.
+
+    Traduz a falha do YouTube em `RankingIndisponivel`, com a mesma mensagem e o
+    mesmo sinal de cota.
+    """
+    try:
+        return await _gerar_ranking(forcar_refresh=forcar_refresh)
+    except YoutubeDataApiError as exc:
+        raise RankingIndisponivel(str(exc), quota_excedida=exc.quota_excedida) from exc
+
+
+async def _gerar_ranking(*, forcar_refresh: bool = False) -> dict:
     """Gera ou atualiza o ranking e devolve os top-N candidatos PENDENTES.
 
     Quando o cache (`live_candidatas.fetched_at`) ainda está válido e não
@@ -379,6 +409,45 @@ async def rejeitar_candidata(video_id: str) -> dict:
         return {"video_id": video_id, "status": candidata.status}
 
 
+async def enfileirar_candidata(video_id: str) -> dict:
+    """Promove a candidata a Projeto e dispara a ingestão (F-052, D-703).
+
+    O Projeto nasce pela regra única da ingestão, que deduplica pela live. Criar e
+    promover são transações separadas de propósito: se algo cair entre as duas, o
+    próximo enfileirar acha o projeto pela deduplicação e completa a promoção.
+    """
+    async with AsyncSessionLocal() as db:
+        candidata = await _carregar_por_video_id(db, video_id)
+    if candidata is None:
+        raise NaoEncontrado(f"Candidata {video_id!r} não encontrada")
+    if candidata.status == StatusLiveCandidata.PROMOVIDA and candidata.projeto_id:
+        return {"projeto_id": candidata.projeto_id, "video_id": video_id, "ja_existia": True}
+
+    iniciado = await IngestaoService.iniciar(
+        f"https://www.youtube.com/watch?v={video_id}",
+        canal_origem=candidata.canal_origem or "",
+        titulo_live=candidata.titulo or "",
+        data_live=_data_live_compactada(candidata),
+        pontuacao_ranking=candidata.pontuacao_total,
+    )
+    await marcar_promovida(video_id, iniciado.projeto.id)
+    if iniciado.ja_existia:
+        return {"projeto_id": iniciado.projeto.id, "video_id": video_id, "ja_existia": True}
+    return {
+        "projeto_id": iniciado.projeto.id,
+        "video_id": video_id,
+        "pontuacao_ranking": iniciado.projeto.pontuacao_ranking,
+        "ja_existia": False,
+    }
+
+
+def _data_live_compactada(candidata: LiveCandidata) -> str:
+    """Espelha o formato YYYYMMDDHHMMSS usado pelos demais fluxos de Projeto."""
+    if not candidata.data_publicacao:
+        return ""
+    return candidata.data_publicacao.strftime("%Y%m%d%H%M%S")
+
+
 async def marcar_promovida(video_id: str, projeto_id: str) -> None:
     """Liga uma candidata a um projeto recém-criado e tira do ranking."""
     async with AsyncSessionLocal() as db:
@@ -414,7 +483,7 @@ async def obter_voto_qualidade(projeto_id: str) -> dict:
 
 async def definir_voto_qualidade(projeto_id: str, voto: int) -> dict:
     """Grava o voto (1-5). Validação de faixa aqui — é regra do domínio, não da HTTP."""
-    if voto < 1 or voto > 5:
+    if voto < _VOTO_MINIMO or voto > _VOTO_MAXIMO:
         raise ValueError("Voto deve estar entre 1 e 5")
     async with AsyncSessionLocal() as db:
         projeto = await db.get(Projeto, projeto_id)

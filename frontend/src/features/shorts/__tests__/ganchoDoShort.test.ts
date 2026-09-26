@@ -124,7 +124,7 @@ describe('tamanhoEfetivo (D-594)', () => {
 
 const DOMINIO_DO_BACKEND = resolve(
   __dirname,
-  '../../../../../backend/app/domain/gancho_short.py',
+  '../../../../../backend/app/domain/short/gancho_short.py',
 );
 
 // A tela só pode prometer o que o render entrega. Como os projetos não

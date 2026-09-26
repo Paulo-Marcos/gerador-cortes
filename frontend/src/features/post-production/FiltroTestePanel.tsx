@@ -6,7 +6,8 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { api, versaoVideoUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import type { AppSettings, FiltroExport, VersaoExport } from '@/types/models';
+import type { AppSettings } from '@/types/models';
+import { filtrosApi, type FiltroExport, type VersaoExport } from './api/filtros';
 
 // ─────────────────────────────────────────────────────────────
 // FiltroTestePanel — aba "Filtros" da Pós-Produção.
@@ -92,11 +93,11 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
 
   const filtrosQuery = useQuery({
     queryKey: ['export-filtros'],
-    queryFn: () => api.listarFiltros(),
+    queryFn: () => filtrosApi.listarFiltros(),
   });
   const versionsQuery = useQuery({
     queryKey: ['export-versoes', corteId],
-    queryFn: () => api.listarVersoes(corteId),
+    queryFn: () => filtrosApi.listarVersoes(corteId),
     enabled: brutoPronto && Boolean(corteId),
     refetchInterval: espera ? POLL_DA_ESPERA_MS : false,
   });
@@ -163,7 +164,8 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
   };
 
   const previewSelecionado = useMutation({
-    mutationFn: () => api.processarMultiversion(corteId, true, previewSeconds, [filtroSelecionado]),
+    mutationFn: () =>
+      filtrosApi.processarMultiversion(corteId, true, previewSeconds, [filtroSelecionado]),
     onSuccess: () => {
       notify(`Preview "${filtroSelecionado}" (${previewSeconds}s) enfileirada.`, {
         tone: 'success',
@@ -175,7 +177,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
   });
 
   const previewTodos = useMutation({
-    mutationFn: () => api.processarMultiversion(corteId, true, previewSeconds, null),
+    mutationFn: () => filtrosApi.processarMultiversion(corteId, true, previewSeconds, null),
     onSuccess: () => {
       notify(`Previews de todos os filtros (${previewSeconds}s) enfileiradas.`, {
         tone: 'success',

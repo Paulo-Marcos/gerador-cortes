@@ -7,7 +7,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
-import type { EditorialScaffold } from '@/lib/editorialScaffoldsApi';
+import type { EditorialScaffold } from '@/features/channels/api/scaffolds';
 import { EditorialScaffoldCard } from './EditorialScaffoldCard';
 import { EditorialScaffoldForm } from './EditorialScaffoldForm';
 import {

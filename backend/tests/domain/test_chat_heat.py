@@ -1,6 +1,6 @@
 import json
 
-from app.domain.chat_heat import (
+from app.domain.projeto.chat_heat import (
     PicoChat,
     formatar_dica,
     parse_live_chat,

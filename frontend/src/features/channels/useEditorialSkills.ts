@@ -7,7 +7,7 @@ import {
   type ListaSkillsResponse,
   type ListaVersoesResponse,
   type UpdateSkillPayload,
-} from '@/lib/editorialSkillsApi';
+} from '@/features/channels/api/skillsEditoriais';
 
 const SKILLS_KEY = ['editorial-skills'] as const;
 // D-312: chave do histórico de versões, por skill.

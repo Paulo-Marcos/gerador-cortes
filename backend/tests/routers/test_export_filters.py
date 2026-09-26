@@ -1,5 +1,5 @@
 import pytest
-from app.domain.cinema_filters import FILTROS_CINEMA
+from app.infrastructure.render.cinema_filters import FILTROS_CINEMA
 from app.routers import export as export_router
 
 

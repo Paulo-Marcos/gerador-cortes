@@ -1,7 +1,7 @@
 """Serviço de Shorts — monta o material do prompt e persiste os candidatos (D-454).
 
 Divisão de trabalho no mesmo arranjo da avaliação do bruto (D-447): aqui mora o
-que toca banco; as regras de validação vivem no domínio puro (`app.domain.shorts`)
+que toca banco; as regras de validação vivem no domínio puro (`app.domain.short.shorts`)
 e a chamada ao Claude vive em `claude_ia`, junto com as demais etapas editoriais.
 
 O INSUMO é `Corte.transcricao_final` — a transcrição já com os desvios removidos
@@ -23,22 +23,30 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from app.channel_paths import projetos_dir, resolver_do_projeto
+from app.config import settings
+from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
-from app.domain import gancho_short, legenda_short, segmentos_short
-from app.domain.arranjo_short import de_chave as arranjo_de_chave
-from app.domain.cenas_short import normalizar_lista as normalizar_lista_de_cenas
-from app.domain.cenas_short_ia import recortar_transcricao_varios
-from app.domain.formato_video import foco_de_regiao
-from app.domain.moldura_short import Moldura
-from app.domain.shorts import ResultadoSugestoes, SugestaoShort
-from app.domain.time_convert import seg_to_mmss
-from app.models import Corte, MetadadoCorte, Projeto, Short, StatusShort
-from app.services import channels
+from app.domain.compartilhado.erros import NaoEncontrado
+from app.domain.compartilhado.provider_ia import ProviderIA
+from app.domain.compartilhado.time_convert import seg_to_hms_short, seg_to_mmss
+from app.domain.short import gancho_short, legenda_short, segmentos_short
+from app.domain.short.arranjo_short import de_chave as arranjo_de_chave
+from app.domain.short.cenas_short import normalizar_lista as normalizar_lista_de_cenas
+from app.domain.short.cenas_short_ia import recortar_transcricao_varios
+from app.domain.short.formato_video import foco_de_regiao
+from app.domain.short.moldura_short import Moldura
+from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
+from app.models import Corte, MetadadoShort, Projeto, Short, StatusShort
+from app.services.canal import editorial_scaffolds, editorial_skills
+from app.services.claude_ia import gerar_json, gerar_texto, registrar_skill_usada
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
+
+_SKILL_SHORTS = "shorts-expert"
+_SKILL_CENAS_SHORT = "cenas-short-expert"
+_SKILL_GANCHO_SHORT = "gancho-short-expert"
 
 ORIGEM_IA = "ia"
 ORIGEM_MANUAL = "manual"
@@ -416,36 +424,44 @@ _STATUS_DA_CURADORIA = frozenset(
 )
 
 
-async def atualizar_short(
-    short_id: str,
-    *,
-    status: str | None = None,
-    inicio_seg: float | None = None,
-    fim_seg: float | None = None,
-    segmentos: list[dict] | None = None,
-    foco_x: float | None = None,
-    arranjo_palco: str | None = None,
-    janela_cheia: str | None = None,
-    ajustes_palco: dict | None = None,
-    palco_preset: str | None = None,
-    moldura: str | None = None,
-    recortes_palco: dict | None = None,
-    fundo_palco: str | None = None,
-    fundo_editorial: str | None = None,
-    palco_short_preset: str | None = None,
-    legenda_cor: str | None = None,
-    legenda_fonte: str | None = None,
-    legenda_x: float | None = None,
-    legenda_y: float | None = None,
-    legenda_largura: float | None = None,
-    gancho_tela: str | None = None,
-    gancho_ate_seg: float | None = None,
-    gancho_cor: str | None = None,
-    gancho_realce: str | None = None,
-    gancho_x: float | None = None,
-    gancho_y: float | None = None,
-    gancho_largura: float | None = None,
-) -> dict:
+@dataclass(frozen=True)
+class AtualizarShortDTO:
+    """A decisão do operador sobre um short (PATCH /shorts/{id}).
+
+    Espelha o request HTTP mantendo o serviço livre de pydantic, como o
+    `AtualizarCorteDTO`. Todo campo é opcional: `None` significa "não mexer".
+    D-717: eram 26 argumentos soltos de `atualizar_short`.
+    """
+
+    status: str | None = None
+    inicio_seg: float | None = None
+    fim_seg: float | None = None
+    segmentos: list[dict] | None = None
+    foco_x: float | None = None
+    arranjo_palco: str | None = None
+    janela_cheia: str | None = None
+    ajustes_palco: dict | None = None
+    palco_preset: str | None = None
+    moldura: str | None = None
+    recortes_palco: dict | None = None
+    fundo_palco: str | None = None
+    fundo_editorial: str | None = None
+    palco_short_preset: str | None = None
+    legenda_cor: str | None = None
+    legenda_fonte: str | None = None
+    legenda_x: float | None = None
+    legenda_y: float | None = None
+    legenda_largura: float | None = None
+    gancho_tela: str | None = None
+    gancho_ate_seg: float | None = None
+    gancho_cor: str | None = None
+    gancho_realce: str | None = None
+    gancho_x: float | None = None
+    gancho_y: float | None = None
+    gancho_largura: float | None = None
+
+
+async def atualizar_short(short_id: str, dados: AtualizarShortDTO) -> dict:
     """Aplica a decisao do operador sobre um candidato (D-459).
 
     As bordas sao validadas contra o BRUTO, nao contra a faixa de duracao da
@@ -461,242 +477,337 @@ async def atualizar_short(
         if not short:
             raise LookupError(f"Short {short_id!r} nao encontrado")
 
-        if status is not None:
-            if status not in _STATUS_DA_CURADORIA:
-                raise ValueError(f"Status {status!r} nao e uma decisao de curadoria.")
-            short.status = status
-
-        if inicio_seg is not None or fim_seg is not None:
-            corte = await db.get(Corte, short.corte_id)
-            novo_inicio = short.inicio_seg if inicio_seg is None else float(inicio_seg)
-            novo_fim = short.fim_seg if fim_seg is None else float(fim_seg)
-            _validar_bordas(novo_inicio, novo_fim, corte)
-            short.inicio_seg = round(novo_inicio, 2)
-            short.fim_seg = round(novo_fim, 2)
-            # D-604: arrastar a borda de um short COLADO nao faz sentido — a
-            # borda dele e a soma dos segmentos, e mexer no envelope deixaria os
-            # dois discordando em silencio. Quem tem segmentos muda os segmentos.
-            if segmentos is None and segmentos_short.de_json(short.segmentos):
-                raise ValueError(
-                    "Este short e montado por segmentos: mova os segmentos na regua "
-                    "em vez das bordas."
-                )
-
-        if segmentos is not None:
-            # D-604: a colagem do short. Lista vazia DESFAZ a colagem e devolve o
-            # short a janela unica — e como o operador volta atras sem precisar de
-            # um botao proprio.
-            if not segmentos:
-                short.segmentos = "[]"
-            else:
-                corte = await db.get(Corte, short.corte_id)
-                limite = float(corte.duracao_clip_seg or 0.0) if corte else 0.0
-                fatias = segmentos_short.de_json(segmentos)
-                # VALIDA antes de cortar, e nao depois — e a diferenca entre um
-                # 422 que explica e um 200 que mente.
-                #
-                # `normalizar(limite_seg=...)` ENCOLHE o que passa do fim do bruto,
-                # e isso e certo na LEITURA (bruto regerado mais curto nao pode
-                # custar a tela). Na ESCRITA seria silencio: um segmento marcado
-                # aos 500s de um bruto de 120s encolheria para nada, a lista viria
-                # vazia, e o operador receberia sucesso com o segmento
-                # desaparecido. Aqui ele ouve o numero e o motivo.
-                segmentos_short.validar(fatias, limite_seg=limite or fatias[-1].fim_seg)
-                # O ENVELOPE acompanha, e nao e redundancia: e por `inicio_seg`/
-                # `fim_seg` que a regua sabe onde desenhar o short e que a
-                # deteccao de rosto escolhe a janela. Deixa-los para tras poria a
-                # tela desenhando o short num lugar que ele nao ocupa mais.
-                envelope_inicio, envelope_fim = segmentos_short.envelope(
-                    fatias, inicio_seg=short.inicio_seg, fim_seg=short.fim_seg
-                )
-                short.inicio_seg = round(envelope_inicio, 2)
-                short.fim_seg = round(envelope_fim, 2)
-                # UM segmento so NAO e colagem: e a janela unica com aquelas
-                # bordas. Colapsar aqui e o que mantem as duas formas de dizer a
-                # mesma coisa como UMA so no banco — com `[{...}]` gravado, a trava
-                # de borda acima recusaria arrastar um short que a tela mostra
-                # como trecho comum, e a regua ofereceria alcas que dao 422.
-                #
-                # E e o que faz "tirar o penultimo" funcionar: a tela manda o
-                # segmento que sobrou, e as bordas viram as dele. Mandar `[]`
-                # deixaria o envelope antigo — com o buraco que o operador tinha
-                # tirado de volta DENTRO do short.
-                short.segmentos = "[]" if len(fatias) == 1 else segmentos_short.para_json(fatias)
-
-        if foco_x is not None:
-            if not 0.0 <= foco_x <= 1.0:
-                raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
-            short.foco_x = round(float(foco_x), 3)
-
-        if gancho_tela is not None:
-            # "" apaga o gancho, e e assim que o operador o remove. Normalizar
-            # aqui e nao so no render: o que a tela mostra de volta tem de ser o
-            # que vai para o arquivo, senao a previa mente sobre o espaco.
-            short.gancho_tela = gancho_short.normalizar_gancho(gancho_tela)
-
-        if gancho_ate_seg is not None:
-            # D-594: 0 e "nao decidi" — o trecho segue a duracao do gancho
-            # padrao do corte. Normalizar o zero para 2,5s aqui carimbaria o
-            # default no short e o preset nunca mais o alcancaria.
-            short.gancho_ate_seg = (
-                gancho_short.normalizar_duracao(gancho_ate_seg) if gancho_ate_seg > 0 else 0.0
-            )
-
-        if gancho_cor is not None:
-            # D-581: "" volta ao branco. Normaliza aqui pelo mesmo motivo do
-            # texto: o que a tela recebe de volta tem de ser o que vai para o
-            # arquivo, senao a previa pinta uma cor que o render nao usa.
-            short.gancho_cor = gancho_short.normalizar_cor(gancho_cor)
-
-        if gancho_realce is not None:
-            # D-594: "" fica "" pelo mesmo motivo da duracao — vazio herda do
-            # padrao do corte; o veu so entra na leitura, quando nada decidiu.
-            short.gancho_realce = (
-                gancho_short.normalizar_realce(gancho_realce) if gancho_realce.strip() else ""
-            )
-
-        if gancho_x is not None or gancho_y is not None or gancho_largura is not None:
-            # D-600: os tres andam juntos porque sao UM gesto — o operador
-            # arrasta a caixa e solta. Mandar so `y` num PATCH e legitimo, mas o
-            # caso comum e o trio, e separa-los em tres `if` sugeriria que ha
-            # tres decisoes onde ha uma.
-            #
-            # 0 continua sendo "nao decidi", como na duracao e no realce: e assim
-            # que o botao "voltar ao lugar do padrao" devolve o trecho a heranca.
-            if gancho_x is not None:
-                short.gancho_x = gancho_short.normalizar_x(gancho_x) if gancho_x > 0 else 0.0
-            if gancho_y is not None:
-                short.gancho_y = gancho_short.normalizar_y(gancho_y) if gancho_y > 0 else 0.0
-            if gancho_largura is not None:
-                short.gancho_largura = (
-                    gancho_short.normalizar_largura(gancho_largura) if gancho_largura > 0 else 0.0
-                )
-
-        if moldura is not None:
-            if moldura not in {m.value for m in Moldura}:
-                raise ValueError(f"Moldura {moldura!r} nao existe.")
-            short.moldura = moldura
-
-        if palco_preset is not None:
-            # "" volta a herdar do corte. Nao validamos a existencia do preset
-            # aqui: quem resolve a cascata ja ignora id que nao acha, e recusar
-            # aqui exigiria uma consulta so para dizer o que a tela ja sabe.
-            short.palco_preset = palco_preset
-
-        if ajustes_palco is not None:
-            # Dicionario VAZIO e valido: e como o operador desfaz os ajustes e
-            # volta ao modelo. Guardar so o que veio mantem a heranca parcial —
-            # materializar os slots do modelo aqui congelaria o arranjo.
-            short.ajustes_palco = json.dumps(
-                {
-                    nome: {c: float(ret[c]) for c in "xywh"}
-                    for nome, ret in ajustes_palco.items()
-                    if isinstance(ret, dict) and all(c in ret for c in "xywh")
-                },
-                ensure_ascii=False,
-            )
-
-        if recortes_palco is not None:
-            # D-499: o recorte sobre o quadro-FONTE, em pixels do bruto. Mesma
-            # regra do `ajustes_palco`: vazio desfaz e volta ao preset, e o que
-            # nao vier continua herdando — materializar as regioes do preset
-            # aqui congelaria a heranca, e trocar de preset depois nao mudaria
-            # mais nada.
-            short.recortes_palco = json.dumps(
-                {
-                    nome: {c: float(ret[c]) for c in "xywh"}
-                    for nome, ret in recortes_palco.items()
-                    if isinstance(ret, dict) and all(c in ret for c in "xywh")
-                },
-                ensure_ascii=False,
-            )
-
-        if fundo_editorial is not None:
-            # O id da textura. "" volta ao default do canal. Nao validamos
-            # contra o catalogo pelo mesmo motivo do `fundo_palco`: o catalogo
-            # muda com o tema, e um short antigo apontando para uma textura que
-            # saiu deve cair no default em vez de virar erro de gravacao.
-            short.fundo_editorial = fundo_editorial
-
-        if legenda_cor is not None:
-            # D-563: o hex da palavra corrente. "" volta ao acento do canal.
-            # Mesma regra dos outros: nao validamos aqui, degrada na leitura.
-            short.legenda_cor = legenda_cor
-
-        if legenda_fonte is not None:
-            # A familia da fonte. "" volta a do canal. Idem: degrada na leitura.
-            short.legenda_fonte = legenda_fonte
-
-        if legenda_x is not None or legenda_y is not None or legenda_largura is not None:
-            # D-605: os tres andam juntos porque sao UM gesto — o operador
-            # arrasta a legenda na previa e solta. Mandar so `y` num PATCH e
-            # legitimo (e o caso comum: "sobe essa legenda"), mas separa-los em
-            # tres blocos sugeriria que ha tres decisoes onde ha uma.
-            #
-            # 0 continua sendo "nao decidi": e assim que "voltar ao lugar do
-            # palco" devolve o trecho a heranca, sem coluna extra de intencao.
-            if legenda_x is not None:
-                short.legenda_x = legenda_short.normalizar_x(legenda_x) if legenda_x > 0 else 0.0
-            if legenda_y is not None:
-                short.legenda_y = legenda_short.normalizar_y(legenda_y) if legenda_y > 0 else 0.0
-            if legenda_largura is not None:
-                short.legenda_largura = (
-                    legenda_short.normalizar_largura(legenda_largura)
-                    if legenda_largura > 0
-                    else 0.0
-                )
-
-        # D-552: a marca do preset e escrita PRIMEIRO e apagada por qualquer
-        # mudanca posterior no mesmo PATCH.
-        #
-        # Aplicar um preset manda tudo junto — a marca e os valores dela. Mexer
-        # no arranjo depois manda so o arranjo, e ai a marca precisa cair: um
-        # rotulo que sobrevive a edicao do que ele descreve passa a mentir, e
-        # mentir sobre a origem e pior que nao dizer nada.
-        if palco_short_preset is not None:
-            short.palco_short_preset = palco_short_preset
-        elif any(
-            campo is not None
-            for campo in (
-                arranjo_palco,
-                janela_cheia,
-                recortes_palco,
-                fundo_editorial,
-                legenda_cor,
-                legenda_fonte,
+        _aplicar_status(short, dados.status)
+        await _aplicar_bordas(db, short, dados.inicio_seg, dados.fim_seg, dados.segmentos)
+        await _aplicar_segmentos(db, short, dados.segmentos)
+        _aplicar_foco(short, dados.foco_x)
+        _aplicar_gancho(
+            short,
+            gancho_tela=dados.gancho_tela,
+            gancho_ate_seg=dados.gancho_ate_seg,
+            gancho_cor=dados.gancho_cor,
+            gancho_realce=dados.gancho_realce,
+            gancho_x=dados.gancho_x,
+            gancho_y=dados.gancho_y,
+            gancho_largura=dados.gancho_largura,
+        )
+        _aplicar_moldura(short, dados.moldura)
+        _aplicar_palco(
+            short,
+            palco_preset=dados.palco_preset,
+            ajustes_palco=dados.ajustes_palco,
+            recortes_palco=dados.recortes_palco,
+            fundo_editorial=dados.fundo_editorial,
+        )
+        _aplicar_legenda(
+            short,
+            legenda_cor=dados.legenda_cor,
+            legenda_fonte=dados.legenda_fonte,
+            legenda_x=dados.legenda_x,
+            legenda_y=dados.legenda_y,
+            legenda_largura=dados.legenda_largura,
+        )
+        _aplicar_marca_do_preset(
+            short,
+            dados.palco_short_preset,
+            campos_do_palco=(
+                dados.arranjo_palco,
+                dados.janela_cheia,
+                dados.recortes_palco,
+                dados.fundo_editorial,
+                dados.legenda_cor,
+                dados.legenda_fonte,
                 # D-605: mexer no lugar da legenda tambem desfaz a marca. O
                 # preset descreve o palco INTEIRO, legenda incluida; manter a
                 # marca faria a tela dizer "preset X" sobre um palco que nao e
                 # mais o X, e aplica-lo noutro trecho sairia diferente.
-                legenda_x,
-                legenda_y,
-                legenda_largura,
-            )
-        ):
-            short.palco_short_preset = ""
-
-        if fundo_palco is not None:
-            # A CHAVE da paleta, nao a cor. "" volta ao default do canal. Nao
-            # validamos contra a paleta: ela pode mudar, e um short antigo
-            # apontando para uma cor que saiu do tema deve cair no default
-            # (o resolvedor faz isso) em vez de virar erro de gravacao.
-            short.fundo_palco = fundo_palco
-
-        if arranjo_palco is not None:
-            # "" e valido: volta ao automatico, que deduz das regioes. Uma chave
-            # desconhecida NAO e — ela viraria um palco silenciosamente diferente
-            # do que a tela mostra (mesma regra que o modelo antigo tinha).
-            if arranjo_palco and arranjo_de_chave(arranjo_palco).chave != arranjo_palco:
-                raise ValueError(f"Arranjo {arranjo_palco!r} nao existe.")
-            short.arranjo_palco = arranjo_palco
-
-        if janela_cheia is not None:
-            # Sem validar contra as regioes: elas mudam com o preset, e o
-            # resolvedor ja cai numa regiao disponivel quando a escolhida sumiu.
-            short.janela_cheia = janela_cheia
+                dados.legenda_x,
+                dados.legenda_y,
+                dados.legenda_largura,
+            ),
+        )
+        _aplicar_arranjo(
+            short,
+            fundo_palco=dados.fundo_palco,
+            arranjo_palco=dados.arranjo_palco,
+            janela_cheia=dados.janela_cheia,
+        )
 
         await db.commit()
         return _serializar(short)
+
+
+def _aplicar_status(short: Short, status: str | None) -> None:
+    if status is not None:
+        if status not in _STATUS_DA_CURADORIA:
+            raise ValueError(f"Status {status!r} nao e uma decisao de curadoria.")
+        short.status = status
+
+
+async def _aplicar_bordas(
+    db: AsyncSession,
+    short: Short,
+    inicio_seg: float | None,
+    fim_seg: float | None,
+    segmentos: list[dict] | None,
+) -> None:
+    if inicio_seg is not None or fim_seg is not None:
+        corte = await db.get(Corte, short.corte_id)
+        novo_inicio = short.inicio_seg if inicio_seg is None else float(inicio_seg)
+        novo_fim = short.fim_seg if fim_seg is None else float(fim_seg)
+        _validar_bordas(novo_inicio, novo_fim, corte)
+        short.inicio_seg = round(novo_inicio, 2)
+        short.fim_seg = round(novo_fim, 2)
+        # D-604: arrastar a borda de um short COLADO nao faz sentido — a
+        # borda dele e a soma dos segmentos, e mexer no envelope deixaria os
+        # dois discordando em silencio. Quem tem segmentos muda os segmentos.
+        if segmentos is None and segmentos_short.de_json(short.segmentos):
+            raise ValueError(
+                "Este short e montado por segmentos: mova os segmentos na regua em vez das bordas."
+            )
+
+
+async def _aplicar_segmentos(db: AsyncSession, short: Short, segmentos: list[dict] | None) -> None:
+    if segmentos is not None:
+        # D-604: a colagem do short. Lista vazia DESFAZ a colagem e devolve o
+        # short a janela unica — e como o operador volta atras sem precisar de
+        # um botao proprio.
+        if not segmentos:
+            short.segmentos = "[]"
+        else:
+            corte = await db.get(Corte, short.corte_id)
+            limite = float(corte.duracao_clip_seg or 0.0) if corte else 0.0
+            fatias = segmentos_short.de_json(segmentos)
+            # VALIDA antes de cortar, e nao depois — e a diferenca entre um
+            # 422 que explica e um 200 que mente.
+            #
+            # `normalizar(limite_seg=...)` ENCOLHE o que passa do fim do bruto,
+            # e isso e certo na LEITURA (bruto regerado mais curto nao pode
+            # custar a tela). Na ESCRITA seria silencio: um segmento marcado
+            # aos 500s de um bruto de 120s encolheria para nada, a lista viria
+            # vazia, e o operador receberia sucesso com o segmento
+            # desaparecido. Aqui ele ouve o numero e o motivo.
+            segmentos_short.validar(fatias, limite_seg=limite or fatias[-1].fim_seg)
+            # O ENVELOPE acompanha, e nao e redundancia: e por `inicio_seg`/
+            # `fim_seg` que a regua sabe onde desenhar o short e que a
+            # deteccao de rosto escolhe a janela. Deixa-los para tras poria a
+            # tela desenhando o short num lugar que ele nao ocupa mais.
+            envelope_inicio, envelope_fim = segmentos_short.envelope(
+                fatias, inicio_seg=short.inicio_seg, fim_seg=short.fim_seg
+            )
+            short.inicio_seg = round(envelope_inicio, 2)
+            short.fim_seg = round(envelope_fim, 2)
+            # UM segmento so NAO e colagem: e a janela unica com aquelas
+            # bordas. Colapsar aqui e o que mantem as duas formas de dizer a
+            # mesma coisa como UMA so no banco — com `[{...}]` gravado, a trava
+            # de borda acima recusaria arrastar um short que a tela mostra
+            # como trecho comum, e a regua ofereceria alcas que dao 422.
+            #
+            # E e o que faz "tirar o penultimo" funcionar: a tela manda o
+            # segmento que sobrou, e as bordas viram as dele. Mandar `[]`
+            # deixaria o envelope antigo — com o buraco que o operador tinha
+            # tirado de volta DENTRO do short.
+            short.segmentos = "[]" if len(fatias) == 1 else segmentos_short.para_json(fatias)
+
+
+def _aplicar_foco(short: Short, foco_x: float | None) -> None:
+    if foco_x is not None:
+        if not 0.0 <= foco_x <= 1.0:
+            raise ValueError("O foco horizontal vai de 0.0 (esquerda) a 1.0 (direita).")
+        short.foco_x = round(float(foco_x), 3)
+
+
+def _aplicar_gancho(
+    short: Short,
+    *,
+    gancho_tela: str | None,
+    gancho_ate_seg: float | None,
+    gancho_cor: str | None,
+    gancho_realce: str | None,
+    gancho_x: float | None,
+    gancho_y: float | None,
+    gancho_largura: float | None,
+) -> None:
+    if gancho_tela is not None:
+        # "" apaga o gancho, e e assim que o operador o remove. Normalizar
+        # aqui e nao so no render: o que a tela mostra de volta tem de ser o
+        # que vai para o arquivo, senao a previa mente sobre o espaco.
+        short.gancho_tela = gancho_short.normalizar_gancho(gancho_tela)
+
+    if gancho_ate_seg is not None:
+        # D-594: 0 e "nao decidi" — o trecho segue a duracao do gancho
+        # padrao do corte. Normalizar o zero para 2,5s aqui carimbaria o
+        # default no short e o preset nunca mais o alcancaria.
+        short.gancho_ate_seg = (
+            gancho_short.normalizar_duracao(gancho_ate_seg) if gancho_ate_seg > 0 else 0.0
+        )
+
+    if gancho_cor is not None:
+        # D-581: "" volta ao branco. Normaliza aqui pelo mesmo motivo do
+        # texto: o que a tela recebe de volta tem de ser o que vai para o
+        # arquivo, senao a previa pinta uma cor que o render nao usa.
+        short.gancho_cor = gancho_short.normalizar_cor(gancho_cor)
+
+    if gancho_realce is not None:
+        # D-594: "" fica "" pelo mesmo motivo da duracao — vazio herda do
+        # padrao do corte; o veu so entra na leitura, quando nada decidiu.
+        short.gancho_realce = (
+            gancho_short.normalizar_realce(gancho_realce) if gancho_realce.strip() else ""
+        )
+
+    if gancho_x is not None or gancho_y is not None or gancho_largura is not None:
+        # D-600: os tres andam juntos porque sao UM gesto — o operador
+        # arrasta a caixa e solta. Mandar so `y` num PATCH e legitimo, mas o
+        # caso comum e o trio, e separa-los em tres `if` sugeriria que ha
+        # tres decisoes onde ha uma.
+        #
+        # 0 continua sendo "nao decidi", como na duracao e no realce: e assim
+        # que o botao "voltar ao lugar do padrao" devolve o trecho a heranca.
+        if gancho_x is not None:
+            short.gancho_x = gancho_short.normalizar_x(gancho_x) if gancho_x > 0 else 0.0
+        if gancho_y is not None:
+            short.gancho_y = gancho_short.normalizar_y(gancho_y) if gancho_y > 0 else 0.0
+        if gancho_largura is not None:
+            short.gancho_largura = (
+                gancho_short.normalizar_largura(gancho_largura) if gancho_largura > 0 else 0.0
+            )
+
+
+def _aplicar_moldura(short: Short, moldura: str | None) -> None:
+    if moldura is not None:
+        if moldura not in {m.value for m in Moldura}:
+            raise ValueError(f"Moldura {moldura!r} nao existe.")
+        short.moldura = moldura
+
+
+def _aplicar_palco(
+    short: Short,
+    *,
+    palco_preset: str | None,
+    ajustes_palco: dict | None,
+    recortes_palco: dict | None,
+    fundo_editorial: str | None,
+) -> None:
+    if palco_preset is not None:
+        # "" volta a herdar do corte. Nao validamos a existencia do preset
+        # aqui: quem resolve a cascata ja ignora id que nao acha, e recusar
+        # aqui exigiria uma consulta so para dizer o que a tela ja sabe.
+        short.palco_preset = palco_preset
+
+    if ajustes_palco is not None:
+        # Dicionario VAZIO e valido: e como o operador desfaz os ajustes e
+        # volta ao modelo. Guardar so o que veio mantem a heranca parcial —
+        # materializar os slots do modelo aqui congelaria o arranjo.
+        short.ajustes_palco = json.dumps(
+            {
+                nome: {c: float(ret[c]) for c in "xywh"}
+                for nome, ret in ajustes_palco.items()
+                if isinstance(ret, dict) and all(c in ret for c in "xywh")
+            },
+            ensure_ascii=False,
+        )
+
+    if recortes_palco is not None:
+        # D-499: o recorte sobre o quadro-FONTE, em pixels do bruto. Mesma
+        # regra do `ajustes_palco`: vazio desfaz e volta ao preset, e o que
+        # nao vier continua herdando — materializar as regioes do preset
+        # aqui congelaria a heranca, e trocar de preset depois nao mudaria
+        # mais nada.
+        short.recortes_palco = json.dumps(
+            {
+                nome: {c: float(ret[c]) for c in "xywh"}
+                for nome, ret in recortes_palco.items()
+                if isinstance(ret, dict) and all(c in ret for c in "xywh")
+            },
+            ensure_ascii=False,
+        )
+
+    if fundo_editorial is not None:
+        # O id da textura. "" volta ao default do canal. Nao validamos
+        # contra o catalogo pelo mesmo motivo do `fundo_palco`: o catalogo
+        # muda com o tema, e um short antigo apontando para uma textura que
+        # saiu deve cair no default em vez de virar erro de gravacao.
+        short.fundo_editorial = fundo_editorial
+
+
+def _aplicar_legenda(
+    short: Short,
+    *,
+    legenda_cor: str | None,
+    legenda_fonte: str | None,
+    legenda_x: float | None,
+    legenda_y: float | None,
+    legenda_largura: float | None,
+) -> None:
+    if legenda_cor is not None:
+        # D-563: o hex da palavra corrente. "" volta ao acento do canal.
+        # Mesma regra dos outros: nao validamos aqui, degrada na leitura.
+        short.legenda_cor = legenda_cor
+
+    if legenda_fonte is not None:
+        # A familia da fonte. "" volta a do canal. Idem: degrada na leitura.
+        short.legenda_fonte = legenda_fonte
+
+    if legenda_x is not None or legenda_y is not None or legenda_largura is not None:
+        # D-605: os tres andam juntos porque sao UM gesto — o operador
+        # arrasta a legenda na previa e solta. Mandar so `y` num PATCH e
+        # legitimo (e o caso comum: "sobe essa legenda"), mas separa-los em
+        # tres blocos sugeriria que ha tres decisoes onde ha uma.
+        #
+        # 0 continua sendo "nao decidi": e assim que "voltar ao lugar do
+        # palco" devolve o trecho a heranca, sem coluna extra de intencao.
+        if legenda_x is not None:
+            short.legenda_x = legenda_short.normalizar_x(legenda_x) if legenda_x > 0 else 0.0
+        if legenda_y is not None:
+            short.legenda_y = legenda_short.normalizar_y(legenda_y) if legenda_y > 0 else 0.0
+        if legenda_largura is not None:
+            short.legenda_largura = (
+                legenda_short.normalizar_largura(legenda_largura) if legenda_largura > 0 else 0.0
+            )
+
+
+def _aplicar_marca_do_preset(
+    short: Short, palco_short_preset: str | None, campos_do_palco: tuple
+) -> None:
+    # D-552: a marca do preset e escrita PRIMEIRO e apagada por qualquer
+    # mudanca posterior no mesmo PATCH.
+    #
+    # Aplicar um preset manda tudo junto — a marca e os valores dela. Mexer
+    # no arranjo depois manda so o arranjo, e ai a marca precisa cair: um
+    # rotulo que sobrevive a edicao do que ele descreve passa a mentir, e
+    # mentir sobre a origem e pior que nao dizer nada.
+    if palco_short_preset is not None:
+        short.palco_short_preset = palco_short_preset
+    elif any(campo is not None for campo in campos_do_palco):
+        short.palco_short_preset = ""
+
+
+def _aplicar_arranjo(
+    short: Short,
+    *,
+    fundo_palco: str | None,
+    arranjo_palco: str | None,
+    janela_cheia: str | None,
+) -> None:
+    if fundo_palco is not None:
+        # A CHAVE da paleta, nao a cor. "" volta ao default do canal. Nao
+        # validamos contra a paleta: ela pode mudar, e um short antigo
+        # apontando para uma cor que saiu do tema deve cair no default
+        # (o resolvedor faz isso) em vez de virar erro de gravacao.
+        short.fundo_palco = fundo_palco
+
+    if arranjo_palco is not None:
+        # "" e valido: volta ao automatico, que deduz das regioes. Uma chave
+        # desconhecida NAO e — ela viraria um palco silenciosamente diferente
+        # do que a tela mostra (mesma regra que o modelo antigo tinha).
+        if arranjo_palco and arranjo_de_chave(arranjo_palco).chave != arranjo_palco:
+            raise ValueError(f"Arranjo {arranjo_palco!r} nao existe.")
+        short.arranjo_palco = arranjo_palco
+
+    if janela_cheia is not None:
+        # Sem validar contra as regioes: elas mudam com o preset, e o
+        # resolvedor ja cai numa regiao disponivel quando a escolhida sumiu.
+        short.janela_cheia = janela_cheia
 
 
 def _fala_do_short(short: Short, transcricao: list[dict]) -> list[dict]:
@@ -763,26 +874,17 @@ async def listar_shorts(corte_id: str) -> list[dict]:
 async def indicar_para_shorts(corte_id: str, indicado: bool = True) -> dict:
     """Marca o corte como candidato a short, sem tocar no Fire (D-502).
 
-    Cria o `MetadadoCorte` se ainda nao existe: um corte que nunca passou pela
-    etapa de metadados tambem pode ter um trecho bom, e exigir que ele passe
-    antes seria uma dependencia inventada.
+    Um corte que nunca passou pela etapa de metadados tambem pode ter um trecho
+    bom. A marca mora no proprio corte (D-713): antes ela vivia no metadado, e
+    indicar um corte sem metadado criava um vazio so para guarda-la.
     """
     async with AsyncSessionLocal() as db:
         corte = await db.get(Corte, corte_id)
         if not corte:
             raise LookupError(f"Corte {corte_id!r} nao encontrado")
 
-        metadado = corte.metadado
-        if metadado is None:
-            # D-666: o mesmo crédito que o default do model gravava.
-            metadado = MetadadoCorte(
-                id=str(uuid.uuid4()),
-                corte_id=corte_id,
-                canal_credito=channels.identidade_do_canal_ativo().credito,
-            )
-            db.add(metadado)
-
-        metadado.candidato_shorts = bool(indicado)
+        # D-713: a indicação é do corte — não precisa mais de metadado.
+        corte.candidato_shorts = bool(indicado)
         await db.commit()
 
     logger.info(
@@ -832,64 +934,218 @@ async def elegibilidade(corte_id: str) -> dict:
         total = await db.scalar(
             select(func.count()).select_from(Short).where(Short.corte_id == corte_id)
         )
-        indicado = bool(corte.metadado.candidato_shorts) if corte.metadado else False
+        indicado = bool(corte.candidato_shorts)
         return {
-            "is_fire": bool(corte.metadado.is_fire) if corte.metadado else False,
+            "is_fire": bool(corte.is_fire),
             "candidato_shorts": indicado,
             # D-502: a fabrica abre para Fire OU para indicacao manual. Sao
             # julgamentos diferentes: o Fire e sobre o corte, a indicacao e
             # sobre um trecho dele.
-            "elegivel": (bool(corte.metadado.is_fire) if corte.metadado else False) or indicado,
+            "elegivel": bool(corte.is_fire) or indicado,
             "tem_bruto": _bruto_em_disco(corte) is not None,
             "total_shorts": int(total or 0),
         }
 
 
-async def gerar_shorts_do_corte(corte_id: str) -> dict:
-    """Caminho MANUAL da fabrica: regera o bruto se preciso e propoe os shorts.
+async def sugerir_shorts(corte_id: str, provider: ProviderIA = "claude") -> dict:
+    """Propõe os trechos verticais do bruto recém-gerado e os persiste (D-454).
 
-    Serve os cortes que o automatico nao alcanca — os que ja tinham bruto antes
-    da E-030, os que tiveram o bruto descartado, e o teste da esteira sem
-    reprocessar a live inteira.
+    Roda sobre `Corte.transcricao_final` — a transcrição já sem os desvios e
+    com os tempos **rebaseados na timeline do bruto**. É desse arquivo que o
+    short será recortado, então é nesse relógio que os candidatos nascem.
 
-    O ponto delicado e a regeneracao do bruto. Ela roda com
-    `refazer_transcricao=False, refazer_cenas=False`, o modo que a D-160 criou
-    justamente para isto: refaz o VIDEO e nao encosta no texto nem nas cenas.
-    Assim a pos-producao ja feita — cenas, layout, metadados, thumbnail —
-    sobrevive intacta; o que muda no banco e so o ponteiro do clip e a duracao,
-    que sao recalculados iguais porque as bordas do corte nao mudaram.
-
-    Levanta `LookupError` (corte inexistente) e `ValueError` (corte sem Fire, ou
-    bruto que nao pode ser regerado).
+    Levanta `LookupError` (corte inexistente) ou `ValueError` (sem transcrição
+    final). Quem chama no fluxo automático trata a falha como não-fatal: a
+    sugestão de shorts é derivada do bruto, não parte da entrega dele.
     """
-    from app.services.claude_ia import ClaudeIaService
+    from app.domain.short.shorts import FaixaShort, normalizar_sugestoes
 
-    estado = await elegibilidade(corte_id)
-    if not estado["elegivel"]:
-        raise ValueError(
-            "Este corte nao esta na fabrica de shorts. Marque o Fire, ou indique-o "
-            "para shorts, e tente de novo."
-        )
-
-    regerou = False
-    if not estado["tem_bruto"]:
-        # Mesma checagem do caminho explicito: sem a live, o FFmpeg falharia com
-        # uma mensagem que nao diz o que fazer.
-        await _exigir_video_da_live(corte_id)
-        await _regerar_bruto_preservando_pos_producao(corte_id)
-        regerou = True
-
-    resultado = await ClaudeIaService.sugerir_shorts_via_claude(corte_id)
-    logger.info(
-        "[Shorts] geracao manual corte=%s bruto_regerado=%s candidatos=%d",
-        corte_id[:8],
-        regerou,
-        len(resultado.get("shorts", [])),
+    contexto = await montar_contexto(corte_id)
+    faixa = FaixaShort(
+        duracao_min_seg=settings.shorts_duracao_min_seg,
+        duracao_max_seg=settings.shorts_duracao_max_seg,
+        quantidade_min=settings.shorts_quantidade_min,
+        quantidade_max=settings.shorts_quantidade_max,
     )
-    return {**resultado, "bruto_regerado": regerou}
+
+    skill = editorial_skills.resolver_skill(_SKILL_SHORTS)
+    scaffold = editorial_scaffolds.resolver_scaffold("shorts")
+    prompt = scaffold.format(
+        titulo=contexto.titulo,
+        tema_central=contexto.tema_central,
+        duracao_humana=seg_to_hms_short(contexto.duracao_seg),
+        quantidade_alvo=faixa.quantidade_humana,
+        faixa_duracao=faixa.duracao_humana,
+        texto_transcricao=contexto.texto_transcricao,
+    )
+    registrar_skill_usada(_SKILL_SHORTS, skill, scaffold)
+    resposta = await gerar_json(
+        provider,
+        prompt,
+        skill,
+        _SKILL_SHORTS,
+        projeto_id=contexto.projeto_id,
+        corte_id=corte_id,
+    )
+    resultado = normalizar_sugestoes(resposta, duracao_bruto_seg=contexto.duracao_seg, faixa=faixa)
+    shorts = await registrar_sugestoes(contexto, resultado)
+    return {"shorts": shorts, "descartes": resultado.descartes}
 
 
-async def _exigir_video_da_live(corte_id: str) -> None:
+async def sugerir_cenas(short_id: str, provider: ProviderIA = "claude") -> dict:
+    """Propõe os cartões que entram por cima de UM trecho vertical (D-497).
+
+    No horizontal a IA propõe as cenas desde sempre; aqui o painel da D-494
+    só sabia criar à mão. A skill é OUTRA (`cenas-short-expert`) porque o
+    repertório é outro: lá são fichas e ênfases num vídeo de dez minutos,
+    aqui são quatro cartões disputando trinta segundos de tela vertical, com
+    a legenda queimada embaixo.
+
+    As cenas voltam GRAVADAS, substituindo as que existiam. Propor sem
+    gravar deixaria o operador com uma lista que ele teria de reescrever à
+    mão para usar; e o que existia antes é ou vazio (o caso comum) ou um
+    palpite anterior da própria IA. Um short com cenas escritas à mão só
+    chega aqui se o operador pedir de novo — e aí ele pediu.
+
+    Levanta `LookupError` (short inexistente) ou `ValueError` (trecho sem
+    transcrição). Devolve o short atualizado e os descartes, que são o que
+    explica por que a IA falou em cinco cenas e a tela mostra três.
+    """
+    from app.domain.short.cenas_short import TipoCenaShort
+    from app.domain.short.cenas_short_ia import normalizar_sugestoes as normalizar_cenas
+
+    contexto = await montar_contexto_de_cenas(short_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_CENAS_SHORT)
+    scaffold = editorial_scaffolds.resolver_scaffold("cenas-short")
+    prompt = scaffold.format(
+        titulo=contexto.titulo,
+        gancho=contexto.gancho,
+        duracao_humana=f"{contexto.duracao_seg:.0f} segundos",
+        tipos_disponiveis=", ".join(t.value for t in TipoCenaShort),
+        texto_transcricao=contexto.texto_transcricao,
+    )
+    registrar_skill_usada(_SKILL_CENAS_SHORT, skill, scaffold)
+    resposta = await gerar_json(
+        provider,
+        prompt,
+        skill,
+        _SKILL_CENAS_SHORT,
+        projeto_id=contexto.projeto_id,
+        corte_id=contexto.corte_id,
+        short_id=short_id,
+    )
+    resultado = normalizar_cenas(resposta, duracao_short=contexto.duracao_seg)
+    short = await definir_cenas(short_id, [cena.para_json() for cena in resultado.cenas])
+    logger.info(
+        "[Shorts] cenas IA short=%s aceitas=%d descartadas=%d",
+        short_id[:8],
+        len(resultado.cenas),
+        len(resultado.descartes),
+    )
+    return {"short": short, "descartes": resultado.descartes}
+
+
+async def sugerir_ganchos(short_id: str, provider: ProviderIA = "claude") -> list[str]:
+    """As variacoes do texto que abre o short (D-565).
+
+    Skill separada da capa do TikTok, e nao um parametro dela, porque as duas
+    escrevem coisas de generos opostos. La sao 2-3 palavras que NOMEIAM o
+    assunto numa prateleira onde nove capas sao vistas juntas, e repetir da
+    coerencia. Aqui e uma frase de 4-7 palavras que ABRE uma pergunta em quem
+    esta com o dedo em movimento — e repetir, no feed, parece robo.
+
+    A base e a transcricao do TRECHO, nao o resumo do corte: o gancho promete,
+    e a promessa tem de estar no que este short mostra.
+
+    NAO grava nada. As variacoes vao para a tela e o operador escolhe uma,
+    escreve a dele, ou ignora todas — a decisao editorial continua sendo
+    humana, e gravar por conta propria tiraria dele a chance de comparar.
+
+    Levanta `LookupError` (short inexistente) e `ValueError` (trecho sem
+    fala). Lista vazia quando o modelo nao produziu nada aproveitavel.
+    """
+    from app.domain.short.gancho_short import MAX_VARIACOES, ganchos_da_resposta
+
+    contexto = await montar_contexto_do_gancho(short_id)
+
+    skill = editorial_skills.resolver_skill(_SKILL_GANCHO_SHORT)
+    scaffold = editorial_scaffolds.resolver_scaffold("gancho-short")
+    prompt = scaffold.format(
+        titulo_proposto=contexto.titulo,
+        tema_central=contexto.tema_central,
+        duracao_seg=contexto.duracao_seg,
+        texto_transcricao=contexto.texto_transcricao,
+        gancho_da_curadoria=contexto.gancho_da_curadoria,
+        ganchos_recentes=contexto.ganchos_recentes,
+        quantidade=MAX_VARIACOES,
+    )
+    registrar_skill_usada(_SKILL_GANCHO_SHORT, skill, scaffold)
+    bruto = await gerar_texto(
+        provider,
+        prompt,
+        skill,
+        _SKILL_GANCHO_SHORT,
+        projeto_id=contexto.projeto_id,
+        corte_id=contexto.corte_id,
+        short_id=short_id,
+    )
+    # O historico vai ao prompt E ao parser: um pede, o outro garante.
+    variacoes = ganchos_da_resposta(bruto, ja_usados=contexto.ganchos_gastos)
+    logger.info(
+        "[Shorts] ganchos IA short=%s variacoes=%d",
+        short_id[:8],
+        len(variacoes),
+    )
+    return variacoes
+
+
+async def localizar_arquivo(short_id: str, estagio: str) -> tuple[str, str, Path]:
+    """O MP4 do short — a prévia ou o final — como (projeto, caminho relativo, arquivo).
+
+    D-483: uma prévia que não se pode ver não serve para nada; a rota que a
+    serve nasce junto com ela. D-706: a busca saiu do router.
+    """
+    if estagio not in {"previa", "final"}:
+        raise NaoEncontrado(f"Estagio {estagio!r} desconhecido.")
+    async with AsyncSessionLocal() as db, db.begin():
+        short, corte = await _short_e_corte(db, short_id)
+        relativo = short.arquivo_short_path if estagio == "final" else short.arquivo_previa_path
+        projeto_id = corte.projeto_id
+    if not relativo:
+        raise NaoEncontrado(f"Este short ainda nao tem {estagio}.")
+    caminho = resolver_do_projeto(relativo, projeto_id)
+    if not caminho.is_file():
+        raise NaoEncontrado("O arquivo foi registrado mas nao esta mais em disco.")
+    return projeto_id, relativo, caminho
+
+
+async def localizar_capa(short_id: str) -> Path:
+    """O arquivo da capa do short (D-706: a busca saiu do router)."""
+    async with AsyncSessionLocal() as db, db.begin():
+        _short, corte = await _short_e_corte(db, short_id)
+        meta = await db.scalar(select(MetadadoShort).where(MetadadoShort.short_id == short_id))
+        relativo = meta.capa_path if meta else ""
+        projeto_id = corte.projeto_id
+    if not relativo:
+        raise NaoEncontrado("Este short ainda nao tem capa.")
+    caminho = resolver_do_projeto(relativo, projeto_id)
+    if not caminho.is_file():
+        raise NaoEncontrado("A capa foi registrada mas nao esta mais em disco.")
+    return caminho
+
+
+async def _short_e_corte(db: AsyncSession, short_id: str) -> tuple[Short, Corte]:
+    short = await db.get(Short, short_id)
+    if not short:
+        raise NaoEncontrado("Short nao encontrado")
+    corte = await db.get(Corte, short.corte_id)
+    if not corte:
+        raise NaoEncontrado("Corte do short nao encontrado")
+    return short, corte
+
+
+async def exigir_video_da_live(corte_id: str) -> None:
     """O bruto sai da live; sem ela em disco, o FFmpeg falharia sem explicar (D-528).
 
     Vale para o caminho implícito — pedir sugestões num corte sem bruto regera o
@@ -917,19 +1173,6 @@ async def _exigir_video_da_live(corte_id: str) -> None:
         )
 
 
-async def _regerar_bruto_preservando_pos_producao(corte_id: str) -> None:
-    """Refaz so o video do bruto — nem transcricao, nem cenas (D-160)."""
-    from app.services.export import ExportService
-
-    resultado = await ExportService.gerar_bruto_via_worker(
-        corte_id, refazer_transcricao=False, refazer_cenas=False
-    )
-    if resultado.get("status") != "pronto":
-        raise ValueError(
-            f"Nao consegui regerar o bruto: {resultado.get('mensagem', 'erro desconhecido')}"
-        )
-
-
 async def listar_fires_com_bruto() -> list[dict]:
     """Os cortes Fire cujo bruto ainda existe em disco — a porta da tela de Shorts.
 
@@ -945,10 +1188,9 @@ async def listar_fires_com_bruto() -> list[dict]:
         linhas = (
             await db.execute(
                 select(Corte, Projeto)
-                .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
                 .join(Projeto, Projeto.id == Corte.projeto_id)
                 # D-502: Fire OU indicado a mao — dois caminhos para a mesma fila.
-                .where(or_(MetadadoCorte.is_fire, MetadadoCorte.candidato_shorts))
+                .where(or_(Corte.is_fire, Corte.candidato_shorts))
                 .order_by(Corte.atualizado_em.desc())
             )
         ).all()
@@ -997,8 +1239,8 @@ def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path | None) -> dict:
         # lugar de "descartar", e nao finge um tamanho que nao existe.
         "tem_bruto": bruto is not None,
         "bruto_mb": round(bruto.stat().st_size / 1_000_000, 1) if bruto else 0.0,
-        "is_fire": bool(corte.metadado.is_fire) if corte.metadado else False,
-        "indicado": bool(corte.metadado.candidato_shorts) if corte.metadado else False,
+        "is_fire": bool(corte.is_fire),
+        "indicado": bool(corte.candidato_shorts),
         # D-503: so ha o que publicar no TikTok quando o MP4 final existe. Sem
         # isto a tela ofereceria um botao que o backend recusa — o mesmo defeito
         # que a D-495 corrigiu no seletor de arranjo.

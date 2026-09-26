@@ -196,7 +196,7 @@ export default function WorkspaceProjetoPage() {
       .filter(
         ({ status }) =>
           !termo ||
-          status.titulo.toLowerCase().includes(termo) ||
+          (status.titulo ?? '').toLowerCase().includes(termo) ||
           String(status.numero).includes(termo),
       );
   }, [statusList, porId, busca]);

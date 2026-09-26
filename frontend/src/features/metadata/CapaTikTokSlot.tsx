@@ -7,7 +7,7 @@ import { shortsApi } from '@/features/shorts/shortsApi';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
-import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
+import { useUltimaGeracao } from '@/features/ia';
 import { lerImagemColada, SemImagemColada } from '@/features/shorts/imagemDaAreaDeTransferencia';
 import { exportStatusKey } from '@/hooks/useProjetoDetalhe';
 

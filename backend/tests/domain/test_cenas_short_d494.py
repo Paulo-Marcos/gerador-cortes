@@ -10,7 +10,7 @@ escreveu, e ele so descobre depois do render.
 """
 
 import pytest
-from app.domain.cenas_short import (
+from app.domain.short.cenas_short import (
     DURACAO_MINIMA_SEG,
     CenaInvalida,
     CenaShort,
@@ -101,7 +101,7 @@ class TestLista:
         """Sobreposicao e a mesma pergunta nos dois formatos."""
         import inspect
 
-        from app.domain import cenas_short
+        from app.domain.short import cenas_short
 
         assert "verificar_sobreposicao" in inspect.getsource(cenas_short.normalizar_lista)
 
