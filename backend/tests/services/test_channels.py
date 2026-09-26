@@ -177,7 +177,7 @@ def test_identidade_prefere_banco_ao_yaml(instancia, monkeypatch):
 
 
 def test_editar_identidade_grava_no_banco(instancia):
-    """Editar deve espelhar no YAML E gravar no banco (fonte da verdade)."""
+    """Editar grava no banco, a fonte única (D-699)."""
     from app.infrastructure import settings_store
 
     instance_root, _ = instancia
@@ -187,6 +187,50 @@ def test_editar_identidade_grava_no_banco(instancia):
     assert linha is not None
     assert linha["nome"] == "Editado"
     assert linha["handle"] == "@seucanal"  # merge preserva o resto
+
+
+def test_editar_identidade_nao_toca_o_yaml(instancia):
+    """D-699: o banco é a fonte única; o `channel.yaml` fica como reserva intacta."""
+    instance_root, _ = instancia
+    channel_yaml = instance_root / "channels" / "default" / "channel.yaml"
+    antes = channel_yaml.read_text(encoding="utf-8")
+
+    svc.editar_identidade("default", {"nome": "Editado"}, instance_root=instance_root)
+
+    assert channel_yaml.read_text(encoding="utf-8") == antes
+
+
+def test_editar_identidade_parte_do_banco_e_nao_do_yaml(instancia):
+    """D-699: a fusão partia do YAML, e um YAML atrasado desfazia o banco em silêncio."""
+    from app.infrastructure import settings_store
+
+    instance_root, _ = instancia
+    db = instance_root / "settings.db"
+    settings_store.gravar_identidade(db, "default", {"handle": "@do-banco"})
+
+    canal = svc.editar_identidade("default", {"nome": "Editado"}, instance_root=instance_root)
+
+    assert canal.nome == "Editado"
+    assert canal.handle == "@do-banco"
+    assert settings_store.ler_identidade(db, "default")["handle"] == "@do-banco"
+
+
+def test_criar_canal_grava_a_identidade_so_no_banco(instancia):
+    """D-699: o template entra como base; o que o operador informou vai por cima."""
+    from app.infrastructure import settings_store
+
+    instance_root, exemplo = instancia
+    svc.criar_canal(
+        "novo-canal", identidade={"nome": "Novo"}, instance_root=instance_root, exemplo_dir=exemplo
+    )
+
+    linha = settings_store.ler_identidade(instance_root / "settings.db", "novo-canal")
+    assert linha["nome"] == "Novo"
+    assert linha["handle"] == "@seucanal"
+    yaml_do_canal = (instance_root / "channels" / "novo-canal" / "channel.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert yaml_do_canal == (exemplo / "channel.yaml").read_text(encoding="utf-8")
 
 
 def test_seed_preenche_campos_vazios_a_partir_do_ambiente(tmp_path: Path, monkeypatch):
