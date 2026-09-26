@@ -96,6 +96,7 @@ O schema do `projetos.db` evolui por um caminho só, no boot (`app/migrations/mi
 
 - **Ação "gerar com IA" dispara sozinha no gesto do fluxo**, sem modal de confirmação, e nunca sobrescreve texto que já foi gerado (a capa é a exceção).
 - Vocabulário do domínio (`Projeto`, `Corte`, `Metadado`, `Short`, `Ingestão`, `Análise`) é o mesmo em código, banco e tela — não invente sinônimo. Termos que se confundem estão no [glossário](docs/dominio/glossario.md).
+- Nome de função é **verbo em português**, como o resto do código (`gerar_`, `montar_`, `resolver_`). Termo técnico de uma ferramenta fica como a ferramenta o chama (`cmd`, `filter`, `hwaccel`, `cdp`). O que já existe em inglês (os `build_*_cmd` do FFmpeg) não se renomeia só por isso: a regra vale para o que nasce (D-718).
 
 ## Skills por pasta
 
