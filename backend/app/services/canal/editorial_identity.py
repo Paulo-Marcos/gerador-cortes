@@ -7,7 +7,7 @@ NOME pelo qual o mascote é citado nos prompts (ex.: "Sapo").
 FONTE DA VERDADE (D-285): o banco de settings (`settings_store`,
 `instance/settings.db`), numa linha por canal — o MESMO padrão que a D-191 aplicou
 à identidade do canal. O arquivo `editorial/mascote.yaml` continua existindo como
-ESPELHO de compatibilidade/backup e serve de FALLBACK+migração: quando o banco
+legado e serve só de FALLBACK+migração (desde a D-699 não é mais espelhado): quando o banco
 ainda não tem a linha do canal (primeiro acesso após o D-285, ou config trazida da
 PROD em arquivo), o accessor lê o yaml e SEMEIA o banco a partir dele (idempotente).
 Quando nada existe, um FALLBACK NEUTRO ("mascote") mantém o backend funcional para
@@ -17,7 +17,7 @@ POR QUÊ (E-010, origem D-193 — pré-publicação no GitHub): os prompts embut
 nome do mascote do canal atual ("Sapo") direto no código. A camada editorial ficou
 genérica publicando; a identidade concreta vivia só em
 `instance/channels/<ativo>/editorial/mascote.yaml`. A D-285 fecha o vão da D-191
-trazendo essa identidade para o banco editável pela UI, deixando o yaml como espelho.
+trazendo essa identidade para o banco editável pela UI; a D-699 deixou o yaml só como semente.
 
 Camada: config/loader (I/O de filesystem + banco de settings), fora de `domain/`
 puro — o mesmo lugar de `channel_config_loader` e `channel_paths`. A fachada pública
@@ -56,7 +56,7 @@ def _channel_id_ativo() -> str:
 
 
 def _nome_do_yaml(editorial_root: Path | None) -> str:
-    """Nome do mascote no `editorial/mascote.yaml` (espelho/legado), ou "" se ausente."""
+    """Nome do mascote no `editorial/mascote.yaml` legado, ou "" se ausente."""
     raiz = Path(editorial_root) if editorial_root is not None else editorial_dir()
     dados = _ler_yaml(raiz / _MASCOTE_YAML)
     return str(dados.get("nome") or "").strip()
@@ -80,7 +80,7 @@ def identidade_do_mascote(
     Ordem de resolução (espelha `AppSettingsService._load` da D-191):
       1. BANCO (`settings_store`): se já há linha para o canal, é a fonte da verdade.
       2. Sem linha → MIGRA (idempotente): lê o `editorial/mascote.yaml` legado e
-         SEMEIA o banco a partir dele. A partir daí o yaml é só espelho.
+         SEMEIA o banco a partir dele. A partir daí o yaml não é mais consultado.
       3. Sem nome em lugar nenhum → `MASCOTE_NEUTRO` ("mascote").
 
     Nunca lança no caminho feliz. A fachada pública é preservada: os prompts seguem
@@ -103,32 +103,17 @@ def identidade_do_mascote(
 def definir_nome_do_mascote(
     nome: str,
     *,
-    editorial_root: Path | None = None,
     db_path: Path | None = None,
     channel_id: str | None = None,
 ) -> Mascote:
     """Define o nome do mascote do canal ATIVO (edição pela UI de Configurações).
 
-    Grava no BANCO (fonte da verdade) e ESPELHA no `editorial/mascote.yaml`,
-    preservando as demais chaves do arquivo (ex.: `config_version`) — o mesmo
-    banco+espelho de `channels.editar_identidade`. Devolve a identidade resultante
-    (neutra quando o nome informado é vazio).
+    Grava só no BANCO, a fonte única (D-699). O `editorial/mascote.yaml` deixou de
+    ser espelhado: continua sendo lido uma vez, para semear um canal ainda sem
+    linha, e mais nada. Devolve a identidade resultante (neutra quando o nome
+    informado é vazio).
     """
     nome = str(nome or "").strip()
     db, cid = _resolver_db_e_canal(db_path, channel_id)
     settings_store.gravar_mascote(db, cid, {"nome": nome})
-    _espelhar_no_yaml(nome, editorial_root)
     return mascote_de(nome)
-
-
-def _espelhar_no_yaml(nome: str, editorial_root: Path | None) -> None:
-    """Escreve `nome` no `editorial/mascote.yaml`, preservando o resto do arquivo."""
-    raiz = Path(editorial_root) if editorial_root is not None else editorial_dir()
-    caminho = raiz / _MASCOTE_YAML
-    dados = _ler_yaml(caminho)
-    dados["nome"] = nome
-    raiz.mkdir(parents=True, exist_ok=True)
-    caminho.write_text(
-        yaml.safe_dump(dados, allow_unicode=True, sort_keys=False),
-        encoding="utf-8",
-    )

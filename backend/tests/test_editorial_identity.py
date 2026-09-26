@@ -1,14 +1,14 @@
 """Testes da identidade editorial do mascote (D-220 / E-010 → D-285).
 
 Desde a D-285 o BANCO (`settings_store`) é a fonte da verdade e o
-`editorial/mascote.yaml` é espelho/fallback+migração. Cobrimos o contrato do
+`editorial/mascote.yaml` é só fallback+migração (desde a D-699 não é mais espelho). Cobrimos o contrato do
 accessor `identidade_do_mascote`:
   - banco é a fonte da verdade (linha no banco vence o yaml);
   - seed/migração idempotente (sem linha + yaml → semeia o banco, e a 2ª leitura
     já vem do banco, sem reler o yaml);
   - fallback para o yaml (sem linha, com yaml);
   - fallback NEUTRO (nada em lugar nenhum → "mascote");
-  - `definir_nome_do_mascote` grava no banco e espelha no yaml.
+  - `definir_nome_do_mascote` grava só no banco (D-699).
 
 A não-regressão dos prompts da PROD é provada em
 `test_prompts_mascote_nao_regressao.py`. Tudo aqui é isolado por `tmp_path` — um
@@ -117,23 +117,20 @@ def test_fallback_neutro_quando_yaml_invalido(tmp_path: Path):
     )
 
 
-def test_definir_nome_grava_no_banco_e_espelha_no_yaml(tmp_path: Path):
+def test_definir_nome_grava_so_no_banco(tmp_path: Path):
     db = _db(tmp_path)
     editorial = _editorial_com_yaml(tmp_path, "Antigo")
 
-    resultado = definir_nome_do_mascote(
-        "Sapo", editorial_root=editorial, db_path=db, channel_id=_CANAL
-    )
+    resultado = definir_nome_do_mascote("Sapo", db_path=db, channel_id=_CANAL)
 
     assert resultado == Mascote(nome="Sapo")
     # Fonte da verdade (banco) atualizada.
     assert settings_store.ler_mascote(db, _CANAL) == {"nome": "Sapo"}
-    # Espelho (yaml) atualizado, preservando as demais chaves.
+    # D-699: o yaml não é mais espelho — fica como estava.
     import yaml
 
     dados = yaml.safe_load((editorial / "mascote.yaml").read_text(encoding="utf-8"))
-    assert dados["nome"] == "Sapo"
-    assert dados["config_version"] == 1
+    assert dados["nome"] == "Antigo"
     # E a próxima leitura reflete o novo nome (via banco).
     assert identidade_do_mascote(
         editorial_root=editorial, db_path=db, channel_id=_CANAL
@@ -143,9 +140,7 @@ def test_definir_nome_grava_no_banco_e_espelha_no_yaml(tmp_path: Path):
 def test_definir_nome_vazio_resulta_neutro(tmp_path: Path):
     db = _db(tmp_path)
 
-    resultado = definir_nome_do_mascote(
-        "  ", editorial_root=tmp_path, db_path=db, channel_id=_CANAL
-    )
+    resultado = definir_nome_do_mascote("  ", db_path=db, channel_id=_CANAL)
 
     assert resultado == MASCOTE_NEUTRO
     assert settings_store.ler_mascote(db, _CANAL) == {"nome": ""}
