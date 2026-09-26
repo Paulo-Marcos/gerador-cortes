@@ -3986,6 +3986,37 @@
         "title": "VotoQualidadeRequest",
         "type": "object"
       },
+      "VotoQualidadeResponse": {
+        "description": "O voto de qualidade da live (D-372) ao lado da pontuação que o ranking deu.",
+        "properties": {
+          "pontuacao_ranking": {
+            "title": "Pontuacao Ranking",
+            "type": "number"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "voto_qualidade_live": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voto Qualidade Live"
+          }
+        },
+        "required": [
+          "projeto_id",
+          "voto_qualidade_live",
+          "pontuacao_ranking"
+        ],
+        "title": "VotoQualidadeResponse",
+        "type": "object"
+      },
       "YouTubeUploadRequest": {
         "properties": {
           "scheduled_at": {
@@ -10777,7 +10808,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/VotoQualidadeResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10825,7 +10858,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/VotoQualidadeResponse"
+                }
               }
             },
             "description": "Successful Response"

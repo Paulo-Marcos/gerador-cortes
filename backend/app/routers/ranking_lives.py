@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 
+from app.routers.resposta_api import RespostaApi
 from app.services.ranking_lives import (
     RankingIndisponivel,
     definir_voto_qualidade,
@@ -24,6 +25,14 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+class VotoQualidadeResponse(RespostaApi):
+    """O voto de qualidade da live (D-372) ao lado da pontuação que o ranking deu."""
+
+    projeto_id: str
+    voto_qualidade_live: int | None
+    pontuacao_ranking: float
 
 
 class VotoQualidadeRequest(BaseModel):
@@ -72,7 +81,7 @@ async def enfileirar(video_id: str):
 # --------------------------------------------------------------------------- #
 
 
-@router.get("/projetos/{projeto_id}/voto-qualidade")
+@router.get("/projetos/{projeto_id}/voto-qualidade", response_model=VotoQualidadeResponse)
 async def obter_voto(projeto_id: str):
     try:
         return await obter_voto_qualidade(projeto_id)
@@ -80,7 +89,7 @@ async def obter_voto(projeto_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.put("/projetos/{projeto_id}/voto-qualidade")
+@router.put("/projetos/{projeto_id}/voto-qualidade", response_model=VotoQualidadeResponse)
 async def salvar_voto(projeto_id: str, body: VotoQualidadeRequest):
     try:
         return await definir_voto_qualidade(projeto_id, body.voto)

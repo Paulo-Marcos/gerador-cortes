@@ -5980,6 +5980,18 @@ export interface components {
             /** Voto */
             voto: number;
         };
+        /**
+         * VotoQualidadeResponse
+         * @description O voto de qualidade da live (D-372) ao lado da pontuação que o ranking deu.
+         */
+        VotoQualidadeResponse: {
+            /** Pontuacao Ranking */
+            pontuacao_ranking: number;
+            /** Projeto Id */
+            projeto_id: string;
+            /** Voto Qualidade Live */
+            voto_qualidade_live: number | null;
+        };
         /** YouTubeUploadRequest */
         YouTubeUploadRequest: {
             /** Scheduled At */
@@ -10733,7 +10745,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["VotoQualidadeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10768,7 +10780,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["VotoQualidadeResponse"];
                 };
             };
             /** @description Validation Error */

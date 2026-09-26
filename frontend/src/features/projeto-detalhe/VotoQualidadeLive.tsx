@@ -3,7 +3,7 @@ import { Loader2, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
-import { votoQualidadeApi, type VotoQualidadeResponse } from '@/lib/votoQualidadeApi';
+import { votoQualidadeApi, type VotoQualidadeResponse } from '@/features/projeto-detalhe/api/votoQualidade';
 
 /**
  * D-372: referência comparativa entre o voto MANUAL do operador (qualidade real
