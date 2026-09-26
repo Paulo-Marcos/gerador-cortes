@@ -66,6 +66,18 @@ gancho é um só, ancorado no zero.
 |---|---|---|
 | **Cena** | Um card de texto sobre o vídeo (Remotion) em qualquer momento do corte. | `Corte.cenas_remotion`; `services/cenas_remotion.py` |
 
+### Nomes históricos no código
+
+Dois nomes do código dizem menos (ou mais) do que o conceito. A conversa usa o
+termo da esquerda; o código fica como está até alguém mexer ali por outro
+motivo — renomear só pelo nome mexeria em banco, API e tela sem mudar nada do
+que o campo faz (D-715).
+
+| Termo | Nome no código | O que o nome esconde |
+|---|---|---|
+| **Layout horizontal** | `Corte.layout_youtube`, `Projeto.layout_youtube_padrao`; `domain/corte/youtube_layout.py` | Não é só do YouTube: o mesmo MP4 horizontal vai também ao TikTok. É o arranjo do vídeo deitado — regiões `full`/`compartilhada`, fundo, placa. Não confundir com o **palco** do short (vertical). |
+| **Gancho** (do short) | `Short.gancho` | Além da frase de curadoria, é a **descrição do post** publicado (ver "Os três ganchos"). Por isso nunca foi reaproveitado para o texto em tela, que ganhou a coluna própria `gancho_tela`. |
+
 ## Travas protegem funcionalidades, não contextos
 
 As travas de `.guia/locks/registry.yaml` protegem **funcionalidades homologadas**
