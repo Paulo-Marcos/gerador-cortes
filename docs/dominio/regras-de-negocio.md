@@ -44,7 +44,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN | Regra | Onde mora | Origem |
 |---|---|---|---|
 | RN-14 | **Fire** (julgamento sobre o corte) é independente de `candidato_shorts` (aposta sobre um trecho). | `models.py` (`MetadadoCorte.is_fire`, `candidato_shorts`) | D-502 |
-| RN-15 | **Limpar**: remove a mídia do que subiu e de corte sem Fire; o texto fica. Fire com shorts pendentes guarda bruto, shorts e mp4. | `services/media_retention.py` (`limpar_projeto`, `_brutos_de_fire`, `_midia_de_fire_pendente`) | D-598 |
+| RN-15 | **Limpar**: remove a mídia do que subiu e de corte sem Fire; o texto fica. Fire com shorts pendentes guarda bruto, shorts e mp4. | `domain/publicacao/retencao_publicacao.py` (`o_que_o_fire_guarda`); o disco em `services/media_retention.py` (`limpar_projeto`, `_midia_de_fire_pendente`) | D-598, D-710 |
 | RN-16 | O MP4 horizontal só pode ser apagado quando **todos** os destinos publicaram. Lista vazia **não** libera (corte sem destino conhecido ainda não foi a lugar nenhum). | `domain/publicacao/retencao_publicacao.py` (`pode_apagar_o_mp4`) | D-512 |
 | RN-17 | "Shorts finalizados" é **declaração do operador**, não dedução a partir das publicações. | `models.py` (`shorts_finalizados_em`) | D-593 |
 

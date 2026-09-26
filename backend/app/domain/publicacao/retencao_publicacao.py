@@ -86,3 +86,45 @@ def pode_apagar_o_mp4(destinos: list[DestinoDoCorte]) -> Veredito:
 
     pendentes = tuple(destino.nome for destino in destinos if not destino.publicado)
     return Veredito(liberado=not pendentes, pendentes=pendentes)
+
+
+@dataclass(frozen=True)
+class GuardaDoFire:
+    """O que a limpeza do projeto poupa de UM corte (RN-15)."""
+
+    bruto: bool
+    shorts: bool
+    mp4: bool
+
+
+NADA_GUARDADO = GuardaDoFire(bruto=False, shorts=False, mp4=False)
+
+
+def o_que_o_fire_guarda(
+    *,
+    e_fire: bool,
+    tem_bruto: bool,
+    shorts_finalizados: bool,
+    destinos: list[DestinoDoCorte],
+) -> GuardaDoFire:
+    """RN-15: a mídia que um corte Fire ainda precisa para publicar os shorts (D-598).
+
+    O Fire guarda o bruto porque é dele que os shorts nascem, os shorts já
+    renderizados porque ainda vão subir, e o MP4 horizontal enquanto algum
+    destino não publicou (RN-16). Deixa de guardar quando o operador marca os
+    shorts como finalizados — ele está dizendo que já subiu tudo — e quando o
+    bruto já não existe: sem bruto não há fábrica de shorts a proteger.
+
+    Mora no domínio desde o D-710; antes a decisão estava misturada com a
+    varredura de disco no serviço de retenção.
+
+    Exemplos:
+        >>> yt = DestinoDoCorte("YouTube", publicado=True)
+        >>> o_que_o_fire_guarda(e_fire=True, tem_bruto=True, shorts_finalizados=False, destinos=[yt])
+        GuardaDoFire(bruto=True, shorts=True, mp4=False)
+        >>> o_que_o_fire_guarda(e_fire=True, tem_bruto=True, shorts_finalizados=True, destinos=[])
+        GuardaDoFire(bruto=False, shorts=False, mp4=False)
+    """
+    if not (e_fire and tem_bruto) or shorts_finalizados:
+        return NADA_GUARDADO
+    return GuardaDoFire(bruto=True, shorts=True, mp4=not pode_apagar_o_mp4(destinos).liberado)
