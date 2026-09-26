@@ -2111,6 +2111,56 @@
         "title": "DefinirCenasRequest",
         "type": "object"
       },
+      "DiarizacaoResponse": {
+        "description": "`ok=False` traz só o `motivo` (degradação graciosa); `ok=True`, os falantes\ne qual deles é o canal.",
+        "properties": {
+          "canal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canal"
+          },
+          "falantes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/FalanteInfo"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Falantes"
+          },
+          "motivo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "DiarizacaoResponse",
+        "type": "object"
+      },
       "DividirBlocoRequest": {
         "properties": {
           "ponto_seg": {
@@ -2252,6 +2302,42 @@
           }
         },
         "title": "EscolherPresetRequest",
+        "type": "object"
+      },
+      "FalanteInfo": {
+        "description": "Um falante da diarização: o nome batizado e se é o canal (D-286).",
+        "properties": {
+          "is_canal": {
+            "title": "Is Canal",
+            "type": "boolean"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nome",
+          "is_canal"
+        ],
+        "title": "FalanteInfo",
+        "type": "object"
+      },
+      "FalantesResponse": {
+        "description": "Mapa `{speaker_id: falante}`, ex.: `{\"SPEAKER_00\": {\"nome\": \"Pedro\", \"is_canal\": true}}`.",
+        "properties": {
+          "falantes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FalanteInfo"
+            },
+            "title": "Falantes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "falantes"
+        ],
+        "title": "FalantesResponse",
         "type": "object"
       },
       "FinalizadoRequest": {
@@ -8897,7 +8983,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DiarizacaoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8938,7 +9026,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DiarizacaoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8979,7 +9069,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FalantesResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9028,7 +9120,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FalantesResponse"
+                }
               }
             },
             "description": "Successful Response"
