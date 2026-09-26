@@ -2397,7 +2397,20 @@
         "required": [
           "id",
           "ts",
-          "sucesso"
+          "etapa",
+          "model",
+          "projeto_id",
+          "corte_id",
+          "short_id",
+          "prompt",
+          "resposta",
+          "tokens_in",
+          "tokens_out",
+          "custo_usd",
+          "duracao_ms_servidor",
+          "latencia_ms_wall",
+          "sucesso",
+          "erro_tipo"
         ],
         "title": "LlmCallResponse",
         "type": "object"
@@ -3375,6 +3388,10 @@
           "provider": {
             "anyOf": [
               {
+                "enum": [
+                  "claude",
+                  "gemini"
+                ],
                 "type": "string"
               },
               {
@@ -3395,6 +3412,11 @@
             "title": "Ts"
           }
         },
+        "required": [
+          "provider",
+          "model",
+          "ts"
+        ],
         "title": "UltimaGeracaoResponse",
         "type": "object"
       },

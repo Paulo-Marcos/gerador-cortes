@@ -10,6 +10,7 @@ import logging
 from app.database import get_db
 from app.domain.compartilhado.provider_ia import provider_do_modelo
 from app.models import Corte, Projeto
+from app.routers.resposta_api import RespostaApi
 from app.services import telemetria_ia
 from app.services.analise import AnaliseService
 from app.services.cenas_remotion import CenasRemotionService
@@ -17,7 +18,6 @@ from app.services.claude_ia import ProviderIA
 from app.services.corte import CorteService
 from app.services.metadados import MetadadosService
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -196,7 +196,7 @@ async def gerar_prompt_thumbnail_via_claude(
 # gravação acontece de forma não-fatal dentro do próprio client (claude_cli_client).
 
 
-class LlmCallResponse(BaseModel):
+class LlmCallResponse(RespostaApi):
     """Uma chamada de IA registrada, para a Área de Análises."""
 
     id: str
@@ -217,14 +217,14 @@ class LlmCallResponse(BaseModel):
     erro_tipo: str | None = None
 
 
-class ListaLlmCallsResponse(BaseModel):
+class ListaLlmCallsResponse(RespostaApi):
     chamadas: list[LlmCallResponse]
 
 
-class UltimaGeracaoResponse(BaseModel):
+class UltimaGeracaoResponse(RespostaApi):
     """Quem fez a última geração de uma etapa, para o selo na tela."""
 
-    provider: str | None = None
+    provider: ProviderIA | None = None
     model: str | None = None
     ts: str | None = None
 
