@@ -16,7 +16,7 @@ from app.domain.corte.corte_mapper import (
     coalescer_chaves_mascote,
     extrair_cenas_remotion,
 )
-from app.domain.projeto.diarizacao_align import prefixo_falante
+from app.domain.projeto.diarizacao_align import mapa_falantes_para_meta, prefixo_falante
 from app.infrastructure import fila_ia, gemini_client
 from app.models import Corte, Projeto
 from app.services import retrato_wikipedia
@@ -33,23 +33,6 @@ logger = logging.getLogger(__name__)
 
 # A skill que escreve as cenas do corte — a geração pela IA mora aqui (D-704).
 _SKILL_CENAS = "cenas-expert"
-
-
-def _carregar_mapa_falantes(raw: object) -> dict | None:
-    """Parse tolerante do `projeto.falantes_map` (D-286/D-307).
-
-    Retorna `None` (sem rótulo) quando o projeto não foi diarizado ou o JSON é
-    inválido — nesse caso o prompt de cenas sai idêntico ao comportamento
-    pré-diarização (back-compat total). Espelha `diarizacao_align.mapa_falantes_para_meta`
-    do fluxo de análise/trechos (D-696: a unificação das duas é do E-054).
-    """
-    if not raw or not isinstance(raw, str):
-        return None
-    try:
-        mapa = json.loads(raw)
-    except json.JSONDecodeError:
-        return None
-    return mapa if isinstance(mapa, dict) and mapa else None
 
 
 PROMPT_CENAS_CHUNK_TAMANHO_SEG = 900.0
@@ -739,7 +722,7 @@ class CenasRemotionService:
             return transcricao_granular, None
 
         projeto = await db.get(Projeto, corte.projeto_id)
-        mapa = _carregar_mapa_falantes(getattr(projeto, "falantes_map", None))
+        mapa = mapa_falantes_para_meta(getattr(projeto, "falantes_map", None))
         if not mapa:
             return transcricao_granular, None
 
