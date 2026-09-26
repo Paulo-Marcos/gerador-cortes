@@ -20,10 +20,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.domain.canal.mascote import MASCOTE_NEUTRO, Mascote
 from app.infrastructure import settings_store
 from app.services.canal.editorial_identity import (
-    MASCOTE_NEUTRO,
-    Mascote,
     definir_nome_do_mascote,
     identidade_do_mascote,
 )

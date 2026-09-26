@@ -22,37 +22,21 @@ trazendo essa identidade para o banco editável pela UI, deixando o yaml como es
 Camada: config/loader (I/O de filesystem + banco de settings), fora de `domain/`
 puro — o mesmo lugar de `channel_config_loader` e `channel_paths`. A fachada pública
 (`identidade_do_mascote()` → `Mascote`) é preservada: os serviços de prompt não mudam.
+O que a mascote É (o objeto, a neutra, a regra do nome vazio) mora em
+`domain/canal/mascote` (D-762); aqui fica onde ela é guardada.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
 from app.core import channel_paths
 from app.core.channel_paths import editorial_dir
+from app.domain.canal.mascote import Mascote, mascote_de
 from app.infrastructure import settings_store
 
 _MASCOTE_YAML = "mascote.yaml"
-
-
-@dataclass(frozen=True)
-class Mascote:
-    """Identidade editorial do mascote usada nos prompts.
-
-    `nome` é usado VERBATIM no texto dos prompts (ex.: "identidade do Sapo",
-    "ombro do Sapo"). Manter só o essencial: o que precisa sair do código para
-    o canal permanecer com a saída idêntica lendo do `instance/`.
-    """
-
-    nome: str
-
-
-# Fallback neutro: sem `instance/editorial/mascote.yaml`, os prompts falam de um
-# "mascote" genérico — nunca do personagem de um canal específico. É o padrão
-# seguro de um clone recém-publicado.
-MASCOTE_NEUTRO = Mascote(nome="mascote")
 
 
 def _ler_yaml(caminho: Path) -> dict:
@@ -76,11 +60,6 @@ def _nome_do_yaml(editorial_root: Path | None) -> str:
     raiz = Path(editorial_root) if editorial_root is not None else editorial_dir()
     dados = _ler_yaml(raiz / _MASCOTE_YAML)
     return str(dados.get("nome") or "").strip()
-
-
-def _mascote_de(nome: str) -> Mascote:
-    """`Mascote(nome)` quando há nome; senão o fallback neutro."""
-    return Mascote(nome=nome) if nome else MASCOTE_NEUTRO
 
 
 def _resolver_db_e_canal(db_path: Path | None, channel_id: str | None) -> tuple[Path, str]:
@@ -113,12 +92,12 @@ def identidade_do_mascote(
 
     linha = settings_store.ler_mascote(db, cid)
     if linha is not None:
-        return _mascote_de(str(linha.get("nome") or "").strip())
+        return mascote_de(linha.get("nome"))
 
     # Sem linha no banco → semeia a partir do yaml legado (idempotente) e devolve.
     nome = _nome_do_yaml(editorial_root)
     settings_store.gravar_mascote(db, cid, {"nome": nome})
-    return _mascote_de(nome)
+    return mascote_de(nome)
 
 
 def definir_nome_do_mascote(
@@ -139,7 +118,7 @@ def definir_nome_do_mascote(
     db, cid = _resolver_db_e_canal(db_path, channel_id)
     settings_store.gravar_mascote(db, cid, {"nome": nome})
     _espelhar_no_yaml(nome, editorial_root)
-    return _mascote_de(nome)
+    return mascote_de(nome)
 
 
 def _espelhar_no_yaml(nome: str, editorial_root: Path | None) -> None:

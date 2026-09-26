@@ -1139,7 +1139,7 @@ class TestPromptThumbnail:
     def _rodar_prompt_thumbnail(self, monkeypatch, nome_mascote: str, *, is_fire: bool) -> str:
         """Roda a geração de prompt de thumbnail com um mascote dado e devolve o
         prompt enviado ao Claude (fakes isolam banco/CLI). Helper de D-221."""
-        from app.services.canal.editorial_identity import Mascote
+        from app.domain.canal.mascote import Mascote
 
         async def fake_ctx(_corte_id):
             return {

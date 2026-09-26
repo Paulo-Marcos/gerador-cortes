@@ -18,8 +18,8 @@ API, NÃO referência ao personagem — e por isso permanecem "mascote" mesmo em
 
 from __future__ import annotations
 
+from app.domain.canal.mascote import MASCOTE_NEUTRO, Mascote
 from app.services import metadados
-from app.services.canal import editorial_identity
 from app.services.metadados import MetadadosService
 
 # Literais EXATOS anteriores à genericização (confirmados no diff de D-221/D-222).
@@ -61,7 +61,7 @@ def test_bloco_hints_metadados_com_sapo_reproduz_texto_anterior(monkeypatch):
     monkeypatch.setattr(
         metadados,
         "identidade_do_mascote",
-        lambda: editorial_identity.Mascote(nome="Sapo"),
+        lambda: Mascote(nome="Sapo"),
     )
 
     bloco = metadados.formatar_bloco_hints_thumbnail("Direção do editor")
@@ -73,7 +73,7 @@ def test_bloco_hints_metadados_neutro_quando_fallback(monkeypatch):
     monkeypatch.setattr(
         metadados,
         "identidade_do_mascote",
-        lambda: editorial_identity.MASCOTE_NEUTRO,
+        lambda: MASCOTE_NEUTRO,
     )
 
     bloco = metadados.formatar_bloco_hints_thumbnail("Direção do editor")
