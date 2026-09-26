@@ -1,4 +1,5 @@
 import os
+from typing import Literal
 
 from app.core.channel_paths import projetos_dir as _channel_projetos_dir
 from pydantic_settings import BaseSettings
@@ -101,6 +102,13 @@ class Settings(BaseSettings):
     # D-565: o post do short e redacao curta sobre um trecho ja recortado, e o
     # peso editorial mora na skill. Mesmo patamar do gancho.
     claude_cli_thinking_tokens_metadados_short: int = 3000
+    # --- Claude pela API, com a chave do operador (BYOK, D-720) ---
+    # "assinatura" (padrão) = `claude -p`; "api" = Messages API com a chave abaixo.
+    # Nomes próprios de propósito: um ANTHROPIC_API_KEY/ANTHROPIC_BASE_URL que outra
+    # ferramenta exporte no ambiente não pode ligar a API nem desviar a chave.
+    ia_claude_transporte: Literal["assinatura", "api"] = "assinatura"
+    ia_anthropic_api_key: str = ""
+    ia_anthropic_base_url: str = "https://api.anthropic.com"
     # --- Antigravity CLI (`agy -p`): o provider "Gemini" pela assinatura Google ---
     # Mesmo papel do `claude -p`: login da conta, sem API key. Ver
     # `infrastructure/antigravity_cli_client.py` para o protocolo medido.

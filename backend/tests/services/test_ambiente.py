@@ -69,3 +69,22 @@ def test_chave_gemini_nunca_expoe_o_valor(monkeypatch):
     )["gemini_key"]
     assert item.ok
     assert "segredo" not in f"{item.detalhe}{item.como_resolver}"
+
+
+def test_quem_escolheu_a_api_nao_e_cobrado_pelo_binario_do_claude():
+    """D-720: com a chave de API, o Claude CLI ausente não é aviso."""
+    sondas = _sondas(
+        claude_cli=lambda: None, claude_por_api=lambda: True, tem_chave_anthropic=lambda: True
+    )
+    itens = _por_id(ambiente.checar(sondas))
+
+    assert "claude_cli" not in itens
+    assert itens["claude_api"].estado == "ok"
+
+
+def test_api_escolhida_sem_chave_diz_o_que_preencher():
+    sondas = _sondas(claude_por_api=lambda: True, tem_chave_anthropic=lambda: False)
+    item = _por_id(ambiente.checar(sondas))["claude_api"]
+
+    assert item.estado == "aviso"
+    assert "IA_ANTHROPIC_API_KEY" in item.como_resolver
