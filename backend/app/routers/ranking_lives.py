@@ -10,8 +10,10 @@ Endpoints:
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
-from app.routers.resposta_api import RespostaApi
+from app.models import StatusLiveCandidata
+from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
 from app.services.ranking_lives import (
     RankingIndisponivel,
     definir_voto_qualidade,
@@ -27,6 +29,65 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+_STATUS_CANDIDATA = tuple(s.value for s in StatusLiveCandidata)
+
+
+class EmbasamentoCriterio(RespostaApi):
+    """Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela."""
+
+    criterio: str
+    rotulo: str
+    valor_bruto: float
+    valor_normalizado: float
+    peso: float
+    contribuicao: float
+
+
+class LiveCandidataResponse(RespostaApi):
+    id: str
+    video_id: str
+    titulo: str
+    canal_origem: str
+    youtube_url: str
+    thumbnail_url: str
+    duracao_iso: str
+    data_publicacao: str
+    views: int
+    likes: int
+    comentarios: int
+    sentimento_score: float
+    sentimento_destaques: list[str]
+    pontuacao_total: float
+    # Mapa plano criterio → contribuição (o que a tela antiga consumia).
+    componentes_pontuacao: dict[str, float]
+    embasamento: list[EmbasamentoCriterio]
+    status: Literal[_STATUS_CANDIDATA]
+    fetched_at: str
+
+
+class RankingLivesResponse(RespostaComCamposOpcionais):
+    """O TOP de candidatas. `janela_meses` só vem numa geração nova — a resposta
+    do cache de 24h não o traz, e a chave não vem."""
+
+    lives: list[LiveCandidataResponse]
+    atualizado_em: str
+    janela_meses: int | None = None
+
+
+class CandidataRejeitadaResponse(RespostaApi):
+    video_id: str
+    status: str
+
+
+class CandidataEnfileiradaResponse(RespostaComCamposOpcionais):
+    """`ja_existia` = a live já tinha projeto; aí não há pontuação a devolver."""
+
+    projeto_id: str
+    video_id: str
+    ja_existia: bool
+    pontuacao_ranking: float | None = None
+
+
 class VotoQualidadeResponse(RespostaApi):
     """O voto de qualidade da live (D-372) ao lado da pontuação que o ranking deu."""
 
@@ -39,7 +100,7 @@ class VotoQualidadeRequest(BaseModel):
     voto: int
 
 
-@router.get("")
+@router.get("", response_model=RankingLivesResponse, response_model_exclude_unset=True)
 async def listar_ranking(forcar_refresh: bool = False):
     """Top candidatas pendentes. Quando `forcar_refresh=true`, ignora o cache de 24h."""
     try:
@@ -49,7 +110,7 @@ async def listar_ranking(forcar_refresh: bool = False):
         raise HTTPException(status_code=status, detail=str(exc)) from exc
 
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=RankingLivesResponse, response_model_exclude_unset=True)
 async def refresh_ranking():
     """Atalho explícito para o botão 'Atualizar ranking' do frontend."""
     try:
@@ -59,7 +120,7 @@ async def refresh_ranking():
         raise HTTPException(status_code=status, detail=str(exc)) from exc
 
 
-@router.post("/{video_id}/rejeitar")
+@router.post("/{video_id}/rejeitar", response_model=CandidataRejeitadaResponse)
 async def rejeitar(video_id: str):
     try:
         return await rejeitar_candidata(video_id)
@@ -69,7 +130,11 @@ async def rejeitar(video_id: str):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/{video_id}/enfileirar")
+@router.post(
+    "/{video_id}/enfileirar",
+    response_model=CandidataEnfileiradaResponse,
+    response_model_exclude_unset=True,
+)
 async def enfileirar(video_id: str):
     """Cria o Projeto da candidata e dispara a ingestão, copiando a pontuação."""
     return await enfileirar_candidata(video_id)

@@ -368,7 +368,11 @@ async def obter_telemetria_cortes(projeto_id: str, db: AsyncSession = Depends(ge
 # acima. Caminhos com ≥2 segmentos, para não colidir com GET /{projeto_id}.
 
 
-@router.post("/youtube-stats/sync", response_model=analises_schemas.YoutubeStatsSyncResponse)
+@router.post(
+    "/youtube-stats/sync",
+    response_model=analises_schemas.YoutubeStatsSyncResponse,
+    response_model_exclude_unset=True,
+)
 async def sincronizar_youtube_stats():
     """Dispara em background a sync das métricas do canal (upsert idempotente).
 

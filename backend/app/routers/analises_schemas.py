@@ -18,7 +18,7 @@ from app.domain.corte.telemetria_cortes import (
     SITUACAO_SEM_PROPOSTA_IA,
     SITUACAO_SEM_SNAPSHOT,
 )
-from app.routers.resposta_api import RespostaApi
+from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
 
 # ─── Telemetria proposta × final (D-303) ─────────────────────────────────────
 
@@ -113,7 +113,7 @@ class YoutubeStatsStatusResponse(RespostaApi):
     videos: list[YoutubeVideoStat]
 
 
-class YoutubeStatsSyncResponse(RespostaApi):
+class YoutubeStatsSyncResponse(RespostaComCamposOpcionais):
     """`iniciado` = a sync foi disparada; `erro` = falta autorizar (a tela mostra
     a instrução de `mensagem`)."""
 

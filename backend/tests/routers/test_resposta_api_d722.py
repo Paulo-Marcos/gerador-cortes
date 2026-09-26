@@ -34,3 +34,25 @@ def test_as_respostas_da_telemetria_saem_com_todos_os_campos_obrigatorios():
 
     for nome in ("LlmCallResponse", "UltimaGeracaoResponse"):
         assert set(schemas[nome]["required"]) == set(schemas[nome]["properties"]), nome
+
+
+def test_campo_que_so_existe_num_ramo_nao_ganha_null_na_resposta():
+    """Um `null` onde a chave nunca existiu muda a resposta — o teste do
+    enfileirar da candidata já promovida pegou isso."""
+    from app.routers.ranking_lives import CandidataEnfileiradaResponse
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    rotas = FastAPI()
+
+    @rotas.get("/x", response_model=CandidataEnfileiradaResponse, response_model_exclude_unset=True)
+    def _ja_promovida():
+        return {"projeto_id": "p", "video_id": "v", "ja_existia": True}
+
+    assert TestClient(rotas).get("/x").json() == {
+        "projeto_id": "p",
+        "video_id": "v",
+        "ja_existia": True,
+    }
+    schema = app.openapi()["components"]["schemas"]["CandidataEnfileiradaResponse"]
+    assert "pontuacao_ranking" not in schema["required"]

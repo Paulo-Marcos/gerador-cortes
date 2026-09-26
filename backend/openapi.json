@@ -1323,6 +1323,59 @@
         "title": "CancelarJobRequest",
         "type": "object"
       },
+      "CandidataEnfileiradaResponse": {
+        "description": "`ja_existia` = a live já tinha projeto; aí não há pontuação a devolver.",
+        "properties": {
+          "ja_existia": {
+            "title": "Ja Existia",
+            "type": "boolean"
+          },
+          "pontuacao_ranking": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pontuacao Ranking"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projeto_id",
+          "video_id",
+          "ja_existia"
+        ],
+        "title": "CandidataEnfileiradaResponse",
+        "type": "object"
+      },
+      "CandidataRejeitadaResponse": {
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "video_id",
+          "status"
+        ],
+        "title": "CandidataRejeitadaResponse",
+        "type": "object"
+      },
       "CapaTikTokRequest": {
         "description": "O que vai na faixa central e qual texto vai por cima.\n\n`origem=\"ia\"` (padrão) usa a arte que o operador subiu; `\"frame\"` tira um\nstill do vídeo, que é o escape hatch.\n\n`etiqueta` vazia usa o `texto_capa` do metadado — o mesmo texto da thumbnail\ndo YouTube. Só quando ele também está vazio a skill entra, e só se\n`sugerir_etiqueta` permitir.",
         "properties": {
@@ -1878,6 +1931,74 @@
           }
         },
         "title": "DividirCorteRequest",
+        "type": "object"
+      },
+      "EmbasamentoCriterio": {
+        "description": "Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela.",
+        "properties": {
+          "contribuicao": {
+            "title": "Contribuicao",
+            "type": "number"
+          },
+          "criterio": {
+            "title": "Criterio",
+            "type": "string"
+          },
+          "peso": {
+            "title": "Peso",
+            "type": "number"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          },
+          "valor_bruto": {
+            "title": "Valor Bruto",
+            "type": "number"
+          },
+          "valor_normalizado": {
+            "title": "Valor Normalizado",
+            "type": "number"
+          }
+        },
+        "required": [
+          "criterio",
+          "rotulo",
+          "valor_bruto",
+          "valor_normalizado",
+          "peso",
+          "contribuicao"
+        ],
+        "title": "EmbasamentoCriterio",
+        "type": "object"
+      },
+      "EnfileirarDownloadsResponse": {
+        "properties": {
+          "criados": {
+            "items": {
+              "$ref": "#/components/schemas/ProjetoCriadoResponse"
+            },
+            "title": "Criados",
+            "type": "array"
+          },
+          "ignorados": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ignorados",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "criados",
+          "ignorados"
+        ],
+        "title": "EnfileirarDownloadsResponse",
         "type": "object"
       },
       "EnfileirarRequest": {
@@ -2596,6 +2717,199 @@
         "title": "ListaVersoesResponse",
         "type": "object"
       },
+      "LiveCandidataResponse": {
+        "properties": {
+          "canal_origem": {
+            "title": "Canal Origem",
+            "type": "string"
+          },
+          "comentarios": {
+            "title": "Comentarios",
+            "type": "integer"
+          },
+          "componentes_pontuacao": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Componentes Pontuacao",
+            "type": "object"
+          },
+          "data_publicacao": {
+            "title": "Data Publicacao",
+            "type": "string"
+          },
+          "duracao_iso": {
+            "title": "Duracao Iso",
+            "type": "string"
+          },
+          "embasamento": {
+            "items": {
+              "$ref": "#/components/schemas/EmbasamentoCriterio"
+            },
+            "title": "Embasamento",
+            "type": "array"
+          },
+          "fetched_at": {
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "likes": {
+            "title": "Likes",
+            "type": "integer"
+          },
+          "pontuacao_total": {
+            "title": "Pontuacao Total",
+            "type": "number"
+          },
+          "sentimento_destaques": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sentimento Destaques",
+            "type": "array"
+          },
+          "sentimento_score": {
+            "title": "Sentimento Score",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "pendente",
+              "rejeitada",
+              "promovida"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "thumbnail_url": {
+            "title": "Thumbnail Url",
+            "type": "string"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          },
+          "youtube_url": {
+            "title": "Youtube Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "video_id",
+          "titulo",
+          "canal_origem",
+          "youtube_url",
+          "thumbnail_url",
+          "duracao_iso",
+          "data_publicacao",
+          "views",
+          "likes",
+          "comentarios",
+          "sentimento_score",
+          "sentimento_destaques",
+          "pontuacao_total",
+          "componentes_pontuacao",
+          "embasamento",
+          "status",
+          "fetched_at"
+        ],
+        "title": "LiveCandidataResponse",
+        "type": "object"
+      },
+      "LiveDoCanalResponse": {
+        "properties": {
+          "data_publicacao": {
+            "title": "Data Publicacao",
+            "type": "string"
+          },
+          "data_publicacao_yyyymmdd": {
+            "title": "Data Publicacao Yyyymmdd",
+            "type": "string"
+          },
+          "duracao_iso": {
+            "title": "Duracao Iso",
+            "type": "string"
+          },
+          "ja_baixado": {
+            "title": "Ja Baixado",
+            "type": "boolean"
+          },
+          "thumbnail_url": {
+            "title": "Thumbnail Url",
+            "type": "string"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          },
+          "youtube_url": {
+            "title": "Youtube Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "video_id",
+          "titulo",
+          "data_publicacao",
+          "data_publicacao_yyyymmdd",
+          "thumbnail_url",
+          "duracao_iso",
+          "youtube_url",
+          "ja_baixado"
+        ],
+        "title": "LiveDoCanalResponse",
+        "type": "object"
+      },
+      "LivesDoCanalResponse": {
+        "description": "`channel_id` só vem quando a busca achou lives; sem elas, a chave não vem.",
+        "properties": {
+          "after_date": {
+            "title": "After Date",
+            "type": "string"
+          },
+          "channel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Id"
+          },
+          "lives": {
+            "items": {
+              "$ref": "#/components/schemas/LiveDoCanalResponse"
+            },
+            "title": "Lives",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lives",
+          "after_date"
+        ],
+        "title": "LivesDoCanalResponse",
+        "type": "object"
+      },
       "LlmCallResponse": {
         "description": "Uma chamada de IA registrada, para a Área de Análises.",
         "properties": {
@@ -2968,6 +3282,29 @@
         "title": "ProcessarMultiversionRequest",
         "type": "object"
       },
+      "ProjetoCriadoResponse": {
+        "properties": {
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          },
+          "youtube_url": {
+            "title": "Youtube Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projeto_id",
+          "video_id",
+          "youtube_url"
+        ],
+        "title": "ProjetoCriadoResponse",
+        "type": "object"
+      },
       "ProjetoResponse": {
         "properties": {
           "arquivo_video_path": {
@@ -3186,6 +3523,39 @@
           "marcador"
         ],
         "title": "PromptUtilitarioResponse",
+        "type": "object"
+      },
+      "RankingLivesResponse": {
+        "description": "O TOP de candidatas. `janela_meses` só vem numa geração nova — a resposta\ndo cache de 24h não o traz, e a chave não vem.",
+        "properties": {
+          "atualizado_em": {
+            "title": "Atualizado Em",
+            "type": "string"
+          },
+          "janela_meses": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Janela Meses"
+          },
+          "lives": {
+            "items": {
+              "$ref": "#/components/schemas/LiveCandidataResponse"
+            },
+            "title": "Lives",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lives",
+          "atualizado_em"
+        ],
+        "title": "RankingLivesResponse",
         "type": "object"
       },
       "RegistrarAvaliacaoRequest": {
@@ -4682,8 +5052,7 @@
         },
         "required": [
           "status",
-          "mensagem",
-          "precisa_reautorizar"
+          "mensagem"
         ],
         "title": "YoutubeStatsSyncResponse",
         "type": "object"
@@ -11518,7 +11887,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RankingLivesResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11640,7 +12011,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RankingLivesResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11671,7 +12044,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CandidataEnfileiradaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11711,7 +12086,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CandidataRejeitadaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -14799,7 +15176,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EnfileirarDownloadsResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -14851,7 +15230,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LivesDoCanalResponse"
+                }
               }
             },
             "description": "Successful Response"

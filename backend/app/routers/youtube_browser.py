@@ -7,6 +7,7 @@ import asyncio
 import logging
 
 from app.database import get_db
+from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
 from app.services import lives_do_canal, youtube_auth
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -35,6 +36,37 @@ class YoutubeAuthAcaoResponse(BaseModel):
     mensagem: str
 
 
+class LiveDoCanalResponse(RespostaApi):
+    video_id: str
+    titulo: str
+    data_publicacao: str
+    data_publicacao_yyyymmdd: str
+    thumbnail_url: str
+    duracao_iso: str
+    youtube_url: str
+    ja_baixado: bool
+
+
+class LivesDoCanalResponse(RespostaComCamposOpcionais):
+    """`channel_id` só vem quando a busca achou lives; sem elas, a chave não vem."""
+
+    lives: list[LiveDoCanalResponse]
+    after_date: str
+    channel_id: str | None = None
+
+
+class ProjetoCriadoResponse(RespostaApi):
+    projeto_id: str
+    video_id: str
+    youtube_url: str
+
+
+class EnfileirarDownloadsResponse(RespostaApi):
+    message: str
+    criados: list[ProjetoCriadoResponse]
+    ignorados: list[str]
+
+
 class EnfileirarRequest(BaseModel):
     video_ids: list[str]
     canal_origem: str = ""
@@ -43,7 +75,7 @@ class EnfileirarRequest(BaseModel):
 # ─── Endpoints ───────────────────────────────────────────────────────────────
 
 
-@router.get("/lives")
+@router.get("/lives", response_model=LivesDoCanalResponse, response_model_exclude_unset=True)
 async def listar_lives_canal(
     after_date: str = "",  # YYYYMMDD — filtra lives após esta data
     max_results: int = 25,
@@ -89,7 +121,7 @@ async def youtube_auth_desconectar():
     return resultado
 
 
-@router.post("/enfileirar")
+@router.post("/enfileirar", response_model=EnfileirarDownloadsResponse)
 async def enfileirar_downloads(body: EnfileirarRequest):
     """
     Cria um Projeto para cada video_id informado e dispara o pipeline completo

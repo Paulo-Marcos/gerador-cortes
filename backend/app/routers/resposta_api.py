@@ -17,3 +17,16 @@ from pydantic import BaseModel, ConfigDict
 
 class RespostaApi(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
+
+class RespostaComCamposOpcionais(RespostaApi):
+    """Resposta com campo que só EXISTE num dos ramos do serviço (D-722).
+
+    Ex.: a candidata já promovida não tem `pontuacao_ranking`; a resposta do cache
+    do ranking não tem `janela_meses`. Aqui o campo com padrão fica opcional no
+    schema (é a verdade), e a rota precisa de `response_model_exclude_unset=True`
+    para quem não mandou a chave continuar sem mandar — sem isso a resposta
+    ganharia um `null` que nunca existiu.
+    """
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=False)
