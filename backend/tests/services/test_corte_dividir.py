@@ -10,6 +10,7 @@ import json
 
 import pytest
 import pytest_asyncio
+from app.domain.compartilhado.time_convert import seg_to_hms
 from app.models import Base, Corte, Projeto
 from app.routers import cortes as cortes_router
 from app.routers.cortes import DividirCorteRequest
@@ -62,12 +63,10 @@ async def _seed_corte(
     numero=1,
     inicio_seg=0.0,
     fim_seg=100.0,
-    inicio_hms="00:00:00.000",
-    fim_hms="00:01:40.000",
     desvios=None,
-    titulo="Tema A",
     is_leitura=0,
 ):
+    """Um corte do proj-1. As bordas em HMS saem das em segundos, como no app."""
     async with factory() as db:
         if await db.get(Projeto, "proj-1") is None:
             db.add(Projeto(id="proj-1", youtube_url="http://x", transcricao_raw="[]"))
@@ -76,9 +75,9 @@ async def _seed_corte(
                 id=corte_id,
                 projeto_id="proj-1",
                 numero=numero,
-                titulo_proposto=titulo,
-                inicio_hms=inicio_hms,
-                fim_hms=fim_hms,
+                titulo_proposto="Tema A",
+                inicio_hms=seg_to_hms(inicio_seg),
+                fim_hms=seg_to_hms(fim_seg),
                 inicio_seg=inicio_seg,
                 fim_seg=fim_seg,
                 desvios=json.dumps(desvios or []),
@@ -155,8 +154,6 @@ async def test_renumera_cortes_posteriores(session_factory, sem_resync):
         numero=2,
         inicio_seg=100.0,
         fim_seg=200.0,
-        inicio_hms="00:01:40.000",
-        fim_hms="00:03:20.000",
     )
     await _seed_corte(
         session_factory,
@@ -164,8 +161,6 @@ async def test_renumera_cortes_posteriores(session_factory, sem_resync):
         numero=3,
         inicio_seg=200.0,
         fim_seg=300.0,
-        inicio_hms="00:03:20.000",
-        fim_hms="00:05:00.000",
     )
 
     _, novo_id = await CorteService.dividir_corte("c1", 50.0)

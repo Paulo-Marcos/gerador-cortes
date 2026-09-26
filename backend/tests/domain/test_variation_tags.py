@@ -137,7 +137,7 @@ class TestStripVariationTags:
         assert "[VARIATION_TAGS]" not in stripped
         assert stripped.startswith("Editorial 2D thumbnail")
 
-    def test_idempotente(self):
+    def test_prompt_sem_tags_sai_igual(self):
         prompt = "Editorial 2D thumbnail, sem tags"
         assert strip_variation_tags(prompt) == prompt
 

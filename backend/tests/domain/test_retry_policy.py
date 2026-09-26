@@ -9,7 +9,7 @@ from app.infrastructure.render.retry_policy import RetryPolicy
 
 
 class TestConstrucao:
-    def test_defaults(self):
+    def test_sem_argumentos_tenta_tres_vezes_com_dois_segundos_de_base(self):
         p = RetryPolicy()
         assert p.max_attempts == 3
         assert p.base_delay_sec == 2.0
