@@ -335,16 +335,15 @@ def test_banco_e_fonte_da_verdade_apos_semear(tmp_path: Path):
     assert AppSettingsService.get().log_level == LogLevel.INFO
 
 
-def test_update_grava_no_banco_e_no_espelho(tmp_path: Path):
+def test_update_grava_so_no_banco(tmp_path: Path):
     settings_path = tmp_path / "app_settings.json"
     AppSettingsService.set_settings_path_for_tests(settings_path)
 
     AppSettingsService.update_render(RenderSettings(cooldown_sec=9))
 
-    # Espelho (arquivo) atualizado.
-    espelho = json.loads(settings_path.read_text(encoding="utf-8"))
-    assert espelho["render"]["cooldown_sec"] == 9
-    # Banco (fonte da verdade) atualizado.
+    # D-699: o arquivo não é mais espelho — não nasce.
+    assert not settings_path.exists()
+    # Banco (fonte única) atualizado.
     linha = settings_store.ler_app_settings(tmp_path / "settings.db", "default")
     assert linha["render_cooldown_sec"] == 9
 

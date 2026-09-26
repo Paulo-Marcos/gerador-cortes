@@ -31,11 +31,15 @@ TETO = 2000
 def _rodar_job(projetos: Path, pasta_do_job: Path) -> None:
     fila = projetos / "fila_remotion"
     fila.mkdir(parents=True, exist_ok=True)
-    (projetos / "app_settings.json").write_text(json.dumps({"log_level": "info"}), encoding="utf-8")
     worker = subprocess.Popen(
         ["node", str(WORKER)],
         cwd=str(RENDERER),
-        env={**os.environ, "PROJETOS_DIR": str(projetos), "WORKER_LOG_MAX_BYTES": str(TETO)},
+        env={
+            **os.environ,
+            "PROJETOS_DIR": str(projetos),
+            "WORKER_LOG_LEVEL": "info",
+            "WORKER_LOG_MAX_BYTES": str(TETO),
+        },
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT,
     )
