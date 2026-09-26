@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PadroesCompilados } from '@/lib/api';
+import type { PadroesCompilados } from '../api';
 import { eixosComOcorrencias, rotuloEixo } from '../thumbnailPadroes';
 
 describe('rotuloEixo', () => {

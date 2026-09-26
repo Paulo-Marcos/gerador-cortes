@@ -422,48 +422,6 @@ export interface PromptManualResponse {
   formato_esperado?: unknown;
 }
 
-// D-066: histórico de avaliações do par prompt+imagem de thumbnail.
-export type VeredictoThumbnail = 'otimo' | 'bom' | 'regular' | 'ruim';
-
-export interface AvaliacaoThumbnail {
-  id: string;
-  corte_id: string;
-  prompt_snapshot: string;
-  thumbnail_path_snapshot: string;
-  titulo_youtube_snapshot: string;
-  texto_capa_snapshot: string;
-  veredito: VeredictoThumbnail;
-  nota_fidelidade: number | null;
-  nota_clareza: number | null;
-  nota_beleza: number | null;
-  nota_impacto: number | null;
-  nota_honestidade: number | null;
-  comentario: string;
-  criado_em: string | null;
-}
-
-export interface AvaliacaoThumbnailResumo {
-  total: number;
-  positivos: number;
-  por_veredito: Record<VeredictoThumbnail, number>;
-  medias_criterios: Record<string, number | null>;
-}
-
-export interface AvaliacaoThumbnailHistorico {
-  avaliacoes: AvaliacaoThumbnail[];
-  resumo: AvaliacaoThumbnailResumo;
-}
-
-export interface RegistrarAvaliacaoThumbnailBody {
-  veredito: VeredictoThumbnail;
-  nota_fidelidade: number | null;
-  nota_clareza: number | null;
-  nota_beleza: number | null;
-  nota_impacto: number | null;
-  nota_honestidade: number | null;
-  comentario: string;
-}
-
 export interface FiltroExport {
   id: string;
   nome: string;

@@ -4393,6 +4393,18 @@ export interface components {
             inicio_hms: string;
         };
         /**
+         * AnalisePadroesAgente
+         * @description A leitura do agente, já normalizada pelo domínio (`normalizar_analise`).
+         */
+        AnalisePadroesAgente: {
+            /** Padroes */
+            padroes: components["schemas"]["PadraoIdentificado"][];
+            /** Proposta Ajuste Skill */
+            proposta_ajuste_skill: string;
+            /** Resumo */
+            resumo: string;
+        };
+        /**
          * ApontamentoResponse
          * @description Uma ressalva do avaliador. As chaves são as que o domínio reconstrói.
          */
@@ -4696,6 +4708,53 @@ export interface components {
             motivos: string[];
             /** Voto */
             voto: number | null;
+        };
+        /** AvaliacaoRegistradaResponse */
+        AvaliacaoRegistradaResponse: {
+            avaliacao: components["schemas"]["AvaliacaoThumbnailResponse"];
+            /** Message */
+            message: string;
+        };
+        /**
+         * AvaliacaoThumbnailResponse
+         * @description Uma avaliação do par prompt+imagem (D-066). Os snapshots saem crus do
+         *     banco — por isso admitem None.
+         */
+        AvaliacaoThumbnailResponse: {
+            /** Comentario */
+            comentario: string | null;
+            /** Corte Id */
+            corte_id: string;
+            /** Criado Em */
+            criado_em: string | null;
+            /** Id */
+            id: string;
+            /** Nota Beleza */
+            nota_beleza: number | null;
+            /** Nota Clareza */
+            nota_clareza: number | null;
+            /** Nota Fidelidade */
+            nota_fidelidade: number | null;
+            /** Nota Honestidade */
+            nota_honestidade: number | null;
+            /** Nota Impacto */
+            nota_impacto: number | null;
+            /** Prompt Snapshot */
+            prompt_snapshot: string | null;
+            /** Texto Capa Snapshot */
+            texto_capa_snapshot: string | null;
+            /** Thumbnail Path Snapshot */
+            thumbnail_path_snapshot: string | null;
+            /** Titulo Youtube Snapshot */
+            titulo_youtube_snapshot: string | null;
+            /** Veredito */
+            veredito: string;
+        };
+        /** AvaliacoesThumbnailResponse */
+        AvaliacoesThumbnailResponse: {
+            /** Avaliacoes */
+            avaliacoes: components["schemas"]["AvaliacaoThumbnailResponse"][];
+            resumo: components["schemas"]["ResumoAvaliacoesThumbnail"];
         };
         /**
          * BlocoArranjoSchema
@@ -5624,11 +5683,61 @@ export interface components {
             /** Para Indice */
             para_indice: number;
         };
+        /** OcorrenciaDoEixo */
+        OcorrenciaDoEixo: {
+            /** Contagem */
+            contagem: number;
+            /** Valor */
+            valor: string;
+        };
         /**
          * OverlayCodec
          * @enum {string}
          */
         OverlayCodec: "vp9" | "prores_4444";
+        /** PadraoIdentificado */
+        PadraoIdentificado: {
+            /** Eixo */
+            eixo: string;
+            /** Evidencia */
+            evidencia: string;
+            /** Forca */
+            forca: string;
+            /** Padrao */
+            padrao: string;
+        };
+        /** PadroesCompilados */
+        PadroesCompilados: {
+            /** Com Tags */
+            com_tags: number;
+            /** Eixos */
+            eixos: {
+                [key: string]: components["schemas"]["OcorrenciaDoEixo"][];
+            };
+            /** Total Melhores */
+            total_melhores: number;
+        };
+        /**
+         * PadroesThumbnailResponse
+         * @description `ok` traz `com_tags`; `dados_insuficientes` traz o `minimo` e nada a analisar.
+         */
+        PadroesThumbnailResponse: {
+            analise: components["schemas"]["AnalisePadroesAgente"] | null;
+            /** Com Tags */
+            com_tags?: number | null;
+            /** Minimo */
+            minimo?: number | null;
+            padroes: components["schemas"]["PadroesCompilados"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "dados_insuficientes";
+            /** Total Avaliacoes */
+            total_avaliacoes: number;
+            /** Total Melhores */
+            total_melhores: number;
+        };
         /** PalcoPadraoRequest */
         PalcoPadraoRequest: {
             /** Preset Id */
@@ -5891,6 +6000,21 @@ export interface components {
         ResetSkillRequest: {
             /** Campos */
             campos: string[];
+        };
+        /** ResumoAvaliacoesThumbnail */
+        ResumoAvaliacoesThumbnail: {
+            /** Medias Criterios */
+            medias_criterios: {
+                [key: string]: number | null;
+            };
+            /** Por Veredito */
+            por_veredito: {
+                [key: string]: number;
+            };
+            /** Positivos */
+            positivos: number;
+            /** Total */
+            total: number;
         };
         /** ReverterSkillRequest */
         ReverterSkillRequest: {
@@ -6638,7 +6762,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AvaliacoesThumbnailResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6669,7 +6793,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AvaliacoesThumbnailResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6704,7 +6828,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AvaliacaoRegistradaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6735,7 +6859,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PadroesThumbnailResponse"];
                 };
             };
             /** @description Validation Error */

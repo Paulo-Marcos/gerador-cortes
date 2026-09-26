@@ -5,9 +5,6 @@ import type {
   AppSettings,
   ArranjoBlocos,
   AuditoriaAnaliseResponse,
-  AvaliacaoThumbnail,
-  AvaliacaoThumbnailHistorico,
-  RegistrarAvaliacaoThumbnailBody,
   BulkYoutubeRequest,
   BulkYoutubeResponse,
   CenaRemotion,
@@ -63,42 +60,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
-}
-
-// D-070: análise de padrões dos melhores prompts de thumbnail. Tipos definidos
-// aqui (e não em models.ts) porque models.ts está sob lock e fora do escopo.
-export interface PadroaoEixoOcorrencia {
-  valor: string;
-  contagem: number;
-}
-
-export interface PadroesCompilados {
-  total_melhores: number;
-  com_tags: number;
-  eixos: Record<string, PadroaoEixoOcorrencia[]>;
-}
-
-export interface PadraoIdentificado {
-  eixo: string;
-  padrao: string;
-  evidencia: string;
-  forca: 'alta' | 'media' | 'baixa' | string;
-}
-
-export interface AnalisePadroesAgente {
-  resumo: string;
-  padroes: PadraoIdentificado[];
-  proposta_ajuste_skill: string;
-}
-
-export interface PadroesThumbnailResponse {
-  status: 'ok' | 'dados_insuficientes';
-  total_avaliacoes: number;
-  total_melhores: number;
-  com_tags?: number;
-  minimo?: number;
-  padroes: PadroesCompilados | null;
-  analise: AnalisePadroesAgente | null;
 }
 
 // D-160 — opt-ins da regeração do bruto. Só valem quando o corte já tem bruto
@@ -325,24 +286,6 @@ export const api = {
       `/claude/corte/${corteId}/gerar-prompt-thumbnail?provider=${provider}`,
       { method: 'POST', body: '{}' },
     ),
-
-
-  // D-066: histórico de avaliações do par prompt+imagem de thumbnail.
-  registrarAvaliacaoThumbnail: (corteId: string, body: RegistrarAvaliacaoThumbnailBody) =>
-    request<{ message: string; avaliacao: AvaliacaoThumbnail }>(
-      `/avaliacoes-thumbnail/corte/${corteId}`,
-      { method: 'POST', body: JSON.stringify(body) },
-    ),
-
-  listarAvaliacoesThumbnail: (corteId: string) =>
-    request<AvaliacaoThumbnailHistorico>(`/avaliacoes-thumbnail/corte/${corteId}`),
-
-  // D-070: dispara a análise de padrões dos melhores prompts avaliados.
-  analisarPadroesThumbnail: (provider: ProviderIA = 'claude') =>
-    request<PadroesThumbnailResponse>(`/avaliacoes-thumbnail/padroes?provider=${provider}`, {
-      method: 'POST',
-      body: '{}',
-    }),
 
   analisarIntervalo: (projetoId: string, body: AnalisarIntervaloRequest) =>
     request<{ message: string; novos_cortes: number; primeiro_numero: number }>(

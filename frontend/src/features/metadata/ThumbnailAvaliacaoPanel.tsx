@@ -7,7 +7,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Loader2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
-import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
   CRITERIOS,
@@ -16,7 +15,7 @@ import {
   rotuloVeredito,
   type NotasState,
 } from './thumbnailAvaliacao';
-import type { VeredictoThumbnail } from '@/types/models';
+import { avaliacaoThumbnailApi, type VeredictoThumbnail } from './api/avaliacaoThumbnail';
 
 const avaliacoesKey = (corteId: string) => ['avaliacoes-thumbnail', corteId] as const;
 
@@ -37,12 +36,12 @@ export function ThumbnailAvaliacaoPanel({ corteId }: { corteId: string }) {
 
   const historicoQuery = useQuery({
     queryKey: avaliacoesKey(corteId),
-    queryFn: () => api.listarAvaliacoesThumbnail(corteId),
+    queryFn: () => avaliacaoThumbnailApi.listar(corteId),
   });
 
   const registrar = useMutation({
     mutationFn: (input: { veredito: VeredictoThumbnail; comDetalhes: boolean }) =>
-      api.registrarAvaliacaoThumbnail(
+      avaliacaoThumbnailApi.registrar(
         corteId,
         montarPayloadAvaliacao({
           veredito: input.veredito,
