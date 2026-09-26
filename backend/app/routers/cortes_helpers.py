@@ -20,7 +20,6 @@ from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload
 from app.domain.corte.desvio_categoria import classificar_desvio
 from app.models import Corte
 from fastapi import HTTPException
-from sqlalchemy.exc import SQLAlchemyError
 
 # O ffprobe da duração só lê o cabeçalho do arquivo.
 _TIMEOUT_DO_FFPROBE_S = 10
@@ -66,6 +65,8 @@ def _corte_to_dict(corte: Corte) -> dict:
         d["score"] = json.loads(getattr(corte, "score_json", None) or "{}")
     except (ValueError, TypeError):
         d["score"] = {}
+    # D-713: o Fire é coluna do corte agora; a API sempre o entregou booleano.
+    d["is_fire"] = bool(getattr(corte, "is_fire", False))
     d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")
     d["transcricao_final"] = json.loads(corte.transcricao_final or "[]")
     d["transcricao_final_texto"] = corte.transcricao_final_texto or ""
@@ -98,12 +99,6 @@ def _corte_to_dict(corte: Corte) -> dict:
         d["trechos_geracoes_log"] = json.loads(getattr(corte, "trechos_geracoes_log", None) or "[]")
     except (ValueError, TypeError):
         d["trechos_geracoes_log"] = []
-
-    # Prevenção contra erro de Lazy Loading (greenlet_spawn)
-    try:
-        d["is_fire"] = corte.metadado.is_fire if corte.metadado else False
-    except SQLAlchemyError:
-        d["is_fire"] = False
 
     d["is_pos_producao"] = getattr(corte, "is_pos_producao", 0)
 

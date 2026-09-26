@@ -102,7 +102,7 @@ async def _capa_e_marcas(corte_id: str) -> tuple[str, bool, bool] | None:
 
         return (
             str(resolver_do_projeto(meta.thumbnail_path, corte.projeto_id)),
-            bool(meta.is_fire),
+            bool(corte.is_fire),
             bool(corte.is_leitura),
         )
 
@@ -133,9 +133,8 @@ class ThumbnailService:
             projeto_id = corte.projeto_id
             # Lidas AQUI, com a sessão viva: fora dela as instâncias estão
             # desligadas e qualquer atributo vira um SELECT que não acontece.
-            # As duas marcas moram em tabelas diferentes — Fire é julgamento do
-            # metadado, Leitura é natureza do corte.
-            is_fire = bool(meta.is_fire)
+            # As duas marcas moram no corte (D-713).
+            is_fire = bool(corte.is_fire)
             is_leitura = bool(corte.is_leitura)
 
         thumb_dir = os.path.join(str(projetos_dir()), projeto_id, "thumbnails")
@@ -366,7 +365,7 @@ class ThumbnailService:
             await _gravar_capa(
                 str(thumb_path),
                 imagem_bytes,
-                is_fire=bool(meta.is_fire),
+                is_fire=bool(corte.is_fire),
                 is_leitura=bool(corte.is_leitura),
             )
 

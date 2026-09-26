@@ -472,7 +472,7 @@ def _refletir_leitura_no_metadado(corte: Corte) -> None:
     )
     corte.metadado.texto_capa = aplicar_emojis_texto_capa(
         corte.metadado.texto_capa,
-        bool(corte.metadado.is_fire),
+        bool(corte.is_fire),
         bool(corte.is_leitura),
     )
 

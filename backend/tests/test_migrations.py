@@ -199,14 +199,15 @@ async def _criar_tabelas_so_com_pk(conn) -> None:
 
 
 @pytest.mark.asyncio
-async def test_reconciliacao_adiciona_is_fire_em_metadados_antigo(conn):
-    """Regressão D-403: banco cuja `metadados_cortes` nasceu sem `is_fire` ganha a
-    coluna — era o que fazia `GET /api/cortes/projeto/{id}` responder 500."""
-    await conn.execute(text("CREATE TABLE metadados_cortes (id VARCHAR(36) PRIMARY KEY)"))
+async def test_reconciliacao_adiciona_is_fire_em_cortes_antigo(conn):
+    """Regressão D-403: banco cuja tabela nasceu sem `is_fire` ganha a coluna — era
+    o que fazia `GET /api/cortes/projeto/{id}` responder 500. Desde o D-713 o
+    `is_fire` mora em `cortes`."""
+    await conn.execute(text("CREATE TABLE cortes (id VARCHAR(36) PRIMARY KEY)"))
 
     await reconciliacao.reconciliar_schema(conn)
 
-    assert "is_fire" in await _colunas(conn, "metadados_cortes")
+    assert "is_fire" in await _colunas(conn, "cortes")
 
 
 @pytest.mark.asyncio
@@ -255,11 +256,11 @@ async def test_reconciliacao_ignora_tabela_ausente(conn):
 @pytest.mark.asyncio
 async def test_runner_reconcilia_antes_das_migrations(conn):
     """A reconciliação está de fato no caminho do boot — `init_db` chama o runner."""
-    await conn.execute(text("CREATE TABLE metadados_cortes (id VARCHAR(36) PRIMARY KEY)"))
+    await _criar_tabelas_so_com_pk(conn)
 
     await aplicar_migrations(conn)
 
-    assert "is_fire" in await _colunas(conn, "metadados_cortes")
+    assert "is_fire" in await _colunas(conn, "cortes")
 
 
 @pytest.mark.asyncio
@@ -280,9 +281,9 @@ def test_colunas_faltantes_preserva_ordem_do_modelo():
 
 
 def test_ddl_usa_default_literal_do_modelo():
-    coluna = Base.metadata.tables["metadados_cortes"].columns["is_fire"]
+    coluna = Base.metadata.tables["cortes"].columns["is_fire"]
 
-    assert reconciliacao.ddl_add_column("metadados_cortes", coluna).endswith("DEFAULT 0")
+    assert reconciliacao.ddl_add_column("cortes", coluna).endswith("DEFAULT 0")
 
 
 def test_ddl_usa_o_valor_do_enum_e_nao_seu_repr():
@@ -305,3 +306,61 @@ def test_ddl_omite_default_calculado_em_python():
     coluna = Column("criado_em", DateTime, default=datetime.utcnow)
 
     assert "DEFAULT" not in reconciliacao.ddl_add_column("cortes", coluna)
+
+
+# ─── D-713: o Fire e a indicação passam do metadado para o corte ──────────────
+
+
+async def _banco_com_fire_no_metadado(conn) -> None:
+    await conn.execute(
+        text(
+            "CREATE TABLE cortes (id VARCHAR(36) PRIMARY KEY, "
+            "is_fire INTEGER DEFAULT 0, candidato_shorts INTEGER DEFAULT 0)"
+        )
+    )
+    await conn.execute(
+        text(
+            "CREATE TABLE metadados_cortes (id VARCHAR(36) PRIMARY KEY, corte_id VARCHAR(36), "
+            "is_fire INTEGER DEFAULT 0, candidato_shorts INTEGER DEFAULT 0)"
+        )
+    )
+    await conn.execute(text("INSERT INTO cortes (id) VALUES ('fire'), ('indicado'), ('sem-meta')"))
+    await conn.execute(
+        text(
+            "INSERT INTO metadados_cortes (id, corte_id, is_fire, candidato_shorts) "
+            "VALUES ('m1', 'fire', 1, 0), ('m2', 'indicado', 0, 1)"
+        )
+    )
+
+
+@pytest.mark.asyncio
+async def test_migration_007_copia_as_marcas_do_metadado_para_o_corte(conn):
+    from app.migrations import migration_007_fire_no_corte
+
+    await _banco_com_fire_no_metadado(conn)
+
+    await migration_007_fire_no_corte.upgrade(conn)
+
+    linhas = await conn.execute(
+        text("SELECT id, is_fire, candidato_shorts FROM cortes ORDER BY id")
+    )
+    assert [tuple(linha) for linha in linhas] == [
+        ("fire", 1, 0),
+        ("indicado", 0, 1),
+        ("sem-meta", 0, 0),
+    ]
+    # As colunas antigas ficam: a migration não apaga nada.
+    assert {"is_fire", "candidato_shorts"} <= await _colunas(conn, "metadados_cortes")
+
+
+@pytest.mark.asyncio
+async def test_migration_007_em_banco_novo_nao_faz_nada(conn):
+    from app.migrations import migration_007_fire_no_corte
+
+    await conn.execute(text("CREATE TABLE cortes (id VARCHAR(36) PRIMARY KEY, is_fire INTEGER)"))
+    await conn.execute(text("CREATE TABLE metadados_cortes (id VARCHAR(36) PRIMARY KEY)"))
+    await conn.execute(text("INSERT INTO cortes (id, is_fire) VALUES ('c1', 1)"))
+
+    await migration_007_fire_no_corte.upgrade(conn)
+
+    assert (await conn.execute(text("SELECT is_fire FROM cortes"))).scalar_one() == 1

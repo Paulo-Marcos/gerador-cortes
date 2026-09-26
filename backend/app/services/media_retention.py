@@ -254,8 +254,7 @@ class MediaRetentionService:
         """
         protegidos: set[Path] = set()
         for corte in cortes:
-            metadado = getattr(corte, "metadado", None)
-            e_fire = bool(metadado and metadado.is_fire)
+            e_fire = bool(corte.is_fire)
             # So o Fire tem o que guardar: o disco so e varrido para ele.
             brutos = cls._brutos_do_corte(corte) if e_fire else set()
             # RN-15: a regra mora no dominio (D-710); aqui so o disco.

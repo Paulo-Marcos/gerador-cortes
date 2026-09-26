@@ -56,9 +56,10 @@ async def _semear(factory, raiz, *, fire: bool, shorts_finalizados: bool = False
                 projeto_id="p1",
                 numero=1,
                 shorts_finalizados_em=datetime.now(UTC) if shorts_finalizados else None,
+                is_fire=fire,
             )
         )
-        db.add(MetadadoCorte(id="m1", corte_id="c1", is_fire=fire))
+        db.add(MetadadoCorte(id="m1", corte_id="c1"))
         await db.commit()
     return bruto
 

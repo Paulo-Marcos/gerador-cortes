@@ -45,6 +45,7 @@ class Esteira:
             audio_offset_ms=0,
             status="proposto",
             metadado=None,
+            is_fire=False,
             arquivo_clip_path=None,
             duracao_clip_seg=None,
         )
@@ -338,7 +339,7 @@ async def test_cenas_que_falham_marcam_erro_e_o_bruto_fica_pronto(esteira, monke
 @pytest.mark.asyncio
 async def test_shorts_so_para_o_corte_fire(esteira, monkeypatch, fire, gera):
     monkeypatch.setattr(export_module.settings, "claude_auto_shorts_no_bruto", True)
-    esteira.corte.metadado = types.SimpleNamespace(is_fire=fire)
+    esteira.corte.is_fire = fire
 
     await gerar("c1")
 
@@ -348,7 +349,7 @@ async def test_shorts_so_para_o_corte_fire(esteira, monkeypatch, fire, gera):
 @pytest.mark.asyncio
 async def test_shorts_que_falham_marcam_erro_e_o_bruto_fica_pronto(esteira, monkeypatch):
     monkeypatch.setattr(export_module.settings, "claude_auto_shorts_no_bruto", True)
-    esteira.corte.metadado = types.SimpleNamespace(is_fire=True)
+    esteira.corte.is_fire = True
     esteira.shorts.side_effect = RuntimeError("IA fora")
 
     assert (await gerar("c1"))["status"] == "pronto"

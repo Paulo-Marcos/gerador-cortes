@@ -230,7 +230,7 @@ async def test_montar_prompt_thumbnail_externo_inclui_instrucao_json():
 
     meta = MagicMock()
     meta.texto_capa = "Texto Capa Teste"
-    meta.is_fire = True
+    corte.is_fire = True
 
     mock_db = AsyncMock()
     mock_db.get = AsyncMock(return_value=corte)

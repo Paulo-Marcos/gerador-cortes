@@ -104,7 +104,7 @@ class ExportService(
             # D-455: o corte marcado com Fire ganha uma etapa a mais no fim da
             # esteira — a fábrica de shorts. Lida aqui, antes de qualquer passo,
             # para o dropdown de progresso já nascer com a lista certa.
-            e_fire = bool(corte.metadado.is_fire) if corte.metadado else False
+            e_fire = bool(corte.is_fire)
             BrutoProgress.iniciar(corte_id, incluir_shorts=e_fire)
             await _salvaguarda_de_silencios(db, corte, corte_id)
 

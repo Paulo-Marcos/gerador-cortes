@@ -125,10 +125,9 @@ async def _aprovados_com_metadado(db: AsyncSession, ids: list[str]) -> dict[str,
 async def _fires_pendentes(db: AsyncSession, ids: list[str]) -> dict[str, int]:
     res = await db.execute(
         select(Corte.projeto_id, func.count(Corte.id).label("total"))
-        .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
         .where(
             Corte.projeto_id.in_(ids),
-            MetadadoCorte.is_fire,
+            Corte.is_fire,
             Corte.arquivo_clip_path.is_not(None),
             Corte.arquivo_clip_path != "",
             Corte.shorts_finalizados_em.is_(None),

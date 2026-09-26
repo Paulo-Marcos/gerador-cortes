@@ -168,18 +168,18 @@ class MetadadosService:
                     corte_id=corte_id,
                     titulo_youtube=corte.titulo_proposto,
                     descricao_youtube="",
-                    is_fire=False,
                     # D-666: o mesmo crédito que o default do model gravava.
                     canal_credito=channels.identidade_do_canal_ativo().credito,
                 )
                 db.add(meta)
 
-            meta.is_fire = not meta.is_fire
+            # D-713: o Fire é do corte; o metadado só leva o 🔥 no título e na capa.
+            corte.is_fire = not corte.is_fire
 
             emoji = "🔥 "
             titulo = meta.titulo_youtube or ""
 
-            if meta.is_fire:
+            if corte.is_fire:
                 if not titulo.startswith(emoji):
                     meta.titulo_youtube = emoji + titulo
             else:
@@ -189,12 +189,12 @@ class MetadadosService:
             if corte:
                 meta.texto_capa = aplicar_emojis_texto_capa(
                     meta.texto_capa,
-                    bool(meta.is_fire),
+                    bool(corte.is_fire),
                     bool(corte.is_leitura),
                 )
 
             await db.commit()
-            resposta = {"is_fire": bool(meta.is_fire), "titulo_youtube": meta.titulo_youtube}
+            resposta = {"is_fire": bool(corte.is_fire), "titulo_youtube": meta.titulo_youtube}
 
         # A moldura da capa lê o mesmo par de marcas que os emojis logo acima. Se
         # o 🔥 entrou no texto, a moldura Fire entra em volta — senão a capa diria
@@ -610,7 +610,7 @@ class MetadadosService:
             if opcoes_texto_capa:
                 tc = opcoes_texto_capa[0]
                 meta.texto_capa = aplicar_emojis_texto_capa(
-                    tc, bool(meta.is_fire), bool(corte.is_leitura)
+                    tc, bool(corte.is_fire), bool(corte.is_leitura)
                 )
 
             meta.link_live_com_timestamp = link_live
@@ -634,7 +634,7 @@ class MetadadosService:
         transcricao_final = await MetadadosService._obter_transcricao_final(corte_id)
         texto_capa = aplicar_emojis_texto_capa(
             meta.texto_capa if meta else "",
-            bool(meta.is_fire) if meta else False,
+            bool(corte.is_fire),
             bool(corte.is_leitura),
         )
 
@@ -694,7 +694,7 @@ class MetadadosService:
         transcricao_final = await MetadadosService._obter_transcricao_final(corte_id)
         texto_capa = aplicar_emojis_texto_capa(
             meta.texto_capa if meta else "",
-            bool(meta.is_fire) if meta else False,
+            bool(corte.is_fire),
             bool(corte.is_leitura),
         )
         historico = await MetadadosService._obter_historico_thumbnails(corte.projeto_id, corte_id)
@@ -738,7 +738,7 @@ class MetadadosService:
         transcricao_final = await MetadadosService._obter_transcricao_final(corte_id)
         texto_capa = aplicar_emojis_texto_capa(
             meta.texto_capa if meta else "",
-            bool(meta.is_fire) if meta else False,
+            bool(corte.is_fire),
             bool(corte.is_leitura),
         )
         historico = await MetadadosService._obter_historico_thumbnails(corte.projeto_id, corte_id)
@@ -758,7 +758,7 @@ class MetadadosService:
             # JÁ aparecem prefixados em `texto_capa`, mas precisam ser
             # explicitamente entregues na arte (o Claude vinha descartando-os
             # ao condensar o apoio para ≤3 palavras).
-            "is_fire": bool(meta.is_fire) if meta else False,
+            "is_fire": bool(corte.is_fire),
             "is_leitura": bool(corte.is_leitura),
         }
 

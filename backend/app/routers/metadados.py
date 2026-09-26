@@ -52,11 +52,18 @@ class AtualizarMetadadoRequest(BaseModel):
 async def obter_metadado(corte_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id))
     meta = result.scalar_one_or_none()
+    # D-713: as marcas editoriais moram no corte; a resposta continua trazendo-as
+    # aqui, como antes, para a tela nao mudar.
+    corte = await db.get(Corte, corte_id)
+    marcas = {
+        "is_fire": bool(corte.is_fire) if corte else False,
+        "candidato_shorts": bool(corte.candidato_shorts) if corte else False,
+    }
     if not meta:
         return {
             "id": None,
             "corte_id": corte_id,
-            "is_fire": False,
+            "is_fire": marcas["is_fire"],
             "titulo_youtube": "",
             "descricao_youtube": "",
             "tags_youtube": [],
@@ -68,6 +75,7 @@ async def obter_metadado(corte_id: str, db: AsyncSession = Depends(get_db)):
         }
     return {
         **{c: getattr(meta, c) for c in meta.__table__.columns.keys()},
+        **marcas,
         "tags_youtube": json.loads(meta.tags_youtube or "[]"),
         "opcoes_titulo": json.loads(meta.opcoes_titulo or "[]"),
         "opcoes_texto_capa": json.loads(meta.opcoes_texto_capa or "[]"),

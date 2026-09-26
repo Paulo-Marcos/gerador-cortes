@@ -270,8 +270,8 @@ async def test_listar_conta_o_estado_de_cada_projeto_do_mais_novo_ao_mais_velho(
         Projeto(id="p2", youtube_url="u2", data_live="20260901"),
         Projeto(id="p3", youtube_url="u3", data_live="20260920"),
         # público sem agendamento, com clip, metadado e Fire pendente
-        _corte("c1", "p1", aprovado, yt="yt1", clip="c1.mp4"),
-        MetadadoCorte(id="m1", corte_id="c1", titulo_youtube="Título", is_fire=True),
+        _corte("c1", "p1", aprovado, yt="yt1", clip="c1.mp4", is_fire=True),
+        MetadadoCorte(id="m1", corte_id="c1", titulo_youtube="Título"),
         _corte("c2", "p1", aprovado, yt="yt2", agendado="2999-01-01T00:00:00Z"),  # futuro
         _corte("c3", "p1", aprovado, clip="c3.mp4"),  # vídeo pronto só no disco
         _corte("c4", "p1", proposto),

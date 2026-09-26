@@ -40,6 +40,7 @@ from app.migrations import (
     migration_004_campos_v2_cortes,
     migration_005_trechos_geracoes,
     migration_006_indices_filtros_quentes,
+    migration_007_fire_no_corte,
     reconciliacao,
 )
 from app.models import Base
@@ -88,6 +89,11 @@ MIGRATIONS: tuple[Migration, ...] = (
         version=6,
         description="D-650 — índices em cortes.projeto_id, shorts.corte_id e projetos.youtube_url",
         upgrade=migration_006_indices_filtros_quentes.upgrade,
+    ),
+    Migration(
+        version=7,
+        description="D-713 — is_fire e candidato_shorts passam do metadado para o corte",
+        upgrade=migration_007_fire_no_corte.upgrade,
     ),
 )
 

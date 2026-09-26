@@ -36,8 +36,7 @@ from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.domain.short.formato_video import foco_de_regiao
 from app.domain.short.moldura_short import Moldura
 from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
-from app.models import Corte, MetadadoCorte, MetadadoShort, Projeto, Short, StatusShort
-from app.services import channels
+from app.models import Corte, MetadadoShort, Projeto, Short, StatusShort
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, gerar_texto, registrar_skill_usada
 from sqlalchemy import and_, case, func, or_, select
@@ -875,26 +874,17 @@ async def listar_shorts(corte_id: str) -> list[dict]:
 async def indicar_para_shorts(corte_id: str, indicado: bool = True) -> dict:
     """Marca o corte como candidato a short, sem tocar no Fire (D-502).
 
-    Cria o `MetadadoCorte` se ainda nao existe: um corte que nunca passou pela
-    etapa de metadados tambem pode ter um trecho bom, e exigir que ele passe
-    antes seria uma dependencia inventada.
+    Um corte que nunca passou pela etapa de metadados tambem pode ter um trecho
+    bom. A marca mora no proprio corte (D-713): antes ela vivia no metadado, e
+    indicar um corte sem metadado criava um vazio so para guarda-la.
     """
     async with AsyncSessionLocal() as db:
         corte = await db.get(Corte, corte_id)
         if not corte:
             raise LookupError(f"Corte {corte_id!r} nao encontrado")
 
-        metadado = corte.metadado
-        if metadado is None:
-            # D-666: o mesmo crédito que o default do model gravava.
-            metadado = MetadadoCorte(
-                id=str(uuid.uuid4()),
-                corte_id=corte_id,
-                canal_credito=channels.identidade_do_canal_ativo().credito,
-            )
-            db.add(metadado)
-
-        metadado.candidato_shorts = bool(indicado)
+        # D-713: a indicação é do corte — não precisa mais de metadado.
+        corte.candidato_shorts = bool(indicado)
         await db.commit()
 
     logger.info(
@@ -944,14 +934,14 @@ async def elegibilidade(corte_id: str) -> dict:
         total = await db.scalar(
             select(func.count()).select_from(Short).where(Short.corte_id == corte_id)
         )
-        indicado = bool(corte.metadado.candidato_shorts) if corte.metadado else False
+        indicado = bool(corte.candidato_shorts)
         return {
-            "is_fire": bool(corte.metadado.is_fire) if corte.metadado else False,
+            "is_fire": bool(corte.is_fire),
             "candidato_shorts": indicado,
             # D-502: a fabrica abre para Fire OU para indicacao manual. Sao
             # julgamentos diferentes: o Fire e sobre o corte, a indicacao e
             # sobre um trecho dele.
-            "elegivel": (bool(corte.metadado.is_fire) if corte.metadado else False) or indicado,
+            "elegivel": bool(corte.is_fire) or indicado,
             "tem_bruto": _bruto_em_disco(corte) is not None,
             "total_shorts": int(total or 0),
         }
@@ -1198,10 +1188,9 @@ async def listar_fires_com_bruto() -> list[dict]:
         linhas = (
             await db.execute(
                 select(Corte, Projeto)
-                .join(MetadadoCorte, MetadadoCorte.corte_id == Corte.id)
                 .join(Projeto, Projeto.id == Corte.projeto_id)
                 # D-502: Fire OU indicado a mao — dois caminhos para a mesma fila.
-                .where(or_(MetadadoCorte.is_fire, MetadadoCorte.candidato_shorts))
+                .where(or_(Corte.is_fire, Corte.candidato_shorts))
                 .order_by(Corte.atualizado_em.desc())
             )
         ).all()
@@ -1250,8 +1239,8 @@ def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path | None) -> dict:
         # lugar de "descartar", e nao finge um tamanho que nao existe.
         "tem_bruto": bruto is not None,
         "bruto_mb": round(bruto.stat().st_size / 1_000_000, 1) if bruto else 0.0,
-        "is_fire": bool(corte.metadado.is_fire) if corte.metadado else False,
-        "indicado": bool(corte.metadado.candidato_shorts) if corte.metadado else False,
+        "is_fire": bool(corte.is_fire),
+        "indicado": bool(corte.candidato_shorts),
         # D-503: so ha o que publicar no TikTok quando o MP4 final existe. Sem
         # isto a tela ofereceria um botao que o backend recusa — o mesmo defeito
         # que a D-495 corrigiu no seletor de arranjo.

@@ -57,9 +57,10 @@ async def ambiente(monkeypatch, tmp_path):
                 fim_hms="00:10:00.000",
                 duracao_clip_seg=600.0,
                 arquivo_clip_path="cortes/c1/clip_raw_1.mkv",
+                is_fire=True,
             )
         )
-        db.add(MetadadoCorte(id="m1", corte_id="c1", is_fire=True))
+        db.add(MetadadoCorte(id="m1", corte_id="c1"))
         await db.commit()
 
     yield factory, tmp_path
@@ -122,7 +123,7 @@ async def test_elegibilidade_de_corte_sem_fire(ambiente):
     factory, raiz = ambiente
     _criar_bruto(raiz)
     async with factory() as db:
-        (await db.get(MetadadoCorte, "m1")).is_fire = False
+        (await db.get(Corte, "c1")).is_fire = False
         await db.commit()
 
     assert (await servico.elegibilidade("c1"))["is_fire"] is False
@@ -165,7 +166,7 @@ async def test_corte_sem_fire_e_recusado_com_instrucao(ambiente, espioes):
     factory, raiz = ambiente
     _criar_bruto(raiz)
     async with factory() as db:
-        (await db.get(MetadadoCorte, "m1")).is_fire = False
+        (await db.get(Corte, "c1")).is_fire = False
         await db.commit()
 
     with pytest.raises(ValueError, match="Fire"):

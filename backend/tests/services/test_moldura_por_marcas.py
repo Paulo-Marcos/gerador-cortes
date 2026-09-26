@@ -85,7 +85,7 @@ async def cenario(tmp_path, monkeypatch):
     async with sf() as db:
         db.add(Projeto(id="proj-1", youtube_url="http://x", transcricao_raw="[]"))
         db.add(Corte(id="corte-1", projeto_id="proj-1", numero=1, is_leitura=0))
-        db.add(MetadadoCorte(id="meta-1", corte_id="corte-1", is_fire=0))
+        db.add(MetadadoCorte(id="meta-1", corte_id="corte-1"))
         await db.commit()
 
     yield sf, molduras, tmp_path
@@ -94,11 +94,10 @@ async def cenario(tmp_path, monkeypatch):
 
 async def _marcar(sf, *, fire=None, leitura=None):
     async with sf() as db:
+        corte = await db.get(Corte, "corte-1")
         if fire is not None:
-            meta = await db.get(MetadadoCorte, "meta-1")
-            meta.is_fire = fire
+            corte.is_fire = fire
         if leitura is not None:
-            corte = await db.get(Corte, "corte-1")
             corte.is_leitura = leitura
         await db.commit()
 
