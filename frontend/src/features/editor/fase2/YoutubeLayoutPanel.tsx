@@ -22,12 +22,14 @@ import { PosicionamentoModal, type PosicionamentoModalResult } from './Posiciona
 import {
   DEFAULT_FULL_CONFIG,
   DEFAULT_YOUTUBE_LAYOUT,
+  chavesMudadas,
   findMatchingFullPreset,
   findMatchingPreset,
   fullConfigDoPreset,
   fundoPlacaDoPreset,
   mergeFullConfig,
   mergeSharedConfig,
+  mesclarNoLayoutDoCorte,
   normalizeYoutubeLayout,
   resolveYoutubeModeAt,
   sharedConfigDoPreset,
@@ -134,6 +136,10 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
       detectando: detectandoSegmentos,
     } = useSegmentosDetectados(corteId, projetoId);
     const [draft, setDraft] = useState<YoutubeLayout>(() => normalizeYoutubeLayout(layout));
+    // D-741: as chaves que ESTE painel mudou desde o último save. O save manda
+    // só elas; mandar o layout resolvido inteiro gravava os padrões no corte,
+    // e ele parava de herdar do projeto e do global (RN-10).
+    const mudadasRef = useRef<Set<string>>(new Set());
     const [dirty, setDirty] = useState(false);
     // I-029 v2: regioes deletadas localmente — usadas para FILTRAR o que vem
     // do cache na sincronizacao. Sem isso, um refetch do React Query (foco
@@ -315,11 +321,19 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
     // commit no cache acontece no onBlur via commitDraft.
     const patch = (next: YoutubeLayout, syncQuery: boolean = true) => {
       const normalized = normalizeYoutubeLayout(next);
+      const mudou = chavesMudadas(draft, normalized);
+      for (const chave of Object.keys(mudou)) mudadasRef.current.add(chave);
       setDraft(normalized);
       setDirty(true);
       if (syncQuery) {
+        // D-741: no cache fica o layout GRAVADO (mesclado), não o resolvido.
         queryClient.setQueryData<Corte>(corteKey(corteId), (current) =>
-          current ? ({ ...current, layout_youtube: normalized } as Corte) : current,
+          current
+            ? ({
+                ...current,
+                layout_youtube: mesclarNoLayoutDoCorte(current.layout_youtube, mudou),
+              } as Corte)
+            : current,
         );
       }
     };
@@ -397,9 +411,14 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
     };
 
     const save = useCallback(() => {
-      const body = { layout_youtube: normalizeYoutubeLayout(draft) } as Partial<Corte>;
+      const valores = normalizeYoutubeLayout(draft) as unknown as Record<string, unknown>;
+      const mudancas = Object.fromEntries(
+        [...mudadasRef.current].map((chave) => [chave, valores[chave] ?? null]),
+      );
+      const body = { layout_youtube: mudancas } as Partial<Corte>;
       atualizar.mutate(body, {
         onSuccess: () => {
+          mudadasRef.current = new Set();
           setDirty(false);
           notify('Layout YouTube salvo.', { tone: 'success' });
         },

@@ -768,3 +768,60 @@ function clamp(value: number, min: number, max: number) {
 function round(value: number) {
   return Math.round(value * 10) / 10;
 }
+
+// ─── D-741: o corte grava só as chaves que o operador mudou ─────────────────
+//
+// RN-10 / ADR-0013: o padrão se materializa na LEITURA. O backend faz um JSON
+// Merge Patch no primeiro nível (`mesclar_no_layout_do_corte`): chave enviada
+// substitui, `null` volta a herdar, ausente fica. Estas três funções são o lado
+// da tela: mandar só o que mudou e manter no cache o layout GRAVADO — nunca o
+// resolvido pela cascata, que é o que fazia o corte parar de herdar.
+
+type LayoutCru = Record<string, unknown>;
+
+function comoObjeto(valor: unknown): LayoutCru {
+  if (typeof valor === 'string') {
+    try {
+      return comoObjeto(JSON.parse(valor));
+    } catch {
+      return {};
+    }
+  }
+  return valor && typeof valor === 'object' && !Array.isArray(valor)
+    ? { ...(valor as LayoutCru) }
+    : {};
+}
+
+/** As chaves de primeiro nível cujo valor mudou de `antes` para `depois`. */
+export function chavesMudadas(antes: YoutubeLayout, depois: YoutubeLayout): Partial<YoutubeLayout> {
+  const a = antes as unknown as LayoutCru;
+  const d = depois as unknown as LayoutCru;
+  const mudadas: LayoutCru = {};
+  for (const chave of new Set([...Object.keys(a), ...Object.keys(d)])) {
+    if (JSON.stringify(a[chave]) !== JSON.stringify(d[chave])) {
+      mudadas[chave] = d[chave] ?? null;
+    }
+  }
+  return mudadas as Partial<YoutubeLayout>;
+}
+
+/** O layout gravado depois de aplicar `mudancas` — a mesma regra do backend. */
+export function mesclarNoLayoutDoCorte(atual: unknown, mudancas: LayoutCru): LayoutCru {
+  const layout = comoObjeto(atual);
+  for (const [chave, valor] of Object.entries(mudancas)) {
+    if (valor === null) delete layout[chave];
+    else layout[chave] = valor;
+  }
+  return layout;
+}
+
+/** O patch que devolve o layout gravado de `atual` para `alvo` (o desfazer). */
+export function patchParaRestaurar(atual: unknown, alvo: unknown): LayoutCru {
+  const de = comoObjeto(atual);
+  const para = comoObjeto(alvo);
+  const patch: LayoutCru = { ...para };
+  for (const chave of Object.keys(de)) {
+    if (!(chave in para)) patch[chave] = null;
+  }
+  return patch;
+}
