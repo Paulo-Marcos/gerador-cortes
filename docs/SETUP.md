@@ -25,12 +25,26 @@ Guia para instalar o CutCut numa máquina **Windows** (a única plataforma supor
 | Ferramenta | Libera |
 |---|---|
 | [Claude Code CLI](https://claude.ai/code) (`claude`) | IA pela sua assinatura do Claude |
+| Chave da API da Anthropic | IA do Claude sem assinatura, cobrada por uso (ver abaixo) |
 | Antigravity CLI (`agy`) | IA pela sua assinatura do Google |
 | Google Chrome | publicação assistida no TikTok e no Instagram (experimental) |
 | iGPU Intel com Quick Sync | render acelerado; sem ela o vídeo sai pela CPU (`libx264`) |
 
-Sem nenhum CLI de IA o app funciona no **modo manual**: ele monta o prompt e você cola a
-resposta de qualquer IA ([ADR-0004](adr/0004-provedores-de-ia-v2.md)).
+Sem nenhum CLI de IA nem chave de API o app funciona no **modo manual**: ele monta o
+prompt e você cola a resposta de qualquer IA ([ADR-0004](adr/0004-provedores-de-ia-v2.md)).
+
+**IA pela chave de API, sem assinatura.** Crie uma chave em
+[console.anthropic.com](https://console.anthropic.com) e ponha no `backend\.env`:
+
+```
+IA_CLAUDE_TRANSPORTE=api
+IA_ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Reinicie o app. Os botões do Claude passam a gerar pela API, cobrando da conta da
+chave; as skills do canal valem do mesmo jeito. O nome da variável é próprio de
+propósito: um `ANTHROPIC_API_KEY` que outra ferramenta tenha deixado no ambiente não
+liga a API.
 
 Confira no terminal:
 

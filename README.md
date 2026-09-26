@@ -54,13 +54,14 @@ Linux, macOS e Docker não são suportados.
 | Ferramenta | Para quê |
 |---|---|
 | [Claude Code CLI](https://claude.ai/code) | IA pela sua assinatura do Claude |
+| Chave da API da Anthropic | IA do Claude sem assinatura, cobrada por uso (`IA_CLAUDE_TRANSPORTE=api` no `backend/.env`) |
 | Antigravity CLI (`agy`) | IA pela sua assinatura do Google |
 | Credencial do Google Cloud (`client_secrets.json`) | publicar no YouTube |
 | Chave da API do Gemini | cenas, desvios e imagens de capa |
 | Google Chrome | publicação assistida no TikTok e no Instagram |
 
-Sem nenhum CLI de IA o app funciona no **modo manual**: ele monta o prompt, você cola a
-resposta de qualquer IA ([ADR-0004](docs/adr/0004-provedores-de-ia-v2.md)).
+Sem nenhum CLI de IA nem chave de API o app funciona no **modo manual**: ele monta o
+prompt, você cola a resposta de qualquer IA ([ADR-0004](docs/adr/0004-provedores-de-ia-v2.md)).
 
 Em **Configurações → Aplicação → Pré-requisitos** o app mostra o que falta na sua máquina,
 item por item.
