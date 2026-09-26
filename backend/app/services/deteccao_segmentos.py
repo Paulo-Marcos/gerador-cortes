@@ -29,7 +29,7 @@ from app.core.channel_paths import resolver_do_projeto
 from app.core.logging import operational_error
 from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido
-from app.domain.corte.youtube_layout import normalizar_layout_youtube
+from app.domain.corte.youtube_layout import mesclar_no_layout_do_corte
 from app.models import Corte
 from app.services.tasks import fire_and_forget
 from sqlalchemy import select
@@ -267,8 +267,12 @@ async def decidir_segmento(corte_id: str, indice: int, decisao: str) -> Corte:
             if decisao in {"full", "compartilhada"}:
                 layout_atual = json.loads(corte.layout_youtube or "{}") or {}
                 layout_novo = materializar_regiao_em_layout(layout_atual, segmento, decisao)
+                # D-741: só as regiões mudam; o resto segue herdando (RN-10).
                 corte.layout_youtube = json.dumps(
-                    normalizar_layout_youtube(layout_novo), ensure_ascii=False
+                    mesclar_no_layout_do_corte(
+                        corte.layout_youtube, {"regioes": layout_novo.get("regioes", [])}
+                    ),
+                    ensure_ascii=False,
                 )
         # Relido depois do commit: colunas com onupdate voltariam expiradas.
         return await _corte_com_metadado(db, corte_id)

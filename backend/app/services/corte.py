@@ -48,7 +48,7 @@ from app.domain.corte.segment_calculator import (
     somar_desvios_novos,
 )
 from app.domain.corte.snap_desvios import palavras_do_corte, snap_desvio_a_palavras
-from app.domain.corte.youtube_layout import normalizar_layout_youtube
+from app.domain.corte.youtube_layout import mesclar_no_layout_do_corte, normalizar_layout_youtube
 from app.domain.projeto.diarizacao_align import anotar_falantes_do_projeto, mapa_falantes_para_meta
 from app.domain.short import segmentos_short
 from app.infrastructure.render.ffmpeg_basic import (
@@ -173,11 +173,15 @@ def _juntar_marcacoes_de_bruto(primeiro: Corte, segundo: Corte, offset_seg: floa
     regioes_segundo = normalizar_layout_youtube(_dict_json(segundo.layout_youtube)).get(
         "regioes", []
     )
-    layout["regioes"] = [
+    regioes = [
         *layout.get("regioes", []),
         *deslocar_tempos(regioes_segundo, offset_seg, CAMPOS_TEMPO_REGIAO),
     ]
-    primeiro.layout_youtube = json.dumps(normalizar_layout_youtube(layout), ensure_ascii=False)
+    # D-741: só as regiões mudam; o resto do layout do primeiro fica como estava.
+    primeiro.layout_youtube = json.dumps(
+        mesclar_no_layout_do_corte(primeiro.layout_youtube, {"regioes": regioes}),
+        ensure_ascii=False,
+    )
 
     # Palco e preset de recortes: o do primeiro manda; herda o do segundo só
     # quando o primeiro nunca escolheu (chave vazia é herança, não decisão).
@@ -437,7 +441,9 @@ def _aplicar_cenas(corte: Corte, payload: list | dict) -> None:
 
 
 def _aplicar_layout(corte: Corte, payload: dict) -> None:
-    layout_youtube = normalizar_layout_youtube(payload)
+    # D-741: grava só as chaves que vieram, e não o layout inteiro normalizado —
+    # a chave ausente é o que mantém o corte herdando do padrão (RN-10).
+    layout_youtube = mesclar_no_layout_do_corte(corte.layout_youtube, payload)
     novo_layout = json.dumps(layout_youtube, ensure_ascii=False)
     operational_debug("DB-DEBUG", ">>> INICIANDO ATUALIZAÇÃO DO LAYOUT DO CORTE <<<")
     operational_debug("DB-DEBUG", f"Recebido do Frontend: {payload}")

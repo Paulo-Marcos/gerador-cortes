@@ -167,6 +167,36 @@ def normalizar_layout_youtube(payload: Any, fallback_layout: Any = None) -> dict
     return layout
 
 
+def mesclar_no_layout_do_corte(atual: Any, mudancas: dict[str, Any]) -> dict[str, Any]:
+    """O layout que o corte GRAVA depois de uma edição: só o que ele decidiu (D-741).
+
+    RN-10 e ADR-0013 (regra 2): o padrão se materializa na LEITURA, nunca ao
+    gravar — a chave ausente é o que faz o corte herdar do projeto e do global.
+    Normalizar o layout inteiro antes de gravar preenchia fundo, placa e recortes
+    com os defaults, e o corte deixava de acompanhar o padrão para sempre.
+
+    A mescla é a de um JSON Merge Patch (RFC 7386) no primeiro nível: chave
+    enviada substitui a gravada (normalizada), chave com `None` volta a herdar,
+    chave ausente fica como estava. Chave que o layout não conhece não entra.
+
+    Exemplo:
+        >>> mesclar_no_layout_do_corte({"modo_padrao": "full"}, {"regioes": []})
+        {'modo_padrao': 'full', 'regioes': []}
+        >>> mesclar_no_layout_do_corte('{"fundo": "papel", "regioes": []}', {"fundo": None})
+        {'regioes': []}
+    """
+    base = _ler_json(atual)
+    layout = dict(base) if isinstance(base, dict) else {}
+    presentes = {chave: valor for chave, valor in mudancas.items() if valor is not None}
+    normalizado = normalizar_layout_youtube(presentes) if presentes else {}
+    for chave, valor in mudancas.items():
+        if valor is None:
+            layout.pop(chave, None)
+        elif chave in normalizado:
+            layout[chave] = normalizado[chave]
+    return layout
+
+
 # ─── Os passos da normalização (D-716: saíram de `normalizar_layout_youtube`) ──
 
 
