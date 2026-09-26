@@ -2340,6 +2340,51 @@
         "title": "FalantesResponse",
         "type": "object"
       },
+      "FiltroExport": {
+        "description": "Um filtro de cinema do render (`FILTROS_CINEMA`).",
+        "properties": {
+          "descricao": {
+            "title": "Descricao",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "tem_filtro_visual": {
+            "title": "Tem Filtro Visual",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "descricao",
+          "tem_filtro_visual"
+        ],
+        "title": "FiltroExport",
+        "type": "object"
+      },
+      "FiltrosResponse": {
+        "properties": {
+          "filtros": {
+            "items": {
+              "$ref": "#/components/schemas/FiltroExport"
+            },
+            "title": "Filtros",
+            "type": "array"
+          }
+        },
+        "required": [
+          "filtros"
+        ],
+        "title": "FiltrosResponse",
+        "type": "object"
+      },
       "FinalizadoRequest": {
         "description": "Declara (ou desfaz) que os shorts do corte ja subiram para todas as redes.",
         "properties": {
@@ -3520,6 +3565,28 @@
           "para_indice"
         ],
         "title": "MoverBlocoRequest",
+        "type": "object"
+      },
+      "MultiversionResponse": {
+        "description": "A geração roda em segundo plano; a resposta só confirma o disparo.",
+        "properties": {
+          "filtros": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Filtros",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "filtros"
+        ],
+        "title": "MultiversionResponse",
         "type": "object"
       },
       "OcorrenciaDoEixo": {
@@ -5330,6 +5397,77 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VersaoExport": {
+        "description": "Uma versão do corte com um filtro aplicado (multiversão).\n\nOs campos vêm da pasta da versão; `preview` vem do `meta.json` que o\nprocessamento grava ao lado do vídeo, e só existe quando o arquivo existe.",
+        "properties": {
+          "completo_disponivel": {
+            "title": "Completo Disponivel",
+            "type": "boolean"
+          },
+          "descricao": {
+            "title": "Descricao",
+            "type": "string"
+          },
+          "e_preview": {
+            "title": "E Preview",
+            "type": "boolean"
+          },
+          "filtro": {
+            "title": "Filtro",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "preview": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview"
+          },
+          "tamanho_mb": {
+            "title": "Tamanho Mb",
+            "type": "number"
+          }
+        },
+        "required": [
+          "filtro",
+          "nome",
+          "descricao",
+          "e_preview",
+          "completo_disponivel",
+          "tamanho_mb"
+        ],
+        "title": "VersaoExport",
+        "type": "object"
+      },
+      "VersoesResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "versoes": {
+            "items": {
+              "$ref": "#/components/schemas/VersaoExport"
+            },
+            "title": "Versoes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "corte_id",
+          "versoes"
+        ],
+        "title": "VersoesResponse",
         "type": "object"
       },
       "VotoQualidadeRequest": {
@@ -9783,7 +9921,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MultiversionResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9874,7 +10014,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/VersoesResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10061,7 +10203,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FiltrosResponse"
+                }
               }
             },
             "description": "Successful Response"

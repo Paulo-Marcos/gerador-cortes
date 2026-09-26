@@ -10,6 +10,7 @@ from app.core.channel_paths import (
 from app.core.logging import operational_info
 from app.database import get_db
 from app.models import Corte, MetadadoCorte, StatusCorte
+from app.routers import export_schemas
 from app.routers.errors import erro_interno
 
 # Via o service de configurações: o router não fala com a infraestrutura (D-696).
@@ -170,7 +171,7 @@ async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.get("/filtros")
+@router.get("/filtros", response_model=export_schemas.FiltrosResponse)
 async def listar_filtros():
     filtros = [
         {
@@ -184,7 +185,11 @@ async def listar_filtros():
     return {"filtros": filtros}
 
 
-@router.get("/corte/{corte_id}/versoes")
+@router.get(
+    "/corte/{corte_id}/versoes",
+    response_model=export_schemas.VersoesResponse,
+    response_model_exclude_unset=True,
+)
 async def listar_versoes(corte_id: str, db: AsyncSession = Depends(get_db)):
     corte = await db.get(Corte, corte_id)
     if not corte:
@@ -226,7 +231,9 @@ class ProcessarMultiversionRequest(BaseModel):
     filtros: list[str] | None = None
 
 
-@router.post("/corte/{corte_id}/processar-multiversion")
+@router.post(
+    "/corte/{corte_id}/processar-multiversion", response_model=export_schemas.MultiversionResponse
+)
 async def processar_multiversion(
     corte_id: str,
     body: ProcessarMultiversionRequest = None,
