@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 
 from app.core.channel_paths import resolver_do_projeto
-from app.domain.corte.segment_calculator import calcular_segmentos, normalizar_desvio
+from app.domain.corte.segment_calculator import duracao_liquida, normalizar_desvio
 from app.models import Corte
 
 logger = logging.getLogger(__name__)
@@ -154,11 +154,8 @@ def _duracao_layout_corte(corte: Corte | dict | None) -> float:
 
     inicio = _numero_corte(_campo_corte(corte, "inicio_seg"), 0.0)
     fim = _numero_corte(_campo_corte(corte, "fim_seg"), inicio)
-    if fim <= inicio:
-        return 0.0
-
-    segmentos = calcular_segmentos(inicio, fim, _desvios_do_corte(corte))
-    return sum(s["end"] - s["start"] for s in segmentos)
+    # RN-07: a mesma conta do corte e do bloco (D-711).
+    return duracao_liquida(inicio, fim, _desvios_do_corte(corte))
 
 
 def _campo_corte(corte: Corte | dict | None, campo: str, default=None):

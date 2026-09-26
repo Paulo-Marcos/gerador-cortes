@@ -20,7 +20,7 @@ Módulo puro: só dicts, listas e números — sem SQLAlchemy, sem HTTP.
 """
 
 from app.domain.compartilhado.time_convert import seg_to_hms
-from app.domain.corte.segment_calculator import calcular_segmentos, normalizar_desvio
+from app.domain.corte.segment_calculator import normalizar_desvio
 
 # Campos de tempo (em segundos do bruto) de cada tipo de marcação deslocável.
 CAMPOS_TEMPO_CENA = ("inicio", "fim", "inicio_seg", "fim_seg")
@@ -29,23 +29,6 @@ CAMPOS_TEMPO_SEGMENTO = ("inicio", "fim")
 
 MOTIVO_VAO = "Vão entre cortes juntados"
 ORIGEM_VAO = "juncao"
-
-
-def duracao_liquida(inicio_seg: float, fim_seg: float, desvios: list[dict]) -> float:
-    """Duração do bruto que este span produz, já sem os trechos removidos.
-
-    É exatamente o que o pipeline vai gerar: reusa `calcular_segmentos`, com o
-    mesmo descarte de micro-fatias, em vez de subtrair durações de desvios na
-    mão (que erra quando dois desvios se sobrepõem).
-
-    Exemplo:
-        >>> duracao_liquida(0.0, 100.0, [{"inicio_seg": 30.0, "fim_seg": 40.0}])
-        90.0
-    """
-    if fim_seg <= inicio_seg:
-        return 0.0
-    segmentos = calcular_segmentos(inicio_seg, fim_seg, desvios)
-    return round(sum(float(s["end"]) - float(s["start"]) for s in segmentos), 3)
 
 
 def desvio_do_vao(fim_primeiro: float, inicio_segundo: float) -> dict | None:

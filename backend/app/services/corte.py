@@ -32,7 +32,6 @@ from app.domain.corte.juncao_cortes import (
     CAMPOS_TEMPO_REGIAO,
     CAMPOS_TEMPO_SEGMENTO,
     deslocar_tempos,
-    duracao_liquida,
     emendar_texto,
     juntar_desvios,
 )
@@ -44,6 +43,7 @@ from app.domain.corte.reading_metadata import (
 )
 from app.domain.corte.segment_calculator import (
     dividir_desvios_no_ponto,
+    duracao_liquida,
     normalizar_desvio,
     somar_desvios_novos,
 )

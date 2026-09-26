@@ -26,7 +26,7 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 | RN | Regra | Onde mora | Origem |
 |---|---|---|---|
 | RN-06 | O `numero` do corte deriva de `inicio_seg`, exceto quando a posição foi fixada à mão. | `domain/corte/ordem_cortes.py` (`ordenar_por_tempo`, `pins_para_ordem`) | D-448 |
-| RN-07 | **Duração líquida** = intervalo − desvios (corte e bloco) ou soma dos segmentos (short). `fim − inicio` mente quando há buracos. | `domain/corte/juncao_cortes.py` (`duracao_liquida`); `domain/corte/arranjo_blocos.py` (`duracao_liquida`); `domain/short/segmentos_short.py` (`duracao_liquida`); `services/render/pipeline_corte_fields.py` (`_duracao_layout_corte`) | D-575 |
+| RN-07 | **Duração líquida** = intervalo − desvios (corte e bloco) ou soma dos segmentos (short). `fim − inicio` mente quando há buracos. | `domain/corte/segment_calculator.py` (`duracao_liquida`: o núcleo, usado pelo corte, pelo bloco do arranjo e pela duração de referência do render); `domain/short/segmentos_short.py` (`duracao_liquida`: a soma do que o short toca) | D-575, D-711 |
 | RN-08 | Os tempos do **Short** estão no espaço do **BRUTO** (o clip do corte), não da live. | `models.py` (invariante documentada em `Short`) | — |
 | RN-09 | Segmentos do short: lista vazia = janela única; a ordem é decisão do operador e **nunca** é reordenada; com segmentos, `inicio_seg`/`fim_seg` viram o envelope. | `domain/short/segmentos_short.py` (`normalizar`, `efetivos`) | D-604 |
 

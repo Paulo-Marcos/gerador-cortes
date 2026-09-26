@@ -10,10 +10,10 @@ from app.domain.corte.juncao_cortes import (
     MOTIVO_VAO,
     deslocar_tempos,
     desvio_do_vao,
-    duracao_liquida,
     emendar_texto,
     juntar_desvios,
 )
+from app.domain.corte.segment_calculator import duracao_liquida
 
 # ─── duracao_liquida ────────────────────────────────────────────────────────
 

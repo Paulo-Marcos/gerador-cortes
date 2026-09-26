@@ -216,6 +216,28 @@ def calcular_segmentos(
     return [{"start": round(inicio, 3), "end": round(fim, 3)}] if fallback else []
 
 
+def duracao_liquida(
+    inicio_seg: float, fim_seg: float, desvios: list[dict], *, fallback: bool = True
+) -> float:
+    """RN-07: quanto tempo de vídeo o intervalo produz, já sem os trechos removidos.
+
+    O núcleo único da duração líquida (D-711): o corte, o bloco do arranjo e a
+    duração de referência do render passam por aqui. É exatamente o que o
+    pipeline vai gerar: reusa `calcular_segmentos`, com o mesmo descarte de
+    micro-fatias, em vez de subtrair durações de desvios na mão (que erra quando
+    dois desvios se sobrepõem). `fallback` é o mesmo de lá: o corte nunca sai
+    vazio; o bloco inteiramente removido vale zero.
+
+    Exemplo:
+        >>> duracao_liquida(0.0, 100.0, [{"inicio_seg": 30.0, "fim_seg": 40.0}])
+        90.0
+    """
+    if fim_seg <= inicio_seg:
+        return 0.0
+    segmentos = calcular_segmentos(inicio_seg, fim_seg, desvios, fallback=fallback)
+    return round(sum(float(s["end"]) - float(s["start"]) for s in segmentos), 3)
+
+
 def _desvio_com_tempos(desvio: dict, ini: float, fim: float) -> dict:
     """Clona o desvio com novos limites, preservando motivo/origem e demais campos."""
     novo = dict(desvio)

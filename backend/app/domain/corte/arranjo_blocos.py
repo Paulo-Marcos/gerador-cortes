@@ -42,6 +42,7 @@ import json
 from dataclasses import dataclass
 
 from app.domain.corte.segment_calculator import calcular_segmentos
+from app.domain.corte.segment_calculator import duracao_liquida as _liquida_do_intervalo
 
 # Coberto e esperado vêm arredondados a 0,1 s: um passo de diferença é arredondamento.
 _TOLERANCIA_DE_COBERTURA_SEG = 0.1
@@ -371,8 +372,7 @@ def duracao_liquida(bloco: Bloco, desvios: list[dict]) -> float:
     fila não bater com a duração do bruto. Sem a rede de segurança do corte —
     bloco inteiramente removido vale zero, e não o intervalo cheio.
     """
-    segmentos = calcular_segmentos(bloco.inicio_seg, bloco.fim_seg, desvios, fallback=False)
-    return round(sum(float(s["end"]) - float(s["start"]) for s in segmentos), 3)
+    return _liquida_do_intervalo(bloco.inicio_seg, bloco.fim_seg, desvios, fallback=False)
 
 
 def _costurar_contiguos(segmentos: list[dict]) -> list[dict]:
