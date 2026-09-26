@@ -3686,6 +3686,70 @@
         },
         "title": "YouTubeUploadRequest",
         "type": "object"
+      },
+      "YoutubeAuthAcaoResponse": {
+        "properties": {
+          "mensagem": {
+            "title": "Mensagem",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "mensagem"
+        ],
+        "title": "YoutubeAuthAcaoResponse",
+        "type": "object"
+      },
+      "YoutubeAuthStatusResponse": {
+        "description": "Estado do login do YouTube do canal ativo (D-169; tipado na D-721).",
+        "properties": {
+          "canal_titulo": {
+            "title": "Canal Titulo",
+            "type": "string"
+          },
+          "client_secrets_destino": {
+            "title": "Client Secrets Destino",
+            "type": "string"
+          },
+          "cliente_configurado": {
+            "title": "Cliente Configurado",
+            "type": "boolean"
+          },
+          "conectado": {
+            "title": "Conectado",
+            "type": "boolean"
+          },
+          "erro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erro"
+          },
+          "fluxo_em_andamento": {
+            "title": "Fluxo Em Andamento",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "conectado",
+          "canal_titulo",
+          "cliente_configurado",
+          "client_secrets_destino",
+          "fluxo_em_andamento",
+          "erro"
+        ],
+        "title": "YoutubeAuthStatusResponse",
+        "type": "object"
       }
     }
   },
@@ -13542,7 +13606,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/YoutubeAuthAcaoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -13562,7 +13628,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/YoutubeAuthAcaoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -13582,7 +13650,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/YoutubeAuthStatusResponse"
+                }
               }
             },
             "description": "Successful Response"

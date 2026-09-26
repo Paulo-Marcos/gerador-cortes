@@ -19,6 +19,22 @@ router = APIRouter()
 # ─── Schemas ────────────────────────────────────────────────────────────────
 
 
+class YoutubeAuthStatusResponse(BaseModel):
+    """Estado do login do YouTube do canal ativo (D-169; tipado na D-721)."""
+
+    conectado: bool
+    canal_titulo: str
+    cliente_configurado: bool
+    client_secrets_destino: str
+    fluxo_em_andamento: bool
+    erro: str | None
+
+
+class YoutubeAuthAcaoResponse(BaseModel):
+    status: str
+    mensagem: str
+
+
 class EnfileirarRequest(BaseModel):
     video_ids: list[str]
     canal_origem: str = ""
@@ -44,7 +60,7 @@ async def listar_lives_canal(
 # ─── Autenticação OAuth por canal (D-169) ─────────────────────────────────────
 
 
-@router.get("/auth/status")
+@router.get("/auth/status", response_model=YoutubeAuthStatusResponse)
 async def youtube_auth_status():
     """Estado da conexão do YouTube (login OAuth) para o canal ativo.
 
@@ -55,7 +71,7 @@ async def youtube_auth_status():
     return await asyncio.to_thread(youtube_auth.status)
 
 
-@router.post("/auth/conectar")
+@router.post("/auth/conectar", response_model=YoutubeAuthAcaoResponse)
 async def youtube_auth_conectar():
     """Dispara o login OAuth do canal ativo (abre o navegador; grava o token)."""
     resultado = youtube_auth.iniciar_conexao()
@@ -64,7 +80,7 @@ async def youtube_auth_conectar():
     return resultado
 
 
-@router.post("/auth/desconectar")
+@router.post("/auth/desconectar", response_model=YoutubeAuthAcaoResponse)
 async def youtube_auth_desconectar():
     """Remove o token do canal ativo (desconecta a conta do YouTube)."""
     resultado = await asyncio.to_thread(youtube_auth.desconectar)
