@@ -2246,6 +2246,129 @@
         "title": "JuntarCortesRequest",
         "type": "object"
       },
+      "LevantamentoDuracao": {
+        "properties": {
+          "avg_view_duration_media_seg": {
+            "title": "Avg View Duration Media Seg",
+            "type": "number"
+          },
+          "faixa": {
+            "title": "Faixa",
+            "type": "string"
+          },
+          "retencao_media_pct": {
+            "title": "Retencao Media Pct",
+            "type": "number"
+          },
+          "retencao_ponderada_pct": {
+            "title": "Retencao Ponderada Pct",
+            "type": "number"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          },
+          "views_media": {
+            "title": "Views Media",
+            "type": "number"
+          },
+          "views_total": {
+            "title": "Views Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "videos",
+          "views_total",
+          "views_media",
+          "retencao_media_pct",
+          "retencao_ponderada_pct",
+          "avg_view_duration_media_seg",
+          "faixa"
+        ],
+        "title": "LevantamentoDuracao",
+        "type": "object"
+      },
+      "LevantamentoDuracaoResponse": {
+        "properties": {
+          "faixas": {
+            "items": {
+              "$ref": "#/components/schemas/LevantamentoDuracao"
+            },
+            "title": "Faixas",
+            "type": "array"
+          }
+        },
+        "required": [
+          "faixas"
+        ],
+        "title": "LevantamentoDuracaoResponse",
+        "type": "object"
+      },
+      "LevantamentoTitulo": {
+        "properties": {
+          "avg_view_duration_media_seg": {
+            "title": "Avg View Duration Media Seg",
+            "type": "number"
+          },
+          "faixa": {
+            "title": "Faixa",
+            "type": "string"
+          },
+          "grupo": {
+            "title": "Grupo",
+            "type": "string"
+          },
+          "retencao_media_pct": {
+            "title": "Retencao Media Pct",
+            "type": "number"
+          },
+          "retencao_ponderada_pct": {
+            "title": "Retencao Ponderada Pct",
+            "type": "number"
+          },
+          "videos": {
+            "title": "Videos",
+            "type": "integer"
+          },
+          "views_media": {
+            "title": "Views Media",
+            "type": "number"
+          },
+          "views_total": {
+            "title": "Views Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "videos",
+          "views_total",
+          "views_media",
+          "retencao_media_pct",
+          "retencao_ponderada_pct",
+          "avg_view_duration_media_seg",
+          "grupo",
+          "faixa"
+        ],
+        "title": "LevantamentoTitulo",
+        "type": "object"
+      },
+      "LevantamentoTituloResponse": {
+        "properties": {
+          "grupos": {
+            "items": {
+              "$ref": "#/components/schemas/LevantamentoTitulo"
+            },
+            "title": "Grupos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "grupos"
+        ],
+        "title": "LevantamentoTituloResponse",
+        "type": "object"
+      },
       "LiberarPublicacaoRequest": {
         "description": "Qual destino deixou de ter este vídeo. Default no YouTube: é o destino\nque bloqueia o re-upload, e o motivo de 9 em 10 chamadas.",
         "properties": {
@@ -3573,6 +3696,378 @@
         "title": "StagingRequest",
         "type": "object"
       },
+      "TelemetriaAvaliacao": {
+        "description": "A avaliação humana do corte (D-419); `voto` None = não avaliado.",
+        "properties": {
+          "comentario": {
+            "title": "Comentario",
+            "type": "string"
+          },
+          "motivos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Motivos",
+            "type": "array"
+          },
+          "voto": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voto"
+          }
+        },
+        "required": [
+          "voto",
+          "motivos",
+          "comentario"
+        ],
+        "title": "TelemetriaAvaliacao",
+        "type": "object"
+      },
+      "TelemetriaBordas": {
+        "properties": {
+          "delta_duracao_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Duracao Seg"
+          },
+          "delta_fim_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Fim Seg"
+          },
+          "delta_inicio_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Inicio Seg"
+          },
+          "duracao_final_seg": {
+            "title": "Duracao Final Seg",
+            "type": "number"
+          },
+          "duracao_proposta_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duracao Proposta Seg"
+          },
+          "fim_final_seg": {
+            "title": "Fim Final Seg",
+            "type": "number"
+          },
+          "fim_proposto_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fim Proposto Seg"
+          },
+          "inicio_final_seg": {
+            "title": "Inicio Final Seg",
+            "type": "number"
+          },
+          "inicio_proposto_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inicio Proposto Seg"
+          }
+        },
+        "required": [
+          "inicio_proposto_seg",
+          "inicio_final_seg",
+          "delta_inicio_seg",
+          "fim_proposto_seg",
+          "fim_final_seg",
+          "delta_fim_seg",
+          "duracao_proposta_seg",
+          "duracao_final_seg",
+          "delta_duracao_seg"
+        ],
+        "title": "TelemetriaBordas",
+        "type": "object"
+      },
+      "TelemetriaCorteDiff": {
+        "properties": {
+          "avaliacao": {
+            "$ref": "#/components/schemas/TelemetriaAvaliacao"
+          },
+          "bordas": {
+            "$ref": "#/components/schemas/TelemetriaBordas"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "desvios": {
+            "$ref": "#/components/schemas/TelemetriaDesvios"
+          },
+          "desvios_claude_por_geracao": {
+            "title": "Desvios Claude Por Geracao",
+            "type": "number"
+          },
+          "numero": {
+            "title": "Numero",
+            "type": "integer"
+          },
+          "origem_analise": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origem Analise"
+          },
+          "situacao": {
+            "enum": [
+              "com_snapshot",
+              "sem_proposta_ia",
+              "sem_snapshot"
+            ],
+            "title": "Situacao",
+            "type": "string"
+          },
+          "status_final": {
+            "title": "Status Final",
+            "type": "string"
+          },
+          "titulo": {
+            "$ref": "#/components/schemas/TelemetriaTitulo"
+          },
+          "trechos_geracoes": {
+            "title": "Trechos Geracoes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "corte_id",
+          "numero",
+          "situacao",
+          "origem_analise",
+          "status_final",
+          "titulo",
+          "bordas",
+          "desvios",
+          "trechos_geracoes",
+          "desvios_claude_por_geracao",
+          "avaliacao"
+        ],
+        "title": "TelemetriaCorteDiff",
+        "type": "object"
+      },
+      "TelemetriaDesvios": {
+        "description": "Contagens e as listas de desvios; cada desvio é o dicionário do corte.",
+        "properties": {
+          "adicionados": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adicionados"
+          },
+          "adicionados_por_origem": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adicionados Por Origem"
+          },
+          "finais": {
+            "title": "Finais",
+            "type": "integer"
+          },
+          "finais_por_origem": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Finais Por Origem",
+            "type": "object"
+          },
+          "mantidos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mantidos"
+          },
+          "propostos": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Propostos"
+          },
+          "removidos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Removidos"
+          }
+        },
+        "required": [
+          "propostos",
+          "mantidos",
+          "removidos",
+          "adicionados",
+          "adicionados_por_origem",
+          "finais",
+          "finais_por_origem"
+        ],
+        "title": "TelemetriaDesvios",
+        "type": "object"
+      },
+      "TelemetriaProjetoResponse": {
+        "properties": {
+          "com_snapshot": {
+            "title": "Com Snapshot",
+            "type": "integer"
+          },
+          "cortes": {
+            "items": {
+              "$ref": "#/components/schemas/TelemetriaCorteDiff"
+            },
+            "title": "Cortes",
+            "type": "array"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "sem_snapshot": {
+            "title": "Sem Snapshot",
+            "type": "integer"
+          },
+          "titulo_live": {
+            "title": "Titulo Live",
+            "type": "string"
+          },
+          "total_cortes": {
+            "title": "Total Cortes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "projeto_id",
+          "titulo_live",
+          "total_cortes",
+          "com_snapshot",
+          "sem_snapshot",
+          "cortes"
+        ],
+        "title": "TelemetriaProjetoResponse",
+        "type": "object"
+      },
+      "TelemetriaTitulo": {
+        "properties": {
+          "final": {
+            "title": "Final",
+            "type": "string"
+          },
+          "mudou": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mudou"
+          },
+          "proposto": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposto"
+          }
+        },
+        "required": [
+          "proposto",
+          "final",
+          "mudou"
+        ],
+        "title": "TelemetriaTitulo",
+        "type": "object"
+      },
       "TemaModel": {
         "properties": {
           "fonte_preset": {
@@ -4096,6 +4591,251 @@
           "erro"
         ],
         "title": "YoutubeAuthStatusResponse",
+        "type": "object"
+      },
+      "YoutubeStatsStatusResponse": {
+        "properties": {
+          "casados_por_titulo": {
+            "title": "Casados Por Titulo",
+            "type": "integer"
+          },
+          "com_corte": {
+            "title": "Com Corte",
+            "type": "integer"
+          },
+          "dias_desde_sync": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dias Desde Sync"
+          },
+          "sincronizado_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sincronizado Em"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "videos": {
+            "items": {
+              "$ref": "#/components/schemas/YoutubeVideoStat"
+            },
+            "title": "Videos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "total",
+          "com_corte",
+          "casados_por_titulo",
+          "sincronizado_em",
+          "stale",
+          "dias_desde_sync",
+          "videos"
+        ],
+        "title": "YoutubeStatsStatusResponse",
+        "type": "object"
+      },
+      "YoutubeStatsSyncResponse": {
+        "description": "`iniciado` = a sync foi disparada; `erro` = falta autorizar (a tela mostra\na instrução de `mensagem`).",
+        "properties": {
+          "mensagem": {
+            "title": "Mensagem",
+            "type": "string"
+          },
+          "precisa_reautorizar": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precisa Reautorizar"
+          },
+          "status": {
+            "enum": [
+              "iniciado",
+              "erro"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "mensagem",
+          "precisa_reautorizar"
+        ],
+        "title": "YoutubeStatsSyncResponse",
+        "type": "object"
+      },
+      "YoutubeVideoStat": {
+        "properties": {
+          "average_view_duration_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average View Duration Seg"
+          },
+          "average_view_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average View Percentage"
+          },
+          "canal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canal Id"
+          },
+          "corte_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corte Id"
+          },
+          "duracao_seg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duracao Seg"
+          },
+          "estimated_minutes_watched": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Minutes Watched"
+          },
+          "match_por_titulo": {
+            "title": "Match Por Titulo",
+            "type": "boolean"
+          },
+          "publicado_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publicado Em"
+          },
+          "sincronizado_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sincronizado Em"
+          },
+          "subscribers_gained": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscribers Gained"
+          },
+          "titulo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Titulo"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          },
+          "views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views"
+          }
+        },
+        "required": [
+          "video_id",
+          "canal_id",
+          "titulo",
+          "duracao_seg",
+          "publicado_em",
+          "views",
+          "estimated_minutes_watched",
+          "average_view_duration_seg",
+          "average_view_percentage",
+          "subscribers_gained",
+          "corte_id",
+          "match_por_titulo",
+          "sincronizado_em"
+        ],
+        "title": "YoutubeVideoStat",
         "type": "object"
       }
     }
@@ -9805,7 +10545,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LevantamentoDuracaoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9847,7 +10589,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LevantamentoTituloResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9877,7 +10621,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/YoutubeStatsStatusResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9897,7 +10643,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/YoutubeStatsSyncResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10633,7 +11381,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetriaProjetoResponse"
+                }
               }
             },
             "description": "Successful Response"

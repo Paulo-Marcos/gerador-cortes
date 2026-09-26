@@ -7,6 +7,7 @@ from app.core.logging import operational_error, operational_info
 from app.database import get_db
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, Projeto, StatusProjeto
+from app.routers import analises_schemas
 from app.routers.errors import erro_interno
 from app.services import abrir_no_sistema, listagem_de_projetos
 from app.services.analise import AnaliseService
@@ -348,7 +349,9 @@ async def exportar_telemetria_cortes(formato: str = "json", db: AsyncSession = D
     return {"total_cortes": len(linhas), "cortes": linhas}
 
 
-@router.get("/{projeto_id}/telemetria-cortes")
+@router.get(
+    "/{projeto_id}/telemetria-cortes", response_model=analises_schemas.TelemetriaProjetoResponse
+)
 async def obter_telemetria_cortes(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """D-303: diff proposta-da-IA × corte final para cada corte do projeto.
 
@@ -365,7 +368,7 @@ async def obter_telemetria_cortes(projeto_id: str, db: AsyncSession = Depends(ge
 # acima. Caminhos com ≥2 segmentos, para não colidir com GET /{projeto_id}.
 
 
-@router.post("/youtube-stats/sync")
+@router.post("/youtube-stats/sync", response_model=analises_schemas.YoutubeStatsSyncResponse)
 async def sincronizar_youtube_stats():
     """Dispara em background a sync das métricas do canal (upsert idempotente).
 
@@ -378,13 +381,16 @@ async def sincronizar_youtube_stats():
     return {"status": "iniciado", "mensagem": "Sync de estatísticas do YouTube em andamento."}
 
 
-@router.get("/youtube-stats/status")
+@router.get("/youtube-stats/status", response_model=analises_schemas.YoutubeStatsStatusResponse)
 async def status_youtube_stats(db: AsyncSession = Depends(get_db)):
     """Último sync (`sincronizado_em`), se está velho (`stale`) e a lista de vídeos."""
     return await YoutubeStatsService.status(db)
 
 
-@router.get("/youtube-stats/levantamento/duracao-retencao")
+@router.get(
+    "/youtube-stats/levantamento/duracao-retencao",
+    response_model=analises_schemas.LevantamentoDuracaoResponse,
+)
 async def levantamento_duracao_retencao(formato: str = "json", db: AsyncSession = Depends(get_db)):
     """Retenção e views médias por faixa de duração (calibra as faixas do V2)."""
     linhas = await YoutubeStatsService.levantamento_duracao_retencao(db)
@@ -397,7 +403,10 @@ async def levantamento_duracao_retencao(formato: str = "json", db: AsyncSession 
     return {"faixas": linhas}
 
 
-@router.get("/youtube-stats/levantamento/titulo-desempenho")
+@router.get(
+    "/youtube-stats/levantamento/titulo-desempenho",
+    response_model=analises_schemas.LevantamentoTituloResponse,
+)
 async def levantamento_titulo_desempenho(formato: str = "json", db: AsyncSession = Depends(get_db)):
     """Views/retenção por comprimento de título e por dois-pontos/pergunta/número."""
     linhas = await YoutubeStatsService.levantamento_titulo_desempenho(db)
