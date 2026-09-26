@@ -61,6 +61,13 @@ ESTADOS_TERMINAIS: frozenset[EstadoItem] = frozenset(
     {EstadoItem.PUBLICADO, EstadoItem.ERRO, EstadoItem.PULADO, EstadoItem.CANCELADO}
 )
 
+# Estados em que a MÁQUINA já largou o item: os terminais e mais `SUA_VEZ`, em que
+# o trabalho que resta é do operador. É o que decide se o lote terminou — e se
+# um novo pode começar (D-564, D-591): um lote não fica preso esperando um
+# clique que talvez nunca venha. O item em `SUA_VEZ` ainda pode virar
+# `PUBLICADO`; só não depende mais da raia.
+ESTADOS_FORA_DA_RAIA: frozenset[EstadoItem] = ESTADOS_TERMINAIS | {EstadoItem.SUA_VEZ}
+
 
 @dataclass(frozen=True)
 class Cadencia:
