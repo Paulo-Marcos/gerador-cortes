@@ -4809,6 +4809,27 @@ export interface components {
             job_id: string;
         };
         /**
+         * CandidataEnfileiradaResponse
+         * @description `ja_existia` = a live já tinha projeto; aí não há pontuação a devolver.
+         */
+        CandidataEnfileiradaResponse: {
+            /** Ja Existia */
+            ja_existia: boolean;
+            /** Pontuacao Ranking */
+            pontuacao_ranking?: number | null;
+            /** Projeto Id */
+            projeto_id: string;
+            /** Video Id */
+            video_id: string;
+        };
+        /** CandidataRejeitadaResponse */
+        CandidataRejeitadaResponse: {
+            /** Status */
+            status: string;
+            /** Video Id */
+            video_id: string;
+        };
+        /**
          * CapaTikTokRequest
          * @description O que vai na faixa central e qual texto vai por cima.
          *
@@ -5085,6 +5106,33 @@ export interface components {
             ponto_hms?: string | null;
             /** Ponto Seg */
             ponto_seg?: number | null;
+        };
+        /**
+         * EmbasamentoCriterio
+         * @description Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela.
+         */
+        EmbasamentoCriterio: {
+            /** Contribuicao */
+            contribuicao: number;
+            /** Criterio */
+            criterio: string;
+            /** Peso */
+            peso: number;
+            /** Rotulo */
+            rotulo: string;
+            /** Valor Bruto */
+            valor_bruto: number;
+            /** Valor Normalizado */
+            valor_normalizado: number;
+        };
+        /** EnfileirarDownloadsResponse */
+        EnfileirarDownloadsResponse: {
+            /** Criados */
+            criados: components["schemas"]["ProjetoCriadoResponse"][];
+            /** Ignorados */
+            ignorados: string[];
+            /** Message */
+            message: string;
         };
         /** EnfileirarRequest */
         EnfileirarRequest: {
@@ -5392,6 +5440,81 @@ export interface components {
             /** Versoes */
             versoes: components["schemas"]["SkillVersaoResponse"][];
         };
+        /** LiveCandidataResponse */
+        LiveCandidataResponse: {
+            /** Canal Origem */
+            canal_origem: string;
+            /** Comentarios */
+            comentarios: number;
+            /** Componentes Pontuacao */
+            componentes_pontuacao: {
+                [key: string]: number;
+            };
+            /** Data Publicacao */
+            data_publicacao: string;
+            /** Duracao Iso */
+            duracao_iso: string;
+            /** Embasamento */
+            embasamento: components["schemas"]["EmbasamentoCriterio"][];
+            /** Fetched At */
+            fetched_at: string;
+            /** Id */
+            id: string;
+            /** Likes */
+            likes: number;
+            /** Pontuacao Total */
+            pontuacao_total: number;
+            /** Sentimento Destaques */
+            sentimento_destaques: string[];
+            /** Sentimento Score */
+            sentimento_score: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pendente" | "rejeitada" | "promovida";
+            /** Thumbnail Url */
+            thumbnail_url: string;
+            /** Titulo */
+            titulo: string;
+            /** Video Id */
+            video_id: string;
+            /** Views */
+            views: number;
+            /** Youtube Url */
+            youtube_url: string;
+        };
+        /** LiveDoCanalResponse */
+        LiveDoCanalResponse: {
+            /** Data Publicacao */
+            data_publicacao: string;
+            /** Data Publicacao Yyyymmdd */
+            data_publicacao_yyyymmdd: string;
+            /** Duracao Iso */
+            duracao_iso: string;
+            /** Ja Baixado */
+            ja_baixado: boolean;
+            /** Thumbnail Url */
+            thumbnail_url: string;
+            /** Titulo */
+            titulo: string;
+            /** Video Id */
+            video_id: string;
+            /** Youtube Url */
+            youtube_url: string;
+        };
+        /**
+         * LivesDoCanalResponse
+         * @description `channel_id` só vem quando a busca achou lives; sem elas, a chave não vem.
+         */
+        LivesDoCanalResponse: {
+            /** After Date */
+            after_date: string;
+            /** Channel Id */
+            channel_id?: string | null;
+            /** Lives */
+            lives: components["schemas"]["LiveDoCanalResponse"][];
+        };
         /**
          * LlmCallResponse
          * @description Uma chamada de IA registrada, para a Área de Análises.
@@ -5534,6 +5657,15 @@ export interface components {
             /** Filtros */
             filtros?: string[] | null;
         };
+        /** ProjetoCriadoResponse */
+        ProjetoCriadoResponse: {
+            /** Projeto Id */
+            projeto_id: string;
+            /** Video Id */
+            video_id: string;
+            /** Youtube Url */
+            youtube_url: string;
+        };
         /** ProjetoResponse */
         ProjetoResponse: {
             /** Arquivo Video Path */
@@ -5668,6 +5800,19 @@ export interface components {
             prompt: string;
             /** Prompt Default */
             prompt_default: string;
+        };
+        /**
+         * RankingLivesResponse
+         * @description O TOP de candidatas. `janela_meses` só vem numa geração nova — a resposta
+         *     do cache de 24h não o traz, e a chave não vem.
+         */
+        RankingLivesResponse: {
+            /** Atualizado Em */
+            atualizado_em: string;
+            /** Janela Meses */
+            janela_meses?: number | null;
+            /** Lives */
+            lives: components["schemas"]["LiveCandidataResponse"][];
         };
         /** RegistrarAvaliacaoRequest */
         RegistrarAvaliacaoRequest: {
@@ -6199,7 +6344,7 @@ export interface components {
             /** Mensagem */
             mensagem: string;
             /** Precisa Reautorizar */
-            precisa_reautorizar: boolean | null;
+            precisa_reautorizar?: boolean | null;
             /**
              * Status
              * @enum {string}
@@ -10927,7 +11072,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RankingLivesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11022,7 +11167,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RankingLivesResponse"];
                 };
             };
         };
@@ -11044,7 +11189,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CandidataEnfileiradaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11075,7 +11220,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CandidataRejeitadaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13312,7 +13457,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["EnfileirarDownloadsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13344,7 +13489,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LivesDoCanalResponse"];
                 };
             };
             /** @description Validation Error */

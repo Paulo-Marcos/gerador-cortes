@@ -21,20 +21,12 @@ import { Button } from '@/components/ui/button';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
-import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
-import type { RankingLive, RankingLivesResponse } from '@/types/models';
-import { RankingEmbasamentoPanel, type EmbasamentoItem } from './RankingEmbasamentoPanel';
+import { livesApi, type RankingLive, type RankingLivesResponse } from './api';
+import { RankingEmbasamentoPanel } from './RankingEmbasamentoPanel';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
-
-/**
- * O payload do ranking passou a trazer `embasamento` on-the-fly (D-356). Como
- * `api.ts`/`models.ts` estão travados e não descrevem o campo, tipamos LOCALMENTE
- * a extensão sobre `RankingLive`.
- */
-type LiveComEmbasamento = RankingLive & { embasamento?: EmbasamentoItem[] };
 
 function formatPublishedAt(iso: string) {
   if (!iso) return 'sem data';
@@ -101,12 +93,12 @@ export function RankingLivesPage() {
   const rankingKey = ['ranking-lives'] as const;
   const rankingQuery = useQuery({
     queryKey: rankingKey,
-    queryFn: () => api.listarRankingLives(false),
+    queryFn: () => livesApi.listarRankingLives(false),
     staleTime: 60_000,
   });
 
   const refreshMutation = useMutation({
-    mutationFn: () => api.refreshRankingLives(),
+    mutationFn: () => livesApi.refreshRankingLives(),
     onSuccess: (data) => {
       queryClient.setQueryData<RankingLivesResponse>(rankingKey, data);
       notify('Ranking atualizado.', { tone: 'success' });
@@ -119,7 +111,7 @@ export function RankingLivesPage() {
   });
 
   const rejeitarMutation = useMutation({
-    mutationFn: (videoId: string) => api.rejeitarCandidata(videoId),
+    mutationFn: (videoId: string) => livesApi.rejeitarCandidata(videoId),
     onSuccess: (_data, videoId) => {
       queryClient.setQueryData<RankingLivesResponse>(rankingKey, (current) =>
         current
@@ -136,7 +128,7 @@ export function RankingLivesPage() {
   });
 
   const baixarMutation = useMutation({
-    mutationFn: (videoId: string) => api.enfileirarCandidata(videoId),
+    mutationFn: (videoId: string) => livesApi.enfileirarCandidata(videoId),
     onSuccess: (data, videoId) => {
       queryClient.setQueryData<RankingLivesResponse>(rankingKey, (current) =>
         current
@@ -304,7 +296,7 @@ function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando 
   const breakdown = Object.entries(live.componentes_pontuacao)
     .map(([k, v]) => `${COMPONENTE_LABEL[k] ?? k}: ${Math.round(v)}`)
     .join(' · ');
-  const embasamento = (live as LiveComEmbasamento).embasamento ?? [];
+  const embasamento = live.embasamento;
 
   return (
     <li

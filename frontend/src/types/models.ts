@@ -511,66 +511,6 @@ export interface BulkYoutubeResponse {
   agenda: Array<{ corte_id: string; scheduled_at: string | null }>;
 }
 
-export interface YoutubeLive {
-  video_id: string;
-  titulo: string;
-  data_publicacao: string;
-  data_publicacao_yyyymmdd: string;
-  thumbnail_url: string;
-  duracao_iso: string;
-  youtube_url: string;
-  ja_baixado: boolean;
-}
-
-export interface YoutubeLivesResponse {
-  lives: YoutubeLive[];
-  after_date: string;
-  channel_id?: string;
-}
-
-export interface EnfileirarDownloadsResponse {
-  message: string;
-  criados: Array<{ projeto_id: string; video_id: string; youtube_url: string }>;
-  ignorados: string[];
-}
-
-// ─── F-052: Ranking de lives candidatas ────────────────────────────────────
-
-export type StatusLiveCandidata = 'pendente' | 'rejeitada' | 'promovida';
-
-export interface RankingLive {
-  id: string;
-  video_id: string;
-  titulo: string;
-  canal_origem: string;
-  youtube_url: string;
-  thumbnail_url: string;
-  duracao_iso: string;
-  data_publicacao: string;
-  views: number;
-  likes: number;
-  comentarios: number;
-  sentimento_score: number;
-  sentimento_destaques: string[];
-  pontuacao_total: number;
-  componentes_pontuacao: Record<string, number>;
-  status: StatusLiveCandidata;
-  fetched_at: string;
-}
-
-export interface RankingLivesResponse {
-  lives: RankingLive[];
-  atualizado_em: string;
-  janela_meses?: number;
-}
-
-export interface EnfileirarCandidataResponse {
-  projeto_id: string;
-  video_id: string;
-  pontuacao_ranking?: number;
-  ja_existia: boolean;
-}
-
 export interface AnalisePromptResponse {
   prompt?: string;
   prompts?: Array<{ parte: number; total_partes: number; texto: string }>;

@@ -14,8 +14,6 @@ import type {
   CenasRemotionPayload,
   Corte,
   CriarProjetoRequest,
-  EnfileirarCandidataResponse,
-  EnfileirarDownloadsResponse,
   ExportStatusResponse,
   FilaGlobal,
   FiltroExport,
@@ -34,8 +32,6 @@ import type {
   StatusBrutoResponse,
   VersaoExport,
   WaveformPeaksResponse,
-  RankingLivesResponse,
-  YoutubeLivesResponse,
   LiberarPublicacaoRequest,
   LiberarPublicacaoResponse,
   YouTubeManualPublishRequest,
@@ -769,35 +765,6 @@ export const api = {
       prompts: { parte: number; total_partes: number; texto: string }[];
       formato_esperado?: unknown;
     }>(`/cortes/${corteId}/cenas-remotion/prompt`),
-
-  listarLivesCanal: (afterDate = '', maxResults = 25) => {
-    const params = new URLSearchParams({ max_results: String(maxResults) });
-    if (afterDate) params.set('after_date', afterDate);
-    return request<YoutubeLivesResponse>(`/youtube/lives?${params.toString()}`);
-  },
-
-  enfileirarDownloads: (videoIds: string[], canalOrigem = import.meta.env.VITE_CANAL_HANDLE ?? '@seucanal') =>
-    request<EnfileirarDownloadsResponse>('/youtube/enfileirar', {
-      method: 'POST',
-      body: JSON.stringify({ video_ids: videoIds, canal_origem: canalOrigem }),
-    }),
-
-  // ─── F-052: Ranking de lives candidatas ───────────────────────────
-  listarRankingLives: (forcarRefresh = false) =>
-    request<RankingLivesResponse>(`/ranking-lives${forcarRefresh ? '?forcar_refresh=true' : ''}`),
-
-  refreshRankingLives: () =>
-    request<RankingLivesResponse>('/ranking-lives/refresh', { method: 'POST' }),
-
-  rejeitarCandidata: (videoId: string) =>
-    request<{ video_id: string; status: string }>(`/ranking-lives/${videoId}/rejeitar`, {
-      method: 'POST',
-    }),
-
-  enfileirarCandidata: (videoId: string) =>
-    request<EnfileirarCandidataResponse>(`/ranking-lives/${videoId}/enfileirar`, {
-      method: 'POST',
-    }),
 
   // ─── Presets de layout YouTube (F-048) ─────────────────────────────
   listarLayoutPresets: (tipo?: LayoutPresetTipo) => {
