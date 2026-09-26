@@ -1,135 +1,46 @@
-import { API_BASE } from '@/lib/apiBase';
+import { api, dados, type Schema } from '@/shared/api';
 // D-154: cliente HTTP do gerenciador de canais (épico Multi-canal — Opção X).
-// Módulo próprio (e não `lib/api.ts`, que está sob lock) para as chamadas da
-// API de canais criada em D-153. Segue o mesmo padrão de fetch/erro do projeto:
-// checa `res.ok`, propaga status + corpo no erro e desserializa JSON.
+// D-721: as chamadas passam pelo cliente GERADO do contrato (`shared/api`), e os
+// tipos são os do `openapi.json` — antes eram cópias escritas à mão de
+// `routers/channels.py`, que divergiam em silêncio quando o backend mudava.
 
+// ─── Contratos (gerados de backend/app/routers/channels.py) ─────────────
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-    ...init,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}${text ? ` — ${text}` : ''}`);
-  }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
-}
-
-// ─── Contratos (espelham backend/app/routers/channels.py) ──────────────
-
-export interface PaletaCanal {
-  primaria: string;
-  secundaria: string;
-  acento: string;
-}
-
-export interface Canal {
-  id: string;
-  handle: string;
-  nome: string;
-  credito: string;
-  /** Canal-fonte das lives no YouTube (@handle ou id UCxxxx). */
-  youtube_channel_id: string;
-  paleta: PaletaCanal;
-  ativo: boolean;
-}
-
-export interface ListaCanaisResponse {
-  canais: Canal[];
-  /** Id do canal ativo (null se ainda não há ponteiro válido). */
-  ativo: string | null;
-}
-
+export type PaletaCanal = Schema<'PaletaModel'>;
+export type Canal = Schema<'CanalResponse'>;
+export type ListaCanaisResponse = Schema<'ListaCanaisResponse'>;
 /** Campos editáveis da identidade de um canal (merge raso; todos opcionais). */
-export interface IdentidadeCanal {
-  handle?: string;
-  nome?: string;
-  credito?: string;
-  youtube_channel_id?: string;
-  paleta?: PaletaCanal;
-}
-
-export interface CriarCanalRequest extends IdentidadeCanal {
-  /** Id (slug) do canal — vira o nome da pasta. */
-  id: string;
-}
-
-export interface SelecionarCanalResponse {
-  canal_id: string;
-  /** Quando true, a troca só efetiva após reiniciar o backend. */
-  requer_restart: boolean;
-}
+export type IdentidadeCanal = Schema<'IdentidadeModel'>;
+export type CriarCanalRequest = Schema<'CriarCanalRequest'>;
+export type SelecionarCanalResponse = Schema<'SelecionarCanalResponse'>;
 
 // ─── Tema de render por canal (D-174) ──────────────────────────────────
 // A paleta de render (conjunto COMPLETO de cores das cenas Remotion) é OUTRA
 // coisa que a `PaletaCanal` de identidade (3 cores de branding/UI) acima.
 
-export interface Tema {
-  id: string;
-  nome: string;
-  /** Preset tipográfico do tema (atual/moderna/cientifica/minimalista/tecnica). */
-  fonte_preset: string;
-  /** Conjunto completo de cores do render, por chave (verdeMoldura, azulAcento, …). */
-  paleta: Record<string, string>;
-}
-
-export interface ListaTemasResponse {
-  temas: Tema[];
-}
-
-export interface TemaSelecionado {
-  canal_id: string;
-  /** Tema efetivo (o default `atual` quando o canal nunca escolheu). */
-  tema_id: string;
-  /** True = escolha explícita; false = default herdado. */
-  selecionado: boolean;
-}
+export type Tema = Schema<'TemaModel'>;
+export type ListaTemasResponse = Schema<'ListaTemasResponse'>;
+export type TemaSelecionado = Schema<'TemaSelecionadoResponse'>;
 
 // ─── Conexão OAuth do YouTube por canal (D-169) ────────────────────────
 
 /** Estado da conexão do YouTube do canal ativo (espelha `youtube_auth.status()`). */
-export interface YoutubeAuthStatus {
-  /** Há um token válido para o canal ativo. */
-  conectado: boolean;
-  /** Título do canal do YouTube autenticado (vazio quando desconectado). */
-  canal_titulo: string;
-  /** O `client_secrets.json` (crachá do app) existe — pré-requisito do login. */
-  cliente_configurado: boolean;
-  /** Caminho exato onde salvar o `client_secrets.json` (D-628). */
-  client_secrets_destino: string;
-  /** Um login está em andamento (a UI deve continuar pollando). */
-  fluxo_em_andamento: boolean;
-  /** Mensagem do último erro de login, se houver. */
-  erro: string | null;
-}
-
-export interface YoutubeAuthAcaoResponse {
-  status: string;
-  mensagem: string;
-}
+export type YoutubeAuthStatus = Schema<'YoutubeAuthStatusResponse'>;
+export type YoutubeAuthAcaoResponse = Schema<'YoutubeAuthAcaoResponse'>;
 
 // ─── Endpoints ─────────────────────────────────────────────────────────
 
+const doCanal = (id: string) => ({ params: { path: { canal_id: id } } });
+
 export const channelsApi = {
-  listar: () => request<ListaCanaisResponse>('/channels'),
+  listar: () => dados(api.GET('/api/channels')),
 
-  criar: (body: CriarCanalRequest) =>
-    request<Canal>('/channels', { method: 'POST', body: JSON.stringify(body) }),
+  criar: (body: CriarCanalRequest) => dados(api.POST('/api/channels', { body })),
 
-  selecionar: (id: string) =>
-    request<SelecionarCanalResponse>(`/channels/${encodeURIComponent(id)}/select`, {
-      method: 'POST',
-      body: '{}',
-    }),
+  selecionar: (id: string) => dados(api.POST('/api/channels/{canal_id}/select', doCanal(id))),
 
   editar: (id: string, body: IdentidadeCanal) =>
-    request<Canal>(`/channels/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
+    dados(api.PATCH('/api/channels/{canal_id}', { ...doCanal(id), body })),
 };
 
 /**
@@ -137,16 +48,12 @@ export const channelsApi = {
  * no backend; a SELEÇÃO é por canal (settings.db). Vive em `/api/channels`.
  */
 export const themesApi = {
-  listar: () => request<ListaTemasResponse>('/channels/temas'),
+  listar: () => dados(api.GET('/api/channels/temas')),
 
-  obterDoCanal: (id: string) =>
-    request<TemaSelecionado>(`/channels/${encodeURIComponent(id)}/tema`),
+  obterDoCanal: (id: string) => dados(api.GET('/api/channels/{canal_id}/tema', doCanal(id))),
 
   selecionar: (id: string, tema_id: string) =>
-    request<TemaSelecionado>(`/channels/${encodeURIComponent(id)}/tema`, {
-      method: 'PUT',
-      body: JSON.stringify({ tema_id }),
-    }),
+    dados(api.PUT('/api/channels/{canal_id}/tema', { ...doCanal(id), body: { tema_id } })),
 };
 
 /**
@@ -155,11 +62,9 @@ export const themesApi = {
  * youtube_browser), não em `/api/channels`.
  */
 export const youtubeAuthApi = {
-  status: () => request<YoutubeAuthStatus>('/youtube/auth/status'),
+  status: () => dados(api.GET('/api/youtube/auth/status')),
 
-  conectar: () =>
-    request<YoutubeAuthAcaoResponse>('/youtube/auth/conectar', { method: 'POST', body: '{}' }),
+  conectar: () => dados(api.POST('/api/youtube/auth/conectar')),
 
-  desconectar: () =>
-    request<YoutubeAuthAcaoResponse>('/youtube/auth/desconectar', { method: 'POST', body: '{}' }),
+  desconectar: () => dados(api.POST('/api/youtube/auth/desconectar')),
 };
