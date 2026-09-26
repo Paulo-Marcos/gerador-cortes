@@ -13,7 +13,6 @@ import type {
   CriarProjetoRequest,
   ExportStatusResponse,
   FilaGlobal,
-  FiltroExport,
   FontePreset,
   ImportarAnaliseRequest,
   LimparArquivosResponse,
@@ -27,7 +26,6 @@ import type {
   ReiniciarFalhadosResponse,
   RemotionStudioUrlResponse,
   StatusBrutoResponse,
-  VersaoExport,
   WaveformPeaksResponse,
   LiberarPublicacaoRequest,
   LiberarPublicacaoResponse,
@@ -282,22 +280,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-
-  listarFiltros: () => request<{ filtros: FiltroExport[] }>('/export/filtros'),
-
-  listarVersoes: (corteId: string) =>
-    request<{ corte_id: string; versoes: VersaoExport[] }>(`/export/corte/${corteId}/versoes`),
-
-  processarMultiversion: (
-    corteId: string,
-    preview = true,
-    previewSegundos = 10,
-    filtros: string[] | null = null,
-  ) =>
-    request<{ message: string; filtros: string[] }>(
-      `/export/corte/${corteId}/processar-multiversion?preview=${preview}&preview_segundos=${previewSegundos}`,
-      { method: 'POST', body: JSON.stringify(filtros ? { filtros } : {}) },
-    ),
 
   // I-023: filtro padrão de render vive só em Ajustes (PUT /settings).
   // O antigo PATCH /export/projeto/{id}/filtro-padrao foi removido — não

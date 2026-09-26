@@ -5252,6 +5252,25 @@ export interface components {
             };
         };
         /**
+         * FiltroExport
+         * @description Um filtro de cinema do render (`FILTROS_CINEMA`).
+         */
+        FiltroExport: {
+            /** Descricao */
+            descricao: string;
+            /** Id */
+            id: string;
+            /** Nome */
+            nome: string;
+            /** Tem Filtro Visual */
+            tem_filtro_visual: boolean;
+        };
+        /** FiltrosResponse */
+        FiltrosResponse: {
+            /** Filtros */
+            filtros: components["schemas"]["FiltroExport"][];
+        };
+        /**
          * FinalizadoRequest
          * @description Declara (ou desfaz) que os shorts do corte ja subiram para todas as redes.
          */
@@ -5719,6 +5738,16 @@ export interface components {
             de_indice: number;
             /** Para Indice */
             para_indice: number;
+        };
+        /**
+         * MultiversionResponse
+         * @description A geração roda em segundo plano; a resposta só confirma o disparo.
+         */
+        MultiversionResponse: {
+            /** Filtros */
+            filtros: string[];
+            /** Message */
+            message: string;
         };
         /** OcorrenciaDoEixo */
         OcorrenciaDoEixo: {
@@ -6431,6 +6460,36 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * VersaoExport
+         * @description Uma versão do corte com um filtro aplicado (multiversão).
+         *
+         *     Os campos vêm da pasta da versão; `preview` vem do `meta.json` que o
+         *     processamento grava ao lado do vídeo, e só existe quando o arquivo existe.
+         */
+        VersaoExport: {
+            /** Completo Disponivel */
+            completo_disponivel: boolean;
+            /** Descricao */
+            descricao: string;
+            /** E Preview */
+            e_preview: boolean;
+            /** Filtro */
+            filtro: string;
+            /** Nome */
+            nome: string;
+            /** Preview */
+            preview?: boolean | null;
+            /** Tamanho Mb */
+            tamanho_mb: number;
+        };
+        /** VersoesResponse */
+        VersoesResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Versoes */
+            versoes: components["schemas"]["VersaoExport"][];
         };
         /** VotoQualidadeRequest */
         VotoQualidadeRequest: {
@@ -9324,7 +9383,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MultiversionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9390,7 +9449,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["VersoesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9542,7 +9601,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FiltrosResponse"];
                 };
             };
         };

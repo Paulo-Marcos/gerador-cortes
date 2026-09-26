@@ -422,22 +422,6 @@ export interface PromptManualResponse {
   formato_esperado?: unknown;
 }
 
-export interface FiltroExport {
-  id: string;
-  nome: string;
-  descricao: string;
-  tem_filtro_visual: boolean;
-}
-
-export interface VersaoExport {
-  filtro: string;
-  nome: string;
-  descricao?: string;
-  e_preview: boolean;
-  completo_disponivel: boolean;
-  tamanho_mb?: number;
-}
-
 export interface FilaGlobal {
   pos_producao: {
     total: number;
