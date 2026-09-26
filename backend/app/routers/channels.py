@@ -12,14 +12,10 @@ serviço e mapeia os erros de domínio para os status corretos.
 from __future__ import annotations
 
 from app.domain.canal import theme_library
+from app.domain.canal.identidade import Canal, IdCanalInvalido
 from app.services import channel_theme as theme_service
 from app.services import channels as channels_service
-from app.services.channels import (
-    Canal,
-    CanalJaExiste,
-    CanalNaoEncontrado,
-    IdCanalInvalido,
-)
+from app.services.channels import CanalJaExiste, CanalNaoEncontrado
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 

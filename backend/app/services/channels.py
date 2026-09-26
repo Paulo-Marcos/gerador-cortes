@@ -22,13 +22,18 @@ produção resolvem a raiz real do repositório.
 from __future__ import annotations
 
 import logging
-import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
 from app.core.channel_paths import active_channel_root
+from app.domain.canal.identidade import (
+    Canal,
+    Paleta,
+    id_de_canal_valido,
+    mesclar_identidade,
+)
 from app.infrastructure import settings_store
 from app.infrastructure.channel_assets_sync import garantir_mascote_materializado
 
@@ -42,16 +47,9 @@ _DIR_CANAIS = "channels"
 _PONTEIRO_ATIVO = "active-channel"
 _CHANNEL_YAML = "channel.yaml"
 
-# Id de canal = nome de pasta: começa com letra/dígito e usa só [a-z0-9-].
-_RE_ID_CANAL = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-
 
 class ChannelError(RuntimeError):
     """Erro de domínio do registry de canais (base)."""
-
-
-class IdCanalInvalido(ChannelError):
-    """O id informado não é um slug de canal válido."""
 
 
 class CanalNaoEncontrado(ChannelError):
@@ -62,25 +60,8 @@ class CanalJaExiste(ChannelError):
     """Já existe um canal com o id informado."""
 
 
-@dataclass(frozen=True)
-class Paleta:
-    primaria: str = ""
-    secundaria: str = ""
-    acento: str = ""
-
-
-@dataclass(frozen=True)
-class Canal:
-    """Visão de um canal para a API (identidade + se é o ativo)."""
-
-    id: str
-    handle: str
-    nome: str
-    credito: str
-    paleta: Paleta
-    ativo: bool
-    # Canal-FONTE das lives (handle/id/username do YouTube de onde o ranking baixa).
-    youtube_channel_id: str = ""
+# D-762: `Canal`, `Paleta` e as regras da identidade moram em domain/canal/identidade.
+# `IdCanalInvalido` também — é um PedidoInvalido, que a API devolve como 400.
 
 
 @dataclass(frozen=True)
@@ -187,13 +168,7 @@ def _montar_canal(canal_id: str, channel_yaml: Path, ativo: bool, db_path: Path)
 
 
 def _exigir_id_valido(canal_id: str) -> str:
-    canal_id = (canal_id or "").strip()
-    if not _RE_ID_CANAL.match(canal_id):
-        raise IdCanalInvalido(
-            f"Id de canal inválido: {canal_id!r}. Use apenas letras minúsculas, "
-            "dígitos e hífen, começando por letra ou dígito (ex.: 'meu-canal')."
-        )
-    return canal_id
+    return id_de_canal_valido(canal_id)
 
 
 def _exigir_canal(instance_root: Path, canal_id: str) -> Path:
@@ -351,28 +326,9 @@ def editar_identidade(canal_id: str, identidade: dict, instance_root: Path | Non
     return _montar_canal(canal_id, channel_yaml, ativo=(canal_id == ativo), db_path=db_path)
 
 
-# Campos de identidade aceitos no PATCH/criação (escalares de topo).
-_CAMPOS_IDENTIDADE = ("handle", "nome", "credito", "youtube_channel_id")
-_CAMPOS_PALETA = ("primaria", "secundaria", "acento")
-
-
 def _aplicar_identidade(channel_yaml: Path, identidade: dict) -> None:
     """Funde `identidade` no `channel.yaml`, preservando o resto (ex.: config_version)."""
-    dados = _ler_yaml(channel_yaml)
-
-    for campo in _CAMPOS_IDENTIDADE:
-        if identidade.get(campo) is not None:
-            dados[campo] = str(identidade[campo])
-
-    paleta_in = identidade.get("paleta")
-    if isinstance(paleta_in, dict):
-        paleta = dados.get("paleta")
-        if not isinstance(paleta, dict):
-            paleta = {}
-        for campo in _CAMPOS_PALETA:
-            if paleta_in.get(campo) is not None:
-                paleta[campo] = str(paleta_in[campo])
-        dados["paleta"] = paleta
+    dados = mesclar_identidade(_ler_yaml(channel_yaml), identidade)
 
     channel_yaml.parent.mkdir(parents=True, exist_ok=True)
     channel_yaml.write_text(

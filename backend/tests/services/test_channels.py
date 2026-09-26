@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from app.domain.canal.identidade import IdCanalInvalido
 from app.services import channels as svc
 
 EXEMPLO_YAML = """config_version: 1
@@ -90,7 +91,7 @@ def test_criar_canal_id_duplicado_falha(instancia):
 @pytest.mark.parametrize("ruim", ["", "Maiusc", "com espaco", "-comeca-hifen", "acentução"])
 def test_criar_canal_id_invalido_falha(instancia, ruim):
     instance_root, exemplo = instancia
-    with pytest.raises(svc.IdCanalInvalido):
+    with pytest.raises(IdCanalInvalido):
         svc.criar_canal(ruim, instance_root=instance_root, exemplo_dir=exemplo)
 
 
