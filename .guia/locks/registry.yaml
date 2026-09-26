@@ -82,7 +82,8 @@ locks:
   files:
   - backend/app/services/render/pipeline_render.py
   - backend/app/routers/cortes.py
-  - backend/tests/services/test_pipeline_render.py
+  - backend/tests/services/test_pipeline_render_chunks.py
+  - backend/tests/services/test_pipeline_render_fases.py
   - frontend/src/hooks/useEditor.ts
 - id: publicacao-manual-upload-individual-estudio
   description: Publicacao manual e upload individual no Estudio
