@@ -86,3 +86,47 @@ class TestCompilarPadroes:
         assert padroes["total_melhores"] == 0
         assert padroes["com_tags"] == 0
         assert padroes["eixos"]["cenario"] == []
+
+
+# ── D-722: a leitura do agente chega à tela sempre na mesma forma ─────────────
+
+
+def test_a_analise_completa_passa_como_veio():
+    from app.domain.corte.padroes_thumbnail import normalizar_analise
+
+    bruto = {
+        "resumo": "fundo escuro vence",
+        "padroes": [{"eixo": "fundo", "padrao": "escuro", "evidencia": "4 de 5", "forca": "alta"}],
+        "proposta_ajuste_skill": "pedir fundo escuro",
+    }
+
+    assert normalizar_analise(bruto) == bruto
+
+
+def test_a_analise_sem_padroes_nao_derruba_a_tela():
+    """A tela faz `analise.padroes.map(...)`: sem a chave, a página quebrava."""
+    from app.domain.corte.padroes_thumbnail import normalizar_analise
+
+    assert normalizar_analise({"resumo": "só isso"}) == {
+        "resumo": "só isso",
+        "padroes": [],
+        "proposta_ajuste_skill": "",
+    }
+
+
+def test_item_que_nao_e_padrao_sai_e_campo_faltando_vira_vazio():
+    from app.domain.corte.padroes_thumbnail import normalizar_analise
+
+    analise = normalizar_analise({"padroes": ["solto", {"eixo": "cor", "forca": None}]})
+
+    assert analise["padroes"] == [{"eixo": "cor", "padrao": "", "evidencia": "", "forca": ""}]
+
+
+def test_resposta_que_nem_e_objeto_vira_analise_vazia():
+    from app.domain.corte.padroes_thumbnail import normalizar_analise
+
+    assert normalizar_analise(["lista"]) == {
+        "resumo": "",
+        "padroes": [],
+        "proposta_ajuste_skill": "",
+    }

@@ -42,6 +42,33 @@
         "title": "AnalisarIntervaloRequest",
         "type": "object"
       },
+      "AnalisePadroesAgente": {
+        "description": "A leitura do agente, já normalizada pelo domínio (`normalizar_analise`).",
+        "properties": {
+          "padroes": {
+            "items": {
+              "$ref": "#/components/schemas/PadraoIdentificado"
+            },
+            "title": "Padroes",
+            "type": "array"
+          },
+          "proposta_ajuste_skill": {
+            "title": "Proposta Ajuste Skill",
+            "type": "string"
+          },
+          "resumo": {
+            "title": "Resumo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resumo",
+          "padroes",
+          "proposta_ajuste_skill"
+        ],
+        "title": "AnalisePadroesAgente",
+        "type": "object"
+      },
       "ApontamentoResponse": {
         "description": "Uma ressalva do avaliador. As chaves são as que o domínio reconstrói.",
         "properties": {
@@ -1081,6 +1108,199 @@
           "avaliado_em"
         ],
         "title": "AvaliacaoCorteResponse",
+        "type": "object"
+      },
+      "AvaliacaoRegistradaResponse": {
+        "properties": {
+          "avaliacao": {
+            "$ref": "#/components/schemas/AvaliacaoThumbnailResponse"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "avaliacao"
+        ],
+        "title": "AvaliacaoRegistradaResponse",
+        "type": "object"
+      },
+      "AvaliacaoThumbnailResponse": {
+        "description": "Uma avaliação do par prompt+imagem (D-066). Os snapshots saem crus do\nbanco — por isso admitem None.",
+        "properties": {
+          "comentario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentario"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "criado_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Criado Em"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nota_beleza": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota Beleza"
+          },
+          "nota_clareza": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota Clareza"
+          },
+          "nota_fidelidade": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota Fidelidade"
+          },
+          "nota_honestidade": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota Honestidade"
+          },
+          "nota_impacto": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota Impacto"
+          },
+          "prompt_snapshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Snapshot"
+          },
+          "texto_capa_snapshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Texto Capa Snapshot"
+          },
+          "thumbnail_path_snapshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Path Snapshot"
+          },
+          "titulo_youtube_snapshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Titulo Youtube Snapshot"
+          },
+          "veredito": {
+            "title": "Veredito",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "corte_id",
+          "prompt_snapshot",
+          "thumbnail_path_snapshot",
+          "titulo_youtube_snapshot",
+          "texto_capa_snapshot",
+          "veredito",
+          "nota_fidelidade",
+          "nota_clareza",
+          "nota_beleza",
+          "nota_impacto",
+          "nota_honestidade",
+          "comentario",
+          "criado_em"
+        ],
+        "title": "AvaliacaoThumbnailResponse",
+        "type": "object"
+      },
+      "AvaliacoesThumbnailResponse": {
+        "properties": {
+          "avaliacoes": {
+            "items": {
+              "$ref": "#/components/schemas/AvaliacaoThumbnailResponse"
+            },
+            "title": "Avaliacoes",
+            "type": "array"
+          },
+          "resumo": {
+            "$ref": "#/components/schemas/ResumoAvaliacoesThumbnail"
+          }
+        },
+        "required": [
+          "avaliacoes",
+          "resumo"
+        ],
+        "title": "AvaliacoesThumbnailResponse",
         "type": "object"
       },
       "BlocoArranjoSchema": {
@@ -3216,6 +3436,24 @@
         "title": "MoverBlocoRequest",
         "type": "object"
       },
+      "OcorrenciaDoEixo": {
+        "properties": {
+          "contagem": {
+            "title": "Contagem",
+            "type": "integer"
+          },
+          "valor": {
+            "title": "Valor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "valor",
+          "contagem"
+        ],
+        "title": "OcorrenciaDoEixo",
+        "type": "object"
+      },
       "OverlayCodec": {
         "enum": [
           "vp9",
@@ -3223,6 +3461,135 @@
         ],
         "title": "OverlayCodec",
         "type": "string"
+      },
+      "PadraoIdentificado": {
+        "properties": {
+          "eixo": {
+            "title": "Eixo",
+            "type": "string"
+          },
+          "evidencia": {
+            "title": "Evidencia",
+            "type": "string"
+          },
+          "forca": {
+            "title": "Forca",
+            "type": "string"
+          },
+          "padrao": {
+            "title": "Padrao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "eixo",
+          "padrao",
+          "evidencia",
+          "forca"
+        ],
+        "title": "PadraoIdentificado",
+        "type": "object"
+      },
+      "PadroesCompilados": {
+        "properties": {
+          "com_tags": {
+            "title": "Com Tags",
+            "type": "integer"
+          },
+          "eixos": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/OcorrenciaDoEixo"
+              },
+              "type": "array"
+            },
+            "title": "Eixos",
+            "type": "object"
+          },
+          "total_melhores": {
+            "title": "Total Melhores",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_melhores",
+          "com_tags",
+          "eixos"
+        ],
+        "title": "PadroesCompilados",
+        "type": "object"
+      },
+      "PadroesThumbnailResponse": {
+        "description": "`ok` traz `com_tags`; `dados_insuficientes` traz o `minimo` e nada a analisar.",
+        "properties": {
+          "analise": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalisePadroesAgente"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "com_tags": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Com Tags"
+          },
+          "minimo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimo"
+          },
+          "padroes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PadroesCompilados"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "dados_insuficientes"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "total_avaliacoes": {
+            "title": "Total Avaliacoes",
+            "type": "integer"
+          },
+          "total_melhores": {
+            "title": "Total Melhores",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "total_avaliacoes",
+          "total_melhores",
+          "padroes",
+          "analise"
+        ],
+        "title": "PadroesThumbnailResponse",
+        "type": "object"
       },
       "PalcoPadraoRequest": {
         "properties": {
@@ -3762,6 +4129,47 @@
           "campos"
         ],
         "title": "ResetSkillRequest",
+        "type": "object"
+      },
+      "ResumoAvaliacoesThumbnail": {
+        "properties": {
+          "medias_criterios": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Medias Criterios",
+            "type": "object"
+          },
+          "por_veredito": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Por Veredito",
+            "type": "object"
+          },
+          "positivos": {
+            "title": "Positivos",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "positivos",
+          "por_veredito",
+          "medias_criterios"
+        ],
+        "title": "ResumoAvaliacoesThumbnail",
         "type": "object"
       },
       "ReverterSkillRequest": {
@@ -5551,7 +5959,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacoesThumbnailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5592,7 +6002,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacoesThumbnailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5641,7 +6053,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacaoRegistradaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5687,7 +6101,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PadroesThumbnailResponse"
+                }
               }
             },
             "description": "Successful Response"

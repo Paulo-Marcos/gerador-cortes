@@ -20,6 +20,7 @@ from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.corte.padroes_thumbnail import (
     MIN_MELHORES_PARA_ANALISE,
     compilar_padroes,
+    normalizar_analise,
     selecionar_melhores,
 )
 from app.infrastructure.gerador_ia import gerador_para
@@ -123,7 +124,7 @@ class PadroesThumbnailService:
         prompt = _montar_prompt(padroes, melhores)
 
         try:
-            analise = await _ler_padroes(prompt, provider)
+            analise = normalizar_analise(await _ler_padroes(prompt, provider))
         except (ValueError, json.JSONDecodeError):
             logger.exception("Falha ao analisar padrões de thumbnail via IA")
             raise

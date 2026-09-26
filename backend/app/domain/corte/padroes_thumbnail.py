@@ -151,3 +151,28 @@ def compilar_padroes(melhores: list[dict]) -> dict:
         "com_tags": com_tags,
         "eixos": eixos,
     }
+
+
+def normalizar_analise(bruto: object) -> dict:
+    """A leitura do agente no formato que a tela lê — nunca o JSON cru (D-722).
+
+    O contrato de saída mora num prompt EDITÁVEL por canal ("padroes-thumbnail"),
+    e a IA pode não cumpri-lo; a tela, porém, faz `analise.padroes.map(...)` —
+    uma resposta sem `padroes` derrubava a página. Aqui a forma é garantida: o
+    que falta vira vazio, o que não é padrão (item que não é objeto) sai.
+
+    >>> normalizar_analise({"resumo": "curto"})
+    {'resumo': 'curto', 'padroes': [], 'proposta_ajuste_skill': ''}
+    """
+    dados = bruto if isinstance(bruto, dict) else {}
+    itens = dados.get("padroes")
+    padroes = [
+        {campo: str(item.get(campo) or "") for campo in ("eixo", "padrao", "evidencia", "forca")}
+        for item in (itens if isinstance(itens, list) else [])
+        if isinstance(item, dict)
+    ]
+    return {
+        "resumo": str(dados.get("resumo") or ""),
+        "padroes": padroes,
+        "proposta_ajuste_skill": str(dados.get("proposta_ajuste_skill") or ""),
+    }
