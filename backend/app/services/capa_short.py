@@ -39,7 +39,12 @@ from app.database import AsyncSessionLocal
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.domain.compartilhado.time_convert import seg_to_mmss
 from app.domain.short import segmentos_short
-from app.domain.short.capa_short import encaixar_instante, instante_padrao, prompt_da_capa
+from app.domain.short.capa_short import (
+    encaixar_instante,
+    instante_padrao,
+    prompt_da_capa,
+    texto_da_capa,
+)
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.infrastructure.ffmpeg_runner import run_ffmpeg_simple
 from app.models import Corte, MetadadoCorte, MetadadoShort, Short
@@ -312,20 +317,6 @@ def _falas_em_texto(janela: list[dict]) -> str:
     return "\n".join(linhas)
 
 
-def texto_da_capa(contexto: ContextoDaCapa) -> str:
-    """A frase que vai DENTRO da arte.
-
-    O gancho da abertura é a primeira escolha, e não por economia: ele já é a
-    promessa deste trecho, já foi julgado pelo operador e já cabe em 4 a 7
-    palavras. Uma segunda frase para a capa criaria duas promessas para o mesmo
-    short — e a capa é justamente o que o espectador lê ANTES do gancho.
-
-    Sem gancho escrito, cai no título: mais longo e mais descritivo, mas melhor
-    que mandar o capista inventar a promessa sozinho.
-    """
-    return contexto.gancho_tela.strip() or contexto.titulo.strip() or "(sem texto)"
-
-
 async def obter_prompt(short_id: str) -> str:
     """O prompt já escrito para este short, ou "" quando ainda não há."""
     async with AsyncSessionLocal() as db:
@@ -372,7 +363,7 @@ async def _escrever_prompt_da_capa(short_id: str, provider: ProviderIA) -> str:
         duracao_humana=contexto.duracao_humana,
         texto_transcricao=contexto.texto_transcricao or "(trecho sem fala transcrita)",
         prompt_thumbnail=contexto.prompt_thumbnail or "(o Capista ainda nao escreveu)",
-        texto_capa=texto_da_capa(contexto),
+        texto_capa=texto_da_capa(contexto.gancho_tela, contexto.titulo),
     )
     registrar_skill_usada(_SKILL_CAPA_SHORT, skill, scaffold)
     bruto = await gerar_texto(

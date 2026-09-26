@@ -214,3 +214,17 @@ def prompt_da_capa(bruto: str) -> str:
         return ""
 
     return texto
+
+
+def texto_da_capa(gancho_tela: str, titulo: str) -> str:
+    """A frase que vai DENTRO da arte.
+
+    O gancho da abertura é a primeira escolha, e não por economia: ele já é a
+    promessa deste trecho, já foi julgado pelo operador e já cabe em 4 a 7
+    palavras. Uma segunda frase para a capa criaria duas promessas para o mesmo
+    short — e a capa é justamente o que o espectador lê ANTES do gancho.
+
+    Sem gancho escrito, cai no título: mais longo e mais descritivo, mas melhor
+    que mandar o capista inventar a promessa sozinho.
+    """
+    return (gancho_tela or "").strip() or (titulo or "").strip() or "(sem texto)"
