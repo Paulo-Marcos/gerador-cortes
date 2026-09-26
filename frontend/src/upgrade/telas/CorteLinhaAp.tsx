@@ -271,7 +271,7 @@ export function CorteLinhaAp({
           <button
             type="button"
             onClick={irEditor}
-            title={status.titulo}
+            title={status.titulo ?? undefined}
             style={{
               minWidth: 0,
               // R4: o título abre o corte e media 20 px de altura clicável.

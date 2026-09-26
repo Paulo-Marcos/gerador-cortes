@@ -4385,6 +4385,13 @@ export interface components {
              */
             motivo: string;
         };
+        /** AgendaDoUpload */
+        AgendaDoUpload: {
+            /** Corte Id */
+            corte_id: string;
+            /** Scheduled At */
+            scheduled_at: string | null;
+        };
         /** AnalisarIntervaloRequest */
         AnalisarIntervaloRequest: {
             /** Fim Hms */
@@ -4842,6 +4849,13 @@ export interface components {
              * @default 3
              */
             videos_por_dia: number;
+        };
+        /** BulkYoutubeResponse */
+        BulkYoutubeResponse: {
+            /** Agenda */
+            agenda: components["schemas"]["AgendaDoUpload"][];
+            /** Message */
+            message: string;
         };
         /** CanalResponse */
         CanalResponse: {
@@ -5480,6 +5494,28 @@ export interface components {
             destino: string;
         };
         /**
+         * LiberarPublicacaoResponse
+         * @description A marca de um destino desfeita (D-566) — só a memória do app, nada lá fora.
+         */
+        LiberarPublicacaoResponse: {
+            /** Campos Limpos */
+            campos_limpos: string[];
+            /** Corte Id */
+            corte_id: string;
+            /** Destino */
+            destino: string;
+            /** Liberado */
+            liberado: boolean;
+            /** Mensagem */
+            mensagem: string;
+            /** Rotulo */
+            rotulo: string;
+            /** Status */
+            status: string;
+            /** Video Pronto */
+            video_pronto: boolean;
+        };
+        /**
          * LimparArquivosRequest
          * @description D-457: o bruto do corte Fire só sai se o operador pedir explicitamente.
          *
@@ -5717,6 +5753,28 @@ export interface components {
         MarcarPublicadoRequest: {
             /** Youtube Url */
             youtube_url: string;
+        };
+        /**
+         * MarcarPublicadoResponse
+         * @description O vídeo conferido no canal autenticado e gravado no corte.
+         */
+        MarcarPublicadoResponse: {
+            /** Mensagem */
+            mensagem: string;
+            /** Privacy Status */
+            privacy_status: string;
+            /** Scheduled At */
+            scheduled_at: string;
+            /** Status */
+            status: string;
+            /** Titulo */
+            titulo: string;
+            /** Upload Status */
+            upload_status: string;
+            /** Url */
+            url: string;
+            /** Video Id */
+            video_id: string;
         };
         /** ModeloGeminiResponse */
         ModeloGeminiResponse: {
@@ -6082,6 +6140,24 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * RetencaoArquivos
+         * @description O que a limpeza de mídia fez depois do upload (D-456).
+         */
+        RetencaoArquivos: {
+            /** Erros */
+            erros: string[];
+            /** Liberado Mb */
+            liberado_mb: number;
+            /** Preservados */
+            preservados: string[];
+            /** Pulados */
+            pulados: string[];
+            /** Removidos */
+            removidos: string[];
+            /** Retido Mb */
+            retido_mb: number;
+        };
         /** ReverterSkillRequest */
         ReverterSkillRequest: {
             /** Versao */
@@ -6230,6 +6306,71 @@ export interface components {
              * @default true
              */
             abrir_pasta: boolean;
+        };
+        /**
+         * StatusCorteBrutoResponse
+         * @description A tarefa de gerar o bruto do corte (`nao_iniciado` quando nunca rodou).
+         */
+        StatusCorteBrutoResponse: {
+            /** Clip Gerado */
+            clip_gerado: boolean;
+            /** Clip Path */
+            clip_path: string | null;
+            /** Corte Id */
+            corte_id: string;
+            /** Status */
+            status: string;
+        };
+        /**
+         * StatusExportCorte
+         * @description Onde cada corte aprovado está no caminho até a publicação.
+         */
+        StatusExportCorte: {
+            /** Cenas Geradas */
+            cenas_geradas: boolean;
+            /** Cenas Validadas */
+            cenas_validadas: boolean;
+            /** Corte Id */
+            corte_id: string;
+            /** Descricao Youtube */
+            descricao_youtube: string | null;
+            /** Grade Pronta */
+            grade_pronta: boolean;
+            /** Metadados Completos */
+            metadados_completos: boolean;
+            /** Numero */
+            numero: number;
+            /** Overlays Prontos */
+            overlays_prontos: boolean;
+            /** Pronto Publicar */
+            pronto_publicar: boolean;
+            /** Raw Pronto */
+            raw_pronto: boolean;
+            /** Thumbnail Path */
+            thumbnail_path: string | null;
+            /** Thumbnail Pronta */
+            thumbnail_pronta: boolean;
+            /** Tiktok Publicado Em */
+            tiktok_publicado_em: string;
+            /** Titulo */
+            titulo: string | null;
+            /** Titulo Youtube */
+            titulo_youtube: string | null;
+            /** Video Pronto */
+            video_pronto: boolean;
+            /** Youtube Scheduled At */
+            youtube_scheduled_at: string;
+            /** Youtube Url Publicado */
+            youtube_url_publicado: string;
+            /** Youtube Video Id */
+            youtube_video_id: string;
+        };
+        /** StatusExportResponse */
+        StatusExportResponse: {
+            /** Cortes */
+            cortes: components["schemas"]["StatusExportCorte"][];
+            /** Projeto Id */
+            projeto_id: string;
         };
         /**
          * TelemetriaAvaliacao
@@ -6512,6 +6653,24 @@ export interface components {
         YouTubeUploadRequest: {
             /** Scheduled At */
             scheduled_at?: string | null;
+        };
+        /**
+         * YouTubeUploadResponse
+         * @description Upload novo, ou o corte que já estava publicado (`mensagem` explica). O
+         *     erro não chega aqui: a rota o devolve como 500.
+         */
+        YouTubeUploadResponse: {
+            /** Mensagem */
+            mensagem?: string | null;
+            retencao_arquivos?: components["schemas"]["RetencaoArquivos"] | null;
+            /** Scheduled At */
+            scheduled_at: string | null;
+            /** Status */
+            status: string;
+            /** Url */
+            url: string;
+            /** Video Id */
+            video_id: string;
         };
         /** YoutubeAuthAcaoResponse */
         YoutubeAuthAcaoResponse: {
@@ -9345,7 +9504,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["StatusCorteBrutoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9418,7 +9577,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LiberarPublicacaoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9484,7 +9643,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["YouTubeUploadResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9519,7 +9678,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MarcarPublicadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9627,7 +9786,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["BulkYoutubeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9658,7 +9817,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["StatusExportResponse"];
                 };
             };
             /** @description Validation Error */

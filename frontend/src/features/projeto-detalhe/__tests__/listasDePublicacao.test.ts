@@ -6,6 +6,7 @@ import {
   pendentesNoTiktok,
 } from '../listasDePublicacao';
 import type { StatusExportCorte } from '@/types/models';
+import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 // D-516: o bug era uma lista servindo a dois destinos.
 //
@@ -17,7 +18,7 @@ import type { StatusExportCorte } from '@/types/models';
 // pode mexer no outro.
 
 function corte(over: Partial<StatusExportCorte> = {}): StatusExportCorte {
-  return {
+  return statusExportPendente({
     corte_id: 'c1',
     numero: 1,
     titulo: 'Um corte',
@@ -29,7 +30,7 @@ function corte(over: Partial<StatusExportCorte> = {}): StatusExportCorte {
     metadados_completos: true,
     pronto_publicar: true,
     ...over,
-  };
+  });
 }
 
 describe('cortesParaTiktok', () => {

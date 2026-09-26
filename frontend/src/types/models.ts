@@ -1,3 +1,4 @@
+import type { Schema } from '@/shared/api';
 // Espelha frontend/src/app/models/models.ts (Angular).
 // Mantenha ambos sincronizados durante a migração.
 
@@ -347,35 +348,9 @@ export interface RemotionStudioUrlResponse {
   props?: unknown;
 }
 
-export interface StatusExportCorte {
-  corte_id: string;
-  numero: number;
-  titulo: string;
-  raw_pronto: boolean;
-  grade_pronta: boolean;
-  overlays_prontos: boolean;
-  /** Existe pelo menos uma cena salva em `cenas_remotion`. */
-  cenas_geradas?: boolean;
-  /** Marca manual do editor de que as cenas estao revisadas. */
-  cenas_validadas?: boolean;
-  video_pronto: boolean;
-  /** D-516: quando o operador confirmou que subiu no TikTok. "" = ainda não. */
-  tiktok_publicado_em?: string;
-  thumbnail_pronta: boolean;
-  metadados_completos: boolean;
-  pronto_publicar: boolean;
-  titulo_youtube?: string;
-  descricao_youtube?: string;
-  thumbnail_path?: string;
-  youtube_video_id?: string;
-  youtube_url_publicado?: string;
-  youtube_scheduled_at?: string;
-}
-
-export interface ExportStatusResponse {
-  projeto_id: string;
-  cortes: StatusExportCorte[];
-}
+/** O status de exportação de um corte — o tipo do contrato (D-722). Mora aqui
+ *  como apelido porque 28 telas o importam deste arquivo. */
+export type StatusExportCorte = Schema<'StatusExportCorte'>;
 
 export interface MetadadoCorte {
   id: string | null;
@@ -440,19 +415,6 @@ export interface FilaGlobal {
   };
 }
 
-export interface BulkYoutubeRequest {
-  corte_ids: string[];
-  agendar: boolean;
-  videos_por_dia: number;
-  data_inicio?: string;
-  hora_publicacao: string;
-}
-
-export interface BulkYoutubeResponse {
-  message: string;
-  agenda: Array<{ corte_id: string; scheduled_at: string | null }>;
-}
-
 export interface AnalisePromptResponse {
   prompt?: string;
   prompts?: Array<{ parte: number; total_partes: number; texto: string }>;
@@ -468,49 +430,7 @@ export interface AnalisarIntervaloRequest {
   fim_hms: string;
 }
 
-export interface YouTubeUploadRequest {
-  scheduled_at: string | null;
-}
-
-export interface YouTubeManualPublishRequest {
-  youtube_url: string;
-}
-
-export interface YouTubePublishResponse {
-  status: string;
-  mensagem: string;
-  video_id?: string;
-  url?: string;
-  titulo?: string;
-  privacy_status?: string;
-  upload_status?: string;
-  scheduled_at?: string;
-}
-
-/**
- * D-566: destinos que sabem ser LIBERADOS (despublicados).
- *
- * O app não descobre sozinho que um vídeo saiu do ar — quem apaga lá fora é o
- * operador. Isto é o vocabulário para ele contar.
- */
 export type DestinoPublicacao = 'youtube' | 'tiktok';
-
-export interface LiberarPublicacaoRequest {
-  destino: DestinoPublicacao;
-}
-
-export interface LiberarPublicacaoResponse {
-  status: string;
-  corte_id: string;
-  destino: DestinoPublicacao;
-  rotulo: string;
-  /** `false` = não havia marca; clicar de novo não é engano, é no-op. */
-  liberado: boolean;
-  campos_limpos: string[];
-  /** Sem o MP4 final na pasta o botão de enviar não volta — precisa re-render. */
-  video_pronto: boolean;
-  mensagem: string;
-}
 
 export interface CriarProjetoRequest {
   youtube_url: string;

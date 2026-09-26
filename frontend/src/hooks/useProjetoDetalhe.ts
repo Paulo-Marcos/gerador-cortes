@@ -3,14 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, progressoWsUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
-import type {
-  AnalisarIntervaloRequest,
-  ImportarAnaliseRequest,
-  LiberarPublicacaoRequest,
-  ProgressoUpdate,
-  YouTubeManualPublishRequest,
-  YouTubeUploadRequest,
-} from '@/types/models';
+import type { AnalisarIntervaloRequest, ImportarAnaliseRequest, ProgressoUpdate } from '@/types/models';
+import {
+  publicacaoApi,
+  type LiberarPublicacaoRequest,
+  type YouTubeManualPublishRequest,
+  type YouTubeUploadRequest,
+} from '@/features/publicacao/api';
 import { cortesProjetoKey } from './useEditor';
 
 export const projetoKey = (id: string) => ['projeto', id] as const;
@@ -39,7 +38,7 @@ export function useAuditoriaAnalise(id: string | undefined, enabled: boolean) {
 export function useExportStatus(id: string | undefined) {
   return useQuery({
     queryKey: exportStatusKey(id ?? ''),
-    queryFn: () => api.exportStatus(id!),
+    queryFn: () => publicacaoApi.exportStatus(id!),
     enabled: !!id,
     refetchInterval: 8_000,
     staleTime: 3_000,
@@ -193,14 +192,14 @@ export function usePromptAnalise(
 export function useUploadYouTube() {
   return useMutation({
     mutationFn: ({ corteId, body }: { corteId: string; body: YouTubeUploadRequest }) =>
-      api.uploadYouTube(corteId, body),
+      publicacaoApi.uploadYouTube(corteId, body),
   });
 }
 
 export function useMarcarPublicadoYouTube() {
   return useMutation({
     mutationFn: ({ corteId, body }: { corteId: string; body: YouTubeManualPublishRequest }) =>
-      api.marcarPublicadoYouTube(corteId, body),
+      publicacaoApi.marcarPublicadoYouTube(corteId, body),
   });
 }
 
@@ -214,7 +213,7 @@ export function useMarcarPublicadoYouTube() {
 export function useLiberarPublicacao() {
   return useMutation({
     mutationFn: ({ corteId, body }: { corteId: string; body: LiberarPublicacaoRequest }) =>
-      api.liberarPublicacao(corteId, body),
+      publicacaoApi.liberarPublicacao(corteId, body),
   });
 }
 

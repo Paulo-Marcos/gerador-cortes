@@ -5,13 +5,10 @@ import type {
   AppSettings,
   ArranjoBlocos,
   AuditoriaAnaliseResponse,
-  BulkYoutubeRequest,
-  BulkYoutubeResponse,
   CenaRemotion,
   CenasRemotionPayload,
   Corte,
   CriarProjetoRequest,
-  ExportStatusResponse,
   FilaGlobal,
   FontePreset,
   ImportarAnaliseRequest,
@@ -27,11 +24,6 @@ import type {
   RemotionStudioUrlResponse,
   StatusBrutoResponse,
   WaveformPeaksResponse,
-  LiberarPublicacaoRequest,
-  LiberarPublicacaoResponse,
-  YouTubeManualPublishRequest,
-  YouTubePublishResponse,
-  YouTubeUploadRequest,
 } from '@/types/models';
 import type {
   AtualizarLayoutPresetRequest,
@@ -160,10 +152,6 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  // ─── Export status (cortes com flags raw/video/thumb/meta) ─────────
-  exportStatus: (projetoId: string) =>
-    request<ExportStatusResponse>(`/export/projeto/${projetoId}/status`),
-
   /** D-746: a pasta da LIVE (a do corte é `abrirPastaCorte`). */
   abrirPastaProjeto: (projetoId: string) =>
     request<{ status: string; dir_path: string }>(`/projetos/${projetoId}/abrir-pasta`, {
@@ -254,33 +242,6 @@ export const api = {
       { method: 'POST', body: JSON.stringify(body) },
     ),
 
-  // ─── Upload YouTube individual (usado em loop p/ massa com +15min) ─
-  uploadYouTube: (corteId: string, body: YouTubeUploadRequest) =>
-    request<YouTubePublishResponse>(`/export/corte/${corteId}/youtube`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  marcarPublicadoYouTube: (corteId: string, body: YouTubeManualPublishRequest) =>
-    request<YouTubePublishResponse>(`/export/corte/${corteId}/youtube/marcar-publicado`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  /**
-   * D-566: desfaz a marca de publicação de um destino.
-   *
-   * O espelho de `marcarPublicadoYouTube`: aquele conta que o vídeo está lá
-   * fora, este conta que não está mais. Sem ele, apagar o vídeo do YouTube
-   * para reprocessar deixava o corte preso — o botão de enviar some quando há
-   * URL publicada e o backend responde "já publicado; upload ignorado".
-   */
-  liberarPublicacao: (corteId: string, body: LiberarPublicacaoRequest) =>
-    request<LiberarPublicacaoResponse>(`/export/corte/${corteId}/publicacao/liberar`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
   // I-023: filtro padrão de render vive só em Ajustes (PUT /settings).
   // O antigo PATCH /export/projeto/{id}/filtro-padrao foi removido — não
   // existia "filtro por projeto" coerente com a fonte única definida em
@@ -294,12 +255,6 @@ export const api = {
       '/export/fila-global/cancelar',
       { method: 'POST', body: JSON.stringify({ job_id: jobId }) },
     ),
-
-  bulkYoutube: (projetoId: string, body: BulkYoutubeRequest) =>
-    request<BulkYoutubeResponse>(`/export/projeto/${projetoId}/bulk-youtube`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
 
   // ─── Cortes (editor) ───────────────────────────────────────────────
   listarCortes: (projetoId: string) => request<Corte[]>(`/cortes/projeto/${projetoId}`),
