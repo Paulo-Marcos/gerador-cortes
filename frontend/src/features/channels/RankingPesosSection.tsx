@@ -5,7 +5,7 @@
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
-import type { RankingPesosPayload } from '@/lib/rankingPesosApi';
+import type { RankingPesosPayload } from '@/features/channels/api/pesosRanking';
 import { RankingPesosForm } from './RankingPesosForm';
 import {
   useRankingPesos,

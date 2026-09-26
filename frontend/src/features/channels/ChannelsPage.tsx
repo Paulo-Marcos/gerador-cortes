@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
-import type { Canal, IdentidadeCanal } from '@/lib/channelsApi';
+import type { Canal, IdentidadeCanal } from '@/features/channels/api/canais';
 import { AppSettingsControls } from '@/features/settings/AppSettingsControls';
 import { useTheme } from '@/hooks/useTheme';
 import { PALETTES, usePalette } from '@/hooks/usePalette';

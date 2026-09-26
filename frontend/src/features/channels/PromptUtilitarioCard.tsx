@@ -3,7 +3,7 @@
 // o botão de editar. Sem I/O — o container decide o que fazer no clique.
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { PromptUtilitario } from '@/lib/promptsUtilitariosApi';
+import type { PromptUtilitario } from '@/features/channels/api/promptsUtilitarios';
 
 interface Props {
   prompt: PromptUtilitario;

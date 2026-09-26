@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 async function modulo() {
-  return import('../channelsApi');
+  return import('../canais');
 }
 
 describe('channelsApi sobre o cliente gerado', () => {

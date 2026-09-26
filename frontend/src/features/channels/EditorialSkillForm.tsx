@@ -13,7 +13,7 @@ import type {
   EditorialSkill,
   ModeloGemini,
   UpdateSkillPayload,
-} from '@/lib/editorialSkillsApi';
+} from '@/features/channels/api/skillsEditoriais';
 
 interface Props {
   skill: EditorialSkill;

@@ -10,7 +10,7 @@ import { AlertTriangle, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { EditorialScaffold } from '@/lib/editorialScaffoldsApi';
+import type { EditorialScaffold } from '@/features/channels/api/scaffolds';
 
 interface Props {
   scaffold: EditorialScaffold;

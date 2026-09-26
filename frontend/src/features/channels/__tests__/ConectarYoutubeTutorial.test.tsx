@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { Canal, YoutubeAuthStatus } from '@/lib/channelsApi';
+import type { Canal, YoutubeAuthStatus } from '@/features/channels/api/canais';
 import { ChannelCard } from '../ChannelCard';
 import { ConectarYoutubeTutorial } from '../ConectarYoutubeTutorial';
 

@@ -7,7 +7,7 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
-import type { PromptUtilitario } from '@/lib/promptsUtilitariosApi';
+import type { PromptUtilitario } from '@/features/channels/api/promptsUtilitarios';
 import { PromptUtilitarioCard } from './PromptUtilitarioCard';
 import { PromptUtilitarioForm } from './PromptUtilitarioForm';
 import {

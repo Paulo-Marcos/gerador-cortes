@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { EditorialSkill, SkillVersao } from '@/lib/editorialSkillsApi';
+import type { EditorialSkill, SkillVersao } from '@/features/channels/api/skillsEditoriais';
 import { EditorialSkillCard } from '../EditorialSkillCard';
 import { EditorialSkillHistory, formatarData } from '../EditorialSkillHistory';
 import { skillCustomizada } from '../EditorialSkillsSection';

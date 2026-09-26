@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   promptsUtilitariosApi,
   type ListaPromptsUtilitariosResponse,
-} from '@/lib/promptsUtilitariosApi';
+} from '@/features/channels/api/promptsUtilitarios';
 
 const PROMPTS_KEY = ['prompts-utilitarios'] as const;
 
