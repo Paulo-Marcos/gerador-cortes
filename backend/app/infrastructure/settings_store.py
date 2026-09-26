@@ -3,8 +3,8 @@
 Este é o backend de persistência ÚNICO das configurações editáveis pelo app —
 um SQLite pequeno e global (`instance/settings.db`) que substitui os arquivos
 `app_settings.json` (ajustes de app por canal) e `channel.yaml` (identidade do
-canal) como FONTE DA VERDADE. Os arquivos continuam sendo escritos como espelho
-de compatibilidade/backup pelos serviços que consomem este módulo — ver
+canal) como FONTE ÚNICA. Desde a D-699 os arquivos não são mais escritos: só
+são lidos uma vez, para semear o banco de um canal ainda sem linha — ver
 `services/app_settings.py` e `services/channels.py`.
 
 DECISÃO DE TOPOLOGIA (D-191, Opção A): um único banco global de settings, com as
@@ -14,10 +14,10 @@ config nunca arrisca os dados/vídeos. Listar canais é uma query só, sem abrir
 banco de cada canal.
 
   - `app_settings`      (channel_id PK): log_level, filtro, layout YT global e o
-                        bloco `render.*`. É o que hoje vive no `app_settings.json`
-                        (que já é por canal).
+                        bloco `render.*`. É o que vivia no `app_settings.json`
+                        (que já era por canal).
   - `channel_identity`  (channel_id PK): handle, nome, credito, youtube_channel_id
-                        e a paleta. É o que hoje vive no `channel.yaml`.
+                        e a paleta. É o que vivia no `channel.yaml`.
 
 Camada `services/`: I/O puro de SQLite, síncrono (os consumidores — accessors de
 identidade e AppSettingsService — são chamados de contexto síncrono, inclusive
@@ -64,8 +64,8 @@ _IDENTIDADE_COLUNAS = (
 )
 
 # Identidade EDITORIAL do mascote (D-285): o `nome` citado nos prompts de
-# thumbnail/metadados. Espelha `editorial/mascote.yaml`, por canal — o mesmo
-# padrão banco-fonte-da-verdade + arquivo-espelho aplicado à identidade do canal.
+# thumbnail/metadados. Substitui `editorial/mascote.yaml`, por canal — o mesmo
+# padrão banco-fonte-única + arquivo legado só para semear da identidade do canal.
 _MASCOTE_COLUNAS = ("nome",)
 
 # Tema de render selecionado por canal (D-174): id do tema da biblioteca versionada
@@ -350,7 +350,7 @@ def inicializar(db_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# App settings (bloco por canal — espelha app_settings.json)
+# App settings (bloco por canal — sucede o app_settings.json)
 # --------------------------------------------------------------------------- #
 
 
@@ -395,7 +395,7 @@ def gravar_app_settings(db_path: Path, channel_id: str, valores: dict) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Identidade do canal (espelha channel.yaml)
+# Identidade do canal (sucede o channel.yaml)
 # --------------------------------------------------------------------------- #
 
 
@@ -417,8 +417,7 @@ def gravar_identidade(db_path: Path, channel_id: str, valores: dict) -> None:
     """Grava (UPSERT) a identidade do canal a partir dos campos presentes.
 
     Faz merge: só as colunas presentes em `valores` são alteradas; as demais são
-    preservadas (ou nascem com o default do schema numa linha nova). Espelha a
-    semântica de merge raso de `channels._aplicar_identidade`.
+    preservadas (ou nascem com o default do schema numa linha nova).
     """
     presentes = [c for c in _IDENTIDADE_COLUNAS if c in valores]
     conn = _connect(db_path)
@@ -457,7 +456,7 @@ def listar_identidades(db_path: Path) -> dict[str, dict]:
 
 
 # --------------------------------------------------------------------------- #
-# Identidade do mascote (D-285 — espelha editorial/mascote.yaml)
+# Identidade do mascote (D-285 — sucede o editorial/mascote.yaml)
 # --------------------------------------------------------------------------- #
 
 
