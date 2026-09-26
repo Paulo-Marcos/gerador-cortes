@@ -46,6 +46,8 @@ from __future__ import annotations
 
 import math
 
+from app.domain.short.transcricao_fiel import Palavra
+
 # A faixa da UI dos apps, em cima e embaixo. Espelha `SAFE_ZONE` em
 # `video-renderer/src/cenas-shorts/LegendaShort.tsx` e em
 # `frontend/src/features/shorts/previaLegenda.ts`.
@@ -176,3 +178,34 @@ def para_payload(x: object = 0.0, y: object = 0.0, largura: object = 0.0) -> dic
         "y": normalizar_y(y),
         "largura": normalizar_largura(largura),
     }
+
+
+def para_captions(palavras: list[Palavra]) -> list[dict]:
+    """Converte `Palavra` no formato `Caption` do `@remotion/captions`.
+
+    Duas conversões que precisam estar certas ou a legenda sai torta:
+
+    - **milissegundos**, não segundos — é a unidade do pacote;
+    - **espaço à esquerda** em toda palavra menos a primeira. O Remotion
+      concatena os tokens crus para montar a frase da página; sem o espaço a
+      linha vira "ninguemtecontaisso".
+
+    Exemplo:
+        >>> para_captions([Palavra("olá", 0.0, 0.4), Palavra("mundo", 0.4, 0.9)])
+        [{'text': 'olá', 'startMs': 0, 'endMs': 400, 'timestampMs': 200, 'confidence': None}, \
+{'text': ' mundo', 'startMs': 400, 'endMs': 900, 'timestampMs': 650, 'confidence': None}]
+    """
+    captions: list[dict] = []
+    for indice, palavra in enumerate(palavras):
+        inicio_ms = int(round(palavra.inicio_seg * 1000))
+        fim_ms = int(round(palavra.fim_seg * 1000))
+        captions.append(
+            {
+                "text": palavra.texto if indice == 0 else f" {palavra.texto}",
+                "startMs": inicio_ms,
+                "endMs": fim_ms,
+                "timestampMs": (inicio_ms + fim_ms) // 2,
+                "confidence": None,
+            }
+        )
+    return captions
