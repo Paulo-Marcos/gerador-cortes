@@ -58,8 +58,8 @@ gancho é um só, ancorado no zero.
 
 | Termo | O que é | Onde mora |
 |---|---|---|
-| **Fire** | Um julgamento sobre o **corte inteiro**: "este é dos bons". Muda a moldura da capa e o que a limpeza preserva (RN-15). | `MetadadoCorte.is_fire` |
-| **Candidato a shorts** | Uma aposta sobre **um trecho** do corte, independente do Fire (RN-14). | `MetadadoCorte.candidato_shorts` |
+| **Fire** | Um julgamento sobre o **corte inteiro**: "este é dos bons". Muda a moldura da capa e o que a limpeza preserva (RN-15). | `Corte.is_fire` (D-713; antes no metadado) |
+| **Candidato a shorts** | Uma aposta sobre **um trecho** do corte, independente do Fire (RN-14). | `Corte.candidato_shorts` (D-713) |
 
 ### Cena
 
