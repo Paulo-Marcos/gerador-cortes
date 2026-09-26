@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
-import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
+import { useUltimaGeracao } from '@/features/ia';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { Tooltip } from '@/components/ui/tooltip';

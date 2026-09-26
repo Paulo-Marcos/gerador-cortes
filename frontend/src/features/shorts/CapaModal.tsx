@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo } from '@/lib/providerIa';
-import { useUltimaGeracao } from '@/lib/useUltimaGeracao';
+import { useUltimaGeracao } from '@/features/ia';
 import { Modal } from '@/components/ui/modal';
 import { capaImagemUrl, shortVideoUrl, type ShortIdentificado } from './shortsApi';
 import {

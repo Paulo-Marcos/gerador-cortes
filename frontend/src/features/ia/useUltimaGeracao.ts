@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { llmCallsApi } from '@/lib/llmCallsApi';
+import { llmCallsApi } from './api/telemetria';
 import type { ProviderIA } from '@/lib/providerIa';
 
 // Quem fez a última geração de uma etapa — a fonte do selo nas telas cujo

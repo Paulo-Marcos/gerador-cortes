@@ -5266,35 +5266,35 @@ export interface components {
          */
         LlmCallResponse: {
             /** Corte Id */
-            corte_id?: string | null;
+            corte_id: string | null;
             /** Custo Usd */
-            custo_usd?: number | null;
+            custo_usd: number | null;
             /** Duracao Ms Servidor */
-            duracao_ms_servidor?: number | null;
+            duracao_ms_servidor: number | null;
             /** Erro Tipo */
-            erro_tipo?: string | null;
+            erro_tipo: string | null;
             /** Etapa */
-            etapa?: string | null;
+            etapa: string | null;
             /** Id */
             id: string;
             /** Latencia Ms Wall */
-            latencia_ms_wall?: number | null;
+            latencia_ms_wall: number | null;
             /** Model */
-            model?: string | null;
+            model: string | null;
             /** Projeto Id */
-            projeto_id?: string | null;
+            projeto_id: string | null;
             /** Prompt */
-            prompt?: string | null;
+            prompt: string | null;
             /** Resposta */
-            resposta?: string | null;
+            resposta: string | null;
             /** Short Id */
-            short_id?: string | null;
+            short_id: string | null;
             /** Sucesso */
             sucesso: boolean;
             /** Tokens In */
-            tokens_in?: number | null;
+            tokens_in: number | null;
             /** Tokens Out */
-            tokens_out?: number | null;
+            tokens_out: number | null;
             /** Ts */
             ts: string;
         };
@@ -5785,11 +5785,11 @@ export interface components {
          */
         UltimaGeracaoResponse: {
             /** Model */
-            model?: string | null;
+            model: string | null;
             /** Provider */
-            provider?: string | null;
+            provider: ("claude" | "gemini") | null;
             /** Ts */
-            ts?: string | null;
+            ts: string | null;
         };
         /** UpdateAppSettingsRequest */
         UpdateAppSettingsRequest: {

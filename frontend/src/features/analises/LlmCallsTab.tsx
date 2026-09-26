@@ -4,7 +4,7 @@
 import { Fragment, useState } from 'react';
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type LlmCall } from '@/lib/llmCallsApi';
+import { type LlmCall } from '@/features/ia';
 import { useLlmCalls } from './useLlmCalls';
 
 function formatarTs(iso: string): string {
