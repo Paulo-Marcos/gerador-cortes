@@ -21,7 +21,6 @@ from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.domain.projeto.vtt_parser import parse_vtt
 from app.domain.publicacao.youtube_urls import extract_youtube_video_id
 from app.models import Projeto, StatusProjeto
-from app.services import channels
 from app.services.ciclo_de_vida import mudar_projeto
 from app.services.tasks import fire_and_forget
 from sqlalchemy import select
@@ -71,6 +70,19 @@ class _CanalDeProgresso:
 
 # Registro de canais de progresso por projeto
 _progress_queues: dict[str, _CanalDeProgresso] = {}
+
+
+def _canal_da_live(info: dict) -> str:
+    """O canal de onde a live veio, como o yt-dlp o descreve (D-714).
+
+    Prefere o @handle, que é como o formulário e o ranking gravam o canal; sem
+    ele, o nome do canal. Era o handle do NOSSO canal — o que publica os cortes
+    —, e a live ficava creditada a quem a recortou.
+    """
+    handle = str(info.get("uploader_id") or "")
+    if handle.startswith("@"):
+        return handle
+    return str(info.get("channel") or info.get("uploader") or "")
 
 
 def _data_publicacao_yt_dlp(info: dict) -> str:
@@ -197,11 +209,9 @@ class IngestaoService:
             projeto = Projeto(
                 id=str(uuid.uuid4()),
                 youtube_url=youtube_url,
-                canal_origem=(
-                    canal_origem
-                    if canal_origem is not None
-                    else channels.identidade_do_canal_ativo().handle
-                ),
+                # D-714: o canal DA LIVE, e nao o nosso. Sem ele informado, fica
+                # vazio ate o download dizer de onde a live veio (_salvar_transcricao).
+                canal_origem=canal_origem or "",
                 titulo_live=titulo_live,
                 data_live=data_live,
                 status=StatusProjeto.PENDENTE,
@@ -593,6 +603,8 @@ class IngestaoService:
                     info = json.loads(info_files[0].read_text(encoding="utf-8"))
                     projeto.titulo_live = info.get("title", "")
                     projeto.duracao_segundos = info.get("duration", 0)
+                    if not projeto.canal_origem:
+                        projeto.canal_origem = _canal_da_live(info)
                     data_publicacao = _data_publicacao_yt_dlp(info)
                     if data_publicacao and len(data_publicacao) >= len(projeto.data_live or ""):
                         projeto.data_live = data_publicacao

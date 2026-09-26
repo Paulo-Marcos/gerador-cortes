@@ -120,14 +120,18 @@ async def _todos(fabrica, modelo):
 
 
 @pytest.mark.asyncio
-async def test_criar_a_mao_cria_pendente_no_canal_ativo_e_dispara_a_ingestao(
-    cliente, fabrica, fundo
-):
+async def test_criar_a_mao_cria_pendente_sem_canal_e_dispara_a_ingestao(cliente, fabrica, fundo):
+    """D-714: mudança de comportamento DELIBERADA.
+
+    Sem canal informado, o projeto nascia com o handle do canal ATIVO — o que
+    publica os cortes — como se fosse o canal da live. Agora nasce vazio, e a
+    ingestão preenche com o canal que o yt-dlp informa (test_canal_da_live_d714).
+    """
     resposta = cliente.post("/api/projetos", json={"youtube_url": "https://youtu.be/abc"})
 
     assert resposta.status_code == 201
     corpo = resposta.json()
-    assert (corpo["status"], corpo["canal_origem"]) == ("pendente", "@canal-ativo")
+    assert (corpo["status"], corpo["canal_origem"]) == ("pendente", "")
     assert fundo == [("ingestao", (corpo["id"], "https://youtu.be/abc"))]
     assert [p.id for p in await _todos(fabrica, Projeto)] == [corpo["id"]]
 
