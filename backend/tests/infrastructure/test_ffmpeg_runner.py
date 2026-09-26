@@ -36,6 +36,16 @@ def fora_do_windows(monkeypatch):
     monkeypatch.setattr(runner, "sys", types.SimpleNamespace(platform="linux"))
 
 
+@pytest.fixture
+def no_windows(monkeypatch):
+    """O módulo enxerga o Windows — o caminho em thread —, rode o teste onde rodar.
+
+    Sem isto os testes do caminho em thread só passavam numa máquina Windows: no
+    CI em Linux o executor seguia o caminho assíncrono (visto no CI de 26/09).
+    """
+    monkeypatch.setattr(runner, "sys", types.SimpleNamespace(platform="win32"))
+
+
 # ─── Puros: a leitura das sondas e do stream ─────────────────────────────────
 
 
@@ -121,7 +131,7 @@ def test_sync_que_estoura_o_prazo_e_encerrado():
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_no_windows_a_saida_so_volta_quando_pedida():
+async def test_no_windows_a_saida_so_volta_quando_pedida(no_windows):
     com = await runner.run_ffmpeg(OK, label="t", capture_output=True)
     sem = await runner.run_ffmpeg(OK, label="t")
 
@@ -131,7 +141,7 @@ async def test_no_windows_a_saida_so_volta_quando_pedida():
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_no_windows_o_simples_que_falha_levanta_com_a_cauda():
+async def test_no_windows_o_simples_que_falha_levanta_com_a_cauda(no_windows):
     with pytest.raises(RuntimeError, match=r"t falhou \(thread\): x+fim"):
         await runner.run_ffmpeg_simple(FALHA, label="t")
 
