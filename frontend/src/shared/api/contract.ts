@@ -4392,6 +4392,25 @@ export interface components {
             /** Inicio Hms */
             inicio_hms: string;
         };
+        /**
+         * ApontamentoResponse
+         * @description Uma ressalva do avaliador. As chaves são as que o domínio reconstrói.
+         */
+        ApontamentoResponse: {
+            /** Descricao */
+            descricao: string;
+            /**
+             * Gravidade
+             * @enum {string}
+             */
+            gravidade: "leve" | "media" | "grave";
+            /** Momento */
+            momento: string;
+            /** Rotulo */
+            rotulo: string;
+            /** Tipo */
+            tipo: string;
+        };
         /** AppSettingsResponse */
         AppSettingsResponse: {
             /**
@@ -4611,6 +4630,42 @@ export interface components {
             /** Status */
             status?: string | null;
         };
+        /** AvaliacaoBrutoFeitaResponse */
+        AvaliacaoBrutoFeitaResponse: {
+            avaliacao: components["schemas"]["AvaliacaoBrutoResponse"];
+        };
+        /** AvaliacaoBrutoResponse */
+        AvaliacaoBrutoResponse: {
+            /** Apontamentos */
+            apontamentos: components["schemas"]["ApontamentoResponse"][];
+            /** Corte Id */
+            corte_id: string;
+            /** Criado Em */
+            criado_em: string | null;
+            /** Duracao Hms */
+            duracao_hms: string;
+            /** Duracao Seg */
+            duracao_seg: number;
+            /** Id */
+            id: string;
+            /** Modelo */
+            modelo: string;
+            /** Nota */
+            nota: number;
+            /** Parecer */
+            parecer: string;
+            /** Projeto Id */
+            projeto_id: string;
+            /** Removido Seg */
+            removido_seg: number;
+            /** Total Emendas */
+            total_emendas: number;
+            /**
+             * Veredito
+             * @enum {string}
+             */
+            veredito: "coesa" | "aceitavel" | "quebrada";
+        };
         /** AvaliacaoCorteRequest */
         AvaliacaoCorteRequest: {
             /**
@@ -4625,6 +4680,22 @@ export interface components {
             motivos: string[];
             /** Voto */
             voto: number;
+        };
+        /**
+         * AvaliacaoCorteResponse
+         * @description A avaliação do corte (D-419). `voto` None = ainda não avaliado.
+         */
+        AvaliacaoCorteResponse: {
+            /** Avaliado Em */
+            avaliado_em: string | null;
+            /** Comentario */
+            comentario: string;
+            /** Corte Id */
+            corte_id: string;
+            /** Motivos */
+            motivos: string[];
+            /** Voto */
+            voto: number | null;
         };
         /**
          * BlocoArranjoSchema
@@ -5213,6 +5284,11 @@ export interface components {
              */
             limpar_brutos_fire: boolean;
         };
+        /** ListaAvaliacoesBrutoResponse */
+        ListaAvaliacoesBrutoResponse: {
+            /** Avaliacoes */
+            avaliacoes: components["schemas"]["AvaliacaoBrutoResponse"][];
+        };
         /** ListaCanaisResponse */
         ListaCanaisResponse: {
             /** Ativo */
@@ -5229,6 +5305,11 @@ export interface components {
         ListaModelosGeminiResponse: {
             /** Modelos */
             modelos: components["schemas"]["ModeloGeminiResponse"][];
+        };
+        /** ListaMotivosResponse */
+        ListaMotivosResponse: {
+            /** Motivos */
+            motivos: components["schemas"]["MotivoAvaliacaoResponse"][];
         };
         /** ListaPromptsUtilitariosResponse */
         ListaPromptsUtilitariosResponse: {
@@ -5254,6 +5335,11 @@ export interface components {
         ListaTemasResponse: {
             /** Temas */
             temas: components["schemas"]["TemaModel"][];
+        };
+        /** ListaTiposApontamentoResponse */
+        ListaTiposApontamentoResponse: {
+            /** Tipos */
+            tipos: components["schemas"]["TipoApontamentoResponse"][];
         };
         /** ListaVersoesResponse */
         ListaVersoesResponse: {
@@ -5354,6 +5440,13 @@ export interface components {
             id: string;
             /** Nome */
             nome: string;
+        };
+        /** MotivoAvaliacaoResponse */
+        MotivoAvaliacaoResponse: {
+            /** Rotulo */
+            rotulo: string;
+            /** Slug */
+            slug: string;
         };
         /** MoverBlocoRequest */
         MoverBlocoRequest: {
@@ -5779,6 +5872,20 @@ export interface components {
             /** Tema Id */
             tema_id: string;
         };
+        /** TipoApontamentoResponse */
+        TipoApontamentoResponse: {
+            /** Rotulo */
+            rotulo: string;
+            /** Slug */
+            slug: string;
+        };
+        /**
+         * UltimaAvaliacaoBrutoResponse
+         * @description `avaliacao` None = o corte nunca foi avaliado.
+         */
+        UltimaAvaliacaoBrutoResponse: {
+            avaliacao: components["schemas"]["AvaliacaoBrutoResponse"] | null;
+        };
         /**
          * UltimaGeracaoResponse
          * @description Quem fez a última geração de uma etapa, para o selo na tela.
@@ -5929,7 +6036,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["UltimaAvaliacaoBrutoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -5962,7 +6069,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AvaliacaoBrutoFeitaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -5993,7 +6100,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ListaAvaliacoesBrutoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6024,7 +6131,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ListaAvaliacoesBrutoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6053,7 +6160,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ListaTiposApontamentoResponse"];
                 };
             };
         };
@@ -6075,7 +6182,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AvaliacaoCorteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6110,7 +6217,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AvaliacaoCorteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6139,7 +6246,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ListaMotivosResponse"];
                 };
             };
         };

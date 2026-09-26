@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cortesProjetoKey } from '@/hooks/useEditor';
-import { ordemCortesApi, type CorteComPin } from '@/lib/ordemCortesApi';
+import { ordemCortesApi, type CorteComPin } from '@/features/editor/ordem/api';
 
 // D-448: o pin de posição — o ÚNICO jeito de um corte sair da ordem do tempo.
 // Hook próprio (não `hooks/useEditor.ts`, sob lock): a ordem é derivada, não

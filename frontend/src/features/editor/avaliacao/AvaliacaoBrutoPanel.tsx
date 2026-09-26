@@ -6,7 +6,7 @@ import type {
   AvaliacaoBruto,
   GravidadeApontamento,
   VereditoBruto,
-} from '@/lib/avaliacaoBrutoApi';
+} from '@/features/editor/avaliacao/api/avaliacaoBruto';
 import {
   useAvaliacaoBruto,
   useHistoricoAvaliacaoBruto,

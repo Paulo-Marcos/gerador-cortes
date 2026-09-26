@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { avaliacaoBrutoApi, type AvaliacaoBruto } from '@/lib/avaliacaoBrutoApi';
+import { avaliacaoBrutoApi, type AvaliacaoBruto } from '@/features/editor/avaliacao/api/avaliacaoBruto';
 import type { ProviderIA } from '@/lib/providerIa';
 
 // D-447: estado da avaliação automática da ESTRUTURA do bruto. Hook próprio

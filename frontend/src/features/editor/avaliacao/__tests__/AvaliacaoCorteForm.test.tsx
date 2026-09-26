@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
-import type { MotivoAvaliacao } from '@/lib/avaliacaoCorteApi';
+import type { MotivoAvaliacao } from '@/features/editor/avaliacao/api/avaliacaoCorte';
 import {
   alternarMotivo,
   AvaliacaoCorteForm,

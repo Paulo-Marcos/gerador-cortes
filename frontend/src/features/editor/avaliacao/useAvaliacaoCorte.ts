@@ -3,7 +3,7 @@ import {
   avaliacaoCorteApi,
   type AvaliacaoCorte,
   type AvaliacaoCortePayload,
-} from '@/lib/avaliacaoCorteApi';
+} from '@/features/editor/avaliacao/api/avaliacaoCorte';
 
 // D-419: estado da avaliação de qualidade de um corte. Hook próprio (não
 // `hooks/useEditor.ts`, sob lock) — a avaliação não participa do ciclo de
