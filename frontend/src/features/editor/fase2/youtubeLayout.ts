@@ -158,7 +158,10 @@ export function normalizeYoutubeLayout(value: unknown, fallbackValue?: unknown):
     }
   }
 
-  if (!parsedValue || typeof parsedValue !== 'object') return cloneLayout(fallback);
+  // D-712: o nível ausente herda do de cima — mas só o que cascateia. Regiões
+  // e padrões de SEGMENTO são deste corte (I-029 v2) e nunca descem do projeto
+  // ou do global, como no backend (`normalizar_layout_youtube`).
+  if (!parsedValue || typeof parsedValue !== 'object') return herdadoDo(fallback);
   const raw = parsedValue as Partial<YoutubeLayout>;
   const cropFacecam = normalizeRect(
     raw.compartilhada?.crop_facecam,
@@ -754,6 +757,14 @@ function subtractRegion(
 
 function cloneLayout(layout: YoutubeLayout): YoutubeLayout {
   return JSON.parse(JSON.stringify(layout)) as YoutubeLayout;
+}
+
+/** O que um nível ausente herda do de cima: tudo, menos o que é do corte. */
+function herdadoDo(fallback: YoutubeLayout): YoutubeLayout {
+  const herdado = cloneLayout(fallback) as YoutubeLayout & Record<string, unknown>;
+  delete herdado.compartilhada_segmento;
+  delete herdado.full_segmento;
+  return { ...herdado, regioes: [] };
 }
 
 function toNumber(value: unknown, fallback: number) {

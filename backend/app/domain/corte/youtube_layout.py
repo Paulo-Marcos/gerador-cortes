@@ -239,9 +239,11 @@ def _aplicar_modo(layout: dict[str, Any], payload: dict, fallback_modo: str | No
         or bool(payload.get("regioes"))
         or modo_payload == MODO_COMPARTILHADA
     )
-    if corte_configurado:
-        if modo_payload:
-            layout["modo_padrao"] = modo_payload
+    # D-712: o corte configurado que NAO escolheu modo herda o do padrao (RN-10:
+    # chave ausente e heranca) — antes caia no "full" fixo, e o preview (que
+    # herdava) mostrava outro modo que o render.
+    if corte_configurado and modo_payload:
+        layout["modo_padrao"] = modo_payload
     elif fallback_modo:
         layout["modo_padrao"] = fallback_modo
     elif modo_payload:
