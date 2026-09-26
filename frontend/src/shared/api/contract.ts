@@ -5258,6 +5258,52 @@ export interface components {
             /** Outro Corte Id */
             outro_corte_id?: string | null;
         };
+        /** LevantamentoDuracao */
+        LevantamentoDuracao: {
+            /** Avg View Duration Media Seg */
+            avg_view_duration_media_seg: number;
+            /** Faixa */
+            faixa: string;
+            /** Retencao Media Pct */
+            retencao_media_pct: number;
+            /** Retencao Ponderada Pct */
+            retencao_ponderada_pct: number;
+            /** Videos */
+            videos: number;
+            /** Views Media */
+            views_media: number;
+            /** Views Total */
+            views_total: number;
+        };
+        /** LevantamentoDuracaoResponse */
+        LevantamentoDuracaoResponse: {
+            /** Faixas */
+            faixas: components["schemas"]["LevantamentoDuracao"][];
+        };
+        /** LevantamentoTitulo */
+        LevantamentoTitulo: {
+            /** Avg View Duration Media Seg */
+            avg_view_duration_media_seg: number;
+            /** Faixa */
+            faixa: string;
+            /** Grupo */
+            grupo: string;
+            /** Retencao Media Pct */
+            retencao_media_pct: number;
+            /** Retencao Ponderada Pct */
+            retencao_ponderada_pct: number;
+            /** Videos */
+            videos: number;
+            /** Views Media */
+            views_media: number;
+            /** Views Total */
+            views_total: number;
+        };
+        /** LevantamentoTituloResponse */
+        LevantamentoTituloResponse: {
+            /** Grupos */
+            grupos: components["schemas"]["LevantamentoTitulo"][];
+        };
         /**
          * LiberarPublicacaoRequest
          * @description Qual destino deixou de ter este vídeo. Default no YouTube: é o destino
@@ -5850,6 +5896,111 @@ export interface components {
              */
             abrir_pasta: boolean;
         };
+        /**
+         * TelemetriaAvaliacao
+         * @description A avaliação humana do corte (D-419); `voto` None = não avaliado.
+         */
+        TelemetriaAvaliacao: {
+            /** Comentario */
+            comentario: string;
+            /** Motivos */
+            motivos: string[];
+            /** Voto */
+            voto: number | null;
+        };
+        /** TelemetriaBordas */
+        TelemetriaBordas: {
+            /** Delta Duracao Seg */
+            delta_duracao_seg: number | null;
+            /** Delta Fim Seg */
+            delta_fim_seg: number | null;
+            /** Delta Inicio Seg */
+            delta_inicio_seg: number | null;
+            /** Duracao Final Seg */
+            duracao_final_seg: number;
+            /** Duracao Proposta Seg */
+            duracao_proposta_seg: number | null;
+            /** Fim Final Seg */
+            fim_final_seg: number;
+            /** Fim Proposto Seg */
+            fim_proposto_seg: number | null;
+            /** Inicio Final Seg */
+            inicio_final_seg: number;
+            /** Inicio Proposto Seg */
+            inicio_proposto_seg: number | null;
+        };
+        /** TelemetriaCorteDiff */
+        TelemetriaCorteDiff: {
+            avaliacao: components["schemas"]["TelemetriaAvaliacao"];
+            bordas: components["schemas"]["TelemetriaBordas"];
+            /** Corte Id */
+            corte_id: string;
+            desvios: components["schemas"]["TelemetriaDesvios"];
+            /** Desvios Claude Por Geracao */
+            desvios_claude_por_geracao: number;
+            /** Numero */
+            numero: number;
+            /** Origem Analise */
+            origem_analise: string | null;
+            /**
+             * Situacao
+             * @enum {string}
+             */
+            situacao: "com_snapshot" | "sem_proposta_ia" | "sem_snapshot";
+            /** Status Final */
+            status_final: string;
+            titulo: components["schemas"]["TelemetriaTitulo"];
+            /** Trechos Geracoes */
+            trechos_geracoes: number;
+        };
+        /**
+         * TelemetriaDesvios
+         * @description Contagens e as listas de desvios; cada desvio é o dicionário do corte.
+         */
+        TelemetriaDesvios: {
+            /** Adicionados */
+            adicionados: Record<string, never>[] | null;
+            /** Adicionados Por Origem */
+            adicionados_por_origem: {
+                [key: string]: number;
+            } | null;
+            /** Finais */
+            finais: number;
+            /** Finais Por Origem */
+            finais_por_origem: {
+                [key: string]: number;
+            };
+            /** Mantidos */
+            mantidos: Record<string, never>[] | null;
+            /** Propostos */
+            propostos: number | null;
+            /** Removidos */
+            removidos: Record<string, never>[] | null;
+        };
+        /** TelemetriaProjetoResponse */
+        TelemetriaProjetoResponse: {
+            /** Com Snapshot */
+            com_snapshot: number;
+            /** Cortes */
+            cortes: components["schemas"]["TelemetriaCorteDiff"][];
+            /** Projeto Id */
+            projeto_id: string;
+            /** Sem Snapshot */
+            sem_snapshot: number;
+            /** Titulo Live */
+            titulo_live: string;
+            /** Total Cortes */
+            total_cortes: number;
+        };
+        /** TelemetriaTitulo */
+        TelemetriaTitulo: {
+            /** Final */
+            final: string;
+            /** Mudou */
+            mudou: boolean | null;
+            /** Proposto */
+            proposto: string | null;
+        };
         /** TemaModel */
         TemaModel: {
             /** Fonte Preset */
@@ -6021,6 +6172,68 @@ export interface components {
             erro: string | null;
             /** Fluxo Em Andamento */
             fluxo_em_andamento: boolean;
+        };
+        /** YoutubeStatsStatusResponse */
+        YoutubeStatsStatusResponse: {
+            /** Casados Por Titulo */
+            casados_por_titulo: number;
+            /** Com Corte */
+            com_corte: number;
+            /** Dias Desde Sync */
+            dias_desde_sync: number | null;
+            /** Sincronizado Em */
+            sincronizado_em: string | null;
+            /** Stale */
+            stale: boolean;
+            /** Total */
+            total: number;
+            /** Videos */
+            videos: components["schemas"]["YoutubeVideoStat"][];
+        };
+        /**
+         * YoutubeStatsSyncResponse
+         * @description `iniciado` = a sync foi disparada; `erro` = falta autorizar (a tela mostra
+         *     a instrução de `mensagem`).
+         */
+        YoutubeStatsSyncResponse: {
+            /** Mensagem */
+            mensagem: string;
+            /** Precisa Reautorizar */
+            precisa_reautorizar: boolean | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "iniciado" | "erro";
+        };
+        /** YoutubeVideoStat */
+        YoutubeVideoStat: {
+            /** Average View Duration Seg */
+            average_view_duration_seg: number | null;
+            /** Average View Percentage */
+            average_view_percentage: number | null;
+            /** Canal Id */
+            canal_id: string | null;
+            /** Corte Id */
+            corte_id: string | null;
+            /** Duracao Seg */
+            duracao_seg: number | null;
+            /** Estimated Minutes Watched */
+            estimated_minutes_watched: number | null;
+            /** Match Por Titulo */
+            match_por_titulo: boolean;
+            /** Publicado Em */
+            publicado_em: string | null;
+            /** Sincronizado Em */
+            sincronizado_em: string | null;
+            /** Subscribers Gained */
+            subscribers_gained: number | null;
+            /** Titulo */
+            titulo: string | null;
+            /** Video Id */
+            video_id: string;
+            /** Views */
+            views: number | null;
         };
     };
     responses: never;
@@ -10026,7 +10239,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LevantamentoDuracaoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10057,7 +10270,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LevantamentoTituloResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10086,7 +10299,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["YoutubeStatsStatusResponse"];
                 };
             };
         };
@@ -10106,7 +10319,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["YoutubeStatsSyncResponse"];
                 };
             };
         };
@@ -10617,7 +10830,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TelemetriaProjetoResponse"];
                 };
             };
             /** @description Validation Error */

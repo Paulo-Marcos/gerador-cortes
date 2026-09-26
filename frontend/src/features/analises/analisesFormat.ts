@@ -1,6 +1,6 @@
 // E-022: helpers puros de formatação da Área de Análises (telemetria + YouTube).
 // Sem I/O e sem React — cobertos por teste unitário (analisesFormat.test.ts).
-import type { TelemetriaSituacao } from '@/lib/api';
+import type { TelemetriaSituacao } from './api';
 
 /** Segundos → "M:SS" ou "H:MM:SS" (sinal absoluto, para bordas/durações). */
 export function formatarSeg(seg: number | null | undefined): string {

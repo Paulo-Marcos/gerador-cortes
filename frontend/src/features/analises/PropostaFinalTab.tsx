@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { api, type TelemetriaCorteDiff } from '@/lib/api';
+import { analisesApi, type TelemetriaCorteDiff } from './api';
 import { cn } from '@/lib/utils';
 import { useProjetosAnalises, useTelemetriaCortes } from './useAnalises';
 import {
@@ -166,7 +166,7 @@ export function PropostaFinalTab() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => window.open(api.telemetriaCortesCsvUrl(), '_blank', 'noopener')}
+          onClick={() => window.open(analisesApi.telemetriaCortesCsvUrl(), '_blank', 'noopener')}
         >
           <Download size={16} aria-hidden />
           Exportar CSV (todos os projetos)
