@@ -1,0 +1,1031 @@
+{
+ "descricao": "D-712: a heranca do gancho do short (RN-12/13), a mesma no backend e na tela. Gerada por backend/tests/domain/test_heranca_gancho_d712.py (ATUALIZAR_HERANCA_GANCHO=1); lida pelo vitest herancaGanchoAcordo.test.ts.",
+ "lugar": [
+  {
+   "proprio": null,
+   "padrao": null,
+   "efetivo": {
+    "x": 50.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": null,
+   "padrao": {},
+   "efetivo": {
+    "x": 50.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": null,
+   "padrao": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": null,
+   "padrao": {
+    "x": 30.0
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": null,
+   "padrao": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": null,
+   "padrao": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": null,
+   "padrao": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": null,
+   "padrao": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {},
+   "padrao": null,
+   "efetivo": {
+    "x": 50.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {},
+   "padrao": {},
+   "efetivo": {
+    "x": 50.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {},
+   "padrao": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {},
+   "padrao": {
+    "x": 30.0
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {},
+   "padrao": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {},
+   "padrao": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {},
+   "padrao": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {},
+   "padrao": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "padrao": null,
+   "efetivo": {
+    "x": 50.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "padrao": {},
+   "efetivo": {
+    "x": 50.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "padrao": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "padrao": {
+    "x": 30.0
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "padrao": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "padrao": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "padrao": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "padrao": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 30.0
+   },
+   "padrao": null,
+   "efetivo": {
+    "x": 30.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 30.0
+   },
+   "padrao": {},
+   "efetivo": {
+    "x": 30.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 30.0
+   },
+   "padrao": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 30.0
+   },
+   "padrao": {
+    "x": 30.0
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 18.0,
+    "largura": 86.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 30.0
+   },
+   "padrao": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 30.0
+   },
+   "padrao": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 30.0
+   },
+   "padrao": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 30.0
+   },
+   "padrao": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "padrao": null,
+   "efetivo": {
+    "x": 50.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "padrao": {},
+   "efetivo": {
+    "x": 50.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "padrao": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "padrao": {
+    "x": 30.0
+   },
+   "efetivo": {
+    "x": 30.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "padrao": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "padrao": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "padrao": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "padrao": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 72.5,
+    "largura": 55.0
+   }
+  },
+  {
+   "proprio": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "padrao": null,
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "padrao": {},
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "padrao": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "padrao": {
+    "x": 30.0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "padrao": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "padrao": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "padrao": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "padrao": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "efetivo": {
+    "x": 50.0,
+    "y": 88.0,
+    "largura": 25.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "padrao": null,
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "padrao": {},
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "padrao": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "padrao": {
+    "x": 30.0
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "padrao": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "padrao": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "padrao": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "padrao": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "efetivo": {
+    "x": 12.35,
+    "y": 33.34,
+    "largura": 66.67
+   }
+  },
+  {
+   "proprio": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "padrao": null,
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "padrao": {},
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "padrao": {
+    "x": 0,
+    "y": 0,
+    "largura": 0
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "padrao": {
+    "x": 30.0
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "padrao": {
+    "y": 72.5,
+    "largura": 55.0
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "padrao": {
+    "x": -5,
+    "y": 150,
+    "largura": 1
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "padrao": {
+    "x": 12.345,
+    "y": 33.335,
+    "largura": 66.665
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  },
+  {
+   "proprio": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "padrao": {
+    "x": 99.999,
+    "y": 0.001,
+    "largura": 100.0
+   },
+   "efetivo": {
+    "x": 90.0,
+    "y": 0.0,
+    "largura": 100.0
+   }
+  }
+ ],
+ "tamanho": [
+  {
+   "entrada": null,
+   "efetivo": 1.0
+  },
+  {
+   "entrada": 0,
+   "efetivo": 1.0
+  },
+  {
+   "entrada": -1,
+   "efetivo": 1.0
+  },
+  {
+   "entrada": 0.5,
+   "efetivo": 0.7
+  },
+  {
+   "entrada": 1.0,
+   "efetivo": 1.0
+  },
+  {
+   "entrada": 1.25,
+   "efetivo": 1.25
+  },
+  {
+   "entrada": 2.345,
+   "efetivo": 1.6
+  },
+  {
+   "entrada": 3.0,
+   "efetivo": 1.6
+  },
+  {
+   "entrada": 9.999,
+   "efetivo": 1.6
+  },
+  {
+   "entrada": 100,
+   "efetivo": 1.6
+  }
+ ],
+ "duracao": [
+  {
+   "entrada": null,
+   "efetivo": 2.5
+  },
+  {
+   "entrada": 0,
+   "efetivo": 2.5
+  },
+  {
+   "entrada": -1,
+   "efetivo": 2.5
+  },
+  {
+   "entrada": 0.5,
+   "efetivo": 1.5
+  },
+  {
+   "entrada": 1.0,
+   "efetivo": 1.5
+  },
+  {
+   "entrada": 1.25,
+   "efetivo": 1.5
+  },
+  {
+   "entrada": 2.345,
+   "efetivo": 2.345
+  },
+  {
+   "entrada": 3.0,
+   "efetivo": 3.0
+  },
+  {
+   "entrada": 9.999,
+   "efetivo": 5.0
+  },
+  {
+   "entrada": 100,
+   "efetivo": 5.0
+  }
+ ],
+ "realce": [
+  {
+   "entrada": null,
+   "efetivo": "veu"
+  },
+  {
+   "entrada": "",
+   "efetivo": "veu"
+  },
+  {
+   "entrada": "caixa",
+   "efetivo": "caixa"
+  },
+  {
+   "entrada": "sombra",
+   "efetivo": "sombra"
+  },
+  {
+   "entrada": "veu",
+   "efetivo": "veu"
+  },
+  {
+   "entrada": "nao-existe",
+   "efetivo": "veu"
+  },
+  {
+   "entrada": "CAIXA",
+   "efetivo": "caixa"
+  }
+ ]
+}

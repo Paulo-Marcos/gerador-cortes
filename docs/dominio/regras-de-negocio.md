@@ -34,9 +34,9 @@ Legenda de **origem**: a decisão (D-NNN) citada no próprio código que criou o
 
 | RN | Regra | Onde mora | Origem |
 |---|---|---|---|
-| RN-10 | **Cascata de layout PARCIAL**: chave ausente herda do nível de cima (global → projeto → corte). Os padrões só se materializam na **leitura**, nunca ao gravar — materializar mata a herança. | `domain/corte/youtube_layout.py` (`resolver_layout_em_cascata`, `normalizar_layout_youtube`); no front, `resolveLayoutChain` em `features/editor/fase2/youtubeLayout.ts` | F-048 |
+| RN-10 | **Cascata de layout PARCIAL**: chave ausente herda do nível de cima (global → projeto → corte). Os padrões só se materializam na **leitura**, nunca ao gravar — materializar mata a herança. | `domain/corte/youtube_layout.py` (`resolver_layout_em_cascata`, `normalizar_layout_youtube`); no front, `resolveLayoutChain` em `features/editor/fase2/youtubeLayout.ts`; acordo backend↔tela: `backend/tests/fixtures/cascata_layout_d712.json` (D-712) | F-048 |
 | RN-11 | O **palco padrão do corte** é herança viva para os shorts; corte sem região herda região a região. | `services/palco_shorts.py` (`com_palco_do_corte`) | D-570 |
-| RN-12 | **Gancho**: a aparência (cor, realce, fonte, tamanho, duração) herda do preset de gancho do corte (`''`/`0` = padrão); o **texto nunca herda**. | `domain/short/gancho_short.py` (`normalizar_*`); `services/palco_shorts.py` (`_aparencia`) | D-594, D-600 |
+| RN-12 | **Gancho**: a aparência (cor, realce, fonte, tamanho, duração) herda do preset de gancho do corte (`''`/`0` = padrão); o **texto nunca herda**. | `domain/short/gancho_short.py` (`normalizar_*`); `services/palco_shorts.py` (`_aparencia`); acordo backend↔tela: `backend/tests/fixtures/heranca_gancho_d712.json` (D-712) | D-594, D-600 |
 | RN-13 | Gancho normalizado: de 4 a 7 palavras, no máximo 90 caracteres, começa com maiúscula; duração entre 1,5 e 5 s (padrão 2,5 s). | `domain/short/gancho_short.py` (`normalizar_gancho`, `esta_na_faixa`, `normalizar_duracao`) | D-565 |
 
 ## D. Fire, shorts e retenção
