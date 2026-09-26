@@ -17,7 +17,7 @@ from pathlib import Path
 ESPEC = Path(__file__).resolve().parents[1] / "openapi.json"
 
 # Operações cuja resposta 2xx em JSON não tem schema. Só desce.
-TETO = 171
+TETO = 163
 
 
 def _sem_tipo() -> list[str]:

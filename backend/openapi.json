@@ -42,6 +42,45 @@
         "title": "AnalisarIntervaloRequest",
         "type": "object"
       },
+      "ApontamentoResponse": {
+        "description": "Uma ressalva do avaliador. As chaves são as que o domínio reconstrói.",
+        "properties": {
+          "descricao": {
+            "title": "Descricao",
+            "type": "string"
+          },
+          "gravidade": {
+            "enum": [
+              "leve",
+              "media",
+              "grave"
+            ],
+            "title": "Gravidade",
+            "type": "string"
+          },
+          "momento": {
+            "title": "Momento",
+            "type": "string"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "rotulo",
+          "gravidade",
+          "momento",
+          "descricao"
+        ],
+        "title": "ApontamentoResponse",
+        "type": "object"
+      },
       "AppSettingsResponse": {
         "properties": {
           "capa_tiktok_layout": {
@@ -867,6 +906,106 @@
         "title": "AtualizarShortRequest",
         "type": "object"
       },
+      "AvaliacaoBrutoFeitaResponse": {
+        "properties": {
+          "avaliacao": {
+            "$ref": "#/components/schemas/AvaliacaoBrutoResponse"
+          }
+        },
+        "required": [
+          "avaliacao"
+        ],
+        "title": "AvaliacaoBrutoFeitaResponse",
+        "type": "object"
+      },
+      "AvaliacaoBrutoResponse": {
+        "properties": {
+          "apontamentos": {
+            "items": {
+              "$ref": "#/components/schemas/ApontamentoResponse"
+            },
+            "title": "Apontamentos",
+            "type": "array"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "criado_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Criado Em"
+          },
+          "duracao_hms": {
+            "title": "Duracao Hms",
+            "type": "string"
+          },
+          "duracao_seg": {
+            "title": "Duracao Seg",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "modelo": {
+            "title": "Modelo",
+            "type": "string"
+          },
+          "nota": {
+            "title": "Nota",
+            "type": "integer"
+          },
+          "parecer": {
+            "title": "Parecer",
+            "type": "string"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "removido_seg": {
+            "title": "Removido Seg",
+            "type": "number"
+          },
+          "total_emendas": {
+            "title": "Total Emendas",
+            "type": "integer"
+          },
+          "veredito": {
+            "enum": [
+              "coesa",
+              "aceitavel",
+              "quebrada"
+            ],
+            "title": "Veredito",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "corte_id",
+          "projeto_id",
+          "nota",
+          "veredito",
+          "parecer",
+          "apontamentos",
+          "duracao_seg",
+          "duracao_hms",
+          "total_emendas",
+          "removido_seg",
+          "modelo",
+          "criado_em"
+        ],
+        "title": "AvaliacaoBrutoResponse",
+        "type": "object"
+      },
       "AvaliacaoCorteRequest": {
         "properties": {
           "comentario": {
@@ -891,6 +1030,57 @@
           "voto"
         ],
         "title": "AvaliacaoCorteRequest",
+        "type": "object"
+      },
+      "AvaliacaoCorteResponse": {
+        "description": "A avaliação do corte (D-419). `voto` None = ainda não avaliado.",
+        "properties": {
+          "avaliado_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avaliado Em"
+          },
+          "comentario": {
+            "title": "Comentario",
+            "type": "string"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "motivos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Motivos",
+            "type": "array"
+          },
+          "voto": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voto"
+          }
+        },
+        "required": [
+          "corte_id",
+          "voto",
+          "motivos",
+          "comentario",
+          "avaliado_em"
+        ],
+        "title": "AvaliacaoCorteResponse",
         "type": "object"
       },
       "BlocoArranjoSchema": {
@@ -2080,6 +2270,22 @@
         "title": "LimparArquivosRequest",
         "type": "object"
       },
+      "ListaAvaliacoesBrutoResponse": {
+        "properties": {
+          "avaliacoes": {
+            "items": {
+              "$ref": "#/components/schemas/AvaliacaoBrutoResponse"
+            },
+            "title": "Avaliacoes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "avaliacoes"
+        ],
+        "title": "ListaAvaliacoesBrutoResponse",
+        "type": "object"
+      },
       "ListaCanaisResponse": {
         "properties": {
           "ativo": {
@@ -2137,6 +2343,22 @@
           "modelos"
         ],
         "title": "ListaModelosGeminiResponse",
+        "type": "object"
+      },
+      "ListaMotivosResponse": {
+        "properties": {
+          "motivos": {
+            "items": {
+              "$ref": "#/components/schemas/MotivoAvaliacaoResponse"
+            },
+            "title": "Motivos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "motivos"
+        ],
+        "title": "ListaMotivosResponse",
         "type": "object"
       },
       "ListaPromptsUtilitariosResponse": {
@@ -2217,6 +2439,22 @@
           "temas"
         ],
         "title": "ListaTemasResponse",
+        "type": "object"
+      },
+      "ListaTiposApontamentoResponse": {
+        "properties": {
+          "tipos": {
+            "items": {
+              "$ref": "#/components/schemas/TipoApontamentoResponse"
+            },
+            "title": "Tipos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tipos"
+        ],
+        "title": "ListaTiposApontamentoResponse",
         "type": "object"
       },
       "ListaVersoesResponse": {
@@ -2503,6 +2741,24 @@
           "nome"
         ],
         "title": "ModeloGeminiResponse",
+        "type": "object"
+      },
+      "MotivoAvaliacaoResponse": {
+        "properties": {
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "rotulo"
+        ],
+        "title": "MotivoAvaliacaoResponse",
         "type": "object"
       },
       "MoverBlocoRequest": {
@@ -3371,6 +3627,44 @@
         "title": "TemaSelecionadoResponse",
         "type": "object"
       },
+      "TipoApontamentoResponse": {
+        "properties": {
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "rotulo"
+        ],
+        "title": "TipoApontamentoResponse",
+        "type": "object"
+      },
+      "UltimaAvaliacaoBrutoResponse": {
+        "description": "`avaliacao` None = o corte nunca foi avaliado.",
+        "properties": {
+          "avaliacao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AvaliacaoBrutoResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "avaliacao"
+        ],
+        "title": "UltimaAvaliacaoBrutoResponse",
+        "type": "object"
+      },
       "UltimaGeracaoResponse": {
         "description": "Quem fez a última geração de uma etapa, para o selo na tela.",
         "properties": {
@@ -3800,7 +4094,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/UltimaAvaliacaoBrutoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3853,7 +4149,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacaoBrutoFeitaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3893,7 +4191,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListaAvaliacoesBrutoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3933,7 +4233,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListaAvaliacoesBrutoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3962,7 +4264,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListaTiposApontamentoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3992,7 +4296,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacaoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4040,7 +4346,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AvaliacaoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4069,7 +4377,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListaMotivosResponse"
+                }
               }
             },
             "description": "Successful Response"
