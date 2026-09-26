@@ -17,8 +17,12 @@ const semCr = (texto: string) => texto.replace(/\r\n/g, '\n');
 
 describe('o contrato gerado', () => {
   it('está em dia com o openapi.json do backend', async () => {
-    // Mesma composição do CLI (`openapi-typescript <spec> -o <arquivo>`).
-    const esperado = COMMENT_HEADER + astToString(await openapiTS(pathToFileURL(ESPEC)));
+    // Mesma composição e opções do `npm run gen:api`. `emptyObjectsUnknown`: um
+    // objeto sem propriedades declaradas é um dicionário livre (dict[str, Any] no
+    // backend), não um objeto que não aceita chave nenhuma.
+    const esperado =
+      COMMENT_HEADER +
+      astToString(await openapiTS(pathToFileURL(ESPEC), { emptyObjectsUnknown: true }));
 
     expect(semCr(readFileSync(CONTRATO, 'utf-8')) === semCr(esperado), 'rode `npm run gen:api`').toBe(
       true,

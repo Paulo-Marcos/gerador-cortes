@@ -4,36 +4,20 @@
 // para não tocar features protegidas. Reutilizam as query-keys existentes para
 // manter as invalidações consistentes com o resto do detalhe do projeto.
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type DiarizarResponse, type FalantesMap } from '@/lib/api';
+import { diarizacaoApi, type FalantesMap } from '@/features/diarizacao/api';
+import { api } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
 import { corteKey, cortesProjetoKey } from './useEditor';
 import { exportStatusKey } from './useProjetoDetalhe';
-import { API_BASE } from '@/lib/apiBase';
 
 export const falantesKey = (id: string) => ['projeto', id, 'falantes'] as const;
 
-
-/** Diariza SÓ a janela de um corte (D-360). Fetch inline para não tocar o
- * `api.ts` sob lock. Reprojeta a transcrição do corte no backend, então basta
- * invalidar o corte para a etiqueta de falante aparecer no editor. */
-async function diarizarCorteRequest(corteId: string): Promise<DiarizarResponse> {
-  const res = await fetch(`${API_BASE}/diarizacao/corte/${corteId}/diarizar`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}${text ? ` - ${text}` : ''}`);
-  }
-  return (await res.json()) as DiarizarResponse;
-}
 
 /** Mapa de falantes persistido do projeto (vazio se ainda não diarizado). */
 export function useFalantes(projetoId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: falantesKey(projetoId ?? ''),
-    queryFn: () => api.obterFalantes(projetoId!),
+    queryFn: () => diarizacaoApi.obterFalantes(projetoId!),
     enabled: !!projetoId && enabled,
     staleTime: 30_000,
   });
@@ -45,7 +29,7 @@ export function useDiarizarProjeto(projetoId: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
-    mutationFn: () => api.diarizarProjeto(projetoId),
+    mutationFn: () => diarizacaoApi.diarizarProjeto(projetoId),
     onSuccess: (data) => {
       if (data.ok) {
         const total = data.falantes ? Object.keys(data.falantes).length : 0;
@@ -68,7 +52,9 @@ export function useDiarizarCorte(corteId: string, projetoId: string | undefined)
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
-    mutationFn: () => diarizarCorteRequest(corteId),
+    // Reprojeta a transcrição do corte no backend: basta invalidar o corte para a
+    // etiqueta de falante aparecer no editor.
+    mutationFn: () => diarizacaoApi.diarizarCorte(corteId),
     onSuccess: (data) => {
       if (data.ok) {
         const total = data.falantes ? Object.keys(data.falantes).length : 0;
@@ -92,7 +78,7 @@ export function useAtualizarFalantes(projetoId: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
-    mutationFn: (falantes: FalantesMap) => api.atualizarFalantes(projetoId, falantes),
+    mutationFn: (falantes: FalantesMap) => diarizacaoApi.atualizarFalantes(projetoId, falantes),
     onSuccess: () => {
       notify('Falantes atualizados.', { tone: 'success' });
       qc.invalidateQueries({ queryKey: falantesKey(projetoId) });

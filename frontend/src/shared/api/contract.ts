@@ -4493,7 +4493,7 @@ export interface components {
             /** Autor Leitura */
             autor_leitura?: string | null;
             /** Cenas Remotion */
-            cenas_remotion?: unknown[] | Record<string, never> | null;
+            cenas_remotion?: unknown[] | Record<string, unknown> | null;
             /** Desvios */
             desvios?: unknown[] | null;
             /** Fim Hms */
@@ -4509,7 +4509,7 @@ export interface components {
             /** Is Leitura */
             is_leitura?: number | null;
             /** Layout Youtube */
-            layout_youtube?: Record<string, never> | null;
+            layout_youtube?: Record<string, unknown> | null;
             /** Parte Leitura */
             parte_leitura?: number | null;
             /** Status */
@@ -4560,7 +4560,7 @@ export interface components {
             /** Nome */
             nome?: string | null;
             /** Payload */
-            payload?: Record<string, never> | null;
+            payload?: Record<string, unknown> | null;
         };
         /**
          * AtualizarRenderConfigRequest
@@ -4590,7 +4590,7 @@ export interface components {
          */
         AtualizarShortRequest: {
             /** Ajustes Palco */
-            ajustes_palco?: Record<string, never> | null;
+            ajustes_palco?: Record<string, unknown> | null;
             /** Arranjo Palco */
             arranjo_palco?: string | null;
             /** Fim Seg */
@@ -4636,7 +4636,7 @@ export interface components {
             /** Palco Short Preset */
             palco_short_preset?: string | null;
             /** Recortes Palco */
-            recortes_palco?: Record<string, never> | null;
+            recortes_palco?: Record<string, unknown> | null;
             /** Segmentos */
             segmentos?: components["schemas"]["SegmentoRequest"][] | null;
             /** Status */
@@ -4775,7 +4775,7 @@ export interface components {
         /** Body_atualizar_falantes_api_diarizacao_projeto__projeto_id__falantes_put */
         Body_atualizar_falantes_api_diarizacao_projeto__projeto_id__falantes_put: {
             /** Falantes */
-            falantes: Record<string, never>;
+            falantes: Record<string, unknown>;
         };
         /** Body_subir_arte_da_capa_api_shorts__short_id__capa_arte_post */
         Body_subir_arte_da_capa_api_shorts__short_id__capa_arte_post: {
@@ -4958,7 +4958,7 @@ export interface components {
              * Cenas Remotion
              * @default []
              */
-            cenas_remotion: Record<string, never> | unknown[];
+            cenas_remotion: Record<string, unknown> | unknown[];
             /**
              * Cenas Validadas
              * @default 0
@@ -5009,7 +5009,7 @@ export interface components {
              * Layout Youtube
              * @default {}
              */
-            layout_youtube: Record<string, never>;
+            layout_youtube: Record<string, unknown>;
             /** Numero */
             numero: number;
             /**
@@ -5091,7 +5091,7 @@ export interface components {
             /** Nome */
             nome: string;
             /** Payload */
-            payload: Record<string, never>;
+            payload: Record<string, unknown>;
             /** Tipo */
             tipo: string;
         };
@@ -5146,7 +5146,24 @@ export interface components {
          */
         DefinirCenasRequest: {
             /** Cenas */
-            cenas: Record<string, never>[];
+            cenas: Record<string, unknown>[];
+        };
+        /**
+         * DiarizacaoResponse
+         * @description `ok=False` traz só o `motivo` (degradação graciosa); `ok=True`, os falantes
+         *     e qual deles é o canal.
+         */
+        DiarizacaoResponse: {
+            /** Canal */
+            canal?: string | null;
+            /** Falantes */
+            falantes?: {
+                [key: string]: components["schemas"]["FalanteInfo"];
+            } | null;
+            /** Motivo */
+            motivo?: string | null;
+            /** Ok */
+            ok: boolean;
         };
         /** DividirBlocoRequest */
         DividirBlocoRequest: {
@@ -5213,6 +5230,26 @@ export interface components {
              * @default
              */
             preset_id: string;
+        };
+        /**
+         * FalanteInfo
+         * @description Um falante da diarização: o nome batizado e se é o canal (D-286).
+         */
+        FalanteInfo: {
+            /** Is Canal */
+            is_canal: boolean;
+            /** Nome */
+            nome: string;
+        };
+        /**
+         * FalantesResponse
+         * @description Mapa `{speaker_id: falante}`, ex.: `{"SPEAKER_00": {"nome": "Pedro", "is_canal": true}}`.
+         */
+        FalantesResponse: {
+            /** Falantes */
+            falantes: {
+                [key: string]: components["schemas"]["FalanteInfo"];
+            };
         };
         /**
          * FinalizadoRequest
@@ -6087,9 +6124,9 @@ export interface components {
              * Ajustes Palco
              * @default {}
              */
-            ajustes_palco: Record<string, never>;
+            ajustes_palco: Record<string, unknown>;
             /** Palco */
-            palco?: Record<string, never> | null;
+            palco?: Record<string, unknown> | null;
         };
         /** SincroniaLegendaRequest */
         SincroniaLegendaRequest: {
@@ -6228,7 +6265,7 @@ export interface components {
          */
         TelemetriaDesvios: {
             /** Adicionados */
-            adicionados: Record<string, never>[] | null;
+            adicionados: Record<string, unknown>[] | null;
             /** Adicionados Por Origem */
             adicionados_por_origem: {
                 [key: string]: number;
@@ -6240,11 +6277,11 @@ export interface components {
                 [key: string]: number;
             };
             /** Mantidos */
-            mantidos: Record<string, never>[] | null;
+            mantidos: Record<string, unknown>[] | null;
             /** Propostos */
             propostos: number | null;
             /** Removidos */
-            removidos: Record<string, never>[] | null;
+            removidos: Record<string, unknown>[] | null;
         };
         /** TelemetriaProjetoResponse */
         TelemetriaProjetoResponse: {
@@ -8700,7 +8737,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DiarizacaoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -8731,7 +8768,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DiarizacaoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -8762,7 +8799,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FalantesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -8797,7 +8834,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FalantesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9614,7 +9651,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": Record<string, unknown>;
                 };
             };
             /** @description Validation Error */
@@ -9665,7 +9702,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": Record<string, unknown>;
                 };
             };
             /** @description Validation Error */
@@ -10274,7 +10311,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>[];
+                    "application/json": Record<string, unknown>[];
                 };
             };
             /** @description Validation Error */
@@ -10307,7 +10344,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": Record<string, unknown>;
                 };
             };
             /** @description Validation Error */
@@ -10342,7 +10379,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": Record<string, unknown>;
                 };
             };
             /** @description Validation Error */
@@ -11124,7 +11161,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": Record<string, unknown>;
             };
         };
         responses: {
@@ -11377,7 +11414,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": Record<string, unknown>;
                 };
             };
             /** @description Validation Error */
@@ -11410,7 +11447,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": Record<string, unknown>;
                 };
             };
             /** @description Validation Error */
@@ -11443,7 +11480,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": Record<string, unknown>;
                 };
             };
             /** @description Validation Error */

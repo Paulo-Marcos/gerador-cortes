@@ -26,7 +26,7 @@ import { resolverBadgeTrecho } from './trechoBadge';
 import { hmsParaSeg } from '../timeUtils';
 import { useCorte } from '@/hooks/useEditor';
 import { useDiarizarCorte, useFalantes } from '@/hooks/useDiarizacao';
-import type { FalantesMap } from '@/lib/api';
+import type { FalantesMap } from '@/features/diarizacao/api';
 import type { Desvio, TranscricaoLinha } from '@/types/models';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 

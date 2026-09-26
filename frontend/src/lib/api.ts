@@ -69,27 +69,6 @@ export interface GerarBrutoOpcoes {
   refazer_cenas?: boolean;
 }
 
-// D-286 — diarização de falantes (canal vs. reagidos). Tipos definidos aqui (e
-// não em models.ts) porque models.ts está sob lock e fora do escopo.
-export interface FalanteInfo {
-  nome: string;
-  is_canal: boolean;
-}
-
-/** Mapa {speaker_id -> info}, ex.: { "SPEAKER_00": { nome: "Pedro", is_canal: true } }. */
-export type FalantesMap = Record<string, FalanteInfo>;
-
-export interface DiarizarResponse {
-  ok: boolean;
-  falantes?: FalantesMap;
-  canal?: string | null;
-  motivo?: string;
-}
-
-export interface FalantesResponse {
-  falantes: FalantesMap;
-}
-
 export const api = {
   listarProjetos: () => request<Projeto[]>('/projetos'),
 
@@ -246,22 +225,6 @@ export const api = {
       `/claude/projeto/${projetoId}/analisar?usar_diarizacao=${usarDiarizacao}&provider=${provider}`,
       { method: 'POST', body: '{}' },
     ),
-
-  // D-286: diarização de falantes (canal vs. reagidos).
-  diarizarProjeto: (projetoId: string) =>
-    request<DiarizarResponse>(`/diarizacao/projeto/${projetoId}/diarizar`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  obterFalantes: (projetoId: string) =>
-    request<FalantesResponse>(`/diarizacao/projeto/${projetoId}/falantes`),
-
-  atualizarFalantes: (projetoId: string, falantes: FalantesMap) =>
-    request<FalantesResponse>(`/diarizacao/projeto/${projetoId}/falantes`, {
-      method: 'PUT',
-      body: JSON.stringify({ falantes }),
-    }),
 
   gerarTrechosClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
     request<{ message: string; corte_id: string; total_desvios: number; novos: number }>(
