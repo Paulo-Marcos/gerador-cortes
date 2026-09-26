@@ -24,6 +24,31 @@
         "title": "AdicionarDesvioRequest",
         "type": "object"
       },
+      "AgendaDoUpload": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          }
+        },
+        "required": [
+          "corte_id",
+          "scheduled_at"
+        ],
+        "title": "AgendaDoUpload",
+        "type": "object"
+      },
       "AnalisarIntervaloRequest": {
         "properties": {
           "fim_hms": {
@@ -1488,6 +1513,27 @@
         "title": "BulkYouTubeRequest",
         "type": "object"
       },
+      "BulkYoutubeResponse": {
+        "properties": {
+          "agenda": {
+            "items": {
+              "$ref": "#/components/schemas/AgendaDoUpload"
+            },
+            "title": "Agenda",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "agenda"
+        ],
+        "title": "BulkYoutubeResponse",
+        "type": "object"
+      },
       "CanalResponse": {
         "properties": {
           "ativo": {
@@ -2853,6 +2899,58 @@
         "title": "LiberarPublicacaoRequest",
         "type": "object"
       },
+      "LiberarPublicacaoResponse": {
+        "description": "A marca de um destino desfeita (D-566) — só a memória do app, nada lá fora.",
+        "properties": {
+          "campos_limpos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Campos Limpos",
+            "type": "array"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "destino": {
+            "title": "Destino",
+            "type": "string"
+          },
+          "liberado": {
+            "title": "Liberado",
+            "type": "boolean"
+          },
+          "mensagem": {
+            "title": "Mensagem",
+            "type": "string"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "video_pronto": {
+            "title": "Video Pronto",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "corte_id",
+          "destino",
+          "rotulo",
+          "liberado",
+          "campos_limpos",
+          "video_pronto",
+          "mensagem"
+        ],
+        "title": "LiberarPublicacaoResponse",
+        "type": "object"
+      },
       "LimparArquivosRequest": {
         "description": "D-457: o bruto do corte Fire só sai se o operador pedir explicitamente.\n\nDefault `False` — é a matéria-prima da fábrica de shorts, e o custo de\napagá-la por engano (re-extrair o trecho da live) é bem maior que o do disco.",
         "properties": {
@@ -3511,6 +3609,55 @@
           "youtube_url"
         ],
         "title": "MarcarPublicadoRequest",
+        "type": "object"
+      },
+      "MarcarPublicadoResponse": {
+        "description": "O vídeo conferido no canal autenticado e gravado no corte.",
+        "properties": {
+          "mensagem": {
+            "title": "Mensagem",
+            "type": "string"
+          },
+          "privacy_status": {
+            "title": "Privacy Status",
+            "type": "string"
+          },
+          "scheduled_at": {
+            "title": "Scheduled At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          },
+          "upload_status": {
+            "title": "Upload Status",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "video_id",
+          "url",
+          "titulo",
+          "privacy_status",
+          "upload_status",
+          "scheduled_at",
+          "mensagem"
+        ],
+        "title": "MarcarPublicadoResponse",
         "type": "object"
       },
       "ModeloGeminiResponse": {
@@ -4325,6 +4472,57 @@
         "title": "ResumoAvaliacoesThumbnail",
         "type": "object"
       },
+      "RetencaoArquivos": {
+        "description": "O que a limpeza de mídia fez depois do upload (D-456).",
+        "properties": {
+          "erros": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Erros",
+            "type": "array"
+          },
+          "liberado_mb": {
+            "title": "Liberado Mb",
+            "type": "number"
+          },
+          "preservados": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Preservados",
+            "type": "array"
+          },
+          "pulados": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Pulados",
+            "type": "array"
+          },
+          "removidos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removidos",
+            "type": "array"
+          },
+          "retido_mb": {
+            "title": "Retido Mb",
+            "type": "number"
+          }
+        },
+        "required": [
+          "liberado_mb",
+          "retido_mb",
+          "removidos",
+          "preservados",
+          "pulados",
+          "erros"
+        ],
+        "title": "RetencaoArquivos",
+        "type": "object"
+      },
       "ReverterSkillRequest": {
         "properties": {
           "versao": {
@@ -4625,6 +4823,195 @@
           }
         },
         "title": "StagingRequest",
+        "type": "object"
+      },
+      "StatusCorteBrutoResponse": {
+        "description": "A tarefa de gerar o bruto do corte (`nao_iniciado` quando nunca rodou).",
+        "properties": {
+          "clip_gerado": {
+            "title": "Clip Gerado",
+            "type": "boolean"
+          },
+          "clip_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clip Path"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "corte_id",
+          "status",
+          "clip_path",
+          "clip_gerado"
+        ],
+        "title": "StatusCorteBrutoResponse",
+        "type": "object"
+      },
+      "StatusExportCorte": {
+        "description": "Onde cada corte aprovado está no caminho até a publicação.",
+        "properties": {
+          "cenas_geradas": {
+            "title": "Cenas Geradas",
+            "type": "boolean"
+          },
+          "cenas_validadas": {
+            "title": "Cenas Validadas",
+            "type": "boolean"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "descricao_youtube": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descricao Youtube"
+          },
+          "grade_pronta": {
+            "title": "Grade Pronta",
+            "type": "boolean"
+          },
+          "metadados_completos": {
+            "title": "Metadados Completos",
+            "type": "boolean"
+          },
+          "numero": {
+            "title": "Numero",
+            "type": "integer"
+          },
+          "overlays_prontos": {
+            "title": "Overlays Prontos",
+            "type": "boolean"
+          },
+          "pronto_publicar": {
+            "title": "Pronto Publicar",
+            "type": "boolean"
+          },
+          "raw_pronto": {
+            "title": "Raw Pronto",
+            "type": "boolean"
+          },
+          "thumbnail_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Path"
+          },
+          "thumbnail_pronta": {
+            "title": "Thumbnail Pronta",
+            "type": "boolean"
+          },
+          "tiktok_publicado_em": {
+            "title": "Tiktok Publicado Em",
+            "type": "string"
+          },
+          "titulo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Titulo"
+          },
+          "titulo_youtube": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Titulo Youtube"
+          },
+          "video_pronto": {
+            "title": "Video Pronto",
+            "type": "boolean"
+          },
+          "youtube_scheduled_at": {
+            "title": "Youtube Scheduled At",
+            "type": "string"
+          },
+          "youtube_url_publicado": {
+            "title": "Youtube Url Publicado",
+            "type": "string"
+          },
+          "youtube_video_id": {
+            "title": "Youtube Video Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "corte_id",
+          "numero",
+          "titulo",
+          "raw_pronto",
+          "grade_pronta",
+          "overlays_prontos",
+          "video_pronto",
+          "thumbnail_pronta",
+          "metadados_completos",
+          "pronto_publicar",
+          "titulo_youtube",
+          "descricao_youtube",
+          "thumbnail_path",
+          "youtube_video_id",
+          "youtube_url_publicado",
+          "youtube_scheduled_at",
+          "cenas_geradas",
+          "cenas_validadas",
+          "tiktok_publicado_em"
+        ],
+        "title": "StatusExportCorte",
+        "type": "object"
+      },
+      "StatusExportResponse": {
+        "properties": {
+          "cortes": {
+            "items": {
+              "$ref": "#/components/schemas/StatusExportCorte"
+            },
+            "title": "Cortes",
+            "type": "array"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projeto_id",
+          "cortes"
+        ],
+        "title": "StatusExportResponse",
         "type": "object"
       },
       "TelemetriaAvaliacao": {
@@ -5529,6 +5916,63 @@
           }
         },
         "title": "YouTubeUploadRequest",
+        "type": "object"
+      },
+      "YouTubeUploadResponse": {
+        "description": "Upload novo, ou o corte que já estava publicado (`mensagem` explica). O\nerro não chega aqui: a rota o devolve como 500.",
+        "properties": {
+          "mensagem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mensagem"
+          },
+          "retencao_arquivos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetencaoArquivos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "video_id",
+          "url",
+          "scheduled_at"
+        ],
+        "title": "YouTubeUploadResponse",
         "type": "object"
       },
       "YoutubeAuthAcaoResponse": {
@@ -9852,7 +10296,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/StatusCorteBrutoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9974,7 +10420,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LiberarPublicacaoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10065,7 +10513,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/YouTubeUploadResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10115,7 +10565,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MarcarPublicadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10245,7 +10697,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BulkYoutubeResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10285,7 +10739,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/StatusExportResponse"
+                }
               }
             },
             "description": "Successful Response"

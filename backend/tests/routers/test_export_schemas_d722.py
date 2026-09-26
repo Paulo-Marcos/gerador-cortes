@@ -39,3 +39,65 @@ def test_a_versao_passa_inteira_com_e_sem_o_meta_json(versao):
         return corpo
 
     assert TestClient(rotas).get("/x").json() == corpo
+
+
+_RETENCAO = {
+    "liberado_mb": 120.5,
+    "retido_mb": 0.0,
+    "removidos": ["preview.mp4"],
+    "preservados": [],
+    "pulados": [],
+    "erros": [],
+}
+
+
+@pytest.mark.parametrize(
+    "resultado",
+    [
+        # upload novo, com a limpeza de mídia que roda depois
+        {
+            "status": "ok",
+            "video_id": "abc",
+            "url": "https://youtu.be/abc",
+            "scheduled_at": None,
+            "retencao_arquivos": _RETENCAO,
+        },
+        # o corte já estava publicado: nada sobe, a mensagem explica
+        {
+            "status": "ok",
+            "video_id": "abc",
+            "url": "https://youtu.be/abc",
+            "scheduled_at": "",
+            "mensagem": "Corte já publicado; upload ignorado.",
+            "retencao_arquivos": _RETENCAO,
+        },
+    ],
+    ids=["upload_novo", "ja_publicado"],
+)
+def test_os_dois_ramos_do_upload_passam_sem_chave_inventada(resultado):
+    from app.routers.export_schemas import YouTubeUploadResponse
+
+    rotas = FastAPI()
+
+    @rotas.get("/x", response_model=YouTubeUploadResponse, response_model_exclude_unset=True)
+    def _rota():
+        return resultado
+
+    assert TestClient(rotas).get("/x").json() == resultado
+
+
+def test_a_liberacao_passa_inteira():
+    from app.routers.export_schemas import LiberarPublicacaoResponse
+
+    resultado = {
+        "status": "ok",
+        "corte_id": "c1",
+        "destino": "youtube",
+        "rotulo": "YouTube",
+        "liberado": True,
+        "campos_limpos": ["youtube_video_id", "youtube_url_publicado"],
+        "video_pronto": True,
+        "mensagem": "Liberado.",
+    }
+
+    assert LiberarPublicacaoResponse.model_validate(resultado).model_dump() == resultado

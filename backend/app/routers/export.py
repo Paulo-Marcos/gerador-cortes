@@ -81,7 +81,7 @@ def _artefatos_de_cada_corte(cortes) -> dict[str, tuple[bool, bool, bool]]:
     return resultado
 
 
-@router.get("/projeto/{projeto_id}/status")
+@router.get("/projeto/{projeto_id}/status", response_model=export_schemas.StatusExportResponse)
 async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Corte)
@@ -153,7 +153,9 @@ async def status_export(projeto_id: str, db: AsyncSession = Depends(get_db)):
     return {"projeto_id": projeto_id, "cortes": items}
 
 
-@router.get("/corte/{corte_id}/cortar/status")
+@router.get(
+    "/corte/{corte_id}/cortar/status", response_model=export_schemas.StatusCorteBrutoResponse
+)
 async def status_corte(corte_id: str, db: AsyncSession = Depends(get_db)):
     status = ExportService.get_tarefa_corte_status(corte_id)
 
@@ -263,7 +265,11 @@ class YouTubeUploadRequest(BaseModel):
     scheduled_at: str | None = None
 
 
-@router.post("/corte/{corte_id}/youtube")
+@router.post(
+    "/corte/{corte_id}/youtube",
+    response_model=export_schemas.YouTubeUploadResponse,
+    response_model_exclude_unset=True,
+)
 async def upload_to_youtube(
     corte_id: str, body: YouTubeUploadRequest = None, db: AsyncSession = Depends(get_db)
 ):
@@ -288,7 +294,10 @@ class MarcarPublicadoRequest(BaseModel):
     youtube_url: str
 
 
-@router.post("/corte/{corte_id}/youtube/marcar-publicado")
+@router.post(
+    "/corte/{corte_id}/youtube/marcar-publicado",
+    response_model=export_schemas.MarcarPublicadoResponse,
+)
 async def marcar_corte_publicado(
     corte_id: str, body: MarcarPublicadoRequest, db: AsyncSession = Depends(get_db)
 ):
@@ -320,7 +329,10 @@ class LiberarPublicacaoRequest(BaseModel):
     destino: str = "youtube"
 
 
-@router.post("/corte/{corte_id}/publicacao/liberar")
+@router.post(
+    "/corte/{corte_id}/publicacao/liberar",
+    response_model=export_schemas.LiberarPublicacaoResponse,
+)
 async def liberar_publicacao_do_corte(corte_id: str, body: LiberarPublicacaoRequest):
     """Desfaz a marca de publicação de um destino (D-566).
 
@@ -425,7 +437,9 @@ class BulkYouTubeRequest(BaseModel):
     scheduled_dates: list[str | None] | None = None
 
 
-@router.post("/projeto/{projeto_id}/bulk-youtube")
+@router.post(
+    "/projeto/{projeto_id}/bulk-youtube", response_model=export_schemas.BulkYoutubeResponse
+)
 async def bulk_upload_youtube(
     projeto_id: str, body: BulkYouTubeRequest, db: AsyncSession = Depends(get_db)
 ):
