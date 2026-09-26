@@ -30,6 +30,8 @@ import shutil
 import subprocess
 import threading
 import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol
 
@@ -57,6 +59,19 @@ class NavegadorIndisponivel(RuntimeError):
     passo de que plataforma ela foi chamada. Quem sabe e o roteiro, e e ele que
     traduz isto para "falhou ao abrir" com a orientacao certa.
     """
+
+
+class ChromeNaoAbriu(NavegadorIndisponivel):
+    """O Chrome do perfil nao abriu — o unico caso que o robo traduz para ABRIR.
+
+    Subclasse, e nao uma excecao nova, porque continua sendo "navegador
+    indisponivel". Existe para separar esta falha da porta ocupada, que o robo
+    nunca traduziu e continua subindo como veio (D-718).
+    """
+
+
+class PlaywrightAusente(RuntimeError):
+    """O Playwright nao esta instalado: dependencia opcional, so os robos param."""
 
 
 class Pagina(Protocol):
@@ -533,3 +548,69 @@ def apagar_copias_do_upload(contexto, origem: str, trecho_da_aba_de_upload: str)
         logger.info("[Navegador] nao consegui apagar as copias de %s: %s", origem, exc)
         return False
     return True
+
+
+@contextmanager
+def sessao_no_chrome(perfil: Path, *, abrir_em: str | None = None) -> Iterator[tuple]:
+    """Conecta ao Chrome do perfil e entrega `(navegador, abriu_agora)` (D-718).
+
+    A ordem e a que os dois robos repetiam: primeiro o Playwright — sem ele, abrir
+    uma janela seria so barulho —, depois o Chrome, e so entao a conexao. O
+    Chrome so e aberto quando vem `abrir_em`: o roteiro abre, a vigilia apenas
+    observa. Ao sair, desconecta; o Chrome e um processo a parte e continua de
+    pe, que e o que deixa a aba para o operador revisar.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError as exc:
+        raise PlaywrightAusente(
+            "o Playwright nao esta instalado; rode `pip install playwright`"
+        ) from exc
+
+    abriu_agora = False
+    if abrir_em is not None:
+        try:
+            abriu_agora = garantir_chrome(perfil, abrir_em)
+        except NavegadorIndisponivel as exc:
+            raise ChromeNaoAbriu(str(exc)) from exc
+
+    pw = sync_playwright().start()
+    try:
+        navegador = pw.chromium.connect_over_cdp(f"http://127.0.0.1:{porta_do_chrome(perfil)}")
+        yield navegador, abriu_agora
+    finally:
+        pw.stop()
+
+
+def vigiar_aba(
+    alvo,
+    segundos: float,
+    parar: threading.Event | None,
+    conferir: Callable[[], bool | None],
+    *,
+    rotulo: str,
+    verbo: str,
+    intervalo: float,
+) -> bool:
+    """Olha a aba ate a plataforma decidir, o lote parar, a aba fechar ou o prazo acabar.
+
+    `conferir` e o que cada plataforma sabe: `True` publicou, `False` desistiu
+    (nao ha mais o que esperar), `None` continua olhando. Qualquer saida que nao
+    seja `True` quer dizer "nao sei" — e mantem o botao "publiquei" a mao (D-718:
+    o laco era igual nos dois robos; so o criterio muda).
+    """
+    limite = time.monotonic() + segundos
+    while time.monotonic() < limite:
+        if parar is not None and parar.is_set():
+            # D-591: o lote foi cancelado, ou o operador ja marcou "publiquei".
+            logger.info("%s vigilia encerrada a pedido do lote", rotulo)
+            return False
+        if alvo.is_closed():
+            logger.info("%s a aba foi fechada; nao da para saber se publicou", rotulo)
+            return False
+        veredito = conferir()
+        if veredito is not None:
+            return veredito
+        time.sleep(intervalo)
+    logger.info("%s %ss sem %s; encerrando a vigilia", rotulo, int(segundos), verbo)
+    return False

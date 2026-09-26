@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 from app.domain.publicacao import instagram_reels as dominio_ig
 from app.domain.publicacao import tiktok_studio as dominio_tt
-from app.services import instagram_reels, tiktok_studio
+from app.services import instagram_reels, navegador_assistido, tiktok_studio
 from app.services.navegador_assistido import NavegadorIndisponivel
 
 ROBOS = [
@@ -109,8 +109,8 @@ def ambiente(monkeypatch):
 
     for robo in (tiktok_studio, instagram_reels):
         monkeypatch.setattr(robo, "perfil_do_chrome", lambda: Path("perfil"))
-        monkeypatch.setattr(robo, "porta_do_chrome", lambda _perfil: PORTA)
-        monkeypatch.setattr(robo, "garantir_chrome", garantir)
+    monkeypatch.setattr(navegador_assistido, "porta_do_chrome", lambda _perfil: PORTA)
+    monkeypatch.setattr(navegador_assistido, "garantir_chrome", garantir)
     return registro
 
 
@@ -141,7 +141,7 @@ def test_chrome_que_nao_abre_vira_falha_no_abrir(robo, dominio, playwright, monk
         raise NavegadorIndisponivel("Chrome nao encontrado")
 
     monkeypatch.setattr(robo, "perfil_do_chrome", lambda: Path("perfil"))
-    monkeypatch.setattr(robo, "garantir_chrome", nao_abre)
+    monkeypatch.setattr(navegador_assistido, "garantir_chrome", nao_abre)
 
     with pytest.raises(dominio.RoteiroInterrompido) as exc:
         _assistir(robo)
@@ -157,7 +157,7 @@ def test_porta_ocupada_sobe_crua_e_desconecta(robo, dominio, playwright, ambient
     def ocupada(_perfil):
         raise NavegadorIndisponivel("portas ocupadas")
 
-    monkeypatch.setattr(robo, "porta_do_chrome", ocupada)
+    monkeypatch.setattr(navegador_assistido, "porta_do_chrome", ocupada)
 
     with pytest.raises(NavegadorIndisponivel, match="portas ocupadas"):
         _assistir(robo)

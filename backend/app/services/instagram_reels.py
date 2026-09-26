@@ -71,13 +71,14 @@ from app.domain.publicacao.instagram_reels import (
     recorte_vertical,
 )
 from app.services.navegador_assistido import (
-    NavegadorIndisponivel,
+    ChromeNaoAbriu,
     Pagina,
     PaginaDoPlaywright,
+    PlaywrightAusente,
     aba_marcada,
-    garantir_chrome,
     perfil_do_canal,
-    porta_do_chrome,
+    sessao_no_chrome,
+    vigiar_aba,
 )
 
 logger = logging.getLogger(__name__)
@@ -580,35 +581,23 @@ def _assistir(
 ) -> dict:
     """Tudo o que fala Playwright, num thread só (síncrono por causa da D-369)."""
     try:
-        from playwright.sync_api import sync_playwright
-    except ImportError as exc:
-        raise RoteiroInterrompido(
-            Passo.ABRIR, "o Playwright nao esta instalado; rode `pip install playwright`"
-        ) from exc
-
-    perfil = perfil_do_chrome()
-    try:
-        abriu_agora = garantir_chrome(perfil, URL_INICIAL)
-    except NavegadorIndisponivel as exc:
+        with sessao_no_chrome(perfil_do_chrome(), abrir_em=URL_INICIAL) as (
+            navegador,
+            abriu_agora,
+        ):
+            contexto = navegador.contexts[0] if navegador.contexts else navegador.new_context()
+            page = contexto.new_page()
+            relatorio = executar_roteiro(
+                PaginaDoPlaywright(page, SELETORES, escapar_apos_escrever=False),
+                video=video,
+                legenda=legenda,
+                capa=capa,
+                marca=marca,
+                publicar_sozinho=publicar_sozinho,
+            )
+            return {**relatorio, "chrome_aberto_agora": abriu_agora}
+    except (PlaywrightAusente, ChromeNaoAbriu) as exc:
         raise RoteiroInterrompido(Passo.ABRIR, str(exc)) from exc
-
-    pw = sync_playwright().start()
-    try:
-        navegador = pw.chromium.connect_over_cdp(f"http://127.0.0.1:{porta_do_chrome(perfil)}")
-        contexto = navegador.contexts[0] if navegador.contexts else navegador.new_context()
-        page = contexto.new_page()
-        relatorio = executar_roteiro(
-            PaginaDoPlaywright(page, SELETORES, escapar_apos_escrever=False),
-            video=video,
-            legenda=legenda,
-            capa=capa,
-            marca=marca,
-            publicar_sozinho=publicar_sozinho,
-        )
-        return {**relatorio, "chrome_aberto_agora": abriu_agora}
-    finally:
-        # `stop` desconecta; não fecha o Chrome, que é um processo à parte.
-        pw.stop()
 
 
 def _vigiar_publicacao(segundos: float, marca: str, parar: threading.Event | None = None) -> bool:
@@ -622,50 +611,43 @@ def _vigiar_publicacao(segundos: float, marca: str, parar: threading.Event | Non
     Errar para menos custa um clique; errar para mais apaga o MP4 (D-512).
     """
     try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        return False
-
-    pw = sync_playwright().start()
-    try:
-        navegador = pw.chromium.connect_over_cdp(
-            f"http://127.0.0.1:{porta_do_chrome(perfil_do_chrome())}"
-        )
-        contexto = navegador.contexts[0] if navegador.contexts else None
-        if contexto is None:
-            return False
-
-        alvo = aba_marcada(contexto, marca, "instagram.com")
-        if alvo is None:
-            return False
-
-        pagina = PaginaDoPlaywright(alvo, SELETORES, escapar_apos_escrever=False)
-        limite = time.monotonic() + segundos
-        while time.monotonic() < limite:
-            if parar is not None and parar.is_set():
-                # D-591: o lote foi cancelado, ou o operador ja marcou "publiquei".
-                logger.info("[InstagramReels] vigilia encerrada a pedido do lote")
+        with sessao_no_chrome(perfil_do_chrome()) as (navegador, _):
+            contexto = navegador.contexts[0] if navegador.contexts else None
+            if contexto is None:
                 return False
-            if alvo.is_closed():
-                logger.info("[InstagramReels] a aba foi fechada; nao da para saber se publicou")
+
+            alvo = aba_marcada(contexto, marca, "instagram.com")
+            if alvo is None:
                 return False
-            if publicou(pagina.existe("confirmacao_de_envio", segundos=1.0)):
-                logger.info("[InstagramReels] confirmacao vista; o reel saiu")
-                _fechar_confirmacao(pagina)
-                return True
-            if not pagina.existe("dialogo", segundos=1.0):
-                # Nem compositor nem confirmação: ele descartou, ou fechou tudo.
-                # Sem confirmação não há publicação para declarar.
-                logger.info("[InstagramReels] o compositor sumiu sem confirmar; nao marco nada")
-                return False
-            time.sleep(INTERVALO_DA_VIGILIA)
-        logger.info("[InstagramReels] %ss sem compartilhar; encerrando a vigilia", int(segundos))
+
+            pagina = PaginaDoPlaywright(alvo, SELETORES, escapar_apos_escrever=False)
+
+            def conferir() -> bool | None:
+                if publicou(pagina.existe("confirmacao_de_envio", segundos=1.0)):
+                    logger.info("[InstagramReels] confirmacao vista; o reel saiu")
+                    _fechar_confirmacao(pagina)
+                    return True
+                if not pagina.existe("dialogo", segundos=1.0):
+                    # Nem compositor nem confirmação: ele descartou, ou fechou tudo.
+                    # Sem confirmação não há publicação para declarar.
+                    logger.info("[InstagramReels] o compositor sumiu sem confirmar; nao marco nada")
+                    return False
+                return None
+
+            return vigiar_aba(
+                alvo,
+                segundos,
+                parar,
+                conferir,
+                rotulo="[InstagramReels]",
+                verbo="compartilhar",
+                intervalo=INTERVALO_DA_VIGILIA,
+            )
+    except PlaywrightAusente:
         return False
     except Exception as exc:  # noqa: BLE001 — vigília nunca derruba nada
         logger.info("[InstagramReels] vigilia interrompida: %s", exc)
         return False
-    finally:
-        pw.stop()
 
 
 async def subir_assistido(
