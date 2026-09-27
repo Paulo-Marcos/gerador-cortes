@@ -248,7 +248,7 @@ describe('D-405 · ícone de metadados vira indicador de estado', () => {
 
 describe('D-397 · o card renderiza os dois eixos do semáforo', () => {
   it('pinta a faixa lateral com o degradê dos sinais do corte', () => {
-    const fireELeitura = { ...corte(1, 'aprovado'), is_fire: true, is_leitura: true } as Corte;
+    const fireELeitura = { ...corte(1, 'aprovado'), is_fire: true, is_leitura: 1 } as Corte;
     const html = render([fireELeitura], [statusExport({ raw_pronto: true })]);
 
     expect(html).toContain(

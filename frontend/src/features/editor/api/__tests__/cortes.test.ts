@@ -104,10 +104,10 @@ describe('cortesApi sobre o cliente gerado', () => {
   });
 
   it('edita pelo PATCH com os campos da tela', async () => {
-    await (await cortes()).atualizarCorte('c1', { titulo_proposto: 'Novo', is_leitura: true });
+    await (await cortes()).atualizarCorte('c1', { titulo_proposto: 'Novo', is_leitura: 1 });
 
     expect(chamadas[0].method).toBe('PATCH');
-    expect(await chamadas[0].json()).toEqual({ titulo_proposto: 'Novo', is_leitura: true });
+    expect(await chamadas[0].json()).toEqual({ titulo_proposto: 'Novo', is_leitura: 1 });
   });
 
   it('decide um segmento pelo índice', async () => {

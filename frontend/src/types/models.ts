@@ -84,8 +84,9 @@ export interface Desvio {
   fim_hms: string;
   motivo: string;
   /** Procedência editorial do desvio. Opcional p/ retrocompatibilidade
-   *  com desvios persistidos antes do I-020. */
-  origem?: DesvioOrigem;
+   *  com desvios persistidos antes do I-020. Aberta no contrato: além das de
+   *  `DesvioOrigem` há `juncao` (D-575) e o que vier de importação. */
+  origem?: string;
   /** Motivo da remoção. Opcional p/ retrocompatibilidade com desvios
    *  persistidos antes do D-422 (o badge infere pelo `motivo`). */
   categoria?: DesvioCategoria;
@@ -109,75 +110,11 @@ export interface CorteScore {
   total?: number;
 }
 
-export interface Corte {
-  id: string;
-  projeto_id: string;
-  numero: number;
-  titulo_proposto: string;
-  resumo: string;
-  tema_central: string;
-  /** I-034: justificativa editorial da IA (audit trail). 1-3 frases
-   * explicando POR QUE o intervalo virou corte e por que a duração escolhida
-   * é a certa. Opcional para retrocompatibilidade com cortes antigos. */
-  justificativa?: string;
-  // D-314: campos v2 da proposta da IA (D-302), persistidos por corte.
-  // `score` é o ranking relativo {hook, flow, value, total} entre os cortes da
-  // MESMA análise — serve para priorizar qual corte tratar primeiro. `{}`/ausente
-  // em cortes antigos ou criados na mão (não exibir badge). `frase_gancho_*` é o
-  // ponto de entrada mais forte do argumento; `contextualizacao` é a frase que
-  // situa o assunto (alimenta a 1ª cena, D-295; vazia = sem contextualização).
-  frase_gancho_hms?: string;
-  frase_gancho_texto?: string;
-  contextualizacao?: string;
-  score?: CorteScore;
-  // fim D-314
-  inicio_hms: string;
-  fim_hms: string;
-  inicio_seg: number;
-  fim_seg: number;
-  desvios: Desvio[];
-  status: StatusCorte;
-  arquivo_clip_path: string;
-  /** Duração real (segundos) do clip bruto, medida via ffprobe pelo backend.
-   * 0 quando o clip ainda não foi gerado.  Quando > 0, deve ser usado como
-   * duração canônica do Player (evita estimativas que acumulam drift). */
-  duracao_clip_seg?: number;
-  /** F-063: offset fino de áudio (lip-sync), em milissegundos. Positivo atrasa
-   * o áudio; negativo adianta. Aplicado na geração do bruto e propaga ao render
-   * final. 0/ausente = sem ajuste. */
-  audio_offset_ms?: number;
-  youtube_video_id: string;
-  youtube_url_publicado: string;
-  youtube_scheduled_at: string;
-  is_leitura: boolean;
-  autor_leitura: string;
-  parte_leitura: number;
-  is_fire: boolean;
-  /** Backend serializa como int 0/1 (coluna SQLite Integer). */
-  is_pos_producao?: 0 | 1;
-  /** Backend serializa como int 0/1: marca manual do editor de que as cenas foram revisadas. */
-  cenas_validadas?: 0 | 1;
-  /** Timestamp ISO da ultima validacao manual das cenas; null se nao validadas. */
-  cenas_validadas_em?: string | null;
-  cenas_remotion?: unknown;
-  layout_youtube?: unknown;
-  /** F-054: sugestões de mudança de cena detectadas pelo PySceneDetect no
-   * bruto do corte. Vazio quando a detecção ainda não rodou (corte legado
-   * ou bruto recém-gerado antes do scan terminar). */
-  segmentos_detectados?: SegmentoDetectado[];
-  /** D-576: ordem de exibição dos blocos. Vazio/ausente = ordem da live. */
-  arranjo_blocos?: { inicio_seg: number; fim_seg: number }[];
-  transcricao_corte?: TranscricaoLinha[];
-  /** Transcricao limpa: sem duplicacao, com tempos remapeados para o video bruto (sem trechos). */
-  transcricao_final?: TranscricaoLinha[];
-  /** Texto puro da transcricao limpa, pronto para alimentar prompts de IA. */
-  transcricao_final_texto?: string;
-  /** F-058: influência manual do editor no prompt da thumbnail. Texto livre
-   * (pessoas a destacar, relações, ênfases) somado ao raciocínio do capista
-   * quando o prompt da capa é gerado. Vazio = sem influência. */
-  hints_thumbnail?: string;
-  criado_em: string;
-}
+/** O corte — o tipo do contrato (D-722), apelido aqui porque as telas o
+ *  importam deste arquivo. As listas internas (trechos, transcrição, segmentos,
+ *  arranjo, cenas, layout) vêm tipadas do CorteResponse e trazem também as
+ *  chaves que o schema não declara. `is_leitura` é 0/1, como o banco guarda. */
+export type Corte = Schema<'CorteResponse'>;
 
 /** Status da geração do bruto de um corte — o tipo do contrato (D-722). */
 export type StatusBrutoResponse = Schema<'StatusCorteBrutoResponse'>;
@@ -254,11 +191,13 @@ export interface CenaRemotion {
   modelo_cena?: 'auto' | 'padrao' | 'card';
 }
 
-export interface CenasRemotionPayload {
+// `type`, e não `interface`: o PATCH do corte recebe o roteiro como objeto
+// livre (Record<string, unknown>), e só um `type` cabe nele.
+export type CenasRemotionPayload = {
   formato?: string;
   paleta?: Record<string, string>;
   cenas: CenaRemotion[];
-}
+};
 
 /** O status de exportação de um corte — o tipo do contrato (D-722). Mora aqui
  *  como apelido porque 28 telas o importam deste arquivo. */

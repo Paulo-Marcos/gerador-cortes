@@ -238,7 +238,7 @@ export function EditorFase2({
       });
       // D-741: só as regiões — mandar o layout resolvido gravaria os padrões no
       // corte, e ele pararia de herdar do projeto e do global (RN-10).
-      atualizarCorte.mutate({ layout_youtube: { regioes: novoLayout.regioes } } as Partial<Corte>, {
+      atualizarCorte.mutate({ layout_youtube: { regioes: novoLayout.regioes } }, {
         onSuccess: (updated) => {
           // Garante que YoutubeLayoutPanel receba o novo layout
           // (ele e renderizado condicionalmente — pode estar montado).
@@ -288,7 +288,7 @@ export function EditorFase2({
           : current,
       );
 
-      atualizarCorte.mutate({ layout_youtube: { regioes: novoLayout.regioes } } as Partial<Corte>, {
+      atualizarCorte.mutate({ layout_youtube: { regioes: novoLayout.regioes } }, {
         onSuccess: (updated) => {
           queryClient.setQueryData<Corte>(corteKey(corte.id), (current) =>
             current

@@ -121,5 +121,6 @@ export function resolverBadgeTrecho(desvio: Desvio): BadgeTrecho {
   if (categoria && categoria !== 'outro' && BADGE_POR_CATEGORIA[categoria]) {
     return BADGE_POR_CATEGORIA[categoria];
   }
-  return BADGE_POR_ORIGEM[desvio.origem ?? 'manual'] ?? BADGE_POR_ORIGEM.manual;
+  // A origem é aberta (há `juncao`); a que não tem badge próprio cai no manual.
+  return BADGE_POR_ORIGEM[(desvio.origem ?? 'manual') as DesvioOrigem] ?? BADGE_POR_ORIGEM.manual;
 }

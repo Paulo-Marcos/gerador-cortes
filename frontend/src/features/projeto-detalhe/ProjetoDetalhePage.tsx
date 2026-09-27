@@ -793,7 +793,7 @@ function CorteLinhaCompacta({
       }}
       className={cn(
         'group cursor-pointer overflow-hidden rounded-[10px] border border-[var(--wb-border)] transition-colors hover:border-[var(--wb-text-dim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-        tintDoCorte(corteFull?.status, corteFull?.is_fire, corteFull?.is_leitura),
+        tintDoCorte(corteFull?.status, corteFull?.is_fire, Boolean(corteFull?.is_leitura)),
         rejeitado && 'opacity-[.72]',
       )}
     >

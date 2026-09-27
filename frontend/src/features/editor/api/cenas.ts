@@ -1,6 +1,5 @@
 import { api, dados, type Schema } from '@/shared/api';
 import type { CenasRemotionPayload } from '@/types/models';
-import { paraOCorteDaTela } from './cortes';
 
 // As cenas Remotion do corte: gerar, importar a resposta de uma IA de fora,
 // validar e o prompt do modo manual. D-722: saiu de lib/api.ts, sobre o cliente
@@ -21,11 +20,9 @@ export const cenasApi = {
       }),
     ),
 
-  validarCenasRemotion: async (corteId: string, validado = true) =>
-    paraOCorteDaTela(
-      await dados(
-        api.POST('/api/cortes/{corte_id}/cenas-remotion/validar', { ...doCorte(corteId), body: { validado } }),
-      ),
+  validarCenasRemotion: (corteId: string, validado = true) =>
+    dados(
+      api.POST('/api/cortes/{corte_id}/cenas-remotion/validar', { ...doCorte(corteId), body: { validado } }),
     ),
 
   obterPromptCenasRemotion: (corteId: string) =>

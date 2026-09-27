@@ -1,4 +1,4 @@
-import type { Corte, Desvio } from '@/types/models';
+import type { Corte } from '@/types/models';
 
 export type WaveformWindow = {
   corteId: string;
@@ -28,7 +28,7 @@ export function mergeDirtyPatch(current: Partial<Corte>, patch: Partial<Corte>):
 }
 
 export function applyDesvioChange(
-  persistedDesvios: Desvio[],
+  persistedDesvios: Corte['desvios'],
   currentDirty: Partial<Corte>,
   idx: number,
   novoInicio: string,

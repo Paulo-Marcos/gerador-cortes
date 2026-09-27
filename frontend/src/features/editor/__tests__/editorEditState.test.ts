@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { Corte, Desvio } from '@/types/models';
+import type { Corte } from '@/types/models';
 import { applyDesvioChange, mergeDirtyPatch, resolveWaveformWindow } from '../editorEditState';
 
-function desvio(inicio: string, fim: string, motivo = 'trecho'): Desvio {
-  return { inicio_hms: inicio, fim_hms: fim, motivo };
+type DesvioDoCorte = Corte['desvios'][number];
+
+function desvio(inicio: string, fim: string, motivo = 'trecho'): DesvioDoCorte {
+  return { inicio_hms: inicio, fim_hms: fim, motivo } as DesvioDoCorte;
 }
 
 describe('estado sujo do editor', () => {

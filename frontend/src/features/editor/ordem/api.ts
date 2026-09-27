@@ -1,6 +1,5 @@
 import type { Corte } from '@/types/models';
 import { api, dados } from '@/shared/api';
-import { paraOsCortesDaTela } from '../api/cortes';
 // D-448: cliente HTTP do desvio EXPLÍCITO da ordem cronológica dos cortes.
 // A ordem padrão (por tempo) não tem endpoint: o backend a recalcula a cada
 // operação que cria ou move corte. O que existe aqui é o pin — e o desfazer
@@ -22,7 +21,7 @@ export const ordemCortesApi = {
       api.POST('/api/ordem-cortes/projeto/{projeto_id}/normalizar', {
         params: { path: { projeto_id: projetoId } },
       }),
-    ).then((cortes) => paraOsCortesDaTela(cortes) as CorteComPin[]),
+    ),
 
   /** Fixa o corte numa posição (1-based); `null` solta e devolve ao tempo. */
   fixarPosicao: (corteId: string, posicao: number | null): Promise<CorteComPin[]> =>
@@ -31,5 +30,5 @@ export const ordemCortesApi = {
         params: { path: { corte_id: corteId } },
         body: { posicao },
       }),
-    ).then((cortes) => paraOsCortesDaTela(cortes) as CorteComPin[]),
+    ),
 };

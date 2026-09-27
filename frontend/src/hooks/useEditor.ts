@@ -7,7 +7,7 @@ import {
 import { brutoApi, type GerarBrutoOpcoes } from '@/features/editor/api/bruto';
 import { cenasApi } from '@/features/editor/api/cenas';
 import { renderApi } from '@/features/editor/api/render';
-import { cortesApi } from '@/features/editor/api/cortes';
+import { cortesApi, type AtualizarCorteRequest } from '@/features/editor/api/cortes';
 import { metadadosApi } from '@/features/metadata/api/metadados';
 import { geracaoIaApi } from '@/features/ia';
 import { exportStatusKey } from './useProjetoDetalhe';
@@ -140,7 +140,7 @@ export function invalidaCorte(
 export function useAtualizarCorte(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Partial<Corte>) => cortesApi.atualizarCorte(corteId, patch),
+    mutationFn: (patch: AtualizarCorteRequest) => cortesApi.atualizarCorte(corteId, patch),
     onSuccess: (data) => {
       qc.setQueryData(corteKey(corteId), data);
       if (projetoId) qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
@@ -269,7 +269,7 @@ export function useToggleLeitura(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (corteAtual: Corte) =>
-      cortesApi.atualizarCorte(corteId, { is_leitura: !corteAtual.is_leitura }),
+      cortesApi.atualizarCorte(corteId, { is_leitura: corteAtual.is_leitura ? 0 : 1 }),
     onSuccess: (data) => {
       qc.setQueryData(corteKey(corteId), data);
       if (projetoId) qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
