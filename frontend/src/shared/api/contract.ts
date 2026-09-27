@@ -7587,6 +7587,23 @@ export interface components {
             retido_mb: number;
         };
         /**
+         * RetratoResponse
+         * @description Um retrato no banco do canal. `url` é absoluta: o Remotion roda noutra
+         *     origem e não resolve `/api/...`.
+         */
+        RetratoResponse: {
+            /** Fonte */
+            fonte: string;
+            /** Nome */
+            nome: string;
+            /** Pagina Wikipedia */
+            pagina_wikipedia: string | null;
+            /** Slug */
+            slug: string;
+            /** Url */
+            url: string;
+        };
+        /**
          * RetratosDasCenas
          * @description O que a busca de retratos fez nas fichas biográficas.
          */
@@ -13427,7 +13444,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, unknown>;
+                    "application/json": components["schemas"]["RetratoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13460,7 +13477,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, unknown>;
+                    "application/json": components["schemas"]["RetratoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13493,7 +13510,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, unknown>;
+                    "application/json": components["schemas"]["RetratoResponse"];
                 };
             };
             /** @description Validation Error */

@@ -8049,6 +8049,47 @@
         "title": "RetencaoArquivos",
         "type": "object"
       },
+      "RetratoResponse": {
+        "description": "Um retrato no banco do canal. `url` é absoluta: o Remotion roda noutra\norigem e não resolve `/api/...`.",
+        "properties": {
+          "fonte": {
+            "title": "Fonte",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "pagina_wikipedia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagina Wikipedia"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nome",
+          "slug",
+          "url",
+          "fonte",
+          "pagina_wikipedia"
+        ],
+        "title": "RetratoResponse",
+        "type": "object"
+      },
       "RetratosDasCenas": {
         "description": "O que a busca de retratos fez nas fichas biográficas.",
         "properties": {
@@ -17810,8 +17851,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Buscar Api Retratos Buscar Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RetratoResponse"
                 }
               }
             },
@@ -17853,8 +17893,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Salvar Url Api Retratos Salvar Url Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RetratoResponse"
                 }
               }
             },
@@ -17896,8 +17935,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Upload Api Retratos Upload Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RetratoResponse"
                 }
               }
             },

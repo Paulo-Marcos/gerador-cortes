@@ -12,12 +12,25 @@ Fluxo:
 from __future__ import annotations
 
 from app.core import channel_paths
+from app.routers.resposta_api import RespostaApi
 from app.services import retrato_wikipedia
 from fastapi import APIRouter, Body, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 router = APIRouter()
+
+
+class RetratoResponse(RespostaApi):
+    """Um retrato no banco do canal. `url` é absoluta: o Remotion roda noutra
+    origem e não resolve `/api/...`."""
+
+    nome: str
+    slug: str
+    url: str
+    fonte: str
+    pagina_wikipedia: str | None
+
 
 _VALIDOS_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
@@ -34,7 +47,7 @@ def _serializar(retrato: retrato_wikipedia.RetratoEncontrado) -> dict[str, objec
     }
 
 
-@router.post("/buscar")
+@router.post("/buscar", response_model=RetratoResponse)
 async def buscar(
     nome: str,
     tamanho: int = 600,
@@ -66,7 +79,7 @@ class SalvarUrlRequest(BaseModel):
     url: str = Field(..., min_length=1)
 
 
-@router.post("/salvar-url")
+@router.post("/salvar-url", response_model=RetratoResponse)
 async def salvar_url(payload: SalvarUrlRequest = Body(...)) -> dict[str, object]:
     """
     Baixa a imagem de uma URL externa e adiciona ao banco de retratos.
@@ -96,7 +109,7 @@ async def salvar_url(payload: SalvarUrlRequest = Body(...)) -> dict[str, object]
     return _serializar(resultado)
 
 
-@router.post("/upload")
+@router.post("/upload", response_model=RetratoResponse)
 async def upload(
     nome: str = Form(...),
     arquivo: UploadFile = File(...),
