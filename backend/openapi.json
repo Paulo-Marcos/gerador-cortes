@@ -2249,6 +2249,50 @@
         "title": "DividirCorteRequest",
         "type": "object"
       },
+      "DownloadReiniciadoResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "projeto_id"
+        ],
+        "title": "DownloadReiniciadoResponse",
+        "type": "object"
+      },
+      "DownloadsFalhadosResponse": {
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ids",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message",
+          "total",
+          "ids"
+        ],
+        "title": "DownloadsFalhadosResponse",
+        "type": "object"
+      },
       "EmbasamentoCriterio": {
         "description": "Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela.",
         "properties": {
@@ -3027,6 +3071,93 @@
         "title": "LimparArquivosRequest",
         "type": "object"
       },
+      "LimpezaDeArquivosResponse": {
+        "description": "Sem pasta do projeto, só a mensagem, o zero e a lista vazia; com pasta, o\nrelatório da retenção de mídia inteiro (D-456).",
+        "properties": {
+          "erros": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erros"
+          },
+          "liberado_mb": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Liberado Mb"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "preservados": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preservados"
+          },
+          "pulados": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pulados"
+          },
+          "removidos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removidos",
+            "type": "array"
+          },
+          "retido_mb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retido Mb"
+          }
+        },
+        "required": [
+          "message",
+          "liberado_mb",
+          "removidos"
+        ],
+        "title": "LimpezaDeArquivosResponse",
+        "type": "object"
+      },
       "ListaAvaliacoesBrutoResponse": {
         "properties": {
           "avaliacoes": {
@@ -3724,6 +3855,19 @@
         "title": "MarcarPublicadoResponse",
         "type": "object"
       },
+      "MensagemResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "MensagemResponse",
+        "type": "object"
+      },
       "ModeloGeminiResponse": {
         "properties": {
           "id": {
@@ -4083,6 +4227,13 @@
           },
           "fonte_preset": {
             "default": "atual",
+            "enum": [
+              "atual",
+              "cientifica",
+              "minimalista",
+              "moderna",
+              "tecnica"
+            ],
             "title": "Fonte Preset",
             "type": "string"
           },
@@ -4092,6 +4243,10 @@
           },
           "layout_card_padrao": {
             "default": "vertical",
+            "enum": [
+              "horizontal",
+              "vertical"
+            ],
             "title": "Layout Card Padrao",
             "type": "string"
           },
@@ -4127,12 +4282,17 @@
           },
           "sombra_nivel_padrao": {
             "default": "nenhuma",
+            "enum": [
+              "nenhuma",
+              "leve",
+              "media",
+              "forte"
+            ],
             "title": "Sombra Nivel Padrao",
             "type": "string"
           },
           "status": {
-            "title": "Status",
-            "type": "string"
+            "$ref": "#/components/schemas/StatusProjeto"
           },
           "titulo_live": {
             "title": "Titulo Live",
@@ -4187,6 +4347,10 @@
           },
           "versao_renderer": {
             "default": "v2",
+            "enum": [
+              "v1",
+              "v2"
+            ],
             "title": "Versao Renderer",
             "type": "string"
           },
@@ -4201,10 +4365,30 @@
           "titulo_live",
           "canal_origem",
           "duracao_segundos",
+          "data_live",
           "status",
           "progresso_download",
           "arquivo_video_path",
-          "criado_em"
+          "arquivos_limpos",
+          "rebaixando_video",
+          "criado_em",
+          "ultima_analise_em",
+          "versao_renderer",
+          "sombra_nivel_padrao",
+          "layout_card_padrao",
+          "layout_youtube_padrao",
+          "fonte_preset",
+          "pontuacao_ranking",
+          "total_cortes",
+          "total_publicados",
+          "total_aprovados",
+          "total_com_raw",
+          "total_video_pronto",
+          "total_com_meta",
+          "total_publicos",
+          "proxima_publicacao",
+          "fires_pendentes",
+          "erro_msg"
         ],
         "title": "ProjetoResponse",
         "type": "object"
@@ -5124,6 +5308,19 @@
         ],
         "title": "StatusExportResponse",
         "type": "object"
+      },
+      "StatusProjeto": {
+        "enum": [
+          "pendente",
+          "baixando",
+          "transcrevendo",
+          "pronto",
+          "analisando",
+          "analisado",
+          "erro"
+        ],
+        "title": "StatusProjeto",
+        "type": "string"
       },
       "TelemetriaAvaliacao": {
         "description": "A avaliação humana do corte (D-419); `voto` None = não avaliado.",
@@ -12061,7 +12258,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadsFalhadosResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12265,7 +12464,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12662,7 +12863,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LimpezaDeArquivosResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12744,7 +12947,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadReiniciadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12826,7 +13031,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadReiniciadoResponse"
+                }
               }
             },
             "description": "Successful Response"

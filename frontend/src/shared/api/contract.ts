@@ -5197,6 +5197,22 @@ export interface components {
             /** Ponto Seg */
             ponto_seg?: number | null;
         };
+        /** DownloadReiniciadoResponse */
+        DownloadReiniciadoResponse: {
+            /** Message */
+            message: string;
+            /** Projeto Id */
+            projeto_id: string;
+        };
+        /** DownloadsFalhadosResponse */
+        DownloadsFalhadosResponse: {
+            /** Ids */
+            ids: string[];
+            /** Message */
+            message: string;
+            /** Total */
+            total: number;
+        };
         /**
          * EmbasamentoCriterio
          * @description Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela.
@@ -5556,6 +5572,27 @@ export interface components {
              */
             limpar_brutos_fire: boolean;
         };
+        /**
+         * LimpezaDeArquivosResponse
+         * @description Sem pasta do projeto, só a mensagem, o zero e a lista vazia; com pasta, o
+         *     relatório da retenção de mídia inteiro (D-456).
+         */
+        LimpezaDeArquivosResponse: {
+            /** Erros */
+            erros?: string[] | null;
+            /** Liberado Mb */
+            liberado_mb: number;
+            /** Message */
+            message: string;
+            /** Preservados */
+            preservados?: string[] | null;
+            /** Pulados */
+            pulados?: string[] | null;
+            /** Removidos */
+            removidos: string[];
+            /** Retido Mb */
+            retido_mb?: number | null;
+        };
         /** ListaAvaliacoesBrutoResponse */
         ListaAvaliacoesBrutoResponse: {
             /** Avaliacoes */
@@ -5803,6 +5840,11 @@ export interface components {
             /** Video Id */
             video_id: string;
         };
+        /** MensagemResponse */
+        MensagemResponse: {
+            /** Message */
+            message: string;
+        };
         /** ModeloGeminiResponse */
         ModeloGeminiResponse: {
             /** Id */
@@ -5950,7 +5992,7 @@ export interface components {
             /** Duracao Segundos */
             duracao_segundos: number;
             /** Erro Msg */
-            erro_msg?: string | null;
+            erro_msg: string | null;
             /**
              * Fires Pendentes
              * @default 0
@@ -5959,17 +6001,19 @@ export interface components {
             /**
              * Fonte Preset
              * @default atual
+             * @enum {string}
              */
-            fonte_preset: string;
+            fonte_preset: "atual" | "cientifica" | "minimalista" | "moderna" | "tecnica";
             /** Id */
             id: string;
             /**
              * Layout Card Padrao
              * @default vertical
+             * @enum {string}
              */
-            layout_card_padrao: string;
+            layout_card_padrao: "horizontal" | "vertical";
             /** Layout Youtube Padrao */
-            layout_youtube_padrao?: string | null;
+            layout_youtube_padrao: string | null;
             /**
              * Pontuacao Ranking
              * @default 0
@@ -5990,10 +6034,10 @@ export interface components {
             /**
              * Sombra Nivel Padrao
              * @default nenhuma
+             * @enum {string}
              */
-            sombra_nivel_padrao: string;
-            /** Status */
-            status: string;
+            sombra_nivel_padrao: "nenhuma" | "leve" | "media" | "forte";
+            status: components["schemas"]["StatusProjeto"];
             /** Titulo Live */
             titulo_live: string;
             /**
@@ -6032,12 +6076,13 @@ export interface components {
              */
             total_video_pronto: number;
             /** Ultima Analise Em */
-            ultima_analise_em?: string | null;
+            ultima_analise_em: string | null;
             /**
              * Versao Renderer
              * @default v2
+             * @enum {string}
              */
-            versao_renderer: string;
+            versao_renderer: "v1" | "v2";
             /** Youtube Url */
             youtube_url: string;
         };
@@ -6421,6 +6466,11 @@ export interface components {
             /** Projeto Id */
             projeto_id: string;
         };
+        /**
+         * StatusProjeto
+         * @enum {string}
+         */
+        StatusProjeto: "pendente" | "baixando" | "transcrevendo" | "pronto" | "analisando" | "analisado" | "erro";
         /**
          * TelemetriaAvaliacao
          * @description A avaliação humana do corte (D-419); `voto` None = não avaliado.
@@ -10759,7 +10809,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DownloadsFalhadosResponse"];
                 };
             };
         };
@@ -10945,7 +10995,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MensagemResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11178,7 +11228,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LimpezaDeArquivosResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11240,7 +11290,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DownloadReiniciadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11302,7 +11352,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["DownloadReiniciadoResponse"];
                 };
             };
             /** @description Validation Error */

@@ -1,14 +1,16 @@
 import json
 import logging
 from datetime import datetime
+from typing import Literal
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.core.logging import operational_error, operational_info
 from app.database import get_db
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, Projeto, StatusProjeto
-from app.routers import analises_schemas
+from app.routers import analises_schemas, projetos_schemas
 from app.routers.errors import erro_interno
+from app.routers.resposta_api import RespostaApi
 from app.services import abrir_no_sistema, listagem_de_projetos
 from app.services.analise import AnaliseService
 from app.services.app_settings import AppSettingsService
@@ -22,7 +24,7 @@ from app.services.youtube_palco import ensure_palco_png
 from app.services.youtube_stats import YoutubeStatsService
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,14 +44,26 @@ class CriarProjetoRequest(BaseModel):
     canal_origem: str | None = None
 
 
-class ProjetoResponse(BaseModel):
+# Os vocabulários que a configuração de render do projeto aceita. A rota de
+# PATCH valida a escrita contra eles, e o schema de resposta os declara — o
+# contrato do frontend recebe a união, não um texto qualquer (D-722).
+SOMBRAS_VALIDAS = ("nenhuma", "leve", "media", "forte")
+LAYOUTS_CARD_VALIDOS = ("horizontal", "vertical")
+# O renderer V1 foi desativado para a escrita, mas há projetos antigos em v1.
+VERSOES_RENDERER = ("v1", "v2")
+
+
+class ProjetoResponse(RespostaApi):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     youtube_url: str
     titulo_live: str
     canal_origem: str
     duracao_segundos: int
     data_live: str = ""
-    status: str
+    # O enum e não Literal: o ORM entrega o membro do enum, que o Literal recusa.
+    status: StatusProjeto
     progresso_download: float
     arquivo_video_path: str
     # I-023: filtro_padrao por projeto removido (vivia em Projeto.filtro_padrao).
@@ -59,11 +73,11 @@ class ProjetoResponse(BaseModel):
     criado_em: datetime
     ultima_analise_em: datetime | None = None
     # Renderer V1 desativado — projetos sempre operam em V2.
-    versao_renderer: str = "v2"
-    sombra_nivel_padrao: str = "nenhuma"
-    layout_card_padrao: str = "vertical"
+    versao_renderer: Literal[VERSOES_RENDERER] = "v2"
+    sombra_nivel_padrao: Literal[SOMBRAS_VALIDAS] = "nenhuma"
+    layout_card_padrao: Literal[LAYOUTS_CARD_VALIDOS] = "vertical"
     layout_youtube_padrao: str | None = None
-    fonte_preset: str = "atual"
+    fonte_preset: Literal[tuple(sorted(FONTE_PRESETS_VALIDOS))] = "atual"
     # F-052: pontuação herdada do ranking de lives no momento do download.
     pontuacao_ranking: float = 0.0
     total_cortes: int = 0
@@ -77,9 +91,6 @@ class ProjetoResponse(BaseModel):
     # Brutos de Fire que a limpeza ainda deve preservar para a fabrica de Shorts.
     fires_pendentes: int = 0
     erro_msg: str | None = None
-
-    class Config:
-        from_attributes = True
 
 
 class AtualizarRenderConfigRequest(BaseModel):
@@ -106,7 +117,10 @@ async def criar_projeto(body: CriarProjetoRequest):
     return iniciado.projeto
 
 
-@router.post("/{projeto_id}/reiniciar-download")
+@router.post(
+    "/{projeto_id}/reiniciar-download",
+    response_model=projetos_schemas.DownloadReiniciadoResponse,
+)
 async def reiniciar_download(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """Reseta projeto com erro/baixando para pendente e reinicia o download."""
     projeto = await db.get(Projeto, projeto_id)
@@ -134,7 +148,9 @@ async def reiniciar_download(projeto_id: str, db: AsyncSession = Depends(get_db)
     return {"message": "Download reiniciado", "projeto_id": projeto_id}
 
 
-@router.post("/{projeto_id}/rebaixar-video")
+@router.post(
+    "/{projeto_id}/rebaixar-video", response_model=projetos_schemas.DownloadReiniciadoResponse
+)
 async def rebaixar_video(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """Traz de volta o video de uma live ja limpa, preservando o resto (D-527).
 
@@ -173,7 +189,9 @@ async def rebaixar_video(projeto_id: str, db: AsyncSession = Depends(get_db)):
     return {"message": "Download do video reiniciado", "projeto_id": projeto_id}
 
 
-@router.post("/reiniciar-downloads-falhados")
+@router.post(
+    "/reiniciar-downloads-falhados", response_model=projetos_schemas.DownloadsFalhadosResponse
+)
 async def reiniciar_downloads_falhados(db: AsyncSession = Depends(get_db)):
     """Reinicia o download de todos os projetos com status 'erro' que não têm vídeo."""
     result = await db.execute(
@@ -437,8 +455,8 @@ async def atualizar_render_config(
     if not projeto:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
 
-    sombras_validas = {"nenhuma", "leve", "media", "forte"}
-    layouts_validos = {"horizontal", "vertical"}
+    sombras_validas = set(SOMBRAS_VALIDAS)
+    layouts_validos = set(LAYOUTS_CARD_VALIDOS)
 
     # V1 desativada — ignoramos silenciosamente `body.versao_renderer` mesmo
     # quando o frontend continua mandando o campo (clientes antigos / drafts
@@ -514,7 +532,7 @@ async def video_proxy(projeto_id: str, db: AsyncSession = Depends(get_db)):
     return RedirectResponse(url=f"/videos/{projeto_id}/{video_path.name}")
 
 
-@router.delete("/{projeto_id}")
+@router.delete("/{projeto_id}", response_model=projetos_schemas.MensagemResponse)
 async def deletar_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)):
     sucesso = await ProjetoService.deletar_projeto(projeto_id, db)
     if not sucesso:
@@ -533,7 +551,11 @@ class LimparArquivosRequest(BaseModel):
     limpar_brutos_fire: bool = False
 
 
-@router.post("/{projeto_id}/limpar-arquivos")
+@router.post(
+    "/{projeto_id}/limpar-arquivos",
+    response_model=projetos_schemas.LimpezaDeArquivosResponse,
+    response_model_exclude_unset=True,
+)
 async def limpar_arquivos_projeto(
     projeto_id: str,
     body: LimparArquivosRequest | None = None,
