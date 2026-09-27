@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { ToastProvider } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Corte, MetadadoCorte } from '@/types/models';
-import { MetadataCard, metadataKey } from '../MetadataCard';
+import { MetadataCard } from '../MetadataCard';
+import { metadataKey } from '../useMetadataCard';
 
 function corte(): Corte {
   return {

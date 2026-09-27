@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { metadataKey } from '@/features/metadata/MetadataCard';
+import { metadataKey } from '@/features/metadata/useMetadataCard';
 import { resolveThumbUrl } from '@/lib/api';
 import { metadadosApi } from '@/features/metadata/api/metadados';
 import { copyTextToClipboard } from '@/lib/clipboard';
