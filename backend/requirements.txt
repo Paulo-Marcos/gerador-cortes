@@ -9,7 +9,7 @@ python-multipart==0.0.32
 yt-dlp>=2026.8.19
 aiofiles==24.1.0
 # 16.x, e nao a 17: o google-genai 2.x pede websockets<17.
-websockets==16.1.1
+websockets==17.1
 
 # Estes dois — como o `websockets` acima — chegam de carona no extra
 # `[standard]` do uvicorn, mas o app os IMPORTA direto, e o que vem de carona
