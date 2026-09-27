@@ -368,7 +368,7 @@ class BulkProcessarRequest(BaseModel):
     filtro: str = "nenhum"
 
 
-@router.get("/fila-global")
+@router.get("/fila-global", response_model=export_schemas.FilaGlobalResponse)
 async def fila_global(db: AsyncSession = Depends(get_db)):
     pos_total = pos_processando = pos_aguardando = pos_concluidos = pos_erros = 0
     for fila in ExportService.get_fila_processamento().values():
@@ -413,7 +413,11 @@ class CancelarJobRequest(BaseModel):
     job_id: str
 
 
-@router.post("/fila-global/cancelar")
+@router.post(
+    "/fila-global/cancelar",
+    response_model=export_schemas.JobCanceladoResponse,
+    response_model_exclude_unset=True,
+)
 async def cancelar_job_da_fila(body: CancelarJobRequest):
     """Interrompe um job da fila global (D-426).
 

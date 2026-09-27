@@ -4,7 +4,11 @@ Descrevem o que as rotas de `routers/export.py` devolvem — não o tipo que a t
 escreveu à mão. O `response_model` FILTRA: campo omitido aqui seria cortado.
 """
 
+from typing import Literal
+
 from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
+from app.services.jobs_globais import EstadoJob
+from pydantic.json_schema import SkipJsonSchema
 
 
 class FiltroExport(RespostaApi):
@@ -150,3 +154,55 @@ class AgendaDoUpload(RespostaApi):
 class BulkYoutubeResponse(RespostaApi):
     message: str
     agenda: list[AgendaDoUpload]
+
+
+class FilaDaPosProducao(RespostaApi):
+    total: int
+    processando: int
+    aguardando: int
+    concluidos: int
+    erros: int
+    ativo: bool
+
+
+class FilaDoYoutube(RespostaApi):
+    total: int
+    processando: int
+    concluidos: int
+    erros: int
+    ativo: bool
+
+
+class JobDaFila(RespostaApi):
+    """Um trabalho pesado, já com o contexto que a fila mostra (D-417)."""
+
+    id: str
+    tipo: str
+    familia: Literal["ia", "midia", "publicacao"]
+    rotulo_tipo: str
+    corte_id: str
+    projeto_id: str
+    # Nulo quando o job é do projeto inteiro, não de um corte.
+    corte_numero: int | None
+    projeto_titulo: str
+    estado: EstadoJob
+    # int | float: o progresso do render pode vir fracionado.
+    progresso: int | float
+    etapa: str
+    erro: str
+
+
+class FilaGlobalResponse(RespostaApi):
+    pos_producao: FilaDaPosProducao
+    upload_youtube: FilaDoYoutube
+    jobs: list[JobDaFila]
+
+
+class JobCanceladoResponse(RespostaComCamposOpcionais):
+    """D-426. Cancelar um item da pós também encerra o ffmpeg que o backend
+    disparou (D-647) — só esse ramo manda `processos_encerrados`."""
+
+    job_id: str
+    cancelado: bool
+    jobs_worker_avisados: int
+    processos_encerrados: int | SkipJsonSchema[None] = None

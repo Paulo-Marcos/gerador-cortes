@@ -101,3 +101,70 @@ def test_a_liberacao_passa_inteira():
     }
 
     assert LiberarPublicacaoResponse.model_validate(resultado).model_dump() == resultado
+
+
+@pytest.mark.parametrize(
+    "resultado",
+    [
+        {"job_id": "bruto:c1", "cancelado": True, "jobs_worker_avisados": 1},
+        {
+            "job_id": "pos:c1",
+            "cancelado": True,
+            "jobs_worker_avisados": 0,
+            "processos_encerrados": 2,
+        },
+    ],
+    ids=["job_em_voo", "item_da_pos"],
+)
+def test_o_cancelamento_passa_nos_dois_ramos_sem_chave_inventada(resultado):
+    from app.routers.export_schemas import JobCanceladoResponse
+
+    rotas = FastAPI()
+
+    @rotas.post("/x", response_model=JobCanceladoResponse, response_model_exclude_unset=True)
+    def _rota():
+        return resultado
+
+    assert TestClient(rotas).post("/x").json() == resultado
+
+
+def test_a_fila_global_passa_inteira_com_job_de_projeto_e_de_corte():
+    from app.routers.export_schemas import FilaGlobalResponse
+
+    job = {
+        "id": "render:c1",
+        "tipo": "render",
+        "familia": "midia",
+        "rotulo_tipo": "render",
+        "corte_id": "c1",
+        "projeto_id": "p1",
+        "corte_numero": 3,
+        "projeto_titulo": "Live",
+        "estado": "rodando",
+        "progresso": 42.5,
+        "etapa": "Overlays",
+        "erro": "",
+    }
+    fila = {
+        "pos_producao": {
+            "total": 1,
+            "processando": 1,
+            "aguardando": 0,
+            "concluidos": 0,
+            "erros": 0,
+            "ativo": True,
+        },
+        "upload_youtube": {
+            "total": 0,
+            "processando": 0,
+            "concluidos": 0,
+            "erros": 0,
+            "ativo": False,
+        },
+        "jobs": [
+            job,
+            {**job, "id": "ingestao:p1", "tipo": "ingestao", "corte_id": "", "corte_numero": None},
+        ],
+    }
+
+    assert FilaGlobalResponse.model_validate(fila).model_dump() == fila

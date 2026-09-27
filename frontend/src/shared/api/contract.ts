@@ -5473,6 +5473,41 @@ export interface components {
             /** Render Final */
             render_final: boolean;
         };
+        /** FilaDaPosProducao */
+        FilaDaPosProducao: {
+            /** Aguardando */
+            aguardando: number;
+            /** Ativo */
+            ativo: boolean;
+            /** Concluidos */
+            concluidos: number;
+            /** Erros */
+            erros: number;
+            /** Processando */
+            processando: number;
+            /** Total */
+            total: number;
+        };
+        /** FilaDoYoutube */
+        FilaDoYoutube: {
+            /** Ativo */
+            ativo: boolean;
+            /** Concluidos */
+            concluidos: number;
+            /** Erros */
+            erros: number;
+            /** Processando */
+            processando: number;
+            /** Total */
+            total: number;
+        };
+        /** FilaGlobalResponse */
+        FilaGlobalResponse: {
+            /** Jobs */
+            jobs: components["schemas"]["JobDaFila"][];
+            pos_producao: components["schemas"]["FilaDaPosProducao"];
+            upload_youtube: components["schemas"]["FilaDoYoutube"];
+        };
         /**
          * FiltroExport
          * @description Um filtro de cinema do render (`FILTROS_CINEMA`).
@@ -5652,6 +5687,57 @@ export interface components {
              * @default true
              */
             indicado: boolean;
+        };
+        /**
+         * JobCanceladoResponse
+         * @description D-426. Cancelar um item da pós também encerra o ffmpeg que o backend
+         *     disparou (D-647) — só esse ramo manda `processos_encerrados`.
+         */
+        JobCanceladoResponse: {
+            /** Cancelado */
+            cancelado: boolean;
+            /** Job Id */
+            job_id: string;
+            /** Jobs Worker Avisados */
+            jobs_worker_avisados: number;
+            /** Processos Encerrados */
+            processos_encerrados?: number;
+        };
+        /**
+         * JobDaFila
+         * @description Um trabalho pesado, já com o contexto que a fila mostra (D-417).
+         */
+        JobDaFila: {
+            /** Corte Id */
+            corte_id: string;
+            /** Corte Numero */
+            corte_numero: number | null;
+            /** Erro */
+            erro: string;
+            /**
+             * Estado
+             * @enum {string}
+             */
+            estado: "aguardando" | "rodando" | "concluido" | "erro" | "cancelado";
+            /** Etapa */
+            etapa: string;
+            /**
+             * Familia
+             * @enum {string}
+             */
+            familia: "ia" | "midia" | "publicacao";
+            /** Id */
+            id: string;
+            /** Progresso */
+            progresso: number;
+            /** Projeto Id */
+            projeto_id: string;
+            /** Projeto Titulo */
+            projeto_titulo: string;
+            /** Rotulo Tipo */
+            rotulo_tipo: string;
+            /** Tipo */
+            tipo: string;
         };
         /**
          * JuntarCortesRequest
@@ -10330,7 +10416,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FilaGlobalResponse"];
                 };
             };
         };
@@ -10354,7 +10440,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["JobCanceladoResponse"];
                 };
             };
             /** @description Validation Error */

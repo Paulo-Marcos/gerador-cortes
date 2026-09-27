@@ -2837,6 +2837,101 @@
         "title": "FasesDoPipeline",
         "type": "object"
       },
+      "FilaDaPosProducao": {
+        "properties": {
+          "aguardando": {
+            "title": "Aguardando",
+            "type": "integer"
+          },
+          "ativo": {
+            "title": "Ativo",
+            "type": "boolean"
+          },
+          "concluidos": {
+            "title": "Concluidos",
+            "type": "integer"
+          },
+          "erros": {
+            "title": "Erros",
+            "type": "integer"
+          },
+          "processando": {
+            "title": "Processando",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "processando",
+          "aguardando",
+          "concluidos",
+          "erros",
+          "ativo"
+        ],
+        "title": "FilaDaPosProducao",
+        "type": "object"
+      },
+      "FilaDoYoutube": {
+        "properties": {
+          "ativo": {
+            "title": "Ativo",
+            "type": "boolean"
+          },
+          "concluidos": {
+            "title": "Concluidos",
+            "type": "integer"
+          },
+          "erros": {
+            "title": "Erros",
+            "type": "integer"
+          },
+          "processando": {
+            "title": "Processando",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "processando",
+          "concluidos",
+          "erros",
+          "ativo"
+        ],
+        "title": "FilaDoYoutube",
+        "type": "object"
+      },
+      "FilaGlobalResponse": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobDaFila"
+            },
+            "title": "Jobs",
+            "type": "array"
+          },
+          "pos_producao": {
+            "$ref": "#/components/schemas/FilaDaPosProducao"
+          },
+          "upload_youtube": {
+            "$ref": "#/components/schemas/FilaDoYoutube"
+          }
+        },
+        "required": [
+          "pos_producao",
+          "upload_youtube",
+          "jobs"
+        ],
+        "title": "FilaGlobalResponse",
+        "type": "object"
+      },
       "FiltroExport": {
         "description": "Um filtro de cinema do render (`FILTROS_CINEMA`).",
         "properties": {
@@ -3245,6 +3340,129 @@
           }
         },
         "title": "IndicarRequest",
+        "type": "object"
+      },
+      "JobCanceladoResponse": {
+        "description": "D-426. Cancelar um item da pós também encerra o ffmpeg que o backend\ndisparou (D-647) — só esse ramo manda `processos_encerrados`.",
+        "properties": {
+          "cancelado": {
+            "title": "Cancelado",
+            "type": "boolean"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "jobs_worker_avisados": {
+            "title": "Jobs Worker Avisados",
+            "type": "integer"
+          },
+          "processos_encerrados": {
+            "title": "Processos Encerrados",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "cancelado",
+          "jobs_worker_avisados"
+        ],
+        "title": "JobCanceladoResponse",
+        "type": "object"
+      },
+      "JobDaFila": {
+        "description": "Um trabalho pesado, já com o contexto que a fila mostra (D-417).",
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "corte_numero": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corte Numero"
+          },
+          "erro": {
+            "title": "Erro",
+            "type": "string"
+          },
+          "estado": {
+            "enum": [
+              "aguardando",
+              "rodando",
+              "concluido",
+              "erro",
+              "cancelado"
+            ],
+            "title": "Estado",
+            "type": "string"
+          },
+          "etapa": {
+            "title": "Etapa",
+            "type": "string"
+          },
+          "familia": {
+            "enum": [
+              "ia",
+              "midia",
+              "publicacao"
+            ],
+            "title": "Familia",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "progresso": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Progresso"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "projeto_titulo": {
+            "title": "Projeto Titulo",
+            "type": "string"
+          },
+          "rotulo_tipo": {
+            "title": "Rotulo Tipo",
+            "type": "string"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "familia",
+          "rotulo_tipo",
+          "corte_id",
+          "projeto_id",
+          "corte_numero",
+          "projeto_titulo",
+          "estado",
+          "progresso",
+          "etapa",
+          "erro"
+        ],
+        "title": "JobDaFila",
         "type": "object"
       },
       "JuntarCortesRequest": {
@@ -12116,7 +12334,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FilaGlobalResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12146,7 +12366,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/JobCanceladoResponse"
+                }
               }
             },
             "description": "Successful Response"
