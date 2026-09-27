@@ -11,7 +11,7 @@ import type {
   YoutubeLayout,
   YoutubePlaca,
   YoutubeSharedConfig,
-} from '@/features/editor/fase2/youtubeLayout';
+} from '@/types/youtubeLayout';
 
 export type LayoutPresetTipo =
   | 'completo'

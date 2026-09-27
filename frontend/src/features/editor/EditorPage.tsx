@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
-import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
-import { useContextoCorte } from '@/hooks/useContextoCorte';
+import { useContextoCorte, useVelocidadePlayerPadrao } from '@/features/settings';
 import { corteKey, useAdicionarDesvio, useAtualizarCorte, useCorte, useCortesProjeto, useDeletarCorte, useDividirCorte, useJuntarCortes, useRemoverDesvio, useSincronizarTranscricao, useToggleFire, useToggleLeitura } from '@/features/editor/useCortes';
 import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaude, useTrechosClaudeEmAndamento } from '@/features/editor/useGeracoesDaIa';
@@ -31,7 +30,6 @@ import { useEditHistory } from './useEditHistory';
 import { calcularDuracaoLiquida, hmsParaSeg, segParaHms, segParaMmSs } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
-import { SettingsModal } from '@/components/layout/SettingsModal';
 import { AvaliacaoCorteModal } from './avaliacao/AvaliacaoCorteModal';
 import {
   applyDesvioChange,
@@ -113,7 +111,6 @@ export function EditorPage() {
   // desenha, e os bindings de atalho sao memoizados (state ficaria stale).
   const velocidadeTrabalhoRef = useRef(VELOCIDADE_TRABALHO_INICIAL);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [trechosManualOpen, setTrechosManualOpen] = useState(false);
   // D-419: avaliação da qualidade do corte, perguntada uma única vez — no
   // clique que dispara a 1ª geração do bruto.
@@ -757,7 +754,6 @@ export function EditorPage() {
         onClose={() => setTrechosManualOpen(false)}
         corteId={corteId}
       />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <AvaliacaoCorteModal
         open={avaliacaoOpen}
         corteId={corteId}

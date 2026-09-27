@@ -27,10 +27,8 @@ module.exports = {
       // Componente compartilhado não depende de feature: a seta é feature -> componente.
       files: ['src/components/**'],
       excludedFiles: [
-        // Dívida de 21/09/2026 — o modal de ajustes e o painel de prompt manual.
-        // A casca do Workbench, que também estava aqui, saiu no D-728.
-        'src/components/PromptManualPanel.tsx',
-        'src/components/layout/SettingsModal.tsx',
+        // D-724: o modal de ajustes foi para features/settings e o painel de
+        // prompt manual já não importava feature; aqui não sobrou dívida.
       ],
       rules: {
         'no-restricted-imports': [
@@ -61,6 +59,10 @@ module.exports = {
               {
                 group: ['@/components/*', '**/components/*'],
                 message: 'hooks/ não importa components/ (D-663). Devolva o estado e deixe a tela decidir o aviso.',
+              },
+              {
+                group: ['@/features/*', '**/features/*'],
+                message: 'hooks/ não importa features/ (D-724): hook que lê dado de uma feature mora nela.',
               },
             ],
           },
@@ -120,8 +122,8 @@ module.exports = {
       // types/ descreve dados; não depende de código de nenhuma camada.
       files: ['src/types/**'],
       excludedFiles: [
-        // Dívida de 21/09/2026 — o tipo de layout mora na feature do editor.
-        'src/types/presets.ts',
+        // D-724: a forma do layout desceu para types/youtubeLayout; aqui não
+        // sobrou dívida.
       ],
       rules: {
         'no-restricted-imports': [

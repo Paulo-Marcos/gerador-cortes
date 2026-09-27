@@ -14,7 +14,7 @@
 // arquivo gerado — desloca a onda em relacao a imagem, que e pior porque e
 // silencioso.
 import { useQuery } from '@tanstack/react-query';
-import { settingsApi } from '@/features/settings/api';
+import { settingsApi } from './api';
 
 // Mesma faixa do clamp do backend (`CONTEXTO_*` em app_settings.py). O teto
 // existe porque a janela vira um proxy FLAC por ffmpeg a cada corte aberto.

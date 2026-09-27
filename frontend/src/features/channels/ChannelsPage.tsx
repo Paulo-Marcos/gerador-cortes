@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import type { Canal, IdentidadeCanal } from '@/features/channels/api/canais';
-import { AppSettingsControls } from '@/features/settings/AppSettingsControls';
+import { AppSettingsControls } from '@/features/settings';
 import { ChannelCard } from './ChannelCard';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { ChannelThemeSection } from './ChannelThemeSection';

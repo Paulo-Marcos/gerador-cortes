@@ -14,11 +14,8 @@ import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts'
 import { SceneTimeline } from '@/features/editor/fase2/SceneTimeline';
 import { calcularDuracaoLiquida } from '@/features/editor/timeUtils';
 import { MetadataModal } from '@/features/metadata/MetadataModal';
-import {
-  useVelocidadeNoVideo,
-  useVelocidadePlayerPadrao,
-} from '@/hooks/useVelocidadePlayerPadrao';
-import { SettingsModal } from '@/components/layout/SettingsModal';
+import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
+import { useVelocidadePlayerPadrao } from '@/features/settings';
 import { filtrosApi } from '@/features/post-production/api/filtros';
 import {
   isCorteVideoPronto,
@@ -66,7 +63,6 @@ export function FinalReviewPage() {
   // D-746: o Fire da Revisão era um botão que não fazia nada.
   const alternarFire = useToggleFire(corteId, projetoId);
   const [metadataOpen, setMetadataOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   // D-367: filtro/grade exibido no header do player. No fluxo normal de
   // "Renderizar" o filtro vai `null` e o backend resolve para o global
   // (AppSettings.filtro_global_padrao), entao o global reflete o que foi
@@ -354,7 +350,6 @@ export function FinalReviewPage() {
         corte={corte}
         onClose={() => setMetadataOpen(false)}
       />
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 

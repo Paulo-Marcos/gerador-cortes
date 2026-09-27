@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { Scissors, Volume2 } from 'lucide-react';
 import { hmsParaSeg } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
-import { useVelocidadeNoVideo } from '@/hooks/useVelocidadePlayerPadrao';
+import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
 import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
 import { legendaEm } from './legendaDoTrecho';

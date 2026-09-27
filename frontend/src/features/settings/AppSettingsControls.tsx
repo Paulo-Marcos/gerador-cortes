@@ -19,7 +19,7 @@ import {
   CONTEXTO_DEPOIS_MAX_SEG,
   CONTEXTO_DEPOIS_PADRAO_SEG,
   CONTEXTO_MIN_SEG,
-} from '@/hooks/useContextoCorte';
+} from './useContextoCorte';
 import { CapaTikTokLayoutEditor } from './CapaTikTokLayoutEditor';
 
 export const LOG_OPTIONS: Array<{ value: LogLevel; label: string; description: string }> = [

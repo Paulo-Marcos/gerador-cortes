@@ -8,9 +8,8 @@
 //
 // E preferencia de LEITURA: nao entra no render. O clipe exportado sai
 // sempre em 1x, independente do que estiver aqui.
-import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { settingsApi } from '@/features/settings/api';
+import { settingsApi } from './api';
 
 // Mesma faixa dos atalhos de velocidade das telas (Ctrl+J/K) e do clamp do
 // backend. Duplicar o limite aqui e barato e evita que um valor gravado fora
@@ -35,27 +34,4 @@ export function normalizarVelocidade(bruta: number | undefined | null): number {
 export function useVelocidadePlayerPadrao(): number {
   const { data } = useQuery({ queryKey: ['app-settings'], queryFn: settingsApi.obterSettings });
   return normalizarVelocidade(data?.velocidade_player_padrao);
-}
-
-/**
- * Aplica uma velocidade a um <video> nativo. Chame do componente que RENDERIZA
- * o <video>: fora dele a ref ainda pode estar nula quando o efeito roda — foi
- * assim que o Editor chegou a anunciar 1,50x com o video rodando em 1,00x.
- *
- * Grava tambem `defaultPlaybackRate` porque o `playbackRate` de um elemento de
- * midia e RESETADO para o default a cada carga — e por isso que trocar de corte
- * devolvia o player para 1,00x. Passe `chaveDaMidia` (o src) para reaplicar
- * quando a fonte muda.
- */
-export function useVelocidadeNoVideo(
-  videoRef: React.RefObject<HTMLVideoElement | null>,
-  velocidade: number,
-  chaveDaMidia?: string,
-): void {
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.defaultPlaybackRate = velocidade;
-    video.playbackRate = velocidade;
-  }, [videoRef, velocidade, chaveDaMidia]);
 }

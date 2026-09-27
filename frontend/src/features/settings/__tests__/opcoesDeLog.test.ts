@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { LOG_OPTIONS } from '../SettingsModal';
+import { LOG_OPTIONS } from '../AppSettingsControls';
 
-describe('SettingsModal log options', () => {
+describe('LOG_OPTIONS dos Ajustes', () => {
   it('exposes the supported log levels in UI order', () => {
     expect(LOG_OPTIONS.map((option) => option.value)).toEqual(['disabled', 'info', 'debug']);
   });

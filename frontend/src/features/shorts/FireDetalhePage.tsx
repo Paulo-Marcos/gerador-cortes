@@ -16,11 +16,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { useShortcuts } from '@/features/editor/shortcuts';
 import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
-import {
-  normalizarVelocidade,
-  useVelocidadeNoVideo,
-  useVelocidadePlayerPadrao,
-} from '@/hooks/useVelocidadePlayerPadrao';
+import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
+import { normalizarVelocidade, useVelocidadePlayerPadrao } from '@/features/settings';
 import type { ShortSugerido } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
 import type { Borda } from './linhaDoTempoShort';

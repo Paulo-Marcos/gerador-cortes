@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
-import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
+import { useVelocidadePlayerPadrao } from '@/features/settings';
 import { useRenderFinal, useStudioUrl } from '@/features/editor/useRender';
 import { useAtualizarCorte, useCorte, useCortesProjeto, useToggleFire } from '@/features/editor/useCortes';
 import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
@@ -23,7 +23,6 @@ import { TiraDoCorteAp } from '@/upgrade/telas/TiraDoCorteAp';
 import { useWorkbenchQueueOptional } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { rotuloCurtoProjeto } from '@/shared/filaGlobal/rotulo';
 import { AvaliacaoCorteModal } from '@/features/editor/avaliacao/AvaliacaoCorteModal';
-import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from './RenderStepsModal';
 
 // D-599: com a casca nova quem desenha a lista de cortes, a trilha e a barra
@@ -71,7 +70,6 @@ export function ScenesPostProductionPage() {
   // URL nova (via `key={src}` no Player) e re-fetchar o arquivo do disco.
   const [videoBust, setVideoBust] = useState<number>(() => Date.now());
   const [metadataOpen, setMetadataOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   // D-419: a nota do corte é perguntada uma vez, no clique de "Gerar bruto"
   // (tela Bruta). Aqui ela só fica reabrível para ajuste.
   const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
@@ -380,7 +378,6 @@ export function ScenesPostProductionPage() {
           aoFechar={() => setMetadataOpen(false)}
         />
       ) : null}
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <AvaliacaoCorteModal
         open={avaliacaoOpen}
         corteId={corte.id}
