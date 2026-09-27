@@ -4572,7 +4572,9 @@ export interface components {
             /** Autor Leitura */
             autor_leitura?: string | null;
             /** Cenas Remotion */
-            cenas_remotion?: unknown[] | Record<string, unknown> | null;
+            cenas_remotion?: unknown[] | {
+                [key: string]: unknown;
+            } | null;
             /** Desvios */
             desvios?: unknown[] | null;
             /** Fim Hms */
@@ -4588,7 +4590,9 @@ export interface components {
             /** Is Leitura */
             is_leitura?: number | null;
             /** Layout Youtube */
-            layout_youtube?: Record<string, unknown> | null;
+            layout_youtube?: {
+                [key: string]: unknown;
+            } | null;
             /** Parte Leitura */
             parte_leitura?: number | null;
             /** Status */
@@ -4639,7 +4643,9 @@ export interface components {
             /** Nome */
             nome?: string | null;
             /** Payload */
-            payload?: Record<string, unknown> | null;
+            payload?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * AtualizarRenderConfigRequest
@@ -4669,7 +4675,9 @@ export interface components {
          */
         AtualizarShortRequest: {
             /** Ajustes Palco */
-            ajustes_palco?: Record<string, unknown> | null;
+            ajustes_palco?: {
+                [key: string]: unknown;
+            } | null;
             /** Arranjo Palco */
             arranjo_palco?: string | null;
             /** Fim Seg */
@@ -4715,7 +4723,9 @@ export interface components {
             /** Palco Short Preset */
             palco_short_preset?: string | null;
             /** Recortes Palco */
-            recortes_palco?: Record<string, unknown> | null;
+            recortes_palco?: {
+                [key: string]: unknown;
+            } | null;
             /** Segmentos */
             segmentos?: components["schemas"]["SegmentoRequest"][] | null;
             /** Status */
@@ -4900,48 +4910,35 @@ export interface components {
         /** Body_atualizar_falantes_api_diarizacao_projeto__projeto_id__falantes_put */
         Body_atualizar_falantes_api_diarizacao_projeto__projeto_id__falantes_put: {
             /** Falantes */
-            falantes: Record<string, unknown>;
+            falantes: {
+                [key: string]: unknown;
+            };
         };
         /** Body_subir_arte_da_capa_api_shorts__short_id__capa_arte_post */
         Body_subir_arte_da_capa_api_shorts__short_id__capa_arte_post: {
-            /**
-             * Arquivo
-             * Format: binary
-             */
+            /** Arquivo */
             arquivo: string;
         };
         /** Body_subir_arte_da_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_arte_post */
         Body_subir_arte_da_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_arte_post: {
-            /**
-             * Arquivo
-             * Format: binary
-             */
+            /** Arquivo */
             arquivo: string;
         };
         /** Body_subir_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_upload_post */
         Body_subir_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_upload_post: {
-            /**
-             * Arquivo
-             * Format: binary
-             */
+            /** Arquivo */
             arquivo: string;
         };
         /** Body_upload_api_retratos_upload_post */
         Body_upload_api_retratos_upload_post: {
-            /**
-             * Arquivo
-             * Format: binary
-             */
+            /** Arquivo */
             arquivo: string;
             /** Nome */
             nome: string;
         };
         /** Body_upload_thumbnail_manual_api_metadados_corte__corte_id__thumbnail_manual_post */
         Body_upload_thumbnail_manual_api_metadados_corte__corte_id__thumbnail_manual_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** BrutoDescartadoResponse */
@@ -5141,7 +5138,9 @@ export interface components {
          */
         CenasDoCorteResponse: {
             /** Cenas */
-            cenas: Record<string, unknown>[];
+            cenas: {
+                [key: string]: unknown;
+            }[];
             /** Formato */
             formato: string;
             retratos: components["schemas"]["RetratosDasCenas"];
@@ -5393,7 +5392,9 @@ export interface components {
             /** Nome */
             nome: string;
             /** Payload */
-            payload: Record<string, unknown>;
+            payload: {
+                [key: string]: unknown;
+            };
             /** Tipo */
             tipo: string;
         };
@@ -5448,7 +5449,9 @@ export interface components {
          */
         DefinirCenasRequest: {
             /** Cenas */
-            cenas: Record<string, unknown>[];
+            cenas: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * DesvioDoCorte
@@ -5915,7 +5918,9 @@ export interface components {
             /** Nome */
             nome: string;
             /** Payload */
-            payload: Record<string, unknown>;
+            payload: {
+                [key: string]: unknown;
+            };
         };
         /** GeracaoConcluidaResponse */
         GeracaoConcluidaResponse: {
@@ -6168,7 +6173,9 @@ export interface components {
             /** Modo Padrao */
             modo_padrao?: string;
             /** Regioes */
-            regioes?: Record<string, unknown>[];
+            regioes?: {
+                [key: string]: unknown;
+            }[];
         } & {
             [key: string]: unknown;
         };
@@ -6193,7 +6200,9 @@ export interface components {
             /** Nome */
             nome: string;
             /** Payload */
-            payload: Record<string, unknown>;
+            payload: {
+                [key: string]: unknown;
+            };
             /**
              * Tipo
              * @enum {string}
@@ -6320,7 +6329,9 @@ export interface components {
             /** End */
             end: number;
             /** Palavras */
-            palavras?: Record<string, unknown>[];
+            palavras?: {
+                [key: string]: unknown;
+            }[];
             /** Speaker */
             speaker?: string;
             /** Start */
@@ -6342,7 +6353,9 @@ export interface components {
             /** Inicio */
             inicio: number;
             /** Palavras */
-            palavras?: Record<string, unknown>[];
+            palavras?: {
+                [key: string]: unknown;
+            }[];
             /** Speaker */
             speaker?: string;
             /** Start */
@@ -7229,7 +7242,9 @@ export interface components {
          */
         PromptDasCenasResponse: {
             /** Formato Esperado */
-            formato_esperado: Record<string, unknown>;
+            formato_esperado: {
+                [key: string]: unknown;
+            };
             /** Prompt */
             prompt: string;
             /** Prompts */
@@ -7242,7 +7257,9 @@ export interface components {
          */
         PromptEmPartesResponse: {
             /** Formato Esperado */
-            formato_esperado: Record<string, unknown>;
+            formato_esperado: {
+                [key: string]: unknown;
+            };
             /** Prompts */
             prompts: components["schemas"]["ParteDoPrompt"][];
         };
@@ -7252,7 +7269,9 @@ export interface components {
          */
         PromptManualResponse: {
             /** Formato Esperado */
-            formato_esperado: Record<string, unknown>;
+            formato_esperado: {
+                [key: string]: unknown;
+            };
             /** Prompt */
             prompt: string;
         };
@@ -7381,7 +7400,9 @@ export interface components {
          */
         RemotionStudioResponse: {
             /** Props */
-            props: Record<string, unknown>;
+            props: {
+                [key: string]: unknown;
+            };
             /** Studio Url */
             studio_url: string;
             /** Video Url */
@@ -7404,7 +7425,6 @@ export interface components {
             /**
              * Status
              * @constant
-             * @enum {string}
              */
             status: "iniciado";
         };
@@ -7628,7 +7648,9 @@ export interface components {
         /** RetratosPreenchidosResponse */
         RetratosPreenchidosResponse: {
             /** Cenas */
-            cenas: Record<string, unknown>[];
+            cenas: {
+                [key: string]: unknown;
+            }[];
             /** Corte Id */
             corte_id: string;
             /** Message */
@@ -7650,9 +7672,13 @@ export interface components {
             /** Formato */
             formato?: string;
             /** Paleta */
-            paleta?: Record<string, unknown>;
+            paleta?: {
+                [key: string]: unknown;
+            };
             /** Retratos */
-            retratos?: Record<string, unknown>;
+            retratos?: {
+                [key: string]: unknown;
+            };
         } & {
             [key: string]: unknown;
         };
@@ -7670,7 +7696,6 @@ export interface components {
             /**
              * Status
              * @constant
-             * @enum {string}
              */
             status: "ok";
         };
@@ -7802,7 +7827,9 @@ export interface components {
             /** Arranjo Palco */
             arranjo_palco: string;
             /** Cenas */
-            cenas: Record<string, unknown>[];
+            cenas: {
+                [key: string]: unknown;
+            }[];
             /** Corte Id */
             corte_id: string;
             /** Duracao Seg */
@@ -7900,9 +7927,13 @@ export interface components {
              * Ajustes Palco
              * @default {}
              */
-            ajustes_palco: Record<string, unknown>;
+            ajustes_palco: {
+                [key: string]: unknown;
+            };
             /** Palco */
-            palco?: Record<string, unknown> | null;
+            palco?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** SincroniaDaLegendaResponse */
         SincroniaDaLegendaResponse: {
@@ -8186,7 +8217,9 @@ export interface components {
          */
         TelemetriaDesvios: {
             /** Adicionados */
-            adicionados: Record<string, unknown>[] | null;
+            adicionados: {
+                [key: string]: unknown;
+            }[] | null;
             /** Adicionados Por Origem */
             adicionados_por_origem: {
                 [key: string]: number;
@@ -8198,11 +8231,15 @@ export interface components {
                 [key: string]: number;
             };
             /** Mantidos */
-            mantidos: Record<string, unknown>[] | null;
+            mantidos: {
+                [key: string]: unknown;
+            }[] | null;
             /** Propostos */
             propostos: number | null;
             /** Removidos */
-            removidos: Record<string, unknown>[] | null;
+            removidos: {
+                [key: string]: unknown;
+            }[] | null;
         };
         /**
          * TelemetriaExportadaResponse
@@ -8211,7 +8248,9 @@ export interface components {
          */
         TelemetriaExportadaResponse: {
             /** Cortes */
-            cortes: Record<string, unknown>[];
+            cortes: {
+                [key: string]: unknown;
+            }[];
             /** Total Cortes */
             total_cortes: number;
         };
@@ -8409,6 +8448,10 @@ export interface components {
         };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, unknown>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -9535,7 +9578,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, unknown>;
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -11686,7 +11731,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, unknown>;
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -11735,7 +11782,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, unknown>;
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -13193,7 +13242,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": Record<string, unknown>;
+                "application/json": {
+                    [key: string]: unknown;
+                };
             };
         };
         responses: {

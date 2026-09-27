@@ -1,14 +1,15 @@
-fastapi==0.115.0
-uvicorn[standard]==0.50.0
-sqlalchemy[asyncio]==2.0.36
-aiosqlite==0.20.0
-pydantic==2.9.2
-pydantic-settings==2.14.2
-httpx==0.27.2
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+sqlalchemy[asyncio]==2.1.0
+aiosqlite==0.22.1
+pydantic==2.13.5
+pydantic-settings==2.15.0
+httpx==0.28.1
 python-multipart==0.0.32
 yt-dlp>=2026.8.19
 aiofiles==24.1.0
-websockets==13.1
+# 16.x, e nao a 17: o google-genai 2.x pede websockets<17.
+websockets==16.1.1
 
 # Estes dois — como o `websockets` acima — chegam de carona no extra
 # `[standard]` do uvicorn, mas o app os IMPORTA direto, e o que vem de carona
@@ -20,18 +21,20 @@ websockets==13.1
 #                render (infrastructure/worker_queue.py) — sem ele nenhum
 #                render termina.
 PyYAML==6.0.3
-watchfiles==1.2.0
-google-genai>=0.5.0
+watchfiles==1.3.0
+google-genai>=2.25.0
 # D-720: o Claude pela chave de API (BYOK). A 1.x roda sobre httpx2, sem
 # conflito com o httpx fixado acima.
 anthropic>=1.8,<2
-google-api-python-client==2.118.0
-google-auth-oauthlib==1.2.0
-google-auth-httplib2==0.2.0
+google-api-python-client==2.200.0
+google-auth-oauthlib==1.4.1
+google-auth-httplib2==0.4.2
 Pillow==12.3.0
-scenedetect[opencv]==0.7
+# A 0.7.1 tirou o extra [opencv]; o opencv ja e declarado abaixo, com versao nossa.
+scenedetect==0.7.1
 
-# O opencv vem como dependencia do scenedetect, mas a VERSAO e nossa (D-583).
+# O opencv e do scenedetect, mas a VERSAO e nossa (D-583) — e desde a 0.7.1
+# ele nao vem mais de carona: sem esta linha, nao seria instalado.
 # O 5.0 aposentou os Haar cascades: sumiram tanto `cv2.CascadeClassifier` quanto
 # os XMLs de `cv2.data.haarcascades` (a pasta vem vazia). Sem eles o detector de
 # rosto do D-477 nao levanta `DeteccaoIndisponivel` — levanta `AttributeError`,
@@ -56,7 +59,7 @@ opencv-python==4.14.0.94
 # Chrome JA INSTALADO do operador por CDP, entao nao ha `playwright install`
 # nem 130 MB de Chromium baixado. Sem ele o app degrada para a macro (D-503),
 # que monta o pacote e abre a aba.
-playwright==1.62.0
+playwright==1.63.0
 
 # Quem e o dono da janela (D-537/D-564). O robo deriva a porta de depuracao do
 # CAMINHO do perfil e, antes de reaproveitar uma porta ocupada, pergunta de quem
