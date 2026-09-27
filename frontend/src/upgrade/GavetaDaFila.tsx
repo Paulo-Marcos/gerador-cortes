@@ -4,7 +4,7 @@ import {
   useWorkbenchQueue,
   type GrupoFila,
   type JobEstado,
-} from '@/components/workbench/useWorkbenchQueue';
+} from '@/shared/filaGlobal/useWorkbenchQueue';
 import { Icon } from './Icon';
 import { SeloDeEstado, type TomDoSelo } from './SeloDeEstado';
 

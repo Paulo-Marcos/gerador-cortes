@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
-import { type RenderStartFrom, usePipelineStatus, useRenderizarRemotion } from '@/features/editor/useRender';
+import { useRenderFinal } from '@/features/editor/useRender';
 import { useAtualizarCorte, useToggleFire, useCorte, useCortesProjeto } from '@/features/editor/useCortes';
 import { useQuery } from '@tanstack/react-query';
 import { finalVideoUrl, resolveThumbUrl } from '@/lib/api';
@@ -43,12 +43,10 @@ import {
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from '@/features/post-production/RenderStepsModal';
 import { filtrosApi } from '@/features/post-production/api/filtros';
-import type { FaseRender } from '@/features/post-production/renderEtapas';
 import {
   isCorteVideoPronto,
   parseCenasPayload,
   resolveCorteStagePath,
-  progressFromPipelineArtifacts,
 } from '@/features/post-production/postProductionNavigation';
 import { settingsApi } from '@/features/settings/api';
 
@@ -85,20 +83,23 @@ export function FinalReviewPage() {
   const corteQuery = useCorte(corteId);
   const exportStatusQ = useExportStatus(projetoId);
   const abrirPasta = useAbrirPasta();
-  const renderFinal = useRenderizarRemotion(corteId);
+  const {
+    pipelineStatus,
+    rodando: renderFinalRunning,
+    progresso: renderProgress,
+    modalDeInicioAberto: renderStartModalOpen,
+    setModalDeInicioAberto: setRenderStartModalOpen,
+    pedir: pedirRenderFinal,
+    iniciar: startRenderFinal,
+  } = useRenderFinal(corteId, { aoMudarStatus: () => void exportStatusQ.refetch() });
   const atualizarCorte = useAtualizarCorte(corteId, projetoId);
   // D-746: o Fire da Revisão era um botão que não fazia nada.
   const alternarFire = useToggleFire(corteId, projetoId);
-  const [renderFinalLocal, setRenderFinalLocal] = useState(
-    () => Boolean(corteId) && window.localStorage.getItem(`render-final:${corteId}`) === 'running',
-  );
-  const [renderStartModalOpen, setRenderStartModalOpen] = useState(false);
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // DE-PARA-v3 §4: o checklist nasce recolhido num contador N/6 — só o
   // contador ocupa a barra de ações; os 6 chips expandem sob demanda.
   const [checklistAberto, setChecklistAberto] = useState(false);
-  const pipelineStatus = usePipelineStatus(corteId, renderFinalLocal);
   // D-367: filtro/grade exibido no header do player. No fluxo normal de
   // "Renderizar" o filtro vai `null` e o backend resolve para o global
   // (AppSettings.filtro_global_padrao), entao o global reflete o que foi
@@ -148,25 +149,6 @@ export function FinalReviewPage() {
       ) ?? cortes[0];
     navigate(`/projetos/${projetoId}/final-review?corte=${escolhido.id}`, { replace: true });
   }, [corteId, cortes, exportStatusQ.data?.cortes, navigate, projetoId]);
-
-  useEffect(() => {
-    setRenderFinalLocal(
-      Boolean(corteId) && window.localStorage.getItem(`render-final:${corteId}`) === 'running',
-    );
-  }, [corteId]);
-
-  useEffect(() => {
-    if (!corteId || !renderFinalLocal) return;
-    const status = pipelineStatus.data;
-    if (!status || renderFinal.isPending) return;
-    const finished = status?.state === 'done' || status?.fases?.encode;
-    const failed = status?.state === 'error';
-    const backendIdle = status?.running === false && status?.state !== 'running';
-    if (!finished && !failed && !backendIdle) return;
-    window.localStorage.removeItem(`render-final:${corteId}`);
-    setRenderFinalLocal(false);
-    void exportStatusQ.refetch();
-  }, [corteId, exportStatusQ, pipelineStatus.data, renderFinal.isPending, renderFinalLocal]);
 
   const shortcutBindings = useMemo<ShortcutBinding[]>(
     () => [
@@ -261,45 +243,10 @@ export function FinalReviewPage() {
 
   async function renderizarNovamente() {
     if (!corte) return;
-    if (renderFinalLocal || pipelineStatus.data?.running) return;
-    const status = (await pipelineStatus.refetch()).data;
-    if (status?.running) return;
-    if (status?.tem_etapas_concluidas) {
-      setRenderStartModalOpen(true);
-      return;
-    }
-    startRenderFinal({ startFrom: 'grade' });
-  }
-
-  function startRenderFinal(opts: {
-    startFrom: RenderStartFrom;
-    pararEm?: FaseRender;
-    continuar?: boolean;
-  }) {
-    if (!corteId) return;
-    window.localStorage.setItem(`render-final:${corteId}`, 'running');
-    setRenderFinalLocal(true);
-    setRenderStartModalOpen(false);
-    renderFinal.mutate(opts, {
-      onSuccess: () => {
-        void pipelineStatus.refetch();
-        void exportStatusQ.refetch();
-      },
-      onError: () => {
-        window.localStorage.removeItem(`render-final:${corteId}`);
-        setRenderFinalLocal(false);
-      },
-    });
+    await pedirRenderFinal();
   }
 
   const aprovado = ['aprovado', 'processado'].includes(corte.status);
-  const renderFinalRunning = Boolean(
-    renderFinalLocal || renderFinal.isPending || pipelineStatus.data?.running,
-  );
-  const renderProgress = Math.round(
-    pipelineStatus.data?.progress ??
-      (renderFinalRunning ? progressFromPipelineArtifacts(pipelineStatus.data?.fases) : 0),
-  );
 
   // Status checklist (conectado aos campos reais do exportStatus + corte).
   const checklistItems: ChecklistItem[] = [

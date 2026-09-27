@@ -2,7 +2,7 @@ import {
   useWorkbenchQueue,
   type JobEstado,
   type QueueJob,
-} from '@/components/workbench/useWorkbenchQueue';
+} from '@/shared/filaGlobal/useWorkbenchQueue';
 import { Icon, type IconName } from '../Icon';
 import { useDefinirChrome } from '../UpgradeChrome';
 

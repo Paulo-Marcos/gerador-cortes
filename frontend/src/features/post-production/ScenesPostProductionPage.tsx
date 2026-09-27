@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-
 import { FolderOpen, Keyboard, Loader2, Play, RotateCcw, Star } from 'lucide-react';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
-import { type RenderStartFrom, usePipelineStatus, useRenderizarRemotion, useStudioUrl } from '@/features/editor/useRender';
+import { useRenderFinal, useStudioUrl } from '@/features/editor/useRender';
 import { useAtualizarCorte, useCorte, useCortesProjeto, useToggleFire } from '@/features/editor/useCortes';
 import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { finalVideoUrl, gradedVideoUrl, rawVideoBustedUrl } from '@/lib/api';
@@ -30,13 +30,12 @@ import { PosTopbarExtra, type PosStep, type VideoTipo } from '@/features/editor/
 import { WorkbenchCutsPanel } from '@/features/editor/WorkbenchCutsPanel';
 import { WorkbenchEditorLayout } from '@/features/editor/WorkbenchEditorLayout';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
-import { useWorkbenchQueueOptional } from '@/components/workbench/useWorkbenchQueue';
-import { rotuloCurtoProjeto } from '@/components/workbench/workbenchRoutes';
+import { useWorkbenchQueueOptional } from '@/shared/filaGlobal/useWorkbenchQueue';
+import { rotuloCurtoProjeto } from '@/shared/filaGlobal/rotulo';
 import { AvaliacaoCorteModal } from '@/features/editor/avaliacao/AvaliacaoCorteModal';
 import { useAvaliacaoCorte } from '@/features/editor/avaliacao/useAvaliacaoCorte';
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from './RenderStepsModal';
-import type { FaseRender } from './renderEtapas';
 
 // D-599: com a casca nova quem desenha a lista de cortes, a trilha e a barra
 // de decisao e a CASCA — a tela apenas a alimenta (BancadaChrome).
@@ -56,7 +55,6 @@ import {
   resolveCorteStagePath,
   resolveRenderCompletionPath,
   parseCenasPayload,
-  progressFromPipelineArtifacts,
   resolverVideoFonte,
   fontesDisponiveis,
   resolverVideoFonteEfetiva,
@@ -94,10 +92,6 @@ export function ScenesPostProductionPage() {
   // bruto termina (status -> 'pronto') para o Remotion Player remontar com a
   // URL nova (via `key={src}` no Player) e re-fetchar o arquivo do disco.
   const [videoBust, setVideoBust] = useState<number>(() => Date.now());
-  const [renderFinalLocal, setRenderFinalLocal] = useState(
-    () => Boolean(corteId) && window.localStorage.getItem(`render-final:${corteId}`) === 'running',
-  );
-  const [renderStartModalOpen, setRenderStartModalOpen] = useState(false);
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // D-419: a nota do corte é perguntada uma vez, no clique de "Gerar bruto"
@@ -142,14 +136,51 @@ export function ScenesPostProductionPage() {
   // Fila global do Workbench: registrar o job deixa o render visível em
   // qualquer tela (a aba não bloqueia). Null no shell legado.
   const workbenchQueue = useWorkbenchQueueOptional();
-  const renderFinal = useRenderizarRemotion(corteId);
+  const {
+    renderFinal,
+    pipelineStatus,
+    marcado: renderFinalLocal,
+    rodando: renderFinalRunning,
+    progresso: renderFinalProgress,
+    modalDeInicioAberto: renderStartModalOpen,
+    setModalDeInicioAberto: setRenderStartModalOpen,
+    pedir: renderizarFinal,
+    iniciar: startRenderFinal,
+  } = useRenderFinal(corteId, {
+    aoMudarStatus: () => void exportStatusQ.refetch(),
+    aoAcabar: ({ concluiu, falhou, status }) => {
+      // D-746: a falha só limpava o estado — o operador ficava esperando um
+      // render que já tinha morrido.
+      if (falhou) {
+        notifyToast(`O render final falhou: ${status.error || 'o backend não disse por quê'}.`, {
+          tone: 'error',
+        });
+        return;
+      }
+      // Render concluído: jogar o usuário direto na tela final, mesmo com
+      // ?fase=2 preservado, porque aqui o vídeo passou a estar pronto.
+      const renderTarget = resolveRenderCompletionPath({ projetoId, corteId, finished: concluiu });
+      if (renderTarget) navigate(renderTarget, { replace: true });
+    },
+    // A fila global acompanha o render: "renderizar em 2º plano" não bloqueia a aba.
+    aoIniciar: () =>
+      workbenchQueue?.registerJob({
+        corteId,
+        projetoId,
+        rotulo: `${rotuloCurtoProjeto(projeto.data?.titulo_live)} · corte ${corte?.numero ?? '?'} → render`,
+      }),
+    aoFalharAoIniciar: (erro) =>
+      notifyToast(
+        `Não consegui iniciar o render: ${erro instanceof Error ? erro.message : 'erro desconhecido'}.`,
+        { tone: 'error' },
+      ),
+  });
   const gerarBruto = useGerarBruto(corteId, projetoId);
   // D-746: veredito e Fire de verdade na Pós. Antes "Aprovar corte" disparava
   // o render final e o Fire era um botão que não fazia nada.
   const atualizarCorte = useAtualizarCorte(corteId, projetoId);
   const alternarFire = useToggleFire(corteId, projetoId);
   const confirmacao = useConfirmacao();
-  const pipelineStatus = usePipelineStatus(corteId, renderFinalLocal);
   const abrirPasta = useAbrirPasta();
   const studioUrl = useStudioUrl(corteId);
 
@@ -161,52 +192,8 @@ export function ScenesPostProductionPage() {
   }, [payload.cenas, corteId, relogio]);
 
   useEffect(() => {
-    setRenderFinalLocal(
-      Boolean(corteId) && window.localStorage.getItem(`render-final:${corteId}`) === 'running',
-    );
     setFonteEscolhida(null);
   }, [corteId]);
-
-  useEffect(() => {
-    if (!corteId || !renderFinalLocal) return;
-    const status = pipelineStatus.data;
-    if (!status || renderFinal.isPending) return;
-
-    const finished = status?.state === 'done' || status?.fases?.encode;
-    const failed = status?.state === 'error';
-    const backendIdle = status?.running === false && status?.state !== 'running';
-    if (!finished && !failed && !backendIdle) return;
-
-    window.localStorage.removeItem(`render-final:${corteId}`);
-    setRenderFinalLocal(false);
-    void exportStatusQ.refetch();
-    // D-746: a falha só limpava o estado — o operador ficava esperando um
-    // render que já tinha morrido.
-    if (failed) {
-      notifyToast(`O render final falhou: ${status.error || 'o backend não disse por quê'}.`, {
-        tone: 'error',
-      });
-      return;
-    }
-
-    // Render concluído: jogar o usuário direto na tela final, mesmo com
-    // ?fase=2 preservado, porque aqui o vídeo passou a estar pronto.
-    const renderTarget = resolveRenderCompletionPath({
-      projetoId,
-      corteId,
-      finished: Boolean(finished),
-    });
-    if (renderTarget) navigate(renderTarget, { replace: true });
-  }, [
-    corteId,
-    exportStatusQ,
-    navigate,
-    notifyToast,
-    pipelineStatus.data,
-    projetoId,
-    renderFinal.isPending,
-    renderFinalLocal,
-  ]);
 
   // D-430: `usePipelineStatus` so faz polling durante o render, entao quando a
   // regeracao do bruto termina o `fases.raw` continua `false` em cache — o
@@ -335,57 +322,6 @@ export function ScenesPostProductionPage() {
       },
     });
   }
-
-  async function renderizarFinal() {
-    if (renderFinalLocal || pipelineStatus.data?.running) return;
-    const status = (await pipelineStatus.refetch()).data;
-    if (status?.running) return;
-    if (status?.tem_etapas_concluidas) {
-      setRenderStartModalOpen(true);
-      return;
-    }
-
-    startRenderFinal({ startFrom: 'grade' });
-  }
-
-  function startRenderFinal(opts: {
-    startFrom: RenderStartFrom;
-    pararEm?: FaseRender;
-    continuar?: boolean;
-  }) {
-    window.localStorage.setItem(`render-final:${corteId}`, 'running');
-    setRenderFinalLocal(true);
-    setRenderStartModalOpen(false);
-    // Workbench: acompanha o render na fila global (DE-PARA §4 —
-    // "renderizar em 2º plano" não bloqueia a aba).
-    workbenchQueue?.registerJob({
-      corteId,
-      projetoId,
-      rotulo: `${rotuloCurtoProjeto(projeto.data?.titulo_live)} · corte ${corte?.numero ?? '?'} → render`,
-    });
-    renderFinal.mutate(opts, {
-      onSuccess: () => {
-        void pipelineStatus.refetch();
-        void exportStatusQ.refetch();
-      },
-      onError: (erro) => {
-        window.localStorage.removeItem(`render-final:${corteId}`);
-        setRenderFinalLocal(false);
-        notifyToast(
-          `Não consegui iniciar o render: ${erro instanceof Error ? erro.message : 'erro desconhecido'}.`,
-          { tone: 'error' },
-        );
-      },
-    });
-  }
-
-  const renderFinalRunning = Boolean(
-    renderFinalLocal || pipelineStatus.data?.running || renderFinal.isPending,
-  );
-  const renderFinalProgress = Math.round(
-    pipelineStatus.data?.progress ??
-      (renderFinalRunning ? progressFromPipelineArtifacts(pipelineStatus.data?.fases) : 0),
-  );
 
   // videoSrc bruto-first (D-368): o PADRAO vem de `resolverVideoFonte` —
   // enquanto o clip_raw existe no disco (`fases.raw`), o player mostra o BRUTO.

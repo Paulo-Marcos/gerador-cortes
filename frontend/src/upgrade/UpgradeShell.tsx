@@ -4,7 +4,7 @@ import {
   WorkbenchQueueProvider,
   useWorkbenchQueueOptional,
   type QueueJob,
-} from '@/components/workbench/useWorkbenchQueue';
+} from '@/shared/filaGlobal/useWorkbenchQueue';
 import { ActionBar } from './ActionBar';
 import { ColunaRecolhida, ContextColumn } from './ContextColumn';
 import { FitaDaLive } from './FitaDaLive';

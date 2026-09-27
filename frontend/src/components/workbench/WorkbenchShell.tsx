@@ -8,7 +8,7 @@ import { ProjectRail } from './ProjectRail';
 import { ProjectStageBar } from './ProjectStageBar';
 import { TabStrip } from './TabStrip';
 import { WorkbenchPanelsProvider, useWorkbenchPanelsContext } from './WorkbenchPanelsProvider';
-import { WorkbenchQueueProvider } from './useWorkbenchQueue';
+import { WorkbenchQueueProvider } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { WorkbenchTabsProvider, useWorkbenchTabsContext } from './WorkbenchTabsProvider';
 import { activateTab, closeTab, type TabsState } from './useWorkbenchTabs';
 import { routeToTab, tabPath } from './workbenchRoutes';

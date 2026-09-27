@@ -11,7 +11,7 @@ import {
   type JobFamilia,
   type MarcoJob,
   type QueueJob,
-} from './useWorkbenchQueue';
+} from '@/shared/filaGlobal/useWorkbenchQueue';
 import type { WorkbenchEtapa } from './useWorkbenchTabs';
 import { tabPath } from './workbenchRoutes';
 

@@ -8,8 +8,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { filaGlobalApi } from '@/shared/filaGlobal/api';
-import { rotuloCurtoProjeto } from './workbenchRoutes';
+import { filaGlobalApi } from './api';
+import { rotuloCurtoProjeto } from './rotulo';
 
 // ─────────────────────────────────────────────────────────────
 // Fila global de jobs pesados (DE-PARA §0; D-417). O backend é a
