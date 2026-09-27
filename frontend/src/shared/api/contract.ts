@@ -5017,6 +5017,18 @@ export interface components {
              */
             sugerir_etiqueta: boolean;
         };
+        /**
+         * CenasDoCorteResponse
+         * @description As cenas geradas ou importadas, já normalizadas. A forma de cada cena é o
+         *     contrato da cena (D-725); aqui ela passa como objeto.
+         */
+        CenasDoCorteResponse: {
+            /** Cenas */
+            cenas: Record<string, unknown>[];
+            /** Formato */
+            formato: string;
+            retratos: components["schemas"]["RetratosDasCenas"];
+        };
         /** CenasGeradasResponse */
         CenasGeradasResponse: {
             /** Corte Id */
@@ -5442,6 +5454,24 @@ export interface components {
             falantes: {
                 [key: string]: components["schemas"]["FalanteInfo"];
             };
+        };
+        /**
+         * FasesDoPipeline
+         * @description Quais fases do render já têm artefato aproveitável em disco.
+         */
+        FasesDoPipeline: {
+            /** Compose */
+            compose: boolean;
+            /** Encode */
+            encode: boolean;
+            /** Grade */
+            grade: boolean;
+            /** Overlays */
+            overlays: boolean;
+            /** Raw */
+            raw: boolean;
+            /** Render Final */
+            render_final: boolean;
         };
         /**
          * FiltroExport
@@ -6244,6 +6274,15 @@ export interface components {
             /** Total Partes */
             total_partes: number;
         };
+        /** PassoDoBruto */
+        PassoDoBruto: {
+            /** Chave */
+            chave: string;
+            /** Label */
+            label: string;
+            /** Status */
+            status: string;
+        };
         /** PastaAbertaResponse */
         PastaAbertaResponse: {
             /** Dir Path */
@@ -6251,10 +6290,38 @@ export interface components {
             /** Status */
             status: string;
         };
+        /**
+         * PicosDaOndaResponse
+         * @description Os picos da waveform do editor; `cached` diz se vieram do arquivo de cache.
+         */
+        PicosDaOndaResponse: {
+            /** Cached */
+            cached: boolean;
+            /** Corte Id */
+            corte_id: string;
+            /** Duration Sec */
+            duration_sec: number;
+            /** Offset Sec */
+            offset_sec: number;
+            /** Peaks */
+            peaks: number[];
+            /** Points */
+            points: number;
+            /** Sample Rate */
+            sample_rate: number;
+        };
         /** ProcessarMultiversionRequest */
         ProcessarMultiversionRequest: {
             /** Filtros */
             filtros?: string[] | null;
+        };
+        /**
+         * ProgressoDoBrutoResponse
+         * @description F-038: os passos do gerar/regerar bruto, para o acompanhamento.
+         */
+        ProgressoDoBrutoResponse: {
+            /** Passos */
+            passos: components["schemas"]["PassoDoBruto"][];
         };
         /** ProjetoCriadoResponse */
         ProjetoCriadoResponse: {
@@ -6384,6 +6451,18 @@ export interface components {
             youtube_url: string;
         };
         /**
+         * PromptDasCenasResponse
+         * @description Além das partes, o prompt inteiro num texto só.
+         */
+        PromptDasCenasResponse: {
+            /** Formato Esperado */
+            formato_esperado: Record<string, unknown>;
+            /** Prompt */
+            prompt: string;
+            /** Prompts */
+            prompts: components["schemas"]["ParteDoPrompt"][];
+        };
+        /**
          * PromptEmPartesResponse
          * @description O prompt do modo manual, fatiado em partes quando a transcrição é longa, e
          *     o formato que a resposta colada deve seguir.
@@ -6472,6 +6551,19 @@ export interface components {
             nota_impacto?: number | null;
             /** Veredito */
             veredito: string;
+        };
+        /**
+         * RemotionStudioResponse
+         * @description Onde abrir o Studio, o vídeo do corte e as props da composição (a forma
+         *     das props é a da cena, D-725).
+         */
+        RemotionStudioResponse: {
+            /** Props */
+            props: Record<string, unknown>;
+            /** Studio Url */
+            studio_url: string;
+            /** Video Url */
+            video_url: string;
         };
         /** RemoverDesvioRequest */
         RemoverDesvioRequest: {
@@ -6579,6 +6671,38 @@ export interface components {
             /** Retido Mb */
             retido_mb: number;
         };
+        /**
+         * RetratosDasCenas
+         * @description O que a busca de retratos fez nas fichas biográficas.
+         */
+        RetratosDasCenas: {
+            /** Atualizados */
+            atualizados: number;
+            /** Erros */
+            erros: number;
+            /** Ja Tinham */
+            ja_tinham: number;
+            /** Nao Encontrados */
+            nao_encontrados: number;
+            /** Nomes Com Erro */
+            nomes_com_erro: string[];
+            /** Nomes Sem Retrato */
+            nomes_sem_retrato: string[];
+            /** Sem Nome */
+            sem_nome: number;
+            /** Total Fichas */
+            total_fichas: number;
+        };
+        /** RetratosPreenchidosResponse */
+        RetratosPreenchidosResponse: {
+            /** Cenas */
+            cenas: Record<string, unknown>[];
+            /** Corte Id */
+            corte_id: string;
+            /** Message */
+            message: string;
+            retratos: components["schemas"]["RetratosDasCenas"];
+        };
         /** ReverterSkillRequest */
         ReverterSkillRequest: {
             /** Versao */
@@ -6668,6 +6792,29 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "nada_a_fazer";
+        };
+        /** SituacaoDoPipelineResponse */
+        SituacaoDoPipelineResponse: {
+            /** Elapsed Seconds */
+            elapsed_seconds: number;
+            /** Error */
+            error: string;
+            fases: components["schemas"]["FasesDoPipeline"];
+            /** Overlays Count */
+            overlays_count: number;
+            /** Progress */
+            progress: number;
+            /** Running */
+            running: boolean;
+            /** Stage */
+            stage: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "idle" | "running" | "done" | "error" | "cancelled";
+            /** Tem Etapas Concluidas */
+            tem_etapas_concluidas: boolean;
         };
         /**
          * SkillDescritaResponse
@@ -8194,7 +8341,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": Record<string, unknown>;
                 };
             };
         };
@@ -8643,7 +8790,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "audio/flac": unknown;
                 };
             };
             /** @description Validation Error */
@@ -8674,7 +8821,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ProgressoDoBrutoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -8740,7 +8887,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CenasDoCorteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -8771,7 +8918,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptDasCenasResponse"];
                 };
             };
             /** @description Validation Error */
@@ -8804,7 +8951,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RetratosPreenchidosResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9041,7 +9188,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MensagemDoCorteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9072,7 +9219,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CenasDoCorteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9138,7 +9285,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SituacaoDoPipelineResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9169,7 +9316,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RemotionStudioResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9239,7 +9386,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MensagemResponse"];
                 };
             };
             /** @description Validation Error */
@@ -9363,13 +9510,11 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            307: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -9402,7 +9547,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PicosDaOndaResponse"];
                 };
             };
             /** @description Validation Error */

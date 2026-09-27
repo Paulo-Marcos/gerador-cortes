@@ -6,9 +6,10 @@ o router focado nos handlers; todos os nomes seguem re-exportados pela fachada
 """
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
-from app.routers.resposta_api import RespostaApi
+from app.routers.resposta_api import PromptEmPartesResponse, RespostaApi
+from app.services.render.render_progress import RenderState
 from pydantic import BaseModel
 
 
@@ -244,3 +245,95 @@ class DeteccaoIniciadaResponse(RespostaApi):
 class SincroniaPosProducaoResponse(RespostaApi):
     status: Literal["ok", "nada_a_fazer"]
     mensagem: str
+
+
+class PassoDoBruto(RespostaApi):
+    chave: str
+    label: str
+    status: str
+
+
+class ProgressoDoBrutoResponse(RespostaApi):
+    """F-038: os passos do gerar/regerar bruto, para o acompanhamento."""
+
+    passos: list[PassoDoBruto]
+
+
+class FasesDoPipeline(RespostaApi):
+    """Quais fases do render já têm artefato aproveitável em disco."""
+
+    raw: bool
+    grade: bool
+    overlays: bool
+    compose: bool
+    render_final: bool
+    encode: bool
+
+
+class SituacaoDoPipelineResponse(RespostaApi):
+    fases: FasesDoPipeline
+    overlays_count: int
+    tem_etapas_concluidas: bool
+    state: RenderState
+    # int | float: quem atualiza o progresso pode mandar fração.
+    progress: int | float
+    stage: str
+    running: bool
+    elapsed_seconds: float
+    error: str
+
+
+class RemotionStudioResponse(RespostaApi):
+    """Onde abrir o Studio, o vídeo do corte e as props da composição (a forma
+    das props é a da cena, D-725)."""
+
+    studio_url: str
+    video_url: str
+    props: dict[str, Any]
+
+
+class PicosDaOndaResponse(RespostaApi):
+    """Os picos da waveform do editor; `cached` diz se vieram do arquivo de cache."""
+
+    corte_id: str
+    offset_sec: float
+    duration_sec: float
+    sample_rate: int
+    points: int
+    peaks: list[float]
+    cached: bool
+
+
+class RetratosDasCenas(RespostaApi):
+    """O que a busca de retratos fez nas fichas biográficas."""
+
+    total_fichas: int
+    atualizados: int
+    ja_tinham: int
+    nao_encontrados: int
+    sem_nome: int
+    erros: int
+    nomes_sem_retrato: list[str]
+    nomes_com_erro: list[str]
+
+
+class CenasDoCorteResponse(RespostaApi):
+    """As cenas geradas ou importadas, já normalizadas. A forma de cada cena é o
+    contrato da cena (D-725); aqui ela passa como objeto."""
+
+    formato: str
+    cenas: list[dict[str, Any]]
+    retratos: RetratosDasCenas
+
+
+class RetratosPreenchidosResponse(RespostaApi):
+    message: str
+    corte_id: str
+    retratos: RetratosDasCenas
+    cenas: list[dict[str, Any]]
+
+
+class PromptDasCenasResponse(PromptEmPartesResponse):
+    """Além das partes, o prompt inteiro num texto só."""
+
+    prompt: str

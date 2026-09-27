@@ -32,3 +32,59 @@ def test_o_prompt_de_trechos_passa_inteiro():
     }
 
     assert PromptEmPartesResponse.model_validate(prompt).model_dump() == prompt
+
+
+def _situacao(**progresso):
+    return {
+        "fases": {
+            "raw": True,
+            "grade": True,
+            "overlays": False,
+            "compose": False,
+            "render_final": False,
+            "encode": False,
+        },
+        "overlays_count": 0,
+        "tem_etapas_concluidas": True,
+        "state": "running",
+        "progress": 42,
+        "stage": "Overlays",
+        "running": True,
+        "elapsed_seconds": 12.5,
+        "error": "",
+        **progresso,
+    }
+
+
+@pytest.mark.parametrize(
+    "progresso",
+    [{}, {"progress": 42.5}, {"state": "cancelled", "running": False}],
+    ids=["inteiro", "fracao", "cancelado"],
+)
+def test_a_situacao_do_pipeline_passa_inteira(progresso):
+    from app.routers.cortes_schemas import SituacaoDoPipelineResponse
+
+    situacao = _situacao(**progresso)
+
+    assert SituacaoDoPipelineResponse.model_validate(situacao).model_dump() == situacao
+
+
+def test_as_cenas_geradas_passam_inteiras_com_os_retratos():
+    from app.routers.cortes_schemas import CenasDoCorteResponse
+
+    cenas = {
+        "formato": "cortes",
+        "cenas": [{"tipo": "ficha_biografica", "startLeg": 2, "nome": "Fulano"}],
+        "retratos": {
+            "total_fichas": 1,
+            "atualizados": 0,
+            "ja_tinham": 1,
+            "nao_encontrados": 0,
+            "sem_nome": 0,
+            "erros": 0,
+            "nomes_sem_retrato": [],
+            "nomes_com_erro": [],
+        },
+    }
+
+    assert CenasDoCorteResponse.model_validate(cenas).model_dump() == cenas

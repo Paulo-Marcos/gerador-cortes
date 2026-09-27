@@ -1894,6 +1894,32 @@
         "title": "CapaTikTokRequest",
         "type": "object"
       },
+      "CenasDoCorteResponse": {
+        "description": "As cenas geradas ou importadas, já normalizadas. A forma de cada cena é o\ncontrato da cena (D-725); aqui ela passa como objeto.",
+        "properties": {
+          "cenas": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Cenas",
+            "type": "array"
+          },
+          "formato": {
+            "title": "Formato",
+            "type": "string"
+          },
+          "retratos": {
+            "$ref": "#/components/schemas/RetratosDasCenas"
+          }
+        },
+        "required": [
+          "formato",
+          "cenas",
+          "retratos"
+        ],
+        "title": "CenasDoCorteResponse",
+        "type": "object"
+      },
       "CenasGeradasResponse": {
         "properties": {
           "corte_id": {
@@ -2770,6 +2796,45 @@
           "falantes"
         ],
         "title": "FalantesResponse",
+        "type": "object"
+      },
+      "FasesDoPipeline": {
+        "description": "Quais fases do render já têm artefato aproveitável em disco.",
+        "properties": {
+          "compose": {
+            "title": "Compose",
+            "type": "boolean"
+          },
+          "encode": {
+            "title": "Encode",
+            "type": "boolean"
+          },
+          "grade": {
+            "title": "Grade",
+            "type": "boolean"
+          },
+          "overlays": {
+            "title": "Overlays",
+            "type": "boolean"
+          },
+          "raw": {
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "render_final": {
+            "title": "Render Final",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "raw",
+          "grade",
+          "overlays",
+          "compose",
+          "render_final",
+          "encode"
+        ],
+        "title": "FasesDoPipeline",
         "type": "object"
       },
       "FiltroExport": {
@@ -4742,6 +4807,29 @@
         "title": "ParteDoPrompt",
         "type": "object"
       },
+      "PassoDoBruto": {
+        "properties": {
+          "chave": {
+            "title": "Chave",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chave",
+          "label",
+          "status"
+        ],
+        "title": "PassoDoBruto",
+        "type": "object"
+      },
       "PastaAbertaResponse": {
         "properties": {
           "dir_path": {
@@ -4758,6 +4846,53 @@
           "dir_path"
         ],
         "title": "PastaAbertaResponse",
+        "type": "object"
+      },
+      "PicosDaOndaResponse": {
+        "description": "Os picos da waveform do editor; `cached` diz se vieram do arquivo de cache.",
+        "properties": {
+          "cached": {
+            "title": "Cached",
+            "type": "boolean"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "duration_sec": {
+            "title": "Duration Sec",
+            "type": "number"
+          },
+          "offset_sec": {
+            "title": "Offset Sec",
+            "type": "number"
+          },
+          "peaks": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Peaks",
+            "type": "array"
+          },
+          "points": {
+            "title": "Points",
+            "type": "integer"
+          },
+          "sample_rate": {
+            "title": "Sample Rate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "corte_id",
+          "offset_sec",
+          "duration_sec",
+          "sample_rate",
+          "points",
+          "peaks",
+          "cached"
+        ],
+        "title": "PicosDaOndaResponse",
         "type": "object"
       },
       "ProcessarMultiversionRequest": {
@@ -4778,6 +4913,23 @@
           }
         },
         "title": "ProcessarMultiversionRequest",
+        "type": "object"
+      },
+      "ProgressoDoBrutoResponse": {
+        "description": "F-038: os passos do gerar/regerar bruto, para o acompanhamento.",
+        "properties": {
+          "passos": {
+            "items": {
+              "$ref": "#/components/schemas/PassoDoBruto"
+            },
+            "title": "Passos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "passos"
+        ],
+        "title": "ProgressoDoBrutoResponse",
         "type": "object"
       },
       "ProjetoCriadoResponse": {
@@ -5014,6 +5166,33 @@
           "erro_msg"
         ],
         "title": "ProjetoResponse",
+        "type": "object"
+      },
+      "PromptDasCenasResponse": {
+        "description": "Além das partes, o prompt inteiro num texto só.",
+        "properties": {
+          "formato_esperado": {
+            "title": "Formato Esperado",
+            "type": "object"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/ParteDoPrompt"
+            },
+            "title": "Prompts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "prompts",
+          "formato_esperado",
+          "prompt"
+        ],
+        "title": "PromptDasCenasResponse",
         "type": "object"
       },
       "PromptEmPartesResponse": {
@@ -5261,6 +5440,30 @@
         "title": "RegistrarAvaliacaoRequest",
         "type": "object"
       },
+      "RemotionStudioResponse": {
+        "description": "Onde abrir o Studio, o vídeo do corte e as props da composição (a forma\ndas props é a da cena, D-725).",
+        "properties": {
+          "props": {
+            "title": "Props",
+            "type": "object"
+          },
+          "studio_url": {
+            "title": "Studio Url",
+            "type": "string"
+          },
+          "video_url": {
+            "title": "Video Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "studio_url",
+          "video_url",
+          "props"
+        ],
+        "title": "RemotionStudioResponse",
+        "type": "object"
+      },
       "RemoverDesvioRequest": {
         "properties": {
           "desvio_index": {
@@ -5505,6 +5708,91 @@
         "title": "RetencaoArquivos",
         "type": "object"
       },
+      "RetratosDasCenas": {
+        "description": "O que a busca de retratos fez nas fichas biográficas.",
+        "properties": {
+          "atualizados": {
+            "title": "Atualizados",
+            "type": "integer"
+          },
+          "erros": {
+            "title": "Erros",
+            "type": "integer"
+          },
+          "ja_tinham": {
+            "title": "Ja Tinham",
+            "type": "integer"
+          },
+          "nao_encontrados": {
+            "title": "Nao Encontrados",
+            "type": "integer"
+          },
+          "nomes_com_erro": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Nomes Com Erro",
+            "type": "array"
+          },
+          "nomes_sem_retrato": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Nomes Sem Retrato",
+            "type": "array"
+          },
+          "sem_nome": {
+            "title": "Sem Nome",
+            "type": "integer"
+          },
+          "total_fichas": {
+            "title": "Total Fichas",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_fichas",
+          "atualizados",
+          "ja_tinham",
+          "nao_encontrados",
+          "sem_nome",
+          "erros",
+          "nomes_sem_retrato",
+          "nomes_com_erro"
+        ],
+        "title": "RetratosDasCenas",
+        "type": "object"
+      },
+      "RetratosPreenchidosResponse": {
+        "properties": {
+          "cenas": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Cenas",
+            "type": "array"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retratos": {
+            "$ref": "#/components/schemas/RetratosDasCenas"
+          }
+        },
+        "required": [
+          "message",
+          "corte_id",
+          "retratos",
+          "cenas"
+        ],
+        "title": "RetratosPreenchidosResponse",
+        "type": "object"
+      },
       "ReverterSkillRequest": {
         "properties": {
           "versao": {
@@ -5691,6 +5979,72 @@
           "mensagem"
         ],
         "title": "SincroniaPosProducaoResponse",
+        "type": "object"
+      },
+      "SituacaoDoPipelineResponse": {
+        "properties": {
+          "elapsed_seconds": {
+            "title": "Elapsed Seconds",
+            "type": "number"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "fases": {
+            "$ref": "#/components/schemas/FasesDoPipeline"
+          },
+          "overlays_count": {
+            "title": "Overlays Count",
+            "type": "integer"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Progress"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "idle",
+              "running",
+              "done",
+              "error",
+              "cancelled"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "tem_etapas_concluidas": {
+            "title": "Tem Etapas Concluidas",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fases",
+          "overlays_count",
+          "tem_etapas_concluidas",
+          "state",
+          "progress",
+          "stage",
+          "running",
+          "elapsed_seconds",
+          "error"
+        ],
+        "title": "SituacaoDoPipelineResponse",
         "type": "object"
       },
       "SkillDescritaResponse": {
@@ -8878,7 +9232,10 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "title": "Response Obter Remotion Active Props Api Cortes Remotion Active Props Get",
+                  "type": "object"
+                }
               }
             },
             "description": "Successful Response"
@@ -9529,9 +9886,7 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
-              }
+              "audio/flac": {}
             },
             "description": "Successful Response"
           },
@@ -9571,7 +9926,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressoDoBrutoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9665,7 +10022,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CenasDoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9706,7 +10065,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDasCenasResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9757,7 +10118,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RetratosPreenchidosResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10124,7 +10487,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemDoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10165,7 +10530,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CenasDoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10266,7 +10633,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SituacaoDoPipelineResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10307,7 +10676,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RemotionStudioResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10418,7 +10789,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10604,12 +10977,7 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
+          "307": {
             "description": "Successful Response"
           },
           "422": {
@@ -10674,7 +11042,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PicosDaOndaResponse"
+                }
               }
             },
             "description": "Successful Response"

@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 from app.core.channel_paths import projetos_dir
 from app.database import get_db
@@ -15,6 +16,7 @@ from app.routers.cortes_schemas import (
     ArranjoResponse,
     AtualizarCorteRequest,
     CaminhoDaPastaResponse,
+    CenasDoCorteResponse,
     CorteResponse,
     CriarCorteDesvioRequest,
     CriarCorteManualRequest,
@@ -28,10 +30,16 @@ from app.routers.cortes_schemas import (
     ImportarDesviosRequest,
     JuntarCortesRequest,
     MoverBlocoRequest,
+    PicosDaOndaResponse,
+    ProgressoDoBrutoResponse,
+    PromptDasCenasResponse,
+    RemotionStudioResponse,
     RemoverDesvioRequest,
     RenderPipelineRequest,
     ReordenarCortesRequest,
+    RetratosPreenchidosResponse,
     SincroniaPosProducaoResponse,
+    SituacaoDoPipelineResponse,
     ValidarCenasRequest,
 )
 from app.routers.errors import erro_interno
@@ -54,7 +62,7 @@ from app.services.render.remotion_render import RemotionRenderService
 from app.services.render.render_progress import RenderProgressStore
 from app.services.tasks import fire_and_forget
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -70,7 +78,7 @@ router = APIRouter()
 # ─── Endpoints (rotas fixas ANTES das rotas com {corte_id}) ─────────────────
 
 
-@router.get("/remotion/active-props")
+@router.get("/remotion/active-props", response_model=dict[str, Any])
 async def obter_remotion_active_props():
     """Retorna as props ativas para o Remotion Studio buscar automaticamente.
 
@@ -400,7 +408,11 @@ async def analisar_desvios_todos(
     return {"message": f"Análise de desvios iniciada para o projeto {projeto_id}"}
 
 
-@router.get("/{corte_id}/audio-proxy")
+@router.get(
+    "/{corte_id}/audio-proxy",
+    response_class=FileResponse,
+    responses={200: {"content": {"audio/flac": {}}}},
+)
 async def audio_proxy_corte(
     corte_id: str, refresh: bool = False, db: AsyncSession = Depends(get_db)
 ):
@@ -419,7 +431,7 @@ async def audio_proxy_corte(
         raise erro_interno(e) from e
 
 
-@router.get("/{corte_id}/waveform-peaks")
+@router.get("/{corte_id}/waveform-peaks", response_model=PicosDaOndaResponse)
 async def waveform_peaks_corte(
     corte_id: str,
     refresh: bool = False,
@@ -449,7 +461,7 @@ async def obter_caminho_pasta(corte_id: str, db: AsyncSession = Depends(get_db))
     return {"dir_path": dir_path}
 
 
-@router.get("/{corte_id}/video-bruto")
+@router.get("/{corte_id}/video-bruto", status_code=307, response_class=RedirectResponse)
 async def obter_video_bruto(corte_id: str):
     """Serve o arquivo de vídeo bruto (original do corte antes dos tratamentos).
 
@@ -458,7 +470,6 @@ async def obter_video_bruto(corte_id: str):
     serve o conteúdo cacheado (duração e metadados antigos) mesmo com o
     `clip_raw.mkv` já atualizado no disco.
     """
-    from fastapi.responses import RedirectResponse
 
     projeto_id, bruto = await bruto_do_corte.localizar(corte_id)
     try:
@@ -470,7 +481,7 @@ async def obter_video_bruto(corte_id: str):
     return RedirectResponse(url=url, headers={"Cache-Control": "no-store"})
 
 
-@router.post("/{corte_id}/gerar-bruto")
+@router.post("/{corte_id}/gerar-bruto", response_model=MensagemDoCorteResponse)
 async def gerar_bruto(corte_id: str, body: GerarBrutoRequest | None = None):
     """Dispara geração assíncrona do vídeo bruto.
 
@@ -507,7 +518,7 @@ async def decidir_segmento(corte_id: str, indice: int, body: DecisaoSegmentoRequ
     return _corte_to_dict(await decidir_segmento_detectado(corte_id, indice, body.decisao))
 
 
-@router.get("/{corte_id}/bruto-progress")
+@router.get("/{corte_id}/bruto-progress", response_model=ProgressoDoBrutoResponse)
 async def bruto_progress(corte_id: str):
     """Passos do gerar/regerar bruto (silêncios → render → transcrição → cenas)
     com status, para o dropdown de acompanhamento ao lado do botão."""
@@ -516,7 +527,7 @@ async def bruto_progress(corte_id: str):
     return {"passos": BrutoProgress.get(corte_id)}
 
 
-@router.post("/{corte_id}/gerar-cenas-remotion")
+@router.post("/{corte_id}/gerar-cenas-remotion", response_model=CenasDoCorteResponse)
 async def gerar_cenas_remotion(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Gera cenas visuais via Gemini AI a partir da transcrição final do corte."""
     try:
@@ -528,7 +539,7 @@ async def gerar_cenas_remotion(corte_id: str, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=500, detail=f"Erro ao gerar cenas: {str(e)}") from e
 
 
-@router.get("/{corte_id}/cenas-remotion/prompt")
+@router.get("/{corte_id}/cenas-remotion/prompt", response_model=PromptDasCenasResponse)
 async def exportar_prompt_cenas(corte_id: str):
     """Retorna o prompt para geração de cenas Remotion sem chamar a IA."""
     try:
@@ -539,7 +550,7 @@ async def exportar_prompt_cenas(corte_id: str):
         raise erro_interno(e) from e
 
 
-@router.post("/{corte_id}/cenas-remotion/importar")
+@router.post("/{corte_id}/cenas-remotion/importar", response_model=CenasDoCorteResponse)
 async def importar_cenas_remotion(corte_id: str, body: ImportarCenasRequest):
     """Importa cenas geradas por IA externa, normaliza e salva."""
     try:
@@ -552,7 +563,7 @@ async def importar_cenas_remotion(corte_id: str, body: ImportarCenasRequest):
         raise erro_interno(e) from e
 
 
-@router.post("/{corte_id}/cenas-remotion/retratos")
+@router.post("/{corte_id}/cenas-remotion/retratos", response_model=RetratosPreenchidosResponse)
 async def preencher_retratos_cenas_remotion(corte_id: str, forcar: bool = False):
     """Busca retratos da Wikipedia para cenas ficha_biografica ja salvas."""
     try:
@@ -613,13 +624,13 @@ async def analisar_desvios_ia(corte_id: str, db: AsyncSession = Depends(get_db))
         raise erro_interno(e) from e
 
 
-@router.get("/{corte_id}/pipeline-status")
+@router.get("/{corte_id}/pipeline-status", response_model=SituacaoDoPipelineResponse)
 async def obter_pipeline_status(corte_id: str):
     """Até onde o render do corte já chegou — as fases com artefato e o progresso."""
     return await situacao_do_render.situacao_do_pipeline(corte_id)
 
 
-@router.post("/{corte_id}/renderizar-pipeline")
+@router.post("/{corte_id}/renderizar-pipeline", response_model=MensagemResponse)
 async def renderizar_pipeline(corte_id: str, body: RenderPipelineRequest | None = None):
     """Pipeline otimizado: Grade QSV -> Overlays Remotion -> Composição FFmpeg -> Encode Final.
 
@@ -659,7 +670,7 @@ async def renderizar_pipeline(corte_id: str, body: RenderPipelineRequest | None 
         raise erro_interno(e) from e
 
 
-@router.get("/{corte_id}/remotion-studio-url")
+@router.get("/{corte_id}/remotion-studio-url", response_model=RemotionStudioResponse)
 async def obter_remotion_studio_url(corte_id: str):
     """Gera a URL do Remotion Studio e salva as props ativas para o Studio buscar."""
     return await remotion_studio.abrir_no_studio(corte_id)
