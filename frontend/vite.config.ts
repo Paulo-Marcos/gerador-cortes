@@ -53,4 +53,22 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom', 'remotion'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // D-735: as bibliotecas mudam pouco e o código do app muda a cada
+        // versão. Em pedaços próprios, elas continuam no cache do navegador
+        // quando o app atualiza, e o Remotion só desce para quem abre a Pós.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/[\/]node_modules[\/](@?remotion)/.test(id)) return 'vendor-remotion';
+          if (/[\/]node_modules[\/](react|react-dom|scheduler|react-router|react-router-dom|@remix-run)[\/]/.test(id)) {
+            return 'vendor-react';
+          }
+          if (/[\/]node_modules[\/](@tanstack|openapi-fetch)[\/]/.test(id)) return 'vendor-dados';
+          return undefined;
+        },
+      },
+    },
+  },
 });
