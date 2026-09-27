@@ -49,13 +49,9 @@
       "type": "string"
     },
     "numero": {
-      "anyOf": [
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        }
+      "type": [
+        "number",
+        "string"
       ]
     },
     "contexto": {
