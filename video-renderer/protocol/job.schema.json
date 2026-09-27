@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Protocolo da fila do worker (D-725)",
+  "description": "O backend grava req_<id>.json na pasta da fila; o native_worker.js roda o comando e responde uma vez com res_<id>.json. ack_<id>.json avisa o início e cancel_<id>.json pede o cancelamento — os dois levam só o id. O campo v é a versão do pedido: o worker recusa a que não conhece, e o que chega sem v é tratado como a 1 (pedidos gravados antes da versão existir).",
+  "$defs": {
+    "pedido": {
+      "type": "object",
+      "required": ["v", "id", "cwd", "cmd"],
+      "additionalProperties": false,
+      "properties": {
+        "v": { "const": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "logical_id": { "type": "string" },
+        "cwd": { "type": "string", "minLength": 1 },
+        "cmd": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "log_level": { "enum": ["disabled", "info", "debug"] },
+        "category": { "enum": ["default", "bundle", "grade", "overlay", "render_final"] }
+      }
+    },
+    "resposta": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["sucesso", "erro", "cancelado"] },
+        "erro": { "type": "string" }
+      }
+    }
+  }
+}

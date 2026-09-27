@@ -46,6 +46,12 @@ logger = logging.getLogger(__name__)
 
 _POLL_INTERVAL_SEC = 0.5
 
+# D-725: versão do pedido `req_`. O contrato inteiro (pedido e resposta) está em
+# video-renderer/protocol/job.schema.json; o worker recusa versão que não conhece
+# e trata o pedido sem `v` como da 1. O worker antigo ignora o campo — por isso
+# a versão pôde entrar sem quebrar a fila durante a atualização.
+VERSAO_DO_PROTOCOLO_DO_JOB = 1
+
 
 class WorkerJobCategory(StrEnum):
     """Categoria do job — usada pelo worker para decisão de paralelismo.
@@ -205,14 +211,7 @@ class RemotionWorkerQueue:
         _remover_se_existir(self._fila_dir / f"cancel_{queue_id}.json")
         _remover_arquivos_legados(self._fila_dir, job.id, queue_id)
 
-        payload = {
-            "id": queue_id,
-            "logical_id": job.id,
-            "cwd": str(Path(job.cwd).absolute()),
-            "cmd": [str(c) for c in job.cmd],
-            "log_level": log_level,
-            "category": job.category.value,
-        }
+        payload = montar_pedido(job, queue_id, log_level=log_level)
 
         logger.info(
             "[WorkerQueue] Enfileirando job=%s fila=%s categoria=%s",
@@ -250,6 +249,19 @@ class RemotionWorkerQueue:
             )
         if status != "sucesso":
             raise WorkerJobFailed(f"Job '{job.id}' falhou: {resultado.get('erro', 'desconhecido')}")
+
+
+def montar_pedido(job: WorkerJob, queue_id: str, *, log_level: str) -> dict:
+    """O `req_` que o worker lê (protocol/job.schema.json, `$defs.pedido`)."""
+    return {
+        "v": VERSAO_DO_PROTOCOLO_DO_JOB,
+        "id": queue_id,
+        "logical_id": job.id,
+        "cwd": str(Path(job.cwd).absolute()),
+        "cmd": [str(c) for c in job.cmd],
+        "log_level": log_level,
+        "category": job.category.value,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────

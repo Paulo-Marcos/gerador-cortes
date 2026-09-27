@@ -17,6 +17,8 @@ from app.services.cenas_remotion import (
     _converter_cena,
 )
 
+from tests.json_schema_minimo import violacoes
+
 _CONTRATO = json.loads(
     (
         Path(__file__).resolve().parents[2] / "video-renderer" / "protocol" / "cena.schema.json"
@@ -28,35 +30,6 @@ _PROPRIEDADES = _CONTRATO["properties"]
 # 27/09/2026), e o zod do renderer os descarta em silêncio. Ficam nomeados aqui
 # para que um campo NOVO fora do contrato não passe despercebido junto com eles.
 _GRAVADOS_SEM_RENDER = {"ancoraLegendas", "motivo"}
-
-_TIPOS_JSON = {"string": str, "number": (int, float), "array": list, "object": dict}
-
-
-def _violacoes(valor, schema: dict, caminho: str = "cena") -> list[str]:
-    """O pedaço do JSON Schema que o contrato da cena usa — sem dependência nova."""
-    if "anyOf" in schema:
-        if any(not _violacoes(valor, opcao, caminho) for opcao in schema["anyOf"]):
-            return []
-        return [f"{caminho}: {valor!r} não cabe em nenhuma opção"]
-    if "enum" in schema:
-        return [] if valor in schema["enum"] else [f"{caminho}: {valor!r} fora de {schema['enum']}"]
-    tipo = schema.get("type")
-    if tipo and (not isinstance(valor, _TIPOS_JSON[tipo]) or isinstance(valor, bool)):
-        return [f"{caminho}: esperava {tipo}, veio {type(valor).__name__}"]
-    erros: list[str] = []
-    if tipo == "object":
-        erros += [
-            f"{caminho}.{c}: obrigatório" for c in schema.get("required", []) if c not in valor
-        ]
-        for chave, item in valor.items():
-            if chave in schema.get("properties", {}):
-                erros += _violacoes(item, schema["properties"][chave], f"{caminho}.{chave}")
-            elif schema.get("additionalProperties") is False:
-                erros.append(f"{caminho}.{chave}: fora do contrato")
-    if tipo == "array" and "items" in schema:
-        for indice, item in enumerate(valor):
-            erros += _violacoes(item, schema["items"], f"{caminho}[{indice}]")
-    return erros
 
 
 def _sem_os_gravados_sem_render(cena: dict) -> dict:
@@ -94,7 +67,7 @@ def test_a_cena_convertida_de_cada_tipo_cabe_no_contrato(tipo):
 
     cena = _converter_cena(resposta_da_ia, inicio_seg=12.5)
 
-    assert _violacoes(_sem_os_gravados_sem_render(cena), _CONTRATO) == []
+    assert violacoes(_sem_os_gravados_sem_render(cena), _CONTRATO, "cena") == []
 
 
 def test_os_padroes_que_o_backend_aplica_estao_no_contrato():

@@ -4,6 +4,7 @@ const path = require("path");
 const { spawn } = require("child_process");
 const { AsyncLocalStorage } = require("node:async_hooks");
 const { clockNow, formatDuration } = require("./worker_time.js");
+const { problemaDoPedido } = require("./protocolo_job.js");
 
 const repoRoot = path.resolve(__dirname, "..");
 const backendDir = path.join(repoRoot, "backend");
@@ -837,6 +838,19 @@ async function checkFilaParallel() {
       try {
         const jobData = JSON.parse(fs.readFileSync(jobPath, "utf8"));
         leiturasFalhas.delete(jobFile);
+        // D-725: pedido que não tem como rodar volta como erro dito com todas
+        // as letras, em vez de estourar lá dentro do spawn.
+        const problema = problemaDoPedido(jobData);
+        if (problema) {
+          console.error(`❌ Pedido recusado ${jobFile}: ${problema}`);
+          const id = jobFile.replace("req_", "").replace(".json", "");
+          responderJob(id, path.join(filaDir, `res_${id}.json`), {
+            status: "erro",
+            erro: `pedido inválido: ${problema}`,
+          });
+          removerSeExistir(jobPath);
+          continue;
+        }
         if (!canStartJob(jobData)) continue;
 
         const category = categoryOf(jobData);

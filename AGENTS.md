@@ -63,8 +63,9 @@ Páginas em `frontend/src/features/` (rotas em `frontend/src/routes.tsx`). O est
 
 ### Renderer (Remotion + Node)
 
-`video-renderer/` é um projeto Remotion separado. **A fila de render é de arquivos, não de banco:** o backend grava `req_<id>.json` na pasta da fila e espera o `res_<id>.json` que o `native_worker.js` escreve (protocolo em `backend/app/infrastructure/worker_queue.py`). O worker grava as respostas de forma atômica e responde uma vez por job.
+`video-renderer/` é um projeto Remotion separado. **A fila de render é de arquivos, não de banco:** o backend grava `req_<id>.json` na pasta da fila e espera o `res_<id>.json` que o `native_worker.js` escreve (contrato versionado em `video-renderer/protocol/job.schema.json`; cliente em `backend/app/infrastructure/worker_queue.py`). O worker recusa com erro o pedido que não tem como rodar, grava as respostas de forma atômica e responde uma vez por job.
 
+- **A cena tem uma definição só:** o schema zod do renderer (`video-renderer/src/schema.ts`). O front usa o tipo inferido pela porta `@video-renderer/public-api` (o ESLint recusa outro caminho) e o backend confere o que grava contra `video-renderer/protocol/cena.schema.json`, gerado do zod (`node --no-warnings protocol/gerar-contratos.mjs`; um teste recusa o arquivo defasado).
 - **Overlay do Remotion é ProRes 4444, obrigatório.** VP9/.webm foi testado e não funciona neste pipeline. Não proponha trocar.
 - **Filtergraph com fonte infinita** (`color=`, `-loop 1`) precisa de limite (`trim=end`, `-shortest` ou equivalente). Teste de grade confere duração e contagem de frames.
 
