@@ -2,9 +2,15 @@ import type { ProviderIA } from '@/lib/providerIa';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, progressoWsUrl } from '@/lib/api';
+import {
+  analiseApi,
+  type AnalisarIntervaloRequest,
+  type ImportarAnaliseRequest,
+} from '@/features/projetos/analise';
+import { geracaoIaApi } from '@/features/ia';
 import { projetosApi } from '@/features/projetos/api';
 import { useToast } from '@/components/ui/toaster';
-import type { AnalisarIntervaloRequest, ImportarAnaliseRequest, ProgressoUpdate } from '@/types/models';
+import type { ProgressoUpdate } from '@/types/models';
 import {
   publicacaoApi,
   type LiberarPublicacaoRequest,
@@ -30,7 +36,7 @@ export const auditoriaAnaliseKey = (id: string) => ['projeto', id, 'auditoria-an
 export function useAuditoriaAnalise(id: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: auditoriaAnaliseKey(id ?? ''),
-    queryFn: () => api.obterAuditoriaAnalise(id!),
+    queryFn: () => analiseApi.obterAuditoriaAnalise(id!),
     enabled: !!id && enabled,
     staleTime: 30_000,
   });
@@ -55,14 +61,14 @@ export function useAbrirPasta() {
 /** D-746: abre a pasta da live — o botão da live usava a rota do corte. */
 export function useAbrirPastaProjeto() {
   return useMutation({
-    mutationFn: (projetoId: string) => api.abrirPastaProjeto(projetoId),
+    mutationFn: (projetoId: string) => projetosApi.abrirPastaProjeto(projetoId),
   });
 }
 
 export function useRefazerTranscricao(projetoId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.refazerTranscricao(projetoId),
+    mutationFn: () => analiseApi.refazerTranscricao(projetoId),
     onSuccess: () => {
       // Após re-baixar a transcrição via json3, todos os cortes têm
       // transcricao_corte/transcricao_final reescritos no banco.
@@ -76,7 +82,7 @@ export function useRefazerTranscricao(projetoId: string) {
 export function useReanalisar(projetoId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.reanalisarProjeto(projetoId),
+    mutationFn: () => analiseApi.reanalisarProjeto(projetoId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
       qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
@@ -91,7 +97,7 @@ export function useAnalisarViaClaude(projetoId: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
-    mutationFn: () => api.analisarViaClaude(projetoId),
+    mutationFn: () => geracaoIaApi.analisarViaClaude(projetoId),
     onSuccess: (data) => {
       notify(`Análise via Claude concluída: ${data.total_cortes ?? 0} corte(s).`, {
         tone: 'success',
@@ -153,7 +159,7 @@ export function useAnalisarDesviosTodos(projetoId: string) {
 export function useAnalisarIntervalo(projetoId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: AnalisarIntervaloRequest) => api.analisarIntervalo(projetoId, body),
+    mutationFn: (body: AnalisarIntervaloRequest) => analiseApi.analisarIntervalo(projetoId, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
       qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
@@ -165,7 +171,7 @@ export function useAnalisarIntervalo(projetoId: string) {
 export function useImportarAnalise(projetoId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: ImportarAnaliseRequest) => api.importarAnalise(projetoId, body),
+    mutationFn: (body: ImportarAnaliseRequest) => analiseApi.importarAnalise(projetoId, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: exportStatusKey(projetoId) });
       qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
@@ -183,8 +189,8 @@ export function usePromptAnalise(
     queryKey: ['projeto', projetoId, 'analise', 'prompt', intervalo],
     queryFn: () =>
       intervalo
-        ? api.obterPromptAnaliseIntervalo(projetoId, intervalo)
-        : api.obterPromptAnalise(projetoId),
+        ? analiseApi.obterPromptAnaliseIntervalo(projetoId, intervalo)
+        : analiseApi.obterPromptAnalise(projetoId),
     enabled,
     staleTime: 60_000,
   });

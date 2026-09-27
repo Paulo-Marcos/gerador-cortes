@@ -1,5 +1,7 @@
-// A IA como capacidade transversal (D-722): a telemetria das chamadas e o selo
-// de quem gerou. Várias features mostram o selo; esta é a única dona dos dois.
+// A IA como capacidade transversal (D-722): as gerações, a telemetria das
+// chamadas e o selo de quem gerou. Várias features mostram o selo; esta é a
+// única dona dos três.
+export { geracaoIaApi } from './api/geracao';
 export { llmCallsApi } from './api/telemetria';
 export type {
   ListaLlmCallsResponse,

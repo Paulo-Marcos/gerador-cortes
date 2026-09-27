@@ -1,14 +1,10 @@
 import type {
   AdicionarDesvioRequest,
-  AnalisarIntervaloRequest,
-  AnalisePromptResponse,
   ArranjoBlocos,
-  AuditoriaAnaliseResponse,
   CenaRemotion,
   CenasRemotionPayload,
   Corte,
   FilaGlobal,
-  ImportarAnaliseRequest,
   MetadadoCorte,
   MetadadoPatch,
   PipelineStatusResponse,
@@ -52,99 +48,11 @@ export interface GerarBrutoOpcoes {
 }
 
 export const api = {
-  /** I-034: audit trail da última análise IA (justificativa por corte + descartados). */
-  obterAuditoriaAnalise: (id: string) =>
-    request<AuditoriaAnaliseResponse>(`/projetos/${id}/auditoria-analise`),
-
-  /** D-746: a pasta da LIVE (a do corte é `abrirPastaCorte`). */
-  abrirPastaProjeto: (projetoId: string) =>
-    request<{ status: string; dir_path: string }>(`/projetos/${projetoId}/abrir-pasta`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
   abrirPastaCorte: (corteId: string) =>
     request<{ status: string; dir_path: string }>(`/cortes/${corteId}/abrir-pasta`, {
       method: 'POST',
       body: '{}',
     }),
-
-  // ─── Análise IA ────────────────────────────────────────────────────
-  obterPromptAnalise: (projetoId: string) =>
-    request<AnalisePromptResponse>(`/projetos/${projetoId}/analise/prompt`),
-
-  obterPromptAnaliseIntervalo: (
-    projetoId: string,
-    params: AnalisarIntervaloRequest & { blocos: number },
-  ) => {
-    const query = new URLSearchParams({
-      inicio_hms: params.inicio_hms,
-      fim_hms: params.fim_hms,
-      blocos: String(params.blocos),
-    });
-    return request<AnalisePromptResponse>(
-      `/projetos/${projetoId}/analise-intervalo/prompt?${query.toString()}`,
-    );
-  },
-
-  importarAnalise: (projetoId: string, body: ImportarAnaliseRequest) =>
-    request<{ message: string; total_cortes: number }>(`/projetos/${projetoId}/analise/importar`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  reanalisarProjeto: (projetoId: string) =>
-    request<{ message: string; cortes_removidos: number }>(`/projetos/${projetoId}/reanalisar`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  // Re-baixa a transcrição via json3 (sem roll-up/duplicação do VTT) e
-  // re-sincroniza todos os cortes (transcricao_final).
-  refazerTranscricao: (projetoId: string) =>
-    request<{ message: string; total_cortes_sincronizados: number }>(
-      `/projetos/${projetoId}/refazer-transcricao`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  // Provider Claude (geração alternativa via `claude -p`) — F-038
-  // D-286: `usarDiarizacao` (default true) injeta o rótulo de falante no prompt
-  // quando o projeto já foi diarizado; false analisa ignorando os falantes.
-  analisarViaClaude: (projetoId: string, usarDiarizacao = true, provider: 'claude' | 'gemini' = 'claude') =>
-    request<{ message: string; projeto_id: string; provider: string; total_cortes?: number }>(
-      `/claude/projeto/${projetoId}/analisar?usar_diarizacao=${usarDiarizacao}&provider=${provider}`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  gerarTrechosClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
-    request<{ message: string; corte_id: string; total_desvios: number; novos: number }>(
-      `/claude/corte/${corteId}/gerar-trechos?provider=${provider}`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  gerarCenasClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
-    request<{ message: string; corte_id: string; total_cenas: number }>(
-      `/claude/corte/${corteId}/gerar-cenas?provider=${provider}`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  gerarMetadadosClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
-    request<{ message: string; corte_id: string; ok: boolean }>(
-      `/claude/corte/${corteId}/gerar-metadados?provider=${provider}`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  gerarPromptThumbnailClaude: (corteId: string, provider: 'claude' | 'gemini' = 'claude') =>
-    request<{ message: string; corte_id: string; ok: boolean }>(
-      `/claude/corte/${corteId}/gerar-prompt-thumbnail?provider=${provider}`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  analisarIntervalo: (projetoId: string, body: AnalisarIntervaloRequest) =>
-    request<{ message: string; novos_cortes: number; primeiro_numero: number }>(
-      `/projetos/${projetoId}/analisar-intervalo`,
-      { method: 'POST', body: JSON.stringify(body) },
-    ),
 
   // I-023: filtro padrão de render vive só em Ajustes (PUT /settings).
   // O antigo PATCH /export/projeto/{id}/filtro-padrao foi removido — não

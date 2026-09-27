@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { api, type GerarBrutoOpcoes } from '@/lib/api';
+import { geracaoIaApi } from '@/features/ia';
 import { exportStatusKey } from './useProjetoDetalhe';
 import { useToast } from '@/components/ui/toaster';
 import type { FaseRender } from '@/features/post-production/renderEtapas';
@@ -469,7 +470,7 @@ export function useGerarTrechosClaude(corteId: string, projetoId?: string) {
   const { notify } = useToast();
   return useMutation({
     mutationKey: trechosClaudeKey(corteId),
-    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => api.gerarTrechosClaude(corteId, provider),
+    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => geracaoIaApi.gerarTrechosClaude(corteId, provider),
     onSuccess: (data) => {
       const msg =
         data.novos > 0
@@ -491,7 +492,7 @@ export function useGerarCenasClaude(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
-    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => api.gerarCenasClaude(corteId, provider),
+    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => geracaoIaApi.gerarCenasClaude(corteId, provider),
     onSuccess: (data) => {
       notify(`${data.total_cenas} cena(s) gerada(s) via IA.`, { tone: 'success' });
       invalidaCorte(qc, corteId, projetoId);
@@ -510,7 +511,7 @@ export function useGerarMetadadosClaude(corteId: string) {
   const { notify } = useToast();
   return useMutation({
     mutationKey: metadadosClaudeKey(corteId),
-    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => api.gerarMetadadosClaude(corteId, provider),
+    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => geracaoIaApi.gerarMetadadosClaude(corteId, provider),
     onSuccess: () => {
       notify('Metadados gerados via IA.', { tone: 'success' });
       qc.invalidateQueries({ queryKey: ['metadado', corteId] });

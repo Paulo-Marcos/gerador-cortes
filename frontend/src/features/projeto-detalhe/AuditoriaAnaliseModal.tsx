@@ -2,7 +2,7 @@ import { AlertTriangle, ClipboardCheck, Loader2, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { useAuditoriaAnalise } from '@/hooks/useProjetoDetalhe';
-import type { AuditoriaCorteItem } from '@/types/models';
+import type { AuditoriaCorteItem } from '@/features/projetos/analise';
 
 interface Props {
   open: boolean;

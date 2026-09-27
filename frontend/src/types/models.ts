@@ -13,33 +13,6 @@ export type StatusProjeto =
 
 export type StatusCorte = 'proposto' | 'aprovado' | 'rejeitado' | 'processado';
 
-// I-034: audit trail da última análise IA do projeto.
-export interface AuditoriaCorteItem {
-  id: string;
-  numero: number;
-  titulo_proposto: string;
-  tema_central: string;
-  justificativa: string;
-  inicio_hms: string;
-  fim_hms: string;
-  duracao_min: number;
-  status: StatusCorte;
-}
-
-export interface AuditoriaDescartado {
-  tema: string;
-  motivo: string;
-}
-
-export interface AuditoriaAnaliseResponse {
-  projeto_id: string;
-  ultima_analise_em: string | null;
-  total_cortes: number;
-  duracao_media_min: number;
-  cortes: AuditoriaCorteItem[];
-  descartados: AuditoriaDescartado[];
-}
-
 export type FontePreset = 'atual' | 'moderna' | 'cientifica' | 'minimalista' | 'tecnica';
 
 /** O projeto (a live) — o tipo do contrato (D-722), apelido aqui porque as
@@ -382,21 +355,6 @@ export interface FilaGlobal {
     erros: number;
     ativo: boolean;
   };
-}
-
-export interface AnalisePromptResponse {
-  prompt?: string;
-  prompts?: Array<{ parte: number; total_partes: number; texto: string }>;
-  formato_esperado?: unknown;
-}
-
-export interface ImportarAnaliseRequest {
-  cortes: unknown[];
-}
-
-export interface AnalisarIntervaloRequest {
-  inicio_hms: string;
-  fim_hms: string;
 }
 
 export type DestinoPublicacao = 'youtube' | 'tiktok';

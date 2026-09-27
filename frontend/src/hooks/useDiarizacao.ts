@@ -5,7 +5,7 @@
 // manter as invalidações consistentes com o resto do detalhe do projeto.
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { diarizacaoApi, type FalantesMap } from '@/features/diarizacao/api';
-import { api } from '@/lib/api';
+import { geracaoIaApi } from '@/features/ia';
 import { useToast } from '@/components/ui/toaster';
 import { corteKey, cortesProjetoKey } from './useEditor';
 import { exportStatusKey } from './useProjetoDetalhe';
@@ -120,7 +120,7 @@ export function useAnalisarComDiarizacao(projetoId: string) {
     }: {
       usarDiarizacao: boolean;
       provider?: 'claude' | 'gemini';
-    }) => api.analisarViaClaude(projetoId, usarDiarizacao, provider),
+    }) => geracaoIaApi.analisarViaClaude(projetoId, usarDiarizacao, provider),
     onSuccess: (data) => {
       const via = data.provider === 'gemini' ? 'Gemini' : 'Claude';
       notify(`Análise via ${via} concluída: ${data.total_cortes ?? 0} corte(s).`, {

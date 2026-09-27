@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
-import { useUltimaGeracao } from '@/features/ia';
+import { geracaoIaApi, useUltimaGeracao } from '@/features/ia';
 import { IconButton } from '@/components/ui/icon-button';
 import { Modal } from '@/components/ui/modal';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
@@ -188,7 +188,7 @@ export function MetadataCard({
 
   // F-038 - geracao automatica por IA: invalida na hora.
   const generateMetadataClaude = useMutation({
-    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => api.gerarMetadadosClaude(cut.id, provider),
+    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => geracaoIaApi.gerarMetadadosClaude(cut.id, provider),
     onMutate: () => {
       versaoAntesDaIa.current =
         meta && (meta.titulo_youtube || meta.descricao_youtube)
@@ -213,7 +213,7 @@ export function MetadataCard({
 
   // F-038 - prompt de thumbnail por IA: invalida na hora.
   const generatePromptThumbnailClaude = useMutation({
-    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => api.gerarPromptThumbnailClaude(cut.id, provider),
+    mutationFn: (provider: 'claude' | 'gemini' = 'claude') => geracaoIaApi.gerarPromptThumbnailClaude(cut.id, provider),
     onSuccess: () => {
       notify('Prompt de thumbnail gerado por IA.', { tone: 'success' });
       invalidate();

@@ -1,7 +1,8 @@
 import { api, dados, type Schema } from '@/shared/api';
 
 // O ciclo do projeto (a live): listar, criar, abrir, excluir, rebaixar o vídeo,
-// reiniciar downloads que falharam, limpar arquivos e a configuração de render.
+// reiniciar downloads que falharam, limpar arquivos, abrir a pasta e a
+// configuração de render.
 // D-722: saiu de lib/api.ts para a feature, sobre o cliente gerado. O
 // `reiniciarDownload` avulso não veio junto: não tinha quem o chamasse.
 
@@ -31,6 +32,10 @@ export const projetosApi = {
   // Sem corpo: o default do backend preserva o bruto dos Fires com shorts pendentes.
   limparArquivosProjeto: (id: string) =>
     dados(api.POST('/api/projetos/{projeto_id}/limpar-arquivos', doProjeto(id))),
+
+  /** D-746: abre a pasta da LIVE no explorador (a do corte fica com os cortes). */
+  abrirPastaProjeto: (id: string) =>
+    dados(api.POST('/api/projetos/{projeto_id}/abrir-pasta', doProjeto(id))),
 
   reiniciarDownloadsFalhados: () => dados(api.POST('/api/projetos/reiniciar-downloads-falhados')),
 
