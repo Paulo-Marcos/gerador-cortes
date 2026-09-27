@@ -13,12 +13,6 @@ import type {
   StatusBrutoResponse,
   WaveformPeaksResponse,
 } from '@/types/models';
-import type {
-  AtualizarLayoutPresetRequest,
-  CriarLayoutPresetRequest,
-  LayoutPreset,
-  LayoutPresetTipo,
-} from '@/types/presets';
 import type { ProviderIA } from '@/lib/providerIa';
 import { API_BASE, VIDEOS_BASE, wsUrl } from '@/lib/apiBase';
 
@@ -420,26 +414,6 @@ export const api = {
       prompts: { parte: number; total_partes: number; texto: string }[];
       formato_esperado?: unknown;
     }>(`/cortes/${corteId}/cenas-remotion/prompt`),
-
-  // ─── Presets de layout YouTube (F-048) ─────────────────────────────
-  listarLayoutPresets: (tipo?: LayoutPresetTipo) => {
-    const query = tipo ? `?tipo=${encodeURIComponent(tipo)}` : '';
-    return request<LayoutPreset[]>(`/presets/layout${query}`);
-  },
-
-  criarLayoutPreset: (body: CriarLayoutPresetRequest) =>
-    request<LayoutPreset>('/presets/layout', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  atualizarLayoutPreset: (id: string, body: AtualizarLayoutPresetRequest) =>
-    request<LayoutPreset>(`/presets/layout/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-    }),
-
-  deletarLayoutPreset: (id: string) => request<void>(`/presets/layout/${id}`, { method: 'DELETE' }),
 
 };
 

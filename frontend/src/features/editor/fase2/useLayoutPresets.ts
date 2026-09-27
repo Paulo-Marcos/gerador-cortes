@@ -8,7 +8,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { api } from '@/lib/api';
+import { layoutPresetsApi } from './layoutPresetsApi';
 import type {
   AtualizarLayoutPresetRequest,
   CriarLayoutPresetRequest,
@@ -26,7 +26,7 @@ export function useLayoutPresets(options: { tipo?: LayoutPresetTipo } = {}) {
   const { tipo } = options;
   return useQuery({
     queryKey: queryKey(tipo),
-    queryFn: () => api.listarLayoutPresets(tipo),
+    queryFn: () => layoutPresetsApi.listarLayoutPresets(tipo),
     staleTime: 30_000,
   });
 }
@@ -34,7 +34,7 @@ export function useLayoutPresets(options: { tipo?: LayoutPresetTipo } = {}) {
 export function useSaveLayoutPreset() {
   const qc = useQueryClient();
   return useMutation<LayoutPreset, Error, CriarLayoutPresetRequest>({
-    mutationFn: (body) => api.criarLayoutPreset(body),
+    mutationFn: (body) => layoutPresetsApi.criarLayoutPreset(body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: LAYOUT_PRESETS_KEY });
     },
@@ -44,7 +44,7 @@ export function useSaveLayoutPreset() {
 export function useUpdateLayoutPreset() {
   const qc = useQueryClient();
   return useMutation<LayoutPreset, Error, { id: string; body: AtualizarLayoutPresetRequest }>({
-    mutationFn: ({ id, body }) => api.atualizarLayoutPreset(id, body),
+    mutationFn: ({ id, body }) => layoutPresetsApi.atualizarLayoutPreset(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: LAYOUT_PRESETS_KEY });
     },
@@ -54,7 +54,7 @@ export function useUpdateLayoutPreset() {
 export function useDeleteLayoutPreset() {
   const qc = useQueryClient();
   return useMutation<void, Error, string>({
-    mutationFn: (id) => api.deletarLayoutPreset(id),
+    mutationFn: (id) => layoutPresetsApi.deletarLayoutPreset(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: LAYOUT_PRESETS_KEY });
     },
