@@ -83,6 +83,8 @@ def test_troca_de_canal_vira_aviso_no_log(tmp_path):
     renderer_falso.mkdir()
     for arquivo in RENDERER.glob("*.js"):
         shutil.copy2(arquivo, renderer_falso / arquivo.name)
+    # D-732: o worker agora se compõe também dos módulos de worker/.
+    shutil.copytree(RENDERER / "worker", renderer_falso / "worker")
 
     projetos = tmp_path / "projetos"
     (projetos / "fila_remotion").mkdir(parents=True)

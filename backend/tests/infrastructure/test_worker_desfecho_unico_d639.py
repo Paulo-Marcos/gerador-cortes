@@ -26,24 +26,33 @@ pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node não 
 _ESCRITA = re.compile(r"escreverJsonAtomico\([^;]{0,160}", re.S)
 
 
+FILA = WORKER.parent / "worker" / "fila.js"
+
+
 def _fonte() -> str:
     return WORKER.read_text(encoding="utf-8")
 
 
-def _porteiro_e_resto(fonte: str) -> tuple[str, str]:
-    inicio = fonte.index("function responderJob")
-    fim = fonte.index("function removerSeExistir")
-    return fonte[inicio:fim], fonte[:inicio] + fonte[fim:]
+def _todo_o_worker() -> str:
+    """O worker inteiro: o maestro e os módulos de worker/ (D-732)."""
+    arquivos = [WORKER, *sorted((WORKER.parent / "worker").glob("*.js"))]
+    return "\n".join(p.read_text(encoding="utf-8") for p in arquivos)
+
+
+def _porteiro_e_resto() -> tuple[str, str]:
+    fila = FILA.read_text(encoding="utf-8")
+    porteiro = fila[fila.index("function responderJob") : fila.index("function esquecerResposta")]
+    return porteiro, _todo_o_worker().replace(porteiro, "")
 
 
 def test_toda_resposta_passa_pelo_porteiro():
     """Guarda: fora do porteiro, ninguém escreve `res_`."""
-    porteiro, resto = _porteiro_e_resto(_fonte())
+    porteiro, resto = _porteiro_e_resto()
 
     fora = [t for t in _ESCRITA.findall(resto) if "resPath" in t or "res_" in t]
 
     assert fora == [], f"escrita de resposta fora do porteiro: {fora}"
-    assert "escreverJsonAtomico(resPath, payload)" in porteiro
+    assert "escreverJsonAtomico(destino, payload)" in porteiro
 
 
 def test_cancelamento_tem_precedencia_sobre_o_codigo_de_saida():
@@ -59,17 +68,10 @@ def test_cancelamento_tem_precedencia_sobre_o_codigo_de_saida():
 
 def test_o_porteiro_ignora_a_segunda_resposta(tmp_path):
     """Roda o porteiro REAL no node: a primeira resposta vence, a segunda é ignorada."""
-    fonte = _fonte()
-    # Pega o escritor atômico e o porteiro, que vivem em sequência no worker.
-    helper = fonte[
-        fonte.index("function escreverJsonAtomico") : fonte.index("function removerSeExistir")
-    ]
     destino = tmp_path / "res_job.json"
     script = (
-        'const fs = require("fs");\n'
-        "const respondidos = new Set();\n"
-        'const clockNow = () => "";\n'
-        f"{helper}\n"
+        f"const {{ criarFila }} = require({json.dumps(str(FILA))});\n"
+        f"const {{ responderJob }} = criarFila({json.dumps(str(tmp_path))});\n"
         f"const alvo = {json.dumps(str(destino))};\n"
         'const primeira = responderJob("job", alvo, { status: "cancelado" });\n'
         'const segunda = responderJob("job", alvo, { status: "erro", erro: "Exit code: 1" });\n'
@@ -89,4 +91,5 @@ def test_o_porteiro_ignora_a_segunda_resposta(tmp_path):
 
 def test_o_registro_de_respondidos_e_limpo_ao_fim_do_job():
     """Sem a limpeza, um job reenfileirado com o mesmo id nunca mais responderia."""
-    assert "respondidos.delete(id)" in _fonte()
+    assert "respondidos.delete(id)" in FILA.read_text(encoding="utf-8")
+    assert "esquecerResposta(id)" in _fonte(), "o maestro precisa liberar o id no fim do job"

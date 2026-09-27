@@ -22,8 +22,13 @@ WORKER = Path(__file__).resolve().parents[3] / "video-renderer" / "native_worker
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node não está no PATH")
 
 
+FILA = WORKER.parent / "worker" / "fila.js"
+
+
 def _fonte() -> str:
-    return WORKER.read_text(encoding="utf-8")
+    """O worker inteiro: o maestro e os módulos de worker/ (D-732)."""
+    arquivos = [WORKER, *sorted((WORKER.parent / "worker").glob("*.js"))]
+    return "\n".join(p.read_text(encoding="utf-8") for p in arquivos)
 
 
 def test_o_worker_tem_o_escritor_atomico_com_tmp_e_rename():
@@ -53,7 +58,7 @@ def test_o_arquivo_final_nunca_existe_pela_metade(tmp_path):
     payload = {"status": "sucesso", "duration_ms": 123456, "detalhe": "x" * 8192}
     script = f"""
       const fs = require("fs");
-      {_fonte()[_fonte().index("function escreverJsonAtomico") :].split("function removerSeExistir")[0]}
+      const {{ escreverJsonAtomico }} = require({json.dumps(str(FILA))});
       escreverJsonAtomico({json.dumps(str(destino))}, {json.dumps(payload)});
       // Se o `.tmp` sobrar, a pasta da fila acumula lixo que o backend vê.
       console.log(JSON.stringify({{ tmp_sobrou: fs.existsSync({json.dumps(str(destino) + ".tmp")}) }}));

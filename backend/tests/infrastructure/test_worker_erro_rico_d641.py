@@ -96,10 +96,8 @@ class TestConcorrenciaDoRemotion:
     """O `12` era mágico e o env inválido virava NaN — que o Remotion aceita calado."""
 
     def _rodar_no_node(self, trecho: str, env: dict | None = None) -> str:
-        fonte = WORKER.read_text(encoding="utf-8")
-        inicio = fonte.index("function inteiroDoAmbiente")
-        fim = fonte.index("function isOverlayJob")
-        script = f"{fonte[inicio:fim]}\n{trecho}"
+        ambiente = WORKER.parent / "worker" / "ambiente.js"
+        script = f"const {{ inteiroDoAmbiente }} = require({json.dumps(str(ambiente))});\n{trecho}"
         return subprocess.run(
             ["node", "-e", script],
             capture_output=True,
