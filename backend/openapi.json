@@ -3142,6 +3142,54 @@
         "title": "LayoutCapaTiktokResponse",
         "type": "object"
       },
+      "LayoutPresetResponse": {
+        "description": "O `payload` muda de forma com o `tipo` (ver o topo do módulo) e já sai\nnormalizado; quem o lê por tipo é a tela (D-722).",
+        "properties": {
+          "atualizado_em": {
+            "format": "date-time",
+            "title": "Atualizado Em",
+            "type": "string"
+          },
+          "criado_em": {
+            "format": "date-time",
+            "title": "Criado Em",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "payload": {
+            "title": "Payload",
+            "type": "object"
+          },
+          "tipo": {
+            "enum": [
+              "completo",
+              "posicionamento",
+              "posicionamento_full",
+              "palco_short",
+              "gancho_short"
+            ],
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "tipo",
+          "payload",
+          "criado_em",
+          "atualizado_em"
+        ],
+        "title": "LayoutPresetResponse",
+        "type": "object"
+      },
       "LevantamentoDuracao": {
         "properties": {
           "avg_view_duration_media_seg": {
@@ -12460,7 +12508,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "type": "object"
+                    "$ref": "#/components/schemas/LayoutPresetResponse"
                   },
                   "title": "Response Listar Presets Api Presets Layout Get",
                   "type": "array"
@@ -12502,8 +12550,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Criar Preset Api Presets Layout Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/LayoutPresetResponse"
                 }
               }
             },
@@ -12541,12 +12588,7 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
+          "204": {
             "description": "Successful Response"
           },
           "422": {
@@ -12593,8 +12635,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Atualizar Preset Api Presets Layout  Preset Id  Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/LayoutPresetResponse"
                 }
               }
             },

@@ -5586,6 +5586,34 @@ export interface components {
             };
             quadro: components["schemas"]["QuadroCapa"];
         };
+        /**
+         * LayoutPresetResponse
+         * @description O `payload` muda de forma com o `tipo` (ver o topo do módulo) e já sai
+         *     normalizado; quem o lê por tipo é a tela (D-722).
+         */
+        LayoutPresetResponse: {
+            /**
+             * Atualizado Em
+             * Format: date-time
+             */
+            atualizado_em: string;
+            /**
+             * Criado Em
+             * Format: date-time
+             */
+            criado_em: string;
+            /** Id */
+            id: string;
+            /** Nome */
+            nome: string;
+            /** Payload */
+            payload: Record<string, unknown>;
+            /**
+             * Tipo
+             * @enum {string}
+             */
+            tipo: "completo" | "posicionamento" | "posicionamento_full" | "palco_short" | "gancho_short";
+        };
         /** LevantamentoDuracao */
         LevantamentoDuracao: {
             /** Avg View Duration Media Seg */
@@ -10800,7 +10828,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, unknown>[];
+                    "application/json": components["schemas"]["LayoutPresetResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -10833,7 +10861,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, unknown>;
+                    "application/json": components["schemas"]["LayoutPresetResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10868,7 +10896,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, unknown>;
+                    "application/json": components["schemas"]["LayoutPresetResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10894,13 +10922,11 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

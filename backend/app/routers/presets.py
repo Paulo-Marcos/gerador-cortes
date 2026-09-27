@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from app.database import get_db
 from app.domain.corte.youtube_layout import (
@@ -40,6 +40,7 @@ from app.domain.corte.youtube_layout import (
 )
 from app.domain.short import gancho_short, legenda_short
 from app.models import LayoutPreset
+from app.routers.resposta_api import RespostaApi
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -47,25 +48,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
-TIPOS_VALIDOS = {
+TIPOS_DE_PRESET = (
     "completo",
     "posicionamento",
     "posicionamento_full",
     "palco_short",
     "gancho_short",
-}
+)
+TIPOS_VALIDOS = set(TIPOS_DE_PRESET)
 
 
-class LayoutPresetResponse(BaseModel):
+class LayoutPresetResponse(RespostaApi):
+    """O `payload` muda de forma com o `tipo` (ver o topo do módulo) e já sai
+    normalizado; quem o lê por tipo é a tela (D-722)."""
+
     id: str
     nome: str
-    tipo: str
+    tipo: Literal[TIPOS_DE_PRESET]
     payload: dict[str, Any]
     criado_em: datetime
     atualizado_em: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class CriarPresetRequest(BaseModel):
@@ -206,7 +208,7 @@ def _serializar(preset: LayoutPreset) -> dict[str, Any]:
     }
 
 
-@router.get("/layout")
+@router.get("/layout", response_model=list[LayoutPresetResponse])
 async def listar_presets(
     tipo: str | None = None,
     db: AsyncSession = Depends(get_db),
@@ -222,7 +224,7 @@ async def listar_presets(
     return [_serializar(p) for p in presets]
 
 
-@router.post("/layout")
+@router.post("/layout", response_model=LayoutPresetResponse)
 async def criar_preset(
     body: CriarPresetRequest,
     db: AsyncSession = Depends(get_db),
@@ -239,7 +241,7 @@ async def criar_preset(
     return _serializar(preset)
 
 
-@router.put("/layout/{preset_id}")
+@router.put("/layout/{preset_id}", response_model=LayoutPresetResponse)
 async def atualizar_preset(
     preset_id: str,
     body: AtualizarPresetRequest,
@@ -259,7 +261,7 @@ async def atualizar_preset(
     return _serializar(preset)
 
 
-@router.delete("/layout/{preset_id}")
+@router.delete("/layout/{preset_id}", status_code=204, response_class=Response)
 async def deletar_preset(
     preset_id: str,
     db: AsyncSession = Depends(get_db),
