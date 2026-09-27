@@ -9,7 +9,7 @@ import { metaCena } from './sceneTypes';
 import { segParaMmSs } from '../timeUtils';
 import { CenasRemotionPreview, type SombraNivelPadrao } from './CenasRemotionPreview';
 import { buildCenaVisualRevision, type LayoutCardPadrao } from './cardPreviewContracts';
-import { resolveYoutubeModeAt, type YoutubeLayout } from './youtubeLayout';
+import { resolveYoutubeModeAt, type YoutubeLayout } from '@/shared/palco/youtubeLayout';
 import { useTempoDoPlayer, type RelogioDoPlayer } from './relogioDoPlayer';
 
 const FPS = 30;

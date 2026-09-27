@@ -10,7 +10,7 @@ import { useAtualizarCorte, useToggleFire, useCorte, useCortesProjeto } from '@/
 import { useQuery } from '@tanstack/react-query';
 import { finalVideoUrl, resolveThumbUrl } from '@/lib/api';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
-import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
+import { useShortcuts, type ShortcutBinding } from '@/shared/atalhos/shortcuts';
 import { SceneTimeline } from '@/features/editor/fase2/SceneTimeline';
 import { calcularDuracaoLiquida } from '@/features/editor/timeUtils';
 import { MetadataModal } from '@/features/metadata/MetadataModal';

@@ -9,7 +9,7 @@ import {
   useLayoutPresets,
   useSaveLayoutPreset,
   useUpdateLayoutPreset,
-} from '@/features/editor/fase2/useLayoutPresets';
+} from '@/shared/palco/useLayoutPresets';
 import type { GanchoShortPreset } from '@/types/presets';
 import {
   CORES_DO_GANCHO,

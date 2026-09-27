@@ -43,9 +43,9 @@ import {
   type YoutubeLayoutRegion,
   type YoutubePlaca,
   type YoutubeSharedConfig,
-} from './youtubeLayout';
+} from '@/shared/palco/youtubeLayout';
 import { modoPadraoDoEscopo, montarPadraoJson } from './youtubeLayoutPadrao';
-import { useLayoutPresets } from './useLayoutPresets';
+import { useLayoutPresets } from '@/shared/palco/useLayoutPresets';
 import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
 import { ScanLine } from 'lucide-react';

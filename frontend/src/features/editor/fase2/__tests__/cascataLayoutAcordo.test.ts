@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { resolveLayoutChain } from '../youtubeLayout';
+import { resolveLayoutChain } from '@/shared/palco/youtubeLayout';
 
 // D-712: a cascata do layout horizontal (RN-10) está escrita duas vezes — aqui,
 // para o preview reagir a cada edição, e no backend, que resolve para o render.

@@ -7,7 +7,7 @@ import {
   useLayoutPresets,
   useSaveLayoutPreset,
   useUpdateLayoutPreset,
-} from '@/features/editor/fase2/useLayoutPresets';
+} from '@/shared/palco/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 
 // D-567: o CRUD de presets sai de dentro do modal do palco.

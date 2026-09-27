@@ -2,7 +2,7 @@
  * Constantes e helpers puros compartilhados entre o YoutubeLayoutPanel e seus
  * subcomponentes (E-006).
  */
-import type { YoutubeLayoutMode } from '../youtubeLayout';
+import type { YoutubeLayoutMode } from '@/shared/palco/youtubeLayout';
 
 export const MODE_LABEL: Record<YoutubeLayoutMode, string> = {
   full: 'Full',

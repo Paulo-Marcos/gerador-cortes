@@ -132,7 +132,7 @@ locks:
   - frontend/src/features/editor/fase2/YoutubeLayoutPanel.tsx
   - frontend/src/features/editor/fase2/youtubeLayoutPadrao.ts
   - frontend/src/features/editor/fase2/__tests__/youtubeLayoutPadrao.test.ts
-  - frontend/src/features/editor/fase2/youtubeBackgrounds.tsx
+  - frontend/src/shared/palco/youtubeBackgrounds.tsx
   - backend/app/services/app_settings.py
   - backend/app/routers/settings.py
   - backend/app/routers/projetos.py
@@ -228,7 +228,7 @@ locks:
   files:
   - backend/app/domain/corte/youtube_layout.py
   - backend/tests/domain/test_youtube_card_zone.py
-  - frontend/src/features/editor/fase2/youtubeLayout.ts
+  - frontend/src/shared/palco/youtubeLayout.ts
   - frontend/src/features/editor/fase2/__tests__/sharedCardZone.test.ts
 - id: f061-dividir-corte
   description: 'F-061: dividir corte em 2 na edicao bruto (endpoint, api/hook, botao

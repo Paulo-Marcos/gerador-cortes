@@ -14,8 +14,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn, formatarDuracao } from '@/lib/utils';
-import { useShortcuts } from '@/features/editor/shortcuts';
-import { shortcutFromRegistry } from '@/features/editor/shortcutsRegistry';
+import { useShortcuts } from '@/shared/atalhos/shortcuts';
+import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
 import { useVelocidadeNoVideo } from '@/hooks/useVelocidadeNoVideo';
 import { normalizarVelocidade, useVelocidadePlayerPadrao } from '@/features/settings';
 import type { ShortSugerido } from './shortsApi';

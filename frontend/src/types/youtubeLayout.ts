@@ -2,8 +2,8 @@
  * O layout do palco do YouTube (F-048 / F-060): só a forma dos dados.
  *
  * As regras — defaults, cascata, normalização — ficam em
- * `features/editor/fase2/youtubeLayout`. A forma mora aqui para que
- * `types/presets` a descreva sem depender de código de feature (D-724).
+ * `shared/palco/youtubeLayout`. A forma mora aqui para que `types/presets` a
+ * descreva sem depender de código de camada nenhuma (D-724).
  */
 
 export type YoutubeLayoutMode = 'full' | 'compartilhada';

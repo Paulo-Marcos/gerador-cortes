@@ -27,15 +27,15 @@ import {
   type YoutubeLayout,
   type YoutubePlaca,
   type YoutubeSharedRect,
-} from './youtubeLayout';
-import { YoutubeBackground } from './youtubeBackgrounds';
+} from '@/shared/palco/youtubeLayout';
+import { YoutubeBackground } from '@/shared/palco/youtubeBackgrounds';
 import {
   ImageFrame,
   SpeakerLabelOverlay,
   SPEAKER_LABEL_GAP_FROM_IMAGE,
   SPEAKER_LABEL_HEIGHT,
   StageChrome,
-} from './youtubeChrome';
+} from '@/shared/palco/youtubeChrome';
 
 // O video-renderer usa @types/react 19 (`ReactNode` inclui `bigint`); frontend está em
 // 18. Em runtime é o mesmo React deduplicado pelo Vite — só os tipos divergem, então

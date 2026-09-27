@@ -4,7 +4,7 @@ import {
   sharedVerticalCardZone,
   type YoutubeSharedConfig,
   type YoutubeSharedRect,
-} from '../youtubeLayout';
+} from '@/shared/palco/youtubeLayout';
 
 // I-035: a faixa do card e dinamica por layout YT. A borda externa fixa define
 // topo/esquerda; a tela grande limita a direita; o facecam limita o alcance

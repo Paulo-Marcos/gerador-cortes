@@ -1,7 +1,7 @@
 import { useId, useMemo, type FC } from "react";
 
 /**
- * ESPELHO de frontend/src/features/editor/fase2/youtubeBackgrounds.tsx.
+ * ESPELHO de frontend/src/shared/palco/youtubeBackgrounds.tsx.
  * Esta cópia (React 19) existe para o video-renderer rasterizar os MESMOS
  * fundos editoriais em PNG (Remotion still), usados como camada no FFmpeg do
  * render final. Mantenha os visuais em sincronia com a versão do frontend.

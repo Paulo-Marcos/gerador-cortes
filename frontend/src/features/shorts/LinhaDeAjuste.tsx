@@ -1,6 +1,6 @@
 import { ScanFace, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLayoutPresets } from '@/features/editor/fase2/useLayoutPresets';
+import { useLayoutPresets } from '@/shared/palco/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { temPalcoProprio } from './aplicarPalco';
 import { temColagem } from './segmentosDoShort';

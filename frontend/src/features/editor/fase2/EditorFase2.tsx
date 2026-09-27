@@ -1,8 +1,8 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { RefObject } from 'react';
-import { useShortcuts, type ShortcutBinding } from '../shortcuts';
-import { shortcutFromRegistry } from '../shortcutsRegistry';
+import { useShortcuts, type ShortcutBinding } from '@/shared/atalhos/shortcuts';
+import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown,
@@ -39,7 +39,7 @@ import {
   resolveLayoutChain,
   type YoutubeLayoutMode,
   type YoutubeLayoutRegion,
-} from './youtubeLayout';
+} from '@/shared/palco/youtubeLayout';
 import { settingsApi } from '@/features/settings/api';
 
 type AbaDireita = 'cenas' | 'layout' | 'filtros';

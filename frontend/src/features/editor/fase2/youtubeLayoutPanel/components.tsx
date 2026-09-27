@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
 import { segParaMmSs } from '../../timeUtils';
 import { DefinirSplitButton } from '../DefinirSplitButton';
-import type { YoutubeLayoutMode, YoutubeLayoutRegion } from '../youtubeLayout';
+import type { YoutubeLayoutMode, YoutubeLayoutRegion } from '@/shared/palco/youtubeLayout';
 import { MODE_LABEL, MODE_SHORT, clamp, round } from './shared';
 
 // Collapsible removido (F-060): as secoes Fundo/Placa migraram para o modal

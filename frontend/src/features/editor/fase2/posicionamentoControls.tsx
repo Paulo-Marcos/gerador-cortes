@@ -18,15 +18,15 @@ import type {
   YoutubeSharedConfig,
   YoutubeSharedRect,
   YoutubeSharedScreenCount,
-} from './youtubeLayout';
-import { YoutubeBackground } from './youtubeBackgrounds';
+} from '@/shared/palco/youtubeLayout';
+import { YoutubeBackground } from '@/shared/palco/youtubeBackgrounds';
 import {
   ImageFrame,
   SPEAKER_LABEL_GAP_FROM_IMAGE,
   SPEAKER_LABEL_HEIGHT,
   SpeakerLabelOverlay,
   StageChrome,
-} from './youtubeChrome';
+} from '@/shared/palco/youtubeChrome';
 
 export type SharedRectKey = Exclude<keyof YoutubeSharedConfig, 'telas'>;
 export type CropRectKey = 'crop_facecam' | 'crop_tela';

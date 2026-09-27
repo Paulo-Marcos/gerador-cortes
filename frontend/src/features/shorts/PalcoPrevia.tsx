@@ -1,16 +1,16 @@
 import { useEffect, useRef, type RefObject } from 'react';
-import { YoutubeBackground } from '@/features/editor/fase2/youtubeBackgrounds';
+import { YoutubeBackground } from '@/shared/palco/youtubeBackgrounds';
 import {
   DEFAULT_YOUTUBE_BACKGROUND,
   YOUTUBE_BACKGROUND_IDS,
   type YoutubeBackgroundId,
-} from '@/features/editor/fase2/youtubeLayout';
+} from '@/shared/palco/youtubeLayout';
 import {
   CardChrome,
   StageChrome,
   buildChromePaths,
   chromeClipPath,
-} from '@/features/editor/fase2/youtubeChrome';
+} from '@/shared/palco/youtubeChrome';
 import type { PlanoDesenhavel } from './shortsApi';
 
 // E-036/D-489: o palco desenhado ao vivo, como o arquivo vai sair.

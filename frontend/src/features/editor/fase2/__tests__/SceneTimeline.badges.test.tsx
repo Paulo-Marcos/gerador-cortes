@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { SceneTimeline } from '../SceneTimeline';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { CenaRemotion } from '@/types/models';
-import type { YoutubeLayout } from '../youtubeLayout';
+import type { YoutubeLayout } from '@/shared/palco/youtubeLayout';
 
 // D-396 (AUDITORIA-v2 §10): badges de sucesso "N cenas ✓" / "palco gerado ✓"
 // na Revisão final (Workbench). Cobrem só o toggle das novas props opcionais

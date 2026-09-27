@@ -6,7 +6,7 @@ import {
   type YoutubeLayoutMode,
   type YoutubePlaca,
   type YoutubeSharedConfig,
-} from './youtubeLayout';
+} from '@/shared/palco/youtubeLayout';
 
 // ─────────────────────────────────────────────────────────────
 // Helpers do "Padrao" do Layout YouTube (F-024 fase 4c).

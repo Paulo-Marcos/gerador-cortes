@@ -41,7 +41,7 @@ import {
   useLayoutPresets,
   useSaveLayoutPreset,
   useUpdateLayoutPreset,
-} from './useLayoutPresets';
+} from '@/shared/palco/useLayoutPresets';
 import {
   fullConfigDoPreset,
   fundoPlacaDoPreset,
@@ -54,8 +54,8 @@ import {
   type YoutubeSharedConfig,
   type YoutubeSharedRect,
   type YoutubeSharedScreenCount,
-} from './youtubeLayout';
-import { FundoThumb, YOUTUBE_BACKGROUND_OPTIONS } from './youtubeBackgrounds';
+} from '@/shared/palco/youtubeLayout';
+import { FundoThumb, YOUTUBE_BACKGROUND_OPTIONS } from '@/shared/palco/youtubeBackgrounds';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
 
 /** Resultado da confirmação do modal (F-060: inclui fundo e placa). */

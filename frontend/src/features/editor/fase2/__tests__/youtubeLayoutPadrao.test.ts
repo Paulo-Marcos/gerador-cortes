@@ -4,7 +4,7 @@ import {
   normalizeYoutubeLayout,
   resolveLayoutChain,
   type YoutubeLayout,
-} from '../youtubeLayout';
+} from '@/shared/palco/youtubeLayout';
 import { draftMatchesPreset, montarPadraoJson, readPadraoModo } from '../youtubeLayoutPadrao';
 
 describe('readPadraoModo', () => {

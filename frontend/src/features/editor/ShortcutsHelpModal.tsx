@@ -1,5 +1,5 @@
 import { Modal } from '@/components/ui/modal';
-import { formatShortcut, type ShortcutBinding } from './shortcuts';
+import { formatShortcut, type ShortcutBinding } from '@/shared/atalhos/shortcuts';
 
 interface Props {
   open: boolean;

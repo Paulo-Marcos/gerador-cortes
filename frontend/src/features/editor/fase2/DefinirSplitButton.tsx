@@ -10,7 +10,7 @@ import { ChevronDown, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useLayoutPresets } from './useLayoutPresets';
+import { useLayoutPresets } from '@/shared/palco/useLayoutPresets';
 import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
 
 interface DefinirSplitButtonProps {

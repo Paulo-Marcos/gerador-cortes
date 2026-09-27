@@ -1,5 +1,5 @@
-import { FundoThumb, YOUTUBE_BACKGROUND_OPTIONS } from '@/features/editor/fase2/youtubeBackgrounds';
-import type { YoutubeBackgroundId } from '@/features/editor/fase2/youtubeLayout';
+import { FundoThumb, YOUTUBE_BACKGROUND_OPTIONS } from '@/shared/palco/youtubeBackgrounds';
+import type { YoutubeBackgroundId } from '@/shared/palco/youtubeLayout';
 import { cn } from '@/lib/utils';
 
 // D-552: o fundo do short passou a ser a TEXTURA, e não uma cor.

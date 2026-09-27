@@ -24,8 +24,8 @@ import {
 } from './regerarBrutoPlan';
 import { confirmacaoRegerarBruto, confirmacaoRegerarTrechos } from './regeracaoConfirmacao';
 import { ShortcutsHelpModal } from './ShortcutsHelpModal';
-import { useShortcuts, type ShortcutBinding } from './shortcuts';
-import { shortcutFromRegistry } from './shortcutsRegistry';
+import { useShortcuts, type ShortcutBinding } from '@/shared/atalhos/shortcuts';
+import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
 import { useEditHistory } from './useEditHistory';
 import { calcularDuracaoLiquida, hmsParaSeg, segParaHms, segParaMmSs } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';

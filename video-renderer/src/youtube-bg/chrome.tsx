@@ -1,7 +1,7 @@
 import { useId, useMemo, type FC, type ReactNode } from "react";
 
 /**
- * ESPELHO de frontend/src/features/editor/fase2/youtubeChrome.tsx (geometria +
+ * ESPELHO de frontend/src/shared/palco/youtubeChrome.tsx (geometria +
  * chrome). Esta cópia (React 19) existe para o video-renderer rasterizar o
  * "palco" (brackets, molduras, sombra, placa) em PNG via Remotion still, usado
  * como camada de FRENTE no FFmpeg do render final (Variante A da F-020).

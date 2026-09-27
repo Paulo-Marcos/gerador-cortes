@@ -179,8 +179,8 @@ placa) vive só em `frontend/.../youtubeChrome.tsx` e **nunca é rasterizado par
 ## Mapa de arquivos
 
 ### Criados
-- `frontend/src/features/editor/fase2/youtubeBackgrounds.tsx` — 6 fundos + `YOUTUBE_BACKGROUND_OPTIONS` + dispatcher `YoutubeBackground`.
-- `frontend/src/features/editor/fase2/youtubeChrome.tsx` — `buildChromePaths`, `CardChrome`, `chromeClipPath`, `ImageFrame`, `NamePlate`, `StageChrome`.
+- `frontend/src/shared/palco/youtubeBackgrounds.tsx` — 6 fundos + `YOUTUBE_BACKGROUND_OPTIONS` + dispatcher `YoutubeBackground`.
+- `frontend/src/shared/palco/youtubeChrome.tsx` — `buildChromePaths`, `CardChrome`, `chromeClipPath`, `ImageFrame`, `NamePlate`, `StageChrome`.
 - `video-renderer/src/youtube-bg/backgrounds.tsx` — **espelho** (React 19) dos fundos p/ rasterizar PNG.
 - `video-renderer/src/youtube-bg/still-entry.tsx` — entry isolado p/ `remotion still` (não toca no `Root.tsx`).
 - `scripts/gen-youtube-bg.mjs` — gera os 6 PNGs.
@@ -193,7 +193,7 @@ placa) vive só em `frontend/.../youtubeChrome.tsx` e **nunca é rasterizado par
 - **[Variante A] `backend/projetos/_palco_cache/<hash>.png`** — cache por layout (já gitignored por `backend/projetos/*`).
 
 ### Alterados
-- `frontend/src/features/editor/fase2/youtubeLayout.ts` — contrato `fundo` + `placa`, defaults, normalize.
+- `frontend/src/shared/palco/youtubeLayout.ts` — contrato `fundo` + `placa`, defaults, normalize.
 - `frontend/src/features/editor/fase2/CenasRemotionPreview.tsx` — render do fundo + chrome + molduras + placa no `SharedVideoLayout`.
 - `frontend/src/features/editor/fase2/YoutubeLayoutPanel.tsx` — seletor de fundo + inputs da placa + fix de foco.
 - `backend/app/domain/ffmpeg_commands.py` — fundo PNG no grade (loop+split) + fallback + `_resolve_shared_bg_png`. **[Variante A]** `_resolve_shared_fg_png` (palco por hash), `fg_input` no filtergraph (palco POR CIMA + base preta), `_shared_foreground_png_chain`/`_shared_black_base_chain`.

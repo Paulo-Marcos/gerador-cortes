@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { SceneTimeline } from '../SceneTimeline';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { CenaRemotion, SegmentoDetectado } from '@/types/models';
-import type { YoutubeLayout } from '../youtubeLayout';
+import type { YoutubeLayout } from '@/shared/palco/youtubeLayout';
 
 const layout: YoutubeLayout = {
   modo_padrao: 'full',

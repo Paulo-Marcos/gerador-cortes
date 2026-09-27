@@ -9,7 +9,7 @@ import {
   useLayoutPresets,
   useSaveLayoutPreset,
   useUpdateLayoutPreset,
-} from '@/features/editor/fase2/useLayoutPresets';
+} from '@/shared/palco/useLayoutPresets';
 import type { PalcoShortPreset } from '@/types/presets';
 import { DefinirPalcoModal } from './DefinirPalcoModal';
 import { mudancaDoPalco, palcoDoShort } from './aplicarPalco';

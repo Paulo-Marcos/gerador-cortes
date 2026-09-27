@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ShortcutBinding } from '@/features/editor/shortcuts';
+import type { ShortcutBinding } from '@/shared/atalhos/shortcuts';
 import {
   assertNoShortcutConflicts,
   clearKeybindingsOverlay,
@@ -18,7 +18,7 @@ import {
   type KeyOverride,
   type ShortcutId,
   type ShortcutScreen,
-} from '@/features/editor/shortcutsRegistry';
+} from '@/shared/atalhos/shortcutsRegistry';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 
 const TELAS: Array<{ id: ShortcutScreen | 'todas'; rotulo: string }> = [

@@ -12,7 +12,7 @@ import type {
 import { hmsParaSeg, segParaMmSs } from '../timeUtils';
 import { metaCena } from './sceneTypes';
 import { SceneTypeIcon, sceneTypeStyle } from './SceneTypeIcon';
-import type { YoutubeLayout, YoutubeLayoutMode, YoutubeLayoutRegion } from './youtubeLayout';
+import type { YoutubeLayout, YoutubeLayoutMode, YoutubeLayoutRegion } from '@/shared/palco/youtubeLayout';
 
 // ─────────────────────────────────────────────────────────────
 // SceneTimeline — replica `design_reference/src/v3_pos.jsx >
