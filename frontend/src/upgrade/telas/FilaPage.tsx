@@ -20,7 +20,7 @@ import { useDefinirChrome } from '../UpgradeChrome';
 //
 // O botão único dizia "Tirar da fila" e chamava `removeJob`, que só
 // esconde: o render continuava rodando no servidor, gastando GPU, e
-// nunca mais reaparecia. `cancelJob` (que chama `api.cancelarJob`) já
+// nunca mais reaparecia. `cancelJob` (que chama `filaGlobalApi.cancelarJob`) já
 // existia no contexto e não era usado por ninguém aqui.
 //
 // E "Limpar a lista" dispensava até os jobs rodando — como o cartão do

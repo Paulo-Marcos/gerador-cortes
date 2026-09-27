@@ -1,44 +1,10 @@
-import type {
-  FilaGlobal,
-  WaveformPeaksResponse,
-} from '@/types/models';
+import type { WaveformPeaksResponse } from '@/types/models';
 import { API_BASE, VIDEOS_BASE, wsUrl } from '@/lib/apiBase';
 
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const isFormData = init?.body instanceof FormData;
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`${res.status} ${res.statusText}${text ? ` — ${text}` : ''}`);
-  }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
-}
-
-export const api = {
-  // I-023: filtro padrão de render vive só em Ajustes (PUT /settings).
-  // O antigo PATCH /export/projeto/{id}/filtro-padrao foi removido — não
-  // existia "filtro por projeto" coerente com a fonte única definida em
-  // AppSettings.filtro_global_padrao.
-
-  filaGlobal: () => request<FilaGlobal>('/export/fila-global'),
-
-  /** D-426: interrompe um job da fila global sem derrubar a aplicação. */
-  cancelarJob: (jobId: string) =>
-    request<{ job_id: string; cancelado: boolean; jobs_worker_avisados: number }>(
-      '/export/fila-global/cancelar',
-      { method: 'POST', body: JSON.stringify({ job_id: jobId }) },
-    ),
-
-  // ─── Cortes (editor) ───────────────────────────────────────────────
-};
+// D-722: os clientes da API saíram daqui para as features (e a fila global para
+// shared/), sobre o cliente gerado. O que fica são as URLs que a tela monta para
+// <video>, <img>, <audio> e WebSocket, e a leitura dos picos da waveform por uma
+// URL já montada — nada disso passa pelo cliente HTTP.
 
 export { VIDEOS_BASE };
 

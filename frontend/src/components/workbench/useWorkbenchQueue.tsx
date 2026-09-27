@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { api } from '@/lib/api';
+import { filaGlobalApi } from '@/shared/filaGlobal/api';
 import { rotuloCurtoProjeto } from './workbenchRoutes';
 
 // ─────────────────────────────────────────────────────────────
@@ -507,7 +507,7 @@ export function WorkbenchQueueProvider({ children }: { children: ReactNode }) {
   const filaGlobal = useQuery({
     queryKey: ['workbench', 'fila-global'],
     // O contrato estendido (`jobs`) só é consumido aqui — daí o cast local.
-    queryFn: async () => (await api.filaGlobal()) as unknown as { jobs?: JobRemoto[] },
+    queryFn: async () => (await filaGlobalApi.filaGlobal()) as unknown as { jobs?: JobRemoto[] },
     refetchInterval: temAtivo ? POLL_ATIVO_MS : POLL_OCIOSO_MS,
   });
 
@@ -578,7 +578,7 @@ export function WorkbenchQueueProvider({ children }: { children: ReactNode }) {
           job.id === id ? { ...job, estado: 'cancelado', etapa: 'Cancelando…' } : job,
         ),
       }));
-      await api.cancelarJob(id);
+      await filaGlobalApi.cancelarJob(id);
       await filaGlobal.refetch();
     },
     [filaGlobal],

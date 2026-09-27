@@ -268,24 +268,6 @@ export type StatusExportCorte = Schema<'StatusExportCorte'>;
  *  telas o importam deste arquivo. Sem metadado ainda, `id` vem nulo. */
 export type MetadadoCorte = Schema<'MetadadoDoCorteResponse'>;
 
-export interface FilaGlobal {
-  pos_producao: {
-    total: number;
-    processando: number;
-    aguardando: number;
-    concluidos: number;
-    erros: number;
-    ativo: boolean;
-  };
-  upload_youtube: {
-    total: number;
-    processando: number;
-    concluidos: number;
-    erros: number;
-    ativo: boolean;
-  };
-}
-
 export type DestinoPublicacao = 'youtube' | 'tiktok';
 
 export type LogLevel = 'disabled' | 'info' | 'debug';
