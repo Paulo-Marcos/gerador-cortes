@@ -1,7 +1,7 @@
 // E-022: camada de I/O (react-query) da Área de Análises. Mantém as abas
 // "burras" — os componentes só consomem estes hooks, sem tocar em fetch direto.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { projetosApi } from '@/features/projetos/api';
 import {
   analisesApi,
   type LevantamentoDuracao,
@@ -22,7 +22,7 @@ const telemetriaKey = (projetoId: string | null) => ['analises', 'telemetria', p
 export function useProjetosAnalises() {
   return useQuery<Projeto[]>({
     queryKey: PROJETOS_KEY,
-    queryFn: api.listarProjetos,
+    queryFn: projetosApi.listarProjetos,
     staleTime: 30_000,
   });
 }

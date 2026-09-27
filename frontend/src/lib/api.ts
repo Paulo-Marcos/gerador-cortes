@@ -7,17 +7,12 @@ import type {
   CenaRemotion,
   CenasRemotionPayload,
   Corte,
-  CriarProjetoRequest,
   FilaGlobal,
-  FontePreset,
   ImportarAnaliseRequest,
-  LimparArquivosResponse,
   MetadadoCorte,
   MetadadoPatch,
   PipelineStatusResponse,
   PromptManualResponse,
-  Projeto,
-  ReiniciarFalhadosResponse,
   RemotionStudioUrlResponse,
   StatusBrutoResponse,
   WaveformPeaksResponse,
@@ -57,59 +52,9 @@ export interface GerarBrutoOpcoes {
 }
 
 export const api = {
-  listarProjetos: () => request<Projeto[]>('/projetos'),
-
-  criarProjeto: (body: CriarProjetoRequest) =>
-    request<Projeto>('/projetos', { method: 'POST', body: JSON.stringify(body) }),
-
-  removerProjeto: (id: string) =>
-    request<{ message: string }>(`/projetos/${id}`, { method: 'DELETE' }),
-
-  // D-527: traz de volta o video de uma live ja limpa, preservando o resto.
-  // NAO confundir com `reiniciarDownload`, que zera transcricao, titulo e
-  // duracao — os cortes apontam para tempos daquela transcricao.
-  rebaixarVideoProjeto: (id: string) =>
-    request<{ message: string; projeto_id: string }>(`/projetos/${id}/rebaixar-video`, {
-      method: 'POST',
-    }),
-
-  // Sem corpo: o default do backend preserva o bruto dos Fires com shorts pendentes.
-  limparArquivosProjeto: (id: string) =>
-    request<LimparArquivosResponse>(`/projetos/${id}/limpar-arquivos`, { method: 'POST' }),
-
-  reiniciarDownload: (id: string) =>
-    request<{ message: string }>(`/projetos/${id}/reiniciar-download`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  reiniciarDownloadsFalhados: () =>
-    request<ReiniciarFalhadosResponse>('/projetos/reiniciar-downloads-falhados', {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  obterProjeto: (id: string) => request<Projeto>(`/projetos/${id}`),
-
   /** I-034: audit trail da última análise IA (justificativa por corte + descartados). */
   obterAuditoriaAnalise: (id: string) =>
     request<AuditoriaAnaliseResponse>(`/projetos/${id}/auditoria-analise`),
-
-  /** PATCH config visual de render do projeto. */
-  atualizarRenderConfig: (
-    id: string,
-    body: {
-      sombra_nivel_padrao?: 'nenhuma' | 'leve' | 'media' | 'forte';
-      layout_card_padrao?: 'horizontal' | 'vertical';
-      layout_youtube_padrao?: string;
-      global_update?: boolean;
-      fonte_preset?: FontePreset;
-    },
-  ) =>
-    request<Projeto>(`/projetos/${id}/render-config`, {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
 
   /** D-746: a pasta da LIVE (a do corte é `abrirPastaCorte`). */
   abrirPastaProjeto: (projetoId: string) =>

@@ -16,7 +16,8 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { corteKey, useAtualizarCorte } from '@/hooks/useEditor';
 import { useToast } from '@/components/ui/toaster';
 import type { AppSettings, Corte, Projeto } from '@/types/models';
-import { api, rawVideoRedirectUrl } from '@/lib/api';
+import { rawVideoRedirectUrl } from '@/lib/api';
+import { projetosApi } from '@/features/projetos/api';
 import { segParaMmSs } from '../timeUtils';
 import { PosicionamentoModal, type PosicionamentoModalResult } from './PosicionamentoModal';
 import {
@@ -173,7 +174,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
     // escopo da aplicacao).
     const { data: projeto } = useQuery<Projeto>({
       queryKey: ['projeto', projetoId],
-      queryFn: () => api.obterProjeto(projetoId),
+      queryFn: () => projetosApi.obterProjeto(projetoId),
       staleTime: 30_000,
     });
     const { data: appSettings } = useQuery<AppSettings>({
@@ -212,7 +213,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
 
     const definirPadraoGlobalMutation = useMutation({
       mutationFn: (layoutJson: string) =>
-        api.atualizarRenderConfig(projetoId, {
+        projetosApi.atualizarRenderConfig(projetoId, {
           layout_youtube_padrao: layoutJson,
           global_update: true,
         }),
@@ -233,7 +234,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
 
     const definirPadraoProjetoMutation = useMutation({
       mutationFn: (layoutJson: string) =>
-        api.atualizarRenderConfig(projetoId, {
+        projetosApi.atualizarRenderConfig(projetoId, {
           layout_youtube_padrao: layoutJson,
           global_update: false,
         }),

@@ -2,6 +2,7 @@ import type { ProviderIA } from '@/lib/providerIa';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, progressoWsUrl } from '@/lib/api';
+import { projetosApi } from '@/features/projetos/api';
 import { useToast } from '@/components/ui/toaster';
 import type { AnalisarIntervaloRequest, ImportarAnaliseRequest, ProgressoUpdate } from '@/types/models';
 import {
@@ -18,7 +19,7 @@ export const exportStatusKey = (id: string) => ['projeto', id, 'export-status'] 
 export function useProjeto(id: string | undefined) {
   return useQuery({
     queryKey: projetoKey(id ?? ''),
-    queryFn: () => api.obterProjeto(id!),
+    queryFn: () => projetosApi.obterProjeto(id!),
     enabled: !!id,
     staleTime: 5_000,
   });

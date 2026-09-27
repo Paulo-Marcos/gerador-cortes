@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import type { CenaRemotion, Corte, FontePreset, Projeto } from '@/types/models';
 import type { PlayerHandle } from '../fase1/PlayerPanel';
-import { api } from '@/lib/api';
+import { projetosApi } from '@/features/projetos/api';
 import { cn } from '@/lib/utils';
 import { calcularDuracaoLiquida } from '../timeUtils';
 import { useAtualizarCorte, corteKey } from '@/hooks/useEditor';
@@ -139,7 +139,7 @@ export function EditorFase2({
   // refresca esta query e o player re-renderiza com a versão/sombra atualizadas.
   const { data: projeto } = useQuery<Projeto>({
     queryKey: ['projeto', corte.projeto_id],
-    queryFn: () => api.obterProjeto(corte.projeto_id),
+    queryFn: () => projetosApi.obterProjeto(corte.projeto_id),
     staleTime: 30_000,
   });
   const { data: appSettings } = useQuery({
@@ -164,7 +164,7 @@ export function EditorFase2({
 
   const fontePresetMutation = useMutation({
     mutationFn: (fonte_preset: FontePreset) =>
-      api.atualizarRenderConfig(corte.projeto_id, { fonte_preset }),
+      projetosApi.atualizarRenderConfig(corte.projeto_id, { fonte_preset }),
     onMutate: async (fonte_preset) => {
       await queryClient.cancelQueries({ queryKey: ['projeto', corte.projeto_id] });
       const previous = queryClient.getQueryData<Projeto>(['projeto', corte.projeto_id]);

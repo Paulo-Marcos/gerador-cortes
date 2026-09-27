@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import type { CriarProjetoRequest, Projeto, StatusProjeto } from '@/types/models';
+import { projetosApi, type CriarProjetoRequest } from '@/features/projetos/api';
+import type { Projeto, StatusProjeto } from '@/types/models';
 
 const PROJETOS_KEY = ['projetos'] as const;
 
@@ -19,7 +19,7 @@ function temProjetoAtivo(projetos: Projeto[] | undefined): boolean {
 export function useProjetos() {
   return useQuery({
     queryKey: PROJETOS_KEY,
-    queryFn: api.listarProjetos,
+    queryFn: projetosApi.listarProjetos,
     refetchInterval: (query) => (temProjetoAtivo(query.state.data) ? POLL_ATIVO_MS : POLL_IDLE_MS),
     staleTime: 5_000,
   });
@@ -28,7 +28,7 @@ export function useProjetos() {
 export function useCriarProjeto() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: CriarProjetoRequest) => api.criarProjeto(body),
+    mutationFn: (body: CriarProjetoRequest) => projetosApi.criarProjeto(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: PROJETOS_KEY }),
   });
 }
@@ -36,7 +36,7 @@ export function useCriarProjeto() {
 export function useRemoverProjeto() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.removerProjeto(id),
+    mutationFn: (id: string) => projetosApi.removerProjeto(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: PROJETOS_KEY }),
   });
 }
@@ -46,7 +46,7 @@ export function useLimparArquivos() {
   return useMutation({
     // O backend preserva sozinho o bruto dos Fires com shorts pendentes; a tela
     // não pergunta mais nada, só manda limpar.
-    mutationFn: ({ id }: LimparArquivosArgs) => api.limparArquivosProjeto(id),
+    mutationFn: ({ id }: LimparArquivosArgs) => projetosApi.limparArquivosProjeto(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: PROJETOS_KEY }),
   });
 }
@@ -56,7 +56,7 @@ export function useRebaixarVideo() {
   return useMutation({
     // D-527: a volta da limpeza. O download roda em background; o card se
     // atualiza pelo polling da lista, como o resto do workspace.
-    mutationFn: (id: string) => api.rebaixarVideoProjeto(id),
+    mutationFn: (id: string) => projetosApi.rebaixarVideoProjeto(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: PROJETOS_KEY }),
   });
 }
@@ -68,7 +68,7 @@ export interface LimparArquivosArgs {
 export function useReiniciarFalhados() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.reiniciarDownloadsFalhados(),
+    mutationFn: () => projetosApi.reiniciarDownloadsFalhados(),
     onSuccess: () => qc.invalidateQueries({ queryKey: PROJETOS_KEY }),
   });
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { projetosApi } from '@/features/projetos/api';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { Projeto } from '@/types/models';
 
@@ -44,7 +44,7 @@ function useRenderConfig(projetoId: string) {
   const qc = useQueryClient();
   const { data: projeto } = useQuery<Projeto>({
     queryKey: ['projeto', projetoId],
-    queryFn: () => api.obterProjeto(projetoId),
+    queryFn: () => projetosApi.obterProjeto(projetoId),
     staleTime: 30_000,
   });
 
@@ -61,7 +61,7 @@ function useRenderConfig(projetoId: string) {
   }, [projeto, projetoSombra, projetoLayout]);
 
   const mutate = useMutation({
-    mutationFn: (body: RenderConfigPatch) => api.atualizarRenderConfig(projetoId, body),
+    mutationFn: (body: RenderConfigPatch) => projetosApi.atualizarRenderConfig(projetoId, body),
     onMutate: async (body) => {
       await qc.cancelQueries({ queryKey: ['projeto', projetoId] });
       const previous = qc.getQueryData<Projeto>(['projeto', projetoId]);

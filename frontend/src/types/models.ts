@@ -42,40 +42,9 @@ export interface AuditoriaAnaliseResponse {
 
 export type FontePreset = 'atual' | 'moderna' | 'cientifica' | 'minimalista' | 'tecnica';
 
-export interface Projeto {
-  id: string;
-  youtube_url: string;
-  titulo_live: string;
-  canal_origem: string;
-  duracao_segundos: number;
-  data_live: string; // YYYYMMDD
-  status: StatusProjeto;
-  progresso_download: number;
-  arquivo_video_path: string;
-  arquivos_limpos: boolean;
-  rebaixando_video?: boolean;
-  criado_em: string;
-  ultima_analise_em: string | null;
-  /** Renderer das cenas Remotion deste projeto: "v1" (estável) ou "v2" (nova identidade). */
-  versao_renderer: 'v1' | 'v2';
-  /** Sombra padrão para cenas v2 com sombra_nivel='auto'. */
-  sombra_nivel_padrao: 'nenhuma' | 'leve' | 'media' | 'forte';
-  layout_card_padrao: 'horizontal' | 'vertical';
-  layout_youtube_padrao: string | null;
-  fonte_preset: FontePreset;
-  /** F-052: pontuação herdada do ranking de lives. 0 quando não veio do ranking. */
-  pontuacao_ranking: number;
-  total_cortes: number;
-  total_publicados: number;
-  total_aprovados: number;
-  total_com_raw: number;
-  total_com_meta: number;
-  total_video_pronto: number;
-  total_publicos: number;
-  proxima_publicacao: string;
-  /** Fires com bruto em disco que ainda aguardam finalizacao ou rejeicao. */
-  fires_pendentes: number;
-}
+/** O projeto (a live) — o tipo do contrato (D-722), apelido aqui porque as
+ *  telas o importam deste arquivo. */
+export type Projeto = Schema<'ProjetoResponse'>;
 
 // F-054: status de um segmento detectado automaticamente.
 export type StatusSegmentoDetectado =
@@ -431,28 +400,6 @@ export interface AnalisarIntervaloRequest {
 }
 
 export type DestinoPublicacao = 'youtube' | 'tiktok';
-
-export interface CriarProjetoRequest {
-  youtube_url: string;
-  canal_origem?: string;
-}
-
-export interface ReiniciarFalhadosResponse {
-  message: string;
-  total: number;
-  ids: string[];
-}
-
-export interface LimparArquivosResponse {
-  message: string;
-  liberado_mb: number;
-  /** D-456: disco que ficou para tras de proposito (brutos de cortes Fire). */
-  retido_mb?: number;
-  removidos: string[];
-  preservados?: string[];
-  pulados?: string[];
-  erros?: string[];
-}
 
 export type LogLevel = 'disabled' | 'info' | 'debug';
 
