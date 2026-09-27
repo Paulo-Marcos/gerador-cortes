@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { cabecalhosDa, motivoDoErro } from '../shortsApi';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { motivoDoErro } from '../shortsApi';
 
 // D-529: o 422 ao subir a arte da capa do TikTok.
 //
@@ -10,38 +10,49 @@ import { cabecalhosDa, motivoDoErro } from '../shortsApi';
 //   {"detail":[{"type":"missing","loc":["body","arquivo"],...}]}
 //
 // O erro aponta para o backend e a causa esta no cliente — por isso vale um
-// teste, e nao so a correcao.
+// teste, e nao so a correcao. D-722: o helper saiu (as chamadas vão pelo
+// cliente gerado), e a regra passou a ser conferida nas chamadas de verdade.
 
-describe('cabecalhosDa', () => {
-  it('NAO declara content-type quando o corpo e FormData', () => {
-    const cabecalhos = cabecalhosDa({ body: new FormData() }) as Record<string, string>;
+let pedidos: Request[] = [];
 
-    expect(cabecalhos['Content-Type']).toBeUndefined();
+beforeEach(() => {
+  pedidos = [];
+  vi.resetModules();
+  vi.stubEnv('VITE_API_URL', 'http://api.test/api');
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (pedido: Request) => {
+      pedidos.push(pedido);
+      return new Response('{}', { status: 200 });
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+const shorts = async () => (await import('../shortsApi')).shortsApi;
+const arquivo = () => new File(['png'], 'arte.png', { type: 'image/png' });
+
+describe('o arquivo sobe como multipart, nunca como JSON', () => {
+  it.each([
+    ['a arte da capa do short', async () => (await shorts()).subirArteDaCapa('s1', arquivo())],
+    ['a arte da capa do TikTok', async () => (await shorts()).subirArteCapaTiktok('c1', arquivo())],
+    ['a capa pronta do TikTok', async () => (await shorts()).subirCapaTiktok('c1', arquivo())],
+  ])('%s', async (_nome, subir) => {
+    await subir();
+
+    expect(pedidos[0].headers.get('content-type')).toMatch(/^multipart\/form-data; boundary=/);
+    expect(((await pedidos[0].formData()).get('arquivo') as File).name).toBe('arte.png');
   });
 
-  it('declara json no corpo comum', () => {
-    const cabecalhos = cabecalhosDa({ body: '{"a":1}' }) as Record<string, string>;
+  it('o corpo comum continua JSON', async () => {
+    await (await shorts()).indicarParaShorts('c1', true);
 
-    expect(cabecalhos['Content-Type']).toBe('application/json');
-  });
-
-  it('requisicao sem corpo continua json', () => {
-    const cabecalhos = cabecalhosDa({ method: 'POST' }) as Record<string, string>;
-
-    expect(cabecalhos['Content-Type']).toBe('application/json');
-  });
-
-  it('sem init nenhum tambem', () => {
-    expect((cabecalhosDa() as Record<string, string>)['Content-Type']).toBe('application/json');
-  });
-
-  it('cabecalho explicito do chamador vence', () => {
-    const cabecalhos = cabecalhosDa({
-      body: new FormData(),
-      headers: { 'X-Teste': 'sim' },
-    }) as Record<string, string>;
-
-    expect(cabecalhos['X-Teste']).toBe('sim');
+    expect(pedidos[0].headers.get('content-type')).toBe('application/json');
+    expect(await pedidos[0].json()).toEqual({ indicado: true });
   });
 });
 

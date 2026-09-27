@@ -385,7 +385,7 @@ function LinhaDoCorte({
               Pronto para conferir: {assistido.data.resumo}.
             </>
           )}
-          {assistido.data.avisos.map((aviso) => (
+          {(assistido.data.avisos ?? []).map((aviso) => (
             <span key={aviso} className="text-[var(--wb-warn-ink)]">
               {aviso}
             </span>

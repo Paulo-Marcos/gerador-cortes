@@ -44,7 +44,8 @@ function short(over: Partial<ShortSugerido> = {}): ShortSugerido {
     fundo_palco: '',
     cenas: [],
     ...over,
-  };
+    // Só o que a regra lê; o tipo do contrato (D-722) pede o short inteiro.
+  } as ShortSugerido;
 }
 
 const TODOS: StatusShort[] = ['sugerido', 'aprovado', 'rejeitado', 'renderizado'];

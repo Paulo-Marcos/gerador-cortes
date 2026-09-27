@@ -32,7 +32,9 @@ function fire(over: Partial<FireComBruto> = {}): FireComBruto {
     tem_video_final: false,
     shorts: { total: 0, sugerido: 0, aprovado: 0, rejeitado: 0, renderizado: 0 },
     ...over,
-  };
+    // Sem `tem_edicao`/`finalizado_em` de propósito: o filtro cobre o backend
+    // antigo que não os mandava (D-722: o tipo do contrato os exige).
+  } as FireComBruto;
 }
 
 describe('temEdicao', () => {
