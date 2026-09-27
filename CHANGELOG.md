@@ -10,12 +10,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-27
+
+233 commits since 0.3.0. This is a **structural release**: almost nothing new on
+screen, a lot less that can break underneath. The backend's layers now point one
+way, the frontend talks to the API through a generated client, the render
+contract is written once, and the three UI shells became one.
+
+### Added
+- **AI through an API key.** Claude can now run through the Anthropic Messages
+  API with the operator's own key, for installations without Claude Code or
+  Antigravity. It is opt-in (`IA_CLAUDE_TRANSPORTE=api` in `backend/.env`); the
+  default stays on the subscription CLI. Same queue, JSON contract and telemetry
+  as the other transports (D-720).
+- **Versioned contracts for the render worker.** The scene has one definition —
+  the renderer's zod schema — shared by the preview, the render and the backend
+  (as a generated JSON Schema checked by tests on both sides). Worker jobs carry
+  a protocol version; a job the worker cannot run is answered with a clear error
+  instead of failing inside the process (D-725).
+
+### Changed
+- **One UI shell.** The legacy and Workbench shells are gone; the new shell,
+  already in production since 0.3.0, is the only one (ADR-0017, D-726 to D-728).
+- **The frontend uses a client generated from the OpenAPI contract**, with typed
+  requests and responses; hand-written fetches and duplicated types are gone
+  (D-721 to D-723).
+- **React 19.** The frontend moved to the renderer's React version (19.2.3), so
+  scene previews run on the same React as the render (D-734).
+- **Smaller downloads per update.** React, data access and Remotion ship in their
+  own bundle chunks, so an app update only replaces the app's code; Remotion
+  loads only on the post-production page (D-735).
+- **The editor's player tick is cheaper.** Panels that do not depend on the
+  playhead no longer re-render four times a second: React render per tick fell
+  by about 45% in an A/B measurement (D-740).
+- **Backend layers are enforced.** Domain rules live in `domain/`, external
+  clients in `infrastructure/`, and import-linter contracts fail the build on a
+  wrong-way import; the app has no import cycles left (E-051 to E-055).
+- **Domain errors become HTTP responses by meaning**, through one global handler
+  (D-697).
+- **One schema-evolution path.** The `projetos.db` schema evolves only at boot:
+  new columns come from the models, transformations from versioned migrations
+  (D-701).
+
 ### Fixed
+- **Cut layouts keep inheriting from the project and global defaults.** Saving a
+  cut's layout wrote every default into it, so later changes to the project's
+  stage stopped reaching that cut. Only the keys that changed are saved now
+  (RN-10, D-741).
+- **Downloads can no longer hang forever.** yt-dlp now stops after ten minutes
+  without any output (the download itself may take hours) and the project shows
+  the error; subtitles and live chat got overall time limits (D-753).
+- **Live credit goes to the channel the live came from**, not to the publishing
+  channel, when no source channel was typed (D-714).
 - **Assisted upload no longer drives the other platform's Chrome.** When the
   TikTok and Instagram profiles hash to the same debugging port, a batch opening
   both at once could hand one robot the other's window. Chrome launches are now
   serialized, and a profile whose window had moved to the next port finds it
   again instead of trying to open a second Chrome over it (D-761).
+- **FFmpeg helper honors its advertised timeout** (D-750), and the backend test
+  suite no longer touches the developer's real databases (D-760).
+
+### Removed
+- The legacy and Workbench shells and their feature flags (`VITE_UPGRADE_SHELL`,
+  `VITE_WORKBENCH`); rollback is now git (D-728).
+- The `SettingsModal`, unreachable since the legacy sidebar left; preferences
+  live in Settings → Application (D-724).
 
 ## [0.3.0] - 2026-09-22
 
@@ -183,7 +242,8 @@ First public release.
   chunks (see `docs/interno/historico-arquitetura-2026-05.md` §8).
 - Single-flight audio proxy with hybrid seek (I-039).
 
-[Unreleased]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Paulo-Marcos/gerador-cortes/releases/tag/v0.1.0
