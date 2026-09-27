@@ -1,4 +1,4 @@
-import { dicaDoPip, textoDaProxima, type EstadoDoPip, type Tira } from '../tiraDoCorte';
+import { dicaDoPip, textoDaProxima, type EstadoDoPip, type Tira } from './tiraDoCorte';
 
 // D-746: quatro estados, quatro formas — o âmbar com filete cheio é o
 // "parou aqui"; o fantasma é o que ainda vem.

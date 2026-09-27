@@ -29,7 +29,7 @@ import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
 import { useEditHistory } from './useEditHistory';
 import { calcularDuracaoLiquida, hmsParaSeg, segParaHms, segParaMmSs } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
-import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
+import { BancadaChrome } from '@/features/editor/BancadaChrome';
 import { AvaliacaoCorteModal } from './avaliacao/AvaliacaoCorteModal';
 import {
   applyDesvioChange,

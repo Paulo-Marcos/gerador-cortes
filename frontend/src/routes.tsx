@@ -66,11 +66,11 @@ const UpgradeShellDemoPage = lazy(() => import('@/upgrade/UpgradeShellDemoPage')
 // vez, na montagem do router — a mesma leitura de flag que o AppShell faz
 // para escolher a casca. Assim tela e casca nunca ficam em versoes
 // diferentes dentro da mesma sessao.
-const BibliotecaPage = lazy(() => import('@/upgrade/telas/BibliotecaPage'));
-const WorkspaceProjetoPage = lazy(() => import('@/upgrade/telas/WorkspaceProjetoPage'));
+const BibliotecaPage = lazy(() => import('@/features/projetos/BibliotecaPage'));
+const WorkspaceProjetoPage = lazy(() => import('@/features/projeto-detalhe/WorkspaceProjetoPage'));
 // D-599: telas que o design pede e o app ainda nao tinha.
-const FilaPage = lazy(() => import('@/upgrade/telas/FilaPage'));
-const Erro404Page = lazy(() => import('@/upgrade/telas/Erro404Page'));
+const FilaPage = lazy(() => import('@/features/fila/FilaPage'));
+const Erro404Page = lazy(() => import('@/upgrade/Erro404Page'));
 
 export const router = createBrowserRouter([
   {

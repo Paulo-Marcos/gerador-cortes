@@ -7,10 +7,10 @@ import { resolveThumbUrl } from '@/lib/api';
 import { metadadosApi } from '@/features/metadata/api/metadados';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { Icon } from '../Icon';
-import { MolduraDeVideo } from '../MolduraDeVideo';
-import { montarTira } from '../tiraDoCorte';
-import { TiraDoCorteAp } from './TiraDoCorteAp';
+import { Icon } from '@/upgrade/Icon';
+import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
+import { montarTira } from '@/upgrade/tiraDoCorte';
+import { TiraDoCorteAp } from '@/upgrade/TiraDoCorteAp';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 // ─────────────────────────────────────────────────────────────────

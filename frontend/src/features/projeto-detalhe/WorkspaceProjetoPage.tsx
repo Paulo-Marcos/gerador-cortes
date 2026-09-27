@@ -36,10 +36,10 @@ import { cortesApi } from '@/features/editor/api/cortes';
 import { formatarDuracao } from '@/lib/utils';
 import type { Corte, DestinoPublicacao, StatusExportCorte } from '@/types/models';
 import { useCanais } from '@/features/channels/useChannels';
-import { Icon, type IconName } from '../Icon';
-import { MolduraDeVideo } from '../MolduraDeVideo';
-import { ModalFields, ModalText, UpgradeModal } from '../UpgradeModal';
-import { useDefinirChrome } from '../UpgradeChrome';
+import { Icon, type IconName } from '@/upgrade/Icon';
+import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
+import { ModalFields, ModalText, UpgradeModal } from '@/upgrade/UpgradeModal';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { CorteLinhaAp } from './CorteLinhaAp';
 
 // ─────────────────────────────────────────────────────────────────

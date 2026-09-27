@@ -7,9 +7,9 @@ import { estadoDoProjeto } from '@/features/projetos/statusMaps';
 import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/features/projetos/useProjetos';
 import { formatarDataLive, formatarDuracao, thumbnailUrl } from '@/lib/utils';
 import type { Projeto } from '@/types/models';
-import { Icon, type IconName } from '../Icon';
-import { MolduraDeVideo } from '../MolduraDeVideo';
-import { SeloDeEstado, TOM_DA_ETAPA, TOM_DA_LIMPEZA, TOM_DO_PROJETO } from '../SeloDeEstado';
+import { Icon, type IconName } from '@/upgrade/Icon';
+import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
+import { SeloDeEstado, TOM_DA_ETAPA, TOM_DA_LIMPEZA, TOM_DO_PROJETO } from '@/upgrade/SeloDeEstado';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · O card da Biblioteca na linguagem nova.

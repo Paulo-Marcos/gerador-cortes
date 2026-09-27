@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Icon } from '../Icon';
-import { useDefinirChrome } from '../UpgradeChrome';
+import { Icon } from './Icon';
+import { useDefinirChrome } from './UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A página que não existe.

@@ -6,11 +6,11 @@ import { useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { thumbnailUrl } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { COR_DO_SELO, TOM_DO_CORTE } from '../SeloDeEstado';
-import { montarTira } from '../tiraDoCorte';
-import { MetadadosDoCorteModal, statusMinimo } from './MetadadosDoCorteModal';
-import type { IconName } from '../Icon';
-import { useDefinirChrome, type ChromeBarra, type ItemDeLista } from '../UpgradeChrome';
+import { COR_DO_SELO, TOM_DO_CORTE } from '@/upgrade/SeloDeEstado';
+import { montarTira } from '@/upgrade/tiraDoCorte';
+import { MetadadosDoCorteModal, statusMinimo } from '@/features/metadata/MetadadosDoCorteModal';
+import type { IconName } from '@/upgrade/Icon';
+import { useDefinirChrome, type ChromeBarra, type ItemDeLista } from '@/upgrade/UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 Etapa 4 · a Bancada conversa com a casca.

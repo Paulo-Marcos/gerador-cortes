@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
-import { TiraMini } from './telas/TiraDoCorteAp';
+import { TiraMini } from './TiraDoCorteAp';
 import type { ChromeLista, ItemDeLista } from './UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────

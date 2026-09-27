@@ -14,8 +14,8 @@ import {
 } from '@/features/projetos/bibliotecaFiltros';
 import { estadoDoProjeto } from '@/features/projetos/statusMaps';
 import { temFalhados, useProjetos, useReiniciarFalhados } from '@/features/projetos/useProjetos';
-import { Icon } from '../Icon';
-import { useDefinirChrome } from '../UpgradeChrome';
+import { Icon } from '@/upgrade/Icon';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { ProjetoCardAp } from './ProjetoCardAp';
 
 // ─────────────────────────────────────────────────────────────────

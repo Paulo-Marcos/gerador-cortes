@@ -3,8 +3,8 @@ import {
   type JobEstado,
   type QueueJob,
 } from '@/shared/filaGlobal/useWorkbenchQueue';
-import { Icon, type IconName } from '../Icon';
-import { useDefinirChrome } from '../UpgradeChrome';
+import { Icon, type IconName } from '@/upgrade/Icon';
+import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A Fila global como tela.

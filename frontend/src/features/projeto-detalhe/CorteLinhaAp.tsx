@@ -6,12 +6,12 @@ import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { formatarDuracaoHMS } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { Icon, type IconName } from '../Icon';
-import { MolduraDeVideo } from '../MolduraDeVideo';
-import { SeloDeEstado, TOM_DO_CORTE } from '../SeloDeEstado';
-import { montarTira } from '../tiraDoCorte';
-import { MetadadosDoCorteModal } from './MetadadosDoCorteModal';
-import { TiraDoCorteAp } from './TiraDoCorteAp';
+import { Icon, type IconName } from '@/upgrade/Icon';
+import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
+import { SeloDeEstado, TOM_DO_CORTE } from '@/upgrade/SeloDeEstado';
+import { montarTira } from '@/upgrade/tiraDoCorte';
+import { MetadadosDoCorteModal } from '@/features/metadata/MetadadosDoCorteModal';
+import { TiraDoCorteAp } from '@/upgrade/TiraDoCorteAp';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A linha do corte no Workspace.
