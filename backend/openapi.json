@@ -2350,6 +2350,24 @@
         "title": "EscolherPresetRequest",
         "type": "object"
       },
+      "FaixaSeguraCapa": {
+        "properties": {
+          "h": {
+            "title": "H",
+            "type": "integer"
+          },
+          "y": {
+            "title": "Y",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "y",
+          "h"
+        ],
+        "title": "FaixaSeguraCapa",
+        "type": "object"
+      },
       "FalanteInfo": {
         "description": "Um falante da diarização: o nome batizado e se é o canal (D-286).",
         "properties": {
@@ -2762,6 +2780,52 @@
           }
         },
         "title": "JuntarCortesRequest",
+        "type": "object"
+      },
+      "LayoutCapaTiktokResponse": {
+        "description": "A geometria resolvida da capa do TikTok (D-532): o editor não recalcula.",
+        "properties": {
+          "atual": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RetanguloCapa"
+            },
+            "title": "Atual",
+            "type": "object"
+          },
+          "componentes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Componentes",
+            "type": "array"
+          },
+          "faixa_segura": {
+            "$ref": "#/components/schemas/FaixaSeguraCapa"
+          },
+          "lado_minimo": {
+            "title": "Lado Minimo",
+            "type": "integer"
+          },
+          "padrao": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RetanguloCapa"
+            },
+            "title": "Padrao",
+            "type": "object"
+          },
+          "quadro": {
+            "$ref": "#/components/schemas/QuadroCapa"
+          }
+        },
+        "required": [
+          "quadro",
+          "faixa_segura",
+          "componentes",
+          "lado_minimo",
+          "padrao",
+          "atual"
+        ],
+        "title": "LayoutCapaTiktokResponse",
         "type": "object"
       },
       "LevantamentoDuracao": {
@@ -4192,6 +4256,24 @@
         "title": "PromptUtilitarioResponse",
         "type": "object"
       },
+      "QuadroCapa": {
+        "properties": {
+          "altura": {
+            "title": "Altura",
+            "type": "integer"
+          },
+          "largura": {
+            "title": "Largura",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "largura",
+          "altura"
+        ],
+        "title": "QuadroCapa",
+        "type": "object"
+      },
       "RankingLivesResponse": {
         "description": "O TOP de candidatas. `janela_meses` só vem numa geração nova — a resposta\ndo cache de 24h não o traz, e a chave não vem.",
         "properties": {
@@ -4470,6 +4552,35 @@
           "medias_criterios"
         ],
         "title": "ResumoAvaliacoesThumbnail",
+        "type": "object"
+      },
+      "RetanguloCapa": {
+        "description": "Um componente da capa do TikTok, em pixels do quadro (inteiros: o domínio\npassa cada coordenada por `_inteiro`).",
+        "properties": {
+          "h": {
+            "title": "H",
+            "type": "integer"
+          },
+          "w": {
+            "title": "W",
+            "type": "integer"
+          },
+          "x": {
+            "title": "X",
+            "type": "integer"
+          },
+          "y": {
+            "title": "Y",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "RetanguloCapa",
         "type": "object"
       },
       "RetencaoArquivos": {
@@ -13517,7 +13628,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LayoutCapaTiktokResponse"
+                }
               }
             },
             "description": "Successful Response"

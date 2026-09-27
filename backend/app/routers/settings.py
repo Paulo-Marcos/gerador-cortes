@@ -1,4 +1,5 @@
 from app.domain.canal.mascote import nome_definido
+from app.routers.resposta_api import RespostaApi
 from app.services.app_settings import (
     AppSettings,
     AppSettingsService,
@@ -11,6 +12,37 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 router = APIRouter()
+
+
+class RetanguloCapa(RespostaApi):
+    """Um componente da capa do TikTok, em pixels do quadro (inteiros: o domínio
+    passa cada coordenada por `_inteiro`)."""
+
+    x: int
+    y: int
+    w: int
+    h: int
+
+
+class QuadroCapa(RespostaApi):
+    largura: int
+    altura: int
+
+
+class FaixaSeguraCapa(RespostaApi):
+    y: int
+    h: int
+
+
+class LayoutCapaTiktokResponse(RespostaApi):
+    """A geometria resolvida da capa do TikTok (D-532): o editor não recalcula."""
+
+    quadro: QuadroCapa
+    faixa_segura: FaixaSeguraCapa
+    componentes: list[str]
+    lado_minimo: int
+    padrao: dict[str, RetanguloCapa]
+    atual: dict[str, RetanguloCapa]
 
 
 class RenderSettingsModel(BaseModel):
@@ -88,7 +120,7 @@ def _to_response(app: AppSettings) -> AppSettingsResponse:
     )
 
 
-@router.get("/capa-tiktok/layout")
+@router.get("/capa-tiktok/layout", response_model=LayoutCapaTiktokResponse)
 def obter_layout_da_capa_tiktok():
     """Onde cada componente da capa do TikTok esta, e onde estaria no padrao.
 
