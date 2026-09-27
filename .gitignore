@@ -73,6 +73,8 @@ backend/projetos/*
 !.eslintrc.json
 !backend/**/*.json
 !frontend/**/*.json
+# D-725: os contratos gerados do renderer (cena, job) são versionados.
+!video-renderer/protocol/*.json
 !video-renderer/theme.config.json
 !.ai/*.json
 .ai/reports/

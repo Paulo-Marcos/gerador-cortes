@@ -17,12 +17,31 @@ module.exports = {
       { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
     ],
     '@typescript-eslint/no-explicit-any': 'warn',
+    // D-725: o renderer só entra pela porta pública. Chave própria (a do
+    // typescript-eslint) para não ser apagada pelos `no-restricted-imports`
+    // das pastas lá embaixo — no ESLint, override troca a regra inteira.
+    '@typescript-eslint/no-restricted-imports': [
+      'error',
+      {
+        patterns: [
+          {
+            group: ['@video-renderer/*', '!@video-renderer/public-api'],
+            message: 'Do renderer, só @video-renderer/public-api (D-725): o resto é interno dele.',
+          },
+        ],
+      },
+    ],
   },
   // D-663: fronteiras entre as pastas, verificadas por máquina. O lint roda com
   // `--max-warnings 0`, então a regra é `error`; a dívida que já existe está em
   // `excludedFiles`, arquivo por arquivo. Import NOVO na direção errada barra.
   // Apertar é tirar um arquivo da lista quando ele for corrigido.
   overrides: [
+    {
+      // Teste de peça interna do renderer entra direto nela: é o que ele testa.
+      files: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx'],
+      rules: { '@typescript-eslint/no-restricted-imports': 'off' },
+    },
     {
       // Componente compartilhado não depende de feature: a seta é feature -> componente.
       files: ['src/components/**'],

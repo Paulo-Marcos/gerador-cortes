@@ -802,30 +802,37 @@ def _converter_cena(cena: dict, inicio_seg: float) -> dict:
     return cena_convertida
 
 
+# D-725: o que a cena gravada leva da resposta da IA, tal como veio. O contrato
+# de quem RENDERIZA é o do renderer (video-renderer/protocol/cena.schema.json);
+# tests/test_contrato_cena_d725.py confere que tudo aqui cabe nele.
+CAMPOS_SIMPLES_DA_CENA = (
+    "texto",
+    "subtexto",
+    "icone",
+    "numero",
+    "cor",
+    "contexto",
+    "nome_curto",
+    "rotuloA",
+    "rotuloB",
+    "autor",
+    "obra",
+    "ano",
+    "fonte",
+    "textura",
+    "ancoraLegendas",
+    "motivo",
+    "retrato_url",
+    "layout_card",
+    "modelo_cena",
+    "sombra_nivel",
+)
+CAMPOS_DO_MASCOTE_NA_CENA = ("mascotMood", "mascotPosicao", "mascotTamanho")
+LISTAS_DA_CENA = ("marcos", "itens")
+
+
 def _copiar_campos_simples(cena: dict, cena_convertida: dict) -> None:
-    campos_simples = [
-        "texto",
-        "subtexto",
-        "icone",
-        "numero",
-        "cor",
-        "contexto",
-        "nome_curto",
-        "rotuloA",
-        "rotuloB",
-        "autor",
-        "obra",
-        "ano",
-        "fonte",
-        "textura",
-        "ancoraLegendas",
-        "motivo",
-        "retrato_url",
-        "layout_card",
-        "modelo_cena",
-        "sombra_nivel",
-    ]
-    for campo in campos_simples:
+    for campo in CAMPOS_SIMPLES_DA_CENA:
         if cena.get(campo) is not None:
             cena_convertida[campo] = cena[campo]
 
@@ -835,7 +842,7 @@ def _copiar_mascote(cena: dict, cena_convertida: dict) -> None:
     # sapoTamanho; a escrita passa a usar as chaves novas mascot*. O coalescer
     # traduz o nome legado para o novo antes de salvar.
     cena_mascote = coalescer_chaves_mascote(cena)
-    for campo in ("mascotMood", "mascotPosicao", "mascotTamanho"):
+    for campo in CAMPOS_DO_MASCOTE_NA_CENA:
         if cena_mascote.get(campo) is not None:
             cena_convertida[campo] = cena_mascote[campo]
 
@@ -854,7 +861,7 @@ def _aplicar_padroes_de_layout(cena_convertida: dict) -> None:
 
 
 def _copiar_listas(cena: dict, cena_convertida: dict) -> None:
-    for campo in ["marcos", "itens"]:
+    for campo in LISTAS_DA_CENA:
         valor = cena.get(campo)
         if isinstance(valor, list) and valor:
             cena_convertida[campo] = valor

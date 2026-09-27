@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "tela_cheia",
+        "barra_inferior",
+        "card_informacao",
+        "destaque_numerico",
+        "comparativo_contraponto",
+        "comparativo_enfase",
+        "enfase",
+        "pergunta_transicao",
+        "chamada_final",
+        "ficha_biografica",
+        "marco_historico",
+        "citacao_autor",
+        "linha_tempo",
+        "definicao_termo",
+        "fonte_referencia",
+        "lista_enumerada",
+        "mostrar_imagem"
+      ]
+    },
+    "inicio": {
+      "type": "number"
+    },
+    "fim": {
+      "type": "number"
+    },
+    "inicio_seg": {
+      "type": "number"
+    },
+    "fim_seg": {
+      "type": "number"
+    },
+    "texto": {
+      "type": "string"
+    },
+    "nome_curto": {
+      "type": "string"
+    },
+    "subtexto": {
+      "type": "string"
+    },
+    "icone": {
+      "type": "string"
+    },
+    "numero": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "contexto": {
+      "type": "string"
+    },
+    "rotuloA": {
+      "type": "string"
+    },
+    "rotuloB": {
+      "type": "string"
+    },
+    "cor": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "mascotMood": {
+      "type": "string",
+      "enum": [
+        "pensativo",
+        "serio",
+        "animado",
+        "investigador",
+        "apresentador",
+        "apontando",
+        "professor",
+        "narrador",
+        "surpreso",
+        "cetico",
+        "duvida",
+        "lendo",
+        "filosofando",
+        "balanca",
+        "concordando",
+        "enfatico",
+        "convidativo",
+        "none"
+      ]
+    },
+    "mascotPosicao": {
+      "type": "string",
+      "enum": [
+        "tl",
+        "tr",
+        "bl",
+        "br",
+        "center"
+      ]
+    },
+    "mascotTamanho": {
+      "type": "string",
+      "enum": [
+        "mini",
+        "pequeno",
+        "medio",
+        "grande",
+        "extraGrande"
+      ]
+    },
+    "autor": {
+      "type": "string"
+    },
+    "obra": {
+      "type": "string"
+    },
+    "ano": {
+      "type": "string"
+    },
+    "fonte": {
+      "type": "string"
+    },
+    "retrato_url": {
+      "type": "string"
+    },
+    "marcos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "detalhe": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "titulo"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "itens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string"
+          },
+          "detalhe": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "titulo"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "textura": {
+      "type": "string",
+      "enum": [
+        "nenhuma",
+        "papel",
+        "particulas"
+      ]
+    },
+    "sombra_nivel": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "nenhuma",
+        "leve",
+        "media",
+        "forte"
+      ]
+    },
+    "layout_card": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "horizontal",
+        "vertical"
+      ]
+    },
+    "modelo_cena": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "padrao",
+        "card"
+      ]
+    },
+    "layout_youtube_modo": {
+      "type": "string",
+      "enum": [
+        "full",
+        "compartilhada"
+      ]
+    },
+    "layout_card_zone": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "w": {
+          "type": "number"
+        },
+        "h": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "tipo",
+    "inicio",
+    "fim"
+  ],
+  "additionalProperties": false
+}

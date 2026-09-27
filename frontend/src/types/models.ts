@@ -139,57 +139,12 @@ export interface AdicionarDesvioRequest {
   motivo: string;
 }
 
-export type CenaTipo =
-  | 'tela_cheia'
-  | 'barra_inferior'
-  | 'card_informacao'
-  | 'destaque_numerico'
-  | 'comparativo_contraponto'
-  | 'comparativo_enfase'
-  | 'enfase'
-  | 'pergunta_transicao'
-  | 'chamada_final'
-  | 'ficha_biografica'
-  | 'marco_historico'
-  | 'citacao_autor'
-  | 'linha_tempo'
-  | 'definicao_termo'
-  | 'fonte_referencia'
-  | 'lista_enumerada'
-  | 'mostrar_imagem';
-
-export interface CenaRemotion {
-  tipo: CenaTipo;
-  inicio: number;
-  fim: number;
-  texto?: string;
-  /** Nome curto para exibicao em ficha_biografica quando texto for longo. */
-  nome_curto?: string;
-  subtexto?: string;
-  icone?: string;
-  numero?: number;
-  contexto?: string;
-  rotuloA?: string;
-  rotuloB?: string;
-  mascotMood?: string;
-  mascotPosicao?: string;
-  mascotTamanho?: string;
-  autor?: string;
-  obra?: string;
-  ano?: string;
-  fonte?: string;
-  marcos?: Array<{ data: string; titulo: string; detalhe?: string }>;
-  itens?: Array<{ titulo: string; detalhe?: string }>;
-  textura?: string;
-  url?: string;
-  cor?: string;
-  /** URL da foto do personagem em ficha_biografica (relativa ou absoluta). */
-  retrato_url?: string;
-  /** Nível de sombra/overlay da cena v2. `auto` = usa o sombra_nivel_padrao do projeto. */
-  sombra_nivel?: 'auto' | 'nenhuma' | 'leve' | 'media' | 'forte';
-  layout_card?: 'auto' | 'horizontal' | 'vertical';
-  modelo_cena?: 'auto' | 'padrao' | 'card';
-}
+// D-725: a cena tem UMA definição — o schema zod do renderer, que valida o que
+// o worker renderiza. A prévia desenha com as mesmas composições, então o tipo
+// que a tela manipula é o mesmo que o render aceita.
+export type { CenaRemotion } from '@video-renderer/public-api';
+import type { CenaRemotion } from '@video-renderer/public-api';
+export type CenaTipo = CenaRemotion['tipo'];
 
 // `type`, e não `interface`: o PATCH do corte recebe o roteiro como objeto
 // livre (Record<string, unknown>), e só um `type` cabe nele.

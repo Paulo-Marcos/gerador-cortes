@@ -1,17 +1,17 @@
 import { Fragment, type ComponentType, type ReactNode } from 'react';
 import { AbsoluteFill, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
-import { FrameOffsetContext } from '@video-renderer/frame-context';
 // V1 (renderCena de OverlayScene) está desativada — preview usa apenas V2.
-import { renderCenaV2 } from '@video-renderer/cenas-v2';
+// Só pela porta pública do renderer (D-725).
 import {
   CardLayoutContext,
   FontPresetProvider as RendererFontPresetProvider,
+  FrameOffsetContext,
+  SharedCardZoneFrame,
   SombraContext,
-  resolverNivel,
   SOMBRA_TOKENS,
-} from '@video-renderer/cenas-v2/_shared';
-import { SharedCardZoneFrame } from '@video-renderer/shared-card-zone';
-import type { CenaRemotion as CenaShared } from '@video-renderer/schema';
+  renderCenaV2,
+  resolverNivel,
+} from '@video-renderer/public-api';
 import type { CenaRemotion, FontePreset } from '@/types/models';
 import { aplicarLayoutCardPadrao, type LayoutCardPadrao } from './cardPreviewContracts';
 import {
@@ -148,10 +148,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
               layout_card_zone: zonaCard,
             }
           : cena;
-        const cenaRender = aplicarLayoutCardPadrao(
-          cenaComContexto,
-          layoutDaCena,
-        ) as unknown as CenaShared;
+        const cenaRender = aplicarLayoutCardPadrao(cenaComContexto, layoutDaCena);
         return (
           <Fragment key={index}>
             <SharedCardZoneFrame cena={cenaRender}>{renderCenaV2(cenaRender)}</SharedCardZoneFrame>

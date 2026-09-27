@@ -134,7 +134,10 @@ const cenaBaseSchema = z.object({
   nome_curto: z.string().optional(),
   subtexto: z.string().optional(),
   icone: z.string().optional(),
-  numero: z.number().optional(),
+  // D-429: o número de destaque chega como veio da IA — "45.7", "1 em 1 milhão",
+  // "15/09/1850" — e é o render que o decompõe (analisarNumeroDestaque). Em
+  // PROD, 177 das 5.009 cenas guardam texto aqui (medido na D-725).
+  numero: z.union([z.number(), z.string()]).optional(),
   contexto: z.string().optional(),
   rotuloA: z.string().optional(),
   rotuloB: z.string().optional(),
