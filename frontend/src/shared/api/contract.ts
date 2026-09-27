@@ -4399,6 +4399,22 @@ export interface components {
             /** Inicio Hms */
             inicio_hms: string;
         };
+        /** AnaliseDoIntervaloResponse */
+        AnaliseDoIntervaloResponse: {
+            /** Message */
+            message: string;
+            /** Novos Cortes */
+            novos_cortes: number;
+            /** Primeiro Numero */
+            primeiro_numero: number;
+        };
+        /** AnaliseImportadaResponse */
+        AnaliseImportadaResponse: {
+            /** Message */
+            message: string;
+            /** Total Cortes */
+            total_cortes: number;
+        };
         /**
          * AnalisePadroesAgente
          * @description A leitura do agente, já normalizada pelo domínio (`normalizar_analise`).
@@ -4410,6 +4426,24 @@ export interface components {
             proposta_ajuste_skill: string;
             /** Resumo */
             resumo: string;
+        };
+        /** AnaliseViaIaResponse */
+        AnaliseViaIaResponse: {
+            /** Message */
+            message: string;
+            /** Projeto Id */
+            projeto_id: string;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "claude" | "gemini";
+            /** Pulados Existentes */
+            pulados_existentes: number;
+            /** Total Cortes */
+            total_cortes: number;
+            /** Total Descartados */
+            total_descartados: number;
         };
         /**
          * ApontamentoResponse
@@ -4648,6 +4682,52 @@ export interface components {
             segmentos?: components["schemas"]["SegmentoRequest"][] | null;
             /** Status */
             status?: string | null;
+        };
+        /**
+         * AuditoriaAnaliseResponse
+         * @description I-034: a trilha da última análise — os cortes com a justificativa e os
+         *     blocos que a IA decidiu não cortar.
+         */
+        AuditoriaAnaliseResponse: {
+            /** Cortes */
+            cortes: components["schemas"]["AuditoriaCorteItem"][];
+            /** Descartados */
+            descartados: components["schemas"]["AuditoriaDescartado"][];
+            /** Duracao Media Min */
+            duracao_media_min: number;
+            /** Projeto Id */
+            projeto_id: string;
+            /** Total Cortes */
+            total_cortes: number;
+            /** Ultima Analise Em */
+            ultima_analise_em: string | null;
+        };
+        /** AuditoriaCorteItem */
+        AuditoriaCorteItem: {
+            /** Duracao Min */
+            duracao_min: number;
+            /** Fim Hms */
+            fim_hms: string;
+            /** Id */
+            id: string;
+            /** Inicio Hms */
+            inicio_hms: string;
+            /** Justificativa */
+            justificativa: string;
+            /** Numero */
+            numero: number;
+            status: components["schemas"]["StatusCorte"];
+            /** Tema Central */
+            tema_central: string;
+            /** Titulo Proposto */
+            titulo_proposto: string;
+        };
+        /** AuditoriaDescartado */
+        AuditoriaDescartado: {
+            /** Motivo */
+            motivo: string;
+            /** Tema */
+            tema: string;
         };
         /** AvaliacaoBrutoFeitaResponse */
         AvaliacaoBrutoFeitaResponse: {
@@ -4931,6 +5011,20 @@ export interface components {
              * @default true
              */
             sugerir_etiqueta: boolean;
+        };
+        /** CenasGeradasResponse */
+        CenasGeradasResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Message */
+            message: string;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "claude" | "gemini";
+            /** Total Cenas */
+            total_cenas: number;
         };
         /**
          * ConfirmarPublicacaoRequest
@@ -5335,6 +5429,20 @@ export interface components {
         GanchoPadraoRequest: {
             /** Preset Id */
             preset_id?: string | null;
+        };
+        /** GeracaoConcluidaResponse */
+        GeracaoConcluidaResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Message */
+            message: string;
+            /** Ok */
+            ok: boolean;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "claude" | "gemini";
         };
         /**
          * GerarBrutoRequest
@@ -5954,6 +6062,22 @@ export interface components {
              */
             secundaria: string;
         };
+        /** ParteDoPrompt */
+        ParteDoPrompt: {
+            /** Parte */
+            parte: number;
+            /** Texto */
+            texto: string;
+            /** Total Partes */
+            total_partes: number;
+        };
+        /** PastaAbertaResponse */
+        PastaAbertaResponse: {
+            /** Dir Path */
+            dir_path: string;
+            /** Status */
+            status: string;
+        };
         /** ProcessarMultiversionRequest */
         ProcessarMultiversionRequest: {
             /** Filtros */
@@ -6087,6 +6211,17 @@ export interface components {
             youtube_url: string;
         };
         /**
+         * PromptAnaliseResponse
+         * @description O prompt da análise manual, em partes, e o formato que a resposta colada
+         *     deve seguir.
+         */
+        PromptAnaliseResponse: {
+            /** Formato Esperado */
+            formato_esperado: Record<string, unknown>;
+            /** Prompts */
+            prompts: components["schemas"]["ParteDoPrompt"][];
+        };
+        /**
          * PromptUtilitarioResponse
          * @description Um prompt utilitário do canal para a UI: metadados + valor + default (reset).
          */
@@ -6125,6 +6260,15 @@ export interface components {
             janela_meses?: number | null;
             /** Lives */
             lives: components["schemas"]["LiveCandidataResponse"][];
+        };
+        /** ReanaliseResponse */
+        ReanaliseResponse: {
+            /** Cortes Removidos */
+            cortes_removidos: number;
+            /** Message */
+            message: string;
+            /** Projeto Id */
+            projeto_id: string;
         };
         /** RegistrarAvaliacaoRequest */
         RegistrarAvaliacaoRequest: {
@@ -6402,6 +6546,11 @@ export interface components {
             abrir_pasta: boolean;
         };
         /**
+         * StatusCorte
+         * @enum {string}
+         */
+        StatusCorte: "proposto" | "aprovado" | "rejeitado" | "processado";
+        /**
          * StatusCorteBrutoResponse
          * @description A tarefa de gerar o bruto do corte (`nao_iniciado` quando nunca rodou).
          */
@@ -6604,6 +6753,29 @@ export interface components {
             rotulo: string;
             /** Slug */
             slug: string;
+        };
+        /** TranscricaoRefeitaResponse */
+        TranscricaoRefeitaResponse: {
+            /** Message */
+            message: string;
+            /** Total Cortes Sincronizados */
+            total_cortes_sincronizados: number;
+        };
+        /** TrechosGeradosResponse */
+        TrechosGeradosResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Message */
+            message: string;
+            /** Novos */
+            novos: number;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "claude" | "gemini";
+            /** Total Desvios */
+            total_desvios: number;
         };
         /**
          * UltimaAvaliacaoBrutoResponse
@@ -7451,7 +7623,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CenasGeradasResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7484,7 +7656,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["GeracaoConcluidaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7517,7 +7689,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["GeracaoConcluidaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7550,7 +7722,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TrechosGeradosResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7584,7 +7756,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AnaliseViaIaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7934,7 +8106,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PastaAbertaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11026,7 +11198,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PastaAbertaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11061,7 +11233,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AnaliseDoIntervaloResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11096,7 +11268,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptAnaliseResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11131,7 +11303,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AnaliseImportadaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11162,7 +11334,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptAnaliseResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11193,7 +11365,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AuditoriaAnaliseResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11259,7 +11431,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ReanaliseResponse"];
                 };
             };
             /** @description Validation Error */
@@ -11321,7 +11493,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TranscricaoRefeitaResponse"];
                 };
             };
             /** @description Validation Error */

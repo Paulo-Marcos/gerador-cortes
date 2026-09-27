@@ -6,6 +6,7 @@ from typing import Literal
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.core.logging import operational_error, operational_info
 from app.database import get_db
+from app.domain.projeto.analise_aditiva import normalizar_descartados
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, Projeto, StatusProjeto
 from app.routers import analises_schemas, projetos_schemas
@@ -264,7 +265,7 @@ async def atualizar_transcricao_projeto(
     }
 
 
-@router.post("/{projeto_id}/abrir-pasta")
+@router.post("/{projeto_id}/abrir-pasta", response_model=projetos_schemas.PastaAbertaResponse)
 async def abrir_pasta_do_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """Abre a pasta da live no explorador do sistema (D-746).
 
@@ -291,7 +292,9 @@ async def obter_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)):
     return projeto
 
 
-@router.get("/{projeto_id}/auditoria-analise")
+@router.get(
+    "/{projeto_id}/auditoria-analise", response_model=projetos_schemas.AuditoriaAnaliseResponse
+)
 async def obter_auditoria_analise(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """I-034: retorna o audit trail da última análise IA do projeto.
 
@@ -334,9 +337,7 @@ async def obter_auditoria_analise(projeto_id: str, db: AsyncSession = Depends(ge
         )
 
     try:
-        descartados = _json.loads(projeto.descartados_analise or "[]")
-        if not isinstance(descartados, list):
-            descartados = []
+        descartados = normalizar_descartados(_json.loads(projeto.descartados_analise or "[]"))
     except (ValueError, TypeError):
         descartados = []
 
@@ -571,7 +572,7 @@ async def limpar_arquivos_projeto(
     return resultado
 
 
-@router.get("/{projeto_id}/analise/prompt")
+@router.get("/{projeto_id}/analise/prompt", response_model=projetos_schemas.PromptAnaliseResponse)
 async def exportar_prompt_analise(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """Retorna o prompt de análise de transcrição sem chamar a IA."""
     projeto = await db.get(Projeto, projeto_id)
@@ -644,7 +645,9 @@ class ImportarAnaliseRequest(BaseModel):
     cortes: list
 
 
-@router.post("/{projeto_id}/analise/importar")
+@router.post(
+    "/{projeto_id}/analise/importar", response_model=projetos_schemas.AnaliseImportadaResponse
+)
 async def importar_analise(
     projeto_id: str, body: ImportarAnaliseRequest, db: AsyncSession = Depends(get_db)
 ):
@@ -659,7 +662,7 @@ async def importar_analise(
         raise erro_interno(e) from e
 
 
-@router.post("/{projeto_id}/reanalisar")
+@router.post("/{projeto_id}/reanalisar", response_model=projetos_schemas.ReanaliseResponse)
 async def reanalisar_projeto(projeto_id: str):
     """Apaga todos os cortes existentes e reinicia a análise da transcrição do zero.
 
@@ -678,7 +681,9 @@ class AnalisarIntervaloRequest(BaseModel):
     fim_hms: str  # ex: "04:00:00"
 
 
-@router.post("/{projeto_id}/analisar-intervalo")
+@router.post(
+    "/{projeto_id}/analisar-intervalo", response_model=projetos_schemas.AnaliseDoIntervaloResponse
+)
 async def analisar_intervalo(
     projeto_id: str,
     body: AnalisarIntervaloRequest,
@@ -717,7 +722,9 @@ async def analisar_intervalo(
         raise HTTPException(status_code=500, detail=f"Erro na análise do intervalo: {e}") from e
 
 
-@router.get("/{projeto_id}/analise-intervalo/prompt")
+@router.get(
+    "/{projeto_id}/analise-intervalo/prompt", response_model=projetos_schemas.PromptAnaliseResponse
+)
 async def exportar_prompt_analise_intervalo(
     projeto_id: str,
     inicio_hms: str,
@@ -743,7 +750,9 @@ async def exportar_prompt_analise_intervalo(
         raise erro_interno(e) from e
 
 
-@router.post("/{projeto_id}/refazer-transcricao")
+@router.post(
+    "/{projeto_id}/refazer-transcricao", response_model=projetos_schemas.TranscricaoRefeitaResponse
+)
 async def refazer_transcricao(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """
     Baixa novamente a transcrição (agora via json3) e sincroniza os cortes existentes.

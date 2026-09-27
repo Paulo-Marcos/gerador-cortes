@@ -38,7 +38,39 @@ async def _soltar_a_transacao(db: AsyncSession) -> None:
     await db.rollback()
 
 
-@router.post("/projeto/{projeto_id}/analisar")
+# O que cada geração devolve (D-722): a mensagem, o alvo, o provider e o
+# resultado do serviço, espalhado na mesma resposta.
+
+
+class AnaliseViaIaResponse(RespostaApi):
+    message: str
+    projeto_id: str
+    provider: ProviderIA
+    total_cortes: int
+    pulados_existentes: int
+    total_descartados: int
+
+
+class GeracaoDoCorteResponse(RespostaApi):
+    message: str
+    corte_id: str
+    provider: ProviderIA
+
+
+class TrechosGeradosResponse(GeracaoDoCorteResponse):
+    total_desvios: int
+    novos: int
+
+
+class CenasGeradasResponse(GeracaoDoCorteResponse):
+    total_cenas: int
+
+
+class GeracaoConcluidaResponse(GeracaoDoCorteResponse):
+    ok: bool
+
+
+@router.post("/projeto/{projeto_id}/analisar", response_model=AnaliseViaIaResponse)
 async def analisar_via_claude(
     projeto_id: str,
     usar_diarizacao: bool = True,
@@ -84,7 +116,7 @@ async def analisar_via_claude(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/corte/{corte_id}/gerar-trechos")
+@router.post("/corte/{corte_id}/gerar-trechos", response_model=TrechosGeradosResponse)
 async def gerar_trechos_via_claude(
     corte_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
 ):
@@ -113,7 +145,7 @@ async def gerar_trechos_via_claude(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/corte/{corte_id}/gerar-cenas")
+@router.post("/corte/{corte_id}/gerar-cenas", response_model=CenasGeradasResponse)
 async def gerar_cenas_via_claude(
     corte_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
 ):
@@ -137,7 +169,7 @@ async def gerar_cenas_via_claude(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/corte/{corte_id}/gerar-metadados")
+@router.post("/corte/{corte_id}/gerar-metadados", response_model=GeracaoConcluidaResponse)
 async def gerar_metadados_via_claude(
     corte_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
 ):
@@ -161,7 +193,7 @@ async def gerar_metadados_via_claude(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/corte/{corte_id}/gerar-prompt-thumbnail")
+@router.post("/corte/{corte_id}/gerar-prompt-thumbnail", response_model=GeracaoConcluidaResponse)
 async def gerar_prompt_thumbnail_via_claude(
     corte_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
 ):

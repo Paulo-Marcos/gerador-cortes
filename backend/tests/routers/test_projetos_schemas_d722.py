@@ -35,3 +35,29 @@ def test_a_limpeza_passa_sem_chave_inventada_nem_numero_mudado(resultado):
 
     assert resposta.json() == resultado
     assert '"liberado_mb":0,' in resposta.text or resultado["liberado_mb"] != 0
+
+
+def test_o_prompt_da_analise_passa_inteiro():
+    from app.routers.projetos_schemas import PromptAnaliseResponse
+
+    prompt = {
+        "prompts": [{"parte": 1, "total_partes": 1, "texto": "Analise..."}],
+        "formato_esperado": {"cortes": [{"titulo_proposto": "...", "inicio_seg": 0}]},
+    }
+
+    assert PromptAnaliseResponse.model_validate(prompt).model_dump() == prompt
+
+
+def test_a_analise_via_ia_espalha_o_resultado_do_servico_na_resposta():
+    from app.routers.claude_ia import AnaliseViaIaResponse
+
+    resposta = {
+        "message": "Análise via IA concluída",
+        "projeto_id": "p1",
+        "provider": "gemini",
+        "total_cortes": 4,
+        "pulados_existentes": 1,
+        "total_descartados": 2,
+    }
+
+    assert AnaliseViaIaResponse.model_validate(resposta).model_dump() == resposta

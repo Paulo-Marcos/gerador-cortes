@@ -67,6 +67,47 @@
         "title": "AnalisarIntervaloRequest",
         "type": "object"
       },
+      "AnaliseDoIntervaloResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "novos_cortes": {
+            "title": "Novos Cortes",
+            "type": "integer"
+          },
+          "primeiro_numero": {
+            "title": "Primeiro Numero",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message",
+          "novos_cortes",
+          "primeiro_numero"
+        ],
+        "title": "AnaliseDoIntervaloResponse",
+        "type": "object"
+      },
+      "AnaliseImportadaResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "total_cortes": {
+            "title": "Total Cortes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message",
+          "total_cortes"
+        ],
+        "title": "AnaliseImportadaResponse",
+        "type": "object"
+      },
       "AnalisePadroesAgente": {
         "description": "A leitura do agente, já normalizada pelo domínio (`normalizar_analise`).",
         "properties": {
@@ -92,6 +133,48 @@
           "proposta_ajuste_skill"
         ],
         "title": "AnalisePadroesAgente",
+        "type": "object"
+      },
+      "AnaliseViaIaResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "provider": {
+            "enum": [
+              "claude",
+              "gemini"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "pulados_existentes": {
+            "title": "Pulados Existentes",
+            "type": "integer"
+          },
+          "total_cortes": {
+            "title": "Total Cortes",
+            "type": "integer"
+          },
+          "total_descartados": {
+            "title": "Total Descartados",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message",
+          "projeto_id",
+          "provider",
+          "total_cortes",
+          "pulados_existentes",
+          "total_descartados"
+        ],
+        "title": "AnaliseViaIaResponse",
         "type": "object"
       },
       "ApontamentoResponse": {
@@ -958,6 +1041,129 @@
         "title": "AtualizarShortRequest",
         "type": "object"
       },
+      "AuditoriaAnaliseResponse": {
+        "description": "I-034: a trilha da última análise — os cortes com a justificativa e os\nblocos que a IA decidiu não cortar.",
+        "properties": {
+          "cortes": {
+            "items": {
+              "$ref": "#/components/schemas/AuditoriaCorteItem"
+            },
+            "title": "Cortes",
+            "type": "array"
+          },
+          "descartados": {
+            "items": {
+              "$ref": "#/components/schemas/AuditoriaDescartado"
+            },
+            "title": "Descartados",
+            "type": "array"
+          },
+          "duracao_media_min": {
+            "title": "Duracao Media Min",
+            "type": "number"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "total_cortes": {
+            "title": "Total Cortes",
+            "type": "integer"
+          },
+          "ultima_analise_em": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultima Analise Em"
+          }
+        },
+        "required": [
+          "projeto_id",
+          "ultima_analise_em",
+          "total_cortes",
+          "duracao_media_min",
+          "cortes",
+          "descartados"
+        ],
+        "title": "AuditoriaAnaliseResponse",
+        "type": "object"
+      },
+      "AuditoriaCorteItem": {
+        "properties": {
+          "duracao_min": {
+            "title": "Duracao Min",
+            "type": "number"
+          },
+          "fim_hms": {
+            "title": "Fim Hms",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "inicio_hms": {
+            "title": "Inicio Hms",
+            "type": "string"
+          },
+          "justificativa": {
+            "title": "Justificativa",
+            "type": "string"
+          },
+          "numero": {
+            "title": "Numero",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusCorte"
+          },
+          "tema_central": {
+            "title": "Tema Central",
+            "type": "string"
+          },
+          "titulo_proposto": {
+            "title": "Titulo Proposto",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "numero",
+          "titulo_proposto",
+          "tema_central",
+          "justificativa",
+          "inicio_hms",
+          "fim_hms",
+          "duracao_min",
+          "status"
+        ],
+        "title": "AuditoriaCorteItem",
+        "type": "object"
+      },
+      "AuditoriaDescartado": {
+        "properties": {
+          "motivo": {
+            "title": "Motivo",
+            "type": "string"
+          },
+          "tema": {
+            "title": "Tema",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tema",
+          "motivo"
+        ],
+        "title": "AuditoriaDescartado",
+        "type": "object"
+      },
       "AvaliacaoBrutoFeitaResponse": {
         "properties": {
           "avaliacao": {
@@ -1673,6 +1879,38 @@
           }
         },
         "title": "CapaTikTokRequest",
+        "type": "object"
+      },
+      "CenasGeradasResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "provider": {
+            "enum": [
+              "claude",
+              "gemini"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "total_cenas": {
+            "title": "Total Cenas",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message",
+          "corte_id",
+          "provider",
+          "total_cenas"
+        ],
+        "title": "CenasGeradasResponse",
         "type": "object"
       },
       "ConfirmarPublicacaoRequest": {
@@ -2551,6 +2789,38 @@
           }
         },
         "title": "GanchoPadraoRequest",
+        "type": "object"
+      },
+      "GeracaoConcluidaResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "provider": {
+            "enum": [
+              "claude",
+              "gemini"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "corte_id",
+          "provider",
+          "ok"
+        ],
+        "title": "GeracaoConcluidaResponse",
         "type": "object"
       },
       "GerarBrutoRequest": {
@@ -4137,6 +4407,47 @@
         "title": "PaletaModel",
         "type": "object"
       },
+      "ParteDoPrompt": {
+        "properties": {
+          "parte": {
+            "title": "Parte",
+            "type": "integer"
+          },
+          "texto": {
+            "title": "Texto",
+            "type": "string"
+          },
+          "total_partes": {
+            "title": "Total Partes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "parte",
+          "total_partes",
+          "texto"
+        ],
+        "title": "ParteDoPrompt",
+        "type": "object"
+      },
+      "PastaAbertaResponse": {
+        "properties": {
+          "dir_path": {
+            "title": "Dir Path",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "dir_path"
+        ],
+        "title": "PastaAbertaResponse",
+        "type": "object"
+      },
       "ProcessarMultiversionRequest": {
         "properties": {
           "filtros": {
@@ -4393,6 +4704,28 @@
         "title": "ProjetoResponse",
         "type": "object"
       },
+      "PromptAnaliseResponse": {
+        "description": "O prompt da análise manual, em partes, e o formato que a resposta colada\ndeve seguir.",
+        "properties": {
+          "formato_esperado": {
+            "title": "Formato Esperado",
+            "type": "object"
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/ParteDoPrompt"
+            },
+            "title": "Prompts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "prompts",
+          "formato_esperado"
+        ],
+        "title": "PromptAnaliseResponse",
+        "type": "object"
+      },
       "PromptUtilitarioResponse": {
         "description": "Um prompt utilitário do canal para a UI: metadados + valor + default (reset).",
         "properties": {
@@ -4489,6 +4822,29 @@
           "atualizado_em"
         ],
         "title": "RankingLivesResponse",
+        "type": "object"
+      },
+      "ReanaliseResponse": {
+        "properties": {
+          "cortes_removidos": {
+            "title": "Cortes Removidos",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "projeto_id",
+          "cortes_removidos"
+        ],
+        "title": "ReanaliseResponse",
         "type": "object"
       },
       "RegistrarAvaliacaoRequest": {
@@ -5119,6 +5475,16 @@
         },
         "title": "StagingRequest",
         "type": "object"
+      },
+      "StatusCorte": {
+        "enum": [
+          "proposto",
+          "aprovado",
+          "rejeitado",
+          "processado"
+        ],
+        "title": "StatusCorte",
+        "type": "string"
       },
       "StatusCorteBrutoResponse": {
         "description": "A tarefa de gerar o bruto do corte (`nao_iniciado` quando nunca rodou).",
@@ -5764,6 +6130,61 @@
           "rotulo"
         ],
         "title": "TipoApontamentoResponse",
+        "type": "object"
+      },
+      "TranscricaoRefeitaResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "total_cortes_sincronizados": {
+            "title": "Total Cortes Sincronizados",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message",
+          "total_cortes_sincronizados"
+        ],
+        "title": "TranscricaoRefeitaResponse",
+        "type": "object"
+      },
+      "TrechosGeradosResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "novos": {
+            "title": "Novos",
+            "type": "integer"
+          },
+          "provider": {
+            "enum": [
+              "claude",
+              "gemini"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "total_desvios": {
+            "title": "Total Desvios",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message",
+          "corte_id",
+          "provider",
+          "total_desvios",
+          "novos"
+        ],
+        "title": "TrechosGeradosResponse",
         "type": "object"
       },
       "UltimaAvaliacaoBrutoResponse": {
@@ -7402,7 +7823,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CenasGeradasResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7457,7 +7880,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GeracaoConcluidaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7512,7 +7937,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GeracaoConcluidaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7567,7 +7994,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TrechosGeradosResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7632,7 +8061,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AnaliseViaIaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8217,7 +8648,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PastaAbertaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12547,7 +12980,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PastaAbertaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12598,7 +13033,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AnaliseDoIntervaloResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12673,7 +13110,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptAnaliseResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12724,7 +13163,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AnaliseImportadaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12765,7 +13206,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptAnaliseResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12806,7 +13249,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AuditoriaAnaliseResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12906,7 +13351,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ReanaliseResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12990,7 +13437,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TranscricaoRefeitaResponse"
+                }
               }
             },
             "description": "Successful Response"

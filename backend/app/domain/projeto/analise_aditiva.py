@@ -31,3 +31,18 @@ def mesclar_descartados(existentes: list, novos: list) -> list:
         temas_vistos.add(tema_norm)
         mesclados.append(desc)
     return mesclados
+
+
+def normalizar_descartados(bruto) -> list[dict]:
+    """Os descartados como a auditoria os mostra: `tema` e `motivo`, em texto.
+
+    Eles vêm da resposta da IA sem conferência e ficam gravados assim; o que não
+    for objeto sai, e campo ausente ou nulo vira texto vazio. Normaliza na
+    leitura, sem reescrever o que está gravado (D-722)."""
+    if not isinstance(bruto, list):
+        return []
+    return [
+        {"tema": str(item.get("tema") or ""), "motivo": str(item.get("motivo") or "")}
+        for item in bruto
+        if isinstance(item, dict)
+    ]

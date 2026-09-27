@@ -5,6 +5,7 @@ from app.core.channel_paths import projetos_dir
 from app.database import get_db
 from app.domain.compartilhado.provider_ia import ProviderIA
 from app.models import Corte
+from app.routers import projetos_schemas
 from app.routers.cortes_helpers import (
     _corte_to_dict,
     _hms_to_seg,
@@ -668,7 +669,7 @@ async def sincronizar_pos_producao(corte_id: str):
     return await finalizacao_do_corte.sincronizar_pos_producao(corte_id)
 
 
-@router.post("/{corte_id}/abrir-pasta")
+@router.post("/{corte_id}/abrir-pasta", response_model=projetos_schemas.PastaAbertaResponse)
 async def abrir_pasta(corte_id: str):
     """Abre a pasta física do corte no explorador de arquivos do sistema (Windows/Mac/Linux)."""
     try:
