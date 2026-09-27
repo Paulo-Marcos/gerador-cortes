@@ -32,6 +32,7 @@ import { copyTextToClipboard } from '@/lib/clipboard';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
 import { resolveThumbUrl } from '@/lib/api';
+import { cortesApi } from '@/features/editor/api/cortes';
 import { metadadosApi, type MetadadoPatch } from './api/metadados';
 import { CapaTikTokSlot } from './CapaTikTokSlot';
 import { applyCoverEmojis, applyReadingTitlePrefix } from '@/lib/readingMetadata';
@@ -675,7 +676,11 @@ export function MetadataCard({
             </div>
 
             {/* F-058: influência manual do editor no prompt da thumbnail. */}
-            <ThumbnailHintsEditor corteId={cut.id} initialValue={cut.hints_thumbnail} />
+            <ThumbnailHintsEditor
+              corteId={cut.id}
+              initialValue={cut.hints_thumbnail}
+              salvar={(hints) => cortesApi.atualizarCorte(cut.id, { hints_thumbnail: hints })}
+            />
           </div>
 
           <aside className="grid content-start gap-2.5">
@@ -962,7 +967,11 @@ export function MetadataCard({
             </div>
 
             {/* F-058: influência manual do editor no prompt da thumbnail. */}
-            <ThumbnailHintsEditor corteId={cut.id} initialValue={cut.hints_thumbnail} />
+            <ThumbnailHintsEditor
+              corteId={cut.id}
+              initialValue={cut.hints_thumbnail}
+              salvar={(hints) => cortesApi.atualizarCorte(cut.id, { hints_thumbnail: hints })}
+            />
 
             {showDescription && (
               <textarea

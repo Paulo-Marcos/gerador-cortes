@@ -31,7 +31,8 @@ import {
 import { useAnaliseClaudeEmAndamento } from '@/hooks/useDiarizacao';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import type { ProviderIA } from '@/lib/providerIa';
-import { api, resolveThumbUrl } from '@/lib/api';
+import { resolveThumbUrl } from '@/lib/api';
+import { cortesApi } from '@/features/editor/api/cortes';
 import { formatarDuracao } from '@/lib/utils';
 import type { Corte, DestinoPublicacao, StatusExportCorte } from '@/types/models';
 import { useCanais } from '@/features/channels/useChannels';
@@ -242,8 +243,8 @@ export default function WorkspaceProjetoPage() {
     const resultados = await Promise.allSettled(
       elegiveis.map((c) =>
         acao === 'aprovar'
-          ? api.aprovarCorte(c.id)
-          : api.atualizarCorte(c.id, { status: 'proposto' }),
+          ? cortesApi.aprovarCorte(c.id)
+          : cortesApi.atualizarCorte(c.id, { status: 'proposto' }),
       ),
     );
     setEmLote(false);

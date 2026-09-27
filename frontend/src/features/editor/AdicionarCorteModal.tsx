@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
-import { api } from '@/lib/api';
+import { cortesApi } from '@/features/editor/api/cortes';
 import { corteKey, cortesProjetoKey } from '@/hooks/useEditor';
 import type { Corte } from '@/types/models';
 import { hmsParaSeg, segParaHms, validarHms } from './timeUtils';
@@ -71,7 +71,7 @@ export function AdicionarCorteModal({
 
     let corteCriado: Corte;
     try {
-      corteCriado = await api.criarCorteManual(projetoId, {
+      corteCriado = await cortesApi.criarCorteManual(projetoId, {
         inicio_hms: inicio,
         fim_hms: fim,
         titulo_proposto: titulo.trim() || null,

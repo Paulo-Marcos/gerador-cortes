@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { api, type GerarBrutoOpcoes } from '@/lib/api';
+import { cortesApi } from '@/features/editor/api/cortes';
 import { metadadosApi } from '@/features/metadata/api/metadados';
 import { geracaoIaApi } from '@/features/ia';
 import { exportStatusKey } from './useProjetoDetalhe';
@@ -79,7 +80,7 @@ export async function salvarRetratoDeUrl(nome: string, url: string): Promise<Ret
 export function useCortesProjeto(projetoId: string | undefined) {
   return useQuery({
     queryKey: cortesProjetoKey(projetoId ?? ''),
-    queryFn: () => api.listarCortes(projetoId!),
+    queryFn: () => cortesApi.listarCortes(projetoId!),
     enabled: !!projetoId,
     staleTime: 5_000,
   });
@@ -88,7 +89,7 @@ export function useCortesProjeto(projetoId: string | undefined) {
 export function useCorte(corteId: string | undefined) {
   return useQuery({
     queryKey: corteKey(corteId ?? ''),
-    queryFn: () => api.obterCorte(corteId!),
+    queryFn: () => cortesApi.obterCorte(corteId!),
     enabled: !!corteId,
     staleTime: 1_000,
   });
@@ -137,7 +138,7 @@ export function invalidaCorte(
 export function useAtualizarCorte(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Partial<Corte>) => api.atualizarCorte(corteId, patch),
+    mutationFn: (patch: Partial<Corte>) => cortesApi.atualizarCorte(corteId, patch),
     onSuccess: (data) => {
       qc.setQueryData(corteKey(corteId), data);
       if (projetoId) qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
@@ -150,7 +151,7 @@ export function useAtualizarCorte(corteId: string, projetoId?: string) {
 export function useReordenarCortes(projetoId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cortesIds: string[]) => api.reordenarCortes(projetoId, cortesIds),
+    mutationFn: (cortesIds: string[]) => cortesApi.reordenarCortes(projetoId, cortesIds),
     onMutate: async (cortesIds) => {
       await qc.cancelQueries({ queryKey: cortesProjetoKey(projetoId) });
       const anterior = qc.getQueryData<Corte[]>(cortesProjetoKey(projetoId));
@@ -203,7 +204,7 @@ export function useDividirCorte(corteId: string, projetoId?: string) {
   const { notify } = useToast();
   return useMutation({
     mutationFn: (body: { ponto_seg?: number; ponto_hms?: string }) =>
-      api.dividirCorte(corteId, body),
+      cortesApi.dividirCorte(corteId, body),
     onSuccess: (cortes) => {
       const [original] = cortes;
       if (original) qc.setQueryData(corteKey(original.id), original);
@@ -223,7 +224,7 @@ export function useJuntarCortes(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   const { notify } = useToast();
   return useMutation({
-    mutationFn: (body: { outro_corte_id?: string } = {}) => api.juntarCortes(corteId, body),
+    mutationFn: (body: { outro_corte_id?: string } = {}) => cortesApi.juntarCortes(corteId, body),
     onSuccess: (corte) => {
       qc.setQueryData(corteKey(corte.id), corte);
       invalidaCorte(qc, corteId, projetoId);
@@ -238,7 +239,7 @@ export function useJuntarCortes(corteId: string, projetoId?: string) {
 export function useAprovar(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.aprovarCorte(corteId),
+    mutationFn: () => cortesApi.aprovarCorte(corteId),
     onSuccess: () => invalidaCorte(qc, corteId, projetoId),
   });
 }
@@ -246,7 +247,7 @@ export function useAprovar(corteId: string, projetoId?: string) {
 export function useDeletarCorte(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.deletarCorte(corteId),
+    mutationFn: () => cortesApi.deletarCorte(corteId),
     onSuccess: () => invalidaCorte(qc, corteId, projetoId),
   });
 }
@@ -266,7 +267,7 @@ export function useToggleLeitura(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (corteAtual: Corte) =>
-      api.atualizarCorte(corteId, { is_leitura: !corteAtual.is_leitura }),
+      cortesApi.atualizarCorte(corteId, { is_leitura: !corteAtual.is_leitura }),
     onSuccess: (data) => {
       qc.setQueryData(corteKey(corteId), data);
       if (projetoId) qc.invalidateQueries({ queryKey: cortesProjetoKey(projetoId) });
@@ -374,7 +375,7 @@ export function usePipelineStatus(corteId: string | undefined, forcePolling = fa
 export function useSincronizarPosProducao(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.sincronizarPosProducao(corteId),
+    mutationFn: () => cortesApi.sincronizarPosProducao(corteId),
     onSuccess: () => invalidaCorte(qc, corteId, projetoId),
   });
 }
@@ -382,7 +383,7 @@ export function useSincronizarPosProducao(corteId: string, projetoId?: string) {
 export function useSincronizarTranscricao(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.sincronizarTranscricao(corteId),
+    mutationFn: () => cortesApi.sincronizarTranscricao(corteId),
     onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
   });
 }
@@ -390,7 +391,7 @@ export function useSincronizarTranscricao(corteId: string) {
 export function usePromptDesvios(corteId: string, enabled: boolean) {
   return useQuery({
     queryKey: ['corte', corteId, 'desvios', 'prompt'],
-    queryFn: () => api.obterPromptDesvios(corteId),
+    queryFn: () => cortesApi.obterPromptDesvios(corteId),
     enabled,
     staleTime: 60_000,
   });
@@ -399,7 +400,7 @@ export function usePromptDesvios(corteId: string, enabled: boolean) {
 export function useImportarDesvios(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (trechos: unknown[]) => api.importarDesvios(corteId, trechos),
+    mutationFn: (trechos: unknown[]) => cortesApi.importarDesvios(corteId, trechos),
     onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
   });
 }
@@ -407,7 +408,7 @@ export function useImportarDesvios(corteId: string) {
 export function useAnalisarDesvios(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (limparAnteriores: boolean) => api.analisarDesviosCorte(corteId, limparAnteriores),
+    mutationFn: (limparAnteriores: boolean) => cortesApi.analisarDesviosCorte(corteId, limparAnteriores),
     onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
   });
 }
@@ -415,7 +416,7 @@ export function useAnalisarDesvios(corteId: string) {
 export function useAdicionarDesvio(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: AdicionarDesvioRequest) => api.adicionarDesvio(corteId, body),
+    mutationFn: (body: AdicionarDesvioRequest) => cortesApi.adicionarDesvio(corteId, body),
     onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
   });
 }
@@ -423,7 +424,7 @@ export function useAdicionarDesvio(corteId: string) {
 export function useRemoverDesvio(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (desvioIndex: number) => api.removerDesvio(corteId, desvioIndex),
+    mutationFn: (desvioIndex: number) => cortesApi.removerDesvio(corteId, desvioIndex),
     onSuccess: (data) => qc.setQueryData(corteKey(corteId), data),
   });
 }

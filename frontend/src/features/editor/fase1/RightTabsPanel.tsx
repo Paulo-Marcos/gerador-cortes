@@ -18,6 +18,7 @@ import type { ProviderIA } from '@/lib/providerIa';
 import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
+import { cortesApi } from '@/features/editor/api/cortes';
 import { RetractableFooter } from '@/components/workbench/RetractableFooter';
 import { cn } from '@/lib/utils';
 import { AvaliacaoBrutoPanel } from '../avaliacao/AvaliacaoBrutoPanel';
@@ -157,7 +158,11 @@ export function RightTabsPanel({
     >
       {/* F-058: influência manual do editor no prompt da thumbnail. */}
       <div className="flex-shrink-0 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-        <ThumbnailHintsEditor corteId={corteId} initialValue={hintsThumbnail} />
+        <ThumbnailHintsEditor
+          corteId={corteId}
+          initialValue={hintsThumbnail}
+          salvar={(hints) => cortesApi.atualizarCorte(corteId, { hints_thumbnail: hints })}
+        />
       </div>
       {/* Tabs planas com sublinhado (DE-PARA-v3 §3): sem caixa e sem sombra,
           alinhadas ao TabStrip fino do shell. O fundo `inset` saiu junto —

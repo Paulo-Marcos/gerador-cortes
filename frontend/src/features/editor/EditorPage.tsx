@@ -24,7 +24,8 @@ import {
   useToggleLeitura,
   useTrechosClaudeEmAndamento,
 } from '@/hooks/useEditor';
-import { api, audioProxyUrl, waveformPeaksUrl } from '@/lib/api';
+import { audioProxyUrl, waveformPeaksUrl } from '@/lib/api';
+import { cortesApi } from '@/features/editor/api/cortes';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
@@ -548,7 +549,7 @@ export function EditorPage() {
   }
 
   async function onCriarCorteDaSelecao(inicioHms: string, fimHms: string, titulo: string) {
-    await api.adicionarDesvio(corteId, {
+    await cortesApi.adicionarDesvio(corteId, {
       inicio_hms: inicioHms,
       fim_hms: fimHms,
       motivo: titulo,

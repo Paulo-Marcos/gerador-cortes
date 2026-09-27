@@ -1,6 +1,4 @@
 import type {
-  AdicionarDesvioRequest,
-  ArranjoBlocos,
   CenaRemotion,
   CenasRemotionPayload,
   Corte,
@@ -10,7 +8,6 @@ import type {
   StatusBrutoResponse,
   WaveformPeaksResponse,
 } from '@/types/models';
-import type { ProviderIA } from '@/lib/providerIa';
 import { API_BASE, VIDEOS_BASE, wsUrl } from '@/lib/apiBase';
 
 
@@ -39,12 +36,6 @@ export interface GerarBrutoOpcoes {
 }
 
 export const api = {
-  abrirPastaCorte: (corteId: string) =>
-    request<{ status: string; dir_path: string }>(`/cortes/${corteId}/abrir-pasta`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
   // I-023: filtro padrão de render vive só em Ajustes (PUT /settings).
   // O antigo PATCH /export/projeto/{id}/filtro-padrao foi removido — não
   // existia "filtro por projeto" coerente com a fonte única definida em
@@ -60,177 +51,6 @@ export const api = {
     ),
 
   // ─── Cortes (editor) ───────────────────────────────────────────────
-  listarCortes: (projetoId: string) => request<Corte[]>(`/cortes/projeto/${projetoId}`),
-
-  // F-056: cria um corte manualmente a partir de inicio/fim (HMS).
-  // Backend sincroniza a transcricao; a analise de desvios (Gemini) e
-  // disparada em seguida pelo frontend via `analisarDesviosIa`.
-  criarCorteManual: (
-    projetoId: string,
-    body: { inicio_hms: string; fim_hms: string; titulo_proposto?: string | null },
-  ) =>
-    request<Corte>(`/cortes/projeto/${projetoId}/manual`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // F-057: renumera os cortes do projeto na ordem informada. Espera a
-  // lista completa de ids do projeto.
-  reordenarCortes: (projetoId: string, cortesIds: string[]) =>
-    request<Corte[]>(`/cortes/projeto/${projetoId}/reordenar`, {
-      method: 'POST',
-      body: JSON.stringify({ cortes_ids: cortesIds }),
-    }),
-
-  // F-061: divide um corte em dois no ponto (ponteiro do player). O backend
-  // encolhe o corte original e cria um novo a partir do ponto, herdando os
-  // trechos a remover da metade direita. Retorna [original_atualizado, novo].
-  dividirCorte: (corteId: string, body: { ponto_seg?: number; ponto_hms?: string }) =>
-    request<Corte[]>(`/cortes/${corteId}/dividir`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // D-575: funde este corte com o vizinho seguinte (ou com `outro_corte_id`).
-  // Sobrevive o que comeca antes — ele herda bordas, trechos a remover, cenas,
-  // layout e shorts do outro. Retorna o corte resultante.
-  juntarCortes: (corteId: string, body: { outro_corte_id?: string } = {}) =>
-    request<Corte>(`/cortes/${corteId}/juntar`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  // D-576: ordem de exibição dos blocos do corte. Toda operação devolve o
-  // arranjo inteiro recalculado — o cliente não deduz estado, só desenha.
-  obterArranjo: (corteId: string) => request<ArranjoBlocos>(`/cortes/${corteId}/arranjo`),
-
-  dividirBloco: (corteId: string, body: { ponto_seg: number }) =>
-    request<ArranjoBlocos>(`/cortes/${corteId}/arranjo/dividir`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  moverBloco: (corteId: string, body: { de_indice: number; para_indice: number }) =>
-    request<ArranjoBlocos>(`/cortes/${corteId}/arranjo/mover`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  fundirBloco: (corteId: string, body: { indice: number }) =>
-    request<ArranjoBlocos>(`/cortes/${corteId}/arranjo/fundir`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  restaurarArranjo: (corteId: string) =>
-    request<ArranjoBlocos>(`/cortes/${corteId}/arranjo/restaurar`, { method: 'POST' }),
-
-  obterCorte: (corteId: string) => request<Corte>(`/cortes/${corteId}`),
-
-  atualizarCorte: (corteId: string, patch: Partial<Corte>) =>
-    request<Corte>(`/cortes/${corteId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(patch),
-    }),
-
-  aprovarCorte: (corteId: string) =>
-    request<{ message: string }>(`/cortes/${corteId}/aprovar`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  // F-054: dispara detecção de mudanças de cena no bruto do corte.
-  detectarSegmentos: (corteId: string) =>
-    request<{ status: string; corte_id: string }>(`/cortes/${corteId}/detectar-segmentos`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  // F-054: rejeita / aceita um segmento sugerido. Aceitar materializa região.
-  decidirSegmentoDetectado: (
-    corteId: string,
-    indice: number,
-    decisao: 'rejeitar' | 'full' | 'compartilhada',
-  ) =>
-    request<Corte>(`/cortes/${corteId}/segmentos-detectados/${indice}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ decisao }),
-    }),
-
-  deletarCorte: (corteId: string) =>
-    request<{ message: string }>(`/cortes/${corteId}`, {
-      method: 'DELETE',
-    }),
-
-  // Desvios / trechos a remover
-  analisarDesviosCorte: (corteId: string, limparAnteriores: boolean) =>
-    request<Corte>(`/cortes/${corteId}/analisar-desvios?limpar_anteriores=${limparAnteriores}`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  // F-056: dispara analise editorial de desvios via Gemini (repeticoes,
-  // desvios de tema, bate-papo). Usado apos criar um corte manual para
-  // sugerir trechos a remover automaticamente.
-  analisarDesviosIa: (corteId: string) =>
-    request<Corte>(`/cortes/${corteId}/analisar-desvios-ia`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  // D-304: dispara em lote a mesma geração de trechos (trechos-expert/Claude)
-  // para TODOS os cortes do projeto, um a um, em background. Fire-and-forget
-  // — o backend não expõe progresso desta operação.
-  analisarDesviosTodos: (projetoId: string, provider: ProviderIA = 'claude') =>
-    request<{ message: string }>(`/cortes/projeto/${projetoId}/analisar-desvios-todos?provider=${provider}`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  // Prompt p/ rodar a análise de trechos numa IA externa (Manual)
-  obterPromptDesvios: (corteId: string) =>
-    request<{
-      prompts: { parte: number; total_partes: number; texto: string }[];
-      formato_esperado?: unknown;
-    }>(`/cortes/${corteId}/desvios/prompt`),
-
-  // Importa o JSON retornado pela IA externa (Manual) — body: { trechos: [...] }
-  importarDesvios: (corteId: string, trechos: unknown[]) =>
-    request<Corte>(`/cortes/${corteId}/desvios/importar`, {
-      method: 'POST',
-      body: JSON.stringify({ trechos }),
-    }),
-
-  adicionarDesvio: (corteId: string, body: AdicionarDesvioRequest) =>
-    request<Corte>(`/cortes/${corteId}/adicionar-desvio`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-
-  removerDesvio: (corteId: string, desvioIndex: number) =>
-    request<Corte>(`/cortes/${corteId}/remover-desvio`, {
-      method: 'POST',
-      body: JSON.stringify({ desvio_index: desvioIndex }),
-    }),
-
-  criarCorteDoDesvio: (corteId: string, desvioIndex: number, titulo: string) =>
-    request<Corte>(`/cortes/${corteId}/corte-do-desvio`, {
-      method: 'POST',
-      body: JSON.stringify({ desvio_index: desvioIndex, titulo }),
-    }),
-
-  sincronizarTranscricao: (corteId: string) =>
-    request<Corte>(`/cortes/${corteId}/sincronizar-transcricao`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  sincronizarPosProducao: (corteId: string) =>
-    request<{ message: string }>(`/cortes/${corteId}/sincronizar-pos-producao`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
   // Geração de vídeo bruto (cortar com ffmpeg, removendo TODOS os desvios).
   // Dispara assíncrono; acompanhe progresso por statusClipBruto.
   // D-160 — na regeração (corte já com bruto) o default é só o bruto; passe

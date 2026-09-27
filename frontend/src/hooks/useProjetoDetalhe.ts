@@ -1,7 +1,8 @@
 import type { ProviderIA } from '@/lib/providerIa';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, progressoWsUrl } from '@/lib/api';
+import { progressoWsUrl } from '@/lib/api';
+import { cortesApi } from '@/features/editor/api/cortes';
 import {
   analiseApi,
   type AnalisarIntervaloRequest,
@@ -54,7 +55,7 @@ export function useExportStatus(id: string | undefined) {
 
 export function useAbrirPasta() {
   return useMutation({
-    mutationFn: (corteId: string) => api.abrirPastaCorte(corteId),
+    mutationFn: (corteId: string) => cortesApi.abrirPastaCorte(corteId),
   });
 }
 
@@ -130,7 +131,7 @@ export function useAnalisarDesviosTodos(projetoId: string) {
   }, []);
 
   const mutation = useMutation({
-    mutationFn: (provider: ProviderIA) => api.analisarDesviosTodos(projetoId, provider),
+    mutationFn: (provider: ProviderIA) => cortesApi.analisarDesviosTodos(projetoId, provider),
     onSuccess: () => {
       notify(
         'Geração de trechos iniciada para todos os cortes: roda em segundo plano, corte a corte, e os desvios vão aparecendo aos poucos. Só ACRESCENTA aos trechos já marcados — nada é removido.',

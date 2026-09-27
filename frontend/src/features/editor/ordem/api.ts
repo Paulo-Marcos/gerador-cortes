@@ -1,5 +1,6 @@
 import type { Corte } from '@/types/models';
-import { api, dados, type Schema } from '@/shared/api';
+import { api, dados } from '@/shared/api';
+import { paraOsCortesDaTela } from '../api/cortes';
 // D-448: cliente HTTP do desvio EXPLÍCITO da ordem cronológica dos cortes.
 // A ordem padrão (por tempo) não tem endpoint: o backend a recalcula a cada
 // operação que cria ou move corte. O que existe aqui é o pin — e o desfazer
@@ -14,14 +15,6 @@ export function estaFixado(corte: CorteComPin): boolean {
   return corte.posicao_fixada != null;
 }
 
-// O cache de cortes ainda usa o `Corte` escrito à mão (types/models.ts), que
-// diverge do CorteResponse do contrato — declara, por exemplo, campos do YouTube
-// que nenhuma rota de corte manda. A listagem de lib/api.ts entra no cache pelo
-// mesmo atalho (o antigo `request<Corte[]>`); os dois saem juntos quando o
-// `Corte` passar a ser o do contrato. Até lá o atalho mora só aqui.
-const paraOCacheDeCortes = (cortes: Schema<'CorteResponse'>[]) =>
-  cortes as unknown as CorteComPin[];
-
 export const ordemCortesApi = {
   /** Solta todos os pins da live e devolve a lista à ordem do tempo. */
   normalizar: (projetoId: string): Promise<CorteComPin[]> =>
@@ -29,7 +22,7 @@ export const ordemCortesApi = {
       api.POST('/api/ordem-cortes/projeto/{projeto_id}/normalizar', {
         params: { path: { projeto_id: projetoId } },
       }),
-    ).then(paraOCacheDeCortes),
+    ).then((cortes) => paraOsCortesDaTela(cortes) as CorteComPin[]),
 
   /** Fixa o corte numa posição (1-based); `null` solta e devolve ao tempo. */
   fixarPosicao: (corteId: string, posicao: number | null): Promise<CorteComPin[]> =>
@@ -38,5 +31,5 @@ export const ordemCortesApi = {
         params: { path: { corte_id: corteId } },
         body: { posicao },
       }),
-    ).then(paraOCacheDeCortes),
+    ).then((cortes) => paraOsCortesDaTela(cortes) as CorteComPin[]),
 };

@@ -3,7 +3,6 @@ import { useMutation } from '@tanstack/react-query';
 import { Check, ChevronDown, ImagePlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
-import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────
@@ -13,8 +12,8 @@ import { cn } from '@/lib/utils';
 // é salvo em `corte.hints_thumbnail` e, ao gerar o prompt da thumbnail, é
 // anexado ao raciocínio do capista (skill `thumbnail-prompt-expert`).
 //
-// Componente auto-suficiente: recebe `corteId` + valor inicial e gerencia a
-// própria persistência via `api.atualizarCorte`. Usado no Bruto (EditorFase1)
+// Componente auto-suficiente: recebe `corteId` + valor inicial e cuida do
+// estado da edição; a gravação é o `salvar` que o pai passa. Usado no Bruto (EditorFase1)
 // e no modal de metadados (MetadataCard).
 // ─────────────────────────────────────────────────────────────
 
@@ -29,6 +28,9 @@ interface ThumbnailHintsEditorProps {
   /** Começa com o campo aberto (default: abre só se já houver texto). */
   defaultOpen?: boolean;
   className?: string;
+  /** Grava o texto no corte. Vem do pai: components/ não fala com a API de
+   *  uma feature (D-722). */
+  salvar: (hints: string) => Promise<unknown>;
   /** Notifica o pai após salvar (ex.: invalidar query do corte). */
   onSaved?: (value: string) => void;
 }
@@ -38,6 +40,7 @@ export function ThumbnailHintsEditor({
   initialValue,
   defaultOpen,
   className,
+  salvar,
   onSaved,
 }: ThumbnailHintsEditorProps) {
   const { notify } = useToast();
@@ -57,7 +60,7 @@ export function ThumbnailHintsEditor({
   const dirty = value.trim() !== saved.trim();
 
   const saveMutation = useMutation({
-    mutationFn: (next: string) => api.atualizarCorte(corteId, { hints_thumbnail: next }),
+    mutationFn: (next: string) => salvar(next),
     onSuccess: (_data, next) => {
       setSaved(next);
       onSaved?.(next);

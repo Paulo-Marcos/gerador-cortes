@@ -1,5 +1,5 @@
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { arranjoApi } from '@/features/editor/api/arranjo';
 import { useToast } from '@/components/ui/toaster';
 import { corteKey, cortesProjetoKey } from './useEditor';
 import type { ArranjoBlocos } from '@/types/models';
@@ -19,7 +19,7 @@ const MUTACAO_ARRANJO = 'arranjo';
 export function useArranjo(corteId: string, enabled = true) {
   return useQuery({
     queryKey: arranjoKey(corteId),
-    queryFn: () => api.obterArranjo(corteId),
+    queryFn: () => arranjoApi.obterArranjo(corteId),
     enabled: enabled && Boolean(corteId),
   });
 }
@@ -43,7 +43,7 @@ export function useArranjoOps(corteId: string, projetoId?: string) {
 
   const dividir = useMutation({
     mutationKey: [MUTACAO_ARRANJO, corteId, 'dividir'],
-    mutationFn: (body: { ponto_seg: number }) => api.dividirBloco(corteId, body),
+    mutationFn: (body: { ponto_seg: number }) => arranjoApi.dividirBloco(corteId, body),
     onSuccess: aoConcluir,
     onError: (e) => aoFalhar(e, 'dividir o bloco'),
   });
@@ -51,21 +51,21 @@ export function useArranjoOps(corteId: string, projetoId?: string) {
   const mover = useMutation({
     mutationKey: [MUTACAO_ARRANJO, corteId, 'mover'],
     mutationFn: (body: { de_indice: number; para_indice: number }) =>
-      api.moverBloco(corteId, body),
+      arranjoApi.moverBloco(corteId, body),
     onSuccess: aoConcluir,
     onError: (e) => aoFalhar(e, 'mover o bloco'),
   });
 
   const fundir = useMutation({
     mutationKey: [MUTACAO_ARRANJO, corteId, 'fundir'],
-    mutationFn: (body: { indice: number }) => api.fundirBloco(corteId, body),
+    mutationFn: (body: { indice: number }) => arranjoApi.fundirBloco(corteId, body),
     onSuccess: aoConcluir,
     onError: (e) => aoFalhar(e, 'juntar os blocos'),
   });
 
   const restaurar = useMutation({
     mutationKey: [MUTACAO_ARRANJO, corteId, 'restaurar'],
-    mutationFn: () => api.restaurarArranjo(corteId),
+    mutationFn: () => arranjoApi.restaurarArranjo(corteId),
     onSuccess: (arranjo) => {
       aoConcluir(arranjo);
       notify('Ordem da live restaurada.', { tone: 'success' });

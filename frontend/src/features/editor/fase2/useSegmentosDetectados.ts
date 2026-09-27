@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { cortesApi } from '@/features/editor/api/cortes';
 import { corteKey } from '@/hooks/useEditor';
 import { useToast } from '@/components/ui/toaster';
 import type { Corte, DecisaoSegmentoDetectado, SegmentoDetectado } from '@/types/models';
@@ -31,7 +31,7 @@ export function useSegmentosDetectados(corteId: string, projetoId: string) {
   }, []);
 
   const detectarMutation = useMutation({
-    mutationFn: () => api.detectarSegmentos(corteId),
+    mutationFn: () => cortesApi.detectarSegmentos(corteId),
     onSuccess: () => {
       notify('Detecção de segmentos iniciada.', { tone: 'info' });
       // Re-fetch após delay curto: backend é fire-and-forget, mas pra cortes
@@ -53,7 +53,7 @@ export function useSegmentosDetectados(corteId: string, projetoId: string) {
 
   const decidirMutation = useMutation({
     mutationFn: ({ indice, decisao }: { indice: number; decisao: DecisaoSegmentoDetectado }) =>
-      api.decidirSegmentoDetectado(corteId, indice, decisao),
+      cortesApi.decidirSegmentoDetectado(corteId, indice, decisao),
     onSuccess: (updated) => {
       qc.setQueryData<Corte>(corteKey(corteId), (current) =>
         current ? ({ ...current, ...updated } as Corte) : updated,
