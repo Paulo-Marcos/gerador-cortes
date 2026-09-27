@@ -31,14 +31,15 @@ import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
-import { api, resolveThumbUrl } from '@/lib/api';
+import { resolveThumbUrl } from '@/lib/api';
+import { metadadosApi, type MetadadoPatch } from './api/metadados';
 import { CapaTikTokSlot } from './CapaTikTokSlot';
 import { applyCoverEmojis, applyReadingTitlePrefix } from '@/lib/readingMetadata';
 import { cn } from '@/lib/utils';
 import { PromptManualPanel } from '@/components/PromptManualPanel';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
 import { ThumbnailAvaliacaoPanel } from './ThumbnailAvaliacaoPanel';
-import type { Corte, MetadadoCorte, MetadadoPatch, StatusExportCorte } from '@/types/models';
+import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
 
 export const metadataKey = (corteId: string) => ['metadado', corteId] as const;
 
@@ -106,7 +107,7 @@ export function MetadataCard({
 
   const metaQuery = useQuery({
     queryKey: metadataKey(cut.id),
-    queryFn: () => api.obterMetadado(cut.id),
+    queryFn: () => metadadosApi.obterMetadado(cut.id),
   });
   const meta = metaQuery.data;
   const generated = Boolean(meta?.titulo_youtube);
@@ -160,7 +161,7 @@ export function MetadataCard({
   };
 
   const saveMutation = useMutation({
-    mutationFn: (patch: MetadadoPatch) => api.atualizarMetadado(cut.id, patch),
+    mutationFn: (patch: MetadadoPatch) => metadadosApi.atualizarMetadado(cut.id, patch),
     onSuccess: () => {
       invalidate();
       setLastSavedAt(new Date());
@@ -231,7 +232,7 @@ export function MetadataCard({
     generateMetadataClaude.variables ?? ultimaMeta.data?.provider ?? null;
 
   const generateThumbnail = useMutation({
-    mutationFn: () => api.gerarThumbnail(cut.id),
+    mutationFn: () => metadadosApi.gerarThumbnail(cut.id),
     onSuccess: () => {
       notify('Geracao de thumbnail iniciada.', { tone: 'success' });
       setConferindoCapa(true);
@@ -243,7 +244,7 @@ export function MetadataCard({
   });
 
   const uploadThumbnail = useMutation({
-    mutationFn: (file: File) => api.uploadThumbnail(cut.id, file),
+    mutationFn: (file: File) => metadadosApi.uploadThumbnail(cut.id, file),
     onSuccess: () => {
       invalidate();
       setVersaoDaCapa((atual) => atual + 1);
@@ -259,7 +260,7 @@ export function MetadataCard({
   // entraram antes da moldura existir, e para reaplicar depois de trocar o PNG
   // da moldura do canal. Clicar duas vezes não empilha moldura.
   const applyFrame = useMutation({
-    mutationFn: () => api.aplicarMolduraThumbnail(cut.id),
+    mutationFn: () => metadadosApi.aplicarMolduraThumbnail(cut.id),
     onSuccess: (res) => {
       invalidate();
       setVersaoDaCapa((atual) => atual + 1);
@@ -272,7 +273,7 @@ export function MetadataCard({
   });
 
   const compressThumbnail = useMutation({
-    mutationFn: () => api.comprimirThumbnail(cut.id),
+    mutationFn: () => metadadosApi.comprimirThumbnail(cut.id),
     onSuccess: (res) => {
       invalidate();
       setVersaoDaCapa((atual) => atual + 1);
@@ -285,7 +286,7 @@ export function MetadataCard({
   });
 
   const removeThumbnail = useMutation({
-    mutationFn: () => api.removerThumbnail(cut.id),
+    mutationFn: () => metadadosApi.removerThumbnail(cut.id),
     onSuccess: (res) => {
       invalidate();
       notify(res.arquivo_removido ? 'Thumbnail removida.' : 'Thumbnail desvinculada.', {
@@ -1419,10 +1420,10 @@ function PromptImportModal({
   const promptQuery = useQuery({
     queryKey: ['manual-prompt', kind, corteId],
     queryFn: () => {
-      if (kind === 'thumbnail-agent') return api.obterPromptThumbnailAgente(corteId);
-      if (kind === 'thumbnail-agent-livre') return api.obterPromptThumbnailAgenteLivre(corteId);
-      if (kind === 'thumbnail') return api.obterPromptThumbnail(corteId);
-      return api.obterPromptMeta(corteId);
+      if (kind === 'thumbnail-agent') return metadadosApi.obterPromptThumbnailAgente(corteId);
+      if (kind === 'thumbnail-agent-livre') return metadadosApi.obterPromptThumbnailAgenteLivre(corteId);
+      if (kind === 'thumbnail') return metadadosApi.obterPromptThumbnail(corteId);
+      return metadadosApi.obterPromptMeta(corteId);
     },
     enabled: open,
   });
@@ -1437,8 +1438,8 @@ function PromptImportModal({
   const importMutation = useMutation({
     mutationFn: (body: unknown) =>
       kind === 'thumbnail'
-        ? api.importarPromptThumbnail(corteId, body)
-        : api.importarMeta(corteId, body),
+        ? metadadosApi.importarPromptThumbnail(corteId, body)
+        : metadadosApi.importarMeta(corteId, body),
     onSuccess: () => {
       notify('Resultado importado com sucesso.', { tone: 'success' });
       onImported();

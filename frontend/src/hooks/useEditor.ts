@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { api, type GerarBrutoOpcoes } from '@/lib/api';
+import { metadadosApi } from '@/features/metadata/api/metadados';
 import { geracaoIaApi } from '@/features/ia';
 import { exportStatusKey } from './useProjetoDetalhe';
 import { useToast } from '@/components/ui/toaster';
@@ -253,7 +254,7 @@ export function useDeletarCorte(corteId: string, projetoId?: string) {
 export function useToggleFire(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.toggleFireMeta(corteId),
+    mutationFn: () => metadadosApi.toggleFireMeta(corteId),
     onSuccess: () => {
       invalidaCorte(qc, corteId, projetoId);
       qc.invalidateQueries({ queryKey: ['metadado', corteId] });

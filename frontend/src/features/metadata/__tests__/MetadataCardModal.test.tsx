@@ -30,6 +30,7 @@ function metadado(overrides: Partial<MetadadoCorte> = {}): MetadadoCorte {
   return {
     id: 'm1',
     corte_id: 'c1',
+    is_fire: false,
     titulo_youtube: 'Um titulo gerado',
     descricao_youtube: 'Descricao',
     tags_youtube: ['tag'],

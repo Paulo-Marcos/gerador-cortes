@@ -294,50 +294,9 @@ export interface RemotionStudioUrlResponse {
  *  como apelido porque 28 telas o importam deste arquivo. */
 export type StatusExportCorte = Schema<'StatusExportCorte'>;
 
-export interface MetadadoCorte {
-  id: string | null;
-  corte_id: string;
-  is_fire?: boolean;
-  titulo_youtube: string;
-  descricao_youtube: string;
-  tags_youtube: string[];
-  opcoes_titulo: string[];
-  opcoes_texto_capa: string[];
-  texto_capa: string;
-  link_live_com_timestamp?: string;
-  canal_credito?: string;
-  prompt_thumbnail: string;
-  thumbnail_path: string;
-  // D-519/D-520: a capa VERTICAL do TikTok e a etiqueta dela. Campos proprios, e
-  // nao reuso dos de cima: 16:9 e 9:16 sao imagens diferentes para trabalhos
-  // diferentes, e guardar uma so faria a errada aparecer em algum dos dois.
-  thumbnail_tiktok_path?: string;
-  etiqueta_tiktok?: string;
-  prompt_capa_tiktok?: string;
-  numero_serie?: number;
-  cor_serie?: string;
-  criado_em?: string;
-}
-
-export type MetadadoPatch = Partial<
-  Pick<
-    MetadadoCorte,
-    | 'titulo_youtube'
-    | 'descricao_youtube'
-    | 'tags_youtube'
-    | 'opcoes_titulo'
-    | 'opcoes_texto_capa'
-    | 'texto_capa'
-    | 'prompt_thumbnail'
-    | 'numero_serie'
-    | 'cor_serie'
-  >
->;
-
-export interface PromptManualResponse {
-  prompt: string;
-  formato_esperado?: unknown;
-}
+/** O metadado do corte — o tipo do contrato (D-722), apelido aqui porque as
+ *  telas o importam deste arquivo. Sem metadado ainda, `id` vem nulo. */
+export type MetadadoCorte = Schema<'MetadadoDoCorteResponse'>;
 
 export interface FilaGlobal {
   pos_producao: {

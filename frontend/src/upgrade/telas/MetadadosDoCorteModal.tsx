@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { metadataKey } from '@/features/metadata/MetadataCard';
-import { api, resolveThumbUrl } from '@/lib/api';
+import { resolveThumbUrl } from '@/lib/api';
+import { metadadosApi } from '@/features/metadata/api/metadados';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import type { Corte, StatusExportCorte } from '@/types/models';
 import { Icon } from '../Icon';
@@ -72,7 +73,7 @@ export function MetadadosDoCorteModal({
   const [capaErro, setCapaErro] = useState(false);
   const meta = useQuery({
     queryKey: metadataKey(status.corte_id),
-    queryFn: () => api.obterMetadado(status.corte_id),
+    queryFn: () => metadadosApi.obterMetadado(status.corte_id),
   });
 
   useEffect(() => {

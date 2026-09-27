@@ -5,10 +5,7 @@ import type {
   CenasRemotionPayload,
   Corte,
   FilaGlobal,
-  MetadadoCorte,
-  MetadadoPatch,
   PipelineStatusResponse,
-  PromptManualResponse,
   RemotionStudioUrlResponse,
   StatusBrutoResponse,
   WaveformPeaksResponse,
@@ -163,89 +160,6 @@ export const api = {
   deletarCorte: (corteId: string) =>
     request<{ message: string }>(`/cortes/${corteId}`, {
       method: 'DELETE',
-    }),
-
-  toggleFireMeta: (corteId: string) =>
-    request<{ is_fire: boolean; titulo_youtube: string }>(
-      `/metadados/corte/${corteId}/toggle-fire`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  obterMetadado: (corteId: string) => request<MetadadoCorte>(`/metadados/corte/${corteId}`),
-
-  gerarMetadados: (corteId: string) =>
-    request<{ message: string; corte_id: string }>(`/metadados/corte/${corteId}/gerar`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  atualizarMetadado: (corteId: string, patch: MetadadoPatch) =>
-    request<{ message: string }>(`/metadados/corte/${corteId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(patch),
-    }),
-
-  gerarPromptThumbnail: (corteId: string) =>
-    request<{ message: string; corte_id: string }>(`/metadados/corte/${corteId}/gerar-prompt`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  gerarThumbnail: (corteId: string) =>
-    request<{ message: string; corte_id: string }>(`/metadados/corte/${corteId}/gerar-thumbnail`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  uploadThumbnail: (corteId: string, file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return request<{ message: string; thumbnail_path: string }>(
-      `/metadados/corte/${corteId}/thumbnail-manual`,
-      { method: 'POST', body: formData },
-    );
-  },
-
-  aplicarMolduraThumbnail: (corteId: string) =>
-    request<{ message: string; moldura: string }>(
-      `/metadados/corte/${corteId}/aplicar-moldura`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  comprimirThumbnail: (corteId: string) =>
-    request<{ message: string }>(`/metadados/corte/${corteId}/comprimir-thumbnail`, {
-      method: 'POST',
-      body: '{}',
-    }),
-
-  removerThumbnail: (corteId: string) =>
-    request<{ message: string; arquivo_removido: boolean }>(
-      `/metadados/corte/${corteId}/thumbnail`,
-      { method: 'DELETE' },
-    ),
-
-  obterPromptMeta: (corteId: string) =>
-    request<PromptManualResponse>(`/metadados/corte/${corteId}/meta/prompt`),
-
-  importarMeta: (corteId: string, payload: unknown) =>
-    request<{ message: string }>(`/metadados/corte/${corteId}/meta/importar`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-
-  obterPromptThumbnail: (corteId: string) =>
-    request<PromptManualResponse>(`/metadados/corte/${corteId}/prompt-thumbnail/prompt`),
-
-  obterPromptThumbnailAgente: (corteId: string) =>
-    request<PromptManualResponse>(`/metadados/corte/${corteId}/thumbnail-agent/prompt`),
-
-  obterPromptThumbnailAgenteLivre: (corteId: string) =>
-    request<PromptManualResponse>(`/metadados/corte/${corteId}/thumbnail-agent-livre/prompt`),
-
-  importarPromptThumbnail: (corteId: string, payload: unknown) =>
-    request<{ message: string }>(`/metadados/corte/${corteId}/prompt-thumbnail/importar`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
     }),
 
   // Desvios / trechos a remover
