@@ -4512,6 +4512,28 @@ export interface components {
              */
             youtube_layout_padrao_global: string;
         };
+        /**
+         * ArranjoDoPalco
+         * @description Um jeito de montar a tela do short e se as regiões do corte o permitem.
+         */
+        ArranjoDoPalco: {
+            /** Chave */
+            chave: string;
+            /** Disposicao */
+            disposicao: string;
+            /** Impedimento */
+            impedimento: string;
+            /** Janelas */
+            janelas: number;
+            /** Modo */
+            modo: string;
+            /** Nome */
+            nome: string;
+            /** Porque */
+            porque: string;
+            /** Possivel */
+            possivel: boolean;
+        };
         /** ArranjoResponse */
         ArranjoResponse: {
             /** Blocos */
@@ -4526,6 +4548,11 @@ export interface components {
             fim_seg: number;
             /** Inicio Seg */
             inicio_seg: number;
+        };
+        /** ArranjosResponse */
+        ArranjosResponse: {
+            /** Arranjos */
+            arranjos: components["schemas"]["ArranjoDoPalco"][];
         };
         /**
          * AssistidoRequest
@@ -4917,6 +4944,15 @@ export interface components {
              */
             file: string;
         };
+        /** BrutoDescartadoResponse */
+        BrutoDescartadoResponse: {
+            /** Erros */
+            erros: string[];
+            /** Liberado Mb */
+            liberado_mb: number;
+            /** Removidos */
+            removidos: string[];
+        };
         /** BulkYouTubeRequest */
         BulkYouTubeRequest: {
             /**
@@ -4999,6 +5035,38 @@ export interface components {
             video_id: string;
         };
         /**
+         * CapaDoShortResponse
+         * @description A capa gravada, ou o instante sugerido para gerar uma.
+         */
+        CapaDoShortResponse: {
+            /** Capa Path */
+            capa_path: string;
+            /** Duracao Seg */
+            duracao_seg: number;
+            /** Gancho Ate Seg */
+            gancho_ate_seg: number;
+            /** Instante Seg */
+            instante_seg: number;
+            /** Tem Capa */
+            tem_capa: boolean;
+        };
+        /** CapaGeradaResponse */
+        CapaGeradaResponse: {
+            /** Capa Path */
+            capa_path: string;
+            /** Instante Seg */
+            instante_seg: number;
+            /** Tem Capa */
+            tem_capa: boolean;
+        };
+        /** CapaResumida */
+        CapaResumida: {
+            /** Instante Seg */
+            instante_seg: number;
+            /** Tem Capa */
+            tem_capa: boolean;
+        };
+        /**
          * CapaTikTokRequest
          * @description O que vai na faixa central e qual texto vai por cima.
          *
@@ -5027,6 +5095,25 @@ export interface components {
              * @default true
              */
             sugerir_etiqueta: boolean;
+        };
+        /**
+         * CapaTiktokDoCorteResponse
+         * @description A capa vertical do TikTok do corte (D-519): o caminho e o nome do arquivo.
+         */
+        CapaTiktokDoCorteResponse: {
+            /** Capa */
+            capa: string;
+            /** Nome */
+            nome: string;
+        };
+        /** CapaTiktokMontadaResponse */
+        CapaTiktokMontadaResponse: {
+            /** Capa */
+            capa: string;
+            /** Etiqueta */
+            etiqueta: string;
+            /** Nome */
+            nome: string;
         };
         /**
          * CenaDoCorte
@@ -5073,6 +5160,12 @@ export interface components {
             /** Total Cenas */
             total_cenas: number;
         };
+        /** CenasSugeridasResponse */
+        CenasSugeridasResponse: {
+            /** Descartes */
+            descartes: string[];
+            short: components["schemas"]["ShortResponse"];
+        };
         /**
          * ConfirmarPublicacaoRequest
          * @description O "publiquei" do destino manual, onde o upload acontece longe daqui.
@@ -5092,6 +5185,22 @@ export interface components {
              * @default
              */
             url: string;
+        };
+        /**
+         * ContagemDeShorts
+         * @description Quantos shorts o corte tem, por estágio da curadoria.
+         */
+        ContagemDeShorts: {
+            /** Aprovado */
+            aprovado: number;
+            /** Rejeitado */
+            rejeitado: number;
+            /** Renderizado */
+            renderizado: number;
+            /** Sugerido */
+            sugerido: number;
+            /** Total */
+            total: number;
         };
         /** CorteResponse */
         CorteResponse: {
@@ -5438,6 +5547,19 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** ElegibilidadeResponse */
+        ElegibilidadeResponse: {
+            /** Candidato Shorts */
+            candidato_shorts: boolean;
+            /** Elegivel */
+            elegivel: boolean;
+            /** Is Fire */
+            is_fire: boolean;
+            /** Tem Bruto */
+            tem_bruto: boolean;
+            /** Total Shorts */
+            total_shorts: number;
+        };
         /**
          * EmbasamentoCriterio
          * @description Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela.
@@ -5476,6 +5598,25 @@ export interface components {
             video_ids: string[];
         };
         /**
+         * EnquadramentoResponse
+         * @description O foco achado pelo rosto — ou por que não achou.
+         */
+        EnquadramentoResponse: {
+            /** Achou */
+            achou: boolean;
+            /** Aviso */
+            aviso: string;
+            /** Foco X */
+            foco_x: number | null;
+            /** Motivo */
+            motivo: string;
+            /** Quadros Analisados */
+            quadros_analisados: number;
+            /** Quadros Com Rosto */
+            quadros_com_rosto: number;
+            short: components["schemas"]["ShortResponse"];
+        };
+        /**
          * EscolherPresetRequest
          * @description `""` volta ao automático (deduzir do layout do corte, ou nada).
          */
@@ -5510,6 +5651,48 @@ export interface components {
             em_dia: boolean;
             /** Troca De Canal Pendente */
             troca_de_canal_pendente: boolean;
+        };
+        /**
+         * EstadoDoPalcoResponse
+         * @description As regiões que o palco do corte usa e de onde vieram.
+         */
+        EstadoDoPalcoResponse: {
+            /** Arranjo Sugerido */
+            arranjo_sugerido: string;
+            /** Origem */
+            origem: string;
+            /** Preset */
+            preset: string;
+            /** Presets Disponiveis */
+            presets_disponiveis: components["schemas"]["PresetComRegioes"][];
+            /** Regioes */
+            regioes: {
+                [key: string]: components["schemas"]["RetanguloEmPixels"];
+            };
+        };
+        /**
+         * EstadoItem
+         * @description Onde um item do lote está.
+         *
+         *     `SUA_VEZ` é o estado que só existe por causa do TikTok e do Instagram: o
+         *     trabalho da máquina acabou e o do humano começou. Sem ele a tela teria de
+         *     escolher entre mentir ("publicado") e assustar ("erro") — e nenhum dos dois
+         *     descreve uma aba aberta esperando um clique.
+         * @enum {string}
+         */
+        EstadoItem: "aguardando" | "preparando" | "sua_vez" | "publicado" | "erro" | "pulado" | "cancelado";
+        /** FaixaDaMoldura */
+        FaixaDaMoldura: {
+            /** Cor */
+            cor: string;
+            /** H */
+            h: number;
+            /** W */
+            w: number;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
         };
         /** FaixaSeguraCapa */
         FaixaSeguraCapa: {
@@ -5622,6 +5805,13 @@ export interface components {
             /** Filtros */
             filtros: components["schemas"]["FiltroExport"][];
         };
+        /** FinalizacaoResponse */
+        FinalizacaoResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Finalizado Em */
+            finalizado_em: string | null;
+        };
         /**
          * FinalizadoRequest
          * @description Declara (ou desfaz) que os shorts do corte ja subiram para todas as redes.
@@ -5641,6 +5831,48 @@ export interface components {
             titulo_youtube: string;
         };
         /**
+         * FireDaFabrica
+         * @description Um corte na porta da fábrica: Fire ou indicado à mão (D-502).
+         */
+        FireDaFabrica: {
+            /** Bruto Mb */
+            bruto_mb: number;
+            /** Corte Id */
+            corte_id: string;
+            /** Duracao Seg */
+            duracao_seg: number;
+            /** Finalizado Em */
+            finalizado_em: string | null;
+            /** Indicado */
+            indicado: boolean;
+            /** Is Fire */
+            is_fire: boolean;
+            /** Live Em Disco */
+            live_em_disco: boolean;
+            /** Numero */
+            numero: number;
+            /** Projeto Id */
+            projeto_id: string;
+            /** Projeto Titulo */
+            projeto_titulo: string;
+            shorts: components["schemas"]["ContagemDeShorts"];
+            /** Tem Bruto */
+            tem_bruto: boolean;
+            /** Tem Edicao */
+            tem_edicao: boolean;
+            /** Tem Video Final */
+            tem_video_final: boolean;
+            /** Tema Central */
+            tema_central: string;
+            /** Titulo */
+            titulo: string;
+        };
+        /** FiresResponse */
+        FiresResponse: {
+            /** Fires */
+            fires: components["schemas"]["FireDaFabrica"][];
+        };
+        /**
          * FixarPosicaoRequest
          * @description `posicao` 1-based; `None` solta o corte e o devolve à ordem do tempo.
          */
@@ -5653,10 +5885,37 @@ export interface components {
             /** Indice */
             indice: number;
         };
+        /** FundoDoCanal */
+        FundoDoCanal: {
+            /** Chave */
+            chave: string;
+            /** Cor */
+            cor: string;
+            /** Padrao */
+            padrao: boolean;
+        };
+        /** FundosResponse */
+        FundosResponse: {
+            /** Fundos */
+            fundos: components["schemas"]["FundoDoCanal"][];
+        };
         /** GanchoPadraoRequest */
         GanchoPadraoRequest: {
             /** Preset Id */
             preset_id?: string | null;
+        };
+        /** GanchoPadraoResponse */
+        GanchoPadraoResponse: {
+            /** Customizados */
+            customizados: number;
+            /** Disponiveis */
+            disponiveis: components["schemas"]["PresetDisponivel"][];
+            /** Gancho Padrao */
+            gancho_padrao: string;
+            /** Nome */
+            nome: string;
+            /** Payload */
+            payload: Record<string, unknown>;
         };
         /** GeracaoConcluidaResponse */
         GeracaoConcluidaResponse: {
@@ -5800,6 +6059,24 @@ export interface components {
             nome: string;
             /** Obrigatorio */
             obrigatorio: boolean;
+        };
+        /** ItemDoLote */
+        ItemDoLote: {
+            /** Alvo Id */
+            alvo_id: string;
+            /** Alvo Tipo */
+            alvo_tipo: string;
+            /** Detalhe */
+            detalhe: string;
+            estado: components["schemas"]["EstadoItem"];
+            /** Plataforma */
+            plataforma: string;
+            /** Plataforma Rotulo */
+            plataforma_rotulo: string;
+            /** Rotulo */
+            rotulo: string;
+            /** Url */
+            url: string;
         };
         /**
          * JobCanceladoResponse
@@ -6250,11 +6527,59 @@ export interface components {
             /** Ts */
             ts: string;
         };
+        /** LogDoRenderResponse */
+        LogDoRenderResponse: {
+            /** Duracoes Ms */
+            duracoes_ms: number[];
+            /** Existe */
+            existe: boolean;
+            /** Linhas */
+            linhas: string[];
+            /** Truncado */
+            truncado: boolean;
+        };
         /**
          * LogLevel
          * @enum {string}
          */
         LogLevel: "disabled" | "info" | "debug";
+        /** LoteAtualResponse */
+        LoteAtualResponse: {
+            lote: components["schemas"]["LoteDePublicacao"] | null;
+        };
+        /** LoteCanceladoResponse */
+        LoteCanceladoResponse: {
+            /** Cancelado */
+            cancelado: boolean;
+            lote: components["schemas"]["LoteDePublicacao"] | null;
+        };
+        /** LoteConfirmadoResponse */
+        LoteConfirmadoResponse: {
+            /** Confirmado */
+            confirmado: boolean;
+        };
+        /**
+         * LoteDePublicacao
+         * @description A publicação em lote, rede a rede (D-617).
+         */
+        LoteDePublicacao: {
+            /** Cancelado */
+            cancelado: boolean;
+            /** Criado Em */
+            criado_em: string;
+            /** Instagram Assistido */
+            instagram_assistido: boolean;
+            /** Lote Id */
+            lote_id: string;
+            /** Publicar Sozinho */
+            publicar_sozinho: boolean;
+            /** Raias */
+            raias: components["schemas"]["RaiaDoLote"][];
+            /** Terminou */
+            terminou: boolean;
+            /** Tiktok Assistido */
+            tiktok_assistido: boolean;
+        };
         /**
          * LoteRequest
          * @description O lote que o operador montou na tela.
@@ -6447,6 +6772,49 @@ export interface components {
          * @enum {string}
          */
         OverlayCodec: "vp9" | "prores_4444";
+        /**
+         * PacoteDePublicacao
+         * @description O que cada rede recebe, montado pela mesma função que os robôs usam.
+         */
+        PacoteDePublicacao: {
+            /** Avisos */
+            avisos: string[];
+            /** Descricao */
+            descricao: string;
+            /** Hashtags */
+            hashtags: string[];
+            /** Legenda */
+            legenda: string;
+            /** Modo */
+            modo: string;
+            /** Plataforma */
+            plataforma: string;
+            /** Rotulo */
+            rotulo: string;
+            /** Titulo */
+            titulo: string;
+            /** Titulo Visivel */
+            titulo_visivel: string;
+        };
+        /** PacotesResponse */
+        PacotesResponse: {
+            /** Pacotes */
+            pacotes: components["schemas"]["PacoteDePublicacao"][];
+        };
+        /** PadraoEscolhidoGanchoResponse */
+        PadraoEscolhidoGanchoResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Gancho Padrao */
+            gancho_padrao: string;
+        };
+        /** PadraoEscolhidoPalcoResponse */
+        PadraoEscolhidoPalcoResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Palco Padrao */
+            palco_padrao: string;
+        };
         /** PadraoIdentificado */
         PadraoIdentificado: {
             /** Eixo */
@@ -6457,6 +6825,16 @@ export interface components {
             forca: string;
             /** Padrao */
             padrao: string;
+        };
+        /**
+         * PadraoSeguidoResponse
+         * @description Quantos trechos largaram o que tinham para seguir o padrão do corte.
+         */
+        PadraoSeguidoResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Liberados */
+            liberados: number;
         };
         /** PadroesCompilados */
         PadroesCompilados: {
@@ -6490,10 +6868,30 @@ export interface components {
             /** Total Melhores */
             total_melhores: number;
         };
+        /** PalavraDoBruto */
+        PalavraDoBruto: {
+            /** Fim Seg */
+            fim_seg: number;
+            /** Inicio Seg */
+            inicio_seg: number;
+            /** Texto */
+            texto: string;
+        };
         /** PalcoPadraoRequest */
         PalcoPadraoRequest: {
             /** Preset Id */
             preset_id?: string | null;
+        };
+        /** PalcoPadraoResponse */
+        PalcoPadraoResponse: {
+            /** Customizados */
+            customizados: number;
+            /** Disponiveis */
+            disponiveis: components["schemas"]["PresetDisponivel"][];
+            /** Nome */
+            nome: string;
+            /** Palco Padrao */
+            palco_padrao: string;
         };
         /** PaletaModel */
         PaletaModel: {
@@ -6558,6 +6956,104 @@ export interface components {
             /** Sample Rate */
             sample_rate: number;
         };
+        /**
+         * PlanoDesenhavelResponse
+         * @description O palco do short como a prévia o desenha — a mesma resolução do render,
+         *     com a aparência já herdada do corte (D-549, D-570, D-585, D-594, D-600).
+         */
+        PlanoDesenhavelResponse: {
+            /** Ajustados */
+            ajustados: string[];
+            /** Arranjo */
+            arranjo: string;
+            /** Arranjos */
+            arranjos: components["schemas"]["ArranjoDoPalco"][];
+            canvas: components["schemas"]["TelaDoShort"];
+            /** Faixas */
+            faixas: components["schemas"]["FaixaDaMoldura"][];
+            /** Fundo */
+            fundo: string;
+            /** Fundo Editorial */
+            fundo_editorial: string;
+            /** Gancho Ate Seg */
+            gancho_ate_seg: number;
+            /** Gancho Cor */
+            gancho_cor: string;
+            /** Gancho Fonte */
+            gancho_fonte: string;
+            /** Gancho Largura */
+            gancho_largura: number;
+            /** Gancho Realce */
+            gancho_realce: string;
+            /** Gancho Tamanho */
+            gancho_tamanho: number;
+            /** Gancho X */
+            gancho_x: number;
+            /** Gancho Y */
+            gancho_y: number;
+            /** Legenda Cor */
+            legenda_cor: string;
+            /** Legenda Fonte */
+            legenda_fonte: string;
+            /** Legenda Largura */
+            legenda_largura: number;
+            /** Legenda X */
+            legenda_x: number;
+            /** Legenda Y */
+            legenda_y: number;
+            /** Modelo */
+            modelo: string | null;
+            /** Moldura */
+            moldura: string;
+            /** Origem */
+            origem: string;
+            /** Recortes */
+            recortes: components["schemas"]["RecorteDesenhavel"][];
+            /** Regioes */
+            regioes: {
+                [key: string]: components["schemas"]["RetanguloEmPixels"];
+            };
+            /** Slots */
+            slots: {
+                [key: string]: components["schemas"]["RetanguloEmPixels"];
+            };
+        };
+        /** PostDoShortResponse */
+        PostDoShortResponse: {
+            /** Descricao */
+            descricao: string;
+            /** Gerado */
+            gerado: boolean;
+            /** Hashtags */
+            hashtags: string[];
+            /** Titulo */
+            titulo: string;
+        };
+        /** PostResumido */
+        PostResumido: {
+            /** Gerado */
+            gerado: boolean;
+            /** Hashtags */
+            hashtags: number;
+            /** Titulo */
+            titulo: string;
+        };
+        /** PresetComRegioes */
+        PresetComRegioes: {
+            /** Id */
+            id: string;
+            /** Nome */
+            nome: string;
+            /** Regioes */
+            regioes: string[];
+        };
+        /** PresetDisponivel */
+        PresetDisponivel: {
+            /** Id */
+            id: string;
+            /** Nome */
+            nome: string;
+        };
         /** ProcessarMultiversionRequest */
         ProcessarMultiversionRequest: {
             /** Filtros */
@@ -6570,6 +7066,30 @@ export interface components {
         ProgressoDoBrutoResponse: {
             /** Passos */
             passos: components["schemas"]["PassoDoBruto"][];
+        };
+        /** ProgressoDoRenderDoShort */
+        ProgressoDoRenderDoShort: {
+            /** Concluido */
+            concluido: boolean;
+            /** Decorrido Seg */
+            decorrido_seg: number;
+            /** Erro */
+            erro: string | null;
+            /**
+             * Estagio
+             * @enum {string}
+             */
+            estagio: "previa" | "final";
+            /** Passos */
+            passos: components["schemas"]["PassoDoBruto"][];
+        };
+        /**
+         * ProgressoResponse
+         * @description `render` nulo = não houve render deste short neste processo; a tela cai
+         *     no estado do banco, que sobrevive a um reload.
+         */
+        ProgressoResponse: {
+            render: components["schemas"]["ProgressoDoRenderDoShort"] | null;
         };
         /** ProjetoCriadoResponse */
         ProjetoCriadoResponse: {
@@ -6698,6 +7218,11 @@ export interface components {
             /** Youtube Url */
             youtube_url: string;
         };
+        /** PromptDaCapaResponse */
+        PromptDaCapaResponse: {
+            /** Prompt */
+            prompt: string;
+        };
         /**
          * PromptDasCenasResponse
          * @description Além das partes, o prompt inteiro num texto só.
@@ -6751,12 +7276,50 @@ export interface components {
             /** Prompt Default */
             prompt_default: string;
         };
+        /** ProntosResponse */
+        ProntosResponse: {
+            /** Shorts */
+            shorts: components["schemas"]["ShortProntoResponse"][];
+        };
+        /** PublicacaoRegistrada */
+        PublicacaoRegistrada: {
+            /** Alvo Id */
+            alvo_id: string;
+            /** Detalhe */
+            detalhe: string;
+            /** Estado */
+            estado: string;
+            /** Plataforma */
+            plataforma: string;
+            /** Publicado Em */
+            publicado_em: string;
+            /** Url */
+            url: string;
+        };
+        /** PublicacoesResponse */
+        PublicacoesResponse: {
+            /** Publicacoes */
+            publicacoes: components["schemas"]["PublicacaoRegistrada"][];
+        };
         /** QuadroCapa */
         QuadroCapa: {
             /** Altura */
             altura: number;
             /** Largura */
             largura: number;
+        };
+        /** RaiaDoLote */
+        RaiaDoLote: {
+            /** Aviso */
+            aviso: string;
+            /** Exige Humano */
+            exige_humano: boolean;
+            /** Itens */
+            itens: components["schemas"]["ItemDoLote"][];
+            /** Plataforma */
+            plataforma: string;
+            /** Rotulo */
+            rotulo: string;
         };
         /**
          * RankingLivesResponse
@@ -6779,6 +7342,17 @@ export interface components {
             message: string;
             /** Projeto Id */
             projeto_id: string;
+        };
+        /**
+         * RecorteDesenhavel
+         * @description Uma janela do palco: o que ela mostra da live e onde senta no short.
+         */
+        RecorteDesenhavel: {
+            destino: components["schemas"]["RetanguloEmPixels"];
+            origem: components["schemas"]["RetanguloEmPixels"];
+            recorta: components["schemas"]["RetanguloEmPixels"];
+            /** Regiao */
+            regiao: string;
         };
         /** RegistrarAvaliacaoRequest */
         RegistrarAvaliacaoRequest: {
@@ -6817,6 +7391,22 @@ export interface components {
         RemoverDesvioRequest: {
             /** Desvio Index */
             desvio_index: number;
+        };
+        /** RenderDisparadoResponse */
+        RenderDisparadoResponse: {
+            /**
+             * Estagio
+             * @enum {string}
+             */
+            estagio: "previa" | "final";
+            /** Short Id */
+            short_id: string;
+            /**
+             * Status
+             * @constant
+             * @enum {string}
+             */
+            status: "iniciado";
         };
         /** RenderPipelineRequest */
         RenderPipelineRequest: {
@@ -6871,6 +7461,61 @@ export interface components {
             /** Campos */
             campos: string[];
         };
+        /**
+         * ResultadoDaPublicacao
+         * @description Varia com o destino: a API do YouTube devolve o vídeo e a URL; o pacote
+         *     manual, a pasta e os textos; os robôs assistidos somam o relatório deles.
+         *     Os campos daqui são o vocabulário comum — nenhum é garantido —, e o resto
+         *     passa como veio.
+         */
+        ResultadoDaPublicacao: {
+            /** Agendado Para */
+            agendado_para?: string;
+            /** Avisos */
+            avisos?: string[];
+            /** Capa */
+            capa?: string;
+            /** Capa Aplicada */
+            capa_aplicada?: boolean;
+            /** Chrome Aberto Agora */
+            chrome_aberto_agora?: boolean;
+            /** Descricao */
+            descricao?: string;
+            /** Erro Ao Abrir */
+            erro_ao_abrir?: string | null;
+            /** Hashtags */
+            hashtags?: string[];
+            /** Legenda */
+            legenda?: string;
+            /** Modo */
+            modo?: string;
+            /** Passos */
+            passos?: string[];
+            /** Pasta */
+            pasta?: string;
+            /** Pasta Aberta */
+            pasta_aberta?: boolean;
+            /** Plataforma */
+            plataforma?: string;
+            /** Publicado */
+            publicado?: boolean;
+            /** Resumo */
+            resumo?: string;
+            /** Titulo */
+            titulo?: string;
+            /** Url */
+            url?: string;
+            /** Url Upload */
+            url_upload?: string;
+            /** Video */
+            video?: string;
+            /** Video Id */
+            video_id?: string;
+            /** Vigiando */
+            vigiando?: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** ResumoAvaliacoesThumbnail */
         ResumoAvaliacoesThumbnail: {
             /** Medias Criterios */
@@ -6892,6 +7537,28 @@ export interface components {
          *     passa cada coordenada por `_inteiro`).
          */
         RetanguloCapa: {
+            /** H */
+            h: number;
+            /** W */
+            w: number;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** RetanguloDoPalco */
+        RetanguloDoPalco: {
+            /** H */
+            h: number;
+            /** W */
+            w: number;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
+        /** RetanguloEmPixels */
+        RetanguloEmPixels: {
             /** H */
             h: number;
             /** W */
@@ -7027,6 +7694,13 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** SegmentoDoShort */
+        SegmentoDoShort: {
+            /** Fim Seg */
+            fim_seg: number;
+            /** Inicio Seg */
+            inicio_seg: number;
+        };
         /**
          * SegmentoRequest
          * @description Uma fatia do bruto que entra no short (D-604).
@@ -7056,6 +7730,149 @@ export interface components {
         SelecionarTemaRequest: {
             /** Tema Id */
             tema_id: string;
+        };
+        /** ShortEditadoResponse */
+        ShortEditadoResponse: {
+            short: components["schemas"]["ShortResponse"];
+        };
+        /**
+         * ShortProntoResponse
+         * @description Um short renderizado que ainda falta em alguma rede (D-651).
+         */
+        ShortProntoResponse: {
+            /** Arquivo Short Path */
+            arquivo_short_path: string;
+            /** Atualizado Em */
+            atualizado_em: string;
+            capa: components["schemas"]["CapaResumida"];
+            /** Corte Id */
+            corte_id: string;
+            /** Corte Numero */
+            corte_numero: number;
+            /** Corte Titulo */
+            corte_titulo: string;
+            /** Duracao Seg */
+            duracao_seg: number;
+            /** Id */
+            id: string;
+            /** Inicio Seg */
+            inicio_seg: number;
+            /** Numero */
+            numero: number;
+            /** Pendentes */
+            pendentes: string[];
+            post: components["schemas"]["PostResumido"];
+            /** Projeto Id */
+            projeto_id: string;
+            /** Projeto Titulo */
+            projeto_titulo: string;
+            /** Publicadas */
+            publicadas: string[];
+            status: components["schemas"]["StatusShort"];
+            /** Titulo */
+            titulo: string;
+        };
+        /** ShortResponse */
+        ShortResponse: {
+            /** Ajustes Palco */
+            ajustes_palco: {
+                [key: string]: components["schemas"]["RetanguloDoPalco"];
+            };
+            /** Arquivo Previa Path */
+            arquivo_previa_path: string;
+            /** Arquivo Short Path */
+            arquivo_short_path: string;
+            /** Arranjo Palco */
+            arranjo_palco: string;
+            /** Cenas */
+            cenas: Record<string, unknown>[];
+            /** Corte Id */
+            corte_id: string;
+            /** Duracao Seg */
+            duracao_seg: number;
+            /** Envelope Seg */
+            envelope_seg: number;
+            /** Fim Seg */
+            fim_seg: number;
+            /** Foco Efetivo */
+            foco_efetivo: number;
+            /** Foco X */
+            foco_x: number | null;
+            /** Fundo Editorial */
+            fundo_editorial: string;
+            /** Fundo Palco */
+            fundo_palco: string;
+            /** Gancho */
+            gancho: string;
+            /** Gancho Ate Seg */
+            gancho_ate_seg: number;
+            /** Gancho Cor */
+            gancho_cor: string;
+            /** Gancho Largura */
+            gancho_largura: number;
+            /** Gancho Realce */
+            gancho_realce: string;
+            /** Gancho Sugestoes */
+            gancho_sugestoes: string[];
+            /** Gancho Tela */
+            gancho_tela: string;
+            /** Gancho X */
+            gancho_x: number;
+            /** Gancho Y */
+            gancho_y: number;
+            /** Id */
+            id: string;
+            /** Inicio Seg */
+            inicio_seg: number;
+            /** Janela Cheia */
+            janela_cheia: string;
+            /** Justificativa */
+            justificativa: string;
+            /** Legenda Cor */
+            legenda_cor: string;
+            /** Legenda Fonte */
+            legenda_fonte: string;
+            /** Legenda Largura */
+            legenda_largura: number;
+            /** Legenda X */
+            legenda_x: number;
+            /** Legenda Y */
+            legenda_y: number;
+            /** Moldura */
+            moldura: string;
+            /** Numero */
+            numero: number;
+            /** Origem */
+            origem: string;
+            /** Palco Preset */
+            palco_preset: string;
+            /** Palco Short Preset */
+            palco_short_preset: string;
+            /** Recortes Palco */
+            recortes_palco: {
+                [key: string]: components["schemas"]["RetanguloDoPalco"];
+            };
+            /** Score */
+            score: number;
+            /** Segmentos */
+            segmentos: components["schemas"]["SegmentoDoShort"][];
+            status: components["schemas"]["StatusShort"];
+            /** Titulo */
+            titulo: string;
+        };
+        /** ShortsDoCorteResponse */
+        ShortsDoCorteResponse: {
+            /** Shorts */
+            shorts: components["schemas"]["ShortResponse"][];
+        };
+        /** ShortsGeradosResponse */
+        ShortsGeradosResponse: {
+            /** Bruto Regerado */
+            bruto_regerado: boolean;
+            /** Descartes */
+            descartes: string[];
+            /** Shorts */
+            shorts: components["schemas"]["ShortResponse"][];
         };
         /**
          * SimularPalcoRequest
@@ -7262,6 +8079,34 @@ export interface components {
          */
         StatusProjeto: "pendente" | "baixando" | "transcrevendo" | "pronto" | "analisando" | "analisado" | "erro";
         /**
+         * StatusShort
+         * @description Estagio de um short dentro da fabrica (E-030).
+         *
+         *     SUGERIDO    -> a IA propos o trecho; aguarda curadoria humana.
+         *     APROVADO    -> o operador aceitou o candidato; entra na fila de producao.
+         *     REJEITADO   -> descartado na curadoria; fica no historico, nao some.
+         *     RENDERIZADO -> MP4 vertical pronto em `arquivo_short_path`.
+         * @enum {string}
+         */
+        StatusShort: "sugerido" | "aprovado" | "rejeitado" | "renderizado";
+        /**
+         * SugestoesDeShortsResponse
+         * @description Os candidatos que a IA propôs e, em `descartes`, por que recusou o resto.
+         */
+        SugestoesDeShortsResponse: {
+            /** Descartes */
+            descartes: string[];
+            /** Shorts */
+            shorts: components["schemas"]["ShortResponse"][];
+        };
+        /** TelaDoShort */
+        TelaDoShort: {
+            /** Altura */
+            altura: number;
+            /** Largura */
+            largura: number;
+        };
+        /**
          * TelemetriaAvaliacao
          * @description A avaliação humana do corte (D-419); `voto` None = não avaliado.
          */
@@ -7413,12 +8258,27 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** TiktokConfirmadoResponse */
+        TiktokConfirmadoResponse: {
+            /** Tiktok Publicado Em */
+            tiktok_publicado_em: string;
+        };
         /** TipoApontamentoResponse */
         TipoApontamentoResponse: {
             /** Rotulo */
             rotulo: string;
             /** Slug */
             slug: string;
+        };
+        /**
+         * TranscricaoDoBrutoResponse
+         * @description As palavras com tempo do bruto; `fonte` diz de onde vieram (D-479).
+         */
+        TranscricaoDoBrutoResponse: {
+            /** Fonte */
+            fonte: string;
+            /** Palavras */
+            palavras: components["schemas"]["PalavraDoBruto"][];
         };
         /** TranscricaoRefeitaResponse */
         TranscricaoRefeitaResponse: {
@@ -7538,6 +8398,11 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VariacoesDeGanchoResponse */
+        VariacoesDeGanchoResponse: {
+            /** Variacoes */
+            variacoes: string[];
         };
         /**
          * VersaoExport
@@ -12794,7 +13659,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ShortsDoCorteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -12829,7 +13694,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ShortEditadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -12860,7 +13725,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["BrutoDescartadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -12897,7 +13762,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CapaTiktokMontadaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -12932,7 +13797,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CapaTiktokDoCorteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -12965,7 +13830,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptDaCapaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13000,7 +13865,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CapaTiktokDoCorteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13031,7 +13896,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ElegibilidadeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13066,7 +13931,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FinalizacaoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13097,7 +13962,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["GanchoPadraoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13132,7 +13997,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PadraoEscolhidoGanchoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13163,7 +14028,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PadraoSeguidoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13194,7 +14059,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ShortsGeradosResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13229,7 +14094,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ElegibilidadeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13260,7 +14125,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["EstadoDoPalcoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13295,7 +14160,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["EstadoDoPalcoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13326,7 +14191,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PalcoPadraoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13361,7 +14226,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PadraoEscolhidoPalcoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13392,7 +14257,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PadraoSeguidoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13423,7 +14288,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PublicacoesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13454,7 +14319,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ResultadoDaPublicacao"];
                 };
             };
             /** @description Validation Error */
@@ -13489,7 +14354,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ResultadoDaPublicacao"];
                 };
             };
             /** @description Validation Error */
@@ -13520,7 +14385,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TiktokConfirmadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13555,7 +14420,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ResultadoDaPublicacao"];
                 };
             };
             /** @description Validation Error */
@@ -13588,7 +14453,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SugestoesDeShortsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13619,7 +14484,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TranscricaoDoBrutoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13653,7 +14518,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PicosDaOndaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13682,7 +14547,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FiresResponse"];
                 };
             };
         };
@@ -13702,7 +14567,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LoteAtualResponse"];
                 };
             };
         };
@@ -13726,7 +14591,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LoteDePublicacao"];
                 };
             };
             /** @description Validation Error */
@@ -13755,7 +14620,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LoteCanceladoResponse"];
                 };
             };
         };
@@ -13779,7 +14644,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LoteConfirmadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13810,7 +14675,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ArranjosResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13839,7 +14704,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FundosResponse"];
                 };
             };
         };
@@ -13859,7 +14724,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ProntosResponse"];
                 };
             };
         };
@@ -13885,7 +14750,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ShortEditadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13916,7 +14781,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CapaDoShortResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13951,7 +14816,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CapaGeradaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -13986,7 +14851,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CapaGeradaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14017,7 +14882,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "image/jpeg": unknown;
                 };
             };
             /** @description Validation Error */
@@ -14048,7 +14913,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptDaCapaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14081,7 +14946,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptDaCapaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14116,7 +14981,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ShortEditadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14149,7 +15014,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CenasSugeridasResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14180,7 +15045,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["EnquadramentoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14213,7 +15078,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["VariacoesDeGanchoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14244,7 +15109,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LogDoRenderResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14275,7 +15140,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PlanoDesenhavelResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14310,7 +15175,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PlanoDesenhavelResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14341,7 +15206,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PostDoShortResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14376,7 +15241,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PostDoShortResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14409,7 +15274,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PostDoShortResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14440,7 +15305,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RenderDisparadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14471,7 +15336,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ProgressoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14502,7 +15367,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PacotesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14537,7 +15402,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ResultadoDaPublicacao"];
                 };
             };
             /** @description Validation Error */
@@ -14569,7 +15434,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ResultadoDaPublicacao"];
                 };
             };
             /** @description Validation Error */
@@ -14600,7 +15465,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RenderDisparadoResponse"];
                 };
             };
             /** @description Validation Error */
@@ -14628,13 +15493,11 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            307: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

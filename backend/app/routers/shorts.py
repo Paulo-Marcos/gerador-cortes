@@ -66,9 +66,12 @@ import logging
 from pathlib import Path
 
 from app.domain.compartilhado.provider_ia import ProviderIA
+from app.routers import shorts_schemas as esquemas
+from app.routers.cortes_schemas import PicosDaOndaResponse
 from app.services import fabrica_de_shorts, publicacao_no_tiktok
 from app.services import shorts as shorts_store
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -81,13 +84,13 @@ router = APIRouter()
 URL_UPLOAD_TIKTOK = "https://www.tiktok.com/tiktokstudio/upload?from=upload"
 
 
-@router.get("/fires")
+@router.get("/fires", response_model=esquemas.FiresResponse)
 async def listar_fires():
     """A porta da tela de Shorts: os Fires que ainda tem de onde recortar."""
     return {"fires": await shorts_store.listar_fires_com_bruto()}
 
 
-@router.get("/prontos")
+@router.get("/prontos", response_model=esquemas.ProntosResponse)
 async def listar_prontos():
     """D-611: a central — todo short pronto que ainda falta em alguma rede."""
     from app.services import shorts_prontos
@@ -95,7 +98,7 @@ async def listar_prontos():
     return {"shorts": await shorts_prontos.listar_prontos()}
 
 
-@router.get("/corte/{corte_id}")
+@router.get("/corte/{corte_id}", response_model=esquemas.ShortsDoCorteResponse)
 async def listar(corte_id: str):
     return {"shorts": await shorts_store.listar_shorts(corte_id)}
 
@@ -108,7 +111,7 @@ class CriarShortManualRequest(BaseModel):
     titulo: str = ""
 
 
-@router.post("/corte/{corte_id}")
+@router.post("/corte/{corte_id}", response_model=esquemas.ShortEditadoResponse)
 async def criar_manual(corte_id: str, body: CriarShortManualRequest):
     """Cria um candidato a short a partir de um trecho escolhido a mão (D-484).
 
@@ -130,7 +133,7 @@ async def criar_manual(corte_id: str, body: CriarShortManualRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.delete("/corte/{corte_id}/bruto")
+@router.delete("/corte/{corte_id}/bruto", response_model=esquemas.BrutoDescartadoResponse)
 async def descartar_bruto(corte_id: str):
     """Descarta o bruto guardado — o corte deixa de poder gerar shorts."""
     try:
@@ -145,7 +148,7 @@ class IndicarRequest(BaseModel):
     indicado: bool = True
 
 
-@router.post("/corte/{corte_id}/indicar")
+@router.post("/corte/{corte_id}/indicar", response_model=esquemas.ElegibilidadeResponse)
 async def indicar_para_shorts(corte_id: str, body: IndicarRequest):
     """Poe o corte na fabrica de shorts sem depender do Fire (D-502).
 
@@ -165,7 +168,7 @@ class FinalizadoRequest(BaseModel):
     finalizado: bool = True
 
 
-@router.put("/corte/{corte_id}/finalizado")
+@router.put("/corte/{corte_id}/finalizado", response_model=esquemas.FinalizacaoResponse)
 async def marcar_finalizado(corte_id: str, body: FinalizadoRequest):
     """Tira o corte da fila de trabalho, ou o devolve a ela (D-593)."""
     try:
@@ -174,7 +177,7 @@ async def marcar_finalizado(corte_id: str, body: FinalizadoRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/corte/{corte_id}/elegibilidade")
+@router.get("/corte/{corte_id}/elegibilidade", response_model=esquemas.ElegibilidadeResponse)
 async def elegibilidade(corte_id: str):
     """Se o corte é Fire, se tem bruto, e quantos candidatos já existem."""
     try:
@@ -183,7 +186,7 @@ async def elegibilidade(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/corte/{corte_id}/gerar")
+@router.post("/corte/{corte_id}/gerar", response_model=esquemas.ShortsGeradosResponse)
 async def gerar_manualmente(corte_id: str):
     """Caminho manual da fábrica: regera o bruto se preciso e propõe os shorts.
 
@@ -198,7 +201,7 @@ async def gerar_manualmente(corte_id: str):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/palco/fundos")
+@router.get("/palco/fundos", response_model=esquemas.FundosResponse)
 async def fundos_de_palco():
     """As cores do canal oferecidas como fundo do short (D-499).
 
@@ -210,7 +213,7 @@ async def fundos_de_palco():
     return {"fundos": palco_shorts.catalogo_fundos()}
 
 
-@router.get("/palco/arranjos")
+@router.get("/palco/arranjos", response_model=esquemas.ArranjosResponse)
 async def arranjos_de_palco(corte_id: str = ""):
     """Como a tela do short pode ser montada (D-507).
 
@@ -230,7 +233,7 @@ async def arranjos_de_palco(corte_id: str = ""):
     return {"arranjos": palco_shorts.catalogo_arranjos(regioes)}
 
 
-@router.get("/corte/{corte_id}/palco")
+@router.get("/corte/{corte_id}/palco", response_model=esquemas.EstadoDoPalcoResponse)
 async def descrever_palco(corte_id: str):
     """De onde vêm as regiões deste corte, e o que há para escolher."""
     from app.services import palco_shorts
@@ -247,7 +250,7 @@ class EscolherPresetRequest(BaseModel):
     preset_id: str = ""
 
 
-@router.put("/corte/{corte_id}/palco")
+@router.put("/corte/{corte_id}/palco", response_model=esquemas.EstadoDoPalcoResponse)
 async def escolher_preset_do_palco(corte_id: str, body: EscolherPresetRequest):
     """Aponta um preset do canal para alimentar o palco vertical deste corte."""
     from app.services import palco_shorts
@@ -260,7 +263,7 @@ async def escolher_preset_do_palco(corte_id: str, body: EscolherPresetRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/corte/{corte_id}/waveform-peaks")
+@router.get("/corte/{corte_id}/waveform-peaks", response_model=PicosDaOndaResponse)
 async def waveform_do_bruto(corte_id: str, refresh: bool = False, points: int | None = None):
     """Os picos de audio do BRUTO, para a regua da curadoria (D-541).
 
@@ -281,7 +284,7 @@ async def waveform_do_bruto(corte_id: str, refresh: bool = False, points: int | 
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/corte/{corte_id}/transcricao")
+@router.get("/corte/{corte_id}/transcricao", response_model=esquemas.TranscricaoDoBrutoResponse)
 async def transcricao_do_bruto(corte_id: str):
     """As palavras com tempo do bruto — a matéria-prima da prévia de legenda.
 
@@ -310,7 +313,7 @@ async def transcricao_do_bruto(corte_id: str):
     }
 
 
-@router.post("/corte/{corte_id}/sugerir")
+@router.post("/corte/{corte_id}/sugerir", response_model=esquemas.SugestoesDeShortsResponse)
 async def sugerir_agora(corte_id: str, provider: ProviderIA = "claude"):
     """Propõe os shorts do bruto atual, de forma síncrona (o caller espera)."""
     from app.services import shorts as shorts_store
@@ -381,7 +384,7 @@ class AtualizarShortRequest(BaseModel):
     gancho_largura: float | None = None
 
 
-@router.patch("/{short_id}")
+@router.patch("/{short_id}", response_model=esquemas.ShortEditadoResponse)
 async def atualizar(short_id: str, body: AtualizarShortRequest):
     """Aprova, rejeita ou reposiciona as bordas de um candidato."""
     try:
@@ -402,7 +405,7 @@ class DefinirCenasRequest(BaseModel):
     cenas: list[dict]
 
 
-@router.put("/{short_id}/cenas")
+@router.put("/{short_id}/cenas", response_model=esquemas.ShortEditadoResponse)
 async def definir_cenas(short_id: str, body: DefinirCenasRequest):
     """Grava as cenas do short — hook, número, citação, CTA (D-494)."""
     try:
@@ -413,7 +416,7 @@ async def definir_cenas(short_id: str, body: DefinirCenasRequest):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.post("/{short_id}/enquadrar")
+@router.post("/{short_id}/enquadrar", response_model=esquemas.EnquadramentoResponse)
 async def enquadrar(short_id: str):
     """Acha o rosto de quem fala e centra o recorte 9:16 nele (D-477).
 
@@ -435,7 +438,7 @@ async def enquadrar(short_id: str):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.post("/{short_id}/cenas/sugerir")
+@router.post("/{short_id}/cenas/sugerir", response_model=esquemas.CenasSugeridasResponse)
 async def sugerir_cenas(short_id: str, provider: ProviderIA = "claude"):
     """A IA propõe os cartões deste trecho e já os grava (D-497).
 
@@ -454,7 +457,7 @@ async def sugerir_cenas(short_id: str, provider: ProviderIA = "claude"):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.post("/{short_id}/ganchos")
+@router.post("/{short_id}/ganchos", response_model=esquemas.VariacoesDeGanchoResponse)
 async def sugerir_ganchos(short_id: str, provider: ProviderIA = "claude"):
     """A IA propoe variacoes do gancho da abertura — e NAO grava (D-565).
 
@@ -498,7 +501,7 @@ class AtualizarPostRequest(BaseModel):
     hashtags: list[str] | None = None
 
 
-@router.get("/{short_id}/post")
+@router.get("/{short_id}/post", response_model=esquemas.PostDoShortResponse)
 async def obter_post(short_id: str):
     """O texto de publicacao deste short, ou os campos vazios (D-565)."""
     from app.services import metadados_short
@@ -506,7 +509,7 @@ async def obter_post(short_id: str):
     return await metadados_short.obter(short_id)
 
 
-@router.post("/{short_id}/post/gerar")
+@router.post("/{short_id}/post/gerar", response_model=esquemas.PostDoShortResponse)
 async def gerar_post(short_id: str, provider: ProviderIA = "claude"):
     """A IA escreve titulo, descricao e hashtags para o feed — e GRAVA.
 
@@ -525,7 +528,7 @@ async def gerar_post(short_id: str, provider: ProviderIA = "claude"):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.patch("/{short_id}/post")
+@router.patch("/{short_id}/post", response_model=esquemas.PostDoShortResponse)
 async def atualizar_post(short_id: str, body: AtualizarPostRequest):
     """A ultima palavra sobre o texto de publicacao e do operador."""
     from app.services import metadados_short
@@ -541,7 +544,7 @@ async def atualizar_post(short_id: str, body: AtualizarPostRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/{short_id}/renderizar")
+@router.post("/{short_id}/renderizar", response_model=esquemas.RenderDisparadoResponse)
 async def renderizar(short_id: str):
     """Produz o MP4 vertical do short (recorte 9:16 + legenda + cenas)."""
     from app.services.render import render_short
@@ -552,7 +555,7 @@ async def renderizar(short_id: str):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.post("/{short_id}/previa")
+@router.post("/{short_id}/previa", response_model=esquemas.RenderDisparadoResponse)
 async def renderizar_previa(short_id: str):
     """Produz a PRÉVIA: vertical com legenda e cenas, sem o filtro (D-483).
 
@@ -568,7 +571,7 @@ async def renderizar_previa(short_id: str):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.get("/{short_id}/video")
+@router.get("/{short_id}/video", status_code=307, response_class=RedirectResponse)
 async def obter_video(short_id: str, estagio: str = "final"):
     """Serve o MP4 do short — a prévia ou o final (D-483).
 
@@ -580,7 +583,6 @@ async def obter_video(short_id: str, estagio: str = "final"):
     disco e só a publicação o lia. Uma prévia que não se pode ver não serve para
     nada, então a rota nasce junto com ela.
     """
-    from fastapi.responses import RedirectResponse
 
     projeto_id, relativo, caminho = await shorts_store.localizar_arquivo(short_id, estagio)
     try:
@@ -599,7 +601,7 @@ class GerarCapaRequest(BaseModel):
     instante_seg: float | None = None
 
 
-@router.get("/{short_id}/capa")
+@router.get("/{short_id}/capa", response_model=esquemas.CapaDoShortResponse)
 async def obter_capa(short_id: str):
     """O quadro de capa gravado, ou o instante SUGERIDO quando ainda nao ha (D-565)."""
     from app.services import capa_short
@@ -610,7 +612,7 @@ async def obter_capa(short_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/{short_id}/capa")
+@router.post("/{short_id}/capa", response_model=esquemas.CapaGeradaResponse)
 async def gerar_capa(short_id: str, body: GerarCapaRequest):
     """Tira o quadro do MP4 do short no instante escolhido e grava o caminho.
 
@@ -633,7 +635,7 @@ async def gerar_capa(short_id: str, body: GerarCapaRequest):
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@router.get("/{short_id}/capa/prompt")
+@router.get("/{short_id}/capa/prompt", response_model=esquemas.PromptDaCapaResponse)
 async def obter_prompt_da_capa(short_id: str):
     """O prompt da arte ja escrito para este short, ou "" quando ainda nao ha.
 
@@ -646,7 +648,7 @@ async def obter_prompt_da_capa(short_id: str):
     return {"prompt": await capa_short.obter_prompt(short_id)}
 
 
-@router.post("/{short_id}/capa/prompt")
+@router.post("/{short_id}/capa/prompt", response_model=esquemas.PromptDaCapaResponse)
 async def gerar_prompt_da_capa(short_id: str, provider: ProviderIA = "claude"):
     """Escreve o prompt de imagem da capa deste short (D-581).
 
@@ -667,7 +669,7 @@ async def gerar_prompt_da_capa(short_id: str, provider: ProviderIA = "claude"):
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@router.post("/{short_id}/capa/arte")
+@router.post("/{short_id}/capa/arte", response_model=esquemas.CapaGeradaResponse)
 async def subir_arte_da_capa(short_id: str, arquivo: UploadFile = File(...)):
     """Grava a imagem desenhada pelo operador como a capa deste short.
 
@@ -685,20 +687,23 @@ async def subir_arte_da_capa(short_id: str, arquivo: UploadFile = File(...)):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/{short_id}/capa/imagem")
+@router.get(
+    "/{short_id}/capa/imagem",
+    response_class=FileResponse,
+    responses={200: {"content": {"image/jpeg": {}}}},
+)
 async def obter_capa_imagem(short_id: str):
     """Serve o arquivo da capa, no mesmo arranjo de `/video`.
 
     Cache-buster pelo mtime: sem ele o navegador serve a capa antiga depois de o
     operador escolher outro instante, e a tela mentiria sobre o que foi gravado.
     """
-    from fastapi.responses import FileResponse
 
     caminho = await shorts_store.localizar_capa(short_id)
     return FileResponse(caminho, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
-@router.get("/{short_id}/progresso")
+@router.get("/{short_id}/progresso", response_model=esquemas.ProgressoResponse)
 async def progresso_do_render(short_id: str):
     """Em que passo o render está e há quanto tempo (D-485).
 
@@ -711,7 +716,7 @@ async def progresso_do_render(short_id: str):
     return {"render": ShortsProgress.get(short_id)}
 
 
-@router.get("/corte/{corte_id}/palco-padrao")
+@router.get("/corte/{corte_id}/palco-padrao", response_model=esquemas.PalcoPadraoResponse)
 async def palco_padrao_do_corte(corte_id: str):
     """O palco que vale para todos os shorts deste corte (D-570)."""
     from app.services import palco_shorts
@@ -722,7 +727,7 @@ async def palco_padrao_do_corte(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.put("/corte/{corte_id}/palco-padrao")
+@router.put("/corte/{corte_id}/palco-padrao", response_model=esquemas.PadraoEscolhidoPalcoResponse)
 async def definir_palco_padrao(corte_id: str, body: PalcoPadraoRequest):
     """Escolhe o palco padrao do corte. Nao copia nada: a heranca e na leitura."""
     from app.services import palco_shorts
@@ -733,7 +738,7 @@ async def definir_palco_padrao(corte_id: str, body: PalcoPadraoRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/corte/{corte_id}/palco-padrao/seguir")
+@router.post("/corte/{corte_id}/palco-padrao/seguir", response_model=esquemas.PadraoSeguidoResponse)
 async def seguir_palco_padrao(corte_id: str):
     """Todos os trechos voltam a herdar o palco padrao. Bordas e gancho ficam."""
     from app.services import palco_shorts
@@ -748,7 +753,7 @@ class GanchoPadraoRequest(BaseModel):
     preset_id: str | None = None
 
 
-@router.get("/corte/{corte_id}/gancho-padrao")
+@router.get("/corte/{corte_id}/gancho-padrao", response_model=esquemas.GanchoPadraoResponse)
 async def gancho_padrao_do_corte(corte_id: str):
     """O preset de gancho que vale para todos os shorts deste corte (D-594)."""
     from app.services import palco_shorts
@@ -759,7 +764,9 @@ async def gancho_padrao_do_corte(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.put("/corte/{corte_id}/gancho-padrao")
+@router.put(
+    "/corte/{corte_id}/gancho-padrao", response_model=esquemas.PadraoEscolhidoGanchoResponse
+)
 async def definir_gancho_padrao(corte_id: str, body: GanchoPadraoRequest):
     """Escolhe o gancho padrao do corte. Heranca na leitura, como a do palco."""
     from app.services import palco_shorts
@@ -770,7 +777,9 @@ async def definir_gancho_padrao(corte_id: str, body: GanchoPadraoRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/corte/{corte_id}/gancho-padrao/seguir")
+@router.post(
+    "/corte/{corte_id}/gancho-padrao/seguir", response_model=esquemas.PadraoSeguidoResponse
+)
 async def seguir_gancho_padrao(corte_id: str):
     """Todos os trechos voltam a seguir o gancho padrao (D-594). O texto fica."""
     from app.services import palco_shorts
@@ -781,7 +790,7 @@ async def seguir_gancho_padrao(corte_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/{short_id}/log")
+@router.get("/{short_id}/log", response_model=esquemas.LogDoRenderResponse)
 async def log_do_render(short_id: str):
     """O log do worker deste short — o que rodou, e quanto cada passo levou.
 
@@ -797,7 +806,7 @@ async def log_do_render(short_id: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/{short_id}/palco")
+@router.get("/{short_id}/palco", response_model=esquemas.PlanoDesenhavelResponse)
 async def palco_do_short(short_id: str):
     """O palco deste short em coordenadas de desenho — a matéria da prévia (D-489)."""
     from app.services import palco_shorts
@@ -818,7 +827,7 @@ class SimularPalcoRequest(BaseModel):
     palco: dict | None = None
 
 
-@router.post("/{short_id}/palco/simular")
+@router.post("/{short_id}/palco/simular", response_model=esquemas.PlanoDesenhavelResponse)
 async def simular_palco(short_id: str, body: SimularPalcoRequest):
     """O palco que ESTES ajustes produziriam, sem gravar nada (D-500).
 
@@ -838,7 +847,7 @@ async def simular_palco(short_id: str, body: SimularPalcoRequest):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/{short_id}/publicacao")
+@router.get("/{short_id}/publicacao", response_model=esquemas.PacotesResponse)
 async def previa_publicacao(short_id: str):
     """O que cada plataforma receberia, com os avisos — sem publicar nada."""
     from app.domain.publicacao.publicacao import LIMITES, legenda_unica
@@ -875,7 +884,11 @@ async def previa_publicacao(short_id: str):
     return {"pacotes": pacotes}
 
 
-@router.post("/{short_id}/publicar/{plataforma}")
+@router.post(
+    "/{short_id}/publicar/{plataforma}",
+    response_model=esquemas.ResultadoDaPublicacao,
+    response_model_exclude_unset=True,
+)
 async def publicar(short_id: str, plataforma: str):
     """Publica pela API ou monta o pacote manual, conforme o destino."""
     from app.domain.publicacao.publicacao import Plataforma
@@ -926,7 +939,7 @@ class CapaTikTokRequest(BaseModel):
     instante_seg: float | None = None
 
 
-@router.post("/corte/{corte_id}/capa-tiktok")
+@router.post("/corte/{corte_id}/capa-tiktok", response_model=esquemas.CapaTiktokMontadaResponse)
 async def gerar_capa_tiktok(
     corte_id: str, body: CapaTikTokRequest, provider: ProviderIA = "claude"
 ):
@@ -966,7 +979,7 @@ async def gerar_capa_tiktok(
     return {"capa": str(caminho), "nome": caminho.name, "etiqueta": etiqueta}
 
 
-@router.post("/corte/{corte_id}/capa-tiktok/prompt")
+@router.post("/corte/{corte_id}/capa-tiktok/prompt", response_model=esquemas.PromptDaCapaResponse)
 async def gerar_prompt_da_capa_tiktok(corte_id: str, provider: ProviderIA = "claude"):
     """Escreve o prompt da ARTE da capa e o guarda no metadado (D-524).
 
@@ -984,7 +997,9 @@ async def gerar_prompt_da_capa_tiktok(corte_id: str, provider: ProviderIA = "cla
     return {"prompt": prompt}
 
 
-@router.post("/corte/{corte_id}/capa-tiktok/arte")
+@router.post(
+    "/corte/{corte_id}/capa-tiktok/arte", response_model=esquemas.CapaTiktokDoCorteResponse
+)
 async def subir_arte_da_capa_tiktok(corte_id: str, arquivo: UploadFile = File(...)):
     """Recebe a ilustracao 16:9 que vai na faixa central, e monta a capa.
 
@@ -1006,7 +1021,9 @@ async def subir_arte_da_capa_tiktok(corte_id: str, arquivo: UploadFile = File(..
     return {"capa": str(caminho), "nome": caminho.name}
 
 
-@router.post("/corte/{corte_id}/capa-tiktok/upload")
+@router.post(
+    "/corte/{corte_id}/capa-tiktok/upload", response_model=esquemas.CapaTiktokDoCorteResponse
+)
 async def subir_capa_tiktok(corte_id: str, arquivo: UploadFile = File(...)):
     """Recebe uma capa 9:16 feita por fora, no lugar da montada."""
     from app.services import capa_tiktok
@@ -1025,7 +1042,10 @@ async def subir_capa_tiktok(corte_id: str, arquivo: UploadFile = File(...)):
     return {"capa": str(caminho), "nome": caminho.name}
 
 
-@router.post("/corte/{corte_id}/publicar/tiktok-horizontal/confirmar")
+@router.post(
+    "/corte/{corte_id}/publicar/tiktok-horizontal/confirmar",
+    response_model=esquemas.TiktokConfirmadoResponse,
+)
 async def confirmar_tiktok_horizontal(corte_id: str):
     """Marca que o operador subiu ESTE corte para o TikTok (D-512).
 
@@ -1041,7 +1061,11 @@ async def confirmar_tiktok_horizontal(corte_id: str):
     return {"tiktok_publicado_em": publicado_em.isoformat()}
 
 
-@router.post("/corte/{corte_id}/publicar/tiktok-horizontal/staging")
+@router.post(
+    "/corte/{corte_id}/publicar/tiktok-horizontal/staging",
+    response_model=esquemas.ResultadoDaPublicacao,
+    response_model_exclude_unset=True,
+)
 async def staging_tiktok_horizontal(corte_id: str, body: StagingRequest):
     """Monta o pacote e deixa TUDO a um passo do upload (D-503).
 
@@ -1090,7 +1114,11 @@ class AssistidoRequest(BaseModel):
     agendar_para: str = ""
 
 
-@router.post("/corte/{corte_id}/publicar/tiktok-horizontal/assistido")
+@router.post(
+    "/corte/{corte_id}/publicar/tiktok-horizontal/assistido",
+    response_model=esquemas.ResultadoDaPublicacao,
+    response_model_exclude_unset=True,
+)
 async def assistido_tiktok_horizontal(corte_id: str, body: AssistidoRequest | None = None):
     """O robô faz os quatro passos repetitivos e para antes de publicar (D-537).
 
@@ -1107,7 +1135,11 @@ async def assistido_tiktok_horizontal(corte_id: str, body: AssistidoRequest | No
     )
 
 
-@router.post("/{short_id}/publicar/tiktok/assistido")
+@router.post(
+    "/{short_id}/publicar/tiktok/assistido",
+    response_model=esquemas.ResultadoDaPublicacao,
+    response_model_exclude_unset=True,
+)
 async def assistido_tiktok_do_short(short_id: str, body: AssistidoRequest | None = None):
     """O mesmo robô, para o short vertical."""
     # Sem `corte_id`: a marca de publicado e do CORTE horizontal, e um short
@@ -1154,7 +1186,11 @@ async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", agendamento=N
         ) from exc
 
 
-@router.post("/corte/{corte_id}/publicar/tiktok-horizontal")
+@router.post(
+    "/corte/{corte_id}/publicar/tiktok-horizontal",
+    response_model=esquemas.ResultadoDaPublicacao,
+    response_model_exclude_unset=True,
+)
 async def publicar_corte_no_tiktok(corte_id: str):
     """Monta o pacote do MP4 HORIZONTAL do corte para o TikTok (D-470).
 
@@ -1203,7 +1239,7 @@ class LoteRequest(BaseModel):
     republicar: bool = False
 
 
-@router.post("/lote")
+@router.post("/lote", response_model=esquemas.LoteDePublicacao)
 async def criar_lote(body: LoteRequest):
     """Dispara o lote: uma raia por plataforma, cada uma no seu passo (D-564)."""
     from app.domain.publicacao.publicacao import Plataforma
@@ -1263,7 +1299,7 @@ def _ler_alvo(bruto: str) -> tuple[str, str]:
     return tipo, identificador
 
 
-@router.get("/lote")
+@router.get("/lote", response_model=esquemas.LoteAtualResponse)
 async def ver_lote():
     """O lote em andamento, ou o ultimo que rodou. `null` quando nunca houve um."""
     from app.services import publicacao_lote
@@ -1272,7 +1308,7 @@ async def ver_lote():
     return {"lote": lote.como_dict() if lote else None}
 
 
-@router.post("/lote/cancelar")
+@router.post("/lote/cancelar", response_model=esquemas.LoteCanceladoResponse)
 async def cancelar_lote():
     """Interrompe o lote na hora: os que esperam viram cancelados e o robo larga a vigilia.
 
@@ -1299,7 +1335,7 @@ class ConfirmarPublicacaoRequest(BaseModel):
     url: str = ""
 
 
-@router.post("/lote/confirmar")
+@router.post("/lote/confirmar", response_model=esquemas.LoteConfirmadoResponse)
 async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
     """Marca que ESTE item subiu — o que a maquina nao tem como saber sozinha.
 
@@ -1328,7 +1364,7 @@ async def confirmar_publicacao(body: ConfirmarPublicacaoRequest):
     return {"confirmado": True}
 
 
-@router.get("/corte/{corte_id}/publicacoes")
+@router.get("/corte/{corte_id}/publicacoes", response_model=esquemas.PublicacoesResponse)
 async def publicacoes_do_corte(corte_id: str):
     """O que ja foi publicado dos shorts deste corte — e do proprio corte.
 

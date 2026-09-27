@@ -136,6 +136,40 @@ def test_corte_sem_bruto_vira_422(client):
     assert client.post("/api/shorts/corte/c-sem-bruto/sugerir").status_code == 422
 
 
+def _plano_desenhavel(**campos) -> dict:
+    """Um plano com todas as chaves que a rota devolve (D-722: o schema filtra
+    e valida a resposta, e um dublê pela metade virava 500)."""
+    return {
+        "origem": "nenhuma",
+        "modelo": None,
+        "arranjo": "",
+        "arranjos": [],
+        "regioes": {},
+        "canvas": {"largura": 1080, "altura": 1920},
+        "fundo": "",
+        "fundo_editorial": "",
+        "legenda_cor": "",
+        "legenda_fonte": "",
+        "legenda_x": 0.0,
+        "legenda_y": 0.0,
+        "legenda_largura": 0.0,
+        "gancho_cor": "",
+        "gancho_realce": "",
+        "gancho_ate_seg": 0.0,
+        "gancho_fonte": "",
+        "gancho_tamanho": 0.0,
+        "gancho_x": 0.0,
+        "gancho_y": 0.0,
+        "gancho_largura": 0.0,
+        "recortes": [],
+        "slots": {},
+        "ajustados": [],
+        "moldura": "palco",
+        "faixas": [],
+        **campos,
+    }
+
+
 class TestSimularPalco:
     """D-500: o palco que ESTES ajustes dariam, sem gravar nada.
 
@@ -157,7 +191,7 @@ class TestSimularPalco:
             if short_id == "sumido":
                 raise LookupError("short nao encontrado")
             recebidos.append((short_id, ajustes_hipoteticos, palco_rascunho))
-            return {"modelo": "pessoa_cheia", "recortes": [], "slots": {}}
+            return _plano_desenhavel(modelo="pessoa_cheia")
 
         monkeypatch.setattr(palco_shorts, "plano_desenhavel", _fake)
         return recebidos

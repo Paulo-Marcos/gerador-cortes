@@ -289,6 +289,55 @@
         "title": "AppSettingsResponse",
         "type": "object"
       },
+      "ArranjoDoPalco": {
+        "description": "Um jeito de montar a tela do short e se as regiões do corte o permitem.",
+        "properties": {
+          "chave": {
+            "title": "Chave",
+            "type": "string"
+          },
+          "disposicao": {
+            "title": "Disposicao",
+            "type": "string"
+          },
+          "impedimento": {
+            "title": "Impedimento",
+            "type": "string"
+          },
+          "janelas": {
+            "title": "Janelas",
+            "type": "integer"
+          },
+          "modo": {
+            "title": "Modo",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "porque": {
+            "title": "Porque",
+            "type": "string"
+          },
+          "possivel": {
+            "title": "Possivel",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave",
+          "modo",
+          "disposicao",
+          "nome",
+          "porque",
+          "janelas",
+          "possivel",
+          "impedimento"
+        ],
+        "title": "ArranjoDoPalco",
+        "type": "object"
+      },
       "ArranjoResponse": {
         "properties": {
           "blocos": {
@@ -328,6 +377,22 @@
           "bruto_desatualizado"
         ],
         "title": "ArranjoResponse",
+        "type": "object"
+      },
+      "ArranjosResponse": {
+        "properties": {
+          "arranjos": {
+            "items": {
+              "$ref": "#/components/schemas/ArranjoDoPalco"
+            },
+            "title": "Arranjos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "arranjos"
+        ],
+        "title": "ArranjosResponse",
         "type": "object"
       },
       "AssistidoRequest": {
@@ -1678,6 +1743,42 @@
         "title": "Body_upload_thumbnail_manual_api_metadados_corte__corte_id__thumbnail_manual_post",
         "type": "object"
       },
+      "BrutoDescartadoResponse": {
+        "properties": {
+          "erros": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Erros",
+            "type": "array"
+          },
+          "liberado_mb": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Liberado Mb"
+          },
+          "removidos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removidos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "liberado_mb",
+          "removidos",
+          "erros"
+        ],
+        "title": "BrutoDescartadoResponse",
+        "type": "object"
+      },
       "BulkYouTubeRequest": {
         "properties": {
           "agendar": {
@@ -1883,6 +1984,81 @@
         "title": "CandidataRejeitadaResponse",
         "type": "object"
       },
+      "CapaDoShortResponse": {
+        "description": "A capa gravada, ou o instante sugerido para gerar uma.",
+        "properties": {
+          "capa_path": {
+            "title": "Capa Path",
+            "type": "string"
+          },
+          "duracao_seg": {
+            "title": "Duracao Seg",
+            "type": "number"
+          },
+          "gancho_ate_seg": {
+            "title": "Gancho Ate Seg",
+            "type": "number"
+          },
+          "instante_seg": {
+            "title": "Instante Seg",
+            "type": "number"
+          },
+          "tem_capa": {
+            "title": "Tem Capa",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "capa_path",
+          "instante_seg",
+          "tem_capa",
+          "duracao_seg",
+          "gancho_ate_seg"
+        ],
+        "title": "CapaDoShortResponse",
+        "type": "object"
+      },
+      "CapaGeradaResponse": {
+        "properties": {
+          "capa_path": {
+            "title": "Capa Path",
+            "type": "string"
+          },
+          "instante_seg": {
+            "title": "Instante Seg",
+            "type": "number"
+          },
+          "tem_capa": {
+            "title": "Tem Capa",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "capa_path",
+          "instante_seg",
+          "tem_capa"
+        ],
+        "title": "CapaGeradaResponse",
+        "type": "object"
+      },
+      "CapaResumida": {
+        "properties": {
+          "instante_seg": {
+            "title": "Instante Seg",
+            "type": "number"
+          },
+          "tem_capa": {
+            "title": "Tem Capa",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "tem_capa",
+          "instante_seg"
+        ],
+        "title": "CapaResumida",
+        "type": "object"
+      },
       "CapaTikTokRequest": {
         "description": "O que vai na faixa central e qual texto vai por cima.\n\n`origem=\"ia\"` (padrão) usa a arte que o operador subiu; `\"frame\"` tira um\nstill do vídeo, que é o escape hatch.\n\n`etiqueta` vazia usa o `texto_capa` do metadado — o mesmo texto da thumbnail\ndo YouTube. Só quando ele também está vazio a skill entra, e só se\n`sugerir_etiqueta` permitir.",
         "properties": {
@@ -1914,6 +2090,48 @@
           }
         },
         "title": "CapaTikTokRequest",
+        "type": "object"
+      },
+      "CapaTiktokDoCorteResponse": {
+        "description": "A capa vertical do TikTok do corte (D-519): o caminho e o nome do arquivo.",
+        "properties": {
+          "capa": {
+            "title": "Capa",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "capa",
+          "nome"
+        ],
+        "title": "CapaTiktokDoCorteResponse",
+        "type": "object"
+      },
+      "CapaTiktokMontadaResponse": {
+        "properties": {
+          "capa": {
+            "title": "Capa",
+            "type": "string"
+          },
+          "etiqueta": {
+            "title": "Etiqueta",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "capa",
+          "nome",
+          "etiqueta"
+        ],
+        "title": "CapaTiktokMontadaResponse",
         "type": "object"
       },
       "CenaDoCorte": {
@@ -2008,6 +2226,26 @@
         "title": "CenasGeradasResponse",
         "type": "object"
       },
+      "CenasSugeridasResponse": {
+        "properties": {
+          "descartes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Descartes",
+            "type": "array"
+          },
+          "short": {
+            "$ref": "#/components/schemas/ShortResponse"
+          }
+        },
+        "required": [
+          "short",
+          "descartes"
+        ],
+        "title": "CenasSugeridasResponse",
+        "type": "object"
+      },
       "ConfirmarPublicacaoRequest": {
         "description": "O \"publiquei\" do destino manual, onde o upload acontece longe daqui.",
         "properties": {
@@ -2035,6 +2273,40 @@
           "plataforma"
         ],
         "title": "ConfirmarPublicacaoRequest",
+        "type": "object"
+      },
+      "ContagemDeShorts": {
+        "description": "Quantos shorts o corte tem, por estágio da curadoria.",
+        "properties": {
+          "aprovado": {
+            "title": "Aprovado",
+            "type": "integer"
+          },
+          "rejeitado": {
+            "title": "Rejeitado",
+            "type": "integer"
+          },
+          "renderizado": {
+            "title": "Renderizado",
+            "type": "integer"
+          },
+          "sugerido": {
+            "title": "Sugerido",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "sugerido",
+          "aprovado",
+          "rejeitado",
+          "renderizado"
+        ],
+        "title": "ContagemDeShorts",
         "type": "object"
       },
       "CorteResponse": {
@@ -2788,6 +3060,39 @@
         "title": "DownloadsFalhadosResponse",
         "type": "object"
       },
+      "ElegibilidadeResponse": {
+        "properties": {
+          "candidato_shorts": {
+            "title": "Candidato Shorts",
+            "type": "boolean"
+          },
+          "elegivel": {
+            "title": "Elegivel",
+            "type": "boolean"
+          },
+          "is_fire": {
+            "title": "Is Fire",
+            "type": "boolean"
+          },
+          "tem_bruto": {
+            "title": "Tem Bruto",
+            "type": "boolean"
+          },
+          "total_shorts": {
+            "title": "Total Shorts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "is_fire",
+          "candidato_shorts",
+          "elegivel",
+          "tem_bruto",
+          "total_shorts"
+        ],
+        "title": "ElegibilidadeResponse",
+        "type": "object"
+      },
       "EmbasamentoCriterio": {
         "description": "Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela.",
         "properties": {
@@ -2877,6 +3182,56 @@
         "title": "EnfileirarRequest",
         "type": "object"
       },
+      "EnquadramentoResponse": {
+        "description": "O foco achado pelo rosto — ou por que não achou.",
+        "properties": {
+          "achou": {
+            "title": "Achou",
+            "type": "boolean"
+          },
+          "aviso": {
+            "title": "Aviso",
+            "type": "string"
+          },
+          "foco_x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foco X"
+          },
+          "motivo": {
+            "title": "Motivo",
+            "type": "string"
+          },
+          "quadros_analisados": {
+            "title": "Quadros Analisados",
+            "type": "integer"
+          },
+          "quadros_com_rosto": {
+            "title": "Quadros Com Rosto",
+            "type": "integer"
+          },
+          "short": {
+            "$ref": "#/components/schemas/ShortResponse"
+          }
+        },
+        "required": [
+          "short",
+          "achou",
+          "foco_x",
+          "motivo",
+          "quadros_analisados",
+          "quadros_com_rosto",
+          "aviso"
+        ],
+        "title": "EnquadramentoResponse",
+        "type": "object"
+      },
       "EscolherPresetRequest": {
         "description": "`\"\"` volta ao automático (deduzir do layout do corte, ou nada).",
         "properties": {
@@ -2947,6 +3302,121 @@
           "em_dia"
         ],
         "title": "EstadoDaSincronizacao",
+        "type": "object"
+      },
+      "EstadoDoPalcoResponse": {
+        "description": "As regiões que o palco do corte usa e de onde vieram.",
+        "properties": {
+          "arranjo_sugerido": {
+            "title": "Arranjo Sugerido",
+            "type": "string"
+          },
+          "origem": {
+            "title": "Origem",
+            "type": "string"
+          },
+          "preset": {
+            "title": "Preset",
+            "type": "string"
+          },
+          "presets_disponiveis": {
+            "items": {
+              "$ref": "#/components/schemas/PresetComRegioes"
+            },
+            "title": "Presets Disponiveis",
+            "type": "array"
+          },
+          "regioes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RetanguloEmPixels"
+            },
+            "title": "Regioes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "preset",
+          "origem",
+          "regioes",
+          "arranjo_sugerido",
+          "presets_disponiveis"
+        ],
+        "title": "EstadoDoPalcoResponse",
+        "type": "object"
+      },
+      "EstadoItem": {
+        "description": "Onde um item do lote está.\n\n`SUA_VEZ` é o estado que só existe por causa do TikTok e do Instagram: o\ntrabalho da máquina acabou e o do humano começou. Sem ele a tela teria de\nescolher entre mentir (\"publicado\") e assustar (\"erro\") — e nenhum dos dois\ndescreve uma aba aberta esperando um clique.",
+        "enum": [
+          "aguardando",
+          "preparando",
+          "sua_vez",
+          "publicado",
+          "erro",
+          "pulado",
+          "cancelado"
+        ],
+        "title": "EstadoItem",
+        "type": "string"
+      },
+      "FaixaDaMoldura": {
+        "properties": {
+          "cor": {
+            "title": "Cor",
+            "type": "string"
+          },
+          "h": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "H"
+          },
+          "w": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "W"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Y"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h",
+          "cor"
+        ],
+        "title": "FaixaDaMoldura",
         "type": "object"
       },
       "FaixaSeguraCapa": {
@@ -3202,6 +3672,31 @@
         "title": "FiltrosResponse",
         "type": "object"
       },
+      "FinalizacaoResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "finalizado_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalizado Em"
+          }
+        },
+        "required": [
+          "corte_id",
+          "finalizado_em"
+        ],
+        "title": "FinalizacaoResponse",
+        "type": "object"
+      },
       "FinalizadoRequest": {
         "description": "Declara (ou desfaz) que os shorts do corte ja subiram para todas as redes.",
         "properties": {
@@ -3230,6 +3725,117 @@
           "titulo_youtube"
         ],
         "title": "FireAlternadoResponse",
+        "type": "object"
+      },
+      "FireDaFabrica": {
+        "description": "Um corte na porta da fábrica: Fire ou indicado à mão (D-502).",
+        "properties": {
+          "bruto_mb": {
+            "title": "Bruto Mb",
+            "type": "number"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "duracao_seg": {
+            "title": "Duracao Seg",
+            "type": "number"
+          },
+          "finalizado_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalizado Em"
+          },
+          "indicado": {
+            "title": "Indicado",
+            "type": "boolean"
+          },
+          "is_fire": {
+            "title": "Is Fire",
+            "type": "boolean"
+          },
+          "live_em_disco": {
+            "title": "Live Em Disco",
+            "type": "boolean"
+          },
+          "numero": {
+            "title": "Numero",
+            "type": "integer"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "projeto_titulo": {
+            "title": "Projeto Titulo",
+            "type": "string"
+          },
+          "shorts": {
+            "$ref": "#/components/schemas/ContagemDeShorts"
+          },
+          "tem_bruto": {
+            "title": "Tem Bruto",
+            "type": "boolean"
+          },
+          "tem_edicao": {
+            "title": "Tem Edicao",
+            "type": "boolean"
+          },
+          "tem_video_final": {
+            "title": "Tem Video Final",
+            "type": "boolean"
+          },
+          "tema_central": {
+            "title": "Tema Central",
+            "type": "string"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "corte_id",
+          "projeto_id",
+          "projeto_titulo",
+          "numero",
+          "titulo",
+          "tema_central",
+          "duracao_seg",
+          "tem_bruto",
+          "bruto_mb",
+          "is_fire",
+          "indicado",
+          "tem_video_final",
+          "live_em_disco",
+          "tem_edicao",
+          "finalizado_em",
+          "shorts"
+        ],
+        "title": "FireDaFabrica",
+        "type": "object"
+      },
+      "FiresResponse": {
+        "properties": {
+          "fires": {
+            "items": {
+              "$ref": "#/components/schemas/FireDaFabrica"
+            },
+            "title": "Fires",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fires"
+        ],
+        "title": "FiresResponse",
         "type": "object"
       },
       "FixarPosicaoRequest": {
@@ -3263,6 +3869,45 @@
         "title": "FundirBlocoRequest",
         "type": "object"
       },
+      "FundoDoCanal": {
+        "properties": {
+          "chave": {
+            "title": "Chave",
+            "type": "string"
+          },
+          "cor": {
+            "title": "Cor",
+            "type": "string"
+          },
+          "padrao": {
+            "title": "Padrao",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "chave",
+          "cor",
+          "padrao"
+        ],
+        "title": "FundoDoCanal",
+        "type": "object"
+      },
+      "FundosResponse": {
+        "properties": {
+          "fundos": {
+            "items": {
+              "$ref": "#/components/schemas/FundoDoCanal"
+            },
+            "title": "Fundos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fundos"
+        ],
+        "title": "FundosResponse",
+        "type": "object"
+      },
       "GanchoPadraoRequest": {
         "properties": {
           "preset_id": {
@@ -3278,6 +3923,42 @@
           }
         },
         "title": "GanchoPadraoRequest",
+        "type": "object"
+      },
+      "GanchoPadraoResponse": {
+        "properties": {
+          "customizados": {
+            "title": "Customizados",
+            "type": "integer"
+          },
+          "disponiveis": {
+            "items": {
+              "$ref": "#/components/schemas/PresetDisponivel"
+            },
+            "title": "Disponiveis",
+            "type": "array"
+          },
+          "gancho_padrao": {
+            "title": "Gancho Padrao",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "payload": {
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "gancho_padrao",
+          "nome",
+          "payload",
+          "disponiveis",
+          "customizados"
+        ],
+        "title": "GanchoPadraoResponse",
         "type": "object"
       },
       "GeracaoConcluidaResponse": {
@@ -3608,6 +4289,53 @@
           "como_resolver"
         ],
         "title": "ItemDoAmbiente",
+        "type": "object"
+      },
+      "ItemDoLote": {
+        "properties": {
+          "alvo_id": {
+            "title": "Alvo Id",
+            "type": "string"
+          },
+          "alvo_tipo": {
+            "title": "Alvo Tipo",
+            "type": "string"
+          },
+          "detalhe": {
+            "title": "Detalhe",
+            "type": "string"
+          },
+          "estado": {
+            "$ref": "#/components/schemas/EstadoItem"
+          },
+          "plataforma": {
+            "title": "Plataforma",
+            "type": "string"
+          },
+          "plataforma_rotulo": {
+            "title": "Plataforma Rotulo",
+            "type": "string"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alvo_tipo",
+          "alvo_id",
+          "plataforma",
+          "plataforma_rotulo",
+          "rotulo",
+          "estado",
+          "detalhe",
+          "url"
+        ],
+        "title": "ItemDoLote",
         "type": "object"
       },
       "JobCanceladoResponse": {
@@ -4807,6 +5535,40 @@
         "title": "LlmCallResponse",
         "type": "object"
       },
+      "LogDoRenderResponse": {
+        "properties": {
+          "duracoes_ms": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Duracoes Ms",
+            "type": "array"
+          },
+          "existe": {
+            "title": "Existe",
+            "type": "boolean"
+          },
+          "linhas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Linhas",
+            "type": "array"
+          },
+          "truncado": {
+            "title": "Truncado",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "linhas",
+          "truncado",
+          "duracoes_ms",
+          "existe"
+        ],
+        "title": "LogDoRenderResponse",
+        "type": "object"
+      },
       "LogLevel": {
         "enum": [
           "disabled",
@@ -4815,6 +5577,114 @@
         ],
         "title": "LogLevel",
         "type": "string"
+      },
+      "LoteAtualResponse": {
+        "properties": {
+          "lote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoteDePublicacao"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "lote"
+        ],
+        "title": "LoteAtualResponse",
+        "type": "object"
+      },
+      "LoteCanceladoResponse": {
+        "properties": {
+          "cancelado": {
+            "title": "Cancelado",
+            "type": "boolean"
+          },
+          "lote": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LoteDePublicacao"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "cancelado",
+          "lote"
+        ],
+        "title": "LoteCanceladoResponse",
+        "type": "object"
+      },
+      "LoteConfirmadoResponse": {
+        "properties": {
+          "confirmado": {
+            "title": "Confirmado",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "confirmado"
+        ],
+        "title": "LoteConfirmadoResponse",
+        "type": "object"
+      },
+      "LoteDePublicacao": {
+        "description": "A publicação em lote, rede a rede (D-617).",
+        "properties": {
+          "cancelado": {
+            "title": "Cancelado",
+            "type": "boolean"
+          },
+          "criado_em": {
+            "title": "Criado Em",
+            "type": "string"
+          },
+          "instagram_assistido": {
+            "title": "Instagram Assistido",
+            "type": "boolean"
+          },
+          "lote_id": {
+            "title": "Lote Id",
+            "type": "string"
+          },
+          "publicar_sozinho": {
+            "title": "Publicar Sozinho",
+            "type": "boolean"
+          },
+          "raias": {
+            "items": {
+              "$ref": "#/components/schemas/RaiaDoLote"
+            },
+            "title": "Raias",
+            "type": "array"
+          },
+          "terminou": {
+            "title": "Terminou",
+            "type": "boolean"
+          },
+          "tiktok_assistido": {
+            "title": "Tiktok Assistido",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "lote_id",
+          "criado_em",
+          "cancelado",
+          "terminou",
+          "tiktok_assistido",
+          "instagram_assistido",
+          "publicar_sozinho",
+          "raias"
+        ],
+        "title": "LoteDePublicacao",
+        "type": "object"
       },
       "LoteRequest": {
         "description": "O lote que o operador montou na tela.\n\n`alvos` são pares `tipo:id` (\"short:uuid\" ou \"corte:uuid\") na ORDEM em que\nele escolheu — a ordem da tela vira a ordem da fila. `plataformas` são os\ndestinos que ele marcou; o mesmo conjunto vale para todos os alvos, que é\ncomo a seleção acontece na prática (\"estes cinco, nestas duas redes\").",
@@ -5203,6 +6073,118 @@
         "title": "OverlayCodec",
         "type": "string"
       },
+      "PacoteDePublicacao": {
+        "description": "O que cada rede recebe, montado pela mesma função que os robôs usam.",
+        "properties": {
+          "avisos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avisos",
+            "type": "array"
+          },
+          "descricao": {
+            "title": "Descricao",
+            "type": "string"
+          },
+          "hashtags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hashtags",
+            "type": "array"
+          },
+          "legenda": {
+            "title": "Legenda",
+            "type": "string"
+          },
+          "modo": {
+            "title": "Modo",
+            "type": "string"
+          },
+          "plataforma": {
+            "title": "Plataforma",
+            "type": "string"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          },
+          "titulo_visivel": {
+            "title": "Titulo Visivel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plataforma",
+          "rotulo",
+          "modo",
+          "titulo",
+          "titulo_visivel",
+          "descricao",
+          "hashtags",
+          "legenda",
+          "avisos"
+        ],
+        "title": "PacoteDePublicacao",
+        "type": "object"
+      },
+      "PacotesResponse": {
+        "properties": {
+          "pacotes": {
+            "items": {
+              "$ref": "#/components/schemas/PacoteDePublicacao"
+            },
+            "title": "Pacotes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pacotes"
+        ],
+        "title": "PacotesResponse",
+        "type": "object"
+      },
+      "PadraoEscolhidoGanchoResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "gancho_padrao": {
+            "title": "Gancho Padrao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "corte_id",
+          "gancho_padrao"
+        ],
+        "title": "PadraoEscolhidoGanchoResponse",
+        "type": "object"
+      },
+      "PadraoEscolhidoPalcoResponse": {
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "palco_padrao": {
+            "title": "Palco Padrao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "corte_id",
+          "palco_padrao"
+        ],
+        "title": "PadraoEscolhidoPalcoResponse",
+        "type": "object"
+      },
       "PadraoIdentificado": {
         "properties": {
           "eixo": {
@@ -5229,6 +6211,25 @@
           "forca"
         ],
         "title": "PadraoIdentificado",
+        "type": "object"
+      },
+      "PadraoSeguidoResponse": {
+        "description": "Quantos trechos largaram o que tinham para seguir o padrão do corte.",
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "liberados": {
+            "title": "Liberados",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "corte_id",
+          "liberados"
+        ],
+        "title": "PadraoSeguidoResponse",
         "type": "object"
       },
       "PadroesCompilados": {
@@ -5332,6 +6333,29 @@
         "title": "PadroesThumbnailResponse",
         "type": "object"
       },
+      "PalavraDoBruto": {
+        "properties": {
+          "fim_seg": {
+            "title": "Fim Seg",
+            "type": "number"
+          },
+          "inicio_seg": {
+            "title": "Inicio Seg",
+            "type": "number"
+          },
+          "texto": {
+            "title": "Texto",
+            "type": "string"
+          }
+        },
+        "required": [
+          "texto",
+          "inicio_seg",
+          "fim_seg"
+        ],
+        "title": "PalavraDoBruto",
+        "type": "object"
+      },
       "PalcoPadraoRequest": {
         "properties": {
           "preset_id": {
@@ -5347,6 +6371,37 @@
           }
         },
         "title": "PalcoPadraoRequest",
+        "type": "object"
+      },
+      "PalcoPadraoResponse": {
+        "properties": {
+          "customizados": {
+            "title": "Customizados",
+            "type": "integer"
+          },
+          "disponiveis": {
+            "items": {
+              "$ref": "#/components/schemas/PresetDisponivel"
+            },
+            "title": "Disponiveis",
+            "type": "array"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "palco_padrao": {
+            "title": "Palco Padrao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "palco_padrao",
+          "nome",
+          "disponiveis",
+          "customizados"
+        ],
+        "title": "PalcoPadraoResponse",
         "type": "object"
       },
       "PaletaModel": {
@@ -5481,6 +6536,267 @@
         "title": "PicosDaOndaResponse",
         "type": "object"
       },
+      "PlanoDesenhavelResponse": {
+        "description": "O palco do short como a prévia o desenha — a mesma resolução do render,\ncom a aparência já herdada do corte (D-549, D-570, D-585, D-594, D-600).",
+        "properties": {
+          "ajustados": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ajustados",
+            "type": "array"
+          },
+          "arranjo": {
+            "title": "Arranjo",
+            "type": "string"
+          },
+          "arranjos": {
+            "items": {
+              "$ref": "#/components/schemas/ArranjoDoPalco"
+            },
+            "title": "Arranjos",
+            "type": "array"
+          },
+          "canvas": {
+            "$ref": "#/components/schemas/TelaDoShort"
+          },
+          "faixas": {
+            "items": {
+              "$ref": "#/components/schemas/FaixaDaMoldura"
+            },
+            "title": "Faixas",
+            "type": "array"
+          },
+          "fundo": {
+            "title": "Fundo",
+            "type": "string"
+          },
+          "fundo_editorial": {
+            "title": "Fundo Editorial",
+            "type": "string"
+          },
+          "gancho_ate_seg": {
+            "title": "Gancho Ate Seg",
+            "type": "number"
+          },
+          "gancho_cor": {
+            "title": "Gancho Cor",
+            "type": "string"
+          },
+          "gancho_fonte": {
+            "title": "Gancho Fonte",
+            "type": "string"
+          },
+          "gancho_largura": {
+            "title": "Gancho Largura",
+            "type": "number"
+          },
+          "gancho_realce": {
+            "title": "Gancho Realce",
+            "type": "string"
+          },
+          "gancho_tamanho": {
+            "title": "Gancho Tamanho",
+            "type": "number"
+          },
+          "gancho_x": {
+            "title": "Gancho X",
+            "type": "number"
+          },
+          "gancho_y": {
+            "title": "Gancho Y",
+            "type": "number"
+          },
+          "legenda_cor": {
+            "title": "Legenda Cor",
+            "type": "string"
+          },
+          "legenda_fonte": {
+            "title": "Legenda Fonte",
+            "type": "string"
+          },
+          "legenda_largura": {
+            "title": "Legenda Largura",
+            "type": "number"
+          },
+          "legenda_x": {
+            "title": "Legenda X",
+            "type": "number"
+          },
+          "legenda_y": {
+            "title": "Legenda Y",
+            "type": "number"
+          },
+          "modelo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelo"
+          },
+          "moldura": {
+            "title": "Moldura",
+            "type": "string"
+          },
+          "origem": {
+            "title": "Origem",
+            "type": "string"
+          },
+          "recortes": {
+            "items": {
+              "$ref": "#/components/schemas/RecorteDesenhavel"
+            },
+            "title": "Recortes",
+            "type": "array"
+          },
+          "regioes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RetanguloEmPixels"
+            },
+            "title": "Regioes",
+            "type": "object"
+          },
+          "slots": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RetanguloEmPixels"
+            },
+            "title": "Slots",
+            "type": "object"
+          }
+        },
+        "required": [
+          "origem",
+          "modelo",
+          "arranjo",
+          "arranjos",
+          "regioes",
+          "canvas",
+          "fundo",
+          "fundo_editorial",
+          "legenda_cor",
+          "legenda_fonte",
+          "legenda_x",
+          "legenda_y",
+          "legenda_largura",
+          "gancho_cor",
+          "gancho_realce",
+          "gancho_ate_seg",
+          "gancho_fonte",
+          "gancho_tamanho",
+          "gancho_x",
+          "gancho_y",
+          "gancho_largura",
+          "recortes",
+          "slots",
+          "ajustados",
+          "moldura",
+          "faixas"
+        ],
+        "title": "PlanoDesenhavelResponse",
+        "type": "object"
+      },
+      "PostDoShortResponse": {
+        "properties": {
+          "descricao": {
+            "title": "Descricao",
+            "type": "string"
+          },
+          "gerado": {
+            "title": "Gerado",
+            "type": "boolean"
+          },
+          "hashtags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hashtags",
+            "type": "array"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "titulo",
+          "descricao",
+          "hashtags",
+          "gerado"
+        ],
+        "title": "PostDoShortResponse",
+        "type": "object"
+      },
+      "PostResumido": {
+        "properties": {
+          "gerado": {
+            "title": "Gerado",
+            "type": "boolean"
+          },
+          "hashtags": {
+            "title": "Hashtags",
+            "type": "integer"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gerado",
+          "titulo",
+          "hashtags"
+        ],
+        "title": "PostResumido",
+        "type": "object"
+      },
+      "PresetComRegioes": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "regioes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Regioes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "regioes"
+        ],
+        "title": "PresetComRegioes",
+        "type": "object"
+      },
+      "PresetDisponivel": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nome"
+        ],
+        "title": "PresetDisponivel",
+        "type": "object"
+      },
       "ProcessarMultiversionRequest": {
         "properties": {
           "filtros": {
@@ -5516,6 +6832,73 @@
           "passos"
         ],
         "title": "ProgressoDoBrutoResponse",
+        "type": "object"
+      },
+      "ProgressoDoRenderDoShort": {
+        "properties": {
+          "concluido": {
+            "title": "Concluido",
+            "type": "boolean"
+          },
+          "decorrido_seg": {
+            "title": "Decorrido Seg",
+            "type": "number"
+          },
+          "erro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erro"
+          },
+          "estagio": {
+            "enum": [
+              "previa",
+              "final"
+            ],
+            "title": "Estagio",
+            "type": "string"
+          },
+          "passos": {
+            "items": {
+              "$ref": "#/components/schemas/PassoDoBruto"
+            },
+            "title": "Passos",
+            "type": "array"
+          }
+        },
+        "required": [
+          "estagio",
+          "concluido",
+          "erro",
+          "decorrido_seg",
+          "passos"
+        ],
+        "title": "ProgressoDoRenderDoShort",
+        "type": "object"
+      },
+      "ProgressoResponse": {
+        "description": "`render` nulo = não houve render deste short neste processo; a tela cai\nno estado do banco, que sobrevive a um reload.",
+        "properties": {
+          "render": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProgressoDoRenderDoShort"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "render"
+        ],
+        "title": "ProgressoResponse",
         "type": "object"
       },
       "ProjetoCriadoResponse": {
@@ -5754,6 +7137,19 @@
         "title": "ProjetoResponse",
         "type": "object"
       },
+      "PromptDaCapaResponse": {
+        "properties": {
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "PromptDaCapaResponse",
+        "type": "object"
+      },
       "PromptDasCenasResponse": {
         "description": "Além das partes, o prompt inteiro num texto só.",
         "properties": {
@@ -5869,6 +7265,76 @@
         "title": "PromptUtilitarioResponse",
         "type": "object"
       },
+      "ProntosResponse": {
+        "properties": {
+          "shorts": {
+            "items": {
+              "$ref": "#/components/schemas/ShortProntoResponse"
+            },
+            "title": "Shorts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shorts"
+        ],
+        "title": "ProntosResponse",
+        "type": "object"
+      },
+      "PublicacaoRegistrada": {
+        "properties": {
+          "alvo_id": {
+            "title": "Alvo Id",
+            "type": "string"
+          },
+          "detalhe": {
+            "title": "Detalhe",
+            "type": "string"
+          },
+          "estado": {
+            "title": "Estado",
+            "type": "string"
+          },
+          "plataforma": {
+            "title": "Plataforma",
+            "type": "string"
+          },
+          "publicado_em": {
+            "title": "Publicado Em",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alvo_id",
+          "plataforma",
+          "estado",
+          "url",
+          "detalhe",
+          "publicado_em"
+        ],
+        "title": "PublicacaoRegistrada",
+        "type": "object"
+      },
+      "PublicacoesResponse": {
+        "properties": {
+          "publicacoes": {
+            "items": {
+              "$ref": "#/components/schemas/PublicacaoRegistrada"
+            },
+            "title": "Publicacoes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "publicacoes"
+        ],
+        "title": "PublicacoesResponse",
+        "type": "object"
+      },
       "QuadroCapa": {
         "properties": {
           "altura": {
@@ -5885,6 +7351,42 @@
           "altura"
         ],
         "title": "QuadroCapa",
+        "type": "object"
+      },
+      "RaiaDoLote": {
+        "properties": {
+          "aviso": {
+            "title": "Aviso",
+            "type": "string"
+          },
+          "exige_humano": {
+            "title": "Exige Humano",
+            "type": "boolean"
+          },
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/ItemDoLote"
+            },
+            "title": "Itens",
+            "type": "array"
+          },
+          "plataforma": {
+            "title": "Plataforma",
+            "type": "string"
+          },
+          "rotulo": {
+            "title": "Rotulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plataforma",
+          "rotulo",
+          "exige_humano",
+          "aviso",
+          "itens"
+        ],
+        "title": "RaiaDoLote",
         "type": "object"
       },
       "RankingLivesResponse": {
@@ -5941,6 +7443,32 @@
           "cortes_removidos"
         ],
         "title": "ReanaliseResponse",
+        "type": "object"
+      },
+      "RecorteDesenhavel": {
+        "description": "Uma janela do palco: o que ela mostra da live e onde senta no short.",
+        "properties": {
+          "destino": {
+            "$ref": "#/components/schemas/RetanguloEmPixels"
+          },
+          "origem": {
+            "$ref": "#/components/schemas/RetanguloEmPixels"
+          },
+          "recorta": {
+            "$ref": "#/components/schemas/RetanguloEmPixels"
+          },
+          "regiao": {
+            "title": "Regiao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "regiao",
+          "origem",
+          "destino",
+          "recorta"
+        ],
+        "title": "RecorteDesenhavel",
         "type": "object"
       },
       "RegistrarAvaliacaoRequest": {
@@ -6063,6 +7591,37 @@
         "title": "RemoverDesvioRequest",
         "type": "object"
       },
+      "RenderDisparadoResponse": {
+        "properties": {
+          "estagio": {
+            "enum": [
+              "previa",
+              "final"
+            ],
+            "title": "Estagio",
+            "type": "string"
+          },
+          "short_id": {
+            "title": "Short Id",
+            "type": "string"
+          },
+          "status": {
+            "const": "iniciado",
+            "enum": [
+              "iniciado"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "short_id",
+          "estagio"
+        ],
+        "title": "RenderDisparadoResponse",
+        "type": "object"
+      },
       "RenderPipelineRequest": {
         "properties": {
           "continuar": {
@@ -6173,6 +7732,118 @@
         "title": "ResetSkillRequest",
         "type": "object"
       },
+      "ResultadoDaPublicacao": {
+        "additionalProperties": true,
+        "description": "Varia com o destino: a API do YouTube devolve o vídeo e a URL; o pacote\nmanual, a pasta e os textos; os robôs assistidos somam o relatório deles.\nOs campos daqui são o vocabulário comum — nenhum é garantido —, e o resto\npassa como veio.",
+        "properties": {
+          "agendado_para": {
+            "title": "Agendado Para",
+            "type": "string"
+          },
+          "avisos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avisos",
+            "type": "array"
+          },
+          "capa": {
+            "title": "Capa",
+            "type": "string"
+          },
+          "capa_aplicada": {
+            "title": "Capa Aplicada",
+            "type": "boolean"
+          },
+          "chrome_aberto_agora": {
+            "title": "Chrome Aberto Agora",
+            "type": "boolean"
+          },
+          "descricao": {
+            "title": "Descricao",
+            "type": "string"
+          },
+          "erro_ao_abrir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erro Ao Abrir"
+          },
+          "hashtags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hashtags",
+            "type": "array"
+          },
+          "legenda": {
+            "title": "Legenda",
+            "type": "string"
+          },
+          "modo": {
+            "title": "Modo",
+            "type": "string"
+          },
+          "passos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Passos",
+            "type": "array"
+          },
+          "pasta": {
+            "title": "Pasta",
+            "type": "string"
+          },
+          "pasta_aberta": {
+            "title": "Pasta Aberta",
+            "type": "boolean"
+          },
+          "plataforma": {
+            "title": "Plataforma",
+            "type": "string"
+          },
+          "publicado": {
+            "title": "Publicado",
+            "type": "boolean"
+          },
+          "resumo": {
+            "title": "Resumo",
+            "type": "string"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "url_upload": {
+            "title": "Url Upload",
+            "type": "string"
+          },
+          "video": {
+            "title": "Video",
+            "type": "string"
+          },
+          "video_id": {
+            "title": "Video Id",
+            "type": "string"
+          },
+          "vigiando": {
+            "title": "Vigiando",
+            "type": "boolean"
+          }
+        },
+        "title": "ResultadoDaPublicacao",
+        "type": "object"
+      },
       "ResumoAvaliacoesThumbnail": {
         "properties": {
           "medias_criterios": {
@@ -6241,6 +7912,90 @@
           "h"
         ],
         "title": "RetanguloCapa",
+        "type": "object"
+      },
+      "RetanguloDoPalco": {
+        "properties": {
+          "h": {
+            "title": "H",
+            "type": "number"
+          },
+          "w": {
+            "title": "W",
+            "type": "number"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "RetanguloDoPalco",
+        "type": "object"
+      },
+      "RetanguloEmPixels": {
+        "properties": {
+          "h": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "H"
+          },
+          "w": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "W"
+          },
+          "x": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "X"
+          },
+          "y": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Y"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "RetanguloEmPixels",
         "type": "object"
       },
       "RetencaoArquivos": {
@@ -6538,6 +8293,24 @@
         "title": "SegmentoDetectadoDoCorte",
         "type": "object"
       },
+      "SegmentoDoShort": {
+        "properties": {
+          "fim_seg": {
+            "title": "Fim Seg",
+            "type": "number"
+          },
+          "inicio_seg": {
+            "title": "Inicio Seg",
+            "type": "number"
+          }
+        },
+        "required": [
+          "inicio_seg",
+          "fim_seg"
+        ],
+        "title": "SegmentoDoShort",
+        "type": "object"
+      },
       "SegmentoRequest": {
         "description": "Uma fatia do bruto que entra no short (D-604).\n\nTempo de BRUTO — o clip ja sem os desvios —, que e o espaco em que o short\nsempre viveu (invariante do modelo desde a D-452).\n\nSem validacao de faixa aqui de proposito: quem recusa e o dominio\n(`segmentos_short.validar`), que conhece o limite do bruto e devolve a frase\nque explica o problema. Validar nos dois lugares daria duas mensagens\ndiferentes para o mesmo erro.",
         "properties": {
@@ -6586,6 +8359,394 @@
           "tema_id"
         ],
         "title": "SelecionarTemaRequest",
+        "type": "object"
+      },
+      "ShortEditadoResponse": {
+        "properties": {
+          "short": {
+            "$ref": "#/components/schemas/ShortResponse"
+          }
+        },
+        "required": [
+          "short"
+        ],
+        "title": "ShortEditadoResponse",
+        "type": "object"
+      },
+      "ShortProntoResponse": {
+        "description": "Um short renderizado que ainda falta em alguma rede (D-651).",
+        "properties": {
+          "arquivo_short_path": {
+            "title": "Arquivo Short Path",
+            "type": "string"
+          },
+          "atualizado_em": {
+            "title": "Atualizado Em",
+            "type": "string"
+          },
+          "capa": {
+            "$ref": "#/components/schemas/CapaResumida"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "corte_numero": {
+            "title": "Corte Numero",
+            "type": "integer"
+          },
+          "corte_titulo": {
+            "title": "Corte Titulo",
+            "type": "string"
+          },
+          "duracao_seg": {
+            "title": "Duracao Seg",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "inicio_seg": {
+            "title": "Inicio Seg",
+            "type": "number"
+          },
+          "numero": {
+            "title": "Numero",
+            "type": "integer"
+          },
+          "pendentes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Pendentes",
+            "type": "array"
+          },
+          "post": {
+            "$ref": "#/components/schemas/PostResumido"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "projeto_titulo": {
+            "title": "Projeto Titulo",
+            "type": "string"
+          },
+          "publicadas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Publicadas",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusShort"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "corte_id",
+          "numero",
+          "titulo",
+          "status",
+          "arquivo_short_path",
+          "inicio_seg",
+          "duracao_seg",
+          "corte_numero",
+          "corte_titulo",
+          "projeto_id",
+          "projeto_titulo",
+          "publicadas",
+          "pendentes",
+          "post",
+          "capa",
+          "atualizado_em"
+        ],
+        "title": "ShortProntoResponse",
+        "type": "object"
+      },
+      "ShortResponse": {
+        "properties": {
+          "ajustes_palco": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RetanguloDoPalco"
+            },
+            "title": "Ajustes Palco",
+            "type": "object"
+          },
+          "arquivo_previa_path": {
+            "title": "Arquivo Previa Path",
+            "type": "string"
+          },
+          "arquivo_short_path": {
+            "title": "Arquivo Short Path",
+            "type": "string"
+          },
+          "arranjo_palco": {
+            "title": "Arranjo Palco",
+            "type": "string"
+          },
+          "cenas": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Cenas",
+            "type": "array"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "duracao_seg": {
+            "title": "Duracao Seg",
+            "type": "number"
+          },
+          "envelope_seg": {
+            "title": "Envelope Seg",
+            "type": "number"
+          },
+          "fim_seg": {
+            "title": "Fim Seg",
+            "type": "number"
+          },
+          "foco_efetivo": {
+            "title": "Foco Efetivo",
+            "type": "number"
+          },
+          "foco_x": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foco X"
+          },
+          "fundo_editorial": {
+            "title": "Fundo Editorial",
+            "type": "string"
+          },
+          "fundo_palco": {
+            "title": "Fundo Palco",
+            "type": "string"
+          },
+          "gancho": {
+            "title": "Gancho",
+            "type": "string"
+          },
+          "gancho_ate_seg": {
+            "title": "Gancho Ate Seg",
+            "type": "number"
+          },
+          "gancho_cor": {
+            "title": "Gancho Cor",
+            "type": "string"
+          },
+          "gancho_largura": {
+            "title": "Gancho Largura",
+            "type": "number"
+          },
+          "gancho_realce": {
+            "title": "Gancho Realce",
+            "type": "string"
+          },
+          "gancho_sugestoes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Gancho Sugestoes",
+            "type": "array"
+          },
+          "gancho_tela": {
+            "title": "Gancho Tela",
+            "type": "string"
+          },
+          "gancho_x": {
+            "title": "Gancho X",
+            "type": "number"
+          },
+          "gancho_y": {
+            "title": "Gancho Y",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "inicio_seg": {
+            "title": "Inicio Seg",
+            "type": "number"
+          },
+          "janela_cheia": {
+            "title": "Janela Cheia",
+            "type": "string"
+          },
+          "justificativa": {
+            "title": "Justificativa",
+            "type": "string"
+          },
+          "legenda_cor": {
+            "title": "Legenda Cor",
+            "type": "string"
+          },
+          "legenda_fonte": {
+            "title": "Legenda Fonte",
+            "type": "string"
+          },
+          "legenda_largura": {
+            "title": "Legenda Largura",
+            "type": "number"
+          },
+          "legenda_x": {
+            "title": "Legenda X",
+            "type": "number"
+          },
+          "legenda_y": {
+            "title": "Legenda Y",
+            "type": "number"
+          },
+          "moldura": {
+            "title": "Moldura",
+            "type": "string"
+          },
+          "numero": {
+            "title": "Numero",
+            "type": "integer"
+          },
+          "origem": {
+            "title": "Origem",
+            "type": "string"
+          },
+          "palco_preset": {
+            "title": "Palco Preset",
+            "type": "string"
+          },
+          "palco_short_preset": {
+            "title": "Palco Short Preset",
+            "type": "string"
+          },
+          "recortes_palco": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RetanguloDoPalco"
+            },
+            "title": "Recortes Palco",
+            "type": "object"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "segmentos": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentoDoShort"
+            },
+            "title": "Segmentos",
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StatusShort"
+          },
+          "titulo": {
+            "title": "Titulo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "corte_id",
+          "numero",
+          "titulo",
+          "gancho",
+          "gancho_tela",
+          "gancho_sugestoes",
+          "gancho_ate_seg",
+          "gancho_cor",
+          "gancho_realce",
+          "gancho_x",
+          "gancho_y",
+          "gancho_largura",
+          "inicio_seg",
+          "fim_seg",
+          "segmentos",
+          "duracao_seg",
+          "envelope_seg",
+          "score",
+          "justificativa",
+          "status",
+          "foco_x",
+          "foco_efetivo",
+          "arquivo_short_path",
+          "arquivo_previa_path",
+          "arranjo_palco",
+          "janela_cheia",
+          "palco_preset",
+          "moldura",
+          "ajustes_palco",
+          "recortes_palco",
+          "fundo_palco",
+          "fundo_editorial",
+          "legenda_cor",
+          "legenda_fonte",
+          "legenda_x",
+          "legenda_y",
+          "legenda_largura",
+          "palco_short_preset",
+          "origem",
+          "cenas"
+        ],
+        "title": "ShortResponse",
+        "type": "object"
+      },
+      "ShortsDoCorteResponse": {
+        "properties": {
+          "shorts": {
+            "items": {
+              "$ref": "#/components/schemas/ShortResponse"
+            },
+            "title": "Shorts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shorts"
+        ],
+        "title": "ShortsDoCorteResponse",
+        "type": "object"
+      },
+      "ShortsGeradosResponse": {
+        "properties": {
+          "bruto_regerado": {
+            "title": "Bruto Regerado",
+            "type": "boolean"
+          },
+          "descartes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Descartes",
+            "type": "array"
+          },
+          "shorts": {
+            "items": {
+              "$ref": "#/components/schemas/ShortResponse"
+            },
+            "title": "Shorts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shorts",
+          "descartes",
+          "bruto_regerado"
+        ],
+        "title": "ShortsGeradosResponse",
         "type": "object"
       },
       "SimularPalcoRequest": {
@@ -7083,6 +9244,60 @@
         "title": "StatusProjeto",
         "type": "string"
       },
+      "StatusShort": {
+        "description": "Estagio de um short dentro da fabrica (E-030).\n\nSUGERIDO    -> a IA propos o trecho; aguarda curadoria humana.\nAPROVADO    -> o operador aceitou o candidato; entra na fila de producao.\nREJEITADO   -> descartado na curadoria; fica no historico, nao some.\nRENDERIZADO -> MP4 vertical pronto em `arquivo_short_path`.",
+        "enum": [
+          "sugerido",
+          "aprovado",
+          "rejeitado",
+          "renderizado"
+        ],
+        "title": "StatusShort",
+        "type": "string"
+      },
+      "SugestoesDeShortsResponse": {
+        "description": "Os candidatos que a IA propôs e, em `descartes`, por que recusou o resto.",
+        "properties": {
+          "descartes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Descartes",
+            "type": "array"
+          },
+          "shorts": {
+            "items": {
+              "$ref": "#/components/schemas/ShortResponse"
+            },
+            "title": "Shorts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "shorts",
+          "descartes"
+        ],
+        "title": "SugestoesDeShortsResponse",
+        "type": "object"
+      },
+      "TelaDoShort": {
+        "properties": {
+          "altura": {
+            "title": "Altura",
+            "type": "integer"
+          },
+          "largura": {
+            "title": "Largura",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "largura",
+          "altura"
+        ],
+        "title": "TelaDoShort",
+        "type": "object"
+      },
       "TelemetriaAvaliacao": {
         "description": "A avaliação humana do corte (D-419); `voto` None = não avaliado.",
         "properties": {
@@ -7567,6 +9782,19 @@
         "title": "ThumbnailRemovidaResponse",
         "type": "object"
       },
+      "TiktokConfirmadoResponse": {
+        "properties": {
+          "tiktok_publicado_em": {
+            "title": "Tiktok Publicado Em",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tiktok_publicado_em"
+        ],
+        "title": "TiktokConfirmadoResponse",
+        "type": "object"
+      },
       "TipoApontamentoResponse": {
         "properties": {
           "rotulo": {
@@ -7583,6 +9811,28 @@
           "rotulo"
         ],
         "title": "TipoApontamentoResponse",
+        "type": "object"
+      },
+      "TranscricaoDoBrutoResponse": {
+        "description": "As palavras com tempo do bruto; `fonte` diz de onde vieram (D-479).",
+        "properties": {
+          "fonte": {
+            "title": "Fonte",
+            "type": "string"
+          },
+          "palavras": {
+            "items": {
+              "$ref": "#/components/schemas/PalavraDoBruto"
+            },
+            "title": "Palavras",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fonte",
+          "palavras"
+        ],
+        "title": "TranscricaoDoBrutoResponse",
         "type": "object"
       },
       "TranscricaoRefeitaResponse": {
@@ -7966,6 +10216,22 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VariacoesDeGanchoResponse": {
+        "properties": {
+          "variacoes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Variacoes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "variacoes"
+        ],
+        "title": "VariacoesDeGanchoResponse",
         "type": "object"
       },
       "VersaoExport": {
@@ -15828,7 +18094,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ShortsDoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -15877,7 +18145,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ShortEditadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -15918,7 +18188,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/BrutoDescartadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -15983,7 +18255,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CapaTiktokMontadaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16034,7 +18308,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CapaTiktokDoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16089,7 +18365,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDaCapaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16140,7 +18418,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CapaTiktokDoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16181,7 +18461,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ElegibilidadeResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16232,7 +18514,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FinalizacaoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16273,7 +18557,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GanchoPadraoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16322,7 +18608,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PadraoEscolhidoGanchoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16363,7 +18651,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PadraoSeguidoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16404,7 +18694,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ShortsGeradosResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16455,7 +18747,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ElegibilidadeResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16496,7 +18790,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDoPalcoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16545,7 +18841,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDoPalcoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16586,7 +18884,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PalcoPadraoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16635,7 +18935,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PadraoEscolhidoPalcoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16676,7 +18978,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PadraoSeguidoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16717,7 +19021,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PublicacoesResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16758,7 +19064,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDaPublicacao"
+                }
               }
             },
             "description": "Successful Response"
@@ -16816,7 +19124,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDaPublicacao"
+                }
               }
             },
             "description": "Successful Response"
@@ -16857,7 +19167,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TiktokConfirmadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -16908,7 +19220,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDaPublicacao"
+                }
               }
             },
             "description": "Successful Response"
@@ -16963,7 +19277,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SugestoesDeShortsResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17004,7 +19320,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TranscricaoDoBrutoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17071,7 +19389,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PicosDaOndaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17101,7 +19421,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FiresResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17121,7 +19443,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LoteAtualResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17149,7 +19473,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LoteDePublicacao"
+                }
               }
             },
             "description": "Successful Response"
@@ -17179,7 +19505,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LoteCanceladoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17209,7 +19537,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LoteConfirmadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17251,7 +19581,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ArranjosResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17281,7 +19613,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FundosResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17301,7 +19635,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProntosResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17342,7 +19678,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ShortEditadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17383,7 +19721,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CapaDoShortResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17432,7 +19772,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CapaGeradaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17483,7 +19825,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CapaGeradaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17523,9 +19867,7 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
-              }
+              "image/jpeg": {}
             },
             "description": "Successful Response"
           },
@@ -17565,7 +19907,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDaCapaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17618,7 +19962,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptDaCapaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17669,7 +20015,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ShortEditadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17724,7 +20072,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CenasSugeridasResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17765,7 +20115,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EnquadramentoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17820,7 +20172,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/VariacoesDeGanchoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17861,7 +20215,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/LogDoRenderResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17902,7 +20258,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PlanoDesenhavelResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17953,7 +20311,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PlanoDesenhavelResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -17994,7 +20354,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PostDoShortResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -18043,7 +20405,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PostDoShortResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -18098,7 +20462,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PostDoShortResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -18139,7 +20505,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RenderDisparadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -18180,7 +20548,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ProgressoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -18221,7 +20591,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PacotesResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -18279,7 +20651,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDaPublicacao"
+                }
               }
             },
             "description": "Successful Response"
@@ -18329,7 +20703,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDaPublicacao"
+                }
               }
             },
             "description": "Successful Response"
@@ -18370,7 +20746,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RenderDisparadoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -18418,12 +20796,7 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
+          "307": {
             "description": "Successful Response"
           },
           "422": {
