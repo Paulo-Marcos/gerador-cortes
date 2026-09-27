@@ -1,4 +1,4 @@
-import type { GerarBrutoOpcoes } from '@/lib/api';
+import type { GerarBrutoOpcoes } from './api/bruto';
 
 // D-160 — opt-ins da regeração do bruto exibidos no editor ("Também refazer:").
 // Todos desmarcados por default: regerar sem marcar nada roda SÓ o bruto.

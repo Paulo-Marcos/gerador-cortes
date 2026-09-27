@@ -35,7 +35,7 @@ import {
   Search,
   X,
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { brutoApi } from '@/features/editor/api/bruto';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import type { ContagemShorts, FireComBruto } from './shortsApi';
@@ -301,7 +301,7 @@ function GerarBruto({ fire }: { fire: FireComBruto }) {
   // rodou uma vez e so perdeu o arquivo.
   const gerar = useMutation({
     mutationFn: () =>
-      api.cortarClipBruto(fire.corte_id, { refazer_transcricao: false, refazer_cenas: false }),
+      brutoApi.cortarClipBruto(fire.corte_id, { refazer_transcricao: false, refazer_cenas: false }),
     onSuccess: () => {
       setErro('');
       void queryClient.invalidateQueries({ queryKey: FIRES_KEY });

@@ -1,11 +1,5 @@
 import type {
-  CenaRemotion,
-  CenasRemotionPayload,
-  Corte,
   FilaGlobal,
-  PipelineStatusResponse,
-  RemotionStudioUrlResponse,
-  StatusBrutoResponse,
   WaveformPeaksResponse,
 } from '@/types/models';
 import { API_BASE, VIDEOS_BASE, wsUrl } from '@/lib/apiBase';
@@ -28,13 +22,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-// D-160 — opt-ins da regeração do bruto. Só valem quando o corte já tem bruto
-// (regeração); na 1ª geração o backend força a cadeia completa.
-export interface GerarBrutoOpcoes {
-  refazer_transcricao?: boolean;
-  refazer_cenas?: boolean;
-}
-
 export const api = {
   // I-023: filtro padrão de render vive só em Ajustes (PUT /settings).
   // O antigo PATCH /export/projeto/{id}/filtro-padrao foi removido — não
@@ -51,104 +38,6 @@ export const api = {
     ),
 
   // ─── Cortes (editor) ───────────────────────────────────────────────
-  // Geração de vídeo bruto (cortar com ffmpeg, removendo TODOS os desvios).
-  // Dispara assíncrono; acompanhe progresso por statusClipBruto.
-  // D-160 — na regeração (corte já com bruto) o default é só o bruto; passe
-  // os opt-ins para também refazer transcrição/cenas. Na 1ª geração o backend
-  // força a cadeia completa e ignora estes flags.
-  cortarClipBruto: (corteId: string, opts?: GerarBrutoOpcoes) =>
-    request<{ message: string; corte_id: string }>(`/cortes/${corteId}/gerar-bruto`, {
-      method: 'POST',
-      body: JSON.stringify(opts ?? {}),
-    }),
-
-  statusClipBruto: (corteId: string) =>
-    request<StatusBrutoResponse>(`/export/corte/${corteId}/cortar/status`),
-
-  // F-038 — passos do gerar/regerar bruto (para o dropdown de acompanhamento).
-  brutoProgress: (corteId: string) =>
-    request<{ passos: { chave: string; label: string; status: string }[] }>(
-      `/cortes/${corteId}/bruto-progress`,
-    ),
-
-  obterWaveformPeaks: (corteId: string, refresh = false) =>
-    request<WaveformPeaksResponse>(
-      `/cortes/${corteId}/waveform-peaks${refresh ? '?refresh=true' : ''}`,
-    ),
-
-  renderizarRemotion: (
-    corteId: string,
-    options: {
-      startFrom?: 'auto' | 'grade' | 'overlays' | 'overlays_continuar' | 'render_final';
-      // D-064: render granular — para após esta fase (parcial, não finaliza o
-      // corte). Omitido = roda até o render final.
-      pararEm?: 'grade' | 'overlays' | 'render_final';
-      // D-064: quando informado explicitamente, controla o reaproveitamento de
-      // overlays (continuar vs. refazer do zero). Quando ausente, é derivado do
-      // `startFrom` (comportamento legado).
-      continuar?: boolean;
-      filtro?: string;
-    } = {},
-  ) => {
-    const startFromUi = options.startFrom ?? 'auto';
-    const isContinuarFase2 = startFromUi === 'overlays_continuar';
-    // I-023: NUNCA enviar fallback hardcoded de filtro. Quando o caller não
-    // especifica um filtro de teste, o backend resolve `filtro=null` para
-    // `AppSettings.filtro_global_padrao` (fonte única configurada em Ajustes).
-    // O bug anterior ("renderiza sempre cinematic_iii completo") era exatamente
-    // este fallback aqui passando `'cinematic_iii'` por cima do global.
-    const payload: {
-      filtro?: string;
-      continuar: boolean;
-      start_from: string;
-      parar_em?: string;
-    } = {
-      continuar: options.continuar ?? (startFromUi === 'auto' || isContinuarFase2),
-      start_from: isContinuarFase2 ? 'overlays' : startFromUi,
-    };
-    if (options.pararEm) payload.parar_em = options.pararEm;
-    if (options.filtro) payload.filtro = options.filtro;
-    return request<{ message: string }>(`/cortes/${corteId}/renderizar-pipeline`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  },
-
-  obterPipelineStatus: (corteId: string) =>
-    request<PipelineStatusResponse>(`/cortes/${corteId}/pipeline-status`),
-
-  obterRemotionStudioUrl: (corteId: string) =>
-    request<RemotionStudioUrlResponse>(`/cortes/${corteId}/remotion-studio-url`),
-
-  obterCaminhoPasta: (corteId: string) =>
-    request<{ dir_path: string }>(`/cortes/${corteId}/caminho-pasta`),
-
-  // ─── Cenas Remotion ────────────────────────────────────────────────
-  gerarCenasRemotion: (corteId: string) =>
-    request<CenasRemotionPayload | { cenas: CenaRemotion[] }>(
-      `/cortes/${corteId}/gerar-cenas-remotion`,
-      { method: 'POST', body: '{}' },
-    ),
-
-  importarCenasRemotion: (corteId: string, payload: CenasRemotionPayload) =>
-    request<{ message: string }>(`/cortes/${corteId}/cenas-remotion/importar`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-
-  validarCenasRemotion: (corteId: string, validado = true) =>
-    request<Corte>(`/cortes/${corteId}/cenas-remotion/validar`, {
-      method: 'POST',
-      body: JSON.stringify({ validado }),
-    }),
-
-  obterPromptCenasRemotion: (corteId: string) =>
-    request<{
-      prompt: string;
-      prompts: { parte: number; total_partes: number; texto: string }[];
-      formato_esperado?: unknown;
-    }>(`/cortes/${corteId}/cenas-remotion/prompt`),
-
 };
 
 export { VIDEOS_BASE };

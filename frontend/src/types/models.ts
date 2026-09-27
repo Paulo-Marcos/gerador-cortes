@@ -179,29 +179,12 @@ export interface Corte {
   criado_em: string;
 }
 
-export interface StatusBrutoResponse {
-  status: 'idle' | 'processando' | 'concluido' | 'erro' | string;
-  clip_gerado: boolean;
-  clip_path: string;
-}
+/** Status da geração do bruto de um corte — o tipo do contrato (D-722). */
+export type StatusBrutoResponse = Schema<'StatusCorteBrutoResponse'>;
 
-export interface PipelineStatusResponse {
-  fases: {
-    raw: boolean;
-    grade: boolean;
-    overlays: boolean;
-    compose: boolean;
-    encode: boolean;
-  };
-  overlays_count: number;
-  tem_etapas_concluidas: boolean;
-  state?: 'idle' | 'running' | 'done' | 'error';
-  progress?: number;
-  stage?: string;
-  running?: boolean;
-  elapsed_seconds?: number;
-  error?: string;
-}
+/** As fases do render com artefato aproveitável e o progresso — o tipo do
+ *  contrato (D-722). */
+export type PipelineStatusResponse = Schema<'SituacaoDoPipelineResponse'>;
 
 export type ProgressoUpdate =
   | { status: 'baixando'; progresso: number }
@@ -210,15 +193,8 @@ export type ProgressoUpdate =
   | { status: 'erro'; mensagem: string }
   | { status: 'sem_progresso'; mensagem: string };
 
-export interface WaveformPeaksResponse {
-  corte_id: string;
-  offset_sec: number;
-  duration_sec: number;
-  sample_rate: number;
-  points: number;
-  peaks: number[];
-  cached: boolean;
-}
+/** Os picos da waveform do editor — o tipo do contrato (D-722). */
+export type WaveformPeaksResponse = Schema<'PicosDaOndaResponse'>;
 
 export interface AdicionarDesvioRequest {
   inicio_hms: string;
@@ -282,12 +258,6 @@ export interface CenasRemotionPayload {
   formato?: string;
   paleta?: Record<string, string>;
   cenas: CenaRemotion[];
-}
-
-export interface RemotionStudioUrlResponse {
-  studio_url: string;
-  video_url?: string;
-  props?: unknown;
 }
 
 /** O status de exportação de um corte — o tipo do contrato (D-722). Mora aqui

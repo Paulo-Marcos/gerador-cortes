@@ -4,7 +4,9 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { api, type GerarBrutoOpcoes } from '@/lib/api';
+import { brutoApi, type GerarBrutoOpcoes } from '@/features/editor/api/bruto';
+import { cenasApi } from '@/features/editor/api/cenas';
+import { renderApi } from '@/features/editor/api/render';
 import { cortesApi } from '@/features/editor/api/cortes';
 import { metadadosApi } from '@/features/metadata/api/metadados';
 import { geracaoIaApi } from '@/features/ia';
@@ -98,7 +100,7 @@ export function useCorte(corteId: string | undefined) {
 export function useStatusBruto(corteId: string | undefined) {
   return useQuery({
     queryKey: statusBrutoKey(corteId ?? ''),
-    queryFn: () => api.statusClipBruto(corteId!),
+    queryFn: () => brutoApi.statusClipBruto(corteId!),
     enabled: !!corteId,
     // Polling enquanto o backend processa ('cortando' é o valor real enviado).
     // 2,5s para o botão liberar logo que o vídeo fica pronto (antes era 15s).
@@ -115,7 +117,7 @@ export function useStatusBruto(corteId: string | undefined) {
 export function useBrutoProgress(corteId: string | undefined, ativo: boolean) {
   return useQuery({
     queryKey: ['corte', corteId, 'bruto-progress'],
-    queryFn: () => api.brutoProgress(corteId!),
+    queryFn: () => brutoApi.brutoProgress(corteId!),
     enabled: !!corteId,
     refetchInterval: (query) => {
       const passos =
@@ -282,7 +284,7 @@ export function useGerarBruto(corteId: string, projetoId?: string) {
   return useMutation({
     // D-160 — opts opcionais gateiam transcrição/cenas na regeração; ausência
     // (1ª geração) faz o backend rodar a cadeia completa.
-    mutationFn: (opts?: GerarBrutoOpcoes) => api.cortarClipBruto(corteId, opts),
+    mutationFn: (opts?: GerarBrutoOpcoes) => brutoApi.cortarClipBruto(corteId, opts),
     // Optimistic update: marca o status como 'cortando' antes mesmo da
     // requisição voltar.  Sem isso, a API retorna em ~100ms (porque é
     // fire-and-forget) e o polling só refetcha 2s depois — nessa janela
@@ -293,6 +295,7 @@ export function useGerarBruto(corteId: string, projetoId?: string) {
       await qc.cancelQueries({ queryKey: statusBrutoKey(corteId) });
       const previous = qc.getQueryData<StatusBrutoResponse>(statusBrutoKey(corteId));
       qc.setQueryData<StatusBrutoResponse>(statusBrutoKey(corteId), {
+        corte_id: corteId,
         status: 'cortando',
         clip_gerado: false,
         clip_path: previous?.clip_path ?? '',
@@ -329,7 +332,7 @@ export function useRenderizarRemotion(corteId: string) {
         continuar?: boolean;
         filtro?: string;
       } = {},
-    ) => api.renderizarRemotion(corteId, options),
+    ) => renderApi.renderizarRemotion(corteId, options),
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: pipelineStatusKey(corteId) });
       const previous = qc.getQueryData<PipelineStatusResponse>(pipelineStatusKey(corteId));
@@ -339,6 +342,7 @@ export function useRenderizarRemotion(corteId: string) {
           grade: false,
           overlays: false,
           compose: false,
+          render_final: false,
           encode: false,
         },
         overlays_count: previous?.overlays_count ?? 0,
@@ -366,7 +370,7 @@ export function useRenderizarRemotion(corteId: string) {
 export function usePipelineStatus(corteId: string | undefined, forcePolling = false) {
   return useQuery({
     queryKey: pipelineStatusKey(corteId ?? ''),
-    queryFn: () => api.obterPipelineStatus(corteId!),
+    queryFn: () => renderApi.obterPipelineStatus(corteId!),
     enabled: !!corteId,
     refetchInterval: (query) => (forcePolling || query.state.data?.running ? 2_000 : false),
   });
@@ -531,7 +535,7 @@ export function useGerarMetadadosClaude(corteId: string) {
 export function useGerarCenasRemotion(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.gerarCenasRemotion(corteId),
+    mutationFn: () => cenasApi.gerarCenasRemotion(corteId),
     onSuccess: () => qc.invalidateQueries({ queryKey: corteKey(corteId) }),
   });
 }
@@ -539,7 +543,7 @@ export function useGerarCenasRemotion(corteId: string) {
 export function useImportarCenasRemotion(corteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: CenasRemotionPayload) => api.importarCenasRemotion(corteId, payload),
+    mutationFn: (payload: CenasRemotionPayload) => cenasApi.importarCenasRemotion(corteId, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: corteKey(corteId) }),
   });
 }
@@ -555,7 +559,7 @@ export function usePreencherRetratosCenas(corteId: string) {
 export function useValidarCenasRemotion(corteId: string, projetoId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (validado: boolean = true) => api.validarCenasRemotion(corteId, validado),
+    mutationFn: (validado: boolean = true) => cenasApi.validarCenasRemotion(corteId, validado),
     onSuccess: (data) => {
       qc.setQueryData(corteKey(corteId), data);
       const projeto = projetoId ?? data.projeto_id;
@@ -572,7 +576,7 @@ export function useValidarCenasRemotion(corteId: string, projetoId?: string) {
 export function usePromptCenasRemotion(corteId: string, enabled: boolean) {
   return useQuery({
     queryKey: ['corte', corteId, 'cenas-remotion', 'prompt'],
-    queryFn: () => api.obterPromptCenasRemotion(corteId),
+    queryFn: () => cenasApi.obterPromptCenasRemotion(corteId),
     enabled,
     staleTime: 60_000,
   });
@@ -580,6 +584,6 @@ export function usePromptCenasRemotion(corteId: string, enabled: boolean) {
 
 export function useStudioUrl(corteId: string) {
   return useMutation({
-    mutationFn: () => api.obterRemotionStudioUrl(corteId),
+    mutationFn: () => renderApi.obterRemotionStudioUrl(corteId),
   });
 }

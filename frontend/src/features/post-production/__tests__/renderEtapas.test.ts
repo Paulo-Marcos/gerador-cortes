@@ -13,9 +13,23 @@ import {
 
 function status(fases: Partial<PipelineStatusResponse['fases']>): PipelineStatusResponse {
   return {
-    fases: { raw: true, grade: false, overlays: false, compose: false, encode: false, ...fases },
+    fases: {
+      raw: true,
+      grade: false,
+      overlays: false,
+      compose: false,
+      render_final: false,
+      encode: false,
+      ...fases,
+    },
     overlays_count: 0,
     tem_etapas_concluidas: false,
+    state: 'idle',
+    progress: 0,
+    stage: '',
+    running: false,
+    elapsed_seconds: 0,
+    error: '',
   };
 }
 
