@@ -40,13 +40,6 @@ class MetadadoDoCorteResponse(RespostaComCamposOpcionais):
     atualizado_em: datetime | SkipJsonSchema[None] = None
 
 
-class GeracaoIniciadaResponse(RespostaApi):
-    """A geração segue em segundo plano; a tela acompanha pelo que muda depois."""
-
-    message: str
-    corte_id: str
-
-
 class FireAlternadoResponse(RespostaApi):
     is_fire: bool
     titulo_youtube: str

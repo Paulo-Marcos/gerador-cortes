@@ -6,7 +6,9 @@ o router focado nos handlers; todos os nomes seguem re-exportados pela fachada
 """
 
 from datetime import datetime
+from typing import Literal
 
+from app.routers.resposta_api import RespostaApi
 from pydantic import BaseModel
 
 
@@ -225,3 +227,20 @@ class RenderPipelineRequest(BaseModel):
     # fase e não finaliza o corte. Permite corrigir uma etapa isolada (ex.:
     # grade truncada) sem refazer o pipeline inteiro.
     parar_em: str | None = None
+
+
+class CaminhoDaPastaResponse(RespostaApi):
+    dir_path: str
+
+
+class DeteccaoIniciadaResponse(RespostaApi):
+    """A detecção de segmentos roda em segundo plano; pedir de novo enquanto roda
+    responde `em_andamento`, sem disparar outra."""
+
+    status: Literal["iniciado", "em_andamento"]
+    corte_id: str
+
+
+class SincroniaPosProducaoResponse(RespostaApi):
+    status: Literal["ok", "nada_a_fazer"]
+    mensagem: str

@@ -5,7 +5,7 @@ from app.domain.corte.metadado_corte import lista_de_textos
 from app.models import Corte, MetadadoCorte
 from app.routers import metadados_schemas as esquemas
 from app.routers.errors import erro_interno
-from app.routers.resposta_api import MensagemResponse
+from app.routers.resposta_api import MensagemDoCorteResponse, MensagemResponse
 from app.services.metadados import MetadadosService
 from app.services.tasks import fire_and_forget
 from app.services.thumbnail import ThumbnailService
@@ -67,7 +67,7 @@ async def obter_metadado(corte_id: str, db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.post("/corte/{corte_id}/gerar", response_model=esquemas.GeracaoIniciadaResponse)
+@router.post("/corte/{corte_id}/gerar", response_model=MensagemDoCorteResponse)
 async def gerar_metadados(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Dispara geração de metadados via Claude."""
     corte = await db.get(Corte, corte_id)
@@ -122,14 +122,14 @@ async def toggle_fire(corte_id: str, db: AsyncSession = Depends(get_db)):
         raise erro_interno(e) from e
 
 
-@router.post("/corte/{corte_id}/gerar-thumbnail", response_model=esquemas.GeracaoIniciadaResponse)
+@router.post("/corte/{corte_id}/gerar-thumbnail", response_model=MensagemDoCorteResponse)
 async def gerar_thumbnail(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Gera thumbnail via Gemini Imagen a partir do prompt."""
     fire_and_forget(ThumbnailService.gerar(corte_id), name=f"thumbnail-{corte_id[:8]}")
     return {"message": "Geração de thumbnail iniciada", "corte_id": corte_id}
 
 
-@router.post("/corte/{corte_id}/gerar-prompt", response_model=esquemas.GeracaoIniciadaResponse)
+@router.post("/corte/{corte_id}/gerar-prompt", response_model=MensagemDoCorteResponse)
 async def gerar_prompt_route(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Dispara geração do prompt da thumbnail via Claude usando texto e opções escolhidas."""
     corte = await db.get(Corte, corte_id)

@@ -11,7 +11,7 @@ from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, Projeto, StatusProjeto
 from app.routers import analises_schemas, projetos_schemas
 from app.routers.errors import erro_interno
-from app.routers.resposta_api import MensagemResponse, RespostaApi
+from app.routers.resposta_api import MensagemResponse, PromptEmPartesResponse, RespostaApi
 from app.services import abrir_no_sistema, listagem_de_projetos
 from app.services.analise import AnaliseService
 from app.services.app_settings import AppSettingsService
@@ -572,7 +572,7 @@ async def limpar_arquivos_projeto(
     return resultado
 
 
-@router.get("/{projeto_id}/analise/prompt", response_model=projetos_schemas.PromptAnaliseResponse)
+@router.get("/{projeto_id}/analise/prompt", response_model=PromptEmPartesResponse)
 async def exportar_prompt_analise(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """Retorna o prompt de análise de transcrição sem chamar a IA."""
     projeto = await db.get(Projeto, projeto_id)
@@ -722,9 +722,7 @@ async def analisar_intervalo(
         raise HTTPException(status_code=500, detail=f"Erro na análise do intervalo: {e}") from e
 
 
-@router.get(
-    "/{projeto_id}/analise-intervalo/prompt", response_model=projetos_schemas.PromptAnaliseResponse
-)
+@router.get("/{projeto_id}/analise-intervalo/prompt", response_model=PromptEmPartesResponse)
 async def exportar_prompt_analise_intervalo(
     projeto_id: str,
     inicio_hms: str,

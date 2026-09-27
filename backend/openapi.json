@@ -1740,6 +1740,19 @@
         "title": "BulkYoutubeResponse",
         "type": "object"
       },
+      "CaminhoDaPastaResponse": {
+        "properties": {
+          "dir_path": {
+            "title": "Dir Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dir_path"
+        ],
+        "title": "CaminhoDaPastaResponse",
+        "type": "object"
+      },
       "CanalResponse": {
         "properties": {
           "ativo": {
@@ -2445,6 +2458,29 @@
         "title": "DefinirCenasRequest",
         "type": "object"
       },
+      "DeteccaoIniciadaResponse": {
+        "description": "A detecção de segmentos roda em segundo plano; pedir de novo enquanto roda\nresponde `em_andamento`, sem disparar outra.",
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "iniciado",
+              "em_andamento"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "corte_id"
+        ],
+        "title": "DeteccaoIniciadaResponse",
+        "type": "object"
+      },
       "DiarizacaoResponse": {
         "description": "`ok=False` traz só o `motivo` (degradação graciosa); `ok=True`, os falantes\ne qual deles é o canal.",
         "properties": {
@@ -2889,25 +2925,6 @@
           "ok"
         ],
         "title": "GeracaoConcluidaResponse",
-        "type": "object"
-      },
-      "GeracaoIniciadaResponse": {
-        "description": "A geração segue em segundo plano; a tela acompanha pelo que muda depois.",
-        "properties": {
-          "corte_id": {
-            "title": "Corte Id",
-            "type": "string"
-          },
-          "message": {
-            "title": "Message",
-            "type": "string"
-          }
-        },
-        "required": [
-          "message",
-          "corte_id"
-        ],
-        "title": "GeracaoIniciadaResponse",
         "type": "object"
       },
       "GerarBrutoRequest": {
@@ -4260,6 +4277,25 @@
         "title": "MarcarPublicadoResponse",
         "type": "object"
       },
+      "MensagemDoCorteResponse": {
+        "description": "A confirmação de uma ação sobre um corte — às vezes só o disparo, que\nsegue em segundo plano.",
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "corte_id"
+        ],
+        "title": "MensagemDoCorteResponse",
+        "type": "object"
+      },
       "MensagemResponse": {
         "description": "A resposta que só confirma, com uma frase para a tela.",
         "properties": {
@@ -4980,8 +5016,8 @@
         "title": "ProjetoResponse",
         "type": "object"
       },
-      "PromptAnaliseResponse": {
-        "description": "O prompt da análise manual, em partes, e o formato que a resposta colada\ndeve seguir.",
+      "PromptEmPartesResponse": {
+        "description": "O prompt do modo manual, fatiado em partes quando a transcrição é longa, e\no formato que a resposta colada deve seguir.",
         "properties": {
           "formato_esperado": {
             "title": "Formato Esperado",
@@ -4999,7 +5035,7 @@
           "prompts",
           "formato_esperado"
         ],
-        "title": "PromptAnaliseResponse",
+        "title": "PromptEmPartesResponse",
         "type": "object"
       },
       "PromptManualResponse": {
@@ -5633,6 +5669,28 @@
           "offset_segundos"
         ],
         "title": "SincroniaLegendaRequest",
+        "type": "object"
+      },
+      "SincroniaPosProducaoResponse": {
+        "properties": {
+          "mensagem": {
+            "title": "Mensagem",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "nada_a_fazer"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "mensagem"
+        ],
+        "title": "SincroniaPosProducaoResponse",
         "type": "object"
       },
       "SkillDescritaResponse": {
@@ -8678,7 +8736,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8848,7 +8908,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemDoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9085,7 +9147,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9126,7 +9190,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9166,7 +9232,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemDoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9544,7 +9612,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CaminhoDaPastaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9851,7 +9921,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9892,7 +9964,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptEmPartesResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9933,7 +10007,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DeteccaoIniciadaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10445,7 +10521,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SincroniaPosProducaoResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12166,7 +12244,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GeracaoIniciadaResponse"
+                  "$ref": "#/components/schemas/MensagemDoCorteResponse"
                 }
               }
             },
@@ -12209,7 +12287,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GeracaoIniciadaResponse"
+                  "$ref": "#/components/schemas/MensagemDoCorteResponse"
                 }
               }
             },
@@ -12252,7 +12330,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GeracaoIniciadaResponse"
+                  "$ref": "#/components/schemas/MensagemDoCorteResponse"
                 }
               }
             },
@@ -13467,7 +13545,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PromptAnaliseResponse"
+                  "$ref": "#/components/schemas/PromptEmPartesResponse"
                 }
               }
             },
@@ -13563,7 +13641,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PromptAnaliseResponse"
+                  "$ref": "#/components/schemas/PromptEmPartesResponse"
                 }
               }
             },

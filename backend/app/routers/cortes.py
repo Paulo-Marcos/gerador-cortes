@@ -14,10 +14,12 @@ from app.routers.cortes_schemas import (
     AdicionarDesvioRequest,
     ArranjoResponse,
     AtualizarCorteRequest,
+    CaminhoDaPastaResponse,
     CorteResponse,
     CriarCorteDesvioRequest,
     CriarCorteManualRequest,
     DecisaoSegmentoRequest,
+    DeteccaoIniciadaResponse,
     DividirBlocoRequest,
     DividirCorteRequest,
     FundirBlocoRequest,
@@ -29,9 +31,15 @@ from app.routers.cortes_schemas import (
     RemoverDesvioRequest,
     RenderPipelineRequest,
     ReordenarCortesRequest,
+    SincroniaPosProducaoResponse,
     ValidarCenasRequest,
 )
 from app.routers.errors import erro_interno
+from app.routers.resposta_api import (
+    MensagemDoCorteResponse,
+    MensagemResponse,
+    PromptEmPartesResponse,
+)
 from app.services import abrir_no_sistema, bruto_do_corte, remotion_studio
 from app.services import arranjo as arranjo_service
 from app.services.cenas_remotion import CenasRemotionService
@@ -168,13 +176,13 @@ async def atualizar_corte(
     return _corte_to_dict(corte)
 
 
-@router.post("/{corte_id}/aprovar")
+@router.post("/{corte_id}/aprovar", response_model=MensagemDoCorteResponse)
 async def aprovar_corte(corte_id: str):
     await CorteService.aprovar(corte_id)
     return {"message": "Corte aprovado", "corte_id": corte_id}
 
 
-@router.delete("/{corte_id}")
+@router.delete("/{corte_id}", response_model=MensagemDoCorteResponse)
 async def deletar_corte(corte_id: str):
     await CorteService.remover(corte_id)
     return {"message": "Corte deletado com sucesso", "corte_id": corte_id}
@@ -359,7 +367,7 @@ async def restaurar_arranjo(corte_id: str):
         raise _erro_de_arranjo(e) from e
 
 
-@router.post("/{corte_id}/analisar-desvios")
+@router.post("/{corte_id}/analisar-desvios", response_model=CorteResponse)
 async def analisar_desvios_corte(
     corte_id: str, limpar_anteriores: bool = False, db: AsyncSession = Depends(get_db)
 ):
@@ -380,7 +388,7 @@ async def analisar_desvios_corte(
         raise erro_interno(e) from e
 
 
-@router.post("/projeto/{projeto_id}/analisar-desvios-todos")
+@router.post("/projeto/{projeto_id}/analisar-desvios-todos", response_model=MensagemResponse)
 async def analisar_desvios_todos(
     projeto_id: str, provider: ProviderIA = "claude", db: AsyncSession = Depends(get_db)
 ):
@@ -429,7 +437,7 @@ async def waveform_peaks_corte(
         raise erro_interno(e) from e
 
 
-@router.get("/{corte_id}/caminho-pasta")
+@router.get("/{corte_id}/caminho-pasta", response_model=CaminhoDaPastaResponse)
 async def obter_caminho_pasta(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Apenas retorna o caminho da pasta do corte (sem gerar arquivos extras)."""
     corte = await db.get(Corte, corte_id)
@@ -479,7 +487,7 @@ async def gerar_bruto(corte_id: str, body: GerarBrutoRequest | None = None):
     )
 
 
-@router.post("/{corte_id}/detectar-segmentos")
+@router.post("/{corte_id}/detectar-segmentos", response_model=DeteccaoIniciadaResponse)
 async def detectar_segmentos(corte_id: str):
     """F-054: dispara PySceneDetect sobre o bruto do corte (fire-and-forget).
 
@@ -566,7 +574,7 @@ async def validar_cenas_remotion(corte_id: str, body: ValidarCenasRequest | None
     return _corte_to_dict(await CenasRemotionService.validar(corte_id, validado))
 
 
-@router.get("/{corte_id}/desvios/prompt")
+@router.get("/{corte_id}/desvios/prompt", response_model=PromptEmPartesResponse)
 async def exportar_prompt_desvios(corte_id: str):
     """Retorna o prompt para análise de desvios e repetições sem chamar a IA."""
     from app.services.desvios import DesviosService
@@ -579,7 +587,7 @@ async def exportar_prompt_desvios(corte_id: str):
         raise erro_interno(e) from e
 
 
-@router.post("/{corte_id}/desvios/importar")
+@router.post("/{corte_id}/desvios/importar", response_model=CorteResponse)
 async def importar_desvios(corte_id: str, body: ImportarDesviosRequest):
     """Importa trechos identificados por IA externa e adiciona como desvios."""
     from app.services.desvios import DesviosService
@@ -593,7 +601,7 @@ async def importar_desvios(corte_id: str, body: ImportarDesviosRequest):
         raise erro_interno(e) from e
 
 
-@router.post("/{corte_id}/analisar-desvios-ia")
+@router.post("/{corte_id}/analisar-desvios-ia", response_model=CorteResponse)
 async def analisar_desvios_ia(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Analisa desvios (repetições, erros) via Gemini IA."""
     from app.services.desvios import DesviosService
@@ -657,7 +665,7 @@ async def obter_remotion_studio_url(corte_id: str):
     return await remotion_studio.abrir_no_studio(corte_id)
 
 
-@router.post("/{corte_id}/sincronizar-pos-producao")
+@router.post("/{corte_id}/sincronizar-pos-producao", response_model=SincroniaPosProducaoResponse)
 async def sincronizar_pos_producao(corte_id: str):
     """
     Promove clip_filtered.mp4 -> upload_ready/ quando o corte tem versão filtrada

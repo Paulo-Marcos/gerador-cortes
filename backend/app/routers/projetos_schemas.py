@@ -7,7 +7,6 @@ análise (auditoria, prompt, importação, intervalo, transcrição). O
 """
 
 from datetime import datetime
-from typing import Any
 
 from app.models import StatusCorte
 from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
@@ -70,20 +69,6 @@ class AuditoriaAnaliseResponse(RespostaApi):
     duracao_media_min: float
     cortes: list[AuditoriaCorteItem]
     descartados: list[AuditoriaDescartado]
-
-
-class ParteDoPrompt(RespostaApi):
-    parte: int
-    total_partes: int
-    texto: str
-
-
-class PromptAnaliseResponse(RespostaApi):
-    """O prompt da análise manual, em partes, e o formato que a resposta colada
-    deve seguir."""
-
-    prompts: list[ParteDoPrompt]
-    formato_esperado: dict[str, Any]
 
 
 class AnaliseImportadaResponse(RespostaApi):

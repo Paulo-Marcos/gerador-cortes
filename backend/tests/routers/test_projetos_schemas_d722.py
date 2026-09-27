@@ -38,14 +38,14 @@ def test_a_limpeza_passa_sem_chave_inventada_nem_numero_mudado(resultado):
 
 
 def test_o_prompt_da_analise_passa_inteiro():
-    from app.routers.projetos_schemas import PromptAnaliseResponse
+    from app.routers.resposta_api import PromptEmPartesResponse
 
     prompt = {
         "prompts": [{"parte": 1, "total_partes": 1, "texto": "Analise..."}],
         "formato_esperado": {"cortes": [{"titulo_proposto": "...", "inicio_seg": 0}]},
     }
 
-    assert PromptAnaliseResponse.model_validate(prompt).model_dump() == prompt
+    assert PromptEmPartesResponse.model_validate(prompt).model_dump() == prompt
 
 
 def test_a_analise_via_ia_espalha_o_resultado_do_servico_na_resposta():

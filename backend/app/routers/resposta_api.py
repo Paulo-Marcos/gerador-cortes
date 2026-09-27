@@ -12,6 +12,8 @@ obrigatório. Use só em modelo de resposta — num modelo que também é corpo 
 pedido o FastAPI dividiria o schema em `-Input`/`-Output` e mudaria os nomes.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -36,3 +38,25 @@ class MensagemResponse(RespostaApi):
     """A resposta que só confirma, com uma frase para a tela."""
 
     message: str
+
+
+class MensagemDoCorteResponse(RespostaApi):
+    """A confirmação de uma ação sobre um corte — às vezes só o disparo, que
+    segue em segundo plano."""
+
+    message: str
+    corte_id: str
+
+
+class ParteDoPrompt(RespostaApi):
+    parte: int
+    total_partes: int
+    texto: str
+
+
+class PromptEmPartesResponse(RespostaApi):
+    """O prompt do modo manual, fatiado em partes quando a transcrição é longa, e
+    o formato que a resposta colada deve seguir."""
+
+    prompts: list[ParteDoPrompt]
+    formato_esperado: dict[str, Any]
