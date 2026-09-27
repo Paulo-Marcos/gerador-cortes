@@ -123,9 +123,9 @@ A telemetria grava `short_id` desde a D-608: sem ele, dois trechos do mesmo cort
 
 ## 4. Como adicionar uma nova chamada de IA
 
-1. Crie a rota em `backend/app/routers/claude_ia.py` com o query param `provider: ProviderIA = "claude"`.
+1. Crie a rota em `backend/app/routers/claude_ia.py` com o query param `provider: ProviderIA = "claude"` e o `response_model` da resposta (D-722: o `response_model` filtra — campo fora dele não chega à tela).
 2. No service do agregado dono do caso de uso (e não no `claude_ia`), monte o prompt e chame `gerar_json` ou `gerar_texto` do `claude_ia`, **repassando `provider` por todos os métodos intermediários**. O `claude_ia` é a ferramenta: ele não importa service nenhum. Métodos estáticos não enxergam variáveis do método que os chamou (rode `ruff check`: o F821 pega o esquecimento).
-3. Adicione a chamada em `frontend/src/lib/api.ts`.
+3. Rode `npm run gen:api` (em `frontend/`) e adicione a chamada no cliente da feature — as gerações de IA moram em `frontend/src/features/ia/api/geracao.ts` —, sobre o cliente gerado (`@/shared/api`). O `lib/api.ts` não recebe mais chamadas (D-722).
 4. Crie a mutation passando o `provider` como `variables`, e derive o provedor em voo com `providerEmVoo` (`frontend/src/lib/providerIa.ts`).
 5. Na tela, use `<AcaoDeIa />` (`frontend/src/components/ui/acao-de-ia.tsx`): a ação é dita uma vez ("Regerar metadados") e o provedor é escolhido por ícone, Claude ou Gemini. Nunca repita o verbo em dois botões.
    - `rotulo` é o texto visível; `descricao` é a ação completa, lida por leitor de tela e no tooltip ("Regerar metadados com o Gemini") — use quando o rótulo visível for curto.
