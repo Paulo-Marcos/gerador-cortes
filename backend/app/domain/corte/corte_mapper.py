@@ -5,6 +5,8 @@ só dicts, listas e números. Movidos de ``routers/cortes.py`` (D-077) para que
 o router fique restrito à tradução HTTP ↔ serviço.
 """
 
+import json
+
 # Com menos cenas que isso, "a maioria no mesmo tempo" não distingue colapso de acaso.
 _MINIMO_DE_CENAS_PARA_COLAPSO = 3
 
@@ -140,3 +142,20 @@ def tem_colapso_de_tempos_das_cenas(cenas: list) -> bool:
         grupos[chave] = grupos.get(chave, 0) + 1
     maior_grupo = max(grupos.values(), default=0)
     return maior_grupo >= max(3, int(len(cenas) * 0.8 + 0.999))
+
+
+def score_do_corte(gravado: str | None) -> dict[str, int | float]:
+    """O `score` da proposta v2 (D-314): {hook, flow, value, total} entre os
+    cortes da mesma análise. Vem da IA sem conferência; aqui só passam as notas
+    numéricas, e o que não for objeto vira {} (sem badge)."""
+    try:
+        valor = json.loads(gravado or "{}")
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(valor, dict):
+        return {}
+    return {
+        chave: nota
+        for chave, nota in valor.items()
+        if isinstance(nota, int | float) and not isinstance(nota, bool)
+    }

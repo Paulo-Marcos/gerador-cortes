@@ -5075,6 +5075,11 @@ export interface components {
             /** Cenas Validadas Em */
             cenas_validadas_em?: string | null;
             /**
+             * Contextualizacao
+             * @default
+             */
+            contextualizacao: string;
+            /**
              * Criado Em
              * Format: date-time
              */
@@ -5090,6 +5095,16 @@ export interface components {
             fim_hms: string;
             /** Fim Seg */
             fim_seg: number;
+            /**
+             * Frase Gancho Hms
+             * @default
+             */
+            frase_gancho_hms: string;
+            /**
+             * Frase Gancho Texto
+             * @default
+             */
+            frase_gancho_texto: string;
             /**
              * Hints Thumbnail
              * @default
@@ -5114,6 +5129,11 @@ export interface components {
              */
             is_pos_producao: number;
             /**
+             * Justificativa
+             * @default
+             */
+            justificativa: string;
+            /**
              * Layout Youtube
              * @default {}
              */
@@ -5131,6 +5151,13 @@ export interface components {
             projeto_id: string;
             /** Resumo */
             resumo: string;
+            /**
+             * Score
+             * @default {}
+             */
+            score: {
+                [key: string]: number;
+            };
             /**
              * Segmentos Detectados
              * @default []
@@ -5157,6 +5184,21 @@ export interface components {
              * @default
              */
             transcricao_final_texto: string;
+            /**
+             * Youtube Scheduled At
+             * @default
+             */
+            youtube_scheduled_at: string;
+            /**
+             * Youtube Url Publicado
+             * @default
+             */
+            youtube_url_publicado: string;
+            /**
+             * Youtube Video Id
+             * @default
+             */
+            youtube_video_id: string;
         };
         /** CriarCanalRequest */
         CriarCanalRequest: {

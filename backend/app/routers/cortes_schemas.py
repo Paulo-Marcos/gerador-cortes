@@ -56,6 +56,17 @@ class CorteResponse(BaseModel):
     is_pos_producao: int = 0
     # F-058: influência manual do editor no prompt da thumbnail.
     hints_thumbnail: str = ""
+    # I-034 e D-314: a justificativa e a proposta v2 da IA. `score` é {} em corte
+    # antigo ou manual. Estavam no `_corte_to_dict`, mas o schema as cortava.
+    justificativa: str = ""
+    frase_gancho_hms: str = ""
+    frase_gancho_texto: str = ""
+    contextualizacao: str = ""
+    score: dict[str, int | float] = {}
+    # A publicação no YouTube, gravada no corte.
+    youtube_video_id: str = ""
+    youtube_url_publicado: str = ""
+    youtube_scheduled_at: str = ""
     criado_em: datetime
 
     class Config:

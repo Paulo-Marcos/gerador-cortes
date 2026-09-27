@@ -16,7 +16,7 @@ import logging
 
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.domain.compartilhado.time_convert import hms_to_seg
-from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload
+from app.domain.corte.corte_mapper import normalizar_cenas_remotion_payload, score_do_corte
 from app.domain.corte.desvio_categoria import classificar_desvio
 from app.models import Corte
 from fastapi import HTTPException
@@ -61,10 +61,7 @@ def _corte_to_dict(corte: Corte) -> dict:
     # antigo/manual (anterior à v2 ou sem análise) → {} — o front não exibe badge.
     # frase_gancho_hms/frase_gancho_texto/contextualizacao já saem como strings
     # pela iteração de colunas acima (default "" nos cortes legados).
-    try:
-        d["score"] = json.loads(getattr(corte, "score_json", None) or "{}")
-    except (ValueError, TypeError):
-        d["score"] = {}
+    d["score"] = score_do_corte(getattr(corte, "score_json", None))
     # D-713: o Fire é coluna do corte agora; a API sempre o entregou booleano.
     d["is_fire"] = bool(getattr(corte, "is_fire", False))
     d["transcricao_corte"] = json.loads(corte.transcricao_corte or "[]")

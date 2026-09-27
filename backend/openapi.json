@@ -1993,6 +1993,11 @@
             ],
             "title": "Cenas Validadas Em"
           },
+          "contextualizacao": {
+            "default": "",
+            "title": "Contextualizacao",
+            "type": "string"
+          },
           "criado_em": {
             "format": "date-time",
             "title": "Criado Em",
@@ -2015,6 +2020,16 @@
           "fim_seg": {
             "title": "Fim Seg",
             "type": "number"
+          },
+          "frase_gancho_hms": {
+            "default": "",
+            "title": "Frase Gancho Hms",
+            "type": "string"
+          },
+          "frase_gancho_texto": {
+            "default": "",
+            "title": "Frase Gancho Texto",
+            "type": "string"
           },
           "hints_thumbnail": {
             "default": "",
@@ -2046,6 +2061,11 @@
             "default": 0,
             "title": "Is Pos Producao",
             "type": "integer"
+          },
+          "justificativa": {
+            "default": "",
+            "title": "Justificativa",
+            "type": "string"
           },
           "layout_youtube": {
             "default": {},
@@ -2080,6 +2100,21 @@
             "title": "Resumo",
             "type": "string"
           },
+          "score": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "default": {},
+            "title": "Score",
+            "type": "object"
+          },
           "segmentos_detectados": {
             "default": [],
             "items": {},
@@ -2113,6 +2148,21 @@
           "transcricao_final_texto": {
             "default": "",
             "title": "Transcricao Final Texto",
+            "type": "string"
+          },
+          "youtube_scheduled_at": {
+            "default": "",
+            "title": "Youtube Scheduled At",
+            "type": "string"
+          },
+          "youtube_url_publicado": {
+            "default": "",
+            "title": "Youtube Url Publicado",
+            "type": "string"
+          },
+          "youtube_video_id": {
+            "default": "",
+            "title": "Youtube Video Id",
             "type": "string"
           }
         },
