@@ -84,7 +84,7 @@ locks:
   - backend/app/routers/cortes.py
   - backend/tests/services/test_pipeline_render_chunks.py
   - backend/tests/services/test_pipeline_render_fases.py
-  - frontend/src/hooks/useEditor.ts
+  - frontend/src/features/editor/useRender.ts
 - id: publicacao-manual-upload-individual-estudio
   description: Publicacao manual e upload individual no Estudio
   locked_at: '2026-05-25'
@@ -99,7 +99,7 @@ locks:
   - backend/projetos/projetos.db
   - frontend/src/types/models.ts
   - frontend/src/lib/api.ts
-  - frontend/src/hooks/useProjetoDetalhe.ts
+  - frontend/src/features/projeto-detalhe/useProjetoDetalhe.ts
 - id: f024-shell-unificado
   description: Shell compartilhado das 3 telas — UnifiedSidebar (132px) + CommonTopBar
     + PosTopbarExtra (marker tipo + stepper)
@@ -185,7 +185,7 @@ locks:
   - backend/tests/routers/test_export_status_cenas.py
   - frontend/src/types/models.ts
   - frontend/src/lib/api.ts
-  - frontend/src/hooks/useEditor.ts
+  - frontend/src/features/editor/useCortes.ts
   - frontend/src/features/editor/fase2/CenasPanel.tsx
   - frontend/src/features/editor/fase2/EditorFase2.tsx
   - frontend/src/features/projeto-detalhe/StatusPills.tsx
@@ -205,7 +205,7 @@ locks:
   - frontend/src/features/projeto-detalhe/ProjetoDetalhePage.tsx
   - frontend/src/features/projeto-detalhe/PublicarMassaModal.tsx
   - frontend/src/features/projetos/ProjetoCard.tsx
-  - frontend/src/hooks/useProjetoDetalhe.ts
+  - frontend/src/features/projeto-detalhe/useProjetoDetalhe.ts
   - frontend/src/index.css
   - frontend/src/features/editor/CorteStatusCard.tsx
 - id: adicoes-exigem-autorizacao
@@ -249,7 +249,7 @@ locks:
   - backend/tests/domain/test_segment_calculator.py
   - backend/tests/services/test_corte_dividir.py
   - frontend/src/lib/api.ts
-  - frontend/src/hooks/useEditor.ts
+  - frontend/src/features/editor/useCortes.ts
   - frontend/src/features/editor/fase1/TimelinePanel.tsx
   - frontend/src/features/editor/fase1/EditorFase1.tsx
   - frontend/src/features/editor/EditorPage.tsx

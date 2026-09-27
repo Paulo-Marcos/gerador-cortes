@@ -9,7 +9,7 @@ import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { useUltimaGeracao } from '@/features/ia';
 import { lerImagemColada, SemImagemColada } from '@/features/shorts/imagemDaAreaDeTransferencia';
-import { exportStatusKey } from '@/hooks/useProjetoDetalhe';
+import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 
 // D-521: a capa VERTICAL, ao lado da thumbnail do YouTube.
 //

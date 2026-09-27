@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReadingModal } from '@/features/editor/CommonTopBar';
 import type { ReadingPatch } from '@/lib/readingMetadata';
-import { useProjeto } from '@/hooks/useProjetoDetalhe';
+import { useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { thumbnailUrl } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';

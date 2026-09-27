@@ -14,7 +14,7 @@ import {
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn, formatarDataLive, formatarDuracao, thumbnailUrl } from '@/lib/utils';
-import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/hooks/useProjetos';
+import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/features/projetos/useProjetos';
 import type { Projeto } from '@/types/models';
 import { PipelineProgress } from './PipelineProgress';
 import { estadoDoProjeto } from './statusMaps';

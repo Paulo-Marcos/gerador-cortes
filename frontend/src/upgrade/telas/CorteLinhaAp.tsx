@@ -1,8 +1,8 @@
 import { useCallback, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAprovar, useAtualizarCorte } from '@/hooks/useEditor';
+import { useAprovar, useAtualizarCorte } from '@/features/editor/useCortes';
 import { useToast } from '@/components/ui/toaster';
-import { useAbrirPasta } from '@/hooks/useProjetoDetalhe';
+import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { formatarDuracaoHMS } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';

@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Circle, Loader2, RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
-import { useBrutoProgress } from '@/hooks/useEditor';
+import { useBrutoProgress } from '@/features/editor/useBruto';
 import { FabricaShortsSection } from './FabricaShortsSection';
 import { posicionarDropdown, type PosicaoDropdown } from './posicaoDropdownBruto';
 import {

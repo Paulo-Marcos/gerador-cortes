@@ -28,9 +28,9 @@ import {
   useProjetoProgressoWS,
   useRefazerTranscricao,
   useUploadYouTube,
-} from '@/hooks/useProjetoDetalhe';
-import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/hooks/useEditor';
-import { useFalantes } from '@/hooks/useDiarizacao';
+} from '@/features/projeto-detalhe/useProjetoDetalhe';
+import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/features/editor/useCortes';
+import { useFalantes } from '@/features/diarizacao/useDiarizacao';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import { cn, formatarDataLive, formatarDuracaoHMS, thumbnailUrl } from '@/lib/utils';
 import { resolveThumbUrl } from '@/lib/api';

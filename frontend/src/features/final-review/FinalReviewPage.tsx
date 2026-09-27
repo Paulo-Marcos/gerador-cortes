@@ -20,16 +20,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
-import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
-import {
-  type RenderStartFrom,
-  useAtualizarCorte,
-  useToggleFire,
-  useCorte,
-  useCortesProjeto,
-  usePipelineStatus,
-  useRenderizarRemotion,
-} from '@/hooks/useEditor';
+import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
+import { type RenderStartFrom, usePipelineStatus, useRenderizarRemotion } from '@/features/editor/useRender';
+import { useAtualizarCorte, useToggleFire, useCorte, useCortesProjeto } from '@/features/editor/useCortes';
 import { useQuery } from '@tanstack/react-query';
 import { finalVideoUrl, resolveThumbUrl } from '@/lib/api';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';

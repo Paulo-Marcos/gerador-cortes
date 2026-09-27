@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn, thumbnailUrl } from '@/lib/utils';
-import { useProjetos } from '@/hooks/useProjetos';
+import { useProjetos } from '@/features/projetos/useProjetos';
 import { PipelineProgress } from '@/features/projetos/PipelineProgress';
 import type { Projeto } from '@/types/models';
 import { useProjetosFixados } from './useProjetosFixados';

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
-import { temFalhados, useProjetos, useReiniciarFalhados } from '@/hooks/useProjetos';
+import { temFalhados, useProjetos, useReiniciarFalhados } from '@/features/projetos/useProjetos';
 import {
   contarPorFiltro,
   filtrarProjetos,

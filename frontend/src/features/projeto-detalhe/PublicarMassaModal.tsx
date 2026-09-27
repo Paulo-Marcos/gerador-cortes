@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/modal';
 import { useQueryClient } from '@tanstack/react-query';
-import { exportStatusKey } from '@/hooks/useProjetoDetalhe';
+import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { StatusExportCorte } from '@/types/models';
 import { publicacaoApi, type BulkYoutubeRequest } from '@/features/publicacao/api';
 

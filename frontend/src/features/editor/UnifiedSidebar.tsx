@@ -20,7 +20,7 @@ import { ThemePicker } from '@/components/layout/ThemePicker';
 import { CorteStatusCard } from './CorteStatusCard';
 import { AdicionarCorteModal } from './AdicionarCorteModal';
 import { MetadataModal } from '@/features/metadata/MetadataModal';
-import { moverCorte, useReordenarCortes } from '@/hooks/useEditor';
+import { moverCorte, useReordenarCortes } from '@/features/editor/useCortes';
 
 // ─────────────────────────────────────────────────────────────
 // UnifiedSidebar — replica `design_reference/src/v2_shell.jsx:278-379`.

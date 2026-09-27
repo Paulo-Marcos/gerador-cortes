@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { waveformPeaksUrl } from '@/lib/api';
+import { api } from '@/shared/api';
 
 // Concorrência baixa: cada warmup pode disparar um ffmpeg no backend (CPU),
 // que concorre com o worker de render. 2 mantém o disco aquecendo sem travar.
@@ -34,7 +34,10 @@ export function useWarmupWaveforms(corteIds: string[], enabled = true): void {
         const id = fila.shift()!;
         warmedRef.current.add(id);
         try {
-          await fetch(waveformPeaksUrl(id), { signal: controller.signal });
+          await api.GET('/api/cortes/{corte_id}/waveform-peaks', {
+            params: { path: { corte_id: id } },
+            signal: controller.signal,
+          });
         } catch {
           // Best-effort: ao abrir o corte ele é regenerado sob demanda.
           if (!controller.signal.aborted) warmedRef.current.delete(id);

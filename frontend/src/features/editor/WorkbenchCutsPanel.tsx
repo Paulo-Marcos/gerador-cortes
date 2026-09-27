@@ -19,7 +19,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { PanelShell } from '@/components/workbench/PanelShell';
 import { RetractableFooter } from '@/components/workbench/RetractableFooter';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { moverCorte, useReordenarCortes } from '@/hooks/useEditor';
+import { moverCorte, useReordenarCortes } from '@/features/editor/useCortes';
 import { estaFixado, type CorteComPin } from '@/features/editor/ordem/api';
 import { useFixarPosicao, useNormalizarOrdem } from './ordem/useOrdemCortes';
 import { MetadataModal } from '@/features/metadata/MetadataModal';

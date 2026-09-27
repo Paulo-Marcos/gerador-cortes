@@ -1,20 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FolderOpen, Keyboard, Loader2, Play, RotateCcw, Star } from 'lucide-react';
-import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
+import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
-import {
-  type RenderStartFrom,
-  useAtualizarCorte,
-  useCorte,
-  useCortesProjeto,
-  useGerarBruto,
-  usePipelineStatus,
-  useRenderizarRemotion,
-  useStatusBruto,
-  useStudioUrl,
-  useToggleFire,
-} from '@/hooks/useEditor';
+import { type RenderStartFrom, usePipelineStatus, useRenderizarRemotion, useStudioUrl } from '@/features/editor/useRender';
+import { useAtualizarCorte, useCorte, useCortesProjeto, useToggleFire } from '@/features/editor/useCortes';
+import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { finalVideoUrl, gradedVideoUrl, rawVideoBustedUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';

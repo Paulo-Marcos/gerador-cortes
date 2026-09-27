@@ -16,7 +16,7 @@ import {
 } from '@/features/projeto-detalhe/listasDePublicacao';
 import { mesclarCortesComExport } from '@/features/projeto-detalhe/cortesDoWorkspace';
 import { avaliarProntidaoPublicacao } from '@/features/projeto-detalhe/prontidaoPublicacao';
-import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/hooks/useEditor';
+import { moverCorte, useCortesProjeto, useReordenarCortes } from '@/features/editor/useCortes';
 import {
   useAbrirPastaProjeto,
   useAnalisarDesviosTodos,
@@ -27,8 +27,8 @@ import {
   useProjetoProgressoWS,
   useRefazerTranscricao,
   useUploadYouTube,
-} from '@/hooks/useProjetoDetalhe';
-import { useAnaliseClaudeEmAndamento } from '@/hooks/useDiarizacao';
+} from '@/features/projeto-detalhe/useProjetoDetalhe';
+import { useAnaliseClaudeEmAndamento } from '@/features/diarizacao/useDiarizacao';
 import { useWarmupWaveforms } from '@/hooks/useWarmupWaveforms';
 import type { ProviderIA } from '@/lib/providerIa';
 import { resolveThumbUrl } from '@/lib/api';

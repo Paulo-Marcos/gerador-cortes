@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/modal';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { cortesApi } from '@/features/editor/api/cortes';
-import { corteKey, cortesProjetoKey } from '@/hooks/useEditor';
+import { corteKey, cortesProjetoKey } from '@/features/editor/useCortes';
 import type { Corte } from '@/types/models';
 import { hmsParaSeg, segParaHms, validarHms } from './timeUtils';
 

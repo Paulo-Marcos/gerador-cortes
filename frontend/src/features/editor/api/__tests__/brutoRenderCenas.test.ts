@@ -99,3 +99,21 @@ describe('cenasApi', () => {
     expect(chamadas[0].url).toBe(`${API}/cortes/c1/cenas-remotion/prompt`);
   });
 });
+
+describe('retratos (D-723: sem fetch direto)', () => {
+  it('preenche os retratos das fichas das cenas', async () => {
+    await (await cenas()).preencherRetratos('c1');
+
+    expect(chamadas[0].method).toBe('POST');
+    expect(chamadas[0].url).toBe(`${API}/cortes/c1/cenas-remotion/retratos`);
+  });
+
+  it('guarda o retrato de uma URL no banco', async () => {
+    const { retratosApi } = await import('../retratos');
+
+    await retratosApi.salvarDeUrl('Fulano', 'https://exemplo.org/f.jpg');
+
+    expect(chamadas[0].url).toBe(`${API}/retratos/salvar-url`);
+    expect(await chamadas[0].json()).toEqual({ nome: 'Fulano', url: 'https://exemplo.org/f.jpg' });
+  });
+});

@@ -7,8 +7,8 @@ import { WorkbenchPanelsProvider } from '@/components/workbench/WorkbenchPanelsP
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ToastProvider } from '@/components/ui/toaster';
 
-vi.mock('@/hooks/useEditor', async () => {
-  const actual = await vi.importActual<typeof import('@/hooks/useEditor')>('@/hooks/useEditor');
+vi.mock('@/features/editor/useCortes', async () => {
+  const actual = await vi.importActual<typeof import('@/features/editor/useCortes')>('@/features/editor/useCortes');
   return {
     ...actual,
     useReordenarCortes: () => ({ mutate: vi.fn(), isPending: false }),

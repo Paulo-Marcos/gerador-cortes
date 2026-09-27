@@ -1,4 +1,4 @@
-import { useArranjo, useArranjoOps } from '@/hooks/useArranjo';
+import { useArranjo, useArranjoOps } from '@/features/editor/useArranjo';
 import { BlocosPanel } from './BlocosPanel';
 
 /**

@@ -12,16 +12,15 @@ import { geracaoIaApi } from '@/features/ia';
 import { projetosApi } from '@/features/projetos/api';
 import { useToast } from '@/components/ui/toaster';
 import type { ProgressoUpdate } from '@/types/models';
+import { cortesProjetoKey, exportStatusKey, projetoKey } from '@/shared/chavesDeCache';
 import {
   publicacaoApi,
   type LiberarPublicacaoRequest,
   type YouTubeManualPublishRequest,
   type YouTubeUploadRequest,
 } from '@/features/publicacao/api';
-import { cortesProjetoKey } from './useEditor';
 
-export const projetoKey = (id: string) => ['projeto', id] as const;
-export const exportStatusKey = (id: string) => ['projeto', id, 'export-status'] as const;
+export { exportStatusKey, projetoKey };
 
 export function useProjeto(id: string | undefined) {
   return useQuery({

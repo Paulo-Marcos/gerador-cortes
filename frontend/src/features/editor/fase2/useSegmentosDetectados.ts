@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cortesApi } from '@/features/editor/api/cortes';
-import { corteKey } from '@/hooks/useEditor';
+import { corteKey } from '@/features/editor/useCortes';
 import { useToast } from '@/components/ui/toaster';
 import type { Corte, DecisaoSegmentoDetectado, SegmentoDetectado } from '@/types/models';
 

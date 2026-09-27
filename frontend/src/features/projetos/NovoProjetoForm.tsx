@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toaster';
-import { useCriarProjeto } from '@/hooks/useProjetos';
+import { useCriarProjeto } from '@/features/projetos/useProjetos';
 
 interface Props {
   open: boolean;

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Projeto } from '@/types/models';
-import { estaProntoPraYoutube } from '@/hooks/useProjetos';
+import { estaProntoPraYoutube } from '@/features/projetos/useProjetos';
 
 // ─────────────────────────────────────────────────────────────
 // Pipeline do projeto em 6 etapas.

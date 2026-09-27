@@ -4,7 +4,7 @@ import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { limpezaDoProjeto } from '@/features/projetos/limpezaDoProjeto';
 import { construirEtapas } from '@/features/projetos/PipelineProgress';
 import { estadoDoProjeto } from '@/features/projetos/statusMaps';
-import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/hooks/useProjetos';
+import { useLimparArquivos, useRebaixarVideo, useRemoverProjeto } from '@/features/projetos/useProjetos';
 import { formatarDataLive, formatarDuracao, thumbnailUrl } from '@/lib/utils';
 import type { Projeto } from '@/types/models';
 import { Icon, type IconName } from '../Icon';

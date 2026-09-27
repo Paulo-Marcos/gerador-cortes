@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { cortesProjetoKey } from '@/hooks/useEditor';
+import { cortesProjetoKey } from '@/features/editor/useCortes';
 import { ordemCortesApi, type CorteComPin } from '@/features/editor/ordem/api';
 
 // D-448: o pin de posição — o ÚNICO jeito de um corte sair da ordem do tempo.

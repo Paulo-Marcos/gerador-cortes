@@ -19,7 +19,7 @@ import type { PlayerHandle } from '../fase1/PlayerPanel';
 import { projetosApi } from '@/features/projetos/api';
 import { cn } from '@/lib/utils';
 import { calcularDuracaoLiquida } from '../timeUtils';
-import { useAtualizarCorte, corteKey } from '@/hooks/useEditor';
+import { useAtualizarCorte, corteKey } from '@/features/editor/useCortes';
 import { useToast } from '@/components/ui/toaster';
 import { CenaPlayerPanel } from './CenaPlayerPanel';
 import { ComTempoDoPlayer, useTempoDoPlayer, type RelogioDoPlayer } from './relogioDoPlayer';

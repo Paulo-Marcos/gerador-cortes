@@ -25,6 +25,10 @@ export const cenasApi = {
       api.POST('/api/cortes/{corte_id}/cenas-remotion/validar', { ...doCorte(corteId), body: { validado } }),
     ),
 
+  /** Busca os retratos das fichas biográficas das cenas e grava o que achar. */
+  preencherRetratos: (corteId: string) =>
+    dados(api.POST('/api/cortes/{corte_id}/cenas-remotion/retratos', doCorte(corteId))),
+
   obterPromptCenasRemotion: (corteId: string) =>
     dados(api.GET('/api/cortes/{corte_id}/cenas-remotion/prompt', doCorte(corteId))),
 };

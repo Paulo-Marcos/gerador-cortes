@@ -31,6 +31,8 @@ module.exports = {
         'src/components/PromptManualPanel.tsx',
         'src/components/layout/SettingsModal.tsx',
         'src/components/workbench/ProjectRail.tsx',
+        // D-723: lê projetos e cortes pelos hooks das features, dentro de cada aba.
+        'src/components/workbench/TabStrip.tsx',
         'src/components/workbench/ProjectStageBar.tsx',
         'src/components/workbench/WorkbenchShell.tsx',
         'src/components/workbench/workbenchRoutes.ts',
@@ -53,12 +55,8 @@ module.exports = {
       // Hook de dados não conhece a tela.
       files: ['src/hooks/**'],
       excludedFiles: [
-        // Dívida de 21/09/2026 — quase toda pelo `useToast` do toaster.
-        'src/hooks/useArranjo.ts',
-        'src/hooks/useDiarizacao.ts',
-        'src/hooks/useEditor.ts',
-        'src/hooks/useProjetoDetalhe.ts',
-        'src/hooks/useWarmupWaveforms.ts',
+        // D-723: os hooks de dados foram para as features, onde avisar pelo
+        // toaster é da tela; aqui não sobrou dívida.
       ],
       rules: {
         'no-restricted-imports': [

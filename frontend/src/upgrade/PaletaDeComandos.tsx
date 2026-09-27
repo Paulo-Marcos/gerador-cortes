@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useFires } from '@/features/shorts/useFires';
-import { useCortesProjeto } from '@/hooks/useEditor';
-import { useProjetos } from '@/hooks/useProjetos';
+import { useCortesProjeto } from '@/features/editor/useCortes';
+import { useProjetos } from '@/features/projetos/useProjetos';
 import {
   ESCOPOS,
   estadoVazio,

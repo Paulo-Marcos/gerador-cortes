@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { analiseClaudeKey, useAnaliseClaudeEmAndamento } from '@/hooks/useDiarizacao';
+import { analiseClaudeKey, useAnaliseClaudeEmAndamento } from '@/features/diarizacao/useDiarizacao';
 
 // D-418 — o estado "analisando" tem de ser POR LIVE. A rota /projetos/:id não
 // remonta ao trocar de projeto pelo rail, então o pending não pode viver no

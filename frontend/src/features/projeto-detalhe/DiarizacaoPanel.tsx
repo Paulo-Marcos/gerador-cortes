@@ -12,7 +12,7 @@ import {
   useAtualizarFalantes,
   useDiarizarProjeto,
   useFalantes,
-} from '@/hooks/useDiarizacao';
+} from '@/features/diarizacao/useDiarizacao';
 
 interface Props {
   projetoId: string;

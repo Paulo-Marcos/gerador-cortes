@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { Tooltip } from '@/components/ui/tooltip';
-import { corteKey, useAtualizarCorte } from '@/hooks/useEditor';
+import { corteKey, useAtualizarCorte } from '@/features/editor/useCortes';
 import { useToast } from '@/components/ui/toaster';
 import type { AppSettings, Corte, Projeto } from '@/types/models';
 import { rawVideoRedirectUrl } from '@/lib/api';

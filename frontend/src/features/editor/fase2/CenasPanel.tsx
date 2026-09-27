@@ -19,12 +19,9 @@ import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
-import {
-  useAtualizarCorte,
-  useGerarCenasClaude,
-  usePreencherRetratosCenas,
-  useValidarCenasRemotion,
-} from '@/hooks/useEditor';
+import { useAtualizarCorte } from '@/features/editor/useCortes';
+import { useGerarCenasClaude } from '@/features/editor/useGeracoesDaIa';
+import { usePreencherRetratosCenas, useValidarCenasRemotion } from '@/features/editor/useCenas';
 import type { CenaRemotion, CenasRemotionPayload } from '@/types/models';
 import { confirmacaoRegerarCenas } from '../regeracaoConfirmacao';
 import { CenaItem } from './CenaItem';

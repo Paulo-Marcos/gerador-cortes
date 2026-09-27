@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import { useImportarDesvios, usePromptDesvios } from '@/hooks/useEditor';
+import { useImportarDesvios, usePromptDesvios } from '@/features/editor/useCortes';
 import { parseManualJson } from '@/lib/manualPrompt';
 import {
   PromptManualPanel,

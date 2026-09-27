@@ -4,11 +4,10 @@
 // para não tocar features protegidas. Reutilizam as query-keys existentes para
 // manter as invalidações consistentes com o resto do detalhe do projeto.
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { diarizacaoApi, type FalantesMap } from '@/features/diarizacao/api';
+import { diarizacaoApi, type FalantesMap } from './api';
 import { geracaoIaApi } from '@/features/ia';
 import { useToast } from '@/components/ui/toaster';
-import { corteKey, cortesProjetoKey } from './useEditor';
-import { exportStatusKey } from './useProjetoDetalhe';
+import { corteKey, cortesProjetoKey, exportStatusKey } from '@/shared/chavesDeCache';
 
 export const falantesKey = (id: string) => ['projeto', id, 'falantes'] as const;
 

@@ -4,17 +4,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ToastProvider } from '@/components/ui/toaster';
 
-vi.mock('@/hooks/useEditor', async () => {
-  const actual = await vi.importActual<typeof import('@/hooks/useEditor')>('@/hooks/useEditor');
+vi.mock('@/features/editor/useCortes', async () => {
+  const actual = await vi.importActual<typeof import('@/features/editor/useCortes')>('@/features/editor/useCortes');
   return {
     ...actual,
     useCorte: () => ({ data: { projeto_id: 'p1' } }),
   };
 });
 
-vi.mock('@/hooks/useDiarizacao', async () => {
-  const actual = await vi.importActual<typeof import('@/hooks/useDiarizacao')>(
-    '@/hooks/useDiarizacao',
+vi.mock('@/features/diarizacao/useDiarizacao', async () => {
+  const actual = await vi.importActual<typeof import('@/features/diarizacao/useDiarizacao')>(
+    '@/features/diarizacao/useDiarizacao',
   );
   return {
     ...actual,

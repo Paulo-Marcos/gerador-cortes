@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { exportStatusKey } from '@/hooks/useProjetoDetalhe';
+import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { Bot, Check, ExternalLink, ImageOff, Loader2, Package, Send, Youtube } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';

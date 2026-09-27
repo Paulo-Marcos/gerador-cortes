@@ -13,8 +13,8 @@ import {
   colarPartesCompleto,
   extrairPartesPrompt,
 } from '@/components/PromptManualPanel';
-import { useImportarAnalise, usePromptAnalise } from '@/hooks/useProjetoDetalhe';
-import { useAnaliseClaudeEmAndamento, useAnalisarComDiarizacao } from '@/hooks/useDiarizacao';
+import { useImportarAnalise, usePromptAnalise } from '@/features/projeto-detalhe/useProjetoDetalhe';
+import { useAnaliseClaudeEmAndamento, useAnalisarComDiarizacao } from '@/features/diarizacao/useDiarizacao';
 import { DiarizacaoPanel } from './DiarizacaoPanel';
 
 interface Props {

@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import type { CenaRemotion } from '@/types/models';
-import { salvarRetratoDeUrl } from '@/hooks/useEditor';
+import { salvarRetratoDeUrl } from '@/features/editor/useCenas';
 import { metaCena, TIPOS_CENA } from './sceneTypes';
 import { SceneTypeIcon } from './SceneTypeIcon';
 

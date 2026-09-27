@@ -3,8 +3,8 @@ import { Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
-import { useProjetos } from '@/hooks/useProjetos';
-import { useCortesProjeto } from '@/hooks/useEditor';
+import { useProjetos } from '@/features/projetos/useProjetos';
+import { useCortesProjeto } from '@/features/editor/useCortes';
 import type { Projeto } from '@/types/models';
 import { useWorkbenchTabsContext } from './WorkbenchTabsProvider';
 import {

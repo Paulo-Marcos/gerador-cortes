@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { resolveThumbUrl } from '@/lib/api';
-import { useAbrirPasta } from '@/hooks/useProjetoDetalhe';
+import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { StatusCorte, StatusExportCorte } from '@/types/models';
 import { StatusPills } from './StatusPills';
 

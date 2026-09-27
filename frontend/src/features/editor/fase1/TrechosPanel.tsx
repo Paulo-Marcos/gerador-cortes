@@ -10,7 +10,7 @@ import {
   WandSparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { usePromptDesvios } from '@/hooks/useEditor';
+import { usePromptDesvios } from '@/features/editor/useCortes';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getManualPromptText } from '@/lib/manualPrompt';
 import { hmsParaSeg, validarHms } from '../timeUtils';

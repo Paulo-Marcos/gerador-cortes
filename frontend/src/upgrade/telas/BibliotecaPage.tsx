@@ -13,7 +13,7 @@ import {
   type SortKey,
 } from '@/features/projetos/bibliotecaFiltros';
 import { estadoDoProjeto } from '@/features/projetos/statusMaps';
-import { temFalhados, useProjetos, useReiniciarFalhados } from '@/hooks/useProjetos';
+import { temFalhados, useProjetos, useReiniciarFalhados } from '@/features/projetos/useProjetos';
 import { Icon } from '../Icon';
 import { useDefinirChrome } from '../UpgradeChrome';
 import { ProjetoCardAp } from './ProjetoCardAp';

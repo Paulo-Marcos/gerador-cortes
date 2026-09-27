@@ -11,7 +11,7 @@ import {
   Youtube,
   type LucideIcon,
 } from 'lucide-react';
-import { estaProntoPraYoutube } from '@/hooks/useProjetos';
+import { estaProntoPraYoutube } from '@/features/projetos/useProjetos';
 import type { Projeto } from '@/types/models';
 
 // ─────────────────────────────────────────────────────────────

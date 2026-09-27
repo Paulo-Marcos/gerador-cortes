@@ -1,7 +1,7 @@
 import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { arranjoApi } from '@/features/editor/api/arranjo';
+import { arranjoApi } from './api/arranjo';
 import { useToast } from '@/components/ui/toaster';
-import { corteKey, cortesProjetoKey } from './useEditor';
+import { corteKey, cortesProjetoKey } from '@/shared/chavesDeCache';
 import type { ArranjoBlocos } from '@/types/models';
 
 /**

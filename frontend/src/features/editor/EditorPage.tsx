@@ -1,29 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAbrirPasta, useExportStatus, useProjeto } from '@/hooks/useProjetoDetalhe';
+import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
 import { useContextoCorte } from '@/hooks/useContextoCorte';
-import {
-  corteKey,
-  useAdicionarDesvio,
-  useAtualizarCorte,
-  useCorte,
-  useCortesProjeto,
-  useDeletarCorte,
-  useDividirCorte,
-  useJuntarCortes,
-  useGerarBruto,
-  useGerarMetadadosClaude,
-  useGerarTrechosClaude,
-  useRemoverDesvio,
-  useSincronizarTranscricao,
-  useStatusBruto,
-  useStatusMetadadosClaude,
-  useToggleFire,
-  useToggleLeitura,
-  useTrechosClaudeEmAndamento,
-} from '@/hooks/useEditor';
+import { corteKey, useAdicionarDesvio, useAtualizarCorte, useCorte, useCortesProjeto, useDeletarCorte, useDividirCorte, useJuntarCortes, useRemoverDesvio, useSincronizarTranscricao, useToggleFire, useToggleLeitura } from '@/features/editor/useCortes';
+import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
+import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaude, useTrechosClaudeEmAndamento } from '@/features/editor/useGeracoesDaIa';
 import { audioProxyUrl, waveformPeaksUrl } from '@/lib/api';
 import { cortesApi } from '@/features/editor/api/cortes';
 import { cn } from '@/lib/utils';
