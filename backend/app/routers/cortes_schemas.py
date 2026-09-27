@@ -8,15 +8,145 @@ o router focado nos handlers; todos os nomes seguem re-exportados pela fachada
 from datetime import datetime
 from typing import Any, Literal
 
+from app.models import StatusCorte
 from app.routers.resposta_api import PromptEmPartesResponse, RespostaApi
 from app.services.render.render_progress import RenderState
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, model_serializer
+from pydantic.json_schema import SkipJsonSchema
 
 
-class DesvioSchema(BaseModel):
+class ItemDoCorte(BaseModel):
+    """Um item de uma lista do corte (D-722): o que ele declara ganha tipo, o
+    resto passa intacto.
+
+    O `response_model` FILTRA a resposta: um item estrito perderia as chaves que
+    não declara — foi assim que o CorteResponse cortou score e contextualização.
+    Daí o extra="allow". E a chave que só alguns itens trazem não pode virar
+    `null` nos outros: a serialização devolve só o que veio. (O TypedDict com
+    extra="allow" não serve: no Pydantic 2.9 ele descarta as chaves extras ao
+    serializar.)
+
+    As chaves obrigatórias são as que aparecem em TODO item dos 831 cortes de uma
+    cópia da PROD (26/09/2026); as opcionais, as que só alguns trazem. Os
+    vocabulários abertos ficam `str`: um valor fora de um Literal derrubaria a
+    leitura do corte inteiro com 500.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    # `plain`, e não `wrap`: medido nos 831 cortes, a volta pelo serializador
+    # padrão dobrava o custo da resposta, e a transcrição tem milhares de linhas.
+    # Sem anotação de retorno de propósito: com ela o Pydantic troca o schema do
+    # item pelo do retorno (`dict`) e o contrato perde os campos.
+    @model_serializer(mode="plain")
+    def _so_as_chaves_que_vieram(self):
+        dados = {
+            chave: valor
+            for chave, valor in self.__dict__.items()
+            if chave in self.__pydantic_fields_set__
+        }
+        dados.update(self.__pydantic_extra__ or {})
+        return dados
+
+
+# Opcional no item: pode faltar, mas quando vem não é nulo. O `SkipJsonSchema`
+# tira o `null` do contrato; o `None` só marca a ausência, que não é serializada.
+Ausente = SkipJsonSchema[None]
+
+CategoriaDoDesvio = Literal[
+    "repeticao",
+    "disfluencia",
+    "tangente",
+    "chat",
+    "enrolacao",
+    "imprecisao",
+    "tom",
+    "silencio",
+    "outro",
+]
+
+
+class DesvioDoCorte(ItemDoCorte):
+    """Um trecho a remover. A `categoria` sai sempre do vocabulário fechado:
+    o `_corte_to_dict` a normaliza na leitura (D-422)."""
+
     inicio_hms: str
     fim_hms: str
     motivo: str
+    categoria: CategoriaDoDesvio
+    # Os trechos técnicos gravam segundos inteiros às vezes; `int | float` deixa
+    # o número sair como foi guardado.
+    inicio_seg: int | float | Ausente = None
+    fim_seg: int | float | Ausente = None
+    inicio_texto: str | Ausente = None
+    fim_texto: str | Ausente = None
+    # Quem marcou: claude, gemini, manual, tecnico, juncao (a tela não lista esta).
+    origem: str | Ausente = None
+    # O rótulo do fluxo manual/Gemini legado (DESVIO, REPETICAO).
+    tipo: str | Ausente = None
+
+
+class LinhaDaTranscricao(ItemDoCorte):
+    start: float
+    end: float
+    texto: str
+    # As palavras com tempo ({inicio_seg, texto}) ficam dict: são centenas de
+    # milhares nos cortes e nenhuma tela as lê pelo corte; como modelo, custavam
+    # um terço da resposta.
+    palavras: list[dict[str, Any]] | Ausente = None
+    # D-286/D-360: o falante da diarização (SPEAKER_00...). Ausente = sem diarização.
+    speaker: str | Ausente = None
+
+
+class LinhaDaTranscricaoFinal(LinhaDaTranscricao):
+    """A linha da transcrição limpa: `inicio`/`fim` no tempo do bruto."""
+
+    inicio: float
+    fim: float
+
+
+class SegmentoDetectadoDoCorte(ItemDoCorte):
+    """F-054: uma mudança de cena sugerida no bruto. O `status` é gravado só
+    pelo backend (sugerido, aceito_full, aceito_compartilhada, rejeitado)."""
+
+    inicio: float
+    fim: float
+    score: float
+    status: str
+
+
+class FatiaDoArranjo(ItemDoCorte):
+    """D-576: uma fatia da ordem de exibição, em tempo de live."""
+
+    inicio_seg: float
+    fim_seg: float
+
+
+class CenaDoCorte(ItemDoCorte):
+    """Uma cena do roteiro visual. O `_corte_to_dict` garante os quatro tempos;
+    o resto varia por tipo de cena (até o `numero` vem int, float ou str)."""
+
+    inicio: float
+    fim: float
+    inicio_seg: float
+    fim_seg: float
+    tipo: str | Ausente = None
+
+
+class RoteiroDeCenasDoCorte(ItemDoCorte):
+    """O roteiro visual no formato com envelope; o antigo é a lista pura."""
+
+    cenas: list[CenaDoCorte] | Ausente = None
+    formato: str | Ausente = None
+    paleta: dict[str, Any] | Ausente = None
+    retratos: dict[str, Any] | Ausente = None
+
+
+class LayoutDoCorte(ItemDoCorte):
+    """O layout do YouTube do corte. `{}` quando o corte ainda não tem um."""
+
+    modo_padrao: str | Ausente = None
+    regioes: list[dict[str, Any]] | Ausente = None
 
 
 class CorteResponse(BaseModel):
@@ -33,8 +163,10 @@ class CorteResponse(BaseModel):
     fim_hms: str
     inicio_seg: float
     fim_seg: float
-    desvios: list
-    status: str
+    desvios: list[DesvioDoCorte]
+    # O vocabulário do ciclo do corte (RN-04): a coluna é texto, mas só a tabela
+    # de transições do domínio grava nela.
+    status: StatusCorte
     arquivo_clip_path: str
     # Duração real (segundos) do clip bruto medida via ffprobe. 0.0 se ainda
     # não gerou.  Frontend usa pra exibir duração exata no Player.
@@ -42,19 +174,19 @@ class CorteResponse(BaseModel):
     is_leitura: int
     autor_leitura: str
     parte_leitura: int = 1
-    transcricao_corte: list = []
-    transcricao_final: list = []
+    transcricao_corte: list[LinhaDaTranscricao] = []
+    transcricao_final: list[LinhaDaTranscricaoFinal] = []
     transcricao_final_texto: str = ""
-    cenas_remotion: dict | list = []
-    layout_youtube: dict = {}
+    cenas_remotion: RoteiroDeCenasDoCorte | list[CenaDoCorte] = []
+    layout_youtube: LayoutDoCorte = LayoutDoCorte()
     cenas_validadas: int = 0
     cenas_validadas_em: datetime | None = None
     # F-063: offset fino de áudio (lip-sync), em ms. Positivo atrasa, negativo adianta.
     audio_offset_ms: int = 0
     # F-054: sugestões de mudança de cena detectadas no bruto.
-    segmentos_detectados: list = []
+    segmentos_detectados: list[SegmentoDetectadoDoCorte] = []
     # D-576: ordem de exibição dos blocos ([] = cronológica).
-    arranjo_blocos: list = []
+    arranjo_blocos: list[FatiaDoArranjo] = []
     is_fire: bool = False
     is_pos_producao: int = 0
     # F-058: influência manual do editor no prompt da thumbnail.

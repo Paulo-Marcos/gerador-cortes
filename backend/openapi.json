@@ -1916,6 +1916,40 @@
         "title": "CapaTikTokRequest",
         "type": "object"
       },
+      "CenaDoCorte": {
+        "additionalProperties": true,
+        "description": "Uma cena do roteiro visual. O `_corte_to_dict` garante os quatro tempos;\no resto varia por tipo de cena (até o `numero` vem int, float ou str).",
+        "properties": {
+          "fim": {
+            "title": "Fim",
+            "type": "number"
+          },
+          "fim_seg": {
+            "title": "Fim Seg",
+            "type": "number"
+          },
+          "inicio": {
+            "title": "Inicio",
+            "type": "number"
+          },
+          "inicio_seg": {
+            "title": "Inicio Seg",
+            "type": "number"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inicio",
+          "fim",
+          "inicio_seg",
+          "fim_seg"
+        ],
+        "title": "CenaDoCorte",
+        "type": "object"
+      },
       "CenasDoCorteResponse": {
         "description": "As cenas geradas ou importadas, já normalizadas. A forma de cada cena é o\ncontrato da cena (D-725); aqui ela passa como objeto.",
         "properties": {
@@ -2011,7 +2045,9 @@
           },
           "arranjo_blocos": {
             "default": [],
-            "items": {},
+            "items": {
+              "$ref": "#/components/schemas/FatiaDoArranjo"
+            },
             "title": "Arranjo Blocos",
             "type": "array"
           },
@@ -2027,10 +2063,12 @@
           "cenas_remotion": {
             "anyOf": [
               {
-                "type": "object"
+                "$ref": "#/components/schemas/RoteiroDeCenasDoCorte"
               },
               {
-                "items": {},
+                "items": {
+                  "$ref": "#/components/schemas/CenaDoCorte"
+                },
                 "type": "array"
               }
             ],
@@ -2065,7 +2103,9 @@
             "type": "string"
           },
           "desvios": {
-            "items": {},
+            "items": {
+              "$ref": "#/components/schemas/DesvioDoCorte"
+            },
             "title": "Desvios",
             "type": "array"
           },
@@ -2129,9 +2169,8 @@
             "type": "string"
           },
           "layout_youtube": {
-            "default": {},
-            "title": "Layout Youtube",
-            "type": "object"
+            "$ref": "#/components/schemas/LayoutDoCorte",
+            "default": {}
           },
           "numero": {
             "title": "Numero",
@@ -2178,13 +2217,14 @@
           },
           "segmentos_detectados": {
             "default": [],
-            "items": {},
+            "items": {
+              "$ref": "#/components/schemas/SegmentoDetectadoDoCorte"
+            },
             "title": "Segmentos Detectados",
             "type": "array"
           },
           "status": {
-            "title": "Status",
-            "type": "string"
+            "$ref": "#/components/schemas/StatusCorte"
           },
           "tema_central": {
             "title": "Tema Central",
@@ -2196,13 +2236,17 @@
           },
           "transcricao_corte": {
             "default": [],
-            "items": {},
+            "items": {
+              "$ref": "#/components/schemas/LinhaDaTranscricao"
+            },
             "title": "Transcricao Corte",
             "type": "array"
           },
           "transcricao_final": {
             "default": [],
-            "items": {},
+            "items": {
+              "$ref": "#/components/schemas/LinhaDaTranscricaoFinal"
+            },
             "title": "Transcricao Final",
             "type": "array"
           },
@@ -2504,6 +2548,85 @@
           "cenas"
         ],
         "title": "DefinirCenasRequest",
+        "type": "object"
+      },
+      "DesvioDoCorte": {
+        "additionalProperties": true,
+        "description": "Um trecho a remover. A `categoria` sai sempre do vocabulário fechado:\no `_corte_to_dict` a normaliza na leitura (D-422).",
+        "properties": {
+          "categoria": {
+            "enum": [
+              "repeticao",
+              "disfluencia",
+              "tangente",
+              "chat",
+              "enrolacao",
+              "imprecisao",
+              "tom",
+              "silencio",
+              "outro"
+            ],
+            "title": "Categoria",
+            "type": "string"
+          },
+          "fim_hms": {
+            "title": "Fim Hms",
+            "type": "string"
+          },
+          "fim_seg": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Fim Seg"
+          },
+          "fim_texto": {
+            "title": "Fim Texto",
+            "type": "string"
+          },
+          "inicio_hms": {
+            "title": "Inicio Hms",
+            "type": "string"
+          },
+          "inicio_seg": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Inicio Seg"
+          },
+          "inicio_texto": {
+            "title": "Inicio Texto",
+            "type": "string"
+          },
+          "motivo": {
+            "title": "Motivo",
+            "type": "string"
+          },
+          "origem": {
+            "title": "Origem",
+            "type": "string"
+          },
+          "tipo": {
+            "title": "Tipo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inicio_hms",
+          "fim_hms",
+          "motivo",
+          "categoria"
+        ],
+        "title": "DesvioDoCorte",
         "type": "object"
       },
       "DeteccaoIniciadaResponse": {
@@ -2917,6 +3040,26 @@
           "encode"
         ],
         "title": "FasesDoPipeline",
+        "type": "object"
+      },
+      "FatiaDoArranjo": {
+        "additionalProperties": true,
+        "description": "D-576: uma fatia da ordem de exibição, em tempo de live.",
+        "properties": {
+          "fim_seg": {
+            "title": "Fim Seg",
+            "type": "number"
+          },
+          "inicio_seg": {
+            "title": "Inicio Seg",
+            "type": "number"
+          }
+        },
+        "required": [
+          "inicio_seg",
+          "fim_seg"
+        ],
+        "title": "FatiaDoArranjo",
         "type": "object"
       },
       "FilaDaPosProducao": {
@@ -3654,6 +3797,25 @@
         "title": "LayoutCapaTiktokResponse",
         "type": "object"
       },
+      "LayoutDoCorte": {
+        "additionalProperties": true,
+        "description": "O layout do YouTube do corte. `{}` quando o corte ainda não tem um.",
+        "properties": {
+          "modo_padrao": {
+            "title": "Modo Padrao",
+            "type": "string"
+          },
+          "regioes": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Regioes",
+            "type": "array"
+          }
+        },
+        "title": "LayoutDoCorte",
+        "type": "object"
+      },
       "LayoutPresetResponse": {
         "description": "O `payload` muda de forma com o `tipo` (ver o topo do módulo) e já sai\nnormalizado; quem o lê por tipo é a tela (D-722).",
         "properties": {
@@ -3986,6 +4148,87 @@
           "removidos"
         ],
         "title": "LimpezaDeArquivosResponse",
+        "type": "object"
+      },
+      "LinhaDaTranscricao": {
+        "additionalProperties": true,
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "number"
+          },
+          "palavras": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Palavras",
+            "type": "array"
+          },
+          "speaker": {
+            "title": "Speaker",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "number"
+          },
+          "texto": {
+            "title": "Texto",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "texto"
+        ],
+        "title": "LinhaDaTranscricao",
+        "type": "object"
+      },
+      "LinhaDaTranscricaoFinal": {
+        "additionalProperties": true,
+        "description": "A linha da transcrição limpa: `inicio`/`fim` no tempo do bruto.",
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "number"
+          },
+          "fim": {
+            "title": "Fim",
+            "type": "number"
+          },
+          "inicio": {
+            "title": "Inicio",
+            "type": "number"
+          },
+          "palavras": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Palavras",
+            "type": "array"
+          },
+          "speaker": {
+            "title": "Speaker",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "number"
+          },
+          "texto": {
+            "title": "Texto",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "texto",
+          "inicio",
+          "fim"
+        ],
+        "title": "LinhaDaTranscricaoFinal",
         "type": "object"
       },
       "ListaAvaliacoesBrutoResponse": {
@@ -6149,6 +6392,33 @@
         "title": "ReverterSkillRequest",
         "type": "object"
       },
+      "RoteiroDeCenasDoCorte": {
+        "additionalProperties": true,
+        "description": "O roteiro visual no formato com envelope; o antigo é a lista pura.",
+        "properties": {
+          "cenas": {
+            "items": {
+              "$ref": "#/components/schemas/CenaDoCorte"
+            },
+            "title": "Cenas",
+            "type": "array"
+          },
+          "formato": {
+            "title": "Formato",
+            "type": "string"
+          },
+          "paleta": {
+            "title": "Paleta",
+            "type": "object"
+          },
+          "retratos": {
+            "title": "Retratos",
+            "type": "object"
+          }
+        },
+        "title": "RoteiroDeCenasDoCorte",
+        "type": "object"
+      },
       "SalvarUrlRequest": {
         "properties": {
           "nome": {
@@ -6236,6 +6506,36 @@
           "marcador"
         ],
         "title": "ScaffoldDescritoResponse",
+        "type": "object"
+      },
+      "SegmentoDetectadoDoCorte": {
+        "additionalProperties": true,
+        "description": "F-054: uma mudança de cena sugerida no bruto. O `status` é gravado só\npelo backend (sugerido, aceito_full, aceito_compartilhada, rejeitado).",
+        "properties": {
+          "fim": {
+            "title": "Fim",
+            "type": "number"
+          },
+          "inicio": {
+            "title": "Inicio",
+            "type": "number"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inicio",
+          "fim",
+          "score",
+          "status"
+        ],
+        "title": "SegmentoDetectadoDoCorte",
         "type": "object"
       },
       "SegmentoRequest": {

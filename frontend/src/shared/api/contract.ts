@@ -5029,6 +5029,25 @@ export interface components {
             sugerir_etiqueta: boolean;
         };
         /**
+         * CenaDoCorte
+         * @description Uma cena do roteiro visual. O `_corte_to_dict` garante os quatro tempos;
+         *     o resto varia por tipo de cena (até o `numero` vem int, float ou str).
+         */
+        CenaDoCorte: {
+            /** Fim */
+            fim: number;
+            /** Fim Seg */
+            fim_seg: number;
+            /** Inicio */
+            inicio: number;
+            /** Inicio Seg */
+            inicio_seg: number;
+            /** Tipo */
+            tipo?: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * CenasDoCorteResponse
          * @description As cenas geradas ou importadas, já normalizadas. A forma de cada cena é o
          *     contrato da cena (D-725); aqui ela passa como objeto.
@@ -5082,7 +5101,7 @@ export interface components {
              * Arranjo Blocos
              * @default []
              */
-            arranjo_blocos: unknown[];
+            arranjo_blocos: components["schemas"]["FatiaDoArranjo"][];
             /**
              * Audio Offset Ms
              * @default 0
@@ -5094,7 +5113,7 @@ export interface components {
              * Cenas Remotion
              * @default []
              */
-            cenas_remotion: Record<string, unknown> | unknown[];
+            cenas_remotion: components["schemas"]["RoteiroDeCenasDoCorte"] | components["schemas"]["CenaDoCorte"][];
             /**
              * Cenas Validadas
              * @default 0
@@ -5113,7 +5132,7 @@ export interface components {
              */
             criado_em: string;
             /** Desvios */
-            desvios: unknown[];
+            desvios: components["schemas"]["DesvioDoCorte"][];
             /**
              * Duracao Clip Seg
              * @default 0
@@ -5161,11 +5180,8 @@ export interface components {
              * @default
              */
             justificativa: string;
-            /**
-             * Layout Youtube
-             * @default {}
-             */
-            layout_youtube: Record<string, unknown>;
+            /** @default {} */
+            layout_youtube: components["schemas"]["LayoutDoCorte"];
             /** Numero */
             numero: number;
             /**
@@ -5190,9 +5206,8 @@ export interface components {
              * Segmentos Detectados
              * @default []
              */
-            segmentos_detectados: unknown[];
-            /** Status */
-            status: string;
+            segmentos_detectados: components["schemas"]["SegmentoDetectadoDoCorte"][];
+            status: components["schemas"]["StatusCorte"];
             /** Tema Central */
             tema_central: string;
             /** Titulo Proposto */
@@ -5201,12 +5216,12 @@ export interface components {
              * Transcricao Corte
              * @default []
              */
-            transcricao_corte: unknown[];
+            transcricao_corte: components["schemas"]["LinhaDaTranscricao"][];
             /**
              * Transcricao Final
              * @default []
              */
-            transcricao_final: unknown[];
+            transcricao_final: components["schemas"]["LinhaDaTranscricaoFinal"][];
             /**
              * Transcricao Final Texto
              * @default
@@ -5325,6 +5340,38 @@ export interface components {
         DefinirCenasRequest: {
             /** Cenas */
             cenas: Record<string, unknown>[];
+        };
+        /**
+         * DesvioDoCorte
+         * @description Um trecho a remover. A `categoria` sai sempre do vocabulário fechado:
+         *     o `_corte_to_dict` a normaliza na leitura (D-422).
+         */
+        DesvioDoCorte: {
+            /**
+             * Categoria
+             * @enum {string}
+             */
+            categoria: "repeticao" | "disfluencia" | "tangente" | "chat" | "enrolacao" | "imprecisao" | "tom" | "silencio" | "outro";
+            /** Fim Hms */
+            fim_hms: string;
+            /** Fim Seg */
+            fim_seg?: number;
+            /** Fim Texto */
+            fim_texto?: string;
+            /** Inicio Hms */
+            inicio_hms: string;
+            /** Inicio Seg */
+            inicio_seg?: number;
+            /** Inicio Texto */
+            inicio_texto?: string;
+            /** Motivo */
+            motivo: string;
+            /** Origem */
+            origem?: string;
+            /** Tipo */
+            tipo?: string;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * DeteccaoIniciadaResponse
@@ -5508,6 +5555,18 @@ export interface components {
             raw: boolean;
             /** Render Final */
             render_final: boolean;
+        };
+        /**
+         * FatiaDoArranjo
+         * @description D-576: uma fatia da ordem de exibição, em tempo de live.
+         */
+        FatiaDoArranjo: {
+            /** Fim Seg */
+            fim_seg: number;
+            /** Inicio Seg */
+            inicio_seg: number;
+        } & {
+            [key: string]: unknown;
         };
         /** FilaDaPosProducao */
         FilaDaPosProducao: {
@@ -5825,6 +5884,18 @@ export interface components {
             quadro: components["schemas"]["QuadroCapa"];
         };
         /**
+         * LayoutDoCorte
+         * @description O layout do YouTube do corte. `{}` quando o corte ainda não tem um.
+         */
+        LayoutDoCorte: {
+            /** Modo Padrao */
+            modo_padrao?: string;
+            /** Regioes */
+            regioes?: Record<string, unknown>[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * LayoutPresetResponse
          * @description O `payload` muda de forma com o `tipo` (ver o topo do módulo) e já sai
          *     normalizado; quem o lê por tipo é a tela (D-722).
@@ -5966,6 +6037,43 @@ export interface components {
             removidos: string[];
             /** Retido Mb */
             retido_mb?: number | null;
+        };
+        /** LinhaDaTranscricao */
+        LinhaDaTranscricao: {
+            /** End */
+            end: number;
+            /** Palavras */
+            palavras?: Record<string, unknown>[];
+            /** Speaker */
+            speaker?: string;
+            /** Start */
+            start: number;
+            /** Texto */
+            texto: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * LinhaDaTranscricaoFinal
+         * @description A linha da transcrição limpa: `inicio`/`fim` no tempo do bruto.
+         */
+        LinhaDaTranscricaoFinal: {
+            /** End */
+            end: number;
+            /** Fim */
+            fim: number;
+            /** Inicio */
+            inicio: number;
+            /** Palavras */
+            palavras?: Record<string, unknown>[];
+            /** Speaker */
+            speaker?: string;
+            /** Start */
+            start: number;
+            /** Texto */
+            texto: string;
+        } & {
+            [key: string]: unknown;
         };
         /** ListaAvaliacoesBrutoResponse */
         ListaAvaliacoesBrutoResponse: {
@@ -6848,6 +6956,22 @@ export interface components {
             /** Versao */
             versao: number;
         };
+        /**
+         * RoteiroDeCenasDoCorte
+         * @description O roteiro visual no formato com envelope; o antigo é a lista pura.
+         */
+        RoteiroDeCenasDoCorte: {
+            /** Cenas */
+            cenas?: components["schemas"]["CenaDoCorte"][];
+            /** Formato */
+            formato?: string;
+            /** Paleta */
+            paleta?: Record<string, unknown>;
+            /** Retratos */
+            retratos?: Record<string, unknown>;
+        } & {
+            [key: string]: unknown;
+        };
         /** SalvarUrlRequest */
         SalvarUrlRequest: {
             /** Nome */
@@ -6885,6 +7009,23 @@ export interface components {
             scaffold: string;
             /** Scaffold Default */
             scaffold_default: string;
+        };
+        /**
+         * SegmentoDetectadoDoCorte
+         * @description F-054: uma mudança de cena sugerida no bruto. O `status` é gravado só
+         *     pelo backend (sugerido, aceito_full, aceito_compartilhada, rejeitado).
+         */
+        SegmentoDetectadoDoCorte: {
+            /** Fim */
+            fim: number;
+            /** Inicio */
+            inicio: number;
+            /** Score */
+            score: number;
+            /** Status */
+            status: string;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * SegmentoRequest

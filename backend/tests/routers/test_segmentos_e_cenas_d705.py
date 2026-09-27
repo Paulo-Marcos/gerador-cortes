@@ -25,8 +25,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 _SEGMENTOS = [
-    {"inicio": 10.0, "fim": 20.0, "status": "sugerido"},
-    {"inicio": 30.0, "fim": 45.0, "status": "sugerido"},
+    {"inicio": 10.0, "fim": 20.0, "score": 0.5, "status": "sugerido"},
+    {"inicio": 30.0, "fim": 45.0, "score": 0.333, "status": "sugerido"},
 ]
 
 
