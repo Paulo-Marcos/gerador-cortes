@@ -14,7 +14,7 @@
  *   mais na página de Layout. Presets carregam fundo+placa no payload.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bookmark, Loader2, Pencil, Save, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -198,13 +198,16 @@ export function PosicionamentoModal({
 
   // F-060: extrai o config do preset no formato que o editor usa (sintetico
   // de 1 tela quando mode='full').
-  const configDoPreset = (preset: LayoutPreset): YoutubeSharedConfig | null => {
-    if (isFullMode) {
-      const full = fullConfigDoPreset(preset);
-      return full ? sharedConfigFromFull(full) : null;
-    }
-    return sharedConfigDoPreset(preset);
-  };
+  const configDoPreset = useCallback(
+    (preset: LayoutPreset): YoutubeSharedConfig | null => {
+      if (isFullMode) {
+        const full = fullConfigDoPreset(preset);
+        return full ? sharedConfigFromFull(full) : null;
+      }
+      return sharedConfigDoPreset(preset);
+    },
+    [isFullMode],
+  );
 
   const aplicarPreset = (preset: LayoutPreset) => {
     const presetConfig = configDoPreset(preset);
@@ -301,8 +304,7 @@ export function PosicionamentoModal({
   );
   const presetConfigOriginal = useMemo(
     () => (presetSelecionadoObj ? configDoPreset(presetSelecionadoObj) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [presetSelecionadoObj, isFullMode],
+    [presetSelecionadoObj, configDoPreset],
   );
   const presetExtrasOriginais = useMemo(
     () => (presetSelecionadoObj ? fundoPlacaDoPreset(presetSelecionadoObj) : {}),

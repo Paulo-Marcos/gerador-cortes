@@ -27,6 +27,7 @@ import {
   SpeakerLabelOverlay,
   StageChrome,
 } from '@/shared/palco/youtubeChrome';
+import { limitar } from '@/lib/limitar';
 
 export type SharedRectKey = Exclude<keyof YoutubeSharedConfig, 'telas'>;
 export type CropRectKey = 'crop_facecam' | 'crop_tela';
@@ -76,9 +77,6 @@ export function resizeSlotForCrop(
   };
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
 
 function rectFromPoints(
   start: { x: number; y: number },
@@ -419,8 +417,8 @@ export function SlotPreview({
     const dx = ((event.clientX - drag.startX) / bounds.width) * 1920;
     const dy = ((event.clientY - drag.startY) / bounds.height) * 1080;
     const slot = config[drag.key];
-    const nextX = clamp(Math.round(drag.startSlotX + dx), 0, 1920 - slot.w);
-    const nextY = clamp(Math.round(drag.startSlotY + dy), 0, 1080 - slot.h);
+    const nextX = limitar(Math.round(drag.startSlotX + dx), 0, 1920 - slot.w);
+    const nextY = limitar(Math.round(drag.startSlotY + dy), 0, 1080 - slot.h);
     if (nextX !== slot.x || nextY !== slot.y) {
       onChangeSlot(drag.key, { ...slot, x: nextX, y: nextY });
     }
@@ -674,8 +672,8 @@ export function CropPicker({
     const bounds = frameRef.current?.getBoundingClientRect();
     if (!bounds) return null;
     return {
-      x: clamp(Math.round(((event.clientX - bounds.left) / bounds.width) * 1920), 0, 1920),
-      y: clamp(Math.round(((event.clientY - bounds.top) / bounds.height) * 1080), 0, 1080),
+      x: limitar(Math.round(((event.clientX - bounds.left) / bounds.width) * 1920), 0, 1920),
+      y: limitar(Math.round(((event.clientY - bounds.top) / bounds.height) * 1080), 0, 1080),
     };
   };
 

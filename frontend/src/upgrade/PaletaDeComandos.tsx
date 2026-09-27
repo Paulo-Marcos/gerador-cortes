@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useFires } from '@/features/shorts/useFires';
 import { useCortesProjeto } from '@/features/editor/useCortes';
@@ -129,10 +129,13 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
 
   // R4: trocou de rota por baixo dela (⌘[, ⌘1…⌘4): a paleta não viaja junto,
   // como a gaveta da fila já não viajava.
-  useEffect(() => {
+  // Só a troca de rota dispara; `aberta` é lida na hora, sem ser gatilho —
+  // reagir a ela fecharia a paleta na própria abertura.
+  const fecharSeAberta = useEffectEvent(() => {
     if (aberta) onFechar();
-    // Só a troca de rota fecha; reagir a `aberta` fecharia na própria abertura.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    fecharSeAberta();
   }, [pathname]);
 
   if (!aberta) return null;

@@ -15,10 +15,8 @@ import {
   useEditorialScaffolds,
   useResetarScaffold,
 } from './useEditorialScaffolds';
+import { mensagemErro } from '@/lib/mensagemErro';
 
-function mensagemErro(erro: unknown, fallback: string): string {
-  return erro instanceof Error ? erro.message : fallback;
-}
 
 /** True quando o canal difere do default (comparação sem espaços nas bordas). */
 export function scaffoldCustomizado(scaffold: EditorialScaffold): boolean {

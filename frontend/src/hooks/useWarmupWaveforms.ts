@@ -23,7 +23,9 @@ export function useWarmupWaveforms(corteIds: string[], enabled = true): void {
   useEffect(() => {
     if (!enabled) return;
 
-    const pendentes = corteIds.filter((id) => !warmedRef.current.has(id));
+    // A lista sai da chave, e não de `corteIds`: o efeito só reage quando os
+    // ids mudam de fato, não a cada array novo com os mesmos ids.
+    const pendentes = (key ? key.split(',') : []).filter((id) => !warmedRef.current.has(id));
     if (pendentes.length === 0) return;
 
     const controller = new AbortController();
@@ -52,6 +54,5 @@ export function useWarmupWaveforms(corteIds: string[], enabled = true): void {
     void Promise.all(trabalhadores);
 
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, enabled]);
 }

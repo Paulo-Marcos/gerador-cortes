@@ -1,3 +1,5 @@
+import { limitar } from '@/lib/limitar';
+
 // D-493: a matemática de mover e redimensionar um bloco do palco.
 //
 // Espelha `domain/palco_short.aplicar_ajustes` nos LIMITES — o backend trava de
@@ -207,6 +209,3 @@ export function paraCanvas(
   return (deltaTela * larguraDoQuadro) / larguraNaTela;
 }
 
-function limitar(valor: number, minimo: number, maximo: number): number {
-  return Math.max(minimo, Math.min(valor, Math.max(minimo, maximo)));
-}

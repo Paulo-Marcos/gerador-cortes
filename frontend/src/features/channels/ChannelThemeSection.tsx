@@ -6,6 +6,7 @@ import { Check, Loader2, Palette } from 'lucide-react';
 import { useToast } from '@/components/ui/toaster';
 import type { Tema } from '@/features/channels/api/canais';
 import { useCanais, useSelecionarTema, useTemaDoCanal, useTemas } from './useChannels';
+import { mensagemErro } from '@/lib/mensagemErro';
 
 // Cores representativas para o swatch de preview (subconjunto legível das 17).
 const CHAVES_PREVIEW = [
@@ -17,9 +18,6 @@ const CHAVES_PREVIEW = [
   'branco',
 ] as const;
 
-function mensagemErro(erro: unknown, fallback: string): string {
-  return erro instanceof Error ? erro.message : fallback;
-}
 
 function TemaCard({
   tema,

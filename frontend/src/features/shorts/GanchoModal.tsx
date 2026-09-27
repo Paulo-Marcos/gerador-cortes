@@ -1,4 +1,4 @@
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useEffectEvent, useState, type RefObject } from 'react';
 import { Eraser, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
@@ -141,8 +141,10 @@ export function GanchoModal({
   // Reabrir o modal em outro candidato tem de trazer o gancho DELE. Sem isto o
   // estado do anterior ficaria na tela e o operador salvaria o texto errado no
   // short errado — em silêncio, porque os dois campos parecem iguais.
-  useEffect(() => {
-    if (!open) return;
+  // A mutation `gerar` é lida na hora, sem ser gatilho: ela muda de identidade
+  // a cada resultado, e como gatilho apagaria as variações no instante em que
+  // chegam. Quem dispara é abrir o modal ou o short mudar.
+  const carregarDoShort = useEffectEvent(() => {
     setTexto(short.gancho_tela ?? '');
     setAteSeg(short.gancho_ate_seg ?? 0);
     setCor(short.gancho_cor ?? '');
@@ -154,10 +156,9 @@ export function GanchoModal({
     });
     setPersonalizado(temAparenciaPropria(short));
     gerar.reset();
-    // `gerar` fora das dependencias de proposito: a mutation muda de identidade
-    // a cada resultado, e inclui-la faria este efeito rodar de novo logo apos
-    // as variacoes chegarem — apagando-as no instante em que aparecem.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    if (open) carregarDoShort();
   }, [
     open,
     short.id,

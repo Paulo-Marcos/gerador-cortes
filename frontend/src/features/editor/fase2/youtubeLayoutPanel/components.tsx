@@ -21,7 +21,8 @@ import type { LayoutPreset, LayoutPresetTipo } from '@/types/presets';
 import { segParaMmSs } from '../../timeUtils';
 import { DefinirSplitButton } from '../DefinirSplitButton';
 import type { YoutubeLayoutMode, YoutubeLayoutRegion } from '@/shared/palco/youtubeLayout';
-import { MODE_LABEL, MODE_SHORT, clamp, round } from './shared';
+import { MODE_LABEL, MODE_SHORT, round } from './shared';
+import { limitar } from '@/lib/limitar';
 
 // Collapsible removido (F-060): as secoes Fundo/Placa migraram para o modal
 // de posicionamento — fundo e placa agora pertencem ao preset/escopo.
@@ -521,13 +522,13 @@ export function RegionItem({
   // mesmo ponto que será gravado. Sem isso, seek e valor salvo podem
   // divergir em até FINE_STEP_SEG nas bordas (inicio + 0.1, duration).
   const adjustInicio = (delta: number) => {
-    const next = clamp(round(region.inicio + delta), 0, duration);
+    const next = limitar(round(region.inicio + delta), 0, duration);
     if (next !== region.inicio) onChangeInicio(next);
     onSeekTo(next);
   };
   const adjustFim = (delta: number) => {
     const minFim = region.inicio + 0.1;
-    const next = clamp(round(region.fim + delta), minFim, Math.max(minFim, duration));
+    const next = limitar(round(region.fim + delta), minFim, Math.max(minFim, duration));
     if (next !== region.fim) onChangeFim(next);
     onSeekTo(next);
   };

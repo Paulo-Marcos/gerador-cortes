@@ -326,7 +326,10 @@ export function useDefinirChrome(chrome: Chrome, deps: unknown[]) {
     if (!store) return;
     store.definir(chrome);
     return () => store.definir(null);
-    // `chrome` é recriado a cada render; as deps da tela é que mandam.
+    // Este hook tem API de dependências, como o próprio useEffect: quem decide
+    // quando republicar é a tela, pela lista `deps` que ela passa — `chrome` é
+    // recriado a cada render e não pode ser o gatilho. Por isso a lista não é
+    // literal, e o lint não tem como conferi-la aqui (D-730).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }

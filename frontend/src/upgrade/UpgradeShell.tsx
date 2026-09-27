@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useEffectEvent, useMemo, useState, type ReactNode } from 'react';
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import {
   WorkbenchQueueProvider,
@@ -333,13 +333,14 @@ function Casca({ children, fila }: CascaProps) {
   // O rótulo chega depois do fetch; `visitar` atualiza sem empilhar.
   const rotuloDoLugar = rotuloParaHistorico(chrome.titulo, trilha, cab.titulo);
   const tipoDeNavegacao = useNavigationType();
-  useEffect(() => {
-    const lugar = { to: pathname, rotulo: rotuloDoLugar, icone: cab.icone, tipo: TIPO_DA_TELA[tela] ?? 'tela' };
+  // O tipo de navegação é lido na hora, sem ser gatilho: ele só importa na
+  // chegada, e mudar o rótulo depois não é uma nova navegação.
+  const registrarVisita = useEffectEvent((lugar: Parameters<typeof visitar>[0]) => {
     if (tipoDeNavegacao === 'POP') visitarPeloNavegador(lugar);
     else visitar(lugar);
-    // O tipo de navegação só importa na chegada; mudar o rótulo depois não
-    // é uma nova navegação.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    registrarVisita({ to: pathname, rotulo: rotuloDoLugar, icone: cab.icone, tipo: TIPO_DA_TELA[tela] ?? 'tela' });
   }, [pathname, rotuloDoLugar, cab.icone, tela]);
   const historico = useHistoricoDaCasca();
   const irPara = useCallback((to: string) => navigate(to), [navigate]);

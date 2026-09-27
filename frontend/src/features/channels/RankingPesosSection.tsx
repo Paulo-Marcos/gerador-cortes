@@ -12,10 +12,8 @@ import {
   useResetarRankingPesos,
   useSalvarRankingPesos,
 } from './useRankingPesos';
+import { mensagemErro } from '@/lib/mensagemErro';
 
-function mensagemErro(erro: unknown, fallback: string): string {
-  return erro instanceof Error ? erro.message : fallback;
-}
 
 export function RankingPesosSection() {
   const { notify } = useToast();

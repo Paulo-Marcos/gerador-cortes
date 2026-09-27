@@ -1,3 +1,5 @@
+import { limitar } from '@/lib/limitar';
+
 // D-475: onde a janela 9:16 cai sobre o vídeo 16:9.
 //
 // A tela mostrava o bruto inteiro e um número solto ("50%"). Quem cura não tinha
@@ -50,9 +52,6 @@ export function janelaVertical(
   };
 }
 
-function limitar(valor: number, minimo: number, maximo: number): number {
-  return Math.max(minimo, Math.min(valor, maximo));
-}
 
 function arredondar(valor: number): number {
   return Math.round(valor * 100) / 100;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
@@ -84,6 +84,43 @@ function appendQueryParams(url: string, params: Record<string, string>): string 
   const search = new URLSearchParams(params).toString();
   return `${url}${url.includes('?') ? '&' : '?'}${search}`;
 }
+
+
+// D-394: os ids do registro central — todo atalho do editor pode ser
+// reatribuído na página Atalhos.
+const ATALHOS_DO_EDITOR = [
+  'player.togglePlay',
+  'bruto.frameAnterior',
+  'bruto.frameProximo',
+  'bruto.seekBack5s',
+  'bruto.seekFwd5s',
+  'bruto.speedDown',
+  'bruto.speedUp',
+  'bruto.corteAnterior',
+  'bruto.proximoCorte',
+  'bruto.inAqui',
+  'bruto.outAqui',
+  'bruto.aprovar',
+  'bruto.rejeitar',
+  'bruto.fire',
+  'bruto.leitura',
+  'bruto.travarTrecho',
+  'bruto.modoPonteiro',
+  'bruto.adicionarTrecho',
+  'bruto.dividirCorte',
+  'bruto.juntarCorte',
+  'bruto.alternarVelocidade',
+  'bruto.removerTrecho',
+  'bruto.smartPlay',
+  'bruto.sincroniaNudgeMenos',
+  'bruto.sincroniaNudgeMais',
+  'bruto.undo',
+  'bruto.redo',
+  'bruto.salvar',
+  'bruto.gerarBruto',
+  'bruto.abrirPasta',
+  'bruto.mostrarAtalhos',
+] as const;
 
 export function EditorPage() {
   const { id: projetoId = '', corteId = '' } = useParams<{ id: string; corteId: string }>();
@@ -190,7 +227,8 @@ export function EditorPage() {
     ({ currentLocation, nextLocation }) =>
       isDirty && currentLocation.pathname !== nextLocation.pathname,
   );
-  useEffect(() => {
+  // Só a mudança de estado do bloqueio dispara; o resto é lido na hora.
+  const salvarAntesDeSair = useEffectEvent(() => {
     if (saida.state !== 'blocked') return;
     const pendentes = editHistory.getPresent();
     if (Object.keys(pendentes).length === 0) {
@@ -214,8 +252,9 @@ export function EditorPage() {
         },
       },
     );
-    // Só a mudança de estado do bloqueio dispara o salvamento.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    salvarAntesDeSair();
   }, [saida.state]);
 
   // Fechar a aba não passa pelo roteador: o navegador pergunta.
@@ -621,42 +660,50 @@ export function EditorPage() {
   // D-394: bindings vêm do registro central (ids bruto.*) — assim TODA
   // funcionalidade do editor pode ter o atalho reatribuído pelo usuário
   // na página Atalhos (overlay wb-keybindings-v1).
+  // As ligações nascem uma vez e chamam a versão ATUAL de cada ação. Antes o
+  // useMemo só as refazia quando corte, corteId ou isDirty mudavam: as outras
+  // ações rodavam com o valor da época (D-730). Recriá-las a cada render
+  // religaria o teclado a cada tique do player.
+  const acoesDosAtalhos = useRef<Record<string, () => void>>({});
+  useLayoutEffect(() => {
+    acoesDosAtalhos.current = {
+      'player.togglePlay': () => playerRef.current?.togglePlay(),
+      'bruto.frameAnterior': () => playerRef.current?.step(-1 / 30),
+      'bruto.frameProximo': () => playerRef.current?.step(1 / 30),
+      'bruto.seekBack5s': () => onSkip(-5),
+      'bruto.seekFwd5s': () => onSkip(5),
+      'bruto.speedDown': () => onChangeSpeed(-0.25),
+      'bruto.speedUp': () => onChangeSpeed(0.25),
+      'bruto.corteAnterior': () => navegarCorte(-1),
+      'bruto.proximoCorte': () => navegarCorte(1),
+      'bruto.inAqui': setInicioAtual,
+      'bruto.outAqui': setFimAtual,
+      'bruto.aprovar': toggleAprovado,
+      'bruto.rejeitar': devolverAProposto,
+      'bruto.fire': () => toggleFire.mutate(),
+      'bruto.leitura': () => corte && toggleLeitura.mutate(corte),
+      'bruto.travarTrecho': () => setTrechoLocked((v) => !v),
+      'bruto.modoPonteiro': () => setPointerMode((v) => !v),
+      'bruto.adicionarTrecho': adicionarTrechoAqui,
+      'bruto.dividirCorte': onDividirCorteAqui,
+      'bruto.juntarCorte': onJuntarProximoCorte,
+      'bruto.alternarVelocidade': alternarVelocidade,
+      'bruto.removerTrecho': onRemoverTrechoSelecionado,
+      'bruto.smartPlay': () => setSmartPlay((v) => !v),
+      'bruto.sincroniaNudgeMenos': () => nudgeSincronia(-STEP_FINO),
+      'bruto.sincroniaNudgeMais': () => nudgeSincronia(STEP_FINO),
+      'bruto.undo': editHistory.undo,
+      'bruto.redo': editHistory.redo,
+      'bruto.salvar': salvarMudancas,
+      'bruto.gerarBruto': () => handleGerarBrutoPrincipal(),
+      'bruto.abrirPasta': () => abrirPasta.mutate(corteId),
+      'bruto.mostrarAtalhos': () => setShortcutsOpen(true),
+    };
+  });
   const bindings: ShortcutBinding[] = useMemo(
-    () => [
-      shortcutFromRegistry('player.togglePlay', () => playerRef.current?.togglePlay()),
-      shortcutFromRegistry('bruto.frameAnterior', () => playerRef.current?.step(-1 / 30)),
-      shortcutFromRegistry('bruto.frameProximo', () => playerRef.current?.step(1 / 30)),
-      shortcutFromRegistry('bruto.seekBack5s', () => onSkip(-5)),
-      shortcutFromRegistry('bruto.seekFwd5s', () => onSkip(5)),
-      shortcutFromRegistry('bruto.speedDown', () => onChangeSpeed(-0.25)),
-      shortcutFromRegistry('bruto.speedUp', () => onChangeSpeed(0.25)),
-      shortcutFromRegistry('bruto.corteAnterior', () => navegarCorte(-1)),
-      shortcutFromRegistry('bruto.proximoCorte', () => navegarCorte(1)),
-      shortcutFromRegistry('bruto.inAqui', setInicioAtual),
-      shortcutFromRegistry('bruto.outAqui', setFimAtual),
-      shortcutFromRegistry('bruto.aprovar', toggleAprovado),
-      shortcutFromRegistry('bruto.rejeitar', devolverAProposto),
-      shortcutFromRegistry('bruto.fire', () => toggleFire.mutate()),
-      shortcutFromRegistry('bruto.leitura', () => corte && toggleLeitura.mutate(corte)),
-      shortcutFromRegistry('bruto.travarTrecho', () => setTrechoLocked((v) => !v)),
-      shortcutFromRegistry('bruto.modoPonteiro', () => setPointerMode((v) => !v)),
-      shortcutFromRegistry('bruto.adicionarTrecho', adicionarTrechoAqui),
-      shortcutFromRegistry('bruto.dividirCorte', onDividirCorteAqui),
-      shortcutFromRegistry('bruto.juntarCorte', onJuntarProximoCorte),
-      shortcutFromRegistry('bruto.alternarVelocidade', alternarVelocidade),
-      shortcutFromRegistry('bruto.removerTrecho', onRemoverTrechoSelecionado),
-      shortcutFromRegistry('bruto.smartPlay', () => setSmartPlay((v) => !v)),
-      shortcutFromRegistry('bruto.sincroniaNudgeMenos', () => nudgeSincronia(-STEP_FINO)),
-      shortcutFromRegistry('bruto.sincroniaNudgeMais', () => nudgeSincronia(STEP_FINO)),
-      shortcutFromRegistry('bruto.undo', editHistory.undo),
-      shortcutFromRegistry('bruto.redo', editHistory.redo),
-      shortcutFromRegistry('bruto.salvar', salvarMudancas),
-      shortcutFromRegistry('bruto.gerarBruto', () => handleGerarBrutoPrincipal()),
-      shortcutFromRegistry('bruto.abrirPasta', () => abrirPasta.mutate(corteId)),
-      shortcutFromRegistry('bruto.mostrarAtalhos', () => setShortcutsOpen(true)),
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [corte, corteId, isDirty],
+    () =>
+      ATALHOS_DO_EDITOR.map((id) => shortcutFromRegistry(id, () => acoesDosAtalhos.current[id]?.())),
+    [],
   );
 
   useShortcuts(bindings, !!corte);

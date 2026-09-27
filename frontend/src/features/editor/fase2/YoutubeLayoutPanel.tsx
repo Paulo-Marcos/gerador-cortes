@@ -50,8 +50,9 @@ import type { LayoutPreset } from '@/types/presets';
 import { useSegmentosDetectados } from './useSegmentosDetectados';
 import { ScanLine } from 'lucide-react';
 import { EscopoLadder, ModoBlock, RegionItem } from './youtubeLayoutPanel/components';
-import { MODE_LABEL, clamp, round } from './youtubeLayoutPanel/shared';
+import { MODE_LABEL, round } from './youtubeLayoutPanel/shared';
 import { settingsApi } from '@/features/settings/api';
+import { limitar } from '@/lib/limitar';
 
 // ─────────────────────────────────────────────────────────────
 // YoutubeLayoutPanel — replica `design_reference/src/v3_pos.jsx > TabLayout`
@@ -291,8 +292,9 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
     // JSON salvo do corte é o sentinela inicial (sem compartilhada/fundo/placa/
     // regioes e sem modo='compartilhada' explícito) — espelha o `corte_configurado`
     // do backend. Como `patch` atualiza o cache do React Query, a flag flipa
-    // imediatamente ao primeiro clique nas pílulas.
-    const modoHerdando = useMemo(() => {
+    // imediatamente ao primeiro clique nas pílulas. Lido a cada render, e não
+    // memorizado: é o cache que muda, e o memo só enxergava isso pelo `draft`.
+    const modoHerdando = (() => {
       const corteRaw = queryClient.getQueryData<Corte>(corteKey(corteId));
       const rawLayout = (corteRaw as unknown as { layout_youtube?: unknown } | undefined)
         ?.layout_youtube;
@@ -312,9 +314,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
       } catch {
         return true;
       }
-      // `draft` na dep list garante recomputo quando patch atualiza o cache local.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [queryClient, corteId, draft]);
+    })();
 
     // syncQuery=false mantem a edicao apenas no draft local enquanto o
     // usuario digita num input controlado. Sincronizar o cache do React
@@ -350,8 +350,8 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
     };
 
     const commitRegionInicio = (index: number, region: YoutubeLayoutRegion, seg: number) => {
-      const inicio = clamp(round(seg), 0, duration);
-      const fim = clamp(
+      const inicio = limitar(round(seg), 0, duration);
+      const fim = limitar(
         Math.max(region.fim, inicio + 1),
         inicio + 0.1,
         Math.max(inicio + 0.1, duration),
@@ -360,7 +360,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
     };
 
     const commitRegionFim = (index: number, region: YoutubeLayoutRegion, seg: number) => {
-      const fim = clamp(round(seg), region.inicio + 0.1, Math.max(region.inicio + 0.1, duration));
+      const fim = limitar(round(seg), region.inicio + 0.1, Math.max(region.inicio + 0.1, duration));
       handleRegion(index, { ...region, fim });
     };
 

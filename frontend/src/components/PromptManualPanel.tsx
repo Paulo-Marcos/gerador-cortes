@@ -88,8 +88,7 @@ export function PromptManualPanel({
   const total = partes.length;
   const colado = (i: number) => Boolean(jsonPorParte[i]?.trim());
   const partesColadas = useMemo(
-    () => partes.filter((_, i) => colado(i)).length,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => partes.filter((_, i) => Boolean(jsonPorParte[i]?.trim())).length,
     [partes, jsonPorParte],
   );
   const todasColadas = !hideRetorno && partesColadas === total;

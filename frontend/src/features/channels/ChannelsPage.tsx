@@ -30,14 +30,12 @@ import {
   useSelecionarCanal,
   useYoutubeAuthStatus,
 } from './useChannels';
+import { mensagemErro } from '@/lib/mensagemErro';
 
 type Dialogo = { tipo: 'criar' } | { tipo: 'editar'; canal: Canal } | null;
 type Aba = 'canal' | 'aplicacao';
 type SecaoCanal = null | 'skills' | 'scaffolds' | 'prompts' | 'pesos';
 
-function mensagemErro(erro: unknown, fallback: string): string {
-  return erro instanceof Error ? erro.message : fallback;
-}
 
 /** Converte os campos do form em payload de identidade (sem o `id`). */
 function paraIdentidade(values: ChannelFormValues): IdentidadeCanal {

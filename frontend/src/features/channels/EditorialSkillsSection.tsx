@@ -19,10 +19,8 @@ import {
   useReverterSkill,
   useVersoesSkill,
 } from './useEditorialSkills';
+import { mensagemErro } from '@/lib/mensagemErro';
 
-function mensagemErro(erro: unknown, fallback: string): string {
-  return erro instanceof Error ? erro.message : fallback;
-}
 
 /** Igualdade rasa de params (modelos dos dois providers, thinking e timeout). */
 function paramsIguais(a: EditorialSkill['params'], b: EditorialSkill['params']): boolean {

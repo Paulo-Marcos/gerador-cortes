@@ -13,6 +13,7 @@ import { hmsParaSeg, segParaMmSs } from '../timeUtils';
 import { metaCena } from './sceneTypes';
 import { SceneTypeIcon, sceneTypeStyle } from './SceneTypeIcon';
 import type { YoutubeLayout, YoutubeLayoutMode, YoutubeLayoutRegion } from '@/shared/palco/youtubeLayout';
+import { limitar } from '@/lib/limitar';
 
 // ─────────────────────────────────────────────────────────────
 // SceneTimeline — replica `design_reference/src/v3_pos.jsx >
@@ -144,9 +145,6 @@ function buildTimecodes(duration: number): string[] {
   return Array.from({ length: TIMECODE_SLOTS }, (_, idx) => segParaMmSs(idx * step, true));
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
@@ -159,16 +157,16 @@ function secondsFromPointer(
 ): number {
   const rect = track.getBoundingClientRect();
   if (rect.width <= 0) return 0;
-  const ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+  const ratio = limitar((event.clientX - rect.left) / rect.width, 0, 1);
   return ratio * duration;
 }
 
 function zoomIn(zoom: number): number {
-  return clamp(zoom * ZOOM_STEP, ZOOM_MIN, ZOOM_MAX);
+  return limitar(zoom * ZOOM_STEP, ZOOM_MIN, ZOOM_MAX);
 }
 
 function zoomOut(zoom: number): number {
-  return clamp(zoom / ZOOM_STEP, ZOOM_MIN, ZOOM_MAX);
+  return limitar(zoom / ZOOM_STEP, ZOOM_MIN, ZOOM_MAX);
 }
 
 function normalizeRemovedSegments(
@@ -186,8 +184,8 @@ function normalizeRemovedSegments(
 
   return desvios
     .map((desvio) => {
-      const start = clamp(hmsParaSeg(desvio.inicio_hms), sourceStartSec, sourceEndSec);
-      const end = clamp(hmsParaSeg(desvio.fim_hms), sourceStartSec, sourceEndSec);
+      const start = limitar(hmsParaSeg(desvio.inicio_hms), sourceStartSec, sourceEndSec);
+      const end = limitar(hmsParaSeg(desvio.fim_hms), sourceStartSec, sourceEndSec);
       return end > start ? { start, end } : null;
     })
     .filter((segment): segment is RemovedSegment => Boolean(segment))
@@ -212,13 +210,13 @@ function clipTimeToSourceTime(
     removedBeforeClip += removedDuration;
   }
 
-  return clamp(sourceTime, sourceStartSec, sourceEndSec);
+  return limitar(sourceTime, sourceStartSec, sourceEndSec);
 }
 
 function peakAtSourceTime(payload: WaveformPeaksResponse, sourceTime: number): number {
   const rel = sourceTime - payload.offset_sec;
   if (rel < 0 || rel > payload.duration_sec || payload.peaks.length === 0) return 0;
-  const index = clamp(
+  const index = limitar(
     Math.floor((rel / payload.duration_sec) * payload.peaks.length),
     0,
     payload.peaks.length - 1,
@@ -256,16 +254,16 @@ function resizeRegionAt(
   duration: number,
 ): YoutubeLayoutRegion {
   const safeDuration = Math.max(MIN_REGION_SECONDS, duration);
-  const time = clamp(round1(seconds), 0, safeDuration);
+  const time = limitar(round1(seconds), 0, safeDuration);
   if (edge === 'inicio') {
     const maxStart = Math.max(
       0,
       Math.min(region.fim - MIN_REGION_SECONDS, safeDuration - MIN_REGION_SECONDS),
     );
-    return { ...region, inicio: clamp(time, 0, maxStart) };
+    return { ...region, inicio: limitar(time, 0, maxStart) };
   }
 
-  return { ...region, fim: clamp(time, region.inicio + MIN_REGION_SECONDS, safeDuration) };
+  return { ...region, fim: limitar(time, region.inicio + MIN_REGION_SECONDS, safeDuration) };
 }
 
 export function SceneTimeline({
@@ -422,7 +420,7 @@ export function SceneTimeline({
             innerPosNew = TRACK_CONTENT_LEFT + ratio * trackUsableNew;
           }
           const maxScroll = Math.max(0, newInnerWidth - viewport.clientWidth);
-          viewport.scrollLeft = clamp(innerPosNew - cursorX, 0, maxScroll);
+          viewport.scrollLeft = limitar(innerPosNew - cursorX, 0, maxScroll);
         });
 
         return next;

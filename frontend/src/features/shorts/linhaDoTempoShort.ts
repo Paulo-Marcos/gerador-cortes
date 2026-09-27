@@ -1,3 +1,5 @@
+import { limitar } from '@/lib/limitar';
+
 // D-478: a matemática da faixa de recorte do short.
 //
 // A curadoria só movia as bordas pelos botões "início aqui"/"fim aqui", que
@@ -143,9 +145,6 @@ export function janelaNova(tempoAtual: number, duracaoSeg: number): Bordas {
   };
 }
 
-function limitar(valor: number, minimo: number, maximo: number): number {
-  return Math.max(minimo, Math.min(valor, maximo));
-}
 
 function arredondar(valor: number): number {
   return Math.round(valor * 100) / 100;

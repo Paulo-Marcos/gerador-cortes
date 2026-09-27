@@ -4,7 +4,7 @@ module.exports = {
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
-    'plugin:react-hooks/recommended',
+    'plugin:react-hooks/recommended-legacy',
     'prettier',
   ],
   ignorePatterns: ['dist', 'dist-tsc-node', '*.config.js', '*.config.ts', '.eslintrc.cjs'],
