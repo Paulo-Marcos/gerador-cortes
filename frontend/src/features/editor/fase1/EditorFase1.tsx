@@ -90,6 +90,9 @@ interface Props {
   dividindoCorte: boolean;
   onJuntarProximoCorte?: () => void;
   juntandoCorte?: boolean;
+  /** D-412: inicio (s) e numero do proximo corte, para a marca na onda. */
+  proximoInicioSeg?: number;
+  proximoNumero?: number;
   onAlternarVelocidade?: () => void;
   onGerarManual: () => void;
   onGerarTrechosIA: (provider: 'claude' | 'gemini') => void;
@@ -142,6 +145,8 @@ export function EditorFase1({
   dividindoCorte,
   onJuntarProximoCorte,
   juntandoCorte,
+  proximoInicioSeg,
+  proximoNumero,
   onAlternarVelocidade,
   onGerarManual,
   onGerarTrechosIA,
@@ -217,6 +222,8 @@ export function EditorFase1({
                 dividindo={dividindoCorte}
                 onJuntarProximo={onJuntarProximoCorte}
                 juntando={juntandoCorte}
+                proximoInicioSeg={proximoInicioSeg}
+                proximoNumero={proximoNumero}
                 onAlternarVelocidade={onAlternarVelocidade}
                 onGerarBruto={onGerarBruto}
                 brutoPronto={brutoPronto}

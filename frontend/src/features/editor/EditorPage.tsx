@@ -202,6 +202,8 @@ export function EditorPage() {
             audioSrc={waveformAudio}
             waveformPeaksSrc={waveformPeaks}
             corte={corteUI}
+            proximoInicioSeg={nextCut?.inicio_seg}
+            proximoNumero={nextCut?.numero}
             audioOffsetSec={waveformOffsetSec}
             currentTime={currentTime}
             playbackRate={playbackRate}
