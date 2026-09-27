@@ -30,3 +30,9 @@ class RespostaComCamposOpcionais(RespostaApi):
     """
 
     model_config = ConfigDict(json_schema_serialization_defaults_required=False)
+
+
+class MensagemResponse(RespostaApi):
+    """A resposta que só confirma, com uma frase para a tela."""
+
+    message: str

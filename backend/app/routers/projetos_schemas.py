@@ -13,10 +13,6 @@ from app.models import StatusCorte
 from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
 
 
-class MensagemResponse(RespostaApi):
-    message: str
-
-
 class DownloadReiniciadoResponse(RespostaApi):
     message: str
     projeto_id: str

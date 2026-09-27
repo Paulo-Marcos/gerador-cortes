@@ -1,9 +1,11 @@
 import json
-from datetime import datetime
 
 from app.database import get_db
+from app.domain.corte.metadado_corte import lista_de_textos
 from app.models import Corte, MetadadoCorte
+from app.routers import metadados_schemas as esquemas
 from app.routers.errors import erro_interno
+from app.routers.resposta_api import MensagemResponse
 from app.services.metadados import MetadadosService
 from app.services.tasks import fire_and_forget
 from app.services.thumbnail import ThumbnailService
@@ -13,27 +15,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
-
-
-class MetadadoResponse(BaseModel):
-    id: str
-    corte_id: str
-    titulo_youtube: str
-    descricao_youtube: str
-    tags_youtube: list
-    opcoes_titulo: list
-    opcoes_texto_capa: list
-    texto_capa: str
-    link_live_com_timestamp: str
-    canal_credito: str
-    prompt_thumbnail: str
-    thumbnail_path: str
-    numero_serie: int
-    cor_serie: str
-    criado_em: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class AtualizarMetadadoRequest(BaseModel):
@@ -48,7 +29,11 @@ class AtualizarMetadadoRequest(BaseModel):
     cor_serie: str | None = None
 
 
-@router.get("/corte/{corte_id}")
+@router.get(
+    "/corte/{corte_id}",
+    response_model=esquemas.MetadadoDoCorteResponse,
+    response_model_exclude_unset=True,
+)
 async def obter_metadado(corte_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(MetadadoCorte).where(MetadadoCorte.corte_id == corte_id))
     meta = result.scalar_one_or_none()
@@ -76,13 +61,13 @@ async def obter_metadado(corte_id: str, db: AsyncSession = Depends(get_db)):
     return {
         **{c: getattr(meta, c) for c in meta.__table__.columns.keys()},
         **marcas,
-        "tags_youtube": json.loads(meta.tags_youtube or "[]"),
-        "opcoes_titulo": json.loads(meta.opcoes_titulo or "[]"),
-        "opcoes_texto_capa": json.loads(meta.opcoes_texto_capa or "[]"),
+        "tags_youtube": lista_de_textos(meta.tags_youtube),
+        "opcoes_titulo": lista_de_textos(meta.opcoes_titulo),
+        "opcoes_texto_capa": lista_de_textos(meta.opcoes_texto_capa),
     }
 
 
-@router.post("/corte/{corte_id}/gerar")
+@router.post("/corte/{corte_id}/gerar", response_model=esquemas.GeracaoIniciadaResponse)
 async def gerar_metadados(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Dispara geração de metadados via Claude."""
     corte = await db.get(Corte, corte_id)
@@ -93,7 +78,7 @@ async def gerar_metadados(corte_id: str, db: AsyncSession = Depends(get_db)):
     return {"message": "Geração de metadados iniciada", "corte_id": corte_id}
 
 
-@router.patch("/corte/{corte_id}")
+@router.patch("/corte/{corte_id}", response_model=MensagemResponse)
 async def atualizar_metadado(
     corte_id: str, body: AtualizarMetadadoRequest, db: AsyncSession = Depends(get_db)
 ):
@@ -125,7 +110,7 @@ async def atualizar_metadado(
     return {"message": "Metadados atualizados"}
 
 
-@router.post("/corte/{corte_id}/toggle-fire")
+@router.post("/corte/{corte_id}/toggle-fire", response_model=esquemas.FireAlternadoResponse)
 async def toggle_fire(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Alterna o status 🔥 do título e do metadado. Cria o metadado se não existir."""
     try:
@@ -137,14 +122,14 @@ async def toggle_fire(corte_id: str, db: AsyncSession = Depends(get_db)):
         raise erro_interno(e) from e
 
 
-@router.post("/corte/{corte_id}/gerar-thumbnail")
+@router.post("/corte/{corte_id}/gerar-thumbnail", response_model=esquemas.GeracaoIniciadaResponse)
 async def gerar_thumbnail(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Gera thumbnail via Gemini Imagen a partir do prompt."""
     fire_and_forget(ThumbnailService.gerar(corte_id), name=f"thumbnail-{corte_id[:8]}")
     return {"message": "Geração de thumbnail iniciada", "corte_id": corte_id}
 
 
-@router.post("/corte/{corte_id}/gerar-prompt")
+@router.post("/corte/{corte_id}/gerar-prompt", response_model=esquemas.GeracaoIniciadaResponse)
 async def gerar_prompt_route(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Dispara geração do prompt da thumbnail via Claude usando texto e opções escolhidas."""
     corte = await db.get(Corte, corte_id)
@@ -157,7 +142,7 @@ async def gerar_prompt_route(corte_id: str, db: AsyncSession = Depends(get_db)):
     return {"message": "Geração de prompt de thumbnail iniciada", "corte_id": corte_id}
 
 
-@router.post("/corte/{corte_id}/thumbnail-manual")
+@router.post("/corte/{corte_id}/thumbnail-manual", response_model=esquemas.ThumbnailEnviadaResponse)
 async def upload_thumbnail_manual(
     corte_id: str, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
 ):
@@ -172,7 +157,7 @@ async def upload_thumbnail_manual(
         raise erro_interno(e) from e
 
 
-@router.get("/corte/{corte_id}/meta/prompt")
+@router.get("/corte/{corte_id}/meta/prompt", response_model=esquemas.PromptManualResponse)
 async def exportar_prompt_meta(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Retorna o prompt de geração de metadados sem chamar a IA."""
     try:
@@ -191,7 +176,7 @@ class ImportarMetaRequest(BaseModel):
     titulo: str | None = None
 
 
-@router.post("/corte/{corte_id}/meta/importar")
+@router.post("/corte/{corte_id}/meta/importar", response_model=MensagemResponse)
 async def importar_meta(
     corte_id: str, body: ImportarMetaRequest, db: AsyncSession = Depends(get_db)
 ):
@@ -205,7 +190,9 @@ async def importar_meta(
         raise erro_interno(e) from e
 
 
-@router.get("/corte/{corte_id}/prompt-thumbnail/prompt")
+@router.get(
+    "/corte/{corte_id}/prompt-thumbnail/prompt", response_model=esquemas.PromptManualResponse
+)
 async def exportar_prompt_thumbnail(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Retorna o prompt de geração de thumbnail sem chamar a IA."""
     try:
@@ -216,7 +203,9 @@ async def exportar_prompt_thumbnail(corte_id: str, db: AsyncSession = Depends(ge
         raise erro_interno(e) from e
 
 
-@router.get("/corte/{corte_id}/thumbnail-agent/prompt")
+@router.get(
+    "/corte/{corte_id}/thumbnail-agent/prompt", response_model=esquemas.PromptManualResponse
+)
 async def exportar_prompt_thumbnail_agente(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Retorna o prompt para o GPT capista gerar thumbnails diretamente."""
     try:
@@ -227,7 +216,9 @@ async def exportar_prompt_thumbnail_agente(corte_id: str, db: AsyncSession = Dep
         raise erro_interno(e) from e
 
 
-@router.get("/corte/{corte_id}/thumbnail-agent-livre/prompt")
+@router.get(
+    "/corte/{corte_id}/thumbnail-agent-livre/prompt", response_model=esquemas.PromptManualResponse
+)
 async def exportar_prompt_thumbnail_agente_livre(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Variante permissiva do prompt para o GPT capista: libera composicao e texto."""
     try:
@@ -244,7 +235,7 @@ class ImportarPromptThumbnailRequest(BaseModel):
     cenario_factual: str | None = None
 
 
-@router.post("/corte/{corte_id}/prompt-thumbnail/importar")
+@router.post("/corte/{corte_id}/prompt-thumbnail/importar", response_model=MensagemResponse)
 async def importar_prompt_thumbnail(
     corte_id: str, body: ImportarPromptThumbnailRequest, db: AsyncSession = Depends(get_db)
 ):
@@ -258,7 +249,7 @@ async def importar_prompt_thumbnail(
         raise erro_interno(e) from e
 
 
-@router.post("/corte/{corte_id}/aplicar-moldura")
+@router.post("/corte/{corte_id}/aplicar-moldura", response_model=esquemas.MolduraAplicadaResponse)
 async def aplicar_moldura_thumbnail(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Cola a moldura do canal na capa que já está publicada.
 
@@ -274,7 +265,7 @@ async def aplicar_moldura_thumbnail(corte_id: str, db: AsyncSession = Depends(ge
         raise erro_interno(e) from e
 
 
-@router.post("/corte/{corte_id}/comprimir-thumbnail")
+@router.post("/corte/{corte_id}/comprimir-thumbnail", response_model=MensagemResponse)
 async def comprimir_thumbnail_manual(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Comprime manualmente a thumbnail se ela exceder 2MB e salva sob a antiga."""
     try:
@@ -286,7 +277,7 @@ async def comprimir_thumbnail_manual(corte_id: str, db: AsyncSession = Depends(g
         raise erro_interno(e) from e
 
 
-@router.delete("/corte/{corte_id}/thumbnail")
+@router.delete("/corte/{corte_id}/thumbnail", response_model=esquemas.ThumbnailRemovidaResponse)
 async def remover_thumbnail(corte_id: str, db: AsyncSession = Depends(get_db)):
     """Remove a thumbnail atual do corte (arquivo + caminho no metadado)."""
     try:

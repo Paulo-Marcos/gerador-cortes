@@ -5412,6 +5412,13 @@ export interface components {
              */
             finalizado: boolean;
         };
+        /** FireAlternadoResponse */
+        FireAlternadoResponse: {
+            /** Is Fire */
+            is_fire: boolean;
+            /** Titulo Youtube */
+            titulo_youtube: string;
+        };
         /**
          * FixarPosicaoRequest
          * @description `posicao` 1-based; `None` solta o corte e o devolve à ordem do tempo.
@@ -5443,6 +5450,16 @@ export interface components {
              * @enum {string}
              */
             provider: "claude" | "gemini";
+        };
+        /**
+         * GeracaoIniciadaResponse
+         * @description A geração segue em segundo plano; a tela acompanha pelo que muda depois.
+         */
+        GeracaoIniciadaResponse: {
+            /** Corte Id */
+            corte_id: string;
+            /** Message */
+            message: string;
         };
         /**
          * GerarBrutoRequest
@@ -5976,10 +5993,69 @@ export interface components {
             /** Video Id */
             video_id: string;
         };
-        /** MensagemResponse */
+        /**
+         * MensagemResponse
+         * @description A resposta que só confirma, com uma frase para a tela.
+         */
         MensagemResponse: {
             /** Message */
             message: string;
+        };
+        /**
+         * MetadadoDoCorteResponse
+         * @description Dois formatos. Corte ainda sem metadado: `id` nulo, os textos vazios e o
+         *     Fire do corte. Com metadado: todas as colunas, mais as duas marcas
+         *     editoriais, que moram no corte (D-713).
+         */
+        MetadadoDoCorteResponse: {
+            /**
+             * Atualizado Em
+             * Format: date-time
+             */
+            atualizado_em?: string;
+            /** Canal Credito */
+            canal_credito?: string;
+            /** Candidato Shorts */
+            candidato_shorts?: boolean;
+            /** Cor Serie */
+            cor_serie?: string;
+            /** Corte Id */
+            corte_id: string;
+            /**
+             * Criado Em
+             * Format: date-time
+             */
+            criado_em?: string;
+            /** Descricao Youtube */
+            descricao_youtube: string;
+            /** Etiqueta Tiktok */
+            etiqueta_tiktok?: string;
+            /** Id */
+            id: string | null;
+            /** Is Fire */
+            is_fire: boolean;
+            /** Link Live Com Timestamp */
+            link_live_com_timestamp?: string;
+            /** Numero Serie */
+            numero_serie?: number;
+            /** Opcoes Texto Capa */
+            opcoes_texto_capa: string[];
+            /** Opcoes Titulo */
+            opcoes_titulo: string[];
+            /** Prompt Capa Tiktok */
+            prompt_capa_tiktok?: string;
+            /** Prompt Thumbnail */
+            prompt_thumbnail: string;
+            /** Tags Youtube */
+            tags_youtube: string[];
+            /** Texto Capa */
+            texto_capa: string;
+            /** Thumbnail Path */
+            thumbnail_path: string;
+            /** Thumbnail Tiktok Path */
+            thumbnail_tiktok_path?: string;
+            /** Titulo Youtube */
+            titulo_youtube: string;
         };
         /** ModeloGeminiResponse */
         ModeloGeminiResponse: {
@@ -5987,6 +6063,13 @@ export interface components {
             id: string;
             /** Nome */
             nome: string;
+        };
+        /** MolduraAplicadaResponse */
+        MolduraAplicadaResponse: {
+            /** Message */
+            message: string;
+            /** Moldura */
+            moldura: string;
         };
         /** MotivoAvaliacaoResponse */
         MotivoAvaliacaoResponse: {
@@ -6248,6 +6331,16 @@ export interface components {
             formato_esperado: Record<string, unknown>;
             /** Prompts */
             prompts: components["schemas"]["ParteDoPrompt"][];
+        };
+        /**
+         * PromptManualResponse
+         * @description O prompt para rodar numa IA de fora e o formato que a resposta deve seguir.
+         */
+        PromptManualResponse: {
+            /** Formato Esperado */
+            formato_esperado: Record<string, unknown>;
+            /** Prompt */
+            prompt: string;
         };
         /**
          * PromptUtilitarioResponse
@@ -6774,6 +6867,20 @@ export interface components {
             selecionado: boolean;
             /** Tema Id */
             tema_id: string;
+        };
+        /** ThumbnailEnviadaResponse */
+        ThumbnailEnviadaResponse: {
+            /** Message */
+            message: string;
+            /** Thumbnail Path */
+            thumbnail_path: string;
+        };
+        /** ThumbnailRemovidaResponse */
+        ThumbnailRemovidaResponse: {
+            /** Arquivo Removido */
+            arquivo_removido: boolean;
+            /** Message */
+            message: string;
         };
         /** TipoApontamentoResponse */
         TipoApontamentoResponse: {
@@ -10250,7 +10357,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MetadadoDoCorteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10285,7 +10392,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MensagemResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10316,7 +10423,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MolduraAplicadaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10347,7 +10454,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MensagemResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10378,7 +10485,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["GeracaoIniciadaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10409,7 +10516,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["GeracaoIniciadaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10440,7 +10547,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["GeracaoIniciadaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10475,7 +10582,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MensagemResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10506,7 +10613,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptManualResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10541,7 +10648,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["MensagemResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10572,7 +10679,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptManualResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10603,7 +10710,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ThumbnailRemovidaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10634,7 +10741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptManualResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10665,7 +10772,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["PromptManualResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10700,7 +10807,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ThumbnailEnviadaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -10731,7 +10838,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["FireAlternadoResponse"];
                 };
             };
             /** @description Validation Error */

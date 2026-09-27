@@ -11,7 +11,7 @@ from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.models import Corte, Projeto, StatusProjeto
 from app.routers import analises_schemas, projetos_schemas
 from app.routers.errors import erro_interno
-from app.routers.resposta_api import RespostaApi
+from app.routers.resposta_api import MensagemResponse, RespostaApi
 from app.services import abrir_no_sistema, listagem_de_projetos
 from app.services.analise import AnaliseService
 from app.services.app_settings import AppSettingsService
@@ -533,7 +533,7 @@ async def video_proxy(projeto_id: str, db: AsyncSession = Depends(get_db)):
     return RedirectResponse(url=f"/videos/{projeto_id}/{video_path.name}")
 
 
-@router.delete("/{projeto_id}", response_model=projetos_schemas.MensagemResponse)
+@router.delete("/{projeto_id}", response_model=MensagemResponse)
 async def deletar_projeto(projeto_id: str, db: AsyncSession = Depends(get_db)):
     sucesso = await ProjetoService.deletar_projeto(projeto_id, db)
     if not sucesso:

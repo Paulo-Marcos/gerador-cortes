@@ -2743,6 +2743,24 @@
         "title": "FinalizadoRequest",
         "type": "object"
       },
+      "FireAlternadoResponse": {
+        "properties": {
+          "is_fire": {
+            "title": "Is Fire",
+            "type": "boolean"
+          },
+          "titulo_youtube": {
+            "title": "Titulo Youtube",
+            "type": "string"
+          }
+        },
+        "required": [
+          "is_fire",
+          "titulo_youtube"
+        ],
+        "title": "FireAlternadoResponse",
+        "type": "object"
+      },
       "FixarPosicaoRequest": {
         "description": "`posicao` 1-based; `None` solta o corte e o devolve à ordem do tempo.",
         "properties": {
@@ -2821,6 +2839,25 @@
           "ok"
         ],
         "title": "GeracaoConcluidaResponse",
+        "type": "object"
+      },
+      "GeracaoIniciadaResponse": {
+        "description": "A geração segue em segundo plano; a tela acompanha pelo que muda depois.",
+        "properties": {
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "corte_id"
+        ],
+        "title": "GeracaoIniciadaResponse",
         "type": "object"
       },
       "GerarBrutoRequest": {
@@ -4174,6 +4211,7 @@
         "type": "object"
       },
       "MensagemResponse": {
+        "description": "A resposta que só confirma, com uma frase para a tela.",
         "properties": {
           "message": {
             "title": "Message",
@@ -4184,6 +4222,128 @@
           "message"
         ],
         "title": "MensagemResponse",
+        "type": "object"
+      },
+      "MetadadoDoCorteResponse": {
+        "description": "Dois formatos. Corte ainda sem metadado: `id` nulo, os textos vazios e o\nFire do corte. Com metadado: todas as colunas, mais as duas marcas\neditoriais, que moram no corte (D-713).",
+        "properties": {
+          "atualizado_em": {
+            "format": "date-time",
+            "title": "Atualizado Em",
+            "type": "string"
+          },
+          "canal_credito": {
+            "title": "Canal Credito",
+            "type": "string"
+          },
+          "candidato_shorts": {
+            "title": "Candidato Shorts",
+            "type": "boolean"
+          },
+          "cor_serie": {
+            "title": "Cor Serie",
+            "type": "string"
+          },
+          "corte_id": {
+            "title": "Corte Id",
+            "type": "string"
+          },
+          "criado_em": {
+            "format": "date-time",
+            "title": "Criado Em",
+            "type": "string"
+          },
+          "descricao_youtube": {
+            "title": "Descricao Youtube",
+            "type": "string"
+          },
+          "etiqueta_tiktok": {
+            "title": "Etiqueta Tiktok",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "is_fire": {
+            "title": "Is Fire",
+            "type": "boolean"
+          },
+          "link_live_com_timestamp": {
+            "title": "Link Live Com Timestamp",
+            "type": "string"
+          },
+          "numero_serie": {
+            "title": "Numero Serie",
+            "type": "integer"
+          },
+          "opcoes_texto_capa": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Opcoes Texto Capa",
+            "type": "array"
+          },
+          "opcoes_titulo": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Opcoes Titulo",
+            "type": "array"
+          },
+          "prompt_capa_tiktok": {
+            "title": "Prompt Capa Tiktok",
+            "type": "string"
+          },
+          "prompt_thumbnail": {
+            "title": "Prompt Thumbnail",
+            "type": "string"
+          },
+          "tags_youtube": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags Youtube",
+            "type": "array"
+          },
+          "texto_capa": {
+            "title": "Texto Capa",
+            "type": "string"
+          },
+          "thumbnail_path": {
+            "title": "Thumbnail Path",
+            "type": "string"
+          },
+          "thumbnail_tiktok_path": {
+            "title": "Thumbnail Tiktok Path",
+            "type": "string"
+          },
+          "titulo_youtube": {
+            "title": "Titulo Youtube",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "corte_id",
+          "is_fire",
+          "titulo_youtube",
+          "descricao_youtube",
+          "tags_youtube",
+          "opcoes_titulo",
+          "opcoes_texto_capa",
+          "texto_capa",
+          "prompt_thumbnail",
+          "thumbnail_path"
+        ],
+        "title": "MetadadoDoCorteResponse",
         "type": "object"
       },
       "ModeloGeminiResponse": {
@@ -4202,6 +4362,24 @@
           "nome"
         ],
         "title": "ModeloGeminiResponse",
+        "type": "object"
+      },
+      "MolduraAplicadaResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "moldura": {
+            "title": "Moldura",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "moldura"
+        ],
+        "title": "MolduraAplicadaResponse",
         "type": "object"
       },
       "MotivoAvaliacaoResponse": {
@@ -4772,6 +4950,25 @@
           "formato_esperado"
         ],
         "title": "PromptAnaliseResponse",
+        "type": "object"
+      },
+      "PromptManualResponse": {
+        "description": "O prompt para rodar numa IA de fora e o formato que a resposta deve seguir.",
+        "properties": {
+          "formato_esperado": {
+            "title": "Formato Esperado",
+            "type": "object"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "formato_esperado"
+        ],
+        "title": "PromptManualResponse",
         "type": "object"
       },
       "PromptUtilitarioResponse": {
@@ -6160,6 +6357,42 @@
           "selecionado"
         ],
         "title": "TemaSelecionadoResponse",
+        "type": "object"
+      },
+      "ThumbnailEnviadaResponse": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "thumbnail_path": {
+            "title": "Thumbnail Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "thumbnail_path"
+        ],
+        "title": "ThumbnailEnviadaResponse",
+        "type": "object"
+      },
+      "ThumbnailRemovidaResponse": {
+        "properties": {
+          "arquivo_removido": {
+            "title": "Arquivo Removido",
+            "type": "boolean"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message",
+          "arquivo_removido"
+        ],
+        "title": "ThumbnailRemovidaResponse",
         "type": "object"
       },
       "TipoApontamentoResponse": {
@@ -11703,7 +11936,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MetadadoDoCorteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11751,7 +11986,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11792,7 +12029,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MolduraAplicadaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11833,7 +12072,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11874,7 +12115,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GeracaoIniciadaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11915,7 +12158,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GeracaoIniciadaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11956,7 +12201,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/GeracaoIniciadaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12007,7 +12254,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12048,7 +12297,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptManualResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12099,7 +12350,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MensagemResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12140,7 +12393,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptManualResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12181,7 +12436,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ThumbnailRemovidaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12222,7 +12479,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptManualResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12263,7 +12522,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PromptManualResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12314,7 +12575,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ThumbnailEnviadaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12355,7 +12618,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FireAlternadoResponse"
+                }
               }
             },
             "description": "Successful Response"
