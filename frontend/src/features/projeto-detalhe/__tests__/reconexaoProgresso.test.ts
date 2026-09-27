@@ -3,7 +3,7 @@ import {
   ESPERA_MAXIMA_PARA_RELIGAR_MS,
   deveReligar,
   esperaParaReligar,
-} from '../useProjetoDetalhe';
+} from '@/shared/api/realtime';
 
 // D-661: o WebSocket de progresso religa quando a conexão CAI — e só aí. O
 // backend fecha de propósito depois de `pronto`/`erro` e responde

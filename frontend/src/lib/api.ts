@@ -1,10 +1,11 @@
 import type { WaveformPeaksResponse } from '@/types/models';
-import { API_BASE, VIDEOS_BASE, wsUrl } from '@/lib/apiBase';
+import { API_BASE, VIDEOS_BASE } from '@/lib/apiBase';
 
 // D-722: os clientes da API saíram daqui para as features (e a fila global para
 // shared/), sobre o cliente gerado. O que fica são as URLs que a tela monta para
-// <video>, <img>, <audio> e WebSocket, e a leitura dos picos da waveform por uma
-// URL já montada — nada disso passa pelo cliente HTTP.
+// <video>, <img> e <audio>, e a leitura dos picos da waveform por uma URL já
+// montada — nada disso passa pelo cliente HTTP. O WebSocket de progresso mora
+// em shared/api/realtime (D-724).
 
 export { VIDEOS_BASE };
 
@@ -91,8 +92,4 @@ export async function fetchWaveformPeaks(url: string): Promise<WaveformPeaksResp
   const res = await fetch(url);
   if (!res.ok) throw new Error(`waveform-peaks ${res.status}`);
   return (await res.json()) as WaveformPeaksResponse;
-}
-
-export function progressoWsUrl(projetoId: string): string {
-  return wsUrl(`/projetos/${projetoId}/ws`);
 }
