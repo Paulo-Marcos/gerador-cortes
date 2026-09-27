@@ -96,8 +96,8 @@ export function carregarBuffer(ctx: AudioContext, src: string): Promise<AudioBuf
  * `alvo` correto; pause/desligar param o source.
  */
 export function useLipSyncPreview(
-  videoRef: RefObject<HTMLVideoElement>,
-  audioRef: RefObject<HTMLAudioElement>,
+  videoRef: RefObject<HTMLVideoElement | null>,
+  audioRef: RefObject<HTMLAudioElement | null>,
   { enabled, proxyStartSec, offsetMs }: Options,
 ): EstadoLipSync {
   const ctxRef = useRef<AudioContext | null>(null);

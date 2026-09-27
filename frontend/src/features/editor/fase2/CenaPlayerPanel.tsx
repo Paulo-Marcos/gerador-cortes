@@ -1,7 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { ExternalLink, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Player, type PlayerRef } from '@remotion/player';
-import type { ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import type { CenaRemotion, FontePreset } from '@/types/models';
 import type { PlayerHandle } from '@/hooks/useVideoPlayer';
@@ -190,7 +189,7 @@ export const CenaPlayerPanel = forwardRef<PlayerHandle, Props>(function CenaPlay
           // Remount visual atualiza preview; initialFrame preserva tempo atual.
           key={playerKey}
           ref={playerRef}
-          component={CenasRemotionPreview as unknown as ComponentType<Record<string, unknown>>}
+          component={CenasRemotionPreview}
           inputProps={inputProps}
           durationInFrames={durationInFrames}
           initialFrame={initialFrame}

@@ -40,7 +40,7 @@ interface Props {
   desvios: Desvio[];
   currentTime: number;
   playbackRate: number;
-  playerRef?: RefObject<PlayerHandle>;
+  playerRef?: RefObject<PlayerHandle | null>;
   onSeek: (seg: number) => void;
   onChangeSpeed: (delta: number) => void;
   onSetInicioAqui?: () => void;
@@ -223,7 +223,7 @@ interface WaveformProps {
   zoomLevel: number;
   locked: boolean;
   pointer: boolean;
-  playerRef?: RefObject<PlayerHandle>;
+  playerRef?: RefObject<PlayerHandle | null>;
   scrollToCursorNonce: number;
   onSeek: (seg: number) => void;
   onSelectDesvio?: (time: number) => void;

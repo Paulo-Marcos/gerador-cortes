@@ -12,8 +12,9 @@ export default defineConfig({
       '@video-renderer': path.resolve(__dirname, '../video-renderer/src'),
     },
     // O mesmo do vite.config: o código do renderer roda no React do frontend.
-    // Sem isto, o teste montava as cenas com o React 19 do renderer e a tela
-    // com o 18 — um ambiente que o app não tem (D-725).
+    // Mesmo com as versões alinhadas (D-734), cada projeto tem o seu
+    // node_modules — sem isto seriam duas instâncias do React, e um elemento
+    // de uma não é elemento para a outra (D-725).
     dedupe: ['react', 'react-dom', 'remotion'],
   },
 });

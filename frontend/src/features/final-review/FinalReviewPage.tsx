@@ -433,7 +433,7 @@ function FinalPlayerPanel({
   corteId: string;
   onAbrirPasta: () => void;
   abrindoPasta: boolean;
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   onTimeUpdate: (segundos: number) => void;
   filtroLabel: string | null;
 }) {

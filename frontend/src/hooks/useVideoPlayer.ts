@@ -15,7 +15,7 @@ export interface PlayerHandle {
 const MIN_RATE = 0.25;
 const MAX_RATE = 4;
 
-export function useVideoPlayer(videoRef: RefObject<HTMLVideoElement>): PlayerHandle {
+export function useVideoPlayer(videoRef: RefObject<HTMLVideoElement | null>): PlayerHandle {
   return useMemo<PlayerHandle>(
     () => ({
       play: () => void videoRef.current?.play(),

@@ -1,10 +1,10 @@
-import { Fragment, type ComponentType, type ReactNode } from 'react';
+import { Fragment } from 'react';
 import { AbsoluteFill, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 // V1 (renderCena de OverlayScene) está desativada — preview usa apenas V2.
 // Só pela porta pública do renderer (D-725).
 import {
   CardLayoutContext,
-  FontPresetProvider as RendererFontPresetProvider,
+  FontPresetProvider,
   FrameOffsetContext,
   SharedCardZoneFrame,
   SombraContext,
@@ -36,29 +36,6 @@ import {
   SPEAKER_LABEL_HEIGHT,
   StageChrome,
 } from '@/shared/palco/youtubeChrome';
-
-// O video-renderer usa @types/react 19 (`ReactNode` inclui `bigint`); frontend está em
-// 18. Em runtime é o mesmo React deduplicado pelo Vite — só os tipos divergem, então
-// reanota o Provider com a assinatura local.
-const FrameOffsetProvider = FrameOffsetContext.Provider as unknown as ComponentType<{
-  value: number;
-  children: ReactNode;
-}>;
-
-const SombraProvider = SombraContext.Provider as unknown as ComponentType<{
-  value: 'nenhuma' | 'leve' | 'media' | 'forte';
-  children: ReactNode;
-}>;
-
-const CardLayoutProvider = CardLayoutContext.Provider as unknown as ComponentType<{
-  value: 'horizontal' | 'vertical';
-  children: ReactNode;
-}>;
-
-const FontPresetProvider = RendererFontPresetProvider as unknown as ComponentType<{
-  preset?: FontePreset;
-  children: ReactNode;
-}>;
 
 export type SombraNivelPadrao = 'nenhuma' | 'leve' | 'media' | 'forte';
 
@@ -129,7 +106,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
   const placa = layoutYoutube?.placa;
 
   const overlayCenas = (
-    <FrameOffsetProvider value={0}>
+    <FrameOffsetContext.Provider value={0}>
       {cenas.map((cena, index) => {
         const isActive = currentTime >= cena.inicio && currentTime <= cena.fim;
         if (!isActive) return null;
@@ -155,7 +132,7 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
           </Fragment>
         );
       })}
-    </FrameOffsetProvider>
+    </FrameOffsetContext.Provider>
   );
 
   // Cena ativa naquele frame — define se o palco aparece, e qual nível
@@ -234,9 +211,9 @@ export const CenasRemotionPreview: React.FC<CenasRemotionPreviewProps> = ({
       {/* Camada 3: cenas + Providers de sombra/layout/fontes. */}
       <AbsoluteFill>
         <FontPresetProvider preset={fontPreset}>
-          <SombraProvider value={sombraNivelPadrao}>
-            <CardLayoutProvider value={layoutCardPadrao}>{overlayCenas}</CardLayoutProvider>
-          </SombraProvider>
+          <SombraContext.Provider value={sombraNivelPadrao}>
+            <CardLayoutContext.Provider value={layoutCardPadrao}>{overlayCenas}</CardLayoutContext.Provider>
+          </SombraContext.Provider>
         </FontPresetProvider>
       </AbsoluteFill>
     </AbsoluteFill>

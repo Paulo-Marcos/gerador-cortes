@@ -1,4 +1,4 @@
-import { useId, useMemo, type FC } from 'react';
+import { useId, useMemo, type FC, type JSX } from 'react';
 import { DEFAULT_YOUTUBE_BACKGROUND, type YoutubeBackgroundId } from './youtubeLayout';
 
 /**

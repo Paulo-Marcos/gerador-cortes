@@ -59,7 +59,7 @@ interface Props {
   playbackRate: number;
   brutoStatus?: StatusBrutoResponse;
   brutoPronto?: boolean;
-  playerRef: RefObject<PlayerHandle>;
+  playerRef: RefObject<PlayerHandle | null>;
   // F-063: sincronia fina de áudio (lip-sync).
   audioPreviewSrc?: string;
   audioPreviewStartSec?: number;

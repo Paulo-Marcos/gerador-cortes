@@ -5,7 +5,7 @@ import { PalcoPrevia } from './PalcoPrevia';
 
 interface Props {
   corteId: string;
-  video: RefObject<HTMLVideoElement>;
+  video: RefObject<HTMLVideoElement | null>;
   /** As do ARQUIVO, lidas nos metadados — mandam na proporção e na máscara. */
   dimensoes: { largura: number; altura: number };
   emQuadro: ShortSugerido | undefined;

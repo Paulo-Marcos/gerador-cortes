@@ -67,7 +67,7 @@ interface Props {
   cenas: CenaRemotion[];
   formato?: string;
   paleta?: Record<string, string>;
-  playerRef: RefObject<PlayerHandle>;
+  playerRef: RefObject<PlayerHandle | null>;
   /** D-657: o tempo do player. Ler com `agora()` num gesto; assinar para desenhar. */
   relogio: RelogioDoPlayer;
   onSeek: (seg: number) => void;
