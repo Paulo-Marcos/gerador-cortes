@@ -15,6 +15,7 @@ from pathlib import Path
 from app.config import settings
 from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.core.logging import operational_debug, operational_error, operational_info
+from app.core.process_runner import ProcessoEstourouOTempo, encerrar_arvore
 from app.database import AsyncSessionLocal
 from app.domain.projeto.json3_parser import parse_json3
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
@@ -102,6 +103,33 @@ def _data_publicacao_yt_dlp(info: dict) -> str:
 
 _PROGRESSO_YTDLP = re.compile(r"\[download\]\s+([\d.]+)%")
 
+# D-753: o yt-dlp rodava sem prazo nenhum — um download pendurado prendia a
+# ingestão para sempre, sem erro na tela. O download é legitimamente longo
+# (horas numa live grande), então o prazo não é do total: é de SILÊNCIO. Com
+# `--newline` o yt-dlp escreve uma linha a cada avanço; o único trecho mudo é a
+# junção final de áudio e vídeo (`[Merger]`), que é cópia de fluxo. Medido em
+# 27/09/2026 na maior live da PROD (3h19, 888 MB): a mesma cópia leva 7 s. Dez
+# minutos sem nenhuma linha ficam muito acima disso e ainda pegam o travamento,
+# que é silêncio para sempre.
+_INATIVIDADE_DO_DOWNLOAD_S = 600
+# Legendas e chat não mandam progresso: prazo do total. Os dois já toleram falha
+# (a legenda cai para o outro formato; o chat é pista opcional), então o prazo
+# só troca "pendurado para sempre" por "seguiu sem aquilo".
+_PRAZO_DA_LEGENDA_S = 300
+_PRAZO_DO_CHAT_S = 1800
+
+
+class DownloadSemSinal(ProcessoEstourouOTempo):
+    """O yt-dlp ficou mudo além do tolerado e foi encerrado com os filhos."""
+
+
+def _mensagem_sem_sinal() -> str:
+    return (
+        f"O download ficou {_INATIVIDADE_DO_DOWNLOAD_S // 60} minutos sem dar sinal "
+        "e foi interrompido. Tente de novo; se repetir, a live pode estar indisponível."
+    )
+
+
 # Gravar no banco a cada linha do yt-dlp era uma transação por DÉCIMO de por
 # cento — centenas de escritas num download, competindo com o resto do app pelo
 # SQLite. A tela continua recebendo TODAS as linhas (isso é de graça, vai pelo
@@ -128,13 +156,17 @@ class _ProgressoGravado:
         return True
 
 
-def _rodar_ytdlp_lendo_saida(cmd: list[str], ao_progresso) -> int:
+def _rodar_ytdlp_lendo_saida(
+    cmd: list[str], ao_progresso, inatividade_s: float = _INATIVIDADE_DO_DOWNLOAD_S
+) -> int:
     """Roda o yt-dlp numa thread LENDO a saída linha a linha (D-653).
 
     Ler é obrigatório em dois sentidos: dá progresso para a tela e esvazia o
-    cano — sem isso o processo trava quando o buffer enche.
+    cano — sem isso o processo trava quando o buffer enche. Um vigia encerra a
+    árvore se nenhuma linha chegar em `inatividade_s` (D-753).
     """
     import subprocess
+    import threading
 
     processo = subprocess.Popen(  # noqa: S603 — comando montado por nós
         cmd,
@@ -144,14 +176,31 @@ def _rodar_ytdlp_lendo_saida(cmd: list[str], ao_progresso) -> int:
         errors="replace",
         bufsize=1,
     )
-    with processo.stdout:
-        for linha in processo.stdout:
-            texto = linha.strip()
-            operational_debug("yt-dlp", texto)
-            progresso = _progresso_da_linha(texto)
-            if progresso is not None:
-                ao_progresso(progresso)
-    return processo.wait()
+    estourou = threading.Event()
+
+    def encerrar_por_silencio() -> None:
+        estourou.set()
+        encerrar_arvore(processo.pid)
+
+    vigia = threading.Timer(inatividade_s, encerrar_por_silencio)
+    vigia.start()
+    try:
+        with processo.stdout:
+            for linha in processo.stdout:
+                vigia.cancel()
+                vigia = threading.Timer(inatividade_s, encerrar_por_silencio)
+                vigia.start()
+                texto = linha.strip()
+                operational_debug("yt-dlp", texto)
+                progresso = _progresso_da_linha(texto)
+                if progresso is not None:
+                    ao_progresso(progresso)
+    finally:
+        vigia.cancel()
+    codigo = processo.wait()
+    if estourou.is_set():
+        raise DownloadSemSinal(_mensagem_sem_sinal())
+    return codigo
 
 
 @dataclass(frozen=True)
@@ -352,9 +401,19 @@ class IngestaoService:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
             )
-            # Lê progresso linha a linha
+            # Lê progresso linha a linha; silêncio além do tolerado encerra (D-753).
             ultimo_gravado = _ProgressoGravado()
-            async for line in process.stdout:
+            while True:
+                try:
+                    line = await asyncio.wait_for(
+                        process.stdout.readline(), _INATIVIDADE_DO_DOWNLOAD_S
+                    )
+                except TimeoutError:
+                    await asyncio.to_thread(encerrar_arvore, process.pid)
+                    await process.wait()
+                    raise DownloadSemSinal(_mensagem_sem_sinal()) from None
+                if not line:
+                    break
                 text = line.decode("utf-8", errors="ignore").strip()
                 operational_debug("yt-dlp", text)
                 progresso = _progresso_da_linha(text)
@@ -445,15 +504,32 @@ class IngestaoService:
                 # D-653: `communicate` e não `wait`. Com o cano aberto e ninguém
                 # lendo, o buffer do sistema enche e o yt-dlp PARA de escrever —
                 # fica pendurado para sempre, sem erro nenhum para mostrar.
-                await process.communicate()
+                try:
+                    await asyncio.wait_for(process.communicate(), _PRAZO_DA_LEGENDA_S)
+                except TimeoutError:
+                    # D-753: segue para o outro formato, como numa falha comum.
+                    await asyncio.to_thread(encerrar_arvore, process.pid)
+                    operational_info(
+                        "INGESTAO",
+                        f"Legenda {sub_format} passou de {_PRAZO_DA_LEGENDA_S}s; seguindo sem ela.",
+                    )
             except NotImplementedError:
                 import subprocess
 
-                await asyncio.to_thread(
-                    lambda cmd=cmd_sub: subprocess.run(
-                        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+                try:
+                    await asyncio.to_thread(
+                        lambda cmd=cmd_sub: subprocess.run(
+                            cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            timeout=_PRAZO_DA_LEGENDA_S,
+                        )
                     )
-                )
+                except subprocess.TimeoutExpired:
+                    operational_info(
+                        "INGESTAO",
+                        f"Legenda {sub_format} passou de {_PRAZO_DA_LEGENDA_S}s; seguindo sem ela.",
+                    )
 
         await IngestaoService._baixar_chat_replay(url, subs_path)
 
@@ -570,13 +646,32 @@ class IngestaoService:
             processo = await asyncio.create_subprocess_exec(
                 *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
             )
-            await processo.communicate()  # D-653: sem ler o cano, o processo trava
+            try:
+                # D-653: sem ler o cano, o processo trava. D-753: com prazo.
+                await asyncio.wait_for(processo.communicate(), _PRAZO_DO_CHAT_S)
+            except TimeoutError:
+                await asyncio.to_thread(encerrar_arvore, processo.pid)
+                operational_info(
+                    "INGESTAO", f"Chat replay passou de {_PRAZO_DO_CHAT_S}s; seguindo sem ele."
+                )
+                return
         except NotImplementedError:
             import subprocess
 
-            await asyncio.to_thread(
-                lambda c=cmd: subprocess.run(c, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            )
+            try:
+                await asyncio.to_thread(
+                    lambda c=cmd: subprocess.run(
+                        c,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        timeout=_PRAZO_DO_CHAT_S,
+                    )
+                )
+            except subprocess.TimeoutExpired:
+                operational_info(
+                    "INGESTAO", f"Chat replay passou de {_PRAZO_DO_CHAT_S}s; seguindo sem ele."
+                )
+                return
         except Exception as e:  # noqa: BLE001 — pista opcional não derruba ingestão
             operational_info("INGESTAO", f"Chat replay indisponível: {e}")
             return

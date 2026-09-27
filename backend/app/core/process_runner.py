@@ -83,6 +83,15 @@ def _rodar_sincrono(argumentos: list[str], cwd: Path | str, timeout: float | Non
     return Resultado(proc.returncode, saida)
 
 
+def encerrar_arvore(pid: int) -> None:
+    """Encerra o processo `pid` e todos os descendentes — nunca pelo nome.
+
+    Para quem roda o próprio processo (com leitura de progresso, por exemplo) e
+    precisa do mesmo encerramento que este runner faz ao estourar o prazo.
+    """
+    _matar_arvore(pid)
+
+
 def _matar_arvore(pid: int) -> None:
     """Encerra o processo e todos os descendentes, partindo do PID dele."""
     try:
