@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { API_BASE } from '@/lib/apiBase';
+import { sincronizacaoApi } from './api';
 
 // D-491: o aviso que teria poupado quatro caçadas a bugs que não existiam.
 //
@@ -13,30 +13,13 @@ import { API_BASE } from '@/lib/apiBase';
 // vai procurar o aviso noutro lugar. Flutua sobre o topo para não precisar
 // mexer no layout de nenhum shell — o do workbench está travado.
 
-
-interface Estado {
-  commit_rodando: string;
-  commit_disco: string;
-  backend_velho: boolean;
-  colunas_pendentes: string[];
-  dependencias_faltando: string[];
-  canal_em_uso: string;
-  canal_escolhido: string;
-  troca_de_canal_pendente: boolean;
-  em_dia: boolean;
-}
-
 /** Um minuto: rápido o bastante para pegar um restart, raro o bastante para sumir do radar. */
 const INTERVALO_MS = 60_000;
 
 export function AvisoSincronizacao() {
-  const { data } = useQuery<Estado>({
+  const { data } = useQuery({
     queryKey: ['sincronizacao'],
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}/sincronizacao`);
-      if (!res.ok) throw new Error(String(res.status));
-      return res.json();
-    },
+    queryFn: sincronizacaoApi.estado,
     refetchInterval: INTERVALO_MS,
     refetchOnWindowFocus: true,
     // Backend fora do ar é outro problema, com outro sintoma (a tela toda
