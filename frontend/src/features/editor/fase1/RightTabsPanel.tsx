@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useFuncaoEstavel } from '@/hooks/useFuncaoEstavel';
 import { ChevronDown, Loader2, Plus, RotateCw, Search, Sparkles, Trash2, WandSparkles } from 'lucide-react';
 import { PanelRightClose, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -111,6 +112,29 @@ export function RightTabsPanel({
 
   // D-360: diarização por corte. projetoId sai do corte já em cache; o mapa de
   // falantes resolve SPEAKER_xx → nome/canal na etiqueta inline da transcrição.
+  // D-740: a lista de trechos é o maior custo do tique de 4 Hz do player e não
+  // depende do tempo. Com props estáveis o memo dela segura a redesenhada.
+  const aoIrPara = useFuncaoEstavel(onSeek);
+  const aoAdicionarDesvio = useFuncaoEstavel(onAdicionarDesvio);
+  const aoRemoverDesvio = useFuncaoEstavel(onRemoverDesvio);
+  const aoGerarManual = useFuncaoEstavel(onGerarManual);
+  const aoGerarTrechosIA = useFuncaoEstavel(onGerarTrechosIA);
+  // O objeto de pendências nasce a cada render do pai; reconstruído a partir
+  // dos campos, só muda quando algum deles muda.
+  const { adicionando, removendo } = pendingTrechos;
+  const claudePendente = pendingTrechos.claude?.isPending;
+  const claudeProvider = pendingTrechos.claude?.provider;
+  const pendenteDosTrechos = useMemo(
+    () => ({
+      adicionando,
+      removendo,
+      claude:
+        claudePendente === undefined
+          ? undefined
+          : { isPending: claudePendente, provider: claudeProvider },
+    }),
+    [adicionando, removendo, claudePendente, claudeProvider],
+  );
   const projetoId = useCorte(corteId).data?.projeto_id;
   const falantes = useFalantes(projetoId, tab === 'transcricao').data?.falantes;
   const diarizar = useDiarizarCorte(corteId, projetoId);
@@ -210,12 +234,12 @@ export function RightTabsPanel({
         <TrechosList
           desvios={desvios}
           selectedDesvioIdx={selectedDesvioIdx}
-          onSeek={onSeek}
-          onAdicionarDesvio={onAdicionarDesvio}
-          onRemoverDesvio={onRemoverDesvio}
-          onGerarManual={onGerarManual}
-          onGerarTrechosIA={onGerarTrechosIA}
-          pending={pendingTrechos}
+          onSeek={aoIrPara}
+          onAdicionarDesvio={aoAdicionarDesvio}
+          onRemoverDesvio={aoRemoverDesvio}
+          onGerarManual={aoGerarManual}
+          onGerarTrechosIA={aoGerarTrechosIA}
+          pending={pendenteDosTrechos}
         />
       ) : (
         <TranscriptList
@@ -329,7 +353,7 @@ function TabButton({
 // tangente, imprecisão…) em vez de um "IA" único para tudo que a IA propôs. A
 // resolução vive em `trechoBadge.ts` (testável, cobre legados sem `categoria`).
 
-function TrechosList({
+const TrechosList = memo(function TrechosList({
   desvios,
   selectedDesvioIdx,
   onSeek,
@@ -526,7 +550,7 @@ function TrechosList({
       </div>
     </div>
   );
-}
+});
 
 // ───── TranscriptList — v2_bruto.jsx:550-624 ─────
 

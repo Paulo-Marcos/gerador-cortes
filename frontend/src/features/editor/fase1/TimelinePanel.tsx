@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -8,6 +9,7 @@ import {
   type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { useFuncaoEstavel } from '@/hooks/useFuncaoEstavel';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import { ChevronsLeft, ChevronsRight, Flag, Lock, MousePointer2, Pin, Play, Plus, RotateCw, Scissors, Settings, Merge, SplitSquareHorizontal, Unlock, ZoomIn, ZoomOut } from 'lucide-react';
@@ -726,7 +728,7 @@ function Waveform({
 
 // ───── Componentes UI da toolbar (replicam Btn/IconBtn do design) ─────
 
-function TransportGroup({
+const TransportGroup = memo(function TransportGroup({
   onSkipStart,
   onPlay,
   onSkipEnd,
@@ -766,7 +768,7 @@ function TransportGroup({
       </Tooltip>
     </div>
   );
-}
+});
 
 // D-575: a pilula da velocidade virou GATILHO. Afinar a borda de um corte
 // pede ouvir devagar; conferir o resultado pede 1x — e a ida e volta era sempre
@@ -1285,6 +1287,11 @@ export function TimelinePanel({
     if (player) player.togglePlay();
   }
 
+  // D-740: o transporte não muda com o tempo; handlers estáveis deixam o memo
+  // dele segurar a redesenhada a cada tique do player.
+  const irParaInicio = useFuncaoEstavel(() => handleSeek(inicioSeg));
+  const irParaFim = useFuncaoEstavel(() => handleSeek(fimSeg));
+  const alternarPlay = useFuncaoEstavel(handlePlayPause);
   const zoomLabel = `${zoomLevel.toFixed(1)}×`;
   const rateLabel = `${playbackRate.toFixed(2)}×`;
   // AUDITORIA-v2 §7 (CP7): "TIMELINE + tempo" do cabecalho compacto —
@@ -1318,11 +1325,7 @@ export function TimelinePanel({
           {tempoLabel}
         </span>
 
-        <TransportGroup
-          onSkipStart={() => handleSeek(inicioSeg)}
-          onPlay={handlePlayPause}
-          onSkipEnd={() => handleSeek(fimSeg)}
-        />
+        <TransportGroup onSkipStart={irParaInicio} onPlay={alternarPlay} onSkipEnd={irParaFim} />
 
         {/* Workbench 1c.dc.html:223-224 - pilulas com rotulo (nao icone
             puro): fundo --wb-ok-soft/--wb-err-soft, texto --wb-ok-ink/--wb-err. */}
