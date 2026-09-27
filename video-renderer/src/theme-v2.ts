@@ -2,8 +2,8 @@
  * Identidade Visual v2 — "Nova Identidade Editorial"
  *
  * Paleta verde-moldura + azul-acento, com presets tipograficos para testar
- * leituras diferentes nos cards/cenas v2. Mantido em paralelo a `theme.ts` durante a transição —
- * apenas as cenas redesenhadas em `cenas-v2/` consomem este módulo.
+ * leituras diferentes nos cards/cenas v2. É o único tema do renderer: o
+ * `theme.ts` antigo saiu na D-733, e o Mascote usa os tokens daqui.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";

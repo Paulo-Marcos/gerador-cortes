@@ -1,6 +1,7 @@
 ﻿import type React from "react";
 import { Mascote } from "../../Mascote";
 import { COLORS_V2 as C, comAlfa } from "../../theme-v2";
+import { mascoteHabilitado } from "../../mascote-habilitado";
 
 type MascotMood = React.ComponentProps<typeof Mascote>["mood"];
 type MascotTamanho = React.ComponentProps<typeof Mascote>["tamanho"];
@@ -18,15 +19,8 @@ export const MascotSpotlight: React.FC<Props> = ({
   size = 200,
   style,
 }) => {
-  // Mascote DESABILITADO por padrao (D-179): so habilita quando o flag === 'true'.
-  // Repo publico nasce sem mascote; o canal liga com VITE_CANAL_MASCOTE_HABILITADO=true.
-  // tsconfig uses module:commonjs for type-check only; Vite handles import.meta at build time.
-  // Precisa ser ts-ignore (nao ts-expect-error): o tsc do frontend compila este arquivo
-  // via alias @video-renderer/* em module:ESNext, onde a linha NAO tem erro.
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const mascoteHabilitado = import.meta.env.VITE_CANAL_MASCOTE_HABILITADO === 'true';
-  if (!mascoteHabilitado) return null;
+  // Mascote DESABILITADO por padrao (D-179): o canal liga o interruptor.
+  if (!mascoteHabilitado()) return null;
   return (
     <div
       style={{

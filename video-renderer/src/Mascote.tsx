@@ -1,5 +1,6 @@
 import { Img, interpolate, random, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { SHADOWS, Z } from "./theme";
+import { mascoteHabilitado } from "./mascote-habilitado";
+import { SHADOWS_V2, Z_V2 } from "./theme-v2";
 
 type Mood =
   | "pensativo" | "serio" | "animado" | "investigador" | "apresentador"
@@ -41,6 +42,18 @@ interface Props {
 // prefixo legado (`sapo_<pose>.png`) ganham essa cópia na materialização.
 // Os 5 primeiros já existem; os 12 restantes só renderizam quando o PNG
 // correspondente for adicionado à pasta (catálogo completo em pose-catalog.ts).
+// D-733: os números da animação, com nome. Valores de sempre — mudar qualquer
+// um muda o vídeo, e o teste de contratos dos cards compara os quadros.
+const MOLA_DA_ENTRADA = { damping: 14, stiffness: 100 };
+/** Quanto o mascote percorre ao entrar: pouco quando ancorado no card, mais solto na tela. */
+const DISTANCIA_DA_ENTRADA_PX = { ancora: 30, tela: 60 } as const;
+/** Respiração: escala oscila ±2,5% num ciclo de 3 s. */
+const RESPIRACAO = { periodoSeg: 3, amplitude: 0.025 };
+/** Balanço vertical: ±2 px num ciclo de 1,5 s. */
+const BALANCO = { periodoSeg: 1.5, amplitudePx: 2 };
+/** Piscada: uma a cada 5 s, com atraso sorteado de até 2 s, 5 quadros, fecha 15%. */
+const PISCADA = { intervaloSeg: 5, atrasoMaxSeg: 2, duracaoFrames: 5, fechamento: 0.15 };
+
 const MOOD_TO_FILE: Record<string, string> = {
   // existentes
   pensativo: "pensativo.png",
@@ -112,11 +125,7 @@ export const Mascote: React.FC<Props> = ({
   // D-197/D-280: canal sem mascote (repo público nasce sem public/mascote) não
   // renderiza nada — sem este gate, o 404 do staticFile derruba o render das
   // cenas que usam Mascote direto (sem passar pelo MascotSpotlight).
-  // Mesmo padrão do MascotSpotlight: ts-ignore (não ts-expect-error) porque o
-  // tsc do frontend compila este arquivo em module:ESNext, onde a linha é válida.
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  if (import.meta.env.VITE_CANAL_MASCOTE_HABILITADO !== "true") return null;
+  if (!mascoteHabilitado()) return null;
 
   const file = MOOD_TO_FILE[mood];
   const sizePx = TAMANHO_PX[tamanho];
@@ -125,33 +134,33 @@ export const Mascote: React.FC<Props> = ({
   const entrySpring = spring({
     frame: delayed,
     fps,
-    config: { damping: 14, stiffness: 100 },
+    config: MOLA_DA_ENTRADA,
   });
 
   // Direção da entrada
   const eixo: Direcao = direcaoEntrada ?? (modo === "ancora" ? "x" : "y");
   const entrySign = modo === "tela" ? POSICAO_TELA[posicao].entrySign : 1;
-  const entryDistance = (modo === "ancora" ? 30 : 60) * entrySign;
+  const entryDistance = DISTANCIA_DA_ENTRADA_PX[modo] * entrySign;
   const translateY = eixo === "y" ? interpolate(entrySpring, [0, 1], [entryDistance, 0]) : 0;
   const translateX = eixo === "x" ? interpolate(entrySpring, [0, 1], [entryDistance, 0]) : 0;
   const opacity = interpolate(entrySpring, [0, 1], [0, 1]);
 
   // Respiração
-  const breathPhase = (frame % Math.round(fps * 3)) / (fps * 3);
-  const breath = 1 + Math.sin(breathPhase * Math.PI * 2) * 0.025;
+  const breathPhase = (frame % Math.round(fps * RESPIRACAO.periodoSeg)) / (fps * RESPIRACAO.periodoSeg);
+  const breath = 1 + Math.sin(breathPhase * Math.PI * 2) * RESPIRACAO.amplitude;
 
   // Bob
-  const bobPhase = (frame % Math.round(fps * 1.5)) / (fps * 1.5);
-  const bob = Math.sin(bobPhase * Math.PI * 2) * 2;
+  const bobPhase = (frame % Math.round(fps * BALANCO.periodoSeg)) / (fps * BALANCO.periodoSeg);
+  const bob = Math.sin(bobPhase * Math.PI * 2) * BALANCO.amplitudePx;
 
   // Piscada
-  const blinkSeed = Math.floor(frame / Math.round(fps * 5));
-  const blinkOffset = Math.round(random(`sapo-blink-${blinkSeed}`) * fps * 2);
-  const blinkFrame = blinkSeed * Math.round(fps * 5) + blinkOffset;
+  const blinkSeed = Math.floor(frame / Math.round(fps * PISCADA.intervaloSeg));
+  const blinkOffset = Math.round(random(`sapo-blink-${blinkSeed}`) * fps * PISCADA.atrasoMaxSeg);
+  const blinkFrame = blinkSeed * Math.round(fps * PISCADA.intervaloSeg) + blinkOffset;
   const framesIntoBlink = frame - blinkFrame;
-  const isBlinking = framesIntoBlink >= 0 && framesIntoBlink < 5;
+  const isBlinking = framesIntoBlink >= 0 && framesIntoBlink < PISCADA.duracaoFrames;
   const blinkScaleY = isBlinking
-    ? 1 - Math.sin((framesIntoBlink / 5) * Math.PI) * 0.15
+    ? 1 - Math.sin((framesIntoBlink / PISCADA.duracaoFrames) * Math.PI) * PISCADA.fechamento
     : 1;
 
   // Cache-bust: PNGs do mascote foram substituídos pela versão final. Sem o
@@ -182,9 +191,9 @@ export const Mascote: React.FC<Props> = ({
           flexShrink: 0,
           opacity,
           transform: `translate(${translateX}px, ${translateY + bob}px) scale(${breath})`,
-          filter: SHADOWS.mascote,
+          filter: SHADOWS_V2.mascote,
           pointerEvents: "none",
-          zIndex: Z.mascote,
+          zIndex: Z_V2.mascote,
         }}
       >
         {innerImg}
@@ -208,8 +217,8 @@ export const Mascote: React.FC<Props> = ({
         height: sizePx,
         opacity,
         transform: `translate(${centerOffset}) translate(${translateX}px, ${translateY + bob}px) scale(${breath})`,
-        zIndex: posicao === "center" ? Z.cta : Z.mascote,
-        filter: SHADOWS.mascote,
+        zIndex: posicao === "center" ? Z_V2.cta : Z_V2.mascote,
+        filter: SHADOWS_V2.mascote,
         pointerEvents: "none",
       }}
     >
