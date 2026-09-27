@@ -125,7 +125,11 @@ async def upload(
     return _serializar(resultado)
 
 
-@router.get("/{slug}")
+@router.get(
+    "/{slug}",
+    response_class=FileResponse,
+    responses={200: {"content": {"image/jpeg": {}, "image/png": {}, "image/webp": {}}}},
+)
 def servir(slug: str):
     """Devolve o arquivo de imagem cacheado para o slug informado."""
     retratos_dir = channel_paths.retratos_dir()
@@ -142,7 +146,7 @@ def servir(slug: str):
     raise HTTPException(status_code=404, detail=f"Retrato '{slug}' nao encontrado")
 
 
-@router.delete("/{slug}")
+@router.delete("/{slug}", status_code=204, response_class=Response)
 def remover(slug: str) -> Response:
     if not retrato_wikipedia.remover(slug):
         raise HTTPException(status_code=404, detail=f"Retrato '{slug}' nao existe")

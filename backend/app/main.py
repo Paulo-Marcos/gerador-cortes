@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import sys
+from typing import Literal
 
 # ProactorEventLoop is required on Windows for asyncio.create_subprocess_exec
 if sys.platform == "win32":
@@ -40,6 +41,7 @@ from app.routers import (
     settings as app_settings,
 )
 from app.routers.errors import registrar_tratadores
+from app.routers.resposta_api import RespostaApi
 from app.routers.seguranca_local import ORIGEM_LOCAL_REGEX, GuardaDeOrigemLocal
 from app.services import channels as channels_service
 from app.services import encerramento
@@ -158,7 +160,27 @@ app.include_router(
 )
 
 
-@app.get("/api/health")
+class SaudeResponse(RespostaApi):
+    status: Literal["ok"]
+    service: str
+
+
+# O arquivo da mídia; com `Range`, só o pedaço pedido (206). Não é JSON.
+_ARQUIVO_DE_MIDIA = {
+    200: {
+        "description": "O arquivo inteiro ou, com `Range`, o pedaço pedido (206).",
+        "content": {
+            "video/mp4": {},
+            "video/webm": {},
+            "video/x-matroska": {},
+            "image/jpeg": {},
+            "image/png": {},
+        },
+    }
+}
+
+
+@app.get("/api/health", response_model=SaudeResponse)
 async def health():
     return {"status": "ok", "service": "CortadorLive Backend"}
 
@@ -167,8 +189,16 @@ async def health():
 CHUNK_SIZE = 1024 * 512  # 512 KB por chunk
 
 
-@app.head("/videos/{projeto_id}/{filename:path}")
-@app.get("/videos/{projeto_id}/{filename:path}")
+@app.head(
+    "/videos/{projeto_id}/{filename:path}",
+    response_class=StreamingResponse,
+    responses=_ARQUIVO_DE_MIDIA,
+)
+@app.get(
+    "/videos/{projeto_id}/{filename:path}",
+    response_class=StreamingResponse,
+    responses=_ARQUIVO_DE_MIDIA,
+)
 async def servir_video(projeto_id: str, filename: str, request: Request):
     """
     Serve arquivos de vídeo com suporte completo a HTTP Range Requests.

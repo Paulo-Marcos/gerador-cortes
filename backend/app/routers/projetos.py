@@ -24,7 +24,7 @@ from app.services.telemetria_cortes import TelemetriaCortesService
 from app.services.youtube_palco import ensure_palco_png
 from app.services.youtube_stats import YoutubeStatsService
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy import update as sa_update
@@ -235,7 +235,9 @@ async def listar_projetos():
     return await listagem_de_projetos.listar_projetos()
 
 
-@router.patch("/{projeto_id}/transcricao")
+@router.patch(
+    "/{projeto_id}/transcricao", response_model=projetos_schemas.TranscricaoRefeitaResponse
+)
 async def atualizar_transcricao_projeto(
     projeto_id: str, body: dict, db: AsyncSession = Depends(get_db)
 ):
@@ -353,7 +355,11 @@ async def obter_auditoria_analise(projeto_id: str, db: AsyncSession = Depends(ge
     }
 
 
-@router.get("/telemetria-cortes/export")
+@router.get(
+    "/telemetria-cortes/export",
+    response_model=projetos_schemas.TelemetriaExportadaResponse,
+    responses={200: {"content": {"text/csv": {}}}},
+)
 async def exportar_telemetria_cortes(formato: str = "json", db: AsyncSession = Depends(get_db)):
     """D-303: agregado cross-projeto da telemetria editorial, uma linha por
     corte (inclusive manuais/legados). `?formato=csv` devolve CSV para
@@ -521,10 +527,9 @@ async def atualizar_render_config(
     return projeto
 
 
-@router.get("/{projeto_id}/video-proxy")
+@router.get("/{projeto_id}/video-proxy", status_code=307, response_class=RedirectResponse)
 async def video_proxy(projeto_id: str, db: AsyncSession = Depends(get_db)):
     """Serve o vídeo original do projeto para uso no player de edição."""
-    from fastapi.responses import RedirectResponse
 
     video_path = await ProjetoService.obter_video_proxy_path(projeto_id, db)
     if not video_path:
@@ -592,7 +597,9 @@ class SincroniaLegendaRequest(BaseModel):
     offset_segundos: float
 
 
-@router.put("/{projeto_id}/sincronia-legenda")
+@router.put(
+    "/{projeto_id}/sincronia-legenda", response_model=projetos_schemas.SincroniaDaLegendaResponse
+)
 async def atualizar_sincronia_legenda(
     projeto_id: str, body: SincroniaLegendaRequest, db: AsyncSession = Depends(get_db)
 ):

@@ -49,6 +49,28 @@
         "title": "AgendaDoUpload",
         "type": "object"
       },
+      "AmbienteResponse": {
+        "description": "D-627: o que o app precisa nesta máquina. `pronto` é falso se falta um\nobrigatório.",
+        "properties": {
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/ItemDoAmbiente"
+            },
+            "title": "Itens",
+            "type": "array"
+          },
+          "pronto": {
+            "title": "Pronto",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pronto",
+          "itens"
+        ],
+        "title": "AmbienteResponse",
+        "type": "object"
+      },
       "AnalisarIntervaloRequest": {
         "properties": {
           "fim_hms": {
@@ -2744,6 +2766,66 @@
         "title": "EscolherPresetRequest",
         "type": "object"
       },
+      "EstadoDaSincronizacao": {
+        "description": "O que roda bate com o que está no disco? `em_dia` é o veredito, dado\naqui para a tela não montar o dela. Commit vazio = não se sabe (sem git).",
+        "properties": {
+          "backend_velho": {
+            "title": "Backend Velho",
+            "type": "boolean"
+          },
+          "canal_em_uso": {
+            "title": "Canal Em Uso",
+            "type": "string"
+          },
+          "canal_escolhido": {
+            "title": "Canal Escolhido",
+            "type": "string"
+          },
+          "colunas_pendentes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Colunas Pendentes",
+            "type": "array"
+          },
+          "commit_disco": {
+            "title": "Commit Disco",
+            "type": "string"
+          },
+          "commit_rodando": {
+            "title": "Commit Rodando",
+            "type": "string"
+          },
+          "dependencias_faltando": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dependencias Faltando",
+            "type": "array"
+          },
+          "em_dia": {
+            "title": "Em Dia",
+            "type": "boolean"
+          },
+          "troca_de_canal_pendente": {
+            "title": "Troca De Canal Pendente",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "commit_rodando",
+          "commit_disco",
+          "backend_velho",
+          "colunas_pendentes",
+          "dependencias_faltando",
+          "canal_em_uso",
+          "canal_escolhido",
+          "troca_de_canal_pendente",
+          "em_dia"
+        ],
+        "title": "EstadoDaSincronizacao",
+        "type": "object"
+      },
       "FaixaSeguraCapa": {
         "properties": {
           "h": {
@@ -3340,6 +3422,49 @@
           }
         },
         "title": "IndicarRequest",
+        "type": "object"
+      },
+      "ItemDoAmbiente": {
+        "properties": {
+          "como_resolver": {
+            "title": "Como Resolver",
+            "type": "string"
+          },
+          "detalhe": {
+            "title": "Detalhe",
+            "type": "string"
+          },
+          "estado": {
+            "enum": [
+              "ok",
+              "aviso",
+              "erro"
+            ],
+            "title": "Estado",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "obrigatorio": {
+            "title": "Obrigatorio",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "nome",
+          "obrigatorio",
+          "estado",
+          "detalhe",
+          "como_resolver"
+        ],
+        "title": "ItemDoAmbiente",
         "type": "object"
       },
       "JobCanceladoResponse": {
@@ -6044,6 +6169,28 @@
         "title": "SalvarUrlRequest",
         "type": "object"
       },
+      "SaudeResponse": {
+        "properties": {
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "enum": [
+              "ok"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "service"
+        ],
+        "title": "SaudeResponse",
+        "type": "object"
+      },
       "ScaffoldDescritoResponse": {
         "description": "Um scaffold do canal para a UI: metadados + valor-do-canal + default (reset).",
         "properties": {
@@ -6162,6 +6309,29 @@
           }
         },
         "title": "SimularPalcoRequest",
+        "type": "object"
+      },
+      "SincroniaDaLegendaResponse": {
+        "properties": {
+          "cortes_sincronizados": {
+            "title": "Cortes Sincronizados",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "offset_ms": {
+            "title": "Offset Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message",
+          "offset_ms",
+          "cortes_sincronizados"
+        ],
+        "title": "SincroniaDaLegendaResponse",
         "type": "object"
       },
       "SincroniaLegendaRequest": {
@@ -6905,6 +7075,28 @@
           "finais_por_origem"
         ],
         "title": "TelemetriaDesvios",
+        "type": "object"
+      },
+      "TelemetriaExportadaResponse": {
+        "description": "D-303: a telemetria editorial de todos os projetos, uma linha por corte.\nCom `?formato=csv`, a mesma coisa em CSV (não passa por aqui).",
+        "properties": {
+          "cortes": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Cortes",
+            "type": "array"
+          },
+          "total_cortes": {
+            "title": "Total Cortes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_cortes",
+          "cortes"
+        ],
+        "title": "TelemetriaExportadaResponse",
         "type": "object"
       },
       "TelemetriaProjetoResponse": {
@@ -12512,7 +12704,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SaudeResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -12579,12 +12773,7 @@
         "description": "Limpa o cache em memoria. Util apos atualizar manualmente\n`backend/app/data/sapo_poses.json` em runtime.",
         "operationId": "recarregar_catalogo_api_mascot_poses_recarregar_post",
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
+          "204": {
             "description": "Successful Response"
           }
         },
@@ -13751,8 +13940,11 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
-              }
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetriaExportadaResponse"
+                }
+              },
+              "text/csv": {}
             },
             "description": "Successful Response"
           },
@@ -14612,7 +14804,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SincroniaDaLegendaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -14707,7 +14901,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TranscricaoRefeitaResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -14745,12 +14941,7 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
+          "307": {
             "description": "Successful Response"
           },
           "422": {
@@ -15178,12 +15369,7 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
+          "204": {
             "description": "Successful Response"
           },
           "422": {
@@ -15219,9 +15405,9 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
-              }
+              "image/jpeg": {},
+              "image/png": {},
+              "image/webp": {}
             },
             "description": "Successful Response"
           },
@@ -17965,7 +18151,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDaSincronizacao"
+                }
               }
             },
             "description": "Successful Response"
@@ -17985,7 +18173,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AmbienteResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -18186,11 +18376,13 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
-              }
+              "image/jpeg": {},
+              "image/png": {},
+              "video/mp4": {},
+              "video/webm": {},
+              "video/x-matroska": {}
             },
-            "description": "Successful Response"
+            "description": "O arquivo inteiro ou, com `Range`, o pedaço pedido (206)."
           },
           "422": {
             "content": {
@@ -18231,11 +18423,13 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
-              }
+              "image/jpeg": {},
+              "image/png": {},
+              "video/mp4": {},
+              "video/webm": {},
+              "video/x-matroska": {}
             },
-            "description": "Successful Response"
+            "description": "O arquivo inteiro ou, com `Range`, o pedaço pedido (206)."
           },
           "422": {
             "content": {

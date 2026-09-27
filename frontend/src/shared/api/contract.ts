@@ -4392,6 +4392,17 @@ export interface components {
             /** Scheduled At */
             scheduled_at: string | null;
         };
+        /**
+         * AmbienteResponse
+         * @description D-627: o que o app precisa nesta máquina. `pronto` é falso se falta um
+         *     obrigatório.
+         */
+        AmbienteResponse: {
+            /** Itens */
+            itens: components["schemas"]["ItemDoAmbiente"][];
+            /** Pronto */
+            pronto: boolean;
+        };
         /** AnalisarIntervaloRequest */
         AnalisarIntervaloRequest: {
             /** Fim Hms */
@@ -5428,6 +5439,31 @@ export interface components {
              */
             preset_id: string;
         };
+        /**
+         * EstadoDaSincronizacao
+         * @description O que roda bate com o que está no disco? `em_dia` é o veredito, dado
+         *     aqui para a tela não montar o dela. Commit vazio = não se sabe (sem git).
+         */
+        EstadoDaSincronizacao: {
+            /** Backend Velho */
+            backend_velho: boolean;
+            /** Canal Em Uso */
+            canal_em_uso: string;
+            /** Canal Escolhido */
+            canal_escolhido: string;
+            /** Colunas Pendentes */
+            colunas_pendentes: string[];
+            /** Commit Disco */
+            commit_disco: string;
+            /** Commit Rodando */
+            commit_rodando: string;
+            /** Dependencias Faltando */
+            dependencias_faltando: string[];
+            /** Em Dia */
+            em_dia: boolean;
+            /** Troca De Canal Pendente */
+            troca_de_canal_pendente: boolean;
+        };
         /** FaixaSeguraCapa */
         FaixaSeguraCapa: {
             /** H */
@@ -5687,6 +5723,24 @@ export interface components {
              * @default true
              */
             indicado: boolean;
+        };
+        /** ItemDoAmbiente */
+        ItemDoAmbiente: {
+            /** Como Resolver */
+            como_resolver: string;
+            /** Detalhe */
+            detalhe: string;
+            /**
+             * Estado
+             * @enum {string}
+             */
+            estado: "ok" | "aviso" | "erro";
+            /** Id */
+            id: string;
+            /** Nome */
+            nome: string;
+            /** Obrigatorio */
+            obrigatorio: boolean;
         };
         /**
          * JobCanceladoResponse
@@ -6801,6 +6855,17 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** SaudeResponse */
+        SaudeResponse: {
+            /** Service */
+            service: string;
+            /**
+             * Status
+             * @constant
+             * @enum {string}
+             */
+            status: "ok";
+        };
         /**
          * ScaffoldDescritoResponse
          * @description Um scaffold do canal para a UI: metadados + valor-do-canal + default (reset).
@@ -6863,6 +6928,15 @@ export interface components {
             ajustes_palco: Record<string, unknown>;
             /** Palco */
             palco?: Record<string, unknown> | null;
+        };
+        /** SincroniaDaLegendaResponse */
+        SincroniaDaLegendaResponse: {
+            /** Cortes Sincronizados */
+            cortes_sincronizados: number;
+            /** Message */
+            message: string;
+            /** Offset Ms */
+            offset_ms: number;
         };
         /** SincroniaLegendaRequest */
         SincroniaLegendaRequest: {
@@ -7126,6 +7200,17 @@ export interface components {
             propostos: number | null;
             /** Removidos */
             removidos: Record<string, unknown>[] | null;
+        };
+        /**
+         * TelemetriaExportadaResponse
+         * @description D-303: a telemetria editorial de todos os projetos, uma linha por corte.
+         *     Com `?formato=csv`, a mesma coisa em CSV (não passa por aqui).
+         */
+        TelemetriaExportadaResponse: {
+            /** Cortes */
+            cortes: Record<string, unknown>[];
+            /** Total Cortes */
+            total_cortes: number;
         };
         /** TelemetriaProjetoResponse */
         TelemetriaProjetoResponse: {
@@ -10555,7 +10640,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SaudeResponse"];
                 };
             };
         };
@@ -10602,13 +10687,11 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
         };
     };
@@ -11439,7 +11522,8 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TelemetriaExportadaResponse"];
+                    "text/csv": unknown;
                 };
             };
             /** @description Validation Error */
@@ -12030,7 +12114,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["SincroniaDaLegendaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -12096,7 +12180,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TranscricaoRefeitaResponse"];
                 };
             };
             /** @description Validation Error */
@@ -12122,13 +12206,11 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            307: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -12436,7 +12518,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "image/jpeg": unknown;
+                    "image/png": unknown;
+                    "image/webp": unknown;
                 };
             };
             /** @description Validation Error */
@@ -12462,13 +12546,11 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": unknown;
-                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -14439,7 +14521,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["EstadoDaSincronizacao"];
                 };
             };
         };
@@ -14459,7 +14541,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AmbienteResponse"];
                 };
             };
         };
@@ -14601,13 +14683,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description O arquivo inteiro ou, com `Range`, o pedaço pedido (206). */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "image/jpeg": unknown;
+                    "image/png": unknown;
+                    "video/mp4": unknown;
+                    "video/webm": unknown;
+                    "video/x-matroska": unknown;
                 };
             };
             /** @description Validation Error */
@@ -14633,13 +14719,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description O arquivo inteiro ou, com `Range`, o pedaço pedido (206). */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "image/jpeg": unknown;
+                    "image/png": unknown;
+                    "video/mp4": unknown;
+                    "video/webm": unknown;
+                    "video/x-matroska": unknown;
                 };
             };
             /** @description Validation Error */

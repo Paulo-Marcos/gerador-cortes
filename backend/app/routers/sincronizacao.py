@@ -10,13 +10,48 @@ from __future__ import annotations
 import asyncio
 
 from app.database import engine
+from app.routers.resposta_api import RespostaApi
 from app.services import ambiente, sincronizacao
+from app.services.ambiente import Estado
 from fastapi import APIRouter
 
 router = APIRouter()
 
 
-@router.get("")
+class EstadoDaSincronizacao(RespostaApi):
+    """O que roda bate com o que está no disco? `em_dia` é o veredito, dado
+    aqui para a tela não montar o dela. Commit vazio = não se sabe (sem git)."""
+
+    commit_rodando: str
+    commit_disco: str
+    backend_velho: bool
+    colunas_pendentes: list[str]
+    dependencias_faltando: list[str]
+    canal_em_uso: str
+    canal_escolhido: str
+    troca_de_canal_pendente: bool
+    em_dia: bool
+
+
+class ItemDoAmbiente(RespostaApi):
+    id: str
+    nome: str
+    obrigatorio: bool
+    estado: Estado
+    detalhe: str
+    # Vazio quando o item está ok.
+    como_resolver: str
+
+
+class AmbienteResponse(RespostaApi):
+    """D-627: o que o app precisa nesta máquina. `pronto` é falso se falta um
+    obrigatório."""
+
+    pronto: bool
+    itens: list[ItemDoAmbiente]
+
+
+@router.get("", response_model=EstadoDaSincronizacao)
 async def estado_da_sincronizacao():
     """Commit no ar vs no disco, colunas pendentes e deps faltando.
 
@@ -27,7 +62,7 @@ async def estado_da_sincronizacao():
         return await sincronizacao.estado(conn)
 
 
-@router.get("/ambiente")
+@router.get("/ambiente", response_model=AmbienteResponse)
 async def pre_requisitos_da_maquina():
     """O que o app precisa nesta máquina e o que falta (D-627).
 

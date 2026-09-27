@@ -7,6 +7,7 @@ análise (auditoria, prompt, importação, intervalo, transcrição). O
 """
 
 from datetime import datetime
+from typing import Any
 
 from app.models import StatusCorte
 from app.routers.resposta_api import RespostaApi, RespostaComCamposOpcionais
@@ -91,3 +92,17 @@ class AnaliseDoIntervaloResponse(RespostaApi):
 class TranscricaoRefeitaResponse(RespostaApi):
     message: str
     total_cortes_sincronizados: int
+
+
+class SincroniaDaLegendaResponse(RespostaApi):
+    message: str
+    offset_ms: int
+    cortes_sincronizados: int
+
+
+class TelemetriaExportadaResponse(RespostaApi):
+    """D-303: a telemetria editorial de todos os projetos, uma linha por corte.
+    Com `?formato=csv`, a mesma coisa em CSV (não passa por aqui)."""
+
+    total_cortes: int
+    cortes: list[dict[str, Any]]

@@ -45,7 +45,7 @@ def buscar_pose(mood: str) -> dict[str, Any]:
     return pose
 
 
-@router.post("/poses/recarregar")
+@router.post("/poses/recarregar", status_code=204, response_class=Response)
 def recarregar_catalogo() -> Response:
     """
     Limpa o cache em memoria. Util apos atualizar manualmente
