@@ -10,7 +10,7 @@
 // sempre em 1x, independente do que estiver aqui.
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { settingsApi } from '@/features/settings/api';
 
 // Mesma faixa dos atalhos de velocidade das telas (Ctrl+J/K) e do clamp do
 // backend. Duplicar o limite aqui e barato e evita que um valor gravado fora
@@ -33,7 +33,7 @@ export function normalizarVelocidade(bruta: number | undefined | null): number {
  * salvar um novo valor no painel se propaga sozinho para os players abertos.
  */
 export function useVelocidadePlayerPadrao(): number {
-  const { data } = useQuery({ queryKey: ['app-settings'], queryFn: api.obterSettings });
+  const { data } = useQuery({ queryKey: ['app-settings'], queryFn: settingsApi.obterSettings });
   return normalizarVelocidade(data?.velocidade_player_padrao);
 }
 

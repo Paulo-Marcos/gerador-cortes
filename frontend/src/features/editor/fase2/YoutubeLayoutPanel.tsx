@@ -50,6 +50,7 @@ import { useSegmentosDetectados } from './useSegmentosDetectados';
 import { ScanLine } from 'lucide-react';
 import { EscopoLadder, ModoBlock, RegionItem } from './youtubeLayoutPanel/components';
 import { MODE_LABEL, clamp, round } from './youtubeLayoutPanel/shared';
+import { settingsApi } from '@/features/settings/api';
 
 // ─────────────────────────────────────────────────────────────
 // YoutubeLayoutPanel — replica `design_reference/src/v3_pos.jsx > TabLayout`
@@ -177,7 +178,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
     });
     const { data: appSettings } = useQuery<AppSettings>({
       queryKey: ['app-settings'],
-      queryFn: api.obterSettings,
+      queryFn: settingsApi.obterSettings,
       staleTime: 30_000,
     });
     const padraoProjetoJson = projeto?.layout_youtube_padrao;

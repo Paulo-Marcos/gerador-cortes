@@ -31,7 +31,7 @@ import {
   useRenderizarRemotion,
 } from '@/hooks/useEditor';
 import { useQuery } from '@tanstack/react-query';
-import { api, finalVideoUrl, resolveThumbUrl } from '@/lib/api';
+import { finalVideoUrl, resolveThumbUrl } from '@/lib/api';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
 import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
@@ -57,6 +57,7 @@ import {
   resolveCorteStagePath,
   progressFromPipelineArtifacts,
 } from '@/features/post-production/postProductionNavigation';
+import { settingsApi } from '@/features/settings/api';
 
 // Atalhos Ctrl+J/K (F-041): mesmos limites usados na tela Bruta.
 const SPEED_MIN = 0.25;
@@ -109,7 +110,7 @@ export function FinalReviewPage() {
   // "Renderizar" o filtro vai `null` e o backend resolve para o global
   // (AppSettings.filtro_global_padrao), entao o global reflete o que foi
   // aplicado. Ressalva: se o global mudar depois do render, mostra o novo.
-  const settingsQ = useQuery({ queryKey: ['app-settings'], queryFn: api.obterSettings });
+  const settingsQ = useQuery({ queryKey: ['app-settings'], queryFn: settingsApi.obterSettings });
   const filtrosQ = useQuery({
     queryKey: ['export-filtros'],
     queryFn: () => filtrosApi.listarFiltros(),

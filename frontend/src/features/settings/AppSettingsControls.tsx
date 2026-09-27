@@ -5,7 +5,7 @@
 // mesma config apareça e seja editável nos dois lugares sem duplicar lógica.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { settingsApi, type AtualizarSettingsBody } from '@/features/settings/api';
 import { filtrosApi, type FiltroExport } from '@/features/post-production/api/filtros';
 import type { LogLevel, RenderSettings } from '@/types/models';
 import { cn } from '@/lib/utils';
@@ -68,7 +68,7 @@ const FALLBACK_FILTERS: FiltroExport[] = [
   },
 ];
 
-type UpdateBody = Exclude<Parameters<typeof api.atualizarSettings>[0], LogLevel>;
+type UpdateBody = AtualizarSettingsBody;
 
 const controlCls =
   'h-10 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-sm font-semibold text-[var(--wb-text)] outline-none transition-colors focus:border-[var(--wb-accent)] disabled:cursor-wait disabled:opacity-60';
@@ -79,7 +79,7 @@ export function AppSettingsControls() {
   const queryClient = useQueryClient();
   const { notify } = useToast();
 
-  const settingsQuery = useQuery({ queryKey: ['app-settings'], queryFn: api.obterSettings });
+  const settingsQuery = useQuery({ queryKey: ['app-settings'], queryFn: settingsApi.obterSettings });
   const filtersQuery = useQuery({
     queryKey: ['export-filtros'],
     queryFn: () => filtrosApi.listarFiltros(),
@@ -100,7 +100,7 @@ export function AppSettingsControls() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (body: UpdateBody) => api.atualizarSettings(body),
+    mutationFn: (body: UpdateBody) => settingsApi.atualizarSettings(body),
     onSuccess: (settings) => {
       queryClient.setQueryData(['app-settings'], settings);
       notify('Ajustes atualizados.', { tone: 'success', title: 'Ajustes' });

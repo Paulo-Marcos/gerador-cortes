@@ -5245,6 +5245,13 @@ export interface components {
              */
             preset_id: string;
         };
+        /** FaixaSeguraCapa */
+        FaixaSeguraCapa: {
+            /** H */
+            h: number;
+            /** Y */
+            y: number;
+        };
         /**
          * FalanteInfo
          * @description Um falante da diarização: o nome batizado e se é o canal (D-286).
@@ -5434,6 +5441,26 @@ export interface components {
         JuntarCortesRequest: {
             /** Outro Corte Id */
             outro_corte_id?: string | null;
+        };
+        /**
+         * LayoutCapaTiktokResponse
+         * @description A geometria resolvida da capa do TikTok (D-532): o editor não recalcula.
+         */
+        LayoutCapaTiktokResponse: {
+            /** Atual */
+            atual: {
+                [key: string]: components["schemas"]["RetanguloCapa"];
+            };
+            /** Componentes */
+            componentes: string[];
+            faixa_segura: components["schemas"]["FaixaSeguraCapa"];
+            /** Lado Minimo */
+            lado_minimo: number;
+            /** Padrao */
+            padrao: {
+                [key: string]: components["schemas"]["RetanguloCapa"];
+            };
+            quadro: components["schemas"]["QuadroCapa"];
         };
         /** LevantamentoDuracao */
         LevantamentoDuracao: {
@@ -6034,6 +6061,13 @@ export interface components {
             /** Prompt Default */
             prompt_default: string;
         };
+        /** QuadroCapa */
+        QuadroCapa: {
+            /** Altura */
+            altura: number;
+            /** Largura */
+            largura: number;
+        };
         /**
          * RankingLivesResponse
          * @description O TOP de candidatas. `janela_meses` só vem numa geração nova — a resposta
@@ -6139,6 +6173,21 @@ export interface components {
             positivos: number;
             /** Total */
             total: number;
+        };
+        /**
+         * RetanguloCapa
+         * @description Um componente da capa do TikTok, em pixels do quadro (inteiros: o domínio
+         *     passa cada coordenada por `_inteiro`).
+         */
+        RetanguloCapa: {
+            /** H */
+            h: number;
+            /** W */
+            w: number;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
         };
         /**
          * RetencaoArquivos
@@ -11842,7 +11891,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["LayoutCapaTiktokResponse"];
                 };
             };
         };

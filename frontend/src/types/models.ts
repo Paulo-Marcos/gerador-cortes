@@ -468,23 +468,6 @@ export interface RenderSettings {
   grade_global_quality: number;
 }
 
-export interface AppSettings {
-  log_level: LogLevel;
-  filtro_global_padrao: string;
-  // F-024: layout YouTube padrao em escopo GLOBAL (separado do
-  // `Projeto.layout_youtube_padrao` que e por-projeto). JSON string;
-  // "{}" significa "sem padrao global definido".
-  youtube_layout_padrao_global?: string;
-  /** D-532: onde cada componente da capa do TikTok fica, em JSON parcial. */
-  capa_tiktok_layout?: string;
-  // D-450: velocidade com que os players de preview ABREM (Editor, Revisao
-  // Final, Pos-producao). Preferencia de leitura — nao afeta o render.
-  velocidade_player_padrao?: number;
-  // D-451: respiro (em segundos) que o editor mostra ANTES do inicio e DEPOIS
-  // do fim do corte — a janela de onda/audio usada para analisar o trecho e,
-  // quando preciso, esticar a borda.
-  contexto_antes_seg?: number;
-  contexto_depois_seg?: number;
-  // D-191: bloco de render exposto pela API (settings vivem no banco).
-  render?: RenderSettings;
-}
+/** Os ajustes do app (D-191) — o tipo do contrato (D-722), apelido aqui porque
+ *  várias telas o importam deste arquivo. */
+export type AppSettings = Schema<'AppSettingsResponse'>;

@@ -14,7 +14,7 @@
 // arquivo gerado — desloca a onda em relacao a imagem, que e pior porque e
 // silencioso.
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { settingsApi } from '@/features/settings/api';
 
 // Mesma faixa do clamp do backend (`CONTEXTO_*` em app_settings.py). O teto
 // existe porque a janela vira um proxy FLAC por ffmpeg a cada corte aberto.
@@ -55,6 +55,6 @@ export function normalizarContextoCorte(
  * Query deduplica e salvar um novo valor se propaga para os editores abertos.
  */
 export function useContextoCorte(): ContextoCorte {
-  const { data } = useQuery({ queryKey: ['app-settings'], queryFn: api.obterSettings });
+  const { data } = useQuery({ queryKey: ['app-settings'], queryFn: settingsApi.obterSettings });
   return normalizarContextoCorte(data?.contexto_antes_seg, data?.contexto_depois_seg);
 }

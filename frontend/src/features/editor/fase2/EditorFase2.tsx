@@ -40,6 +40,7 @@ import {
   type YoutubeLayoutMode,
   type YoutubeLayoutRegion,
 } from './youtubeLayout';
+import { settingsApi } from '@/features/settings/api';
 
 type AbaDireita = 'cenas' | 'layout' | 'filtros';
 
@@ -143,7 +144,7 @@ export function EditorFase2({
   });
   const { data: appSettings } = useQuery({
     queryKey: ['app-settings'],
-    queryFn: api.obterSettings,
+    queryFn: settingsApi.obterSettings,
     staleTime: 30_000,
   });
   // I-023: a aba "Filtros" da Pós-Produção é só para testes; cuida sozinha

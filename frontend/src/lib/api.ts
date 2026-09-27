@@ -2,7 +2,6 @@ import type {
   AdicionarDesvioRequest,
   AnalisarIntervaloRequest,
   AnalisePromptResponse,
-  AppSettings,
   ArranjoBlocos,
   AuditoriaAnaliseResponse,
   CenaRemotion,
@@ -13,9 +12,7 @@ import type {
   FontePreset,
   ImportarAnaliseRequest,
   LimparArquivosResponse,
-  LogLevel,
   MetadadoCorte,
-  RenderSettings,
   MetadadoPatch,
   PipelineStatusResponse,
   PromptManualResponse,
@@ -61,44 +58,6 @@ export interface GerarBrutoOpcoes {
 
 export const api = {
   listarProjetos: () => request<Projeto[]>('/projetos'),
-
-  // D-532: a geometria resolvida da capa do TikTok, para o editor de layout.
-  // O frontend nao recalcula: pede pronta e devolve a que o operador soltou.
-  obterLayoutCapaTiktok: () =>
-    request<{
-      quadro: { largura: number; altura: number };
-      faixa_segura: { y: number; h: number };
-      componentes: string[];
-      lado_minimo: number;
-      padrao: Record<string, { x: number; y: number; w: number; h: number }>;
-      atual: Record<string, { x: number; y: number; w: number; h: number }>;
-    }>('/settings/capa-tiktok/layout'),
-
-  obterSettings: () => request<AppSettings>('/settings'),
-
-  atualizarSettings: (
-    body:
-      | LogLevel
-      | {
-          log_level?: LogLevel;
-          filtro_global_padrao?: string;
-          youtube_layout_padrao_global?: string;
-          capa_tiktok_layout?: string;
-          // D-450: velocidade inicial dos players de preview.
-          velocidade_player_padrao?: number;
-          // D-451: janela de contexto do editor (antes/depois do corte).
-          contexto_antes_seg?: number;
-          contexto_depois_seg?: number;
-          // D-191: bloco completo de render (editável pela UI).
-          render?: RenderSettings;
-        },
-  ) =>
-    request<AppSettings>('/settings', {
-      method: 'PUT',
-      // Compat: callers antigos passam apenas LogLevel (string). Novos
-      // passam objeto para atualizar campos especificos.
-      body: JSON.stringify(typeof body === 'string' ? { log_level: body } : body),
-    }),
 
   criarProjeto: (body: CriarProjetoRequest) =>
     request<Projeto>('/projetos', { method: 'POST', body: JSON.stringify(body) }),

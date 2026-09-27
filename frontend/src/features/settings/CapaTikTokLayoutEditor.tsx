@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, RotateCcw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
 import { BlocosArrastaveis } from '@/features/shorts/BlocosArrastaveis';
 import type { Retangulo } from '@/features/shorts/arrastarSlot';
+import { settingsApi } from '@/features/settings/api';
 
 // D-532: onde cada componente da capa do TikTok fica.
 //
@@ -70,7 +70,7 @@ export function CapaTikTokLayoutEditor() {
 
   const layoutQuery = useQuery({
     queryKey: ['capa-tiktok-layout'],
-    queryFn: api.obterLayoutCapaTiktok,
+    queryFn: settingsApi.obterLayoutCapaTiktok,
   });
   const layout = layoutQuery.data as LayoutDaCapa | undefined;
 
@@ -83,7 +83,7 @@ export function CapaTikTokLayoutEditor() {
 
   const salvar = useMutation({
     mutationFn: (valor: Record<string, Retangulo> | null) =>
-      api.atualizarSettings({ capa_tiktok_layout: valor ? JSON.stringify(valor) : '{}' }),
+      settingsApi.atualizarSettings({ capa_tiktok_layout: valor ? JSON.stringify(valor) : '{}' }),
     onSuccess: () => {
       setErro('');
       setSujo(false);

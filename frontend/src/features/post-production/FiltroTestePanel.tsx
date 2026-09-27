@@ -4,10 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
-import { api, versaoVideoUrl } from '@/lib/api';
+import { versaoVideoUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { AppSettings } from '@/types/models';
 import { filtrosApi, type FiltroExport, type VersaoExport } from './api/filtros';
+import { settingsApi } from '@/features/settings/api';
 
 // ─────────────────────────────────────────────────────────────
 // FiltroTestePanel — aba "Filtros" da Pós-Produção.
@@ -105,7 +106,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
   // input do render. O render final lê o global direto do backend em runtime.
   const { data: appSettings } = useQuery<AppSettings>({
     queryKey: ['app-settings'],
-    queryFn: () => api.obterSettings(),
+    queryFn: () => settingsApi.obterSettings(),
     staleTime: 30_000,
   });
 
