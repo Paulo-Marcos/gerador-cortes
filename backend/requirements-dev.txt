@@ -1,7 +1,7 @@
 pytest>=9.1.1
-pytest-cov>=5.0
+pytest-cov>=7.1.0
 pytest-asyncio>=0.23
-ruff==0.16.4  # D-687: fixo; uma versão nova muda regras e formatação sem o código mudar
+ruff==0.16.9  # D-687: fixo; uma versão nova muda regras e formatação sem o código mudar
 pre-commit>=3.7
 import-linter>=2.15
 pytest-testmon>=2.2  # D-751: roda só os testes que a mudança afeta; não enxerga arquivo que não é Python

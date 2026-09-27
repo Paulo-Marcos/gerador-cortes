@@ -84,7 +84,7 @@ export function normalizeYoutubeLayout(value: unknown, fallbackValue?: unknown):
     if (typeof fallbackValue === 'string') {
       try {
         parsedFallback = JSON.parse(fallbackValue);
-      } catch (e) {
+      } catch {
         parsedFallback = {};
       }
     }

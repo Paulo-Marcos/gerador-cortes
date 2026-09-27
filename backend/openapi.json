@@ -438,6 +438,7 @@
                 "type": "array"
               },
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -527,6 +528,7 @@
           "layout_youtube": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -753,6 +755,7 @@
           "payload": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -838,6 +841,7 @@
           "ajustes_palco": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -1091,6 +1095,7 @@
           "recortes_palco": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -1658,6 +1663,7 @@
       "Body_atualizar_falantes_api_diarizacao_projeto__projeto_id__falantes_put": {
         "properties": {
           "falantes": {
+            "additionalProperties": true,
             "title": "Falantes",
             "type": "object"
           }
@@ -1671,7 +1677,7 @@
       "Body_subir_arte_da_capa_api_shorts__short_id__capa_arte_post": {
         "properties": {
           "arquivo": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Arquivo",
             "type": "string"
           }
@@ -1685,7 +1691,7 @@
       "Body_subir_arte_da_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_arte_post": {
         "properties": {
           "arquivo": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Arquivo",
             "type": "string"
           }
@@ -1699,7 +1705,7 @@
       "Body_subir_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_upload_post": {
         "properties": {
           "arquivo": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Arquivo",
             "type": "string"
           }
@@ -1713,7 +1719,7 @@
       "Body_upload_api_retratos_upload_post": {
         "properties": {
           "arquivo": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "Arquivo",
             "type": "string"
           },
@@ -1732,7 +1738,7 @@
       "Body_upload_thumbnail_manual_api_metadados_corte__corte_id__thumbnail_manual_post": {
         "properties": {
           "file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
           }
@@ -2173,6 +2179,7 @@
         "properties": {
           "cenas": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Cenas",
@@ -2688,6 +2695,7 @@
             "type": "string"
           },
           "payload": {
+            "additionalProperties": true,
             "title": "Payload",
             "type": "object"
           },
@@ -2810,6 +2818,7 @@
         "properties": {
           "cenas": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Cenas",
@@ -3947,6 +3956,7 @@
             "type": "string"
           },
           "payload": {
+            "additionalProperties": true,
             "title": "Payload",
             "type": "object"
           }
@@ -4535,6 +4545,7 @@
           },
           "regioes": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Regioes",
@@ -4566,6 +4577,7 @@
             "type": "string"
           },
           "payload": {
+            "additionalProperties": true,
             "title": "Payload",
             "type": "object"
           },
@@ -4887,6 +4899,7 @@
           },
           "palavras": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Palavras",
@@ -4931,6 +4944,7 @@
           },
           "palavras": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Palavras",
@@ -7154,6 +7168,7 @@
         "description": "Além das partes, o prompt inteiro num texto só.",
         "properties": {
           "formato_esperado": {
+            "additionalProperties": true,
             "title": "Formato Esperado",
             "type": "object"
           },
@@ -7181,6 +7196,7 @@
         "description": "O prompt do modo manual, fatiado em partes quando a transcrição é longa, e\no formato que a resposta colada deve seguir.",
         "properties": {
           "formato_esperado": {
+            "additionalProperties": true,
             "title": "Formato Esperado",
             "type": "object"
           },
@@ -7203,6 +7219,7 @@
         "description": "O prompt para rodar numa IA de fora e o formato que a resposta deve seguir.",
         "properties": {
           "formato_esperado": {
+            "additionalProperties": true,
             "title": "Formato Esperado",
             "type": "object"
           },
@@ -7558,6 +7575,7 @@
         "description": "Onde abrir o Studio, o vídeo do corte e as props da composição (a forma\ndas props é a da cena, D-725).",
         "properties": {
           "props": {
+            "additionalProperties": true,
             "title": "Props",
             "type": "object"
           },
@@ -7607,9 +7625,6 @@
           },
           "status": {
             "const": "iniciado",
-            "enum": [
-              "iniciado"
-            ],
             "title": "Status",
             "type": "string"
           }
@@ -8149,6 +8164,7 @@
         "properties": {
           "cenas": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Cenas",
@@ -8204,10 +8220,12 @@
             "type": "string"
           },
           "paleta": {
+            "additionalProperties": true,
             "title": "Paleta",
             "type": "object"
           },
           "retratos": {
+            "additionalProperties": true,
             "title": "Retratos",
             "type": "object"
           }
@@ -8243,9 +8261,6 @@
           },
           "status": {
             "const": "ok",
-            "enum": [
-              "ok"
-            ],
             "title": "Status",
             "type": "string"
           }
@@ -8534,6 +8549,7 @@
           },
           "cenas": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Cenas",
@@ -8794,6 +8810,7 @@
         "description": "Ajustes de RASCUNHO — nada disto e gravado.",
         "properties": {
           "ajustes_palco": {
+            "additionalProperties": true,
             "default": {},
             "title": "Ajustes Palco",
             "type": "object"
@@ -8801,6 +8818,7 @@
           "palco": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -9546,6 +9564,7 @@
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": true,
                   "type": "object"
                 },
                 "type": "array"
@@ -9585,6 +9604,7 @@
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": true,
                   "type": "object"
                 },
                 "type": "array"
@@ -9610,6 +9630,7 @@
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": true,
                   "type": "object"
                 },
                 "type": "array"
@@ -9638,6 +9659,7 @@
         "properties": {
           "cortes": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Cortes",
@@ -10228,6 +10250,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -12250,6 +12279,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Obter Remotion Active Props Api Cortes Remotion Active Props Get",
                   "type": "object"
                 }
@@ -15351,6 +15381,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Listar Poses Api Mascot Poses Get",
                   "type": "object"
                 }
@@ -15410,6 +15441,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Buscar Pose Api Mascot Poses  Mood  Get",
                   "type": "object"
                 }
@@ -17497,6 +17529,7 @@
           "content": {
             "application/json": {
               "schema": {
+                "additionalProperties": true,
                 "title": "Body",
                 "type": "object"
               }

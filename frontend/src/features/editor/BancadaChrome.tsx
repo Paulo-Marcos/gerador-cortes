@@ -305,6 +305,7 @@ export function BancadaChrome({
           projetoId={projetoId}
           status={statusDe(metaDoCorte) ?? statusMinimo(metaDoCorte)}
           statusCorte={metaDoCorte.status}
+          corte={metaDoCorte}
           aoFechar={() => setMetaDoCorte(null)}
         />
       ) : null}

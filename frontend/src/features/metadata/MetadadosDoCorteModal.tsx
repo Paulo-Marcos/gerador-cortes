@@ -12,6 +12,7 @@ import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { montarTira } from '@/upgrade/tiraDoCorte';
 import { TiraDoCorteAp } from '@/upgrade/TiraDoCorteAp';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
+import { MetadataCard } from '@/features/metadata/MetadataCard';
 
 // ─────────────────────────────────────────────────────────────────
 // D-746 · RODADA 3 · consultar o metadado de um corte sem sair da lista.
@@ -19,6 +20,10 @@ import { statusExportPendente } from '@/features/publicacao/statusExport';
 // O botão de metadados da linha fazia `navigate('/metadados')`: conferir
 // o título de UM corte custava a lista inteira e a posição de rolagem.
 // Consultar não é navegar — o modal mostra, e só o "Editar" leva à tela.
+//
+// D-767: com o corte em mãos, o modal traz o editor inteiro da tela de
+// metadados (gerar título/prompt, escolher sugestão, colar/subir capa) — o
+// operador trabalha sem perder a lista. Sem o corte, cai na consulta.
 // ─────────────────────────────────────────────────────────────────
 
 function Campo({ rotulo, valor, alto = false }: { rotulo: string; valor: string; alto?: boolean }) {
@@ -60,9 +65,11 @@ export function MetadadosDoCorteModal({
   projetoId,
   status,
   statusCorte,
+  corte,
   aoFechar,
 }: {
   projetoId: string;
+  corte?: Corte;
   status: StatusExportCorte;
   statusCorte?: string;
   aoFechar: () => void;
@@ -74,6 +81,7 @@ export function MetadadosDoCorteModal({
   const meta = useQuery({
     queryKey: metadataKey(status.corte_id),
     queryFn: () => metadadosApi.obterMetadado(status.corte_id),
+    enabled: !corte,
   });
 
   useEffect(() => {
@@ -132,7 +140,7 @@ export function MetadadosDoCorteModal({
         style={{
           display: 'flex',
           flexDirection: 'column',
-          width: 'min(720px, 100%)',
+          width: corte ? 'min(1100px, 100%)' : 'min(720px, 100%)',
           maxHeight: 'calc(100dvh - 48px)',
           overflow: 'hidden',
           // Sólido: é um formulário de leitura, e o vidro deixava a lista de
@@ -152,11 +160,20 @@ export function MetadadosDoCorteModal({
         >
           <Icon name="tags" size={15} style={{ color: 'var(--accent)', flex: 'none' }} />
           <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-            <strong style={{ fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <strong
+              style={{
+                fontSize: 13.5,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
               #{status.numero} · {status.titulo}
             </strong>
             <span style={{ fontSize: 11, color: 'var(--mute)' }}>
-              metadados do corte — só consulta; a lista atrás fica onde estava
+              {corte
+                ? 'metadados do corte — edite aqui; a lista atrás fica onde estava'
+                : 'metadados do corte — só consulta; a lista atrás fica onde estava'}
             </span>
           </span>
           <button
@@ -170,60 +187,78 @@ export function MetadadosDoCorteModal({
           </button>
         </header>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 216px',
-            gap: 14,
-            padding: 14,
-            overflow: 'auto',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-            {meta.isLoading ? (
-              <span style={{ color: 'var(--mute)', fontSize: 12.5 }}>Carregando…</span>
-            ) : meta.isError ? (
-              <span style={{ color: 'var(--err)', fontSize: 12.5 }}>
-                Não foi possível ler os metadados deste corte.
-              </span>
-            ) : (
-              <>
-                <Campo rotulo="Título" valor={m?.titulo_youtube ?? ''} />
-                <Campo rotulo="Texto da capa" valor={m?.texto_capa ?? ''} />
-                <Campo rotulo="Descrição" valor={m?.descricao_youtube ?? ''} alto />
-                <Campo rotulo="Tags" valor={(m?.tags_youtube ?? []).join(', ')} />
-                <Campo rotulo="Prompt da capa" valor={prompt} alto />
-              </>
-            )}
+        {corte ? (
+          <div style={{ padding: 14, overflow: 'auto' }}>
+            <MetadataCard
+              projetoId={projetoId}
+              cut={corte}
+              status={status}
+              variant="modal"
+              onRequestClose={aoFechar}
+            />
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <MolduraDeVideo mat={6} proporcao="16/9">
-              {capa && !capaErro ? (
-                <img
-                  src={capa}
-                  alt=""
-                  onError={() => setCapaErro(true)}
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <span
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: 11,
-                    color: 'var(--dim)',
-                  }}
-                >
-                  sem capa
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr) 216px',
+              gap: 14,
+              padding: 14,
+              overflow: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+              {meta.isLoading ? (
+                <span style={{ color: 'var(--mute)', fontSize: 12.5 }}>Carregando…</span>
+              ) : meta.isError ? (
+                <span style={{ color: 'var(--err)', fontSize: 12.5 }}>
+                  Não foi possível ler os metadados deste corte.
                 </span>
+              ) : (
+                <>
+                  <Campo rotulo="Título" valor={m?.titulo_youtube ?? ''} />
+                  <Campo rotulo="Texto da capa" valor={m?.texto_capa ?? ''} />
+                  <Campo rotulo="Descrição" valor={m?.descricao_youtube ?? ''} alto />
+                  <Campo rotulo="Tags" valor={(m?.tags_youtube ?? []).join(', ')} />
+                  <Campo rotulo="Prompt da capa" valor={prompt} alto />
+                </>
               )}
-            </MolduraDeVideo>
-            <TiraDoCorteAp tira={montarTira(status, statusCorte)} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <MolduraDeVideo mat={6} proporcao="16/9">
+                {capa && !capaErro ? (
+                  <img
+                    src={capa}
+                    alt=""
+                    onError={() => setCapaErro(true)}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                ) : (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'grid',
+                      placeItems: 'center',
+                      fontSize: 11,
+                      color: 'var(--dim)',
+                    }}
+                  >
+                    sem capa
+                  </span>
+                )}
+              </MolduraDeVideo>
+              <TiraDoCorteAp tira={montarTira(status, statusCorte)} />
+            </div>
           </div>
-        </div>
+        )}
 
         <footer
           style={{
@@ -235,23 +270,25 @@ export function MetadadosDoCorteModal({
             borderTop: '1px solid var(--line2)',
           }}
         >
-          <button
-            type="button"
-            className="btn"
-            onClick={() => void copiar()}
-            disabled={!prompt}
-            title={prompt ? 'Copiar o prompt da capa' : 'Este corte ainda não tem prompt de capa'}
-          >
-            <Icon name={copiado ? 'check' : 'copy'} size={12} />
-            {copiado ? 'Copiado' : 'Copiar prompt'}
-          </button>
+          {corte ? null : (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void copiar()}
+              disabled={!prompt}
+              title={prompt ? 'Copiar o prompt da capa' : 'Este corte ainda não tem prompt de capa'}
+            >
+              <Icon name={copiado ? 'check' : 'copy'} size={12} />
+              {copiado ? 'Copiado' : 'Copiar prompt'}
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-pri"
             onClick={() => navigate(`/projetos/${projetoId}/metadados`)}
           >
             <Icon name="tags" size={12} />
-            Editar na tela de metadados
+            {corte ? 'Abrir a tela de metadados' : 'Editar na tela de metadados'}
           </button>
         </footer>
       </div>

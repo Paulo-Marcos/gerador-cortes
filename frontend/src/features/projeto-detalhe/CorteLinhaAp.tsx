@@ -394,6 +394,7 @@ export function CorteLinhaAp({
           projetoId={projetoId}
           status={status}
           statusCorte={corte?.status}
+          corte={corte}
           aoFechar={fecharMeta}
         />
       ) : null}

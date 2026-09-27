@@ -1,7 +1,7 @@
 """O pedaço de JSON Schema que os contratos do protocolo usam (D-725).
 
 Os contratos de video-renderer/protocol/ (cena e job) usam só isto: tipos
-básicos, enum, const, anyOf, obrigatórios, chaves fechadas, tamanho mínimo e
+básicos (um só ou em lista), enum, const, anyOf, obrigatórios, chaves fechadas, tamanho mínimo e
 listas. Validar esse pedaço aqui evita uma dependência nova só para teste.
 """
 
@@ -19,6 +19,10 @@ def violacoes(valor, schema: dict, caminho: str = "valor") -> list[str]:
     if "enum" in schema:
         return [] if valor in schema["enum"] else [f"{caminho}: {valor!r} fora de {schema['enum']}"]
     tipo = schema.get("type")
+    if isinstance(tipo, list):
+        # `type` com lista (["number", "string"]) é o `anyOf` de tipos simples.
+        opcoes = [{**schema, "type": t} for t in tipo]
+        return violacoes(valor, {"anyOf": opcoes}, caminho)
     if tipo and (not isinstance(valor, _TIPOS_JSON[tipo]) or isinstance(valor, bool)):
         return [f"{caminho}: esperava {tipo}, veio {type(valor).__name__}"]
     erros: list[str] = []
