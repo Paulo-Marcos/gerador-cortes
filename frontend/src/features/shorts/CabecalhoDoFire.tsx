@@ -1,26 +1,10 @@
-import { Link } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Captions,
-  CheckCheck,
-  Clapperboard,
-  Gauge,
-  LayoutGrid,
-  LayoutTemplate,
-  Redo2,
-  RotateCcw,
-  Trash2,
-  Undo2,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Captions, CheckCheck, Gauge, LayoutTemplate, Redo2, RotateCcw, Trash2, Undo2 } from 'lucide-react';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
-import { cn, formatarDuracao } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { BotaoDeCluster } from './BotaoDeCluster';
 import { rotuloDescarteBruto } from './descarteBruto';
-import { SeloDeGravacao } from './SeloDeGravacao';
 import type { FireComBruto } from './shortsApi';
 import type { EdicaoDoShort } from './useEdicaoDoShort';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 // D-479: o operador precisa saber a QUALIDADE do que está lendo. A auto-legenda
 // erra grafia, e erro de grafia num short vira o produto — o texto é o conteúdo.
@@ -30,8 +14,6 @@ const ROTULO_FONTE: Record<string, string> = {
 };
 
 interface Props {
-  workbench: boolean;
-  corteId: string;
   fire: FireComBruto | undefined;
   /** O caminho único de escrita — aqui só para o selo e o par desfazer/refazer. */
   edicao: EdicaoDoShort;
@@ -83,11 +65,8 @@ export function SeloFinalizado() {
 // CASCA (cabecalho de tela e trilha). O que sobra aqui e a barra de ferramentas
 // — os tres grupos de o-que-vejo / o-que-fiz / para-onde-vou — sem borda nem
 // fundo proprios, porque ja mora dentro do conteudo.
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function CabecalhoDoFire({
-  workbench,
-  corteId,
   fire,
   edicao,
   temPalco,
@@ -108,43 +87,12 @@ export function CabecalhoDoFire({
 }: Props) {
   return (
     <header
-      className={
-        CASCA_NOVA
-          ? 'flex-none pb-3'
-          : cn(
-              'flex-none border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]',
-              workbench ? 'px-4 py-2.5' : 'px-7 py-4',
-            )
-      }
+      className="flex-none pb-3"
     >
       <div className="flex flex-wrap items-center gap-2.5">
-        {CASCA_NOVA ? null : (
-        <>
-        <Link
-          to="/shorts"
-          className="inline-flex items-center gap-1 rounded-[7px] px-1.5 py-1 text-[12px] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
-        >
-          <ArrowLeft size={14} aria-hidden />
-          Shorts
-        </Link>
-        <Clapperboard size={16} className="text-[var(--wb-accent)]" aria-hidden />
-        <div className="min-w-0">
-          <h1 className="truncate text-[14.5px] font-extrabold leading-tight">
-            {fire?.titulo || 'Candidatos do Fire'}
-          </h1>
-          {fire && (
-            <p className="truncate text-[11.5px] text-[var(--wb-text-mute)]">
-              {fire.projeto_titulo} · bruto de {formatarDuracao(fire.duracao_seg)}
-            </p>
-          )}
-        </div>
-        </>
-        )}
         {finalizado && <SeloFinalizado />}
 
         <div className="flex-1" />
-
-        {CASCA_NOVA ? null : <SeloDeGravacao estado={edicao.estado} />}
 
         {/* ── o que eu vejo ─────────────────────────────────────────── */}
         <div className="flex items-center gap-0.5 rounded-[8px] bg-[var(--wb-bg-inset)] p-0.5">
@@ -225,17 +173,6 @@ export function CabecalhoDoFire({
         {/* ── para onde eu vou ──────────────────────────────────────── */}
         {/* Na casca nova a ida para a prateleira mora no cabecalho da tela;
             repeti-la aqui daria dois botoes para o mesmo lugar lado a lado. */}
-        {CASCA_NOVA ? null : (
-          <Button variant="secondary" size="sm" asChild>
-            <Link
-              to={`/shorts/${corteId}/workspace`}
-              title="A prateleira dos aprovados: prévia lado a lado e publicação em massa"
-            >
-              <LayoutGrid />
-              Workspace
-            </Link>
-          </Button>
-        )}
 
         {fire && (
           <OverflowMenu

@@ -6,7 +6,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import type { ShortcutBinding } from '@/features/editor/shortcuts';
 import {
   assertNoShortcutConflicts,
@@ -21,7 +20,6 @@ import {
   type ShortcutScreen,
 } from '@/features/editor/shortcutsRegistry';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 const TELAS: Array<{ id: ShortcutScreen | 'todas'; rotulo: string }> = [
   { id: 'todas', rotulo: 'Todas' },
@@ -69,8 +67,6 @@ function overrideDoEvento(event: KeyboardEvent): KeyOverride | null {
   return { key: event.key, mod };
 }
 
-const CASCA_NOVA = isUpgradeShellEnabled();
-
 export function AtalhosPage() {
   const [busca, setBusca] = useState('');
   const [tela, setTela] = useState<ShortcutScreen | 'todas'>('todas');
@@ -78,7 +74,6 @@ export function AtalhosPage() {
   const [capturando, setCapturando] = useState<ShortcutId | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [pendenteAplicar, setPendenteAplicar] = useState(false);
-  const workbench = isWorkbenchEnabled();
 
   const specs = useMemo(() => effectiveShortcutSpecs(overlay), [overlay]);
 
@@ -150,22 +145,11 @@ export function AtalhosPage() {
     <div
       className={cn(
         'flex min-h-0 flex-col gap-3 overflow-hidden text-[var(--wb-text)]',
-        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)] p-4',
-        CASCA_NOVA || workbench ? 'h-full' : 'min-h-screen',
+        'h-full',
+        'h-full',
       )}
     >
       <header className="flex flex-none flex-wrap items-center gap-2">
-        {CASCA_NOVA ? null : (
-          <>
-            <span className="text-[16px]" aria-hidden>
-              ⌨
-            </span>
-            <h1 className="text-[15px] font-extrabold">Atalhos</h1>
-            <span className="text-xs text-[var(--wb-text-mute)]">
-              clique em ✎ e pressione a nova combinação (Esc cancela)
-            </span>
-          </>
-        )}
         <div className="flex-1" />
         <div className="flex gap-1.5">
           {TELAS.map(({ id, rotulo }) => (

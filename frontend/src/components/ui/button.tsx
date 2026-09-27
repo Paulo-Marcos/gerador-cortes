@@ -2,13 +2,11 @@ import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 // D-599: com a casca nova o botão passa a ser o `.btn` do handoff — 30 px,
 // canto de 4 px, superfície de vidro. Não é troca de cor: é o MESMO botão
 // que a tela de Componentes mostra, então tudo que usa `<Button>` (e é
 // quase tudo) adota o padrão sem reescrever chamada por chamada.
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 const AP_VARIANTS: Record<string, string> = {
   default: 'btn btn-pri',
@@ -64,15 +62,13 @@ export interface ButtonProps
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
-    const classes = CASCA_NOVA
-      ? cn(
+    const classes = cn(
           AP_VARIANTS[variant ?? 'default'] ?? AP_VARIANTS.default,
           AP_SIZES[size ?? 'default'],
           // `[&_svg]` continua: o tamanho do glifo é o mesmo nos dois mundos.
           '[&_svg]:size-[13px] [&_svg]:shrink-0',
           className,
-        )
-      : cn(buttonVariants({ variant, size, className }));
+        );
 
     return <Comp className={classes} ref={ref} {...props} />;
   },

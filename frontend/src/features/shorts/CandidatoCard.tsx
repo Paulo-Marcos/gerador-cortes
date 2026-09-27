@@ -12,10 +12,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
-import { StatusChip } from '@/components/ui/status-chip';
 import { cn } from '@/lib/utils';
 import { SeloDeEstado, type TomDoSelo } from '@/upgrade/SeloDeEstado';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import { APARENCIA, notaVisivel, planoDeAcoes, tomDaNota, type AcaoId } from './estadoDoCandidato';
 import type { PalcoShortPreset } from '@/types/presets';
 import { LinhaDeAjuste } from './LinhaDeAjuste';
@@ -81,7 +79,6 @@ interface Props {
 }
 
 // Lida uma vez: casca e tela nunca podem ficar em versões diferentes.
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 /** D-746: o estado do short no contrato do selo — "aprovado" saía na cor do
  *  acento, a mesma dos botões. */
@@ -302,11 +299,7 @@ export function CandidatoCard({
         </div>
 
         <div className="flex flex-none flex-col items-end gap-1">
-          {CASCA_NOVA ? (
-            <SeloDeEstado tom={TOM_DO_SHORT[short.status] ?? 'inerte'}>{aparencia.rotulo}</SeloDeEstado>
-          ) : (
-            <StatusChip label={aparencia.rotulo} tone={aparencia.tom} />
-          )}
+          <SeloDeEstado tom={TOM_DO_SHORT[short.status] ?? 'inerte'}>{aparencia.rotulo}</SeloDeEstado>
           {short.origem === 'manual' && (
             <span
               className="font-code text-[9.5px] uppercase tracking-wide text-[var(--wb-text-mute)]"

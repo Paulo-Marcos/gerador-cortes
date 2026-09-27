@@ -9,37 +9,15 @@ import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { useGerarMetadadosClaude, useGerarTrechosClaude, useStatusMetadadosClaude, useTrechosClaudeEmAndamento } from '@/features/editor/useGeracoesDaIa';
 import { audioProxyUrl, waveformPeaksUrl } from '@/lib/api';
 import { cortesApi } from '@/features/editor/api/cortes';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/toaster';
-import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
-import { Tooltip } from '@/components/ui/tooltip';
-import {
-  Clock,
-  FolderOpen,
-  Headphones,
-  Info,
-  Keyboard,
-  Loader2,
-  RefreshCw,
-  Save,
-  Scissors,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { Corte, Desvio } from '@/types/models';
 import { EditorFase1 } from './fase1/EditorFase1';
-import { PlayerPanel, type PlayerHandle } from './fase1/PlayerPanel';
-import { TimelinePanel } from './fase1/TimelinePanel';
-import { RightTabsPanel } from './fase1/RightTabsPanel';
+import { type PlayerHandle } from './fase1/PlayerPanel';
 import { TrechosManualModal } from './fase1/TrechosManualModal';
 import { BrutoContextStrip } from './fase1/BrutoContextStrip';
-import type { EstadoLipSync } from '@/hooks/useLipSyncPreview';
-import { AudioSyncControl, MAX_MS, MIN_MS, STEP_FINO } from './fase1/AudioSyncControl';
-import { BrutoStepsDropdown } from './BrutoStepsDropdown';
-import { PanelShell } from '@/components/workbench/PanelShell';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
-import { WorkbenchCutsPanel } from './WorkbenchCutsPanel';
-import { PlayerCap, WorkbenchEditorLayout } from './WorkbenchEditorLayout';
+import { MAX_MS, MIN_MS, STEP_FINO } from './fase1/AudioSyncControl';
 import {
   OPCOES_REGERAR_VAZIAS,
   planejarRegeracaoBruto,
@@ -53,9 +31,6 @@ import { useEditHistory } from './useEditHistory';
 import { calcularDuracaoLiquida, hmsParaSeg, segParaHms, segParaMmSs } from './timeUtils';
 import { selectDesvioIdxByTime } from './fase1/desvioUtils';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
-import { UnifiedSidebar } from './UnifiedSidebar';
-import { CommonTopBar, StatusToggleRow, type MoreMenuItem } from './CommonTopBar';
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { AvaliacaoCorteModal } from './avaliacao/AvaliacaoCorteModal';
 import {
@@ -74,7 +49,6 @@ import { ORIGEM_API } from '@/lib/apiBase';
 // barra de decisao e a CASCA — o editor apenas a alimenta (BancadaChrome).
 // Lido uma vez, no modulo, pela mesma razao do router: casca e tela nunca
 // podem ficar em versoes diferentes dentro da mesma sessao.
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 const APROVADO_STATUS_SET = new Set<Corte['status']>(['aprovado', 'processado']);
 
@@ -99,7 +73,6 @@ function findNextCorte(cortes: Corte[], corte: Corte): Corte | null {
   );
 }
 
-
 const SPEED_MIN = 0.25;
 const SPEED_MAX = 4;
 // D-575: os dois polos da alternancia de velocidade. 1x e onde se confere o
@@ -112,46 +85,6 @@ const VELOCIDADE_TRABALHO_INICIAL = 0.75;
 function appendQueryParams(url: string, params: Record<string, string>): string {
   const search = new URLSearchParams(params).toString();
   return `${url}${url.includes('?') ? '&' : '?'}${search}`;
-}
-
-// Botão dentro do cluster de ferramentas do Bruto: sem borda e sem fundo
-// próprios (quem tem é o cluster), tamanho igual ao dos vizinhos. A cor do
-// glifo vem de fora, por ferramenta.
-const FERRAMENTA_CLASS =
-  'flex aspect-square min-w-[24px] flex-[0_1_34px] items-center justify-center rounded-[6px] transition-colors hover:bg-[var(--wb-bg-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-40';
-
-// D-410: par rótulo/valor da faixa acima do vídeo. Rótulo miúdo em caixa alta
-// e valor em tabular-nums, para os números não dançarem enquanto o player anda.
-const TOM_FAIXA_VIDEO = {
-  padrao: 'text-[var(--wb-text)]',
-  ok: 'text-[var(--wb-ok)]',
-  accent: 'text-[var(--wb-accent)]',
-} as const;
-
-function CampoFaixaVideo({
-  rotulo,
-  valor,
-  tom = 'padrao',
-  titulo,
-}: {
-  rotulo: string;
-  valor: string;
-  tom?: keyof typeof TOM_FAIXA_VIDEO;
-  titulo?: string;
-}) {
-  return (
-    <span className="flex flex-none items-baseline gap-1.5" title={titulo}>
-      <span className="font-code text-[8.5px] font-bold uppercase tracking-[0.12em] text-[var(--wb-text-dim)]">
-        {rotulo}
-      </span>
-      <span
-        className={cn('font-code text-[11px] font-semibold', TOM_FAIXA_VIDEO[tom])}
-        style={{ fontVariantNumeric: 'tabular-nums' }}
-      >
-        {valor}
-      </span>
-    </span>
-  );
 }
 
 export function EditorPage() {
@@ -186,26 +119,6 @@ export function EditorPage() {
   // clique que dispara a 1ª geração do bruto.
   const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
   const [intervaloAberto, setIntervaloAberto] = useState(false);
-  // AUDITORIA-v2 §2/§5/§6 (CP2): toggles da toolbar do Workbench. Começam
-  // FECHADOS — Sincronia/Tempos ficam ocultos por padrão (só o estado do
-  // ícone muda nesta etapa; a próxima liga a visibilidade de
-  // BrutoContextStrip/AudioSyncControl a partir destes mesmos booleans).
-  const [temposAbertos, setTemposAbertos] = useState(false);
-  const [sincroniaAberta, setSincroniaAberta] = useState(false);
-  // D-601: preview ao vivo do lip-sync. Mora aqui, e não no PlayerPanel, porque
-  // no Workbench o interruptor (🎧 da faixa) e o <video> que ele muta são irmãos
-  // — só um pai em comum enxerga os dois. O preview só vale com a faixa ABERTA
-  // (derivado abaixo): vídeo mudo com o interruptor fora de vista — fechado pelo
-  // X, pelo ícone da toolbar ou pelo atalho H — é a armadilha que criou o bug.
-  const [sincroniaPreview, setSincroniaPreview] = useState(false);
-  // "ativo" = o operador ligou o fone E a faixa está à vista.
-  const previewAtivo = sincroniaPreview && sincroniaAberta;
-  // Decodificar o áudio do corte leva ~7s; sem contar isso, o clique no fone
-  // parece não ter efeito — a mesma sensação que abriu a D-601.
-  const [estadoPreview, setEstadoPreview] = useState<EstadoLipSync>('desligado');
-  // Painel "passos do bruto" (BrutoStepsDropdown), agora aberto pelo ícone
-  // ⟳ da toolbar (controlado por fora — ver CP2).
-  const [brutoDropdownOpen, setBrutoDropdownOpen] = useState(false);
   // Trecho comeca DESTRAVADO por default (decisao de produto): usuario pode
   // gerenciar tamanho dos trechos na waveform sem precisar destravar manualmente.
   // Trocar de corte reseta para destravado (caso o usuario tenha travado e mudado).
@@ -738,8 +651,6 @@ export function EditorPage() {
       shortcutFromRegistry('bruto.smartPlay', () => setSmartPlay((v) => !v)),
       shortcutFromRegistry('bruto.sincroniaNudgeMenos', () => nudgeSincronia(-STEP_FINO)),
       shortcutFromRegistry('bruto.sincroniaNudgeMais', () => nudgeSincronia(STEP_FINO)),
-      shortcutFromRegistry('bruto.alternarTempos', () => setTemposAbertos((v) => !v)),
-      shortcutFromRegistry('bruto.alternarSincronia', () => setSincroniaAberta((v) => !v)),
       shortcutFromRegistry('bruto.undo', editHistory.undo),
       shortcutFromRegistry('bruto.redo', editHistory.redo),
       shortcutFromRegistry('bruto.salvar', salvarMudancas),
@@ -832,23 +743,6 @@ export function EditorPage() {
     setIntervaloAberto(false);
   }
 
-  // D-746: saiu o "Atualizar pos-producao", que estava sempre desabilitado —
-  // item de menu que nunca funciona ensina a desconfiar do menu inteiro.
-  const moreMenuItems: MoreMenuItem[] = [
-    {
-      icon: FolderOpen,
-      label: 'Abrir pasta',
-      kbd: 'Ctrl+O',
-      disabled: abrirPasta.isPending,
-      onClick: () => abrirPasta.mutate(corteId),
-    },
-    {
-      icon: Keyboard,
-      label: 'Atalhos',
-      kbd: '?',
-      onClick: () => setShortcutsOpen(true),
-    },
-  ];
   const exportStatuses = exportStatusQ.data?.cortes ?? [];
 
   const editorModals = (
@@ -883,519 +777,52 @@ export function EditorPage() {
   // contexto → timeline flex:1) + painel direito retrátil. A lógica acima
   // (hooks, atalhos, dirty, waveform window) é EXATAMENTE a mesma do
   // layout legado — só o container muda.
-  if (isWorkbenchEnabled()) {
-    return (
-      <>
-        <WorkbenchEditorLayout
-          panelIds={['cuts', 'right']}
-          leftPanel={
-            <WorkbenchCutsPanel
-              projetoId={projetoId}
-              cortes={cortes}
-              corteAtivoId={corteUI.id}
-              exportStatus={exportStatuses}
-              getCortePath={(item) =>
-                resolveCorteStagePath({
-                  projetoId,
-                  corte: item,
-                  status: exportStatuses.find((status) => status.corte_id === item.id),
-                })
-              }
-              getCurrentTime={() => playerRef.current?.getCurrentTime() ?? currentTime}
-            />
-          }
-          rightPanel={
-            <PanelShell id="right" side="right" title="TRECHOS · TRANSCRIÇÃO">
-              <div className="min-h-0 flex-1 px-1.5 pb-1.5">
-                <RightTabsPanel
-                  variant="workbench"
-                  corteId={corteUI.id}
-                  hintsThumbnail={corteUI.hints_thumbnail}
-                  desvios={corteUI.desvios ?? []}
-                  selectedDesvioIdx={selectedDesvioIdx}
-                  onSeek={onSeekTimeline}
-                  onAdicionarDesvio={onAdicionarDesvio}
-                  onRemoverDesvio={onRemoverDesvio}
-                  onGerarManual={() => setTrechosManualOpen(true)}
-                  onGerarTrechosIA={handleGerarTrechosIA}
-                  pendingTrechos={{
-                    adicionando: adicionarDesvio.isPending,
-                    removendo: removerDesvio.isPending,
-                    claude: trechosClaudePendente,
-                  }}
-                  transcricao={corteUI.transcricao_corte}
-                  currentTime={currentTime}
-                  onAtualizarTranscricao={() => sincTrans.mutate()}
-                  transcricaoAtualizando={sincTrans.isPending}
-                />
-              </div>
-            </PanelShell>
-          }
-        >
-          {/* Toolbar do Bruto (AUDITORIA-v2 §2/§3, CP2/CP3): veredito em
-              ícones (reaproveita StatusToggleRow, só muda a apresentação) +
-              regerar/pasta/tempos/sincronia/info + chip do vídeo original +
-              pílula Salvar flutuante (último filho flex — reserva a própria
-              largura; NÃO é position:absolute, nada desliza por baixo). */}
-          <div className="flex flex-none items-center gap-1.5">
-            <StatusToggleRow
-              corte={corteUI}
-              onAprovar={toggleAprovado}
-              onRejeitar={excluirCorte}
-              onToggleFire={() => toggleFire.mutate()}
-              onToggleLeitura={() => toggleLeitura.mutate(corteUI)}
-              onUpdateLeitura={(patch) =>
-                atualizarCorte.mutate(patch, {
-                  onSuccess: () => qc.invalidateQueries({ queryKey: ['metadado', corteId] }),
-                })
-              }
-              pendingFlags={{
-                aprovando: atualizarCorte.isPending,
-                rejeitando: atualizarCorte.isPending,
-                fire: toggleFire.isPending,
-                leitura: toggleLeitura.isPending,
-              }}
-              iconOnly
-            />
-
-            <div className="h-6 w-px flex-none bg-[var(--wb-border)]" aria-hidden />
-
-            {/* Cluster de ferramentas do corte: UM fundo/borda para o grupo
-                inteiro (cada botão era uma caixa com borda própria, e a do
-                "regerar" ainda destoava por causa do wrapper do dropdown).
-                Cor fica só no glifo — identidade sem o peso de um chip cheio. */}
-            <div className="inline-flex flex-none items-center gap-0.5 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-[3px]">
-              <div className="relative">
-                <Tooltip
-                  label={brutoPronto ? 'Regerar bruto (Ctrl+G)' : 'Gerar bruto (Ctrl+G)'}
-                  side="bottom"
-                >
-                  <button
-                    type="button"
-                    aria-label={brutoPronto ? 'Regerar bruto' : 'Gerar bruto'}
-                    className={cn(FERRAMENTA_CLASS, 'text-[var(--wb-accent)]')}
-                    onClick={() => {
-                      // brutoPronto: abre o dropdown p/ escolher o que também
-                      // refazer (mesmo handleRegerarBruto de sempre). 1ª geração
-                      // não tem opt-ins — dispara direto (mesmo Ctrl+G/botão de
-                      // sempre): handleGerarBrutoPrincipal.
-                      if (brutoPronto) setBrutoDropdownOpen((v) => !v);
-                      else handleGerarBrutoPrincipal();
-                    }}
-                    disabled={brutoBusy}
-                  >
-                    {brutoBusy ? (
-                      <Loader2 size={15} className="animate-spin" aria-hidden />
-                    ) : (
-                      <RefreshCw size={15} aria-hidden />
-                    )}
-                  </button>
-                </Tooltip>
-                {brutoPronto && (
-                  <BrutoStepsDropdown
-                    corteId={corteId}
-                    ativo={brutoBusy}
-                    metadadosStatus={metaClaudeStatus}
-                    variant="outline"
-                    brutoPronto={brutoPronto}
-                    onRegerar={brutoBusy ? undefined : handleRegerarBruto}
-                    open={brutoDropdownOpen}
-                    onOpenChange={setBrutoDropdownOpen}
-                    hideTrigger
-                  />
-                )}
-              </div>
-
-              <Tooltip label="Abrir pasta (Ctrl+O)" side="bottom">
-                <button
-                  type="button"
-                  aria-label="Abrir pasta do corte"
-                  className={cn(FERRAMENTA_CLASS, 'text-[var(--wb-warn)]')}
-                  onClick={() => abrirPasta.mutate(corteId)}
-                  disabled={abrirPasta.isPending}
-                >
-                  <FolderOpen size={14} aria-hidden />
-                </button>
-              </Tooltip>
-
-              {/* D-408: a tecla entra no rotulo (como "Regerar bruto (Ctrl+G)"
-                  e "Abrir pasta (Ctrl+O)" ao lado) — atalho que so vive no
-                  registro nao e descoberto por ninguem. */}
-              <Tooltip label="Tempos do corte (T)" side="bottom">
-                <button
-                  type="button"
-                  aria-label="Alternar tempos do corte"
-                  aria-pressed={temposAbertos}
-                  className={cn(
-                    FERRAMENTA_CLASS,
-                    temposAbertos
-                      ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-                      : 'text-[var(--wb-info)]',
-                  )}
-                  onClick={() => setTemposAbertos((v) => !v)}
-                >
-                  <Clock size={14} aria-hidden />
-                </button>
-              </Tooltip>
-
-              <Tooltip label="Sincronia do áudio (H)" side="bottom">
-                <button
-                  type="button"
-                  aria-label="Alternar sincronia do áudio"
-                  aria-pressed={sincroniaAberta}
-                  className={cn(
-                    FERRAMENTA_CLASS,
-                    sincroniaAberta
-                      ? 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-                      : 'text-[var(--wb-violet)]',
-                  )}
-                  onClick={() => setSincroniaAberta((v) => !v)}
-                >
-                  <Headphones size={14} aria-hidden />
-                </button>
-              </Tooltip>
-            </div>
-
-            {/* ℹ️ — SÓ tooltip via atributo title (AUDITORIA-v2 §2): sem
-                onClick, sem modal. O atalho continua na página Atalhos. */}
-            <span
-              title="Aprovar A · Rejeitar R · Fire F · Tempos T · Sincronia H · In/Out [ ] · Navegar ←→ 5s · Desfazer Ctrl+Z"
-              className="flex aspect-square min-w-[24px] flex-[0_1_34px] cursor-help items-center justify-center text-[var(--wb-text-dim)]"
-            >
-              <Info size={14} aria-hidden />
-            </span>
-
-            <span className="min-w-0 flex-[0_1_auto] overflow-hidden whitespace-nowrap text-ellipsis rounded-[5px] bg-[var(--wb-bg-inset)] px-2 py-0.5 font-code text-[8.5px] font-bold uppercase text-[var(--wb-text-mute)]">
-              Vídeo original · 4K
-            </span>
-            {/* D-410: "corte de MM:SS" saiu daqui — virou o campo Duração da
-                faixa acima do vídeo, ao lado da líquida. Repetir na toolbar só
-                gastava largura, que já faltava em janelas estreitas. */}
-
-            <div className="min-w-2 flex-1" />
-
-            {/* D-407: o Salvar era permanente e so ficava `disabled` quando
-                limpo — ocupava a ponta da toolbar sem dizer nada. Agora so
-                existe enquanto ha o que salvar (ou enquanto salva, para o
-                clique nao sumir sob o cursor) e usa a cor de alerta, virando
-                o aviso de "corte sujo" em vez de mais um botao morto. Sem
-                salto de layout: quem cede o espaco e o espacador flex-1 ao
-                lado, entao nada da toolbar se desloca. */}
-            {(isDirty || atualizarCorte.isPending) && (
-              <Tooltip label="Salvar (Ctrl+S)" side="top">
-                <button
-                  type="button"
-                  onClick={salvarMudancas}
-                  disabled={atualizarCorte.isPending}
-                  className="flex flex-none items-center gap-1.5 rounded-lg border border-[var(--wb-warn)] bg-[var(--wb-warn-soft)] px-[11px] py-[7px] shadow-[shadow:var(--wb-shadow)] disabled:pointer-events-none disabled:opacity-60"
-                >
-                  {atualizarCorte.isPending ? (
-                    <Loader2
-                      size={11}
-                      className="animate-spin text-[var(--wb-warn-ink)]"
-                      aria-hidden
-                    />
-                  ) : (
-                    <span className="h-[7px] w-[7px] rounded-full bg-[var(--wb-warn)]" aria-hidden />
-                  )}
-                  <span className="text-[10.5px] font-bold text-[var(--wb-warn-ink)]">Salvar</span>
-                  <span className="font-code text-[9px] font-semibold text-[var(--wb-warn-ink)] opacity-70">
-                    Ctrl+S
-                  </span>
-                </button>
-              </Tooltip>
-            )}
-          </div>
-
-          {/* D-410: faixa de leitura do vídeo. Vem ACIMA do PlayerCap, nunca
-              dentro — pela mesma razão da Sincronia/Tempos (CP5/CP6): dentro
-              ela disputaria altura com o vídeo no teto de 44vh. Reúne o que
-              antes eram chips sobrepostos à imagem (BRUTO, velocidade,
-              intervalo) e acrescenta duração líquida e tempo no corte, que só
-              existiam no painel Tempos. */}
-          <div className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1 rounded-[9px] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-1.5">
-            <span className="flex-none rounded-[5px] bg-[var(--wb-ink)] px-1.5 py-0.5 font-code text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--wb-ink-fg)]">
-              Bruto
-            </span>
-            <CampoFaixaVideo rotulo="Velocidade" valor={`${playbackRate.toFixed(2)}×`} />
-            <CampoFaixaVideo rotulo="Início" valor={segParaHms(corteUI.inicio_seg)} />
-            <CampoFaixaVideo rotulo="Fim" valor={segParaHms(corteUI.fim_seg)} />
-            <CampoFaixaVideo rotulo="Duração" valor={segParaMmSs(durSeg, true)} />
-            <CampoFaixaVideo
-              rotulo="Líquido"
-              valor={segParaMmSs(liquidoSeg, true)}
-              tom="ok"
-              titulo="Duração após remover os trechos marcados"
-            />
-            <CampoFaixaVideo
-              rotulo="No corte"
-              valor={segParaMmSs(Math.max(0, currentTime - corteUI.inicio_seg), true)}
-              tom="accent"
-              titulo="Posição do player contada a partir do início do corte"
-            />
-          </div>
-
-          <PlayerCap>
-            <PlayerPanel
-              ref={playerRef}
-              variant="overlay"
-              posicaoKey={corteId}
-              src={videoOriginal}
-              inicioSeg={corteUI.inicio_seg}
-              fimSeg={corteUI.fim_seg}
-              desvios={corteUI.desvios ?? []}
-              playbackRate={playbackRate}
-              smartPlay={smartPlay}
-              onTimeUpdate={setCurrentTime}
-              audioPreviewSrc={waveformAudio}
-              audioPreviewStartSec={waveformOffsetSec}
-              audioOffsetMs={corteUI.audio_offset_ms ?? 0}
-              onAudioOffsetChange={(ms) => patchDirty({ audio_offset_ms: ms })}
-              previewSync={previewAtivo}
-              onPreviewEstado={setEstadoPreview}
-            />
-          </PlayerCap>
-
-          {/* Sincronia (AUDITORIA-v2 §5, CP5): oculta por padrao, alterna
-              pelo icone 🎧 da toolbar. Fica entre o video e o painel de
-              Tempos — nunca dentro do PlayerCap (senao disputaria altura
-              com o video no teto de 44vh). */}
-          {sincroniaAberta && (
-            <AudioSyncControl
-              variant="workbench"
-              offsetMs={corteUI.audio_offset_ms ?? 0}
-              onChange={(ms) => patchDirty({ audio_offset_ms: ms })}
-              previewEnabled={previewAtivo}
-              onTogglePreview={() => setSincroniaPreview((v) => !v)}
-              canPreview={!!waveformAudio}
-              previewEstado={estadoPreview}
-              onClose={() => setSincroniaAberta(false)}
-            />
-          )}
-
-          {/* Tempos (AUDITORIA-v2 §6, CP6): oculto por padrao, alterna pelo
-              icone 🕑 da toolbar. Hospeda titulo/trechos/Intervalo — o
-              bloco que antes ficava sempre visivel solto no centro. */}
-          {temposAbertos && (
-            <BrutoContextStrip
-              variant="workbench"
-              previous={
-                previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null
-              }
-              next={nextCut ? { numero: nextCut.numero, hms: nextCut.inicio_hms } : null}
-              inicioHms={corteUI.inicio_hms}
-              fimHms={corteUI.fim_hms}
-              inicioSeg={hmsParaSeg(corteUI.inicio_hms)}
-              currentTime={currentTime}
-              durSeg={durSeg}
-              liquidoSeg={liquidoSeg}
-              intervaloAberto={intervaloAberto}
-              onToggleIntervalo={() => setIntervaloAberto((v) => !v)}
-              onAplicarIntervalo={aplicarIntervaloManual}
-              titulo={corteUI.titulo_proposto}
-              onChangeTitulo={(titulo) => patchDirty({ titulo_proposto: titulo })}
-              trechosCount={(corteUI.desvios ?? []).length}
-            />
-          )}
-
-          {/* Os 200px do DE-PARA §3 (quanto mais alto o painel, mais legível a
-              onda) eram um `min-height`, e min-height RÍGIDO nao encolhe: com
-              Tempos e/ou Sincronia abertos numa janela baixa a soma dos irmaos
-              estourava a coluna e a onda vazava por baixo do `overflow-hidden`
-              — media 77px fora em 1600x720 (D-411).
-              Vira `flex: 1 1 200px`: 200px continua sendo a altura PREFERIDA e
-              a onda ainda cresce quando sobra espaco, mas agora e um basis, que
-              o flex pode encolher quando falta. O piso de 110px (cabecalho da
-              timeline + onda ainda legivel) e seguro agora que o PlayerCap
-              tambem encolhe (D-411): sempre ha quem ceda antes de estourar. */}
-          <div className="min-h-[110px] shrink grow basis-[200px]">
-            <TimelinePanel
-              variant="workbench"
-              audioSrc={waveformAudio}
-              waveformPeaksSrc={waveformPeaks}
-              audioOffsetSec={waveformOffsetSec}
-              inicioSeg={corteUI.inicio_seg}
-              fimSeg={corteUI.fim_seg}
-              // D-412: o inicio do proximo corte ja era exibido como numero no
-              // painel Tempos; aqui ele vira marca na onda, onde a invasao do
-              // corte vizinho fica visivel enquanto se arrasta o Out.
-              proximoInicioSeg={nextCut?.inicio_seg}
-              proximoNumero={nextCut?.numero}
-              desvios={corteUI.desvios ?? []}
-              currentTime={currentTime}
-              playbackRate={playbackRate}
-              playerRef={playerRef}
-              onSeek={onSeekTimeline}
-              onSkip={onSkip}
-              onChangeSpeed={onChangeSpeed}
-              onSetInicioAqui={setInicioAtual}
-              onSetFimAqui={setFimAtual}
-              onAtualizarAudioTimeline={() => setWaveformRefreshKey((k) => k + 1)}
-              locked={trechoLocked}
-              onToggleLocked={() => setTrechoLocked((v) => !v)}
-              pointer={pointerMode}
-              onTogglePointer={() => setPointerMode((v) => !v)}
-              smartPlay={smartPlay}
-              onToggleSmartPlay={() => setSmartPlay((v) => !v)}
-              onSelectDesvio={onSelectDesvioByTime}
-              onAdicionarTrechoAqui={adicionarTrechoAqui}
-              onChangeDesvio={onChangeDesvio}
-              onCriarCorteDaSelecao={onCriarCorteDaSelecao}
-              onDividirAqui={onDividirCorteAqui}
-              dividindo={dividirCorte.isPending}
-              onJuntarProximo={onJuntarProximoCorte}
-              juntando={juntarCortes.isPending}
-              onAlternarVelocidade={alternarVelocidade}
-              onGerarBruto={handleGerarBrutoPrincipal}
-              brutoPronto={brutoPronto}
-              brutoStatus={brutoStatusAtual}
-            />
-          </div>
-        </WorkbenchEditorLayout>
-        {editorModals}
-      </>
-    );
-  }
 
   return (
     <>
-      {CASCA_NOVA ? (
-        <BancadaChrome
-          projetoId={projetoId}
-          tituloLive={projeto.data?.titulo_live ?? 'Live'}
-          cortes={cortes}
-          corte={corteUI}
-          exportStatus={exportStatusQ.data?.cortes ?? []}
-          caminhoDoCorte={(item) =>
-            resolveCorteStagePath({
-              projetoId,
-              corte: item,
-              status: exportStatuses.find((status) => status.corte_id === item.id),
-            })
-          }
-          sub={`bruto ${segParaMmSs(durSeg)} · líquido ${segParaMmSs(liquidoSeg)} · ${(corteUI.desvios ?? []).length} trechos`}
-          fire={corteUI.is_fire}
-          sujo={isDirty}
-          salvando={atualizarCorte.isPending}
-          brutoPronto={brutoPronto}
-          brutoOcupado={brutoBusy}
-          onSalvar={salvarMudancas}
-          onGerarBruto={handleGerarBrutoPrincipal}
-          onToggleFire={() => toggleFire.mutate()}
-          fireOcupado={toggleFire.isPending}
-          leitura={{
-            ativo: Boolean(corteUI.is_leitura),
-            autor: corteUI.autor_leitura ?? '',
-            parte: corteUI.parte_leitura ?? 1,
-            ocupado: toggleLeitura.isPending,
-            onAlternar: () => toggleLeitura.mutate(corteUI),
-            // Mesmo caminho do legado: o backend reaplica o prefixo
-            // "Leitura - autor - PT.n |" no título e o metadado é invalidado.
-            onAtualizar: (patch) =>
-              atualizarCorte.mutate(patch, {
-                onSuccess: () => qc.invalidateQueries({ queryKey: ['metadado', corteId] }),
-              }),
-          }}
-          onAprovar={toggleAprovado}
-          onExcluir={excluirCorte}
-        />
-      ) : (
-      <UnifiedSidebar
+      <BancadaChrome
         projetoId={projetoId}
+        tituloLive={projeto.data?.titulo_live ?? 'Live'}
         cortes={cortes}
-        corteAtivoId={corteUI.id}
+        corte={corteUI}
         exportStatus={exportStatusQ.data?.cortes ?? []}
-        activePhase="editor"
-        getCortePath={(item) =>
+        caminhoDoCorte={(item) =>
           resolveCorteStagePath({
             projetoId,
             corte: item,
             status: exportStatuses.find((status) => status.corte_id === item.id),
           })
         }
-        onOpenSettings={() => setSettingsOpen(true)}
-        getCurrentTime={() => playerRef.current?.getCurrentTime() ?? currentTime}
+        sub={`bruto ${segParaMmSs(durSeg)} · líquido ${segParaMmSs(liquidoSeg)} · ${(corteUI.desvios ?? []).length} trechos`}
+        fire={corteUI.is_fire}
+        sujo={isDirty}
+        salvando={atualizarCorte.isPending}
+        brutoPronto={brutoPronto}
+        brutoOcupado={brutoBusy}
+        onSalvar={salvarMudancas}
+        onGerarBruto={handleGerarBrutoPrincipal}
+        onToggleFire={() => toggleFire.mutate()}
+        fireOcupado={toggleFire.isPending}
+        leitura={{
+          ativo: Boolean(corteUI.is_leitura),
+          autor: corteUI.autor_leitura ?? '',
+          parte: corteUI.parte_leitura ?? 1,
+          ocupado: toggleLeitura.isPending,
+          onAlternar: () => toggleLeitura.mutate(corteUI),
+          // Mesmo caminho do legado: o backend reaplica o prefixo
+          // "Leitura - autor - PT.n |" no título e o metadado é invalidado.
+          onAtualizar: (patch) =>
+            atualizarCorte.mutate(patch, {
+              onSuccess: () => qc.invalidateQueries({ queryKey: ['metadado', corteId] }),
+            }),
+        }}
+        onAprovar={toggleAprovado}
+        onExcluir={excluirCorte}
       />
-      )}
 
       <div
-        className={
-          CASCA_NOVA
-            ? 'flex h-full min-h-0 flex-col overflow-hidden'
-            : 'ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)]'
-        }
+        className="flex h-full min-h-0 flex-col overflow-hidden"
       >
-        {CASCA_NOVA ? null : (
-        <CommonTopBar
-          projeto={projeto.data}
-          corte={corteUI}
-          dirty={isDirty}
-          statusToggles={
-            <StatusToggleRow
-              corte={corteUI}
-              onAprovar={toggleAprovado}
-              onRejeitar={excluirCorte}
-              onToggleFire={() => toggleFire.mutate()}
-              onToggleLeitura={() => toggleLeitura.mutate(corteUI)}
-              onUpdateLeitura={(patch) =>
-                atualizarCorte.mutate(patch, {
-                  // Backend reaplica o prefixo "Leitura - ... | " no titulo do
-                  // YouTube quando autor/parte mudam; invalida o metadado p/ a
-                  // UI refletir na hora.
-                  onSuccess: () => qc.invalidateQueries({ queryKey: ['metadado', corteId] }),
-                })
-              }
-              pendingFlags={{
-                aprovando: atualizarCorte.isPending,
-                rejeitando: atualizarCorte.isPending,
-                fire: toggleFire.isPending,
-                leitura: toggleLeitura.isPending,
-              }}
-            />
-          }
-          secondaryAction={
-            <div className="flex items-center">
-              <Tooltip
-                label={brutoPronto ? 'Regerar bruto (Ctrl+G)' : 'Gerar bruto (Ctrl+G)'}
-                side="bottom"
-              >
-                <Button
-                  variant={brutoPronto ? 'outline' : 'default'}
-                  size="sm"
-                  className="rounded-r-none"
-                  onClick={handleGerarBrutoPrincipal}
-                  disabled={brutoBusy}
-                >
-                  {brutoBusy ? <Loader2 className="animate-spin" /> : <Scissors />}
-                  {brutoPronto ? 'Regerar bruto' : 'Gerar bruto'}
-                </Button>
-              </Tooltip>
-              <BrutoStepsDropdown
-                corteId={corteId}
-                ativo={brutoBusy}
-                metadadosStatus={metaClaudeStatus}
-                variant={brutoPronto ? 'outline' : 'default'}
-                brutoPronto={brutoPronto}
-                onRegerar={brutoBusy ? undefined : handleRegerarBruto}
-              />
-            </div>
-          }
-          primaryAction={
-            <Tooltip label="Salvar (Ctrl+S)" side="bottom">
-              <IconButton
-                aria-label="Salvar"
-                title="Salvar (Ctrl+S)"
-                variant={isDirty ? 'accent' : 'outline'}
-                onClick={salvarMudancas}
-                disabled={!isDirty || atualizarCorte.isPending}
-              >
-                {atualizarCorte.isPending ? <Loader2 className="animate-spin" /> : <Save />}
-              </IconButton>
-            </Tooltip>
-          }
-          moreMenuItems={moreMenuItems}
-        />
-        )}
 
         <BrutoContextStrip
           previous={previousCut ? { numero: previousCut.numero, hms: previousCut.fim_hms } : null}

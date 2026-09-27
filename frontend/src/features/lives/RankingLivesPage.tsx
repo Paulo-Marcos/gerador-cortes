@@ -1,32 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Calendar,
-  Clock,
-  Download,
-  Eye,
-  ExternalLink,
-  Heart,
-  Info,
-  Loader2,
-  MessageCircle,
-  RefreshCw,
-  Scale,
-  Sparkles,
-  Trophy,
-  X,
-} from 'lucide-react';
+import { Calendar, Clock, Download, Eye, ExternalLink, Heart, Info, Loader2, MessageCircle, Sparkles, Trophy, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { livesApi, type RankingLive, type RankingLivesResponse } from './api';
 import { RankingEmbasamentoPanel } from './RankingEmbasamentoPanel';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 function formatPublishedAt(iso: string) {
   if (!iso) return 'sem data';
@@ -82,8 +65,6 @@ const COMPONENTE_LABEL: Record<string, string> = {
   recencia: 'Recência',
   vph: 'Momento (v/h)',
 };
-
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function RankingLivesPage() {
   const navigate = useNavigate();
@@ -176,46 +157,10 @@ export function RankingLivesPage() {
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)]',
-        CASCA_NOVA || isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+        'h-full',
+        'h-full',
       )}
     >
-      {CASCA_NOVA ? null : (
-      <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
-        <span className="text-[16px]" aria-hidden>
-          🏆
-        </span>
-        <h1 className="text-[15px] font-extrabold">Ranking de lives</h1>
-        <span className="font-code text-[10px] uppercase tracking-[0.09em] text-[var(--wb-text-dim)]">
-          top {lives.length}
-        </span>
-        <span className="hidden text-xs text-[var(--wb-text-mute)] lg:block">
-          audiência · engajamento · tom dos comentários · recência
-        </span>
-        <div className="flex-1" />
-        {/* Protótipo §Ranking: atalho para os pesos (configurados em /canais). */}
-        <Button asChild variant="outline" size="sm">
-          <Link to="/canais" title="Configurar pesos do ranking (Canais)">
-            <Scale aria-hidden />
-            Pesos do ranking
-          </Link>
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => refreshMutation.mutate()}
-          disabled={refreshMutation.isPending}
-        >
-          {refreshMutation.isPending ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <RefreshCw aria-hidden />
-          )}
-          Atualizar ranking
-        </Button>
-      </header>
-      )}
 
       <main className="grid flex-1 content-start gap-4 overflow-auto p-5">
         <section className="flex flex-wrap items-center gap-3 text-xs text-[var(--wb-text-mute)]">

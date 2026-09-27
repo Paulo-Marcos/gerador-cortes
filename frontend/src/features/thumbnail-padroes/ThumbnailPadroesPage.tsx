@@ -4,23 +4,18 @@
 // o operador validar antes da edição manual da SKILL.md.
 import { useMutation } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { useToast } from '@/components/ui/toaster';
 import { padroesThumbnailApi, type PadroesThumbnailResponse } from './api';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { eixosComOcorrencias, rotuloEixo } from './thumbnailPadroes';
 import { cn } from '@/lib/utils';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 const FORCA_TONS: Record<string, string> = {
   alta: 'text-[var(--wb-ok)]',
   media: 'text-[var(--wb-warn)]',
   baixa: 'text-[var(--wb-text-dim)]',
 };
-
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function ThumbnailPadroesPage() {
   const { notify } = useToast();
@@ -60,30 +55,10 @@ export function ThumbnailPadroesPage() {
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)]',
-        CASCA_NOVA || isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+        'h-full',
+        'h-full',
       )}
     >
-      {CASCA_NOVA ? null : (
-        <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
-          <span className="text-[16px]" aria-hidden>
-            ✨
-          </span>
-          <h1 className="text-[15px] font-extrabold">Padrões de thumbnail</h1>
-          <span className="hidden text-xs text-[var(--wb-text-mute)] lg:block">
-            o que as capas melhor avaliadas têm em comum — valide antes de aplicar
-          </span>
-          <div className="flex-1" />
-          <AcaoDeIa
-            rotulo="Analisar padrões"
-            rotuloEmVoo="analisando…"
-            tamanho="md"
-            destaque
-            emVoo={emVoo}
-            onGerar={(provider) => analise.mutate(provider)}
-          />
-        </header>
-      )}
 
       <main className="grid flex-1 content-start gap-5 overflow-auto p-6">
         {!resultado && !analise.isPending && (

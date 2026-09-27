@@ -2,16 +2,14 @@
 // proposta×final (D-310) e o desempenho no YouTube (D-313). Cada aba nasce vazia
 // de forma elegante e nunca quebra na ausência de dados.
 import { useMemo, useState } from 'react';
-import { BarChart3, Cpu, Film, Link2, TrendingUp } from 'lucide-react';
+import { Cpu, Film, Link2, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { PropostaFinalTab } from './PropostaFinalTab';
 import { YoutubeDesempenhoTab } from './YoutubeDesempenhoTab';
 import { LlmCallsTab } from './LlmCallsTab';
 import { useYoutubeStatsStatus } from './useAnalises';
 import { useLlmCalls } from './useLlmCalls';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 type AbaId = 'proposta-final' | 'youtube' | 'llm-calls';
 
@@ -115,11 +113,8 @@ function StatCard({
   );
 }
 
-const CASCA_NOVA = isUpgradeShellEnabled();
-
 export function AnalisesPage() {
   const [aba, setAba] = useState<AbaId>('proposta-final');
-  const workbench = isWorkbenchEnabled();
 
   // D-599: o titulo e o subtitulo passam para a casca; a faixa de STATS e
   // as abas continuam aqui, que e onde o design as coloca — logo abaixo do
@@ -130,45 +125,17 @@ export function AnalisesPage() {
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)]',
-        CASCA_NOVA || workbench ? 'h-full' : 'h-screen',
+        'h-full',
+        'h-full',
       )}
     >
       <header
         className={cn(
           'border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)]',
-          workbench ? 'px-4 pt-3' : 'px-7 pt-5',
+          'px-7 pt-5',
         )}
       >
-        {CASCA_NOVA ? (
-          <StatCards />
-        ) : workbench ? (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <BarChart3 size={18} className="text-[var(--wb-accent)]" aria-hidden />
-              <h1 className="text-[15px] font-extrabold">Análises</h1>
-              <span className="text-xs text-[var(--wb-text-mute)]">
-                proposta × final e desempenho no YouTube
-              </span>
-            </div>
-            <StatCards />
-          </div>
-        ) : (
-          <div className="flex items-start gap-4">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]">
-              <BarChart3 size={22} aria-hidden />
-            </span>
-            <div className="min-w-0 flex-1">
-              <h1 className="font-editorial text-[48px] font-medium leading-[0.96] tracking-[-0.01em] text-[var(--wb-text)]">
-                Análises
-              </h1>
-              <p className="mt-2 max-w-2xl text-[15px] text-[var(--wb-text-mute)]">
-                Régua do que a IA propôs contra o que foi ao ar, e o desempenho dos vídeos
-                publicados no canal.
-              </p>
-            </div>
-          </div>
-        )}
+        <StatCards />
 
         <nav className="mt-4 flex gap-1" aria-label="Abas de análise">
           {ABAS.map(({ id, rotulo }) => (

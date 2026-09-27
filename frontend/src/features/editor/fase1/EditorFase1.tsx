@@ -1,7 +1,6 @@
 import { useCallback, useState, type RefObject } from 'react';
 import { PanelRightOpen } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import type { Corte, StatusBrutoResponse } from '@/types/models';
 import { PlayerPanel, type PlayerHandle } from './PlayerPanel';
 import { TimelinePanel } from './TimelinePanel';
@@ -22,19 +21,17 @@ import { RightTabsPanel } from './RightTabsPanel';
 // para preencher o painel sem deixar faixa cinza embaixo.
 // ─────────────────────────────────────────────────────────────
 
-const PANEL_PERSIST = 'editor-fase1-panels-v2';
 // D-599: a casca nova tem outra geometria (o palco manda no enquadramento e a
 // coluna direita e mais estreita). Chave de persistencia propria para que o
 // layout que o Paulo ajustou numa casca nao seja imposto a outra.
 const PANEL_PERSIST_AP = 'editor-fase1-panels-ap';
-const CASCA_NOVA = isUpgradeShellEnabled();
 const TRECHOS_RECOLHIDOS_KEY = 'editor-trechos-recolhidos';
 
 /** D-610: a coluna de trechos pode sair do caminho; a escolha é lembrada. */
 function useTrechosRecolhidos(): [boolean, () => void] {
   const [recolhidos, setRecolhidos] = useState(() => {
     try {
-      return CASCA_NOVA && window.localStorage.getItem(TRECHOS_RECOLHIDOS_KEY) === '1';
+      return window.localStorage.getItem(TRECHOS_RECOLHIDOS_KEY) === '1';
     } catch {
       return false;
     }
@@ -161,23 +158,23 @@ export function EditorFase1({
     <div className="flex h-full min-w-0">
       <PanelGroup
         direction="horizontal"
-        autoSaveId={`${CASCA_NOVA ? PANEL_PERSIST_AP : PANEL_PERSIST}-h`}
-        className={CASCA_NOVA ? 'h-full min-w-0 flex-1 py-2' : 'h-full min-w-0 flex-1 p-3'}
-        style={{ gap: CASCA_NOVA ? 14 : 12 }}
+        autoSaveId={`${PANEL_PERSIST_AP}-h`}
+        className="h-full min-w-0 flex-1 py-2"
+        style={{ gap: 14 }}
       >
         {/* Esquerda: Player (cresce) + Timeline (compact rente aos timecodes) */}
         {/* No design a coluna direita e uma faixa fixa de 320px; aqui ela
           continua redimensionavel (decisao anterior do Paulo) com o default
           aproximado dessa largura. */}
-        <Panel id="bancada-centro" defaultSize={CASCA_NOVA ? 68 : 62} minSize={40} order={1}>
+        <Panel id="bancada-centro" defaultSize={68} minSize={40} order={1}>
           <PanelGroup
             direction="vertical"
-            autoSaveId={`${CASCA_NOVA ? PANEL_PERSIST_AP : PANEL_PERSIST}-left-v`}
+            autoSaveId={`${PANEL_PERSIST_AP}-left-v`}
           >
             <Panel defaultSize={65} minSize={30} order={1}>
               <PlayerPanel
                 ref={playerRef}
-                variant={CASCA_NOVA ? 'ap' : 'legacy'}
+                variant="ap"
                 selo={brutoPronto ? 'BRUTO · pronto' : 'VÍDEO ORIGINAL'}
                 src={videoSrc}
                 inicioSeg={corte.inicio_seg}
@@ -195,7 +192,7 @@ export function EditorFase1({
             <PanelResizeHandle className="h-2 transition-colors hover:bg-[var(--wb-border-soft)]" />
             <Panel defaultSize={35} minSize={15} order={2}>
               <TimelinePanel
-                variant={CASCA_NOVA ? 'ap' : undefined}
+                variant="ap"
                 audioSrc={audioSrc}
                 waveformPeaksSrc={waveformPeaksSrc}
                 audioOffsetSec={audioOffsetSec}
@@ -246,12 +243,12 @@ export function EditorFase1({
         {trechosRecolhidos ? null : (
           <Panel
             id="bancada-trechos"
-            defaultSize={CASCA_NOVA ? 32 : 38}
-            minSize={CASCA_NOVA ? 26 : 22}
+            defaultSize={32}
+            minSize={26}
             order={2}
           >
             <RightTabsPanel
-              onRecolher={CASCA_NOVA ? alternarTrechos : undefined}
+              onRecolher={alternarTrechos}
               corteId={corte.id}
               hintsThumbnail={corte.hints_thumbnail}
               desvios={corte.desvios ?? []}

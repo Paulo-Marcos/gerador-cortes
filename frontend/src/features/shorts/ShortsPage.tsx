@@ -22,28 +22,14 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  CheckCheck,
-  Clapperboard,
-  Flame,
-  Clock,
-  HardDrive,
-  LayoutGrid,
-  Loader2,
-  Pencil,
-  RotateCcw,
-  Search,
-  X,
-} from 'lucide-react';
+import { CheckCheck, Flame, Clock, HardDrive, LayoutGrid, Loader2, Pencil, RotateCcw, Search, X } from 'lucide-react';
 import { brutoApi } from '@/features/editor/api/bruto';
 import { cn, formatarDuracao } from '@/lib/utils';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import type { ContagemShorts, FireComBruto } from './shortsApi';
 import { FIRES_KEY, useFires } from './useFires';
 import { useMarcarFinalizado } from './useShortsDoCorte';
 import { SeloFinalizado } from './CabecalhoDoFire';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import {
   contarPorFiltro,
   estaFinalizado,
@@ -122,17 +108,7 @@ function FireCard({ fire }: { fire: FireComBruto }) {
 
   return (
     <article
-      className={
-        CASCA_NOVA
-          ? 'card group flex flex-col overflow-hidden'
-          : cn(
-              'group flex flex-col overflow-hidden rounded-[12px] border bg-[var(--wb-bg-panel)] transition-colors',
-              editado
-                ? 'border-[var(--wb-accent-soft,var(--wb-border))]'
-                : 'border-[var(--wb-border)]',
-              'hover:border-[var(--wb-text-dim)] focus-within:border-[var(--wb-accent)]',
-            )
-      }
+      className="card group flex flex-col overflow-hidden"
     >
       <BarraDeProgresso fire={fire} />
 
@@ -144,13 +120,7 @@ function FireCard({ fire }: { fire: FireComBruto }) {
         className="flex flex-1 flex-col gap-2 p-3.5 pb-2.5 focus-visible:outline-none"
       >
         <div className="flex items-start gap-2">
-          {CASCA_NOVA ? (
-            <Flame size={15} aria-hidden style={{ color: 'var(--accent)', flex: 'none' }} />
-          ) : (
-            <span aria-hidden className="text-[15px] leading-none">
-              🔥
-            </span>
-          )}
+          <Flame size={15} aria-hidden style={{ color: 'var(--accent)', flex: 'none' }} />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-[14px] font-bold text-[var(--wb-text)]" title={fire.titulo}>
               {fire.titulo || `Corte ${fire.numero}`}
@@ -385,10 +355,7 @@ function VazioDoFiltro({ onLimpar }: { onLimpar: () => void }) {
   );
 }
 
-const CASCA_NOVA = isUpgradeShellEnabled();
-
 export default function ShortsPage() {
-  const workbench = isWorkbenchEnabled();
   const { data, isLoading, isError, error } = useFires();
   const [filtro, setFiltro] = useState<FiltroDeFire>('todos');
   const [busca, setBusca] = useState('');
@@ -407,111 +374,109 @@ export default function ShortsPage() {
     setBusca('');
   };
 
-  if (CASCA_NOVA) {
-    // D-599: o design poe filtros e busca na MESMA linha — chips a esquerda,
-    // busca a direita — e a grade logo abaixo. Titulo e subtitulo ja estao no
-    // cabecalho da casca; repetir a faixa com borda aqui empilharia dois
-    // cabecalhos.
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
-          {fires.length > 0
-            ? FILTROS.map(({ id, rotulo, nota }) => {
-                const quantos = contagens[id];
-                const ativo = filtro === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setFiltro(id)}
-                    title={nota}
-                    aria-pressed={ativo}
-                    disabled={quantos === 0 && !ativo}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      height: 30,
-                      padding: '0 10px',
-                      border: `1px solid ${ativo ? 'var(--accent)' : 'var(--line)'}`,
-                      borderRadius: 'var(--r2)',
-                      background: ativo ? 'var(--accent-soft)' : 'var(--panel)',
-                      color: ativo ? 'var(--accent2)' : 'var(--mute)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: quantos === 0 && !ativo ? 'default' : 'pointer',
-                      opacity: quantos === 0 && !ativo ? 0.45 : 1,
-                    }}
-                  >
-                    {rotulo}
-                    <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7 }}>
-                      {quantos}
-                    </span>
-                  </button>
-                );
-              })
-            : null}
-          <div style={{ flex: 1 }} />
-          <label className="fld" style={{ width: 240 }}>
-            <Search size={12} aria-hidden style={{ color: 'var(--dim)' }} />
-            <input
-              type="search"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="buscar por título, live ou tema"
-              aria-label="Buscar cortes"
-              style={{
-                minWidth: 0,
-                flex: 1,
-                border: 0,
-                outline: 'none',
-                background: 'transparent',
-                fontSize: 12,
-              }}
-            />
-            {busca ? (
-              <button
-                type="button"
-                onClick={() => setBusca('')}
-                aria-label="Limpar busca"
-                className="btn btn-icon btn-ghost"
-                style={{ width: 18, height: 18 }}
-              >
-                <X size={11} />
-              </button>
-            ) : null}
-          </label>
-        </div>
-
-        {isLoading ? (
-          <p style={{ padding: '64px 0', textAlign: 'center', color: 'var(--mute)' }}>
-            Procurando os Fires…
-          </p>
-        ) : null}
-        {isError ? (
-          <p style={{ padding: '64px 0', textAlign: 'center', color: 'var(--err)' }}>
-            Não consegui carregar os Fires: {(error as Error)?.message ?? 'erro desconhecido'}
-          </p>
-        ) : null}
-        {!isLoading && !isError && fires.length === 0 ? <Vazio /> : null}
-        {fires.length > 0 && visiveis.length === 0 ? <VazioDoFiltro onLimpar={limpar} /> : null}
-
-        {visiveis.length > 0 ? (
-          <div
+  // D-599: o design poe filtros e busca na MESMA linha — chips a esquerda,
+  // busca a direita — e a grade logo abaixo. Titulo e subtitulo ja estao no
+  // cabecalho da casca; repetir a faixa com borda aqui empilharia dois
+  // cabecalhos.
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+        {fires.length > 0
+          ? FILTROS.map(({ id, rotulo, nota }) => {
+              const quantos = contagens[id];
+              const ativo = filtro === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setFiltro(id)}
+                  title={nota}
+                  aria-pressed={ativo}
+                  disabled={quantos === 0 && !ativo}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    height: 30,
+                    padding: '0 10px',
+                    border: `1px solid ${ativo ? 'var(--accent)' : 'var(--line)'}`,
+                    borderRadius: 'var(--r2)',
+                    background: ativo ? 'var(--accent-soft)' : 'var(--panel)',
+                    color: ativo ? 'var(--accent2)' : 'var(--mute)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: quantos === 0 && !ativo ? 'default' : 'pointer',
+                    opacity: quantos === 0 && !ativo ? 0.45 : 1,
+                  }}
+                >
+                  {rotulo}
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7 }}>
+                    {quantos}
+                  </span>
+                </button>
+              );
+            })
+          : null}
+        <div style={{ flex: 1 }} />
+        <label className="fld" style={{ width: 240 }}>
+          <Search size={12} aria-hidden style={{ color: 'var(--dim)' }} />
+          <input
+            type="search"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="buscar por título, live ou tema"
+            aria-label="Buscar cortes"
             style={{
-              display: 'grid',
-              gap: 10,
-              gridTemplateColumns: 'repeat(auto-fill,minmax(310px,1fr))',
+              minWidth: 0,
+              flex: 1,
+              border: 0,
+              outline: 'none',
+              background: 'transparent',
+              fontSize: 12,
             }}
-          >
-            {visiveis.map((fire) => (
-              <ItemDaFila key={fire.corte_id} fire={fire} />
-            ))}
-          </div>
-        ) : null}
+          />
+          {busca ? (
+            <button
+              type="button"
+              onClick={() => setBusca('')}
+              aria-label="Limpar busca"
+              className="btn btn-icon btn-ghost"
+              style={{ width: 18, height: 18 }}
+            >
+              <X size={11} />
+            </button>
+          ) : null}
+        </label>
       </div>
-    );
-  }
+
+      {isLoading ? (
+        <p style={{ padding: '64px 0', textAlign: 'center', color: 'var(--mute)' }}>
+          Procurando os Fires…
+        </p>
+      ) : null}
+      {isError ? (
+        <p style={{ padding: '64px 0', textAlign: 'center', color: 'var(--err)' }}>
+          Não consegui carregar os Fires: {(error as Error)?.message ?? 'erro desconhecido'}
+        </p>
+      ) : null}
+      {!isLoading && !isError && fires.length === 0 ? <Vazio /> : null}
+      {fires.length > 0 && visiveis.length === 0 ? <VazioDoFiltro onLimpar={limpar} /> : null}
+
+      {visiveis.length > 0 ? (
+        <div
+          style={{
+            display: 'grid',
+            gap: 10,
+            gridTemplateColumns: 'repeat(auto-fill,minmax(310px,1fr))',
+          }}
+        >
+          {visiveis.map((fire) => (
+            <ItemDaFila key={fire.corte_id} fire={fire} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 
   return (
     <div
@@ -522,25 +487,16 @@ export default function ShortsPage() {
         // exatamente a altura desse cabecalho. Com o conteudo rolando dentro
         // (D-499), a ultima linha ficava inalcancavel. No workbench a pagina ja
         // recebe a altura do pai, e `h-full` continua certo.
-        workbench ? 'h-full' : 'h-[calc(100vh-3.5rem)]',
+        'h-[calc(100vh-3.5rem)]',
       )}
     >
       <header
         className={cn(
           'flex-none space-y-2.5 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)]',
-          workbench ? 'px-4 py-3' : 'px-7 py-5',
+          'px-7 py-5',
         )}
       >
         <div className="flex items-center gap-2">
-          {CASCA_NOVA ? null : (
-            <>
-              <Clapperboard size={18} className="text-[var(--wb-accent)]" aria-hidden />
-              <h1 className="text-[15px] font-extrabold">Shorts</h1>
-              <span className="text-xs text-[var(--wb-text-mute)]">
-                cortes Fire com bruto guardado — a nata, pronta para virar vertical
-              </span>
-            </>
-          )}
 
           <div className="flex-1" />
 

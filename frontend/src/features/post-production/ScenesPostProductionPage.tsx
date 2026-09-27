@@ -1,17 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { FolderOpen, Keyboard, Loader2, Play, RotateCcw, Star } from 'lucide-react';
-import { useAbrirPasta, useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
+import { Loader2 } from 'lucide-react';
+import { useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useVelocidadePlayerPadrao } from '@/hooks/useVelocidadePlayerPadrao';
 import { useRenderFinal, useStudioUrl } from '@/features/editor/useRender';
 import { useAtualizarCorte, useCorte, useCortesProjeto, useToggleFire } from '@/features/editor/useCortes';
 import { useGerarBruto, useStatusBruto } from '@/features/editor/useBruto';
 import { finalVideoUrl, gradedVideoUrl, rawVideoBustedUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/toaster';
-import { Button } from '@/components/ui/button';
 import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
-import { Tooltip } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 import type { CenaRemotion, Corte } from '@/types/models';
 import type { PlayerHandle } from '@/features/editor/fase1/PlayerPanel';
 import { EditorFase2 } from '@/features/editor/fase2/EditorFase2';
@@ -23,26 +20,14 @@ import { montarTira } from '@/upgrade/tiraDoCorte';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
 import { MetadadosDoCorteModal, statusMinimo } from '@/upgrade/telas/MetadadosDoCorteModal';
 import { TiraDoCorteAp } from '@/upgrade/telas/TiraDoCorteAp';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
-import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
-import { CommonTopBar, type MoreMenuItem } from '@/features/editor/CommonTopBar';
-import { PosTopbarExtra, type PosStep, type VideoTipo } from '@/features/editor/PosTopbarExtra';
-import { WorkbenchCutsPanel } from '@/features/editor/WorkbenchCutsPanel';
-import { WorkbenchEditorLayout } from '@/features/editor/WorkbenchEditorLayout';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { useWorkbenchQueueOptional } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { rotuloCurtoProjeto } from '@/shared/filaGlobal/rotulo';
 import { AvaliacaoCorteModal } from '@/features/editor/avaliacao/AvaliacaoCorteModal';
-import { useAvaliacaoCorte } from '@/features/editor/avaliacao/useAvaliacaoCorte';
 import { SettingsModal } from '@/components/layout/SettingsModal';
 import { RenderStepsModal } from './RenderStepsModal';
 
 // D-599: com a casca nova quem desenha a lista de cortes, a trilha e a barra
 // de decisao e a CASCA — a tela apenas a alimenta (BancadaChrome).
-const CASCA_NOVA = isUpgradeShellEnabled();
-
-// Constante fora do componente p/ evitar useMemo + early-return (rules-of-hooks).
-const STEP_DONE_DEFAULT: Set<PosStep> = new Set([1]);
 
 // Atalhos Ctrl+J/K (F-041): mesmos limites usados na tela Bruta.
 const SPEED_MIN = 0.25;
@@ -60,13 +45,6 @@ import {
   resolverVideoFonteEfetiva,
   type VideoFontePos,
 } from './postProductionNavigation';
-
-// Rotulo e tooltip de cada fonte no seletor do player (D-430).
-const FONTE_LABEL: Record<VideoFontePos, { curto: string; ajuda: string }> = {
-  raw: { curto: 'Bruto', ajuda: 'Recorte da live, sem grade nem overlays' },
-  graded: { curto: 'Grade', ajuda: 'Bruto com o filtro cinematografico aplicado' },
-  final: { curto: 'Final', ajuda: 'Video renderizado, com overlays — pronto para publicar' },
-};
 
 export function ScenesPostProductionPage() {
   const { id: projetoId = '' } = useParams<{ id: string }>();
@@ -100,7 +78,6 @@ export function ScenesPostProductionPage() {
   // D-430: fonte do player escolhida a mao. `null` = segue o padrao
   // bruto-first do D-368. Zerada ao trocar de corte (effect abaixo).
   const [fonteEscolhida, setFonteEscolhida] = useState<VideoFontePos | null>(null);
-  const avaliacaoQuery = useAvaliacaoCorte(corteId || undefined);
   const ultimoStatusBrutoRef = useRef<string | undefined>(undefined);
   const gradeFaseRef = useRef(false);
   const brutoEmGeracaoRef = useRef(false);
@@ -181,7 +158,6 @@ export function ScenesPostProductionPage() {
   const atualizarCorte = useAtualizarCorte(corteId, projetoId);
   const alternarFire = useToggleFire(corteId, projetoId);
   const confirmacao = useConfirmacao();
-  const abrirPasta = useAbrirPasta();
   const studioUrl = useStudioUrl(corteId);
 
   const payload = useMemo(() => parseCenasPayload(corte?.cenas_remotion), [corte?.cenas_remotion]);
@@ -380,61 +356,7 @@ export function ScenesPostProductionPage() {
   liveSrcRef.current = videoSrc;
   const videoSrcEstavel = pinnedSrc ?? videoSrc;
 
-  // Marcador de tipo: TOP > LEITURA > null (TOP tem prioridade visual)
-  const videoTipo: VideoTipo = corte.is_fire ? 'top' : corte.is_leitura ? 'leitura' : null;
-  // Stepper: passo ativo. Render rodando = 4 Renderizar; senao = 2 Cenas.
-  // Passo 1 (Metadados) sempre marcado como done — corte ja foi classificado no Bruto
-  // e os metadados podem ser preenchidos via modal a qualquer momento.
-  const stepActive: PosStep = renderFinalRunning ? 4 : 2;
-  const stepDone: Set<PosStep> = STEP_DONE_DEFAULT;
-
-  const moreMenuItems: MoreMenuItem[] = [
-    {
-      icon: Star,
-      label: avaliacaoQuery.data?.voto
-        ? `Avaliar corte (${avaliacaoQuery.data.voto}/5)`
-        : 'Avaliar corte',
-      onClick: () => setAvaliacaoOpen(true),
-    },
-    {
-      icon: FolderOpen,
-      label: 'Abrir pasta',
-      kbd: 'Ctrl+O',
-      disabled: abrirPasta.isPending,
-      onClick: () => abrirPasta.mutate(corte.id),
-    },
-    {
-      icon: Keyboard,
-      label: 'Atalhos',
-      kbd: '?',
-      onClick: () => undefined,
-    },
-  ];
   const exportStatuses = exportStatusQ.data?.cortes ?? [];
-
-  // Acoes compartilhadas pelos dois shells (Workbench e legado) — declaradas
-  // uma vez para as duas barras nao divergirem.
-  const seletorFonte = fontes.length > 1 && (
-    <FonteVideoSwitch fontes={fontes} atual={videoFonte} onEscolher={setFonteEscolhida} />
-  );
-
-  const botaoRegerarBruto = brutoAusente && (
-    <Tooltip
-      label="O video bruto foi apagado na limpeza do projeto. Regerar re-extrai o trecho da live sem refazer transcricao nem cenas."
-      side="bottom"
-    >
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={regerarBruto}
-        disabled={gerandoBruto}
-      >
-        {gerandoBruto ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-        {gerandoBruto ? 'Gerando bruto...' : 'Regerar bruto'}
-      </Button>
-    </Tooltip>
-  );
 
   const posModals = (
     <>
@@ -471,114 +393,6 @@ export function ScenesPostProductionPage() {
   // ── Shell Workbench (Etapa 4): steps no topo do conteúdo da aba, painel
   // CORTES retrátil e o EditorFase2 (player+timeline+painéis de cenas/
   // layout/filtros com todos os atalhos) re-hospedado intacto no centro.
-  if (isWorkbenchEnabled()) {
-    return (
-      <>
-        <WorkbenchEditorLayout
-          panelIds={['cuts', 'cenas', 'layout']}
-          leftPanel={
-            <WorkbenchCutsPanel
-              projetoId={projetoId}
-              cortes={cortes}
-              corteAtivoId={corte.id}
-              exportStatus={exportStatuses}
-              getCortePath={(item) =>
-                resolveCorteStagePath({
-                  projetoId,
-                  corte: item,
-                  status: exportStatuses.find((status) => status.corte_id === item.id),
-                  forcePhase2,
-                })
-              }
-            />
-          }
-        >
-          <div className="flex flex-none flex-wrap items-center gap-2">
-            <PosTopbarExtra
-              tipo={videoTipo}
-              active={stepActive}
-              done={stepDone}
-              onMetadadosClick={() => setMetadataOpen(true)}
-            />
-            <div className="flex-1" />
-            {seletorFonte}
-            {botaoRegerarBruto}
-            <Tooltip
-              label={
-                renderFinalRunning
-                  ? `Renderizando ${renderFinalProgress}% — acompanhe na fila global`
-                  : 'Renderizar (o job aparece na fila global; pode trocar de aba)'
-              }
-              side="bottom"
-            >
-              <Button
-                type="button"
-                variant="default"
-                size="sm"
-                onClick={renderizarFinal}
-                disabled={renderFinalRunning}
-              >
-                {renderFinalRunning ? <Loader2 className="animate-spin" /> : <Play />}
-                {renderFinalRunning ? `Renderizando ${renderFinalProgress}%` : 'Renderizar'}
-              </Button>
-            </Tooltip>
-            <Tooltip
-              label={
-                avaliacaoQuery.data?.voto
-                  ? `Qualidade do corte: ${avaliacaoQuery.data.voto} de 5 — clique para ajustar`
-                  : 'Avaliar a qualidade deste corte'
-              }
-              side="bottom"
-            >
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setAvaliacaoOpen(true)}
-                aria-label="Avaliar qualidade do corte"
-              >
-                <Star
-                  className={avaliacaoQuery.data?.voto ? 'fill-amber-300 text-amber-300' : ''}
-                />
-                {avaliacaoQuery.data?.voto ?? 'Avaliar'}
-              </Button>
-            </Tooltip>
-            <Tooltip label="Abrir pasta do corte" side="bottom">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => abrirPasta.mutate(corte.id)}
-                disabled={abrirPasta.isPending}
-              >
-                <FolderOpen />
-              </Button>
-            </Tooltip>
-          </div>
-
-          <div className="flex min-h-0 flex-1 flex-col">
-            <EditorFase2
-              workbench
-              videoSrc={videoSrcEstavel}
-              modoLabel="Cenas"
-              corte={corte}
-              cenas={cenas}
-              formato={payload.formato}
-              paleta={payload.paleta}
-              playerRef={playerRef}
-              relogio={relogio}
-              onSeek={(seg) => playerRef.current?.seekTo(seg)}
-              onCenasChange={setCenas}
-              onAbrirStudio={abrirStudio}
-              abrindoStudio={studioUrl.isPending}
-              playbackRate={playbackRate}
-            />
-          </div>
-        </WorkbenchEditorLayout>
-        {posModals}
-      </>
-    );
-  }
 
   const caminhoDoCorte = (item: Corte) =>
     resolveCorteStagePath({
@@ -590,114 +404,61 @@ export function ScenesPostProductionPage() {
 
   return (
     <>
-      {CASCA_NOVA ? (
-        <BancadaChrome
-          projetoId={projetoId}
-          tituloLive={projeto.data?.titulo_live ?? 'Live'}
-          cortes={cortes}
-          corte={corte}
-          exportStatus={exportStatusQ.data?.cortes ?? []}
-          caminhoDoCorte={caminhoDoCorte}
-          sub={[
-            `${cenas.length} cenas`,
-            payload.formato,
-            renderFinalRunning ? `render ${renderFinalProgress}%` : videoPronto ? 'render pronto' : 'render pendente',
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-          fire={corte.is_fire}
-          sujo={false}
-          salvando={false}
-          brutoPronto={!brutoAusente}
-          brutoOcupado={gerandoBruto}
-          // O botão do topo diz "Regerar bruto": ele regera o BRUTO. Estava
-          // ligado ao render final — um verbo, outra ação.
-          onGerarBruto={regerarBruto}
-          onToggleFire={() => alternarFire.mutate()}
-          fireOcupado={alternarFire.isPending}
-          onAprovar={alternarAprovado}
-          barra={{
-            // D-746: um verbo por botão. O primário renderiza, e só ele; o
-            // veredito é um par separado e reversível; Enter não dispara GPU.
-            veredito: {
-              aprovado: aprovadoNaPos,
-              ocupado: atualizarCorte.isPending,
-              onAlternar: alternarAprovado,
-            },
-            primario: {
-              texto: renderFinalRunning
-                ? `Renderizando ${renderFinalProgress}%`
-                : videoPronto
-                  ? 'Renderizar de novo'
-                  : 'Renderizar final',
-              icone: renderFinalRunning ? 'loader' : 'clapperboard',
-              onClick: renderizarFinal,
-              desabilitado: renderFinalRunning || brutoAusente,
-              motivo: brutoAusente
-                ? 'Sem o vídeo bruto (a limpeza apagou): regere o bruto antes de renderizar.'
-                : undefined,
-              semEnter: true,
-            },
-          }}
-        />
-      ) : (
-      <UnifiedSidebar
+      <BancadaChrome
         projetoId={projetoId}
+        tituloLive={projeto.data?.titulo_live ?? 'Live'}
         cortes={cortes}
-        corteAtivoId={corte.id}
+        corte={corte}
         exportStatus={exportStatusQ.data?.cortes ?? []}
-        activePhase="pos"
-        getCortePath={caminhoDoCorte}
-        onOpenSettings={() => setSettingsOpen(true)}
+        caminhoDoCorte={caminhoDoCorte}
+        sub={[
+          `${cenas.length} cenas`,
+          payload.formato,
+          renderFinalRunning ? `render ${renderFinalProgress}%` : videoPronto ? 'render pronto' : 'render pendente',
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+        fire={corte.is_fire}
+        sujo={false}
+        salvando={false}
+        brutoPronto={!brutoAusente}
+        brutoOcupado={gerandoBruto}
+        // O botão do topo diz "Regerar bruto": ele regera o BRUTO. Estava
+        // ligado ao render final — um verbo, outra ação.
+        onGerarBruto={regerarBruto}
+        onToggleFire={() => alternarFire.mutate()}
+        fireOcupado={alternarFire.isPending}
+        onAprovar={alternarAprovado}
+        barra={{
+          // D-746: um verbo por botão. O primário renderiza, e só ele; o
+          // veredito é um par separado e reversível; Enter não dispara GPU.
+          veredito: {
+            aprovado: aprovadoNaPos,
+            ocupado: atualizarCorte.isPending,
+            onAlternar: alternarAprovado,
+          },
+          primario: {
+            texto: renderFinalRunning
+              ? `Renderizando ${renderFinalProgress}%`
+              : videoPronto
+                ? 'Renderizar de novo'
+                : 'Renderizar final',
+            icone: renderFinalRunning ? 'loader' : 'clapperboard',
+            onClick: renderizarFinal,
+            desabilitado: renderFinalRunning || brutoAusente,
+            motivo: brutoAusente
+              ? 'Sem o vídeo bruto (a limpeza apagou): regere o bruto antes de renderizar.'
+              : undefined,
+            semEnter: true,
+          },
+        }}
       />
-      )}
 
       <div
-        className={
-          CASCA_NOVA
-            ? 'flex h-full min-h-0 flex-col overflow-hidden'
-            : 'ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)]'
-        }
+        className="flex h-full min-h-0 flex-col overflow-hidden"
       >
-        {CASCA_NOVA ? null : (
-        <CommonTopBar
-          projeto={projeto.data}
-          corte={corte}
-          statusToggles={null}
-          extra={
-            <PosTopbarExtra
-              tipo={videoTipo}
-              active={stepActive}
-              done={stepDone}
-              onMetadadosClick={() => setMetadataOpen(true)}
-            />
-          }
-          primaryAction={
-            <div className="flex items-center gap-2">
-              {seletorFonte}
-              {botaoRegerarBruto}
-              <Tooltip
-                label={renderFinalRunning ? `Renderizando ${renderFinalProgress}%` : 'Renderizar'}
-                side="bottom"
-              >
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  onClick={renderizarFinal}
-                  disabled={renderFinalRunning}
-                >
-                  {renderFinalRunning ? <Loader2 className="animate-spin" /> : <Play />}
-                  {renderFinalRunning ? `Renderizando ${renderFinalProgress}%` : 'Renderizar'}
-                </Button>
-              </Tooltip>
-            </div>
-          }
-          moreMenuItems={moreMenuItems}
-        />
-        )}
 
-        {CASCA_NOVA && exportEntry ? (
+        {exportEntry ? (
           // D-746: a mesma tira da lista de Cortes — o operador não precisa
           // voltar à lista para saber se o corte tem capa e metadados. O
           // painel de fases do render continua: ele diz o que ESTA execução
@@ -726,7 +487,7 @@ export function ScenesPostProductionPage() {
           </div>
         ) : null}
 
-        <div className={CASCA_NOVA ? 'min-h-0 flex-1' : 'min-h-0 flex-1 p-4'}>
+        <div className="min-h-0 flex-1">
           <EditorFase2
             videoSrc={videoSrcEstavel}
             modoLabel="Cenas"
@@ -750,47 +511,3 @@ export function ScenesPostProductionPage() {
   );
 }
 
-// ── FonteVideoSwitch (D-430) ─────────────────────────────────
-// Segmented control com as fontes que existem em disco. So aparece quando ha
-// mais de uma — com um unico artefato nao ha o que escolher.
-function FonteVideoSwitch({
-  fontes,
-  atual,
-  onEscolher,
-}: {
-  fontes: VideoFontePos[];
-  atual: VideoFontePos;
-  onEscolher: (fonte: VideoFontePos) => void;
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label="Fonte do video no player"
-      className="inline-flex items-center rounded-full border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] p-1"
-    >
-      {fontes.map((fonte) => {
-        const { curto, ajuda } = FONTE_LABEL[fonte];
-        const ativa = fonte === atual;
-        return (
-          <Tooltip key={fonte} label={ajuda} side="bottom">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={ativa}
-              onClick={() => onEscolher(fonte)}
-              className={cn(
-                'inline-flex h-7 items-center rounded-full border-0 px-3 text-[12px] transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-                ativa
-                  ? 'bg-[var(--wb-accent)] font-bold text-[var(--wb-ink-fg)]'
-                  : 'bg-transparent font-semibold text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-card)] hover:text-[var(--wb-text)]',
-              )}
-            >
-              {curto}
-            </button>
-          </Tooltip>
-        );
-      })}
-    </div>
-  );
-}

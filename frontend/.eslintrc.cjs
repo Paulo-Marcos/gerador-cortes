@@ -27,15 +27,10 @@ module.exports = {
       // Componente compartilhado não depende de feature: a seta é feature -> componente.
       files: ['src/components/**'],
       excludedFiles: [
-        // Dívida de 21/09/2026 — a casca do Workbench e o modal de ajustes.
+        // Dívida de 21/09/2026 — o modal de ajustes e o painel de prompt manual.
+        // A casca do Workbench, que também estava aqui, saiu no D-728.
         'src/components/PromptManualPanel.tsx',
         'src/components/layout/SettingsModal.tsx',
-        'src/components/workbench/ProjectRail.tsx',
-        // D-723: lê projetos e cortes pelos hooks das features, dentro de cada aba.
-        'src/components/workbench/TabStrip.tsx',
-        'src/components/workbench/ProjectStageBar.tsx',
-        'src/components/workbench/WorkbenchShell.tsx',
-        'src/components/workbench/workbenchRoutes.ts',
       ],
       rules: {
         'no-restricted-imports': [

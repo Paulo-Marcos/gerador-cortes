@@ -11,9 +11,6 @@ import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import type { Canal, IdentidadeCanal } from '@/features/channels/api/canais';
 import { AppSettingsControls } from '@/features/settings/AppSettingsControls';
-import { useTheme } from '@/hooks/useTheme';
-import { PALETTES, usePalette } from '@/hooks/usePalette';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { ChannelCard } from './ChannelCard';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { ChannelThemeSection } from './ChannelThemeSection';
@@ -24,7 +21,6 @@ import { PromptsUtilitariosSection } from './PromptsUtilitariosSection';
 import { RankingPesosSection } from './RankingPesosSection';
 import { AparenciaDaCasca } from '@/upgrade/AparenciaDaCasca';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import {
   useCanais,
   useConectarYoutube,
@@ -86,79 +82,12 @@ function BlocoPortal({
   );
 }
 
-/** Aparência (design §Aplicação): tema claro/escuro + paleta de acento. */
-function AparenciaSection() {
-  const { theme, setTheme } = useTheme();
-  const { palette, setPalette } = usePalette();
-
-  return (
-    <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
-      <h2 className="text-lg font-semibold text-[var(--wb-text)]">Aparência</h2>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-code text-[9px] font-extrabold tracking-[0.14em] text-[var(--wb-text-dim)]">
-          TEMA
-        </span>
-        {(
-          [
-            { id: 'light', rotulo: '☀️ Claro' },
-            { id: 'dark', rotulo: '🌙 Escuro' },
-          ] as const
-        ).map(({ id, rotulo }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTheme(id)}
-            aria-pressed={theme === id}
-            className={cn(
-              'rounded-lg border px-3 py-1.5 text-[11px] font-bold',
-              theme === id
-                ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
-                : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-            )}
-          >
-            {rotulo}
-          </button>
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-code text-[9px] font-extrabold tracking-[0.14em] text-[var(--wb-text-dim)]">
-          PALETA DE ACENTO
-        </span>
-        {PALETTES.map((opcao) => (
-          <button
-            key={opcao.id}
-            type="button"
-            onClick={() => setPalette(opcao.id)}
-            aria-pressed={palette === opcao.id}
-            title={opcao.descricao}
-            className={cn(
-              'flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[11px] font-bold',
-              palette === opcao.id
-                ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-text)]'
-                : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-            )}
-          >
-            <span
-              aria-hidden
-              className="h-3.5 w-3.5 rounded-full"
-              style={{ background: opcao.swatch }}
-            />
-            {opcao.nome}
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 const SECOES_CANAL: Record<Exclude<SecaoCanal, null>, { titulo: string }> = {
   skills: { titulo: 'Skills editoriais' },
   scaffolds: { titulo: 'Scaffolds' },
   prompts: { titulo: 'Prompts utilitários' },
   pesos: { titulo: 'Pesos do ranking' },
 };
-
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function ChannelsPage() {
   const { notify } = useToast();
@@ -257,18 +186,10 @@ export function ChannelsPage() {
         'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
         // Dentro da casca a tela mora num miolo que ja rola; 100vh ali
         // empurrava o fim da pagina para baixo da barra de acoes.
-        CASCA_NOVA || isWorkbenchEnabled() ? 'h-full' : 'h-screen',
+        'h-full',
       )}
     >
       <header className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-4 py-2.5">
-        {CASCA_NOVA ? null : (
-          <>
-            <span className="text-[16px]" aria-hidden>
-              ⚙
-            </span>
-            <h1 className="text-[15px] font-extrabold">Configurações</h1>
-          </>
-        )}
         <div className="ml-3 flex gap-1.5">
           {(
             [
@@ -309,7 +230,7 @@ export function ChannelsPage() {
             {/* D-599: com a casca nova a aparencia que vale e a DELA (tema e
                 superficie). A secao antiga controla o tema das cascas
                 anteriores e seria um controle que nao muda nada na tela. */}
-            {CASCA_NOVA ? <AparenciaDaCasca /> : <AparenciaSection />}
+            <AparenciaDaCasca />
             <PreRequisitosSection />
             <section className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-5">
               <h2 className="text-lg font-semibold text-[var(--wb-text)]">Configurações globais</h2>

@@ -1,9 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from '@/App';
-import { ProjetosPage } from '@/features/projetos/ProjetosPage';
-import { StubPage } from '@/pages/StubPage';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 const EditorPage = lazy(() =>
   import('@/features/editor/EditorPage').then((m) => ({ default: m.EditorPage })),
@@ -23,11 +20,6 @@ const MetadataPage = lazy(() =>
 const ScenesPostProductionPage = lazy(() =>
   import('@/features/post-production/ScenesPostProductionPage').then((m) => ({
     default: m.ScenesPostProductionPage,
-  })),
-);
-const ProjetoDetalhePage = lazy(() =>
-  import('@/features/projeto-detalhe/ProjetoDetalhePage').then((m) => ({
-    default: m.ProjetoDetalhePage,
   })),
 );
 const ThumbnailPadroesPage = lazy(() =>
@@ -79,7 +71,6 @@ const WorkspaceProjetoPage = lazy(() => import('@/upgrade/telas/WorkspaceProjeto
 // D-599: telas que o design pede e o app ainda nao tinha.
 const FilaPage = lazy(() => import('@/upgrade/telas/FilaPage'));
 const Erro404Page = lazy(() => import('@/upgrade/telas/Erro404Page'));
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 export const router = createBrowserRouter([
   {
@@ -87,10 +78,10 @@ export const router = createBrowserRouter([
     element: <App />,
     children: [
       { index: true, element: <Navigate to="/projetos" replace /> },
-      { path: 'projetos', element: CASCA_NOVA ? <BibliotecaPage /> : <ProjetosPage /> },
+      { path: 'projetos', element: <BibliotecaPage /> },
       {
         path: 'projetos/:id',
-        element: CASCA_NOVA ? <WorkspaceProjetoPage /> : <ProjetoDetalhePage />,
+        element: <WorkspaceProjetoPage />,
       },
       { path: 'projetos/:id/cortes', element: <EditorPage /> },
       { path: 'projetos/:id/cortes/:corteId', element: <EditorPage /> },
@@ -115,10 +106,10 @@ export const router = createBrowserRouter([
       { path: 'shorts/:corteId', element: <FireDetalhePage /> },
       { path: 'shorts/:corteId/workspace', element: <WorkspaceDoFirePage /> },
       { path: 'atalhos', element: <AtalhosPage /> },
-      ...(CASCA_NOVA ? [{ path: 'fila', element: <FilaPage /> }] : []),
+      { path: 'fila', element: <FilaPage /> },
       {
         path: '*',
-        element: CASCA_NOVA ? <Erro404Page /> : <StubPage titulo="Pagina nao encontrada" />,
+        element: <Erro404Page />,
       },
     ],
   },

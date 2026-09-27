@@ -25,19 +25,10 @@
 // resposta ("falta renderizar") é exatamente o que esta tela deve dizer.
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Clapperboard,
-  Image as ImageIcon,
-  LayoutGrid,
-  Loader2,
-  Pencil,
-  Send,
-} from 'lucide-react';
+import { Clapperboard, Image as ImageIcon, LayoutGrid, Loader2, Pencil, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusChip } from '@/components/ui/status-chip';
 import { cn, formatarDuracao } from '@/lib/utils';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { capaImagemUrl, shortVideoUrl, type ShortSugerido } from './shortsApi';
 import { mmss } from './linhaDoTempoShort';
 import { PainelPublicacao } from './PainelPublicacao';
@@ -56,7 +47,6 @@ import { useFechoDoShort } from './useFechoDoShort';
 import type { PublicacaoRegistrada } from './shortsApi';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 /** Como cada plataforma se chama na prateleira. */
 const NOME_DA_PLATAFORMA: Record<string, string> = {
@@ -222,10 +212,9 @@ function CartaoDoPronto({
 // fixa — e o design faz isso por um motivo: numa grade de cartoes 9:16 que rola,
 // "Publicar em massa" no topo some justamente quando a pessoa chega ao ultimo
 // short e decide publicar.
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 export default function WorkspaceDoFirePage() {
-  const workbench = isWorkbenchEnabled();
+
   const { corteId = '' } = useParams();
   const { data, isLoading, isError, error } = useShortsDoCorte(corteId);
   const fires = useFires();
@@ -295,67 +284,12 @@ export default function WorkspaceDoFirePage() {
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        CASCA_NOVA ? '' : 'bg-[var(--wb-bg)]',
-        CASCA_NOVA ? '' : workbench ? 'h-full' : 'h-[calc(100vh-3.5rem)]',
+        '',
+        '',
       )}
     >
-      {CASCA_NOVA ? null : (
-      <header
-        className={cn(
-          'flex-none border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]',
-          workbench ? 'px-4 py-2.5' : 'px-7 py-4',
-        )}
-      >
-        <div className="flex items-center gap-2.5">
-          <Link
-            to="/shorts"
-            className="inline-flex items-center gap-1 rounded-[7px] px-1.5 py-1 text-[12px] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]"
-          >
-            <ArrowLeft size={14} aria-hidden />
-            Shorts
-          </Link>
-          <LayoutGrid size={16} className="text-[var(--wb-accent)]" aria-hidden />
-          <div className="min-w-0">
-            <h1 className="truncate text-[14.5px] font-extrabold leading-tight">
-              {fire?.titulo || 'Workspace do Fire'}
-            </h1>
-            <p className="truncate text-[11.5px] text-[var(--wb-text-mute)]">
-              {publicaveis.length} pronto{publicaveis.length === 1 ? '' : 's'} para publicar
-              {aguardando > 0 && ` · ${aguardando} aguardando render`}
-              {fire && ` · bruto de ${formatarDuracao(fire.duracao_seg)}`}
-            </p>
-          </div>
 
-          <div className="flex-1" />
-
-          {/* D-581: a ida e volta entre as duas telas, nas duas direções.
-              O botão aqui e o "Workspace" lá formam o par — sem um deles a
-              navegação vira mão única e o operador volta pela lista. */}
-          <Button variant="ghost" size="sm" asChild>
-            <Link to={`/shorts/${corteId}`}>
-              <Pencil />
-              Voltar à edição
-            </Link>
-          </Button>
-
-          <Button
-            size="sm"
-            disabled={publicaveis.length === 0}
-            onClick={() => setPublicandoEmLote(true)}
-            title={
-              publicaveis.length > 0
-                ? 'Publicar vários trechos deste Fire, nas plataformas escolhidas'
-                : 'Nenhum short finalizado ainda'
-            }
-          >
-            <Send />
-            Publicar em massa
-          </Button>
-        </div>
-      </header>
-      )}
-
-      <main className={CASCA_NOVA ? '' : 'flex-1 overflow-auto p-4'}>
+      <main className="">
         {isLoading && (
           <p className="py-16 text-center text-[13px] text-[var(--wb-text-mute)]">
             Carregando a prateleira…
@@ -391,7 +325,7 @@ export default function WorkspaceDoFirePage() {
           <div
             className="grid gap-3"
             style={{
-              gridTemplateColumns: `repeat(auto-fill,minmax(${CASCA_NOVA ? 210 : 220}px,1fr))`,
+              gridTemplateColumns: `repeat(auto-fill,minmax(${210}px,1fr))`,
             }}
           >
             {naPrateleira.map((short) => (

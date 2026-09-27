@@ -23,21 +23,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  Check,
-  CircleDashed,
-  ClipboardList,
-  FileText,
-  Image as ImageIcon,
-  LayoutGrid,
-  Send,
-} from 'lucide-react';
+import { Check, CircleDashed, ClipboardList, FileText, Image as ImageIcon, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import {
   REDES_DO_SHORT,
   contarPorFiltro,
@@ -56,8 +46,6 @@ import { useFechoDoShort } from './useFechoDoShort';
 import { useLoteAtual } from './useLotePublicacao';
 import { PRONTOS_KEY, useShortsProntos } from './useShortsProntos';
 
-const CASCA_NOVA = isUpgradeShellEnabled();
-
 const FILTROS: Array<{ id: FiltroDosProntos; texto: string }> = [
   { id: 'todos', texto: 'Todos' },
   ...REDES_DO_SHORT.map((r) => ({ id: r.id, texto: `Falta ${r.rotulo}` })),
@@ -66,7 +54,7 @@ const FILTROS: Array<{ id: FiltroDosProntos; texto: string }> = [
 ];
 
 export default function ShortsProntosPage() {
-  const workbench = isWorkbenchEnabled();
+
   const { data, isLoading, isError, error } = useShortsProntos();
   const [filtro, setFiltro] = useState<FiltroDosProntos>('todos');
   const [selecionados, setSelecionados] = useState<string[]>([]);
@@ -128,27 +116,12 @@ export default function ShortsProntosPage() {
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        CASCA_NOVA ? '' : 'bg-[var(--wb-bg)]',
-        CASCA_NOVA ? '' : workbench ? 'h-full' : 'h-[calc(100vh-3.5rem)]',
+        '',
+        '',
       )}
     >
-      {!CASCA_NOVA && (
-        <header className="flex flex-none items-center gap-2.5 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)] px-5 py-3">
-          <Send size={16} className="text-[var(--wb-accent)]" aria-hidden />
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[14.5px] font-extrabold leading-tight">
-              Prontos para publicar
-            </h1>
-            <p className="truncate text-[11.5px] text-[var(--wb-text-mute)]">{resumo}</p>
-          </div>
-          <Button size="sm" disabled={alvoDoLote.length === 0} onClick={abrirLote}>
-            <Send />
-            {textoDoPrimario}
-          </Button>
-        </header>
-      )}
 
-      <main className={CASCA_NOVA ? '' : 'flex-1 overflow-auto p-4'}>
+      <main className="">
         {prontos.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
             {FILTROS.map((f) => (

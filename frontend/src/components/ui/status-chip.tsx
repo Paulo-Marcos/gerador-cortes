@@ -8,13 +8,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import type { StatusProjeto } from '@/types/models';
 
 // D-599: na casca nova o selo e o `.chip` do handoff — 22 px, canto de 3 px,
 // fundo `-soft` do proprio tom. O tom continua sendo dado semantico; so a
 // forma muda.
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 const AP_TOM: Record<StatusTone, { cor: string; bg: string }> = {
   neutral: { cor: 'var(--mute)', bg: 'var(--inset)' },
@@ -68,15 +66,13 @@ export function StatusChip({
   const Icon = meta?.Icon ?? CircleDashed;
   const resolvedTone = tone ?? meta?.tone ?? 'neutral';
 
-  if (CASCA_NOVA) {
-    const tomAp = AP_TOM[resolvedTone];
-    return (
-      <span className={cn('chip', className)} style={{ background: tomAp.bg, color: tomAp.cor }}>
-        <Icon size={12} aria-hidden className={cn(meta?.animate && 'animate-spin')} />
-        {label ?? meta?.label ?? 'Status'}
-      </span>
-    );
-  }
+  const tomAp = AP_TOM[resolvedTone];
+  return (
+    <span className={cn('chip', className)} style={{ background: tomAp.bg, color: tomAp.cor }}>
+      <Icon size={12} aria-hidden className={cn(meta?.animate && 'animate-spin')} />
+      {label ?? meta?.label ?? 'Status'}
+    </span>
+  );
 
   return (
     <span

@@ -94,8 +94,6 @@ locks:
   - backend/app/routers/export.py
   - backend/tests/domain/test_youtube_urls.py
   - backend/tests/services/test_youtube_manual_publish.py
-  - frontend/src/features/projeto-detalhe/ProjetoDetalhePage.tsx
-  - frontend/src/features/projeto-detalhe/CorteCard.tsx
   - backend/projetos/projetos.db
   - frontend/src/types/models.ts
   - frontend/src/lib/api.ts
@@ -105,9 +103,7 @@ locks:
     + PosTopbarExtra (marker tipo + stepper)
   locked_at: 2026-05-30
   files:
-  - frontend/src/features/editor/UnifiedSidebar.tsx
   - frontend/src/features/editor/CommonTopBar.tsx
-  - frontend/src/features/editor/PosTopbarExtra.tsx
   - frontend/src/components/layout/AppShell.tsx
 - id: f024-bruto-completo
   description: 'Bruto end-to-end conforme hand-off: ContextStrip + Timeline enxuta
@@ -169,7 +165,6 @@ locks:
   - frontend/tailwind.config.ts
   - frontend/src/hooks/usePalette.ts
   - frontend/src/hooks/__tests__/usePalette.test.ts
-  - frontend/src/components/layout/ThemePicker.tsx
   - frontend/src/main.tsx
 - id: editor-cortes-stage-medallion
   description: Card do corte na sidebar do editor com medalha de estagio + tint de
@@ -197,17 +192,12 @@ locks:
   - backend/app/services/render/pipeline_render.py
   - backend/app/services/projeto.py
   - bin/check-lock.py
-  - frontend/src/features/editor/EditorCutList.tsx
   - frontend/src/features/editor/fase1/EditorFase1.tsx
   - frontend/src/features/editor/fase1/PlayerPanel.tsx
   - frontend/src/features/post-production/ScenesPostProductionPage.tsx
-  - frontend/src/features/projeto-detalhe/CorteCard.tsx
-  - frontend/src/features/projeto-detalhe/ProjetoDetalhePage.tsx
   - frontend/src/features/projeto-detalhe/PublicarMassaModal.tsx
-  - frontend/src/features/projetos/ProjetoCard.tsx
   - frontend/src/features/projeto-detalhe/useProjetoDetalhe.ts
   - frontend/src/index.css
-  - frontend/src/features/editor/CorteStatusCard.tsx
 - id: adicoes-exigem-autorizacao
   description: Criacao/adicao de novos arquivos exige autorizacao explicita do Paulo.
   locked_at: 2026-05-30
@@ -253,20 +243,6 @@ locks:
   - frontend/src/features/editor/fase1/TimelinePanel.tsx
   - frontend/src/features/editor/fase1/EditorFase1.tsx
   - frontend/src/features/editor/EditorPage.tsx
-- id: d068-metadados-sidebar
-  description: Icones T (titulo/descricao) e Imagem (thumbnail) do card de corte na
-    sidebar (CorteStatusCard/UnifiedSidebar) abrem o MetadataModal de qualquer pagina;
-    meta strip vira botoes irmaos do botao de navegacao.
-  locked_at: '2026-06-20'
-  operations:
-  - add
-  - modify
-  - delete
-  - rename
-  files:
-  - frontend/src/features/editor/CorteStatusCard.tsx
-  - frontend/src/features/editor/UnifiedSidebar.tsx
-  - frontend/src/features/editor/__tests__/CorteStatusCard.test.tsx
 - id: d069-leitura-edicao
   description: 'Feature Leitura: contrato do prefixo de titulo ''Leitura - {autor}
     - PT.{parte} |'' e helpers (autor/parte, clique do toggle) - front + back'

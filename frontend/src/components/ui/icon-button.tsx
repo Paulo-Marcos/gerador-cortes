@@ -1,12 +1,10 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 
 // D-599: na casca nova o botão de ícone é o `.btn.btn-icon` do handoff —
 // 30 px quadrados, canto de 4 px. As variantes de COR continuam valendo:
 // elas carregam significado (ok = aprovar, err = rejeitar, fire, leitura),
 // e trocar significado por estética seria perder informação.
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 const AP_SIZES: Record<NonNullable<IconButtonProps['size']>, string> = {
   sm: 'btn btn-icon btn-sm',
@@ -56,68 +54,16 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   size?: 'sm' | 'md' | 'lg' | 'toolbar' | 'toolbar-sm';
 }
 
-const sizeClasses: Record<NonNullable<IconButtonProps['size']>, string> = {
-  sm: 'h-7 w-7 rounded-[var(--radius-xs)] [&_svg]:size-3.5',
-  md: 'h-9 w-9 rounded-[var(--radius-sm)] [&_svg]:size-4',
-  lg: 'h-10 w-10 rounded-[var(--radius)] [&_svg]:size-5',
-  // AUDITORIA-v2 §2 — botões da toolbar do Bruto (Workbench): encolhem
-  // PROPORCIONAL (fundo sempre quadrado) em vez de esticar/espremer só a
-  // largura quando os painéis laterais abrem/fecham.
-  toolbar: 'aspect-square min-w-[26px] flex-[0_1_38px] rounded-[9px]',
-  'toolbar-sm': 'aspect-square min-w-[24px] flex-[0_1_34px] rounded-[9px]',
-};
-
-const variantClasses: Record<NonNullable<IconButtonProps['variant']>, string> = {
-  ghost:
-    'border border-transparent bg-transparent text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-inset)] hover:text-[var(--wb-text)]',
-  outline:
-    'border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
-  solid: 'border border-transparent bg-[var(--wb-ink)] text-[var(--wb-ink-fg)] hover:opacity-90',
-  accent:
-    'border border-transparent bg-[var(--wb-accent)] text-white shadow-[shadow:var(--wb-shadow-btn)] hover:opacity-90',
-  // AUDITORIA-v2 §2 — cores fixas da toolbar do Bruto (veredito + toggles).
-  ok: 'border border-transparent bg-[var(--wb-ok)] text-white hover:opacity-90',
-  err: 'border border-transparent bg-[var(--wb-err)] text-white hover:opacity-90',
-  // Protótipo v3 (toolbar do Bruto): Rejeitar é o secundário do par — fundo
-  // de painel + borda, só o glifo em --wb-err. O vermelho cheio ao lado do
-  // verde cheio fazia a toolbar inteira parecer um semáforo.
-  'err-outline':
-    'border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-err)] hover:border-[var(--wb-err)]',
-  'fire-soft': 'border border-[var(--wb-fire)] bg-[var(--wb-fire-soft)] text-[var(--wb-fire)]',
-  'leitura-soft':
-    'border border-[var(--wb-leitura)] bg-[var(--wb-leitura-soft)] text-[var(--wb-leitura)]',
-  inset:
-    'border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-  'toggle-active':
-    'border border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]',
-};
-
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
-  ({ className, variant = 'ghost', size = 'md', type = 'button', style, ...props }, ref) =>
-    CASCA_NOVA ? (
-      <button
-        ref={ref}
-        type={type}
-        className={cn(AP_SIZES[size], AP_VARIANTS[variant], className)}
-        style={{ ...AP_INLINE[variant], ...style }}
-        {...props}
-      />
-    ) : (
-      <button
-        ref={ref}
-        type={type}
-        className={cn(
-          'inline-flex shrink-0 items-center justify-center transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
-          'disabled:pointer-events-none disabled:opacity-45',
-          sizeClasses[size],
-          variantClasses[variant],
-          className,
-        )}
-        style={style}
-        {...props}
-      />
-    ),
+  ({ className, variant = 'ghost', size = 'md', type = 'button', style, ...props }, ref) => (
+    <button
+      ref={ref}
+      type={type}
+      className={cn(AP_SIZES[size], AP_VARIANTS[variant], className)}
+      style={{ ...AP_INLINE[variant], ...style }}
+      {...props}
+    />
+  ),
 );
 
 IconButton.displayName = 'IconButton';

@@ -1,22 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import {
-  Check,
-  CheckCircle2,
-  Download,
-  Edit3,
-  FileText,
-  Flame,
-  Folder,
-  FolderOpen,
-  Keyboard,
-  Loader2,
-  Palette,
-  RefreshCw,
-  Sparkles,
-  VolumeX,
-  type LucideIcon,
-} from 'lucide-react';
+import { Check, Download, Edit3, FileText, Folder, Loader2, Palette, RefreshCw, Sparkles, VolumeX, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
@@ -26,12 +10,6 @@ import { useAtualizarCorte, useToggleFire, useCorte, useCortesProjeto } from '@/
 import { useQuery } from '@tanstack/react-query';
 import { finalVideoUrl, resolveThumbUrl } from '@/lib/api';
 import { BancadaChrome } from '@/upgrade/telas/BancadaChrome';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
-import { UnifiedSidebar } from '@/features/editor/UnifiedSidebar';
-import { CommonTopBar, type MoreMenuItem } from '@/features/editor/CommonTopBar';
-import { WorkbenchCutsPanel } from '@/features/editor/WorkbenchCutsPanel';
-import { WorkbenchEditorLayout } from '@/features/editor/WorkbenchEditorLayout';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import { useShortcuts, type ShortcutBinding } from '@/features/editor/shortcuts';
 import { SceneTimeline } from '@/features/editor/fase2/SceneTimeline';
 import { calcularDuracaoLiquida } from '@/features/editor/timeUtils';
@@ -41,7 +19,6 @@ import {
   useVelocidadePlayerPadrao,
 } from '@/hooks/useVelocidadePlayerPadrao';
 import { SettingsModal } from '@/components/layout/SettingsModal';
-import { RenderStepsModal } from '@/features/post-production/RenderStepsModal';
 import { filtrosApi } from '@/features/post-production/api/filtros';
 import {
   isCorteVideoPronto,
@@ -69,7 +46,6 @@ const SPEED_STEP = 0.25;
 
 // D-599: com a casca nova quem desenha a lista de cortes, a trilha e a barra
 // de decisao e a CASCA — a tela apenas a alimenta (BancadaChrome).
-const CASCA_NOVA = isUpgradeShellEnabled();
 
 export function FinalReviewPage() {
   const { id: projetoId = '' } = useParams<{ id: string }>();
@@ -83,23 +59,14 @@ export function FinalReviewPage() {
   const corteQuery = useCorte(corteId);
   const exportStatusQ = useExportStatus(projetoId);
   const abrirPasta = useAbrirPasta();
-  const {
-    pipelineStatus,
-    rodando: renderFinalRunning,
-    progresso: renderProgress,
-    modalDeInicioAberto: renderStartModalOpen,
-    setModalDeInicioAberto: setRenderStartModalOpen,
-    pedir: pedirRenderFinal,
-    iniciar: startRenderFinal,
-  } = useRenderFinal(corteId, { aoMudarStatus: () => void exportStatusQ.refetch() });
+  // A Revisão não dispara render; acompanha o que a Pós disparou, para reler o
+  // status de exportação quando ele terminar (D-727).
+  useRenderFinal(corteId, { aoMudarStatus: () => void exportStatusQ.refetch() });
   const atualizarCorte = useAtualizarCorte(corteId, projetoId);
   // D-746: o Fire da Revisão era um botão que não fazia nada.
   const alternarFire = useToggleFire(corteId, projetoId);
   const [metadataOpen, setMetadataOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // DE-PARA-v3 §4: o checklist nasce recolhido num contador N/6 — só o
-  // contador ocupa a barra de ações; os 6 chips expandem sob demanda.
-  const [checklistAberto, setChecklistAberto] = useState(false);
   // D-367: filtro/grade exibido no header do player. No fluxo normal de
   // "Renderizar" o filtro vai `null` e o backend resolve para o global
   // (AppSettings.filtro_global_padrao), entao o global reflete o que foi
@@ -120,15 +87,6 @@ export function FinalReviewPage() {
     () => parseCenasPayload(corte?.cenas_remotion).cenas,
     [corte?.cenas_remotion],
   );
-  // D-396 (AUDITORIA-v2 §10): badges de sucesso da timeline CENAS/LAYOUT YT
-  // no Workbench. Nao ha flag por-cena de "renderizada" nem um "palco_pronto"
-  // exposto pela API — usamos os agregados de `exportStatusAtual` ja
-  // consumidos pelo checklist logo abaixo como proxy: `overlays_prontos`
-  // (overlays das cenas aplicados ao video final) e `grade_pronta` (a fase
-  // de grade e onde o composite do palco acontece — D-384 bloqueia o render
-  // se o PNG do palco falhar, entao grade_pronta=true implica palco ok).
-  const cenasRenderizadas = cenas.length > 0 && Boolean(exportStatusAtual?.overlays_prontos);
-  const palcoGerado = Boolean(exportStatusAtual?.grade_pronta);
   const videoRef = useRef<HTMLVideoElement>(null);
   // D-365: playhead da timeline segue o <video> final (igual ao Pos, que
   // alimenta `currentTime` via onTimeUpdate). Sem isso a timeline ficava
@@ -241,11 +199,6 @@ export function FinalReviewPage() {
   // Navegacao livre entre fases (B-012): permanece em Final mesmo sem
   // video renderizado. Player ganha placeholder mais abaixo.
 
-  async function renderizarNovamente() {
-    if (!corte) return;
-    await pedirRenderFinal();
-  }
-
   const aprovado = ['aprovado', 'processado'].includes(corte.status);
 
   // Status checklist (conectado aos campos reais do exportStatus + corte).
@@ -283,8 +236,6 @@ export function FinalReviewPage() {
       icon: VolumeX,
     },
   ];
-  const checklistOkCount = checklistItems.filter((item) => item.ok).length;
-  const capaPronta = Boolean(exportStatusAtual?.thumbnail_pronta);
 
   // Duracao para timeline: usa duracao real do clip se houver.
   const timelineDuration = Math.max(
@@ -311,40 +262,6 @@ export function FinalReviewPage() {
     );
   }
 
-  // statusPills (read-only) — Aprovado/Renderizado/TOP/Leitura na esquerda do titulo.
-  const statusPills = (
-    <span className="flex flex-wrap items-center gap-1.5">
-      <FinalStatusPill icon={Check} label="Aprovado" active={aprovado} color="var(--wb-ok)" />
-      <FinalStatusPill
-        icon={Flame}
-        label="TOP"
-        active={Boolean(corte.is_fire)}
-        color="var(--wb-fire)"
-      />
-    </span>
-  );
-
-  const moreMenuItems: MoreMenuItem[] = [
-    {
-      icon: RefreshCw,
-      label: renderFinalRunning ? `Re-renderizando ${renderProgress}%` : 'Re-renderizar',
-      disabled: renderFinalRunning,
-      onClick: () => void renderizarNovamente(),
-    },
-    {
-      icon: FolderOpen,
-      label: 'Abrir pasta do render',
-      kbd: 'Ctrl+O',
-      disabled: abrirPasta.isPending,
-      onClick: () => abrirPasta.mutate(corte.id),
-    },
-    {
-      icon: Keyboard,
-      label: 'Atalhos',
-      kbd: '?',
-      onClick: () => undefined,
-    },
-  ];
   const exportStatuses = exportStatusQ.data?.cortes ?? [];
 
   // D-367: resolve o id do filtro global para o nome amigavel (FiltroExport.nome).
@@ -431,12 +348,6 @@ export function FinalReviewPage() {
 
   const finalModals = (
     <>
-      <RenderStepsModal
-        open={renderStartModalOpen}
-        status={pipelineStatus.data}
-        onClose={() => setRenderStartModalOpen(false)}
-        onConfirm={startRenderFinal}
-      />
       <MetadataModal
         open={metadataOpen}
         projetoId={projetoId}
@@ -449,188 +360,6 @@ export function FinalReviewPage() {
 
   // ── Shell Workbench (Etapa 5 / DE-PARA §5): painel CORTES retrátil +
   // linha de ações no topo do conteúdo da aba; grid final compartilhado.
-  if (isWorkbenchEnabled()) {
-    return (
-      <>
-        <WorkbenchEditorLayout
-          panelIds={['cuts']}
-          leftPanel={
-            <WorkbenchCutsPanel
-              projetoId={projetoId}
-              cortes={cortes}
-              corteAtivoId={corte.id}
-              exportStatus={exportStatuses}
-              getCortePath={(item) =>
-                resolveCorteStagePath({
-                  projetoId,
-                  corte: item,
-                  status: exportStatuses.find((status) => status.corte_id === item.id),
-                })
-              }
-            />
-          }
-        >
-          {/* Fluxo vertical: o PLAYER é o item flexível — fica com todo o
-              espaço que sobra — e a timeline ancora no rodapé com a altura
-              natural dela (nunca cortada, nunca sobrando branco embaixo). */}
-          <div className="min-h-0 flex-1">
-            {videoPronto ? (
-              <FinalPlayerPanel
-                src={finalVideoUrl(projetoId, corte.id)}
-                projetoId={projetoId}
-                corteId={corte.id}
-                onAbrirPasta={() => abrirPasta.mutate(corte.id)}
-                abrindoPasta={abrirPasta.isPending}
-                videoRef={videoRef}
-                onTimeUpdate={setCurrentTime}
-                filtroLabel={filtroNome}
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-8 text-center text-[var(--wb-text-mute)]">
-                <div className="flex flex-col items-center gap-2">
-                  <p className="text-[14px] font-bold text-[var(--wb-text)]">
-                    Render final ainda nao disponivel
-                  </p>
-                  <p className="text-xs">Gere o video na fase Pos para visualizar aqui.</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Linha de ações do protótipo */}
-          <div className="flex flex-none flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={aprovarCorte}
-              disabled={atualizarCorte.isPending || aprovado}
-              className="flex items-center gap-1.5 rounded-[9px] bg-[var(--wb-ok)] px-4 py-2 text-[11.5px] font-extrabold text-white hover:opacity-90 disabled:opacity-60"
-            >
-              {atualizarCorte.isPending ? (
-                <Loader2 size={13} className="animate-spin" aria-hidden />
-              ) : (
-                <CheckCircle2 size={13} aria-hidden />
-              )}
-              {/* D-746: aprovar não publica — o rótulo prometia o que não fazia. */}
-              {aprovado ? 'Aprovado' : 'Aprovar'}
-            </button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate(`/projetos/${projetoId}/post-production?corte=${corte.id}`)}
-            >
-              ↩ Voltar para pós
-            </Button>
-            {statusPills}
-            <div className="flex-1" />
-            <button
-              type="button"
-              onClick={() => setChecklistAberto((aberto) => !aberto)}
-              aria-expanded={checklistAberto}
-              title="Ver checklist de publicação"
-              className={
-                checklistOkCount === checklistItems.length
-                  ? 'flex items-center gap-1.5 rounded-[9px] bg-[var(--wb-ok-soft)] px-3 py-2 text-[10.5px] font-bold text-[var(--wb-ok-ink)]'
-                  : 'flex items-center gap-1.5 rounded-[9px] bg-[var(--wb-warn-soft)] px-3 py-2 text-[10.5px] font-bold text-[var(--wb-warn-ink)]'
-              }
-            >
-              CHECKLIST {checklistOkCount}/{checklistItems.length}
-              <span aria-hidden className="text-[9px]">
-                {checklistAberto ? '▲' : '▼'}
-              </span>
-            </button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void renderizarNovamente()}
-              disabled={renderFinalRunning}
-            >
-              {renderFinalRunning ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-              {renderFinalRunning ? `Re-renderizando ${renderProgress}%` : 'Re-renderizar'}
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => setMetadataOpen(true)}>
-              <FileText />
-              Metadados
-            </Button>
-          </div>
-
-          {/* Checklist expansível (DE-PARA-v3 §4): recolhido por padrão para
-              despoluir; o contador na barra de ações é o gatilho. Traz os 6
-              chips + o cluster compacto (agendamento · capa · editar). */}
-          {checklistAberto && (
-            <div className="flex flex-none flex-wrap items-center gap-1.5 rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] p-2.5">
-              {checklistItems.map((item, idx) => (
-                <span
-                  key={idx}
-                  title={item.label}
-                  className={
-                    item.ok
-                      ? 'flex items-center gap-1 rounded-[6px] bg-[var(--wb-ok-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-ok)]'
-                      : 'flex items-center gap-1 rounded-[6px] bg-[var(--wb-warn-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-warn)]'
-                  }
-                >
-                  {item.ok ? '✓' : '○'} {item.label}
-                </span>
-              ))}
-              {exportStatusAtual?.youtube_scheduled_at && (
-                <span className="rounded-[6px] bg-[var(--wb-info-soft)] px-2 py-1 text-[9.5px] font-bold text-[var(--wb-info)]">
-                  agendado · {exportStatusAtual.youtube_scheduled_at}
-                </span>
-              )}
-              <div className="flex-1" />
-              {resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) && (
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className={
-                      capaPronta
-                        ? 'rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[9px] font-bold uppercase text-[var(--wb-ok)]'
-                        : 'rounded-full bg-[var(--wb-warn-soft)] px-2 py-0.5 font-code text-[9px] font-bold uppercase text-[var(--wb-warn)]'
-                    }
-                  >
-                    {capaPronta ? 'pronta' : 'pendente'}
-                  </span>
-                  <img
-                    src={resolveThumbUrl(projetoId, exportStatusAtual?.thumbnail_path) ?? undefined}
-                    alt="Capa do corte"
-                    className="h-12 rounded-md object-cover"
-                  />
-                </span>
-              )}
-              <Button type="button" variant="ghost" size="sm" onClick={() => setMetadataOpen(true)}>
-                <Edit3 />
-                Editar capa
-              </Button>
-            </div>
-          )}
-
-          {/* Timeline read-only navegável (D-365), ancorada no rodapé com a
-              altura natural do componente (cabeçalho + trilha CENAS 68px +
-              trilha LAYOUT YT 44px + eixo ≈ 196px). `flex-none` porque o
-              SceneTimeline não estica por dentro: com `flex-1` ele ganhava a
-              sobra e a devolvia como espaço branco abaixo do eixo. Quem cresce
-              é o player. */}
-          <div className="flex-none">
-            <SceneTimeline
-              cenas={cenas}
-              currentTime={currentTime}
-              duration={timelineDuration}
-              layoutYoutube={(corte as unknown as { layout_youtube?: never }).layout_youtube}
-              onSeek={(seg) => {
-                const v = videoRef.current;
-                if (!v) return;
-                v.currentTime = Math.max(0, seg);
-              }}
-              readOnly
-              seekable
-              cenasRenderizadas={cenasRenderizadas}
-              palcoGerado={palcoGerado}
-            />
-          </div>
-        </WorkbenchEditorLayout>
-        {finalModals}
-      </>
-    );
-  }
 
   const caminhoDoCorte = (item: (typeof cortes)[number]) =>
     resolveCorteStagePath({
@@ -641,140 +370,55 @@ export function FinalReviewPage() {
 
   return (
     <>
-      {CASCA_NOVA ? (
-        <BancadaChrome
-          projetoId={projetoId}
-          tituloLive={projeto.data?.titulo_live ?? 'Live'}
-          cortes={cortes}
-          corte={corte}
-          exportStatus={exportStatusQ.data?.cortes ?? []}
-          caminhoDoCorte={caminhoDoCorte}
-          sub="confira o render, a capa e o título antes de liberar o lote"
-          fire={corte.is_fire}
-          sujo={false}
-          salvando={atualizarCorte.isPending}
-          brutoPronto
-          brutoOcupado={false}
-          // D-746: um verbo por botão. Salvar, Rejeitar e "Regerar bruto"
-          // abriam os metadados; o Fire não fazia nada; o veredito agora é
-          // reversível e o primário diz para onde leva.
-          onToggleFire={() => alternarFire.mutate()}
-          fireOcupado={alternarFire.isPending}
-          onAprovar={aprovarCorte}
-          barra={{
-            veredito: {
-              aprovado,
-              ocupado: atualizarCorte.isPending,
-              onAlternar: () =>
-                aprovado ? atualizarCorte.mutate({ status: 'proposto' }) : aprovarCorte(),
-            },
-            terciario: {
-              titulo: 'Metadados do corte — editar aqui',
-              icone: 'tags',
-              onClick: () => setMetadataOpen(true),
-            },
-            primario: {
-              texto: 'Ir para publicar',
-              icone: 'send',
-              // Publicar é na live, com a conferência de canal, título e capa.
-              onClick: () => navigate(`/projetos/${projetoId}`),
-            },
-          }}
-        />
-      ) : (
-      <UnifiedSidebar
+      <BancadaChrome
         projetoId={projetoId}
+        tituloLive={projeto.data?.titulo_live ?? 'Live'}
         cortes={cortes}
-        corteAtivoId={corte.id}
+        corte={corte}
         exportStatus={exportStatusQ.data?.cortes ?? []}
-        activePhase="final"
-        getCortePath={caminhoDoCorte}
-        onOpenSettings={() => setSettingsOpen(true)}
+        caminhoDoCorte={caminhoDoCorte}
+        sub="confira o render, a capa e o título antes de liberar o lote"
+        fire={corte.is_fire}
+        sujo={false}
+        salvando={atualizarCorte.isPending}
+        brutoPronto
+        brutoOcupado={false}
+        // D-746: um verbo por botão. Salvar, Rejeitar e "Regerar bruto"
+        // abriam os metadados; o Fire não fazia nada; o veredito agora é
+        // reversível e o primário diz para onde leva.
+        onToggleFire={() => alternarFire.mutate()}
+        fireOcupado={alternarFire.isPending}
+        onAprovar={aprovarCorte}
+        barra={{
+          veredito: {
+            aprovado,
+            ocupado: atualizarCorte.isPending,
+            onAlternar: () =>
+              aprovado ? atualizarCorte.mutate({ status: 'proposto' }) : aprovarCorte(),
+          },
+          terciario: {
+            titulo: 'Metadados do corte — editar aqui',
+            icone: 'tags',
+            onClick: () => setMetadataOpen(true),
+          },
+          primario: {
+            texto: 'Ir para publicar',
+            icone: 'send',
+            // Publicar é na live, com a conferência de canal, título e capa.
+            onClick: () => navigate(`/projetos/${projetoId}`),
+          },
+        }}
       />
-      )}
 
       <div
-        className={
-          CASCA_NOVA
-            ? 'flex h-full min-h-0 flex-col overflow-hidden'
-            : 'ml-[132px] flex h-screen flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]'
-        }
+        className="flex h-full min-h-0 flex-col overflow-hidden"
       >
-        {CASCA_NOVA ? null : (
-        <CommonTopBar
-          projeto={projeto.data}
-          corte={corte}
-          statusToggles={null}
-          statusPills={statusPills}
-          secondaryAction={
-            <Tooltip label="Editar metadados (único editável aqui)" side="bottom">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setMetadataOpen(true)}
-              >
-                <FileText />
-                Metadados
-              </Button>
-            </Tooltip>
-          }
-          primaryAction={
-            <Tooltip label={aprovado ? 'Corte já aprovado' : 'Aprovar este corte'} side="bottom">
-              <Button
-                type="button"
-                size="sm"
-                onClick={aprovarCorte}
-                disabled={atualizarCorte.isPending || aprovado}
-                className="bg-[var(--wb-ok)] text-white hover:opacity-90 disabled:opacity-60"
-              >
-                {atualizarCorte.isPending ? (
-                  <Loader2 className="animate-spin" />
-                ) : aprovado ? (
-                  <CheckCircle2 />
-                ) : (
-                  <Check />
-                )}
-                {aprovado ? 'Aprovado' : 'Aprovar'}
-              </Button>
-            </Tooltip>
-          }
-          moreMenuItems={moreMenuItems}
-        />
-        )}
 
         {conteudoFinal}
       </div>
 
       {finalModals}
     </>
-  );
-}
-
-// ─── FinalStatusPill — read-only status do corte na topbar ──
-function FinalStatusPill({
-  icon: Icon,
-  label,
-  active,
-  color,
-}: {
-  icon: LucideIcon;
-  label: string;
-  active: boolean;
-  color: string;
-}) {
-  return (
-    <span
-      style={{ '--pill-color': color } as CSSProperties}
-      className={
-        active
-          ? 'inline-flex h-6 items-center gap-1 rounded-full border border-[var(--pill-color)] bg-[var(--pill-color)] px-[9px] pl-[7px] text-[10px] font-bold uppercase tracking-[0.04em] text-white'
-          : 'inline-flex h-6 items-center gap-1 rounded-full border border-[var(--wb-border)] bg-transparent px-[9px] pl-[7px] text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-text-mute)]'
-      }
-    >
-      <Icon size={11} strokeWidth={active ? 2.4 : 1.8} aria-hidden />
-      {label}
-    </span>
   );
 }
 

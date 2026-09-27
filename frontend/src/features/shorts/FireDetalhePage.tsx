@@ -21,7 +21,6 @@ import {
   useVelocidadeNoVideo,
   useVelocidadePlayerPadrao,
 } from '@/hooks/useVelocidadePlayerPadrao';
-import { isWorkbenchEnabled } from '@/components/workbench/workbenchFlag';
 import type { ShortSugerido } from './shortsApi';
 import { avisoDescarteBruto } from './descarteBruto';
 import type { Borda } from './linhaDoTempoShort';
@@ -45,7 +44,6 @@ import { useSimulacaoDePalco } from './useSimulacaoDePalco';
 import { useFires } from './useFires';
 import { estaFinalizado } from './filtrosDosFires';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { isUpgradeShellEnabled } from '@/upgrade/upgradeFlag';
 import {
   useDescartarBruto,
   useGanchoPadrao,
@@ -61,10 +59,8 @@ import {
 const VELOCIDADE_NORMAL = 1;
 const VELOCIDADE_TRABALHO_INICIAL = 0.75;
 
-const CASCA_NOVA = isUpgradeShellEnabled();
-
 export default function FireDetalhePage() {
-  const workbench = isWorkbenchEnabled();
+
   const { corteId = '' } = useParams();
   const navigate = useNavigate();
   const video = useRef<HTMLVideoElement>(null);
@@ -337,19 +333,17 @@ export default function FireDetalhePage() {
     <div
       className={cn(
         'flex min-h-0 flex-col overflow-hidden text-[var(--wb-text)]',
-        CASCA_NOVA ? 'h-full' : 'bg-[var(--wb-bg)]',
+        'h-full',
         // No shell LEGADO a pagina fica ABAIXO de um cabecalho de 3.5rem, e
         // `h-screen` a fazia medir a viewport inteira — transbordando por
         // exatamente a altura desse cabecalho. Com o conteudo rolando dentro
         // (D-499), a ultima linha ficava inalcancavel. No workbench a pagina ja
         // recebe a altura do pai, e `h-full` continua certo.
-        CASCA_NOVA || workbench ? 'h-full' : 'h-[calc(100vh-3.5rem)]',
+        'h-full',
       )}
     >
       <FireChrome corteId={corteId} fire={fire} estado={edicao.estado} />
       <CabecalhoDoFire
-        workbench={workbench}
-        corteId={corteId}
         fire={fire}
         edicao={edicao}
         temPalco={temPalco}
@@ -372,7 +366,7 @@ export default function FireDetalhePage() {
       <main
         className={cn(
           'grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_400px]',
-          CASCA_NOVA ? '' : 'p-4',
+          '',
         )}
       >
         {/* ── Material: o que existe para olhar ───────────────────────── */}
