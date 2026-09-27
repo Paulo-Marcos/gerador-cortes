@@ -10,32 +10,10 @@ import {
 import { createPortal } from 'react-dom';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Flag,
-  Lock,
-  MoreVertical,
-  MousePointer2,
-  Pin,
-  Play,
-  Plus,
-  RotateCw,
-  Scissors,
-  Settings,
-  Merge,
-  SplitSquareHorizontal,
-  Unlock,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Flag, Lock, MousePointer2, Pin, Play, Plus, RotateCw, Scissors, Settings, Merge, SplitSquareHorizontal, Unlock, ZoomIn, ZoomOut } from 'lucide-react';
 import type { Desvio } from '@/types/models';
 import { corDoSegmento } from './trechoBadge';
 import type { PlayerHandle } from '@/hooks/useVideoPlayer';
-import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { fetchWaveformPeaks } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -48,13 +26,9 @@ import { hmsParaSeg, segParaHms, segParaMmSs } from '../timeUtils';
 // O corpo (Waveform interno + WaveSurfer) permanece o existente — apenas
 // a toolbar foi redesenhada. Atalhos (`shortcuts.ts`) preservados.
 //
-// `variant="workbench"` (AUDITORIA-v2 §7, CP7) — cabecalho reduzido a
-// TIMELINE+tempo/transporte/In-Out/cadeado/menu (engrenagem), com
-// velocidade + dividir/trecho/atualizar-onda movidos para dentro do
-// AdvancedMenu. `variant="legacy"` (default) preserva 100% o cabecalho e
-// o menu atuais (EditorFase1/shell antigo). O corpo — Waveform, WaveSurfer,
-// peaks reais, drawRegions, cursor via requestAnimationFrame — é o MESMO
-// para os dois variants: nada disso foi tocado nesta etapa.
+// O cabecalho e o do upgrade de layout (D-599/D-610): tempo, transporte,
+// In/Out, cadeado, velocidade e o menu ⚙ com dividir/juntar/trecho/onda.
+// As variantes do legado e do Workbench sairam com as cascas (D-728).
 // ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -68,7 +42,6 @@ interface Props {
   playbackRate: number;
   playerRef?: RefObject<PlayerHandle>;
   onSeek: (seg: number) => void;
-  onSkip: (delta: number) => void;
   onChangeSpeed: (delta: number) => void;
   onSetInicioAqui?: () => void;
   onSetFimAqui?: () => void;
@@ -100,13 +73,6 @@ interface Props {
    *  dele, para marcar na onda ate onde este corte pode ir. */
   proximoInicioSeg?: number;
   proximoNumero?: number;
-  /** AUDITORIA-v2 §7 (CP7): 'legacy' (default) preserva o cabecalho/menu
-   *  atuais (EditorFase1). 'workbench' reduz o cabecalho e move
-   *  velocidade/dividir/trecho/atualizar-onda para o AdvancedMenu. */
-  /** D-599: `ap` e o cabecalho do upgrade (rotulo e estilo da casca nova). Desde
-   *  a D-610 carrega o transporte e a velocidade, como o workbench. O corpo
-   *  (WaveSurfer, regioes, cursor) e o mesmo dos outros variants. */
-  variant?: 'legacy' | 'workbench' | 'ap';
 }
 
 const WB = {
@@ -270,15 +236,6 @@ interface WaveformProps {
   proximoInicioSeg?: number;
   /** Numero do proximo corte, so para rotular a marca. */
   proximoNumero?: number;
-  // AUDITORIA-v2 §7/§8 (CP8): 'legacy' (default) preserva EXATAMENTE os
-  // parametros visuais atuais (cor/barWidth hardcoded). 'workbench' deixa a
-  // onda mais densa/detalhada (barWidth/barGap menores) com a cor vinda do
-  // token --wb-text-dim (lido ao vivo do DOM, funciona claro e escuro) — só
-  // isto muda; peaks reais, drawRegions, cursor e zoom continuam intactos.
-  /** D-599: `ap` e o cabecalho do upgrade (rotulo e estilo da casca nova). Desde
-   *  a D-610 carrega o transporte e a velocidade, como o workbench. O corpo
-   *  (WaveSurfer, regioes, cursor) e o mesmo dos outros variants. */
-  variant?: 'legacy' | 'workbench' | 'ap';
 }
 
 function Waveform({
@@ -301,7 +258,6 @@ function Waveform({
   onLoadingChange,
   proximoInicioSeg,
   proximoNumero,
-  variant = 'legacy',
 }: WaveformProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -406,16 +362,13 @@ function Waveform({
 
     const root = getComputedStyle(document.documentElement);
     const accentColor = root.getPropertyValue('--wb-accent').trim() || '#facc15';
-    // AUDITORIA-v2 §8 (CP8): no Workbench a onda fica mais densa (barras
-    // menores/mais próximas) e a cor sai do token --wb-text-dim (lido ao
-    // vivo — funciona em claro e escuro). Legacy mantém os valores
-    // hardcoded de sempre, byte-a-byte.
-    const isWorkbenchWave = variant === 'workbench' || variant === 'ap';
+    // AUDITORIA-v2 §8 (CP8): onda densa (barras menores e mais proximas), com
+    // a cor do token --wb-text-dim lido ao vivo — funciona em claro e escuro.
     const dimColor = root.getPropertyValue('--wb-text-dim').trim();
     const waveColor =
-      isWorkbenchWave && dimColor ? withAlpha(dimColor, 0.85) : 'oklch(0.58 0.13 225 / 0.82)';
+      dimColor ? withAlpha(dimColor, 0.85) : 'oklch(0.58 0.13 225 / 0.82)';
     const progressColor =
-      isWorkbenchWave && dimColor ? withAlpha(dimColor, 0.42) : 'oklch(0.58 0.13 225 / 0.45)';
+      dimColor ? withAlpha(dimColor, 0.42) : 'oklch(0.58 0.13 225 / 0.45)';
 
     const regions = RegionsPlugin.create();
     regionsRef.current = regions;
@@ -426,8 +379,8 @@ function Waveform({
       progressColor,
       cursorColor: accentColor,
       cursorWidth: 2,
-      barWidth: isWorkbenchWave ? 1.5 : 2,
-      barGap: isWorkbenchWave ? 0.6 : undefined,
+      barWidth: 1.5,
+      barGap: 0.6,
       height: 'auto',
       autoCenter: false,
       autoScroll: false,
@@ -522,7 +475,7 @@ function Waveform({
       wsRef.current = null;
       regionsRef.current = null;
     };
-  }, [audioSrc, waveformPeaksSrc, variant]);
+  }, [audioSrc, waveformPeaksSrc]);
 
   useEffect(() => {
     let frame = 0;
@@ -775,20 +728,14 @@ function Waveform({
 
 function TransportGroup({
   onSkipStart,
-  onSkipMinus,
   onPlay,
-  onSkipPlus,
   onSkipEnd,
-  compacto = false,
 }: {
   onSkipStart: () => void;
-  onSkipMinus: () => void;
   onPlay: () => void;
-  onSkipPlus: () => void;
   onSkipEnd: () => void;
-  /** D-610: só início, play e fim — o ±5s já mora nas setas do teclado. */
-  compacto?: boolean;
 }) {
+  // D-610: só início, play e fim — o ±5s já mora nas setas do teclado.
   // v2_bruto.jsx:216-222 — bloco bg-inset, gap 2, padding 2
   const btn =
     'flex h-7 w-7 items-center justify-center rounded-[var(--radius-xs)] text-[var(--wb-text-mute)] hover:bg-[var(--wb-bg-card)] hover:text-[var(--wb-text)] transition-colors';
@@ -799,13 +746,6 @@ function TransportGroup({
           <ChevronsLeft size={14} />
         </button>
       </Tooltip>
-      {compacto ? null : (
-        <Tooltip label="-5s" side="bottom">
-          <button type="button" onClick={onSkipMinus} aria-label="-5s" className={btn}>
-            <ChevronLeft size={14} />
-          </button>
-        </Tooltip>
-      )}
       <Tooltip label="Play/Pause" side="bottom">
         <button
           type="button"
@@ -819,13 +759,6 @@ function TransportGroup({
           <Play size={13} />
         </button>
       </Tooltip>
-      {compacto ? null : (
-        <Tooltip label="+5s" side="bottom">
-          <button type="button" onClick={onSkipPlus} aria-label="+5s" className={btn}>
-            <ChevronRight size={14} />
-          </button>
-        </Tooltip>
-      )}
       <Tooltip label="Fim do corte" side="bottom">
         <button type="button" onClick={onSkipEnd} aria-label="Fim" className={btn}>
           <ChevronsRight size={14} />
@@ -934,7 +867,6 @@ function posicionarMenu(rect: DOMRect, alturaTela: number, larguraTela: number):
 // do overflow:hidden dos containers (Panel/react-resizable-panels) e nao
 // ficar cortado. Position:fixed calculado pelo bounding rect do botao.
 function AdvancedMenu({
-  variant = 'legacy',
   onZoomIn,
   onZoomOut,
   onToggleSmartPlay,
@@ -957,10 +889,6 @@ function AdvancedMenu({
   onRefreshAudio,
   refreshing,
 }: {
-  /** D-599: `ap` e o cabecalho do upgrade (rotulo e estilo da casca nova). Desde
-   *  a D-610 carrega o transporte e a velocidade, como o workbench. O corpo
-   *  (WaveSurfer, regioes, cursor) e o mesmo dos outros variants. */
-  variant?: 'legacy' | 'workbench' | 'ap';
   onZoomIn: () => void;
   onZoomOut: () => void;
   onToggleSmartPlay?: () => void;
@@ -973,7 +901,7 @@ function AdvancedMenu({
   pinned?: boolean;
   zoomLabel: string;
   rateLabel: string;
-  // AUDITORIA-v2 §7 (CP7) — só usados em variant='workbench': velocidade
+  // AUDITORIA-v2 §7 (CP7): velocidade
   // clicavel (chama o MESMO onChangeSpeed de Ctrl+J/K) + dividir/trecho/
   // atualizar-onda, migrados dos botoes soltos do header pro menu.
   playbackRate?: number;
@@ -1034,9 +962,6 @@ function AdvancedMenu({
     setOpen(false);
   }
 
-  const isWorkbench = variant === 'workbench';
-  const TriggerIcon = isWorkbench ? Settings : MoreVertical;
-
   return (
     <>
       <Tooltip label="Ferramentas avancadas" side="bottom">
@@ -1053,7 +978,7 @@ function AdvancedMenu({
               : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
           )}
         >
-          <TriggerIcon size={14} />
+          <Settings size={14} />
         </button>
       </Tooltip>
       {open &&
@@ -1074,7 +999,7 @@ function AdvancedMenu({
             <div className="px-2 pb-1 pt-0.5 font-code text-[9.5px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]">
               Avancado
             </div>
-            {isWorkbench && onChangeSpeed && playbackRate !== undefined && (
+            {onChangeSpeed && playbackRate !== undefined && (
               <>
                 <div className="px-2 pb-1 pt-0.5 font-code text-[8.5px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]">
                   Velocidade
@@ -1197,7 +1122,7 @@ function AdvancedMenu({
                 </span>
               </button>
             )}
-            {isWorkbench && (onDividirAqui || onJuntarProximo || onAddSegment || onRefreshAudio) && (
+            {(onDividirAqui || onJuntarProximo || onAddSegment || onRefreshAudio) && (
               <>
                 <div className="my-1 h-px bg-[var(--wb-border-soft)]" />
                 {onDividirAqui && (
@@ -1287,7 +1212,6 @@ export function TimelinePanel({
   playerRef,
   waveformPeaksSrc: _waveformPeaksSrc,
   onSeek,
-  onSkip,
   onSetInicioAqui,
   onSetFimAqui,
   onAtualizarAudioTimeline,
@@ -1311,7 +1235,6 @@ export function TimelinePanel({
   onChangeSpeed,
   proximoInicioSeg,
   proximoNumero,
-  variant = 'legacy',
 }: Props) {
   const [lockedFallback, setLockedFallback] = useState(true);
   const locked = lockedProp ?? lockedFallback;
@@ -1329,11 +1252,6 @@ export function TimelinePanel({
 
   function handleSeek(seg: number) {
     onSeek(seg);
-    requestScrollToCursor();
-  }
-
-  function handleSkip(delta: number) {
-    onSkip(delta);
     requestScrollToCursor();
   }
 
@@ -1369,10 +1287,6 @@ export function TimelinePanel({
 
   const zoomLabel = `${zoomLevel.toFixed(1)}×`;
   const rateLabel = `${playbackRate.toFixed(2)}×`;
-  // O `ap` herda o cabecalho compacto do workbench; o que muda e o que SAI
-  // dele — transporte e relogio, que agora moram na barra de transporte.
-  const isAp = variant === 'ap';
-  const isWorkbench = variant === 'workbench' || isAp;
   // AUDITORIA-v2 §7 (CP7): "TIMELINE + tempo" do cabecalho compacto —
   // elapsed/total relativos ao INICIO DO CORTE (mesma convencao de
   // "NO CORTE" no BrutoContextStrip: currentTime - inicioSeg). Puramente
@@ -1386,226 +1300,107 @@ export function TimelinePanel({
       style={{ overflow: 'visible' }}
     >
       {/* Header — v2_bruto.jsx:209-329 (Panel + toolbar) */}
-      <header
-        className={cn(
-          'flex flex-shrink-0 items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2',
-          // Em coluna estreita quebra em duas linhas em vez de esconder o ⚙.
-          isAp && 'flex-wrap',
-        )}
-      >
-        {isWorkbench ? (
-          <>
-            {/* AUDITORIA-v2 §7 (CP7): cabecalho reduzido a TIMELINE+tempo,
-                transporte, In/Out, cadeado, espacador e o menu ⚙. Velocidade/
-                dividir/trecho/atualizar-onda migraram pro AdvancedMenu — ver
-                abaixo — e o badge solto de trechos saiu (ja aparece em
-                Tempos/CP6). */}
-            {/* Na casca nova o rótulo cede o lugar ao transporte: o cartão já
-                se explica pela onda. */}
-            {isAp ? null : (
-              <span className="flex-none font-code text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--wb-text-dim)]">
-                Timeline
-              </span>
+      {/* Em coluna estreita o cabecalho quebra em duas linhas em vez de
+          esconder o ⚙. */}
+      <header className="flex flex-shrink-0 flex-wrap items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
+        {/* AUDITORIA-v2 §7 (CP7): cabecalho reduzido a TIMELINE+tempo,
+            transporte, In/Out, cadeado, espacador e o menu ⚙. Velocidade/
+            dividir/trecho/atualizar-onda migraram pro AdvancedMenu — ver
+            abaixo — e o badge solto de trechos saiu (ja aparece em
+            Tempos/CP6). */}
+        {/* D-610: na casca nova o transporte voltou para cá. A barra própria
+            acima gastava uma linha inteira do player para cinco controles
+            que cabem folgados neste cabeçalho. */}
+        <span
+          className="flex-none font-code text-[10px] font-semibold text-[var(--wb-text-mute)]"
+          style={{ fontVariantNumeric: 'tabular-nums' }}
+        >
+          {tempoLabel}
+        </span>
+
+        <TransportGroup
+          onSkipStart={() => handleSeek(inicioSeg)}
+          onPlay={handlePlayPause}
+          onSkipEnd={() => handleSeek(fimSeg)}
+        />
+
+        {/* Workbench 1c.dc.html:223-224 - pilulas com rotulo (nao icone
+            puro): fundo --wb-ok-soft/--wb-err-soft, texto --wb-ok-ink/--wb-err. */}
+        <Tooltip label="Marcar inicio aqui ( [ )" side="bottom">
+          <button
+            type="button"
+            onClick={onSetInicioAqui}
+            disabled={!onSetInicioAqui}
+            aria-label="Marcar inicio aqui"
+            className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-ok-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-ok-ink)] transition-colors disabled:opacity-40"
+          >
+            <Flag size={11} />
+            In
+          </button>
+        </Tooltip>
+        <Tooltip label="Marcar fim aqui ( ] )" side="bottom">
+          <button
+            type="button"
+            onClick={onSetFimAqui}
+            disabled={!onSetFimAqui}
+            aria-label="Marcar fim aqui"
+            className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-err-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-err)] transition-colors disabled:opacity-40"
+          >
+            <Flag size={11} style={{ transform: 'scaleX(-1)' }} />
+            Out
+          </button>
+        </Tooltip>
+
+        <Tooltip
+          label={locked ? 'Destravar trecho (Ctrl+L)' : 'Travar trecho (Ctrl+L)'}
+          side="bottom"
+        >
+          <button
+            type="button"
+            onClick={toggleLocked}
+            aria-pressed={locked}
+            aria-label={locked ? 'Destravar trecho' : 'Travar trecho'}
+            className={cn(
+              'flex h-7 w-7 flex-none items-center justify-center rounded-[var(--radius-sm)] transition-colors',
+              locked
+                ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
+                : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
             )}
-            {/* D-610: na casca nova o transporte voltou para cá. A barra própria
-                acima gastava uma linha inteira do player para cinco controles
-                que cabem folgados neste cabeçalho. */}
-            <span
-              className="flex-none font-code text-[10px] font-semibold text-[var(--wb-text-mute)]"
-              style={{ fontVariantNumeric: 'tabular-nums' }}
-            >
-              {tempoLabel}
-            </span>
+          >
+            {locked ? <Lock size={13} /> : <Unlock size={13} />}
+          </button>
+        </Tooltip>
 
-            <TransportGroup
-              onSkipStart={() => handleSeek(inicioSeg)}
-              onSkipMinus={() => handleSkip(-5)}
-              onPlay={handlePlayPause}
-              onSkipPlus={() => handleSkip(5)}
-              onSkipEnd={() => handleSeek(fimSeg)}
-              compacto={isAp}
-            />
+        <div className="flex-1" />
 
-            {/* Workbench 1c.dc.html:223-224 - pilulas com rotulo (nao icone
-                puro): fundo --wb-ok-soft/--wb-err-soft, texto --wb-ok-ink/--wb-err. */}
-            <Tooltip label="Marcar inicio aqui ( [ )" side="bottom">
-              <button
-                type="button"
-                onClick={onSetInicioAqui}
-                disabled={!onSetInicioAqui}
-                aria-label="Marcar inicio aqui"
-                className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-ok-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-ok-ink)] transition-colors disabled:opacity-40"
-              >
-                <Flag size={11} />
-                In
-              </button>
-            </Tooltip>
-            <Tooltip label="Marcar fim aqui ( ] )" side="bottom">
-              <button
-                type="button"
-                onClick={onSetFimAqui}
-                disabled={!onSetFimAqui}
-                aria-label="Marcar fim aqui"
-                className="flex flex-none items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-err-soft)] px-2.5 py-1 text-[10px] font-bold text-[var(--wb-err)] transition-colors disabled:opacity-40"
-              >
-                <Flag size={11} style={{ transform: 'scaleX(-1)' }} />
-                Out
-              </button>
-            </Tooltip>
+        {/* D-402: a velocidade em vigor precisa ser legivel sem abrir o ⚙.
+            O CP7 mandou o CONTROLE pro AdvancedMenu; aqui volta so o
+            INDICADOR (pill nao-clicavel), como no header legacy. */}
+        <SpeedDisplay playbackRate={playbackRate} onAlternar={onAlternarVelocidade} />
 
-            <Tooltip
-              label={locked ? 'Destravar trecho (Ctrl+L)' : 'Travar trecho (Ctrl+L)'}
-              side="bottom"
-            >
-              <button
-                type="button"
-                onClick={toggleLocked}
-                aria-pressed={locked}
-                aria-label={locked ? 'Destravar trecho' : 'Travar trecho'}
-                className={cn(
-                  'flex h-7 w-7 flex-none items-center justify-center rounded-[var(--radius-sm)] transition-colors',
-                  locked
-                    ? 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok)]'
-                    : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-                )}
-              >
-                {locked ? <Lock size={13} /> : <Unlock size={13} />}
-              </button>
-            </Tooltip>
-
-            <div className="flex-1" />
-
-            {/* D-402: a velocidade em vigor precisa ser legivel sem abrir o ⚙.
-                O CP7 mandou o CONTROLE pro AdvancedMenu; aqui volta so o
-                INDICADOR (pill nao-clicavel), como no header legacy. */}
-            <SpeedDisplay playbackRate={playbackRate} onAlternar={onAlternarVelocidade} />
-
-            <AdvancedMenu
-              variant="workbench"
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onToggleSmartPlay={onToggleSmartPlay}
-              smartPlay={smartPlay}
-              onTogglePointer={togglePointer}
-              pointer={pointer}
-              onToggleLocked={toggleLocked}
-              locked={locked}
-              onTogglePinned={onTogglePinned}
-              pinned={pinned}
-              zoomLabel={zoomLabel}
-              rateLabel={rateLabel}
-              playbackRate={playbackRate}
-              onChangeSpeed={onChangeSpeed}
-              onDividirAqui={onDividirAqui}
-              dividindo={dividindo}
-              onJuntarProximo={onJuntarProximo}
-              juntando={juntando}
-              onAddSegment={handleAddSegment}
-              onRefreshAudio={onAtualizarAudioTimeline ? handleRefreshAudio : undefined}
-              refreshing={audioRefreshing}
-            />
-          </>
-        ) : (
-          <>
-            <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
-              Timeline
-            </span>
-            <span className="rounded-full bg-[var(--wb-bg-card)] border border-[var(--wb-border-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-text-mute)]">
-              {desvios.length} {desvios.length === 1 ? 'trecho' : 'trechos'}
-            </span>
-
-            <div className="flex-1" />
-
-            {/* Toolbar — direita do header */}
-            <div className="flex items-center gap-1.5">
-              <TransportGroup
-                onSkipStart={() => handleSeek(inicioSeg)}
-                onSkipMinus={() => handleSkip(-5)}
-                onPlay={handlePlayPause}
-                onSkipPlus={() => handleSkip(5)}
-                onSkipEnd={() => handleSeek(fimSeg)}
-              />
-              <Tooltip label="Marcar inicio aqui ( [ )" side="bottom">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onSetInicioAqui}
-                  disabled={!onSetInicioAqui}
-                >
-                  <Flag />
-                  In
-                </Button>
-              </Tooltip>
-              <Tooltip label="Marcar fim aqui ( ] )" side="bottom">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onSetFimAqui}
-                  disabled={!onSetFimAqui}
-                >
-                  <Flag style={{ transform: 'scaleX(-1)' }} />
-                  Out
-                </Button>
-              </Tooltip>
-              <div className="h-4 w-px bg-[var(--wb-border)]" aria-hidden />
-              <Tooltip label="Adicionar trecho no cursor (Ctrl+Alt+T)" side="bottom">
-                <Button type="button" variant="default" size="sm" onClick={handleAddSegment}>
-                  <Plus />
-                  Trecho aqui
-                </Button>
-              </Tooltip>
-              {onDividirAqui && (
-                <Tooltip
-                  label="Dividir corte no cursor (D) — mantém trechos e tempos"
-                  side="bottom"
-                >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={onDividirAqui}
-                    disabled={dividindo}
-                  >
-                    <SplitSquareHorizontal />
-                    Dividir
-                  </Button>
-                </Tooltip>
-              )}
-              <Tooltip
-                label={audioRefreshing ? 'Atualizando onda' : 'Atualizar onda de audio'}
-                side="bottom"
-              >
-                <IconButton
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefreshAudio}
-                  disabled={!onAtualizarAudioTimeline || audioRefreshing}
-                  aria-label="Atualizar onda"
-                >
-                  <RotateCw />
-                </IconButton>
-              </Tooltip>
-              <SpeedDisplay playbackRate={playbackRate} />
-              <AdvancedMenu
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onToggleSmartPlay={onToggleSmartPlay}
-                smartPlay={smartPlay}
-                onTogglePointer={togglePointer}
-                pointer={pointer}
-                onToggleLocked={toggleLocked}
-                locked={locked}
-                onTogglePinned={onTogglePinned}
-                pinned={pinned}
-                zoomLabel={zoomLabel}
-                rateLabel={rateLabel}
-              />
-            </div>
-          </>
-        )}
+        <AdvancedMenu
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onToggleSmartPlay={onToggleSmartPlay}
+          smartPlay={smartPlay}
+          onTogglePointer={togglePointer}
+          pointer={pointer}
+          onToggleLocked={toggleLocked}
+          locked={locked}
+          onTogglePinned={onTogglePinned}
+          pinned={pinned}
+          zoomLabel={zoomLabel}
+          rateLabel={rateLabel}
+          playbackRate={playbackRate}
+          onChangeSpeed={onChangeSpeed}
+          onDividirAqui={onDividirAqui}
+          dividindo={dividindo}
+          onJuntarProximo={onJuntarProximo}
+          juntando={juntando}
+          onAddSegment={handleAddSegment}
+          onRefreshAudio={onAtualizarAudioTimeline ? handleRefreshAudio : undefined}
+          refreshing={audioRefreshing}
+        />
       </header>
 
       {/* Waveform — corpo */}
@@ -1630,7 +1425,6 @@ export function TimelinePanel({
           onLoadingChange={setAudioRefreshing}
           proximoInicioSeg={proximoInicioSeg}
           proximoNumero={proximoNumero}
-          variant={variant}
         />
       </div>
     </section>

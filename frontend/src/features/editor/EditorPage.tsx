@@ -856,7 +856,6 @@ export function EditorPage() {
             onAudioOffsetChange={(ms) => patchDirty({ audio_offset_ms: ms })}
             onTimeUpdate={setCurrentTime}
             onSeek={onSeekTimeline}
-            onSkip={onSkip}
             onChangeSpeed={onChangeSpeed}
             onSetInicioAqui={setInicioAtual}
             onSetFimAqui={setFimAtual}

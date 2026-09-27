@@ -67,7 +67,6 @@ interface Props {
   onAudioOffsetChange?: (ms: number) => void;
   onTimeUpdate: (t: number) => void;
   onSeek: (seg: number) => void;
-  onSkip: (delta: number) => void;
   onChangeSpeed: (delta: number) => void;
   onSetInicioAqui: () => void;
   onSetFimAqui: () => void;
@@ -120,7 +119,6 @@ export function EditorFase1({
   onAudioOffsetChange,
   onTimeUpdate,
   onSeek,
-  onSkip,
   onChangeSpeed,
   onSetInicioAqui,
   onSetFimAqui,
@@ -174,7 +172,6 @@ export function EditorFase1({
             <Panel defaultSize={65} minSize={30} order={1}>
               <PlayerPanel
                 ref={playerRef}
-                variant="ap"
                 selo={brutoPronto ? 'BRUTO · pronto' : 'VÍDEO ORIGINAL'}
                 src={videoSrc}
                 inicioSeg={corte.inicio_seg}
@@ -192,7 +189,6 @@ export function EditorFase1({
             <PanelResizeHandle className="h-2 transition-colors hover:bg-[var(--wb-border-soft)]" />
             <Panel defaultSize={35} minSize={15} order={2}>
               <TimelinePanel
-                variant="ap"
                 audioSrc={audioSrc}
                 waveformPeaksSrc={waveformPeaksSrc}
                 audioOffsetSec={audioOffsetSec}
@@ -203,7 +199,6 @@ export function EditorFase1({
                 playbackRate={playbackRate}
                 playerRef={playerRef}
                 onSeek={onSeek}
-                onSkip={onSkip}
                 onChangeSpeed={onChangeSpeed}
                 onSetInicioAqui={onSetInicioAqui}
                 onSetFimAqui={onSetFimAqui}

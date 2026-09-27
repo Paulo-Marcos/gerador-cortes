@@ -8,7 +8,7 @@ const noop = vi.fn();
 function renderWorkbench(props: Partial<Parameters<typeof AudioSyncControl>[0]> = {}) {
   return renderToStaticMarkup(
     <TooltipProvider>
-      <AudioSyncControl variant="workbench" offsetMs={0} onChange={noop} {...props} />
+      <AudioSyncControl offsetMs={0} onChange={noop} {...props} />
     </TooltipProvider>,
   );
 }
@@ -16,7 +16,7 @@ function renderWorkbench(props: Partial<Parameters<typeof AudioSyncControl>[0]> 
 // D-601: a faixa do Workbench nasceu sem o toggle de preview e, como o shell
 // legado deixou de ser alcancavel, o operador ajustava ms sem nunca ouvir o
 // resultado. Estes testes prendem o interruptor no lugar.
-describe('AudioSyncControl no Workbench', () => {
+describe('AudioSyncControl', () => {
   it('oferece o toggle de preview ao vivo', () => {
     const html = renderWorkbench({ onTogglePreview: noop, canPreview: true });
     expect(html).toContain('aria-label="Preview de sincronia de áudio"');

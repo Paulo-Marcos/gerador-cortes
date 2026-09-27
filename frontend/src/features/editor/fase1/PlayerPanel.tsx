@@ -1,10 +1,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Scissors, Volume2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { hmsParaSeg, segParaMmSs } from '../timeUtils';
+import { hmsParaSeg } from '../timeUtils';
 import { useVideoPlayer, type PlayerHandle } from '@/hooks/useVideoPlayer';
 import { useVelocidadeNoVideo } from '@/hooks/useVelocidadePlayerPadrao';
-import { useLipSyncPreview, type EstadoLipSync } from '@/hooks/useLipSyncPreview';
+import { useLipSyncPreview } from '@/hooks/useLipSyncPreview';
 import { AudioSyncControl } from './AudioSyncControl';
 import { legendaEm } from './legendaDoTrecho';
 import type { Desvio } from '@/types/models';
@@ -67,10 +66,11 @@ export function posicaoInicialDoVideo(
 // O antigo painel inferior (prev/next aprovados) saiu para o
 // BrutoContextStrip — substituido pelo bloco IN/OUT/DUR.
 //
-// `variant="overlay"` (AUDITORIA-v2 §4, CP4) — usado só pelo shell Workbench:
-// sem o header de texto acima do vídeo; os mesmos dados (BRUTO/velocidade/
-// intervalo do corte) viram 3 chips sobrepostos DIRETO no vídeo. O shell
-// legado (EditorFase1) continua no `variant="legacy"` (default) — inalterado.
+// D-599: o palco do upgrade de layout — o vídeo vira um retângulo preto
+// centralizado, com proporção fixa, cantos de 5 px e um selo em mono no
+// canto. Sem moldura de painel em volta: no design o palco É o painel, e a
+// imagem manda no enquadramento. As variantes do legado e do Workbench
+// saíram com as cascas (D-728).
 // ─────────────────────────────────────────────────────────────
 
 interface Props {
@@ -90,22 +90,7 @@ interface Props {
   /** Offset atual (ms). Quando `onAudioOffsetChange` é dado, mostra o controle. */
   audioOffsetMs?: number;
   onAudioOffsetChange?: (ms: number) => void;
-  /** D-601: preview ao vivo CONTROLADO de fora. No Workbench o interruptor
-   *  mora na faixa de sincronia, que o EditorPage monta como irmã do vídeo —
-   *  o estado precisa morar lá em cima para os dois enxergarem o mesmo valor.
-   *  Quando `undefined`, o painel mantém o estado próprio do variant legado. */
-  previewSync?: boolean;
-  /** D-601: avisa o dono do interruptor em que pé está o preview — quem desenha
-   *  o botão vive fora daqui e não tem como saber que o decode ainda roda. */
-  onPreviewEstado?: (estado: EstadoLipSync) => void;
-  /** AUDITORIA-v2 §4 (CP4) — 'legacy' (default) mantém o header do editor
-   *  antigo; 'overlay' é o vídeo largo do Workbench com chips sobrepostos.
-   *  D-599: 'ap' é o palco do upgrade de layout — o vídeo vira um retângulo
-   *  preto centralizado, com proporção fixa, cantos de 5 px e um selo em
-   *  mono no canto. Sem moldura de painel em volta: no design o palco É o
-   *  painel, e a imagem manda no enquadramento. */
-  variant?: 'legacy' | 'overlay' | 'ap';
-  /** Proporção do palco no variant 'ap' ('16/9' no bruto, '9/16' no short). */
+  /** Proporção do palco ('16/9' no bruto, '9/16' no short). */
   proporcao?: string;
   /** Selo do canto superior esquerdo: "BRUTO · 1080p", "FINAL · grade". */
   selo?: string;
@@ -127,9 +112,6 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
     audioPreviewStartSec = 0,
     audioOffsetMs = 0,
     onAudioOffsetChange,
-    previewSync: previewSyncControlado,
-    onPreviewEstado,
-    variant = 'legacy',
     proporcao = '16/9',
     selo,
     posicaoKey,
@@ -149,23 +131,16 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   const onTimeUpdateRef = useRef(onTimeUpdate);
   onTimeUpdateRef.current = onTimeUpdate;
 
-  const [previewSyncInterno, setPreviewSyncInterno] = useState(false);
+  const [previewSync, setPreviewSync] = useState(false);
   // D-610 (casca nova): a sincronia se ajusta uma vez por vídeo, não por
   // corte. Fica recolhida num botão e só vira faixa quando pedida.
   const [sincroniaAberta, setSincroniaAberta] = useState(false);
-  const previewSync = previewSyncControlado ?? previewSyncInterno;
   const podePreview = !!audioPreviewSrc;
   const estadoPreview = useLipSyncPreview(videoRef, audioRef, {
     enabled: previewSync && podePreview,
     proxyStartSec: audioPreviewStartSec,
     offsetMs: audioOffsetMs,
   });
-
-  const onPreviewEstadoRef = useRef(onPreviewEstado);
-  onPreviewEstadoRef.current = onPreviewEstado;
-  useEffect(() => {
-    onPreviewEstadoRef.current?.(estadoPreview);
-  }, [estadoPreview]);
 
   // D-409: ultimo segundo ja persistido, para nao escrever no localStorage a
   // cada `timeupdate` (o evento dispara ~4x/s).
@@ -234,279 +209,141 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
   // React e a fonte unica: o <video> segue a prop.
   useVelocidadeNoVideo(videoRef, playbackRate, src);
 
-  const duracao = Math.max(0, fimSeg - inicioSeg);
-  const rateLabel = `${playbackRate.toFixed(2)}×`;
-
   // ── D-599: o palco ────────────────────────────────────────────
   // O design tira a moldura e centraliza um retângulo de proporção
   // fixa. `container-type: inline-size` é o detalhe que faz a peça
   // funcionar: a legenda passa a medir em `cqw`, então ela cresce e
   // encolhe JUNTO com o palco. Legenda em px num palco elástico é
   // legenda que mente sobre como o texto vai sair no vídeo final.
-  if (variant === 'ap') {
-    return (
-      <section
+  return (
+    <section
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        height: '100%',
+        minHeight: 0,
+      }}
+    >
+      <div
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          height: '100%',
-          minHeight: 0,
+          flex: 1,
+          display: 'grid',
+          placeItems: 'center',
+          minHeight: 220,
+          minWidth: 0,
         }}
       >
         <div
           style={{
-            flex: 1,
-            display: 'grid',
-            placeItems: 'center',
-            minHeight: 220,
-            minWidth: 0,
+            position: 'relative',
+            height: '100%',
+            maxWidth: '100%',
+            aspectRatio: proporcao,
+            borderRadius: 'var(--r3)',
+            overflow: 'hidden',
+            background: '#000',
+            boxShadow: 'var(--shadow)',
+            containerType: 'inline-size',
           }}
         >
-          <div
-            style={{
-              position: 'relative',
-              height: '100%',
-              maxWidth: '100%',
-              aspectRatio: proporcao,
-              borderRadius: 'var(--r3)',
-              overflow: 'hidden',
-              background: '#000',
-              boxShadow: 'var(--shadow)',
-              containerType: 'inline-size',
-            }}
-          >
-            <video
-              ref={videoRef}
-              src={src}
-              controls
-              preload="metadata"
-              crossOrigin="anonymous"
-              style={{ width: '100%', height: '100%', display: 'block' }}
-            />
-
-            {selo ? (
-              <span
-                className="chip"
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  left: 8,
-                  background: 'rgb(0 0 0/.55)',
-                  color: '#fff',
-                  fontFamily: 'var(--mono)',
-                  pointerEvents: 'none',
-                }}
-              >
-                {selo}
-              </span>
-            ) : null}
-
-            {smartPlay ? (
-              <span
-                className="chip"
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  background: 'rgb(0 0 0/.55)',
-                  color: '#fff',
-                  fontFamily: 'var(--mono)',
-                  pointerEvents: 'none',
-                }}
-              >
-                <Scissors size={11} aria-hidden />
-                sem cortes
-              </span>
-            ) : null}
-
-            {/* D-511 preservado: o que está sendo dito no trecho marcado para
-                SAIR. Ver o que se perde no instante em que se perde é o que
-                permite discordar do corte. */}
-            {legenda ? (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '10%',
-                  right: '10%',
-                  bottom: '16%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 6,
-                  pointerEvents: 'none',
-                }}
-              >
-                <span
-                  className="chip"
-                  style={{
-                    background: 'rgb(0 0 0/.75)',
-                    color: '#ff9b9b',
-                    fontFamily: 'var(--mono)',
-                    fontSize: 10,
-                    textTransform: 'uppercase',
-                    letterSpacing: '.08em',
-                  }}
-                >
-                  sai do bruto{legenda.rotulo ? ` · ${legenda.rotulo}` : ''}
-                </span>
-                <p
-                  style={{
-                    margin: 0,
-                    textAlign: 'center',
-                    fontWeight: 800,
-                    fontSize: '4.2cqw',
-                    lineHeight: 1.15,
-                    color: '#fff',
-                    // `paint-order: stroke` desenha o contorno ATRÁS das hastes:
-                    // sem ele o traço come as letras finas.
-                    paintOrder: 'stroke fill',
-                    WebkitTextStroke: '0.35cqw rgba(0,0,0,0.85)',
-                    textShadow: '0 2px 0 #000',
-                  }}
-                >
-                  {legenda.texto}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        {podePreview ? (
-          <audio
-            ref={audioRef}
-            src={audioPreviewSrc}
-            preload="auto"
+          <video
+            ref={videoRef}
+            src={src}
+            controls
+            preload="metadata"
             crossOrigin="anonymous"
-            className="hidden"
+            style={{ width: '100%', height: '100%', display: 'block' }}
           />
-        ) : null}
 
-        {onAudioOffsetChange ? (
-          sincroniaAberta ? (
-            <AudioSyncControl
-              variant="workbench"
-              offsetMs={audioOffsetMs}
-              onChange={onAudioOffsetChange}
-              previewEnabled={previewSync}
-              onTogglePreview={() => setPreviewSyncInterno((v) => !v)}
-              previewEstado={estadoPreview}
-              canPreview={podePreview}
-              // Fechar desliga o fone junto: vídeo mudo com o interruptor fora
-              // de vista foi exatamente a armadilha da D-601.
-              onClose={() => {
-                setSincroniaAberta(false);
-                setPreviewSyncInterno(false);
+          {selo ? (
+            <span
+              className="chip"
+              style={{
+                position: 'absolute',
+                top: 8,
+                left: 8,
+                background: 'rgb(0 0 0/.55)',
+                color: '#fff',
+                fontFamily: 'var(--mono)',
+                pointerEvents: 'none',
               }}
-            />
-          ) : (
-            <button
-              type="button"
-              className="btn btn-sm btn-ghost"
-              onClick={() => setSincroniaAberta(true)}
-              title="Ajustar a sincronia entre áudio e vídeo"
-              style={{ alignSelf: 'flex-start', color: 'var(--mute)' }}
             >
-              <Volume2 size={12} aria-hidden />
-              Sincronia do áudio
-              <span style={{ fontFamily: 'var(--mono)', color: audioOffsetMs ? 'var(--accent)' : 'var(--dim)' }}>
-                {audioOffsetMs > 0 ? `+${audioOffsetMs}` : audioOffsetMs} ms
-              </span>
-            </button>
-          )
-        ) : null}
-      </section>
-    );
-  }
+              {selo}
+            </span>
+          ) : null}
 
-  return (
-    <section
-      className={cn(
-        'flex h-full w-full flex-col overflow-hidden',
-        variant === 'overlay'
-          ? 'rounded-xl shadow-[shadow:var(--wb-shadow)]'
-          : 'rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]',
-      )}
-    >
-      {/* Header: grip + caption + badge + right info ---- v2_bruto.jsx:629-637
-          Só no legado — o Workbench (variant="overlay") sobrepõe os mesmos
-          dados como chips direto no vídeo (AUDITORIA-v2 §4). */}
-      {variant === 'legacy' && (
-        <header className="flex items-center gap-2 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-3 py-2">
-          <span className="font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-mute)]">
-            Player
-          </span>
-          <span className="rounded-full bg-[var(--wb-info-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-info)]">
-            video original · 4K
-          </span>
-          <div className="flex-1" />
-          {smartPlay && (
-            <span className="flex items-center gap-1 rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold text-[var(--wb-accent)]">
-              <Scissors size={10} aria-hidden />
+          {smartPlay ? (
+            <span
+              className="chip"
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                background: 'rgb(0 0 0/.55)',
+                color: '#fff',
+                fontFamily: 'var(--mono)',
+                pointerEvents: 'none',
+              }}
+            >
+              <Scissors size={11} aria-hidden />
               sem cortes
             </span>
-          )}
-          <span
-            className="font-code text-[11px] text-[var(--wb-text-dim)]"
-            style={{ fontVariantNumeric: 'tabular-nums' }}
-          >
-            {rateLabel} · corte de {segParaMmSs(duracao, true)}
-          </span>
-        </header>
-      )}
+          ) : null}
 
-      <div className="relative min-h-0 flex-1 bg-black">
-        <video
-          ref={videoRef}
-          src={src}
-          controls
-          preload="metadata"
-          crossOrigin="anonymous"
-          className="h-full w-full"
-        />
-        {/* D-511: o que está sendo dito no trecho marcado para SAIR.
-            Ver o que se perde no instante em que se perde é o que permite
-            discordar do corte — antes o texto só existia no card, cortado em
-            duas linhas, e conferir exigia abrir a transcrição à parte. */}
-        {legenda && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-14 flex flex-col items-center gap-1 px-6">
-            {/* Legenda de verdade: branca, grande, com CONTORNO.
-                A primeira versão pintava o texto de vermelho sobre a imagem — e
-                vermelho escuro sobre vídeo é o pior caso de contraste que
-                existe, porque muda a cada quadro. O contorno resolve o
-                problema na raiz: o texto fica legível sobre qualquer fundo,
-                claro ou escuro, sem depender de uma caixa opaca tapando o
-                quadro que se quer justamente avaliar. */}
-            <span
-              className="rounded-full bg-black/75 px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.08em] text-[#ff9b9b]"
-              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}
-            >
-              sai do bruto{legenda.rotulo ? ` · ${legenda.rotulo}` : ''}
-            </span>
-            <p
-              className="max-w-[92%] text-center text-[19px] font-bold leading-[1.35] text-white"
+          {/* D-511 preservado: o que está sendo dito no trecho marcado para
+              SAIR. Ver o que se perde no instante em que se perde é o que
+              permite discordar do corte. */}
+          {legenda ? (
+            <div
               style={{
-                // `paint-order: stroke` desenha o contorno ATRÁS das hastes, e
-                // não por cima — sem ele o traço come as letras finas.
-                paintOrder: 'stroke fill',
-                WebkitTextStroke: '4px rgba(0,0,0,0.85)',
-                textShadow: '0 2px 6px rgba(0,0,0,0.75)',
+                position: 'absolute',
+                left: '10%',
+                right: '10%',
+                bottom: '16%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 6,
+                pointerEvents: 'none',
               }}
             >
-              {legenda.texto}
-            </p>
-          </div>
-        )}
-        {/* D-410: os chips BRUTO / velocidade / intervalo eram `absolute`
-            sobre a imagem e brigavam com o conteudo do quadro — sobre um fundo
-            claro sumiam, sobre um escuro tapavam o rosto. Migraram para a
-            faixa dedicada que o EditorPage monta ACIMA do video, fora da area
-            de imagem e com espaco para os campos que faltavam (duracao liquida
-            e tempo no corte). O `variant='legacy'` mantem o header de texto. */}
+              <span
+                className="chip"
+                style={{
+                  background: 'rgb(0 0 0/.75)',
+                  color: '#ff9b9b',
+                  fontFamily: 'var(--mono)',
+                  fontSize: 10,
+                  textTransform: 'uppercase',
+                  letterSpacing: '.08em',
+                }}
+              >
+                sai do bruto{legenda.rotulo ? ` · ${legenda.rotulo}` : ''}
+              </span>
+              <p
+                style={{
+                  margin: 0,
+                  textAlign: 'center',
+                  fontWeight: 800,
+                  fontSize: '4.2cqw',
+                  lineHeight: 1.15,
+                  color: '#fff',
+                  // `paint-order: stroke` desenha o contorno ATRÁS das hastes:
+                  // sem ele o traço come as letras finas.
+                  paintOrder: 'stroke fill',
+                  WebkitTextStroke: '0.35cqw rgba(0,0,0,0.85)',
+                  textShadow: '0 2px 0 #000',
+                }}
+              >
+                {legenda.texto}
+              </p>
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      {/* F-063: áudio do proxy para preview de lip-sync (oculto, controlado pelo hook). */}
-      {podePreview && (
+      {podePreview ? (
         <audio
           ref={audioRef}
           src={audioPreviewSrc}
@@ -514,20 +351,40 @@ export const PlayerPanel = forwardRef<PlayerHandle, Props>(function PlayerPanel(
           crossOrigin="anonymous"
           className="hidden"
         />
-      )}
-      {/* AUDITORIA-v2 §5 (CP5): no Workbench (variant='overlay') a faixa de
-          sincronia sai daqui — vira irmã do vídeo (fora do cap de altura do
-          PlayerCap), montada pelo próprio EditorPage com variant="workbench".
-          O legado (variant='legacy') mantém o controle aqui, inalterado. */}
-      {variant === 'legacy' && onAudioOffsetChange && (
-        <AudioSyncControl
-          offsetMs={audioOffsetMs}
-          onChange={onAudioOffsetChange}
-          previewEnabled={previewSync}
-          onTogglePreview={() => setPreviewSyncInterno((v) => !v)}
-          canPreview={podePreview}
-        />
-      )}
+      ) : null}
+
+      {onAudioOffsetChange ? (
+        sincroniaAberta ? (
+          <AudioSyncControl
+            offsetMs={audioOffsetMs}
+            onChange={onAudioOffsetChange}
+            previewEnabled={previewSync}
+            onTogglePreview={() => setPreviewSync((v) => !v)}
+            previewEstado={estadoPreview}
+            canPreview={podePreview}
+            // Fechar desliga o fone junto: vídeo mudo com o interruptor fora
+            // de vista foi exatamente a armadilha da D-601.
+            onClose={() => {
+              setSincroniaAberta(false);
+              setPreviewSync(false);
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={() => setSincroniaAberta(true)}
+            title="Ajustar a sincronia entre áudio e vídeo"
+            style={{ alignSelf: 'flex-start', color: 'var(--mute)' }}
+          >
+            <Volume2 size={12} aria-hidden />
+            Sincronia do áudio
+            <span style={{ fontFamily: 'var(--mono)', color: audioOffsetMs ? 'var(--accent)' : 'var(--dim)' }}>
+              {audioOffsetMs > 0 ? `+${audioOffsetMs}` : audioOffsetMs} ms
+            </span>
+          </button>
+        )
+      ) : null}
     </section>
   );
 });

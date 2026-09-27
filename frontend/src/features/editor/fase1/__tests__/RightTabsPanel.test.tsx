@@ -46,20 +46,20 @@ function baseProps(desvios: Desvio[] = []) {
   };
 }
 
-function render(variant?: 'legacy' | 'workbench', desvios?: Desvio[]) {
+function render(desvios?: Desvio[]) {
   const qc = new QueryClient();
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <ToastProvider>
         <TooltipProvider>
-          <RightTabsPanel {...baseProps(desvios)} variant={variant} />
+          <RightTabsPanel {...baseProps(desvios)} />
         </TooltipProvider>
       </ToastProvider>
     </QueryClientProvider>,
   );
 }
 
-describe('RightTabsPanel — variant legacy (default) preserva o header atual', () => {
+describe('RightTabsPanel — header', () => {
   it('mantém "Atualizar transcricao" no header e NÃO renderiza o rodapé "Mais ações"', () => {
     const html = render();
 
@@ -67,27 +67,8 @@ describe('RightTabsPanel — variant legacy (default) preserva o header atual', 
     expect(html).not.toContain('Mais ações');
   });
 
-  it('mesmo comportamento quando variant não é passado (EditorFase1/shell antigo)', () => {
-    const html = render('legacy');
-
-    expect(html).toContain('aria-label="Atualizar transcricao"');
-    expect(html).not.toContain('Mais ações');
-  });
-});
-
-describe('RightTabsPanel — variant workbench move "Regerar transcrição" pro rodapé (AUDITORIA-v2 §9, CP10)', () => {
-  it('remove o refresh do header e mostra o rodapé "Mais ações" fechado por padrão', () => {
-    const html = render('workbench');
-
-    expect(html).not.toContain('aria-label="Atualizar transcricao"');
-    expect(html).toContain('Mais ações');
-    expect(html).toContain('aria-expanded="false"');
-    // Fechado por padrão: a ação "Regerar transcrição" ainda não aparece no HTML.
-    expect(html).not.toContain('Regerar transcrição');
-  });
-
   it('mantém a busca na transcrição e o "Influenciar a capa" como estão (não movidos)', () => {
-    const html = render('workbench');
+    const html = render();
 
     // ThumbnailHintsEditor continua sempre visível no topo do painel.
     expect(html).toContain('Influenciar');
@@ -120,7 +101,7 @@ describe('RightTabsPanel — badge do trecho varia pelo motivo da remoção (D-4
   ];
 
   it('três trechos da MESMA origem (claude) rendem três badges distintos, sem "IA" genérico', () => {
-    const html = render('workbench', desviosDaIa);
+    const html = render(desviosDaIa);
 
     expect(html).toContain('>tangente<');
     expect(html).toContain('>repeticao<');
@@ -129,14 +110,14 @@ describe('RightTabsPanel — badge do trecho varia pelo motivo da remoção (D-4
   });
 
   it('o trecho impreciso avisa na mensagem, não só na cor do badge', () => {
-    const html = render('workbench', desviosDaIa);
+    const html = render(desviosDaIa);
 
     expect(html).toContain('Possível imprecisão');
     expect(html).toContain('var(--wb-warn-soft)');
   });
 
   it('desvio legado sem categoria continua badgeado (fallback por motivo/origem)', () => {
-    const html = render('workbench', [
+    const html = render([
       { inicio_hms: '00:36:14', fim_hms: '00:36:23', motivo: 'Trecho manual', origem: 'manual' },
       {
         inicio_hms: '00:40:00',
