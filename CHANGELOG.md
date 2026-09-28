@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already over the limit are listed with today's size as a ceiling; the list
   can only shrink. The old check asked the agent to judge size by itself and
   never caught a single file (D-771).
+- **A size gate for functions.** Python functions are measured by cyclomatic
+  complexity (limit 10) and statement count (limit 40); frontend functions,
+  React components included, by lines (limit 100). The 39 Python and 121
+  frontend functions already over the limit are listed per function with
+  today's measure as a ceiling, and the lists can only shrink (D-772).
 
 ### Security
 - **AI agents can no longer read or write the app's secrets.** The project's
