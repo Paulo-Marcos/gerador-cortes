@@ -115,6 +115,31 @@ def test_selecionar_inexistente_falha(instancia):
         svc.selecionar_canal("fantasma", instance_root=instance_root)
 
 
+# D-811: o id que chega pela URL não passava pelo slug. `..` é a própria
+# instance/ (uma pasta que existe) e `\` é separador no Windows: o ponteiro do
+# canal ativo apontava para fora de channels/, e o boot seguinte lia banco e
+# prompts de lá. `/` não chega pela URL, mas `\` chega (%5C).
+_IDS_DE_TRAVESSIA = ["..", "..\\..", "default\\..\\..", "C:\\Windows", "..\\channels\\default"]
+
+
+@pytest.mark.parametrize("ruim", _IDS_DE_TRAVESSIA)
+def test_selecionar_recusa_id_que_sai_de_channels(instancia, ruim):
+    instance_root, _ = instancia
+
+    with pytest.raises(IdCanalInvalido):
+        svc.selecionar_canal(ruim, instance_root=instance_root)
+
+    assert (instance_root / "active-channel").read_text(encoding="utf-8").strip() == "default"
+
+
+@pytest.mark.parametrize("ruim", _IDS_DE_TRAVESSIA)
+def test_editar_recusa_id_que_sai_de_channels(instancia, ruim):
+    instance_root, _ = instancia
+
+    with pytest.raises(IdCanalInvalido):
+        svc.editar_identidade(ruim, {"nome": "x"}, instance_root=instance_root)
+
+
 def test_editar_identidade_preserva_config_version(instancia):
     instance_root, _ = instancia
     canal = svc.editar_identidade(
@@ -310,3 +335,30 @@ def test_seed_mascote_nao_sobrescreve_nome_existente(tmp_path: Path, monkeypatch
 
     dados = yaml.safe_load((editorial / "mascote.yaml").read_text(encoding="utf-8"))
     assert dados["nome"] == "Coruja"  # valor já presente é preservado
+
+
+@pytest.mark.parametrize("ruim", _IDS_DE_TRAVESSIA)
+def test_ponteiro_ja_gravado_fora_do_padrao_e_ignorado_no_boot(tmp_path, ruim):
+    # D-811: um ponteiro gravado antes da correção seguiria valendo no boot e
+    # levaria banco e prompts para fora de channels/. O leitor o ignora.
+    from app.core import channel_paths
+
+    (tmp_path / "active-channel").write_text(ruim, encoding="utf-8")
+
+    assert channel_paths._ler_canal_ativo(tmp_path) == ""
+
+
+def test_ponteiro_valido_continua_valendo(tmp_path):
+    from app.core import channel_paths
+
+    (tmp_path / "active-channel").write_text("meu-canal\n", encoding="utf-8")
+
+    assert channel_paths._ler_canal_ativo(tmp_path) == "meu-canal"
+
+
+def test_core_e_dominio_usam_a_mesma_regra_de_id():
+    # O core repete a regra (roda antes do domínio); isto impede que divirjam.
+    from app.core import channel_paths
+    from app.domain.canal import identidade
+
+    assert "^" + channel_paths._ID_DE_CANAL.pattern + "$" == identidade._RE_ID_CANAL.pattern

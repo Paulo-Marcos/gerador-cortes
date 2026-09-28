@@ -14,12 +14,27 @@ from app.config import settings
 from app.core.channel_paths import projetos_dir, resolver_do_projeto
 from app.core.logging import operational_error, operational_info
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.erros import PedidoInvalido
 from app.infrastructure.ffmpeg_runner import run_ffmpeg
 from app.infrastructure.render.cinema_filters import FILTROS_CINEMA, get_filtro_vf
 from app.infrastructure.render.ffmpeg_commands import build_normalize_cmd
 from app.models import Corte
 
 _TIMEOUT_DA_NORMALIZACAO_S = 3600
+
+
+def _filtros_conferidos(filtros: list[str] | None) -> list[str]:
+    """Os filtros pedidos, ou todos quando nenhum foi pedido.
+
+    D-811: o nome do filtro vira pasta (versoes/{filtro}); fora da lista, um
+    "filtro" com caminho gravava vídeo e meta.json em qualquer lugar.
+    """
+    if filtros is None:
+        return list(FILTROS_CINEMA.keys())
+    desconhecidos = sorted(set(filtros) - FILTROS_CINEMA.keys())
+    if desconhecidos:
+        raise PedidoInvalido(f"Filtro desconhecido: {', '.join(desconhecidos)}.")
+    return filtros
 
 
 class _ExportProcessamentoMixin:
@@ -196,14 +211,12 @@ class _ExportProcessamentoMixin:
         - preview=False: versão completa em versoes/{filtro}/video.mp4
         - preview=True: clip de N segundos sem intro/outro em versoes/{filtro}/preview.mp4
         """
+        filtros = _filtros_conferidos(filtros)
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte or not corte.arquivo_clip_path:
                 operational_error("MultiVersion", f"Clip bruto não encontrado para {corte_id}")
                 return
-
-        if filtros is None:
-            filtros = list(FILTROS_CINEMA.keys())
 
         clip_path = resolver_do_projeto(corte.arquivo_clip_path, corte.projeto_id)
         if not clip_path.exists():

@@ -86,6 +86,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per channel, in the database, and are untouched (D-775).
 
 ### Security
+- **Two paths that could leave their folder are closed.** Selecting or
+  editing a channel did not check the id from the URL, so `..\..` (a
+  backslash is a path separator on Windows) could point the active channel
+  outside `channels/`, and the next start would read its database and
+  editorial prompts from there; a pointer already written that way is now
+  ignored. The multi-version export used each filter name as a folder, so a
+  "filter" holding a path created folders and wrote files anywhere; only the
+  known filters pass now. The other 95 path alerts from CodeQL were checked
+  one by one and do not hold — every id is a server-generated UUID looked up
+  in the database before any path is built; the triage is in
+  `docs/seguranca/triagem-codeql-2026-09.md` (D-811).
 - **Vite 6.4.3 and patched frontend/renderer packages.** The screen is served
   by Vite's server, and Vite 5 let Windows-specific alternate paths bypass
   the list of files it refuses to serve (`server.fs.deny`). Along with it,

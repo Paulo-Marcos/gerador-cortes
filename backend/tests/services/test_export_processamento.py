@@ -286,9 +286,32 @@ async def test_sem_filtros_pedidos_gera_todos(versoes, tmp_path):
 
 @pytest.mark.asyncio
 async def test_corte_sem_bruto_ou_bruto_sumido_nao_gera_nada(versoes, banco, tmp_path):
-    await ExportService.processar_multiversion("nao-existe", ["x"])
+    filtro = next(iter(modulo.FILTROS_CINEMA))  # D-811: só filtro da lista passa
+    await ExportService.processar_multiversion("nao-existe", [filtro])
     (tmp_path / "clip.mkv").unlink()
-    await ExportService.processar_multiversion("c1", ["x"])
+    await ExportService.processar_multiversion("c1", [filtro])
 
     assert versoes["normalizados"] == []
     assert not _pasta_das_versoes(tmp_path).exists()
+
+
+# ─── D-811: o nome do filtro vira pasta ──────────────────────────────────────
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "ruim",
+    [r"..\..\..", r"C:\Users\Public\x", "../../x", "nao-existe"],
+)
+async def test_filtro_fora_da_lista_e_recusado_antes_de_tocar_o_disco(ruim, monkeypatch):
+    # O nome do filtro era `versoes_dir / filtro`: um "filtro" com caminho
+    # criava pasta e gravava vídeo e meta.json fora do corte (CodeQL, D-811).
+    from app.domain.compartilhado.erros import PedidoInvalido
+
+    def banco_nao_deve_ser_aberto():
+        raise AssertionError("a validação vem antes de abrir o banco")
+
+    monkeypatch.setattr(modulo, "AsyncSessionLocal", banco_nao_deve_ser_aberto)
+
+    with pytest.raises(PedidoInvalido):
+        await ExportService.processar_multiversion("c1", filtros=[ruim])

@@ -22,6 +22,7 @@ ponteiro ainda não exista (ex.: primeiro boot antes do migrador rodar).
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 # Raiz do repositório, derivada do próprio arquivo (backend/app/core/channel_paths.py):
@@ -33,6 +34,8 @@ _VIDEO_RENDERER_ROOT = _REPO_ROOT / "video-renderer"
 
 _DIR_CANAIS = "channels"
 _PONTEIRO_ATIVO = "active-channel"
+# Slug de canal: o mesmo `_RE_ID_CANAL` de domain/canal/identidade.py (D-811).
+_ID_DE_CANAL = re.compile(r"[a-z0-9][a-z0-9-]*")
 
 # Subpasta que agrega os ASSETS VISUAIS do canal (D-156): mascote,
 # fundos editoriais (youtube_bg), retratos e a paleta (theme.config.json).
@@ -75,11 +78,18 @@ def settings_db_path() -> Path:
 # 18/09/2026. O cache devolveria o canal ANTIGO, e este ponteiro decide em qual
 # banco o app escreve. 0,15 ms não paga esse risco: lê-se sempre.
 def _ler_canal_ativo(instance_root: Path) -> str:
-    """Id do canal ativo gravado no ponteiro, ou string vazia se ausente."""
+    """Id do canal ativo gravado no ponteiro, ou string vazia se ausente.
+
+    D-811: ponteiro fora do padrão de id (`..`, barra invertida, caminho
+    absoluto) vale como ausente — o layout cai no `instance/` plano em vez de
+    ler banco e prompts de fora de `channels/`. A mesma regra da criação
+    (`domain.canal.identidade`), repetida aqui porque o `core` roda antes dela.
+    """
     try:
-        return (instance_root / _PONTEIRO_ATIVO).read_text(encoding="utf-8").strip()
+        canal = (instance_root / _PONTEIRO_ATIVO).read_text(encoding="utf-8").strip()
     except OSError:
         return ""
+    return canal if _ID_DE_CANAL.fullmatch(canal) else ""
 
 
 def active_channel_root() -> Path:

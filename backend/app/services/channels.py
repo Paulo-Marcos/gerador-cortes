@@ -201,7 +201,10 @@ def _exigir_id_valido(canal_id: str) -> str:
 
 
 def _exigir_canal(instance_root: Path, canal_id: str) -> Path:
-    canal_root = _canais_dir(instance_root) / canal_id
+    # D-811: o id da URL passa pelo mesmo slug da criação. Sem isso `..` (a
+    # própria instance/) ou `..\..` (o `\` chega pela URL como %5C) apontavam
+    # o canal ativo para fora de channels/.
+    canal_root = _canais_dir(instance_root) / id_de_canal_valido(canal_id)
     if not canal_root.is_dir():
         raise CanalNaoEncontrado(f"Canal não encontrado: {canal_id!r}.")
     return canal_root
