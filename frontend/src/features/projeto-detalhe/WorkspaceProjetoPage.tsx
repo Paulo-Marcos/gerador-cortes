@@ -243,7 +243,7 @@ export default function WorkspaceProjetoPage() {
           />
           <Utilitario
             icone="send"
-            titulo="Preparar pacote para o TikTok (envio manual)"
+            titulo="Subir para o TikTok (robô ou pacote)"
             cor="var(--mute)"
             onClick={() => setTiktokAberto(true)}
           />
