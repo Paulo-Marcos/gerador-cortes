@@ -14,6 +14,7 @@ O essencial deste escopo — vale com ou sem skill instalada:
 - Todo subprocesso tem `timeout`; processo se encerra pelo PID, nunca pelo nome.
 - Transação (ADR-0016): o caso de uso é a unidade de trabalho — o service abre a sessão com `async with AsyncSessionLocal() as db, db.begin():`; service chamado por outro recebe o `db`; nenhuma escrita pendente atravessa I/O longo (IA, ffmpeg, rede); router não abre sessão nem faz commit.
 - Portão antes de declarar pronto: `ruff check .`, `ruff format --check .`, `lint-imports`, `pytest`.
+- Rode tudo pelo `backend/.venv`, nunca pelo Python global. Antes de medir a linha de base de uma catraca (listas `EXCECOES`), sincronize com `bin/bootstrap.ps1 -Dev`: medida em ambiente defasado reprova no CI (D-795).
 
 Skills, quando disponíveis:
 

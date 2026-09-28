@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Garante que o Chrome Headless Shell do Remotion esteja instalado e funcional.
 
