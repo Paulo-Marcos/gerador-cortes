@@ -17,6 +17,7 @@ from app.core.channel_paths import (
 from app.core.logging import operational_error, operational_info
 from app.database import AsyncSessionLocal
 from app.domain.canal.variacao_prompt import strip_variation_tags
+from app.domain.compartilhado.erros import PedidoInvalido
 from app.domain.corte.moldura_thumbnail import arquivos_da_moldura, nomes_das_molduras
 from app.infrastructure import gemini_client
 from app.infrastructure.imagem.moldura import emoldurar
@@ -115,9 +116,33 @@ async def _gravar_capa(
     await _gravar_bytes(thumb_path, await _emoldurar_capa(conteudo, is_fire, is_leitura))
 
 
+# D-813: a extensão do nome enviado virava a do arquivo gravado, e `.hta` ou
+# `.html` entravam como "capa" na pasta do projeto. Mesma lista da arte do
+# short (capa_short.EXTENSOES_DA_ARTE), sem importar aquele módulo pesado.
+_EXTENSOES_DA_CAPA = {"jpg", "jpeg", "png", "webp"}
+
+
+class CapaNaoEImagem(PedidoInvalido, ValueError):
+    """Também `ValueError` de propósito: o router do upload (travado,
+    thumbnail-agent-prompt-livre) só devolve a mensagem para `ValueError`; o
+    resto vira 500 genérico. Com o unlock, o router pode deixar o tratador
+    global responder 400."""
+
+
+def _extensao_da_capa(nome_do_arquivo: str) -> str:
+    """A extensão, em minúsculas, se for de imagem; senão `PedidoInvalido`."""
+    extensao = nome_do_arquivo.rsplit(".", 1)[-1].lower() if "." in nome_do_arquivo else ""
+    if extensao not in _EXTENSOES_DA_CAPA:
+        raise CapaNaoEImagem(
+            f"A capa precisa ser uma imagem ({', '.join(sorted(_EXTENSOES_DA_CAPA))})."
+        )
+    return extensao
+
+
 class ThumbnailService:
     @staticmethod
     async def upload_manual(corte_id: str, content: bytes, filename: str) -> str:
+        extension = _extensao_da_capa(filename)
         async with AsyncSessionLocal() as db:
             corte = await db.get(Corte, corte_id)
             if not corte:
@@ -140,7 +165,6 @@ class ThumbnailService:
         thumb_dir = os.path.join(str(projetos_dir()), projeto_id, "thumbnails")
         os.makedirs(thumb_dir, exist_ok=True)
 
-        extension = filename.split(".")[-1]
         thumb_path = os.path.join(thumb_dir, f"thumb_{corte_id[:8]}.{extension}")
 
         await _gravar_capa(thumb_path, content, is_fire=is_fire, is_leitura=is_leitura)

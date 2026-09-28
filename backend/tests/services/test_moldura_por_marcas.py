@@ -151,6 +151,22 @@ class TestMolduraNoUpload:
         arte = thumbnail_module._caminho_da_arte(caminho)
         assert open(arte, "rb").read() == _capa_crua()
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("nome", ["capa.hta", "capa.html", "capa.exe", "capa", "capa.PNG.js"])
+    async def test_extensao_fora_da_lista_e_recusada(self, cenario, nome):
+        # D-813: a extensão do nome enviado virava a do arquivo gravado; .hta e
+        # .html passavam como "capa" dentro da pasta do projeto.
+        from app.domain.compartilhado.erros import PedidoInvalido
+
+        with pytest.raises(PedidoInvalido):
+            await ThumbnailService.upload_manual("corte-1", _capa_crua(), nome)
+
+    @pytest.mark.asyncio
+    async def test_extensao_em_maiusculas_e_aceita(self, cenario):
+        caminho = await ThumbnailService.upload_manual("corte-1", _capa_crua(), "CAPA.JPG")
+
+        assert caminho.endswith(".jpg")
+
 
 class TestReaplicarQuandoAMarcaMuda:
     """Fire e Leitura costumam ser decididos DEPOIS que a capa entrou."""
