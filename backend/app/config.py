@@ -233,6 +233,10 @@ class Settings(BaseSettings):
     # D-634: executável do Chrome do upload assistido (TikTok/Instagram,
     # EXPERIMENTAL). Vazio = procura nos caminhos padrão do Windows e no PATH.
     chrome_path: str = ""
+    # D-802: token da API do Instagram (login do Instagram, "IGAA..."), gerado no
+    # painel da Meta. Vazio = Reels seguem pelo pacote/robô. Vale 60 dias; o app
+    # guarda uma cópia por canal e a renova sozinho (services/instagram_api.py).
+    instagram_access_token: str = ""
 
     class Config:
         env_file = ".env"

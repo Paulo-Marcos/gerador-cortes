@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Ctrl+V, so frames and cover assembly still apply. It uses the ChatGPT
   subscription, not the paid API. The project link and the sheets are set per
   channel in Canais → Capas no ChatGPT (D-804).
+- **Reels through the official Instagram API.** With `INSTAGRAM_ACCESS_TOKEN`
+  in the backend `.env` (an Instagram-login token from a Meta app in development
+  mode, with the channel as Instagram Tester — no App Review, no Facebook Page),
+  the Reels destination uploads from disk, waits for Meta to process and
+  publishes, with no browser. The cover goes through a link that expires in one
+  hour, because the API only accepts a public cover URL; a cover that cannot be
+  uploaded holds the Reel back (RN-26). The API cannot schedule, so a Reel with
+  a date is refused instead of being published early. The token is copied to
+  the channel folder and renewed every 30 days (D-802).
 - **Upload every cut to TikTok at once.** The TikTok dialog of a project now
   has "Subir todos": the robot uploads the chosen cuts one after another in the
   operator's Chrome, without waiting for each one to be published before

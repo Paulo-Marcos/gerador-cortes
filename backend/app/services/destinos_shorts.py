@@ -26,6 +26,7 @@ from app.domain.publicacao.agendamento import Agendamento
 from app.domain.publicacao.publicacao import LIMITES, ModoPublicacao, Plataforma, legenda_unica
 from app.domain.publicacao.ritmo_publicacao import UPLOADS_YOUTUBE_POR_DIA
 from app.infrastructure import youtube_api
+from app.services import instagram_api
 from app.services.publicacao_destinos import (
     Destino,
     PacotePublicacao,
@@ -329,7 +330,8 @@ def registrar_destinos_padrao() -> None:
     corte, que é onde a tela horizontal e o lote o procuram.
     """
     registrar(DestinoYouTubeShorts())
-    registrar(DestinoManual(Plataforma.INSTAGRAM_REELS))
+    # D-802: com token, o Reels vai pela API; sem, segue o pacote de sempre.
+    registrar(instagram_api.destino_do_reels(DestinoManual(Plataforma.INSTAGRAM_REELS)))
     registrar(DestinoManual(Plataforma.TIKTOK))
     registrar_do_corte(DestinoManual(Plataforma.TIKTOK_HORIZONTAL))
 
