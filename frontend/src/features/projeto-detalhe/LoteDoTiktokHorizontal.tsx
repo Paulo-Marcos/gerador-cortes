@@ -76,20 +76,7 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, agendarPara, onPr
   return (
     <div className="space-y-2 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 py-2">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5 text-[12px]">
-          Quantos
-          <Input
-            type="number"
-            min={1}
-            max={pendentes.length}
-            value={quantidade || ''}
-            placeholder={String(pendentes.length)}
-            onChange={(e) => setQuantidade(Number(e.target.value) || 0)}
-            className="h-7 w-[68px] text-center text-[12px]"
-            aria-label="Quantos cortes subir"
-          />
-          de {pendentes.length}
-        </label>
+        <CampoQuantos total={pendentes.length} valor={quantidade} onChange={setQuantidade} />
         <Button
           size="sm"
           disabled={subir.isPending || correndo || alvos.length === 0}
@@ -140,6 +127,34 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, agendarPara, onPr
 
       {raia && <PainelDoLote raias={[raia]} />}
     </div>
+  );
+}
+
+/** Quantos cortes o lote leva. Vazio quer dizer todos — o caso comum. */
+function CampoQuantos({
+  total,
+  valor,
+  onChange,
+}: {
+  total: number;
+  valor: number;
+  onChange: (valor: number) => void;
+}) {
+  return (
+    <label className="flex items-center gap-1.5 text-[12px]">
+      Quantos
+      <Input
+        type="number"
+        min={1}
+        max={total}
+        value={valor || ''}
+        placeholder={String(total)}
+        onChange={(e) => onChange(Number(e.target.value) || 0)}
+        className="h-7 w-[68px] text-center text-[12px]"
+        aria-label="Quantos cortes subir"
+      />
+      de {total}
+    </label>
   );
 }
 
