@@ -114,7 +114,7 @@ def enviar_video(token: str, container: Container, video: Path) -> None:
                     "offset": "0",
                     "file_size": str(tamanho),
                 },
-                content=arquivo.read(),
+                content=arquivo,  # em pedaços: o MP4 não passa inteiro pela memória
             )
         )
 
