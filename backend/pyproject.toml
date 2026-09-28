@@ -152,3 +152,12 @@ layers = [
     "app.domain.projeto | app.domain.corte | app.domain.short | app.domain.publicacao | app.domain.canal | app.domain.live_candidata",
     "app.domain.compartilhado",
 ]
+
+# D-773: checagem de tipos. O modo basic pega o que costuma virar defeito
+# (argumento do tipo errado, atributo de algo que pode ser None) sem exigir
+# anotação em tudo. Os erros que já existiam em 28/09/2026 estão contados em
+# tests/test_tipos_pyright_d773.py, e aquela lista só diminui.
+[tool.pyright]
+include = ["app"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
