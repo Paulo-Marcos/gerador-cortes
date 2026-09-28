@@ -178,6 +178,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/capa-chatgpt/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ler Configuracao
+         * @description O link do projeto e as fichas do canal ativo.
+         */
+        get: operations["ler_configuracao_api_capa_chatgpt_config_get"];
+        /**
+         * Gravar Projeto
+         * @description Grava o link do projeto do ChatGPT; vazio desliga a integração.
+         */
+        put: operations["gravar_projeto_api_capa_chatgpt_config_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/capa-chatgpt/fichas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Subir Ficha
+         * @description Guarda uma ficha do mascote; o mesmo nome substitui a anterior.
+         */
+        post: operations["subir_ficha_api_capa_chatgpt_fichas_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/capa-chatgpt/fichas/{nome}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ver Ficha
+         * @description A imagem da ficha, para a miniatura na tela de Canais.
+         */
+        get: operations["ver_ficha_api_capa_chatgpt_fichas__nome__get"];
+        put?: never;
+        post?: never;
+        /** Remover Ficha */
+        delete: operations["remover_ficha_api_capa_chatgpt_fichas__nome__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/capa-chatgpt/gerar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Gerar Capa
+         * @description Gera a imagem no ChatGPT e a devolve (PNG, JPEG ou WEBP). Leva cerca de um minuto.
+         */
+        post: operations["gerar_capa_api_capa_chatgpt_gerar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/channels": {
         parameters: {
             query?: never;
@@ -3059,7 +3144,7 @@ export interface paths {
         put?: never;
         /**
          * Subir Arte Da Capa Tiktok
-         * @description Recebe a ilustracao 16:9 que vai na faixa central, e monta a capa.
+         * @description Recebe a ilustracao 4:5 que vai na faixa central, e monta a capa.
          *
          *     Monta na sequencia porque e o gesto natural: quem acabou de subir a arte
          *     quer ver a capa, nao clicar num segundo botao para descobrir se ficou boa.
@@ -4991,6 +5076,11 @@ export interface components {
             /** Arquivo */
             arquivo: string;
         };
+        /** Body_subir_ficha_api_capa_chatgpt_fichas_post */
+        Body_subir_ficha_api_capa_chatgpt_fichas_post: {
+            /** Arquivo */
+            arquivo: string;
+        };
         /** Body_upload_api_retratos_upload_post */
         Body_upload_api_retratos_upload_post: {
             /** Arquivo */
@@ -5226,6 +5316,15 @@ export interface components {
             /** Descartes */
             descartes: string[];
             short: components["schemas"]["ShortResponse"];
+        };
+        /** ConfiguracaoCapaChatgptResponse */
+        ConfiguracaoCapaChatgptResponse: {
+            /** Fichas */
+            fichas: string[];
+            /** Maximo De Fichas */
+            maximo_de_fichas: number;
+            /** Projeto Url */
+            projeto_url: string;
         };
         /**
          * ConfirmarPublicacaoRequest
@@ -6028,6 +6127,16 @@ export interface components {
              * @default false
              */
             refazer_transcricao: boolean;
+        };
+        /** GerarCapaChatgptRequest */
+        GerarCapaChatgptRequest: {
+            /** Prompt */
+            prompt: string;
+            /**
+             * Proporcao
+             * @enum {string}
+             */
+            proporcao: "16:9" | "4:5" | "9:16";
         };
         /**
          * GerarCapaRequest
@@ -7177,6 +7286,11 @@ export interface components {
          */
         ProgressoResponse: {
             render: components["schemas"]["ProgressoDoRenderDoShort"] | null;
+        };
+        /** ProjetoChatgptRequest */
+        ProjetoChatgptRequest: {
+            /** Projeto Url */
+            projeto_url: string;
         };
         /** ProjetoCriadoResponse */
         ProjetoCriadoResponse: {
@@ -9052,6 +9166,183 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PadroesThumbnailResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ler_configuracao_api_capa_chatgpt_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfiguracaoCapaChatgptResponse"];
+                };
+            };
+        };
+    };
+    gravar_projeto_api_capa_chatgpt_config_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjetoChatgptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfiguracaoCapaChatgptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    subir_ficha_api_capa_chatgpt_fichas_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_subir_ficha_api_capa_chatgpt_fichas_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfiguracaoCapaChatgptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ver_ficha_api_capa_chatgpt_fichas__nome__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nome: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remover_ficha_api_capa_chatgpt_fichas__nome__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nome: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfiguracaoCapaChatgptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    gerar_capa_api_capa_chatgpt_gerar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GerarCapaChatgptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

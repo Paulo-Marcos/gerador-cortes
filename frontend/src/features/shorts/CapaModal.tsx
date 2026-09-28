@@ -18,6 +18,7 @@ import {
   recadoDoInstante,
 } from './capaDoShort';
 import { alvoEditavel, imagemDoColar } from './imagemDaAreaDeTransferencia';
+import { PassoDesenharCapa } from './PassoDesenharCapa';
 import {
   useCapaDoShort,
   useGerarCapa,
@@ -437,17 +438,7 @@ function ArteDaCapa({
         )}
       </section>
 
-      {/* Passo 2 — fora do app. Existe como TEXTO porque é o único passo que o
-          app não executa, e omiti-lo faria o 1 e o 3 parecerem desconexos. */}
-      <section className="border-t border-[var(--wb-border-soft)] pt-3">
-        <p className="text-[12.5px] font-semibold text-[var(--wb-text)]">
-          2. Desenhar no seu agente
-        </p>
-        <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
-          Cole o prompt no gerador de imagem e peça 1080×1920. Confira se o texto e o assunto
-          cabem no quadrado central antes de salvar.
-        </p>
-      </section>
+      <PassoDesenharCapa prompt={texto} entregar={subir.mutateAsync} ocupado={subir.isPending} />
 
       {/* Passo 3 — a volta. */}
       <section className="space-y-2 border-t border-[var(--wb-border-soft)] pt-3">

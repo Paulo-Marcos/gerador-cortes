@@ -113,6 +113,16 @@ def mascot_dir() -> Path:
     return active_channel_root() / "mascot"
 
 
+def fichas_do_chatgpt_dir() -> Path:
+    """As fichas que o robô anexa em toda capa gerada no ChatGPT (D-804).
+
+    Fora de `mascot/` de propósito: aquela pasta é espelhada no `public/` do
+    Remotion e entra na impressão digital do bundle — uma ficha nova ali
+    invalidaria o cache do render sem mudar nada no vídeo.
+    """
+    return active_channel_root() / "capa_chatgpt" / "fichas"
+
+
 # --------------------------------------------------------------------------- #
 # Assets visuais do canal (D-156)
 # --------------------------------------------------------------------------- #

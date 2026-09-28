@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { PromptManualPanel } from '@/components/PromptManualPanel';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
 import { ThumbnailAvaliacaoPanel } from './ThumbnailAvaliacaoPanel';
+import { AcoesDoPromptDaCapa } from './AcoesDoPromptDaCapa';
 import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { useMetadataCard, sanitizeDescription } from './useMetadataCard';
 
@@ -738,29 +739,14 @@ export function MetadataCard(props: {
               textoCapa={coverText}
               onAtualizou={invalidate}
             />
-            {/* D-746: copiar o prompt é o passo que se repete dez vezes por
-                live (cola no agente capista, a imagem volta por Ctrl+V). Ele
-                tinha ido parar no ⋯ do cabeçalho junto com o raro. Frequência
-                de uso, não quantidade de botões, decide o que fica à vista. */}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => void copiarPromptDaCapa()}
-              disabled={!promptReady}
-              aria-describedby={promptReady ? undefined : `motivo-prompt-${cut.id}`}
-              title="Copiar o prompt para colar no agente capista"
-            >
-              {promptCopiado ? <Check /> : <Clipboard />}
-              {promptCopiado ? 'Copiado' : 'Copiar prompt da capa'}
-            </Button>
-            {!promptReady && (
-              <p
-                id={`motivo-prompt-${cut.id}`}
-                className="-mt-1 text-[11px] leading-snug text-[var(--wb-warn-ink)]"
-              >
-                Gere o prompt da capa primeiro — ainda não há o que copiar.
-              </p>
-            )}
+            <AcoesDoPromptDaCapa
+              corteId={cut.id}
+              prompt={meta?.prompt_thumbnail}
+              promptReady={promptReady}
+              promptCopiado={promptCopiado}
+              onCopiar={() => void copiarPromptDaCapa()}
+              entregar={uploadThumbnail.mutateAsync}
+            />
             {/* DE-PARA-v3 §5: "Trocar thumbnail" é o primário (sólido em
                 acento); "Gerar" fica em outline; e as ações raras (copiar
                 pasta, comprimir, remover) saem da pilha de botões para um ⋯. */}

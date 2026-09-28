@@ -126,7 +126,7 @@ async def gerar(
             arte = _arte_existente(contexto["thumb_dir"], corte_id)
             if arte is None:
                 raise CapaTikTokError(
-                    "Nao ha arte para esta capa. Gere o prompt, crie a imagem 16:9 no "
+                    "Nao ha arte para esta capa. Gere o prompt, crie a imagem 4:5 no "
                     "agente capista e suba com 'Subir arte'."
                 )
             imagem = arte
@@ -314,7 +314,7 @@ async def _contexto(corte_id: str, *, exigir_video: bool = True) -> dict:
 
 
 def caminho_da_arte(thumb_dir: Path, corte_id: str, extensao: str = ".png") -> Path:
-    """Onde a arte 16:9 daquele corte mora."""
+    """Onde a arte 4:5 daquele corte mora (D-526)."""
     return thumb_dir / f"{NOME_DA_ARTE}_{corte_id[:8]}{extensao}"
 
 
@@ -418,7 +418,7 @@ async def gerar_prompt_da_arte(corte_id: str, provider: ProviderIA = "claude") -
 
 
 async def salvar_arte(corte_id: str, conteudo: bytes, nome_arquivo: str) -> Path:
-    """Recebe a arte 16:9 feita a mao, que vai na faixa central.
+    """Recebe a arte 4:5 feita a mao, que vai na faixa central (D-526).
 
     Diferente de `salvar_upload`, que recebe a CAPA inteira já montada: aqui
     entra só a ilustração, e o sistema ainda desenha a etiqueta e o selo por

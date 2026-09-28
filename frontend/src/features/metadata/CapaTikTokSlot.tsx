@@ -10,6 +10,7 @@ import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { useUltimaGeracao } from '@/features/ia';
 import { lerImagemColada, SemImagemColada } from '@/features/shorts/imagemDaAreaDeTransferencia';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
+import { GerarNoChatGPT } from '@/features/capa-chatgpt/GerarNoChatGPT';
 
 // D-521: a capa VERTICAL, ao lado da thumbnail do YouTube.
 //
@@ -74,7 +75,6 @@ export function CapaTikTokSlot({
 }: Props) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
-  const inputCapaRef = useRef<HTMLInputElement>(null);
   const [erro, setErro] = useState('');
   const [copiado, setCopiado] = useState(false);
   // D-534: o caminho da capa nao muda quando ela e refeita — mesmo arquivo,
@@ -219,6 +219,12 @@ export function CapaTikTokSlot({
               {copiado ? 'copiado' : 'Copiar prompt'}
             </Button>
           )}
+          <GerarNoChatGPT
+            prompt={promptArte}
+            proporcao="4:5"
+            entregar={subirArte.mutateAsync}
+            desabilitado={ocupado}
+          />
 
           {/* Passo 2: a arte de volta. Subir já monta a capa — quem acabou de
               trazer a imagem quer ver o resultado, não um segundo botão. */}
@@ -228,10 +234,10 @@ export function CapaTikTokSlot({
             variant="outline"
             disabled={ocupado}
             onClick={() => inputRef.current?.click()}
-            title="A ilustração 16:9 gerada no agente. O sistema desenha a etiqueta por cima."
+            title="A ilustração 4:5 gerada no agente. O sistema desenha a etiqueta por cima."
           >
             {subirArte.isPending ? <Loader2 className="animate-spin" /> : <ImagePlus />}
-            Subir arte 16:9
+            Subir arte 4:5
           </Button>
           <Button
             type="button"
@@ -279,29 +285,7 @@ export function CapaTikTokSlot({
             </Button>
           )}
 
-          {/* A capa PRONTA, montada por fora. Escape hatch de quem quer controle
-              total do quadro — some do fluxo normal porque, usada por engano no
-              lugar da arte, entrega uma imagem sem a etiqueta e sem o selo. */}
-          <button
-            type="button"
-            disabled={ocupado}
-            onClick={() => inputCapaRef.current?.click()}
-            className="text-left text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
-            title="Sobe a capa 1080x1920 inteira, já com texto — o sistema não desenha nada por cima."
-          >
-            subir capa pronta 9:16
-          </button>
-          <input
-            ref={inputCapaRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(event) => {
-              const arquivo = event.target.files?.[0];
-              if (arquivo) subirCapaPronta.mutate(arquivo);
-              event.currentTarget.value = '';
-            }}
-          />
+          <SubirCapaPronta ocupado={ocupado} onArquivo={(arquivo) => subirCapaPronta.mutate(arquivo)} />
 
           <button
             type="button"
@@ -334,5 +318,44 @@ export function CapaTikTokSlot({
 
       {erro && <p className="text-[11px] leading-snug text-[var(--wb-warn-ink)]">{erro}</p>}
     </section>
+  );
+}
+
+/**
+ * A capa PRONTA, montada por fora. Escape hatch de quem quer controle total do
+ * quadro — discreto de propósito porque, usada por engano no lugar da arte,
+ * entrega uma imagem sem a etiqueta e sem o selo.
+ */
+function SubirCapaPronta({
+  ocupado,
+  onArquivo,
+}: {
+  ocupado: boolean;
+  onArquivo: (arquivo: File) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <button
+        type="button"
+        disabled={ocupado}
+        onClick={() => inputRef.current?.click()}
+        className="text-left text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
+        title="Sobe a capa 1080x1920 inteira, já com texto — o sistema não desenha nada por cima."
+      >
+        subir capa pronta 9:16
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          const arquivo = event.target.files?.[0];
+          if (arquivo) onArquivo(arquivo);
+          event.currentTarget.value = '';
+        }}
+      />
+    </>
   );
 }

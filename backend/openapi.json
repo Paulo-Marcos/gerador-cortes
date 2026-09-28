@@ -1768,6 +1768,20 @@
         "title": "Body_subir_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_upload_post",
         "type": "object"
       },
+      "Body_subir_ficha_api_capa_chatgpt_fichas_post": {
+        "properties": {
+          "arquivo": {
+            "contentMediaType": "application/octet-stream",
+            "title": "Arquivo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "arquivo"
+        ],
+        "title": "Body_subir_ficha_api_capa_chatgpt_fichas_post",
+        "type": "object"
+      },
       "Body_upload_api_retratos_upload_post": {
         "properties": {
           "arquivo": {
@@ -2303,6 +2317,32 @@
           "descartes"
         ],
         "title": "CenasSugeridasResponse",
+        "type": "object"
+      },
+      "ConfiguracaoCapaChatgptResponse": {
+        "properties": {
+          "fichas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fichas",
+            "type": "array"
+          },
+          "maximo_de_fichas": {
+            "title": "Maximo De Fichas",
+            "type": "integer"
+          },
+          "projeto_url": {
+            "title": "Projeto Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projeto_url",
+          "fichas",
+          "maximo_de_fichas"
+        ],
+        "title": "ConfiguracaoCapaChatgptResponse",
         "type": "object"
       },
       "ConfirmarPublicacaoRequest": {
@@ -4094,6 +4134,29 @@
           }
         },
         "title": "GerarBrutoRequest",
+        "type": "object"
+      },
+      "GerarCapaChatgptRequest": {
+        "properties": {
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          },
+          "proporcao": {
+            "enum": [
+              "16:9",
+              "4:5",
+              "9:16"
+            ],
+            "title": "Proporcao",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "proporcao"
+        ],
+        "title": "GerarCapaChatgptRequest",
         "type": "object"
       },
       "GerarCapaRequest": {
@@ -6989,6 +7052,19 @@
           "render"
         ],
         "title": "ProgressoResponse",
+        "type": "object"
+      },
+      "ProjetoChatgptRequest": {
+        "properties": {
+          "projeto_url": {
+            "title": "Projeto Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projeto_url"
+        ],
+        "title": "ProjetoChatgptRequest",
         "type": "object"
       },
       "ProjetoCriadoResponse": {
@@ -11384,6 +11460,221 @@
         "summary": "Analisar Padroes",
         "tags": [
           "Avaliações Thumbnail"
+        ]
+      }
+    },
+    "/api/capa-chatgpt/config": {
+      "get": {
+        "description": "O link do projeto e as fichas do canal ativo.",
+        "operationId": "ler_configuracao_api_capa_chatgpt_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracaoCapaChatgptResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ler Configuracao",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      },
+      "put": {
+        "description": "Grava o link do projeto do ChatGPT; vazio desliga a integração.",
+        "operationId": "gravar_projeto_api_capa_chatgpt_config_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjetoChatgptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracaoCapaChatgptResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gravar Projeto",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      }
+    },
+    "/api/capa-chatgpt/fichas": {
+      "post": {
+        "description": "Guarda uma ficha do mascote; o mesmo nome substitui a anterior.",
+        "operationId": "subir_ficha_api_capa_chatgpt_fichas_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_subir_ficha_api_capa_chatgpt_fichas_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracaoCapaChatgptResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Subir Ficha",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      }
+    },
+    "/api/capa-chatgpt/fichas/{nome}": {
+      "delete": {
+        "operationId": "remover_ficha_api_capa_chatgpt_fichas__nome__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "nome",
+            "required": true,
+            "schema": {
+              "title": "Nome",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracaoCapaChatgptResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remover Ficha",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      },
+      "get": {
+        "description": "A imagem da ficha, para a miniatura na tela de Canais.",
+        "operationId": "ver_ficha_api_capa_chatgpt_fichas__nome__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "nome",
+            "required": true,
+            "schema": {
+              "title": "Nome",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ver Ficha",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      }
+    },
+    "/api/capa-chatgpt/gerar": {
+      "post": {
+        "description": "Gera a imagem no ChatGPT e a devolve (PNG, JPEG ou WEBP). Leva cerca de um minuto.",
+        "operationId": "gerar_capa_api_capa_chatgpt_gerar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GerarCapaChatgptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gerar Capa",
+        "tags": [
+          "Capa no ChatGPT"
         ]
       }
     },
@@ -18428,7 +18719,7 @@
     },
     "/api/shorts/corte/{corte_id}/capa-tiktok/arte": {
       "post": {
-        "description": "Recebe a ilustracao 16:9 que vai na faixa central, e monta a capa.\n\nMonta na sequencia porque e o gesto natural: quem acabou de subir a arte\nquer ver a capa, nao clicar num segundo botao para descobrir se ficou boa.",
+        "description": "Recebe a ilustracao 4:5 que vai na faixa central, e monta a capa.\n\nMonta na sequencia porque e o gesto natural: quem acabou de subir a arte\nquer ver a capa, nao clicar num segundo botao para descobrir se ficou boa.",
         "operationId": "subir_arte_da_capa_tiktok_api_shorts_corte__corte_id__capa_tiktok_arte_post",
         "parameters": [
           {

@@ -450,7 +450,7 @@ def porta_do_chrome(perfil: Path) -> int:
 _ABRINDO_CHROME = threading.Lock()
 
 
-def garantir_chrome(perfil: Path, url: str) -> bool:
+def garantir_chrome(perfil: Path, url: str, *, executavel: Path | None = None) -> bool:
     """Deixa um Chrome de depuração no ar PARA ESTE PERFIL, e diz se abriu um.
 
     Reaproveita o que já estiver escutando na porta DELE: publicar cinco cortes
@@ -463,15 +463,15 @@ def garantir_chrome(perfil: Path, url: str) -> bool:
     dois lançam, um perde a porta — e o robô dele dirige a janela do outro.
     """
     with _ABRINDO_CHROME:
-        return _garantir_chrome(perfil, url)
+        return _garantir_chrome(perfil, url, executavel)
 
 
-def _garantir_chrome(perfil: Path, url: str) -> bool:
+def _garantir_chrome(perfil: Path, url: str, executavel: Path | None) -> bool:
     porta = porta_do_chrome(perfil)
     if _porta_responde(porta):
         return False
 
-    chrome = _chrome_no_disco()
+    chrome = executavel or _chrome_no_disco()  # D-804: o ChatGPT abre no Edge
     if chrome is None:
         if settings.chrome_path:
             raise NavegadorIndisponivel(

@@ -989,7 +989,7 @@ async def gerar_prompt_da_capa_tiktok(corte_id: str, provider: ProviderIA = "cla
     "/corte/{corte_id}/capa-tiktok/arte", response_model=esquemas.CapaTiktokDoCorteResponse
 )
 async def subir_arte_da_capa_tiktok(corte_id: str, arquivo: UploadFile = File(...)):
-    """Recebe a ilustracao 16:9 que vai na faixa central, e monta a capa.
+    """Recebe a ilustracao 4:5 que vai na faixa central, e monta a capa.
 
     Monta na sequencia porque e o gesto natural: quem acabou de subir a arte
     quer ver a capa, nao clicar num segundo botao para descobrir se ficou boa.

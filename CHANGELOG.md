@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Generate covers in your own ChatGPT, without copy and paste.** A
+  "Gerar no ChatGPT" button on the YouTube thumbnail (16:9), the TikTok art
+  (4:5) and the Short cover (9:16) drives the operator's Edge: it opens a new
+  chat in the channel's ChatGPT project, attaches the mascot sheets, pastes
+  the prompt, waits for the image and sends it through the same upload as
+  Ctrl+V, so frames and cover assembly still apply. It uses the ChatGPT
+  subscription, not the paid API. The project link and the sheets are set per
+  channel in Canais → Capas no ChatGPT (D-804).
 - **A size gate for source files.** A test now fails when a code file in the
   backend, frontend or renderer goes over 500 lines. The 61 files that were
   already over the limit are listed with today's size as a ceiling; the list

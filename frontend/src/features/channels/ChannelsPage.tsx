@@ -4,13 +4,14 @@
 // abrem cada seção; na aplicação, Aparência (tema+paleta) + settings globais.
 // Container: orquestra o I/O (hooks em useChannels) e delega às seções.
 import { useState } from 'react';
-import { AlertTriangle, ChevronLeft, Loader2, Plus } from 'lucide-react';
+import { ChevronLeft, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import type { Canal, IdentidadeCanal } from '@/features/channels/api/canais';
 import { AppSettingsControls } from '@/features/settings';
+import { CapaChatgptSection } from '@/features/capa-chatgpt/CapaChatgptSection';
 import { ChannelCard } from './ChannelCard';
 import { ChannelForm, type ChannelFormValues } from './ChannelForm';
 import { ChannelThemeSection } from './ChannelThemeSection';
@@ -19,6 +20,7 @@ import { EditorialSkillsSection } from './EditorialSkillsSection';
 import { PreRequisitosSection } from './PreRequisitosSection';
 import { PromptsUtilitariosSection } from './PromptsUtilitariosSection';
 import { RankingPesosSection } from './RankingPesosSection';
+import { SituacaoDosCanais } from './SituacaoDosCanais';
 import { AparenciaDaCasca } from '@/upgrade/AparenciaDaCasca';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import {
@@ -259,45 +261,13 @@ export function ChannelsPage() {
 
         {aba === 'canal' && secao === null && (
           <>
-            {canaisQuery.isLoading && (
-              <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-                <Loader2 className="animate-spin" size={16} aria-hidden />
-                Carregando canais…
-              </p>
-            )}
-
-            {canaisQuery.isError && (
-              <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklch,var(--error)_10%,var(--wb-bg-card))] p-5">
-                <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-                  <AlertTriangle size={16} aria-hidden className="text-error" />
-                  {mensagemErro(canaisQuery.error, 'Não foi possível carregar os canais.')}
-                </p>
-                <div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => canaisQuery.refetch()}
-                  >
-                    Tentar de novo
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {canaisQuery.isSuccess && canais.length === 0 && (
-              <div className="grid gap-3 rounded-[var(--radius)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-6 text-center">
-                <p className="text-[15px] text-[var(--wb-text-mute)]">
-                  Nenhum canal cadastrado ainda. Crie o primeiro para começar.
-                </p>
-                <div className="flex justify-center">
-                  <Button type="button" onClick={() => setDialogo({ tipo: 'criar' })}>
-                    <Plus aria-hidden />
-                    Criar primeiro canal
-                  </Button>
-                </div>
-              </div>
-            )}
+            <SituacaoDosCanais
+              carregando={canaisQuery.isLoading}
+              erro={canaisQuery.isError ? canaisQuery.error : null}
+              vazio={canaisQuery.isSuccess && canais.length === 0}
+              onTentarDeNovo={() => void canaisQuery.refetch()}
+              onCriar={() => setDialogo({ tipo: 'criar' })}
+            />
 
             {canais.length > 0 && (
               <ul className="grid gap-3">
@@ -319,6 +289,7 @@ export function ChannelsPage() {
             )}
 
             <ChannelThemeSection />
+            <CapaChatgptSection />
 
             {/* Blocos-portal do design: cada área editorial abre em sub-view. */}
             <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(230px,1fr))]">
