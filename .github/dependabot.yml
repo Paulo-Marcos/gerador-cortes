@@ -21,9 +21,13 @@ updates:
     groups:
       correcoes-backend:
         update-types: ["minor", "patch"]
+    # D-796: requirements.in é a intenção e requirements.txt o lock gerado pelo
+    # `uv pip compile` (comando no cabeçalho do lock). O PR do Dependabot é o
+    # sinal; o lote se refaz localmente regenerando o lock (skill pr-bump), e o
+    # teste do ambiente confere que o que roda é o que está no lock.
     ignore:
       # O 5.0 removeu os Haar cascades que o detector de rosto usa (D-583,
-      # comentário no requirements.txt). Subir é demanda, não atualização.
+      # comentário no requirements.in). Subir é demanda, não atualização.
       - dependency-name: "opencv-python"
         versions: [">=5"]
 

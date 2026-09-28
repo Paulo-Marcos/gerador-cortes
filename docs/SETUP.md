@@ -88,6 +88,14 @@ O `dev.ps1` encontra o `backend\.venv` sozinho. Criar o venv importa: sem ele, t
 da máquina divide a mesma instalação de Python, e atualizar uma dependência num deles
 mexe em todos.
 
+**O `requirements.txt` é gerado; não o edite à mão** (D-796). As dependências diretas estão
+no `requirements.in`; o `requirements.txt` é o *lock*: a árvore inteira, com versão exata e
+hash de cada arquivo, para Windows e Linux. O pip confere os hashes e recusa um pacote que
+não bata. Para acrescentar ou subir uma dependência, edite o `.in` e regenere o lock com o
+comando que está no cabeçalho do `requirements.txt` (precisa do [uv](https://docs.astral.sh/uv/)).
+O mesmo vale para `requirements-dev.in` → `requirements-dev.txt`. Um teste reprova quando o
+`.venv` não bate com o lock: rode o bootstrap de novo.
+
 </details>
 
 ---

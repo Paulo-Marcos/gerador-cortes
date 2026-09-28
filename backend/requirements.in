@@ -1,0 +1,71 @@
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+sqlalchemy[asyncio]==2.1.0
+aiosqlite==0.22.1
+pydantic==2.13.5
+pydantic-settings==2.15.0
+httpx==0.28.1
+python-multipart==0.0.32
+yt-dlp>=2026.8.19
+aiofiles==24.1.0
+# 16.x, e nao a 17: o google-genai 2.x pede websockets<17.
+websockets==16.1.1
+
+# Estes dois — como o `websockets` acima — chegam de carona no extra
+# `[standard]` do uvicorn, mas o app os IMPORTA direto, e o que vem de carona
+# pode descer na proxima versao sem aviso. O `websockets` ja era declarado por
+# isso; estes faltavam (D-583):
+#   `yaml`       le o channel.yaml, fonte unica da identidade do canal
+#                (services/channels.py) — sem ele o app nao sobe;
+#   `watchfiles` e o `awatch` que espera o `res_{job_id}.json` do worker de
+#                render (infrastructure/worker_queue.py) — sem ele nenhum
+#                render termina.
+PyYAML==6.0.3
+watchfiles==1.3.0
+google-genai>=2.25.0
+# D-720: o Claude pela chave de API (BYOK). A 1.x roda sobre httpx2, sem
+# conflito com o httpx fixado acima.
+anthropic>=1.8,<2
+google-api-python-client==2.200.0
+google-auth-oauthlib==1.4.1
+google-auth-httplib2==0.4.2
+Pillow==12.3.0
+# A 0.7.1 tirou o extra [opencv]; o opencv ja e declarado abaixo, com versao nossa.
+scenedetect==0.7.1
+
+# O opencv e do scenedetect, mas a VERSAO e nossa (D-583) — e desde a 0.7.1
+# ele nao vem mais de carona: sem esta linha, nao seria instalado.
+# O 5.0 aposentou os Haar cascades: sumiram tanto `cv2.CascadeClassifier` quanto
+# os XMLs de `cv2.data.haarcascades` (a pasta vem vazia). Sem eles o detector de
+# rosto do D-477 nao levanta `DeteccaoIndisponivel` — levanta `AttributeError`,
+# que ninguem espera, e o `POST /shorts/{id}/enquadrar` devolve 500 em vez do
+# 503 que a tela sabe tratar. Enquanto o detector for Haar, o teto e a 4.x.
+# Para subir para o 5: trocar por `cv2.FaceDetectorYN` (rede neural, exige
+# baixar pesos) e reaferir o enquadramento — e demanda, nao upgrade de pin.
+opencv-python==4.14.0.94
+
+# Diarização de falantes (D-286) — OPCIONAL e pesado (torch + pyannote).
+# Instale só se for usar o rótulo canal/reagidos: `pip install pyannote.audio`.
+# Requer token gratuito do HuggingFace (ver docs/SETUP.md). Deixado comentado
+# para não impor a dependência a quem não usa; o app degrada sem ela.
+# pyannote.audio==3.3.2
+# Transcricao fiel do short (D-461) — OPCIONAL. Sem ela o app cai na
+# auto-legenda do YouTube, que ja traz timing por palavra (D-337) mas com
+# grafia pior. Instale se for queimar legenda no video:
+# `pip install faster-whisper` e ligue `ASR_LOCAL_HABILITADO=true` no .env.
+# faster-whisper==1.1.1
+
+# Upload assistido no TikTok Studio (D-537). So o pacote Python: ele conecta ao
+# Chrome JA INSTALADO do operador por CDP, entao nao ha `playwright install`
+# nem 130 MB de Chromium baixado. Sem ele o app degrada para a macro (D-503),
+# que monta o pacote e abre a aba.
+playwright==1.63.0
+
+# Quem e o dono da janela (D-537/D-564). O robo deriva a porta de depuracao do
+# CAMINHO do perfil e, antes de reaproveitar uma porta ocupada, pergunta de quem
+# e o Chrome que atende ali — e quem le a linha de comando do processo e o
+# psutil. Sem ele a resposta e sempre "nao sei", o robo desiste da porta do
+# proprio perfil, tenta abrir um SEGUNDO Chrome sobre um perfil ja aberto, e o
+# Chrome apenas manda a URL para a janela existente sem abrir porta nenhuma:
+# a aba aparece e o upload nunca comeca. Nao e opcional.
+psutil==7.2.2

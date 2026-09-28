@@ -78,6 +78,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per channel, in the database, and are untouched (D-775).
 
 ### Security
+- **Python dependencies are locked with hashes.** `requirements.txt` is now
+  generated from `requirements.in` and pins the whole tree — 73 packages
+  instead of the 23 listed by hand — with the hash of every file, for Windows
+  and Linux. Two installs on different days get the same packages, and pip
+  refuses a file whose hash does not match. A test fails when the environment
+  running the tests drifts from the lock (D-796).
 - **Every GitHub Action is pinned to a commit SHA.** The workflows used
   version tags (`@v7`), which the action's owner can move to other code;
   they now name the exact commit, with the version in a comment for
