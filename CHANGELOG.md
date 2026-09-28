@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-28
+
 ### Added
 - **Generate covers in your own ChatGPT, without copy and paste.** A
   "Gerar no ChatGPT" button on the YouTube thumbnail (16:9), the TikTok art
@@ -406,7 +408,8 @@ First public release.
   chunks (see `docs/interno/historico-arquitetura-2026-05.md` §8).
 - Single-flight audio proxy with hybrid seek (I-039).
 
-[Unreleased]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Paulo-Marcos/gerador-cortes/compare/v0.1.0...v0.2.0
