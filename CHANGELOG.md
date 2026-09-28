@@ -112,6 +112,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per channel, in the database, and are untouched (D-775).
 
 ### Security
+- **Another website can no longer make the app do heavy work.** Pages open in
+  the same browser could embed `<img>` or `<audio>` pointing at the local API;
+  those requests carry no `Origin`, so the local-origin guard let them
+  through, and some reads start ffmpeg. The guard now refuses what the
+  browser marks as coming from another site (`Sec-Fetch-Site: cross-site`)
+  unless its `Origin` or `Referer` is local. The app itself, scripts and the
+  render worker are unaffected (D-814).
+- **Uploaded covers must be images, and YouTube hosts are matched exactly.**
+  A manual cover upload kept whatever extension the file name had (`.hta`,
+  `.html`); only jpg, jpeg, png and webp pass now. The video-id extractor
+  accepted any host ending in `youtube.com`; it now requires the real host
+  (D-812, D-813).
 - **Two paths that could leave their folder are closed.** Selecting or
   editing a channel did not check the id from the URL, so `..\..` (a
   backslash is a path separator on Windows) could point the active channel

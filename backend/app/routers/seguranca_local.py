@@ -12,8 +12,10 @@ resposta; três portas continuam abertas sem esta guarda:
   página parecer "da mesma origem" — e aí até o GET é lido.
 
 A guarda recusa Host que não seja local (fecha o rebinding), método que muda
-dados vindo de origem não local, e WebSocket de origem não local. Leituras (GET)
-de outra origem passam: o CORS já impede o site de ver a resposta.
+dados vindo de origem não local, e WebSocket de origem não local. Leitura (GET)
+que o navegador marca como vinda de outro site (`Sec-Fetch-Site: cross-site`,
+sem Origin local) também é recusada (D-814): o CORS impede o site de ver a
+resposta, mas não impede a GET de rodar — e há GET que dispara ffmpeg.
 """
 
 import json
@@ -51,11 +53,30 @@ def origem_e_local(origem: str) -> bool:
     return partes.scheme in ("http", "https") and (partes.hostname or "") in HOSTS_LOCAIS
 
 
-def motivo_da_recusa(tipo: str, metodo: str, host: str, origem: str | None) -> str | None:
+def motivo_da_recusa(
+    tipo: str,
+    metodo: str,
+    host: str,
+    origem: str | None,
+    sec_fetch_site: str | None = None,
+    referer: str | None = None,
+) -> str | None:
     """Por que recusar esta requisição, ou None se ela pode seguir."""
     if not host_e_local(host):
         return f"host não local: {host!r}"
-    if origem is None or origem_e_local(origem):
+    if origem is not None and origem_e_local(origem):
+        return None
+    # D-814: `<img>`/`<audio>` de um site qualquer manda GET SEM Origin — e há
+    # GET que roda ffmpeg. O navegador marca essas requisições com
+    # Sec-Fetch-Site: cross-site (o JavaScript não forja). O app chega por /api
+    # no mesmo servidor do Vite (same-origin); curl, worker e testes não mandam
+    # a marca.
+    # O Referer local salva a tela aberta em 127.0.0.1 com a API em localhost
+    # (o <video> dela não manda Origin); um site pode suprimir o Referer, não
+    # fazê-lo parecer local.
+    if (sec_fetch_site or "").lower() == "cross-site" and not origem_e_local(referer or ""):
+        return "requisição disparada por outro site"
+    if origem is None:
         return None
     if tipo == "websocket" or metodo.upper() not in _METODOS_DE_LEITURA:
         return f"origem não local: {origem!r}"
@@ -79,6 +100,8 @@ class GuardaDeOrigemLocal:
             scope.get("method", "GET"),
             cabecalhos.get("host", ""),
             cabecalhos.get("origin"),
+            cabecalhos.get("sec-fetch-site"),
+            cabecalhos.get("referer"),
         )
         if motivo is None:
             await self.app(scope, receive, send)

@@ -91,6 +91,33 @@ def test_app_recusa_delete_de_site_estranho_e_aceita_do_frontend():
     assert cliente.delete("/coisa").status_code == 200
 
 
+def test_app_recusa_get_disparado_por_outro_site_sem_origin():
+    # D-814: `<audio src="http://localhost:8000/...">` num site qualquer manda GET
+    # sem Origin — e algumas GETs rodam ffmpeg. O navegador marca a requisição
+    # com Sec-Fetch-Site: cross-site, que o JavaScript não consegue forjar.
+    cliente = _app_de_teste()
+    outro_site = {"Sec-Fetch-Site": "cross-site"}
+
+    assert cliente.get("/coisa", headers=outro_site).status_code == 403
+    assert cliente.delete("/coisa", headers=outro_site).status_code == 403
+
+
+def test_app_aceita_o_proprio_app_e_quem_nao_e_navegador():
+    cliente = _app_de_teste()
+
+    for marca in ("same-origin", "same-site", "none"):
+        assert cliente.get("/coisa", headers={"Sec-Fetch-Site": marca}).status_code == 200
+    local = {"Sec-Fetch-Site": "cross-site", "Origin": "http://localhost:4300"}
+    assert cliente.get("/coisa", headers=local).status_code == 200
+    # Tela aberta em 127.0.0.1 com a API em localhost: o <video> do app é
+    # cross-site e não manda Origin, mas manda o Referer da página local.
+    video_do_app = {"Sec-Fetch-Site": "cross-site", "Referer": "http://127.0.0.1:4300/cortes"}
+    assert cliente.get("/coisa", headers=video_do_app).status_code == 200
+    atacante = {"Sec-Fetch-Site": "cross-site", "Referer": "https://site-qualquer.example/x"}
+    assert cliente.get("/coisa", headers=atacante).status_code == 403
+    assert cliente.get("/coisa").status_code == 200  # curl, worker, testes
+
+
 def test_app_nao_libera_cors_para_site_estranho():
     cliente = _app_de_teste()
     preflight = {"Origin": ESTRANHA, "Access-Control-Request-Method": "DELETE"}
