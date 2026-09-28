@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""check_commit_msg.py — confere o padrão de commit do AGENTS.md (D-091, D-684).
+"""check_commit_msg.py — confere o padrão de commit (D-091, D-684).
+
+A tabela está em docs/processo-de-trabalho.md, seção "Padrão de commit".
 
     <emoji> <tipo>(<escopo>): <descrição imperativa, minúscula, sem ponto final>
 
@@ -19,7 +21,7 @@ import re
 import subprocess
 import sys
 
-# A mesma tabela do AGENTS.md ("Padrão de commit").
+# A mesma tabela de docs/processo-de-trabalho.md ("Padrão de commit").
 EMOJI_DO_TIPO = {
     "feat": "✨",
     "fix": "🐛",
@@ -115,7 +117,10 @@ def main(argv: list[str]) -> int:
         with open(argv[1], encoding="utf-8") as arquivo:
             ok = _relatar("commit", cabecalho_da_mensagem(arquivo.read()))
         if not ok:
-            print("Padrão em AGENTS.md, seção 'Padrão de commit'.", file=sys.stderr)
+            print(
+                "Padrão em docs/processo-de-trabalho.md, seção 'Padrão de commit'.",
+                file=sys.stderr,
+            )
         return 0 if ok else 1
 
     if len(argv) == 3 and argv[0] == "range":

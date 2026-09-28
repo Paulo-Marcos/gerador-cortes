@@ -1,4 +1,4 @@
-"""O hook de commit confere o padrão do AGENTS.md (D-684)."""
+"""O hook de commit confere o padrão de docs/processo-de-trabalho.md (D-684)."""
 
 import importlib.util
 from pathlib import Path
