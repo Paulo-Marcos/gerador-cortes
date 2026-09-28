@@ -26,6 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already existed are counted per file and rule; a new one fails the build,
   and the counts can only go down (D-773).
 
+### Removed
+- **Development skills are no longer vendored in the repository.** The seven
+  coding skills (`clean-code`, `react-best-practices`, `remotion-best-practices`
+  and others) and the script that mirrored them from `.claude/skills` to
+  `.agents/skills` are gone: they are about how to write code, not about the
+  app, and now live in the maintainer's global skills. The per-folder rules in
+  `.claude/rules` and `.agents/rules` keep the essentials of each scope and
+  work without any skill installed. The app's editorial skills were already
+  per channel, in the database, and are untouched (D-775).
+
 ### Security
 - **AI agents can no longer read or write the app's secrets.** The project's
   Claude Code settings deny access to `.env`, `token.json`,
