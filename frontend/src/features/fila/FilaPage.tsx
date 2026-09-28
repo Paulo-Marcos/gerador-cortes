@@ -3,6 +3,8 @@ import {
   type JobEstado,
   type QueueJob,
 } from '@/shared/filaGlobal/useWorkbenchQueue';
+import { useState } from 'react';
+import { DetalheDasExecucoes } from '@/upgrade/GavetaDaFila';
 import { Icon, type IconName } from '@/upgrade/Icon';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 
@@ -82,6 +84,7 @@ function LinhaJob({
   const pct = `${Math.round(job.progresso)}%`;
   const tempo = decorrido(job);
   const andando = emAndamento(job);
+  const [aberta, setAberta] = useState(false);
 
   return (
     <article
@@ -104,8 +107,16 @@ function LinhaJob({
         </span>
         {/* `rotulo` já é "alvo → tipo": repeti-lo embaixo só gastaria a linha
             que o log usa melhor. */}
-        <span style={{ minWidth: 0, fontSize: 12.5, fontWeight: 700 }}>{job.rotulo}</span>
-        <span style={{ flex: 1, minWidth: 8 }} />
+        <button
+          type="button"
+          onClick={() => setAberta((v) => !v)}
+          aria-expanded={aberta}
+          title={aberta ? 'Recolher o detalhe' : 'Ver tempos e linha do tempo (D-769)'}
+          style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, padding: 0, border: 0, background: 'none', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
+        >
+          <Icon name={aberta ? 'chevron-down' : 'chevron-right'} size={12} style={{ color: 'var(--mute)' }} />
+          <span style={{ minWidth: 0, fontSize: 12.5, fontWeight: 700 }}>{job.rotulo}</span>
+        </button>
         <span className="chip" style={{ background: tom.bg, color: tom.cor }}>
           {tom.texto}
         </span>
@@ -181,6 +192,8 @@ function LinhaJob({
       >
         {job.erro || job.etapa || '—'}
       </span>
+
+      {aberta ? <DetalheDasExecucoes jobs={[job]} /> : null}
     </article>
   );
 }

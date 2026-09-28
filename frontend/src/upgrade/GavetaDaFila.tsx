@@ -1,9 +1,11 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ehAtivo,
   useWorkbenchQueue,
   type GrupoFila,
   type JobEstado,
+  type MarcoJob,
+  type QueueJob,
 } from '@/shared/filaGlobal/useWorkbenchQueue';
 import { Icon } from './Icon';
 import { SeloDeEstado, type TomDoSelo } from './SeloDeEstado';
@@ -63,22 +65,123 @@ const TEXTO_DO_JOB: Record<JobEstado, string> = {
   cancelado: 'cancelado',
 };
 
+// D-769 · o detalhe por execução voltou.
+//
+// A casca antiga (D-435) abria um modal com os tempos e a linha do tempo de
+// cada job do alvo; a gaveta da R3 herdou só o resumo, e com ele sumiu o
+// único jeito de ver as várias execuções de um mesmo corte. Tudo ainda está
+// no estado da fila (`historico`, `atualizadoEm`) — faltava de novo o lugar.
+// Aqui ele se abre DENTRO da linha, sem outro diálogo sobre a gaveta.
+
+const TEXTO_PERDIDO =
+  'O backend parou de publicar esta execução sem informar o desfecho — em geral porque foi reiniciado. Confira o resultado na tela correspondente.';
+
+function duracaoHumana(ms: number): string {
+  const segundos = Math.max(0, Math.round(ms / 1000));
+  if (segundos < 10) return 'instantes';
+  if (segundos < 60) return `${segundos} s`;
+  const minutos = Math.floor(segundos / 60);
+  if (minutos < 60) return `${minutos} min`;
+  return `${Math.floor(minutos / 60)} h ${minutos % 60} min`;
+}
+
+function horaDe(epochMs: number): string {
+  return new Date(epochMs).toLocaleTimeString('pt-BR', { hour12: false });
+}
+
+/**
+ * Relógio próprio: o poll só re-renderiza quando algo muda, e é justamente no
+ * job travado — que não muda — que o operador precisa ver o tempo correndo.
+ */
+function useAgora(): number {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setAgora(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return agora;
+}
+
+const MONO_PEQUENO = { fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--mute)' } as const;
+
+function LinhaDoTempo({ marcos }: { marcos: MarcoJob[] }) {
+  if (marcos.length === 0) {
+    return <span style={MONO_PEQUENO}>Sem etapas registradas ainda.</span>;
+  }
+  return (
+    <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {marcos.map((marco, indice) => (
+        <li key={`${marco.em}-${indice}`} style={{ display: 'flex', alignItems: 'baseline', gap: 7, fontSize: 11, lineHeight: 1.4 }}>
+          <span style={{ ...MONO_PEQUENO, flex: 'none' }}>{horaDe(marco.em)}</span>
+          <span style={{ ...MONO_PEQUENO, flex: 'none', width: 32, textAlign: 'right', fontWeight: 700, color: COR_DA_BARRA[TOM_DO_JOB[marco.estado]] }}>
+            {Math.round(marco.progresso)}%
+          </span>
+          <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{marco.etapa || TEXTO_DO_JOB[marco.estado]}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Uma execução por extenso: estado, tempos, erro completo e por onde passou. */
+function ExecucaoDoJob({ job, agora }: { job: QueueJob; agora: number }) {
+  return (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 9px', borderRadius: 'var(--r2)', background: 'var(--inset)' }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <strong style={{ flex: 1, minWidth: 0, fontSize: 11.5 }}>{job.rotuloTipo || job.tipo}</strong>
+        <SeloDeEstado tom={TOM_DO_JOB[job.estado]}>{TEXTO_DO_JOB[job.estado]}</SeloDeEstado>
+      </span>
+      <span style={MONO_PEQUENO}>
+        {`na fila há ${duracaoHumana(agora - job.iniciadoEm)} · último avanço ${horaDe(job.atualizadoEm)} (há ${duracaoHumana(agora - job.atualizadoEm)})`}
+      </span>
+      {job.estado === 'perdido' ? <span style={{ fontSize: 11, lineHeight: 1.45, color: 'var(--mute)' }}>{TEXTO_PERDIDO}</span> : null}
+      {job.erro ? (
+        <span style={{ ...MONO_PEQUENO, lineHeight: 1.45, color: 'var(--err)', overflowWrap: 'anywhere' }}>{job.erro}</span>
+      ) : null}
+      <LinhaDoTempo marcos={job.historico} />
+    </section>
+  );
+}
+
+/** As execuções de um alvo, da mais recente para a mais antiga. */
+export function DetalheDasExecucoes({ jobs }: { jobs: QueueJob[] }) {
+  const agora = useAgora();
+  const ordenados = [...jobs].sort((a, b) => b.iniciadoEm - a.iniciadoEm);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {ordenados.map((job) => (
+        <ExecucaoDoJob key={job.id} job={job} agora={agora} />
+      ))}
+    </div>
+  );
+}
+
 function LinhaDaFila({ grupo }: { grupo: GrupoFila }) {
   const { cancelJob, removeJob } = useWorkbenchQueue();
   const job = grupo.destaque;
   const ativo = ehAtivo(grupo.estado);
   const tom = TOM_DO_JOB[grupo.estado];
+  const [aberta, setAberta] = useState(false);
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '10px 11px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {grupo.rotulo}
-        </span>
-        {/* Mais de um job no mesmo alvo: o número evita a linha mentir. */}
-        {grupo.jobs.length > 1 ? (
-          <span className="lbl">{grupo.jobs.length} jobs</span>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => setAberta((v) => !v)}
+          aria-expanded={aberta}
+          title={aberta ? 'Recolher o detalhe' : 'Ver o detalhe de cada execução'}
+          style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, padding: 0, border: 0, background: 'none', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
+        >
+          <Icon name={aberta ? 'chevron-down' : 'chevron-right'} size={11} style={{ flex: 'none', color: 'var(--mute)' }} />
+          <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {grupo.rotulo}
+          </span>
+          {/* Mais de um job no mesmo alvo: o número evita a linha mentir. */}
+          {grupo.jobs.length > 1 ? (
+            <span className="lbl">{grupo.jobs.length} jobs</span>
+          ) : null}
+        </button>
         <SeloDeEstado tom={tom}>{TEXTO_DO_JOB[grupo.estado]}</SeloDeEstado>
         <button
           type="button"
@@ -129,6 +232,8 @@ function LinhaDaFila({ grupo }: { grupo: GrupoFila }) {
       >
         {job.erro || job.etapa || job.rotuloTipo}
       </span>
+
+      {aberta ? <DetalheDasExecucoes jobs={grupo.jobs} /> : null}
     </div>
   );
 }
