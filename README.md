@@ -45,7 +45,7 @@ Linux, macOS e Docker não são suportados.
 **Obrigatórios**
 
 - [Python 3.11+](https://www.python.org/) (marque "Add to PATH")
-- [Node.js 20+](https://nodejs.org/)
+- [Node.js 24+](https://nodejs.org/)
 - [ffmpeg e ffprobe](https://ffmpeg.org/) no PATH
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) no PATH
 

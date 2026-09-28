@@ -46,6 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Generating shorts again adds to the queue instead of replacing it.**
   Pending AI suggestions are no longer deleted; a new suggestion that overlaps
   an existing candidate is dropped and listed in `descartes` (RN-26, D-803).
+- **Node.js 24 is now the minimum.** Node 20 reached end of life on
+  2026-04-30 and no longer gets security fixes; the bootstrap refuses it and
+  points to the Node 24 LTS download. Production already runs 24 (D-781).
+- **CI also runs weekly and on demand.** Besides every push, the full CI runs
+  every Monday on `main` and from the Actions tab, to catch a dependency
+  release that breaks the build without any code change (D-781).
 
 ### Fixed
 - **Rebuilding a Fire's raw clip from the Shorts screen no longer calls the AI

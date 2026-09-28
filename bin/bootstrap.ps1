@@ -53,7 +53,7 @@ Write-Host "Raiz: $RAIZ"
 # ─── 1. O que precisa existir ANTES ──────────────────────────────────────────
 Passo "1/5 Conferindo o que precisa estar instalado"
 ExigirVersao "Python" "python" "--version" ([version]"3.11") "Instale o Python 3.11+ de https://python.org (marque 'Add to PATH')."
-ExigirVersao "Node.js" "node" "--version" ([version]"20.0") "Instale o Node.js 20+ de https://nodejs.org."
+ExigirVersao "Node.js" "node" "--version" ([version]"24.0") "Instale o Node.js 24+ (LTS) de https://nodejs.org."
 if (-not (Comando "npm")) { Parar "npm nao encontrado. Ele vem com o Node.js." }
 
 # ffmpeg e yt-dlp não são necessários para INSTALAR, só para usar: avisar é o

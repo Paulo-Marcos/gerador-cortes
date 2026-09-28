@@ -51,7 +51,7 @@ passo "1/5 Conferindo o que precisa estar instalado"
 PYTHON=python3
 command -v "$PYTHON" >/dev/null 2>&1 || PYTHON=python
 exigir_versao "Python" "$PYTHON" "--version" "3.11" "Instale o Python 3.11+ (apt install python3 / brew install python)."
-exigir_versao "Node.js" "node" "--version" "20.0" "Instale o Node.js 20+ (https://nodejs.org)."
+exigir_versao "Node.js" "node" "--version" "24.0" "Instale o Node.js 24+ LTS (https://nodejs.org)."
 command -v npm >/dev/null 2>&1 || parar "npm não encontrado. Ele vem com o Node.js."
 
 # ffmpeg e yt-dlp não são necessários para INSTALAR, só para usar: avisar basta,

@@ -5,6 +5,14 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # D-781: o Windows é a plataforma do produto (ADR-0008) e fica em todo push;
+  # medido em 27/09/2026, o CI inteiro espera ~7,5 min, e é ele o mais lento.
+  # O que faltava era rodar SEM push: três dependências do backend não têm
+  # versão exata (D-796), e uma versão nova delas pode quebrar a main sem
+  # ninguém mudar código. A rodada semanal pega isso antes do próximo trabalho.
+  schedule:
+    - cron: '0 9 * * 1' # segunda-feira, 06:00 em Brasília
+  workflow_dispatch: # botão "Run workflow" na aba Actions
 
 # Cancela runs antigos do mesmo branch/PR quando um novo push chega.
 concurrency:
@@ -79,11 +87,12 @@ jobs:
   frontend:
     name: Frontend (lint + tsc + vitest + build, Node ${{ matrix.node }})
     runs-on: ubuntu-latest
-    # D-687: 20 é o mínimo que o SETUP promete; 24 é o que a produção roda.
+    # D-781: o Node 20 saiu de suporte em 30/04/2026; o mínimo passou a ser o
+    # 24, o mesmo da produção. A matriz fica para quando o 26 virar LTS.
     strategy:
       fail-fast: false
       matrix:
-        node: ['20', '24']
+        node: ['24']
     defaults:
       run:
         working-directory: frontend
@@ -137,7 +146,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ['20', '24']
+        node: ['24']
     defaults:
       run:
         working-directory: video-renderer

@@ -15,7 +15,7 @@ Guia para instalar o CutCut numa máquina **Windows** (a única plataforma supor
 | Ferramenta | Versão | Onde |
 |---|---|---|
 | Python | 3.11+ (marque "Add to PATH") | https://python.org |
-| Node.js | 20+ | https://nodejs.org |
+| Node.js | 24+ | https://nodejs.org |
 | ffmpeg e ffprobe | recente, no PATH | https://ffmpeg.org/download.html |
 | yt-dlp | recente, no PATH | https://github.com/yt-dlp/yt-dlp |
 | git | qualquer | https://git-scm.com |
