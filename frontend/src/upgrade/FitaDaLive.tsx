@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Icon } from './Icon';
 import type { EtapaProjeto } from './UpgradeChrome';
-import type { PassoDaLive } from './upgradeRoutes';
+import type { PassoDaLive } from './esteiraDaLive';
 import { TOM_DA_ETAPA } from './SeloDeEstado';
 
 // ─────────────────────────────────────────────────────────────────

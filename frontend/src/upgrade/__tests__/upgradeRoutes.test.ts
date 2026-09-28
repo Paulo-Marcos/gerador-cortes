@@ -3,14 +3,13 @@ import {
   CABECALHO,
   corteDaLive,
   corteDaRota,
-  dentroDeUmaLive,
   destinosDaPaleta,
-  esteiraDaLive,
   menuDoTrilho,
   projetoDaRota,
   telaDaRota,
   trilhaDaTela,
 } from '../upgradeRoutes';
+import { dentroDeUmaLive, esteiraDaLive } from '../esteiraDaLive';
 
 describe('telaDaRota', () => {
   it('distingue as telas do projeto pela parte final da rota', () => {
