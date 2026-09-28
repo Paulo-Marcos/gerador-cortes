@@ -100,12 +100,16 @@ def _video(video_id: str, publicado: str) -> dict:
 def _responder_padrao(respostas: dict) -> None:
     respostas["channels"] = lambda _: httpx.Response(200, json={"items": [{"id": "UC123"}]})
     respostas["search"] = lambda _: httpx.Response(
-        200, json={"items": [{"id": {"videoId": "a1"}}, {"id": {"videoId": "b2"}}]}
+        200,
+        json={"items": [{"id": {"videoId": "a1aaaaaaaaa"}}, {"id": {"videoId": "b2bbbbbbbbb"}}]},
     )
     respostas["videos"] = lambda _: httpx.Response(
         200,
         json={
-            "items": [_video("a1", "2026-09-01T20:00:00Z"), _video("b2", "2026-09-10T20:00:00Z")]
+            "items": [
+                _video("a1aaaaaaaaa", "2026-09-01T20:00:00Z"),
+                _video("b2bbbbbbbbb", "2026-09-10T20:00:00Z"),
+            ]
         },
     )
 
@@ -114,23 +118,27 @@ def _responder_padrao(respostas: dict) -> None:
 async def test_lista_as_lives_mais_novas_primeiro_e_marca_as_ja_baixadas(db, canal, api):
     pedidos, respostas = api
     _responder_padrao(respostas)
-    db.add(Projeto(id="p1", youtube_url="https://www.youtube.com/watch?v=a1", data_live="20260801"))
+    db.add(
+        Projeto(
+            id="p1", youtube_url="https://www.youtube.com/watch?v=a1aaaaaaaaa", data_live="20260801"
+        )
+    )
     await db.commit()
 
     resultado = await youtube_browser.listar_lives_canal(after_date="", max_results=10, db=db)
 
     assert resultado["channel_id"] == "UC123"
     assert resultado["after_date"] == "20260801"
-    assert [live["video_id"] for live in resultado["lives"]] == ["b2", "a1"]
+    assert [live["video_id"] for live in resultado["lives"]] == ["b2bbbbbbbbb", "a1aaaaaaaaa"]
     assert resultado["lives"][1]["ja_baixado"] is True
     assert resultado["lives"][0] == {
-        "video_id": "b2",
-        "titulo": "Live b2",
+        "video_id": "b2bbbbbbbbb",
+        "titulo": "Live b2bbbbbbbbb",
         "data_publicacao": "2026-09-10T20:00:00Z",
         "data_publicacao_yyyymmdd": "20260910",
-        "thumbnail_url": "https://i.ytimg.com/b2.jpg",
+        "thumbnail_url": "https://i.ytimg.com/b2bbbbbbbbb.jpg",
         "duracao_iso": "PT2H",
-        "youtube_url": "https://www.youtube.com/watch?v=b2",
+        "youtube_url": "https://www.youtube.com/watch?v=b2bbbbbbbbb",
         "ja_baixado": False,
     }
     busca = next(p for p in pedidos if p.url.path.endswith("/search"))
@@ -209,17 +217,19 @@ async def test_enfileirar_cria_projetos_com_a_data_da_live_e_pula_os_que_existem
     _, ingestoes = canal
     _, respostas = api
     respostas["videos"] = lambda _: httpx.Response(
-        200, json={"items": [_video("a1", "2026-09-01T20:30:15Z")]}
+        200, json={"items": [_video("a1aaaaaaaaa", "2026-09-01T20:30:15Z")]}
     )
-    db.add(Projeto(id="p0", youtube_url="https://www.youtube.com/watch?v=b2"))
+    db.add(Projeto(id="p0", youtube_url="https://www.youtube.com/watch?v=b2bbbbbbbbb"))
     await db.commit()
 
     resultado = await youtube_browser.enfileirar_downloads(
-        youtube_browser.EnfileirarRequest(video_ids=["a1", "b2"], canal_origem="@canal")
+        youtube_browser.EnfileirarRequest(
+            video_ids=["a1aaaaaaaaa", "b2bbbbbbbbb"], canal_origem="@canal"
+        )
     )
 
-    assert [c["video_id"] for c in resultado["criados"]] == ["a1"]
-    assert resultado["ignorados"] == ["b2"]
+    assert [c["video_id"] for c in resultado["criados"]] == ["a1aaaaaaaaa"]
+    assert resultado["ignorados"] == ["b2bbbbbbbbb"]
     projeto = (await db.execute(select(Projeto).where(Projeto.id != "p0"))).scalar_one()
     assert (projeto.data_live, projeto.canal_origem) == ("20260901203015", "@canal")
     assert len(ingestoes) == 1
@@ -231,7 +241,7 @@ async def test_enfileirar_segue_sem_data_quando_a_api_falha(db, canal, api):
     respostas["videos"] = lambda _: httpx.Response(500, text="caiu")
 
     resultado = await youtube_browser.enfileirar_downloads(
-        youtube_browser.EnfileirarRequest(video_ids=["a1"])
+        youtube_browser.EnfileirarRequest(video_ids=["a1aaaaaaaaa"])
     )
 
     assert len(resultado["criados"]) == 1

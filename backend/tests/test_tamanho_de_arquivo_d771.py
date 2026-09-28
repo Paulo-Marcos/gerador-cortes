@@ -55,7 +55,7 @@ EXCECOES = {
     "backend/app/services/corte.py": 1636,
     "backend/app/services/destinos_shorts.py": 524,
     "backend/app/services/export.py": 555,
-    "backend/app/services/ingestao.py": 745,
+    "backend/app/services/ingestao.py": 719,
     "backend/app/services/instagram_reels.py": 680,
     "backend/app/services/metadados.py": 785,
     "backend/app/services/navegador_assistido.py": 616,

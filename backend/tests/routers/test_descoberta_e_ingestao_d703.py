@@ -127,12 +127,12 @@ async def test_criar_a_mao_cria_pendente_sem_canal_e_dispara_a_ingestao(cliente,
     publica os cortes — como se fosse o canal da live. Agora nasce vazio, e a
     ingestão preenche com o canal que o yt-dlp informa (test_canal_da_live_d714).
     """
-    resposta = cliente.post("/api/projetos", json={"youtube_url": "https://youtu.be/abc"})
+    resposta = cliente.post("/api/projetos", json={"youtube_url": "https://youtu.be/abcdefghij0"})
 
     assert resposta.status_code == 201
     corpo = resposta.json()
     assert (corpo["status"], corpo["canal_origem"]) == ("pendente", "")
-    assert fundo == [("ingestao", (corpo["id"], "https://youtu.be/abc"))]
+    assert fundo == [("ingestao", (corpo["id"], "https://youtu.be/abcdefghij0"))]
     assert [p.id for p in await _todos(fabrica, Projeto)] == [corpo["id"]]
 
 
@@ -174,7 +174,7 @@ async def test_criar_a_mao_nao_copia_o_layout_global_para_o_projeto(cliente, fab
 def _candidata(**campos) -> LiveCandidata:
     base = {
         "id": "cand-1",
-        "video_id": "vid1",
+        "video_id": "vid1aaaaaaa",
         "titulo": "Live boa",
         "canal_origem": "@fonte",
         "data_publicacao": datetime(2026, 9, 1, 20, 30, 15),
@@ -187,25 +187,25 @@ def _candidata(**campos) -> LiveCandidata:
 async def test_enfileirar_cria_o_projeto_com_os_dados_da_candidata(cliente, fabrica, fundo):
     await _gravar(fabrica, _candidata())
 
-    resposta = cliente.post("/api/ranking-lives/vid1/enfileirar")
+    resposta = cliente.post("/api/ranking-lives/vid1aaaaaaa/enfileirar")
 
     corpo = resposta.json()
     assert (corpo["video_id"], corpo["ja_existia"], corpo["pontuacao_ranking"]) == (
-        "vid1",
+        "vid1aaaaaaa",
         False,
         81.5,
     )
     (projeto,) = await _todos(fabrica, Projeto)
     assert projeto.id == corpo["projeto_id"]
     assert (projeto.youtube_url, projeto.titulo_live, projeto.canal_origem) == (
-        "https://www.youtube.com/watch?v=vid1",
+        "https://www.youtube.com/watch?v=vid1aaaaaaa",
         "Live boa",
         "@fonte",
     )
     assert (projeto.data_live, projeto.status) == ("20260901203015", StatusProjeto.PENDENTE)
     (candidata,) = await _todos(fabrica, LiveCandidata)
     assert (candidata.status, candidata.projeto_id) == (StatusLiveCandidata.PROMOVIDA, projeto.id)
-    assert fundo == [("ingestao", (projeto.id, "https://www.youtube.com/watch?v=vid1"))]
+    assert fundo == [("ingestao", (projeto.id, "https://www.youtube.com/watch?v=vid1aaaaaaa"))]
 
 
 @pytest.mark.asyncio
@@ -213,10 +213,10 @@ async def test_enfileirar_live_que_ja_tem_projeto_so_promove(cliente, fabrica, f
     await _gravar(
         fabrica,
         _candidata(),
-        Projeto(id="p-velho", youtube_url="https://www.youtube.com/watch?v=vid1"),
+        Projeto(id="p-velho", youtube_url="https://www.youtube.com/watch?v=vid1aaaaaaa"),
     )
 
-    corpo = cliente.post("/api/ranking-lives/vid1/enfileirar").json()
+    corpo = cliente.post("/api/ranking-lives/vid1aaaaaaa/enfileirar").json()
 
     assert (corpo["projeto_id"], corpo["ja_existia"]) == ("p-velho", True)
     assert len(await _todos(fabrica, Projeto)) == 1
@@ -229,9 +229,9 @@ async def test_enfileirar_live_que_ja_tem_projeto_so_promove(cliente, fabrica, f
 async def test_enfileirar_candidata_ja_promovida_devolve_o_projeto_dela(cliente, fabrica, fundo):
     await _gravar(fabrica, _candidata(status=StatusLiveCandidata.PROMOVIDA, projeto_id="p-9"))
 
-    corpo = cliente.post("/api/ranking-lives/vid1/enfileirar").json()
+    corpo = cliente.post("/api/ranking-lives/vid1aaaaaaa/enfileirar").json()
 
-    assert corpo == {"projeto_id": "p-9", "video_id": "vid1", "ja_existia": True}
+    assert corpo == {"projeto_id": "p-9", "video_id": "vid1aaaaaaa", "ja_existia": True}
     assert fundo == []
 
 

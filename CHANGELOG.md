@@ -86,6 +86,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per channel, in the database, and are untouched (D-775).
 
 ### Security
+- **A live's URL can no longer smuggle options into yt-dlp.** The URL went
+  straight into yt-dlp's command line, so a "URL" such as `--exec=...` was read
+  as an option — and `--exec` runs a command. The address is now checked
+  (exact YouTube host, 11-character video id) when the project is created,
+  and what reaches yt-dlp is rebuilt from the id, after a `--`. Pasted URLs
+  without `https://` and bare video ids keep working. Found by CodeQL, which
+  this release turns on (D-807).
 - **Python dependencies are locked with hashes.** `requirements.txt` is now
   generated from `requirements.in` and pins the whole tree — 73 packages
   instead of the 23 listed by hand — with the hash of every file, for Windows

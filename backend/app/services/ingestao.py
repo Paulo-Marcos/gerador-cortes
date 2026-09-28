@@ -17,10 +17,12 @@ from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir
 from app.core.logging import operational_debug, operational_error, operational_info
 from app.core.process_runner import ProcessoEstourouOTempo, encerrar_arvore
 from app.database import AsyncSessionLocal
+from app.domain.compartilhado.url_do_youtube import url_canonica_do_video
 from app.domain.projeto.json3_parser import parse_json3
 from app.domain.projeto.transcricao_utils import TranscricaoIndisponivelError
 from app.domain.projeto.vtt_parser import parse_vtt
 from app.domain.publicacao.youtube_urls import extract_youtube_video_id
+from app.infrastructure.ytdlp import argv_da_legenda, argv_do_chat, argv_do_video
 from app.models import Projeto, StatusProjeto
 from app.services.ciclo_de_vida import mudar_projeto
 from app.services.tasks import fire_and_forget
@@ -250,7 +252,11 @@ class IngestaoService:
         navegador de lives passam por aqui. O projeto nasce sem cópia do layout
         global — a cascata herda na leitura (RN-10). `canal_origem` ausente vale o
         canal ativo. A ingestão só parte depois do commit, com o projeto gravado.
+
+        O que não é endereço de vídeo do YouTube é recusado aqui, antes de virar
+        projeto (D-807): `PedidoInvalido` chega à tela com a mensagem.
         """
+        url_canonica_do_video(youtube_url)
         async with AsyncSessionLocal() as db, db.begin():
             existente = await _projeto_da_mesma_live(db, youtube_url)
             if existente is not None:
@@ -382,18 +388,7 @@ class IngestaoService:
 
         output_template = str(projeto_dir / "video.%(ext)s")
 
-        cmd = [
-            "yt-dlp",
-            "-f",
-            settings.ytdlp_format,
-            "--output",
-            output_template,
-            "--write-info-json",  # salva metadados JSON
-            "--newline",  # progresso linha a linha
-            "--merge-output-format",
-            "mkv",
-            url,
-        ]
+        cmd = argv_do_video(url, settings.ytdlp_format, output_template)
 
         try:
             process = await asyncio.create_subprocess_exec(
@@ -481,19 +476,7 @@ class IngestaoService:
         subs_path.mkdir(parents=True, exist_ok=True)
 
         for sub_format in ("json3", "vtt"):
-            cmd_sub = [
-                "yt-dlp",
-                "--write-auto-sub",
-                "--write-sub",
-                "--sub-lang",
-                "pt,pt-BR,pt-PT,en",
-                "--sub-format",
-                sub_format,
-                "--skip-download",
-                "--output",
-                str(subs_path / "sub"),
-                url,
-            ]
+            cmd_sub = argv_da_legenda(url, sub_format, str(subs_path / "sub"))
 
             try:
                 process = await asyncio.create_subprocess_exec(
@@ -632,16 +615,7 @@ class IngestaoService:
         Flags diferentes das legendas de propósito: o chat é `--write-subs`
         (faixa real, não automática) na "língua" `live_chat`.
         """
-        cmd = [
-            "yt-dlp",
-            "--write-subs",
-            "--sub-langs",
-            "live_chat",
-            "--skip-download",
-            "--output",
-            str(subs_path / "chat"),
-            url,
-        ]
+        cmd = argv_do_chat(url, str(subs_path / "chat"))
         try:
             processo = await asyncio.create_subprocess_exec(
                 *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
