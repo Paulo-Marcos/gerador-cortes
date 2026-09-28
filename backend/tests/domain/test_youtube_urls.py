@@ -17,6 +17,22 @@ def test_extract_youtube_video_id_aceita_formatos_comuns(value: str, expected: s
     assert extract_youtube_video_id(value) == expected
 
 
+@pytest.mark.parametrize(
+    "impostor",
+    [
+        "https://evilyoutube.com/watch?v=ZcvZLOResPc",
+        "https://youtube.com.evil.example/watch?v=ZcvZLOResPc",
+        "https://notyoutube-nocookie.com/embed/ZcvZLOResPc",
+        "https://www.evilyoutube.com/live/ZcvZLOResPc",
+    ],
+)
+def test_host_que_so_termina_em_youtube_e_recusado(impostor: str):
+    # D-812: o host era conferido por sufixo (CodeQL
+    # py/incomplete-url-substring-sanitization): evilyoutube.com passava.
+    with pytest.raises(ValueError):
+        extract_youtube_video_id(impostor)
+
+
 def test_extract_youtube_video_id_rejeita_url_sem_video_id():
     with pytest.raises(ValueError, match="video_id"):
         extract_youtube_video_id("https://www.youtube.com/watch?list=playlist")

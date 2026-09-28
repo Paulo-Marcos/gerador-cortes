@@ -13,11 +13,11 @@ o alerta é dispensado citando esta página.
 | `py/command-line-injection` (crítico, x2) | `services/ingestao.py` | D-807: a URL da live virava opção do yt-dlp (`--exec=...`). Agora é conferida na criação do projeto e reconstruída a partir do id, depois de `--` (`infrastructure/ytdlp.py`). |
 | `actions/missing-workflow-permissions` (x6) | `ci.yml`, `lock-check.yml` | D-809: `permissions: contents: read` no topo; teste exige a chave em todo workflow. |
 
-## Confirmado, gravidade baixa, correção depois da 0.5.0
+## Confirmado, gravidade baixa, corrigido
 
-| Alerta | Onde | Por que baixa |
+| Alerta | Onde | Correção |
 |---|---|---|
-| `py/incomplete-url-substring-sanitization` (x2) | `domain/publicacao/youtube_urls.py:24` | `host.endswith("youtube.com")` aceita `evilyoutube.com`. Nenhum código acessa esse host: a função devolve só o id de 11 caracteres (conferido por regex), e desde a D-807 o yt-dlp recebe a URL reconstruída. Correção: comparar o host por igualdade, como `domain/compartilhado/url_do_youtube.py`. O arquivo está travado (`publicacao-manual-upload-individual-estudio`): exige unlock do dono. |
+| `py/incomplete-url-substring-sanitization` (x2) | `domain/publicacao/youtube_urls.py` | D-812: o host era conferido por sufixo (`evilyoutube.com` passava). Agora por igualdade, com os mesmos domínios de antes (`youtube.com`, `music.youtube.com`, `youtube-nocookie.com`). Baixa porque só o id de 11 caracteres sai da função e o yt-dlp já recebia a URL reconstruída (D-807). |
 
 ## Refutados
 

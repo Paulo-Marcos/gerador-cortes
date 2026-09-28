@@ -6,6 +6,8 @@ _PARTES_DO_CAMINHO_COM_ID = 2
 
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _YOUTUBE_PATH_PREFIXES = {"embed", "live", "shorts", "v"}
+# Hosts depois de `_normalize_host` (sem `www.` nem `m.`).
+_HOSTS_DO_SITE = {"youtube.com", "music.youtube.com", "youtube-nocookie.com"}
 
 
 def extract_youtube_video_id(value: str) -> str:
@@ -21,7 +23,8 @@ def extract_youtube_video_id(value: str) -> str:
     if host == "youtu.be":
         return _validate_video_id(_first_path_part(parsed.path), raw_value)
 
-    if host.endswith("youtube.com") or host.endswith("youtube-nocookie.com"):
+    # D-812: por igualdade — por sufixo, evilyoutube.com passava como YouTube.
+    if host in _HOSTS_DO_SITE:
         query_video_id = parse_qs(parsed.query).get("v", [""])[0]
         if query_video_id:
             return _validate_video_id(query_video_id, raw_value)
