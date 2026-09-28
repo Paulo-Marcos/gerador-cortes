@@ -228,6 +228,32 @@ def _sem_sobreposicao(
     return aprovados, descartados
 
 
+def sem_repetir_existentes(
+    resultado: ResultadoSugestoes, existentes: list[tuple[float, float]]
+) -> ResultadoSugestoes:
+    """Tira da rodada nova o trecho que já é candidato do corte (RN-26, D-803).
+
+    Gerar de novo SOMA à fila e nunca apaga: o palpite pendente pode estar na
+    cabeça do operador, e sumir com ele seria desfazer trabalho sem aviso. O
+    preço de somar é a repetição, e ela se resolve pela mesma régua da rodada:
+    dois candidatos sobre a mesma fala são um só — e o que já estava fica.
+
+    >>> r = ResultadoSugestoes([SugestaoShort("t", "g", 20.0, 50.0, 8.0, "j")])
+    >>> sem_repetir_existentes(r, [(10.0, 40.0)]).sugestoes
+    []
+    """
+    novas: list[SugestaoShort] = []
+    descartes = list(resultado.descartes)
+    for sugestao in resultado.sugestoes:
+        if any(
+            sugestao.inicio_seg < fim and inicio < sugestao.fim_seg for inicio, fim in existentes
+        ):
+            descartes.append(f"{_rotulo(sugestao)}: repete um trecho que já é candidato")
+            continue
+        novas.append(sugestao)
+    return ResultadoSugestoes(sugestoes=novas, descartes=descartes)
+
+
 def _colidem(a: SugestaoShort, b: SugestaoShort) -> bool:
     return a.inicio_seg < b.fim_seg and b.inicio_seg < a.fim_seg
 

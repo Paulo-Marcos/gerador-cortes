@@ -3213,7 +3213,8 @@ export interface paths {
          * @description Caminho manual da fábrica: regera o bruto se preciso e propõe os shorts.
          *
          *     Serve os cortes antigos e o teste da esteira. A regeração do bruto NÃO toca
-         *     na pós-produção — refaz só o vídeo (D-160).
+         *     na pós-produção — refaz só o vídeo (D-160). A rodada soma aos candidatos
+         *     que já existem e não apaga nenhum (RN-26).
          */
         post: operations["gerar_manualmente_api_shorts_corte__corte_id__gerar_post"];
         delete?: never;
@@ -3538,6 +3539,49 @@ export interface paths {
          * @description A porta da tela de Shorts: os Fires que ainda tem de onde recortar.
          */
         get: operations["listar_fires_api_shorts_fires_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shorts/live/{projeto_id}/gerar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Gerar Da Live
+         * @description Um clique por live: baixa a live se foi limpa, refaz os brutos e propõe os shorts.
+         *
+         *     Volta na hora; o trabalho segue em segundo plano e aparece em
+         *     `GET /lives/andamento`.
+         */
+        post: operations["gerar_da_live_api_shorts_live__projeto_id__gerar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shorts/lives/andamento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Andamento Das Lives
+         * @description O que a fábrica de cada live está fazendo, ou como terminou.
+         */
+        get: operations["andamento_das_lives_api_shorts_lives_andamento_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4455,6 +4499,24 @@ export interface components {
             total_cortes: number;
             /** Total Descartados */
             total_descartados: number;
+        };
+        /** AndamentoDaLive */
+        AndamentoDaLive: {
+            /** Erros */
+            erros: string[];
+            /** Etapa */
+            etapa: string;
+            /** Feitos */
+            feitos: number;
+            /** Projeto Id */
+            projeto_id: string;
+            /** Total */
+            total: number;
+        };
+        /** AndamentoDasLivesResponse */
+        AndamentoDasLivesResponse: {
+            /** Lives */
+            lives: components["schemas"]["AndamentoDaLive"][];
         };
         /**
          * ApontamentoResponse
@@ -5684,6 +5746,18 @@ export interface components {
          * @enum {string}
          */
         EstadoItem: "aguardando" | "preparando" | "sua_vez" | "publicado" | "erro" | "pulado" | "cancelado";
+        /**
+         * FabricaDaLiveResponse
+         * @description O que o clique disparou: quantos cortes entram e se a live será baixada.
+         */
+        FabricaDaLiveResponse: {
+            /** Baixar Live */
+            baixar_live: boolean;
+            /** Cortes */
+            cortes: number;
+            /** Projeto Id */
+            projeto_id: string;
+        };
         /** FaixaDaMoldura */
         FaixaDaMoldura: {
             /** Cor */
@@ -14616,6 +14690,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FiresResponse"];
+                };
+            };
+        };
+    };
+    gerar_da_live_api_shorts_live__projeto_id__gerar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projeto_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FabricaDaLiveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    andamento_das_lives_api_shorts_lives_andamento_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AndamentoDasLivesResponse"];
                 };
             };
         };

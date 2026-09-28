@@ -127,7 +127,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/shorts/ReguaDeOnda.tsx::ReguaDeOnda": 367,
   "src/features/shorts/ReguaDeOnda.tsx::ReguaDeOnda.useEffect": 136,
   "src/features/shorts/ShortsPage.tsx::FireCard": 108,
-  "src/features/shorts/ShortsPage.tsx::ShortsPage": 239,
+  "src/features/shorts/ShortsPage.tsx::ShortsPage": 137,
   "src/features/shorts/ShortsProntosPage.tsx::CartaoDaCentral": 121,
   "src/features/shorts/ShortsProntosPage.tsx::ShortsProntosPage": 163,
   "src/features/shorts/WorkspaceDoFirePage.tsx::CartaoDoPronto": 143,

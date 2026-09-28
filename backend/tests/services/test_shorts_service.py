@@ -130,8 +130,8 @@ async def test_registrar_grava_os_candidatos_ordenados(session_factory):
 
 
 @pytest.mark.asyncio
-async def test_regerar_substitui_sugeridos_e_preserva_curadoria(session_factory):
-    """Refazer o palpite da IA nao pode desfazer o que o operador ja decidiu."""
+async def test_regerar_soma_sem_apagar_sugeridos_nem_curadoria(session_factory):
+    """D-803 (RN-26): a rodada nova soma; nem o palpite pendente nem o curado somem."""
     await _seed_corte(session_factory)
     contexto = await servico.montar_contexto("c1")
 
@@ -157,8 +157,8 @@ async def test_regerar_substitui_sugeridos_e_preserva_curadoria(session_factory)
         titulos = {s.titulo_sugerido for s in (await db.scalars(select(Short))).all()}
         numeros = {s.titulo_sugerido: s.numero for s in (await db.scalars(select(Short))).all()}
 
-    assert titulos == {"o que eu ja escolhi", "palpite novo"}
-    # Numeracao continua depois do que sobreviveu, sem colidir com o aprovado.
+    assert titulos == {"palpite velho", "o que eu ja escolhi", "palpite novo"}
+    # Numeracao continua depois de todos, sem colidir com o aprovado.
     assert numeros["palpite novo"] == 100
 
 

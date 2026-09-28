@@ -35,11 +35,11 @@ from app.domain.short.cenas_short import normalizar_lista as normalizar_lista_de
 from app.domain.short.cenas_short_ia import recortar_transcricao_varios
 from app.domain.short.formato_video import foco_de_regiao
 from app.domain.short.moldura_short import Moldura
-from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort
+from app.domain.short.shorts import ResultadoSugestoes, SugestaoShort, sem_repetir_existentes
 from app.models import Corte, MetadadoShort, Projeto, Short, StatusShort
 from app.services.canal import editorial_scaffolds, editorial_skills
 from app.services.claude_ia import gerar_json, gerar_texto, registrar_skill_usada
-from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -117,29 +117,20 @@ def montar_texto_transcricao(transcricao_final: list[dict]) -> str:
 async def registrar_sugestoes(
     contexto: ContextoShorts, resultado: ResultadoSugestoes
 ) -> list[dict]:
-    """Substitui os candidatos ainda SUGERIDOS do corte pelos recém-propostos.
+    """Soma os recém-propostos aos candidatos do corte, sem apagar nenhum (RN-26).
 
-    Aprovados e rejeitados NÃO são tocados: regerar as sugestões é refazer o
-    palpite da IA, não desfazer a curadoria de quem já passou por ali.
+    Até a D-803 a rodada nova trocava os palpites pendentes da IA; o operador
+    pediu que gerar de novo nunca desfaça o que já está na fila. O trecho que
+    repete um candidato existente cai, com o motivo em `descartes`.
     """
     async with AsyncSessionLocal() as db:
-        # A numeracao continua depois do que SOBREVIVE, entao ela e lida antes do
-        # delete — depois dele os candidatos removidos ainda estariam na sessao.
-        proximo_numero = await _proximo_numero_apos_os_curados(db, contexto.corte_id)
-
-        # D-484: so os SUGERIDOS DA IA sao descartados. Regerar e refazer o
-        # palpite da maquina; o trecho que o operador marcou a mao nao e palpite
-        # de ninguem, e some-lo aqui seria apagar trabalho humano em silencio.
-        antigos = (
-            await db.scalars(
-                select(Short)
-                .where(Short.corte_id == contexto.corte_id)
-                .where(Short.status == StatusShort.SUGERIDO)
-                .where(Short.origem == ORIGEM_IA)
+        proximo_numero = await _proximo_numero_livre(db, contexto.corte_id)
+        existentes = (
+            await db.execute(
+                select(Short.inicio_seg, Short.fim_seg).where(Short.corte_id == contexto.corte_id)
             )
         ).all()
-        for antigo in antigos:
-            await db.delete(antigo)
+        resultado = sem_repetir_existentes(resultado, [(i, f) for i, f in existentes])
 
         novos = [
             _para_modelo(contexto.corte_id, proximo_numero + posicao, sugestao)
@@ -150,11 +141,10 @@ async def registrar_sugestoes(
         serializados = [_serializar(short) for short in novos]
 
     logger.info(
-        "[Shorts] corte=%s sugeridos=%d descartados=%d substituidos=%d",
+        "[Shorts] corte=%s sugeridos=%d descartados=%d",
         contexto.corte_id[:8],
         len(novos),
         len(resultado.descartes),
-        len(antigos),
     )
     for motivo in resultado.descartes:
         logger.info("[Shorts] corte=%s descarte: %s", contexto.corte_id[:8], motivo)
@@ -183,7 +173,7 @@ async def criar_manual(
             raise LookupError(f"Corte {corte_id!r} nao encontrado")
 
         _validar_bordas(float(inicio_seg), float(fim_seg), corte)
-        numero = await _proximo_numero_apos_os_curados(db, corte_id)
+        numero = await _proximo_numero_livre(db, corte_id)
 
         short = Short(
             id=str(uuid.uuid4()),
@@ -1248,7 +1238,7 @@ def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path | None) -> dict:
         # D-528: sem a live nao ha de onde extrair o bruto. A tela usa isto para
         # desabilitar o botao e dizer o que fazer, em vez de deixar o operador
         # descobrir no clique — mesma regra da D-495.
-        "live_em_disco": _live_em_disco(projeto),
+        "live_em_disco": live_em_disco(projeto),
         # D-581: preenchido depois, junto das contagens — uma consulta para a
         # lista inteira em vez de uma por Fire.
         "tem_edicao": False,
@@ -1260,7 +1250,7 @@ def _descrever_fire(corte: Corte, projeto: Projeto, bruto: Path | None) -> dict:
     }
 
 
-def _live_em_disco(projeto: Projeto) -> bool:
+def live_em_disco(projeto: Projeto) -> bool:
     """Se o vídeo da live ainda está no disco — a matéria-prima do bruto."""
     if not projeto.arquivo_video_path:
         return False
@@ -1343,18 +1333,9 @@ async def _contar_shorts_por_corte(db: AsyncSession, corte_ids: list[str]) -> di
     return contagens
 
 
-async def _proximo_numero_apos_os_curados(db: AsyncSession, corte_id: str) -> int:
-    """Primeiro número livre acima dos shorts que a regeração NÃO apaga.
-
-    Sobrevivem os já curados E os manuais (D-484). Contar só os curados daria um
-    número que já pertence a um short manual, e dois candidatos do mesmo corte
-    passariam a se chamar "#3".
-    """
-    maior = await db.scalar(
-        select(func.max(Short.numero))
-        .where(Short.corte_id == corte_id)
-        .where(~and_(Short.status == StatusShort.SUGERIDO, Short.origem == ORIGEM_IA))
-    )
+async def _proximo_numero_livre(db: AsyncSession, corte_id: str) -> int:
+    """Primeiro número acima de TODOS os shorts do corte — nenhum é apagado (D-803)."""
+    maior = await db.scalar(select(func.max(Short.numero)).where(Short.corte_id == corte_id))
     return int(maior or 0) + 1
 
 

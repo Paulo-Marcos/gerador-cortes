@@ -54,6 +54,7 @@ export interface CenaShort {
 
 export type ContagemShorts = Schema<'ContagemDeShorts'>;
 export type FireComBruto = Schema<'FireDaFabrica'>;
+export type AndamentoDaLive = Schema<'AndamentoDaLive'>;
 export type Retangulo = Schema<'RetanguloDoPalco'>;
 
 /** O short como a tela o lê: o do contrato, com as cenas pelo tipo da tela. */
@@ -208,6 +209,12 @@ export const shortsApi = {
 
   gerarManualmente: async (corteId: string) =>
     comShorts(await dados(api.POST('/api/shorts/corte/{corte_id}/gerar', doCorte(corteId)))),
+
+  /** D-803: um clique por live — baixa se foi limpa, refaz os brutos, propõe os shorts. */
+  gerarDaLive: (projetoId: string) =>
+    dados(api.POST('/api/shorts/live/{projeto_id}/gerar', { params: { path: { projeto_id: projetoId } } })),
+
+  andamentoDasLives: () => dados(api.GET('/api/shorts/lives/andamento')),
 
   criarManual: async (corteId: string, body: { inicio_seg: number; fim_seg: number; titulo?: string }) =>
     comShort(

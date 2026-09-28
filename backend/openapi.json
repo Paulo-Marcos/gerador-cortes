@@ -199,6 +199,58 @@
         "title": "AnaliseViaIaResponse",
         "type": "object"
       },
+      "AndamentoDaLive": {
+        "properties": {
+          "erros": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Erros",
+            "type": "array"
+          },
+          "etapa": {
+            "title": "Etapa",
+            "type": "string"
+          },
+          "feitos": {
+            "title": "Feitos",
+            "type": "integer"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "projeto_id",
+          "etapa",
+          "feitos",
+          "total",
+          "erros"
+        ],
+        "title": "AndamentoDaLive",
+        "type": "object"
+      },
+      "AndamentoDasLivesResponse": {
+        "properties": {
+          "lives": {
+            "items": {
+              "$ref": "#/components/schemas/AndamentoDaLive"
+            },
+            "title": "Lives",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lives"
+        ],
+        "title": "AndamentoDasLivesResponse",
+        "type": "object"
+      },
       "ApontamentoResponse": {
         "description": "Uma ressalva do avaliador. As chaves são as que o domínio reconstrói.",
         "properties": {
@@ -3366,6 +3418,30 @@
         ],
         "title": "EstadoItem",
         "type": "string"
+      },
+      "FabricaDaLiveResponse": {
+        "description": "O que o clique disparou: quantos cortes entram e se a live será baixada.",
+        "properties": {
+          "baixar_live": {
+            "title": "Baixar Live",
+            "type": "boolean"
+          },
+          "cortes": {
+            "title": "Cortes",
+            "type": "integer"
+          },
+          "projeto_id": {
+            "title": "Projeto Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "projeto_id",
+          "cortes",
+          "baixar_live"
+        ],
+        "title": "FabricaDaLiveResponse",
+        "type": "object"
       },
       "FaixaDaMoldura": {
         "properties": {
@@ -18748,7 +18824,7 @@
     },
     "/api/shorts/corte/{corte_id}/gerar": {
       "post": {
-        "description": "Caminho manual da fábrica: regera o bruto se preciso e propõe os shorts.\n\nServe os cortes antigos e o teste da esteira. A regeração do bruto NÃO toca\nna pós-produção — refaz só o vídeo (D-160).",
+        "description": "Caminho manual da fábrica: regera o bruto se preciso e propõe os shorts.\n\nServe os cortes antigos e o teste da esteira. A regeração do bruto NÃO toca\nna pós-produção — refaz só o vídeo (D-160). A rodada soma aos candidatos\nque já existem e não apaga nenhum (RN-26).",
         "operationId": "gerar_manualmente_api_shorts_corte__corte_id__gerar_post",
         "parameters": [
           {
@@ -19501,6 +19577,71 @@
           }
         },
         "summary": "Listar Fires",
+        "tags": [
+          "Shorts"
+        ]
+      }
+    },
+    "/api/shorts/live/{projeto_id}/gerar": {
+      "post": {
+        "description": "Um clique por live: baixa a live se foi limpa, refaz os brutos e propõe os shorts.\n\nVolta na hora; o trabalho segue em segundo plano e aparece em\n`GET /lives/andamento`.",
+        "operationId": "gerar_da_live_api_shorts_live__projeto_id__gerar_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "projeto_id",
+            "required": true,
+            "schema": {
+              "title": "Projeto Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FabricaDaLiveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gerar Da Live",
+        "tags": [
+          "Shorts"
+        ]
+      }
+    },
+    "/api/shorts/lives/andamento": {
+      "get": {
+        "description": "O que a fábrica de cada live está fazendo, ou como terminou.",
+        "operationId": "andamento_das_lives_api_shorts_lives_andamento_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AndamentoDasLivesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Andamento Das Lives",
         "tags": [
           "Shorts"
         ]

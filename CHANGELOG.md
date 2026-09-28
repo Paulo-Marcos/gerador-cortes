@@ -26,8 +26,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Pylance) now checks `backend/app` in basic mode. The 175 type errors that
   already existed are counted per file and rule; a new one fails the build,
   and the counts can only go down (D-773).
+- **Shorts on demand, grouped by live.** The Shorts screen now groups cuts by
+  the live they came from. Each cut has a "Gerar shorts com IA" button (it
+  rebuilds a missing raw clip first), and each live has one button that
+  downloads a cleaned-up live again, rebuilds the missing raw clips and asks
+  the AI for shorts, one cut at a time. Until now the automatic step only ran
+  when a raw clip finished rendering, so a Fire marked later, a cut flagged by
+  hand, or a failed AI call was left without shorts (D-803).
+
+### Changed
+- **Generating shorts again adds to the queue instead of replacing it.**
+  Pending AI suggestions are no longer deleted; a new suggestion that overlaps
+  an existing candidate is dropped and listed in `descartes` (RN-26, D-803).
 
 ### Fixed
+- **Rebuilding a Fire's raw clip from the Shorts screen no longer calls the AI
+  twice.** The raw clip step already suggests shorts for a Fire; the manual
+  path now skips its own call when that step succeeded (D-803).
 - **The cut's metadata modal edits again.** Opened from the cut list, it had
   become read-only in 0.4.0; it now offers the same actions as the metadata
   screen — generating and picking titles, the cover prompt, images (D-767).

@@ -23,7 +23,9 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.integration  # varre o repositório inteiro via git (D-751)
+# Sem a marca `integration` de propósito (D-805): varre o repositório, mas
+# leva 0,2 s. Marcado, ficava fora do ciclo antes do commit e a D-798 passou
+# dois arquivos do limite sem ninguém ver.
 
 RAIZ = Path(__file__).resolve().parents[2]
 LIMITE = 500
@@ -42,7 +44,7 @@ EXCECOES = {
     "backend/app/models.py": 908,
     "backend/app/routers/cortes.py": 698,
     "backend/app/routers/projetos.py": 823,
-    "backend/app/routers/shorts.py": 1376,
+    "backend/app/routers/shorts.py": 1364,
     "backend/app/routers/shorts_schemas.py": 558,
     "backend/app/services/analise.py": 881,
     "backend/app/services/canal/editorial_scaffolds.py": 669,
@@ -62,7 +64,7 @@ EXCECOES = {
     "backend/app/services/ranking_lives.py": 589,
     "backend/app/services/render/pipeline_render.py": 1633,
     "backend/app/services/render/render_short.py": 791,
-    "backend/app/services/shorts.py": 1518,
+    "backend/app/services/shorts.py": 1499,
     "backend/app/services/tiktok_studio.py": 822,
     "backend/app/services/youtube.py": 611,
     "frontend/src/features/editor/fase1/RightTabsPanel.tsx": 717,
@@ -85,7 +87,7 @@ EXCECOES = {
     "frontend/src/features/shorts/GanchoModal.tsx": 680,
     "frontend/src/features/shorts/PublicarEmLoteModal.tsx": 648,
     "frontend/src/features/shorts/ReguaDeOnda.tsx": 582,
-    "frontend/src/features/shorts/ShortsPage.tsx": 596,
+    "frontend/src/features/shorts/ShortsPage.tsx": 578,
     "frontend/src/features/shorts/useShortsDoCorte.ts": 658,
     "frontend/src/shared/atalhos/shortcutsRegistry.ts": 775,
     "frontend/src/shared/filaGlobal/useWorkbenchQueue.tsx": 619,

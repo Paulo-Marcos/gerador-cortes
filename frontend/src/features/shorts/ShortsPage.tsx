@@ -19,15 +19,21 @@
 // mesmo", e a BARRA de progresso responde "quanto falta" sem obrigar a ler
 // número nenhum. A regra dos dois primeiros vive em `filtrosDosFires.ts`, fora
 // do JSX, porque é regra e não desenho.
+//
+// ## D-803: por que a lista virou grupos por live
+//
+// Porque os Fires de uma live dividem a matéria-prima. Com a live limpa, a
+// pergunta útil é "quantos cortes desta live estão parados?" — e a resposta
+// vira UM clique que baixa a live uma vez e atende todos (`agrupamentoPorLive.ts`).
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCheck, Flame, Clock, HardDrive, LayoutGrid, Loader2, Pencil, RotateCcw, Search, X } from 'lucide-react';
-import { brutoApi } from '@/features/editor/api/bruto';
+import { CheckCheck, Clock, Download, Flame, HardDrive, LayoutGrid, Loader2, Pencil, RotateCcw, Search, Sparkles, X } from 'lucide-react';
 import { cn, formatarDuracao } from '@/lib/utils';
-import type { ContagemShorts, FireComBruto } from './shortsApi';
-import { FIRES_KEY, useFires } from './useFires';
-import { useMarcarFinalizado } from './useShortsDoCorte';
+import { motivoDoErro, shortsApi, type AndamentoDaLive, type ContagemShorts, type FireComBruto } from './shortsApi';
+import { ANDAMENTO_DAS_LIVES_KEY, estaRodando, FIRES_KEY, useAndamentoDasLives, useFires } from './useFires';
+import { shortsDoCorteKey, useMarcarFinalizado } from './useShortsDoCorte';
+import { agruparPorLive, type GrupoDaLive } from './agrupamentoPorLive';
 import { SeloFinalizado } from './CabecalhoDoFire';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import {
@@ -50,7 +56,7 @@ function ContagemChips({ shorts }: { shorts: ContagemShorts }) {
   if (shorts.total === 0) {
     return (
       <span className="text-[12px] text-[var(--wb-text-mute)]">
-        nenhum candidato ainda — gere o bruto de novo para a IA propor
+        nenhum candidato ainda
       </span>
     );
   }
@@ -245,47 +251,52 @@ function AlternarFinalizado({ fire }: { fire: FireComBruto }) {
 }
 
 /** O card e a ação: o botão mora fora do `Link`, senão o clique navegaria junto. */
-function ItemDaFila({ fire }: { fire: FireComBruto }) {
-  // D-593: corte finalizado sem bruto não pede "gerar bruto" — não há mais o
-  // que recortar dele, e o convite seria ruído na aba de concluídos.
-  if (fire.tem_bruto || estaFinalizado(fire)) return <FireCard fire={fire} />;
+function ItemDaFila({ fire, liveRodando }: { fire: FireComBruto; liveRodando: boolean }) {
+  // D-593: corte finalizado não pede mais nada — o convite seria ruído na aba
+  // de concluídos.
+  if (estaFinalizado(fire)) return <FireCard fire={fire} />;
 
   return (
     <div className="flex flex-col gap-1.5">
       <FireCard fire={fire} />
-      <GerarBruto fire={fire} />
+      <GerarComIa fire={fire} liveRodando={liveRodando} />
     </div>
   );
 }
 
-function GerarBruto({ fire }: { fire: FireComBruto }) {
+/**
+ * D-803: o mesmo trabalho que o fim do bruto faz sozinho, agora no clique.
+ *
+ * Existe porque o automático só roda quando o bruto termina: o Fire marcado
+ * depois, o indicado à mão e a proposta que falhou ficavam sem short e sem
+ * caminho. Sem bruto, ele é refeito antes, sem tocar na transcrição nem nas
+ * cenas (D-160). Nada do que já está na fila é apagado (RN-26).
+ */
+function GerarComIa({ fire, liveRodando }: { fire: FireComBruto; liveRodando: boolean }) {
   const queryClient = useQueryClient();
-  const [erro, setErro] = useState('');
+  const [aviso, setAviso] = useState('');
 
-  // O MESMO endpoint que o editor usa. Refazer o bruto ja tem dono — com status
-  // de tarefa e avaliacao no fim —, e um segundo caminho aqui seria uma segunda
-  // implementacao da mesma coisa, sem essas duas.
-  //
-  // Os flags em false sao o ponto: preservam transcricao e cenas. Na 1a geracao
-  // o backend os ignora e roda a cadeia inteira, que e o certo; aqui o corte ja
-  // rodou uma vez e so perdeu o arquivo.
   const gerar = useMutation({
-    mutationFn: () =>
-      brutoApi.cortarClipBruto(fire.corte_id, { refazer_transcricao: false, refazer_cenas: false }),
-    onSuccess: () => {
-      setErro('');
+    mutationFn: () => shortsApi.gerarManualmente(fire.corte_id),
+    onSuccess: (r) => {
+      const repetidos = r.descartes.length ? ` · ${r.descartes.length} descartado(s)` : '';
+      setAviso(
+        r.bruto_regerado && r.shorts.length === 0
+          ? 'Bruto refeito; a IA propôs os trechos junto com ele.'
+          : `${r.shorts.length} candidato(s) novo(s)${repetidos}`,
+      );
       void queryClient.invalidateQueries({ queryKey: FIRES_KEY });
+      void queryClient.invalidateQueries({ queryKey: shortsDoCorteKey(fire.corte_id) });
     },
-    onError: (e: Error) => setErro(e.message),
+    onError: (e) => setAviso(motivoDoErro(e, 'Não consegui gerar os shorts.')),
   });
 
-  // D-495: nao oferecer o que o backend vai recusar. Sem a live no disco nao ha
-  // de onde extrair o trecho, e o FFmpeg falharia com uma mensagem que nao diz
-  // o que fazer.
-  if (!fire.live_em_disco) {
+  // D-495: não oferecer o que o backend vai recusar. Sem bruto e sem a live não
+  // há de onde recortar; o caminho é o botão da live, no cabeçalho do grupo.
+  if (!fire.tem_bruto && !fire.live_em_disco) {
     return (
       <p className="px-1 text-[11px] leading-snug text-[var(--wb-warn-ink)]">
-        A live foi limpa do disco. Baixe-a de novo no workspace para poder gerar o bruto.
+        Sem bruto e com a live limpa: use “Baixar a live e gerar” no topo do grupo.
       </p>
     );
   }
@@ -294,20 +305,93 @@ function GerarBruto({ fire }: { fire: FireComBruto }) {
     <div className="grid gap-1">
       <button
         type="button"
-        disabled={gerar.isPending}
+        disabled={gerar.isPending || liveRodando}
         onClick={() => gerar.mutate()}
         className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[12px] font-semibold text-[var(--wb-text)] transition-colors hover:border-[var(--wb-text-dim)] disabled:opacity-60"
-        title="Refaz o vídeo do bruto a partir da live. Não mexe na transcrição nem nas cenas."
+        title={
+          fire.tem_bruto
+            ? 'A IA propõe trechos novos. Nada da fila é apagado; trecho repetido fica de fora.'
+            : 'Refaz o bruto a partir da live (sem mexer na transcrição nem nas cenas) e a IA propõe os trechos.'
+        }
       >
         {gerar.isPending ? (
           <Loader2 size={13} className="animate-spin" aria-hidden />
         ) : (
-          <RotateCcw size={13} aria-hidden />
+          <Sparkles size={13} aria-hidden />
         )}
-        {gerar.isPending ? 'gerando o bruto…' : 'Gerar bruto'}
+        {gerar.isPending
+          ? 'a IA está propondo…'
+          : fire.tem_bruto
+            ? 'Gerar shorts com IA'
+            : 'Gerar bruto e shorts com IA'}
       </button>
-      {erro && <p className="px-1 text-[11px] leading-snug text-[var(--wb-warn-ink)]">{erro}</p>}
+      {aviso && <p className="px-1 text-[11px] leading-snug text-[var(--wb-text-mute)]">{aviso}</p>}
     </div>
+  );
+}
+
+/**
+ * D-803: a faixa de cada live — quantos cortes ela tem, quantos estão parados,
+ * e o clique que atende todos de uma vez.
+ */
+function CabecalhoDaLive({ grupo, andamento }: { grupo: GrupoDaLive; andamento?: AndamentoDaLive }) {
+  const queryClient = useQueryClient();
+  const [erro, setErro] = useState('');
+  const rodando = andamento ? estaRodando(andamento) : false;
+
+  const disparar = useMutation({
+    mutationFn: () => shortsApi.gerarDaLive(grupo.projetoId),
+    onSuccess: () => {
+      setErro('');
+      void queryClient.invalidateQueries({ queryKey: ANDAMENTO_DAS_LIVES_KEY });
+    },
+    onError: (e) => setErro(motivoDoErro(e, 'Não consegui disparar a live.')),
+  });
+
+  return (
+    <header className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[var(--wb-border-soft)] pb-2">
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-[13.5px] font-bold text-[var(--wb-text)]" title={grupo.titulo}>
+          {grupo.titulo || 'live sem título'}
+        </h2>
+        <p className="font-code text-[11.5px] tabular-nums text-[var(--wb-text-mute)]">
+          {grupo.totalDaLive} {grupo.totalDaLive === 1 ? 'corte' : 'cortes'} na fábrica
+          {grupo.pendentes > 0 && ` · ${grupo.pendentes} sem bruto ou sem short`}
+          {grupo.precisaBaixar && ' · live limpa do disco'}
+        </p>
+        {/* A falha de um corte não para a live; ela aparece aqui, com o nome dele. */}
+        {andamento?.erros.map((motivo) => (
+          <p key={motivo} className="text-[11px] leading-snug text-[var(--wb-warn-ink)]">
+            {motivo}
+          </p>
+        ))}
+        {erro && <p className="text-[11px] leading-snug text-[var(--wb-warn-ink)]">{erro}</p>}
+      </div>
+
+      {rodando && andamento ? (
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--wb-accent)]">
+          <Loader2 size={13} className="animate-spin" aria-hidden />
+          {andamento.etapa === 'baixando'
+            ? 'baixando a live…'
+            : `gerando ${Math.min(andamento.feitos + 1, andamento.total)} de ${andamento.total}…`}
+        </span>
+      ) : grupo.pendentes > 0 ? (
+        <button
+          type="button"
+          disabled={disparar.isPending}
+          onClick={() => disparar.mutate()}
+          className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] px-3 text-[12px] font-semibold text-[var(--wb-accent-strong,var(--wb-accent))] disabled:opacity-60"
+          title="Um corte por vez: refaz o bruto que falta e a IA propõe os trechos. Nada do que já existe é apagado."
+        >
+          {grupo.precisaBaixar ? <Download size={13} aria-hidden /> : <Sparkles size={13} aria-hidden />}
+          {grupo.precisaBaixar
+            ? `Baixar a live e gerar (${grupo.pendentes})`
+            : grupo.pendentes === 1
+              ? 'Gerar o que falta'
+              : `Gerar os ${grupo.pendentes} que faltam`}
+        </button>
+      ) : null}
+    </header>
   );
 }
 
@@ -357,6 +441,7 @@ function VazioDoFiltro({ onLimpar }: { onLimpar: () => void }) {
 
 export default function ShortsPage() {
   const { data, isLoading, isError, error } = useFires();
+  const { data: andamento } = useAndamentoDasLives();
   const [filtro, setFiltro] = useState<FiltroDeFire>('todos');
   const [busca, setBusca] = useState('');
 
@@ -368,6 +453,9 @@ export default function ShortsPage() {
     [fires.length, contagens.prontos],
   );
   const visiveis = useMemo(() => filtrarFires(fires, filtro, busca), [fires, filtro, busca]);
+  const grupos = useMemo(() => agruparPorLive(visiveis, fires), [visiveis, fires]);
+  const andamentoDe = (projetoId: string) =>
+    andamento?.lives.find((live) => live.projeto_id === projetoId);
 
   const limpar = () => {
     setFiltro('todos');
@@ -462,135 +550,29 @@ export default function ShortsPage() {
       {!isLoading && !isError && fires.length === 0 ? <Vazio /> : null}
       {fires.length > 0 && visiveis.length === 0 ? <VazioDoFiltro onLimpar={limpar} /> : null}
 
-      {visiveis.length > 0 ? (
-        <div
-          style={{
-            display: 'grid',
-            gap: 10,
-            gridTemplateColumns: 'repeat(auto-fill,minmax(310px,1fr))',
-          }}
-        >
-          {visiveis.map((fire) => (
-            <ItemDaFila key={fire.corte_id} fire={fire} />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-
-  return (
-    <div
-      className={cn(
-        'flex min-h-0 flex-col overflow-hidden bg-[var(--wb-bg)] text-[var(--wb-text)]',
-        // No shell LEGADO a pagina fica ABAIXO de um cabecalho de 3.5rem, e
-        // `h-screen` a fazia medir a viewport inteira — transbordando por
-        // exatamente a altura desse cabecalho. Com o conteudo rolando dentro
-        // (D-499), a ultima linha ficava inalcancavel. No workbench a pagina ja
-        // recebe a altura do pai, e `h-full` continua certo.
-        'h-[calc(100vh-3.5rem)]',
-      )}
-    >
-      <header
-        className={cn(
-          'flex-none space-y-2.5 border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)]',
-          'px-7 py-5',
-        )}
-      >
-        <div className="flex items-center gap-2">
-
-          <div className="flex-1" />
-
-          {/* A busca fica no cabeçalho e não sobre a lista: ela vale para a
-              fila inteira, e um campo flutuando entre os cartões sugeriria que
-              procura só no que está à vista. */}
-          <label className="relative flex items-center">
-            <Search
-              size={13}
-              className="pointer-events-none absolute left-2 text-[var(--wb-text-mute)]"
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="buscar por título, live ou tema"
-              aria-label="Buscar cortes"
-              className="h-7 w-[230px] rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] pl-7 pr-6 text-[12px] text-[var(--wb-text)] outline-none placeholder:text-[var(--wb-text-mute)] focus:border-[var(--wb-accent)]"
-            />
-            {busca && (
-              <button
-                type="button"
-                onClick={() => setBusca('')}
-                aria-label="Limpar busca"
-                className="absolute right-1.5 text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
-              >
-                <X size={12} />
-              </button>
-            )}
-          </label>
-        </div>
-
-        {/* Os chips só aparecem com fila: numa fábrica vazia eles seriam cinco
-            zeros pedindo para filtrar o nada. */}
-        {fires.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {FILTROS.map(({ id, rotulo, nota }) => {
-              const quantos = contagens[id];
-              const ativo = filtro === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setFiltro(id)}
-                  title={nota}
-                  aria-pressed={ativo}
-                  // Chip com zero fica VISÍVEL e desabilitado, não some: a
-                  // ausência é resposta ("não tem nada pronto ainda"), e um
-                  // chip que aparece e desaparece muda o layout debaixo do
-                  // dedo a cada refetch.
-                  disabled={quantos === 0 && !ativo}
-                  className={cn(
-                    'inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12px] font-semibold transition-colors',
-                    ativo
-                      ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent-strong,var(--wb-accent))]'
-                      : 'border-[var(--wb-border)] text-[var(--wb-text-dim)] hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
-                    quantos === 0 && !ativo && 'opacity-40',
-                  )}
-                >
-                  {rotulo}
-                  <span className="font-code text-[11px] tabular-nums opacity-70">{quantos}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </header>
-
-      <main className="flex-1 overflow-auto p-4">
-        {isLoading && (
-          <p className="py-16 text-center text-[13px] text-[var(--wb-text-mute)]">
-            Procurando os Fires…
-          </p>
-        )}
-
-        {isError && (
-          <p className="py-16 text-center text-[13px] text-[var(--wb-danger-ink,var(--wb-text))]">
-            Nao consegui carregar os Fires: {(error as Error)?.message ?? 'erro desconhecido'}
-          </p>
-        )}
-
-        {!isLoading && !isError && fires.length === 0 && <Vazio />}
-
-        {fires.length > 0 && visiveis.length === 0 && <VazioDoFiltro onLimpar={limpar} />}
-
-        {visiveis.length > 0 && (
-          <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
-            {visiveis.map((fire) => (
-              <ItemDaFila key={fire.corte_id} fire={fire} />
-            ))}
-          </div>
-        )}
-      </main>
+      {grupos.map((grupo) => {
+        const daLive = andamentoDe(grupo.projetoId);
+        return (
+          <section key={grupo.projetoId} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <CabecalhoDaLive grupo={grupo} andamento={daLive} />
+            <div
+              style={{
+                display: 'grid',
+                gap: 10,
+                gridTemplateColumns: 'repeat(auto-fill,minmax(310px,1fr))',
+              }}
+            >
+              {grupo.fires.map((fire) => (
+                <ItemDaFila
+                  key={fire.corte_id}
+                  fire={fire}
+                  liveRodando={daLive ? estaRodando(daLive) : false}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

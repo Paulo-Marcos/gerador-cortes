@@ -159,16 +159,15 @@ class TestSobrevivenciaARegeracao:
         assert manual["id"] in ids, "a regeracao apagou o short manual"
 
     @pytest.mark.asyncio
-    async def test_regerar_continua_apagando_o_palpite_antigo_da_ia(self, ambiente):
-        """A poupanca do manual nao pode virar acumulo de lixo da maquina."""
+    async def test_regerar_soma_ao_palpite_antigo_da_ia(self, ambiente):
+        """D-803 (RN-26): gerar de novo soma; o palpite pendente nao some mais."""
         await servico.registrar_sugestoes(_contexto(), _sugestoes((10.0, 40.0), (50.0, 80.0)))
 
         await servico.registrar_sugestoes(_contexto(), _sugestoes((200.0, 240.0)))
 
         da_ia = [s for s in await servico.listar_shorts("c1") if s["origem"] == servico.ORIGEM_IA]
 
-        assert len(da_ia) == 1
-        assert da_ia[0]["inicio_seg"] == 200.0
+        assert sorted(s["inicio_seg"] for s in da_ia) == [10.0, 50.0, 200.0]
 
     @pytest.mark.asyncio
     async def test_o_manual_nao_perde_a_numeracao_para_um_novo_palpite(self, ambiente):

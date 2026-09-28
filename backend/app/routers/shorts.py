@@ -66,9 +66,10 @@ import logging
 from pathlib import Path
 
 from app.domain.compartilhado.provider_ia import ProviderIA
+from app.routers import fabrica_de_shorts as rotas_da_fabrica
 from app.routers import shorts_schemas as esquemas
 from app.routers.cortes_schemas import PicosDaOndaResponse
-from app.services import fabrica_de_shorts, publicacao_no_tiktok
+from app.services import publicacao_no_tiktok
 from app.services import shorts as shorts_store
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
@@ -77,6 +78,8 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+# D-803: primeiro, para que `/live/...` e `/lives/...` nao caiam em `/{short_id}/...`.
+router.include_router(rotas_da_fabrica.router)
 
 # A pagina de upload do TikTok no desktop. Constante nomeada porque ela e um
 # fato externo que pode mudar sem aviso — e uma URL solta no meio do codigo e
@@ -184,21 +187,6 @@ async def elegibilidade(corte_id: str):
         return await shorts_store.elegibilidade(corte_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-
-@router.post("/corte/{corte_id}/gerar", response_model=esquemas.ShortsGeradosResponse)
-async def gerar_manualmente(corte_id: str):
-    """Caminho manual da fábrica: regera o bruto se preciso e propõe os shorts.
-
-    Serve os cortes antigos e o teste da esteira. A regeração do bruto NÃO toca
-    na pós-produção — refaz só o vídeo (D-160).
-    """
-    try:
-        return await fabrica_de_shorts.gerar_shorts_do_corte(corte_id)
-    except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/palco/fundos", response_model=esquemas.FundosResponse)
