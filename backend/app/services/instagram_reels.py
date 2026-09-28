@@ -70,6 +70,7 @@ from app.domain.publicacao.instagram_reels import (
     publicou,
     recorte_vertical,
 )
+from app.domain.publicacao.publicacao import pode_publicar_sozinho
 from app.services.navegador_assistido import (
     ChromeNaoAbriu,
     Pagina,
@@ -349,7 +350,7 @@ def executar_roteiro(
         _marcar_aba(pagina, marca)
 
     publicado = False
-    if publicar_sozinho:
+    if publicar_sozinho and pode_publicar_sozinho(capa is not None, Passo.CAPA in feitos, avisos):
         _compartilhar_agora(pagina)
         feitos.append(Passo.PUBLICAR)
         publicado = True
@@ -581,10 +582,8 @@ def _assistir(
 ) -> dict:
     """Tudo o que fala Playwright, num thread só (síncrono por causa da D-369)."""
     try:
-        with sessao_no_chrome(perfil_do_chrome(), abrir_em=URL_INICIAL) as (
-            navegador,
-            abriu_agora,
-        ):
+        perfil = perfil_do_chrome()
+        with sessao_no_chrome(perfil, abrir_em=URL_INICIAL) as (navegador, abriu_agora):
             contexto = navegador.contexts[0] if navegador.contexts else navegador.new_context()
             page = contexto.new_page()
             relatorio = executar_roteiro(

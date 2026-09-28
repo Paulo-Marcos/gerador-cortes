@@ -22,7 +22,7 @@ from app.domain.publicacao.tiktok_studio import (
     RoteiroInterrompido,
     publicou,
 )
-from app.services import tiktok_studio
+from app.services import capa_no_tiktok_studio, tiktok_studio
 
 
 class PaginaFalsa:
@@ -150,6 +150,9 @@ def arquivos(tmp_path):
 def sem_espera_no_envio(monkeypatch):
     """O acompanhamento le o cartao de meio em meio segundo; num teste e so demora."""
     monkeypatch.setattr(tiktok_studio, "INTERVALO_DO_ENVIO", 0.0)
+    # D-799: a conferencia da capa espera a miniatura trocar por alguns segundos.
+    monkeypatch.setattr(capa_no_tiktok_studio, "SEGUNDOS_PARA_A_MINIATURA", 0.05)
+    monkeypatch.setattr(capa_no_tiktok_studio, "INTERVALO_DA_MINIATURA", 0.0)
 
 
 def _rodar(pagina, arquivos, **kwargs):
@@ -834,3 +837,85 @@ class TestAgendamento:
     def test_a_falha_do_agendamento_avisa_para_marcar_a_mao(self):
         assert "a mao" in ORIENTACOES[Passo.AGENDAMENTO]
         assert "agora" in ORIENTACOES[Passo.AGENDAMENTO]
+
+
+class TestCapaInsistente:
+    """D-799: "vira e mexe nao salva a capa". Um clique que chega enquanto a
+    pagina redesenha nao falha com erro — so nao acontece."""
+
+    def test_segunda_tentativa_salva_quando_a_primeira_nao_pegou(self, arquivos):
+        class PegaNaSegunda(PaginaFalsa):
+            salvos = 0
+
+            def clicar(self, alvo, *, segundos):
+                self._registrar("clicar", alvo)
+                if alvo == "confirmar_capa":
+                    self.salvos += 1
+                    if self.salvos >= 2:  # o Salvar da 1a passada nao pega
+                        self.miniatura = "blob:depois"
+
+        pagina = PegaNaSegunda()
+
+        relatorio = _rodar(pagina, arquivos)
+
+        assert relatorio["capa_aplicada"] is True
+        assert relatorio["avisos"] == []
+        aberturas = [c for c in pagina.chamadas if c == ("clicar", "botao_da_capa")]
+        assert len(aberturas) == 2
+
+    def test_miniatura_que_troca_com_atraso_conta_como_salva(self, arquivos):
+        """A leitura unica logo apos o Salvar dava falso negativo."""
+
+        class TrocaDepois(PaginaFalsa):
+            leituras = 0
+
+            def clicar(self, alvo, *, segundos):
+                self._registrar("clicar", alvo)
+
+            def atributo_de(self, alvo, atributo):
+                self.leituras += 1
+                return "blob:antes" if self.leituras < 3 else "blob:depois"
+
+        relatorio = _rodar(TrocaDepois(), arquivos)
+
+        assert relatorio["capa_aplicada"] is True
+
+    def test_depois_das_tentativas_o_motivo_chega_a_tela(self, arquivos):
+        class NuncaTroca(PaginaFalsa):
+            def clicar(self, alvo, *, segundos):
+                self._registrar("clicar", alvo)
+
+        pagina = NuncaTroca()
+        relatorio = _rodar(pagina, arquivos)
+
+        assert relatorio["capa_aplicada"] is False
+        assert any("continua a mesma" in a for a in relatorio["avisos"])
+        assert pagina.chamadas.count(("clicar", "botao_da_capa")) == 2
+
+
+class TestPublicarSozinhoExigeCapa:
+    """RN-26 (D-799): um post no ar com um quadro qualquer de capa nao tem volta."""
+
+    def test_sem_capa_confirmada_nao_publica_e_diz_por_que(self, arquivos):
+        pagina = PaginaFalsa(falhar={"campo_da_capa"})
+
+        relatorio = _rodar(pagina, arquivos, publicar_sozinho=True)
+
+        assert relatorio["publicado"] is False
+        assert ("clicar", "botao_publicar") not in pagina.chamadas
+        assert any("Nao publiquei sozinho" in a for a in relatorio["avisos"])
+
+    def test_capa_fora_do_disco_tambem_segura_o_publicar(self, arquivos, tmp_path):
+        relatorio = _rodar(
+            PaginaFalsa(), arquivos, capa=tmp_path / "sumiu.png", publicar_sozinho=True
+        )
+
+        assert relatorio["publicado"] is False
+
+    def test_sem_capa_pedida_publica_normalmente(self, arquivos):
+        pagina = PaginaFalsa()
+        pagina.url = "https://www.tiktok.com/tiktokstudio/content"
+
+        relatorio = _rodar(pagina, arquivos, capa=None, publicar_sozinho=True)
+
+        assert relatorio["publicado"] is True

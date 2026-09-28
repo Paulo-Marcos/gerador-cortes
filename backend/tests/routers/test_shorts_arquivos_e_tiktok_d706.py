@@ -22,7 +22,7 @@ from app.domain.publicacao.tiktok_studio import Passo, RoteiroInterrompido
 from app.models import Base, Corte, MetadadoShort, Projeto, Short, StatusCorte
 from app.routers import shorts as rota_shorts
 from app.routers.errors import registrar_tratadores
-from app.services import publicacao_no_tiktok, tiktok_studio
+from app.services import janela_do_robo, publicacao_no_tiktok, tiktok_studio
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -31,6 +31,12 @@ from sqlalchemy.pool import StaticPool
 assistir_no_tiktok = rota_shorts._assistir_no_tiktok
 # Onde a vigília da aba é disparada.
 _VIGILIA_EM = (publicacao_no_tiktok, "vigiar_publicacao")
+
+
+@pytest.fixture(autouse=True)
+def sem_janela_do_robo(monkeypatch):
+    """D-799: a aba pronta traz a janela do robô para a tela; aqui não há Chrome."""
+    monkeypatch.setattr(janela_do_robo, "mostrar", lambda perfil: True)
 
 
 @pytest_asyncio.fixture

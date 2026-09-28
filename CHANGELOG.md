@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Ctrl+V, so frames and cover assembly still apply. It uses the ChatGPT
   subscription, not the paid API. The project link and the sheets are set per
   channel in Canais → Capas no ChatGPT (D-804).
+- **Upload every cut to TikTok at once.** The TikTok dialog of a project now
+  has "Subir todos": the robot uploads the chosen cuts one after another in the
+  operator's Chrome, without waiting for each one to be published before
+  starting the next. At the end the window comes back with one ready tab per
+  cut. With "publicar sozinho" it also presses Publish — but only on cuts whose
+  cover was confirmed (RN-26). The same no-wait lane applies to the shorts
+  batch (D-799).
 - **A size gate for source files.** A test now fails when a code file in the
   backend, frontend or renderer goes over 500 lines. The 61 files that were
   already over the limit are listed with today's size as a ceiling; the list
@@ -74,6 +81,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Clicking a queue row shows each run again.** The queue drawer and the
   `/fila` page expand a row into the state, timings, error and timeline of
   every run of that item, as the old modal did before 0.4.0 (D-769).
+- **The assisted upload no longer shows a blank page when nobody is looking.**
+  Chrome stopped drawing the TikTok/Instagram page whenever its window was fully
+  covered (Windows occlusion), so the robot waited for buttons that never
+  appeared. The robot's Chrome now starts with occlusion disabled, off screen,
+  and gives keyboard focus back to the window the operator was using. An old
+  robot Chrome without these settings is restarted when no upload is pending
+  (D-799).
+- **The TikTok cover is retried and double-checked.** A cover that did not
+  stick is tried a second time with the editor reopened, and the proof (the
+  thumbnail changing) now waits a few seconds instead of reading once (D-799).
 
 ### Removed
 - **Development skills are no longer vendored in the repository.** The seven

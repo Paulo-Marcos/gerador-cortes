@@ -44,6 +44,7 @@ from app.domain.publicacao.tiktok_studio import (
     perfil_na_linha_de_comando,
     porta_de_depuracao,
 )
+from app.services import janela_do_robo
 
 # O Playwright conta em milissegundos; o urllib, em segundos.
 _ESPERA_PELO_CAMPO_MS = 5000
@@ -468,7 +469,9 @@ def garantir_chrome(perfil: Path, url: str, *, executavel: Path | None = None) -
 
 def _garantir_chrome(perfil: Path, url: str, executavel: Path | None) -> bool:
     porta = porta_do_chrome(perfil)
-    if _porta_responde(porta):
+    if _porta_responde(porta) and not janela_do_robo.fechar_se_antigo(
+        perfil, porta, responde=_porta_responde
+    ):
         return False
 
     chrome = executavel or _chrome_no_disco()  # D-804: o ChatGPT abre no Edge
@@ -480,21 +483,14 @@ def _garantir_chrome(perfil: Path, url: str, executavel: Path | None) -> bool:
         raise NavegadorIndisponivel(f"Chrome não encontrado nesta máquina. {_COMO_RESOLVER_CHROME}")
 
     perfil.mkdir(parents=True, exist_ok=True)
-    subprocess.Popen(  # noqa: S603 — caminho conhecido, argumentos nossos
-        [
-            str(chrome),
-            f"--remote-debugging-port={porta}",
-            f"--user-data-dir={perfil}",
-            "--no-first-run",
-            "--no-default-browser-check",
-            url,
-        ],
-        creationflags=getattr(subprocess, "DETACHED_PROCESS", 0),
-    )
+    # D-799: fora da tela e com a oclusão desligada — a página não fica branca
+    # quando coberta, e o foco que o nascimento rouba volta para o operador.
+    aberto = janela_do_robo.abrir_escondido(subprocess.Popen, chrome, porta, perfil, url)
 
     limite = time.monotonic() + 30
     while time.monotonic() < limite:
         if _porta_responde(porta):
+            janela_do_robo.devolver_foco(aberto)
             return True
         time.sleep(0.5)
     raise NavegadorIndisponivel(
@@ -577,7 +573,8 @@ def sessao_no_chrome(perfil: Path, *, abrir_em: str | None = None) -> Iterator[t
     pw = sync_playwright().start()
     try:
         navegador = pw.chromium.connect_over_cdp(f"http://127.0.0.1:{porta_do_chrome(perfil)}")
-        yield navegador, abriu_agora
+        with janela_do_robo.em_uso(perfil):
+            yield navegador, abriu_agora
     finally:
         pw.stop()
 

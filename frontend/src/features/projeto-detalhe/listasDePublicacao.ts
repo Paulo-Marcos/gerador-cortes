@@ -85,3 +85,17 @@ export function destinosPublicados(corte: StatusExportCorte): DestinoMarcado[] {
 
   return marcados;
 }
+
+/** O prefixo que o lote usa para saber que o alvo é o MP4 horizontal do corte. */
+const ALVO_CORTE = 'corte';
+
+/**
+ * D-799: os cortes que o "Subir todos" manda para o robô, na ordem da tela.
+ *
+ * `quantidade` 0 (ou maior que a lista) quer dizer "todos": é o caso comum, e o
+ * campo vazio precisa significar isso sem o operador digitar o total.
+ */
+export function alvosDoLoteNoTiktok(pendentes: StatusExportCorte[], quantidade = 0): string[] {
+  const limite = quantidade > 0 ? quantidade : pendentes.length;
+  return pendentes.slice(0, limite).map((corte) => `${ALVO_CORTE}:${corte.corte_id}`);
+}

@@ -68,7 +68,6 @@ EXCECOES = {
     "app/services/metadados.py::MetadadosService.importar_resultado_meta::PLR0915": 42,
     "app/services/render/finalizacao_do_corte.py::_limpar_pasta_corte_pos_sync::C901": 12,
     "app/services/render/pipeline_render.py::_fase_overlays::PLR0915": 41,
-    "app/services/tiktok_studio.py::executar_roteiro::PLR0915": 43,
     "app/services/timeline_math.py::TimelineMath.recalcular_transcricao::C901": 12,
     "app/services/timeline_math.py::TimelineMath.recalcular_transcricao::PLR0915": 43,
     "app/services/youtube.py::YouTubeService.upload_video._run_upload::C901": 14,

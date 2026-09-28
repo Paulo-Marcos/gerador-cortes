@@ -17,7 +17,8 @@ from app.database import AsyncSessionLocal
 from app.domain.compartilhado.erros import NaoEncontrado
 from app.domain.publicacao.publicacao import legenda_unica
 from app.models import Corte
-from app.services import tiktok_studio
+from app.services import janela_do_robo, tiktok_studio
+from app.services.navegador_assistido import sessao_no_chrome
 from app.services.tasks import fire_and_forget
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,11 @@ async def publicar_assistido(pacote: dict, *, corte_id: str = "", agendamento=No
     # seguraria uma conexao por meia hora para nao entregar nada de novo.
     if corte_id:
         vigiar_publicacao(corte_id)
+    if not relatorio.get("publicado"):
+        # D-799: o Chrome do robô trabalha fora da tela; a aba pronta é a vez do
+        # operador, e a janela volta para a tela — sem pular na frente dele.
+        conexao = sessao_no_chrome(tiktok_studio.perfil_do_chrome())
+        await asyncio.to_thread(janela_do_robo.mostrar, conexao)
 
     return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}
 

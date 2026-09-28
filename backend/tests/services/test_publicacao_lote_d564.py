@@ -21,6 +21,7 @@ from app.domain.publicacao.publicacao import ModoPublicacao, Plataforma
 from app.domain.publicacao.ritmo_publicacao import EstadoItem
 from app.domain.publicacao.tiktok_studio import Passo, RoteiroInterrompido
 from app.models import Base, Corte, MetadadoCorte, Projeto, PublicacaoShort, Short
+from app.services import janela_do_robo, publicacao_no_tiktok, registro_do_lote
 from app.services import publicacao_destinos as destinos
 from app.services import publicacao_lote as lote_svc
 from app.services.publicacao_destinos import Destino
@@ -93,6 +94,11 @@ async def ambiente(monkeypatch, tmp_path):
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     monkeypatch.setattr(destinos, "AsyncSessionLocal", factory)
     monkeypatch.setattr(lote_svc, "AsyncSessionLocal", factory)
+    # D-799: as leituras do lote e a marca do corte moram em módulos próprios.
+    monkeypatch.setattr(registro_do_lote, "AsyncSessionLocal", factory)
+    monkeypatch.setattr(publicacao_no_tiktok, "AsyncSessionLocal", factory)
+    # E a janela do robô não existe aqui: mostrá-la procuraria um Chrome de verdade.
+    monkeypatch.setattr(janela_do_robo, "mostrar", lambda perfil: True)
 
     async with factory() as db:
         db.add(Projeto(id="p1", youtube_url="u"))
@@ -494,6 +500,8 @@ class TestRaiaAssistidaDoTikTok:
         ):
             eventos.append(f"subiu:{Path(video).parent.name}")
             estado["agendamento"] = agendamento
+            if estado.get("portao") is not None:
+                await estado["portao"].wait()
             if estado["explode"]:
                 raise RoteiroInterrompido(Passo.SESSAO, "este Chrome nao esta logado no TikTok")
             estado["sozinho"] = publicar_sozinho
@@ -517,9 +525,10 @@ class TestRaiaAssistidaDoTikTok:
         return eventos, estado
 
     @pytest.mark.asyncio
-    async def test_o_proximo_so_comeca_quando_o_anterior_sai(self, ambiente, robo):
-        """Uma aba de upload por vez — não é lentidão, é o que impede a vigília
-        de marcar o vídeo errado como publicado (D-512)."""
+    async def test_nao_espera_o_anterior_sair_para_subir_o_proximo(self, ambiente, robo):
+        """D-799: o operador revisa tudo de uma vez no fim, em vez de ficar de
+        babá um vídeo por vez. Cada aba tem a sua marca (D-564), então vigiar
+        várias ao mesmo tempo não confunde qual publicou (D-512)."""
         _, raias = ambiente
         eventos, _ = robo
 
@@ -530,7 +539,8 @@ class TestRaiaAssistidaDoTikTok:
         )
         await _rodar(raias)
 
-        assert [e.split(":")[0] for e in eventos] == ["subiu", "esperou", "subiu", "esperou"]
+        assert [e.split(":")[0] for e in eventos] == ["subiu", "subiu", "esperou", "esperou"]
+        assert len({e.split(":")[1] for e in eventos if e.startswith("esperou")}) == 2
         assert eventos[0] == "subiu:s-demo-1" or eventos[0].startswith("subiu:")
         assert all(i.estado is EstadoItem.PUBLICADO for i in lote.itens)
 
@@ -642,7 +652,7 @@ class TestRaiaAssistidaDoTikTok:
 
         assert await lote_svc.confirmar("s2", Plataforma.TIKTOK)
         await asyncio.wait_for(tarefa, timeout=2)
-        assert [e.split(":")[0] for e in eventos] == ["subiu", "esperou", "subiu", "esperou"]
+        assert [e.split(":")[0] for e in eventos] == ["subiu", "subiu", "esperou", "esperou"]
         assert all(i.estado is EstadoItem.PUBLICADO for i in lote.itens)
 
     @pytest.mark.asyncio
@@ -655,6 +665,9 @@ class TestRaiaAssistidaDoTikTok:
         _, raias = ambiente
         eventos, estado = robo
         estado["segura"] = True
+        # D-799: a raia não espera mais a publicação, então o segundo só fica
+        # na fila enquanto o PRIMEIRO ainda está subindo — o portão segura ali.
+        estado["portao"] = asyncio.Event()
 
         lote = await lote_svc.criar(
             alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
@@ -664,15 +677,49 @@ class TestRaiaAssistidaDoTikTok:
         tarefa = asyncio.create_task(_rodar(raias))
         primeiro, segundo = lote.itens
 
-        await _esperar_ate(lambda: primeiro.estado is EstadoItem.SUA_VEZ)
+        await _esperar_ate(lambda: primeiro.estado is EstadoItem.PREPARANDO)
         assert await lote_svc.cancelar() is lote
         assert segundo.estado is EstadoItem.CANCELADO
+        estado["portao"].set()
 
         await asyncio.wait_for(tarefa, timeout=2)
         assert primeiro.estado is EstadoItem.SUA_VEZ
         assert "marque aqui" in primeiro.detalhe
         assert lote.terminou
         assert [e.split(":")[0] for e in eventos] == ["subiu", "esperou"]
+
+    @pytest.mark.asyncio
+    async def test_com_abas_esperando_a_janela_volta_para_a_tela(self, ambiente, robo, monkeypatch):
+        """D-799: o robô trabalhou fora da tela; na vez do operador, ela volta."""
+        _, raias = ambiente
+        _, estado = robo
+        estado["publica"] = False
+        mostradas: list = []
+        monkeypatch.setattr(janela_do_robo, "mostrar", mostradas.append)
+
+        await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1"), (lote_svc.ALVO_SHORT, "s2")],
+            plataformas=[Plataforma.TIKTOK],
+            opcoes=lote_svc.OpcoesDoLote(tiktok_assistido=True),
+        )
+        await _rodar(raias)
+
+        assert len(mostradas) == 1
+
+    @pytest.mark.asyncio
+    async def test_publicando_sozinho_a_janela_fica_escondida(self, ambiente, robo, monkeypatch):
+        _, raias = ambiente
+        mostradas: list = []
+        monkeypatch.setattr(janela_do_robo, "mostrar", mostradas.append)
+
+        await lote_svc.criar(
+            alvos=[(lote_svc.ALVO_SHORT, "s1")],
+            plataformas=[Plataforma.TIKTOK],
+            opcoes=lote_svc.OpcoesDoLote(tiktok_assistido=True, publicar_sozinho=True),
+        )
+        await _rodar(raias)
+
+        assert mostradas == []
 
     @pytest.mark.asyncio
     async def test_publicar_sozinho_dispensa_a_vigilia(self, ambiente, robo):
@@ -764,7 +811,7 @@ class TestRaiaAssistidaDoInstagram:
         return eventos, estado
 
     @pytest.mark.asyncio
-    async def test_a_raia_do_instagram_encadeia_igual_a_do_tiktok(self, ambiente, robo):
+    async def test_a_raia_do_instagram_anda_igual_a_do_tiktok(self, ambiente, robo):
         _, raias = ambiente
         eventos, _ = robo
 
@@ -775,7 +822,7 @@ class TestRaiaAssistidaDoInstagram:
         )
         await _rodar(raias)
 
-        assert eventos == ["subiu", "esperou", "subiu", "esperou"]
+        assert eventos == ["subiu", "subiu", "esperou", "esperou"]
         assert all(i.estado is EstadoItem.PUBLICADO for i in lote.itens)
 
     @pytest.mark.asyncio
@@ -798,3 +845,26 @@ class TestRaiaAssistidaDoInstagram:
         assert eventos == ["subiu", "esperou"]
         assert por_plataforma[Plataforma.INSTAGRAM_REELS].estado is EstadoItem.PUBLICADO
         assert por_plataforma[Plataforma.TIKTOK].estado is EstadoItem.SUA_VEZ
+
+
+@pytest.mark.asyncio
+async def test_corte_publicado_pelo_lote_ganha_a_marca_do_tiktok(ambiente):
+    """D-799: a tela do projeto e a limpeza do MP4 (D-512) leem
+    `Corte.tiktok_publicado_em`; sem a marca, o corte que subiu pelo lote
+    continuaria "pendente" lá."""
+    factory, _ = ambiente
+
+    await lote_svc.confirmar("c1", Plataforma.TIKTOK_HORIZONTAL, alvo_tipo=lote_svc.ALVO_CORTE)
+
+    async with factory() as db:
+        assert (await db.get(Corte, "c1")).tiktok_publicado_em is not None
+
+
+@pytest.mark.asyncio
+async def test_short_publicado_nao_marca_o_corte(ambiente):
+    factory, _ = ambiente
+
+    await lote_svc.confirmar("s1", Plataforma.TIKTOK)
+
+    async with factory() as db:
+        assert (await db.get(Corte, "c1")).tiktok_publicado_em is None

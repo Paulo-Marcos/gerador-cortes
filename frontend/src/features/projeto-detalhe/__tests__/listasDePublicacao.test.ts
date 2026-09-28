@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  alvosDoLoteNoTiktok,
   cortesParaTiktok,
   cortesParaYoutube,
   destinosPublicados,
@@ -137,5 +138,22 @@ describe('destinosPublicados', () => {
 
     expect(marcados.map((d) => d.destino)).toEqual(['youtube', 'tiktok']);
     expect(marcados[1].detalhe).toContain('2026-09-04');
+  });
+});
+
+// D-799: o "Subir todos" manda estes alvos para o lote do robô.
+describe('alvosDoLoteNoTiktok', () => {
+  const tres = [corte({ corte_id: 'a' }), corte({ corte_id: 'b' }), corte({ corte_id: 'c' })];
+
+  it('sem quantidade, sobe todos na ordem da tela, marcados como corte', () => {
+    expect(alvosDoLoteNoTiktok(tres)).toEqual(['corte:a', 'corte:b', 'corte:c']);
+  });
+
+  it('com quantidade, sobe só os primeiros', () => {
+    expect(alvosDoLoteNoTiktok(tres, 2)).toEqual(['corte:a', 'corte:b']);
+  });
+
+  it('quantidade maior que a lista é o mesmo que todos', () => {
+    expect(alvosDoLoteNoTiktok(tres, 9)).toHaveLength(3);
   });
 });

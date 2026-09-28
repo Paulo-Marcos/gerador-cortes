@@ -320,3 +320,31 @@ def _normalizar_hashtags(hashtags: list[str], maximo: int) -> list[str]:
 
 def _num(valor: float) -> str:
     return str(int(valor)) if float(valor).is_integer() else f"{valor:g}"
+
+
+# RN-26 (D-799): o aviso que acompanha o "não" — ele é a instrução do operador.
+NAO_PUBLIQUEI_SEM_CAPA = (
+    "Nao publiquei sozinho porque a capa nao entrou. Ponha a capa na aba e publique."
+)
+
+
+def pode_publicar_sozinho(capa_pedida: bool, capa_aplicada: bool, avisos: list[str]) -> bool:
+    """RN-26: o robô só aperta Publicar sozinho com a capa confirmada.
+
+    Um post no ar com um quadro qualquer de capa não tem volta; a aba parada
+    esperando o operador tem. Sem capa pedida não há o que confirmar. Quando
+    nega, acrescenta a `avisos` o que o operador faz a seguir — o veredito e a
+    instrução viajam juntos, para nenhum robô negar em silêncio.
+
+    >>> pode_publicar_sozinho(False, False, [])
+    True
+    >>> avisos = []
+    >>> pode_publicar_sozinho(True, False, avisos)
+    False
+    >>> avisos == [NAO_PUBLIQUEI_SEM_CAPA]
+    True
+    """
+    if capa_pedida and not capa_aplicada:
+        avisos.append(NAO_PUBLIQUEI_SEM_CAPA)
+        return False
+    return True

@@ -44,14 +44,23 @@ from app.domain.publicacao.ritmo_publicacao import (
     EstadoItem,
     cadencia_de,
     motivo_para_parar,
-    publicados_no_dia,
 )
 from app.models import PublicacaoShort
 from app.services import (
+    destinos_assistidos,
     destinos_shorts,  # noqa: F401 — registra os destinos
     publicacao_destinos,
+    publicacao_no_tiktok,
 )
 from app.services.publicacao_destinos import Destino
+from app.services.registro_do_lote import (  # noqa: F401 — historico: o router lê por aqui
+    ALVO_CORTE,
+    ALVO_SHORT,
+    historico_do_corte,
+)
+from app.services.registro_do_lote import ja_publicados as _ja_publicados
+from app.services.registro_do_lote import publicados_hoje as _publicados_hoje
+from app.services.registro_do_lote import rotulos_dos_alvos as _rotulos_dos_alvos
 from app.services.tasks import fire_and_forget
 from sqlalchemy import select
 
@@ -66,9 +75,6 @@ NAO_DEU_PARA_CONFIRMAR = (
     "marque aqui se voce publicou"
 )
 CONFIRMADO_A_MAO = "voce marcou como publicado"
-
-ALVO_SHORT = "short"
-ALVO_CORTE = "corte"
 
 
 @dataclass(frozen=True)
@@ -275,6 +281,7 @@ async def _rodar_raia(lote: Lote, plataforma: Plataforma) -> None:
     """A raia de UMA plataforma: um item por vez, respeitando a cadência dela."""
     ritmo = cadencia_de(plataforma)
     saldo = await _publicados_hoje(plataforma)
+    destino = None
 
     for item in lote.da_plataforma(plataforma):
         if item.estado is not EstadoItem.AGUARDANDO:
@@ -302,6 +309,16 @@ async def _rodar_raia(lote: Lote, plataforma: Plataforma) -> None:
             lote.avisos[plataforma.value] = f"{item.detalhe} Os que faltam ficaram esperando."
             break
 
+    await _mostrar_se_for_a_vez(lote.da_plataforma(plataforma), destino)
+
+
+async def _mostrar_se_for_a_vez(itens: list[ItemDoLote], destino: Destino | None) -> None:
+    """D-799: com as abas prontas, a janela do robô volta para a tela — sem pular
+    na frente. Antes disso ela trabalhou fora da tela, sem o operador ver nada."""
+    esperando = any(i.estado is EstadoItem.SUA_VEZ for i in itens)
+    if esperando and isinstance(destino, destinos_assistidos.DestinoAssistido):
+        await destino.mostrar_janela()
+
 
 def _destino_do_item(item: ItemDoLote, lote: Lote) -> Destino:
     """O transporte deste item: o registrado, ou o robô quando o lote pediu.
@@ -328,6 +345,8 @@ def _destino_do_item(item: ItemDoLote, lote: Lote) -> Destino:
         ao_ficar_pronta=ao_ficar_pronta,
         agendamento=lote.opcoes.agendamento,
         parar_espera=item.espera,
+        # D-799: a raia não espera o operador publicar para subir o próximo.
+        sem_esperar=True,
     )
 
 
@@ -338,14 +357,14 @@ def _robo_do_lote(plataforma: Plataforma, opcoes: OpcoesDoLote):
     o que muda é uma linha de dado — e a raia continua sem saber de nenhuma.
     """
     robos = {
-        Plataforma.TIKTOK: (opcoes.tiktok_assistido, destinos_shorts.DestinoTikTokAssistido),
+        Plataforma.TIKTOK: (opcoes.tiktok_assistido, destinos_assistidos.DestinoTikTokAssistido),
         Plataforma.TIKTOK_HORIZONTAL: (
             opcoes.tiktok_assistido,
-            destinos_shorts.DestinoTikTokAssistido,
+            destinos_assistidos.DestinoTikTokAssistido,
         ),
         Plataforma.INSTAGRAM_REELS: (
             opcoes.instagram_assistido,
-            destinos_shorts.DestinoInstagramReelsAssistido,
+            destinos_assistidos.DestinoInstagramReelsAssistido,
         ),
     }
     ligado, classe = robos.get(plataforma, (False, None))
@@ -389,6 +408,10 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
         return EstadoItem.PUBLICADO
 
     if destino.modo is ModoPublicacao.ASSISTIDO:
+        if resultado.get("marca") and isinstance(destino, destinos_assistidos.DestinoAssistido):
+            # Já está em SUA_VEZ (`ao_ficar_pronta`); a raia segue, a vigília fica.
+            fire_and_forget(_vigiar(item, destino, resultado["marca"], avisos), name="vigiar-aba")
+            return EstadoItem.SUA_VEZ
         if resultado.get("publicado"):
             await _mudar(item, EstadoItem.PUBLICADO, detalhe=SUBIU_NO_TIKTOK, publicado=True)
             return EstadoItem.PUBLICADO
@@ -404,6 +427,18 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
 
     await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_recado_do_pacote(resultado, ritmo))
     return EstadoItem.SUA_VEZ
+
+
+async def _vigiar(
+    item: ItemDoLote, destino: destinos_assistidos.DestinoAssistido, marca: str, avisos
+) -> None:
+    """A vigília de UMA aba, em segundo plano, enquanto a raia sobe as outras (D-799)."""
+    publicado = await destino.aguardar(marca)
+    if publicado:
+        await _mudar(item, EstadoItem.PUBLICADO, detalhe=SUBIU_NO_TIKTOK, publicado=True)
+    elif item.estado is EstadoItem.SUA_VEZ:
+        # "Não sei", e não "não publicou" — o botão "publiquei" continua à mão.
+        await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos))
 
 
 def _recado_do_pacote(resultado: dict, ritmo: Cadencia) -> str:
@@ -456,6 +491,18 @@ async def _mudar(
         if publicado:
             registro.publicado_em = datetime.utcnow()
         await db.commit()
+    if publicado:
+        await _marcar_corte_no_tiktok(item.alvo_tipo, item.alvo_id, item.plataforma)
+
+
+async def _marcar_corte_no_tiktok(alvo_tipo: str, alvo_id: str, plataforma: Plataforma) -> None:
+    """D-799: o corte que subiu pelo lote ganha a MESMA marca do botão avulso.
+
+    A tela do projeto e a limpeza do MP4 (D-512) leem `Corte.tiktok_publicado_em`,
+    e não o registro do lote; sem isto o corte publicado seguiria "pendente" lá.
+    """
+    if alvo_tipo == ALVO_CORTE and plataforma is Plataforma.TIKTOK_HORIZONTAL:
+        await publicacao_no_tiktok.marcar_corte_publicado(alvo_id)
 
 
 async def _gravar_registros(lote: Lote) -> None:
@@ -473,63 +520,6 @@ async def _gravar_registros(lote: Lote) -> None:
                 )
             )
         await db.commit()
-
-
-async def _ja_publicados(alvo_ids: list[str]) -> dict[str, set[str]]:
-    """Por alvo, as plataformas onde ele JÁ foi publicado de verdade.
-
-    Só conta `publicado_em` preenchido: um pacote manual montado não é uma
-    publicação, e tratá-lo como tal esconderia do operador o que falta subir.
-    """
-    if not alvo_ids:
-        return {}
-
-    async with AsyncSessionLocal() as db:
-        linhas = (
-            await db.execute(
-                select(PublicacaoShort).where(
-                    PublicacaoShort.alvo_id.in_(alvo_ids),
-                    PublicacaoShort.publicado_em.is_not(None),
-                )
-            )
-        ).scalars()
-
-        mapa: dict[str, set[str]] = {}
-        for linha in linhas:
-            mapa.setdefault(linha.alvo_id, set()).add(linha.plataforma)
-        return mapa
-
-
-async def _publicados_hoje(plataforma: Plataforma) -> int:
-    """Quantos já saíram hoje nesta plataforma — o que a cota do YouTube gasta."""
-    async with AsyncSessionLocal() as db:
-        linhas = (
-            await db.execute(
-                select(PublicacaoShort.publicado_em).where(
-                    PublicacaoShort.plataforma == plataforma.value,
-                    PublicacaoShort.publicado_em.is_not(None),
-                )
-            )
-        ).scalars()
-        return publicados_no_dia([m for m in linhas if m], datetime.utcnow())
-
-
-async def _rotulos_dos_alvos(alvos: list[tuple[str, str]]) -> dict[str, str]:
-    """O título de cada alvo, para a tela falar de vídeos e não de uuids."""
-    from app.models import Corte, Short
-
-    ids_short = [a for t, a in alvos if t == ALVO_SHORT]
-    ids_corte = [a for t, a in alvos if t == ALVO_CORTE]
-    rotulos: dict[str, str] = {}
-
-    async with AsyncSessionLocal() as db:
-        if ids_short:
-            for short in (await db.execute(select(Short).where(Short.id.in_(ids_short)))).scalars():
-                rotulos[short.id] = short.titulo_sugerido or f"Short {short.numero}"
-        if ids_corte:
-            for corte in (await db.execute(select(Corte).where(Corte.id.in_(ids_corte)))).scalars():
-                rotulos[corte.id] = corte.titulo_proposto or f"Corte {corte.numero}"
-    return rotulos
 
 
 async def confirmar(
@@ -591,6 +581,8 @@ async def confirmar(
             registro.url = url
         registro.publicado_em = datetime.utcnow()
         await db.commit()
+    # O tipo gravado no lote manda: o "publiquei" do painel chega sem ele.
+    await _marcar_corte_no_tiktok(registro.alvo_tipo or alvo_tipo, alvo_id, plataforma)
 
     if _lote_atual is not None:
         for item in _lote_atual.itens:
@@ -602,39 +594,3 @@ async def confirmar(
                 # parados — exatamente o "subiu o primeiro e o resto travou".
                 item.espera.set()
     return True
-
-
-async def historico_do_corte(corte_id: str) -> list[dict]:
-    """O que já foi publicado dos shorts DESTE corte — e do próprio corte.
-
-    A tela de seleção usa isto para nascer sabendo: o operador vê de cara o que
-    falta, em vez de descobrir na hora em que o lote pula metade dos itens.
-    """
-    from app.models import Short
-
-    async with AsyncSessionLocal() as db:
-        ids = [
-            s.id
-            for s in (await db.execute(select(Short).where(Short.corte_id == corte_id))).scalars()
-        ]
-        ids.append(corte_id)
-
-        linhas = (
-            await db.execute(
-                select(PublicacaoShort)
-                .where(PublicacaoShort.alvo_id.in_(ids))
-                .order_by(PublicacaoShort.criado_em.desc())
-            )
-        ).scalars()
-
-        return [
-            {
-                "alvo_id": linha.alvo_id,
-                "plataforma": linha.plataforma,
-                "estado": linha.estado,
-                "url": linha.url,
-                "detalhe": linha.detalhe,
-                "publicado_em": linha.publicado_em.isoformat() if linha.publicado_em else "",
-            }
-            for linha in linhas
-        ]

@@ -545,7 +545,7 @@ function LinhaDoShort({
   );
 }
 
-function PainelDoLote({ raias, corteId }: { raias: RaiaDoLote[]; corteId?: string }) {
+export function PainelDoLote({ raias, corteId }: { raias: RaiaDoLote[]; corteId?: string }) {
   return (
     <div className="grid gap-2 md:grid-cols-3">
       {raias.map((raia) => (

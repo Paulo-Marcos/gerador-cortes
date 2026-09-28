@@ -56,6 +56,7 @@ from pathlib import Path
 
 from app.domain.compartilhado.time_convert import seg_to_duracao_humana
 from app.domain.publicacao.agendamento import Agendamento
+from app.domain.publicacao.publicacao import pode_publicar_sozinho
 from app.domain.publicacao.tiktok_studio import (
     PORTA_MINIMA_DE_DEPURACAO,
     Passo,
@@ -64,6 +65,8 @@ from app.domain.publicacao.tiktok_studio import (
     leitura_do_envio,
     marco_do_envio,
 )
+from app.services import capa_no_tiktok_studio
+from app.services.janela_do_robo import fechar_aba
 from app.services.navegador_assistido import (
     ChromeNaoAbriu,
     Pagina,
@@ -109,7 +112,6 @@ def perfil_do_chrome() -> Path:
 SEGUNDOS_PARA_ABRIR = 45.0
 SEGUNDOS_PARA_SESSAO = 20.0
 SEGUNDOS_PARA_ELEMENTO = 30.0
-SEGUNDOS_PARA_CAPA = 20.0
 SEGUNDOS_PARA_TUTORIAL = 8.0
 SEGUNDOS_PARA_PROCESSAR = 900.0
 SEGUNDOS_PARA_AGENDAR = 15.0
@@ -343,17 +345,13 @@ def executar_roteiro(
             "Confira na aba antes de publicar."
         )
 
-    if capa and capa.is_file():
-        erro = _tentar_capa(pagina, capa)
-        if erro:
-            # Passo opcional: o vídeo já subiu e a legenda já está escrita.
-            # Derrubar tudo aqui trocaria um contratempo por um retrabalho.
-            avisos.append(erro)
-            logger.warning("[TikTokStudio] capa nao entrou: %s", erro)
-        else:
-            feitos.append(Passo.CAPA)
-    elif capa:
-        avisos.append("A capa nao esta mais em disco; o TikTok vai congelar um frame.")
+    # Passo opcional: o vídeo já subiu e a legenda já está escrita. Derrubar
+    # tudo aqui trocaria um contratempo por um retrabalho — a falha vira aviso.
+    capa_aplicada, aviso_da_capa = capa_no_tiktok_studio.aplicar_no_roteiro(pagina, capa)
+    if capa_aplicada:
+        feitos.append(Passo.CAPA)
+    if aviso_da_capa:
+        avisos.append(aviso_da_capa)
 
     # D-580. Depois da capa e ANTES da revisao, por dois motivos: o formulario
     # de agendamento so existe com o video ja aceito, e a revisao e o momento em
@@ -371,7 +369,7 @@ def executar_roteiro(
         _marcar_aba(pagina, marca)
 
     publicado = False
-    if publicar_sozinho:
+    if publicar_sozinho and pode_publicar_sozinho(capa is not None, capa_aplicada, avisos):
         _publicar_agora(pagina)
         feitos.append(Passo.PUBLICAR)
         publicado = True
@@ -540,14 +538,6 @@ def _confirmar_legenda(pagina: Pagina, legenda: str, tentativas: int = 3) -> boo
         return False
 
 
-def _miniatura_da_capa(pagina: Pagina) -> str:
-    """O `src` da miniatura da capa, ou vazio quando não dá para ler."""
-    try:
-        return pagina.atributo_de("miniatura_da_capa", "src")
-    except Exception:  # noqa: BLE001 — sem miniatura a comparação é inconclusiva
-        return ""
-
-
 def _dispensar_tutorial(pagina: Pagina) -> None:
     """Tira o tour de novidades da frente. Nunca falha, e insiste até sair.
 
@@ -581,54 +571,6 @@ def _dispensar_tutorial(pagina: Pagina) -> None:
             logger.info("[TikTokStudio] overlay do tour removido do DOM")
     except Exception as exc:  # noqa: BLE001 — o tour nunca pode derrubar o upload
         logger.debug("[TikTokStudio] tour: %s", exc)
-
-
-def _tentar_capa(pagina: Pagina, capa: Path) -> str:
-    """Troca a capa, devolvendo o motivo quando não dá — e nunca levantando.
-
-    Abrir um modal, entregar o arquivo ao input escondido e salvar. É o passo
-    mais frágil do roteiro e o menos importante dos cinco, nesta ordem exata;
-    por isso ele é o único que reporta em vez de interromper.
-
-    Não há passo de "clicar em Upload cover": o `<input type=file>` do modal já
-    nasce no DOM, e entregar o arquivo direto a ele dispensa o clique na área
-    de arrastar — que é só a fachada dele.
-    """
-    try:
-        if not pagina.existe("botao_da_capa", segundos=SEGUNDOS_PARA_CAPA):
-            return "Nao achei o botao de editar capa."
-        pagina.clicar("botao_da_capa", segundos=SEGUNDOS_PARA_CAPA)
-
-        # A miniatura de ANTES: é ela que dirá se a troca pegou.
-        antes = _miniatura_da_capa(pagina)
-
-        pagina.enviar_arquivo("campo_da_capa", capa, segundos=SEGUNDOS_PARA_CAPA)
-
-        if not pagina.existe("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA):
-            return "O modal da capa abriu, mas nao achei o botao de salvar."
-
-        # D-545: ESPERAR o Salvar habilitar antes de clicar.
-        #
-        # O relato foi exato: abrindo o editor depois, a imagem estava lá,
-        # escolhida e não salva. Ou seja, o `set_input_files` pegou e o clique
-        # em Salvar não. O TikTok mantém o botão desabilitado enquanto processa
-        # a imagem que acabou de receber, e um clique nesse intervalo não é
-        # recusado com erro — ele simplesmente não acontece.
-        pagina.esperar_habilitado("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
-        pagina.clicar("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
-        pagina.esperar_sumir("dialogo", segundos=SEGUNDOS_PARA_CAPA)
-
-        # Diálogo ainda aberto = o clique não fechou nada. Uma segunda tentativa
-        # cobre o caso de o primeiro ter pego o botão no meio da habilitação.
-        if pagina.existe("dialogo", segundos=1.0):
-            pagina.clicar("confirmar_capa", segundos=SEGUNDOS_PARA_CAPA)
-            pagina.esperar_sumir("dialogo", segundos=SEGUNDOS_PARA_CAPA)
-
-        if _miniatura_da_capa(pagina) == antes:
-            return "Cliquei em salvar, mas a capa na pagina continua a mesma."
-        return ""
-    except Exception as exc:  # noqa: BLE001 — qualquer falha aqui vira aviso
-        return f"{type(exc).__name__}: {exc}"
 
 
 def _acompanhar_envio(pagina: Pagina) -> None:
@@ -764,6 +706,9 @@ def _vigiar_publicacao(
                 if not publicou(alvo.url):
                     return None
                 logger.info("[TikTokStudio] publicacao detectada em %s", alvo.url[:60])
+                # D-799: a aba cumpriu o papel. Deixá-la aberta empilhava uma por
+                # vídeo no Chrome do robô, e segurava a faxina logo abaixo.
+                fechar_aba(alvo)
                 if apagar_copias_do_upload(contexto, ORIGEM_DO_TIKTOK, TRECHO_DA_ABA_DE_UPLOAD):
                     logger.info("[TikTokStudio] copia do video apagada do perfil do robo")
                 return True

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
-import { Bot, Check, ExternalLink, ImageOff, Loader2, Package, Send, Youtube } from 'lucide-react';
+import { Bot, Check, ExternalLink, ImageOff, Loader2, Send, Youtube } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
 import type { StatusExportCorte } from '@/types/models';
 import { pendentesNoTiktok } from './listasDePublicacao';
+import { LoteDoTiktokHorizontal } from './LoteDoTiktokHorizontal';
 
 // D-510/D-516/D-517: o TikTok horizontal, no workspace do projeto.
 //
@@ -30,19 +31,15 @@ import { pendentesNoTiktok } from './listasDePublicacao';
 // linha como contexto. Filtro e informação são coisas diferentes: uma tira da
 // vista, a outra ajuda a decidir.
 //
-// ## Por que o "em massa" só prepara
+// ## O "em massa" (D-799)
 //
 // O YouTube publica N cortes numa tacada porque tem API. O TikTok não: cliente
-// sem auditoria só posta SELF_ONLY, e automatizar o login viola os Termos — o
-// risco não é a macro falhar, é a CONTA ser banida.
+// sem auditoria só posta SELF_ONLY. Por isso o lote é o ROBÔ, em sequência, no
+// Chrome do operador — ver `LoteDoTiktokHorizontal`. O login continua sendo
+// dele, uma vez só; o robô nunca vê senha.
 //
-// E há um limite físico: a pasta do pacote é POR CORTE. Não existe pasta-mãe
-// para abrir uma vez só, e abrir dez exploradores com dez abas seria pior que
-// fazer à mão. Então o lote faz o trabalho repetitivo — montar as pastas e
-// escrever a legenda de cada uma — e para aí.
-// O upload segue um por vez, e o botão de cada linha abre a pasta, a aba e
-// copia a legenda DAQUELE corte, que é a única forma de a área de transferência
-// ter a legenda certa.
+// Cada linha segue com os botões avulsos: "Assistido" para um corte só, e
+// "Só o pacote", que abre a pasta, a aba e copia a legenda DAQUELE corte.
 //
 // ## A capa (D-518)
 //
@@ -66,39 +63,22 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
   // do servidor (`tiktok_publicado_em`) e sobrevive a fechar e reabrir; o
   // "pacote montado" não precisa sobreviver — refazer é barato.
   const [preparados, setPreparados] = useState<Record<string, boolean>>({});
-  const [quantidade, setQuantidade] = useState(0);
   // D-580: uma data para o modal inteiro, e não uma por linha. O operador vem
   // aqui com uma janela em mente ("solta às 19h") e manda os cortes um a um; um
   // campo por linha seria a mesma data digitada N vezes.
   const [agendarPara, setAgendarPara] = useState('');
 
   const pendentes = useMemo(() => pendentesNoTiktok(cortes), [cortes]);
-  const alvo = quantidade > 0 ? quantidade : pendentes.length;
-
-  const lote = useMutation({
-    mutationFn: async () => {
-      const fila = pendentes.slice(0, alvo);
-      for (const corte of fila) {
-        // Em série, e não em paralelo. O pacote não copia o MP4 — aponta para
-        // ele —, então o ganho de disparar tudo junto seria pequeno, e o custo
-        // é grande: numa rajada de dez chamadas, uma que falhe não diz qual
-        // corte ficou sem pasta. Em fila, o `preparados` marca linha a linha e
-        // o erro para exatamente onde parou.
-        // `abrir_pasta: false` — no lote ninguém quer dez exploradores.
-        await shortsApi.stagingTiktokHorizontal(corte.corte_id, { abrirPasta: false });
-        setPreparados((atual) => ({ ...atual, [corte.corte_id]: true }));
-      }
-      return fila.length;
-    },
-  });
+  const marcarPreparado = (corteId: string) =>
+    setPreparados((atual) => ({ ...atual, [corteId]: true }));
 
   return (
     <Modal open={open} onClose={onClose} title="TikTok — cortes horizontais">
       <div className="space-y-3">
         <p className="text-[12px] leading-relaxed text-[var(--wb-text-mute)]">
           O TikTok aceita 16:9, e o MP4 já existe — é o mesmo que foi para o YouTube, sem
-          render novo. <strong>O envio é manual</strong>: a API só publica em modo privado
-          enquanto o app não passar pela auditoria deles.
+          render novo. O robô sobe pelo seu Chrome, fora da tela; a API deles só publica em
+          modo privado enquanto o app não passar pela auditoria.
         </p>
 
         {cortes.length === 0 ? (
@@ -107,41 +87,6 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
           </p>
         ) : (
           <>
-            {/* D-517: o lote monta os pacotes; o upload continua um por vez. */}
-            <div className="flex flex-wrap items-center gap-2 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 py-2">
-              <label className="flex items-center gap-1.5 text-[12px]">
-                Preparar
-                <Input
-                  type="number"
-                  min={1}
-                  max={pendentes.length}
-                  value={quantidade || ''}
-                  placeholder={String(pendentes.length)}
-                  onChange={(e) => setQuantidade(Number(e.target.value) || 0)}
-                  className="h-7 w-[68px] text-center text-[12px]"
-                  aria-label="Quantos pacotes preparar"
-                />
-                de {pendentes.length}
-              </label>
-              <Button
-                size="sm"
-                disabled={lote.isPending || pendentes.length === 0}
-                onClick={() => lote.mutate()}
-              >
-                {lote.isPending ? <Loader2 className="animate-spin" /> : <Package />}
-                {lote.isPending ? 'montando…' : 'Preparar pacotes'}
-              </Button>
-              <span className="text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
-                Monta as pastas de uma vez, sem abrir nada. Depois use “abrir” em cada linha
-                para subir.
-              </span>
-              {lote.isError && (
-                <span className="w-full text-[11px] text-[var(--wb-warn-ink)]">
-                  {(lote.error as Error)?.message ?? 'não consegui montar os pacotes'}
-                </span>
-              )}
-            </div>
-
             <div className="flex flex-wrap items-center gap-2 rounded-[8px] bg-[var(--wb-bg-inset)] px-2.5 py-2">
               <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]">
                 <input
@@ -168,6 +113,13 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
               )}
             </div>
 
+            <LoteDoTiktokHorizontal
+              projetoId={projetoId}
+              pendentes={pendentes}
+              agendarPara={agendarPara}
+              onPreparado={marcarPreparado}
+            />
+
             <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">
               {cortes.map((corte) => (
                 <LinhaDoCorte
@@ -176,9 +128,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
                   projetoId={projetoId}
                   preparado={Boolean(preparados[corte.corte_id])}
                   agendarPara={agendarPara}
-                  onPreparado={() =>
-                    setPreparados((atual) => ({ ...atual, [corte.corte_id]: true }))
-                  }
+                  onPreparado={() => marcarPreparado(corte.corte_id)}
                 />
               ))}
             </ul>
@@ -367,8 +317,8 @@ function LinhaDoCorte({
 
       {assistido.isPending && (
         <span className="w-full text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
-          Subindo no Chrome… o TikTok ainda precisa processar o vídeo, o que num corte longo leva
-          minutos. Não feche a janela que abriu.
+          Subindo no Chrome do robô, fora da tela… num corte longo o TikTok leva minutos para
+          processar. Quando a aba ficar pronta, a janela volta para a tela.
         </span>
       )}
       {assistido.isSuccess && (
