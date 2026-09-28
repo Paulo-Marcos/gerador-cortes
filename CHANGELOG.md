@@ -26,6 +26,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Pylance) now checks `backend/app` in basic mode. The 175 type errors that
   already existed are counted per file and rule; a new one fails the build,
   and the counts can only go down (D-773).
+- **`bin\release.ps1` prepares a release in one command.** It refuses a dirty
+  tree, a branch other than `main`, an existing tag or an empty
+  `[Unreleased]`; checks the requested version against the one the changelog
+  categories call for; runs the full quality gate; bumps every copy of the
+  version; closes `[Unreleased]`; and creates the release commit and the
+  annotated tag. It never pushes: it ends by printing the publishing steps —
+  push `main`, wait for green CI on that exact commit, then push the tag
+  (D-782).
 - **Shorts on demand, grouped by live.** The Shorts screen now groups cuts by
   the live they came from. Each cut has a "Gerar shorts com IA" button (it
   rebuilds a missing raw clip first), and each live has one button that
