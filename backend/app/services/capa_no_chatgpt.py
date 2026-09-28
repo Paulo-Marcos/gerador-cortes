@@ -42,7 +42,7 @@ from app.domain.compartilhado.chatgpt_imagem import (
 )
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido, ServicoExternoFalhou
 from app.infrastructure import capa_chatgpt_store
-from app.services import navegador_assistido
+from app.services import janela_do_robo, navegador_assistido
 
 logger = logging.getLogger(__name__)
 
@@ -325,14 +325,24 @@ def _gerar_no_navegador(projeto_url: str, pedido: str, fichas: list[Path]) -> by
         ) as exc:
             raise ServicoExternoFalhou(f"Não consegui abrir o navegador do robô: {exc}") from exc
         except ServicoExternoFalhou:
+            _mostrar_janela(perfil)
             raise
         except Exception as exc:  # noqa: BLE001 — aba fechada, tela mudou: dizer onde parou
             logger.warning("[ChatGPT] o robô parou: %s", exc)
+            _mostrar_janela(perfil)
             # Exceção sem mensagem não pode virar um IndexError aqui dentro.
             motivo = (str(exc).splitlines() or [type(exc).__name__])[0]
             raise ServicoExternoFalhou(
                 f"O robô parou no meio, na janela do ChatGPT: {motivo}"
             ) from exc
+
+
+def _mostrar_janela(perfil: Path) -> None:
+    """Traz a janela do robô de volta quando só o operador resolve (D-799).
+
+    Ela nasce fora da tela; login, recusa e prazo estourado são lidos NELA.
+    """
+    janela_do_robo.mostrar(navegador_assistido.sessao_no_chrome(perfil))
 
 
 async def gerar_imagem(prompt: str, proporcao: str) -> tuple[bytes, str]:

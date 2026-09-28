@@ -275,3 +275,53 @@ class TestNavegador:
         navegador_assistido.garantir_chrome(tmp_path / "perfil", PROJETO, executavel=edge)
 
         assert lancados[0][0] == str(edge)
+
+
+class TestJanelaDoRoboNoChatGPT:
+    """D-799 deu ao robô uma janela que nasce fora da tela. No ChatGPT ela tem de
+    voltar quando o robô para por algo que só o operador resolve (login, recusa,
+    prazo) — e ficar escondida quando a imagem volta sozinha."""
+
+    @pytest.fixture
+    def robo(self, monkeypatch):
+        from contextlib import contextmanager
+
+        from app.services import janela_do_robo, navegador_assistido
+
+        class Aba:
+            def bring_to_front(self):
+                pass
+
+        class Contexto:
+            pages: list = []
+
+            def new_page(self):
+                return Aba()
+
+        @contextmanager
+        def sessao(_perfil):
+            yield type("Navegador", (), {"contexts": [Contexto()]})(), False
+
+        mostradas: list = []
+        monkeypatch.setattr(navegador_assistido, "garantir_chrome", lambda *a, **k: False)
+        monkeypatch.setattr(navegador_assistido, "sessao_no_chrome", sessao)
+        monkeypatch.setattr(janela_do_robo, "mostrar", mostradas.append)
+        monkeypatch.setattr(capa_no_chatgpt, "edge_no_disco", lambda: None)
+        return mostradas
+
+    def test_parada_que_pede_o_operador_traz_a_janela(self, robo, monkeypatch):
+        def pede_login(*_a, **_k):
+            raise ServicoExternoFalhou("O ChatGPT pediu login na janela do robô.")
+
+        monkeypatch.setattr(capa_no_chatgpt, "executar_roteiro", pede_login)
+
+        with pytest.raises(ServicoExternoFalhou, match="login"):
+            capa_no_chatgpt._gerar_no_navegador(PROJETO, "pedido", [])
+
+        assert len(robo) == 1
+
+    def test_imagem_que_volta_sozinha_deixa_a_janela_escondida(self, robo, monkeypatch):
+        monkeypatch.setattr(capa_no_chatgpt, "executar_roteiro", lambda *_a, **_k: PNG)
+
+        assert capa_no_chatgpt._gerar_no_navegador(PROJETO, "pedido", []) == PNG
+        assert robo == []
