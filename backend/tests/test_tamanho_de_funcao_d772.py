@@ -30,7 +30,8 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.integration  # roda o ruff sobre o backend inteiro (D-751)
+# Sem a marca `integration` de propósito (D-805): o ruff leva menos de 1 s
+# sobre o backend inteiro; marcado, ficava fora do ciclo antes do commit.
 
 BACKEND = Path(__file__).resolve().parents[1]
 LIMITES = {"C901": 10, "PLR0915": 40}
