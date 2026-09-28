@@ -27,7 +27,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-resizable-panels": "^2.1.9",
-    "react-router-dom": "^6.27.0",
+    "react-router-dom": "^6.30.6",
     "remotion": "4.0.529",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
@@ -41,7 +41,7 @@
     "@typescript-eslint/eslint-plugin": "^8.70.1",
     "@typescript-eslint/parser": "^8.70.1",
     "@vitejs/plugin-react": "^4.3.2",
-    "@vitest/ui": "^4.1.6",
+    "@vitest/ui": "^4.1.11",
     "autoprefixer": "^10.6.1",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
@@ -52,7 +52,7 @@
     "prettier": "^3.9.9",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.6.2",
-    "vite": "^5.4.8",
-    "vitest": "^4.1.6"
+    "vite": "^6.4.3",
+    "vitest": "^4.1.11"
   }
 }

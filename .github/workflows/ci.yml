@@ -128,12 +128,15 @@ jobs:
         working-directory: video-renderer
         run: npm ci
 
-      - name: npm audit (bloqueia em CVE critico)
-        run: npm audit --audit-level=critical
-
-      - name: npm audit (informativo, high/moderate)
-        continue-on-error: true
+      # D-808: bloquear só o crítico deixou 31 alertas altos e médios se
+      # acumularem com o CI verde. Agora o alto também barra; o médio segue
+      # informativo (ex.: react-router, que só se corrige na versão 7).
+      - name: npm audit (bloqueia em CVE alto ou critico)
         run: npm audit --audit-level=high
+
+      - name: npm audit (informativo, moderate)
+        continue-on-error: true
+        run: npm audit --audit-level=moderate
 
       - name: Lint
         run: npm run lint
@@ -173,12 +176,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: npm audit (bloqueia em CVE critico)
-        run: npm audit --audit-level=critical
-
-      - name: npm audit (informativo, high/moderate)
-        continue-on-error: true
+      # D-808: bloquear só o crítico deixou 31 alertas altos e médios se
+      # acumularem com o CI verde. Agora o alto também barra; o médio segue
+      # informativo (ex.: react-router, que só se corrige na versão 7).
+      - name: npm audit (bloqueia em CVE alto ou critico)
         run: npm audit --audit-level=high
+
+      - name: npm audit (informativo, moderate)
+        continue-on-error: true
+        run: npm audit --audit-level=moderate
 
       - name: Lint (eslint + tsc)
         run: npm run lint

@@ -86,6 +86,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per channel, in the database, and are untouched (D-775).
 
 ### Security
+- **Vite 6.4.3 and patched frontend/renderer packages.** The screen is served
+  by Vite's server, and Vite 5 let Windows-specific alternate paths bypass
+  the list of files it refuses to serve (`server.fs.deny`). Along with it,
+  `vitest`, `react-router-dom`, `js-yaml`, `fast-uri`, `brace-expansion` and
+  others move to fixed versions: high advisories go from 6 to 0 across both
+  packages. Two moderate `react-router` advisories remain; their fix is
+  React Router 7, a migration of its own. CI now fails on high advisories,
+  not only critical ones (D-808).
 - **A live's URL can no longer smuggle options into yt-dlp.** The URL went
   straight into yt-dlp's command line, so a "URL" such as `--exec=...` was read
   as an option — and `--exec` runs a command. The address is now checked
