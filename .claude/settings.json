@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Edit(**/.env)",
+      "Read(**/token.json)",
+      "Edit(**/token.json)",
+      "Read(**/client_secrets.json)",
+      "Edit(**/client_secrets.json)",
+      "Read(**/*.db)",
+      "Edit(**/*.db)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)"
+    ]
+  },
   "skillOverrides": {
     "tdd-react": "off",
     "tdd-dotnet": "off",

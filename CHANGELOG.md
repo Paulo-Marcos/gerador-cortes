@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **AI agents can no longer read or write the app's secrets.** The project's
+  Claude Code settings deny access to `.env`, `token.json`,
+  `client_secrets.json`, the SQLite databases and `~/.ssh`/`~/.aws`. Before
+  this, an agent working on the code could read the operator's real YouTube
+  OAuth credentials (D-770).
+
 ## [0.4.0] - 2026-09-27
 
 233 commits since 0.3.0. This is a **structural release**: almost nothing new on
