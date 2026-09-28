@@ -290,6 +290,18 @@ export function projetoDaRota(pathname: string): string | null {
   return /^\/projetos\/([^/]+)/.exec(pathname)?.[1] ?? null;
 }
 
+/**
+ * Corte aberto numa fase da live (D-798). O editor o carrega no caminho
+ * (`/cortes/7`); Pós, Metadados e Revisão, em `?corte=7`.
+ */
+export function corteDaLive(pathname: string, search: string): string | null {
+  if (!projetoDaRota(pathname)) return null;
+  return (
+    /^\/projetos\/[^/]+\/cortes\/([^/?]+)/.exec(pathname)?.[1] ??
+    new URLSearchParams(search).get('corte')
+  );
+}
+
 /** Id do corte quando a rota aponta para um corte específico. */
 export function corteDaRota(pathname: string): string | null {
   return (
@@ -399,16 +411,32 @@ export function dentroDeUmaLive(tela: TelaId): boolean {
  * (`chrome.etapas`) quando ela os tem; a fita sozinha já responde "em que
  * fase estou" e "como pulo para outra", que é o que o trilho respondia mal.
  */
-export function esteiraDaLive(tela: TelaId, projetoId: string | null): PassoDaLive[] {
+export function esteiraDaLive(
+  tela: TelaId,
+  projetoId: string | null,
+  corteId: string | null = null,
+): PassoDaLive[] {
   if (!projetoId || !dentroDeUmaLive(tela)) return [];
   return ESTEIRA.map((id) => ({
     id,
     icone: TELAS[id].icone,
     texto: TELAS[id].menu ?? TELAS[id].titulo,
-    to: TELAS[id].rota?.(projetoId),
+    to: (corteId && ROTA_COM_CORTE[id]?.(projetoId, corteId)) || TELAS[id].rota?.(projetoId),
     agora: id === tela,
   }));
 }
+
+/**
+ * D-798: com um corte aberto, cada fase da fita leva a ELE — sem isso o
+ * menu caía no primeiro corte do projeto, e só dava para ver o bruto, a pós
+ * e a revisão do corte #1. O Workspace é da live inteira e fica de fora.
+ */
+const ROTA_COM_CORTE: Partial<Record<TelaId, (projetoId: string, corteId: string) => string>> = {
+  cortes: (p, c) => `/projetos/${p}/cortes/${c}`,
+  pos: (p, c) => `/projetos/${p}/post-production?corte=${c}`,
+  metadados: (p, c) => `/projetos/${p}/metadados?corte=${c}`,
+  revisao: (p, c) => `/projetos/${p}/final-review?corte=${c}`,
+};
 
 // ── Trilha (breadcrumb) ──────────────────────────────────────────
 // A última migalha é sempre a tela atual, em peso 700 e SEM destino:

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CABECALHO,
+  corteDaLive,
   corteDaRota,
   dentroDeUmaLive,
   destinosDaPaleta,
@@ -156,6 +157,25 @@ describe('esteiraDaLive', () => {
   it('marca como "agora" a fase da rota atual', () => {
     const passos = esteiraDaLive('pos', '267');
     expect(passos.filter((p) => p.agora).map((p) => p.id)).toEqual(['pos']);
+  });
+
+  it('com um corte aberto, cada fase leva a ELE e nao ao primeiro (D-798)', () => {
+    const passos = esteiraDaLive('revisao', '267', '7');
+    const destinos = Object.fromEntries(passos.map((p) => [p.id, p.to]));
+    expect(destinos).toEqual({
+      projeto: '/projetos/267',
+      cortes: '/projetos/267/cortes/7',
+      pos: '/projetos/267/post-production?corte=7',
+      metadados: '/projetos/267/metadados?corte=7',
+      revisao: '/projetos/267/final-review?corte=7',
+    });
+  });
+
+  it('le o corte aberto do caminho do editor e do ?corte= das outras fases', () => {
+    expect(corteDaLive('/projetos/267/cortes/7', '?fase=1')).toBe('7');
+    expect(corteDaLive('/projetos/267/final-review', '?corte=9')).toBe('9');
+    expect(corteDaLive('/projetos/267/cortes', '')).toBeNull();
+    expect(corteDaLive('/shorts/42', '?corte=9')).toBeNull();
   });
 
   it('nao existe fora de uma live', () => {

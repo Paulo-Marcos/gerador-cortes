@@ -17,12 +17,28 @@ function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
   return 'empty';
 }
 
+/**
+ * D-427: a aba de trabalho amarrada a um corte chega aqui com `?corte=` —
+ * sem isso a tela abriria sempre no primeiro corte do projeto.
+ * D-798: o corte ativo volta para a URL — é de lá que a fita de fases
+ * (Cortes, Pós, Revisão) tira o corte para onde levar.
+ */
+function useCorteAtivoNaUrl(): [string, (corteId: string) => void] {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeId, setActiveId] = useState(() => searchParams.get('corte') ?? '');
+  const ativarCorte = useCallback(
+    (corteId: string) => {
+      setActiveId(corteId);
+      setSearchParams({ corte: corteId }, { replace: true });
+    },
+    [setSearchParams],
+  );
+  return [activeId, ativarCorte];
+}
+
 export function MetadataPage() {
   const { id: projetoId } = useParams();
-  const [searchParams] = useSearchParams();
-  // D-427: a aba de trabalho amarrada a um corte chega aqui com `?corte=`
-  // — sem isso a tela abriria sempre no primeiro corte do projeto.
-  const [activeId, setActiveId] = useState(() => searchParams.get('corte') ?? '');
+  const [activeId, ativarCorte] = useCorteAtivoNaUrl();
   const [metaById, setMetaById] = useState<Record<string, MetadadoCorte>>({});
   const [publicarOpen, setPublicarOpen] = useState(false);
   const refs = useRef<Record<string, HTMLElement | null>>({});
@@ -49,15 +65,15 @@ export function MetadataPage() {
   );
 
   useEffect(() => {
-    if (!activeId && cuts[0]) setActiveId(cuts[0].id);
-  }, [activeId, cuts]);
+    if (!activeId && cuts[0]) ativarCorte(cuts[0].id);
+  }, [activeId, cuts, ativarCorte]);
 
   const handleMetaLoaded = useCallback((corteId: string, meta: MetadadoCorte) => {
     setMetaById((current) => ({ ...current, [corteId]: meta }));
   }, []);
 
   const selectCut = (corteId: string) => {
-    setActiveId(corteId);
+    ativarCorte(corteId);
     requestAnimationFrame(() =>
       refs.current[corteId]?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     );

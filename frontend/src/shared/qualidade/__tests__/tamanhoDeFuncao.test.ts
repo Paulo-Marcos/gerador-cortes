@@ -85,7 +85,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/metadata/MetadadosDoCorteModal.tsx::MetadadosDoCorteModal": 235,
   "src/features/metadata/MetadataCard.tsx::MetadataCard": 805,
   "src/features/metadata/MetadataCard.tsx::PromptImportModal": 129,
-  "src/features/metadata/MetadataPage.tsx::MetadataPage": 257,
+  "src/features/metadata/MetadataPage.tsx::MetadataPage": 254,
   "src/features/metadata/ThumbnailAvaliacaoPanel.tsx::ThumbnailAvaliacaoPanel": 168,
   "src/features/metadata/useMetadataCard.tsx::useMetadataCard": 311,
   "src/features/post-production/FiltroTestePanel.tsx::FiltroTestePanel": 221,

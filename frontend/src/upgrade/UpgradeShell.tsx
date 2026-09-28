@@ -33,6 +33,7 @@ import {
 } from './UpgradeChrome';
 import {
   CABECALHO,
+  corteDaLive,
   esteiraDaLive,
   type TelaId,
   menuDoTrilho,
@@ -277,6 +278,13 @@ type CascaProps = {
   fila?: FilaDoTrilho;
 };
 
+/** A fita de fases leva ao corte aberto, não ao primeiro da live (D-798). */
+function useEsteiraDaLive(tela: TelaId, projetoId: string | null) {
+  const { pathname, search } = useLocation();
+  const corteId = corteDaLive(pathname, search);
+  return useMemo(() => esteiraDaLive(tela, projetoId, corteId), [tela, projetoId, corteId]);
+}
+
 function Casca({ children, fila }: CascaProps) {
   const { pathname } = useLocation();
   const { theme, setTheme, toggleTheme, glass } = useUpgradeTheme();
@@ -326,7 +334,7 @@ function Casca({ children, fila }: CascaProps) {
     () => trilhaDaTela(tela, chrome.rotulos, projetoId),
     [tela, chrome.rotulos, projetoId],
   );
-  const passos = useMemo(() => esteiraDaLive(tela, projetoId), [tela, projetoId]);
+  const passos = useEsteiraDaLive(tela, projetoId);
   const denso = Boolean(chrome.denso);
 
   // D-746: cada tela visitada entra na pilha (← →) e em "Onde eu estava".
