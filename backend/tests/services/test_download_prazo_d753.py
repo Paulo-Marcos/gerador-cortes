@@ -45,6 +45,18 @@ def _pid_de_quem_rodou(monkeypatch) -> list[int]:
     return encerrados
 
 
+def _morreu(pid: int, prazo_s: float = 5.0) -> bool:
+    """O processo sumiu dentro do prazo? No Windows encerrar é assíncrono: logo
+    depois do kill o PID ainda existe por alguns milissegundos, e perguntar na
+    hora falhava ~1 vez em 5 (medido em 28/09/2026)."""
+    limite = time.monotonic() + prazo_s
+    while psutil.pid_exists(pid):
+        if time.monotonic() > limite:
+            return False
+        time.sleep(0.05)
+    return True
+
+
 class TestNaThread:
     def test_silencio_alem_do_prazo_encerra_o_processo(self, monkeypatch):
         encerrados = _pid_de_quem_rodou(monkeypatch)
@@ -56,7 +68,7 @@ class TestNaThread:
             )
 
         assert time.monotonic() - inicio < 30, "o vigia não disparou"
-        assert encerrados and not psutil.pid_exists(encerrados[0])
+        assert encerrados and _morreu(encerrados[0])
 
     def test_quem_continua_falando_termina_mesmo_passando_do_prazo_total(self):
         vistos: list[float] = []
@@ -98,7 +110,7 @@ class TestNoCaminhoAssincrono:
                 ingestao.IngestaoService._baixar_video("p1", "https://youtu.be/abcdefghij0", fila)
             )
 
-        assert encerrados and not psutil.pid_exists(encerrados[0])
+        assert encerrados and _morreu(encerrados[0])
 
     def test_quem_continua_falando_segue_ate_o_fim(self, monkeypatch, tmp_path):
         self._trocar_ytdlp_por(monkeypatch, tmp_path, _LENTO_MAS_VIVO)
