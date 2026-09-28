@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **A size gate for source files.** A test now fails when a code file in the
+  backend, frontend or renderer goes over 500 lines. The 61 files that were
+  already over the limit are listed with today's size as a ceiling; the list
+  can only shrink. The old check asked the agent to judge size by itself and
+  never caught a single file (D-771).
+
 ### Security
 - **AI agents can no longer read or write the app's secrets.** The project's
   Claude Code settings deny access to `.env`, `token.json`,
