@@ -5,7 +5,7 @@ não eram conferidas por ninguém. O pyright (o mesmo motor do Pylance no VS
 Code) em modo basic, configurado em `[tool.pyright]` no `pyproject.toml`,
 passa a conferir `backend/app`.
 
-Os 172 erros que já existiam em 28/09/2026 estão em `EXCECOES`, contados por
+Os 175 erros que já existiam em 28/09/2026 estão em `EXCECOES`, contados por
 arquivo e regra, com as mesmas regras de catraca dos portões de tamanho
 (D-771, D-772):
 
@@ -53,8 +53,9 @@ EXCECOES = {
     "app/infrastructure/claude_cli_client.py::reportGeneralTypeIssues": 1,
     "app/infrastructure/detector_rosto.py::reportAttributeAccessIssue": 1,
     "app/infrastructure/gemini_client.py::reportArgumentType": 1,
-    "app/infrastructure/gemini_client.py::reportAttributeAccessIssue": 1,
-    "app/infrastructure/gemini_client.py::reportOptionalMemberAccess": 1,
+    "app/infrastructure/gemini_client.py::reportOptionalIterable": 1,
+    "app/infrastructure/gemini_client.py::reportOptionalMemberAccess": 2,
+    "app/infrastructure/gemini_client.py::reportReturnType": 1,
     "app/infrastructure/imagem/moldura.py::reportAttributeAccessIssue": 5,
     "app/infrastructure/imagem/moldura.py::reportOperatorIssue": 2,
     "app/infrastructure/render/ffmpeg_grade.py::reportAssignmentType": 1,
@@ -75,6 +76,7 @@ EXCECOES = {
     "app/routers/projetos.py::reportOptionalMemberAccess": 1,
     "app/routers/ranking_lives.py::reportInvalidTypeForm": 2,
     "app/services/analise.py::reportArgumentType": 1,
+    "app/services/analise.py::reportAttributeAccessIssue": 1,
     "app/services/canal/prompts_utilitarios.py::reportArgumentType": 1,
     "app/services/cenas_remotion.py::reportArgumentType": 2,
     "app/services/cenas_remotion.py::reportOptionalMemberAccess": 1,

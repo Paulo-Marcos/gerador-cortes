@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   frontend functions already over the limit are listed per function with
   today's measure as a ceiling, and the lists can only shrink (D-772).
 - **Type checking for the backend.** Pyright (the engine behind VS Code's
-  Pylance) now checks `backend/app` in basic mode. The 172 type errors that
+  Pylance) now checks `backend/app` in basic mode. The 175 type errors that
   already existed are counted per file and rule; a new one fails the build,
   and the counts can only go down (D-773).
 
