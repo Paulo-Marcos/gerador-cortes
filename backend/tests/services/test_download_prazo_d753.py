@@ -94,7 +94,9 @@ class TestNoCaminhoAssincrono:
         fila: asyncio.Queue = asyncio.Queue()
 
         with pytest.raises(DownloadSemSinal, match="sem dar sinal"):
-            asyncio.run(ingestao.IngestaoService._baixar_video("p1", "https://youtu.be/x", fila))
+            asyncio.run(
+                ingestao.IngestaoService._baixar_video("p1", "https://youtu.be/abcdefghij0", fila)
+            )
 
         assert encerrados and not psutil.pid_exists(encerrados[0])
 
@@ -105,7 +107,7 @@ class TestNoCaminhoAssincrono:
         fila: asyncio.Queue = asyncio.Queue()
 
         caminho = asyncio.run(
-            ingestao.IngestaoService._baixar_video("p1", "https://youtu.be/x", fila)
+            ingestao.IngestaoService._baixar_video("p1", "https://youtu.be/abcdefghij0", fila)
         )
 
         assert caminho.endswith("video.mkv")
