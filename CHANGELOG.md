@@ -18,13 +18,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   never caught a single file (D-771).
 - **A size gate for functions.** Python functions are measured by cyclomatic
   complexity (limit 10) and statement count (limit 40); frontend functions,
-  React components included, by lines (limit 100). The 39 Python and 121
-  frontend functions already over the limit are listed per function with
-  today's measure as a ceiling, and the lists can only shrink (D-772).
+  React components included, by lines (limit 100). What was already over the
+  limit is listed per function with today's measure as a ceiling — 39 entries
+  for 28 Python functions (a function can break both rules) and 121 frontend
+  functions — and the lists can only shrink (D-772).
 - **Type checking for the backend.** Pyright (the engine behind VS Code's
   Pylance) now checks `backend/app` in basic mode. The 175 type errors that
   already existed are counted per file and rule; a new one fails the build,
   and the counts can only go down (D-773).
+
+### Fixed
+- **The cut's metadata modal edits again.** Opened from the cut list, it had
+  become read-only in 0.4.0; it now offers the same actions as the metadata
+  screen — generating and picking titles, the cover prompt, images (D-767).
+- **The next-cut marker is back on the editor timeline.** It stopped showing
+  in 0.4.0 because the position was no longer passed down to the timeline
+  (D-768).
+- **Clicking a queue row shows each run again.** The queue drawer and the
+  `/fila` page expand a row into the state, timings, error and timeline of
+  every run of that item, as the old modal did before 0.4.0 (D-769).
 
 ### Removed
 - **Development skills are no longer vendored in the repository.** The seven
@@ -37,11 +49,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per channel, in the database, and are untouched (D-775).
 
 ### Security
-- **AI agents can no longer read or write the app's secrets.** The project's
-  Claude Code settings deny access to `.env`, `token.json`,
-  `client_secrets.json`, the SQLite databases and `~/.ssh`/`~/.aws`. Before
-  this, an agent working on the code could read the operator's real YouTube
-  OAuth credentials (D-770).
+- **Claude Code is denied the app's secrets.** The project's Claude Code
+  settings deny reading and editing `.env`, `token.json`,
+  `client_secrets.json` and the SQLite databases, and reading `~/.ssh` and
+  `~/.aws`. It covers Claude Code's file tools and the shell commands it
+  recognizes as reads; it does not cover every interpreter a script could
+  run, nor other agents (Codex, Antigravity), which have their own settings.
+  Before this, nothing stopped an agent from opening the operator's real
+  YouTube OAuth credentials (D-770, D-800).
 
 ## [0.4.0] - 2026-09-27
 
