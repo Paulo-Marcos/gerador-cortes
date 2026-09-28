@@ -69,7 +69,6 @@ logger = logging.getLogger(__name__)
 # Frases prontas, num lugar só: o texto do estado é a única coisa que o
 # operador tem para saber o que fazer a seguir.
 RECADO_DA_ABA = "a aba esta pronta no Chrome — confira e clique em Publicar"
-SUBIU_NO_TIKTOK = "publicado no TikTok"
 NAO_DEU_PARA_CONFIRMAR = (
     "nao consegui confirmar a publicacao (a aba pode ter sido fechada); "
     "marque aqui se voce publicou"
@@ -313,8 +312,7 @@ async def _rodar_raia(lote: Lote, plataforma: Plataforma) -> None:
 
 
 async def _mostrar_se_for_a_vez(itens: list[ItemDoLote], destino: Destino | None) -> None:
-    """D-799: com as abas prontas, a janela do robô volta para a tela — sem pular
-    na frente. Antes disso ela trabalhou fora da tela, sem o operador ver nada."""
+    """D-799: com as abas prontas, a janela do robô volta à tela, sem pular na frente."""
     esperando = any(i.estado is EstadoItem.SUA_VEZ for i in itens)
     if esperando and isinstance(destino, destinos_assistidos.DestinoAssistido):
         await destino.mostrar_janela()
@@ -413,7 +411,7 @@ async def _publicar_item(item: ItemDoLote, destino: Destino, ritmo: Cadencia) ->
             fire_and_forget(_vigiar(item, destino, resultado["marca"], avisos), name="vigiar-aba")
             return EstadoItem.SUA_VEZ
         if resultado.get("publicado"):
-            await _mudar(item, EstadoItem.PUBLICADO, detalhe=SUBIU_NO_TIKTOK, publicado=True)
+            await _mudar(item, EstadoItem.PUBLICADO, publicado=True)
             return EstadoItem.PUBLICADO
         if item.estado is EstadoItem.PUBLICADO:
             # D-591: o operador clicou "publiquei" DURANTE a vigília, e foi isso
@@ -435,7 +433,7 @@ async def _vigiar(
     """A vigília de UMA aba, em segundo plano, enquanto a raia sobe as outras (D-799)."""
     publicado = await destino.aguardar(marca)
     if publicado:
-        await _mudar(item, EstadoItem.PUBLICADO, detalhe=SUBIU_NO_TIKTOK, publicado=True)
+        await _mudar(item, EstadoItem.PUBLICADO, publicado=True)
     elif item.estado is EstadoItem.SUA_VEZ:
         # "Não sei", e não "não publicou" — o botão "publiquei" continua à mão.
         await _mudar(item, EstadoItem.SUA_VEZ, detalhe=_com_avisos(NAO_DEU_PARA_CONFIRMAR, avisos))
@@ -478,6 +476,8 @@ async def _mudar(
     item.estado = estado
     if detalhe:
         item.detalhe = detalhe
+    elif publicado:
+        item.detalhe = f"publicado no {LIMITES[item.plataforma].rotulo}"
     if url:
         item.url = url
 

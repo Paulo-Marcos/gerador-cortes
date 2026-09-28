@@ -824,6 +824,8 @@ class TestRaiaAssistidaDoInstagram:
 
         assert eventos == ["subiu", "subiu", "esperou", "esperou"]
         assert all(i.estado is EstadoItem.PUBLICADO for i in lote.itens)
+        # A linha do Reels não pode dizer "publicado no TikTok" (achado do D-799).
+        assert all(i.detalhe == "publicado no Instagram Reels" for i in lote.itens)
 
     @pytest.mark.asyncio
     async def test_os_dois_interruptores_sao_independentes(self, ambiente, robo):

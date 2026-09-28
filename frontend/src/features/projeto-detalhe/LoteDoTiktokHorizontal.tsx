@@ -51,10 +51,9 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, agendarPara, onPr
     mutationFn: async () => {
       // Em série: numa rajada, a chamada que falha não diz qual corte ficou
       // sem pasta. `abrir_pasta: false` — no lote ninguém quer dez exploradores.
-      for (const alvo of alvos) {
-        const corteId = alvo.split(':')[1];
-        await shortsApi.stagingTiktokHorizontal(corteId, { abrirPasta: false });
-        onPreparado(corteId);
+      for (const corte of pendentes.slice(0, alvos.length)) {
+        await shortsApi.stagingTiktokHorizontal(corte.corte_id, { abrirPasta: false });
+        onPreparado(corte.corte_id);
       }
     },
   });
