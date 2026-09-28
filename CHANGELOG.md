@@ -72,6 +72,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per channel, in the database, and are untouched (D-775).
 
 ### Security
+- **Every GitHub Action is pinned to a commit SHA.** The workflows used
+  version tags (`@v7`), which the action's owner can move to other code;
+  they now name the exact commit, with the version in a comment for
+  Dependabot to update both together. A test fails when a workflow uses an
+  action by tag again (D-780).
 - **Claude Code is denied the app's secrets.** The project's Claude Code
   settings deny reading and editing `.env`, `token.json`,
   `client_secrets.json` and the SQLite databases, and reading `~/.ssh` and
