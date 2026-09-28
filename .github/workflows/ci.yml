@@ -14,6 +14,12 @@ on:
     - cron: '0 9 * * 1' # segunda-feira, 06:00 em Brasília
   workflow_dispatch: # botão "Run workflow" na aba Actions
 
+# D-809: o token de cada job só lê o código. Sem esta chave ele herda o
+# padrão do repositório, que pode escrever — e uma action comprometida
+# herdaria esse poder. Quem precisar de mais pede no próprio job.
+permissions:
+  contents: read
+
 # Cancela runs antigos do mesmo branch/PR quando um novo push chega.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -23,6 +29,9 @@ jobs:
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # em PR, o gitleaks lista os commits pela API
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -6,6 +6,10 @@ on:
   push:
     branches: [main]
 
+# D-809: só lê o código e o histórico; nada a escrever.
+permissions:
+  contents: read
+
 jobs:
   check-locks:
     name: Verificar travas de edicao

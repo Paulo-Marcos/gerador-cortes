@@ -104,6 +104,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they now name the exact commit, with the version in a comment for
   Dependabot to update both together. A test fails when a workflow uses an
   action by tag again (D-780).
+- **Workflows declare what their token may do.** CI and the lock check now
+  read the code and nothing else; before, their token inherited the
+  repository default, which can write. A test requires `permissions:` in
+  every workflow (D-809).
 - **Claude Code is denied the app's secrets.** The project's Claude Code
   settings deny reading and editing `.env`, `token.json`,
   `client_secrets.json` and the SQLite databases, and reading `~/.ssh` and

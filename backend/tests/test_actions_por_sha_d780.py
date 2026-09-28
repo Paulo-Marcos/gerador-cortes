@@ -46,6 +46,27 @@ def test_toda_action_e_fixada_por_sha_com_a_versao():
     )
 
 
+def _sem_permissoes_no_topo(texto: str) -> bool:
+    """D-809: sem `permissions:` no nível do workflow, o token de cada job herda
+    o padrão do repositório, que pode escrever. Declarar é o menor privilégio."""
+    return re.search(r"^permissions:", texto, re.MULTILINE) is None
+
+
+def test_todo_workflow_declara_as_permissoes_do_token():
+    workflows = sorted((RAIZ / ".github" / "workflows").glob("*.y*ml"))
+
+    sem = [c.name for c in workflows if _sem_permissoes_no_topo(c.read_text(encoding="utf-8"))]
+
+    assert not sem, f"Declare `permissions:` no topo (ex.: contents: read): {sem}"
+
+
+def test_detector_de_permissoes_ve_a_falta():
+    assert _sem_permissoes_no_topo(
+        "on: push\njobs:\n  x:\n    permissions:\n      contents: read\n"
+    )
+    assert not _sem_permissoes_no_topo("on: push\npermissions:\n  contents: read\njobs: {}\n")
+
+
 class TestODetectorVeASolta:
     """Um guarda que nunca acusa não guarda nada."""
 
