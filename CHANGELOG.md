@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **One required check for `main`: "CI ok".** Branch protection used to list
+  every CI job by name, so when Node 20 left the matrix no pull request could
+  merge. A single job now waits for all the others, and a test fails when a
+  new job is left out of it (D-820).
+
 ## [0.5.0] - 2026-09-28
 
 ### Added
