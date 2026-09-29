@@ -73,6 +73,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   open redirect through a backslash in `<Link>` and `useNavigate`, and a
   constructor injection in server-side hydration (not used by the app, closed
   anyway). Routes and imports did not change (D-818).
+- **Lightning 2.6.6 in the speaker diarization lock.** Closes CVE-2026-58659:
+  a tampered model checkpoint could run code on load, even with
+  `weights_only=True`. It comes in through `pyannote.audio`; only `lightning`
+  and `pytorch-lightning` changed, the lock is still compiled against the main
+  one. Reinstall with `bin\bootstrap.ps1 -Diarizacao` (D-836).
 
 ## [0.5.0] - 2026-09-28
 
