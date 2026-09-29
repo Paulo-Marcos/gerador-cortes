@@ -266,3 +266,19 @@ jobs:
       - name: Run pytest
         working-directory: backend
         run: .venv\Scripts\python.exe -m pytest
+
+  ci-ok:
+    # D-820: o único check que a proteção da main exige. Ela exigia cada job
+    # pelo nome, e quando o Node 20 saiu da matriz (D-781) dois nomes sumiram e
+    # nenhum PR fecharia mais. Este job espera todos; mudar nome ou matriz não
+    # mexe na proteção. Job novo entra no `needs` (o teste d820 cobra).
+    # `always()`: sem ele o job é pulado quando outro falha, e check pulado
+    # conta como aprovado na proteção.
+    name: CI ok
+    if: always()
+    needs: [secret-scan, backend, frontend, video-renderer, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Todos os jobs passaram
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
