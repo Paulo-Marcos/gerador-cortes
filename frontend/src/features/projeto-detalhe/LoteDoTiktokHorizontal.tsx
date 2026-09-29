@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { PainelDoLote } from '@/features/shorts/PublicarEmLoteModal';
-import { motivoDoErro, shortsApi } from '@/features/shorts/shortsApi';
+import { motivoDoErro, shortsApi, type EnvioAssistido } from '@/features/shorts/shortsApi';
 import { useCancelarLote, useCriarLote, useLoteAtual } from '@/features/shorts/useLotePublicacao';
 import type { StatusExportCorte } from '@/types/models';
 import { alvosDoLoteNoTiktok } from './listasDePublicacao';
@@ -33,13 +33,13 @@ const PLATAFORMA = 'tiktok_horizontal';
 interface Props {
   projetoId: string;
   pendentes: StatusExportCorte[];
-  agendarPara: string;
+  /** D-834: data e "publicar sozinho" vêm do modal, que vale também para cada corte. */
+  envio: EnvioAssistido;
   onPreparado: (corteId: string) => void;
 }
 
-export function LoteDoTiktokHorizontal({ projetoId, pendentes, agendarPara, onPreparado }: Props) {
+export function LoteDoTiktokHorizontal({ projetoId, pendentes, envio, onPreparado }: Props) {
   const [quantidade, setQuantidade] = useState(0);
-  const [publicarSozinho, setPublicarSozinho] = useState(false);
   const alvos = alvosDoLoteNoTiktok(pendentes, quantidade);
 
   const subir = useCriarLote();
@@ -65,8 +65,7 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, agendarPara, onPr
       opcoes: {
         tiktokAssistido: true,
         instagramAssistido: false,
-        publicarSozinho,
-        agendarPara,
+        ...envio,
         republicar: false,
       },
     });
@@ -107,16 +106,6 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, agendarPara, onPr
           </Button>
         )}
       </div>
-
-      <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]">
-        <input
-          type="checkbox"
-          checked={publicarSozinho}
-          disabled={correndo}
-          onChange={(e) => setPublicarSozinho(e.target.checked)}
-        />
-        Publicar sozinho — o robô aperta Publicar, e só nos cortes cuja capa entrou
-      </label>
 
       {(subir.isError || preparar.isError) && (
         <p className="text-[11px] text-[var(--wb-warn-ink)]">

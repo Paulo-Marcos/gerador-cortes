@@ -1097,9 +1097,15 @@ async def staging_tiktok_horizontal(corte_id: str, body: StagingRequest):
 
 
 class AssistidoRequest(BaseModel):
-    """D-580: `AAAA-MM-DDTHH:MM` no relogio do operador, ou vazio para agora."""
+    """D-580: `AAAA-MM-DDTHH:MM` ou vazio; D-834: o robô aperta Publicar (RN-26)."""
 
     agendar_para: str = ""
+    publicar_sozinho: bool = False
+
+    def para_o_robo(self, plataforma: str) -> dict:
+        """A data já conferida (422 se a plataforma recusaria) e o interruptor."""
+        agendamento = _ler_agendamento(self.agendar_para, plataforma)
+        return {"agendamento": agendamento, "publicar_sozinho": self.publicar_sozinho}
 
 
 @router.post(
@@ -1108,18 +1114,13 @@ class AssistidoRequest(BaseModel):
     response_model_exclude_unset=True,
 )
 async def assistido_tiktok_horizontal(corte_id: str, body: AssistidoRequest | None = None):
-    """O robô faz os quatro passos repetitivos e para antes de publicar (D-537).
+    """O robô sobe o MP4, cola a legenda, põe a capa e espera o TikTok (D-537).
 
-    A staging (D-503) montava o pacote e abria a aba; o resto — arrastar o MP4,
-    colar a legenda, subir a capa, esperar — sobrava para o operador, toda vez.
-
-    Isto faz esses quatro, no Chrome dele, com a sessão que ele mesmo abriu. E
-    para com o *Publicar* aceso sem tocar nele: até ali tudo é reversível com um
-    F5, e depois dali uma legenda errada é um post público no canal.
+    Para com o *Publicar* aceso (reversível com um F5), salvo `publicar_sozinho` (D-834).
     """
-    agendamento = _ler_agendamento(body.agendar_para if body else "", "tiktok_horizontal")
+    pedido = (body or AssistidoRequest()).para_o_robo("tiktok_horizontal")
     return await _assistir_no_tiktok(
-        await publicar_corte_no_tiktok(corte_id), corte_id=corte_id, agendamento=agendamento
+        await publicar_corte_no_tiktok(corte_id), corte_id=corte_id, **pedido
     )
 
 
@@ -1132,8 +1133,8 @@ async def assistido_tiktok_do_short(short_id: str, body: AssistidoRequest | None
     """O mesmo robô, para o short vertical."""
     # Sem `corte_id`: a marca de publicado e do CORTE horizontal, e um short
     # vertical publicado nao diz nada sobre o MP4 do corte.
-    agendamento = _ler_agendamento(body.agendar_para if body else "", "tiktok")
-    return await _assistir_no_tiktok(await publicar(short_id, "tiktok"), agendamento=agendamento)
+    pedido = (body or AssistidoRequest()).para_o_robo("tiktok")
+    return await _assistir_no_tiktok(await publicar(short_id, "tiktok"), **pedido)
 
 
 def _ler_agendamento(texto: str | None, plataforma: str):
@@ -1156,14 +1157,12 @@ def _ler_agendamento(texto: str | None, plataforma: str):
     return agendamento
 
 
-async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", agendamento=None) -> dict:
-    """A publicação assistida no TikTok, com a parada do roteiro traduzida em 422."""
+async def _assistir_no_tiktok(pacote: dict, *, corte_id: str = "", **pedido) -> dict:
+    """A publicação assistida (`pedido`: o de `para_o_robo`), com a parada do roteiro em 422."""
     from app.domain.publicacao.tiktok_studio import RoteiroInterrompido
 
     try:
-        return await publicacao_no_tiktok.publicar_assistido(
-            pacote, corte_id=corte_id, agendamento=agendamento
-        )
+        return await publicacao_no_tiktok.publicar_assistido(pacote, corte_id=corte_id, **pedido)
     except RoteiroInterrompido as exc:
         # 422 e nao 500: nao e defeito nosso, e uma condicao que o operador
         # resolve — logar, subir a mao, ou avisar que a pagina mudou. A tela

@@ -12,7 +12,7 @@ import {
 import { Modal } from '@/components/ui/modal';
 import { cn } from '@/lib/utils';
 import { resolveThumbUrl } from '@/lib/api';
-import { shortsApi } from '@/features/shorts/shortsApi';
+import { shortsApi, type EnvioAssistido } from '@/features/shorts/shortsApi';
 import type { StatusExportCorte } from '@/types/models';
 import { pendentesNoTiktok } from './listasDePublicacao';
 import { LoteDoTiktokHorizontal } from './LoteDoTiktokHorizontal';
@@ -67,6 +67,9 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
   // aqui com uma janela em mente ("solta às 19h") e manda os cortes um a um; um
   // campo por linha seria a mesma data digitada N vezes.
   const [agendarPara, setAgendarPara] = useState('');
+  // D-834: o "publicar sozinho" era só do lote; agora vale para cada corte também.
+  const [publicarSozinho, setPublicarSozinho] = useState(false);
+  const envio = { agendarPara, publicarSozinho };
 
   const pendentes = useMemo(() => pendentesNoTiktok(cortes), [cortes]);
   const marcarPreparado = (corteId: string) =>
@@ -111,12 +114,21 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
                   </span>
                 </>
               )}
+              <label className="flex w-full items-center gap-1.5 text-[11.5px] text-[var(--wb-text-dim)]">
+                <input
+                  type="checkbox"
+                  checked={publicarSozinho}
+                  onChange={(e) => setPublicarSozinho(e.target.checked)}
+                />
+                Publicar sozinho — o robô aperta Publicar, e só nos cortes cuja capa entrou. Vale
+                para o lote e para o botão Assistido de cada corte.
+              </label>
             </div>
 
             <LoteDoTiktokHorizontal
               projetoId={projetoId}
               pendentes={pendentes}
-              agendarPara={agendarPara}
+              envio={envio}
               onPreparado={marcarPreparado}
             />
 
@@ -127,7 +139,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
                   corte={corte}
                   projetoId={projetoId}
                   preparado={Boolean(preparados[corte.corte_id])}
-                  agendarPara={agendarPara}
+                  envio={envio}
                   onPreparado={() => marcarPreparado(corte.corte_id)}
                 />
               ))}
@@ -143,13 +155,13 @@ function LinhaDoCorte({
   corte,
   projetoId,
   preparado,
-  agendarPara,
+  envio,
   onPreparado,
 }: {
   corte: StatusExportCorte;
   projetoId: string;
   preparado: boolean;
-  agendarPara: string;
+  envio: EnvioAssistido;
   onPreparado: () => void;
 }) {
   const [copiada, setCopiada] = useState(false);
@@ -168,8 +180,8 @@ function LinhaDoCorte({
   // testes passavam, e a tela seguia com os dois manuais. Um botão que não está
   // montado é indistinguível de um botão que não existe.
   const assistido = useMutation({
-    mutationFn: () => shortsApi.assistidoTiktokHorizontal(corte.corte_id, agendarPara),
-    onSuccess: () => onPreparado(),
+    mutationFn: () => shortsApi.assistidoTiktokHorizontal(corte.corte_id, envio),
+    onSuccess: (dados) => (dados.publicado ? setConfirmadoAgora(true) : onPreparado()),
   });
 
   // D-546: depois que a aba fica pronta, o backend continua de olho nela. Aqui
@@ -282,7 +294,7 @@ function LinhaDoCorte({
             size="sm"
             disabled={assistido.isPending || abrir.isPending}
             onClick={() => assistido.mutate()}
-            title="Sobe o vídeo, escreve a legenda e põe a capa no navegador do robô. Para antes de publicar, para você conferir."
+            title="Sobe o vídeo, escreve a legenda e põe a capa no navegador do robô. Só publica com “Publicar sozinho” ligado."
           >
             {assistido.isPending ? <Loader2 className="animate-spin" /> : <Bot />}
             {assistido.isPending ? 'subindo…' : 'Assistido'}

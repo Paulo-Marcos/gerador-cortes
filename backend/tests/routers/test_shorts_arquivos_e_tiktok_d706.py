@@ -222,3 +222,62 @@ async def test_roteiro_interrompido_vira_422_com_o_passo(monkeypatch, navegador)
     assert exc.value.status_code == 422
     assert exc.value.detail["passo"] == "sessao"
     assert navegador[1] == [], "roteiro parado não abre vigília"
+
+
+# ─── Publicar sozinho no envio avulso (D-834) ────────────────────────────────
+
+
+def test_o_pedido_da_tela_chega_ao_robo(cliente, navegador, monkeypatch):
+    """O interruptor do lote, agora no botão de cada corte."""
+
+    async def pacote(_corte_id):
+        return {"titulo": "T", "descricao": "", "video": "v.mp4"}
+
+    monkeypatch.setattr(rota_shorts, "publicar_corte_no_tiktok", pacote)
+
+    cliente.post(
+        "/api/shorts/corte/c1/publicar/tiktok-horizontal/assistido",
+        json={"publicar_sozinho": True},
+    )
+    cliente.post("/api/shorts/corte/c1/publicar/tiktok-horizontal/assistido")
+
+    assert [p["publicar_sozinho"] for p in navegador[0]] == [True, False]
+
+
+@pytest.mark.asyncio
+async def test_publicado_pelo_robo_marca_o_corte_sem_vigiar(fabrica, navegador, monkeypatch):
+    """Quem apertou Publicar foi o robô: não há o que esperar na aba (como no lote)."""
+    pedidos, vigiados = navegador
+    mostradas = []
+    monkeypatch.setattr(janela_do_robo, "mostrar", mostradas.append)
+
+    async def publica(**kwargs):
+        pedidos.append(kwargs)
+        return {"passos": ["publicar"], "publicado": True}
+
+    monkeypatch.setattr(tiktok_studio, "subir_assistido", publica)
+
+    resultado = await assistir_no_tiktok(
+        {"titulo": "T", "video": "v.mp4"}, corte_id="c1", publicar_sozinho=True
+    )
+
+    async with fabrica() as db:
+        corte = await db.get(Corte, "c1")
+    assert corte.tiktok_publicado_em is not None
+    assert resultado["publicado"] is True and resultado["vigiando"] is False
+    assert vigiados == [] and mostradas == []
+
+
+@pytest.mark.asyncio
+async def test_sem_capa_o_robo_nao_publica_e_a_aba_fica_vigiada(fabrica, navegador):
+    """RN-26: pedido de publicar sozinho não passa por cima da capa que faltou."""
+    _, vigiados = navegador
+
+    resultado = await assistir_no_tiktok(
+        {"titulo": "T", "video": "v.mp4"}, corte_id="c1", publicar_sozinho=True
+    )
+
+    async with fabrica() as db:
+        corte = await db.get(Corte, "c1")
+    assert corte.tiktok_publicado_em is None
+    assert resultado["vigiando"] is True and vigiados == ["c1"]

@@ -152,6 +152,9 @@ export interface OpcoesDoLote {
   republicar: boolean;
 }
 
+export type EnvioAssistido = Pick<OpcoesDoLote, 'agendarPara' | 'publicarSozinho'>;
+const SEM_ESCOLHA: EnvioAssistido = { agendarPara: '', publicarSozinho: false };
+
 export type ShortIdentificado = Pick<ShortSugerido, 'id' | 'titulo'>;
 export type ShortPronto = Schema<'ShortProntoResponse'>;
 export type PublicacaoRegistrada = Schema<'PublicacaoRegistrada'>;
@@ -378,18 +381,18 @@ export const shortsApi = {
   previaPublicacao: (shortId: string) => dados(api.GET('/api/shorts/{short_id}/publicacao', doShort(shortId))),
 
   /**
-   * D-537: o robô faz os quatro passos repetitivos e para antes de publicar.
+   * D-537: o robô sobe e para antes de publicar; com `publicarSozinho`, publica (D-834, RN-26).
    *
    * Demora de propósito — ele espera o TikTok processar o vídeo, que num corte
    * longo leva minutos. Quem chama precisa mostrar isso, senão a tela parece
    * travada bem no passo em que ela mais parece. D-546: `vigiando` diz que o
    * backend ficou de olho na aba; D-580: `agendado_para`, já em português.
    */
-  assistidoTiktokHorizontal: (corteId: string, agendarPara = '') =>
+  assistidoTiktokHorizontal: (corteId: string, envio: EnvioAssistido = SEM_ESCOLHA) =>
     dados(
       api.POST('/api/shorts/corte/{corte_id}/publicar/tiktok-horizontal/assistido', {
         ...doCorte(corteId),
-        body: { agendar_para: agendarPara },
+        body: { agendar_para: envio.agendarPara, publicar_sozinho: envio.publicarSozinho },
       }),
     ),
 

@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`browser/tiktok-edge`): Chrome encrypts its cookies with a key Edge cannot
   open, so sharing the folder would log both out. Log in once in the Edge
   window the first time (D-832).
+- **"Publish on its own" also works for a single TikTok cut.** The switch that
+  only the batch had now sits in the TikTok window next to "Marcar dia e hora",
+  and applies to both the batch and each cut's "Assistido" button. The robot
+  still publishes only when the cover went in (RN-26); a cut it published is
+  marked right away, with no tab left to watch (D-834).
 - **Click a small image to see it full size.** The TikTok cover, the Short
   cover and the mascot sheets in Canais now open large on click, without
   cropping, over any open window; click outside, the X or Esc closes only the

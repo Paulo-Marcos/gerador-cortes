@@ -3476,14 +3476,9 @@ export interface paths {
         put?: never;
         /**
          * Assistido Tiktok Horizontal
-         * @description O robô faz os quatro passos repetitivos e para antes de publicar (D-537).
+         * @description O robô sobe o MP4, cola a legenda, põe a capa e espera o TikTok (D-537).
          *
-         *     A staging (D-503) montava o pacote e abria a aba; o resto — arrastar o MP4,
-         *     colar a legenda, subir a capa, esperar — sobrava para o operador, toda vez.
-         *
-         *     Isto faz esses quatro, no Chrome dele, com a sessão que ele mesmo abriu. E
-         *     para com o *Publicar* aceso sem tocar nele: até ali tudo é reversível com um
-         *     F5, e depois dali uma legenda errada é um post público no canal.
+         *     Para com o *Publicar* aceso (reversível com um F5), salvo `publicar_sozinho` (D-834).
          */
         post: operations["assistido_tiktok_horizontal_api_shorts_corte__corte_id__publicar_tiktok_horizontal_assistido_post"];
         delete?: never;
@@ -4721,7 +4716,7 @@ export interface components {
         };
         /**
          * AssistidoRequest
-         * @description D-580: `AAAA-MM-DDTHH:MM` no relogio do operador, ou vazio para agora.
+         * @description D-580: `AAAA-MM-DDTHH:MM` ou vazio; D-834: o robô aperta Publicar (RN-26).
          */
         AssistidoRequest: {
             /**
@@ -4729,6 +4724,11 @@ export interface components {
              * @default
              */
             agendar_para: string;
+            /**
+             * Publicar Sozinho
+             * @default false
+             */
+            publicar_sozinho: boolean;
         };
         /** AtualizarCorteRequest */
         AtualizarCorteRequest: {
