@@ -44,7 +44,7 @@ EXCECOES = {
     "backend/app/models.py": 908,
     "backend/app/routers/cortes.py": 698,
     "backend/app/routers/projetos.py": 823,
-    "backend/app/routers/shorts.py": 1364,
+    "backend/app/routers/shorts.py": 1363,
     "backend/app/routers/shorts_schemas.py": 558,
     "backend/app/services/analise.py": 881,
     "backend/app/services/canal/editorial_scaffolds.py": 669,

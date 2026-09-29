@@ -24,13 +24,18 @@ from app.services.tasks import fire_and_forget
 logger = logging.getLogger(__name__)
 
 
-async def publicar_assistido(pacote: dict, *, corte_id: str = "", agendamento=None) -> dict:
+async def publicar_assistido(
+    pacote: dict, *, corte_id: str = "", agendamento=None, publicar_sozinho: bool = False
+) -> dict:
     """Monta a legenda do pacote e entrega o roteiro ao navegador.
 
     Recebe o pacote JÁ montado em vez de montá-lo: assim o corte horizontal e o
     short vertical — que chegam por caminhos diferentes — compartilham este
     trecho sem que nenhum dos dois precise saber do outro. Um roteiro que para
     levanta `RoteiroInterrompido`, com o passo.
+
+    D-834: `publicar_sozinho` é o interruptor do lote no botão de cada corte, e
+    o robô segue a RN-26 — sem a capa confirmada, ele para e a aba fica vigiada.
     """
     legenda = legenda_unica(pacote.get("titulo", ""), pacote.get("descricao", ""))
     capa = pacote.get("capa") or ""
@@ -40,7 +45,15 @@ async def publicar_assistido(pacote: dict, *, corte_id: str = "", agendamento=No
         legenda=legenda,
         capa=Path(capa) if capa else None,
         agendamento=agendamento,
+        publicar_sozinho=publicar_sozinho,
     )
+
+    if relatorio.get("publicado"):
+        # Quem apertou Publicar foi o robô: não há aba a vigiar nem janela a
+        # mostrar, e a marca vem já — como o lote faz com o mesmo veredito.
+        if corte_id:
+            await marcar_corte_publicado(corte_id)
+        return {**pacote, **relatorio, "legenda": legenda, "vigiando": False}
 
     # D-546: a partir daqui o app FICA DE OLHO na aba. Quando o operador
     # publicar, o corte se marca sozinho — ele nao precisa voltar aqui para
@@ -51,11 +64,10 @@ async def publicar_assistido(pacote: dict, *, corte_id: str = "", agendamento=No
     # seguraria uma conexao por meia hora para nao entregar nada de novo.
     if corte_id:
         vigiar_publicacao(corte_id)
-    if not relatorio.get("publicado"):
-        # D-799: o Chrome do robô trabalha fora da tela; a aba pronta é a vez do
-        # operador, e a janela volta para a tela — sem pular na frente dele.
-        conexao = sessao_no_chrome(tiktok_studio.perfil_do_chrome())
-        await asyncio.to_thread(janela_do_robo.mostrar, conexao)
+    # D-799: o Chrome do robô trabalha fora da tela; a aba pronta é a vez do
+    # operador, e a janela volta para a tela — sem pular na frente dele.
+    conexao = sessao_no_chrome(tiktok_studio.perfil_do_chrome())
+    await asyncio.to_thread(janela_do_robo.mostrar, conexao)
 
     return {**pacote, **relatorio, "legenda": legenda, "vigiando": bool(corte_id)}
 
