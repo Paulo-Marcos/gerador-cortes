@@ -45,13 +45,14 @@ Por pasta, as rules em `.claude/rules/` e `.agents/rules/` trazem o essencial do
 
 Fluxo: `pr-audit` antes de integrar, `security-audit` em fronteira sensível, `pr-bump` para dependências, `release` para publicar (`bin\release.ps1`), `kaizen` ao fechar com retrabalho.
 
-## Travas, commit e trabalho concorrente
+## Fluxo de entrega, travas e commit
 
 Detalhe em [`docs/processo-de-trabalho.md`](docs/processo-de-trabalho.md). O essencial:
 
+- **Nada entra na `main` sem PR.** Toda implementação nasce num worktree próprio, numa branch `d-NNN-slug` a partir da `origin/main`; vai por PR, o CI roda (`CI ok` + travas), a aprovação passa **sempre** pela `pr-audit` (`pr-bump` no Dependabot) e o merge é squash, com o ok do Paulo. Conflito se resolve na branch (rebase), antes da aprovação. PR não é release: a release é quando o lote usado na PROD está bom.
 - **Antes de editar, `python bin/check-lock.py check <arquivo>`.** Travado: não edite, apague, mova nem recrie sem autorização explícita do dono. Arquivo novo também é trava (`adicoes-exigem-autorizacao`). O commit leva `[unlock:<id>] motivo: ...` para cada trava tocada.
 - Commit: `<emoji> <tipo>(<D-NNN>): <descrição imperativa>`, em português, um por funcionalidade; tabela de tipos no documento acima.
-- Árvore compartilhada: commit **com pathspec**, nunca `git add -A` nem `git stash`; confira a HEAD antes de commitar índice montado à mão. Frentes que mexem no mesmo arquivo vão para worktree.
+- Na árvore principal, que outras sessões também usam: commit **com pathspec**, nunca `git add -A` nem `git stash`; confira a HEAD antes de commitar índice montado à mão.
 
 ## Portão de qualidade
 
