@@ -93,6 +93,9 @@ class PaginaFalsa:
         self.passos.append(("baixar", alvo))
         return self.imagem
 
+    def fechar(self):
+        self.passos.append(("fechar",))
+
 
 def _rodar(pagina, relogio, fichas=()):
     return capa_no_chatgpt.executar_roteiro(
@@ -121,7 +124,18 @@ class TestRoteiro:
             ("esperar_habilitado", "enviar"),
             ("clicar", "enviar"),
             ("baixar", "imagem_gerada"),
+            ("fechar",),
         ]
+
+    def test_erro_deixa_a_aba_aberta_para_o_operador_ver(self):
+        # D-821: a aba fecha quando a imagem sai; quando nao sai, e nela que o
+        # operador ve a recusa ou o limite do plano — fechar esconderia o motivo.
+        relogio = RelogioFalso()
+        pagina = PaginaFalsa(relogio, imagem_em=None, gerando_ate=8)
+
+        with pytest.raises(ServicoExternoFalhou):
+            _rodar(pagina, relogio)
+        assert ("fechar",) not in pagina.passos
 
     def test_so_baixa_quando_a_resposta_termina(self):
         # A prévia borrada aparece antes da imagem final: baixar ali entregaria a prévia.

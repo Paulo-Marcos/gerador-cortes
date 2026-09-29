@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
 import { useToast } from '@/components/ui/toaster';
 import { fichaUrl, mensagemDoRobo as texto, type ConfiguracaoCapaChatgpt } from './api';
 import {
@@ -139,10 +140,11 @@ function FichasDoPersonagem({ config }: { config?: ConfiguracaoCapaChatgpt }) {
               key={nome}
               className="grid gap-1 rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-inset)] p-1.5"
             >
-              <img
+              <ImagemAmpliavel
                 src={fichaUrl(nome, versao)}
                 alt={nome}
-                className="aspect-[3/2] w-full rounded-[6px] object-contain"
+                className="w-full"
+                imgClassName="aspect-[3/2] w-full rounded-[6px] object-contain"
               />
               <div className="flex items-center gap-1">
                 <span className="min-w-0 flex-1 truncate font-code text-[10.5px] text-[var(--wb-text-mute)]">

@@ -7,6 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Corte, MetadadoCorte } from '@/types/models';
 import { MetadataCard } from '../MetadataCard';
 import { metadataKey } from '../useMetadataCard';
+import { ModalChip } from '../modalPecas';
 
 function corte(): Corte {
   return {
@@ -47,6 +48,11 @@ function metadado(overrides: Partial<MetadadoCorte> = {}): MetadadoCorte {
 function render(meta: MetadadoCorte) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   qc.setQueryData(metadataKey('c1'), meta);
+  qc.setQueryData(['capa-chatgpt', 'configuracao'], {
+    projeto_url: 'https://chatgpt.com/g/g-p-6aa2f1d08414819192ac821e77ded48e/project',
+    fichas: [],
+    maximo_de_fichas: 10,
+  });
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <ToastProvider>
@@ -121,9 +127,39 @@ describe('MetadataCard — corpo do modal', () => {
     expect(markup).toContain('aria-label="Gerar prompt da capa com o Gemini"');
   });
 
-  it('mostra as sugestoes de titulo e de capa como chips', () => {
+  // D-821: sugestao e para quando o titulo ficou ruim, nao para toda vez —
+  // recolhidas, dizem quantas ha e nao ocupam a tela.
+  it('comeca com as sugestoes recolhidas, dizendo quantas ha', () => {
     const markup = render(metadado());
-    expect(markup).toContain('Primeira opcao');
-    expect(markup).toContain('CAPA DOIS');
+    expect(markup).not.toContain('Primeira opcao');
+    expect(markup).not.toContain('CAPA DOIS');
+    expect(markup).toContain('sugestões (2)');
+  });
+
+  // D-821: a D-804 pos o botao so na variante card; o modal ficou sem ele.
+  it('oferece gerar a capa do YouTube no ChatGPT', () => {
+    expect(render(metadado())).toContain('imagem 16:9');
+  });
+
+  // D-821: cada capa numa aba, com as acoes ao lado da propria imagem — antes
+  // o bloco do TikTok separava a capa do YouTube dos botoes dela.
+  it('separa as capas em abas, com a do YouTube aberta', () => {
+    const markup = render(metadado());
+    expect(markup).toMatch(/role="tab"[^>]*aria-selected="true"[^>]*>[^<]*YouTube/);
+    expect(markup).toMatch(/role="tab"[^>]*aria-selected="false"[^>]*>[^<]*TikTok/);
+  });
+});
+
+describe('ModalChip', () => {
+  // D-821: o escolhido usava texto branco fixo sobre o acento do tema; num tema
+  // de acento escuro com texto herdado escuro, a opcao ficava ilegivel.
+  it('usa a cor de texto que o tema define para o acento', () => {
+    const html = renderToStaticMarkup(
+      <ModalChip active onClick={() => undefined}>
+        opcao
+      </ModalChip>,
+    );
+    expect(html).toContain('text-[var(--wb-accent-fg)]');
+    expect(html).not.toContain('text-white');
   });
 });

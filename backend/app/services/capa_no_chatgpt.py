@@ -78,6 +78,7 @@ class PaginaDoChatGPT(Protocol):
     def esperar_habilitado(self, alvo: str, *, segundos: float) -> None: ...
     def clicar(self, alvo: str, *, segundos: float) -> None: ...
     def baixar_imagem(self, alvo: str) -> bytes: ...
+    def fechar(self) -> None: ...
 
 
 class PaginaDoPlaywrightNoChatGPT(navegador_assistido.PaginaDoPlaywright):
@@ -131,6 +132,13 @@ class PaginaDoPlaywrightNoChatGPT(navegador_assistido.PaginaDoPlaywright):
             self._css(alvo),
         )
         return base64.b64decode(codificado) if codificado else b""
+
+    def fechar(self) -> None:
+        """Fecha a aba. Falhar aqui não pode custar a imagem que já veio."""
+        try:
+            self._page.close()
+        except Exception as exc:  # noqa: BLE001 — aba já fechada pelo operador
+            logger.info("[ChatGPT] não consegui fechar a aba: %s", exc)
 
 
 def edge_no_disco() -> Path | None:
@@ -263,6 +271,10 @@ def executar_roteiro(
         raise ServicoExternoFalhou(
             "A imagem apareceu, mas não consegui baixá-la. Copie pela janela do robô."
         )
+    # D-821: uma aba por capa acumulava dezenas abertas. Com a imagem em mãos a
+    # aba não serve mais (a conversa fica no histórico do projeto); nos erros
+    # acima ela FICA, porque é nela que o operador vê o motivo.
+    pagina.fechar()
     return imagem
 
 
