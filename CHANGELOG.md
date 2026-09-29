@@ -41,6 +41,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reset now only sets the default, so the chosen chip is light on the accent
   (D-821).
 
+### Security
+- **React Router 7.18.** Closes the two open advisories on React Router 6: an
+  open redirect through a backslash in `<Link>` and `useNavigate`, and a
+  constructor injection in server-side hydration (not used by the app, closed
+  anyway). Routes and imports did not change (D-818).
+
 ## [0.5.0] - 2026-09-28
 
 ### Added
