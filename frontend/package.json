@@ -40,7 +40,7 @@
     "@types/react-dom": "19.3.0",
     "@typescript-eslint/eslint-plugin": "^8.70.1",
     "@typescript-eslint/parser": "^8.70.1",
-    "@vitejs/plugin-react": "^4.3.2",
+    "@vitejs/plugin-react": "^6.1.1",
     "@vitest/ui": "^4.1.11",
     "autoprefixer": "^10.6.1",
     "eslint": "^8.57.1",
