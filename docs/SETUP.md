@@ -181,10 +181,13 @@ na hora da análise, no projeto. Sem configurar, tudo funciona — a transcriç�
 recebe o rótulo.
 
 ```powershell
-# 1. Instale a dependência pesada (torch + pyannote) no venv do backend
-cd backend
-.venv\Scripts\python.exe -m pip install pyannote.audio
+# 1. Instale a dependência pesada (torch + pyannote, mais de 2 GB) pelo lock dela
+powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1 -Diarizacao
 ```
+
+O `-Diarizacao` instala o `backend\requirements-diarizacao.txt`, compilado contra o
+lock principal. Não use `pip install pyannote.audio` solto: ele traz versões que
+brigam com as do lock (foi o conflito do `opentelemetry`, D-819).
 
 2. Crie um token **gratuito** em huggingface.co/settings/tokens — de preferência um token
    clássico com role "Read". Se usar um "fine-grained", marque *"Read access to contents

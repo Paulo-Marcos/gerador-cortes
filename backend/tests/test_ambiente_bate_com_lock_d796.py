@@ -7,8 +7,9 @@ passando os testes com outras versões, e o que se mede nele não vale para o
 CI: foi assim que a lista do pyright nasceu errada (D-795).
 
 Confere, para cada pacote do lock que vale nesta plataforma e neste Python, a
-versão instalada. Pacote fora do lock (diarização, opcional) não é assunto.
-Para sincronizar: `bin\\bootstrap.ps1 -Dev`.
+versão instalada. A diarização (opcional, D-819) tem lock próprio, que só vale
+quando ela está instalada. Para sincronizar: `bin\\bootstrap.ps1 -Dev`
+(e `-Diarizacao`, se for o caso).
 """
 
 import re
@@ -19,6 +20,7 @@ from packaging.markers import Marker
 
 BACKEND = Path(__file__).resolve().parents[1]
 LOCKS = ("requirements.txt", "requirements-dev.txt")
+LOCK_DA_DIARIZACAO = "requirements-diarizacao.txt"
 LINHA = re.compile(
     r"^(?P<nome>[A-Za-z0-9][A-Za-z0-9._-]*)(?:\[[^\]]*\])?==(?P<versao>[^\s;\\]+)\s*(?:;\s*(?P<marcador>[^\\]+?))?\s*\\?$"
 )
@@ -46,10 +48,16 @@ def _instalados() -> dict[str, str]:
     return {_normalizar(d.metadata["Name"]): d.version for d in metadata.distributions()}
 
 
+def _locks_do_ambiente(instalados: dict[str, str]) -> tuple[str, ...]:
+    if "pyannote-audio" in instalados:
+        return (*LOCKS, LOCK_DA_DIARIZACAO)
+    return LOCKS
+
+
 def test_o_ambiente_tem_as_versoes_do_lock():
     instalados = _instalados()
     divergentes = {}
-    for lock in LOCKS:
+    for lock in _locks_do_ambiente(instalados):
         for nome, versao in _fixados((BACKEND / lock).read_text(encoding="utf-8")).items():
             if instalados.get(nome) != versao:
                 divergentes[nome] = f"lock {versao}, instalado {instalados.get(nome, 'nada')}"
@@ -57,6 +65,13 @@ def test_o_ambiente_tem_as_versoes_do_lock():
     assert not divergentes, (
         f"O ambiente não bate com o lock — rode bin\\bootstrap.ps1 -Dev: {divergentes}"
     )
+
+
+def test_com_a_diarizacao_instalada_o_lock_dela_tambem_vale():
+    # D-819: instalada solta, ela trazia versões que brigavam com o lock
+    # principal. Com lock próprio, o ambiente que a tem precisa bater com ele.
+    assert "requirements-diarizacao.txt" in _locks_do_ambiente({"pyannote-audio": "4.0.7"})
+    assert "requirements-diarizacao.txt" not in _locks_do_ambiente({"fastapi": "1"})
 
 
 def test_o_leitor_do_lock_respeita_os_marcadores():

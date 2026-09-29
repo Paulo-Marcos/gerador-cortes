@@ -44,11 +44,9 @@ scenedetect==0.7.1
 # baixar pesos) e reaferir o enquadramento — e demanda, nao upgrade de pin.
 opencv-python==4.14.0.94
 
-# Diarização de falantes (D-286) — OPCIONAL e pesado (torch + pyannote).
-# Instale só se for usar o rótulo canal/reagidos: `pip install pyannote.audio`.
-# Requer token gratuito do HuggingFace (ver docs/SETUP.md). Deixado comentado
-# para não impor a dependência a quem não usa; o app degrada sem ela.
-# pyannote.audio==3.3.2
+# Diarização de falantes (D-286) — OPCIONAL e pesada (torch + pyannote): mora
+# no requirements-diarizacao.in, com lock próprio compilado contra este (D-819).
+# Instale com `bin\bootstrap.ps1 -Diarizacao`; o app degrada sem ela.
 # Transcricao fiel do short (D-461) — OPCIONAL. Sem ela o app cai na
 # auto-legenda do YouTube, que ja traz timing por palavra (D-337) mas com
 # grafia pior. Instale se for queimar legenda no video:
