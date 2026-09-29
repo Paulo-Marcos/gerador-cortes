@@ -78,10 +78,10 @@ PASSOS_OPCIONAIS: frozenset[Passo] = frozenset({Passo.CAPA})
 
 ORIENTACOES: dict[Passo, str] = {
     Passo.ABRIR: (
-        "Nao consegui abrir o TikTok Studio. Confira se o Chrome abriu e se ha internet."
+        "Nao consegui abrir o TikTok Studio. Confira se o navegador do robo abriu e se ha internet."
     ),
     Passo.SESSAO: (
-        "Este Chrome nao esta logado no TikTok. Faca login na janela que abriu — "
+        "Este navegador nao esta logado no TikTok. Faca login na janela que abriu — "
         "uma vez so, a sessao fica guardada — e rode de novo."
     ),
     Passo.ARQUIVO: (
@@ -136,8 +136,8 @@ def orientacao_da_falha(passo: Passo, detalhe: str = "") -> str:
     O detalhe técnico entra entre parênteses e no fim: quem lê primeiro precisa
     da ação, não do seletor que não casou.
 
-    >>> orientacao_da_falha(Passo.SESSAO)[:24]
-    'Este Chrome nao esta log'
+    >>> orientacao_da_falha(Passo.SESSAO).startswith("Este navegador nao esta logado")
+    True
     >>> orientacao_da_falha(Passo.CAPA, "timeout de 15s").endswith("(timeout de 15s)")
     True
     """

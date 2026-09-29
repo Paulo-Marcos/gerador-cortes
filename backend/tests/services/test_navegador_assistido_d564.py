@@ -236,7 +236,7 @@ class TestRaiasAbrindoChromeJuntas:
                 abrir.start()
 
         monkeypatch.setattr(navegador_assistido, "porta_de_depuracao", lambda _perfil: 9239)
-        monkeypatch.setattr(navegador_assistido, "_chrome_no_disco", lambda: tmp_path / "chrome")
+        monkeypatch.setattr(navegador_assistido, "chrome_no_disco", lambda: tmp_path / "chrome")
         monkeypatch.setattr(navegador_assistido, "subprocess", SimpleNamespace(Popen=ChromeFalso))
         monkeypatch.setattr(navegador_assistido, "_porta_responde", lambda porta: porta in vivos)
         monkeypatch.setattr(
@@ -374,7 +374,7 @@ class TestChromeDoUploadAssistido:
         exe.write_text("x")
         monkeypatch.setattr(navegador_assistido.settings, "chrome_path", str(exe))
 
-        assert navegador_assistido._chrome_no_disco() == exe
+        assert navegador_assistido.chrome_no_disco() == exe
 
     def test_chrome_path_inexistente_explica_a_configuracao(self, monkeypatch, tmp_path):
         from app.services import navegador_assistido
@@ -392,7 +392,7 @@ class TestChromeDoUploadAssistido:
         from app.services import navegador_assistido
 
         monkeypatch.setattr(navegador_assistido.settings, "chrome_path", "")
-        monkeypatch.setattr(navegador_assistido, "_chrome_no_disco", lambda: None)
+        monkeypatch.setattr(navegador_assistido, "chrome_no_disco", lambda: None)
         monkeypatch.setattr(navegador_assistido, "porta_do_chrome", lambda perfil: 9999)
         monkeypatch.setattr(navegador_assistido, "_porta_responde", lambda porta: False)
 

@@ -21,8 +21,8 @@ from app.config import settings
 from app.core.channel_paths import youtube_client_secrets_path
 from app.infrastructure import antigravity_cli_client, claude_cli_client
 from app.infrastructure.encoder_detector import encoder_da_maquina
+from app.infrastructure.executaveis_do_navegador import chrome_no_disco
 from app.infrastructure.render.video_encoder import VideoEncoder
-from app.services import navegador_assistido
 
 _RAIZ = Path(__file__).resolve().parents[3]
 
@@ -86,7 +86,7 @@ def sondas_da_maquina() -> Sondas:
         agy_cli=_resolver_ou_none(
             antigravity_cli_client._resolver_binario, antigravity_cli_client.AntigravityCliError
         ),
-        chrome=navegador_assistido._chrome_no_disco,
+        chrome=chrome_no_disco,
         client_secrets=youtube_client_secrets_path,
         tem_chave_gemini=lambda: bool(settings.gemini_api_key),
         claude_por_api=lambda: settings.ia_claude_transporte == "api",

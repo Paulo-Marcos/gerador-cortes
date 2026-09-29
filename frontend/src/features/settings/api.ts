@@ -8,6 +8,7 @@ import { api, dados, type Schema } from '@/shared/api';
 
 export type AtualizarSettingsBody = Schema<'UpdateAppSettingsRequest'>;
 export type LayoutCapaTiktok = Schema<'LayoutCapaTiktokResponse'>;
+export type Navegador = Schema<'NavegadorDoRobo'>['navegador'];
 
 export const settingsApi = {
   obterSettings: () => dados(api.GET('/api/settings')),
@@ -22,4 +23,9 @@ export const settingsApi = {
 
   /** A geometria resolvida da capa: o editor não recalcula, pede pronta. */
   obterLayoutCapaTiktok: () => dados(api.GET('/api/settings/capa-tiktok/layout')),
+
+  /** D-832: Chrome ou Edge para o robô do TikTok e do Instagram, no canal ativo. */
+  obterNavegadorDoRobo: () => dados(api.GET('/api/channels/ativo/navegador-do-robo')),
+  escolherNavegadorDoRobo: (navegador: Navegador) =>
+    dados(api.PUT('/api/channels/ativo/navegador-do-robo', { body: { navegador } })),
 };

@@ -106,7 +106,7 @@ def ambiente(monkeypatch):
     """Perfil, porta e abertura do Chrome sob controle, nos dois robôs."""
     registro = {"abriu": [], "ordem": []}
 
-    def garantir(perfil, url):
+    def garantir(perfil, url, executavel=None):
         registro["ordem"].append("chrome")
         registro["abriu"].append((perfil, url))
         return True
@@ -141,7 +141,7 @@ def test_sem_playwright_para_no_abrir_antes_de_tocar_no_chrome(robo, dominio, pl
 def test_chrome_que_nao_abre_vira_falha_no_abrir(robo, dominio, playwright, monkeypatch):
     falso = playwright(PlaywrightFalso())
 
-    def nao_abre(_perfil, _url):
+    def nao_abre(_perfil, _url, executavel=None):
         raise NavegadorIndisponivel("Chrome nao encontrado")
 
     monkeypatch.setattr(robo, "perfil_do_chrome", lambda: Path("perfil"))

@@ -75,9 +75,11 @@ ROTULOS: dict[Passo, str] = {
 
 
 ORIENTACOES: dict[Passo, str] = {
-    Passo.ABRIR: "Nao consegui abrir o Instagram. Confira se o Chrome abriu e se ha internet.",
+    Passo.ABRIR: (
+        "Nao consegui abrir o Instagram. Confira se o navegador do robo abriu e se ha internet."
+    ),
     Passo.SESSAO: (
-        "Este Chrome nao esta logado no Instagram. Faca login na janela que abriu — "
+        "Este navegador nao esta logado no Instagram. Faca login na janela que abriu — "
         "uma vez so, a sessao fica guardada — e rode de novo."
     ),
     Passo.COMPOSITOR: (
@@ -139,8 +141,8 @@ class RoteiroInterrompido(RuntimeError):
 def orientacao_da_falha(passo: Passo, detalhe: str = "") -> str:
     """O que o operador faz agora, em uma frase.
 
-    >>> orientacao_da_falha(Passo.SESSAO)[:24]
-    'Este Chrome nao esta log'
+    >>> orientacao_da_falha(Passo.SESSAO).startswith("Este navegador nao esta logado")
+    True
     >>> orientacao_da_falha(Passo.LEGENDA, "timeout de 30s").endswith("(timeout de 30s)")
     True
     """

@@ -21,6 +21,7 @@ import {
   CONTEXTO_MIN_SEG,
 } from './useContextoCorte';
 import { CapaTikTokLayoutEditor } from './CapaTikTokLayoutEditor';
+import { NavegadorDoRobo } from './NavegadorDoRobo';
 
 export const LOG_OPTIONS: Array<{ value: LogLevel; label: string; description: string }> = [
   {
@@ -397,10 +398,9 @@ export function AppSettingsControls() {
         </div>
       </div>
 
-      {/* D-532: o layout da capa do TikTok. Salva sozinho, com o proprio botao —
-          nao entra no `isBusy` dos ajustes de cima porque nao compartilha
-          mutation com eles. */}
+      {/* D-532 e D-832: salvam sozinhos, com mutation propria — fora do `isBusy` de cima. */}
       <CapaTikTokLayoutEditor />
+      <NavegadorDoRobo />
 
       {isBusy && (
         <p className="inline-flex items-center gap-2 text-xs text-[var(--wb-text-mute)]">

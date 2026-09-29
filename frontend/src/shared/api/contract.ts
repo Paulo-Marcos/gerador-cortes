@@ -281,6 +281,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/channels/ativo/navegador-do-robo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obter Navegador Do Robo */
+        get: operations["obter_navegador_do_robo_api_channels_ativo_navegador_do_robo_get"];
+        /** Escolher Navegador Do Robo */
+        put: operations["escolher_navegador_do_robo_api_channels_ativo_navegador_do_robo_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/channels/temas": {
         parameters: {
             query?: never;
@@ -6956,6 +6974,14 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** NavegadorDoRobo */
+        NavegadorDoRobo: {
+            /**
+             * Navegador
+             * @enum {string}
+             */
+            navegador: "chrome" | "edge";
+        };
         /** OcorrenciaDoEixo */
         OcorrenciaDoEixo: {
             /** Contagem */
@@ -9395,6 +9421,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CanalResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obter_navegador_do_robo_api_channels_ativo_navegador_do_robo_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NavegadorDoRobo"];
+                };
+            };
+        };
+    };
+    escolher_navegador_do_robo_api_channels_ativo_navegador_do_robo_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NavegadorDoRobo"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NavegadorDoRobo"];
                 };
             };
             /** @description Validation Error */

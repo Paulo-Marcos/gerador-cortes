@@ -242,7 +242,7 @@ export function PublicarEmLoteModal({
                     <Interruptor
                       ligado={tiktokAssistido}
                       onChange={setTiktokAssistido}
-                      titulo="TikTok: o robô sobe pelo Chrome"
+                      titulo="TikTok: o robô sobe pelo navegador"
                       nota="envia o vídeo, escreve a legenda e põe a capa — e para no Publicar"
                     />
                   )}
@@ -250,7 +250,7 @@ export function PublicarEmLoteModal({
                     <Interruptor
                       ligado={instagramAssistido}
                       onChange={setInstagramAssistido}
-                      titulo="Instagram: o robô sobe pelo Chrome"
+                      titulo="Instagram: o robô sobe pelo navegador"
                       nota="abre o compositor, envia o vídeo e escreve a legenda — e para no Compartilhar"
                     />
                   )}
@@ -411,7 +411,7 @@ function Secao({
 /**
  * Um interruptor de decisão, com o que ele muda escrito embaixo.
  *
- * A nota não é enfeite: "o robô sobe pelo Chrome" e "o robô publica" parecem a
+ * A nota não é enfeite: "o robô sobe pelo navegador" e "o robô publica" parecem a
  * mesma frase e são responsabilidades opostas. Quem lê às onze da noite precisa
  * da consequência à vista, não do nome da opção.
  */

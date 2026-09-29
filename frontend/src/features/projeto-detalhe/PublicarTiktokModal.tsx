@@ -77,7 +77,7 @@ export function PublicarTiktokModal({ open, onClose, projetoId, cortes }: Props)
       <div className="space-y-3">
         <p className="text-[12px] leading-relaxed text-[var(--wb-text-mute)]">
           O TikTok aceita 16:9, e o MP4 já existe — é o mesmo que foi para o YouTube, sem
-          render novo. O robô sobe pelo seu Chrome, fora da tela; a API deles só publica em
+          render novo. O robô sobe pelo navegador dele, fora da tela; a API deles só publica em
           modo privado enquanto o app não passar pela auditoria.
         </p>
 
@@ -282,7 +282,7 @@ function LinhaDoCorte({
             size="sm"
             disabled={assistido.isPending || abrir.isPending}
             onClick={() => assistido.mutate()}
-            title="Sobe o vídeo, escreve a legenda e põe a capa no seu Chrome. Para antes de publicar, para você conferir."
+            title="Sobe o vídeo, escreve a legenda e põe a capa no navegador do robô. Para antes de publicar, para você conferir."
           >
             {assistido.isPending ? <Loader2 className="animate-spin" /> : <Bot />}
             {assistido.isPending ? 'subindo…' : 'Assistido'}
@@ -317,7 +317,7 @@ function LinhaDoCorte({
 
       {assistido.isPending && (
         <span className="w-full text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
-          Subindo no Chrome do robô, fora da tela… num corte longo o TikTok leva minutos para
+          Subindo no navegador do robô, fora da tela… num corte longo o TikTok leva minutos para
           processar. Quando a aba ficar pronta, a janela volta para a tela.
         </span>
       )}
