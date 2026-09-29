@@ -41,6 +41,15 @@ updates:
     groups:
       correcoes-frontend:
         update-types: ["minor", "patch"]
+    ignore:
+      # Os tipos acompanham o Node que roda o app (24, D-781), não o mais novo.
+      # Sobe junto com o Node, como demanda.
+      - dependency-name: "@types/node"
+        versions: [">=25"]
+      # O 0.5 exige ESLint 9; a migração do ESLint é demanda (D-825), e este
+      # ignore sai nela.
+      - dependency-name: "eslint-plugin-react-refresh"
+        versions: [">=0.5"]
 
   - package-ecosystem: "npm"
     directory: "/video-renderer"
@@ -52,6 +61,11 @@ updates:
     groups:
       correcoes-renderer:
         update-types: ["minor", "patch"]
+    ignore:
+      # O Remotion fixa o zod numa versão exata, e os schemas daqui entram no
+      # <Composition schema>: duas cópias do zod quebram a validação e o editor
+      # de props do Studio. O zod sobe junto com o Remotion (D-824).
+      - dependency-name: "zod"
 
   - package-ecosystem: "github-actions"
     directory: "/"
