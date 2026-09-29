@@ -22,7 +22,6 @@ import asyncio
 import base64
 import json
 import logging
-import shutil
 import threading
 import time
 from collections.abc import Callable
@@ -42,6 +41,7 @@ from app.domain.compartilhado.chatgpt_imagem import (
 )
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido, ServicoExternoFalhou
 from app.infrastructure import capa_chatgpt_store
+from app.infrastructure.executaveis_do_navegador import edge_no_disco
 from app.services import janela_do_robo, navegador_assistido
 
 logger = logging.getLogger(__name__)
@@ -139,22 +139,6 @@ class PaginaDoPlaywrightNoChatGPT(navegador_assistido.PaginaDoPlaywright):
             self._page.close()
         except Exception as exc:  # noqa: BLE001 — aba já fechada pelo operador
             logger.info("[ChatGPT] não consegui fechar a aba: %s", exc)
-
-
-def edge_no_disco() -> Path | None:
-    """O Edge da máquina, ou None (aí o robô abre no Chrome, como os outros).
-
-    Edge porque é o navegador do dia a dia do operador. Para o CDP tanto faz:
-    os dois são Chromium, e porta, perfil e conexão seguem iguais.
-    """
-    candidatos = [
-        Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
-        Path(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
-    ]
-    achado = next((c for c in candidatos if c.is_file()), None)
-    if achado is None and (no_path := shutil.which("msedge")):
-        achado = Path(no_path)
-    return achado
 
 
 # --------------------------------------------------------------------------- #

@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Choose Chrome or Edge for the TikTok and Instagram robot.** Settings →
+  Aplicação has a new "Navegador do robô" choice, saved per channel; Chrome
+  stays the default. Edge gets its own session folder next to Chrome's
+  (`browser/tiktok-edge`): Chrome encrypts its cookies with a key Edge cannot
+  open, so sharing the folder would log both out. Log in once in the Edge
+  window the first time (D-832).
 - **Click a small image to see it full size.** The TikTok cover, the Short
   cover and the mascot sheets in Canais now open large on click, without
   cropping, over any open window; click outside, the X or Esc closes only the

@@ -11,10 +11,13 @@ serviço e mapeia os erros de domínio para os status corretos.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from app.domain.canal import theme_library
 from app.domain.canal.identidade import Canal, IdCanalInvalido
 from app.services import channel_theme as theme_service
 from app.services import channels as channels_service
+from app.services import navegador_do_robo
 from app.services.channels import CanalJaExiste, CanalNaoEncontrado
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -83,6 +86,25 @@ async def selecionar_tema_do_canal(canal_id: str, body: SelecionarTemaRequest):
     except theme_service.TemaInvalido as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
     return TemaSelecionadoResponse(canal_id=canal_id, tema_id=tema.id, selecionado=True)
+
+
+# --------------------------------------------------------------------------- #
+# Navegador do robô do TikTok e do Instagram, no canal ativo (D-832)
+# --------------------------------------------------------------------------- #
+
+
+class NavegadorDoRobo(BaseModel):
+    navegador: Literal["chrome", "edge"]
+
+
+@router.get("/ativo/navegador-do-robo", response_model=NavegadorDoRobo)
+async def obter_navegador_do_robo():
+    return NavegadorDoRobo(navegador=navegador_do_robo.navegador_do_canal())
+
+
+@router.put("/ativo/navegador-do-robo", response_model=NavegadorDoRobo)
+async def escolher_navegador_do_robo(body: NavegadorDoRobo):
+    return NavegadorDoRobo(navegador=navegador_do_robo.escolher_navegador(body.navegador))
 
 
 class PaletaModel(BaseModel):

@@ -80,7 +80,7 @@ export function LoteDoTiktokHorizontal({ projetoId, pendentes, agendarPara, onPr
           size="sm"
           disabled={subir.isPending || correndo || alvos.length === 0}
           onClick={subirTodos}
-          title="O robô sobe um por um no Chrome, fora da tela, com legenda e capa. No fim a janela volta com as abas prontas."
+          title="O robô sobe um por um no navegador dele, fora da tela, com legenda e capa. No fim a janela volta com as abas prontas."
         >
           {subir.isPending || correndo ? <Loader2 className="animate-spin" /> : <Bot />}
           {correndo ? 'subindo…' : `Subir todos (${alvos.length})`}

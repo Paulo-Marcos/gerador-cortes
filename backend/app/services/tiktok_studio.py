@@ -74,10 +74,10 @@ from app.services.navegador_assistido import (
     PlaywrightAusente,
     aba_marcada,
     apagar_copias_do_upload,
-    perfil_do_canal,
     sessao_no_chrome,
     vigiar_aba,
 )
+from app.services.navegador_do_robo import executavel_escolhido, perfil_da_plataforma
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +102,8 @@ PERFIL = "tiktok"
 
 
 def perfil_do_chrome() -> Path:
-    """Onde mora a sessao do TikTok deste canal."""
-    return perfil_do_canal(PERFIL)
+    """Onde mora a sessao do TikTok deste canal, no navegador escolhido (D-832)."""
+    return perfil_da_plataforma(PERFIL)
 
 
 # Quanto esperamos em cada passo. O processamento é o único generoso: um corte
@@ -653,10 +653,9 @@ def _assistir(
     que o resto deste projeto já usa pelo mesmo motivo.
     """
     try:
-        with sessao_no_chrome(perfil_do_chrome(), abrir_em=URL_DO_UPLOAD) as (
-            navegador,
-            abriu_agora,
-        ):
+        with sessao_no_chrome(
+            perfil_do_chrome(), abrir_em=URL_DO_UPLOAD, executavel=executavel_escolhido()
+        ) as (navegador, abriu_agora):
             contexto = navegador.contexts[0] if navegador.contexts else navegador.new_context()
             # A vigilia so apaga a copia quando VE a publicacao; o "publiquei" clicado
             # a mao escapa dela. Antes de subir o proximo, a sobra do anterior sai.

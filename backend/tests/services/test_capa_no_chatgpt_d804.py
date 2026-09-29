@@ -17,6 +17,7 @@ from app.domain.compartilhado.chatgpt_imagem import (
     url_do_projeto_valida,
 )
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido, ServicoExternoFalhou
+from app.infrastructure import executaveis_do_navegador
 from app.services import capa_no_chatgpt
 
 PROJETO = "https://chatgpt.com/g/g-p-6aa2f1d08414819192ac821e77ded48e/project"
@@ -264,15 +265,17 @@ class TestNavegador:
     def test_abre_no_edge_quando_ha_edge(self, monkeypatch, tmp_path):
         edge = tmp_path / "msedge.exe"
         edge.write_bytes(b"")
-        monkeypatch.setattr(capa_no_chatgpt, "Path", lambda _caminho: edge)
+        monkeypatch.setattr(executaveis_do_navegador, "Path", lambda _caminho: edge)
 
-        assert capa_no_chatgpt.edge_no_disco() == edge
+        assert executaveis_do_navegador.edge_no_disco() == edge
 
     def test_sem_edge_devolve_nada_e_o_robo_cai_no_chrome(self, monkeypatch, tmp_path):
-        monkeypatch.setattr(capa_no_chatgpt, "Path", lambda _caminho: tmp_path / "nao-existe.exe")
-        monkeypatch.setattr(capa_no_chatgpt.shutil, "which", lambda _nome: None)
+        monkeypatch.setattr(
+            executaveis_do_navegador, "Path", lambda _caminho: tmp_path / "nao-existe.exe"
+        )
+        monkeypatch.setattr(executaveis_do_navegador.shutil, "which", lambda _nome: None)
 
-        assert capa_no_chatgpt.edge_no_disco() is None
+        assert executaveis_do_navegador.edge_no_disco() is None
 
     def test_garantir_chrome_abre_o_executavel_pedido(self, monkeypatch, tmp_path):
         from app.services import navegador_assistido

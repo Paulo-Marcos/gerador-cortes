@@ -49,9 +49,8 @@ não achá-lo devolve "não sei" em vez de "não publicou".
 
 ## Por que o perfil é separado do TikTok
 
-`instance/channels/<canal>/browser/instagram`. Sessões diferentes, contas
-diferentes; e com a porta derivada do caminho (D-564), os dois Chromes nunca se
-encontram — nem entre si, nem com o de outro checkout.
+`browser/instagram` (`instagram-edge` no Edge, D-832): contas diferentes, e a porta
+vem do caminho (D-564) — as janelas nunca se encontram, nem com outro checkout.
 """
 
 from __future__ import annotations
@@ -77,10 +76,10 @@ from app.services.navegador_assistido import (
     PaginaDoPlaywright,
     PlaywrightAusente,
     aba_marcada,
-    perfil_do_canal,
     sessao_no_chrome,
     vigiar_aba,
 )
+from app.services.navegador_do_robo import executavel_escolhido, perfil_da_plataforma
 
 logger = logging.getLogger(__name__)
 
@@ -573,8 +572,8 @@ def _passo(funcao, passo: Passo, *args, **kwargs) -> None:
 
 
 def perfil_do_chrome() -> Path:
-    """Onde mora a sessão do Instagram deste canal."""
-    return perfil_do_canal(PERFIL)
+    """Onde mora a sessão do Instagram deste canal, no navegador escolhido (D-832)."""
+    return perfil_da_plataforma(PERFIL)
 
 
 def _assistir(
@@ -582,8 +581,9 @@ def _assistir(
 ) -> dict:
     """Tudo o que fala Playwright, num thread só (síncrono por causa da D-369)."""
     try:
-        perfil = perfil_do_chrome()
-        with sessao_no_chrome(perfil, abrir_em=URL_INICIAL) as (navegador, abriu_agora):
+        with sessao_no_chrome(
+            perfil_do_chrome(), abrir_em=URL_INICIAL, executavel=executavel_escolhido()
+        ) as (navegador, abriu_agora):
             contexto = navegador.contexts[0] if navegador.contexts else navegador.new_context()
             page = contexto.new_page()
             relatorio = executar_roteiro(

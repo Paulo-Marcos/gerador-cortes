@@ -26,7 +26,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-import shutil
 import subprocess
 import threading
 import time
@@ -44,6 +43,7 @@ from app.domain.publicacao.tiktok_studio import (
     perfil_na_linha_de_comando,
     porta_de_depuracao,
 )
+from app.infrastructure.executaveis_do_navegador import chrome_no_disco
 from app.services import janela_do_robo
 
 # O Playwright conta em milissegundos; o urllib, em segundos.
@@ -318,23 +318,6 @@ _COMO_RESOLVER_CHROME = (
 )
 
 
-def _chrome_no_disco() -> Path | None:
-    if settings.chrome_path:
-        # Caminho explícito manda: não cair num Chrome diferente do escolhido.
-        configurado = Path(settings.chrome_path)
-        return configurado if configurado.is_file() else None
-    candidatos = [
-        Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
-        Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
-        Path.home() / "AppData/Local/Google/Chrome/Application/chrome.exe",
-    ]
-    for caminho in candidatos:
-        if caminho.is_file():
-            return caminho
-    achado = shutil.which("chrome") or shutil.which("google-chrome")
-    return Path(achado) if achado else None
-
-
 def _porta_responde(porta: int) -> bool:
     """Há um Chrome VIVO falando DevTools nesta porta?
 
@@ -473,7 +456,7 @@ def _garantir_chrome(perfil: Path, url: str, executavel: Path | None) -> bool:
     ):
         return False
 
-    chrome = executavel or _chrome_no_disco()  # D-804: o ChatGPT abre no Edge
+    chrome = executavel or chrome_no_disco()  # D-804/D-832: o Edge, quando escolhido
     if chrome is None:
         if settings.chrome_path:
             raise NavegadorIndisponivel(
@@ -546,14 +529,16 @@ def apagar_copias_do_upload(contexto, origem: str, trecho_da_aba_de_upload: str)
 
 
 @contextmanager
-def sessao_no_chrome(perfil: Path, *, abrir_em: str | None = None) -> Iterator[tuple]:
+def sessao_no_chrome(
+    perfil: Path, *, abrir_em: str | None = None, executavel: Path | None = None
+) -> Iterator[tuple]:
     """Conecta ao Chrome do perfil e entrega `(navegador, abriu_agora)` (D-718).
 
     A ordem e a que os dois robos repetiam: primeiro o Playwright — sem ele, abrir
     uma janela seria so barulho —, depois o Chrome, e so entao a conexao. O
     Chrome so e aberto quando vem `abrir_em`: o roteiro abre, a vigilia apenas
     observa. Ao sair, desconecta; o Chrome e um processo a parte e continua de
-    pe, que e o que deixa a aba para o operador revisar.
+    pe, que e o que deixa a aba para o operador revisar. `executavel`: o Edge (D-832).
     """
     try:
         from playwright.sync_api import sync_playwright
@@ -565,7 +550,7 @@ def sessao_no_chrome(perfil: Path, *, abrir_em: str | None = None) -> Iterator[t
     abriu_agora = False
     if abrir_em is not None:
         try:
-            abriu_agora = garantir_chrome(perfil, abrir_em)
+            abriu_agora = garantir_chrome(perfil, abrir_em, executavel=executavel)
         except NavegadorIndisponivel as exc:
             raise ChromeNaoAbriu(str(exc)) from exc
 

@@ -6200,6 +6200,23 @@
         "title": "MultiversionResponse",
         "type": "object"
       },
+      "NavegadorDoRobo": {
+        "properties": {
+          "navegador": {
+            "enum": [
+              "chrome",
+              "edge"
+            ],
+            "title": "Navegador",
+            "type": "string"
+          }
+        },
+        "required": [
+          "navegador"
+        ],
+        "title": "NavegadorDoRobo",
+        "type": "object"
+      },
       "OcorrenciaDoEixo": {
         "properties": {
           "contagem": {
@@ -11733,6 +11750,66 @@
           }
         },
         "summary": "Criar Canal",
+        "tags": [
+          "Canais"
+        ]
+      }
+    },
+    "/api/channels/ativo/navegador-do-robo": {
+      "get": {
+        "operationId": "obter_navegador_do_robo_api_channels_ativo_navegador_do_robo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavegadorDoRobo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Obter Navegador Do Robo",
+        "tags": [
+          "Canais"
+        ]
+      },
+      "put": {
+        "operationId": "escolher_navegador_do_robo_api_channels_ativo_navegador_do_robo_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavegadorDoRobo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavegadorDoRobo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Escolher Navegador Do Robo",
         "tags": [
           "Canais"
         ]
