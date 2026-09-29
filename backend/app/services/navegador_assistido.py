@@ -348,7 +348,6 @@ def _porta_responde(porta: int) -> bool:
     Perguntar ao endpoint do DevTools resolve porque só um Chrome de verdade
     responde a ele.
     """
-    import json as _json
     import urllib.error
     import urllib.request
 
@@ -356,7 +355,7 @@ def _porta_responde(porta: int) -> bool:
         with urllib.request.urlopen(  # noqa: S310 — localhost, porta nossa
             f"http://127.0.0.1:{porta}/json/version", timeout=_ESPERA_PELA_PORTA_CDP_S
         ) as resposta:
-            return "webSocketDebuggerUrl" in _json.loads(resposta.read())
+            return "webSocketDebuggerUrl" in json.loads(resposta.read())
     except (urllib.error.URLError, OSError, ValueError, TimeoutError):
         return False
 
@@ -591,10 +590,11 @@ def vigiar_aba(
 ) -> bool:
     """Olha a aba ate a plataforma decidir, o lote parar, a aba fechar ou o prazo acabar.
 
-    `conferir` e o que cada plataforma sabe: `True` publicou, `False` desistiu
-    (nao ha mais o que esperar), `None` continua olhando. Qualquer saida que nao
-    seja `True` quer dizer "nao sei" — e mantem o botao "publiquei" a mao (D-718:
-    o laco era igual nos dois robos; so o criterio muda).
+    `conferir` e o que cada plataforma sabe: `True` publicou, `False` desistiu,
+    `None` continua olhando. O que nao for `True` e "nao sei" (D-718).
+
+    D-833: espera PELA aba, nunca em `time.sleep`. Dormindo, o cliente sincrono nao
+    le o driver, que para, e os workers da aba seguinte do lote ficam presos (medido).
     """
     limite = time.monotonic() + segundos
     while time.monotonic() < limite:
@@ -608,6 +608,6 @@ def vigiar_aba(
         veredito = conferir()
         if veredito is not None:
             return veredito
-        time.sleep(intervalo)
+        alvo.wait_for_timeout(intervalo * 1000)
     logger.info("%s %ss sem %s; encerrando a vigilia", rotulo, int(segundos), verbo)
     return False
