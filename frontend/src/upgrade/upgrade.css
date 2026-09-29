@@ -210,6 +210,13 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
 .ap select,
 .ap textarea {
   font: inherit;
+}
+
+/* D-821: a cor herdada é só o PADRÃO. Com `.ap button` ela vencia qualquer
+   utilitário de cor do componente (classe + elemento > uma classe): o chip
+   escolhido pedia o texto claro do acento e recebia o escuro herdado — 3:1 sobre
+   o vermelho. Em :where() a especificidade é zero, e a cor declarada ganha. */
+:where(.ap) :where(button, input, select, textarea) {
   color: inherit;
 }
 
