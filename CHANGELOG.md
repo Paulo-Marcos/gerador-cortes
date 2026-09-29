@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **The second video of a TikTok batch no longer freezes mid-upload.** The
+  watch over the previous tab slept outside Playwright while connected to the
+  robot's Chrome; asleep, it stopped reading its driver, and the workers of the
+  next tab stayed paused, so the upload stopped (42% in production). The watch
+  now waits through the page. Measured with Chrome and two clients: frozen
+  while sleeping, fine waiting through the page (D-833).
 - **Buttons in the new shell show the colors they declare.** A form reset gave
   every button the inherited text color, overriding the component's own: the
   chosen title/cover suggestion came out dark on the dark accent, at 3:1. The

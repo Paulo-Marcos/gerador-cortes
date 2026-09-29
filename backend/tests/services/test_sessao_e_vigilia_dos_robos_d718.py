@@ -30,9 +30,13 @@ class PageFalsa:
     def __init__(self, url=""):
         self.url = url
         self.fechada = False
+        self.esperas = 0
 
     def is_closed(self):
         return self.fechada
+
+    def wait_for_timeout(self, _ms):
+        self.esperas += 1
 
 
 class ContextoFalso:
@@ -361,6 +365,26 @@ def test_tiktok_espera_ate_a_aba_navegar(aba_do_robo, monkeypatch):
 
     assert tiktok_studio._vigiar_publicacao(5, "marca-1") is True
     assert aba.olhadas >= 2
+
+
+def test_vigilia_espera_pelo_playwright_e_nao_dormindo(aba_do_robo, monkeypatch):
+    """D-833: vigília em `time.sleep` travava o upload do item seguinte do lote.
+
+    Dormindo, o cliente síncrono não lê o driver; o driver para, e os workers
+    que ele anexou na aba nova nunca são liberados. Medido: TRAVOU dormindo,
+    ok esperando pela página.
+    """
+    aba = AbaQuePublicaNaSegundaOlhada()
+    monkeypatch.setattr(tiktok_studio, "aba_marcada", lambda contexto, marca, url: aba)
+    monkeypatch.setattr(tiktok_studio, "apagar_copias_do_upload", lambda *a: False)
+
+    def dormir(_segundos):
+        raise AssertionError("a vigília não pode dormir fora do Playwright")
+
+    monkeypatch.setattr(navegador_assistido.time, "sleep", dormir)
+
+    assert tiktok_studio._vigiar_publicacao(5, "marca-1") is True
+    assert aba.esperas >= 1
 
 
 class PaginaDoInstagramFalsa:
