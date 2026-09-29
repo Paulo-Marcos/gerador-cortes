@@ -15,6 +15,7 @@ porta vem do caminho, então as duas janelas nunca se cruzam.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from app.core import channel_paths
 from app.domain.compartilhado.erros import PedidoInvalido
@@ -22,27 +23,32 @@ from app.infrastructure import navegador_do_robo_store
 from app.infrastructure.executaveis_do_navegador import edge_no_disco
 from app.services.navegador_assistido import ChromeNaoAbriu, perfil_do_canal
 
-CHROME = "chrome"
-EDGE = "edge"
-NAVEGADORES = (CHROME, EDGE)
+Navegador = Literal["chrome", "edge"]
+CHROME: Navegador = "chrome"
+EDGE: Navegador = "edge"
+NAVEGADORES: tuple[Navegador, ...] = (CHROME, EDGE)
 
 
 def _banco_e_canal() -> tuple[Path, str]:
     return channel_paths.settings_db_path(), channel_paths.active_channel_root().name
 
 
-def navegador_do_canal() -> str:
+def _conhecido(navegador: str) -> Navegador | None:
+    return next((n for n in NAVEGADORES if n == navegador), None)
+
+
+def navegador_do_canal() -> Navegador:
     """O navegador escolhido para o canal ativo; o Chrome quando não há escolha."""
-    escolhido = navegador_do_robo_store.ler(*_banco_e_canal())
-    return escolhido if escolhido in NAVEGADORES else CHROME
+    return _conhecido(navegador_do_robo_store.ler(*_banco_e_canal())) or CHROME
 
 
-def escolher_navegador(navegador: str) -> str:
+def escolher_navegador(navegador: str) -> Navegador:
     """Grava a escolha do canal ativo e a devolve."""
-    if navegador not in NAVEGADORES:
+    escolhido = _conhecido(navegador)
+    if escolhido is None:
         raise PedidoInvalido(f"navegador desconhecido: {navegador!r}; use chrome ou edge")
-    navegador_do_robo_store.gravar(*_banco_e_canal(), navegador)
-    return navegador
+    navegador_do_robo_store.gravar(*_banco_e_canal(), escolhido)
+    return escolhido
 
 
 def perfil_da_plataforma(plataforma: str) -> Path:
