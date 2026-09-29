@@ -160,4 +160,9 @@ layers = [
 [tool.pyright]
 include = ["app"]
 pythonVersion = "3.11"
+# O app só roda no Windows (ADR-0008). Sem isto o pyright analisa para a
+# plataforma onde está: no runner Linux do CI via trechos `sys.platform` que não
+# rodam no produto (e não via `ctypes.windll`), e a catraca medida no Windows
+# reprovava lá com 4 erros "novos" (release 0.5.0).
+pythonPlatform = "Windows"
 typeCheckingMode = "basic"
