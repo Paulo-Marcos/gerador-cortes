@@ -19,6 +19,9 @@ export function sanitizeDescription(text: string) {
 
 // D-729: o container de MetadataCard — estado, efeitos e ações. A view, em
 // MetadataCard.tsx, só desenha o que este hook devolve.
+/** Tudo o que o card devolve — o que as partes do modal recebem inteiro (D-821). */
+export type EstadoDoCard = ReturnType<typeof useMetadataCard>;
+
 export function useMetadataCard({
   projetoId,
   cut,

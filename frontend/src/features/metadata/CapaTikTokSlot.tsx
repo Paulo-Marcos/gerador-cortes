@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, Clipboard, Copy, Film, ImagePlus, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
 import { resolveThumbUrl } from '@/lib/api';
 import { shortsApi } from '@/features/shorts/shortsApi';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
@@ -171,7 +172,7 @@ export function CapaTikTokSlot({
       <div className="flex items-start gap-2.5">
         <div className="aspect-[9/16] w-[76px] shrink-0 overflow-hidden rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)]">
           {capaUrl ? (
-            <img src={capaUrl} alt="" className="h-full w-full object-cover" />
+            <ImagemAmpliavel src={capaUrl} alt="Capa do TikTok" className="h-full w-full" imgClassName="h-full w-full object-cover" />
           ) : (
             <div className="grid h-full place-items-center px-1 text-center text-[10px] leading-tight text-[var(--wb-text-dim)]">
               sem capa
@@ -241,7 +242,7 @@ export function CapaTikTokSlot({
           </Button>
           <Button
             type="button"
-            size="sm"
+            size="sm" variant="outline"
             disabled={ocupado}
             onClick={() => colar.mutate()}
             title="Sobe a imagem que está na área de transferência e monta a capa."

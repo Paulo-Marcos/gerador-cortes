@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, Check, ChevronLeft, ChevronRight, Copy, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { providerEmVoo } from '@/lib/providerIa';
@@ -160,11 +161,10 @@ export function CapaModal({ open, onClose, short }: Props) {
                 e responder isso com um frame do vídeo seria mostrar outra
                 imagem. Sem capa ainda, o vídeo volta — é melhor que um vazio. */}
             {mostrarImagem ? (
-              <img
+              <ImagemAmpliavel
                 src={capaImagemUrl(short.id, capa.data?.instante_seg ?? 0)}
-                alt="Capa gravada deste short"
-                className="block w-full"
-                style={{ aspectRatio: '9 / 16', objectFit: 'cover' }}
+                alt="Capa gravada deste short" className="w-full" imgClassName="block w-full"
+                imgStyle={{ aspectRatio: '9 / 16', objectFit: 'cover' }}
               />
             ) : (
               <video
@@ -326,10 +326,9 @@ export function CapaModal({ open, onClose, short }: Props) {
 
           {capa.data?.tem_capa && (
             <div className="flex items-center gap-2 border-t border-[var(--wb-border-soft)] pt-3">
-              <img
-                src={capaImagemUrl(short.id, capa.data.instante_seg)}
-                alt="Capa gravada"
-                className="h-16 w-9 flex-none rounded-[4px] border border-[var(--wb-border)] object-cover"
+              <ImagemAmpliavel
+                src={capaImagemUrl(short.id, capa.data.instante_seg)} alt="Capa gravada" className="flex-none"
+                imgClassName="h-16 w-9 rounded-[4px] border border-[var(--wb-border)] object-cover"
               />
               <span className="text-[11.5px] leading-relaxed text-[var(--wb-text-mute)]">
                 Capa gravada em {comSegundos(capa.data.instante_seg)}.

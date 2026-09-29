@@ -10,11 +10,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Click a small image to see it full size.** The TikTok cover, the Short
+  cover and the mascot sheets in Canais now open large on click, without
+  cropping, over any open window; click outside, the X or Esc closes only the
+  image (D-821).
+
 ### Changed
+- **The metadata window is organized by what each part produces.** YouTube
+  texts (title, description, tags) on the left; covers on the right, with the
+  cover text on top and one tab per cover (YouTube 16:9, TikTok 9:16), each in
+  work order: preview, prompt, image. "Generate in ChatGPT" is now there for
+  the YouTube cover too, and title and cover suggestions start collapsed. The
+  ChatGPT robot closes its tab once the image arrives and keeps it open on
+  errors (D-821).
 - **One required check for `main`: "CI ok".** Branch protection used to list
   every CI job by name, so when Node 20 left the matrix no pull request could
   merge. A single job now waits for all the others, and a test fails when a
   new job is left out of it (D-820).
+
+### Fixed
+- **Buttons in the new shell show the colors they declare.** A form reset gave
+  every button the inherited text color, overriding the component's own: the
+  chosen title/cover suggestion came out dark on the dark accent, at 3:1. The
+  reset now only sets the default, so the chosen chip is light on the accent
+  (D-821).
 
 ## [0.5.0] - 2026-09-28
 

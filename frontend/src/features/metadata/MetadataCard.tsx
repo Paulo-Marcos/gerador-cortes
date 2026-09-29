@@ -4,7 +4,6 @@ import {
   BookOpen,
   Check,
   ChevronDown,
-  Clipboard,
   FileText,
   Folder,
   Frame,
@@ -24,7 +23,6 @@ import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
 import { type ProviderIA } from '@/lib/providerIa';
-import { IconButton } from '@/components/ui/icon-button';
 import { Modal } from '@/components/ui/modal';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
@@ -37,13 +35,17 @@ import { PromptManualPanel } from '@/components/PromptManualPanel';
 import { ThumbnailHintsEditor } from '@/components/ThumbnailHintsEditor';
 import { ThumbnailAvaliacaoPanel } from './ThumbnailAvaliacaoPanel';
 import { AcoesDoPromptDaCapa } from './AcoesDoPromptDaCapa';
+import { CapasDoModal } from './CapasDoModal';
+import {
+  MODAL_ASIDE_BUTTON,
+  ModalActionButton,
+  ModalChip,
+  ModalFieldLabel,
+  SemSugestoes,
+  SugestoesRecolhidas,
+} from './modalPecas';
 import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { useMetadataCard, sanitizeDescription } from './useMetadataCard';
-
-// D-413: os botões da coluna da thumbnail (modal) herdavam o `size=default` do
-// primitivo — 11,5px, ilegível ao lado do corpo já ampliado. Sobrescrito só
-// aqui: o `Button` é compartilhado com o app inteiro.
-const MODAL_ASIDE_BUTTON = 'h-10 px-3.5 text-[13px]';
 
 export type PromptModalKind = 'metadata' | 'thumbnail' | 'thumbnail-agent' | 'thumbnail-agent-livre';
 
@@ -81,7 +83,8 @@ export function MetadataCard(props: {
   
   onRequestClose,
 } = props;
-  const { applyFrame, capaAmpliada, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, coverText, description, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, save, saveMutation, setCapaAmpliada, setCoverText, setDescription, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, setTagsText, setTitle, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, tagsText, thumbSuggestions, thumbnailReady, thumbnailUrl, title, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix } = useMetadataCard(props);
+  const card = useMetadataCard(props);
+  const { applyFrame, capaAmpliada, compressThumbnail, conferindoCapa, confirmRemoveThumbnail, copiarPromptDaCapa, copy, coverText, description, desfazerIa, expanded, generateMetadataClaude, generatePromptThumbnailClaude, generateThumbnail, generated, handlePasteImage, invalidate, lastSavedAt, manualKind, meta, metaGeradaPor, metaQuery, metadadosEmVoo, modal, promptCapaEmVoo, promptCopiado, promptReady, removeThumbnail, save, saveMutation, setCapaAmpliada, setCoverText, setDescription, setDesfazerIa, setExpanded, setManualKind, setShowDescription, setShowTags, setShowThumbSuggestions, setShowTitleSuggestions, setTagsText, setTitle, showDescription, showTags, showThumbSuggestions, showTitleSuggestions, tagsText, thumbSuggestions, thumbnailReady, thumbnailUrl, title, titleSuggestions, ultimaMeta, uploadThumbnail, withCoverEmojis, withReadingTitlePrefix } = card;
 
 
   return (
@@ -271,8 +274,27 @@ export function MetadataCard(props: {
       )}
 
       {expanded && generated && modal && (
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_232px]">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="flex min-w-0 flex-col gap-4">
+            {/* D-821: "Regerar metadados" reescreve título, texto da capa,
+                descrição e tags — mora no cabeçalho do bloco, e não embaixo do
+                título, onde parecia regerar só o título. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="mr-auto font-code text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
+                Textos do YouTube
+              </h3>
+              <AcaoDeIa
+                rotulo="Regerar metadados"
+                destaque
+                emVoo={metadadosEmVoo}
+                onGerar={(provider) => generateMetadataClaude.mutate(provider)}
+                className="h-8"
+              />
+              <ModalActionButton icon={Wand2} onClick={() => setManualKind('metadata')}>
+                Manual
+              </ModalActionButton>
+            </div>
+
             <div>
               <ModalFieldLabel
                 label="Título YouTube"
@@ -285,8 +307,11 @@ export function MetadataCard(props: {
                 onBlur={() => save({ titulo_youtube: title })}
                 className="h-11 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[15px] font-semibold outline-none focus:border-[var(--wb-accent)]"
               />
-              <ModalSuggestionRow>
-                {titleSuggestions.length === 0 && <SemSugestoes />}
+              <SugestoesRecolhidas
+                quantidade={titleSuggestions.length}
+                aberto={showTitleSuggestions}
+                onAlternar={() => setShowTitleSuggestions((atual) => !atual)}
+              >
                 {titleSuggestions.map((suggestion) => (
                   <ModalChip
                     key={`${cut.id}-title-${suggestion}`}
@@ -300,76 +325,20 @@ export function MetadataCard(props: {
                     {suggestion}
                   </ModalChip>
                 ))}
-              </ModalSuggestionRow>
-              <ModalActionRow>
-                <AcaoDeIa
-                  rotulo="Regerar metadados"
-                  destaque
-                  emVoo={metadadosEmVoo}
-                  onGerar={(provider) => generateMetadataClaude.mutate(provider)}
-                  className="h-8"
-                />
-                <ModalActionButton icon={Wand2} onClick={() => setManualKind('metadata')}>
-                  Manual
-                </ModalActionButton>
-              </ModalActionRow>
+              </SugestoesRecolhidas>
             </div>
 
-            <div>
-              <ModalFieldLabel
-                label="Texto da capa"
-                counter={`${coverText.length}/28`}
-                over={coverText.length > 28}
-              />
-              <input
-                value={coverText}
-                onChange={(event) => setCoverText(event.target.value)}
-                onBlur={() => save({ texto_capa: coverText })}
-                placeholder="Ex: JUSTICA EM SI"
-                className="h-11 w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 text-[15px] font-extrabold outline-none focus:border-[var(--wb-accent)]"
-              />
-              <ModalSuggestionRow>
-                {thumbSuggestions.length === 0 && <SemSugestoes />}
-                {thumbSuggestions.map((suggestion) => (
-                  <ModalChip
-                    key={`${cut.id}-thumb-${suggestion}`}
-                    active={suggestion === coverText}
-                    onClick={() => {
-                      const nextCoverText = withCoverEmojis(suggestion);
-                      setCoverText(nextCoverText);
-                      save({ texto_capa: nextCoverText });
-                    }}
-                  >
-                    {suggestion}
-                  </ModalChip>
-                ))}
-              </ModalSuggestionRow>
-              <ModalActionRow>
-                <AcaoDeIa
-                  rotulo={promptReady ? 'Regerar prompt da capa' : 'Gerar prompt da capa'}
-                  destaque
-                  emVoo={promptCapaEmVoo}
-                  onGerar={(provider) => generatePromptThumbnailClaude.mutate(provider)}
-                  className="h-8"
-                />
-                <ModalActionButton
-                  icon={Palette}
-                  onClick={() => setManualKind('thumbnail-agent-livre')}
-                >
-                  Manual
-                </ModalActionButton>
-              </ModalActionRow>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
+            {/* D-821: a descrição é o texto longo — ganha a largura e a altura que
+                sobravam; as tags, curtas, ficam embaixo. */}
+            <div className="grid gap-3">
               <div>
                 <ModalFieldLabel label="Descrição" />
                 <textarea
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                   onBlur={() => save({ descricao_youtube: sanitizeDescription(description) })}
-                  rows={4}
-                  className="min-h-[104px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 text-[13px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
+                  rows={10}
+                  className="min-h-[240px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 text-[13px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
                 />
               </div>
               <div>
@@ -378,159 +347,14 @@ export function MetadataCard(props: {
                   value={tagsText}
                   onChange={(event) => setTagsText(event.target.value)}
                   onBlur={() => save({ tags_youtube: splitTags(tagsText) })}
-                  rows={4}
-                  className="min-h-[104px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 font-code text-[13px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
+                  rows={3}
+                  className="min-h-[76px] w-full rounded-[8px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3 py-2.5 font-code text-[13px] leading-[1.6] text-[var(--wb-text-mute)] outline-none focus:border-[var(--wb-accent)]"
                 />
               </div>
             </div>
-
-            {/* F-058: influência manual do editor no prompt da thumbnail. */}
-            <ThumbnailHintsEditor
-              corteId={cut.id}
-              initialValue={cut.hints_thumbnail}
-              salvar={(hints) => cortesApi.atualizarCorte(cut.id, { hints_thumbnail: hints })}
-            />
           </div>
 
-          <aside className="grid content-start gap-2.5">
-            {/* D-556: clicar na capa AMPLIA. Copiar o endereço saiu daqui sem
-                perda: continua no ícone de pasta logo abaixo e no ⋯ do card —
-                e ninguém clica numa imagem esperando copiar um caminho. */}
-            <button
-              type="button"
-              title={thumbnailUrl ? 'Ampliar a capa' : 'Sem thumbnail'}
-              disabled={!thumbnailUrl}
-              onClick={() => setCapaAmpliada(true)}
-              className="aspect-video overflow-hidden rounded-[10px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)]"
-            >
-              {thumbnailUrl ? (
-                <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <div className="grid h-full place-items-center text-sm text-[var(--wb-text-dim)]">
-                  Sem thumbnail
-                </div>
-              )}
-            </button>
-            {/* D-521: a capa vertical do TikTok, irmã da thumbnail acima. */}
-            <CapaTikTokSlot
-              projetoId={projetoId}
-              corteId={cut.id}
-              capaPath={meta?.thumbnail_tiktok_path}
-              promptArte={meta?.prompt_capa_tiktok}
-              etiqueta={meta?.etiqueta_tiktok}
-              textoCapa={coverText}
-              onAtualizou={invalidate}
-            />
-            {/* D-413: copiar o prompt é a ação principal do fluxo manual de capa
-                (cola no agente capista e traz a imagem de volta por Ctrl+V). Ela
-                só existia no ⋯ do header do card, que o modal não renderiza —
-                logo, sumiu da tela desde o D-396. */}
-            <Button
-              type="button"
-              className={MODAL_ASIDE_BUTTON}
-              onClick={() => void copy(meta?.prompt_thumbnail ?? '', 'Prompt da capa copiado.')}
-              disabled={!promptReady}
-              title={
-                promptReady
-                  ? 'Copiar o prompt para colar no agente capista'
-                  : 'Gere o prompt da capa primeiro'
-              }
-            >
-              <Clipboard />
-              Copiar prompt
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className={MODAL_ASIDE_BUTTON}
-              onClick={() => generateThumbnail.mutate()}
-              disabled={!promptReady || generateThumbnail.isPending}
-            >
-              {generateThumbnail.isPending || conferindoCapa ? <Loader2 className="animate-spin" /> : <Sparkles />}
-              {conferindoCapa ? 'Gerando capa…' : 'Gerar thumbnail'}
-            </Button>
-            {!promptReady && (
-              <p className="-mt-1 text-[11px] leading-snug text-[var(--wb-warn-ink)]">
-                Gere o prompt da capa primeiro — sem ele não há o que gerar.
-              </p>
-            )}
-            <label
-              className={cn(
-                MODAL_ASIDE_BUTTON,
-                'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] font-bold text-[var(--wb-text)] hover:border-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-card-elev)]',
-              )}
-            >
-              <UploadCloud size={13} aria-hidden />
-              Trocar thumbnail
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) uploadThumbnail.mutate(file);
-                  event.currentTarget.value = '';
-                }}
-              />
-            </label>
-            <p className="text-center font-code text-[11px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-              ou cole com Ctrl+V
-            </p>
-            {thumbnailUrl && (
-              <div className="flex items-center justify-center gap-1.5">
-                <IconButton
-                  size="sm"
-                  variant="inset"
-                  aria-label="Copiar pasta da thumbnail"
-                  title="Copiar pasta da thumbnail"
-                  onClick={() => void copy(meta?.thumbnail_path ?? '', 'Endereco copiado.')}
-                >
-                  <Folder />
-                </IconButton>
-                <IconButton
-                  size="sm"
-                  variant="inset"
-                  aria-label="Comprimir thumbnail"
-                  title="Comprimir thumbnail"
-                  onClick={() => compressThumbnail.mutate()}
-                  disabled={compressThumbnail.isPending}
-                >
-                  {compressThumbnail.isPending ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <RefreshCw />
-                  )}
-                </IconButton>
-                {/* D-555: entrou aqui, e não no ⋯ do header, porque o header é
-                    do card e o modal não o renderiza — a mesma armadilha que a
-                    D-413 já tinha desarmado para o "Copiar prompt". O lugar da
-                    ação é ao lado das irmãs que também operam a capa existente. */}
-                <IconButton
-                  size="sm"
-                  variant="inset"
-                  aria-label="Aplicar moldura"
-                  title="Aplicar a moldura do canal nesta capa"
-                  onClick={() => applyFrame.mutate()}
-                  disabled={applyFrame.isPending}
-                >
-                  {applyFrame.isPending ? <Loader2 className="animate-spin" /> : <Frame />}
-                </IconButton>
-                <IconButton
-                  size="sm"
-                  variant="inset"
-                  aria-label="Remover thumbnail"
-                  title="Remover thumbnail (apaga o arquivo)"
-                  onClick={confirmRemoveThumbnail}
-                  disabled={removeThumbnail.isPending}
-                  className="text-[var(--wb-err)] hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
-                >
-                  {removeThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
-                </IconButton>
-              </div>
-            )}
-            {/* D-066: avaliação do par prompt+imagem (histórico de qualidade). */}
-            {promptReady && <ThumbnailAvaliacaoPanel corteId={cut.id} />}
-          </aside>
+          <CapasDoModal card={card} cut={cut} projetoId={projetoId} />
 
           <footer className="-mx-4 -mb-3.5 mt-0.5 flex items-center gap-2 border-t border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-4 py-2.5 lg:col-span-2">
             <span className="font-code text-[12px] text-[var(--wb-text-dim)]">
@@ -879,111 +703,6 @@ function IconAction({
   );
 }
 
-// AUDITORIA-v3 §6 — label de campo do corpo de modal: mono uppercase à
-// esquerda, contador à direita (na MESMA linha, como no protótipo).
-function ModalFieldLabel({
-  label,
-  counter,
-  over,
-}: {
-  label: string;
-  counter?: string;
-  over?: boolean;
-}) {
-  return (
-    <div className="mb-1.5 flex items-center gap-1.5">
-      <span className="font-code text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-        {label}
-      </span>
-      {counter && (
-        <span
-          className={cn(
-            'ml-auto font-code text-[11.5px] font-semibold text-[var(--wb-text-dim)]',
-            over && 'text-[var(--wb-err)]',
-          )}
-        >
-          {counter}
-        </span>
-      )}
-    </div>
-  );
-}
-
-/**
- * D-413 — a faixa de sugestões e as ações de geração dividiam o MESMO
- * flex-wrap de `ModalChip`: "regerar por IA" e "manual" liam como se fossem
- * mais duas opções de título. Agora as sugestões ficam rotuladas e as ações
- * vão para uma barra própria, separada por um filete e com botões de outra
- * forma (retangulares, com ícone) — pill = escolha, retângulo = ação.
- */
-function ModalSuggestionRow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      <span className="font-code text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--wb-text-dim)]">
-        sugestões
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function ModalActionRow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-dashed border-[var(--wb-border-soft)] pt-2.5">
-      {children}
-    </div>
-  );
-}
-
-// Ação secundária da linha (o "Manual"). A geração por IA mora no AcaoDeIa.
-function ModalActionButton({
-  icon: Icon,
-  onClick,
-  children,
-}: {
-  icon: LucideIcon;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex h-8 items-center gap-1.5 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-[12.5px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
-    >
-      <Icon size={14} aria-hidden />
-      {children}
-    </button>
-  );
-}
-
-// Pill de SUGESTÃO do corpo de modal (protótipo: rounded-full, inset). D-413
-// tirou daqui a variante `accent`: ação de geração agora é ModalActionButton.
-function ModalChip({
-  active,
-  onClick,
-  children,
-}: {
-  active?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'rounded-full px-3 py-1.5 text-left text-[12px] font-semibold transition-colors',
-        active
-          ? 'bg-[var(--wb-accent)] text-white'
-          : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 function relativeMinutes(from: Date) {
   const min = Math.max(0, Math.round((Date.now() - from.getTime()) / 60000));
   if (min < 1) return 'instantes';
@@ -1022,14 +741,6 @@ function FieldHeader({
   );
 }
 
-function SemSugestoes() {
-  return (
-    <span className="text-[11.5px] text-[var(--wb-text-mute)]">
-      A IA ainda não sugeriu — gere os metadados para ver opções.
-    </span>
-  );
-}
-
 function SuggestionButton({
   active,
   onClick,
@@ -1046,7 +757,7 @@ function SuggestionButton({
       className={cn(
         'min-h-[31px] rounded-[var(--radius-sm)] border px-2.5 text-left text-xs font-bold',
         active
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-white'
+          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
           : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text)]',
       )}
     >
