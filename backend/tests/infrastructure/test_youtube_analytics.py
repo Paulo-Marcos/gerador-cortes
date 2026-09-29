@@ -6,7 +6,9 @@ API devolvem, e a carga de credenciais é exercida com um `Credentials` falso.
 
 from __future__ import annotations
 
+import importlib.util
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 from app.infrastructure import youtube_analytics as ya
@@ -226,3 +228,25 @@ class TestCarregarCredenciais:
             ya.Credentials, "from_authorized_user_file", staticmethod(lambda _p: com_analytics)
         )
         assert ya.carregar_credenciais() is com_analytics
+
+
+class TestScriptDeReautorizacao:
+    """D-835: a instrução de reautorizar manda rodar dev-utils/auth_youtube.py.
+
+    O script ficou fora da mudança do D-698 (channel_paths foi para o core) e morria
+    no import — o operador seguia a instrução e dava de cara com um traceback.
+    """
+
+    _SCRIPT = Path(__file__).resolve().parents[2] / "dev-utils" / "auth_youtube.py"
+
+    def _carregar(self):
+        spec = importlib.util.spec_from_file_location("auth_youtube_d835", self._SCRIPT)
+        modulo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(modulo)  # executa só os imports; main() fica no __main__
+        return modulo
+
+    def test_script_carrega_sem_erro_de_import(self):
+        assert callable(self._carregar().main)
+
+    def test_script_pede_o_escopo_de_analytics(self):
+        assert ya.ANALYTICS_SCOPE in self._carregar().SCOPES

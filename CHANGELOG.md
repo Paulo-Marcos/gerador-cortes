@@ -45,6 +45,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the backend lock. It now has its own lock, compiled against the main one and
   seeded with the versions already known to work:
   `bin\bootstrap.ps1 -Diarizacao` (D-819).
+- **The YouTube re-authorization script runs again.** `dev-utils/auth_youtube.py`,
+  the one the backend tells you to run when the token is missing or lacks the
+  analytics scope, still imported the channel paths from their old place and
+  died with `ModuleNotFoundError`, so no token could be generated for upload
+  (D-835).
 
 ### Security
 - **React Router 7.18.** Closes the two open advisories on React Router 6: an

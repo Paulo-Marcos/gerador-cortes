@@ -4,7 +4,7 @@ from pathlib import Path
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 # Este utilitário vive em backend/dev-utils/, mas as credenciais são resolvidas
-# pelo MESMO módulo que o serviço de upload usa (app.channel_paths), para que o
+# pelo MESMO módulo que o serviço de upload usa (app.core.channel_paths), para que o
 # token nasça exatamente onde o backend vai lê-lo — no canal ATIVO
 # (instance/channels/<ativo>/youtube/token.json), enquanto o client_secrets pode
 # ser compartilhado na raiz do backend (D-168). Sem isto, o script gravava o token
@@ -13,8 +13,8 @@ _BACKEND_ROOT = Path(__file__).resolve().parent.parent
 if str(_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(_BACKEND_ROOT))
 
-from app.channel_paths import youtube_client_secrets_path, youtube_token_path  # noqa: E402
 from app.config import settings  # noqa: E402
+from app.core.channel_paths import youtube_client_secrets_path, youtube_token_path  # noqa: E402
 
 # Escopos: upload + gerenciamento de playlists + leitura de estatísticas.
 # O escopo de analytics (D-305) permite ao backend ler views/retenção lifetime
