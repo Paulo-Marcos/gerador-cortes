@@ -31,7 +31,7 @@
     "remotion": "4.0.529",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
-    "wavesurfer.js": "^7.12.12",
+    "wavesurfer.js": "^8.0.1",
     "zod": "4.6.5"
   },
   "devDependencies": {
