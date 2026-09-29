@@ -12,7 +12,8 @@
 # Uso:
 #   powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1
 #   powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1 -Dev   # + deps de teste
-param([switch]$Dev)
+#   powershell -ExecutionPolicy Bypass -File bin\bootstrap.ps1 -Diarizacao   # + pyannote (>2 GB, D-819)
+param([switch]$Dev, [switch]$Diarizacao)
 
 $ErrorActionPreference = "Stop"
 $RAIZ = Split-Path -Parent $PSScriptRoot
@@ -83,6 +84,12 @@ if ($LASTEXITCODE -ne 0) { Parar "falha ao instalar as dependencias do backend" 
 if ($Dev) {
     & $venvPython -m pip install -r (Join-Path $RAIZ "backend\requirements-dev.txt")
     if ($LASTEXITCODE -ne 0) { Parar "falha ao instalar as dependencias de desenvolvimento" }
+}
+# D-819: a diarizacao tem lock proprio, compilado contra o principal; instalar
+# o pyannote solto trazia versoes que brigavam com as do lock (opentelemetry).
+if ($Diarizacao) {
+    & $venvPython -m pip install -r (Join-Path $RAIZ "backend\requirements-diarizacao.txt")
+    if ($LASTEXITCODE -ne 0) { Parar "falha ao instalar a diarizacao" }
 }
 Ok "dependencias do backend instaladas"
 

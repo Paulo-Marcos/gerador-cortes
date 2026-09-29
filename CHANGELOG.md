@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   chosen title/cover suggestion came out dark on the dark accent, at 3:1. The
   reset now only sets the default, so the chosen chip is light on the accent
   (D-821).
+- **Speaker diarization installs without version conflicts.** Installed on
+  its own, `pyannote.audio` pulled OpenTelemetry versions that clashed with
+  the backend lock. It now has its own lock, compiled against the main one and
+  seeded with the versions already known to work:
+  `bin\bootstrap.ps1 -Diarizacao` (D-819).
 
 ### Security
 - **React Router 7.18.** Closes the two open advisories on React Router 6: an
