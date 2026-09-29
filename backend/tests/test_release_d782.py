@@ -128,6 +128,7 @@ def test_consultar_travas_aceita_o_codigo_1_do_check_lock(monkeypatch):
 def test_tag_anotada_guarda_os_titulos_das_categorias(tmp_path, monkeypatch):
     # Achado no ensaio 3: o git apaga linha que começa com "#" da mensagem
     # (trata como comentário), e a tag perdia "### Added", "### Fixed"...
+    # Versão que nunca vai existir: a v0.5.0 do teste original foi publicada.
     comum = {"cwd": tmp_path, "check": True, "capture_output": True}
     release.subprocess.run(["git", "init", "-q"], **comum)
     release.subprocess.run(
@@ -149,17 +150,62 @@ def test_tag_anotada_guarda_os_titulos_das_categorias(tmp_path, monkeypatch):
     monkeypatch.setenv("GIT_COMMITTER_NAME", "t")
     monkeypatch.setenv("GIT_COMMITTER_EMAIL", "t@t")
 
-    release.criar_tag("0.5.0", "resumo", "### Added\n- Coisa.\n\n### Fixed\n- Outra.")
+    release.criar_tag("9.9.9", "resumo", "### Added\n- Coisa.\n\n### Fixed\n- Outra.")
 
     mensagem = release.subprocess.run(
-        ["git", "tag", "-l", "v0.5.0", "--format=%(contents)"], text=True, **comum
+        ["git", "tag", "-l", "v9.9.9", "--format=%(contents)"], text=True, **comum
     ).stdout
     assert "### Added" in mensagem and "### Fixed" in mensagem
     real = Path(release.__file__).resolve().parents[1]
     tags_reais = release.subprocess.run(
-        ["git", "tag", "-l", "v0.5.0"], cwd=real, capture_output=True, text=True, check=True
+        ["git", "tag", "-l", "v9.9.9"], cwd=real, capture_output=True, text=True, check=True
     ).stdout
     assert tags_reais == "", "o teste criou a tag no repositório de verdade"
+
+
+def test_preparar_so_na_branch_da_release():
+    # D-823: a main só recebe PR; a versão sobe numa branch e entra pelo PR.
+    release.conferir_ramo("release-v0.6.0", "0.6.0")
+    for ramo in ("main", "release-v0.5.0", "d-900-outra"):
+        with pytest.raises(release.ErroDeRelease, match="release-v0.6.0"):
+            release.conferir_ramo(ramo, "0.6.0")
+
+
+def test_commit_da_release_e_achado_pelo_assunto_na_main():
+    # Depois do squash o SHA é outro; o que identifica o commit é o assunto,
+    # que o merge preserva. Outros PRs podem ter entrado depois dele.
+    log = (
+        "c3\x00✨ feat(D-900): algo que entrou depois\n"
+        f"b2\x00{release.assunto_do_commit('0.6.0')}\n"
+        f"a1\x00{release.assunto_do_commit('0.5.0')}\n"
+    )
+
+    assert release.sha_do_commit_da_release(log, "0.6.0") == "b2"
+    with pytest.raises(release.ErroDeRelease, match="PR da release"):
+        release.sha_do_commit_da_release(log, "0.7.0")
+
+
+def test_resumo_da_tag_sai_do_corpo_do_commit():
+    corpo = "o que a versão entrega\n\n[unlock:x] motivo: y\n\nCo-Authored-By: z\n"
+
+    assert release.resumo_do_commit(corpo) == "o que a versão entrega"
+
+
+@pytest.mark.parametrize(
+    ("runs", "erro"),
+    [
+        ('[{"status": "completed", "conclusion": "success"}]', None),
+        ("[]", "ainda não rodou"),
+        ('[{"status": "in_progress", "conclusion": ""}]', "ainda roda"),
+        ('[{"status": "completed", "conclusion": "failure"}]', "failure"),
+    ],
+)
+def test_tag_so_com_o_ci_verde_no_sha(runs, erro):
+    if erro is None:
+        release.conferir_ci_verde(runs, "b2")
+        return
+    with pytest.raises(release.ErroDeRelease, match=erro):
+        release.conferir_ci_verde(runs, "b2")
 
 
 def test_marcas_de_unlock_uma_por_trava_com_motivo():

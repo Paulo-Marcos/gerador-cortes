@@ -1,22 +1,26 @@
-"""release.py — prepara uma release local: portão, versão, CHANGELOG, commit e tag (D-782).
+"""release.py — a release em dois atos, com o PR no meio (D-782, D-823).
 
-Não faz push. Publicar é outro ato, do dono: enviar a main, esperar o CI verde
-naquele SHA e só então enviar a tag, que dispara o release.yml. O script
-termina imprimindo esses comandos.
+A main só recebe PR (D-822), então a versão não pode subir nela direto:
+
+1. **Preparar**, numa branch `release-vX.Y.Z` criada da origin/main: confere a
+   árvore e a versão pedida contra a sugerida pelas categorias do CHANGELOG,
+   roda o portão do AGENTS.md, atualiza as cópias da versão (VERSION,
+   package.json e lockfiles do frontend e do renderer, openapi.json), fecha o
+   [Unreleased] e commita. Sem tag: o squash do PR muda o SHA.
+2. **Taguear**, depois do merge: acha na origin/main o commit da release pelo
+   assunto, exige o CI verde NAQUELE SHA e cria a tag anotada com as notas.
+
+Nenhum ato faz push. Cada um termina imprimindo os comandos seguintes.
 
 Uso (pelo bin\\release.ps1, que usa o Python do backend\\.venv):
-    python bin/release.py 0.5.0 --resumo "o que esta versão entrega"
-    python bin/release.py 0.5.0 --resumo "..." --verificar   # só confere
-
-Passos: confere a árvore (main, limpa, tag nova, [Unreleased] com conteúdo);
-confere a versão pedida contra a sugerida pelas categorias do CHANGELOG; roda
-o portão do AGENTS.md; atualiza as cópias da versão (VERSION, package.json e
-lockfiles do frontend e do renderer, openapi.json); fecha o [Unreleased];
-commita e cria a tag anotada com as notas da versão.
+    python bin/release.py 0.6.0 --resumo "o que esta versão entrega"
+    python bin/release.py 0.6.0 --resumo "..." --verificar   # só confere
+    python bin/release.py 0.6.0 --taguear                    # depois do merge
 """
 
 import argparse
 import datetime
+import json
 import os
 import re
 import shutil
@@ -131,6 +135,52 @@ def notas_da_versao(changelog: str, versao: str) -> str:
     return bloco.group(1).strip()
 
 
+def assunto_do_commit(versao: str) -> str:
+    return f"🧹 chore(release): subir a versão para {versao}"
+
+
+def ramo_da_release(versao: str) -> str:
+    return f"release-v{versao}"
+
+
+def conferir_ramo(ramo: str, versao: str) -> None:
+    if ramo != ramo_da_release(versao):
+        raise ErroDeRelease(
+            f"a versão sobe na branch {ramo_da_release(versao)} e entra pelo PR "
+            f"(você está em {ramo!r}): "
+            f"git worktree add ..\\gerador-cortes-v{versao} -b {ramo_da_release(versao)} origin/main"
+        )
+
+
+def sha_do_commit_da_release(log: str, versao: str) -> str:
+    """No `git log --format=%H%x00%s` da origin/main, o commit da versão.
+
+    O squash troca o SHA, mas mantém o assunto (o merge o passa em --subject)."""
+    assunto = assunto_do_commit(versao)
+    for linha in log.splitlines():
+        sha, _, texto = linha.partition("\x00")
+        if texto == assunto:
+            return sha
+    raise ErroDeRelease(f"a origin/main não tem '{assunto}': o PR da release já foi mergeado?")
+
+
+def resumo_do_commit(corpo: str) -> str:
+    """O primeiro parágrafo do corpo, que o `preparar` gravou como resumo."""
+    return corpo.strip().split("\n\n", 1)[0].strip()
+
+
+def conferir_ci_verde(runs_json: str, sha: str) -> None:
+    """`gh run list --commit <sha> --workflow CI --json status,conclusion`."""
+    runs = json.loads(runs_json)
+    if not runs:
+        raise ErroDeRelease(f"o CI ainda não rodou em {sha[:10]}")
+    ultimo = runs[0]
+    if ultimo["status"] != "completed":
+        raise ErroDeRelease(f"o CI ainda roda em {sha[:10]}: espere e taguei de novo")
+    if ultimo["conclusion"] != "success":
+        raise ErroDeRelease(f"o CI em {sha[:10]} terminou em {ultimo['conclusion']}")
+
+
 def marcas_de_unlock(saida_do_check_lock: str, versao: str) -> list[str]:
     ids = sorted(set(re.findall(r"\[unlock:([^\]]+)\]", saida_do_check_lock)))
     motivo = MOTIVO_DO_UNLOCK.format(versao=versao)
@@ -163,17 +213,25 @@ def executavel(nome: str) -> str:
     return caminho
 
 
-def conferir_arvore(versao: str) -> None:
-    ramo = rodar(["git", "branch", "--show-current"]).strip()
-    if ramo != "main":
-        raise ErroDeRelease(f"a release sai da main (você está em {ramo!r})")
-    sujos = rodar(["git", "status", "--porcelain"]).strip()
-    if sujos:
-        raise ErroDeRelease(f"árvore com mudanças não commitadas:\n{sujos}")
+def conferir_tag_nova(versao: str) -> None:
     if rodar(["git", "tag", "--list", f"v{versao}"]).strip():
         raise ErroDeRelease(f"a tag v{versao} já existe localmente")
     if rodar(["git", "ls-remote", "--tags", "origin", f"v{versao}"]).strip():
         raise ErroDeRelease(f"a tag v{versao} já existe no GitHub")
+
+
+def conferir_arvore(versao: str) -> None:
+    conferir_ramo(rodar(["git", "branch", "--show-current"]).strip(), versao)
+    sujos = rodar(["git", "status", "--porcelain"]).strip()
+    if sujos:
+        raise ErroDeRelease(f"árvore com mudanças não commitadas:\n{sujos}")
+    rodar(["git", "fetch", "origin", "main"])
+    em_dia = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", "origin/main", "HEAD"], cwd=RAIZ, timeout=60
+    )
+    if em_dia.returncode != 0:
+        raise ErroDeRelease("a branch não contém a origin/main atual: git rebase origin/main")
+    conferir_tag_nova(versao)
 
 
 def rodar_portao() -> None:
@@ -238,38 +296,66 @@ def consultar_travas(arquivos: list[str]) -> str:
     return feito.stdout + feito.stderr
 
 
-def commitar_e_marcar(versao: str, resumo: str, notas: str) -> str:
+def commitar(versao: str, resumo: str) -> str:
     marcas = marcas_de_unlock(consultar_travas(COPIAS_DA_VERSAO), versao)
     if marcas:
         print("  travas liberadas no commit:\n    " + "\n    ".join(marcas))
-    mensagem = f"🧹 chore(release): subir a versão para {versao}\n\n{resumo}\n"
+    mensagem = f"{assunto_do_commit(versao)}\n\n{resumo}\n"
     if marcas:
         mensagem += "\n" + "\n".join(marcas) + "\n"
     rodar(["git", "commit", "-m", mensagem, "--", *COPIAS_DA_VERSAO, "CHANGELOG.md"])
-    criar_tag(versao, resumo, notas)
     return rodar(["git", "rev-parse", "HEAD"]).strip()
 
 
-def criar_tag(versao: str, resumo: str, notas: str) -> None:
+def criar_tag(versao: str, resumo: str, notas: str, sha: str = "HEAD") -> None:
     # verbatim: sem ele o git apaga as linhas "### Added" etc., que começam
     # com "#" e contam como comentário na mensagem (achado no ensaio 3).
     mensagem = f"CutCut {versao} — {resumo}\n\n{notas}"
-    rodar(["git", "tag", "-a", "--cleanup=verbatim", f"v{versao}", "-m", mensagem])
+    rodar(["git", "tag", "-a", "--cleanup=verbatim", f"v{versao}", sha, "-m", mensagem])
 
 
-def imprimir_proximos_passos(versao: str, sha: str) -> None:
+def imprimir_como_abrir_o_pr(versao: str, sha: str) -> None:
+    ramo = ramo_da_release(versao)
     print(
         f"""
-Pronto: commit {sha[:10]} e tag anotada v{versao}, só nesta máquina.
+Pronto: commit {sha[:10]} na branch {ramo}, só nesta máquina. Sem tag ainda.
 
-Para publicar (nesta ordem):
-  1. git push origin main                      # envia o commit da release
-  2. gh run list --commit {sha} --limit 5       # espere o CI ficar verde NESTE SHA
-     gh run watch <id-do-run>
-  3. git push origin v{versao}                  # a tag dispara o release.yml
-  4. gh release view v{versao}                   # confira as notas e os anexos
+Próximos passos (nesta ordem):
+  1. git push -u origin {ramo}
+  2. gh pr create --base main --title "{assunto_do_commit(versao)}" --body "<o resumo>"
+  3. pr-audit e merge por squash, com --subject igual ao título
+  4. .\\bin\\release.ps1 {versao} -Taguear      # tag no commit da main, com o CI verde
 
-Desistir antes do push: git tag -d v{versao} && git reset --hard HEAD~1
+Desistir antes do push: apague a branch e o worktree.
+"""
+    )
+
+
+def taguear(versao: str) -> None:
+    conferir_tag_nova(versao)
+    rodar(["git", "fetch", "origin", "main"])
+    log = rodar(["git", "log", "origin/main", "-200", "--format=%H%x00%s"])
+    sha = sha_do_commit_da_release(log, versao)
+    no_commit = rodar(["git", "show", f"{sha}:VERSION"]).strip()
+    if no_commit != versao:
+        raise ErroDeRelease(f"o VERSION em {sha[:10]} diz {no_commit}, não {versao}")
+    runs = rodar(
+        [executavel("gh"), "run", "list", "--commit", sha, "--workflow", "CI",
+         "--limit", "1", "--json", "status,conclusion"]
+    )  # fmt: skip
+    conferir_ci_verde(runs, sha)
+    resumo = resumo_do_commit(rodar(["git", "log", "-1", "--format=%b", sha]))
+    notas = notas_da_versao(rodar(["git", "show", f"{sha}:CHANGELOG.md"]), versao)
+    criar_tag(versao, resumo, notas, sha)
+    print(
+        f"""
+Pronto: tag anotada v{versao} em {sha[:10]} (origin/main, CI verde), só nesta máquina.
+
+Para publicar:
+  1. git push origin v{versao}                  # a tag dispara o release.yml (rascunho)
+  2. gh release view v{versao}                   # confira as notas e publique o rascunho
+
+Desistir antes do push: git tag -d v{versao}
 """
     )
 
@@ -289,9 +375,9 @@ def preparar(versao: str, resumo: str, verificar: bool) -> None:
     rodar_portao()
     print("Cópias da versão:")
     atualizar_copias(versao)
-    notas = gravar_changelog(versao, anterior)
-    print("Commit e tag:")
-    imprimir_proximos_passos(versao, commitar_e_marcar(versao, resumo, notas))
+    gravar_changelog(versao, anterior)
+    print("Commit:")
+    imprimir_como_abrir_o_pr(versao, commitar(versao, resumo))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -301,11 +387,19 @@ def main(argv: list[str] | None = None) -> int:
         fluxo.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("versao", help="a nova versão, X.Y.Z")
-    parser.add_argument("--resumo", required=True, help="uma linha: o que a versão entrega")
+    parser.add_argument("--resumo", help="uma linha: o que a versão entrega (ao preparar)")
     parser.add_argument("--verificar", action="store_true", help="só confere; não altera nada")
+    parser.add_argument(
+        "--taguear", action="store_true", help="depois do merge: tag no commit da origin/main"
+    )
     args = parser.parse_args(argv)
+    if not args.taguear and not (args.resumo or "").strip():
+        parser.error("--resumo é obrigatório ao preparar")
     try:
-        preparar(args.versao, args.resumo.strip(), args.verificar)
+        if args.taguear:
+            taguear(args.versao)
+        else:
+            preparar(args.versao, args.resumo.strip(), args.verificar)
     except ErroDeRelease as erro:
         print(f"release recusada: {erro}", file=sys.stderr)
         return 1

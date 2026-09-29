@@ -37,10 +37,17 @@ worktree d-NNN-slug ──PR──▶ CI + pr-audit ──squash──▶ main �
 
 **PR não é release.** A `main` acumula no `[Unreleased]`; a PROD puxa a `main`
 quando o Paulo quer usar o que entrou. A release é a decisão de dizer "este lote
-está bom": a versão sobe num PR como qualquer mudança e a tag vai no commit da
-`main` depois do merge (D-823 adapta o `bin\release.py`). A última tag é o ponto
-estável de volta: `backup-prod.py` antes de todo pull na PROD, por causa das
-migrations do boot.
+está bom". O `bin\release.ps1` faz em dois atos, com o PR no meio (D-823):
+
+1. Num worktree na branch `release-vX.Y.Z`, criada da `origin/main`:
+   `.\bin\release.ps1 X.Y.Z -Resumo "..."` roda o portão, sobe a versão, fecha o
+   `[Unreleased]` e commita. O PR segue o fluxo acima.
+2. Depois do merge: `.\bin\release.ps1 X.Y.Z -Taguear` acha o commit da release
+   na `origin/main` e cria a tag anotada **só com o CI verde naquele SHA**.
+   O push da tag dispara o `release.yml`, que cria o rascunho da release.
+
+A última tag é o ponto estável de volta: `backup-prod.py` antes de todo pull na
+PROD, por causa das migrations do boot.
 
 ### Conflitos: resolvem-se na branch, antes da aprovação
 
