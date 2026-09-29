@@ -20,6 +20,8 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import pytest
+
 os.environ["VIDEO_ENCODER"] = "qsv"
 
 _PASTA_DA_SESSAO = Path(tempfile.mkdtemp(prefix="cutcut-testes-"))
@@ -44,3 +46,21 @@ def _instancia_isolada() -> Path:
 
 
 channel_paths._instance_root = _instancia_isolada
+
+
+@pytest.fixture(autouse=True)
+def _progresso_do_processo_limpo():
+    """D-815: o andamento do bruto, dos shorts e da fábrica mora em dicionários do
+    processo, indexados pelo id do corte — e quase todo teste usa "c1". Um teste
+    que deixava "c1: passo shorts concluído" fazia outro, no mesmo processo,
+    pular a IA e falhar; em série um terceiro limpava por acaso no meio, sob
+    `-n 6` não. Limpa depois de cada teste, e o import fica aqui dentro para
+    não passar na frente do isolamento acima (D-760)."""
+    yield
+    from app.services import fabrica_de_shorts
+    from app.services.bruto_progress import BrutoProgress
+    from app.services.shorts_progress import ShortsProgress
+
+    BrutoProgress._store.clear()
+    ShortsProgress._store.clear()
+    fabrica_de_shorts._andamento.clear()
