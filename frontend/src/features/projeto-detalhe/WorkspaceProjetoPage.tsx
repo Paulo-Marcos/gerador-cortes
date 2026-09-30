@@ -334,7 +334,7 @@ export default function WorkspaceProjetoPage() {
         </span>
         <div style={{ flex: 1 }} />
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--dim)' }}>
-          <kbd>A</kbd> aprova · <kbd>R</kbd> devolve · <kbd>J</kbd>
+          <kbd>A</kbd> aprova/devolve · <kbd>R</kbd> exclui · <kbd>J</kbd>
           <kbd>K</kbd> anda
         </span>
         <label className="fld" style={{ width: 200 }}>

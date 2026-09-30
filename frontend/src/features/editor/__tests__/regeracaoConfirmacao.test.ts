@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { OPCOES_REGERAR_VAZIAS } from '../regerarBrutoPlan';
 import {
+  confirmacaoExcluirCorte,
   confirmacaoRegerarBruto,
   confirmacaoRegerarCenas,
   confirmacaoRegerarTrechos,
@@ -70,5 +71,27 @@ describe('rotulosDosOptIns', () => {
     expect(
       rotulosDosOptIns({ transcricao: true, cenas: false, metadados: true, desvios: true }),
     ).toEqual(['transcricao', 'metadados', 'trechos a remover']);
+  });
+});
+
+// D-842: o R exclui (no editor e na linha do Workspace), e o que separa a tecla
+// da perda de vez é este pedido — nunca pode ser `null`.
+describe('confirmacaoExcluirCorte', () => {
+  it('sempre pede confirmação, marcada como perigosa', () => {
+    const pedido = confirmacaoExcluirCorte(7, 'O dia em que');
+    expect(pedido).not.toBeNull();
+    expect(pedido.tone).toBe('danger');
+    expect(pedido.confirmLabel).toBe('Excluir de vez');
+  });
+
+  it('diz qual corte sai', () => {
+    expect(confirmacaoExcluirCorte(7, 'O dia em que').detalhe).toBe('Corte #7 · O dia em que');
+  });
+
+  it('aponta o A para quem só queria tirar a aprovação', () => {
+    const { descricao } = confirmacaoExcluirCorte(7, 'x');
+    expect(descricao).toContain('Não há como desfazer');
+    expect(descricao).toContain('(A)');
+    expect(descricao).not.toContain('(R)');
   });
 });
