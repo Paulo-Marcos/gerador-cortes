@@ -19,21 +19,40 @@ worktree d-NNN-slug ──PR──▶ CI + pr-audit ──squash──▶ main �
    Branch sozinha não basta: duas frentes na mesma pasta varrem os arquivos
    uma da outra. A pasta `C:\DEV\gerador-cortes` fica na `main`, para puxar,
    ler e rodar o Guia (o estado do Guia mora nela). Sessão na nuvem já trabalha
-   numa branch própria: vale como worktree.
+   numa branch própria: vale como worktree (regras dela no fim desta seção).
 2. **Na branch:** commits no padrão abaixo, portão local, entrada no
    `CHANGELOG` em `[Unreleased]`.
 3. **PR contra a `main`:** `git push -u origin d-NNN-slug` e `gh pr create`, com
    o título igual ao assunto do commit. Uma demanda, um PR.
 4. **CI no PR.** A proteção da `main` exige `CI ok` (o job que espera todos os
-   outros, D-820) e `Verificar travas de edicao`, com a branch **atualizada**
-   com a `main`.
-5. **Aprovação sempre pela skill:** `pr-audit` (PR do Dependabot: `pr-bump`),
-   com o relatório. O merge só com o ok do Paulo, por squash, levando a mensagem
+   outros, D-820), `Verificar travas de edicao` e `Auditoria registrada`
+   (passo 5), com a branch **atualizada** com a `main`.
+5. **Aprovação sempre pela skill:** `pr-audit` (PR do Dependabot: `pr-bump`).
+   Com o veredito aprovado, o relatório vai para o PR num comentário que
+   termina com o marcador do SHA auditado (D-838):
+
+   ```
+   gh pr view <N> --json headRefOid -q .headRefOid   # o SHA que foi auditado
+   gh pr comment <N> --body-file <relatório>         # última linha: <!-- auditoria-aprovada sha=<SHA> -->
+   ```
+
+   O workflow `auditoria.yml` confere o marcador e grava o status
+   `Auditoria registrada` naquele SHA. Só conta comentário do dono do
+   repositório, e o status é do commit: push novo (commit ou rebase) nasce
+   sem ele e pede auditoria do head novo.
+   O merge só com o ok do Paulo, por squash, levando a mensagem
    do commit (o Lock Check confere as marcas `[unlock:]` também no push da
    `main`):
    `gh pr merge <N> --squash --delete-branch --subject "<assunto>" --body-file <msg>`.
 6. **Depois do merge:** `git worktree remove ..\gerador-cortes-dNNN` e
    `git pull --ff-only` na pasta principal.
+
+**Sessão na nuvem (D-838).** Ela faz os passos 1 a 4 e **para no PR**: nunca
+faz merge, nem comenta o marcador da auditoria. As skills de auditoria moram
+no PC do Paulo, assim como o estado do Guia e os dados dos canais, então a
+auditoria, a prova da tela no navegador e o fechamento da demanda acontecem
+aqui. A demanda nasce no Guia antes, e o prompt da nuvem leva o `D-NNN` e o
+nome da branch.
 
 **PR não é release.** A `main` acumula no `[Unreleased]`; a PROD puxa a `main`
 quando o Paulo quer usar o que entrou. A release é a decisão de dizer "este lote
@@ -63,7 +82,8 @@ git diff origin/main -- <arquivo> | grep "^-"   # "manter os dois" já comeu fun
 git push --force-with-lease     # só na própria branch, nunca na main
 ```
 
-O CI roda de novo e a `pr-audit` revê o head novo. A exigência de branch em dia
+O CI roda de novo e a `pr-audit` revê o head novo (e comenta o marcador com o
+SHA novo). A exigência de branch em dia
 existe por causa do **conflito semântico**, que o git não vê: um PR renomeia uma
 função, o outro acrescenta uma chamada ao nome antigo; cada um passa sozinho, a
 soma quebra. Só o CI rodando sobre a combinação pega.
