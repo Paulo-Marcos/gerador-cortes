@@ -889,3 +889,13 @@ async def test_colagem_que_nao_cabe_mais_no_bruto_recusa_em_vez_de_renderizar_o_
         await render_short.renderizar_short("s1")
 
     assert jobs == [], "nenhum passo de render pode ter saido"
+
+
+@pytest.mark.asyncio
+async def test_camada_roda_de_dentro_do_video_renderer(ambiente, jobs):
+    """D-837: o D-707 desceu este módulo uma pasta e o `parents[3]` passou a
+    apontar para `backend/video-renderer`, que não existe. O Windows reporta cwd
+    inexistente como ENOENT do `node.exe` — todo short falhava em 0 s."""
+    cwd = (await _render_e_pegar(jobs, 1))["cwd"]
+
+    assert (cwd / "src" / "index.ts").is_file()
