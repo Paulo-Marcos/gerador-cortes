@@ -304,7 +304,7 @@ export function AppSettingsControls() {
                 className={cn(
                   'mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border',
                   active
-                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-white'
+                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
                     : 'border-[var(--wb-border)] text-transparent',
                 )}
                 aria-hidden

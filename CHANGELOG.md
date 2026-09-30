@@ -62,6 +62,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **Dark themes no longer show light panels, and faded colors show up again.**
+  The older color scales (`bg-bg-900`, `text-text-100`…) froze the light
+  theme's values before the shell theme applied, so in Escuro and Ardósia
+  about 106 classes painted white panels with dark ink (Análise IA,
+  Auditoria, Prompt manual). And every color with an opacity modifier
+  (`border-error/30`, `bg-[var(--wb-accent)]/10`, `bg-bg-900/40`…) produced
+  no CSS at all: 65 borders, tints and highlights were simply missing. Text
+  on a filled accent or status color now follows the theme instead of being
+  fixed white, the old theme provider is gone, and "Onde eu estava" no
+  longer records "Página não encontrada" (D-841).
 - **Shorts render again.** Every short failed at once on the overlay step
   with `spawn node.exe ENOENT`. Node was there: Windows reports a missing
   working folder as the program being missing. When the short renderer moved

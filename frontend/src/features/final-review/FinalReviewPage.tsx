@@ -555,13 +555,13 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
       className={`flex items-center gap-2.5 rounded-[var(--radius-sm)] border p-2 ${
         item.ok
           ? 'border-transparent bg-transparent'
-          : 'border-[var(--wb-warn)]/30 bg-[var(--wb-warn-soft)]'
+          : 'border-wb-warn/30 bg-[var(--wb-warn-soft)]'
       }`}
     >
       <span
         className={`flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full border-[1.5px] ${
           item.ok
-            ? 'border-[var(--wb-ok)] bg-[var(--wb-ok)] text-white'
+            ? 'border-[var(--wb-ok)] bg-[var(--wb-ok)] text-[var(--wb-accent-fg)]'
             : 'border-[var(--wb-warn)] bg-[var(--wb-bg-card)] text-transparent'
         }`}
         aria-hidden

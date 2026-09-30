@@ -45,7 +45,7 @@ export const PROJECT_STATUS_META: Record<StatusProjeto, StatusMeta> = {
 const toneClasses: Record<StatusTone, string> = {
   neutral: 'border-[var(--wb-border-soft)] bg-[var(--wb-pill-bg)] text-[var(--wb-text-mute)]',
   info: 'border-info/25 bg-[var(--wb-pill-bg)] text-info',
-  accent: 'border-[var(--wb-accent)]/25 bg-[var(--wb-pill-bg)] text-[var(--wb-accent-strong)]',
+  accent: 'border-wb-accent/25 bg-[var(--wb-pill-bg)] text-[var(--wb-accent-strong)]',
   success: 'border-success/25 bg-[var(--wb-pill-bg)] text-success',
   warning: 'border-warning/25 bg-[var(--wb-pill-bg)] text-warning',
   error: 'border-error/25 bg-[var(--wb-pill-bg)] text-error',

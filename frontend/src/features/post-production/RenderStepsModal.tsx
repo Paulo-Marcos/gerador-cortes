@@ -127,7 +127,7 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
                 <span className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-[var(--wb-text)]">{info.label}</span>
                   {pronta && (
-                    <span className="rounded-full bg-[var(--wb-ok)]/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--wb-ok)]">
+                    <span className="rounded-full bg-wb-ok/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--wb-ok)]">
                       pronta
                     </span>
                   )}

@@ -229,7 +229,7 @@ function LinhaDoCorte({
       className={cn(
         'flex flex-wrap items-center gap-2 rounded-[8px] border px-2.5 py-2',
         publicado
-          ? 'border-[var(--wb-ok)]/40 bg-[var(--wb-ok-soft)]/30'
+          ? 'border-wb-ok/40 bg-wb-ok-soft/30'
           : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-panel)]',
       )}
     >

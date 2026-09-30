@@ -572,6 +572,39 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
   --warning: var(--warn);
   --error: var(--err);
 
+  /* D-841: as escalas antigas (bg-bg-900, text-text-100…) são apelidos de
+     `--wb-*`, e um apelido se resolve onde é DECLARADO. Declaradas só no
+     :root, congelavam os valores do tema claro antes da ponte acima: no
+     escuro, ~106 classes pintavam painel branco com tinta escura (Análise
+     IA, Auditoria, Prompt manual). Redeclaradas aqui, passam a ler o tema.
+     Mesma lista do :root do index.css; o temaDaCasca.test confere. */
+  --bg-950: var(--wb-bg);
+  --bg-900: var(--wb-bg-panel);
+  --bg-800: var(--wb-bg-inset);
+  --bg-700: var(--wb-border-soft);
+  --bg-600: var(--wb-border);
+  --bg-500: var(--wb-text-dim);
+  --surface-1: var(--wb-bg-card);
+  --surface-2: var(--wb-bg-card-elev);
+  --surface-3: var(--wb-bg-inset);
+  --accent-200: var(--wb-accent-strong);
+  --accent-300: var(--wb-accent-soft);
+  --accent-400: var(--wb-accent);
+  --accent-500: var(--wb-accent);
+  --accent-600: var(--wb-accent);
+  --accent-700: var(--wb-accent-strong);
+  --text-100: var(--wb-text);
+  --text-200: var(--wb-text-mute);
+  --text-300: var(--wb-text-dim);
+  --text-400: var(--wb-text-dim);
+  --text-500: var(--wb-text);
+  --border: var(--wb-border);
+  --border-hover: var(--wb-text-dim);
+  --border-accent: var(--wb-accent);
+  --accent-glow: var(--wb-focus);
+  --shadow-sm: var(--wb-shadow);
+  --shadow-md: var(--wb-shadow);
+
   /* Cantos: o design inteiro vive entre 3 e 5 px. Deixar 10–16 px nas
      telas não migradas criaria duas linguagens de forma na mesma janela. */
   --radius-xs: var(--r1);

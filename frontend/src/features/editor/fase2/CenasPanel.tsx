@@ -351,7 +351,7 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
       {/* Lista de cenas */}
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {validation.overlappingIndices.size > 0 && (
-          <div className="mx-1 mb-2.5 rounded-[var(--radius-sm)] border border-[var(--wb-err)]/30 bg-[var(--wb-err-soft)] p-2.5 text-xs text-[var(--wb-err)]">
+          <div className="mx-1 mb-2.5 rounded-[var(--radius-sm)] border border-wb-err/30 bg-[var(--wb-err-soft)] p-2.5 text-xs text-[var(--wb-err)]">
             <div className="flex items-start gap-2">
               <AlertTriangle size={14} className="mt-0.5" aria-hidden />
               <div className="flex flex-col gap-0.5">

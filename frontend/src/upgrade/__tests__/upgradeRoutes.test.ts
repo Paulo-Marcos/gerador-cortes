@@ -4,6 +4,7 @@ import {
   corteDaLive,
   corteDaRota,
   destinosDaPaleta,
+  entraNoHistorico,
   menuDoTrilho,
   projetoDaRota,
   telaDaRota,
@@ -197,5 +198,19 @@ describe('destinosDaPaleta e CABECALHO', () => {
   it('o cabecalho de cada tela vem da mesma tabela', () => {
     expect(CABECALHO.cortes).toEqual({ icone: 'scissors', titulo: 'Editor de cortes' });
     expect(CABECALHO.erro.icone).toBe('triangle-alert');
+  });
+});
+
+describe('entraNoHistorico', () => {
+  // D-841: a raiz "/" é 'erro' até o <Navigate> levar a /projetos, e essa
+  // passagem gravava "Página não encontrada" em "Onde eu estava".
+  it('uma página de erro não vira lugar para onde voltar', () => {
+    expect(entraNoHistorico(telaDaRota('/'))).toBe(false);
+    expect(entraNoHistorico(telaDaRota('/rota-que-nao-existe'))).toBe(false);
+  });
+
+  it('as telas de verdade entram', () => {
+    expect(entraNoHistorico(telaDaRota('/projetos'))).toBe(true);
+    expect(entraNoHistorico(telaDaRota('/projetos/267/cortes/7'))).toBe(true);
   });
 });

@@ -149,7 +149,7 @@ export function LinhaDoTempo({
               // remover do editor. O bloco opaco de antes tapava a onda
               // justamente onde ela mais importa — dentro do trecho.
               className={cn(
-                'absolute inset-y-0 border-x border-[var(--wb-border)] bg-[var(--wb-border)]/30',
+                'absolute inset-y-0 border-x border-[var(--wb-border)] bg-wb-border/30',
                 short.status === 'rejeitado' && 'opacity-40',
               )}
               style={{
@@ -163,7 +163,7 @@ export function LinhaDoTempo({
         {bordasVisiveis && (
           <div
             className={cn(
-              'absolute inset-y-0 rounded-[5px] border-2 bg-[var(--wb-accent)]/25',
+              'absolute inset-y-0 rounded-[5px] border-2 bg-wb-accent/25',
               alerta ? 'border-[var(--wb-warn-ink)]' : 'border-[var(--wb-accent)]',
             )}
             style={{
