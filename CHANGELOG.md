@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every CI job by name, so when Node 20 left the matrix no pull request could
   merge. A single job now waits for all the others, and a test fails when a
   new job is left out of it (D-820).
+- **No pull request merges without a recorded audit.** A cloud session opens
+  the pull request and stops there, because the audit skills live on the
+  maintainer's PC. The `pr-audit` report goes into the pull request as a
+  comment that ends with the audited commit's SHA, and the new required check
+  "Auditoria registrada" only turns green for the owner's comment on the
+  current head: any later push asks for a new audit (D-838).
 - **`bin\release.ps1` works in two steps, with the pull request in between.**
   `main` only takes pull requests now, so the version goes up on a
   `release-vX.Y.Z` branch; after the merge, `-Taguear` finds the release

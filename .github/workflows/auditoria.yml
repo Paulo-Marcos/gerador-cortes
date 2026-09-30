@@ -1,0 +1,55 @@
+name: Auditoria
+
+# D-838: nenhum PR entra na main sem o relatório da pr-audit (pr-bump no
+# Dependabot). As skills de auditoria moram no PC do Paulo: a sessão na nuvem
+# abre o PR mas não audita, e a proteção da main (0 aprovações) deixaria o
+# merge passar. Aqui o comentário do dono com o marcador do SHA auditado vira o
+# status "Auditoria registrada", que a proteção exige. Status é do commit: push
+# novo (commit ou rebase) nasce sem ele e pede auditoria do head novo.
+on:
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  registrar:
+    name: Registrar auditoria
+    # Só o dono conta: comentário de bot, de app ou de terceiro não aprova.
+    if: >-
+      github.event.issue.pull_request &&
+      github.event.comment.author_association == 'OWNER' &&
+      contains(github.event.comment.body, 'auditoria-aprovada')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Gravar o status no head do PR
+        # O corpo do comentário entra por variável de ambiente, nunca
+        # interpolado no script: é texto de fora e viraria comando.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number }}
+          COMENTARIO: ${{ github.event.comment.body }}
+          LINK: ${{ github.event.comment.html_url }}
+        run: |
+          read -r BASE HEAD < <(gh api "repos/$REPO/pulls/$PR" --jq '"\(.base.ref) \(.head.sha)"')
+          if [ "$BASE" != "main" ]; then
+            echo "PR contra $BASE: a proteção só vale para a main."
+            exit 0
+          fi
+          case "$COMENTARIO" in
+            *"<!-- auditoria-aprovada sha=$HEAD -->"*) ;;
+            *)
+              echo "::error::O marcador não traz o head atual ($HEAD): o PR mudou depois da auditoria. Audite o head novo."
+              exit 1
+              ;;
+          esac
+          gh api "repos/$REPO/statuses/$HEAD" \
+            -f state=success \
+            -f context="Auditoria registrada" \
+            -f description="Relatório da auditoria no PR #$PR" \
+            -f target_url="$LINK"
