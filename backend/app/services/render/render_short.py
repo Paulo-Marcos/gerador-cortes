@@ -24,6 +24,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.config import settings
 from app.core.channel_paths import para_relativo_ao_projeto, projetos_dir, resolver_do_projeto
 from app.database import AsyncSessionLocal
 from app.domain.corte.youtube_layout import FUNDO_PADRAO as FUNDO_EDITORIAL_PADRAO
@@ -218,7 +219,8 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
             # ProRes 4444 é o único codec com alpha confiável neste projeto.
             codec_profile=overlay_codec_profile(OverlayCodec.PRORES_4444),
         ),
-        cwd=_renderer_dir(),
+        # Da configuração, como no corte: contar pastas quebrou no D-707 (D-837).
+        cwd=Path(settings.video_renderer_dir),
         category=WorkerJobCategory.OVERLAY,
         timeout=_TIMEOUT_CAMADA_SEG,
     )
@@ -776,11 +778,6 @@ async def _despachar(
             id=job_id, cmd=[str(c) for c in cmd], cwd=cwd, category=category, timeout_sec=timeout
         )
     )
-
-
-def _renderer_dir() -> Path:
-    """Raiz do `video-renderer`, de onde o `npx remotion` precisa rodar."""
-    return Path(__file__).resolve().parents[3] / "video-renderer"
 
 
 def _json_lista(bruto: str | None) -> list[dict]:
