@@ -6,6 +6,9 @@ fielmente nos 5 eixos, (2) é removida antes do prompt ir pro gerador de imagem
 vira bloco proibido injetável, (4) o repertório é formatado como bullets.
 """
 
+import time
+
+import pytest
 from app.domain.canal.variacao_prompt import (
     coletar_eixos_proibidos,
     contar_eixos_modais,
@@ -313,6 +316,22 @@ class TestPessoasDoPrompt:
     def test_repeticao_e_excesso_ficam_de_fora(self):
         prompt = _tags(referencias="A Um; B Dois; a um; C Tres; D Quatro; E Cinco")
         assert pessoas_do_prompt(prompt) == ["A Um", "B Dois", "C Tres", "D Quatro"]
+
+    @pytest.mark.parametrize(
+        "texto",
+        [
+            "[VARIATION_TAGS] " + "a" * 50_000,  # letras sem `=`: 24 s antes da âncora
+            '[VARIATION_TAGS] referencias="a' + " " * 50_000 + 'b"',  # 12 s com o `\s*`
+            "[VARIATION_TAGS]" + " " * 50_000,
+        ],
+        ids=["letras", "espacos-no-nome", "espacos-na-linha"],
+    )
+    def test_texto_hostil_nao_trava_o_backend(self, texto):
+        # O prompt chega pela requisição e a regex roda no event loop: tempo
+        # quadrático congelaria o backend inteiro. Linear, isto leva milissegundos.
+        inicio = time.perf_counter()
+        pessoas_do_prompt(texto)
+        assert time.perf_counter() - inicio < 1
 
     def test_prompt_sem_tags_nao_tem_elenco(self):
         assert pessoas_do_prompt("A frog meets Lula in Brasília.") == []

@@ -175,7 +175,11 @@ TAG_LINE_REGEX = re.compile(
     r"^\[VARIATION_TAGS\]\s*(.+?)$",
     re.MULTILINE,
 )
-TAG_PAIR_REGEX = re.compile(r'(\w+)\s*=\s*"([^"]*)"')
+# `(?<!\w)`: o par só começa no início de uma palavra. Sem a âncora, uma
+# sequência longa de letras sem `=` era varrida de novo a partir de cada letra
+# (tempo quadrático: 50 mil letras, 24 s, D-840). O resultado não muda: se um
+# pedaço da palavra casa, a palavra inteira casa.
+TAG_PAIR_REGEX = re.compile(r'(?<!\w)(\w+)\s*=\s*"([^"]*)"')
 
 _EIXOS_TAGS = (
     "cenario",
@@ -255,7 +259,10 @@ def strip_variation_tags(prompt: str) -> str:
 # o ChatGPT acertar o rosto. Mais que quatro disputa a atenção do gerador com
 # as fichas, e uma capa raramente tem tanta gente reconhecível.
 MAXIMO_DE_PESSOAS = 4
-_SEPARADOR_DE_NOMES = re.compile(r"\s*[;|,]\s*")
+# Sem `\s*` em volta: espaço é tirado de cada nome depois, e o `\s*` antes do
+# separador tornava a divisão quadrática numa sequência de espaços.
+_SEPARADOR_DE_NOMES = re.compile(r"[;|,]")
+_MARCA_DAS_TAGS = "[VARIATION_TAGS]"
 _SEM_PESSOA = {"", "-", "—", "nenhuma", "nenhum", "none", "n/a"}
 # Palavra com inicial maiúscula (acentos e hífen valem: "Tsé-Tung"), emendada a
 # outras pelas partículas de sobrenome ("Lula da Silva").
@@ -280,10 +287,14 @@ def pessoas_do_prompt(prompt: str, *, mascote: str = "") -> list[str]:
     "protagonista da China"), por isso a tela mostra a foto de cada nome e o
     operador tira o que não é gente.
     """
-    linha = TAG_LINE_REGEX.search(prompt or "")
+    # O prompt chega pela requisição: a linha se acha por comparação de texto,
+    # sem regex que o texto de fora possa fazer patinar.
+    linha = next(
+        (lin for lin in (prompt or "").splitlines() if lin.startswith(_MARCA_DAS_TAGS)), ""
+    )
     if not linha:
         return []
-    pares = {chave: valor.strip() for chave, valor in TAG_PAIR_REGEX.findall(linha.group(1))}
+    pares = {chave: valor.strip() for chave, valor in TAG_PAIR_REGEX.findall(linha)}
     if "referencias" in pares:
         nomes = _SEPARADOR_DE_NOMES.split(pares["referencias"])
     else:
