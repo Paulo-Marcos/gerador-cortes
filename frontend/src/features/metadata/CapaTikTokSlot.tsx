@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef, useState, type ComponentProps } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Clipboard, Copy, Film, ImagePlus, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
@@ -12,6 +12,8 @@ import { useUltimaGeracao } from '@/features/ia';
 import { lerImagemColada, SemImagemColada } from '@/features/shorts/imagemDaAreaDeTransferencia';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { GerarNoChatGPT } from '@/features/capa-chatgpt/GerarNoChatGPT';
+import { metadadosApi } from './api/metadados';
+import { metadataKey } from './useMetadataCard';
 
 // D-521: a capa VERTICAL, ao lado da thumbnail do YouTube.
 //
@@ -220,9 +222,9 @@ export function CapaTikTokSlot({
               {copiado ? 'copiado' : 'Copiar prompt'}
             </Button>
           )}
-          <GerarNoChatGPT
+          <GerarArteNoChatGPT
+            corteId={corteId}
             prompt={promptArte}
-            proporcao="4:5"
             entregar={subirArte.mutateAsync}
             desabilitado={ocupado}
           />
@@ -358,5 +360,27 @@ function SubirCapaPronta({
         }}
       />
     </>
+  );
+}
+
+/**
+ * A arte 4:5 gerada no ChatGPT (D-804). O elenco vem do prompt da thumbnail
+ * (D-840): é ele que traz as pessoas reais, e a arte nasce dele. A chave é a do
+ * card, então o metadado já está em cache.
+ */
+function GerarArteNoChatGPT({
+  corteId,
+  ...props
+}: { corteId: string } & Omit<ComponentProps<typeof GerarNoChatGPT>, 'proporcao'>) {
+  const metadado = useQuery({
+    queryKey: metadataKey(corteId),
+    queryFn: () => metadadosApi.obterMetadado(corteId),
+  });
+  return (
+    <GerarNoChatGPT
+      {...props}
+      proporcao="4:5"
+      promptDoElenco={metadado.data?.prompt_thumbnail ?? ''}
+    />
   );
 }

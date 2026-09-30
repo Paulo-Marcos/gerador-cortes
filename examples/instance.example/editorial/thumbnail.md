@@ -111,7 +111,7 @@ ou composição centrada conforme a cena pedir.
 Emita **apenas** a linha de VARIATION_TAGS e depois o prompt final em inglês:
 
 ```
-[VARIATION_TAGS] cenario="<cenário material específico>" | personagens="<protagonistas + coadjuvantes OU motivo de ausência>" | relacao_mascote_personagens="<a relação dramática escolhida>" | escala_mascote="<o papel/escala do mascote nesta cena>" | camera="<enquadramento e ângulo>" | pose="<ação física concreta>" | paleta="<família cromática>" | luminosidade="<chave de luz / registro tonal, distinto das últimas capas>" | tipografia="<caráter tipográfico>" | roupa="<roupa exata do mascote>" | layout_texto="<geometria do sistema manchete + apoio>" | apoio_layout="<relação visual do apoio com a manchete>"
+[VARIATION_TAGS] cenario="<cenário material específico>" | personagens="<protagonistas + coadjuvantes OU motivo de ausência>" | relacao_mascote_personagens="<a relação dramática escolhida>" | escala_mascote="<o papel/escala do mascote nesta cena>" | camera="<enquadramento e ângulo>" | pose="<ação física concreta>" | paleta="<família cromática>" | luminosidade="<chave de luz / registro tonal, distinto das últimas capas>" | tipografia="<caráter tipográfico>" | roupa="<roupa exata do mascote>" | layout_texto="<geometria do sistema manchete + apoio>" | apoio_layout="<relação visual do apoio com a manchete>" | referencias="<pessoas reais da imagem pelo nome completo do título da Wikipédia, separadas por ; — ou vazio>"
 ```
 
 Depois, UMA linha em branco e o prompt final em inglês (apenas a solução

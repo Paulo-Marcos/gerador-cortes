@@ -202,6 +202,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/capa-chatgpt/elenco": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Elenco Da Capa
+         * @description As pessoas reais do prompt e a foto de cada uma (cache → Wikipédia).
+         */
+        post: operations["elenco_da_capa_api_capa_chatgpt_elenco_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/capa-chatgpt/fichas": {
         parameters: {
             query?: never;
@@ -5742,6 +5762,16 @@ export interface components {
             /** Total Shorts */
             total_shorts: number;
         };
+        /** ElencoDaCapaRequest */
+        ElencoDaCapaRequest: {
+            /** Prompt */
+            prompt: string;
+        };
+        /** ElencoDaCapaResponse */
+        ElencoDaCapaResponse: {
+            /** Pessoas */
+            pessoas: components["schemas"]["PessoaDaCapa"][];
+        };
         /**
          * EmbasamentoCriterio
          * @description Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela.
@@ -6148,6 +6178,8 @@ export interface components {
         };
         /** GerarCapaChatgptRequest */
         GerarCapaChatgptRequest: {
+            /** Pessoas */
+            pessoas?: string[] | null;
             /** Prompt */
             prompt: string;
             /**
@@ -7157,6 +7189,13 @@ export interface components {
             dir_path: string;
             /** Status */
             status: string;
+        };
+        /** PessoaDaCapa */
+        PessoaDaCapa: {
+            /** Nome */
+            nome: string;
+            /** Slug */
+            slug: string | null;
         };
         /**
          * PicosDaOndaResponse
@@ -9244,6 +9283,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConfiguracaoCapaChatgptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    elenco_da_capa_api_capa_chatgpt_elenco_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ElencoDaCapaRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ElencoDaCapaResponse"];
                 };
             };
             /** @description Validation Error */

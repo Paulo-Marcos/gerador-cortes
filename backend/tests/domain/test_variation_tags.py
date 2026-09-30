@@ -6,6 +6,9 @@ fielmente nos 5 eixos, (2) é removida antes do prompt ir pro gerador de imagem
 vira bloco proibido injetável, (4) o repertório é formatado como bullets.
 """
 
+import time
+
+import pytest
 from app.domain.canal.variacao_prompt import (
     coletar_eixos_proibidos,
     contar_eixos_modais,
@@ -13,6 +16,7 @@ from app.domain.canal.variacao_prompt import (
     formatar_pressao_positiva,
     formatar_repertorio,
     parse_variation_tags,
+    pessoas_do_prompt,
     strip_variation_tags,
 )
 
@@ -278,3 +282,66 @@ class TestFormatarPressaoPositiva:
 
     def test_vazio_quando_nada_satura(self):
         assert formatar_pressao_positiva({}) == ""
+
+
+def _tags(**pares: str) -> str:
+    corpo = " | ".join(f'{chave}="{valor}"' for chave, valor in pares.items())
+    return f'[VARIATION_TAGS] cenario="x" | {corpo}\n\nA frog in a lab.'
+
+
+class TestPessoasDoPrompt:
+    """D-840: quem a capa desenha e cuja foto vai para o ChatGPT."""
+
+    def test_a_tag_referencias_manda_na_ordem_do_prompt(self):
+        prompt = _tags(
+            personagens="Lula e Sapo",
+            referencias="Luiz Inácio Lula da Silva; Neymar | Sapo",
+        )
+        assert pessoas_do_prompt(prompt, mascote="Sapo") == [
+            "Luiz Inácio Lula da Silva",
+            "Neymar",
+        ]
+
+    def test_referencias_vazia_e_resposta_nao_cai_na_sugestao(self):
+        assert pessoas_do_prompt(_tags(personagens="Bill Gates", referencias="nenhuma")) == []
+
+    def test_sem_a_tag_sugere_os_nomes_proprios_de_personagens(self):
+        prompt = _tags(personagens="Mao Tsé-Tung e Sapo; massa da ONU ao fundo")
+        assert pessoas_do_prompt(prompt, mascote="sapo") == ["Mao Tsé-Tung"]
+
+    def test_sugestao_tira_sigla_e_artigo(self):
+        assert pessoas_do_prompt(_tags(personagens="CEO de TI arrogante")) == []
+        assert pessoas_do_prompt(_tags(personagens="O Diabo corporativo")) == ["Diabo"]
+
+    def test_repeticao_e_excesso_ficam_de_fora(self):
+        prompt = _tags(referencias="A Um; B Dois; a um; C Tres; D Quatro; E Cinco")
+        assert pessoas_do_prompt(prompt) == ["A Um", "B Dois", "C Tres", "D Quatro"]
+
+    @pytest.mark.parametrize(
+        "texto",
+        [
+            "[VARIATION_TAGS] " + "a" * 50_000,  # letras sem `=`: 24 s antes da âncora
+            '[VARIATION_TAGS] referencias="a' + " " * 50_000 + 'b"',  # 12 s com o `\s*`
+            "[VARIATION_TAGS]" + " " * 50_000,
+            '[VARIATION_TAGS] personagens="' + "A " * 50_000 + '"',  # 2 s com o pop(0)
+        ],
+        ids=["letras", "espacos-no-nome", "espacos-na-linha", "artigos"],
+    )
+    def test_texto_hostil_nao_trava_o_backend(self, texto):
+        # O prompt chega pela requisição e a regex roda no event loop: tempo
+        # quadrático congelaria o backend inteiro. Linear, isto leva milissegundos.
+        inicio = time.perf_counter()
+        pessoas_do_prompt(texto)
+        assert time.perf_counter() - inicio < 1
+
+    def test_tag_com_aspa_aberta_nao_conta(self):
+        prompt = '[VARIATION_TAGS] personagens="Bill Gates" | referencias="Neymar'
+        assert pessoas_do_prompt(prompt) == ["Bill Gates"]
+
+    def test_frase_comprida_nao_vira_nome(self):
+        longo = "Ab " * 40
+        assert pessoas_do_prompt(_tags(referencias=f"{longo}; Neymar")) == ["Neymar"]
+
+    def test_prompt_sem_tags_nao_tem_elenco(self):
+        assert pessoas_do_prompt("A frog meets Lula in Brasília.") == []
+        assert pessoas_do_prompt("") == []

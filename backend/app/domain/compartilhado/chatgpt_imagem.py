@@ -18,6 +18,7 @@ para o chat e a validação do link do projeto.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 
 from app.domain.compartilhado.erros import PedidoInvalido
 
@@ -73,22 +74,33 @@ def url_do_projeto_valida(url: str) -> str:
     return url
 
 
-def montar_pedido(prompt: str, proporcao: str) -> str:
+def montar_pedido(prompt: str, proporcao: str, pessoas: Sequence[tuple[str, str]] = ()) -> str:
     """O texto que vai para o chat: o prompt do app e o quadro que a capa exige.
 
     O quadro vai no fim, e não só dentro do prompt, porque os prompts antigos
     foram escritos para o agente capista, que sabia o formato de cor.
+
+    `pessoas` são pares (nome, arquivo) das fotos anexadas de gente real (D-840).
+    O pedido diz qual arquivo é quem: sem isso, o ChatGPT leria a foto como mais
+    uma ficha do mascote.
     """
     prompt = (prompt or "").strip()
     if not prompt:
         raise PedidoInvalido("Não há prompt para mandar ao ChatGPT: gere o prompt da capa antes.")
     if proporcao not in PROPORCOES:
         raise PedidoInvalido(f"Proporção desconhecida: {proporcao!r}.")
-    return (
+    pedido = (
         f"{prompt}\n\n"
         f"Gere a imagem agora, no formato {PROPORCOES[proporcao]}, usando as fichas "
         "anexas como referência do personagem."
     )
+    if pessoas:
+        fotos = "; ".join(f"{arquivo} = {nome}" for nome, arquivo in pessoas)
+        pedido += (
+            f"\nFotos de pessoas reais da cena: {fotos}. Use cada foto como referência "
+            "do rosto e dos traços dessa pessoa; elas não são fichas do personagem."
+        )
+    return pedido
 
 
 def nome_de_ficha_valido(nome: str) -> str:

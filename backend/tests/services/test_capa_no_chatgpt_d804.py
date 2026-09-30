@@ -7,6 +7,9 @@ cada desvio, não o Chromium.
 
 from __future__ import annotations
 
+import asyncio
+from types import SimpleNamespace
+
 import pytest
 from app.core import channel_paths
 from app.domain.compartilhado.chatgpt_imagem import (
@@ -18,7 +21,7 @@ from app.domain.compartilhado.chatgpt_imagem import (
 )
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido, ServicoExternoFalhou
 from app.infrastructure import executaveis_do_navegador
-from app.services import capa_no_chatgpt
+from app.services import capa_no_chatgpt, retrato_wikipedia
 
 PROJETO = "https://chatgpt.com/g/g-p-6aa2f1d08414819192ac821e77ded48e/project"
 PNG = bytes.fromhex("89504e470d0a1a0a") + b"resto-da-imagem"
@@ -245,6 +248,12 @@ class TestDominio:
         assert pedido.startswith("o sapo aponta\n\n")
         assert "4:5" in pedido
 
+    def test_pedido_diz_qual_foto_e_de_quem(self):
+        pedido = montar_pedido("o sapo e o Lula", "16:9", [("Lula", "lula.jpg")])
+        assert "lula.jpg = Lula" in pedido
+        assert "não são fichas do personagem" in pedido
+        assert "Fotos de pessoas" not in montar_pedido("o sapo", "16:9")
+
     def test_pedido_sem_prompt_e_recusado(self):
         with pytest.raises(PedidoInvalido):
             montar_pedido("  ", "16:9")
@@ -342,3 +351,76 @@ class TestJanelaDoRoboNoChatGPT:
 
         assert capa_no_chatgpt._gerar_no_navegador(PROJETO, "pedido", []) == PNG
         assert robo == []
+
+
+@pytest.fixture
+def retratos(canal, monkeypatch, tmp_path):
+    """Banco de retratos falso: Neymar tem foto, a rede cai para "Erro", o resto não existe."""
+    pasta = tmp_path / "retratos"
+    pasta.mkdir()
+    buscados: list[str] = []
+
+    async def buscar(nome, **_kw):
+        buscados.append(nome)
+        if nome == "Erro":
+            raise OSError("sem rede")
+        if nome != "Neymar":
+            return None
+        foto = pasta / "neymar.jpg"
+        foto.write_bytes(b"jpg")
+        return retrato_wikipedia.RetratoEncontrado(
+            nome=nome, slug="neymar", caminho_arquivo=foto, url_publica="/", fonte="cache"
+        )
+
+    monkeypatch.setattr(retrato_wikipedia, "buscar_wikipedia", buscar)
+    monkeypatch.setattr(
+        capa_no_chatgpt, "identidade_do_mascote", lambda: SimpleNamespace(nome="Sapo")
+    )
+    return buscados
+
+
+PROMPT_COM_ELENCO = (
+    '[VARIATION_TAGS] personagens="Neymar e Sapo" | referencias="Neymar; Fulano Sem Foto; Erro"'
+    "\n\nA frog and Neymar."
+)
+
+
+class TestElenco:
+    """D-840: a foto de quem a capa desenha vai junto das fichas."""
+
+    def test_elenco_traz_a_foto_de_quem_tem_e_nada_de_quem_nao_tem(self, retratos):
+        elenco = asyncio.run(capa_no_chatgpt.elenco_do_prompt(PROMPT_COM_ELENCO))
+
+        assert elenco == [
+            {"nome": "Neymar", "slug": "neymar"},
+            {"nome": "Fulano Sem Foto", "slug": None},
+            {"nome": "Erro", "slug": None},
+        ]
+
+    @pytest.fixture
+    def robo(self, monkeypatch):
+        capa_no_chatgpt.gravar_projeto(PROJETO)
+        chamadas: list[tuple[str, list]] = []
+
+        def gerar(_projeto, pedido, anexos):
+            chamadas.append((pedido, anexos))
+            return PNG
+
+        monkeypatch.setattr(capa_no_chatgpt, "_gerar_no_navegador", gerar)
+        return chamadas
+
+    def test_sem_elenco_conferido_le_do_prompt_e_anexa_depois_das_fichas(self, retratos, robo):
+        capa_no_chatgpt.salvar_ficha("poses.png", PNG)
+
+        asyncio.run(capa_no_chatgpt.gerar_imagem(PROMPT_COM_ELENCO, "16:9"))
+
+        pedido, anexos = robo[0]
+        assert [a.name for a in anexos] == ["poses.png", "neymar.jpg"]
+        assert "neymar.jpg = Neymar" in pedido
+        assert "= Fulano" not in pedido
+
+    def test_elenco_conferido_manda_mesmo_vazio(self, retratos, robo):
+        asyncio.run(capa_no_chatgpt.gerar_imagem(PROMPT_COM_ELENCO, "16:9", pessoas=[]))
+
+        assert robo[0][1] == []
+        assert retratos == []

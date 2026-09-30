@@ -175,7 +175,11 @@ TAG_LINE_REGEX = re.compile(
     r"^\[VARIATION_TAGS\]\s*(.+?)$",
     re.MULTILINE,
 )
-TAG_PAIR_REGEX = re.compile(r'(\w+)\s*=\s*"([^"]*)"')
+# `(?<!\w)`: o par só começa no início de uma palavra. Sem a âncora, uma
+# sequência longa de letras sem `=` era varrida de novo a partir de cada letra
+# (tempo quadrático: 50 mil letras, 24 s, D-840). O resultado não muda: se um
+# pedaço da palavra casa, a palavra inteira casa.
+TAG_PAIR_REGEX = re.compile(r'(?<!\w)(\w+)\s*=\s*"([^"]*)"')
 
 _EIXOS_TAGS = (
     "cenario",
@@ -249,6 +253,111 @@ def strip_variation_tags(prompt: str) -> str:
     if not prompt:
         return prompt
     return TAG_LINE_REGEX.sub("", prompt, count=1).lstrip()
+
+
+# D-840: pessoas reais da capa, cuja foto vai junto das fichas do mascote para
+# o ChatGPT acertar o rosto. Mais que quatro disputa a atenção do gerador com
+# as fichas, e uma capa raramente tem tanta gente reconhecível.
+MAXIMO_DE_PESSOAS = 4
+# Sem `\s*` em volta: espaço é tirado de cada nome depois, e o `\s*` antes do
+# separador tornava a divisão quadrática numa sequência de espaços.
+_SEPARADOR_DE_NOMES = re.compile(r"[;|,]")
+_MARCA_DAS_TAGS = "[VARIATION_TAGS]"
+_SEM_PESSOA = {"", "-", "—", "nenhuma", "nenhum", "none", "n/a"}
+# Palavra com inicial maiúscula (acentos e hífen valem: "Tsé-Tung"), emendada a
+# outras pelas partículas de sobrenome ("Lula da Silva").
+_PARTICULAS = {"da", "de", "do", "das", "dos", "di", "del", "van", "von"}
+_PALAVRA_PROPRIA = r"[A-ZÀ-ÖØ-Þ][^\W\d_]*(?:[-'’][^\W\d_]+)*"
+_NOME_PROPRIO = re.compile(
+    rf"{_PALAVRA_PROPRIA}(?:\s+(?:(?:{'|'.join(_PARTICULAS)})\s+)?{_PALAVRA_PROPRIA})*"
+)
+_ARTIGOS = {"o", "a", "os", "as", "um", "uma", "the"}
+_INICIO_DESCARTAVEL = _ARTIGOS | _PARTICULAS
+# Nome de gente cabe nisto; mais que isso é frase, e iria parar numa consulta à
+# Wikipédia e num nome de arquivo.
+_TAMANHO_MAXIMO_DO_NOME = 80
+
+
+def pessoas_do_prompt(prompt: str, *, mascote: str = "") -> list[str]:
+    """Os nomes das pessoas reais que a capa desenha, na ordem do prompt.
+
+    A fonte é a tag `referencias="Nome 1; Nome 2"`, que o scaffold pede só com
+    gente real e com o nome completo — o título da Wikipédia, onde a foto é
+    buscada ("Lula" sozinho é o molusco). Tag presente e vazia é resposta: a
+    capa não tem ninguém.
+
+    Prompt anterior à tag cai numa SUGESTÃO lida de `personagens`, que é texto
+    livre: as palavras com maiúscula, sem siglas nem o mascote. Erra ("China" em
+    "protagonista da China"), por isso a tela mostra a foto de cada nome e o
+    operador tira o que não é gente.
+    """
+    # O prompt chega pela requisição: a linha se acha por comparação de texto,
+    # sem regex que o texto de fora possa fazer patinar.
+    linha = next(
+        (lin for lin in (prompt or "").splitlines() if lin.startswith(_MARCA_DAS_TAGS)), ""
+    )
+    if not linha:
+        return []
+    pares = _pares_da_linha(linha)
+    if "referencias" in pares:
+        nomes = _SEPARADOR_DE_NOMES.split(pares["referencias"])
+    else:
+        nomes = _nomes_proprios(pares.get("personagens", ""))
+
+    vistos: set[str] = {mascote.strip().casefold()} - {""}
+    pessoas: list[str] = []
+    for nome in (n.strip() for n in nomes):
+        chave = nome.casefold()
+        if chave in _SEM_PESSOA or chave in vistos or len(nome) > _TAMANHO_MAXIMO_DO_NOME:
+            continue
+        vistos.add(chave)
+        pessoas.append(nome)
+        if len(pessoas) == MAXIMO_DE_PESSOAS:
+            break
+    return pessoas
+
+
+def _pares_da_linha(linha: str) -> dict[str, str]:
+    """Os pares `chave="valor"` da linha de tags, sem regex.
+
+    O mesmo que `TAG_PAIR_REGEX`, mas por `split`: a linha chega pela requisição,
+    e um laço sobre os pedaços é linear por construção — o CodeQL não aceita a
+    âncora da regex como prova disso (alerta #117 do PR #87).
+    """
+    pedacos = linha.split('"')
+    pares = {}
+    # Entre aspas ficam os valores (índices ímpares); o pedaço antes de cada um
+    # termina em `chave=`. O último pedaço não fecha aspas e fica de fora — por
+    # isso o `zip` trunca: aspa aberta no fim deixa um `antes` sem valor.
+    for antes, valor in zip(pedacos[0:-1:2], pedacos[1:-1:2], strict=False):
+        antes = antes.rstrip()
+        if not antes.endswith("="):
+            continue
+        antes = antes[:-1].rstrip()
+        inicio = len(antes)
+        while inicio and (antes[inicio - 1].isalnum() or antes[inicio - 1] == "_"):
+            inicio -= 1
+        if inicio < len(antes):
+            pares[antes[inicio:]] = valor.strip()
+    return pares
+
+
+def _nomes_proprios(texto: str) -> list[str]:
+    nomes = []
+    for trecho in _NOME_PROPRIO.findall(texto):
+        # Sigla ("CEO", "ONU", "XVI") não é gente; artigo no começo ("O Diabo")
+        # é só o começo da frase.
+        # Por índice, e não `pop(0)`: cada `pop(0)` desloca a lista inteira, e
+        # um texto hostil ("A A A …") ficava quadrático.
+        palavras = [p for p in trecho.split() if not (len(p) > 1 and p.isupper())]
+        inicio, fim = 0, len(palavras)
+        while inicio < fim and palavras[inicio].casefold() in _INICIO_DESCARTAVEL:
+            inicio += 1
+        while fim > inicio and palavras[fim - 1] in _PARTICULAS:
+            fim -= 1
+        if inicio < fim:
+            nomes.append(" ".join(palavras[inicio:fim]))
+    return nomes
 
 
 def coletar_eixos_proibidos(historico_tags: list[dict[str, str]]) -> dict[str, list[str]]:
