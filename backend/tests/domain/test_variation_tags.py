@@ -334,6 +334,10 @@ class TestPessoasDoPrompt:
         pessoas_do_prompt(texto)
         assert time.perf_counter() - inicio < 1
 
+    def test_tag_com_aspa_aberta_nao_conta(self):
+        prompt = '[VARIATION_TAGS] personagens="Bill Gates" | referencias="Neymar'
+        assert pessoas_do_prompt(prompt) == ["Bill Gates"]
+
     def test_frase_comprida_nao_vira_nome(self):
         longo = "Ab " * 40
         assert pessoas_do_prompt(_tags(referencias=f"{longo}; Neymar")) == ["Neymar"]

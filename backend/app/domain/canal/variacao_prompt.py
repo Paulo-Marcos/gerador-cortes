@@ -298,7 +298,7 @@ def pessoas_do_prompt(prompt: str, *, mascote: str = "") -> list[str]:
     )
     if not linha:
         return []
-    pares = {chave: valor.strip() for chave, valor in TAG_PAIR_REGEX.findall(linha)}
+    pares = _pares_da_linha(linha)
     if "referencias" in pares:
         nomes = _SEPARADOR_DE_NOMES.split(pares["referencias"])
     else:
@@ -315,6 +315,31 @@ def pessoas_do_prompt(prompt: str, *, mascote: str = "") -> list[str]:
         if len(pessoas) == MAXIMO_DE_PESSOAS:
             break
     return pessoas
+
+
+def _pares_da_linha(linha: str) -> dict[str, str]:
+    """Os pares `chave="valor"` da linha de tags, sem regex.
+
+    O mesmo que `TAG_PAIR_REGEX`, mas por `split`: a linha chega pela requisição,
+    e um laço sobre os pedaços é linear por construção — o CodeQL não aceita a
+    âncora da regex como prova disso (alerta #117 do PR #87).
+    """
+    pedacos = linha.split('"')
+    pares = {}
+    # Entre aspas ficam os valores (índices ímpares); o pedaço antes de cada um
+    # termina em `chave=`. O último pedaço não fecha aspas e fica de fora — por
+    # isso o `zip` trunca: aspa aberta no fim deixa um `antes` sem valor.
+    for antes, valor in zip(pedacos[0:-1:2], pedacos[1:-1:2], strict=False):
+        antes = antes.rstrip()
+        if not antes.endswith("="):
+            continue
+        antes = antes[:-1].rstrip()
+        inicio = len(antes)
+        while inicio and (antes[inicio - 1].isalnum() or antes[inicio - 1] == "_"):
+            inicio -= 1
+        if inicio < len(antes):
+            pares[antes[inicio:]] = valor.strip()
+    return pares
 
 
 def _nomes_proprios(texto: str) -> list[str]:
