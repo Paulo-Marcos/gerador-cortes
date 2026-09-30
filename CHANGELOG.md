@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The ChatGPT cover robot attaches a photo of each real person in the
+  cover.** The thumbnail prompt now names them in a `referencias` tag, by
+  their full Wikipedia title ("Lula" alone is the squid). Their photos come
+  from the portrait bank (cache, then Wikipedia) and go after the mascot
+  sheets, and the message says which file is who. Under "Gerar no ChatGPT"
+  the cast shows each photo, so you can swap a wrong one (the upload goes to
+  the bank), remove whoever is not a person, or add someone by name. Anyone
+  left without a photo stays out. Older prompts get a suggestion read from
+  `personagens`. To get the tag, update your channel's thumbnail scaffold in
+  Canais (D-840).
 - **Choose Chrome or Edge for the TikTok and Instagram robot.** Settings →
   Aplicação has a new "Navegador do robô" choice, saved per channel; Chrome
   stays the default. Edge gets its own session folder next to Chrome's
