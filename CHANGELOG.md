@@ -52,6 +52,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **Shorts render again.** Every short failed at once on the overlay step
+  with `spawn node.exe ENOENT`. Node was there: Windows reports a missing
+  working folder as the program being missing. When the short renderer moved
+  into `services/render/` (D-707), the folder it counted its way up to became
+  `backend/video-renderer`, which does not exist. It now reads the renderer
+  folder from the settings, like the cut render already did (D-837).
 - **The second video of a TikTok batch no longer freezes mid-upload.** The
   watch over the previous tab slept outside Playwright while connected to the
   robot's Chrome; asleep, it stopped reading its driver, and the workers of the
