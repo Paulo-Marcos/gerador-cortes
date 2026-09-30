@@ -3199,6 +3199,35 @@
         "title": "ElegibilidadeResponse",
         "type": "object"
       },
+      "ElencoDaCapaRequest": {
+        "properties": {
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "ElencoDaCapaRequest",
+        "type": "object"
+      },
+      "ElencoDaCapaResponse": {
+        "properties": {
+          "pessoas": {
+            "items": {
+              "$ref": "#/components/schemas/PessoaDaCapa"
+            },
+            "title": "Pessoas",
+            "type": "array"
+          }
+        },
+        "required": [
+          "pessoas"
+        ],
+        "title": "ElencoDaCapaResponse",
+        "type": "object"
+      },
       "EmbasamentoCriterio": {
         "description": "Quanto um critério contribuiu para a pontuação (D-356), com o rótulo da tela.",
         "properties": {
@@ -4143,6 +4172,20 @@
       },
       "GerarCapaChatgptRequest": {
         "properties": {
+          "pessoas": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pessoas"
+          },
           "prompt": {
             "title": "Prompt",
             "type": "string"
@@ -6662,6 +6705,31 @@
           "dir_path"
         ],
         "title": "PastaAbertaResponse",
+        "type": "object"
+      },
+      "PessoaDaCapa": {
+        "properties": {
+          "nome": {
+            "title": "Nome",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          }
+        },
+        "required": [
+          "nome",
+          "slug"
+        ],
+        "title": "PessoaDaCapa",
         "type": "object"
       },
       "PicosDaOndaResponse": {
@@ -11542,6 +11610,48 @@
           }
         },
         "summary": "Gravar Projeto",
+        "tags": [
+          "Capa no ChatGPT"
+        ]
+      }
+    },
+    "/api/capa-chatgpt/elenco": {
+      "post": {
+        "description": "As pessoas reais do prompt e a foto de cada uma (cache → Wikipédia).",
+        "operationId": "elenco_da_capa_api_capa_chatgpt_elenco_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ElencoDaCapaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElencoDaCapaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Elenco Da Capa",
         "tags": [
           "Capa no ChatGPT"
         ]

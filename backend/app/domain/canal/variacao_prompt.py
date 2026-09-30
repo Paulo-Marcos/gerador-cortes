@@ -251,6 +251,70 @@ def strip_variation_tags(prompt: str) -> str:
     return TAG_LINE_REGEX.sub("", prompt, count=1).lstrip()
 
 
+# D-840: pessoas reais da capa, cuja foto vai junto das fichas do mascote para
+# o ChatGPT acertar o rosto. Mais que quatro disputa a atenção do gerador com
+# as fichas, e uma capa raramente tem tanta gente reconhecível.
+MAXIMO_DE_PESSOAS = 4
+_SEPARADOR_DE_NOMES = re.compile(r"\s*[;|,]\s*")
+_SEM_PESSOA = {"", "-", "—", "nenhuma", "nenhum", "none", "n/a"}
+# Palavra com inicial maiúscula (acentos e hífen valem: "Tsé-Tung"), emendada a
+# outras pelas partículas de sobrenome ("Lula da Silva").
+_PARTICULAS = {"da", "de", "do", "das", "dos", "di", "del", "van", "von"}
+_PALAVRA_PROPRIA = r"[A-ZÀ-ÖØ-Þ][^\W\d_]*(?:[-'’][^\W\d_]+)*"
+_NOME_PROPRIO = re.compile(
+    rf"{_PALAVRA_PROPRIA}(?:\s+(?:(?:{'|'.join(_PARTICULAS)})\s+)?{_PALAVRA_PROPRIA})*"
+)
+_ARTIGOS = {"o", "a", "os", "as", "um", "uma", "the"}
+
+
+def pessoas_do_prompt(prompt: str, *, mascote: str = "") -> list[str]:
+    """Os nomes das pessoas reais que a capa desenha, na ordem do prompt.
+
+    A fonte é a tag `referencias="Nome 1; Nome 2"`, que o scaffold pede só com
+    gente real e com o nome completo — o título da Wikipédia, onde a foto é
+    buscada ("Lula" sozinho é o molusco). Tag presente e vazia é resposta: a
+    capa não tem ninguém.
+
+    Prompt anterior à tag cai numa SUGESTÃO lida de `personagens`, que é texto
+    livre: as palavras com maiúscula, sem siglas nem o mascote. Erra ("China" em
+    "protagonista da China"), por isso a tela mostra a foto de cada nome e o
+    operador tira o que não é gente.
+    """
+    linha = TAG_LINE_REGEX.search(prompt or "")
+    if not linha:
+        return []
+    pares = {chave: valor.strip() for chave, valor in TAG_PAIR_REGEX.findall(linha.group(1))}
+    if "referencias" in pares:
+        nomes = _SEPARADOR_DE_NOMES.split(pares["referencias"])
+    else:
+        nomes = _nomes_proprios(pares.get("personagens", ""))
+
+    vistos: set[str] = {mascote.strip().casefold()} - {""}
+    pessoas: list[str] = []
+    for nome in (n.strip() for n in nomes):
+        chave = nome.casefold()
+        if chave in _SEM_PESSOA or chave in vistos:
+            continue
+        vistos.add(chave)
+        pessoas.append(nome)
+    return pessoas[:MAXIMO_DE_PESSOAS]
+
+
+def _nomes_proprios(texto: str) -> list[str]:
+    nomes = []
+    for trecho in _NOME_PROPRIO.findall(texto):
+        # Sigla ("CEO", "ONU", "XVI") não é gente; artigo no começo ("O Diabo")
+        # é só o começo da frase.
+        palavras = [p for p in trecho.split() if not (len(p) > 1 and p.isupper())]
+        while palavras and palavras[0].casefold() in _ARTIGOS | _PARTICULAS:
+            palavras.pop(0)
+        while palavras and palavras[-1] in _PARTICULAS:
+            palavras.pop()
+        if palavras:
+            nomes.append(" ".join(palavras))
+    return nomes
+
+
 def coletar_eixos_proibidos(historico_tags: list[dict[str, str]]) -> dict[str, list[str]]:
     """Consolida os eixos usados nas últimas N capas em listas (sem duplicatas).
 

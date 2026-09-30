@@ -130,8 +130,13 @@ def _oraculo_thumbnail(ctx, marca_emojis, bloco_hints, mascote):
         'personagens="..." | relacao_mascote_personagens="..." | '
         'escala_mascote="..." | camera="..." | pose="..." | paleta="..." '
         '| luminosidade="..." | tipografia="..." | roupa="..." | '
-        'layout_texto="..." | apoio_layout="..."  — frases curtas e '
-        "CONCRETAS descrevendo a solução escolhida, sem listar opções.\n"
+        'layout_texto="..." | apoio_layout="..." | referencias="..."  — frases curtas e '
+        "CONCRETAS descrevendo a solução escolhida, sem listar opções. "
+        # D-840: a tag das pessoas reais, cuja foto vai para o ChatGPT.
+        "Em referencias, só as PESSOAS REAIS que aparecem na imagem, cada uma "
+        'pelo nome completo do título da Wikipédia ("Luiz Inácio Lula da Silva", '
+        'não "Lula"), separadas por ";"; "" se não houver ninguém real — nunca o '
+        f"{mascote} nem figura genérica.\n"
         "Depois, UMA linha em branco e o prompt final em inglês (formato "
         "PROMPT-MODELO da skill), apenas com a solução escolhida. Sem JSON, "
         "sem markdown, sem comentários, sem 'ou'/alternativas/listas de "

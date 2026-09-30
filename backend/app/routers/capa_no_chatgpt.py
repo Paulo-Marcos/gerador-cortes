@@ -30,6 +30,22 @@ class ProjetoChatgptRequest(BaseModel):
 class GerarCapaChatgptRequest(BaseModel):
     prompt: str
     proporcao: Literal["16:9", "4:5", "9:16"]
+    # D-840: o elenco conferido na tela; ausente, o backend o lê do prompt.
+    pessoas: list[str] | None = None
+
+
+class ElencoDaCapaRequest(BaseModel):
+    prompt: str
+
+
+class PessoaDaCapa(RespostaApi):
+    nome: str
+    # A foto no banco de retratos (`/api/retratos/<slug>`); None = sem foto.
+    slug: str | None
+
+
+class ElencoDaCapaResponse(RespostaApi):
+    pessoas: list[PessoaDaCapa]
 
 
 @router.get("/config", response_model=ConfiguracaoCapaChatgptResponse)
@@ -61,8 +77,16 @@ async def remover_ficha(nome: str):
     return capa_no_chatgpt.remover_ficha(nome)
 
 
+@router.post("/elenco", response_model=ElencoDaCapaResponse)
+async def elenco_da_capa(pedido: ElencoDaCapaRequest):
+    """As pessoas reais do prompt e a foto de cada uma (cache → Wikipédia)."""
+    return {"pessoas": await capa_no_chatgpt.elenco_do_prompt(pedido.prompt)}
+
+
 @router.post("/gerar", response_class=Response)
 async def gerar_capa(pedido: GerarCapaChatgptRequest):
     """Gera a imagem no ChatGPT e a devolve (PNG, JPEG ou WEBP). Leva cerca de um minuto."""
-    imagem, tipo = await capa_no_chatgpt.gerar_imagem(pedido.prompt, pedido.proporcao)
+    imagem, tipo = await capa_no_chatgpt.gerar_imagem(
+        pedido.prompt, pedido.proporcao, pedido.pessoas
+    )
     return Response(content=imagem, media_type=tipo)

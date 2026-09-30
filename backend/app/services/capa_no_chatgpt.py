@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Protocol
 
 from app.core import channel_paths
+from app.domain.canal.variacao_prompt import MAXIMO_DE_PESSOAS, pessoas_do_prompt
 from app.domain.compartilhado.chatgpt_imagem import (
     EXTENSOES_DE_FICHA,
     MAXIMO_DE_FICHAS,
@@ -42,7 +43,8 @@ from app.domain.compartilhado.chatgpt_imagem import (
 from app.domain.compartilhado.erros import NaoEncontrado, PedidoInvalido, ServicoExternoFalhou
 from app.infrastructure import capa_chatgpt_store
 from app.infrastructure.executaveis_do_navegador import edge_no_disco
-from app.services import janela_do_robo, navegador_assistido
+from app.services import janela_do_robo, navegador_assistido, retrato_wikipedia
+from app.services.canal.editorial_identity import identidade_do_mascote
 
 logger = logging.getLogger(__name__)
 
@@ -341,15 +343,68 @@ def _mostrar_janela(perfil: Path) -> None:
     janela_do_robo.mostrar(navegador_assistido.sessao_no_chrome(perfil))
 
 
-async def gerar_imagem(prompt: str, proporcao: str) -> tuple[bytes, str]:
-    """A imagem gerada no ChatGPT e o tipo dela (`image/png`, ...)."""
-    pedido = montar_pedido(prompt, proporcao)
+# --------------------------------------------------------------------------- #
+# As pessoas reais da capa (D-840)
+# --------------------------------------------------------------------------- #
+
+
+async def _retrato(nome: str) -> retrato_wikipedia.RetratoEncontrado | None:
+    """A foto do banco de retratos — o cache primeiro, a Wikipédia na falta dele."""
+    try:
+        return await retrato_wikipedia.buscar_wikipedia(nome)
+    except Exception as exc:  # noqa: BLE001 — a foto é opcional: a capa segue só com as fichas
+        logger.warning("[ChatGPT] sem foto de '%s': %s", nome, exc)
+        return None
+
+
+async def _retratos(nomes: list[str]) -> list[retrato_wikipedia.RetratoEncontrado | None]:
+    return list(await asyncio.gather(*(_retrato(nome) for nome in nomes)))
+
+
+def _pessoas_do_prompt(prompt: str) -> list[str]:
+    return pessoas_do_prompt(prompt, mascote=identidade_do_mascote().nome)
+
+
+async def elenco_do_prompt(prompt: str) -> list[dict]:
+    """As pessoas reais que o prompt desenha, cada uma com a foto que irá junto.
+
+    `slug` é a foto no banco de retratos (`/api/retratos/<slug>`); `None` quando
+    nem o cache nem a Wikipédia a têm — a tela oferece subir uma.
+    """
+    nomes = _pessoas_do_prompt(prompt)
+    achados = await _retratos(nomes)
+    return [
+        {"nome": nome, "slug": achado.slug if achado else None}
+        for nome, achado in zip(nomes, achados, strict=True)
+    ]
+
+
+async def gerar_imagem(
+    prompt: str, proporcao: str, pessoas: list[str] | None = None
+) -> tuple[bytes, str]:
+    """A imagem gerada no ChatGPT e o tipo dela (`image/png`, ...).
+
+    `pessoas` é o elenco que o operador conferiu na tela; `None` (quem não
+    conferiu) lê o elenco do próprio prompt. Quem não tem foto fica de fora.
+    """
     projeto_url = ler_configuracao()["projeto_url"]
     if not projeto_url:
         raise PedidoInvalido("Configure o link do projeto do ChatGPT em Canais → Capas no ChatGPT.")
-    fichas = _fichas()
-    logger.info("[ChatGPT] gerando capa %s com %d ficha(s)", proporcao, len(fichas))
-    imagem = await asyncio.to_thread(_gerar_no_navegador, projeto_url, pedido, fichas)
+    nomes = _pessoas_do_prompt(prompt) if pessoas is None else pessoas[:MAXIMO_DE_PESSOAS]
+    fotos = [
+        (nome, achado.caminho_arquivo)
+        for nome, achado in zip(nomes, await _retratos(nomes), strict=True)
+        if achado
+    ]
+    pedido = montar_pedido(prompt, proporcao, [(nome, foto.name) for nome, foto in fotos])
+    anexos = _fichas() + [foto for _, foto in fotos]
+    logger.info(
+        "[ChatGPT] gerando capa %s com %d anexo(s), %d de pessoa(s)",
+        proporcao,
+        len(anexos),
+        len(fotos),
+    )
+    imagem = await asyncio.to_thread(_gerar_no_navegador, projeto_url, pedido, anexos)
     tipo = tipo_da_imagem(imagem)
     if not tipo:
         raise ServicoExternoFalhou("O ChatGPT devolveu um arquivo que não é imagem.")

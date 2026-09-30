@@ -13,6 +13,7 @@ from app.domain.canal.variacao_prompt import (
     formatar_pressao_positiva,
     formatar_repertorio,
     parse_variation_tags,
+    pessoas_do_prompt,
     strip_variation_tags,
 )
 
@@ -278,3 +279,41 @@ class TestFormatarPressaoPositiva:
 
     def test_vazio_quando_nada_satura(self):
         assert formatar_pressao_positiva({}) == ""
+
+
+def _tags(**pares: str) -> str:
+    corpo = " | ".join(f'{chave}="{valor}"' for chave, valor in pares.items())
+    return f'[VARIATION_TAGS] cenario="x" | {corpo}\n\nA frog in a lab.'
+
+
+class TestPessoasDoPrompt:
+    """D-840: quem a capa desenha e cuja foto vai para o ChatGPT."""
+
+    def test_a_tag_referencias_manda_na_ordem_do_prompt(self):
+        prompt = _tags(
+            personagens="Lula e Sapo",
+            referencias="Luiz Inácio Lula da Silva; Neymar | Sapo",
+        )
+        assert pessoas_do_prompt(prompt, mascote="Sapo") == [
+            "Luiz Inácio Lula da Silva",
+            "Neymar",
+        ]
+
+    def test_referencias_vazia_e_resposta_nao_cai_na_sugestao(self):
+        assert pessoas_do_prompt(_tags(personagens="Bill Gates", referencias="nenhuma")) == []
+
+    def test_sem_a_tag_sugere_os_nomes_proprios_de_personagens(self):
+        prompt = _tags(personagens="Mao Tsé-Tung e Sapo; massa da ONU ao fundo")
+        assert pessoas_do_prompt(prompt, mascote="sapo") == ["Mao Tsé-Tung"]
+
+    def test_sugestao_tira_sigla_e_artigo(self):
+        assert pessoas_do_prompt(_tags(personagens="CEO de TI arrogante")) == []
+        assert pessoas_do_prompt(_tags(personagens="O Diabo corporativo")) == ["Diabo"]
+
+    def test_repeticao_e_excesso_ficam_de_fora(self):
+        prompt = _tags(referencias="A Um; B Dois; a um; C Tres; D Quatro; E Cinco")
+        assert pessoas_do_prompt(prompt) == ["A Um", "B Dois", "C Tres", "D Quatro"]
+
+    def test_prompt_sem_tags_nao_tem_elenco(self):
+        assert pessoas_do_prompt("A frog meets Lula in Brasília.") == []
+        assert pessoas_do_prompt("") == []
