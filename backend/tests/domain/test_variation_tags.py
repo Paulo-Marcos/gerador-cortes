@@ -323,8 +323,9 @@ class TestPessoasDoPrompt:
             "[VARIATION_TAGS] " + "a" * 50_000,  # letras sem `=`: 24 s antes da âncora
             '[VARIATION_TAGS] referencias="a' + " " * 50_000 + 'b"',  # 12 s com o `\s*`
             "[VARIATION_TAGS]" + " " * 50_000,
+            '[VARIATION_TAGS] personagens="' + "A " * 50_000 + '"',  # 2 s com o pop(0)
         ],
-        ids=["letras", "espacos-no-nome", "espacos-na-linha"],
+        ids=["letras", "espacos-no-nome", "espacos-na-linha", "artigos"],
     )
     def test_texto_hostil_nao_trava_o_backend(self, texto):
         # O prompt chega pela requisição e a regex roda no event loop: tempo
@@ -332,6 +333,10 @@ class TestPessoasDoPrompt:
         inicio = time.perf_counter()
         pessoas_do_prompt(texto)
         assert time.perf_counter() - inicio < 1
+
+    def test_frase_comprida_nao_vira_nome(self):
+        longo = "Ab " * 40
+        assert pessoas_do_prompt(_tags(referencias=f"{longo}; Neymar")) == ["Neymar"]
 
     def test_prompt_sem_tags_nao_tem_elenco(self):
         assert pessoas_do_prompt("A frog meets Lula in Brasília.") == []

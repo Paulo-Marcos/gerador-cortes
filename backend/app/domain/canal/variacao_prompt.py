@@ -272,6 +272,10 @@ _NOME_PROPRIO = re.compile(
     rf"{_PALAVRA_PROPRIA}(?:\s+(?:(?:{'|'.join(_PARTICULAS)})\s+)?{_PALAVRA_PROPRIA})*"
 )
 _ARTIGOS = {"o", "a", "os", "as", "um", "uma", "the"}
+_INICIO_DESCARTAVEL = _ARTIGOS | _PARTICULAS
+# Nome de gente cabe nisto; mais que isso é frase, e iria parar numa consulta à
+# Wikipédia e num nome de arquivo.
+_TAMANHO_MAXIMO_DO_NOME = 80
 
 
 def pessoas_do_prompt(prompt: str, *, mascote: str = "") -> list[str]:
@@ -304,11 +308,13 @@ def pessoas_do_prompt(prompt: str, *, mascote: str = "") -> list[str]:
     pessoas: list[str] = []
     for nome in (n.strip() for n in nomes):
         chave = nome.casefold()
-        if chave in _SEM_PESSOA or chave in vistos:
+        if chave in _SEM_PESSOA or chave in vistos or len(nome) > _TAMANHO_MAXIMO_DO_NOME:
             continue
         vistos.add(chave)
         pessoas.append(nome)
-    return pessoas[:MAXIMO_DE_PESSOAS]
+        if len(pessoas) == MAXIMO_DE_PESSOAS:
+            break
+    return pessoas
 
 
 def _nomes_proprios(texto: str) -> list[str]:
@@ -316,13 +322,16 @@ def _nomes_proprios(texto: str) -> list[str]:
     for trecho in _NOME_PROPRIO.findall(texto):
         # Sigla ("CEO", "ONU", "XVI") não é gente; artigo no começo ("O Diabo")
         # é só o começo da frase.
+        # Por índice, e não `pop(0)`: cada `pop(0)` desloca a lista inteira, e
+        # um texto hostil ("A A A …") ficava quadrático.
         palavras = [p for p in trecho.split() if not (len(p) > 1 and p.isupper())]
-        while palavras and palavras[0].casefold() in _ARTIGOS | _PARTICULAS:
-            palavras.pop(0)
-        while palavras and palavras[-1] in _PARTICULAS:
-            palavras.pop()
-        if palavras:
-            nomes.append(" ".join(palavras))
+        inicio, fim = 0, len(palavras)
+        while inicio < fim and palavras[inicio].casefold() in _INICIO_DESCARTAVEL:
+            inicio += 1
+        while fim > inicio and palavras[fim - 1] in _PARTICULAS:
+            fim -= 1
+        if inicio < fim:
+            nomes.append(" ".join(palavras[inicio:fim]))
     return nomes
 
 
