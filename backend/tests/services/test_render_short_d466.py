@@ -927,33 +927,50 @@ class TestFilaDoRender:
         rr._render_gate.limpar()
 
     @pytest.mark.asyncio
-    async def test_short_espera_a_vaga_que_um_corte_ocupa(self, ambiente, jobs, monkeypatch):
+    async def test_short_espera_a_vaga_que_um_corte_ocupa(self, ambiente, monkeypatch):
         from app.services.render import remotion_render as rr
         from app.services.shorts_progress import ShortsProgress
 
         monkeypatch.setenv("RENDER_PIPELINE_CONCURRENCY", "1")
         corte_rodando, liberar = asyncio.Event(), asyncio.Event()
+        corte = {"na_vaga": False}
+        # Cada passo anota se o corte ainda segurava a vaga quando ele saiu.
+        passos: list[tuple[str, bool]] = []
+
+        async def _despachar(job_id, cmd, *, cwd, category, timeout):
+            passos.append((job_id, corte["na_vaga"]))
+
+        monkeypatch.setattr(render_short, "_despachar", _despachar)
 
         async def _corte():
             async with rr.vaga_de_render(lambda _etapa: None):
+                corte["na_vaga"] = True
                 corte_rodando.set()
                 await liberar.wait()
+                corte["na_vaga"] = False
 
-        corte = asyncio.create_task(_corte())
+        async def _short_decidiu():
+            # Sem portão, o short despacha; com portão, anuncia a fila. Esperar
+            # por um dos dois tira o teste da sorte do relógio.
+            while not passos and not ShortsProgress.get("s1")["fila"]:
+                await asyncio.sleep(0.01)
+
+        tarefa_do_corte = asyncio.create_task(_corte())
         await asyncio.wait_for(corte_rodando.wait(), 5)
         ShortsProgress.iniciar("s1", estagio="final")
         short = asyncio.create_task(render_short._renderizar_em_background("s1", final=True))
+        await asyncio.wait_for(_short_decidiu(), 5)
         await asyncio.sleep(0.05)
 
-        assert jobs == [], "com a vaga ocupada, nenhum passo do short pode sair"
+        assert passos == [], "com a vaga ocupada, nenhum passo do short pode sair"
         assert ShortsProgress.get("s1")["fila"] == "Aguardando vez na fila de render"
 
         liberar.set()
-        await asyncio.wait_for(asyncio.gather(corte, short), 5)
+        await asyncio.wait_for(asyncio.gather(tarefa_do_corte, short), 5)
         estado = ShortsProgress.get("s1")
         assert estado["erro"] is None
         assert estado["fila"] is None
-        assert len(jobs) == 3
+        assert [na_vaga for _id, na_vaga in passos] == [False, False, False]
 
     @pytest.mark.asyncio
     async def test_camada_tenta_de_novo_quando_o_chrome_nao_sobe(self, ambiente, monkeypatch):
