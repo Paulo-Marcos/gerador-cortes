@@ -36,6 +36,7 @@ TIPOS: dict[str, tuple[str, str]] = {
     "segmentos": (FAMILIA_MIDIA, "segmentos"),
     "pos": (FAMILIA_MIDIA, "pós"),
     "render": (FAMILIA_MIDIA, "render"),
+    "short": (FAMILIA_MIDIA, "short"),
     "youtube": (FAMILIA_PUBLICACAO, "youtube"),
     "analise": (FAMILIA_IA, "análise"),
     "trechos": (FAMILIA_IA, "trechos"),

@@ -30,6 +30,7 @@ async def ambiente(monkeypatch, tmp_path):
 
     monkeypatch.setattr(channel_paths, "projetos_dir", lambda: tmp_path)
     monkeypatch.setattr(render_short, "projetos_dir", lambda: tmp_path)
+    monkeypatch.setattr(shorts_progress, "projetos_dir", lambda: tmp_path)
 
     corte_dir = tmp_path / "p1" / "cortes" / "c1"
     corte_dir.mkdir(parents=True)
@@ -44,6 +45,7 @@ async def ambiente(monkeypatch, tmp_path):
         await conn.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     monkeypatch.setattr(render_short, "AsyncSessionLocal", factory)
+    monkeypatch.setattr(shorts_progress, "AsyncSessionLocal", factory)
 
     async def _transcricao(corte_id):
         return TranscricaoFiel(palavras=[], fonte="auto_legenda")
@@ -692,7 +694,7 @@ class TestResumirLog:
             "[t3] Job: b\nCMD: remotion\n[t4] Fim: b status=sucesso duration_ms=140200\n"
         )
 
-        assert render_short.resumir_log(texto)["duracoes_ms"] == [29883, 140200]
+        assert shorts_progress.resumir_log(texto)["duracoes_ms"] == [29883, 140200]
 
     def test_corta_a_linha_do_filtergraph_sem_perder_o_comeco(self):
         """A CMD do ffmpeg tem kilobytes numa linha so — um filtergraph inteiro.
@@ -702,7 +704,7 @@ class TestResumirLog:
         """
         texto = "CMD: ffmpeg -i entrada.mkv " + "x" * 900
 
-        linha = render_short.resumir_log(texto)["linhas"][0]
+        linha = shorts_progress.resumir_log(texto)["linhas"][0]
 
         assert linha.startswith("CMD: ffmpeg -i entrada.mkv")
         assert linha.endswith(" […]")
@@ -712,13 +714,13 @@ class TestResumirLog:
         """Um render que falhou e foi refeito acumula tudo no mesmo arquivo."""
         texto = "\n".join(f"linha {n}" for n in range(200))
 
-        resumo = render_short.resumir_log(texto, linhas=10)
+        resumo = shorts_progress.resumir_log(texto, linhas=10)
 
         assert resumo["linhas"][0] == "linha 190"
         assert resumo["truncado"] is True
 
     def test_log_curto_nao_se_diz_truncado(self):
-        resumo = render_short.resumir_log("uma linha so")
+        resumo = shorts_progress.resumir_log("uma linha so")
 
         assert resumo["truncado"] is False
         assert resumo["duracoes_ms"] == []
@@ -742,7 +744,7 @@ async def test_o_log_e_lido_da_mesma_pasta_em_que_o_render_escreve(ambiente, job
     (pasta / "worker_debug.log").write_text(
         "[t] Fim: s1_final_recorte status=sucesso duration_ms=4200", encoding="utf-8"
     )
-    lido = await render_short.log_do_render("s1")
+    lido = await shorts_progress.log_do_render("s1")
 
     assert lido["existe"] is True
     assert lido["duracoes_ms"] == [4200]
@@ -1035,6 +1037,93 @@ class TestFilaDoRender:
         with pytest.raises(WorkerJobCancelled):
             await render_short.renderizar_short("s1")
         assert ids.count("s1_final_camada") == 1
+
+    # ── D-844: o short na fila global, e cancelável ─────────────────────────
+    #
+    # A D-843 pôs o short na vaga dos cortes, mas a task "short-..." não estava
+    # no mapa da fila global e ninguém a registrava como cancelável: o operador
+    # via o corte esperando e não via o short que segurava a vaga, nem podia
+    # pará-lo.
+
+    @staticmethod
+    def _job(job_id: str):
+        from app.services.jobs_globais import JobsGlobais
+
+        return next((j for j in JobsGlobais.coletar() if j.id == job_id), None)
+
+    @pytest.mark.asyncio
+    async def test_short_na_fila_aparece_na_fila_global_e_cancela(
+        self, ambiente, jobs, monkeypatch
+    ):
+        from app.services.cancelamento_jobs import TrabalhoEmVoo, cancelar_job
+        from app.services.jobs_globais import JobsGlobais
+        from app.services.render import remotion_render as rr
+        from app.services.shorts_progress import ShortsProgress
+
+        JobsGlobais.resetar()
+        monkeypatch.setenv("RENDER_PIPELINE_CONCURRENCY", "1")
+        corte_rodando, liberar = asyncio.Event(), asyncio.Event()
+
+        async def _corte():
+            async with rr.vaga_de_render(lambda _etapa: None):
+                corte_rodando.set()
+                await liberar.wait()
+
+        corte = asyncio.create_task(_corte())
+        await asyncio.wait_for(corte_rodando.wait(), 5)
+        render_short.disparar("s1", final=False)
+        await asyncio.sleep(0.05)
+
+        job = self._job("short:s1")
+        assert job is not None, "o short esperando a vaga tem de aparecer na fila global"
+        assert (job.tipo, job.corte_id, job.estado) == ("short", "c1", "aguardando")
+        assert job.etapa == "Short 1 (prévia): Aguardando vez na fila de render"
+
+        task = TrabalhoEmVoo._registro["short:s1"].task
+        cancelar_job("short:s1")
+        await asyncio.gather(task, return_exceptions=True)
+
+        assert ShortsProgress.em_curso("s1") is False, "cancelado não pode ficar rodando"
+        assert self._job("short:s1").estado == "cancelado"
+        liberar.set()
+        await asyncio.wait_for(corte, 5)
+        assert jobs == [], "cancelado na fila, nenhum passo pode sair depois"
+
+    @pytest.mark.asyncio
+    async def test_cancelar_short_rodando_mata_os_jobs_do_worker(self, ambiente, monkeypatch):
+        from app.infrastructure import worker_queue
+        from app.services import cancelamento_jobs
+        from app.services.cancelamento_jobs import TrabalhoEmVoo, cancelar_job
+        from app.services.jobs_globais import JobsGlobais
+        from app.services.shorts_progress import ShortsProgress
+
+        JobsGlobais.resetar()
+        despachado, donos_dos_jobs, donos_cancelados = asyncio.Event(), [], []
+
+        async def _recorte_sem_fim(job_id, cmd, *, cwd, category, timeout):
+            donos_dos_jobs.append(worker_queue._DONO_ATUAL.get())
+            despachado.set()
+            await asyncio.Event().wait()
+
+        monkeypatch.setattr(render_short, "_despachar", _recorte_sem_fim)
+        monkeypatch.setattr(
+            cancelamento_jobs, "cancelar_owner", lambda dono: donos_cancelados.append(dono) or 1
+        )
+        render_short.disparar("s1", final=True)
+        await asyncio.wait_for(despachado.wait(), 5)
+
+        job = self._job("short:s1")
+        assert (job.estado, job.etapa) == ("rodando", "Short 1 (final): Recortar 9:16")
+
+        task = TrabalhoEmVoo._registro["short:s1"].task
+        assert cancelar_job("short:s1")["jobs_worker_avisados"] == 1
+        await asyncio.gather(task, return_exceptions=True)
+
+        assert donos_cancelados == donos_dos_jobs, "o cancelamento mira o dono dos jobs do short"
+        estado = ShortsProgress.get("s1")
+        assert estado["concluido"] is True and estado["erro"] is None
+        assert "rodando" not in {p["status"] for p in estado["passos"]}
+        assert self._job("short:s1").estado == "cancelado"
 
 
 class TestCamadaUsaOBundleEmCache:
