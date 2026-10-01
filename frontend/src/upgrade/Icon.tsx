@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   ArrowDown,
   ArrowLeft,
   ArrowLeftRight,
@@ -21,7 +20,6 @@ import {
   Captions,
   Check,
   CheckCheck,
-  CheckCircle2,
   ChevronDown,
   ChevronFirst,
   ChevronLast,
@@ -144,7 +142,6 @@ import {
   Volume2,
   VolumeX,
   Wand,
-  Wand2,
   WandSparkles,
   X,
   XCircle,
@@ -170,11 +167,12 @@ import {
 // ícone passa por aqui (a catraca iconeDoTema.test cobra), e a escala é
 // curta e tipada: 14 px junto de texto, 16 px em botão e barra, 20 px no
 // trilho. Desenho grande (placeholder, estado vazio) usa `ilustracao`, com
-// o tamanho dito em px. O traço é um só, 1,75, em todo lugar.
+// o tamanho dito em px. O traço é um só, 1,75, em todo lugar. Um nome por
+// desenho: os apelidos antigos do lucide (AlertTriangle, CheckCircle2,
+// Wand2) são o mesmo glifo de triangle-alert, circle-check e wand-sparkles.
 // ─────────────────────────────────────────────────────────────────
 
 const ICONS = {
-  'alert-triangle': AlertTriangle,
   'arrow-down': ArrowDown,
   'arrow-left': ArrowLeft,
   'arrow-left-right': ArrowLeftRight,
@@ -196,7 +194,6 @@ const ICONS = {
   captions: Captions,
   check: Check,
   'check-check': CheckCheck,
-  'check-circle-2': CheckCircle2,
   'chevron-down': ChevronDown,
   'chevron-first': ChevronFirst,
   'chevron-last': ChevronLast,
@@ -319,7 +316,6 @@ const ICONS = {
   'volume-2': Volume2,
   'volume-x': VolumeX,
   wand: Wand,
-  'wand-2': Wand2,
   'wand-sparkles': WandSparkles,
   x: X,
   'x-circle': XCircle,

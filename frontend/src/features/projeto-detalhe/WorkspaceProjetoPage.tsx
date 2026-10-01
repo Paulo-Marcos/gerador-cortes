@@ -296,7 +296,6 @@ export default function WorkspaceProjetoPage() {
         >
           <Icon
             name={progresso.status === 'baixando' ? 'download' : 'captions'}
-           
             style={{ color: 'var(--info)' }}
           />
           <b style={{ fontSize: 12.5 }}>

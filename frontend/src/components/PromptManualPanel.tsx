@@ -225,13 +225,13 @@ export function PromptManualPanel({
                   onClick={() => void onCopiarParte(index)}
                   disabled={semPrompt}
                 >
-                  {copiadoParte === index ? <Icon name="check-circle-2" /> : <Icon name="copy" />}
+                  {copiadoParte === index ? <Icon name="circle-check" /> : <Icon name="copy" />}
                   {copiadoParte === index ? 'Copiado' : 'Copiar prompt'}
                 </Button>
                 {!hideRetorno && (
                   <Button type="button" size="sm" onClick={() => void onColarParte(index)}>
                     {coladoParte === index ? (
-                      <Icon name="check-circle-2" />
+                      <Icon name="circle-check" />
                     ) : (
                       <Icon name="clipboard-paste" />
                     )}

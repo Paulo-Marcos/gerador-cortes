@@ -43,7 +43,7 @@ export function ConfirmDialog({
     >
       <div className="flex items-start gap-2.5">
         {perigoso && (
-          <Icon name="alert-triangle" size={16} className="mt-0.5 shrink-0 text-[var(--wb-warn)]" />
+          <Icon name="triangle-alert" size={16} className="mt-0.5 shrink-0 text-[var(--wb-warn)]" />
         )}
         <p className="text-[13px] leading-relaxed text-[var(--wb-text)]">{pedido?.descricao}</p>
       </div>

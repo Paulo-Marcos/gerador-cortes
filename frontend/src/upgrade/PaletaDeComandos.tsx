@@ -377,7 +377,6 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
                     >
                       <Icon
                         name={d.icone}
-                       
                         style={{ color: ativo ? 'var(--sel-ink)' : 'var(--mute)', flex: 'none' }}
                       />
                       <span style={{ flex: 1, minWidth: 0 }}>

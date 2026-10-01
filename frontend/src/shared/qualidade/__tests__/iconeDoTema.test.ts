@@ -17,7 +17,10 @@ import { readFileSync } from 'node:fs';
 // O próprio Icon é a única porta para o lucide.
 const PORTA = 'src/upgrade/Icon.tsx';
 const TESTES = /(__tests__\/|\.test\.tsx?$)/;
-const IMPORTA_LUCIDE = /from\s+['"]lucide-react['"]/;
+// Qualquer referência ao pacote, não só o import estático da raiz: caminho
+// interno (`lucide-react/dist/...`), `import()` e `require` também furam a
+// escala (achado da auditoria do #99).
+const IMPORTA_LUCIDE = /['"]lucide-react(?:\/[^'"]*)?['"]/;
 
 const AINDA_IMPORTAM = new Set([
   "src/components/ui/acao-de-ia.tsx",

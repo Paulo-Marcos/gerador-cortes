@@ -93,7 +93,10 @@ export function ThumbnailHintsEditor({
             aria-label="com sugestões salvas"
           />
         )}
-        <Icon name="chevron-down" className={cn('ml-auto transition-transform', open && 'rotate-180')} />
+        <Icon
+          name="chevron-down"
+          className={cn('ml-auto transition-transform', open && 'rotate-180')}
+        />
       </button>
 
       {open && (
@@ -119,7 +122,11 @@ export function ThumbnailHintsEditor({
               disabled={!dirty || saveMutation.isPending}
               onClick={() => saveMutation.mutate(value.trim())}
             >
-              {saveMutation.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="check" />}
+              {saveMutation.isPending ? (
+                <Icon name="loader-2" className="animate-spin" />
+              ) : (
+                <Icon name="check" />
+              )}
               Salvar
             </Button>
           </div>

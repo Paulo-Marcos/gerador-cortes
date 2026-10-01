@@ -107,7 +107,10 @@ function ToastViewport({
             className="card pointer-events-none flex items-center gap-[9px] p-[10px_12px] animate-in fade-in slide-in-from-bottom-1"
             style={{ padding: '10px 12px', boxShadow: '0 18px 44px rgb(0 0 0/.3)' }}
           >
-            <Icon name={ICONE_DO_TOM[toast.tone]} style={{ color: AP_TOM[toast.tone], flex: 'none' }} />
+            <Icon
+              name={ICONE_DO_TOM[toast.tone]}
+              style={{ color: AP_TOM[toast.tone], flex: 'none' }}
+            />
             <span className="min-w-0 flex-1 text-[12px] leading-[1.45]">
               {toast.title ? <b>{toast.title} </b> : null}
               <span style={{ color: 'var(--mute)' }}>{toast.message}</span>
