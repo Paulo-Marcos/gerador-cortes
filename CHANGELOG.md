@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **Plain background, and the theme ramp moves out of the top bar.** The
+  radial glows behind the content (red, amber/teal and blue, in all five
+  themes) are gone: they competed with the status colors, so color now only
+  appears where it means something. The top bar keeps just the light/dark
+  button; the five themes and the accent palettes stay in Configurações →
+  Aplicação → Aparência (D-846).
 - **R deletes the cut, after asking; A toggles.** In the editor and on the
   focused row of the live's cut list, A approves a proposed cut and sends an
   approved one back to proposed, and R now deletes the cut. Since D-746 R only

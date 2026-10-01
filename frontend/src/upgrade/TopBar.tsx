@@ -11,14 +11,7 @@ import { BUSCA_LARGA_MIN_PX, useJanelaMin } from './medidas';
 import { AcoesDaTela, type ScreenAction } from './ScreenHeader';
 import type { ChromeAtual, ChromeEstado, ChromeLista } from './UpgradeChrome';
 import type { Migalha } from './upgradeRoutes';
-import {
-  AMOSTRA,
-  LUMINANCIA,
-  NOME_DO_TEMA,
-  RAMPA,
-  temaEscuro,
-  type UpgradeTheme,
-} from './useUpgradeTheme';
+import { temaEscuro, type UpgradeTheme } from './useUpgradeTheme';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A barra superior.
@@ -59,8 +52,6 @@ type TopBarProps = {
   cabecalho?: { sub?: string; acoes?: ScreenAction[] };
   tema: UpgradeTheme;
   onAlternarTema: () => void;
-  /** Escolhe um degrau da rampa. Sem ele, a rampa não aparece. */
-  onEscolherTema?: (t: UpgradeTheme) => void;
   onAbrirBusca?: () => void;
   /** O sino leva à Fila: os avisos deste app SÃO os jobs — render, análise,
    *  upload. Uma caixa de notificações à parte duplicaria a mesma lista. */
@@ -361,57 +352,6 @@ function Seletor({
   );
 }
 
-/** D-746: os cinco degraus, do claro ao escuro. A ordem é a informação —
- *  por isso amostras de cor, não nomes: o operador vê onde está na rampa. */
-function RampaDeTemas({
-  tema,
-  onEscolher,
-}: {
-  tema: UpgradeTheme;
-  onEscolher: (t: UpgradeTheme) => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label="Tema"
-      style={{
-        display: 'flex',
-        gap: 2,
-        padding: 3,
-        flex: 'none',
-        border: '1px solid var(--line)',
-        borderRadius: 'var(--r2)',
-        background: 'var(--inset)',
-      }}
-    >
-      {RAMPA.map((t) => {
-        const ativo = t === tema;
-        return (
-          <button
-            key={t}
-            type="button"
-            aria-pressed={ativo}
-            aria-label={NOME_DO_TEMA[t]}
-            title={`${NOME_DO_TEMA[t]} · ${LUMINANCIA[t]}`}
-            onClick={() => onEscolher(t)}
-            style={{
-              width: 16,
-              // R4: piso de alvo clicável — a rampa era 16×20.
-              height: 24,
-              padding: 0,
-              borderRadius: 2,
-              cursor: 'pointer',
-              background: AMOSTRA[t],
-              border: `1px solid ${ativo ? 'var(--accent)' : 'var(--line)'}`,
-              boxShadow: ativo ? '0 0 0 1px var(--accent)' : 'none',
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 export function TopBar({
   trilha,
   atual,
@@ -421,7 +361,6 @@ export function TopBar({
   cabecalho,
   tema,
   onAlternarTema,
-  onEscolherTema,
   onAbrirBusca,
   onAbrirAvisos,
   avisosAtivos = 0,
@@ -600,7 +539,6 @@ export function TopBar({
           />
         ) : null}
       </button>
-      {onEscolherTema ? <RampaDeTemas tema={tema} onEscolher={onEscolherTema} /> : null}
       <button
         type="button"
         className="btn btn-icon"
