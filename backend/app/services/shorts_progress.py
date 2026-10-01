@@ -40,8 +40,11 @@ ROTULO_DO_ESTAGIO = {"previa": "prévia", "final": "final"}
 
 
 class LugarDoShort(NamedTuple):
+    """Onde o short mora, com os ids lidos do BANCO, nunca os da URL (D-811)."""
+
     projeto_id: str
     corte_id: str
+    short_id: str
     numero: int
 
 
@@ -56,6 +59,9 @@ class ShortsProgress:
         cls._store[short_id] = {
             "estagio": estagio,
             "iniciado_em": time.monotonic(),
+            # D-844: o cronômetro para no desfecho; sem isto o card cancelado
+            # (ou com erro) seguia contando como se rodasse.
+            "terminado_em": None,
             "concluido": False,
             "erro": None,
             # D-844: parado pela fila — desfecho pedido, não falha.
@@ -102,7 +108,7 @@ class ShortsProgress:
     def concluir(cls, short_id: str) -> None:
         sessao = cls._store.get(short_id)
         if sessao:
-            sessao["concluido"] = True
+            _encerrar(sessao)
 
     @classmethod
     def falhar(cls, short_id: str, erro: str) -> None:
@@ -117,7 +123,7 @@ class ShortsProgress:
         if not sessao:
             return
         sessao["erro"] = erro
-        sessao["concluido"] = True
+        _encerrar(sessao)
         for passo in sessao["passos"]:
             if passo["status"] == "rodando":
                 passo["status"] = "erro"
@@ -134,7 +140,7 @@ class ShortsProgress:
         if not sessao:
             return
         sessao["cancelado"] = True
-        sessao["concluido"] = True
+        _encerrar(sessao)
         sessao["fila"] = None
         for passo in sessao["passos"]:
             if passo["status"] == "rodando":
@@ -160,7 +166,9 @@ class ShortsProgress:
             "concluido": sessao["concluido"],
             "erro": sessao["erro"],
             "fila": sessao["fila"],
-            "decorrido_seg": round(time.monotonic() - sessao["iniciado_em"], 1),
+            "decorrido_seg": round(
+                (sessao["terminado_em"] or time.monotonic()) - sessao["iniciado_em"], 1
+            ),
             "passos": [dict(passo) for passo in sessao["passos"]],
         }
 
@@ -176,6 +184,11 @@ class ShortsProgress:
             for short_id, sessao in cls._store.items()
             if sessao["corte_id"]
         ]
+
+
+def _encerrar(sessao: dict) -> None:
+    sessao["concluido"] = True
+    sessao["terminado_em"] = time.monotonic()
 
 
 def _descrever_situacao(sessao: dict) -> dict:
@@ -263,7 +276,7 @@ async def localizar_short(short_id: str) -> LugarDoShort:
         corte = await db.get(Corte, short.corte_id)
         if not corte:
             raise LookupError("Corte do short nao encontrado")
-        return LugarDoShort(corte.projeto_id, corte.id, short.numero)
+        return LugarDoShort(corte.projeto_id, corte.id, short.id, short.numero)
 
 
 async def log_do_render(short_id: str) -> dict:
@@ -273,8 +286,11 @@ async def log_do_render(short_id: str) -> dict:
     ainda. A tela mostra "ainda nao ha log" em vez de um 404 que pareceria
     defeito.
     """
+    # O caminho sai dos ids do banco: um `..\` vindo da URL não acha short e
+    # para no `LookupError`, antes de virar pasta (D-811).
     lugar = await localizar_short(short_id)
-    arquivo = diretorio_do_short(lugar.projeto_id, lugar.corte_id, short_id) / "worker_debug.log"
+    pasta = diretorio_do_short(lugar.projeto_id, lugar.corte_id, lugar.short_id)
+    arquivo = pasta / "worker_debug.log"
     if not arquivo.is_file():
         return {"linhas": [], "truncado": False, "duracoes_ms": [], "existe": False}
 

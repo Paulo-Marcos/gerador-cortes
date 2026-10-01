@@ -112,7 +112,7 @@ def test_short_sem_corte_anotado_fica_fora_da_fila():
 
 def _situacao_na_fila(preparar) -> tuple[str, int, str]:
     ShortsProgress.iniciar("s1", estagio="final")
-    ShortsProgress.vincular("s1", LugarDoShort("p1", "c1", 3))
+    ShortsProgress.vincular("s1", LugarDoShort("p1", "c1", "s1", 3))
     preparar()
     (item,) = ShortsProgress.listar_para_a_fila()
     assert (item["short_id"], item["corte_id"]) == ("s1", "c1")
@@ -162,3 +162,30 @@ def test_cancelar_encerra_sem_erro_e_sem_passo_rodando():
     assert ShortsProgress.em_curso("s1") is False
     assert estado["erro"] is None
     assert [p["status"] for p in estado["passos"]] == ["concluido", "pendente", "pendente"]
+
+
+@pytest.mark.parametrize(
+    "terminar",
+    [
+        lambda: ShortsProgress.concluir("s1"),
+        lambda: ShortsProgress.falhar("s1", "worker caiu"),
+        lambda: ShortsProgress.cancelar("s1"),
+    ],
+    ids=["pronto", "erro", "cancelado"],
+)
+def test_o_cronometro_para_quando_o_render_termina(monkeypatch, terminar):
+    """D-844: o card cancelado (ou com erro) seguia contando "49s, 50s…".
+
+    O tempo é a resposta a "há quanto tempo está rodando?" — depois do fim ele
+    tem de virar "quanto durou".
+    """
+    from app.services import shorts_progress
+
+    agora = [100.0]
+    monkeypatch.setattr(shorts_progress.time, "monotonic", lambda: agora[0])
+    ShortsProgress.iniciar("s1", estagio="final")
+    agora[0] = 112.0
+    terminar()
+    agora[0] = 500.0
+
+    assert ShortsProgress.get("s1")["decorrido_seg"] == 12.0
