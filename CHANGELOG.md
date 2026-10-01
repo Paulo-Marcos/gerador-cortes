@@ -95,6 +95,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **The Library card shows the right icon for "Bruto" and "Publicação".** The
+  card's six-step strip looks up each icon by the step's label, but its map
+  still said "Cortes" and "Publicado", so those two steps fell back to the
+  generic dashed circle instead of the scissors and the rocket. A test now
+  checks that the map and the labels agree (D-851).
 - **The short's overlay no longer rebuilds the renderer bundle on every
   render.** It rendered straight from `src/index.ts`, so each render (and each
   retry) ran webpack inside the same process that was launching Chrome. Under
