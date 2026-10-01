@@ -181,7 +181,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
                       <span className="w-5 shrink-0">
                         {r?.status === 'enfileirado' && (
                           <span title={r.mensagem ?? 'enfileirado'}>
-                            <CheckCircle2 size={14} className="text-emerald-400" />
+                            <CheckCircle2 size={14} className="text-success" />
                           </span>
                         )}
                         {r?.status === 'erro' && (

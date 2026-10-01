@@ -140,13 +140,21 @@ describe('estado fala uma língua só', () => {
     expect(importam.map((f) => relative(raiz, f))).toEqual([]);
   });
 
+  // Qualquer prefixo (text, fill, stroke, ring…), as famílias de cor de estado
+  // e os hex soltos que o app já teve, sem diferenciar maiúscula — a primeira
+  // versão só via `amber` em text/border/bg (achado da auditoria do #95).
+  // CenaPlayerPanel fica de fora: a pílula sobre o vídeo segue a regra sobreArte.
+  const corSolta = /-(red|rose|amber|emerald|yellow|orange|green|lime)-\d{2,3}\b|#(fca5a5|ff9b9b|e5484d|f87171)\b|--wb-danger,/i;
+
   it.each([
     'features/editor/avaliacao/AvaliacaoBrutoPanel.tsx',
+    'features/editor/avaliacao/AvaliacaoCorteForm.tsx',
     'features/editor/fase2/AlertaCenasForaDoCorte.tsx',
     'features/editor/fase1/AudioSyncControl.tsx',
     'features/projeto-detalhe/AuditoriaAnaliseModal.tsx',
+    'features/projeto-detalhe/PublicarMassaModal.tsx',
   ])('%s usa os tokens de estado, não cor solta', (arquivo) => {
     const texto = readFileSync(resolve(__dirname, '../..', arquivo), 'utf-8');
-    expect(texto).not.toMatch(/-(red|rose|emerald)-\d{3}|(text|border|bg)-amber-\d{3}|#fca5a5|#e5484d/);
+    expect(texto).not.toMatch(corSolta);
   });
 });
