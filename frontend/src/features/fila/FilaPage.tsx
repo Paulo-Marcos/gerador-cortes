@@ -134,7 +134,7 @@ function LinhaJob({
             type="button"
             className="btn btn-sm btn-danger"
             title="Cancelar este job — o processo é interrompido no servidor"
-            aria-label={`Cancelar ${job.rotulo}`}
+            aria-label={`Cancelar ${job.rotulo} (${job.etapa})`}
             onClick={onCancelar}
           >
             <Icon name="x" size={12} />

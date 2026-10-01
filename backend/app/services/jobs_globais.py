@@ -28,6 +28,7 @@ from app.core.tarefas_ativas import TIPO_DESCONHECIDO, TIPOS, TarefasAtivas
 from app.models import Corte, Projeto
 from app.services.bruto_progress import BrutoProgress
 from app.services.render.render_progress import RenderProgressStore
+from app.services.shorts_progress import ShortsProgress
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -239,6 +240,26 @@ def _jobs_render() -> list[JobGlobal]:
     return jobs
 
 
+# ── Render do short (D-844) ─────────────────────────────────────────────────
+# Divide a vaga com o render final desde a D-843: fora da fila, o corte parecia
+# esperar por nada e o short que segurava a vaga não tinha botão de parar.
+
+
+def _jobs_shorts() -> list[JobGlobal]:
+    return [
+        JobGlobal(
+            id=f"short:{item['short_id']}",
+            tipo="short",
+            corte_id=item["corte_id"],
+            estado=item["estado"],
+            progresso=item["progresso"],
+            etapa=item["etapa"],
+            erro=item["erro"],
+        )
+        for item in ShortsProgress.listar_para_a_fila()
+    ]
+
+
 # ── Publicação no YouTube ───────────────────────────────────────────────────
 
 _YOUTUBE_ESTADO: dict[str, EstadoJob] = {
@@ -330,7 +351,12 @@ class JobsGlobais:
     def coletar(cls, agora: float | None = None) -> list[JobGlobal]:
         instante = time.time() if agora is None else agora
         candidatos = (
-            _jobs_bruto() + _jobs_pos() + _jobs_render() + _jobs_youtube() + _jobs_tarefas()
+            _jobs_bruto()
+            + _jobs_pos()
+            + _jobs_render()
+            + _jobs_shorts()
+            + _jobs_youtube()
+            + _jobs_tarefas()
         )
         publicaveis = [job for job in candidatos if cls._publicavel(job, instante)]
         cls._esquecer_ausentes({job.id for job in candidatos})

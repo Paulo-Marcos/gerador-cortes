@@ -9,7 +9,7 @@ a fila e o gate de RAM, e esqueceu o instrumento que torna tudo legivel.
 """
 
 import pytest
-from app.services.shorts_progress import PASSOS_RENDER, ShortsProgress
+from app.services.shorts_progress import PASSOS_RENDER, LugarDoShort, ShortsProgress
 
 
 @pytest.fixture(autouse=True)
@@ -98,3 +98,94 @@ def test_o_estado_devolvido_nao_e_o_interno():
     ShortsProgress.get("s1")["passos"][0]["status"] = "mexido"
 
     assert ShortsProgress.get("s1")["passos"][0]["status"] == "pendente"
+
+
+# ── D-844: o render do short na fila global ────────────────────────────────
+
+
+def test_short_sem_corte_anotado_fica_fora_da_fila():
+    """A fila descartaria o job sem projeto nem número de corte para mostrar."""
+    ShortsProgress.iniciar("s1", estagio="previa")
+
+    assert ShortsProgress.listar_para_a_fila() == []
+
+
+def _situacao_na_fila(preparar) -> tuple[str, int, str]:
+    ShortsProgress.iniciar("s1", estagio="final")
+    ShortsProgress.vincular("s1", LugarDoShort("p1", "c1", "s1", 3))
+    preparar()
+    (item,) = ShortsProgress.listar_para_a_fila()
+    assert (item["short_id"], item["corte_id"]) == ("s1", "c1")
+    return item["estado"], item["progresso"], item["etapa"]
+
+
+@pytest.mark.parametrize(
+    ("preparar", "esperado"),
+    [
+        (
+            lambda: ShortsProgress.na_fila("s1", "Aguardando RAM"),
+            ("aguardando", 0, "Short 3 (final): Aguardando RAM"),
+        ),
+        (
+            lambda: ShortsProgress.marcar("s1", "recorte", "rodando"),
+            ("rodando", 0, "Short 3 (final): Recortar 9:16"),
+        ),
+        (
+            lambda: (
+                ShortsProgress.marcar("s1", "recorte", "concluido"),
+                ShortsProgress.marcar("s1", "camada", "rodando"),
+            ),
+            ("rodando", 33, "Short 3 (final): Desenhar legenda e cenas"),
+        ),
+        (
+            lambda: ShortsProgress.falhar("s1", "worker caiu"),
+            ("erro", 0, "Short 3 (final): Falha no render"),
+        ),
+        (lambda: ShortsProgress.concluir("s1"), ("concluido", 100, "Short 3 (final): Pronto")),
+        (lambda: ShortsProgress.cancelar("s1"), ("cancelado", 0, "Short 3 (final): Cancelado")),
+    ],
+    ids=["na-fila", "recorte", "camada", "erro", "pronto", "cancelado"],
+)
+def test_fila_global_le_o_estado_do_render(preparar, esperado):
+    assert _situacao_na_fila(preparar) == esperado
+
+
+def test_cancelar_encerra_sem_erro_e_sem_passo_rodando():
+    """Cancelado não é falha, e o passo parado não pode girar para sempre."""
+    ShortsProgress.iniciar("s1", estagio="previa")
+    ShortsProgress.marcar("s1", "recorte", "concluido")
+    ShortsProgress.marcar("s1", "camada", "rodando")
+
+    ShortsProgress.cancelar("s1")
+
+    estado = ShortsProgress.get("s1")
+    assert ShortsProgress.em_curso("s1") is False
+    assert estado["erro"] is None
+    assert [p["status"] for p in estado["passos"]] == ["concluido", "pendente", "pendente"]
+
+
+@pytest.mark.parametrize(
+    "terminar",
+    [
+        lambda: ShortsProgress.concluir("s1"),
+        lambda: ShortsProgress.falhar("s1", "worker caiu"),
+        lambda: ShortsProgress.cancelar("s1"),
+    ],
+    ids=["pronto", "erro", "cancelado"],
+)
+def test_o_cronometro_para_quando_o_render_termina(monkeypatch, terminar):
+    """D-844: o card cancelado (ou com erro) seguia contando "49s, 50s…".
+
+    O tempo é a resposta a "há quanto tempo está rodando?" — depois do fim ele
+    tem de virar "quanto durou".
+    """
+    from app.services import shorts_progress
+
+    agora = [100.0]
+    monkeypatch.setattr(shorts_progress.time, "monotonic", lambda: agora[0])
+    ShortsProgress.iniciar("s1", estagio="final")
+    agora[0] = 112.0
+    terminar()
+    agora[0] = 500.0
+
+    assert ShortsProgress.get("s1")["decorrido_seg"] == 12.0

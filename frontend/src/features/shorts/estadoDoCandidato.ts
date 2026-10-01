@@ -1,5 +1,5 @@
 import type { StatusTone } from '@/components/ui/status-chip';
-import type { ShortSugerido, StatusShort } from './shortsApi';
+import type { ProgressoRender, ShortSugerido, StatusShort } from './shortsApi';
 
 // D-492: o que a tela deve oferecer, dado o estado do candidato.
 //
@@ -120,4 +120,15 @@ export function tomDaNota(short: ShortSugerido): StatusTone {
   if (short.score >= 8) return 'success';
   if (short.score >= 6) return 'accent';
   return 'neutral';
+}
+
+/**
+ * D-844: o render foi parado pela fila global?
+ *
+ * Pelo HTTP, cancelado e pronto chegam iguais — concluído e sem erro. O que os
+ * separa são os passos: o pronto conclui os três. Sem esta distinção o painel
+ * sumia no cancelamento como se o arquivo tivesse saído.
+ */
+export function foiCancelado({ concluido, erro, passos }: ProgressoRender): boolean {
+  return concluido && !erro && passos.some((passo) => passo.status !== 'concluido');
 }

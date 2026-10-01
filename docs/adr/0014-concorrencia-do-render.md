@@ -34,6 +34,9 @@ O render passa por um **portão global** (`services/render/remotion_render.py`):
   4 h), porque um passo curto do short pode esperar atrás de uma grade de horas.
 - **D-843:** a camada do short tenta de novo como o overlay do corte
   (`overlay_max_attempts`): o Chrome do Remotion que não sobe em 25 s é transiente.
+- **D-844:** quem divide a vaga aparece na fila global. O render do short é o job
+  `short:<id>` (na espera ou rodando, com o passo), e cancelá-lo para a task e os jobs
+  do worker, como o render do corte.
 
 ## Consequências
 

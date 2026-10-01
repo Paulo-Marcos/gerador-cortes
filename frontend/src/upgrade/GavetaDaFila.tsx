@@ -189,7 +189,7 @@ function LinhaDaFila({ grupo }: { grupo: GrupoFila }) {
           style={{ width: 24, height: 24, color: ativo ? 'var(--err)' : 'var(--mute)' }}
           title={
             ativo
-              ? `Cancelar ${job.rotulo} — o processo para no servidor`
+              ? `Cancelar ${job.rotulo} (${job.etapa}) — o processo para no servidor`
               : 'Tirar da lista (já terminou)'
           }
           aria-label={ativo ? 'Cancelar o job' : 'Tirar da lista'}

@@ -18,6 +18,7 @@ limpeza junto com o resto da mídia pesada, e o final é o que a publicação le
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from dataclasses import dataclass
@@ -54,6 +55,7 @@ from app.infrastructure.worker_queue import (
 from app.models import Corte, Short, StatusShort
 from app.services import legendas_short, palco_shorts
 from app.services.app_settings import AppSettingsService
+from app.services.cancelamento_jobs import TrabalhoEmVoo
 from app.services.render.pipeline_render import _preparar_bundle_overlay
 from app.services.render.pipeline_render_helpers import (
     _build_overlay_render_cmd,
@@ -62,7 +64,7 @@ from app.services.render.pipeline_render_helpers import (
 )
 from app.services.render.remotion_render import vaga_de_render
 from app.services.shorts import foco_efetivo
-from app.services.shorts_progress import ShortsProgress, resumir_log
+from app.services.shorts_progress import ShortsProgress, diretorio_do_short, localizar_short
 from app.services.tasks import fire_and_forget
 
 logger = logging.getLogger(__name__)
@@ -138,10 +140,11 @@ def disparar(short_id: str, *, final: bool) -> dict:
 
     estagio = "final" if final else "previa"
     ShortsProgress.iniciar(short_id, estagio=estagio)
-    fire_and_forget(
-        _renderizar_em_background(short_id, final=final),
-        name=f"short-{estagio}-{short_id[:8]}",
-    )
+    nome = f"short-{estagio}-{short_id[:8]}"
+    task = fire_and_forget(_renderizar_em_background(short_id, final=final), name=nome)
+    # D-844: a fila global publica `short:<id>`; o dono dos jobs do worker é o
+    # que `fire_and_forget` define para a task — o mesmo arranjo do bruto.
+    TrabalhoEmVoo.registrar(f"short:{short_id}", task, owner=f"task:{nome}")
     return {"status": "iniciado", "short_id": short_id, "estagio": estagio}
 
 
@@ -152,12 +155,16 @@ async def _renderizar_em_background(short_id: str, *, final: bool) -> None:
     "rodando" para sempre — pior que o silêncio que esta demanda veio resolver.
     """
     try:
+        ShortsProgress.vincular(short_id, await localizar_short(short_id))
         # D-843: a mesma vaga dos cortes. Sem ela, cada clique abria um render
         # e o recorte morria no timeout esperando atrás de todos.
         async with vaga_de_render(lambda motivo: ShortsProgress.na_fila(short_id, motivo)):
             ShortsProgress.na_fila(short_id, None)
             await (renderizar_short if final else renderizar_previa)(short_id)
         ShortsProgress.concluir(short_id)
+    except asyncio.CancelledError:
+        ShortsProgress.cancelar(short_id)  # D-844: parado pela fila
+        raise
     except Exception as exc:  # noqa: BLE001 — a falha PRECISA chegar a tela
         logger.exception("[RenderShort] short=%s falhou", short_id[:8])
         ShortsProgress.falhar(short_id, str(exc) or exc.__class__.__name__)
@@ -373,7 +380,7 @@ async def _montar_contexto(short_id: str) -> _ContextoRender:
             corte_id=corte.id,
             projeto_id=corte.projeto_id,
             bruto=bruto,
-            diretorio=_diretorio_do_short(corte.projeto_id, corte.id, short.id),
+            diretorio=diretorio_do_short(corte.projeto_id, corte.id, short.id),
             inicio_seg=float(short.inicio_seg),
             fim_seg=float(short.fim_seg),
             foco_x=foco_efetivo(short, corte),
@@ -464,46 +471,6 @@ async def _palco_em_png(palco: dict):
 # apaga-las. O dado fica no banco — nada e destruido, e religar e mudar esta
 # constante de volta.
 CENAS_LIGADAS = False
-
-
-def _diretorio_do_short(projeto_id: str, corte_id: str, short_id: str) -> Path:
-    """Onde moram os artefatos deste short: MP4, props e o log do worker.
-
-    D-568: escrito num lugar so porque o LOG depende de concordar com o RENDER.
-    Enquanto eram duas expressoes iguais, o dia em que o render mudasse de pasta
-    — e ele ja mudou uma vez, quando os shorts ganharam subdiretorio proprio —
-    o log passaria a ler onde ninguem escreve, SEM ERRO NENHUM: `is_file()` da
-    falso, a funcao devolve `existe: false`, e a tela diz educadamente que nao ha
-    log ainda. Mentira plausivel, que e a pior categoria.
-    """
-    return projetos_dir() / projeto_id / "cortes" / corte_id / "shorts" / short_id
-
-
-async def log_do_render(short_id: str) -> dict:
-    """O `worker_debug.log` deste short, resumido.
-
-    Sem arquivo nao e erro: significa que nenhum passo chegou a ser despachado
-    ainda. A tela mostra "ainda nao ha log" em vez de um 404 que pareceria
-    defeito.
-    """
-    async with AsyncSessionLocal() as db:
-        short = await db.get(Short, short_id)
-        if not short:
-            raise LookupError(f"Short {short_id!r} nao encontrado")
-        corte = await db.get(Corte, short.corte_id)
-        if not corte:
-            raise LookupError("Corte do short nao encontrado")
-        projeto_id = corte.projeto_id
-        corte_id = corte.id
-
-    arquivo = _diretorio_do_short(projeto_id, corte_id, short_id) / "worker_debug.log"
-    if not arquivo.is_file():
-        return {"linhas": [], "truncado": False, "duracoes_ms": [], "existe": False}
-
-    # `errors="replace"`: o ffmpeg escreve caminho com acento em codepage do
-    # Windows, e um byte invalido nao pode custar o log inteiro.
-    texto = arquivo.read_text(encoding="utf-8", errors="replace")
-    return {**resumir_log(texto), "existe": True}
 
 
 def _textura(palco: dict) -> str:

@@ -786,10 +786,10 @@ async def log_do_render(short_id: str):
     quanto a anterior demorou. E o mesmo acompanhamento que o horizontal tem, e
     que o short nao tinha: "fico no escuro".
     """
-    from app.services.render import render_short
+    from app.services import shorts_progress
 
     try:
-        return await render_short.log_do_render(short_id)
+        return await shorts_progress.log_do_render(short_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 

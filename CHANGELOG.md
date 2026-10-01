@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and applies to both the batch and each cut's "Assistido" button. The robot
   still publishes only when the cover went in (RN-26); a cut it published is
   marked right away, with no tab left to watch (D-834).
+- **Short renders show up in the global queue, and can be cancelled.** Each
+  preview or final render is a line of its own ("Short 2 (prévia): Recortar
+  9:16"), waiting or running, so a cut that waits for a render slot shows who
+  holds it. Cancel stops the task and the worker's ffmpeg/Remotion jobs, frees
+  the slot, and the short's card says "cancelado" instead of spinning forever
+  (D-844).
 - **Click a small image to see it full size.** The TikTok cover, the Short
   cover and the mascot sheets in Canais now open large on click, without
   cropping, over any open window; click outside, the X or Esc closes only the

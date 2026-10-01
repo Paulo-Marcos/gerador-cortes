@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, ChevronDown, ChevronRight, CircleDashed, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { foiCancelado } from './estadoDoCandidato';
 import { useLogDoRender } from './useShortsDoCorte';
 import type { PassoRender, ProgressoRender } from './shortsApi';
 
@@ -36,19 +37,11 @@ function decorrido(segundos: number): string {
 
 export function ProgressoRenderPanel({ progresso, shortId }: Props) {
   const { estagio, concluido, erro, fila, decorrido_seg: decorridoSeg, passos } = progresso;
-
-  // D-568: o log do worker, atrás de um clique.
-  //
-  // Aberto por padrão ele empurraria os passos para fora da vista em cinco
-  // cards ao mesmo tempo — e na maioria das vezes basta saber QUAL etapa corre.
-  // O log é para quando isso não basta: "fico no escuro".
-  const [verLog, setVerLog] = useState(false);
-  const log = useLogDoRender(shortId, verLog && !concluido);
-  const linhas = log.data?.linhas ?? [];
+  const cancelado = foiCancelado(progresso);
 
   // Terminou sem erro: o card já mostra o player, e um painel de "tudo pronto"
   // ao lado dele seria ruído sobre um fato que a tela já conta melhor.
-  if (concluido && !erro) return null;
+  if (concluido && !erro && !cancelado) return null;
 
   return (
     <div
@@ -57,7 +50,13 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
     >
       <div className="mb-1.5 flex items-center gap-2">
         <span className="font-code text-[10.5px] font-bold uppercase tracking-wide text-[var(--wb-text-dim)]">
-          {erro ? `${estagio} falhou` : fila ? `${estagio} na fila` : `renderizando ${estagio}`}
+          {erro
+            ? `${estagio} falhou`
+            : cancelado
+              ? `render ${estagio} cancelado`
+              : fila
+                ? `${estagio} na fila`
+                : `renderizando ${estagio}`}
         </span>
         <div className="flex-1" />
         <span className="font-code text-[10.5px] tabular-nums text-[var(--wb-text-mute)]">
@@ -89,7 +88,14 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
         </p>
       )}
 
-      {!erro && (
+      {cancelado && (
+        <p className="mt-2 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
+          Cancelado pela fila. O arquivo anterior, se havia, continua valendo — renderize de novo
+          quando quiser.
+        </p>
+      )}
+
+      {!erro && !cancelado && (
         // A camada é o passo longo, e sem dizer isso o operador acha que travou
         // justamente onde é normal demorar. D-843: na fila, o motivo da espera
         // (vaga ou RAM) responde o mesmo "travou?" antes de qualquer passo.
@@ -101,6 +107,25 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
         </p>
       )}
 
+      <LogDoWorker shortId={shortId} emCurso={!concluido} />
+    </div>
+  );
+}
+
+/**
+ * D-568: o log do worker, atrás de um clique.
+ *
+ * Aberto por padrão ele empurraria os passos para fora da vista em cinco cards
+ * ao mesmo tempo — e na maioria das vezes basta saber QUAL etapa corre. O log é
+ * para quando isso não basta: "fico no escuro".
+ */
+function LogDoWorker({ shortId, emCurso }: { shortId: string; emCurso: boolean }) {
+  const [verLog, setVerLog] = useState(false);
+  const log = useLogDoRender(shortId, verLog && emCurso);
+  const linhas = log.data?.linhas ?? [];
+
+  return (
+    <>
       {/* D-568: o mesmo `worker_debug.log` que o horizontal deixa acompanhar.
           Uma entrada por passo: o comando que rodou e, ao fechar, a duração. */}
       <button
@@ -127,6 +152,6 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }

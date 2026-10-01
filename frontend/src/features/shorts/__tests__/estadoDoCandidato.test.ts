@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { APARENCIA, notaVisivel, planoDeAcoes, tomDaNota } from '../estadoDoCandidato';
-import type { ShortSugerido, StatusShort } from '../shortsApi';
+import {
+  APARENCIA,
+  foiCancelado,
+  notaVisivel,
+  planoDeAcoes,
+  tomDaNota,
+} from '../estadoDoCandidato';
+import type { PassoRender, ProgressoRender, ShortSugerido, StatusShort } from '../shortsApi';
 
 // D-492: a hierarquia da tela, testada como regra.
 //
@@ -172,5 +178,41 @@ describe('status que a tela nao conhece', () => {
     expect(plano.principal).toBeNull();
     expect(plano.secundarias).toHaveLength(0);
     expect(plano.noMenu).toHaveLength(0);
+  });
+});
+
+// D-844: cancelado pela fila e pronto chegam iguais pelo HTTP. Os passos separam.
+describe('foiCancelado', () => {
+  function progresso(over: Partial<ProgressoRender>, ...status: PassoRender['status'][]) {
+    const passos = status.map((s, i) => ({ chave: `p${i}`, label: `Passo ${i}`, status: s }));
+    return {
+      estagio: 'final',
+      concluido: true,
+      erro: null,
+      fila: null,
+      decorrido_seg: 1,
+      passos,
+      ...over,
+    } as ProgressoRender;
+  }
+
+  it('pronto conclui os três passos: não é cancelamento', () => {
+    expect(foiCancelado(progresso({}, 'concluido', 'concluido', 'concluido'))).toBe(false);
+  });
+
+  it('concluído sem erro e com passo por fazer foi cancelado', () => {
+    expect(foiCancelado(progresso({}, 'concluido', 'pendente', 'pendente'))).toBe(true);
+  });
+
+  it('falha continua sendo falha', () => {
+    expect(foiCancelado(progresso({ erro: 'worker caiu' }, 'concluido', 'erro', 'pendente'))).toBe(
+      false,
+    );
+  });
+
+  it('render em curso ainda não decidiu nada', () => {
+    expect(foiCancelado(progresso({ concluido: false }, 'rodando', 'pendente', 'pendente'))).toBe(
+      false,
+    );
   });
 });
