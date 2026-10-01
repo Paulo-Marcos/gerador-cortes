@@ -470,7 +470,7 @@ function FontePresetPanel({ value, pending, onChange }: FontePresetPanelProps) {
                 className={cn(
                   'min-h-[42px] rounded-[var(--radius-xs)] border px-2 py-1.5 text-left transition-colors disabled:cursor-wait disabled:opacity-60',
                   active
-                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-text)]'
+                    ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] text-[var(--wb-text)]'
                     : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
                 )}
                 aria-pressed={active}

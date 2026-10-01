@@ -153,13 +153,15 @@ describe('MetadataCard — corpo do modal', () => {
 describe('ModalChip', () => {
   // D-821: o escolhido usava texto branco fixo sobre o acento do tema; num tema
   // de acento escuro com texto herdado escuro, a opcao ficava ilegivel.
-  it('usa a cor de texto que o tema define para o acento', () => {
+  // D-847: o escolhido saiu do acento (selecao e tinta neutra); o texto segue
+  // vindo do tema, agora pelo par --sel-ink/--sel-on.
+  it('usa a cor de texto que o tema define para a selecao', () => {
     const html = renderToStaticMarkup(
       <ModalChip active onClick={() => undefined}>
         opcao
       </ModalChip>,
     );
-    expect(html).toContain('text-[var(--wb-accent-fg)]');
+    expect(html).toContain('text-[var(--sel-on)]');
     expect(html).not.toContain('text-white');
   });
 });

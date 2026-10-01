@@ -138,10 +138,10 @@ export function FiltrosDaLista({ filtros }: { filtros: NonNullable<ChromeLista['
             gap: 5,
             height: 24,
             padding: '0 8px',
-            border: `1px solid ${f.ativo ? 'var(--accent)' : 'var(--line)'}`,
+            border: `1px solid ${f.ativo ? 'var(--sel-line)' : 'var(--line)'}`,
             borderRadius: 'var(--r1)',
-            background: f.ativo ? 'var(--accent-soft)' : 'var(--panel)',
-            color: f.ativo ? 'var(--accent2)' : 'var(--mute)',
+            background: f.ativo ? 'var(--sel-bg)' : 'var(--panel)',
+            color: f.ativo ? 'var(--sel-ink)' : 'var(--mute)',
             fontSize: 11,
             fontWeight: 600,
             cursor: 'pointer',
@@ -212,9 +212,9 @@ export function LinhaDeLista({ item }: { item: ItemDeLista }) {
         alignItems: 'center',
         gap: 2,
         marginBottom: 2,
-        border: `1px solid ${item.ativo ? 'var(--accent)' : 'transparent'}`,
+        border: `1px solid ${item.ativo ? 'var(--sel-line)' : 'transparent'}`,
         borderRadius: 'var(--r2)',
-        background: item.ativo ? 'var(--accent-soft)' : 'transparent',
+        background: item.ativo ? 'var(--sel-bg)' : 'transparent',
       }}
     >
       <button

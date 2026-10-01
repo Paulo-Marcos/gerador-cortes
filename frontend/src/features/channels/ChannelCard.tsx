@@ -35,7 +35,7 @@ export function ChannelCard({
     <li
       className={`grid gap-3 rounded-[var(--radius)] border p-4 ${
         canal.ativo
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+          ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
           : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]'
       }`}
     >

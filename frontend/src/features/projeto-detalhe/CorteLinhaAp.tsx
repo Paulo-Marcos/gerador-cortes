@@ -230,7 +230,7 @@ export function CorteLinhaAp({
         alignItems: 'center',
         padding: '9px 11px',
         opacity: estado === 'rejeitado' ? 0.72 : 1,
-        borderColor: selecionado ? 'var(--accent)' : undefined,
+        borderColor: selecionado ? 'var(--sel-line)' : undefined,
       }}
     >
       {onAlternarSelecao ? (

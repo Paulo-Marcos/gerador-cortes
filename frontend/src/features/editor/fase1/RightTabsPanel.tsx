@@ -289,10 +289,10 @@ function TabButton({
         height: 30,
         padding: '0 9px',
         border: 0,
-        borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+        borderBottom: `2px solid ${active ? 'var(--sel-ink)' : 'transparent'}`,
         marginBottom: -1,
         background: 'none',
-        color: active ? 'var(--accent)' : 'var(--mute)',
+        color: active ? 'var(--sel-ink)' : 'var(--mute)',
         fontSize: 12.5,
         fontWeight: 600,
         whiteSpace: 'nowrap',
@@ -315,34 +315,6 @@ function TabButton({
           {count}
         </span>
       ) : null}
-    </button>
-  );
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-[7px] whitespace-nowrap border-b-2 px-1 py-2 text-[11.5px] transition-colors',
-        active
-          ? 'border-b-[var(--wb-accent)] font-bold text-[var(--wb-text)]'
-          : 'border-b-transparent font-semibold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
-      )}
-      aria-current={active ? 'page' : undefined}
-    >
-      {label}
-      {count !== undefined && (
-        <span
-          className={cn(
-            'rounded-[5px] px-1.5 py-px font-code text-[9px] font-bold',
-            countTone === 'err'
-              ? 'bg-[var(--wb-err-soft)] text-[var(--wb-err-ink)]'
-              : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
-          )}
-        >
-          {count}
-        </span>
-      )}
     </button>
   );
 }
@@ -479,7 +451,7 @@ const TrechosList = memo(function TrechosList({
                 className={cn(
                   'group flex w-full cursor-pointer items-start gap-2.5 rounded-[var(--radius-sm)] border bg-[var(--wb-bg-card-elev)] px-2.5 py-2 pr-10 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
                   ativo
-                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+                    ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
                     : 'border-[var(--wb-border-soft)] hover:border-[var(--wb-border)]',
                 )}
                 aria-label={`Pular para ${d.inicio_hms}`}
@@ -652,7 +624,7 @@ function TranscriptList({
               className={cn(
                 'flex w-full items-baseline gap-2.5 border-l-2 px-3 py-1.5 text-left transition-colors',
                 ativa
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+                  ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
                   : 'border-transparent hover:bg-[var(--wb-bg-inset)]',
               )}
             >
@@ -660,7 +632,7 @@ function TranscriptList({
                 className={cn(
                   'min-w-[56px] font-code text-[10px]',
                   ativa
-                    ? 'font-bold text-[var(--wb-accent)]'
+                    ? 'font-bold text-[var(--sel-ink)]'
                     : 'font-medium text-[var(--wb-text-dim)]',
                 )}
                 style={{ fontVariantNumeric: 'tabular-nums' }}

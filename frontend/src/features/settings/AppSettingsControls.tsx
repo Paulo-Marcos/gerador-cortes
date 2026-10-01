@@ -288,7 +288,7 @@ export function AppSettingsControls() {
                 'grid grid-cols-[1fr_20px] gap-3 rounded-[var(--radius)] border p-3 text-left transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:cursor-wait disabled:opacity-60',
                 active
-                  ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+                  ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
                   : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] hover:bg-[var(--wb-bg-card-elev)]',
               )}
             >
@@ -304,7 +304,7 @@ export function AppSettingsControls() {
                 className={cn(
                   'mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border',
                   active
-                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
+                    ? 'border-[var(--sel-ink)] bg-[var(--sel-ink)] text-[var(--sel-on)]'
                     : 'border-[var(--wb-border)] text-transparent',
                 )}
                 aria-hidden

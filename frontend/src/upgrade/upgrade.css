@@ -40,6 +40,16 @@
   --accent2: oklch(0.44 0.18 28);
   --accent-soft: oklch(0.52 0.165 28 / 0.12);
   --on-accent: #fff;
+  /* D-847: "onde estou" — item do trilho, aba, filtro, fase da live — é
+     tinta neutra, não acento. O acento é o que se aperta; quando o mesmo
+     vermelho marcava o lugar, a ação principal e o excluir, nada se
+     destacava. Derivam de --ink, então acompanham os cinco temas sozinhos. */
+  --sel-bg: color-mix(in oklab, var(--ink) 8%, transparent);
+  --sel-line: color-mix(in oklab, var(--ink) 55%, transparent);
+  --sel-ink: var(--ink);
+  /* Texto sobre a seleção CHEIA (fundo --sel-ink): o par invertido, para
+     quando o escolhido precisa pesar mais que um fundo de 8%. */
+  --sel-on: var(--solid);
 
   /* R4: medido compondo o alpha em sRGB — ok e aviso reprovavam (4,21 e
      4,45 no claro). O texto desce 0.05 L e o -soft passa a usar A MESMA
@@ -489,6 +499,18 @@ html.wb-palette-ink .ap:is([data-theme='dark'], [data-theme='ardosia']) {
 .ap .btn-icon.btn-sm {
   width: 26px;
   padding: 0;
+}
+
+/* ─── Seleção fora da casca ───────────────────────────────────────
+   D-847: menus que abrem por portal no <body> (o de velocidade do bruto,
+   a imagem ampliada) ficam fora do `.ap` e não veem os --sel-* dele. Aqui
+   eles recebem o mesmo papel a partir dos --wb-* do :root, para não
+   cair em `var()` vazio — dentro da casca, a declaração do `.ap` vence. */
+:root {
+  --sel-bg: color-mix(in oklab, var(--wb-text) 8%, transparent);
+  --sel-line: color-mix(in oklab, var(--wb-text) 55%, transparent);
+  --sel-ink: var(--wb-text);
+  --sel-on: var(--wb-bg-panel);
 }
 
 /* ─── Ponte para as telas ainda não migradas ──────────────────────

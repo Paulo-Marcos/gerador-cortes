@@ -66,7 +66,7 @@ EXCECOES = {
     "backend/app/services/shorts.py": 1499,
     "backend/app/services/tiktok_studio.py": 766,
     "backend/app/services/youtube.py": 611,
-    "frontend/src/features/editor/fase1/RightTabsPanel.tsx": 717,
+    "frontend/src/features/editor/fase1/RightTabsPanel.tsx": 689,
     "frontend/src/features/editor/fase1/TimelinePanel.tsx": 1435,
     "frontend/src/features/editor/fase2/EditorFase2.tsx": 580,
     "frontend/src/features/editor/fase2/PosicionamentoModal.tsx": 777,

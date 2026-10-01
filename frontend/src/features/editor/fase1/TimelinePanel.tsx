@@ -1021,7 +1021,7 @@ function AdvancedMenu({
                         className={cn(
                           'rounded-md py-1 text-center font-code text-[10px] font-bold transition-colors',
                           active
-                            ? 'bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
+                            ? 'bg-[var(--sel-ink)] text-[var(--sel-on)]'
                             : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
                         )}
                       >

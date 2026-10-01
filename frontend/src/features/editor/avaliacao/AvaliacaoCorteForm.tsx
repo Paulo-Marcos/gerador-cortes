@@ -81,7 +81,7 @@ export function AvaliacaoCorteForm({ rascunho, onChange }: AvaliacaoCorteFormPro
                 className={cn(
                   'rounded-[7px] border px-2 py-[3px] text-[10.5px] font-bold transition-colors',
                   ativo
-                    ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
+                    ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] text-[var(--sel-ink)]'
                     : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
                 )}
               >

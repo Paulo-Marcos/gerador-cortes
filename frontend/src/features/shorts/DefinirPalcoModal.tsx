@@ -510,7 +510,7 @@ export function DefinirPalcoModal({
                     className={cn(
                       'h-7 w-7 rounded-full border-2 transition-transform disabled:opacity-50',
                       ativa
-                        ? 'border-[var(--wb-accent)] ring-2 ring-wb-accent/40'
+                        ? 'border-[var(--sel-line)] ring-2 ring-[var(--sel-line)]'
                         : 'border-[var(--wb-border)] hover:scale-110',
                     )}
                     style={{ background: opcao.hex }}
@@ -542,7 +542,7 @@ export function DefinirPalcoModal({
                     className={cn(
                       'rounded-[7px] border px-2 py-1 text-[15px] font-extrabold leading-none transition-colors disabled:opacity-50',
                       ativa
-                        ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+                        ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
                         : 'border-[var(--wb-border)] hover:bg-[var(--wb-bg-inset)]',
                     )}
                     style={{ fontFamily: opcao.familia || undefined }}

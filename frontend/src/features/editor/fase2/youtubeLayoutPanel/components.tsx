@@ -225,7 +225,7 @@ function DefinirScopeRow({
       className={cn(
         'mb-1 flex items-center gap-2 rounded-[var(--radius-xs)] border p-1.5 last:mb-0',
         ativo
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+          ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
           : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]',
       )}
     >
@@ -538,7 +538,7 @@ export function RegionItem({
       className={cn(
         'rounded-[var(--radius-sm)] border p-2',
         active
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] shadow-[0_0_0_2px_var(--wb-accent-soft)]'
+          ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] shadow-[0_0_0_2px_var(--sel-bg)]'
           : 'border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)]',
       )}
     >
