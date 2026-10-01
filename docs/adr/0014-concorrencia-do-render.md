@@ -26,11 +26,23 @@ O render passa por um **portão global** (`services/render/remotion_render.py`):
   concorrência de frames do Remotion vem de `REMOTION_CONCURRENCY` (padrão 12,
   validado).
 
+- **D-843:** o render do **short** passa pelo mesmo portão (`vaga_de_render`). Corte e
+  short dividem as mesmas vagas, porque a máquina é uma só. Antes, cada clique de short
+  abria um render sem limite, e o recorte morria no timeout esperando atrás dos outros.
+- **D-843:** o `timeout_sec` de um job mede só a **execução** (a partir do `ack_`). A
+  espera na fila do worker tem teto próprio, `RENDER_ESPERA_NA_FILA_MAX_SEG` (padrão
+  4 h), porque um passo curto do short pode esperar atrás de uma grade de horas.
+- **D-843:** a camada do short tenta de novo como o overlay do corte
+  (`overlay_max_attempts`): o Chrome do Remotion que não sobe em 25 s é transiente.
+
 ## Consequências
 
 - Dois renders no máximo, e o segundo só com folga de memória: a máquina não trava
   por excesso de paralelismo.
-- Renders a mais **esperam** no portão, em vez de falhar.
+- Renders a mais **esperam** no portão, em vez de falhar. A tela do short diz o motivo
+  da espera (vaga ou RAM).
+- Com o worker parado, um job só desiste quando passa o teto da espera na fila, e não
+  mais no timeout do passo.
 
 ## Alternativas consideradas
 

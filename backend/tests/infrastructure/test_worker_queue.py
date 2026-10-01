@@ -192,6 +192,28 @@ class TestRelogioComecaNoAck:
         assert ok is False
         assert time.perf_counter() - inicio < 2.5
 
+    def test_espera_na_fila_tem_teto_proprio(self, tmp_path):
+        """D-843: o relógio do passo mede a execução; a espera tem teto à parte.
+
+        O recorte do short (900 s) morria atrás da grade de um corte (horas)
+        sem nunca ter rodado — o primeiro orçamento valia também para a fila.
+        """
+        res = tmp_path / "res_x.json"
+        ack = tmp_path / "ack_x.json"
+
+        async def cenario():
+            async def worker_comeca_tarde():
+                await asyncio.sleep(1.3)  # já passou do timeout de execução
+                ack.write_text("{}", encoding="utf-8")
+                res.write_text("{}", encoding="utf-8")
+
+            worker = asyncio.create_task(worker_comeca_tarde())
+            ok = await _aguardar_arquivo_de_resposta(res, ack, timeout=1, espera_na_fila=3)
+            await worker
+            return ok
+
+        assert asyncio.run(cenario()) is True
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Regressão: o `awatch` NÃO deve receber `timeout=` (kwarg inválido na
@@ -249,6 +271,12 @@ class TestAwatchKwargsRegressao:
 # ─────────────────────────────────────────────────────────────────────────────
 # RemotionWorkerQueue.submit_and_wait
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True)
+def _espera_na_fila_curta(monkeypatch):
+    """Aqui não há worker: o job nunca sai da fila, e o teto real dela é de horas (D-843)."""
+    monkeypatch.setenv("RENDER_ESPERA_NA_FILA_MAX_SEG", "1")
 
 
 def _write_resposta(res_file: Path, *, status: str, erro: str | None = None) -> None:

@@ -17,6 +17,7 @@ como fonte de verdade — tem prévia ou não tem.
 
 from __future__ import annotations
 
+import re
 import time
 
 # Os três passos do `render_short._produzir`, na ordem em que ele os despacha.
@@ -42,6 +43,8 @@ class ShortsProgress:
             "iniciado_em": time.monotonic(),
             "concluido": False,
             "erro": None,
+            # D-843: o motivo da espera no portão de render; None = já tem vaga.
+            "fila": None,
             "passos": [
                 {"chave": chave, "label": label, "status": "pendente"}
                 for chave, label in PASSOS_RENDER
@@ -58,6 +61,13 @@ class ShortsProgress:
             if passo["chave"] == chave:
                 passo["status"] = status
                 return
+
+    @classmethod
+    def na_fila(cls, short_id: str, motivo: str | None) -> None:
+        """Conta por que o render ainda não começou (vaga ou RAM); None ao entrar."""
+        sessao = cls._store.get(short_id)
+        if sessao:
+            sessao["fila"] = motivo
 
     @classmethod
     def concluir(cls, short_id: str) -> None:
@@ -102,6 +112,47 @@ class ShortsProgress:
             "estagio": sessao["estagio"],
             "concluido": sessao["concluido"],
             "erro": sessao["erro"],
+            "fila": sessao["fila"],
             "decorrido_seg": round(time.monotonic() - sessao["iniciado_em"], 1),
             "passos": [dict(passo) for passo in sessao["passos"]],
         }
+
+
+# D-568: o log do worker, que ja existe e ninguem lia.
+#
+# O `native_worker` escreve um `worker_debug.log` no `cwd` de cada job — e o
+# render do short passa o diretorio DELE como cwd, entao o arquivo ja nasce por
+# short, com uma entrada por passo:
+#
+#   [iso] Job: <id>            CMD: ...            CWD: ...
+#   [iso] Fim: <id> status=sucesso duration_ms=409048
+#
+# E o que o operador acompanha no horizontal ("vai atualizando o status de
+# execucao, e no final mostra ate quanto tempo demorou"). Faltava so servir.
+LINHAS_DO_LOG = 80
+LARGURA_DA_LINHA = 400
+
+_FIM = re.compile(r"Fim: \S+ status=(\w+) duration_ms=(\d+)")
+
+
+def resumir_log(texto: str, *, linhas: int = LINHAS_DO_LOG) -> dict:
+    """As ultimas linhas do log do worker, e quanto cada passo levou.
+
+    A linha de CMD do ffmpeg tem varios kilobytes — um filtergraph inteiro numa
+    linha so. Cortar em `LARGURA_DA_LINHA` mantem o log legivel numa caixa de
+    tela sem esconder o que importa: o inicio dela ja diz qual binario rodou.
+
+    >>> resumir_log("[t] Fim: j_1 status=sucesso duration_ms=1500")["duracoes_ms"]
+    [1500]
+    """
+    todas = [linha.rstrip() for linha in texto.splitlines() if linha.strip()]
+    recorte = todas[-linhas:]
+    return {
+        "linhas": [
+            linha if len(linha) <= LARGURA_DA_LINHA else linha[:LARGURA_DA_LINHA] + " […]"
+            for linha in recorte
+        ],
+        "truncado": len(todas) > len(recorte),
+        # Uma duracao por passo concluido, na ordem em que sairam.
+        "duracoes_ms": [int(m.group(2)) for m in _FIM.finditer(texto)],
+    }

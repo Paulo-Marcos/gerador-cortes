@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,13 +45,23 @@ from app.infrastructure.render.ffmpeg_short import (
     build_recorte_vertical_cmd,
 )
 from app.infrastructure.render.overlay_codec import OverlayCodec, overlay_codec_profile
-from app.infrastructure.worker_queue import RemotionWorkerQueue, WorkerJob, WorkerJobCategory
+from app.infrastructure.worker_queue import (
+    RemotionWorkerQueue,
+    WorkerJob,
+    WorkerJobCancelled,
+    WorkerJobCategory,
+)
 from app.models import Corte, Short, StatusShort
 from app.services import legendas_short, palco_shorts
 from app.services.app_settings import AppSettingsService
-from app.services.render.pipeline_render_helpers import _build_overlay_render_cmd
+from app.services.render.pipeline_render_helpers import (
+    _build_overlay_render_cmd,
+    _render_retry_policy,
+    _retry_async,
+)
+from app.services.render.remotion_render import vaga_de_render
 from app.services.shorts import foco_efetivo
-from app.services.shorts_progress import ShortsProgress
+from app.services.shorts_progress import ShortsProgress, resumir_log
 from app.services.tasks import fire_and_forget
 
 logger = logging.getLogger(__name__)
@@ -145,10 +154,11 @@ async def _renderizar_em_background(short_id: str, *, final: bool) -> None:
     "rodando" para sempre — pior que o silêncio que esta demanda veio resolver.
     """
     try:
-        if final:
-            await renderizar_short(short_id)
-        else:
-            await renderizar_previa(short_id)
+        # D-843: a mesma vaga dos cortes. Sem ela, cada clique abria um render
+        # e o recorte morria no timeout esperando atrás de todos.
+        async with vaga_de_render(lambda motivo: ShortsProgress.na_fila(short_id, motivo)):
+            ShortsProgress.na_fila(short_id, None)
+            await (renderizar_short if final else renderizar_previa)(short_id)
         ShortsProgress.concluir(short_id)
     except Exception as exc:  # noqa: BLE001 — a falha PRECISA chegar a tela
         logger.exception("[RenderShort] short=%s falhou", short_id[:8])
@@ -208,21 +218,28 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
     )
 
     ShortsProgress.marcar(short_id, "camada", "rodando")
-    await _despachar(
-        f"{short_id}_{estagio}_camada",
-        _build_overlay_render_cmd(
-            composition=COMPOSICAO_CAMADA,
-            bundle_arg=_ENTRYPOINT_REMOTION,
-            output_path=camada,
-            props_file=props_file,
-            concurrency=2,
-            # ProRes 4444 é o único codec com alpha confiável neste projeto.
-            codec_profile=overlay_codec_profile(OverlayCodec.PRORES_4444),
+    # D-843: como o overlay do corte, a camada tenta de novo — o Chrome que não
+    # sobe em 25 s (máquina ocupada) é transiente. Cancelar não ressuscita.
+    await _retry_async(
+        operacao=lambda: _despachar(
+            f"{short_id}_{estagio}_camada",
+            _build_overlay_render_cmd(
+                composition=COMPOSICAO_CAMADA,
+                bundle_arg=_ENTRYPOINT_REMOTION,
+                output_path=camada,
+                props_file=props_file,
+                concurrency=2,
+                # ProRes 4444 é o único codec com alpha confiável neste projeto.
+                codec_profile=overlay_codec_profile(OverlayCodec.PRORES_4444),
+            ),
+            # Da configuração, como no corte: contar pastas quebrou no D-707 (D-837).
+            cwd=Path(settings.video_renderer_dir),
+            category=WorkerJobCategory.OVERLAY,
+            timeout=_TIMEOUT_CAMADA_SEG,
         ),
-        # Da configuração, como no corte: contar pastas quebrou no D-707 (D-837).
-        cwd=Path(settings.video_renderer_dir),
-        category=WorkerJobCategory.OVERLAY,
-        timeout=_TIMEOUT_CAMADA_SEG,
+        policy=_render_retry_policy(AppSettingsService.get().render),
+        rotulo=f"camada do short {short_id[:8]}",
+        nao_retentar=(WorkerJobCancelled,),
     )
 
     ShortsProgress.marcar(short_id, "camada", "concluido")
@@ -447,46 +464,6 @@ async def _palco_em_png(palco: dict):
 # apaga-las. O dado fica no banco — nada e destruido, e religar e mudar esta
 # constante de volta.
 CENAS_LIGADAS = False
-
-
-# D-568: o log do worker, que ja existe e ninguem lia.
-#
-# O `native_worker` escreve um `worker_debug.log` no `cwd` de cada job — e o
-# render do short passa o diretorio DELE como cwd, entao o arquivo ja nasce por
-# short, com uma entrada por passo:
-#
-#   [iso] Job: <id>            CMD: ...            CWD: ...
-#   [iso] Fim: <id> status=sucesso duration_ms=409048
-#
-# E o que o operador acompanha no horizontal ("vai atualizando o status de
-# execucao, e no final mostra ate quanto tempo demorou"). Faltava so servir.
-LINHAS_DO_LOG = 80
-LARGURA_DA_LINHA = 400
-
-_FIM = re.compile(r"Fim: \S+ status=(\w+) duration_ms=(\d+)")
-
-
-def resumir_log(texto: str, *, linhas: int = LINHAS_DO_LOG) -> dict:
-    """As ultimas linhas do log do worker, e quanto cada passo levou.
-
-    A linha de CMD do ffmpeg tem varios kilobytes — um filtergraph inteiro numa
-    linha so. Cortar em `LARGURA_DA_LINHA` mantem o log legivel numa caixa de
-    tela sem esconder o que importa: o inicio dela ja diz qual binario rodou.
-
-    >>> resumir_log("[t] Fim: j_1 status=sucesso duration_ms=1500")["duracoes_ms"]
-    [1500]
-    """
-    todas = [linha.rstrip() for linha in texto.splitlines() if linha.strip()]
-    recorte = todas[-linhas:]
-    return {
-        "linhas": [
-            linha if len(linha) <= LARGURA_DA_LINHA else linha[:LARGURA_DA_LINHA] + " […]"
-            for linha in recorte
-        ],
-        "truncado": len(todas) > len(recorte),
-        # Uma duracao por passo concluido, na ordem em que sairam.
-        "duracoes_ms": [int(m.group(2)) for m in _FIM.finditer(texto)],
-    }
 
 
 def _diretorio_do_short(projeto_id: str, corte_id: str, short_id: str) -> Path:

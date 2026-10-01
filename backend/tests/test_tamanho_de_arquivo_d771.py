@@ -62,7 +62,7 @@ EXCECOES = {
     "backend/app/services/publicacao_lote.py": 596,
     "backend/app/services/ranking_lives.py": 589,
     "backend/app/services/render/pipeline_render.py": 1633,
-    "backend/app/services/render/render_short.py": 788,
+    "backend/app/services/render/render_short.py": 765,
     "backend/app/services/shorts.py": 1499,
     "backend/app/services/tiktok_studio.py": 766,
     "backend/app/services/youtube.py": 611,

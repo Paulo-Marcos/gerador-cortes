@@ -56,17 +56,13 @@ def test_pool_nao_excede_o_limite(monkeypatch):
     ativos = {"n": 0, "max": 0}
 
     async def _job(cid):
-        gate = rr._obter_render_gate()
-        async with gate:
-            await rr._aguardar_folga_de_ram(cid)
-            rr._renders_ativos += 1
+        async with rr.vaga_de_render(lambda _etapa: None):
             ativos["n"] += 1
             ativos["max"] = max(ativos["max"], ativos["n"])
             try:
                 await asyncio.sleep(0.01)
             finally:
                 ativos["n"] -= 1
-                rr._renders_ativos -= 1
 
     async def _run():
         await asyncio.gather(_job("a"), _job("b"), _job("c"), _job("d"))
@@ -84,7 +80,7 @@ def test_ram_apertada_segura_o_segundo_slot(monkeypatch):
     monkeypatch.setattr(rr.asyncio, "sleep", _sleep_instantaneo)
     rr._renders_ativos = 1
 
-    asyncio.run(rr._aguardar_folga_de_ram("corte-x"))
+    asyncio.run(rr._aguardar_folga_de_ram(_sem_aviso))
     assert next(leituras, "esgotou") == "esgotou", (
         "deveria ter consumido as 3 leituras (2 vetos + 1 liberacao)"
     )
@@ -93,7 +89,7 @@ def test_ram_apertada_segura_o_segundo_slot(monkeypatch):
 def test_leitura_de_ram_indisponivel_nao_veta(monkeypatch):
     monkeypatch.setattr("app.infrastructure.memoria.ram_disponivel_mb", lambda: None)
     rr._renders_ativos = 1
-    asyncio.run(rr._aguardar_folga_de_ram("corte-x"))
+    asyncio.run(rr._aguardar_folga_de_ram(_sem_aviso))
 
 
 def test_primeiro_render_nunca_espera_ram(monkeypatch):
@@ -104,7 +100,31 @@ def test_primeiro_render_nunca_espera_ram(monkeypatch):
 
     monkeypatch.setattr("app.infrastructure.memoria.ram_disponivel_mb", _explode)
     rr._renders_ativos = 0
-    asyncio.run(rr._aguardar_folga_de_ram("corte-x"))
+    asyncio.run(rr._aguardar_folga_de_ram(_sem_aviso))
+
+
+def test_quem_espera_e_avisado_do_motivo(monkeypatch):
+    """D-843: corte e short dividem o portão; cada um conta a espera na própria tela."""
+    monkeypatch.setenv("RENDER_PIPELINE_CONCURRENCY", "1")
+    avisos: list[str] = []
+
+    async def _run():
+        async with rr.vaga_de_render(avisos.append):
+            segundo = asyncio.create_task(_entrar(rr.vaga_de_render(avisos.append)))
+            await asyncio.sleep(0.01)
+        await segundo
+
+    asyncio.run(_run())
+    assert avisos == ["Aguardando vez na fila de render"]
+
+
+async def _entrar(vaga):
+    async with vaga:
+        pass
+
+
+def _sem_aviso(_etapa: str) -> None:
+    return None
 
 
 async def _sleep_instantaneo(_segundos):

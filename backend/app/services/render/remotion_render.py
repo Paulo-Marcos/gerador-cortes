@@ -6,6 +6,8 @@ import asyncio
 import json
 import logging
 import os
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 
 from app.core.channel_paths import projetos_dir
 from app.core.por_loop import PorLoop
@@ -43,7 +45,7 @@ def _ram_minima_para_segundo_slot_mb() -> float:
     return max(0.0, float(os.getenv("RENDER_MIN_RAM_LIVRE_MB", "8192")))
 
 
-async def _aguardar_folga_de_ram(corte_id: str) -> None:
+async def _aguardar_folga_de_ram(avisar: Callable[[str], None]) -> None:
     """Segura o slot extra enquanto a RAM estiver apertada.
 
     Só se aplica quando já existe render ativo (o primeiro nunca espera).
@@ -56,10 +58,30 @@ async def _aguardar_folga_de_ram(corte_id: str) -> None:
         livre = ram_disponivel_mb()
         if livre is None or livre >= limiar:
             return
-        RenderProgressStore.update(
-            corte_id, 1, f"Aguardando RAM livre ({livre:.0f}MB < {limiar:.0f}MB)"
-        )
+        avisar(f"Aguardando RAM livre ({livre:.0f}MB < {limiar:.0f}MB)")
         await asyncio.sleep(10)
+
+
+@asynccontextmanager
+async def vaga_de_render(avisar: Callable[[str], None]) -> AsyncIterator[None]:
+    """Ocupa uma vaga do portão de render (D-440/D-441) enquanto o bloco roda.
+
+    D-843: corte e short dividem as MESMAS vagas. A máquina é uma só — com
+    portões separados, dois cortes e um short somavam três renders pesados, e
+    o short sem portão nenhum abria um por clique. `avisar` leva o motivo da
+    espera para a tela de quem espera, seja ela do corte ou do short.
+    """
+    global _renders_ativos
+    gate = _obter_render_gate()
+    if gate.locked():
+        avisar("Aguardando vez na fila de render")
+    async with gate:
+        await _aguardar_folga_de_ram(avisar)
+        _renders_ativos += 1
+        try:
+            yield
+        finally:
+            _renders_ativos -= 1
 
 
 class RemotionRenderService:
@@ -92,17 +114,8 @@ class RemotionRenderService:
         RenderProgressStore.start(corte_id)
 
         async def _rodar_com_gate():
-            global _renders_ativos
-            gate = _obter_render_gate()
-            if gate.locked():
-                RenderProgressStore.update(corte_id, 1, "Aguardando vez na fila de render")
-            async with gate:
-                await _aguardar_folga_de_ram(corte_id)
-                _renders_ativos += 1
-                try:
-                    return await _rodar_pipeline()
-                finally:
-                    _renders_ativos -= 1
+            async with vaga_de_render(lambda etapa: RenderProgressStore.update(corte_id, 1, etapa)):
+                return await _rodar_pipeline()
 
         async def _rodar_pipeline():
             return await renderizar_pipeline_otimizado(

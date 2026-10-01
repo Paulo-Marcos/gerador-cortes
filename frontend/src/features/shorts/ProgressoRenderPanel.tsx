@@ -35,7 +35,7 @@ function decorrido(segundos: number): string {
 }
 
 export function ProgressoRenderPanel({ progresso, shortId }: Props) {
-  const { estagio, concluido, erro, decorrido_seg: decorridoSeg, passos } = progresso;
+  const { estagio, concluido, erro, fila, decorrido_seg: decorridoSeg, passos } = progresso;
 
   // D-568: o log do worker, atrás de um clique.
   //
@@ -57,7 +57,7 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
     >
       <div className="mb-1.5 flex items-center gap-2">
         <span className="font-code text-[10.5px] font-bold uppercase tracking-wide text-[var(--wb-text-dim)]">
-          {erro ? `${estagio} falhou` : `renderizando ${estagio}`}
+          {erro ? `${estagio} falhou` : fila ? `${estagio} na fila` : `renderizando ${estagio}`}
         </span>
         <div className="flex-1" />
         <span className="font-code text-[10.5px] tabular-nums text-[var(--wb-text-mute)]">
@@ -91,9 +91,12 @@ export function ProgressoRenderPanel({ progresso, shortId }: Props) {
 
       {!erro && (
         // A camada é o passo longo, e sem dizer isso o operador acha que travou
-        // justamente onde é normal demorar.
+        // justamente onde é normal demorar. D-843: na fila, o motivo da espera
+        // (vaga ou RAM) responde o mesmo "travou?" antes de qualquer passo.
         <p className="mt-2 text-[11px] leading-relaxed text-[var(--wb-text-mute)]">
-          Desenhar a legenda e as cenas é o passo demorado — costuma levar alguns minutos.
+          {fila
+            ? `${fila}. Cortes e shorts dividem as mesmas vagas de render — este começa sozinho quando abrir a dele.`
+            : 'Desenhar a legenda e as cenas é o passo demorado — costuma levar alguns minutos.'}{' '}
           Pode sair desta tela: o render continua.
         </p>
       )}
