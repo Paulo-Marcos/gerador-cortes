@@ -48,7 +48,7 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
       )}
 
       {query.isError && (
-        <div className="flex items-start gap-2 rounded-md border border-error/30 bg-error/10 px-3 py-2 text-sm text-[#fca5a5]">
+        <div className="flex items-start gap-2 rounded-md border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
           <span>Falha ao carregar a auditoria: {(query.error as Error).message}</span>
         </div>

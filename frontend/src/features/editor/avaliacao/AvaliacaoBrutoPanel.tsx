@@ -31,15 +31,15 @@ const ROTULO_VEREDITO: Record<VereditoBruto, string> = {
 };
 
 const COR_VEREDITO: Record<VereditoBruto, string> = {
-  coesa: 'text-emerald-300',
-  aceitavel: 'text-amber-300',
-  quebrada: 'text-rose-300',
+  coesa: 'text-success',
+  aceitavel: 'text-warning',
+  quebrada: 'text-error',
 };
 
 const COR_GRAVIDADE: Record<GravidadeApontamento, string> = {
   leve: 'border-[var(--wb-border)] text-[var(--wb-text-dim)]',
-  media: 'border-amber-400/50 text-amber-200',
-  grave: 'border-rose-400/60 text-rose-200',
+  media: 'border-warning/50 text-warning',
+  grave: 'border-error/60 text-error',
 };
 
 // Os três mapas acima são indexados por valor que veio da REDE. O backend
@@ -60,7 +60,7 @@ function NotaEmEstrelas({ nota }: { nota: number }) {
           aria-hidden
           className={cn(
             'text-[var(--wb-text-mute)]',
-            n <= nota && 'fill-amber-300 text-amber-300',
+            n <= nota && 'fill-warning text-warning',
           )}
         />
       ))}
@@ -143,7 +143,7 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
       )}
 
       {reavaliar.isError && (
-        <p className="text-[11px] text-rose-300">{(reavaliar.error as Error).message}</p>
+        <p className="text-[11px] text-error">{(reavaliar.error as Error).message}</p>
       )}
 
       {!query.isLoading && !avaliacao && (
@@ -179,7 +179,7 @@ export function AvaliacaoBrutoPanel({ corteId }: Props) {
               ))}
             </ul>
           ) : (
-            <p className="text-[11px] text-emerald-300">Nenhum ponto de quebra apontado.</p>
+            <p className="text-[11px] text-success">Nenhum ponto de quebra apontado.</p>
           )}
 
           <button

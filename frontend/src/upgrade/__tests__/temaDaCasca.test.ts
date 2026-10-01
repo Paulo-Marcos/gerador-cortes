@@ -114,3 +114,39 @@ describe('o acento é ação, não lugar', () => {
     expect(ler('../FitaDaLive.tsx')).not.toMatch(/agora:\s*\{[^}]*--warn/);
   });
 });
+
+describe('estado fala uma língua só', () => {
+  // D-848: o SeloDeEstado define "aviso = convida a um ato" e "info = em
+  // curso", mas trabalho da máquina saía em âmbar; e um segundo vocabulário
+  // (StatusChip: success/warning/accent…) convivia com o do selo.
+  it('trabalho da máquina é info, não aviso', async () => {
+    const { TOM_DO_PROJETO } = await import('../SeloDeEstado');
+    expect([TOM_DO_PROJETO.baixando, TOM_DO_PROJETO.transcrevendo, TOM_DO_PROJETO.publicando]).toEqual([
+      'info',
+      'info',
+      'info',
+    ]);
+  });
+
+  it('ninguém mais importa o StatusChip', () => {
+    const raiz = resolve(__dirname, '../..');
+    const fontes = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+        const caminho = resolve(dir, e.name);
+        if (e.isDirectory()) return fontes(caminho);
+        return /\.tsx?$/.test(e.name) ? [caminho] : [];
+      });
+    const importam = fontes(raiz).filter((f) => /components\/ui\/status-chip/.test(readFileSync(f, 'utf-8')));
+    expect(importam.map((f) => relative(raiz, f))).toEqual([]);
+  });
+
+  it.each([
+    'features/editor/avaliacao/AvaliacaoBrutoPanel.tsx',
+    'features/editor/fase2/AlertaCenasForaDoCorte.tsx',
+    'features/editor/fase1/AudioSyncControl.tsx',
+    'features/projeto-detalhe/AuditoriaAnaliseModal.tsx',
+  ])('%s usa os tokens de estado, não cor solta', (arquivo) => {
+    const texto = readFileSync(resolve(__dirname, '../..', arquivo), 'utf-8');
+    expect(texto).not.toMatch(/-(red|rose|emerald)-\d{3}|(text|border|bg)-amber-\d{3}|#fca5a5|#e5484d/);
+  });
+});

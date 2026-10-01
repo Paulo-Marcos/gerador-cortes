@@ -34,9 +34,9 @@ function EstrelasAvaliacao({ voto, onChange }: EstrelasProps) {
           onClick={() => onChange(n)}
           aria-label={`Nota ${n} de 5`}
           aria-pressed={n === voto}
-          className="text-[var(--wb-text-mute)] transition-colors hover:text-amber-300"
+          className="text-[var(--wb-text-mute)] transition-colors hover:text-warning"
         >
-          <Star size={20} className={n <= (voto ?? 0) ? 'fill-amber-300 text-amber-300' : ''} />
+          <Star size={20} className={n <= (voto ?? 0) ? 'fill-warning text-warning' : ''} />
         </button>
       ))}
     </span>

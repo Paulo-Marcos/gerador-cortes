@@ -27,7 +27,8 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Clapperboard, Image as ImageIcon, LayoutGrid, Loader2, Pencil, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { StatusChip } from '@/components/ui/status-chip';
+import { SeloDeEstado } from '@/upgrade/SeloDeEstado';
+import { APARENCIA } from './estadoDoCandidato';
 import { cn, formatarDuracao } from '@/lib/utils';
 import { capaImagemUrl, shortVideoUrl, type ShortSugerido } from './shortsApi';
 import { mmss } from './linhaDoTempoShort';
@@ -145,9 +146,9 @@ function CartaoDoPronto({
           <span>{Math.round(short.duracao_seg)}s</span>
           <div className="flex-1" />
           {pronto ? (
-            <StatusChip label="pronto" tone="success" />
+            <SeloDeEstado tom={APARENCIA.renderizado.tom}>{APARENCIA.renderizado.rotulo}</SeloDeEstado>
           ) : (
-            <StatusChip label="aprovado" tone="accent" />
+            <SeloDeEstado tom={APARENCIA.aprovado.tom}>{APARENCIA.aprovado.rotulo}</SeloDeEstado>
           )}
         </div>
 

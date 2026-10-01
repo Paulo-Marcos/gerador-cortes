@@ -76,7 +76,7 @@ export function AudioSyncControl({
           className={cn(
             'flex h-6 w-6 flex-none items-center justify-center rounded-md border transition-colors disabled:pointer-events-none disabled:opacity-45',
             falhou
-              ? 'border-[var(--wb-danger,#e5484d)] bg-[var(--wb-bg-inset)] text-[var(--wb-danger,#e5484d)]'
+              ? 'border-[var(--wb-err)] bg-[var(--wb-bg-inset)] text-[var(--wb-err)]'
               : previewEnabled
                 ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-bg-panel)]'
                 : 'border-[var(--wb-border)] bg-[var(--wb-bg-inset)] text-[var(--wb-text-dim)] hover:text-[var(--wb-text)]',
