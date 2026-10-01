@@ -1,21 +1,8 @@
-import {
-  AlertTriangle,
-  Brain,
-  CheckCircle2,
-  CircleDashed,
-  Download,
-  Loader2,
-  Pencil,
-  Rocket,
-  UploadCloud,
-  Youtube,
-  type LucideIcon,
-} from 'lucide-react';
 import { estaProntoPraYoutube } from '@/features/projetos/useProjetos';
 import type { Projeto } from '@/types/models';
 
 // ─────────────────────────────────────────────────────────────
-// Estado editorial do projeto — a faixa do topo do card.
+// Estado editorial do projeto — o selo do card.
 //
 // `StatusProjeto` (o enum do banco) só descreve a INGESTÃO: para depois de
 // `analisado` ele congela, e o card não conseguia dizer se o projeto estava
@@ -39,81 +26,48 @@ export type EstadoProjetoKey =
 export interface EstadoProjeto {
   key: EstadoProjetoKey;
   label: string;
-  Icon: LucideIcon;
-  /** Fundo + tinta da faixa; par soft/ink pra manter contraste nos dois temas. */
-  faixaClass: string;
-  animate?: boolean;
 }
 
 const ESTADOS: Record<EstadoProjetoKey, EstadoProjeto> = {
   erro: {
     key: 'erro',
     label: 'erro',
-    Icon: AlertTriangle,
-    faixaClass: 'bg-[var(--wb-err-soft)] text-[var(--wb-err-ink)]',
   },
   aguardando: {
     key: 'aguardando',
     label: 'aguardando',
-    Icon: CircleDashed,
-    faixaClass: 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
   },
   baixando: {
     key: 'baixando',
     label: 'baixando',
-    Icon: Download,
-    faixaClass: 'bg-[var(--wb-warn-soft)] text-[var(--wb-warn-ink)]',
   },
   transcrevendo: {
     key: 'transcrevendo',
     label: 'transcrevendo',
-    Icon: Loader2,
-    faixaClass: 'bg-[var(--wb-warn-soft)] text-[var(--wb-warn-ink)]',
-    animate: true,
   },
   analise: {
     key: 'analise',
     label: 'em análise',
-    Icon: Brain,
-    faixaClass: 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent-strong)]',
   },
   analisado: {
     key: 'analisado',
     label: 'analisado',
-    Icon: CheckCircle2,
-    // `--wb-info` e `--wb-violet` não têm variante `-ink` (ok/warn/err têm), e
-    // o tom base sobre o próprio soft fica em ~3,9:1 no tema claro — abaixo de
-    // AA. Nessas duas faixas a cor fica no fundo e o texto usa `--wb-text`.
-    faixaClass: 'bg-[var(--wb-info-soft)] text-[var(--wb-text)]',
   },
   editando: {
     key: 'editando',
     label: 'em edição',
-    Icon: Pencil,
-    faixaClass: 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
   },
   'pronto-publicar': {
     key: 'pronto-publicar',
     label: 'pronto p/ publicar',
-    Icon: Rocket,
-    // Sem `--wb-violet-ink`: mesma solução da faixa `analisado`.
-    faixaClass: 'bg-[var(--wb-violet-soft)] text-[var(--wb-text)]',
   },
   publicando: {
     key: 'publicando',
     label: 'publicando',
-    Icon: UploadCloud,
-    // Amarelo dos estados "em curso" (baixando/transcrevendo): a publicação
-    // parcial ainda está andando. O ícone e o rótulo separam os três.
-    faixaClass: 'bg-[var(--wb-warn-soft)] text-[var(--wb-warn-ink)]',
   },
   publicado: {
     key: 'publicado',
     label: 'publicado',
-    Icon: Youtube,
-    // Par soft/ink e não `--wb-ok` cheio com texto branco: no tema escuro o
-    // verde cheio clareia e branco sobre ele fica ilegível.
-    faixaClass: 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]',
   },
 };
 

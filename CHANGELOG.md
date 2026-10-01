@@ -149,6 +149,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   died with `ModuleNotFoundError`, so no token could be generated for upload
   (D-835).
 
+### Removed
+- **Dead project-status code that called work in progress a warning.**
+  The old card's top band (`faixaClass`, with its icon and spin flag) and the
+  `PipelineProgress` component with its `rotuloDeEstado` label were no longer
+  rendered anywhere, yet they still colored downloading, transcribing
+  and publishing as a warning — the opposite of the status vocabulary, where a
+  warning invites an action and work in progress is info. The Library card
+  keeps reading the same state and the same six-step ribbon (D-850).
+
 ### Security
 - **React Router 7.18.** Closes the two open advisories on React Router 6: an
   open redirect through a backslash in `<Link>` and `useNavigate`, and a
