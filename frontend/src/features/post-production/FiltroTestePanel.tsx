@@ -357,7 +357,7 @@ function FiltroItem({
           <span
             className={cn(
               'truncate text-[12px] font-bold',
-              ativo ? 'text-[var(--wb-accent)]' : 'text-[var(--wb-text)]',
+              ativo ? 'text-[var(--sel-ink)]' : 'text-[var(--wb-text)]',
             )}
           >
             {filtro.nome}

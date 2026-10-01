@@ -40,6 +40,13 @@
   --accent2: oklch(0.44 0.18 28);
   --accent-soft: oklch(0.52 0.165 28 / 0.12);
   --on-accent: #fff;
+  /* D-847: "onde estou" — item do trilho, aba, filtro, fase da live — é
+     tinta neutra, não acento. O acento é o que se aperta; quando o mesmo
+     vermelho marcava o lugar, a ação principal e o excluir, nada se
+     destacava. Derivam de --ink, então acompanham os cinco temas sozinhos. */
+  --sel-bg: color-mix(in oklab, var(--ink) 8%, transparent);
+  --sel-line: color-mix(in oklab, var(--ink) 55%, transparent);
+  --sel-ink: var(--ink);
 
   /* R4: medido compondo o alpha em sRGB — ok e aviso reprovavam (4,21 e
      4,45 no claro). O texto desce 0.05 L e o -soft passa a usar A MESMA

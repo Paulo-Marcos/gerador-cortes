@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
 import postcss from 'postcss';
 import tailwind from 'tailwindcss';
 import { describe, expect, it } from 'vitest';
@@ -82,5 +82,32 @@ describe('fundo da casca', () => {
   // pelo atalho `background:` também é brilho.
   it.each(blocos)('%s não pinta brilho radial', (_seletor, corpo) => {
     expect(corpo).not.toMatch(/radial-gradient/);
+  });
+});
+
+describe('o acento é ação, não lugar', () => {
+  // D-847: "onde estou" (item do trilho, aba, filtro, fase da live) usava o
+  // mesmo vermelho de "Nova live" e de "Excluir". Seleção é tinta neutra
+  // (--sel-*); o acento fica para o que se aperta.
+  const raiz = resolve(__dirname, '../..');
+  const fontes = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const caminho = resolve(dir, e.name);
+      if (e.isDirectory()) return e.name === '__tests__' ? [] : fontes(caminho);
+      return /\.tsx?$/.test(e.name) ? [caminho] : [];
+    });
+  const selecaoComAcento = /\b(ativo|ativa|active|selecionado|selecionada|agora)\s*\?\s*['`][^'`]*--(wb-)?accent/;
+
+  it('nenhum estado de seleção escolhe a cor do acento', () => {
+    const achados = fontes(raiz).flatMap((arquivo) =>
+      readFileSync(arquivo, 'utf-8')
+        .split('\n')
+        .flatMap((linha, i) => (selecaoComAcento.test(linha) ? [`${relative(raiz, arquivo)}:${i + 1}`] : [])),
+    );
+    expect(achados).toEqual([]);
+  });
+
+  it('a fase atual da live não usa a cor de aviso', () => {
+    expect(ler('../FitaDaLive.tsx')).not.toMatch(/agora:\s*\{[^}]*--warn/);
   });
 });

@@ -286,10 +286,10 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
                   gap: 4,
                   height: 22,
                   padding: '0 8px',
-                  border: `1px solid ${ativo ? 'var(--accent)' : 'var(--line)'}`,
+                  border: `1px solid ${ativo ? 'var(--sel-line)' : 'var(--line)'}`,
                   borderRadius: 99,
-                  background: ativo ? 'var(--accent-soft)' : 'transparent',
-                  color: ativo ? 'var(--accent2)' : 'var(--mute)',
+                  background: ativo ? 'var(--sel-bg)' : 'transparent',
+                  color: ativo ? 'var(--sel-ink)' : 'var(--mute)',
                   fontSize: 11,
                   fontWeight: 600,
                   whiteSpace: 'nowrap',
@@ -367,9 +367,9 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
                         gap: 10,
                         width: '100%',
                         padding: '7px 9px',
-                        border: `1px solid ${ativo ? 'var(--accent)' : 'transparent'}`,
+                        border: `1px solid ${ativo ? 'var(--sel-line)' : 'transparent'}`,
                         borderRadius: 'var(--r2)',
-                        background: ativo ? 'var(--accent-soft)' : 'transparent',
+                        background: ativo ? 'var(--sel-bg)' : 'transparent',
                         color: 'var(--ink)',
                         textAlign: 'left',
                         cursor: 'pointer',
@@ -378,7 +378,7 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
                       <Icon
                         name={d.icone}
                         size={14}
-                        style={{ color: ativo ? 'var(--accent)' : 'var(--mute)', flex: 'none' }}
+                        style={{ color: ativo ? 'var(--sel-ink)' : 'var(--mute)', flex: 'none' }}
                       />
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span

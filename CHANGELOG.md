@@ -50,6 +50,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   appears where it means something. The top bar keeps just the light/dark
   button; the five themes and the accent palettes stay in Configurações →
   Aplicação → Aparência (D-846).
+- **"Where I am" is neutral; red is for actions.** The active item in the
+  rail, the current phase of the live, the selected tab, filter and cut used
+  the same red as "Nova live" and as delete, so nothing stood out. They now
+  use the neutral ink (new `--sel-*` tokens); the accent is left for what you
+  press (D-847).
 - **R deletes the cut, after asking; A toggles.** In the editor and on the
   focused row of the live's cut list, A approves a proposed cut and sends an
   approved one back to proposed, and R now deletes the cut. Since D-746 R only
