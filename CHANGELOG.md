@@ -44,6 +44,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **New colors in code must come from the theme.** A third ratchet test,
+  next to the file- and function-size ones, counts the colors written straight
+  into the frontend code (Tailwind palette classes like `text-red-400` or
+  `text-white`, hex and rgb/oklch literals). A new file must have none, a file
+  on the list cannot gain any, and when one loses some its ceiling goes down.
+  What draws the video itself (the stage, the short's caption and hook
+  previews, the scene-type palette, overlays on the video) stays on the list
+  on purpose (D-849).
 - **Plain background, and the theme ramp moves out of the top bar.** The
   radial glows behind the content (red, amber/teal and blue, in all five
   themes) are gone: they competed with the status colors, so color now only
