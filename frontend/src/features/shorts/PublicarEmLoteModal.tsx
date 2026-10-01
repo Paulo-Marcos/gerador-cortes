@@ -515,7 +515,7 @@ function LinhaDoShort({
           className={cn(
             'flex size-4 flex-none items-center justify-center rounded-[4px] border',
             marcado
-              ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-white'
+              ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
               : 'border-[var(--wb-border)]',
           )}
         >

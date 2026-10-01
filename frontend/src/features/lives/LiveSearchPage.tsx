@@ -194,7 +194,7 @@ export function LiveSearchPage() {
           <section className="grid gap-3 rounded-[var(--radius-lg)] border border-[var(--wb-accent)] bg-[color-mix(in_oklch,var(--wb-accent)_6%,var(--wb-bg-card))] p-3.5 shadow-[0_14px_36px_rgba(20,15,10,0.10)] md:grid-cols-[minmax(0,1fr)_auto]">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent)] text-white">
+                <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]">
                   <Radio size={15} aria-hidden />
                 </span>
                 <strong className="text-[var(--wb-accent)]">
@@ -305,7 +305,7 @@ function LiveRow({
         className={cn(
           'flex h-[22px] w-[22px] items-center justify-center rounded-[6px] border transition-colors',
           selected
-            ? 'border-success bg-success text-white'
+            ? 'border-success bg-success text-[var(--wb-accent-fg)]'
             : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-transparent',
           live.ja_baixado && 'cursor-not-allowed',
         )}

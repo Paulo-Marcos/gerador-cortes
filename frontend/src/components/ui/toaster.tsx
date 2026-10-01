@@ -41,22 +41,22 @@ const TONE_META: Record<ToastTone, { Icon: LucideIcon; className: string; iconCl
     success: {
       Icon: Check,
       className: 'border-success/30 bg-[color-mix(in_oklch,var(--success)_12%,var(--wb-bg-card))]',
-      iconClassName: 'bg-success text-white',
+      iconClassName: 'bg-success text-[var(--wb-accent-fg)]',
     },
     info: {
       Icon: Info,
       className: 'border-info/30 bg-[color-mix(in_oklch,var(--info)_10%,var(--wb-bg-card))]',
-      iconClassName: 'bg-info text-white',
+      iconClassName: 'bg-info text-[var(--wb-accent-fg)]',
     },
     warning: {
       Icon: TriangleAlert,
       className: 'border-warning/30 bg-[color-mix(in_oklch,var(--warning)_12%,var(--wb-bg-card))]',
-      iconClassName: 'bg-warning text-white',
+      iconClassName: 'bg-warning text-[var(--wb-accent-fg)]',
     },
     error: {
       Icon: Bell,
       className: 'border-error/30 bg-[color-mix(in_oklch,var(--error)_12%,var(--wb-bg-card))]',
-      iconClassName: 'bg-error text-white',
+      iconClassName: 'bg-error text-[var(--wb-accent-fg)]',
     },
   };
 

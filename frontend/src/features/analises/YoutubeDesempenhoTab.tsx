@@ -179,7 +179,7 @@ export function YoutubeDesempenhoTab() {
       </div>
 
       {precisaReautorizar && (
-        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-[var(--wb-warn)]/40 bg-[var(--wb-bg-card)] p-4">
+        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-wb-warn/40 bg-[var(--wb-bg-card)] p-4">
           <AlertTriangle size={18} className="mt-0.5 shrink-0 text-[var(--wb-warn)]" aria-hidden />
           <div className="text-[14px] text-[var(--wb-text-mute)]">
             <p className="font-medium text-[var(--wb-text)]">Reautorização necessária</p>

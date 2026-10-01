@@ -285,6 +285,15 @@ export function telaDaRota(pathname: string): TelaId {
   return 'erro';
 }
 
+/**
+ * D-841: só tela de verdade vira lugar em "Onde eu estava". A raiz "/" é
+ * 'erro' no instante antes do <Navigate> levar a /projetos, e essa passagem
+ * gravava "Página não encontrada" como lugar para onde voltar.
+ */
+export function entraNoHistorico(tela: TelaId): boolean {
+  return tela !== 'erro';
+}
+
 /** Id do projeto quando a rota está dentro de um; `null` fora dele. */
 export function projetoDaRota(pathname: string): string | null {
   return /^\/projetos\/([^/]+)/.exec(pathname)?.[1] ?? null;

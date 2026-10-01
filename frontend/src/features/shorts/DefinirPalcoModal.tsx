@@ -510,7 +510,7 @@ export function DefinirPalcoModal({
                     className={cn(
                       'h-7 w-7 rounded-full border-2 transition-transform disabled:opacity-50',
                       ativa
-                        ? 'border-[var(--wb-accent)] ring-2 ring-[var(--wb-accent)]/40'
+                        ? 'border-[var(--wb-accent)] ring-2 ring-wb-accent/40'
                         : 'border-[var(--wb-border)] hover:scale-110',
                     )}
                     style={{ background: opcao.hex }}

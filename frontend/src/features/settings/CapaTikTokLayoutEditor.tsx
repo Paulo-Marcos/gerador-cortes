@@ -123,7 +123,7 @@ export function CapaTikTokLayoutEditor() {
         >
           {/* A guia do recorte da vitrine. */}
           <div
-            className="pointer-events-none absolute left-0 right-0 border-y border-dashed border-[var(--wb-accent)]/50 bg-[var(--wb-accent)]/5"
+            className="pointer-events-none absolute left-0 right-0 border-y border-dashed border-wb-accent/50 bg-wb-accent/5"
             style={{ top: pct(seguro.y, quadro.altura), height: pct(seguro.h, quadro.altura) }}
           />
           <BlocosArrastaveis

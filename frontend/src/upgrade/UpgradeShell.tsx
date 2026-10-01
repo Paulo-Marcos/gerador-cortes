@@ -33,6 +33,7 @@ import {
 import {
   CABECALHO,
   corteDaLive,
+  entraNoHistorico,
   type TelaId,
   menuDoTrilho,
   projetoDaRota,
@@ -252,10 +253,10 @@ function Casca({ children, fila }: CascaProps) {
   // O tipo de navegação é lido na hora, sem ser gatilho: ele só importa na
   // chegada, e mudar o rótulo depois não é uma nova navegação.
   const registrarVisita = useEffectEvent((lugar: Parameters<typeof visitar>[0]) => {
-    if (tipoDeNavegacao === 'POP') visitarPeloNavegador(lugar);
-    else visitar(lugar);
+    (tipoDeNavegacao === 'POP' ? visitarPeloNavegador : visitar)(lugar);
   });
   useEffect(() => {
+    if (!entraNoHistorico(tela)) return;
     registrarVisita({ to: pathname, rotulo: rotuloDoLugar, icone: cab.icone, tipo: TIPO_DA_TELA[tela] ?? 'tela' });
   }, [pathname, rotuloDoLugar, cab.icone, tela]);
   const historico = useHistoricoDaCasca();

@@ -619,7 +619,7 @@ export function SceneTimeline({
                   <button
                     type="button"
                     onClick={() => onAddRegion('compartilhada')}
-                    className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-[var(--wb-info)]/45 bg-[var(--wb-info-soft)] px-2 font-code text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-info)] transition-opacity hover:opacity-85"
+                    className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-wb-info/45 bg-[var(--wb-info-soft)] px-2 font-code text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-info)] transition-opacity hover:opacity-85"
                   >
                     <Plus size={11} strokeWidth={2.4} />
                     Comp.
@@ -629,7 +629,7 @@ export function SceneTimeline({
                   <button
                     type="button"
                     onClick={() => onAddRegion('full')}
-                    className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-[var(--wb-violet)]/45 bg-[var(--wb-violet-soft)] px-2 font-code text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-violet)] transition-opacity hover:opacity-85"
+                    className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-wb-violet/45 bg-[var(--wb-violet-soft)] px-2 font-code text-[9.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-violet)] transition-opacity hover:opacity-85"
                   >
                     <Plus size={11} strokeWidth={2.4} />
                     Full
@@ -646,7 +646,7 @@ export function SceneTimeline({
                   <button
                     type="button"
                     onClick={() => onAjustarInicioPinada?.()}
-                    className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-[var(--wb-accent)]/45 bg-[var(--wb-accent-soft)] px-2 font-code text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-accent)] transition-opacity hover:opacity-85"
+                    className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-wb-accent/45 bg-[var(--wb-accent-soft)] px-2 font-code text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-accent)] transition-opacity hover:opacity-85"
                     aria-label="Ajustar inicio da regiao travada"
                   >
                     [
@@ -656,7 +656,7 @@ export function SceneTimeline({
                   <button
                     type="button"
                     onClick={() => onAjustarFimPinada?.()}
-                    className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-[var(--wb-accent)]/45 bg-[var(--wb-accent-soft)] px-2 font-code text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-accent)] transition-opacity hover:opacity-85"
+                    className="inline-flex h-7 items-center justify-center gap-1 rounded-[var(--radius-xs)] border border-wb-accent/45 bg-[var(--wb-accent-soft)] px-2 font-code text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--wb-accent)] transition-opacity hover:opacity-85"
                     aria-label="Ajustar fim da regiao travada"
                   >
                     ]
