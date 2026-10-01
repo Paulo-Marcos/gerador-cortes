@@ -35,13 +35,13 @@ import { SeloDeEstado, TOM_DA_ETAPA, TOM_DA_LIMPEZA, TOM_DO_PROJETO } from '@/up
 
 // A fita do design usa os ícones da etapa, não o componente do lucide —
 // o mapa fecha a ponte pelo rótulo, que é o mesmo nos dois lados.
-const ICONE_ETAPA: Record<string, IconName> = {
+export const ICONE_ETAPA: Record<string, IconName> = {
   Baixado: 'download',
   Analisado: 'brain',
-  Cortes: 'scissors',
+  Bruto: 'scissors',
   Pós: 'clapperboard',
   Metadados: 'tags',
-  Publicado: 'rocket',
+  Publicação: 'rocket',
 };
 
 const HUES = [22, 280, 160, 340, 240, 60, 200, 100];
