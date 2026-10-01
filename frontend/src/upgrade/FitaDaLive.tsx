@@ -31,10 +31,10 @@ type FitaProps = {
 };
 
 // R4: a QUARTA cópia da tabela de etapas — e a única que ainda pintava a
-// fase atual com a tinta dos botões. Vem do vocabulário do selo; aqui só
-// mora a borda, que é desenho desta fita.
-// D-847: a fase ATUAL é "onde estou", não "precisa de você": tinta neutra
-// (--sel-*) em vez do âmbar de aviso, igual ao item ativo do trilho.
+// fase atual com a tinta dos botões. "Feito" vem do vocabulário do selo;
+// aqui só mora a borda, que é desenho desta fita.
+// D-847: a fase ATUAL sai do selo de propósito — é "onde estou", não
+// "precisa de você": tinta neutra (--sel-*), igual ao item ativo do trilho.
 const TOM = {
   feito: { ...TOM_DA_ETAPA.feito, borda: 'transparent' },
   agora: { bg: 'var(--sel-bg)', cor: 'var(--sel-ink)', borda: 'var(--sel-line)' },

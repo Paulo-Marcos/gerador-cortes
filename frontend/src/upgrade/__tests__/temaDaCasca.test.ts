@@ -96,14 +96,17 @@ describe('o acento é ação, não lugar', () => {
       if (e.isDirectory()) return e.name === '__tests__' ? [] : fontes(caminho);
       return /\.tsx?$/.test(e.name) ? [caminho] : [];
     });
-  const selecaoComAcento = /\b(ativo|ativa|active|selecionado|selecionada|agora)\s*\?\s*['`][^'`]*--(wb-)?accent/;
+  // Sobre o arquivo inteiro, não linha a linha: o ternário quebrado em duas
+  // linhas (`ativo` ⏎ `? '…--wb-accent…'`) escapava — achado da auditoria do #94.
+  const selecaoComAcento = /\b(ativo|ativa|active|selecionado|selecionada|agora)\s*\?\s*['`][^'`]*--(wb-)?accent/g;
 
   it('nenhum estado de seleção escolhe a cor do acento', () => {
-    const achados = fontes(raiz).flatMap((arquivo) =>
-      readFileSync(arquivo, 'utf-8')
-        .split('\n')
-        .flatMap((linha, i) => (selecaoComAcento.test(linha) ? [`${relative(raiz, arquivo)}:${i + 1}`] : [])),
-    );
+    const achados = fontes(raiz).flatMap((arquivo) => {
+      const texto = readFileSync(arquivo, 'utf-8');
+      return [...texto.matchAll(selecaoComAcento)].map(
+        (m) => `${relative(raiz, arquivo)}:${texto.slice(0, m.index).split('\n').length}`,
+      );
+    });
     expect(achados).toEqual([]);
   });
 

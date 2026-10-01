@@ -47,7 +47,7 @@ export function SeletorDeTextura({ escolhida, padrao, ocupado, onEscolher }: Pro
           className={cn(
             'overflow-hidden rounded-[7px] border transition-transform disabled:opacity-50',
             opcao.id === ativa
-              ? 'border-[var(--wb-accent)] ring-2 ring-wb-accent/40'
+              ? 'border-[var(--sel-line)] ring-2 ring-[var(--sel-line)]'
               : 'border-[var(--wb-border)] hover:scale-105',
           )}
         >

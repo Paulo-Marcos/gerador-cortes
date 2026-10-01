@@ -134,7 +134,7 @@ export function ModalChip({
       className={cn(
         'rounded-full px-3 py-1.5 text-left text-[12px] font-semibold transition-colors',
         active
-          ? 'bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
+          ? 'bg-[var(--sel-ink)] text-[var(--sel-on)]'
           : 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
       )}
     >

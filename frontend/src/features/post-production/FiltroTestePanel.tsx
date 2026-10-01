@@ -343,7 +343,7 @@ function FiltroItem({
         'flex w-full cursor-pointer items-center gap-2.5 rounded-[var(--radius-sm)] border p-2.5 transition-colors',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)]',
         ativo
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)]'
+          ? 'border-[var(--sel-line)] bg-[var(--sel-bg)]'
           : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] hover:border-[var(--wb-text-dim)]',
       )}
     >

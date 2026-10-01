@@ -757,7 +757,7 @@ function SuggestionButton({
       className={cn(
         'min-h-[31px] rounded-[var(--radius-sm)] border px-2.5 text-left text-xs font-bold',
         active
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]'
+          ? 'border-[var(--sel-ink)] bg-[var(--sel-ink)] text-[var(--sel-on)]'
           : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text)]',
       )}
     >

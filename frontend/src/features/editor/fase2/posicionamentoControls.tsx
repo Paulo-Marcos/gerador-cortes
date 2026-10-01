@@ -152,7 +152,7 @@ export function ModePicker({
       className={cn(
         'h-[30px] rounded-[var(--radius-xs)] border px-2.5 text-[11px] font-bold uppercase tracking-[0.06em] transition-colors',
         active
-          ? 'border-[var(--wb-accent)] bg-[var(--wb-accent-soft)] text-[var(--wb-accent)]'
+          ? 'border-[var(--sel-line)] bg-[var(--sel-bg)] text-[var(--sel-ink)]'
           : 'border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]',
       )}
     >
