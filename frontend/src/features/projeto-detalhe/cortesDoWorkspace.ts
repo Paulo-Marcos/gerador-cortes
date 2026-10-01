@@ -1,4 +1,4 @@
-import type { Corte, StatusExportCorte } from '@/types/models';
+import type { Corte, StatusCorte, StatusExportCorte } from '@/types/models';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 // ─────────────────────────────────────────────────────────────
@@ -35,4 +35,34 @@ export function mesclarCortesComExport(
       youtube_scheduled_at: c.youtube_scheduled_at ?? '',
     });
   });
+}
+
+export type AcaoDaTecla = 'aprovar' | 'devolver' | 'excluir' | 'descer' | 'subir';
+
+/**
+ * A triagem pelo teclado na linha focada do Workspace (D-746, D-842).
+ *
+ * A alterna: aprova o proposto e devolve a proposto o aprovado. R exclui o
+ * corte de vez — quem chama pede confirmação antes, porque é a confirmação,
+ * e não a tecla, que impede o irreversível num toque só. J/K andam entre as
+ * linhas. Sem corte carregado (`status` indefinido), só a navegação vale.
+ */
+export function acaoDaTeclaNaLinha(
+  tecla: string,
+  status: StatusCorte | undefined,
+): AcaoDaTecla | null {
+  switch (tecla.toLowerCase()) {
+    case 'j':
+      return 'descer';
+    case 'k':
+      return 'subir';
+    case 'a':
+      if (status === 'proposto') return 'aprovar';
+      if (status === 'aprovado' || status === 'processado') return 'devolver';
+      return null;
+    case 'r':
+      return status ? 'excluir' : null;
+    default:
+      return null;
+  }
 }

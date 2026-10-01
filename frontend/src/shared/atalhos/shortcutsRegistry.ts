@@ -446,15 +446,15 @@ export const SHORTCUTS_REGISTRY: readonly ShortcutSpec[] = [
     id: 'bruto.aprovar',
     screen: 'bruto',
     key: 'a',
-    description: 'Alternar aprovado',
+    description: 'Aprovar / devolver a proposto',
     group: 'edicao',
   },
   {
     id: 'bruto.rejeitar',
     screen: 'bruto',
     key: 'r',
-    // D-746: não apaga mais — excluir de vez é ação à parte, com confirmação.
-    description: 'Devolver a proposto (não apaga nada)',
+    // D-842: exclui com confirmação (o A alterna); o id fica pelo overlay gravado.
+    description: 'Excluir corte (pede confirmação)',
     group: 'edicao',
   },
   {

@@ -17,7 +17,7 @@ import {
   planejarRegeracaoBruto,
   type RegerarBrutoOpcoes,
 } from './regerarBrutoPlan';
-import { confirmacaoRegerarBruto, confirmacaoRegerarTrechos } from './regeracaoConfirmacao';
+import { confirmacaoExcluirCorte, confirmacaoRegerarBruto, confirmacaoRegerarTrechos } from './regeracaoConfirmacao';
 import { useShortcuts, type ShortcutBinding } from '@/shared/atalhos/shortcuts';
 import { shortcutFromRegistry } from '@/shared/atalhos/shortcutsRegistry';
 import { useEditHistory } from './useEditHistory';
@@ -590,26 +590,14 @@ export function useEditorPage() {
 
   const deletarCorte = useDeletarCorte(corteId, projetoId);
 
-  // D-746: R devolve (reversível); excluir é ação à parte e pede confirmação.
-  // Antes o R, "alternar rejeitado", apagava o corte e os arquivos dele de vez
-  // atrás de um confirm do navegador — um Enter e a decisão estava perdida.
-  function devolverAProposto() {
-    if (!corteUI) return;
-    if (!['aprovado', 'processado'].includes(corteUI.status)) return;
-    atualizarCorte.mutate({ status: 'proposto' });
-  }
-
+  // D-842: R exclui, e o A alterna aprovado ↔ proposto. Na D-746 o R só
+  // devolvia a proposto — o mesmo que o A já fazia. Excluir é irreversível,
+  // então a tecla sozinha nunca basta: o diálogo do shell (não o confirm do
+  // navegador, que um Enter atravessava) é quem decide.
   function excluirCorte() {
     if (!corteUI) return;
     confirmacao.executarOuPedir(
-      {
-        titulo: 'Excluir o corte de vez',
-        detalhe: `Corte #${corteUI.numero} · ${corteUI.titulo_proposto}`,
-        descricao:
-          'O corte e todos os arquivos dele (bruto, render, capa) saem do disco. Não há como desfazer. Para só tirar a aprovação, use Devolver (R).',
-        confirmLabel: 'Excluir de vez',
-        tone: 'danger',
-      },
+      confirmacaoExcluirCorte(corteUI.numero, corteUI.titulo_proposto),
       excluirConfirmado,
     );
   }
@@ -663,7 +651,7 @@ export function useEditorPage() {
       'bruto.inAqui': setInicioAtual,
       'bruto.outAqui': setFimAtual,
       'bruto.aprovar': toggleAprovado,
-      'bruto.rejeitar': devolverAProposto,
+      'bruto.rejeitar': excluirCorte,
       'bruto.fire': () => toggleFire.mutate(),
       'bruto.leitura': () => corte && toggleLeitura.mutate(corte),
       'bruto.travarTrecho': () => setTrechoLocked((v) => !v),

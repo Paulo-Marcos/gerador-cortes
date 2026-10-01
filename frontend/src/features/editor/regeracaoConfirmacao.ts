@@ -7,7 +7,8 @@ import type { RegerarBrutoOpcoes } from './regerarBrutoPlan';
 // do dialogo. Puro de proposito: o "ja tem resultado?" e o que exatamente se
 // perde sao regra, nao layout — ficam testaveis fora do React.
 //
-// Cada funcao devolve `null` quando NAO ha nada a confirmar.
+// Cada funcao devolve `null` quando NAO ha nada a confirmar — menos a de
+// excluir o corte, que confirma sempre.
 // ─────────────────────────────────────────────────────────────
 
 function pluralizar(quantidade: number, um: string, varios: string): string {
@@ -74,6 +75,22 @@ export function confirmacaoRegerarBruto(
     detalhe: 'o video bruto ja existe',
     descricao: `O video bruto deste corte sera renderizado de novo, substituindo o atual.${extras}`,
     confirmLabel: 'Regerar bruto',
+    tone: 'danger',
+  };
+}
+
+/**
+ * D-842: excluir o corte (R no editor e na linha do Workspace) confirma SEMPRE.
+ * Apaga o corte e os arquivos dele do disco, sem volta; a tecla sozinha nunca
+ * pode bastar. Quem so' queria tirar a aprovacao tem o A, que alterna.
+ */
+export function confirmacaoExcluirCorte(numero: number, titulo: string): PedidoConfirmacao {
+  return {
+    titulo: 'Excluir o corte de vez',
+    detalhe: `Corte #${numero} · ${titulo}`,
+    descricao:
+      'O corte e todos os arquivos dele (bruto, render, capa) saem do disco. Não há como desfazer. Para só tirar a aprovação, use Devolver (A).',
+    confirmLabel: 'Excluir de vez',
     tone: 'danger',
   };
 }

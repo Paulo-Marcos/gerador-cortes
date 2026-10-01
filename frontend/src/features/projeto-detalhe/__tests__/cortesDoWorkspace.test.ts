@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { mesclarCortesComExport } from '../cortesDoWorkspace';
+import { acaoDaTeclaNaLinha, mesclarCortesComExport } from '../cortesDoWorkspace';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 function corte(over: Partial<Corte> & Pick<Corte, 'id' | 'numero'>): Corte {
@@ -84,5 +84,44 @@ describe('mesclarCortesComExport', () => {
     );
 
     expect(lista.map((c) => c.corte_id)).toEqual(['a', 'b']);
+  });
+});
+
+// D-842: A alterna e R exclui. O R só devolvia a proposto (D-746), o que o A
+// já fazia; agora ele exclui — e a confirmação é o que impede o irreversível
+// num toque só.
+describe('acaoDaTeclaNaLinha', () => {
+  it('A aprova o corte proposto', () => {
+    expect(acaoDaTeclaNaLinha('a', 'proposto')).toBe('aprovar');
+  });
+
+  it.each(['aprovado', 'processado'] as const)('A devolve a proposto o corte %s', (status) => {
+    expect(acaoDaTeclaNaLinha('A', status)).toBe('devolver');
+  });
+
+  it('A não mexe no corte rejeitado (o botão Voltar cuida dele)', () => {
+    expect(acaoDaTeclaNaLinha('a', 'rejeitado')).toBeNull();
+  });
+
+  it.each(['proposto', 'aprovado', 'processado', 'rejeitado'] as const)(
+    'R exclui o corte %s (a linha pede confirmação antes)',
+    (status) => {
+      expect(acaoDaTeclaNaLinha('r', status)).toBe('excluir');
+    },
+  );
+
+  it('J e K andam entre as linhas', () => {
+    expect(acaoDaTeclaNaLinha('j', 'proposto')).toBe('descer');
+    expect(acaoDaTeclaNaLinha('K', 'aprovado')).toBe('subir');
+  });
+
+  it('sem corte carregado, só a navegação vale', () => {
+    expect(acaoDaTeclaNaLinha('a', undefined)).toBeNull();
+    expect(acaoDaTeclaNaLinha('r', undefined)).toBeNull();
+    expect(acaoDaTeclaNaLinha('j', undefined)).toBe('descer');
+  });
+
+  it('outra tecla não faz nada', () => {
+    expect(acaoDaTeclaNaLinha('x', 'proposto')).toBeNull();
   });
 });

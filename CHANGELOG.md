@@ -38,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   image (D-821).
 
 ### Changed
+- **R deletes the cut, after asking; A toggles.** In the editor and on the
+  focused row of the live's cut list, A approves a proposed cut and sends an
+  approved one back to proposed, and R now deletes the cut. Since D-746 R only
+  sent it back to proposed, which A already did. Deleting removes the cut and
+  its files for good, so R always opens the "Excluir de vez" confirmation first;
+  on the list, focus moves to the next row afterwards, or back to the same
+  row if you cancel (D-842).
 - **The metadata window is organized by what each part produces.** YouTube
   texts (title, description, tags) on the left; covers on the right, with the
   cover text on top and one tab per cover (YouTube 16:9, TikTok 9:16), each in

@@ -1,6 +1,9 @@
-import { useCallback, useState, type KeyboardEvent } from 'react';
+import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { useAprovar, useAtualizarCorte } from '@/features/editor/useCortes';
+import { useAprovar, useAtualizarCorte, useDeletarCorte } from '@/features/editor/useCortes';
+import { confirmacaoExcluirCorte } from '@/features/editor/regeracaoConfirmacao';
+import { ConfirmDialog, useConfirmacao } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toaster';
 import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
@@ -12,6 +15,7 @@ import { SeloDeEstado, TOM_DO_CORTE } from '@/upgrade/SeloDeEstado';
 import { montarTira } from '@/upgrade/tiraDoCorte';
 import { MetadadosDoCorteModal } from '@/features/metadata/MetadadosDoCorteModal';
 import { TiraDoCorteAp } from '@/upgrade/TiraDoCorteAp';
+import { acaoDaTeclaNaLinha } from './cortesDoWorkspace';
 
 // ─────────────────────────────────────────────────────────────────
 // D-599 · A linha do corte no Workspace.
@@ -58,6 +62,72 @@ type CorteLinhaApProps = {
   selecionado?: boolean;
   onAlternarSelecao?: () => void;
 };
+
+type TriagemPeloTeclado = {
+  projetoId: string;
+  corte: Corte | undefined;
+  status: StatusExportCorte;
+  metaAberto: boolean;
+  aprovar: ReturnType<typeof useAprovar>;
+  atualizar: ReturnType<typeof useAtualizarCorte>;
+  avisarFalha: (acao: string) => (erro: unknown) => void;
+};
+
+/**
+ * D-746/D-842: triagem pelo teclado na linha focada (a regra da tecla mora em
+ * `acaoDaTeclaNaLinha`). Digitando num campo, nada disso vale. R abre o mesmo
+ * diálogo de exclusão do editor; só o "Excluir de vez" apaga, e o foco segue
+ * para a linha vizinha em vez de cair no nada. Desistir devolve o foco à
+ * própria linha: o modal não o restaura, e sem isso J/K/A paravam até um clique.
+ */
+function useTriagemPeloTeclado({
+  projetoId,
+  corte,
+  status,
+  metaAberto,
+  aprovar,
+  atualizar,
+  avisarFalha,
+}: TriagemPeloTeclado) {
+  const deletar = useDeletarCorte(status.corte_id, projetoId);
+  const confirmacao = useConfirmacao();
+  const linhaQuePediu = useRef<HTMLElement | null>(null);
+  const cancelar = () => {
+    confirmacao.cancelar();
+    linhaQuePediu.current?.focus();
+  };
+
+  const aoTeclar = (e: KeyboardEvent<HTMLElement>) => {
+    const alvo = e.target as HTMLElement;
+    // R4: o modal de metadados é filho JSX desta linha — mesmo saindo por
+    // portal, o keydown sobe pela árvore do React até aqui. Sem esta guarda,
+    // `A` aprovava o corte de trás com o modal aberto.
+    if (metaAberto || confirmacao.pedido || alvo.closest('[role="dialog"]')) return;
+    if (e.metaKey || e.ctrlKey || e.altKey || alvo.closest('input, textarea, select')) return;
+    const acao = acaoDaTeclaNaLinha(e.key, corte?.status);
+    if (!acao) return;
+    e.preventDefault();
+    const linha = e.currentTarget;
+    if (acao === 'aprovar') aprovar.mutate(undefined, { onError: avisarFalha('aprovar') });
+    else if (acao === 'devolver')
+      atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('devolver') });
+    else if (acao === 'excluir') {
+      linhaQuePediu.current = linha;
+      confirmacao.executarOuPedir(confirmacaoExcluirCorte(status.numero, status.titulo ?? ''), () => {
+        const vizinha = (linha.nextElementSibling ?? linha.previousElementSibling) as HTMLElement | null;
+        deletar.mutate(undefined, { onSuccess: () => vizinha?.focus(), onError: avisarFalha('excluir') });
+      });
+    } else {
+      e.stopPropagation();
+      const vizinha = (acao === 'descer' ? linha.nextElementSibling : linha.previousElementSibling) as
+        | HTMLElement
+        | null;
+      vizinha?.focus();
+    }
+  };
+
+  return { aoTeclar, confirmacao, cancelar };
+}
 
 export function CorteLinhaAp({
   projetoId,
@@ -135,32 +205,15 @@ export function CorteLinhaAp({
     },
   }[estado];
 
-  // D-746: triagem pelo teclado na linha focada. A aprova, R devolve (nunca
-  // apaga), J/K andam entre as linhas. Digitando num campo, nada disso vale.
-  const aoTeclar = (e: KeyboardEvent<HTMLElement>) => {
-    const alvo = e.target as HTMLElement;
-    // R4: o modal de metadados é filho JSX desta linha — mesmo saindo por
-    // portal, o keydown sobe pela árvore do React até aqui. Sem esta guarda,
-    // `A` aprovava o corte de trás com o modal aberto.
-    if (metaAberto || alvo.closest('[role="dialog"]')) return;
-    if (e.metaKey || e.ctrlKey || e.altKey || alvo.closest('input, textarea, select')) return;
-    const tecla = e.key.toLowerCase();
-    if (tecla === 'a' && corte?.status === 'proposto') {
-      e.preventDefault();
-      aprovar.mutate(undefined, { onError: avisarFalha('aprovar') });
-    } else if (tecla === 'r' && corte && ['aprovado', 'processado'].includes(corte.status)) {
-      e.preventDefault();
-      atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('devolver') });
-    } else if (tecla === 'j' || tecla === 'k') {
-      e.preventDefault();
-      e.stopPropagation();
-      const linha = e.currentTarget;
-      const vizinha = (tecla === 'j' ? linha.nextElementSibling : linha.previousElementSibling) as
-        | HTMLElement
-        | null;
-      vizinha?.focus();
-    }
-  };
+  const { aoTeclar, confirmacao, cancelar } = useTriagemPeloTeclado({
+    projetoId,
+    corte,
+    status,
+    metaAberto,
+    aprovar,
+    atualizar,
+    avisarFalha,
+  });
 
   return (
     <article
@@ -389,6 +442,19 @@ export function CorteLinhaAp({
           {primario.texto}
         </button>
       </span>
+      {/* Portal para a `.ap`, como o de metadados: o vidro (`backdrop-filter`)
+          do card vira a referência do `position: fixed` e prenderia o diálogo
+          dentro da linha. */}
+      {confirmacao.pedido
+        ? createPortal(
+            <ConfirmDialog
+              pedido={confirmacao.pedido}
+              onCancel={cancelar}
+              onConfirm={confirmacao.confirmar}
+            />,
+            document.querySelector('.ap') ?? document.body,
+          )
+        : null}
       {metaAberto ? (
         <MetadadosDoCorteModal
           projetoId={projetoId}
