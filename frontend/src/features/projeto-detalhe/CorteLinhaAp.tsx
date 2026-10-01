@@ -1,4 +1,4 @@
-import { useCallback, useState, type KeyboardEvent } from 'react';
+import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAprovar, useAtualizarCorte, useDeletarCorte } from '@/features/editor/useCortes';
@@ -77,7 +77,8 @@ type TriagemPeloTeclado = {
  * D-746/D-842: triagem pelo teclado na linha focada (a regra da tecla mora em
  * `acaoDaTeclaNaLinha`). Digitando num campo, nada disso vale. R abre o mesmo
  * diálogo de exclusão do editor; só o "Excluir de vez" apaga, e o foco segue
- * para a linha vizinha em vez de cair no nada.
+ * para a linha vizinha em vez de cair no nada. Desistir devolve o foco à
+ * própria linha: o modal não o restaura, e sem isso J/K/A paravam até um clique.
  */
 function useTriagemPeloTeclado({
   projetoId,
@@ -90,6 +91,11 @@ function useTriagemPeloTeclado({
 }: TriagemPeloTeclado) {
   const deletar = useDeletarCorte(status.corte_id, projetoId);
   const confirmacao = useConfirmacao();
+  const linhaQuePediu = useRef<HTMLElement | null>(null);
+  const cancelar = () => {
+    confirmacao.cancelar();
+    linhaQuePediu.current?.focus();
+  };
 
   const aoTeclar = (e: KeyboardEvent<HTMLElement>) => {
     const alvo = e.target as HTMLElement;
@@ -105,12 +111,13 @@ function useTriagemPeloTeclado({
     if (acao === 'aprovar') aprovar.mutate(undefined, { onError: avisarFalha('aprovar') });
     else if (acao === 'devolver')
       atualizar.mutate({ status: 'proposto' }, { onError: avisarFalha('devolver') });
-    else if (acao === 'excluir')
+    else if (acao === 'excluir') {
+      linhaQuePediu.current = linha;
       confirmacao.executarOuPedir(confirmacaoExcluirCorte(status.numero, status.titulo ?? ''), () => {
         const vizinha = (linha.nextElementSibling ?? linha.previousElementSibling) as HTMLElement | null;
         deletar.mutate(undefined, { onSuccess: () => vizinha?.focus(), onError: avisarFalha('excluir') });
       });
-    else {
+    } else {
       e.stopPropagation();
       const vizinha = (acao === 'descer' ? linha.nextElementSibling : linha.previousElementSibling) as
         | HTMLElement
@@ -119,7 +126,7 @@ function useTriagemPeloTeclado({
     }
   };
 
-  return { aoTeclar, confirmacao };
+  return { aoTeclar, confirmacao, cancelar };
 }
 
 export function CorteLinhaAp({
@@ -198,7 +205,7 @@ export function CorteLinhaAp({
     },
   }[estado];
 
-  const { aoTeclar, confirmacao } = useTriagemPeloTeclado({
+  const { aoTeclar, confirmacao, cancelar } = useTriagemPeloTeclado({
     projetoId,
     corte,
     status,
@@ -442,7 +449,7 @@ export function CorteLinhaAp({
         ? createPortal(
             <ConfirmDialog
               pedido={confirmacao.pedido}
-              onCancel={confirmacao.cancelar}
+              onCancel={cancelar}
               onConfirm={confirmacao.confirmar}
             />,
             document.querySelector('.ap') ?? document.body,
