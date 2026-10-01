@@ -69,6 +69,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **The short's overlay no longer rebuilds the renderer bundle on every
+  render.** It rendered straight from `src/index.ts`, so each render (and each
+  retry) ran webpack inside the same process that was launching Chrome. Under
+  load, the 25 s browser timeout fired while webpack held the process, and the
+  overlay died at 4m20s with "Timed out … while trying to connect to the
+  browser". It now uses the cached bundle the cut render already uses, rebuilt
+  only when `video-renderer/src` changes (D-845).
 - **Shorts wait their turn instead of all rendering at once.** Every click
   started its own render with no limit, competing with the cut renders, so
   shorts died with "Worker não respondeu … em 900s" without ever starting,

@@ -11,6 +11,7 @@ não a execução.
 
 import asyncio
 import json
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -118,6 +119,9 @@ def palco_sem_remotion(monkeypatch, tmp_path):
     monkeypatch.setattr(palco_short_png, "obter", _fake)
 
 
+BUNDLE_EM_CACHE = Path("C:/bundle-cache/fp123")
+
+
 @pytest.fixture
 def jobs(monkeypatch):
     """Captura os despachos em vez de rodar ffmpeg/Remotion de verdade."""
@@ -128,6 +132,19 @@ def jobs(monkeypatch):
 
     monkeypatch.setattr(render_short, "_despachar", _fake)
     return capturados
+
+
+@pytest.fixture(autouse=True)
+def bundles(monkeypatch):
+    """O bundle em cache também é dublê: `npx remotion bundle` levaria minutos."""
+    pedidos: list[Path] = []
+
+    async def _fake(output_dir):
+        pedidos.append(output_dir)
+        return BUNDLE_EM_CACHE
+
+    monkeypatch.setattr(render_short, "_preparar_bundle_overlay", _fake)
+    return pedidos
 
 
 @pytest.mark.asyncio
@@ -1018,3 +1035,73 @@ class TestFilaDoRender:
         with pytest.raises(WorkerJobCancelled):
             await render_short.renderizar_short("s1")
         assert ids.count("s1_final_camada") == 1
+
+
+class TestCamadaUsaOBundleEmCache:
+    """D-845: o entrypoint cru (`src/index.ts`) refazia o webpack a cada render e
+    a cada nova tentativa — na PROD, de 20 s a 166 s por bundle, somados ao
+    render. O bundle em cache do horizontal (D-190) serve: sai do mesmo
+    `src/index.ts`, então traz todas as composições do Root."""
+
+    @pytest.mark.asyncio
+    async def test_a_camada_renderiza_do_bundle_e_nao_do_entrypoint(self, ambiente, jobs):
+        cmd = (await _render_e_pegar(jobs, 1))["cmd"]
+
+        assert cmd[cmd.index("render") + 1] == str(BUNDLE_EM_CACHE)
+        assert "src/index.ts" not in cmd
+
+    @pytest.mark.asyncio
+    async def test_o_bundle_e_preparado_uma_vez_por_render(self, ambiente, jobs, bundles):
+        await render_short.renderizar_short("s1")
+
+        assert len(bundles) == 1
+
+    @pytest.mark.asyncio
+    async def test_a_nova_tentativa_nao_refaz_o_bundle(self, ambiente, bundles, monkeypatch):
+        from app.infrastructure.render.retry_policy import RetryPolicy
+        from app.infrastructure.worker_queue import WorkerJobFailed
+
+        camadas: list[list[str]] = []
+
+        async def _chrome_falha_uma_vez(job_id, cmd, *, cwd, category, timeout):
+            if job_id.endswith("_camada"):
+                camadas.append(cmd)
+                if len(camadas) == 1:
+                    raise WorkerJobFailed("Timed out after 25000 ms while trying to connect")
+
+        monkeypatch.setattr(render_short, "_despachar", _chrome_falha_uma_vez)
+        monkeypatch.setattr(
+            render_short, "_render_retry_policy", lambda _cfg: RetryPolicy(3, base_delay_sec=0)
+        )
+
+        await render_short.renderizar_short("s1")
+
+        assert len(camadas) == 2
+        assert len(bundles) == 1
+        assert all(str(BUNDLE_EM_CACHE) in cmd for cmd in camadas)
+
+    def test_a_composicao_da_camada_esta_registrada_no_root_do_bundle(self):
+        # O bundle nasce de `src/index.ts`, que registra o Root: se a CamadaShort
+        # sair dele, o render do short morre com "composition not found".
+        raiz = Path(__file__).resolve().parents[3] / "video-renderer" / "src"
+        root = (raiz / "Root.tsx").read_text(encoding="utf-8")
+
+        assert f'id="{render_short.COMPOSICAO_CAMADA}"' in root
+        assert "registerRoot(RemotionRoot)" in (raiz / "index.ts").read_text(encoding="utf-8")
+
+    def test_mexer_nas_cenas_do_short_invalida_o_bundle(self, tmp_path):
+        from app.services.render.pipeline_render_helpers import (
+            esquecer_fingerprint_em_cache,
+            fingerprint_do_bundle,
+        )
+
+        cena = tmp_path / "src" / "cenas-shorts" / "CamadaShortComposition.tsx"
+        cena.parent.mkdir(parents=True)
+        cena.write_text("export const a = 1;", encoding="utf-8")
+        esquecer_fingerprint_em_cache()
+        antes = fingerprint_do_bundle(tmp_path)
+
+        cena.write_text("export const a = 2;", encoding="utf-8")
+        esquecer_fingerprint_em_cache()
+
+        assert fingerprint_do_bundle(tmp_path) != antes
