@@ -8,7 +8,8 @@
 //
 // "Cor solta" é cor escrita no código em vez de token do tema: classe de paleta
 // do Tailwind (`text-red-400`, `bg-black/70`, `text-white`), hex (`#fca5a5`) e
-// rgb/hsl/oklch literais. Ela não acompanha os cinco temas nem o contrato de
+// rgb/hsl/oklch literais, e cor pelo nome num style ou atributo SVG
+// (`color: 'white'`). Ela não acompanha os cinco temas nem o contrato de
 // cor da casca: foi o `text-white` sobre o acento, o `#fca5a5` ilegível no
 // claro e os oito vermelhos de "perigo" da revisão do layout (D-841, D-848).
 // O que é estado usa os tokens (`--ok`, `--warn`, `--err`, `--info`, `--sel-*`,
@@ -30,11 +31,14 @@ const PALETA =
   '(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)';
 const CORES_SOLTAS = [
   new RegExp(
-    String.raw`\b(?:text|bg|border|ring|fill|stroke|from|to|via|outline|divide|placeholder|decoration|shadow|accent|caret)-${PALETA}(?:-\d{2,3})?\b`,
+    String.raw`\b(?:text|bg|border(?:-[xytrblse])?|ring(?:-offset)?|fill|stroke|from|to|via|outline|divide|placeholder|decoration|shadow|accent|caret)-${PALETA}(?:-\d{2,3})?\b`,
     'g',
   ),
   /#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3}(?:[0-9a-fA-F]{2})?)?\b/g,
   /\b(?:rgba?|hsla?|oklch|oklab)\(\s*[\d.]/g,
+  // Cor pelo nome num `style` ou atributo SVG (`color: 'white'`,
+  // `stopColor="black"`): o mesmo text-white de antes, por outra porta.
+  /\b(?:color|background(?:Color)?|borderColor|outlineColor|fill|stroke|stopColor)\s*[:=]\s*\{?\s*['"](?:white|black|red|green|blue|yellow|orange|gray|grey|purple|pink)['"]/g,
 ];
 
 const EXCECOES: Record<string, number> = {
@@ -82,8 +86,8 @@ const EXCECOES: Record<string, number> = {
   "src/features/shorts/coresDosShorts.ts": 3,
   "src/features/shorts/ganchoDoShort.ts": 13,
   "src/hooks/usePalette.ts": 5,
-  "src/shared/palco/youtubeBackgrounds.tsx": 38,
-  "src/shared/palco/youtubeChrome.tsx": 19,
+  "src/shared/palco/youtubeBackgrounds.tsx": 44,
+  "src/shared/palco/youtubeChrome.tsx": 21,
   "src/upgrade/ActionBar.tsx": 1,
   "src/upgrade/ContextColumn.tsx": 2,
   "src/upgrade/GavetaDaFila.tsx": 2,
