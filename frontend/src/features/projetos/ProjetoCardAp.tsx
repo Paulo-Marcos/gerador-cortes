@@ -173,7 +173,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
               title={`Nota do projeto no ranking de lives: ${nota}/100`}
               style={{ position: 'absolute', top: 8, right: 8, fontFamily: 'var(--mono)' }}
             >
-              <Icon name="trophy" size={11} />
+              <Icon name="trophy" />
               {nota}
             </span>
           ) : null}
@@ -292,7 +292,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
                     opacity: e.estado === 'pendente' ? 0.7 : 1,
                   }}
                 >
-                  <Icon name={ICONE_ETAPA[e.label] ?? 'circle-dashed'} size={12} />
+                  <Icon name={ICONE_ETAPA[e.label] ?? 'circle-dashed'} />
                 </span>
               );
             })}
@@ -326,7 +326,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
                 title="Baixar o vídeo da live de novo. Preserva transcrição, cortes e metadados."
                 aria-label="Baixar o vídeo da live de novo"
               >
-                <Icon name={rebaixando ? 'loader' : 'download'} size={12} />
+                <Icon name={rebaixando ? 'loader' : 'download'} />
               </button>
             ) : (
               <button
@@ -342,7 +342,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
                 }
                 aria-label="Limpar mídia pesada"
               >
-                <Icon name="sparkles" size={12} />
+                <Icon name="sparkles" />
               </button>
             )}
 
@@ -355,7 +355,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
               title="Remover projeto"
               aria-label="Remover projeto"
             >
-              <Icon name="trash" size={12} />
+              <Icon name="trash" />
             </button>
 
             <button
@@ -366,7 +366,7 @@ export function ProjetoCardAp({ projeto, index = 0 }: { projeto: Projeto; index?
               title="Abrir a live"
               aria-label="Abrir a live"
             >
-              <Icon name="arrow-right" size={12} />
+              <Icon name="arrow-right" />
             </button>
           </div>
         </div>

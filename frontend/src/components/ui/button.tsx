@@ -28,7 +28,7 @@ const AP_SIZES: Record<string, string> = {
 // 6–7px×12–14px. `default` usa --wb-accent-fg (não branco fixo) para
 // respeitar a paleta ativa.
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[13px] [&_svg]:shrink-0',
+  'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[9px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--wb-focus)] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
@@ -66,7 +66,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           AP_VARIANTS[variant ?? 'default'] ?? AP_VARIANTS.default,
           AP_SIZES[size ?? 'default'],
           // `[&_svg]` continua: o tamanho do glifo é o mesmo nos dois mundos.
-          '[&_svg]:size-[13px] [&_svg]:shrink-0',
+          // D-853: 16 px, o degrau de botão da escala do Icon (era 13, fora dela).
+          '[&_svg]:size-4 [&_svg]:shrink-0',
           className,
         );
 

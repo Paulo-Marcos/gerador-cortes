@@ -72,14 +72,14 @@ export function FitaDaLive({ passos, etapas }: FitaProps) {
         const tom = TOM[estadoDe(p)];
         const conteudo = (
           <>
-            <Icon name={p.icone} size={12} />
+            <Icon name={p.icone} />
             {p.texto}
           </>
         );
         return (
           <span key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none' }}>
             {i > 0 ? (
-              <Icon name="chevron-right" size={11} style={{ color: 'var(--dim)' }} />
+              <Icon name="chevron-right" style={{ color: 'var(--dim)' }} />
             ) : null}
             {p.to && !p.agora ? (
               <Link

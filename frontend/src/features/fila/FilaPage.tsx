@@ -103,7 +103,7 @@ function LinhaJob({
             color: tom.cor,
           }}
         >
-          <Icon name={ICONE_FAMILIA[job.familia] ?? 'loader'} size={13} />
+          <Icon name={ICONE_FAMILIA[job.familia] ?? 'loader'} />
         </span>
         {/* `rotulo` já é "alvo → tipo": repeti-lo embaixo só gastaria a linha
             que o log usa melhor. */}
@@ -114,7 +114,7 @@ function LinhaJob({
           title={aberta ? 'Recolher o detalhe' : 'Ver tempos e linha do tempo (D-769)'}
           style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, padding: 0, border: 0, background: 'none', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
         >
-          <Icon name={aberta ? 'chevron-down' : 'chevron-right'} size={12} style={{ color: 'var(--mute)' }} />
+          <Icon name={aberta ? 'chevron-down' : 'chevron-right'} style={{ color: 'var(--mute)' }} />
           <span style={{ minWidth: 0, fontSize: 12.5, fontWeight: 700 }}>{job.rotulo}</span>
         </button>
         <span className="chip" style={{ background: tom.bg, color: tom.cor }}>
@@ -137,7 +137,7 @@ function LinhaJob({
             aria-label={`Cancelar ${job.rotulo} (${job.etapa})`}
             onClick={onCancelar}
           >
-            <Icon name="x" size={12} />
+            <Icon name="x" />
             Cancelar
           </button>
         ) : (
@@ -148,7 +148,7 @@ function LinhaJob({
             aria-label={`Tirar ${job.rotulo} da lista`}
             onClick={onRemover}
           >
-            <Icon name="x" size={12} />
+            <Icon name="x" />
           </button>
         )}
       </span>
@@ -243,7 +243,7 @@ export default function FilaPage() {
           maxWidth: 960,
         }}
       >
-        <Icon name="inbox" size={22} style={{ color: 'var(--dim)' }} />
+        <Icon name="inbox" size={20} style={{ color: 'var(--dim)' }} />
         <span style={{ fontSize: 12.5, fontWeight: 700 }}>Nada na fila</span>
         <span style={{ fontSize: 11.5, color: 'var(--mute)', maxWidth: 260, lineHeight: 1.5 }}>
           Download, análise, render e publicação aparecem aqui enquanto rodam — venha de qual tela

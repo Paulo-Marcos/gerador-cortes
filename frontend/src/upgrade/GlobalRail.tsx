@@ -88,7 +88,7 @@ function ItemBotao({
         flex: 'none',
       }}
     >
-      <Icon name={item.icone} size={15} />
+      <Icon name={item.icone} size={16} />
       {mostrarTexto ? (
         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden' }}>{item.texto}</span>
       ) : null}
@@ -147,7 +147,7 @@ export function GlobalRail({
             color: 'var(--on-accent)',
           }}
         >
-          <Icon name="scissors" size={13} stroke={2.4} />
+          <Icon name="scissors" />
         </span>
         {mostrarTexto ? (
           <span
@@ -178,7 +178,7 @@ export function GlobalRail({
             color: 'var(--dim)',
           }}
         >
-          <Icon name="panel-left" size={14} />
+          <Icon name="panel-left" />
         </button>
       </div>
 
@@ -222,7 +222,7 @@ export function GlobalRail({
               // R4: sem `fontSize` — o piso de 10,5 px do `.lbl` manda.
               style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 4px 4px' }}
             >
-              <Icon name="history" size={11} />
+              <Icon name="history" />
               Onde eu estava
             </span>
             {lugares.slice(0, 4).map((l, i) => (
@@ -246,7 +246,7 @@ export function GlobalRail({
                   cursor: 'pointer',
                 }}
               >
-                <Icon name={l.icone} size={12} style={{ flex: 'none' }} />
+                <Icon name={l.icone} style={{ flex: 'none' }} />
                 <span
                   style={{
                     flex: 1,

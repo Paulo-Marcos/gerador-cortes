@@ -253,7 +253,7 @@ export function CorteLinhaAp({
           aria-label={`Mover corte ${status.numero} para cima`}
           style={botaoOrdem}
         >
-          <Icon name="chevron-up" size={10} />
+          <Icon name="chevron-up" />
         </button>
         <button
           type="button"
@@ -262,7 +262,7 @@ export function CorteLinhaAp({
           aria-label={`Mover corte ${status.numero} para baixo`}
           style={botaoOrdem}
         >
-          <Icon name="chevron-down" size={10} />
+          <Icon name="chevron-down" />
         </button>
       </span>
 
@@ -346,7 +346,7 @@ export function CorteLinhaAp({
           </button>
           {corte?.is_fire ? (
             <span style={{ color: 'var(--accent)', flex: 'none' }} title="Marcado como fire">
-              <Icon name="flame" size={13} />
+              <Icon name="flame" />
             </span>
           ) : null}
           <SeloDeEstado tom={TOM_DO_CORTE[estado]}>{estado}</SeloDeEstado>
@@ -373,7 +373,7 @@ export function CorteLinhaAp({
 
       <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <button type="button" className="btn btn-icon" title="Editar corte" onClick={irEditor}>
-          <Icon name="scissors" size={13} />
+          <Icon name="scissors" />
         </button>
         <button
           type="button"
@@ -383,7 +383,7 @@ export function CorteLinhaAp({
             navigate(`/projetos/${projetoId}/post-production?corte=${status.corte_id}`)
           }
         >
-          <Icon name="clapperboard" size={13} />
+          <Icon name="clapperboard" />
         </button>
         {/* D-746: consultar não é navegar — o { } abre o metadado aqui, e a
             lista fica onde estava. Destacado porque é a consulta mais
@@ -400,7 +400,7 @@ export function CorteLinhaAp({
             background: 'var(--accent-soft)',
           }}
         >
-          <Icon name="tags" size={13} />
+          <Icon name="tags" />
         </button>
         <button
           type="button"
@@ -409,7 +409,7 @@ export function CorteLinhaAp({
           onClick={() => abrirPasta.mutate(status.corte_id)}
           disabled={abrirPasta.isPending}
         >
-          <Icon name="folder" size={13} />
+          <Icon name="folder" />
         </button>
 
         {status.youtube_url_publicado || status.tiktok_publicado_em ? (
@@ -419,7 +419,7 @@ export function CorteLinhaAp({
             title="Liberar publicação (subir de novo)"
             onClick={onLiberarPublicacao}
           >
-            <Icon name="rotate-ccw" size={13} />
+            <Icon name="rotate-ccw" />
           </button>
         ) : (
           <button
@@ -428,7 +428,7 @@ export function CorteLinhaAp({
             title="Informar a URL de um vídeo já publicado no YouTube"
             onClick={onInformarUrl}
           >
-            <Icon name="play" size={13} />
+            <Icon name="play" />
           </button>
         )}
 
@@ -438,7 +438,7 @@ export function CorteLinhaAp({
           onClick={primario.acao}
           disabled={enviando && estado === 'pronto'}
         >
-          <Icon name={enviando && estado === 'pronto' ? 'loader' : primario.icone} size={13} />
+          <Icon name={enviando && estado === 'pronto' ? 'loader' : primario.icone} />
           {primario.texto}
         </button>
       </span>

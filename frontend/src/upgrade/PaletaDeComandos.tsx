@@ -205,7 +205,7 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
             borderBottom: '1px solid var(--line2)',
           }}
         >
-          <Icon name="command" size={14} style={{ color: 'var(--dim)' }} />
+          <Icon name="command" style={{ color: 'var(--dim)' }} />
           <input
             ref={campo}
             value={termo}
@@ -347,7 +347,7 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
                     className="lbl"
                     style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 9px 4px' }}
                   >
-                    <Icon name={g.icone} size={11} />
+                    <Icon name={g.icone} />
                     {g.titulo}
                   </span>
                 ) : null}
@@ -377,7 +377,7 @@ export function PaletaDeComandos({ aberta, onFechar }: { aberta: boolean; onFech
                     >
                       <Icon
                         name={d.icone}
-                        size={14}
+                       
                         style={{ color: ativo ? 'var(--sel-ink)' : 'var(--mute)', flex: 'none' }}
                       />
                       <span style={{ flex: 1, minWidth: 0 }}>

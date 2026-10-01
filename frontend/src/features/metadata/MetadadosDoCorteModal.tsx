@@ -158,7 +158,7 @@ export function MetadadosDoCorteModal({
             borderBottom: '1px solid var(--line2)',
           }}
         >
-          <Icon name="tags" size={15} style={{ color: 'var(--accent)', flex: 'none' }} />
+          <Icon name="tags" size={16} style={{ color: 'var(--accent)', flex: 'none' }} />
           <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
             <strong
               style={{
@@ -183,7 +183,7 @@ export function MetadadosDoCorteModal({
             aria-label="Fechar"
             title="Fechar (Esc)"
           >
-            <Icon name="x" size={13} />
+            <Icon name="x" />
           </button>
         </header>
 
@@ -278,7 +278,7 @@ export function MetadadosDoCorteModal({
               disabled={!prompt}
               title={prompt ? 'Copiar o prompt da capa' : 'Este corte ainda não tem prompt de capa'}
             >
-              <Icon name={copiado ? 'check' : 'copy'} size={12} />
+              <Icon name={copiado ? 'check' : 'copy'} />
               {copiado ? 'Copiado' : 'Copiar prompt'}
             </button>
           )}
@@ -287,7 +287,7 @@ export function MetadadosDoCorteModal({
             className="btn btn-pri"
             onClick={() => navigate(`/projetos/${projetoId}/metadados`)}
           >
-            <Icon name="tags" size={12} />
+            <Icon name="tags" />
             {corte ? 'Abrir a tela de metadados' : 'Editar na tela de metadados'}
           </button>
         </footer>

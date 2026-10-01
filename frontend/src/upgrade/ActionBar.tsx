@@ -42,7 +42,7 @@ function Veredito({ aprovado, ocupado, onAlternar }: NonNullable<ChromeBarra['ve
           whiteSpace: 'nowrap',
         }}
       >
-        <Icon name="check" size={13} />
+        <Icon name="check" />
         Aprovado
       </span>
       <button
@@ -54,7 +54,7 @@ function Veredito({ aprovado, ocupado, onAlternar }: NonNullable<ChromeBarra['ve
         title="Devolver o corte para proposto — não apaga nada"
         style={{ color: 'var(--mute)', borderColor: 'transparent', background: 'none' }}
       >
-        <Icon name="undo-2" size={13} />
+        <Icon name="undo-2" />
         Devolver
       </button>
     </span>
@@ -68,7 +68,7 @@ function Veredito({ aprovado, ocupado, onAlternar }: NonNullable<ChromeBarra['ve
       title="Aprovar o corte — não renderiza nada"
       style={{ borderColor: 'var(--ok)', color: 'var(--ok)' }}
     >
-      <Icon name="check" size={13} />
+      <Icon name="check" />
       Aprovar corte
     </button>
   );
@@ -126,7 +126,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
                 : { color: 'var(--mute)' }
             }
           >
-            <Icon name={a.icone} size={13} />
+            <Icon name={a.icone} />
             {a.texto}
           </button>
           {a.ativo && a.editar ? (
@@ -138,7 +138,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
               aria-label={a.editar.titulo}
               onClick={a.editar.onClick}
             >
-              <Icon name="pencil" size={12} />
+              <Icon name="pencil" />
             </button>
           ) : null}
         </span>
@@ -155,7 +155,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
           style={{ color: 'var(--mute)' }}
           onClick={barra.secundario.onClick}
         >
-          <Icon name={barra.secundario.icone} size={13} />
+          <Icon name={barra.secundario.icone} />
           {barra.secundario.texto}
         </button>
       ) : null}
@@ -169,7 +169,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
           aria-label={barra.terciario.titulo}
           onClick={barra.terciario.onClick}
         >
-          <Icon name={barra.terciario.icone} size={13} />
+          <Icon name={barra.terciario.icone} />
         </button>
       ) : null}
 
@@ -185,7 +185,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
             color: 'var(--warn)',
           }}
         >
-          <Icon name="ban" size={12} style={{ flex: 'none' }} />
+          <Icon name="ban" style={{ flex: 'none' }} />
           {barra.primario.motivo}
         </span>
       ) : null}
@@ -202,7 +202,7 @@ export function ActionBar({ barra }: { barra: ChromeBarra }) {
         onClick={barra.primario.onClick}
         disabled={barra.primario.desabilitado}
       >
-        <Icon name={barra.primario.icone} size={13} />
+        <Icon name={barra.primario.icone} />
         {barra.primario.texto}
         {barra.primario.desabilitado || barra.primario.semEnter ? null : (
           <kbd

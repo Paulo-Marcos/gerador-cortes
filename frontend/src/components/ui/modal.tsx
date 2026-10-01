@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/upgrade/Icon';
 
 // D-599: na casca nova o modal veste a moldura do handoff — cartão de vidro,
 // cabeçalho e rodapé separados por `--line2`, título 14/700 e subtítulo 11.5
@@ -112,7 +112,7 @@ export function Modal({
             aria-label="Fechar"
             className="btn btn-icon btn-ghost shrink-0"
           >
-            <X size={14} />
+            <Icon name="x" />
           </button>
         </header>
         <div

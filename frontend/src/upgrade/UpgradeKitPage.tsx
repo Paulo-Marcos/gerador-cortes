@@ -52,7 +52,7 @@ export default function UpgradeKitPage() {
           }}
         >
           <span>CutCut</span>
-          <Icon name="chevron-right" size={12} style={{ color: 'var(--dim)' }} />
+          <Icon name="chevron-right" style={{ color: 'var(--dim)' }} />
           <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Componentes</span>
         </nav>
         <div style={{ flex: 1 }} />
@@ -62,11 +62,11 @@ export default function UpgradeKitPage() {
           onClick={toggleGlass}
           title="Vidro translúcido ou superfície sólida"
         >
-          <Icon name="layout-template" size={13} />
+          <Icon name="layout-template" />
           {glass ? 'Vidro' : 'Sólido'}
         </button>
         <button type="button" className="btn btn-icon" onClick={toggleTheme} title="Tema">
-          <Icon name={escuro ? 'sun' : 'moon'} size={14} />
+          <Icon name={escuro ? 'sun' : 'moon'} />
         </button>
       </header>
 

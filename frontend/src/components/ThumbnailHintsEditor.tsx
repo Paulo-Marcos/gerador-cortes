@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Check, ChevronDown, ImagePlus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // F-058 — Influência manual na thumbnail.
@@ -85,7 +85,7 @@ export function ThumbnailHintsEditor({
         )}
         aria-expanded={open}
       >
-        <ImagePlus size={14} aria-hidden />
+        <Icon name="image-plus" />
         Influenciar a capa
         {hasHints && (
           <span
@@ -93,11 +93,7 @@ export function ThumbnailHintsEditor({
             aria-label="com sugestões salvas"
           />
         )}
-        <ChevronDown
-          size={13}
-          aria-hidden
-          className={cn('ml-auto transition-transform', open && 'rotate-180')}
-        />
+        <Icon name="chevron-down" className={cn('ml-auto transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (
@@ -123,7 +119,7 @@ export function ThumbnailHintsEditor({
               disabled={!dirty || saveMutation.isPending}
               onClick={() => saveMutation.mutate(value.trim())}
             >
-              {saveMutation.isPending ? <Loader2 className="animate-spin" /> : <Check />}
+              {saveMutation.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="check" />}
               Salvar
             </Button>
           </div>

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, ChevronDown, ChevronRight, ClipboardPaste, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import { getManualPromptText } from '@/lib/manualPrompt';
+import { Icon } from '@/upgrade/Icon';
 
 export type PromptParte = { parte: number; total_partes: number; texto: string };
 
@@ -225,15 +225,15 @@ export function PromptManualPanel({
                   onClick={() => void onCopiarParte(index)}
                   disabled={semPrompt}
                 >
-                  {copiadoParte === index ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                  {copiadoParte === index ? <Icon name="check-circle-2" /> : <Icon name="copy" />}
                   {copiadoParte === index ? 'Copiado' : 'Copiar prompt'}
                 </Button>
                 {!hideRetorno && (
                   <Button type="button" size="sm" onClick={() => void onColarParte(index)}>
                     {coladoParte === index ? (
-                      <CheckCircle2 size={14} />
+                      <Icon name="check-circle-2" />
                     ) : (
-                      <ClipboardPaste size={14} />
+                      <Icon name="clipboard-paste" />
                     )}
                     {coladoParte === index ? 'Colado' : 'Colar resposta'}
                   </Button>
@@ -247,7 +247,7 @@ export function PromptManualPanel({
                 onClick={() => toggle(index, 'prompt')}
                 className="flex items-center gap-1 hover:text-text-200"
               >
-                {exp.prompt ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                {exp.prompt ? <Icon name="chevron-down" /> : <Icon name="chevron-right" />}
                 {labelPrompt}
               </button>
               {!hideRetorno && (
@@ -256,7 +256,7 @@ export function PromptManualPanel({
                   onClick={() => toggle(index, 'json')}
                   className="flex items-center gap-1 hover:text-text-200"
                 >
-                  {exp.json ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  {exp.json ? <Icon name="chevron-down" /> : <Icon name="chevron-right" />}
                   {labelResposta}
                   {ok && <span className="text-text-500">({coladoTexto.length} chars)</span>}
                 </button>

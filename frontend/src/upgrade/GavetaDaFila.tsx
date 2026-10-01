@@ -173,7 +173,7 @@ function LinhaDaFila({ grupo }: { grupo: GrupoFila }) {
           title={aberta ? 'Recolher o detalhe' : 'Ver o detalhe de cada execução'}
           style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, padding: 0, border: 0, background: 'none', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
         >
-          <Icon name={aberta ? 'chevron-down' : 'chevron-right'} size={11} style={{ flex: 'none', color: 'var(--mute)' }} />
+          <Icon name={aberta ? 'chevron-down' : 'chevron-right'} style={{ flex: 'none', color: 'var(--mute)' }} />
           <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {grupo.rotulo}
           </span>
@@ -198,7 +198,7 @@ function LinhaDaFila({ grupo }: { grupo: GrupoFila }) {
             else grupo.jobs.forEach((j) => removeJob(j.id));
           }}
         >
-          <Icon name={ativo ? 'ban' : 'x'} size={11} />
+          <Icon name={ativo ? 'ban' : 'x'} />
         </button>
       </div>
 
@@ -337,7 +337,7 @@ export function GavetaDaFila({
       >
         <header style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '11px 12px', borderBottom: '1px solid var(--line)' }}>
           <span style={{ display: 'grid', placeItems: 'center', width: 26, height: 26, borderRadius: 'var(--r2)', background: 'var(--accent-soft)', color: 'var(--accent2)', flex: 'none' }}>
-            <Icon name="loader" size={13} />
+            <Icon name="loader" />
           </span>
           <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.2 }}>
             <strong style={{ fontSize: 12.5 }}>Fila de processamento</strong>
@@ -345,11 +345,11 @@ export function GavetaDaFila({
           </span>
           <span style={{ flex: 1 }} />
           <button type="button" className="btn" style={{ height: 26, padding: '0 8px', fontSize: 11 }} onClick={aoAbrirTelaCheia} title="Abrir a fila em tela cheia (/fila)">
-            <Icon name="maximize" size={11} />
+            <Icon name="maximize" />
             Tela cheia
           </button>
           <button type="button" className="btn btn-icon" style={{ width: 26, height: 26 }} onClick={aoFechar} title="Fechar (Esc)" aria-label="Fechar a fila">
-            <Icon name="x" size={13} />
+            <Icon name="x" />
           </button>
         </header>
 
