@@ -7341,13 +7341,14 @@ export interface components {
              * @enum {string}
              */
             estagio: "previa" | "final";
+            /** Fila */
+            fila: string | null;
             /** Passos */
             passos: components["schemas"]["PassoDoBruto"][];
         };
         /**
          * ProgressoResponse
-         * @description `render` nulo = não houve render deste short neste processo; a tela cai
-         *     no estado do banco, que sobrevive a um reload.
+         * @description `render` nulo = sem render deste short neste processo: a tela cai no banco.
          */
         ProgressoResponse: {
             render: components["schemas"]["ProgressoDoRenderDoShort"] | null;

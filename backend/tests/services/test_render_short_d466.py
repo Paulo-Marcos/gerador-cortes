@@ -9,11 +9,13 @@ exigiria bruto, bundle e headless shell; o que precisa de teste é a decisão,
 não a execução.
 """
 
+import asyncio
 import json
 
 import pytest
 import pytest_asyncio
 from app.models import Base, Corte, Projeto, Short, StatusShort
+from app.services import shorts_progress
 from app.services.render import render_short
 from app.services.transcricao_fiel import TranscricaoFiel
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -461,7 +463,14 @@ async def test_final_sai_com_filtro(ambiente, jobs, monkeypatch):
     monkeypatch.setattr(
         app_settings.AppSettingsService,
         "get",
-        staticmethod(lambda: type("S", (), {"filtro_global_padrao": "cinematic_iii"})()),
+        staticmethod(
+            lambda: type(
+                "S",
+                (),
+                # D-843: a camada lê dali a política de novas tentativas.
+                {"filtro_global_padrao": "cinematic_iii", "render": app_settings.RenderSettings()},
+            )()
+        ),
     )
 
     await render_short.renderizar_short("s1")
@@ -680,7 +689,7 @@ class TestResumirLog:
 
         assert linha.startswith("CMD: ffmpeg -i entrada.mkv")
         assert linha.endswith(" […]")
-        assert len(linha) == render_short.LARGURA_DA_LINHA + 4
+        assert len(linha) == shorts_progress.LARGURA_DA_LINHA + 4
 
     def test_devolve_so_o_fim_do_log_e_avisa_que_cortou(self):
         """Um render que falhou e foi refeito acumula tudo no mesmo arquivo."""
@@ -899,3 +908,113 @@ async def test_camada_roda_de_dentro_do_video_renderer(ambiente, jobs):
     cwd = (await _render_e_pegar(jobs, 1))["cwd"]
 
     assert (cwd / "src" / "index.ts").is_file()
+
+
+class TestFilaDoRender:
+    """D-843: o short entra pelo mesmo portão dos cortes, e a camada tenta de novo.
+
+    Antes, cada clique virava uma task solta: N shorts rodavam juntos, disputando
+    o worker com os cortes, e um Chrome que não subia em 25 s matava o short.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _portao_limpo(self, monkeypatch):
+        from app.services.render import remotion_render as rr
+
+        rr._render_gate.limpar()
+        monkeypatch.setattr(rr, "_renders_ativos", 0)
+        yield
+        rr._render_gate.limpar()
+
+    @pytest.mark.asyncio
+    async def test_short_espera_a_vaga_que_um_corte_ocupa(self, ambiente, monkeypatch):
+        from app.services.render import remotion_render as rr
+        from app.services.shorts_progress import ShortsProgress
+
+        monkeypatch.setenv("RENDER_PIPELINE_CONCURRENCY", "1")
+        corte_rodando, liberar = asyncio.Event(), asyncio.Event()
+        corte = {"na_vaga": False}
+        # Cada passo anota se o corte ainda segurava a vaga quando ele saiu.
+        passos: list[tuple[str, bool]] = []
+
+        async def _despachar(job_id, cmd, *, cwd, category, timeout):
+            passos.append((job_id, corte["na_vaga"]))
+
+        monkeypatch.setattr(render_short, "_despachar", _despachar)
+
+        async def _corte():
+            async with rr.vaga_de_render(lambda _etapa: None):
+                corte["na_vaga"] = True
+                corte_rodando.set()
+                await liberar.wait()
+                corte["na_vaga"] = False
+
+        async def _short_decidiu():
+            # Sem portão, o short despacha; com portão, anuncia a fila. Esperar
+            # por um dos dois tira o teste da sorte do relógio.
+            while not passos and not ShortsProgress.get("s1")["fila"]:
+                await asyncio.sleep(0.01)
+
+        tarefa_do_corte = asyncio.create_task(_corte())
+        await asyncio.wait_for(corte_rodando.wait(), 5)
+        ShortsProgress.iniciar("s1", estagio="final")
+        short = asyncio.create_task(render_short._renderizar_em_background("s1", final=True))
+        await asyncio.wait_for(_short_decidiu(), 5)
+        await asyncio.sleep(0.05)
+
+        assert passos == [], "com a vaga ocupada, nenhum passo do short pode sair"
+        assert ShortsProgress.get("s1")["fila"] == "Aguardando vez na fila de render"
+
+        liberar.set()
+        await asyncio.wait_for(asyncio.gather(tarefa_do_corte, short), 5)
+        estado = ShortsProgress.get("s1")
+        assert estado["erro"] is None
+        assert estado["fila"] is None
+        assert [na_vaga for _id, na_vaga in passos] == [False, False, False]
+
+    @pytest.mark.asyncio
+    async def test_camada_tenta_de_novo_quando_o_chrome_nao_sobe(self, ambiente, monkeypatch):
+        from app.infrastructure.render.retry_policy import RetryPolicy
+        from app.infrastructure.worker_queue import WorkerJobFailed
+
+        ids: list[str] = []
+
+        async def _chrome_falha_uma_vez(job_id, cmd, *, cwd, category, timeout):
+            ids.append(job_id)
+            if job_id.endswith("_camada") and ids.count(job_id) == 1:
+                raise WorkerJobFailed("Timed out after 25000 ms while trying to connect")
+
+        monkeypatch.setattr(render_short, "_despachar", _chrome_falha_uma_vez)
+        monkeypatch.setattr(
+            render_short, "_render_retry_policy", lambda _cfg: RetryPolicy(3, base_delay_sec=0)
+        )
+
+        await render_short.renderizar_short("s1")
+
+        assert ids == [
+            "s1_final_recorte",
+            "s1_final_camada",
+            "s1_final_camada",
+            "s1_final_composicao",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_camada_cancelada_nao_ressuscita(self, ambiente, monkeypatch):
+        from app.infrastructure.render.retry_policy import RetryPolicy
+        from app.infrastructure.worker_queue import WorkerJobCancelled
+
+        ids: list[str] = []
+
+        async def _cancelada(job_id, cmd, *, cwd, category, timeout):
+            ids.append(job_id)
+            if job_id.endswith("_camada"):
+                raise WorkerJobCancelled("a pedido do operador")
+
+        monkeypatch.setattr(render_short, "_despachar", _cancelada)
+        monkeypatch.setattr(
+            render_short, "_render_retry_policy", lambda _cfg: RetryPolicy(3, base_delay_sec=0)
+        )
+
+        with pytest.raises(WorkerJobCancelled):
+            await render_short.renderizar_short("s1")
+        assert ids.count("s1_final_camada") == 1

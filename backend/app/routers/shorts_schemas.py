@@ -423,13 +423,13 @@ class ProgressoDoRenderDoShort(RespostaApi):
     estagio: Literal["previa", "final"]
     concluido: bool
     erro: str | None
+    fila: str | None  # D-843: por que ainda não começou; None = já tem vaga
     decorrido_seg: float
     passos: list[PassoDoBruto]
 
 
 class ProgressoResponse(RespostaApi):
-    """`render` nulo = não houve render deste short neste processo; a tela cai
-    no estado do banco, que sobrevive a um reload."""
+    """`render` nulo = sem render deste short neste processo: a tela cai no banco."""
 
     render: ProgressoDoRenderDoShort | None
 

@@ -7106,6 +7106,17 @@
             "title": "Estagio",
             "type": "string"
           },
+          "fila": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fila"
+          },
           "passos": {
             "items": {
               "$ref": "#/components/schemas/PassoDoBruto"
@@ -7118,6 +7129,7 @@
           "estagio",
           "concluido",
           "erro",
+          "fila",
           "decorrido_seg",
           "passos"
         ],
@@ -7125,7 +7137,7 @@
         "type": "object"
       },
       "ProgressoResponse": {
-        "description": "`render` nulo = não houve render deste short neste processo; a tela cai\nno estado do banco, que sobrevive a um reload.",
+        "description": "`render` nulo = sem render deste short neste processo: a tela cai no banco.",
         "properties": {
           "render": {
             "anyOf": [

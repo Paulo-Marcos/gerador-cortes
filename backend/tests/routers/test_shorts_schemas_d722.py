@@ -108,6 +108,7 @@ def test_o_lote_passa_inteiro():
             "estagio": "final",
             "concluido": False,
             "erro": None,
+            "fila": None,
             "decorrido_seg": 12.5,
             "passos": [{"chave": "cortar", "label": "Cortar", "status": "rodando"}],
         },

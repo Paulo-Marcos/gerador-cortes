@@ -12,9 +12,9 @@ para polling se o watcher levantar qualquer erro.
 Dois sinais complementam o par req/res:
 
 - `ack_{id}.json` — o worker COMEÇOU o job. O `timeout_sec` passa a medir
-  EXECUÇÃO: enquanto o job espera na fila o relógio não corre. Sem isso
-  (D-424), com dois cortes em voo um chunk de overlay estourava os 30 min
-  sem nunca ter rodado, e o retry re-submetia por cima do job em execução.
+  EXECUÇÃO. Sem isso (D-424), com dois cortes em voo um chunk de overlay
+  estourava os 30 min sem nunca ter rodado, e o retry re-submetia por cima do
+  job em execução. A espera na fila tem teto próprio e folgado (D-843).
 - `cancel_{id}.json` — pedido de cancelamento (D-426). O worker mata a
   árvore de processos e responde `status="cancelado"`, que aqui vira
   `WorkerJobCancelled`.
@@ -45,6 +45,17 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 _POLL_INTERVAL_SEC = 0.5
+
+
+def _teto_da_espera_na_fila_seg() -> int:
+    """Quanto um job espera o worker começá-lo antes de desistir (D-843).
+
+    Folgado de propósito: o recorte de um short (900 s de execução) espera atrás
+    da grade de um corte, que leva horas. Ainda é um teto — um worker morto
+    derruba o job, só que mais tarde.
+    """
+    return max(1, int(os.getenv("RENDER_ESPERA_NA_FILA_MAX_SEG", "14400")))
+
 
 # D-725: versão do pedido `req_`. O contrato inteiro (pedido e resposta) está em
 # video-renderer/protocol/job.schema.json; o worker recusa versão que não conhece
@@ -225,7 +236,10 @@ class RemotionWorkerQueue:
 
         try:
             respondeu = await _aguardar_arquivo_de_resposta(
-                res_file, ack_file, timeout=job.timeout_sec
+                res_file,
+                ack_file,
+                timeout=job.timeout_sec,
+                espera_na_fila=_teto_da_espera_na_fila_seg(),
             )
         finally:
             _esquecer_em_voo(owner, queue_id)
@@ -237,6 +251,10 @@ class RemotionWorkerQueue:
             # retry então esperava o timeout inteiro por uma resposta que
             # ninguém mais ia escrever (D-424).
             escrever_json_atomico(self._fila_dir / f"cancel_{queue_id}.json", {"id": queue_id})
+            # D-843: dizer ONDE morreu. "900s de execução" para um job que nunca
+            # saiu da fila mandava procurar o defeito no passo errado.
+            if not ack_file.exists():
+                raise WorkerJobTimeout(f"Job '{job.id}' não saiu da fila do worker a tempo")
             raise WorkerJobTimeout(
                 f"Worker não respondeu para job '{job.id}' em {job.timeout_sec}s de execução"
             )
@@ -323,14 +341,17 @@ def _ler_e_remover_resposta(res_file: Path, *, job_id: str) -> dict:
         _remover_se_existir(res_file)
 
 
-async def _aguardar_arquivo_de_resposta(res_file: Path, ack_file: Path, *, timeout: int) -> bool:
+async def _aguardar_arquivo_de_resposta(
+    res_file: Path, ack_file: Path, *, timeout: int, espera_na_fila: int = 0
+) -> bool:
     """Aguarda o `res_file`, com o relógio medindo EXECUÇÃO, não espera.
 
-    O `timeout` vale por VEZ: começa valendo para a espera na fila e é
-    reiniciado quando o `ack_file` aparece, isto é, quando o worker começa a
-    executar de fato. Sem isso (D-424), um chunk de overlay atrás de outros
-    jobs estourava o próprio orçamento de render antes de rodar — e o retry
-    re-submetia por cima de um job que o worker já estava executando.
+    Dois orçamentos: até o `ack_file` aparecer (o worker começou de fato) vale
+    o maior entre `espera_na_fila` e `timeout`; depois dele, `timeout`. Sem
+    isso (D-424), um chunk de overlay atrás de outros jobs estourava o próprio
+    orçamento de render antes de rodar — e o retry re-submetia por cima de um
+    job que o worker já estava executando. D-843: a espera ganhou teto próprio
+    porque um só orçamento ainda matava o recorte do short atrás de uma grade.
 
     Devolve True se o `res_file` apareceu; False no estouro de tempo.
     """
@@ -341,14 +362,15 @@ async def _aguardar_arquivo_de_resposta(res_file: Path, ack_file: Path, *, timeo
             return True
 
         alvos = [res_file] if ack_visto else [res_file, ack_file]
-        encontrado = await _esperar_algum(alvos, timeout=timeout)
+        orcamento = timeout if ack_visto else max(timeout, espera_na_fila)
+        encontrado = await _esperar_algum(alvos, timeout=orcamento)
 
         if encontrado is None:
             return res_file.exists()
         if encontrado == res_file:
             return True
 
-        # Foi o ack: o job saiu da fila e começou. Zera o relógio uma vez.
+        # Foi o ack: o job saiu da fila e começou. Daqui, só a execução conta.
         logger.info("[WorkerQueue] Job iniciou no worker (%s); relógio reiniciado.", ack_file.name)
         ack_visto = True
 

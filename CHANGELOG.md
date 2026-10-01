@@ -62,6 +62,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit (D-823).
 
 ### Fixed
+- **Shorts wait their turn instead of all rendering at once.** Every click
+  started its own render with no limit, competing with the cut renders, so
+  shorts died with "Worker não respondeu … em 900s" without ever starting,
+  or lost the overlay when Remotion's Chrome took more than 25 s to open.
+  Shorts now share the cut render slots (two by default, the second only
+  with enough free RAM), and the short's panel says it is queued and why.
+  A job's timeout now counts only while it runs; the wait in the worker
+  queue has its own limit, `RENDER_ESPERA_NA_FILA_MAX_SEG` (4 h by default).
+  The overlay step retries like the cut overlays (D-843).
 - **Dark themes no longer show light panels, and faded colors show up again.**
   The older color scales (`bg-bg-900`, `text-text-100`…) froze the light
   theme's values before the shell theme applied, so in Escuro and Ardósia
