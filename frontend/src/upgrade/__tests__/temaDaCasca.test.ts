@@ -74,10 +74,13 @@ describe('fundo da casca', () => {
     [...css.matchAll(/(\.ap[^{]*)\{([^}]*)\}/g)].map((m) => [m[1].trim(), m[2]] as const),
   );
 
-  it.each(blocos.filter(([, corpo]) => /background-image/.test(corpo)))(
-    '%s não pinta brilho radial',
-    (_seletor, corpo) => {
-      expect(corpo).not.toMatch(/radial-gradient/);
-    },
-  );
+  it('há blocos da casca para conferir', () => {
+    expect(blocos.length).toBeGreaterThan(5);
+  });
+
+  // Todo bloco, não só os que declaram background-image: um brilho que volte
+  // pelo atalho `background:` também é brilho.
+  it.each(blocos)('%s não pinta brilho radial', (_seletor, corpo) => {
+    expect(corpo).not.toMatch(/radial-gradient/);
+  });
 });

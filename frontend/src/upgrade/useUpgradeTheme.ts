@@ -14,8 +14,8 @@ import { useCallback, useSyncExternalStore } from 'react';
 // NO MEIO em vez de renomear as pontas.
 //
 // toggleTheme mantém o contrato antigo (claro ⇄ escuro), porque é o que o
-// ícone de sol/lua promete. Para andar degrau a degrau existem clarear e
-// escurecer — é o que a rampa da barra superior usa.
+// ícone de sol/lua promete. Os cinco degraus se escolhem em Configurações ›
+// Aparência (setTheme); desde a D-846 a barra superior só tem o sol/lua.
 // ─────────────────────────────────────────────────────────────────
 
 export type UpgradeTheme = 'light' | 'papel' | 'nevoa' | 'ardosia' | 'dark';
@@ -89,11 +89,6 @@ function assinar(avisar: () => void) {
 
 const retrato = () => atual;
 
-function anda(passo: 1 | -1): UpgradeTheme {
-  const i = RAMPA.indexOf(atual.theme);
-  return RAMPA[Math.min(RAMPA.length - 1, Math.max(0, (i < 0 ? 0 : i) + passo))];
-}
-
 export function useUpgradeTheme() {
   const { theme, glass } = useSyncExternalStore(assinar, retrato, retrato);
 
@@ -103,16 +98,12 @@ export function useUpgradeTheme() {
     () => publicar({ ...atual, theme: temaEscuro(atual.theme) ? 'light' : 'dark' }),
     [],
   );
-  const clarear = useCallback(() => publicar({ ...atual, theme: anda(-1) }), []);
-  const escurecer = useCallback(() => publicar({ ...atual, theme: anda(1) }), []);
   const toggleGlass = useCallback(() => publicar({ ...atual, glass: !atual.glass }), []);
 
   return {
     theme,
     setTheme,
     toggleTheme,
-    clarear,
-    escurecer,
     escuro: temaEscuro(theme),
     glass,
     setGlass,
