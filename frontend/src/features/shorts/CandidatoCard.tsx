@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { OverflowMenu } from '@/components/ui/overflow-menu';
 import { cn } from '@/lib/utils';
-import { SeloDeEstado, type TomDoSelo } from '@/upgrade/SeloDeEstado';
+import { SeloDeEstado } from '@/upgrade/SeloDeEstado';
 import { APARENCIA, notaVisivel, planoDeAcoes, tomDaNota, type AcaoId } from './estadoDoCandidato';
 import type { PalcoShortPreset } from '@/types/presets';
 import { LinhaDeAjuste } from './LinhaDeAjuste';
@@ -79,15 +79,6 @@ interface Props {
 }
 
 // Lida uma vez: casca e tela nunca podem ficar em versões diferentes.
-
-/** D-746: o estado do short no contrato do selo — "aprovado" saía na cor do
- *  acento, a mesma dos botões. */
-const TOM_DO_SHORT: Record<string, TomDoSelo> = {
-  sugerido: 'aviso',
-  aprovado: 'info',
-  rejeitado: 'inerte',
-  renderizado: 'ok',
-};
 
 function mmss(segundos: number): string {
   const total = Math.max(0, Math.round(segundos));
@@ -220,9 +211,9 @@ export function CandidatoCard({
           title={short.origem === 'manual' ? 'Trecho seu — sem nota da IA' : 'Nota da IA'}
           className={cn(
             'grid h-9 w-9 flex-none place-items-center rounded-[9px] font-code text-[14px] font-bold tabular-nums',
-            tomDaNota(short) === 'success' && 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]',
-            tomDaNota(short) === 'accent' && 'bg-[var(--wb-accent-soft)] text-[var(--wb-accent-strong)]',
-            tomDaNota(short) === 'neutral' && 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
+            tomDaNota(short) === 'ok' && 'bg-[var(--wb-ok-soft)] text-[var(--wb-ok-ink)]',
+            tomDaNota(short) === 'info' && 'bg-[var(--wb-info-soft)] text-[var(--wb-info)]',
+            tomDaNota(short) === 'inerte' && 'bg-[var(--wb-bg-inset)] text-[var(--wb-text-mute)]',
           )}
         >
           {notaVisivel(short)}
@@ -299,7 +290,7 @@ export function CandidatoCard({
         </div>
 
         <div className="flex flex-none flex-col items-end gap-1">
-          <SeloDeEstado tom={TOM_DO_SHORT[short.status] ?? 'inerte'}>{aparencia.rotulo}</SeloDeEstado>
+          <SeloDeEstado tom={aparencia.tom}>{aparencia.rotulo}</SeloDeEstado>
           {short.origem === 'manual' && (
             <span
               className="font-code text-[9.5px] uppercase tracking-wide text-[var(--wb-text-mute)]"

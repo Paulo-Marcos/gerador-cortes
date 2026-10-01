@@ -50,13 +50,13 @@ describe('AvaliacaoCorteForm (D-419)', () => {
   it('sem nota, nenhuma estrela vem preenchida', () => {
     const html = renderForm(RASCUNHO_VAZIO);
     expect(html).toContain('sem nota');
-    expect(html).not.toContain('fill-amber-300');
+    expect(html).not.toContain('fill-warning');
   });
 
   it('com nota, as estrelas ate a nota vem preenchidas', () => {
     const html = renderForm({ ...RASCUNHO_VAZIO, voto: 3 });
     expect(html).toContain('3 de 5');
-    expect(html.match(/fill-amber-300/g)).toHaveLength(3);
+    expect(html.match(/fill-warning/g)).toHaveLength(3);
   });
 
   it('motivo marcado aparece pressionado para leitor de tela', () => {

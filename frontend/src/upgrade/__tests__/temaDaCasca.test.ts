@@ -114,3 +114,47 @@ describe('o acento é ação, não lugar', () => {
     expect(ler('../FitaDaLive.tsx')).not.toMatch(/agora:\s*\{[^}]*--warn/);
   });
 });
+
+describe('estado fala uma língua só', () => {
+  // D-848: o SeloDeEstado define "aviso = convida a um ato" e "info = em
+  // curso", mas trabalho da máquina saía em âmbar; e um segundo vocabulário
+  // (StatusChip: success/warning/accent…) convivia com o do selo.
+  it('trabalho da máquina é info, não aviso', async () => {
+    const { TOM_DO_PROJETO } = await import('../SeloDeEstado');
+    expect([TOM_DO_PROJETO.baixando, TOM_DO_PROJETO.transcrevendo, TOM_DO_PROJETO.publicando]).toEqual([
+      'info',
+      'info',
+      'info',
+    ]);
+  });
+
+  it('ninguém mais importa o StatusChip', () => {
+    const raiz = resolve(__dirname, '../..');
+    const fontes = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+        const caminho = resolve(dir, e.name);
+        if (e.isDirectory()) return fontes(caminho);
+        return /\.tsx?$/.test(e.name) ? [caminho] : [];
+      });
+    const importam = fontes(raiz).filter((f) => /components\/ui\/status-chip/.test(readFileSync(f, 'utf-8')));
+    expect(importam.map((f) => relative(raiz, f))).toEqual([]);
+  });
+
+  // Qualquer prefixo (text, fill, stroke, ring…), as famílias de cor de estado
+  // e os hex soltos que o app já teve, sem diferenciar maiúscula — a primeira
+  // versão só via `amber` em text/border/bg (achado da auditoria do #95).
+  // CenaPlayerPanel fica de fora: a pílula sobre o vídeo segue a regra sobreArte.
+  const corSolta = /-(red|rose|amber|emerald|yellow|orange|green|lime)-\d{2,3}\b|#(fca5a5|ff9b9b|e5484d|f87171)\b|--wb-danger,/i;
+
+  it.each([
+    'features/editor/avaliacao/AvaliacaoBrutoPanel.tsx',
+    'features/editor/avaliacao/AvaliacaoCorteForm.tsx',
+    'features/editor/fase2/AlertaCenasForaDoCorte.tsx',
+    'features/editor/fase1/AudioSyncControl.tsx',
+    'features/projeto-detalhe/AuditoriaAnaliseModal.tsx',
+    'features/projeto-detalhe/PublicarMassaModal.tsx',
+  ])('%s usa os tokens de estado, não cor solta', (arquivo) => {
+    const texto = readFileSync(resolve(__dirname, '../..', arquivo), 'utf-8');
+    expect(texto).not.toMatch(corSolta);
+  });
+});

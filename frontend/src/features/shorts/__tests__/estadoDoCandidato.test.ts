@@ -132,11 +132,18 @@ describe('APARENCIA', () => {
 
   it('rejeitado e neutro, nao erro', () => {
     // Foi uma decisao registrada, nao uma falha. Vermelho diria o contrario.
-    expect(APARENCIA.rejeitado.tom).toBe('neutral');
+    expect(APARENCIA.rejeitado.tom).toBe('inerte');
   });
 
   it('renderizado e sucesso, porque ha arquivo', () => {
-    expect(APARENCIA.renderizado.tom).toBe('success');
+    expect(APARENCIA.renderizado.tom).toBe('ok');
+  });
+
+  it('fala o vocabulario do selo: aprovado esta em curso, sugerido pede um ato (D-848)', () => {
+    // Era 'accent' para aprovado — a tinta dos botoes — e divergia da
+    // TOM_DO_SHORT que o cartao de fato desenhava.
+    expect(APARENCIA.aprovado.tom).toBe('info');
+    expect(APARENCIA.sugerido.tom).toBe('aviso');
   });
 });
 
@@ -144,13 +151,14 @@ describe('nota', () => {
   it('manual nao mostra 0.0', () => {
     // Mostrar zero o poria no fundo de uma fila de que ele nao participa.
     expect(notaVisivel(short({ origem: 'manual', score: 0 }))).toBe('—');
-    expect(tomDaNota(short({ origem: 'manual', score: 0 }))).toBe('neutral');
+    expect(tomDaNota(short({ origem: 'manual', score: 0 }))).toBe('inerte');
   });
 
   it('a faixa alta se destaca do resto', () => {
-    expect(tomDaNota(short({ score: 9.2 }))).toBe('success');
-    expect(tomDaNota(short({ score: 7 }))).toBe('accent');
-    expect(tomDaNota(short({ score: 4 }))).toBe('neutral');
+    expect(tomDaNota(short({ score: 9.2 }))).toBe('ok');
+    // D-848: a faixa do meio era 'accent', a cor dos botoes; nota nao se aperta.
+    expect(tomDaNota(short({ score: 7 }))).toBe('info');
+    expect(tomDaNota(short({ score: 4 }))).toBe('inerte');
   });
 
   it('a nota da IA sai com uma casa', () => {

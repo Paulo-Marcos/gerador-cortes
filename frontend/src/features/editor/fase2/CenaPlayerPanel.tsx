@@ -298,7 +298,7 @@ function CabecalhoDoTempo({
         ·
       </span>
       {cenaAtiva ? (
-        <span className="rounded-full bg-emerald-400 px-2 py-0.5 font-code text-[10.5px] font-bold text-emerald-950">
+        <span className="rounded-full bg-[var(--wb-ok-soft)] px-2 py-0.5 font-code text-[10.5px] font-bold text-[var(--wb-ok-ink)]">
           cena: {cenaAtivaLabel}
         </span>
       ) : proximaCena ? (
@@ -309,7 +309,7 @@ function CabecalhoDoTempo({
           próx: {proximaLabel} em {segundosParaProxima!.toFixed(1)}s
         </span>
       ) : (
-        <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 font-code text-[10.5px] text-amber-300">
+        <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 font-code text-[10.5px] text-warning">
           sem cenas {cenas.length === 0 ? '(0 carregadas)' : ''}
         </span>
       )}

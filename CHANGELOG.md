@@ -55,6 +55,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the same red as "Nova live" and as delete, so nothing stood out. They now
   use the neutral ink (new `--sel-*` tokens); the accent is left for what you
   press (D-847).
+- **States speak one language.** The status badge already said "amber = it
+  needs you, blue = it is in progress", but downloading, transcribing and
+  publishing (the machine at work) came out amber, and an older status chip
+  painted "aprovado" and the 6–8 short score in the button red. Those now
+  follow the badge: machine work is blue, the mid score is blue, and the old
+  chip is gone. Loose reds, ambers and greens in the cut evaluation, the
+  scenes-out-of-cut alert, the audio sync button and the analysis audit now
+  use one danger, one warning and one success tone that follow the theme
+  (D-848).
 - **R deletes the cut, after asking; A toggles.** In the editor and on the
   focused row of the live's cut list, A approves a proposed cut and sends an
   approved one back to proposed, and R now deletes the cut. Since D-746 R only

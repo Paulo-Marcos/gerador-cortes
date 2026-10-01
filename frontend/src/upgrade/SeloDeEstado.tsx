@@ -126,13 +126,16 @@ export const TOM_DA_LIMPEZA: Record<LimpezaDoProjeto['chave'], TomDoSelo> = {
 export const TOM_DO_PROJETO = {
   erro: 'erro',
   aguardando: 'inerte',
-  baixando: 'aviso',
-  transcrevendo: 'aviso',
+  // D-848: baixar, transcrever e publicar são a máquina trabalhando — "em
+  // curso" (info), como o próprio contrato acima define. Em âmbar, pediam
+  // um ato que não cabia ao operador.
+  baixando: 'info',
+  transcrevendo: 'info',
   analise: 'info',
   analisado: 'info',
   editando: 'info',
   'pronto-publicar': 'aviso',
-  publicando: 'aviso',
+  publicando: 'info',
   publicado: 'ok',
 } as const satisfies Record<EstadoProjetoKey, TomDoSelo>;
 

@@ -1,4 +1,4 @@
-import type { StatusTone } from '@/components/ui/status-chip';
+import type { TomDoSelo } from '@/upgrade/SeloDeEstado';
 import type { ProgressoRender, ShortSugerido, StatusShort } from './shortsApi';
 
 // D-492: o que a tela deve oferecer, dado o estado do candidato.
@@ -14,22 +14,23 @@ import type { ProgressoRender, ShortSugerido, StatusShort } from './shortsApi';
 
 export interface AparenciaStatus {
   rotulo: string;
-  tom: StatusTone;
+  tom: TomDoSelo;
 }
 
 /**
- * Como cada estágio se apresenta.
+ * Como cada estágio se apresenta, no contrato do selo (D-746, D-848).
  *
- * Cor semântica, não decoração: `rejeitado` é neutro (uma decisão registrada,
- * não um erro), `renderizado` é sucesso (há arquivo), `aprovado` é acento
- * (aguarda ação sua). Pintar rejeitado de vermelho diria que algo deu errado,
- * quando o operador apenas escolheu.
+ * Cor semântica, não decoração: `rejeitado` é inerte (uma decisão registrada,
+ * não um erro), `renderizado` é ok (há arquivo), `aprovado` está em curso
+ * (info) e `sugerido` pede um ato seu (aviso). Pintar rejeitado de vermelho
+ * diria que algo deu errado, quando o operador apenas escolheu; e `aprovado`
+ * no acento entrava na tinta dos botões.
  */
 export const APARENCIA: Record<StatusShort, AparenciaStatus> = {
-  sugerido: { rotulo: 'sugerido', tom: 'info' },
-  aprovado: { rotulo: 'aprovado', tom: 'accent' },
-  rejeitado: { rotulo: 'rejeitado', tom: 'neutral' },
-  renderizado: { rotulo: 'pronto', tom: 'success' },
+  sugerido: { rotulo: 'sugerido', tom: 'aviso' },
+  aprovado: { rotulo: 'aprovado', tom: 'info' },
+  rejeitado: { rotulo: 'rejeitado', tom: 'inerte' },
+  renderizado: { rotulo: 'pronto', tom: 'ok' },
 };
 
 export type AcaoId =
@@ -115,11 +116,12 @@ export function notaVisivel(short: ShortSugerido): string {
  * Os cortes de faixa vêm da leitura editorial que o programa já usa: acima de 8
  * é candidato forte, abaixo de 6 é o que só entra faltando material.
  */
-export function tomDaNota(short: ShortSugerido): StatusTone {
-  if (short.origem === 'manual') return 'neutral';
-  if (short.score >= 8) return 'success';
-  if (short.score >= 6) return 'accent';
-  return 'neutral';
+export function tomDaNota(short: ShortSugerido): TomDoSelo {
+  if (short.origem === 'manual') return 'inerte';
+  if (short.score >= 8) return 'ok';
+  // D-848: a faixa do meio era 'accent', a tinta dos botões; nota não se aperta.
+  if (short.score >= 6) return 'info';
+  return 'inerte';
 }
 
 /**
