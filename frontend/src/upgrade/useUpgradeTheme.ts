@@ -31,24 +31,6 @@ export const NOME_DO_TEMA: Record<UpgradeTheme, string> = {
   dark: 'Escuro',
 };
 
-/** Luminância aproximada do fundo — a dica de cada degrau mostra isso. */
-export const LUMINANCIA: Record<UpgradeTheme, string> = {
-  light: '0.975 L',
-  papel: '0.945 L',
-  nevoa: '0.870 L',
-  ardosia: '0.345 L',
-  dark: '0.170 L',
-};
-
-/** Amostra sólida, para desenhar o degrau sem montar o tema inteiro. */
-export const AMOSTRA: Record<UpgradeTheme, string> = {
-  light: 'oklch(0.975 0.004 240)',
-  papel: 'oklch(0.945 0.014 78)',
-  nevoa: 'oklch(0.87 0.007 250)',
-  ardosia: 'oklch(0.345 0.016 256)',
-  dark: 'oklch(0.17 0.012 255)',
-};
-
 /** Degraus que pedem color-scheme: dark (scrollbar, autofill, inputs). */
 export function temaEscuro(t: UpgradeTheme): boolean {
   return t === 'ardosia' || t === 'dark';

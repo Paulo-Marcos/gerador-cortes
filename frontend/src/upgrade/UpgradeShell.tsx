@@ -196,7 +196,7 @@ function useEsteiraDaLive(tela: TelaId, projetoId: string | null) {
 
 function Casca({ children, fila }: CascaProps) {
   const { pathname } = useLocation();
-  const { theme, setTheme, toggleTheme, glass } = useUpgradeTheme();
+  const { theme, toggleTheme, glass } = useUpgradeTheme();
   const { expandido, alternar } = useTrilho();
   const chrome = useChrome();
   const filaGlobal = useWorkbenchQueueOptional();
@@ -303,7 +303,6 @@ function Casca({ children, fila }: CascaProps) {
           cabecalho={denso ? { sub: chrome.sub, acoes: chrome.acoes } : undefined}
           tema={theme}
           onAlternarTema={toggleTheme}
-          onEscolherTema={setTheme}
           onAbrirBusca={abrirBusca}
           onAbrirAvisos={abrirFila}
           avisosAtivos={jobsRodando}
