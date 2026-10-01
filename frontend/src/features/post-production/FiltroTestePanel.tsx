@@ -261,7 +261,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
         </div>
 
         {!brutoPronto && (
-          <p className="mt-2 rounded-[var(--radius-xs)] border border-[var(--wb-warn)]/40 bg-[var(--wb-warn-soft)] px-2 py-1.5 text-[11px] text-[var(--wb-warn)]">
+          <p className="mt-2 rounded-[var(--radius-xs)] border border-wb-warn/40 bg-[var(--wb-warn-soft)] px-2 py-1.5 text-[11px] text-[var(--wb-warn)]">
             Gere o recorte bruto primeiro pra testar filtros.
           </p>
         )}
