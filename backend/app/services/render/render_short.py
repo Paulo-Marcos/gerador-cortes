@@ -54,6 +54,7 @@ from app.infrastructure.worker_queue import (
 from app.models import Corte, Short, StatusShort
 from app.services import legendas_short, palco_shorts
 from app.services.app_settings import AppSettingsService
+from app.services.render.pipeline_render import _preparar_bundle_overlay
 from app.services.render.pipeline_render_helpers import (
     _build_overlay_render_cmd,
     _render_retry_policy,
@@ -70,9 +71,6 @@ COMPOSICAO_CAMADA = "CamadaShort"
 _TIMEOUT_RECORTE_SEG = 900.0
 _TIMEOUT_CAMADA_SEG = 1800.0
 _TIMEOUT_COMPOSICAO_SEG = 900.0
-# O bundle cacheado é do pipeline horizontal; aqui o entrypoint cru basta e evita
-# acoplar o short à invalidação de fingerprint do outro caminho (D-190).
-_ENTRYPOINT_REMOTION = "src/index.ts"
 
 
 @dataclass(frozen=True)
@@ -218,6 +216,8 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
     )
 
     ShortsProgress.marcar(short_id, "camada", "rodando")
+    # D-845: o bundle em cache (D-190) traz a CamadaShort; fora do retry, não se refaz.
+    bundle = await _preparar_bundle_overlay(saida_dir)
     # D-843: como o overlay do corte, a camada tenta de novo — o Chrome que não
     # sobe em 25 s (máquina ocupada) é transiente. Cancelar não ressuscita.
     await _retry_async(
@@ -225,7 +225,7 @@ async def _produzir(short_id: str, *, com_filtro: bool, nome: str) -> ResultadoR
             f"{short_id}_{estagio}_camada",
             _build_overlay_render_cmd(
                 composition=COMPOSICAO_CAMADA,
-                bundle_arg=_ENTRYPOINT_REMOTION,
+                bundle_arg=str(bundle),
                 output_path=camada,
                 props_file=props_file,
                 concurrency=2,
