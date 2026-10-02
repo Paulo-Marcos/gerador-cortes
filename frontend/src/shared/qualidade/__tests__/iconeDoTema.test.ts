@@ -52,7 +52,6 @@ const AINDA_IMPORTAM = new Set([
   "src/features/channels/RankingPesosSection.tsx",
   "src/features/channels/SituacaoDosCanais.tsx",
   "src/features/editor/fase2/CenasPanel.tsx",
-  "src/features/editor/fase2/YoutubeLayoutPanel.tsx",
   "src/features/final-review/FinalReviewPage.tsx",
   "src/features/lives/LiveSearchPage.tsx",
   "src/features/lives/RankingEmbasamentoPanel.tsx",

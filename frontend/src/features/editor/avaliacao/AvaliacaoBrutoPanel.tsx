@@ -54,10 +54,11 @@ function NotaEmEstrelas({ nota }: { nota: number }) {
   return (
     <span className="flex items-center gap-0.5" aria-label={`Nota ${nota} de 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <Icon key={n} name="star" className={cn(
-            'text-[var(--wb-text-mute)]',
-            n <= nota && 'fill-warning text-warning',
-          )} />
+        <Icon
+          key={n}
+          name="star"
+          className={cn('text-[var(--wb-text-mute)]', n <= nota && 'fill-warning text-warning')}
+        />
       ))}
     </span>
   );

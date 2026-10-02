@@ -38,7 +38,6 @@ import {
   
   type YoutubeSharedConfig,
 } from '@/shared/palco/youtubeLayout';
-import { ScanLine } from 'lucide-react';
 import { EscopoLadder, ModoBlock, RegionItem } from './youtubeLayoutPanel/components';
 import { MODE_LABEL } from './youtubeLayoutPanel/shared';
 import { useYoutubeLayoutPanel } from './useYoutubeLayoutPanel';
@@ -144,7 +143,7 @@ export const YoutubeLayoutPanel = forwardRef<YoutubeLayoutPanelHandle, Props>(
                   disabled={detectandoSegmentos}
                   aria-label="Detectar segmentos no bruto"
                 >
-                  {detectandoSegmentos ? <Icon name="loader-2" className="animate-spin" /> : <ScanLine />}
+                  {detectandoSegmentos ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="scan-line" />}
                   Detectar
                 </Button>
               </Tooltip>
