@@ -61,6 +61,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   They are line icons now, and scene types keep their colour. The 🔥 and 📖
   that go into YouTube titles and covers stay: that is published content,
   not interface. A test fails any new emoji in the interface (D-858).
+- **Text has an 11 px floor.** The app had 288 texts below 11 px, like the
+  9.5 px uppercase mono of "PRONTO PARA LIMPAR". The status badges, the stage
+  strip of the cut card, the AI provider badge and the Library counters are
+  11 px now; in the side list the stage strip wraps between its groups, so
+  the eight steps no longer run past the column. A test fails any new text
+  below 11 px and keeps the remaining ones on a list that only shrinks
+  (D-859).
 - **One icon scale.** The app had 24 icon sizes (9 to 34 px) and strokes from
   0.3 to 3. Icons now go through one component with three sizes (14 px next to
   text, 16 px in buttons and bars, 20 px in the rail; big drawings use an

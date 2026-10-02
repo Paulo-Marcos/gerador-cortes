@@ -82,7 +82,8 @@ export function SeloDeEstado({
         background: bg,
         color: cor,
         fontFamily: 'var(--mono)',
-        fontSize: 9.5,
+        // D-859: o piso de texto é 11 px (era 9,5).
+        fontSize: 11,
         fontWeight: 700,
         letterSpacing: '.06em',
         textTransform: 'uppercase',

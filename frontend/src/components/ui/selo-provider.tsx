@@ -28,7 +28,7 @@ export function SeloDeProvider({ provider, modelo, className }: Props) {
       title={modelo ? `Gerado por ${NOME[provider]} (${modelo})` : `Gerado por ${NOME[provider]}`}
       className={cn(
         'inline-flex flex-none items-center gap-1 rounded-full border px-1.5 py-0.5',
-        'font-code text-[9.5px] font-bold uppercase tracking-[0.04em]',
+        'font-code text-[11px] font-bold uppercase tracking-[0.04em]',
         className,
       )}
       style={{ borderColor: COR[provider], color: COR[provider] }}
