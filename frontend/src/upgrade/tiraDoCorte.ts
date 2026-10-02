@@ -6,25 +6,15 @@ import type { StatusExportCorte } from '@/types/models';
 //
 // A queixa: "não dá por ela saber o status das coisas".
 //
-// ATENÇÃO — leia antes de mexer. Ao escrever esta rodada descobrimos que
-// `StatusPipStrip` (features/projeto-detalhe/StatusPills.tsx) JÁ resolve
-// o problema: ela tem os quatro estados (done / next / rejected / off) e
-// já pinta o primeiro pendente em warn. O que falhou não foi a ausência
-// do componente — foi a casca nova não usá-lo: `CorteLinhaAp.tsx` chama
-// `buildStatusPills` cru e desenha um laço de DOIS tons
-// (`p.done ? --ok : --dim`), perdendo o "parou aqui".
+// ATENÇÃO — leia antes de mexer. A casca nova chamava `buildStatusPills`
+// cru e desenhava um laço de DOIS tons (`p.done ? --ok : --dim`), perdendo
+// o "parou aqui" que a tira antiga (`StatusPipStrip`, estilada em `--wb-*`
+// e removida na D-862 por não ter mais tela) já sabia mostrar.
 //
-// Mas `StatusPipStrip` não dá para reaproveitar como está: ela é estilada
-// em Tailwind sobre os tokens `--wb-*` (o sistema ANTIGO), e dentro de
-// `.ap` esses tokens não existem. Copiá-la traria uma terceira cópia
-// divergente da mesma regra.
-//
-// Então a divisão é esta, e é o ponto principal deste arquivo:
-//   · AQUI mora a REGRA (estado de cada etapa, agrupamento, "próxima"),
-//     pura, sem uma linha de estilo;
-//   · `StatusPipStrip` (--wb-*) e a tira nova da casca (.ap) passam a ser
-//     duas ROUPAS sobre esta mesma regra.
-// Uma regra, dois temas. É o que impede a terceira divergência.
+// Por isso AQUI mora a REGRA (estado de cada etapa, agrupamento,
+// "próxima"), pura, sem uma linha de estilo; a tira da casca (.ap) é só a
+// roupa. Copiar a regra para dentro de um componente foi o que fez as duas
+// tiras divergirem.
 //
 // A fonte dos booleanos continua sendo `buildStatusPills`: ela já sabe
 // ler `StatusExportCorte` e já carrega rótulo e `hint` de cada etapa.
@@ -77,8 +67,8 @@ export type Tira = {
  * Monta a tira de um corte.
  *
  * `statusCorte` é o status EDITORIAL (`corte.status`): 'rejeitado' pinta
- * o primeiro pip e apaga o resto, igual à `StatusPipStrip` — um corte
- * fora do lote não tem "próxima etapa".
+ * o primeiro pip e apaga o resto — um corte fora do lote não tem
+ * "próxima etapa".
  */
 export function montarTira(status: StatusExportCorte, statusCorte?: string): Tira {
   const rejeitado = statusCorte === 'rejeitado';

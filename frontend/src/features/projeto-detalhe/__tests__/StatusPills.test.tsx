@@ -1,8 +1,6 @@
-import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import type { StatusExportCorte } from '@/types/models';
-import { StatusPills, buildStatusPills } from '../StatusPills';
+import { buildStatusPills } from '../StatusPills';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 function makeStatus(patch: Partial<StatusExportCorte> = {}): StatusExportCorte {
@@ -21,14 +19,6 @@ function makeStatus(patch: Partial<StatusExportCorte> = {}): StatusExportCorte {
     pronto_publicar: false,
     ...patch,
   });
-}
-
-function render(corte: StatusExportCorte) {
-  return renderToStaticMarkup(
-    <TooltipProvider>
-      <StatusPills corte={corte} />
-    </TooltipProvider>,
-  );
 }
 
 describe('buildStatusPills (F-018)', () => {
@@ -64,6 +54,13 @@ describe('buildStatusPills (F-018)', () => {
     const validadas = findCenas(makeStatus({ cenas_geradas: true, cenas_validadas: true }));
     expect(validadas.done).toBe(true);
     expect(validadas.hint).toMatch(/validadas/i);
+  });
+
+  it('marca Bruto quando raw_pronto = true (recorte exportado)', () => {
+    const bruto = buildStatusPills(makeStatus({ raw_pronto: true })).find(
+      (p) => p.label === 'Bruto',
+    )!;
+    expect(bruto.done).toBe(true);
   });
 
   it('marca Graded quando grade_pronta = true (fase 1 do render final)', () => {
@@ -102,47 +99,5 @@ describe('buildStatusPills (F-018)', () => {
     const publicado = findYt(makeStatus({ youtube_url_publicado: 'https://youtu.be/abc' }));
     expect(publicado.done).toBe(true);
     expect(publicado.hint).toMatch(/publicado/i);
-  });
-});
-
-describe('StatusPills (render)', () => {
-  it('renderiza data-testid e data-done para cada pill', () => {
-    const html = render(
-      makeStatus({
-        raw_pronto: true,
-        grade_pronta: true,
-        cenas_geradas: true,
-        cenas_validadas: true,
-        video_pronto: false,
-        thumbnail_pronta: false,
-        metadados_completos: false,
-      }),
-    );
-
-    expect(html).toContain('data-testid="status-pill-bruto"');
-    expect(html).toContain('data-testid="status-pill-cenas"');
-    expect(html).toContain('data-testid="status-pill-graded"');
-    expect(html).toContain('data-testid="status-pill-overlays"');
-    expect(html).toContain('data-testid="status-pill-final"');
-    expect(html).toContain('data-testid="status-pill-youtube"');
-    expect(html).toContain('data-testid="status-pill-thumb"');
-    expect(html).toContain('data-testid="status-pill-meta"');
-  });
-
-  it('aplica data-done=true apenas nas pills concluidas', () => {
-    const html = render(
-      makeStatus({
-        raw_pronto: true,
-        grade_pronta: true,
-        cenas_geradas: true,
-        cenas_validadas: false,
-        video_pronto: false,
-      }),
-    );
-
-    expect(html).toMatch(/data-testid="status-pill-bruto"[^>]*data-done="true"/);
-    expect(html).toMatch(/data-testid="status-pill-graded"[^>]*data-done="true"/);
-    expect(html).toMatch(/data-testid="status-pill-cenas"[^>]*data-done="false"/);
-    expect(html).toMatch(/data-testid="status-pill-final"[^>]*data-done="false"/);
   });
 });

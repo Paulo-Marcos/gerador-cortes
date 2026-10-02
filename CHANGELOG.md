@@ -178,6 +178,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and publishing as a warning — the opposite of the status vocabulary, where a
   warning invites an action and work in progress is info. The Library card
   keeps reading the same state and the same six-step ribbon (D-850).
+- **The old cut status strip.** `StatusPills` and `StatusPipStrip`, styled on
+  the old `--wb-*` tokens, were no longer rendered on any screen; only their
+  test imported them. The rule they wrapped, `buildStatusPills`, stays: it is
+  what the cut card's ribbon reads (D-862).
 
 ### Security
 - **React Router 7.18.** Closes the two open advisories on React Router 6: an
