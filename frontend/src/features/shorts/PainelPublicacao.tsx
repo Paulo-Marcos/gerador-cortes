@@ -22,7 +22,7 @@ import { comSegundos } from './capaDoShort';
 import { useConfirmarPublicacao, usePublicacoesDoCorte } from './useLotePublicacao';
 import { plataformasJaPublicadas } from './selecaoDoLote';
 import type { ShortSugerido } from './shortsApi';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 interface Props {
   /** D-565: o short inteiro, e nao so o id — o modal do post precisa dele. */
@@ -182,7 +182,7 @@ function Destino({
             <MarcaManual ocupado={marcando} onMarcar={onMarcar} />
           ))}
         <Button size="sm" variant="outline" onClick={onPublicar} disabled={ocupado}>
-          {porApi ? <Icon name="send" /> : <Icon name="upload" />}
+          {porApi ? <Icon name={ICONE_DO_CONCEITO.publicar} /> : <Icon name="package" />}
           {porApi ? 'publicar' : 'preparar pacote'}
         </Button>
       </div>

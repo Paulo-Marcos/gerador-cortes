@@ -7,7 +7,7 @@ import { resolveThumbUrl } from '@/lib/api';
 import { metadadosApi } from '@/features/metadata/api/metadados';
 import { copyTextToClipboard } from '@/lib/clipboard';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { montarTira } from '@/upgrade/tiraDoCorte';
 import { TiraDoCorteAp } from '@/upgrade/TiraDoCorteAp';
@@ -287,7 +287,7 @@ export function MetadadosDoCorteModal({
             className="btn btn-pri"
             onClick={() => navigate(`/projetos/${projetoId}/metadados`)}
           >
-            <Icon name="tags" />
+            <Icon name={ICONE_DO_CONCEITO.editar} />
             {corte ? 'Abrir a tela de metadados' : 'Editar na tela de metadados'}
           </button>
         </footer>

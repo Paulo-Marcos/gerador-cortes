@@ -33,7 +33,6 @@ import {
   CircleSlash,
   Clapperboard,
   Clipboard,
-  ClipboardCheck,
   ClipboardList,
   ClipboardPaste,
   Clock,
@@ -72,7 +71,9 @@ import {
   Layers,
   LayoutGrid,
   LayoutTemplate,
+  Link,
   Link2,
+  ListChecks,
   ListFilter,
   Loader,
   Loader2,
@@ -114,7 +115,6 @@ import {
   ScanLine,
   Scissors,
   Search,
-  Send,
   Settings,
   Settings2,
   ShieldCheck,
@@ -141,7 +141,6 @@ import {
   Users,
   Volume2,
   VolumeX,
-  Wand,
   WandSparkles,
   X,
   XCircle,
@@ -207,7 +206,6 @@ const ICONS = {
   'circle-slash': CircleSlash,
   clapperboard: Clapperboard,
   clipboard: Clipboard,
-  'clipboard-check': ClipboardCheck,
   'clipboard-list': ClipboardList,
   'clipboard-paste': ClipboardPaste,
   clock: Clock,
@@ -246,7 +244,9 @@ const ICONS = {
   layers: Layers,
   'layout-grid': LayoutGrid,
   'layout-template': LayoutTemplate,
+  link: Link,
   'link-2': Link2,
+  'list-checks': ListChecks,
   'list-filter': ListFilter,
   loader: Loader,
   'loader-2': Loader2,
@@ -288,7 +288,6 @@ const ICONS = {
   'scan-line': ScanLine,
   scissors: Scissors,
   search: Search,
-  send: Send,
   settings: Settings,
   'settings-2': Settings2,
   'shield-check': ShieldCheck,
@@ -315,7 +314,6 @@ const ICONS = {
   users: Users,
   'volume-2': Volume2,
   'volume-x': VolumeX,
-  wand: Wand,
   'wand-sparkles': WandSparkles,
   x: X,
   'x-circle': XCircle,
@@ -325,6 +323,30 @@ const ICONS = {
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
+
+/** Todos os nomes, para quem precisa percorrê-los (testes, kit). */
+export const NOMES_DE_ICONE = Object.keys(ICONS) as IconName[];
+
+// D-858 · Um conceito, um desenho. O app usava o mesmo glifo para ideias
+// diferentes — a tesoura era a etapa Cortes, "Editar corte" e "Gerar
+// trechos"; o avião de papel, o menu Prontos e "Subir para o TikTok"; o play,
+// "Tocar vídeo" e "Informar a URL"; a lupa, "Buscar" e "Auditar". Cada
+// conceito do fluxo tem agora o seu, e a catraca umConceitoUmDesenho.test
+// cobra que a ação rotulada com o conceito use este glifo.
+export const ICONE_DO_CONCEITO = {
+  /** A IA produz algo: trechos, metadados, capa. */
+  iaGera: 'sparkles',
+  /** Abrir para editar: o corte, a capa. */
+  editar: 'pencil',
+  /** Mandar para fora: YouTube, TikTok, Reels. */
+  publicar: 'upload',
+  /** O que já pode sair. */
+  prontos: 'circle-check',
+  /** Ligar o corte a um vídeo já publicado fora do app. */
+  urlPublicada: 'link',
+  /** Ver por que a IA escolheu o que escolheu. */
+  auditar: 'list-checks',
+} as const satisfies Record<string, IconName>;
 
 /** A escala inteira: 14 junto de texto, 16 em botão e barra, 20 no trilho. */
 export type TamanhoDoIcone = 14 | 16 | 20;

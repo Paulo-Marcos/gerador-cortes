@@ -9,7 +9,7 @@ import { useAbrirPasta } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { resolveThumbUrl } from '@/lib/api';
 import { formatarDuracaoHMS } from '@/lib/utils';
 import type { Corte, StatusExportCorte } from '@/types/models';
-import { Icon, type IconName } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO, type IconName } from '@/upgrade/Icon';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
 import { SeloDeEstado, TOM_DO_CORTE } from '@/upgrade/SeloDeEstado';
 import { montarTira } from '@/upgrade/tiraDoCorte';
@@ -187,7 +187,7 @@ export function CorteLinhaAp({
     pronto: {
       // D-746: o verbo do resultado; o clique abre a conferência, não envia.
       texto: 'Enviar ao YouTube',
-      icone: 'send' as IconName,
+      icone: ICONE_DO_CONCEITO.publicar,
       forte: true,
       acao: onEnviarYoutube,
     },
@@ -373,7 +373,7 @@ export function CorteLinhaAp({
 
       <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <button type="button" className="btn btn-icon" title="Editar corte" onClick={irEditor}>
-          <Icon name="scissors" />
+          <Icon name={ICONE_DO_CONCEITO.editar} />
         </button>
         <button
           type="button"
@@ -428,7 +428,7 @@ export function CorteLinhaAp({
             title="Informar a URL de um vídeo já publicado no YouTube"
             onClick={onInformarUrl}
           >
-            <Icon name="play" />
+            <Icon name={ICONE_DO_CONCEITO.urlPublicada} />
           </button>
         )}
 

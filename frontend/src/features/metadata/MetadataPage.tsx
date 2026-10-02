@@ -9,7 +9,7 @@ import type { MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { PublicarMassaModal } from '@/features/projeto-detalhe/PublicarMassaModal';
 import { MetadataCard } from './MetadataCard';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
   if (status?.metadados_completos || meta?.titulo_youtube) return 'ready';
@@ -183,7 +183,7 @@ export function MetadataPage() {
                   cortesProntos.length === 0
                     ? 'Nada pronto para publicar'
                     : `Publicar ${cortesProntos.length} ${cortesProntos.length === 1 ? 'corte' : 'cortes'}`,
-                icone: 'send',
+                icone: ICONE_DO_CONCEITO.publicar,
                 onClick: () => setPublicarOpen(true),
                 desabilitado: cortesProntos.length === 0,
               },

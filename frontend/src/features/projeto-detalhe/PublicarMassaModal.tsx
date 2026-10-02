@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { StatusExportCorte } from '@/types/models';
 import { publicacaoApi, type BulkYoutubeRequest } from '@/features/publicacao/api';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -117,7 +117,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
       size="lg"
       title={
         <span className="flex items-center gap-2">
-          <Icon name="rocket" size={20} className="text-accent-300" /> Publicar em massa
+          <Icon name={ICONE_DO_CONCEITO.publicar} size={20} className="text-accent-300" /> Publicar em massa
         </span>
       }
       description={`Cada lançamento espaçado de ${SPACING_MIN} minutos a partir do horário inicial.`}
@@ -210,7 +210,7 @@ export function PublicarMassaModal({ open, onClose, projetoId, cortesProntos }: 
         </Button>
         {totalProntos > 0 && !loteEnviado && (
           <Button type="button" onClick={onPublicar} disabled={enviando || agenda.length === 0}>
-            {enviando ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="rocket" size={16} />}
+            {enviando ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name={ICONE_DO_CONCEITO.publicar} size={16} />}
             Publicar {agenda.length} {agenda.length === 1 ? 'corte' : 'cortes'}
           </Button>
         )}

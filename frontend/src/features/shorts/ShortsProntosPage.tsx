@@ -44,7 +44,7 @@ import { capaImagemUrl, shortVideoUrl, type ShortPronto } from './shortsApi';
 import { useFechoDoShort } from './useFechoDoShort';
 import { useLoteAtual } from './useLotePublicacao';
 import { PRONTOS_KEY, useShortsProntos } from './useShortsProntos';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 const FILTROS: Array<{ id: FiltroDosProntos; texto: string }> = [
   { id: 'todos', texto: 'Todos' },
@@ -103,7 +103,7 @@ export default function ShortsProntosPage() {
       barra: {
         primario: {
           texto: textoDoPrimario,
-          icone: 'send',
+          icone: ICONE_DO_CONCEITO.publicar,
           onClick: abrirLote,
           desabilitado: alvoDoLote.length === 0,
         },

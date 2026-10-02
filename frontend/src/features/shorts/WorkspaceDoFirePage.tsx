@@ -47,7 +47,7 @@ import { useFechoDoShort } from './useFechoDoShort';
 import type { PublicacaoRegistrada } from './shortsApi';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
 import { MolduraDeVideo } from '@/upgrade/MolduraDeVideo';
-import { Icon } from '@/upgrade/Icon';
+import { Icon, ICONE_DO_CONCEITO } from '@/upgrade/Icon';
 
 /** Como cada plataforma se chama na prateleira. */
 const NOME_DA_PLATAFORMA: Record<string, string> = {
@@ -181,7 +181,7 @@ function CartaoDoPronto({
 
         {pronto && (
           <Button variant="outline" size="sm" onClick={onAlternar}>
-            <Icon name="send" />
+            <Icon name={ICONE_DO_CONCEITO.publicar} />
             {aberto ? 'fechar a publicação' : 'Publicar este'}
           </Button>
         )}
@@ -272,7 +272,7 @@ export default function WorkspaceDoFirePage() {
             publicaveis.length === 0
               ? 'Nada pronto para publicar'
               : `Publicar ${publicaveis.length} short${publicaveis.length === 1 ? '' : 's'}`,
-          icone: 'send',
+          icone: ICONE_DO_CONCEITO.publicar,
           onClick: () => setPublicandoEmLote(true),
           desabilitado: publicaveis.length === 0,
         },

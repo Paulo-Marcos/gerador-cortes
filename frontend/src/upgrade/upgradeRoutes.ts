@@ -160,7 +160,7 @@ export const TELAS: Record<TelaId, Def> = {
   },
   // D-611: item próprio, e não filha de Shorts — ela não pertence a um Fire.
   prontos: {
-    icone: 'send',
+    icone: 'circle-check',
     titulo: 'Prontos para publicar',
     menu: 'Prontos',
     rota: () => '/prontos',
