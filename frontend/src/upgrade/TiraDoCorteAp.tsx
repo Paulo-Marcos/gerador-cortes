@@ -19,7 +19,7 @@ const TOM_DO_PIP: Record<EstadoDoPip, { bg: string; cor: string; filete: string;
  * `montarTira`; aqui só a roupa, para a Pós e o modal usarem a mesma.
  */
 /**
- * D-746: a tira para a lista lateral (~200 px). Sem nome de grupo e sem
+ * D-746: a tira para a lista lateral (145 px). Sem nome de grupo e sem
  * texto — só as siglas, com um respiro entre CENAS · RENDER · PUBLICAÇÃO.
  * A pergunta ali é "qual destes já tem render?", respondida varrendo a cor.
  */

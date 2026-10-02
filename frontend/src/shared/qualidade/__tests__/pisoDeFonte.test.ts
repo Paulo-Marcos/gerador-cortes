@@ -11,12 +11,17 @@
 // 11 px — e 11 é o piso (decisão do Paulo, 01/10/2026; antes o piso era 9 px,
 // D-746). O app tinha 288 textos abaixo disso em 89 arquivos, como os 9,5 px
 // em mono e caixa alta de "PRONTO PARA LIMPAR". Os tetos são de 02/10/2026,
-// depois da primeira leva (selos e legendas da Biblioteca): 280 em 85.
+// depois da primeira leva (selos e legendas da Biblioteca): 279 em 85.
 //
 // Conta as três portas por onde o tamanho entra: a classe do Tailwind
 // (`text-[9.5px]`), o estilo inline e o atributo SVG (`fontSize: 9`,
 // `fontSize={9}`) e o CSS (`font-size: 10.5px`). Ficam na lista, e é
 // legítimo, os textos que desenham o VÍDEO em escala (as prévias do palco).
+//
+// Não vê, e não há hoje no app fora das prévias de vídeo: tamanho calculado
+// (template `${n}px`, ternário, `clamp(9px, …)`), o shorthand `font: … 9px`,
+// `text-[length:…]` e unidades relativas (`rem`, `em`, `cqw`) — essas não são
+// px e ficam fora da conta de propósito.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -26,7 +31,8 @@ const GERADOS = new Set(['src/shared/api/contract.ts']);
 const TESTES = /(__tests__\/|\.test\.tsx?$)/;
 const TAMANHOS = [
   /\btext-\[(\d+(?:\.\d+)?)px\]/g,
-  /\bfontSize\s*[:=]\s*\{?\s*['"]?(\d+(?:\.\d+)?)(?:px)?\b/g,
+  // `(?![\w.%])`: o número inteiro, em px ou sem unidade — `'4.2cqw'` não é 4 px.
+  /\bfontSize\s*[:=]\s*\{?\s*['"]?(\d+(?:\.\d+)?)(?:px)?(?![\w.%])/g,
   /\bfont-size:\s*(\d+(?:\.\d+)?)px/g,
 ];
 
@@ -64,7 +70,7 @@ const EXCECOES: Record<string, number> = {
   "src/features/editor/fase1/AudioSyncControl.tsx": 7,
   "src/features/editor/fase1/BlocosPanel.tsx": 2,
   "src/features/editor/fase1/BrutoContextStrip.tsx": 4,
-  "src/features/editor/fase1/PlayerPanel.tsx": 2,
+  "src/features/editor/fase1/PlayerPanel.tsx": 1,
   "src/features/editor/fase1/RightTabsPanel.tsx": 9,
   "src/features/editor/fase1/TimelinePanel.tsx": 10,
   "src/features/editor/fase2/CenaItem.tsx": 4,
@@ -154,6 +160,8 @@ describe('piso de 11 px (D-859)', () => {
     expect(contarAbaixoDoPiso('className="text-[9.5px] text-[11px] text-[13px]"')).toBe(1);
     expect(contarAbaixoDoPiso('style={{ fontSize: 10.5 }} <text fontSize={9}> fontSize: 11')).toBe(2);
     expect(contarAbaixoDoPiso('.x { font-size: 10px } .y { font-size: 11px }')).toBe(1);
+    // px em string conta; unidade relativa não é px e fica fora (achado da auditoria do #108)
+    expect(contarAbaixoDoPiso("fontSize: '10px' fontSize: '4.2cqw' fontSize: '1.2em'")).toBe(1);
   });
 
   it('arquivo novo não tem texto abaixo de 11 px', () => {

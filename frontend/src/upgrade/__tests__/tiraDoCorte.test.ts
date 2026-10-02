@@ -105,10 +105,13 @@ describe('a tira no piso de 11 px', () => {
 
   it('TiraMini: siglas a 11 px, e a fileira quebra entre os grupos, não dentro', () => {
     const html = renderToStaticMarkup(createElement(TiraMini, { tira }));
+    expect(fontes(html).length).toBe(8);
     expect(Math.min(...fontes(html))).toBeGreaterThanOrEqual(11);
-    const [fileira, ...grupos] = html.match(/<span[^>]*style="[^"]*"/g) ?? [];
+    const [fileira, ...resto] = html.match(/<span[^>]*style="[^"]*"/g) ?? [];
     expect(fileira).toContain('flex-wrap:wrap');
-    // cada grupo é um bloco inline-flex sem quebra própria
-    expect(grupos.filter((g) => g.includes('display:inline-flex')).every((g) => !g.includes('flex-wrap'))).toBe(true);
+    // os três grupos (CENAS · RENDER · PUBLICAÇÃO), cada um um bloco sem quebra própria
+    const grupos = resto.filter((s) => !s.includes('data-estado'));
+    expect(grupos).toHaveLength(3);
+    for (const g of grupos) expect(g).not.toContain('flex-wrap');
   });
 });
