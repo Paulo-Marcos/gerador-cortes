@@ -27,7 +27,10 @@ export function TiraMini({ tira }: { tira: Tira }) {
   return (
     <span
       aria-label={`${tira.contagem} etapas${tira.proxima ? ` · próximo: ${tira.proxima.nome}` : ''}`}
-      style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}
+      // D-859: os oito pips não cabiam na coluna da lista (145 px) nem a 9 px —
+      // passavam 31 px da borda; a 11 px, 60. Quebra entre os grupos, nunca
+      // dentro de um: CENAS · RENDER em cima, PUBLICAÇÃO embaixo.
+      style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '3px 4px', marginTop: 3 }}
     >
       {tira.grupos.map((g) => (
         <span key={g.nome} style={{ display: 'inline-flex', gap: 1.5 }}>
@@ -41,14 +44,14 @@ export function TiraMini({ tira }: { tira: Tira }) {
                 style={{
                   display: 'grid',
                   placeItems: 'center',
-                  // R4: 9 px é o piso do dado mínimo da casca; 7,5 px era
-                  // escolha local, abaixo de qualquer limiar de leitura.
-                  minWidth: 19,
-                  height: 14,
+                  // D-859: o piso de texto é 11 px (R4 tinha subido de 7,5
+                  // para 9); a caixa cresce junto para a sigla caber.
+                  minWidth: 23,
+                  height: 16,
                   padding: '0 2px',
                   borderRadius: 2,
                   fontFamily: 'var(--mono)',
-                  fontSize: 9,
+                  fontSize: 11,
                   fontWeight: 700,
                   background: tom.bg,
                   color: tom.cor,
@@ -85,7 +88,7 @@ export function TiraDoCorteAp({ tira, compacta = false }: { tira: Tira; compacta
           <span
             style={{
               fontFamily: 'var(--mono)',
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: 700,
               letterSpacing: '.08em',
               color: 'var(--dim)',
@@ -104,12 +107,12 @@ export function TiraDoCorteAp({ tira, compacta = false }: { tira: Tira; compacta
                 style={{
                   display: 'grid',
                   placeItems: 'center',
-                  minWidth: 22,
-                  height: 15,
+                  minWidth: 26,
+                  height: 17,
                   padding: '0 3px',
                   borderRadius: 2,
                   fontFamily: 'var(--mono)',
-                  fontSize: 9,
+                  fontSize: 11,
                   fontWeight: 700,
                   letterSpacing: '.02em',
                   background: tom.bg,
@@ -124,7 +127,7 @@ export function TiraDoCorteAp({ tira, compacta = false }: { tira: Tira; compacta
           })}
         </span>
       ))}
-      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--mute)' }}>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--mute)' }}>
         {tira.contagem}
       </span>
       {compacta ? null : (

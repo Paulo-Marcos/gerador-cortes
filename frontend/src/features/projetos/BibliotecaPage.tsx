@@ -202,7 +202,7 @@ export default function BibliotecaPage() {
               }}
             >
               {f.label}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 10.5, opacity: 0.7 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11, opacity: 0.7 }}>
                 {contagens[f.key]}
               </span>
             </button>

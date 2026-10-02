@@ -1,6 +1,9 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { StatusExportCorte } from '@/types/models';
 import { montarTira, textoDaProxima } from '../tiraDoCorte';
+import { TiraDoCorteAp, TiraMini } from '../TiraDoCorteAp';
 import { statusExportPendente } from '@/features/publicacao/statusExport';
 
 function status(patch: Partial<StatusExportCorte> = {}): StatusExportCorte {
@@ -85,5 +88,27 @@ describe('montarTira', () => {
 
   it('sem nada feito e sem publicar, nada pendente só quando rejeitado', () => {
     expect(textoDaProxima(montarTira(status(), 'rejeitado'))).toBe('nada pendente');
+  });
+});
+
+// D-859: a tira está no piso de 11 px (era 9), e a mini quebra entre os
+// grupos para caber na coluna da lista — os oito pips passavam da borda.
+describe('a tira no piso de 11 px', () => {
+  const tira = montarTira(status({ raw_pronto: true }));
+  const fontes = (html: string) => [...html.matchAll(/font-size:([\d.]+)px/g)].map((m) => Number(m[1]));
+
+  it('TiraDoCorteAp: nenhum texto abaixo de 11 px', () => {
+    const html = renderToStaticMarkup(createElement(TiraDoCorteAp, { tira }));
+    expect(fontes(html).length).toBeGreaterThan(0);
+    expect(Math.min(...fontes(html))).toBeGreaterThanOrEqual(11);
+  });
+
+  it('TiraMini: siglas a 11 px, e a fileira quebra entre os grupos, não dentro', () => {
+    const html = renderToStaticMarkup(createElement(TiraMini, { tira }));
+    expect(Math.min(...fontes(html))).toBeGreaterThanOrEqual(11);
+    const [fileira, ...grupos] = html.match(/<span[^>]*style="[^"]*"/g) ?? [];
+    expect(fileira).toContain('flex-wrap:wrap');
+    // cada grupo é um bloco inline-flex sem quebra própria
+    expect(grupos.filter((g) => g.includes('display:inline-flex')).every((g) => !g.includes('flex-wrap'))).toBe(true);
   });
 });
