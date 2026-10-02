@@ -104,6 +104,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   comment that ends with the audited commit's SHA, and the new required check
   "Auditoria registrada" only turns green for the owner's comment on the
   current head: any later push asks for a new audit (D-838).
+- **Every change comes with a test.** The rule used to ask for tests only for
+  new domain/service code and for bug fixes, so screen changes, refactors and
+  migrations went in guarded by type checks and a look in the browser, and a
+  requested function could go missing unnoticed. Now each item of a request
+  gets the test that covers it, and the pull request template asks for a
+  "Pedido → teste" table; an item without a test is listed as missing. A test
+  keeps the rule written in AGENTS.md, CONTRIBUTING and the per-folder rules
+  (D-860).
 - **`bin\release.ps1` works in two steps, with the pull request in between.**
   `main` only takes pull requests now, so the version goes up on a
   `release-vX.Y.Z` branch; after the merge, `-Taguear` finds the release

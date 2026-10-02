@@ -80,7 +80,7 @@ Antes de cada commit: `pytest -m "not integration" -n 6`. Catracas de tamanho de
 ## Princípios
 
 - App pequeno, de um mantenedor: **sem abstração para o futuro**.
-- **Toda mudança vem com teste** — backend, tela, refatoração ou migração: cada item do pedido vira um comportamento com teste que o cobre, e o PR lista *pedido → teste* (item sem teste é "faltando", não "feito"). É o que pega a função ou a organização que somem no caminho. Correção de defeito começa pelo teste que falha antes e passa depois.
+- **Toda mudança vem com teste** — backend, tela, refatoração ou migração: cada item do pedido vira um comportamento com teste que o cobre, e o PR lista *pedido → teste* (item sem teste é "faltando", não "feito"). É o que pega a função ou a organização que somem no caminho. **Correção de defeito começa pelo teste que falha antes e passa depois.**
 - Comentário explica o porquê. Sem código morto, TODO genérico ou `print` esquecido. Sem refactor de carona.
 - Mudança de tela se testa no navegador.
 - **Na dúvida, pergunte antes de editar.**
