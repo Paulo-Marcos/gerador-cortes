@@ -1,6 +1,6 @@
-import { Check, Clipboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GerarNoChatGPT } from '@/features/capa-chatgpt/GerarNoChatGPT';
+import { Icon } from '@/upgrade/Icon';
 
 // O que se faz com o prompt da capa do YouTube: levar ao ChatGPT.
 //
@@ -41,7 +41,7 @@ export function AcoesDoPromptDaCapa({
         aria-describedby={promptReady ? undefined : motivoId}
         title="Copiar o prompt para colar no agente capista"
       >
-        {promptCopiado ? <Check /> : <Clipboard />}
+        {promptCopiado ? <Icon name="check" /> : <Icon name="clipboard" />}
         {promptCopiado ? 'Copiado' : 'Copiar prompt da capa'}
       </Button>
       <GerarNoChatGPT prompt={prompt} proporcao="16:9" entregar={entregar} />

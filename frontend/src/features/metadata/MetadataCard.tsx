@@ -1,24 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import {
-  BookOpen,
-  Check,
-  ChevronDown,
-  FileText,
-  Folder,
-  Frame,
-  Image,
-  Loader2,
-  Palette,
-  RefreshCw,
-  Sparkles,
-  Tag,
-  Trash2,
-  UploadCloud,
-  Wand2,
-  Youtube,
-  type LucideIcon,
-} from 'lucide-react';
+import { FileText, Folder, Frame, RefreshCw, Tag, Trash2, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
@@ -46,6 +28,7 @@ import {
 } from './modalPecas';
 import type { Corte, MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { useMetadataCard, sanitizeDescription } from './useMetadataCard';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 export type PromptModalKind = 'metadata' | 'thumbnail' | 'thumbnail-agent' | 'thumbnail-agent-livre';
 
@@ -139,13 +122,13 @@ export function MetadataCard(props: {
                     {coverText || 'Thumbnail'}
                   </span>
                   {promptReady && (
-                    <Sparkles size={12} className="text-warning" aria-label="prompt" />
+                    <Icon name="sparkles" rotulo="prompt" className="text-warning" />
                   )}
                   {thumbnailReady && (
-                    <Check size={12} className="text-success" aria-label="thumbnail" />
+                    <Icon name="check" rotulo="thumbnail" className="text-success" />
                   )}
                   {Boolean(cut.is_leitura) && (
-                    <BookOpen size={12} className="text-info" aria-label="leitura" />
+                    <Icon name="book-open" rotulo="leitura" className="text-info" />
                   )}
                 </div>
               )}
@@ -208,7 +191,7 @@ export function MetadataCard(props: {
               {generated ? 'metadados' : 'pendente'}
             </span>
             <IconAction title={expanded ? 'Recolher' : 'Expandir'} active={expanded}>
-              <ChevronDown className={expanded ? 'rotate-180' : ''} />
+              <Icon name="chevron-down" className={expanded ? 'rotate-180' : ''} />
             </IconAction>
           </div>
         </header>
@@ -216,7 +199,7 @@ export function MetadataCard(props: {
 
       {expanded && metaQuery.isLoading && (
         <div className="grid min-h-[180px] place-items-center">
-          <Loader2 className="animate-spin text-[var(--wb-text-dim)]" />
+          <Icon name="loader-2" size={20} className="animate-spin text-[var(--wb-text-dim)]" />
         </div>
       )}
 
@@ -243,7 +226,7 @@ export function MetadataCard(props: {
                 size="sm"
                 onClick={() => setManualKind('metadata')}
               >
-                <Wand2 />
+                <Icon name="wand-sparkles" />
                 Manual
               </Button>
             </div>
@@ -290,7 +273,7 @@ export function MetadataCard(props: {
                 onGerar={(provider) => generateMetadataClaude.mutate(provider)}
                 className="h-8"
               />
-              <ModalActionButton icon={Wand2} onClick={() => setManualKind('metadata')}>
+              <ModalActionButton icon="wand-sparkles" onClick={() => setManualKind('metadata')}>
                 Manual
               </ModalActionButton>
             </div>
@@ -384,7 +367,7 @@ export function MetadataCard(props: {
               }
               disabled={saveMutation.isPending}
             >
-              {saveMutation.isPending && <Loader2 className="animate-spin" />}
+              {saveMutation.isPending && <Icon name="loader-2" className="animate-spin" />}
               Salvar metadados
             </Button>
           </footer>
@@ -397,7 +380,7 @@ export function MetadataCard(props: {
               a coluna inteira vazava para fora do card. */}
           <div className="grid gap-3">
             <FieldHeader
-              icon={<Youtube size={13} />}
+              icon={<Icon name="youtube" />}
               label="Titulo YouTube"
               expanded={showTitleSuggestions}
               onToggle={() => setShowTitleSuggestions((current) => !current)}
@@ -436,7 +419,7 @@ export function MetadataCard(props: {
             </div>
 
             <FieldHeader
-              icon={<Image size={13} />}
+              icon={<Icon name="image" />}
               label="Texto thumbnail"
               expanded={showThumbSuggestions}
               onToggle={() => setShowThumbSuggestions((current) => !current)}
@@ -478,7 +461,7 @@ export function MetadataCard(props: {
                 aiTitle="Regerar"
                 aiDescricao="Regerar metadados"
                 onAi={(provider) => generateMetadataClaude.mutate(provider)}
-                manualIcon={Wand2}
+                manualIcon="wand-sparkles"
                 onManual={() => setManualKind('metadata')}
               />
               <SegmentedAiManual
@@ -487,7 +470,7 @@ export function MetadataCard(props: {
                 aiTitle={promptReady ? 'Regerar' : 'Gerar'}
                 aiDescricao={promptReady ? 'Regerar o prompt da capa' : 'Gerar o prompt da capa'}
                 onAi={(provider) => generatePromptThumbnailClaude.mutate(provider)}
-                manualIcon={Palette}
+                manualIcon="palette"
                 onManual={() => setManualKind('thumbnail-agent-livre')}
               />
               {!metadadosEmVoo && generated && (
@@ -519,7 +502,7 @@ export function MetadataCard(props: {
             {showTags && (
               <label className="grid gap-2">
                 <span className="flex items-center gap-1.5 font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-                  <Tag size={13} aria-hidden />
+                  <Icon name="tag" />
                   Tags (SEO oculto)
                 </span>
                 <span className="text-[11px] leading-snug text-[var(--wb-text-dim)]">
@@ -575,7 +558,7 @@ export function MetadataCard(props: {
                 acento); "Gerar" fica em outline; e as ações raras (copiar
                 pasta, comprimir, remover) saem da pilha de botões para um ⋯. */}
             <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-sm)] bg-[var(--wb-accent)] px-4 text-sm font-bold text-[var(--wb-accent-fg)] shadow-[shadow:var(--wb-shadow-btn)] hover:bg-[var(--wb-accent-strong)]">
-              <UploadCloud size={16} aria-hidden />
+              <Icon name="upload-cloud" size={16} />
               Trocar thumbnail
               <input
                 type="file"
@@ -594,7 +577,7 @@ export function MetadataCard(props: {
               onClick={() => generateThumbnail.mutate()}
               disabled={!promptReady || generateThumbnail.isPending}
             >
-              {generateThumbnail.isPending || conferindoCapa ? <Loader2 className="animate-spin" /> : <Image />}
+              {generateThumbnail.isPending || conferindoCapa ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="image" />}
               {conferindoCapa ? 'Gerando capa…' : 'Gerar thumbnail'}
             </Button>
             <div className="flex items-center gap-2">
@@ -735,7 +718,7 @@ function FieldHeader({
             : 'border-[var(--wb-border)] bg-[var(--wb-bg-panel)] text-[var(--wb-text-mute)]',
         )}
       >
-        <ChevronDown size={12} className={expanded ? 'rotate-180' : ''} aria-hidden />
+        <Icon name="chevron-down" className={expanded ? 'rotate-180' : ''} />
       </button>
     </div>
   );
@@ -776,7 +759,7 @@ function SegmentedAiManual({
   aiTitle,
   aiDescricao,
   onAi,
-  manualIcon: ManualIcon,
+  manualIcon,
   onManual,
 }: {
   label: string;
@@ -786,7 +769,7 @@ function SegmentedAiManual({
   /** A ação completa, para leitor de tela e tooltip. */
   aiDescricao: string;
   onAi: (provider: ProviderIA) => void;
-  manualIcon: LucideIcon;
+  manualIcon: IconName;
   onManual: () => void;
 }) {
   return (
@@ -807,7 +790,7 @@ function SegmentedAiManual({
           onClick={onManual}
           className="inline-flex h-[26px] items-center gap-1.5 rounded-[6px] px-3 text-[10px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-panel)] hover:text-[var(--wb-text)]"
         >
-          <ManualIcon size={12} aria-hidden />
+          <Icon name={manualIcon} />
           Manual
         </button>
       </div>
@@ -921,7 +904,7 @@ function PromptImportModal({
               onClick={importPayload}
               disabled={!colado || importMutation.isPending}
             >
-              {importMutation.isPending ? <Loader2 className="animate-spin" /> : <UploadCloud />}
+              {importMutation.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="upload-cloud" />}
               Importar
             </Button>
           </>

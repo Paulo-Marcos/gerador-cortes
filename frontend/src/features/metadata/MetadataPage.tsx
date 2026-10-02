@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Loader2, RefreshCw } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCortesProjeto } from '@/features/editor/useCortes';
@@ -10,6 +9,7 @@ import type { MetadadoCorte, StatusExportCorte } from '@/types/models';
 import { PublicarMassaModal } from '@/features/projeto-detalhe/PublicarMassaModal';
 import { MetadataCard } from './MetadataCard';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { Icon } from '@/upgrade/Icon';
 
 function metadadoStatus(meta?: MetadadoCorte, status?: StatusExportCorte) {
   if (status?.metadados_completos || meta?.titulo_youtube) return 'ready';
@@ -222,7 +222,7 @@ export function MetadataPage() {
         <div className="">
           {cortesQuery.isLoading ? (
             <div className="grid min-h-[300px] place-items-center">
-              <Loader2 className="animate-spin text-[var(--wb-text-dim)]" />
+              <Icon name="loader-2" size={20} className="animate-spin text-[var(--wb-text-dim)]" />
             </div>
           ) : cortesQuery.isError ? (
             <div className="grid min-h-[300px] place-items-center rounded-[var(--radius-lg)] border border-error/30 bg-error/5 p-8 text-center">
@@ -241,7 +241,7 @@ export function MetadataPage() {
                   className="mt-4"
                   onClick={() => void cortesQuery.refetch()}
                 >
-                  <RefreshCw />
+                  <Icon name="refresh-cw" />
                   Tentar novamente
                 </Button>
               </div>
@@ -249,7 +249,7 @@ export function MetadataPage() {
           ) : cuts.length === 0 ? (
             <div className="grid min-h-[320px] place-items-center rounded-[var(--radius-lg)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
               <div>
-                <Check size={34} className="mx-auto mb-3 text-[var(--wb-text-dim)]" aria-hidden />
+                <Icon name="check" ilustracao={34} className="mx-auto mb-3 text-[var(--wb-text-dim)]" />
                 <p className="font-editorial text-3xl font-medium">Nenhum corte aprovado</p>
                 <p className="mt-1 text-sm text-[var(--wb-text-mute)]">
                   Aprove cortes no editor antes de gerar metadados.

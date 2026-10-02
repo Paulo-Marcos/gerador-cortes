@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Film, Loader2, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -9,6 +8,7 @@ import { cn } from '@/lib/utils';
 import type { AppSettings } from '@/types/models';
 import { filtrosApi, type FiltroExport, type VersaoExport } from './api/filtros';
 import { settingsApi } from '@/features/settings/api';
+import { Icon } from '@/upgrade/Icon';
 
 // ─────────────────────────────────────────────────────────────
 // FiltroTestePanel — aba "Filtros" da Pós-Produção.
@@ -195,7 +195,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--wb-bg-card)]">
       <header className="border-b border-[var(--wb-border-soft)] bg-[var(--wb-bg)] p-3">
         <div className="mb-2 flex items-center gap-2">
-          <SlidersHorizontal size={14} className="text-[var(--wb-text-mute)]" aria-hidden />
+          <Icon name="sliders-horizontal" className="text-[var(--wb-text-mute)]" />
           <strong className="font-editorial text-[17px] font-medium text-[var(--wb-ink)]">
             Teste de filtros
           </strong>
@@ -242,7 +242,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
               onClick={() => previewSelecionado.mutate()}
               disabled={!brutoPronto || busy}
             >
-              {previewSelecionado.isPending ? <Loader2 className="animate-spin" /> : <Film />}
+              {previewSelecionado.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="film" />}
               Preview {previewSeconds}s
             </Button>
           </Tooltip>
@@ -254,7 +254,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
               onClick={() => previewTodos.mutate()}
               disabled={!brutoPronto || busy}
             >
-              {previewTodos.isPending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              {previewTodos.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="refresh-cw" />}
               Todos
             </Button>
           </Tooltip>
@@ -298,7 +298,7 @@ export function FiltroTestePanel({ corteId, projetoId, brutoPronto }: Props) {
 
         {versionsQuery.isFetching && (
           <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-[var(--wb-text-dim)]">
-            <Loader2 size={12} className="animate-spin" />
+            <Icon name="loader-2" className="animate-spin" />
             Atualizando previews...
           </div>
         )}
@@ -390,7 +390,7 @@ function FiltroItem({
             onClick={(e) => e.stopPropagation()}
             className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[var(--radius-xs)] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
           >
-            <Download size={12} aria-hidden />
+            <Icon name="download" />
           </a>
         </Tooltip>
       )}

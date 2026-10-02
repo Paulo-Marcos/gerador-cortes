@@ -4,7 +4,6 @@
 // alimenta, mais adiante, um agente que procura o que os melhores têm em comum.
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Loader2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
@@ -16,6 +15,7 @@ import {
   type NotasState,
 } from './thumbnailAvaliacao';
 import { avaliacaoThumbnailApi, type VeredictoThumbnail } from './api/avaliacaoThumbnail';
+import { Icon } from '@/upgrade/Icon';
 
 const avaliacoesKey = (corteId: string) => ['avaliacoes-thumbnail', corteId] as const;
 
@@ -70,7 +70,7 @@ export function ThumbnailAvaliacaoPanel({ corteId }: { corteId: string }) {
     <div className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-card)] p-2.5">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 font-code text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--wb-text-dim)]">
-          <Star size={12} aria-hidden />
+          <Icon name="star" />
           Avaliar capa
         </span>
         {resumo && resumo.total > 0 && (
@@ -108,11 +108,7 @@ export function ThumbnailAvaliacaoPanel({ corteId }: { corteId: string }) {
         onClick={() => setDetalhar((current) => !current)}
         className="flex items-center gap-1 self-start font-code text-[10px] uppercase tracking-[0.08em] text-[var(--wb-text-dim)] hover:text-[var(--wb-text-mute)]"
       >
-        <ChevronDown
-          size={12}
-          className={cn('transition-transform', detalhar && 'rotate-180')}
-          aria-hidden
-        />
+        <Icon name="chevron-down" className={cn('transition-transform', detalhar && 'rotate-180')} />
         Detalhar critérios
       </button>
 
@@ -160,7 +156,7 @@ export function ThumbnailAvaliacaoPanel({ corteId }: { corteId: string }) {
             className="min-w-0"
             title={`Registrar “${rotuloVeredito(veredito)}” com critérios`}
           >
-            {pending ? <Loader2 className="animate-spin" /> : <Star />}
+            {pending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="star" />}
             <span className="truncate">Registrar com detalhes</span>
           </Button>
         </div>

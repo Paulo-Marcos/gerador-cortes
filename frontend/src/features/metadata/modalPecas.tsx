@@ -1,5 +1,5 @@
-import { ChevronDown, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 // As peças visuais do corpo do modal de metadados (AUDITORIA-v3 §6). Saíram do
 // MetadataCard na D-821, quando o modal foi reorganizado em textos × capas e a
@@ -68,7 +68,7 @@ export function SugestoesRecolhidas({
         aria-expanded={aberto}
         className="inline-flex w-fit items-center gap-1 font-code text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
       >
-        <ChevronDown size={12} className={aberto ? 'rotate-180' : ''} aria-hidden />
+        <Icon name="chevron-down" className={aberto ? 'rotate-180' : ''} />
         sugestões ({quantidade})
       </button>
       {aberto && (
@@ -90,11 +90,11 @@ export function ModalActionRow({ children }: { children: React.ReactNode }) {
 
 // Ação secundária da linha (o "Manual"). A geração por IA mora no AcaoDeIa.
 export function ModalActionButton({
-  icon: Icon,
+  icon,
   onClick,
   children,
 }: {
-  icon: LucideIcon;
+  icon: IconName;
   onClick: () => void;
   children: React.ReactNode;
 }) {
@@ -104,7 +104,7 @@ export function ModalActionButton({
       onClick={onClick}
       className="inline-flex h-8 items-center gap-1.5 rounded-[7px] border border-[var(--wb-border)] bg-[var(--wb-bg-card)] px-3 text-[12.5px] font-semibold text-[var(--wb-text-mute)] transition-colors hover:border-[var(--wb-text-dim)] hover:text-[var(--wb-text)]"
     >
-      <Icon size={14} aria-hidden />
+      <Icon name={icon} />
       {children}
     </button>
   );
