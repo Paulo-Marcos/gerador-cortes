@@ -2,10 +2,10 @@
 // ações (selecionar / editar) via callbacks — sem I/O próprio.
 // D-169: o bloco de conexão do YouTube aparece só no canal ATIVO (o token é
 // gravado na pasta do canal ativo); estado e callbacks vêm por props.
-import { CheckCircle2, Loader2, Pencil, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Canal, YoutubeAuthStatus } from '@/features/channels/api/canais';
 import { ConectarYoutubeTutorial } from './ConectarYoutubeTutorial';
+import { Icon } from '@/upgrade/Icon';
 
 interface ChannelCardProps {
   canal: Canal;
@@ -47,7 +47,7 @@ export function ChannelCard({
             </h3>
             {canal.ativo && (
               <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--wb-accent)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
-                <CheckCircle2 size={11} aria-hidden />
+                <Icon name="circle-check" />
                 Ativo
               </span>
             )}
@@ -65,7 +65,7 @@ export function ChannelCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onEditar}>
-            <Pencil aria-hidden />
+            <Icon name="pencil" />
             Editar
           </Button>
           <Button
@@ -75,7 +75,7 @@ export function ChannelCard({
             onClick={onSelecionar}
             disabled={canal.ativo || selecionando}
           >
-            {selecionando && <Loader2 className="animate-spin" aria-hidden />}
+            {selecionando && <Icon name="loader-2" className="animate-spin" />}
             {canal.ativo ? 'Selecionado' : 'Selecionar'}
           </Button>
         </div>
@@ -99,14 +99,10 @@ export function ChannelCard({
       {canal.ativo && youtube && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--wb-border-soft)] pt-3">
           <div className="flex min-w-0 items-center gap-2">
-            <Youtube
-              size={16}
-              aria-hidden
-              className={youtube.conectado ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text-dim)]'}
-            />
+            <Icon name="youtube" size={16} className={youtube.conectado ? 'text-[var(--wb-err)]' : 'text-[var(--wb-text-dim)]'} />
             {youtube.fluxo_em_andamento ? (
               <span className="inline-flex items-center gap-1.5 text-sm text-[var(--wb-text-mute)]">
-                <Loader2 size={13} className="animate-spin" aria-hidden />
+                <Icon name="loader-2" className="animate-spin" />
                 Aguardando login no navegador…
               </span>
             ) : youtube.conectado ? (
@@ -145,7 +141,7 @@ export function ChannelCard({
                 }
               >
                 {(youtubeBusy || youtube.fluxo_em_andamento) && (
-                  <Loader2 className="animate-spin" aria-hidden />
+                  <Icon name="loader-2" className="animate-spin" />
                 )}
                 Conectar YouTube
               </Button>

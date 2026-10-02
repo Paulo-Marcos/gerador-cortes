@@ -3,7 +3,6 @@
 // reset por campo é delegado via `onReset`. Ressincroniza o estado local quando a
 // skill muda (ex.: após um reset persistido refazer a query).
 import { useEffect, useState } from 'react';
-import { Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +13,7 @@ import type {
   ModeloGemini,
   UpdateSkillPayload,
 } from '@/features/channels/api/skillsEditoriais';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   skill: EditorialSkill;
@@ -46,7 +46,7 @@ function ResetButton({ onClick, disabled }: { onClick: () => void; disabled: boo
       disabled={disabled}
       className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
     >
-      <RotateCcw size={12} aria-hidden />
+      <Icon name="rotate-ccw" />
       Resetar para o padrão
     </button>
   );
@@ -211,7 +211,7 @@ export function EditorialSkillForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={pending}>
-          {pending && <Loader2 className="animate-spin" aria-hidden />}
+          {pending && <Icon name="loader-2" className="animate-spin" />}
           Salvar skill
         </Button>
       </div>

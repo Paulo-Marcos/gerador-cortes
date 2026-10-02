@@ -1,5 +1,4 @@
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from 'react';
-import { ExternalLink, Image as ImageIcon, Plus, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
@@ -268,20 +267,20 @@ export const CenasPanel = forwardRef<CenasPanelHandle, Props>(function CenasPane
             label="Outras ações das cenas"
             items={[
               {
-                icon: ImageIcon,
+                icon: 'image',
                 label: `Retratos${fichasSemRetrato > 0 ? ` (${fichasSemRetrato})` : ''}`,
                 title: retratosTooltip,
                 disabled: retratosDisabled,
                 onClick: handlePreencherRetratos,
               },
-              { icon: Plus, label: 'Gerar manual', onClick: handleAdd },
+              { icon: 'plus', label: 'Gerar manual', onClick: handleAdd },
               {
-                icon: ExternalLink,
+                icon: 'external-link',
                 label: 'Studio Remotion',
                 onClick: () => setManualOpen(true),
               },
               {
-                icon: Settings2,
+                icon: 'settings-2',
                 label: padroesOpen ? 'Ocultar padrões do palco' : 'Padrões do palco',
                 onClick: () => setPadroesOpen((v) => !v),
               },

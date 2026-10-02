@@ -2,10 +2,10 @@
 // (etapa/modelo/custo/latência/tokens/sucesso), com prompt/resposta sob demanda.
 // Separada da telemetria proposta×final (outra preocupação, outra aba).
 import { Fragment, useState } from 'react';
-import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { type LlmCall } from '@/features/ia';
 import { useLlmCalls } from './useLlmCalls';
+import { Icon } from '@/upgrade/Icon';
 
 function formatarTs(iso: string): string {
   const d = new Date(iso);
@@ -67,7 +67,7 @@ function CallRow({ call }: { call: LlmCall }) {
         onClick={() => setAberto((v) => !v)}
       >
         <td className="px-3 py-3 text-[var(--wb-text-dim)]">
-          {aberto ? <ChevronDown size={15} aria-hidden /> : <ChevronRight size={15} aria-hidden />}
+          {aberto ? <Icon name="chevron-down" size={16} /> : <Icon name="chevron-right" size={16} />}
         </td>
         <td className="px-3 py-3 font-code text-[12px] text-[var(--wb-text-mute)]">
           {formatarTs(call.ts)}
@@ -117,7 +117,7 @@ export function LlmCallsTab() {
   if (isLoading) {
     return (
       <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-        <Loader2 className="animate-spin" size={16} aria-hidden />
+        <Icon name="loader-2" size={16} className="animate-spin" />
         Carregando chamadas de IA…
       </p>
     );

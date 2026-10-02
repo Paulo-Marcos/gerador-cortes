@@ -1,15 +1,13 @@
 // Todo ícone passa pelo upgrade/Icon (D-853). Quarta catraca, irmã das de
-// tamanho (D-771, D-772) e de cor solta (D-849):
-//
-// - arquivo fora da lista que importa o lucide-react falha;
-// - arquivo da lista que parou de importar falha até sair da lista.
+// tamanho (D-771, D-772) e de cor solta (D-849): arquivo que importa o
+// lucide-react fora do próprio Icon falha.
 //
 // O Icon é onde mora a escala (14 px junto de texto, 16 em botão e barra, 20
 // no trilho, `ilustracao` para figura grande) e o traço único de 1,75. Ícone
 // importado direto do lucide escapa dos dois: foi assim que o app chegou a 24
-// tamanhos e a traços de 0,3 a 3. A lista é de 01/10/2026 e cai a cada PR de
-// área da Onda 2 (editor, shorts, metadados/pós/revisão, demais telas) até
-// ficar vazia.
+// tamanhos e a traços de 0,3 a 3. Eram 113 arquivos importando direto em
+// 01/10/2026; a lista de exceção nasceu com 106 (D-853) e zerou na Onda 2
+// (D-854 a D-857), então a regra agora não tem exceção.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -22,55 +20,6 @@ const TESTES = /(__tests__\/|\.test\.tsx?$)/;
 // escala (achado da auditoria do #99).
 const IMPORTA_LUCIDE = /['"]lucide-react(?:\/[^'"]*)?['"]/;
 
-const AINDA_IMPORTAM = new Set([
-  "src/components/ui/acao-de-ia.tsx",
-  "src/components/ui/overflow-menu.tsx",
-  "src/features/analises/AnalisesPage.tsx",
-  "src/features/analises/LlmCallsTab.tsx",
-  "src/features/analises/PropostaFinalTab.tsx",
-  "src/features/analises/YoutubeDesempenhoTab.tsx",
-  "src/features/atalhos/AtalhosPage.tsx",
-  "src/features/capa-chatgpt/CapaChatgptSection.tsx",
-  "src/features/capa-chatgpt/GerarNoChatGPT.tsx",
-  "src/features/channels/ChannelCard.tsx",
-  "src/features/channels/ChannelForm.tsx",
-  "src/features/channels/ChannelThemeSection.tsx",
-  "src/features/channels/ChannelsPage.tsx",
-  "src/features/channels/ConectarYoutubeTutorial.tsx",
-  "src/features/channels/EditorialScaffoldCard.tsx",
-  "src/features/channels/EditorialScaffoldForm.tsx",
-  "src/features/channels/EditorialScaffoldsSection.tsx",
-  "src/features/channels/EditorialSkillCard.tsx",
-  "src/features/channels/EditorialSkillForm.tsx",
-  "src/features/channels/EditorialSkillHistory.tsx",
-  "src/features/channels/EditorialSkillsSection.tsx",
-  "src/features/channels/PreRequisitosSection.tsx",
-  "src/features/channels/PromptUtilitarioCard.tsx",
-  "src/features/channels/PromptUtilitarioForm.tsx",
-  "src/features/channels/PromptsUtilitariosSection.tsx",
-  "src/features/channels/RankingPesosForm.tsx",
-  "src/features/channels/RankingPesosSection.tsx",
-  "src/features/channels/SituacaoDosCanais.tsx",
-  "src/features/editor/fase2/CenasPanel.tsx",
-  "src/features/lives/LiveSearchPage.tsx",
-  "src/features/lives/RankingEmbasamentoPanel.tsx",
-  "src/features/lives/RankingLivesPage.tsx",
-  "src/features/metadata/MetadataCard.tsx",
-  "src/features/projeto-detalhe/AnaliseIaModal.tsx",
-  "src/features/projeto-detalhe/AuditoriaAnaliseModal.tsx",
-  "src/features/projeto-detalhe/DiarizacaoPanel.tsx",
-  "src/features/projeto-detalhe/LoteDoTiktokHorizontal.tsx",
-  "src/features/projeto-detalhe/PublicarMassaModal.tsx",
-  "src/features/projeto-detalhe/PublicarTiktokModal.tsx",
-  "src/features/projeto-detalhe/StatusPills.tsx",
-  "src/features/projeto-detalhe/WorkspaceProjetoPage.tsx",
-  "src/features/projetos/NovoProjetoForm.tsx",
-  "src/features/settings/AppSettingsControls.tsx",
-  "src/features/settings/CapaTikTokLayoutEditor.tsx",
-  "src/features/shorts/CabecalhoDoFire.tsx",
-  "src/features/sincronizacao/AvisoSincronizacao.tsx",
-]);
-
 function quemImportaLucide(): Set<string> {
   const arquivos = execFileSync('git', ['ls-files', 'src'], { encoding: 'utf8', timeout: 60_000 })
     .split('\n')
@@ -79,15 +28,7 @@ function quemImportaLucide(): Set<string> {
 }
 
 describe('ícone pelo Icon (D-853)', () => {
-  const importam = quemImportaLucide();
-
-  it('arquivo novo usa o Icon, não o lucide', () => {
-    const novos = [...importam].filter((caminho) => !AINDA_IMPORTAM.has(caminho));
-    expect(novos, 'Use <Icon name=...> (não acrescente à lista)').toEqual([]);
-  });
-
-  it('a lista só diminui', () => {
-    const migrados = [...AINDA_IMPORTAM].filter((caminho) => !importam.has(caminho));
-    expect(migrados, 'Já não importam o lucide: tire da lista').toEqual([]);
+  it('ninguém importa o lucide fora do Icon', () => {
+    expect([...quemImportaLucide()], 'Use <Icon name=...> do upgrade/Icon').toEqual([]);
   });
 });

@@ -7,11 +7,11 @@
 // lado. A validação real (peso negativo, todos-zero, meia-vida <= 0) é do backend
 // (422); aqui a UI só orienta com um aviso leve.
 import { useEffect, useState } from 'react';
-import { Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { CriterioRanking, RankingPesosPayload } from '@/features/channels/api/pesosRanking';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   criterios: CriterioRanking[];
@@ -114,11 +114,11 @@ export function RankingPesosForm({ criterios, pending, onSave, onReset }: Props)
           disabled={pending}
           className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
         >
-          <RotateCcw size={12} aria-hidden />
+          <Icon name="rotate-ccw" />
           Resetar para o padrão
         </button>
         <Button type="submit" disabled={bloqueado}>
-          {pending && <Loader2 className="animate-spin" aria-hidden />}
+          {pending && <Icon name="loader-2" className="animate-spin" />}
           Salvar pesos
         </Button>
       </div>

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Brain, CheckCircle2, Clock, Info, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import type { ProviderIA } from '@/lib/providerIa';
@@ -16,6 +15,7 @@ import {
 import { useImportarAnalise, usePromptAnalise } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useAnaliseClaudeEmAndamento, useAnalisarComDiarizacao } from '@/features/diarizacao/useDiarizacao';
 import { DiarizacaoPanel } from './DiarizacaoPanel';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -145,7 +145,7 @@ function AnaliseIaModalDaLive({
       size="lg"
       title={
         <span className="flex items-center gap-2">
-          <Brain size={18} className="text-accent-300" /> Análise IA
+          <Icon name="brain" size={20} className="text-accent-300" /> Análise IA
         </span>
       }
       description="Refazer a análise inteira ou gerar cortes em um intervalo específico."
@@ -180,7 +180,7 @@ function AnaliseIaModalDaLive({
           <div className="grid grid-cols-1 gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/40 p-3 sm:grid-cols-[1fr_1fr_120px]">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="inicio">
-                <Clock size={12} className="mr-1 inline" /> Início (HH:MM:SS)
+                <Icon name="clock" className="mr-1 inline" /> Início (HH:MM:SS)
               </Label>
               <Input
                 id="inicio"
@@ -195,7 +195,7 @@ function AnaliseIaModalDaLive({
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="fim">
-                <Clock size={12} className="mr-1 inline" /> Fim (HH:MM:SS)
+                <Icon name="clock" className="mr-1 inline" /> Fim (HH:MM:SS)
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -244,7 +244,7 @@ function AnaliseIaModalDaLive({
         {/* Aviso informativo (não bloqueia): a análise é aditiva, nunca apaga */}
         {temCortesExistentes && (
           <div className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-bg-900/40 p-3 text-xs text-text-300">
-            <Info size={16} className="mt-0.5 shrink-0 text-accent-300" />
+            <Icon name="info" size={16} className="mt-0.5 shrink-0 text-accent-300" />
             <span className="flex-1">
               Este projeto já tem{' '}
               <strong className="text-text-100">{totalCortesExistentes} cortes</strong>. A análise{' '}
@@ -270,7 +270,7 @@ function AnaliseIaModalDaLive({
               origem === 'ia' ? 'bg-bg-700 text-text-100' : 'text-text-300 hover:text-text-100',
             )}
           >
-            <Sparkles size={13} aria-hidden />
+            <Icon name="sparkles" />
             IA
           </button>
           <button
@@ -291,7 +291,7 @@ function AnaliseIaModalDaLive({
           <>
             <div className="rounded-[var(--radius-sm)] border border-accent-500/40 bg-accent-500/10 p-3 text-xs text-text-200">
               <p className="flex items-center gap-1.5 font-semibold text-text-100">
-                <Sparkles size={14} className="text-accent-300" aria-hidden /> Analise completa por IA
+                <Icon name="sparkles" className="text-accent-300" /> Analise completa por IA
               </p>
               <p className="mt-1 text-text-300">
                 Usa a skill <code>cortador-expert</code> para gerar os cortes e os trechos a remover
@@ -339,9 +339,9 @@ function AnaliseIaModalDaLive({
             disabled={isPending || !todasColadas}
           >
             {isPending ? (
-              <Loader2 size={16} className="animate-spin" />
+              <Icon name="loader-2" size={16} className="animate-spin" />
             ) : (
-              <CheckCircle2 size={16} />
+              <Icon name="circle-check" size={16} />
             )}
             Importar análise{totalPartes > 1 ? ` (${partesColadas}/${totalPartes})` : ''}
           </Button>

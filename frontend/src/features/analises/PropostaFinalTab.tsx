@@ -2,7 +2,6 @@
 // editor mudou depois da proposta da IA (bordas, duração, desvios, título) por
 // corte de um projeto. Nasce vazia: escolha um projeto para carregar o diff.
 import { useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { analisesApi, type TelemetriaCorteDiff } from './api';
 import { cn } from '@/lib/utils';
@@ -15,6 +14,7 @@ import {
   somarOrigens,
   tomDelta,
 } from './analisesFormat';
+import { Icon } from '@/upgrade/Icon';
 
 const TOM_DELTA_CLASSE: Record<ReturnType<typeof tomDelta>, string> = {
   pos: 'text-[var(--wb-warn)]',
@@ -168,7 +168,7 @@ export function PropostaFinalTab() {
           variant="outline"
           onClick={() => window.open(analisesApi.telemetriaCortesCsvUrl(), '_blank', 'noopener')}
         >
-          <Download size={16} aria-hidden />
+          <Icon name="download" size={16} />
           Exportar CSV (todos os projetos)
         </Button>
       </div>
@@ -187,7 +187,7 @@ export function PropostaFinalTab() {
 
       {projetoId && telemetria.isLoading && (
         <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-          <Loader2 className="animate-spin" size={16} aria-hidden />
+          <Icon name="loader-2" size={16} className="animate-spin" />
           Carregando telemetria…
         </p>
       )}

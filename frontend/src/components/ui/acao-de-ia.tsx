@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Loader2, Sparkles, type LucideIcon } from 'lucide-react';
 import { CLAUDE_BRAND, ClaudeIcon } from '@/components/ui/claude-button';
 import { GEMINI_BRAND, GeminiIcon } from '@/components/ui/gemini-button';
 import type { ProviderIA } from '@/lib/providerIa';
 import { cn } from '@/lib/utils';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 // D-609: uma ação de IA, dois provedores — sem repetir o verbo.
 //
@@ -26,8 +26,8 @@ const PROVEDORES: {
 ];
 
 const TAMANHOS = {
-  sm: { altura: 'h-7', texto: 'text-[11.5px]', icone: 13, botao: 'w-7' },
-  md: { altura: 'h-9', texto: 'text-[13px]', icone: 15, botao: 'w-9' },
+  sm: { altura: 'h-7', texto: 'text-[11.5px]', icone: 14, botao: 'w-7' },
+  md: { altura: 'h-9', texto: 'text-[13px]', icone: 16, botao: 'w-9' },
 } as const;
 
 interface AcaoDeIaProps {
@@ -92,9 +92,9 @@ export function AcaoDeIa({
           )}
         >
           {emVoo ? (
-            <Loader2 size={t.icone} className="animate-spin" aria-hidden />
+            <Icon name="loader-2" size={t.icone} className="animate-spin" />
           ) : (
-            <Sparkles size={t.icone} aria-hidden />
+            <Icon name="sparkles" size={t.icone} />
           )}
           {/* aria-live: quem não vê o spinner ouve que a geração começou. */}
           <span aria-live="polite" className="truncate">
@@ -126,7 +126,7 @@ export function AcaoDeIa({
           style={{ color: cor }}
         >
           {emVoo === id ? (
-            <Loader2 size={t.icone} className="animate-spin" aria-hidden />
+            <Icon name="loader-2" size={t.icone} className="animate-spin" />
           ) : (
             <Icone size={t.icone} />
           )}
@@ -140,7 +140,7 @@ interface MenuDeIaProps {
   /** O que a IA vai fazer — vira o título do menu e o nome dos itens. */
   rotulo: string;
   /** Ícone do gatilho, para barras só de ícones. */
-  icone: LucideIcon;
+  icone: IconName;
   onGerar: (provider: ProviderIA) => void;
   /** Mostra o gatilho girando (a ação já foi disparada). */
   ocupado?: boolean;
@@ -161,7 +161,7 @@ interface MenuDeIaProps {
  */
 export function MenuDeIa({
   rotulo,
-  icone: Icone,
+  icone,
   onGerar,
   ocupado = false,
   desabilitado = false,
@@ -204,9 +204,9 @@ export function MenuDeIa({
         )}
       >
         {ocupado ? (
-          <Loader2 size={16} strokeWidth={1.75} className="animate-spin" aria-hidden />
+          <Icon name="loader-2" size={16} className="animate-spin" />
         ) : (
-          <Icone size={16} strokeWidth={1.75} aria-hidden />
+          <Icon name={icone} size={16} />
         )}
       </button>
 

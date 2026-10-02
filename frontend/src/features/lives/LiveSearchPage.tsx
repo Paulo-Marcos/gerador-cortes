@@ -1,22 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  AtSign,
-  Calendar,
-  Check,
-  Clock,
-  ExternalLink,
-  Loader2,
-  Play,
-  Radio,
-  Search,
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { useToast } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { livesApi, type YoutubeLive, type YoutubeLivesResponse } from './api';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { Icon } from '@/upgrade/Icon';
 
 const DEFAULT_AFTER_DATE = '2026-05-01';
 
@@ -162,7 +152,7 @@ export function LiveSearchPage() {
               Lives apos a data
             </span>
             <span className="flex h-11 items-center gap-2 rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3">
-              <Calendar size={15} className="text-[var(--wb-text-dim)]" aria-hidden />
+              <Icon name="calendar" size={16} className="text-[var(--wb-text-dim)]" />
               <input
                 value={afterDate}
                 onChange={(event) => setAfterDate(event.target.value)}
@@ -176,7 +166,7 @@ export function LiveSearchPage() {
               Canal de origem
             </span>
             <span className="flex h-11 items-center gap-2 rounded-[var(--radius)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-3">
-              <AtSign size={15} className="text-[var(--wb-text-dim)]" aria-hidden />
+              <Icon name="at-sign" size={16} className="text-[var(--wb-text-dim)]" />
               <input
                 value={channel}
                 onChange={(event) => setChannel(event.target.value)}
@@ -185,7 +175,7 @@ export function LiveSearchPage() {
             </span>
           </label>
           <Button type="button" onClick={searchLives} disabled={livesQuery.isFetching}>
-            {livesQuery.isFetching ? <Loader2 className="animate-spin" /> : <Search />}
+            {livesQuery.isFetching ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="search" />}
             Buscar lives
           </Button>
         </section>
@@ -195,7 +185,7 @@ export function LiveSearchPage() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius)] bg-[var(--wb-accent)] text-[var(--wb-accent-fg)]">
-                  <Radio size={15} aria-hidden />
+                  <Icon name="radio" size={16} />
                 </span>
                 <strong className="text-[var(--wb-accent)]">
                   {selectedLives.length} live(s) selecionada(s)
@@ -220,7 +210,7 @@ export function LiveSearchPage() {
                 Desmarcar todos
               </Button>
               <Button type="button" onClick={processSelected} disabled={enqueueMutation.isPending}>
-                {enqueueMutation.isPending ? <Loader2 className="animate-spin" /> : <Play />}
+                {enqueueMutation.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="play" />}
                 Baixar e processar
               </Button>
             </div>
@@ -235,7 +225,7 @@ export function LiveSearchPage() {
             <div className="flex-1" />
             {lives.length > 0 && (
               <Button type="button" variant="outline" size="sm" onClick={selectNotDownloaded}>
-                <Check className="text-success" />
+                <Icon name="check" className="text-success" />
                 Selecionar nao baixadas
               </Button>
             )}
@@ -252,7 +242,7 @@ export function LiveSearchPage() {
           {!livesQuery.isLoading && lives.length === 0 && !livesQuery.isError && (
             <div className="grid min-h-[240px] place-items-center rounded-[var(--radius-lg)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
               <div>
-                <Radio size={34} className="mx-auto mb-3 text-[var(--wb-text-dim)]" aria-hidden />
+                <Icon name="radio" ilustracao={34} className="mx-auto mb-3 text-[var(--wb-text-dim)]" />
                 <p className="font-editorial text-3xl font-medium">Nenhuma live encontrada</p>
                 <p className="mt-1 text-sm text-[var(--wb-text-mute)]">
                   Ajuste a data ou confira a configuracao do canal no backend.
@@ -310,7 +300,7 @@ function LiveRow({
           live.ja_baixado && 'cursor-not-allowed',
         )}
       >
-        <Check size={13} strokeWidth={2.4} aria-hidden />
+        <Icon name="check" />
       </button>
 
       <div className="overflow-hidden rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)]">
@@ -332,15 +322,15 @@ function LiveRow({
         </h3>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--wb-text-dim)]">
           <span className="inline-flex items-center gap-1">
-            <Calendar size={12} aria-hidden />
+            <Icon name="calendar" />
             {formatPublishedAt(live.data_publicacao)}
           </span>
           <span className="inline-flex items-center gap-1">
-            <Clock size={12} aria-hidden />
+            <Icon name="clock" />
             {formatDuration(live.duracao_iso)}
           </span>
           <span className="inline-flex items-center gap-1">
-            <AtSign size={12} aria-hidden />
+            <Icon name="at-sign" />
             YouTube
           </span>
           {live.ja_baixado && (
@@ -357,7 +347,7 @@ function LiveRow({
         rel="noreferrer"
         className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 text-xs font-bold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
       >
-        <ExternalLink size={12} aria-hidden />
+        <Icon name="external-link" />
         Ver
       </a>
     </article>

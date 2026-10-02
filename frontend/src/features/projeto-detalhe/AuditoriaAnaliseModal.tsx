@@ -1,8 +1,8 @@
-import { AlertTriangle, ClipboardCheck, Loader2, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { useAuditoriaAnalise } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import type { AuditoriaCorteItem } from '@/features/projetos/analise';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -30,7 +30,7 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
       onClose={onClose}
       title={
         <span className="flex items-center gap-2">
-          <ClipboardCheck size={18} /> Auditoria da análise IA
+          <Icon name="clipboard-check" size={20} /> Auditoria da análise IA
         </span>
       }
       description="Por que cada corte virou corte (e o que foi descartado)."
@@ -43,13 +43,13 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
     >
       {query.isLoading && (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-text-300">
-          <Loader2 size={16} className="animate-spin" /> Carregando…
+          <Icon name="loader-2" size={16} className="animate-spin" /> Carregando…
         </div>
       )}
 
       {query.isError && (
         <div className="flex items-start gap-2 rounded-md border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          <Icon name="triangle-alert" size={16} className="mt-0.5 shrink-0" />
           <span>Falha ao carregar a auditoria: {(query.error as Error).message}</span>
         </div>
       )}
@@ -82,7 +82,7 @@ export function AuditoriaAnaliseModal({ open, onClose, projetoId }: Props) {
 
           <section>
             <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-text-300">
-              <Trash2 size={12} /> Descartados ({data.descartados.length})
+              <Icon name="trash-2" /> Descartados ({data.descartados.length})
             </h3>
             {data.descartados.length === 0 ? (
               <p className="text-sm text-text-400">

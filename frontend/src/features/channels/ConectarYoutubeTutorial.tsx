@@ -3,9 +3,9 @@
 // única pista era "falta o arquivo na raiz do backend". Cada instalação usa o
 // PRÓPRIO projeto no Google Cloud: não há crachá compartilhado para distribuir.
 import { useState } from 'react';
-import { Check, Copy, ExternalLink, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { copyTextToClipboard } from '@/lib/clipboard';
+import { Icon } from '@/upgrade/Icon';
 
 const CONSOLE_URL = 'https://console.cloud.google.com/';
 const API_URL = 'https://console.cloud.google.com/apis/library/youtube.googleapis.com';
@@ -27,7 +27,7 @@ function Link({ href, children }: { href: string; children: string }) {
       className="inline-flex items-center gap-0.5 font-medium text-[var(--wb-accent)] underline-offset-2 hover:underline"
     >
       {children}
-      <ExternalLink size={11} aria-hidden />
+      <Icon name="external-link" />
     </a>
   );
 }
@@ -88,7 +88,7 @@ export function ConectarYoutubeTutorial({
               onClick={copiarDestino}
               aria-label="Copiar caminho"
             >
-              {copiado ? <Check aria-hidden /> : <Copy aria-hidden />}
+              {copiado ? <Icon name="check" /> : <Icon name="copy" />}
             </Button>
           </span>
         </li>
@@ -99,7 +99,7 @@ export function ConectarYoutubeTutorial({
             é seu. Clique em <b>Avançado</b> → <b>Acessar</b>.
           </span>
           <Button type="button" size="sm" variant="outline" onClick={onChecarDeNovo} className="w-fit">
-            <RefreshCw aria-hidden />
+            <Icon name="refresh-cw" />
             Checar de novo
           </Button>
         </li>

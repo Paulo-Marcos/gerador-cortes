@@ -1,6 +1,6 @@
-import { AlertTriangle, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { mensagemErro } from '@/lib/mensagemErro';
+import { Icon } from '@/upgrade/Icon';
 
 // O que a aba "Canal ativo" mostra enquanto ainda não há lista de canais para
 // desenhar: carregando, erro (com "tentar de novo") ou nenhum canal (com
@@ -20,7 +20,7 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
   if (carregando) {
     return (
       <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-        <Loader2 className="animate-spin" size={16} aria-hidden />
+        <Icon name="loader-2" size={16} className="animate-spin" />
         Carregando canais…
       </p>
     );
@@ -30,7 +30,7 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
     return (
       <div className="grid gap-3 rounded-[var(--radius)] border border-error/30 bg-[color-mix(in_oklch,var(--error)_10%,var(--wb-bg-card))] p-5">
         <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text)]">
-          <AlertTriangle size={16} aria-hidden className="text-error" />
+          <Icon name="triangle-alert" size={16} className="text-error" />
           {mensagemErro(erro, 'Não foi possível carregar os canais.')}
         </p>
         <div>
@@ -50,7 +50,7 @@ export function SituacaoDosCanais({ carregando, erro, vazio, onTentarDeNovo, onC
         </p>
         <div className="flex justify-center">
           <Button type="button" onClick={onCriar}>
-            <Plus aria-hidden />
+            <Icon name="plus" />
             Criar primeiro canal
           </Button>
         </div>

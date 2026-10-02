@@ -3,11 +3,11 @@
 // o estado de envio via `pending`. No modo criar expõe o campo `id` (slug); no
 // modo editar o id é fixo e só a identidade básica é editável (escopo mínimo).
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Canal, PaletaCanal } from '@/features/channels/api/canais';
+import { Icon } from '@/upgrade/Icon';
 
 export interface ChannelFormValues {
   id: string;
@@ -163,7 +163,7 @@ export function ChannelForm({ mode, initial, pending, onSubmit, onCancel }: Chan
           Cancelar
         </Button>
         <Button type="submit" disabled={pending || !idValido}>
-          {pending && <Loader2 className="animate-spin" aria-hidden />}
+          {pending && <Icon name="loader-2" className="animate-spin" />}
           {criando ? 'Criar canal' : 'Salvar identidade'}
         </Button>
       </div>

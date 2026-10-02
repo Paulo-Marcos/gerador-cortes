@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { FileText, Folder, Frame, RefreshCw, Tag, Trash2, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { SeloDeProvider } from '@/components/ui/selo-provider';
@@ -144,7 +143,7 @@ export function MetadataCard(props: {
                 label="Mais ações do corte"
                 items={[
                   {
-                    icon: FileText,
+                    icon: 'file-text',
                     label: showDescription ? 'Ocultar descrição' : 'Ver descrição',
                     onClick: () => {
                       setExpanded(true);
@@ -152,7 +151,7 @@ export function MetadataCard(props: {
                     },
                   },
                   {
-                    icon: Tag,
+                    icon: 'tag',
                     label: showTags ? 'Ocultar tags' : 'Ver tags',
                     onClick: () => {
                       setExpanded(true);
@@ -160,13 +159,13 @@ export function MetadataCard(props: {
                     },
                   },
                   {
-                    icon: UploadCloud,
+                    icon: 'upload-cloud',
                     label: 'Subir thumbnail',
                     accept: 'image/*',
                     onFile: (file) => uploadThumbnail.mutate(file),
                   },
                   {
-                    icon: Folder,
+                    icon: 'folder',
                     label: 'Copiar pasta da thumbnail',
                     onClick: () =>
                       void copy(meta?.thumbnail_path ?? '', 'Endereco da thumbnail copiado.'),
@@ -590,25 +589,25 @@ export function MetadataCard(props: {
                   label="Mais ações da thumbnail"
                   items={[
                     {
-                      icon: Folder,
+                      icon: 'folder',
                       label: 'Copiar pasta',
                       onClick: () => void copy(meta?.thumbnail_path ?? '', 'Endereco copiado.'),
                     },
                     {
-                      icon: Frame,
+                      icon: 'frame',
                       label: applyFrame.isPending ? 'Aplicando moldura…' : 'Aplicar moldura',
                       title: 'Aplicar a moldura do canal nesta capa',
                       disabled: applyFrame.isPending,
                       onClick: () => applyFrame.mutate(),
                     },
                     {
-                      icon: RefreshCw,
+                      icon: 'refresh-cw',
                       label: compressThumbnail.isPending ? 'Comprimindo…' : 'Comprimir',
                       disabled: compressThumbnail.isPending,
                       onClick: () => compressThumbnail.mutate(),
                     },
                     {
-                      icon: Trash2,
+                      icon: 'trash-2',
                       label: 'Remover',
                       danger: true,
                       disabled: removeThumbnail.isPending,

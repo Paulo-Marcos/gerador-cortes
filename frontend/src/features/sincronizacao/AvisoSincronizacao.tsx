@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { sincronizacaoApi } from './api';
+import { Icon } from '@/upgrade/Icon';
 
 // D-491: o aviso que teria poupado quatro caçadas a bugs que não existiam.
 //
@@ -34,7 +34,7 @@ export function AvisoSincronizacao() {
       role="status"
       className="fixed inset-x-0 top-0 z-50 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--wb-warn-ink)] bg-[var(--wb-warn-soft)] px-4 py-1.5 text-[12px] text-[var(--wb-warn-ink)] shadow-sm"
     >
-      <AlertTriangle size={13} className="flex-none" aria-hidden />
+      <Icon name="triangle-alert" className="flex-none" />
       <span className="font-bold">Fora de sincronia.</span>
       {data.troca_de_canal_pendente && (
         <span>
@@ -45,7 +45,7 @@ export function AvisoSincronizacao() {
       )}
       {data.backend_velho && (
         <span className="inline-flex items-center gap-1">
-          <RefreshCw size={11} aria-hidden />
+          <Icon name="refresh-cw" />
           backend rodando <code className="font-code">{data.commit_rodando}</code>, disco em{' '}
           <code className="font-code">{data.commit_disco}</code> — reinicie
         </span>

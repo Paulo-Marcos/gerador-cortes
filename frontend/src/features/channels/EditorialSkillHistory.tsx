@@ -2,9 +2,9 @@
 // "burro": recebe as versões já carregadas e delega o reverter ao container, sem
 // I/O próprio. Mostra, por versão, a data e o resumo do que mudou; oferece
 // "Reverter" nas versões que não são a vigente.
-import { AlertTriangle, History, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { SkillVersao } from '@/features/channels/api/skillsEditoriais';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   versoes: SkillVersao[];
@@ -32,7 +32,7 @@ export function EditorialSkillHistory({ versoes, carregando, erro, pending, onRe
   return (
     <section className="grid gap-2 border-t border-[var(--wb-border-soft)] pt-4">
       <h3 className="flex items-center gap-2 text-sm font-medium text-[var(--wb-text)]">
-        <History size={15} aria-hidden />
+        <Icon name="history" size={16} />
         Histórico de versões
       </h3>
       <p className="text-xs text-[var(--wb-text-dim)]">
@@ -42,14 +42,14 @@ export function EditorialSkillHistory({ versoes, carregando, erro, pending, onRe
 
       {carregando && (
         <p className="flex items-center gap-2 text-xs text-[var(--wb-text-mute)]">
-          <Loader2 className="animate-spin" size={14} aria-hidden />
+          <Icon name="loader-2" className="animate-spin" />
           Carregando histórico…
         </p>
       )}
 
       {erro && (
         <p className="flex items-center gap-2 text-xs text-[var(--wb-text)]">
-          <AlertTriangle size={14} aria-hidden className="text-error" />
+          <Icon name="triangle-alert" className="text-error" />
           {erro}
         </p>
       )}
@@ -88,7 +88,7 @@ export function EditorialSkillHistory({ versoes, carregando, erro, pending, onRe
                   disabled={pending}
                   onClick={() => onReverter(v.versao)}
                 >
-                  <RotateCcw size={13} aria-hidden />
+                  <Icon name="rotate-ccw" />
                   Reverter
                 </Button>
               )}

@@ -1,7 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { AcaoDeIa, MenuDeIa } from '../acao-de-ia';
-import { Scissors } from 'lucide-react';
 
 const render = (props: Partial<Parameters<typeof AcaoDeIa>[0]> = {}) =>
   renderToStaticMarkup(
@@ -46,7 +45,7 @@ describe('AcaoDeIa', () => {
 describe('MenuDeIa', () => {
   it('fechado, mostra só o ícone da ação com o nome acessível', () => {
     const html = renderToStaticMarkup(
-      <MenuDeIa rotulo="Gerar trechos de todos os cortes" icone={Scissors} onGerar={vi.fn()} />,
+      <MenuDeIa rotulo="Gerar trechos de todos os cortes" icone="scissors" onGerar={vi.fn()} />,
     );
     expect(html).toContain('aria-label="Gerar trechos de todos os cortes"');
     expect(html).toContain('aria-expanded="false"');

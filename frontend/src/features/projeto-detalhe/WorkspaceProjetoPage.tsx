@@ -1,4 +1,3 @@
-import { Scissors } from 'lucide-react';
 import { MenuDeIa } from '@/components/ui/acao-de-ia';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { AdicionarCorteModal } from '@/features/editor/AdicionarCorteModal';
@@ -233,7 +232,7 @@ export default function WorkspaceProjetoPage() {
               cabe um grupo com texto sem quebrar o ritmo dos utilitários. */}
           <MenuDeIa
             rotulo="Gerar trechos de todos os cortes"
-            icone={Scissors}
+            icone="scissors"
             ocupado={analisarDesviosTodos.disparado}
             desabilitado={cortes.length === 0}
             onGerar={dispararTrechosTodos}

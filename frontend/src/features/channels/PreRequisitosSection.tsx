@@ -1,14 +1,14 @@
 // D-627: cartão "Pré-requisitos" na aba Aplicação. Quem instala o app numa
 // máquina nova vê aqui, antes da primeira live, o que falta e como resolver.
-import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAmbiente, type Ambiente, type EstadoItem, type ItemAmbiente } from './useAmbiente';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
-const ICONE: Record<EstadoItem, typeof CheckCircle2> = {
-  ok: CheckCircle2,
-  aviso: AlertTriangle,
-  erro: XCircle,
+const ICONE: Record<EstadoItem, IconName> = {
+  ok: 'circle-check',
+  aviso: 'triangle-alert',
+  erro: 'x-circle',
 };
 
 const COR: Record<EstadoItem, string> = {
@@ -29,10 +29,9 @@ export function resumoDoAmbiente({ pronto, itens }: Ambiente): string {
 }
 
 function Item({ item }: { item: ItemAmbiente }) {
-  const Icone = ICONE[item.estado];
   return (
     <li className="flex gap-2.5 py-2">
-      <Icone size={16} aria-hidden className={cn('mt-0.5 shrink-0', COR[item.estado])} />
+      <Icon name={ICONE[item.estado]} size={16} className={cn('mt-0.5 shrink-0', COR[item.estado])} />
       <div className="grid min-w-0 gap-0.5">
         <p className="text-sm font-medium text-[var(--wb-text)]">
           {item.nome}
@@ -86,7 +85,7 @@ export function PreRequisitosSection() {
           onClick={() => refetch()}
           disabled={isFetching}
         >
-          {isFetching ? <Loader2 className="animate-spin" aria-hidden /> : <RefreshCw aria-hidden />}
+          {isFetching ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="refresh-cw" />}
           Checar de novo
         </Button>
       </header>

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toaster';
 import { useCriarProjeto } from '@/features/projetos/useProjetos';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   open: boolean;
@@ -72,11 +72,11 @@ export function NovoProjetoForm({ open, onClose }: Props) {
         </div>
         <div className="flex items-center gap-1.5">
           <Button type="submit" disabled={criar.isPending || !url.trim()}>
-            {criar.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {criar.isPending ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="plus" size={16} />}
             Criar
           </Button>
           <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Fechar">
-            <X size={16} />
+            <Icon name="x" size={16} />
           </Button>
         </div>
         {criar.isError && (

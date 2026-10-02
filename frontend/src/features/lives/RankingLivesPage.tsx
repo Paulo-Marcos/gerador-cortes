@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Clock, Download, Eye, ExternalLink, Heart, Info, Loader2, MessageCircle, Sparkles, Trophy, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThumbnailPlaceholder } from '@/components/ui/thumbnail-placeholder';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -10,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { livesApi, type RankingLive, type RankingLivesResponse } from './api';
 import { RankingEmbasamentoPanel } from './RankingEmbasamentoPanel';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { Icon } from '@/upgrade/Icon';
 
 function formatPublishedAt(iso: string) {
   if (!iso) return 'sem data';
@@ -165,12 +165,12 @@ export function RankingLivesPage() {
       <main className="grid flex-1 content-start gap-4 overflow-auto p-5">
         <section className="flex flex-wrap items-center gap-3 text-xs text-[var(--wb-text-mute)]">
           <span className="inline-flex items-center gap-1.5">
-            <Sparkles size={12} aria-hidden />
+            <Icon name="sparkles" />
             Atualizado {formatRelative(atualizadoEm)}
           </span>
           {janelaMeses && (
             <span className="inline-flex items-center gap-1.5">
-              <Calendar size={12} aria-hidden />
+              <Icon name="calendar" />
               Janela de {janelaMeses} {janelaMeses === 1 ? 'mês' : 'meses'}
             </span>
           )}
@@ -187,7 +187,7 @@ export function RankingLivesPage() {
         {(rankingQuery.isLoading || refreshMutation.isPending) && lives.length === 0 && (
           <div className="grid min-h-[240px] place-items-center rounded-[var(--radius-lg)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
             <div className="flex items-center gap-2 text-[var(--wb-text-mute)]">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Icon name="loader-2" size={16} className="animate-spin" />
               Gerando ranking (busca + sentimento via Claude). Pode levar alguns minutos na primeira
               vez.
             </div>
@@ -197,7 +197,7 @@ export function RankingLivesPage() {
         {!rankingQuery.isLoading && lives.length === 0 && !rankingQuery.isError && (
           <div className="grid min-h-[240px] place-items-center rounded-[var(--radius-lg)] border border-dashed border-[var(--wb-border)] bg-[var(--wb-bg-card)] p-8 text-center">
             <div>
-              <Trophy size={34} className="mx-auto mb-3 text-[var(--wb-text-dim)]" aria-hidden />
+              <Icon name="trophy" ilustracao={34} className="mx-auto mb-3 text-[var(--wb-text-dim)]" />
               <p className="font-editorial text-3xl font-medium">Nenhuma candidata pendente</p>
               <p className="mt-1 text-sm text-[var(--wb-text-mute)]">
                 Clique em "Atualizar ranking" para buscar lives recentes do canal-fonte.
@@ -283,35 +283,35 @@ function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando 
             rel="noreferrer"
             className="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 text-xs font-bold text-[var(--wb-text-mute)] hover:text-[var(--wb-text)]"
           >
-            <ExternalLink size={12} aria-hidden />
+            <Icon name="external-link" />
             Ver
           </a>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--wb-text-dim)]">
           <span className="inline-flex items-center gap-1">
-            <Calendar size={12} aria-hidden />
+            <Icon name="calendar" />
             {formatPublishedAt(live.data_publicacao)}
           </span>
           <span className="inline-flex items-center gap-1">
-            <Clock size={12} aria-hidden />
+            <Icon name="clock" />
             {formatDuration(live.duracao_iso)}
           </span>
           <Tooltip label={`${live.views.toLocaleString('pt-BR')} views`} side="top">
             <span className="inline-flex items-center gap-1">
-              <Eye size={12} aria-hidden />
+              <Icon name="eye" />
               {formatNumber(live.views)}
             </span>
           </Tooltip>
           <Tooltip label={`${live.likes.toLocaleString('pt-BR')} likes`} side="top">
             <span className="inline-flex items-center gap-1">
-              <Heart size={12} aria-hidden />
+              <Icon name="heart" />
               {formatNumber(live.likes)}
             </span>
           </Tooltip>
           <Tooltip label={`${live.comentarios.toLocaleString('pt-BR')} comentários`} side="top">
             <span className="inline-flex items-center gap-1">
-              <MessageCircle size={12} aria-hidden />
+              <Icon name="message-circle" />
               {formatNumber(live.comentarios)}
             </span>
           </Tooltip>
@@ -360,7 +360,7 @@ function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando 
             onClick={() => setEmbasamentoAberto(true)}
             className="inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--wb-border-soft)] bg-[var(--wb-bg-inset)] px-2.5 py-1.5 text-xs font-semibold text-[var(--wb-text-mute)] transition-colors hover:text-[var(--wb-text)]"
           >
-            <Info size={13} aria-hidden />
+            <Icon name="info" />
             Entenda a nota
           </button>
         )}
@@ -374,7 +374,7 @@ function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando 
             disabled={rejeitando || baixando}
             className="flex-1"
           >
-            {rejeitando ? <Loader2 className="animate-spin" /> : <X aria-hidden />}
+            {rejeitando ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="x" />}
             Rejeitar
           </Button>
           <Button
@@ -384,7 +384,7 @@ function RankingRow({ live, posicao, onBaixar, onRejeitar, baixando, rejeitando 
             disabled={baixando || rejeitando}
             className="flex-1"
           >
-            {baixando ? <Loader2 className="animate-spin" /> : <Download aria-hidden />}
+            {baixando ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="download" />}
             Baixar
           </Button>
         </div>

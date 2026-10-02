@@ -6,11 +6,11 @@
 // mostra os placeholders obrigatórios e o marcador do contrato de saída, para o
 // editor não removê-los sem querer.
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { EditorialScaffold } from '@/features/channels/api/scaffolds';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   scaffold: EditorialScaffold;
@@ -91,7 +91,7 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
         </div>
         {(faltando.length > 0 || marcadorAusente) && (
           <p className="flex items-center gap-1.5 text-[11px] text-error">
-            <AlertTriangle size={12} aria-hidden />
+            <Icon name="triangle-alert" />
             Faltam itens obrigatórios — o backend vai recusar o salvamento até incluí-los.
           </p>
         )}
@@ -106,7 +106,7 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
             disabled={pending}
             className="inline-flex items-center gap-1 text-xs text-[var(--wb-text-mute)] hover:text-[var(--wb-text)] disabled:opacity-40"
           >
-            <RotateCcw size={12} aria-hidden />
+            <Icon name="rotate-ccw" />
             Resetar para o padrão
           </button>
         </div>
@@ -129,7 +129,7 @@ export function EditorialScaffoldForm({ scaffold, pending, onSave, onReset, onCa
           Cancelar
         </Button>
         <Button type="submit" disabled={pending}>
-          {pending && <Loader2 className="animate-spin" aria-hidden />}
+          {pending && <Icon name="loader-2" className="animate-spin" />}
           Salvar scaffold
         </Button>
       </div>

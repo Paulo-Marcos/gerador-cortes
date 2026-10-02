@@ -4,7 +4,6 @@
 // com validação de conflito via assertNoShortcutConflicts. A nova
 // combinação vale para todas as telas ao recarregar a página.
 import { useEffect, useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ShortcutBinding } from '@/shared/atalhos/shortcuts';
 import {
@@ -20,6 +19,7 @@ import {
   type ShortcutScreen,
 } from '@/shared/atalhos/shortcutsRegistry';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { Icon } from '@/upgrade/Icon';
 
 const TELAS: Array<{ id: ShortcutScreen | 'todas'; rotulo: string }> = [
   { id: 'todas', rotulo: 'Todas' },
@@ -169,7 +169,7 @@ export function AtalhosPage() {
           ))}
         </div>
         <label className="flex h-8 min-w-[190px] items-center gap-2 rounded-lg border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] px-2.5 text-xs text-[var(--wb-text-mute)]">
-          <Search size={13} aria-hidden />
+          <Icon name="search" />
           <input
             value={busca}
             onChange={(event) => setBusca(event.target.value)}

@@ -1,9 +1,9 @@
 // D-348: card "burro" de um prompt utilitário na lista de gestão. Mostra a etapa,
 // a explicação, o marcador do contrato e se o canal customizou (vs. o padrão), com
 // o botão de editar. Sem I/O — o container decide o que fazer no clique.
-import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { PromptUtilitario } from '@/features/channels/api/promptsUtilitarios';
+import { Icon } from '@/upgrade/Icon';
 
 interface Props {
   prompt: PromptUtilitario;
@@ -31,7 +31,7 @@ export function PromptUtilitarioCard({ prompt, customizado, onEditar }: Props) {
           <p className="mt-1 text-sm text-[var(--wb-text-mute)]">{prompt.descricao}</p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onEditar} className="shrink-0">
-          <Pencil size={14} aria-hidden />
+          <Icon name="pencil" />
           Editar
         </Button>
       </div>
