@@ -52,20 +52,10 @@ const AINDA_IMPORTAM = new Set([
   "src/features/channels/RankingPesosSection.tsx",
   "src/features/channels/SituacaoDosCanais.tsx",
   "src/features/editor/fase2/CenasPanel.tsx",
-  "src/features/final-review/FinalReviewPage.tsx",
   "src/features/lives/LiveSearchPage.tsx",
   "src/features/lives/RankingEmbasamentoPanel.tsx",
   "src/features/lives/RankingLivesPage.tsx",
-  "src/features/metadata/AcoesDoPromptDaCapa.tsx",
-  "src/features/metadata/CapaTikTokSlot.tsx",
-  "src/features/metadata/CapaYoutubeDoModal.tsx",
   "src/features/metadata/MetadataCard.tsx",
-  "src/features/metadata/MetadataPage.tsx",
-  "src/features/metadata/ThumbnailAvaliacaoPanel.tsx",
-  "src/features/metadata/modalPecas.tsx",
-  "src/features/post-production/FiltroTestePanel.tsx",
-  "src/features/post-production/RenderStepsModal.tsx",
-  "src/features/post-production/ScenesPostProductionPage.tsx",
   "src/features/projeto-detalhe/AnaliseIaModal.tsx",
   "src/features/projeto-detalhe/AuditoriaAnaliseModal.tsx",
   "src/features/projeto-detalhe/DiarizacaoPanel.tsx",
@@ -79,7 +69,6 @@ const AINDA_IMPORTAM = new Set([
   "src/features/settings/CapaTikTokLayoutEditor.tsx",
   "src/features/shorts/CabecalhoDoFire.tsx",
   "src/features/sincronizacao/AvisoSincronizacao.tsx",
-  "src/features/thumbnail-padroes/ThumbnailPadroesPage.tsx",
 ]);
 
 function quemImportaLucide(): Set<string> {

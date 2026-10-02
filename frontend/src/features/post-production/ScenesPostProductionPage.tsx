@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import { useExportStatus, useProjeto } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { useVelocidadePlayerPadrao } from '@/features/settings';
 import { useRenderFinal, useStudioUrl } from '@/features/editor/useRender';
@@ -263,7 +262,7 @@ export function ScenesPostProductionPage() {
   if (corteQuery.isLoading || cortesQuery.isLoading || !corte) {
     return (
       <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center text-[var(--wb-text-dim)]">
-        <Loader2 size={20} className="mr-2 animate-spin" />
+        <Icon name="loader-2" size={20} className="mr-2 animate-spin" />
         Carregando cenas...
       </div>
     );

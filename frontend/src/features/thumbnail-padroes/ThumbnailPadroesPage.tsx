@@ -3,13 +3,13 @@
 // têm em comum (por eixo) e a proposta de ajuste para a skill do Capista, para o
 // o operador validar antes da edição manual da SKILL.md.
 import { useMutation } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/toaster';
 import { padroesThumbnailApi, type PadroesThumbnailResponse } from './api';
 import { providerEmVoo, type ProviderIA } from '@/lib/providerIa';
 import { eixosComOcorrencias, rotuloEixo } from './thumbnailPadroes';
 import { cn } from '@/lib/utils';
 import { useDefinirChrome } from '@/upgrade/UpgradeChrome';
+import { Icon } from '@/upgrade/Icon';
 
 const FORCA_TONS: Record<string, string> = {
   alta: 'text-[var(--wb-ok)]',
@@ -70,7 +70,7 @@ export function ThumbnailPadroesPage() {
 
         {analise.isPending && (
           <p className="flex items-center gap-2 text-[15px] text-[var(--wb-text-mute)]">
-            <Loader2 className="animate-spin" size={16} aria-hidden />
+            <Icon name="loader-2" size={16} className="animate-spin" />
             Analisando os melhores prompts…
           </p>
         )}

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, CircleSlash, Lock, RefreshCw, Sparkles } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import type { PipelineStatusResponse } from '@/types/models';
@@ -14,6 +13,7 @@ import {
   faseSelecionavel,
   selecaoParaRequest,
 } from './renderEtapas';
+import { Icon } from '@/upgrade/Icon';
 
 interface RenderStepsModalProps {
   open: boolean;
@@ -74,7 +74,7 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
             size="sm"
             onClick={() => onConfirm({ startFrom: 'auto', continuar: true })}
           >
-            <Sparkles /> Continuar de onde parou
+            <Icon name="sparkles" /> Continuar de onde parou
           </Button>
         )}
         <Button
@@ -86,7 +86,7 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
             setReaproveitarOverlays(false);
           }}
         >
-          <RefreshCw /> Reprocessar tudo
+          <Icon name="refresh-cw" /> Reprocessar tudo
         </Button>
       </div>
 
@@ -121,7 +121,7 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
                 ].join(' ')}
                 aria-hidden
               >
-                <Check size={12} />
+                <Icon name="check" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
                   )}
                   {obrigatoria && (
                     <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[var(--wb-text-mute)]">
-                      <Lock size={10} /> intermediária
+                      <Icon name="lock" /> intermediária
                     </span>
                   )}
                 </span>
@@ -168,7 +168,7 @@ export function RenderStepsModal({ open, status, onClose, onConfirm }: RenderSte
       <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-[var(--wb-text-mute)]">
         {startInvalido ? (
           <>
-            <CircleSlash size={14} className="mt-0.5 shrink-0 text-[var(--wb-warn)]" />
+            <Icon name="circle-slash" className="mt-0.5 shrink-0 text-[var(--wb-warn)]" />
             <span>A grade precisa existir para iniciar dos overlays ou do render final.</span>
           </>
         ) : (

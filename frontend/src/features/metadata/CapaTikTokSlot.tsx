@@ -1,6 +1,5 @@
 import { useRef, useState, type ComponentProps } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Clipboard, Copy, Film, ImagePlus, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImagemAmpliavel } from '@/components/ui/imagem-ampliavel';
 import { resolveThumbUrl } from '@/lib/api';
@@ -14,6 +13,7 @@ import { exportStatusKey } from '@/features/projeto-detalhe/useProjetoDetalhe';
 import { GerarNoChatGPT } from '@/features/capa-chatgpt/GerarNoChatGPT';
 import { metadadosApi } from './api/metadados';
 import { metadataKey } from './useMetadataCard';
+import { Icon } from '@/upgrade/Icon';
 
 // D-521: a capa VERTICAL, ao lado da thumbnail do YouTube.
 //
@@ -218,7 +218,7 @@ export function CapaTikTokSlot({
               onClick={() => void copiar()}
               title="Copiar para colar no agente capista."
             >
-              {copiado ? <Check /> : <Copy />}
+              {copiado ? <Icon name="check" /> : <Icon name="copy" />}
               {copiado ? 'copiado' : 'Copiar prompt'}
             </Button>
           )}
@@ -239,7 +239,7 @@ export function CapaTikTokSlot({
             onClick={() => inputRef.current?.click()}
             title="A ilustração 4:5 gerada no agente. O sistema desenha a etiqueta por cima."
           >
-            {subirArte.isPending ? <Loader2 className="animate-spin" /> : <ImagePlus />}
+            {subirArte.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="image-plus" />}
             Subir arte 4:5
           </Button>
           <Button
@@ -249,7 +249,7 @@ export function CapaTikTokSlot({
             onClick={() => colar.mutate()}
             title="Sobe a imagem que está na área de transferência e monta a capa."
           >
-            {colar.isPending ? <Loader2 className="animate-spin" /> : <Clipboard />}
+            {colar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="clipboard" />}
             Colar arte
           </Button>
 
@@ -283,7 +283,7 @@ export function CapaTikTokSlot({
               onClick={() => montar.mutate({})}
               title="Refaz a capa com o texto de capa atual, reusando a mesma arte."
             >
-              {montar.isPending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              {montar.isPending ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="refresh-cw" />}
               Atualizar texto
             </Button>
           )}
@@ -297,7 +297,7 @@ export function CapaTikTokSlot({
             className="inline-flex items-center gap-1 text-[10px] text-[var(--wb-text-dim)] underline-offset-2 hover:underline disabled:opacity-50"
             title="Sem arte: usa um quadro do próprio vídeo. Costuma ficar pior."
           >
-            <Film size={10} aria-hidden />
+            <Icon name="film" />
             usar frame do vídeo
           </button>
 

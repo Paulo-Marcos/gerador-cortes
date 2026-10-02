@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Check, Download, Edit3, FileText, Folder, Loader2, Palette, RefreshCw, Sparkles, VolumeX, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toaster';
@@ -23,6 +22,7 @@ import {
   resolveCorteStagePath,
 } from '@/features/post-production/postProductionNavigation';
 import { settingsApi } from '@/features/settings/api';
+import { Icon, type IconName } from '@/upgrade/Icon';
 
 // Atalhos Ctrl+J/K (F-041): mesmos limites usados na tela Bruta.
 const SPEED_MIN = 0.25;
@@ -176,7 +176,7 @@ export function FinalReviewPage() {
             void exportStatusQ.refetch();
           }}
         >
-          <RefreshCw />
+          <Icon name="refresh-cw" />
           Tentar novamente
         </Button>
       </div>
@@ -186,7 +186,7 @@ export function FinalReviewPage() {
   if (corteQuery.isLoading || cortesQuery.isLoading || exportStatusQ.isLoading || !corte) {
     return (
       <div className="flex min-h-screen items-center justify-center text-[var(--wb-text-dim)]">
-        <Loader2 size={20} className="mr-2 animate-spin" />
+        <Icon name="loader-2" size={20} className="mr-2 animate-spin" />
         Carregando revisão final...
       </div>
     );
@@ -202,34 +202,34 @@ export function FinalReviewPage() {
     {
       ok: Boolean(exportStatusAtual?.video_pronto || corte.is_pos_producao === 1),
       label: 'Render final concluído',
-      icon: Check,
+      icon: 'check',
     },
     {
       ok: Boolean(exportStatusAtual?.overlays_prontos),
       label: 'Overlays aplicados',
-      icon: Sparkles,
+      icon: 'sparkles',
     },
     {
       ok: Boolean(exportStatusAtual?.grade_pronta),
       label: 'Color grade aplicado',
-      icon: Palette,
+      icon: 'palette',
     },
     {
       ok: Boolean(exportStatusAtual?.metadados_completos),
       label: 'Metadados preenchidos',
-      icon: FileText,
+      icon: 'file-text',
     },
     {
       ok: Boolean(exportStatusAtual?.thumbnail_pronta),
       label: 'Capa renderizada',
-      icon: Edit3,
+      icon: 'edit-3',
     },
     {
       // Audio normalizado: nao temos campo dedicado — assumimos OK quando
       // o video final esta pronto (encoder normaliza para -14 LUFS).
       ok: Boolean(exportStatusAtual?.video_pronto),
       label: 'Áudio normalizado (-14 LUFS)',
-      icon: VolumeX,
+      icon: 'volume-x',
     },
   ];
 
@@ -464,7 +464,7 @@ function FinalPlayerPanel({
             side="bottom"
           >
             <span className="inline-flex flex-none items-center gap-1 rounded-full bg-[var(--wb-accent-soft)] px-2 py-0.5 font-code text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--wb-accent)]">
-              <Palette size={11} aria-hidden />
+              <Icon name="palette" />
               Global · {filtroLabel}
             </span>
           </Tooltip>
@@ -477,7 +477,7 @@ function FinalPlayerPanel({
             data-projeto={projetoId}
             className="inline-flex h-7 items-center gap-1 rounded-[var(--radius-xs)] px-2.5 text-[11px] font-bold uppercase tracking-[0.04em] text-[var(--wb-text-mute)] transition-colors hover:bg-[var(--wb-bg-card)] hover:text-[var(--wb-text)]"
           >
-            <Download size={12} />
+            <Icon name="download" />
             MP4
           </a>
         </Tooltip>
@@ -489,7 +489,7 @@ function FinalPlayerPanel({
             onClick={onAbrirPasta}
             disabled={abrindoPasta}
           >
-            {abrindoPasta ? <Loader2 className="animate-spin" /> : <Folder />}
+            {abrindoPasta ? <Icon name="loader-2" className="animate-spin" /> : <Icon name="folder" />}
             Pasta
           </Button>
         </Tooltip>
@@ -516,7 +516,7 @@ function FinalPlayerPanel({
 interface ChecklistItem {
   ok: boolean;
   label: string;
-  icon: LucideIcon;
+  icon: IconName;
 }
 
 function ChecklistCard({ items }: { items: ChecklistItem[] }) {
@@ -549,7 +549,6 @@ function ChecklistCard({ items }: { items: ChecklistItem[] }) {
 }
 
 function ChecklistRow({ item }: { item: ChecklistItem }) {
-  const Icon = item.icon;
   return (
     <div
       className={`flex items-center gap-2.5 rounded-[var(--radius-sm)] border p-2 ${
@@ -566,12 +565,11 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
         }`}
         aria-hidden
       >
-        {item.ok && <Check size={12} strokeWidth={3} />}
+        {item.ok && <Icon name="check" />}
       </span>
       <Icon
-        size={13}
+        name={item.icon}
         className={item.ok ? 'text-[var(--wb-text-mute)]' : 'text-[var(--wb-warn)]'}
-        aria-hidden
       />
       <span
         className={`text-[12.5px] ${
@@ -614,7 +612,7 @@ function CapaCard({
         <div className="flex-1" />
         <Tooltip label="Editar capa (abre Metadados)" side="bottom">
           <Button type="button" variant="ghost" size="sm" onClick={onEditar}>
-            <Edit3 />
+            <Icon name="edit-3" />
             Editar
           </Button>
         </Tooltip>

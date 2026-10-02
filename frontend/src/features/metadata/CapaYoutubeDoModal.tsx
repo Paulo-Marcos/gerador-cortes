@@ -1,4 +1,3 @@
-import { Clipboard, Folder, Frame, Loader2, Palette, RefreshCw, Sparkles, Trash2, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AcaoDeIa } from '@/components/ui/acao-de-ia';
 import { IconButton } from '@/components/ui/icon-button';
@@ -10,6 +9,7 @@ import type { Corte } from '@/types/models';
 import { MODAL_ASIDE_BUTTON, ModalActionButton, ModalActionRow } from './modalPecas';
 import { ThumbnailAvaliacaoPanel } from './ThumbnailAvaliacaoPanel';
 import type { EstadoDoCard } from './useMetadataCard';
+import { Icon } from '@/upgrade/Icon';
 
 // A aba da capa do YouTube no modal (D-821): tudo o que opera ESTA capa, ao
 // lado dela, na ordem do trabalho — a prévia, 1. o prompt, 2. a imagem, e as
@@ -50,7 +50,7 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
             onGerar={(provider) => card.generatePromptThumbnailClaude.mutate(provider)}
             className="h-8"
           />
-          <ModalActionButton icon={Palette} onClick={() => card.setManualKind('thumbnail-agent-livre')}>
+          <ModalActionButton icon="palette" onClick={() => card.setManualKind('thumbnail-agent-livre')}>
             Manual
           </ModalActionButton>
         </ModalActionRow>
@@ -78,9 +78,9 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
             title="Gera pela API do Gemini"
           >
             {card.generateThumbnail.isPending || card.conferindoCapa ? (
-              <Loader2 className="animate-spin" />
+              <Icon name="loader-2" className="animate-spin" />
             ) : (
-              <Sparkles />
+              <Icon name="sparkles" />
             )}
             {card.conferindoCapa ? 'Gerando…' : 'Gerar no Gemini'}
           </Button>
@@ -98,7 +98,7 @@ export function CapaYoutubeDoModal({ card, cut }: { card: EstadoDoCard; cut: Cor
             disabled={!promptReady}
             title={promptReady ? 'Copiar o prompt para outro gerador' : 'Gere o prompt da capa primeiro'}
           >
-            <Clipboard />
+            <Icon name="clipboard" />
             Copiar prompt
           </Button>
         </div>
@@ -135,7 +135,7 @@ function TrocarThumbnail({ onArquivo }: { onArquivo: (arquivo: File) => void }) 
         'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-[9px] border border-[var(--wb-border)] bg-[var(--wb-bg-panel)] font-bold text-[var(--wb-text)] hover:border-[var(--wb-text-dim)] hover:bg-[var(--wb-bg-card-elev)]',
       )}
     >
-      <UploadCloud size={13} aria-hidden />
+      <Icon name="upload-cloud" />
       Trocar
       <input
         type="file"
@@ -163,7 +163,7 @@ function FerramentasDaCapa({ card }: { card: EstadoDoCard }) {
         title="Copiar pasta da thumbnail"
         onClick={() => void card.copy(card.meta?.thumbnail_path ?? '', 'Endereco copiado.')}
       >
-        <Folder />
+        <Icon name="folder" size={16} />
       </IconButton>
       <IconButton
         size="sm"
@@ -173,7 +173,7 @@ function FerramentasDaCapa({ card }: { card: EstadoDoCard }) {
         onClick={() => card.compressThumbnail.mutate()}
         disabled={card.compressThumbnail.isPending}
       >
-        {card.compressThumbnail.isPending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+        {card.compressThumbnail.isPending ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="refresh-cw" size={16} />}
       </IconButton>
       <IconButton
         size="sm"
@@ -183,7 +183,7 @@ function FerramentasDaCapa({ card }: { card: EstadoDoCard }) {
         onClick={() => card.applyFrame.mutate()}
         disabled={card.applyFrame.isPending}
       >
-        {card.applyFrame.isPending ? <Loader2 className="animate-spin" /> : <Frame />}
+        {card.applyFrame.isPending ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="frame" size={16} />}
       </IconButton>
       <IconButton
         size="sm"
@@ -194,7 +194,7 @@ function FerramentasDaCapa({ card }: { card: EstadoDoCard }) {
         disabled={card.removeThumbnail.isPending}
         className="text-[var(--wb-err)] hover:bg-[var(--wb-err-soft)] hover:text-[var(--wb-err)]"
       >
-        {card.removeThumbnail.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
+        {card.removeThumbnail.isPending ? <Icon name="loader-2" size={16} className="animate-spin" /> : <Icon name="trash-2" size={16} />}
       </IconButton>
     </div>
   );
