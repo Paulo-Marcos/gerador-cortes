@@ -8,7 +8,7 @@ description: Utilizar quando for mexer no backend (Python/FastAPI).
 O essencial deste escopo — vale com ou sem skill instalada:
 
 - Camadas: `routers/` (só HTTP) → `services/` (orquestração) → `domain/` (regras puras: sem FastAPI, SQLAlchemy, HTTP nem `models`) / `infrastructure/` (mundo externo). O import-linter (`backend/pyproject.toml`) reprova import na direção errada.
-- Código novo em `domain/` ou `services/` nasce com teste do caminho feliz. Regra de negócio catalogada: cite a RN na docstring (`docs/dominio/regras-de-negocio.md`).
+- **Toda mudança vem com teste** que cobre cada item do pedido (código novo em `domain/` ou `services/` tem, no mínimo, o caminho feliz). Regra de negócio catalogada: cite a RN na docstring (`docs/dominio/regras-de-negocio.md`).
 - Correção de defeito começa pelo teste que reproduz o bug: ele falha antes da correção e passa depois (antes/depois no `ready --validation`). Sem refactor de carona nem teste enfraquecido.
 - DDD **pragmático**: vocabulário do glossário, ciclos de vida no domínio. Sem aggregates, CQRS ou repositórios de brinde.
 - Todo subprocesso tem `timeout`; processo se encerra pelo PID, nunca pelo nome.

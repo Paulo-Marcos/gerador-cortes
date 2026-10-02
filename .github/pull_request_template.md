@@ -10,3 +10,12 @@ ela chega mais longe por lá.
 Issue combinada: #
 
 ## O que muda e por quê
+
+## Pedido → teste
+
+<!-- Cada item do que foi pedido e o teste que o cobre (arquivo::nome).
+     Item sem teste fica como faltando, com o motivo. -->
+
+| Pedido | Teste |
+|---|---|
+|  |  |
